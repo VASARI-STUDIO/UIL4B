@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getLenis } from '../../hooks/useSmoothScroll'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
-import { TOOL_COUNT, numberWord } from '../spectrum/spectrumFacts'
+import { TOOL_COUNT, numberWord, route } from '../spectrum/spectrumFacts'
 import { COLOUR_SYSTEMS, FREE_COLOUR_SYSTEMS } from '../../config/colourSystems'
 import { ICON_PACK_TIERS } from '../../data/iconPackTiers'
 import PaletteTool from './try/PaletteTool'
@@ -55,6 +55,8 @@ const TOOLS = [
     lead: 'The Google Fonts catalogue, set in your own words with live specimens.',
     next: 'Open a family in the full tool to see every weight and three suggested pairings, and to copy its import URL. Send it on to Font Pair to choose a heading and body.',
     body: <FontTool />,
+    // On phones the Font Pair link sits under the card, as the frame's tray has no room for it.
+    after: <Link className="ht-fp" to={route('font-pair')}>Build a font pair</Link>,
   },
   {
     id: 'file-converter',
@@ -206,6 +208,7 @@ export default function HomeTry() {
                 {/* On phones the lead sits under the name and the next-step text under the link. */}
                 <div className="ht-d ht-info" id={`ht-d-${i}`}><p className="ht-lead">{t.lead}</p><p className="ht-next">{t.next}</p></div>
                 <div className="ht-fr">{t.body}</div>
+                {t.after}
               </article>
             ))}
           </div>

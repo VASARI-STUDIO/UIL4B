@@ -5,7 +5,7 @@ import { ratio } from '../../spectrum/spectrumKit'
 import { iconifyFetch, ICONIFY_HOST, HELD_HEADER } from '../../../utils/iconifyFetch'
 import { ICON_START, KERBSIDE_BODIES } from './kerbsideIcons'
 import { safeBody } from './iconBody'
-import { Radios, ToolLink } from './tryParts'
+import { Radios, ToolLink, Well } from './tryParts'
 import { useNear } from './useNear'
 
 // ICON LIBRARY. Kerbside's sixteen icons lead a list of Phosphor's first names;
@@ -19,6 +19,7 @@ const DUO = 3
 // Default (the icon's own two tones) is offered only at Duo.
 const COLOURS = [['Default', ''], ['Signal', '#FF5A1F'], ['White', '#FFFFFF']]
 const SIGNAL = COLOURS[1][1]
+const PHONE_MODES = ['Search', 'Weight', 'Colour']
 const PACK = 'Phosphor'
 const WEIGHT_SUFFIX = /-(bold|fill|duotone|light|thin)$/
 const NAME = /^[a-z0-9-]{1,48}$/
@@ -49,6 +50,7 @@ export default function IconTool() {
   const slowTimer = useRef(0)
   const [near, setNear] = useState(false)
   const [, repaint] = useState(0)
+  const [mode, setMode] = useState(0)
   const [weight, setWeight] = useState(0)
   const [sel, setSel] = useState(ICON_START[0])
   const [q, setQ] = useState('')
@@ -169,30 +171,46 @@ export default function IconTool() {
     short = 'Search for this icon to copy it as SVG.'
   } else if (kinds.includes('search') && total) line = short = 'Pick one to colour it.'
 
+  // The controls are drawn twice, once in the toolbar and preview pane and once in the
+  // phone well; CSS shows one set. The phone search field has its own class so the
+  // toolbar's stays the only `.ht-input` in the frame.
+  const searchField = (cls, wrap) => (
+    <div className={wrap}>
+      <svg viewBox="0 0 256 256" aria-hidden="true" focusable="false"><path d={MAGNIFIER} /></svg>
+      <input
+        className={`${cls} ht-input--icon`}
+        type="text"
+        aria-label="Search icons"
+        value={q}
+        onChange={onQ}
+        placeholder="bike, map pin, clock"
+        spellCheck="false"
+        autoComplete="off"
+        maxLength={40}
+      />
+    </div>
+  )
+  const weightSeg = (className) => (
+    <Radios label="Weight" className={className} items={WEIGHTS.map(([label]) => label)} value={weight} onPick={pickWeight} />
+  )
+  const colourSeg = (className) => (
+    <Radios className={className} label="Colour" items={opts.map(([label]) => label)} value={colIndex} onPick={(i) => paint(opts[i][1])} />
+  )
+  const swatch = (
+    <>
+      <span className="ht-swatch">
+        <input type="color" aria-label="Any colour" value={col || '#FFFFFF'} onChange={(e) => paint(e.target.value)} />
+      </span>
+      <span className="ht-val">{col || '#FFFFFF'}</span>
+    </>
+  )
+
   return (
     <>
       <div className="ht-tool ht-icn" ref={root}>
       <div className="ht-tb">
-        <div className="ht-field">
-          <svg viewBox="0 0 256 256" aria-hidden="true" focusable="false"><path d={MAGNIFIER} /></svg>
-          <input
-            className="ht-input ht-input--icon"
-            type="text"
-            aria-label="Search icons"
-            value={q}
-            onChange={onQ}
-            placeholder="bike, map pin, clock"
-            spellCheck="false"
-            autoComplete="off"
-            maxLength={40}
-          />
-        </div>
-        <Radios
-          label="Weight"
-          items={WEIGHTS.map(([label]) => label)}
-          value={weight}
-          onPick={pickWeight}
-        />
+        {searchField('ht-input', 'ht-field')}
+        {weightSeg('')}
       </div>
 
       <div className="ht-ic">
@@ -242,21 +260,17 @@ export default function IconTool() {
           </div>
           <p className="ht-ic-name">{sel}</p>
           <p className="ht-ic-meta">{`${PACK} · ${WEIGHTS[weight][0]}`}</p>
-          <Radios
-            className="ht-ic-cols"
-            label="Colour"
-            items={opts.map(([label]) => label)}
-            value={colIndex}
-            onPick={(i) => paint(opts[i][1])}
-          />
-          <div className="ht-ic-sw">
-            <span className="ht-swatch">
-              <input type="color" aria-label="Any colour" value={col || '#FFFFFF'} onChange={(e) => paint(e.target.value)} />
-            </span>
-            <span className="ht-val">{col || '#FFFFFF'}</span>
-          </div>
+          {colourSeg('ht-ic-cols')}
+          <div className="ht-ic-sw">{swatch}</div>
         </div>
       </div>
+
+      {/* Phone: the search field, the weights and the colours become one control under a three-way choice. */}
+      <Well label="What the Icon Library can do" items={PHONE_MODES} value={mode} onPick={setMode}>
+        {mode === 0 && searchField('ht-pin', 'ht-field ht-grow')}
+        {mode === 1 && weightSeg('ht-grow')}
+        {mode === 2 && <>{colourSeg('ht-grow')}{swatch}</>}
+      </Well>
 
         <span className="ht-sr" role="status">{failed ? '' : slow ? 'Searching…' : count}</span>
       </div>

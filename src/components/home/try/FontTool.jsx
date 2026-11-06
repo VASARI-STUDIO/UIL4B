@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PhIcon from '../../spectrum/PhIcon'
 import { route } from '../../spectrum/spectrumFacts'
-import { Radios, ToolLink } from './tryParts'
+import { Radios, ToolLink, Well } from './tryParts'
 import { useNear } from './useNear'
 
 // FONT GALLERY. Thirteen families in one list, Kerbside's two first, set in the
@@ -38,11 +38,15 @@ const MAX_COMPARE = 3
 const SIZE_MIN = 22
 const SIZE_MAX = 72
 const SIZE_STEP = 2
+// Until the visitor changes it, a phone's sample is smaller than a desktop's.
 const SIZE_START = 40
+const SIZE_START_PHONE = 24
+const PHONE_MODES = ['Words', 'Size', 'Side by side']
 // The list's height inside the frame; the rows share it evenly, as many as fit whole.
 const LIST_H = 327
 const LOAD_GIVE_UP = 10000
 
+const CHEVRON = 'M213.66 101.66l-80 80a8 8 0 0 1-11.32 0l-80-80a8 8 0 0 1 11.32-11.32L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32'
 const CARET = '<path d="M213.66 101.66l-80 80a8 8 0 0 1-11.32 0l-80-80a8 8 0 0 1 11.32-11.32L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32"/>'
 
 // Archivo is shown at 800 and its widest cut, whatever other pages have loaded of it.
@@ -98,7 +102,9 @@ export default function FontTool() {
   const [open, setOpen] = useState('')
   // family -> 'ok' | 'fail'; absent while its face is on the way.
   const [ready, setReady] = useState({})
-  const [size, setSize] = useState(SIZE_START)
+  // null until the visitor sets a size, so each width keeps its own starting size.
+  const [size, setSize] = useState(null)
+  const [mode, setMode] = useState(0)
   const [picks, setPicks] = useState(['Archivo', 'IBM Plex Sans'])
   const [compare, setCompare] = useState(false)
   const [msg, setMsg] = useState('')
@@ -122,11 +128,11 @@ export default function FontTool() {
   useNear(root, startLoading)
 
   const pickCat = (i) => { setCat(i); setCompare(false); setMsg('') }
-  const step = (by) => setSize((s) => Math.min(SIZE_MAX, Math.max(SIZE_MIN, s + by)))
+  const step = (by) => setSize((s) => Math.min(SIZE_MAX, Math.max(SIZE_MIN, (s ?? SIZE_START) + by)))
   // A fourth pick is refused, in words (the tray is a live region).
   const togglePick = (f) => {
     const on = picks.includes(f)
-    if (!on && picks.length >= MAX_COMPARE) { setMsg('Three at a time. Remove one first.'); return }
+    if (!on && picks.length >= MAX_COMPARE) { setMsg('Three at a time. Remove one first.'); setMode(2); return }
     setPicks(on ? picks.filter((x) => x !== f) : [...picks, f])
     setMsg('')
   }
@@ -137,7 +143,8 @@ export default function FontTool() {
 
   const typed = text.trim()
   const rows = FAMILIES.filter((x) => cat === 0 || x.c === cat)
-  const fit = Math.max(1, Math.floor(LIST_H / (size * 1.1 + 51)))
+  const shown = size ?? SIZE_START
+  const fit = Math.max(1, Math.floor(LIST_H / (shown * 1.1 + 51)))
   const pitch = (LIST_H / fit).toFixed(2)
   const tray = msg || (picks.length >= 2 ? `${picks.slice(0, -1).join(', ')} and ${picks[picks.length - 1]}` : '')
   const first = picks[0]
@@ -145,7 +152,7 @@ export default function FontTool() {
 
   return (
     <>
-      <div className="ht-tool ht-fn" ref={root} style={{ '--fs': `${size}px`, '--pitch': `${pitch}px` }}>
+      <div className="ht-tool ht-fn" ref={root} style={{ '--fs': `${shown}px`, '--fp': `${size ?? SIZE_START_PHONE}px`, '--pitch': `${pitch}px` }}>
       <div className="ht-tb">
         <input
           className="ht-input"
@@ -159,15 +166,23 @@ export default function FontTool() {
           placeholder="Type your own words"
         />
         <div className="ht-step" role="group" aria-label="Size">
-          <button type="button" aria-label="Smaller" disabled={size <= SIZE_MIN} onClick={() => step(-SIZE_STEP)}>−</button>
-          <span className="ht-val" role="status" aria-label={`Size ${size} pixels`}>{size}px</span>
-          <button type="button" aria-label="Larger" disabled={size >= SIZE_MAX} onClick={() => step(SIZE_STEP)}>+</button>
+          <button type="button" aria-label="Smaller" disabled={shown <= SIZE_MIN} onClick={() => step(-SIZE_STEP)}>−</button>
+          <span className="ht-val" role="status" aria-label={`Size ${shown} pixels`}>{shown}px</span>
+          <button type="button" aria-label="Larger" disabled={shown >= SIZE_MAX} onClick={() => step(SIZE_STEP)}>+</button>
         </div>
       </div>
 
       <div className="ht-fn-cat">
         <Radios label="Category" items={CATS} value={cat} onPick={pickCat} />
       </div>
+      {/* Phone: the five category chips become one choice. */}
+      <span className="ht-selw ht-selw--cat">
+        <label htmlFor="ht-fn-cat-p">Category</label>
+        <select id="ht-fn-cat-p" className="ht-sel" value={cat} onChange={(e) => pickCat(Number(e.target.value))}>
+          {CATS.map((c, i) => <option key={c} value={i}>{c}</option>)}
+        </select>
+        <svg className="ht-chev" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d={CHEVRON} /></svg>
+      </span>
 
       {!compare && (
         <ul className="ht-fn-list" aria-label="Font families">
@@ -226,9 +241,49 @@ export default function FontTool() {
 
       <div className="ht-fn-tray">
         <p className="ht-fn-trn" role="status" data-empty={!tray}>{tray}</p>
-        {picks.length >= 2 && <button type="button" className="ht-btn" onClick={toggleCompare}>{compare ? 'Back to list' : 'Side by side'}</button>}
-        <Link className="ht-btn" to={route('font-pair')}>Build a font pair</Link>
+        {picks.length >= 2 && <button type="button" className="ht-btn ht-chip" aria-pressed={compare} onClick={toggleCompare}>Side by side</button>}
+        <Link className="ht-btn ht-fn-fp" to={route('font-pair')}>Build a font pair</Link>
       </div>
+
+      {/* Phone: the words, the size and the comparison become one control under a three-way choice. */}
+      <Well label="What the Font Gallery can do" items={PHONE_MODES} value={mode} onPick={setMode}>
+        {mode === 0 && (
+          <input
+            className="ht-pin ht-grow"
+            type="text"
+            aria-label="Your words"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={72}
+            spellCheck="false"
+            autoComplete="off"
+            placeholder="Type your own words"
+          />
+        )}
+        {mode === 1 && (
+          <>
+            <span className="ht-end" aria-hidden="true">Aa</span>
+            <input
+              className="ht-rng"
+              type="range"
+              min={SIZE_MIN}
+              max={SIZE_MAX}
+              step={1}
+              value={size ?? SIZE_START_PHONE}
+              aria-label="Sample size"
+              aria-valuetext={`${size ?? SIZE_START_PHONE} pixels`}
+              onChange={(e) => setSize(Number(e.target.value))}
+            />
+            <span className="ht-end ht-end--big" aria-hidden="true">Aa</span>
+          </>
+        )}
+        {mode === 2 && (
+          <>
+            <p className="ht-fn-trn">{tray || 'Pick two or three families with the plus.'}</p>
+            <button type="button" className="ht-btn ht-chip" aria-pressed={compare} disabled={picks.length < 2} onClick={toggleCompare}>Side by side</button>
+          </>
+        )}
+      </Well>
       </div>
 
       <ToolLink
