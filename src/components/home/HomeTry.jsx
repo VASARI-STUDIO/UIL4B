@@ -6,7 +6,8 @@ import { TOOL_COUNT, numberWord } from '../spectrum/spectrumFacts'
 import { COLOUR_SYSTEMS, FREE_COLOUR_SYSTEMS } from '../../config/colourSystems'
 import { ICON_PACK_TIERS } from '../../data/iconPackTiers'
 import PaletteTool from './try/PaletteTool'
-import OpenOnlyTool from './try/OpenOnlyTool'
+import IconTool from './try/IconTool'
+import FontTool from './try/FontTool'
 import ConverterTool from './try/ConverterTool'
 import '../../styles/pages/home-try.css'
 
@@ -34,6 +35,7 @@ const TOOLS = [
   {
     id: 'palette',
     name: 'Palette Builder',
+    short: 'Palette',
     lead: 'Build a full palette from one colour, with tints, shades and accessible pairings.',
     next: `Your five colours open in the full tool, ready to build on. Pull a palette from a photo, try ${numberWord(FREE_SYSTEMS)} colour systems free and ${numberWord(PRO_SYSTEMS)} more with Pro, and grow it further.`,
     body: <PaletteTool />,
@@ -41,20 +43,23 @@ const TOOLS = [
   {
     id: 'icons',
     name: 'Icon Library',
+    short: 'Icons',
     lead: 'A searchable library of the popular open-source icon packs.',
     next: `In the full tool, search for the same icon, flip it, rotate it and copy it as SVG, or paste in your own. A free account opens ${numberWord(FREE_PACKS)} packs; Pro opens ${numberWord(PRO_PACKS)} more, with brand logos, flags and emoji.`,
-    body: <OpenOnlyTool toolId="icons" label="Icon Library" line="Search the full library for bike, map pin, clock and more." />,
+    body: <IconTool />,
   },
   {
     id: 'font-gallery',
     name: 'Font Gallery',
+    short: 'Fonts',
     lead: 'The Google Fonts catalogue, set in your own words with live specimens.',
     next: 'Open a family in the full tool to see every weight and three suggested pairings, and to copy its import URL. Send it on to Font Pair to choose a heading and body.',
-    body: <OpenOnlyTool toolId="font-gallery" label="Font Gallery" line="Set Archivo and IBM Plex Sans, or any family, in your own words." />,
+    body: <FontTool />,
   },
   {
     id: 'file-converter',
     name: 'File Converter',
+    short: 'Converter',
     lead: 'Convert and compress images and video.',
     // The photo carries over because the converter hands the chosen file to the full tool.
     next: 'Your own photo carries over, ready to convert. In the full tool you can convert many images at once, build animations and edit video. Converting needs no account; downloading needs a free one.',
@@ -169,7 +174,8 @@ export default function HomeTry() {
                     aria-controls={`ht-s-${i}`}
                     onClick={() => go(i)}
                   >
-                    {t.name}
+                    {/* Phones have a quarter of the width each, so they read the short name. */}
+                    <span data-l>{t.name}</span><span data-s>{t.short}</span>
                   </button>
                   {/* The same text is the tool's own description (aria-describedby), so it is read once. */}
                   <div className="ht-acc" aria-hidden="true">
@@ -196,7 +202,8 @@ export default function HomeTry() {
                 onFocus={() => onStageFocus(i)}
                 onKeyDown={(e) => onStageKey(e, i)}
               >
-                <h3 className="ht-h3" id={`ht-h3-${i}`}>{t.name}</h3>
+                <h3 className="ht-h3" id={`ht-h3-${i}`}><span data-l>{t.name}</span><span data-s>{t.short}</span></h3>
+                {/* On phones the lead sits under the name and the next-step text under the link. */}
                 <div className="ht-d ht-info" id={`ht-d-${i}`}><p className="ht-lead">{t.lead}</p><p className="ht-next">{t.next}</p></div>
                 <div className="ht-fr">{t.body}</div>
               </article>
