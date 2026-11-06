@@ -34,7 +34,10 @@ const TOOLS = [
     title: 'Font Pair',
     output: '.fpr-page .fpr-specimen',
     // A phone opens on the specimen (it is the first thing in the DOM), so the
-    // default rule applies: the output starts on the first screen.
+    // default rule applies: the output starts on the first screen. At 768 the
+    // two family cards and the preview text lead (the panel sits above the
+    // specimen until 1024), so the first screen must hold the cards themselves.
+    outputAt: { 768: '.fpr-page .fpr-fams' },
   },
   {
     route: '/create/type-scale',

@@ -1,0 +1,228 @@
+/* font-pair-board.css — Font Pair's surface language, loaded after font-pair.css.
+ *
+ * A control is a fill, never an outline. The specimen ground (Dark/Light)
+ * flips the specimen only; the page chrome keeps the app's theme. Sample-brand
+ * colours live on the specimen only, never on the page chrome. */
+
+.fpr-page, .fpr-sheet-layer {
+  --fpr-fill: color-mix(in srgb, var(--t0) 5%, var(--bg-0));
+  --fpr-fill-2: color-mix(in srgb, var(--t0) 8%, var(--bg-0));
+  --fpr-sel: color-mix(in srgb, var(--t0) 14%, var(--bg-0));
+  --fpr-rule: color-mix(in srgb, var(--t0) 8%, transparent);
+}
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+.fpr-page .tl-btn, .fpr-page .tl-pill, .fpr-page .svt-trigger, .fpr-page .typ-picker-clear, :is(.fpr-page, .fpr-sheet) .fpr-input {
+  border: 0;
+  background: var(--fpr-fill);
+}
+.fpr-page .tl-pill[aria-pressed="true"], .fpr-page .tl-pill[aria-selected="true"], :is(.fpr-page, .fpr-sheet) .fpr-lock[aria-pressed="true"] { background: var(--fpr-sel); color: var(--t0); }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .tl-btn, :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-input, .fpr-page .fpr-dock .svt-trigger { background: var(--fpr-fill-2); }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-head .fpr-wand { background: transparent; }
+:is(.fpr-page, .fpr-sheet) .fpr-wmenu { flex: none; font-variant-numeric: tabular-nums; }
+/* The one ink pill: Copy CSS. */
+.fpr-page .fpr-copy-primary { border: 0; background: var(--t0); color: var(--bg-0); }
+.fpr-page .fpr-copy-primary:disabled { opacity: .5; }
+
+/* ── Panel: one surface, one hairline between its sections ───────────────── */
+:is(.fpr-page, .fpr-sheet) .fpr-fam, :is(.fpr-page, .fpr-sheet) .fpr-text, .fpr-page .fpr-delivery { border: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam + .fpr-fam, :is(.fpr-page, .fpr-sheet) .fpr-text, :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-suggest { border-top: 1px solid var(--fpr-rule); }
+:is(.fpr-page, .fpr-sheet) .fpr-fam + .fpr-fam { border-left: 0; }
+@media (min-width: 1024px) { .fpr-page .fpr-config { overscroll-behavior: auto; } }
+
+/* Suggestions sit inside the panel as rows, no card and no rule between them. */
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-suggest { margin: 0; padding: 16px 16px 8px; gap: 8px; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-section-head h2 { font-size: 13px; font-weight: 500; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-suggest-grid { display: grid; gap: 2px; margin: 0 -8px; border: 0; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card { border: 0; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-apply { padding: 12px; border-radius: 8px; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-head { font-size: 20px; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-cta { font-size: 14px; font-weight: 500; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-apply[aria-pressed="true"] { background: var(--fpr-sel); }
+
+/* ── Dock: the status line, then the save pill ───────────────────────────── */
+.fpr-page .fpr-dock-note { font-size: 12px; line-height: 16px; }
+
+/* ── The specimen surface and its ground ─────────────────────────────────── */
+.fpr-page .fpr-specimen {
+  --fpr-sbg: #0F1012; --fpr-sfg: #EFEEEA; --fpr-s72: rgba(239, 238, 234, .72); --fpr-s62: rgba(239, 238, 234, .62);
+  min-height: 0;
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--fpr-sbg);
+  color: var(--fpr-sfg);
+  overflow: hidden;
+}
+.fpr-page .fpr-specimen[data-ground="l"] { --fpr-sbg: #EFEEEA; --fpr-sfg: #0B0C0E; --fpr-s72: rgba(11, 12, 14, .72); --fpr-s62: rgba(11, 12, 14, .66); }
+.fpr-page .fpr-specimen .fpr-h1, .fpr-page .fpr-specimen .fpr-h2, .fpr-page .fpr-specimen .fpr-glyphs { color: var(--fpr-sfg); }
+.fpr-page .fpr-specimen .fpr-lede, .fpr-page .fpr-specimen .fpr-body { color: var(--fpr-s72); }
+.fpr-page .fpr-specimen--street { padding: 0; background: #E6E4DE; }
+.fpr-page .fpr-specimen--street[data-ground="l"] .fpr-street-page { background: #FFFFFF; }
+.fpr-page .fpr-street-photo picture { display: contents; }
+@media (min-width: 768px) { .fpr-page .fpr-specimen { padding: 40px; } .fpr-page .fpr-specimen--street { padding: 0; } }
+
+/* ── The Kerbside page (Article): drawn, nothing on it is a control ──────── */
+.fpr-page .fpr-page-sample {
+  --pg-fg: #1A1A1A; --pg-soft: #3A3936; --pg-quiet: #6B6A66; --pg-rule: #E6E4DE;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #FFFFFF;
+  color: var(--pg-fg);
+  cursor: default;
+}
+.fpr-page .fpr-specimen[data-ground="d"] .fpr-page-sample { --pg-fg: #FFFFFF; --pg-soft: #D4D2CC; --pg-quiet: #A8A6A0; --pg-rule: rgba(255, 255, 255, .16); background: #262628; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); }
+.fpr-page .fpr-page-sample .fpr-h1, .fpr-page .fpr-page-sample .fpr-h2 { color: var(--pg-fg); }
+.fpr-page .fpr-page-sample .fpr-lede, .fpr-page .fpr-page-sample .fpr-body { color: var(--pg-soft); }
+.fpr-page .fpr-pg-masthead { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 56px; padding: 0 20px; border-bottom: 1px solid var(--pg-rule); font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 14px; line-height: 20px; color: var(--pg-soft); }
+.fpr-page .fpr-pg-word { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; line-height: 24px; font-weight: clamp(500, calc(var(--fpr-b-fw) + 200), 700); letter-spacing: -.01em; color: var(--pg-fg); }
+.fpr-page .fpr-pg-nav { display: none; gap: 28px; white-space: nowrap; color: var(--pg-quiet); user-select: none; pointer-events: none; }
+.fpr-page .fpr-plate--page { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 4px 8px; font-size: 12px; line-height: 16px; white-space: nowrap; pointer-events: none; user-select: none; }
+.fpr-page .fpr-pg-body { padding: 32px 20px 28px; }
+.fpr-page .fpr-page-sample .fpr-h1 { max-width: 9em; margin: 0; line-height: .95; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.fpr-page .fpr-hs { display: block; }
+.fpr-page .fpr-page-sample .fpr-lede { max-width: 34em; margin: 20px 0 0; font-size: 16px; line-height: 24px; }
+.fpr-page .fpr-pg-cta { display: flex; margin: 24px 0 0; pointer-events: none; user-select: none; }
+.fpr-page .fpr-pg-cta span { display: inline-flex; align-items: center; height: 48px; padding: 0 24px; border-radius: 4px; background: #FF5A1F; color: #1A1A1A; font-family: var(--fpr-b-ff); font-size: 16px; font-weight: var(--fpr-b-btn, 600); line-height: 1; }
+.fpr-page .fpr-pg-section { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--pg-rule); }
+.fpr-page .fpr-pg-section .fpr-h2 { margin: 0; }
+.fpr-page .fpr-pg-section .fpr-body { max-width: 36em; margin-top: 12px; }
+@media (min-width: 768px) {
+  .fpr-page .fpr-pg-masthead { min-height: 64px; padding: 0 40px; }
+  .fpr-page .fpr-pg-nav { display: flex; }
+  .fpr-page .fpr-pg-body { padding: 56px 40px 48px; }
+  .fpr-page .fpr-page-sample .fpr-lede { font-size: 20px; line-height: 30px; }
+}
+
+/* ── Product page: the track-a-rider screen. Sample prices stay as drawn ─── */
+.fpr-page .fpr-product { padding: 8px 0; }
+.fpr-page .fpr-pp-label { margin: 0; font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 13px; line-height: 18px; color: var(--fpr-s62); }
+.fpr-page .fpr-pp-status { display: inline-flex; align-items: center; height: 28px; margin-top: 16px; padding: 0 12px; border-radius: 999px; background: #FF5A1F; color: #1A1A1A; font-family: var(--fpr-b-ff); font-size: 13px; font-weight: 600; line-height: 1; }
+.fpr-page .fpr-product .fpr-h1 { margin-top: 20px; }
+.fpr-page .fpr-product .fpr-lede { margin-top: 0; }
+.fpr-page .fpr-pp-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 32px 0 0; }
+.fpr-page .fpr-pp-stats dt { font-family: var(--fpr-h-ff); font-weight: var(--fpr-h-fw); font-size: clamp(22px, 5vw, 32px); line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--fpr-sfg); }
+.fpr-page .fpr-pp-stats dd { margin: 4px 0 0; font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 15px; line-height: 22px; color: var(--fpr-s72); }
+.fpr-page .fpr-product-actions { pointer-events: none; user-select: none; }
+.fpr-page .fpr-product-actions span { border-radius: 4px; }
+.fpr-page .fpr-product-primary { background: #FF5A1F; color: #1A1A1A; }
+.fpr-page .fpr-product-secondary { border: 0; box-shadow: inset 0 0 0 1.5px var(--fpr-sfg); color: var(--fpr-sfg); }
+
+/* ── Family card: the name in its face, the weight menu beside it ───────────
+   One row, so the phone sheet matches the panel; the old stacked phone rule in
+   font-pair.css is overridden here. */
+:is(.fpr-page, .fpr-sheet) .fpr-fam-row { flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 12px; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-name { flex: 1 1 auto; min-width: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-head .fpr-label { flex: none; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-lock { margin-inline-start: -10px; }
+
+/* ── Phone: the family sheet ─────────────────────────────────────────────────
+   Portalled to <body>, so it carries its own scope. The sheet's title names the
+   family, so the card's label is kept for assistive tech only. */
+.fpr-sheet .fpr-fam { padding: 8px 4px 16px; }
+.fpr-sheet .fpr-fam-head .fpr-label {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* Browse opens from inside the sheet; the font browser (z 120) would sit under the
+   sheet layer (z 140) and its tiles could not be pressed. */
+html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
+/* The sheet reads name, kind, then one row of actions with the weight beside them;
+   Lock shares the kind's row at the end. The card's own wrappers drop out of the
+   box tree so its parts sit on one grid, in their DOM (and focus) order. */
+.fpr-sheet .fpr-fam { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.fpr-sheet .fpr-fam-head, .fpr-sheet .fpr-fam-row, .fpr-sheet .fpr-fam-foot { display: contents; }
+.fpr-sheet .fpr-fam-name { grid-area: 1 / 1 / 2 / -1; }
+.fpr-sheet .fpr-fam-meta { grid-area: 2 / 1 / 3 / -1; }
+.fpr-sheet .fpr-lock { grid-area: 2 / 1 / 3 / -1; justify-self: end; margin-inline-start: 0; }
+.fpr-sheet .fpr-fam-acts { grid-area: 3 / 1 / 4 / 2; display: flex; gap: 8px; }
+.fpr-sheet .fpr-wmenu { grid-area: 3 / 2 / 4 / 3; }
+.fpr-sheet .fpr-suggest { padding: 16px 4px 8px; }
+.fpr-sheet .fpr-suggest-grid { margin: 0 -8px; }
+
+/* ── Suggestions: compact rows, one reason line per group ────────────────── */
+:is(.fpr-page, .fpr-sheet) .fpr-sug-group { display: grid; gap: 8px; min-width: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-sug-group + .fpr-sug-group { margin-top: 8px; }
+:is(.fpr-page, .fpr-sheet) .fpr-reason { margin: 0; max-width: 62ch; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-apply { gap: 2px; padding: 10px 12px; background: var(--fpr-fill); }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-line { margin-top: 0; align-items: center; }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-name { flex: 1 1 auto; font-family: var(--font); font-weight: 500; font-size: 13px; line-height: 16px; color: var(--tl-dim); }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-cta { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; line-height: 16px; font-weight: 500; color: var(--tl-ink); }
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-text { overflow: hidden; font-size: 18px; line-height: 24px; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-card-apply:hover:not([aria-pressed="true"]) { background: var(--fpr-fill-2); }
+}
+
+/* A disclosure row: the label left, a chevron that turns when it opens. */
+:is(.fpr-page, .fpr-sheet) .fpr-disc {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; margin-top: 8px; padding: 0 4px 0 2px;
+  border: 0; background: transparent; color: var(--tl-ink); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+:is(.fpr-page, .fpr-sheet) .fpr-chev { flex: none; color: var(--tl-dim); transition: transform .15s var(--tl-ease, ease-out); }
+:is(.fpr-page, .fpr-sheet) .fpr-disc[aria-expanded="true"] .fpr-chev,
+.fpr-page .fpr-delivery[open] > summary .fpr-chev { transform: rotate(180deg); }
+
+/* ── Handoff: a tonal pill with a chevron, the code behind it ────────────── */
+.fpr-page .fpr-delivery > summary::after { content: none; }
+.fpr-page .fpr-delivery > summary { min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--fpr-fill); font-weight: 500; }
+.fpr-page .fpr-delivery > .fpr-hint { margin: 12px 4px 10px; }
+
+/* ── Stage head: presets, the preview field, then the pair line ──────────── */
+.fpr-page .fpr-input--stage { flex: 1 1 200px; width: auto; max-width: 360px; height: 40px; padding-inline: 16px; border-radius: 999px; background: var(--fpr-fill); font-size: 14px; }
+.fpr-page .fpr-pair { margin-left: auto; }
+
+/* ── Phone: family rows under the stage, four presets across the row ─────── */
+.fpr-page .fpr-fampair { display: grid; padding: 0 16px; border-radius: 16px; background: var(--fpr-fill); }
+.fpr-page .fpr-frow {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 0; border: 0; background: transparent;
+  color: var(--tl-ink); font: inherit; text-align: start; cursor: pointer; transition: transform .12s var(--tl-ease, ease-out);
+}
+.fpr-page .fpr-frow + .fpr-frow { box-shadow: inset 0 1px 0 var(--fpr-rule); }
+.fpr-page .fpr-frow:active { transform: scale(.99); }
+.fpr-page .fpr-frow-t { flex: 1 1 auto; min-width: 0; display: grid; }
+.fpr-page .fpr-frow-n { overflow: hidden; font-family: var(--fpr-fam-ff, var(--font)); font-weight: var(--fpr-fam-fw, 400); font-size: 18px; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; }
+.fpr-page .fpr-frow-w { flex: none; font-family: var(--mono, monospace); font-size: 14px; font-variant-numeric: tabular-nums; color: var(--tl-dim); }
+.fpr-page .fpr-frow-chev { flex: none; color: var(--tl-dim); }
+@media (max-width: 767px) {
+  .fpr-page .fpr-stage-head { display: block; }
+  .fpr-page .fpr-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; width: 100%; padding: 2px; border-radius: 999px; background: var(--fpr-fill); }
+  .fpr-page .fpr-presets .tl-pill { min-width: 0; padding-inline: 4px; justify-content: center; border-radius: 999px; background: transparent; font-size: 14px; font-weight: 500; }
+  .fpr-page .fpr-presets .tl-pill.is-on { background: var(--fpr-sel); }
+}
+
+/* ── Phone dock: Heading and Body pills, Save, Copy CSS ──────────────────── */
+.fpr-page .fpr-pill {
+  flex: 1 1 0; min-width: 0; height: 44px; padding: 0 8px 0 12px; border: 0; border-radius: 999px; background: var(--fpr-fill-2);
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; color: var(--tl-ink); font: inherit; text-align: start; cursor: pointer;
+  transition: transform .12s var(--tl-ease, ease-out);
+}
+.fpr-page .fpr-pill:active { transform: scale(.97); }
+.fpr-page .fpr-pill-l { font-size: 12px; line-height: 14px; color: var(--tl-dim); }
+.fpr-page .fpr-pill-n { display: block; max-width: 100%; overflow: hidden; font-family: var(--fpr-fam-ff, var(--font)); font-weight: var(--fpr-fam-fw, 400); font-size: 14px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 767px) {
+  .fpr-page .fpr-dock .fpr-copy-primary { margin-left: 0; flex: none; }
+  .fpr-page .fpr-dock-save { flex: none; }
+  /* Save is the bookmark alone on a phone, so both family pills keep room for a name.
+     The label stays in the DOM as the button's name. */
+  .fpr-page .fpr-dock .svt-trigger { width: 44px; min-width: 44px; padding: 0; justify-content: center; }
+  .fpr-page .fpr-dock .svt-trigger .svt-trigger-label {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+/* At 359px and below the row cannot hold four items: Save lives in More. */
+@media (max-width: 359px) {
+  .fpr-page .fpr-dock-save { display: none; }
+  .fpr-page .fpr-pill { padding-inline: 10px 6px; }
+}
+
+/* Nothing in the page scrolls sideways. */
+.fpr-page .fpr-grid, .fpr-page .fpr-output, .fpr-page .fpr-stage { min-width: 0; max-width: 100%; }
+
+/* ── More sheet (portalled): the preview field and Save ──────────────────── */
+.tl-sheet-layer .fpr-more-preview { display: grid; gap: 8px; padding: 8px 4px 12px; }
+.tl-sheet-layer .fpr-more-preview .fpr-label { color: var(--tl-dim); font-size: 13px; }
+.tl-sheet-layer .fpr-more-preview .fpr-input { width: 100%; min-width: 0; height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--t0) 8%, var(--card)); color: var(--tl-ink); font: inherit; font-size: 16px; }
+.tl-sheet-layer .fpr-more-preview .fpr-hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
+.tl-sheet-layer .fpr-more-save { padding: 4px; }
+.tl-sheet-layer .fpr-more-save .svt-wrap { width: 100%; }
+.tl-sheet-layer .fpr-more-save .svt-trigger { width: 100%; justify-content: center; min-height: 44px; }
