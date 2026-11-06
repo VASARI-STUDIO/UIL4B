@@ -231,7 +231,7 @@ test.describe('premium homepage', () => {
     expect(lede, 'the bench lede no longer states the tool count the tree gives')
       .toContain(`${numberWord(TOOL_COUNT)} tools`)
 
-    const bench = page.locator('#bench')
+    const bench = page.locator('#bookmarks')
     await bench.scrollIntoViewIfNeeded()
     await expect(page.locator('.sp-panel[data-panel]')).toHaveCount(4)
     for (const [name, href] of [

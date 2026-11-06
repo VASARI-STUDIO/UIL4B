@@ -244,7 +244,7 @@ for (const [width, height, touch] of [[1440, 900, false], [390, 844, true]]) {
       await show(page, 1)
       await waitShown(page, 1, (await tabId(page, 0)))
       const before = {
-        next: await docTop(page, '#discover'),
+        next: await docTop(page, '#examples'),
         card: await card(page, 1).evaluate((el) => [el.offsetWidth, el.offsetHeight]),
         plate: await card(page, 1).locator('.sp-plate').evaluate((el) => [el.offsetWidth, el.offsetHeight]),
         height: await page.evaluate(() => document.scrollingElement.scrollHeight),
@@ -258,7 +258,7 @@ for (const [width, height, touch] of [[1440, 900, false], [390, 844, true]]) {
         }
         await waitShown(page, 1, (await tabId(page, i)))
         await twoFrames(page)
-        expect(await docTop(page, '#discover'), `the next section moved after switching to tab ${i + 1} by ${how}`).toBeCloseTo(before.next, 0)
+        expect(await docTop(page, '#examples'), `the next section moved after switching to tab ${i + 1} by ${how}`).toBeCloseTo(before.next, 0)
         expect(await card(page, 1).evaluate((el) => [el.offsetWidth, el.offsetHeight]), 'the card resized').toEqual(before.card)
         expect(await card(page, 1).locator('.sp-plate').evaluate((el) => [el.offsetWidth, el.offsetHeight]), 'the plate resized').toEqual(before.plate)
       }
@@ -304,13 +304,13 @@ test.describe("card 3's radio group", () => {
     await go(page, '/')
     await show(page, 2)
     await waitShown(page, 2, (await projectId(page, 0)))
-    const next = await docTop(page, '#discover')
+    const next = await docTop(page, '#examples')
     const box = await card(page, 2).evaluate((el) => [el.offsetWidth, el.offsetHeight])
     for (const i of [1, 2, 0]) {
       await radios(page).nth(i).click()
       await waitShown(page, 2, (await projectId(page, i)))
       await twoFrames(page)
-      expect(await docTop(page, '#discover'), `the next section moved after choosing project ${i + 1}`).toBeCloseTo(next, 0)
+      expect(await docTop(page, '#examples'), `the next section moved after choosing project ${i + 1}`).toBeCloseTo(next, 0)
       expect(await card(page, 2).evaluate((el) => [el.offsetWidth, el.offsetHeight])).toEqual(box)
     }
     await ctx.close()

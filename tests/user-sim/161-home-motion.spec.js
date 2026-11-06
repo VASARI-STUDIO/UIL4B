@@ -252,7 +252,7 @@ async function exercise(page, view) {
   await page.waitForTimeout(1500)
   await scrollThrough(page)
   if (view <= 1000) {
-    await page.locator('#bench').scrollIntoViewIfNeeded()
+    await page.locator('#bookmarks').scrollIntoViewIfNeeded()
     await switchTools(page)
   }
   await page.locator('.sp-chips').scrollIntoViewIfNeeded()
@@ -307,7 +307,7 @@ test('T3 with motion on and a wide window, the same walk does produce the named 
 test('T3 with motion on at 390, the tool switch enters and the tab pill slides', async ({ browser }) => {
   const { ctx, page } = await open(browser, 390)
   await go(page, '/')
-  await page.locator('#bench').scrollIntoViewIfNeeded()
+  await page.locator('#bookmarks').scrollIntoViewIfNeeded()
   const before = await page.evaluate(() => window.__hm.anims.filter((a) => a.name === 'sp-enter').length)
   expect(before, 'the first paint must not run the tool-switch enter').toBe(0)
   const pill = page.locator('.sp-rail-ind')
@@ -358,7 +358,7 @@ for (const view of [1440, 768, 390]) {
     await page.waitForTimeout(1800)
     await scrollThrough(page)
     if (view <= 1000) {
-      await page.locator('#bench').scrollIntoViewIfNeeded()
+      await page.locator('#bookmarks').scrollIntoViewIfNeeded()
       await switchTools(page)
     }
     await page.locator('.sp-chips').scrollIntoViewIfNeeded()
@@ -400,7 +400,7 @@ for (const view of [1440, 768, 390]) {
     const read = () => page.evaluate(() => ({
       doc: document.documentElement.scrollHeight,
       grid: Math.round(document.querySelector('.sp-disc-grid').getBoundingClientRect().height),
-      proof: Math.round(document.querySelector('#index').getBoundingClientRect().top + window.scrollY),
+      proof: Math.round(document.querySelector('#proof').getBoundingClientRect().top + window.scrollY),
     }))
     const start = await read()
     for (const i of [1, 2, 0]) {
