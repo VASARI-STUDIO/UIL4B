@@ -258,6 +258,7 @@ const ALLOWED = {
     '.tsc-page .tsk-tag': 'value',
   },
   'pages/type-scale.css': {
+    '.tsc-page .tsc-dock-ratio-v': 'value',
     '.tsc-page .tsc-row-name': 'token',
     '.tsc-page .tsc-row-num': 'value',
     '.tsc-page .tsc-width-px': 'value',

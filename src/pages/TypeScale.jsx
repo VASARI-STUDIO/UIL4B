@@ -14,7 +14,8 @@ import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont, verifyFontLoaded } from '../utils/googleFonts'
 import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
-import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
+import { lockScroll } from '../utils/scrollLock'
+import { fitTypePreviewSize,typePreviewNeedsFitting } from '../utils/typeScalePreview'
 import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '../utils/fluidType'
 // The shared sheets for the font picker, the catalogue notice, the slider and
 // the loader, then the page's own sheet, scoped under `.tsc-page`.
@@ -255,6 +256,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const ladderRef = useRef(null)
   const pageColRef = useRef(null)
   const sheetRowRef = useRef(null)
+  const dockRatioRef = useRef(null)
+  // Whichever control opened the sheet, so closing it gives focus back there.
+  const sheetOpenerRef = useRef(null)
   const [colW, setColW] = useState(0)
   // The work column's own box, read from the column itself (not the viewport) so
   // the panel beside it is already counted. It decides between the split and
@@ -623,7 +627,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // The settings sheet is non-modal. Opening it brings the ladder up under the
   // toolbar, so the steps stay in view above it.
-  const openSheet = () => {
+  const openSheet = (opener = sheetRowRef.current) => {
+    sheetOpenerRef.current = opener
     setSheetOpen(true)
     requestAnimationFrame(() => ladderRef.current?.scrollIntoView({ block: 'start' }))
   }
@@ -631,8 +636,13 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // rather than falling to <body>.
   const closeSheet = () => {
     setSheetOpen(false)
-    sheetRowRef.current?.focus({ preventScroll: true })
+    sheetOpenerRef.current?.focus({ preventScroll: true })
   }
+  // On a phone the open sheet holds the page still: the sheet scrolls on its own.
+  useEffect(() => {
+    if (!sheetOpen || !phone) return undefined
+    return lockScroll()
+  }, [sheetOpen, phone])
   // Escape closes the open sheet. Escape that belongs to a popup inside it (a
   // list, the font dialog, the Base value field) is left to that popup.
   useEffect(() => {
@@ -641,7 +651,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       if (event.key !== 'Escape' || event.defaultPrevented) return
       if (event.target instanceof Element && event.target.closest('[aria-modal="true"], [role="listbox"], .snapv-input')) return
       setSheetOpen(false)
-      sheetRowRef.current?.focus({ preventScroll: true })
+      sheetOpenerRef.current?.focus({ preventScroll: true })
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -751,8 +761,26 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       {primary}
     </div>
   )
+  // The phone dock: the scale trigger that opens the settings sheet, then Copy.
+  const ratioRec = RATIOS.find(r => r.id === ratioId)
+  const dockRatio = (
+    <button
+      type="button"
+      ref={dockRatioRef}
+      className="tsc-dock-ratio"
+      aria-haspopup="dialog"
+      aria-expanded={sheetOpen}
+      aria-controls="tsc-sheet"
+      aria-label={`${ratioRec?.label || 'Custom ratio'} ${ratio}. Scale, families and fine tuning`}
+      onClick={() => (sheetOpen ? closeSheet() : openSheet(dockRatioRef.current))}
+    >
+      <b>{ratioRec?.label?.replace(/ ratio$/i, '') || 'Custom'}</b>
+      <span className="tsc-dock-ratio-v">{ratio}</span>
+      <ToolIcon name="caret-down" size={14} />
+    </button>
+  )
   const layout = (body) => (
-    <ToolLayout className="tsc-page" back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? primary : toolbarPrimary}>
+    <ToolLayout className="tsc-page" back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? <>{dockRatio}{primary}</> : toolbarPrimary}>
       {body}
     </ToolLayout>
   )

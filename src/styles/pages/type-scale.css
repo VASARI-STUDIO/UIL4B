@@ -542,5 +542,26 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
 @media (max-width: 767px) {
   .tsc-page .tsc-width-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .tsc-page .tsc-width-bar .tsc-width-seg { flex: 1 1 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .tsc-page .tsc-width-btn { justify-content: center; }
+  .tsc-page .tsc-width-btn { justify-content: center; min-width: 0; padding-inline: 6px; white-space: nowrap; }
+  /* The pressed button is a full 44px target on touch. */
+  @media (pointer: coarse) { .tsc-page .tsc-width-btn { min-height: 44px; } }
+}
+
+/* ── The phone dock's scale trigger: opens the settings sheet ────────────── */
+@media (max-width: 767px) {
+  .tsc-page .tl-dock .tsc-dock-ratio {
+    flex: 1 1 0; display: flex; align-items: center; gap: 8px; height: 44px; min-height: 44px; min-width: 0; padding: 0 12px 0 16px;
+    border: 0; border-radius: 999px; background: var(--tl-wash); color: var(--tl-ink);
+    font: 500 14px/20px var(--font); text-align: left; cursor: pointer;
+    transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+  }
+  .tsc-page .tl-dock .tsc-dock-ratio:active { transform: scale(.97); }
+  .tsc-page .tsc-dock-ratio b { flex: 0 1 auto; min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+  .tsc-page .tsc-dock-ratio-v { flex: none; font-family: var(--mono); font-size: 13px; color: var(--tl-dim); }
+  .tsc-page .tsc-dock-ratio svg { flex: none; margin-left: auto; transition: transform 150ms var(--tl-ease); }
+  .tsc-page .tsc-dock-ratio[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .tsc-page .tl-dock .tsc-copy-primary { flex: 0 0 auto; }
+}
+@media (max-width: 359px) {
+  .tsc-page .tsc-dock-ratio-v { display: none; }
 }
