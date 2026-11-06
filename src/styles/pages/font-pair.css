@@ -254,6 +254,12 @@
    scrolls clear of it. On phones it sits on the tab bar, so both are counted. */
 html:has(.fpr-page) { scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 html.has-tabbar:has(.fpr-page) { scroll-padding-bottom: calc(var(--tabbar-h) + 72px + env(safe-area-inset-bottom, 0px)); }
+/* On a phone the toast rides above the dock: the dock's height (10px + a 44px
+   control + 10px + the hairline) is published for the toast's bottom offset in
+   global.css. From 768px the toast's own lift already clears the shorter dock. */
+@media (max-width: 767px) {
+  html:has(.fpr-page .fpr-dock) { --toast-dock: 65px; }
+}
 .fpr-page .fpr-dock-note { flex: 1; margin: 0; font-size: 13px; color: var(--tl-dim); }
 .fpr-page .fpr-dock-save { display: flex; }
 /* Save carries the same 13px label as the tool buttons beside it. */
