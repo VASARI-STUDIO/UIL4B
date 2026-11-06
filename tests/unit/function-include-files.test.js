@@ -254,10 +254,11 @@ test('the api functions import exactly the two internal boards and the Pro expor
   // are the format list, the two Pro document generators and the font coercion that
   // api/_lib/exportDocument.js builds on the server (they are not in the browser
   // bundle at all), and vercel.json bundles them. The export themes' brand-from-project step adds the font
-  // catalogue (fallback list and licence table), the semantic presets, the UI kit foundations and the system roles.
+  // catalogue (fallback list and licence table), the semantic presets, the UI kit foundations and the system roles. The theme export route adds the theme list and its plan gate.
   assert.deepEqual(IMPORTED, [
     'config/exportFormats.js',
     'config/exportTemplates.js',
+    'data/exportThemes.js',
     'data/fallbackFonts.js',
     'data/fontLicences.json',
     'data/moduleBoard.js',

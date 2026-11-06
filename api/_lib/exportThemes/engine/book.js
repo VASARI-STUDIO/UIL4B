@@ -207,9 +207,10 @@ ${bookMarkup(ctx, T)}
 }
 
 // The brand book as a file map: index.html plus assets/ (the brand kit's files and its zip, by relative link).
-// kit is the kit's file map, kitName its folder name, zip the zipped kit as a Buffer.
-export function bookFiles(ctx, T, { kit, kitName, zip }) {
-  const listing = kitListing(ctx, T, kit);
+// kit is the kit's file map, kitName its folder name, zip the zipped kit as a Buffer. outside: false when the PNG and PDF files made
+// outside the engine are not in that zip (the route's), so the book does not list them.
+export function bookFiles(ctx, T, { kit, kitName, zip, outside = true }) {
+  const listing = kitListing(ctx, T, kit, { outside });
   ctx.book = bookData(ctx, listing, { name: `${kitName}.zip`, size: zip.length });
   ctx.mode = { kind: 'files', photoBase: ctx.book.photosBase, fontBase: '' };
   const files = { 'index.html': bookDoc(ctx, T), [`assets/${kitName}.zip`]: zip };

@@ -4,6 +4,7 @@
 // Each content family takes a newspaper page type: colour is the markets page, contrast the weather table, type a front page
 // with its styles labelled in the margin, logo the nameplate with a corrections column, downloads the classifieds.
 import { A, fit, edition } from './helpers.js';
+import { typeToken } from '../../engine/typeToken.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 const hairlineOn = (ctx, hex) => hex.toLowerCase() === ctx.roles.light.surface.toLowerCase();
@@ -123,6 +124,7 @@ function typography(ctx) {
   const B = ctx.brand, F = B.fonts, T = B.type, alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789';
   const fam = { display: 'var(--display)', body: 'var(--body)', chrome: 'var(--chrome)' };
   const S = Object.fromEntries(T.scale.map((s) => [s.token, s]));
+  for (const n of ['nameplate', 'lead']) S[n] ||= typeToken(T.scale, n);  // a project brand has no nameplate or lead token
   const st = (s) => `font-family:${fam[s.face] || fam.body};font-weight:${s.weight};line-height:${s.line};--size:${s.size}px`;
   const an = (s, inner) => `<li class="bk-an"><div class="bk-an__m"><p class="bk-an__t">${A(ctx.cap(s.token))}</p><p class="bk-cap num">${s.size} px, line ${s.line}, weight ${s.weight}</p><p class="bk-cap">${A(s.use)}</p></div><i class="bk-an__l" aria-hidden="true"></i><div class="bk-an__s">${inner}</div></li>`;
   const text = (s, t) => `<p class="bk-an__x" style="${st(s)}">${A(t)}</p>`;

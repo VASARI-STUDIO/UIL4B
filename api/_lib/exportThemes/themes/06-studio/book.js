@@ -160,21 +160,18 @@ function colour(ctx) {
     const rgb = rgbOf(ctx, c.hex), ok = c.oklch || ctx.C.oklchString(c.hex);
     return `<li class="bk-crow"><span class="bk-ix num">${no[c.id]}</span><span class="bk-chip${hairlineOn(ctx, c.hex) ? ' is-hair' : ''}" style="background:${c.hex}" aria-hidden="true"></span><div class="bk-cinfo"><p class="bk-cname">${A(c.name)}</p><p class="bk-tok">--${A(c.tok)}</p></div><dl class="bk-vals"><div><dt>HEX</dt><dd>${c.hex}</dd></div><div><dt>RGB</dt><dd>${rgb}</dd></div><div><dt>OKLCH</dt><dd>${ok}</dd></div></dl><div class="bk-copies">${copyBtn('Copy HEX', c.hex, `${c.name} HEX`)}${copyBtn('Copy RGB', rgb, `${c.name} RGB`)}${copyBtn('Copy OKLCH', ok, `${c.name} OKLCH`)}</div><p class="bk-clands">${A(c.lands)}</p></li>`;
   };
-  const pairKey = (p) => `${p.fg}/${p.bg}`;
+  // The callouts name the sample's colours. A project brand names its colours by role, so each sample id stands for the role it plays there.
+  const SAMPLE_ROLE = { steel: 'panel', white: 'ground', ink: 'text', toolbox: 'action' };
+  const nm = (id) => ctx.byId[id] || (SAMPLE_ROLE[id] ? ctx.colours.find((c) => c.role === SAMPLE_ROLE[id]) : undefined);
+  const sampleId = (id) => Object.keys(SAMPLE_ROLE).find((k) => nm(k) && nm(k).id === id) || id;
+  const pairKey = (p) => `${sampleId(p.fg)}/${sampleId(p.bg)}`;
   const pairAt = { 'ink/white': 'cT', 'soft/white': 'cS', 'quiet/white': 'cQ', 'ink/steel': 'g1', 'soft/steel': 'g2', 'quiet/steel': 'g3', 'white/toolbox': 'cB', 'toolbox/white': 'cL', 'white/ink': 'tt', 'toolbox/ink': 'nb' };
   const placed = ctx.pairs.filter((p) => pairAt[pairKey(p)]);
   const unplaced = ctx.pairs.filter((p) => !pairAt[pairKey(p)]);
   const pairNote = (p, i) => note(pairAt[pairKey(p)], i + 1, `<span class="bk-note__s" style="background:${p.bgHex};color:${p.fgHex}" aria-hidden="true">Aa</span><span class="bk-note__t"><b class="num">${A(p.ratioText)} : 1</b><span>${A(p.use)}</span></span>`, ' bk-note--pair');
   const key = (p) => `<li class="bk-pair${hairlineOn(ctx, p.bgHex) ? ' is-hair' : ''}${p.large ? ' is-large' : ''}${pairAt[pairKey(p)] ? '' : ' is-off'}" style="background:${p.bgHex};color:${p.fgHex}"><span class="bk-pair__r">${A(p.ratioText)} : 1</span><span class="bk-pair__u">${A(p.use)}</span>${p.large ? '' : '<span class="bk-pair__n">Any size</span>'}</li>`;
-  const nm = (id) => ctx.byId[id];
-  const colourNotes = {
-    ...note('g0', no[nm('steel').id], `<b>${A(nm('steel').name)}</b><span>${A(ctx.cap(nm('steel').role))}. ${nm('steel').hex}</span>`),
-    ...note('c0', no[nm('white').id], `<b>${A(nm('white').name)}</b><span>${A(ctx.cap(nm('white').role))}. ${nm('white').hex}</span>`),
-    ...note('cT', no[nm('ink').id], `<b>${A(nm('ink').name)}</b><span>${A(ctx.cap(nm('ink').role))}. ${nm('ink').hex}</span>`),
-    ...note('cS', no.soft, `<b>${A(nm('soft').name)}</b><span>${A(ctx.cap(nm('soft').role))}. ${nm('soft').hex}</span>`),
-    ...note('cQ', no.quiet, `<b>${A(nm('quiet').name)}</b><span>${A(ctx.cap(nm('quiet').role))}. ${nm('quiet').hex}</span>`),
-    ...note('cB', no[nm('toolbox').id], `<b>${A(nm('toolbox').name)}</b><span>${A(ctx.cap(nm('toolbox').role))}. ${nm('toolbox').hex}</span>`),
-  };
+  const named = (key, id) => { const c = nm(id); return c ? note(key, no[c.id], `<b>${A(c.name)}</b><span>${A(ctx.cap(c.role))}. ${c.hex}</span>`) : {}; };  // a brand with no soft or quiet tone leaves that callout off
+  const colourNotes = { ...named('g0', 'steel'), ...named('c0', 'white'), ...named('cT', 'ink'), ...named('cS', 'soft'), ...named('cQ', 'quiet'), ...named('cB', 'toolbox') };
   const pairNotes = Object.assign({}, ...placed.map(pairNote));
   // Offcut has no warning state, so the roles list leaves it out
   const roleKeys = [['surface', 'Surface', 'surface'], ['raised', 'Raised', 'raised'], ['text', 'Text', 'text'], ['quiet', 'Quiet text', 'quiet'], ['border', 'Border', 'edge'], ['action', 'Action', 'action'], ['actionLabel', 'Action label', 'action-label'], ['focus', 'Focus', 'focus']];
