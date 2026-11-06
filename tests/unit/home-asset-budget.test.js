@@ -56,10 +56,10 @@ test('every declared face is served from /fonts, never from a catalogue', () => 
   assert.ok(faces.length >= 2, `expected self-hosted @font-face rules, found ${faces.length}`)
   for (const face of faces) {
     const urls = [...face.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)].map(m => m[1])
-    // 'Switzer Fallback' is the one face with no file: a local() Arial scaled to
-    // Switzer's metrics. It must say local(), so a download cannot hide in it.
-    if (/font-family:\s*'Switzer Fallback'/.test(face)) {
-      assert.deepEqual(urls, [], 'the Switzer fallback must be local() only')
+    // 'Switzer Fallback' and 'Geist Fallback' have no file: a local() Arial scaled to
+    // the real face's metrics. They must say local(), so a download cannot hide in them.
+    if (/font-family:\s*'(Switzer|Geist) Fallback'/.test(face)) {
+      assert.deepEqual(urls, [], 'a metric-matched fallback must be local() only')
       assert.match(face, /src:\s*local\(/)
       continue
     }

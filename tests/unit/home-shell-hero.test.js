@@ -307,3 +307,28 @@ test('only the sales-page URLs get it', () => {
   // own page arrived would be telling a visitor something about the wrong page.
   assert.deepEqual([...HOME_SHELL_ROUTES].sort(), ['/', '/home'])
 })
+
+test('the shell preloads the Geist file the headline and sub-line are set in, once, in CORS mode', () => {
+  const applied = applyHomeShell(read('index.html'))
+  const links = applied.match(/<link[^>]*rel="preload"[^>]*>/g) || []
+  const geist = links.filter((l) => /fonts\/geist-latin\.woff2/.test(l))
+  assert.equal(geist.length, 1, 'exactly one Geist preload in the sales page head')
+  assert.match(geist[0], /as="font"/)
+  assert.match(geist[0], /type="font\/woff2"/)
+  // A font preload without crossorigin mismatches the CORS-mode request and downloads twice.
+  assert.match(geist[0], /crossorigin/)
+  // Applying it to a shell that already carries it adds nothing.
+  assert.equal(applyHomeShell(applied).split('fonts/geist-latin.woff2').length, 2)
+  // The preloaded file is the one the Geist @font-face (latin subset) declares.
+  assert.match(stripCss(read('src/styles/global.css')), /font-family:\s*'Geist';[^}]*url\('\/fonts\/geist-latin\.woff2'\)/)
+  // It belongs to the sales page only: the shared index.html and the generic route shells never carry it.
+  assert.doesNotMatch(read('index.html'), /geist-latin\.woff2/)
+  assert.doesNotMatch(stripJs(read('scripts/prerender.mjs')), /geist-latin/)
+})
+
+test('assertHomeShellApplied fails on a shell whose Geist preload went missing', () => {
+  const applied = applyHomeShell(read('index.html'))
+  assert.doesNotThrow(() => assertHomeShellApplied(applied, 'x'))
+  const without = applied.replace(/<link[^>]*geist-latin\.woff2[^>]*>/, '')
+  assert.throws(() => assertHomeShellApplied(without, 'x'), /Geist preload/)
+})

@@ -95,6 +95,14 @@
 @font-face{font-family:'Switzer';font-style:italic;font-weight:100 900;font-display:swap;src:url('/fonts/switzer/Switzer-VariableItalic.woff2') format('woff2')}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:100 599;font-display:swap;src:local('Arial'),local('Liberation Sans'),local('Helvetica');size-adjust:101%;ascent-override:98%;descent-override:25%;line-gap-override:9%}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:600 900;font-display:swap;src:local('Arial Bold'),local('Arial-BoldMT'),local('Liberation Sans Bold'),local('Helvetica Bold');size-adjust:96%;ascent-override:102.1%;descent-override:26%;line-gap-override:9.4%}
+/* 'Geist Fallback' does for the homepage (--hm-font) what 'Switzer Fallback' does for the
+   rest of the site: a local Arial scaled to Geist's advance widths and line box, so the swap
+   moves neither the glyphs nor the lines. Geist's vertical metrics are hhea 1005 / -295 / 0 on
+   a 1000 upm (OS/2 typo identical, USE_TYPO_METRICS set), divided by the size-adjust because the
+   overrides apply before it. Measured in Chromium at 100px: Geist / Arial is 1.01 at weight 400
+   (the sub-line) and 0.983 at 600 (the headline), hence two faces. */
+@font-face{font-family:'Geist Fallback';font-style:normal;font-weight:100 599;font-display:swap;src:local('Arial'),local('Liberation Sans'),local('Helvetica');size-adjust:101%;ascent-override:99.5%;descent-override:29.2%;line-gap-override:0%}
+@font-face{font-family:'Geist Fallback';font-style:normal;font-weight:600 900;font-display:swap;src:local('Arial Bold'),local('Arial-BoldMT'),local('Liberation Sans Bold'),local('Helvetica Bold');size-adjust:98.3%;ascent-override:102.2%;descent-override:30%;line-gap-override:0%}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 @font-face{font-family:'Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}

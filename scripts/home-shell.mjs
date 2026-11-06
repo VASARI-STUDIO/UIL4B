@@ -119,6 +119,21 @@ export const AFTER_ROOT = '<noscript>'
 export const PREPAINTED_ATTR = 'data-hero-prepainted'
 
 /**
+ * The sales page sets its text in Geist, which no other route uses, so the file
+ * is preloaded in this shell's head and nowhere else. It is one variable file,
+ * so the one preload covers the 600 headline and the 400 sub-line. Without it
+ * the file is only discovered once the stylesheet is parsed, the headline
+ * paints in the fallback face first, and the swap shifts it.
+ *
+ * This lives here, not in the per-route head rewrite in prerender.mjs: `/` is
+ * not in the route matrix (see HOME_SHELL_ROUTES), so a head rewrite keyed on
+ * `/` never ran, and `/home` is a second shell for the same page.
+ * `crossorigin` is required: fonts are fetched in CORS mode, and a preload
+ * without it is downloaded twice.
+ */
+export const HOME_FONT_PRELOAD = '<link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>'
+
+/**
  * The URLs that serve the sales page, and therefore the only shells that get
  * this headline.
  *
@@ -230,7 +245,12 @@ export function applyHomeShell(html) {
       + 'whose headline waits for React.',
     )
   }
-  return opened.slice(0, open) + homeShellRoot() + opened.slice(after)
+  const shelled = opened.slice(0, open) + homeShellRoot() + opened.slice(after)
+  if (shelled.includes(HOME_FONT_PRELOAD)) return shelled
+  if (!shelled.includes('</head>')) {
+    throw new Error('home-shell: could not find </head> to put the Geist preload before.')
+  }
+  return shelled.replace('</head>', `${HOME_FONT_PRELOAD}\n</head>`)
 }
 
 /**
@@ -249,6 +269,7 @@ export function assertHomeShellApplied(html, where) {
     ['the lead', `${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">`],
     ['the highlight', `<span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>`],
     [`${PREPAINTED_ATTR} on <html>`, PREPAINTED_ATTR],
+    ['the Geist preload', HOME_FONT_PRELOAD],
   ]
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)
   if (missing.length) {

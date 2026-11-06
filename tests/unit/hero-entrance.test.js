@@ -215,14 +215,16 @@ test('every authored weight sits inside the variable axis that renders it', () =
   const faces = css.match(/@font-face\{[^}]*\}/g) || []
   assert.ok(faces.length >= 1, 'expected self-hosted @font-face rules')
   for (const f of faces) {
-    // 'Switzer Fallback' is a metric-matched stand-in for the swap period: a
-    // local() Arial with size-adjust and ascent/descent overrides. It has no
-    // file to load, but it still declares a range and swap (the Learn
-    // font-loading table reads every rule and needs both).
-    if (/font-family:\s*'Switzer Fallback'/.test(f)) {
+    // 'Switzer Fallback' and 'Geist Fallback' are metric-matched stand-ins for
+    // the swap period: a local() Arial with size-adjust and ascent/descent/
+    // line-gap overrides. They have no file to load, but they still declare a
+    // range and swap (the Learn font-loading table reads every rule and needs both).
+    if (/font-family:\s*'(Switzer|Geist) Fallback'/.test(f)) {
       assert.match(f, /src:\s*local\(/, 'the fallback must be a local() face, never a download')
       assert.match(f, /size-adjust:/, 'the fallback is only worth having if it is size-adjusted')
       assert.match(f, /ascent-override:/)
+      assert.match(f, /descent-override:/)
+      assert.match(f, /line-gap-override:/)
     }
     const single = /font-family:\s*'Caveat'/.test(f)
     if (single) {

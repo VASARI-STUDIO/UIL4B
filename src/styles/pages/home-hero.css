@@ -63,7 +63,9 @@
 
 .hh-h1 {
   margin: 0;
-  max-width: 20ch;
+  /* 20ch of Geist 600 (its "0" is 0.683em), written in em. ch is read from whichever
+     face is on screen, so a ch width would change when Geist swaps in over the fallback. */
+  max-width: 13.66em;
   font-weight: 600;
   font-size: clamp(40px, 5.8vw, 84px);
   line-height: .98;

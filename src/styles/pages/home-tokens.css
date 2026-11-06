@@ -1,7 +1,7 @@
 /* Homepage spacing tokens. Padding is the only space at a section's top and
    bottom; every section reads these instead of its own numbers. */
 .spectrum {
-  --hm-font: "Geist", system-ui, sans-serif;
+  --hm-font: "Geist", "Geist Fallback", system-ui, sans-serif;
   --section-y: 152px;
   --section-y-join: 136px;
   --section-y-compact: 96px;
