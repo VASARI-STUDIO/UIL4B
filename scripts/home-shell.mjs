@@ -134,6 +134,14 @@ export const PREPAINTED_ATTR = 'data-hero-prepainted'
 export const HOME_FONT_PRELOAD = '<link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>'
 
 /**
+ * index.html preloads Switzer, the face every other route is set in. The sales
+ * page does not use it (its text is Geist), so on this shell the preload would
+ * fetch 11 KB at high priority in the same wave as the stylesheets for a file
+ * nothing paints with. Matched on the href so the rest of the tag can change.
+ */
+export const SWITZER_PRELOAD = /<link\b[^>]*\brel="preload"[^>]*\bhref="[^"]*Switzer-Variable\.woff2"[^>]*>\n?/
+
+/**
  * The URLs that serve the sales page, and therefore the only shells that get
  * this headline.
  *
@@ -173,6 +181,11 @@ export const HOME_SHELL_ROUTES = new Set(['/', '/home'])
  * comes AFTER `<main>` so the skeleton strip flows below the hero instead of
  * pushing it down; the nav inside it is fixed, so where it sits in the tree
  * does not matter.
+ *
+ * The skeleton bars are `<span>`s, not `<i>`s. `<i>` is italic by default, and
+ * an italic box set in Switzer (the `.boot-shell` face) makes the browser fetch
+ * Switzer-VariableItalic.woff2 for a bar with no text in it. The sheet gives
+ * every bar `display:block`, so they draw the same.
  */
 function heroH1() {
   return `<h1 class="hh-h1">${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>${text(SPECTRUM_HERO.tail)}</h1>`
@@ -196,11 +209,11 @@ export function homeShellRoot() {
       <div class="boot-decoration" aria-hidden="true">
         <div class="boot-nav">
           ${logoSvg({ attrs: 'class="boot-mark" aria-hidden="true" focusable="false"' })}
-          <span class="boot-nav-lines"><i class="boot-line"></i><i class="boot-line"></i><i class="boot-line"></i></span>
-          <span class="boot-actions"><i class="boot-action"></i><i class="boot-action"></i></span>
+          <span class="boot-nav-lines"><span class="boot-line"></span><span class="boot-line"></span><span class="boot-line"></span></span>
+          <span class="boot-actions"><span class="boot-action"></span><span class="boot-action"></span></span>
         </div>
         <div class="boot-below">
-          <div class="boot-cards"><i class="boot-card"></i><i class="boot-card"></i><i class="boot-card"></i></div>
+          <div class="boot-cards"><span class="boot-card"></span><span class="boot-card"></span><span class="boot-card"></span></div>
         </div>
       </div>
     </div>
@@ -246,11 +259,15 @@ export function applyHomeShell(html) {
     )
   }
   const shelled = opened.slice(0, open) + homeShellRoot() + opened.slice(after)
-  if (shelled.includes(HOME_FONT_PRELOAD)) return shelled
-  if (!shelled.includes('</head>')) {
+  const unswitzered = shelled.replace(SWITZER_PRELOAD, '')
+  if (unswitzered.includes(HOME_FONT_PRELOAD)) return unswitzered
+  if (!unswitzered.includes('</head>')) {
     throw new Error('home-shell: could not find </head> to put the Geist preload before.')
   }
-  return shelled.replace('</head>', `${HOME_FONT_PRELOAD}\n</head>`)
+  // Last in the head, after the stylesheets and the scripts: the first paint
+  // waits on the stylesheets, and this 29 KB font requested ahead of them (or
+  // ahead of the scripts) cost 95 to 170 ms of LCP on the throttled mobile profile.
+  return unswitzered.replace('</head>', `${HOME_FONT_PRELOAD}\n</head>`)
 }
 
 /**
@@ -272,6 +289,9 @@ export function assertHomeShellApplied(html, where) {
     ['the Geist preload', HOME_FONT_PRELOAD],
   ]
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)
+  if (SWITZER_PRELOAD.test(html)) {
+    throw new Error(`home-shell: ${where} still preloads Switzer, which the sales page does not use.`)
+  }
   if (missing.length) {
     throw new Error(
       `home-shell: ${where} was written without ${missing.join(', ')}. The homepage would `
