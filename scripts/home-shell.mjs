@@ -260,14 +260,37 @@ export function applyHomeShell(html) {
   }
   const shelled = opened.slice(0, open) + homeShellRoot() + opened.slice(after)
   const unswitzered = shelled.replace(SWITZER_PRELOAD, '')
-  if (unswitzered.includes(HOME_FONT_PRELOAD)) return unswitzered
+  if (unswitzered.includes(HOME_FONT_PRELOAD)) return stylesheetsBeforeScripts(unswitzered)
   if (!unswitzered.includes('</head>')) {
     throw new Error('home-shell: could not find </head> to put the Geist preload before.')
   }
   // Last in the head, after the stylesheets and the scripts: the first paint
   // waits on the stylesheets, and this 29 KB font requested ahead of them (or
   // ahead of the scripts) cost 95 to 170 ms of LCP on the throttled mobile profile.
-  return unswitzered.replace('</head>', `${HOME_FONT_PRELOAD}\n</head>`)
+  return stylesheetsBeforeScripts(unswitzered.replace('</head>', `${HOME_FONT_PRELOAD}\n</head>`))
+}
+
+// The built head lists the entry script and its ~70 modulepreload links, and
+// only then the stylesheets. The browser asks for them in that order, so on a
+// slow connection the stylesheets the first paint waits on queue behind about
+// 400 KB of script that nothing paints with. Moved ahead of them, LCP fell by
+// about 570 ms on the throttled mobile profile, to just under the 2.5 s budget.
+// The sheets keep their order among themselves (the cascade depends on it) and
+// the entry script stays in the head, so it starts as soon as it did.
+const HEAD_STYLESHEETS = /<link\b[^>]*\brel="stylesheet"[^>]*>\n?/g
+const ENTRY_SCRIPT = /<script\b[^>]*\btype="module"[^>]*\bsrc="\/assets\/[^"]*"[^>]*><\/script>\n?/
+
+/** A no-op on a head with no built entry script (the source index.html). */
+export function stylesheetsBeforeScripts(html) {
+  const headEnd = html.indexOf('</head>')
+  if (headEnd === -1) return html
+  const head = html.slice(0, headEnd)
+  const sheets = head.match(HEAD_STYLESHEETS)
+  if (!sheets || !ENTRY_SCRIPT.test(head)) return html
+  const block = sheets.map((sheet) => (sheet.endsWith('\n') ? sheet : `${sheet}\n`)).join('')
+  // Replacer function, so a `$` in a path is never read as a substitution pattern.
+  const moved = head.replace(HEAD_STYLESHEETS, '').replace(ENTRY_SCRIPT, (script) => block + script)
+  return moved + html.slice(headEnd)
 }
 
 /**
@@ -291,6 +314,12 @@ export function assertHomeShellApplied(html, where) {
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)
   if (SWITZER_PRELOAD.test(html)) {
     throw new Error(`home-shell: ${where} still preloads Switzer, which the sales page does not use.`)
+  }
+  const head = html.slice(0, Math.max(html.indexOf('</head>'), 0))
+  const script = head.match(ENTRY_SCRIPT)
+  const lastSheet = head.lastIndexOf('rel="stylesheet"')
+  if (script && lastSheet > script.index) {
+    throw new Error(`home-shell: ${where} lists the entry script ahead of a stylesheet, which queues the render-blocking CSS behind the JS.`)
   }
   if (missing.length) {
     throw new Error(
