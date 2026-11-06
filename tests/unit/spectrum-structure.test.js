@@ -377,11 +377,13 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   const ids = [...MOUNTED.matchAll(/<(?:section|div)\s+id="([a-z]+)"/g)].map((m) => m[1])
   assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'proof', 'plans', 'start'],
     'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, start in that order')
-  // Every section names its heading, so each anchor lands on something a screen reader can announce.
-  for (const m of PAGE.matchAll(/<section\s+id="([a-z]+)"([^>]*)>/g)) {
+  // Every section below the hero names its heading, so each anchor lands on
+  // something a screen reader can announce. The hero holds the page's h1.
+  for (const m of MOUNTED.matchAll(/<section\s+id="([a-z]+)"([^>]*)>/g)) {
+    if (m[1] === 'top') continue
     const labelled = /aria-labelledby="([^"]+)"/.exec(m[2])
     assert.ok(labelled, `#${m[1]} has no aria-labelledby`)
-    assert.match(PAGE, new RegExp(`<h2[^>]*id="${labelled[1]}"[^>]*tabIndex=\\{-1\\}`), `#${m[1]} points at ${labelled[1]}, which is not a focusable h2`)
+    assert.match(MOUNTED, new RegExp(`<h2[^>]*id="${labelled[1]}"[^>]*tabIndex=\\{-1\\}`), `#${m[1]} points at ${labelled[1]}, which is not a focusable h2`)
   }
   // The final call is its own component, mounted last in <main>; it owns #start.
   const START = stripComments(read('src/components/home/HomeFinalCall.jsx'))

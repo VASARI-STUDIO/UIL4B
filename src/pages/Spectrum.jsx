@@ -11,6 +11,7 @@ import { AutoplayOwner } from '../components/home/AutoplayOwner'
 import HomeFinalCall from '../components/home/HomeFinalCall'
 import PhIcon from '../components/spectrum/PhIcon'
 import HomeProof from '../components/home/HomeProof'
+import HomeShowcase from '../components/home/HomeShowcase'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE: this page is
@@ -93,7 +94,7 @@ export default function Spectrum() {
 
         {/* ── Examples (slot) ─────────────────────────────────────────────── */}
         <section id="examples" aria-labelledby="examples-h" data-slot="examples">
-          <h2 id="examples-h" className="sr-only" tabIndex={-1}>Examples</h2>
+          <HomeShowcase />
         </section>
 
         {/* ── Proof ───────────────────────────────────────────────────────── */}
