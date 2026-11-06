@@ -806,7 +806,6 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 .fg-page .fg-sheet-v { font-size: 13px; color: var(--t1); font-variant-numeric: tabular-nums; }
 .fg-page .fg-sheet-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .fg-page .fg-sheet-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-.fg-page .fg-sheet-pill,
 .fg-page .fg-sheet-btn {
   min-height: 44px;
   padding: 0 20px;
@@ -821,11 +820,42 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
   cursor: pointer;
   transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
 }
-.fg-page .fg-sheet-pill--face { min-height: 52px; font-family: var(--fg-ff, var(--font)); font-size: 18px; font-weight: 400; }
-.fg-page .fg-sheet-pill.is-on { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+/* Filled pills: a resting fill, a lighter ink fill when on, no border. The
+   dark values are the sheet's own; light takes the same steps from the ink. */
+.fg-page .fg-sheet {
+  --fg-pill: #131416;
+  --fg-pill-hover: #1A1B1E;
+  --fg-pill-on: rgba(239, 238, 234, .14);
+  --fg-pill-ink: rgba(239, 238, 234, .86);
+  --fg-pill-on-ink: #EFEEEA;
+  --fg-pill-sub: rgba(239, 238, 234, .62);
+}
+[data-theme="light"] .fg-page .fg-sheet {
+  --fg-pill: color-mix(in srgb, var(--t0) 5%, var(--card));
+  --fg-pill-hover: color-mix(in srgb, var(--t0) 8%, var(--card));
+  --fg-pill-on: color-mix(in srgb, var(--t0) 14%, var(--card));
+  --fg-pill-ink: color-mix(in srgb, var(--t0) 86%, transparent);
+  --fg-pill-on-ink: var(--t0);
+  --fg-pill-sub: color-mix(in srgb, var(--t0) 70%, transparent);
+}
+.fg-page .fg-sheet-pill {
+  min-height: 44px;
+  padding: 0 16px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--fg-pill-ink);
+  background: var(--fg-pill);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard);
+}
+.fg-page .fg-sheet-pill.is-on { color: var(--fg-pill-on-ink); background: var(--fg-pill-on); }
 .fg-page .fg-sheet-btn--primary { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
 @media (hover: hover) {
-  .fg-page .fg-sheet-pill:not(.is-on):hover,
+  .fg-page .fg-sheet-pill:not(.is-on):hover { background: var(--fg-pill-hover); }
   .fg-page .fg-sheet-btn:not(.fg-sheet-btn--primary):not(:disabled):hover { background: var(--hvr); }
   .fg-page .fg-sheet-x:hover { background: color-mix(in srgb, var(--t0) 12%, var(--card)); }
   .fg-page .fg-sheet-btn--primary:hover { background: color-mix(in srgb, var(--t0) 90%, var(--bg-0)); border-color: transparent; }
@@ -1027,9 +1057,8 @@ html[data-reduced-motion="true"] .fg-page .fg-card-copy { transition: opacity 12
   .fg-page .tl-toolbar .fg-filt:not(:has(.fg-filt-badge)) { width: 44px; }
 }
 /* Category pills in the Filters sheet carry their count. */
-.fg-page .fg-sheet-pill--cat { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0 4px; min-height: 52px; line-height: 18px; }
-.fg-page .fg-sheet-pill--cat em { font-style: normal; font-size: 12px; line-height: 14px; font-weight: 400; color: var(--t1); font-variant-numeric: tabular-nums; }
-.fg-page .fg-sheet-pill--cat.is-on em { color: inherit; }
+.fg-page .fg-sheet-pill--cat { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0 4px; min-height: 44px; line-height: 18px; }
+.fg-page .fg-sheet-pill--cat em { font-style: normal; font-size: 12px; line-height: 14px; font-weight: 400; color: var(--fg-pill-sub); font-variant-numeric: tabular-nums; }
 @media (hover: hover) {
   .fg-page .fg-chip[aria-pressed="false"]:hover { background: color-mix(in srgb, var(--t0) 10%, var(--bg-0)); }
 }

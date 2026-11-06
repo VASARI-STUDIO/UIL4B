@@ -90,8 +90,8 @@ const MAX_COMPARE = 3
 // whole list once and never one band on its own.
 const LAYOUTS = {
   wide: { name: 96, floor: 72, grid: 56, band: n => Math.max(160, Math.round(n * 1.1) + 94) },
-  tablet: { name: 64, floor: 48, grid: 40, band: n => Math.max(160, Math.round(n * 1.1) + 94) },
-  phone: { name: 40, floor: 32, grid: 24, band: n => Math.max(112, Math.ceil(n * 1.1) + 68) },
+  tablet: { name: 96, floor: 48, grid: 40, band: n => Math.max(160, Math.round(n * 1.1) + 94) },
+  phone: { name: 48, floor: 32, grid: 24, band: n => Math.max(112, Math.ceil(n * 1.1) + 68) },
 }
 const SIZE_MIN = 24
 const SIZE_MAX = 120
