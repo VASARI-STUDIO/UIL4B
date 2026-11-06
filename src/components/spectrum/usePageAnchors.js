@@ -108,9 +108,11 @@ export function usePageAnchors() {
       window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}#${old}`)
       return old
     }
-    const redirect = () => {
-      const old = rewriteOld()
-      if (old) jumpToSection(old)
+    let cancelArrival = () => {}
+    const arrive = () => {
+      const id = rewriteOld() || decodeHash(window.location.hash)
+      cancelArrival()
+      if (id) cancelArrival = landArrivingHash(id)
     }
     const onClick = (e) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
@@ -124,18 +126,17 @@ export function usePageAnchors() {
       jumpToSection(id)
     }
 
-    let cancelArrival = () => {}
-    if (arriving.current) {
-      const id = rewriteOld() || decodeHash(window.location.hash)
-      if (id) cancelArrival = landArrivingHash(id)
-    } else {
-      redirect()
+    if (arriving.current) arrive()
+    else {
+      // History navigation keeps its restored scroll; only an old anchor is fixed.
+      const old = rewriteOld()
+      if (old) jumpToSection(old)
     }
-    window.addEventListener('hashchange', redirect)
+    window.addEventListener('hashchange', arrive)
     document.addEventListener('click', onClick)
     return () => {
       cancelArrival()
-      window.removeEventListener('hashchange', redirect)
+      window.removeEventListener('hashchange', arrive)
       document.removeEventListener('click', onClick)
     }
   }, [])
