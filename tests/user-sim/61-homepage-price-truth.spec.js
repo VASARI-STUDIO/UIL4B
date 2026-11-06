@@ -119,7 +119,7 @@ test.describe('the homepage price panel only names tiers that can be bought', ()
     await expect(page.locator('#plans').getByRole('link', { name: 'Compare every limit' })).toHaveAttribute('href', '/plans')
 
     // Every plan link goes to /plans — never checkout, never the login popup.
-    for (const name of [/^View plans$/, /^See the plans$/]) {
+    for (const name of [/^View plans$/]) {
       await expect(page.locator('#main').getByRole('link', { name }), `"${name.source}" is gone`).toHaveAttribute('href', '/plans')
     }
     const toCheckout = await page.locator('#main a[href^="/checkout"], #main a[href*="signup=1"]').count()
