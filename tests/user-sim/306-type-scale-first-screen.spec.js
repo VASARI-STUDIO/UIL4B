@@ -19,7 +19,7 @@
 // notes. Numbers here are the design spec's (memory/designs/design-2026-11-06-
 // type-scale-28ac352e47.md, section 9), written out by hand, not read from the app.
 import { test, expect } from './base.js'
-import { go, signIn, watch, chooseMenuOption } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { settleTypeScaleView, showTypeScaleCode } from './type-scale-view.js'
 
 const ROUTE = '/create/type-scale'
@@ -229,21 +229,21 @@ test.describe('Type Scale · the view switch and the width menu are one bar', ()
     test.describe(`${width}`, () => {
       test.use({ viewport: { width, height }, ...(touch ? TOUCH : {}) })
 
-      // MUTATION: take the width menu out of `.tsc-view-bar`, or let the bar wrap.
-      test(`${width}px: Scale | Page | Code and Preview width share a top`, async ({ page }) => {
+      // MUTATION: put Preview width back inside `.tsc-view-bar`, or drop it to a menu.
+      test(`${width}px: Preview width is a three-way segment in the page header, above the view switch`, async ({ page }) => {
         watch(page, `someone choosing a view at ${width}px`)
         await go(page, ROUTE)
         expect(await settleTypeScaleView(page)).toBe('switch')
         const tabs = page.locator('.tsc-view-switch')
-        const widthMenu = page.locator('#tsc-width')
+        const seg = page.locator('#tsc-width')
         await expect(tabs).toBeVisible()
-        await expect(widthMenu).toBeVisible()
-        const a = await box(tabs)
-        const b = await box(widthMenu)
-        // Both are in the same bar. Controls of different heights centre on one line, so compare the centres; the tops follow within the height difference.
-        expect(Math.abs((a.y + a.height / 2) - (b.y + b.height / 2)), `${width}px: the switch and the width menu are on different lines`).toBeLessThanOrEqual(2)
-        expect(Math.abs(a.y - b.y), `${width}px: their tops differ by ${Math.abs(a.y - b.y)}px`).toBeLessThanOrEqual(Math.abs(a.height - b.height) / 2 + 2)
-        expect(b.x, 'the width menu is to the right of the switch').toBeGreaterThanOrEqual(a.x + a.width - 1)
+        await expect(seg).toBeVisible()
+        await expect(seg.getByRole('button'), 'Mobile, Tablet, Desktop').toHaveText([/^Mobile\s*375$/, /^Tablet\s*768$/, /^Desktop\s*1440$/])
+        await expect(seg.locator('button[aria-pressed="true"]'), 'one width is pressed').toHaveCount(1)
+        const t = await box(tabs)
+        const s = await box(seg)
+        expect(s.y + s.height, `${width}px: the segment sits above the view switch`).toBeLessThanOrEqual(t.y + 1)
+        await expect(page.locator('.tsc-view-bar .tsc-width-seg'), 'the segment is not in the view bar').toHaveCount(0)
       })
     })
   }
@@ -253,24 +253,19 @@ test.describe('Type Scale · the view switch and the width menu are one bar', ()
 test.describe('Type Scale · weight is a menu', () => {
   test.use({ viewport: { width: 768, height: 1024 } })
 
-  // MUTATION: put the weight pills (`.tsc-weights`) back for either family.
-  test('768px: each family has a weight menu and no row of weight pills', async ({ page }) => {
+  // MUTATION: turn either family's cells back into a menu, or list a weight the family lacks.
+  test('768px: each family has a row of weight cells, and one press restyles the steps', async ({ page }) => {
     watch(page, 'designer choosing a weight')
     await go(page, ROUTE)
     for (const [id, family] of [['#tsc-hweight', 'Heading'], ['#tsc-bweight', 'Body']]) {
-      const trigger = page.locator(id)
-      await expect(trigger, `${family} weight is a menu`).toBeVisible()
-      await expect(trigger).toHaveAttribute('aria-haspopup', 'listbox')
-      await expect(trigger).toContainText('Weight')
+      const cells = page.locator(id)
+      await expect(cells, `${family} weight is a group of cells`).toBeVisible()
+      await expect(cells).not.toHaveAttribute('aria-haspopup', /.*/)
+      await expect(cells.locator('button[aria-pressed="true"]'), `${family}: one weight is pressed`).toHaveCount(1)
+      expect(await cells.getByRole('button').count(), `${family}: Inter's nine weights`).toBe(9)
     }
-    await expect(page.locator('.tsc-weights'), 'no pills for weight').toHaveCount(0)
-    await expect(page.locator('.tsc-weight'), 'no pills for weight').toHaveCount(0)
-    await expect(page.getByRole('group', { name: 'Heading weight' })).toHaveCount(0)
-    await expect(page.getByRole('group', { name: 'Body weight' })).toHaveCount(0)
-
-    // The menu does the job the pills did: Inter lists its weights, and one choice restyles the heading steps.
-    await chooseMenuOption(page, page.locator('#tsc-hweight'), '300')
-    await expect(page.locator('#tsc-hweight')).toContainText('300')
+    await page.locator('#tsc-hweight').getByRole('button', { name: '300 Light' }).click()
+    await expect(page.locator('#tsc-hweight button[aria-pressed="true"]')).toHaveText('300')
     await expect.poll(() => page.locator('.tsc-row-text--heading').first().evaluate((el) => getComputedStyle(el).fontWeight)).toBe('300')
   })
 })
