@@ -323,3 +323,59 @@ html[data-reduced-motion="true"] .fpr-page .fpr-card-apply { transition: none; }
   .fpr-page .fpr-h1 { font-size: clamp(28px, 9vw, 36px); margin-bottom: 8px; }
   .fpr-page .fpr-article .fpr-h2 { display: none; }
 }
+
+/* ── Street: the pair on a photograph ───────────────────────────────────────
+   Sample-brand colours live on this stage only. The photo carries a caption
+   plate in the body face; the heading and the paragraph sit on the page under
+   it. Light ground turns that page white. */
+.fpr-page .fpr-specimen--street { min-height: 0; padding: 0; border-radius: 16px; overflow: hidden; background: #E6E4DE; }
+.fpr-page .fpr-street-photo { position: relative; height: 300px; overflow: hidden; background: #3A3936; }
+.fpr-page .fpr-street-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 62% 30%; outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
+.fpr-page .fpr-plate { position: absolute; padding: 6px 10px; border-radius: 8px; background: rgba(19, 20, 22, .72); color: #EFEEEA; }
+.fpr-page .fpr-plate--cap { left: 12px; bottom: 12px; max-width: calc(100% - 24px); font-family: var(--fpr-b-ff); font-weight: 500; font-size: 14px; line-height: 20px; text-wrap: pretty; }
+.fpr-page .fpr-plate--tag { top: 12px; right: 12px; padding: 4px 8px; font-size: 12px; line-height: 16px; }
+.fpr-page .fpr-street-page { display: grid; gap: 16px; padding: 20px; color: #3A3936; }
+.fpr-page .fpr-street-h {
+  margin: 0;
+  min-height: 2lh;
+  color: #1A1A1A;
+  font-family: var(--fpr-h-ff);
+  font-weight: var(--fpr-h-fw);
+  font-size: 40px;
+  line-height: .95;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.fpr-page .fpr-street-voice { margin: 8px 0 0; color: #1A1A1A; font-family: var(--fpr-b-ff); font-weight: 500; font-size: 13px; line-height: 18px; }
+.fpr-page .fpr-street-p { max-width: 60ch; margin: 0; color: #3A3936; font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 15px; line-height: 24px; text-wrap: pretty; }
+@media (min-width: 768px) {
+  .fpr-page .fpr-street-photo { height: 380px; }
+  .fpr-page .fpr-plate--cap { left: 20px; bottom: 16px; max-width: 190px; font-size: 15px; line-height: 22px; text-wrap: balance; }
+  .fpr-page .fpr-plate--tag { top: 16px; right: 16px; }
+  .fpr-page .fpr-street-page { padding: 24px 32px 28px; }
+  .fpr-page .fpr-street-h { font-size: 56px; }
+  .fpr-page .fpr-street-p { font-size: 16px; line-height: 25px; }
+}
+@media (min-width: 1024px) {
+  .fpr-page .fpr-street-page { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 32px; align-items: start; }
+  .fpr-page .fpr-street-h { font-size: 48px; }
+}
+@media (min-width: 1280px) {
+  .fpr-page .fpr-street-photo { height: 380px; }
+  .fpr-page .fpr-street-page { padding: 24px 40px 28px; column-gap: 40px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+  .fpr-page .fpr-street-h { font-size: 64px; }
+  .fpr-page .fpr-street-p { font-size: 17px; line-height: 27px; }
+}
+@media (max-width: 359px) { .fpr-page .fpr-street-h { font-size: 32px; } }
+
+/* ── The type-tools switcher in the bar ──────────────────────────────────── */
+.fpr-page .tl-item:has(> .ttn) { flex: 0 1 auto; }
+@media (max-width: 767px) {
+  .fpr-page .tl-item:has(> .ttn) { flex: 1 1 0; }
+}
