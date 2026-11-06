@@ -47,9 +47,10 @@ async function openBrowser(page, tool, width) {
       : page.getByRole('button', { name: /^Heading family, .*Change/ }).first()
     await opener.click()
   }
-  // Type Scale opens it from its family picker; Font Pair from the Browse
+  // Type Scale opens it from its family picker on a tablet and up, and from the
+  // Browse icon on the heading family row on a phone; Font Pair from the Browse
   // button on the heading family row.
-  const trigger = tool.name === 'Font Pair'
+  const trigger = tool.name === 'Font Pair' || width < 768
     ? page.getByRole('button', { name: 'Browse heading family' }).first()
     : page.locator('.typ-picker-trigger').first()
   await trigger.click()
