@@ -34,6 +34,12 @@ const SPECTRUM_CSS_PATH = ['src/styles/deferred/spectrum.css', 'src/styles/pages
 if (!SPECTRUM_CSS_PATH) throw new Error('spectrum.css is in neither src/styles/deferred/ nor src/styles/pages/')
 
 const PAGE = stripComments(read('src/pages/Spectrum.jsx'))
+// The page with each mounted homepage section (`<HomeX />`) replaced by its own
+// source, so ids that a section renders itself are read in page order.
+const MOUNTED = PAGE.replace(/<(Home[A-Z]\w*)\s*\/>/g, (tag, name) => {
+  const file = `src/components/home/${name}.jsx`
+  return fs.existsSync(file) ? stripComments(read(file)) : tag
+})
 const FOOTER = stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
 const APP_FOOTER = stripComments(read('src/components/AppFooter.jsx'))
 const WORDS = stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
@@ -55,7 +61,7 @@ const SOURCES = {
   'src/components/spectrum/SpectrumSearch.jsx': stripComments(read('src/components/spectrum/SpectrumSearch.jsx')),
   'src/components/spectrum/PhIcon.jsx': stripComments(read('src/components/spectrum/PhIcon.jsx')),
   'src/components/spectrum/OpenPill.jsx': stripComments(read('src/components/spectrum/OpenPill.jsx')),
-  'src/components/spectrum/SpectrumProof.jsx': stripComments(read('src/components/spectrum/SpectrumProof.jsx')),
+  'src/components/home/HomeProof.jsx': stripComments(read('src/components/home/HomeProof.jsx')),
 }
 
 test('the stripper still works, so every source read below can be trusted', () => {
@@ -162,11 +168,10 @@ test('the word reveal has a visible resting state', () => {
 test('the hero does not wait on a scroll observer to become visible', () => {
   // `[data-reveal]` starts at opacity:0 in global.css. On the fold that would
   // blank the largest paint of the prerendered shell until hydration.
-  const heroTag = /<div\s[^>]*heroLit[^>]*>/.exec(PAGE)
-  assert.ok(heroTag, 'the hero block no longer toggles its own entrance class')
-  assert.ok(!heroTag[0].includes('data-reveal'), 'the hero block has grown a data-reveal attribute')
-  assert.ok(PAGE.includes('data-hero-prepainted'),
-    'Spectrum.jsx no longer checks data-hero-prepainted, so a prepainted headline will animate a second time')
+  const HERO = stripComments(read('src/components/home/HomeHero.jsx'))
+  assert.ok(PAGE.includes('<HomeHero />'), 'the landing no longer renders HomeHero')
+  assert.ok(/<section\s[^>]*id="top"/.test(HERO), 'the hero block is no longer the #top section')
+  assert.ok(!HERO.includes('data-reveal'), 'the hero block has grown a data-reveal attribute')
 })
 
 test('every moving thing has a reduced-motion companion, under both spellings', () => {
@@ -369,8 +374,8 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   // The plan comparison and FAQ live on /plans. The landing is the hero, then
   // bookmarks, try, exports, examples, proof, plans and the final call. Each
   // section's own content is asserted by the test for that section.
-  const ids = [...PAGE.matchAll(/<(?:section|div)\s+id="([a-z]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'plans', 'start'],
+  const ids = [...MOUNTED.matchAll(/<(?:section|div)\s+id="([a-z]+)"/g)].map((m) => m[1])
+  assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'proof', 'plans', 'start'],
     'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, start in that order')
   // Every section names its heading, so each anchor lands on something a screen reader can announce.
   for (const m of PAGE.matchAll(/<section\s+id="([a-z]+)"([^>]*)>/g)) {
@@ -378,11 +383,11 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
     assert.ok(labelled, `#${m[1]} has no aria-labelledby`)
     assert.match(PAGE, new RegExp(`<h2[^>]*id="${labelled[1]}"[^>]*tabIndex=\\{-1\\}`), `#${m[1]} points at ${labelled[1]}, which is not a focusable h2`)
   }
-  // The proof band (#proof, SpectrumProof.jsx) sits between examples and plans.
-  const proofAt = PAGE.indexOf('<SpectrumProof />')
+  // The proof bar (#proof, HomeProof.jsx) sits between examples and plans.
+  const proofAt = PAGE.indexOf('<HomeProof />')
   assert.ok(proofAt > PAGE.indexOf('id="examples"') && proofAt < PAGE.indexOf('id="plans"'),
     'the proof band no longer sits between the examples and the plans')
-  assert.match(stripComments(read('src/components/spectrum/SpectrumProof.jsx')), /<section id="proof"/,
+  assert.match(stripComments(read('src/components/home/HomeProof.jsx')), /<section id="proof"/,
     'the proof band lost the #proof anchor')
   assert.ok(!PAGE.includes('id="discover"'), 'the homepage carries the Discover section again; the footer links to it instead')
   // Landmarks: one banner (the nav), one main from the hero to the final call, one footer.
@@ -399,7 +404,7 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   assert.ok(FOOTER.includes('/discover'), 'the footer no longer links Discover')
   // No word reveal and no scroll-reveal trigger on the page's headings.
   assert.ok(!PAGE.includes('data-sp-reveal') && !PAGE.includes('useSpectrumReveal'), 'the page uses the scroll reveal again')
-  assert.ok(!stripComments(read('src/components/spectrum/SpectrumProof.jsx')).includes('requestAnimationFrame'), 'the proof figures count up again')
+  assert.ok(!stripComments(read('src/components/home/HomeProof.jsx')).includes('requestAnimationFrame'), 'the proof figures count up again (the bar must print them as they are)')
   for (const gone of ['id="pricing"', 'id="faq"', '<table', 'sp-compare', 'sp-plans']) {
     assert.ok(!PAGE.includes(gone), `Spectrum.jsx carries ${gone} again — pricing belongs on /plans`)
   }

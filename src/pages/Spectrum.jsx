@@ -9,7 +9,7 @@ import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import HomeHero from '../components/home/HomeHero'
 import { AutoplayOwner } from '../components/home/AutoplayOwner'
 import PhIcon from '../components/spectrum/PhIcon'
-import SpectrumProof from '../components/spectrum/SpectrumProof'
+import HomeProof from '../components/home/HomeProof'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE: this page is
@@ -95,8 +95,8 @@ export default function Spectrum() {
           <h2 id="examples-h" className="sr-only" tabIndex={-1}>Examples</h2>
         </section>
 
-        {/* ── Proof (slot: the previous band stands here) ─────────────────── */}
-        <SpectrumProof />
+        {/* ── Proof ───────────────────────────────────────────────────────── */}
+        <HomeProof />
 
         {/* ── Plans (slot) ────────────────────────────────────────────────── */}
         <section id="plans" aria-labelledby="plans-h" data-slot="plans">
