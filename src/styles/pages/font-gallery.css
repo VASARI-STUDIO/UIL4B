@@ -206,7 +206,6 @@
 /* ── Touch floors ─────────────────────────────────────────────────────────── */
 
 @media (pointer: coarse) {
-  .fg-page .fg-card-compare,
   .fg-page .fg-detail-close { width: 44px; height: 44px; }
   .fg-page .fg-compare-col-remove { width: 44px; height: 44px; }
   .fg-page .fg-more-btn,
@@ -484,8 +483,10 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 }
 
 /* The pick button: a 36px tonal round on the band's right edge, centred on the
-   name. Its plus and tick cross-fade; picked is a deeper tint, not a ring. */
+   name. Its plus and tick cross-fade; picked is a deeper tint, not a ring.
+   A touch pointer gets 44px, set after the base so it wins. */
 .fg-page .fg-card {
+  --fg-cmp: 36px;
   --fg-chip: color-mix(in srgb, var(--fg-ink) 8%, transparent);
   --fg-chip-h: color-mix(in srgb, var(--fg-ink) 14%, transparent);
   --fg-chip-on: color-mix(in srgb, var(--fg-ink) 20%, transparent);
@@ -494,11 +495,11 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   position: absolute;
   z-index: 3;
   right: var(--fg-padr);
-  top: max(0px, calc(var(--fg-y) + var(--fg-line) / 2 - 18px));
+  top: max(0px, calc(var(--fg-y) + var(--fg-line) / 2 - var(--fg-cmp) / 2));
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: var(--fg-cmp);
+  height: var(--fg-cmp);
   padding: 0;
   color: var(--fg-ink);
   background: var(--fg-chip);
@@ -507,6 +508,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   cursor: pointer;
   transition: background-color 150ms ease, transform 120ms var(--fg-ease);
 }
+@media (pointer: coarse) { .fg-page .fg-card { --fg-cmp: 44px; } }
 .fg-page .fg-card-compare svg { grid-area: 1 / 1; transition: opacity 300ms var(--fg-ease); }
 .fg-page .fg-card-compare .fg-ico-check { opacity: 0; }
 .fg-page .fg-card-compare--on { background: var(--fg-chip-on); }
