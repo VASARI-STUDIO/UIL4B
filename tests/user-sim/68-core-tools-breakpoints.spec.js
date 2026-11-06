@@ -266,7 +266,7 @@ test.describe('/create/palette · Save / export, signed in on a desktop', () => 
   }
 })
 
-for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair', null]]) {
+for (const [route, tab] of [['/create/type-scale', null], ['/create/font-pair', null]]) {
   test(`${route} · at the free cap on a 390px phone the save menu is not cut off above the screen`, async ({ browser }) => {
     // `.svt-menu` opens UPWARD (bottom: calc(100% + 8px)) from a button that
     // sits mid-screen. At the cap the wall makes it 419px tall, and at 390 the
@@ -282,9 +282,9 @@ for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair'
     await go(page, route)
     if (tab) await page.getByRole('tab', { name: tab }).click()
     if (route === '/create/type-scale') {
-      // Type Scale keeps its save in the toolbar (an icon
+      // Type Scale keeps its save in the dock (an icon
       // at 390); the menu it opens is the same bottom sheet.
-      await page.locator('[data-tool-toolbar] .tsc-save').click()
+      await page.locator('.tl-dock').getByRole('button', { name: 'Save to a project' }).click()
     } else {
       const trigger = page.getByRole('button', { name: 'Save to a project' })
       // The fault depends on where the button sits when it is pressed: the menu

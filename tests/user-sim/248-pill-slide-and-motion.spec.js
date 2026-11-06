@@ -124,8 +124,13 @@ const CASES = [
     open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-half-switch') },
   },
   {
-    id: 'type-scale-view', name: 'Type Scale: output view', widths: [390],
-    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-view-switch') },
+    id: 'type-scale-sheet', name: 'Type Scale: sheet Settings and Code', widths: [390],
+    open: async (page) => {
+      // A phone has no page-level views: Code is a tab in the settings sheet.
+      await go(page, '/create/type-scale')
+      await page.locator('.tl-dock .tsc-dock-ratio').click()
+      return page.locator('.tsc-sheet-tabs')
+    },
   },
   {
     id: 'type-scale-join', name: 'Type Scale: how the scales join', widths: WIDTHS,
@@ -133,7 +138,7 @@ const CASES = [
       await go(page, '/create/type-scale')
       if (page.viewportSize().width < 700) {
         // Phones keep the settings in a sheet behind the docked bar's opener.
-        await page.getByRole('button', { name: /^Families, preview text/ }).click()
+        await page.locator('.tl-dock .tsc-dock-ratio').click()
       }
       await page.getByRole('button', { name: 'Fine tuning', exact: true }).click()
       return page.locator('.tsc-bp-mode')

@@ -46,7 +46,9 @@ const TOOLS = [
     // At 768 the panel card leads and is about a screen tall, so the first ladder
     // row starts below the fold by design (fonts build spec, section 3). What
     // must be on the first screen there is the work itself: Base and Ratio.
-    outputAt: { 768: '.tsc-page .tsc-sec-scale' },
+    // On a phone the work is the Kerbside screen, under the width segment; the
+    // ladder follows it and starts below the fold.
+    outputAt: { 390: '.tsc-page .tsk', 768: '.tsc-page .tsc-sec-scale' },
   },
   {
     route: '/create/font-gallery',

@@ -8,8 +8,14 @@
 //   - the page's own dock and Code drawer are gone; on a phone the shell dock holds the scale trigger, Save (an icon) and Copy CSS,
 //     and from 768 Save and Copy CSS sit on the toolbar;
 //   - the toolbar stays one row at 320, 390 and 768;
-//   - the ladder follows the controls and the view bar, and its first step is above the dock;
-//   - the view switch and the width menu share a row;
+//   - on a phone (767 and under) the width, the Kerbside screen and the ladder are
+//     one scroll with no page-level tabs; the ladder follows the screen, and every
+//     step can be scrolled clear of the dock;
+//   - the settings sheet has Settings and Code tabs, with Base, Ratio and Specimen
+//     ground in Settings;
+//   - the dock chip says how many lines a lit step sets once the page is off
+//     screen, and a tap brings the page back;
+//   - from 768 the view switch and the width menu are one bar;
 //   - weights are one menu per family, not rows of pills;
 //   - at 1440 the right half has a Page | Code switch and Code is a view there;
 //   - the catalogue notice sits inside the Fonts section, not above the work.
@@ -206,32 +212,39 @@ test.describe('Type Scale · the ladder starts on the first screen of a phone', 
     test.describe(`${width}`, () => {
       test.use({ viewport: { width, height }, ...TOUCH })
 
-      // The ladder follows the scale controls, the view switch and the width
-      // segment, as the board draws it, so the first step sits well below the
-      // top. What matters on a phone is that it starts above the dock, is not
-      // covered by it, and that every step can be scrolled clear of it.
+      // A phone is one scroll: the width segment, then the Kerbside screen, then
+      // the ladder. The first step follows the screen, so it starts below it, and
+      // what matters is that no step is stuck under the dock: the last one can be
+      // scrolled clear of it and a tap on the first lands on it.
       // MUTATION: put the catalogue notice back above the work so it covers the
-      // ladder, or let `.tl-dock` grow taller than the foot of the screen.
-      test(`${width}px: the ladder follows the scale controls and its first step is reachable, with the catalogue loaded and with it degraded`, async ({ page }) => {
+      // ladder, put the ladder above the screen, bring the view tabs back, or drop
+      // the room the page leaves under its last step for the dock.
+      test(`${width}px: the ladder follows the Kerbside screen and every step is reachable, with the catalogue loaded and with it degraded`, async ({ page }) => {
         watch(page, `someone opening Type Scale on a ${width}px phone`)
         const reachable = async (when) => {
           const first = page.locator('.tsc-row').first()
-          await expect(first).toBeVisible()
+          await expect(first).toBeAttached()
           expect(await page.evaluate(() => window.scrollY), 'measured from the top of the page').toBe(0)
-          const f = await box(first)
-          const dock = await box(page.locator('.tl-dock'))
-          // Source order is screen order: the width segment and the view switch
-          // come before the first step, which sits under both.
+          await expect(page.getByRole('tab'), `${when}: a phone has no page-level tabs`).toHaveCount(0)
           const seg = await box(page.locator('#tsc-width'))
-          const tabs = await box(page.locator('.tsc-view-switch'))
-          expect(f.y, `${when}: the first step follows the view switch`).toBeGreaterThanOrEqual(tabs.y + tabs.height)
-          expect(f.y, `${when}: the first step follows the width segment`).toBeGreaterThanOrEqual(seg.y + seg.height)
-          expect(f.y + f.height, `${when}: the first step is wholly on the first screen above the dock (${Math.round(f.y)}px down)`).toBeLessThanOrEqual(dock.y)
-          // A tap on the middle of the step lands on the step, not on the dock or a card.
+          const screen = await box(page.locator('.tsk'))
+          const f = await box(first)
+          expect(screen.y, `${when}: the screen follows the width segment`).toBeGreaterThanOrEqual(seg.y + seg.height - 1)
+          expect(f.y, `${when}: the first step follows the Kerbside screen`).toBeGreaterThanOrEqual(screen.y + screen.height - 1)
+
+          // Scroll to the end: the last step comes clear of the dock.
+          await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+          const dock = await box(page.locator('.tl-dock'))
+          const last = await box(page.locator('.tsc-row').last())
+          expect(last.y + last.height, `${when}: the last step ends above the dock`).toBeLessThanOrEqual(dock.y + 0.5)
+
+          // A tap on the middle of the first step lands on the step, not on the dock or a card.
+          await first.scrollIntoViewIfNeeded()
           expect(await first.evaluate((el) => {
             const r = el.getBoundingClientRect()
             return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2))
           }), `${when}: a tap on the first step lands on it`).toBe(true)
+          await page.evaluate(() => window.scrollTo(0, 0))
         }
         await go(page, ROUTE)
         await reachable('catalogue loaded')
@@ -246,8 +259,8 @@ test.describe('Type Scale · the ladder starts on the first screen of a phone', 
 })
 
 // ── The view bar ──────────────────────────────────────────────────────────────
-test.describe('Type Scale · the view switch and the width menu are one bar', () => {
-  for (const [width, height, touch] of [[390, 844, true], [768, 1024, false]]) {
+test.describe('Type Scale · the view switch and the width menu are one bar from 768', () => {
+  for (const [width, height, touch] of [[768, 1024, false]]) {
     test.describe(`${width}`, () => {
       test.use({ viewport: { width, height }, ...(touch ? TOUCH : {}) })
 
@@ -271,6 +284,140 @@ test.describe('Type Scale · the view switch and the width menu are one bar', ()
       })
     })
   }
+})
+
+// ── The phone's one scroll ────────────────────────────────────────────────────
+test.describe('Type Scale · a phone is one scroll, with Code in the sheet', () => {
+  test.use({ viewport: { width: 390, height: 844 }, ...TOUCH })
+
+  // MUTATION: bring the Scale / Page / Code tablist back on a phone, put Preview
+  // width after the screen, or take the screen out of the stack.
+  test('Preview width, then the Kerbside screen, then the ladder, with no page-level tabs', async ({ page }) => {
+    watch(page, 'someone reading Type Scale on a phone')
+    await go(page, ROUTE)
+    expect(await settleTypeScaleView(page)).toBe('stack')
+    await expect(page.getByRole('tablist'), 'no page-level tabs').toHaveCount(0)
+    const seg = page.locator('#tsc-width')
+    await expect(seg.getByRole('button'), 'Mobile, Tablet, Desktop').toHaveText([/^Mobile\s*375$/, /^Tablet\s*768$/, /^Desktop\s*1440$/])
+    await expect(seg.locator('button[aria-pressed="true"]'), 'it opens on the phone width').toContainText('Mobile')
+    await expect(page.locator('.tsk'), 'the Kerbside screen is on the page').toBeAttached()
+    const s = await box(seg)
+    const k = await box(page.locator('.tsk'))
+    const r = await box(page.locator('.tsc-row').first())
+    expect(k.y, 'the screen is under the width segment').toBeGreaterThanOrEqual(s.y + s.height - 1)
+    expect(r.y, 'the ladder is under the screen').toBeGreaterThanOrEqual(k.y + k.height - 1)
+  })
+
+  // MUTATION: put the page-level Base and Ratio strip back above the work on a
+  // phone, show the ratio's name in long form, or move Specimen ground out of the sheet.
+  test('Base, Ratio and Specimen ground are in the sheet, and the ratio trigger reads "Golden 1.618"', async ({ page }) => {
+    watch(page, 'someone tuning a scale on a phone')
+    await go(page, ROUTE)
+    await expect(page.locator('.tsc-row').first()).toBeAttached()
+    const sheet = page.locator('#tsc-sheet')
+    await expect(sheet, 'the sheet is shut until the dock opens it').toBeHidden()
+    await expect(page.locator('#tsc-base'), 'Base is not on the page').toBeHidden()
+
+    await page.locator('.tl-dock .tsc-dock-ratio').tap()
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Settings', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(sheet.getByRole('button', { name: 'Code', exact: true })).toHaveAttribute('aria-pressed', 'false')
+    await expect(sheet.locator('#tsc-base'), 'Base is in Settings').toBeAttached()
+    await expect(sheet.locator('#tsc-base + .snapv-value')).toHaveText('15px')
+    const ratio = sheet.locator('#tsc-ratio')
+    await expect(ratio, 'the ratio trigger names the ratio short, then its value').toHaveText(/^Golden\s*1\.618$/)
+    await expect(sheet.getByText('Specimen ground'), 'Specimen ground is in Settings').toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Heading family' }).or(sheet.getByLabel('Heading family')).first(), 'the families are in Settings').toBeVisible()
+  })
+
+  // MUTATION: make the Code tab a page-level view again, unmount Settings behind
+  // it (the open fine-tuning group is lost), or drop the export from the sheet.
+  test('the sheet has a Code tab, and Settings keeps its state when it comes back', async ({ page }) => {
+    watch(page, 'developer copying a scale on a phone')
+    await go(page, ROUTE)
+    await page.locator('.tl-dock .tsc-dock-ratio').tap()
+    const sheet = page.locator('#tsc-sheet')
+    await expect(sheet).toBeVisible()
+    await sheet.getByRole('button', { name: 'Fine tuning', exact: true }).tap()
+    await expect(sheet.locator('#tsc-up')).toBeVisible()
+
+    await sheet.getByRole('button', { name: 'Code', exact: true }).tap()
+    await expect(sheet.getByRole('button', { name: 'Code', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('#tsc-export')).toContainText('--text-base')
+    await expect(sheet.locator('.tsc-fmt').getByRole('button')).toHaveText(['CSS variables', 'Tailwind v4', 'Tailwind v3', 'SCSS'])
+    await expect(sheet.locator('#tsc-base + .snapv-value'), 'Settings is out of sight on the Code tab').toBeHidden()
+
+    await sheet.getByRole('button', { name: 'Settings', exact: true }).tap()
+    await expect(sheet.locator('#tsc-base + .snapv-value')).toBeVisible()
+    await expect(sheet.locator('#tsc-up'), 'the fine-tuning group is still open').toBeVisible()
+    await expect(page.locator('#tsc-export')).toHaveCount(0)
+  })
+
+  // MUTATION: drop the chip from the dock, miscount the lines (pageLineSteps), or
+  // make the chip's tap do nothing.
+  test('a lit step the page uses puts a chip in the dock once the page is off screen, and a tap brings the page back', async ({ page }) => {
+    watch(page, 'someone checking where a size is used, on a phone')
+    await go(page, ROUTE)
+    await expect(page.locator('.tsc-row').first()).toBeAttached()
+    await expect(page.locator('.tsc-chip'), 'no chip until a step is lit').toHaveCount(0)
+
+    // Kerbside sets the base step on four lines: Picked up and the three timeline rows.
+    await page.locator('.tsc-row[data-step="base"]').tap()
+    await expect(page.locator('.tsc-row[data-step="base"]')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.tsk .is-lit'), 'the page lights the lines the step sets').toHaveCount(4)
+    // The first lit step brings the page into view, so there is no chip yet.
+    await expect(page.locator('.tsk')).toBeInViewport({ ratio: 0.5 })
+    await expect(page.locator('.tsc-chip')).toHaveCount(0)
+
+    // Back down at the ladder the page is off screen, and the dock says what is lit.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    const chip = page.locator('.tl-dock .tsc-chip')
+    await expect(chip).toBeVisible()
+    await expect(chip).toHaveText(/^base\s*lit on 4 lines$/)
+    await expect(chip).toHaveAccessibleName(/base is lit on 4 lines of the sample screen\. Scroll to it/)
+    const c = await box(chip)
+    const dock = await box(page.locator('.tl-dock'))
+    // It belongs to the dock and floats 8px above it, from the page gutter.
+    expect(dock.y - (c.y + c.height), 'the chip rests 8px above the dock').toBeGreaterThan(6)
+    expect(dock.y - (c.y + c.height), 'the chip rests 8px above the dock').toBeLessThan(10)
+    expect(c.x, 'the chip starts at the page gutter').toBeGreaterThan(0)
+    expect(c.x + c.width, 'the chip is whole on the screen').toBeLessThanOrEqual(390)
+    expect(c.height, 'the chip is a 44px target').toBeGreaterThanOrEqual(TOUCH_MIN)
+
+    await chip.tap()
+    await expect(page.locator('.tsk'), 'the chip scrolls to the Kerbside screen').toBeInViewport({ ratio: 0.5 })
+    await expect(page.locator('.tsc-chip'), 'with the page back in view the chip goes').toHaveCount(0)
+  })
+
+  // MUTATION: say nothing for a step the page never sets, or count a line for it.
+  test('a lit step the page never sets says so in the dock', async ({ page }) => {
+    watch(page, 'signed in designer pressing a step the sample screen skips')
+    await signIn(page, { plan: 'free' })
+    await go(page, ROUTE)
+    await expect(page.locator('.tsc-row').first()).toBeAttached()
+    // The signed-in sample screen has no big time line, so the top step is never set.
+    const top = page.locator('.tsc-row').first()
+    const name = await top.getAttribute('data-step')
+    await top.tap()
+    await expect(top).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.tsk .is-lit'), 'no line on the page is lit').toHaveCount(0)
+    await expect(page.locator('.tsc-lit-note')).toHaveText(`Nothing on this page uses ${name}.`)
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    const chip = page.locator('.tl-dock .tsc-chip')
+    await expect(chip).toBeVisible()
+    await expect(chip).toHaveText(new RegExp(`^${name}\\s*is not used on the page$`))
+    expect(await chip.evaluate((el) => el.tagName), 'it is a note, not a button').toBe('P')
+  })
+
+  // MUTATION: leave the desktop wording on the phone, or print the previewed size in the rows.
+  test('past the cap the fit note speaks plainly, and the rows still print the scale\'s own px', async ({ page }) => {
+    watch(page, 'someone previewing the desktop sizes on a phone')
+    await go(page, ROUTE)
+    await expect(page.locator('.tsc-fit-note'), 'nothing is fitted at the phone width').toHaveCount(0)
+    await page.locator('#tsc-width').getByRole('button', { name: /Desktop/ }).tap()
+    await expect(page.locator('.tsc-fit-note')).toHaveText('Preview sizes are fitted between 8px and 96px to keep the preview readable. The code keeps the true values.')
+    await expect(page.locator('.tsc-row .tsc-row-num')).toHaveText(['102.8px', '63.54px', '39.27px', '24.27px', '15px', '9.27px'])
+  })
 })
 
 // ── Weight ────────────────────────────────────────────────────────────────────
@@ -374,27 +521,28 @@ test.describe('Type Scale · nothing scrolls sideways on a phone', () => {
 
       // MUTATION: give the ladder row, the toolbar or the code well a fixed width
       // wider than the phone.
-      test(`${width}px: the page is no wider than the screen in the Scale, Page and Code views and with the sheet open`, async ({ page }) => {
+      test(`${width}px: the page is no wider than the screen in the one scroll, the width the Desktop preview takes, and the sheet's Settings and Code tabs`, async ({ page }) => {
         watch(page, `someone on a ${width}px phone`)
         await go(page, ROUTE)
-        await expect(page.locator('.tsc-row').first()).toBeVisible()
+        await expect(page.locator('.tsc-row').first()).toBeAttached()
 
         const seen = []
         const measure = async (what) => {
           const o = await horizontalOverflow(page)
           seen.push({ what, ...o })
         }
-        await measure('Scale view')
-        await page.getByRole('tab', { name: 'Page' }).tap()
-        await expect(page.locator('.tsk')).toBeVisible()
-        await measure('Page view')
-        await page.getByRole('tab', { name: 'Code' }).tap()
-        await expect(page.locator('#tsc-export')).toBeVisible()
-        await measure('Code view')
-        await page.getByRole('tab', { name: 'Scale' }).tap()
-        await page.getByRole('button', { name: /^Families, preview text/ }).tap()
-        await expect(page.locator('#tsc-sheet')).toBeVisible()
+        await measure('one scroll')
+        // The Desktop width sets the 102.8px step at the cap, in the longest row.
+        await page.locator('#tsc-width').getByRole('button', { name: /Desktop/ }).tap()
+        await expect(page.locator('.tsc-fit-note')).toBeVisible()
+        await measure('Desktop width')
+        await page.locator('.tl-dock .tsc-dock-ratio').tap()
+        const sheet = page.locator('#tsc-sheet')
+        await expect(sheet).toBeVisible()
         await measure('settings sheet')
+        await sheet.getByRole('button', { name: 'Code', exact: true }).tap()
+        await expect(page.locator('#tsc-export')).toBeVisible()
+        await measure('code sheet')
 
         for (const s of seen) {
           expect(s.scroll, `${width}px ${s.what}: the page is ${s.scroll}px wide (${s.wide.join(', ')})`).toBeLessThanOrEqual(s.client)

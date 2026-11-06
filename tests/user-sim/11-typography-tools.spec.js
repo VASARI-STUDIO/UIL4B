@@ -1385,7 +1385,8 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await expectTarget(page.locator('.fpr-sheet .fpr-card-apply').first(), 'Font Pair apply')
 
   await go(page, '/create/type-scale')
-  await page.getByRole('tab', { name: 'Page' }).click()
+  // The phone has no view tabs: the width segment is the top of the one scroll.
+  await expect(page.getByRole('tab')).toHaveCount(0)
   await expect(page.locator('#tsc-width')).toBeVisible()
   // The dock's scale trigger and Save are touch targets too.
   await expectTarget(page.locator('.tl-dock .tsc-dock-ratio'), 'Type Scale dock trigger')

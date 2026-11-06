@@ -84,10 +84,11 @@ const TOOLS = [
   {
     route: '/create/type-scale',
     // From 768 Save to a project sits right against Copy CSS at the end of the
-    // toolbar; under 768 Save is a 44px icon on the row and Copy CSS is the shell dock.
+    // toolbar; under 768 the shell dock holds the scale trigger, Save (an icon) and Copy CSS.
     actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
     primary: /^Copy CSS/,
     primaryDockedBelow: 768,
+    phoneDock: true,
     title: 'Type Scale',
   },
   {
