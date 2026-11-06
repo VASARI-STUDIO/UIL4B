@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import PhIcon from '../../spectrum/PhIcon'
 
 // Shared pieces of the "Try the tools" frames: the foot (one status line on the
-// left, the link into the full tool on the right) and a small segmented control.
+// left, the link into the full tool on the right), a small segmented control and
+// the phone well.
 
 /** The foot of a tool frame. `fill` makes the link the filled one. */
 export function ToolLink({ to, onClick, fill = false, line, short, children }) {
@@ -49,6 +50,17 @@ export function Radios({ label, labelledBy, items, value, onPick, className = ''
           {text}
         </button>
       ))}
+    </div>
+  )
+}
+
+/** Phone only (CSS hides it from 768px): the tool's controls give way to a three-way
+ *  choice with the chosen control under it. `children` is that one control. */
+export function Well({ label, items, value, onPick, children }) {
+  return (
+    <div className="ht-well">
+      <Radios label={label} items={items} value={value} onPick={onPick} className="ht-ab" />
+      <div className="ht-ctl">{children}</div>
     </div>
   )
 }
