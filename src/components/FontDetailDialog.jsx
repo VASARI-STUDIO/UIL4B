@@ -7,6 +7,7 @@ import {
   suggestPairings, verifyFontLoaded,
 } from '../utils/googleFonts'
 import { formatSubsets, weightName } from '../utils/fontGallery'
+import { backdropImage } from '../utils/galleryBackdrop'
 import '../styles/pages/font-detail.css'
 
 // The Font Gallery's family pop-up. At 768 and up it is one scroll of sections
@@ -500,7 +501,7 @@ export default function FontDetailDialog({
           <div className="fgd-scroll">
             <header className={backdrop ? 'fgd-hero fgd-hero--bg' : 'fgd-hero'} ref={heroRef}>
               {backdrop && (
-                <span className="fgd-hero-bg" aria-hidden="true" ref={varsRef({ '--fgd-bgimg': `url(${backdrop})` })} />
+                <span className="fgd-hero-bg" aria-hidden="true" ref={varsRef({ '--fgd-bgimg': backdropImage(backdrop, true) })} />
               )}
               <h2
                 className="fgd-name"

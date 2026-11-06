@@ -877,6 +877,9 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
   opacity: 0;
   transition: opacity 200ms cubic-bezier(.4, 0, 1, 1);
 }
+/* A phone paints the small file. Both custom properties hold an image-set that
+   takes the AVIF and falls back to the WebP. */
+@media (max-width: 767px) { .fg-page .fg-card::before { background-image: var(--fg-bgimg-m, none); } }
 .fg-page .fg-card.is-open { --fg-ground: var(--fg-wake); }
 .fg-page .fg-card--comparing, .fg-page .fg-card--comparing.is-open { --fg-ground: var(--fg-sel); }
 .fg-page .fg-card.is-open.has-backdrop::before { opacity: 1; transition: opacity 320ms var(--fg-ease); }

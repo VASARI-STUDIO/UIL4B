@@ -22,7 +22,7 @@ import ToolIcon from '../components/tool/ToolIcon'
 import { GALLERY_CATEGORIES, categoryWord, filterGalleryListTypefaces, ladderWeights } from '../utils/fontGallery'
 import { ownFont, ownTypeScale, setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import {
-  backdropFor, backdropKind, backdropReady, backdropUrls, loadBackdrop, loadBackdropsInTurn,
+  backdropFor, backdropKind, backdropReady, backdropUrls, backdropVars, loadBackdrop, loadBackdropsInTurn,
 } from '../utils/galleryBackdrop'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -458,7 +458,7 @@ function GalleryCard({
         '--fg-ff': fontStack(font),
         '--fg-fw-h': String(heading),
         '--fg-fw-b': String(body),
-        '--fg-bgimg': backdropIn ? `url(${backdrop})` : 'none',
+        ...(backdropIn ? backdropVars(backdrop) : { '--fg-bgimg': 'none', '--fg-bgimg-m': 'none' }),
       })}
       onMouseEnter={tiles ? undefined : () => bands.enter(font.family)}
       onMouseLeave={tiles ? undefined : bands.leave}
