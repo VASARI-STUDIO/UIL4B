@@ -5,11 +5,13 @@
 // Firebase SDK, which that runner cannot load. Same split as config/plans.js
 // and utils/aiQuota.js use for the same reason.
 import {
-  collection, setDoc, getDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, limit,
-  writeBatch, serverTimestamp,
+  collection, setDoc, getDoc, getDocs, query, where, orderBy, doc, limit,
+  startAfter, writeBatch, serverTimestamp, documentId, Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { QUEUE_COLLECTION, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS } from './communityQueue'
+import {
+  QUEUE_COLLECTION, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS, PUBLIC_COLLECTION, buildPublicDesign,
+} from './communityQueue'
 import { COMMUNITY_LIMITS_ENABLED, UNSTAMPED_SCAN, mergeUnstamped, planCounter, queueOrderField } from './communityLimits'
 
 /**
@@ -102,6 +104,37 @@ export async function listMySubmissions(uid, kind = null, max = 100) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
+/**
+ * How many approved designs one read brings to the public grid. One more is
+ * asked for to learn whether another page exists, so the query's limit is this
+ * plus one; firestore.rules caps a public list at 25.
+ */
+export const PUBLIC_DESIGN_PAGE = 24
+
+/**
+ * One page of approved designs, newest approval first — what /community shows
+ * every visitor, signed out included. It reads the public copies, which hold a
+ * name, a typed credit, a category, a link and two colours and nothing that
+ * identifies the member. `after` is the cursor a previous page returned. The
+ * extra document is not returned.
+ *
+ * @returns {Promise<{ items: object[], cursor: object|null, hasMore: boolean }>}
+ */
+export async function listApprovedDesigns({ after = null, pageSize = PUBLIC_DESIGN_PAGE } = {}) {
+  const snap = await getDocs(query(
+    collection(db, PUBLIC_COLLECTION),
+    orderBy('approvedAt', 'desc'),
+    ...(after ? [startAfter(after)] : []),
+    limit(pageSize + 1),
+  ))
+  const shown = snap.docs.slice(0, pageSize)
+  return {
+    items: shown.map(d => ({ id: d.id, ...d.data() })),
+    cursor: shown.length ? shown[shown.length - 1] : null,
+    hasMore: snap.docs.length > pageSize,
+  }
+}
+
 /** Everything awaiting review — the admin queue. */
 export async function listQueue(status = 'pending') {
   const snap = await getDocs(query(
@@ -140,32 +173,105 @@ export async function listUnstamped(collectionName, status) {
  * Reviewer decision. Rejected in firestore.rules unless the caller carries the
  * `admin` custom claim — which api/verify-admin.js grants, and which nothing
  * granted before, so every moderation write used to fail.
+ *
+ * The decision and the design's public copy change in one batch. Approving a
+ * design writes the copy (buildPublicDesign, with the server's clock as
+ * `approvedAt`); any other decision removes it, so a design a reviewer turns
+ * down is never left in public view. The copy is built from the stored
+ * submission, not from whatever the caller holds.
  */
 export async function decideSubmission(id, status, reviewerUid) {
   if (!QUEUE_STATUSES.includes(status) || status === CLIENT_WRITABLE_STATUS) {
     throw new Error(`Not a review decision: ${status}`)
   }
-  await updateDoc(doc(db, QUEUE_COLLECTION, id), {
+  const ref = doc(db, QUEUE_COLLECTION, id)
+  const publicRef = doc(db, PUBLIC_COLLECTION, id)
+  const copy = status === 'approved' ? buildPublicDesign((await getDoc(ref)).data()) : null
+  const batch = writeBatch(db)
+  batch.update(ref, {
     status,
     reviewedAt: new Date().toISOString(),
     reviewedBy: reviewerUid || null,
   })
+  if (copy) batch.set(publicRef, { ...copy, approvedAt: serverTimestamp() })
+  else batch.delete(publicRef)
+  await batch.commit()
 }
 
 /**
  * Take a decision back: the submission returns to the awaiting-review list.
  * firestore.rules lets a reviewer write any status, so this needs no rules
  * change; it is separate from decideSubmission because that refuses 'pending'
- * on purpose, as a decision a reviewer makes.
+ * on purpose, as a decision a reviewer makes. The public copy, if there is one,
+ * goes in the same batch.
  */
 export async function reopenSubmission(id) {
-  await updateDoc(doc(db, QUEUE_COLLECTION, id), {
+  const batch = writeBatch(db)
+  batch.update(doc(db, QUEUE_COLLECTION, id), {
     status: CLIENT_WRITABLE_STATUS,
     reviewedAt: null,
     reviewedBy: null,
   })
+  batch.delete(doc(db, PUBLIC_COLLECTION, id))
+  await batch.commit()
 }
 
-export async function deleteSubmission(id) {
-  await deleteDoc(doc(db, QUEUE_COLLECTION, id))
+/**
+ * Delete a submission and its public copy in one batch. A reviewer may delete
+ * either; the author may delete their own submission, and may delete the copy
+ * because firestore.rules checks the submission's `authorUid` before the batch
+ * applies. Pass `kind` when it is known: only a design has a public copy, so
+ * any other kind skips that delete.
+ */
+export async function deleteSubmission(id, { kind } = {}) {
+  const batch = writeBatch(db)
+  batch.delete(doc(db, QUEUE_COLLECTION, id))
+  if (!kind || kind === 'design') batch.delete(doc(db, PUBLIC_COLLECTION, id))
+  await batch.commit()
+}
+
+// Public copies written per batch: well under the 500-write limit.
+const PUBLISH_PAGE = 200
+
+/**
+ * Write the public copy of every approved design that was approved before
+ * public copies existed, or whose copy is missing. Reviewer path only: the
+ * rules refuse the writes to anyone else. Safe to run again, as each copy is
+ * written at its submission's id. The copy keeps the original approval time
+ * when the submission has one, so the grid's order is the order they were
+ * approved in.
+ *
+ * @returns {Promise<number>} how many copies were written
+ */
+export async function publishApprovedDesigns() {
+  let written = 0
+  let after = null
+  for (;;) {
+    const snap = await getDocs(query(
+      collection(db, QUEUE_COLLECTION),
+      where('status', '==', 'approved'),
+      where('kind', '==', 'design'),
+      orderBy(documentId()),
+      ...(after ? [startAfter(after)] : []),
+      limit(PUBLISH_PAGE),
+    ))
+    if (snap.empty) return written
+    const batch = writeBatch(db)
+    let inBatch = 0
+    for (const d of snap.docs) {
+      const stored = d.data()
+      const copy = buildPublicDesign(stored)
+      if (!copy) continue
+      const when = Date.parse(stored.reviewedAt)
+      batch.set(doc(db, PUBLIC_COLLECTION, d.id), {
+        ...copy,
+        approvedAt: Number.isFinite(when) ? Timestamp.fromMillis(when) : serverTimestamp(),
+      })
+      inBatch += 1
+    }
+    if (inBatch) await batch.commit()
+    written += inBatch
+    if (snap.docs.length < PUBLISH_PAGE) return written
+    after = snap.docs[snap.docs.length - 1]
+  }
 }

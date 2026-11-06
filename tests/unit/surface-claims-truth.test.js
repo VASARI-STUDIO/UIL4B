@@ -311,10 +311,14 @@ test('/sitemap does not promise a Soon group in its Create lede or type a Discov
 /* ── /community: nothing "appears" until something renders the queue ───────── */
 
 test('/community does not promise a submission will appear while nothing shows the queue', () => {
-  // A public feed would call listQueue() outside the admin. Read the callers:
-  // the day one exists, the sentence is true and this check retires itself.
+  // A public feed would call listQueue() outside the admin, or read the approved
+  // designs for everyone with listApprovedDesigns(). Read the callers: once one
+  // exists, the sentence is true and this check retires itself.
   const files = ['src/pages/Community.jsx', 'src/pages/SurfaceIndex.jsx', 'src/components/discover/CommunityCard.jsx']
-  const publicFeed = files.some((f) => stripComments(read(f)).includes('listQueue('))
+  const publicFeed = files.some((f) => {
+    const code = stripComments(read(f))
+    return code.includes('listQueue(') || code.includes('listApprovedDesigns(')
+  })
   if (publicFeed) return
   const community = stripComments(read('src/pages/Community.jsx'))
   assert.ok(community.includes('publishToQueue('),

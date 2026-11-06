@@ -37,6 +37,9 @@ const STUBS = {
     export const where = (...a) => a
     export const orderBy = (...a) => a
     export const limit = (n) => n
+    export const startAfter = (...a) => a
+    export const documentId = () => '__name__'
+    export const Timestamp = { fromMillis: (ms) => ({ ms }) }
   `,
   'stub:firebase': 'export const db = {}',
   'stub:auth': 'export const useAuth = () => globalThis.__AUTH__',

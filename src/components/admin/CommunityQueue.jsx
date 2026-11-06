@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listQueue, decideSubmission, deleteSubmission, reopenSubmission } from '../../utils/communityQueueApi'
+import { listQueue, decideSubmission, deleteSubmission, reopenSubmission, publishApprovedDesigns } from '../../utils/communityQueueApi'
 import { safeHttpUrl } from '../../utils/urlSafety'
 import { gradientCss } from '../../data/gradientGallery'
 import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
@@ -102,6 +102,9 @@ export default function CommunityQueue({ toast }) {
   const [busyId, setBusyId] = useState(null)
   // The row whose Delete has been pressed once and is waiting for the answer.
   const [confirmingId, setConfirmingId] = useState(null)
+  // The backfill of public copies: running, and what the last run wrote.
+  const [publishing, setPublishing] = useState(false)
+  const [publishNote, setPublishNote] = useState('')
 
   const load = useCallback(async (which) => {
     setState('loading')
@@ -152,11 +155,32 @@ export default function CommunityQueue({ toast }) {
     }
   }
 
+  // Writes the public copy of every approved design. Designs approved before
+  // public copies existed need this once; a repeat run rewrites the same copies
+  // and changes nothing a visitor sees.
+  const publishApproved = async () => {
+    setPublishing(true)
+    setPublishNote('')
+    try {
+      const count = await publishApprovedDesigns()
+      const note = count === 1 ? 'Published 1 approved design.' : `Published ${count} approved designs.`
+      setPublishNote(note)
+      toast?.(note)
+    } catch (err) {
+      setPublishNote('')
+      toast?.(/permission|insufficient/i.test(err?.message || '')
+        ? 'Firestore refused that. Reload the dashboard to pick up admin permissions, then retry.'
+        : (err?.message || 'Could not publish the approved designs.'))
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   const remove = async (item) => {
     setConfirmingId(null)
     setBusyId(item.id)
     try {
-      await deleteSubmission(item.id)
+      await deleteSubmission(item.id, { kind: item.kind })
       setItems(list => list.filter(i => i.id !== item.id))
       toast?.('Deleted')
     } catch (err) {
@@ -185,9 +209,20 @@ export default function CommunityQueue({ toast }) {
             </button>
           ))}
         </div>
-        <button className="btn btn-s" onClick={() => load(status)} disabled={state === 'loading'}>
-          {state === 'loading' ? 'Loading…' : 'Refresh'}
-        </button>
+        <div className="cq-tools">
+          {publishNote && <p className="cq-publish-note">{publishNote}</p>}
+          <button
+            className="btn btn-s"
+            onClick={publishApproved}
+            disabled={publishing}
+            aria-busy={publishing || undefined}
+          >
+            {publishing ? 'Publishing…' : 'Publish approved designs'}
+          </button>
+          <button className="btn btn-s" onClick={() => load(status)} disabled={state === 'loading'}>
+            {state === 'loading' ? 'Loading…' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {/* THE ROLE WAS LYING. These filters carried role="tab" with no tabpanel
