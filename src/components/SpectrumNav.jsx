@@ -114,9 +114,10 @@ const HIDE_AFTER = 120
 const RETURN_DELAY = 140
 
 // A pinned stage (the tools column, the exports stack) marks its root with
-// `data-pins`. While the top of the viewport is inside one, scrolling up does not
-// bring the bar back; keyboard focus into the bar, a skip-link jump and leaving
-// the box still do.
+// `data-pins`. While the top of the viewport is inside one, the bar is hidden
+// whichever way the page scrolls: a bar that is showing when the box is entered
+// from below goes away, and scrolling up does not bring it back. Keyboard focus
+// into the bar, a skip-link jump and leaving the box still do.
 function viewportTopInPinnedBox() {
   return [...document.querySelectorAll('[data-pins]')].some((el) => {
     const r = el.getBoundingClientRect()
@@ -133,6 +134,10 @@ export default function SpectrumNav() {
   const shortcut = useShortcutHint()
 
   const [hidden, setHidden] = useState(false)
+  // True while a pinned stage holds the bar away. Its own flag, because the
+  // reduced-motion rules switch the scroll-hide off but must still clear the
+  // bar from a pinned stage's sticky content.
+  const [pinHidden, setPinHidden] = useState(false)
   // True once the page has scrolled, so the bar draws its lower edge only when
   // content passes under it.
   const [scrolled, setScrolled] = useState(false)
@@ -182,18 +187,20 @@ export default function SpectrumNav() {
       setScrolled(y > 8)
       const focused = document.activeElement
       const focusInBar = !!(focused && navRef.current?.contains(focused) && focused.matches(':focus-visible'))
+      const inPinnedBox = y >= HIDE_AFTER && !openRef.current && !focusInBar && viewportTopInPinnedBox()
+      setPinHidden(inPinnedBox)
       if (y < HIDE_AFTER || openRef.current || focusInBar) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(false)
-      } else if (dy > 2) {
+      } else if (dy > 2 || (dy < -2 && inPinnedBox)) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(true)
-      } else if (dy < -2 && !returnTimer.current && !viewportTopInPinnedBox()) {
+      } else if (dy < -2 && !returnTimer.current) {
         returnTimer.current = setTimeout(() => {
           returnTimer.current = null
-          setHidden(false)
+          if (!viewportTopInPinnedBox()) setHidden(false)
         }, RETURN_DELAY)
       }
     }
@@ -320,6 +327,7 @@ export default function SpectrumNav() {
         onFocus={onNavFocus}
         aria-label="Primary"
         data-nav-hidden={hidden ? '1' : '0'}
+        data-nav-pinned={pinHidden ? '1' : '0'}
         data-scrolled={scrolled ? '1' : '0'}
       >
         <div className="spnav-bar">

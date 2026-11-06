@@ -66,9 +66,13 @@ html[data-reduced-motion="true"] .sp-footer .sp-footer-col a{transition:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .spnav{transition:none}
   html:not([data-reduced-motion="false"]) .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
+  /* Inside a pinned stage the bar still clears away, at once (no transition
+     above), so it never sits over the stage's sticky content. */
+  html:not([data-reduced-motion="false"]) .spnav[data-nav-pinned="1"]:not(:has(:focus-visible)){transform:translateY(-100%);opacity:0}
 }
 html[data-reduced-motion="true"] .spnav{transition:none}
 html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
+html[data-reduced-motion="true"] .spnav[data-nav-pinned="1"]:not(:has(:focus-visible)){transform:translateY(-100%);opacity:0}
 .spnav-bar{display:flex;align-items:center;justify-content:space-between;gap:24px;box-sizing:border-box;width:100%;max-width:1400px;margin:0 auto;padding:24px max(clamp(20px,4vw,52px),env(safe-area-inset-right,0px)) 24px max(clamp(20px,4vw,52px),env(safe-area-inset-left,0px))}
 .spnav-mark{display:inline-flex;align-items:center;min-height:44px;color:var(--t0);text-decoration:none;line-height:normal}
 .spnav-mark:hover{text-decoration:none}
