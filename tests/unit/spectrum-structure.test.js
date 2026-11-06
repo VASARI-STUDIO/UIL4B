@@ -365,13 +365,19 @@ test('the split headline keeps one readable sentence for assistive tech', () => 
     'the visible word split is no longer aria-hidden, so the headline is announced twice')
 })
 
-test('the landing is the design\'s six blocks in order, and pricing is not one of them', () => {
-  // In the design the plan comparison and FAQ live on the Pricing screen,
-  // which is /plans. The landing is hero, bench, exports (#specimens), the
-  // community library (#discover), the terms band (#index) and the handoff.
-  const ids = [...PAGE.matchAll(/<(?:section|div) id="([a-z]+)"/g)].map((m) => m[1])
+test('the landing frame: anchors in order, one banner, one main, one footer, no reveal, and pricing is not on it', () => {
+  // The plan comparison and FAQ live on /plans. The landing is the hero, then
+  // bookmarks, try, exports, examples, proof, plans and the final call. Each
+  // section's own content is asserted by the test for that section.
+  const ids = [...PAGE.matchAll(/<(?:section|div)\s+id="([a-z]+)"/g)].map((m) => m[1])
   assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'plans', 'start'],
     'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, start in that order')
+  // Every section names its heading, so each anchor lands on something a screen reader can announce.
+  for (const m of PAGE.matchAll(/<section\s+id="([a-z]+)"([^>]*)>/g)) {
+    const labelled = /aria-labelledby="([^"]+)"/.exec(m[2])
+    assert.ok(labelled, `#${m[1]} has no aria-labelledby`)
+    assert.match(PAGE, new RegExp(`<h2[^>]*id="${labelled[1]}"[^>]*tabIndex=\\{-1\\}`), `#${m[1]} points at ${labelled[1]}, which is not a focusable h2`)
+  }
   // The proof band (#proof, SpectrumProof.jsx) sits between examples and plans.
   const proofAt = PAGE.indexOf('<SpectrumProof />')
   assert.ok(proofAt > PAGE.indexOf('id="examples"') && proofAt < PAGE.indexOf('id="plans"'),
@@ -397,6 +403,11 @@ test('the landing is the design\'s six blocks in order, and pricing is not one o
   for (const gone of ['id="pricing"', 'id="faq"', '<table', 'sp-compare', 'sp-plans']) {
     assert.ok(!PAGE.includes(gone), `Spectrum.jsx carries ${gone} again — pricing belongs on /plans`)
   }
+})
+
+// The exports section's own structure. The exports lane owns and replaces these
+// assertions when it rebuilds the stack.
+test('exports: the stack nests its three cards and pins them', () => {
   // THE STACK NESTS. A sticky card pins only inside its own containing block,
   // so each card must sit in a wrapper that also holds the cards after it.
   const nests = EXPORTS_SRC.split('<div className="sp-stack-nest">').length - 1
