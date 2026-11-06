@@ -21,6 +21,7 @@
     "test:users:report": "node tests/user-sim/summarize.js",
     "prerender": "node scripts/prerender.mjs",
     "og:cards": "node scripts/og-cards.mjs",
+    "og:home": "node scripts/render-home-og.mjs",
     "auth-wall:generate": "node scripts/auth-wall/generate.mjs",
     "tools:shots": "node scripts/tool-shots.mjs",
     "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs",

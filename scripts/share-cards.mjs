@@ -64,6 +64,7 @@
 // forced into a category it does not belong to.
 import { CREATE_GROUPS } from '../src/data/toolTree.js'
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, TOPICS } from '../src/data/learnIndex.js'
+import { HOME_SHARE_IMAGE } from '../src/data/routeMetaMap.js'
 
 export const CARD_DIR = '/previews'
 
@@ -218,11 +219,26 @@ export function cardFor(pathname) {
   }
 }
 
+/**
+ * The sales page's card, for `/` only. It is not one of the section cards: it is
+ * a JPEG rendered from the page itself (scripts/render-home-og.mjs), it lives
+ * outside CARD_DIR, and it is deliberately absent from cardFor() and
+ * allCardFiles(), which describe the generated PNG set. `path` is what moves it
+ * out of CARD_DIR. It is also what X shows, so it has no `twitterFile`.
+ */
+export const HOME_CARD = Object.freeze({
+  id: 'home',
+  path: HOME_SHARE_IMAGE.path,
+  alt: HOME_SHARE_IMAGE.alt,
+})
+
 /** Absolute URL for a card, which is what og:image requires. */
-export const cardUrl = (origin, card) => `${origin}${CARD_DIR}/${card.file}`
+export const cardUrl = (origin, card) => `${origin}${card.path ?? `${CARD_DIR}/${card.file}`}`
 
 /** The twitter:image for a card: its X-specific file if it has one. */
-export const twitterCardUrl = (origin, card) => `${origin}${CARD_DIR}/${card.twitterFile || card.file}`
+export const twitterCardUrl = (origin, card) => (card.twitterFile
+  ? `${origin}${CARD_DIR}/${card.twitterFile}`
+  : cardUrl(origin, card))
 
 /** Every card file the site references, for the "does it exist" test. */
 export function allCardFiles() {

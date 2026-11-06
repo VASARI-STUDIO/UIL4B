@@ -36,6 +36,17 @@ export const LOGIN_SIGNUP_TITLE = 'UI L4B | Create your free account'
 // The sales page's own title; `/` and `/home` share it.
 export const HOME_TITLE = 'UI L4B: your UI and brand kit, from one app'
 
+// The sales page's share image: a 1200x630 JPEG rendered from the built page
+// by scripts/render-home-og.mjs. `path` is site-relative; both the prerendered
+// `/` shell and routeMeta.js prefix it with SITE_ORIGIN, because og:image must
+// be absolute.
+export const HOME_SHARE_IMAGE = Object.freeze({
+  path: '/og/home.jpg',
+  width: 1200,
+  height: 630,
+  alt: 'The UI L4B homepage: the headline "Your UI and brand kit, from one app." above the Export panel, showing a style guide ready to export.',
+})
+
 // Titles/descriptions for real destinations only. Legacy redirect-only paths
 // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
 // <Navigate> and inherit their target's metadata, so an entry here would only
