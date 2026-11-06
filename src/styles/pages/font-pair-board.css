@@ -124,7 +124,16 @@
 .fpr-sheet .fpr-fam-head .fpr-label {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
-.fpr-sheet .fpr-fam-head { justify-content: flex-end; }
+/* The sheet reads name, kind, then one row of actions with the weight beside them;
+   Lock shares the kind's row at the end. The card's own wrappers drop out of the
+   box tree so its parts sit on one grid, in their DOM (and focus) order. */
+.fpr-sheet .fpr-fam { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.fpr-sheet .fpr-fam-head, .fpr-sheet .fpr-fam-row, .fpr-sheet .fpr-fam-foot { display: contents; }
+.fpr-sheet .fpr-fam-name { grid-area: 1 / 1 / 2 / -1; }
+.fpr-sheet .fpr-fam-meta { grid-area: 2 / 1 / 3 / -1; }
+.fpr-sheet .fpr-lock { grid-area: 2 / 1 / 3 / -1; justify-self: end; margin-inline-start: 0; }
+.fpr-sheet .fpr-fam-acts { grid-area: 3 / 1 / 4 / 2; display: flex; gap: 8px; }
+.fpr-sheet .fpr-wmenu { grid-area: 3 / 2 / 4 / 3; }
 .fpr-sheet .fpr-suggest { padding: 16px 4px 8px; }
 .fpr-sheet .fpr-suggest-grid { margin: 0 -8px; }
 
@@ -190,6 +199,12 @@
 @media (max-width: 767px) {
   .fpr-page .fpr-dock .fpr-copy-primary { margin-left: 0; flex: none; }
   .fpr-page .fpr-dock-save { flex: none; }
+  /* Save is the bookmark alone on a phone, so both family pills keep room for a name.
+     The label stays in the DOM as the button's name. */
+  .fpr-page .fpr-dock .svt-trigger { width: 44px; min-width: 44px; padding: 0; justify-content: center; }
+  .fpr-page .fpr-dock .svt-trigger .svt-trigger-label {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
 }
 /* At 359px and below the row cannot hold four items: Save lives in More. */
 @media (max-width: 359px) {
