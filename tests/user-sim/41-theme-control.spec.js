@@ -52,6 +52,10 @@ const btn = (v) => `${SEG} [data-theme-choice="${v}"]`
 // that the bar has none.
 const NAV_ROUTE = '/discover'
 
+// A route that follows the visitor's choice. `/` and `/home` do not: they are
+// dark in both colour schemes, so a "follows the device" check cannot run there.
+const SCHEME_ROUTE = '/tools'
+
 const themeOf = (page) => page.evaluate(() => document.documentElement.getAttribute('data-theme'))
 const storedOf = (page) => page.evaluate(() => {
   try { return localStorage.getItem('vs-t') } catch { return 'THREW' }
@@ -108,8 +112,25 @@ test.describe('the dark theme is reachable', () => {
   test('a visitor on a light device still gets light', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
-    await go(page, '/')
+    await go(page, SCHEME_ROUTE)
     expect(await themeOf(page)).toBe('light')
+    await ctx.close()
+  })
+
+  test('the homepage is dark on a light device, and stays dark once hydrated', async ({ browser }) => {
+    // `/` and `/home` are dark in both colour schemes: the boot script writes
+    // dark for them and the mounted page holds it there. A light device with
+    // nothing stored is the case that tells the two apart.
+    const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
+    const page = await ctx.newPage()
+    await go(page, '/')
+    expect(await themeOf(page), 'a light device was served the light theme on the homepage').toBe('dark')
+    await page.waitForTimeout(1200)
+    expect(await themeOf(page), 'hydration moved the homepage off dark').toBe('dark')
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(6, 6, 7)')
+    // Holding the homepage dark must not be stored as the visitor's own choice,
+    // or every other route would stay dark after they leave.
+    expect([null, 'system'], 'the homepage wrote an explicit theme choice').toContain(await storedOf(page))
     await ctx.close()
   })
 
@@ -219,15 +240,22 @@ await ready(page)
     }
   })
 
-  for (const [scheme, expected, bg] of [['dark', 'dark', 'rgb(6, 6, 7)'], ['light', 'light', 'rgb(245, 245, 242)']]) { // #F5F5F2, the App file's light page
-    test(`on a ${scheme} device the FIRST painted frame is already ${expected}`, async ({ browser }) => {
+  const DARK_BG = 'rgb(6, 6, 7)'
+  const LIGHT_BG = 'rgb(245, 245, 242)' // #F5F5F2, the App file's light page
+  for (const [scheme, route, expected, bg] of [
+    ['dark', SCHEME_ROUTE, 'dark', DARK_BG],
+    ['light', SCHEME_ROUTE, 'light', LIGHT_BG],
+    ['dark', '/', 'dark', DARK_BG],
+    ['light', '/', 'dark', DARK_BG], // the homepage ignores the device scheme
+  ]) {
+    test(`on a ${scheme} device the FIRST painted frame of ${route} is already ${expected}`, async ({ browser }) => {
       // The whole reason the theme is resolved in a synchronous boot script
       // rather than left to React. If the boot script and ThemeContext ever
       // disagree, this is where it shows up as a visible colour change.
       const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1280, height: 900 } })
       await ctx.addInitScript(PRE_PAINT_PROBE)
       const page = await ctx.newPage()
-      await go(page, '/')
+      await go(page, route)
       // Long enough for hydration to have had every chance to disagree.
       await page.waitForTimeout(1200)
 

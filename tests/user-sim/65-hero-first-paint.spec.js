@@ -195,8 +195,12 @@ test('arriving at the homepage in-session plays the panel entrance and leaves th
     .catch(() => {})
   const anims = await page.evaluate(() => window.__heroAnims)
   expect(anims.some((a) => a.name === 'hh-panel-in' && a.el === 'FIGURE.hh-fig'), `the loop panel's entrance never ran: ${JSON.stringify(anims)}`).toBe(true)
+  // The homepage holds the theme at dark while it is mounted, so arriving from a
+  // light tool flips the theme and the search field's own `transition: all`
+  // fades its colours. That is a transition on a control, like a hover, not an
+  // entrance. Any other element's animation or transition still fails here.
   expect(
-    anims.filter((a) => a.name !== 'hh-panel-in' && !/^(BUTTON|A|SVG|svg|PATH|CIRCLE)/.test(a.el)),
+    anims.filter((a) => a.name !== 'hh-panel-in' && !/^(BUTTON|A|SVG|svg|PATH|CIRCLE|INPUT\.hcmd-input)/.test(a.el)),
     `something other than the loop panel entered: ${JSON.stringify(anims)}`,
   ).toEqual([])
 
