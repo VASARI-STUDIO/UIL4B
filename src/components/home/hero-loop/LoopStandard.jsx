@@ -3,6 +3,7 @@ import { buildLoopModel, useLoop } from './useLoop'
 import { CHAPTERS, EXTRA_STEPS, SETTLE, PANEL_LABEL, RESULTS, PK_FROM, PK_HUE, PK_TO, FIELD_KEYS, SEARCH_KEYS, ALT_WORDS, dragSteps, keyBeats, pickerPlacers } from './loopData'
 import { deriveVals, stackedRows } from './loopVals'
 import { ChapterButtons, ExportRows, LoopImage, NextButton, PauseButton } from './LoopParts'
+import { PHOTO_META } from './photoMeta'
 import './hero-loop.css'
 
 const PK_BOX = [822, 209]
@@ -1291,7 +1292,7 @@ export default function LoopStandard({ active }) {
               style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 6 }}
             >
               <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13 }}>riders.jpg</span>
-              <span style={{ fontSize: 12.5, color: 'rgba(239,238,234,.6)' }}>1600×974 · 268 KB</span>
+              <span style={{ fontSize: 12.5, color: 'rgba(239,238,234,.6)' }}>{PHOTO_META}</span>
               <span
                 style={{
                   position: 'relative', marginTop: 10, minHeight: 112, boxSizing: 'border-box',

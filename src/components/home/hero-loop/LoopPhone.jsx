@@ -4,6 +4,7 @@ import { PHONE_PANEL_LABEL, PK_FROM, PK_HUE, PK_TO, SEARCH_KEYS_PHONE, FIELD_KEY
 import { derivePhoneVals, touchPositions } from './loopValsPhone'
 import { LoopImage } from './LoopParts'
 import { PhoneChapters, PhonePause } from './PhoneParts'
+import { PHOTO_META } from './photoMeta'
 import './hero-loop.css'
 
 // The colour picker sheet, in panel pixels: its thumbs ride the pad and the hue bar.
@@ -897,7 +898,7 @@ export default function LoopPhone({ active }) {
           <span
             style={{ position: 'absolute', left: 160, top: 86, fontSize: 12, color: 'rgba(239,238,234,.62)' }}
           >
-            1600×974 · 268 KB
+            {PHOTO_META}
           </span>
           <p
             style={{
