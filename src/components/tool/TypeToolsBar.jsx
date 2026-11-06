@@ -72,6 +72,7 @@ export function typeToolsBarItems({
     },
     {
       id: 'ttb-switcher',
+      measure: `${heading?.family}|${heading?.weight}|${body?.family}|${scale}`,
       priority: 99,
       menu: false,
       render: () => (

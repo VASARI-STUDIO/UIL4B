@@ -31,7 +31,7 @@
 @media (min-width: 1024px) { .fpr-page .fpr-config { overscroll-behavior: auto; } }
 
 /* Suggestions sit inside the panel as rows, no card and no rule between them. */
-.fpr-page .fpr-panel .fpr-suggest { margin: 0; padding: 16px 0 8px; gap: 8px; }
+.fpr-page .fpr-panel .fpr-suggest { margin: 0; padding: 16px 16px 8px; gap: 8px; }
 .fpr-page .fpr-panel .fpr-section-head h2 { font-size: 13px; font-weight: 500; }
 .fpr-page .fpr-panel .fpr-suggest-grid { display: grid; gap: 2px; margin: 0 -8px; border: 0; }
 .fpr-page .fpr-panel .fpr-card { border: 0; }
