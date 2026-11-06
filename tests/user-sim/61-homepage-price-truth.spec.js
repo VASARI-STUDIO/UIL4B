@@ -24,6 +24,8 @@
 // fails the build for any spec that reaches past it.
 import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
+import { withAvailability } from './price-payload.js'
+import { planPriceFacts, freePrice } from '../../src/components/home/plansPrices.js'
 import {
   PLAN_LADDER,
   purchasablePlans,
@@ -73,22 +75,48 @@ test.describe('the homepage price panel only names tiers that can be bought', ()
   // there. So the front door must name no tier and quote no
   // price, and its plan links must all go to /plans. The panel checks
   // themselves belong to /plans's own specs.
-  test('the landing quotes no price and names no tier; its plan links all go to /plans', async ({ page }) => {
+  test('amounts appear only inside #plans and are the ones planPriceFacts works out; the plan links go where they should', async ({ page }) => {
+    // The stub gives the section live prices, so the figures it prints are the
+    // ones planPriceFacts derives from the same payload.
+    const stub = withAvailability({ monthly: { usd: 7 }, yearly: { usd: 48 } })
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(stub) }))
     watch(page, PERSONA)
     await go(page, '/')
     await expectRendered(page)
 
     await expect(page.locator(PRICING), 'the landing has its pricing section back').toHaveCount(0)
     await expect(page.locator('.sp-plan, .sp-billing-tab, .sp-compare-table'), 'plan cards are back on the landing').toHaveCount(0)
+    await page.locator('#plans').scrollIntoViewIfNeeded()
+    const facts = planPriceFacts(stub)
+    await expect(page.locator('#plans'), 'the section never showed the headline price').toContainText(facts.perMonth)
+
     const text = await page.locator('#main').evaluate((el) => (el.textContent || '').replace(/\s+/g, ' '))
     // POSITIVE CONTROL: the read found the landing, not an empty shell.
     expect(text, 'the landing text was not read').toContain('Start your first project today.')
+    const outside = await page.locator('#main').evaluate((el) => {
+      const clone = el.cloneNode(true)
+      clone.querySelector('#plans')?.remove()
+      return (clone.textContent || '').replace(/\s+/g, ' ')
+    })
+    expect(/\$\d/.test(outside), 'a dollar amount sits outside #plans; prices live in the plans section and on /plans').toBe(false)
+
+    // Inside #plans every amount is one planPriceFacts produced, or the Free $0.
+    const inside = await page.locator('#plans').evaluate((el) => (el.textContent || '').replace(/\s+/g, ' '))
+    const allowed = `${facts.perMonth} ${facts.terms} ${facts.savingLabel} ${freePrice()}`
+    const amounts = inside.match(/(?:US|A|C|NZ|S)?\$\d[\d.,]*\d|(?:US|A|C|NZ|S)?\$\d/g) || []
+    expect(amounts.length, 'the section quotes no amount at all').toBeGreaterThan(0)
+    for (const amount of amounts) {
+      expect(allowed.includes(amount), `#plans quotes ${amount}, which planPriceFacts did not produce`).toBe(true)
+    }
     for (const plan of RESOLVED) {
       if (!plan.perMonthLabel) continue
-      expect(text.includes(`${plan.perMonthLabel} /`) || text.includes(`${plan.perMonthLabel} a month`),
-        `the landing quotes the ${plan.label} rate ${plan.perMonthLabel}`).toBe(false)
+      expect(outside.includes(`${plan.perMonthLabel} a month`), `${plan.perMonthLabel} a month is quoted outside #plans`).toBe(false)
     }
-    expect(/\$\d/.test(text), 'the landing quotes a dollar amount; prices live on /plans').toBe(false)
+
+    // The Free link goes to the toolkit, the trial link and the comparison to /plans.
+    await expect(page.locator('#plans').getByRole('link', { name: 'Open the toolkit' })).toHaveAttribute('href', '/projects')
+    await expect(page.locator('#plans').getByRole('link', { name: facts.cta })).toHaveAttribute('href', '/plans')
+    await expect(page.locator('#plans').getByRole('link', { name: 'Compare every limit' })).toHaveAttribute('href', '/plans')
 
     // Every plan link goes to /plans — never checkout, never the login popup.
     for (const name of [/^View plans$/, /^See the plans$/]) {

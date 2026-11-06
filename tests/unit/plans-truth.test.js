@@ -453,3 +453,19 @@ test('the themes are not sold as formats: no theme export is a Pro format in the
   const formatNames = new Set(EXPORT_FORMATS.map((f) => f.name))
   for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(!formatNames.has(e.name), `${e.name} is in the format table without being built`)
 })
+
+// ── The homepage plans section sells only what the plan lists say ────────────
+test('the homepage plans section reads its lines from planFacts and its amounts from plansPrices', () => {
+  const lists = stripComments(read('src/components/home/PlanLists.jsx'))
+  const section = stripComments(read('src/components/home/HomePlans.jsx'))
+  assert.match(lists, /from '\.\.\/\.\.\/config\/planFacts'/)
+  assert.match(lists, /\bfreeLines\b/)
+  assert.match(lists, /\bproRows\b/)
+  assert.match(lists, /\bFREE_EXCLUSION_FULL\b/)
+  assert.match(section, /\bplansLead\b/)
+  assert.match(section, /\bplanPriceFacts\b/)
+  assert.match(section, /usePrices\(\{ enabled: near \}\)/, 'the prices are not held back until the section is near')
+  // The figure of two Pro pages is true only once the themes export.
+  assert.match(section, /\{live && <PlanFigure \/>\}/, 'the figure shows without the themes switch')
+  assert.match(section, /themeById/, 'the figure\'s alt text is not read from the theme data')
+})

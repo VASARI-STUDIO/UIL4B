@@ -508,3 +508,23 @@ test('the plan lists and rows hold no price: amounts come from the ladder at ren
   const all = [...FACT_FREE, ...FACT_PRO, ...FREE_LINES, PLANS_LEAD, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub])]
   for (const line of all) assert.ok(!/[$€£]\s?\d|\b\d+(\.\d+)?\s?(USD|AUD|dollars)\b|\d+%/i.test(line), `a plan line types a price or a saving: ${line}`)
 })
+
+// ── The homepage components carry no money ───────────────────────────────────
+// src/components/home prints the plans section. Its amounts come from
+// plansPrices.js at render time, so no file there may type one.
+test('src/components/home types no price, saving or count', () => {
+  const dir = path.join(SRC, 'components', 'home')
+  const files = walk(dir).filter((f) => /\.jsx?$/.test(f))
+  assert.ok(files.length >= 4, `expected the home components, found ${files.length} files`)
+  for (const file of files) {
+    const code = stripComments(fs.readFileSync(file, 'utf8'), { lineComments: true })
+    assert.ok(!PRICE.test(code) && !/US\$/.test(code), `${rel(file)} types a price`)
+    PRICE.lastIndex = 0
+    assert.ok(!/\d\s?%(?![\s\d.,%]*\))/.test(code.replace(/(?:hsla?|oklch|rgba?)\([^)]*\)/g, '')), `${rel(file)} types a percentage`)
+    // Count words are product facts only in the plans files; elsewhere they are
+    // sample-brand copy (alt text, demo lines).
+    if (!/plan/i.test(path.basename(file))) continue
+    assert.ok(!/\b(?:eight|ten|two|four|six|thirteen)\b/i.test(code), `${rel(file)} types a count word`)
+    assert.ok(!/['">]\s*\d+\s+(?:export |Pro |free )?(?:themes|tools|features|days|projects)\b/i.test(code), `${rel(file)} types a count`)
+  }
+})
