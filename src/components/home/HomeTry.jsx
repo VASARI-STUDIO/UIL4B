@@ -7,7 +7,7 @@ import { COLOUR_SYSTEMS, FREE_COLOUR_SYSTEMS } from '../../config/colourSystems'
 import { ICON_PACK_TIERS } from '../../data/iconPackTiers'
 import PaletteTool from './try/PaletteTool'
 import IconTool from './try/IconTool'
-import OpenOnlyTool from './try/OpenOnlyTool'
+import FontTool from './try/FontTool'
 import ConverterTool from './try/ConverterTool'
 import '../../styles/pages/home-try.css'
 
@@ -51,7 +51,7 @@ const TOOLS = [
     name: 'Font Gallery',
     lead: 'The Google Fonts catalogue, set in your own words with live specimens.',
     next: 'Open a family in the full tool to see every weight and three suggested pairings, and to copy its import URL. Send it on to Font Pair to choose a heading and body.',
-    body: <OpenOnlyTool toolId="font-gallery" label="Font Gallery" line="Set Archivo and IBM Plex Sans, or any family, in your own words." />,
+    body: <FontTool />,
   },
   {
     id: 'file-converter',
