@@ -951,6 +951,22 @@ html[data-reduced-motion="true"] .fg-page .fg-card-copy { transition: opacity 12
 /* ── Phone: the category chip row, the Filters button and the More sheet ───── */
 .fg-page .fg-bar2--phone { flex-direction: column; align-items: stretch; gap: 8px; }
 .fg-page .fg-chiprow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* The board's 52px chip row stays under the nav while the list scrolls: flat
+   ground, no rule, no shadow. The tool bar above it scrolls away, as the board
+   draws it, so the row is the only sticky strip. */
+@media (max-width: 767px) {
+  .fg-page > .tl-toolbar { position: relative; top: auto; z-index: 31; }
+  .fg-page .fg-chiprow {
+    position: sticky;
+    top: var(--chrome-h);
+    z-index: 30;
+    box-sizing: border-box;
+    height: 52px;
+    margin-inline: calc(-1 * var(--fg-pad));
+    padding-inline: var(--fg-padl) var(--fg-padr);
+    background: var(--bg-0);
+  }
+}
 .fg-page .fg-chips { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .fg-page .fg-chips::-webkit-scrollbar { display: none; }
 .fg-page .fg-chip {

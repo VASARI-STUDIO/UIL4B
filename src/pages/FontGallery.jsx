@@ -19,7 +19,7 @@ import {
   verifyFontLoaded,
 } from '../utils/googleFonts'
 import ToolIcon from '../components/tool/ToolIcon'
-import { categoryWord, filterGalleryListTypefaces, ladderWeights } from '../utils/fontGallery'
+import { GALLERY_CATEGORIES, categoryWord, filterGalleryListTypefaces, ladderWeights } from '../utils/fontGallery'
 import { ownFont, ownTypeScale, setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import {
   backdropFor, backdropKind, backdropReady, backdropUrls, loadBackdrop, loadBackdropsInTurn,
@@ -60,14 +60,7 @@ import '../styles/pages/font-gallery.css'
 // blocked is reported per-font in the detail dialog with its own retry, and
 // never silently rendered as a system fallback pretending to be the real thing.
 
-const CATS = [
-  { id: 'all', label: 'All' },
-  { id: 'sans-serif', label: 'Sans Serif' },
-  { id: 'serif', label: 'Serif' },
-  { id: 'display', label: 'Display' },
-  { id: 'handwriting', label: 'Script' },
-  { id: 'monospace', label: 'Mono' },
-]
+const CATS = GALLERY_CATEGORIES
 
 // What the type-tools switcher shows until the project has faces of its own:
 // the same sample pair Font Pair and Type Scale open on.
@@ -802,6 +795,18 @@ export default function FontGallery({ onCopy, toast }) {
     navigate('/create/type-scale')
   }, [navigate, setFonts, toast])
 
+  // "Use as body" writes the body slot of the project's fonts, the same write
+  // the switcher reads, and hands back the slot it replaced so the sheet can
+  // undo it. The heading slot is left alone.
+  const setAsBody = useCallback((font) => {
+    const before = design?.fonts?.body ?? null
+    setFonts({ body: { family: font.family, weight: bodyWeight(font), category: font.category } })
+    return before
+  }, [design, setFonts])
+  const undoBody = useCallback((before) => {
+    if (before) setFonts({ body: before })
+  }, [setFonts])
+
   const ready = status !== 'loading'
 
   // The switcher's two answers: the project's own faces, or the sample pair the
@@ -1054,13 +1059,16 @@ export default function FontGallery({ onCopy, toast }) {
   // The tablet and phone second row, below the sticky bar, for the layouts that
   // cannot fit search on the first. It never wraps either.
   const bar2 = mode === 'wide' ? null : mode === 'phone' ? (
-    <div className="fg-bar2 fg-bar2--phone">
+    <>
+      {/* The chip row is a direct child of the page so it can stay under the
+          nav while the list scrolls; inside the search row it would unstick
+          where that row ends. */}
       <div className="fg-chiprow">
         {categoryChips}
         {filtersButton}
       </div>
-      {searchField}
-    </div>
+      <div className="fg-bar2 fg-bar2--phone">{searchField}</div>
+    </>
   ) : (
     <div className="fg-bar2">
       {searchField}
@@ -1257,6 +1265,8 @@ export default function FontGallery({ onCopy, toast }) {
           inCompare={compareIds.has(selected.family)}
           onSendToPair={sendToPair}
           onSendToScale={sendToScale}
+          onUseBody={setAsBody}
+          onUndoBody={undoBody}
         />
       )}
     </ToolLayout>

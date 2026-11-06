@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useModalDialog from '../hooks/useModalDialog'
-import { FontAboutPanel, FontExamplesPanel, FontInUsePanel } from './FontDossier'
+import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from './FontDossier'
 import { trackFontCopy } from '../utils/analytics'
 import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont,
@@ -9,13 +9,16 @@ import {
 import { formatSubsets, weightName } from '../utils/fontGallery'
 import '../styles/pages/font-detail.css'
 
-// The Font Gallery's family pop-up: one scroll of sections under a plain hero,
-// with the actions pinned to the foot in a single row. The tabs it replaced
-// (Specimen, About, Examples, In use) are now section headings, and nothing the
-// tabs held was dropped. At 1440 the bar holds five actions; at 768 three and
-// More; at 390 Find a pairing, the compare toggle and More, in a bottom sheet.
+// The Font Gallery's family pop-up. At 768 and up it is one scroll of sections
+// under a plain hero, with the actions pinned to the foot in a single row; the
+// tabs became section headings and nothing they held was dropped. At 1440 the
+// bar holds five actions, at 768 three and More. At 390 the sheet keeps the
+// tabs (Specimen, About, Examples, In use), and its foot holds Open in Font
+// Pair and Compare.
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
+// What the phone sheet sets each weight in when no words were typed.
+const PHONE_LINE = 'Bikes, not vans.'
 // 80 glyphs: the grid is 8 columns on the sheet and at 768 and 10 from 1024, and
 // 80 fills the last row of both.
 const GLYPHS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()+-=?.,:;']
@@ -61,21 +64,27 @@ function CompareIcon({ on }) {
   )
 }
 
-function DotsIcon() {
+function CheckIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
   )
 }
 
-// The overflow of the action bar. A menu button that opens upward over the bar,
-// or, on the phone sheet, a bottom sheet of its own under a scrim. Escape, a
-// press outside or focus leaving closes it, and the dialog's own Escape waits
-// for it (useModalDialog skips a close while an [aria-haspopup][aria-expanded=true]
-// trigger is on screen). On the sheet the scrim takes the outside press as a
-// click, so it cannot fall through onto the bar's buttons beneath.
-function MoreMenu({ iconOnly, items, family }) {
+function ArrowIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  )
+}
+
+// The overflow of the action bar: a menu button that opens upward over the
+// bar. Escape, a press outside or focus leaving closes it, and the dialog's own
+// Escape waits for it (useModalDialog skips a close while an
+// [aria-haspopup][aria-expanded=true] trigger is on screen).
+function MoreMenu({ items, family }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
   const triggerRef = useRef(null)
@@ -100,12 +109,12 @@ function MoreMenu({ iconOnly, items, family }) {
     }
     const onPointer = (e) => { if (!rootRef.current?.contains(e.target)) close(false) }
     document.addEventListener('keydown', onKey)
-    if (!iconOnly) document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('pointerdown', onPointer)
     return () => {
       document.removeEventListener('keydown', onKey)
       document.removeEventListener('pointerdown', onPointer)
     }
-  }, [open, close, iconOnly])
+  }, [open, close])
 
   // Focus moving to another control closes the menu. A null target (a press on
   // something that takes no focus) is left to the scrim or the pointer handler,
@@ -120,17 +129,13 @@ function MoreMenu({ iconOnly, items, family }) {
       <button
         type="button"
         ref={triggerRef}
-        className={iconOnly ? 'fgd-btn fgd-btn--icon' : 'fgd-btn'}
+        className="fgd-btn"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={iconOnly ? `More actions for ${family}` : undefined}
         onClick={() => setOpen(o => !o)}
       >
-        {iconOnly ? <DotsIcon /> : 'More'}
+        More
       </button>
-      {open && iconOnly && (
-        <button type="button" className="fgd-menu-scrim" tabIndex={-1} aria-hidden="true" onClick={() => close(true)} />
-      )}
       {open && (
         <ul className="fgd-menu" role="menu" aria-label={`More actions for ${family}`}>
           {items.map(item => (
@@ -165,9 +170,148 @@ function MoreMenu({ iconOnly, items, family }) {
   )
 }
 
+// "CSS carries 400 and 700."
+function carriesLine(weights) {
+  if (weights.length === 1) return `CSS carries ${weights[0]}`
+  return `CSS carries ${weights.slice(0, -1).join(', ')} and ${weights[weights.length - 1]}`
+}
+
+// The phone sheet's body: four tabs under the hero. The Specimen tab sets every
+// weight in the typed words (or the house line), lets the reader choose which
+// weights the CSS carries, and holds Copy CSS, Copy font import, Use as body in
+// Font Pair and Open in Type Scale. Tab and weight choices are this sheet's own.
+function PhoneSheetBody({ font, fam, words, onCopy, onSendToScale, onUseBody, onUndoBody }) {
+  const [tab, setTab] = useState('specimen')
+  // The reader's weights for the CSS, recorded against the font they were
+  // chosen for, so another font starts from its own defaults.
+  const [chosen, setChosen] = useState(null)
+  const [copied, setCopied] = useState('')
+  const [bodySet, setBodySet] = useState(false)
+  const timers = useRef({})
+  // The body slot as it was before the first "Use as body" in this sheet.
+  const before = useRef(undefined)
+
+  useEffect(() => {
+    const held = timers.current
+    return () => Object.values(held).forEach(clearTimeout)
+  }, [])
+
+  const sorted = useMemo(() => [...font.variants].sort((a, b) => a - b), [font.variants])
+  // Regular and heading weights, the same pair the gallery's cards copy.
+  const defaults = useMemo(() => {
+    const pair = [...new Set([bodyWeight(font), headingWeight(font)])]
+      .filter(w => sorted.includes(w)).sort((a, b) => a - b)
+    return pair.length ? pair : sorted.slice(0, 1)
+  }, [font, sorted])
+  const weights = chosen && chosen.font === font ? chosen.list : defaults
+
+  const toggleWeight = (w) => {
+    const list = weights.includes(w) ? weights.filter(x => x !== w) : [...weights, w].sort((a, b) => a - b)
+    if (list.length) setChosen({ font, list })
+  }
+
+  const importLine = `@import url('${getFontImportUrl([{ family: font.family, weights }])}');`
+  const css = `${importLine}\n\nfont-family: ${fam};`
+
+  const copy = (key, text) => {
+    trackFontCopy(font.family)
+    Promise.resolve(onCopy?.(text)).then(ok => {
+      if (!ok) return
+      setCopied(key)
+      clearTimeout(timers.current.copied)
+      timers.current.copied = setTimeout(() => setCopied(''), 2000)
+    })
+  }
+
+  const setBody = () => {
+    const previous = onUseBody(font)
+    if (before.current === undefined) before.current = previous
+    setBodySet(true)
+    clearTimeout(timers.current.body)
+    timers.current.body = setTimeout(() => { setBodySet(false); before.current = undefined }, 6000)
+  }
+  const undoBody = () => {
+    clearTimeout(timers.current.body)
+    onUndoBody(before.current)
+    before.current = undefined
+    setBodySet(false)
+  }
+
+  return (
+    <>
+      <FontDossierTabs value={tab} onChange={setTab} idBase="fgd" label={`About ${font.family}`} />
+
+      {tab === 'specimen' && (
+        <div className="fgd-spec" id="fgd-panel-specimen" role="tabpanel" aria-labelledby="fgd-tab-specimen" tabIndex={0}>
+          <section className="fgd-spec-sec" aria-labelledby="fgd-h-weights">
+            <h3 className="fgd-h" id="fgd-h-weights">Every weight, in your words</h3>
+            <ol className="fgd-weights">
+              {sorted.map(w => (
+                <li key={w} className="fgd-weight">
+                  <span className="fgd-weight-line" ref={varsRef({ '--fgd-ff': fam, '--fgd-fw': String(w) })}>{words}</span>
+                  <span className="fgd-weight-tag">
+                    <strong>{w}</strong>{weightName(w) ? ` ${weightName(w)}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section className="fgd-spec-sec" aria-labelledby="fgd-h-css">
+            <h3 className="fgd-h" id="fgd-h-css">Weights in the CSS</h3>
+            <div className="fgd-wpills" role="group" aria-labelledby="fgd-h-css">
+              {sorted.map(w => {
+                const on = weights.includes(w)
+                return (
+                  <button
+                    key={w}
+                    type="button"
+                    className="fgd-wpill"
+                    aria-pressed={on}
+                    aria-disabled={on && weights.length === 1 ? true : undefined}
+                    onClick={() => toggleWeight(w)}
+                  >
+                    {on && <CheckIcon />}{w}
+                  </button>
+                )
+              })}
+            </div>
+            <pre className="fgd-code"><code>{css}</code></pre>
+            <p className="fgd-carries">{carriesLine(weights)}</p>
+
+            <div className="fgd-acts">
+              <button type="button" className="fgd-btn" onClick={() => copy('css', css)} aria-label={`Copy CSS for ${font.family}`}>
+                {copied === 'css' ? 'Copied' : 'Copy CSS'}
+              </button>
+              <button type="button" className="fgd-btn" onClick={() => copy('import', importLine)}>
+                {copied === 'import' ? 'Copied' : 'Copy font import'}
+              </button>
+              <button type="button" className="fgd-btn" onClick={setBody}>Use as body in Font Pair</button>
+            </div>
+            <span className="sr-only" role="status">{copied ? 'Copied' : ''}</span>
+            {bodySet && (
+              <p className="fgd-bodyset" role="status">
+                {font.family} is now the body in Font Pair.
+                <button type="button" className="fgd-link" onClick={undoBody}>Undo</button>
+              </p>
+            )}
+            <button type="button" className="fgd-golink" onClick={() => onSendToScale(font)}>
+              <span>Open in Type Scale</span><ArrowIcon />
+            </button>
+          </section>
+        </div>
+      )}
+
+      {tab === 'about' && <FontAboutPanel font={font} id="fgd-panel-about" labelledBy="fgd-tab-about" />}
+      {tab === 'examples' && <FontExamplesPanel font={font} id="fgd-panel-examples" labelledBy="fgd-tab-examples" />}
+      {tab === 'inuse' && <FontInUsePanel font={font} id="fgd-panel-inuse" labelledBy="fgd-tab-inuse" />}
+    </>
+  )
+}
+
 export default function FontDetailDialog({
   font, previewText, categoryLabel, layout, onClose, onCopy, onCompare, inCompare,
-  onSendToPair, onSendToScale, backdrop,
+  onSendToPair, onSendToScale, onUseBody, onUndoBody, backdrop,
 }) {
   const ref = useModalDialog(onClose)
   // The result is recorded against the font it describes, so a font this dialog
@@ -305,7 +449,6 @@ export default function FontDetailDialog({
   // What the bar cannot fit goes into More, in the same order it would have
   // sat on the bar.
   const moreItems = layout === 'wide' ? [] : [
-    ...(phone ? [{ key: 'scale', label: 'Build a type scale', onSelect: () => onSendToScale(font) }] : []),
     { key: 'copy', label: 'Copy import URL', onSelect: copyImport },
     { key: 'google', label: 'View on Google Fonts', href: googleUrl },
   ]
@@ -396,100 +539,114 @@ export default function FontDetailDialog({
               </div>
             )}
 
-            {/* One control, and it drives the weight list below it. */}
-            <div className="fgd-controls">
-              <label className="fgd-field">
-                <span>Preview text</span>
-                <input
-                  type="text"
-                  value={text}
-                  maxLength={72}
-                  spellCheck="false"
-                  placeholder="Type your own words"
-                  enterKeyHint="done"
-                  onChange={e => setText(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                />
-              </label>
-            </div>
-
-            <section className="fgd-sec" aria-labelledby="fgd-h-weights">
-              <h3 className="fgd-h" id="fgd-h-weights">Weights</h3>
-              <ol className="fgd-weights">
-                {font.variants.map(w => (
-                  <li key={w} className="fgd-weight">
-                    <span
-                      className="fgd-weight-line"
-                      ref={varsRef({ '--fgd-ff': fam, '--fgd-fw': String(w) })}
-                    >
-                      {text.trim() || PANGRAM}
-                    </span>
-                    <span className="fgd-weight-tag">
-                      <strong>{w}</strong>{weightName(w) ? ` ${weightName(w)}` : ''}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </section>
-
-            <section className="fgd-sec" aria-labelledby="fgd-h-about">
-              <h3 className="fgd-h" id="fgd-h-about">About</h3>
-              <FontAboutPanel font={font} id="fgd-about" inline />
-            </section>
-
-            <section className="fgd-sec" aria-labelledby="fgd-h-chars">
-              <h3 className="fgd-h" id="fgd-h-chars">Characters</h3>
-              <div
-                className="fgd-glyphs"
-                role="img"
-                aria-label="Capitals A to Z, lowercase a to z, the digits 0 to 9 and common symbols"
-                ref={varsRef({ '--fgd-ff': fam, '--fgd-fw': String(bodyWeight(font)) })}
-              >
-                {GLYPHS.map((g, i) => <span key={i} className="fgd-glyph" aria-hidden="true">{g}</span>)}
+            {phone ? (
+              <PhoneSheetBody
+                font={font}
+                fam={fam}
+                words={previewText.trim() || PHONE_LINE}
+                onCopy={onCopy}
+                onSendToScale={onSendToScale}
+                onUseBody={onUseBody}
+                onUndoBody={onUndoBody}
+              />
+            ) : (
+            <>
+              {/* One control, and it drives the weight list below it. */}
+              <div className="fgd-controls">
+                <label className="fgd-field">
+                  <span>Preview text</span>
+                  <input
+                    type="text"
+                    value={text}
+                    maxLength={72}
+                    spellCheck="false"
+                    placeholder="Type your own words"
+                    enterKeyHint="done"
+                    onChange={e => setText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                  />
+                </label>
               </div>
-            </section>
 
-            {pairings.length > 0 && (
-              <section className="fgd-sec" aria-labelledby="fgd-h-pairs">
-                <h3 className="fgd-h" id="fgd-h-pairs">Pairs well with</h3>
-                <div className="fgd-pairs">
-                  {pairings.map(({ font: pair, reason }) => (
-                    <div
-                      key={pair.family}
-                      className="fgd-pair"
-                      ref={varsRef({
-                        '--fgd-ff': fam,
-                        '--fgd-fw-h': String(headingWeight(font)),
-                        '--fgd-pair-ff': fontStack(pair),
-                        '--fgd-pair-fw': String(bodyWeight(pair)),
-                      })}
-                    >
-                      <div className="fgd-pair-preview">
-                        <span className="fgd-pair-heading">{font.family}</span>
-                        <span className="fgd-pair-body">{pair.family} keeps the body copy readable underneath.</span>
-                      </div>
-                      <p className="fgd-pair-reason">{reason}</p>
-                      <div className="fgd-pair-foot">
-                        <span className="fgd-pair-name">{pair.family}</span>
-                        <button type="button" className="fgd-btn fgd-btn--small" onClick={() => onSendToPair(font, pair)}>
-                          Open in Font Pair
-                        </button>
-                      </div>
-                    </div>
+              <section className="fgd-sec" aria-labelledby="fgd-h-weights">
+                <h3 className="fgd-h" id="fgd-h-weights">Weights</h3>
+                <ol className="fgd-weights">
+                  {font.variants.map(w => (
+                    <li key={w} className="fgd-weight">
+                      <span
+                        className="fgd-weight-line"
+                        ref={varsRef({ '--fgd-ff': fam, '--fgd-fw': String(w) })}
+                      >
+                        {text.trim() || PANGRAM}
+                      </span>
+                      <span className="fgd-weight-tag">
+                        <strong>{w}</strong>{weightName(w) ? ` ${weightName(w)}` : ''}
+                      </span>
+                    </li>
                   ))}
+                </ol>
+              </section>
+
+              <section className="fgd-sec" aria-labelledby="fgd-h-about">
+                <h3 className="fgd-h" id="fgd-h-about">About</h3>
+                <FontAboutPanel font={font} id="fgd-about" inline />
+              </section>
+
+              <section className="fgd-sec" aria-labelledby="fgd-h-chars">
+                <h3 className="fgd-h" id="fgd-h-chars">Characters</h3>
+                <div
+                  className="fgd-glyphs"
+                  role="img"
+                  aria-label="Capitals A to Z, lowercase a to z, the digits 0 to 9 and common symbols"
+                  ref={varsRef({ '--fgd-ff': fam, '--fgd-fw': String(bodyWeight(font)) })}
+                >
+                  {GLYPHS.map((g, i) => <span key={i} className="fgd-glyph" aria-hidden="true">{g}</span>)}
                 </div>
               </section>
+
+              {pairings.length > 0 && (
+                <section className="fgd-sec" aria-labelledby="fgd-h-pairs">
+                  <h3 className="fgd-h" id="fgd-h-pairs">Pairs well with</h3>
+                  <div className="fgd-pairs">
+                    {pairings.map(({ font: pair, reason }) => (
+                      <div
+                        key={pair.family}
+                        className="fgd-pair"
+                        ref={varsRef({
+                          '--fgd-ff': fam,
+                          '--fgd-fw-h': String(headingWeight(font)),
+                          '--fgd-pair-ff': fontStack(pair),
+                          '--fgd-pair-fw': String(bodyWeight(pair)),
+                        })}
+                      >
+                        <div className="fgd-pair-preview">
+                          <span className="fgd-pair-heading">{font.family}</span>
+                          <span className="fgd-pair-body">{pair.family} keeps the body copy readable underneath.</span>
+                        </div>
+                        <p className="fgd-pair-reason">{reason}</p>
+                        <div className="fgd-pair-foot">
+                          <span className="fgd-pair-name">{pair.family}</span>
+                          <button type="button" className="fgd-btn fgd-btn--small" onClick={() => onSendToPair(font, pair)}>
+                            Open in Font Pair
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="fgd-sec" aria-labelledby="fgd-h-examples">
+                <h3 className="fgd-h" id="fgd-h-examples">Examples</h3>
+                <FontExamplesPanel font={font} id="fgd-examples" inline />
+              </section>
+
+              <section className="fgd-sec" aria-labelledby="fgd-h-inuse">
+                <h3 className="fgd-h" id="fgd-h-inuse">In use</h3>
+                <FontInUsePanel font={font} id="fgd-inuse" inline />
+              </section>
+            </>
             )}
-
-            <section className="fgd-sec" aria-labelledby="fgd-h-examples">
-              <h3 className="fgd-h" id="fgd-h-examples">Examples</h3>
-              <FontExamplesPanel font={font} id="fgd-examples" inline />
-            </section>
-
-            <section className="fgd-sec" aria-labelledby="fgd-h-inuse">
-              <h3 className="fgd-h" id="fgd-h-inuse">In use</h3>
-              <FontInUsePanel font={font} id="fgd-inuse" inline />
-            </section>
           </div>
         </div>
 
@@ -497,32 +654,21 @@ export default function FontDetailDialog({
         <footer className="fgd-bar">
           <div className="fgd-bar-row" role="group" aria-label={`Actions for ${font.family}`}>
             <button type="button" className="fgd-btn fgd-btn--primary" onClick={() => onSendToPair(font, null)}>
-              Find a pairing
+              {phone ? 'Open in Font Pair' : 'Find a pairing'}
+              {phone && <ArrowIcon />}
             </button>
-            {layout !== 'phone' && (
+            {!phone && (
               <button type="button" className="fgd-btn" onClick={() => onSendToScale(font)}>
                 Build a type scale
               </button>
             )}
             {/* One name whether or not the font is in the comparison: the
                 pressed state says which, and the +/check icon shows it. */}
-            {phone ? (
-              <button
-                type="button"
-                className="fgd-btn fgd-btn--icon"
-                onClick={() => onCompare(font)}
-                aria-pressed={inCompare}
-                aria-label={`Compare ${font.family}`}
-              >
-                <CompareIcon on={inCompare} />
-              </button>
-            ) : (
-              <button type="button" className="fgd-btn fgd-btn--compare" onClick={() => onCompare(font)} aria-pressed={inCompare}>
-                <CompareIcon on={inCompare} />
-                Compare
-              </button>
-            )}
-            {layout === 'wide' ? (
+            <button type="button" className="fgd-btn fgd-btn--compare" onClick={() => onCompare(font)} aria-pressed={inCompare}>
+              <CompareIcon on={inCompare} />
+              Compare
+            </button>
+            {phone ? null : layout === 'wide' ? (
               <>
                 <button type="button" className="fgd-btn" onClick={copyImport}>
                   Copy import URL
@@ -533,7 +679,7 @@ export default function FontDetailDialog({
                 </a>
               </>
             ) : (
-              <MoreMenu iconOnly={phone} items={moreItems} family={font.family} />
+              <MoreMenu items={moreItems} family={font.family} />
             )}
           </div>
         </footer>
