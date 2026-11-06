@@ -36,9 +36,9 @@ const HomeExports = lazy(() => import('../components/home/HomeExports'))
 const HomeShowcase = lazy(() => import('../components/home/HomeShowcase'))
 const HomePlans = lazy(() => import('../components/home/HomePlans'))
 
-// About how tall each section is once it has arrived, so the page does not
-// lengthen under the scrollbar as the chunks land.
-const H = { bookmarks: '100svh', try: '100svh', exports: '100svh', examples: '100svh', plans: '100svh' }
+// A little under how tall each section is once it has arrived, at any width, so
+// the page does not lengthen under the scrollbar as the chunks land.
+const H = { bookmarks: 1100, try: 3400, exports: 2600, examples: 1400, plans: 1500 }
 
 export default function Spectrum() {
   usePageAnchors()
