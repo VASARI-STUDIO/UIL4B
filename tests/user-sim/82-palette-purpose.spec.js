@@ -198,7 +198,7 @@ test.describe('the palette board is a named set, not a list of landmarks', () =>
   // the only landmark coverage the homepage has in this file.
   test('the front door answers "what is this page made of" in its landmarks', async ({ page }) => {
     await go(page, '/')
-    await expect(page.locator('.sp-hero-h1')).toBeVisible()
+    await expect(page.locator('section#top h1.hh-h1')).toBeVisible()
 
     const nodes = await axNodes(page)
     // Nothing on this page is named by a raw hex value, and nothing that is

@@ -3,9 +3,8 @@
 //
 // What is covered, each from what the browser computes and draws (the toast success
 // pop is not back: it was removed on purpose, as decoration this product does not use):
-//   - sliding tab underline    the File Converter tabs on the Spectrum homepage
-//                              (.sp-modes) and the font dossier tabs in the
-//                              Font Pair font browser (.fdx-tabs)
+//   - sliding tab underline    the font dossier tabs in the Font Pair font browser
+//                              (.fdx-tabs)
 //   - Font Pair chevron        the "Prepare the handoff" caret turns on open
 //   - aspect-ratio preview     the shape eases between ratios by a FLIP scale,
 //                              never by width or height, and rests unscaled
@@ -20,14 +19,12 @@
 // slide and the row was left out on purpose.
 //
 // MUTATIONS (each should turn the named test red):
-//   - drop the useSlideIndicator call in spectrum/BenchConverter.jsx
-//       -> "the underline slides" (File Converter tabs)
 //   - drop it in FontDossier.jsx                    -> "the underline slides" (font dossier tabs)
 //   - delete `--si-n` from useSlideIndicator.js     -> both underline cases (no bar width)
-//   - change the bar's transition in spectrum.css (.sp-modes[data-slide="ready"]::after)
+//   - change the bar's transition in type.css (.fdx-tabs[data-slide="ready"]::after)
 //     or type.css (.fdx-tabs[data-slide="ready"]::after) to width, or remove it
 //                                                   -> "the underline slides" for that bar
-//   - delete the reduced-motion `transition: none` rules for .sp-modes::after / .fdx-tabs ::after
+//   - delete the reduced-motion `transition: none` rules for .fdx-tabs ::after
 //                                                   -> "reduced motion" for that bar
 //   - remove `transition: transform` from .fpr-delivery > summary::after (font-pair.css)
 //                                                   -> "the caret turns"
@@ -135,23 +132,6 @@ const reduceInApp = (page) => page.evaluate(() => { document.documentElement.dat
 // Where the bar should end up on a tab: x and scaleX from the tab's box.
 const BARS = [
   {
-    id: 'converter-tabs',
-    name: 'File Converter tabs (Spectrum homepage)',
-    widths: WIDTHS,
-    duration: 0.2,
-    // The bar spans the tab's full width; its top is the tab's bottom edge less the 2px bar.
-    expect: (tab) => ({ x: tab.left, scale: tab.width, y: tab.top + tab.height - 2 }),
-    open: async (page) => {
-      await go(page, '/')
-      // At 1000px and below the bench is a tool switcher: pick the Converter window first.
-      const switcherTab = page.getByRole('tab', { name: 'Converter', exact: true })
-      if (await switcherTab.count()) await switcherTab.click()
-      const bar = page.locator('.sp-modes')
-      await bar.scrollIntoViewIfNeeded()
-      return { bar, target: bar.getByRole('tab', { name: 'Aspect ratio', exact: true }) }
-    },
-  },
-  {
     id: 'dossier-tabs',
     name: 'Font dossier tabs (Font Pair font browser)',
     widths: [1440],
@@ -208,12 +188,8 @@ for (const c of BARS) {
         // A frame between the tabs, or (on a machine too slow to paint one) the transition itself.
         expect(between.length > 0 || ran, 'the bar jumped instead of sliding').toBe(true)
         // The tab's own underline is clear while the bar is drawn, so the two are never both on.
-        const own = await style(target, null, ['borderBottomColor'])
-        if (c.id === 'converter-tabs') expect(own.borderBottomColor, 'the tab paints a second underline under the bar').toBe('rgba(0, 0, 0, 0)')
-        else {
-          const ownBar = await style(target, '::after', ['content'])
-          expect(ownBar.content, 'the tab paints a second underline under the bar').toBe('none')
-        }
+        const ownBar = await style(target, '::after', ['content'])
+        expect(ownBar.content, 'the tab paints a second underline under the bar').toBe('none')
       })
     }
 

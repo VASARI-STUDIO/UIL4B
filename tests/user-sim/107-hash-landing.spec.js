@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, ready, watch } from './helpers.js'
+import { go, homeSectionsLoaded, ready, watch } from './helpers.js'
 
 async function navigateInRouter(page, to) {
   await page.evaluate((to) => {
@@ -126,19 +126,75 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
   })
 }
 
-test('a fresh sales hash still lands below its nav', async ({ page }) => {
-  watch(page, 'a visitor opening the sales bench section')
-  await go(page, '/home#bench')
-  await expectLanding(page, 'bench', '.spnav')
+// The homepage's nav bar slides away on the way down, so its height is read off
+// the bar itself rather than from where it is sitting at the moment of landing.
+async function homeLanding(page, id) {
+  await expect(page.locator(`#${id} h2`)).toBeAttached({ timeout: 20000 })
+  await expect.poll(() => page.evaluate(() => scrollY), { timeout: 5000 }).toBeGreaterThan(0)
+  // Wait for the jump to stop moving before reading where it landed.
+  await expect.poll(async () => {
+    const first = await page.evaluate(() => scrollY)
+    await page.waitForTimeout(150)
+    return (await page.evaluate(() => scrollY)) === first
+  }).toBe(true)
+  return page.evaluate((id) => ({
+    top: document.getElementById(id).getBoundingClientRect().top,
+    bar: document.querySelector('.spnav-bar').getBoundingClientRect().height,
+  }), id)
+}
+
+test('a fresh sales hash lands its section below the nav bar', async ({ page }) => {
+  watch(page, 'a visitor opening a homepage section URL')
+  await go(page, '/#plans')
+  const { top, bar } = await homeLanding(page, 'plans')
+  expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
+})
+
+test('a fresh sales hash lands its section 104px from the top', async ({ page }) => {
+  watch(page, 'a visitor opening a homepage section URL')
+  await go(page, '/#plans')
+  const { top } = await homeLanding(page, 'plans')
+  expect(Math.abs(top - 104)).toBeLessThanOrEqual(8)
 })
 
 test('a section link from another route lands on the sales page', async ({ page }) => {
-  watch(page, 'a visitor following The bench from the footer on the mobile page')
+  watch(page, 'a visitor following Plans from the footer on the mobile page')
   await go(page, '/mobile')
-  await page.locator('.sp-footer a[href="/home#bench"]').first().click()
+  await page.locator('.sp-footer a[href="/home#plans"]').first().click()
   await ready(page, '/home')
-  await expectLanding(page, 'bench', '.spnav')
+  await expect(page).toHaveURL(/\/home#plans$/)
+  const { top, bar } = await homeLanding(page, 'plans')
+  expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
 })
+
+test('a footer section link from another route puts focus on the section heading', async ({ page }) => {
+  watch(page, 'a keyboard visitor following Plans from the footer on the mobile page')
+  await go(page, '/mobile')
+  await page.locator('.sp-footer a[href="/home#plans"]').first().click()
+  await ready(page, '/home')
+  await homeLanding(page, 'plans')
+  await expect(page.locator('#plans-h')).toBeFocused()
+})
+
+test('an in-page section link lands below the nav bar and moves focus to the heading', async ({ page }) => {
+  watch(page, 'a visitor following Plans from the footer of the homepage')
+  await go(page, '/')
+  await homeSectionsLoaded(page)
+  await page.locator('.sp-footer a[href="#plans"]').click()
+  const { top, bar } = await homeLanding(page, 'plans')
+  expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
+  await expect(page.locator('#plans-h')).toBeFocused()
+})
+
+for (const [old, current] of [['bench', 'bookmarks'], ['specimens', 'exports'], ['index', 'proof']]) {
+  test(`the old #${old} link resolves to #${current}`, async ({ page }) => {
+    watch(page, 'a visitor following an old homepage link')
+    await go(page, `/home#${old}`)
+    await expect(page).toHaveURL(new RegExp(`/home#${current}$`))
+    const { top, bar } = await homeLanding(page, current)
+    expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
+  })
+}
 
 for (const [route, id] of [['/faq', 'faq'], ['/about', 'about']]) {
   test(`${route} redirects and lands on its help section`, async ({ page }) => {
