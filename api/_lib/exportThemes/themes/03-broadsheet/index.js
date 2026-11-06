@@ -7,6 +7,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
+import { cssStr } from '../../engine/escape.js';
 
 export const meta = {
   id: '03-broadsheet', name: 'Broadsheet', tier: 'Pro', brand: 'saltbush',
@@ -20,7 +21,7 @@ export function css(ctx) {
   // the brand's fill-only mark colour (role "mark"), else the action colour
   const mark = (B.colours.find((c) => c.role === 'mark') || { hex: L.action }).hex;
   return `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--quiet-panel:${L.quietOnSunken};--ground:${L.surface};--panel:${L.sunken};--hair:${L.divider};--accent:${L.action};--accent-ink:${L.actionLabel};--mark:${mark};--dark:${rev.ground};--dark-ink:${rev.name};--m:${m}px;
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',sans-serif;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',sans-serif;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:12px;line-height:1.4;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}

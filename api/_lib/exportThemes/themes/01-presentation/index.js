@@ -7,6 +7,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
+import { cssStr } from '../../engine/escape.js';
 
 export const meta = {
   id: '01-presentation', name: 'Presentation', tier: 'Pro', brand: 'kerbside',
@@ -19,7 +20,7 @@ export function css(ctx) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, rev = B.logo.colourways.reversed;
   const m = B.layout.margin;
   return `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--quiet-panel:${L.quietOnSunken};--ground:${L.surface};--panel:${L.sunken};--hair:${L.divider};--accent:${L.action};--accent-ink:${L.actionLabel};--dark:${rev.ground};--dark-ink:${rev.name};--m:${m}px;
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:12px;line-height:1.4;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}

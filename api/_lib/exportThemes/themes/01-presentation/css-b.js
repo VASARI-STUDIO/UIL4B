@@ -1,6 +1,7 @@
 // Styles for guidelines-b.js. Appended to css() in index.js; use the same custom properties (.pg vars). Every class starts b-.
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssStr } from '../../engine/escape.js';
 
 export function cssB(ctx) {
   const mono = ctx.brand.fonts.mono;
@@ -9,7 +10,7 @@ export function cssB(ctx) {
   // the product screen on the digital page uses the UI kit's components, so it carries the kit's light tokens
   const uiScope = `.pg .ui{${decl(colourMap(ctx, 'light'))};${decl(g.space)};${decl(g.radius)};${decl(g.width)};${decl(g.font)};${decl(g.text)};${decl(g.shadow)}}`;
   return `
-.pg{--bmono:'${mono.family}',monospace}
+.pg{--bmono:'${cssStr(mono.family)}',monospace}
 .b-mono{font-family:var(--bmono);font-size:13px;line-height:1.4}
 .b-wide{flex:1;min-height:0;padding:28px 0 24px;display:flex;flex-direction:column}
 /* a bleed slide: its bands and pictures reach the slide's edges, the running head and folio keep the margins */

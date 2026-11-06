@@ -1,5 +1,6 @@
 // Styles for theme 07's brand kit pages (read-me, palette, typefaces, photography): .pg pages in the standards style, classes k-.
 // Wired through cssBook in css-book.js (cssBookKit(ctx) + ...). Every rule is scoped under .pg--k. Roles come from the brand; no hex is written here.
+import { cssStr } from '../../engine/escape.js';
 export function cssBookKit(ctx) {
   const B = ctx.brand, d = B.fonts.display;
   return `
@@ -16,7 +17,7 @@ export function cssBookKit(ctx) {
 .pg--k .k-cl__c p+p{margin-top:2px}
 .pg--k .k-cl--face .k-cl__l{font-family:var(--chrome)}
 .pg--k .k-note{font-family:var(--chrome);font-size:12px;color:var(--quiet)}
-.pg--k .k-mono{font-family:'${B.fonts.mono.family}',monospace;font-size:10.5px;line-height:1.5;letter-spacing:-0.02em}
+.pg--k .k-mono{font-family:'${cssStr(B.fonts.mono.family)}',monospace;font-size:10.5px;line-height:1.5;letter-spacing:-0.02em}
 .pg--k .k-logo{margin-top:8px}
 .pg--k .k-lines{margin-top:32px}
 .pg--k .k-lines li{font-family:var(--body);font-size:15px;line-height:1.4;padding:5px 0;color:var(--soft)}
@@ -33,7 +34,7 @@ export function cssBookKit(ctx) {
 .pg--k .k-band__n{font-size:13px;align-self:start}
 .pg--k .k-band h2{font-family:var(--display);font-weight:${d.weights[0]};font-size:30px;line-height:1.05;letter-spacing:-0.01em}
 .pg--k .k-band p{font-family:var(--body);font-size:13px;line-height:1.45;margin-top:4px}
-.pg--k .k-band p.k-mono{margin-top:0;font-family:'${B.fonts.mono.family}',monospace;font-size:10.5px}
+.pg--k .k-band p.k-mono{margin-top:0;font-family:'${cssStr(B.fonts.mono.family)}',monospace;font-size:10.5px}
 .pg--k .k-samp{font-family:var(--body);font-weight:500;font-size:18px;line-height:1.4;color:var(--ink);margin-top:10px}
 .pg--k .k-samp--d{font-family:var(--display);font-weight:${d.weights[0]};font-size:34px;line-height:1.15;letter-spacing:-0.015em}
 .pg--k .k-cl--face{padding:14px 0 20px}

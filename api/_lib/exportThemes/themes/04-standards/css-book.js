@@ -1,4 +1,5 @@
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr } from '../../engine/escape.js';
 // Styles for theme 04's brand book site (bookCss, scoped under .bk and the root custom properties) and for the
 // brand kit pages (cssBook, scoped under .pg: appended to css() in index.js; the kit styles come from css-bookkit.js).
 // Everything reads colours from the brand's roles; no hex is written here. Hairlines, not shadows.
@@ -11,7 +12,7 @@ export function bookCss(ctx) {
   const rev = B.logo.colourways.reversed, buoy = B.logo.colourways['on-buoy'];
   const chrome = 'Public Sans';
   return `:root,.bk--board{${vars(L)}--fix-ground:${L.surface};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};
---chrome:'${chrome}',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;--mono:'${m.family}',monospace}
+--chrome:'${chrome}',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"]{${vars(D)}}
 body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk{font-family:var(--chrome);font-size:13px;line-height:1.5;color:var(--bk-ink);background:var(--bk-ground);-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh;position:relative}

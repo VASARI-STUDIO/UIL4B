@@ -1,4 +1,5 @@
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr } from '../../engine/escape.js';
 // Styles for theme 02's brand book site (bookCss): the roll ticket. Every rule is scoped under the book's root (.bk), so nothing reaches
 // the guideline pages. Classes start tb-; the engine's shell keeps its own bk- names (bk-top, bk-nav, bk-mode, bk-foot ...).
 // Light is Stock with Night ink; dark is Night with Stock ink. Imagery is the one Night section in light (Stage in dark), for rhythm.
@@ -11,7 +12,7 @@ export function bookCss(ctx) {
   const rc = B.ui.radius.control, rk = B.ui.radius.card, bw = B.ui.border, st = d.stretch || 150;
   const cond = `font-family:var(--tb-cond);font-weight:700;font-stretch:50%;letter-spacing:0.02em`;
   return `.bk,.bk--board{${vars(L)}--tb-plate:${L.surface};--tb-plate-ink:${L.text};--tb-fix:${L.surface};
---tb-cond:'Anybody',sans-serif;--tb-disp:'${d.family}',sans-serif;--tb-body:'${b.family}',sans-serif;--tb-mono:'${m.family}',monospace}
+--tb-cond:'Anybody',sans-serif;--tb-disp:'${cssStr(d.family)}',sans-serif;--tb-body:'${cssStr(b.family)}',sans-serif;--tb-mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"] .bk{${vars(D)}--tb-plate:${D.action};--tb-plate-ink:${D.actionLabel}}
 .bk .tb-night{${vars(D)}}
 [data-theme="dark"] .bk .tb-night{${vars(D, D.raised)}--tb-panel:${D.sunken}}

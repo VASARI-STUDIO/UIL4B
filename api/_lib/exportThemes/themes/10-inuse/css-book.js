@@ -1,4 +1,5 @@
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr } from '../../engine/escape.js';
 // Styles for theme 10's brand book site (bookCss, scoped under .bk and the root custom properties) and for the
 // brand kit pages: read-me, palette sheet, specimen, photography and the pack boards (cssBook, scoped under .pg).
 // In use: the product on a phone with numbered notes beside it, Figtree chrome, Chalk ground, one Float panel behind the opening phone.
@@ -11,7 +12,7 @@ export function bookCss(ctx) {
   const rc = B.ui.radius.control, rcard = B.ui.radius.card, bw = B.ui.border;
   const hl = ctx.colours.find((c) => c.role === 'highlight').hex;
   return `:root,.bk--board{${vars(L)}--bk-float:${hl};--fix-ground:${L.surface};--fix-raised:${L.raised};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};--fix-action:${L.action};--fix-action-ink:${L.actionLabel};--fix-pool:${L.success.bg};
---chrome:'Figtree',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;--mono:'${m.family}',monospace}
+--chrome:'Figtree',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"]{${vars(D)}}
 body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk{font-family:var(--chrome);font-size:13px;line-height:1.5;color:var(--bk-ink);background:var(--bk-ground);-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;position:relative}

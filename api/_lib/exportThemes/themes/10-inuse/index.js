@@ -7,6 +7,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
+import { cssStr } from '../../engine/escape.js';
 
 export const meta = {
   id: '10-inuse', name: 'In use', tier: 'Pro', brand: 'shallow-end',
@@ -18,7 +19,7 @@ export function css(ctx) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, m = B.layout.margin;
   const hl = ctx.colours.find((c) => c.role === 'highlight').hex;
   return `.pg{--hover:${ctx.byId.hover.hex};--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--ground:${L.surface};--card:${L.raised};--panel:${L.sunken};--hair:${L.divider};--accent:${L.action};--float:${hl};--m:${m}px;
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',sans-serif;--body:'${B.fonts.body.family}',sans-serif;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(B.fonts.body.family)}',sans-serif;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:12px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}

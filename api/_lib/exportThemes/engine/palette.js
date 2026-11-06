@@ -1,5 +1,6 @@
 // Palette files for the brand kit: Adobe Swatch Exchange (binary), CSS and JSON.
 import { hexToRgb } from './color.js';
+import { cssIdent, commentText } from './escape.js';
 
 // ASE: 'ASEF', version 1.0, block count, then one colour block per swatch (RGB, floats 0 to 1, big endian).
 export function paletteAse(ctx) {
@@ -25,11 +26,11 @@ export function paletteAse(ctx) {
 export function paletteCss(ctx) {
   const lines = [];
   for (const c of ctx.colours) {
-    lines.push(`  --palette-${c.id}: ${c.hex};`);
-    for (const [k, v] of Object.entries(c.ramp)) lines.push(`  --palette-${c.id}-${k}: ${v};`);
+    lines.push(`  --palette-${cssIdent(c.id)}: ${c.hex};`);
+    for (const [k, v] of Object.entries(c.ramp)) lines.push(`  --palette-${cssIdent(c.id)}-${cssIdent(k)}: ${v};`);
   }
-  for (const t of ctx.tones) lines.push(`  --palette-${t.id}: ${t.hex};`);
-  return `/* ${ctx.brand.name} palette. Brand colours with their tint ramps, then the measured tones. */\n:root {\n${lines.join('\n')}\n}\n`;
+  for (const t of ctx.tones) lines.push(`  --palette-${cssIdent(t.id)}: ${t.hex};`);
+  return `/* ${commentText(ctx.brand.name)} palette. Brand colours with their tint ramps, then the measured tones. */\n:root {\n${lines.join('\n')}\n}\n`;
 }
 
 export function paletteJson(ctx) {

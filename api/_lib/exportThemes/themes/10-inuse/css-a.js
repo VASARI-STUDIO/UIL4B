@@ -1,8 +1,9 @@
 // Styles for guidelines-a.js (theme 10, In use). Appended to css() in index.js; uses the .pg custom properties. Every class starts a-.
+import { cssStr } from '../../engine/escape.js';
 export function cssA(ctx) {
   const mono = ctx.brand.fonts.mono;
   return `
-.pg{--mono:'${mono.family}',monospace}
+.pg{--mono:'${cssStr(mono.family)}',monospace}
 .a-abs{position:absolute}
 .a-mk--lt{background:var(--card);color:var(--ink)}
 .a-h1{font-family:var(--display);font-weight:700;font-size:58px;line-height:1.05;letter-spacing:-0.01em;text-wrap:balance;max-width:560px}

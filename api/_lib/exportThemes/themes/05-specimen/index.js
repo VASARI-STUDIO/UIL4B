@@ -30,6 +30,7 @@ import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
 import { cssK } from './css-k.js';
+import { cssStr } from '../../engine/escape.js';
 
 export const meta = {
   id: '05-specimen', name: 'Catalogue', tier: 'Pro', brand: 'margin',
@@ -47,7 +48,7 @@ export function css(ctx) {
   const m = B.layout.margin;
   const rule = toHex(mix(ctx, L.text, L.surface, 0.22));
   return `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--quiet-panel:${L.quietOnSunken};--ground:${L.surface};--panel:${L.sunken};--hair:${L.divider};--rule:${rule};--accent:${L.action};--accent-ink:${L.actionLabel};--dark:${rev.ground};--dark-ink:${rev.name};--m:${m}px;
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',serif;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',serif;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:12px;line-height:1.4;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}

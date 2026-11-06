@@ -1,7 +1,8 @@
 // Styles for the brand kit PDF pages (read-me, palette sheet, specimen, photography) and the pack boards. Scoped under .pg; classes start k-.
+import { cssStr } from '../../engine/escape.js';
 // Imported by css-book.js. The pack boards (engine/pack.js) use .pg--std and need it to be a flex column, which this theme's .pg--std is not.
 export function cssBookKit(ctx) {
-  const B = ctx.brand, mono = B.fonts.mono.family;
+  const B = ctx.brand, mono = cssStr(B.fonts.mono.family);
   return `
 /* pack boards: the engine's markup assumes a flex column */
 .pg--std[data-page^="pack-"]{display:flex;flex-direction:column}

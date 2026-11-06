@@ -7,6 +7,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
+import { cssStr } from '../../engine/escape.js';
 export { readMe, sheets } from './kit.js';
 
 export const meta = {
@@ -19,7 +20,7 @@ export function css(ctx) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, cw = B.logo.colourways, buoy = cw['on-buoy'], rev = cw.reversed;
   const m = B.layout.margin, dw = d.weights[d.weights.length - 1];
   return `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--quiet-panel:${L.quietOnSunken};--ground:${L.surface};--raised:${L.raised};--panel:${L.sunken};--hair:${L.divider};--accent:${L.action};--buoy:${buoy.ground};--buoy-ink:${buoy.name};--dark:${rev.ground};--dark-ink:${rev.name};--m:${m}px;
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}

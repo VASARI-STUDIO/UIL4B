@@ -7,6 +7,8 @@ import { paletteAse, paletteCss, paletteJson } from './palette.js';
 import { pageDoc, pageSizeMap, largestSize } from './doc.js';
 import { finishText } from './placeholders.js';
 import { ICONS_LICENCE } from '../icons.js';
+import { OFL_LICENCE } from '../fontLicence.js';
+import { cssNum, cleanText, commentText, mdEsc } from './escape.js';
 
 // logo file names: the colour version is "full-colour"
 export const LOGO_FILE = { colour: 'full-colour' };
@@ -38,15 +40,15 @@ export const iconFile = (ctx, name) => icon(ctx, name, 24).replace(' class="ui-i
 
 export function putIcons(ctx, files, dir) {
   for (const n of iconSet(ctx)) put(ctx, files, `${dir}/svg/${n}.svg`, iconFile(ctx, n));
-  put(ctx, files, `${dir}/LICENSE.txt`, `These icons are from Lucide (https://lucide.dev), released under the ISC licence.\nStroke width and corner style are set to the ${ctx.brand.name} brand (stroke ${ctx.iconStyle.stroke}, ${ctx.iconStyle.join} joins).\n\n${ICONS_LICENCE}`);
+  put(ctx, files, `${dir}/LICENSE.txt`, `These icons are from Lucide (https://lucide.dev), released under the ISC licence.\nStroke width and corner style are set to the ${cleanText(ctx.brand.name, 200)} brand (stroke ${cssNum(ctx.iconStyle.stroke, 'icon stroke')}, ${ctx.iconStyle.join} joins).\n\n${ICONS_LICENCE}`);
 }
 
 function codeReadme(ctx) {
   const B = ctx.brand, L = colourMap(ctx, 'light');
   const ex = ['surface', 'text', 'action', 'action-label', 'focus', 'danger'].map((k) => `| \`--${k}\` | \`${L[k]}\` | \`${colourMap(ctx, 'dark')[k]}\` |`).join('\n');
-  return `# ${B.name} UI kit: code package
+  return `# ${mdEsc(B.name)} UI kit: code package
 
-Design tokens and working components for ${B.name}, built on plain CSS custom properties. No framework needed.
+Design tokens and working components for ${mdEsc(B.name)}, built on plain CSS custom properties. No framework needed.
 
 ## What is here
 
@@ -82,7 +84,7 @@ With Tailwind v4: \`@import "tailwindcss"; @import "./tokens.css"; @import "./ta
 
 ## Token names
 
-Colour tokens name a job, not a colour: \`--surface\`, \`--raised\`, \`--text\`, \`--quiet\`, \`--action\`, \`--action-label\`, \`--focus\`. State is plain words in one colour, never a tinted pill: \`--success\` (and \`--warning\`, \`--danger\`, \`--info\`) colours the words and the icon. Each has a \`-bg\` tint for a highlight or a chart, never under text. \`--action-text\` is the action colour where it reads as text, and the text colour where it does not.${ctx.houseRoles.length ? `The ${ctx.houseRoles.map((t) => `\`--${t}\``).join(' and ')} pair${ctx.houseRoles.length > 1 ? 's are' : ' is'} a house default, not a brand colour: ${B.name} has no ${ctx.houseRoles.join(' or ')} colour of its own, so the pair is there to keep the components working. ` : ''}Brand colours are \`--palette-<id>\`. Space is \`--sp-1\` to \`--sp-${ctx.space.length}\`, radii \`--r-control\` and \`--r-card\`, type \`--fs-*\`, \`--lh-*\`, \`--fw-*\`.
+Colour tokens name a job, not a colour: \`--surface\`, \`--raised\`, \`--text\`, \`--quiet\`, \`--action\`, \`--action-label\`, \`--focus\`. State is plain words in one colour, never a tinted pill: \`--success\` (and \`--warning\`, \`--danger\`, \`--info\`) colours the words and the icon. Each has a \`-bg\` tint for a highlight or a chart, never under text. \`--action-text\` is the action colour where it reads as text, and the text colour where it does not.${ctx.houseRoles.length ? `The ${ctx.houseRoles.map((t) => `\`--${t}\``).join(' and ')} pair${ctx.houseRoles.length > 1 ? 's are' : ' is'} a house default, not a brand colour: ${mdEsc(B.name)} has no ${ctx.houseRoles.join(' or ')} colour of its own, so the pair is there to keep the components working. ` : ''}Brand colours are \`--palette-<id>\`. Space is \`--sp-1\` to \`--sp-${ctx.space.length}\`, radii \`--r-control\` and \`--r-card\`, type \`--fs-*\`, \`--lh-*\`, \`--fw-*\`.
 
 | Token | Light | Dark |
 |---|---|---|
@@ -97,9 +99,19 @@ Light is the default. Set \`data-theme="dark"\` on \`<html>\` for dark, or \`dat
 - Every text colour pair in the kit is measured: ratio 4.5:1 or better under 24 px, 3:1 for large text, control edges and focus rings. The same holds in dark.
 - Focus is a ${ctx.borders[2].px}px ring in \`--focus\` on every control (\`:focus-visible\`). Do not remove it.
 - Controls are 44 px tall (36 px for the small size) and use real elements: \`button\`, \`input\`, \`select\`. State is carried by \`disabled\`, \`aria-invalid\`, \`aria-pressed\`, \`aria-selected\` and \`aria-current\`, not by class alone.
-- Fonts: ${[...new Set(ctx.faces.map((f) => f.family))].join(', ')}. All are open licence (SIL OFL 1.1).
+- Fonts: ${[...new Set(ctx.faces.map((f) => mdEsc(f.family)))].join(', ')}. All are open licence (SIL OFL 1.1).
 - Icons are Lucide (ISC licence), drawn with currentColor.
 `;
+}
+
+// OFL.txt for a kit that ships font files: the families, then the licence text. Each font file carries its own copyright notice
+// in its metadata (the name table's copyright field), which the licence allows in place of a separate line.
+export function oflText(ctx) {
+  const fams = [...new Set(ctx.faces.map((f) => cleanText(f.family, 100).replace(/s+/g, ' ')))];
+  return `The font files in this folder (${fams.join(', ')}) are released under the SIL Open Font License, Version 1.1.
+Each file carries its copyright notice in its font metadata (the copyright field of its name table).
+
+${OFL_LICENCE}`;
 }
 
 // The code package: tokens, components, example page, fonts, logo and icons.
@@ -115,7 +127,8 @@ export function codePackageFiles(ctx, theme) {
   put(ctx, files, 'example.html', exampleHtml(ctx));
   // fonts: local files first, Google as an alternative
   for (const f of ctx.faces) put(ctx, files, `assets/fonts/${f.stem}.woff2`, ctx.loaders.fontFile(f.stem, 'woff2'));
-  put(ctx, files, 'fonts.css', `/* ${ctx.brand.name} fonts: local files in assets/fonts (open licence, SIL OFL 1.1). */\n${fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`)}\n\n/* Or load from Google Fonts instead: delete the rules above and use this.\n${fontsCss(ctx).split('\n').filter((l) => l.startsWith('@import')).join('\n')}\n*/\n`);
+  put(ctx, files, 'assets/fonts/OFL.txt', oflText(ctx));
+  put(ctx, files, 'fonts.css', `/* ${commentText(ctx.brand.name)} fonts: local files in assets/fonts (open licence, SIL OFL 1.1). */\n${fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`)}\n\n/* Or load from Google Fonts instead: delete the rules above and use this.\n${fontsCss(ctx).split('\n').filter((l) => l.startsWith('@import')).join('\n')}\n*/\n`);
   // logo and icons
   if (ctx.edition === 'slot') put(ctx, files, 'assets/logo/logo-slot.svg', ctx.logo.slotSvgFile());
   else for (const id of ctx.logo.versions) put(ctx, files, `assets/logo/${ctx.slug}-${logoFileName(id)}.svg`, ctx.logo.svg(id) + '\n');
@@ -130,7 +143,7 @@ export function kitFiles(ctx, theme) {
   const B = ctx.brand, files = {}, slug = ctx.slug;
   if (ctx.edition === 'slot') {
     put(ctx, files, '01 Logo/logo-slot.svg', ctx.logo.slotSvgFile());
-    put(ctx, files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${B.name} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
+    put(ctx, files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${mdEsc(B.name)} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
   } else {
     const logo = ctx.logo;
     for (const id of logo.versions) {
@@ -143,12 +156,12 @@ export function kitFiles(ctx, theme) {
   put(ctx, files, `02 Colour/${slug}-palette.json`, JSON.stringify(paletteJson(ctx), null, 2) + '\n');
   const fams = [...new Map(ctx.faces.map((f) => [f.family, f])).values()];
   put(ctx, files, '03 Type/fonts.md', `# Typefaces\n\n${fams.map((f) => {
-    const mine = ctx.faces.filter((x) => x.family === f.family), ws = mine.filter((x) => x.style !== 'italic').map((x) => x.weight).join(', '), it = mine.filter((x) => x.style === 'italic').map((x) => x.weight).join(', ');
-    return `## ${f.family}\n\n- Role: ${f.role}\n- Weights: ${ws}${it ? `\n- Italics: ${it}` : ''}${B.fonts[f.role].axes ? `\n- Axes: ${B.fonts[f.role].axes}` : ''}\n- Google Fonts: https://fonts.google.com/specimen/${f.family.replace(/ /g, '+')}`;
+    const mine = ctx.faces.filter((x) => x.family === f.family), ws = mine.filter((x) => x.style !== 'italic').map((x) => cssNum(x.weight, 'font weight')).join(', '), it = mine.filter((x) => x.style === 'italic').map((x) => cssNum(x.weight, 'font weight')).join(', ');
+    return `## ${mdEsc(f.family)}\n\n- Role: ${mdEsc(f.role)}\n- Weights: ${ws}${it ? `\n- Italics: ${it}` : ''}${B.fonts[f.role].axes ? `\n- Axes: ${mdEsc(B.fonts[f.role].axes)}` : ''}\n- Google Fonts: https://fonts.google.com/specimen/${encodeURIComponent(f.family).replace(/%20/g, '+').replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())}`;
   }).join('\n\n')}\n\n## Licence\n\nAll faces are released under the SIL Open Font License 1.1. You may use, embed and share them, including commercially. They may not be sold on their own.\n`);
   putIcons(ctx, files, '04 Icons');
-  put(ctx, files, '05 Imagery/README.md', `# Photography direction\n\n${B.imagery.shots.map((s) => `## ${s.caption}\n\n${s.slot}`).join('\n\n')}\n`);
-  put(ctx, files, 'README.md', `# ${B.name} brand kit\n\n${B.version ? `Version ${B.version.number}, ${ctx.date}.\n\n` : ''}${B.description}\n\n| Folder | What is in it |\n|---|---|\n| 01 Logo | ${ctx.edition === 'slot' ? 'Where the approved logo files go, and a slot frame' : 'Every version as svg, png (512, 1024, 2048 px wide, transparent) and pdf'} |\n| 02 Colour | The palette as ASE (Adobe), CSS and JSON, and a swatch sheet |\n| 03 Type | The typefaces, weights, links and licence |\n| 04 Icons | ${iconSet(ctx).length} interface icons (Lucide, ISC licence) in the brand's stroke |\n| 05 Imagery | Photography direction |\n\nThe palette: ${ctx.colours.map((c) => `${c.name} ${c.hex}`).join(', ')}.\n\nAsk your printer for a proof before a print run.\n`);
+  put(ctx, files, '05 Imagery/README.md', `# Photography direction\n\n${B.imagery.shots.map((s) => `## ${mdEsc(s.caption)}\n\n${mdEsc(s.slot)}`).join('\n\n')}\n`);
+  put(ctx, files, 'README.md', `# ${mdEsc(B.name)} brand kit\n\n${B.version ? `Version ${mdEsc(B.version.number)}, ${ctx.date}.\n\n` : ''}${mdEsc(B.description)}\n\n| Folder | What is in it |\n|---|---|\n| 01 Logo | ${ctx.edition === 'slot' ? 'Where the approved logo files go, and a slot frame' : 'Every version as svg, png (512, 1024, 2048 px wide, transparent) and pdf'} |\n| 02 Colour | The palette as ASE (Adobe), CSS and JSON, and a swatch sheet |\n| 03 Type | The typefaces, weights, links and licence |\n| 04 Icons | ${iconSet(ctx).length} interface icons (Lucide, ISC licence) in the brand's stroke |\n| 05 Imagery | Photography direction |\n\nThe palette: ${ctx.colours.map((c) => `${mdEsc(c.name)} ${c.hex}`).join(', ')}.\n\nAsk your printer for a proof before a print run.\n`);
   return files;
 }
 

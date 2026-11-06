@@ -1,6 +1,7 @@
 // Styles for guidelines-b.js (classes start b-). Appended to css() in index.js; uses the .pg custom properties.
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssStr } from '../../engine/escape.js';
 
 export function cssB(ctx) {
   const mono = ctx.brand.fonts.mono, g = tokenGroups(ctx);
@@ -8,7 +9,7 @@ export function cssB(ctx) {
   // the product screens on the digital and layout pages use the UI kit's components, so they carry the kit's light tokens
   const uiScope = `.pg .ui{${decl(colourMap(ctx, 'light'))};${decl(g.space)};${decl(g.radius)};${decl(g.width)};${decl(g.font)};${decl(g.text)};${decl(g.shadow)}}`;
   return `
-.pg{--bmono:'${mono.family}',monospace}
+.pg{--bmono:'${cssStr(mono.family)}',monospace}
 .pg :where(b){font-weight:600}
 .b-mono{font-family:var(--bmono);font-weight:400;font-size:12px}
 .b-mono--l{font-size:15px}

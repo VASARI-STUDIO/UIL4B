@@ -1,9 +1,10 @@
 // Styles for guidelines-a.js. Appended to css() in index.js; use the same custom properties (.pg vars). Every class starts a-.
 // The pages are full-bleed slides (.pg--a): panels run edge to edge, the running head and folio are laid over the first panel.
+import { cssStr } from '../../engine/escape.js';
 export function cssA(ctx) {
   const mono = ctx.brand.fonts.mono;
   return `
-.pg{--mono:'${mono.family}',monospace}
+.pg{--mono:'${cssStr(mono.family)}',monospace}
 .pg--a{padding:0}
 .pg--a .hd,.pg--a .fo{position:absolute;z-index:2;color:inherit}
 .pg--a .hd{top:36px;left:var(--m);right:var(--m)}

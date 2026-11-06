@@ -3,11 +3,12 @@
 // Every kit page is a slide: the stage on top, a foot with the title and the rules. Component states run left to right as a build sequence.
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
 import { componentsCss } from '../../engine/components.js';
+import { cssStr } from '../../engine/escape.js';
 
 export function cssKit(ctx) {
   const B = ctx.brand, g = tokenGroups(ctx), stretch = B.fonts.display.stretch || 100;
   const decl = (o) => Object.entries(o).map(([k, v]) => `--${k}:${v};`).join('');
-  const tokens = `.pg .ui{${decl(colourMap(ctx, 'light'))}${decl(g.space)}${decl(g.radius)}${decl(g.width)}${decl(g.font)}${decl(g.text)}${decl(g.shadow)}--chrome:'${ctx.theme?.chrome?.family || 'Instrument Sans'}',sans-serif}
+  const tokens = `.pg .ui{${decl(colourMap(ctx, 'light'))}${decl(g.space)}${decl(g.radius)}${decl(g.width)}${decl(g.font)}${decl(g.text)}${decl(g.shadow)}--chrome:'${cssStr(ctx.theme?.chrome?.family || 'Instrument Sans')}',sans-serif}
 .pg .ui[data-theme="dark"]{${decl(colourMap(ctx, 'dark'))}}`;
   return `
 /* kit: tokens and components, scoped under .pg */

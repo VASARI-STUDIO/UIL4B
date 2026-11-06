@@ -4,6 +4,7 @@
 // left margin column, ledger tables (a full rule under the header, hairlines between rows), numbered figures, a contrast matrix.
 // Mono only on literal values. Everything reads colours from the brand's roles; no hex is written here.
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr } from '../../engine/escape.js';
 
 const vars = (r) => `--bk-ground:${r.surface};--bk-raised:${r.raised};--bk-panel:${r.sunken};--bk-ink:${r.text};--bk-soft:${r.textSoft};--bk-quiet:${r.quiet};--bk-quiet-panel:${r.quietOnSunken};--bk-hair:${r.divider};--bk-edge:${r.border};--bk-action:${r.action};--bk-action-hover:${r.actionHover};--bk-action-ink:${r.actionLabel};--bk-focus:${r.focus};--bk-mark:${r.danger.fg};`;
 
@@ -13,7 +14,7 @@ export function bookCss(ctx) {
   const top = d.weights[0], sub = d.weights[d.weights.length - 1];
   const sb = B.logo.colourways['on-sunbelt'];
   return `:root,.bk--board{${vars(L)}--bk-rule:color-mix(in srgb,var(--bk-ink) 24%,var(--bk-ground));--fix-ground:${L.surface};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};--fix-mark:${L.danger.fg};--hang:140px;--gap:32px;
---chrome:'Hanken Grotesk',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;--mono:'${m.family}',monospace}
+--chrome:'Hanken Grotesk',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"]{${vars(D)}}
 body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk{font-family:var(--chrome);font-size:14px;line-height:1.5;color:var(--bk-ink);background:var(--bk-panel);-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:264px minmax(0,1fr);min-height:100vh;position:relative}

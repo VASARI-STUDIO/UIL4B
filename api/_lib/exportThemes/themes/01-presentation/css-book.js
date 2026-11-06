@@ -2,6 +2,7 @@
 // brand kit pages: read-me, palette sheet, specimen, photography and the pack boards (cssBook, scoped under .pg).
 // Everything reads colours from the brand's roles; no hex is written here.
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr } from '../../engine/escape.js';
 
 const vars = (r) => `--bk-ground:${r.surface};--bk-raised:${r.raised};--bk-panel:${r.sunken};--bk-ink:${r.text};--bk-soft:${r.textSoft};--bk-quiet:${r.quiet};--bk-quiet-panel:${r.quietOnSunken};--bk-hair:${r.divider};--bk-edge:${r.border};--bk-action:${r.action};--bk-action-hover:${r.actionHover};--bk-action-ink:${r.actionLabel};--bk-focus:${r.focus};`;
 
@@ -9,7 +10,7 @@ export function bookCss(ctx) {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono;
   const rc = B.ui.radius.control, bw = B.ui.border;
   return `:root,.bk--board{${vars(L)}--fix-ground:${L.surface};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};
---chrome:'Instrument Sans',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;--mono:'${m.family}',monospace}
+--chrome:'Instrument Sans',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"]{${vars(D)}}
 body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk{font-family:var(--chrome);font-size:13px;line-height:1.45;color:var(--bk-ink);background:var(--bk-ground);-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;position:relative}
