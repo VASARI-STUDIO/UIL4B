@@ -96,9 +96,7 @@ export const HERO_HEADLINE = Object.freeze({
   lead: 'Your UI and brand kit, from',
   mark: 'one app',
   tail: '.',
-  /** Where the sentence comes from, so a test can check the trace. */
-  source: 'HeroNewNav.dc.html (hero h1)',
-  /** Positioning lines it was spliced from — none: it is the design's sentence whole. */
+  /** Positioning lines it was spliced from; none, it is written whole. */
   cutFrom: Object.freeze([]),
 })
 
