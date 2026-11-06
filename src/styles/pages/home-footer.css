@@ -192,6 +192,9 @@
   color: #EFEEEA;
   text-decoration: underline;
   text-underline-offset: 3px;
+  /* 18px of text in a 26px box; the margin pulls the padding back, so the baseline row keeps its height. */
+  padding-block: 4px;
+  margin-block: -4px;
 }
 .sp-footer--home .sp-footer-place { margin-left: auto; }
 .sp-footer--home .sp-footer-attrib-icon { width: 12px; height: 12px; margin-left: .25em; vertical-align: -1px; }
@@ -242,6 +245,7 @@
   .sp-footer.sp-footer--home .sp-footer-legal > * { display: flex; align-items: center; min-height: 44px; }
   .sp-footer.sp-footer--home .sp-footer-legal a,
   .sp-footer.sp-footer--home .app-footer-note { display: inline-flex; align-items: center; min-height: 44px; }
+  .sp-footer.sp-footer--home .sp-footer-legal a.sp-footer-attrib { padding-block: 0; margin-block: 0; }
   .sp-footer--home .sp-footer-place { flex: 1 0 100%; margin-left: 0; gap: .35em; }
   .sp-footer--home .sp-footer-mark .brand-logo { margin-top: 48px; }
 

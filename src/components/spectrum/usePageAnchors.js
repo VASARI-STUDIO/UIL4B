@@ -121,7 +121,9 @@ export function jumpToSection(id, { immediate = false } = {}) {
   } else {
     el.scrollIntoView({ block: 'start', behavior: immediate ? 'instant' : 'auto' })
   }
-  const heading = el.querySelector('h2') || el
+  // The main landmark (the skip link's target) takes focus itself, so the next
+  // Tab reaches the first control in it, not the first heading on the page.
+  const heading = el.tagName === 'MAIN' ? el : (el.querySelector('h2') || el)
   if (!heading.hasAttribute('tabindex') && heading.tabIndex < 0) heading.setAttribute('tabindex', '-1')
   heading.focus({ preventScroll: true })
   return true

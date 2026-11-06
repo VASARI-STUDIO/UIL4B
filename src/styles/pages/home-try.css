@@ -202,11 +202,12 @@
 .ht-pal-nm { margin-top: 12px; }
 .ht-pal-l2 { display: contents; }
 .ht-pal-nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-width: 100%; min-height: 40px; font-size: 15px; font-weight: 600; line-height: 20px; text-wrap: balance; overflow-wrap: anywhere; }
+/* 16px of text in a 24px box: the 4px of padding above and below is pulled back by the margin, so the button is 24px to hit and sits exactly where a 16px one with a 4px top margin did. */
 .ht-pal-hex {
-  position: relative; max-width: 100%; height: 16px; margin-top: 4px; padding: 0; border: 0; background: transparent; display: grid;
+  position: relative; box-sizing: border-box; max-width: 100%; height: 24px; margin: 0 0 -4px; padding: 4px 0; border: 0; background: transparent; display: grid;
   font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums;
 }
-.ht-pal-hex::after { content: ""; position: absolute; inset: -8px -6px; }
+.ht-pal-hex::after { content: ""; position: absolute; inset: -4px -6px; }
 .ht.ht .ht-pal-hex:focus-visible { outline-color: currentColor; }
 .ht-pal-swap { display: grid; }
 .ht-pal-swap > span { grid-area: 1 / 1; justify-self: center; white-space: nowrap; transition: opacity 150ms var(--ease); }

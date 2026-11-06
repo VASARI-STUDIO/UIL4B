@@ -1288,6 +1288,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--accent-fg);outline-offset:2px}
 html[data-reduced-motion="true"] .skip-link{transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .skip-link{transition:none}}
+@media(pointer:coarse){.skip-link{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box}}
 /* Recovery affordance for the price-service-down state (Murphy's law: error +
    offline both land here). Sits under the price slot, never inside the
    aria-live region, so retrying doesn't re-announce the amount. */

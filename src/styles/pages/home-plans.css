@@ -179,6 +179,8 @@
   text-decoration-color: rgba(var(--sp-ink-rgb), .35);
   text-underline-offset: 4px;
   white-space: nowrap;
+  /* Inline: the padding adds no height to the line, and takes the link's box from 18px to 26px. */
+  padding-block: 4px;
   transition: text-decoration-color 150ms ease;
 }
 @media (hover: hover) {
@@ -387,6 +389,7 @@
   .hpl-small { margin-top: 12px; font-size: 13px; text-align: center; }
   .hpl-link {
     margin-top: 4px;
+    padding-block: 0;
     display: flex;
     align-items: center;
     justify-content: center;
