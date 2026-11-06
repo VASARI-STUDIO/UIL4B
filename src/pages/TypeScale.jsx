@@ -23,7 +23,7 @@ import '../styles/deferred/type.css'
 import '../styles/pages/type-scale.css'
 import '../styles/pages/type-scale-kerbside.css'
 import KerbsidePage from '../components/typescale/KerbsidePage'
-import { useNote } from '../components/typescale/kerbsideSteps'
+import { ladderNote } from '../components/typescale/kerbsideSteps'
 import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -795,7 +795,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const ladderView = (
     <div className="tsc-ladder" ref={ladderRef} data-ladder="" data-ground={ground}>
       <h2 className="sr-only">Read the scale</h2>
-      <p className="tsc-use" role="status">{useNote(steps, up, !!user, litStep)}</p>
+      <p className="tsc-use" role="status">{ladderNote(steps, up, !!user, litStep)}</p>
       {previewIsFitted && (
         <p className="tsc-fit-note" role="status">
           Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.

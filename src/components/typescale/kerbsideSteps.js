@@ -26,7 +26,7 @@ export function usedStepNames(steps, up, mine) {
 
 // The ladder's note above its rows: it says where a step is used, and says so
 // plainly when the step pressed is one this screen never sets.
-export function useNote(steps, up, mine, lit) {
+export function ladderNote(steps, up, mine, lit) {
   const pressed = steps.find(s => s.name === lit)
   if (pressed && !usedStepNames(steps, up, mine).has(pressed.name)) return `${pressed.name} isn’t used on this screen.`
   return 'Press a step to see where it’s used.'
