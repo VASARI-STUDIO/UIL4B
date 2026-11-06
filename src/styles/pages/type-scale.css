@@ -660,8 +660,9 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
 .tsc-page .tsc-drawer-head .tsc-fmt { margin-right: auto; min-width: 0; overflow-x: auto; }
 .tsc-page .tsc-drawer .tsc-export { flex: 1; min-height: 0; max-height: none; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 @keyframes tsc-drawer-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+html[data-reduced-motion="true"] .tsc-page .tsc-drawer { animation: none; }
 @media (prefers-reduced-motion: reduce) {
-  .tsc-page .tsc-drawer { animation: none; }
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-drawer { animation: none; }
 }
 html:has(.tsc-page .tsc-dock) { scroll-padding-bottom: 72px; }
 

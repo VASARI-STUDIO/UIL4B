@@ -191,10 +191,17 @@ html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
   :is(.fpr-page, .fpr-sheet) .fpr-wmenu { height: 44px; padding: 0 12px 0 16px; font-size: 14px; }
   :is(.fpr-page, .fpr-sheet) .fpr-wopt { height: 44px; font-size: 14px; }
 }
+html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-wmenu,
+html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-wopt { transition: background-color .15s ease; }
+html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-wmenu:active,
+html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-wopt:active { transform: none; }
+html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-wmenu svg { transition: none; }
 @media (prefers-reduced-motion: reduce) {
-  :is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt) { transition: background-color .15s ease; }
-  :is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt):active { transform: none; }
-  :is(.fpr-page, .fpr-sheet) .fpr-wmenu svg { transition: none; }
+  html:not([data-reduced-motion="false"]) :is(.fpr-page, .fpr-sheet) .fpr-wmenu,
+  html:not([data-reduced-motion="false"]) :is(.fpr-page, .fpr-sheet) .fpr-wopt { transition: background-color .15s ease; }
+  html:not([data-reduced-motion="false"]) :is(.fpr-page, .fpr-sheet) .fpr-wmenu:active,
+  html:not([data-reduced-motion="false"]) :is(.fpr-page, .fpr-sheet) .fpr-wopt:active { transform: none; }
+  html:not([data-reduced-motion="false"]) :is(.fpr-page, .fpr-sheet) .fpr-wmenu svg { transition: none; }
 }
 
 /* ── Suggestions: compact rows, one reason line per group ────────────────── */

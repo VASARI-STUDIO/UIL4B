@@ -1,6 +1,7 @@
 import { ToolBack } from './ToolLayout'
 import ToolIcon from './ToolIcon'
 import TypeToolsNav from './TypeToolsNav'
+import GroundSegment from './GroundSegment'
 import '../../styles/pages/type-tools-nav.css'
 
 // The shared tool bar of the three type tools (Font Gallery, Font Pair, Type
@@ -32,19 +33,6 @@ import '../../styles/pages/type-tools-nav.css'
 // its right-hand group starts.
 
 const SAMPLE_PROJECT = 'Kerbside'
-
-export function GroundSegment({ ground, onGround, className }) {
-  return (
-    <div className={className ? `ttb-seg ${className}` : 'ttb-seg'} role="group" aria-label="Specimen ground">
-      <button type="button" aria-pressed={ground === 'd'} onClick={() => onGround('d')}>
-        <span className="ttb-sq ttb-sq--dark" aria-hidden="true" />Dark
-      </button>
-      <button type="button" aria-pressed={ground === 'l'} onClick={() => onGround('l')}>
-        <span className="ttb-sq ttb-sq--light" aria-hidden="true" />Light
-      </button>
-    </div>
-  )
-}
 
 export function typeToolsBarItems({
   current, heading, body, scale, headingStack, bodyStack, projectName, ground, onGround,

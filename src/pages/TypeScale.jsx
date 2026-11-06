@@ -25,7 +25,8 @@ import '../styles/pages/type-scale-kerbside.css'
 import KerbsidePage from '../components/typescale/KerbsidePage'
 import { ladderNote, litLineCount, usedStepNames } from '../components/typescale/kerbsideSteps'
 import { useAppearance } from '../contexts/AppearanceContext'
-import { GroundSegment, typeToolsBarItems } from '../components/tool/TypeToolsBar'
+import GroundSegment from '../components/tool/GroundSegment'
+import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { useAuth } from '../contexts/AuthContext'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one

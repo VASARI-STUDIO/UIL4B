@@ -143,7 +143,14 @@ const ALLOWED = {
     '.xfp-code': 'code',
     '.xfp-file': 'token',
   },
+  'pages/font-detail.css': {
+    '.fgd-code': 'code',
+    '.fgd-spec .fgd-weight-tag strong': 'value',
+    '.fgd-wpill': 'value',
+  },
   'pages/font-pair-board.css': {
+    ':is(.fpr-page, .fpr-sheet) .fpr-wmenu': 'value',
+    ':is(.fpr-page, .fpr-sheet) .fpr-wopt': 'value',
     '.fpr-page .fpr-frow-w': 'value',
   },
   'pages/from-image-dialog.css': {
