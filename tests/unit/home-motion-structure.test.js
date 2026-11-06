@@ -32,7 +32,7 @@ if (!CSS_PATH) throw new Error('spectrum.css is in neither src/styles/pages/ nor
 const CSS = read(CSS_PATH).replace(/\/\*[\s\S]*?\*\//g, '')
 const js = (p) => stripComments(read(p))
 const BENCH = js('src/components/spectrum/SpectrumBench.jsx')
-const PROOF = js('src/components/spectrum/SpectrumProof.jsx')
+const PROOF = js('src/components/home/HomeProof.jsx')
 const RAMP = js('src/components/spectrum/SpectrumRamp.jsx')
 
 // ── a small stylesheet reader ───────────────────────────────────────────────
@@ -248,11 +248,10 @@ const matching = (src, openAt, open, close) => {
   return -1
 }
 
-test('U4: the bench and the proof band listen to no scroll, and use an observer instead', () => {
+test('U4: the bench and the proof bar listen to no scroll; the bench uses an observer', () => {
   assert.ok(BENCH.includes('new IntersectionObserver'), 'the bench no longer observes its steps')
-  assert.ok(PROOF.includes('new IntersectionObserver'), 'the proof band no longer observes its row')
-  for (const [file, src] of Object.entries({ 'SpectrumBench.jsx': BENCH, 'SpectrumProof.jsx': PROOF })) {
-    assert.ok(!scrollListener.test(src), `${file} adds a scroll listener. Both ran one per frame before; an observer replaced them.`)
+  for (const [file, src] of Object.entries({ 'SpectrumBench.jsx': BENCH, 'HomeProof.jsx': PROOF })) {
+    assert.ok(!scrollListener.test(src), `${file} adds a scroll listener. A scroll handler runs once per frame.`)
     assert.ok(!/onScroll|\.onscroll/.test(src), `${file} has an onScroll handler`)
   }
 })

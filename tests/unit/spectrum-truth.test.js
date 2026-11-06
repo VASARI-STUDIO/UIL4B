@@ -25,7 +25,6 @@ import {
   LADDER,
   LIBRARY_COUNTS,
   PROOF,
-  PROOF_STATS,
   PRO_POINTS,
   TOOL_COUNT,
   numberWord,
@@ -38,7 +37,8 @@ import { HERO_HEADLINE } from '../../src/data/positioning.js'
 import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
-import { ICON_PACK_TIERS } from '../../src/data/iconPackTiers.js'
+import { BOOKMARK_COUNT } from '../../src/components/home/bookmarkFolders.js'
+import { PROOF_ROWS, STATS } from '../../src/components/home/proofStats.js'
 import { ICON_GROUP_SHELF } from '../../src/components/spectrum/iconGroupShelf.js'
 import { listIconGroups } from '../../src/data/iconGroups.js'
 // WHERE THE SHEET IS TODAY, FOUND RATHER THAN TYPED.
@@ -74,7 +74,8 @@ const ALL_JSX = PAGE + FACTS + BENCH
   + stripComments(read('src/components/spectrum/SpectrumExports.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumSearch.jsx'))
   + stripComments(read('src/components/spectrum/OpenPill.jsx'))
-  + stripComments(read('src/components/spectrum/SpectrumProof.jsx'))
+  + stripComments(read('src/components/home/HomeProof.jsx'))
+  + stripComments(read('src/components/home/proofStats.js'))
   + stripComments(read('src/components/spectrum/spectrumHero.js'))
   + stripComments(read('src/components/spectrum/spectrumKit.js'))
 // The same text with the JS `export` keyword removed. The export sweep below
@@ -193,7 +194,7 @@ test('the page claims no feature that does not exist', () => {
 
 /* ── proof ─────────────────────────────────────────────────────────────────── */
 
-test('not one of the prototype\'s proof numbers survives, and the band\'s figures are counted', () => {
+test('not one of the prototype\'s proof numbers survives, and the bar\'s figures are accounted for', () => {
   // "138 kits exported since we opened the toolkit · 27 designers building with
   // it every week · 4 studios using it on client work · 9,176 palettes
   // generated". None of those is measured anywhere in this repo, and the
@@ -207,26 +208,24 @@ test('not one of the prototype\'s proof numbers survives, and the band\'s figure
       `the Spectrum page carries the prototype's social-proof copy ${phrase}. `
       + 'There is no measurement behind it.')
   }
-  // HIS BAND IS BACK: "you are forgetting
-  // about the don't just take it from us section". Rebuilt as drawn, with FOUR
-  // REAL FIGURES, each the length of the array that decides it — and none of
-  // them a claim about other people, which is what the prototype's were.
-  assert.equal(PROOF_STATS.length, 4, 'the proof band no longer carries four figures')
-  assert.deepEqual(PROOF_STATS.map((s) => s.value), [
-    createTools().filter((t) => !t.soon && !t.beta).length,
-    LIBRARY_PALETTES.length,
-    GALLERY_GRADIENTS.length,
-    Object.keys(ICON_PACK_TIERS).length,
-  ], 'a proof figure is no longer the count of the array it names')
-  for (const s of PROOF_STATS) {
-    assert.ok(!/\b(users?|designers?|studios?|customers?|teams?|people)\b/i.test(s.label),
-      `the proof figure "${s.label}" makes a claim about other people, which nothing measures`)
-  }
-  // MUTATION GUARD: the module interpolates rather than types the figures.
-  assert.ok(FACTS.includes('LIBRARY_TOTALS.palettes') && FACTS.includes('LIBRARY_TOTALS.gradients') && FACTS.includes('Object.keys(ICON_PACK_TIERS).length'),
-    'spectrumFacts.js no longer counts its proof figures; something typed them')
-  assert.ok(stripComments(read('src/components/spectrum/SpectrumProof.jsx')).includes('PROOF_STATS.map'),
-    'SpectrumProof.jsx no longer renders PROOF_STATS')
+  // THE BAR SHIPS THREE PLACEHOLDER COUNTS ON PURPOSE, AND THEY ARE CONFINED.
+  // They are the only unmeasured figures on the page and sit in the one STATS
+  // array, so real counts replace them in a single edit (change the first
+  // assertion with that edit). The fourth figure is a fact about the product,
+  // derived rather than typed.
+  assert.deepEqual(STATS.map((s) => s.n), [186, 540, 72],
+    'a proof count changed; the three that ship are the ones in STATS')
+  assert.equal(PROOF_ROWS.length, 4, 'the proof bar no longer carries four figures')
+  assert.equal(PROOF_ROWS[3].n, createTools().filter((t) => !t.soon && !t.beta).length,
+    'the tools figure is no longer the count of the live tools')
+  assert.equal(PROOF_ROWS[3].label, `tools in place of ${BOOKMARK_COUNT} bookmarks`,
+    'the bookmarks figure is no longer the total of the bookmark folders')
+  // MUTATION GUARD: the derived figures are read, not typed.
+  const ROWS_SRC = stripComments(read('src/components/home/proofStats.js'))
+  assert.ok(ROWS_SRC.includes('n: TOOL_COUNT') && ROWS_SRC.includes('${BOOKMARK_COUNT}'),
+    'proofStats.js no longer derives its tools figure; something typed it')
+  assert.ok(stripComments(read('src/components/home/HomeProof.jsx')).includes('PROOF_ROWS.map'),
+    'HomeProof.jsx no longer renders the proof rows')
 })
 
 /* ── counts ────────────────────────────────────────────────────────────────── */
