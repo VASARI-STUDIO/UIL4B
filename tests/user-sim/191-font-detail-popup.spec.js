@@ -225,6 +225,7 @@ test.describe('Font Gallery pop-up: the action bar', () => {
     await toggle.click()
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(page.locator('.fg-compare-tray')).toContainText('Inter')
+    await expect(page.locator('.fg-compare-tray-status')).toHaveText('Pick 1 or 2 more to compare')
 
     await page.locator('.fg-card-open').first().focus()
     await page.keyboard.press('Enter')
