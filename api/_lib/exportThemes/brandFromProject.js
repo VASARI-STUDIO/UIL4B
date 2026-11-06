@@ -52,12 +52,14 @@ function lightRoles(palette, slots, semantic) {
     ...a, focus: reach(up(R.focus), [...all], 3), disabledBg: dis, disabledText: reach(up(R.onDisabled), [dis], 4.5), scrim: text,
     success: by.success, warning: by.warning, danger: by.danger, info: by.info, neutral: { fg: text, bg: sunken },
   };
-  if (ratio(r.action, surface) < 3) r.actionExempt = true;
+  // A pale action fill gets an edge that reads on the surface, so the button is still seen.
+  if (ratio(r.action, surface) < 3) r.actionEdge = r.border;
   return r;
 }
 
 function darkRoles(design, primary) {
-  const { H } = toOklch(primary), dk = (L, C = 0.012) => fromOklch(L, C, H);
+  // The dark grounds take a trace of the primary's hue; a grey, white or black primary has none to give, so they stay neutral.
+  const { C: chroma, H } = toOklch(primary), tint = chroma < 0.02 ? 0 : 1, dk = (L, C = 0.012) => fromOklch(L, C * tint, H);
   const surface = dk(0.19), raised = dk(0.235), sunken = dk(0.15), all = [surface, raised, sunken];
   const text = reach(dk(0.95, 0.01), all, 4.5), quiet = reach(dk(0.72), [surface, raised], 4.5), dis = dk(0.26);
   const a = actionStates(reach(primary, [surface], 3), [surface, '#FFFFFF', '#000000']);
@@ -77,7 +79,7 @@ const query = (family, ws) => `${family.replace(/ /g, '+')}:wght@${ws.join(';')}
 
 // One font role. A family with a .ttf here is used as it is; any other takes its category's stand-in files and weights.
 function fontFace(role, family, wantWeight, category) {
-  const own = TTF_FAMILIES[family];
+  const own = Object.hasOwn(TTF_FAMILIES, family) ? TTF_FAMILIES[family] : undefined;  // a family called "toString" is not a table entry
   const cat = CATEGORIES.includes(category) ? category : (catalogueEntry(family) || {}).category;
   const standIn = !own;
   const useFamily = own ? family : standInFor(CATEGORIES.includes(cat) ? cat : 'sans-serif', role === 'display' ? 'heading' : 'body');
@@ -97,7 +99,7 @@ const wordmarkOf = (name) => {
     const c = ch.codePointAt(0);
     if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || ' .,&\'-'.includes(ch)) out += ch;
   }
-  out = out.replace(/\s+/g, ' ').trim().slice(0, 40).trim();
+  out = out.replace(/\s+/g, ' ').replace(/^[^A-Za-z0-9]+/, '').slice(0, 40).trim();  // no leading punctuation: "../x" is "x"
   return /[A-Za-z0-9]/.test(out) ? out : 'Your brand';
 };
 const slugOf = (word) => {
@@ -182,7 +184,7 @@ function typeBlock(d, faces) {
       T('display', 'display', s(lad[0], 24, 96), 1.05, fw('display', d.headingWeight), 'The largest line'),
       T('headline', 'display', s(lad[1], 20, 80), 1.1, fw('display', d.headingWeight), 'A page headline'),
       T('title', 'display', s(lad[3], 16, 40), 1.2, fw('display', d.headingWeight), 'A section title'),
-      T('body', 'body', s(lad[5], 12, 24), round1(body * 100) / 100, fw('body', d.bodyWeight), 'Reading text'),
+      T('body', 'body', s(lad[5], 12, 24), round1(body * 100) / 100, fw('body', d.bodyWeight), 'Running copy'),
       T('label', 'body', s(lad[6], 11, 18), 1.3, fw('body', 500), 'Labels and small text'),
       T('caption', 'body', s(lad[7], 10, 16), 1.4, fw('body', 400), 'Notes and folios'),
     ],
@@ -192,8 +194,12 @@ function typeBlock(d, faces) {
 }
 
 // ---- the brand ----
-function build({ design, projectName, date }) {
-  const d = readDesign(design), word = wordmarkOf(projectName);
+const plain = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+// readDesign and the kit helpers expect objects and an array of colours; any other shape in the request counts as absent.
+const cleanDesign = (design) => { const d = plain(design), p = plain(d.palette); return { ...d, palette: { ...p, colors: Array.isArray(p.colors) ? p.colors : [] }, fonts: plain(d.fonts) }; };
+
+function build({ design: rawDesign, projectName, date }) {
+  const design = cleanDesign(rawDesign), d = readDesign(design), word = wordmarkOf(projectName);
   const palette = kitPalette(design || {}), slot = Object.fromEntries(palette.map((p) => [p.id, p]));
   const light = lightRoles(palette, slot, kitSemantic(design || {})), dark = darkRoles(design, slot.pine.hex);
   const faces = {
