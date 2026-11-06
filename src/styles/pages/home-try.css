@@ -219,9 +219,11 @@
 .ht-rng::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -6px; border: 0; border-radius: 50%; background: #EFEEEA; }
 .ht-rng::-moz-range-track { height: 2px; border-radius: 999px; background: rgba(var(--ink), .22); }
 .ht-rng::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: #EFEEEA; }
-.ht.ht .ht-rng:focus-visible { outline: none; }
-.ht-rng:focus-visible::-webkit-slider-thumb { outline: 2px solid #EFEEEA; outline-offset: 2px; }
-.ht-rng:focus-visible::-moz-range-thumb { outline: 2px solid #EFEEEA; outline-offset: 2px; }
+/* The ring sits on the input itself (the shared `.ht.ht :focus-visible` rule), so
+   it is one ring a script can measure, and the global field halo is dropped. The
+   radius is set at rest, which is what the ring traces. */
+.ht-rng { border-radius: 6px; }
+.ht.ht .ht-rng:focus-visible { box-shadow: none; }
 @media (pointer: coarse) { .ht-rng { height: 44px; } }
 /* Under 768 the toolbar and the four sliders give way to one well (below). */
 .ht-well { display: none; }
