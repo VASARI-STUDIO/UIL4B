@@ -92,6 +92,7 @@
 .tsc-page .tsc-ladder[data-ground="l"] {
   --tl-ink: #0B0C0E; --tl-dim: rgba(11, 12, 14, .7); --tl-soft: rgba(11, 12, 14, .76);
   --tl-hair: rgba(11, 12, 14, .1); --tl-wash: rgba(19, 20, 22, .06); --tl-wash-2: rgba(19, 20, 22, .1);
+  --tsc-hv: rgba(19, 20, 22, .06); --tsc-sel: rgba(19, 20, 22, .1);
   padding: 8px 16px; border-radius: 16px; background: #EFEEEA; color: #0B0C0E;
 }
 .tsc-page .tsc-ladder[data-ground="l"] .tsc-row:focus-visible { outline-color: #0B0C0E; }

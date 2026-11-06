@@ -23,6 +23,7 @@ import '../styles/deferred/type.css'
 import '../styles/pages/type-scale.css'
 import '../styles/pages/type-scale-kerbside.css'
 import KerbsidePage from '../components/typescale/KerbsidePage'
+import { useNote } from '../components/typescale/kerbsideSteps'
 import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -203,6 +204,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const { user } = useAuth()
   // The step pressed in the ladder; the page lights each line that uses it.
   const [litStep, setLitStep] = useState('')
+  // The step whose Copy label reads Copied, for a moment after it is pressed.
+  const [copiedStep, setCopiedStep] = useState('')
+  const copiedTimer = useRef(0)
   // Steps above the base take a tighter line height than the body's.
   const [tight, setTight] = useState(true)
   // The ground the ladder is read on, Dark or Light.
@@ -791,36 +795,70 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const ladderView = (
     <div className="tsc-ladder" ref={ladderRef} data-ladder="" data-ground={ground}>
       <h2 className="sr-only">Read the scale</h2>
+      <p className="tsc-use" role="status">{useNote(steps, up, !!user, litStep)}</p>
       {previewIsFitted && (
         <p className="tsc-fit-note" role="status">
           Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
         </p>
       )}
-      {steps.map(s => (
-        <button
-          key={s.name}
-          type="button"
-          className="tsc-row"
-          data-step={s.name}
-          data-px={s.px}
-          aria-pressed={litStep === s.name}
-          onClick={() => {
-            setLitStep(cur => (cur === s.name ? '' : s.name))
-            onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(s.lead, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
-            toast?.(`Copied --text-${s.name}`)
-          }}
-          aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
-        >
-          <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
-          <span
-            className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-            ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
+      {steps.map((s, i) => {
+        const heading = s.role === 'heading'
+        const loading = heading && headingLoading
+        const fitted = fitTypePreviewSize(s.previewPx)
+        // A step too large to hold the whole line shows its first word, sized to
+        // fit the row's own width.
+        const first = !loading && fitted >= 49
+        const text = first ? specimen.split(' ')[0] : specimen
+        const num = `${trim(s.previewPx, 2)} / ${trim(s.lead, 3)}`
+        // The first heading row gives way to the error when the face failed.
+        if (heading && headingFailed && i === steps.findIndex(x => x.role === 'heading')) {
+          return (
+            <div key={s.name} className="tsc-row tsc-row--static" role="alert" data-step={s.name} data-px={s.px}>
+              <span className="tsc-row-l">
+                <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
+                <span className="tsc-row-num">{num}</span>
+              </span>
+              <span className="tsc-row-text tsc-row-err">
+                <span>{headingName} didn’t load.</span>
+                <button type="button" className="tsc-retry" onClick={retryFace}>Retry</button>
+              </span>
+            </div>
+          )
+        }
+        const cls = ['tsc-row-text', heading && 'tsc-row-text--heading', loading && 'is-loading', first && 'is-first'].filter(Boolean).join(' ')
+        return (
+          <button
+            key={s.name}
+            type="button"
+            className="tsc-row"
+            data-step={s.name}
+            data-px={s.px}
+            aria-pressed={litStep === s.name}
+            onClick={() => {
+              setLitStep(cur => (cur === s.name ? '' : s.name))
+              onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(s.lead, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
+              toast?.(`Copied --text-${s.name}`)
+              setCopiedStep(s.name)
+              clearTimeout(copiedTimer.current)
+              copiedTimer.current = setTimeout(() => setCopiedStep(''), 1600)
+            }}
+            aria-label={`Copy the ${s.name} step and light it on the page. ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
           >
-            {specimen}
-          </span>
-          <span className="tsc-row-num">{trim(s.previewPx, 1)}px<span className="tsc-row-rem"> · {trim(+(s.previewPx / 16).toFixed(4))}rem</span></span>
-        </button>
-      ))}
+            <span className="tsc-row-l">
+              <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
+              <span className="tsc-row-num">{num}</span>
+              <span className={copiedStep === s.name ? 'tsc-row-cp is-did' : 'tsc-row-cp'} aria-hidden="true"><span className="tsc-cp-a">Copy</span><span className="tsc-cp-b">Copied</span></span>
+            </span>
+            <span
+              className={cls}
+              ref={varsRef({ '--tsc-fs': `${fitted}px`, '--tsc-lead': trim(s.lead, 3), '--tsc-chars': (text.length * 0.66).toFixed(2) })}
+            >
+              {loading ? `Loading ${headingName}` : text}
+              {s.previewPx < 12 && !loading && <span className="tsc-row-cap">Under 12px: captions only</span>}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 

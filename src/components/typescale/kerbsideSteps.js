@@ -23,3 +23,19 @@ export function usedStepNames(steps, up, mine) {
   if (!mine) used.push(p.eta)
   return new Set(used.map(s => s.name))
 }
+
+// The ladder's note above its rows: it says where a step is used, and says so
+// plainly when the step pressed is one this screen never sets.
+export function useNote(steps, up, mine, lit) {
+  const pressed = steps.find(s => s.name === lit)
+  if (pressed && !usedStepNames(steps, up, mine).has(pressed.name)) return `${pressed.name} isn’t used on this screen.`
+  return 'Press a step to see where it’s used.'
+}
+
+// What names the screen: Kerbside's own tracking screen signed out, a neutral
+// "Sample content" screen in the project's families signed in.
+export function screenCopy(mine) {
+  return mine
+    ? { label: 'A sample screen set on this scale', caption: 'Sample content', brand: null }
+    : { label: 'Kerbside’s Track a rider screen, set on this scale', caption: null, brand: 'Kerbside' }
+}

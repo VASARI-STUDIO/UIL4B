@@ -71,42 +71,60 @@
   line-height: 1.45;
   color: var(--tl-soft);
 }
+/* A row is a button: the token and its "size / lead" value on the left, the
+   sample on the right. Pressing it lights the row and copies its CSS. */
+.tsc-page .tsc-ladder { --tsc-hv: var(--tl-wash); --tsc-sel: var(--tl-wash-on); }
+.tsc-page .tsc-use { margin: 0 0 4px; padding: 12px 20px 0; font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); }
 .tsc-page .tsc-row {
+  position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto);
-  align-items: baseline;
-  gap: 12px;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
   width: 100%;
   min-width: 0;
-  padding: 12px 0;
+  margin: 0 0 8px;
+  padding: 16px 20px;
   scroll-margin-top: calc(var(--chrome-h) + var(--tl-bar-h) + 60px);
   border: 0;
+  border-radius: 12px;
   background: transparent;
   color: var(--tl-ink);
   text-align: left;
   cursor: pointer;
-  transition: background-color .16s ease;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
 }
-.tsc-page .tsc-row + .tsc-row { border-top: 1px solid var(--tl-hair); }
-.tsc-page .tsc-row:focus-visible { position: relative; z-index: 1; outline-offset: -2px; }
-.tsc-page .tsc-row:active { background: var(--tl-wash-2); }
-/* The longest token, --text-base, is about 80px at 12px mono. */
-@media (min-width: 768px) {
-  .tsc-page .tsc-row { grid-template-columns: 92px minmax(0, 1fr) auto; gap: 16px; }
-}
-/* Literal values only are mono: the token and the px. */
-.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
-.tsc-page .tsc-row-num { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-row:last-child { margin-bottom: 0; }
+.tsc-page .tsc-row:active { transform: scale(.99); }
+.tsc-page .tsc-row[aria-pressed="true"],
+.tsc-page .tsc-row[aria-pressed="true"]:hover { background: var(--tsc-sel); }
+.tsc-page .tsc-row:focus-visible { outline-offset: -2px; }
+.tsc-page .tsc-row--static { cursor: default; }
+.tsc-page .tsc-row--static:active { transform: none; }
+.tsc-page .tsc-fit-note { margin: 0 0 8px; padding: 12px 20px; border: 0; }
+/* The token, its value and the Copy label stack in the left cell. */
+.tsc-page .tsc-row-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
+/* Literal values only are mono: the token and the size / lead. The --text- prefix is read, not shown. */
+.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 13px; line-height: 18px; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
+.tsc-page .tsc-row-prefix { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.tsc-page .tsc-row-num { font-family: var(--mono); font-size: 12px; line-height: 16px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Copy shows on hover and focus; after a press the two words cross-fade to Copied. */
+.tsc-page .tsc-row-cp { display: inline-grid; margin-top: 6px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tl-dim); opacity: 0; pointer-events: none; transition: opacity 150ms var(--tl-ease); }
+.tsc-page .tsc-row-cp > span { grid-area: 1 / 1; transition: opacity 300ms var(--tl-ease); }
+.tsc-page .tsc-cp-b { opacity: 0; }
+.tsc-page .tsc-row-cp.is-did { opacity: 1; }
+.tsc-page .tsc-row-cp.is-did .tsc-cp-a { opacity: 0; }
+.tsc-page .tsc-row-cp.is-did .tsc-cp-b { opacity: 1; }
+.tsc-page .tsc-row:focus-visible .tsc-row-cp { opacity: 1; }
 .tsc-page .tsc-row-text {
+  display: block;
   min-width: 0;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   color: var(--tl-ink);
   font-family: var(--tsc-body-ff);
   font-size: var(--tsc-fs);
   font-weight: var(--tsc-body-fw);
-  /* A sample is judged by its size, so the ladder holds a tight leading; the
-     Line height control still sets the Page view and the export. */
-  line-height: min(1.2, var(--tsc-lh));
+  line-height: var(--tsc-lead);
   letter-spacing: var(--tsc-body-ls);
 }
 .tsc-page .tsc-row-text--heading {
@@ -114,8 +132,21 @@
   font-weight: var(--tsc-heading-fw);
   letter-spacing: var(--tsc-heading-ls);
 }
+/* A step too big for the whole line shows one word, sized to its row. */
+.tsc-page .tsc-row:has(.is-first) { container-type: inline-size; }
+.tsc-page .tsc-row-text.is-first { font-size: min(var(--tsc-fs), calc((100cqw - 112px) / var(--tsc-chars))); }
+.tsc-page .tsc-row-text.is-loading { font-family: var(--font); font-size: 15px; font-weight: 500; line-height: 24px; letter-spacing: 0; color: var(--tl-dim); }
+.tsc-page .tsc-row-cap { display: block; margin-top: 4px; font-family: var(--font); font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0; color: var(--tl-dim); }
+.tsc-page .tsc-row-err { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-height: 36px; margin: -8px 0; font-family: var(--font); font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0; color: var(--tl-soft); }
+.tsc-page .tsc-retry {
+  min-height: 36px; margin: -4px 0; padding: 0 16px; border: 0; border-radius: 999px;
+  background: var(--tl-wash-on); color: var(--tl-ink); font: 500 14px/1 var(--font); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-retry:active { transform: scale(.97); }
 @media (hover: hover) and (pointer: fine) {
-  .tsc-page .tsc-row:hover { background: var(--tl-wash); }
+  .tsc-page .tsc-row:not(.tsc-row--static):hover { background: var(--tsc-hv); }
+  .tsc-page .tsc-row:hover .tsc-row-cp { opacity: 1; }
 }
 
 /* ── Page view ──────────────────────────────────────────────────────────── */
@@ -136,10 +167,6 @@
   gap: var(--tl-gap) 24px;
   align-items: start;
 }
-.tsc-page .tsc-view[data-view="split"] .tsc-row { grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto); gap: 12px; }
-.tsc-page .tsc-view[data-view="split"] .tsc-row-num { text-align: right; }
-.tsc-page .tsc-view[data-view="split"] .tsc-row-prefix,
-.tsc-page .tsc-view[data-view="split"] .tsc-row-rem { display: none; }
 /* A tall ladder keeps the page beside it: the page half stays under the toolbar
    while the steps scroll, when the screen is tall enough to hold it. A page
    taller than the room between the toolbar and the dock scrolls within itself. */
@@ -378,8 +405,14 @@
     text-align: left;
     cursor: pointer;
   }
-  .tsc-page .tsc-row-prefix,
-  .tsc-page .tsc-row-rem { display: none; }
+  /* Phone: the sample takes the row's full width, under its token and value. */
+  .tsc-page .tsc-row { padding-inline: 16px; }
+  .tsc-page .tsc-row:has(.is-first) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
+  .tsc-page .tsc-row:has(.is-first) .tsc-row-l { flex-direction: row; align-items: baseline; gap: 12px; padding-top: 0; }
+  .tsc-page .tsc-row:has(.is-first) .tsc-row-cp { display: none; }
+  .tsc-page .tsc-row-text.is-first { font-size: min(var(--tsc-fs), calc(100cqw / var(--tsc-chars))); }
+  .tsc-page .tsc-row { grid-template-columns: 88px minmax(0, 1fr); }
+  .tsc-page .tsc-use { padding-inline: 16px; }
 
   .tsc-page .tsc-sheet {
     --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom) + env(safe-area-inset-bottom, 0px));

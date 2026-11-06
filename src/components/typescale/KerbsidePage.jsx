@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import { pickSteps } from './kerbsideSteps'
+import { pickSteps, screenCopy } from './kerbsideSteps'
 
 // The page half of the Type Scale tool: one product screen set on the scale
 // that is being built. Every line names the step it uses, and the step pressed
@@ -8,7 +8,6 @@ import { pickSteps } from './kerbsideSteps'
 // Signed out it is the sample brand's tracking screen. Signed in it is the
 // same layout with neutral working copy, in the project's own families.
 
-const SAMPLE_CAPTION = 'Sample content'
 const FIT_MIN = 8
 
 const KERB_LINES = [
@@ -57,7 +56,7 @@ export default function KerbsidePage({ steps, up, mine, text, lit, headingName, 
   const hf = headingLoading ? loadingLine : null
 
   const headLine = text || (mine ? 'Fresh this week.' : 'There at')
-  const label = mine ? 'A sample screen set on this scale' : 'Kerbside’s Track a rider screen, set on this scale'
+  const { label, caption: sampleCaption, brand } = screenCopy(mine)
 
   return (
     <LitStep.Provider value={lit}>
@@ -70,7 +69,7 @@ export default function KerbsidePage({ steps, up, mine, text, lit, headingName, 
       )}
       {mine ? (
         <div className="tsk-body">
-          <p className="tsk-sample">{SAMPLE_CAPTION}</p>
+          <p className="tsk-sample">{sampleCaption}</p>
           <Line step={stat}>{hf || <p className="tsk-pt tsk-h" style={lineStyle(stat, 48, true)}>Picked this morning</p>}</Line>
           <Line step={lede} style={{ marginTop: 12 }}>
             <p className="tsk-pt tsk-b" style={lineStyle(lede, 28, false)}>Picked at dawn and packed the same day, ready when you are.</p>
@@ -119,7 +118,7 @@ export default function KerbsidePage({ steps, up, mine, text, lit, headingName, 
           <span className="tsk-fk" aria-hidden="true" />
           <Line step={caption}>
             <div className="tsk-ft" style={lineStyle(caption, 18, false)}>
-              {hf || <span className="tsk-h">Kerbside</span>}<span className="tsk-b">Bikes, not vans.</span>
+              {hf || <span className="tsk-h">{brand}</span>}<span className="tsk-b">Bikes, not vans.</span>
             </div>
           </Line>
         </div>
