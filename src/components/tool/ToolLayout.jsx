@@ -176,7 +176,7 @@ export function ToolLayout({
       <ToolToolbar
         title={title} titleId={titleId} showTitle={showTitle} back={back}
         items={items} primary={docked ? null : primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}
-        feedback={feedback} onOpenChange={onOverflowOpenChange}
+        feedback={feedback} onOpenChange={onOverflowOpenChange} sheetPage={className}
       />
       <div className={bleed ? 'tl-body tl-body--bleed' : 'tl-body'}>{children}</div>
       {docked && <div className={cx('tl-dock', keyboard && 'is-away')} data-tl-dock="">{primary}</div>}
@@ -221,7 +221,7 @@ export function ToolLayout({
 //              false for a toolbar that is not on a tool page.
 export function ToolToolbar({
   title, titleId, showTitle = true, back, items = [], primary, overflowLabel = 'More', overflowIcon = 'dots-three', className,
-  feedback = true, onOpenChange,
+  feedback = true, onOpenChange, sheetPage,
 }) {
   const navigate = useNavigate()
   const backProps = back === false ? null : { to: '/tools', label: 'Back to all tools', history: false, ...(back || {}) }
@@ -409,7 +409,7 @@ export function ToolToolbar({
 
   const panel = open && (overflow.length > 0 || feedback) && (phone
     ? createPortal(
-      <div className="tl-sheet-layer">
+      <div className="tl-sheet-layer" data-page={sheetPage || undefined}>
         <div className="tl-sheet-scrim" aria-hidden="true" onClick={close} />
         <div
           id={menuId}
