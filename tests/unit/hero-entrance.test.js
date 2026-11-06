@@ -253,7 +253,11 @@ test('every authored weight sits inside the variable axis that renders it', () =
 
   const used = styleFiles.flatMap((file) => {
     const text = fs.readFileSync(file, 'utf8').replace(/@font-face\{[^}]*\}/g, '')
-    return [...text.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1]))
+    // A rule that names its own quoted non-Geist face (the homepage's Archivo
+    // samples) renders on that face's axis, as with the JSX check below.
+    return [...text.matchAll(/\{[^{}]*\}/g)]
+      .filter(([rule]) => !/font-family:\s*["'](?!Geist)[^"']+["']/i.test(rule))
+      .flatMap(([rule]) => [...rule.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1])))
   })
 
   // AND THE WEIGHTS NO STYLESHEET CONTAINS. A component can set a weight two
