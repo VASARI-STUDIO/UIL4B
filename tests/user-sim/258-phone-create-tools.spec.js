@@ -76,7 +76,8 @@ const audit = (page) => page.evaluate(() => {
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (!n.textContent.trim()) continue
     const el = n.parentElement
-    if (!shown(el) || el.closest('svg') || el.closest('.tsc-row-text')) continue
+    // The ladder and the sample screen draw each step at its true size, so the smallest step is under 12px by design.
+    if (!shown(el) || el.closest('svg') || el.closest('.tsc-row-text, .tsk')) continue
     const fs = parseFloat(getComputedStyle(el).fontSize)
     if (fs < 12) small[`${fs}px ${name(el)}`] = true
   }
