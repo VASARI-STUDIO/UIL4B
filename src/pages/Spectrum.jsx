@@ -8,6 +8,7 @@ import SpectrumExports from '../components/spectrum/SpectrumExports'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import HomeHero from '../components/home/HomeHero'
 import { AutoplayOwner } from '../components/home/AutoplayOwner'
+import HomeFinalCall from '../components/home/HomeFinalCall'
 import PhIcon from '../components/spectrum/PhIcon'
 import HomeProof from '../components/home/HomeProof'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
@@ -103,28 +104,13 @@ export default function Spectrum() {
           <h2 id="plans-h" className="sr-only" tabIndex={-1}>Plans</h2>
         </section>
 
-        {/* ── Final call: last child of main, in the layer the footer's glow
-            will share ─────────────────────────────────────────────────────── */}
-        <div className="sp-orb-layer">
-          <section id="start" className="sp-close" aria-labelledby="sp-close-h">
-            <h2 id="sp-close-h" tabIndex={-1}>Start your first project today.</h2>
-            <p>
-              Free to use, no account needed. Sign up when you want to export files or save projects and
-              come back to them.
-            </p>
-            <div className="sp-close-cta">
-              <Link className="sp-pill sp-pill--close" to="/projects">
-                <span>Use for free</span>
-                <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-              </Link>
-              <Link className="sp-ghost sp-ghost--close" to="/plans">See the plans</Link>
-            </div>
-          </section>
-        </div>
+        {/* ── Final call: last child of main. The light behind it is drawn on
+            the footer's box, so this section paints nothing of its own. ───── */}
+        <HomeFinalCall toolkitTo="/projects" />
       </main>
       </AutoplayOwner>
 
-      <SpectrumFooter toolkitTo="/projects" reveal />
+      <SpectrumFooter toolkitTo="/projects" home />
     </div>
   )
 }
