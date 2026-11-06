@@ -39,8 +39,10 @@
   }
 }
 
-/* The page scroller leaves room for the nav above any in-page target. */
-html:has(.spectrum #top) { scroll-padding-top: 104px; }
+/* No scroll-padding-top on the page scroller. A jump lands a target at its
+   scroll-margin-top PLUS the scroller's scroll-padding-top, and
+   `.spectrum [id]` (spectrum.css) already sets the 104px that clears the nav.
+   A second 104px here put every section link 208px down. */
 
 /* The page's two hairlines: the proof bar's top edge and the plans section's
    top edge. */
