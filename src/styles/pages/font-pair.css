@@ -375,7 +375,7 @@ html[data-reduced-motion="true"] .fpr-page .fpr-card-apply { transition: none; }
 @media (max-width: 359px) { .fpr-page .fpr-street-h { font-size: 32px; } }
 
 /* ── The type-tools switcher in the bar ──────────────────────────────────── */
-.fpr-page .tl-item:has(> .ttn) { flex: 0 1 auto; }
+.fpr-page .tl-item:has(> .ttn) { flex: 0 0 auto; }
 @media (max-width: 767px) {
   .fpr-page .tl-item:has(> .ttn) { flex: 1 1 180px; min-width: 180px; }
 }

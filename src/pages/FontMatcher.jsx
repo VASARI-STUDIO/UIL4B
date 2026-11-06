@@ -2,7 +2,8 @@ import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import FontBrowseDialog from '../components/FontBrowseDialog'
 import MenuSelect from '../components/tool/MenuSelect'
-import TypeToolsNav from '../components/tool/TypeToolsNav'
+import ToolIcon from '../components/tool/ToolIcon'
+import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import UIKitGuide from '../components/UIKitGuide'
 import SaveTypeSystem from '../components/SaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
@@ -26,6 +27,7 @@ import { consumePairDraft, readPairDraft, setScaleDraft } from '../utils/typeHan
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
 import '../styles/pages/font-pair.css'
+import '../styles/pages/font-pair-board.css'
 
 // Font Pair — the standalone /create/font-pair page. Two families, one specimen, and a
 // reason for every suggestion.
@@ -68,19 +70,20 @@ const STREET_CAPTION = 'Mai, cargo bike. Picked up at 10:52.'
 const STREET_VOICE = 'There at 11:40.'
 const STREET_PARA = 'Book a pickup by ten and your parcel is there by twelve. Mai collects from 88 Brunswick Street, rides the lanes you would not drive, and signs it in at 240 Adelaide Street. You see her the whole way.'
 
-const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-// The body copy carries one bold and one italic phrase, so the specimen shows
-// the cuts the exported import loads (see bodyFaceWeights).
-const BODY_COPY = (
-  <>
-    Pack my box with five dozen liquor jugs. How <em>vexingly</em> quick daft zebras jump — the five
-    boxing wizards jump quickly, and the <strong>rhythm of the line</strong> holds all the way to the
-    end of the measure.
-  </>
-)
-const LEDE_COPY = 'A heading face sets the tone; the body face has to survive four hundred words of it.'
-const SUB_HEAD = 'Where the pairing earns its keep'
-const HEAD_COPY = 'Typography that carries the whole page'
+// The sample brand's own page, product screen and letterforms copy.
+const KS_LINE_A = 'Booked by ten.'
+const KS_LINE_B = 'There by twelve.'
+const KS_LEDE = 'Kerbside is a bike courier in Melbourne. Book a pickup by ten and your parcel is there by twelve. Riders, not vans, across the city.'
+const KS_H2 = 'Say when it arrives'
+const KS_BODY = 'You book a pickup, a rider collects it from one address and delivers it to another, and you see where they are the whole way. We say a time, and we keep to it.'
+const KS_NAV = ['Track a rider', 'Prices', 'Help']
+const KS_ETA = 'There at 11:40'
+const KS_PICKUP = 'Picked up at 10:52 from 88 Brunswick Street.'
+const KS_STATS = [['$18.50', 'Paid'], ['11:40', 'There at'], ['4 min', 'Rider away']]
+const KS_WORD = 'Bikes, not vans.'
+const KS_TEST_LINE = 'Hamburgefonstiv 0123456789'
+const PHOTO_WIDTH = 1100
+const PHOTO_HEIGHT = 670
 // One short line of running text for each suggestion row.
 const ROW_LINE = 'Pack my box with five dozen liquor jugs.'
 const ROW_HEAD_MAX = 40
@@ -109,7 +112,7 @@ function useMedia(query) {
 // `headAction` is the body family's Best match button, drawn on the label line
 // so it never reads as one of the weights. Weights are a pill row (a menu pill
 // on a phone) and never hold anything but weights.
-function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, phone, headAction, locked, onToggleLock }) {
+function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, headAction, locked, onToggleLock }) {
   const uid = useId()
   const [browsing, setBrowsing] = useState(false)
   const slot = label.split(' ')[0]
@@ -134,9 +137,7 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
           <span className="fpr-fam-meta">{categoryLabel(font.category)} · {weightCount(count)}</span>
         </div>
         <div className="fpr-fam-acts">
-          {phone && (
-            <MenuSelect className="fpr-wmenu" value={weight} options={weights} onChange={onWeight} ariaLabel={`${slot} weight`} />
-          )}
+          <MenuSelect className="fpr-wmenu" value={weight} options={weights} onChange={onWeight} ariaLabel={`${slot} weight`} />
           <ToolButton
             icon={locked ? 'lock-simple' : 'lock-simple-open'}
             iconSize={14}
@@ -153,9 +154,6 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
           </ToolButton>
         </div>
       </div>
-      {!phone && (
-        <ToolPills label={`${slot} weight`} className="fpr-weights" options={weights} value={weight} onChange={onWeight} />
-      )}
       {browsing && (
         <FontBrowseDialog
           title={label}
@@ -206,6 +204,7 @@ export default function FontMatcher({ onCopy, toast }) {
   const [bodyW, setBodyW] = useState(() => seedBody?.weight || 400)
   const [previewText, setPreviewText] = useState('')
   const [preset, setPreset] = useState('street')
+  const [ground, setGround] = useState('d')
   const [suggestions, setSuggestions] = useState([])
   const [suggesting, setSuggesting] = useState(true)
   // A locked side survives Shuffle. History is the undo stack of earlier pairs.
@@ -431,22 +430,20 @@ export default function FontMatcher({ onCopy, toast }) {
       : lock === 'both' ? 'Both families are locked'
         : 'Shuffle the pair'
   const canUndo = history.length > 0
+  const bar = typeToolsBarItems({
+    current: 'pair',
+    heading: headingFont ? { family: headingFont.family, weight: headingW } : null,
+    body: bodyFont ? { family: bodyFont.family, weight: bodyW } : null,
+    scale: design?.typeScale?.ratio || 1.618,
+    headingStack,
+    bodyStack,
+    projectName: '',
+    ground,
+    onGround: setGround,
+  })
+  const groundItem = bar.find((it) => it.id === 'ttb-ground')
   const allItems = [
-    {
-      id: 'switcher',
-      priority: 99,
-      menu: false,
-      render: () => (
-        <TypeToolsNav
-          current="pair"
-          heading={headingFont ? { family: headingFont.family, weight: headingW } : null}
-          body={bodyFont ? { family: bodyFont.family, weight: bodyW } : null}
-          scale={design?.typeScale?.ratio || 1.618}
-          headingStack={headingStack}
-          bodyStack={bodyStack}
-        />
-      ),
-    },
+    ...bar.filter((it) => it !== groundItem),
     {
       id: 'shuffle',
       priority: 1,
@@ -498,6 +495,7 @@ export default function FontMatcher({ onCopy, toast }) {
       menu: { label: 'Build a type scale from this pair', icon: 'caret-right', onSelect: openInTypeScale, disabled: !ready },
     },
     { id: 'div', divider: true, align: 'end' },
+    groundItem,
     {
       id: 'import',
       priority: 3,
@@ -520,7 +518,7 @@ export default function FontMatcher({ onCopy, toast }) {
     </ToolButton>
   )
   const layout = (body) => (
-    <ToolLayout className="fpr-page" title="Font Pair" titleId="fpr-title" showTitle={false} items={items} primary={phone ? null : primary}>
+    <ToolLayout className="fpr-page" back={false} title="Font Pair" titleId="fpr-title" showTitle={false} items={items} primary={phone ? null : primary}>
       {body}
     </ToolLayout>
   )
@@ -549,7 +547,6 @@ export default function FontMatcher({ onCopy, toast }) {
   const sample = previewText.trim()
   // The typed words go in the heading slots only. The body slots keep their
   // paragraph, because a body face is judged on running text.
-  const headline = sample || HEAD_COPY
   const rowHead = sample ? sample.slice(0, ROW_HEAD_MAX) : 'Typography that carries the page'
 
   const specimenVars = {
@@ -598,7 +595,7 @@ export default function FontMatcher({ onCopy, toast }) {
   )
 
   // The families, the preview text, and the lock/best-match controls.
-  const panel = (
+  const panelWith = (suggestNode) => (
     <ToolPanel label="Font Pair controls" className="fpr-panel fpr-config">
       <div className="fpr-fams">
         <FamilyCard
@@ -607,7 +604,6 @@ export default function FontMatcher({ onCopy, toast }) {
           fonts={catalog}
           font={headingFont}
           weight={headingW}
-          phone={phone}
           locked={locks.heading}
           onToggleLock={() => toggleLock('heading')}
           onPickFont={chooseHeading}
@@ -621,7 +617,6 @@ export default function FontMatcher({ onCopy, toast }) {
           fonts={catalog}
           font={bodyFont}
           weight={bodyW}
-          phone={phone}
           locked={locks.body}
           onToggleLock={() => toggleLock('body')}
           onPickFont={chooseBody}
@@ -661,6 +656,8 @@ export default function FontMatcher({ onCopy, toast }) {
           placeholder="Type your own words"
           maxLength={90}
           spellCheck="false"
+          enterKeyHint="done"
+          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
           onChange={e => setPreviewText(e.target.value)}
         />
         <p className="fpr-hint">
@@ -668,6 +665,7 @@ export default function FontMatcher({ onCopy, toast }) {
           can judge the face on running text.
         </p>
       </div>
+      {suggestNode}
     </ToolPanel>
   )
 
@@ -691,11 +689,15 @@ export default function FontMatcher({ onCopy, toast }) {
         </div>
       </div>
 
-      <div className={preset === 'street' ? 'fpr-specimen fpr-specimen--street' : 'fpr-specimen'} ref={varsRef(specimenVars)}>
+      <div className={preset === 'street' ? 'fpr-specimen fpr-specimen--street' : 'fpr-specimen'} data-ground={ground} ref={varsRef(specimenVars)}>
         {preset === 'street' && (
           <div className="fpr-street">
             <div className="fpr-street-photo">
-              <img src={STREET_PHOTO} alt={STREET_ALT} width="2000" height="1217" />
+              <picture>
+                <source type="image/avif" srcSet={STREET_PHOTO.replace(/\.jpg$/, '.avif')} />
+                <source type="image/webp" srcSet={STREET_PHOTO.replace(/\.jpg$/, '.webp')} />
+                <img src={STREET_PHOTO} alt={STREET_ALT} width={PHOTO_WIDTH} height={PHOTO_HEIGHT} />
+              </picture>
               <span className="fpr-plate fpr-plate--cap">{STREET_CAPTION}</span>
               <span className="fpr-plate fpr-plate--tag">Sample photo</span>
             </div>
@@ -710,32 +712,51 @@ export default function FontMatcher({ onCopy, toast }) {
         )}
 
         {preset === 'article' && (
-          <article className="fpr-article">
-            <h3 className="fpr-h1">{headline}</h3>
-            <p className="fpr-lede">{LEDE_COPY}</p>
-            <h4 className="fpr-h2">{sample || SUB_HEAD}</h4>
-            <p className="fpr-body">{BODY_COPY}</p>
+          <article className="fpr-article fpr-page-sample">
+            <div className="fpr-pg-masthead">
+              <span className="fpr-pg-word"><ToolIcon name="bicycle" size={20} />Kerbside</span>
+              <span className="fpr-pg-nav" aria-hidden="true">{KS_NAV.map((n) => <span key={n}>{n}</span>)}</span>
+              <span className="fpr-plate fpr-plate--page">Sample page</span>
+            </div>
+            <div className="fpr-pg-body">
+              <h3 className="fpr-h1">
+                {sample || <><span className="fpr-hs">{KS_LINE_A}</span><span className="fpr-hs">{KS_LINE_B}</span></>}
+              </h3>
+              <p className="fpr-lede">{sample || KS_LEDE}</p>
+              <p className="fpr-pg-cta" aria-hidden="true"><span>Book a pickup</span></p>
+              <div className="fpr-pg-section">
+                <h4 className="fpr-h2">{sample || KS_H2}</h4>
+                <p className="fpr-body">{sample ? `${sample} ${sample}` : KS_BODY}</p>
+              </div>
+            </div>
           </article>
         )}
 
         {preset === 'product' && (
           <div className="fpr-product">
-            <h3 className="fpr-h1">{headline}</h3>
-            <p className="fpr-body">Short body copy, buttons and labels — the register most interfaces actually live in.</p>
-            <div className="fpr-product-actions">
-              <span className="fpr-product-primary">Get started</span>
-              <span className="fpr-product-secondary">See how it works</span>
+            <p className="fpr-pp-label">Track a rider</p>
+            <span className="fpr-pp-status">On the way</span>
+            <h3 className="fpr-h1">{sample || KS_ETA}</h3>
+            <p className="fpr-lede">{KS_PICKUP}</p>
+            <dl className="fpr-pp-stats">
+              {KS_STATS.map(([n, l]) => (
+                <div key={l}><dt>{n}</dt><dd>{l}</dd></div>
+              ))}
+            </dl>
+            <div className="fpr-product-actions" aria-hidden="true">
+              <span className="fpr-product-primary">Book rider</span>
+              <span className="fpr-product-secondary">Share tracking link</span>
             </div>
           </div>
         )}
 
         {preset === 'specimen' && (
           <div className="fpr-specimen-raw">
-            <p className="fpr-h1">{sample || 'Aa Bb Cc'}</p>
+            <p className="fpr-h1">{sample || KS_WORD}</p>
             <p className="fpr-glyphs fpr-glyphs--heading">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
             <p className="fpr-glyphs fpr-glyphs--heading">abcdefghijklmnopqrstuvwxyz 0123456789</p>
-            <p className="fpr-glyphs">{sample || PANGRAM}</p>
-            <p className="fpr-body">{BODY_COPY}</p>
+            <p className="fpr-glyphs">{sample || KS_TEST_LINE}</p>
+            <p className="fpr-body">{sample ? `${sample} ${sample}` : STREET_PARA}</p>
           </div>
         )}
       </div>
@@ -833,9 +854,9 @@ export default function FontMatcher({ onCopy, toast }) {
             {/* A phone opens on the specimen, then the controls, then the
                 suggestions. DOM order is the reading and focus order. */}
             <ToolMain className="fpr-output fpr-output--stage">{stage}</ToolMain>
-            {panel}
+            {panelWith(suggest)}
             <ToolMain className="fpr-output fpr-output--rest">
-              {suggest}
+
               {delivery}
             </ToolMain>
           </>
@@ -844,10 +865,10 @@ export default function FontMatcher({ onCopy, toast }) {
             {/* The controls first from 768, so a tablet reads the families, then
                 the preview text, then the specimen. From 1024 the grid puts the
                 panel on the right. */}
-            {panel}
+            {panelWith(suggest)}
             <ToolMain className="fpr-output">
               {stage}
-              {suggest}
+
               {delivery}
             </ToolMain>
           </>
