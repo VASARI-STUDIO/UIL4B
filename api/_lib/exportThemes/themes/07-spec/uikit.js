@@ -288,7 +288,7 @@ function cards(ctx) {
   const ui = ctx.ui, SC = S(ctx), X = SC.example;
   const plain = ui.card({ title: SC.eta, text: SC.pickup, meta: SC.status, action: `<div class="kca">${ui.btn(SC.share, { variant: 'secondary', size: 'sm' })}</div>` });
   const raised = ui.card({ title: SC.rider, text: SC.riderNote, raised: true });
-  const stats = `<div class="kst2">${ui.stat(SC.paid, X.statLabel)}${ui.stat(SC.riderNote.split(' ')[0] + ' of ' + SC.riderNote.split(' ')[2], 'Panels on')}</div>`;
+  const stats = `<div class="kst2">${ui.stat(SC.paid, X.statLabel)}${ui.stat(ctx.real(SC.riderNote).split(' ')[0] + ' of ' + ctx.real(SC.riderNote).split(' ')[2], 'Panels on')}</div>`;
   const spec = [['Radius', m(ctx.radius.card + ' px'), 'The card radius, larger than a control.'], ['Edge', m('1 px --divider'), 'Or a raised fill with no edge. Never both.'], ['Padding', m('16 px'), 'Gap of 6 px between the lines inside.'], ['Title', m('title-s 20 / 26'), 'Display face. One per card.'], ['Text', m('body 16 / 24'), `${m('--text-soft')}, at most three lines.`], ['Meta', m('label 14'), `${m('--quiet')}, above the title.`], ['Stat value', m('title 28 / 32'), 'Tabular figures, so a changing number holds its width.']];
   return kpage(ctx, 'cards', {
     lede: 'A card groups one thing: a job, a person, a number. It carries an edge or a tint, not a shadow, and at most one action.',
