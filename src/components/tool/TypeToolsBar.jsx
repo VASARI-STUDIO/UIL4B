@@ -33,8 +33,7 @@ import '../../styles/pages/type-tools-nav.css'
 
 const SAMPLE_PROJECT = 'Kerbside'
 
-// eslint-disable-next-line react-refresh/only-export-components
-function GroundSegment({ ground, onGround, className }) {
+export function GroundSegment({ ground, onGround, className }) {
   return (
     <div className={className ? `ttb-seg ${className}` : 'ttb-seg'} role="group" aria-label="Specimen ground">
       <button type="button" aria-pressed={ground === 'd'} onClick={() => onGround('d')}>

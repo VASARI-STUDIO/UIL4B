@@ -15,7 +15,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont, verifyFontLoaded } from '../utils/googleFonts'
 import { consumeScaleDraft, ownFont, ownTypeScale, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
 import { lockScroll } from '../utils/scrollLock'
-import { fitTypePreviewSize,typePreviewNeedsFitting } from '../utils/typeScalePreview'
+import { fitTypePreviewSize, typePreviewNeedsFitting, TYPE_PREVIEW_MAX_PX, TYPE_PREVIEW_MIN_PX } from '../utils/typeScalePreview'
 import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '../utils/fluidType'
 // The shared sheets for the font picker, the catalogue notice, the slider and
 // the loader, then the page's own sheet, scoped under `.tsc-page`.
@@ -24,8 +24,9 @@ import '../styles/deferred/type.css'
 import '../styles/pages/type-scale.css'
 import '../styles/pages/type-scale-kerbside.css'
 import KerbsidePage from '../components/typescale/KerbsidePage'
-import { ladderNote, usedStepNames } from '../components/typescale/kerbsideSteps'
-import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
+import { ladderNote, litLineCount, usedStepNames } from '../components/typescale/kerbsideSteps'
+import { useAppearance } from '../contexts/AppearanceContext'
+import { GroundSegment, typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { useAuth } from '../contexts/AuthContext'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one
@@ -117,6 +118,17 @@ function deviceWidth() {
 const SPLIT_MIN = 1024
 // Below this the split is left: 16px of slack, wider than a scrollbar.
 const SPLIT_LEAVE = 1008
+
+// The strip of the phone screen the page is read in: under the sticky toolbar,
+// above the dock.
+function readingBand() {
+  const bar = document.querySelector('.tsc-page .tl-toolbar')
+  const dock = document.querySelector('.tsc-page .tl-dock')
+  return {
+    top: bar ? bar.getBoundingClientRect().bottom : 0,
+    bottom: dock ? dock.getBoundingClientRect().top : window.innerHeight,
+  }
+}
 
 function useMedia(query) {
   const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false)
@@ -278,6 +290,16 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   if (work.width >= SPLIT_MIN) splitRef.current = true
   else if (work.width < SPLIT_LEAVE) splitRef.current = false
   const split = splitRef.current
+  // A phone is one scroll: the width, the page, then the ladder, with Code in the
+  // sheet. From 768 the Scale / Page / Code switch (or the split) takes over.
+  const stackedView = phone && !split
+  const { reducedMotion } = useAppearance() || {}
+  // Phone dock chip: whether the page is mostly out of the reading band, and
+  // which side of it the page lies on. `litSeen` marks the first lit step, the
+  // one press that brings the page into view by itself.
+  const [pageOff, setPageOff] = useState(false)
+  const [pageDir, setPageDir] = useState('up')
+  const [litSeen, setLitSeen] = useState(false)
   // Beside the ladder, the right half shows the page or the code.
   const [half, setHalf] = useState('page')
   const [format, setFormat] = useState('css')
@@ -619,6 +641,24 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     return () => ro.disconnect()
   }, [view, split, half, phone])
 
+  // The dock chip needs to know when the page has left the screen. The page
+  // counts as off once under half of it sits between the toolbar and the dock.
+  useEffect(() => {
+    const el = pageColRef.current?.querySelector('.tsc-kerb')
+    if (!stackedView || !el || typeof IntersectionObserver === 'undefined') return undefined
+    const band = readingBand()
+    const io = new IntersectionObserver(entries => {
+      const last = entries[entries.length - 1]
+      setPageOff(last.intersectionRatio < 0.5)
+      setPageDir(last.boundingClientRect.top > 0 ? 'down' : 'up')
+    }, {
+      threshold: [0, 0.25, 0.5, 0.75, 1],
+      rootMargin: `-${Math.round(band.top)}px 0px -${Math.round(window.innerHeight - band.bottom)}px 0px`,
+    })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [stackedView, status])
+
   // Measure the work column before it paints, then follow it as it resizes.
   useLayoutEffect(() => {
     if (!workEl) return undefined
@@ -716,7 +756,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       menu: { label: 'Find a pairing for these families', icon: 'arrow-right', onSelect: openInFontPair },
     },
     { id: 'div', divider: true, align: 'end' },
-    groundItem,
+    // On a phone the ground is a section of the settings sheet, not a toolbar control.
+    ...(phone ? [] : [groundItem]),
     {
       id: 'import',
       priority: 2,
@@ -755,6 +796,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   )
   // The phone dock: the scale trigger that opens the settings sheet, then Save, then Copy.
   const ratioRec = RATIOS.find(r => r.id === ratioId)
+  const ratioShort = ratioRec?.label?.replace(/ ratio$/i, '') || 'Custom'
   const dockRatio = (
     <button
       type="button"
@@ -766,13 +808,57 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       aria-label={`${ratioRec?.label || 'Custom ratio'} ${ratio}. Scale, families and fine tuning`}
       onClick={() => (sheetOpen ? closeSheet() : openSheet(dockRatioRef.current))}
     >
-      <b>{ratioRec?.label?.replace(/ ratio$/i, '') || 'Custom'}</b>
+      <b>{ratioShort}</b>
       <span className="tsc-dock-ratio-v">{ratio}</span>
       <ToolIcon name="caret-down" size={14} />
     </button>
   )
+  // The dock chip: while a step is lit and the page is off screen, it says how
+  // many lines of the page the step sets, and a tap brings the page back.
+  const showPage = () => {
+    pageColRef.current?.querySelector('.tsc-kerb')?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' })
+  }
+  const pageHidden = () => {
+    const el = pageColRef.current?.querySelector('.tsc-kerb')
+    if (!el) return false
+    const rect = el.getBoundingClientRect()
+    const band = readingBand()
+    return Math.min(rect.bottom, band.bottom) - Math.max(rect.top, band.top) < rect.height * 0.5
+  }
+  // Pressing a step lights it (a second press clears it). The first lit step the
+  // page uses brings an off-screen page into view; after that the chip does it.
+  const lightStep = (name) => {
+    const on = litStep !== name
+    setLitStep(on ? name : '')
+    if (!stackedView || !on) return
+    const first = !litSeen && litLineCount(steps, up, !!user, name) > 0 && pageHidden()
+    if (first) {
+      setLitSeen(true)
+      showPage()
+    } else if (pageOff && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+      // At the very end of the page the chip is about to cover the last lines; the page gains 40px of room below them.
+      requestAnimationFrame(() => window.scrollBy({ top: 40, behavior: reducedMotion ? 'auto' : 'smooth' }))
+    }
+  }
+  const litUses = litStep ? litLineCount(steps, up, !!user, litStep) : 0
+  const litPlural = `${litUses} ${litUses === 1 ? 'line' : 'lines'}`
+  const chipRoom = stackedView && !!litStep && !sheetOpen
+  const litChip = chipRoom && pageOff && (litUses > 0 ? (
+    <button
+      type="button"
+      className="tsc-chip"
+      aria-label={`${litStep} is lit on ${litPlural} of the sample screen. Scroll to it`}
+      onClick={showPage}
+    >
+      <span className="tsc-chip-n">{litStep}</span>
+      <span>lit on {litPlural}</span>
+      <span className="tsc-chip-ico" data-down={pageDir === 'down'}><ToolIcon name="arrow-up" size={16} /></span>
+    </button>
+  ) : (
+    <p className="tsc-chip tsc-chip--quiet" role="status"><span className="tsc-chip-n">{litStep}</span><span>is not used on the page</span></p>
+  ))
   const layout = (body) => (
-    <ToolLayout className="tsc-page" back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? <>{dockRatio}<div className="tsc-dock-save"><SaveTypeSystem {...saveOptions} /></div>{primary}</> : toolbarPrimary}>
+    <ToolLayout className="tsc-page" data-chip={String(chipRoom)} back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? <>{litChip}{dockRatio}<div className="tsc-dock-save"><SaveTypeSystem {...saveOptions} /></div>{primary}</> : toolbarPrimary}>
       {body}
     </ToolLayout>
   )
@@ -794,9 +880,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     '--tsc-body-ls': `${bodyTrack}em`,
   }
   const activeWidth = WIDTHS.find(w => w.id === width) || DESKTOP
-  // A phone is one scroll: the width, the page, then the ladder, with Code in the
-  // sheet. From 768 the Scale / Page / Code switch (or the split) takes over.
-  const stackedView = phone && !split
   const codeTab = stackedView && sheetTab === 'code'
   const stepsLine = `${steps.length} step${steps.length === 1 ? '' : 's'}, ${steps[steps.length - 1].px}px to ${steps[0].px}px`
   // The step pressed in the ladder, when the page never sets it.
@@ -848,7 +931,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       <p className="tsc-use" role="status">{stackedView ? ladderNote(steps, up, !!user, '') : ladderNote(steps, up, !!user, litStep)}</p>
       {previewIsFitted && (
         <p className="tsc-fit-note" role="status">
-          Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
+          {stackedView
+            ? `Preview sizes are fitted between ${TYPE_PREVIEW_MIN_PX}px and ${TYPE_PREVIEW_MAX_PX}px to keep the preview readable. The code keeps the true values.`
+            : `Preview sizes are fitted between ${TYPE_PREVIEW_MIN_PX}px and ${TYPE_PREVIEW_MAX_PX}px to keep the preview usable. Labels and exports retain the exact scale.`}
         </p>
       )}
       {steps.map((s, i) => {
@@ -859,7 +944,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         // fit the row's own width.
         const first = !loading && fitted >= 49
         const text = first ? specimen.split(' ')[0] : specimen
-        const num = `${trim(s.previewPx, 2)} / ${trim(s.lead, 3)}`
+        // A phone prints the scale's own size, the one the code keeps; the
+        // preview beside it may be fitted or shown at the narrower width.
+        const num = stackedView ? `${trim(s.px, 2)}px` : `${trim(s.previewPx, 2)} / ${trim(s.lead, 3)}`
         // The first heading row gives way to the error when the face failed.
         if (heading && headingFailed && i === steps.findIndex(x => x.role === 'heading')) {
           return (
@@ -885,7 +972,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             data-px={s.px}
             aria-pressed={litStep === s.name}
             onClick={() => {
-              setLitStep(cur => (cur === s.name ? '' : s.name))
+              lightStep(s.name)
               onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(s.lead, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
               toast?.(`Copied --text-${s.name}`)
               setCopiedStep(s.name)
@@ -1040,6 +1127,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               className="tsc-select tsc-scale-select"
               value={ratioId}
               options={ratioOptions}
+              triggerLabel={phone ? <span className="tsc-ratio-t"><b>{ratioShort}</b><span className="tsc-ratio-v">{ratio}</span></span> : undefined}
               onChange={nextValue => changeRatioId(nextValue)}
             />
             <button
@@ -1157,6 +1245,13 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   </div>
                 </div>
               </ToolSection>
+
+              {phone && (
+                <ToolSection className="tsc-ground-sec">
+                  <span className="tsc-k">Specimen ground</span>
+                  <GroundSegment ground={ground} onGround={setGround} className="ttb-seg--full" />
+                </ToolSection>
+              )}
 
           <ToolSection className="tsc-tuning-sec">
             <div className="tsc-words-row">

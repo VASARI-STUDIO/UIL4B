@@ -39,3 +39,18 @@ export function screenCopy(mine) {
     ? { label: 'A sample screen set on this scale', caption: 'Sample content', brand: null }
     : { label: 'Kerbside’s Track a rider screen, set on this scale', caption: null, brand: 'Kerbside' }
 }
+
+// The step each tagged line of the page uses, in reading order. It mirrors the
+// Line components in KerbsidePage: a line added there is added here.
+export function pageLineSteps(steps, up, mine) {
+  const p = pickSteps(steps, up)
+  const lines = mine
+    ? [p.head, p.stat, p.lede, p.base, p.base, p.base, p.caption]
+    : [p.head, p.eta, p.stat, p.caption, p.lede, p.base, p.base, p.base, p.base, p.caption]
+  return lines.map(s => s.name)
+}
+
+// How many lines of the page a step is set on.
+export function litLineCount(steps, up, mine, name) {
+  return pageLineSteps(steps, up, mine).filter(n => n === name).length
+}

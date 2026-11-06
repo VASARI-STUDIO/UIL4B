@@ -575,6 +575,35 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   .tsc-page .tsc-steps-line + .tsc-use { padding-top: 8px; }
   .tsc-page .tsc-sample-line,
   .tsc-page .tsc-lit-note { margin: 8px 0 0; font-size: max(var(--fs-caption), 13px); line-height: 18px; color: var(--tl-dim); text-wrap: pretty; }
+  .tsc-page .tsc-fit-note { margin: 0 0 8px; padding: 4px 16px 0; line-height: 18px; color: var(--tl-dim); text-wrap: pretty; }
+  .tsc-page .tsc-kerb { scroll-margin-top: calc(var(--tsc-top) + 4px); }
+
+  /* The sheet's ratio trigger reads like the dock's: the short name, then the value. */
+  .tsc-page .tsc-ratio-t { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .tsc-page .tsc-ratio-t b { flex: 0 1 auto; min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; }
+  .tsc-page .tsc-ratio-v { flex: none; font-family: var(--mono); font-size: 13px; color: var(--tl-dim); }
+
+  /* The dock chip: 44px, 8px above the dock, from the page gutter. */
+  .tsc-page .tl-dock .tsc-chip {
+    position: absolute; left: var(--page-inline); bottom: calc(100% + 8px); flex: none; box-sizing: border-box;
+    display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 2 * var(--page-inline)); height: 44px; margin: 0; padding: 0 16px;
+    border: 0; border-radius: 999px; background: var(--tl-card); box-shadow: inset 0 0 0 1px var(--tl-line-2);
+    color: var(--tl-ink); font: 500 14px/20px var(--font); white-space: nowrap;
+  }
+  .tsc-page .tl-dock button.tsc-chip { cursor: pointer; transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease); }
+  .tsc-page .tl-dock button.tsc-chip:active { transform: scale(.97); }
+  .tsc-page .tl-dock button.tsc-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+  .tsc-page .tl-dock .tsc-chip--quiet { color: var(--tl-dim); font-weight: 400; }
+  .tsc-page .tsc-chip-n { padding: 2px 6px; border-radius: 6px; background: var(--tl-wash-on); font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--tl-ink); }
+  .tsc-page .tsc-chip-ico { display: inline-grid; flex: none; transition: transform 150ms var(--tl-ease); }
+  .tsc-page .tsc-chip-ico[data-down="true"] { transform: rotate(180deg); }
+  /* While a step is lit the page keeps 40px more below the last line, so the chip never covers it. */
+  .tl.tl--docked.tsc-page[data-chip="true"] .tl-body { padding-bottom: calc(clamp(12px, 2vw, 20px) + var(--tl-dock-h) + 40px); }
+  html[data-reduced-motion="true"] .tsc-page .tsc-chip-ico,
+  html[data-reduced-motion="true"] .tsc-page .tl-dock button.tsc-chip { transition: none; }
+}
+@media (hover: hover) and (pointer: fine) and (max-width: 767px) {
+  .tsc-page .tl-dock button.tsc-chip:hover { background: var(--tl-wash-on); }
 }
 @media (max-width: 359px) {
   /* The three width buttons share a 320px row: the label alone fits. */
