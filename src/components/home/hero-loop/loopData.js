@@ -21,6 +21,8 @@ export const keystrokesPhone = (text) => {
 export const FIELD_KEYS = keystrokes('Kerbside');
 export const SEARCH = 'bike';
 export const SEARCH_KEYS = keystrokes(SEARCH);
+export const FIELD_KEYS_PHONE = keystrokesPhone('Kerbside');
+export const SEARCH_KEYS_PHONE = keystrokesPhone(SEARCH);
 export const ALT_TEXT = 'Two riders waiting at a city intersection, one in an orange jacket';
 export const ALT_WORDS = ALT_TEXT.split(' ');
 // The words a search engine and a screen reader lean on: what is in the picture and where.
@@ -137,3 +139,31 @@ export const tone = (hex, l) => {
   const [a, bb, cc] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
   return '#' + [a, bb, cc].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
 };
+
+// The panel accessible name: what the loop shows, in words.
+export const PANEL_LABEL =
+  "UI L4B in use, building a kit for Kerbside, a sample brand, in five chapters. Palette: colours are randomised, one is locked, another is added and its tints opened. Icons: a search for bike is typed, and the bike icon is recoloured and flipped. Type: a display heading font is picked and previewed with the name Kerbside, then a type scale is chosen. Alt text: a description of a photo is generated and its keywords marked. Export: the finished kit is saved as an HTML style guide and opened, showing its first three pages: the cover, the palette with its contrast checks, and the type scale."
+export const PHONE_PANEL_LABEL =
+  "UI L4B in use on a phone, building a kit for Kerbside, a sample brand, in five short chapters: a palette is randomised with its accent locked, a search for bike is typed and the bike icon is recoloured with the colour picker and flipped, a display heading and type scale are set, alt text is written for a photo, and the finished kit is exported as an HTML style guide and opened on its first three pages: the cover, the palette with its contrast checks, and the type scale."
+
+// The panel pictures, in the widths the asset set holds (public/hero-loop).
+export const IMAGES = {
+  kit: { path: '/hero-loop/ui-kit', widths: [870, 1740] },
+  'guide-1': { path: '/hero-loop/guide-1', widths: [400, 800] },
+  'guide-2': { path: '/hero-loop/guide-2', widths: [400, 800] },
+  'guide-3': { path: '/hero-loop/guide-3', widths: [400, 800] },
+  riders: { path: '/hero-loop/riders', widths: [400, 800] },
+}
+
+// The loop's chapters and Next stops, the same on every size: each names the
+// timeline beats it starts and ends on. SETTLE is the chapter shown finished
+// under reduced motion.
+export const CHAPTERS = [
+  { name: 'Palette', first: 'p0', end: 'h5' },
+  { name: 'Icons', first: 'enter3', end: 'h16' },
+  { name: 'Type', first: 'enter1', end: 'h11' },
+  { name: 'Alt text', first: 'enter6', end: 'h6c' },
+  { name: 'Export', first: 'pExp', end: 'guide' },
+];
+export const EXTRA_STEPS = [{ name: 'Type scale', beat: 'enter2' }];
+export const SETTLE = 4;

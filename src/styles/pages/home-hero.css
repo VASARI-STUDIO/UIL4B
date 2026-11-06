@@ -120,10 +120,17 @@
   transition: background-color 150ms ease;
 }
 .hh-go-disc > svg { transition: transform 320ms cubic-bezier(.25, 1, .5, 1); }
+/* `.ui-pill-out` brings the chroma ring (global.css) and its own ground and
+   inks; the hero keeps its own, whichever page theme is on. */
 .hh-ghost {
   padding: 0 22px;
   border: 1px solid rgba(var(--hh-ink-rgb), .16);
   color: var(--hh-ink);
+}
+.hh-ghost.ui-pill-out {
+  background: transparent;
+  color: var(--hh-ink);
+  border-color: rgba(var(--hh-ink-rgb), .16);
 }
 .hh-go:active,
 .hh-ghost:active { transform: scale(.97); }
@@ -135,7 +142,7 @@
   .hh-go:hover { background: #F7F6F2; }
   .hh-go:hover .hh-go-disc { background: rgba(11, 12, 14, .12); }
   .hh-go:hover .hh-go-disc > svg { transform: rotate(45deg); }
-  .hh-ghost:hover { border-color: rgba(var(--hh-ink-rgb), .3); }
+  .hh-ghost.ui-pill-out:hover { background: transparent; border-color: rgba(var(--hh-ink-rgb), .3); }
 }
 
 /* ── the loop panel ───────────────────────────────────────────────────────── */
