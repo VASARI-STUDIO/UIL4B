@@ -151,8 +151,9 @@ export default function HomeBookmarks() {
                     <Link className={`bm-tool${tool.group === open ? ' on' : ''}${hot && hot.j === j ? ' hot' : ''}`} to={tool.href} data-tool={j} aria-describedby={`bm-d-${tool.key}`}>
                       <span className="bm-g"><Glyph name={tool.key} /></span>
                       <span>{tool.name}</span>
-                      <span id={`bm-d-${tool.key}`} className="bm-sr">Replaces {bookmarksOf(j).join(' and ')}.</span>
                     </Link>
+                    {/* Outside the link, so it describes the tool without becoming part of its name */}
+                    <span id={`bm-d-${tool.key}`} className="bm-sr">Replaces {bookmarksOf(j).join(' and ')}.</span>
                   </Fragment>
                 ))}
                 <div className="bm-rule" aria-hidden="true" />
