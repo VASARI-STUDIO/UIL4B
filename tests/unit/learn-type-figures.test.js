@@ -279,10 +279,15 @@ test('the inventory the guide describes is the inventory global.css declares', (
   // The count is asserted rather than derived on purpose: a family appearing or
   // disappearing is a first-paint decision, and this is where the guide's
   // sentence and the stylesheet are held to the same number.
-  assert.equal(faces.length, 12, `global.css now declares ${faces.length} @font-face rules`)
+  assert.equal(faces.length, 14, `global.css now declares ${faces.length} @font-face rules`)
   const families = [...new Set(faces.map((f) => f.family))]
-  assert.equal(families.length, 7, `global.css now declares ${families.length} families`)
-  assert.match(loadingProse, /Seven families, twelve rules/)
+  assert.equal(families.length, 8, `global.css now declares ${families.length} families`)
+  assert.match(loadingProse, /Eight families, fourteen rules/)
+  // The homepage text face's stand-in is local, like the interface face's.
+  const homeStandIn = facesOf('Geist Fallback')
+  assert.ok(homeStandIn.length === 2 && homeStandIn.every((f) => f.local && f.range === null),
+    'Geist Fallback is no longer a pair of local faces')
+  assert.match(loadingProse, /The homepage text face has a stand-in of the same kind/)
 
   // Which families are subset, and which ship whole, is the claim the section
   // turns on. The UI face is the one that must carry no range at all; the
