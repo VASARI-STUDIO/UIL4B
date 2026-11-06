@@ -143,6 +143,9 @@ const ALLOWED = {
     '.xfp-code': 'code',
     '.xfp-file': 'token',
   },
+  'pages/font-pair-board.css': {
+    '.fpr-page .fpr-frow-w': 'value',
+  },
   'pages/from-image-dialog.css': {
     '.plb-imgsel-hex': 'hex',
     '.plb-imgslot-hex': 'hex',

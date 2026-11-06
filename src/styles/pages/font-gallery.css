@@ -669,11 +669,16 @@ html.fg-tray { --fg-tray-h: 60px; }
   .fg-page :hover > .mi-go--paper { background: rgba(239, 238, 234, .14); }
 }
 .fg-page :focus-visible > .mi-go > .mi-a { transform: rotate(var(--mi-r)); transition: transform 320ms cubic-bezier(.25, 1, .5, 1); }
+html[data-reduced-motion="true"] .fg-page .mi-go > .mi-a,
+html[data-reduced-motion="true"] .fg-page :hover > .mi-go > .mi-a,
+html[data-reduced-motion="true"] .fg-page :focus-visible > .mi-go > .mi-a { transition: none; transform: none; }
+html[data-reduced-motion="true"] .fg-page .mi-go > .mi-b { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
-  .fg-page .mi-go > .mi-a, .fg-page :hover > .mi-go > .mi-a, .fg-page :focus-visible > .mi-go > .mi-a { transition: none; transform: none; }
-  .fg-page .mi-go > .mi-b { visibility: hidden; }
+  html:not([data-reduced-motion="false"]) .fg-page .mi-go > .mi-a,
+  html:not([data-reduced-motion="false"]) .fg-page :hover > .mi-go > .mi-a,
+  html:not([data-reduced-motion="false"]) .fg-page :focus-visible > .mi-go > .mi-a { transition: none; transform: none; }
+  html:not([data-reduced-motion="false"]) .fg-page .mi-go > .mi-b { visibility: hidden; }
 }
-html[data-reduced-motion="true"] .fg-page :is(.mi-go > .mi-a, :hover > .mi-go > .mi-a, :focus-visible > .mi-go > .mi-a) { transition: none; transform: none; }
 html.fg-tray body .toast { bottom: calc(var(--fg-tray-h, 60px) + 24px + var(--toast-lift) + env(safe-area-inset-bottom, 0px)); }
 html.fg-tray body .global-feedback-btn { bottom: calc(var(--fg-tray-h, 60px) + 20px + env(safe-area-inset-bottom, 0px)); }
 /* The page and the scroll snap both leave room for the tray, so the last band
@@ -932,7 +937,8 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
 .fg-page .fg-grid--tiles .fg-card-label { top: 16px; right: 64px; }
 @media (max-width: 767px) { .fg-page .fg-card-label { font-size: 14px; top: 16px; } .fg-page .fg-card.has-label .fg-card-preview { top: calc(var(--fg-y) + 20px); } .fg-page .fg-card.has-label { height: calc(var(--fg-band, 240px) + 20px); } }
 
-html[data-reduced-motion="true"] .fg-page .fg-card::before { transition: opacity 120ms linear; }
+html[data-reduced-motion="true"] .fg-page .fg-card::before,
+html[data-reduced-motion="true"] .fg-page .fg-card.is-open.has-backdrop::before { transition: opacity 120ms linear; }
 html[data-reduced-motion="true"] .fg-page .fg-card-copy { transition: opacity 120ms linear; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .fg-page .fg-card::before,
