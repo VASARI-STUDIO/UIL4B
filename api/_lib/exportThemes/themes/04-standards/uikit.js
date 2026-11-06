@@ -339,7 +339,7 @@ export const uikit = {
     const L = chipPairs(ctx, 'light'), D = chipPairs(ctx, 'dark');
     const ids = [...ctx.status.map((s) => s.id), 'departed'];
     const chip = (id) => (id === 'departed' ? '<span class="ui-chip kchip--gone">Departed</span>' : ctx.ui.statusChip(id));
-    const rows = ids.map((id, i) => `<div class="kstat"><span>${chip(id)}</span><span class="ui kdk" data-theme="dark">${chip(id)}</span><span class="krr"><b>${rt(ctx, ...L[id])}</b>Light</span><span class="krr"><b>${rt(ctx, ...D[id])}</b>Dark</span><span class="kcap kcap--ink">${meaning[id]}</span></div>`).join('');
+    const rows = ids.map((id, i) => `<div class="kstat"><span>${chip(id)}</span><span class="ui kdk" data-theme="dark">${chip(id)}</span><span class="krr"><b>${rt(ctx, ...L[id])}</b>Light</span><span class="krr"><b>${rt(ctx, ...D[id])}</b>Dark</span><span class="kcap kcap--ink">${meaning[id] || `Words in ${tk(id)}.`}</span></div>`).join('');
     return kstd(ctx, 'status', { lead: 'Status is words first. Colour is the second cue.',
       rules: ['A status is words in one colour, a 6 px dot before them. The ratio is the words on the page ground. Five states, with a time or a count where it helps.', 'A status is never colour alone: Boarding, 5 min late and Cancelled are read, not matched.', `A count badge sits on a tab or an icon: ${'<span class="ui-badge">3</span>'}`],
       work: grp('Six states, light and dark', `<div class="kstats-list"><div class="kstat kstat--h"><b>Light</b><b>Dark</b><b>Ratio</b><b>Ratio</b><b>When</b></div>${rows}</div>`) });

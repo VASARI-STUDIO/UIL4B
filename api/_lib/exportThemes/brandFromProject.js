@@ -134,7 +134,7 @@ function skeleton(word, date) {
       signage: 'Sign, 594 x 841 mm: your line here.', email: { person: 'Your name', role: 'Your title' }, site: { url: 'brand.example' },
     },
     guideB: {
-      studioSlot: w, examples: [1, 2, 3, 4].map((i) => `Example ${i}.`), rules: [1, 2, 3].map((i) => ({ title: `Brand rule ${i}`, text: w })),
+      studioSlot: w, examples: [1, 2, 3, 4].map((i) => ({ do: `Example ${i}, do this.`, dont: `Example ${i}, not this.` })), rules: [1, 2, 3].map((i) => ({ title: `Brand rule ${i}`, text: w })),
       email: { to: 'Customer name', subject: 'Your subject line', time: '10:44', body: ['Hi there,', w] },
     },
     contact: { owner: 'Brand team', email: 'brand@brand.example' },
