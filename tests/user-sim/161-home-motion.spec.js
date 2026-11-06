@@ -2,7 +2,7 @@
 //
 // The homepage got a hero arrival (the sub-line, search and buttons rise in and the
 // band is set bar by bar), shorter section headings, an observer-driven bench,
-// a sliding tab pill, a library fade and a single-observer count-up. Each of them
+// a sliding tab pill, a library fade and and a bar of printed figures. Each of them
 // can be done wrongly in a way the page still LOOKS fine in a screenshot:
 //
 //   - the arrival can move the headline, which makes the settled hydrated
@@ -10,7 +10,7 @@
 //   - a content switch can move the layout under a thumb (CLS);
 //   - the reduced-motion choice can be answered by one input and not the other;
 //   - a scroll handler can come back on the bench or the proof band;
-//   - a figure can end on the wrong number, or its box can change width as it counts.
+//   - a figure can start counting up again, or end on the wrong number.
 //
 // So the oracles are the BROWSER'S OWN: `document.getAnimations()` scanned every
 // frame (an animation that has finished is no longer listed, so "did it run?"
@@ -24,13 +24,12 @@
 //         21 in its reflection = 42
 //   controls: sub-line, search, buttons = 3, each 240ms (200ms), +0/+60/+120ms (+0/+40/+80ms)
 //   section headings: 600ms, delay capped at 8*40ms, not at all at 1000px and below
-//   count-up: 700ms (600ms at 1000px and below), the four figures start together
 //
 // WHAT THIS DOES NOT PROVE: the 4x-throttled frame trace of the spec's T8 (a manual
 // trace, recorded in the PR), and Firefox/Safari (no view timelines there).
 import { test, expect } from './base.js'
 import { go, goHoldingApp, watch } from './helpers.js'
-import { PROOF_STATS } from '../../src/components/spectrum/spectrumFacts.js'
+import { PROOF_ROWS } from '../../src/components/home/proofStats.js'
 
 const PERSONA = 'a first-time visitor on the front door'
 const NEW_MOTION = /^(sp-arrive|sp-bar-set|sp-depth|sp-enter|sp-fade-[ab]|sp-word-up)$/
@@ -131,7 +130,7 @@ async function pressChips(page) {
   }
 }
 
-const finalFigure = (s) => (s.value >= 1000 ? s.value.toLocaleString('en-GB') : String(s.value))
+const finalFigure = (row) => String(row.n)
 
 // ── T1: the cold-load hero ──────────────────────────────────────────────────
 
@@ -257,7 +256,7 @@ async function exercise(page, view) {
   }
   await page.locator('.sp-chips').scrollIntoViewIfNeeded()
   await pressChips(page)
-  await page.locator('.sp-proof-row').scrollIntoViewIfNeeded()
+  await page.locator('.hp-l').scrollIntoViewIfNeeded()
 }
 
 const REDUCED = {
@@ -270,10 +269,10 @@ for (const [label, opts] of Object.entries(REDUCED)) {
       const { ctx, page } = await open(browser, view, opts)
       await exercise(page, view)
       // The figure is read the moment the band is in view, before any count could have finished.
-      const figures = await page.locator('.sp-proof-n').allTextContents()
-      expect(figures, 'the figures are not their real values straight away').toEqual(PROOF_STATS.map(finalFigure))
+      const figures = await page.locator('.hp-l strong').allTextContents()
+      expect(figures, 'the figures are not their real values straight away').toEqual(PROOF_ROWS.map(finalFigure))
       await page.waitForTimeout(1000)
-      expect(await page.locator('.sp-proof-n').allTextContents()).toEqual(PROOF_STATS.map(finalFigure))
+      expect(await page.locator('.hp-l strong').allTextContents()).toEqual(PROOF_ROWS.map(finalFigure))
       const named = (await hm(page, () => window.__hm.anims)).filter((a) => NEW_MOTION.test(a.name))
       expect(named.map((a) => a.name), `with ${label}, these still ran`).toEqual([])
       // And the content is settled in plain CSS, not waiting on a run.
@@ -413,29 +412,30 @@ for (const view of [1440, 768, 390]) {
 }
 
 for (const view of [1440, 390]) {
-  test(`T5 each figure keeps its box while it counts at ${view}px`, async ({ browser }) => {
+  test(`T5 each figure is printed as it is, and keeps its text and its box, at ${view}px`, async ({ browser }) => {
     const { ctx, page } = await open(browser, view)
     await go(page, '/')
     await page.waitForTimeout(1500)
     await page.evaluate(() => {
       window.__fig = []
-      const els = [...document.querySelectorAll('.sp-proof-n')]
+      const els = [...document.querySelectorAll('.hp-l strong')]
       const tick = () => {
         window.__fig.push({ t: performance.now(), f: els.map((e) => { const r = e.getBoundingClientRect(); return { text: e.textContent, x: r.x + window.scrollX, w: r.width } }) })
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
     })
-    await page.locator('.sp-proof-row').scrollIntoViewIfNeeded()
+    await page.locator('.hp-l').scrollIntoViewIfNeeded()
     await page.waitForTimeout(1500)
     const samples = await page.evaluate(() => window.__fig)
     const changed = samples.filter((s, i) => i > 0 && s.f.some((f, k) => f.text !== samples[i - 1].f[k].text))
-    expect(changed.length, 'the count never ran, so there is nothing to compare').toBeGreaterThan(5)
-    PROOF_STATS.forEach((stat, k) => {
+    expect(samples.length, 'the sampler never ran, so there is nothing to compare').toBeGreaterThan(5)
+    expect(changed.length, 'a figure changed its text, so something counts up again').toBe(0)
+    PROOF_ROWS.forEach((stat, k) => {
       const lefts = samples.map((s) => s.f[k].x)
       // The page may scroll while the sampler runs; compare the box to ITS OWN final box in page coordinates.
-      expect(new Set(lefts.map((x) => x.toFixed(1))).size, `figure ${k} (${finalFigure(stat)}) moved sideways while counting: ${[...new Set(lefts.map((x) => x.toFixed(1)))]}`).toBe(1)
-      expect(new Set(samples.map((s) => s.f[k].w.toFixed(1))).size, `figure ${k} changed width while counting`).toBe(1)
+      expect(new Set(lefts.map((x) => x.toFixed(1))).size, `figure ${k} (${finalFigure(stat)}) moved sideways: ${[...new Set(lefts.map((x) => x.toFixed(1)))]}`).toBe(1)
+      expect(new Set(samples.map((s) => s.f[k].w.toFixed(1))).size, `figure ${k} changed width`).toBe(1)
       expect(samples.at(-1).f[k].text).toBe(finalFigure(stat))
     })
     await ctx.close()
@@ -445,62 +445,30 @@ for (const view of [1440, 390]) {
 // ── T6: phone feel, and the desktop timings ─────────────────────────────────
 
 for (const view of [390, 768]) {
-  test(`T6 at ${view}px section headings do not rise, the band is set in 420ms, and the figures count together in under 700ms`, async ({ browser }) => {
+  test(`T6 at ${view}px section headings do not rise and the band is set in 420ms`, async ({ browser }) => {
     const { ctx, page } = await open(browser, view)
     await go(page, '/')
-    await page.evaluate(() => {
-      window.__chg = []
-      const els = [...document.querySelectorAll('.sp-proof-n')]
-      const last = els.map((e) => e.textContent)
-      const tick = () => {
-        els.forEach((e, k) => { if (e.textContent !== last[k]) { last[k] = e.textContent; window.__chg.push({ k, t: performance.now() }) } })
-        requestAnimationFrame(tick)
-      }
-      requestAnimationFrame(tick)
-    })
     await scrollThrough(page)
-    await page.locator('.sp-proof-row').scrollIntoViewIfNeeded()
+    await page.locator('.hp-l').scrollIntoViewIfNeeded()
     await page.waitForTimeout(1200)
     expect(await ran(page, 'sp-word-up'), 'a heading rose on a phone-width screen').toHaveLength(0)
     const barMs = await page.evaluate(() => getComputedStyle(document.querySelector('.sp-ramp--hero .sp-ramp-bar')).animationDuration)
     expect(barMs).toBe('0.42s')
-    const chg = await page.evaluate(() => window.__chg)
-    const firsts = [0, 1, 2, 3].map((k) => Math.min(...chg.filter((c) => c.k === k).map((c) => c.t)))
-    expect(Math.max(...firsts) - Math.min(...firsts), 'the four figures did not start in the same frame').toBeLessThanOrEqual(16.7)
-    const span = Math.max(...chg.map((c) => c.t)) - Math.min(...chg.map((c) => c.t))
-    expect(span, 'the count ran for 700ms or more on a phone').toBeLessThan(700)
-    expect(span, 'the count did not run').toBeGreaterThan(250)
     await ctx.close()
   })
 }
 
-test('T6 at 1440 the band bar is 600ms, headings rise in 600ms with a capped stagger, and the count is under 750ms', async ({ browser }) => {
+test('T6 at 1440 the band bar is 600ms, headings rise in 600ms with a capped stagger', async ({ browser }) => {
   const { ctx, page } = await open(browser, 1440)
   await go(page, '/')
-  await page.evaluate(() => {
-    window.__chg = []
-    const els = [...document.querySelectorAll('.sp-proof-n')]
-    const last = els.map((e) => e.textContent)
-    const tick = () => {
-      els.forEach((e, k) => { if (e.textContent !== last[k]) { last[k] = e.textContent; window.__chg.push({ k, t: performance.now() }) } })
-      requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  })
   await scrollThrough(page)
-  await page.locator('.sp-proof-row').scrollIntoViewIfNeeded()
+  await page.locator('.hp-l').scrollIntoViewIfNeeded()
   await page.waitForTimeout(1200)
   expect(await page.evaluate(() => getComputedStyle(document.querySelector('.sp-ramp--hero .sp-ramp-bar')).animationDuration)).toBe('0.6s')
   const words = await ran(page, 'sp-word-up')
   expect(words.length, 'section headings rise at desktop width').toBeGreaterThan(10)
   expect(new Set(words.map((a) => a.dur)), 'a section heading rises in 600ms').toEqual(new Set([600]))
   expect(Math.max(...words.map((a) => a.delay)), 'the longest heading ends in 840ms: delay capped at 8 x 40ms').toBeLessThanOrEqual(320)
-  const chg = await page.evaluate(() => window.__chg)
-  const firsts = [0, 1, 2, 3].map((k) => Math.min(...chg.filter((c) => c.k === k).map((c) => c.t)))
-  expect(Math.max(...firsts) - Math.min(...firsts), 'the four figures did not start in the same frame').toBeLessThanOrEqual(16.7)
-  const span = Math.max(...chg.map((c) => c.t)) - Math.min(...chg.map((c) => c.t))
-  expect(span).toBeLessThan(750)
-  expect(span).toBeGreaterThan(300)
   await ctx.close()
 })
 

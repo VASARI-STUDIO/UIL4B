@@ -32,7 +32,7 @@ if (!CSS_PATH) throw new Error('spectrum.css is in neither src/styles/pages/ nor
 const CSS = read(CSS_PATH).replace(/\/\*[\s\S]*?\*\//g, '')
 const js = (p) => stripComments(read(p))
 const BENCH = js('src/components/spectrum/SpectrumBench.jsx')
-const PROOF = js('src/components/spectrum/SpectrumProof.jsx')
+const PROOF = js('src/components/home/HomeProof.jsx')
 const RAMP = js('src/components/spectrum/SpectrumRamp.jsx')
 
 // ── a small stylesheet reader ───────────────────────────────────────────────
@@ -251,14 +251,14 @@ const matching = (src, openAt, open, close) => {
 test('U4: the bench listens to no scroll, and the proof band neither listens nor animates', () => {
   // What the bench observes instead is the bookmarks section's own business; the frame only
   // guarantees it does not run a handler per scroll frame.
-  for (const [file, src] of Object.entries({ 'SpectrumBench.jsx': BENCH, 'SpectrumProof.jsx': PROOF })) {
+  for (const [file, src] of Object.entries({ 'SpectrumBench.jsx': BENCH, 'HomeProof.jsx': PROOF })) {
     assert.ok(!scrollListener.test(src), `${file} adds a scroll listener`)
     assert.ok(!/onScroll|\.onscroll/.test(src), `${file} has an onScroll handler`)
   }
   // The proof figures print as they are: no observer, timer or frame loop drives them.
   assert.ok(!/IntersectionObserver|requestAnimationFrame|setInterval|setTimeout|useEffect/.test(PROOF),
-    'SpectrumProof.jsx drives its figures from an observer, timer or effect; they are static text')
-  assert.ok(PROOF.includes('PROOF_STATS'), 'the proof band no longer prints PROOF_STATS')
+    'HomeProof.jsx drives its figures from an observer, timer or effect; they are static text')
+  assert.ok(PROOF.includes('PROOF_ROWS'), 'the proof bar no longer prints PROOF_ROWS')
 })
 
 test('U4: the band\'s hue listener is attached from an IntersectionObserver callback only', () => {
@@ -304,14 +304,15 @@ test('U5: the served shell carries none of the arrival', () => {
   for (const [where, html] of Object.entries(shells)) {
     for (const word of ARRIVAL) assert.ok(!html.includes(word), `${where} contains "${word}". The headline would be served mid-arrival.`)
   }
-  // POSITIVE CONTROL: it is the real shell, and the hero header is still the bare one.
-  assert.ok(shells['homeShellRoot()'].includes('<header class="sp-hero">'), 'the shell\'s hero header is no longer the bare <header class="sp-hero">')
-  assert.ok(shells['homeShellRoot()'].includes('<h1 class="sp-hero-h1">'), 'the shell lost its headline')
+  // POSITIVE CONTROL: it is the real shell, and the hero is still the bare section.
+  assert.ok(shells['homeShellRoot()'].includes('<section id="top" class="hh-hero">'), 'the shell\'s hero is no longer the bare <section id="top" class="hh-hero">')
+  assert.ok(/<h1 class="hh-h1"/.test(shells['homeShellRoot()']), 'the shell lost its headline')
 })
 
-test('U5: the hero\'s arrival is decided in React, from the same first render as the headline', () => {
-  const page = js('src/pages/Spectrum.jsx')
-  assert.match(page, /\[arrive\] = useState\(\(\) =>[^)]*prefersReducedMotion\(\)/,
-    'the arrival is no longer decided once, in the first render, with a reduced-motion check')
-  assert.ok(!/<h1[^>]*is-arriving/.test(page), 'the h1 carries the arrival class')
+test('U5: the hero copy has no arrival of its own', () => {
+  const hero = js('src/components/home/HomeHero.jsx')
+  for (const word of ['is-arriving', 'sp-arrive', 'heroLit', 'SpectrumWords']) {
+    assert.ok(!hero.includes(word), `HomeHero.jsx contains "${word}". The hero copy has no entrance.`)
+  }
+  assert.ok(/<h1[^>]*className="hh-h1"/.test(hero), 'HomeHero.jsx lost its headline')
 })
