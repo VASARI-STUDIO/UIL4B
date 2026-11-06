@@ -52,9 +52,8 @@ import { go, watch, expectRendered } from './helpers.js'
 //
 // Home.jsx's `#hsteps-title` / `#htools-title` / `#hcomm-title` are gone with
 // the page. Their successors on Spectrum, where one exists:
-//   · #hsteps-title (the tools/workbench heading)  → #sp-bench-h, which renders
-//     `SURFACE_LINE.toolsSectionHeading` — the design's line for that section, and
-//     the slot both rejected workbench headings were aimed at.
+//   · #hsteps-title (the tools/workbench heading)  → #bm-h, the bookmarks
+//     section's heading — the slot both rejected workbench headings were aimed at.
 //   · #hcomm-title  (the community showcase)        → #sp-disc-h, the library
 //     section. "Systems worth stealing." was rejected in this slot.
 //   · #htools-title (the six-category strip)        → NOTHING. Spectrum has no
@@ -67,7 +66,7 @@ import { go, watch, expectRendered } from './helpers.js'
 //
 // The pricing and FAQ headings are on /plans (the Pricing screen), not the
 // landing, and the design's proof band has a heading.
-const SLOTS = ['sp-bench-h', 'sp-disc-h', 'sp-spec-h', 'proof-h', 'sp-close-h']
+const SLOTS = ['bm-h', 'sp-disc-h', 'sp-spec-h', 'proof-h', 'sp-close-h']
 
 const REJECTED = [
   {

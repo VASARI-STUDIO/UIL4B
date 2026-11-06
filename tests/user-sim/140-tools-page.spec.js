@@ -37,9 +37,9 @@ test.describe('/tools shell', () => {
     await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Tools')
   })
 
-  test('the homepage lede links to /tools; the footer lists All tools first', async ({ page }) => {
+  test('the homepage bookmarks heading is there; the footer lists All tools first', async ({ page }) => {
     await go(page, '/')
-    await expect(page.locator('.sp-bench-lede').getByRole('link', { name: 'See all of them.' })).toHaveAttribute('href', '/tools')
+    await expect(page.locator('#bookmarks h2#bm-h')).toHaveText('Say goodbye to bookmark folders.')
     await expect(page.locator('.sp-footer-col').first().locator('a').first()).toHaveText('All tools')
   })
 })

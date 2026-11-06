@@ -52,6 +52,12 @@ const SPECTRUM_CSS_PATH = ['src/styles/deferred/spectrum.css', 'src/styles/pages
 if (!SPECTRUM_CSS_PATH) throw new Error('spectrum.css is in neither src/styles/deferred/ nor src/styles/pages/')
 
 const PAGE = stripComments(read('src/pages/Spectrum.jsx'))
+// The page with each mounted homepage section (`<HomeX />`) replaced by its own
+// source, so copy a section renders itself is read as part of the landing.
+const MOUNTED = PAGE.replace(/<(Home[A-Z]\w*)[^>]*\/>/g, (tag, name) => {
+  const file = `src/components/home/${name}.jsx`
+  return fs.existsSync(file) ? stripComments(read(file)) : tag
+})
 const HERO = stripComments(read('src/components/home/HomeHero.jsx'))
 const FACTS = stripComments(read('src/components/spectrum/spectrumFacts.js'))
 const BENCH = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
@@ -122,7 +128,7 @@ test('no price is typed anywhere on this page', () => {
   assert.ok(!/\$\d/.test(PAGE), 'Spectrum.jsx quotes a price again; pricing lives on /plans')
   assert.ok(!PAGE.includes('/checkout') && !PAGE.includes('login?signup=1'),
     'a landing CTA goes to checkout or the sign-up route instead of /plans')
-  const plansLinks = (PAGE + HERO).match(/to="\/plans"/g) || []
+  const plansLinks = (MOUNTED + HERO).match(/to="\/plans"/g) || []
   assert.ok(plansLinks.length >= 2, 'the landing no longer links "View plans" and "See the plans" to /plans')
 })
 
@@ -247,13 +253,13 @@ test('the tool count is counted off the tree, not typed', () => {
   // stylesheet's comments.
   const withoutTable = FACTS.replace(/const NUMBER_WORDS = \[[\s\S]*?\n\]/, '')
   assert.ok(!withoutTable.includes("'thirteen'"), 'the NUMBER_WORDS excision did not work; this scan is unreliable')
-  for (const [file, src] of Object.entries({ 'src/pages/Spectrum.jsx': PAGE, 'src/components/spectrum/spectrumFacts.js': withoutTable })) {
+  for (const [file, src] of Object.entries({ 'src/pages/Spectrum.jsx and its sections': MOUNTED, 'src/components/spectrum/spectrumFacts.js': withoutTable })) {
     assert.ok(!/\bthirteen\b/i.test(src),
       `${file} types the tool count. It is derived: shipping the UI Component Builder must `
       + 'change these sentences on the next build without an edit here.')
   }
-  assert.ok(PAGE.includes('numberWord(TOOL_COUNT'),
-    'Spectrum.jsx no longer renders the count through numberWord(TOOL_COUNT)')
+  assert.ok(/TOOL_COUNT/.test(MOUNTED),
+    'the landing no longer renders the tool count from TOOL_COUNT')
   assert.ok(FACTS.includes('numberWord(TOOL_COUNT)'),
     'spectrumFacts.js no longer builds its count sentences through numberWord(TOOL_COUNT)')
   assert.equal(numberWord(13, { capital: true }), 'Thirteen')

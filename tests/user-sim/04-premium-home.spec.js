@@ -5,7 +5,7 @@ import { go, goRaw, ready, watch } from './helpers.js'
 // The front door's headline is the design's Spectrum line. Its accent run renders as ONE revealed word, as the design
 // draws it, so the word count is the sentence's words less the run's extras.
 import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
-import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
+import { TOOL_COUNT } from '../../src/components/spectrum/spectrumFacts.js'
 
 const HERO_UNITS = SPECTRUM_HERO.text.trim().split(/\s+/).length
   - (SPECTRUM_HERO.mark.trim().split(/\s+/).length - 1)
@@ -223,24 +223,21 @@ test.describe('premium homepage', () => {
      *
      * Each window still ends at the real tool rather than at a picture of it:
      * its primary CTA is a link to that tool's live route. */
-    const rail = page.locator('.sp-rail-row')
-    await expect(rail).toHaveCount(4)
-    await expect(rail).toHaveText([/Palette Builder/, /Icon Library/, /Font Gallery/, /File Converter/])
-
-    const lede = (await page.locator('.sp-bench-lede').innerText()).toLowerCase()
-    expect(lede, 'the bench lede no longer states the tool count the tree gives')
-      .toContain(`${numberWord(TOOL_COUNT)} tools`)
-
     const bench = page.locator('#bookmarks')
     await bench.scrollIntoViewIfNeeded()
-    await expect(page.locator('.sp-panel[data-panel]')).toHaveCount(4)
+    const lede = (await bench.locator('.bm-sub').innerText()).toLowerCase()
+    expect(lede, 'the bookmarks sub-line no longer states the tool count the tree gives')
+      .toContain(`${TOOL_COUNT} tools`)
+
+    // The window's sidebar is the set of links: one per live tool, to its route.
+    await expect(bench.locator('a[data-tool]'), 'one sidebar link per live tool').toHaveCount(TOOL_COUNT)
     for (const [name, href] of [
-      ['Open Palette Builder', '/create/palette'],
-      ['Open Icon Library', '/create/icons'],
-      ['Open Font Gallery', '/create/font-gallery'],
-      ['Open File Converter', '/create/file-converter'],
+      ['Palette', '/create/palette'],
+      ['Icon Library', '/create/icons'],
+      ['Font Gallery', '/create/font-gallery'],
+      ['File Converter', '/create/file-converter'],
     ]) {
-      await expect(page.getByRole('link', { name }), `the "${name}" window CTA`).toHaveAttribute('href', href)
+      await expect(bench.getByRole('link', { name, exact: true }), `the "${name}" tool link`).toHaveAttribute('href', href)
     }
 
     const overflow = await page.evaluate(
@@ -262,15 +259,8 @@ test.describe('premium homepage', () => {
     const cta = page.locator('.sp-hero .sp-pill').first()
     await expect(cta).toBeVisible()
     await expect(cta).toHaveAttribute('href', '/projects')
-    // The design's four tool windows, each with its rail row, on a phone as well.
-    await expect(page.locator('.sp-rail-row')).toHaveCount(4)
-    // The phone gets the calm stacked arrangement: the rail does not stick, so
-    // the bench reads as one column instead of pinning a third of a small
-    // screen. The design's own rule (below 1000px the bench column is static).
-    const stickyPosition = await page.locator('.sp-bench-col').evaluate(
-      (element) => getComputedStyle(element).position,
-    )
-    expect(stickyPosition).toBe('static')
+    // Every live tool is a link in the bookmarks section on a phone as well.
+    await expect(page.locator('#bookmarks .bm-narrow a')).toHaveCount(TOOL_COUNT)
     // The command bar is the hero's primary control and must be usable here.
     await expect(page.locator('.hcmd-input')).toBeVisible()
     const overflow = await page.evaluate(

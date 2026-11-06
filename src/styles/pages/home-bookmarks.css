@@ -1,0 +1,280 @@
+/* The bookmarks section. Padding is the only space at its top and bottom: the
+   join token above (it sits under the hero) and the standard token below.
+   Written desktop first: a fixed 640px stage holding a 1336px composition.
+   Below 1024px the composition would be too small to read, so narrow screens
+   show the tools as a plain list. */
+.bm {
+  --e: cubic-bezier(.23, 1, .32, 1);
+  --x: cubic-bezier(.4, 0, 1, 1);
+  box-sizing: border-box;
+  padding: var(--section-y-join) var(--gutter-x) var(--section-y);
+  color: #EFEEEA;
+  font-family: var(--hm-font);
+}
+.bm-wide { max-width: 1336px; margin: 0 auto; }
+.bm-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Heading and sub-line */
+.bm-head { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: end; }
+.bm-h {
+  margin: 0; max-width: 13ch;
+  font-size: 60px; font-weight: 600; line-height: 1.02; letter-spacing: -.04em; text-wrap: balance;
+}
+.bm-h:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 4px; }
+.bm-sub { margin: 0 0 6px; max-width: 44ch; justify-self: end; font-size: 18px; line-height: 1.6; color: rgba(239, 238, 234, .68); }
+
+/* Controls */
+.bm button { font-family: inherit; cursor: pointer; transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--e); }
+.bm button:active { transform: scale(.97); }
+.bm button:focus-visible, .bm a:focus-visible { outline: 2px solid #EFEEEA; outline-offset: -2px; }
+.bm-fold:active { transform: none; background-color: rgba(239, 238, 234, .12); }
+
+/* ── The stage ─────────────────────────────────────────────────────────────── */
+.bm-frame { margin-top: 80px; }
+.bm-stage { position: relative; isolation: isolate; width: 1336px; height: 640px; margin: 0 auto; }
+/* Scaled as one piece so nothing scrolls sideways; zoom shrinks the layout height too. */
+@media (max-width: 1439px) { .bm-stage { zoom: .86; } }
+@media (max-width: 1252px) { .bm-stage { zoom: .82; } }
+@media (max-width: 1199px) { .bm-stage { zoom: .7; } }
+
+.bm-bar {
+  position: absolute; left: 0; top: 0; height: 44px; box-sizing: border-box; padding: 0 8px;
+  border-radius: 12px; border: 1px solid rgba(239, 238, 234, .08); background: #0E0F11;
+  display: flex; align-items: center; font-size: 13px;
+}
+.bm-bar span {
+  height: 30px; padding: 0 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(239, 238, 234, .1); color: #EFEEEA;
+}
+
+.bm-menu, .bm-sub-menu {
+  position: absolute; box-sizing: border-box; padding: 6px; border-radius: 12px;
+  border: 1px solid rgba(239, 238, 234, .1);
+}
+.bm-menu { left: 0; top: 56px; width: 256px; background: #121316; box-shadow: 0 24px 48px rgba(0, 0, 0, .45); }
+.bm-sub-menu {
+  left: 262px; top: 0; width: 300px; background: #16171A; box-shadow: 0 24px 48px rgba(0, 0, 0, .5);
+  transition: transform 220ms var(--e);
+}
+.bm-menu-h {
+  height: 40px; padding-left: 10px; display: flex; align-items: center;
+  border-bottom: 1px solid rgba(239, 238, 234, .08); margin-bottom: 8px; font-size: 13.5px; font-weight: 500;
+}
+
+/* The pause control: 24px visual, WCAG 2.2.2 */
+.bm-pause {
+  flex: none; width: 24px; height: 24px; margin-left: auto; margin-right: 8px; padding: 0;
+  border: 1px solid rgba(239, 238, 234, .16); border-radius: 6px; background-color: transparent;
+  color: rgba(239, 238, 234, .72); display: grid; place-items: center;
+}
+
+/* The run bar: the bookmarks as their four parts. The open folder's segment is full strength. */
+.bm-run { display: grid; gap: 2px; margin: 0 12px 8px; }
+.bm-run i { position: relative; isolation: isolate; height: 4px; border-radius: 2px; }
+.bm-run i::before {
+  content: ''; position: absolute; inset: 0; border-radius: 2px; background: var(--c);
+  opacity: .35; transition: opacity 160ms ease;
+}
+.bm-run i.on::before { opacity: 1; }
+/* The tour's clock: this fill ending opens the next folder. Paused, the clock and the bar stop together. */
+.bm-fill {
+  position: absolute; inset: 0; border-radius: 2px; background: var(--c);
+  transform-origin: left; transform: scaleX(0); animation: bmFill 3200ms linear forwards;
+}
+.bm-paused .bm-fill { animation-play-state: paused; }
+@keyframes bmFill { to { transform: scaleX(1); } }
+
+/* Folder rows */
+.bm-fold {
+  position: relative; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px;
+  display: flex; align-items: center; gap: 10px; font-size: 13.5px; text-align: left;
+  background-color: transparent; color: rgba(239, 238, 234, .82);
+}
+.bm-fold.on { background-color: rgba(239, 238, 234, .09); color: #EFEEEA; }
+.bm-fold-n { flex: 1; }
+.bm-dot { flex: none; width: 6px; height: 6px; border-radius: 1px; }
+.bm-fold-c { min-width: 2ch; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: rgba(239, 238, 234, .62); }
+.bm-chev { flex: none; opacity: .5; transition: opacity 150ms ease, transform 150ms var(--e); }
+.bm-fold.on .bm-chev { opacity: .86; transform: translateX(2px); }
+
+/* The open folder's bookmarks; each lights as its line leaves */
+.bm-list { display: none; }
+.bm-list.on { display: block; }
+.bm-mk {
+  height: 32px; padding: 0 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #EFEEEA; background-color: transparent; transition: background-color 120ms ease;
+}
+.bm-mk.hot { background-color: rgba(239, 238, 234, .08); }
+.bm-mk-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-fav {
+  flex: none; width: 16px; height: 16px; border-radius: 4px; color: #0B0C0E;
+  display: grid; place-items: center; font-size: 9.5px; font-weight: 600;
+}
+.bm-list.on .bm-mk { animation: bmLight 260ms var(--e) backwards; }
+.bm-list.on .bm-fav { animation: bmFav 260ms var(--e) backwards; }
+@keyframes bmLight { from { color: rgba(239, 238, 234, .6); } }
+@keyframes bmFav { from { opacity: .35; } }
+/* Nothing moves until the reader acts or the tour has opened a second folder */
+.bm-still .bm-list.on .bm-mk, .bm-still .bm-list.on .bm-fav { animation: none; }
+
+/* ── Lines: bookmark to tool ─────────────────────────────────────────────────── */
+.bm-set { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 160ms var(--x); }
+.bm-set.on { opacity: 1; transition: none; }
+.bm-ln { position: absolute; left: 562px; top: 0; overflow: visible; opacity: 1; transition: opacity 120ms ease; }
+.bm-ln.dim { opacity: .2; }
+.bm-set path { stroke-dasharray: var(--l); stroke-dashoffset: 0; }
+.bm-set.on path { animation: bmDraw 520ms var(--e) backwards; }
+.bm-set.on circle { animation: bmDot 160ms ease-out backwards; }
+.bm-set path.bm-p2 { opacity: 0; transition: opacity 120ms ease; }
+.bm-ln.lit path.bm-p2 { opacity: 1; }
+@keyframes bmDraw { from { stroke-dashoffset: var(--l); } to { stroke-dashoffset: 0; } }
+@keyframes bmDot { from { opacity: 0; } }
+/* The light: one short dash travels each open line, bookmark to tool, once the
+   line has drawn, then rests. 3400ms is 1400ms of travel and 2000ms of rest; it
+   fades in leaving the bookmark and out reaching the tool. Dashoffset and
+   opacity only. */
+.bm-set path.bm-fl { opacity: 0; stroke-dasharray: 28 var(--l); stroke-dashoffset: 28; }
+.bm-set.on path.bm-fl {
+  animation: bmFlow 3400ms cubic-bezier(.65, 0, .35, 1) var(--fd) infinite backwards,
+    bmFlowFade 3400ms linear var(--fd) infinite backwards;
+}
+@keyframes bmFlow { 0% { stroke-dashoffset: 28; } 41.18%, 100% { stroke-dashoffset: var(--nl); } }
+@keyframes bmFlowFade { 0%, 4% { opacity: 0; } 17.4%, 23.7% { opacity: .8; } 41.18%, 100% { opacity: 0; } }
+/* Still before the first change, with nobody looking (out of view or a hidden tab), or stopped (one sweep, then rest) */
+.bm-still .bm-set.on path, .bm-still .bm-set.on circle { animation: none; }
+.bm-still .bm-set.on path.bm-fl, .bm-away .bm-set.on path.bm-fl { animation: none; }
+.bm-once .bm-set.on path.bm-fl { animation-iteration-count: 1; }
+
+/* ── The window ──────────────────────────────────────────────────────────────── */
+.bm-win {
+  position: absolute; left: 760px; top: 0; width: 576px; height: 640px; box-sizing: border-box;
+  border-radius: 16px; background: #16171A; overflow: hidden;
+  display: grid; grid-template-columns: 200px 1fr; grid-template-rows: 44px 1fr;
+}
+.bm-win::after { content: ''; position: absolute; inset: 0; border-radius: 16px; border: 1px solid rgba(239, 238, 234, .16); pointer-events: none; }
+.bm-win-h {
+  grid-column: 1 / -1; height: 44px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(239, 238, 234, .08); font-size: 14px; font-weight: 500;
+}
+.bm-win-n { margin-left: auto; font-size: 13px; font-weight: 400; color: rgba(239, 238, 234, .62); }
+.bm-side {
+  box-sizing: border-box; padding-top: 8px; background: #121316; border-right: 1px solid rgba(239, 238, 234, .08);
+  display: flex; flex-direction: column; min-width: 0;
+}
+.bm-lab {
+  flex: none; height: 22px; padding: 0 12px; display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 500; color: rgba(239, 238, 234, .62);
+}
+.bm-lab.on { color: rgba(239, 238, 234, .86); }
+.bm-g { flex: none; width: 16px; height: 16px; color: rgba(239, 238, 234, .86); }
+.bm-g svg { display: block; width: 16px; height: 16px; }
+.bm-tool {
+  position: relative; flex: none; height: 32px; padding: 0 12px; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #EFEEEA; background-color: transparent; text-decoration: none; isolation: isolate;
+  transition: background-color 120ms ease;
+}
+.bm-tool::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; background-color: rgba(239, 238, 234, .04);
+  opacity: 0; pointer-events: none; transition: opacity 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.bm-tool.on::before { opacity: 1; }
+.bm-tool::after {
+  content: ''; position: absolute; inset: 0; border: 1px solid rgba(239, 238, 234, .24);
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+}
+.bm-tool.hot { background-color: rgba(239, 238, 234, .14); }
+.bm-tool.hot::after { opacity: 1; }
+.bm-tool:active { background-color: rgba(239, 238, 234, .12); transition: none; }
+.bm-rule { margin-top: 8px; height: 1px; flex: none; background: rgba(239, 238, 234, .08); }
+.bm-brand {
+  margin-top: 7px; height: 32px; flex: none; padding: 0 12px; display: flex; align-items: center;
+  font-size: 13px; color: rgba(239, 238, 234, .86);
+}
+.bm-brand span {
+  margin-left: auto; width: 48px; height: 10px; display: grid; grid-template-columns: repeat(4, 12px);
+  border-radius: 3px; overflow: hidden; outline: 1px solid rgba(239, 238, 234, .16); outline-offset: -1px;
+}
+
+@media (hover: hover) {
+  .bm-fold:not(.on):hover { background-color: rgba(239, 238, 234, .05); }
+  .bm-tool:hover { background-color: rgba(239, 238, 234, .08); }
+  .bm-pause:hover { color: rgba(239, 238, 234, .86); background-color: rgba(239, 238, 234, .06); }
+}
+
+/* ── The pane: four layers in one grid cell. Out 100ms on the exit curve, in
+   160ms ease-out after an 80ms delay, so the two are never both above about .3. */
+.bm-panes { box-sizing: border-box; padding: 16px; min-width: 0; display: grid; grid-template-columns: 344px; grid-template-rows: 564px; }
+.bm-lay { grid-area: 1 / 1; min-width: 0; opacity: 0; pointer-events: none; transition: opacity 100ms var(--x); }
+.bm-lay.on { opacity: 1; pointer-events: auto; transition: opacity 160ms ease-out 80ms; }
+.bm-lay-h { height: 24px; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: rgba(239, 238, 234, .86); }
+.bm-lay-g { margin-top: 12px; height: 528px; display: grid; gap: 8px; }
+
+.bm-card {
+  position: relative; box-sizing: border-box; min-width: 0; padding: 12px; border-radius: 10px;
+  display: flex; flex-direction: column; color: #EFEEEA; text-decoration: none;
+}
+.bm-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: 10px; border: 1px solid rgba(239, 238, 234, .08);
+  pointer-events: none; transition: border-color 120ms ease;
+}
+.bm-card.hot::after { border-color: rgba(239, 238, 234, 0); }
+.bm-card::before {
+  content: ''; position: absolute; inset: -1px; border-radius: 11px; border: 2px solid #EFEEEA;
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+}
+.bm-card.hot::before { opacity: 1; }
+.bm-card .pv { flex: 1; min-height: 0; overflow: hidden; }
+.bm-card .ft {
+  flex: none; height: 20px; margin: 8px -8px 0 0; white-space: nowrap; display: flex; align-items: center;
+  gap: 8px; font-size: 13px; font-weight: 500; color: #EFEEEA;
+}
+.bm-card .fg { flex: none; display: block; width: 16px; height: 16px; color: rgba(239, 238, 234, .86); }
+.bm-card .fg svg { display: block; width: 16px; height: 16px; }
+/* A colour tool never fades its colour: the hot card gets a ring, the others lose
+   their words and hairline, and the colour stays exact. */
+.bm-card .ink, .bm-card .ft { transition: opacity 120ms ease; }
+.bm-card.dim .ink, .bm-card.dim .ft { opacity: .40; }
+.bm-card.dim::after { border-color: rgba(239, 238, 234, 0); }
+.bm-mono { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.bm-gr {
+  background: linear-gradient(var(--a, 135deg), var(--g));
+  background: linear-gradient(var(--a, 135deg) in oklch, var(--g));
+}
+.bm-gt { --a: 90deg; }
+
+/* ── Narrow screens: the tools by folder, as links ───────────────────────────── */
+.bm-narrow { display: none; }
+@media (max-width: 1023px) {
+  .bm-head { grid-template-columns: 1fr; gap: 16px; }
+  .bm-h { max-width: 13ch; font-size: 40px; }
+  .bm-sub { justify-self: start; margin: 0; }
+  .bm-frame { display: none; }
+  .bm-narrow {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 24px; margin-top: 32px;
+  }
+  .bm-narrow-g ul { margin: 0; padding: 0; list-style: none; }
+  .bm-narrow-h {
+    margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500;
+    color: rgba(239, 238, 234, .62);
+  }
+  .bm-narrow .bm-tool { height: 44px; padding: 0 8px; font-size: 15px; border-radius: 8px; }
+}
+@media (max-width: 767px) {
+  .bm-narrow { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .bm-h { font-size: 60px; }
+}
+
+/* ── Reduced motion: nothing moves, every state still shows ──────────────────── */
+.bm-rm *, .bm-rm *::before, .bm-rm *::after { transition: none !important; animation: none !important; }
+.bm-rm button:active { transform: none; }
+.bm-rm .bm-set path.bm-fl { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .bm *, html:not([data-reduced-motion="false"]) .bm *::before, html:not([data-reduced-motion="false"]) .bm *::after {
+    transition: none !important; animation: none !important;
+  }
+}
