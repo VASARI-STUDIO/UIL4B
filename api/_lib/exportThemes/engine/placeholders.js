@@ -171,13 +171,14 @@ export const DESCRIPTORS = {
   'ui.status.*.label': c('Status {n}', 'The label of a status chip.', '1 to 3 words', 'Out for delivery'),
 };
 
-// ---- registry: one id per concrete brand data path, the same in every ctx ----
+// ---- registry: one id per brand data path and the text behind it, so the same brand gets the same ids in every ctx and a different brand never reads another's text ----
 const entries = []; const idByPath = new Map();
 function register(pathStr, desc, n, real) {
-  if (idByPath.has(pathStr)) return idByPath.get(pathStr);
+  const key = pathStr + '\n' + real;
+  if (idByPath.has(key)) return idByPath.get(key);
   const fill = (s) => s.replace('{n}', String(n));
   const e = { path: pathStr, ...desc, label: fill(desc.label), what: fill(desc.what), real, realSize: !!desc.real, first: !/{n}/.test(desc.label) || n === 1 };  // real: the sample text behind it; realSize: show the "what" line at the copy's own size; first: only the first item of a list shows the example
-  entries.push(e); idByPath.set(pathStr, entries.length - 1);
+  entries.push(e); idByPath.set(key, entries.length - 1);
   return entries.length - 1;
 }
 const sentinel = (id) => OPEN + encodeId(id) + CLOSE;

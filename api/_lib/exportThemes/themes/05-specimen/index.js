@@ -1,9 +1,9 @@
 // Theme 05, Catalogue: the library card catalogue, 794 x 1123. Drawer fronts and guide cards drawn in Rod line, printed cards at 5 : 3
 // with the call number top left, the rod hole bottom centre and the tracings at the foot. Cards appear only in the colour drawer.
-// The gate pages (cover, palette, colour-values, contrast) are in guidelines-k.js and css-k.js; the other pages are the lane files below.
+// The gate pages (cover, palette, colour-values, contrast) are in guidelines-k.js and css-k.js; every other page comes from the p-*.js (guidelines) and u-*.js (UI kit) files below.
 // Everything reads roles and colourways from the brand; no brand name or hex is written here.
 import { guidelinesK } from './guidelines-k.js';
-// the full rebuild: each file holds a set of pages and its own css; the gate pages come first and the lane pages override them
+// each p-*.js and u-*.js file holds a set of pages and its own css; the gate pages are spread first and the later page sets override them
 import { pFront } from './p-front.js';
 import { cssPFront } from './css-p-front.js';
 import { pLogo } from './p-logo.js';

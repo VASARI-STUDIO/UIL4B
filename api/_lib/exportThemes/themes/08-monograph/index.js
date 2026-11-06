@@ -1,9 +1,9 @@
 // Theme 08, Riso: A4 portrait. The art space's own riso press: the brand's colours are its drums, Wall is the paper, and figures are
 // shown as separations (each drum alone, then the composite) with a registration cross at the sheet corners. Familjen Grotesk is the
 // chrome. Everything reads roles, colours and colourways from the brand; no hex is written here. The gate pages (cover, palette,
-// colour-values, contrast) are in guidelines-r.js, styled in css-r.js; every other page is in a lane file below, each with its own css.
+// colour-values, contrast) are in guidelines-r.js, styled in css-r.js; every other page is in a p-*.js or u-*.js file below, each with its own css.
 import { guidelinesR } from './guidelines-r.js';
-// the full rebuild: each file holds a set of pages and its own css; the gate pages sit underneath them
+// each p-*.js and u-*.js file holds a set of pages and its own css; the gate pages sit underneath them
 import { pFront } from './p-front.js';
 import { cssPFront } from './css-p-front.js';
 import { pLogo } from './p-logo.js';
