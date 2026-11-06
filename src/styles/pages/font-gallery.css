@@ -788,3 +788,91 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
   html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn, .fg-sheet-x) { transition: none; }
   html:not([data-reduced-motion="false"]) .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-sheet-btn):active { transform: none; }
 }
+
+/* ── The open band ────────────────────────────────────────────────────────────
+   The open band (pointer at rest, keyboard focus, a tap, or the first band when
+   none) swaps its flat fill for its family's strip. The strip is a decorative
+   layer under the text: it fades in over 320ms the first time and holds, and
+   fades out over 200ms when the band closes. A band that has shown it once
+   swaps with no fade. Only opacity moves, and no box changes size. */
+.fg-page { --fg-wake: #191919; }
+[data-theme="light"] .fg-page { --fg-wake: #E3E2DE; }
+.fg-page .fg-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--fg-bgimg, none) center / cover no-repeat;
+  opacity: 0;
+  transition: opacity 200ms cubic-bezier(.4, 0, 1, 1);
+}
+.fg-page .fg-card.is-open { --fg-ground: var(--fg-wake); }
+.fg-page .fg-card.is-open.has-backdrop::before { opacity: 1; transition: opacity 320ms var(--fg-ease); }
+.fg-page .fg-card.is-open.has-seen::before { transition: none; }
+.fg-page .fg-grid--tiles .fg-card::before { display: none; }
+
+/* Copy CSS sits in the open band, left of the pick button. */
+.fg-page .fg-card-copy {
+  position: absolute;
+  z-index: 3;
+  right: calc(var(--fg-padr) + 56px);
+  bottom: var(--fg-y);
+  height: 36px;
+  padding: 0 14px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--fg-ink);
+  background: color-mix(in srgb, var(--fg-ink) 8%, transparent);
+  border: 0;
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 150ms var(--fg-ease), background-color 150ms ease;
+}
+.fg-page .fg-card.is-open .fg-card-copy,
+.fg-page .fg-card:has(:focus-visible) .fg-card-copy { opacity: 1; pointer-events: auto; }
+@media (hover: hover) and (pointer: fine) {
+  .fg-page .fg-card-copy:hover { background: color-mix(in srgb, var(--fg-ink) 14%, transparent); }
+}
+.fg-page .fg-card-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-card-copy:active { transform: scale(.97); }
+@media (pointer: coarse) { .fg-page .fg-card-copy { height: 44px; } }
+[data-theme="light"] .fg-page .fg-card.is-open :is(.fg-card-copy, .fg-card-compare) {
+  background: #E2E1DC;
+  box-shadow: inset 0 0 0 1px rgba(26, 26, 26, .12);
+}
+[data-theme="light"] .fg-page .fg-card.is-open .fg-card-compare--on { background: var(--fg-ink); }
+
+/* Typed preview text: the family name drops to a small label above the words,
+   and the band grows by the label's height. */
+.fg-page .fg-card-label {
+  position: absolute;
+  top: 24px;
+  left: var(--fg-padl);
+  right: var(--fg-right);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+  color: color-mix(in srgb, var(--fg-ink) 86%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fg-page .fg-card.has-label { height: calc(var(--fg-band, 240px) + 24px); }
+.fg-page .fg-card.has-label .fg-card-preview { top: calc(var(--fg-y) + 24px); }
+.fg-page .fg-grid--tiles .fg-card.has-label { height: calc(var(--fg-gname, 56px) * 2.2 + var(--fg-y) * 2 + 54px); }
+.fg-page .fg-grid--tiles .fg-card-label { top: 16px; right: 64px; }
+@media (max-width: 767px) { .fg-page .fg-card-label { font-size: 14px; top: 16px; } .fg-page .fg-card.has-label .fg-card-preview { top: calc(var(--fg-y) + 20px); } .fg-page .fg-card.has-label { height: calc(var(--fg-band, 240px) + 20px); } }
+
+html[data-reduced-motion="true"] .fg-page .fg-card::before { transition: opacity 120ms linear; }
+html[data-reduced-motion="true"] .fg-page .fg-card-copy { transition: opacity 120ms linear; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fg-page .fg-card::before,
+  html:not([data-reduced-motion="false"]) .fg-page .fg-card.is-open.has-backdrop::before { transition: opacity 120ms linear; }
+  html:not([data-reduced-motion="false"]) .fg-page .fg-card-copy { transition: opacity 120ms linear; transform: none; }
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import LibrarySearch from '../components/library/LibrarySearch'
@@ -16,8 +16,9 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont,
   verifyFontLoaded,
 } from '../utils/googleFonts'
-import { categoryWord, filterGalleryTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
+import { categoryWord, filterGalleryTypefaces, ladderWeights } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
+import { backdropFor, backdropReady, loadBackdrop } from '../utils/galleryBackdrop'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -312,14 +313,91 @@ function CloseIcon() {
   )
 }
 
+/* ── The open band ────────────────────────────────────────────────────────── */
+
+// The page's ground, read from the theme the app has set on <html>.
+const subscribeGround = (notify) => {
+  const observer = new MutationObserver(notify)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  return () => observer.disconnect()
+}
+const readGround = () => (document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark')
+function useGround() {
+  return useSyncExternalStore(subscribeGround, readGround, () => 'dark')
+}
+
+// How long a pointer rests on a band before it opens, how long it may be off
+// every band before the first one re-opens, and how long the list stays warm
+// after one opens (a warm list swaps bands with no wait).
+const OPEN_INTENT_MS = 250
+const REOPEN_MS = 180
+const WARM_MS = 320
+const COOL_MS = 600
+
+// Which band is open: the one the pointer rests on, else the one with keyboard
+// focus, else the one a tap opened, else the first.
+function useOpenBand(firstFamily) {
+  const [hot, setHot] = useState('')
+  const [focused, setFocused] = useState('')
+  const [tapped, setTapped] = useState('')
+  const timers = useRef({ intent: 0, leave: 0, warm: 0, cool: 0, isWarm: false })
+  useEffect(() => {
+    const t = timers.current
+    return () => { clearTimeout(t.intent); clearTimeout(t.leave); clearTimeout(t.warm); clearTimeout(t.cool) }
+  }, [])
+  const enter = useCallback((family) => {
+    const t = timers.current
+    clearTimeout(t.intent); clearTimeout(t.cool); clearTimeout(t.leave)
+    const go = () => {
+      setHot(family)
+      clearTimeout(t.warm)
+      t.warm = setTimeout(() => { t.isWarm = true }, WARM_MS)
+    }
+    if (t.isWarm) go()
+    else t.intent = setTimeout(go, OPEN_INTENT_MS)
+  }, [])
+  const leave = useCallback(() => {
+    const t = timers.current
+    clearTimeout(t.intent); clearTimeout(t.cool)
+    t.leave = setTimeout(() => setHot(''), REOPEN_MS)
+    t.cool = setTimeout(() => { t.isWarm = false }, COOL_MS)
+  }, [])
+  const focus = useCallback((family) => setFocused(family), [])
+  const blur = useCallback(() => setFocused(''), [])
+  return { openFamily: hot || focused || tapped || firstFamily || '', enter, leave, focus, blur, tap: setTapped }
+}
+
 /* ── Catalogue band ───────────────────────────────────────────────────────── */
 
 // One band per family: the name at band size in its own face, a meta line
 // along the bottom, and a compare button on the right. The pangram and the run
 // of weights wait in `.fg-card-reveal`, which is always in the DOM and is only
 // faded in (hover or keyboard focus), so showing it never moves a box.
-function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, gridName, floor, tiles }) {
+function GalleryCard({
+  font, rank, onOpen, inCompare, onToggleCompare, previewText, nameSize, gridName, floor, tiles,
+  open, ground, bands, onCopy,
+}) {
   const heading = headingWeight(font)
+  // The open band's image fades in once it is in, then holds. It is only asked
+  // for when the band first opens (or is about to), so a long list never fetches
+  // a strip nobody has seen.
+  const backdrop = backdropFor(font.family, font.category, ground)
+  const wantsBackdrop = !tiles && open
+  const [backdropSeen, setBackdropSeen] = useState(null)
+  useEffect(() => {
+    if (!wantsBackdrop || backdropReady(backdrop)) return undefined
+    let live = true
+    loadBackdrop(backdrop).then(ok => { if (live && ok) setBackdropSeen(backdrop) })
+    return () => { live = false }
+  }, [wantsBackdrop, backdrop])
+  const backdropIn = !tiles && (backdropSeen === backdrop || backdropReady(backdrop))
+  // Once the fade has played, later opens swap with no fade.
+  const [faded, setFaded] = useState(false)
+  useEffect(() => {
+    if (!(open && backdropIn)) return undefined
+    const id = setTimeout(() => setFaded(true), 340)
+    return () => clearTimeout(id)
+  }, [open, backdropIn])
   const body = bodyWeight(font)
   const ladder = useMemo(() => ladderWeights(font.variants), [font.variants])
   const [ready, ref] = useFontReady(font, heading, { extraWeights: ladder })
@@ -336,21 +414,45 @@ function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewTe
   // line so it is still on the band.
   const meta = [
     rank != null ? String(rank).padStart(2, '0') : null,
-    typed ? font.family : null,
     sentence(catWord(font.category)),
     weightLabel,
   ].filter(Boolean).join(' · ')
+  const [copied, setCopied] = useState(false)
+  const copyCss = () => {
+    const url = getFontImportUrl([{ family: font.family, weights: font.variants.slice(0, 4) }])
+    trackFontCopy(font.family)
+    Promise.resolve(onCopy?.(`@import url('${url}');\n\nfont-family: ${fontStack(font)};`)).then(ok => {
+      if (!ok) return
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  const classes = ['fg-card']
+  if (inCompare) classes.push('fg-card--comparing')
+  if (!tiles && open) classes.push('is-open')
+  if (backdropIn) classes.push('has-backdrop')
+  if (faded) classes.push('has-seen')
+  if (typed) classes.push('has-label')
 
   return (
     <article
-      className={inCompare ? 'fg-card fg-card--comparing' : 'fg-card'}
-      ref={varsRef({ '--fg-ff': fontStack(font), '--fg-fw-h': String(heading), '--fg-fw-b': String(body) })}
+      className={classes.join(' ')}
+      ref={varsRef({
+        '--fg-ff': fontStack(font),
+        '--fg-fw-h': String(heading),
+        '--fg-fw-b': String(body),
+        '--fg-bgimg': backdropIn ? `url(${backdrop})` : 'none',
+      })}
+      onMouseEnter={tiles ? undefined : () => bands.enter(font.family)}
+      onMouseLeave={tiles ? undefined : bands.leave}
+      onFocus={tiles ? undefined : (e) => { if (e.target.matches?.(':focus-visible')) bands.focus(font.family) }}
+      onBlur={tiles ? undefined : (e) => { if (!e.currentTarget.contains(e.relatedTarget)) bands.blur() }}
     >
       <button
         type="button"
         className="fg-card-open"
         ref={ref}
-        onClick={() => onOpen(font)}
+        onClick={() => { if (!tiles) bands.tap(font.family); onOpen(font) }}
         aria-label={`Open the ${font.family} specimen — ${sentence(catWord(font.category))}, ${weightLabel}`}
       >
         {/* The band is decorative to assistive tech: the button's own label
@@ -361,18 +463,20 @@ function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewTe
             ? <span className="fg-card-name fg-card-sample" ref={nameRef}>{typed || font.family}</span>
             : <span className="fg-card-skeleton fg-card-skeleton--sample" />}
         </span>
-        {ready && (
-          <span className="fg-card-reveal" aria-hidden="true">
-            <span className="fg-card-pangram">{PANGRAM}</span>
-            <span className="fg-card-weights">
-              {ladder.map(w => (
-                <span key={w} className="fg-card-step" ref={varsRef({ '--fg-fw': String(w) })}>{weightName(w) || w}</span>
-              ))}
-            </span>
-          </span>
-        )}
+        {typed && <span className="fg-card-label" aria-hidden="true">{font.family}</span>}
         <span className="fg-card-meta" aria-hidden="true">{meta}</span>
       </button>
+      {!tiles && (
+        <button
+          type="button"
+          className={copied ? 'fg-card-copy is-done' : 'fg-card-copy'}
+          onClick={copyCss}
+          aria-label={`Copy CSS for ${font.family}`}
+          tabIndex={open ? 0 : -1}
+        >
+          {copied ? 'Copied' : 'Copy CSS'}
+        </button>
+      )}
       <button
         type="button"
         className={inCompare ? 'fg-card-compare fg-card-compare--on' : 'fg-card-compare'}
@@ -586,6 +690,12 @@ export default function FontGallery({ onCopy, toast }) {
 
   const paged = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page])
   const hasMore = paged.length < filtered.length
+  const ground = useGround()
+  const openBand = useOpenBand(paged[0]?.family)
+  const bandHandlers = useMemo(
+    () => ({ enter: openBand.enter, leave: openBand.leave, focus: openBand.focus, blur: openBand.blur, tap: openBand.tap }),
+    [openBand.enter, openBand.leave, openBand.focus, openBand.blur, openBand.tap],
+  )
 
   // Infinite scroll, with an explicit button underneath as the keyboard route —
   // an observer alone strands anyone who never scrolls with a pointer.
@@ -854,6 +964,10 @@ export default function FontGallery({ onCopy, toast }) {
                   gridName={gridName}
                   floor={floor}
                   tiles={tiles}
+                  open={openBand.openFamily === font.family}
+                  ground={ground}
+                  bands={bandHandlers}
+                  onCopy={onCopy}
                 />
               ))}
             </div>
