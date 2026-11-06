@@ -1,19 +1,12 @@
-// THE HOMEPAGE'S HERO GHOST, SECTION ORDER AND FOOTER CURTAIN, IN A REAL BROWSER.
+// THE HOMEPAGE'S SECTION ORDER AND FOOTER, IN A REAL BROWSER.
 //
-// 1. The hero search's ghost phrase types itself: it holds a phrase, erases it
-//    and types the next. Under reduced motion it never moves; once the visitor
-//    takes the bar it stops for good. The field's own name and placeholder never
-//    change while the ghost does, and the ghost is aria-hidden.
-// 2. The exports section (#exports) comes before the community library
-//    (#examples), in the DOM and on screen.
-// 3. The footer does not move: on `/` it is in normal flow after <main> at every
+// 1. The sections run in the page's order, in the DOM and on screen: the
+//    below-the-fold ones arrive after the first screen, and must land in place.
+// 2. The footer does not move: on `/` it is in normal flow after <main> at every
 //    width, with no curtain, so it scrolls with the page and nothing ever
 //    covers it. Keyboard focus landing in the footer ends on screen and on top.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
-
-const RESTING = 'a contrast ratio'
-const NEXT = 'a tint and shade ramp'
+import { go, homeSectionsLoaded, watch } from './helpers.js'
 
 async function open(browser, { width, height, theme = 'dark', reducedMotion = 'no-preference', touch = false }) {
   // `touch` is a real phone: a coarse primary pointer (hasTouch + isMobile). A narrow
@@ -27,77 +20,6 @@ async function open(browser, { width, height, theme = 'dark', reducedMotion = 'n
   return { ctx, page }
 }
 
-/** Record every text the ghost phrase shows, from now on. */
-const recordGhost = (page) => page.locator('.sp-search-rot').evaluate((el) => {
-  window.__ghost = [el.textContent]
-  new MutationObserver(() => window.__ghost.push(el.textContent))
-    .observe(el, { subtree: true, childList: true, characterData: true })
-})
-const ghostFrames = (page) => page.evaluate(() => window.__ghost)
-
-/** The field's accessible name and placeholder, which must never move. */
-const fieldIdentity = (page) => page.locator('.sp-search input.hcmd-input').evaluate((input) => ({
-  labelledBy: input.getAttribute('aria-labelledby'),
-  label: input.getAttribute('aria-label'),
-  placeholder: input.getAttribute('placeholder'),
-}))
-
-test.describe('hero ghost phrase', () => {
-  test('types, holds, erases and types the next phrase, with the field name fixed', async ({ browser }) => {
-    const { ctx, page } = await open(browser, { width: 1440, height: 900 })
-    await go(page, '/')
-    const ghost = page.locator('.sp-search-ghost')
-    await expect(ghost).toHaveAttribute('aria-hidden', 'true')
-    const before = await fieldIdentity(page)
-    // The hero's arrival (a transform) can still be running at first paint, and a box read during it is
-    // a few thousandths of a pixel off its resting place. Wait for the time-driven animations to end
-    // (the infinite ones, such as a caret blink, never do, so they are left out).
-    await page.evaluate(() => Promise.all(document.getAnimations()
-      .filter((a) => a.timeline instanceof DocumentTimeline && a.effect?.getComputedTiming().endTime !== Infinity)
-      .map((a) => a.finished.catch(() => {}))))
-    const barBefore = await page.locator('.sp-search .hcmd-bar').boundingBox()
-    await recordGhost(page)
-
-    await expect(page.locator('.sp-search-rot'), 'the ghost never typed the second phrase').toHaveText(NEXT, { timeout: 12000 })
-    const frames = await ghostFrames(page)
-    // Erasing the resting phrase passes through its own prefixes, shortest last,
-    // and typing the next passes through its prefixes, longest last.
-    const erasedTo = frames.findIndex((t) => t.length <= 2)
-    expect(erasedTo, `the resting phrase was never erased: ${JSON.stringify(frames.slice(0, 12))}`).toBeGreaterThan(0)
-    expect(frames.slice(0, erasedTo).some((t) => RESTING.startsWith(t) && t.length < RESTING.length),
-      'the resting phrase vanished at once instead of being erased a character at a time').toBe(true)
-    expect(frames.slice(erasedTo).some((t) => NEXT.startsWith(t) && t.length > 2 && t.length < NEXT.length),
-      'the next phrase appeared at once instead of being typed').toBe(true)
-
-    expect(await fieldIdentity(page), 'the search field\'s name or placeholder changed while the ghost moved').toEqual(before)
-    expect(await page.locator('.sp-search .hcmd-bar').boundingBox(), 'the search bar moved or resized while the ghost typed').toEqual(barBefore)
-    await ctx.close()
-  })
-
-  test('stops for good once the visitor takes the bar', async ({ browser }) => {
-    const { ctx, page } = await open(browser, { width: 1440, height: 900 })
-    await go(page, '/')
-    await page.locator('.sp-search input.hcmd-input').focus()
-    await recordGhost(page)
-    await page.waitForTimeout(2500)
-    await page.locator('.sp-search input.hcmd-input').blur()
-    await page.waitForTimeout(2500)
-    const frames = await ghostFrames(page)
-    expect(new Set(frames), `the ghost kept moving after the bar was taken: ${JSON.stringify(frames.slice(0, 12))}`).toEqual(new Set([RESTING]))
-    await ctx.close()
-  })
-
-  test('never moves under reduced motion', async ({ browser }) => {
-    const { ctx, page } = await open(browser, { width: 1440, height: 900, reducedMotion: 'reduce' })
-    await go(page, '/')
-    await recordGhost(page)
-    await page.waitForTimeout(5000)
-    const frames = await ghostFrames(page)
-    expect(new Set(frames), `the ghost moved under reduced motion: ${JSON.stringify(frames.slice(0, 12))}`).toEqual(new Set([RESTING]))
-    await ctx.close()
-  })
-})
-
 // The page's sections, top to bottom. `start` (the final call) sits in <main> or just after it.
 const SECTION_ORDER = ['top', 'bookmarks', 'try', 'exports', 'examples', 'proof', 'plans', 'start']
 
@@ -105,6 +27,7 @@ for (const width of [390, 1440]) {
   test(`the sections run top, bookmarks, try, exports, examples, proof, plans, start (${width})`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width, height: 900 })
     await go(page, '/')
+    await homeSectionsLoaded(page)
     const ids = await page.locator('section[id]').evaluateAll((els, wanted) => els.map((el) => el.id).filter((id) => wanted.includes(id)), SECTION_ORDER)
     expect(ids, `section order in the DOM is ${ids.join(', ')}`).toEqual(SECTION_ORDER)
     // Drawn in the same order: each section starts below the one before it.

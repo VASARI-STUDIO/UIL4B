@@ -7,7 +7,7 @@
 //
 // Every test names, in a comment, the source change that turns it red.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, homeSectionsLoaded, watch } from './helpers.js'
 
 const SECTION = '#exports'
 const card = (page, i) => page.locator(`${SECTION} .hx-card[data-card="${i}"]`)
@@ -32,6 +32,9 @@ async function open(browser, { width = 1440, height = 900, touch = false, reduce
   const page = await ctx.newPage()
   watch(page, 'a visitor on the homepage')
   await go(page, '/')
+  // The section loads after the first screen; the rest of the page's sections too,
+  // and the ones above it change its place when they arrive.
+  await homeSectionsLoaded(page)
   // Rest card 1 at its dock line, as a visitor scrolling down meets it, so cards 2 and 3 are not yet over its controls.
   await page.evaluate(() => {
     const first = document.querySelector('#exports .hx-card[data-card="0"]')
