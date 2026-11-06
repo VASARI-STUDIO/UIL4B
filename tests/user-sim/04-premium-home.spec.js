@@ -134,7 +134,12 @@ test.describe('premium homepage', () => {
             try { return !!l.sheet && l.sheet.cssRules.length > 0 } catch { return false }
           })
         })
-        await page.waitForFunction(() => document.fonts.status === 'loaded')
+        // Not `document.fonts.status === 'loaded'`: that reads 'loaded' while the
+        // headline face is still unrequested (a face is only fetched once text
+        // that uses it has laid out), so the shell was measured in 'Geist
+        // Fallback' and the comparison caught the face swap, not a drift.
+        // `check` with the headline's own text is false until Geist itself is in.
+        await page.waitForFunction(() => document.fonts.check('600 80px Geist', 'Your UI and brand kit, from one app.'))
         shell = await page.evaluate(HERO_GEOMETRY)
         // Positive control on the read itself. Before the stylesheet applies
         // this reports the UA's own h1 — 32px, bold, `letter-spacing: normal` —

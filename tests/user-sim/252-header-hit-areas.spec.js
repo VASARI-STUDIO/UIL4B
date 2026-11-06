@@ -66,7 +66,8 @@ const DRAWN = {
   'pnav-logo': { phone: [110.7, 25.8], wide: [null, 24.1] },
   'spnav-icon': { phone: [44, 44] },
   'spnav-quiet-link': { wide: [null, 44] },
-  'spnav-search': { wide: [null, 40] },
+  // The pill is a 44px target on a touch screen and 40px for a mouse.
+  'spnav-search': { wide: (w, touch) => [null, touch ? 44 : 40] },
   'spnav-mark': { phone: [null, 44], wide: [null, 44] },
 }
 const DRAWN_TOLERANCE = 0.6
@@ -182,13 +183,13 @@ const overlaps = (controls) => {
 const round = (n) => Math.round(n * 10) / 10
 
 // Every control with a recorded drawn size, checked against it.
-const drawnSizeFailures = (controls, width) => {
+const drawnSizeFailures = (controls, width, touch) => {
   const out = []
   for (const c of controls) {
     for (const [cls, spec] of Object.entries(DRAWN)) {
       if (!c.classes.includes(cls)) continue
       let want = width < 768 ? spec.phone : spec.wide
-      if (typeof want === 'function') want = want(width)
+      if (typeof want === 'function') want = want(width, touch)
       if (!want) continue
       const [w, h] = want
       if (w != null && Math.abs(c.box.width - w) > DRAWN_TOLERANCE) out.push(`${cls} is ${round(c.box.width)} wide, drawn ${w}`)
@@ -216,7 +217,7 @@ for (const route of ROUTES) {
         expect(wanted.filter((cls) => !present.has(cls)), `controls missing from the header: found ${[...present].join(', ')}`).toEqual([])
 
         // DRAWN SIZE: nothing grew to reach 44.
-        const drawnFailures = drawnSizeFailures(controls, size.width)
+        const drawnFailures = drawnSizeFailures(controls, size.width, size.touch)
         // MUTATION: in global.css change `.pnav-mobile{...width:36px;height:36px...}` to 44px, or give the
         // logo `min-height:44px`; the box grows, the reach below still passes, and this fails.
         expect(drawnFailures, 'a control was resized to reach 44px').toEqual([])
