@@ -649,7 +649,8 @@ html.fg-tray { --fg-tray-h: 60px; }
 .fg-page .fg-dock-ink .mi-go { width: 24px; height: 24px; border-radius: var(--radius-pill); }
 @media (hover: hover) and (pointer: fine) {
   .fg-page .fg-compare-tray .fg-dock-ghost:hover:not(:disabled) { background: var(--hvr); border-color: color-mix(in srgb, var(--t0) 20%, transparent); }
-  .fg-page .fg-compare-tray .fg-dock-ink:hover:not(:disabled) { background: color-mix(in srgb, var(--t0) 90%, var(--bg-0)); border-color: transparent; }
+  /* The shared button hover sets the ink colour; the pill is filled with it, so the label must stay the page colour. */
+  .fg-page .fg-compare-tray .fg-dock-ink:hover:not(:disabled) { color: var(--bg-0); background: color-mix(in srgb, var(--t0) 90%, var(--bg-0)); border-color: transparent; }
 }
 .fg-page .fg-compare-tray .fg-dock-ghost:focus-visible,
 .fg-page .fg-compare-tray .fg-dock-ink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
