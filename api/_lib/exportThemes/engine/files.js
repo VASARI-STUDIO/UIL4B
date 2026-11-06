@@ -107,7 +107,7 @@ Light is the default. Set \`data-theme="dark"\` on \`<html>\` for dark, or \`dat
 // OFL.txt for a kit that ships font files: the families, then the licence text. Each font file carries its own copyright notice
 // in its metadata (the name table's copyright field), which the licence allows in place of a separate line.
 export function oflText(ctx) {
-  const fams = [...new Set(ctx.faces.map((f) => cleanText(f.family, 100).replace(/s+/g, ' ')))];
+  const fams = [...new Set(ctx.faces.map((f) => cleanText(f.family, 100).replace(/\s+/g, ' ')))];
   return `The font files in this folder (${fams.join(', ')}) are released under the SIL Open Font License, Version 1.1.
 Each file carries its copyright notice in its font metadata (the copyright field of its name table).
 

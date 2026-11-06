@@ -13,7 +13,7 @@ const OFFLINE = new Map(FALLBACK_FONTS.map((f) => [f.family, f]));
 
 export const isBundledFamily = (family) => BUNDLED.has(family);
 export const catalogueEntry = (family) => OFFLINE.get(family) || null;
-export const isKnownFamily = (family) => typeof family === 'string' && (BUNDLED.has(family) || OFFLINE.has(family) || Object.prototype.hasOwnProperty.call(licences, familyKey(family)));
+export const isKnownFamily = (family) => typeof family === 'string' && /^[A-Za-z0-9 ._-]{1,80}$/.test(family) && (BUNDLED.has(family) || OFFLINE.has(family) || Object.prototype.hasOwnProperty.call(licences, familyKey(family)));
 
 // Families whose .ttf files are in fonts/ at every weight listed: the engine measures and outlines from these.
 export const TTF_FAMILIES = {

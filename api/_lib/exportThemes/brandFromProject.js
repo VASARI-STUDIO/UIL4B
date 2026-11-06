@@ -261,7 +261,8 @@ function build({ design: rawDesign, projectName, date }) {
 }
 
 // design and projectName are the body of an export request; both are untrusted.
-export function projectToBrand({ design, projectName, date = new Date().toISOString().slice(0, 10) } = {}) {
+export function projectToBrand(input) {
+  const { design, projectName, date = new Date().toISOString().slice(0, 10) } = input && typeof input === 'object' ? input : {};
   try {
     const brand = build({ design, projectName, date });
     loadBrand(brand, null);  // contrast, ids and shape: throws if any rule is missed

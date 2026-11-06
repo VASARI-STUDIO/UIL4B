@@ -86,7 +86,7 @@ export function loadBrand(data, loaders) {
   const B = validateBrand(data);  // an allowlisted, sanitised deep copy; throws BrandInputError
   const slug = B.slug;
   // colours: brand colours plus measured tones, addressed by id
-  const byId = {};
+  const byId = Object.create(null);
   for (const c of [...B.colours, ...(B.tones || [])]) byId[c.id] = c;
   const hex = (id) => { if (!byId[id]) throw new Error('Unknown colour id ' + id); return byId[id].hex; };
   const hexOr = (v) => (byId[v] ? byId[v].hex : v);
