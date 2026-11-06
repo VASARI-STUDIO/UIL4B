@@ -295,17 +295,19 @@ test.describe('Font Pair', () => {
 
     await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeAttached()
     await expect(page.locator('.fpr-specimen')).toBeVisible()
-    await expect(page.getByRole('link', { name: /Browse the Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
+    await expect(page.getByRole('link', { name: /^Font Gallery, heading / })).toHaveAttribute('href', '/create/font-gallery')
 
     const cards = page.locator('.fpr-card')
     await expect(cards).toHaveCount(6)
-    // Every suggestion states WHY it is here, in plain view (no disclosure).
-    const reasons = await cards.locator('.fpr-card-reason')
-      .evaluateAll((els) => els.map((e) => (e.textContent || '').trim()))
+    // Every suggestion states WHY it is here: the row is described by a reason
+    // that sits once above its group (238 pins that layout).
+    const reasons = await cards.evaluateAll((els) => els.map((li) => {
+      const why = document.getElementById(li.querySelector("button").getAttribute("aria-describedby") || "")
+      return (why?.textContent || "").trim()
+    }))
     expect(reasons).toHaveLength(6)
     for (const reason of reasons) expect(reason.length).toBeGreaterThan(20)
-    await expect(cards.first().locator('.fpr-card-reason')).toBeVisible()
-    await expect(page.locator('.fpr-card-why')).toHaveCount(0)
+    await expect(page.locator(".fpr-card-why")).toHaveCount(0)
 
     // Applying a pair marks it in use and swaps the body family everywhere.
     const first = cards.first()
@@ -1006,7 +1008,7 @@ test.describe('typography hand-offs', () => {
     await expect(page.locator('.fpr-pair span').nth(0)).toHaveText('Merriweather')
     await expect(page.locator('.fpr-card')).not.toHaveCount(0)
 
-    await page.getByRole('button', { name: /Build a type scale from this pair/ }).click()
+    await page.getByRole('link', { name: /^Type Scale, scale / }).click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/type-scale')
     await expect(page.locator('.tsc-row').first()).toBeVisible()
     const family = await page.locator('.tsc-row-text--heading').first().evaluate(
