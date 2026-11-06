@@ -85,17 +85,17 @@ const MAX_COMPARE = 3
 
 // The three layouts. `name` is the band's name size and the size the list
 // opens at; `floor` is how far a long name may shrink before it is clipped;
-// `ratio` turns the size into the band's height, so changing the size moves the
+// `band` turns the size into the band's height (the name's box plus the room
+// above and below it, never under a minimum), so changing the size moves the
 // whole list once and never one band on its own.
 const LAYOUTS = {
-  wide: { name: 96, floor: 72, ratio: 2.5, grid: 56 },
-  tablet: { name: 64, floor: 48, ratio: 3.125, grid: 40 },
-  phone: { name: 40, floor: 32, ratio: 3, grid: 24 },
+  wide: { name: 96, floor: 72, grid: 56, band: n => Math.max(160, Math.round(n * 1.1) + 94) },
+  tablet: { name: 64, floor: 48, grid: 40, band: n => Math.max(160, Math.round(n * 1.1) + 94) },
+  phone: { name: 40, floor: 32, grid: 24, band: n => Math.max(112, Math.ceil(n * 1.1) + 68) },
 }
 const SIZE_MIN = 24
 const SIZE_MAX = 120
-const SIZE_CHOICES = [24, 32, 40, 48, 64, 72, 96, 120]
-const MIN_BAND = 72
+const SIZE_CHOICES = [24, 32, 40, 48, 56, 64, 72, 80, 96, 112, 120]
 
 // Category names as they read in running text come from the shared helper, so
 // the pop-up, the browser and Font Pair spell them the same.
@@ -874,7 +874,7 @@ export default function FontGallery({ onCopy, toast }) {
   const layout = LAYOUTS[mode]
   const nameSize = sizeOverride ?? layout.name
   const floor = Math.min(layout.floor, nameSize)
-  const band = Math.max(MIN_BAND, Math.round(nameSize * layout.ratio))
+  const band = layout.band(nameSize)
   // The grid name follows the same Size choice, scaled to its cell.
   const gridName = Math.max(16, Math.round(nameSize * layout.grid / layout.name))
   const bandVars = varsRef({ '--fg-name': `${nameSize}px`, '--fg-band': `${band}px`, '--fg-gname': `${gridName}px` })
