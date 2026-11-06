@@ -1074,7 +1074,7 @@ export default function FontGallery({ onCopy, toast }) {
   // filters never run over an empty list.
   if (!ready) {
     return (
-      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More" feedback={mode !== 'phone'}>
+      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" showTitle={mode !== 'phone'} back={false} items={items} overflowLabel="More" feedback={mode !== 'phone'}>
         {row2}
         {bar2}
         <FontCatalogLoading label="Opening the Font Gallery" />
@@ -1090,7 +1090,7 @@ export default function FontGallery({ onCopy, toast }) {
     + `${sort === 'popularity' ? ', most popular first' : ''}`
 
   return (
-    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More" feedback={mode !== 'phone'}>
+    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" showTitle={mode !== 'phone'} back={false} items={items} overflowLabel="More" feedback={mode !== 'phone'}>
       {row2}
       <FontCatalogNotice
         online={online}
