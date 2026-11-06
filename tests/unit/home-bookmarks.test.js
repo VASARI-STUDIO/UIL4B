@@ -11,7 +11,7 @@ import { assertStripperWorks, read, stripComments } from './helpers/source-text.
 import { TOOL_COUNT } from '../../src/components/spectrum/spectrumFacts.js'
 import { BOOKMARK_COUNT } from '../../src/components/home/bookmarkFolders.js'
 import {
-  CONTRAST_TEXT, CYCLE_MS, FOLDERS, SETS, STEP_MS, TOOLS,
+  CONTRAST_TEXT, CYCLE_MS, FOLDERS, GROUPS, SETS, STEP_MS, TOOLS,
 } from '../../src/components/home/bookmarksData.js'
 
 const HOOK = stripComments(read('src/components/home/useBookmarkTour.js'))
@@ -69,4 +69,74 @@ test('the sample contrast reads 5.6 and the cycle is 12.8 seconds', () => {
 test('the sub-line is derived from the two counts, never typed', () => {
   // Mutation: type "13" or "26" into the sub-line.
   assert.match(VIEW, /\{TOOL_COUNT\} tools that would otherwise be \{BOOKMARK_COUNT\} tabs/)
+})
+
+// ── the layout below 1024px ─────────────────────────────────────────────────
+
+const PHONE = stripComments(read('src/components/home/BookmarkPhone.jsx'))
+const PANE = stripComments(read('src/components/home/BookmarkPhonePane.jsx'))
+
+test('the phone layout shares the section\'s one tour and watches only through the autoplay owner', () => {
+  // Mutation: pass `stageEl` alone to the hook, or drop either ref callback from the JSX.
+  assert.match(VIEW, /useBookmarkTour\(watched, groupOf, rowsOf\)/)
+  assert.match(VIEW, /\[stageEl, phoneStageEl, phonePaneEl\]/)
+  assert.match(VIEW, /<BookmarkPhone tour=\{tour\} stageRef=\{setPhoneStageEl\} paneRef=\{setPhonePaneEl\} \/>/)
+  assert.match(PHONE, /data-r7ap-stage ref=\{stageRef\}/)
+  assert.match(PANE, /data-r7ap-pane ref=\{paneRef\}/)
+  // Mutation: add an observer or a scroll listener to the phone files.
+  for (const src of [PHONE, PANE]) {
+    assert.doesNotMatch(src, /IntersectionObserver/)
+    assert.doesNotMatch(src, /['"]scroll['"]|onScroll/)
+  }
+})
+
+test('the phone layout has its own pause button that reduced motion removes', () => {
+  // Mutation: remove the `mode !== 'off'` guard, or point the button at something other than the tour's toggle.
+  assert.match(PHONE, /mode !== 'off' \? \(\s*<button type="button" className="bmp-pb"/)
+  assert.match(PHONE, /onClick=\{tour\.toggle\}/)
+  // Mutation: let the fill render without `run`.
+  assert.match(PHONE, /i === open && run \?/)
+})
+
+test('a folder button and a pair of bookmarks hand control to the reader through the tour', () => {
+  // Mutation: set `onClick` to a local handler that does not call the tour.
+  assert.match(PHONE, /onClick=\{tour\.folder\(i\)\.onClick\}/)
+  assert.match(PHONE, /onClick=\{\(\) => tour\.togglePair\(p\.j\)\}/)
+})
+
+test('every phone pair is two bookmarks that share one tool', () => {
+  // The phone draws each folder's bookmarks two at a time under one tool.
+  // Mutation: add a bookmark to a folder without its twin, or reorder two rows in ITEMS.
+  FOLDERS.forEach((f) => {
+    assert.equal(f.items.length % 2, 0, `${f.name} holds an odd number of bookmarks`)
+    for (let k = 0; k < f.items.length; k += 2) {
+      assert.equal(f.items[k][1], f.items[k + 1][1], `${f.items[k][0]} and ${f.items[k + 1][0]} do not share a tool`)
+    }
+  })
+})
+
+test('the phone toolkit links every tool, grouped by the four folders\' colours', () => {
+  // Mutation: filter the list, or link to something other than the tool's own route.
+  assert.match(PHONE, /<Link className=\{hot && hot\.j === j \? 'bmp-tool hot' : 'bmp-tool'\} to=\{tool\.href\}/)
+  assert.match(PHONE, /TOOLS\.map\(\(tool, j\) => \(tool\.group === g \?/)
+  assert.equal(GROUPS.length, FOLDERS.length)
+  GROUPS.forEach((_, g) => assert.ok(TOOLS.some((t) => t.group === g), `group ${g} holds no tool`))
+  TOOLS.forEach((t) => assert.ok(t.href && t.href.startsWith('/'), `${t.id} has no route`))
+})
+
+test('tapping a pair stops the tour, lights its tool, and a second tap or a new folder puts it out', () => {
+  // Mutation: drop `stop()`, drop the toggle-off branch, or drop the `at !== open` clause in `lit`.
+  assert.match(HOOK, /const togglePair = \(tool\) => \{\s*stop\(\)/)
+  assert.match(HOOK, /cur && cur\.j === tool && cur\.src === 'tap' && cur\.at === open \? null : \{ j: tool, ks: rowsOf\(tool\), src: 'tap', at: open \}/)
+  assert.match(HOOK, /const lit = hot && hot\.src === 'tap' && hot\.at !== open \? null : hot/)
+  // Mutation: return `hot` instead of `lit`, or forget to return togglePair.
+  assert.match(HOOK, /hot: lit,/)
+  assert.match(HOOK, /\r?\n {4}togglePair,/)
+})
+
+test('the tour clock reaches every folder once and the phone and desktop share the folder count', () => {
+  // Mutation: change the modulus in `onFillEnd`, or add a fifth folder to one list only.
+  assert.match(HOOK, /setOpen\(\(cur\) => \(cur \+ 1\) % FOLDERS\.length\)/)
+  assert.equal(FOLDERS.length, 4)
+  assert.equal(SETS.length, FOLDERS.length)
 })

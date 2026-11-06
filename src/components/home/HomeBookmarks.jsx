@@ -1,12 +1,13 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { TOOL_COUNT, numberWord } from '../spectrum/spectrumFacts.js'
 import { BOOKMARK_COUNT } from './bookmarkFolders.js'
 import {
   DOT, FAV, FOLDERS, GROUPS, SETS, TOOLS, bookmarksOf, groupOf, rowsOf, subTopOf,
 } from './bookmarksData.js'
-import { FolderIcon, Glyph } from './BookmarkGlyphs.jsx'
+import { FolderIcon, Glyph, PauseIcon } from './BookmarkGlyphs.jsx'
 import BookmarkPanes from './BookmarkPanes.jsx'
+import BookmarkPhone from './BookmarkPhone.jsx'
 import { useBookmarkFonts } from './bookmarksFonts.js'
 import { useBookmarkTour } from './useBookmarkTour.js'
 import '../../styles/pages/home-bookmarks.css'
@@ -21,24 +22,21 @@ import '../../styles/pages/home-bookmarks.css'
 // The stage is a fixed 640px frame holding a 1336px composition, so nothing
 // shifts as it changes. Under 1440 the composition is scaled as one piece (CSS
 // zoom). Below 1024 the composition would be too small to read, so narrow
-// screens get the plain list of tools.
+// screens get a layout of their own (BookmarkPhone.jsx) that shares this
+// section's tour and open folder; CSS shows one of the two.
 
 const chevron = (
   <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="bm-chev"><path d="M9 6l6 6-6 6" /></svg>
 )
 
-function PauseIcon({ stopped }) {
-  return stopped ? (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z" /></svg>
-  ) : (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
-  )
-}
-
 export default function HomeBookmarks() {
   const [sectionEl, setSectionEl] = useState(null)
   const [stageEl, setStageEl] = useState(null)
-  const tour = useBookmarkTour(stageEl, groupOf, rowsOf)
+  const [phoneStageEl, setPhoneStageEl] = useState(null)
+  const [phonePaneEl, setPhonePaneEl] = useState(null)
+  // The layout that is not showing has no box, so it never counts as in view.
+  const watched = useMemo(() => [stageEl, phoneStageEl, phonePaneEl], [stageEl, phoneStageEl, phonePaneEl])
+  const tour = useBookmarkTour(watched, groupOf, rowsOf)
   useBookmarkFonts(sectionEl)
 
   const { open, hot, mode } = tour
@@ -63,21 +61,8 @@ export default function HomeBookmarks() {
           </p>
         </div>
 
-        {/* Narrow screens: the tools by folder, as links */}
-        <div className="bm-narrow">
-          {GROUPS.map((group, g) => (
-            <div key={group} className="bm-narrow-g">
-              <h3 className="bm-narrow-h"><span className="bm-dot" aria-hidden="true" style={{ background: DOT[g] }} />{group}</h3>
-              <ul role="list">
-                {TOOLS.filter((tool) => tool.group === g).map((tool) => (
-                  <li key={tool.id}>
-                    <Link className="bm-tool" to={tool.href}><span className="bm-g"><Glyph name={tool.key} /></span>{tool.name}</Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        {/* Below 1024px: the folders, pairs and toolkit for a thumb */}
+        <BookmarkPhone tour={tour} stageRef={setPhoneStageEl} paneRef={setPhonePaneEl} />
 
         <div className="bm-frame">
           <div className="bm-stage" ref={setStageEl} {...tour.stage}>

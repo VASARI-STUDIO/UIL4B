@@ -98,15 +98,18 @@ test.describe('hero ghost phrase', () => {
   })
 })
 
+// The page's sections, top to bottom. `start` (the final call) sits in <main> or just after it.
+const SECTION_ORDER = ['top', 'bookmarks', 'try', 'exports', 'examples', 'proof', 'plans', 'start']
+
 for (const width of [390, 1440]) {
-  test(`the exports section comes before the community library (${width})`, async ({ browser }) => {
+  test(`the sections run top, bookmarks, try, exports, examples, proof, plans, start (${width})`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width, height: 900 })
     await go(page, '/')
-    const ids = await page.locator('main section[id]').evaluateAll((els) => els.map((el) => el.id))
-    expect(ids.indexOf('specimens'), `section order is ${ids.join(', ')}`).toBeGreaterThan(-1)
-    expect(ids.indexOf('specimens'), `section order is ${ids.join(', ')}`).toBeLessThan(ids.indexOf('discover'))
-    const top = (sel) => page.locator(sel).evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
-    expect(await top('#exports'), 'the exports section is drawn below the library').toBeLessThan(await top('#examples'))
+    const ids = await page.locator('section[id]').evaluateAll((els, wanted) => els.map((el) => el.id).filter((id) => wanted.includes(id)), SECTION_ORDER)
+    expect(ids, `section order in the DOM is ${ids.join(', ')}`).toEqual(SECTION_ORDER)
+    // Drawn in the same order: each section starts below the one before it.
+    const tops = await page.evaluate((order) => order.map((id) => document.getElementById(id).getBoundingClientRect().top + window.scrollY), SECTION_ORDER)
+    tops.forEach((t, i) => { if (i) expect(t, `#${SECTION_ORDER[i]} is drawn above #${SECTION_ORDER[i - 1]}`).toBeGreaterThan(tops[i - 1]) })
     await ctx.close()
   })
 }

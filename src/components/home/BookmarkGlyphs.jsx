@@ -32,3 +32,12 @@ export function FolderIcon({ size = 15, stroke = 1.7, style }) {
     </svg>
   )
 }
+
+/** The tour's pause control: bars while it runs, a triangle while it is held. */
+export function PauseIcon({ stopped }) {
+  return stopped ? (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z" /></svg>
+  ) : (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+  )
+}

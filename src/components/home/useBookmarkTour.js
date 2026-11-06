@@ -46,7 +46,8 @@ function useReducedMotion() {
 }
 
 /**
- * @param {Element|null} stageEl  the stage whose visibility decides the tour (state, not a ref)
+ * @param {Element|null|Array<Element|null>} stageEl  what decides the tour: the desktop stage, or on a phone
+ *   the stage or the pane, whichever shows (state, not a ref; keep a list stable)
  * @param {(tool: number) => number} groupOf  the folder a tool belongs to
  * @param {(tool: number) => number[]} rowsOf  the rows in that folder that a tool replaces
  */
@@ -95,6 +96,15 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
   }, [])
 
   const stop = () => setChosen((m) => (m === 'run' ? 'stopped' : m))
+
+  // Phone: tapping a pair of bookmarks lights its tool and card, and takes the
+  // tour over. A second tap puts the light out, and so does a change of folder.
+  const togglePair = (tool) => {
+    stop()
+    setHotState((cur) => (cur && cur.j === tool && cur.src === 'tap' && cur.at === open ? null : { j: tool, ks: rowsOf(tool), src: 'tap', at: open }))
+  }
+  // A tapped light belongs to the folder it was tapped in.
+  const lit = hot && hot.src === 'tap' && hot.at !== open ? null : hot
 
   const section = {
     // A finger down holds the tour (a scroll starts as a touch) and lets go a second after it lifts.
@@ -186,13 +196,14 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
     open,
     seen,
     mode,
-    hot,
+    hot: lit,
     // The fill and the travelling light only run while the owner says so and no hold is on.
     playing,
     paused: !playing || pointerHold || focusHold,
     away: !playing,
     pick,
     toggle,
+    togglePair,
     folder,
     section,
     surface,
