@@ -321,10 +321,10 @@ test.describe('Font Pair: the handoff caret turns when the row opens', () => {
     const summary = await openPage(page, 1440)
     const chevron = summary.locator('.fpr-chev')
     await reduceInApp(page)
-    const seen = await traceAround(summary, '::after', () => toggle(page, summary), 600)
+    const seen = await traceAround(chevron, null, () => toggle(page, summary), 600)
     expect(near(seen.at(-1).a, -1, 0.01), 'the caret never turned').toBe(true)
     expect(seen.filter((p) => p.a > -0.95 && p.a < 0.95).length, 'the caret still turns slowly').toBe(0)
-    expect(parseFloat((await style(summary, '::after', ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
+    expect(parseFloat((await style(chevron, null, ['transitionDuration'])).transitionDuration), 'instant (the global clamp leaves 0.01ms)').toBeLessThanOrEqual(0.00001)
   })
 })
 
