@@ -1005,6 +1005,18 @@ html[data-reduced-motion="true"] .fg-page .fg-card-copy { transition: opacity 12
   background: var(--t0);
   border-radius: var(--radius-pill);
 }
+/* The tablet toolbar holds Back, the name, the type-tools switcher (424px until
+   900), Filters and More. Under 840px that is wider than the row with the word
+   "Filters" on it, so the button keeps its icon (and its count badge) and the
+   word leaves; the name stays on aria-label and title. */
+@media (min-width: 768px) and (max-width: 839px) {
+  .fg-page .tl-toolbar .fg-filt .fg-filt-word { display: none; }
+  .fg-page .tl-toolbar .fg-filt:not(:has(.fg-filt-badge)) { width: 36px; padding: 0; }
+  .fg-page .tl-toolbar .fg-filt .fg-filt-badge { margin-left: 0; }
+}
+@media (min-width: 768px) and (max-width: 839px) and (pointer: coarse) {
+  .fg-page .tl-toolbar .fg-filt:not(:has(.fg-filt-badge)) { width: 44px; }
+}
 /* Category pills in the Filters sheet carry their count. */
 .fg-page .fg-sheet-pill--cat { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0 4px; min-height: 52px; line-height: 18px; }
 .fg-page .fg-sheet-pill--cat em { font-style: normal; font-size: 12px; line-height: 14px; font-weight: 400; color: var(--t1); font-variant-numeric: tabular-nums; }

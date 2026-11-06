@@ -951,8 +951,9 @@ export default function FontGallery({ onCopy, toast }) {
       aria-haspopup="dialog"
       aria-expanded={sheetShown}
       aria-label={filtersOn > 0 ? `Filters, ${filtersOn} on` : 'Filters'}
+      title="Filters"
     >
-      Filters
+      <span className="fg-filt-word">Filters</span>
       {filtersOn > 0 && <span className="fg-filt-badge" aria-hidden="true">{filtersOn}</span>}
     </ToolButton>
   )
@@ -1025,7 +1026,29 @@ export default function FontGallery({ onCopy, toast }) {
       { ...pairItem, align: 'end' },
     ]
   } else if (mode === 'tablet') {
-    items = [...barLead, categoryItem, { id: 'filters', priority: 10, align: 'end', render: () => filtersButton }, { ...groundItem, align: 'end' }]
+    // Filters is the only way to Sort, Size and Preview text on a tablet, so it
+    // outranks the pills and the ground. The row is too short for its word at the
+    // narrow end (see .fg-filt-word), and the count badge changes its width, so
+    // `measure` folds again when it does. Its overflow entry opens the same sheet.
+    items = [
+      ...barLead,
+      categoryItem,
+      {
+        id: 'filters',
+        priority: 10,
+        align: 'end',
+        measure: filtersOn,
+        render: () => filtersButton,
+        menu: {
+          label: 'Filters',
+          icon: 'sliders-horizontal',
+          hint: filtersOn > 0 ? `${filtersOn} on` : undefined,
+          disabled: !ready,
+          onSelect: () => setSheetOpen(true),
+        },
+      },
+      { ...groundItem, align: 'end' },
+    ]
   } else {
     // The phone's More sheet: Project, Specimen ground, View (the ground is the
     // bar's own item). Overflow-only items keep the order they are listed in.
