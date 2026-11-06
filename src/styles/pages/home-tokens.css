@@ -1,6 +1,7 @@
 /* Homepage spacing tokens. Padding is the only space at a section's top and
    bottom; every section reads these instead of its own numbers. */
 .spectrum {
+  --hm-font: "Geist", system-ui, sans-serif;
   --section-y: 152px;
   --section-y-join: 136px;
   --section-y-compact: 96px;
@@ -36,4 +37,41 @@
     --section-y-compact: 48px;
     --section-y-close: 96px;
   }
+}
+
+/* The page scroller leaves room for the nav above any in-page target. */
+html:has(.spectrum #top) { scroll-padding-top: 104px; }
+
+/* The page's two hairlines: the proof bar's top edge and the plans section's
+   top edge. */
+.spectrum .sp-proof,
+.spectrum #plans { border-top: 1px solid var(--hm-hairline); }
+
+/* Arrow buttons. A go arrow (a link to another page) turns in place to point
+   the way it goes and never travels: a diagonal arrow turns 45deg clockwise, a
+   right arrow (--r, --e) turns 45deg anticlockwise. Keyboard focus turns it too.
+   Reduced motion turns nothing; the arrow changes at once. */
+.spectrum :is(.sp-pill, .sp-cta, .sp-disc-cta):focus-visible :is(.sp-pill-icon, .sp-cta-icon) { transform: rotate(45deg); }
+.sp-footer .sp-footer-cta:focus-visible .sp-footer-cta-icon { transform: rotate(45deg); }
+.mi-go { display: inline-grid; place-items: center; transition: transform 320ms cubic-bezier(.25,1,.5,1); }
+@media (hover: hover) and (pointer: fine) {
+  :hover > .mi-go { transform: rotate(45deg); }
+  :hover > .mi-go--r, :hover > .mi-go--e { transform: rotate(-45deg); }
+}
+:focus-visible > .mi-go { transform: rotate(45deg); }
+:focus-visible > .mi-go--r, :focus-visible > .mi-go--e { transform: rotate(-45deg); }
+/* A step forward is not leaving: the arrow leans 3px and holds, further on press. */
+.mi-nx { transition: transform 180ms cubic-bezier(.23,1,.32,1); }
+@media (hover: hover) and (pointer: fine) {
+  :hover > .mi-nx { transform: translateX(3px); }
+}
+:focus-visible > .mi-nx { transform: translateX(3px); }
+:active > .mi-nx { transform: translateX(5px); transition-duration: 100ms; }
+html[data-reduced-motion="true"] :is(.mi-go, .mi-nx) { transition: none; transform: none !important; }
+html[data-reduced-motion="true"] .spectrum :is(.sp-pill, .sp-cta, .sp-disc-cta):focus-visible :is(.sp-pill-icon, .sp-cta-icon),
+html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:focus-visible .sp-footer-cta-icon { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) :is(.mi-go, .mi-nx) { transition: none; transform: none !important; }
+  html:not([data-reduced-motion="false"]) .spectrum :is(.sp-pill, .sp-cta, .sp-disc-cta):focus-visible :is(.sp-pill-icon, .sp-cta-icon),
+  html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-cta:focus-visible .sp-footer-cta-icon { transform: none; }
 }

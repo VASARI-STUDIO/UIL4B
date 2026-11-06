@@ -4,8 +4,8 @@
 //    and types the next. Under reduced motion it never moves; once the visitor
 //    takes the bar it stops for good. The field's own name and placeholder never
 //    change while the ghost does, and the ghost is aria-hidden.
-// 2. The exports section (#specimens) comes before the community library
-//    (#discover), in the DOM and on screen.
+// 2. The exports section (#exports) comes before the community library
+//    (#examples), in the DOM and on screen.
 // 3. The footer curtain: where the whole footer fits the window, the footer sits
 //    still under <main> and the page scrolls up off it. Where it does not fit, or
 //    under reduced motion, the footer is in normal flow. Keyboard focus landing
@@ -107,7 +107,7 @@ for (const width of [390, 1440]) {
     expect(ids.indexOf('specimens'), `section order is ${ids.join(', ')}`).toBeGreaterThan(-1)
     expect(ids.indexOf('specimens'), `section order is ${ids.join(', ')}`).toBeLessThan(ids.indexOf('discover'))
     const top = (sel) => page.locator(sel).evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
-    expect(await top('#specimens'), 'the exports section is drawn below the library').toBeLessThan(await top('#discover'))
+    expect(await top('#exports'), 'the exports section is drawn below the library').toBeLessThan(await top('#examples'))
     await ctx.close()
   })
 }

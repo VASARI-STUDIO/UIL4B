@@ -53,14 +53,14 @@ test.describe('the marketing pill', () => {
       label: a.textContent.trim(), href: a.getAttribute('href'), current: a.getAttribute('aria-current'),
     })))
     // Tools / Pricing / On mobile — `UIL4B - Spectrum.dc.html` lines 226-228.
-    expect(links.map((l) => l.label), 'the design\'s three quiet links, in its order').toEqual(['Tools', 'Pricing', 'On mobile'])
+    expect(links.map((l) => l.label), 'the design\'s three quiet links, in its order').toEqual(['Tools', 'Plans', 'On mobile'])
     // Tools is a section of THIS page; Pricing and On mobile are screens.
     for (const { href } of links.filter((l) => l.href.startsWith('#'))) {
       await expect(page.locator(href), `${href} is a link to nothing`).toHaveCount(1)
     }
     expect(links.find((l) => l.label === 'On mobile').href).toBe('/mobile')
     // Pricing is the design's separate Pricing screen, which is /plans.
-    expect(links.find((l) => l.label === 'Pricing').href).toBe('/plans')
+    expect(links.find((l) => l.label === 'Plans').href).toBe('/plans')
     // The sales page is the design's "Tools" screen, so Tools is the current one.
     expect(links.map((l) => l.current), '/ marks no quiet link as current').toEqual([null, null, null])
   })

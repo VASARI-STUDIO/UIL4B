@@ -16,7 +16,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       test(`${tab.label}: gallery CTA and first card reach their destinations`, async ({ page }) => {
         watch(page, 'a signed-out visitor choosing a library on the homepage')
         await go(page, '/')
-        const section = page.locator('section#discover')
+        const section = page.locator('section#examples')
         await section.getByRole('button', { name: tab.label, exact: true }).click()
 
         await section.locator('a.sp-disc-cta').click()
