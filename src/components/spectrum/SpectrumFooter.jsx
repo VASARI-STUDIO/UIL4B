@@ -51,9 +51,11 @@ const TOOLS = [
 
 // PROJECT — the design's three (1617-1619): sections of the sales page, by anchor.
 const PROJECT = [
-  ['#bench', 'The bench'],
-  ['#specimens', 'Specimens'],
-  ['#index', 'Index'],
+  ['#bookmarks', 'Bookmarks'],
+  ['#try', 'Try the tools'],
+  ['#exports', 'Exports'],
+  ['#examples', 'Examples'],
+  ['#plans', 'Plans'],
 ]
 
 // EXPLORE — the destinations AppFooter reaches that the drawn columns do not.
@@ -144,7 +146,7 @@ function uncoverFooter(event) {
 function Column({ heading, className = '', children }) {
   return (
     <div className={className ? `sp-footer-col ${className}` : 'sp-footer-col'}>
-      <h2 className="sp-footer-col-h">{heading}</h2>
+      <h3 className="sp-footer-col-h">{heading}</h3>
       <ul>{children}</ul>
     </div>
   )
@@ -182,6 +184,7 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
           {/* `display:contents`, so the columns are cells of the one grid
               while still sitting inside a Footer navigation landmark. */}
           <nav className="sp-footer-links" aria-label="Footer">
+            <h2 className="sr-only">Site links</h2>
             <Column heading="Tools">
               <li><NavLink to="/tools">All tools</NavLink></li>
               {TOOLS.map(([groupId, label]) => (

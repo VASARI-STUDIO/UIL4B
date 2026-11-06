@@ -162,9 +162,9 @@ test('the word reveal has a visible resting state', () => {
 test('the hero does not wait on a scroll observer to become visible', () => {
   // `[data-reveal]` starts at opacity:0 in global.css. On the fold that would
   // blank the largest paint of the prerendered shell until hydration.
-  const heroTag = /<header\s[^>]*heroLit[^>]*>/.exec(PAGE)
-  assert.ok(heroTag, 'the hero header no longer toggles its own entrance class')
-  assert.ok(!heroTag[0].includes('data-reveal'), 'the hero header has grown a data-reveal attribute')
+  const heroTag = /<div\s[^>]*heroLit[^>]*>/.exec(PAGE)
+  assert.ok(heroTag, 'the hero block no longer toggles its own entrance class')
+  assert.ok(!heroTag[0].includes('data-reveal'), 'the hero block has grown a data-reveal attribute')
   assert.ok(PAGE.includes('data-hero-prepainted'),
     'Spectrum.jsx no longer checks data-hero-prepainted, so a prepainted headline will animate a second time')
 })
@@ -369,15 +369,31 @@ test('the landing is the design\'s six blocks in order, and pricing is not one o
   // In the design the plan comparison and FAQ live on the Pricing screen,
   // which is /plans. The landing is hero, bench, exports (#specimens), the
   // community library (#discover), the terms band (#index) and the handoff.
-  const ids = [...PAGE.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['bench', 'specimens', 'discover'],
-    'the landing sections are no longer bench, specimens, discover in that order')
-  // Then the design's proof band (#index, SpectrumProof.jsx), then the handoff.
+  const ids = [...PAGE.matchAll(/<(?:section|div) id="([a-z]+)"/g)].map((m) => m[1])
+  assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'plans', 'start'],
+    'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, start in that order')
+  // The proof band (#proof, SpectrumProof.jsx) sits between examples and plans.
   const proofAt = PAGE.indexOf('<SpectrumProof />')
-  assert.ok(proofAt > PAGE.indexOf('id="discover"') && proofAt < PAGE.indexOf('className="sp-close"'),
-    'the proof band no longer sits between the library and "Start your first project today."')
-  assert.match(stripComments(read('src/components/spectrum/SpectrumProof.jsx')), /<section id="index"/,
-    'the proof band lost the #index anchor the footer links to')
+  assert.ok(proofAt > PAGE.indexOf('id="examples"') && proofAt < PAGE.indexOf('id="plans"'),
+    'the proof band no longer sits between the examples and the plans')
+  assert.match(stripComments(read('src/components/spectrum/SpectrumProof.jsx')), /<section id="proof"/,
+    'the proof band lost the #proof anchor')
+  assert.ok(!PAGE.includes('id="discover"'), 'the homepage carries the Discover section again; the footer links to it instead')
+  // Landmarks: one banner (the nav), one main from the hero to the final call, one footer.
+  assert.equal([...PAGE.matchAll(/<header[\s>]/g)].length, 1, 'the page has more than one <header>')
+  assert.equal([...PAGE.matchAll(/<main\s/g)].length, 1)
+  assert.ok(PAGE.indexOf('id="start"') > PAGE.indexOf('id="plans"') && PAGE.indexOf('id="start"') < PAGE.indexOf('</main>'),
+    'the final call is not the last section of <main>')
+  // The footer's PROJECT column links to the page's own sections, by anchor.
+  for (const hash of ['#bookmarks', '#try', '#exports', '#examples', '#plans']) {
+    assert.ok(FOOTER.includes(`'${hash}'`), `the footer no longer links ${hash}`)
+    assert.ok(PAGE.includes(`id="${hash.slice(1)}"`), `${hash} has no target on the page`)
+  }
+  for (const old of ['#bench', '#specimens', '#index']) assert.ok(!FOOTER.includes(old), `the footer still links ${old}`)
+  assert.ok(FOOTER.includes('/discover'), 'the footer no longer links Discover')
+  // No word reveal and no scroll-reveal trigger on the page's headings.
+  assert.ok(!PAGE.includes('data-sp-reveal') && !PAGE.includes('useSpectrumReveal'), 'the page uses the scroll reveal again')
+  assert.ok(!stripComments(read('src/components/spectrum/SpectrumProof.jsx')).includes('requestAnimationFrame'), 'the proof figures count up again')
   for (const gone of ['id="pricing"', 'id="faq"', '<table', 'sp-compare', 'sp-plans']) {
     assert.ok(!PAGE.includes(gone), `Spectrum.jsx carries ${gone} again — pricing belongs on /plans`)
   }

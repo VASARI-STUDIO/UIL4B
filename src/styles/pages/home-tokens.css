@@ -37,3 +37,11 @@
     --section-y-close: 96px;
   }
 }
+
+/* The page scroller leaves room for the nav above any in-page target. */
+html:has(.spectrum #top) { scroll-padding-top: 104px; }
+
+/* The page's two hairlines: the proof bar's top edge and the plans section's
+   top edge. */
+.spectrum .sp-proof,
+.spectrum #plans { border-top: 1px solid var(--hm-hairline); }
