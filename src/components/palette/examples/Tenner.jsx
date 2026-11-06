@@ -1,4 +1,4 @@
-// Tally: a spending card app, painted the way a bank spends a brand. The card
+// Tenner: a spending card app, painted the way a bank spends a brand. The card
 // is the one coloured object (a recolourable render in the primary); the spent
 // part of the budget bar is the primary, the active tab's underline the
 // secondary, the day-of-month pace tick the accent, the category glyphs sit on
@@ -19,9 +19,9 @@ import Recolour from '../Recolour.jsx'
 import { PREVIEW_ASSETS } from '../../../data/previewAssets.js'
 import {
   ACCOUNT, ACTIONS, CARD, CATS, DETAILS_PIN_HELP, DUE, FIGURES, FROZEN_LINE, LIMITS, NAV, NAV_HEADING, TABS, TXNS, UPCOMING,
-  amountText, eatingUnderSpend, tallyVars,
-} from './Tally.data.js'
-import './Tally.css'
+  amountText, eatingUnderSpend, tennerVars,
+} from './Tenner.data.js'
+import './Tenner.css'
 
 // How long "Budget saved" shows before the form hands back to the Overview.
 const SAVED_MS = 2000
@@ -72,8 +72,8 @@ function Header() {
   const here = live ? live.nav : 'Cards'
   return (
     <header className="ty-head">
-      <span className="ty-wordmark" data-role="neutral">Tally</span>
-      <nav className="ty-nav" data-role="neutral" aria-label={live ? 'Tally' : undefined}>
+      <span className="ty-wordmark" data-role="neutral">Tenner</span>
+      <nav className="ty-nav" data-role="neutral" aria-label={live ? 'Tenner' : undefined}>
         {NAV.map((n) => (
           <Ctl key={n} className={n === here ? 'ty-navlink is-current' : 'ty-navlink'} aria-current={n === here ? 'page' : undefined} onClick={() => live.setNav(n)}>{n}</Ctl>
         ))}
@@ -88,7 +88,7 @@ function Card({ color, frozen }) {
   return (
     <div className="ty-cardwrap">
       <Recolour asset={PREVIEW_ASSETS['card-front']} color={color} sizes="360px" eager className={frozen ? 'ty-cardface is-frozen' : 'ty-cardface'}>
-        <span className="ty-card-mark">Tally</span>
+        <span className="ty-card-mark">Tenner</span>
         <span className="ty-card-num">•••• {CARD.last4}</span>
         <span className="ty-network" aria-hidden="true"><i /><i /></span>
       </Recolour>
@@ -410,8 +410,8 @@ function Dock({ show, live }) {
  *   declined); onState: asks the dialog to move its State menu (Freeze, Limits, Cancel,
  *   Save). Without it the scene is a still picture.
  */
-export default function Tally({ roles, state, onState }) {
-  const { vars, pair } = useMemo(() => tallyVars(roles), [roles])
+export default function Tenner({ roles, state, onState }) {
+  const { vars, pair } = useMemo(() => tennerVars(roles), [roles])
   // A two-colour pair has no states: the Contrast Checker's use of this scene is the overview.
   const view = pair || !state ? 'overview' : state
   const frozen = view === 'frozen' || view === 'declined'

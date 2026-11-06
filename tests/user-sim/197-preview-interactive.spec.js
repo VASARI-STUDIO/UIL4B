@@ -19,10 +19,10 @@
 //   2  in PaletteBuilder.jsx setPreview({ mode: 'light', ... }) at the Preview button (line ~2736)
 //   3  in Recolour.css delete the `.rc-tint` rule's `background:var(--rc-color)`
 //   4  in palette-preview.css make the `[data-fail="on"]` rule apply without :hover (it shows at rest)
-//   5  in Tally.jsx make Tabs' onClick `live.setTab(0)`
-//   6  in Tally.jsx `act`, call onState('frozen') whatever `frozen` is
-//   7  in Tally.jsx `save`, drop `setSaved(true)`; or set SAVED_MS to 60000
-//   8  in Tally.jsx `isLive`, drop the `!pair &&` AND hand the compare Stage an onState
+//   5  in Tenner.jsx make Tabs' onClick `live.setTab(0)`
+//   6  in Tenner.jsx `act`, call onState('frozen') whatever `frozen` is
+//   7  in Tenner.jsx `save`, drop `setSaved(true)`; or set SAVED_MS to 60000
+//   8  in Tenner.jsx `isLive`, drop the `!pair &&` AND hand the compare Stage an onState
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { clickPaletteAction, openCompareFromSuggest } from './palette-helpers.js'
@@ -30,7 +30,7 @@ import { clickPaletteAction, openCompareFromSuggest } from './palette-helpers.js
 test.use({ viewport: { width: 1440, height: 900 } })
 
 const STATES = ['Overview', 'Card frozen', 'Limits', 'Declined payment']
-// The data-state each label sets on the scene root, by hand from Tally.jsx (overview, frozen, limits, declined).
+// The data-state each label sets on the scene root, by hand from Tenner.jsx (overview, frozen, limits, declined).
 const STATE_ID = { Overview: 'overview', 'Card frozen': 'frozen', Limits: 'limits', 'Declined payment': 'declined' }
 
 const MID = ['#20838d', '#2994c7', '#5b89d7', '#8a9fea', '#c5c1f6']

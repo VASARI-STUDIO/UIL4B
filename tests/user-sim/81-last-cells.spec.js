@@ -363,7 +363,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       }, VARS)
 
       expect(s.name, `${name}: the scene rendered with the wrong data-preview-scene`).toBe(name)
-      // The scenes with live controls (Ridgeline, Tally, Slack Water and Orra) are groups of them; every other scene is one picture.
+      // The scenes with live controls (Ridgeline, Tenner, Slack Water and Orra) are groups of them; every other scene is one picture.
       const live = name === 'Trail run app' || name === 'Spending card' || name === 'Editorial hero' || name === 'Product page'
       expect(s.role, `${name}: the scene is not exposed as ${live ? 'a group of controls' : 'one image'}`).toBe(live ? 'group' : 'img')
       expect(s.label, `${name}: the scene lost its accessible name`).toBe(`${name} preview using your palette, light theme`)
