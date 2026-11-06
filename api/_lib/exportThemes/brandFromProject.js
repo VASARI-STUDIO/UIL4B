@@ -193,6 +193,19 @@ function typeBlock(d, faces) {
   };
 }
 
+// Themes lay the logo on a coloured ground by a colourway named for it. Every name they look up is made here, on the primary, the accent
+// or the support colour, with the mark in whichever of ink, canvas, black or white reads on that ground.
+const ON_PRIMARY = ['on-signal', 'on-brick', 'on-vermilion', 'on-quandong', 'on-lane', 'on-toolbox', 'on-sunbelt'];
+const ON_ACCENT = ['on-buoy', 'on-blush', 'on-wattle', 'on-timber', 'on-float'];
+const ON_SUPPORT = ['on-concrete', 'on-steel', 'on-white'];
+function onColourways(cw, onGround, label, primary, accent, support) {
+  const out = {};
+  for (const k of ON_PRIMARY) out[k] = cw(label, primary);
+  for (const k of ON_ACCENT) out[k] = cw(onGround(accent), accent);
+  for (const k of ON_SUPPORT) out[k] = cw(onGround(support), support);
+  return out;
+}
+
 // ---- the brand ----
 const plain = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 // readDesign and the kit helpers expect objects and an array of colours; any other shape in the request counts as absent.
@@ -233,7 +246,7 @@ function build({ design: rawDesign, projectName, date }) {
       showcase: { wordmark: word, symbolNote: 'Write this in your own words.', minScreenPx: 96, minPrintMm: 24 },
       colourways: {
         colour: cw(ink, canvas, prim), 'mono-dark': cw(ink, canvas), 'mono-light': cw(canvas, ink), reversed: cw(a.actionLabel, prim, a.actionLabel),
-        'on-buoy': cw(onGround(slot.citron.hex), slot.citron.hex), 'on-stage': cw(canvas, ink, prim),
+        'on-stage': cw(canvas, ink, prim), ...onColourways(cw, onGround, a.actionLabel, prim, slot.citron.hex, slot.lilac.hex),
       },
       when: Object.fromEntries(['colour', 'mono-dark', 'mono-light', 'reversed', 'horizontal', 'stacked', 'symbol'].map((k) => [k, 'Say where this version goes.'])),
     },
