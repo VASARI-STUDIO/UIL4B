@@ -13,15 +13,20 @@ export const LOGO_FILE = { colour: 'full-colour' };
 export const logoFileName = (id) => LOGO_FILE[id] || id;
 
 // Adds a file to a map. Text is finished for the edition (slot placeholders swapped in); binary data goes in as it is.
-export function put(files, name, data) {
-  files[name] = typeof data === 'string' ? finishText(data, name) : data;
+export function put(ctx, files, name, data) {
+  files[name] = typeof data === 'string' ? finishText(data, name, ctx) : data;
   return files;
 }
 
 // A file map as a zip (Buffer). Entries are sorted and dated alike, so the same files give the same zip.
+// An entry name that could climb out of the archive: a "..", a leading slash, a drive letter or a backslash.
+export const unsafeZipName = (name) => typeof name !== 'string' || !name || /(^|\/)\.\.(\/|$)|\.\.|^\/|^[A-Za-z]:|\\/.test(name);
+
 export async function zipFiles(files, top) {
   const zip = new JSZip();
+  if (top !== undefined && top !== '' && unsafeZipName(top)) throw new Error(`zipFiles: unsafe folder name ${JSON.stringify(top)}`);
   for (const name of Object.keys(files).sort()) {
+    if (unsafeZipName(name)) throw new Error(`zipFiles: unsafe entry name ${JSON.stringify(name)}`);
     const v = files[name];
     zip.file((top ? top + '/' : '') + name, typeof v === 'string' ? Buffer.from(v, 'utf8') : v, { date: new Date('2026-01-01T00:00:00Z') });
   }
@@ -32,8 +37,8 @@ export async function zipFiles(files, top) {
 export const iconFile = (ctx, name) => icon(ctx, name, 24).replace(' class="ui-icon"', '') + '\n';
 
 export function putIcons(ctx, files, dir) {
-  for (const n of iconSet(ctx)) put(files, `${dir}/svg/${n}.svg`, iconFile(ctx, n));
-  put(files, `${dir}/LICENSE.txt`, `These icons are from Lucide (https://lucide.dev), released under the ISC licence.\nStroke width and corner style are set to the ${ctx.brand.name} brand (stroke ${ctx.iconStyle.stroke}, ${ctx.iconStyle.join} joins).\n\n${ICONS_LICENCE}`);
+  for (const n of iconSet(ctx)) put(ctx, files, `${dir}/svg/${n}.svg`, iconFile(ctx, n));
+  put(ctx, files, `${dir}/LICENSE.txt`, `These icons are from Lucide (https://lucide.dev), released under the ISC licence.\nStroke width and corner style are set to the ${ctx.brand.name} brand (stroke ${ctx.iconStyle.stroke}, ${ctx.iconStyle.join} joins).\n\n${ICONS_LICENCE}`);
 }
 
 function codeReadme(ctx) {
@@ -101,19 +106,19 @@ Light is the default. Set \`data-theme="dark"\` on \`<html>\` for dark, or \`dat
 // eslint-disable-next-line no-unused-vars -- theme is part of the builder signature all three kit writers share
 export function codePackageFiles(ctx, theme) {
   const files = {};
-  put(files, 'README.md', codeReadme(ctx));
-  put(files, 'tokens.css', tokensCss(ctx));
-  put(files, 'tokens.json', JSON.stringify(tokensJson(ctx), null, 2) + '\n');
-  put(files, 'tailwind.css', tailwindCss(ctx));
-  put(files, 'tokens.ts', tokensTs(ctx));
-  put(files, 'components.css', componentsCss(ctx));
-  put(files, 'example.html', exampleHtml(ctx));
+  put(ctx, files, 'README.md', codeReadme(ctx));
+  put(ctx, files, 'tokens.css', tokensCss(ctx));
+  put(ctx, files, 'tokens.json', JSON.stringify(tokensJson(ctx), null, 2) + '\n');
+  put(ctx, files, 'tailwind.css', tailwindCss(ctx));
+  put(ctx, files, 'tokens.ts', tokensTs(ctx));
+  put(ctx, files, 'components.css', componentsCss(ctx));
+  put(ctx, files, 'example.html', exampleHtml(ctx));
   // fonts: local files first, Google as an alternative
-  for (const f of ctx.faces) put(files, `assets/fonts/${f.stem}.woff2`, ctx.loaders.fontFile(f.stem, 'woff2'));
-  put(files, 'fonts.css', `/* ${ctx.brand.name} fonts: local files in assets/fonts (open licence, SIL OFL 1.1). */\n${fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`)}\n\n/* Or load from Google Fonts instead: delete the rules above and use this.\n${fontsCss(ctx).split('\n').filter((l) => l.startsWith('@import')).join('\n')}\n*/\n`);
+  for (const f of ctx.faces) put(ctx, files, `assets/fonts/${f.stem}.woff2`, ctx.loaders.fontFile(f.stem, 'woff2'));
+  put(ctx, files, 'fonts.css', `/* ${ctx.brand.name} fonts: local files in assets/fonts (open licence, SIL OFL 1.1). */\n${fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`)}\n\n/* Or load from Google Fonts instead: delete the rules above and use this.\n${fontsCss(ctx).split('\n').filter((l) => l.startsWith('@import')).join('\n')}\n*/\n`);
   // logo and icons
-  if (ctx.edition === 'slot') put(files, 'assets/logo/logo-slot.svg', ctx.logo.slotSvgFile());
-  else for (const id of ctx.logo.versions) put(files, `assets/logo/${ctx.slug}-${logoFileName(id)}.svg`, ctx.logo.svg(id) + '\n');
+  if (ctx.edition === 'slot') put(ctx, files, 'assets/logo/logo-slot.svg', ctx.logo.slotSvgFile());
+  else for (const id of ctx.logo.versions) put(ctx, files, `assets/logo/${ctx.slug}-${logoFileName(id)}.svg`, ctx.logo.svg(id) + '\n');
   putIcons(ctx, files, 'assets/icons');
   return files;
 }
@@ -124,26 +129,26 @@ export function codePackageFiles(ctx, theme) {
 export function kitFiles(ctx, theme) {
   const B = ctx.brand, files = {}, slug = ctx.slug;
   if (ctx.edition === 'slot') {
-    put(files, '01 Logo/logo-slot.svg', ctx.logo.slotSvgFile());
-    put(files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${B.name} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
+    put(ctx, files, '01 Logo/logo-slot.svg', ctx.logo.slotSvgFile());
+    put(ctx, files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${B.name} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
   } else {
     const logo = ctx.logo;
     for (const id of logo.versions) {
       const g = logo.geos[id];
-      put(files, `01 Logo/svg/${slug}-${logoFileName(id)}.svg`, `<?xml version="1.0" encoding="UTF-8"?>\n` + logo.svg(id, { title: `${B.name} logo, ${logo.labels[id].toLowerCase()}` }).replace('<svg ', `<svg width="${g.w.toFixed(1)}" height="${g.h.toFixed(1)}" `) + '\n');
+      put(ctx, files, `01 Logo/svg/${slug}-${logoFileName(id)}.svg`, `<?xml version="1.0" encoding="UTF-8"?>\n` + logo.svg(id, { title: `${B.name} logo, ${logo.labels[id].toLowerCase()}` }).replace('<svg ', `<svg width="${g.w.toFixed(1)}" height="${g.h.toFixed(1)}" `) + '\n');
     }
   }
-  put(files, `02 Colour/${slug}-palette.ase`, paletteAse(ctx));
-  put(files, `02 Colour/${slug}-palette.css`, paletteCss(ctx));
-  put(files, `02 Colour/${slug}-palette.json`, JSON.stringify(paletteJson(ctx), null, 2) + '\n');
+  put(ctx, files, `02 Colour/${slug}-palette.ase`, paletteAse(ctx));
+  put(ctx, files, `02 Colour/${slug}-palette.css`, paletteCss(ctx));
+  put(ctx, files, `02 Colour/${slug}-palette.json`, JSON.stringify(paletteJson(ctx), null, 2) + '\n');
   const fams = [...new Map(ctx.faces.map((f) => [f.family, f])).values()];
-  put(files, '03 Type/fonts.md', `# Typefaces\n\n${fams.map((f) => {
+  put(ctx, files, '03 Type/fonts.md', `# Typefaces\n\n${fams.map((f) => {
     const mine = ctx.faces.filter((x) => x.family === f.family), ws = mine.filter((x) => x.style !== 'italic').map((x) => x.weight).join(', '), it = mine.filter((x) => x.style === 'italic').map((x) => x.weight).join(', ');
     return `## ${f.family}\n\n- Role: ${f.role}\n- Weights: ${ws}${it ? `\n- Italics: ${it}` : ''}${B.fonts[f.role].axes ? `\n- Axes: ${B.fonts[f.role].axes}` : ''}\n- Google Fonts: https://fonts.google.com/specimen/${f.family.replace(/ /g, '+')}`;
   }).join('\n\n')}\n\n## Licence\n\nAll faces are released under the SIL Open Font License 1.1. You may use, embed and share them, including commercially. They may not be sold on their own.\n`);
   putIcons(ctx, files, '04 Icons');
-  put(files, '05 Imagery/README.md', `# Photography direction\n\n${B.imagery.shots.map((s) => `## ${s.caption}\n\n${s.slot}`).join('\n\n')}\n`);
-  put(files, 'README.md', `# ${B.name} brand kit\n\n${B.version ? `Version ${B.version.number}, ${ctx.date}.\n\n` : ''}${B.description}\n\n| Folder | What is in it |\n|---|---|\n| 01 Logo | ${ctx.edition === 'slot' ? 'Where the approved logo files go, and a slot frame' : 'Every version as svg, png (512, 1024, 2048 px wide, transparent) and pdf'} |\n| 02 Colour | The palette as ASE (Adobe), CSS and JSON, and a swatch sheet |\n| 03 Type | The typefaces, weights, links and licence |\n| 04 Icons | ${iconSet(ctx).length} interface icons (Lucide, ISC licence) in the brand's stroke |\n| 05 Imagery | Photography direction |\n\nThe palette: ${ctx.colours.map((c) => `${c.name} ${c.hex}`).join(', ')}.\n\nAsk your printer for a proof before a print run.\n`);
+  put(ctx, files, '05 Imagery/README.md', `# Photography direction\n\n${B.imagery.shots.map((s) => `## ${s.caption}\n\n${s.slot}`).join('\n\n')}\n`);
+  put(ctx, files, 'README.md', `# ${B.name} brand kit\n\n${B.version ? `Version ${B.version.number}, ${ctx.date}.\n\n` : ''}${B.description}\n\n| Folder | What is in it |\n|---|---|\n| 01 Logo | ${ctx.edition === 'slot' ? 'Where the approved logo files go, and a slot frame' : 'Every version as svg, png (512, 1024, 2048 px wide, transparent) and pdf'} |\n| 02 Colour | The palette as ASE (Adobe), CSS and JSON, and a swatch sheet |\n| 03 Type | The typefaces, weights, links and licence |\n| 04 Icons | ${iconSet(ctx).length} interface icons (Lucide, ISC licence) in the brand's stroke |\n| 05 Imagery | Photography direction |\n\nThe palette: ${ctx.colours.map((c) => `${c.name} ${c.hex}`).join(', ')}.\n\nAsk your printer for a proof before a print run.\n`);
   return files;
 }
 

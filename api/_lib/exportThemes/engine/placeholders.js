@@ -10,7 +10,7 @@
 //      builders call it, so any file made from a slot ctx is finished (doc.js pageDoc and finishFiles, the book, the kit).
 //   3. A sentinel that is cut in half (slice, charAt, regex) stays in the output; finishText throws and names the file.
 // Showcase ctxs never hold a sentinel, so finishText returns their text as it is.
-// The registry below is module-level state, shared by every ctx in the process.
+// The registry of placeholders belongs to one ctx (made in applyPlaceholders), so two documents built in sequence never share one.
 const extname = (name) => { const m = /\.[^./\\]*$/.exec(String(name)); return m ? m[0] : ''; };
 
 const OPEN = '', CLOSE = '', DIG = 0xE010;
@@ -171,9 +171,11 @@ export const DESCRIPTORS = {
   'ui.status.*.label': c('Status {n}', 'The label of a status chip.', '1 to 3 words', 'Out for delivery'),
 };
 
-// ---- registry: one id per brand data path and the text behind it, so the same brand gets the same ids in every ctx and a different brand never reads another's text ----
-const entries = []; const idByPath = new Map();
+// ---- registry: one id per brand data path and the text behind it. It belongs to one ctx (made in applyPlaceholders), so a brand never reads another's text ----
+// `cur` is the registry in use while a ctx's own functions run (ctx.placeholders.run); the code is synchronous, so it is never shared between calls.
+let cur = null;
 function register(pathStr, desc, n, real) {
+  const { entries, idByPath } = cur;
   const key = pathStr + '\n' + real;
   if (idByPath.has(key)) return idByPath.get(key);
   const fill = (s) => s.replace('{n}', String(n));
@@ -202,16 +204,22 @@ const fullOf = (e) => `${e.label}: ${e.what} ${e.length}. e.g. "${e.example}"`;
 
 export function applyPlaceholders(ctx) {
   const B = ctx.brand;
+  const reg = { entries: [], idByPath: new Map() };
+  // run fn with this ctx's registry in use, then put back whatever was in use
+  const run = (fn) => { const prev = cur; cur = reg; try { return fn(); } finally { cur = prev; } };
+  run(() => {
   for (const [pattern, desc] of Object.entries(DESCRIPTORS)) if (!desc.virtual) walk(B, pattern.split('.'), 0, [], desc, null);
   // a colour's role drives code (role === 'action'), so it stays as it is; roleText is the same word as a placeholder, for the line that prints it
   for (const list of ['colours', 'tones']) (B[list] || []).forEach((k, i) => { k.roleText = sentinel(register(`${list}.${i}.roleText`, DESCRIPTORS[`${list}.*.roleText`], i + 1, k.role)); });
   // ctx.colours and ctx.pairs are copies made before the swap: give them the same placeholder strings
   (ctx.colours || []).forEach((k, i) => Object.assign(k, { name: B.colours[i].name, lands: B.colours[i].lands, roleText: B.colours[i].roleText }));
   (ctx.pairs || []).forEach((p, i) => { p.use = B.pairs[i].use; });
-  ctx.real = (str) => String(str).replace(SENT, (m, g) => entries[decodeId(g)].real);
+  });
+  ctx.real = (str) => run(() => String(str).replace(SENT, (m, g) => { const e = reg.entries[decodeId(g)]; if (!e) throw new Error('placeholders: a placeholder from another document'); return e.real; }));
   // ctx.ph(path, real): a placeholder for copy a theme hard-codes; real is the words showcase prints
-  ctx.ph = (p, real = '') => { const desc = DESCRIPTORS[p]; if (!desc) throw new Error('no placeholder descriptor ' + p); return sentinel(register(p, desc, 1, real)); };
-  ctx.placeholders = { count: entries.length, descriptors: DESCRIPTORS, entries };
+  ctx.ph = (p, real = '') => { const desc = DESCRIPTORS[p]; if (!desc) throw new Error('no placeholder descriptor ' + p); return run(() => sentinel(register(p, desc, 1, real))); };
+  // the registry itself stays private; finishText reaches it through run
+  ctx.placeholders = { descriptors: DESCRIPTORS, run, get count() { return reg.entries.length; } };
   return ctx;
 }
 
@@ -244,7 +252,7 @@ const CTRL_CLASS = /(^|[\s_-])(chip|badge|tab|tabs|crumb|crumbs|btn|button|tag)(
 // inside a drawn product screen (the .ui components, phone and window frames) the compact form is the label alone too
 const UI_CLASS = /(^|\s)(ui|ui-[\w-]+|kphn|b-win|bk-screen|bk-device)(\s|$)/i;
 
-const plainWith = (s, fn) => s.replace(SENT, (m, g) => fn(entries[decodeId(g)]));
+const plainWith = (s, fn) => s.replace(SENT, (m, g) => fn(cur.entries[decodeId(g)]));
 
 function blockHtml(e) {
   return `<span class="ph-b${e.realSize ? ' ph-b--real' : ''}" data-ph="${esc(e.path)}"><span class="ph-l">${esc(e.label)}</span><span class="ph-w">${esc(e.what)}</span><span class="ph-m">${esc(e.length)}.${e.first ? ` e.g. &quot;${esc(e.example)}&quot;` : ''}</span></span>`;
@@ -291,21 +299,27 @@ function finishHtml(html) {
     const prev = toks[k - 1], next = toks[k + 1];
     const alone = tk.text.trim().replace(SENT, '') === '' && (tk.text.match(SENT) || []).length === 1
       && prev && prev.t === 'tag' && /^<[a-z]/i.test(prev.text) && !/\/>$/.test(prev.text) && next && next.t === 'tag' && /^<\//.test(next.text);
-    tk.text = tk.text.replace(SENT, (mm, g) => { const e = entries[decodeId(g)]; return alone && !tight && e.form === 'block' ? blockHtml(e) : compactHtml(e, monoCtx, ctrl); });
+    tk.text = tk.text.replace(SENT, (mm, g) => { const e = cur.entries[decodeId(g)]; return alone && !tight && e.form === 'block' ? blockHtml(e) : compactHtml(e, monoCtx, ctrl); });
   }
   let out = toks.map((t) => t.text).join('');
   if (any) out = /<\/helmet>/i.test(out) ? out.replace(/<\/helmet>/i, STYLE_TAG + '</helmet>') : /<\/head>/i.test(out) ? out.replace(/<\/head>/i, STYLE_TAG + '</head>') : STYLE_TAG + out;
   return out;
 }
 
-export function finishText(text, file = '') {
+// ctx is the ctx the text was made from: its registry decodes the placeholders. Text with no placeholder needs no ctx.
+export function finishText(text, file = '', ctx = null) {
   if (!text.includes(OPEN)) return text;
+  if (!ctx || !ctx.placeholders) throw new Error(`placeholders: ${file} holds a placeholder but no ctx was given to finish it`);
+  return ctx.placeholders.run(() => finishWith(text, file));
+}
+
+function finishWith(text, file) {
   const ext = extname(file).toLowerCase();
   let out;
   if (ext === '.html' || ext === '.htm') out = finishHtml(text);
-  else if (ext === '.md' || ext === '.txt') out = text.replace(SENT, (m, g) => { const e = entries[decodeId(g)]; return `[${e.form === 'block' ? fullOf(e) : e.label}]`; });
-  else if (ext === '.svg' || ext === '.xml') out = text.replace(SENT, (m, g) => esc(labelOf(entries[decodeId(g)])));
-  else out = text.replace(SENT, (m, g) => `[${labelOf(entries[decodeId(g)])}]`);
+  else if (ext === '.md' || ext === '.txt') out = text.replace(SENT, (m, g) => { const e = cur.entries[decodeId(g)]; return `[${e.form === 'block' ? fullOf(e) : e.label}]`; });
+  else if (ext === '.svg' || ext === '.xml') out = text.replace(SENT, (m, g) => esc(labelOf(cur.entries[decodeId(g)])));
+  else out = text.replace(SENT, (m, g) => `[${labelOf(cur.entries[decodeId(g)])}]`);
   if (/[-]/.test(out)) {
     const at = out.search(/[-]/);
     throw new Error(`placeholders: a brand copy string was cut or changed in code, so its placeholder could not be swapped, in ${file}\n  near: ${JSON.stringify(out.slice(Math.max(0, at - 80), at + 40))}`);
