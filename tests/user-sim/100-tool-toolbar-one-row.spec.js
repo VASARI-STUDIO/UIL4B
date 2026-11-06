@@ -71,15 +71,11 @@ const TOOLS = [
   {
     route: '/create/font-pair',
     actions: [
-      { row: 'Shuffle', menu: 'Shuffle the pair' },
       { row: 'Swap', menu: 'Swap heading and body' },
       { row: 'Undo', menu: 'Undo the last change' },
       'Build a type scale from this pair',
       'Copy font import',
     ],
-    // Below 1024 Shuffle is in the docked bar, and below 768 so is Copy CSS.
-    dockedBelow: 1024,
-    docked: ['Shuffle'],
     primaryFrom: 768,
     links: ['Browse the Font Gallery'],
     primary: /^Copy CSS/,
@@ -103,9 +99,9 @@ const TOOLS = [
     // 1440 and up); below that it is in the overflow ("More filters" at 1024 and up).
     fields: ['Preview text'],
     links: ['Build a font pair'],
-    // From 768 to 1023 search and "Build a font pair" sit on the page's own second row.
-    secondRow: '.fg-bar2',
-    // Under 1024 the page has a Filters sheet in place of an overflow menu. Whatever
+    // Below 1024 the page's own .fg-bar2 holds search and Filters; from 1024 a second toolbar (.fg-row2) holds the filters.
+    secondRow: '.fg-row2, .fg-bar2',
+    // Under 1024 the page has a Filters sheet in place of the filter rows. Whatever
     // is off the row must be in the sheet, found by the role and name the sheet gives
     // it (the sheet spells Sort out as pills and Specimen size as a slider called Size).
     sheet: {
@@ -121,14 +117,16 @@ const TOOLS = [
       },
     },
     // What the tool calls whatever is left in its overflow at each width.
-    overflow: (width) => (width >= 1024 ? 'More filters' : 'More'),
+    overflow: () => 'More',
+    // On a tablet the category pills and the ground switch also fold into More, beside Send feedback.
+    menuExtras: (width) => (width >= 768 && width < 1024 ? 2 : 0),
     title: 'Font Gallery',
   },
   { route: '/create/aspect-ratio', actions: ['Swap width and height'], primary: /^Copy size/, title: 'Aspect & Resolution', phoneDock: true },
 ]
 
 async function readRow(page) {
-  return page.locator('[data-tool-toolbar]').evaluate((bar) => {
+  return page.locator('[data-tool-toolbar]').first().evaluate((bar) => {
     const kids = [...bar.children].filter((el) => {
       const r = el.getBoundingClientRect()
       return r.width > 0 && r.height > 0 && getComputedStyle(el).position !== 'absolute'
@@ -154,7 +152,7 @@ for (const tool of TOOLS) {
         await page.setViewportSize({ width, height: 900 })
         await go(page, tool.route)
         await expect(page.getByRole('heading', { level: 1, name: tool.title })).toBeAttached()
-        const bar = page.locator('[data-tool-toolbar]')
+        const bar = page.locator('[data-tool-toolbar]').first()
         await expect(bar).toBeVisible()
         // Where an action can sit while it is still "on the row": the toolbar, or
         // the tool's own second row when it names one.
@@ -260,14 +258,15 @@ for (const tool of TOOLS) {
           await more.click()
           const panel = page.getByRole('dialog', { name: overflowName })
           await expect(panel).toBeVisible()
-          await expect(panel.locator('[data-tl-menu-item]'), `${width}px: the ${overflowName} holds more than Send feedback although every action fits`).toHaveCount(1)
+          await expect(panel.locator('[data-tl-menu-item]'), `${width}px: the ${overflowName} holds more than Send feedback although every action fits`).toHaveCount(1 + (tool.menuExtras?.(width) ?? 0))
           await expect(panel.locator('[data-tl-menu-item="feedback"]')).toBeVisible()
           await page.keyboard.press('Escape')
           await expect(panel).toBeHidden()
           await expect(more).toBeFocused()
         }
         if (inOverflow.length || overflowSelects.length || overflowSliders.length || overflowFields.length) {
-          const more = bar.getByRole('button', { name: overflowName, exact: true })
+          // A tool with a second toolbar folds what does not fit into that one's More.
+          const more = (tool.secondRow ? page.locator('[data-tool-toolbar]').last() : bar).getByRole('button', { name: overflowName, exact: true })
           await expect(more, `${width}px: ${[...inOverflow, ...overflowSelects, ...overflowSliders, ...overflowFields].join(', ')} are off the row and there is no ${overflowName}`).toBeVisible()
           await more.click()
           const panel = page.getByRole('dialog', { name: overflowName })

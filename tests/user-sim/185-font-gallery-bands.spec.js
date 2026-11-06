@@ -197,6 +197,9 @@ test.describe('Font Gallery bands', () => {
     await expect(page.locator('.fg-card')).toHaveCount(4)
   })
 
+  // The 44px floor is the coarse-pointer rule (36px with a mouse), so this runs as a phone.
+  test.describe('on a touch phone', () => {
+    test.use({ hasTouch: true, isMobile: true })
   test('the compare button is 44px and named for the family', async ({ page }) => {
     watch(page, 'someone adding a font to compare')
     await open(page, 390)
@@ -206,5 +209,6 @@ test.describe('Font Gallery bands', () => {
     expect(box.height).toBeGreaterThanOrEqual(44)
     await add.click()
     await expect(page.getByRole('button', { name: 'Remove Lora from comparison' })).toBeVisible()
+  })
   })
 })

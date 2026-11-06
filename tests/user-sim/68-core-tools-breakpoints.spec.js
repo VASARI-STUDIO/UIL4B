@@ -314,28 +314,34 @@ for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair'
 // Words broken in half
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('/create/font-pair · the specimen heading keeps “Typography” whole at 320 and 360', async ({ browser }) => {
-  // `.fpr-h1` was clamp(42px, 6vw, 76px): "Typography" is 235px at 42px and the
-  // specimen column is 188px at 320 and 228px at 360, so overflow-wrap broke
-  // the longest word of a TYPE SPECIMEN across two lines. The floor now scales
-  // with the phone (10vw: 32px at 320, 36px at 360) and hands back to the old
-  // curve from 420px.
+test('/create/font-pair · a long word typed into the headline stays whole at 320 and 360', async ({ browser }) => {
+  // The sample headlines hold only short words, so the guard is a typed word:
+  // "Typography" is the longest word a specimen is likely to be asked to set.
+  // The Article headline (.fpr-h1) scales its size with the phone and the
+  // Street headline (.fpr-street-h) holds a fixed size; either breaks the word
+  // across two lines if its size outgrows the column.
   //
-  // MUTATION: restore `font-size:clamp(42px,6vw,76px)` — both widths report
-  // ["Typography"].
+  // MUTATION: raise `.fpr-h1` on a phone to `font-size:64px` — the Article
+  // case at 320 reports ["Typography"].
   test.setTimeout(60_000)
   const failures = []
   for (const width of [320, 360]) {
     const { ctx, page } = await at(browser, width)
     watch(page, `someone reading a font pairing on a ${width}px phone`)
     await go(page, '/create/font-pair')
-    const h = page.locator('.fpr-h1')
-    await expect(h).toContainText('Typography')
-    await h.scrollIntoViewIfNeeded()
-    await settle(page)
-    const split = await page.evaluate(splitWords, '.fpr-h1')
+    await page.locator('[data-tool-toolbar]').getByRole('button', { name: /More/ }).click()
+    await page.getByRole('textbox', { name: 'Preview text' }).fill('Typography')
+    await page.keyboard.press('Escape')
+    for (const [preset, selector] of [['Street', '.fpr-street-h'], ['Article', '.fpr-h1']]) {
+      await page.getByRole('button', { name: preset }).click()
+      const h = page.locator(selector)
+      await expect(h).toHaveText('Typography')
+      await h.scrollIntoViewIfNeeded()
+      await settle(page)
+      const split = await page.evaluate(splitWords, selector)
+      if (split.length) failures.push(`${width}px ${preset}: ${split.map((w) => `"${w}"`).join(', ')}`)
+    }
     await ctx.close()
-    if (split.length) failures.push(`${width}px: ${split.map((w) => `"${w}"`).join(', ')}`)
   }
   expect(failures, `words broken across lines:\n  ${failures.join('\n  ')}`).toEqual([])
 })

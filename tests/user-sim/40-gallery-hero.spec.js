@@ -201,7 +201,7 @@ test.describe('the shared Discover gallery masthead', () => {
 // nor a figure strip has come back.
 const TOOLBAR_HEADED = [
   { route: '/create/font-gallery', title: 'Font Gallery', action: 'Build a font pair', to: '/create/font-pair' },
-  { route: '/create/font-pair', title: 'Font Pair', action: 'Browse the Font Gallery', to: '/create/font-gallery' },
+  { route: '/create/font-pair', title: 'Font Pair', action: /^Font Gallery, heading /, to: '/create/font-gallery', nameHidden: true },
 ]
 
 test.describe('the typography tools open on their toolbar, with no furniture', () => {
@@ -209,16 +209,22 @@ test.describe('the typography tools open on their toolbar, with no furniture', (
     test(`${surface.route} states its name and its next action on the toolbar`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await go(page, surface.route)
-      const bar = page.locator('[data-tool-toolbar]')
+      const bar = page.locator('[data-tool-toolbar]').first()
       await expect(bar).toBeVisible()
 
       const h1 = bar.getByRole('heading', { level: 1, name: surface.title })
-      await expect(h1).toBeVisible()
-      // The tool's name is a 15px label, not a display headline.
-      const fs = await h1.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
-      expect(fs, 'the tool name has grown back into a display headline').toBeLessThanOrEqual(16)
+      await expect(h1).toBeAttached()
+      // The tool's name is a 15px label, not a display headline. Font Pair's name is
+      // read aloud only: its switcher is the visible name, so the h1 must be a 1px box.
+      const { fs, w, h } = await h1.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return { fs: parseFloat(getComputedStyle(el).fontSize), w: r.width, h: r.height }
+      })
+      if (surface.nameHidden) expect(Math.max(w, h), 'the hidden tool name takes up room').toBeLessThanOrEqual(1)
+      else expect(fs, 'the tool name has grown back into a display headline').toBeLessThanOrEqual(16)
 
-      const action = bar.getByRole('link', { name: surface.action })
+      // The onward action sits on whichever toolbar row the tool puts it on.
+      const action = page.locator('[data-tool-toolbar]').getByRole('link', { name: surface.action })
       await expect(action).toBeVisible()
       await expect(action).toHaveAttribute('href', surface.to)
       const box = await action.boundingBox()
@@ -236,7 +242,7 @@ test.describe('the Font Gallery search field', () => {
   // search rather than decorating the masthead (Readymag's "Search 1638 fonts").
   test('the family count moved into the search field instead of a stat strip', async ({ page }) => {
     await go(page, '/create/font-gallery')
-    await expect(page.locator('[data-tool-toolbar]')).toBeVisible()
+    await expect(page.locator('[data-tool-toolbar]').first()).toBeVisible()
     const placeholder = await page.evaluate(() => {
       const input = [...document.querySelectorAll('input[aria-label="Search font families"]')].filter((e) => e.offsetParent !== null)[0]
       return input ? input.placeholder : null
