@@ -12,7 +12,7 @@ import {
 } from '../components/tool/ToolLayout'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
-import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont } from '../utils/googleFonts'
+import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont, verifyFontLoaded } from '../utils/googleFonts'
 import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
 import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
 import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '../utils/fluidType'
@@ -90,10 +90,11 @@ const WEIGHT_NAMES = { 100: 'Thin', 200: 'Extra light', 300: 'Light', 400: 'Regu
 const weightLabel = w => (WEIGHT_NAMES[w] ? `${w} ${WEIGHT_NAMES[w]}` : String(w))
 
 const WIDTHS = [
-  { id: 'full', label: 'Desktop', px: FLUID_VIEWPORTS.max, vw: FLUID_VIEWPORTS.max },
-  { id: 'tablet', label: 'Tablet', px: 768, vw: 768 },
   { id: 'mobile', label: 'Mobile', px: 375, vw: FLUID_VIEWPORTS.min },
+  { id: 'tablet', label: 'Tablet', px: 768, vw: 768 },
+  { id: 'full', label: 'Desktop', px: FLUID_VIEWPORTS.max, vw: FLUID_VIEWPORTS.max },
 ]
+const DESKTOP = WIDTHS[2]
 
 
 // The width the preview opens on is the visitor's own device class, so a phone
@@ -166,6 +167,14 @@ const PHONE_SPECIMEN = PANGRAM
 // breakpoint ladders and their clamp() are all rounded by one function that the
 // unit suite can reach without a browser.)
 
+// A step above the base takes its size plus 8px as a line height, so a large step
+// doesn't carry the body's leading: never under 1.1, never over the line height
+// the user set, in steps of 0.05. The base and the steps below keep the user's value.
+function leadFor(exp, px, lineHeight, tight) {
+  if (exp <= 0 || !tight) return lineHeight
+  return Math.round(Math.min(lineHeight, Math.max(1.1, 1 + 8 / px)) * 20) / 20
+}
+
 // Trim a computed number to a readable literal — 1.5 not 1.5000, 0.875 not
 // 0.87500. Exports read like something a person typed.
 function trim(n, places = 4) {
@@ -193,6 +202,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const { user } = useAuth()
   // The step pressed in the ladder; the page lights each line that uses it.
   const [litStep, setLitStep] = useState('')
+  // Steps above the base take a tighter line height than the body's.
+  const [tight, setTight] = useState(true)
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
   // A selection handed over from the Font Gallery or Font Pair. Read — never
@@ -304,6 +315,28 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     if (bodyFont) loadFont(bodyFont.family, [bodyW])
   }, [bodyFont, bodyW])
 
+  // Whether the heading face is painting. The page and the heading rows show a
+  // loading line until the face is confirmed, and an error with Retry if it
+  // never arrives; `face` holds the verdict for one family and weight.
+  const faceKey = headingFont ? `${headingFont.family}|${headingW}` : ''
+  const [face, setFace] = useState({ key: '', status: '' })
+  const [faceTry, setFaceTry] = useState(0)
+  useEffect(() => {
+    if (!headingFont) return undefined
+    let live = true
+    verifyFontLoaded(headingFont.family, headingW).then(status => {
+      if (live) setFace({ key: faceKey, status })
+    })
+    return () => { live = false }
+  }, [headingFont, headingW, faceKey, faceTry])
+  const headingLoading = Boolean(headingFont) && face.key !== faceKey
+  const headingFailed = Boolean(headingFont) && face.key === faceKey && face.status === 'failed'
+  const retryFace = () => {
+    if (!headingFont) return
+    setFace({ key: '', status: '' })
+    reloadFont(headingFont.family).then(() => loadFont(headingFont.family, [headingW])).then(() => setFaceTry(n => n + 1))
+  }
+
   const ratio = ratioId === 'custom' ? customRatio : (RATIOS.find(o => o.id === ratioId)?.value || DEFAULTS.ratio)
 
   const mobileRatio = mobileRatioId === 'custom'
@@ -313,7 +346,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // The viewport width the preview REPRESENTS — the number the fluid maths is
   // evaluated at. Declared here rather than beside `activeWidth` further down
   // because `steps` depends on it.
-  const previewVw = (WIDTHS.find(w => w.id === width) || WIDTHS[0]).vw
+  const previewVw = (WIDTHS.find(w => w.id === width) || DESKTOP).vw
 
   // Every step now carries BOTH ends of the scale and the clamp that joins
   // them. `px` stays the desktop size so every existing consumer (the ladder
@@ -335,6 +368,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       const previewPx = fluid
         ? sizeAtViewport(mobilePx, px, previewVw)
         : (previewVw <= 768 ? mobilePx : px)
+      const lead = leadFor(exp, px, lineHeight, tight)
       out.push({
         exp,
         name: stepName(exp),
@@ -348,12 +382,12 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         role: isHeading ? 'heading' : 'body',
         weight: isHeading ? headingW : bodyW,
         track: isHeading ? headingTrack : bodyTrack,
-        lead: lineHeight,
-        lineHeight: +(previewPx * lineHeight).toFixed(1),
+        lead,
+        lineHeight: +(previewPx * lead).toFixed(1),
       })
     }
     return out
-  }, [base, ratio, mobileBase, mobileRatio, fluid, previewVw, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight])
+  }, [base, ratio, mobileBase, mobileRatio, fluid, previewVw, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight, tight])
   // The ladder draws each step at the previewed width, so that is the size to test.
   const previewIsFitted = typePreviewNeedsFitting(steps.map(s => ({ px: s.previewPx })))
 
@@ -415,6 +449,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       bodySpacing: DEFAULTS.bodyTrack,
     })
     setLitStep('')
+    setTight(true)
     toast?.('Scale reset to a 15px golden ratio')
   }
 
@@ -454,6 +489,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ...lines,
       '',
       `  --leading: ${trim(lineHeight, 3)};`,
+      ...(tight ? steps.filter(s => s.exp > 0).map(s => `  --text-${s.name}--line-height: ${trim(s.lead, 3)};`) : []),
       `  --tracking-heading: ${trim(headingTrack, 3)}em;`,
       `  --tracking-body: ${trim(bodyTrack, 3)}em;`,
       headingFont ? `  --font-heading: ${headingStack};` : '',
@@ -464,7 +500,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ...desktopBlock,
     ]
     return out.filter(l => l !== '').join('\n')
-  }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack, headingW, bodyW, importUrl])
+  }, [steps, tight, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack, headingW, bodyW, importUrl])
 
   // Tailwind v4 reads its theme from CSS: each --text-<name> makes a text-<name>
   // utility, and --text-<name>--line-height sets its leading. The clamp is a valid value there.
@@ -472,13 +508,13 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     const out = ['@theme {']
     steps.forEach(s => {
       out.push(`  --text-${s.name}: ${fluid ? s.css : `${trim(s.rem)}rem`};`)
-      out.push(`  --text-${s.name}--line-height: ${trim(lineHeight, 3)};`)
+      out.push(`  --text-${s.name}--line-height: ${trim(s.lead, 3)};`)
     })
     if (headingFont) out.push(`  --font-heading: ${headingStack};`)
     if (bodyFont) out.push(`  --font-body: ${bodyStack};`)
     out.push('}')
     return out.join('\n')
-  }, [steps, fluid, lineHeight, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, fluid, headingFont, bodyFont, headingStack, bodyStack])
 
   // The v3 config. Tailwind v4 loads it only through @config in the stylesheet.
   const tailwindExport = useMemo(() => {
@@ -486,7 +522,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     // is valid and is how fluid type is done there, so the theme carries the
     // same behaviour the CSS export does rather than a desktop-only snapshot.
     const sizes = steps
-      .map(s => `        '${s.name}': ['${fluid ? s.css : `${trim(s.rem)}rem`}', { lineHeight: '${trim(lineHeight, 3)}' }],`)
+      .map(s => `        '${s.name}': ['${fluid ? s.css : `${trim(s.rem)}rem`}', { lineHeight: '${trim(s.lead, 3)}' }],`)
       .join('\n')
     return [
       'module.exports = {',
@@ -503,7 +539,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       '  },',
       '}',
     ].filter(l => l !== '').join('\n')
-  }, [steps, fluid, lineHeight, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, fluid, headingFont, bodyFont, headingStack, bodyStack])
 
   const scssExport = useMemo(() => {
     const lines = steps.map(s => (fluid
@@ -513,12 +549,13 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ...lines,
       '',
       `$leading: ${trim(lineHeight, 3)};`,
+      ...(tight ? steps.filter(s => s.exp > 0).map(s => `$text-${s.name}-line-height: ${trim(s.lead, 3)};`) : []),
       `$tracking-heading: ${trim(headingTrack, 3)}em;`,
       `$tracking-body: ${trim(bodyTrack, 3)}em;`,
       headingFont ? `$font-heading: (${headingStack});` : '',
       bodyFont ? `$font-body: (${bodyStack});` : '',
     ].filter(l => l !== '').join('\n')
-  }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, tight, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
 
   const currentExport = format === 'tailwind' ? tailwindExport : format === 'tailwind4' ? tailwind4Export : format === 'scss' ? scssExport : cssExport
   // Copy CSS exports through here.
@@ -715,7 +752,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     '--tsc-heading-ls': `${headingTrack}em`,
     '--tsc-body-ls': `${bodyTrack}em`,
   }
-  const activeWidth = WIDTHS.find(w => w.id === width) || WIDTHS[0]
+  const activeWidth = WIDTHS.find(w => w.id === width) || DESKTOP
   const ratioHint = RATIOS.find(r => r.id === ratioId)?.hint
 
   // One menu per family. Only the weights the family has are listed.
@@ -752,7 +789,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           aria-pressed={litStep === s.name}
           onClick={() => {
             setLitStep(cur => (cur === s.name ? '' : s.name))
-            onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
+            onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(s.lead, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
             toast?.(`Copied --text-${s.name}`)
           }}
           aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
@@ -847,9 +884,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             text={sample.trim()}
             lit={litStep}
             headingName={headingName}
-            headingLoading={false}
-            headingFailed={false}
-            onRetry={retry}
+            headingLoading={headingLoading}
+            headingFailed={headingFailed}
+            onRetry={retryFace}
           />
         </div>
       </div>
@@ -1140,6 +1177,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                     ariaLabel="Line height multiplier"
                   />
                 </div>
+                <button type="button" className="tsc-tight" role="switch" aria-checked={tight} onClick={() => setTight(t => !t)}>
+                  <span>Tighter headings</span>
+                  <span className="tsc-tight-trk" aria-hidden="true"><i /></span>
+                </button>
+                <p className="tsc-hint">Steps above base use size plus 8px, between 1.1 and your line height.</p>
                 <div className="tsc-slider-row">
                   <label className="tsc-slider-k" htmlFor="tsc-htrack">Heading tracking</label>
                   <SnapSlider

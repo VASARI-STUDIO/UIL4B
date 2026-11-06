@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import { pickSteps } from './kerbsideSteps'
 
 // The page half of the Type Scale tool: one product screen set on the scale
 // that is being built. Every line names the step it uses, and the step pressed
@@ -50,14 +51,7 @@ function Line({ step, children, className = '', style }) {
 }
 
 export default function KerbsidePage({ steps, up, mine, text, lit, headingName, headingLoading, headingFailed, onRetry }) {
-  const bottom = steps[steps.length - 1]
-  const pick = (exp, fallback) => steps.find(s => s.exp === exp) || fallback
-  const eta = pick(Math.min(4, up), steps[0])
-  const head = pick(Math.min(3, up), steps[0])
-  const stat = pick(Math.min(2, up), steps[0])
-  const lede = pick(Math.min(1, up), steps[0])
-  const base = pick(0, bottom)
-  const caption = pick(-1, bottom)
+  const { eta, head, stat, lede, base, caption } = pickSteps(steps, up)
   const loadingLine = <p className="tsk-loading">Loading {headingName}</p>
   const failed = headingFailed
   const hf = headingLoading ? loadingLine : null

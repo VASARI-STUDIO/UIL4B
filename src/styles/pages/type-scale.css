@@ -159,40 +159,6 @@
 /* The page is never scaled: the column is as wide as the chosen width, or the
    space there is, and the type inside keeps its true px. */
 .tsc-page .tsc-page-col { min-width: 0; }
-.tsc-page .tsc-article {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: var(--tsc-w, 100%);
-  padding: clamp(16px, 3vw, 32px);
-  border: 1px solid var(--tl-line);
-  border-radius: 18px;
-  background: var(--tl-card);
-}
-.tsc-page .tsc-article-h1,
-.tsc-page .tsc-article-h2 {
-  margin: 14px 0 8px;
-  color: var(--tl-ink);
-  font-family: var(--tsc-heading-ff);
-  font-size: var(--tsc-fs);
-  font-weight: var(--tsc-heading-fw);
-  line-height: var(--tsc-lh);
-  letter-spacing: var(--tsc-heading-ls);
-  overflow-wrap: break-word;
-}
-.tsc-page .tsc-article-h1 { margin-top: 0; }
-.tsc-page .tsc-article-lede,
-.tsc-page .tsc-article-body,
-.tsc-page .tsc-article-small {
-  max-width: 64ch;
-  margin: 0 0 14px;
-  color: var(--tl-soft);
-  font-family: var(--tsc-body-ff);
-  font-size: var(--tsc-fs);
-  font-weight: var(--tsc-body-fw);
-  line-height: var(--tsc-lh);
-  letter-spacing: var(--tsc-body-ls);
-}
-.tsc-page .tsc-article-small { margin-bottom: 0; color: var(--tl-dim); }
 
 /* ── Code view ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-developer-view { display: grid; gap: 10px; min-width: 0; }
