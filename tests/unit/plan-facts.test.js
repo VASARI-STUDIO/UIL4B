@@ -258,3 +258,16 @@ test('planFacts types no count word or price into the lists', () => {
 
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 const GALLERY_CAP = GALLERY_TIER_LIMITS.free
+
+test('the homepage components type no plan line, count word or price', () => {
+  for (const file of ['PlanLists.jsx', 'HomePlans.jsx', 'plansPrices.js', 'planListArt.js']) {
+    const src = code(`src/components/home/${file}`)
+    for (const line of [...FREE_LINES, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub]), PLANS_LEAD]) {
+      assert.ok(!src.includes(line), `${file} types the plan line "${line}"`)
+    }
+    assert.ok(!/\b(Eight|Ten|Two|Four|Six|Thirteen)\b/.test(src), `${file} types a count word`)
+    assert.ok(!/(US|A|C)?\$\d/.test(src), `${file} types a price`)
+  }
+  const section = code('src/components/home/HomePlans.jsx')
+  assert.match(section, /proRows\(live\)\.length/, 'the "Show all" count is not derived')
+})
