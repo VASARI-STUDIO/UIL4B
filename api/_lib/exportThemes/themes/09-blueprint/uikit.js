@@ -400,7 +400,7 @@ ${rv('left:-40px;top:0;height:132px', 44, 'l')}${rh(`left:3px;top:-28px;width:${
   lists(ctx) {
     const ui = ctx.ui, S = sc(ctx), D = S.deliveries;
     const icons = ['calendar', 'receipt', 'hammer', 'ruler', 'house'];
-    const rows = D.map((d, i) => ui.row({ lead: ui.icon(icons[i], 18), title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) })).join('');
+    const rows = D.map((d, i) => ui.row({ lead: ui.icon(icons[i % icons.length], 18), title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) })).join('');
     // measured: a row with a status is 12 + (price 19.5, 4, the words 16.9) + 12 + a 1 hairline = 65.4; the lead is 40 with 12 to the words
     const main = `${dm(`<ul class="ui-list">${rows}</ul>`, `${rh('left:0;top:-14px;width:40px', 40)}${rh('left:40px;top:-14px;width:12px', 12)}${rv('left:-14px;top:1px;height:65.4px', 65.4, 'l')}${vs([[12], [19.5], [4, ''], [16.9], [12]], 1, 'calc(100% + 10px)', 'r')}`, 'kdm--b', 'margin:28px 44px 0 30px')}<span class="kcap kcap--after" style="margin-left:30px">With a status a row is 65.4: 12, the price 19.5, 4, the words 16.9, 12, and a 1 hairline.</span>`;
     const plain = `${dm(`<ul class="ui-list">${D.slice(0, 2).map((d) => ui.row({ title: d.to, sub: d.when, end: d.price })).join('')}</ul>`, vs([[64], [64]], 1, -14), 'kdm--b', 'margin:24px 0 0 30px')}<span class="kcap kcap--after" style="margin-left:30px">No lead and no status: the row holds its 64 minimum.</span>`;

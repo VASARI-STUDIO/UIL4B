@@ -22,7 +22,7 @@ const own = {
     // plumb line: from the baseline to the foot of the bob, only where the logo is actually drawn
     const baseY = rd(geo.top * s), px = rd(geo.cx * s);
     // (extension lines run from the baseline and the foot of the bob out to the dimension line)
-    const plumb = slot ? '' : `<i class="g-ext" style="left:${px + 10}px;top:${baseY}px;width:38px"></i><i class="g-ext" style="left:${px + 14}px;top:${LH}px;width:34px"></i>${vline(px + 44, baseY, LH - baseY, LH - baseY, { dx: 10 })}`;
+    const plumb = slot || geo.top === undefined ? '' : `<i class="g-ext" style="left:${px + 10}px;top:${baseY}px;width:38px"></i><i class="g-ext" style="left:${px + 14}px;top:${LH}px;width:34px"></i>${vline(px + 44, baseY, LH - baseY, LH - baseY, { dx: 10 })}`;
     const sections = ctx.sections.map((s2) => `<li><span class="num">${ctx.pageNo(s2.pages[0].id)}</span>${A(s2.title)}</li>`).join('');
     const bar = [0, 1, 2, 3].map((i) => `<i style="left:${i * 50}px;background:${i % 2 ? 'var(--ground)' : 'var(--ink)'}"></i>`).join('');
     return `<section class="pg pg--cover g-cover" data-page="cover">${frame()}

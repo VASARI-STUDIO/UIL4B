@@ -7,7 +7,7 @@ import { cssNum } from '../../engine/escape.js';
 // Lettering sheets. The guide lines (baseline, x-height, cap height, descender) and every size a redline prints come from the font file
 // itself (opentype.js), not from a guess, so a printed number is the real size of the glyph at that point size.
 const fm = (ctx, face, weight) => {
-  const F = ctx.brand.fonts[face], stem = `${F.file}-${weight}`;
+  const F = ctx.brand.fonts[face], have = F.weights.includes(weight) ? weight : F.weights.reduce((b, w) => (Math.abs(w - weight) < Math.abs(b - weight) ? w : b)), stem = `${F.file}-${have}`;  // a face without this weight is measured at its nearest
   const f = ctx.loadFont(stem), u = f.unitsPerEm, bb = (c) => f.charToGlyph(c).getBoundingBox();
   return { f, asc: f.tables.hhea.ascender / u, desc: f.tables.hhea.descender / u, cap: bb('H').y2 / u, xh: bb('x').y2 / u, dn: -bb('p').y1 / u };
 };
@@ -140,8 +140,8 @@ ${dv(440, T1, S1, String(S1))}${dv(504, base1 - cap1, cap1, n1(cap1))}${dv(568, 
       [col('text-align:right;font-variant-numeric:tabular-nums;border-right:1px solid var(--accent);padding-right:8px;width:104px'), col('text-align:left;font-variant-numeric:proportional-nums'), [0, 1, 2].map((i) => gd(m5, 16, 20, ctr(60) + i * 20, ['base'])).join(''), [0, 1, 2].map((i) => gd(m5, 16, 20, ctr(60) + i * 20, ['base'])).join('')],
       [`<span class="b-mono b-d">${A(action)}</span>`, `<span class="b-mono b-d">${A(c.form.book)}</span>`, gd(mm, 13, 18.2, ctr(18.2), ['cap', 'base']), gd(mm, 13, 18.2, ctr(18.2), ['cap', 'base'])],
     ];
-    const rows = R.map((r, i) => `<li class="b-rule"><span class="b-bubble b-bubble--s b-nb num">${i + 1}</span><div class="b-rule__c"><div class="b-demo">${demos[i][2]}${demos[i][0]}</div><p class="b-rt">${ic(ctx, 'check')}<span>${A(r.do)}</span></p></div><div class="b-rule__c"><div class="b-demo b-demo--no">${demos[i][3]}${demos[i][1]}${cross('b-xs')}</div><p class="b-rt b-rt--no">${ic(ctx, 'x')}<span>${A(r.dont)}</span></p></div></li>`).join('');
-    return std(ctx, 'type-rules', `<p class="lead">${R.length} rules for setting type. Each says what to do, and what never happens. Every example sits on its drawn baseline.</p><div class="b-rulehead"><span></span><h3 class="b-h3">Do</h3><h3 class="b-h3">Don't</h3></div><ul class="b-rules">${rows}</ul>`);
+    const rows = R.slice(0, demos.length).map((r, i) => `<li class="b-rule"><span class="b-bubble b-bubble--s b-nb num">${i + 1}</span><div class="b-rule__c"><div class="b-demo">${demos[i][2]}${demos[i][0]}</div><p class="b-rt">${ic(ctx, 'check')}<span>${A(r.do)}</span></p></div><div class="b-rule__c"><div class="b-demo b-demo--no">${demos[i][3]}${demos[i][1]}${cross('b-xs')}</div><p class="b-rt b-rt--no">${ic(ctx, 'x')}<span>${A(r.dont)}</span></p></div></li>`).join('');
+    return std(ctx, 'type-rules', `<p class="lead">${Math.min(R.length, demos.length)} rules for setting type. Each says what to do, and what never happens. Every example sits on its drawn baseline.</p><div class="b-rulehead"><span></span><h3 class="b-h3">Do</h3><h3 class="b-h3">Don't</h3></div><ul class="b-rules">${rows}</ul>`);
   },
 
   'photo-direction'(ctx) {

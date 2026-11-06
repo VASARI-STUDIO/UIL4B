@@ -71,7 +71,7 @@ export const guidelinesA = {
     const L = ctx.logo, B = ctx.brand, cw = B.logo.colourways.colour, g = L.geos.colour;
     const LW = 560, LH = Math.round((LW * g.h) / g.w);
     const gp = L.geo, sc = LW / g.w, by = Math.round(gp.top * sc), bx = Math.round(gp.cx * sc); // plumb dimension: baseline to the foot of the bob, only where the logo is drawn
-    const plumb = ctx.edition === 'slot' ? '' : `<i class="g-ext" style="left:${bx + 10}px;top:${by}px;width:38px"></i><i class="g-ext" style="left:${bx + 14}px;top:${LH}px;width:34px"></i>${vline(bx + 44, by, LH - by, LH - by, { dx: 10 })}`;
+    const plumb = ctx.edition === 'slot' || gp.top === undefined ? '' : `<i class="g-ext" style="left:${bx + 10}px;top:${by}px;width:38px"></i><i class="g-ext" style="left:${bx + 14}px;top:${LH}px;width:34px"></i>${vline(bx + 44, by, LH - by, LH - by, { dx: 10 })}`;
     const fig = `<div class="a-fig" style="width:${LW}px;height:${LH}px">${L.html('colour', { width: LW, color: cw.name, label: 'Your logo goes here' })}${hline(0, -32, LW, LW)}${vline(LW + 24, 0, LH, LH)}${plumb}</div>`;
     return sheet(ctx, 'logo', `<p class="lead a-lead2">${A(B.logo.idea)}</p>${detail('A', L.labels.colour, `. ${B.logo.when.colour} Drawn at 1×.`, fig, 560, 'a-detail--lg')}`, '1×');
   },
