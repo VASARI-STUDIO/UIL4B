@@ -56,6 +56,8 @@ import {
   applyHomeShell,
   assertHomeShellApplied,
   homeShellRoot,
+  fontPreloadAfterStylesheets,
+  HOME_FONT_PRELOAD,
 } from '../../scripts/home-shell.mjs'
 
 const ROOT = process.cwd()
@@ -331,4 +333,33 @@ test('assertHomeShellApplied fails on a shell whose Geist preload went missing',
   assert.doesNotThrow(() => assertHomeShellApplied(applied, 'x'))
   const without = applied.replace(/<link[^>]*geist-latin\.woff2[^>]*>/, '')
   assert.throws(() => assertHomeShellApplied(without, 'x'), /Geist preload/)
+})
+
+// The Geist file has to be requested in the same wave as the stylesheets. Left last in the head
+// it queued behind the entry script's ~70 modulepreloads, arrived after the headline's first
+// paint, and the swap from the fallback face moved the headline's text by a fraction of a pixel.
+const BUILT_HEAD = [
+  '<head>',
+  '<link rel="stylesheet" crossorigin href="/assets/a.css">',
+  '<link rel="stylesheet" crossorigin href="/assets/b.css">',
+  '<script type="module" crossorigin src="/assets/index-x.js"></script>',
+  '<link rel="modulepreload" crossorigin href="/assets/c.js">',
+  '</head>',
+].join('\n')
+
+test('the Geist preload goes straight after the last stylesheet, ahead of the entry script and its modulepreloads', () => {
+  const placed = fontPreloadAfterStylesheets(BUILT_HEAD)
+  const at = (needle) => placed.indexOf(needle)
+  assert.ok(at(HOME_FONT_PRELOAD) > at('b.css'), 'the preload is behind the stylesheets')
+  assert.ok(at(HOME_FONT_PRELOAD) < at('index-x.js'), 'the preload is ahead of the entry script')
+  assert.ok(at(HOME_FONT_PRELOAD) < at('modulepreload'), 'the preload is ahead of the modulepreloads')
+  assert.equal(placed.split('geist-latin.woff2').length, 2, 'one preload')
+})
+
+test('assertHomeShellApplied fails on a shell whose Geist preload sits behind the entry script', () => {
+  const applied = applyHomeShell(read('index.html'))
+  assert.doesNotThrow(() => assertHomeShellApplied(applied, 'x'))
+  const script = '<script type="module" crossorigin src="/assets/index-x.js"></script>'
+  const behind = applied.replace(HOME_FONT_PRELOAD, `${script}\n${HOME_FONT_PRELOAD}`)
+  assert.throws(() => assertHomeShellApplied(behind, 'x'), /Geist preload behind the entry script/)
 })

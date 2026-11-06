@@ -260,14 +260,36 @@ export function applyHomeShell(html) {
   }
   const shelled = opened.slice(0, open) + homeShellRoot() + opened.slice(after)
   const unswitzered = shelled.replace(SWITZER_PRELOAD, '')
-  if (unswitzered.includes(HOME_FONT_PRELOAD)) return stylesheetsBeforeScripts(unswitzered)
   if (!unswitzered.includes('</head>')) {
     throw new Error('home-shell: could not find </head> to put the Geist preload before.')
   }
-  // Last in the head, after the stylesheets and the scripts: the first paint
-  // waits on the stylesheets, and this 29 KB font requested ahead of them (or
-  // ahead of the scripts) cost 95 to 170 ms of LCP on the throttled mobile profile.
-  return stylesheetsBeforeScripts(unswitzered.replace('</head>', `${HOME_FONT_PRELOAD}\n</head>`))
+  // Taken out first, so a shell that already carries it ends up with one, placed.
+  const unpreloaded = unswitzered.split(`${HOME_FONT_PRELOAD}\n`).join('').split(HOME_FONT_PRELOAD).join('')
+  return fontPreloadAfterStylesheets(stylesheetsBeforeScripts(unpreloaded))
+}
+
+/**
+ * Put the Geist preload straight after the last stylesheet link: ahead of the
+ * entry script and its ~70 modulepreload links, behind the sheets.
+ *
+ * The first paint waits on the stylesheets, so they keep the front of the
+ * queue; a 29 KB font requested ahead of them cost 95 to 170 ms of LCP on the
+ * throttled mobile profile. But with the sheets ahead of the scripts, a preload
+ * left last in the head sat behind about 400 KB of modulepreloads, so Geist
+ * arrived after the headline's first paint and the swap from 'Geist Fallback'
+ * moved the headline's text by a fraction of a pixel. Straight after the sheets
+ * the font is requested in the same wave and arrives with them. A head with no
+ * stylesheet link gets it before `</head>`.
+ */
+export function fontPreloadAfterStylesheets(html) {
+  const headEnd = html.indexOf('</head>')
+  if (headEnd === -1) return html
+  const head = html.slice(0, headEnd)
+  const sheets = [...head.matchAll(HEAD_STYLESHEETS)]
+  const last = sheets.at(-1)
+  const at = last ? last.index + last[0].length : headEnd
+  const lead = last && !last[0].endsWith('\n') ? '\n' : ''
+  return `${html.slice(0, at)}${lead}${HOME_FONT_PRELOAD}\n${html.slice(at)}`
 }
 
 // The built head lists the entry script and its ~70 modulepreload links, and
@@ -320,6 +342,10 @@ export function assertHomeShellApplied(html, where) {
   const lastSheet = head.lastIndexOf('rel="stylesheet"')
   if (script && lastSheet > script.index) {
     throw new Error(`home-shell: ${where} lists the entry script ahead of a stylesheet, which queues the render-blocking CSS behind the JS.`)
+  }
+  const preloadAt = head.indexOf(HOME_FONT_PRELOAD)
+  if (script && preloadAt > script.index) {
+    throw new Error(`home-shell: ${where} lists the Geist preload behind the entry script and its modulepreloads, so the font arrives after the headline's first paint.`)
   }
   if (missing.length) {
     throw new Error(
