@@ -114,14 +114,23 @@ async function scrollThrough(page, step = 600, pause = 70) {
   await page.waitForTimeout(400)
 }
 
-const TOOL_TABS = ['Palette', 'Icons', 'Fonts', 'Converter']
-/** Press the four tools on the phone switcher (a real switch each time, Palette is the start). */
+const FOLDER_NAMES = ['Fonts', 'Icons and emoji', 'Image tools', 'Colours']
+/** The bookmarks section's folder buttons that are drawn (the desktop stage or the phone layout, never both). */
+const folderButton = (page, name) => page.locator('#bookmarks [role="group"][aria-label="Folders inside Graphic design"] button')
+  .filter({ hasText: name }).and(page.locator(':visible')).first()
+/** Press the four folders (a real change each time; Colours is the start). A press stops the tour. */
 async function switchTools(page) {
-  for (const name of ['Icons', 'Fonts', 'Converter', 'Palette']) {
-    await page.getByLabel('Tools').getByRole('tab', { name, exact: true }).click()
+  for (const name of FOLDER_NAMES) {
+    await folderButton(page, name).click()
     await page.waitForTimeout(350)
   }
 }
+/** The tour's clock, if it is running: the open folder's run-bar fill, animating. */
+const tourRunning = (page) => page.evaluate(() => {
+  const fill = [...document.querySelectorAll('#bookmarks .bm-fill')].find((el) => el.getClientRects().length)
+  return !!fill && getComputedStyle(fill).animationPlayState === 'running'
+})
+const pauseButton = (page) => page.locator('#bookmarks .bm-pause, #bookmarks .bmp-pb').and(page.locator(':visible')).first()
 /** Press the other two library chips, then the first again. */
 async function pressChips(page) {
   for (const i of [1, 2, 0]) {
@@ -303,21 +312,41 @@ test('T3 with motion on and a wide window, the same walk does produce the named 
   await ctx.close()
 })
 
-test('T3 with motion on at 390, the tool switch enters and the tab pill slides', async ({ browser }) => {
-  const { ctx, page } = await open(browser, 390)
-  await go(page, '/')
-  await page.locator('#bookmarks').scrollIntoViewIfNeeded()
-  const before = await page.evaluate(() => window.__hm.anims.filter((a) => a.name === 'sp-enter').length)
-  expect(before, 'the first paint must not run the tool-switch enter').toBe(0)
-  const pill = page.locator('.sp-rail-ind')
-  const x0 = (await pill.boundingBox()).x
-  await page.getByLabel('Tools').getByRole('tab', { name: 'Icons', exact: true }).click()
-  await page.waitForTimeout(400)
-  expect((await ran(page, 'sp-enter')).length, 'choosing a tool enters its window').toBe(1)
-  const x1 = (await pill.boundingBox()).x
-  expect(x1 - x0, 'the pill sits one segment (82.5px + 4px gap) further along after one step').toBeCloseTo(86.5, 0)
-  await ctx.close()
-})
+// The bookmarks tour: it runs while its stage is on screen, Pause holds it, and a folder click stops it for good.
+for (const view of [1440, 390]) {
+  test(`T3 the bookmarks tour runs in view, Pause holds it and Play resumes it (${view}px)`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, view)
+    await go(page, '/')
+    await page.locator('#bookmarks .bm-stage, #bookmarks [data-r7ap-stage]').and(page.locator(':visible')).first().scrollIntoViewIfNeeded()
+    await expect.poll(() => tourRunning(page), { message: 'the tour never started with its stage in view' }).toBe(true)
+    const pause = pauseButton(page)
+    await expect(pause).toHaveAttribute('aria-label', 'Pause the folder tour')
+    await pause.click()
+    await expect(pause, 'the control did not turn into Play').toHaveAttribute('aria-label', 'Play the folder tour')
+    const open = () => page.locator('#bookmarks [role="group"][aria-label="Folders inside Graphic design"] button[aria-pressed="true"]').and(page.locator(':visible')).first().innerText()
+    const held = await open()
+    await page.waitForTimeout(3800) // longer than one folder's 3200ms
+    expect(await tourRunning(page), 'the tour kept running after Pause').toBe(false)
+    expect(await open(), 'a folder opened while the tour was paused').toBe(held)
+    await pause.click()
+    await expect.poll(() => tourRunning(page), { message: 'Play did not start the tour again' }).toBe(true)
+    await ctx.close()
+  })
+
+  test(`T3 a folder click stops the bookmarks tour for good (${view}px)`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, view)
+    await go(page, '/')
+    await page.locator('#bookmarks .bm-stage, #bookmarks [data-r7ap-stage]').and(page.locator(':visible')).first().scrollIntoViewIfNeeded()
+    await expect.poll(() => tourRunning(page)).toBe(true)
+    await folderButton(page, 'Image tools').click()
+    await expect(folderButton(page, 'Image tools')).toHaveAttribute('aria-pressed', 'true')
+    await page.waitForTimeout(3800)
+    expect(await tourRunning(page), 'the tour ran on after a folder was picked').toBe(false)
+    await expect(folderButton(page, 'Image tools'), 'the tour moved off the picked folder').toHaveAttribute('aria-pressed', 'true')
+    await expect(pauseButton(page)).toHaveAttribute('aria-label', 'Play the folder tour')
+    await ctx.close()
+  })
+}
 
 // ── T4: no layout shift ─────────────────────────────────────────────────────
 
@@ -376,16 +405,16 @@ for (const view of [1440, 768, 390]) {
 
 // ── T5: content changes do not move what is below ───────────────────────────
 
-for (const view of [390, 768]) {
-  test(`T5 a tool switch leaves the Exports heading where it was at ${view}px`, async ({ browser }) => {
+for (const view of [1440, 768, 390]) {
+  test(`T5 a folder pick leaves the Exports heading where it was at ${view}px`, async ({ browser }) => {
     const { ctx, page } = await open(browser, view)
     await go(page, '/')
     const top = () => page.evaluate(() => document.querySelector('#sp-spec-h').getBoundingClientRect().top + window.scrollY)
     const start = await top()
-    for (const name of ['Icons', 'Fonts', 'Converter', 'Palette']) {
-      await page.getByLabel('Tools').getByRole('tab', { name, exact: true }).click()
+    for (const name of FOLDER_NAMES) {
+      await folderButton(page, name).click()
       await page.waitForTimeout(350)
-      expect(await top(), `the Exports heading moved after switching to ${name}`).toBe(start)
+      expect(await top(), `the Exports heading moved after opening ${name}`).toBe(start)
     }
     await ctx.close()
   })
