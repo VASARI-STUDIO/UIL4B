@@ -4,13 +4,15 @@ import { useLocation } from 'react-router-dom'
 // WHEN THE HOMEPAGE'S BELOW-THE-FOLD SECTIONS ALL START LOADING AT ONCE.
 //
 // Each section opens on its own when it comes within 600px of the viewport (see
-// DeferredSection.jsx), and that is the only thing that opens one for a visitor
-// who scrolls, by wheel, touch, scrollbar or drag. This hook is the other way
-// in, for the visitors who jump rather than scroll: it turns true for every
-// section together on a link into the page (`/#plans` has to find its target),
-// on any key press (End, Page Down and Tab move the page by more than a
-// section), and after requestSections() (an in-page link, which usePageAnchors
-// calls).
+// DeferredSection.jsx), which is all a visitor who never touches the page needs.
+// This hook turns true for every section together on the first sign of someone
+// scrolling, pressing or touching, because a fling moves the page by many
+// sections between two frames and the observer would be left behind it; on a
+// link into the page (`/#plans` has to find its target); and after
+// requestSections() (an in-page link, which usePageAnchors calls). The chunks
+// are already in the cache from the idle prefetch (belowFoldSections.js) by the
+// time a visitor does this, so mounting them all is cheap.
+const INTENT_EVENTS = ['scroll', 'wheel', 'touchstart', 'pointerdown', 'keydown']
 const OPEN_SECTIONS_EVENT = 'home:open-sections'
 // Remembered, so a request made before the page has subscribed is not lost.
 let requested = false
@@ -30,11 +32,11 @@ export function useBelowFoldReady() {
   useEffect(() => {
     if (asked) return undefined
     const open = () => setAsked(true)
-    window.addEventListener('keydown', open, { once: true, passive: true })
+    INTENT_EVENTS.forEach((name) => window.addEventListener(name, open, { once: true, passive: true }))
     window.addEventListener(OPEN_SECTIONS_EVENT, open, { once: true })
     if (requested) open()
     return () => {
-      window.removeEventListener('keydown', open)
+      INTENT_EVENTS.forEach((name) => window.removeEventListener(name, open))
       window.removeEventListener(OPEN_SECTIONS_EVENT, open)
     }
   }, [asked])

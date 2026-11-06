@@ -8,10 +8,10 @@ import './deferredSection.css'
 // render-blocking sheet every route pays for (tests/unit/home-asset-budget.test.js
 // holds both sizes). A section's chunks start when its stand-in is within
 // NEAR_PX of the viewport, or when `ready` says every section should (a link
-// into the page or a key press: see useBelowFoldReady). Until then a section is
-// an empty box a little under its final height at the current width
-// (deferredSection.css), so the ones already mounted barely move when it
-// arrives. The chunks are fetched ahead of this, once the page is idle
+// into the page, or the first scroll, touch or key press: see
+// useBelowFoldReady). Until then a section is an empty box a little under its
+// final height at the current width (deferredSection.css), so the ones already
+// mounted barely move when it arrives. The chunks are fetched ahead of this, once the page is idle
 // (belowFoldSections.js), so a section mounts without waiting on a download.
 
 // How far outside the viewport, above and below, a stand-in opens its section.

@@ -3,7 +3,7 @@
 //   1. With no input event, a section mounts when its stand-in is within 600px of the viewport
 //      and stays a stand-in when it is farther than that.
 //   2. Scrolling down in steps with window.scrollTo (no wheel, no key, no pointer) leaves every
-//      section mounted before its top comes into view.
+//      section mounted before its top comes into view: the first scroll event opens them all.
 //
 // MUTATIONS (each turns a test red):
 //   - open every section on mount (`open` always true in DeferredSection.jsx) -> test 1, far sections mounted.
