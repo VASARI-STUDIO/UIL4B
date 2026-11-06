@@ -258,6 +258,9 @@ const ALLOWED = {
     '.tsc-page .tsc-row-name': 'token',
     '.tsc-page .tsc-row-num': 'value',
   },
+  'pages/type-tools-nav.css': {
+    '.ttn-mono': 'value',
+  },
 }
 
 // var(--mono) and var(--mono, fallback), but not var(--mono-ink) or var(--mono-glow).
