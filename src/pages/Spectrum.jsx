@@ -5,6 +5,7 @@ import SpectrumWords from '../components/spectrum/SpectrumWords'
 import SpectrumExports from '../components/spectrum/SpectrumExports'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import HomeHero from '../components/home/HomeHero'
+import HomeTry from '../components/home/HomeTry'
 import { AutoplayOwner } from '../components/home/AutoplayOwner'
 import HomeFinalCall from '../components/home/HomeFinalCall'
 import PhIcon from '../components/spectrum/PhIcon'
@@ -56,8 +57,8 @@ export default function Spectrum() {
         <HomeBookmarks />
 
         {/* ── Try the tools (slot) ────────────────────────────────────────── */}
-        <section id="try" aria-labelledby="try-h" data-slot="try">
-          <h2 id="try-h" className="sr-only" tabIndex={-1}>Try the tools</h2>
+        <section id="try" aria-labelledby="try-h">
+          <HomeTry />
         </section>
 
         {/* ── Exports (slot: the previous stack stands here) ──────────────── */}

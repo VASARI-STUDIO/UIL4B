@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import ToolFoot from './ToolFoot'
 import PhIcon from './PhIcon'
 import { prefersReducedMotion } from './reducedMotion'
+import { useImageMeasure, useInView } from './useImageMeasure'
 import { route } from './spectrumFacts'
 import useSlideIndicator from '../../hooks/useSlideIndicator'
 import { navigatesThisTab } from '../../utils/handoffSlot'
@@ -37,20 +38,6 @@ import {
 // rather than unmounted, so the panel is as tall as its tallest pane and a tab
 // switch moves nothing below the tab row.
 
-function useInView(ref, margin = '600px') {
-  const [seen, setSeen] = useState(() => typeof IntersectionObserver === 'undefined')
-  useEffect(() => {
-    const el = ref.current
-    if (!el || seen) return undefined
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect() }
-    }, { rootMargin: margin })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [ref, margin, seen])
-  return seen
-}
-
 /** True while the element is on screen (not one-shot, unlike useInView). */
 function useOnScreen(ref, active) {
   const [on, setOn] = useState(false)
@@ -63,12 +50,6 @@ function useOnScreen(ref, active) {
   }, [ref, active])
   return on
 }
-
-const encode = (canvas, type, q) => new Promise((resolve) => {
-  try { canvas.toBlob((b) => resolve(b ? b.size : null), type, q) } catch { resolve(null) }
-})
-
-const isImage = (file) => (file?.type || '').startsWith('image/')
 
 /** The saving line: [number, words, tone]. Tone 'win' is the accent. */
 function savingOf(pct, lossless) {
@@ -95,59 +76,11 @@ export default function BenchConverter({ onResult }) {
   const [ratioPreset, setRatioPreset] = useState(0)
   const [frameCount, setFrameCount] = useState(12)
   const [dragging, setDragging] = useState(null)
-  const [pick, setPick] = useState(null)
   const [clip, setClip] = useState(null)
-  const [failed, setFailed] = useState(false)
   const [loopReady, setLoopReady] = useState(false)
-  // { w, h, before } for the image being measured, and the latest AFTER size.
-  const [src, setSrc] = useState(null)
-  const [out, setOut] = useState(null)
-  const canvasRef = useRef(null)
   const modelOn = useOnScreen(stageRef, mode === 'model')
 
-  // Release a picked file's object URL when it is replaced or the page goes.
-  useEffect(() => () => { if (pick?.url) URL.revokeObjectURL(pick.url) }, [pick])
-
-  // Decode the image being compressed and measure its BEFORE size.
-  useEffect(() => {
-    if (!near || typeof document === 'undefined') return undefined
-    const url = pick ? pick.url : CONVERTER_SOURCE
-    let cancelled = false
-    const img = new Image()
-    img.decoding = 'async'
-    img.src = url
-    img.decode().then(async () => {
-      if (cancelled) return
-      const canvas = document.createElement('canvas')
-      canvas.width = img.naturalWidth
-      canvas.height = img.naturalHeight
-      canvas.getContext('2d').drawImage(img, 0, 0)
-      canvasRef.current = canvas
-      const before = pick ? pick.size : await encode(canvas, 'image/png')
-      if (cancelled) return
-      // A zero-size image, or one past the browser's canvas limit, cannot be
-      // measured; it reports as unsupported rather than waiting for a figure.
-      if (!img.naturalWidth || !img.naturalHeight || !before) { setSrc(null); setFailed(true); return }
-      setSrc({ w: img.naturalWidth, h: img.naturalHeight, before })
-    }).catch(() => { if (!cancelled) { setSrc(null); if (pick) setFailed(true) } })
-    return () => { cancelled = true }
-  }, [near, pick])
-
-  // Re-encode at the format and quality on screen.
-  useEffect(() => {
-    if (!src || !canvasRef.current) return undefined
-    let cancelled = false
-    const timer = setTimeout(async () => {
-      const [, type] = IMG_FORMATS[fmt]
-      const size = await encode(canvasRef.current, type, type === 'image/png' ? undefined : quality / 100)
-      // The size is stored with the format it was encoded as, so a reading
-      // from the previous format is never shown under the new one's name.
-      if (cancelled) return
-      if (size == null) { setFailed(true); return }
-      setOut({ size, format: IMG_FORMATS[fmt][0] })
-    }, 150)
-    return () => { cancelled = true; clearTimeout(timer) }
-  }, [src, fmt, quality])
+  const { pick, failed, src, out, takeImage } = useImageMeasure({ near, source: CONVERTER_SOURCE, format: IMG_FORMATS[fmt][1], quality })
 
   // The turntable plays only while its tab is open, the stage is on screen and
   // motion is allowed; otherwise the poster stands in, so nothing keeps decoding.
@@ -161,15 +94,6 @@ export default function BenchConverter({ onResult }) {
     return () => { cancelled = true }
   }, [playing, loopReady])
 
-  const takeImage = (file) => {
-    if (!file) return
-    // A rejected file leaves the current image and its measurements untouched.
-    if (!isImage(file)) { setFailed(true); return }
-    setOut(null)
-    setSrc(null)
-    setFailed(false)
-    setPick({ name: file.name, size: file.size, url: URL.createObjectURL(file), file })
-  }
   const takeClip = (file) => { if (file) setClip({ name: file.name, size: file.size }) }
 
   const select = (id) => {
@@ -197,7 +121,7 @@ export default function BenchConverter({ onResult }) {
   const before = src?.before ?? null
   // The AFTER size counts only once it was encoded as the format on screen; in
   // the gap after a format switch the old reading is stale, so it reads as pending.
-  const outSize = out && out.format === formatLabel ? out.size : null
+  const outSize = out && out.type === IMG_FORMATS[fmt][1] ? out.size : null
   const pct = before && outSize != null ? Math.round(100 - (outSize / before) * 100) : null
   const [numText, wordText, tone] = savingOf(pct, lossless)
   // The rail's summary reads the latest measurement. `measuring` is true only
