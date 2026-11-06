@@ -293,7 +293,7 @@ test.describe('Font Pair', () => {
     watch(page, 'designer choosing a font pairing')
     await go(page, '/create/font-pair')
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeAttached()
     await expect(page.locator('.fpr-specimen')).toBeVisible()
     await expect(page.getByRole('link', { name: /Browse the Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
 

@@ -199,6 +199,7 @@ test.describe('Font Pair · lock, shuffle, swap, undo', () => {
 test.describe('Font Pair · typed text', () => {
   test('goes in the headings only; the body keeps its paragraph', async ({ page }) => {
     await open(page)
+    await page.getByRole('button', { name: 'Article' }).click()
     const words = 'Ship interfaces that hold up'
     const before = await page.locator('.fpr-body').innerText()
     await page.getByLabel('Preview text').fill(words)

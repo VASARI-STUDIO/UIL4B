@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import FontBrowseDialog from '../components/FontBrowseDialog'
 import MenuSelect from '../components/tool/MenuSelect'
+import TypeToolsNav from '../components/tool/TypeToolsNav'
 import UIKitGuide from '../components/UIKitGuide'
 import SaveTypeSystem from '../components/SaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
@@ -47,6 +48,7 @@ import '../styles/pages/font-pair.css'
 // face is blocked the browser's own fallback shows and the notice explains why.
 
 const PREVIEW_PRESETS = [
+  { id: 'street', label: 'Street' },
   { id: 'article', label: 'Article' },
   { id: 'product', label: 'Product page' },
   // "Letterforms", not "Specimen". The other two presets
@@ -56,6 +58,15 @@ const PREVIEW_PRESETS = [
   // not a label.
   { id: 'specimen', label: 'Letterforms' },
 ]
+
+// The Street preset: the pair set on a photograph and the page under it. The
+// words are the sample brand's own.
+const STREET_PHOTO = '/samples/street-riders.jpg'
+const STREET_ALT = 'Two riders waiting at a city intersection, one in an orange jacket'
+const STREET_HEAD = 'Across town before lunch.'
+const STREET_CAPTION = 'Mai, cargo bike. Picked up at 10:52.'
+const STREET_VOICE = 'There at 11:40.'
+const STREET_PARA = 'Book a pickup by ten and your parcel is there by twelve. Mai collects from 88 Brunswick Street, rides the lanes you would not drive, and signs it in at 240 Adelaide Street. You see her the whole way.'
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
 // The body copy carries one bold and one italic phrase, so the specimen shows
@@ -194,7 +205,7 @@ export default function FontMatcher({ onCopy, toast }) {
   const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 700)
   const [bodyW, setBodyW] = useState(() => seedBody?.weight || 400)
   const [previewText, setPreviewText] = useState('')
-  const [preset, setPreset] = useState('article')
+  const [preset, setPreset] = useState('street')
   const [suggestions, setSuggestions] = useState([])
   const [suggesting, setSuggesting] = useState(true)
   // A locked side survives Shuffle. History is the undo stack of earlier pairs.
@@ -422,6 +433,21 @@ export default function FontMatcher({ onCopy, toast }) {
   const canUndo = history.length > 0
   const allItems = [
     {
+      id: 'switcher',
+      priority: 99,
+      menu: false,
+      render: () => (
+        <TypeToolsNav
+          current="pair"
+          heading={headingFont ? { family: headingFont.family, weight: headingW } : null}
+          body={bodyFont ? { family: bodyFont.family, weight: bodyW } : null}
+          scale={design?.typeScale?.ratio || 1.618}
+          headingStack={headingStack}
+          bodyStack={bodyStack}
+        />
+      ),
+    },
+    {
       id: 'shuffle',
       priority: 1,
       render: () => (
@@ -494,7 +520,7 @@ export default function FontMatcher({ onCopy, toast }) {
     </ToolButton>
   )
   const layout = (body) => (
-    <ToolLayout className="fpr-page" title="Font Pair" titleId="fpr-title" items={items} primary={phone ? null : primary}>
+    <ToolLayout className="fpr-page" title="Font Pair" titleId="fpr-title" showTitle={false} items={items} primary={phone ? null : primary}>
       {body}
     </ToolLayout>
   )
@@ -665,7 +691,24 @@ export default function FontMatcher({ onCopy, toast }) {
         </div>
       </div>
 
-      <div className="fpr-specimen" ref={varsRef(specimenVars)}>
+      <div className={preset === 'street' ? 'fpr-specimen fpr-specimen--street' : 'fpr-specimen'} ref={varsRef(specimenVars)}>
+        {preset === 'street' && (
+          <div className="fpr-street">
+            <div className="fpr-street-photo">
+              <img src={STREET_PHOTO} alt={STREET_ALT} width="2000" height="1217" />
+              <span className="fpr-plate fpr-plate--cap">{STREET_CAPTION}</span>
+              <span className="fpr-plate fpr-plate--tag">Sample photo</span>
+            </div>
+            <div className="fpr-street-page">
+              <div className="fpr-street-lead">
+                <h3 className="fpr-street-h">{sample || STREET_HEAD}</h3>
+                <p className="fpr-street-voice">{STREET_VOICE}</p>
+              </div>
+              <p className="fpr-street-p">{STREET_PARA}</p>
+            </div>
+          </div>
+        )}
+
         {preset === 'article' && (
           <article className="fpr-article">
             <h3 className="fpr-h1">{headline}</h3>
