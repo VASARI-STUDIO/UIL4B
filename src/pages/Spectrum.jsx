@@ -1,18 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import TryItMark from '../components/TryItMark'
 import SpectrumRamp from '../components/spectrum/SpectrumRamp'
 import SpectrumWords from '../components/spectrum/SpectrumWords'
 import SpectrumBench from '../components/spectrum/SpectrumBench'
 import SpectrumExports from '../components/spectrum/SpectrumExports'
-import SpectrumSearch from '../components/spectrum/SpectrumSearch'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
+import HomeHero from '../components/home/HomeHero'
+import { AutoplayOwner } from '../components/home/AutoplayOwner'
 import PhIcon from '../components/spectrum/PhIcon'
 import SpectrumProof from '../components/spectrum/SpectrumProof'
-import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { useSpectrumReveal } from '../components/spectrum/useSpectrumReveal'
-import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../components/spectrum/spectrumHero'
 import { gradientCss } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
@@ -24,6 +22,7 @@ import { ICON_GROUPS_ROUTE, listIconGroups } from '../data/iconGroups'
 // `/`, the first paint, which must not wait on a chunk. The budget test
 // (tests/unit/home-asset-budget.test.js) holds its size.
 import '../styles/pages/spectrum.css'
+import '../styles/pages/home-hero.css'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // SPECTRUM — the sales page, built from "UIL4B - Spectrum.dc.html".
@@ -147,25 +146,6 @@ export default function Spectrum() {
 
   useSpectrumReveal()
 
-  // THE HERO ENTRANCE, ON THE ONE PATH WHERE IT IS STILL AN ENTRANCE. The words'
-  // resting state is visible and the movement is a keyframe the class turns on.
-  // `data-hero-prepainted` is set on <html> for shells whose headline
-  // scripts/home-shell.mjs already painted; re-running the entrance there would
-  // be a second arrival of something that never left. Decided at first render
-  // so the hero never commits settled and then drops for a frame.
-  const [heroLit] = useState(() => typeof document !== 'undefined'
-    && !document.documentElement.hasAttribute('data-hero-prepainted')
-    && !prefersReducedMotion())
-  // THE ARRIVAL OF EVERYTHING REACT ADDS UNDER THE HEADLINE (spectrum.css, "the
-  // hero's arrival"): the sub-line, search and buttons rise in and the band is
-  // set. It plays on every path, since on a cold load these are the elements that
-  // appear after the painted headline, and it never touches the headline itself.
-  // Decided at first render, like `heroLit`, so nothing commits settled and then
-  // drops. Where the headline is rising (`heroLit`) the arrival starts 300ms in
-  // so the words lead and the band lands under them.
-  const [arrive] = useState(() => typeof document !== 'undefined' && !prefersReducedMotion())
-  const arriveAt = heroLit ? '300ms' : '0ms'
-
   // The library's grid fades on a chip press, never on first paint. The two keys
   // alternate so each press restarts the fade (spectrum.css, `sp-fade-a`).
   const [swaps, setSwaps] = useState(0)
@@ -182,38 +162,10 @@ export default function Spectrum() {
       <PillNav variant="spectrum" />
       <div className="sp-grain" aria-hidden="true" />
 
+      <AutoplayOwner>
       <main id="main" tabIndex={-1}>
 
-        {/* ── Hero ────────────────────────────────────────────────────────── */}
-        <header
-          className={`sp-hero${heroLit ? ' is-in' : ''}${arrive ? ' is-arriving' : ''}`}
-          style={arrive ? { '--sp-arrive-at': arriveAt } : undefined}
-        >
-          <div className="sp-shell sp-hero-core">
-            <h1 className="sp-hero-h1">
-              <SpectrumWords text={SPECTRUM_HERO.text} mark={SPECTRUM_HERO.mark} joinMark />
-            </h1>
-            <p className="sp-hero-sub">{SPECTRUM_HERO_SUB}</p>
-
-            <p className="sr-only" id="spectrum-search-label">Search every tool</p>
-            <div className="sp-hero-bar">
-              <div className="tim-anchor">
-                <SpectrumSearch labelledBy="spectrum-search-label" />
-                <TryItMark />
-              </div>
-              <div className="sp-hero-cta">
-                <Link className="sp-pill sp-pill--hero" to="/projects">
-                  <span>Open the toolkit</span>
-                  <span className="sp-pill-icon" aria-hidden="true"><PhIcon name="arrow-up-right" /></span>
-                </Link>
-                <Link className="sp-ghost sp-ghost--hero" to="/plans">View plans</Link>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Only this band is set on arrival; the closing one just sits there. */}
-        <SpectrumRamp mirror arrive={arrive} arriveAt={arriveAt} className="sp-ramp--hero" />
+        <HomeHero />
 
         {/* ── The bench ───────────────────────────────────────────────────── */}
         <section id="bench" className="sp-section" aria-labelledby="sp-bench-h">
@@ -335,6 +287,7 @@ export default function Spectrum() {
 
         <SpectrumRamp className="sp-ramp--close" />
       </main>
+      </AutoplayOwner>
 
       <SpectrumFooter toolkitTo="/projects" reveal />
     </div>
