@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../spectrum/spectrumHero'
 import SpectrumSearch from '../spectrum/SpectrumSearch'
 import { useAutoplaySlot } from './useAutoplaySlot'
-import { useLoopSize } from './heroLoopSize'
+import { LOOP_SIZES, useLoopSize } from './heroLoopSize'
+import ChunkBoundary from './ChunkBoundary'
 
 const HeroLoop = lazy(() => import('./HeroLoop'))
 
@@ -23,7 +24,16 @@ const HeroLoop = lazy(() => import('./HeroLoop'))
 //
 // The loop's frame (`.hh-slot`) is the element the page's autoplay owner
 // watches. It is sized by CSS from the first paint, and the loop module that
-// fills it loads after, so its arrival cannot move the layout.
+// fills it loads after, so its arrival cannot move the layout. If that module
+// cannot download, the boundary leaves an empty panel of the same size, so the
+// rest of the hero stays and the page does not fall to the route's error card.
+
+/** The loop's panel with nothing drawn in it: what the frame holds when the loop's code did not arrive. */
+function LoopStandIn({ size }) {
+  const { width, height } = LOOP_SIZES[size] || LOOP_SIZES.wide
+  return <div className="hh-loop" data-size={size} style={{ width, height }} aria-hidden="true" />
+}
+
 export default function HomeHero() {
   const size = useLoopSize()
   const [frameEl, setFrameEl] = useState(null)
@@ -61,9 +71,11 @@ export default function HomeHero() {
 
       <figure className="hh-fig">
         <div className="hh-slot" data-size={size} data-playing={playing ? 'true' : 'false'} ref={setFrameEl}>
-          <Suspense fallback={null}>
-            <HeroLoop key={size} size={size} playing={playing} />
-          </Suspense>
+          <ChunkBoundary key={size} fallback={<LoopStandIn size={size} />}>
+            <Suspense fallback={null}>
+              <HeroLoop size={size} playing={playing} />
+            </Suspense>
+          </ChunkBoundary>
         </div>
       </figure>
     </section>
