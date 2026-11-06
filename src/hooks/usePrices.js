@@ -64,7 +64,13 @@ const subscribeToNothing = () => () => {}
 // `enabled: false` reads whatever the cache holds and starts no request, so a
 // surface far down a page can wait until it is near before it asks.
 export function usePrices({ enabled = true } = {}) {
-  useSyncExternalStore(enabled ? subscribe : subscribeToNothing, getSnapshot, getServerSnapshot)
+  return usePricesVia(enabled ? subscribe : subscribeToNothing)
+}
+
+// The one place the store is read: `subscribe` is the store's own, or one that
+// never fetches.
+function usePricesVia(subscribe) {
+  useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   return { prices: priceCache, settled: priceSettled }
 }
 

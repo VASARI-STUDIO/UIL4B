@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react'
+import { Suspense, useState } from 'react'
+import { lazyRoute as lazy } from '../../utils/lazyRoute'
 import { Link } from 'react-router-dom'
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../spectrum/spectrumHero'
 import { useAutoplaySlot } from './useAutoplaySlot'

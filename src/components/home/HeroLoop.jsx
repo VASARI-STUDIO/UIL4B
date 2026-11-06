@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
+import { lazyRoute as lazy } from '../../utils/lazyRoute'
 import { LOOP_SIZES } from './heroLoopSize'
 import { loadFont } from '../../utils/googleFonts'
 
