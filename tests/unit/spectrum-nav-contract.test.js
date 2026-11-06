@@ -244,7 +244,11 @@ test('the screen you are on is announced as well as painted', () => {
 test('the search pill names its shortcut by platform, and one chord has one handler', () => {
   const src = stripJs(read(SPECTRUM_NAV))
   assert.match(src, />Search tools</, 'the pill\'s label is gone')
-  assert.match(src, /apple \? '\\u2318K' : 'Ctrl K'/, 'the hint is not Command K on Apple and Ctrl K elsewhere')
+  assert.match(src, /apple \? '(?:⌘|\\u2318)K' : 'Ctrl K'/, 'the hint is not Command K on Apple and Ctrl K elsewhere')
+  // The pill's assistive shortcut names the same chord as its visible hint.
+  assert.match(src, /aria-keyshortcuts=\{shortcut === 'Ctrl K' \? 'Control\+K' : 'Meta\+K'\}/, 'aria-keyshortcuts no longer follows the visible hint')
+  // Control and Command both open it, but never with Alt or Shift held.
+  assert.match(src, /\(e\.metaKey \|\| e\.ctrlKey\) && !e\.altKey && !e\.shiftKey/, 'the chord is no longer Control or Command K alone')
   // The server snapshot must be the non-Apple one, so server and client markup agree.
   assert.match(src, /useSyncExternalStore\(noopSubscribe, isApplePlatform, \(\) => false\)/)
   // The hero's command bar binds Control or Command K itself; the nav steps aside
