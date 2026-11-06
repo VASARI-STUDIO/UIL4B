@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
+import ChunkBoundary from './ChunkBoundary'
 import './deferredSection.css'
 
 // THE HOMEPAGE'S BELOW-THE-FOLD SECTIONS LOAD AS THEY APPROACH THE VIEWPORT.
@@ -20,10 +21,13 @@ const NEAR_PX = 600
 // The stand-in for a section whose chunk has not arrived. `holdId` is set when
 // the section renders its own id (so an in-page link has something to land on
 // until it does); the sections the page wraps itself already carry theirs.
-// `data-deferred-hold` marks it for usePageAnchors, which waits until none is
-// left before it lands an arriving hash.
-function Hold({ holdId, size, holdRef }) {
-  return <div ref={holdRef} id={holdId} className={`dsh-${size}`} data-deferred-hold="" aria-hidden="true" />
+// `data-deferred-hold` marks it for usePageAnchors and landOnHash, which wait
+// until none is left before they land an arriving hash. A stand-in whose chunk
+// failed to download is `failed`: it keeps its size and id but is no longer
+// waited for, since nothing is coming to replace it.
+function Hold({ holdId, size, holdRef, failed = false }) {
+  const marker = failed ? { 'data-deferred-failed': '' } : { 'data-deferred-hold': '' }
+  return <div ref={holdRef} id={holdId} className={`dsh-${size}`} aria-hidden="true" {...marker} />
 }
 
 /** `children` is a lazy section; `size` names its stand-in height in
@@ -48,5 +52,9 @@ export default function DeferredSection({ ready, holdId, size, children }) {
 
   const hold = <Hold holdId={holdId} size={size} holdRef={holdRef} />
   if (!open) return hold
-  return <Suspense fallback={hold}>{children}</Suspense>
+  return (
+    <ChunkBoundary fallback={<Hold holdId={holdId} size={size} failed />}>
+      <Suspense fallback={hold}>{children}</Suspense>
+    </ChunkBoundary>
+  )
 }
