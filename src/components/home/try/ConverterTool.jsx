@@ -72,7 +72,8 @@ export default function ConverterTool() {
   }
 
   return (
-    <div className="ht-tool" ref={root}>
+    <>
+      <div className="ht-tool ht-cvt" ref={root}>
       <div className="ht-tabs" role="tablist" aria-label="Conversion type" onKeyDown={tabKey}>
         {MODES.map(([label], i) => (
           <button
@@ -168,6 +169,7 @@ export default function ConverterTool() {
           <p className="ht-cv-qn">{png ? 'PNG is lossless.' : ''}</p>
         </div>
       </div>
+      </div>
 
       <ToolLink
         to={route('file-converter')}
@@ -177,6 +179,6 @@ export default function ConverterTool() {
       >
         Open in File Converter
       </ToolLink>
-    </div>
+    </>
   )
 }

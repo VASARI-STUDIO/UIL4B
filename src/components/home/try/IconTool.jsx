@@ -23,8 +23,9 @@ const PACK = 'Phosphor'
 const WEIGHT_SUFFIX = /-(bold|fill|duotone|light|thin)$/
 const NAME = /^[a-z0-9-]{1,48}$/
 const HEX = /^#[0-9A-F]{6}$/
-// The grid shows nine rows; this is more than any width fills.
-const CAP = 81
+// The grid shows nine rows at most. The list is the whole starting set, so the
+// count read out comes from the data, not a typed number.
+const CAP = ICON_START.length
 const CHUNK = 60
 const SEARCH_DELAY = 250
 const SLOW_AFTER = 400
@@ -169,7 +170,8 @@ export default function IconTool() {
   } else if (kinds.includes('search') && total) line = short = 'Pick one to colour it.'
 
   return (
-    <div className="ht-tool" ref={root}>
+    <>
+      <div className="ht-tool ht-icn" ref={root}>
       <div className="ht-tb">
         <div className="ht-field">
           <svg viewBox="0 0 256 256" aria-hidden="true" focusable="false"><path d={MAGNIFIER} /></svg>
@@ -256,8 +258,9 @@ export default function IconTool() {
         </div>
       </div>
 
+        <span className="ht-sr" role="status">{failed ? '' : slow ? 'Searching…' : count}</span>
+      </div>
       <ToolLink to={route('icons')} line={line} short={short}>Open in Icon Library</ToolLink>
-      <span className="ht-sr" role="status">{failed ? '' : slow ? 'Searching…' : count}</span>
-    </div>
+    </>
   )
 }

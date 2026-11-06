@@ -144,7 +144,8 @@ export default function FontTool() {
   const to = first ? `${route('font-gallery')}?font=${encodeURIComponent(first)}` : route('font-gallery')
 
   return (
-    <div className="ht-tool ht-fn" ref={root} style={{ '--fs': `${size}px`, '--pitch': `${pitch}px` }}>
+    <>
+      <div className="ht-tool ht-fn" ref={root} style={{ '--fs': `${size}px`, '--pitch': `${pitch}px` }}>
       <div className="ht-tb">
         <input
           className="ht-input"
@@ -228,6 +229,7 @@ export default function FontTool() {
         {picks.length >= 2 && <button type="button" className="ht-btn" onClick={toggleCompare}>{compare ? 'Back to list' : 'Side by side'}</button>}
         <Link className="ht-btn" to={route('font-pair')}>Build a font pair</Link>
       </div>
+      </div>
 
       <ToolLink
         to={to}
@@ -237,6 +239,6 @@ export default function FontTool() {
       >
         Open in Font Gallery
       </ToolLink>
-    </div>
+    </>
   )
 }
