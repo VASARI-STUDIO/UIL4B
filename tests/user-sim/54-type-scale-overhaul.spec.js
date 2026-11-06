@@ -180,7 +180,7 @@ test.describe('Type Scale · the overhaul', () => {
   test('fine tuning is closed on arrival and every control is still reachable', async ({ page }) => {
     watch(page, 'designer who needs letter spacing')
     await go(page, '/create/type-scale')
-    // At 1440 the Scale / Page / Code switch is gone, so any tab here is a stray.
+    // At 1440 the Scale / Page switch is gone, so any tab here is a stray.
     expect(await settleTypeScaleView(page)).toBe('split')
 
     const toggle = page.getByRole('button', { name: 'Fine tuning' })

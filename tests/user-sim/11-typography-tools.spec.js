@@ -107,8 +107,8 @@ test.describe('Type Scale Generator', () => {
     // At 1440 the work column is wide enough to show the ladder and the page
     // side by side, so there is no audience switch to press: the page preview is
     // already there, and so are the steps the controls above just moved. (The
-    // Scale / Page / Code switch below the split is covered in the test after
-    // the keyboard one.)
+    // Scale / Page switch below the split is covered in the test after the
+    // keyboard one.)
     await showTypeScalePage(page)
     await expect(page.getByRole('tab')).toHaveCount(0)
     await expect(page.locator('.tsc-row').first()).toBeVisible()
