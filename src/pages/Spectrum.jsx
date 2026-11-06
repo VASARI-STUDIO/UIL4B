@@ -1,9 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import SpectrumRamp from '../components/spectrum/SpectrumRamp'
 import SpectrumWords from '../components/spectrum/SpectrumWords'
-import SpectrumBench from '../components/spectrum/SpectrumBench'
 import SpectrumExports from '../components/spectrum/SpectrumExports'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import HomeHero from '../components/home/HomeHero'
@@ -12,8 +10,8 @@ import HomeFinalCall from '../components/home/HomeFinalCall'
 import PhIcon from '../components/spectrum/PhIcon'
 import HomeProof from '../components/home/HomeProof'
 import HomeShowcase from '../components/home/HomeShowcase'
+import HomeBookmarks from '../components/home/HomeBookmarks'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
-import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE: this page is
 // `/`, the first paint, which must not wait on a chunk. The budget test
 // (tests/unit/home-asset-budget.test.js) holds its size.
@@ -34,10 +32,9 @@ import '../styles/pages/home-hero.css'
 // final call, one <footer>.
 
 export default function Spectrum() {
-  // The seed and the family chosen in the bookmarks windows drive the exports
-  // cards below them.
-  const [base, setBase] = useState(0)
-  const [font, setFont] = useState(0)
+  // The seed and the family the exports cards draw their sample from.
+  const [base] = useState(0)
+  const [font] = useState(0)
 
   usePageAnchors()
 
@@ -54,26 +51,8 @@ export default function Spectrum() {
 
         <HomeHero />
 
-        {/* ── Bookmarks (slot: the previous bench stands here) ────────────── */}
-        <section id="bookmarks" className="sp-section" aria-labelledby="sp-bench-h">
-          <SpectrumBench
-            base={base}
-            onBase={setBase}
-            font={font}
-            onFont={setFont}
-            head={(
-              <div>
-                <h2 className="sp-h2" id="sp-bench-h" tabIndex={-1}>Say goodbye to bookmark folders.</h2>
-                <p className="sp-bench-lede">
-                  {numberWord(TOOL_COUNT, { capital: true })} tools that would otherwise be{' '}
-                  {numberWord(TOOL_COUNT)} tabs and a folder you stopped opening. They are all
-                  running below.{' '}
-                  <Link className="sp-bench-more" to="/tools">See all of them.</Link>
-                </p>
-              </div>
-            )}
-          />
-        </section>
+        {/* ── Bookmarks ───────────────────────────────────────────────────── */}
+        <HomeBookmarks />
 
         {/* ── Try the tools (slot) ────────────────────────────────────────── */}
         <section id="try" aria-labelledby="try-h" data-slot="try">
