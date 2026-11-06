@@ -153,6 +153,50 @@ html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
 .fpr-sheet .fpr-suggest { padding: 16px 4px 8px; }
 .fpr-sheet .fpr-suggest-grid { margin: 0 -8px; }
 
+/* ── Weight control: a trigger, and the family's weights as a tray of pills ──
+   The trigger is a filled pill with the weight in mono and a chevron that turns
+   over while the tray is open. The tray sits in the card's flow below the kind
+   line, five pills to a row; the pick fills, never outlines. */
+:is(.fpr-page, .fpr-sheet) .fpr-wmenu {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 36px; padding: 0 10px 0 14px; border: 0; border-radius: 999px;
+  background: var(--fpr-fill-2); color: var(--tl-ink);
+  font-family: var(--mono, monospace); font-size: 13px; line-height: 18px; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: transform .12s var(--tl-ease, ease-out), background-color .15s ease;
+}
+:is(.fpr-page, .fpr-sheet) .fpr-wmenu[aria-expanded="true"] { background: var(--fpr-sel); }
+:is(.fpr-page, .fpr-sheet) .fpr-wmenu svg { transition: transform .15s var(--tl-ease, ease-out); }
+:is(.fpr-page, .fpr-sheet) .fpr-wmenu[aria-expanded="true"] svg { transform: rotate(180deg); }
+:is(.fpr-page, .fpr-sheet) .fpr-wtray {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 12px; min-width: 0;
+}
+:is(.fpr-page, .fpr-sheet) .fpr-wopt {
+  height: 36px; min-width: 0; padding: 0; border: 0; border-radius: 999px;
+  background: var(--fpr-fill); color: var(--tl-dim);
+  font-family: var(--mono, monospace); font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transition: transform .12s var(--tl-ease, ease-out), background-color .15s ease, color .15s ease;
+}
+:is(.fpr-page, .fpr-sheet) .fpr-wopt[aria-selected="true"] { background: var(--fpr-sel); color: var(--tl-ink); }
+:is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt):active { transform: scale(.97); }
+:is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt):focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.fpr-page, .fpr-sheet) .fpr-wmenu:hover:not([aria-expanded="true"]) { background: var(--fpr-sel); }
+  :is(.fpr-page, .fpr-sheet) .fpr-wopt:hover:not([aria-selected="true"]) { background: var(--fpr-fill-2); }
+}
+/* The sheet's grid gives the tray its own full-width row under the actions. */
+.fpr-sheet .fpr-wtray { grid-area: 4 / 1 / 5 / -1; margin-top: 4px; }
+@media (max-width: 767px), (pointer: coarse) {
+  :is(.fpr-page, .fpr-sheet) .fpr-wmenu { height: 44px; padding: 0 12px 0 16px; font-size: 14px; }
+  :is(.fpr-page, .fpr-sheet) .fpr-wopt { height: 44px; font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt) { transition: background-color .15s ease; }
+  :is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt):active { transform: none; }
+  :is(.fpr-page, .fpr-sheet) .fpr-wmenu svg { transition: none; }
+}
+
 /* ── Suggestions: compact rows, one reason line per group ────────────────── */
 :is(.fpr-page, .fpr-sheet) .fpr-sug-group { display: grid; gap: 8px; min-width: 0; }
 :is(.fpr-page, .fpr-sheet) .fpr-sug-group + .fpr-sug-group { margin-top: 8px; }

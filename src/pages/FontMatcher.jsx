@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import FontBrowseDialog from '../components/FontBrowseDialog'
-import MenuSelect from '../components/tool/MenuSelect'
 import ToolIcon from '../components/tool/ToolIcon'
 import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import UIKitGuide from '../components/UIKitGuide'
@@ -112,17 +111,51 @@ function useMedia(query) {
   return match
 }
 
+// Weights per row in the open weight tray; Up and Down move by this many.
+const WEIGHT_COLS = 5
+
 // One family of the pair: the label with its actions (Shuffle or Best match,
-// then Browse), the name in its own face beside the weight, and a foot line with
-// the category and weight count beside Lock. `headAction` is the slot's own
-// action: Shuffle on the heading, Best match on the body. Weights hold nothing
-// but weights.
+// then Browse), the name in its own face beside the weight trigger, and a foot
+// line with the category and weight count beside Lock. The trigger opens the
+// family's weights as a row of pills below the card. `headAction` is the slot's
+// own action: Shuffle on the heading, Best match on the body. Weights hold
+// nothing but weights.
 function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, headAction, locked, onToggleLock }) {
   const uid = useId()
   const [browsing, setBrowsing] = useState(false)
   const slot = label.split(' ')[0]
   const count = font.variants.length
-  const weights = font.variants.map((w) => ({ value: w, label: String(w) }))
+  // Only the weights this family has are offered, so 100-900 never shows a
+  // weight the face cannot draw.
+  const weights = font.variants
+  const [weightsOpen, setWeightsOpen] = useState(false)
+  const triggerRef = useRef(null)
+  const trayRef = useRef(null)
+  const trayId = `${uid}-weights`
+  // Opening moves focus onto the current weight, so the keyboard lands in the
+  // list; a pointer open shows no ring because the focus is programmatic.
+  useEffect(() => {
+    if (weightsOpen) trayRef.current?.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true })
+  }, [weightsOpen])
+  const closeWeights = () => {
+    setWeightsOpen(false)
+    triggerRef.current?.focus({ preventScroll: true })
+  }
+  // Arrow keys travel the pills (Up and Down jump a row of five); Escape
+  // closes just the tray, since an open trigger tells the sheet to stand down.
+  const onTrayKey = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeWeights(); return }
+    const pills = [...trayRef.current.querySelectorAll('[role="option"]')]
+    const at = pills.indexOf(document.activeElement)
+    const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: WEIGHT_COLS, ArrowUp: -WEIGHT_COLS }[e.key]
+    let next = null
+    if (step !== undefined) next = Math.min(Math.max(at + step, 0), pills.length - 1)
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = pills.length - 1
+    if (next === null) return
+    e.preventDefault()
+    pills[next].focus({ preventScroll: true })
+  }
   return (
     <div
       className="fpr-fam"
@@ -145,7 +178,19 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
       </div>
       <div className="fpr-fam-row">
         <span className="fpr-fam-name">{font.family}</span>
-        <MenuSelect className="fpr-wmenu" value={weight} options={weights} onChange={onWeight} ariaLabel={`${slot} weight`} />
+        <button
+          ref={triggerRef}
+          type="button"
+          className="fpr-wmenu"
+          aria-haspopup="listbox"
+          aria-expanded={weightsOpen}
+          aria-controls={weightsOpen ? trayId : undefined}
+          aria-label={`${slot} weight: ${weight}`}
+          onClick={() => setWeightsOpen((o) => !o)}
+        >
+          <span>{weight}</span>
+          <ToolIcon name="caret-down" size={14} />
+        </button>
       </div>
       <div className="fpr-fam-foot">
         <span className="fpr-fam-meta">{categoryLabel(font.category)} · {weightCount(count)}</span>
@@ -160,6 +205,24 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
           onClick={onToggleLock}
         />
       </div>
+      {weightsOpen && (
+        <div ref={trayRef} id={trayId} className="fpr-wtray" role="listbox" aria-label={`${slot} weight`} onKeyDown={onTrayKey}>
+          {weights.map((w) => (
+            <button
+              key={w}
+              type="button"
+              role="option"
+              data-value={w}
+              className="fpr-wopt"
+              aria-selected={w === weight}
+              tabIndex={w === weight ? 0 : -1}
+              onClick={() => { onWeight(w); closeWeights() }}
+            >
+              {w}
+            </button>
+          ))}
+        </div>
+      )}
       {browsing && (
         <FontBrowseDialog
           title={label}
@@ -325,13 +388,37 @@ export default function FontMatcher({ onCopy, toast }) {
     return true
   }, [catalog, setFonts])
 
+  // Put the pair back as it stood before a pick or shuffle, and drop that step
+  // from the history when it is still the newest, so Undo in More does not
+  // repeat it. Applying a snapshot raises no toast: the page change is the answer.
+  const restorePair = useCallback((previous) => {
+    if (!applySnapshot(previous)) return
+    setHistory((h) => {
+      const top = h[h.length - 1]
+      const same = top && top.headingName === previous.headingName && top.bodyName === previous.bodyName
+        && top.headingW === previous.headingW && top.bodyW === previous.bodyW
+      return same ? h.slice(0, -1) : h
+    })
+  }, [applySnapshot])
+
+  // "Using {body} with {heading}" with an Undo button on the toast itself.
+  // `previous` is the pair before the change.
+  const pairToast = useCallback((previous, heading, body) => {
+    toast?.(`Using ${body} with ${heading}`, 'success', {
+      action: { label: 'Undo', onAction: () => restorePair(previous) },
+    })
+  }, [toast, restorePair])
+
   const chooseHeading = useCallback((font) => {
     const w = font.variants.includes(headingW) ? headingW : headingWeight(font)
     if (font.family !== headingName) remember()
     setHeadingName(font.family)
     setHeadingW(w)
     setFonts({ heading: { family: font.family, weight: w, category: font.category } })
-  }, [headingW, headingName, remember, setFonts])
+    // The phone has no room to see the pair change under the sheet, so it
+    // confirms a new heading the way a new body is confirmed.
+    if (phone && font.family !== headingName) pairToast(snapshot, font.family, bodyName)
+  }, [headingW, headingName, bodyName, phone, snapshot, remember, setFonts, pairToast])
 
   const chooseBody = useCallback((font) => {
     const w = font.variants.includes(bodyW) ? bodyW : bodyWeight(font)
@@ -339,7 +426,8 @@ export default function FontMatcher({ onCopy, toast }) {
     setBodyName(font.family)
     setBodyW(w)
     setFonts({ body: { family: font.family, weight: w, category: font.category } })
-  }, [bodyW, bodyName, remember, setFonts])
+    if (font.family !== bodyName) pairToast(snapshot, headingName, font.family)
+  }, [bodyW, bodyName, headingName, snapshot, remember, setFonts, pairToast])
 
   // NB: not named `usePair` — a `use…` identifier makes the rules-of-hooks lint
   // treat every call site as a hook call, which it is not.
@@ -353,8 +441,9 @@ export default function FontMatcher({ onCopy, toast }) {
       heading: { family: headingFont.family, weight: headingW, category: headingFont.category },
       body: { family: body.family, weight: bw, category: body.category },
     })
-    toast?.(`Using ${body.family} with ${headingFont.family}`)
-  }, [headingFont, headingW, bodyName, remember, setFonts, toast])
+    if (body.family !== bodyName) pairToast(snapshot, headingFont.family, body.family)
+    else toast?.(`Using ${body.family} with ${headingFont.family}`)
+  }, [headingFont, headingW, bodyName, snapshot, remember, setFonts, pairToast, toast])
 
   const lock = locks.heading && locks.body ? 'both' : locks.heading ? 'heading' : locks.body ? 'body' : null
   const toggleLock = (side) => setLocks((l) => ({ ...l, [side]: !l[side] }))
@@ -374,8 +463,8 @@ export default function FontMatcher({ onCopy, toast }) {
     applySnapshot({
       headingName: next.heading.family, bodyName: next.body.family, headingW: headingNext, bodyW: bodyNext,
     })
-    toast?.(`${next.heading.family} with ${next.body.family}`)
-  }, [catalog, headingFont, bodyFont, headingW, bodyW, lock, remember, applySnapshot, toast])
+    pairToast(snapshot, next.heading.family, next.body.family)
+  }, [catalog, headingFont, bodyFont, headingW, bodyW, lock, snapshot, remember, applySnapshot, pairToast, toast])
 
   // Swap the two families. A lock stays with its family, so it swaps sides too.
   const swap = useCallback(() => {
