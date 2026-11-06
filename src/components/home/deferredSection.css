@@ -1,75 +1,94 @@
 /* The empty box a below-the-fold section holds until it arrives: the least
-   height the real section has anywhere in each width band, so the page only
-   ever grows by a little when a section lands and nothing is left over to
-   collapse. The bands follow where the sections change layout (1440, 1200,
-   1024, 768 and the phone widths), and each one reads the shortest the section
-   measured inside it. Measured with every section mounted, at 320 to 1920. */
-.dsh-bookmarks { min-height: 1130px; }
-.dsh-try       { min-height: 3456px; }
-.dsh-exports   { min-height: 2589px; }
-.dsh-examples  { min-height: 1541px; }
-.dsh-plans     { min-height: 1517px; }
-
-@media (max-width: 1439px) {
-  .dsh-bookmarks { min-height: 1030px; }
-  .dsh-examples  { min-height: 1511px; }
-}
-@media (max-width: 1359px) {
-  .dsh-examples { min-height: 1480px; }
-}
-@media (max-width: 1279px) {
-  .dsh-bookmarks { min-height: 1001px; }
-  .dsh-examples  { min-height: 1449px; }
-  .dsh-plans     { min-height: 1538px; }
-}
-@media (max-width: 1199px) {
-  .dsh-bookmarks { min-height: 850px; }
-  .dsh-try       { min-height: 3993px; }
-  .dsh-exports   { min-height: 2525px; }
-  .dsh-examples  { min-height: 1327px; }
-  .dsh-plans     { min-height: 1978px; }
-}
-@media (max-width: 1023px) {
-  .dsh-bookmarks { min-height: 1746px; }
-  .dsh-exports   { min-height: 3527px; }
-  .dsh-examples  { min-height: 1314px; }
-  .dsh-plans     { min-height: 2043px; }
-}
-@media (max-width: 767px) {
-  .dsh-bookmarks { min-height: 1769px; }
-  .dsh-try       { min-height: 3592px; }
-  .dsh-exports   { min-height: 2738px; }
-  .dsh-examples  { min-height: 1306px; }
-  .dsh-plans     { min-height: 1654px; }
-}
-@media (max-width: 639px) {
-  .dsh-try      { min-height: 3592px; }
-  .dsh-exports  { min-height: 2784px; }
-  .dsh-examples { min-height: 1326px; }
-  .dsh-plans    { min-height: 1698px; }
-}
-@media (max-width: 519px) {
-  .dsh-try      { min-height: 3676px; }
-  .dsh-exports  { min-height: 2824px; }
-  .dsh-examples { min-height: 1351px; }
-  .dsh-plans    { min-height: 1720px; }
-}
-@media (max-width: 479px) {
-  .dsh-try      { min-height: 3764px; }
-  .dsh-exports  { min-height: 2970px; }
-  .dsh-examples { min-height: 1391px; }
-  .dsh-plans    { min-height: 1904px; }
-}
-@media (max-width: 399px) {
-  .dsh-try      { min-height: 3828px; }
-  .dsh-exports  { min-height: 3009px; }
-  .dsh-examples { min-height: 1314px; }
-  .dsh-plans    { min-height: 1976px; }
-}
-@media (max-width: 359px) {
-  .dsh-bookmarks { min-height: 1745px; }
-  .dsh-try       { min-height: 3857px; }
-  .dsh-exports   { min-height: 3109px; }
-  .dsh-examples  { min-height: 1312px; }
-  .dsh-plans     { min-height: 2069px; }
-}
+   height the real section has anywhere in a run of widths, so the page only
+   ever grows when a section lands and nothing is left over to collapse. Each
+   section's height changes with the width of the page (its text wraps, its
+   columns stack), so a run of widths ends where the real height has risen more
+   than 20px above the run's least, and the next run starts from its own least.
+   Measured with every section mounted, at each width from 320 to 1920. */
+.dsh-bookmarks  { min-height: 1130px; }
+.dsh-try        { min-height: 3456px; }
+.dsh-exports    { min-height: 2589px; }
+.dsh-examples   { min-height: 1533px; }
+.dsh-plans      { min-height: 1517px; }
+@media (max-width: 1439px) { .dsh-bookmarks { min-height: 1030px; } }
+@media (max-width: 1416px) { .dsh-examples { min-height: 1512px; } }
+@media (max-width: 1361px) { .dsh-examples { min-height: 1491px; } }
+@media (max-width: 1307px) { .dsh-examples { min-height: 1470px; } }
+@media (max-width: 1300px) { .dsh-plans { min-height: 1538px; } }
+@media (max-width: 1252px) { .dsh-bookmarks { min-height: 1001px; } .dsh-examples { min-height: 1449px; } }
+@media (max-width: 1241px) { .dsh-plans { min-height: 1559px; } }
+@media (max-width: 1235px) { .dsh-plans { min-height: 1580px; } }
+@media (max-width: 1199px) { .dsh-bookmarks { min-height: 850px; } .dsh-try { min-height: 3993px; } .dsh-exports { min-height: 2525px; } .dsh-examples { min-height: 1390px; } .dsh-plans { min-height: 1978px; } }
+@media (max-width: 1186px) { .dsh-examples { min-height: 1369px; } }
+@media (max-width: 1169px) { .dsh-plans { min-height: 2022px; } }
+@media (max-width: 1132px) { .dsh-examples { min-height: 1348px; } }
+@media (max-width: 1090px) { .dsh-bookmarks { min-height: 912px; } }
+@media (max-width: 1077px) { .dsh-examples { min-height: 1327px; } }
+@media (max-width: 1034px) { .dsh-plans { min-height: 2043px; } }
+@media (max-width: 1023px) { .dsh-bookmarks { min-height: 1746px; } .dsh-exports { min-height: 3527px; } .dsh-examples { min-height: 1354px; } }
+@media (max-width: 1022px) { .dsh-plans { min-height: 2064px; } }
+@media (max-width: 1003px) { .dsh-examples { min-height: 1333px; } }
+@media (max-width: 948px) { .dsh-examples { min-height: 1312px; } }
+@media (max-width: 919px) { .dsh-plans { min-height: 2086px; } }
+@media (max-width: 905px) { .dsh-plans { min-height: 2107px; } }
+@media (max-width: 895px) { .dsh-examples { min-height: 1372px; } }
+@media (max-width: 880px) { .dsh-examples { min-height: 1411px; } }
+@media (max-width: 875px) { .dsh-examples { min-height: 1390px; } }
+@media (max-width: 868px) { .dsh-plans { min-height: 2128px; } }
+@media (max-width: 867px) { .dsh-plans { min-height: 2149px; } }
+@media (max-width: 856px) { .dsh-plans { min-height: 2170px; } }
+@media (max-width: 827px) { .dsh-plans { min-height: 2191px; } }
+@media (max-width: 823px) { .dsh-plans { min-height: 2212px; } }
+@media (max-width: 821px) { .dsh-examples { min-height: 1369px; } }
+@media (max-width: 804px) { .dsh-plans { min-height: 2234px; } }
+@media (max-width: 781px) { .dsh-plans { min-height: 2256px; } }
+@media (max-width: 767px) { .dsh-bookmarks { min-height: 1769px; } .dsh-try { min-height: 3592px; } .dsh-exports { min-height: 2738px; } .dsh-examples { min-height: 1306px; } .dsh-plans { min-height: 1654px; } }
+@media (max-width: 689px) { .dsh-plans { min-height: 1679px; } }
+@media (max-width: 668px) { .dsh-exports { min-height: 2761px; } }
+@media (max-width: 667px) { .dsh-exports { min-height: 2784px; } }
+@media (max-width: 625px) { .dsh-try { min-height: 3612px; } }
+@media (max-width: 600px) { .dsh-plans { min-height: 1720px; } }
+@media (max-width: 585px) { .dsh-examples { min-height: 1351px; } }
+@media (max-width: 569px) { .dsh-try { min-height: 3654px; } }
+@media (max-width: 549px) { .dsh-exports { min-height: 2807px; } }
+@media (max-width: 529px) { .dsh-try { min-height: 3676px; } }
+@media (max-width: 518px) { .dsh-try { min-height: 3696px; } }
+@media (max-width: 516px) { .dsh-exports { min-height: 2849px; } }
+@media (max-width: 512px) { .dsh-examples { min-height: 1372px; } }
+@media (max-width: 494px) { .dsh-plans { min-height: 1741px; } }
+@media (max-width: 493px) { .dsh-examples { min-height: 1385px; } }
+@media (max-width: 491px) { .dsh-try { min-height: 3742px; } }
+@media (max-width: 482px) { .dsh-plans { min-height: 1762px; } }
+@media (max-width: 481px) { .dsh-plans { min-height: 1818px; } }
+@media (max-width: 468px) { .dsh-exports { min-height: 2908px; } }
+@media (max-width: 464px) { .dsh-exports { min-height: 2931px; } }
+@media (max-width: 449px) { .dsh-exports { min-height: 2970px; } }
+@media (max-width: 448px) { .dsh-plans { min-height: 1840px; } }
+@media (max-width: 447px) { .dsh-plans { min-height: 1861px; } }
+@media (max-width: 446px) { .dsh-try { min-height: 3764px; } }
+@media (max-width: 445px) { .dsh-plans { min-height: 1882px; } }
+@media (max-width: 441px) { .dsh-plans { min-height: 1904px; } }
+@media (max-width: 435px) { .dsh-exports { min-height: 2990px; } }
+@media (max-width: 432px) { .dsh-try { min-height: 3784px; } }
+@media (max-width: 427px) { .dsh-plans { min-height: 1932px; } }
+@media (max-width: 417px) { .dsh-plans { min-height: 1954px; } }
+@media (max-width: 410px) { .dsh-try { min-height: 3828px; } }
+@media (max-width: 402px) { .dsh-examples { min-height: 1409px; } }
+@media (max-width: 391px) { .dsh-plans { min-height: 1976px; } }
+@media (max-width: 381px) { .dsh-exports { min-height: 3034px; } }
+@media (max-width: 379px) { .dsh-exports { min-height: 3057px; } .dsh-plans { min-height: 1998px; } }
+@media (max-width: 378px) { .dsh-try { min-height: 3869px; } .dsh-exports { min-height: 3080px; } }
+@media (max-width: 377px) { .dsh-exports { min-height: 3109px; } }
+@media (max-width: 374px) { .dsh-bookmarks { min-height: 1745px; } .dsh-try { min-height: 3837px; } .dsh-exports { min-height: 3065px; } .dsh-examples { min-height: 1312px; } .dsh-plans { min-height: 1973px; } }
+@media (max-width: 371px) { .dsh-exports { min-height: 3093px; } .dsh-plans { min-height: 1994px; } }
+@media (max-width: 367px) { .dsh-plans { min-height: 2016px; } }
+@media (max-width: 365px) { .dsh-plans { min-height: 2040px; } }
+@media (max-width: 359px) { .dsh-try { min-height: 3857px; } .dsh-plans { min-height: 2069px; } }
+@media (max-width: 355px) { .dsh-exports { min-height: 3125px; } }
+@media (max-width: 348px) { .dsh-plans { min-height: 2090px; } }
+@media (max-width: 345px) { .dsh-try { min-height: 3902px; } }
+@media (max-width: 343px) { .dsh-exports { min-height: 3162px; } }
+@media (max-width: 336px) { .dsh-bookmarks { min-height: 1784px; } }
+@media (max-width: 333px) { .dsh-try { min-height: 3922px; } }
+@media (max-width: 332px) { .dsh-exports { min-height: 3202px; } }
+@media (max-width: 320px) { .dsh-try { min-height: 3964px; } }
