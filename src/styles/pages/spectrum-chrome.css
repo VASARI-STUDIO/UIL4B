@@ -95,6 +95,8 @@ html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opac
 html[data-reduced-motion="true"] .spnav-quiet-link{transition:none}
 html[data-reduced-motion="true"] .spnav-search{transition:none}
 html[data-reduced-motion="true"] .spnav-search:active{transform:none}
+/* On a touch screen the pill is a 44px target, like the bar's other controls. */
+@media(pointer:coarse){.spnav-search{min-height:44px}}
 /* The phone's two buttons; hidden on a wide window. */
 .spnav-phone{display:none}
 .spnav-icon{display:grid;place-items:center;width:44px;height:44px;flex:0 0 auto;padding:0;border:1px solid color-mix(in srgb,var(--t0) 14%,transparent);border-radius:var(--radius-pill);background:transparent;color:var(--t0);cursor:pointer;transition:transform 120ms cubic-bezier(.23,1,.32,1)}
