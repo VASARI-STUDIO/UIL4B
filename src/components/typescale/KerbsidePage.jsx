@@ -1,3 +1,5 @@
+import { createContext, useContext } from 'react'
+
 // The page half of the Type Scale tool: one product screen set on the scale
 // that is being built. Every line names the step it uses, and the step pressed
 // in the ladder lights a kerb mark beside each line that uses it.
@@ -19,6 +21,8 @@ const OWN_DELIVERIES = [
   ['Silverbeet, bunch', 'Thu 08:30', '$3.20'],
 ]
 
+const LitStep = createContext('')
+
 // A step's size on the page: the size it resolves to at the previewed width,
 // held between the floor and the most this line can take without overflowing.
 const capPx = (step, max) => Math.min(max, Math.max(FIT_MIN, step.previewPx))
@@ -34,8 +38,8 @@ function lineStyle(step, max, heading) {
 }
 
 // One tagged line: the text, its step name in the right margin and the kerb mark.
-function Line({ step, lit, children, className = '', style }) {
-  const on = lit === step.name
+function Line({ step, children, className = '', style }) {
+  const on = useContext(LitStep) === step.name
   return (
     <div className={`tsk-ln${on ? ' is-lit' : ''}${className ? ` ${className}` : ''}`} style={style}>
       {children}
@@ -62,6 +66,7 @@ export default function KerbsidePage({ steps, up, mine, text, lit, headingName, 
   const label = mine ? 'A sample screen set on this scale' : 'Kerbside’s Track a rider screen, set on this scale'
 
   return (
+    <LitStep.Provider value={lit}>
     <section className={`tsk${failed ? ' has-err' : ''}`} aria-label={label}>
       {!failed && (
         <div className={`tsk-hdr${mine ? ' is-mine' : ''}`}>
@@ -132,5 +137,6 @@ export default function KerbsidePage({ steps, up, mine, text, lit, headingName, 
         </div>
       )}
     </section>
+    </LitStep.Provider>
   )
 }

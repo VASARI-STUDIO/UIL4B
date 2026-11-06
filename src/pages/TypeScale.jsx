@@ -21,6 +21,9 @@ import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '.
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
 import '../styles/pages/type-scale.css'
+import '../styles/pages/type-scale-kerbside.css'
+import KerbsidePage from '../components/typescale/KerbsidePage'
+import { useAuth } from '../contexts/AuthContext'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed
@@ -126,21 +129,21 @@ function useMedia(query) {
 }
 
 const DEFAULTS = {
-  base: 16,
+  base: 15,
   // The mobile anchor. Slightly smaller base, and the ratio is chosen separately
   // (see mobileRatioId) rather than shared — see the state comment for why one
   // ratio across both breakpoints cannot work.
   mobileBase: 15,
-  ratio: 1.25,
+  ratio: 1.618,
   custom: 1.333,
-  up: 6,
-  down: 2,
+  up: 4,
+  down: 1,
   lineHeight: 1.5,
   // Matches the project's own default (data/designDefaults.js, 0), so the first
   // load and Reset scale read the same letter spacing (K17).
   headingTrack: 0,
   bodyTrack: 0,
-  rounding: 'half',
+  rounding: 'none',
 }
 
 // The default specimen. It is the SAME string on every row, and that is a
@@ -149,10 +152,10 @@ const DEFAULTS = {
 // steps comparable at a glance. #327 examined this and kept it; this change
 // does not overturn it. What it adds is the ability to swap the string for
 // your own words — see `sample` — which is the part that was missing.
-const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-// Under 768 the pangram wraps the top step to four lines and pushes the lower
-// steps out of view, so a phone gets a short default. Typed text is never cut.
-const PHONE_SPECIMEN = 'Scale it'
+const PANGRAM = 'There at 11:40.'
+// The field's hint. It is never the value, so the ladder keeps the default line.
+const PREVIEW_HINT = 'Bikes, not vans.'
+const PHONE_SPECIMEN = PANGRAM
 
 // (stepName lived here. It is now in utils/fluidType.js beside stepPx, because
 // the homepage workbench's Typography preview labels its steps with the same
@@ -187,6 +190,9 @@ function varsRef(vars) {
 export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const navigate = useNavigate()
   const { design, setFonts, setTypeScale } = useProject()
+  const { user } = useAuth()
+  // The step pressed in the ladder; the page lights each line that uses it.
+  const [litStep, setLitStep] = useState('')
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
   // A selection handed over from the Font Gallery or Font Pair. Read — never
@@ -267,9 +273,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // then the saved kit — the tool never opens on a font the user didn't choose.
   const seedHeading = carried?.heading || design?.fonts?.heading
   const seedBody = carried?.body || design?.fonts?.body
-  const [headingName, setHeadingName] = useState(() => seedHeading?.family || 'Inter')
-  const [bodyName, setBodyName] = useState(() => seedBody?.family || 'Inter')
-  const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 700)
+  const [headingName, setHeadingName] = useState(() => seedHeading?.family || 'Archivo')
+  const [bodyName, setBodyName] = useState(() => seedBody?.family || 'IBM Plex Sans')
+  const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 800)
   const [bodyW, setBodyW] = useState(() => seedBody?.weight || 400)
 
   // Commit the hand-off. Effects only run for a committed tree, so the slot
@@ -342,6 +348,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         role: isHeading ? 'heading' : 'body',
         weight: isHeading ? headingW : bodyW,
         track: isHeading ? headingTrack : bodyTrack,
+        lead: lineHeight,
         lineHeight: +(previewPx * lineHeight).toFixed(1),
       })
     }
@@ -391,7 +398,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   const reset = () => {
     setBase(DEFAULTS.base)
-    setRatioId('1.25')
+    setRatioId(String(DEFAULTS.ratio))
     setCustomRatio(DEFAULTS.custom)
     setUp(DEFAULTS.up)
     setDown(DEFAULTS.down)
@@ -407,7 +414,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       headingSpacing: DEFAULTS.headingTrack,
       bodySpacing: DEFAULTS.bodyTrack,
     })
-    toast?.('Scale reset to a 16px major third')
+    setLitStep('')
+    toast?.('Scale reset to a 15px golden ratio')
   }
 
   const headingStack = headingFont ? fontStack(headingFont) : 'var(--font)'
@@ -741,7 +749,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           className="tsc-row"
           data-step={s.name}
           data-px={s.px}
+          aria-pressed={litStep === s.name}
           onClick={() => {
+            setLitStep(cur => (cur === s.name ? '' : s.name))
             onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
             toast?.(`Copied --text-${s.name}`)
           }}
@@ -829,25 +839,19 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         </p>
       )}
       <div className="tsc-page-col" ref={pageColRef}>
-        <article className="tsc-article" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
-          <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.previewPx || steps[0].previewPx, { max: 72 })}px` })}>
-            {sample.trim() || 'A page set on this scale'}
-          </h3>
-          <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.previewPx || base, { max: 28 })}px` })}>
-            Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
-            hand-picked, so the rhythm holds when the page grows.
-          </p>
-          <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.previewPx || base, { max: 48 })}px` })}>
-            Where the jumps matter
-          </h4>
-          <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 0)?.previewPx || base, { max: 24 })}px` })}>
-            A ratio that looks elegant in isolation can flatten a page: if the step between
-            body copy and a subheading is too small, the hierarchy stops doing its job.
-          </p>
-          <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.previewPx || base, { max: 18 })}px` })}>
-            Captions and helper text live down here — check they are still comfortably legible.
-          </p>
-        </article>
+        <div className="tsc-kerb" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
+          <KerbsidePage
+            steps={steps}
+            up={up}
+            mine={!!user}
+            text={sample.trim()}
+            lit={litStep}
+            headingName={headingName}
+            headingLoading={false}
+            headingFailed={false}
+            onRetry={retry}
+          />
+        </div>
       </div>
       </>}
     </div>
@@ -989,7 +993,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   className="tsc-sample-input"
                   value={sample}
                   maxLength={60}
-                  placeholder={defaultSpecimen}
+                  placeholder={PREVIEW_HINT}
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="sentences"
