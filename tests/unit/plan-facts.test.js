@@ -194,7 +194,7 @@ test('the switch turns the Free UI kit line and the Pro export rows, both ways',
   assert.equal(on[1].sub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free: ${proNames.slice(0, -1).join(', ')} and ${proNames.at(-1)}. Each has all ${numberWord(EXPORT_THEME_EXPORTS.length)} exports.`)
   assert.equal(on[1].phoneSub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free, each with all ${numberWord(EXPORT_THEME_EXPORTS.length)} exports.`)
   assert.ok(on[1].phoneSub.length < on[1].sub.length)
-  const pages = EXPORT_THEME_EXPORTS.find((e) => e.id === 'guidelines').guidelinesPages
+  const pages = EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages
   assert.ok(on[2].sub.startsWith(`A ${pages}-page guidelines PDF`))
   // The documents row names every export that is Pro in all themes, and not the free UI kit.
   for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(on[2].title.toLowerCase().includes(e.short), `the documents row leaves out ${e.id}`)

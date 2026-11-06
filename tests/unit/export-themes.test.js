@@ -61,7 +61,7 @@ test('page shapes: three 16:9, one A4 landscape, six A4', () => {
 })
 
 test('every theme makes the same four exports, and only the UI kit is ever free', () => {
-  assert.deepEqual(EXPORT_THEME_EXPORTS.map((e) => e.id), ['brand-kit', 'guidelines', 'brand-book', 'ui-kit'])
+  assert.deepEqual(EXPORT_THEME_EXPORTS.map((e) => e.id), ['brand-kit', 'brand-guidelines', 'brand-book', 'ui-kit'])
   assert.deepEqual(EXPORT_THEME_EXPORTS.map((e) => e.name), ['Brand kit', 'Brand guidelines', 'HTML brand book', 'UI kit'])
   for (const t of EXPORT_THEMES) {
     const made = themeExports(t.id)
@@ -80,7 +80,7 @@ test('isThemeExportPro and themeById refuse an id they do not know', () => {
   assert.equal(themeById('04-standards').name, 'Standards')
   assert.equal(themeById('nope'), null)
   assert.equal(isThemeExportPro('04-standards', 'ui-kit'), false)
-  assert.equal(isThemeExportPro('04-standards', 'guidelines'), true)
+  assert.equal(isThemeExportPro('04-standards', 'brand-guidelines'), true)
   assert.equal(isThemeExportPro('01-presentation', 'ui-kit'), true)
   assert.throws(() => isThemeExportPro('nope', 'ui-kit'), /unknown export theme/)
   assert.throws(() => isThemeExportPro('04-standards', 'nope'), /unknown export theme/)

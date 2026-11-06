@@ -196,7 +196,7 @@ export const EXPORT_THEME_SHAPES = Object.freeze(['16:9', 'A4 landscape', 'A4'])
 // `guidelinesPages` is the page count of the guidelines document.
 export const EXPORT_THEME_EXPORTS = Object.freeze([
   Object.freeze({ id: 'brand-kit', name: 'Brand kit', short: 'kit', proOnly: true }),
-  Object.freeze({ id: 'guidelines', name: 'Brand guidelines', short: 'guidelines', proOnly: true, guidelinesPages: 33 }),
+  Object.freeze({ id: 'brand-guidelines', name: 'Brand guidelines', short: 'guidelines', proOnly: true, guidelinesPages: 33 }),
   Object.freeze({ id: 'brand-book', name: 'HTML brand book', short: 'brand book', proOnly: true }),
   Object.freeze({ id: 'ui-kit', name: 'UI kit', short: 'UI kit', proOnly: false }),
 ])

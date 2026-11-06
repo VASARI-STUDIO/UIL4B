@@ -147,7 +147,7 @@ test('the selling regions this test scopes to actually exist', () => {
   // arbitrary list. At least one region has to name a real format.
   const known = EXPORT_FORMATS.map((f) => f.name)
   const plansRegions = sellingRegions(PLANS).join('')
-  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS|PRO_EXPORT_NAMES|FREE_EXPORT_NAMES/.test(plansRegions),
+  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS|PRO_EXPORT_NAMES|FREE_EXPORT_NAMES|proDocumentsLine|STYLE_GUIDE_EXPORT_NAMES/.test(plansRegions),
     'no export claim is visible inside the parsed benefit lists — the format guard is reading the wrong region')
 })
 
