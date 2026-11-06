@@ -255,7 +255,7 @@
   .bmp { display: block; margin-top: 20px; }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
-  .bm-h { font-size: 60px; }
+  .bm-h { max-width: 13ch; font-size: 60px; }
   .bm-head { gap: 16px; }
   .bm-sub { font-size: 18px; line-height: 1.6; }
   /* Heading, sub-line and the layout share one centred 640px column; the tools go three up. */
@@ -493,7 +493,7 @@
 .bmp-asr small { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .62); }
 .bmp-alt { width: 100%; height: 40px; }
 .bmp-at {
-  margin: 6px 0 0; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .72);
+  margin: 6px 0 0; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .72); text-wrap: wrap;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
 }
 /* A narrow window (320): the same cards, less text */
