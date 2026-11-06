@@ -45,6 +45,11 @@ import { HOME_SHELL_ROUTES, applyHomeShell, assertHomeShellApplied } from './hom
 import { applyPageShell, assertPageShellApplied, guideFor, shellContentFor, wantsPageShell } from './page-shell.mjs'
 import { renderGuideBodies } from './guide-html.mjs'
 
+// The sales page sets its text in Geist, which the other routes do not use. One
+// variable file covers every weight, so one preload covers 400 and 600; it goes
+// in this route's head only.
+const HOME_PRELOADS = '<link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>'
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 /* WHICH BUILD TO PRERENDER. Defaults to `dist`, so `npm run build` and every
  * existing caller are unchanged.
@@ -250,7 +255,7 @@ async function main() {
       robots: robotsFor(route),
       canonical: canonicalUrl(route),
       card: cardFor(route),
-      schema: breadcrumbJsonLd(route, ORIGIN) + articleJsonLd(route, ORIGIN),
+      schema: breadcrumbJsonLd(route, ORIGIN) + articleJsonLd(route, ORIGIN) + (route === '/' ? HOME_PRELOADS : ''),
     })
     misses.forEach(m => allMisses.add(m))
 
