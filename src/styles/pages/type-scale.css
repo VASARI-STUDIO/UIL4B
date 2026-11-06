@@ -404,7 +404,10 @@
     /* A fixed 56% of the screen (480px at most). The page scrolls the sample
        screen up under the toolbar when the sheet opens, so it stays in view
        above the sheet; the sheet's contents scroll inside. */
-    height: min(56dvh, 480px);
+    /* The page's own chrome (site header, toolbar, tab bar) leaves less room than
+       a bare screen, so the height is what is left under the toolbar once the
+       pinned sample card keeps 245px; never under 300px or over 56%. */
+    height: clamp(300px, calc(100dvh - var(--tsc-sheet-bottom) - var(--tsc-top) - 16px - 245px), min(56dvh, 480px));
     border-radius: 16px 16px 0 0;
     border: 1px solid var(--tl-line-2);
     border-bottom: 0;
@@ -671,3 +674,77 @@ html:has(.tsc-page .tsc-dock) { scroll-padding-bottom: 72px; }
 /* The project row in More: a label, not a button. */
 .tsc-page .tsc-menu-project { margin: 0; cursor: default; pointer-events: none; }
 .tsc-page .tsc-menu-sample { font-weight: 400; color: var(--tl-dim); }
+
+/* ── Copy CSS: the label, then the copy glyph in a disc ───────────────────── */
+.tsc-page .tsc-copy-primary.tl-btn { gap: 8px; height: 36px; padding: 0 4px 0 16px; }
+.tsc-page .tsc-copy-primary .tl-btn-label { display: inline-flex; align-items: center; gap: 8px; }
+.tsc-page .tsc-copy-disc {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-ink) 8%, transparent);
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .tsc-page .tsc-copy-primary.tl-btn { height: 44px; min-height: 44px; padding: 0 6px 0 18px; }
+  .tsc-page .tsc-copy-disc { width: 32px; height: 32px; }
+}
+
+/* ── Preview width and the sheet's tabs: one segmented pill ───────────────── */
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) {
+  gap: 2px; padding: 2px; border-radius: 999px;
+  background: color-mix(in srgb, var(--t0) 6%, transparent);
+}
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs)[data-slide]::before {
+  border: 0; background: color-mix(in srgb, var(--t0) 14%, transparent);
+}
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill {
+  height: 32px; min-height: 0; padding: 0 14px; border: 0; background: transparent;
+  color: color-mix(in srgb, var(--t0) 56%, var(--bg-0)); font-size: 14px; font-weight: 500; line-height: 20px;
+}
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill.is-on { color: var(--t0); background: transparent; }
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs):not([data-slide]) .tl-pill.is-on { background: color-mix(in srgb, var(--t0) 14%, transparent); }
+@media (max-width: 767px), (pointer: coarse) {
+  .tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) { gap: 0; padding: 0; }
+  .tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill { height: 44px; min-height: 44px; }
+}
+@media (max-width: 767px) {
+  .tsc-page .tsc-width-btn { padding-inline: 6px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill:not(.is-on):hover { color: var(--t0); background: color-mix(in srgb, var(--t0) 8%, transparent); }
+}
+
+/* ── Phone sheet: a family is its name, a weight chip and a browse button ─── */
+.tsc-page .tsc-fr { display: grid; gap: 8px; min-width: 0; }
+.tsc-page .tsc-fams-grid:has(.tsc-fr) { gap: 20px; }
+.tsc-page .tsc-fr-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tsc-page .tsc-fr-n { flex: 1 1 auto; display: grid; min-width: 0; }
+.tsc-page .tsc-fr-name { font-size: 24px; line-height: 30px; overflow-wrap: anywhere; color: var(--tl-ink); }
+.tsc-page .tsc-fr-meta { font-size: 13px; line-height: 18px; color: var(--tl-dim); }
+.tsc-page .tsc-fr-chip,
+.tsc-page .tsc-fr-ib,
+.tsc-page .tsc-fr-opt {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; height: 44px; margin: 0; border: 0; border-radius: 999px;
+  background: color-mix(in srgb, var(--t0) 7%, transparent); color: var(--tl-ink); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-fr-chip { min-width: 56px; padding: 0 14px; font: 400 14px/20px var(--mono); font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-fr-ib { width: 44px; padding: 0; }
+.tsc-page .tsc-fr-chip[aria-expanded="true"],
+.tsc-page .tsc-fr-opt[aria-selected="true"] { background: color-mix(in srgb, var(--t0) 14%, transparent); }
+.tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: scale(.97); }
+.tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
+.tsc-page .tsc-fr-tray { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.tsc-page .tsc-fr-opt { min-width: 0; padding: 0; background: transparent; font: 400 14px/20px var(--mono); }
+.tsc-page .tsc-fr-opt[aria-selected="true"] { color: var(--tl-ink); }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib):hover:not([aria-expanded="true"]) { background: color-mix(in srgb, var(--t0) 11%, transparent); }
+  .tsc-page .tsc-fr-opt:not([aria-selected="true"]):hover { background: color-mix(in srgb, var(--t0) 8%, transparent); }
+}
+html[data-reduced-motion="true"] .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt) { transition: background-color 150ms ease; }
+html[data-reduced-motion="true"] .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt) { transition: background-color 150ms ease; }
+  html:not([data-reduced-motion="false"]) .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: none; }
+}
+/* The width labels' number sits one pill-gap from its word, as on the board. */
+.tsc-page .tsc-width-seg .tl-pill { gap: 8px; }
+.tsc-page .tsc-width-seg .tsc-width-px { margin-left: 0; }

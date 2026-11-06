@@ -26,6 +26,7 @@ import KerbsidePage from '../components/typescale/KerbsidePage'
 import { ladderNote, litLineCount, usedStepNames } from '../components/typescale/kerbsideSteps'
 import { useAppearance } from '../contexts/AppearanceContext'
 import GroundSegment from '../components/tool/GroundSegment'
+import FamilyRow from '../components/typescale/FamilyRow'
 import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -799,8 +800,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       : [resetItem, { id: 'div', divider: true, align: 'end' }, groundItem, importItem]),
   ]
   const primary = (
-    <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={exportCode}>
+    <ToolButton variant="accent" className="tsc-copy-primary" onClick={exportCode}>
       {`Copy ${formatLabel}`}
+      <span className="tsc-copy-disc" aria-hidden="true"><ToolIcon name="copy" size={16} /></span>
     </ToolButton>
   )
   // The phone dock: the scale trigger that opens the settings sheet, then Save, then Copy.
@@ -1216,22 +1218,34 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                 <div className="tsc-fams">
                   <div className="tsc-fams-grid">
                     <div className="tsc-fam">
-                      <FontPicker
-                        label="Heading family"
-                        fonts={catalog}
-                        value={headingFont}
-                        onChange={chooseHeading}
-                      />
-                      {headingFont && weightSelect(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
+                      {phone && headingFont ? (
+                        <FamilyRow idBase="tsc-hweight" label="Heading family" intent="heading" fonts={catalog} font={headingFont} weight={headingW} onPickFont={chooseHeading} onWeight={chooseHeadingWeight} />
+                      ) : (
+                        <>
+                          <FontPicker
+                            label="Heading family"
+                            fonts={catalog}
+                            value={headingFont}
+                            onChange={chooseHeading}
+                          />
+                          {headingFont && weightSelect(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
+                        </>
+                      )}
                     </div>
                     <div className="tsc-fam">
-                      <FontPicker
-                        label="Body family"
-                        fonts={catalog}
-                        value={bodyFont}
-                        onChange={chooseBody}
-                      />
-                      {bodyFont && weightSelect(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+                      {phone && bodyFont ? (
+                        <FamilyRow idBase="tsc-bweight" label="Body family" fonts={catalog} font={bodyFont} weight={bodyW} onPickFont={chooseBody} onWeight={chooseBodyWeight} />
+                      ) : (
+                        <>
+                          <FontPicker
+                            label="Body family"
+                            fonts={catalog}
+                            value={bodyFont}
+                            onChange={chooseBody}
+                          />
+                          {bodyFont && weightSelect(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
