@@ -30,7 +30,10 @@ const WIDTHS = [320, 360, 390, 480, 640, 768, 900, 1024, 1280, 1440, 1920]
 // width; and `overflow` is what the tool calls its overflow (default "More"; a function
 // of the width when the name changes with it). A tool with a `sheet` swaps the overflow
 // for a sheet below `sheet.below`: the controls that are off the row are looked for in
-// the sheet, opened from its `open` button.
+// the sheet, opened from its `open` button. `linksFrom` is the width from which the
+// links are offered at all (a phone's switcher carries them), and `bareMore(width)`
+// names a More that has no Send feedback entry: with every action reached it holds
+// only `ids` (and may be absent when `optional`).
 const TOOLS = [
   {
     route: '/create/palette',
@@ -77,18 +80,24 @@ const TOOLS = [
       'Copy font import',
     ],
     primaryFrom: 768,
+    // The phone's More leaves the gallery link out: the bar's switcher goes there.
     links: ['Browse the Font Gallery'],
+    linksFrom: 768,
     primary: /^Copy CSS/,
     title: 'Font Pair',
   },
   {
     route: '/create/type-scale',
-    // From 768 Save to a project sits right against Copy CSS at the end of the
-    // toolbar; under 768 the shell dock holds the scale trigger, Save (an icon) and Copy CSS.
-    actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
+    // Copy CSS ends the toolbar from 768 (Code and Save to a project are in the
+    // tool's own docked bar); under 768 the shell dock holds the scale trigger, Save
+    // and Copy CSS. The switcher's Pair link carries the pair, so there is no
+    // "Find a pairing" action, and the tool has no Send feedback entry.
+    actions: ['Reset scale', 'Copy font import'],
     primary: /^Copy CSS/,
     primaryDockedBelow: 768,
     phoneDock: true,
+    // With every action on the row, More holds the project chip or is not there.
+    bareMore: () => ({ ids: ['ttb-chip'], optional: true }),
     title: 'Type Scale',
   },
   {
@@ -100,18 +109,24 @@ const TOOLS = [
     // 1440 and up); below that it is in the overflow ("More filters" at 1024 and up).
     fields: ['Preview text'],
     links: ['Build a font pair'],
+    // The phone has no onward link: its switcher goes to Font Pair.
+    linksFrom: 768,
+    // At 320 and 360 the row is Back and More; the switcher joins it from 390.
+    minChildren: 2,
     // Below 1024 the page's own .fg-bar2 holds search and Filters; from 1024 a second toolbar (.fg-row2) holds the filters.
-    secondRow: '.fg-row2, .fg-bar2',
+    // A phone's category chips and Filters button sit in the page's own .fg-chiprow.
+    secondRow: '.fg-row2, .fg-bar2, .fg-chiprow',
     // Under 1024 the page has a Filters sheet in place of the filter rows. Whatever
     // is off the row must be in the sheet, found by the role and name the sheet gives
-    // it (the sheet spells Sort out as pills and Specimen size as a slider called Size).
+    // it (the sheet spells Sort out as pills and Specimen size as a slider called Size,
+    // and each category pill carries its family count after the name).
     sheet: {
       below: 1024,
       open: 'Filters',
       reach: {
-        All: ['button', 'All'],
-        Serif: ['button', 'Serif'],
-        Display: ['button', 'Display'],
+        All: ['button', /^All \d/],
+        Serif: ['button', /^Serif \d/],
+        Display: ['button', /^Display \d/],
         'Sort families': ['group', 'Sort'],
         'Specimen size': ['slider', 'Size'],
         'Preview text': ['textbox', 'Preview text'],
@@ -119,6 +134,8 @@ const TOOLS = [
     },
     // What the tool calls whatever is left in its overflow at each width.
     overflow: () => 'More',
+    // The phone's More holds the Project row, the ground and the View, and no Send feedback.
+    bareMore: (width) => (width < 768 ? { ids: ['project', 'ttb-ground', 'view'], optional: false } : null),
     // On a tablet the category pills and the ground switch also fold into More, beside Send feedback.
     menuExtras: (width) => (width >= 768 && width < 1024 ? 2 : 0),
     title: 'Font Gallery',
@@ -202,7 +219,7 @@ for (const tool of TOOLS) {
           if (!shown) missingActions.push(menuName(action))
         }
         const missingLinks = []
-        for (const name of tool.links || []) {
+        for (const name of width >= (tool.linksFrom || 0) ? (tool.links || []) : []) {
           const shown = await scope.getByRole('link', { name: startsWith(name) }).first().isVisible().catch(() => false)
           if (!shown) missingLinks.push(name)
         }
@@ -253,7 +270,25 @@ for (const tool of TOOLS) {
         // with "Send feedback". When every action fits on the row, that row is the
         // ONLY thing in it: anything else listed means the row is stuck in its
         // measuring pass (seen once on /create/tint).
-        if (!inOverflow.length && !overflowSelects.length && !overflowSliders.length && !overflowFields.length) {
+        const bare = tool.bareMore?.(width)
+        if (!inOverflow.length && !overflowSelects.length && !overflowSliders.length && !overflowFields.length && bare) {
+          // No action overflows and the tool has no feedback entry: More is absent (when
+          // the tool allows that) or holds only the named items.
+          const more = bar.getByRole('button', { name: overflowName, exact: true })
+          if (await more.count()) {
+            await more.click()
+            const panel = page.getByRole('dialog', { name: overflowName })
+            await expect(panel).toBeVisible()
+            const ids = await panel.locator('[data-tl-menu-item]').evaluateAll((els) => els.map((el) => el.dataset.tlMenuItem))
+            expect(ids.length, `${width}px: the ${overflowName} is empty`).toBeGreaterThan(0)
+            expect(bare.ids, `${width}px: the ${overflowName} holds ${ids.join(', ')}`).toEqual(expect.arrayContaining(ids))
+            await page.keyboard.press('Escape')
+            await expect(panel).toBeHidden()
+            await expect(more).toBeFocused()
+          } else {
+            expect(bare.optional, `${width}px: no ${overflowName} button`).toBe(true)
+          }
+        } else if (!inOverflow.length && !overflowSelects.length && !overflowSliders.length && !overflowFields.length) {
           const more = bar.getByRole('button', { name: overflowName, exact: true })
           await expect(more, `${width}px: the ${overflowName} button that holds Send feedback`).toBeVisible()
           await more.click()

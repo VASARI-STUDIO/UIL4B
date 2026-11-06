@@ -190,7 +190,7 @@ test('/create/font-gallery · a category chosen in the phone sheet filters the l
   await expect(count).not.toContainText('serif')
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const serif = sheet.getByRole('button', { name: 'Serif', exact: true })
+  const serif = sheet.getByRole('button', { name: /^Serif \d/ })
   await serif.click()
   await expect(serif).toHaveAttribute('aria-pressed', 'true')
   await page.keyboard.press('Escape')

@@ -11,7 +11,7 @@
 // are the states most likely to rot, and they are the ones under test.
 import { test, expect } from './base.js'
 import { chooseMenuOption, fillGalleryPreviewText, go, watch } from './helpers.js'
-import { settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './type-scale-view.js'
+import { hideTypeScaleCode, settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './type-scale-view.js'
 
 // The Font Gallery pop-up is one scroll of sections under h3 headings, not a set
 // of tabs. This scrolls to a section and checks it landed inside the scroll
@@ -118,7 +118,7 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'front-end developer shipping type tokens')
     await go(page, '/create/type-scale')
 
-    // At 1440 the code is the Code half of the Page | Code switch.
+    // At 1440 the code is the drawer the docked Code button opens.
     expect(await showTypeScaleCode(page)).toBe('split')
 
     // The scale is now FLUID by default: two ladders (mobile and desktop)
@@ -149,10 +149,10 @@ test.describe('Type Scale Generator', () => {
     // a single media query raises it, rather than desktop values being the
     // default and mobile an override.
     await page.getByRole('button', { name: 'CSS variables' }).click()
-    // The drawer is not modal: the panel beside it stays usable with the code
-    // open, so a change there is read straight from the drawer.
+    // The open drawer covers the foot of the page, where the panel's Fine tuning
+    // controls sit, so close it, change the mode, and open it again to read.
+    await hideTypeScaleCode(page)
     await page.getByRole('button', { name: 'Fine tuning' }).click()
-    await expect(page.locator('#tsc-export')).toBeVisible()
     await page.getByRole('button', { name: /Fixed · media query/ }).click()
     await showTypeScaleCode(page)
     await expect(code).not.toContainText('clamp(')
@@ -176,14 +176,19 @@ test.describe('Type Scale Generator', () => {
 
     const designer = page.getByRole('tab', { name: /Scale/i })
     await designer.focus()
-    // Three tabs now: Scale, Page, Code. One step right is Page; two is Code.
+    // Two tabs: Scale and Page (Code is a drawer from the docked bar). One step
+    // right is Page; the arrows wrap, so a second step is back on Scale.
+    await expect(page.getByRole('tab')).toHaveCount(2)
     await page.keyboard.press('ArrowRight')
     await expect(page.getByRole('tab', { name: 'Page' })).toBeFocused()
+    await expect(page.getByRole('tab', { name: 'Page' })).toHaveAttribute('aria-selected', 'true')
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('tab', { name: /Code/i })).toBeFocused()
-    await expect(page.locator('#tsc-export')).toBeVisible()
+    await expect(designer).toBeFocused()
     await page.keyboard.press('ArrowLeft')
-    await page.keyboard.press('ArrowLeft')
+    await expect(page.getByRole('tab', { name: 'Page' })).toBeFocused()
+    await page.keyboard.press('End')
+    await expect(page.getByRole('tab', { name: 'Page' })).toBeFocused()
+    await page.keyboard.press('Home')
     await expect(designer).toBeFocused()
   })
 
@@ -414,7 +419,7 @@ test.describe('Font Gallery', () => {
     await expect(dialog.locator('.fgd-glyph').first()).toBeVisible()
   })
 
-  test('code, emoji, icon and symbol families never enter the gallery', async ({ page }) => {
+  test('emoji, icon, symbol and barcode families never enter the gallery; a real monospace family is a Mono entry', async ({ page }) => {
     watch(page, 'designer browsing a text-only type catalogue')
     await page.route('**/api/fonts', route => route.fulfill({ json: {
       fonts: [
@@ -427,9 +432,12 @@ test.describe('Font Gallery', () => {
     } }))
 
     await go(page, '/create/font-gallery')
+    // Lora and the monospace family are listed; the emoji, symbol and barcode sets are not.
+    await expect(page.locator('.fg-card')).toHaveCount(2)
+    await expect.poll(async () => (await page.locator('.fg-card-name').allTextContents()).map(name => name.trim()).sort()).toEqual(['JetBrains Mono', 'Lora'])
+    await page.getByRole('button', { name: 'Mono', exact: true }).click()
     await expect(page.locator('.fg-card')).toHaveCount(1)
-    await expect(page.locator('.fg-card-name')).toHaveText('Lora')
-    await expect(page.getByRole('button', { name: 'Mono', exact: true })).toHaveCount(0)
+    await expect(page.locator('.fg-card-name')).toHaveText('JetBrains Mono')
   })
 
   // Each typeface should show real-world examples, not the same UI examples for
@@ -1365,10 +1373,10 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   await go(page, '/create/font-gallery')
   await expect(page.locator('.fg-card').first()).toBeVisible()
   await expectTarget(page.locator('.fg-card-compare').first(), 'Font Gallery compare')
-  // On a phone the category filter lives in the toolbar's Filters sheet.
+  // The Filters sheet repeats the chip row's categories, each with its family count.
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  await expectTarget(sheet.getByRole('button', { name: 'All', exact: true }), 'Font Gallery filter')
+  await expectTarget(sheet.getByRole('button', { name: /^All \d/ }), 'Font Gallery filter')
   await page.keyboard.press('Escape')
   await expect(sheet).toBeHidden()
   // The phone tray stands on the tab bar once two fonts are picked.
