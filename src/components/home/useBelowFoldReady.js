@@ -1,38 +1,29 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
-// WHEN THE HOMEPAGE'S BELOW-THE-FOLD SECTIONS MAY START LOADING (see
-// DeferredSection.jsx): once the page has loaded and the browser is idle, so
-// they never compete with the hero for the first request wave, and at once on a
-// deep link or on the first sign of someone scrolling, pressing or tapping.
-const IDLE_TIMEOUT_MS = 2500
-const INTENT_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll']
+// WHEN THE HOMEPAGE'S BELOW-THE-FOLD SECTIONS ALL START LOADING AT ONCE.
+//
+// Each section opens on its own when it comes within 600px of the viewport (see
+// DeferredSection.jsx), so a visitor who only reads the first screen downloads
+// and hydrates none of them. This hook is the other way in: it turns true for
+// every section together on a link into the page (`/#plans` has to find its
+// target) and on the first sign of someone scrolling, pressing or tapping, so
+// an in-page jump or a fast fling does not land on empty stand-ins. `click`
+// is there for a link activated with no press before it (assistive tech).
+const INTENT_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll', 'click']
 
 export function useBelowFoldReady() {
-  // A link into the page (`/#plans`) has to find its section, so a hash opens the gate.
-  const [ready, setReady] = useState(() => typeof window !== 'undefined' && window.location.hash.length > 1)
+  // Read from the router, not window.location: a hash pushed by a link while the
+  // page is already mounted changes this too.
+  const { hash } = useLocation()
+  const [intent, setIntent] = useState(false)
 
   useEffect(() => {
-    if (ready) return undefined
-    const open = () => setReady(true)
-    let idleHandle = null
-    let timer = null
-    const afterLoad = () => {
-      if (typeof window.requestIdleCallback === 'function') {
-        idleHandle = window.requestIdleCallback(open, { timeout: IDLE_TIMEOUT_MS })
-      } else {
-        timer = window.setTimeout(open, 1000)
-      }
-    }
-    if (document.readyState === 'complete') afterLoad()
-    else window.addEventListener('load', afterLoad, { once: true })
+    if (intent) return undefined
+    const open = () => setIntent(true)
     INTENT_EVENTS.forEach((name) => window.addEventListener(name, open, { once: true, passive: true }))
-    return () => {
-      window.removeEventListener('load', afterLoad)
-      INTENT_EVENTS.forEach((name) => window.removeEventListener(name, open))
-      if (idleHandle !== null) window.cancelIdleCallback(idleHandle)
-      if (timer !== null) window.clearTimeout(timer)
-    }
-  }, [ready])
+    return () => INTENT_EVENTS.forEach((name) => window.removeEventListener(name, open))
+  }, [intent])
 
-  return ready
+  return intent || hash.length > 1
 }

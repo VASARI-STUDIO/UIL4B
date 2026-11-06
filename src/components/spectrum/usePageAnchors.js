@@ -123,7 +123,16 @@ export function usePageAnchors() {
       if (!id || !document.getElementById(id)) return
       e.preventDefault()
       window.history.pushState(window.history.state, '', `${window.location.pathname}${window.location.search}#${id}`)
-      jumpToSection(id)
+      // A section that has not arrived yet is an estimate of its height, and a
+      // glide aimed at it would stop short once the real sections push it down.
+      // The press that started this click has already asked for them all, so
+      // wait for them as an arriving hash does.
+      if (document.querySelector('[data-deferred-hold]')) {
+        cancelArrival()
+        cancelArrival = landArrivingHash(id)
+      } else {
+        jumpToSection(id)
+      }
     }
 
     if (arriving.current) arrive()
