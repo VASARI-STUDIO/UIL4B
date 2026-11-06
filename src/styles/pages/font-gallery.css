@@ -856,6 +856,9 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
    swaps with no fade. Only opacity moves, and no box changes size. */
 .fg-page { --fg-wake: #191919; --fg-sel: #272727; }
 [data-theme="light"] .fg-page { --fg-wake: #E3E2DE; --fg-sel: #D9D8D5; }
+/* The meta line sits on the open band's paper strip, whose darkest patches take
+   the plain secondary ink to 4.0 at worst; a darker mix keeps 4.5 on every light strip. */
+[data-theme="light"] .fg-page .fg-card { --fg-ink-2: color-mix(in srgb, var(--t0) 30%, var(--t1)); }
 .fg-page .fg-card::before {
   content: "";
   position: absolute;
