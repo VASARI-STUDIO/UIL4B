@@ -196,9 +196,9 @@ function applications(ctx) {
   const bus = ctx.shot('busstop'), [, signHead] = ap.signage.split(': ');
   const glass = bus.photo ? `<span class="bk-poster__glass" style="background-image:url(${A(ctx.photoUrl(bus.photo))})"></span>` : '';
   const logoGeo = L.geos.colour;
-  const sign = `<figure class="bk-sign"><div class="bk-sign__crop"><div class="bk-stage">${ctx.photo('busstop', { cls: 'bk-stage__img' })}<span class="bk-stage__patch"></span>
+  const sign = `<figure class="bk-sign"><div class="bk-sign__crop"><div class="bk-stage">${ctx.photo('busstop', { cls: 'bk-stage__img', slotNote: false })}<span class="bk-stage__patch"></span>
 <div class="bk-poster"><span class="bk-poster__ink"></span>${glass}<div class="bk-poster__in"><p class="disp bk-poster__h">${A(signHead || lastLine)}</p><div class="bk-poster__b"><p class="bk-poster__l">${A(B.lines.primary).replace('. ', '.<br>')}</p><div class="bk-poster__logo" style="aspect-ratio:${logoGeo.w.toFixed(2)}/${logoGeo.h.toFixed(2)}">${L.html('colour', { colourway: 'on-signal', width: 190, label: '', color: 'var(--bk-poster-ink)' })}</div></div></div></div></div></div>
-<figcaption class="cap">${A(ap.signage.split(': ')[0].replace(/ x /g, ' × '))}. ${A(bus.caption || '')}. ${bus.photo ? `Photo: ${A(bus.credit)}.` : 'Art-directed slot.'}</figcaption></figure>`;
+<figcaption class="cap">${A(ap.signage.split(': ')[0].replace(/ x /g, ' × '))}. ${bus.photo ? `${A(bus.caption || '')}. Photo: ${A(bus.credit)}.` : `${A(bus.slot)} Art-directed slot.`}</figcaption></figure>`;
   const email = `<div class="bk-email"><p class="bk-email__n">${A(ap.email.person)}</p><p class="bk-email__r">${A(ap.email.role)}, ${A(B.name)}</p><p class="bk-email__c">${A(ap.card.contact)}<br>${A(ap.site.url)}</p><div class="bk-email__l">${L.html('horizontal', { width: 168, label: 'Logo' })}</div></div>`;
   const rows = S.deliveries.slice(0, 3);
   const screen = `<div class="bk-device"><div class="ui bk-screen" role="img" aria-label="${A(B.name)} product screen: ${A(S.title)}. ${A(S.eta)}. ${A(S.rider)}, ${A(S.riderNote)}." inert>

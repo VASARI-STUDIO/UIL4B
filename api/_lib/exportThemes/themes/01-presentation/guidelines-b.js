@@ -95,17 +95,23 @@ const own = {
     const R = ctx.brand.imagery.rules, sh = ctx.brand.guideB.studioSlot, line = ctx.brand.lines.others[1];
     const [r, g, b] = ctx.C.hexToRgb(ctx.roles.light.action);
     const full = 'width:100%;height:100%';
+    // Each tile treats a photo. A slot has no picture to crop, so a cropped tile stays a plain slot; a tile with type or a logo on it
+    // gets a dark ground and no slot note, so the type reads and nothing prints under it.
+    const tile = (id, { pos, crop = '', over = false }) => {
+      const real = !!ctx.shot(id).photo;
+      return ctx.photo(id, { pos, cls: !real && over ? 'b-slot--dark' : '', style: real && crop ? `${full};${crop}` : full, slotNote: real || !over });
+    };
     const doT = [
-      ctx.photo('riders', { pos: '50% 60%', style: full }),
-      ctx.photo('riders', { pos: '72% 50%', style: `${full};transform:scale(2.1);transform-origin:72% 52%` }),
-      `${ctx.photo('evening', { pos: '30% 50%', style: full })}<span class="disp b-onphoto" style="left:14px;top:14px;font-size:22px;line-height:1">${A(line)}</span>`,
+      tile('riders', { pos: '50% 60%' }),
+      tile('riders', { pos: '72% 50%', crop: 'transform:scale(2.1);transform-origin:72% 52%' }),
+      `${tile('evening', { pos: '30% 50%', over: true })}<span class="disp b-onphoto" style="left:14px;top:14px;font-size:22px;line-height:1">${A(line)}</span>`,
       `<div class="b-flat">${ctx.logo.html('reversed', { width: 150, color: 'var(--dark-ink)' })}</div>`,
     ];
     const dontT = [
       `<div class="photo-slot b-studio"><span>${A(sh)}</span></div>`,
-      `${ctx.photo('riders', { pos: '50% 60%', style: full })}<span class="b-wash" style="background:rgba(${r},${g},${b},0.55)"></span>`,
-      `${ctx.photo('riders', { pos: '72% 50%', style: `${full};transform:scale(3);transform-origin:73% 24%` })}<span class="disp b-onphoto b-onphoto--mid" style="font-size:24px;line-height:1">${A(line)}</span>`,
-      `${ctx.photo('riders', { pos: '50% 60%', style: full })}<span class="b-onphoto" style="left:50%;top:62%;transform:translate(-50%,-50%)">${ctx.logo.html('colour', { width: 140, label: 'Logo' })}</span>`,
+      `${tile('riders', { pos: '50% 60%' })}<span class="b-wash" style="background:rgba(${r},${g},${b},0.55)"></span>`,
+      `${tile('riders', { pos: '72% 50%', crop: 'transform:scale(3);transform-origin:73% 24%', over: true })}<span class="disp b-onphoto b-onphoto--mid" style="font-size:24px;line-height:1">${A(line)}</span>`,
+      `${tile('riders', { pos: '50% 60%', over: true })}<span class="b-onphoto" style="left:50%;top:62%;transform:translate(-50%,-50%)">${ctx.logo.html('colour', { width: 140, label: 'Logo' })}</span>`,
     ];
     const ic = (n) => ctx.ui.icon(n, 16);
     const row = (tiles, key, icon, cls) => `<div class="b-irow ${cls}">${R.slice(0, 4).map((_, i) => `<div class="b-ir"><div class="b-ir__tile">${tiles[i]}</div><p class="cap b-ir__cap">${ic(icon)}<span><b>${key}</b>${A(R[i][key === 'Do' ? 'do' : 'dont'])}</span></p></div>`).join('')}</div>`;

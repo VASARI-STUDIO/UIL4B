@@ -97,6 +97,7 @@ export function cssB(ctx) {
 .b-ir__tile{position:relative;overflow:hidden;flex:1;min-height:0;border-radius:2px}
 .b-ir__cap{display:flex;gap:8px;align-items:flex-start}
 .b-ir__cap .ui-icon{margin-top:1px;color:var(--ink)}
+.b-ir .b-slot--dark{background:var(--dark);border-color:var(--dark-ink)}
 .b-onphoto{position:absolute;color:var(--dark-ink)}
 .b-onphoto--mid{left:14px;right:14px;top:50%;transform:translateY(-50%)}
 .b-wash{position:absolute;inset:0}
@@ -134,6 +135,7 @@ export function cssB(ctx) {
 /* signage */
 .pg--sign{background:var(--ground)}
 .b-scene{position:absolute;left:0;top:-100px;width:1280px;height:853px;object-fit:cover}
+.b-scene.photo-slot{align-items:flex-start;padding:116px 800px 0 var(--m)}
 .b-frame{position:absolute;left:594px;top:44px;width:76px;height:26px;background:var(--quiet)}
 .b-poster{position:absolute;left:495px;top:64px;width:277px;height:490px;clip-path:polygon(0% 1%,100% 0%,100% 100%,1.4% 97.1%)}
 .b-poster__ink{position:absolute;inset:0;background:var(--accent);mix-blend-mode:multiply}

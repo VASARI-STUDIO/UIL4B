@@ -15,6 +15,7 @@ export function cssA(ctx) {
 .a-mono{font-family:var(--mono);font-size:12px;line-height:1.3;color:inherit;white-space:nowrap}
 .a-sw{display:block;flex:none;width:28px;height:28px;border-radius:2px}
 .a-fillimg{position:absolute;inset:0;width:100%;height:100%}
+.a-gart--photo .a-fillimg.photo-slot{background:var(--dark);color:var(--dark-ink);align-items:flex-end}
 .a-onphoto{position:absolute;left:24px;top:24px;display:block}
 .a-onphoto--mid{left:50%;top:50%;transform:translate(-50%,-50%)}
 .a-cross{position:absolute;right:20px;top:18px;color:var(--ink)}
