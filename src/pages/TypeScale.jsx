@@ -868,7 +868,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             </span>
             <span
               className={cls}
-              ref={varsRef({ '--tsc-fs': `${fitted}px`, '--tsc-lead': trim(s.lead, 3), '--tsc-chars': (text.length * 0.66).toFixed(2) })}
+              ref={varsRef({ '--tsc-fs': `${fitted}px`, '--tsc-lead': trim(s.lead, 3) })}
             >
               {loading ? `Loading ${headingName}` : text}
               {s.previewPx < 12 && !loading && <span className="tsc-row-cap">Under 12px: captions only</span>}

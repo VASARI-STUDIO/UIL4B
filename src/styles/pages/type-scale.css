@@ -132,9 +132,7 @@
   font-weight: var(--tsc-heading-fw);
   letter-spacing: var(--tsc-heading-ls);
 }
-/* A step too big for the whole line shows one word, sized to its row. */
-.tsc-page .tsc-row:has(.is-first) { container-type: inline-size; }
-.tsc-page .tsc-row-text.is-first { font-size: min(var(--tsc-fs), calc((100cqw - 112px) / var(--tsc-chars))); }
+/* A step too big for the whole line shows its first word at the step's true size, the size its row prints. */
 .tsc-page .tsc-row-text.is-loading { font-family: var(--font); font-size: 15px; font-weight: 500; line-height: 24px; letter-spacing: 0; color: var(--tl-dim); }
 .tsc-page .tsc-row-cap { display: block; margin-top: 4px; font-family: var(--font); font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0; color: var(--tl-dim); }
 .tsc-page .tsc-row-err { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-height: 36px; margin: -8px 0; font-family: var(--font); font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0; color: var(--tl-soft); }
@@ -410,7 +408,6 @@
   .tsc-page .tsc-row:has(.is-first) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
   .tsc-page .tsc-row:has(.is-first) .tsc-row-l { flex-direction: row; align-items: baseline; gap: 12px; padding-top: 0; }
   .tsc-page .tsc-row:has(.is-first) .tsc-row-cp { display: none; }
-  .tsc-page .tsc-row-text.is-first { font-size: min(var(--tsc-fs), calc(100cqw / var(--tsc-chars))); }
   .tsc-page .tsc-row { grid-template-columns: 88px minmax(0, 1fr); }
   .tsc-page .tsc-use { padding-inline: 16px; }
 

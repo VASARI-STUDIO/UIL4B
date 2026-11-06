@@ -87,12 +87,21 @@
 .tsc-page .tsc-copy-primary { border: 0; background: var(--t0); color: var(--bg-0); }
 
 /* ── The ladder's ground ─────────────────────────────────────────────────── *
- * Light sets the ladder on paper; the page beside it and the app keep their
- * own grounds. */
+ * Dark and Light each carry their own fixed ground and ink, so Dark stays dark
+ * when the app is in its light theme; the page beside it and the app keep their
+ * own grounds. The two share one box, so switching moves nothing. */
+.tsc-page .tsc-ladder[data-ground] { padding: 8px 16px; border-radius: 16px; }
+.tsc-page .tsc-ladder[data-ground="d"] {
+  --tl-ink: #EFEEEA; --tl-dim: rgba(239, 238, 234, .62); --tl-soft: rgba(239, 238, 234, .72);
+  --tl-hair: rgba(239, 238, 234, .08); --tl-wash: rgba(239, 238, 234, .08); --tl-wash-2: rgba(239, 238, 234, .14); --tl-wash-on: rgba(239, 238, 234, .14);
+  --tsc-hv: rgba(239, 238, 234, .08); --tsc-sel: rgba(239, 238, 234, .14);
+  background: #060607; color: #EFEEEA;
+}
+.tsc-page .tsc-ladder[data-ground="d"] .tsc-row:focus-visible { outline-color: #EFEEEA; }
 .tsc-page .tsc-ladder[data-ground="l"] {
   --tl-ink: #0B0C0E; --tl-dim: rgba(11, 12, 14, .7); --tl-soft: rgba(11, 12, 14, .76);
-  --tl-hair: rgba(11, 12, 14, .1); --tl-wash: rgba(19, 20, 22, .06); --tl-wash-2: rgba(19, 20, 22, .1);
+  --tl-hair: rgba(11, 12, 14, .1); --tl-wash: rgba(19, 20, 22, .06); --tl-wash-2: rgba(19, 20, 22, .1); --tl-wash-on: rgba(19, 20, 22, .1);
   --tsc-hv: rgba(19, 20, 22, .06); --tsc-sel: rgba(19, 20, 22, .1);
-  padding: 8px 16px; border-radius: 16px; background: #EFEEEA; color: #0B0C0E;
+  background: #EFEEEA; color: #0B0C0E;
 }
 .tsc-page .tsc-ladder[data-ground="l"] .tsc-row:focus-visible { outline-color: #0B0C0E; }
