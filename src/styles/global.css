@@ -532,6 +532,27 @@ html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{animatio
 @media (forced-colors:active){
   :is(.btn,.ui-pill-out,.tl-btn)::before{content:none}
 }
+/* The ring turns once to 140deg and holds, instead of spinning. It fades in
+   over 320ms and turns over 560ms, both after a 40ms intent delay (hover) or at
+   once (focus). On leave it fades out over 280ms and the angle resets only after
+   it is invisible, so the hues never jump. Peak opacity .92. */
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{transition:opacity 280ms cubic-bezier(.25,1,.5,1),--chroma-angle 0s linear 280ms}
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:.92;animation:none;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1),--chroma-angle 560ms cubic-bezier(.45,.05,.3,1)}
+@media (hover:hover) and (pointer:fine){
+  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;animation:none;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-angle 560ms cubic-bezier(.45,.05,.3,1) 40ms}
+}
+/* Reduced motion: a still ring at its final angle with a 120ms fade. */
+html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{--chroma-angle:140deg;transition:opacity 120ms linear!important}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.tl-btn)::before{--chroma-angle:140deg;transition:opacity 120ms linear!important}
+}
+/* Press: every pill button shrinks to .97 over 150ms; disabled controls and
+   reduced motion do not scale. */
+:is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):not(:disabled):not([aria-disabled="true"]):active{transform:scale(.97);transition-property:transform,background-color,border-color,color,opacity;transition-duration:150ms;transition-timing-function:cubic-bezier(.23,1,.32,1)}
+html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):active{transform:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):active{transform:none}
+}
 .tag{display:inline-flex;padding:4px 12px;border-radius:var(--radius-s);font-size:10px;font-weight:600}
 
 /* ─── Inputs ─── */

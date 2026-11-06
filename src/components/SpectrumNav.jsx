@@ -42,7 +42,7 @@ const CommandPalette = lazy(() => import('./CommandPalette'))
 // and lands there (salesLinks.js).
 const QUIET = [
   { id: 'tools', label: 'Tools', to: '/tools' },
-  { id: 'pricing', label: 'Pricing', to: '/plans' },
+  { id: 'pricing', label: 'Plans', to: '/plans' },
   { id: 'mobile', label: 'On mobile', to: '/mobile' },
 ]
 
@@ -116,6 +116,17 @@ function QuietLink({ href, label, className, current, mi, onClick, onHash }) {
 const HIDE_AFTER = 120
 const RETURN_DELAY = 140
 
+// A pinned stage (the tools column, the exports stack) marks its root with
+// `data-pins`. While the top of the viewport is inside one, scrolling up does not
+// bring the bar back; keyboard focus into the bar, a skip-link jump and leaving
+// the box still do.
+function viewportTopInPinnedBox() {
+  return [...document.querySelectorAll('[data-pins]')].some((el) => {
+    const r = el.getBoundingClientRect()
+    return r.top <= 0 && r.bottom > 0
+  })
+}
+
 export default function SpectrumNav() {
   const { reducedMotion } = useAppearance()
   const location = useLocation()
@@ -180,7 +191,7 @@ export default function SpectrumNav() {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(true)
-      } else if (dy < -2 && !returnTimer.current) {
+      } else if (dy < -2 && !returnTimer.current && !viewportTopInPinnedBox()) {
         returnTimer.current = setTimeout(() => {
           returnTimer.current = null
           setHidden(false)

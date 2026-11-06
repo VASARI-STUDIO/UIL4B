@@ -209,7 +209,7 @@ test('the quiet links are the design\'s three, and each one goes somewhere real'
   // which the route matrix would not prerender it and vercel.json would 404 it).
   const src = stripJs(read(SPECTRUM_NAV))
   const labels = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)'/g)].map((m) => m[1])
-  assert.deepEqual(labels, ['Tools', 'Pricing', 'On mobile'], 'the quiet links are the design\'s three, in its order')
+  assert.deepEqual(labels, ['Tools', 'Plans', 'On mobile'], 'the quiet links are Tools, Plans and On mobile, in that order')
   const hashes = [...src.matchAll(/hash: '#([a-z-]+)'/g)].map((m) => m[1])
   assert.deepEqual(hashes, [])
   const page = read('src/pages/Spectrum.jsx')
