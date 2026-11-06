@@ -300,6 +300,7 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 }
 .fg-page .tl-btn--quiet { border: 0; }
 .fg-page .tl-pills:not([data-slide]) .tl-pill.is-on { background: var(--fg-fill-sel); color: var(--t0); }
+.fg-page .tl-pills.fg-cats[data-slide]::before { border: 0; background: var(--fg-fill-sel); }
 
 /* The second toolbar row (tablet and phone): search, and on a tablet the pair
    link. It never wraps. */
