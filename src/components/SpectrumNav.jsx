@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PH_X } from './spectrum/phosphorNav'
 import { crossRouteHashClick, normPath, onSalesPage } from './spectrum/salesLinks'
@@ -13,6 +13,7 @@ import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
 import { BrandLockup } from './BrandLogo'
+import { useShortcutHint } from '../hooks/useShortcutHint'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
@@ -58,18 +59,6 @@ const MENU_EXIT_MS = 260
 // Where the phone layout ends. Past it the menu is not drawn, so an open menu
 // is closed when the window grows beyond it.
 const WIDE = '(min-width: 768px)'
-
-// The shortcut the search pill names: the command key on Apple platforms,
-// Control elsewhere. The server snapshot is the non-Apple one, so the markup
-// the server renders matches the first client render.
-const noopSubscribe = () => () => {}
-const isApplePlatform = () => /Mac|iPhone|iPad|iPod/i.test(
-  navigator.userAgentData?.platform || navigator.platform || '',
-)
-function useShortcutHint() {
-  const apple = useSyncExternalStore(noopSubscribe, isApplePlatform, () => false)
-  return apple ? '⌘K' : 'Ctrl K'
-}
 
 function CloseGlyph() {
   return (
