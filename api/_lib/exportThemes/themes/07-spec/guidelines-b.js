@@ -193,15 +193,15 @@ export const guidelinesB = {
   'type-rules'(ctx) {
     const B = ctx.brand, S = B.ui.screen, ground = ctx.roles.light.surface, quiet = ctx.roles.light.quiet, text = ctx.roles.light.text;
     const fade = faded(ctx, text, ground, 0.35), fr = ctx.fmt(ctx.ratio(fade, ground)), qr = ctx.fmt(ctx.ratio(quiet, ground));
-    const act = roleColour(ctx, 'action');
+    const act = roleColour(ctx, 'action'), gnd = ctx.byId.white ? 'white' : (ctx.colours.find((c) => c.role === 'ground') || ctx.colours[0]).id;
     const demos = [
       [`<span class="disp disp--sub b-dm" style="font-size:28px">By Thursday.</span>`, `<span class="disp b-dm" style="font-size:28px">By Thursday.</span>`],
       [`<span class="b-dm b-dm--b">6.6 kW, 3 pm</span>`, `<span class="b-dm b-dm--b">6.6kW, 3PM</span>`],
       [`<span class="b-dm b-dm--b" style="font-size:16px">Sun in, bills down.</span>`, `<span class="b-dm b-dm--b" style="font-size:12px">Sun in, bills down.</span>`],
-      [`<span class="b-dm b-dm--b" style="font-size:14px;color:var(--quiet)">6.6 kW, 15 panels.</span><span class="cap num">Quiet on ${A(nameOf(ctx, 'white'))}, ${qr} : 1</span>`, `<span class="b-chip" style="background:${fade}"></span><span class="cap num">${fade.toUpperCase()} on ${A(nameOf(ctx, 'white'))}, ${fr} : 1, fails</span>`],
+      [`<span class="b-dm b-dm--b" style="font-size:14px;color:var(--quiet)">6.6 kW, 15 panels.</span><span class="cap num">Quiet on ${A(nameOf(ctx, gnd))}, ${qr} : 1</span>`, `<span class="b-chip" style="background:${fade}"></span><span class="cap num">${fade.toUpperCase()} on ${A(nameOf(ctx, gnd))}, ${fr} : 1, fails</span>`],
       [`<span class="b-dm">${mono(act.hex)}</span>`, `<span class="b-dm b-mono20">${A(S.title)}</span>`],
     ];
-    const rows = B.type.rules.map((r, i) => row([['b-r', num(ctx, 'type-rules', i + 1)], ['b-req1 ph-tight', A(r.do)], `<div class="b-demo">${demos[i][0]}</div>`, `<div class="b-demo b-demo--no">${demos[i][1]}</div><p class="cap b-dont ph-tight">${A(r.dont)}</p>`]));
+    const rows = B.type.rules.slice(0, demos.length).map((r, i) => row([['b-r', num(ctx, 'type-rules', i + 1)], ['b-req1 ph-tight', A(r.do)], `<div class="b-demo">${demos[i][0]}</div>`, `<div class="b-demo b-demo--no">${demos[i][1]}</div><p class="cap b-dont ph-tight">${A(r.dont)}</p>`]));
     const tab = table(['Ref', 'Requirement', `<span class="b-yes">${ctx.ui.icon('check', 16)}Do</span>`, `<span class="b-no">${ctx.ui.icon('x', 16)}Don't</span>`], [46, 188, 196, null], rows);
     return std(ctx, 'type-rules', `${title(ctx, 'type-rules', 'Five requirements, each drawn right and wrong. They cover weight, units, size, secondary text and mono.')}${tab}`, { note: `The faded sample is a swatch, not text. Text is never faded: secondary text uses the quiet colour, which passes at ${qr} : 1.` });
   },
@@ -332,7 +332,7 @@ export const guidelinesB = {
     const strip = B.colours.map((c) => `<i style="flex:${c.share};background:${c.hex}"></i>`).join('');
     const faces = [['display', F.display], ['body', F.body], ['mono', F.mono]].map(([r, f]) => `<li><span class="b-sf" style="font-family:var(--${r});font-weight:${cssNum(f.weights[f.weights.length - 1])}">Aa</span><b>${A(f.family)}</b><span class="num">${f.weights.join(', ')}</span></li>`).join('');
     const lines = [B.lines.primary, ...B.lines.others].map((l, i) => `<p class="${i ? 'b-ln' : 'b-ln b-ln--1'}">${A(l)}</p>`).join('');
-    const rules = B.guideB.rules.map((r, i) => `<li><span class="num">${i + 1}</span><span>${A(r)}</span></li>`).join('');
+    const rules = B.guideB.rules.map((r, i) => `<li><span class="num">${i + 1}</span><span>${A(typeof r === 'string' ? r : r.text)}</span></li>`).join('');
     const rows = [
       ['Logo', ctx.logo.html('colour', { width: 260, label: 'Your logo goes here' })],
       ['Colour', `<ul class="b-sws">${sw}</ul><div class="b-strip">${strip}</div>`],
