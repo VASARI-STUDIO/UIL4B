@@ -47,7 +47,7 @@
 // silently stopped resolving names would make every other test in this file
 // pass on an empty result.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, homeSectionsLoaded } from './helpers.js'
 
 /** Every named node in Chrome's accessibility tree, with its computed role. */
 async function axNodes(page) {
@@ -199,6 +199,8 @@ test.describe('the palette board is a named set, not a list of landmarks', () =>
   test('the front door answers "what is this page made of" in its landmarks', async ({ page }) => {
     await go(page, '/')
     await expect(page.locator('section#top h1.hh-h1')).toBeVisible()
+    // The sections below the hero mount as the visitor nears them; a reader sees them all.
+    await homeSectionsLoaded(page)
 
     const nodes = await axNodes(page)
     // Nothing on this page is named by a raw hex value, and nothing that is

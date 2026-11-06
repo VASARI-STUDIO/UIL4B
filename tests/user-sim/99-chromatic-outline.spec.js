@@ -85,8 +85,9 @@ test.describe('the chromatic outline', () => {
     // A tap leaves the touch point over the button; on a touch screen that
     // must not count as hover.
     await btn.tap()
-    await page.waitForTimeout(300)
-    expect((await ring(btn)).opacity, 'the hover ring showed on a touch screen').toBe(0)
+    // The :active ring fades out over 280ms once the finger lifts; wait for it to settle at 0,
+    // which a hover ring stuck on by the touch point never would.
+    await expect.poll(async () => (await ring(btn)).opacity, { message: 'the hover ring showed on a touch screen' }).toBe(0)
     await context.close()
   })
 })
