@@ -407,7 +407,7 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   // The footer's PROJECT column links to the page's own sections, by anchor.
   for (const hash of ['#bookmarks', '#try', '#exports', '#examples', '#plans']) {
     assert.ok(FOOTER.includes(`'${hash}'`), `the footer no longer links ${hash}`)
-    assert.ok(PAGE.includes(`id="${hash.slice(1)}"`), `${hash} has no target on the page`)
+    assert.ok(MOUNTED.includes(`id="${hash.slice(1)}"`), `${hash} has no target on the page`)
   }
   for (const old of ['#bench', '#specimens', '#index']) assert.ok(!FOOTER.includes(old), `the footer still links ${old}`)
   assert.ok(FOOTER.includes('/discover'), 'the footer no longer links Discover')

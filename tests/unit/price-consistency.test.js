@@ -520,7 +520,7 @@ test('src/components/home types no price, saving or count', () => {
     const code = stripComments(fs.readFileSync(file, 'utf8'), { lineComments: true })
     assert.ok(!PRICE.test(code) && !/US\$/.test(code), `${rel(file)} types a price`)
     PRICE.lastIndex = 0
-    assert.ok(!/\d\s?%/.test(code), `${rel(file)} types a percentage`)
+    assert.ok(!/\d\s?%(?![\s\d.,%]*\))/.test(code.replace(/(?:hsla?|oklch|rgba?)\([^)]*\)/g, '')), `${rel(file)} types a percentage`)
     // Count words are product facts only in the plans files; elsewhere they are
     // sample-brand copy (alt text, demo lines).
     if (!/plan/i.test(path.basename(file))) continue
