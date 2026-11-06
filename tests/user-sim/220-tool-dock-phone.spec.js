@@ -181,8 +181,11 @@ for (const phone of PHONES) {
       }
 
       test('scrolled to the end, the last thing on the page is wholly above the dock', async ({ page }) => {
-        await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-        await expect.poll(() => page.evaluate(() => Math.round(document.documentElement.scrollHeight - window.innerHeight - window.scrollY)), { message: 'the page reaches its end' }).toBeLessThanOrEqual(1)
+        // Scroll again on every poll: content that finishes loading after the first scroll makes the page taller.
+        await expect.poll(() => page.evaluate(() => {
+          window.scrollTo(0, document.documentElement.scrollHeight)
+          return Math.round(document.documentElement.scrollHeight - window.innerHeight - window.scrollY)
+        }), { message: 'the page reaches its end' }).toBeLessThanOrEqual(1)
         await settled(page)
         const top = (await box(dock(page))).y
         const low = await contentBottom(page)
