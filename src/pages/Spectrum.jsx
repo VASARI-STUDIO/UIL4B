@@ -4,7 +4,6 @@ import PillNav from '../components/PillNav'
 import SpectrumRamp from '../components/spectrum/SpectrumRamp'
 import SpectrumWords from '../components/spectrum/SpectrumWords'
 import SpectrumBench from '../components/spectrum/SpectrumBench'
-import SpectrumExports from '../components/spectrum/SpectrumExports'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import HomeHero from '../components/home/HomeHero'
 import { AutoplayOwner } from '../components/home/AutoplayOwner'
@@ -13,6 +12,7 @@ import PhIcon from '../components/spectrum/PhIcon'
 import HomeProof from '../components/home/HomeProof'
 import HomeShowcase from '../components/home/HomeShowcase'
 import HomePlans from '../components/home/HomePlans'
+import HomeExports from '../components/home/HomeExports'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE: this page is
@@ -35,8 +35,7 @@ import '../styles/pages/home-hero.css'
 // final call, one <footer>.
 
 export default function Spectrum() {
-  // The seed and the family chosen in the bookmarks windows drive the exports
-  // cards below them.
+  // The seed and the family chosen in the bookmarks windows.
   const [base, setBase] = useState(0)
   const [font, setFont] = useState(0)
 
@@ -81,17 +80,8 @@ export default function Spectrum() {
           <h2 id="try-h" className="sr-only" tabIndex={-1}>Try the tools</h2>
         </section>
 
-        {/* ── Exports (slot: the previous stack stands here) ──────────────── */}
-        <section id="exports" className="sp-section" aria-labelledby="sp-spec-h">
-          <div className="sp-spec-head">
-            <h2 id="sp-spec-h" tabIndex={-1}>Studio quality exports.</h2>
-            <p>
-              Take one piece, take the whole system, or come back to it next month. All three leave
-              the browser looking like a studio made them.
-            </p>
-          </div>
-          <SpectrumExports base={base} font={font} />
-        </section>
+        {/* ── Exports: renders its own <section id="exports"> ─────────────── */}
+        <HomeExports />
 
         {/* ── Examples (slot) ─────────────────────────────────────────────── */}
         <section id="examples" aria-labelledby="examples-h" data-slot="examples">

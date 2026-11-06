@@ -380,7 +380,7 @@ for (const view of [390, 768]) {
   test(`T5 a tool switch leaves the Exports heading where it was at ${view}px`, async ({ browser }) => {
     const { ctx, page } = await open(browser, view)
     await go(page, '/')
-    const top = () => page.evaluate(() => document.querySelector('#sp-spec-h').getBoundingClientRect().top + window.scrollY)
+    const top = () => page.evaluate(() => document.querySelector('#exports-h').getBoundingClientRect().top + window.scrollY)
     const start = await top()
     for (const name of ['Icons', 'Fonts', 'Converter', 'Palette']) {
       await page.getByLabel('Tools').getByRole('tab', { name, exact: true }).click()
