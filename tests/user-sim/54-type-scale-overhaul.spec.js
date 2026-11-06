@@ -105,7 +105,7 @@ test.describe('Type Scale · the overhaul', () => {
     await page.locator('#tsc-base + .snapv-value').click()
     await page.getByRole('spinbutton', { name: /Base font size/ }).fill('20')
     await page.getByRole('spinbutton', { name: /Base font size/ }).press('Enter')
-    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('20px')
+    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('20 px')
     await expect(largest).toHaveText(/^101\.25 \//)
   })
 

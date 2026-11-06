@@ -244,11 +244,13 @@ for (const width of WIDTHS) {
 //   <768:  Heading pill, Body pill, Save (the bookmark alone), Copy CSS
 //   <360:  no room for Save beside the two pills, so it lives in More (three buttons)
 // Two pills can only show a family name if Save gives up its label; at 390 each
-// pill must be wider than the bare 44px a finger needs.
+// pill must be wider than the bare 44px a finger needs. Copy CSS is its label and a
+// 32px disc (131.5px at 14px type), so at 390 the Heading pill is the board's 74.5px
+// share of what is left, and the floor sits just under that.
 const DOCK_FIT = [
-  { width: 320, height: 640, buttons: 3, pillMin: 90 },
+  { width: 320, height: 640, buttons: 3, pillMin: 74 },
   { width: 360, height: 780, buttons: 4, pillMin: 70 },
-  { width: 390, height: 844, buttons: 4, pillMin: 90 },
+  { width: 390, height: 844, buttons: 4, pillMin: 74 },
   { width: 768, height: 1024, buttons: 1, pillMin: 0 },
 ]
 

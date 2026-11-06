@@ -76,7 +76,7 @@ test.describe('Type Scale Generator', () => {
     // carries every option's label in its textContent, so `toContainText('1.25')`
     // on the bar would pass with any ratio selected. That is the assertion this
     // replaces and it is why it is not replaced in kind.
-    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('15px')
+    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('15 px')
     await expect(page.getByLabel('Scale ratio')).toHaveAttribute('value', '1.618')
     await expect(page.locator('.tsc-scale-range')).toHaveText('6 steps, 9.27px to 102.8px')
 
