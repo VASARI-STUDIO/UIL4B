@@ -240,8 +240,6 @@ const ALLOWED = {
     '.spt .spt-art .spt-alt-s': 'code',
   },
   'pages/spectrum.css': {
-    '.sp-ex-filebar b': 'token',
-    '.sp-ico-peek': 'code',
     '.sp-search .hcmd-kbd kbd': 'kbd',
     '.sp-search .hcmd-prompt::after': 'glyph',
   },

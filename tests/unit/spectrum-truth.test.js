@@ -60,7 +60,6 @@ const MOUNTED = PAGE.replace(/<(Home[A-Z]\w*)[^>]*\/>/g, (tag, name) => {
 })
 const HERO = stripComments(read('src/components/home/HomeHero.jsx'))
 const FACTS = stripComments(read('src/components/spectrum/spectrumFacts.js'))
-const BENCH = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
 // CSS COMMENTS ARE STRIPPED BEFORE ANY OF THIS IS ASSERTED.
 // #332's rule, one language over: a check that passes because a COMMENT still
 // names the old value is not an assertion — and the inverse bit this file on the
@@ -70,15 +69,12 @@ const BENCH = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
 // not the code.
 const stripCss = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '')
 const CSS = stripCss(read(SPECTRUM_CSS_PATH))
-const ALL_JSX = PAGE + HERO + FACTS + BENCH
+const ALL_JSX = PAGE + HERO + FACTS
   + stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumRamp.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumIcon.jsx'))
-  // The landing's new pieces: the four bench windows, the exports
-  // stack, the search wrapper, the hero copy module and the design's tables.
-  + stripComments(read('src/components/spectrum/BenchConverter.jsx'))
-  + stripComments(read('src/components/spectrum/SpectrumExports.jsx'))
+  // The landing's remaining pieces: the search wrapper, the hero copy module and the design's tables.
   + stripComments(read('src/components/spectrum/SpectrumSearch.jsx'))
   + stripComments(read('src/components/spectrum/OpenPill.jsx'))
   + stripComments(read('src/components/home/HomeProof.jsx'))
@@ -355,26 +351,16 @@ test('the stylesheet hardcodes no accent colour', () => {
 
   // Every hex in the sheet, minus the ones that are legitimately fixed.
   const ALLOWED = new Set([
-    // The three window dots in the panel title bar: a picture of an operating
-    // system window, not a product colour. The design ships these exact values.
-    '#ED6A5E', '#F4BF4F', '#61C554',
-    // Neutral, and only inside a shadow/drop-shadow on a generated fill.
-    '#fff',
     // The design's ground is the spec:
     // the design's dark ink and ink-hover, and its light page / card / ink /
     // ink-hover. All neutrals; the dark page and card are the app's own tokens.
     '#EFEEEA', '#D5D4CE', '#F5F5F2', '#FFFFFF', '#121418', '#2C313B',
-    // A mask, not a colour: the converter's tab row fades out at its edge.
-    '#000',
-    // The converter's dimension badge: light text on a fixed dark scrim over
-    // a photograph, the same in both themes because the photo is.
-    '#F4F6FA',
   ])
   const hexes = [...CSS.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0])
   const unexpected = hexes.filter((h) => !ALLOWED.has(h) && !ALLOWED.has(h.toUpperCase()))
   assert.deepEqual(unexpected, [],
     `spectrum.css carries unexpected literal colours: ${unexpected.join(', ')}. `
-    + 'Everything but the window dots resolves from the token layer.')
+    + 'Everything else resolves from the token layer.')
 
   // POSITIVE CONTROL: the sheet really does use the derived family, so the
   // assertion above is not passing on an empty stylesheet.

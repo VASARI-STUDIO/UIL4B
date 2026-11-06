@@ -18,8 +18,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
-import { EX_FILES, ICONS, IMG_MODES, MODEL_OUTPUTS, MODEL_PREVIEW, MODEL_SOURCE } from '../../src/components/spectrum/spectrumKit.js'
-import { OUTPUT_FORMATS } from '../../src/utils/meshFormats.js'
+import { EX_FILES, ICONS, IMG_MODES } from '../../src/components/spectrum/spectrumKit.js'
 import { PH_REGULAR } from '../../src/components/spectrum/phosphorRegular.js'
 import { PH_WEIGHTS } from '../../src/components/spectrum/phosphorWeights.js'
 import { CREATE_GROUPS, categoryDestination } from '../../src/data/toolTree.js'
@@ -43,21 +42,15 @@ const MOUNTED = PAGE.replace(/<(Home[A-Z]\w*)\b[^>]*\/>/g, (tag, name) => {
 const FOOTER = stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
 const APP_FOOTER = stripComments(read('src/components/AppFooter.jsx'))
 const WORDS = stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
-const BENCH_SRC = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
-const CONVERTER_SRC = stripComments(read('src/components/spectrum/BenchConverter.jsx'))
-const EXPORTS_SRC = stripComments(read('src/components/spectrum/SpectrumExports.jsx'))
 // Comments stripped first — see the note in spectrum-truth.test.js. The header
 // of spectrum.css quotes the very strings these tests ban.
 const CSS = read(SPECTRUM_CSS_PATH).replace(/\/\*[\s\S]*?\*\//g, '')
 const SOURCES = {
   'src/pages/Spectrum.jsx': PAGE,
   'src/components/spectrum/SpectrumFooter.jsx': FOOTER,
-  'src/components/spectrum/SpectrumBench.jsx': BENCH_SRC,
   'src/components/spectrum/SpectrumWords.jsx': WORDS,
   'src/components/spectrum/SpectrumRamp.jsx': stripComments(read('src/components/spectrum/SpectrumRamp.jsx')),
   'src/components/spectrum/SpectrumIcon.jsx': stripComments(read('src/components/spectrum/SpectrumIcon.jsx')),
-  'src/components/spectrum/BenchConverter.jsx': CONVERTER_SRC,
-  'src/components/spectrum/SpectrumExports.jsx': EXPORTS_SRC,
   'src/components/spectrum/SpectrumSearch.jsx': stripComments(read('src/components/spectrum/SpectrumSearch.jsx')),
   'src/components/spectrum/PhIcon.jsx': stripComments(read('src/components/spectrum/PhIcon.jsx')),
   'src/components/spectrum/OpenPill.jsx': stripComments(read('src/components/spectrum/OpenPill.jsx')),
@@ -196,7 +189,7 @@ test('every moving thing has a reduced-motion companion, under both spellings', 
   const start = CSS.indexOf('html[data-reduced-motion="true"]')
   assert.ok(start > -1, 'spectrum.css has no reduced-motion block at all')
   const blocks = CSS.slice(start)
-  for (const cls of ['.sp-w', '.sp-ramp-bar', '.sp-stack-card', '.sp-panel', '.sp-pill-icon', '.sp-cta-icon', '.sp-disc-card', '.sp-disc-cta', '.sp-chip']) {
+  for (const cls of ['.sp-w', '.sp-ramp-bar', '.sp-pill-icon']) {
     assert.ok(blocks.includes(cls),
       `${cls} moves but is not named in spectrum.css's reduced-motion blocks`)
   }
@@ -270,98 +263,6 @@ test('every glyph the page asks for is one the page ships', () => {
   assert.deepEqual(spMissing, [], `SpectrumIcon is asked for ${spMissing.join(', ')} and draws none of them`)
 })
 
-/* ── the bench is the design's four tool windows ─────────────────────────────────────── */
-
-test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
-  // The design's 4 bench tool windows, not the 5 category panels.
-  // The windows carry no title bar now: their names live on the rail list and in each article's aria-label.
-  const names = [...(/const RAIL = \[([^\]]+)\]/.exec(BENCH_SRC)?.[1] || '').matchAll(/'([^']+)'/g)].map((m) => m[1])
-  assert.ok(!BENCH_SRC.includes('sp-panel-bar') && !BENCH_SRC.includes('sp-panel-name'), 'the bench draws a window title bar again')
-  assert.deepEqual(names, ['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'])
-  // One `windows` list feeds both layouts, and each entry is wrapped once in a
-  // [data-panel] article numbered by its place in the list.
-  const list = /const windows = \[([\s\S]*?)\n {2}\]/.exec(BENCH_SRC)
-  assert.ok(list, 'the bench no longer builds its four windows as one list')
-  const entries = [...list[1].matchAll(/<(PalettePanel|IconPanel|FontPanel|BenchConverter)\b/g)].map((m) => m[1])
-  assert.deepEqual(entries, ['PalettePanel', 'IconPanel', 'FontPanel', 'BenchConverter'], 'the bench windows are not the four tools, in order')
-  assert.equal([...BENCH_SRC.matchAll(/data-panel=\{i\}/g)].length, 1, 'the bench no longer numbers its [data-panel] windows from the list')
-  assert.match(BENCH_SRC, /const RAIL = \['Palette Builder', 'Icon Library', 'Font Gallery', 'File Converter'\]/,
-    'the rail no longer lists the four tools by their own names, matching the window titles')
-  // No fake window chrome, no duplicate numbering, no glyph-as-icon marks.
-  for (const gone of ['sp-panel-lights', 'sp-panel-no', 'sp-fontrow-no', 'sp-rail-mark']) {
-    assert.ok(!BENCH_SRC.includes(gone), `the bench renders .${gone} again`)
-  }
-  assert.ok(!/['"`>](?:●|✓|\+)['"`<]/.test(BENCH_SRC), 'the bench draws a unicode glyph as an icon again')
-  // AI Studio is not one of the design's windows.
-  assert.ok(!/AI Studio/.test(BENCH_SRC), 'the bench has an AI Studio window again')
-})
-
-test('the bench writes down no route', () => {
-  // Every window CTA reads its destination off the tool tree through route(),
-  // so a renamed tool fails the build rather than shipping a dead link.
-  for (const [file, src] of [['SpectrumBench.jsx', BENCH_SRC], ['BenchConverter.jsx', CONVERTER_SRC]]) {
-    assert.ok(!/to="\/create\//.test(src), `${file} carries a literal /create/ route`)
-    assert.ok(!/to="\/discover\//.test(src), `${file} carries a literal /discover/ route`)
-  }
-  const called = [...(BENCH_SRC + CONVERTER_SRC).matchAll(/route\('([a-z0-9-]+)'\)/g)].map((m) => m[1]).sort()
-  assert.deepEqual(called, ['3d-converter', 'file-converter', 'font-gallery', 'font-pair', 'gradient', 'icons', 'palette', 'ratio'],
-    'the four windows no longer open their eight destinations through route()')
-})
-
-test('the Compress panel describes compressing, not converting', () => {
-  // Only the names of the tools the panel links to, and the 3D tab's own
-  // preview (which is a conversion), may say "convert".
-  const copy = CONVERTER_SRC
-    .replace(/BenchConverter|CONVERTER_SOURCE/g, '')
-    .replace(/file-converter|3d-converter/g, '')
-    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter<|label: 'File Converter'/g, '')
-    .replace(/A machined bracket turning, converted from/g, '')
-  const left = [...copy.matchAll(/[^\n]*convert[^\n]*/gi)].map((m) => m[0].trim())
-  assert.deepEqual(left, [], 'the Compress panel still says "convert"')
-  assert.match(CONVERTER_SRC, /ready to compress/, 'a chosen file is no longer called ready to compress')
-})
-
-test('the converter tabs are keyed by id, and every id opens its own pane', () => {
-  const ids = IMG_MODES.map(([id]) => id)
-  assert.deepEqual(ids, ['compress', 'model', 'frames', 'ratio'], 'the tabs are not Compress, 3D model, Video frames, Aspect ratio')
-  assert.equal(new Set(ids).size, ids.length, 'two converter tabs share an id')
-  assert.deepEqual(IMG_MODES.map(([, label]) => label), ['Compress', '3D model', 'Video frames', 'Aspect ratio'])
-  for (const [, label, , short] of IMG_MODES) {
-    if (short) assert.ok(label.toLowerCase().includes(short.toLowerCase()), `the short label "${short}" is not part of "${label}"`)
-  }
-  for (const id of ids) {
-    assert.match(CONVERTER_SRC, new RegExp(`paneClass\\('${id}'[^)]*\\)} \\{\\.\\.\\.paneProps\\('${id}'\\)\\}`),
-      `BenchConverter renders no pane for the "${id}" tab`)
-  }
-  assert.ok(!/mode === \d/.test(CONVERTER_SRC), 'BenchConverter branches on a tab index again')
-})
-
-test('the 3D tab offers only outputs the 3D Model Converter writes, and loads its preview on demand', () => {
-  assert.deepEqual(MODEL_OUTPUTS.map((f) => f.id), ['glb', 'obj', 'stl', 'usdz'])
-  for (const f of MODEL_OUTPUTS) assert.ok(OUTPUT_FORMATS.some((o) => o.id === f.id), `${f.id} is not in meshFormats.js`)
-  // "mm → m" is printed only for outputs whose format fixes metres.
-  assert.equal(MODEL_SOURCE.unit, 'mm')
-  for (const f of MODEL_OUTPUTS) assert.equal(f.metres, OUTPUT_FORMATS.find((o) => o.id === f.id).unit === 'm')
-  // The preview files exist, within budget, and are only named behind the
-  // flag the tab sets on first open.
-  assert.ok(fs.statSync(`public${MODEL_PREVIEW.loop}`).size <= 400 * 1024, 'the turntable loop is over 400 KB')
-  assert.ok(fs.statSync(`public${MODEL_PREVIEW.poster}`).size <= 40 * 1024, 'the turntable poster is over 40 KB')
-  assert.match(CONVERTER_SRC, /\{modelOpened\s*\?\s*<img/, 'the 3D preview image is no longer gated on the tab being opened')
-})
-
-test('the dashed file row and the image sub-info are gone; the saving has one home', () => {
-  for (const gone of ['sp-drop', 'sp-conv-dims']) {
-    assert.ok(!CONVERTER_SRC.includes(gone), `BenchConverter still renders .${gone}`)
-    assert.ok(!CSS.includes(`.${gone}`), `spectrum.css still styles .${gone}`)
-  }
-  assert.ok(!/1920 × 1080, 0:08/.test(CONVERTER_SRC), 'the video fixture meta is back')
-  assert.match(CONVERTER_SRC, /className="sp-saving" aria-live="polite"/)
-  assert.ok(!/sp-quality[\s\S]{0,200}<b>/.test(CONVERTER_SRC), 'the Quality row prints a figure again')
-  // The overlay is never hidden with visibility, so the input it pictures can always take focus.
-  const over = /\.sp-art-over \{[^}]*\}/.exec(CSS)?.[0] || ''
-  assert.ok(over && !/visibility|display:\s*none/.test(over), 'the stage overlay is hidden with visibility or display')
-})
-
 test('the split headline keeps one readable sentence for assistive tech', () => {
   assert.ok(WORDS.includes('className="sr-only"'),
     'SpectrumWords no longer carries the whole sentence in a visually-hidden span, so a screen '
@@ -417,26 +318,6 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   for (const gone of ['id="pricing"', 'id="faq"', '<table', 'sp-compare', 'sp-plans']) {
     assert.ok(!PAGE.includes(gone), `Spectrum.jsx carries ${gone} again — pricing belongs on /plans`)
   }
-})
-
-// The exports section's own structure. The exports lane owns and replaces these
-// assertions when it rebuilds the stack.
-test('exports: the stack nests its three cards and pins them', () => {
-  // THE STACK NESTS. A sticky card pins only inside its own containing block,
-  // so each card must sit in a wrapper that also holds the cards after it.
-  const nests = EXPORTS_SRC.split('<div className="sp-stack-nest">').length - 1
-  assert.equal(nests, 3, 'the exports stack no longer nests its three cards (A ⊃ B ⊃ C)')
-  // Card 1 is the OneCard, card 2 a PlateCard and card 3 the ShelfCard (each builds its own <Card>).
-  const order = ['<OneCard index={0}', '<div className="sp-stack-nest">', '<PlateCard index={1}', '<ShelfCard index={2}', 'sp-stack-pad--tail']
-  let at = EXPORTS_SRC.indexOf('<div className="sp-stack-nest">')
-  for (const needle of order) {
-    const next = EXPORTS_SRC.indexOf(needle, at)
-    assert.ok(next > -1, `the stack lost ${needle}, or it moved out of order`)
-    at = next
-  }
-  assert.match(EXPORTS_SRC, /const TOPS = \[84, 116, 148\]/, 'the cards no longer pin at 84 / 116 / 148')
-  assert.match(EXPORTS_SRC, /1 - docked \* 0\.045/, 'covered cards no longer shrink by .045 per card')
-  assert.match(EXPORTS_SRC, /1 - docked \* 0\.05/, 'covered cards no longer dim by .05 per card')
 })
 
 test('the page never removes an outline', () => {
