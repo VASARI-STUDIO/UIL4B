@@ -1,0 +1,39 @@
+/* Homepage spacing tokens. Padding is the only space at a section's top and
+   bottom; every section reads these instead of its own numbers. */
+.spectrum {
+  --section-y: 152px;
+  --section-y-join: 136px;
+  --section-y-compact: 96px;
+  --section-y-close: 176px;
+  --gutter-x: 52px;
+  --hm-hairline: rgba(239, 238, 234, .08);
+}
+
+@media (max-width: 1199px) {
+  .spectrum {
+    --section-y: 120px;
+    --section-y-join: 104px;
+    --section-y-compact: 80px;
+    --section-y-close: 144px;
+    --gutter-x: 40px;
+  }
+}
+
+@media (max-width: 767px) {
+  .spectrum {
+    --section-y: 88px;
+    --section-y-join: 72px;
+    --section-y-compact: 56px;
+    --section-y-close: 112px;
+    --gutter-x: 16px;
+  }
+}
+
+@media (max-width: 374px) {
+  .spectrum {
+    --section-y: 72px;
+    --section-y-join: 64px;
+    --section-y-compact: 48px;
+    --section-y-close: 96px;
+  }
+}
