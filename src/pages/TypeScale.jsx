@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import FontPicker from '../components/FontPicker'
 import UIKitGuide from '../components/UIKitGuide'
-import { SaveTypeSystemPanel } from '../components/SaveTypeSystem'
+import SaveTypeSystem, { SaveTypeSystemPanel } from '../components/SaveTypeSystem'
 import { useSaveTypeSystemToolbar } from '../hooks/useSaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import {
@@ -669,36 +669,17 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const formatLabel = { css: 'CSS', tailwind: 'v3 config', tailwind4: 'v4 theme', scss: 'SCSS' }[format] || 'SCSS'
 
   // Keeping the scale in a project is the one step here that asks for an
-  // account; everything else on the page works signed out. The trigger sits in
-  // the sticky toolbar at every width, so it stays on screen while the page scrolls.
-  const save = useSaveTypeSystemToolbar({
+  // account; everything else on the page works signed out. From 768 the trigger
+  // sits in the sticky toolbar, so it stays on screen while the page scrolls; on
+  // a phone it is the middle of the dock.
+  const saveOptions = {
     gate: 'type-save-type-scale',
     label: 'this type scale',
     summary: `${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}. Kept with the project’s palette and tokens.`,
     toast,
-  })
-
-  // The toolbar's actions exist in every state so the row keeps its shape
-  // while the catalogue loads.
-  const saveItem = {
-    id: 'save',
-    priority: 4,
-    render: () => (
-      <ToolButton
-        ref={save.triggerRef}
-        icon="bookmark-simple"
-        collapse
-        className="tsc-save tsc-save--icon"
-        aria-label="Save to a project"
-        aria-expanded={save.open}
-        aria-haspopup="dialog"
-        onClick={save.trigger}
-      >
-        Save to a project
-      </ToolButton>
-    ),
-    menu: { label: 'Save to a project', icon: 'bookmark-simple', onSelect: save.trigger },
   }
+  const save = useSaveTypeSystemToolbar(saveOptions)
+
   const bar = typeToolsBarItems({
     current: 'scale',
     heading: headingFont ? { family: headingFont.family, weight: headingW } : null,
@@ -713,7 +694,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const groundItem = bar.find(it => it.id === 'ttb-ground')
   const items = [
     ...bar.filter(it => it !== groundItem),
-    ...(phone ? [saveItem] : []),
     {
       id: 'reset',
       priority: 3,
@@ -751,7 +731,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // From 768 Save to a project sits right against Copy CSS, as one group at the
   // end of the row, so the More button always lands to the left of both. The
   // group never leaves the row, and the save menu is drawn with it. On a phone
-  // Save is a 44px icon button on the row and Copy CSS is the shell's dock.
+  // both sit in the shell's dock instead.
   const toolbarPrimary = (
     <div className="tsc-primary-group">
       <div className="tsc-save-wrap">
@@ -770,7 +750,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       {primary}
     </div>
   )
-  // The phone dock: the scale trigger that opens the settings sheet, then Copy.
+  // The phone dock: the scale trigger that opens the settings sheet, then Save, then Copy.
   const ratioRec = RATIOS.find(r => r.id === ratioId)
   const dockRatio = (
     <button
@@ -789,7 +769,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     </button>
   )
   const layout = (body) => (
-    <ToolLayout className="tsc-page" back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? <>{dockRatio}{primary}</> : toolbarPrimary}>
+    <ToolLayout className="tsc-page" back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? <>{dockRatio}<div className="tsc-dock-save"><SaveTypeSystem {...saveOptions} /></div>{primary}</> : toolbarPrimary}>
       {body}
     </ToolLayout>
   )
@@ -1420,8 +1400,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           </div>
         </ToolMain>
       </ToolGrid>
-
-      {phone && <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />}
 
       {/* Step 3 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="typescale" />

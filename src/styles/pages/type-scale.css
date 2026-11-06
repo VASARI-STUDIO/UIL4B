@@ -198,19 +198,17 @@
 .tsc-page .tsc-developer-bar .tsc-fmt { min-width: 0; overflow-x: auto; }
 .tsc-page .tsc-export-copy { flex: none; }
 
-
 /* The save menu (SaveTypeSystemPanel) opens downward from the toolbar's Save from
-   768. On a phone it is mounted at the page root, outside the toolbar (whose
-   backdrop-filter would pin a fixed child to the bar), as a bottom sheet over the
-   tab bar. Below 561px global.css .svt-menu is already that sheet. */
+   768. On a phone the dock's SaveTypeSystem menu is a bottom sheet over the tab
+   bar (below 561px global.css .svt-menu is already that sheet). */
 .tsc-page .tsc-save-wrap { position: relative; display: inline-flex; }
 .tsc-page .tsc-primary-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tsc-page .tl-toolbar .svt-pop { display: block; position: absolute; top: calc(100% + 8px); bottom: auto; right: 0; z-index: 60; }
 .tsc-page .tl-toolbar .svt-pop .svt-menu { position: static; }
 .tsc-page .svt-pop { display: contents; }
 @media (max-width: 767px) {
-  .tsc-page .svt-pop .svt-menu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 16px 16px 0 0; z-index: 70; }
-  html.has-tabbar .tsc-page .svt-pop .svt-menu { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+  .tsc-page :is(.svt-pop, .tl-dock) .svt-menu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 16px 16px 0 0; z-index: 70; }
+  html.has-tabbar .tsc-page :is(.svt-pop, .tl-dock) .svt-menu { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ── The panel ──────────────────────────────────────────────────────────── */
@@ -493,9 +491,8 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   .tsc-page .tsc-words-row .tsc-tuning-toggle { width: auto; }
 }
 
-/* Phone: Save is a 44px icon button on the toolbar row; the settings row shows the families. */
+/* Phone: the settings row shows the families. */
 @media (max-width: 767px) {
-  .tsc-page .tl-toolbar .tsc-save--icon { width: 44px; padding: 0; }
   .tsc-page .tsc-sheet-row-value { margin-left: auto; min-width: 0; max-width: 55%; overflow: hidden; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
   .tsc-page .tsc-sheet-row-label { flex: 0 0 auto; }
   .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); max-height: min(45dvh, calc(100dvh - var(--tl-kb-inset, 0px) - var(--tsc-top) - 120px)); }
@@ -561,6 +558,20 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   .tsc-page .tsc-dock-ratio svg { flex: none; margin-left: auto; transition: transform 150ms var(--tl-ease); }
   .tsc-page .tsc-dock-ratio[aria-expanded="true"] svg { transform: rotate(180deg); }
   .tsc-page .tl-dock .tsc-copy-primary { flex: 0 0 auto; }
+  .tsc-page .tl-dock { gap: 8px; }
+  /* Save is the bookmark alone: the label stays in the DOM as the button's name. */
+  .tsc-page .tl-dock .tsc-dock-save { flex: none; display: flex; }
+  .tsc-page .tl-dock .tsc-dock-save .svt-wrap { width: auto; }
+  .tsc-page .tl-dock .svt-trigger {
+    width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; justify-content: center;
+    border: 0; border-radius: 999px; background: var(--tl-wash); color: var(--tl-ink);
+    transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+  }
+  .tsc-page .tl-dock .svt-trigger:active { transform: scale(.97); }
+  .tsc-page .tl-dock .svt-trigger svg { width: 20px; height: 20px; }
+  .tsc-page .tl-dock .svt-trigger .svt-trigger-label {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
 }
 @media (max-width: 359px) {
   .tsc-page .tsc-dock-ratio-v { display: none; }
