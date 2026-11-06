@@ -220,10 +220,10 @@
 }
 .ht-ic-t[aria-pressed="true"] { background: var(--l3); color: #EFEEEA; }
 .ht-ic-t:not(:disabled):active { transform: scale(.97); }
-.ht-ic-g { width: 24px; height: 24px; }
+.ht .ht-ic-g { width: 24px; height: 24px; }
 .ht-ic-pv { flex: none; width: 184px; display: flex; flex-direction: column; }
 .ht-ic-stage { display: grid; place-items: center; width: 184px; height: 160px; border-radius: 12px; background: var(--l2); color: #EFEEEA; }
-.ht-ic-big { width: 96px; height: 96px; }
+.ht .ht-ic-big { width: 96px; height: 96px; }
 .ht-ic-name { margin: 8px 0 0; font-size: 15px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
 .ht-ic-meta { margin: 4px 0 0; height: 18px; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
 .ht-ic-cols { align-self: stretch; margin-top: 16px; }
@@ -283,9 +283,9 @@
 .ht-fn-row[data-load="true"] .ht-fn-spec { display: none; }
 .ht-fn-row[data-load="true"] .ht-fn-skel { display: block; }
 .ht-fn-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); white-space: nowrap; }
-.ht-fn-caret { display: none; width: 16px; height: 16px; }
-.ht-fn-row:focus-visible .ht-fn-caret, .ht-fn-row[aria-expanded="true"] .ht-fn-caret { display: block; }
-.ht-fn-row[aria-expanded="true"] .ht-fn-caret { transform: rotate(180deg); }
+.ht .ht-fn-caret { display: none; width: 16px; height: 16px; }
+.ht .ht-fn-row:focus-visible .ht-fn-caret, .ht .ht-fn-row[aria-expanded="true"] .ht-fn-caret { display: block; }
+.ht .ht-fn-row[aria-expanded="true"] .ht-fn-caret { transform: rotate(180deg); }
 .ht-fn-ladder { display: none; margin-top: 12px; gap: 16px; font-size: 15px; line-height: 20px; color: rgba(var(--ink), .86); }
 .ht-fn-row[aria-expanded="true"] .ht-fn-ladder { display: flex; flex-wrap: wrap; }
 .ht-fn-pick {
@@ -310,7 +310,7 @@
 .ht-fn-col p { margin: 0; font-size: var(--fs); line-height: 1.15; color: #EFEEEA; overflow-wrap: anywhere; }
 @media (hover: hover) and (pointer: fine) {
   .ht-fn-row:hover { background: rgba(var(--ink), .03); }
-  .ht-fn-row:hover .ht-fn-caret { display: block; }
+  .ht .ht-fn-row:hover .ht-fn-caret { display: block; }
   .ht-fn-pick:hover { background: var(--l2h); }
   .ht-fn-pick[aria-pressed="true"]:hover { background: var(--l3h); }
   .ht-step button:hover:not(:disabled) { background: var(--l2h); color: #EFEEEA; }
