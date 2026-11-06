@@ -18,8 +18,9 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont,
   verifyFontLoaded,
 } from '../utils/googleFonts'
-import { categoryWord, filterGalleryTypefaces, ladderWeights } from '../utils/fontGallery'
-import { ownTypeScale, setPairDraft, setScaleDraft } from '../utils/typeHandoff'
+import ToolIcon from '../components/tool/ToolIcon'
+import { categoryWord, filterGalleryListTypefaces, ladderWeights } from '../utils/fontGallery'
+import { ownFont, ownTypeScale, setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import {
   backdropFor, backdropKind, backdropReady, backdropUrls, loadBackdrop, loadBackdropsInTurn,
 } from '../utils/galleryBackdrop'
@@ -65,7 +66,13 @@ const CATS = [
   { id: 'serif', label: 'Serif' },
   { id: 'display', label: 'Display' },
   { id: 'handwriting', label: 'Script' },
+  { id: 'monospace', label: 'Mono' },
 ]
+
+// What the type-tools switcher shows until the project has faces of its own:
+// the same sample pair Font Pair and Type Scale open on.
+const SAMPLE_HEADING = { family: 'Archivo', weight: 800, category: 'sans-serif' }
+const SAMPLE_BODY = { family: 'IBM Plex Sans', weight: 400, category: 'sans-serif' }
 
 const SORTS = [
   { id: 'popularity', label: 'Popular' },
@@ -637,6 +644,23 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy, onClear }) {
   )
 }
 
+// The phone More sheet's Project row: the sample project, opening onto the one
+// line that says how to use a project of your own.
+function MoreProject() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="fg-more-proj">
+      <span className="ttb-menu-label">Project</span>
+      <button type="button" className="fg-more-proj-row" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <ToolIcon name="bicycle" size={16} />
+        <span className="fg-more-proj-name">Kerbside<span className="fg-more-proj-tag"> · Sample</span></span>
+        <ToolIcon name="caret-down" size={16} className="fg-more-proj-caret" />
+      </button>
+      {open && <p className="fg-more-proj-note">Sign in to use your own project</p>}
+    </div>
+  )
+}
+
 /* ── Page ──────────────────────────────────────────────────────────────────── */
 
 export default function FontGallery({ onCopy, toast }) {
@@ -681,7 +705,13 @@ export default function FontGallery({ onCopy, toast }) {
 
   const compareIds = useMemo(() => new Set(compare.map(f => f.family)), [compare])
 
-  const galleryCatalog = useMemo(() => filterGalleryTypefaces(catalog), [catalog])
+  const galleryCatalog = useMemo(() => filterGalleryListTypefaces(catalog), [catalog])
+  // Each category's family count, for the Filters sheet's pills.
+  const catCounts = useMemo(() => {
+    const out = { all: galleryCatalog.length }
+    for (const f of galleryCatalog) out[f.category] = (out[f.category] || 0) + 1
+    return out
+  }, [galleryCatalog])
 
   // The filtered figures are derived from the catalogue actually on screen, so
   // a degraded fallback list scopes the search honestly rather than quoting the
@@ -774,6 +804,15 @@ export default function FontGallery({ onCopy, toast }) {
 
   const ready = status !== 'loading'
 
+  // The switcher's two answers: the project's own faces, or the sample pair the
+  // other two tools open on. The faces are loaded so the switcher paints in them.
+  const switchHeading = ownFont(design, 'heading') || SAMPLE_HEADING
+  const switchBody = ownFont(design, 'body') || SAMPLE_BODY
+  useEffect(() => {
+    loadFont(switchHeading.family, [switchHeading.weight])
+    loadFont(switchBody.family, [switchBody.weight])
+  }, [switchHeading.family, switchHeading.weight, switchBody.family, switchBody.weight])
+
   // Once the page is idle the rest of the ground's strips come in one at a
   // time, the first band's kind first, so a hover never meets a blank band and
   // a phone on a slow link never has several in flight. Switching ground
@@ -812,13 +851,9 @@ export default function FontGallery({ onCopy, toast }) {
   // The sheet is a phone and tablet surface, so growing to the wide layout closes it.
   if (mode === 'wide' && sheetOpen) setSheetOpen(false)
   const sheetShown = sheetOpen && mode !== 'wide'
-  // One family stands for each category in the Filters sheet, so its pill is set
-  // in a face from that class.
-  const faces = useMemo(() => {
-    const out = {}
-    for (const f of galleryCatalog) if (!out[f.category]) out[f.category] = f
-    return out
-  }, [galleryCatalog])
+  // How many of the sheet's choices are off their defaults: the badge on the
+  // Filters button. Preview text and the view show in the page itself.
+  const filtersOn = (category !== 'all' ? 1 : 0) + (sort !== 'popularity' ? 1 : 0) + (sizeOverride !== null ? 1 : 0)
   // The empty state clears what narrows the list (search and category); the
   // sheet's own Clear puts back the sheet's controls and leaves the search alone.
   const clearFilters = () => { setQuery(''); setCategory('all') }
@@ -902,9 +937,36 @@ export default function FontGallery({ onCopy, toast }) {
   )
   const viewToggle = <ViewToggle view={view} onChange={setView} />
   const filtersButton = (
-    <ToolButton onClick={() => setSheetOpen(true)} disabled={!ready} aria-haspopup="dialog" aria-expanded={sheetShown}>
+    <ToolButton
+      className="fg-filt"
+      icon="sliders-horizontal"
+      iconSize={18}
+      onClick={() => setSheetOpen(true)}
+      disabled={!ready}
+      aria-haspopup="dialog"
+      aria-expanded={sheetShown}
+      aria-label={filtersOn > 0 ? `Filters, ${filtersOn} on` : 'Filters'}
+    >
       Filters
+      {filtersOn > 0 && <span className="fg-filt-badge" aria-hidden="true">{filtersOn}</span>}
     </ToolButton>
+  )
+  // The phone's category chips: one scrolling row beside Filters, as the board
+  // draws it. The tablet and wide layouts keep the pills on the toolbar.
+  const categoryChips = (
+    <div className="fg-chips" role="group" aria-label="Filter by category">
+      {CATS.map(c => (
+        <button
+          key={c.id}
+          type="button"
+          className="fg-chip"
+          aria-pressed={category === c.id}
+          onClick={() => setCategory(c.id)}
+        >
+          {c.label}
+        </button>
+      ))}
+    </div>
   )
   // The onward link is the first thing to fold into More.
   const pairItem = {
@@ -919,11 +981,11 @@ export default function FontGallery({ onCopy, toast }) {
   // Dark/Light pair and drives the app theme, which is what the bands follow.
   const bar = typeToolsBarItems({
     current: 'gallery',
-    heading: design?.fonts?.heading || null,
-    body: design?.fonts?.body || null,
+    heading: switchHeading,
+    body: switchBody,
     scale: ownTypeScale(design)?.ratio || 1.618,
-    headingStack: design?.fonts?.heading ? fontStack(design.fonts.heading) : 'var(--font)',
-    bodyStack: design?.fonts?.body ? fontStack(design.fonts.body) : 'var(--font)',
+    headingStack: fontStack(switchHeading),
+    bodyStack: fontStack(switchBody),
     projectName: '',
     ground: ground === 'light' ? 'l' : 'd',
     onGround: g => setTheme(g === 'l' ? 'light' : 'dark'),
@@ -960,7 +1022,26 @@ export default function FontGallery({ onCopy, toast }) {
   } else if (mode === 'tablet') {
     items = [...barLead, categoryItem, { id: 'filters', priority: 10, align: 'end', render: () => filtersButton }, { ...groundItem, align: 'end' }]
   } else {
-    items = [...bar, pairItem]
+    // The phone's More sheet: Project, Specimen ground, View (the ground is the
+    // bar's own item). Overflow-only items keep the order they are listed in.
+    items = [
+      { id: 'project', inline: false, menu: () => <MoreProject /> },
+      ...bar,
+      {
+        id: 'view',
+        inline: false,
+        menu: () => (
+          <div className="ttb-menu-ground">
+            <span className="ttb-menu-label">View</span>
+            <div className="ttb-seg ttb-seg--full" role="group" aria-label="View">
+              {[['list', 'List'], ['grid', 'Grid']].map(([id, label]) => (
+                <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>
+              ))}
+            </div>
+          </div>
+        ),
+      },
+    ]
   }
 
   // The wide layout's sticky second row. It is a toolbar of its own, so it
@@ -972,10 +1053,17 @@ export default function FontGallery({ onCopy, toast }) {
 
   // The tablet and phone second row, below the sticky bar, for the layouts that
   // cannot fit search on the first. It never wraps either.
-  const bar2 = mode === 'wide' ? null : (
+  const bar2 = mode === 'wide' ? null : mode === 'phone' ? (
+    <div className="fg-bar2 fg-bar2--phone">
+      <div className="fg-chiprow">
+        {categoryChips}
+        {filtersButton}
+      </div>
+      {searchField}
+    </div>
+  ) : (
     <div className="fg-bar2">
       {searchField}
-      {mode === 'phone' && filtersButton}
       {mode === 'tablet' && viewToggle}
       {mode === 'tablet' && pairLink}
     </div>
@@ -986,7 +1074,7 @@ export default function FontGallery({ onCopy, toast }) {
   // filters never run over an empty list.
   if (!ready) {
     return (
-      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More">
+      <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More" feedback={mode !== 'phone'}>
         {row2}
         {bar2}
         <FontCatalogLoading label="Opening the Font Gallery" />
@@ -1002,7 +1090,7 @@ export default function FontGallery({ onCopy, toast }) {
     + `${sort === 'popularity' ? ', most popular first' : ''}`
 
   return (
-    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More">
+    <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More" feedback={mode !== 'phone'}>
       {row2}
       <FontCatalogNotice
         online={online}
@@ -1146,7 +1234,9 @@ export default function FontGallery({ onCopy, toast }) {
           onView={setView}
           previewText={previewText}
           onPreviewText={setPreviewText}
-          faces={faces}
+          counts={catCounts}
+          ground={ground === 'light' ? 'l' : 'd'}
+          onGround={g => setTheme(g === 'l' ? 'light' : 'dark')}
           count={filtered.length}
           canClear={sheetDirty}
           onClear={clearSheet}

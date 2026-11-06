@@ -640,3 +640,11 @@ html[data-reduced-motion="true"] :is(.fgd-btn, .fgd-close):active { transform: n
   html:not([data-reduced-motion="false"]) :is(.fgd-btn, .fgd-close, .fgd-strip, .fgd-field) { transition: none; }
   html:not([data-reduced-motion="false"]) :is(.fgd-btn, .fgd-close):active { transform: none; }
 }
+
+/* On a phone the sheet's one primary action is the ink pill (cream on dark),
+   as in the type tools' other docks. */
+@media (max-width: 767px) {
+  .fgd-btn--primary { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+  .fgd-btn--primary:not(:disabled):hover { background: color-mix(in srgb, var(--t0) 90%, var(--bg-0)); border-color: transparent; }
+  .fgd-btn--primary:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+}

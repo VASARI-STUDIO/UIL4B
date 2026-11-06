@@ -60,6 +60,19 @@ export function filterPickableTypefaces(fonts) {
   return Array.isArray(fonts) ? fonts.filter(isPickableTypeface) : []
 }
 
+// The Font Gallery's own list: the text families plus the catalogue's monospace
+// ones, so the Mono category has something to show. A monospace family still has
+// to render a specimen (the picker's rule), which drops the few that are icon or
+// symbol sets in disguise.
+export function isGalleryListTypeface(font) {
+  if (isGalleryTypeface(font)) return true
+  return String(font?.category).toLowerCase() === 'monospace' && isPickableTypeface(font)
+}
+
+export function filterGalleryListTypefaces(fonts) {
+  return Array.isArray(fonts) ? fonts.filter(isGalleryListTypeface) : []
+}
+
 // ── What a full-width specimen row shows about a family ─────────────────────
 
 // The weights a row's ladder draws — numerals that are themselves set in the

@@ -714,7 +714,7 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 @media (hover: hover) {
   .fg-page .fg-view-btn:not(.is-on):hover { background: var(--hvr); }
 }
-.fg-page .fg-view-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-view-btn:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
 .fg-page .fg-view-btn:active { transform: scale(.97); }
 .fg-page .fg-view-btn:disabled { opacity: .45; cursor: not-allowed; }
 @media (pointer: coarse) {
@@ -799,7 +799,7 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 .fg-page .fg-sheet-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .fg-page .fg-sheet-k { font-size: 13px; line-height: 1.3; color: var(--t1); }
 .fg-page .fg-sheet-v { font-size: 13px; color: var(--t1); font-variant-numeric: tabular-nums; }
-.fg-page .fg-sheet-cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.fg-page .fg-sheet-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .fg-page .fg-sheet-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .fg-page .fg-sheet-pill,
 .fg-page .fg-sheet-btn {
@@ -818,18 +818,18 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 }
 .fg-page .fg-sheet-pill--face { min-height: 52px; font-family: var(--fg-ff, var(--font)); font-size: 18px; font-weight: 400; }
 .fg-page .fg-sheet-pill.is-on { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
-.fg-page .fg-sheet-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: var(--accent-fill); }
+.fg-page .fg-sheet-btn--primary { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
 @media (hover: hover) {
   .fg-page .fg-sheet-pill:not(.is-on):hover,
   .fg-page .fg-sheet-btn:not(.fg-sheet-btn--primary):not(:disabled):hover,
   .fg-page .fg-sheet-x:hover { background: var(--hvr); }
-  .fg-page .fg-sheet-btn--primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+  .fg-page .fg-sheet-btn--primary:hover { background: color-mix(in srgb, var(--t0) 90%, var(--bg-0)); border-color: transparent; }
 }
 .fg-page .fg-sheet-pill:focus-visible,
 .fg-page .fg-sheet-btn:focus-visible,
 .fg-page .fg-sheet-x:focus-visible,
 .fg-page .fg-sheet-range:focus-visible,
-.fg-page .fg-sheet-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-sheet-field:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
 .fg-page .fg-sheet-pill:active,
 .fg-page .fg-sheet-btn:not(:disabled):active { transform: scale(.97); }
 .fg-page .fg-sheet-range { width: 100%; height: 44px; margin: 0; accent-color: var(--t0); }
@@ -909,7 +909,7 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
 @media (hover: hover) and (pointer: fine) {
   .fg-page .fg-card-copy:hover { background: color-mix(in srgb, var(--fg-ink) 14%, transparent); }
 }
-.fg-page .fg-card-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fg-page .fg-card-copy:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
 .fg-page .fg-card-copy:active { transform: scale(.97); }
 @media (pointer: coarse) { .fg-page .fg-card-copy { height: 44px; } }
 [data-theme="light"] .fg-page .fg-card.is-open :is(.fg-card-copy, .fg-card-compare) {
@@ -947,3 +947,82 @@ html[data-reduced-motion="true"] .fg-page .fg-card-copy { transition: opacity 12
   html:not([data-reduced-motion="false"]) .fg-page .fg-card.is-open.has-backdrop::before { transition: opacity 120ms linear; }
   html:not([data-reduced-motion="false"]) .fg-page .fg-card-copy { transition: opacity 120ms linear; transform: none; }
 }
+
+/* ── Phone: the category chip row, the Filters button and the More sheet ───── */
+.fg-page .fg-bar2--phone { flex-direction: column; align-items: stretch; gap: 8px; }
+.fg-page .fg-chiprow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.fg-page .fg-chips { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.fg-page .fg-chips::-webkit-scrollbar { display: none; }
+.fg-page .fg-chip {
+  flex: none;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 16px;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--t0) 72%, var(--bg-0));
+  background: var(--fg-fill);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-standard), transform 120ms var(--ease-standard);
+}
+.fg-page .fg-chip[aria-pressed="true"] { color: var(--t0); background: var(--fg-fill-sel); }
+.fg-page .fg-chip:active { transform: scale(.97); }
+.fg-page .fg-chip:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+.fg-page .fg-chiprow .fg-filt { flex: none; height: 44px; }
+.fg-page .fg-filt-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin: 0 -4px 0 8px;
+  padding: 0 5px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--bg-0);
+  background: var(--t0);
+  border-radius: var(--radius-pill);
+}
+/* Category pills in the Filters sheet carry their count. */
+.fg-page .fg-sheet-pill--cat { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0 4px; min-height: 52px; line-height: 18px; }
+.fg-page .fg-sheet-pill--cat em { font-style: normal; font-size: 12px; line-height: 14px; font-weight: 400; color: var(--t1); font-variant-numeric: tabular-nums; }
+.fg-page .fg-sheet-pill--cat.is-on em { color: inherit; }
+@media (hover: hover) {
+  .fg-page .fg-chip[aria-pressed="false"]:hover { background: color-mix(in srgb, var(--t0) 10%, var(--bg-0)); }
+}
+
+/* The More sheet's Project row, and its heading at the board's size. The sheet
+   is portalled out of the page, so it is found by what it holds. */
+.tl-sheet:has(.fg-more-proj) .tl-sheet-title { font-size: 24px; line-height: 30px; font-weight: 500; letter-spacing: -.01em; color: var(--t0); }
+.fg-more-proj { display: grid; gap: 4px; padding: 6px 8px 8px; }
+.fg-more-proj-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  text-align: start;
+  color: var(--t0);
+  background: color-mix(in srgb, var(--t0) 5%, var(--bg-0));
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.fg-more-proj-name { flex: 1 1 auto; min-width: 0; }
+.fg-more-proj-tag { font-weight: 400; color: color-mix(in srgb, var(--t0) 62%, var(--bg-0)); }
+.fg-more-proj-caret { flex: none; opacity: .62; transition: transform 200ms var(--ease-standard); }
+.fg-more-proj-row[aria-expanded="true"] .fg-more-proj-caret { transform: rotate(180deg); }
+.fg-more-proj-row:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+.fg-more-proj-note { margin: 4px 0 0; padding: 0 16px; min-height: 44px; display: flex; align-items: center; font-size: 14px; line-height: 20px; color: color-mix(in srgb, var(--t0) 72%, var(--bg-0)); background: color-mix(in srgb, var(--t0) 5%, var(--bg-0)); border-radius: 12px; }
+html[data-reduced-motion="true"] .fg-more-proj-caret { transition: none; }

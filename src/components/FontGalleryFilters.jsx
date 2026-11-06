@@ -1,18 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import useModalDialog from '../hooks/useModalDialog'
-import { fontStack, loadFont, bodyWeight } from '../utils/googleFonts'
 
 // The Font Gallery's Filters sheet and its list / grid toggle. The page owns
 // every value; this file only draws them. A change applies at once, and the
 // foot's count line says what the sheet is showing.
-
-// Per-item values go through custom properties, never inline styles.
-function vars(map) {
-  return (el) => {
-    if (!el) return
-    for (const key of Object.keys(map)) el.style.setProperty(key, map[key])
-  }
-}
 
 function ViewIcon({ kind }) {
   return (
@@ -53,13 +44,12 @@ const DRAG_CLOSE_DY = 96
 const DRAG_CLOSE_SPEED = 0.5
 const DRAG_JITTER = 12
 
-// `faces` maps a category id to the catalogue family that stands for it, so
-// each category pill is drawn in a face from its own class. `previewFirst` puts
-// the preview text field above Category, where the phone keyboard leaves it in
+// `counts` maps a category id to its family count. `previewFirst` puts the
+// preview text field above Category, where the phone keyboard leaves it in
 // view.
 export default function FiltersSheet({
-  onClose, cats, category, onCategory, sorts, sort, onSort, size, sizeMin, sizeMax, onSize,
-  view, onView, previewText, onPreviewText, faces, count, canClear, onClear, previewFirst,
+  onClose, cats, category, onCategory, counts, sorts, sort, onSort, size, sizeMin, sizeMax, onSize, ground, onGround,
+  view, onView, previewText, onPreviewText, count, canClear, onClear, previewFirst,
 }) {
   const ref = useModalDialog(onClose)
   const drag = useRef(null)
@@ -116,10 +106,6 @@ export default function FiltersSheet({
     </div>
   )
 
-  useEffect(() => {
-    Object.values(faces).forEach(font => { if (font) loadFont(font.family, [bodyWeight(font)]) })
-  }, [faces])
-
   return (
     <div className="fg-sheet-layer" data-typing={shrunk ? '1' : undefined}>
       <div className="fg-sheet-scrim" aria-hidden="true" onClick={onClose} />
@@ -151,12 +137,12 @@ export default function FiltersSheet({
                 <button
                   key={c.id}
                   type="button"
-                  className={category === c.id ? 'fg-sheet-pill fg-sheet-pill--face is-on' : 'fg-sheet-pill fg-sheet-pill--face'}
+                  className={category === c.id ? 'fg-sheet-pill fg-sheet-pill--cat is-on' : 'fg-sheet-pill fg-sheet-pill--cat'}
                   aria-pressed={category === c.id}
                   onClick={() => onCategory(c.id)}
-                  ref={vars(faces[c.id] ? { '--fg-ff': fontStack(faces[c.id]) } : {})}
                 >
-                  {c.label}
+                  <span>{c.label}</span>
+                  <em>{(counts[c.id] || 0).toLocaleString()}</em>
                 </button>
               ))}
             </div>
@@ -206,6 +192,23 @@ export default function FiltersSheet({
                   className={view === id ? 'fg-sheet-pill is-on' : 'fg-sheet-pill'}
                   aria-pressed={view === id}
                   onClick={() => onView(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="fg-sheet-group" role="group" aria-labelledby="fg-sheet-ground">
+            <span className="fg-sheet-k" id="fg-sheet-ground">Specimen ground</span>
+            <div className="fg-sheet-pills">
+              {[['d', 'Dark'], ['l', 'Light']].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={ground === id ? 'fg-sheet-pill is-on' : 'fg-sheet-pill'}
+                  aria-pressed={ground === id}
+                  onClick={() => onGround(id)}
                 >
                   {label}
                 </button>
