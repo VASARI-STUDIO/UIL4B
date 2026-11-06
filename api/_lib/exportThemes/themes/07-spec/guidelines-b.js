@@ -17,7 +17,7 @@ const faded = (ctx, hex, ground, share) => {
   return ctx.C.rgbToHex(a.map((v, i) => b[i] + (v - b[i]) * share));
 };
 const roleColour = (ctx, role) => ctx.brand.colours.find((c) => c.role === role);
-const rn = (ctx, role) => A(roleColour(ctx, role).name);  // the brand's own word for a colour, read from brand.json
+const rn = (ctx, role) => A(roleColour(ctx, role).name);  // the brand's own word for a colour, read from brand data
 // numbered requirements under a table: "5.1.4 text"
 const reqList = (ctx, id, from, items) => `<ol class="b-req">${items.map((t, i) => `<li>${num(ctx, id, from + i)}<span>${t}</span></li>`).join('')}</ol>`;
 // "Figure 5.2 caption"

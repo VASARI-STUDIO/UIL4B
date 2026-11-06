@@ -1,5 +1,5 @@
 // The kit's own tokens and the engine's components, scoped under .pg .ui (light by default, data-theme="dark" for the dark plates),
-// so a .ui region reads the real roles. The UI kit pages (u-*.js) depend on this. The old uikit.js page rules were removed 2026-11-05:
+// so a .ui region reads the real roles. The UI kit pages (u-*.js) depend on this. The old uikit.js page rules were removed:
 // no built page matched them. Page chrome (running head, facts, plates) is in index.js.
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
 import { componentsCss } from '../../engine/components.js';

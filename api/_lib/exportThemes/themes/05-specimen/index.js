@@ -3,7 +3,7 @@
 // The gate pages (cover, palette, colour-values, contrast) are in guidelines-k.js and css-k.js; the other pages are the lane files below.
 // Everything reads roles and colourways from the brand; no brand name or hex is written here.
 import { guidelinesK } from './guidelines-k.js';
-// the full rebuild (2026-11-05): each lane file holds a set of pages and its own css; the gate pages come first and the lane pages override them
+// the full rebuild: each file holds a set of pages and its own css; the gate pages come first and the lane pages override them
 import { pFront } from './p-front.js';
 import { cssPFront } from './css-p-front.js';
 import { pLogo } from './p-logo.js';

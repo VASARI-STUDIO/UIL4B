@@ -1,4 +1,4 @@
-// Design tokens as CSS, DTCG JSON, typed TS and a Tailwind v4 @theme block. All values come from brand.json.
+// Design tokens as CSS, DTCG JSON, typed TS and a Tailwind v4 @theme block. All values come from brand data.
 import { isPinned } from './brand.js';
 import * as C from './color.js';
 

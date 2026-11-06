@@ -8,7 +8,7 @@ const m = mono;
 const S = (ctx) => ctx.brand.ui.screen.content;
 const fm = (ctx, a, b) => ctx.fmt(ctx.ratio(a, b));
 const roleColour = (ctx, r) => ctx.colours.find((c) => c.role === r);
-const roleName = (ctx, r) => roleColour(ctx, r).name;  // the brand's own word for a colour, read from brand.json
+const roleName = (ctx, r) => roleColour(ctx, r).name;  // the brand's own word for a colour, read from brand data
 const refOf = (ctx, id) => ctx.pages.find((p) => p.id === id).ref;
 
 // running head: the section on the left (the document on the cover and contents), the folio on the right

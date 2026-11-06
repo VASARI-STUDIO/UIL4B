@@ -14,7 +14,7 @@ export const sectionOf = (ctx, id) => ctx.sections.find((s) => s.pages.some((p) 
 // Each section is normative (it sets requirements) or informative (it explains). Keyed by section number (engine/pages.js GUIDE_PAGES).
 const KIND = { 1: 'informative', 2: 'normative', 3: 'normative', 4: 'normative', 5: 'normative', 6: 'normative', 7: 'normative', 8: 'normative', 9: 'informative' };
 export const kindOf = (n) => KIND[n] || 'normative';
-// the document's designation, "Northern Current 1:2026": the brand's full name (brand.json nameRules: never initials), part 1, the year of issue.
+// the document's designation, "Northern Current 1:2026": the brand's full name (brand data nameRules: never initials), part 1, the year of issue.
 // The name is read whole and escaped once, so the slot edition's placeholder stays whole too.
 export const designation = (ctx) => `${A(ctx.brand.name)} 1:${String(ctx.brand.version.date).slice(0, 4)}`;
 export const pageCount = (ctx) => ctx.pages[ctx.pages.length - 1].no;

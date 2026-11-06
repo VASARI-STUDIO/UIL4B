@@ -3,7 +3,7 @@
 // Every section that has a subject uses the same device: a phone (or a phone-sized screen) on one side, a numbered key on the other.
 // The engine wraps these in the shell (skip link, section nav, light and dark switch) and adds the behaviour.
 // Copy, the type tester and the downloads read data attributes the engine script understands: data-copy, data-tester-*.
-// Phone text that is not in brand.json (the Done screen, the week) is the approved copy from the T10 boards.
+// Phone text that is not in brand data (the Done screen, the week) is the approved copy from the T10 boards.
 import { A, fit, wordsHex } from './helpers.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };

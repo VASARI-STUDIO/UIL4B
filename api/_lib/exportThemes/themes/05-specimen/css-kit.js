@@ -1,4 +1,4 @@
-// What is left of the old UI kit styles (cleaned 2026-11-05). Kit tokens and the engine's components are scoped under .pg .ui; the new UI kit pages and the page chrome read them.
+// What is left of the old UI kit styles. Kit tokens and the engine's components are scoped under .pg .ui; the new UI kit pages and the page chrome read them.
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
 import { componentsCss } from '../../engine/components.js';
 

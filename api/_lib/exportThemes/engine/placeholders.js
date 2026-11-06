@@ -20,7 +20,7 @@ const decodeId = (s) => Number([...s].map((c) => c.charCodeAt(0) - DIG).join('')
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// ---- descriptors, keyed by brand.json path ("*" is an array index; {n} in a label is that index plus one) ----
+// ---- descriptors, keyed by brand data path ("*" is an array index; {n} in a label is that index plus one) ----
 // d(label, what, length, example, opts): form 'block' (dashed frame, label / what / length and example) or 'compact' (label and length on one line);
 // opts.real: the "what to write" line is shown at the real size of the copy it replaces (type samples).
 // opts.sample: a short stand-in shown as it is (initials, a clock), for slots too small for a label.
@@ -76,7 +76,7 @@ export const DESCRIPTORS = {
   'applications.card.role': c('Job title', 'The title under the name.', '1 to 3 words', 'Head baker'),
   'applications.card.contact': c('Contact line', 'An email address for the card.', '1 address', 'mia@bellbird.example'),
   'applications.social.*': d('Social post {n}', 'A line for a social post or its image.', '4 to 10 words', 'Baked at 4 am. At your door by 6.'),
-  // virtual: no brand.json string of their own; a page asks for them with ctx.ph(path)
+  // virtual: no brand data string of their own; a page asks for them with ctx.ph(path)
   'applications.signage.line': d('Signage line', 'The line printed on the board.', '3 to 7 words', 'Fresh bread, warm by six', { virtual: true }),
   'applications.signage': d('Signage', 'Where the sign goes, how big, and what it says.', '1 sentence', 'Shopfront board, 600 x 900 mm: Fresh bread, warm by six.'),
   'applications.email.person': c('Sender', 'The name that signs the email.', '2 words', 'Mia Tran'),
@@ -171,7 +171,7 @@ export const DESCRIPTORS = {
   'ui.status.*.label': c('Status {n}', 'The label of a status chip.', '1 to 3 words', 'Out for delivery'),
 };
 
-// ---- registry: one id per concrete brand.json path, the same in every ctx ----
+// ---- registry: one id per concrete brand data path, the same in every ctx ----
 const entries = []; const idByPath = new Map();
 function register(pathStr, desc, n, real) {
   if (idByPath.has(pathStr)) return idByPath.get(pathStr);

@@ -18,7 +18,7 @@ const NUM = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight
 const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 // "Finger limes, Riverland" -> ["Finger limes", "Riverland"]
 const split = (d) => { const [item, ...rest] = d.to.split(', '); return [item, rest.join(', ')]; };
-// the demo copy for the kit: brand.json ui.screen.content.example, else neutral words (same defaults as the engine's example.html)
+// the demo copy for the kit: brand data ui.screen.content.example, else neutral words (same defaults as the engine's example.html)
 const X = (ctx) => ({ secondary: 'Secondary', quiet: 'Skip', danger: 'Delete', small: 'Add', account: 'Account', checks: ['Checked', 'Unchecked', 'Disabled'], switches: ['Switch on', 'Switch off'], radios: ['First choice', 'Second choice'], statLabel: 'Total', crumbs: ['Home', 'Section'], tabs: ['One', 'Two', 'Three'], links: [['One', 'map-pin'], ['Two', 'plus'], ['Three', 'clock']], ...(sc(ctx).example || {}) });
 const navItems = (ctx) => [...X(ctx).links, [X(ctx).account, 'user']];
 const bookLabel = (ctx) => `${sc(ctx).form.book}, ${sc(ctx).paid}`;

@@ -3,7 +3,7 @@
 // chrome. Everything reads roles, colours and colourways from the brand; no hex is written here. The gate pages (cover, palette,
 // colour-values, contrast) are in guidelines-r.js, styled in css-r.js; every other page is in a lane file below, each with its own css.
 import { guidelinesR } from './guidelines-r.js';
-// the full rebuild (2026-11-05): each lane file holds a set of pages and its own css; the gate pages sit underneath them
+// the full rebuild: each file holds a set of pages and its own css; the gate pages sit underneath them
 import { pFront } from './p-front.js';
 import { cssPFront } from './css-p-front.js';
 import { pLogo } from './p-logo.js';

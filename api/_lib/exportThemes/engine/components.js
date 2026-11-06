@@ -8,7 +8,7 @@ export function icon(ctx, name, size = 20) {
   return `<svg class="ui-icon" xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s.stroke}" stroke-linecap="${s.cap}" stroke-linejoin="${s.join}" aria-hidden="true" focusable="false">${inner}</svg>`;
 }
 export const ICON_SET = ['map-pin', 'clock', 'package', 'phone', 'user', 'calendar', 'search', 'check', 'x', 'plus', 'menu', 'chevron-right', 'arrow-right', 'triangle-alert', 'info'];
-// the icons shipped in the kit: brand.json ui.icons (Lucide names) if it lists some, else the default set
+// the icons shipped in the kit: brand data ui.icons (Lucide names) if it lists some, else the default set
 export const iconSet = (ctx) => ctx.brand.ui.icons || ICON_SET;
 // the display face as the brand sets it: its heaviest weight and its width axis (100 when it has none)
 export const displayType = (ctx) => { const d = ctx.brand.fonts.display; return { DW: ctx.weights.heading, DS: d.stretch || 100 }; };
@@ -244,7 +244,7 @@ export function makeUi(ctx) {
 // example.html for the code package: every component live, light/dark switch
 export function exampleHtml(ctx) {
   const ui = ctx.ui, S = ctx.brand.ui.screen.content, F = S.form, { DW, DS } = displayType(ctx);
-  // sample copy for the demo page: brand.json ui.screen.content.example, else neutral words
+  // sample copy for the demo page: brand data ui.screen.content.example, else neutral words
   const X = { secondary: 'Secondary', quiet: 'Skip', danger: 'Delete', small: 'Add', account: 'Account', checks: ['Checked', 'Unchecked', 'Disabled'], switches: ['Switch on', 'Switch off'], radios: ['First choice', 'Second choice'], statLabel: 'Total', crumbs: ['Home', 'Section'], tabs: ['One', 'Two', 'Three'], links: [['One', 'map-pin'], ['Two', 'plus'], ['Three', 'clock']], ...(S.example || {}) };
   const sec = (t, body) => `<section class="ex"><h2>${esc(t)}</h2>${body}</section>`;
   const row = (...x) => `<div class="exrow">${x.join('')}</div>`;

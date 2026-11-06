@@ -1,4 +1,4 @@
-// What is left of the old run B styles (the guidelines-b.js page rules were removed 2026-11-05: no built page matched them): the mono
+// What is left of the old run B styles (the guidelines-b.js page rules were removed: no built page matched them): the mono
 // custom property, the kit's light tokens under .pg .ui and the engine's component CSS. Appended to css() in index.js.
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';

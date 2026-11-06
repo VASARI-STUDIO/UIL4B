@@ -1,9 +1,9 @@
 // Theme 02, Ticket: the thing Encore sells, printed. A 1280 x 720 page. Anybody expanded (the brand's display face) sets the event line,
 // Anybody condensed (the chrome face) the serials, stub text and running heads. Full tickets on the cover and the colour pages only;
 // elsewhere the perforation is an edge device. The gate pages (cover, palette, colour-values, contrast) are in gate.js and css-gate.js;
-// the other pages are the lane files below. Everything reads roles and colourways from the brand; no hex is written here.
+// the other pages are the page files below. Everything reads roles and colourways from the brand; no hex is written here.
 import { gate } from './gate.js';
-// the full rebuild (2026-11-05): each lane file holds a set of pages and its own css; the gate pages (cover, palette, colour-values, contrast) come first and the lane pages override them
+// the full rebuild: each file holds a set of pages and its own css; the gate pages (cover, palette, colour-values, contrast) come first and the lane pages override them
 import { pFront } from './p-front.js';
 import { cssPFront } from './css-p-front.js';
 import { pLogo } from './p-logo.js';

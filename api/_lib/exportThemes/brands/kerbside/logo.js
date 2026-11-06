@@ -9,7 +9,7 @@
 // Returns:
 //   primary, horizontal, stacked, symbol   each { w, h, parts: [{ d, role, tf }] }  (tf is an svg transform or '')
 //   clearUnit   the clear-space unit x in the same units as the geometry (here the cap height)
-//   roles       how a part's role takes its colour from a brand.json colourway: role -> key, or role -> (colourway, name) => colour
+//   roles       how a part's role takes its colour from a brand data colourway: role -> key, or role -> (colourway, name) => colour
 //   geo         optional extra measurements for themes (ctx.logo.geo)
 export default function kerbsideLogo({ brand, font, outline, capHeight }) {
   const size = 100, track = -0.01;

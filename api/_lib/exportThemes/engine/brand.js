@@ -67,7 +67,7 @@ export function faceList(fonts) {
 }
 
 // ---- status roles a brand may leave out ----
-// A role with no pair in brand.json (or one named in ui.houseRoles) is a house default, not a brand colour: tone (OKLCH hue), found per mode against that mode's surface.
+// A role with no pair in brand data (or one named in ui.houseRoles) is a house default, not a brand colour: tone (OKLCH hue), found per mode against that mode's surface.
 const HOUSE_HUE = { success: 150, warning: 75, danger: 25, info: 250 };
 function houseTone(tone, r) {
   const H = HOUSE_HUE[tone], dark = C.luminance(r.surface) < C.luminance(r.text);

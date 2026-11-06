@@ -1,4 +1,4 @@
-// What is left of the old UI kit styles (cleaned 2026-11-05). Appended to css() in index.js. Everything inside a .ui region reads the kit's own
+// What is left of the old UI kit styles. Appended to css() in index.js. Everything inside a .ui region reads the kit's own
 // tokens (light by default, data-theme="dark" for Night pages): the tokens and the engine's components are scoped under .pg .ui, which the new UI kit pages use.
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
 import { componentsCss } from '../../engine/components.js';
