@@ -9,7 +9,7 @@ import SpectrumExports from '../components/spectrum/SpectrumExports'
 import SpectrumSearch from '../components/spectrum/SpectrumSearch'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import PhIcon from '../components/spectrum/PhIcon'
-import SpectrumProof from '../components/spectrum/SpectrumProof'
+import HomeProof from '../components/home/HomeProof'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../components/spectrum/spectrumHero'
@@ -133,8 +133,8 @@ export default function Spectrum() {
           <h2 id="examples-h" className="sr-only" tabIndex={-1}>Examples</h2>
         </section>
 
-        {/* ── Proof (slot: the previous band stands here) ─────────────────── */}
-        <SpectrumProof />
+        {/* ── Proof ───────────────────────────────────────────────────────── */}
+        <HomeProof />
 
         {/* ── Plans (slot) ────────────────────────────────────────────────── */}
         <section id="plans" aria-labelledby="plans-h" data-slot="plans">
