@@ -59,8 +59,12 @@ const getServerSnapshot = () => 0
 // The store's two halves, exported so a test can drive them without a renderer.
 export { subscribe as subscribeToPrices, getSnapshot as getPricesSnapshot }
 
-export function usePrices() {
-  useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+const subscribeToNothing = () => () => {}
+
+// `enabled: false` reads whatever the cache holds and starts no request, so a
+// surface far down a page can wait until it is near before it asks.
+export function usePrices({ enabled = true } = {}) {
+  useSyncExternalStore(enabled ? subscribe : subscribeToNothing, getSnapshot, getServerSnapshot)
   return { prices: priceCache, settled: priceSettled }
 }
 
