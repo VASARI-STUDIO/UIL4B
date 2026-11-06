@@ -20,11 +20,10 @@
 //                               chip cannot be reached and switched on. A menu
 //                               instead of a row passes the same reach checks
 //                               on its options.
-//   same categories as Gallery  Fails if the dialog's labels stop starting with
-//                               the Font Gallery's labels in the same order, or
-//                               if it offers anything beyond them other than
-//                               Mono (the one extra, kept because a picker keeps
-//                               monospace families and the gallery does not).
+//   same categories as Gallery  Fails if the dialog's labels stop matching the
+//                               Font Gallery's labels in the same order, or if
+//                               Mono (a picker keeps monospace families) is
+//                               missing from the gallery or the dialog.
 //   opens from both tools       Fails if either tool stops opening this dialog,
 //                               if a tile's About button no longer opens the
 //                               family's details, or if Escape stops handing
@@ -37,12 +36,16 @@ const TOOLS = [
   { name: 'Font Pair', route: '/create/font-pair' },
 ]
 
-// Under 768 Type Scale keeps its family pickers in a settings sheet that is
-// closed on arrival, so a phone opens that first.
+// Under 768 both tools keep their family pickers in a sheet that is closed on
+// arrival, so a phone opens that first: Type Scale's settings sheet from the
+// scale button in the dock, Font Pair's heading sheet from the heading family row.
 async function openBrowser(page, tool, width) {
   await go(page, tool.route)
-  if (tool.name === 'Type Scale' && width < 768) {
-    await page.getByRole('button', { name: 'Families, preview text and fine tuning' }).click()
+  if (width < 768) {
+    const opener = tool.name === 'Type Scale'
+      ? page.getByRole('button', { name: /Scale, families and fine tuning/ })
+      : page.getByRole('button', { name: /^Heading family, .*Change/ }).first()
+    await opener.click()
   }
   // Type Scale opens it from its family picker; Font Pair from the Browse
   // button on the heading family row.
@@ -269,7 +272,7 @@ test.describe('font browser on a fine pointer at 390', () => {
 test.describe('font browser at 1440', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('the dialog offers the Font Gallery\'s categories, plus Mono', async ({ page }) => {
+  test('the dialog offers the Font Gallery\'s categories, Mono included', async ({ page }) => {
     watch(page, 'designer comparing the gallery and the picker')
     await go(page, '/create/font-gallery')
     const galleryRow = page.getByRole('group', { name: 'Filter by category' }).first()
@@ -287,8 +290,8 @@ test.describe('font browser at 1440', () => {
       await control.trigger.click()
       picker = (await dialog.locator('.lbry-filtermenu .lbry-filter').allTextContents()).map(s => s.trim())
     }
-    expect(picker.slice(0, gallery.length), 'same labels, same order as the gallery').toEqual(gallery)
-    expect(picker.slice(gallery.length), 'the one extra is Mono').toEqual(['Mono'])
+    expect(gallery, 'the gallery lists Mono').toContain('Mono')
+    expect(picker, 'same labels, same order as the gallery').toEqual(gallery)
   })
 
   for (const tool of TOOLS) {
