@@ -299,7 +299,8 @@ html[data-reduced-motion="true"] .hsc-tab:active { transform: none; }
   --hsv-ease: cubic-bezier(.23, 1, .32, 1);
   position: fixed;
   inset: 0;
-  z-index: 100;
+  /* Above the nav (120) and its phone menu (130): the viewer is modal. */
+  z-index: 140;
   display: flex;
   align-items: center;
   justify-content: center;
