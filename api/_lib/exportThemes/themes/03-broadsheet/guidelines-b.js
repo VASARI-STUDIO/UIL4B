@@ -4,7 +4,9 @@
 // corrections column, notices, classifieds-style briefs. No boxes: rules do the work.
 import { A, std } from './helpers.js';
 
-const tok = (ctx, t) => ctx.brand.type.scale.find((s) => s.token === t);
+import { typeToken } from '../../engine/typeToken.js';
+
+const tok = (ctx, t) => typeToken(ctx.brand.type.scale, t);
 const px = (k) => (n) => +(n * k).toFixed(2);
 const sentence = (s) => s.split(/(?<=\.)\s+/)[0];
 const rest = (s) => s.split(/(?<=\.)\s+/).slice(1).join(' ');
@@ -39,6 +41,7 @@ const own = {
     const S = ctx.brand.type, V = ctx.brand.voice.principles;
     const samples = { nameplate: ctx.brand.name, headline: V[1].example, title: V[0].example, lead: ctx.brand.lines.others[0], body: S.sample.paragraph, caption: S.sample.caption };
     const T = Object.fromEntries(S.scale.map((t) => [t.token, t]));
+    for (const n of ['nameplate', 'lead']) T[n] ||= tok(ctx, n);
     const style = (t) => `font-size:${t.size}px;line-height:${t.line};${t.face === 'body' ? `font-family:var(--body);font-weight:${t.weight};` : ''}`;
     const cls = (t) => (t.face === 'display' ? 'disp' : t.face === 'body' ? 'b-bd' : 'b-ch');
     const label = (t, area) => `<div class="b-lb" style="grid-area:${area}"><p class="cap"><b>${A(ctx.cap(t.token))}</b>${t.size} px, line ${t.line}, weight ${t.weight}<br>${A(t.use)}</p><i class="b-ld" aria-hidden="true"></i></div>`;

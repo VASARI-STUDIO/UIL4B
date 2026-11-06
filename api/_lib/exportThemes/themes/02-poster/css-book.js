@@ -1,4 +1,5 @@
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 // Styles for theme 02's brand book site (bookCss): the roll ticket. Every rule is scoped under the book's root (.bk), so nothing reaches
 // the guideline pages. Classes start tb-; the engine's shell keeps its own bk- names (bk-top, bk-nav, bk-mode, bk-foot ...).
 // Light is Stock with Night ink; dark is Night with Stock ink. Imagery is the one Night section in light (Stage in dark), for rhythm.
@@ -8,10 +9,10 @@ const vars = (r, ground = r.surface) => `--tb-ground:${ground};--tb-raised:${r.r
 
 export function bookCss(ctx) {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono;
-  const rc = B.ui.radius.control, rk = B.ui.radius.card, bw = B.ui.border, st = d.stretch || 150;
+  const rc = B.ui.radius.control, rk = B.ui.radius.card, bw = B.ui.border, st = cssNum(d.stretch || 150);
   const cond = `font-family:var(--tb-cond);font-weight:700;font-stretch:50%;letter-spacing:0.02em`;
   return `.bk,.bk--board{${vars(L)}--tb-plate:${L.surface};--tb-plate-ink:${L.text};--tb-fix:${L.surface};
---tb-cond:'Anybody',sans-serif;--tb-disp:'${d.family}',sans-serif;--tb-body:'${b.family}',sans-serif;--tb-mono:'${m.family}',monospace}
+--tb-cond:'Anybody',sans-serif;--tb-disp:'${cssStr(d.family)}',sans-serif;--tb-body:'${cssStr(b.family)}',sans-serif;--tb-mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"] .bk{${vars(D)}--tb-plate:${D.action};--tb-plate-ink:${D.actionLabel}}
 .bk .tb-night{${vars(D)}}
 [data-theme="dark"] .bk .tb-night{${vars(D, D.raised)}--tb-panel:${D.sunken}}
@@ -23,7 +24,7 @@ body:has(>.bk){background:${L.surface}}[data-theme="dark"] body:has(>.bk){backgr
 .bk :where(a){color:inherit}
 .bk :focus-visible{outline:2px solid var(--tb-focus);outline-offset:2px}
 .bk .num{font-variant-numeric:tabular-nums}
-.bk .tb-disp,.bk .bk-name{font-family:var(--tb-disp);font-weight:${d.weights[0]};font-stretch:${st}%;letter-spacing:-0.015em;line-height:0.92}
+.bk .tb-disp,.bk .bk-name{font-family:var(--tb-disp);font-weight:${cssNum(d.weights[0])};font-stretch:${st}%;letter-spacing:-0.015em;line-height:0.92}
 .bk .tb-sn{${cond};font-size:20px;line-height:22px;font-variant-numeric:tabular-nums}
 .bk .tb-sl{${cond};font-size:22px;line-height:24px;font-weight:700}
 .bk .tb-mono{font-family:var(--tb-mono);font-size:13px;line-height:18px;font-weight:400;letter-spacing:0}
@@ -168,7 +169,7 @@ body:has(>.bk){background:${L.surface}}[data-theme="dark"] body:has(>.bk){backgr
 .bk .tb-clear__logo svg,.bk .tb-clear__logo .logo-slot{display:block;width:100%!important;height:auto!important;max-width:100%}
 .bk .tb-clear__logo .logo-slot{aspect-ratio:${(ctx.logo.geo.width / ctx.logo.geo.height).toFixed(3)}}
 .bk .tb-x{position:absolute;pointer-events:none}
-.bk .tb-x i{position:absolute;font-family:var(--tb-disp);font-stretch:${st}%;font-weight:${d.weights[0]};font-style:normal;font-size:24px;line-height:1}
+.bk .tb-x i{position:absolute;font-family:var(--tb-disp);font-stretch:${st}%;font-weight:${cssNum(d.weights[0])};font-style:normal;font-size:24px;line-height:1}
 .bk .tb-x--t,.bk .tb-x--b{left:50%;width:0;height:0;padding-top:var(--p);border-left:1.5px solid var(--sign)}
 .bk .tb-x--t{top:0}.bk .tb-x--b{bottom:0}
 .bk .tb-x--t i,.bk .tb-x--b i{left:8px;top:50%;transform:translateY(-50%)}
@@ -254,7 +255,7 @@ body:has(>.bk){background:${L.surface}}[data-theme="dark"] body:has(>.bk){backgr
 .bk .tb-face__aa{font-size:220px;line-height:0.8;margin-bottom:16px}
 .bk .tb-face--2 .tb-face__aa{font-size:150px;font-weight:500}
 .bk .tb-face__n{${cond};font-size:34px;line-height:1}
-.bk .tb-face--1 .tb-face__al{font-weight:${d.weights[0]}}
+.bk .tb-face--1 .tb-face__al{font-weight:${cssNum(d.weights[0])}}
 .bk .tb-face__al{font-size:20px;line-height:1.4;margin-top:12px;overflow-wrap:anywhere}
 .bk .tb-faces__mono{margin-top:32px;max-width:70ch}
 .bk .tb-tester{--tb-focus:var(--tb-ground);padding:36px 40px;background:var(--tb-ink);color:var(--tb-ground);border-radius:${rk}px}
@@ -357,7 +358,7 @@ body:has(>.bk){background:${L.surface}}[data-theme="dark"] body:has(>.bk){backgr
 .bk .tb-zip__s:focus-visible{outline:3px solid var(--tb-ink);outline-offset:3px}
 @media (hover:hover){.bk .tb-zip__s:hover{background:${L.actionHover}}}
 .bk .tb-pad{display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:40px;margin-top:72px}
-.bk .tb-pad__h .tb-h3{font-family:var(--tb-disp);font-stretch:${st}%;font-weight:${d.weights[0]};font-size:34px;line-height:1;letter-spacing:-0.015em}
+.bk .tb-pad__h .tb-h3{font-family:var(--tb-disp);font-stretch:${st}%;font-weight:${cssNum(d.weights[0])};font-size:34px;line-height:1;letter-spacing:-0.015em}
 .bk .tb-file{display:grid;grid-template-columns:minmax(0,1fr) 3px 136px;column-gap:20px;align-items:center}
 .bk .tb-file--logo{grid-template-columns:minmax(0,1fr) 3px auto}
 .bk .tb-file>.tb-ph{grid-column:1/-1}

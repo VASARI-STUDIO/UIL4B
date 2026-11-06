@@ -1,9 +1,10 @@
 // Styles for guidelines-a.js (theme 06, Studio). Appended to css() in index.js; reads the .pg custom properties. Every class starts a-.
 // Studio's vocabulary here: Steel panels that hold the brand's real UI (White cards, chips, buttons), hairline-ruled lists, drawn dimension marks.
+import { cssStr } from '../../engine/escape.js';
 export function cssA(ctx) {
   const mono = ctx.brand.fonts.mono;
   return `
-.pg{--mono:'${mono.family}',monospace}
+.pg{--mono:'${cssStr(mono.family)}',monospace}
 .a-mono{font-family:var(--mono);font-size:12px;line-height:1.4;font-weight:400;color:var(--ink);white-space:nowrap}
 .a-fill{flex:1;min-height:0}
 .a-h2{font-size:38px;line-height:1.12;text-wrap:balance;max-width:640px}

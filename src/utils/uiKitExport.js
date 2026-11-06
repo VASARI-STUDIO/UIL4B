@@ -34,6 +34,7 @@ import {
   paletteRole, kitScale, kitInk, kitPalette, kitSemantic, derivedNoteFor, interfaceRoles, makeOn,
 } from './systemRoles.js'
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
+import { SPACING, RADIUS } from '../data/uiKitFoundations.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 import { SUBSET_RANGES } from './kitFonts.js'
 import { readIdentity, IDENTITY_NAME_MAX } from './kitIdentity.js'
@@ -101,10 +102,8 @@ const TYPE_SAMPLES = Object.freeze({
   Body: 'Simple ideas, made to be part of your everyday.',
   Caption: 'The small things deserve care, too.',
 })
-// The design model holds no spacing or radius choices, so the kit documents
-// the template's starter foundations. The spacing ladder is also the app's own.
-const SPACING = Object.freeze([4, 8, 12, 16, 24, 32, 48, 64, 96])
-const RADIUS = Object.freeze({ control: 6, card: 16 })
+// The design model holds no spacing or radius choices, so the kit documents the
+// template's starter foundations (SPACING and RADIUS, from src/data/uiKitFoundations.js).
 const MOTION = Object.freeze({ fast: 180, ease: [0.16, 1, 0.3, 1] })
 
 // A swatch at least this light gets a hairline, so it holds its edge on the page.

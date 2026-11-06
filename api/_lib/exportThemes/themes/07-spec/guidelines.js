@@ -14,7 +14,7 @@ const th = (cols) => `<thead><tr>${cols.map(([l, w, c]) => `<th${c ? ` class="${
 const own = {
   // a document-control page: the designation, Figure 0.1, the title block, then the control table a standard opens with
   cover(ctx) {
-    const B = ctx.brand, L = ctx.logo, g = L.geo, slot = ctx.edition === 'slot', s = ctx.sections;
+    const B = ctx.brand, L = ctx.logo, g = L.geo, slot = ctx.edition === 'slot' || g.R === undefined, s = ctx.sections;  // a mark with no sun (a project's wordmark) is drawn as the slot is
     // Figure 0.1: the logo's horizon run on across the measure as the x-axis of one day, the sun's path a single curve back to the logo's sun.
     // The slot edition has no sun to meet: the slot's foot is the horizon and the day starts at its right edge, so the slot stays whole.
     const CW = 682, LW = 380, k = LW / g.width, LH = g.height * k, HC = 150; // measure, logo width, scale, logo height, crest height (px)

@@ -5,6 +5,7 @@
 // (classes start rk-); the gate's classes (r-) are used as they are. Every value comes from ctx.
 import { A, fit } from './helpers.js';
 import { corners, drums, drumNo, paper, byRole, inkOn, readInk, Word, isSurface, pc } from './guidelines-r.js';
+import { cssNum } from '../../engine/escape.js';
 
 const hx = (h) => String(h).toLowerCase();
 const drumOf = (ctx, hex) => drums(ctx).find((c) => hx(c.hex) === hx(hex));
@@ -109,7 +110,7 @@ export function sheets(ctx) {
   // typefaces: the display face very large, roman beside italic, its alphabet under it; then the body face beside the sample
   // pulled as a one-drum test print; the mono rule at the foot
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789';
-  const dw = f.display.weights[f.display.weights.length - 1];
+  const dw = cssNum(f.display.weights[f.display.weights.length - 1]);
   const dispFace = `<div class="rk-dface"><p class="rk-dface__aa disp" aria-hidden="true">Aa <span class="it">Aa</span></p><div class="rk-dface__m"><h2 class="rk-face__nn">${A(f.display.family)}</h2><p class="rk-face__dd">Display, for headlines and artist names. Weight ${f.display.weights.join(', ')}, roman and italic. SIL OFL 1.1.</p><p class="rk-al disp" style="font-weight:${dw}">${alpha}</p></div></div>`;
   const bodyFace = `<div class="rk-bface"><p class="rk-bface__aa" aria-hidden="true">Aa</p><h2 class="rk-face__nn">${A(f.body.family)}</h2><p class="rk-face__dd">Body, for reading text, labels and captions. Weights ${f.body.weights.join(', ')}. SIL OFL 1.1.</p><p class="rk-al rk-al--body">${alpha}</p>`
     + `<p class="rk-mono-rule">${A(f.mono.family)} is for a hex, a token or a code string only. Links and licence notes are in <span class="r-mono">fonts.md</span>.</p></div>`;

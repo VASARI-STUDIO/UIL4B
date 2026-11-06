@@ -1,6 +1,7 @@
 // Styles for guidelines-b.js. Appended to css() in index.js; use the same custom properties (.pg vars). Every class starts b-.
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export function cssB(ctx) {
   const mono = ctx.brand.fonts.mono;
@@ -9,7 +10,7 @@ export function cssB(ctx) {
   // the product screen on the digital page uses the UI kit's components, so it carries the kit's light tokens
   const uiScope = `.pg .ui{${decl(colourMap(ctx, 'light'))};${decl(g.space)};${decl(g.radius)};${decl(g.width)};${decl(g.font)};${decl(g.text)};${decl(g.shadow)}}`;
   return `
-.pg{--bmono:'${mono.family}',monospace}
+.pg{--bmono:'${cssStr(mono.family)}',monospace}
 .b-mono{font-family:var(--bmono);font-size:13px;line-height:1.4}
 .b-wide{flex:1;min-height:0;padding:28px 0 24px;display:flex;flex-direction:column}
 /* a bleed slide: its bands and pictures reach the slide's edges, the running head and folio keep the margins */
@@ -202,7 +203,7 @@ ${componentsCss(ctx)}
 .b-sum__foot{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:center;padding:28px var(--m);margin-bottom:12px}
 .b-lines{display:flex;flex-direction:column;gap:8px}
 .b-ln{font-family:var(--body);font-size:15px;line-height:1.4;color:var(--dark-ink)}
-.b-ln--first{font-family:var(--display);font-stretch:${ctx.brand.fonts.display.stretch || 100}%;font-weight:800;font-size:26px;line-height:1.15;letter-spacing:-0.01em}
+.b-ln--first{font-family:var(--display);font-stretch:${cssNum(ctx.brand.fonts.display.stretch || 100)}%;font-weight:800;font-size:26px;line-height:1.15;letter-spacing:-0.01em}
 .b-faces2{display:flex;flex-direction:column;gap:12px}
 .b-faces2 p{display:flex;align-items:center;gap:16px}
 .b-aa2{font-size:56px;line-height:1;width:92px;color:var(--dark-ink)}

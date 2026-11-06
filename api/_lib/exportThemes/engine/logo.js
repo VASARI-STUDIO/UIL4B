@@ -3,6 +3,7 @@
 // brands/<slug>/logo.js, reached through loaders.logoPlugin(slug). A brand without one gets a plain outlined wordmark
 // in the display face and a one-letter monogram.
 import { esc } from './brand.js';
+import { svgAttr } from './escape.js';
 
 // Path data from opentype.js commands. Its own toPathData writes NaN for some float offsets (e.g. x = 175.60000000000002), which silently drops every later glyph.
 const num = (v) => { const r = Math.round(v * 100) / 100; return Object.is(r, -0) ? '0' : String(r); };
@@ -70,7 +71,7 @@ export function makeLogo(ctx) {
     if (!cw) throw new Error(`the brand's logo.colourways has no "${cwName}"`);
     const vb = `0 0 ${(g.w + pad * 2).toFixed(2)} ${(g.h + pad * 2).toFixed(2)}`;
     const dims = width ? ` width="${width}" height="${(width * g.h / g.w).toFixed(2)}"` : height ? ` width="${(height * g.w / g.h).toFixed(2)}" height="${height}"` : '';
-    const body = g.parts.map((p) => `<path d="${p.d}" fill="${fill || fillOf(p.role, cw, cwName)}"${p.tf ? ` transform="${p.tf}"` : ''}/>`).join('');
+    const body = g.parts.map((p) => `<path d="${p.d}" fill="${svgAttr(fill || fillOf(p.role, cw, cwName))}"${p.tf ? ` transform="${p.tf}"` : ''}/>`).join('');
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}"${dims} role="img" aria-label="${esc(title)}">${body}</svg>`;
   }
   // the slot frame: same proportion as the primary logo, labelled, never a logo
@@ -79,11 +80,11 @@ export function makeLogo(ctx) {
   const slotWeight = chromeWs.length ? chromeWs.reduce((b, w) => (Math.abs(w - 400) < Math.abs(b - 400) ? w : b)) : 400;
   function slotHtml({ width, color = 'currentColor', label = 'Your logo goes here' }) {
     const h = width * primary.h / primary.w;
-    return `<div class="logo-slot" role="img" aria-label="Logo slot" style="width:${width}px;height:${h.toFixed(1)}px;box-sizing:border-box;border:1.5px dashed ${color};color:${color};display:flex;align-items:center;justify-content:center;font:${slotWeight} ${Math.max(11, Math.min(13, width / 14))}px/1.2 var(--chrome, var(--ff-body, sans-serif));text-align:center">${esc(label)}</div>`;
+    return `<div class="logo-slot" role="img" aria-label="Logo slot" style="width:${width}px;height:${h.toFixed(1)}px;box-sizing:border-box;border:1.5px dashed ${svgAttr(color)};color:${svgAttr(color)};display:flex;align-items:center;justify-content:center;font:${slotWeight} ${Math.max(11, Math.min(13, width / 14))}px/1.2 var(--chrome, var(--ff-body, sans-serif));text-align:center">${esc(label)}</div>`;
   }
   const slotSvgFile = () => {
     const w = 900, h = w * primary.h / primary.w, ink = ctx.roles.light.quiet;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" role="img" aria-label="Logo slot"><rect x="1.5" y="1.5" width="${w - 3}" height="${(h - 3).toFixed(1)}" fill="none" stroke="${ink}" stroke-width="3" stroke-dasharray="14 10"/><text x="${w / 2}" y="${(h / 2 + 8).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-size="22" fill="${ink}">Your logo goes here. Proportion ${primary.w.toFixed(0)} : ${primary.h.toFixed(0)}.</text></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h.toFixed(1)}" width="${w}" height="${h.toFixed(1)}" role="img" aria-label="Logo slot"><rect x="1.5" y="1.5" width="${w - 3}" height="${(h - 3).toFixed(1)}" fill="none" stroke="${svgAttr(ink)}" stroke-width="3" stroke-dasharray="14 10"/><text x="${w / 2}" y="${(h / 2 + 8).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-size="22" fill="${svgAttr(ink)}">Your logo goes here. Proportion ${primary.w.toFixed(0)} : ${primary.h.toFixed(0)}.</text></svg>`;
   };
 
   const logo = {

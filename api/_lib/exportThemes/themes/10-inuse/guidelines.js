@@ -79,7 +79,7 @@ ${phoneToday(ctx, 'left:378px;top:320px')}
     const P = (fg, bg) => ctx.pairs.find((p) => p.fg === fg && p.bg === bg);
     const orderA = [['deep-end', 'chalk'], ['soft', 'chalk'], ['deep-end', 'float'], ['deep-end', 'white'], ['quiet', 'white'], ['quiet', 'chalk'], ['white', 'lane']];
     const orderB = [['lane', 'white'], ['lane', 'chalk'], ['white', 'hover'], ['chalk', 'deep-end'], ['float', 'deep-end']];
-    const order = [...orderA, ...orderB].map(([f, b]) => P(f, b));
+    const order = [...orderA, ...orderB].map(([f, b]) => P(f, b)).filter(Boolean);  // a brand with fewer pairs leaves the tags past its last pair off
     const rest = ctx.pairs.filter((p) => !order.includes(p)); order.push(...rest);
     const r = (i) => ratioText(order[i].ratioText);
     const lanes = [84, 150, 216, 282].map((x) => `<i class="lane" style="left:${x}px"></i>`).join('');
@@ -94,7 +94,7 @@ ${e('left:20px;top:112px;width:320px;font:400 15px/24px var(--body);color:var(--
 <div class="g-e g-card" style="left:20px;top:340px;width:320px;height:144px"><div class="g-c1"><span class="av">${A(S.initials)}</span><b>${A(S.rider.split(',')[0])}</b></div><div class="g-c2">${A(S.riderNote)}</div></div>
 ${e('left:20px;top:502px;font:400 12px/18px var(--body);color:var(--quiet)', A(S.deliverTo))}
 ${e('left:20px;top:640px;width:320px;height:48px', A(S.form.book), 'g-btn')}`;
-    const lt = (n, y, inset) => tag(n, r(n - 1), y * k, 'l', inset);
+    const lt = (n, y, inset) => (n > order.length ? '' : tag(n, r(n - 1), y * k, 'l', inset));
     const tagsA = lt(1, mid(a.t), kk(20)) + lt(2, mid(a.p), kk(20)) + lt(3, 184 + 52 + 14, kk(166)) + lt(4, mid(a.nm), kk(88)) + lt(5, mid(a.nt), kk(36)) + lt(6, mid(a.cap), kk(20)) + lt(7, mid(a.btn), kk(20));
     // phone B: lessons
     const [d0, d1] = S.deliveries;
@@ -104,7 +104,7 @@ ${e('left:20px;top:640px;width:320px;height:48px', A(S.form.book), 'g-btn')}`;
 <div class="g-e g-lks" style="left:20px;top:336px;width:320px;height:32px">${X.links.map(([t]) => `<span class="g-lk">${A(t)}</span>`).join('')}</div>
 ${e('left:20px;top:404px;width:320px;height:48px', A(S.form.book), 'g-btn g-btn--h')}
 <div class="g-e g-toast" style="left:12px;top:600px;width:336px;height:100px"><span>${A(S.toast)}</span><span class="g-ta">Undo</span></div>`;
-    const rt = (n, y, inset) => tag(n, r(n - 1), y * k, 'r', inset);
+    const rt = (n, y, inset) => (n > order.length ? '' : tag(n, r(n - 1), y * k, 'r', inset));
     const tagsB = rt(8, 60 + 88 + 30, kk(16)) + rt(9, 352, kk(20)) + rt(10, 428, kk(20)) + rt(11, 628, kk(12)) + rt(12, 672, kk(12));
     const pw = Math.round(360 * k), left = 104;
     const fig = `<div class="g-cf" style="height:${Math.round(740 * k)}px">${sp(k, A1, { st: `left:${left}px;top:0;position:absolute`, extra: tagsA })}${sp(k, B1, { st: `left:${682 - left - pw}px;top:0;position:absolute`, extra: tagsB })}</div>`;

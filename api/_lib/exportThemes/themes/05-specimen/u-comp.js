@@ -120,7 +120,7 @@ ${dark(`${holder('Variants, dark')}<ul class="ku2-vas">${variants}</ul>`, 'ku2-v
     const S = sc(ctx), ui = ctx.ui, b = S.deliveries[0], b2 = S.deliveries[1];
     const media = `<div class="ui-card__media ku2-cover" role="img" aria-label="Cover of ${A(b.to)}"><span>Cover of ${A(b.to)}, supplied by ${A(ctx.brand.name)}</span></div>`;
     const withMedia = ui.card({ media, meta: S.status, title: b.to, text: b.when, action: `<div class="ku2-cact">${ui.btn(S.example.secondary, { variant: 'secondary', size: 'sm' })}</div>` });
-    const noMedia = ui.card({ meta: ctx.ph('ui.screen.content.status', ctx.status.find((s) => s.id === b2.status).label), title: b2.to, text: b2.when });
+    const noMedia = ui.card({ meta: ctx.ph('ui.screen.content.status', (ctx.status.find((s) => s.id === b2.status) || ctx.status[0]).label), title: b2.to, text: b2.when });
     const raised = ui.card({ meta: S.deliverToLabel, title: S.deliverTo, text: S.eta, raised: true });
     const anat = [['Meta', 'First, in the quiet colour.'], ['Title', 'The subject, in the display face.'], ['Detail', 'One line.'], ['Action', 'Last, if there is one.']]
       .map(([n, t], i) => `<li><span class="num ku2-an">${i + 1}</span><p><b>${n}.</b> ${t}</p></li>`).join('');

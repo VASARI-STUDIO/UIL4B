@@ -2,6 +2,7 @@
 // so the page shows what components.css ships; states are forced with the .is-* classes. Styles are in css-kit.js.
 import { A, ratioText } from './helpers.js';
 import { colourMap, tokenGroups, statusText } from '../../engine/tokens.js';
+import { cssNum } from '../../engine/escape.js';
 
 const m = (s) => `<span class="mono">${A(s)}</span>`;
 const rt = (ctx, a, b) => ratioText(ctx.fmt(ctx.ratio(a, b)));
@@ -63,7 +64,7 @@ function colourPage(ctx, id, mode) {
   const intro = rules([
     `Roles name a job, not a colour. Components read ${m('--action')}, never a palette name, so ${dark ? 'dark' : 'light'} changes nothing in the markup.`,
     'Every text pair is measured. Text under 24 px needs 4.5 : 1. Edges, the focus ring and fills against their ground need 3 : 1. The -bg tints are for highlights and charts, never under text.',
-    dark ? `Dark keeps ${actionColour(ctx).name}. The label stays ${textColour(ctx).name}, so a button reads the same in both.` : `${actionColour(ctx).name} is the action and the live status. Nothing else is allowed to use it.`,
+    dark ? `Dark keeps ${A(actionColour(ctx).name)}. The label stays ${A(textColour(ctx).name)}, so a button reads the same in both.` : `${A(actionColour(ctx).name)} is the action and the live status. Nothing else is allowed to use it.`,
   ]);
   const panel = `<div class="ui kband ${dark ? 'kband--dark' : ''}" ${dark ? 'data-theme="dark"' : ''}><div class="kroles">${rows}</div></div>`;
   return kstd(ctx, id, panel, `pg--kroles ${dark ? 'is-dark' : ''}`, intro);
@@ -136,7 +137,7 @@ export const uikit = {
   'type-scale'(ctx) {
     const S = sc(ctx), F = S.form, B = ctx.brand;
     const sample = { caption: F.notesHelp, label: F.pickup, body: S.pickup, control: F.book, 'title-s': S.dialog.title, title: S.rider, headline: S.eta };
-    const stretch = B.fonts.display.stretch || 100;
+    const stretch = cssNum(B.fonts.display.stretch || 100);
     // a slide for the two faces, then one slide per style at its true size with the spec in the slide's foot
     const faces = `<div class="kts-t kts-t--face"><span class="disp kts-fd" style="font-family:var(--ff-display);font-stretch:${stretch}%">${A(B.fonts.display.family)}</span><span class="kts-fb">${A(B.fonts.body.family)}</span></div>`;
     const rows = faces + [...ctx.uiType].reverse().map((t) => {
@@ -222,10 +223,10 @@ export const uikit = {
     const act = actionColour(ctx), txt = textColour(ctx), gnd = ground(ctx), ctl = ctx.uiType.find((t) => t.token === 'control');
     const padPx = ctx.space[4].px, H = 44, rad = ctx.brand.ui.radius.control, Z = 2;
     const l = rules([
-      `One ${act.name} button per screen. It books, pays or calls a rider, and its label says which.`,
-      `${txt.name} type on ${act.name}, always. ${gnd.name} type on ${act.name} is ${rt(ctx, R.surface, R.action)}, which is for 24 px type and over, never a button.`,
+      `One ${A(act.name)} button per screen. It books, pays or calls a rider, and its label says which.`,
+      `${A(txt.name)} type on ${A(act.name)}, always. ${A(gnd.name)} type on ${A(act.name)} is ${rt(ctx, R.surface, R.action)}, which is for 24 px type and over, never a button.`,
       'Labels are verbs: Book rider, Pay $18.50, Track. Never Submit or OK.',
-      `A disabled button says why beside it: ${F.bookWhy}`,
+      `A disabled button says why beside it: ${A(F.bookWhy)}`,
     ]);
     const draw = `<div class="kdraw">
 <span class="kd" style="left:48px;top:20px;width:${padPx * Z}px;height:1px"></span><span class="kd" style="left:48px;top:16px;width:1px;height:9px"></span><span class="kd" style="left:${47 + padPx * Z}px;top:16px;width:1px;height:9px"></span>
@@ -300,7 +301,7 @@ export const uikit = {
     const crumbs = ui.crumbs(['Deliveries', 'Today', S.deliverTo]);
     const g = (t, inner, cap, flush) => grp(t, `<div class="kfr${flush ? ' kfr--flush' : ''}">${inner}</div><span class="kcap kcap--after">${cap}</span>`);
     return kstd(ctx, 'navigation', `<div class="knav">
-<div class="kstack">${g('Top bar', top, `The current page has a 3 px bar in ${actionColour(ctx).name} under it. Links are 44 px tall.`, true)}${g('Tabs', tabs, 'Tabs switch views of the same list. They do not change the page.')}${g('Breadcrumbs', crumbs, 'Quiet, with the current page in full ink.')}</div>
+<div class="kstack">${g('Top bar', top, `The current page has a 3 px bar in ${A(actionColour(ctx).name)} under it. Links are 44 px tall.`, true)}${g('Tabs', tabs, 'Tabs switch views of the same list. They do not change the page.')}${g('Breadcrumbs', crumbs, 'Quiet, with the current page in full ink.')}</div>
 ${g('Sidebar', side, 'A bar on the left marks the current page.', true)}${g('Mobile tab bar', bar, 'Four destinations at most, 64 px tall.', true)}
 </div>`);
   },
@@ -349,7 +350,7 @@ ${g('Sidebar', side, 'A bar on the left marks the current page.', true)}${g('Mob
     const sortBtn = (t, dir) => `<button type="button">${A(t)}${dir ? ui.icon(dir === 'asc' ? 'arrow-up' : 'arrow-down', 14) : ''}</button>`;
     const rows = S.deliveries.map((d, i) => `<tr${i === 0 ? ' aria-selected="true"' : ''}${i === 2 ? ' class="is-hover"' : ''}><td>${A(d.to)}</td><td class="ui-num">${A(d.when)}</td><td>${ui.statusChip(d.status)}</td><td class="is-num">${A(d.price)}</td></tr>`).join('');
     const table = `<table class="ui-table"><thead><tr><th scope="col" aria-sort="ascending">${sortBtn('Deliver to', 'asc')}</th><th scope="col">${sortBtn('When')}</th><th scope="col">Status</th><th scope="col" class="is-num">${sortBtn('Price')}</th></tr></thead><tbody>${rows}</tbody></table>`;
-    const l = rules(['Headers are verbs of the data, not decoration. A sortable header is a button, and the sorted one shows its direction.', 'Numbers sit right and use tabular figures.', `Row states: rest, hover on pointer devices, and selected with a 3 px ${actionColour(ctx).name} bar on the left.`]);
+    const l = rules(['Headers are verbs of the data, not decoration. A sortable header is a button, and the sorted one shows its direction.', 'Numbers sit right and use tabular figures.', `Row states: rest, hover on pointer devices, and selected with a 3 px ${A(actionColour(ctx).name)} bar on the left.`]);
     const keys = `<div class="kkeys"><span class="kcap"><b>Selected</b>First row</span><span class="kcap"><b>Hover</b>Third row</span><span class="kcap"><b>Sorted</b>Deliver to, ascending</span></div>`;
     return kstd(ctx, 'table', `<div class="kstack">${table}${keys}</div>`, '', l);
   },

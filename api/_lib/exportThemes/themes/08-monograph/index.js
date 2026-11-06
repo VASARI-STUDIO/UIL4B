@@ -30,6 +30,7 @@ import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
 import { readMe, sheets } from './kit.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '08-monograph', name: 'Riso', tier: 'Pro', brand: 'long-room',
@@ -44,16 +45,16 @@ export const meta = {
 export function css(ctx) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, cw = B.logo.colourways;
   const fb = ctx.mode && ctx.mode.fontBase;
-  const italics = fb ? `@font-face{font-family:"${d.family}";font-style:italic;font-weight:500;font-display:swap;src:url(${fb}BodoniModa-i500.woff2) format("woff2")}\n` : '';
+  const italics = fb ? `@font-face{font-family:"${cssStr(d.family)}";font-style:italic;font-weight:500;font-display:swap;src:url(${fb}BodoniModa-i500.woff2) format("woff2")}\n` : '';
   return italics + `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--panel:${L.sunken};--ground:${L.surface};--hair:${L.divider};--accent:${L.action};--accent-ink:${L.actionLabel};--dark:${cw.reversed.ground};--dark-ink:${cw.reversed.name};--plate:${cw.colour.plate};--m:${B.layout.margin}px;
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',sans-serif;--mono:'${B.fonts.mono.family}',monospace;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(B.fonts.mono.family)}',monospace;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,dl,dd,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}
-.pg :where(h1,h2,h3){font-weight:${d.weights[0]}}
+.pg :where(h1,h2,h3){font-weight:${cssNum(d.weights[0])}}
 .pg em{font-style:italic}
 .pg .it{font-style:italic}
-.disp{font-family:var(--display);font-weight:${d.weights[0]};letter-spacing:-0.005em}
+.disp{font-family:var(--display);font-weight:${cssNum(d.weights[0])};letter-spacing:-0.005em}
 .num{font-variant-numeric:tabular-nums}
 .q{color:var(--quiet)}
 .pg--std{display:block}

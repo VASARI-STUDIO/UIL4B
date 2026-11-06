@@ -4,6 +4,7 @@
 // and the Toolbox cut (the diagonal the logo is sawn at) used once on a page, to cross out the wrong way. Anything drawn at a real size
 // (a post, a sign, a page) is authored in its own units and shown with a transform scale, so its type keeps the size it has in use.
 import { A, std, fit } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const px = (n) => +n.toFixed(2);
 const tok = (ctx, t) => ctx.brand.type.scale.find((s) => s.token === t);
@@ -39,7 +40,7 @@ const own = {
       return `<div class="b-fp__spec" style="height:${S + 2 * pad}px">${line(k.base - k.cap, '', `Cap height, ${k.cap.toFixed(2)} em`, 1)}${line(k.base - k.xh, 'b-gl--dash', `x-height, ${k.xh.toFixed(2)} em`, 2)}${line(k.base, 'b-gl--base', 'Baseline', 3)}<p class="b-fp__aa ${cls}" style="top:${pad}px;font-size:${S}px;${cls ? '' : `font-family:var(--body);font-weight:${weight}`}" aria-hidden="true">Aa</p></div>`;
     };
     const glyph = (cls, st) => ['ABCDEFGHIJKLM', 'NOPQRSTUVWXYZ', 'abcdefghijklm', 'nopqrstuvwxyz', '0123456789'].map((r) => `<span class="${cls}" style="${st}">${r}</span>`).join('');
-    const p1 = `<section class="b-panel b-fp">${spec('display', d.weights[d.weights.length - 1], 'disp')}<div class="b-fp__row"><div class="b-fp__id"><h2 class="disp b-fp__n">${A(d.family)}</h2><p class="b-fp__d">Display, weights ${d.weights.join(' and ')}. Sets ${A(toks('display'))}, and the wordmark. 18 px and larger, never small.</p></div><p class="b-fp__gl disp">${glyph('', '')}</p></div></section>`;
+    const p1 = `<section class="b-panel b-fp">${spec('display', cssNum(d.weights[d.weights.length - 1]), 'disp')}<div class="b-fp__row"><div class="b-fp__id"><h2 class="disp b-fp__n">${A(d.family)}</h2><p class="b-fp__d">Display, weights ${d.weights.join(' and ')}. Sets ${A(toks('display'))}, and the wordmark. 18 px and larger, never small.</p></div><p class="b-fp__gl disp">${glyph('', '')}</p></div></section>`;
     const bw = [[ctx.weights.regular, 'Regular', sentence(ctx.brand.type.sample.paragraph)], [ctx.weights.medium, 'Medium', ctx.brand.ui.screen.content.form.book], [ctx.weights.strong, 'Semibold', ctx.brand.ui.screen.content.toast]];
     const ws = bw.map(([w, n, t]) => `<li><span class="b-ws__w num">${w}, ${n}</span><span class="b-ws__t" style="font-weight:${w}">${A(t)}</span></li>`).join('');
     const p2 = `<section class="b-panel b-fp">${spec('body', ctx.weights.regular, '', b.family)}<div class="b-fp__row"><div class="b-fp__id"><h2 class="b-fp__n b-fp__n--body">${A(b.family)}</h2><p class="b-fp__d">Body, weights ${b.weights.join(', ')}. Sets ${A(toks('body'))}. Weight ${ctx.weights.strong} is for badges, avatars and toast buttons.</p></div><ul class="b-ws">${ws}</ul></div></section>`;
@@ -82,7 +83,7 @@ const own = {
 
   'type-rules'(ctx) {
     const R = ctx.brand.type.rules, c = ctx.brand.ui.screen.content, L = ctx.roles.light, ui = ctx.ui;
-    const q = ctx.pairs.find((p) => p.fg === 'quiet' && p.bgHex.toLowerCase() === L.surface.toLowerCase());
+    const q = ctx.pairs.find((p) => p.fg === 'quiet' && p.bgHex.toLowerCase() === L.surface.toLowerCase()) || { ratio: ctx.ratio(L.quiet, L.surface) };  // a brand with no quiet pair on the surface gets the measured ratio
     const faded = mix(ctx, L.text, L.surface, 0.62), fr = ctx.ratio(faded, L.surface);
     const amt = c.deliveries[1].price;
     const t = (inner) => `<div class="b-demo ui">${inner}</div>`, tn = (inner) => `<div class="b-demo ui">${inner}${strike}</div>`;
@@ -94,10 +95,11 @@ const own = {
       [t(`<span class="b-sw" style="background:${L.quiet}"></span><span class="b-fig2">Quiet Ink, <span class="num">${ctx.fmt(q.ratio)} : 1</span> on White</span>`), tn(`<span class="b-sw" style="background:${faded}"></span><span class="b-fig2">Ink faded, <span class="num">${ctx.fmt(fr)} : 1</span> on White</span>`)],
       [t(`<span class="b-mono b-mono--l">${A(L.action)}</span>`), tn(`<span class="b-mono b-mono--l">${A(amt)}</span>`)],
     ];
+    const Rn = R.slice(0, demos.length);  // the demos cover five rules; a brand with more shows the first five
     const names = ['Display size', 'Figures', 'Case', 'Secondary text', 'Mono'];
     const ic = (n) => ui.icon(n, 16);
-    const rows = R.map((r, i) => `<li class="b-panel b-tr"><p class="b-tr__n">${nb(i + 1)}${names[i] || ''}</p><div class="b-tr__c">${demos[i][0]}<p class="b-ic">${ic('check')}<span>${A(r.do)}</span></p></div><div class="b-tr__c">${demos[i][1]}<p class="b-ic b-ic--no">${ic('x')}<span>${A(r.dont)}</span></p></div></li>`).join('');
-    return std(ctx, 'type-rules', `<div class="b-trh"><span></span><h3 class="h3">Do</h3><h3 class="h3">Don't</h3></div><ul class="b-trs">${rows}</ul>`, { lead: `${R.length} rules for setting type. Each says what to do, and what never happens. The cut marks the wrong way.` });
+    const rows = Rn.map((r, i) => `<li class="b-panel b-tr"><p class="b-tr__n">${nb(i + 1)}${names[i] || ''}</p><div class="b-tr__c">${demos[i][0]}<p class="b-ic">${ic('check')}<span>${A(r.do)}</span></p></div><div class="b-tr__c">${demos[i][1]}<p class="b-ic b-ic--no">${ic('x')}<span>${A(r.dont)}</span></p></div></li>`).join('');
+    return std(ctx, 'type-rules', `<div class="b-trh"><span></span><h3 class="h3">Do</h3><h3 class="h3">Don't</h3></div><ul class="b-trs">${rows}</ul>`, { lead: `${Rn.length} rules for setting type. Each says what to do, and what never happens. The cut marks the wrong way.` });
   },
 
   'photo-direction'(ctx) {
@@ -193,7 +195,7 @@ ${ab(m, 640, span(8), 0, '', `<p class="disp" style="font-size:56px;line-height:
     const k = 198 / 1080, lw = 260;
     const lg = (id, o) => L.html(id, { label: 'Logo', ...o });
     const line = S[0].split(/(?<=\.)\s/);
-    const [paidW, ...paidRest] = S[2].split(/(?<=\.)\s/), [, amt, from] = paidRest.join(' ').match(/^(\S+)\s+(.*)$/);
+    const [paidW, ...paidRest] = S[2].split(/(?<=\.)\s/), [, amt, from] = paidRest.join(' ').match(/^(\S+)\s+(.*)$/) || [null, c.paid, c.rider];  // a line without an amount and a name takes them from the screen copy
     const square = `${ab(72, 72, lw, 0, '', lg('colour', { width: lw, colourway: 'reversed', color: rev.name }))}${ab(72, 460, 936, 0, '', `<p class="disp" style="font-size:132px;line-height:1.05;color:var(--dark-ink)">${line.map((l) => A(l)).join('<br>')}</p>`)}`;
     const portrait = `${ab(0, 0, 1080, 880, '', ctx.photo('ute', { cls: 'b-fill', style: 'font-size:36px;padding:56px;line-height:1.4;border-radius:0' }))}${ab(72, 940, 936, 0, '', `<p class="disp" style="font-size:112px;line-height:1.05">${A(S[1])}</p>`)}${ab(72, 1350 - 72 - 64, lw, 0, '', lg('colour', { width: lw, color: cw.colour.name }))}`;
     const story = `${ab(72, 250, lw, 0, '', lg('colour', { width: lw, colourway: 'on-steel', color: sw.name }))}

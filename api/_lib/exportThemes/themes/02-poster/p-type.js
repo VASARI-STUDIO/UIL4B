@@ -4,6 +4,7 @@
 // serials as running numbers, fact fields label over value, the condensed stub face for small labels. No hex is written here.
 import { A, ratioText } from './helpers.js';
 import { page, perf, fields, serial, bySize, byRole, inkOn, holeOn, edgeOn } from './gate.js';
+import { cssNum } from '../../engine/escape.js';
 
 const tok = (ctx, t) => ctx.brand.type.scale.find((s) => s.token === t);
 const spec = (t) => `${t.size} px, line ${t.line}, weight ${t.weight}`;
@@ -49,7 +50,7 @@ export const pType = {
     const tokensOf = (face) => sc.filter((s) => s.face === face).map((s) => s.token).join(', ');
     // a second line of the brand's, so the main line keeps its own pages (cover, voice, messaging)
     const L = ctx.brand.lines, sample = (L.others && (L.others[1] || L.others[0])) || L.primary;
-    const facts = fields([['Weight', `<span class="num">${d.weights.join(', ')}</span>`], ['Width', `<span class="num">${d.stretch || 100}</span>`], ['Used for', A(tokensOf('display'))]], 'tt-ff');
+    const facts = fields([['Weight', `<span class="num">${d.weights.join(', ')}</span>`], ['Width', `<span class="num">${cssNum(d.stretch || 100)}</span>`], ['Used for', A(tokensOf('display'))]], 'tt-ff');
     const lic = `<p class="tt-cap tt-lic">${A(d.family)}, ${A(b.family)} and ${A(m.family)} are open source under the SIL Open Font Licence. Free to use in print and on screen, and free to download from Google Fonts.</p>`;
     const main = `<div class="tt-tfb"><p class="tk-sn">Display</p><h2 class="disp tt-fn">${A(d.family)}</h2>${facts}<div class="tt-glw"><p class="disp tt-gl">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p>${lic}</div></div>`;
     const rows = b.weights.map((w) => `<li style="font-weight:${w}"><span class="tt-wn">${wname[w] || w} <span class="num">${w}</span></span><span>${A(sample)}</span></li>`).join('');

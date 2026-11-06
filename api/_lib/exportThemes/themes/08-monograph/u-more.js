@@ -18,7 +18,7 @@ const nm = (ctx, hex) => { const c = ctx.colours.find((x) => x.hex.toLowerCase()
 // the sample brand's words in the showcase, words true for any brand in the slot edition
 const ed = (ctx, show, slot) => (ctx.edition === 'slot' ? slot : show);
 // a status chip: its label is the brand's own (a placeholder, Status 1 to n, in the slot edition)
-const chip = (ctx, id) => { const i = ctx.status.findIndex((s) => s.id === id); return ctx.ui.statusChip(id, { label: ctx.brand.ui.status[i].label }); };
+const chip = (ctx, id) => { const i = Math.max(0, ctx.status.findIndex((s) => s.id === id)); return ctx.ui.statusChip(id, { label: ctx.brand.ui.status[i].label }); };
 
 // the page: the gate's running head (named for the UI kit), the title and its lead, then the body
 function kpage(ctx, id, lead, body, cls = '') {

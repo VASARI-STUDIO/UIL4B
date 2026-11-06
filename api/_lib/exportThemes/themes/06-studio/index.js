@@ -7,6 +7,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '06-studio', name: 'Studio', tier: 'Pro', brand: 'offcut',
@@ -19,11 +20,11 @@ export function css(ctx) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, rev = B.logo.colourways.reversed, R = B.ui.radius;
   const m = B.layout.margin, nr = ctx.neutralRamp;
   return `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--quiet-panel:${L.quietOnSunken};--ground:${L.surface};--panel:${L.sunken};--hair:${L.divider};--hair2:${nr[200]};--line:${nr[300]};--accent:${L.action};--accent-ink:${L.actionLabel};--dark:${rev.ground};--dark-ink:${rev.name};--m:${m}px;--rc:${R.control}px;--rk:${R.card}px;
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:12px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}
-.disp{font-family:var(--display);font-weight:${d.weights[d.weights.length - 1]};letter-spacing:-0.01em}
+.disp{font-family:var(--display);font-weight:${cssNum(d.weights[d.weights.length - 1])};letter-spacing:-0.01em}
 .num{font-variant-numeric:tabular-nums}
 
 /* the standard page: running head, title, body, hairline foot */

@@ -3,12 +3,13 @@
 // are. .tu1-night swaps the page's own colour variables to the dark roles (the queue at night). No hex is written here.
 // meta is read at call time (index.js calls this after it has loaded), for the condensed face's pinned width.
 import { meta } from './index.js';
+import { cssStr } from '../../engine/escape.js';
 
 export const cssUFound = (ctx) => {
   const D = ctx.roles.dark, B = ctx.brand, st = meta.chrome.stretch, rc = B.ui.radius.card;
   return `
 .pg.tk.tu1-night{--ground:${D.surface};--ink:${D.text};--soft:${D.textSoft};--quiet:${D.quiet};--hair:${D.divider};--edge:${D.border}}
-.tu1 .tu1-m{font-family:'${B.fonts.mono.family}',monospace;font-size:max(12px,0.9em);font-weight:400;letter-spacing:0;font-stretch:100%}
+.tu1 .tu1-m{font-family:'${cssStr(B.fonts.mono.family)}',monospace;font-size:max(12px,0.9em);font-weight:400;letter-spacing:0;font-stretch:100%}
 .tu1-perf{color:var(--ink)}.tu1-edge{box-shadow:inset 0 0 0 1px var(--hair)}
 /* small labels in the condensed stub face */
 .tu1-roll__k,.tu1-no,.tu1-co__p,.tu1-ts__px,.tu1-sp__n,.tu1-rt__r,.tu1-st__n,.tu1-st__name{font-family:var(--cond);font-weight:700;font-stretch:${st}%;letter-spacing:0.02em}

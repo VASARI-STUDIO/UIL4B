@@ -5,6 +5,7 @@
 // Familjen Grotesk is the chrome, as on the gate pages. Roles only; spacing on a 4 px base. Elevation is none: hairlines only.
 import { cssBookKit } from './css-bookkit.js';
 import { drums, drumNo } from './guidelines-r.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 const vars = (r) => `--bk-ground:${r.surface};--bk-raised:${r.raised};--bk-panel:${r.sunken};--bk-ink:${r.text};--bk-soft:${r.textSoft};--bk-quiet:${r.quiet};--bk-quiet-panel:${r.quietOnSunken};--bk-hair:${r.divider};--bk-edge:${r.border};--bk-action:${r.action};--bk-action-hover:${r.actionHover};--bk-action-ink:${r.actionLabel};--bk-focus:${r.focus};`;
 
@@ -15,7 +16,7 @@ export function bookCss(ctx) {
   // a separation of the logo: only the paths in that drum's ink print
   const only = drums(ctx).map((c) => `.rb-only--${drumNo(ctx, c)} svg path:not([fill="${c.hex}" i]){fill:none}`).join('\n');
   return `:root,.bk--board{${vars(L)}--rb-plate:${plate};
---chrome:'${chrome}',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',sans-serif;--mono:'${m.family}',monospace}
+--chrome:'${cssStr(chrome)}',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"]{${vars(D)}}
 body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk{font-family:var(--chrome);font-size:14px;line-height:1.5;color:var(--bk-ink);background:var(--bk-ground);-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;position:relative;isolation:isolate}
@@ -116,11 +117,11 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .rb-cv-logo{position:absolute;line-height:0}
 .rb-cv-logo svg{display:block;width:100%;height:auto}
 .rb-cv-logo .logo-slot{width:100%!important;height:auto!important;aspect-ratio:var(--ar)}
-.rb-cv-line{position:absolute;left:8cqw;top:83.2cqw;width:84cqw;font-family:var(--display);font-weight:${d.weights[0]};font-size:8.8cqw;line-height:1.08;letter-spacing:-0.01em;text-wrap:balance}
+.rb-cv-line{position:absolute;left:8cqw;top:83.2cqw;width:84cqw;font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:8.8cqw;line-height:1.08;letter-spacing:-0.01em;text-wrap:balance}
 .rb-cv-t{position:absolute;left:8cqw;top:120cqw;font-weight:700;font-size:5.6cqw;line-height:1.1;letter-spacing:-0.01em}
 .rb-cv-v{position:absolute;left:8cqw;top:128cqw;font-size:2.8cqw;line-height:1.4}
 .rb-cover__m{align-self:end;display:flex;flex-direction:column;gap:16px}
-.rb-cover__o{font-family:var(--display);font-weight:${d.weights[0]};font-style:italic;font-size:30px;line-height:1.2}
+.rb-cover__o{font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-style:italic;font-size:30px;line-height:1.2}
 .rb-cover__c{font-size:15px;font-weight:600}
 .rb-cover__m .rb-job{flex-direction:column;margin-top:0}
 @keyframes rb-land{from{opacity:0}}
@@ -141,9 +142,9 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .rb-prin{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px 48px}
 .rb-prin li{padding-top:16px;border-top:${bw}px solid var(--bk-ink)}
 .rb-prin__t{font-weight:600;font-size:15px;line-height:1.35}
-.rb-prin__e{margin-top:12px;font-family:var(--display);font-weight:${d.weights[0]};font-size:28px;line-height:1.2;text-wrap:balance}
+.rb-prin__e{margin-top:12px;font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:28px;line-height:1.2;text-wrap:balance}
 .rb-lines{display:flex;flex-direction:column;gap:8px}
-.rb-lines li{font-family:var(--display);font-weight:${d.weights[0]};font-size:52px;line-height:1.08;letter-spacing:-0.01em}
+.rb-lines li{font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:52px;line-height:1.08;letter-spacing:-0.01em}
 .rb-lines li+li{font-style:italic;font-size:34px}
 .rb-wtn{display:flex;flex-direction:column;gap:24px}
 .rb-wtn__r{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:32px;align-items:center}
@@ -193,7 +194,7 @@ ${only}
 .rb-clear__z{position:relative;outline:1px dashed ${L.text};outline-offset:-1px;max-width:100%}
 .rb-clear__in{outline:1px solid ${L.divider}}
 .rb-clear__in svg,.rb-clear__in .logo-slot{display:block;max-width:100%;height:auto}
-.rb-clear__x{position:absolute;font-family:var(--display);font-style:italic;font-weight:${d.weights[0]};font-size:16px;line-height:1;color:${L.text}}
+.rb-clear__x{position:absolute;font-family:var(--display);font-style:italic;font-weight:${cssNum(d.weights[0])};font-size:16px;line-height:1;color:${L.text}}
 .rb-clear__x--t{left:50%;top:-24px}
 .rb-clear__x--l{left:-20px;top:50%}
 .rb-min__sh{display:flex;align-items:center;justify-content:center;min-height:200px;padding:32px}
@@ -260,12 +261,12 @@ ${only}
 
 /* typography */
 .rb-faces{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:48px}
-.rb-word{font-family:var(--display);font-weight:${d.weights[0]};font-size:clamp(88px,10vw,152px);line-height:0.95;white-space:nowrap}
+.rb-word{font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:clamp(88px,10vw,152px);line-height:0.95;white-space:nowrap}
 .rb-word--i{font-style:italic;font-size:clamp(56px,6vw,96px);margin:12px 0 24px}
 .rb-word--b{font-family:var(--body);font-weight:400;font-size:clamp(72px,8vw,120px);margin-bottom:32px}
 .rb-face .rb-note{margin-top:6px}
 .rb-al{margin-top:20px;padding-top:12px;border-top:1px solid var(--bk-hair);font-family:var(--body);font-size:16px;line-height:1.5;overflow-wrap:anywhere}
-.rb-al--d{font-family:var(--display);font-weight:${d.weights[0]}}
+.rb-al--d{font-family:var(--display);font-weight:${cssNum(d.weights[0])}}
 .rb-scale{display:grid;grid-template-columns:120px minmax(0,1fr);gap:32px;align-items:start}
 .rb-tseps{display:grid;grid-auto-rows:1fr;gap:20px}
 .rb-tsep{display:flex;flex-direction:column;container-type:inline-size}
@@ -291,10 +292,10 @@ ${only}
 .rb-field input[type=text]{height:44px;padding:0 12px;border:${bw}px solid var(--bk-edge);border-radius:0;background:var(--bk-ground);color:var(--bk-ink);font:400 16px/1 var(--body)}
 .rb-field input[type=range]{height:44px;margin:0;accent-color:var(--bk-action);width:100%}
 .rb-proof{padding:48px 40px;--xi:6px}
-.rb-tester__d{font-family:var(--display);font-weight:${d.weights[0]};font-size:min(var(--tester-size,64px),12vw);line-height:1.1;min-height:1.1em;overflow-wrap:anywhere}
+.rb-tester__d{font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:min(var(--tester-size,64px),12vw);line-height:1.1;min-height:1.1em;overflow-wrap:anywhere}
 .rb-tester__b{margin-top:16px;font-family:var(--body);font-weight:500;font-size:min(var(--tester-size,64px),9vw);line-height:1.15;min-height:1.15em;overflow-wrap:anywhere}
 .rb-use{max-width:720px;padding-left:24px;border-left:${bw}px solid var(--bk-ink)}
-.rb-use__h{font-family:var(--display);font-weight:${d.weights[0]};font-size:44px;line-height:1.12;margin-bottom:16px}
+.rb-use__h{font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:44px;line-height:1.12;margin-bottom:16px}
 .rb-use__p{font-family:var(--body);font-size:16px;line-height:1.6;max-width:60ch;margin-bottom:12px}
 .rb-use__c{font-family:var(--body);font-size:12px;line-height:1.5;color:var(--bk-quiet)}
 .rb-rules li{padding:14px 0;border-top:1px solid var(--bk-hair);display:grid;gap:6px;break-inside:avoid}
@@ -365,7 +366,7 @@ ${only}
 .rb-post--sq{width:300px}
 .rb-post--pt{width:240px}
 .rb-post--st{width:170px;padding:0;display:flex;flex-direction:column;background:${L.surface};color:${L.text};box-shadow:inset 0 0 0 1px ${L.divider}}
-.rb-post__l{position:relative;font-family:var(--display);font-weight:${d.weights[0]};font-size:30px;line-height:1.08}
+.rb-post__l{position:relative;font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:30px;line-height:1.08}
 .rb-post__l--i{font-style:italic}
 .rb-post--st .rb-post__l{font-size:14px;line-height:1.3;padding:12px}
 .rb-post__lg{position:absolute;left:20px;bottom:20px}
@@ -376,7 +377,7 @@ ${only}
 .rb-sign__w{display:inline-flex;flex-direction:column;gap:8px;max-width:100%}
 .rb-sign__r{display:flex;gap:12px;align-items:stretch}
 .rb-wall{position:relative;width:280px;max-width:100%;aspect-ratio:2/3;padding:24px;background:${L.sunken};color:${L.text}}
-.rb-wall__l{font-family:var(--display);font-weight:${d.weights[0]};font-size:36px;line-height:1.08}
+.rb-wall__l{font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-size:36px;line-height:1.08}
 .rb-wall__lg{position:absolute;left:24px;bottom:24px}
 .rb-dim{position:relative;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--bk-quiet)}
 .rb-dim::before{content:"";position:absolute;background:var(--bk-quiet)}
@@ -396,7 +397,7 @@ ${only}
 .rb-screen{padding:20px;display:flex;flex-direction:column;gap:12px}
 .rb-scr__top{display:flex;justify-content:space-between;align-items:center}
 .rb-scr__time{font-size:13px;font-weight:500}
-.rb-scr__eta{margin:0;font-size:30px;line-height:1.1;font-weight:${d.weights[0]}}
+.rb-scr__eta{margin:0;font-size:30px;line-height:1.1;font-weight:${cssNum(d.weights[0])}}
 .rb-scr__note{margin:0;font-size:13px;color:var(--text-soft)}
 .rb-scr__ft{display:flex;justify-content:space-between;font-size:12px;color:var(--quiet)}
 

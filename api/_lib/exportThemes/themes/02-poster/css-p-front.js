@@ -3,6 +3,7 @@
 // queue at night: .tf-night swaps the page's own colour variables to the dark roles. No hex is written here.
 // meta is read at call time (index.js calls this after it has loaded), for the condensed face's pinned width.
 import { meta } from './index.js';
+import { cssNum } from '../../engine/escape.js';
 
 export const cssPFront = (ctx) => {
   const D = ctx.roles.dark, st = meta.chrome.stretch;
@@ -50,7 +51,7 @@ export const cssPFront = (ctx) => {
 .tf-pe__stub{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:24px;padding-left:40px}
 .tf-pe__stub .tf-pe__t + .tf-pe__t{padding-top:24px}
 .tf-pe__foot{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 480px;padding-top:20px}
-.tf-pe__l{position:relative;font-family:var(--display);font-weight:${ctx.brand.fonts.display.weights[0]};font-stretch:${ctx.brand.fonts.display.stretch || 100}%;font-size:30px;line-height:1.05;letter-spacing:-0.015em}
+.tf-pe__l{position:relative;font-family:var(--display);font-weight:${cssNum(ctx.brand.fonts.display.weights[0])};font-stretch:${cssNum(ctx.brand.fonts.display.stretch || 100)}%;font-size:30px;line-height:1.05;letter-spacing:-0.015em}
 .tf-pe__l + .tf-pe__l{padding-left:40px}
 
 /* voice: the event line at night, the habits under one perforation, split by gutters; the rule in the body face, the serial in the stub face */

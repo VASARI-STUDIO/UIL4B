@@ -1,9 +1,10 @@
 // Theme 09 Blueprint, run A styles (classes start a-). Sheets are 794 x 1123 with a 56 px margin, so the content column is 682 px.
 // Every sheet ends in a ruled title block (.a-tb); key bubbles (.a-bub) are Brick rings; details (.a-detail) are ruled frames with a title strip.
+import { cssStr } from '../../engine/escape.js';
 export const cssA = (ctx) => {
   const mono = ctx.brand.fonts.mono;
   return `
-.pg{--mono:'${mono.family}',monospace}
+.pg{--mono:'${cssStr(mono.family)}',monospace}
 .pg--std .grow{flex:1;min-height:0}
 .a-mono{font-family:var(--mono);font-size:12px;line-height:1.3;color:var(--ink);white-space:nowrap}
 .a-h3{font-size:13px;line-height:18px;font-weight:600;margin-bottom:12px}

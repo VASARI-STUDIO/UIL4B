@@ -53,6 +53,20 @@ export function numberPages(list, extra = {}) {
 // Themes whose pages read brand copy only through esc(), so slot-edition placeholders can reach them; the rest keep the sample copy until they are moved over.
 const PH_THEMES = new Set(['02', '04', '05', '07', '08']);
 
+// A theme names the shots of the sample brand it was written for. A brand without one of those ids gets the shot at the same
+// position in the sample's list (wrapping when the brand has fewer), so a brand with any shots fills every frame.
+function fallbackShots(ctx, T) {
+  const shots = ctx.brand.imagery.shots, own = ctx.shot, photo = ctx.photo;
+  const sample = (BRANDS[T.meta.brand] && BRANDS[T.meta.brand].data.imagery.shots) || [];
+  const pick = (id) => {
+    const s = own(id);
+    if (s || !shots.length) return s;
+    return shots[Math.max(0, sample.findIndex((x) => x.id === id)) % shots.length];
+  };
+  ctx.shot = pick;
+  ctx.photo = (id, o) => photo(pick(id) ? pick(id).id : id, o);
+}
+
 // The context a theme renders from: the brand loaded and measured, its logo and components, the page list with numbers
 // and section references. T is the theme module, kind 'guidelines' or 'uikit', loaders the reads the engine may make
 // (fontFile, icon, logoPlugin). data is the brand's data; it defaults to the sample brand the theme is written for.
@@ -67,6 +81,7 @@ export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].d
   const own = pageSizeMap(T.meta);
   ctx.pageSizes = own; ctx.sizeOf = (id) => own[id] || ctx.size; ctx.maxSize = largestSize(ctx.size, own);
   ctx.pageNo = (id) => nos[id];
+  fallbackShots(ctx, T);
   ctx.pages = list.map((p) => ({ ...p, no: nos[p.id] }));
   // sections with their pages and a "3.2" style reference
   const secs = [];

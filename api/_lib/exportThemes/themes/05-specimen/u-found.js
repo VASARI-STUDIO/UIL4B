@@ -8,6 +8,7 @@
 import { A, ratioText } from './helpers.js';
 import { sheet, hole, pull } from './guidelines-k.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssNum } from '../../engine/escape.js';
 
 const m = (s) => `<span class="ku1-m">${A(s)}</span>`;
 const sc = (ctx) => ctx.brand.ui.screen.content;
@@ -141,7 +142,7 @@ ${hole(20, 'ku1-lhole')}
     const sets = ['ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz', '0123456789&?!.,:;\'"()%/@#-'];
     const grid = (ff) => `<div class="ku1-cs" style="font-family:${ff}" aria-hidden="true">${sets.map((r) => [...r].map((c) => `<i>${A(c)}</i>`).join('')).join('')}</div>`;
     const wts = (ff, ws) => `<ul class="ku1-wts">${ws.map((w) => `<li>${m(String(w))}<span style="font-family:${ff};font-weight:${w}">${A(F.book)}</span></li>`).join('')}</ul>`;
-    const face = (f, ff, spec, cls) => `<div class="ku1-face2 ${cls}"><span class="ku1-aa" style="font-family:${ff};font-weight:${f.weights.includes(500) ? 500 : f.weights[0]}" aria-hidden="true">Aa</span>
+    const face = (f, ff, spec, cls) => `<div class="ku1-face2 ${cls}"><span class="ku1-aa" style="font-family:${ff};font-weight:${f.weights.includes(500) ? 500 : cssNum(f.weights[0])}" aria-hidden="true">Aa</span>
 <div class="ku1-fm"><h2 class="k-disp ku1-ff">${A(f.family)}</h2><p class="ku1-fs">${spec}</p>${grid(ff)}${wts(ff, f.weights)}</div></div>`;
     const faces = face(B.fonts.display, 'var(--display)', `Display, <span class="num">${dsz.length ? Math.min(...dsz) : 26}</span> px and up.`, 'ku1-face2--d')
       + face(B.fonts.body, 'var(--body)', `Interface, <span class="num">${Math.min(...bsz)}</span> to <span class="num">${Math.max(...bsz)}</span> px.`, 'ku1-face2--b');

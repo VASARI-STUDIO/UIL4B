@@ -71,10 +71,10 @@ function chip(ctx, r, no) {
 function colourPage(ctx, id, mode) {
   const dark = mode === 'dark', act = byRole(ctx, 'action'), hl = byRole(ctx, 'highlight'), txt = byRole(ctx, 'text'), gnd = byRole(ctx, 'ground');
   const rules = dark
-    ? ['The roles and their names stay. Only the values change, so nothing in the markup does.', `${hl.name} is the action in dark. The label stays ${txt.name}, so a button reads the same in both.`, 'The page follows the system setting on first load. The switch in the code package overrides it.', `The ${m('-bg')} tints (${m('--success-bg')} and the rest) are for highlights and charts, never under text.`]
-    : [`Components read ${m('--action')}, never a colour name, so dark changes the values and not the markup.`, `The ${m('-bg')} tints (${m('--success-bg')} and the rest) are for highlights and charts, never under text.`, 'Every text pair is measured. Text under 24 px needs 4.5 : 1. Edges, the focus ring and fills against their ground need 3 : 1.', `${act.name} is the one action on a screen. ${hl.name} is fill only, never type.`];
+    ? ['The roles and their names stay. Only the values change, so nothing in the markup does.', `${A(hl.name)} is the action in dark. The label stays ${A(txt.name)}, so a button reads the same in both.`, 'The page follows the system setting on first load. The switch in the code package overrides it.', `The ${m('-bg')} tints (${m('--success-bg')} and the rest) are for highlights and charts, never under text.`]
+    : [`Components read ${m('--action')}, never a colour name, so dark changes the values and not the markup.`, `The ${m('-bg')} tints (${m('--success-bg')} and the rest) are for highlights and charts, never under text.`, 'Every text pair is measured. Text under 24 px needs 4.5 : 1. Edges, the focus ring and fills against their ground need 3 : 1.', `${A(act.name)} is the one action on a screen. ${A(hl.name)} is fill only, never type.`];
   const rows = roleRows(ctx, mode), p = ctx.pages.find((x) => x.id === id);
-  return kstd(ctx, id, { lead: `${dark ? `The same roles on ${txt.name}.` : `Roles name a job, not a colour. ${gnd.name} is the ground.`} Each chip is set in its pair at the smallest size, 3x. The strip under it is its tint table, ten steps from light to dark.`, rules, dark, cls: 'pg--kroles',
+  return kstd(ctx, id, { lead: `${dark ? `The same roles on ${A(txt.name)}.` : `Roles name a job, not a colour. ${A(gnd.name)} is the ground.`} Each chip is set in its pair at the smallest size, 3x. The strip under it is its tint table, ten steps from light to dark.`, rules, dark, cls: 'pg--kroles',
     work: families(ctx, rows, (i) => `${p.ref}.${rules.length + i + 1}`) });
 }
 // the roles in four families of unequal size: the grounds, the text and lines, the action, the states. Numbering follows the role order.
@@ -151,7 +151,7 @@ export const uikit = {
     const spec = `<ol class="kc-spec"><li><span>1</span><p>Keep a clear zone round the logo, ${+(L.geo.unit / ux).toFixed(1)}x on every side. ${A(unit)}</p></li><li><span>2</span><p>Measure from the edge of the logo, on all four sides.</p></li><li><span>3</span><p>On screen, ${mn.screenPx} px wide. The wake is ${f1(ux * mn.screenPx / g.w)} px thick.</p></li></ol>`;
     return `<section class="pg pg--kcover" data-page="cover"><div class="cv-top"><div><h1>Interface standards manual</h1><p>${A(B.name)}, river ferry, ${A(B.city)}. ${A(B.product)}<br>${A(ctx.versionLine)}.</p></div><ul class="sec">${sections}</ul></div>
 <div class="kc-row">${sheet}${spec}</div>
-<div class="kc-band"><span class="disp num">${A(split(d.when)[0])}</span><span class="disp kc-to">${A(d.to)}</span><span class="kc-chip">${A(ctx.status.find((x) => x.id === d.status).label)}</span></div>
+<div class="kc-band"><span class="disp num">${A(split(d.when)[0])}</span><span class="disp kc-to">${A(d.to)}</span><span class="kc-chip">${A((ctx.status.find((x) => x.id === d.status) || ctx.status[0]).label)}</span></div>
 <div class="cv-bot"><p>On screen, x is fixed at ${base(ctx)} px.<br>Every space and height is a whole number of x.</p></div></section>`;
   },
 
@@ -334,12 +334,12 @@ export const uikit = {
   },
 
   status(ctx) {
-    const tk = (id) => m(statusText(ctx, 'light', ctx.status.find((x) => x.id === id)).token);
+    const tk = (id) => m(statusText(ctx, 'light', ctx.status.find((x) => x.id === id) || ctx.status[0]).token);
     const meaning = { boarding: `The one sailing boarding now. Words in ${tk('boarding')}.`, 'on-time': `Leaves when the timetable says. Words in ${tk('on-time')}.`, late: `Behind the time we gave. The words name the minutes, in ${tk('late')}.`, cancelled: `Not sailing. Words in ${tk('cancelled')}. The next sailing is named beside it.`, 'fare-bought': `Your fare is bought. Words in ${tk('fare-bought')}.`, departed: 'Gone. The row drops to quiet.' };
     const L = chipPairs(ctx, 'light'), D = chipPairs(ctx, 'dark');
     const ids = [...ctx.status.map((s) => s.id), 'departed'];
     const chip = (id) => (id === 'departed' ? '<span class="ui-chip kchip--gone">Departed</span>' : ctx.ui.statusChip(id));
-    const rows = ids.map((id, i) => `<div class="kstat"><span>${chip(id)}</span><span class="ui kdk" data-theme="dark">${chip(id)}</span><span class="krr"><b>${rt(ctx, ...L[id])}</b>Light</span><span class="krr"><b>${rt(ctx, ...D[id])}</b>Dark</span><span class="kcap kcap--ink">${meaning[id]}</span></div>`).join('');
+    const rows = ids.map((id, i) => `<div class="kstat"><span>${chip(id)}</span><span class="ui kdk" data-theme="dark">${chip(id)}</span><span class="krr"><b>${rt(ctx, ...L[id])}</b>Light</span><span class="krr"><b>${rt(ctx, ...D[id])}</b>Dark</span><span class="kcap kcap--ink">${meaning[id] || `Words in ${tk(id)}.`}</span></div>`).join('');
     return kstd(ctx, 'status', { lead: 'Status is words first. Colour is the second cue.',
       rules: ['A status is words in one colour, a 6 px dot before them. The ratio is the words on the page ground. Five states, with a time or a count where it helps.', 'A status is never colour alone: Boarding, 5 min late and Cancelled are read, not matched.', `A count badge sits on a tab or an icon: ${'<span class="ui-badge">3</span>'}`],
       work: grp('Six states, light and dark', `<div class="kstats-list"><div class="kstat kstat--h"><b>Light</b><b>Dark</b><b>Ratio</b><b>Ratio</b><b>When</b></div>${rows}</div>`) });

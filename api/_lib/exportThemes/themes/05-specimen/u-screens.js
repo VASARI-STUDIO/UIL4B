@@ -38,7 +38,7 @@ const progress = (S) => `<div class="ui-progress" role="progressbar" aria-label=
 const stateOf = (ctx, id) => (ctx.status.find((s) => s.id === id) || { label: '' }).label;
 const chip = (ctx, id) => ctx.ui.statusChip(id, { label: ctx.ph('ui.screen.content.status', stateOf(ctx, id)) });
 // the line on what the action colour marks: the action, and the state it also fills if the brand gives one
-const actLine = (ctx, act) => { const s = ctx.status.find((x) => x.tone === 'action'); return s ? `${A(act.name)} marks the action and the ${ctx.ph('ui.screen.content.status', s.label)} state, and nothing else.` : `${A(act.name)} marks the action, and nothing else.`; };
+const actLine = (ctx, act) => { const s = ctx.status.find((x) => x.tone === 'action'); return s ? `${A(act.name)} marks the action and the ${A(ctx.ph('ui.screen.content.status', s.label))} state, and nothing else.` : `${A(act.name)} marks the action, and nothing else.`; };
 // the row's lead is a drawn book cover (a spine and a title bar), no brand word on it, so it holds in the slot too
 const bookRows = (ctx, rows) => `<ul class="ui-list">${rows.map((d) => ctx.ui.row({ lead: '<i class="ku-cvr" aria-hidden="true"></i>', title: d.to, sub: d.when, end: d.price, chip: chip(ctx, d.status) })).join('')}</ul>`;
 

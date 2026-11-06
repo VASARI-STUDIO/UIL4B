@@ -203,7 +203,7 @@ ${bookCssAll(ctx, T)}
 <body>
 ${bookMarkup(ctx, T)}
 </body></html>
-`, 'index.html');
+`, 'index.html', ctx);
 }
 
 // The brand book as a file map: index.html plus assets/ (the brand kit's files and its zip, by relative link).

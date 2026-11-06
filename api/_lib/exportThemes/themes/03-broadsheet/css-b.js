@@ -1,6 +1,7 @@
 // Styles for guidelines-b.js (theme 03, Broadsheet). Appended to css() in index.js; same custom properties (.pg vars). Every class starts b-.
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssStr } from '../../engine/escape.js';
 
 export function cssB(ctx) {
   const mono = ctx.brand.fonts.mono;
@@ -8,7 +9,7 @@ export function cssB(ctx) {
   const decl = (o) => Object.entries(o).map(([k, v]) => `--${k}:${v}`).join(';');
   const uiScope = `.pg .ui{${decl(colourMap(ctx, 'light'))};${decl(g.space)};${decl(g.radius)};${decl(g.width)};${decl(g.font)};${decl(g.text)};${decl(g.shadow)}}`;
   return `
-.pg{--bmono:'${mono.family}',monospace}
+.pg{--bmono:'${cssStr(mono.family)}',monospace}
 .b-mono{font-family:var(--bmono);font-size:13px;line-height:1.4}
 .b-fill{flex:1;min-height:0;display:flex;flex-direction:column;gap:18px}
 .b-hl{font-family:var(--display);font-weight:400;font-size:56px;line-height:1.02;letter-spacing:-0.01em}

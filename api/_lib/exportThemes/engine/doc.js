@@ -52,5 +52,5 @@ ${theme.css(ctx)}
 <body${stack ? ' class="stack"' : ''}>
 ${pages.join('\n')}
 </body></html>
-`, 'page.html');
+`, 'page.html', ctx);
 }

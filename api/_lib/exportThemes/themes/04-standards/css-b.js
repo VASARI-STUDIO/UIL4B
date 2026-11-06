@@ -1,8 +1,9 @@
 // Styles for guidelines-b.js. Appended to css() in index.js and scoped to the .pg custom properties set there. Every class starts b-.
+import { cssStr } from '../../engine/escape.js';
 export function cssB(ctx) {
   const mono = ctx.brand.fonts.mono;
   return `
-.pg{--bmono:'${mono.family}',monospace}
+.pg{--bmono:'${cssStr(mono.family)}',monospace}
 .b-mono{font-family:var(--bmono);font-size:13px;line-height:1.4;font-weight:400}
 .pg--std .photo-slot{border:1.5px dashed var(--quiet-panel)}
 

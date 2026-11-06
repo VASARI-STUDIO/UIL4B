@@ -145,7 +145,7 @@ ${messagesPhone(ctx, 'left:378px;top:330px;height:560px')}`;
     const photo = pc(ctx, { ground: 'var(--ink)', fg: '#FFFFFF', h: 404, cls: 'a-pc--photo', inner: `${ctx.photo('pool-door', { cls: 'a-fillimg' })}<span class="a-onphoto">${L.html('mono-light', { width: 160, colourway: 'mono-light', color: ml.name, label: 'Logo' })}</span>`, marks: mkA(7, 'right:12px;top:10px', true) });
     const names = [...new Set(keys.map((k) => hexName(ctx, cw[k].ground)))];
     const key = `<ul class="a-notes a-gkey">${keys.map((k, i) => note(i + 1, 'On ' + hexName(ctx, cw[k].ground), desc(cw[k]))).join('')}${note(7, 'On a photo', 'Mono light, on a quiet, dark part of the picture. Keep it clear of faces, lane ropes and water.')}</ul>`;
-    const inner = `<p class="a-lead" style="margin-top:8px">The logo sits on ${names.slice(0, -1).join(', ')} and ${names.at(-1)}, each in its own colourway. On a photo it goes in mono light.</p><div class="a-gd">${key}<div class="a-gcells">${photo}${keys.map((k, i) => cell(k, i + 1)).join('')}</div></div>`;
+    const inner = `<p class="a-lead" style="margin-top:8px">The logo sits on ${names.slice(0, -1).map((n) => A(n)).join(', ')} and ${A(names.at(-1))}, each in its own colourway. On a photo it goes in mono light.</p><div class="a-gd">${key}<div class="a-gcells">${photo}${keys.map((k, i) => cell(k, i + 1)).join('')}</div></div>`;
     return std(ctx, 'logo-grounds', 'Logo on colour and photos', inner);
   },
 
@@ -175,7 +175,7 @@ ${messagesPhone(ctx, 'left:378px;top:330px;height:560px')}`;
     const ord = ['ground', 'card', 'text', 'action', 'highlight'].map((r) => cs.find((c) => c.role === r)).filter(Boolean);
     const sw = (c) => `<span class="a-sw ${isHair(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex}"></span>`;
     const notes = ord.map((c, i) => `<li class="a-n a-n--pal">${mk(i + 1)}${sw(c)}<div><b>${A(c.name)}</b>${A(ctx.cap(c.role))}. ${A(c.lands)}</div></li>`).join('');
-    const inner = `<p class="a-lead" style="margin-top:8px;max-width:600px">${NUM[cs.length]} colours, each named for where it lands. Most of every screen is ${A(g.name)}. The other four each do one job.</p>
+    const inner = `<p class="a-lead" style="margin-top:8px;max-width:600px">${NUM[cs.length] || cs.length} colours, each named for where it lands. Most of every screen is ${A(g.name)}. The other ${NUM[cs.length - 1] ? NUM[cs.length - 1].toLowerCase() : cs.length - 1} each do one job.</p>
 <div class="a-duo a-duo--r"><ul class="a-notes">${notes}</ul>${bookPhone(ctx, 360, 740)}</div>`;
     return std(ctx, 'palette', 'The palette at work', inner);
   },
