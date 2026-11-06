@@ -796,7 +796,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     // On a phone everything past the switcher is in More, in the board's order,
     // and the ground is a section of the settings sheet.
     ...(phone
-      ? [importItem, resetItem]
+      ? [importItem, { ...resetItem, inline: false }]
       : [resetItem, { id: 'div', divider: true, align: 'end' }, groundItem, importItem]),
   ]
   const primary = (

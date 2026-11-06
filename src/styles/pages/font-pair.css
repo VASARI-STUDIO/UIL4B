@@ -314,9 +314,11 @@ html.has-tabbar:has(.fpr-page) { scroll-padding-bottom: calc(var(--tabbar-h) + 7
 }
 /* The disclosure caret and the row wash ease; reduced motion drops it. */
 html[data-reduced-motion="true"] .fpr-page .fpr-delivery > summary::after,
+html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-chev,
 html[data-reduced-motion="true"] .fpr-page .fpr-card-apply { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-delivery > summary::after,
+  :where(html:not([data-reduced-motion="false"])) :is(.fpr-page, .fpr-sheet) .fpr-chev,
   :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-card-apply { transition: none; }
 }
 
