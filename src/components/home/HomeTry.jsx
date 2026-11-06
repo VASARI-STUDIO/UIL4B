@@ -68,6 +68,8 @@ export default function HomeTry() {
   const names = useRef([])
   // A name click owns the active tool until the scroll lands (or this long passes).
   const dest = useRef(null)
+  const destTimer = useRef(0)
+  useEffect(() => () => clearTimeout(destTimer.current), [])
 
   const isWide = () => typeof window !== 'undefined' && window.matchMedia?.(WIDE).matches
 
@@ -77,7 +79,7 @@ export default function HomeTry() {
     if (dest.current) {
       const r = els[dest.current.i].getBoundingClientRect()
       const there = isWide() ? Math.abs(r.top + r.height / 2 - window.innerHeight / 2) < 3 : Math.abs(r.top - (NAMES_H + CHAPTER_GAP)) < 3
-      if (there || performance.now() > dest.current.until) dest.current = null
+      if (there) dest.current = null
       else return
     }
     setCur((was) => {
@@ -117,7 +119,9 @@ export default function HomeTry() {
   const go = (i) => {
     const el = stages.current[i]
     if (!el) return
-    dest.current = { i, until: performance.now() + 900 }
+    dest.current = { i }
+    clearTimeout(destTimer.current)
+    destTimer.current = setTimeout(() => { dest.current = null }, 900)
     setCur(i)
     const r = el.getBoundingClientRect()
     const y = isWide()
