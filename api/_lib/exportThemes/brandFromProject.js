@@ -210,7 +210,7 @@ function build({ design: rawDesign, projectName, date }) {
   const ink = slot.ink.hex, canvas = slot.chalk.hex, prim = slot.pine.hex;
   const kit = [['primary', slot.pine, 'action', 0.08], ['ink', slot.ink, 'text', 0.1], ['support', slot.lilac, 'panel', 0.1], ['canvas', slot.chalk, 'ground', 0.55], ['accent', slot.citron, 'highlight', 0.07]];
   const seen = new Set(kit.map(([, s]) => s.hex));
-  const extra = d.palette.slice(5).map(up).filter((h) => HEX.test(h) && !seen.has(h) && seen.add(h)).slice(0, 7);
+  const extra = d.palette.slice(5).map(up).filter((h) => HEX.test(h) && !seen.has(h) && seen.add(h)).slice(0, 6);
   const raw = [...kit.map(([, , , sh]) => sh), 0.03, ...extra.map(() => 0.1 / extra.length)], total = raw.reduce((a, b) => a + b, 0);
   const shares = raw.map((v) => Math.round((v / total) * 1000) / 1000);
   shares[3] = Math.round((shares[3] + 1 - shares.reduce((a, b) => a + b, 0)) * 1000) / 1000;
