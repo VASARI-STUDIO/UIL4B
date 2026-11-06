@@ -129,7 +129,7 @@ test('no price is typed anywhere on this page', () => {
   assert.ok(!PAGE.includes('/checkout') && !PAGE.includes('login?signup=1'),
     'a landing CTA goes to checkout or the sign-up route instead of /plans')
   const plansLinks = (MOUNTED + HERO).match(/to="\/plans"/g) || []
-  assert.ok(plansLinks.length >= 2, 'the landing no longer links "View plans" and "See the plans" to /plans')
+  assert.ok(plansLinks.length >= 2, 'the landing no longer links its hero and its plans section to /plans')
 })
 
 test('the page offers no cadence that cannot reach checkout', () => {

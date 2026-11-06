@@ -86,11 +86,11 @@ test.describe('signup intent', () => {
     await expect(page).toHaveURL(/\/projects$/)
     await expect(signupOnly(page), 'opening the toolkit put a sign-up form in the way').toHaveCount(0)
 
-    // The closing band's CTA is free too: the workspace, no sign-up form.
+    // The final call's link is free too: the workspace, no sign-up form.
     await go(page, '/')
-    const close = page.locator('.sp-close-cta').getByRole('link', { name: 'Use for free' })
+    const close = page.locator('#start').getByRole('link', { name: 'Open the toolkit' })
     await expect(close).toHaveAttribute('href', '/projects')
-    await expect(page.locator('.sp-close-cta').getByRole('button'), 'the closing band opens a sign-up form again').toHaveCount(0)
+    await expect(page.locator('#start').getByRole('button'), 'the final call opens a sign-up form again').toHaveCount(0)
 
     await go(page, '/login?signup=1')
     await expect(signupOnly(page), 'a signup form is open').toBeVisible()

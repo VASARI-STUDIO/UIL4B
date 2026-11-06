@@ -66,7 +66,7 @@ import { go, watch, expectRendered } from './helpers.js'
 //
 // The pricing and FAQ headings are on /plans (the Pricing screen), not the
 // landing, and the design's proof band has a heading.
-const SLOTS = ['bm-h', 'sp-disc-h', 'sp-spec-h', 'proof-h', 'sp-close-h']
+const SLOTS = ['bm-h', 'sp-spec-h', 'proof-h', 'start-h']
 
 const REJECTED = [
   {
