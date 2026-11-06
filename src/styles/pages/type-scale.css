@@ -401,9 +401,10 @@
     bottom: var(--tsc-sheet-bottom);
     z-index: 40;
     flex-direction: column;
-    /* At most 55% of the screen, and short enough that the top steps stay in
-       view above it. The contents scroll inside. */
-    max-height: min(55dvh, max(200px, calc(100dvh - var(--tsc-top) - var(--tsc-sheet-bottom) - 330px)));
+    /* A fixed 56% of the screen (480px at most). The page scrolls the sample
+       screen up under the toolbar when the sheet opens, so it stays in view
+       above the sheet; the sheet's contents scroll inside. */
+    height: min(56dvh, 480px);
     border-radius: 16px 16px 0 0;
     border: 1px solid var(--tl-line-2);
     border-bottom: 0;
@@ -413,7 +414,10 @@
   html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom)); }
   .tsc-page .tsc-sheet[data-open="true"] { display: flex; }
   /* The Code tab is the taller sheet; its code scrolls with the sheet. */
-  .tsc-page .tsc-sheet[data-tab="code"] { max-height: min(72dvh, 620px); }
+  .tsc-page .tsc-sheet[data-tab="code"] { height: min(72dvh, 620px); }
+  /* While the sheet is open the page keeps room under its last line, so the
+     sample screen can scroll up to the toolbar. */
+  .tsc-page .tsc-output[data-sheet="true"] { padding-bottom: min(56dvh, 480px); }
   .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
   .tsc-page .tsc-sheet-tabs { flex: 1 1 auto; max-width: 224px; flex-wrap: nowrap; }
   .tsc-page .tsc-sheet-tabs .tsc-sheet-tab { flex: 1 1 0; min-width: 0; justify-content: center; padding-inline: 12px; white-space: nowrap; }
@@ -613,3 +617,56 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   /* Base size and Ratio take a row each, so the ratio's name has room. */
   .tsc-page .tsc-scale-bar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 }
+
+/* ── The docked bar and the Code drawer (from 768) ────────────────────────────
+   One bar at the foot of the page: Code and the save line on the left, Save to
+   a project on the right. Code opens a drawer that sits on the bar. */
+.tsc-page .tsc-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  margin: var(--tl-gap) calc(-1 * clamp(12px, 2vw, 20px)) calc(-1 * clamp(12px, 2vw, 20px));
+  padding: 8px clamp(12px, 2vw, 20px);
+  background: var(--tl-card);
+  border-top: 1px solid var(--tl-hair);
+}
+.tsc-page .tsc-dock-l { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.tsc-page .tsc-dock-status { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); }
+.tsc-page .tsc-code-btn[aria-expanded="true"] { background: var(--tl-wash-2); color: var(--tl-ink); }
+.tsc-page .tsc-dock .svt-pop { display: block; position: absolute; top: auto; bottom: calc(100% + 8px); right: 0; z-index: 60; }
+.tsc-page .tsc-dock .svt-pop .svt-menu { position: static; }
+.tsc-page .tsc-drawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(384px, 60dvh);
+  padding: 12px clamp(12px, 2vw, 20px) 16px;
+  background: var(--tl-card);
+  border-top: 1px solid var(--tl-hair);
+  overscroll-behavior: contain;
+  animation: tsc-drawer-in 200ms var(--tl-ease) both;
+}
+.tsc-page .tsc-drawer[hidden] { display: none; }
+.tsc-page .tsc-drawer-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tsc-page .tsc-drawer-head .tsc-fmt { margin-right: auto; min-width: 0; overflow-x: auto; }
+.tsc-page .tsc-drawer .tsc-export { flex: 1; min-height: 0; max-height: none; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+@keyframes tsc-drawer-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .tsc-page .tsc-drawer { animation: none; }
+}
+html:has(.tsc-page .tsc-dock) { scroll-padding-bottom: 72px; }
+
+/* The switcher's wrapper adds no box of its own. */
+.tsc-page .tsc-switch { display: contents; }
+/* The project row in More: a label, not a button. */
+.tsc-page .tsc-menu-project { margin: 0; cursor: default; pointer-events: none; }
+.tsc-page .tsc-menu-sample { font-weight: 400; color: var(--tl-dim); }

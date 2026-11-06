@@ -1,6 +1,5 @@
 import MenuSelect from '../components/tool/MenuSelect'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import FontPicker from '../components/FontPicker'
 import UIKitGuide from '../components/UIKitGuide'
@@ -212,8 +211,7 @@ function varsRef(vars) {
 // Google Fonts import URL stays on `onCopy`: those are lookups, not a finished
 // type scale. See src/config/activationExports.js.
 export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
-  const navigate = useNavigate()
-  const { design, setFonts, setTypeScale } = useProject()
+  const { design, projects, setFonts, setTypeScale } = useProject()
   const { user } = useAuth()
   // The step pressed in the ladder; the page lights each line that uses it.
   const [litStep, setLitStep] = useState('')
@@ -300,8 +298,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const [pageOff, setPageOff] = useState(false)
   const [pageDir, setPageDir] = useState('up')
   const [litSeen, setLitSeen] = useState(false)
-  // Beside the ladder, the right half shows the page or the code.
-  const [half, setHalf] = useState('page')
+  // From 768 Code is a drawer over the foot of the page, opened from the docked bar.
+  const [codeOpen, setCodeOpen] = useState(false)
+  const codeBtnRef = useRef(null)
   const [format, setFormat] = useState('css')
   // THE WORDS IN THE PREVIEW. Empty means the pangram below.
   //
@@ -604,8 +603,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // Copy CSS exports through here.
   const exportCode = () => onExport?.(currentExport)
 
-  const openInFontPair = () => {
-    const staged = setPairDraft({
+  // The switcher's Font Pair link opens Font Pair on these families: the pair is
+  // staged as the link is pressed, and the link's own navigation carries on.
+  const stagePair = (event) => {
+    if (!event.target.closest?.('a[href="/create/font-pair"]')) return
+    setPairDraft({
       heading: headingFont
         ? { family: headingFont.family, weight: headingW, category: headingFont.category }
         : null,
@@ -614,11 +616,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         : null,
       scale: { base, ratio },
     })
-    if (!staged) { toast?.('Choose a family first — the pairing tool needs somewhere to start.'); return }
-    navigate('/create/font-pair')
   }
 
-  const VIEWS = [['scale', 'Scale'], ['page', 'Page'], ['code', 'Code']]
+  const VIEWS = [['scale', 'Scale'], ['page', 'Page']]
   const handleViewKeyDown = (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
@@ -634,12 +634,12 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // chosen width doesn't fit and lines wrap sooner.
   useEffect(() => {
     const el = pageColRef.current
-    const pageShown = split ? half !== 'code' : phone || view === 'page'
+    const pageShown = split || phone || view === 'page'
     if (!pageShown || !el || typeof ResizeObserver === 'undefined') return undefined
     const ro = new ResizeObserver(() => setColW(el.clientWidth))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [view, split, half, phone])
+  }, [view, split, phone])
 
   // The dock chip needs to know when the page has left the screen. The page
   // counts as off once under half of it sits between the toolbar and the dock.
@@ -676,14 +676,31 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   }, [workEl])
 
 
-  // The settings sheet is non-modal. Opening it brings the ladder up under the
-  // toolbar, so the steps stay in view above it.
+  // The settings sheet is non-modal. Opening it brings the sample screen up under
+  // the toolbar, so it stays in view above the sheet while the controls change it.
   const openSheet = (opener) => {
     sheetOpenerRef.current = opener
     setSheetTab('settings')
     setSheetOpen(true)
-    requestAnimationFrame(() => ladderRef.current?.scrollIntoView({ block: 'start' }))
+    requestAnimationFrame(() => {
+      const card = pageColRef.current?.querySelector('.tsc-kerb') || ladderRef.current
+      card?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' })
+    })
   }
+  // The Code drawer closes on Escape (a popup inside the panel keeps its own Escape)
+  // and when the page narrows to a phone, where Code is a tab in the sheet.
+  useEffect(() => {
+    if (!codeOpen) return undefined
+    const onKey = event => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (event.target instanceof Element && event.target.closest('[aria-modal="true"], [role="listbox"], .snapv-input')) return
+      setCodeOpen(false)
+      codeBtnRef.current?.focus({ preventScroll: true })
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [codeOpen])
+  const drawerOpen = codeOpen && !phone
   // Closing hides the sheet, so focus goes back to the row that opened it
   // rather than falling to <body>.
   const closeSheet = () => {
@@ -723,6 +740,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   }
   const save = useSaveTypeSystemToolbar(saveOptions)
 
+  // The open project's name, or empty for the sample (the chip then reads "Kerbside · Sample").
+  const projectName = ((projects || []).find(p => p.id === design?.source?.projectId)?.name || '').trim()
   const bar = typeToolsBarItems({
     current: 'scale',
     heading: headingFont ? { family: headingFont.family, weight: headingW } : null,
@@ -730,69 +749,58 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     scale: ratio,
     headingStack,
     bodyStack,
-    projectName: '',
+    projectName,
     ground,
     onGround: setGround,
+  }).map(it => {
+    // The chip leaves the row first; in More it is the project row.
+    if (it.id === 'ttb-chip') {
+      return {
+        ...it,
+        menu: () => (
+          <p className="tl-menu-row tsc-menu-project">
+            <ToolIcon name="bicycle" size={16} />
+            <span>{projectName || 'Kerbside'}{!projectName && <span className="tsc-menu-sample"> &middot; Sample</span>}</span>
+          </p>
+        ),
+      }
+    }
+    // The switcher's Font Pair link carries these families across.
+    if (it.id === 'ttb-switcher') {
+      const draw = it.render
+      return { ...it, render: () => <span className="tsc-switch" onClickCapture={stagePair}>{draw()}</span> }
+    }
+    return it
   })
   const groundItem = bar.find(it => it.id === 'ttb-ground')
+  const resetItem = {
+    id: 'reset',
+    priority: 3,
+    render: () => (
+      <ToolButton icon="arrow-counter-clockwise" collapse className="tsc-reset" onClick={reset}>Reset scale</ToolButton>
+    ),
+    menu: { label: 'Reset scale', icon: 'arrow-counter-clockwise', onSelect: reset },
+  }
+  const importItem = {
+    id: 'import',
+    priority: 2,
+    render: () => (
+      <ToolButton className="tsc-copy-all" onClick={() => importUrl && onCopy?.(importUrl)} disabled={!importUrl}>Copy font import</ToolButton>
+    ),
+    menu: { label: 'Copy font import', icon: 'copy', onSelect: () => importUrl && onCopy?.(importUrl), disabled: !importUrl },
+  }
   const items = [
     ...bar.filter(it => it !== groundItem),
-    {
-      id: 'reset',
-      priority: 3,
-      render: () => (
-        <ToolButton icon="arrow-counter-clockwise" collapse className="tsc-reset" onClick={reset}>Reset scale</ToolButton>
-      ),
-      menu: { label: 'Reset scale', icon: 'arrow-counter-clockwise', onSelect: reset },
-    },
-    {
-      id: 'pair',
-      priority: 0,
-      render: () => (
-        <ToolButton icon="arrow-right" className="tsc-handoff" onClick={openInFontPair} aria-label="Find a pairing for these families">
-          Find a pairing
-        </ToolButton>
-      ),
-      menu: { label: 'Find a pairing for these families', icon: 'arrow-right', onSelect: openInFontPair },
-    },
-    { id: 'div', divider: true, align: 'end' },
-    // On a phone the ground is a section of the settings sheet, not a toolbar control.
-    ...(phone ? [] : [groundItem]),
-    {
-      id: 'import',
-      priority: 2,
-      render: () => (
-        <ToolButton className="tsc-copy-all" onClick={() => importUrl && onCopy?.(importUrl)} disabled={!importUrl}>Copy font import</ToolButton>
-      ),
-      menu: { label: 'Copy font import', icon: 'copy', onSelect: () => importUrl && onCopy?.(importUrl), disabled: !importUrl },
-    },
+    // On a phone everything past the switcher is in More, in the board's order,
+    // and the ground is a section of the settings sheet.
+    ...(phone
+      ? [importItem, resetItem]
+      : [resetItem, { id: 'div', divider: true, align: 'end' }, groundItem, importItem]),
   ]
   const primary = (
     <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={exportCode}>
       {`Copy ${formatLabel}`}
     </ToolButton>
-  )
-  // From 768 Save to a project sits right against Copy CSS, as one group at the
-  // end of the row, so the More button always lands to the left of both. The
-  // group never leaves the row, and the save menu is drawn with it. On a phone
-  // both sit in the shell's dock instead.
-  const toolbarPrimary = (
-    <div className="tsc-primary-group">
-      <div className="tsc-save-wrap">
-        <ToolButton
-          ref={save.triggerRef}
-          icon="bookmark-simple"
-          className="tsc-save"
-          aria-expanded={save.open}
-          aria-haspopup="dialog"
-          onClick={save.trigger}
-        >
-          Save to a project
-        </ToolButton>
-        {!phone && <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />}
-      </div>
-      {primary}
-    </div>
   )
   // The phone dock: the scale trigger that opens the settings sheet, then Save, then Copy.
   const ratioRec = RATIOS.find(r => r.id === ratioId)
@@ -858,7 +866,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     <p className="tsc-chip tsc-chip--quiet" role="status"><span className="tsc-chip-n">{litStep}</span><span>is not used on the page</span></p>
   ))
   const layout = (body) => (
-    <ToolLayout className="tsc-page" data-chip={String(chipRoom)} back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? <>{litChip}{dockRatio}<div className="tsc-dock-save"><SaveTypeSystem {...saveOptions} /></div>{primary}</> : toolbarPrimary}>
+    <ToolLayout className="tsc-page" data-chip={String(chipRoom)} back={false} title="Type Scale" titleId="tsc-title" showTitle={false} feedback={false} items={items} primary={phone ? <>{litChip}{dockRatio}<div className="tsc-dock-save"><SaveTypeSystem {...saveOptions} /></div>{primary}</> : primary}>
       {body}
     </ToolLayout>
   )
@@ -1049,24 +1057,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     <div className="tsc-page-view">
       {stackedView ? (
         <h2 className="sr-only">{user ? 'A sample screen set on this scale' : 'Kerbside’s tracking screen, set on this scale'}</h2>
-      ) : <div className="tsc-page-bar">
-        {split ? (
-          <SlidePills className="tsc-half-switch tl-pills" role="group" aria-label="Show beside the scale" value={half}>
-            {[['page', 'Page'], ['code', 'Code']].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={half === id ? 'tsc-half-btn tl-pill is-on' : 'tsc-half-btn tl-pill'}
-                aria-pressed={half === id}
-                onClick={() => setHalf(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </SlidePills>
-        ) : <p className="tsc-page-label">Page set on this scale</p>}
-      </div>}
-      {split && half === 'code' ? <div className="tsc-developer-view"><div className="tsc-developer-bar">{formatPills}{exportCopy}</div>{exportPre}</div> : <>
+      ) : !split && <div className="tsc-page-bar"><p className="tsc-page-label">Page set on this scale</p></div>}
       <div className="tsc-page-col" ref={pageColRef}>
         <div className="tsc-kerb" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
           <KerbsidePage
@@ -1084,7 +1075,6 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         {stackedView && !user && <p className="tsc-sample-line">Kerbside &middot; sample screen</p>}
         {stackedView && litUnused && <p className="tsc-lit-note" role="status">Nothing on this page uses {litStep}.</p>}
       </div>
-      </>}
     </div>
   )
 
@@ -1479,7 +1469,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             Scale / Page / Code switch shows one view at a time. On a phone
             there is no switch: the width, the page and the ladder are one
             scroll, and Code is a tab in the sheet. */}
-        <ToolMain className="tsc-output" ref={setWorkEl}>
+        <ToolMain className="tsc-output" ref={setWorkEl} data-sheet={String(phone && sheetOpen)}>
           {!stackedView && !split && (
             <div className="tsc-view-bar">
               <SlidePills className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view" value={view}>
@@ -1504,7 +1494,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           )}
 
           {/* The page header: the width every size on the page is read at. */}
-          {(split || stackedView || view !== 'code') && (
+          {(
             <div className="tsc-width-bar">
               <span className="tsc-width-k" id="tsc-width-k">Preview width</span>
               {widthSegment}
@@ -1524,15 +1514,51 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             {stackedView && <>{pageView}{ladderView}</>}
             {!stackedView && (split || view === 'scale') && ladderView}
             {!stackedView && (split || view === 'page') && pageView}
-            {!stackedView && !split && view === 'code' && (
-              <div className="tsc-developer-view">
-                {formatPills}
-                {exportPre}
-              </div>
-            )}
           </div>
         </ToolMain>
       </ToolGrid>
+
+      {/* From 768 the docked bar holds Code and Save to a project; Code opens a
+          drawer over the foot of the page. A phone has the dock and the sheet. */}
+      {!phone && (
+        <div className="tsc-dock" role="group" aria-label="Code and save" data-code={drawerOpen ? 'open' : 'closed'}>
+          <div id="tsc-code-drawer" className="tsc-drawer" role="dialog" aria-modal="false" aria-label="Code" hidden={!drawerOpen}>
+            <div className="tsc-drawer-head">
+              {formatPills}
+              {exportCopy}
+              <ToolButton variant="quiet" icon="x" className="tl-btn--square tsc-drawer-close" aria-label="Close code" onClick={() => { setCodeOpen(false); codeBtnRef.current?.focus({ preventScroll: true }) }} />
+            </div>
+            {exportPre}
+          </div>
+          <div className="tsc-dock-l">
+            <ToolButton
+              ref={codeBtnRef}
+              icon="code"
+              className="tsc-code-btn"
+              aria-expanded={drawerOpen}
+              aria-controls="tsc-code-drawer"
+              aria-haspopup="dialog"
+              onClick={() => setCodeOpen(open => !open)}
+            >
+              Code
+            </ToolButton>
+            <p className="tsc-dock-status" aria-live="polite">{user ? 'Keeps this scale with your project' : 'Kept in this browser. Log in to save it to a project.'}</p>
+          </div>
+          <div className="tsc-save-wrap">
+            <ToolButton
+              ref={save.triggerRef}
+              icon="bookmark-simple"
+              className="tsc-save"
+              aria-expanded={save.open}
+              aria-haspopup="dialog"
+              onClick={save.trigger}
+            >
+              Save to a project
+            </ToolButton>
+            <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+          </div>
+        </div>
+      )}
 
       {/* Step 3 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="typescale" />
