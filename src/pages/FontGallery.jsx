@@ -5,7 +5,7 @@ import LibrarySearch from '../components/library/LibrarySearch'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
 import {
-  ToolLayout, ToolButton, ToolPills, ToolSelect,
+  ToolLayout, ToolToolbar, ToolButton, ToolPills, ToolSelect,
 } from '../components/tool/ToolLayout'
 import FiltersSheet, { ViewToggle } from '../components/FontGalleryFilters'
 import FontDetailDialog from '../components/FontDetailDialog'
@@ -878,17 +878,19 @@ export default function FontGallery({ onCopy, toast }) {
       label="Search font families"
     />
   )
-  // On the toolbar the field has no room for a visible label; inside Filters it does.
+  // `true` is the Filters sheet's own label; 'row' is the short "Preview" tag the
+  // second toolbar row draws before the field (the input keeps its full aria-label).
   const previewField = (labelled) => (
-    <label className={labelled ? 'fg-preview-field fg-preview-field--labelled' : 'fg-preview-field'}>
-      {labelled && <span className="fg-preview-k">Preview text</span>}
+    <label className={labelled === true ? 'fg-preview-field fg-preview-field--labelled' : 'fg-preview-field'}>
+      {labelled === true && <span className="fg-preview-k">Preview text</span>}
+      {labelled === 'row' && <span className="fg-preview-k" aria-hidden="true">Preview</span>}
       <input
         type="text"
         value={previewText}
         maxLength={72}
         spellCheck="false"
         placeholder="Type your own words"
-        aria-label={labelled ? undefined : 'Preview text'}
+        aria-label={labelled === true ? undefined : 'Preview text'}
         onChange={e => setPreviewText(e.target.value)}
       />
     </label>
@@ -929,27 +931,31 @@ export default function FontGallery({ onCopy, toast }) {
   const groundItem = bar.find(it => it.id === 'ttb-ground')
   const barLead = bar.filter(it => it !== groundItem)
 
-  // One item set per layout. The row never wraps: whatever does not fit goes
-  // into the overflow menu, lowest priority first. The pair link folds first
-  // (priority 0), then the preview text, then Size and the view toggle.
-  //   wide    every control on the row
+  // One item set per layout. A row never wraps: whatever does not fit goes into
+  // that row's overflow menu, lowest priority first.
+  //   wide    two rows. The tool bar (it scrolls away) carries Back, the project
+  //           chip, the switcher, the ground and the view toggle. The sticky
+  //           second row carries category, search, preview text, Sort, Size and
+  //           the onward link; Size leaves it first, then Sort, then the preview.
   //   tablet  category pills and Filters on the row; search and the view toggle
   //           sit on a second row
   //   phone   search and Filters on a second row; the rest is in the Filters
   //           sheet
   let items
+  let rowItems = null
   if (mode === 'wide') {
     items = [
       ...barLead,
+      { ...groundItem, align: 'end' },
+      { id: 'view', priority: 3, render: () => viewToggle, menu: () => viewToggle },
+    ]
+    rowItems = [
       categoryItem,
       { id: 'search', priority: 4, render: () => searchField, menu: () => searchField },
-      { id: 'preview', priority: 1, render: () => previewField(false), menu: () => previewField(true) },
-      { id: 'div', divider: true, align: 'end' },
-      { id: 'sort', priority: 3, render: () => sortSelect, menu: () => sortSelect },
-      { id: 'size', priority: 2, render: () => sizeSelect, menu: () => sizeSelect },
-      { id: 'view', priority: 2, render: () => viewToggle, menu: () => viewToggle },
-      groundItem,
-      pairItem,
+      { id: 'preview', priority: 3, render: () => previewField('row'), menu: () => previewField(true) },
+      { id: 'sort', priority: 2, measure: sort, render: () => sortSelect, menu: () => sortSelect },
+      { id: 'size', priority: 1, measure: nameSize, render: () => sizeSelect, menu: () => sizeSelect },
+      { ...pairItem, align: 'end' },
     ]
   } else if (mode === 'tablet') {
     items = [...barLead, categoryItem, { id: 'filters', priority: 10, align: 'end', render: () => filtersButton }, { ...groundItem, align: 'end' }]
@@ -957,8 +963,15 @@ export default function FontGallery({ onCopy, toast }) {
     items = [...bar, pairItem]
   }
 
-  // The second toolbar row, below the sticky bar, for the layouts that cannot
-  // fit search on the first. It never wraps either.
+  // The wide layout's sticky second row. It is a toolbar of its own, so it
+  // measures and folds on its own; it has no title and no feedback entry (the
+  // tool bar above owns both).
+  const row2 = rowItems && (
+    <ToolToolbar className="fg-row2" back={false} items={rowItems} overflowLabel="More" feedback={false} />
+  )
+
+  // The tablet and phone second row, below the sticky bar, for the layouts that
+  // cannot fit search on the first. It never wraps either.
   const bar2 = mode === 'wide' ? null : (
     <div className="fg-bar2">
       {searchField}
@@ -974,6 +987,7 @@ export default function FontGallery({ onCopy, toast }) {
   if (!ready) {
     return (
       <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More">
+        {row2}
         {bar2}
         <FontCatalogLoading label="Opening the Font Gallery" />
         <SkeletonRows vars={bandVars} />
@@ -989,6 +1003,7 @@ export default function FontGallery({ onCopy, toast }) {
 
   return (
     <ToolLayout className={tiles ? 'fg-page lib-surface fg-page--grid' : 'fg-page lib-surface'} title="Font Gallery" titleId="fg-title" back={false} items={items} overflowLabel="More">
+      {row2}
       <FontCatalogNotice
         online={online}
         degraded={degraded}

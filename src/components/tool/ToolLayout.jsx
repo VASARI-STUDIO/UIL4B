@@ -184,7 +184,8 @@ export function ToolLayout({
 }
 
 // ── ToolToolbar ───────────────────────────────────────────────────────────
-// title        the tool's name — the h1 and the 15px label
+// title        the tool's name — the h1 and the 15px label (omit it on a
+//              second toolbar row that sits under a titled one)
 // titleId      optional id for the h1
 // showTitle    false → the h1 is sr-only
 // back         { to, label, text, hint, history } | false (see ToolBack).
@@ -438,7 +439,7 @@ export function ToolToolbar({
       data-tool-toolbar=""
     >
       {backProps && <span data-tl-fixed="" className="tl-fixed"><ToolBack {...backProps} /></span>}
-      <h1 id={titleId} data-tl-fixed="" className={showTitle ? 'tl-title' : 'sr-only'}>{title}</h1>
+      {title && <h1 id={titleId} data-tl-fixed="" className={showTitle ? 'tl-title' : 'sr-only'}>{title}</h1>}
       {inlineItems}
       {showMore && (
         <div data-tl-more="" className={cx('tl-more', !endStarted && 'tl-item--end')}>
