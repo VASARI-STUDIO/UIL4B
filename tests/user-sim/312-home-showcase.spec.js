@@ -47,7 +47,7 @@
 //   styles/pages/home-showcase.css    delete the reduced-motion overrides           -> 6 "reduced motion"
 //   components/home/HomeShowcase.jsx  drop the `uiKitNote` sentence                 -> 7 footnote
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch } from './helpers.js'
+import { go, homeSectionsLoaded, restingScrollY, watch } from './helpers.js'
 
 const PERSONA = 'a visitor comparing the export themes on the homepage'
 
@@ -172,6 +172,11 @@ for (const { width, height, touch } of SIZES) {
     test('puts only the picked kind in the DOM, and the section is exactly as tall', async ({ browser }) => {
       const { ctx, page } = await openSection(browser, { width, height, touch })
       await waitAllShow(page, 'Colour')
+      // The sections after this one mount as the visitor nears them, and a late one swaps its
+      // stand-in for its real height; the page height is only comparable once they are all in.
+      await homeSectionsLoaded(page)
+      await page.locator('#examples').scrollIntoViewIfNeeded()
+      await twoFrames(page)
       const measure = () => page.evaluate(() => ({
         section: document.getElementById('examples').offsetHeight,
         panel: document.getElementById('hsc-panel').offsetHeight,
