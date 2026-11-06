@@ -1,3 +1,10 @@
+import { loadBrand } from './brand.js';
+import { makeLogo } from './logo.js';
+import { makeUi } from './components.js';
+import { pageSizeMap, largestSize } from './doc.js';
+import { applyPlaceholders } from './placeholders.js';
+import { BRANDS } from '../brands/index.js';
+
 // The fixed page-id lists for the two documents. Order is the order in the PDF.
 // A theme implements guidelines[id] / uikit[id] for every id. `section` is null for front matter.
 const S = (n, title) => ({ n, title });
@@ -41,4 +48,34 @@ export function numberPages(list, extra = {}) {
   let n = 0; const out = {};
   for (const p of list) { out[p.id] = n + 1; n += 1 + (extra[p.id] || 0); }
   return out;
+}
+
+// Themes whose pages read brand copy only through esc(), so slot-edition placeholders can reach them; the rest keep the sample copy until they are moved over.
+const PH_THEMES = new Set(['02', '04', '05', '07', '08']);
+
+// The context a theme renders from: the brand loaded and measured, its logo and components, the page list with numbers
+// and section references. T is the theme module, kind 'guidelines' or 'uikit', loaders the reads the engine may make
+// (fontFile, icon, logoPlugin). data is the brand's data; it defaults to the sample brand the theme is written for.
+export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].data) {
+  const ctx = loadBrand(data, loaders);
+  ctx.edition = edition; ctx.theme = T.meta; ctx.kind = kind;
+  ctx.logo = makeLogo(ctx); ctx.ui = makeUi(ctx);
+  const list = kind === 'uikit' ? UIKIT_PAGES : GUIDE_PAGES;
+  const nos = numberPages(list, (T.meta.extraPages && T.meta.extraPages[kind]) || {});
+  ctx.size = kind === 'uikit' ? (T.meta.uikitPage || T.meta.guidelinesPage) : T.meta.guidelinesPage;
+  // a page may have its own size (meta.pageSizes { id: [w, h] }): ctx.sizeOf(id) is that page's size, ctx.maxSize the viewport that fits them all
+  const own = pageSizeMap(T.meta);
+  ctx.pageSizes = own; ctx.sizeOf = (id) => own[id] || ctx.size; ctx.maxSize = largestSize(ctx.size, own);
+  ctx.pageNo = (id) => nos[id];
+  ctx.pages = list.map((p) => ({ ...p, no: nos[p.id] }));
+  // sections with their pages and a "3.2" style reference
+  const secs = [];
+  for (const p of ctx.pages) if (p.section) {
+    let s = secs.find((x) => x.n === p.section.n); if (!s) secs.push(s = { n: p.section.n, title: p.section.title, pages: [] });
+    s.pages.push(p); p.ref = `${s.n}.${s.pages.length}`;
+  }
+  ctx.sections = secs;
+  // last: the logo, the components and the page list are made from the real brand; from here ctx.brand holds placeholders (slot edition)
+  if (edition === 'slot' && PH_THEMES.has(T.meta.id.slice(0, 2))) applyPlaceholders(ctx);
+  return ctx;
 }

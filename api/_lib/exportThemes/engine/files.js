@@ -1,33 +1,38 @@
-// Writers for the UI kit code package and the brand kit's engine-owned parts, plus zip.
-import fs from 'node:fs';
-import path from 'node:path';
+// The UI kit code package and the brand kit's engine-owned parts, as file maps ({ 'relative/path': string | Uint8Array }), plus zip.
 import JSZip from 'jszip';
-import { esc, ROOT } from './brand.js';
+import { esc } from './brand.js';
 import { tokensCss, tokensJson, tokensTs, tailwindCss, fontsCss, fontFaceCss, colourMap } from './tokens.js';
 import { componentsCss, exampleHtml, icon, iconSet } from './components.js';
 import { paletteAse, paletteCss, paletteJson } from './palette.js';
-import { renderLogoSet, logoFileName, printPdf } from './render.js';
-import { write, mkdirp, pageDoc, copyAssets, pageSizeMap, largestSize } from './doc.js';
+import { pageDoc, pageSizeMap, largestSize } from './doc.js';
+import { finishText } from './placeholders.js';
 
-export async function zipFolder(dir, zipFile, topName) {
+// logo file names: the colour version is "full-colour"
+export const LOGO_FILE = { colour: 'full-colour' };
+export const logoFileName = (id) => LOGO_FILE[id] || id;
+
+// Adds a file to a map. Text is finished for the edition (slot placeholders swapped in); binary data goes in as it is.
+export function put(files, name, data) {
+  files[name] = typeof data === 'string' ? finishText(data, name) : data;
+  return files;
+}
+
+// A file map as a zip (Buffer). Entries are sorted and dated alike, so the same files give the same zip.
+export async function zipFiles(files, top) {
   const zip = new JSZip();
-  const walk = (d, rel) => {
-    for (const e of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      const p = path.join(d, e.name), r = rel ? rel + '/' + e.name : e.name;
-      if (e.isDirectory()) walk(p, r); else zip.file((topName ? topName + '/' : '') + r, fs.readFileSync(p), { date: new Date('2026-01-01T00:00:00Z') });
-    }
-  };
-  walk(dir, '');
-  fs.writeFileSync(zipFile, await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }));
+  for (const name of Object.keys(files).sort()) {
+    const v = files[name];
+    zip.file((top ? top + '/' : '') + name, typeof v === 'string' ? Buffer.from(v, 'utf8') : v, { date: new Date('2026-01-01T00:00:00Z') });
+  }
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
 
 // icon as a standalone file (no class)
 export const iconFile = (ctx, name) => icon(ctx, name, 24).replace(' class="ui-icon"', '') + '\n';
 
-export function writeIcons(ctx, dir) {
-  const d = mkdirp(path.join(dir, 'svg'));
-  for (const n of iconSet(ctx)) write(path.join(d, n + '.svg'), iconFile(ctx, n));
-  write(path.join(dir, 'LICENSE.txt'), `These icons are from Lucide (https://lucide.dev), released under the ISC licence.\nStroke width and corner style are set to the ${ctx.brand.name} brand (stroke ${ctx.iconStyle.stroke}, ${ctx.iconStyle.join} joins).\n\nISC License\n\nCopyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.\n\nPermission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.\n\nTHE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.\n`);
+export function putIcons(ctx, files, dir) {
+  for (const n of iconSet(ctx)) put(files, `${dir}/svg/${n}.svg`, iconFile(ctx, n));
+  put(files, `${dir}/LICENSE.txt`, `These icons are from Lucide (https://lucide.dev), released under the ISC licence.\nStroke width and corner style are set to the ${ctx.brand.name} brand (stroke ${ctx.iconStyle.stroke}, ${ctx.iconStyle.join} joins).\n\nISC License\n\nCopyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.\n\nPermission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.\n\nTHE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.\n`);
 }
 
 function codeReadme(ctx) {
@@ -91,65 +96,86 @@ Light is the default. Set \`data-theme="dark"\` on \`<html>\` for dark, or \`dat
 `;
 }
 
-// The code package: the files the SPEC lists, from tokens and components only.
-export function writeCodePackage(ctx, theme, dir) {
-  mkdirp(dir);
-  write(path.join(dir, 'README.md'), codeReadme(ctx));
-  write(path.join(dir, 'tokens.css'), tokensCss(ctx));
-  write(path.join(dir, 'tokens.json'), JSON.stringify(tokensJson(ctx), null, 2) + '\n');
-  write(path.join(dir, 'tailwind.css'), tailwindCss(ctx));
-  write(path.join(dir, 'tokens.ts'), tokensTs(ctx));
-  write(path.join(dir, 'components.css'), componentsCss(ctx));
-  write(path.join(dir, 'example.html'), exampleHtml(ctx));
+// The code package: tokens, components, example page, fonts, logo and icons.
+export function codePackageFiles(ctx, theme) {
+  const files = {};
+  put(files, 'README.md', codeReadme(ctx));
+  put(files, 'tokens.css', tokensCss(ctx));
+  put(files, 'tokens.json', JSON.stringify(tokensJson(ctx), null, 2) + '\n');
+  put(files, 'tailwind.css', tailwindCss(ctx));
+  put(files, 'tokens.ts', tokensTs(ctx));
+  put(files, 'components.css', componentsCss(ctx));
+  put(files, 'example.html', exampleHtml(ctx));
   // fonts: local files first, Google as an alternative
-  const fd = mkdirp(path.join(dir, 'assets', 'fonts'));
-  for (const f of ctx.faces) fs.copyFileSync(path.join(ROOT, 'fonts', f.stem + '.woff2'), path.join(fd, f.stem + '.woff2'));
-  write(path.join(dir, 'fonts.css'), `/* ${ctx.brand.name} fonts: local files in assets/fonts (open licence, SIL OFL 1.1). */\n${fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`)}\n\n/* Or load from Google Fonts instead: delete the rules above and use this.\n${fontsCss(ctx).split('\n').filter((l) => l.startsWith('@import')).join('\n')}\n*/\n`);
+  for (const f of ctx.faces) put(files, `assets/fonts/${f.stem}.woff2`, ctx.loaders.fontFile(f.stem, 'woff2'));
+  put(files, 'fonts.css', `/* ${ctx.brand.name} fonts: local files in assets/fonts (open licence, SIL OFL 1.1). */\n${fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`)}\n\n/* Or load from Google Fonts instead: delete the rules above and use this.\n${fontsCss(ctx).split('\n').filter((l) => l.startsWith('@import')).join('\n')}\n*/\n`);
   // logo and icons
-  const ld = mkdirp(path.join(dir, 'assets', 'logo'));
-  if (ctx.edition === 'slot') write(path.join(ld, 'logo-slot.svg'), ctx.logo.slotSvgFile());
-  else for (const id of ctx.logo.versions) write(path.join(ld, `${ctx.slug}-${logoFileName(id)}.svg`), ctx.logo.svg(id) + '\n');
-  writeIcons(ctx, path.join(dir, 'assets', 'icons'));
+  if (ctx.edition === 'slot') put(files, 'assets/logo/logo-slot.svg', ctx.logo.slotSvgFile());
+  else for (const id of ctx.logo.versions) put(files, `assets/logo/${ctx.slug}-${logoFileName(id)}.svg`, ctx.logo.svg(id) + '\n');
+  putIcons(ctx, files, 'assets/icons');
+  return files;
 }
 
-// Brand kit (engine part): logo set, palette files, type notes, icons, imagery photos. PDFs come from the theme if it has them.
-export async function writeBrandKitFiles(ctx, theme, dir) {
-  const B = ctx.brand;
-  const logoDir = mkdirp(path.join(dir, '01 Logo'));
+// The brand kit's files the engine writes: logo svgs, palette files, type notes, icons and the read-me.
+// The PNG and PDF files are made outside the engine; kitListing names them for the brand book.
+export function kitFiles(ctx, theme) {
+  const B = ctx.brand, files = {}, slug = ctx.slug;
   if (ctx.edition === 'slot') {
-    write(path.join(logoDir, 'logo-slot.svg'), ctx.logo.slotSvgFile());
-    write(path.join(logoDir, 'README.md'), `# Logo\n\nThis folder is where the approved ${B.name} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
-  } else await renderLogoSet(ctx, logoDir);
-  const cd = mkdirp(path.join(dir, '02 Colour')), slug = ctx.slug;
-  fs.writeFileSync(path.join(cd, `${slug}-palette.ase`), paletteAse(ctx));
-  write(path.join(cd, `${slug}-palette.css`), paletteCss(ctx));
-  write(path.join(cd, `${slug}-palette.json`), JSON.stringify(paletteJson(ctx), null, 2) + '\n');
-  const td = mkdirp(path.join(dir, '03 Type'));
+    put(files, '01 Logo/logo-slot.svg', ctx.logo.slotSvgFile());
+    put(files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${B.name} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
+  } else {
+    const logo = ctx.logo;
+    for (const id of logo.versions) {
+      const g = logo.geos[id];
+      put(files, `01 Logo/svg/${slug}-${logoFileName(id)}.svg`, `<?xml version="1.0" encoding="UTF-8"?>\n` + logo.svg(id, { title: `${B.name} logo, ${logo.labels[id].toLowerCase()}` }).replace('<svg ', `<svg width="${g.w.toFixed(1)}" height="${g.h.toFixed(1)}" `) + '\n');
+    }
+  }
+  put(files, `02 Colour/${slug}-palette.ase`, paletteAse(ctx));
+  put(files, `02 Colour/${slug}-palette.css`, paletteCss(ctx));
+  put(files, `02 Colour/${slug}-palette.json`, JSON.stringify(paletteJson(ctx), null, 2) + '\n');
   const fams = [...new Map(ctx.faces.map((f) => [f.family, f])).values()];
-  write(path.join(td, 'fonts.md'), `# Typefaces\n\n${fams.map((f) => {
+  put(files, '03 Type/fonts.md', `# Typefaces\n\n${fams.map((f) => {
     const mine = ctx.faces.filter((x) => x.family === f.family), ws = mine.filter((x) => x.style !== 'italic').map((x) => x.weight).join(', '), it = mine.filter((x) => x.style === 'italic').map((x) => x.weight).join(', ');
     return `## ${f.family}\n\n- Role: ${f.role}\n- Weights: ${ws}${it ? `\n- Italics: ${it}` : ''}${B.fonts[f.role].axes ? `\n- Axes: ${B.fonts[f.role].axes}` : ''}\n- Google Fonts: https://fonts.google.com/specimen/${f.family.replace(/ /g, '+')}`;
   }).join('\n\n')}\n\n## Licence\n\nAll faces are released under the SIL Open Font License 1.1. You may use, embed and share them, including commercially. They may not be sold on their own.\n`);
-  writeIcons(ctx, path.join(dir, '04 Icons'));
-  const id = mkdirp(path.join(dir, '05 Imagery'));
-  const real = B.imagery.shots.filter((s) => s.photo);
-  if (real.length) { const pd = mkdirp(path.join(id, 'photos')); for (const s of real) fs.copyFileSync(path.join(ctx.dir, s.photo), path.join(pd, path.basename(s.photo))); }
-  write(path.join(dir, 'README.md'), `# ${B.name} brand kit\n\n${B.version ? `Version ${B.version.number}, ${ctx.date}.\n\n` : ''}${B.description}\n\n| Folder | What is in it |\n|---|---|\n| 01 Logo | ${ctx.edition === 'slot' ? 'Where the approved logo files go, and a slot frame' : 'Every version as svg, png (512, 1024, 2048 px wide, transparent) and pdf'} |\n| 02 Colour | The palette as ASE (Adobe), CSS and JSON, and a swatch sheet |\n| 03 Type | The typefaces, weights, links and licence |\n| 04 Icons | ${iconSet(ctx).length} interface icons (Lucide, ISC licence) in the brand's stroke |\n| 05 Imagery | Photography direction${real.length ? ' and the photos' : ''} |\n\nThe palette: ${ctx.colours.map((c) => `${c.name} ${c.hex}`).join(', ')}.\n\nAsk your printer for a proof before a print run.\n`);
-  if (theme.readMe && theme.sheets) await writeKitPdfs(ctx, theme, dir);
+  putIcons(ctx, files, '04 Icons');
+  put(files, '05 Imagery/README.md', `# Photography direction\n\n${B.imagery.shots.map((s) => `## ${s.caption}\n\n${s.slot}`).join('\n\n')}\n`);
+  put(files, 'README.md', `# ${B.name} brand kit\n\n${B.version ? `Version ${B.version.number}, ${ctx.date}.\n\n` : ''}${B.description}\n\n| Folder | What is in it |\n|---|---|\n| 01 Logo | ${ctx.edition === 'slot' ? 'Where the approved logo files go, and a slot frame' : 'Every version as svg, png (512, 1024, 2048 px wide, transparent) and pdf'} |\n| 02 Colour | The palette as ASE (Adobe), CSS and JSON, and a swatch sheet |\n| 03 Type | The typefaces, weights, links and licence |\n| 04 Icons | ${iconSet(ctx).length} interface icons (Lucide, ISC licence) in the brand's stroke |\n| 05 Imagery | Photography direction |\n\nThe palette: ${ctx.colours.map((c) => `${c.name} ${c.hex}`).join(', ')}.\n\nAsk your printer for a proof before a print run.\n`);
+  return files;
 }
 
-// Brand kit PDFs from the theme: read-me, palette sheet, type specimen, photography sheet. The page HTML is kept in
-// .scratch/kitdocs/<theme id>/<edition>/ (ctx.kitDocs lists it) so the build can check it, and is not part of the kit.
-export async function writeKitPdfs(ctx, theme, dir) {
-  const docs = path.join(ROOT, '.scratch', 'kitdocs', theme.meta.id, ctx.edition);
-  fs.rmSync(docs, { recursive: true, force: true }); mkdirp(docs); copyAssets(ctx, theme, docs);
+// Brand kit PDFs, as page documents: read-me, palette sheet, type specimen, photography sheet. Each is
+// { name, rel, html, size, pages }: rel is where its PDF sits in the kit, html the page document (fonts by assets/fonts/<stem>.woff2),
+// size the viewport that fits its largest page. Empty when the theme has no read-me and sheets.
+export function kitDocs(ctx, theme) {
+  if (!(theme.readMe && theme.sheets)) return [];
   const S = theme.sheets(ctx), size = theme.meta.kitPage || theme.meta.guidelinesPage;  // read-me and sheets: the theme's kitPage, else its guidelines page
   const jobs = [['00 Read me', theme.readMe(ctx), '00 Read me.pdf'], ['palette', S.palette, `02 Colour/${ctx.slug}-palette.pdf`], ['typefaces', S.typefaces, '03 Type/Typefaces.pdf'], ['photography', S.photography, '05 Imagery/Photography.pdf']];
-  ctx.kitDocs = [];
-  for (const [name, pages, rel] of jobs) {
-    const file = path.join(docs, name.replace(/s+/g, '-') + '.html');
-    write(file, pageDoc(ctx, theme, { title: `${ctx.brand.name} brand kit: ${name}`, pages, size }));
-    mkdirp(path.dirname(path.join(dir, rel))); await printPdf(file, path.join(dir, rel), size);
-    ctx.kitDocs.push({ name, file, pages: pages.length, size: largestSize(size, pageSizeMap(theme.meta)) });  // the viewport for the check and the shots fits the largest page
+  return jobs.map(([name, pages, rel]) => ({
+    name, rel, pages: pages.length,
+    html: pageDoc(ctx, theme, { title: `${ctx.brand.name} brand kit: ${name}`, pages, size }),
+    size: largestSize(size, pageSizeMap(theme.meta)),
+  }));
+}
+
+// Nominal sizes (bytes) for the files made outside the engine, so the book can print a size beside each download.
+const NOMINAL = { png512: 9000, png1024: 22000, png2048: 60000, logoPdf: 6000, readMePdf: 180000, palettePdf: 120000, typefacesPdf: 220000, photographyPdf: 120000 };
+
+// The kit as the book lists it: the real files plus the PNG and PDF files made outside the engine, each with a nominal size.
+// Returns [{ rel, size }] sorted by path.
+export function kitListing(ctx, theme, files) {
+  const list = Object.entries(files).map(([rel, v]) => ({ rel, size: typeof v === 'string' ? Buffer.byteLength(v) : v.length }));
+  const add = (rel, size) => { if (!list.some((f) => f.rel === rel)) list.push({ rel, size }); };
+  if (ctx.edition !== 'slot') {
+    for (const id of ctx.logo.versions) {
+      const n = `${ctx.slug}-${logoFileName(id)}`;
+      add(`01 Logo/png/${n}-512.png`, NOMINAL.png512); add(`01 Logo/png/${n}-1024.png`, NOMINAL.png1024); add(`01 Logo/png/${n}-2048.png`, NOMINAL.png2048);
+      add(`01 Logo/pdf/${n}.pdf`, NOMINAL.logoPdf);
+    }
   }
+  if (theme.readMe && theme.sheets) {
+    add('00 Read me.pdf', NOMINAL.readMePdf); add(`02 Colour/${ctx.slug}-palette.pdf`, NOMINAL.palettePdf);
+    add('03 Type/Typefaces.pdf', NOMINAL.typefacesPdf); add('05 Imagery/Photography.pdf', NOMINAL.photographyPdf);
+  }
+  return list.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
 }
