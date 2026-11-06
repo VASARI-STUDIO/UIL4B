@@ -729,14 +729,14 @@ html:has(.tsc-page .tsc-dock) { scroll-padding-bottom: 72px; }
   background: color-mix(in srgb, var(--t0) 7%, transparent); color: var(--tl-ink); cursor: pointer;
   transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
 }
-.tsc-page .tsc-fr-chip { min-width: 56px; padding: 0 14px; font: 400 14px/20px var(--mono); font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-fr-chip { min-width: 56px; padding: 0 14px; font: 400 14px/20px var(--font); font-variant-numeric: tabular-nums; }
 .tsc-page .tsc-fr-ib { width: 44px; padding: 0; }
 .tsc-page .tsc-fr-chip[aria-expanded="true"],
 .tsc-page .tsc-fr-opt[aria-selected="true"] { background: color-mix(in srgb, var(--t0) 14%, transparent); }
 .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: scale(.97); }
 .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
 .tsc-page .tsc-fr-tray { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
-.tsc-page .tsc-fr-opt { min-width: 0; padding: 0; background: transparent; font: 400 14px/20px var(--mono); }
+.tsc-page .tsc-fr-opt { min-width: 0; padding: 0; background: transparent; font: 400 14px/20px var(--font); }
 .tsc-page .tsc-fr-opt[aria-selected="true"] { color: var(--tl-ink); }
 @media (hover: hover) and (pointer: fine) {
   .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib):hover:not([aria-expanded="true"]) { background: color-mix(in srgb, var(--t0) 11%, transparent); }
