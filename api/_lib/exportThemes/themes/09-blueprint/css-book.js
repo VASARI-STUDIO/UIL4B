@@ -4,7 +4,7 @@
 // White for the things drawn on it, Bluestone rules, Brick only for redlines, key tags and the one action.
 // Everything reads colours from the brand's roles; no hex is written here. Edges, not shadows.
 import { cssBookKit } from './css-bookkit.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 // ground is Plaster (raised), cards and fields are White (surface), panels are the deeper plaster (sunken)
 const vars = (r) => `--bk-ground:${r.raised};--bk-raised:${r.surface};--bk-panel:${r.sunken};--bk-ink:${r.text};--bk-soft:${r.textSoft};--bk-quiet:${r.quiet};--bk-quiet-panel:${r.quietOnSunken};--bk-hair:${r.divider};--bk-edge:${r.border};--bk-action:${r.action};--bk-action-hover:${r.actionHover};--bk-action-ink:${r.actionLabel};--bk-focus:${r.focus};--bk-red:${r.action};`;
@@ -22,7 +22,7 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk :where(h1,h2,h3,p,ul,ol,dl,dd,figure){margin:0;padding:0}
 .bk :where(ul,ol){list-style:none}
 .bk :where(a){color:inherit}
-.bk .disp{font-family:var(--display);font-weight:${d.weights[d.weights.length - 1]};letter-spacing:-0.01em}
+.bk .disp{font-family:var(--display);font-weight:${cssNum(d.weights[d.weights.length - 1])};letter-spacing:-0.01em}
 .bk .num{font-variant-numeric:tabular-nums}
 .bk :focus-visible{outline:2px solid var(--bk-focus);outline-offset:2px}
 .bk-skip{position:absolute;left:16px;top:-80px;z-index:30;background:var(--bk-ink);color:var(--bk-ground);padding:12px 16px;border-radius:${rc}px;font-weight:600;text-decoration:none}

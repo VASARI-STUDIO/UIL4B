@@ -4,6 +4,7 @@
 // and the Toolbox cut (the diagonal the logo is sawn at) used once on a page, to cross out the wrong way. Anything drawn at a real size
 // (a post, a sign, a page) is authored in its own units and shown with a transform scale, so its type keeps the size it has in use.
 import { A, std, fit } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const px = (n) => +n.toFixed(2);
 const tok = (ctx, t) => ctx.brand.type.scale.find((s) => s.token === t);
@@ -39,7 +40,7 @@ const own = {
       return `<div class="b-fp__spec" style="height:${S + 2 * pad}px">${line(k.base - k.cap, '', `Cap height, ${k.cap.toFixed(2)} em`, 1)}${line(k.base - k.xh, 'b-gl--dash', `x-height, ${k.xh.toFixed(2)} em`, 2)}${line(k.base, 'b-gl--base', 'Baseline', 3)}<p class="b-fp__aa ${cls}" style="top:${pad}px;font-size:${S}px;${cls ? '' : `font-family:var(--body);font-weight:${weight}`}" aria-hidden="true">Aa</p></div>`;
     };
     const glyph = (cls, st) => ['ABCDEFGHIJKLM', 'NOPQRSTUVWXYZ', 'abcdefghijklm', 'nopqrstuvwxyz', '0123456789'].map((r) => `<span class="${cls}" style="${st}">${r}</span>`).join('');
-    const p1 = `<section class="b-panel b-fp">${spec('display', d.weights[d.weights.length - 1], 'disp')}<div class="b-fp__row"><div class="b-fp__id"><h2 class="disp b-fp__n">${A(d.family)}</h2><p class="b-fp__d">Display, weights ${d.weights.join(' and ')}. Sets ${A(toks('display'))}, and the wordmark. 18 px and larger, never small.</p></div><p class="b-fp__gl disp">${glyph('', '')}</p></div></section>`;
+    const p1 = `<section class="b-panel b-fp">${spec('display', cssNum(d.weights[d.weights.length - 1]), 'disp')}<div class="b-fp__row"><div class="b-fp__id"><h2 class="disp b-fp__n">${A(d.family)}</h2><p class="b-fp__d">Display, weights ${d.weights.join(' and ')}. Sets ${A(toks('display'))}, and the wordmark. 18 px and larger, never small.</p></div><p class="b-fp__gl disp">${glyph('', '')}</p></div></section>`;
     const bw = [[ctx.weights.regular, 'Regular', sentence(ctx.brand.type.sample.paragraph)], [ctx.weights.medium, 'Medium', ctx.brand.ui.screen.content.form.book], [ctx.weights.strong, 'Semibold', ctx.brand.ui.screen.content.toast]];
     const ws = bw.map(([w, n, t]) => `<li><span class="b-ws__w num">${w}, ${n}</span><span class="b-ws__t" style="font-weight:${w}">${A(t)}</span></li>`).join('');
     const p2 = `<section class="b-panel b-fp">${spec('body', ctx.weights.regular, '', b.family)}<div class="b-fp__row"><div class="b-fp__id"><h2 class="b-fp__n b-fp__n--body">${A(b.family)}</h2><p class="b-fp__d">Body, weights ${b.weights.join(', ')}. Sets ${A(toks('body'))}. Weight ${ctx.weights.strong} is for badges, avatars and toast buttons.</p></div><ul class="b-ws">${ws}</ul></div></section>`;

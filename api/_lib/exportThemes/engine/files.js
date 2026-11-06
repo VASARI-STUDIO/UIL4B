@@ -8,7 +8,7 @@ import { pageDoc, pageSizeMap, largestSize } from './doc.js';
 import { finishText } from './placeholders.js';
 import { ICONS_LICENCE } from '../icons.js';
 import { OFL_LICENCE } from '../fontLicence.js';
-import { cssNum, cleanText, commentText, mdEsc } from './escape.js';
+import { cssNum, cleanText, commentText, mdEsc, fencedHtml } from './escape.js';
 
 // logo file names: the colour version is "full-colour"
 export const LOGO_FILE = { colour: 'full-colour' };
@@ -77,7 +77,7 @@ Design tokens and working components for ${mdEsc(B.name)}, built on plain CSS cu
 3. Put \`class="ui"\` on \`<body>\` (or any wrapper) so the base type and colours apply.
 
 \`\`\`html
-<button class="ui-btn" type="button">${esc(B.ui.screen.content.form.book)}</button>
+<button class="ui-btn" type="button">${fencedHtml(esc(B.ui.screen.content.form.book))}</button>
 \`\`\`
 
 With Tailwind v4: \`@import "tailwindcss"; @import "./tokens.css"; @import "./tailwind.css";\` then use \`bg-surface text-text\`, \`bg-action text-action-label\`.

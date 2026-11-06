@@ -2,7 +2,7 @@
 // brand kit pages: read-me, palette sheet, specimen, photography and the pack boards (cssBook, scoped under .pg).
 // Everything reads colours from the brand's roles; no hex is written here.
 import { cssBookKit } from './css-bookkit.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 const vars = (r) => `--bk-ground:${r.surface};--bk-raised:${r.raised};--bk-panel:${r.sunken};--bk-ink:${r.text};--bk-soft:${r.textSoft};--bk-quiet:${r.quiet};--bk-quiet-panel:${r.quietOnSunken};--bk-hair:${r.divider};--bk-edge:${r.border};--bk-action:${r.action};--bk-action-hover:${r.actionHover};--bk-action-ink:${r.actionLabel};--bk-focus:${r.focus};`;
 
@@ -17,7 +17,7 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk :where(h1,h2,h3,p,ul,ol,dl,dd,figure){margin:0;padding:0}
 .bk :where(ul,ol){list-style:none}
 .bk :where(a){color:inherit}
-.bk .disp{font-family:var(--display);font-stretch:${d.stretch || 100}%;font-weight:${d.weights[d.weights.length - 1]};letter-spacing:-0.01em}
+.bk .disp{font-family:var(--display);font-stretch:${cssNum(d.stretch || 100)}%;font-weight:${cssNum(d.weights[d.weights.length - 1])};letter-spacing:-0.01em}
 .bk .num{font-variant-numeric:tabular-nums}
 .bk :focus-visible{outline:2px solid var(--bk-focus);outline-offset:2px}
 .bk-skip{position:absolute;left:16px;top:-80px;z-index:30;background:var(--bk-ink);color:var(--bk-ground);padding:12px 16px;border-radius:${rc}px;font-weight:600;text-decoration:none}
@@ -77,7 +77,7 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk-say{font-family:var(--body);font-size:max(20px,3cqw);font-weight:500;line-height:1.25;max-width:30em;text-wrap:pretty}
 .bk-say+.bk-btn{align-self:flex-start;margin-top:1.6cqw}
 .bk-txt{font-family:var(--body);font-size:max(16px,1.9cqw);line-height:1.5;color:var(--bk-soft);max-width:34em}
-.bk-st{font-family:var(--display);font-stretch:${d.stretch || 100}%;font-weight:${d.weights[d.weights.length - 1]};letter-spacing:-0.01em;font-size:max(22px,2.6cqw);line-height:1.1;color:inherit;margin:0 0 1.2cqw}
+.bk-st{font-family:var(--display);font-stretch:${cssNum(d.stretch || 100)}%;font-weight:${cssNum(d.weights[d.weights.length - 1])};letter-spacing:-0.01em;font-size:max(22px,2.6cqw);line-height:1.1;color:inherit;margin:0 0 1.2cqw}
 .bk-lead{font-family:var(--body);font-size:max(16px,1.6cqw);line-height:1.55;color:inherit;max-width:44em;text-wrap:pretty}
 .bk-cap,.bk .cap{font-size:12px;line-height:1.5;color:var(--bk-quiet)}
 .bk-capt{display:block;font-size:12px;line-height:1.5}

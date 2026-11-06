@@ -8,7 +8,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '07-spec', name: 'Specification', tier: 'Free', brand: 'northern-current',
@@ -19,7 +19,7 @@ export const meta = {
 
 export function css(ctx) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono;
-  const top = d.weights[0], sub = d.weights[d.weights.length - 1];
+  const top = cssNum(d.weights[0]), sub = cssNum(d.weights[d.weights.length - 1]);
   return `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--ground:${L.surface};--panel:${L.sunken};--hair:${L.divider};--rule:color-mix(in srgb,${L.text} 24%,${L.surface});--accent:${L.action};--accent-ink:${L.actionLabel};--mark:${L.danger.fg};
   --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace;--r:${B.ui.radius.control}px;--rc:${B.ui.radius.card}px;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}

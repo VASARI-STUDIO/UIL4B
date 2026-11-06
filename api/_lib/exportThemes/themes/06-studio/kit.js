@@ -2,6 +2,7 @@
 // Pages are 794 x 1123 .pg sheets in the guidelines layout (running head with the folio, title, lead, body, hairline foot).
 // Styles are in css-bookkit.js, classes start k-. Every value comes from ctx.
 import { A } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 const onColour = (ctx, hex) => { const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface; ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
@@ -68,7 +69,7 @@ export function sheets(ctx) {
 
   // type specimen: two faces, then the scale set at its real sizes
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789';
-  const dispW = f.display.weights[f.display.weights.length - 1];
+  const dispW = cssNum(f.display.weights[f.display.weights.length - 1]);
   const face = (cls, fam, role, w, style) => `<div class="k-face"><p class="k-face__aa ${cls}" style="${style}" aria-hidden="true">Aa</p><div><p class="k-face__n">${A(fam)}</p><p class="cap">${role}. Weights ${w.join(', ')}. SIL OFL 1.1.</p><p class="k-face__al" style="${style}">${alpha}</p></div></div>`;
   const sampleOf = { display: firstSentence(T.sample.headline), headline: '$1,452.00', title: B.ui.screen.title, subtitle: B.lines.others[0], body: firstSentence(T.sample.paragraph), label: B.voice.writeThis[2].write, caption: T.sample.caption };
   const scale = T.scale.map((s) => `<li><p class="cap"><b>${A(s.token)}</b><span class="num">${s.size} px, ${s.line}, ${s.weight}</span></p><p class="k-sc__s" style="font-family:var(--${s.face});font-size:${s.size}px;line-height:${s.line};font-weight:${s.weight}">${A(sampleOf[s.token] || T.sample.headline)}</p></li>`).join('');

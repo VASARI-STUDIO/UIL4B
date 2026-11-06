@@ -145,7 +145,7 @@ ${messagesPhone(ctx, 'left:378px;top:330px;height:560px')}`;
     const photo = pc(ctx, { ground: 'var(--ink)', fg: '#FFFFFF', h: 404, cls: 'a-pc--photo', inner: `${ctx.photo('pool-door', { cls: 'a-fillimg' })}<span class="a-onphoto">${L.html('mono-light', { width: 160, colourway: 'mono-light', color: ml.name, label: 'Logo' })}</span>`, marks: mkA(7, 'right:12px;top:10px', true) });
     const names = [...new Set(keys.map((k) => hexName(ctx, cw[k].ground)))];
     const key = `<ul class="a-notes a-gkey">${keys.map((k, i) => note(i + 1, 'On ' + hexName(ctx, cw[k].ground), desc(cw[k]))).join('')}${note(7, 'On a photo', 'Mono light, on a quiet, dark part of the picture. Keep it clear of faces, lane ropes and water.')}</ul>`;
-    const inner = `<p class="a-lead" style="margin-top:8px">The logo sits on ${names.slice(0, -1).join(', ')} and ${names.at(-1)}, each in its own colourway. On a photo it goes in mono light.</p><div class="a-gd">${key}<div class="a-gcells">${photo}${keys.map((k, i) => cell(k, i + 1)).join('')}</div></div>`;
+    const inner = `<p class="a-lead" style="margin-top:8px">The logo sits on ${names.slice(0, -1).map((n) => A(n)).join(', ')} and ${A(names.at(-1))}, each in its own colourway. On a photo it goes in mono light.</p><div class="a-gd">${key}<div class="a-gcells">${photo}${keys.map((k, i) => cell(k, i + 1)).join('')}</div></div>`;
     return std(ctx, 'logo-grounds', 'Logo on colour and photos', inner);
   },
 

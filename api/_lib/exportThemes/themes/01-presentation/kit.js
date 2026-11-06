@@ -1,6 +1,7 @@
 // Brand kit PDFs for theme 01: the 2-page read-me, the palette sheet, the type specimen and the photography sheet.
 // Pages are 1280 x 720 .pg slides (styles in css-bookkit.js, classes start k-). Every value comes from ctx.
 import { A, fit } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 const onColour = (ctx, hex) => { const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface; ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
@@ -48,7 +49,7 @@ export function sheets(ctx) {
   // type specimen
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789';
   const face = (cls, fam, role, w, style) => `<div class="k-face"><p class="k-face__aa ${cls}" style="${style}">Aa</p><p class="k-face__n">${A(fam)}</p><p class="cap">${role}. Weights ${w.join(', ')}. SIL OFL 1.1.</p><p class="k-face__al" style="${style}">${alpha}</p></div>`;
-  const typefaces = page(ctx, 'typefaces', 'Typefaces', `<div class="k-faces2">${face('disp', f.display.family, 'Display, for headlines', f.display.weights, `font-family:var(--display);font-stretch:${f.display.stretch || 100}%;font-weight:${f.display.weights[f.display.weights.length - 1]}`)}${face('', f.body.family, 'Body, for reading text, labels and captions', f.body.weights, 'font-family:var(--body);font-weight:500')}</div>
+  const typefaces = page(ctx, 'typefaces', 'Typefaces', `<div class="k-faces2">${face('disp', f.display.family, 'Display, for headlines', f.display.weights, `font-family:var(--display);font-stretch:${cssNum(f.display.stretch || 100)}%;font-weight:${cssNum(f.display.weights[f.display.weights.length - 1])}`)}${face('', f.body.family, 'Body, for reading text, labels and captions', f.body.weights, 'font-family:var(--body);font-weight:500')}</div>
 <div class="k-spec"><p class="disp k-spec__h">${A(T.sample.headline)}</p><p class="k-spec__p">${A(T.sample.paragraph)}</p></div><p class="cap k-note">${A(f.mono.family)} is for a hex, a token or a code string only. Links and licence notes are in fonts.md.</p>`, { no: 1, of: 1 });
   // photography: direction, then the shot list
   const rows = [['Subject', D.subject], ['Light', D.light], ['Crop', D.crop], ['Colour', D.colour], ['People', D.people]];

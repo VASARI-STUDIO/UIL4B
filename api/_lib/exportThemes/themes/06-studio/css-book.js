@@ -1,6 +1,6 @@
 import { cssBookKit } from './css-bookkit.js';
 import { colourMap } from '../../engine/tokens.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 // Styles for theme 06's brand book site (bookCss, scoped under .bk and the root custom properties) and for the brand kit pages
 // (cssBook, scoped under .pg: appended to css() in index.js; the kit styles come from css-bookkit.js).
 // Studio: an annotated design-system book. Geist chrome at 13 px, titles in Geist 600, the display face only for the big line. Steel
@@ -15,7 +15,7 @@ const decl = (o) => Object.entries(o).map(([k, v]) => `--${k}:${v};`).join('');
 
 export function bookCss(ctx) {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono;
-  const rc = B.ui.radius.control, rk = B.ui.radius.card, bw = B.ui.border, dw = d.weights[d.weights.length - 1];
+  const rc = B.ui.radius.control, rk = B.ui.radius.card, bw = B.ui.border, dw = cssNum(d.weights[d.weights.length - 1]);
   const rev = B.logo.colourways.reversed;
   return `:root,.bk--board{${vars(L)}${mdVars}--fix-ground:${L.surface};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};
 --chrome:'Geist',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}

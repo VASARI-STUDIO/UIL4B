@@ -7,7 +7,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '10-inuse', name: 'In use', tier: 'Pro', brand: 'shallow-end',
@@ -23,7 +23,7 @@ export function css(ctx) {
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:12px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}
-.disp{font-family:var(--display);font-weight:${d.weights[d.weights.length - 1]};letter-spacing:-0.01em;line-height:1;white-space:nowrap}
+.disp{font-family:var(--display);font-weight:${cssNum(d.weights[d.weights.length - 1])};letter-spacing:-0.01em;line-height:1;white-space:nowrap}
 .num{font-variant-numeric:tabular-nums}
 .pg--std{display:flex;flex-direction:column;padding:48px var(--m) 56px}
 .hd{display:flex;justify-content:space-between;font-size:12px;font-weight:600}

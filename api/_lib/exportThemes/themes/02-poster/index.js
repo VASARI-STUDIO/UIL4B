@@ -30,7 +30,7 @@ import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
 import { cssGate } from './css-gate.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '02-poster', name: 'Ticket', tier: 'Pro', brand: 'encore',
@@ -57,7 +57,7 @@ export function css(ctx) {
 .pg--lamp{--ground:${lamp};--ink:${lampInk};--soft:${L.textSoft};--quiet:${L.quiet};--hair:${mix(ctx.C, lampInk, lamp, 0.35)};--panel:${mix(ctx.C, lampInk, lamp, 0.12)};--lit:${lampInk}}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}
-.disp{font-family:var(--display);font-style:normal;font-weight:${d.weights[0]};letter-spacing:-0.015em;line-height:0.92}
+.disp{font-family:var(--display);font-style:normal;font-weight:${cssNum(d.weights[0])};letter-spacing:-0.015em;line-height:0.92}
 .num{font-variant-numeric:tabular-nums}
 
 /* the poster page: running head, then the page */

@@ -7,7 +7,7 @@ import { cssB } from './css-b.js';
 import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '09-blueprint', name: 'Blueprint', tier: 'Pro', brand: 'plumbline',
@@ -22,7 +22,7 @@ export function css(ctx) {
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:12px;line-height:1.4;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}
-.disp{font-family:var(--display);font-weight:${d.weights[d.weights.length - 1]};letter-spacing:-0.01em}
+.disp{font-family:var(--display);font-weight:${cssNum(d.weights[d.weights.length - 1])};letter-spacing:-0.01em}
 .num{font-variant-numeric:tabular-nums}
 
 /* redlines: Brick lines with end ticks, numbers in the chrome face */

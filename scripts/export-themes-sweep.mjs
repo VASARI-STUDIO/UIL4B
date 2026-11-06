@@ -211,9 +211,11 @@ function scanHtml(text) {
   };
   walk(doc);
   // a style, title or textarea end tag the payload wrote leaves its own end tag behind
-  const left = text.replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '').replace(/<(title|textarea|script)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '');
+  // (matched blocks are blanked with spaces of the same length, so an offset in `left` is an offset in `text`)
+  const blankOut = (s) => s.replace(/[^\n]/g, ' ');
+  const left = text.replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, blankOut).replace(/<(title|textarea|script)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, blankOut);
   const m = /<\/(style|title|textarea|script)\s*>/i.exec(left);
-  if (m) bad.push({ at: text.indexOf(m[0]), what: `stray </${m[1]}>` });
+  if (m) bad.push({ at: m.index, what: `stray </${m[1]}>` });
   return bad;
 }
 

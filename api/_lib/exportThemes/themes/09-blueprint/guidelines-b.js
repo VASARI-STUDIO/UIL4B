@@ -2,6 +2,7 @@
 // grid, layouts, social, signage, email-signature, digital, summary, contact-scope. Styles are in css-b.js (classes start b-).
 // Every redline prints the length it draws. A drawn-down page (grid, layouts, social, signage) says its scale and prints real sizes.
 import { A, std, cell } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 // Lettering sheets. The guide lines (baseline, x-height, cap height, descender) and every size a redline prints come from the font file
 // itself (opentype.js), not from a guess, so a printed number is the real size of the glyph at that point size.
@@ -51,7 +52,7 @@ const cross = (cls = '') => `<svg class="b-xx ${cls}" viewBox="0 0 100 100" pres
 const own = {
   typefaces(ctx) {
     const F = ctx.brand.fonts, d = F.display, b = F.body, mo = F.mono, sc = ctx.brand.type.scale;
-    const dw = d.weights[d.weights.length - 1], W = 682;
+    const dw = cssNum(d.weights[d.weights.length - 1]), W = 682;
     const wname = { 400: 'Regular', 500: 'Medium', 600: 'Semibold', 800: 'Extra bold' };
     const tokensOf = (face) => sc.filter((s) => s.face === face).map((s) => s.token).join(', ');
     const tag = (x, y, t) => `<span class="b-gt" style="left:${x}px;top:${Math.round(y) - 15}px">${A(t)}</span>`;
@@ -74,7 +75,7 @@ ${dv(440, T1, S1, String(S1))}${dv(504, base1 - cap1, cap1, n1(cap1))}${dv(568, 
     }).join('');
     const bodySheet = `<div class="b-sheet" style="height:${RH * b.weights.length}px">${wrows}${tag(532, 4, 'Cap height')}${tag(612, 4, 'x-height')}</div>`;
     // the mono face, one line
-    const MS = 20, ML = 28, mw = mo.weights[0], mm = fm(ctx, 'mono', mw), mtop = 16, mbs = mtop + baseOf(mm, MS, ML), gm = { face: 'mono', weight: mw, size: MS, line: ML, x: LC, y: mtop };
+    const MS = 20, ML = 28, mw = cssNum(mo.weights[0]), mm = fm(ctx, 'mono', mw), mtop = 16, mbs = mtop + baseOf(mm, MS, ML), gm = { face: 'mono', weight: mw, size: MS, line: ML, x: LC, y: mtop };
     const mono = `<div class="b-sheet b-sheet--mono" style="height:${mtop + ML + 28}px"><span class="cap b-wl" style="top:12px"><b>${A(mo.family)}, weight ${mo.weights.join(', ')}</b>Only for a hex, a token or a code string.</span>${lt(ctx, { ...gm, x: LC + 8, text: ctx.roles.light.action })}${guides(ctx, { ...gm, w: 520 - LC, kinds: ['cap', 'base'] })}${dv(540, mbs - mm.cap * MS, mm.cap * MS, n1(mm.cap * MS))}</div>`;
     const lic = `<p class="cap b-licence">${A(d.family)} and ${A(mo.family)} are open source under the SIL Open Font Licence. Free to use in print and on screen, and free to download from Google Fonts.</p>`;
     return std(ctx, 'typefaces', `<p class="lead">One family does the work. ${A(d.family)} Extra bold sets the line you read first, and its lighter weights carry everything after it.</p><div class="b-faces">${sheet1}${tb1}<div class="b-gap">${glyphs}</div><div class="b-fhead"><h2 class="b-fname b-fname--body">${A(b.family)}</h2><p class="cap"><b>Body, weights ${b.weights.join(', ')}</b>Used for ${A(tokensOf('body'))}.</p></div>${bodySheet}${mono}${lic}</div>`);

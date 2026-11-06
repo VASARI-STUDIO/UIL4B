@@ -1,7 +1,7 @@
 // Styles for u-screens.js: screen-light, screen-dark, screen-mobile, tokens, code. Classes start tu4-.
 // Reads the .pg.tk custom properties set in css-gate.js; the gate's classes are used, never restyled. The screens are the kit's own
 // components (.ui, scoped to light or dark tokens in css-kit.js). No hex is written here.
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 export const cssUScreens = (ctx) => {
   const D = ctx.roles.dark, B = ctx.brand, mono = B.fonts.mono, d = B.fonts.display, rc = B.ui.radius.card;
   return `
@@ -36,7 +36,7 @@ export const cssUScreens = (ctx) => {
 .tu4-tix__body{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 20px 22px}
 .tu4-tix__top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .tu4-tix__eta{font:var(--fw-label) var(--fs-label)/var(--lh-label) var(--ff-body);color:var(--text-soft);font-variant-numeric:tabular-nums}
-.tu4-tix__act{margin:0;font-size:var(--fs-title);line-height:var(--lh-title);font-stretch:${d.stretch || 100}%;overflow-wrap:break-word}
+.tu4-tix__act{margin:0;font-size:var(--fs-title);line-height:var(--lh-title);font-stretch:${cssNum(d.stretch || 100)}%;overflow-wrap:break-word}
 /* the slot edition's act is a placeholder box wider than a two-word act: it steps down and wraps inside the body, short of the tear line */
 .tu4-tix--slot .tu4-tix__act{font-size:var(--fs-title-s);line-height:var(--lh-title-s);max-width:100%;overflow-wrap:anywhere}
 .tu4-tix--slot .tu4-tix__act *{white-space:normal!important;overflow-wrap:anywhere}

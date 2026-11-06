@@ -1,6 +1,7 @@
 // Guidelines run B pages (typefaces to contact-scope), laid out as a standards document: tables, numbered requirements
 // and figures with numbered captions. Styles are in css-b.js (classes start b-); helpers are in helpers.js.
 import { A, mono, nameOf, std, title, issued } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const refOf = (ctx, id) => ctx.pages.find((p) => p.id === id).ref;
 // the "ref.n" folio for a numbered item on a page
@@ -124,13 +125,13 @@ export const guidelinesB = {
     // a real line in each face, at its heaviest cut: the primary line, the caption, a literal value
     const C = B.ui.screen.content, sample = { display: [A(C.eta), 22], body: [A(C.rider), 16], mono: ['6.6 kW, 3 pm', 13] };
     const faceRows = defs.map(([role, label, f], i) => {
-      const [txt, fs] = sample[role], top = f.weights[f.weights.length - 1];
+      const [txt, fs] = sample[role], top = cssNum(f.weights[f.weights.length - 1]);
       return row([['b-r', num(ctx, 'typefaces', i + 1)], `<b class="b-fam">${A(f.family)}</b><span class="cap num">${label}, cut in ${f.weights.join(' and ')}</span>`, `<p class="b-line" style="font-family:var(--${role});font-weight:${top};font-size:${fs}px;${role === 'display' ? 'letter-spacing:-0.015em' : ''}">${txt}</p>`, A(useOf(role)), ['cap', 'Open Font Licence. Free from Google Fonts.']]);
     });
     const faces = table(['Ref', 'Face', 'Line set in the face', 'Use', 'Licence'], [46, 132, null, 168, 120], faceRows);
     const setRows = defs.map(([role, , f]) => {
       const fs = role === 'mono' ? 12 : role === 'display' ? 19 : 16;
-      return row([`<b class="b-fam b-fam--s">${A(f.family)}</b>`, `<p class="b-alpha" style="font-family:var(--${role});font-weight:${f.weights[f.weights.length - 1]};font-size:${fs}px">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 kW 6.6 3 pm</p>`]);
+      return row([`<b class="b-fam b-fam--s">${A(f.family)}</b>`, `<p class="b-alpha" style="font-family:var(--${role});font-weight:${cssNum(f.weights[f.weights.length - 1])};font-size:${fs}px">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 kW 6.6 3 pm</p>`]);
     });
     const sets = table(['Face', 'Character set'], [186, null], setRows);
     const reqs = reqList(ctx, 'typefaces', 4, [
@@ -303,7 +304,7 @@ export const guidelinesB = {
     const ground = B.colours.find((c) => c.hex.toLowerCase() === cw['on-sunbelt'].ground.toLowerCase());
     const w = Math.round(W * k), h = Math.round(H * k);
     const dims = `<div class="dh" style="width:${w}px"></div><span class="dn" style="left:${Math.round(w / 2) - 30}px;top:-38px;background:var(--ground);padding:0 6px">${W} mm</span><div class="dv" style="height:${h}px"></div><span class="dn" style="left:-66px;top:${Math.round(h / 2) - 6}px">${H} mm</span>`;
-    const spec = [['Size', `${W} × ${H} mm`], ['Ground', ground ? ground.name : ''], ['Type', `${A(ctx.cap(B.colours.find((c) => c.role === 'text').name))}, 700`], ['Logo', `Stacked, on ${ground ? A(ground.name) : rn(ctx, 'action')}`], ['Fixed', ctx.ph('applications.signage.fixed', 'To the front fence')]].map(([a, b], i) => `<tr><td class="b-spec"><span class="b-ref">${num(ctx, 'signage', i + 1)}</span><b class="b-el">${a}</b>${b}</td></tr>`).join('');
+    const spec = [['Size', `${W} × ${H} mm`], ['Ground', ground ? A(ground.name) : ''], ['Type', `${A(ctx.cap(B.colours.find((c) => c.role === 'text').name))}, 700`], ['Logo', `Stacked, on ${ground ? A(ground.name) : rn(ctx, 'action')}`], ['Fixed', ctx.ph('applications.signage.fixed', 'To the front fence')]].map(([a, b], i) => `<tr><td class="b-spec"><span class="b-ref">${num(ctx, 'signage', i + 1)}</span><b class="b-el">${a}</b>${b}</td></tr>`).join('');
     const fig = `<figure class="b-fgr"><div class="b-sg"><div class="b-sg__w" style="width:${w}px;height:${h}px">${dims}${board}</div></div>${fcap(ref, `The site board, drawn flat at ${Math.round(k * 100)}% of ${W} by ${H} mm. The dimension lines are ${rn(ctx, 'text')}, as on every drawing in this document.`)}</figure>`;
     return std(ctx, 'signage', `${title(ctx, 'signage', 'The site board that goes on the front fence on install day: the date, the crew and the address, in one colour.')}<div class="b-sgrid">${fig}<table class="st b-tb b-tb--n"><colgroup><col></colgroup><thead><tr><th>Specification</th></tr></thead><tbody>${spec}</tbody></table></div>`);
   },
@@ -329,7 +330,7 @@ export const guidelinesB = {
     const B = ctx.brand, F = B.fonts, ref = refOf(ctx, 'summary');
     const sw = B.colours.map((c) => `<li><span class="b-sw" style="background:${c.hex}"></span><b>${A(c.name)}</b>${mono(c.hex)}</li>`).join('');
     const strip = B.colours.map((c) => `<i style="flex:${c.share};background:${c.hex}"></i>`).join('');
-    const faces = [['display', F.display], ['body', F.body], ['mono', F.mono]].map(([r, f]) => `<li><span class="b-sf" style="font-family:var(--${r});font-weight:${f.weights[f.weights.length - 1]}">Aa</span><b>${A(f.family)}</b><span class="num">${f.weights.join(', ')}</span></li>`).join('');
+    const faces = [['display', F.display], ['body', F.body], ['mono', F.mono]].map(([r, f]) => `<li><span class="b-sf" style="font-family:var(--${r});font-weight:${cssNum(f.weights[f.weights.length - 1])}">Aa</span><b>${A(f.family)}</b><span class="num">${f.weights.join(', ')}</span></li>`).join('');
     const lines = [B.lines.primary, ...B.lines.others].map((l, i) => `<p class="${i ? 'b-ln' : 'b-ln b-ln--1'}">${A(l)}</p>`).join('');
     const rules = B.guideB.rules.map((r, i) => `<li><span class="num">${i + 1}</span><span>${A(r)}</span></li>`).join('');
     const rows = [

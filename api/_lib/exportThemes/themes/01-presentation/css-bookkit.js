@@ -1,5 +1,5 @@
 // Styles for the brand kit PDF pages (read-me, palette sheet, specimen, photography). Scoped under .pg; classes start k-.
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 export function cssBookKit(ctx) {
   return `
 .pg--k{display:flex;flex-direction:column;justify-content:space-between;padding:40px var(--m)}
@@ -18,7 +18,7 @@ export function cssBookKit(ctx) {
 .k-brand{flex:1;display:flex;flex-direction:column;justify-content:center;gap:48px;min-height:0}
 .k-brand__top{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 260px;gap:48px;align-items:start}
 .k-lines li{font-family:var(--body);font-size:16px;line-height:1.4;font-weight:500;padding:6px 0;color:var(--soft)}
-.k-lines li.is-first{font-family:var(--display);font-stretch:${ctx.brand.fonts.display.stretch || 100}%;font-weight:800;font-size:30px;line-height:1;color:var(--ink);padding-bottom:12px}
+.k-lines li.is-first{font-family:var(--display);font-stretch:${cssNum(ctx.brand.fonts.display.stretch || 100)}%;font-weight:800;font-size:30px;line-height:1;color:var(--ink);padding-bottom:12px}
 .k-faces p{display:flex;align-items:baseline;gap:16px;margin-bottom:12px}
 .k-aa{font-size:56px;line-height:1}.k-aa--body{font-family:var(--body);font-weight:500}
 .k-strip{display:flex;gap:4px}

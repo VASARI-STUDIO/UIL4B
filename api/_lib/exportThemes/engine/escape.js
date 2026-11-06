@@ -53,3 +53,7 @@ const MD_SPECIAL = new Set('\\`*_[]<>|~'.split(''));
 export const mdEsc = (s) => [...stripBad(s).replace(/[\r\n]+/g, ' ')].map((ch) => (MD_SPECIAL.has(ch) ? '\\' + ch : ch)).join('')
   // a marker at the start of the text (heading, list, rule, numbered list) would change the line it opens
   .replace(/^(\s*)(?:([#+=-])|(\d+)([.)]))(?=\s|$)/, (m, sp, mark, num, dot) => (mark ? `${sp}\\${mark}` : `${sp}${num}\\${dot}`));
+
+// Escaped HTML text printed inside a fenced Markdown code block: line breaks become spaces and every backtick an entity (still a
+// backtick when the HTML is read), so no line of it can open or close the fence.
+export const fencedHtml = (html) => stripBad(html).replace(/[\r\n]+/g, ' ').replace(/`/g, '&#96;');

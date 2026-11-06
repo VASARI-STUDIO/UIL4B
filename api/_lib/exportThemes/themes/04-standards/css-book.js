@@ -1,5 +1,5 @@
 import { cssBookKit } from './css-bookkit.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 // Styles for theme 04's brand book site (bookCss, scoped under .bk and the root custom properties) and for the
 // brand kit pages (cssBook, scoped under .pg: appended to css() in index.js; the kit styles come from css-bookkit.js).
 // Everything reads colours from the brand's roles; no hex is written here. Hairlines, not shadows.
@@ -8,7 +8,7 @@ const vars = (r) => `--bk-ground:${r.surface};--bk-raised:${r.raised};--bk-panel
 
 export function bookCss(ctx) {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono;
-  const rc = B.ui.radius.control, bw = B.ui.border, dw = d.weights[d.weights.length - 1];
+  const rc = B.ui.radius.control, bw = B.ui.border, dw = cssNum(d.weights[d.weights.length - 1]);
   const rev = B.logo.colourways.reversed, buoy = B.logo.colourways['on-buoy'];
   const chrome = 'Public Sans';
   return `:root,.bk--board{${vars(L)}--fix-ground:${L.surface};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};

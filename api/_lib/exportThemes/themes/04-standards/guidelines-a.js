@@ -190,7 +190,7 @@ export const guidelinesA = {
   // the chip sheet: large square chips in a strict grid, each with its clause number
   palette(ctx) {
     const cs = ctx.colours, action = byRole(ctx, 'action'), V = ctx.brand.voice.principles, W = ctx.brand.voice.writeThis, sample = ctx.brand.type.sample, ref = refOf(ctx, 'palette');
-    const lead = `${cs.length} colours, each named for where it lands. ${action.name} is the one action on a screen, and ${byRole(ctx, 'highlight').name} is fill only.`;
+    const lead = `${cs.length} colours, each named for where it lands. ${A(action.name)} is the one action on a screen, and ${A(byRole(ctx, 'highlight').name)} is fill only.`;
     const texts = [sample.headline, V[0].example, W[2].write, ctx.brand.lines.others[1], V[1].example];
     const chip = (c, i) => `<figure><div class="a-ch ${ctx.ratio(ctx.roles.light.surface, c.hex) < 1.3 ? 'hairline' : ''}" style="background:${c.hex};color:${inkOn(ctx, c.hex)}"><span class="num a-cno">${ref}.${i + 1}</span><span class="${i < 2 ? 'disp ' : ''}a-ptext">${A(texts[i % texts.length])}</span><span class="a-pn">${A(c.name)}</span></div><figcaption class="cap"><b>${A(c.name)}, ${A(ctx.cap(c.role))}</b>${A(c.lands)}</figcaption></figure>`;
     const vref = refOf(ctx, 'colour-values');

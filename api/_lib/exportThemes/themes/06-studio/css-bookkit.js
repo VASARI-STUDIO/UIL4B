@@ -1,5 +1,5 @@
 // Styles for theme 06's brand kit PDF pages (read-me, palette sheet, specimen, photography). Scoped under .pg--k; classes start k-.
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 // The sheets reuse the guidelines frame (.pg--std, .hd, .top, .lead, .bd, .fo). Imported by css-book.js.
 export function cssBookKit(ctx) {
   const B = ctx.brand, mono = cssStr(B.fonts.mono.family);
@@ -23,7 +23,7 @@ export function cssBookKit(ctx) {
 /* read me 1: folders as a ruled list, steps in three columns */
 .k-folders li{display:grid;grid-template-columns:36px 150px minmax(0,1fr);align-items:baseline;gap:0 12px;padding:22px 0;border-top:1px solid var(--hair)}
 .k-folders li:last-child{border-bottom:1px solid var(--hair)}
-.k-fn{font-family:var(--display);font-size:22px;line-height:1.2;font-weight:${B.fonts.display.weights[B.fonts.display.weights.length - 1]}}
+.k-fn{font-family:var(--display);font-size:22px;line-height:1.2;font-weight:${cssNum(B.fonts.display.weights[B.fonts.display.weights.length - 1])}}
 .k-fd{font-family:var(--body);font-size:14px;line-height:1.5;color:var(--soft);max-width:44ch}
 .k-how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 24px}
 .k-how li{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--hair);padding-top:12px}

@@ -2,6 +2,7 @@
 // Pages are 794 x 1123 drawing sheets on the guidelines frame: running head with "n of N", a title, the work, a ruled title block at the foot.
 // Redlines print the length they draw (px at 1x). Styles are in css-bookkit.js, classes start k-. Every value comes from ctx.
 import { A, fit, vline } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // a swatch that sits on the Plaster page or a White card needs its edge drawn
@@ -71,7 +72,7 @@ export function sheets(ctx) {
 
   // type specimen: two faces, each Aa drawn with its size, then the scale set at its real sizes
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789';
-  const dispW = f.display.weights[f.display.weights.length - 1], AA = 128;
+  const dispW = cssNum(f.display.weights[f.display.weights.length - 1]), AA = 128;
   const face = (cls, fam, role, w, style) => `<div class="k-face"><div class="k-face__aa"><p class="${cls}" style="${style};font-size:${AA}px;line-height:1" aria-hidden="true">Aa</p>${vline(-24, 0, AA, AA, { dx: -30 })}</div><p class="k-face__n">${A(fam)}</p><p class="cap">${role}. Weights ${w.join(', ')}. SIL OFL 1.1.</p><p class="k-face__al" style="${style}">${alpha}</p></div>`;
   const sampleOf = { display: B.name, headline: firstSentence(B.lines.primary), title: '$38,460', lead: B.lines.others[0], label: B.voice.writeThis[2].write, body: firstSentence(T.sample.paragraph), caption: T.sample.caption };
   const scale = T.scale.map((s) => `<li><p class="cap"><b>${A(s.token)}</b><span class="num">${s.size} px, ${s.line}, ${s.weight}</span></p><p class="k-sc__s" style="font-family:var(--${s.face});font-size:${s.size}px;line-height:${s.line};font-weight:${s.weight}">${A(sampleOf[s.token] || T.sample.headline)}</p></li>`).join('');

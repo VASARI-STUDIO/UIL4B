@@ -5,6 +5,7 @@
 // The engine wraps these in the shell (skip link, section nav, light and dark switch) and adds the behaviour.
 // Copy, the type tester and the downloads read data attributes the engine script understands: data-copy, data-tester-*.
 import { A, fit } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the readable text colour on a brand colour: the better of the light-mode text and surface colours, checked
@@ -115,7 +116,7 @@ function elevation(ctx) {
   const pts = [[plaster, 60, 252, 146, 252], [stone, 60, 336, 150, 337], [stone, 170, 70, 300, 132], [brick, 800, 56, 668, 84], [timber, 480, 384, 480, 290], [white, 900, 200, 756, 250]];
   const leaders = pts.map(([, bx, by, px, py]) => `<path class="bk-lead-l" d="M${bx} ${by}L${px} ${py}"/><circle class="bk-lead-d" cx="${px}" cy="${py}" r="3.5"/>`).join('');
   const bubbles = pts.map(([c, bx, by]) => `<span class="bk-bub bk-bub--abs" style="left:${(bx / 9.6).toFixed(2)}%;top:${(by / 4).toFixed(2)}%">${tag(c)}</span>`).join('');
-  const svg = `<svg viewBox="0 0 960 400" role="img" aria-label="A house front in line, tagged by finish: ${ctx.colours.map((c, i) => `C${i + 1} ${c.name}`).join(', ')}." preserveAspectRatio="xMidYMid meet">
+  const svg = `<svg viewBox="0 0 960 400" role="img" aria-label="A house front in line, tagged by finish: ${ctx.colours.map((c, i) => `C${i + 1} ${A(c.name)}`).join(', ')}." preserveAspectRatio="xMidYMid meet">
 <path class="bk-el-hair" d="M40 350H920M60 358L52 366M110 358L102 366M160 358L152 366M210 358L202 366M260 358L252 366M310 358L302 366M360 358L352 366M410 358L402 366M460 358L452 366M510 358L502 366M560 358L552 366M610 358L602 366M660 358L652 366M710 358L702 366M760 358L752 366M810 358L802 366M860 358L852 366M910 358L902 366"/>
 <rect class="bk-el" x="640" y="62" width="56" height="86" fill="${brick.hex}"/><path class="bk-el-m" d="${brickLines.join('')}"/>
 <rect class="bk-el" x="634" y="56" width="68" height="10" fill="${brick.hex}"/>
@@ -183,7 +184,7 @@ ${big ? '' : `<i class="bk-vd bk-vd--l" style="top:0;height:${lh}em"></i>`}
 function typography(ctx) {
   const B = ctx.brand, F = B.fonts, T = B.type, alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789';
   const wlist = (f) => f.weights.join(', ');
-  const dm = metrics(ctx, 'display', F.display.weights[F.display.weights.length - 1]), bm = metrics(ctx, 'body', 500);
+  const dm = metrics(ctx, 'display', cssNum(F.display.weights[F.display.weights.length - 1])), bm = metrics(ctx, 'body', 500);
   const face = (cls, f, m, weight, note, style) => `<div class="bk-face"><div class="bk-face__fr">${lettering(m, { size: 168, lh: 1, text: 'Aa', style: `font-family:${cls ? 'var(--display)' : 'var(--body)'};font-weight:${weight}${cls ? ';letter-spacing:-0.01em' : ''}`, lab: true, big: true })}</div><p class="bk-face__n">${A(f.family)}</p><p class="bk-cap">${note} Weights ${wlist(f)}.</p><p class="bk-face__al" style="${style}">${alpha}</p></div>`;
   const scaleRows = T.scale.map((s) => {
     const d = s.face === 'display', m = d ? dm : bm;

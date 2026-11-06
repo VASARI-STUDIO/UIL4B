@@ -47,9 +47,9 @@ const LEAF = {
   'ui.status[].id': id, 'ui.status[].tone': oneOf('action', 'success', 'warning', 'danger', 'info', 'neutral'),
   'ui.status[].fg': hexOrId, 'ui.status[].bg': hexOrId, 'ui.status[].edge': hexOrId, 'ui.status[].dark.fg': hexOrId, 'ui.status[].dark.bg': hexOrId, 'ui.status[].dark.edge': hexOrId,
   'imagery.shots[].id': id, 'logo.showcase.minScreenPx': num(8, 1000), 'logo.showcase.minPrintMm': num(1, 500),
-  'ui.screen.content.progress': num(0, 1), 'ui.screen.content.deliveries[].status': id, 'ui.screen.content.example.links[][]': (v) => v.length <= LINE_MAX,
+  'ui.screen.content.progress': num(0, 1), 'ui.screen.content.deliveries[].status': id,
 };
-const LINE_PATHS = new Set(['name', 'city', 'logo.showcase.wordmark', 'contact.email', 'applications.site.url', 'applications.card.contact']);
+const LINE_PATHS = new Set(['name', 'city', 'logo.showcase.wordmark', 'contact.email', 'applications.site.url', 'applications.card.contact', 'ui.screen.content.example.links[][]']);
 const WEIGHT_PATH = /^(fonts[.](display|body|mono)[.](weights|italics)\[\]|fonts[.](display|body)[.](labelWeight|strongWeight|logoWeight|headingWeight)|type[.]scale\[\][.]weight|ui[.]type\[\][.]weight)$/;
 const COLOUR_PATH = /^(ui[.](light|dark)[.][A-Za-z]+([.](fg|bg))?|logo[.]colourways[.][a-z0-9-]{1,32}[.][A-Za-z]{1,16})$/;
 const TOP = new Set(['name', 'slug', 'theme', 'edition', 'version', 'description', 'product', 'audience', 'city', 'lines', 'personality', 'voice', 'colours', 'tones', 'pairs', 'fonts', 'type', 'logo', 'imagery', 'layout', 'ui', 'applications', 'guideB', 'contact']);
@@ -63,8 +63,12 @@ CLOSED['fonts.body'] = CLOSED['fonts.display']; CLOSED['fonts.mono'] = CLOSED['f
 const BOOL = new Set(['fonts.display.standIn', 'fonts.body.standIn', 'fonts.mono.standIn']);
 const ACTION_EXEMPT = /^ui[.](light|dark)[.]actionExempt$/;
 
+// Text the brand wrote: control characters and private-use code points go (the slot edition's placeholder sentinels live in that range, so
+// brand text must never carry one in).
+const PRIVATE_USE = new RegExp(`[${String.fromCodePoint(0xE000)}-${String.fromCodePoint(0xF8FF)}]`, 'g');
+const text = (s) => stripBad(s).replace(PRIVATE_USE, '');
 // Collapses line breaks and tabs: a one-line field never carries a break into a comment, attribute or file name.
-const oneLine = (s) => stripBad(s).replace(/[\r\n\t]+/g, ' ').trim();
+const oneLine = (s) => text(s).replace(/[\r\n\t]+/g, ' ').trim();
 
 export function validateBrand(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new BrandInputError('', 'must be an object');
@@ -76,7 +80,8 @@ export function validateBrand(data) {
       if (COLOUR_PATH.test(pat) || pat === 'ui.light.actionExempt') { if (!hex(v)) throw new BrandInputError(path, 'must be a #rrggbb colour'); return v; }
       const rule = LEAF[pat];
       if (typeof rule === 'function') { if (!rule(v)) throw new BrandInputError(path, 'is not an allowed value'); return v; }
-      return LINE_PATHS.has(pat) ? oneLine(v).slice(0, LINE_MAX) : stripBad(v).slice(0, TEXT_MAX);
+      if ((rule && rule.num) || WEIGHT_PATH.test(pat)) throw new BrandInputError(path, 'must be a number');  // a number field never takes text
+      return LINE_PATHS.has(pat) ? oneLine(v).slice(0, LINE_MAX) : text(v).slice(0, TEXT_MAX);
     }
     if (typeof v === 'number') {
       if (!Number.isFinite(v)) throw new BrandInputError(path, 'must be a finite number');

@@ -1,3 +1,4 @@
+import { cssNum } from '../../engine/escape.js';
 // Styles for theme 07, run A (guidelines-a.js). Every class starts a-. Spacing steps: 4, 8, 12, 16, 24, 32, 40, 48.
 // The pages are a standards document: hanging clause numbers, ledger tables, numbered figures, a conformance matrix.
 export function cssA(ctx) {
@@ -28,9 +29,9 @@ export function cssA(ctx) {
 .st.a-bl td,.st.a-bl tbody th{vertical-align:baseline;padding-top:20px;padding-bottom:20px}
 .st.a-bl td.a-no{padding-top:20px}
 .a-def{font-family:var(--body);font-size:15px;line-height:1.5}
-.st.a-t td.a-def--line{font-family:var(--display);font-weight:${ctx.brand.fonts.display.weights[ctx.brand.fonts.display.weights.length - 1]};font-size:28px;line-height:1.2}
+.st.a-t td.a-def--line{font-family:var(--display);font-weight:${cssNum(ctx.brand.fonts.display.weights[ctx.brand.fonts.display.weights.length - 1])};font-size:28px;line-height:1.2}
 .st.a-t th.a-term--big{padding:8px 16px 8px 0}
-.a-term--big .disp{display:block;font-size:32px;line-height:1.15;font-weight:${ctx.brand.fonts.display.weights[0]}}
+.a-term--big .disp{display:block;font-size:32px;line-height:1.15;font-weight:${cssNum(ctx.brand.fonts.display.weights[0])}}
 .st.a-t .a-wc{font-size:12px;color:var(--quiet);text-align:right;padding-right:0;white-space:nowrap}
 
 /* 2.2 write this, not that */

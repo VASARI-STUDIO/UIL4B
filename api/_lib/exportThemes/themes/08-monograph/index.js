@@ -30,7 +30,7 @@ import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
 import { readMe, sheets } from './kit.js';
-import { cssStr } from '../../engine/escape.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '08-monograph', name: 'Riso', tier: 'Pro', brand: 'long-room',
@@ -51,10 +51,10 @@ export function css(ctx) {
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .pg :where(h1,h2,h3,p,ul,ol,dl,dd,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}
-.pg :where(h1,h2,h3){font-weight:${d.weights[0]}}
+.pg :where(h1,h2,h3){font-weight:${cssNum(d.weights[0])}}
 .pg em{font-style:italic}
 .pg .it{font-style:italic}
-.disp{font-family:var(--display);font-weight:${d.weights[0]};letter-spacing:-0.005em}
+.disp{font-family:var(--display);font-weight:${cssNum(d.weights[0])};letter-spacing:-0.005em}
 .num{font-variant-numeric:tabular-nums}
 .q{color:var(--quiet)}
 .pg--std{display:block}
