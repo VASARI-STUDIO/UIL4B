@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink, useNavigate } from 'react-router-dom'
 import FontBrowseDialog from '../components/FontBrowseDialog'
 import MenuSelect from '../components/tool/MenuSelect'
@@ -50,16 +51,18 @@ import '../styles/pages/font-pair-board.css'
 // families are always defined, so the specimen can never render empty; when a
 // face is blocked the browser's own fallback shows and the notice explains why.
 
+// `short` is the label on a phone, where four segments share the row; the full
+// name stays as the accessible name.
 const PREVIEW_PRESETS = [
   { id: 'street', label: 'Street' },
   { id: 'article', label: 'Article' },
-  { id: 'product', label: 'Product page' },
+  { id: 'product', label: 'Product page', short: 'Product' },
   // "Letterforms", not "Specimen". The other two presets
   // name what you are looking AT in plain words, an article and a product page;
   // "specimen" named it in type-trade language, on the one preset that is not a
   // page at all. The id stays `specimen` because it is a stored preference key,
   // not a label.
-  { id: 'specimen', label: 'Letterforms' },
+  { id: 'specimen', label: 'Letterforms', short: 'Letters' },
 ]
 
 // The Street preset: the pair set on a photograph and the page under it. The
@@ -87,12 +90,13 @@ const PHOTO_WIDTH = 1100
 const PHOTO_HEIGHT = 670
 // One short line of running text for each suggestion row.
 const ROW_LINE = 'Pack my box with five dozen liquor jugs.'
-const ROW_HEAD_MAX = 40
 
-// The heading the pair page opens on when the carried design has no pairing to
-// show. A serif against the Inter body, so the first paint demonstrates the
-// contrast the tool is for.
-const PAIR_FALLBACK_HEADING = 'Playfair Display'
+// The pair the page opens on when the carried design has no pairing to show: the
+// sample brand's own faces, a heavy grotesque over a plain sans body.
+const PAIR_FALLBACK = {
+  heading: { family: 'Archivo', weight: 800 },
+  body: { family: 'IBM Plex Sans', weight: 400 },
+}
 
 function useMedia(query) {
   const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false)
@@ -173,10 +177,11 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
 }
 
 // A phone's bottom sheet for one family's controls. It locks the page scroll,
-// traps focus, closes on Escape and hands focus back (useModalDialog).
+// traps focus, closes on Escape and hands focus back (useModalDialog). Portalled
+// to <body> like the toolbar's More sheet, so the sticky dock cannot trap it.
 function FamilySheet({ title, onClose, children }) {
   const ref = useModalDialog(onClose)
-  return (
+  return createPortal(
     <div className="tl-sheet-layer fpr-sheet-layer">
       <div className="tl-sheet-scrim" aria-hidden="true" onClick={onClose} />
       <div ref={ref} className="tl-sheet fpr-sheet" role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
@@ -189,7 +194,8 @@ function FamilySheet({ title, onClose, children }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -221,12 +227,14 @@ export default function FontMatcher({ onCopy, toast }) {
   // a heading that equals the body is a non-pairing however it got there, and
   // comparing against the default cannot tell "never chose" from "chose Inter".
   // A real choice carried in from another tool still wins, because the only
-  // case this rejects is the one with nothing to show.
+  // case this rejects is the one with nothing to show; both slots then open on
+  // the sample brand's pair.
   const seedPairs = Boolean(seedHeading?.family) && seedHeading.family !== seedBody?.family
-  const [headingName, setHeadingName] = useState(() => (seedPairs ? seedHeading.family : PAIR_FALLBACK_HEADING))
-  const [bodyName, setBodyName] = useState(() => seedBody?.family || 'Inter')
-  const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 700)
-  const [bodyW, setBodyW] = useState(() => seedBody?.weight || 400)
+  const seed = seedPairs ? { heading: seedHeading, body: seedBody } : PAIR_FALLBACK
+  const [headingName, setHeadingName] = useState(() => seed.heading.family)
+  const [bodyName, setBodyName] = useState(() => seed.body.family)
+  const [headingW, setHeadingW] = useState(() => seed.heading.weight || 700)
+  const [bodyW, setBodyW] = useState(() => seed.body.weight || 400)
   const [previewText, setPreviewText] = useState('')
   const [preset, setPreset] = useState('street')
   const [ground, setGround] = useState('d')
@@ -611,9 +619,6 @@ export default function FontMatcher({ onCopy, toast }) {
   const bodyIsBestMatch = !!bestMatch && bestMatch.font.family === bodyFont.family
 
   const sample = previewText.trim()
-  // The typed words go in the heading slots only. The body slots keep their
-  // paragraph, because a body face is judged on running text.
-  const rowHead = sample ? sample.slice(0, ROW_HEAD_MAX) : 'Typography that carries the page'
 
   const specimenVars = {
     '--fpr-h-ff': headingStack,
@@ -636,17 +641,18 @@ export default function FontMatcher({ onCopy, toast }) {
       body: { family: bodyFont.family, weight: bodyW, category: bodyFont.category },
     })
   }
+  // The heading card's own action. Its name says which side it moves.
   const shuffleButton = (
     <ToolButton
       icon="shuffle"
-      variant={phone ? 'square' : 'quiet'}
-      className="fpr-dock-shuffle"
+      iconSize={14}
+      className="fpr-shuffle"
       onClick={shuffle}
       disabled={!ready}
-      aria-label={phone ? shuffleName : undefined}
+      aria-label={shuffleName}
       title={shuffleName}
     >
-      {!phone && 'Shuffle'}
+      Shuffle
     </ToolButton>
   )
   const saveButton = (
@@ -660,79 +666,122 @@ export default function FontMatcher({ onCopy, toast }) {
     </div>
   )
 
-  // The families, the preview text, and the lock/best-match controls.
+  // The two family cards. The panel (from 768) and the phone's family sheet
+  // carry the same ones, so a change to a card lands in both.
+  const headingCard = (
+    <FamilyCard
+      label="Heading family"
+      intent="heading"
+      fonts={catalog}
+      font={headingFont}
+      weight={headingW}
+      locked={locks.heading}
+      onToggleLock={() => toggleLock('heading')}
+      onPickFont={chooseHeading}
+      onWeight={(w) => {
+        setHeadingW(w)
+        setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
+      }}
+      headAction={shuffleButton}
+    />
+  )
+  const bodyCard = (
+    <FamilyCard
+      label="Body family"
+      fonts={catalog}
+      font={bodyFont}
+      weight={bodyW}
+      locked={locks.body}
+      onToggleLock={() => toggleLock('body')}
+      onPickFont={chooseBody}
+      onWeight={(w) => {
+        setBodyW(w)
+        setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
+      }}
+      headAction={(
+        <ToolButton
+          variant="quiet"
+          icon={bodyIsBestMatch ? undefined : 'magic-wand'}
+          iconSize={14}
+          className="fpr-wand"
+          onClick={() => { if (bestMatch) applyPair(bestMatch.font) }}
+          disabled={!bestMatch || bodyIsBestMatch}
+          title={bestMatch
+            ? `Use ${bestMatch.font.family}, the top suggestion for ${headingFont.family}`
+            : 'No suggestions yet'}
+          aria-label={bestMatch
+            ? (bodyIsBestMatch
+              ? `Best match for ${headingFont.family} is in use: ${bestMatch.font.family}`
+              : `Use the best match for ${headingFont.family}: ${bestMatch.font.family}`)
+            : undefined}
+        >
+          {bodyIsBestMatch ? <><span aria-hidden="true">✓ </span>Best match</> : 'Best match'}
+        </ToolButton>
+      )}
+    />
+  )
+
+  // Both cards, and on a tablet the preview text between them and the
+  // suggestions. A desktop keeps that field in the stage head, a phone in More.
   const panelWith = (suggestNode) => (
     <ToolPanel label="Font Pair controls" className="fpr-panel fpr-config">
       <div className="fpr-fams">
-        <FamilyCard
-          label="Heading family"
-          intent="heading"
-          fonts={catalog}
-          font={headingFont}
-          weight={headingW}
-          locked={locks.heading}
-          onToggleLock={() => toggleLock('heading')}
-          onPickFont={chooseHeading}
-          onWeight={(w) => {
-            setHeadingW(w)
-            setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
-          }}
-        />
-        <FamilyCard
-          label="Body family"
-          fonts={catalog}
-          font={bodyFont}
-          weight={bodyW}
-          locked={locks.body}
-          onToggleLock={() => toggleLock('body')}
-          onPickFont={chooseBody}
-          onWeight={(w) => {
-            setBodyW(w)
-            setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
-          }}
-          headAction={(
-            <ToolButton
-              variant="quiet"
-              icon={bodyIsBestMatch ? undefined : 'magic-wand'}
-              iconSize={14}
-              className="fpr-wand"
-              onClick={() => { if (bestMatch) applyPair(bestMatch.font) }}
-              disabled={!bestMatch || bodyIsBestMatch}
-              title={bestMatch
-                ? `Use ${bestMatch.font.family}, the top suggestion for ${headingFont.family}`
-                : 'No suggestions yet'}
-              aria-label={bestMatch
-                ? (bodyIsBestMatch
-                  ? `Best match for ${headingFont.family} is in use: ${bestMatch.font.family}`
-                  : `Use the best match for ${headingFont.family}: ${bestMatch.font.family}`)
-                : undefined}
-            >
-              {bodyIsBestMatch ? <><span aria-hidden="true">✓ </span>Best match</> : 'Best match'}
-            </ToolButton>
-          )}
-        />
+        {headingCard}
+        {bodyCard}
       </div>
-      <div className="fpr-text">
-        <label className="fpr-label" htmlFor="fpr-text">Preview text</label>
-        <input
-          id="fpr-text"
-          className="fpr-input"
-          type="text"
-          value={previewText}
-          placeholder="Type your own words"
-          maxLength={90}
-          spellCheck="false"
-          enterKeyHint="done"
-          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-          onChange={e => setPreviewText(e.target.value)}
-        />
-        <p className="fpr-hint">
-          Your words go in the headings. The body keeps a real paragraph, so you
-          can judge the face on running text.
-        </p>
-      </div>
+      {!desktop && (
+        <div className="fpr-text">
+          <label className="fpr-label" htmlFor="fpr-text">Preview text</label>
+          {previewInput('fpr-text', 'fpr-input')}
+          <p className="fpr-hint">
+            Your words go in the headings. The body keeps a real paragraph, so you
+            can judge the face on running text.
+          </p>
+        </div>
+      )}
       {suggestNode}
     </ToolPanel>
+  )
+
+  // A phone sees the pair as two rows under the specimen; each opens its sheet.
+  const famRow = (side, label, font, weight) => (
+    <button
+      type="button"
+      className="fpr-frow"
+      aria-haspopup="dialog"
+      aria-label={`${label}, ${font.family}, weight ${weight}. Change`}
+      onClick={() => setSheet(side)}
+      ref={varsRef({ '--fpr-fam-ff': fontStack(font), '--fpr-fam-fw': String(weight) })}
+    >
+      <span className="fpr-frow-t">
+        <span className="fpr-label">{label}</span>
+        <span className="fpr-frow-n">{font.family}</span>
+      </span>
+      <span className="fpr-frow-w">{weight}</span>
+      <ToolIcon name="caret-right" size={16} className="fpr-frow-chev" />
+    </button>
+  )
+  const famRows = (
+    <div className="fpr-fampair" role="group" aria-label="Current font pair">
+      {famRow('heading', 'Heading family', headingFont, headingW)}
+      {famRow('body', 'Body family', bodyFont, bodyW)}
+    </div>
+  )
+
+  // The dock's two pills on a phone: the same two sheets, one tap from the Save
+  // and Copy CSS they sit beside.
+  const dockPill = (side, label, font, weight) => (
+    <button
+      type="button"
+      className="fpr-pill"
+      aria-haspopup="dialog"
+      aria-label={`${label} family, ${font.family}, weight ${weight}. Change`}
+      onClick={() => setSheet(side)}
+      ref={varsRef({ '--fpr-fam-ff': fontStack(font), '--fpr-fam-fw': String(weight) })}
+    >
+      <span className="fpr-pill-l">{label}</span>
+      <span className="fpr-pill-n">{font.family}</span>
+    </button>
   )
 
   // The specimen: a real article at real sizes.
@@ -742,17 +791,25 @@ export default function FontMatcher({ onCopy, toast }) {
       <div className="fpr-stage-head">
         <ToolPills
           label="Preview layout"
-          options={PREVIEW_PRESETS.map((p) => ({ value: p.id, label: p.label }))}
+          className="fpr-presets"
+          options={PREVIEW_PRESETS.map((p) => ({
+            value: p.id,
+            label: phone && p.short ? p.short : p.label,
+            ariaLabel: phone && p.short ? p.label : undefined,
+          }))}
           value={preset}
           onChange={setPreset}
         />
-        {/* The current pair, set in the two families it names: the one
-            place on the page that states it. */}
-        <div className="fpr-pair" role="group" aria-label="Current font pair" ref={varsRef(specimenVars)}>
-          <span>{headingFont.family}</span>
-          <i aria-hidden="true">+</i>
-          <span>{bodyFont.family}</span>
-        </div>
+        {desktop && previewInput('fpr-text-stage', 'fpr-input fpr-input--stage')}
+        {/* The current pair, set in the two families it names. A phone states
+            it in the family rows and the dock instead. */}
+        {!phone && (
+          <div className="fpr-pair" role="group" aria-label="Current font pair" ref={varsRef(specimenVars)}>
+            <span>{headingFont.family}</span>
+            <i aria-hidden="true">+</i>
+            <span>{bodyFont.family}</span>
+          </div>
+        )}
       </div>
 
       <div className={preset === 'street' ? 'fpr-specimen fpr-specimen--street' : 'fpr-specimen'} data-ground={ground} ref={varsRef(specimenVars)}>
@@ -829,8 +886,59 @@ export default function FontMatcher({ onCopy, toast }) {
     </section>
   )
 
-  // Each row is one tap target: the pair drawn in both faces, and the reason
-  // under it in plain view.
+  // One compact row per suggestion: the family and the action on one line, then
+  // a line of running text in that face. The reason sits once above its group.
+  const suggestRow = ({ font }, reasonId) => {
+    const active = font.family === bodyFont.family
+    return (
+      <li
+        key={font.family}
+        className={active ? 'fpr-card fpr-card--on' : 'fpr-card'}
+        ref={varsRef({ '--fpr-b-ff': fontStack(font), '--fpr-b-fw': String(bodyWeight(font)) })}
+      >
+        <button
+          type="button"
+          className="fpr-card-apply"
+          onClick={() => applyPair(font)}
+          aria-pressed={active}
+          aria-label={active ? `${font.family} with ${headingFont.family}, in use` : `Use ${font.family} with ${headingFont.family}`}
+          aria-describedby={reasonId}
+        >
+          <span className="fpr-card-line">
+            <span className="fpr-card-name">{font.family}</span>
+            <span className="fpr-card-cta">
+              {active ? <><ToolIcon name="check" size={14} />In use</> : 'Use this pair'}
+            </span>
+          </span>
+          <span className="fpr-card-text">{ROW_LINE}</span>
+        </button>
+      </li>
+    )
+  }
+  // The pairing engine gives one reason per body category, so rows with the
+  // same reason share one line above them.
+  const suggestGroups = (list, key) => {
+    const groups = []
+    list.forEach((s) => {
+      const group = groups.find((g) => g.reason === s.reason)
+      if (group) group.items.push(s)
+      else groups.push({ reason: s.reason, items: [s] })
+    })
+    return groups.map((g, i) => {
+      const reasonId = `fpr-why-${key}-${i}`
+      return (
+        <div className="fpr-sug-group" key={reasonId}>
+          <p className="fpr-reason" id={reasonId}>{g.reason}</p>
+          <ul className="fpr-suggest-grid" aria-label={`${categoryLabel(g.items[0].font.category)} body faces`}>
+            {g.items.map((s) => suggestRow(s, reasonId))}
+          </ul>
+        </div>
+      )
+    })
+  }
+  const monoBodies = suggestions.filter((s) => s.font.category === 'monospace')
+  const plainBodies = suggestions.filter((s) => s.font.category !== 'monospace')
+
   const suggest = (
     <section className="fpr-suggest" aria-labelledby="fpr-suggest-title">
       <div className="fpr-section-head">
@@ -855,50 +963,34 @@ export default function FontMatcher({ onCopy, toast }) {
           </button>
         </div>
       ) : (
-        <ul className="fpr-suggest-grid">
-          {suggestions.map(({ font, reason }) => {
-            const active = font.family === bodyFont.family
-            const reasonId = `fpr-why-${font.family.replace(/[^a-z0-9]+/gi, '-')}`
-            return (
-              <li
-                key={font.family}
-                className={active ? 'fpr-card fpr-card--on' : 'fpr-card'}
-                ref={varsRef({
-                  '--fpr-b-ff': fontStack(font),
-                  '--fpr-b-fw': String(bodyWeight(font)),
-                  '--fpr-h-ff': headingStack,
-                  '--fpr-h-fw': String(headingW),
-                })}
+        <>
+          {suggestGroups(plainBodies, 'plain')}
+          {monoBodies.length > 0 && (
+            <div className="fpr-mono">
+              <button
+                type="button"
+                className="fpr-disc"
+                aria-expanded={monoOpen}
+                aria-controls="fpr-mono-list"
+                onClick={() => setMonoOpen((o) => !o)}
               >
-                <button
-                  type="button"
-                  className="fpr-card-apply"
-                  onClick={() => applyPair(font)}
-                  aria-pressed={active}
-                  aria-label={active ? `${font.family} with ${headingFont.family}, in use` : `Use ${font.family} with ${headingFont.family}`}
-                  aria-describedby={reasonId}
-                >
-                  <span className="fpr-card-head">{rowHead}</span>
-                  <span className="fpr-card-text">{ROW_LINE}</span>
-                  <span className="fpr-card-line">
-                    <span className="fpr-card-name">{font.family}</span>
-                    <span className="fpr-card-cta">
-                      {active ? <><span aria-hidden="true">✓ </span>In use</> : 'Use this pair'}
-                    </span>
-                  </span>
-                  <span className="fpr-card-reason" id={reasonId}>{reason}</span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+                Mono bodies ({monoBodies.length})
+                <ToolIcon name="caret-down" size={16} className="fpr-chev" />
+              </button>
+              {monoOpen && <div id="fpr-mono-list">{suggestGroups(monoBodies, 'mono')}</div>}
+            </div>
+          )}
+        </>
       )}
     </section>
   )
 
   const delivery = (
     <details className="fpr-delivery">
-      <summary>Prepare the handoff</summary>
+      <summary>
+        Prepare the handoff
+        <ToolIcon name="caret-down" size={16} className="fpr-chev" />
+      </summary>
       <p className="fpr-hint">One import and one block of CSS. Weights loaded: {describePairImport(importFamilies)}.</p>
       <pre id="fpr-export" className="tl-code fpr-export" tabIndex={0} aria-label="CSS for this pair"><code>{cssExport}</code></pre>
     </details>
@@ -917,12 +1009,11 @@ export default function FontMatcher({ onCopy, toast }) {
       <ToolGrid className="fpr-grid">
         {phone ? (
           <>
-            {/* A phone opens on the specimen, then the controls, then the
-                suggestions. DOM order is the reading and focus order. */}
-            <ToolMain className="fpr-output fpr-output--stage">{stage}</ToolMain>
-            {panelWith(suggest)}
-            <ToolMain className="fpr-output fpr-output--rest">
-
+            {/* A phone opens on the specimen, then the two family rows; each
+                row opens a sheet with that family's controls. */}
+            <ToolMain className="fpr-output">
+              {stage}
+              {famRows}
               {delivery}
             </ToolMain>
           </>
@@ -943,16 +1034,26 @@ export default function FontMatcher({ onCopy, toast }) {
 
       {/* The docked bar: one stack above the tab bar on a phone. */}
       <div className="fpr-dock" role="group" aria-label="Pair actions">
-        {desktop && <p className="fpr-dock-note">Keeps both families with your project</p>}
-        {!desktop && !phone && shuffleButton}
+        {!phone && (
+          <p className="fpr-dock-note">
+            {canSaveProjects ? 'Keeps both families with your project' : 'Kept in this browser. Log in to save it to a project.'}
+          </p>
+        )}
+        {phone && dockPill('heading', 'Heading', headingFont, headingW)}
+        {phone && dockPill('body', 'Body', bodyFont, bodyW)}
         {saveButton}
-        {phone && shuffleButton}
         {phone && (
           <ToolButton variant="accent" icon="copy" iconSize={14} className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)} disabled={!cssExport}>
             Copy CSS
           </ToolButton>
         )}
       </div>
+
+      {phone && sheet && (
+        <FamilySheet title={sheet === 'heading' ? 'Heading family' : 'Body family'} onClose={() => setSheet(null)}>
+          {sheet === 'heading' ? headingCard : <>{bodyCard}{suggest}</>}
+        </FamilySheet>
+      )}
 
       {/* Step 2 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="fonts" />
