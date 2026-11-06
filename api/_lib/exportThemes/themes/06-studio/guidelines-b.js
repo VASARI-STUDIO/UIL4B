@@ -83,7 +83,7 @@ const own = {
 
   'type-rules'(ctx) {
     const R = ctx.brand.type.rules, c = ctx.brand.ui.screen.content, L = ctx.roles.light, ui = ctx.ui;
-    const q = ctx.pairs.find((p) => p.fg === 'quiet' && p.bgHex.toLowerCase() === L.surface.toLowerCase());
+    const q = ctx.pairs.find((p) => p.fg === 'quiet' && p.bgHex.toLowerCase() === L.surface.toLowerCase()) || { ratio: ctx.ratio(L.quiet, L.surface) };  // a brand with no quiet pair on the surface gets the measured ratio
     const faded = mix(ctx, L.text, L.surface, 0.62), fr = ctx.ratio(faded, L.surface);
     const amt = c.deliveries[1].price;
     const t = (inner) => `<div class="b-demo ui">${inner}</div>`, tn = (inner) => `<div class="b-demo ui">${inner}${strike}</div>`;
@@ -95,10 +95,11 @@ const own = {
       [t(`<span class="b-sw" style="background:${L.quiet}"></span><span class="b-fig2">Quiet Ink, <span class="num">${ctx.fmt(q.ratio)} : 1</span> on White</span>`), tn(`<span class="b-sw" style="background:${faded}"></span><span class="b-fig2">Ink faded, <span class="num">${ctx.fmt(fr)} : 1</span> on White</span>`)],
       [t(`<span class="b-mono b-mono--l">${A(L.action)}</span>`), tn(`<span class="b-mono b-mono--l">${A(amt)}</span>`)],
     ];
+    const Rn = R.slice(0, demos.length);  // the demos cover five rules; a brand with more shows the first five
     const names = ['Display size', 'Figures', 'Case', 'Secondary text', 'Mono'];
     const ic = (n) => ui.icon(n, 16);
-    const rows = R.map((r, i) => `<li class="b-panel b-tr"><p class="b-tr__n">${nb(i + 1)}${names[i] || ''}</p><div class="b-tr__c">${demos[i][0]}<p class="b-ic">${ic('check')}<span>${A(r.do)}</span></p></div><div class="b-tr__c">${demos[i][1]}<p class="b-ic b-ic--no">${ic('x')}<span>${A(r.dont)}</span></p></div></li>`).join('');
-    return std(ctx, 'type-rules', `<div class="b-trh"><span></span><h3 class="h3">Do</h3><h3 class="h3">Don't</h3></div><ul class="b-trs">${rows}</ul>`, { lead: `${R.length} rules for setting type. Each says what to do, and what never happens. The cut marks the wrong way.` });
+    const rows = Rn.map((r, i) => `<li class="b-panel b-tr"><p class="b-tr__n">${nb(i + 1)}${names[i] || ''}</p><div class="b-tr__c">${demos[i][0]}<p class="b-ic">${ic('check')}<span>${A(r.do)}</span></p></div><div class="b-tr__c">${demos[i][1]}<p class="b-ic b-ic--no">${ic('x')}<span>${A(r.dont)}</span></p></div></li>`).join('');
+    return std(ctx, 'type-rules', `<div class="b-trh"><span></span><h3 class="h3">Do</h3><h3 class="h3">Don't</h3></div><ul class="b-trs">${rows}</ul>`, { lead: `${Rn.length} rules for setting type. Each says what to do, and what never happens. The cut marks the wrong way.` });
   },
 
   'photo-direction'(ctx) {
@@ -194,7 +195,7 @@ ${ab(m, 640, span(8), 0, '', `<p class="disp" style="font-size:56px;line-height:
     const k = 198 / 1080, lw = 260;
     const lg = (id, o) => L.html(id, { label: 'Logo', ...o });
     const line = S[0].split(/(?<=\.)\s/);
-    const [paidW, ...paidRest] = S[2].split(/(?<=\.)\s/), [, amt, from] = paidRest.join(' ').match(/^(\S+)\s+(.*)$/);
+    const [paidW, ...paidRest] = S[2].split(/(?<=\.)\s/), [, amt, from] = paidRest.join(' ').match(/^(\S+)\s+(.*)$/) || [null, c.paid, c.rider];  // a line without an amount and a name takes them from the screen copy
     const square = `${ab(72, 72, lw, 0, '', lg('colour', { width: lw, colourway: 'reversed', color: rev.name }))}${ab(72, 460, 936, 0, '', `<p class="disp" style="font-size:132px;line-height:1.05;color:var(--dark-ink)">${line.map((l) => A(l)).join('<br>')}</p>`)}`;
     const portrait = `${ab(0, 0, 1080, 880, '', ctx.photo('ute', { cls: 'b-fill', style: 'font-size:36px;padding:56px;line-height:1.4;border-radius:0' }))}${ab(72, 940, 936, 0, '', `<p class="disp" style="font-size:112px;line-height:1.05">${A(S[1])}</p>`)}${ab(72, 1350 - 72 - 64, lw, 0, '', lg('colour', { width: lw, color: cw.colour.name }))}`;
     const story = `${ab(72, 250, lw, 0, '', lg('colour', { width: lw, colourway: 'on-steel', color: sw.name }))}
