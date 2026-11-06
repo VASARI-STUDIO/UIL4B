@@ -4,14 +4,17 @@ import PhIcon from '../spectrum/PhIcon'
 import { EXPORT_THEMES } from '../../config/exportFormats'
 import { THEME_FACTS, numberWord } from '../../config/planFacts'
 import { DEFAULT_KIND_ID, SHOWCASE_KINDS, showcaseImage, showcaseRatio } from './showcaseImages'
+import { preloadPage } from './showcasePreload'
+import ShowcaseViewer from './ShowcaseViewer'
 import '../../styles/pages/home-showcase.css'
 
 // ships with the export themes
 // "Pick a page, compare ten themes": a picker of page kinds over two rows that show
 // the picked kind in every export theme. Only the picked kind's images are in the
-// DOM. A pick swaps all of them in one commit, once every new page has loaded.
+// DOM. A pick swaps all of them in one commit, once every new page has loaded, or after
+// SLOW_SWAP_MS with the ones that have. A page is replaced, never faded: the new one is
+// already in the cache when it appears.
 
-const noop = () => {}
 const capitalise = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 const joinAnd = (items) => (items.length < 2
   ? items.join('')
@@ -23,47 +26,27 @@ const LANDSCAPE = SLOTS.filter((s) => s.landscape)
 const PORTRAIT = SLOTS.filter((s) => !s.landscape)
 
 const INTENT_DELAY_MS = 80
+// How long a pick waits for all ten pages before swapping the ones it has.
+const SLOW_SWAP_MS = 600
 const kindIndex = (id) => SHOWCASE_KINDS.findIndex((k) => k.id === id)
 const kindLabel = (id) => SHOWCASE_KINDS[kindIndex(id)].label
 
 // ── Page loading ─────────────────────────────────────────────────────────────
 //
-// A page is "ready" once its thumbnail is in the browser's cache. Loading goes
-// through a detached <picture> built like the visible one, so the browser picks
-// the same file (AVIF, else WebP) and the visible image is served from cache.
+// A page is "ready" once its thumbnail is in the browser's cache (see preloadPage), so
+// the visible image is served from cache. A failed load is forgotten, so it can retry.
 
 const loads = new Map()
 const ready = new Set()
-const pending = new Set()
 const pageKey = (themeId, kindId) => `${themeId}/${kindId}`
 
 function loadPage(themeId, kindId) {
   const key = pageKey(themeId, kindId)
   if (loads.has(key)) return loads.get(key)
-  const { thumb } = showcaseImage(themeId, kindId)
-  const promise = new Promise((resolve) => {
-    const picture = document.createElement('picture')
-    for (const [type, srcset] of [['image/avif', thumb.avif], ['image/webp', thumb.webp]]) {
-      const source = document.createElement('source')
-      source.type = type
-      source.srcset = srcset
-      picture.appendChild(source)
-    }
-    const img = document.createElement('img')
-    picture.appendChild(img)
-    // The set holds the element until it settles, so a load in flight is never collected.
-    pending.add(picture)
-    img.onload = () => {
-      pending.delete(picture)
-      ready.add(key)
-      resolve(true)
-    }
-    img.onerror = () => {
-      pending.delete(picture)
-      loads.delete(key)
-      resolve(false)
-    }
-    img.src = thumb.webp
+  const promise = preloadPage(showcaseImage(themeId, kindId).thumb).then((ok) => {
+    if (ok) ready.add(key)
+    else loads.delete(key)
+    return ok
   })
   loads.set(key, promise)
   return promise
@@ -88,7 +71,7 @@ const ShowcaseTile = memo(function ShowcaseTile({ slot, kindId, failed, onFailed
           className="hsc-open"
           aria-haspopup="dialog"
           aria-label={`Enlarge ${alt}`}
-          onClick={() => onOpen(index)}
+          onClick={() => onOpen(index, kindId)}
         >
           <span className="hsc-page">
             {failed ? (
@@ -129,10 +112,11 @@ const ShowcaseTile = memo(function ShowcaseTile({ slot, kindId, failed, onFailed
 
 // ── The section ──────────────────────────────────────────────────────────────
 
-export default function HomeShowcase({ onOpen = noop }) {
+export default function HomeShowcase() {
   const rootRef = useRef(null)
   const tabRefs = useRef([])
   const intentTimer = useRef(0)
+  const swapTimer = useRef(0)
   const swapToken = useRef(0)
   // `kindId` is the picked kind. `shown` is the kind each page currently displays: it
   // trails the pick until the new pages have loaded, and stays put for a page that fails.
@@ -140,9 +124,12 @@ export default function HomeShowcase({ onOpen = noop }) {
   const [shown, setShown] = useState(() => EXPORT_THEMES.map(() => DEFAULT_KIND_ID))
   const [failed, setFailed] = useState(() => EXPORT_THEMES.map(() => false))
   const [announce, setAnnounce] = useState('')
+  // The page open in the viewer: its position in the theme list and the kind it was showing.
+  const [viewer, setViewer] = useState(null)
 
   useEffect(() => () => {
     window.clearTimeout(intentTimer.current)
+    window.clearTimeout(swapTimer.current)
     swapToken.current += 1
   }, [])
 
@@ -150,10 +137,15 @@ export default function HomeShowcase({ onOpen = noop }) {
     setFailed((prev) => (prev[index] ? prev : prev.map((f, i) => (i === index ? true : f))))
   }, [])
 
+  const openViewer = useCallback((index, openKindId) => setViewer({ index, kindId: openKindId }), [])
+  const closeViewer = useCallback(() => setViewer(null), [])
+
   const swapTo = useCallback((id) => {
     const token = ++swapToken.current
+    window.clearTimeout(swapTimer.current)
+    const current = () => token === swapToken.current
+    // `results[i]` says whether theme i's new page is ready to show.
     const apply = (results) => {
-      if (token !== swapToken.current) return
       setShown((prev) => prev.map((k, i) => (results[i] ? id : k)))
       setFailed((prev) => prev.map((f, i) => (results[i] ? false : f)))
       rootRef.current?.querySelectorAll('[data-hsc-rail]').forEach((rail) => { rail.scrollLeft = 0 })
@@ -162,7 +154,30 @@ export default function HomeShowcase({ onOpen = noop }) {
       apply(EXPORT_THEMES.map(() => true))
       return
     }
-    Promise.all(EXPORT_THEMES.map((t) => loadPage(t.id, id))).then(apply)
+    const loading = EXPORT_THEMES.map((t) => loadPage(t.id, id))
+    let swapped = false
+    // Not everything arrived in time: swap the pages that are ready. Each of the others keeps
+    // its old image, and swaps on its own as soon as its new one has loaded.
+    swapTimer.current = window.setTimeout(() => {
+      if (!current() || swapped) return
+      swapped = true
+      const results = EXPORT_THEMES.map((t) => ready.has(pageKey(t.id, id)))
+      apply(results)
+      loading.forEach((load, at) => {
+        if (results[at]) return
+        load.then((ok) => {
+          if (!ok || !current()) return
+          setShown((prev) => prev.map((k, i) => (i === at ? id : k)))
+          setFailed((prev) => prev.map((f, i) => (i === at ? false : f)))
+        })
+      })
+    }, SLOW_SWAP_MS)
+    Promise.all(loading).then((results) => {
+      if (!current() || swapped) return
+      swapped = true
+      window.clearTimeout(swapTimer.current)
+      apply(results)
+    })
   }, [])
 
   const pick = useCallback((id, { focus = false } = {}) => {
@@ -205,7 +220,7 @@ export default function HomeShowcase({ onOpen = noop }) {
           kindId={shown[slot.index]}
           failed={failed[slot.index]}
           onFailed={markFailed}
-          onOpen={onOpen}
+          onOpen={openViewer}
         />
       ))}
     </ul>
@@ -270,7 +285,8 @@ export default function HomeShowcase({ onOpen = noop }) {
         <div className="hsc-foot">
           {/* ships with the export themes */}
           <p className="hsc-footnote">
-            {joinAnd(EXPORT_THEMES.map((t) => t.brand))} are sample brands; {EXPORT_THEMES[0].brand}’s photos are from Unsplash.
+            {joinAnd(EXPORT_THEMES.map((t) => t.brand))} are sample brands; {EXPORT_THEMES[0].brand}’s photos are from Unsplash.{' '}
+            {THEME_FACTS.uiKitNote}; every other export is Pro.
           </p>
           <Link className="hsc-cta ui-pill-out" to="/projects">
             Open the toolkit
@@ -278,6 +294,7 @@ export default function HomeShowcase({ onOpen = noop }) {
           </Link>
         </div>
       </div>
+      {viewer && <ShowcaseViewer startIndex={viewer.index} kindId={viewer.kindId} onClose={closeViewer} />}
     </div>
   )
 }
