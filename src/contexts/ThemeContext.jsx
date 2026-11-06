@@ -63,10 +63,18 @@ export function ThemeProvider({ children }) {
   // reachable as `themePref` only by the controls that have to render it.
   const theme = pref === 'system' ? (osDark ? 'dark' : 'light') : pref
 
+  // A page drawn on one fixed ground (the sales page is dark in both schemes)
+  // asks for it here while it is mounted, so the page ground, the nav and the
+  // browser chrome tint all follow it. `theme` stays the visitor's own resolved
+  // choice, which the controls that show it still read; only the attribute below
+  // takes the page's ground. null hands the attribute back to `theme`.
+  const [pageTheme, setPageTheme] = useState(null)
+  const applied = pageTheme || theme
+
   useEffect(() => {
     // The attribute goes on FIRST and unguarded — a visitor whose storage throws
     // still gets a correctly themed page, they just start from system each load.
-    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.setAttribute('data-theme', applied)
 
     // Then the browser chrome tint, which index.html cannot finish on its own.
     //
@@ -102,7 +110,7 @@ export function ThemeProvider({ children }) {
       document.head.prepend(meta)
     }
     meta.setAttribute('content', ground)
-  }, [theme])
+  }, [applied])
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, pref) } catch { /* storage unavailable */ }
@@ -125,7 +133,7 @@ export function ThemeProvider({ children }) {
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark')
 
   return (
-    <ThemeContext.Provider value={{ theme, themePref: pref, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, themePref: pref, toggleTheme, setTheme, setPageTheme }}>
       {children}
     </ThemeContext.Provider>
   )

@@ -60,10 +60,10 @@ test.describe('the homepage below the hero', () => {
    *     Soon badge left to guard on this page.
    *
    * ALSO REMOVED: "ends on the price panel — the closing CTA banner is gone".
-   * Spectrum DOES end on a closing CTA section (.sp-close, "Start your first
-   * kit today") after the pricing and FAQ. That is the design as drawn, so
-   * asserting the banner's absence would fail a page behaving as drawn; a
-   * test does not overrule the design to satisfy an old rule. */
+   * The homepage DOES end on a final call (#start, "Start your first project
+   * today.") after the plans section, so asserting a closing banner's absence
+   * would fail a page behaving as drawn. The last test of this block holds the
+   * final call to its own copy and to a single free way in instead. */
 
   test('the plans page describes Pro from the config that enforces it', async ({ page }) => {
     // Was: "Free covers the complete core toolkit with no trial clock. Pro
@@ -98,6 +98,33 @@ test.describe('the homepage below the hero', () => {
     await go(page, '/')
     await expectRendered(page, '/')
     await expect(page.locator('.sp-plan'), 'a plan card is back on the landing').toHaveCount(0)
+  })
+
+  test('ends on the final call: its own headline and line, one free way in, none of the old band', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/')
+    await expectRendered(page, '/')
+
+    // The final call is the last thing in <main>; the footer follows it.
+    const close = page.locator('#main > section#start')
+    await expect(close, 'the final call is not the last section of the page').toHaveCount(1)
+    expect(await page.locator('#main > section').last().getAttribute('id')).toBe('start')
+    await expect(close.getByRole('heading', { level: 2 })).toHaveText('Start your first project today.')
+    await expect(close.locator('p')).toHaveText(
+      'Free to use, no account needed. Sign up when you want to export files or save projects and come back to them.',
+    )
+
+    // One way in, and it is free: the toolkit, no sign-up form in the way.
+    await expect(close.getByRole('link'), 'the final call offers more than one way in').toHaveCount(1)
+    await expect(close.getByRole('link', { name: 'Open the toolkit' })).toHaveAttribute('href', '/projects')
+    await expect(close.getByRole('button'), 'the final call opens a sign-up form').toHaveCount(0)
+
+    // The old closing band's classes, headline and buttons are gone.
+    await expect(page.locator('.sp-close, .sp-close-cta'), 'the old closing band is back').toHaveCount(0)
+    for (const old of ['Start your first kit today', 'Use for free']) {
+      await expect(close.getByText(old), `"${old}" is back in the final call`).toHaveCount(0)
+    }
+    await expect(close.getByRole('link', { name: 'See the plans' }), '"See the plans" is back in the final call').toHaveCount(0)
   })
 
 })

@@ -2,21 +2,23 @@
 //
 // What this pins, at 390 (touch), 768 (touch) and 1440 (mouse):
 //   · Hover styles apply only where a pointer can hover. A pointer over the phone
-//     tab or the marketing icon button leaves it as it was on a touch screen; on
-//     a mouse the same move still lights it (the control).
-//   · The marketing quiet links (Tools / Pricing / On mobile) take a 44px touch
-//     hit area on a coarse pointer, and nothing else about them changes: the
-//     drawn boxes are the same as with a mouse, and a mouse gets no extra area.
+//     tab or a marketing quiet link leaves it as it was on a touch screen; on a
+//     mouse the same move still lights it (the control).
+//   · The marketing quiet links (Tools / Plans / On mobile) are drawn 44px tall at
+//     every width and for every pointer, so a finger needs no extra hit area and a
+//     mouse gets none: the boxes are the same on touch and with a mouse.
 //   · The Admin dashboard row in the account popover has a shield icon, sized and
 //     aligned like its sibling rows, for the admin only.
-//   · One name for /plans: "Pricing" in both menus and both footers, and the
-//     settings row reads "Account and settings".
-//   · The footer's Privacy / Terms / Credits links are shown once at every width:
-//     in the baseline row up to 760px, as the LEGAL column from 761px. Both sit in
-//     the page from the first render, so crossing the line moves nothing.
+//   · The app's menus name /plans "Pricing" and its settings row reads "Account and
+//     settings". The marketing footer names it "Plans", as the marketing bar does.
+//   · The marketing footer's Privacy / Terms / Credits links: the home page keeps
+//     them in the LEGAL column at every width; every other marketing page shows
+//     them once, in the baseline row up to 760px and as the LEGAL column from
+//     761px. Both sets sit in the page from the first render, so crossing the line
+//     moves nothing.
 //
-// The drawn quiet links are 32px tall (16px line, 8px padding above and below) and
-// set in the UI sans: sentence case, 13px, weight 560, normal tracking.
+// The drawn quiet links are 44px tall and set in the UI sans: sentence case, 14px,
+// weight 400, normal tracking.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -46,7 +48,6 @@ const centre = async (loc) => {
 }
 const canHover = (page) => page.evaluate(() => matchMedia('(hover: hover)').matches)
 const colour = (loc) => loc.evaluate((el) => getComputedStyle(el).color)
-const fill = (loc) => loc.evaluate((el) => getComputedStyle(el).backgroundColor)
 
 // ── 3a: hover only where a pointer can hover ─────────────────────────────────
 test.describe('hover styles', () => {
@@ -80,34 +81,37 @@ test.describe('hover styles', () => {
     await ctx.close()
   })
 
-  test('768 touch: a pointer over the theme button leaves its fill at the resting 5.5%', async ({ browser }) => {
+  // The quiet link rests at 68% ink and goes to full ink on a hover that a
+  // pointer can make. "Plans" is used because no quiet link is current on `/`.
+  test('768 touch: a pointer over a quiet link leaves it at its resting 68% ink', async ({ browser }) => {
     const { ctx, page } = await open(browser, TABLET, 'a tablet visitor')
     await go(page, '/')
     expect(await canHover(page), 'POSITIVE CONTROL: this context can hover').toBe(false)
-    const icon = page.locator('.spnav-icon').first()
-    await expect(icon).toBeVisible()
-    expect(alpha(await fill(icon))).toBeCloseTo(0.055, 3)
-    const { x, y } = await centre(icon)
+    const link = page.locator('.spnav-quiet-link', { hasText: 'Plans' })
+    await expect(link).toBeVisible()
+    expect(alpha(await colour(link))).toBeCloseTo(0.68, 2)
+    const { x, y } = await centre(link)
     await page.mouse.move(x, y)
     await page.waitForTimeout(300)
-    expect(await icon.evaluate((el) => el.matches(':hover')), 'the pointer is not over the button, so this proves nothing').toBe(true)
-    expect(alpha(await fill(icon)), 'a hover latched the hover fill').toBeCloseTo(0.055, 3)
+    expect(await link.evaluate((el) => el.matches(':hover')), 'the pointer is not over the link, so this proves nothing').toBe(true)
+    expect(alpha(await colour(link)), 'a hover latched the hover ink').toBeCloseTo(0.68, 2)
     await ctx.close()
   })
 
-  test('1440 mouse: hovering the theme button fills it to 11% (control)', async ({ browser }) => {
+  test('1440 mouse: hovering a quiet link takes it to full ink (control)', async ({ browser }) => {
     const { ctx, page } = await open(browser, DESKTOP, 'a desktop visitor')
     await go(page, '/')
-    const icon = page.locator('.spnav-icon').first()
-    await expect(icon).toBeVisible()
-    await icon.hover()
-    await expect.poll(async () => alpha(await fill(icon)), { message: 'a hover no longer fills the button' }).toBeCloseTo(0.11, 3)
+    const link = page.locator('.spnav-quiet-link', { hasText: 'Plans' })
+    await expect(link).toBeVisible()
+    expect(alpha(await colour(link)), 'the link does not rest dimmer than its hover').toBeCloseTo(0.68, 2)
+    await link.hover()
+    await expect.poll(async () => alpha(await colour(link)), { message: 'a hover no longer lights the link' }).toBeCloseTo(1, 2)
     await ctx.close()
   })
 })
 
-// ── 3b: the quiet links' touch hit area ──────────────────────────────────────
-const QUIET = ['Tools', 'Pricing', 'On mobile']
+// ── 3b: the quiet links' size ────────────────────────────────────────────────
+const QUIET = ['Tools', 'Plans', 'On mobile']
 
 const quietBoxes = (page) => page.locator('.spnav-quiet-link').evaluateAll((els) => els.map((el) => {
   const r = el.getBoundingClientRect()
@@ -121,7 +125,7 @@ const ownerAt = (page, x, y) => page.evaluate(
 )
 
 test.describe('quiet links', () => {
-  test('768 touch: each link takes a 44px tall hit area and its drawn box is the one a mouse sees', async ({ browser }) => {
+  test('768 touch: each link is a 44px tall target and its box is the one a mouse sees', async ({ browser }) => {
     const touch = await open(browser, TABLET, 'a tablet visitor')
     await go(touch.page, '/')
     expect(await touch.page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'POSITIVE CONTROL: not a coarse pointer').toBe(true)
@@ -133,33 +137,34 @@ test.describe('quiet links', () => {
     const base = await quietBoxes(mouse.page)
     expect(drawn.map((b) => b.text)).toEqual(QUIET)
     drawn.forEach((b, i) => {
-      expect(b.h, `${b.text} changed height`).toBe(32)
-      // Each link is wider than the 44px target, so only its height grows and neighbouring areas never overlap.
-      expect(b.w, `${b.text} is narrower than 44px`).toBeGreaterThan(44)
-      // Layout is unchanged by the hit area: every edge matches the mouse layout.
+      expect(b.h, `${b.text} is not drawn 44px tall`).toBe(44)
+      // The same layout for a finger and a mouse: every edge matches.
       for (const k of ['x', 'y', 'w', 'h']) expect(b[k], `${b.text} ${k} moved on touch`).toBeCloseTo(base[i][k], 2)
     })
+    // Neighbouring links never share a point.
+    drawn.slice(1).forEach((b, i) => expect(b.x, `${b.text} overlaps ${drawn[i].text}`).toBeGreaterThanOrEqual(drawn[i].x + drawn[i].w))
 
     for (const b of drawn) {
       const cx = b.x + b.w / 2
       const cy = b.y + b.h / 2
       expect(await ownerAt(touch.page, cx, cy - 21), `a tap 21px above ${b.text} misses it`).toBe(b.text)
       expect(await ownerAt(touch.page, cx, cy + 21), `a tap 21px below ${b.text} misses it`).toBe(b.text)
-      expect(await ownerAt(touch.page, cx, cy - 25), `${b.text}'s area is taller than 44px`).toBeNull()
-      expect(await ownerAt(touch.page, cx, cy + 25), `${b.text}'s area is taller than 44px`).toBeNull()
     }
     await touch.ctx.close()
     await mouse.ctx.close()
   })
 
-  test('1440 mouse: the links get no extra area', async ({ browser }) => {
+  test('1440 mouse: the links are the same 44px target, and no taller', async ({ browser }) => {
     const { ctx, page } = await open(browser, DESKTOP, 'a desktop visitor')
     await go(page, '/')
     const boxes = await quietBoxes(page)
-    expect(boxes).toHaveLength(3)
+    expect(boxes.map((b) => b.text)).toEqual(QUIET)
     for (const b of boxes) {
-      expect(b.h).toBe(32)
-      expect(await ownerAt(page, b.x + b.w / 2, b.y + b.h / 2 - 21), `${b.text} has a touch area under a mouse`).toBeNull()
+      const cx = b.x + b.w / 2
+      const cy = b.y + b.h / 2
+      expect(b.h).toBe(44)
+      expect(await ownerAt(page, cx, cy + 21), `${b.text} does not reach its own 44px`).toBe(b.text)
+      expect(await ownerAt(page, cx, cy + 25), `${b.text} reaches past its 44px under a mouse`).toBeNull()
     }
     await ctx.close()
   })
@@ -287,16 +292,17 @@ test.describe('account menu rows', () => {
   })
 })
 
-// ── 3d: both footers name /plans "Pricing" ───────────────────────────────────
+// ── 3d: the footers' name for /plans ─────────────────────────────────────────
+// The marketing footer says "Plans", as the marketing bar does; the app's reading-page footer says "Pricing".
 for (const size of [PHONE, TABLET, DESKTOP]) {
   test.describe(`footers at ${size.name}`, () => {
-    test('the marketing footer links /plans as Pricing, and no link is called Plans', async ({ browser }) => {
+    test('the marketing footer links /plans as Plans, and no link is called Pricing', async ({ browser }) => {
       const { ctx, page } = await open(browser, size, 'a visitor at the foot of the front page')
       await go(page, '/')
       const footer = page.locator('footer.sp-footer')
       await footer.scrollIntoViewIfNeeded()
-      await expect(footer.locator('a[href="/plans"]')).toHaveText('Pricing')
-      await expect(footer.getByRole('link', { name: 'Plans', exact: true })).toHaveCount(0)
+      await expect(footer.locator('a[href="/plans"]')).toHaveText('Plans')
+      await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toHaveCount(0)
       await ctx.close()
     })
 
@@ -322,11 +328,31 @@ const WIDTHS = [
   { width: 1440, inColumn: true, groups: 4 },
 ]
 
+// The home page's footer keeps the LEGAL column at every width and has no baseline row of them.
 for (const w of WIDTHS) {
   const touch = w.width <= 768
-  test(`front page at ${w.width}: Privacy, Terms and Credits are shown once, in the ${w.inColumn ? 'LEGAL column' : 'baseline row'}`, async ({ browser }) => {
+  test(`front page at ${w.width}: Privacy, Terms and Credits are shown once, in the LEGAL column`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { name: String(w.width), width: w.width, height: 900, touch }, 'a visitor reading the footer')
     await go(page, '/')
+    const footer = page.locator('footer.sp-footer')
+    await footer.scrollIntoViewIfNeeded()
+    for (const [name, href] of LEGAL) {
+      await expect(footer.locator(`a[href="${href}"]`), `${name} should be in the page once`).toHaveCount(1)
+      await expect(footer.locator(`.sp-footer-col--legal a[href="${href}"]`), `${name} should sit in the LEGAL column`).toBeVisible()
+    }
+    await expect(footer.locator('.sp-footer-legal-links'), 'the baseline row of legal links is back on the home page').toHaveCount(0)
+    await expect(footer.getByRole('navigation', { name: 'Legal' })).toHaveCount(0)
+    await expect(footer.locator('.sp-footer-col--legal .sp-footer-col-h')).toHaveText('Legal')
+    await ctx.close()
+  })
+}
+
+// Every other marketing page (here /mobile) carries both sets and lets CSS choose.
+for (const w of WIDTHS) {
+  const touch = w.width <= 768
+  test(`/mobile at ${w.width}: Privacy, Terms and Credits are shown once, in the ${w.inColumn ? 'LEGAL column' : 'baseline row'}`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, { name: String(w.width), width: w.width, height: 900, touch }, 'a visitor reading the footer')
+    await go(page, '/mobile')
     const footer = page.locator('footer.sp-footer')
     await footer.scrollIntoViewIfNeeded()
     const keep = w.inColumn ? '.sp-footer-col--legal' : '.sp-footer-legal-links'
@@ -350,8 +376,8 @@ for (const w of WIDTHS) {
 // Nothing in the footer's link markup changes after it first appears, at either
 // side of the 760/761 line, and its height is the same once it has settled.
 for (const width of [760, 761]) {
-  test(`front page at ${width}: the footer's links and height do not change after it first appears`, async ({ browser }) => {
-    const { ctx, page } = await open(browser, { name: String(width), width, height: 900, touch: false }, 'a visitor loading the front page')
+  test(`/mobile at ${width}: the footer's links and height do not change after it first appears`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, { name: String(width), width, height: 900, touch: false }, 'a visitor loading the page')
     await page.addInitScript(() => {
       const state = { first: null, linkChanges: 0 }
       window.__footerWatch = state
@@ -369,7 +395,7 @@ for (const width of [760, 761]) {
         }
       }).observe(document, { childList: true, subtree: true })
     })
-    await go(page, '/')
+    await go(page, '/mobile')
     await page.locator('footer.sp-footer').scrollIntoViewIfNeeded()
     await page.waitForTimeout(800)
     const seen = await page.evaluate(() => {

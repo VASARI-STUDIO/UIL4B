@@ -145,10 +145,11 @@ async function landChromelessCrash(page, variant) {
 }
 
 /** The home page itself: the command palette's file throws when it opens. */
-async function landHomeCrash(page, variant) {
+async function landHomeCrash(page) {
   await crashChunk(page, COMMAND_PALETTE_CHUNK)
   await go(page, '/')
-  await expectTheme(page, variant)
+  // The homepage is dark under both colour schemes.
+  await expectTheme(page, { scheme: 'dark' })
   await spendReload(page)
   await page.keyboard.press('/')
   const card = page.locator('.error-boundary')
@@ -323,7 +324,7 @@ for (const variant of VARIANTS) {
 
     test('Go to the home page, when the crash is on the home page itself, loads the document afresh', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
-        const { card } = await landHomeCrash(page, variant)
+        const { card } = await landHomeCrash(page)
         // A client-side link to the page you are on changes nothing, so the
         // crash would stay. A marker on window proves the document was replaced.
         await page.evaluate(() => { window.__sameDocument = true })

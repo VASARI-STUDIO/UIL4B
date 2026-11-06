@@ -170,12 +170,6 @@ const WINDOW = 400
 // what we charge."
 const NOT_A_PLAN_PRICE = [
   {
-    file: 'src/components/spectrum/benchSummary.js',
-    context: /\.replace\(\/ \(id\|width\|viewBox\|fill\)=\/g/,
-    why: 'The "$1" is the capture-group reference in a String.replace template that '
-      + 'breaks the icon code peek at its attributes. It is regex syntax, not an amount.',
-  },
-  {
     file: 'src/components/contrast/views/Landing.data.js',
     context: /Sole trader|Officeworks/,
     why: 'Copy for Tidewell, the invented bookkeeping product the Landing pair view '
@@ -499,4 +493,32 @@ test('no allowlist entry outlives the thing it excuses', () => {
   assert.deepEqual(dead.map((entry) => `${entry.file} ${entry.context}`), [],
     'these NOT_A_PLAN_PRICE entries no longer excuse anything. Delete them — an '
     + 'allowlist entry with nothing behind it is a hole waiting for a future price.')
+})
+
+// ── The plan lists carry no money ────────────────────────────────────────────
+import { FREE_LINES, PRO_ROWS, PLANS_LEAD, FREE_POINTS as FACT_FREE, PRO_POINTS as FACT_PRO } from '../../src/config/planFacts.js'
+
+test('the plan lists and rows hold no price: amounts come from the ladder at render time', () => {
+  const all = [...FACT_FREE, ...FACT_PRO, ...FREE_LINES, PLANS_LEAD, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub])]
+  for (const line of all) assert.ok(!/[$€£]\s?\d|\b\d+(\.\d+)?\s?(USD|AUD|dollars)\b|\d+%/i.test(line), `a plan line types a price or a saving: ${line}`)
+})
+
+// ── The homepage components carry no money ───────────────────────────────────
+// src/components/home prints the plans section. Its amounts come from
+// plansPrices.js at render time, so no file there may type one.
+test('src/components/home types no price, saving or count', () => {
+  const dir = path.join(SRC, 'components', 'home')
+  const files = walk(dir).filter((f) => /\.jsx?$/.test(f))
+  assert.ok(files.length >= 4, `expected the home components, found ${files.length} files`)
+  for (const file of files) {
+    const code = stripComments(fs.readFileSync(file, 'utf8'), { lineComments: true })
+    assert.ok(!PRICE.test(code) && !/US\$/.test(code), `${rel(file)} types a price`)
+    PRICE.lastIndex = 0
+    // Savings and count words are product facts only in the plans files; elsewhere
+    // a percentage is a style value and a count word is sample-brand copy.
+    if (!/plan/i.test(path.basename(file))) continue
+    assert.ok(!/\d\s?%/.test(code.replace(/(?:hsla?|oklch|rgba?)\([^)]*\)/g, '')), `${rel(file)} types a percentage`)
+    assert.ok(!/\b(?:eight|ten|two|four|six|thirteen)\b/i.test(code), `${rel(file)} types a count word`)
+    assert.ok(!/['">]\s*\d+\s+(?:export |Pro |free )?(?:themes|tools|features|days|projects)\b/i.test(code), `${rel(file)} types a count`)
+  }
 })

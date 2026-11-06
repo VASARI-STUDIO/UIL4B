@@ -4,6 +4,7 @@ import { getCategory, localiseCategories, localiseTools } from '../data/tools'
 import { categoryPillFor, queryCommandIndex, searchHints } from '../data/toolIndex'
 import { useI18n } from '../contexts/I18nContext'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { useShortcutHint } from '../hooks/useShortcutHint'
 
 // The V2 hero's command bar — the "front door" the design gives the ⌘K palette.
 //
@@ -121,6 +122,7 @@ function RowIcon({ item }) {
 // ghost (SpectrumSearch): the placeholder then stays at its resting sentence,
 // and `demoRunning` tells the ⌘K keycap whether the wrapper's demo is moving.
 export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = false } = {}) {
+  const shortcut = useShortcutHint()
   const { t } = useI18n()
   const navigate = useNavigate()
   const { reducedMotion } = useAppearance()
@@ -344,7 +346,7 @@ export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = 
           <span className="sr-only">
             {demoMoving ? 'Stop the search demo and focus the tool search' : 'Focus the tool search'}
           </span>
-          <kbd aria-hidden="true">⌘K</kbd>
+          <kbd aria-hidden="true">{shortcut}</kbd>
         </button>
       </div>
 

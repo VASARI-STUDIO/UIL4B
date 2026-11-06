@@ -171,17 +171,17 @@ export default function FontLoading() {
         <FontFaceTable />
 
         <p>
-          Six families, ten rules, and only two of the families are subset. The interface face ships whole. It has one variable file for the
+          Eight families, fourteen rules, and only three of the families are subset. The interface face ships whole. It has one variable file for the
           upright and one for the italic, each declared with no range. Each reads
           as covering every code point, and each is fetched the first time text in
           that style is drawn. Its stand-in is a pair of local faces, which have no
-          file to fetch. Two display faces, a serif and a condensed sans, are
+          file to fetch. The homepage text face has a stand-in of the same kind. Two display faces, a serif and a condensed sans, are
           declared the same way, with no range, though their files are already
           trimmed to the Latin set. The menu fetches them by script. It does so
           the first time the Create or Discover menu opens on a device with a
           mouse and without Save-Data, so a phone never downloads either for the
-          menu. The homepage specimens also set text in both. The monospace face
-          and the handwritten annotation face are each split at U+0100. The
+          menu. The homepage specimens also set text in both. The monospace face,
+          the homepage text face and the handwritten annotation face are each split at U+0100. The
           second file of each pair is only fetched when a character in its range
           is actually rendered. That is what the last column measures. It asks
           whether the file that would draw the first printable character of each

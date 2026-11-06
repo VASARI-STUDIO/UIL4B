@@ -111,7 +111,7 @@ test('every nav animation ships a reduced-motion companion', () => {
   const companions = [
     ['the burger morph', /\.spnav-burger-ico > span\{transition:none\}/],
     ['the staggered menu entrance', /\.spnav-menu \[data-mi\]\{animation:none\}/],
-    ['the CTA icon rotation', /\.spnav-cta:hover \.spnav-cta-icon\{transform:none\}/],
+    ['the search pill press', /\.spnav-search:active\{transform:none\}/],
     ['the hide-on-scroll transform', /\.spnav\[data-nav-hidden="1"\]\{transform:none;opacity:1\}/],
   ]
   for (const [what, re] of companions) {
@@ -159,29 +159,31 @@ test('Beta is not a second Soon, in the app header', () => {
   assert.match(css, /\.pnav-tool \.soon-badge,\.pnav-tool \.beta-badge[^{]*\{padding:2px 8px;border-radius:var\(--radius-xs\)\}/)
 })
 
-test('the full-screen menu is the design\'s four items and its note — not a mega menu', () => {
-  // The design file is the spec, and it has no mega-menu. The design's menu (UIL4B - Spectrum.dc.html 248-257) is Tools, Pricing,
-  // On mobile, "Open the toolkit ↗" and the note EVERY CORE TOOL IS FREE,
-  // FOREVER. An earlier pass hung the tool tree, search, the three-way theme and
-  // the account block under it; this fails if any of that comes back.
+test('the phone menu is the three links and the page\'s sections — not a mega menu', () => {
+  // The menu lists what the bar sheds (Tools, Plans, On mobile), then a "This
+  // page" label and the sales page's sections. The tool tree, the theme
+  // control and an account block must not come back.
   const src = stripJs(read(SPECTRUM_NAV))
   for (const [what, re] of [
     ['the tool tree', /NAV_SECTIONS/],
     ['the three-way theme segment', /<ThemeChoice/],
+    ['the one-press theme cycle', /ThemeCycle/],
     ['an account block', /logout\(\)|openLogin\(/],
   ]) {
-    assert.doesNotMatch(src, re, `the marketing menu has grown ${what} again`)
+    assert.doesNotMatch(src, re, `the marketing nav has grown ${what} again`)
   }
-  assert.match(src, /Every core tool is free, forever/, 'the design\'s menu note is gone')
-  assert.match(src, /className="spnav-mi spnav-mi--accent"[\s\S]{0,80}Open the toolkit/,
-    'the fourth big item, "Open the toolkit ↗" in the accent, is gone')
+  assert.match(src, />This page</, 'the menu\'s "This page" label is gone')
+  const anchors = [...src.matchAll(/\{ id: '([a-z]+)', label: '([^']+)' \}/g)].map((m) => `${m[1]}:${m[2]}`)
+  assert.deepEqual(anchors, [
+    'bookmarks:Bookmarks', 'try:Try the tools', 'exports:Exports', 'examples:Examples', 'plans:Plans',
+  ], 'the menu\'s page anchors changed')
   // What a dialog has to do, whatever is in it.
   for (const [what, re] of [
     ['scroll lock', /lockScroll\(\)/],
     ['a focus trap', /event\.key !== 'Tab'/],
     ['focus returned to the trigger on close', /burgerRef\.current\?\.focus\(\)/],
-    ['the design\'s exit, held mounted', /menu !== 'closed' &&/],
-    ['the one-press theme cycle on the pill', /<ThemeCycle[^>]*glyphs="phosphor"/],
+    ['the exit, held mounted', /menu !== 'closed' &&/],
+    ['a jump that focuses the section heading', /jumpToSection\(href\.slice\(1\)\)/],
   ]) {
     assert.match(src, re, `the marketing nav dropped ${what}`)
   }
@@ -189,12 +191,11 @@ test('the full-screen menu is the design\'s four items and its note — not a me
     'the full-screen menu must declare itself a modal dialog')
 })
 
-test('"Open the toolkit" enters the app, with no sign-up gate', () => {
-  // Signed out or in, it lands on
+test('the bar carries no "Open the toolkit"; the footer still enters the app with no sign-up gate', () => {
+  // Entering the app is the hero's call to action. Signed out or in it lands on
   // /projects, the workspace; sign-up happens only on save or export.
   const src = stripJs(read(SPECTRUM_NAV))
-  assert.match(src, /const TOOLKIT = '\/projects'/)
-  assert.match(src, /<Link className="spnav-cta" data-cta to=\{TOOLKIT\}/)
+  assert.doesNotMatch(src, /Open the toolkit|spnav-cta/)
   const footer = stripJs(read('src/components/spectrum/SpectrumFooter.jsx'))
   assert.match(footer, /toolkitTo = '\/projects'/)
   assert.doesNotMatch(footer, /onOpenToolkit/, 'the footer CTA opens the sign-up dialog again')
@@ -208,10 +209,10 @@ test('the quiet links are the design\'s three, and each one goes somewhere real'
   // route as a page App.jsx renders AND a title in routeMetaMap.js (without
   // which the route matrix would not prerender it and vercel.json would 404 it).
   const src = stripJs(read(SPECTRUM_NAV))
-  const labels = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)'/g)].map((m) => m[1])
-  assert.deepEqual(labels, ['Tools', 'Pricing', 'On mobile'], 'the quiet links are the design\'s three, in its order')
+  const labels = [...src.matchAll(/\{ id: '[a-z]+', label: '([^']+)', to:/g)].map((m) => m[1])
+  assert.deepEqual(labels, ['Tools', 'Plans', 'On mobile'], 'the quiet links are Tools, Plans and On mobile, in that order')
   const hashes = [...src.matchAll(/hash: '#([a-z-]+)'/g)].map((m) => m[1])
-  assert.deepEqual(hashes, [])
+  assert.deepEqual(hashes, ['try'])
   const page = read('src/pages/Spectrum.jsx')
   for (const id of hashes) {
     assert.match(page, new RegExp(`id="${id}"`), `SpectrumNav links to #${id}, which Spectrum.jsx does not define`)
@@ -238,6 +239,31 @@ test('the screen you are on is announced as well as painted', () => {
   assert.match(src, /if \(p === '\/mobile'\) return 'mobile'/)
   const css = stripCss(read(CHROME_CSS))
   assert.match(css, /\.spnav-quiet-link\.is-active\{color:var\(--t0\)\}/)
+})
+
+test('the search pill names its shortcut by platform, and one chord has one handler', () => {
+  const src = stripJs(read(SPECTRUM_NAV))
+  assert.match(src, />Search tools</, 'the pill\'s label is gone')
+  // The label comes from one hook, shared by the pill and the hero command bar.
+  const hint = stripJs(read('src/hooks/useShortcutHint.js'))
+  assert.match(src, /const shortcut = useShortcutHint\(\)/, 'the pill no longer reads the shared shortcut hint')
+  assert.match(hint, /apple \? '(?:⌘|\\u2318)K' : 'Ctrl K'/, 'the hint is not Command K on Apple and Ctrl K elsewhere')
+  // The pill's assistive shortcut names the same chord as its visible hint.
+  assert.match(src, /aria-keyshortcuts=\{shortcut === 'Ctrl K' \? 'Control\+K' : 'Meta\+K'\}/, 'aria-keyshortcuts no longer follows the visible hint')
+  // Control and Command both open it, but never with Alt or Shift held.
+  assert.match(src, /\(e\.metaKey \|\| e\.ctrlKey\) && !e\.altKey && !e\.shiftKey/, 'the chord is no longer Control or Command K alone')
+  // The server snapshot must be the non-Apple one, so server and client markup agree.
+  assert.match(hint, /useSyncExternalStore\(noopSubscribe, isApplePlatform, \(\) => false\)/)
+  // The hero's command bar binds Control or Command K itself; the nav steps aside
+  // when that bar is on the page and opens the palette otherwise.
+  assert.match(src, /document\.querySelector\('\.hcmd-input'\)\) return/)
+  const bar = stripJs(read('src/components/HomeCommandBar.jsx'))
+  assert.match(bar, /event\.key !== 'k' && event\.key !== 'K'/)
+  assert.match(bar, /<kbd aria-hidden="true">\{shortcut\}<\/kbd>/, 'the hero bar types its own shortcut label')
+  // Two 44px buttons on a phone: search and menu.
+  const css = stripCss(read(CHROME_CSS))
+  assert.match(css, /\.spnav-icon\{[^}]*width:44px;height:44px/)
+  assert.match(css, /@media\(max-width:767px\)\{[^@]*\.spnav-quiet,\.spnav-search\{display:none\}[^@]*\.spnav-phone\{display:flex/)
 })
 
 test('the preview hook is not in the shipped nav', () => {

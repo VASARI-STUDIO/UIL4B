@@ -163,6 +163,20 @@ const ALLOWED = {
     '.hlp-run-note code': 'code',
     '.hlp-run-stop-hex': 'hex',
   },
+  // the homepage boards: hex, size, byte and file-name values
+  'pages/home-bookmarks.css': {
+    '.bm-mono': 'value',
+    '.bmp-mono': 'value',
+  },
+  'pages/home-exports.css': {
+    '.hx-mono': 'value',
+  },
+  'pages/home-try.css': {
+    '.ht-cv-bytes': 'value',
+    '.ht-cv-meta': 'value',
+    '.ht-pal-hex': 'value',
+    '.ht-val': 'value',
+  },
   'pages/icon-emoji-library.css': {
     '.iel-page .emd-value': 'code',
     '.iel-page .icust-colour-help code': 'code',
@@ -215,6 +229,9 @@ const ALLOWED = {
     '.seo-page .seo-tags-code': 'code',
     '.seo-page .seo-tags-note code': 'code',
   },
+  'pages/spectrum-chrome.css': {
+    '.spnav-search kbd': 'kbd',
+  },
   'pages/spectrum-mobile.css': {
     '.spm .spm-ic-fmt': 'debt',
     '.spm .spm-pb-add': 'debt',
@@ -237,8 +254,6 @@ const ALLOWED = {
     '.spt .spt-art .spt-alt-s': 'code',
   },
   'pages/spectrum.css': {
-    '.sp-ex-filebar b': 'token',
-    '.sp-ico-peek': 'code',
     '.sp-search .hcmd-kbd kbd': 'kbd',
     '.sp-search .hcmd-prompt::after': 'glyph',
   },
