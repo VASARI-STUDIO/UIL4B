@@ -173,7 +173,7 @@ html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
 }
 :is(.fpr-page, .fpr-sheet) .fpr-wopt {
   height: 36px; min-width: 0; padding: 0; border: 0; border-radius: 999px;
-  background: var(--fpr-fill); color: var(--tl-dim);
+  background: var(--fpr-fill-2); color: var(--tl-dim);
   font-family: var(--mono, monospace); font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; cursor: pointer;
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: transform .12s var(--tl-ease, ease-out), background-color .15s ease, color .15s ease;
@@ -183,7 +183,7 @@ html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
 :is(.fpr-page, .fpr-sheet) :is(.fpr-wmenu, .fpr-wopt):focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
   :is(.fpr-page, .fpr-sheet) .fpr-wmenu:hover:not([aria-expanded="true"]) { background: var(--fpr-sel); }
-  :is(.fpr-page, .fpr-sheet) .fpr-wopt:hover:not([aria-selected="true"]) { background: var(--fpr-fill-2); }
+  :is(.fpr-page, .fpr-sheet) .fpr-wopt:hover:not([aria-selected="true"]) { background: color-mix(in srgb, var(--t0) 11%, var(--bg-0)); }
 }
 /* The sheet's grid gives the tray its own full-width row under the actions. */
 .fpr-sheet .fpr-wtray { grid-area: 4 / 1 / 5 / -1; margin-top: 4px; }
