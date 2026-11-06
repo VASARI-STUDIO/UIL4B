@@ -103,10 +103,10 @@ test.describe('home Try the tools', () => {
     await go(page, '/')
     await openTool(page, 3)
     const line = page.locator('#ht-s-3 .ht-cv-line')
-    await expect(line).toHaveText(/^Output WebP, quality 90, d+×d+ px$/, { timeout: 15000 })
+    await expect(line).toHaveText(/^Output WebP, quality 90, \d+×\d+ px$/, { timeout: 15000 })
     await page.locator('#ht-s-3 .ht-cv-set').getByRole('radio', { name: '640 px' }).click()
     // Mutation: pass no limit to the encode and the line never gains the arrow.
-    await expect(line).toHaveText(/^Output WebP, quality 90, d+×d+ → 640×d+ px$/, { timeout: 15000 })
+    await expect(line).toHaveText(/^Output WebP, quality 90, \d+×\d+ → 640×\d+ px$/, { timeout: 15000 })
   })
 
   test('the Fonts Side by side chip is pressed when the comparison is showing', async ({ page }) => {

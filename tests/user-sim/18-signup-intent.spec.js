@@ -79,7 +79,7 @@ test.describe('signup intent', () => {
     // "Open the toolkit" is a free CTA and does its job WITHOUT an account: it
     // goes straight into the app at /projects, and no sign-up form stands in
     // the way. Sign-up is asked for only when saving or exporting.
-    const hero = page.locator('.sp-hero-cta .sp-pill').first()
+    const hero = page.locator('#top .hh-go').first()
     await expect(hero).toBeVisible()
     await expect(hero).toHaveAttribute('href', '/projects')
     await hero.click()

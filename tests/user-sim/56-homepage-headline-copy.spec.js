@@ -35,7 +35,7 @@
 // sentences those headlines are not.
 
 import { test, expect } from './base.js'
-import { go, watch, expectRendered } from './helpers.js'
+import { go, homeSectionsLoaded, watch, expectRendered } from './helpers.js'
 
 // The heading slots the front door still has. A rejected line is only half the
 // rule — the other half is that the page still says SOMETHING in its headings,
@@ -188,6 +188,9 @@ test.describe('homepage copy the founder has already ruled out', () => {
     watch(page, 'a screen-reader user listing the front door by landmark')
     await go(page, '/')
     await expectRendered(page, '/')
+    // The sections under the first screen sit on an empty, labelled stand-in until they load;
+    // their headings only exist once they have.
+    await homeSectionsLoaded(page)
 
     const sections = await page.locator('main#main section[aria-labelledby]').evaluateAll(
       (els) => els.map((el) => {
