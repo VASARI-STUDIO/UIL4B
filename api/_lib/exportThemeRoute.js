@@ -64,7 +64,7 @@ async function bookSite(E, T, brand, slug) {
   const kitName = `${slug}-brand-kit`
   const kit = E.kitFiles(ctx, T)
   const kitZip = await E.zipFiles(kit, kitName)
-  return { ctx, files: E.bookFiles(ctx, T, { kit, kitName, zip: kitZip }) }
+  return { ctx, files: E.bookFiles(ctx, T, { kit, kitName, zip: kitZip, outside: false }) }
 }
 
 /** Builds one export. Returns { zip: Buffer, name } or { html }. */
