@@ -137,3 +137,16 @@ export const tone = (hex, l) => {
   const [a, bb, cc] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
   return '#' + [a, bb, cc].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
 };
+
+// The panel accessible name: what the loop shows, in words.
+export const PANEL_LABEL =
+  "UI L4B in use, building a kit for Kerbside, a sample brand, in five chapters. Palette: colours are randomised, one is locked, another is added and its tints opened. Icons: a search for bike is typed, and the bike icon is recoloured and flipped. Type: a display heading font is picked and previewed with the name Kerbside, then a type scale is chosen. Alt text: a description of a photo is generated and its keywords marked. Export: the finished kit is saved as an HTML style guide and opened, showing its first three pages: the cover, the palette with its contrast checks, and the type scale."
+
+// The panel pictures, in the widths the asset set holds (public/hero-loop).
+export const IMAGES = {
+  kit: { path: '/hero-loop/ui-kit', widths: [870, 1740] },
+  'guide-1': { path: '/hero-loop/guide-1', widths: [400, 800] },
+  'guide-2': { path: '/hero-loop/guide-2', widths: [400, 800] },
+  'guide-3': { path: '/hero-loop/guide-3', widths: [400, 800] },
+  riders: { path: '/hero-loop/riders', widths: [400, 800] },
+}

@@ -1,0 +1,178 @@
+/* The hero loop panel (all sizes). Loaded with the loop module, never on the
+   hero's critical path. The arrow's lean (.mi-nx) comes from home-tokens.css;
+   this adds the downward variant and the demo cursor's hover and press. */
+
+.lp-next {
+  --mi-dx: 3px;
+  --mi-dy: 0px;
+}
+.mi-nx--d {
+  --mi-dx: 0px;
+  --mi-dy: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  :hover > .mi-nx--d { transform: translate(var(--mi-dx), var(--mi-dy)); }
+}
+:focus-visible > .mi-nx--d { transform: translate(var(--mi-dx), var(--mi-dy)); }
+:active > .mi-nx--d { transform: translate(calc(var(--mi-dx) * 1.67), calc(var(--mi-dy) * 1.67)); transition-duration: 100ms; }
+
+@keyframes blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.blink {
+  animation: blink 1060ms steps(1) infinite;
+}
+
+@keyframes shim {
+  from {
+    background-position: -300px 0;
+  }
+  to {
+    background-position: 300px 0;
+  }
+}
+
+.shim {
+  background: linear-gradient(90deg, rgba(239, 238, 234, .08) 0, rgba(239, 238, 234, .2) 50%, rgba(239, 238, 234, .08) 100%) 0 0 / 300px 100%;
+  animation: shim 1100ms linear infinite;
+}
+
+.lp-next, .lp-seg, .lp-pause {
+  transition: transform 120ms cubic-bezier(.23, 1, .32, 1), background-color 120ms cubic-bezier(.23, 1, .32, 1);
+}
+
+.lp-next:active, .lp-seg:active, .lp-pause:active {
+  transform: scale(.97);
+}
+
+.lp-next:focus-visible, .lp-seg:focus-visible, .lp-pause:focus-visible {
+  outline: 2px solid #EFEEEA;
+  outline-offset: 2px;
+}
+
+.lp-next {
+  background-color: transparent;
+}
+
+@media (hover:hover) {
+  .lp-seg:hover .lp-seg-l {
+    color: rgba(239, 238, 234, .86);
+  }
+  .lp-pause:hover>span:first-child {
+    background: rgba(239, 238, 234, .08);
+  }
+  .lp-next:hover {
+    background-color: rgba(239, 238, 234, .08);
+  }
+}
+
+/* The demo cursor's hover and press on Next. The hover waits for the cursor to arrive (--hd). */
+.lp-next[data-sim="hover"] {
+  background-color: rgba(239, 238, 234, .08);
+  transition-delay: var(--hd, 0ms);
+}
+
+.lp-next[data-sim="press"] {
+  background-color: rgba(239, 238, 234, .14);
+  transform: scale(.97);
+}
+
+[data-held] * {
+  animation-play-state: paused !important;
+}
+
+/* The chroma ring on Next: a visitor's own hover or focus turns it once and holds. The demo cursor's hover never shows it. */
+@property --mi-a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.lp-next {
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lp-next::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1.5px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from var(--mi-a), hsl(8 58% 56%), hsl(22 60% 57%), hsl(36 62% 58%), hsl(48 58% 56%), hsl(62 44% 52%), hsl(84 34% 48%), hsl(104 30% 45%), hsl(134 28% 44%), hsl(160 30% 44%), hsl(182 32% 45%), hsl(200 38% 50%), hsl(216 40% 55%), hsl(238 32% 56%), hsl(262 28% 54%), hsl(288 26% 52%), hsl(312 32% 54%), hsl(332 40% 56%), hsl(350 48% 56%), hsl(8 58% 56%));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0;
+  padding: .5px;
+  transition: opacity 280ms cubic-bezier(.25, 1, .5, 1), padding 280ms cubic-bezier(.25, 1, .5, 1), --mi-a 0s linear 280ms;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .lp-next:hover::before {
+    opacity: .92;
+    padding: 1.5px;
+    --mi-a: 140deg;
+    transition: opacity 320ms cubic-bezier(.25, 1, .5, 1) 40ms, padding 360ms cubic-bezier(.25, 1, .5, 1) 40ms, --mi-a 560ms cubic-bezier(.45, .05, .3, 1) 40ms;
+  }
+}
+
+.lp-next:focus-visible::before {
+  opacity: .92;
+  padding: 1.5px;
+  --mi-a: 140deg;
+  transition: opacity 320ms cubic-bezier(.25, 1, .5, 1), padding 360ms cubic-bezier(.25, 1, .5, 1), --mi-a 560ms cubic-bezier(.45, .05, .3, 1);
+}
+
+@media (hover:none) {
+  .lp-next:active::before {
+    opacity: .92;
+    padding: 1.5px;
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .lp-next::before {
+    --mi-a: 140deg;
+    padding: 1.5px;
+    transition: opacity 120ms linear;
+  }
+  .lp-next:hover::before, .lp-next:focus-visible::before {
+    transition: opacity 120ms linear;
+  }
+}
+
+@media (forced-colors:active) {
+  .lp-next::before {
+    content: none;
+  }
+}
+
+.lp-next[data-sim="hover"]>.mi-nx {
+  transform: translate(var(--mi-dx), var(--mi-dy));
+  transition-delay: var(--hd, 0ms);
+}
+
+.lp-next[data-sim="press"]>.mi-nx {
+  transform: translate(calc(var(--mi-dx) * 1.67), calc(var(--mi-dy) * 1.67));
+  transition-duration: 100ms;
+}
+
+.lp-cut .lp-scene * {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .lp-root * {
+    animation: none !important;
+    transition: opacity 200ms ease-out !important;
+  }
+}
