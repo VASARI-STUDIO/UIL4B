@@ -43,121 +43,91 @@
 html[data-reduced-motion="true"] .spectrum a:not([class]),
 html[data-reduced-motion="true"] .sp-footer .sp-footer-col a{transition:none}
 
-/* == SpectrumNav -- the MARKETING nav, `UIL4B - Spectrum.dc.html` 217-258 ==
-   A floating pill on the marketing screens, not a shelf. Every rule is rooted
-   in .spnav / .spnav-menu, the component's own roots.
+/* == SpectrumNav: the marketing nav ==
+   A flat, full-width bar fixed to the top of the marketing screens. Every rule
+   is rooted in .spnav / .spnav-menu, the component's own roots.
 
-   THE WRAPPER IS pointer-events:none AND THE PILL IS pointer-events:auto.
-   That is the design's own arrangement (line 218) and it is load-bearing: the
-   nav spans the full width so the pill can centre itself, and without this the
-   invisible 100px-tall band would eat clicks on whatever the hero puts up
-   there.
+   --spnav-h is the bar's height. Screens that reserve room under the fixed bar
+   (a spacer, a scroll offset) read it, so the room follows the bar.
 
-   HIDE-ON-SCROLL, AND THE REDUCED-MOTION ANSWER IS "DO NOT HIDE".
-   Spectrum's own script branches on prefers-reduced-motion and leaves the bar
-   in place rather than teleporting it (setNav, standalone source line 2045),
-   which is the right call: a bar that vanishes with no transition reads as a
-   rendering fault, and someone who asked for less motion has not asked for
-   less navigation. Both companions below say so. */
-.spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:max(clamp(14px,2vw,26px),env(safe-area-inset-top,0px)) max(clamp(14px,3vw,40px),env(safe-area-inset-right,0px)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left,0px));pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
-.spnav[data-nav-hidden="1"]{transform:translateY(calc(-100% - 14px));opacity:0}
+   HIDE-ON-SCROLL, AND THE REDUCED-MOTION ANSWER IS "DO NOT HIDE". A bar that
+   vanishes with no transition reads as a rendering fault, and someone who asked
+   for less motion has not asked for less navigation. Both companions below say
+   so. */
+:root{--spnav-h:92px}
+@media(max-width:767px){:root{--spnav-h:56px}}
+.spnav{position:fixed;top:0;left:0;right:0;z-index:120;background:var(--bg-0);border-bottom:1px solid transparent;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
+.spnav[data-scrolled="1"]{border-bottom-color:color-mix(in srgb,var(--t0) 9%,transparent)}
+.spnav[data-nav-hidden="1"]{transform:translateY(-100%);opacity:0}
 /* Keyboard focus inside the bar always shows it. :focus-visible rather than
    :focus-within, so a mouse click on a control does not pin the bar open. Same
    specificity as the hidden rule and later, so it wins. */
 .spnav:has(:focus-visible){transform:none;opacity:1}
-/* A section the menu jumps to takes focus by script, so the stylesheet's
-   keyboard ring is not drawn on a whole section. */
-.spectrum [data-menu-jump]:focus-visible{outline:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .spnav{transition:none}
   html:not([data-reduced-motion="false"]) .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
 }
 html[data-reduced-motion="true"] .spnav{transition:none}
 html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
-/* flex-wrap is the design's (line 219) and it is the overflow guard: at a width
-   where the pill cannot hold its row it stacks rather than pushing the page
-   sideways. The media queries at the end of this block mean it never gets
-   there on a real phone. */
-/* The pill's surface is the design's, line 219: page at 62% under a 26px blur,
-   a 9% ink hairline, and a long soft drop (0 28px 70px -32px, the design's
-   shade at .96 of its alpha) over a 9% ink top highlight. --spnav-shade is that
-   shade per theme: a pale slate in light, black in dark. */
-.spnav-bar{--spnav-shade:rgba(26,30,42,.154);pointer-events:auto;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px;max-width:100%;padding:6px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 62%,transparent);border:1px solid color-mix(in srgb,var(--t0) 9%,transparent);-webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);box-shadow:0 28px 70px -32px var(--spnav-shade),inset 0 1px 0 color-mix(in srgb,var(--t0) 9%,transparent)}
-[data-theme="dark"] .spnav-bar{--spnav-shade:rgba(0,0,0,.96)}
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .spnav-bar{background:var(--bg-1)}
-}
-.spnav-mark{display:flex;align-items:baseline;gap:10px;padding:8px 14px;border-radius:var(--radius-pill);color:var(--t0);text-decoration:none}
+.spnav-bar{display:flex;align-items:center;justify-content:space-between;gap:24px;box-sizing:border-box;width:100%;max-width:1400px;margin:0 auto;padding:24px max(clamp(20px,4vw,52px),env(safe-area-inset-right,0px)) 24px max(clamp(20px,4vw,52px),env(safe-area-inset-left,0px))}
+.spnav-mark{display:inline-flex;align-items:center;min-height:44px;color:var(--t0);text-decoration:none;line-height:normal}
 .spnav-mark:hover{text-decoration:none}
-/* line-height:normal is the design's (it sets none, so the button's UA
-   `normal` applies); the body's 1.65 made the pill 65px tall against the
-   design's 55. */
-.spnav-mark{line-height:normal}
-.spnav-word{font-size:21px;font-weight:560;letter-spacing:-.01em;white-space:nowrap}
-/* The wrapper keeps its line box (the pill is 55px tall because of it); the
-   lockup sits on the baseline inside it, 0.85em tall. */
-.spnav-word .brand-logo{height:.85em}
-.spnav-rule{flex:0 0 auto;width:1px;height:20px;background:color-mix(in srgb,var(--t0) 11%,transparent)}
-.spnav-quiet{display:flex;align-items:center;gap:1px}
-/* No transition: the design writes `transition:none` inline on these three
-   (226-228), which outranks its own [data-quiet] colour fade. */
-.spnav-quiet-link{display:inline-flex;align-items:center;min-height:24px;padding:8px 14px;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;line-height:16px;letter-spacing:normal;text-transform:none;color:var(--t2);text-decoration:none;transition:none}
-@media(hover:hover){.spnav-quiet-link:hover{color:var(--t0);text-decoration:none}}
-/* THE SCREEN YOU ARE ON. The design colours the current screen's link with
-   --ink and the others with --ink-faint (`navLanding` / `navMobile`,
-   2368-2371) — colour alone, which is why the markup also carries
-   aria-current="page". */
+.spnav-word{display:inline-flex;align-items:center}
+.spnav-word .brand-logo{display:block;height:20px;width:auto}
+.spnav-end{display:flex;align-items:center;gap:24px}
+.spnav-quiet{display:flex;align-items:center;gap:24px}
+.spnav-quiet-link{display:inline-flex;align-items:center;min-height:44px;font-family:var(--font);font-size:14px;font-weight:400;line-height:normal;letter-spacing:normal;text-transform:none;color:color-mix(in srgb,var(--t0) 68%,transparent);text-decoration:none;transition:color 150ms ease}
+@media(hover:hover) and (pointer:fine){.spnav-quiet-link:hover{color:var(--t0);text-decoration:none}}
+/* The screen you are on is painted in ink; the markup also carries
+   aria-current="page", so colour is not the only cue. */
 .spnav-quiet-link.is-active{color:var(--t0)}
-/* 5.5% ink at rest, 11% on hover (230-233). */
-.spnav-icon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:0;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:var(--t0);cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
-@media(hover:hover){.spnav-icon:hover{background:color-mix(in srgb,var(--t0) 11%,transparent)}}
-/* THE BURGER MORPH. Three bars, two of which rotate into a cross while the
-   middle one squashes and fades -- Spectrum lines 234-237 and 129-132, with its
-   own .34s curve. The 5.15px offsets are the design's; they are what make the
-   two bars meet exactly on the centre line. */
+/* The search pill: a hairline outline whose chroma ring and press come from
+   the shared outline-button rules. */
+.spnav-search{display:inline-flex;align-items:center;gap:10px;min-height:40px;padding:0 8px 0 16px;border:1px solid color-mix(in srgb,var(--t0) 14%,transparent);border-radius:var(--radius-pill);background:transparent;color:color-mix(in srgb,var(--t0) 68%,transparent);font-family:var(--font);font-size:14px;line-height:normal;cursor:pointer;transition:border-color 150ms ease,color 150ms ease,transform 120ms cubic-bezier(.23,1,.32,1)}
+@media(hover:hover) and (pointer:fine){.spnav-search:hover{color:var(--t0)}}
+.spnav-search:active{transform:scale(.97)}
+.spnav-search kbd{font-family:var(--mono);font-size:10.5px;padding:5px 8px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--t0) 7%,transparent)}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-quiet-link{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav-search{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav-search:active{transform:none}
+}
+html[data-reduced-motion="true"] .spnav-quiet-link{transition:none}
+html[data-reduced-motion="true"] .spnav-search{transition:none}
+html[data-reduced-motion="true"] .spnav-search:active{transform:none}
+/* The phone's two buttons; hidden on a wide window. */
+.spnav-phone{display:none}
+.spnav-icon{display:grid;place-items:center;width:44px;height:44px;flex:0 0 auto;padding:0;border:1px solid color-mix(in srgb,var(--t0) 14%,transparent);border-radius:var(--radius-pill);background:transparent;color:var(--t0);cursor:pointer;transition:transform 120ms cubic-bezier(.23,1,.32,1)}
+.spnav-icon:active{transform:scale(.97)}
+/* THE BURGER MORPH. Two bars that rotate into a cross. */
 .spnav-burger-ico{position:relative;display:block;width:16px;height:12px}
-.spnav-burger-ico > span{position:absolute;left:0;width:100%;height:1.7px;border-radius:2px;background:currentColor;transition:transform .34s cubic-bezier(.65,0,.35,1),opacity var(--dur-2) var(--ease-standard)}
-.spnav-burger-ico > span:nth-child(1){top:0}
-.spnav-burger-ico > span:nth-child(2){top:5.15px}
-.spnav-burger-ico > span:nth-child(3){top:10.3px}
-.spnav-burger-ico[data-burger="in"] > span:nth-child(1){transform:translateY(5.15px) rotate(45deg)}
-.spnav-burger-ico[data-burger="in"] > span:nth-child(2){transform:scaleX(.2);opacity:0}
-.spnav-burger-ico[data-burger="in"] > span:nth-child(3){transform:translateY(-5.15px) rotate(-45deg)}
-/* The morph's reduced-motion companion: the cross still forms, it just forms
-   in one frame. The STATE has to survive -- it is the only thing telling a
-   sighted user the button is now "close". */
+.spnav-burger-ico > span{position:absolute;left:0;width:100%;height:1.7px;border-radius:2px;background:currentColor;transition:transform .34s cubic-bezier(.65,0,.35,1)}
+.spnav-burger-ico > span:nth-child(1){top:2.2px}
+.spnav-burger-ico > span:nth-child(2){top:8.1px}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(1){transform:translateY(2.95px) rotate(45deg)}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(2){transform:translateY(-2.95px) rotate(-45deg)}
+/* The cross still forms under reduced motion, in one frame: the state is the
+   only thing telling a sighted user the button is now "close". */
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .spnav-burger-ico > span{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav-icon{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav-icon:active{transform:none}
 }
 html[data-reduced-motion="true"] .spnav-burger-ico > span{transition:none}
-/* Ink pill, page-coloured label -- `background:var(--ink);color:var(--page)`
-   (line 240). Inverse of the body pairing, so its contrast is the body's. */
-.spnav-cta{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:6px 7px 6px 18px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:13.5px;font-weight:540;white-space:nowrap;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
-/* --ink-hover (line 240): ink 14% of the way to the page. */
-.spnav-cta:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
-.spnav-cta-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 10%,transparent);transition:transform var(--dur-1) var(--ease-standard)}
-/* 45 degrees on hover -- the design's one signature nav gesture (line 70),
-   scoped to pointers that can hover so a tap does not leave it stuck rotated. */
-@media(hover:hover) and (pointer:fine){.spnav-cta:hover .spnav-cta-icon{transform:rotate(45deg)}}
-@media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .spnav-cta-icon{transition:none}
-  html:not([data-reduced-motion="false"]) .spnav-cta:hover .spnav-cta-icon{transform:none}
-}
-html[data-reduced-motion="true"] .spnav-cta-icon{transition:none}
-html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none}
+html[data-reduced-motion="true"] .spnav-icon{transition:none}
+html[data-reduced-motion="true"] .spnav-icon:active{transform:none}
 
-/* -- The full-screen menu (lines 247-257) ------------------------------------
-   HIS MENU, EXACTLY: page at 90% under a 34px blur; the four big items and the
-   mono note, centred vertically, at padding clamp(28px,7vw,96px) inside a
-   1200px column; the Close pill at top 26px / right clamp(20px,5vw,52px); a
-   .28s fade in and a .24s fade out. Nothing else is in it (SpectrumNav.jsx says
-   why). The safe-area terms keep the pill, and the menu's own padding, clear of
-   the notch and home indicator; they are 0 on screens without them.
 
-   THE GROUND IS 97%, NOT THE DESIGN'S 90% — the one departure in this block.
-   Rendered in WebKit at 390x844 the page behind showed through at 90% as
-   crisp second copy under the menu items (the blur was not painted). At 97%
-   the items read cleanly whether or not the engine paints the blur. */
+/* -- The full-screen menu (phone layout only) ---------------------------------
+   The links the bar shed, then a "This page" label and the page's sections.
+   Centred vertically in a 1200px column; the Close pill at the top right; a
+   .28s fade in and a .24s fade out. The safe-area terms keep the pill and the
+   menu's own padding clear of the notch and home indicator; they are 0 on
+   screens without them.
+
+   THE GROUND IS 97% PAGE COLOUR. At 90% the page behind showed through in
+   WebKit as a crisp second copy under the items (the blur was not painted). At
+   97% the items read cleanly whether or not the engine paints the blur. */
 .spnav-menu{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;justify-content:center;padding:max(clamp(28px,7vw,96px),env(safe-area-inset-top,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-right,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-bottom,0px)) max(clamp(28px,7vw,96px),env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--bg-0) 97%,transparent);-webkit-backdrop-filter:blur(34px);backdrop-filter:blur(34px);overflow-y:auto;overscroll-behavior:contain}
 .spnav-menu[data-menu="in"]{animation:spnav-menu-in .28s cubic-bezier(.23,1,.32,1) both}
 .spnav-menu[data-menu="out"]{animation:spnav-menu-out .24s ease both;pointer-events:none}
@@ -173,27 +143,25 @@ html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none
 .spnav-menu .spnav-close:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0))}
 .spnav-menu .spnav-close > span:last-child{display:grid;place-items:center}
 .spnav-rail{max-width:1200px;width:100%;margin:0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
-/* The big items (251-254): Geist 560 at clamp(42px,9vw,96px), line-height
-   1.04, no tracking, ink — the fourth in --accent-text. text-wrap:pretty is the
-   design's body rule, and it is why its 390px menu breaks "Open the / toolkit"
-   rather than stranding the arrow on a line alone. */
-.spnav-mi{position:relative;display:inline-block;padding:0;border:0;background:none;font-family:var(--display);font-size:clamp(42px,9vw,96px);font-weight:560;line-height:1.04;color:var(--t0);text-align:left;text-decoration:none;text-wrap:pretty;cursor:pointer;transition:color .2s ease,opacity .2s ease}
+/* The big items: the three links, Geist 560, line-height 1.04, in ink. The
+   page's sections below the label are smaller (--sub). */
+.spnav-mi{position:relative;display:inline-block;padding:0;border:0;background:none;font-family:var(--display);font-size:clamp(36px,10vw,56px);font-weight:560;line-height:1.04;color:var(--t0);text-align:left;text-decoration:none;text-wrap:pretty;cursor:pointer;transition:color .2s ease,opacity .2s ease}
 .spnav-mi:hover{text-decoration:none;color:var(--t0)}
-.spnav-mi--accent,.spnav-mi--accent:hover{color:var(--accent-text)}
+.spnav-mi--sub{font-size:clamp(24px,6.4vw,32px);line-height:1.2}
 .spnav-mi::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:2px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .34s cubic-bezier(.23,1,.32,1)}
-/* The note (255): faint, 30px under the items, in the interface sans. */
-.spnav-mi-note{margin:30px 0 0;font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
-.spnav-mi-note::after{display:none}
+/* The "This page" label: faint, in the interface sans, set off from the links
+   above it. */
+.spnav-mi-label{margin:32px 0 6px;font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
+.spnav-mi-group{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 /* Hovering ANYWHERE on the open menu dims the items to .42, and the one under
    the pointer comes back to full in the link-hover colour with its underline
-   drawn -- the design's own `[data-menu="in"]:hover [data-mi]` (189-194),
-   keyed on the whole layer, not the list. The note stays at full. Pointer
-   only: on touch there is no hover to leave. The link-hover colour is the
-   link token when the app has one, the accent family until then. */
+   drawn. The label stays at full. Pointer only: on touch there is no hover to
+   leave. The link-hover colour is the link token when the app has one, the
+   accent family until then. */
 @media(hover:hover) and (pointer:fine){
   .spnav-menu[data-menu="in"]:hover .spnav-rail [data-mi]{opacity:.42}
   .spnav-menu[data-menu="in"] .spnav-rail [data-mi]:hover{opacity:1;color:var(--link-hover,var(--accent-bright))}
-  .spnav-menu[data-menu="in"]:hover .spnav-rail [data-mi-note]{opacity:1}
+  .spnav-menu[data-menu="in"]:hover .spnav-rail .spnav-mi-label{opacity:1}
   .spnav-mi:hover::after{transform:scaleX(1)}
 }
 .spnav-mi:focus-visible::after{transform:scaleX(1)}
@@ -201,17 +169,12 @@ html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none
   html:not([data-reduced-motion="false"]) .spnav-mi,html:not([data-reduced-motion="false"]) .spnav-mi::after{transition:none}
 }
 html[data-reduced-motion="true"] .spnav-mi,html[data-reduced-motion="true"] .spnav-mi::after{transition:none}
-/* The staggered entrance (135-145) and the exit (136, 140). Delays are the
-   design's: .04 / .09 / .14 / .19 for the four items and .26 for the note. */
+/* The staggered entrance and the exit. Each item's place in the order is its
+   `--i`, 50ms apart after a 40ms start. */
 @keyframes spnav-mi-in{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes spnav-mi-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px)}}
-.spnav-menu[data-menu="in"] [data-mi]{animation:spnav-mi-in .52s cubic-bezier(.16,1,.3,1) both}
+.spnav-menu[data-menu="in"] [data-mi]{animation:spnav-mi-in .52s cubic-bezier(.16,1,.3,1) both;animation-delay:calc(.04s + var(--i,0) * .05s)}
 .spnav-menu[data-menu="out"] [data-mi]{animation:spnav-mi-out .2s ease both}
-.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(1){animation-delay:.04s}
-.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(2){animation-delay:.09s}
-.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(3){animation-delay:.14s}
-.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(4){animation-delay:.19s}
-.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(5){animation-delay:.26s}
 /* The companions. `animation:none` rather than a 0.01ms duration: the items
    are `both`-filled, so cancelling the animation outright is what leaves them
    at their natural opacity. SpectrumNav also skips the 260ms exit wait under
@@ -223,53 +186,17 @@ html[data-reduced-motion="true"] .spnav-mi,html[data-reduced-motion="true"] .spn
 html[data-reduced-motion="true"] .spnav-menu,
 html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 
-/* -- Responsive. The pill sheds, it never wraps on a real phone -------------
-   THE DESIGN HAS NO BREAKPOINT FOR THE PILL: it relies on flex-wrap, and at
-   390px its pill wraps to three rows and sits over the headline (rendered and
-   screenshotted from the design file). So the bands below are the smallest
-   departure that keeps the design's one-row pill, and each is set where the
-   full row stops fitting, MEASURED on the built page: the whole pill is 695px
-   wide, so the quiet links and their rule stay until 760px (the design's own
-   pill at 768 is one row, and so is this one); the eyebrow goes under 480
-   (with it the phone pill is ~432px, which wrapped at 430); the
-   CTA stays on phones as the design has it and only goes under 390, where it
-   cannot share the row (with it the pill is 360px, and 390 leaves 362). Nothing dropped is lost: the quiet links are
-   the menu's first three items and the CTA is its fourth. */
-@media(max-width:759px){
-  .spnav-quiet,.spnav-rule{display:none}
-}
-@media(max-width:479px){
-  .spnav-mark{padding:8px 10px}
-}
-@media(max-width:389px){
-  .spnav-cta{display:none}
-}
-/* While the page's own "Open the toolkit" is on screen the pill's copy of it
-   steps aside. Hidden, not removed: the pill keeps its width, so the mark never
-   moves, and `visibility` takes it out of the tab order. */
-@media(max-width:1000px){
-  .spnav[data-hero-cta="1"] .spnav-cta{opacity:0;visibility:hidden;pointer-events:none}
-  /* The hidden CTA keeps its width, so with the controls after it the pill would
-     show an empty stretch at its end. While it is hidden the controls take the
-     slot after it instead, so they end the pill and the gap sits inside it. */
-  .spnav[data-hero-cta="1"] .spnav-icon{order:1}
-}
-/* On phones the pill spans the viewport less a 16px gutter each side, the
-   mark at its start and the controls at its end. */
+/* -- Responsive. At 767px and under the links and the search pill give way to
+   a search button and a menu button, 44px each, and the bar tightens to the
+   logo's row. The menu lists what the bar shed. */
 @media(max-width:767px){
-  .spnav{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-  .spnav-bar{width:100%;flex-wrap:nowrap;justify-content:flex-start}
-  .spnav-bar > .spnav-mark{margin-right:auto}
+  .spnav-bar{gap:12px;padding:12px max(12px,env(safe-area-inset-right,0px)) 0 max(20px,env(safe-area-inset-left,0px))}
+  .spnav-word .brand-logo{height:18px}
+  .spnav-quiet,.spnav-search{display:none}
+  .spnav-end{gap:6px}
+  .spnav-phone{display:flex;gap:6px}
 }
-/* The icon buttons are drawn at 38px and the quiet links about 32px tall; on a
-   touch screen each takes a 44px hit area centred on it, so the drawn size
-   stays and the target is 44px. The quiet links are wider than 44px, so only
-   their height grows and neighbouring areas never overlap. Any pointer gets them
-   below 768px, where the pill is the phone layout. */
-@media(pointer:coarse),(max-width:767px){
-  .spnav-icon,.spnav-cta,.spnav-mark,.spnav-quiet-link{position:relative}
-  .spnav-icon::after,.spnav-cta::after,.spnav-mark::after,.spnav-quiet-link::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
-}
+
 
 
 /* ── "give it a try" (lines 269-275, responsive 166-170) ─────────────────────
