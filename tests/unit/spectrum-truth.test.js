@@ -52,6 +52,7 @@ const SPECTRUM_CSS_PATH = ['src/styles/deferred/spectrum.css', 'src/styles/pages
 if (!SPECTRUM_CSS_PATH) throw new Error('spectrum.css is in neither src/styles/deferred/ nor src/styles/pages/')
 
 const PAGE = stripComments(read('src/pages/Spectrum.jsx'))
+const HERO = stripComments(read('src/components/home/HomeHero.jsx'))
 const FACTS = stripComments(read('src/components/spectrum/spectrumFacts.js'))
 const BENCH = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
 // CSS COMMENTS ARE STRIPPED BEFORE ANY OF THIS IS ASSERTED.
@@ -63,7 +64,7 @@ const BENCH = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
 // not the code.
 const stripCss = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '')
 const CSS = stripCss(read(SPECTRUM_CSS_PATH))
-const ALL_JSX = PAGE + FACTS + BENCH
+const ALL_JSX = PAGE + HERO + FACTS + BENCH
   + stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumRamp.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
@@ -90,20 +91,17 @@ test('the stripper still works, so every source read below can be trusted', () =
 /* ── the headline is the design's, to the character ────────────────────────── */
 
 test('the hero renders the Spectrum headline from its module, not a typed one', () => {
-  // The front door uses the Spectrum design's lines ("Build and export UI and
-  // brand kits from one place."). They live in
-  // spectrumHero.js, which the page and the served shell both read; the page
-  // must read them and must not type them.
-  assert.equal(SPECTRUM_HERO.text, 'Build and export UI and brand kits from one place.')
-  assert.equal(SPECTRUM_HERO.mark, 'one place')
-  assert.ok(PAGE.includes('SPECTRUM_HERO.text') && PAGE.includes('SPECTRUM_HERO.mark'),
-    'Spectrum.jsx no longer renders the headline from spectrumHero.js; this check is reading nothing')
-  assert.ok(!PAGE.includes('brand kits from one place'),
-    'Spectrum.jsx types the headline out rather than reading it from spectrumHero.js')
-  // The 09-10 sentence is not on the landing any more; its share card still is
-  // (positioning.js), which is a separate decision.
-  assert.ok(!PAGE.includes(HERO_HEADLINE.lead) && !PAGE.includes('heroHeadlineText()'),
-    'Spectrum.jsx renders the retired 09-10 headline again')
+  // The headline lives in spectrumHero.js, which the hero component and the
+  // served shell both read; the hero must read it and must not type it.
+  assert.equal(SPECTRUM_HERO.text, 'Your UI and brand kit, from one app.')
+  assert.equal(SPECTRUM_HERO.mark, 'one app')
+  assert.ok(HERO.includes('SPECTRUM_HERO.lead') && HERO.includes('SPECTRUM_HERO.mark') && HERO.includes('SPECTRUM_HERO.tail'),
+    'HomeHero.jsx no longer renders the headline from spectrumHero.js; this check is reading nothing')
+  for (const [name, src] of Object.entries({ 'Spectrum.jsx': PAGE, 'HomeHero.jsx': HERO })) {
+    assert.ok(!src.includes(HERO_HEADLINE.lead) && !src.includes(HERO_HEADLINE.mark),
+      `${name} types the headline out rather than reading it from spectrumHero.js`)
+  }
+  assert.ok(PAGE.includes('<HomeHero'), 'Spectrum.jsx no longer mounts the hero component')
 })
 
 /* ── prices ────────────────────────────────────────────────────────────────── */
@@ -123,7 +121,7 @@ test('no price is typed anywhere on this page', () => {
   assert.ok(!/\$\d/.test(PAGE), 'Spectrum.jsx quotes a price again; pricing lives on /plans')
   assert.ok(!PAGE.includes('/checkout') && !PAGE.includes('login?signup=1'),
     'a landing CTA goes to checkout or the sign-up route instead of /plans')
-  const plansLinks = PAGE.match(/to="\/plans"/g) || []
+  const plansLinks = (PAGE + HERO).match(/to="\/plans"/g) || []
   assert.ok(plansLinks.length >= 2, 'the landing no longer links "View plans" and "See the plans" to /plans')
 })
 
