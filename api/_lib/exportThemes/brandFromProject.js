@@ -193,6 +193,10 @@ function typeBlock(d, faces) {
   };
 }
 
+// A colourway can colour a second part of the mark (a rule, a wedge, a plate) apart from the name; themes name those parts in their
+// colour tables. The plain wordmark has one colour, so each of those parts takes the name's.
+const DETAIL_KEYS = ['kerb', 'wake', 'cut', 'sun', 'plate', 'plumb', 'lane', 'rule', 'mark'];
+
 // Themes lay the logo on a coloured ground by a colourway named for it. Every name they look up is made here, on the primary, the accent
 // or the support colour, with the mark in whichever of ink, canvas, black or white reads on that ground.
 const ON_PRIMARY = ['on-signal', 'on-brick', 'on-vermilion', 'on-quandong', 'on-lane', 'on-toolbox', 'on-sunbelt'];
@@ -237,7 +241,7 @@ function build({ design: rawDesign, projectName, date }) {
     .filter(([, , fg, bg]) => ratio(fg, bg) >= 4.5).map(([fg, bg, , , use]) => ({ fg, bg, use }));
   const onGround = (g) => [ink, canvas, '#000000', '#FFFFFF'].find((c) => ratio(c, g) >= 4.5) || '#000000';
   const a = actionStates(prim, [canvas, ink, '#FFFFFF', '#000000']);
-  const cw = (name, ground, mark = name) => ({ name, ground, sign: mark, tile: mark, tileInk: onGround(mark) });
+  const cw = (name, ground, mark = name) => ({ name, ground, ...Object.fromEntries(DETAIL_KEYS.map((k) => [k, name])), sign: mark, tile: mark, tileInk: onGround(mark) });
   const brand = {
     ...skeleton(word, date), slug: slugOf(word), colours, tones: [], pairs,
     fonts: faces, type: typeBlock(d, faces),

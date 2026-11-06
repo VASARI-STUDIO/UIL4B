@@ -25,7 +25,7 @@ const own = {
     const lead = `Two faces do the work. ${A(d.family)} sets the line you read first. ${A(b.family)} carries everything after it.`;
     // the display face's name is the slide, set huge in itself; the body face and the mono sit in the footer
     const main = `<div class="b-tf">
-<div class="b-tf__top"><p class="lead">${lead}</p><p class="cap"><b>Display</b>Weight ${d.weights.join(', ')}, width ${d.stretch}. Used for ${A(tokensOf('display'))}.</p></div>
+<div class="b-tf__top"><p class="lead">${lead}</p><p class="cap"><b>Display</b>Weight ${d.weights.join(', ')}, width ${d.stretch || 100}. Used for ${A(tokensOf('display'))}.</p></div>
 <div><h2 class="disp b-tf__name">${A(d.family)}</h2><p class="b-glyphs disp">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p></div>
 <div class="b-tf__foot">
 <div><h3 class="b-fname">${A(b.family)}</h3><p class="cap"><b>Body</b>Used for ${A(tokensOf('body'))}.</p></div>
