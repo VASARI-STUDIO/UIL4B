@@ -10,9 +10,10 @@
  * kept for the CSS code block only. */
 
 /* ── The grid ────────────────────────────────────────────────────────────────
-   The panel is first in the source, so below 1024 the families, then the
-   preview text, then the specimen read in that order. From 1024 the panel
-   takes the right-hand column and the work the left. */
+   Below 1024 the panel is first in the source, so the families, then the
+   preview text, then the specimen read in that order. From 1024 the work is
+   first in the source and takes the left column, the panel the right, so Tab
+   follows what is drawn. */
 .fpr-page .fpr-grid { grid-template-columns: minmax(0, 1fr); }
 .fpr-page .fpr-output { gap: var(--tl-gap); }
 @media (min-width: 1024px) {

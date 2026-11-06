@@ -115,7 +115,20 @@
 :is(.fpr-page, .fpr-sheet) .fpr-fam-name { flex: 1 1 auto; min-width: 0; }
 :is(.fpr-page, .fpr-sheet) .fpr-fam-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 :is(.fpr-page, .fpr-sheet) .fpr-fam-head .fpr-label { flex: none; }
-:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-lock { margin-inline-start: -10px; }
+/* Lock is a bare padlock at the end of the kind line: no fill, dim until it is
+   on. On is the closed padlock in ink with a faint wash, so it never rests on
+   colour alone. */
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-fam-foot .fpr-lock {
+  width: 32px; min-width: 32px; height: 32px; min-height: 32px; margin-block: -4px; margin-inline: 0 -8px; padding: 0;
+  border: 0; background: transparent; color: var(--tl-dim);
+}
+:is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-fam-foot .fpr-lock[aria-pressed="true"] { background: var(--fpr-fill); color: var(--tl-ink); }
+@media (hover: hover) and (pointer: fine) {
+  :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-fam-foot .fpr-lock:hover { background: var(--fpr-fill); color: var(--tl-ink); }
+}
+@media (pointer: coarse) {
+  :is(.fpr-page .fpr-panel, .fpr-sheet) .fpr-fam-foot .fpr-lock { width: 44px; min-width: 44px; height: 44px; min-height: 44px; margin-block: -8px; }
+}
 
 /* ── Phone: the family sheet ─────────────────────────────────────────────────
    Portalled to <body>, so it carries its own scope. The sheet's title names the
@@ -162,10 +175,20 @@ html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
 :is(.fpr-page, .fpr-sheet) .fpr-disc[aria-expanded="true"] .fpr-chev,
 .fpr-page .fpr-delivery[open] > summary .fpr-chev { transform: rotate(180deg); }
 
-/* ── Handoff: a tonal pill with a chevron, the code behind it ────────────── */
+/* ── Handoff: a tonal pill that hugs its label, the code behind it ─────────
+   From 768 the pill is 36px and the width of its label. A phone draws it as a
+   full-width card with a 52px row. */
 .fpr-page .fpr-delivery > summary::after { content: none; }
-.fpr-page .fpr-delivery > summary { min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--fpr-fill); font-weight: 500; }
+.fpr-page .fpr-delivery > summary {
+  justify-content: flex-start; gap: 8px; width: fit-content; min-height: 36px; padding: 0 14px 0 16px; border-radius: 999px;
+  background: var(--fpr-fill); color: var(--tl-ink); font-size: 14px; font-weight: 500;
+}
 .fpr-page .fpr-delivery > .fpr-hint { margin: 12px 4px 10px; }
+@media (max-width: 767px) {
+  .fpr-page .fpr-delivery { padding: 0 16px; border-radius: 16px; background: var(--fpr-fill); }
+  .fpr-page .fpr-delivery > summary { justify-content: space-between; width: auto; min-height: 52px; padding: 0; border-radius: 0; background: transparent; }
+  .fpr-page .fpr-delivery > .fpr-hint { margin: 0 0 12px; }
+}
 
 /* ── Stage head: presets, the preview field, then the pair line ──────────── */
 .fpr-page .fpr-input--stage { flex: 1 1 200px; width: auto; max-width: 360px; height: 40px; padding-inline: 16px; border-radius: 999px; background: var(--fpr-fill); font-size: 14px; }
@@ -223,6 +246,16 @@ html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
 .tl-sheet-layer .fpr-more-preview .fpr-label { color: var(--tl-dim); font-size: 13px; }
 .tl-sheet-layer .fpr-more-preview .fpr-input { width: 100%; min-width: 0; height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--t0) 8%, var(--card)); color: var(--tl-ink); font: inherit; font-size: 16px; }
 .tl-sheet-layer .fpr-more-preview .fpr-hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
-.tl-sheet-layer .fpr-more-save { padding: 4px; }
+/* Save is a row like its neighbours (icon, label, no fill), not a button. The
+   panel it opens is positioned from .svt-wrap, so the wrap stays full width. */
+.tl-sheet-layer .fpr-more-save { padding: 0; }
 .tl-sheet-layer .fpr-more-save .svt-wrap { width: 100%; }
-.tl-sheet-layer .fpr-more-save .svt-trigger { width: 100%; justify-content: center; min-height: 44px; }
+.tl-sheet-layer .fpr-more-save .svt-trigger {
+  width: 100%; min-height: 48px; padding: 8px 10px; justify-content: flex-start; gap: 11px;
+  border: 0; border-radius: 12px; background: transparent; color: var(--tl-ink);
+  font-size: 15px; font-weight: 400; text-align: left;
+}
+.tl-sheet-layer .fpr-more-save .svt-trigger svg { width: 16px; height: 16px; stroke-width: 1.5; color: var(--tl-dim); }
+@media (hover: hover) and (pointer: fine) {
+  .tl-sheet-layer .fpr-more-save .svt-trigger:hover { background: var(--tl-wash-2); }
+}

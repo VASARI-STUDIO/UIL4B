@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import FontBrowseDialog from '../components/FontBrowseDialog'
 import MenuSelect from '../components/tool/MenuSelect'
 import ToolIcon from '../components/tool/ToolIcon'
@@ -158,9 +158,7 @@ function FamilyCard({ label, intent, fonts, font, weight, onPickFont, onWeight, 
           aria-label={`Lock ${label.toLowerCase()}`}
           title={locked ? `${font.family} stays when you shuffle. Press to unlock.` : `Keep ${font.family} when you shuffle`}
           onClick={onToggleLock}
-        >
-          {locked ? 'Locked' : 'Lock'}
-        </ToolButton>
+        />
       </div>
       {browsing && (
         <FontBrowseDialog
@@ -231,6 +229,9 @@ export default function FontMatcher({ onCopy, toast }) {
   // the sample brand's pair.
   const seedPairs = Boolean(seedHeading?.family) && seedHeading.family !== seedBody?.family
   const seed = seedPairs ? { heading: seedHeading, body: seedBody } : PAIR_FALLBACK
+  // The pair the page opened on, kept for Reset; `seed` follows the project's
+  // fonts and moves with every change.
+  const [openingPair] = useState(() => seed)
   const [headingName, setHeadingName] = useState(() => seed.heading.family)
   const [bodyName, setBodyName] = useState(() => seed.body.family)
   const [headingW, setHeadingW] = useState(() => seed.heading.weight || 700)
@@ -396,6 +397,25 @@ export default function FontMatcher({ onCopy, toast }) {
     }
   }, [history, applySnapshot, toast])
 
+  // Back to the pair the page opened on, with the preview words and both locks
+  // cleared. Undo steps back over it.
+  const reset = useCallback(() => {
+    const next = {
+      headingName: openingPair.heading.family,
+      bodyName: openingPair.body.family,
+      headingW: openingPair.heading.weight || 700,
+      bodyW: openingPair.body.weight || 400,
+    }
+    const same = next.headingName === headingName && next.bodyName === bodyName
+      && next.headingW === headingW && next.bodyW === bodyW
+    if (same || applySnapshot(next)) {
+      if (!same) remember()
+      setPreviewText('')
+      setLocks({ heading: false, body: false })
+      toast?.(`Back to ${next.headingName} with ${next.bodyName}`)
+    }
+  }, [openingPair, headingName, bodyName, headingW, bodyW, remember, applySnapshot, toast])
+
   const headingStack = headingFont ? fontStack(headingFont) : 'var(--font)'
   const bodyStack = bodyFont ? fontStack(bodyFont) : 'var(--font)'
 
@@ -501,44 +521,26 @@ export default function FontMatcher({ onCopy, toast }) {
   )
   const allItems = [
     ...bar.filter((it) => it !== groundItem),
+    // Swap and Undo are working features the row does not draw, so they live in
+    // More at every width rather than on the row beside Dark/Light and Copy.
     {
       id: 'swap',
-      priority: 5,
-      render: () => (
-        <ToolButton icon="arrows-left-right" collapse onClick={swap} disabled={!ready} title="Swap the heading and body families">
-          Swap
-        </ToolButton>
-      ),
+      inline: false,
       menu: { label: 'Swap heading and body', icon: 'arrows-left-right', onSelect: swap, disabled: !ready },
     },
     {
       id: 'undo',
-      priority: 6,
-      render: () => (
-        <ToolButton icon="arrow-u-up-left" collapse onClick={undo} disabled={!canUndo} title="Undo the last change to the pair">
-          Undo
-        </ToolButton>
-      ),
+      inline: false,
       menu: { label: 'Undo the last change', icon: 'arrow-u-up-left', onSelect: undo, disabled: !canUndo },
     },
     {
       id: 'gallery',
-      priority: 0,
-      render: () => (
-        <ToolButton as={NavLink} to="/create/font-gallery" icon="swatches" aria-label="Browse the Font Gallery">
-          Font Gallery
-        </ToolButton>
-      ),
+      inline: false,
       menu: { label: 'Browse the Font Gallery', icon: 'swatches', onSelect: () => navigate('/create/font-gallery') },
     },
     {
       id: 'scale',
-      priority: 2,
-      render: () => (
-        <ToolButton icon="caret-right" className="fpr-handoff" onClick={openInTypeScale} disabled={!ready} aria-label="Build a type scale from this pair">
-          Build a type scale
-        </ToolButton>
-      ),
+      inline: false,
       menu: { label: 'Build a type scale from this pair', icon: 'caret-right', onSelect: openInTypeScale, disabled: !ready },
     },
     { id: 'div', divider: true, align: 'end' },
@@ -566,6 +568,8 @@ export default function FontMatcher({ onCopy, toast }) {
         </div>
       ),
     },
+    // The Font Gallery link is left out: the switcher on the bar goes there.
+    { ...allItems.find((it) => it.id === 'import'), inline: false },
     {
       id: 'shuffle',
       inline: false,
@@ -576,6 +580,14 @@ export default function FontMatcher({ onCopy, toast }) {
       inline: false,
       menu: () => <div className="fpr-more-save" onClickCapture={keepPair}>{saveButton}</div>,
     }] : []),
+    {
+      id: 'reset',
+      inline: false,
+      menu: { label: 'Reset', icon: 'arrow-counter-clockwise', onSelect: reset, disabled: !ready },
+    },
+    { ...groundItem, inline: false },
+    // After the board's own rows: the working features it does not draw.
+    ...allItems.filter((it) => ['swap', 'undo', 'scale'].includes(it.id)).map((it) => ({ ...it, inline: false })),
   ]
   const items = desktop
     ? allItems
@@ -583,7 +595,6 @@ export default function FontMatcher({ onCopy, toast }) {
       ? [
         ...allItems.filter((it) => ['ttb-back', 'ttb-chip', 'ttb-switcher'].includes(it.id)),
         ...phoneItems,
-        ...allItems.filter((it) => ['gallery', 'scale', 'swap', 'undo', 'import', 'ttb-ground'].includes(it.id)).map((it) => ({ ...it, inline: false })),
       ]
       : allItems.map((it) => (it.id === 'gallery' || it.id === 'import' ? { ...it, inline: false } : it))
   const primary = (
@@ -1017,15 +1028,24 @@ export default function FontMatcher({ onCopy, toast }) {
               {delivery}
             </ToolMain>
           </>
+        ) : desktop ? (
+          <>
+            {/* From 1024 the work leads in the source as well as on the left, so
+                Tab reaches the presets and the preview field before the panel.
+                The grid places the panel in the right-hand column. */}
+            <ToolMain className="fpr-output">
+              {stage}
+              {delivery}
+            </ToolMain>
+            {panelWith(suggest)}
+          </>
         ) : (
           <>
-            {/* The controls first from 768, so a tablet reads the families, then
-                the preview text, then the specimen. From 1024 the grid puts the
-                panel on the right. */}
+            {/* A tablet reads the families, then the preview text, then the
+                specimen, so the panel comes first. */}
             {panelWith(suggest)}
             <ToolMain className="fpr-output">
               {stage}
-
               {delivery}
             </ToolMain>
           </>
