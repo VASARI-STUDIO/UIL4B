@@ -7,9 +7,10 @@
 // inside one is never shrunk. Every value comes from ctx; no brand name or hex is written here.
 import { A, nameOf, fit } from './helpers.js';
 import { sheet, inkOn, same } from './guidelines-k.js';
+import { typeToken } from '../../engine/typeToken.js';
 
 const px = (n) => +n.toFixed(2);
-const tok = (ctx, t) => ctx.brand.type.scale.find((s) => s.token === t);
+const tok = (ctx, t) => typeToken(ctx.brand.type.scale, t);
 const full = 'width:100%;height:100%';
 // a drawing at its own size w x h, shown at k
 const scaled = (k, w, h, inner, cls = '', st = '') => `<div class="ka-sc ${cls}" style="width:${px(w * k)}px;height:${px(h * k)}px"><div class="ka-sc__in" style="width:${w}px;height:${h}px;transform:scale(${k});${st}">${inner}</div></div>`;

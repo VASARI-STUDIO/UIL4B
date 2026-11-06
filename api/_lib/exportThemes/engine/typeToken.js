@@ -4,6 +4,7 @@ const STAND_IN = {
   nameplate: (by) => by.display || by.headline,
   lead: (by) => by.body && { ...by.body, size: Math.round(by.body.size * 1.25 * 10) / 10 },
   subtitle: (by) => by.title || by.headline,
+  small: (by) => by.label || by.caption,
   time: (by) => by.title || by.headline,
 };
 
