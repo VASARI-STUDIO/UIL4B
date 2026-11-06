@@ -124,6 +124,9 @@
 .fpr-sheet .fpr-fam-head .fpr-label {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
+/* Browse opens from inside the sheet; the font browser (z 120) would sit under the
+   sheet layer (z 140) and its tiles could not be pressed. */
+html:has(.fpr-sheet-layer) .fbd-overlay { z-index: 150; }
 /* The sheet reads name, kind, then one row of actions with the weight beside them;
    Lock shares the kind's row at the end. The card's own wrappers drop out of the
    box tree so its parts sit on one grid, in their DOM (and focus) order. */
