@@ -83,6 +83,7 @@ function Page({ themeId, kindId, alt, className, imgRef, onLoad, onError }) {
         alt={alt}
         width={large.width}
         height={large.height}
+        loading="lazy"
         decoding="async"
         onLoad={onLoad}
         onError={onError}

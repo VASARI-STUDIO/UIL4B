@@ -71,7 +71,11 @@ const ShowcaseTile = memo(function ShowcaseTile({ slot, kindId, failed, onFailed
           className="hsc-open"
           aria-haspopup="dialog"
           aria-label={`Enlarge ${alt}`}
-          onClick={() => onOpen(index, kindId)}
+          onClick={(event) => {
+            // Safari doesn't focus a button when it is tapped, and focus is what returns here on close.
+            event.currentTarget.focus({ preventScroll: true })
+            onOpen(index, kindId)
+          }}
         >
           <span className="hsc-page">
             {failed ? (
