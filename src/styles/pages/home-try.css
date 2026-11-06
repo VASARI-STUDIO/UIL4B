@@ -25,7 +25,8 @@
 .ht *, .ht *::before, .ht *::after { box-sizing: border-box; }
 .ht button, .ht input { font-family: inherit; color: inherit; }
 .ht button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.ht :focus-visible { outline: 2px solid #EFEEEA; outline-offset: 2px; }
+/* Doubled class: the page-wide `.spectrum :focus-visible` ring would otherwise win on order. */
+.ht.ht :focus-visible { outline: 2px solid #EFEEEA; outline-offset: 2px; }
 @media (max-width: 767px) { .ht { padding-inline: 20px; } }
 
 .ht-in { max-width: 1336px; margin: 0 auto; }
@@ -43,7 +44,7 @@
 .ht-stages { display: grid; row-gap: 56px; max-width: 688px; }
 .ht-stage { position: relative; scroll-margin-top: 60px; }
 .ht-stage:focus { outline: none; }
-.ht-stage:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 4px; }
+.ht.ht .ht-stage:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 4px; }
 .ht-h3 { margin: 0; font-size: 24px; line-height: 1.2; font-weight: 600; letter-spacing: -.02em; }
 .ht-d { margin: 8px 0 16px; }
 .ht-info { max-width: 460px; }
@@ -73,7 +74,7 @@
   transition: color 150ms var(--ease);
 }
 .ht .ht-n[aria-current="true"] { color: #EFEEEA; }
-.ht .ht-n:focus-visible { outline-offset: -2px; }
+.ht.ht .ht-n:focus-visible { outline-offset: -2px; }
 @media (max-width: 767px) { .ht .ht-n { font-size: 13px; } .ht .ht-n[aria-current="true"] { font-weight: 600; } }
 @media (hover: hover) {
   .ht .ht-n:hover { color: rgba(var(--ink), .86); }
@@ -183,7 +184,7 @@
 .ht-sel option { background: #16171A; color: #EFEEEA; }
 .ht-chev { position: absolute; right: 12px; top: 10px; color: rgba(var(--ink), .72); pointer-events: none; }
 .ht-selw:has(:focus-visible) { outline: 2px solid #EFEEEA; outline-offset: 2px; }
-.ht-sel:focus-visible { outline: none; }
+.ht.ht .ht-sel:focus-visible { outline: none; }
 
 .ht-pal-cols { flex: 1 1 0; min-height: 162px; margin-top: 16px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-radius: 12px; overflow: hidden; isolation: isolate; }
 .ht-pal-col { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 12px 8px 16px; text-align: center; color: var(--ci); }
@@ -198,7 +199,7 @@
 .ht-lk { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; opacity: .72; transition: background-color 150ms var(--ease), opacity 150ms var(--ease), transform 120ms var(--ease); }
 .ht-lock[aria-pressed="true"] .ht-lk { opacity: 1; background: color-mix(in oklab, currentColor 22%, transparent); }
 .ht-lock:active .ht-lk { transform: scale(.97); }
-.ht-lock:focus-visible { outline-color: var(--ci); }
+.ht.ht .ht-lock:focus-visible { outline-color: var(--ci); }
 @media (hover: hover) and (pointer: fine) { .ht-lock:hover .ht-lk { opacity: 1; background: color-mix(in oklab, currentColor 22%, transparent); } }
 .ht-pal-bot { margin-top: auto; display: flex; flex-direction: column; align-items: center; min-width: 0; width: 100%; color: var(--si); }
 .ht-pal-ramp { display: flex; gap: 4px; height: 20px; }
@@ -211,7 +212,7 @@
   font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums;
 }
 .ht-pal-hex::after { content: ""; position: absolute; inset: -8px -6px; }
-.ht-pal-hex:focus-visible { outline-color: currentColor; }
+.ht.ht .ht-pal-hex:focus-visible { outline-color: currentColor; }
 .ht-pal-swap { display: grid; }
 .ht-pal-swap > span { grid-area: 1 / 1; justify-self: center; white-space: nowrap; transition: opacity 150ms var(--ease); }
 .ht-pal-role { margin-top: 4px; font-size: 13px; line-height: 18px; }
@@ -225,7 +226,7 @@
 .ht-rng::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -6px; border: 0; border-radius: 50%; background: #EFEEEA; }
 .ht-rng::-moz-range-track { height: 2px; border-radius: 999px; background: rgba(var(--ink), .22); }
 .ht-rng::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: #EFEEEA; }
-.ht-rng:focus-visible { outline: none; }
+.ht.ht .ht-rng:focus-visible { outline: none; }
 .ht-rng:focus-visible::-webkit-slider-thumb { outline: 2px solid #EFEEEA; outline-offset: 2px; }
 .ht-rng:focus-visible::-moz-range-thumb { outline: 2px solid #EFEEEA; outline-offset: 2px; }
 @media (pointer: coarse) { .ht-rng { height: 44px; } }
@@ -285,7 +286,7 @@
 .ht-swatch input::-webkit-color-swatch { border: 0; border-radius: 999px; }
 .ht-swatch input::-moz-color-swatch { border: 0; border-radius: 999px; }
 .ht-swatch:has(:focus-visible) { outline: 2px solid #EFEEEA; outline-offset: 2px; }
-.ht-swatch input:focus-visible { outline: none; }
+.ht.ht .ht-swatch input:focus-visible { outline: none; }
 @media (hover: hover) and (pointer: fine) {
   .ht-ic-t:hover:not([aria-pressed="true"]) { background: var(--l2); }
 }
@@ -319,7 +320,7 @@
   height: calc(var(--pitch) - 1px); padding: 12px 48px 12px 0; border: 0; background: transparent; text-align: left;
 }
 .ht-fn-row[aria-expanded="true"] { height: auto; min-height: 136px; padding: 16px 48px 16px 0; }
-.ht-fn-row:focus-visible { outline-offset: -2px; }
+.ht.ht .ht-fn-row:focus-visible { outline-offset: -2px; }
 .ht-fn-top { display: block; min-width: 0; }
 .ht-fn-spec {
   display: block; max-width: 960px; font-size: var(--fs); font-weight: 400; line-height: 1.1; color: #EFEEEA;
@@ -395,6 +396,13 @@
 .ht-cv-out.is-alert { color: #EFEEEA; }
 @container (max-width: 579px) { .ht-cv-fig { height: 40px; font-size: 34px; line-height: 40px; } }
 @container (max-width: 459px) { .ht-cv-fig { height: 36px; font-size: 26px; line-height: 36px; } }
+/* A 320 phone leaves the result column about 140px: the figure and the last tab's name shrink to fit. */
+.ht-tabs [data-s] { display: none; }
+@container (max-width: 299px) {
+  .ht-cv-fig { height: 28px; font-size: 22px; line-height: 28px; }
+  .ht-tabs [data-l] { display: none; }
+  .ht-tabs [data-s] { display: inline; }
+}
 .ht-cv-pick { position: relative; margin-top: auto; align-self: flex-start; }
 .ht-cv-pick:has(.ht-cv-file:focus-visible) { outline: 2px solid #EFEEEA; outline-offset: 2px; }
 .ht-cv-file { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }

@@ -23,7 +23,7 @@ const MODES = [
   ['Image', ''],
   ['Animation', 'Build an animation from frames and save it as GIF, WebP, APNG, MP4 or WebM.'],
   ['Video', 'Edit a video or GIF: crop, turn, change the speed or reverse it.'],
-  ['Extract frames', 'Pull frames out of a video.'],
+  ['Extract frames', 'Pull frames out of a video.', 'Frames'],
 ]
 
 export default function ConverterTool() {
@@ -75,7 +75,7 @@ export default function ConverterTool() {
     <>
       <div className="ht-tool ht-cvt" ref={root}>
       <div className="ht-tabs" role="tablist" aria-label="Conversion type" onKeyDown={tabKey}>
-        {MODES.map(([label], i) => (
+        {MODES.map(([label, , short], i) => (
           <button
             key={label}
             type="button"
@@ -86,7 +86,7 @@ export default function ConverterTool() {
             tabIndex={mode === i ? 0 : -1}
             onClick={() => setMode(i)}
           >
-            {label}
+            {short ? <><span data-l>{label}</span><span data-s>{short}</span></> : label}
           </button>
         ))}
       </div>
