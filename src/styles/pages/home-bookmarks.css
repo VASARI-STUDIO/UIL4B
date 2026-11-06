@@ -520,6 +520,9 @@
 .bm-rm *, .bm-rm *::before, .bm-rm *::after { transition: none !important; animation: none !important; }
 .bm-rm button:active { transform: none; }
 .bm-rm .bm-set path.bm-fl { display: none; }
+html[data-reduced-motion="true"] .bm *, html[data-reduced-motion="true"] .bm *::before, html[data-reduced-motion="true"] .bm *::after {
+  transition: none !important; animation: none !important;
+}
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .bm *, html:not([data-reduced-motion="false"]) .bm *::before, html:not([data-reduced-motion="false"]) .bm *::after {
     transition: none !important; animation: none !important;

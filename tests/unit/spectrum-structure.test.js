@@ -231,6 +231,17 @@ test('every glyph the page asks for is one the page ships', () => {
   for (const [, src] of Object.entries(SOURCES)) {
     for (const m of src.matchAll(/PhIcon name="([^"]+)"/g)) asked.add(m[1])
   }
+  // The homepage sections and the try tools draw with PhIcon too: a literal name, or a
+  // conditional whose quoted branches are the names (`name={picked ? 'check' : 'plus'}`).
+  const homeFiles = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (
+    e.isDirectory() ? homeFiles(`${dir}/${e.name}`) : e.name.endsWith('.jsx') ? [`${dir}/${e.name}`] : []
+  ))
+  for (const file of homeFiles('src/components/home')) {
+    for (const m of stripComments(read(file)).matchAll(/PhIcon name=(?:"([^"]+)"|\{([^}]*)\})/g)) {
+      if (m[1]) asked.add(m[1])
+      else for (const q of m[2].matchAll(/'([^']+)'/g)) asked.add(q[1])
+    }
+  }
   // The tables the windows draw their icons from, checked the same way.
   for (const [, , icon] of IMG_MODES) if (icon) asked.add(icon)
   for (const [icon] of EX_FILES) asked.add(icon)

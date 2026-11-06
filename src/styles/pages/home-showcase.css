@@ -276,9 +276,15 @@
   .hsc-tab { font-size: 13px; }
 }
 
+html[data-reduced-motion="true"] .hsc-tab,
+html[data-reduced-motion="true"] .hsc-page::after,
+html[data-reduced-motion="true"] .hsc-zoom { transition: none; }
+html[data-reduced-motion="true"] .hsc-tab:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  .hsc-tab, .hsc-page::after, .hsc-zoom { transition: none; }
-  .hsc-tab:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .hsc-tab,
+  html:not([data-reduced-motion="false"]) .hsc-page::after,
+  html:not([data-reduced-motion="false"]) .hsc-zoom { transition: none; }
+  html:not([data-reduced-motion="false"]) .hsc-tab:active { transform: none; }
 }
 
 /* ── Page viewer ─────────────────────────────────────────────────────────────
