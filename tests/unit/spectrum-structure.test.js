@@ -377,19 +377,21 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   const ids = [...MOUNTED.matchAll(/<(?:section|div)\s+id="([a-z]+)"/g)].map((m) => m[1])
   assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'proof', 'plans', 'start'],
     'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, start in that order')
-  // Every section names its heading, so each anchor lands on something a screen reader can announce.
-  for (const m of PAGE.matchAll(/<section\s+id="([a-z]+)"([^>]*)>/g)) {
+  // Every section below the hero names its heading, so each anchor lands on
+  // something a screen reader can announce. The hero holds the page's h1.
+  for (const m of MOUNTED.matchAll(/<section\s+id="([a-z]+)"([^>]*)>/g)) {
+    if (m[1] === 'top') continue
     const labelled = /aria-labelledby="([^"]+)"/.exec(m[2])
     assert.ok(labelled, `#${m[1]} has no aria-labelledby`)
-    assert.match(PAGE, new RegExp(`<h2[^>]*id="${labelled[1]}"[^>]*tabIndex=\\{-1\\}`), `#${m[1]} points at ${labelled[1]}, which is not a focusable h2`)
+    assert.match(MOUNTED, new RegExp(`<h2[^>]*id="${labelled[1]}"[^>]*tabIndex=\\{-1\\}`), `#${m[1]} points at ${labelled[1]}, which is not a focusable h2`)
   }
   // The final call is its own component, mounted last in <main>; it owns #start.
   const START = stripComments(read('src/components/home/HomeFinalCall.jsx'))
   assert.match(START, /<section id="start"[^>]*aria-labelledby="start-h"/, 'the final call lost its #start section or its aria-labelledby')
   assert.match(START, /<h2 id="start-h" tabIndex=\{-1\}>/, 'the final call heading no longer takes focus for an in-page jump')
   // The proof bar (#proof, HomeProof.jsx) sits between examples and plans.
-  const proofAt = PAGE.indexOf('<HomeProof />')
-  assert.ok(proofAt > PAGE.indexOf('id="examples"') && proofAt < PAGE.indexOf('id="plans"'),
+  const proofAt = MOUNTED.indexOf('id="proof"')
+  assert.ok(proofAt > MOUNTED.indexOf('id="examples"') && proofAt < MOUNTED.indexOf('id="plans"'),
     'the proof band no longer sits between the examples and the plans')
   assert.match(stripComments(read('src/components/home/HomeProof.jsx')), /<section id="proof"/,
     'the proof band lost the #proof anchor')
@@ -405,7 +407,7 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   // The footer's PROJECT column links to the page's own sections, by anchor.
   for (const hash of ['#bookmarks', '#try', '#exports', '#examples', '#plans']) {
     assert.ok(FOOTER.includes(`'${hash}'`), `the footer no longer links ${hash}`)
-    assert.ok(PAGE.includes(`id="${hash.slice(1)}"`), `${hash} has no target on the page`)
+    assert.ok(MOUNTED.includes(`id="${hash.slice(1)}"`), `${hash} has no target on the page`)
   }
   for (const old of ['#bench', '#specimens', '#index']) assert.ok(!FOOTER.includes(old), `the footer still links ${old}`)
   assert.ok(FOOTER.includes('/discover'), 'the footer no longer links Discover')
