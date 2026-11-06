@@ -60,17 +60,22 @@ test('reduced motion keeps a still 1.5px ring in both spellings; forced colours 
 })
 
 test('go arrows turn in place in 320ms and never travel; Next leans 3px', () => {
-  const home = stripCss(read('src/styles/pages/home-tokens.css'))
-  assert.match(home, /\.mi-go\{[^}]*transition:transform 320ms cubic-bezier\(\.25,1,\.5,1\)/)
-  assert.match(home, /:hover > \.mi-go\{transform:rotate\(45deg\)\}/)
-  assert.match(home, /:hover > \.mi-go--r, :hover > \.mi-go--e\{transform:rotate\(-45deg\)\}/)
-  assert.match(home, /:hover > \.mi-nx\{transform:translateX\(3px\)\}/)
-  assert.match(home, /\.mi-nx\{transition:transform 180ms/)
-  assert.match(home, /:active > \.mi-nx\{[^}]*transition-duration:100ms/)
-  assert.doesNotMatch(home, /\.mi-go[^{]*\{[^}]*translate\(/, 'a go arrow travels')
-  assert.match(home, /html\[data-reduced-motion="true"\] :is\(\.mi-go, \.mi-nx\)\{transition:none;transform:none !important\}/)
-  const spectrum = stripCss(read('src/styles/pages/spectrum.css'))
-  assert.match(spectrum, /\.sp-pill-icon \{[^}]*transition:transform 320ms cubic-bezier\(\.25,1,\.5,1\)/)
+  // These two sheets are written one declaration per line; fold whitespace so the rules read the same either way.
+  const flat = (p) => stripCss(read(p)).replace(/\s+/g, ' ')
+  const home = flat('src/styles/pages/home-tokens.css')
+  const hoverOnly = '@media \\(hover: ?hover\\) and \\(pointer: ?fine\\) ?\\{[^@]*?'
+  assert.match(home, /\.mi-go ?\{[^}]*transition: ?transform 320ms cubic-bezier\(\.25, ?1, ?\.5, ?1\)/)
+  assert.match(home, new RegExp(`${hoverOnly}:hover > \\.mi-go ?\\{ ?transform: ?rotate\\(45deg\\)`), 'a diagonal go arrow does not turn 45deg on hover')
+  assert.match(home, new RegExp(`${hoverOnly}:hover > \\.mi-go--r, :hover > \\.mi-go--e ?\\{ ?transform: ?rotate\\(-45deg\\)`), 'a right go arrow does not turn -45deg on hover')
+  assert.match(home, /:focus-visible > \.mi-go ?\{ ?transform: ?rotate\(45deg\)/, 'keyboard focus does not turn the go arrow')
+  assert.match(home, new RegExp(`${hoverOnly}:hover > \\.mi-nx ?\\{ ?transform: ?translateX\\(3px\\)`), 'Next does not lean 3px on hover')
+  assert.match(home, /\.mi-nx ?\{ ?transition: ?transform 180ms/)
+  assert.match(home, /:active > \.mi-nx ?\{[^}]*transition-duration: ?100ms/)
+  assert.doesNotMatch(home, /\.mi-go[^{]*\{[^}]*translate/, 'a go arrow travels')
+  assert.match(home, /html\[data-reduced-motion="true"\] :is\(\.mi-go, \.mi-nx\) ?\{ ?transition: ?none; ?transform: ?none !important/)
+  assert.match(home, /@media \(prefers-reduced-motion: ?reduce\) ?\{ ?html:not\(\[data-reduced-motion="false"\]\) :is\(\.mi-go, \.mi-nx\) ?\{ ?transition: ?none/)
+  const spectrum = flat('src/styles/pages/spectrum.css')
+  assert.match(spectrum, /\.sp-pill-icon ?\{[^}]*transition: ?transform 320ms cubic-bezier\(\.25, ?1, ?\.5, ?1\)/)
 })
 
 test('filled buttons are left out of the ring', () => {
