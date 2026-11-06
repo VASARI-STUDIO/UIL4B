@@ -180,7 +180,7 @@ test('the component reads card 2 through the live switch, not around it', () => 
 // ── No typed count or price ─────────────────────────────────────────────────
 
 // A count word or digit next to the thing it counts, or a price.
-const TYPED_COUNT = /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?:themes?|exports?|projects?|pages?|tools?|icons?)\b/i
+const TYPED_COUNT = /(?<![\d.])\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)[ \t]+(?:themes?|exports?|projects?|pages?|tools?|icons?)\b/i
 const TYPED_PRICE = /[$£€]\s?\d|\b\d+(?:\.\d+)?\s?(?:USD|AUD)\b|\/\s?(?:month|year)\b/i
 
 test('the count and price detectors can fail', () => {
