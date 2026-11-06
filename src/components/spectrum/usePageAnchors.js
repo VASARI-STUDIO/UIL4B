@@ -13,7 +13,7 @@ export const OLD_ANCHORS = {
 
 // How long an arriving hash waits for the page to finish loading its sections,
 // and how many consecutive frames the target must hold still to count as settled.
-const ARRIVAL_DEADLINE_MS = 10000
+const ARRIVAL_DEADLINE_MS = 3000
 const SETTLED_FRAMES = 3
 // Input that means the visitor has taken over the scroll position.
 const TAKEOVER_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown']
@@ -64,6 +64,34 @@ function releaseBrowserScroll() {
   if (location.pathname === pathname && location.search === search && !location.hash) {
     window.history.replaceState(window.history.state, '', `${pathname}${search}${hash}`)
   }
+}
+
+// A reload keeps the history entry's state, so the router reports it as a
+// back/forward return (no arrival, scroll left where the browser puts it). A
+// reload started while a fragment was still being landed is marked in
+// sessionStorage, and the reloaded document treats the fragment as an arrival
+// again. Read once per document, when this module loads.
+const RELAND_KEY = 'vs-reland-hash'
+function takeRelandMark() {
+  try {
+    const mark = window.sessionStorage.getItem(RELAND_KEY)
+    window.sessionStorage.removeItem(RELAND_KEY)
+    return mark !== null && mark === window.location.hash && mark.length > 1
+  } catch {
+    return false
+  }
+}
+let relandPending = typeof window !== 'undefined' && takeRelandMark()
+
+/** Called just before a hard reload (the recovery for a chunk that failed to
+ *  download, main.jsx). A fragment still being landed goes back into the URL,
+ *  which the reload reads at that moment, and the reloaded page is told to land
+ *  it again. */
+export function prepareReload() {
+  const hash = held ? held.hash : ''
+  releaseBrowserScroll()
+  if (hash.length < 2) return
+  try { window.sessionStorage.setItem(RELAND_KEY, hash) } catch { /* the reloaded page keeps the browser's own scroll */ }
 }
 
 const currentHash = () => (held ? held.hash : window.location.hash)
@@ -173,13 +201,15 @@ export function usePageAnchors() {
   const navigate = useNavigate()
   // Back and forward restore the scroll position they left, so only a first
   // load (the router's initial entry) or a pushed link counts as an arrival.
-  const arriving = useRef(navType !== 'POP' || key === 'default')
+  const reland = useRef(relandPending).current
+  const arriving = useRef(navType !== 'POP' || key === 'default' || reland)
 
   // Before the first paint, so the browser has no fragment to scroll to. Only
   // the document's own first load has the browser scrolling to a fragment; a
   // link pushed inside the app does not.
   useLayoutEffect(() => {
-    if (key === 'default') holdBrowserScroll(navigate)
+    if (key === 'default' || reland) holdBrowserScroll(navigate)
+    relandPending = false
     // eslint-disable-next-line react-hooks/exhaustive-deps -- first render only
   }, [])
 

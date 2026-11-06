@@ -184,6 +184,11 @@
 /* The field has no outline of its own (it is a bare input inside the bar), so
    the bar draws the ring when the field has keyboard focus, in place of the
    blue border and shadow ring. The outline follows the bar's pill corners. */
+/* The bar's vertical padding sits on the field instead, so the field is as tall
+   as the bar (a tap anywhere along it lands in the field, not on the bar's
+   edge) and the bar keeps the height it has always had. */
+.hh-search .sp-search .hcmd-bar { padding-block: 0; }
+.hh-search .sp-search input.hcmd-input { padding-block: 18px; }
 .hh-search input.hcmd-input:focus-visible { outline: none; }
 .hh-search .hcmd-bar:has(.hcmd-input:focus-visible) {
   border-color: rgba(var(--hh-ink-rgb), .14);
@@ -289,7 +294,8 @@
   .hh-go-disc > svg { width: 15px; height: 15px; }
   .hh-ghost { justify-content: center; padding: 0; }
   .hh-search { margin-top: 16px; }
-  .hh-search .sp-search .hcmd-bar { padding: 14px 20px; }
+  .hh-search .sp-search .hcmd-bar { padding: 0 20px; }
+  .hh-search .sp-search input.hcmd-input { padding-block: 14px; }
   .hh-search .sp-search-ghost { left: 42px; }
 
   .hh-fig {
