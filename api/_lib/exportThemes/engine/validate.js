@@ -26,6 +26,7 @@ const num = (lo, hi) => ({ num: [lo, hi] });
 const oneOf = (...vals) => (v) => vals.includes(v);
 
 // Leaf rules by path ("[]" stands for any array index). A function checks a string; { num } bounds a number.
+// type.scale faces are the brand's three font roles or "chrome", the running theme's own face (03-broadsheet sets captions in it); ui.type has no chrome.
 const LEAF = {
   slug: (v) => SLUG.test(v), edition: oneOf('slot', 'showcase'), theme: (v) => /^[0-9]{2}-[a-z]{3,20}$/.test(v),
   'version.number': (v) => /^[0-9]{1,3}([.][0-9]{1,3}){0,2}$/.test(v), 'version.date': date,
@@ -37,7 +38,7 @@ const LEAF = {
   'fonts.display.italicCss': (v) => CSS_QUERY.test(v), 'fonts.body.italicCss': (v) => CSS_QUERY.test(v),
   'fonts.display.axes': (v) => AXES.test(v), 'fonts.body.axes': (v) => AXES.test(v), 'fonts.mono.axes': (v) => AXES.test(v),
   'fonts.display.stretch': num(25, 200), 'fonts.body.stretch': num(25, 200), 'fonts.mono.stretch': num(25, 200),
-  'type.scale[].token': id, 'type.scale[].face': oneOf('display', 'body', 'mono'), 'type.scale[].size': num(6, 400), 'type.scale[].line': num(0.5, 5),
+  'type.scale[].token': id, 'type.scale[].face': oneOf('display', 'body', 'mono', 'chrome'), 'type.scale[].size': num(6, 400), 'type.scale[].line': num(0.5, 5),
   'ui.type[].token': id, 'ui.type[].face': oneOf('display', 'body', 'mono'), 'ui.type[].size': num(6, 400), 'ui.type[].line': num(0.5, 400),
   'layout.page.w': num(100, 5000), 'layout.page.h': num(100, 5000), 'layout.margin': num(0, 400), 'layout.columns': num(1, 24), 'layout.gutter': num(0, 200), 'layout.base': num(1, 32),
   'ui.border': num(0, 8), 'ui.spacingBase': num(1, 32), 'ui.spacing[]': num(1, 256), 'ui.shadows': (v) => SHADOW.test(v),
