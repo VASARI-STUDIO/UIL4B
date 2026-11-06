@@ -1287,12 +1287,16 @@ export default function LoopLarge({ active }) {
             }}
           >
             <span
-              className="lp-photo"
               style={{
                 position: 'relative', display: 'block', flex: 'none', width: 400, height: 243, borderRadius: 16,
-                overflow: 'hidden',
+                overflow: 'hidden', background: '#3A3936',
               }}
-            />
+            >
+              <LoopImage
+                name="riders" width="1600" height="974" drawn={400} loading="lazy" fetchPriority="low"
+                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </span>
             <div
               style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 6 }}
             >

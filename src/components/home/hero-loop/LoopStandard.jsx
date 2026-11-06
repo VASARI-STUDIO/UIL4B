@@ -1282,12 +1282,16 @@ export default function LoopStandard({ active }) {
             }}
           >
             <span
-              className="lp-photo"
               style={{
                 position: 'relative', display: 'block', flex: 'none', width: 240, height: 146, borderRadius: 14,
-                overflow: 'hidden',
+                overflow: 'hidden', background: '#3A3936',
               }}
-            />
+            >
+              <LoopImage
+                name="riders" width="1600" height="974" drawn={240} loading="lazy" fetchPriority="low"
+                style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </span>
             <div
               style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 6 }}
             >
