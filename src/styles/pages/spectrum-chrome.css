@@ -224,7 +224,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
    that grid); headings in the caption size, faint, weight 540; lists at an
    11px gap, 16px under the heading; links in the design's link style above;
    the baseline in the caption size, faint, over another 9% hairline. */
-.sp-footer{position:relative;z-index:2;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);background:var(--bg-0);color:var(--t0)}
+.sp-footer{position:relative;z-index:2;background:var(--bg-0);color:var(--t0)}
 /* The curtain reveal (SpectrumFooter `reveal`, set only while the whole footer
    fits the window and it is on the verge of view): stuck to the bottom of the window one layer under the
    page's <main>, which is opaque there, so scrolling slides the page up off it.
