@@ -816,7 +816,7 @@ export default function LoopPhone({ active }) {
                 <div key={idx}
                   style={{
                     height: 36, display: 'flex', alignItems: 'center', gap: 12,
-                    borderBottom: '1px solid rgba(239,238,234,.06)',
+                    borderBottom: '1px solid rgba(239,238,234,.06)', boxSizing: 'content-box',
                   }}
                 >
                   <span

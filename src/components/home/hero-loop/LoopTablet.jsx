@@ -722,7 +722,7 @@ export default function LoopTablet({ active }) {
                 <div key={idx}
                   style={{
                     height: 54, display: 'flex', alignItems: 'center', gap: 12,
-                    borderBottom: '1px solid rgba(239,238,234,.06)',
+                    borderBottom: '1px solid rgba(239,238,234,.06)', boxSizing: 'content-box',
                   }}
                 >
                   <span

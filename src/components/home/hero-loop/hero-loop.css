@@ -165,3 +165,9 @@
     font-size: 13px !important;
   }
 }
+
+/* The browser's own paragraph wrapping (text-wrap: pretty) re-breaks the
+   panel's lines; the panel's copy breaks at the plain wrap the layout was drawn at. */
+.lp-root :where(p, h1, h2, h3, h4) {
+  text-wrap: wrap;
+}

@@ -722,7 +722,7 @@ export default function LoopLarge({ active }) {
                 <div key={idx}
                   style={{
                     height: 68, display: 'flex', alignItems: 'center', gap: 14,
-                    borderBottom: '1px solid rgba(239,238,234,.06)',
+                    borderBottom: '1px solid rgba(239,238,234,.06)', boxSizing: 'content-box',
                   }}
                 >
                   <span
