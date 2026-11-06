@@ -23,7 +23,7 @@ import {
   bodyFaceWeights, describePairImport, headingFaceWeights, pairImportFamilies,
 } from '../utils/fontImport'
 import { categoryLabel, categoryWord, weightCount } from '../utils/fontGallery'
-import { consumePairDraft, readPairDraft, setScaleDraft } from '../utils/typeHandoff'
+import { consumePairDraft, ownTypeScale, readPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // The shared sheets for the font picker, the catalogue notice and the loader,
 // then the page's own sheet, scoped under `.fpr-page`, the page root.
 import '../styles/deferred/tool-shell.css'
@@ -269,10 +269,10 @@ export default function FontMatcher({ onCopy, toast }) {
     [catalog, bodyName],
   )
 
-  // Load what the specimen draws, so nothing on it is faux-bolded or slanted:
-  // the heading weight, and for the body its regular, button and bold weights
-  // and its italic. The other role's default weight rides along so a Swap
-  // lands on faces that are already there.
+  // Load what the specimen draws, so nothing on it is faux-bolded: the heading
+  // weight, and for the body its regular weight and the status pill's. The
+  // other role's default weight rides along so a Swap lands on faces that are
+  // already there. The copied import asks for more (see importFamilies).
   useEffect(() => {
     if (!headingFont) return
     const { upright } = headingFaceWeights(headingFont, headingW)
@@ -280,8 +280,8 @@ export default function FontMatcher({ onCopy, toast }) {
   }, [headingFont, headingW])
   useEffect(() => {
     if (!bodyFont) return
-    const { upright, italic } = bodyFaceWeights(bodyFont, bodyW)
-    loadFont(bodyFont.family, [...upright, headingWeight(bodyFont)], italic)
+    const { drawn } = bodyFaceWeights(bodyFont, bodyW)
+    loadFont(bodyFont.family, [...drawn, headingWeight(bodyFont)])
   }, [bodyFont, bodyW])
 
   // Recompute suggestions whenever the heading changes. Guarded against a
@@ -399,9 +399,10 @@ export default function FontMatcher({ onCopy, toast }) {
   const headingStack = headingFont ? fontStack(headingFont) : 'var(--font)'
   const bodyStack = bodyFont ? fontStack(bodyFont) : 'var(--font)'
 
-  // Every weight and style the specimen draws, so the site built from the
-  // import matches the page: the heading weight; the body's regular weight, the
-  // button weight, bold and italic. Only cuts the family ships are asked for.
+  // The copied import and CSS: the heading weight; the body's regular weight,
+  // the status pill's weight, bold and italic, so a site built from it has the
+  // running-text cuts too. This is a wider set than the page loads for itself.
+  // Only cuts the family ships are asked for.
   const importFamilies = useMemo(
     () => (headingFont && bodyFont ? pairImportFamilies(headingFont, headingW, bodyFont, bodyW) : []),
     [headingFont, bodyFont, headingW, bodyW],
@@ -450,10 +451,9 @@ export default function FontMatcher({ onCopy, toast }) {
       body: bodyFont
         ? { family: bodyFont.family, weight: bodyW, category: bodyFont.category }
         : null,
-      scale: {
-        base: design?.typeScale?.base || 16,
-        ratio: design?.typeScale?.ratio || 1.25,
-      },
+      // Only a scale the project really holds travels; otherwise the Type Scale
+      // opens on its own default instead of the blank project's seed.
+      scale: ownTypeScale(design) ? { base: design.typeScale.base, ratio: design.typeScale.ratio } : undefined,
     })
     if (!staged) { toast?.('Choose a family first — the type scale needs a font to preview.'); return }
     navigate('/create/type-scale')
@@ -473,7 +473,7 @@ export default function FontMatcher({ onCopy, toast }) {
     current: 'pair',
     heading: headingFont ? { family: headingFont.family, weight: headingW } : null,
     body: bodyFont ? { family: bodyFont.family, weight: bodyW } : null,
-    scale: design?.typeScale?.ratio || 1.618,
+    scale: ownTypeScale(design)?.ratio || 1.618,
     headingStack,
     bodyStack,
     projectName: '',
@@ -991,7 +991,7 @@ export default function FontMatcher({ onCopy, toast }) {
         Prepare the handoff
         <ToolIcon name="caret-down" size={16} className="fpr-chev" />
       </summary>
-      <p className="fpr-hint">One import and one block of CSS. Weights loaded: {describePairImport(importFamilies)}.</p>
+      <p className="fpr-hint">One import and one block of CSS. Weights in the import: {describePairImport(importFamilies)}.</p>
       <pre id="fpr-export" className="tl-code fpr-export" tabIndex={0} aria-label="CSS for this pair"><code>{cssExport}</code></pre>
     </details>
   )

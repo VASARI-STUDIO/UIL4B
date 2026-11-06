@@ -19,7 +19,7 @@ import {
   verifyFontLoaded,
 } from '../utils/googleFonts'
 import { categoryWord, filterGalleryTypefaces, ladderWeights } from '../utils/fontGallery'
-import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
+import { ownTypeScale, setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import {
   backdropFor, backdropKind, backdropReady, backdropUrls, loadBackdrop, loadBackdropsInTurn,
 } from '../utils/galleryBackdrop'
@@ -921,7 +921,7 @@ export default function FontGallery({ onCopy, toast }) {
     current: 'gallery',
     heading: design?.fonts?.heading || null,
     body: design?.fonts?.body || null,
-    scale: design?.typeScale?.ratio || 1.618,
+    scale: ownTypeScale(design)?.ratio || 1.618,
     headingStack: design?.fonts?.heading ? fontStack(design.fonts.heading) : 'var(--font)',
     bodyStack: design?.fonts?.body ? fontStack(design.fonts.body) : 'var(--font)',
     projectName: '',

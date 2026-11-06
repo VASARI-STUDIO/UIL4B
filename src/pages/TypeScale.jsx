@@ -13,7 +13,7 @@ import {
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont, verifyFontLoaded } from '../utils/googleFonts'
-import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
+import { consumeScaleDraft, ownFont, ownTypeScale, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
 import { lockScroll } from '../utils/scrollLock'
 import { fitTypePreviewSize,typePreviewNeedsFitting } from '../utils/typeScalePreview'
 import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '../utils/fluidType'
@@ -220,17 +220,23 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // visit reads nothing and the tool opens on the saved kit instead.
   const carried = readScaleDraft()
 
-  const [base, setBase] = useState(() => carried?.scale?.base ?? design?.typeScale?.base ?? DEFAULTS.base)
+  // The project's own scale and families, or nothing. `design` falls back to the
+  // blank project's seed (Inter, 16px, 1.25) when nothing is saved, and that seed
+  // is not a choice: only a scale or pair that differs from it counts as the
+  // user's own and wins over the tool's defaults.
+  const savedScale = ownTypeScale(design)
+
+  const [base, setBase] = useState(() => carried?.scale?.base ?? savedScale?.base ?? DEFAULTS.base)
   const [ratioId, setRatioId] = useState(() => {
-    const r = carried?.scale?.ratio ?? design?.typeScale?.ratio ?? DEFAULTS.ratio
+    const r = carried?.scale?.ratio ?? savedScale?.ratio ?? DEFAULTS.ratio
     return RATIOS.find(o => o.value === r)?.id || 'custom'
   })
-  const [customRatio, setCustomRatio] = useState(() => carried?.scale?.ratio ?? design?.typeScale?.ratio ?? DEFAULTS.custom)
+  const [customRatio, setCustomRatio] = useState(() => carried?.scale?.ratio ?? savedScale?.ratio ?? DEFAULTS.custom)
   const [up, setUp] = useState(DEFAULTS.up)
   const [down, setDown] = useState(DEFAULTS.down)
-  const [lineHeight, setLineHeight] = useState(() => design?.typeScale?.lineHeight ?? DEFAULTS.lineHeight)
-  const [headingTrack, setHeadingTrack] = useState(() => design?.typeScale?.headingSpacing ?? DEFAULTS.headingTrack)
-  const [bodyTrack, setBodyTrack] = useState(() => design?.typeScale?.bodySpacing ?? DEFAULTS.bodyTrack)
+  const [lineHeight, setLineHeight] = useState(() => savedScale?.lineHeight ?? DEFAULTS.lineHeight)
+  const [headingTrack, setHeadingTrack] = useState(() => savedScale?.headingSpacing ?? DEFAULTS.headingTrack)
+  const [bodyTrack, setBodyTrack] = useState(() => savedScale?.bodySpacing ?? DEFAULTS.bodyTrack)
   const [rounding, setRounding] = useState(DEFAULTS.rounding)
   // The MOBILE end of the scale. `base`/`ratio` above are the desktop end.
   //
@@ -293,8 +299,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // The two families the preview and the export use. Seeded from the hand-off,
   // then the saved kit — the tool never opens on a font the user didn't choose.
-  const seedHeading = carried?.heading || design?.fonts?.heading
-  const seedBody = carried?.body || design?.fonts?.body
+  const seedHeading = carried?.heading || ownFont(design, 'heading')
+  const seedBody = carried?.body || ownFont(design, 'body')
   const [headingName, setHeadingName] = useState(() => seedHeading?.family || 'Archivo')
   const [bodyName, setBodyName] = useState(() => seedBody?.family || 'IBM Plex Sans')
   const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 800)
@@ -464,8 +470,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     toast?.('Scale reset to a 15px golden ratio')
   }
 
-  const headingStack = headingFont ? fontStack(headingFont) : 'var(--font)'
-  const bodyStack = bodyFont ? fontStack(bodyFont) : 'var(--font)'
+  // While the catalogue is still loading the chosen family is already known by
+  // name, so the first paint names it instead of the site face.
+  const pendingStack = (name, seed) => (status === 'loading' ? fontStack({ family: name, category: seed?.category }) : 'var(--font)')
+  const headingStack = headingFont ? fontStack(headingFont) : pendingStack(headingName, seedHeading)
+  const bodyStack = bodyFont ? fontStack(bodyFont) : pendingStack(bodyName, seedBody)
 
   const importUrl = useMemo(() => {
     const families = []
