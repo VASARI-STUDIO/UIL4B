@@ -426,6 +426,8 @@
   color: rgba(239, 238, 234, .66);
 }
 .hx-count-mid { display: none; }
+/* Both tails start with a space; as flex items they would drop it. */
+.hx-count-long, .hx-count-mid { white-space: pre; }
 .hx-tiles {
   padding: 24px;
   display: grid;
@@ -503,7 +505,7 @@
 @media (min-width: 1024px) and (max-width: 1175px) {
   .hx-bar { right: 24px; flex-wrap: wrap; justify-content: space-between; }
   .hx-file { flex: 1 1 100%; }
-  .hx-ramp { bottom: 118px; }
+  .hx-ramp, .hx-files, .hx-icons { bottom: 118px; }
 }
 
 /* ── Up to 1439: the art column is narrower, so the pictures resize ───────── */
@@ -515,6 +517,12 @@
   .hx-ui { left: auto; right: 16px; top: 400px; width: 336px; height: 189px; }
   .hx-tiles { padding-right: 64px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .hx-ph { height: auto; aspect-ratio: 236 / 300; }
+}
+/* 1024 to 1175: the art column is under 640px, so the palette page and the
+   cover sit side by side instead of overlapping. */
+@media (min-width: 1024px) and (max-width: 1175px) {
+  .hx-kt { width: 168px; height: 95px; }
+  .hx-gf { width: 262px; height: 147px; }
 }
 
 /* ── Up to 1023: words on top, the art full width underneath ──────────────── */
@@ -669,6 +677,9 @@
 @media (max-width: 374px) {
   .hx-h2 { font-size: 32px; }
   .hx-webp, .hx-count-mid { display: none; }
+  /* The file bar grows by a line instead of cutting the name short. */
+  .hx-fname { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+  .hx-file { height: auto; padding-top: 6px; padding-bottom: 6px; }
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────── */
