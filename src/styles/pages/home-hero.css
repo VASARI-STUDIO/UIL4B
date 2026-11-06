@@ -5,12 +5,13 @@
 
    The headline and its sub-line have no entrance and the glow is still. Only
    the loop panel enters, once. `--hh-nav-h` is the room reserved above the hero
-   for the navigation. */
+   for the navigation. The hero stays on its dark ground in either page theme,
+   so its inks are its own. */
 
 .hh-hero {
   --hh-nav-h: 92px;
-  --hh-ink: var(--sp-ink, #EFEEEA);
-  --hh-ink-rgb: var(--sp-ink-rgb, 239, 238, 234);
+  --hh-ink: #EFEEEA;
+  --hh-ink-rgb: 239, 238, 234;
   position: relative;
   isolation: isolate;
   display: flex;
