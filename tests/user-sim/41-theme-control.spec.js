@@ -47,8 +47,9 @@ const btn = (v) => `${SEG} [data-theme-choice="${v}"]`
 // `.theme-seg` in its panel, and at 390 the meatball hidden with the sheet's
 // `.pnav-sheet-theme .theme-seg` behind [aria-label="Open menu"].
 //
-// The front door's OWN copy of the control is not dropped — it is pinned by
-// 'the front door carries the control too' at the foot of this file.
+// The marketing bar on the sales pages carries no theme control at all, so the
+// front door is not one of the places this file drives; 96-spectrum-nav pins
+// that the bar has none.
 const NAV_ROUTE = '/discover'
 
 const themeOf = (page) => page.evaluate(() => document.documentElement.getAttribute('data-theme'))
@@ -261,39 +262,6 @@ await ready(page)
       try { return Object.keys(localStorage) } catch { return ['THREW'] }
     })
     expect(keys, `localStorage holds ${JSON.stringify(keys)}`).not.toContain('vs-t-lightreset')
-    await ctx.close()
-  })
-
-  // THE FRONT DOOR'S OWN COPY, and it is here so re-pointing the four tests
-  // above onto /discover does not quietly drop the page every visitor lands on.
-  //
-  // `/` is SpectrumNav, the design's marketing pill, and its menu is the
-  // design's four items and nothing else — the
-  // three-way segment is no longer in it. The control on the front door is the
-  // one the design draws: the theme cycle on the pill (line 230), light → dark
-  // → system → light. What this file exists to say — a visitor can reach the
-  // dark theme from where they are, and it sticks — is said about that.
-  test('the front door carries the control too, as the pill\'s theme cycle', async ({ browser }) => {
-    const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
-    const page = await ctx.newPage()
-    await go(page, '/')
-    expect(await themeOf(page)).toBe('light')
-
-    // Not the segment: that lives in the app's popover, sheet and /settings.
-    expect(await visibleSegments(page), 'the segmented control is not part of the marketing pill').toBe(0)
-
-    // From System (the fresh-profile default), the cycle's next stop is Light,
-    // then Dark. Its label is the design's, "Theme: auto. Switch to light.".
-    const cycle = page.locator('.spnav-bar .spnav-icon[aria-label^="Theme:"]')
-    await expect(cycle).toBeVisible()
-    for (let i = 0; i < 3 && (await themeOf(page)) !== 'dark'; i++) await cycle.click()
-    await expect.poll(() => themeOf(page), { message: 'the front door could not switch the theme' }).toBe('dark')
-
-    // Persistence, for the same reason as every other case here: a fabricated
-    // write looks identical until the next visit.
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await ready(page)
-    expect(await themeOf(page), 'the chosen theme did not survive a reload').toBe('dark')
     await ctx.close()
   })
 })
