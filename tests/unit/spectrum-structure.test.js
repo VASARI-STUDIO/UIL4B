@@ -370,8 +370,13 @@ test('the landing is the design\'s six blocks in order, and pricing is not one o
   // which is /plans. The landing is hero, bench, exports (#specimens), the
   // community library (#discover), the terms band (#index) and the handoff.
   const ids = [...PAGE.matchAll(/<(?:section|div) id="([a-z]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'plans', 'start'],
-    'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, start in that order')
+  // The final call is its own component, mounted last in <main>; it owns #start.
+  const START = stripComments(read('src/components/home/HomeFinalCall.jsx'))
+  assert.match(START, /<section id="start"[^>]*aria-labelledby="start-h"/, 'the final call lost its #start section or its aria-labelledby')
+  assert.match(START, /<h2 id="start-h" tabIndex=\{-1\}>/, 'the final call heading no longer takes focus for an in-page jump')
+  assert.ok(PAGE.includes('<HomeFinalCall'), 'Spectrum.jsx no longer mounts the final call')
+  assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'plans'],
+    'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, then the final call in that order')
   // The proof band (#proof, SpectrumProof.jsx) sits between examples and plans.
   const proofAt = PAGE.indexOf('<SpectrumProof />')
   assert.ok(proofAt > PAGE.indexOf('id="examples"') && proofAt < PAGE.indexOf('id="plans"'),
@@ -382,8 +387,11 @@ test('the landing is the design\'s six blocks in order, and pricing is not one o
   // Landmarks: one banner (the nav), one main from the hero to the final call, one footer.
   assert.equal([...PAGE.matchAll(/<header[\s>]/g)].length, 1, 'the page has more than one <header>')
   assert.equal([...PAGE.matchAll(/<main\s/g)].length, 1)
-  assert.ok(PAGE.indexOf('id="start"') > PAGE.indexOf('id="plans"') && PAGE.indexOf('id="start"') < PAGE.indexOf('</main>'),
+  assert.ok(PAGE.indexOf('<HomeFinalCall') > PAGE.indexOf('id="plans"') && PAGE.indexOf('<HomeFinalCall') < PAGE.indexOf('</main>'),
     'the final call is not the last section of <main>')
+  // The homepage footer takes the closing look; the curtain reveal is not used on it.
+  assert.match(PAGE, /<SpectrumFooter[^>]*\bhome\b/, 'the homepage no longer asks for the home footer')
+  assert.ok(!/<SpectrumFooter[^>]*\breveal\b/.test(PAGE), 'the homepage footer turned the curtain reveal back on')
   // The footer's PROJECT column links to the page's own sections, by anchor.
   for (const hash of ['#bookmarks', '#try', '#exports', '#examples', '#plans']) {
     assert.ok(FOOTER.includes(`'${hash}'`), `the footer no longer links ${hash}`)
