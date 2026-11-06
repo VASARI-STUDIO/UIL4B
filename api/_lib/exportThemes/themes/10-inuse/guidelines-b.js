@@ -226,7 +226,8 @@ const own = {
 
   summary(ctx) {
     const B = ctx.brand, G = B.guideB, f = B.fonts, cw = B.logo.colourways, hl = tok(ctx, 'headline'), S = B.ui.screen.content;
-    const by = (id) => ctx.colours.find((c) => c.id === id);
+    const ROLE = { float: 'highlight', 'deep-end': 'text', white: 'card', lane: 'action', chalk: 'ground' }, ALT = { card: 'panel' };
+    const by = (id) => ctx.colours.find((c) => c.id === id) || ctx.colours.find((c) => c.role === ROLE[id]) || ctx.colours.find((c) => c.role === ALT[ROLE[id]]);  // a project brand names its colours by role
     // the brand on one screen: each colour noted where it lives, top to bottom; the key gives name, share and hex
     const order = ['float', 'deep-end', 'white', 'lane', 'chalk'].map(by);
     const mkc = (id, style) => mkp(order.indexOf(by(id)) + 1, '', style);

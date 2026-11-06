@@ -162,6 +162,7 @@ ${phoneBook(ctx, 'left:378px;top:560px')}
   'radii-borders'(ctx) {
     const S = sc(ctx), ui = ctx.ui, F = S.form;
     const R = Object.fromEntries(ctx.radii.map((r) => [r.token.replace('radius-', ''), r]));
+    for (const k of ['button', 'input']) R[k] ||= { ...R.control, token: `radius-${k}` };  // a brand with one control radius has no button or input radius of its own
     const tk = (k) => `${m('--r-' + k)}`;
     const cap = (k) => `${tk(k)}, ${radiusText(R[k].px)}`;
     const [bh, bc, bf] = ctx.borders;

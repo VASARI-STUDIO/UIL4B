@@ -175,7 +175,7 @@ ${messagesPhone(ctx, 'left:378px;top:330px;height:560px')}`;
     const ord = ['ground', 'card', 'text', 'action', 'highlight'].map((r) => cs.find((c) => c.role === r)).filter(Boolean);
     const sw = (c) => `<span class="a-sw ${isHair(ctx, c.hex) ? 'hairline' : ''}" style="background:${c.hex}"></span>`;
     const notes = ord.map((c, i) => `<li class="a-n a-n--pal">${mk(i + 1)}${sw(c)}<div><b>${A(c.name)}</b>${A(ctx.cap(c.role))}. ${A(c.lands)}</div></li>`).join('');
-    const inner = `<p class="a-lead" style="margin-top:8px;max-width:600px">${NUM[cs.length]} colours, each named for where it lands. Most of every screen is ${A(g.name)}. The other four each do one job.</p>
+    const inner = `<p class="a-lead" style="margin-top:8px;max-width:600px">${NUM[cs.length] || cs.length} colours, each named for where it lands. Most of every screen is ${A(g.name)}. The other ${NUM[cs.length - 1] ? NUM[cs.length - 1].toLowerCase() : cs.length - 1} each do one job.</p>
 <div class="a-duo a-duo--r"><ul class="a-notes">${notes}</ul>${bookPhone(ctx, 360, 740)}</div>`;
     return std(ctx, 'palette', 'The palette at work', inner);
   },
