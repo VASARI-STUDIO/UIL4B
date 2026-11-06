@@ -384,7 +384,6 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   background-color: var(--fg-ground);
   transition: background-color var(--dur-1) var(--ease-standard);
 }
-.fg-page .fg-card--comparing { box-shadow: inset 3px 0 0 var(--t0); }
 
 .fg-page .fg-card-open {
   position: absolute;
@@ -448,105 +447,45 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   transition: color var(--dur-1) var(--ease-standard);
 }
 
-/* The wake's contents: always laid out, so only their opacity changes. */
-.fg-page .fg-card-reveal {
-  position: absolute;
-  left: var(--fg-padl);
-  right: var(--fg-right);
-  /* Starts below the name's descender room (p, g, y, j, q, script tails run
-     under the line box), so the pangram never meets them. */
-  top: calc(var(--fg-y) + var(--fg-line) + var(--fg-name, 96px) * .14);
-  bottom: calc(var(--fg-y) + 24px);
-  container: fg-reveal / size;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-  font-family: var(--fg-ff);
-  color: var(--fg-ink);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-1) var(--ease-standard);
-}
-@media (max-width: 767px) {
-  /* The pangram and the weights line together need 31px; 24px of clearance
-     below left too little. */
-  .fg-page .fg-card-reveal { bottom: calc(var(--fg-y) + 18px); gap: 0; }
-}
-.fg-page .fg-card-pangram {
-  flex: 0 0 auto;
-  font-size: var(--fg-pangram);
-  font-weight: var(--fg-fw-b);
-  line-height: 1.3;
-  white-space: nowrap;
-}
-.fg-page .fg-card-weights {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 4px 18px;
-  font-size: var(--fg-steps);
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.fg-page .fg-card-step { font-weight: var(--fg-fw); }
-
-/* The reveal's room follows the Size choice while its type does not, so a line
-   that does not fit whole is dropped (weights first, then the pangram) rather
-   than cut mid-glyph. Each limit is a line's height plus the gap: wide 26 and
-   48; tablet 24 and 44; phone 17 and 31 (the fixed sizes above, at 1.3). Hidden
-   lines leave the layout, but the reveal is its own box, so nothing else moves. */
-@media (min-width: 1024px) {
-  @container fg-reveal (height < 50px) { .fg-page .fg-card-weights { display: none; } }
-  @container fg-reveal (height < 27px) { .fg-page .fg-card-pangram { display: none; } }
-}
-@media (min-width: 768px) and (max-width: 1023px) {
-  @container fg-reveal (height < 46px) { .fg-page .fg-card-weights { display: none; } }
-  @container fg-reveal (height < 25px) { .fg-page .fg-card-pangram { display: none; } }
-}
-@media (max-width: 767px) {
-  @container fg-reveal (height < 33px) { .fg-page .fg-card-weights { display: none; } }
-  @container fg-reveal (height < 18px) { .fg-page .fg-card-pangram { display: none; } }
-}
-
-/* The reveal: the pangram and the weights fade in on the same transparent
-   band. Hover waits 80ms, so a pointer crossing the list does not strobe it;
-   keyboard focus shows it at once. Only opacity changes; no box moves and the
-   ground and ink stay as they are at rest. */
-.fg-page .fg-card:has(:focus-visible) .fg-card-reveal { opacity: 1; }
+/* Tile hover: a hovered tile shows its name in the link colour. */
 @media (hover: hover) {
-  .fg-page .fg-card:hover .fg-card-reveal { opacity: 1; }
-  /* Tiles hide the reveal, so a hovered tile shows its name in the link colour. */
   .fg-page .fg-grid--tiles .fg-card:hover .fg-card-name { color: var(--tl-link); }
-  .fg-page .fg-card:hover,
-  .fg-page .fg-card:hover :is(.fg-card-name, .fg-card-meta, .fg-card-reveal, .fg-card-compare) { transition-delay: 80ms; }
 }
 
-/* Compare: 44px, on the band's right edge, centred on the name. */
+/* The pick button: a 36px tonal round on the band's right edge, centred on the
+   name. Its plus and tick cross-fade; picked is a deeper tint, not a ring. */
+.fg-page .fg-card {
+  --fg-chip: color-mix(in srgb, var(--fg-ink) 8%, transparent);
+  --fg-chip-h: color-mix(in srgb, var(--fg-ink) 14%, transparent);
+  --fg-chip-on: color-mix(in srgb, var(--fg-ink) 20%, transparent);
+}
 .fg-page .fg-card-compare {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   right: var(--fg-padr);
-  top: max(0px, calc(var(--fg-y) + var(--fg-line) / 2 - 22px));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
+  top: max(0px, calc(var(--fg-y) + var(--fg-line) / 2 - 18px));
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  color: var(--fg-ink-2);
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--fg-ink) 34%, transparent);
-  border-radius: var(--btn-radius);
+  color: var(--fg-ink);
+  background: var(--fg-chip);
+  border: 0;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+  transition: background-color 150ms ease, transform 120ms var(--fg-ease);
 }
-.fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (hover: hover) {
-  .fg-page .fg-card-compare:hover { color: var(--fg-ink); border-color: color-mix(in srgb, var(--fg-ink) 60%, transparent); }
+.fg-page .fg-card-compare svg { grid-area: 1 / 1; transition: opacity 300ms var(--fg-ease); }
+.fg-page .fg-card-compare .fg-ico-check { opacity: 0; }
+.fg-page .fg-card-compare--on { background: var(--fg-chip-on); }
+.fg-page .fg-card-compare--on .fg-ico-plus { opacity: 0; }
+.fg-page .fg-card-compare--on .fg-ico-check { opacity: 1; }
+.fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .fg-page .fg-card-compare:hover { background: var(--fg-chip-h); }
+  .fg-page .fg-card-compare--on:hover { background: var(--fg-chip-on); }
 }
-.fg-page .fg-card-compare--on,
-.fg-page .fg-card-compare--on:hover { color: var(--fg-back); background: var(--fg-ink); border-color: var(--fg-ink); }
 
 /* Loading: the same bands, drawn empty. */
 .fg-page .fg-skel-row { padding: var(--fg-y) var(--fg-padr) 0 var(--fg-padl); }
@@ -795,8 +734,8 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
    layer under the text: it fades in over 320ms the first time and holds, and
    fades out over 200ms when the band closes. A band that has shown it once
    swaps with no fade. Only opacity moves, and no box changes size. */
-.fg-page { --fg-wake: #191919; }
-[data-theme="light"] .fg-page { --fg-wake: #E3E2DE; }
+.fg-page { --fg-wake: #191919; --fg-sel: #272727; }
+[data-theme="light"] .fg-page { --fg-wake: #E3E2DE; --fg-sel: #D9D8D5; }
 .fg-page .fg-card::before {
   content: "";
   position: absolute;
@@ -808,6 +747,7 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
   transition: opacity 200ms cubic-bezier(.4, 0, 1, 1);
 }
 .fg-page .fg-card.is-open { --fg-ground: var(--fg-wake); }
+.fg-page .fg-card--comparing, .fg-page .fg-card--comparing.is-open { --fg-ground: var(--fg-sel); }
 .fg-page .fg-card.is-open.has-backdrop::before { opacity: 1; transition: opacity 320ms var(--fg-ease); }
 .fg-page .fg-card.is-open.has-seen::before { transition: none; }
 .fg-page .fg-grid--tiles .fg-card::before { display: none; }
@@ -845,7 +785,6 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
   background: #E2E1DC;
   box-shadow: inset 0 0 0 1px rgba(26, 26, 26, .12);
 }
-[data-theme="light"] .fg-page .fg-card.is-open .fg-card-compare--on { background: var(--fg-ink); }
 
 /* Typed preview text: the family name drops to a small label above the words,
    and the band grows by the label's height. */
