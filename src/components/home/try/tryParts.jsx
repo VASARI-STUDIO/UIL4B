@@ -20,7 +20,8 @@ export function ToolLink({ to, onClick, fill = false, line, short, children }) {
   )
 }
 
-/** A radio segment: arrow keys move the choice, only the chosen one is in the tab order. */
+/** A radio segment: arrow keys move the choice, only the chosen one is in the tab order
+ *  (the first one, when `value` is -1 because none is chosen). */
 export function Radios({ label, labelledBy, items, value, onPick, className = '', isDisabled }) {
   const enabled = items.map((_, i) => !(isDisabled && isDisabled(i)))
   const move = (e, i) => {
@@ -40,7 +41,7 @@ export function Radios({ label, labelledBy, items, value, onPick, className = ''
           type="button"
           role="radio"
           aria-checked={value === i}
-          tabIndex={value === i ? 0 : -1}
+          tabIndex={value === i || (value < 0 && i === 0) ? 0 : -1}
           disabled={!enabled[i]}
           onClick={() => onPick(i)}
           onKeyDown={(e) => move(e, i)}

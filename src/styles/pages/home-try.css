@@ -9,7 +9,9 @@
   --l2: rgba(var(--ink), .06);
   --l2h: rgba(var(--ink), .10);
   --l3: rgba(var(--ink), .14);
+  --l3h: rgba(var(--ink), .18);
   --hair: rgba(var(--ink), .08);
+  --ring: inset 0 0 0 1px rgba(var(--ink), .10);
   position: relative;
   isolation: isolate;
   box-sizing: border-box;
@@ -183,6 +185,67 @@
 .ht-pal-swap > span { grid-area: 1 / 1; justify-self: center; white-space: nowrap; transition: opacity 150ms var(--ease); }
 .ht-pal-role { margin-top: 4px; font-size: 13px; line-height: 18px; }
 @container (max-width: 459px) { .ht-pal-col { padding-inline: 4px; } .ht-pal-nm { font-size: 13px; line-height: 18px; min-height: 36px; } }
+
+/* ── shared by the icon and font frames ───────────────────────────────────── */
+
+.ht-tb { flex: none; display: flex; align-items: center; gap: 8px; height: 36px; }
+.ht-field { position: relative; flex: 1; min-width: 0; }
+.ht-field svg { position: absolute; left: 12px; top: 10px; width: 16px; height: 16px; fill: rgba(var(--ink), .62); pointer-events: none; }
+.ht-input {
+  display: block; width: 100%; height: 36px; padding: 0 16px; border: 1px solid transparent; border-radius: 999px;
+  background: var(--l2); box-shadow: var(--ring); font-size: 15px; font-weight: 400; line-height: 20px; color: #EFEEEA;
+}
+.ht-input--icon { padding-left: 40px; }
+.ht-input::placeholder { color: rgba(var(--ink), .56); opacity: 1; }
+.ht-msg { margin: 0 0 8px; max-width: 48ch; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
+.ht-val { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px; color: rgba(var(--ink), .72); font-variant-numeric: tabular-nums; }
+.ht-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) {
+  .ht-input { min-height: 44px; height: 44px; }
+  .ht-field svg { top: 14px; }
+}
+
+/* ── icons ────────────────────────────────────────────────────────────────── */
+
+.ht-ic { flex: 1 1 0; min-height: 0; margin-top: 16px; display: flex; gap: 24px; }
+.ht-ic-res { flex: 1; min-width: 0; min-height: 0; }
+.ht-ic-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, 44px); grid-template-rows: repeat(9, 44px); grid-auto-rows: 0;
+  gap: 4px; height: 428px; overflow: hidden;
+}
+.ht-ic-t {
+  display: grid; place-items: center; height: 44px; padding: 0; border: 0; border-radius: 8px;
+  background: transparent; color: rgba(var(--ink), .62);
+  transition: transform 120ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease);
+}
+.ht-ic-t[aria-pressed="true"] { background: var(--l3); color: #EFEEEA; }
+.ht-ic-t:not(:disabled):active { transform: scale(.97); }
+.ht-ic-g { width: 24px; height: 24px; }
+.ht-ic-pv { flex: none; width: 184px; display: flex; flex-direction: column; }
+.ht-ic-stage { display: grid; place-items: center; width: 184px; height: 160px; border-radius: 12px; background: var(--l2); color: #EFEEEA; }
+.ht-ic-big { width: 96px; height: 96px; }
+.ht-ic-name { margin: 8px 0 0; font-size: 15px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
+.ht-ic-meta { margin: 4px 0 0; height: 18px; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
+.ht-ic-cols { align-self: stretch; margin-top: 16px; }
+.ht-ic-cols button { padding: 0 8px; }
+.ht-ic-sw { margin-top: 8px; display: flex; align-items: center; gap: 8px; height: 32px; }
+.ht-swatch {
+  position: relative; flex: none; display: block; width: 32px; height: 32px; border-radius: 999px; overflow: hidden;
+  cursor: pointer; background: #E1D6C4; box-shadow: inset 0 0 0 1px rgba(var(--ink), .10);
+}
+.ht-swatch input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 999px; }
+.ht-swatch input::-webkit-color-swatch-wrapper { padding: 0; }
+.ht-swatch input::-webkit-color-swatch { border: 0; border-radius: 999px; }
+.ht-swatch input::-moz-color-swatch { border: 0; border-radius: 999px; }
+.ht-swatch:has(:focus-visible) { outline: 2px solid #EFEEEA; outline-offset: 2px; }
+.ht-swatch input:focus-visible { outline: none; }
+@media (hover: hover) and (pointer: fine) {
+  .ht-ic-t:hover:not([aria-pressed="true"]) { background: var(--l2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ht-ic-t { transition: none; }
+  .ht-ic-t:not(:disabled):active { transform: none; }
+}
 
 /* ── a frame that only links on ───────────────────────────────────────────── */
 

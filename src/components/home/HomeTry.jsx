@@ -6,6 +6,7 @@ import { TOOL_COUNT, numberWord } from '../spectrum/spectrumFacts'
 import { COLOUR_SYSTEMS, FREE_COLOUR_SYSTEMS } from '../../config/colourSystems'
 import { ICON_PACK_TIERS } from '../../data/iconPackTiers'
 import PaletteTool from './try/PaletteTool'
+import IconTool from './try/IconTool'
 import OpenOnlyTool from './try/OpenOnlyTool'
 import ConverterTool from './try/ConverterTool'
 import '../../styles/pages/home-try.css'
@@ -43,7 +44,7 @@ const TOOLS = [
     name: 'Icon Library',
     lead: 'A searchable library of the popular open-source icon packs.',
     next: `In the full tool, search for the same icon, flip it, rotate it and copy it as SVG, or paste in your own. A free account opens ${numberWord(FREE_PACKS)} packs; Pro opens ${numberWord(PRO_PACKS)} more, with brand logos, flags and emoji.`,
-    body: <OpenOnlyTool toolId="icons" label="Icon Library" line="Search the full library for bike, map pin, clock and more." />,
+    body: <IconTool />,
   },
   {
     id: 'font-gallery',
