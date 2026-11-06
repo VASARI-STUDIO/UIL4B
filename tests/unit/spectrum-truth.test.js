@@ -271,10 +271,11 @@ test('the library counts are counted off the arrays', () => {
   }
 })
 
-test('the Icon sets tab shows the premade icon groups, counted, and says nothing it cannot', () => {
-  // The third Discover tab shows real icon groups: every group a signed-out
-  // visitor can open, each with four of its own glyphs; the gallery count is
-  // every group, Pro included.
+test('the icon-group shelf data is sound, and the page claims nothing about icon sets it cannot back', () => {
+  // The shelf shows real icon groups: every group a signed-out visitor can
+  // open, each with four of its own glyphs. The homepage has no Discover
+  // section to hold it; whichever section shows the shelf asserts its own
+  // markup and count.
   const groups = listIconGroups({ tier: 'anon' })
   const open = groups.filter((g) => !g.locked).map((g) => g.id)
   const shelf = Object.keys(ICON_GROUP_SHELF)
@@ -284,13 +285,11 @@ test('the Icon sets tab shows the premade icon groups, counted, and says nothing
     assert.equal(ICON_GROUP_SHELF[id].length, 4, `${id} does not carry four of its own glyphs`)
     for (const body of ICON_GROUP_SHELF[id]) assert.match(body, /stroke="currentColor"/, `${id} carries a glyph that is not an outline`)
   }
-  assert.ok(PAGE.includes('listIconGroups('), 'the Icon sets tab no longer reads the icon groups')
-  assert.ok(PAGE.includes('ICON_GROUPS.length'), 'the icon-group count is no longer counted')
-  assert.ok(PAGE.includes('g.route'), 'a group card no longer links to its group')
-  // The groups draw on other people's packs, so the Discover footer may not
+  // The groups draw on other people's packs, so nothing on the page may
   // say every set here is made by UI L4B.
-  assert.ok(!/Every set here is made by UI L4B/.test(PAGE),
-    'the Discover footer claims the icon packs are made by UI L4B')
+  assert.ok(!/Every set here is made by UI L4B/.test(ALL_JSX),
+    'the page claims the icon packs are made by UI L4B')
+  assert.ok(!PAGE.includes('id="discover"'), 'the homepage carries the Discover section again')
 })
 
 /* ── limits ────────────────────────────────────────────────────────────────── */
