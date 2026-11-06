@@ -136,6 +136,7 @@ function skeleton(word, date) {
     guideB: {
       studioSlot: w, examples: [1, 2, 3, 4].map((i) => ({ do: `Example ${i}, do this.`, dont: `Example ${i}, not this.` })), rules: [1, 2, 3].map((i) => ({ title: `Brand rule ${i}`, text: w })),
       email: { to: 'Customer name', subject: 'Your subject line', time: '10:44', body: ['Hi there,', w] },
+      notIn: [1, 2, 3].map((i) => `Left out of this document ${i}.`),
     },
     contact: { owner: 'Brand team', email: 'brand@brand.example' },
   };
