@@ -148,7 +148,9 @@
 @media (pointer: coarse) {
   .ht-btn, .ht-go { min-height: 44px; height: 44px; }
   .ht-seg, .ht-tabs { height: 44px; }
-  .ht-seg button, .ht-tabs button { height: 40px; }
+  .ht-seg button, .ht-tabs button { position: relative; height: 40px; }
+  /* The 2px of the track above and below each 40px button joins its hit area, which makes it 44px tall without a wider drawing. The buttons touch side to side, so nothing overlaps. */
+  .ht-seg button::before, .ht-tabs button::before { content: ""; position: absolute; inset: -2px 0; }
 }
 
 /* the foot: one status line on the left, the link into the full tool on the right */
@@ -359,7 +361,8 @@
   .ht-step { height: 44px; }
   .ht-step button { height: 44px; }
   .ht-fn-pick { width: 36px; height: 36px; }
-  .ht-fn-pick::after { inset: -4px; }
+  /* 44px to hit. The list clips the pick's right edge, so the extra reach goes to the left, over the row, which keeps 48px clear for it. */
+  .ht-fn-pick::after { inset: -4px 0 -4px -8px; }
 }
 
 /* ── converter ────────────────────────────────────────────────────────────── */
@@ -367,6 +370,11 @@
 .ht-tabs { flex: none; align-self: flex-start; display: inline-flex; height: 36px; margin-bottom: 16px; padding: 2px; border-radius: var(--btn-radius); background: var(--l2); max-width: 100%; overflow: hidden; }
 .ht-tabs button { flex: 1 1 auto; height: 32px; padding: 0 14px; border: 0; border-radius: var(--btn-radius); background: transparent; font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; color: rgba(var(--ink), .78); }
 @container (max-width: 459px) { .ht-tabs button { padding: 0 8px; } }
+/* Touch: this sits after the base sizes above so it wins (the shared coarse rule near the top of the file comes first and lost). */
+@media (pointer: coarse) {
+  .ht-tabs { height: 44px; }
+  .ht-tabs button { height: 40px; }
+}
 .ht-cv-panel { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
 .ht-cv-card { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 45% minmax(0, 1fr); gap: 16px; }
 .ht-cv-thumb { position: relative; min-height: 0; border-radius: 12px; overflow: hidden; background: var(--l2); }

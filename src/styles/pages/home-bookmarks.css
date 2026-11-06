@@ -29,16 +29,16 @@
 /* Controls */
 .bm button { font-family: inherit; cursor: pointer; transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--e); }
 .bm button:active { transform: scale(.97); }
-.bm button:focus-visible, .bm a:focus-visible { outline: 2px solid #EFEEEA; outline-offset: -2px; }
+.bm button:focus-visible, .bm a:focus-visible { outline: 2px solid #EFEEEA; outline-offset: calc(-2px / var(--hm-zoom, 1)); }
 .bm-fold:active { transform: none; background-color: rgba(239, 238, 234, .12); }
 
 /* ── The stage ─────────────────────────────────────────────────────────────── */
 /* The gap above the stage sits on the stage, so the zoom scales it with the rest. */
 .bm-stage { position: relative; isolation: isolate; width: 1336px; height: 640px; margin: 80px auto 0; }
 /* Scaled as one piece so nothing scrolls sideways; zoom shrinks the layout height too. */
-@media (max-width: 1439px) { .bm-stage { zoom: .86; } }
-@media (max-width: 1252px) { .bm-stage { zoom: .82; } }
-@media (max-width: 1199px) { .bm-stage { zoom: .7; } }
+@media (max-width: 1439px) { .bm-stage { --hm-zoom: .86; } }
+@media (max-width: 1252px) { .bm-stage { --hm-zoom: .82; } }
+@media (max-width: 1199px) { .bm-stage { --hm-zoom: .7; } }
 
 .bm-bar {
   position: absolute; left: 0; top: 0; height: 44px; box-sizing: border-box; padding: 0 8px;
@@ -270,13 +270,13 @@
 .bmp-bar { height: 36px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .bmp-bar-n { font-weight: 500; }
 .bmp-bar-c { font-size: 13px; color: rgba(239, 238, 234, .62); }
-/* 24px to look at, 44px to hit */
+/* 24px to look at, 44px to hit. The ::after is measured from the padding box, 22px inside the 1px border, so it needs 11px each side to reach 44. */
 .bmp-pb {
   position: relative; flex: none; width: 24px; height: 24px; margin-left: auto; padding: 0;
   border: 1px solid rgba(239, 238, 234, .16); border-radius: var(--btn-radius); background-color: transparent;
   color: rgba(239, 238, 234, .72); display: grid; place-items: center;
 }
-.bmp-pb::after { content: ''; position: absolute; inset: -10px; }
+.bmp-pb::after { content: ''; position: absolute; inset: -11px; }
 .bmp-pb svg { display: block; }
 .bmp-run { margin: 4px 0 0; }
 

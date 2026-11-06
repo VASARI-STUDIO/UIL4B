@@ -56,8 +56,21 @@ html:has(.spectrum-home) { scroll-padding-top: 104px; }
    a focus rule. */
 .spectrum.spectrum-home :focus-visible {
   outline-style: solid;
-  outline-width: 2px;
+  outline-width: var(--hm-ring-w, 2px);
   outline-color: #EFEEEA;
+}
+
+/* The two scaled stages (the hero loop slot and the bookmarks stage) take their
+   scale from --hm-zoom, which the width steps in home-hero.css and
+   home-bookmarks.css set. `zoom` multiplies an outline width too, and the
+   browser floors the result to whole device pixels: 2px under .96 is 1.92 and
+   draws 1px. So inside a stage the ring is asked for at 2px / zoom, which
+   lands on 2px on screen at every step. The extra .02px keeps float error from
+   landing just under 2 and flooring to 1. --hm-zoom is 1 outside a stage. */
+.hh-slot,
+.bm-stage {
+  zoom: var(--hm-zoom, 1);
+  --hm-ring-w: calc(2.02px / var(--hm-zoom, 1));
 }
 html:has(.spectrum-home) .skip-link:focus { outline-color: #EFEEEA; }
 
