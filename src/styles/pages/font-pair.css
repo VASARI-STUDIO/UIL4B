@@ -377,5 +377,5 @@ html[data-reduced-motion="true"] .fpr-page .fpr-card-apply { transition: none; }
 /* ── The type-tools switcher in the bar ──────────────────────────────────── */
 .fpr-page .tl-item:has(> .ttn) { flex: 0 1 auto; }
 @media (max-width: 767px) {
-  .fpr-page .tl-item:has(> .ttn) { flex: 1 1 0; }
+  .fpr-page .tl-item:has(> .ttn) { flex: 1 1 180px; min-width: 180px; }
 }
