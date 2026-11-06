@@ -119,6 +119,8 @@ test.describe('reflow at 320px', () => {
     // runs first returns an empty list, which would pass a "nothing overflows"
     // check by measuring nothing at all.
     await expect(page.locator('.tsc-row-text').first()).toBeVisible()
+    // A heading row draws at the base size until its face has loaded.
+    await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
 
     const sizes = await page.evaluate(() =>
       [...document.querySelectorAll('.tsc-row-text')].map(t => parseFloat(getComputedStyle(t).fontSize)))
@@ -128,7 +130,8 @@ test.describe('reflow at 320px', () => {
     for (let i = 1; i < sizes.length; i++) {
       expect(sizes[i], `step ${i} is not smaller than step ${i - 1}`).toBeLessThan(sizes[i - 1])
     }
-    expect(sizes[0], 'the display step is still rendered at its real size').toBeGreaterThan(40)
+    // The phone anchor is 15px at a 1.2 ratio with four steps up: 15 * 1.2^4.
+    expect(sizes[0], 'the display step is still rendered at its real size').toBeCloseTo(31.1, 1)
   })
 
   test('the palette row keeps its controls at a usable target size', async ({ page }) => {

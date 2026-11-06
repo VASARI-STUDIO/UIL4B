@@ -289,12 +289,12 @@ test.describe('Font Pair', () => {
     await wand.click()
     await expect(page.locator('.fpr-pair span').last()).toHaveText(top)
     // …and the panel agrees: exactly one card reads "In use".
-    // The cards are counted by their own apply buttons: the Best match button
+    // The cards are counted by their own apply buttons: the Auto button
     // also says the face is in use once it has nothing left to do, and it is
     // not a card.
     await expect(page.locator('.fpr-card-apply', { hasText: 'In use' })).toHaveCount(1)
     await expect(wand).toBeDisabled()
-    await expect(wand).toContainText('Best match')
+    await expect(wand).toContainText('Auto')
   })
 
   test('a designer gets reasoned body suggestions and a live specimen', async ({ page }) => {

@@ -311,17 +311,19 @@ test.describe('Adjust sliders · keyboard stepping', () => {
 
   test('the fix reaches every SnapSlider, not just the Palette Builder', async ({ page }) => {
     watch(page, 'keyboard-only designer tuning a type scale')
-    // The Type Scale's base size is a SnapSlider with a snap at its resting 16px,
-    // so it carries exactly the same trap.
+    // The Type Scale's base size is a SnapSlider with snaps at 14, 16, 18 and 20
+    // and rests at 15, so it carries exactly the same trap.
     await go(page, '/create/type-scale')
 
     const shift = page.getByRole('slider', { name: 'Base font size in pixels' })
     await expect(shift).toBeVisible()
     await shift.focus()
-    await expect(shift).toHaveValue('16')
+    await expect(shift).toHaveValue('15')
     // The edited-value WEIGHT is not asserted on this slider: the Type Scale's
     // own sheet holds .snapv-value at 600 in both states, so the shared
     // .snapv--edited treatment never shows there. The keyboard contract, which is what this test is for, is asserted.
+    await page.keyboard.press('ArrowRight')
+    await expect(shift, 'one step lands exactly on the 16 snap').toHaveValue('16')
     await page.keyboard.press('ArrowRight')
     await expect(shift).toHaveValue('17')
     await page.waitForTimeout(350)

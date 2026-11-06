@@ -1,5 +1,5 @@
 // Font Pair, layout A "Specimen and panel", at 1440, 768 and 390.
-//   6  Best match (the one-press body suggestion) sits with Browse on the Body
+//   6  Auto (the one-press body suggestion) sits with Browse on the Body
 //      family label line, at its right; it is never inside the weight menu.
 //   7  At 768 the panel (family cards, then the preview text) comes before the
 //      specimen, in the DOM and on screen. At 390 there is no panel: the specimen
@@ -10,7 +10,7 @@
 //      #fpr-text in the panel on a tablet, #fpr-text-more in More on a phone.
 //
 // MUTATIONS (each should fail the spec named):
-//   - move Best match into .fpr-wmenu or before the label          -> 6
+//   - move Auto into .fpr-wmenu or before the label          -> 6
 //   - render the panel under the specimen at 768                   -> 7
 //   - render the panel instead of the family rows at 390           -> 7
 //   - give .fpr-fam-name `white-space: nowrap; overflow: hidden`   -> long name test
@@ -50,7 +50,7 @@ for (const width of WIDTHS) {
       }
     })
 
-    test('Best match is not in the weight menu, and sits at the right of the body family label line', async ({ page }) => {
+    test('Auto is not in the weight menu, and sits at the right of the body family label line', async ({ page }) => {
       const read = await withCard(page, width, 1, (card) => card.evaluate((el) => {
         const wand = el.querySelector('.fpr-wand')
         const head = el.querySelector('.fpr-fam-head')
@@ -59,7 +59,7 @@ for (const width of WIDTHS) {
         return {
           wandCount: el.querySelectorAll('.fpr-wand').length,
           inWeights: !!wand?.closest('.fpr-wmenu, .fpr-weights, .tl-pills, .fpr-fam-row'),
-          wordInMenu: [...el.querySelectorAll('.fpr-wmenu, .tl-pills, .fpr-weights')].some((g) => /\b(Auto|Best match)\b/.test(g.textContent || '')),
+          wordInMenu: [...el.querySelectorAll('.fpr-wmenu, .tl-pills, .fpr-weights')].some((g) => /\bAuto\b/.test(g.textContent || '')),
           inBodyCard: /Body family/.test(el.textContent || ''),
           onHead: !!head && !!acts && acts.parentElement === head,
           labelFirst: !!head && head.firstElementChild?.classList.contains('fpr-label') && /Body family/.test(head.firstElementChild.textContent || ''),
@@ -69,16 +69,16 @@ for (const width of WIDTHS) {
           label: wand?.getAttribute('aria-label'),
         }
       }))
-      expect(read.wandCount, 'exactly one Best match').toBe(1)
-      expect(read.inWeights, 'Best match is inside the weight menu or the name row').toBe(false)
-      expect(read.wordInMenu, 'the weight menu carries Auto or Best match').toBe(false)
-      expect(read.inBodyCard, 'Best match is not on the body family').toBe(true)
-      expect(read.onHead, 'Best match is not on the label line').toBe(true)
+      expect(read.wandCount, 'exactly one Auto').toBe(1)
+      expect(read.inWeights, 'Auto is inside the weight menu or the name row').toBe(false)
+      expect(read.wordInMenu, 'the weight menu carries Auto').toBe(false)
+      expect(read.inBodyCard, 'Auto is not on the body family').toBe(true)
+      expect(read.onHead, 'Auto is not on the label line').toBe(true)
       expect(read.labelFirst, 'the Body family label is not first on its line').toBe(true)
       expect(read.actsLast, 'the actions are not last on the label line').toBe(true)
-      expect(read.wandBeforeBrowse, 'Best match does not sit directly before Browse').toBe(true)
-      expect(read.text).toMatch(/Best match$/)
-      expect(read.label).toMatch(/^(Use the best match for .+: .+|Best match for .+ is in use: .+)$/)
+      expect(read.wandBeforeBrowse, 'Auto does not sit directly before Browse').toBe(true)
+      expect(read.text).toMatch(/Auto$/)
+      expect(read.label).toMatch(/^Auto: (use the top suggested body face, .+|.+, the top suggested body face, is in use)$/)
     })
 
     test('the weight control is one menu of weights, never a pill row', async ({ page }) => {
@@ -172,7 +172,7 @@ for (const width of WIDTHS) {
       // cannot catch a clipped name (seen: `white-space: nowrap; overflow:
       // hidden` on .fpr-fam-name left the default-pair checks green). The
       // longest real names are seeded into the catalogue the app already reads
-      // and chosen through Browse, on the body card too, where Best match and
+      // and chosen through Browse, on the body card too, where Auto and
       // Browse leave the least room.
       const LONG = 'Noto Sans Inscriptional Parthian'
       await page.addInitScript((long) => {
@@ -220,7 +220,7 @@ for (const width of WIDTHS) {
         expect(r.nameOver, 'the family name is clipped').toBeLessThanOrEqual(0)
         expect(r.metaOver, 'the category line is clipped').toBeLessThanOrEqual(0)
         expect(r.insideCard, 'the family name runs outside its card').toBe(true)
-        expect(r.overlapsAction, 'the family name sits under Best match or Browse').toBe(false)
+        expect(r.overlapsAction, 'the family name sits under Auto or Browse').toBe(false)
       }
     })
 
@@ -404,8 +404,8 @@ test.describe('Font Pair · the two family cards line up', () => {
 
 // The score figure ("N match") was dropped: a number the person cannot act on.
 // Nothing on the page, in its text or in the labels read aloud, may carry the
-// word "match" next to a figure, or the word at all as a score. The Best match
-// button is the one place the word belongs, so that phrase alone is set aside.
+// word "match" next to a figure, or the word at all as a score. The Auto
+// button is named for what it does, so no label carries the word either.
 // On a phone the suggestions live in the body sheet, so that is read too.
 for (const width of [1440, 390]) {
   test(`no "match" figure renders anywhere on the page at ${width}px`, async ({ page }) => {
@@ -417,7 +417,7 @@ for (const width of [1440, 390]) {
     const hits = await page.evaluate(() => {
       const out = []
       const roots = [document.querySelector('.fpr-page') || document.body, document.querySelector('.fpr-sheet')].filter(Boolean)
-      const outsideButton = (v) => v.replace(/best match/gi, '')
+      const outsideButton = (v) => v
       const scored = (v) => /\d\s*%?\s*(best )?match/i.test(v)
       for (const root of roots) {
         // textContent also reads the closed handoff disclosure.
