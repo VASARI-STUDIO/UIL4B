@@ -22,6 +22,8 @@ import {
   bodyFaceWeights, describePairImport, headingFaceWeights, pairImportFamilies,
 } from '../utils/fontImport'
 import { categoryLabel, categoryWord, weightCount } from '../utils/fontGallery'
+import { shortFamilyName } from '../utils/familyLabel'
+import { getLenis } from '../hooks/useSmoothScroll.js'
 import { consumePairDraft, ownTypeScale, readPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // The shared sheets for the font picker, the catalogue notice and the loader,
 // then the page's own sheet, scoped under `.fpr-page`, the page root.
@@ -96,6 +98,10 @@ const PAIR_FALLBACK = {
   heading: { family: 'Archivo', weight: 800 },
   body: { family: 'IBM Plex Sans', weight: 400 },
 }
+
+// The category as the suggestions heading names it: "a sans heading", where the
+// running-text word for sans-serif is "sans serif".
+const suggestCategory = (category) => (category === 'sans-serif' ? 'sans' : categoryWord(category))
 
 function useMedia(query) {
   const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false)
@@ -320,6 +326,46 @@ export default function FontMatcher({ onCopy, toast }) {
 
   // A sheet belongs to the phone layout; widening past it closes the sheet.
   useEffect(() => { if (!phone) setSheet(null) }, [phone])
+
+  // With a phone sheet open, the page scrolls so the specimen's headline sits
+  // just under the sticky toolbar, clear of the sheet, and goes back to where it
+  // was when the sheet closes. A family sheet pins the scroll it opens at, so its
+  // button reveals before the sheet mounts; More opens in the toolbar, and
+  // reports back through onOverflowOpenChange.
+  const [moreOpen, setMoreOpen] = useState(false)
+  const savedScroll = useRef(null)
+  const scrollPageTo = (top) => {
+    const lenis = getLenis()
+    // `force`: an open sheet has stopped Lenis.
+    if (lenis) lenis.scrollTo(top, { immediate: true, force: true })
+    else window.scrollTo({ top, behavior: 'instant' })
+  }
+  const revealHeadline = () => {
+    const head = document.querySelector('.fpr-specimen :is(h1, h2, h3)') || document.querySelector('.fpr-specimen')
+    const bar = document.querySelector('.tl-toolbar')
+    if (!head || !bar) return
+    savedScroll.current = window.scrollY
+    // The page is shorter than the scroll the reveal needs; the class adds room below it while the sheet is up.
+    document.documentElement.classList.add('fpr-sheet-room')
+    getLenis()?.resize?.()
+    const barBottom = (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight
+    scrollPageTo(window.scrollY + head.getBoundingClientRect().top - barBottom - 12)
+  }
+  const sheetShown = phone && (sheet !== null || moreOpen)
+  useEffect(() => { if (phone && moreOpen) revealHeadline() }, [phone, moreOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!sheetShown) return undefined
+    return () => {
+      const y = savedScroll.current
+      savedScroll.current = null
+      document.documentElement.classList.remove('fpr-sheet-room')
+      if (y != null) scrollPageTo(y)
+    }
+  }, [sheetShown])
+  const openSheet = (side) => {
+    revealHeadline()
+    setSheet(side)
+  }
 
   // Resolve names against the catalogue, falling back to the first entry so the
   // specimen always has something real to render — a catalogue that came back
@@ -692,7 +738,7 @@ export default function FontMatcher({ onCopy, toast }) {
     </ToolButton>
   )
   const layout = (body) => (
-    <ToolLayout className="fpr-page" back={false} title="Font Pair" titleId="fpr-title" showTitle={false} items={items} primary={phone ? null : primary}>
+    <ToolLayout className="fpr-page" back={false} title="Font Pair" titleId="fpr-title" showTitle={false} items={items} primary={phone ? null : primary} onOverflowOpenChange={setMoreOpen}>
       {body}
     </ToolLayout>
   )
@@ -811,11 +857,11 @@ export default function FontMatcher({ onCopy, toast }) {
             : 'No suggestions yet'}
           aria-label={bestMatch
             ? (bodyIsBestMatch
-              ? `Best match for ${headingFont.family} is in use: ${bestMatch.font.family}`
-              : `Use the best match for ${headingFont.family}: ${bestMatch.font.family}`)
+              ? `Auto: ${bestMatch.font.family}, the top suggested body face, is in use`
+              : `Auto: use the top suggested body face, ${bestMatch.font.family}`)
             : undefined}
         >
-          {bodyIsBestMatch ? <><span aria-hidden="true">✓ </span>Best match</> : 'Best match'}
+          {bodyIsBestMatch ? <><span aria-hidden="true">✓ </span>Auto</> : 'Auto'}
         </ToolButton>
       )}
     />
@@ -850,7 +896,7 @@ export default function FontMatcher({ onCopy, toast }) {
       className="fpr-frow"
       aria-haspopup="dialog"
       aria-label={`${label}, ${font.family}, weight ${weight}. Change`}
-      onClick={() => setSheet(side)}
+      onClick={() => openSheet(side)}
       ref={varsRef({ '--fpr-fam-ff': fontStack(font), '--fpr-fam-fw': String(weight) })}
     >
       <span className="fpr-frow-t">
@@ -876,11 +922,11 @@ export default function FontMatcher({ onCopy, toast }) {
       className="fpr-pill"
       aria-haspopup="dialog"
       aria-label={`${label} family, ${font.family}, weight ${weight}. Change`}
-      onClick={() => setSheet(side)}
+      onClick={() => openSheet(side)}
       ref={varsRef({ '--fpr-fam-ff': fontStack(font), '--fpr-fam-fw': String(weight) })}
     >
       <span className="fpr-pill-l">{label}</span>
-      <span className="fpr-pill-n">{font.family}</span>
+      <span className="fpr-pill-n">{shortFamilyName(font.family)}</span>
     </button>
   )
 
@@ -1042,7 +1088,7 @@ export default function FontMatcher({ onCopy, toast }) {
   const suggest = (
     <section className="fpr-suggest" aria-labelledby="fpr-suggest-title">
       <div className="fpr-section-head">
-        <h2 id="fpr-suggest-title">Bodies that suit {headingFont.family}</h2>
+        <h2 id="fpr-suggest-title">Popular bodies for a {suggestCategory(headingFont.category)} heading</h2>
       </div>
 
       {suggesting ? (

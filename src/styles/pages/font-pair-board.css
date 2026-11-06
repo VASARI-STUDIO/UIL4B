@@ -292,6 +292,22 @@ html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-wmenu svg { tra
 /* Nothing in the page scrolls sideways. */
 .fpr-page .fpr-grid, .fpr-page .fpr-output, .fpr-page .fpr-stage { min-width: 0; max-width: 100%; }
 
+/* ── Phone sheets (portalled): height and scrim ──────────────────────────── */
+/* The sheet stops at 62% of the screen so the specimen's headline stays in view
+   above it. Dark: the scrim is .72 over the specimen for More, .24 for a family
+   sheet, and .24 for More while the preview field has focus, so the words being
+   typed stay readable. Light keeps the app's own scrim for More and takes the
+   same .24 for the other two. */
+.tl-sheet-layer .tl-sheet.fpr-sheet,
+.tl-sheet-layer .tl-sheet:has(.fpr-more-preview) { max-height: 62dvh; }
+/* Room under the page, while a sheet is up, so the headline can scroll clear of it. */
+html.fpr-sheet-room .fpr-page .tl-body { padding-bottom: 62dvh; }
+[data-theme="dark"] .tl-sheet-layer:has(.fpr-more-preview) .tl-sheet-scrim { background: rgba(6, 6, 7, .72); }
+[data-theme="dark"] .tl-sheet-layer.fpr-sheet-layer .tl-sheet-scrim,
+[data-theme="dark"] .tl-sheet-layer:has(.fpr-more-preview .fpr-input:focus) .tl-sheet-scrim { background: rgba(6, 6, 7, .24); }
+[data-theme="light"] .tl-sheet-layer.fpr-sheet-layer .tl-sheet-scrim,
+[data-theme="light"] .tl-sheet-layer:has(.fpr-more-preview .fpr-input:focus) .tl-sheet-scrim { background: rgba(15, 15, 16, .24); }
+
 /* ── More sheet (portalled): the preview field and Save ──────────────────── */
 .tl-sheet-layer .fpr-more-preview { display: grid; gap: 8px; padding: 8px 4px 12px; }
 .tl-sheet-layer .fpr-more-preview .fpr-label { color: var(--tl-dim); font-size: 13px; }

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import '../../styles/pages/type-tools-nav.css'
+import { shortFamilyName } from '../../utils/familyLabel'
 
 // The switcher between the three type tools. Each link shows the project's
 // current answer for that tool (heading face, body face, scale), so the bar
@@ -26,13 +27,13 @@ export default function TypeToolsNav({ current, heading, body, scale, headingSta
       id: 'gallery', to: '/create/font-gallery', label: 'Heading', short: 'Gallery',
       name: `Font Gallery, heading ${headName}${heading?.weight ? ` ${heading.weight}` : ''}`,
       value: <span style={{ fontFamily: headingStack, fontWeight: heading?.weight || 700 }}>{headName}{heading?.weight ? <span className="ttn-wt"> {heading.weight}</span> : null}</span>,
-      shortValue: headName,
+      shortValue: shortFamilyName(headName),
     },
     {
       id: 'pair', to: '/create/font-pair', label: 'Body', short: 'Pair',
       name: `Font Pair, body ${bodyName}`,
       value: <span style={{ fontFamily: bodyStack, fontWeight: 500 }}>{bodyName}</span>,
-      shortValue: bodyName,
+      shortValue: shortFamilyName(bodyName),
     },
     {
       id: 'scale', to: '/create/type-scale', label: 'Scale', short: 'Scale',

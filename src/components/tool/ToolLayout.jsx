@@ -142,7 +142,7 @@ function useKeyboardOpen(active) {
 // the brand kit walkthrough owns the foot of the screen.
 export function ToolLayout({
   className, title, titleId, showTitle = true, back, items, primary, overflowLabel, overflowIcon,
-  feedback, bleed = false, children, ...rest
+  feedback, bleed = false, onOverflowOpenChange, children, ...rest
 }) {
   const phone = useMedia(PHONE)
   const walkthrough = useRootClass('bkit-on')
@@ -176,7 +176,7 @@ export function ToolLayout({
       <ToolToolbar
         title={title} titleId={titleId} showTitle={showTitle} back={back}
         items={items} primary={docked ? null : primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}
-        feedback={feedback}
+        feedback={feedback} onOpenChange={onOverflowOpenChange}
       />
       <div className={bleed ? 'tl-body tl-body--bleed' : 'tl-body'}>{children}</div>
       {docked && <div className={cx('tl-dock', keyboard && 'is-away')} data-tl-dock="">{primary}</div>}
@@ -221,7 +221,7 @@ export function ToolLayout({
 //              false for a toolbar that is not on a tool page.
 export function ToolToolbar({
   title, titleId, showTitle = true, back, items = [], primary, overflowLabel = 'More', overflowIcon = 'dots-three', className,
-  feedback = true,
+  feedback = true, onOpenChange,
 }) {
   const navigate = useNavigate()
   const backProps = back === false ? null : { to: '/tools', label: 'Back to all tools', history: false, ...(back || {}) }
@@ -236,6 +236,8 @@ export function ToolToolbar({
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { arrowNav: true })
   // The phone sheet covers the page, so the page behind it must not scroll.
   useEffect(() => (open && phone ? lockScroll() : undefined), [open, phone])
+  // The page can react to the phone sheet (the Font Pair scrolls its headline clear of it).
+  useEffect(() => { onOpenChange?.(open && phone) }, [open, phone, onOpenChange])
 
   // An item may carry `measure`: a value that changes its width (a select's label), so a new one is measured again.
   // The primary is measured with the row, so gaining or losing one is a new set too.
