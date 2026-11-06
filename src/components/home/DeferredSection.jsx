@@ -12,8 +12,10 @@ import { Suspense } from 'react'
 // The stand-in for a section whose chunk has not arrived. `holdId` is set when
 // the section renders its own id (so an in-page link has something to land on
 // until it does); the sections the page wraps itself already carry theirs.
+// `data-deferred-hold` marks it for usePageAnchors, which waits until none is
+// left before it lands an arriving hash.
 function Hold({ holdId, minHeight }) {
-  return <div id={holdId} aria-hidden="true" style={{ minHeight }} />
+  return <div id={holdId} data-deferred-hold="" aria-hidden="true" style={{ minHeight }} />
 }
 
 /** `children` is a lazy section. It mounts when `ready`, with the stand-in
