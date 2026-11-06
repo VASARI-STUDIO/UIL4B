@@ -202,7 +202,7 @@
 .ht-pal-nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-width: 100%; min-height: 40px; font-size: 15px; font-weight: 600; line-height: 20px; text-wrap: balance; overflow-wrap: anywhere; }
 .ht-pal-hex {
   position: relative; max-width: 100%; height: 16px; margin-top: 4px; padding: 0; border: 0; background: transparent; display: grid;
-  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums;
+  font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums;
 }
 .ht-pal-hex::after { content: ""; position: absolute; inset: -8px -6px; }
 .ht.ht .ht-pal-hex:focus-visible { outline-color: currentColor; }
@@ -239,7 +239,7 @@
 .ht-input--icon, .ht-pin.ht-input--icon { padding-left: 40px; }
 .ht-input::placeholder, .ht-pin::placeholder { color: rgba(var(--ink), .56); opacity: 1; }
 .ht-msg { margin: 0 0 8px; max-width: 48ch; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
-.ht-val { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px; color: rgba(var(--ink), .72); font-variant-numeric: tabular-nums; }
+.ht-val { font-family: var(--mono); font-size: 12px; line-height: 16px; color: rgba(var(--ink), .72); font-variant-numeric: tabular-nums; }
 .ht-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 @media (pointer: coarse) {
   .ht-input, .ht-pin { min-height: 44px; height: 44px; }
@@ -372,7 +372,7 @@
 .ht-cv-photo { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border-radius: 12px; object-fit: cover; object-position: center 55%; outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
 .ht-cv-info { min-width: 0; display: flex; flex-direction: column; }
 .ht-cv-name { margin: 0; font-size: 15px; font-weight: 600; line-height: 20px; overflow-wrap: anywhere; }
-.ht-cv-meta, .ht-cv-bytes { margin: 4px 0 0; min-height: 16px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px; color: rgba(var(--ink), .72); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ht-cv-meta, .ht-cv-bytes { margin: 4px 0 0; min-height: 16px; font-family: var(--mono); font-size: 12px; line-height: 16px; color: rgba(var(--ink), .72); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ht-cv-res { margin-top: 16px; min-width: 0; }
 .ht-cv-fig { height: 44px; font-size: 40px; font-weight: 600; line-height: 44px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ht-cv-fig[data-tone="win"] { color: #98B98C; }

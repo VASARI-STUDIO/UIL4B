@@ -212,7 +212,7 @@
   min-height: 36px;
   padding: 0 14px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--btn-radius);
   background: #EFEEEA;
   color: #0B0C0E;
   font-size: 13px;
@@ -603,7 +603,7 @@
   .hx-file { flex-wrap: nowrap; min-height: 40px; padding: 0 12px; border-radius: 12px; }
   .hx-segs { padding: 2px; border-radius: 12px; background: rgba(239, 238, 234, .04); }
   .hx-seg { flex: 1; min-height: 44px; padding: 0 8px; border-radius: 8px; font-size: 13.5px; }
-  .hx-pill { min-height: 48px; padding: 0 16px; justify-content: center; border-radius: 12px; font-size: 14px; }
+  .hx-pill { min-height: 48px; padding: 0 16px; justify-content: center; border-radius: var(--btn-radius); font-size: 14px; }
   .hx-mono { font-size: 12px; }
 
   .hx-ramp { bottom: 0; }

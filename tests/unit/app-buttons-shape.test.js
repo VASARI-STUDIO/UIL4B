@@ -56,7 +56,9 @@ const KEEP = {
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
     'plb-match-btn',
     // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners
-    'fpr-card-apply'],
+    'fpr-card-apply',
+    // the homepage bookmark board's folder rows (sidebar list) and its phone twin's pair rows, flush to the list edge
+    'bm-fold', 'bmp-pair'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',
@@ -71,13 +73,17 @@ const KEEP = {
     // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
     'cc-lg-chip',
     // a locked prompt card: a button (signed-out) or a link (Pro) drawn as the card it stands in for
-    'pl-card'],
+    'pl-card',
+    // the homepage's folder tiles on the phone board, its piece chips, its screenshot thumbnails and the icon grid's cells
+    'bmp-fold', 'hx-pc', 'hsc-open', 'ht-ic-t'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
     'plb-imgmoodbtn'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
+  // a segment inside a tray of segments: the tray carries the outer shape, each segment its own inner radius
+  segment: ['hx-seg'],
   // the two halves of one split button: together they draw a single pill, so each keeps its
   // outer corners round and squares the edge where they meet (.icust-foot .dl-main / .dl-more)
   split: ['dl-main', 'dl-more'],

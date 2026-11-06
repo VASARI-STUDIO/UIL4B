@@ -72,14 +72,15 @@
   .hm-close-cta:hover .hm-close-icon { background: rgba(11, 12, 14, .12); }
 }
 .hm-close-cta:active { transform: scale(.97); }
+/* The ring traces the corners the link has at rest. */
+.sp-footer--home a { border-radius: 4px; }
+.sp-footer--home .app-footer-note { border-radius: var(--btn-radius); }
 .hm-close-cta:focus-visible,
 .sp-footer--home a:focus-visible,
 .sp-footer--home .app-footer-note:focus-visible {
   outline: 2px solid #EFEEEA;
   outline-offset: 3px;
-  border-radius: 4px;
 }
-.hm-close-cta:focus-visible { border-radius: 999px; }
 
 @media (max-width: 767px) {
   .hm-close { --hm-close-gap: 88px; }

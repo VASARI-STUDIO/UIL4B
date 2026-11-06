@@ -163,6 +163,20 @@ const ALLOWED = {
     '.hlp-run-note code': 'code',
     '.hlp-run-stop-hex': 'hex',
   },
+  // the homepage boards: hex, size, byte and file-name values
+  'pages/home-bookmarks.css': {
+    '.bm-mono': 'value',
+    '.bmp-mono': 'value',
+  },
+  'pages/home-exports.css': {
+    '.hx-mono': 'value',
+  },
+  'pages/home-try.css': {
+    '.ht-cv-bytes': 'value',
+    '.ht-cv-meta': 'value',
+    '.ht-pal-hex': 'value',
+    '.ht-val': 'value',
+  },
   'pages/icon-emoji-library.css': {
     '.iel-page .emd-value': 'code',
     '.iel-page .icust-colour-help code': 'code',
