@@ -62,7 +62,7 @@ export async function showTypeScalePage(page) {
   } else {
     await page.getByRole('tab', { name: 'Page' }).click()
   }
-  await expect(page.locator('.tsc-article')).toBeVisible()
+  await expect(page.locator('.tsk')).toBeVisible()
   return layout
 }
 

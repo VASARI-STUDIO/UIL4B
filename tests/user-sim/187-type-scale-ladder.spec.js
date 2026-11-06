@@ -12,16 +12,21 @@ const SIZES = [[1440, 900], [1024, 800], [768, 1024], [390, 844]]
 
 test.describe('Type Scale · ladder, panel, sheet and default width', () => {
   // The ladder draws each step at the width the preview is set to, and prints
-  // that size. Written out by hand for the defaults (desktop base 16 and ratio
-  // 1.25, mobile base 15 and ratio 1.2, joined between 375 and 1440): the top
-  // step is 61 on Desktop, 45 on Mobile, and 45 + (61 - 45) x (768 - 375) /
-  // (1440 - 375) = 50.9 on Tablet. A window opens on its own device's width.
-  const LARGEST = { 1440: 61, 1024: 61, 768: 50.9, 390: 45 }
+  // that size. Written out by hand for the defaults (desktop base 15 and golden
+  // ratio 1.618, mobile base 15 and ratio 1.2, joined between 375 and 1440, four
+  // steps up and one down): the top step is 102.8 on Desktop, 31.1 on Mobile, and
+  // 31.1 + (102.8 - 31.1) x (768 - 375) / (1440 - 375) = 57.56 on Tablet. A
+  // window opens on its own device's width. The ladder draws no step above 96px,
+  // so the 102.8 step is printed at 102.8 and drawn at 96 with a note saying so.
+  const PREVIEW_CAP = 96
+  const LARGEST = { 1440: 102.8, 1024: 102.8, 768: 57.56, 390: 31.1 }
   for (const [w, h] of SIZES) {
     test(`10. every step is drawn at the size it prints, for the width the window opens on, unscaled, at ${w}`, async ({ page }) => {
       watch(page, 'designer reading the ladder')
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
+      // The heading rows read "Loading <family>" at 15px until the face is in.
+      await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
       const rows = await page.locator('.tsc-row').evaluateAll(els => els.map(el => {
         const text = el.querySelector('.tsc-row-text')
         const transforms = []
@@ -32,14 +37,24 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
         }
         return { px: parseFloat(el.dataset.px), fs: parseFloat(getComputedStyle(text).fontSize), label: el.querySelector('.tsc-row-num').textContent, transforms }
       }))
-      expect(rows).toHaveLength(9)
-      for (const r of rows) {
-        expect(r.label, `${w}px: the printed size is the drawn size`).toMatch(new RegExp(`^${Math.round(r.fs * 100) / 100} /`))
+      expect(rows, 'four steps up, the base and one down').toHaveLength(6)
+      const printed = rows.map(r => parseFloat(r.label))
+      expect(printed[0], `${w}px: the top step prints the size for the previewed width`).toBeCloseTo(LARGEST[w], 2)
+      for (const [i, r] of rows.entries()) {
+        const drawn = Math.round(r.fs * 100) / 100
+        if (printed[i] <= PREVIEW_CAP) {
+          expect(r.label, `${w}px: the printed size is the drawn size`).toMatch(new RegExp(`^${drawn} /`))
+        } else {
+          expect(drawn, `${w}px: a step past the cap is drawn at the cap`).toBe(PREVIEW_CAP)
+        }
         expect(r.fs, `${w}px: no step is larger than its desktop size`).toBeLessThanOrEqual(r.px)
         expect(r.transforms, 'nothing is scaled with transform or zoom').toEqual([])
       }
-      expect(rows[0].px, 'the top step is 61px on desktop').toBe(61)
-      expect(rows[0].fs, `${w}px: the top step is drawn at the previewed width`).toBeCloseTo(LARGEST[w], 1)
+      expect(rows[0].px, 'the top step is 102.8px on desktop').toBe(102.8)
+      // The note shows exactly when a step is past the cap.
+      const capped = printed.some(n => n > PREVIEW_CAP)
+      await expect(page.locator('.tsc-fit-note'), `${w}px: the cap note shows only when a step is capped`).toHaveCount(capped ? 1 : 0)
+      if (capped) await expect(page.locator('.tsc-fit-note')).toContainText('fitted between 8px and 96px')
     })
   }
 
@@ -94,7 +109,7 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       expect(probe.type).toBe('range')
       expect(probe.base).toBe(probe.full)
       expect(probe.ratio).toBe(probe.full)
-      await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('16px')
+      await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('15px')
     })
   }
 
@@ -385,8 +400,8 @@ test.describe('Type Scale · the split and its Page | Code switch', () => {
     await expect(page.locator('#tsc-view-panel')).not.toHaveAttribute('role', 'tabpanel')
 
     // Both halves are rendered at once, not one at a time.
-    await expect(page.locator('.tsc-row')).toHaveCount(9)
-    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsc-row')).toHaveCount(6)
+    await expect(page.locator('.tsk')).toBeVisible()
 
     const g = await page.evaluate(() => {
       const box = sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, width: r.width } }
