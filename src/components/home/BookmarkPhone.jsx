@@ -70,7 +70,7 @@ export default function BookmarkPhone({ tour, stageRef, paneRef }) {
           {FOLDERS.map((f, i) => (
             <button key={f.name} type="button" className={i === open ? 'bmp-fold on' : 'bmp-fold'} aria-pressed={i === open} onClick={tour.folder(i).onClick}>
               <span className="bmp-fold-n">{f.name}</span>
-              <span className="bmp-cnt"><span className="bmp-dot" aria-hidden="true" style={{ background: DOT[i] }} /><span>{f.count}</span><span className="bm-sr"> bookmarks</span></span>
+              <span className="bmp-cnt"><span className="bm-dot" aria-hidden="true" style={{ background: DOT[i] }} /><span>{f.count}</span><span className="bm-sr"> bookmarks</span></span>
             </button>
           ))}
         </div>
@@ -112,7 +112,7 @@ export default function BookmarkPhone({ tour, stageRef, paneRef }) {
         <BookmarkPhonePane open={open} hot={hot} paneRef={paneRef} />
         {GROUPS.map((group, g) => (
           <div key={group} className={g === open ? 'bmp-grp on' : 'bmp-grp'} style={{ '--ring': DOT[g] }}>
-            <h3 className="bmp-gh"><span className="bmp-dot" aria-hidden="true" style={{ background: DOT[g] }} />{group}</h3>
+            <h3 className="bmp-gh"><span className="bm-dot" aria-hidden="true" style={{ background: DOT[g] }} />{group}</h3>
             <ul className="bmp-tools" role="list">
               {TOOLS.map((tool, j) => (tool.group === g ? (
                 <li key={tool.id}>

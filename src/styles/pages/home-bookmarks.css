@@ -290,7 +290,6 @@
 .bmp-fold-n { font-size: 14px; font-weight: 500; line-height: 1.3; }
 .bmp-cnt { display: flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; color: rgba(239, 238, 234, .62); }
 .bmp-fold.on .bmp-cnt { color: rgba(239, 238, 234, .86); }
-.bmp .bm-dot { flex: none; }
 
 /* The open folder's pairs, sized to the longest folder so nothing below moves */
 .bmp-sub {
