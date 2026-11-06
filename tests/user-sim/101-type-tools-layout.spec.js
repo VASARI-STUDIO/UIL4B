@@ -78,7 +78,8 @@ for (const tool of TOOLS) {
             await go(page, tool.route)
             await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 
-            const bar = page.locator('[data-tool-toolbar]')
+            // The first toolbar carries the h1; Font Gallery has a second one for its filters.
+            const bar = page.locator('[data-tool-toolbar]').first()
             await expect(bar).toBeVisible()
             await expect(bar.getByRole('heading', { level: 1, name: tool.title })).toBeAttached()
             await expect(bar).not.toHaveClass(/is-measuring/)

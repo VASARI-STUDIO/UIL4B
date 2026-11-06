@@ -1,13 +1,13 @@
 // Font Pair: suggestions drawn as compact rows, a specimen-first phone with a
-// sheet per family, lock / shuffle / swap / undo, typed words in the headings only,
-// and an import that loads every weight and style the page draws.
+// sheet per family, lock / shuffle / swap / undo, typed words in the specimen,
+// and an import that loads the weights and styles the page uses.
 //   1  each suggestion row is ONE button: the family, its action, and a line of
 //      running text in that face; the reason sits once above its group, not per row
 //   2  at 390 the specimen sits above two family rows, the panel is gone, and each
 //      row (and its dock pill) opens a sheet holding that family's controls
 //   3  Shuffle (in the heading card) keeps a locked side, never makes a pair of one
 //      family; Swap and Undo stay on the toolbar
-//   4  typed text fills the heading slots only
+//   4  typed text fills the headline, lede and sub-heading, and the body repeats it twice
 //   5  the export asks for the regular, 600 and bold weights and the italic
 //
 // MUTATIONS (each should fail the spec named):
@@ -15,7 +15,7 @@
 //   - render the panel (not the rows and sheet) on a phone      -> 2
 //   - make shufflePair ignore `lock`                            -> 3 (lock tests)
 //   - let shufflePair draw the body's own family                -> 3 (never one family)
-//   - put `sample` back into .fpr-lede / .fpr-body              -> 4
+//   - stop doubling `sample` in .fpr-body, or drop it from .fpr-lede -> 4
 //   - drop the 600 / italic from bodyFaceWeights                -> 5
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
@@ -167,6 +167,21 @@ test.describe('Font Pair · phone', () => {
     expect(await htmlOverflow(page), 'the page stayed locked after the sheet closed').not.toBe('hidden')
   })
 
+  test('Escape in the font browser closes the browser first; a second Escape closes the sheet and frees the page', async ({ page }) => {
+    await open(page, 390)
+    await page.locator('.fpr-dock .fpr-pill').first().click()
+    const sheet = page.getByRole('dialog', { name: 'Heading family' })
+    await sheet.getByRole('button', { name: 'Browse heading family' }).click()
+    const browser = page.getByRole('dialog').filter({ has: page.getByLabel('Search font families') })
+    await expect(browser).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(browser, 'Escape did not close the font browser').toHaveCount(0)
+    await expect(sheet, 'Escape in the browser closed the sheet under it as well').toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(sheet).toHaveCount(0)
+    expect(await htmlOverflow(page), 'the page stayed locked after both dialogs closed').not.toBe('hidden')
+  })
+
   test('the heading sheet carries Shuffle, Browse, the weight menu and Lock; a locked heading survives Shuffle', async ({ page }) => {
     await open(page, 390)
     await page.locator('.fpr-dock .fpr-pill').first().click()
@@ -278,7 +293,7 @@ test.describe('Font Pair · lock, shuffle, swap, undo', () => {
 })
 
 test.describe('Font Pair · typed text', () => {
-  test('goes in the headings only; the body keeps its paragraph', async ({ page }) => {
+  test('goes in the headline, lede and sub-heading, and the body repeats it twice', async ({ page }) => {
     await open(page)
     await page.getByRole('button', { name: 'Article' }).click()
     const words = 'Ship interfaces that hold up'
@@ -288,8 +303,9 @@ test.describe('Font Pair · typed text', () => {
     await page.locator('#fpr-text-stage').fill(words)
     await expect(page.locator('.fpr-h1')).toHaveText(words)
     await expect(page.locator('.fpr-h2')).toHaveText(words)
-    expect(await page.locator('.fpr-lede').innerText()).not.toContain(words)
-    expect(await page.locator('.fpr-body').innerText()).toBe(before)
+    await expect(page.locator('.fpr-lede')).toHaveText(words)
+    // The body is the typed words twice, so a short line still fills a paragraph.
+    await expect(page.locator('.fpr-body')).toHaveText(`${words} ${words}`)
     expect(before).not.toContain(words)
   })
 
@@ -318,9 +334,10 @@ test.describe('Font Pair · the export loads what the page uses', () => {
     expect(css).toContain('family=Archivo:wght@800')
     expect(css).toContain('family=IBM%20Plex%20Sans:ital,wght@0,400;0,600;0,700;1,400')
     await expect(page.locator('.fpr-delivery .fpr-hint')).toContainText('IBM Plex Sans 400, 600, 700 and 400 italic')
-    // The specimen shows a bold and an italic phrase, and the preview button uses the same 600.
-    await expect(page.locator('.fpr-body strong')).toBeVisible()
-    await expect(page.locator('.fpr-body em')).toBeVisible()
+    // The product screen's status pill is set in the 600 the import carries.
+    await page.getByRole('button', { name: 'Product' }).click()
+    const pillWeight = await page.locator('.fpr-pp-status').evaluate((el) => getComputedStyle(el).fontWeight)
+    expect(pillWeight).toBe('600')
   })
 
   test('a body family without italics asks for none', async ({ page }) => {
