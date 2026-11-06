@@ -242,7 +242,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .sp-footer .sp-footer-cta{margin-top:22px;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:8px 9px 8px 22px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:15px;font-weight:540;line-height:normal;text-decoration:none;white-space:nowrap;transition:transform .16s cubic-bezier(.23,1,.32,1),background .16s ease}
 .sp-footer .sp-footer-cta:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
 .sp-footer .sp-footer-cta:active{transform:scale(.978)}
-.sp-footer .sp-footer-cta-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 10%,transparent);transition:transform .16s cubic-bezier(.23,1,.32,1)}
+.sp-footer .sp-footer-cta-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 10%,transparent);transition:transform 320ms cubic-bezier(.25,1,.5,1)}
 @media(hover:hover) and (pointer:fine){.sp-footer .sp-footer-cta:hover .sp-footer-cta-icon{transform:rotate(45deg)}}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-cta,

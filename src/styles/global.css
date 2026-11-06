@@ -498,55 +498,49 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 
 /* ── THE CHROMATIC OUTLINE on outline-only buttons ──────────────────────────
    An outline button (a hairline over a quiet or card ground: the default .btn,
-   .ui-pill-out and the tool layout's quiet and square buttons) draws its
-   outline as a rotating conic gradient in the colour-band hues on hover and on
+   .ui-pill-out, the marketing nav's search controls and the tool layout's quiet
+   and square buttons) draws its outline in the colour-band hues on hover and on
    :focus-visible. Filled buttons (accent, primary, inverse) and borderless
    ghost buttons do not.
 
-   The ring is a ::before laid over the border box and masked to its edge, so
-   nothing moves and the label stays ink. Only --chroma-angle animates.
+   The ring is a ::before laid exactly over the border box and masked to its
+   edge, so nothing moves and the label stays ink. It fades in while it
+   thickens from .5px to 1.5px and turns once to 140deg, then holds. Three
+   registered properties carry that: --chroma-angle, --chroma-w and opacity, all
+   plain transitions, so a pointer that leaves mid-way reverses from where the
+   ring is. On leave the width and angle reset only after the ring has faded out,
+   so the hues never jump.
    The hues are the chromatic bars of the colour band (SpectrumRamp.jsx BARS,
    in order, the first repeated to close the circle); a unit test holds the two
    together.
 
    Contrast, measured against the grounds a button sits on: in dark every hue
    clears 3:1 (weakest 3.98:1, hue 238 on the card). In light the weakest is
-   1.83:1 (hue 48 on the page), so light adds a 1px ink ring just inside the
-   colour, which holds the edge at 6:1 or more whatever the hue under it.
+   1.83:1 (hue 48 on the page); the 1.5px ring is not re-measured there.
 
    Hover only where the pointer can hover: a tap on a phone must not leave the
-   ring stuck on. :focus-visible shows it on every device. Reduced motion keeps
-   a still ring; forced colours draw the plain system border. */
+   ring stuck on, so touch gets a flash while pressed. :focus-visible shows it on
+   every device. Reduced motion keeps a still 1.5px ring; forced colours draw the
+   plain system border. */
 @property --chroma-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
-@keyframes chroma-spin{to{--chroma-angle:360deg}}
-:where(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){position:relative;--chroma-inner:transparent}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{content:"";position:absolute;inset:-1px;border:1.5px solid transparent;padding:1px;border-radius:inherit;background:linear-gradient(var(--chroma-inner),var(--chroma-inner)) padding-box,conic-gradient(from var(--chroma-angle),hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%)) border-box;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0) border-box;-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0) border-box;opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease-out)}
-[data-theme="light"] :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){--chroma-inner:var(--t2)}
+@property --chroma-w{syntax:'<length>';inherits:false;initial-value:.5px}
+:where(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){position:relative}
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{content:"";position:absolute;inset:-1px;padding:var(--chroma-w);border-radius:inherit;background:conic-gradient(from var(--chroma-angle),hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0;pointer-events:none;transition:opacity 280ms cubic-bezier(.25,1,.5,1),--chroma-w 0s linear 280ms,--chroma-angle 0s linear 280ms}
 :is(.tl,.tl-sheet-layer) .tl-tray .tl-btn::before{content:none}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:1;animation:chroma-spin 2.4s linear infinite}
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1),--chroma-w 360ms cubic-bezier(.25,1,.5,1),--chroma-angle 560ms cubic-bezier(.45,.05,.3,1)}
 @media (hover:hover) and (pointer:fine){
-  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:1;animation:chroma-spin 2.4s linear infinite}
+  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-w 360ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-angle 560ms cubic-bezier(.45,.05,.3,1) 40ms}
 }
-html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{animation:none!important}
+@media (hover:none){
+  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):active:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:none}
+}
+/* Reduced motion: a still ring at its final width and angle with a 120ms fade. */
+html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important}
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.tl-btn)::before{animation:none!important}
+  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important}
 }
 @media (forced-colors:active){
-  :is(.btn,.ui-pill-out,.tl-btn)::before{content:none}
-}
-/* The ring turns once to 140deg and holds, instead of spinning. It fades in
-   over 320ms and turns over 560ms, both after a 40ms intent delay (hover) or at
-   once (focus). On leave it fades out over 280ms and the angle resets only after
-   it is invisible, so the hues never jump. Peak opacity .92. */
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{transition:opacity 280ms cubic-bezier(.25,1,.5,1),--chroma-angle 0s linear 280ms}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:.92;animation:none;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1),--chroma-angle 560ms cubic-bezier(.45,.05,.3,1)}
-@media (hover:hover) and (pointer:fine){
-  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;animation:none;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-angle 560ms cubic-bezier(.45,.05,.3,1) 40ms}
-}
-/* Reduced motion: a still ring at its final angle with a 120ms fade. */
-html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{--chroma-angle:140deg;transition:opacity 120ms linear!important}
-@media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.tl-btn)::before{--chroma-angle:140deg;transition:opacity 120ms linear!important}
+  :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{content:none}
 }
 /* Press: every pill button shrinks to .97 over 150ms; disabled controls and
    reduced motion do not scale. */
