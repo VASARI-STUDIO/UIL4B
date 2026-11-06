@@ -1,5 +1,5 @@
-import { LIVE_TOOLS, route } from '../spectrum/spectrumFacts'
-import { BOOKMARK_FOLDERS } from './bookmarkFolders'
+import { LIVE_TOOLS, route } from '../spectrum/spectrumFacts.js'
+import { BOOKMARK_FOLDERS } from './bookmarkFolders.js'
 
 // DATA AND GEOMETRY FOR THE BOOKMARKS SECTION (`#bookmarks`). No React here, so
 // the rules the tour and the lines depend on can be tested on their own.
