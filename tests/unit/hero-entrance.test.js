@@ -15,6 +15,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { stripCss, stripJs } from '../helpers/strip-comments.js'
+import { geistWeights } from '../helpers/font-axis.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -280,8 +281,10 @@ test('every authored weight sits inside the variable axis that renders it', () =
 
   const inlineUsed = codeFiles.flatMap((file) => {
     const text = stripJs(fs.readFileSync(file, 'utf8'))
-    return [...text.matchAll(/fontWeight\s*[:=]\s*["']?(\d{3})["']?/g)].map((m) => Number(m[1]))
+    return geistWeights(text)
   })
+  // A weight set beside an explicit non-Geist `fontFamily` (the loop's Archivo
+  // headline) renders on that face's own axis and is not counted here.
   const inlineOutOfAxis = inlineUsed.filter((w) => w < 300 || w > 700)
   assert.deepEqual(inlineOutOfAxis, [],
     'a JSX fontWeight sits outside Geist\'s 300..700 axis — inline styles and SVG presentation '
@@ -310,4 +313,21 @@ test('every authored weight sits inside the variable axis that renders it', () =
   const outOfAxis = used.filter((w) => w < 300 || w > 700)
   assert.deepStrictEqual(outOfAxis, [],
     'an out-of-axis weight appeared; it will be silently clamped — pick one inside Geist\'s 300..700')
+})
+
+test('the Geist axis check reads the face beside each weight', () => {
+  // Without these cases the exemption could widen until nothing is checked.
+  const archivo = `<h1 style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800 }} />`
+  assert.deepEqual(geistWeights(archivo), [], 'an explicit Archivo weight is not a Geist weight')
+  const svgArchivo = `<text fontFamily="Archivo" fontWeight="800">x</text>`
+  assert.deepEqual(geistWeights(svgArchivo), [])
+  const geist = `<h1 style={{ fontFamily: "'Geist', sans-serif", fontWeight: 800 }} />`
+  assert.deepEqual(geistWeights(geist), [800], 'Geist at 800 is outside its axis and must be reported')
+  const bare = `<p style={{ margin: 0, fontWeight: 800 }}>x</p>`
+  assert.deepEqual(geistWeights(bare), [800], 'no family means the default face, which is Geist')
+  const computed = `<p style={{ fontFamily: v.headFont, fontWeight: 800 }}>x</p>`
+  assert.deepEqual(geistWeights(computed), [800], 'a computed family does not exempt a weight')
+  // The exemption stays inside the one style object it was written in.
+  const neighbours = `<><a style={{ fontFamily: "'Archivo'", fontWeight: 800 }} /><b style={{ fontWeight: 800 }} /></>`
+  assert.deepEqual(geistWeights(neighbours), [800], 'a sibling without a family stays on Geist')
 })
