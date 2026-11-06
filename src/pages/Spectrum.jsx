@@ -12,6 +12,7 @@ import HomeFinalCall from '../components/home/HomeFinalCall'
 import PhIcon from '../components/spectrum/PhIcon'
 import HomeProof from '../components/home/HomeProof'
 import HomeShowcase from '../components/home/HomeShowcase'
+import HomePlans from '../components/home/HomePlans'
 import { usePageAnchors } from '../components/spectrum/usePageAnchors'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE: this page is
@@ -101,9 +102,7 @@ export default function Spectrum() {
         <HomeProof />
 
         {/* ── Plans (slot) ────────────────────────────────────────────────── */}
-        <section id="plans" aria-labelledby="plans-h" data-slot="plans">
-          <h2 id="plans-h" className="sr-only" tabIndex={-1}>Plans</h2>
-        </section>
+        <HomePlans />
 
         {/* ── Final call: last child of main. The light behind it is drawn on
             the footer's box, so this section paints nothing of its own. ───── */}

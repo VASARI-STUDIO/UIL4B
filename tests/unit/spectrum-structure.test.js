@@ -390,8 +390,8 @@ test('the landing frame: anchors in order, one banner, one main, one footer, no 
   assert.match(START, /<section id="start"[^>]*aria-labelledby="start-h"/, 'the final call lost its #start section or its aria-labelledby')
   assert.match(START, /<h2 id="start-h" tabIndex=\{-1\}>/, 'the final call heading no longer takes focus for an in-page jump')
   // The proof bar (#proof, HomeProof.jsx) sits between examples and plans.
-  const proofAt = PAGE.indexOf('<HomeProof />')
-  assert.ok(proofAt > PAGE.indexOf('id="examples"') && proofAt < PAGE.indexOf('id="plans"'),
+  const proofAt = MOUNTED.indexOf('id="proof"')
+  assert.ok(proofAt > MOUNTED.indexOf('id="examples"') && proofAt < MOUNTED.indexOf('id="plans"'),
     'the proof band no longer sits between the examples and the plans')
   assert.match(stripComments(read('src/components/home/HomeProof.jsx')), /<section id="proof"/,
     'the proof band lost the #proof anchor')
