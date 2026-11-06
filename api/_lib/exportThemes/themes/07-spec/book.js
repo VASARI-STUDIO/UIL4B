@@ -199,6 +199,7 @@ function applications(ctx) {
 <div class="bk-post bk-post--st" style="background:${sb.ground};color:${sb.name}"><p class="disp">${A(ap.social[2])}</p><span class="bk-post__lg">${L.html('symbol', { width: 40, colourway: 'on-sunbelt', color: sb.name, label: 'Logo' })}</span></div>
 </div>`;
   const [signSpec, signHead] = [ctx.real(ap.signage).split(': ')[0], ctx.ph('applications.signage.line', ctx.real(ap.signage).split(': ').slice(1).join(': '))];  // the size is data in the string; slot: a placeholder on the line
+  // eslint-disable-next-line no-sparse-arrays -- the hole keeps the width and height at indexes 1 and 2, as in a match result
   const signMm = (signSpec.match(/(\d+) x (\d+) mm/) || [, 600, 900]);
   const sign = `<div class="bk-sign"><div class="bk-sign__w"><div class="bk-sign__dh"><span>${signMm[1]} mm</span></div><div class="bk-sign__dv"><span>${signMm[2]} mm</span></div><div class="bk-board" style="background:${sb.ground};color:${sb.name};aspect-ratio:${signMm[1]}/${signMm[2]}"><p class="disp bk-board__h">${A(signHead || B.lines.primary)}</p><div class="bk-board__lg">${L.html('stacked', { width: 120, colourway: 'on-sunbelt', color: sb.name, label: 'Logo' })}</div></div></div></div>`;
   const email = `<div class="bk-email"><p class="bk-email__n">${A(ap.email.person)}</p><p class="bk-email__r">${A(ap.email.role)}, ${A(B.name)}</p><p class="bk-email__c">${A(ap.card.contact)}<br>${A(ap.site.url)}</p><div class="bk-email__l">${L.html('horizontal', { width: 168, label: 'Logo' })}</div></div>`;

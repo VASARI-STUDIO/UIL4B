@@ -1,5 +1,5 @@
 // Design tokens as CSS, DTCG JSON, typed TS and a Tailwind v4 @theme block. All values come from brand.json.
-import { esc, isPinned } from './brand.js';
+import { isPinned } from './brand.js';
 import * as C from './color.js';
 
 const ROLE_NAMES = {

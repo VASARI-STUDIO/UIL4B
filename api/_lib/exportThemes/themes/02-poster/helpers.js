@@ -2,7 +2,7 @@
 import { esc } from '../../engine/brand.js';
 
 export const A = esc;
-export const ratioText = (t) => `${t} : 1`; // no break inside a ratio
+export const ratioText = (t) => `${t}\u00A0:\u00A01`; // no break inside a ratio
 // a tone (quiet...) is a text colour: name it by its role in pair labels
 export const nameOf = (ctx, id) => ctx.byId[id].name.replace(/ on .+$/, '');
 // width that fits a logo version inside a box

@@ -21,7 +21,7 @@ export default function plumblineLogo({ brand, font, outline, capHeight }) {
   const symbol = { w: sw, h: sh, parts: [{ d: `M0 0 H${r(sw)} V${r(T)} H${r(sw / 2 + T / 2)} V${r(sh - bobH - 0)} H${r(sw / 2 - T / 2)} V${r(T)} H0 Z`, role: 'plumb', tf: '' }, { d: plumb(sw / 2, sh - bobH - 0.01, 0.01, bobW, bobH, T), role: 'plumb', tf: '' }] };
   const nameOnly = [{ d: name.d, role: 'name', tf: nameTf }];
   const move = (parts, dx, dy, sc) => parts.map((p) => ({ role: p.role, d: p.d, tf: `translate(${r(dx)} ${r(dy)}) scale(${sc}) ${p.tf}`.trim() }));
-  const gap = cap * 0.8, nameH = top + 0 + cap * 0; // the name block is as tall as the ascender line to the baseline
+  const gap = cap * 0.8;
   const horizontal = { w: symbol.w + gap + W, h: sh, parts: [...move(symbol.parts, 0, 0, 1), ...move(nameOnly, symbol.w + gap, 0, 1)] };
   const stacked = { w: Math.max(W, symbol.w), h: sh + gap + top, parts: [...move(symbol.parts, (W - symbol.w) / 2, 0, 1), ...move(nameOnly, 0, sh + gap, 1)] };
   return { primary, horizontal, stacked, symbol, clearUnit: cap, roles: { name: 'name', plumb: 'plumb' }, geo: { W, T, cap, top, lineLen, bobH, bobW, cx, tick, gap } };

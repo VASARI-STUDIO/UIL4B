@@ -228,7 +228,7 @@ export const PH_CSS = `.ph-b,.ph-b *,.ph-c{text-decoration:none}
 .ph-c{display:inline;box-decoration-break:clone;-webkit-box-decoration-break:clone;border:1px dashed currentColor;padding:0 .3em;text-transform:none;letter-spacing:normal;font-style:normal;font-variant:normal;font-size:min(1em,20px);white-space:normal}`;
 // The placeholder CSS as a string, for a builder that writes its own stylesheet. Not needed for text that goes through finishText:
 // a finished html file that holds a placeholder gets this css in its head automatically.
-export const placeholderCss = (ctx) => PH_CSS;
+export const placeholderCss = () => PH_CSS;
 const STYLE_TAG = `<style id="ph-css">${PH_CSS}</style>`;
 
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
@@ -243,7 +243,6 @@ const CTRL_CLASS = /(^|[\s_-])(chip|badge|tab|tabs|crumb|crumbs|btn|button|tag)(
 // inside a drawn product screen (the .ui components, phone and window frames) the compact form is the label alone too
 const UI_CLASS = /(^|\s)(ui|ui-[\w-]+|kphn|b-win|bk-screen|bk-device)(\s|$)/i;
 
-const idsIn = (s) => { const out = []; s.replace(SENT, (m, g) => { out.push(decodeId(g)); return m; }); return out; };
 const plainWith = (s, fn) => s.replace(SENT, (m, g) => fn(entries[decodeId(g)]));
 
 function blockHtml(e) {

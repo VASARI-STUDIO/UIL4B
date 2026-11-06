@@ -98,6 +98,7 @@ Light is the default. Set \`data-theme="dark"\` on \`<html>\` for dark, or \`dat
 }
 
 // The code package: tokens, components, example page, fonts, logo and icons.
+// eslint-disable-next-line no-unused-vars -- theme is part of the builder signature all three kit writers share
 export function codePackageFiles(ctx, theme) {
   const files = {};
   put(files, 'README.md', codeReadme(ctx));
@@ -119,6 +120,7 @@ export function codePackageFiles(ctx, theme) {
 
 // The brand kit's files the engine writes: logo svgs, palette files, type notes, icons and the read-me.
 // The PNG and PDF files are made outside the engine; kitListing names them for the brand book.
+// eslint-disable-next-line no-unused-vars -- theme is part of the builder signature all three kit writers share
 export function kitFiles(ctx, theme) {
   const B = ctx.brand, files = {}, slug = ctx.slug;
   if (ctx.edition === 'slot') {
