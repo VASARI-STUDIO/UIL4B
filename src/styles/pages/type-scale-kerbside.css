@@ -82,3 +82,16 @@
 @media (prefers-reduced-motion: reduce) {
   .tsc-page .tsc-tight-trk, .tsc-page .tsc-tight-trk i { transition: none; }
 }
+
+/* ── Copy CSS is the page's one ink pill ─────────────────────────────────── */
+.tsc-page .tsc-copy-primary { border: 0; background: var(--t0); color: var(--bg-0); }
+
+/* ── The ladder's ground ─────────────────────────────────────────────────── *
+ * Light sets the ladder on paper; the page beside it and the app keep their
+ * own grounds. */
+.tsc-page .tsc-ladder[data-ground="l"] {
+  --tl-ink: #0B0C0E; --tl-dim: rgba(11, 12, 14, .7); --tl-soft: rgba(11, 12, 14, .76);
+  --tl-hair: rgba(11, 12, 14, .1); --tl-wash: rgba(19, 20, 22, .06); --tl-wash-2: rgba(19, 20, 22, .1);
+  padding: 8px 16px; border-radius: 16px; background: #EFEEEA; color: #0B0C0E;
+}
+.tsc-page .tsc-ladder[data-ground="l"] .tsc-row:focus-visible { outline-color: #0B0C0E; }

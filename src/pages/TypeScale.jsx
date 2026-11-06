@@ -23,6 +23,7 @@ import '../styles/deferred/type.css'
 import '../styles/pages/type-scale.css'
 import '../styles/pages/type-scale-kerbside.css'
 import KerbsidePage from '../components/typescale/KerbsidePage'
+import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
 import { useAuth } from '../contexts/AuthContext'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one
@@ -204,6 +205,8 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const [litStep, setLitStep] = useState('')
   // Steps above the base take a tighter line height than the body's.
   const [tight, setTight] = useState(true)
+  // The ground the ladder is read on, Dark or Light.
+  const [ground, setGround] = useState('d')
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
   // A selection handed over from the Font Gallery or Font Pair. Read — never
@@ -673,7 +676,20 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     ),
     menu: { label: 'Save to a project', icon: 'bookmark-simple', onSelect: save.trigger },
   }
+  const bar = typeToolsBarItems({
+    current: 'scale',
+    heading: headingFont ? { family: headingFont.family, weight: headingW } : null,
+    body: bodyFont ? { family: bodyFont.family, weight: bodyW } : null,
+    scale: ratio,
+    headingStack,
+    bodyStack,
+    projectName: '',
+    ground,
+    onGround: setGround,
+  })
+  const groundItem = bar.find(it => it.id === 'ttb-ground')
   const items = [
+    ...bar.filter(it => it !== groundItem),
     ...(phone ? [saveItem] : []),
     {
       id: 'reset',
@@ -693,10 +709,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ),
       menu: { label: 'Find a pairing for these families', icon: 'arrow-right', onSelect: openInFontPair },
     },
+    { id: 'div', divider: true, align: 'end' },
+    groundItem,
     {
       id: 'import',
       priority: 2,
-      align: 'end',
       render: () => (
         <ToolButton className="tsc-copy-all" onClick={() => importUrl && onCopy?.(importUrl)} disabled={!importUrl}>Copy font import</ToolButton>
       ),
@@ -731,7 +748,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     </div>
   )
   const layout = (body) => (
-    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? primary : toolbarPrimary}>
+    <ToolLayout className="tsc-page" back={false} title="Type Scale" titleId="tsc-title" showTitle={false} items={items} primary={phone ? primary : toolbarPrimary}>
       {body}
     </ToolLayout>
   )
@@ -772,7 +789,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // The three pieces of the work column. The split shows the ladder and the
   // page together; below it the Scale / Page / Code switch shows one at a time.
   const ladderView = (
-    <div className="tsc-ladder" ref={ladderRef} data-ladder="">
+    <div className="tsc-ladder" ref={ladderRef} data-ladder="" data-ground={ground}>
       <h2 className="sr-only">Read the scale</h2>
       {previewIsFitted && (
         <p className="tsc-fit-note" role="status">
