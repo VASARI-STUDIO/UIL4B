@@ -1,6 +1,7 @@
 // Loads a brand and computes everything a theme may print: ramps, roles, contrast table, tokens, faces.
 import opentype from 'opentype.js';
 import * as C from './color.js';
+import { validateBrand } from './validate.js';
 
 export const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 export const words = (s) => s.trim().split(/\s+/).length;
@@ -82,7 +83,7 @@ function houseTone(tone, r) {
 // data is a brand's data object (brands/<slug>/brand.js). It is copied, because the slot edition rewrites the copy's strings.
 // loaders is the set of reads the engine may make (fontFile, icon, logoPlugin); they travel on ctx.loaders.
 export function loadBrand(data, loaders) {
-  const B = structuredClone(data);
+  const B = validateBrand(data);  // an allowlisted, sanitised deep copy; throws BrandInputError
   const slug = B.slug;
   // colours: brand colours plus measured tones, addressed by id
   const byId = {};
