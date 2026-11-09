@@ -29,7 +29,7 @@ export function miniOf(project) {
   return {
     id: project.id,
     name: digest.name,
-    colours: digest.colors.filter(isHex),
+    colours: digest.parts.find((p) => p.id === 'palette')?.done ? digest.colors.filter(isHex) : [],
     archived: digest.archived,
     face: fonts?.done ? { family: digest.heading, weight: project.design?.fonts?.heading?.weight ?? 700 } : null,
     meta: `${digest.done} of ${digest.total} parts set.${when ? ` Edited ${when}.` : ''}`,
