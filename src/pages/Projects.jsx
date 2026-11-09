@@ -14,6 +14,7 @@ import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 import KitSheet, { FailedSheet, GoArrow, LoadingSheet } from '../components/dashboard/KitSheet'
 import { StatusRow, TodayLine } from '../components/dashboard/StatusRow'
+import { OtherProjects, OtherProjectsSkeleton } from '../components/dashboard/OtherProjects'
 import { exampleKit, kitFromProject } from '../components/dashboard/kit'
 import '../styles/pages/dashboard.css'
 
@@ -88,7 +89,11 @@ export default function Projects() {
     navigate(guideEntry(null).path, { state: NEW_PROJECT_STATE })
   }
 
-  const lead = mostRecentProject([...projects].sort(byRecent))
+  const sorted = [...projects].sort(byRecent)
+  const lead = mostRecentProject(sorted)
+  // The rest, newest first, with archived ones last.
+  const rest = sorted.filter((p) => p !== lead)
+  const others = [...rest.filter((p) => !p.archived), ...rest.filter((p) => p.archived)]
   // The account's own count from the server, once it answers; until then this browser's count.
   const serverAi = useServerAiUsage(canSaveProjects ? user?.uid : null, plan?.id)
   const ai = aiUsageToday(getUsageCount, plan, serverAi)
@@ -155,6 +160,10 @@ export default function Projects() {
             </div>
             <TodayLine meters={meters} offline={offline} atCap={atCap} />
             {sheet}
+            {loadingList && <OtherProjectsSkeleton />}
+            {!signedOut && !resolving && !loadFailed && !loadingList && (
+              <OtherProjects others={others} room={!isPro && slots ? Math.max(0, slots.limit - slots.used) : 0} onNew={startNew} />
+            )}
             <div className="db-end" />
           </div>
         </div>
