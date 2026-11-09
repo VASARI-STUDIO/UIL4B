@@ -437,10 +437,12 @@
   /* The covers sit under the note: the book at 240 high, the deck takes the rest of the row (606 wide at most). */
   .pricing .pa-fig { grid-column: 1; grid-row: 4; max-width: 606px; margin-top: 24px; }
   .pricing .pa-covers { gap: 8px; align-items: flex-start; justify-content: flex-start; }
-  .pricing .pa-covers picture { display: contents; }
+  .pricing .pa-covers picture { display: block; min-width: 0; }
+  .pricing .pa-covers picture:first-child { flex: none; }
+  .pricing .pa-covers picture:last-child { flex: 1 1 0; }
   .pricing .pa-cover { height: 240px; min-width: 0; }
-  .pricing .pa-cover--book { flex: none; width: auto; aspect-ratio: 83 / 117; }
-  .pricing .pa-cover--deck { flex: 1 1 0; width: auto; }
+  .pricing .pa-cover--book { width: auto; aspect-ratio: 83 / 117; }
+  .pricing .pa-cover--deck { width: 100%; }
   .pricing .pa-cap { margin-top: 8px; }
 
   .pricing .hpl-more { margin-top: 8px; }
@@ -590,8 +592,10 @@
 
   /* The two covers fill the panel's width at one height, each taking its share of the row by its own ratio. */
   .pricing .pa-cover { height: auto; }
-  .pricing .pa-cover--book { flex: 83 1 0; width: auto; aspect-ratio: 83 / 117; }
-  .pricing .pa-cover--deck { flex: 209 1 0; width: auto; aspect-ratio: 209 / 117; }
+  .pricing .pa-covers picture:first-child { flex: 83 1 0; }
+  .pricing .pa-cover--book { width: 100%; aspect-ratio: 83 / 117; }
+  .pricing .pa-covers picture:last-child { flex: 209 1 0; }
+  .pricing .pa-cover--deck { width: 100%; aspect-ratio: 209 / 117; }
 
   .pricing .pl-panel { margin-top: 12px; }
   .pricing .pa-faq { margin-top: 88px; }
