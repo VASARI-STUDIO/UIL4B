@@ -193,6 +193,8 @@ for (const [width, height] of [[390, 844], [1440, 900]]) {
   test(`the About panel opens and closes with the footer part-way up without changing its layering (${width}x${height})`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width, height })
     await go(page, '/')
+    // Every section in first, so none arrives while the panel is open and moves the page.
+    await homeSectionsLoaded(page)
     const footer = page.locator('footer.sp-footer')
     const footerH = await footer.evaluate((el) => el.offsetHeight)
     const endY = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
