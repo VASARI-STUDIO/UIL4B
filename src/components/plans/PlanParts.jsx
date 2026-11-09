@@ -20,7 +20,7 @@ const COVERS = [
     widths: [100, 200],
     width: 100,
     height: 141,
-    sizes: '(max-width: 767px) 74px, 100px',
+    sizes: '(max-width: 767px) 90px, (max-width: 1199px) 170px, 100px',
     alt: 'Cover of the Kerbside design system book, a sample brand',
   },
   {
@@ -29,7 +29,7 @@ const COVERS = [
     widths: [242, 484],
     width: 242,
     height: 136,
-    sizes: '(max-width: 767px) 187px, 242px',
+    sizes: '(max-width: 767px) 214px, (max-width: 1199px) 428px, 242px',
     alt: 'Cover slide of the Kerbside brand guidelines, a sample brand',
   },
 ]

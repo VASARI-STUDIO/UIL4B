@@ -111,6 +111,26 @@ function Figures({ text }) {
   )
 }
 
+// One comparison cell, printed by the table and by the stacked list under 1200.
+function FreeValue({ row }) {
+  if (row.free !== null) return <Figures text={row.free} />
+  return (
+    <span className="pl-v">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round"><path d="M6 12h12" /></svg>
+      <span className="sr-only">Not included</span>
+    </span>
+  )
+}
+function ProValue({ row }) {
+  if (row.pro !== 'Included') return <Figures text={row.pro} />
+  return (
+    <span className="pl-v">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
+      <span>Included</span>
+    </span>
+  )
+}
+
 const unitOf = (offer) => (offer.months === 12 ? 'year' : 'month')
 const ctaLabel = (offer) => (offer.trialDays ? `Start ${offer.trialDays}-day free trial` : 'Upgrade to Pro')
 
@@ -141,6 +161,13 @@ export default function Pricing() {
   // scrolled up under the nav.
   const [stuck, setStuck] = useState(false)
   const [open, setOpen] = useState({})
+  // Under 768 the Pro list shows its first rows; this opens the rest.
+  const [allRows, setAllRows] = useState(false)
+  // Under 1200 a docked bar carries the Pro action whenever the page's own
+  // action is off screen.
+  const [barOn, setBarOn] = useState(false)
+  const rootRef = useRef(null)
+  const freeGoRef = useRef(null)
   const actRef = useRef(null)
   const ctaRef = useRef(null)
   const segRefs = useRef({})
@@ -319,6 +346,34 @@ export default function Pricing() {
   }
   const hasAction = proCta !== null
 
+  // The docked bar's one action, by state: Pro's pill when the live price is
+  // up, the recovery button when the price is down or missing, Free's toolkit
+  // link when Pro has no action. Never on a Pro account.
+  let barKind = null
+  if (!isPro && !subLoading) {
+    if (live) barKind = 'price'
+    else if (state === 'unreachable' || state === 'cadence-missing') barKind = 'action'
+    else if (state === 'no-currency') barKind = 'toolkit'
+  }
+
+  // One observer for the bar. Its root is the screen less the bar's 64px, so a
+  // button sitting under the bar counts as off screen. The bar shows while the
+  // page's own action is off screen, and hides while the closing call or the
+  // footer is on screen, so one ink pill is in view at a time.
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || typeof IntersectionObserver === 'undefined') return undefined
+    const main = hasAction ? ctaRef.current : freeGoRef.current
+    const ends = [root.querySelector('.hm-close'), root.querySelector('footer')]
+    const seen = new Map()
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => seen.set(entry.target, entry.isIntersecting))
+      setBarOn(seen.get(main) === false && !ends.some((el) => seen.get(el) === true))
+    }, { rootMargin: '0px 0px -64px 0px' })
+    ;[main, ...ends].forEach((el) => { if (el) observer.observe(el) })
+    return () => observer.disconnect()
+  }, [hasAction, state, isPro])
+
   // The closing "Choose Pro" is the same destination as the Pro button. A Pro
   // account has nothing to buy and a missing price means no offer.
   const chooseInner = (
@@ -351,7 +406,7 @@ export default function Pricing() {
   const pillOn = stuck && showPill
 
   return (
-    <div className="spectrum pricing">
+    <div className="spectrum pricing" ref={rootRef}>
       {/* The marketing nav, exactly as `/` mounts it. */}
       <PillNav variant="spectrum" />
       <div className="sp-grain" aria-hidden="true" />
@@ -364,7 +419,7 @@ export default function Pricing() {
 
         <div className="pa-wrap">
           <div className="hpl pa-hpl">
-            <div className="pa-pair">
+            <div className={`pa-pair${hasAction ? '' : ' pa-pair--ff'}`}>
               <div className="hpl-card hpl-free">
                 <div className="pa-planrow">
                   <h2 className="hpl-plan">Free</h2>
@@ -375,7 +430,7 @@ export default function Pricing() {
                 <FreeList live={EXPORT_THEMES_LIVE} />
                 <div className="hpl-freefoot">
                   {/* The toolkit opens without a sign-up gate and lands on the workspace. */}
-                  <Link className="hpl-btn hpl-ghost ui-pill-out" to="/projects">Open the toolkit</Link>
+                  <Link ref={freeGoRef} className="hpl-btn hpl-ghost ui-pill-out" to="/projects">Open the toolkit</Link>
                   {!user && <p>You don’t need an account to start.</p>}
                 </div>
               </div>
@@ -429,7 +484,19 @@ export default function Pricing() {
                     </div>
                   </div>
                 </div>
-                <ProList live={EXPORT_THEMES_LIVE} collapsed={false} />
+                <ProList live={EXPORT_THEMES_LIVE} collapsed={!allRows} />
+                <button
+                  type="button"
+                  className="hpl-more"
+                  aria-expanded={allRows}
+                  aria-controls="pp-prolist"
+                  onClick={() => setAllRows((value) => !value)}
+                >
+                  {allRows ? 'Show fewer' : `Show all ${PRO_ROWS.length} Pro features`}
+                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -477,22 +544,8 @@ export default function Pricing() {
                     {group.rows.map((row) => (
                       <tr className="pl-r" key={row.label}>
                         <th scope="row" className="pl-l">{row.label}</th>
-                        <td className="pl-f">
-                          {row.free === null ? (
-                            <span className="pl-v">
-                              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round"><path d="M6 12h12" /></svg>
-                              <span className="sr-only">Not included</span>
-                            </span>
-                          ) : <Figures text={row.free} />}
-                        </td>
-                        <td className="pl-p">
-                          {row.pro === 'Included' ? (
-                            <span className="pl-v">
-                              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
-                              <span>Included</span>
-                            </span>
-                          ) : <Figures text={row.pro} />}
-                        </td>
+                        <td className="pl-f"><FreeValue row={row} /></td>
+                        <td className="pl-p"><ProValue row={row} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -505,6 +558,43 @@ export default function Pricing() {
                 </tr>
               </tbody>
             </table>
+            {/* Under 1200 the table gives way to one stack per group: the label, then Free and Pro on their own lines. */}
+            <div className="pl-stack">
+              {PRO_VALUE.map((group, gi) => {
+                const art = groupArt(group.group)
+                return (
+                  <section key={group.group} aria-labelledby={`pl-sg-${gi}`}>
+                    <h3 id={`pl-sg-${gi}`} className="pl-sh">
+                      {art && (
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={art.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d={art.d} />
+                        </svg>
+                      )}
+                      {group.group}
+                    </h3>
+                    <dl>
+                      {group.rows.map((row) => (
+                        <div className="pl-srow" key={row.label}>
+                          <dt>{row.label}</dt>
+                          <dd className="pl-val pl-val--free">
+                            <span className="pl-vl">Free</span>
+                            <span className="pl-vv"><FreeValue row={row} /></span>
+                          </dd>
+                          <dd className="pl-val pl-val--pro">
+                            <span className="pl-vl">Pro</span>
+                            <span className="pl-vv"><ProValue row={row} /></span>
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )
+              })}
+              <section className="pl-ssame" aria-labelledby="pl-same-h">
+                <h3 id="pl-same-h">Same on both plans</h3>
+                <p>{SAME_ON_BOTH}</p>
+              </section>
+            </div>
           </section>
         </div>
 
@@ -559,6 +649,30 @@ export default function Pricing() {
           )}
         />
       </main>
+
+      {barKind && (
+        <aside className="pl-bar" data-on={barOn ? 'true' : 'false'} aria-label={barKind === 'toolkit' ? 'Toolkit' : 'Pro plan'}>
+          {barKind === 'price' && (
+            <>
+              <div key={`bar-${fxKey}`} className={`pl-bar-text${fx}`}>
+                <p className="pl-bar-top"><span className="pl-bar-pro">Pro · </span>{liveAmount} a month</p>
+                <p className="pl-bar-sub">{offer.months > 1 ? `${liveTotal} billed ${BILLED_EVERY[offer.id]}` : `billed ${BILLED_EVERY[offer.id]}`}</p>
+              </div>
+              <Link className="pl-bar-go" to={proTo} onClick={openPro} tabIndex={barOn ? 0 : -1}>
+                <span key={`bar-label-${fxKey}`} className={fx.trim() || undefined}>{label}</span>
+              </Link>
+            </>
+          )}
+          {barKind === 'action' && (
+            <button type="button" className="hm-close-ghost ui-pill-out pl-bar-ghost" onClick={proCta.props.onClick} tabIndex={barOn ? 0 : -1}>
+              {stateCopy.button}
+            </button>
+          )}
+          {barKind === 'toolkit' && (
+            <Link className="hm-close-ghost ui-pill-out pl-bar-ghost" to="/projects" tabIndex={barOn ? 0 : -1}>Open the toolkit</Link>
+          )}
+        </aside>
+      )}
 
       <SpectrumFooter toolkitTo="/projects" home pageColumn={false} />
     </div>
