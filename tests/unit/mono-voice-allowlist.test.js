@@ -177,6 +177,15 @@ const ALLOWED = {
     '.ht-pal-hex': 'value',
     '.ht-val': 'value',
   },
+  // The icon editor sets code in mono: the pasted SVG markup, inline <code>, the SVG code box and
+  // the colour picker's hex field. Its figures (.ied-mono, the stroke and size number fields) are
+  // not listed: a plain figure takes var(--font), so those selectors fail until they move.
+  'pages/icon-editor.css': {
+    '.ied-ta': 'code',
+    '.ied-note code': 'code',
+    '.ied-code pre': 'code',
+    '.ied-cpop .cpk-hex': 'hex',
+  },
   'pages/icon-emoji-library.css': {
     '.iel-page .emd-value': 'code',
     '.iel-page .icust-colour-help code': 'code',

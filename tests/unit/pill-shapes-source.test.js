@@ -2,9 +2,8 @@
 //
 // tests/user-sim/129-pill-shapes.spec.js measures the rendered shape on the
 // pages it can reach. This reads the stylesheets, so it also covers the ones
-// that sit behind a click or a sign-in (the account menu's theme tray, the icon
-// customiser's segments, the admin search, the font browser), and it names the
-// file and rule that regressed.
+// that sit behind a click or a sign-in (the account menu's theme tray, the
+// admin search, the font browser), and it names the file and rule that regressed.
 //
 // For each selector below, every rule whose subject is that selector and that
 // declares a corner radius must declare the pill token. Three readings are
@@ -25,7 +24,9 @@ const TARGETS = [
   '.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search',
   // pill toolbars and segmented trays
   '.lbry-toolbar', '.lbry-filters', '.lbry-filter-ind', '.theme-seg',
-  '.icust-seg', '.icust-seg button', '.adm-tabs', '.fc-seg', '.fc-seg-opt',
+  '.adm-tabs', '.fc-seg', '.fc-seg-opt',
+  // The icon editor's segments (.ied-seg) are not listed: its board draws them as a tonal tray with
+  // 12px corners, the same as the editor's other controls (see KEEP in app-buttons-shape.test.js).
 ]
 
 /** Split a selector list on the commas that are not inside parentheses. */
@@ -121,7 +122,7 @@ for (const target of SEARCH_BARS) {
 // took the hairline. Each tray below must declare a 1px hairline somewhere (a
 // border, or the converter's inset ring).
 const TRAYS = [
-  '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.icust-seg', '.adm-tabs',
+  '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.adm-tabs',
   '.seo-seg', '.pr-billing', '.fc-seg',
 ]
 for (const target of TRAYS) {

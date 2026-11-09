@@ -113,6 +113,29 @@ test('phone sheets size their height against the top inset', () => {
   }
 })
 
+// The icon editor's phone sheet: its foot and its save panel sit on the bottom edge, so they pad
+// themselves by the bottom inset. (.icust-overlay and .icust-panel above are the emoji dialog's.)
+test('the icon editor pads its foot and its save panel by the bottom inset on a phone', () => {
+  for (const sel of ['.ied-ft', '.ied-spn']) {
+    const padded = bodies(sel).filter((b) => /(^|[;\s])padding\s*:/.test(b))
+    assert.ok(padded.some((b) => /safe-area-inset-bottom/.test(b)), `${sel} pads its bottom by the inset`)
+  }
+})
+
+test('the icon editor overlay keeps its padding clear of the notch at every width', { skip: 'phone layout not built yet: .ied-overlay sets no padding; re-check when it does' }, () => {
+  for (const body of everyBodyWith('.ied-overlay', 'padding')) {
+    assert.match(body, /safe-area-inset-top/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
+    assert.match(body, /safe-area-inset-left/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
+    assert.match(body, /safe-area-inset-right/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
+  }
+})
+
+test('the icon editor phone sheet sizes its height against the top inset', { skip: 'phone layout not built yet: .ied sets no max-height against the inset; re-check when it does' }, () => {
+  for (const body of everyBodyWith('.ied', 'max-height')) {
+    assert.match(body, /safe-area-inset-top/, `.ied { ${body.trim().slice(0, 90)} ... }`)
+  }
+})
+
 test('the Export dialog phone sheet keeps its edges clear of the notch and the home indicator', () => {
   // The sheet is flush with the screen on a phone. Its sides are padded on the card
   // (every rule that pads it reads both side insets), the top inset sits in the head
