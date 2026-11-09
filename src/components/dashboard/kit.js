@@ -138,11 +138,11 @@ export function exampleKit(kind) {
   const { palette, scale, fonts, tints } = partsOf(EXAMPLE_PROJECT, 'Kerbside')
   const head = kind === 'empty'
     ? {
-        title: 'Start your first brand kit', region: 'Start your first brand kit',
+        title: 'Start your first brand kit', wrap: true, region: 'Start your first brand kit',
         meta: 'This one is an example: Kerbside, a sample bike courier.',
       }
     : {
-        title: 'Every kit has four parts', region: 'Example brand kit',
+        title: 'Every kit has four parts', wrap: true, region: 'Example brand kit',
         meta: 'This one is an example: Kerbside, a sample bike courier. No account needed to start.',
       }
   return { ...head, face: null, pill: null, parts: [palette, scale, fonts, tints] }

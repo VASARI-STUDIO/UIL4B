@@ -115,6 +115,7 @@ export default function Projects() {
     ? { isPro, ai, slots }
     : null
 
+  const leadKit = lead ? kitFromProject(lead) : null
   let sheet
   if (resolving || loadingList) sheet = <LoadingSheet />
   else if (loadFailed) sheet = <FailedSheet onRetry={() => (syncError?.retry ? syncError.retry() : window.location.reload())} />
@@ -123,13 +124,13 @@ export default function Projects() {
     // No project yet (or every project is archived): the example, with New project as its one next step.
     const kit = exampleKit('empty')
     sheet = <KitSheet kit={{ ...kit, pill: { text: 'New project' } }} onPill={startNew} />
-  } else sheet = <KitSheet kit={kitFromProject(lead)} openHref={`/projects/${encodeURIComponent(lead.id)}`} />
+  } else sheet = <KitSheet kit={leadKit} openHref={`/projects/${encodeURIComponent(lead.id)}`} />
 
   // New project: top right of the title row. Ink when signed out, outlined once there is work, and absent
   // when the sheet's own pill is the same action (no project yet).
   const showNew = !resolving && !loadingList && !loadFailed && (signedOut || lead)
   const newProject = showNew && (
-    <div className="db-newwrap">
+    <div className={`db-newwrap${signedOut ? ' out' : ''}`}>
       {signedOut ? (
         <button type="button" className="db-go" onClick={startNew}>New project<GoArrow /></button>
       ) : (
@@ -142,7 +143,7 @@ export default function Projects() {
           aria-expanded={atCap ? !!capRefusal : undefined}
         >
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-          New project
+          <span className="db-bt">New project</span>
         </button>
       )}
       {capRefusal && (
@@ -153,6 +154,17 @@ export default function Projects() {
       )}
     </div>
   )
+
+  // Below 1200 the sheet's own pill moves to a docked bar at the foot of the page (the CSS hides the pill in the
+  // sheet's head there). The bar is the next step, or New project for the example kit.
+  const lead4 = !resolving && !loadingList && !loadFailed
+  let bar = null
+  if (lead4 && !signedOut && lead) {
+    const pill = leadKit.pill
+    bar = { text: pill.text, href: pill.href }
+  } else if (lead4) {
+    bar = { text: 'New project', onClick: startNew }
+  }
 
   return (
     <div className="db">
@@ -176,6 +188,13 @@ export default function Projects() {
           </div>
         </div>
       </div>
+      {bar && (
+        <div className="db-bar">
+          {bar.href
+            ? <Link className="db-go" to={bar.href}>{bar.text}<GoArrow /></Link>
+            : <button type="button" className="db-go" onClick={bar.onClick}>{bar.text}<GoArrow /></button>}
+        </div>
+      )}
     </div>
   )
 }

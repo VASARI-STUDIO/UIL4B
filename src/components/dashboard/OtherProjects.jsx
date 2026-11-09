@@ -104,8 +104,10 @@ export function OtherProjects({ others, room, onNew }) {
         {room > 0 && (
           <li>
             <button type="button" className="db-gt" onClick={onNew}>
-              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-              <span className="gn">New project</span>
+              <span className="r">
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                <span className="gn">New project</span>
+              </span>
               <span className="gd">{`Room for ${room === 1 ? 'one more project' : `${numberWord(room)} more projects`} on Free.`}</span>
             </button>
           </li>

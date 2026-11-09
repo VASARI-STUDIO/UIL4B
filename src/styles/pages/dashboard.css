@@ -42,6 +42,9 @@
 .db-mono { font-family: var(--db-mono); font-variant-numeric: tabular-nums; }
 .db-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+/* focus: the page's own ink ring on every control (the app's default ring is its accent colour) */
+.db :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
 /* the chroma ring and the Go arrow */
 @property --db-a{syntax:'<angle>';inherits:false;initial-value:0deg}
 .db-ring{position:relative;-webkit-tap-highlight-color:transparent}
@@ -298,19 +301,190 @@
   .db-mini:active,.db-gt:active,.db-dw:active,.db-also a:active,.db-files .f:active,.db-col:has(.db-sl-a:active){transform:none}
 }
 
-/* Below 1200 the tablet and phone layouts are not drawn yet: the sheet grows to fit and the parts sit two to a row. */
+.db-end { height: 96px; }
+
+/* drawn only below 1200 (see the block at the foot of this file) */
+.db-opent,.db-hexes,.db-tcm,.db-lbl,.db-bar{display:none}
+.db-gt .r{display:contents}
+.db-plate.sc .row{line-height:var(--lh)}
+
+/* Below 1200: the tablet and phone layout. The kit is a 2 x 2 of 120px plates, each cell a caption and its own
+ * "Open in" link; the next step moves from the sheet's head to a solid bar docked at the foot of the page.
+ * 768 and up widens the gutters and keeps the lower sections two to a row; below 360 the rules at the end apply. */
 @media (max-width: 1199px) {
-  .db-sheet { height: auto; }
-  .db-head { height: auto; min-height: 48px; flex-wrap: wrap; row-gap: 12px; }
-  .db-kit { height: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 32px; }
-  .db-title { flex-wrap: wrap; }
-  .db-title h1 { font-size: clamp(36px, 7vw, 56px); }
-  .db-minis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .db-minis > li:has(.db-gt) { grid-column: 1 / -1; }
-  .db-shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 40px; }
+  .db { display: flex; flex-direction: column; min-height: calc(100dvh - var(--chrome-h)); }
+  .db-wrap { flex: 1 0 auto; }
+  html:has(.db-bar) { scroll-padding-bottom: 84px; }
+  .db-main { padding-top: 24px; }
+  .db-status { height: auto; min-height: 24px; flex-wrap: wrap; }
+  .db-off { align-items: flex-start; }
+  .db-off svg { margin-top: 4px; flex: none; }
+  .db-title { margin-top: 8px; min-height: 44px; flex-wrap: nowrap; align-items: center; gap: 12px; }
+  .db-title h1 { font-size: 34px; line-height: 1.05; }
+  .db-today { margin-top: 12px; min-height: 40px; }
+  .db-newwrap.out { display: none; }
+
+  /* the sheet */
+  .db-sheet { margin-top: 12px; height: auto; padding: 8px 16px 16px; }
+  .db-head { height: auto; min-height: 44px; gap: 12px; }
+  .db-head .db-go { display: none; }
+  .db-head .db-ghost { height: 44px; flex: none; }
+  .db-name { font-size: 36px; }
+  .db-name.wrap { font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: -.02em; white-space: normal; overflow: visible; text-wrap: balance; }
+  .db-meta { margin-top: 4px; height: auto; text-wrap: pretty; }
+  .db-opent { position: relative; margin-left: 8px; font-weight: 500; white-space: nowrap; text-decoration: underline; text-decoration-color: rgba(var(--ink-rgb), .35); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  .db-opent::before { content: ''; position: absolute; inset: -13px -8px; }
+  .db-fail .db-go { width: 100%; height: 44px; margin-top: 20px; justify-content: space-between; padding: 0 4px 0 20px; font-size: 15px; }
+  .db-kit { margin-top: 12px; height: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+  .db-part { display: flex; flex-direction: column; }
+  .db-kit .db-plate { height: 120px; }
+  .db-kit .db-hex { display: none; }
+  .db-kit .db-plate.sc { padding: 10px 12px; }
+  .db-kit .db-sch { display: none; }
+  .db-kit .db-plate.sc .rows { flex: 1; gap: 0; justify-content: space-between; }
+  .db-kit .db-plate.sc .rows .row:first-child { display: none; }
+  .db-kit .db-plate.sc .row { gap: 8px; line-height: 1; }
+  .db-kit .db-plate.sc .row:last-child { line-height: 1.2; }
+  .db-kit .db-plate.sc .px { line-height: 16px; }
+  .db-kit .db-plate.fp { padding: 12px; }
+  .db-kit .db-fname { font-size: 28px; }
+  .db-kit .db-fm { display: none; }
+  .db-kit .db-fsample { margin-top: 8px; font-size: 13px; line-height: 18px; -webkit-line-clamp: 3; }
+  .db-kit .db-blank { padding: 12px; font-size: 14px; line-height: 20px; color: var(--t62); }
+  .db-kit .db-tstop { height: 32px; }
+  .db-kit .db-tnote, .db-kit .db-ramp.rest { display: none; }
+  .db-kit .db-ramp { top: 32px; height: 88px; }
+  .db-kit .db-ramp.set { top: 0; height: 100%; }
+  /* the one moment, on a phone: the first time the cell is 60% in view the ramp unrolls from the source stop, and the note beside it changes */
+  .db-tn.play .db-ramp:not(.rest) { clip-path: inset(0); transition: clip-path 420ms var(--db-out); }
+  .db-tcm { display: grid; flex-basis: 100%; min-width: 0; font-size: 14px; line-height: 20px; color: var(--t62); }
+  .db-tcm > * { grid-area: 1 / 1; min-width: 0; transition: opacity 150ms ease; }
+  .db-tcm > .b { opacity: 0; }
+  .db-tn.play .db-tcm > .a { opacity: 0; }
+  .db-tn.play .db-tcm > .b { opacity: 1; }
+  .db-tcm .db-mono { font-size: 13px; }
+
+  /* captions: the name row, then up to two lines, then the link at the cell's foot */
+  .db-cap { height: auto; margin-top: 8px; flex: 1; flex-wrap: wrap; align-content: flex-start; column-gap: 8px; row-gap: 0; }
+  .db-cap .n { line-height: 24px; }
+  .db-cap .m { flex-basis: 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 14px; line-height: 20px; }
+  .db-cap .m.pm { display: none; }
+  .db-cap .m.st { flex-basis: auto; display: inline; font-weight: 500; color: var(--t86); white-space: nowrap; }
+  .db-lbl { display: inline; }
+  .db-hexes { display: flex; flex-basis: 100%; flex-wrap: wrap; column-gap: 10px; font-size: 13px; line-height: 20px; color: var(--t62); }
+  .db-open { margin-top: 0; gap: 4px; font-size: 13px; text-decoration: none; }
+  .db-open .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-decoration: underline; text-decoration-color: rgba(var(--ink-rgb), .35); text-decoration-thickness: 1px; text-underline-offset: 4px; transition: text-decoration-color 150ms ease; }
+  .db-part:hover .db-open .t, .db-part:has(.db-link:focus-visible) .db-open .t { text-decoration-color: var(--ink); }
+  .db-part:has(.db-link:focus-visible) { outline-offset: 2px; }
+
+  /* the docked bar: solid, no shadow, no blur; in the flow so the page end is never covered; the pill never scales or dims */
+  .db-bar { display: block; margin-top: auto; position: sticky; bottom: 0; z-index: 5; background: var(--ground); border-top: 1px solid var(--hl08); padding: 8px var(--db-gutter) calc(12px + env(safe-area-inset-bottom)); }
+  .db-bar .db-go { display: flex; width: 100%; height: 44px; justify-content: space-between; padding: 0 4px 0 20px; font-size: 15px; transition: background-color 150ms ease; }
+  .db-bar .db-go:active { transform: none; }
+  .db-bar .db-arrow--ink { width: 36px; height: 36px; }
+  .db-bar .db-arrow svg { width: 16px; height: 16px; }
+  .db:has(.db-pop) .db-bar, body:has(.pnav-sheet) .db-bar { visibility: hidden; }
+  .db-end { height: 32px; }
+
+  /* lower sections */
+  .db-group { margin-top: 48px; }
   .db-gh { flex-wrap: wrap; height: auto; min-height: 24px; }
-  .db-fwrap { width: min(280px, 100%); }
-  .db-plan { flex-wrap: wrap; height: auto; }
+  .db-gh.find { flex-direction: column; align-items: stretch; gap: 12px; }
+  .db-find label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .db-fwrap { width: 100%; }
+  .db-fwrap svg { top: 14px; }
+  .db-fwrap .db-input, .db-input { height: 44px; }
+  .db-minis { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .db-mini { height: 168px; }
+  .db-strip { height: 72px; }
+  .db-strip.none { padding: 0 16px; }
+  .db-mini .nm { margin: 12px 16px 0; }
+  .db-minis > li:has(.db-gt) { grid-column: 1 / -1; }
+  .db-gt { display: block; height: auto; padding: 0; background: none; }
+  .db-gt .r { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 16px; border-radius: 12px; background: var(--surface); transition: background-color 150ms ease; }
+  .db-gt .gd { display: block; margin-top: 8px; white-space: normal; }
+  .db-nomatch { min-height: 44px; height: auto; }
+  .db-more { height: 44px; margin-top: 4px; }
+
+  .db-shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; row-gap: 32px; }
+  .db-shelf > .db-col:nth-child(-n+2) { grid-column: 1 / -1; }
+  .db-dis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; row-gap: 16px; }
+  .db-dp { height: 120px; }
+  .db-col.o .t { margin-top: 12px; }
+  .db-img { width: 100%; }
+  .db-crop { left: 50%; top: 50%; width: 128px; height: 160px; margin: -80px 0 0 -64px; border: 1px solid rgba(239, 238, 234, .72); box-shadow: 0 0 0 100px rgba(6, 6, 7, .48); }
+  .db-ratio { left: calc(50% - 56px); }
+  .db-plan { margin-top: 48px; height: auto; flex-wrap: wrap; gap: 0 20px; min-height: 24px; }
+  .db-perks li { height: auto; min-height: 44px; align-items: flex-start; padding: 10px 0; }
+  .db-perks li svg { margin-top: 3px; }
 }
 
-.db-end { height: 96px; }
+/* the phone: the name form is a sheet in the flow under the greeting, the cap note sits under the plus */
+@media (max-width: 767px) {
+  .db { --db-gutter: 16px; }
+  .db-greetw { flex-wrap: wrap; width: 100%; }
+  .db-anchor { display: contents; }
+  .db-pop.name { position: static; flex: 0 0 100%; width: auto; margin: 8px 0; padding: 16px; border-radius: 16px; box-shadow: none; }
+  .db-pop.name .db-input { background: var(--ground); }
+  .db-pop.name .btns { flex-direction: column; align-items: stretch; gap: 8px; }
+  .db-pop.name .db-ghost { width: 100%; height: 44px; }
+  .db-pop.name .btns .db-textbtn { justify-content: center; height: 48px; }
+  .db-pop.cap { top: calc(100% + 8px); bottom: auto; right: 0; width: min(350px, calc(100vw - 32px)); transform-origin: top right; }
+  .db-newwrap .db-ghost { width: 44px; height: 44px; padding: 0; }
+  .db-newwrap .db-bt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .db-newwrap .db-ghost svg { width: 18px; height: 18px; }
+  .db-gt .gd { font-size: 14px; }
+}
+
+/* the tablet: wider gutters, the lower sections two to a row */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .db-title h1 { font-size: clamp(40px, 6vw, 56px); }
+  .db-sheet { padding: 16px 24px 24px; }
+  .db-bar .db-go { width: auto; min-width: 360px; }
+  .db-minis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .db-mini { height: 200px; }
+  .db-strip { height: 96px; }
+  .db-mini .nm { margin: 16px 16px 0; }
+  .db-gt { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 16px; background: var(--surface); border-radius: 12px; }
+  .db-gt .r { display: contents; }
+  .db-gt .gd { display: block; margin-top: 0; white-space: nowrap; }
+  .db-gt:hover { background: var(--raised); }
+  .db-gh.find { flex-direction: row; align-items: center; }
+  .db-fwrap { width: min(280px, 100%); }
+}
+@media (hover: hover) { .db-gt:hover .r { background: var(--raised); } }
+
+/* 320: the sheet's inner width is 256, so Open project becomes a text link, the "Open in" label drops to the arrow,
+ * the shelf pairs stack and the type tightens */
+@media (max-width: 359px) {
+  .db-title h1 { font-size: 32px; }
+  .db-today { font-size: 13px; }
+  .db-name { font-size: 32px; }
+  .db-name.wrap { font-size: 22px; }
+  .db-head .db-ghost { display: none; }
+  .db-opent { display: inline; }
+  .db-kit .db-fname { font-size: 22px; }
+  .db-kit .db-fsample { margin-top: 6px; line-height: 16px; -webkit-line-clamp: 4; }
+  .db-kit .db-plate.sc { padding: 10px; }
+  .db-kit .db-plate.sc .row { gap: 6px; }
+  .db-kit .db-plate.fp { padding: 10px; }
+  .db-tn .db-cap .m.st { flex-basis: 100%; }
+  .db-open { height: 0; }
+  .db-open .t { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .db-open .db-arrow { position: absolute; top: 134px; right: 0; }
+  .db-shelf > .db-col { grid-column: 1 / -1; }
+  .db-bar .db-go { font-size: 14px; padding-left: 16px; }
+}
+
+/* touch: 44px targets wherever a pointer is coarse (the links that sit in a line of text grow a hit area, not a size) */
+@media (pointer: coarse) {
+  .db-go, .db-ghost { min-height: 44px; }
+  .db-input { height: 44px; }
+  .db-tl, .db-also a { position: relative; }
+  .db-tl::before, .db-also a::before { content: ''; position: absolute; inset: -10px -6px; }
+  .db-files li { height: 44px; }
+  .db-files .f { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-tn.play .db-ramp:not(.rest) { clip-path: none; opacity: 1; transition: opacity 150ms linear; }
+}
