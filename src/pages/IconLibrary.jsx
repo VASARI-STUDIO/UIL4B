@@ -28,7 +28,7 @@ import { collectionToNames, createCollectionLoader, createLimiter } from '../uti
 import { matchesRegular } from '../data/iconRegularRules'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
-import { colourRowState, colourChoice, normaliseGround, groundContrastNote } from '../utils/iconColourRow'
+import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import { clearPreviewDraft, readPreviewDraft, stampPreviewDraft, writePreviewDraft } from '../utils/iconPreviewDraft'
@@ -280,15 +280,12 @@ const GROUND_OPTS = [
 
 // The picture the upgrade popup shows for a Pro preview: the icon drawn on the stage's ground.
 const PROOF_PX = 64
-const PROOF_GROUNDS = {
-  light: { background: '#DEDEE2' },
-  dark: { background: '#202024' },
-  checker: {
-    backgroundColor: '#EDEDF0',
-    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='16' height='16' fill='%23D9D9DE'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23D9D9DE'/%3E%3C/svg%3E\")",
-    backgroundSize: '32px 32px',
-  },
-}
+// The grounds come from the same table the editor paints and the contrast note measures.
+const proofGround = (ground, theme) => (ground === 'page' ? undefined : (
+  ground === 'checker'
+    ? { backgroundImage: `url("${checkerUri(theme, 8)}")`, backgroundSize: '16px 16px' }
+    : { background: groundHex(ground, theme) }
+))
 
 // Arrow keys inside a radiogroup: focus moves to the neighbour (wrapping) and, unless
 // it only opens a popup (marked data-opens-popup), selects it. Keys from anything inside a radio's popup
@@ -2232,7 +2229,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     }) : ''
     const proof = svg ? (
       <>
-        <div className="ui-pro-proof-art" style={PROOF_GROUNDS[ground]}>
+        <div className="ui-pro-proof-art" style={proofGround(ground, theme)}>
           <img src={svgToDataUri(svg)} width={PROOF_PX} height={PROOF_PX} alt="" />
         </div>
         <p className="ui-pro-proof-cap">
@@ -2414,7 +2411,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     <div className={`ied-pv${previewing ? '' : ' ied-vh'}`}>
       <p className="ied-note" id="ied-preview-line" role="status" aria-live="polite">
         {preview
-          ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="ied-mono">{p.code}</span>))
+          ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="ied-num">{p.code}</span>))
           : leftPreview ? BACK_TO_FREE_NOTE : ''}
       </p>
       {previewing && <button type="button" className="ied-tn" onClick={backToFree}>Back to free settings</button>}
@@ -2424,7 +2421,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const lockBase = savePickerOpen && onSheet
 
   return (
-    <div className="ied-overlay" onMouseDown={onClose}>
+    <div className="ied-overlay" style={groundVars(theme)} onMouseDown={onClose}>
       <div
         className={`ied${activeIcon ? '' : ' ied--paste'}`}
         role="dialog"
@@ -2523,7 +2520,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     </>
                   )}
                 </div>
-                <p className="ied-note ied-cap">Drawn large to inspect. Exports at <span className="ied-mono">{size}px</span>.</p>
+                <p className="ied-note ied-cap">Drawn large to inspect. Exports at <span className="ied-num">{size}px</span>.</p>
               </div>
             </div>
 
@@ -2591,11 +2588,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                         />
                         <span className="px" aria-hidden="true">px</span>
                       </span>
-                      <span className="ied-val" id="ied-size-range">From <span className="ied-mono">{CUSTOM_SIZE_MIN}</span> to <span className="ied-mono">{CUSTOM_SIZE_MAX}px</span></span>
+                      <span className="ied-val" id="ied-size-range">From <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span></span>
                     </div>
                     {clampedTo && (
                       <p className="ied-cus-clamp" id="ied-size-note" role="status">
-                        Sizes go from <span className="ied-mono">{CUSTOM_SIZE_MIN}</span> to <span className="ied-mono">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="ied-mono">{clampedTo}px</span>.
+                        Sizes go from <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="ied-num">{clampedTo}px</span>.
                       </p>
                     )}
                   </div>
@@ -2643,7 +2640,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   ) : colourRow === 'wait' ? (
                     <span className="ied-val">&nbsp;</span>
                   ) : (
-                    <span className="ied-val ied-mono">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : 'currentColor'}</span>
+                    <span className="ied-val ied-hex">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : 'currentColor'}</span>
                   )}
                 </div>
                 {colourRow !== 'original' && colourRow !== 'wait' && (
@@ -2811,7 +2808,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <div className="ied-rot">
                 <div className="ied-rot-l">
                   <span className="ied-lbl" id="ied-rot-label">Rotate and flip</span>
-                  <span className="ied-mono ied-val" aria-hidden="true">{rotate}°</span>
+                  <span className="ied-num ied-val" aria-hidden="true">{rotate}°</span>
                   {/* Polite and always mounted, so each press of Rotate is announced. */}
                   <span className="ied-vh" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
                 </div>
@@ -2841,7 +2838,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 >
                   <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
                   SVG code
-                  <span className="ied-bytes ied-val"><span className="ied-mono">{codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
+                  <span className="ied-bytes ied-val"><span className="ied-num">{codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
                 </button>
                 {codeOpen && (
                   <div className={`ied-code${previewing ? ' is-locked' : ''}`} id="ied-code">

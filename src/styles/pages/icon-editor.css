@@ -17,7 +17,7 @@
   --ied-pop-shadow:0 0 0 1px oklch(1 0 0 / .1),0 8px 24px rgba(0,0,0,.4);
   --ied-checker:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='16' height='16' fill='%23242426'/%3E%3Crect width='8' height='8' fill='%23393A3C'/%3E%3Crect x='8' y='8' width='8' height='8' fill='%23393A3C'/%3E%3C/svg%3E");
   --ied-checker-s:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23242426'/%3E%3Crect width='4' height='4' fill='%23393A3C'/%3E%3Crect x='4' y='4' width='4' height='4' fill='%23393A3C'/%3E%3C/svg%3E");
-  --ied-g-page:#060607;--ied-g-light:#EFEEEA;--ied-g-dark:#18181B;
+  --ied-g-page:#060607; /* --ied-g-light and --ied-g-dark come from groundVars() in utils/iconColourRow.js, written on this element */
   --ied-sheet-shadow:0 0 0 1px rgba(239,238,234,.1),0 -12px 40px rgba(0,0,0,.4);
   --ied-cell:rgba(239,238,234,.07);--ied-cell-s:rgba(239,238,234,.18);
 }
@@ -34,7 +34,7 @@
   --ied-pop-shadow:0 0 0 1px oklch(0 0 0 / .1),0 8px 24px rgba(24,24,27,.14);
   --ied-checker:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='16' height='16' fill='%23FAFAF8'/%3E%3Crect width='8' height='8' fill='%23DEDDD6'/%3E%3Crect x='8' y='8' width='8' height='8' fill='%23DEDDD6'/%3E%3C/svg%3E");
   --ied-checker-s:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23FAFAF8'/%3E%3Crect width='4' height='4' fill='%23DEDDD6'/%3E%3Crect x='4' y='4' width='4' height='4' fill='%23DEDDD6'/%3E%3C/svg%3E");
-  --ied-g-page:var(--bg-2,#F6F5F1);--ied-g-light:#FFFFFF;--ied-g-dark:#18181B;
+  --ied-g-page:var(--bg-2,#F6F5F1);
   --ied-sheet-shadow:0 0 0 1px rgba(24,24,27,.1),0 -12px 40px rgba(24,24,27,.2);
   --ied-cell:rgba(24,24,27,.06);--ied-cell-s:rgba(24,24,27,.14);
 }
@@ -56,7 +56,8 @@
 .ied button{font-family:inherit;color:inherit;cursor:pointer;margin:0;-webkit-tap-highlight-color:transparent}
 .ied button:focus-visible,.ied input:focus-visible,.ied textarea:focus-visible,.ied [tabindex]:focus-visible{outline:2px solid var(--ied-ink);outline-offset:3px}
 .ied button:disabled{cursor:default}
-.ied-mono{font-family:var(--mono);font-weight:400}
+.ied-hex{font-family:var(--mono);font-weight:400}
+.ied-num{font-variant-numeric:tabular-nums;font-weight:400}
 .ied-vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .ied-ic{display:block;flex:none;overflow:visible}
 
@@ -136,7 +137,8 @@
 .ied-val{margin:0;font-size:13px;line-height:20px;font-weight:400;color:var(--ied-m1)}
 .ied-note{margin:0;font-size:13px;line-height:20px;color:var(--ied-m2);text-wrap:pretty}
 .ied-note b{font-weight:600;color:var(--ied-ink)}
-.ied-note code,.ied-note .ied-mono{font-family:var(--mono);font-size:12px;color:var(--ied-ink)}
+.ied-note code{font-family:var(--mono);font-size:12px;color:var(--ied-ink)}
+.ied-note .ied-num{font-size:12px;color:var(--ied-ink)}
 .ied-tag{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:13px;line-height:20px;font-weight:400;color:var(--ied-m1)}
 .ied-ck{flex:none;width:16px;height:16px;display:grid;place-items:center}
 .ied-small-label{display:block;margin:0 0 6px;font-size:13px;line-height:16px;font-weight:500;color:var(--ied-m1)}
@@ -168,8 +170,8 @@
 /* stroke */
 .ied-strokehead{display:flex;align-items:center;justify-content:space-between;height:36px;margin-top:-8px}
 .ied-numf{position:relative;display:block;width:80px}
-.ied-numf .ied-in{height:32px;padding:0 28px 0 12px;font-family:var(--mono);font-size:13px;text-align:right}
-.ied-numf .px{position:absolute;right:10px;top:6px;font-family:var(--mono);font-size:12px;line-height:20px;color:var(--ied-m1);pointer-events:none}
+.ied-numf .ied-in{height:32px;padding:0 28px 0 12px;font-variant-numeric:tabular-nums;font-size:13px;text-align:right}
+.ied-numf .px{position:absolute;right:10px;top:6px;font-variant-numeric:tabular-nums;font-size:12px;line-height:20px;color:var(--ied-m1);pointer-events:none}
 .ied-rgw{position:relative;height:20px;margin-top:4px}
 .ied-trk{position:absolute;left:0;right:0;top:8px;height:4px;border-radius:2px;background:var(--ied-track)}
 .ied-fil{position:absolute;left:0;top:8px;height:4px;border-radius:2px;background:var(--ied-ink)}
@@ -207,7 +209,7 @@
 .ied-ib--gap{margin-left:8px}
 .ied-code{margin-top:8px;border-radius:8px;background:var(--ied-code);overflow:hidden}
 .ied-code-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 8px 12px}
-.ied-code-hd .ied-val{font-family:var(--mono);font-size:12px}
+.ied-code-hd .ied-val{font-variant-numeric:tabular-nums;font-size:12px}
 .ied-code pre{margin:0;padding:0 12px 12px;max-height:200px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:18px;color:var(--ied-m2);white-space:pre-wrap;overflow-wrap:anywhere;scrollbar-width:thin}
 .ied-code .ied-tn{height:32px}
 .ied-similar:not([data-ready]){display:none}

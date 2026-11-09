@@ -1,5 +1,5 @@
 import { isMulticolourSvg, isNearBlackMono, singlePaint } from './iconPaint.js'
-import { contrastRatio } from './colors.js'
+import { contrastRatio, luminance, hexToRgb } from './colors.js'
 
 // What the customiser's Colour row shows for an icon.
 //
@@ -50,18 +50,36 @@ export const GROUNDS = Object.freeze(['page', 'light', 'dark', 'checker'])
 export const GROUND_DEFAULT = 'page'
 export const normaliseGround = (v) => (GROUNDS.includes(v) ? v : GROUND_DEFAULT)
 
-// The ground colours the contrast note measures against. `page` is the theme's own
-// page ground (--bg-0). The checker is measured on its darker square, the harder case.
-// Light and Dark are each at least 1.2:1 from the page ground they share a theme with
-// (Light #DEDEE2 against #F5F5F2 is 1.23:1, Dark #202024 against #060607 is 1.25:1),
-// so choosing the matching fixed ground visibly changes the stage. White cannot do
-// that on the light page (1.09:1). Keep these in step with the swatch and stage
-// classes in icon-emoji-library.css and library.css; the unit test compares them.
-const GROUND_HEX = Object.freeze({ light: '#DEDEE2', dark: '#202024', checker: '#D9D9DE' })
-const PAGE_HEX = Object.freeze({ light: '#F5F5F2', dark: '#060607' })
-export const groundHex = (ground, theme) => (
-  ground === 'page' ? (theme === 'light' ? PAGE_HEX.light : PAGE_HEX.dark) : GROUND_HEX[ground]
-)
+// The ground colours of the editor's stage, per theme. This table is the one source:
+// the contrast note measures these, the editor paints its Light and Dark plates and
+// swatches from them (`groundVars`, written on the dialog root), and the upgrade
+// preview draws on them. `page` is the stage's own colour (the CSS `--ied-stage`; a
+// unit test keeps the two equal). The checker is a pair of squares in the CSS; the
+// note measures the darker one, the harder case, and a unit test keeps the CSS pair
+// equal to this one.
+const GROUNDS_BY_THEME = Object.freeze({
+  dark: Object.freeze({ page: '#060607', light: '#EFEEEA', dark: '#18181B', checker: ['#242426', '#393A3C'] }),
+  light: Object.freeze({ page: '#F6F5F1', light: '#FFFFFF', dark: '#18181B', checker: ['#FAFAF8', '#DEDDD6'] }),
+})
+const themeGrounds = (theme) => GROUNDS_BY_THEME[theme === 'light' ? 'light' : 'dark']
+const lum = (hex) => luminance(...hexToRgb(hex))
+const darker = (pair) => (lum(pair[0]) <= lum(pair[1]) ? pair[0] : pair[1])
+export const groundHex = (ground, theme) => {
+  const g = themeGrounds(theme)
+  return ground === 'checker' ? darker(g.checker) : g[ground]
+}
+// The custom properties the dialog root carries for the two fixed plates.
+export const groundVars = (theme) => {
+  const g = themeGrounds(theme)
+  return { '--ied-g-light': g.light, '--ied-g-dark': g.dark }
+}
+// The checker as a data: URI (cell px square), for places that cannot read the stylesheet.
+export function checkerUri(theme, cell = 8) {
+  const [a, b] = themeGrounds(theme).checker
+  const enc = (h) => `%23${h.slice(1)}`
+  const s = cell * 2
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${s}' height='${s}'%3E%3Crect width='${s}' height='${s}' fill='${enc(a)}'/%3E%3Crect width='${cell}' height='${cell}' fill='${enc(b)}'/%3E%3Crect x='${cell}' y='${cell}' width='${cell}' height='${cell}' fill='${enc(b)}'/%3E%3C/svg%3E`
+}
 
 // Below this the icon is hard to make out (WCAG's floor for graphical objects).
 export const GROUND_MIN_CONTRAST = 3
@@ -71,8 +89,8 @@ export const GROUND_MIN_CONTRAST = 3
 // ('light' or 'dark'), or null when neither of those gets it to the floor either.
 export function groundContrastNote({ ink, ground, theme }) {
   if (contrastRatio(ink, groundHex(ground, theme)) >= GROUND_MIN_CONTRAST) return null
-  const onLight = contrastRatio(ink, GROUND_HEX.light)
-  const onDark = contrastRatio(ink, GROUND_HEX.dark)
+  const onLight = contrastRatio(ink, groundHex('light', theme))
+  const onDark = contrastRatio(ink, groundHex('dark', theme))
   const best = onLight >= onDark ? 'light' : 'dark'
   const ok = Math.max(onLight, onDark) >= GROUND_MIN_CONTRAST && best !== ground
   return { suggest: ok ? best : null }
