@@ -1,3 +1,4 @@
+import { cssNum } from '../../engine/escape.js';
 // Styles for the brand kit PDF pages (read me, palette sheet, specimen, photography) and the pack boards, theme 08 (Riso).
 // Imported by css-book.js: cssBook returns cssBookKit(ctx), so the export name stays. The kit pages are open pages of the paper
 // with the gate's running head (css-r.js); every figure is a printed sheet (.r-sheet) with crosses at its corners and a job line.
@@ -49,9 +50,9 @@ export function cssBookKit(ctx) {
 .rk-pg .rk-fig--one{display:flex}
 .rk-pg .rk-sh--one{flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:40px;padding:48px 44px 44px}
 .rk-pg .rk-logo{line-height:0}
-.rk-pg .rk-line{font-weight:${d.weights[0]};font-size:48px;line-height:1.1;letter-spacing:-0.01em;color:var(--ink);text-wrap:balance}
+.rk-pg .rk-line{font-weight:${cssNum(d.weights[0])};font-size:48px;line-height:1.1;letter-spacing:-0.01em;color:var(--ink);text-wrap:balance}
 .rk-pg .rk-lines{margin-top:16px}
-.rk-pg .rk-lines li{font-weight:${d.weights[0]};font-size:22px;line-height:1.3;color:var(--soft);margin-top:6px;text-wrap:balance}
+.rk-pg .rk-lines li{font-weight:${cssNum(d.weights[0])};font-size:22px;line-height:1.3;color:var(--soft);margin-top:6px;text-wrap:balance}
 .rk-pg .rk-side{display:flex;flex-direction:column;gap:20px}
 .rk-pg .rk-traits span{display:block}
 .rk-pg .rk-faces{display:flex;flex-direction:column;gap:16px;padding-top:16px;border-top:1px solid var(--hair)}

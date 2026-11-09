@@ -1,25 +1,26 @@
 // Working components built only on the tokens in tokens.css. CSS plus markup helpers shared by every theme.
 import { esc } from './brand.js';
+import { cssIdent, cssNum, commentText } from './escape.js';
 
 // Lucide (ISC) icon drawn with the brand's stroke and corner style. ctx.loaders.icon(name) gives the icon's inner svg markup.
 export function icon(ctx, name, size = 20) {
   const inner = ctx.loaders.icon(name);
   const s = ctx.iconStyle;
-  return `<svg class="ui-icon" xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s.stroke}" stroke-linecap="${s.cap}" stroke-linejoin="${s.join}" aria-hidden="true" focusable="false">${inner}</svg>`;
+  return `<svg class="ui-icon" xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${cssNum(s.stroke, 'icon stroke')}" stroke-linecap="${s.cap}" stroke-linejoin="${s.join}" aria-hidden="true" focusable="false">${inner}</svg>`;
 }
 export const ICON_SET = ['map-pin', 'clock', 'package', 'phone', 'user', 'calendar', 'search', 'check', 'x', 'plus', 'menu', 'chevron-right', 'arrow-right', 'triangle-alert', 'info'];
 // the icons shipped in the kit: brand data ui.icons (Lucide names) if it lists some, else the default set
 export const iconSet = (ctx) => ctx.brand.ui.icons || ICON_SET;
 // the display face as the brand sets it: its heaviest weight and its width axis (100 when it has none)
-export const displayType = (ctx) => { const d = ctx.brand.fonts.display; return { DW: ctx.weights.heading, DS: d.stretch || 100 }; };
+export const displayType = (ctx) => { const d = ctx.brand.fonts.display; return { DW: cssNum(ctx.weights.heading, 'heading weight'), DS: cssNum(d.stretch || 100, 'display stretch') }; };
 
 // emit a state rule for both a real pseudo-class and a forced class used in documentation
 const st = (sel, pseudo, cls, body, extra = '') => `@media (hover:hover){${sel}:${pseudo}${extra}{${body}}}\n${sel}.${cls}{${body}}`;
 
 export function componentsCss(ctx) {
-  const { DW, DS } = displayType(ctx), W = ctx.weights;
-  const statusCss = ctx.status.filter((s) => s.custom).map((s) => `.ui-chip--s-${s.id} { color: var(--status-${s.id}-text); }`).join(" ");
-  return `/* ${ctx.brand.name} components. Built only on tokens.css. */
+  const { DW, DS } = displayType(ctx), W = Object.fromEntries(Object.entries(ctx.weights).map(([k, v]) => [k, cssNum(v, `${k} weight`)]));
+  const statusCss = ctx.status.filter((s) => s.custom).map((s) => `.ui-chip--s-${cssIdent(s.id)} { color: var(--status-${cssIdent(s.id)}-text); }`).join(" ");
+  return `/* ${commentText(ctx.brand.name)} components. Built only on tokens.css. */
 .ui, .ui * { box-sizing: border-box; }
 .ui { font-family: var(--ff-body); font-size: var(--fs-body); line-height: var(--lh-body); color: var(--text); background: var(--surface); }
 .ui-icon { flex: none; display: inline-block; vertical-align: middle; }
@@ -204,12 +205,12 @@ export function makeUi(ctx) {
   const ui = {
     icon: ic,
     btn(label, { variant = 'primary', size, state, iconLeft, iconRight, block, disabled, tag = 'button', attrs = '' } = {}) {
-      const c = cls('ui-btn', variant !== 'primary' && `ui-btn--${variant}`, size && `ui-btn--${size}`, state && `is-${state}`, block && 'ui-btn--block');
+      const c = cls('ui-btn', variant !== 'primary' && `ui-btn--${cssIdent(variant)}`, size && `ui-btn--${cssIdent(size)}`, state && `is-${cssIdent(state)}`, block && 'ui-btn--block');
       const dis = disabled || state === 'disabled' ? (tag === 'button' ? ' disabled' : ' aria-disabled="true"') : '';
       return `<${tag} class="${c}"${tag === 'button' ? ' type="button"' : ''}${dis} ${attrs}>${iconLeft ? ic(iconLeft, 18) : ''}${A(label)}${iconRight ? ic(iconRight, 18) : ''}</${tag}>`;
     },
-    chip(label, tone = 'neutral') { return `<span class="ui-chip ui-chip--${tone}">${A(label)}</span>`; },
-    statusChip(id, { label } = {}) { const s = ctx.status.find((x) => x.id === id); return `<span class="ui-chip ${s.custom ? 'ui-chip--s-' + s.id : 'ui-chip--' + s.tone}">${A(label || s.label)}</span>`; },
+    chip(label, tone = 'neutral') { return `<span class="ui-chip ui-chip--${cssIdent(tone)}">${A(label)}</span>`; },
+    statusChip(id, { label } = {}) { const s = ctx.status.find((x) => x.id === id) || ctx.status[0]; return `<span class="ui-chip ${s.custom ? 'ui-chip--s-' + cssIdent(s.id) : 'ui-chip--' + cssIdent(s.tone)}">${A(label || s.label)}</span>`; },
     field({ id, label, value = '', type = 'text', help, error, disabled, state, placeholder, kind = 'input', options = [] }) {
       const d = error ? ` aria-invalid="true" aria-describedby="${id}-m"` : help ? ` aria-describedby="${id}-m"` : '';
       let ctl;
@@ -227,7 +228,7 @@ export function makeUi(ctx) {
       return `<li><${tag} class="ui-row"${href ? ` href="${href}"` : ''}>${lead ? `<span class="ui-row__lead">${lead}</span>` : ''}<div class="ui-row__main"><p class="ui-row__title">${A(title)}</p>${sub ? `<p class="ui-row__sub">${A(sub)}</p>` : ''}</div><div class="ui-row__end">${end ? `<span>${A(end)}</span>` : ''}${endHtml || ''}${chip || ''}</div></${tag}></li>`;
     },
     deliveryRows(n = 5) { return `<ul class="ui-list">${S.deliveries.slice(0, n).map((d) => ui.row({ lead: ic(d.icon || ctx.brand.ui.rowIcon || 'package', 18), title: d.to, sub: d.when, end: d.price, chip: ui.statusChip(d.status) })).join('')}</ul>`; },
-    alert(tone, text) { const i = { info: 'info', success: 'check', warning: 'triangle-alert', danger: 'triangle-alert' }[tone]; return `<div class="ui-alert ui-alert--${tone}" role="${tone === 'danger' ? 'alert' : 'status'}">${ic(i, 20)}<span>${A(text)}</span></div>`; },
+    alert(tone, text) { const i = { info: 'info', success: 'check', warning: 'triangle-alert', danger: 'triangle-alert' }[tone]; return `<div class="ui-alert ui-alert--${cssIdent(tone)}" role="${tone === 'danger' ? 'alert' : 'status'}">${ic(i, 20)}<span>${A(text)}</span></div>`; },
     toast(text) { return `<div class="ui-toast" role="status"><span>${A(text)}</span><button type="button">Undo</button></div>`; },
     dialog({ title, body, confirm, keep, danger }) { return `<div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-t"><h3 class="ui-dialog__title" id="dlg-t">${A(title)}</h3><p class="ui-dialog__text">${A(body)}</p><div class="ui-dialog__actions">${ui.btn(keep, { variant: 'secondary' })}${ui.btn(confirm, { variant: danger ? 'danger' : 'primary' })}</div></div>`; },
     card({ title, text, meta, media, raised, action }) { return `<article class="ui-card ${raised ? 'ui-card--raised' : ''}">${media || ''}<div class="ui-card__body">${meta ? `<p class="ui-card__meta">${A(meta)}</p>` : ''}<h3 class="ui-card__title">${A(title)}</h3>${text ? `<p class="ui-card__text">${A(text)}</p>` : ''}${action || ''}</div></article>`; },

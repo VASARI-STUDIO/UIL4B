@@ -2,6 +2,7 @@
 // Pages are 794 x 1123 .pg sheets in the guidelines frame (running head with "n of N", a title, the work). The brand's own idea
 // carries through: numbered circles sit on the thing and beside its note. Styles are in css-bookkit.js, classes start k-. Every value comes from ctx.
 import { A, mk, phoneToday } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 const onColour = (ctx, hex) => { const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface; ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
@@ -50,7 +51,7 @@ export function readMe(ctx) {
   const float = ctx.colours.find((c) => c.role === 'highlight');
   const pins = [
     ['k-pin--1', `Status`, `${ctx.status[0].label} is plain words in one colour, one word for the lesson.`],
-    ['k-pin--2', S.eta, `The screen's one line, set in ${f.display.family} ${f.display.weights[f.display.weights.length - 1]}.`],
+    ['k-pin--2', S.eta, `The screen's one line, set in ${f.display.family} ${cssNum(f.display.weights[f.display.weights.length - 1])}.`],
     ['k-pin--3', 'Float', float.lands],
     ['k-pin--4', S.rider, `${S.riderNote}.`],
     ['k-pin--5', S.share, ctx.colours.find((c) => c.role === 'action').lands],
@@ -87,7 +88,7 @@ export function sheets(ctx) {
 
   // type specimen: two faces, then the scale set at its real sizes
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789';
-  const dispW = f.display.weights[f.display.weights.length - 1];
+  const dispW = cssNum(f.display.weights[f.display.weights.length - 1]);
   const face = (cls, fam, role, w, style) => `<div class="k-face"><p class="k-face__aa ${cls}" style="${style}" aria-hidden="true">Aa</p><div><p class="k-face__n">${A(fam)}</p><p class="cap">${role}. Weights ${w.join(', ')}. SIL OFL 1.1.</p><p class="k-face__al" style="${style}">${alpha}</p></div></div>`;
   const sampleOf = { display: B.name, headline: 'Tuesdays at 4:15', title: B.ui.screen.title, body: firstSentence(T.sample.paragraph), label: S.form.notes, caption: T.sample.caption };
   const scale = T.scale.map((s, i) => `<li>${mk(i + 1)}<p class="cap"><b>${A(s.token)}</b><span class="num">${s.size} px, ${s.line}, ${s.weight}</span></p><p class="k-sc__s" style="font-family:var(--${s.face});font-size:${s.size}px;line-height:${s.line};font-weight:${s.weight}${s.face === 'display' ? ';letter-spacing:-0.01em' : ''}">${A(sampleOf[s.token] || T.sample.headline)}</p></li>`).join('');

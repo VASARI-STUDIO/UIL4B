@@ -1,9 +1,10 @@
 // Styles for guidelines-a.js (theme 03, Broadsheet). Appended to css() in index.js; reads the .pg custom properties. Every class starts a-.
+import { cssStr } from '../../engine/escape.js';
 export function cssA(ctx) {
   const mono = ctx.brand.fonts.mono;
   const nSteps = Object.keys(ctx.colours[0].ramp).length;
   return `
-.pg{--mono:'${mono.family}',monospace}
+.pg{--mono:'${cssStr(mono.family)}',monospace}
 /* ruled columns: a hairline between neighbours, padding on both sides of it */
 .a-rules{display:grid;min-height:0}
 .a-rules>*{min-width:0;min-height:0;padding:0 24px;border-left:1px solid var(--hair)}

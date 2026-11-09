@@ -2,6 +2,7 @@
 // grid, layouts, social, signage, email-signature, digital, summary, contact-scope. Styles are in css-b.js (classes start b-).
 // Every page is the manual's standard page: a 250 px column of clauses, the work to its right, drawn dimensions and numbered clauses.
 import { A, std, fit, wide, crop, VIEWS, wakePlan, wharfPlan, drawnLogo } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 // a drawing standing in for a photograph: one crop of the hull sheet's world, labelled as a drawing
 const drawn = (ctx, view, o = {}) => crop(ctx, VIEWS[view] || view, { label: 'Drawing', wharf: true, ...o });
 
@@ -41,14 +42,14 @@ const own = {
     const B = ctx.brand, F = B.fonts, d = F.display, b = F.body, mo = F.mono, R = B.type.rules, sc = B.type.scale, id = 'typefaces';
     const tokensOf = (face) => sc.filter((s) => s.face === face).map((s) => s.token).join(', ');
     const sample = timeOf(B.ui.screen.content.eta) + ' ' + B.ui.screen.content.to;
-    const dm = metrics(ctx, d.family, d.weights[d.weights.length - 1]), bm = metrics(ctx, b.family, b.weights[0]), mm = metrics(ctx, mo.family, mo.weights[0]);
+    const dm = metrics(ctx, d.family, cssNum(d.weights[d.weights.length - 1])), bm = metrics(ctx, b.family, cssNum(b.weights[0])), mm = metrics(ctx, mo.family, cssNum(mo.weights[0]));
     const dw = [...d.weights].reverse().map((w) => `<li style="font-family:var(--display);font-weight:${w}"><span class="b-wn">${WN[w] || w} ${w}</span><span>${A(sample)}</span></li>`).join('');
     const bw = b.weights.map((w) => `<li style="font-family:var(--body);font-weight:${w}"><span class="b-wn">${WN[w] || w} ${w}</span><span>${A(B.lines.others[1])}</span></li>`).join('');
     const head = (n, name, fam, wts, use) => `<header class="b-fh"><span class="b-n num">${cn(ctx, id, n)}</span><b>${name}</b><span>${A(fam)}</span><span>${wts}</span><span>${use}</span></header>`;
     const work = `<div class="b-faces">
-<section class="b-fc">${head(4, 'Display', d.family, `Weights ${d.weights.join(' and ')}`, `Set for ${A(tokensOf('display'))}.`)}<div class="b-fc__w">${gauge({ css: faceCss('display', d.weights[d.weights.length - 1]), size: 170, text: 'Aa', w: 168, h: 150, base: 140, m: dm, labels: true, ruler: 40 })}<div class="b-fc__r"><p class="b-glyphs disp">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p><ul class="b-weights ph-tight">${dw}</ul></div></div></section>
+<section class="b-fc">${head(4, 'Display', d.family, `Weights ${d.weights.join(' and ')}`, `Set for ${A(tokensOf('display'))}.`)}<div class="b-fc__w">${gauge({ css: faceCss('display', cssNum(d.weights[d.weights.length - 1])), size: 170, text: 'Aa', w: 168, h: 150, base: 140, m: dm, labels: true, ruler: 40 })}<div class="b-fc__r"><p class="b-glyphs disp">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p><ul class="b-weights ph-tight">${dw}</ul></div></div></section>
 <section class="b-fc">${head(5, 'Body', b.family, `Weights ${b.weights.join(', ')}`, `Set for ${A(tokensOf('body'))}.`)}<div class="b-fc__w">${gauge({ css: faceCss('body', 500), size: 150, text: 'Aa', w: 166, h: 130, base: 122, m: bm, labels: true, ruler: 40 })}<div class="b-fc__r"><p class="b-glyphs b-glyphs--body">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p><ul class="b-weights ph-tight">${bw}</ul></div></div></section>
-<section class="b-fc b-fc--mono">${head(6, 'Mono', mo.family, `Weight ${mo.weights.join(', ')}`, 'Only for a hex, a token or a code string.')}<div class="b-fc__w">${gauge({ css: faceCss('mono', mo.weights[0]), size: 80, text: ctx.roles.light.action, w: 340, h: 100, base: 80, m: mm, labels: true, ruler: 40 })}</div></section>
+<section class="b-fc b-fc--mono">${head(6, 'Mono', mo.family, `Weight ${mo.weights.join(', ')}`, 'Only for a hex, a token or a code string.')}<div class="b-fc__w">${gauge({ css: faceCss('mono', cssNum(mo.weights[0])), size: 80, text: ctx.roles.light.action, w: 340, h: 100, base: 80, m: mm, labels: true, ruler: 40 })}</div></section>
 <p class="cap b-xnote"><b>Sizes</b>Given in px and in x, 4 px on screen, the stroke of the wake. ${r1(dm.cap / dm.x) === r1(bm.cap / bm.x) ? `Cap height is ${r1(dm.cap / dm.x)} times the x-height in both faces.` : `Cap height is ${r1(dm.cap / dm.x)} times the x-height in ${A(d.family)} and ${r1(bm.cap / bm.x)} times in ${A(b.family)}.`}</p></div>`;
     const lic = `${A(d.family)}, ${A(b.family)} and ${A(mo.family)} are open source under the SIL Open Font Licence. Free in print and on screen, and free to download from Google Fonts.`;
     return std(ctx, id, { lead: `Two faces do the work. ${A(d.family)} sets the time and the line you read first. ${A(b.family)} carries everything after it.`, rules: [A(R[0].do), A(R[5].do), lic], work });
@@ -62,7 +63,7 @@ const own = {
     const samples = { display: slot ? 'Display' : timeOf(c.eta), headline: o[0], time: slot ? 'Time' : `${timeOf(c.eta)} ${c.to}`, title: B.voice.principles[1].example, body: `${o[1]} ${o[0]}`, label: c.riderNote, caption: S.sample.caption };
     const rows = S.scale.map((t, i) => {
       const disp = t.face === 'display', fam = B.fonts[t.face], m = metrics(ctx, fam.family, t.weight), capPx = m.cap * t.size, xh = m.x * t.size;
-      const css = disp ? faceCss('display', fam.weights[fam.weights.length - 1]) : faceCss('body', t.weight);
+      const css = disp ? faceCss('display', cssNum(fam.weights[fam.weights.length - 1])) : faceCss('body', t.weight);
       return `<li class="b-sc"><span class="b-n num">${cn(ctx, id, i + 4)}</span>${gauge({ css, size: t.size, text: samples[t.token] || t.use, w: 330, h: 86, base: Math.round(43 + (m.cap * t.size) / 2), m, ruler: 44 })}<p class="cap"><b>${A(ctx.cap(t.token))}</b>${t.size} px, ${fx(t.size)}, line ${t.line}, weight ${t.weight}<br>Cap height ${r1(capPx)} px, ${fx(capPx)}; x-height ${r1(xh)} px, ${fx(xh)}<br>${A(t.use)}</p></li>`;
     }).join('');
     const fam = (face) => B.fonts[face].family;

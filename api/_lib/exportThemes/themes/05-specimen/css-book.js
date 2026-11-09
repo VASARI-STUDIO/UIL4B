@@ -1,4 +1,5 @@
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr } from '../../engine/escape.js';
 // Styles for theme 05's brand book (bookCss) and the brand kit pages (cssBook). bookCss is only ever loaded by the book itself and
 // its canvas boards, and every rule in it sits under the book's root (.bk) or on a kb- class, so nothing reaches the guideline pages.
 // The book is the card catalogue: the engine's section index drawn as a cabinet of drawers, open sheets with a guide card's tab on
@@ -10,7 +11,7 @@ const vars = (ctx, r) => `--kb-ground:${r.surface};--kb-face:${r.raised};--kb-pa
 export function bookCss(ctx) {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono, bw = B.ui.border, rev = B.logo.colourways.reversed;
   return `.bk{${vars(ctx, L)}--kb-fix-ground:${L.surface};--kb-fix-face:${L.raised};--kb-fix-ink:${L.text};--kb-fix-soft:${L.textSoft};--kb-fix-quiet:${L.quiet};--kb-fix-hair:${L.divider};--kb-fix-rule:${mixHex(ctx, L.text, L.surface, 0.22)};
---chrome:'Albert Sans',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',serif;--mono:'${m.family}',monospace;--i1:72px;--i2:144px}
+--chrome:'Albert Sans',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',serif;--mono:'${cssStr(m.family)}',monospace;--i1:72px;--i2:144px}
 [data-theme="dark"] .bk{${vars(ctx, D)}}
 body:has(>.bk){background:${L.surface}}
 [data-theme="dark"] body:has(>.bk){background:${D.surface}}

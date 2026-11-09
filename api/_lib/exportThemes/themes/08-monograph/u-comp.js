@@ -53,7 +53,7 @@ const toneHex = (ctx, role) => (tone(ctx, role) || { hex: '' }).hex;
 // the colours the status words of some rows print in (light ground), for the job line: only inks the brand has
 const swords = (ctx, rows) => {
   const known = [...ctx.colours, ...ctx.tones].map((c) => c.hex.toLowerCase());
-  return [...new Set(rows.map((d) => d.status))].map((id) => statusText(ctx, 'light', ctx.status.find((s) => s.id === id)).hex)
+  return [...new Set(rows.map((d) => d.status))].map((id) => statusText(ctx, 'light', ctx.status.find((s) => s.id === id) || ctx.status[0]).hex)
     .filter((h) => known.includes(String(h).toLowerCase())).map((h) => [h, 'the status words']);
 };
 // the page's one plain paragraph: the rules as sentences, no run-in labels, no grid

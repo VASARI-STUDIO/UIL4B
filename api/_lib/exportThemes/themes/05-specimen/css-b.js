@@ -2,6 +2,7 @@
 // which the page files replaced. Every class in the old sheet started b-.
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssStr } from '../../engine/escape.js';
 
 export function cssB(ctx) {
   const mono = ctx.brand.fonts.mono, night = ctx.brand.logo.colourways['mono-light'];
@@ -10,7 +11,7 @@ export function cssB(ctx) {
   // the product screen on the digital page uses the UI kit's components, so it carries the kit's light tokens
   const uiScope = `.pg .ui{${decl(colourMap(ctx, 'light'))};${decl(g.space)};${decl(g.radius)};${decl(g.width)};${decl(g.font)};${decl(g.text)};${decl(g.shadow)}}`;
   return `
-.pg{--bmono:'${mono.family}',monospace;--night:${night.ground};--night-ink:${night.name}}
+.pg{--bmono:'${cssStr(mono.family)}',monospace;--night:${night.ground};--night-ink:${night.name}}
 .pg :where(b){font-weight:600}
 
 /* digital */

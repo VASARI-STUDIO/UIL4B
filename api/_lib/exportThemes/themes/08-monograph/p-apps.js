@@ -4,6 +4,7 @@
 // the drums it prints in, any tone, and the paper, as real swatches from the brand. Composites only; no separations on these pages.
 import { A, fit } from './helpers.js';
 import { page, corners, drums, drumNo, paper, byRole, readInk, Word, isSurface } from './guidelines-r.js';
+import { cssNum } from '../../engine/escape.js';
 
 const titleOf = (ctx, id) => ctx.pages.find((p) => p.id === id).title;
 const px = (n) => +n.toFixed(2);
@@ -100,7 +101,7 @@ export const pApps = {
     const dimH = `<svg class="ra-dim" style="left:${px(X + vw + 14)}px;top:${Y}px" width="9" height="${px(vh)}" viewBox="0 0 9 ${px(vh)}" aria-hidden="true"><path d="M0 0.5h9M0 ${px(vh) - 0.5}h9M4.5 0v${px(vh)}" stroke="${ink.hex}" fill="none"/></svg><p class="ra-dim__l ra-dim__l--v num" style="left:${px(X + vw + 28)}px;top:${Y}px;height:${px(vh)}px">${H} mm</p>`;
     const wall = `<figure class="ra-sg__f"><div class="ra-wall" style="width:${fw}px;height:${px(fh)}px;background:${panel.hex}">${vinyl}${dimW}${dimH}</div><figcaption><p class="ra-cap">Drawn at <span class="num">1 : ${ratio}</span>. The dashed edge marks the vinyl and is not cut.</p>${job(ctx, [[mono.name, 'the vinyl'], [panel.hex, 'the wall']])}</figcaption></figure>`;
     const fact = (h, t) => `<div class="ra-sg__i"><h2 class="r-tg__h">${h}</h2><p class="ra-tx">${t}</p></div>`;
-    const facts = `<div class="ra-sg__c">${fact('Sign', A(sg))}${fact('Type', `${A(B.fonts.display.family)} <span class="num">${B.fonts.display.weights[0]}</span> in ${A(ink.name)}, cut from vinyl.`)}${fact('Logo', `${A(ctx.logo.labels['mono-dark'])}, since vinyl is one colour.`)}`
+    const facts = `<div class="ra-sg__c">${fact('Sign', A(sg))}${fact('Type', `${A(B.fonts.display.family)} <span class="num">${cssNum(B.fonts.display.weights[0])}</span> in ${A(ink.name)}, cut from vinyl.`)}${fact('Logo', `${A(ctx.logo.labels['mono-dark'])}, since vinyl is one colour.`)}`
       + `${fact('Contrast', `${A(ink.name)} on the ${A(panel.name)} wall, <span class="num">${ctx.fmt(ctx.ratio(ink.hex, panel.hex))} : 1</span>.`)}</div>`;
     return page(ctx, 'signage', `<div class="r-top"><h1 class="r-h1">${A(titleOf(ctx, 'signage'))}</h1><p class="r-lead">The sign where it is fixed, drawn to scale with its sizes.</p></div><div class="ra-b ra-b--sg">${wall}${facts}</div>`);
   },

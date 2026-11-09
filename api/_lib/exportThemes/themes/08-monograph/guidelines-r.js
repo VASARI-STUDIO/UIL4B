@@ -12,7 +12,8 @@ export const isSurface = (ctx, hex) => hex.toLowerCase() === surface(ctx);
 export const paper = (ctx) => ctx.colours.find((c) => c.role === 'ground') || ctx.colours.find((c) => isSurface(ctx, c.hex)) || ctx.colours[0];
 export const drums = (ctx) => { const p = paper(ctx); return ctx.colours.map((c, i) => [c, i]).filter(([c]) => c !== p).sort((a, b) => b[0].share - a[0].share || a[1] - b[1]).map(([c]) => c); };
 export const drumNo = (ctx, c) => drums(ctx).indexOf(c) + 1;
-export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role);
+// a brand with a second action colour calls it accent; a project brand calls its second colour highlight
+export const byRole = (ctx, role) => ctx.colours.find((c) => c.role === role) || (role === 'accent' ? ctx.colours.find((c) => c.role === 'highlight') : undefined);
 export const pc = (c) => Math.round(c.share * 100);
 // whichever of the text and ground colours reads better on a hex
 export const inkOn = (ctx, hex) => { const t = ctx.roles.light.text, g = ctx.roles.light.surface; return ctx.ratio(t, hex) >= ctx.ratio(g, hex) ? t : g; };

@@ -162,6 +162,7 @@ ${phoneBook(ctx, 'left:378px;top:560px')}
   'radii-borders'(ctx) {
     const S = sc(ctx), ui = ctx.ui, F = S.form;
     const R = Object.fromEntries(ctx.radii.map((r) => [r.token.replace('radius-', ''), r]));
+    for (const k of ['button', 'input']) R[k] ||= { ...R.control, token: `radius-${k}` };  // a brand with one control radius has no button or input radius of its own
     const tk = (k) => `${m('--r-' + k)}`;
     const cap = (k) => `${tk(k)}, ${radiusText(R[k].px)}`;
     const [bh, bc, bf] = ctx.borders;
@@ -338,7 +339,7 @@ ${pin(6, `<ul class="ui-list kw">${ui.row({ title: S.deliverTo, sub: S.from, end
     const S = sc(ctx), ui = ctx.ui;
     const order = S.deliveries.map((d) => d.status);
     const rows = (dark) => phone(ctx, `<ul class="ui-list">${S.deliveries.map((d, i) => ui.row({ lead: ui.icon('waves', 18), title: d.to, sub: d.when, end: d.price, chip: pin(i + 1, ui.statusChip(d.status), { i: 1, cls: 'kn--r' }) })).join('')}</ul>`, { dark, cls: 'kp--sts' });
-    const key = kkey(order.map((id) => { const s = ctx.status.find((x) => x.id === id); return `${kt(A(s.label), `<span class="kratio"><b class="num">${rt(ctx, ...L[id])}</b> light, <b class="num">${rt(ctx, ...D[id])}</b> dark</span>${meaning[id] || ''}`)}`; }), { cols: 2 });
+    const key = kkey(order.map((id) => { const s = ctx.status.find((x) => x.id === id) || ctx.status[0]; return `${kt(A(s.label), `<span class="kratio"><b class="num">${rt(ctx, ...L[id])}</b> light, <b class="num">${rt(ctx, ...D[id])}</b> dark</span>${meaning[id] || ''}`)}`; }), { cols: 2 });
     const lead = `Status is words first, colour second. ${nw(ctx.status.length)} states, each in plain words in one colour, so it reads without the colour. The ratio is the words on the page ground. A count badge sits on a tab or an icon: <span class="ui"><span class="ui-badge">3</span></span>`;
     return kpage(ctx, 'status', lead, `${stage(rows(false) + rows(true))}${key}`, { cls: 'pg--ksts' });
   },

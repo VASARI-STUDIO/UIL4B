@@ -1,6 +1,7 @@
 // Theme 10 stylesheet part, wave 2 run B (classes start b-). Appended to css() in index.js; uses the .pg custom properties.
 import { componentsCss } from '../../engine/components.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssStr } from '../../engine/escape.js';
 
 export function cssB(ctx) {
   const L = ctx.roles.light, mono = ctx.brand.fonts.mono, g = tokenGroups(ctx);
@@ -8,7 +9,7 @@ export function cssB(ctx) {
   // product screens on the digital page use the UI kit's components, so they carry the kit's light tokens
   const uiScope = `.pg .ui{${decl(colourMap(ctx, 'light'))};${decl(g.space)};${decl(g.radius)};${decl(g.width)};${decl(g.font)};${decl(g.text)};${decl(g.shadow)}}`;
   return `
-.pg{--pool:${L.success.bg};--ok:${L.success.fg};--bad:${L.danger.fg};--bmono:'${mono.family}',monospace}
+.pg{--pool:${L.success.bg};--ok:${L.success.fg};--bad:${L.danger.fg};--bmono:'${cssStr(mono.family)}',monospace}
 .pg :where(b){font-weight:600}
 .b-mono{font-family:var(--bmono);font-size:14px;line-height:1.4}
 .b-lead{font-size:14px;line-height:1.6;color:var(--soft);max-width:520px;margin-top:8px}

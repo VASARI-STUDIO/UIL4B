@@ -3,6 +3,7 @@
 // Every value comes from ctx.
 import { A, clauses } from './helpers.js';
 import { drawing, drawKind, SHOT_KEY } from './book.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `${r}, ${g}, ${b}`; };
 const onColour = (ctx, hex) => { const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface; ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
@@ -57,7 +58,7 @@ export function sheets(ctx) {
   // type specimen
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789';
   const face = (cls, fam, role, w, style, n) => `<div class="k-face"><p class="k-face__aa ${cls}" style="${style}" aria-hidden="true">Aa</p><div><p class="k-face__n"><span class="num k-no">1.${n}</span> ${A(fam)}</p><p class="cap">${role}. Weights ${w.join(', ')}. SIL OFL 1.1.</p><p class="k-face__al" style="${style}">${alpha}</p></div></div>`;
-  const dispW = f.display.weights[f.display.weights.length - 1];
+  const dispW = cssNum(f.display.weights[f.display.weights.length - 1]);
   const typefaces = page(ctx, 'typefaces', {
     section: '1 Typefaces', title: 'Typefaces', lead: `${A(f.display.family)} sets the time and the line you read first. ${A(f.body.family)} carries everything after it.`,
     rules: [A(T.rules[0].do), A(T.rules[5].do), `${A(f.mono.family)} is for a hex, a token or a code string only. Links and licence notes are in fonts.md.`],

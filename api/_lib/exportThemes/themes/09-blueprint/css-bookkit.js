@@ -1,7 +1,8 @@
 // Styles for theme 09's brand kit PDF pages (read-me, palette sheet, specimen, photography) and the pack boards. Scoped under .pg--k; classes start k-.
+import { cssStr } from '../../engine/escape.js';
 // The sheets reuse the guidelines frame (.pg--std, .hd, .ttl, .lead, .cap, .h2). Imported by css-book.js (cssBook returns this).
 export function cssBookKit(ctx) {
-  const B = ctx.brand, mono = B.fonts.mono.family;
+  const B = ctx.brand, mono = cssStr(B.fonts.mono.family);
   return `
 /* pack boards (engine/pack.js): the guidelines frame is a flex column; set the folder lists at a size that fills the sheet */
 .pg--std[data-page^="pack-"] .pk{margin-top:48px;column-gap:32px}

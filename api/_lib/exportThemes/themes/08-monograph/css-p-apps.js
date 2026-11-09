@@ -1,3 +1,4 @@
+import { cssNum } from '../../engine/escape.js';
 // Styles for p-apps.js (classes start ra-): business-card, social, signage, email-signature, digital, summary, contact-scope.
 // Page 794 x 1123, margin 72, spacing on a 4 px base. Sheets use the gate's r-sheet (paper edged by a hairline); nothing here restyles a
 // gate class. Familjen Grotesk is the chrome; the brand's faces only where the thing itself uses them; mono only on literal values.
@@ -117,7 +118,7 @@ ${ctx.edition === 'slot' ? '/* the sign line\'s placeholder is set at the sign\'
 .ra-hero__i{min-height:440px}
 .ra-hero__i>*{height:100%}
 .ra-dl{display:flex;flex-direction:column;gap:12px}
-.ra-dl__h{margin:0;font-size:22px;line-height:1.3;font-family:var(--display);font-weight:${ctx.brand.fonts.display.weights[0]};font-style:normal}
+.ra-dl__h{margin:0;font-size:22px;line-height:1.3;font-family:var(--display);font-weight:${cssNum(ctx.brand.fonts.display.weights[0])};font-style:normal}
 /* one Vermilion fill on the screen (the button): statuses are plain Ink words with no fill, the one that needs attention at 500,
    and the current page is underlined in Ink */
 .ra-scr .ui-chip{color:var(--ink);font-weight:400}

@@ -4,6 +4,7 @@
 // rail, light and dark switch) and adds the behaviour. Copy, the type tester and the downloads read data attributes the engine script
 // understands: data-copy, data-tester-*.
 import { A, fit } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the readable text colour on a brand colour: the better of the light-mode text and surface colours, checked
@@ -208,7 +209,7 @@ function typography(ctx) {
     const fam = s.face === 'display' ? 'var(--display)' : 'var(--body)', lh = n1(s.size * s.line);
     return `<li class="bk-scale" style="--size:${s.size}px;--lh:${lh}px"><div class="bk-scale__c bk-lt"><div class="bk-scale__d"><span class="bk-dm" style="height:calc(var(--size) * var(--k, 1));margin-top:calc((var(--lh) - var(--size)) / 2 * var(--k, 1))"><em class="num">${s.size}</em></span><span class="bk-dm" style="height:calc(var(--lh) * var(--k, 1))"><em class="num">${lh}</em></span></div><p class="bk-scale__s" style="font-family:${fam};font-weight:${s.weight};line-height:${s.line}">${A(T.sample.headline)}</p></div><div class="bk-scale__m"><p class="bk-scale__t">${A(ctx.cap(s.token))}</p><p class="bk-cap num">${s.size} px, line ${s.line}, weight ${s.weight}</p><p class="bk-cap">${A(s.use)}</p></div></li>`;
   }).join('');
-  const dw = F.display.weights[F.display.weights.length - 1];
+  const dw = cssNum(F.display.weights[F.display.weights.length - 1]);
   return sec('typography', 'bk-sec--type', `
 ${head('typography', 'Typography', 'One face for the big line, one for everything you read.')}
 <div class="bk-faces">${face('disp', F.display, 'For headlines, totals and the wordmark, at 18 px or larger.', `font-family:var(--display);font-weight:${dw};letter-spacing:-0.01em`, '5.1')}${face('', F.body, 'For reading text, labels and captions.', 'font-family:var(--body)', '5.2')}</div>

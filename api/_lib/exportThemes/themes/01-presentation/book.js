@@ -3,6 +3,7 @@
 // The engine wraps these in the shell (skip link, section nav, light and dark switch) and adds the behaviour.
 // Copy, the type tester and the downloads read data attributes the engine script understands: data-copy, data-tester-*.
 import { A, fit } from './helpers.js';
+import { cssStr } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the readable text colour on a brand colour: the better of the light-mode text and surface colours, checked
@@ -194,7 +195,7 @@ function applications(ctx) {
   // signage: the poster sits in the shelter's panel, as on the guidelines signage page. Sizes are in cqw of the stage,
   // so the whole scene scales together. The photo and poster geometry are fractions of the 1280 x 853 scene.
   const bus = ctx.shot('busstop'), [, signHead] = ap.signage.split(': ');
-  const glass = bus.photo ? `<span class="bk-poster__glass" style="background-image:url(${A(ctx.photoUrl(bus.photo))})"></span>` : '';
+  const glass = bus.photo ? `<span class="bk-poster__glass" style="background-image:url('${cssStr(ctx.photoUrl(bus.photo))}')"></span>` : '';
   const logoGeo = L.geos.colour;
   const sign = `<figure class="bk-sign"><div class="bk-sign__crop"><div class="bk-stage">${ctx.photo('busstop', { cls: 'bk-stage__img', slotNote: false })}<span class="bk-stage__patch"></span>
 <div class="bk-poster"><span class="bk-poster__ink"></span>${glass}<div class="bk-poster__in"><p class="disp bk-poster__h">${A(signHead || lastLine)}</p><div class="bk-poster__b"><p class="bk-poster__l">${A(B.lines.primary).replace('. ', '.<br>')}</p><div class="bk-poster__logo" style="aspect-ratio:${logoGeo.w.toFixed(2)}/${logoGeo.h.toFixed(2)}">${L.html('colour', { colourway: 'on-signal', width: 190, label: '', color: 'var(--bk-poster-ink)' })}</div></div></div></div></div></div>

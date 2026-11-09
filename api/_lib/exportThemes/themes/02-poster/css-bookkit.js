@@ -2,8 +2,9 @@
 // rule is scoped under the kit page's own class (.pg.tk2), so nothing here reaches the guidelines, the UI kit or the HTML book.
 // The pages stand on the gate's frame (.pg.tk: Stock ground, Night ink, the condensed head); the photography pages are the queue at
 // night (.tk2-night). Colours come from the roles; no hex is written here. css-book.js imports cssBookKit under this name.
+import { cssStr } from '../../engine/escape.js';
 export function cssBookKit(ctx) {
-  const D = ctx.roles.dark, B = ctx.brand, mono = `'${B.fonts.mono.family}',monospace`;
+  const D = ctx.roles.dark, B = ctx.brand, mono = `'${cssStr(B.fonts.mono.family)}',monospace`;
   return `
 /* the queue at night: the photography pages print Stock on Night */
 .pg.tk2.tk2-night{--ground:${D.surface};--ink:${D.text};--soft:${D.textSoft};--quiet:${D.quiet};--hair:${D.divider};--edge:${D.border}}

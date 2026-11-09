@@ -2,6 +2,7 @@
 // Laid out as a standards document: numbered clauses (1.1, 2.3) down a left column, hairline rules, one idea per page.
 // Styles are in css-bookkit.js (cssBookKit, wired through cssBook in css-book.js, classes k-). Every value comes from ctx.
 import { A, mono } from './helpers.js';
+import { cssNum } from '../../engine/escape.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 const onColour = (ctx, hex) => { const L = ctx.roles.light, pick = ctx.ratio(L.text, hex) >= ctx.ratio(L.surface, hex) ? L.text : L.surface; ctx.pair(pick, hex, { size: 13, what: `kit swatch ${hex}` }); return pick; };
@@ -54,7 +55,7 @@ export function sheets(ctx) {
   const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789';
   const face = (n, cls, fam, note, w, style) => cl(n, fam, `<p class="k-note">${A(note)} Weights ${w.join(', ')}. SIL OFL 1.1.</p><p class="k-face__aa ${cls}" style="${style}">Aa</p><p class="k-face__al" style="${style}">${alpha}</p>`, 'k-cl--face');
   const scale = T.scale.slice(1, 6).map((s, i) => `<tr><td class="num">2.${i + 1}</td><td class="num">${s.size} px, ${s.weight}</td><td><span class="k-spl" style="font-family:var(--${s.face === 'display' ? 'display' : 'body'});font-weight:${s.weight};font-size:${s.size}px;line-height:1.1">${A(s.face === 'display' ? (s.size >= 60 ? B.name.split(' ')[0] : B.lines.primary) : T.sample.caption)}</span></td></tr>`).join('');
-  const typefaces = page(ctx, 'typefaces', 'Typefaces', `<h1 class="t k-title">Typefaces</h1><h2 class="k-h"><span class="num">1</span>The faces</h2><ul class="k-cls">${face('1.1', 'disp', f.display.family, 'Display, 24 px and over.', f.display.weights, `font-family:var(--display);font-weight:${f.display.weights[0]}`)}${face('1.2', '', f.body.family, 'Body, for reading text.', f.body.weights, 'font-family:var(--body);font-weight:500')}</ul>
+  const typefaces = page(ctx, 'typefaces', 'Typefaces', `<h1 class="t k-title">Typefaces</h1><h2 class="k-h"><span class="num">1</span>The faces</h2><ul class="k-cls">${face('1.1', 'disp', f.display.family, 'Display, 24 px and over.', f.display.weights, `font-family:var(--display);font-weight:${cssNum(f.display.weights[0])}`)}${face('1.2', '', f.body.family, 'Body, for reading text.', f.body.weights, 'font-family:var(--body);font-weight:500')}</ul>
 <h2 class="k-h"><span class="num">2</span>The scale</h2><table class="st k-tab k-scale"><colgroup><col style="width:44px"><col style="width:120px"><col></colgroup><tbody>${scale}</tbody></table>`, { no: 1, of: 1, note: `${mono(f.mono.family)} is for a hex, a token or a code string only. Links and licence notes are in fonts.md.` });
   const dir = [['Subject', D.subject], ['Light', D.light], ['Crop', D.crop], ['Colour', D.colour], ['People', D.people]];
   const photo1 = page(ctx, 'photography-1', 'Photography', `<h1 class="t k-title">Photography direction</h1><h2 class="k-h"><span class="num">1</span>Direction</h2><ul class="k-cls">${dir.map(([k, v], i) => cl(`1.${i + 1}`, k, `<p>${A(v)}</p>`)).join('')}</ul>

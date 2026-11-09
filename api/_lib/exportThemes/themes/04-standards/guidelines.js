@@ -45,7 +45,7 @@ const own = {
   // the construction sheet for the versions: every version drawn at one scale, x = 4 px, on a grid of x with a heavier line every 6x
   'logo-versions'(ctx) {
     const L = ctx.logo, cw = ctx.brand.logo.colourways, b = xb(ctx), surface = ctx.roles.light.surface.toLowerCase(), ref = ctx.pages.find((x) => x.id === 'logo-versions').ref;
-    const ux = L.geo.x, cell = 6 * b, COLS = 30, ROWS = 25, SW = COLS * cell, SH = ROWS * cell, id = 'gvg';
+    const ux = L.geo.x || L.geo.cap / 10, cell = 6 * b, COLS = 30, ROWS = 25, SW = COLS * cell, SH = ROWS * cell, id = 'gvg';
     // [version, column, row, columns, rows] on the 6x grid
     const plan = [['colour', 0, 0, 15, 6], ['mono-dark', 15, 0, 15, 6], ['mono-light', 0, 6, 15, 6], ['reversed', 15, 6, 15, 6], ['horizontal', 0, 12, 30, 6], ['stacked', 0, 18, 8, 7], ['symbol', 8, 18, 6, 7]];
     const tile = ([vid, c, r, cs, rs], i) => {
@@ -79,7 +79,7 @@ const own = {
 
   // front and back at 5 px to the millimetre, which makes x (4 px) 0.8 mm: the logo is drawn 62x wide, so its own x is the manual's x
   'business-card'(ctx) {
-    const B = ctx.brand, L = ctx.logo, c = B.applications.card, rev = B.logo.colourways.reversed, b = xb(ctx), CW = 450, CH = 275, T = 26, ux = L.geo.x;
+    const B = ctx.brand, L = ctx.logo, c = B.applications.card, rev = B.logo.colourways.reversed, b = xb(ctx), CW = 450, CH = 275, T = 26, ux = L.geo.x || L.geo.cap / 10;
     const lw = Math.round((L.geos.reversed.w / ux) * b), lh = (L.geos.reversed.h / ux) * b, sw = Math.round((L.geos.symbol.w / ux) * b), sh = (L.geos.symbol.h / ux) * b;
     const ly = (CH - lh) / 2, z = 4 * b;
     const frontMarks = `<g>${`<rect class="g-z" x="${40 - z}" y="${f2(ly - z)}" width="${lw + 2 * z}" height="${f2(lh + 2 * z)}"/>`}<text x="${40 + lw + z / 2}" y="${f2(ly + lh / 2 + 4)}" text-anchor="middle">${fx(z, b)}</text>${dh(205, 40, 40 + lw, fx(lw, b))}${dh(237, 0, 40, fx(40, b), { tx: 20 })}${dv(14, 247, CH, fx(28, b), { dx: 8 })}</g>`;

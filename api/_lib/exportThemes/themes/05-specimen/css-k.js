@@ -1,10 +1,11 @@
 // Styles for guidelines-k.js (classes start k-): the card catalogue. Page 794 x 1123, margin 56.
 // One elevation language: 1 px and 1.5 px Rod lines for drawers, card edges and the rod hole; no shadows, no fills that only decorate.
 // Cards are White stock or printed in a brand colour, always at 5 : 3 when shown whole. Goudy Bookletter 1911 at 24 px and over only.
+import { cssStr } from '../../engine/escape.js';
 export function cssK(ctx) {
   const L = ctx.roles.light, mono = ctx.brand.fonts.mono;
   return `
-.pg{--rod:${L.quiet};--face:${L.raised};--plum:${L.action};--plum-ink:${L.actionLabel};--kmono:'${mono.family}',monospace}
+.pg{--rod:${L.quiet};--face:${L.raised};--plum:${L.action};--plum-ink:${L.actionLabel};--kmono:'${cssStr(mono.family)}',monospace}
 .k-mono{font-family:var(--kmono);font-weight:400;letter-spacing:0}
 .k-disp{font-family:var(--display);font-weight:400;letter-spacing:0}
 .k-hole{display:block;flex:none}

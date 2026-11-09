@@ -64,7 +64,8 @@ function annotated(ctx, mode) {
   const M = colourMap(ctx, mode), S = sc(ctx), ui = ctx.ui, F = S.form;
   const R = (a, b) => rt(ctx, M[a], M[b]);
   const C = (side, y, reach, name, t, a, b) => co(side, y, reach, name, '--' + t, M[t], b ? R(a, b) : '');
-  const sent = ctx.status.find((x) => x.id === 'sent'), over = ctx.status.find((x) => x.id === 'overdue'), paid = ctx.status.find((x) => x.id === 'paid'), draft = ctx.status.find((x) => x.id === 'draft');
+  const byId = (id, tone) => ctx.status.find((x) => x.id === id) || ctx.status.find((x) => x.tone === tone) || ctx.status[0];
+  const sent = byId('sent', 'info'), over = byId('overdue', 'danger'), paid = byId('paid', 'success'), draft = byId('draft', 'neutral');
   const chip = (s) => ui.statusChip(s.id);
   return `<div class="an-st"><div class="an-card">
 <div class="an-pt">${C('l', 7, 20, 'Info', 'info', 'info', 'surface')}${C('r', 7, 20, 'Quiet text', 'quiet', 'quiet', 'surface')}<div class="an-head">${chip(sent)}<span class="an-q num">${A(S.time)}</span></div></div>
@@ -368,7 +369,7 @@ export const uikit = {
     const sortBtn = (t, dir) => `<button type="button">${A(t)}${dir ? ui.icon(dir === 'asc' ? 'arrow-up' : 'arrow-down', 14) : ''}</button>`;
     const rows = S.deliveries.map((d, i) => `<tr${i === 0 ? ' aria-selected="true"' : ''}${i === 2 ? ' class="is-hover"' : ''}><td>${A(d.to)}</td><td class="ui-num">${A(d.when)}</td><td>${ui.statusChip(d.status)}</td><td class="is-num">${A(d.price)}</td></tr>`).join('');
     const table = `<table class="ui-table"><thead><tr><th scope="col" aria-sort="ascending">${sortBtn(S.deliverToLabel, 'asc')}</th><th scope="col">${sortBtn('Job')}</th><th scope="col">Status</th><th scope="col" class="is-num">${sortBtn(S.paidLabel)}</th></tr></thead><tbody>${rows}</tbody></table>`;
-    const keys = `<div class="k3 kkeys">${cap('Selected', 'First row')}${cap('Hover', 'Third row')}${cap('Sorted', `${S.deliverToLabel}, ascending`)}</div>`;
+    const keys = `<div class="k3 kkeys">${cap('Selected', 'First row')}${cap('Hover', 'Third row')}${cap('Sorted', `${A(S.deliverToLabel)}, ascending`)}</div>`;
     const ru = rules(['A sortable header is a button, and the sorted one shows its direction.', 'Numbers sit right and use tabular figures.', `Row states: rest, hover on pointer devices, and selected with a 3 px ${A(act.name)} bar on the left.`]);
     const k = key([['Header', '44 px, medium, 2 px rule below'], ['Row', '52 px, hairline between'], ['Selected', `${m('--raised')} and a 3 px ${m('--action')} bar`], ['Numbers', 'Right-aligned, tabular']]);
     const tw = `<div class="kls kls--t">${nl(1, 12)}${nl(2, 70)}${nl(3, 116)}${nl(4, 12, 'r')}<div class="ktbl">${table}</div></div>`;

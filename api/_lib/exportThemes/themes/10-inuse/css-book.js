@@ -1,4 +1,5 @@
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 // Styles for theme 10's brand book site (bookCss, scoped under .bk and the root custom properties) and for the
 // brand kit pages: read-me, palette sheet, specimen, photography and the pack boards (cssBook, scoped under .pg).
 // In use: the product on a phone with numbered notes beside it, Figtree chrome, Chalk ground, one Float panel behind the opening phone.
@@ -11,14 +12,14 @@ export function bookCss(ctx) {
   const rc = B.ui.radius.control, rcard = B.ui.radius.card, bw = B.ui.border;
   const hl = ctx.colours.find((c) => c.role === 'highlight').hex;
   return `:root,.bk--board{${vars(L)}--bk-float:${hl};--fix-ground:${L.surface};--fix-raised:${L.raised};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};--fix-action:${L.action};--fix-action-ink:${L.actionLabel};--fix-pool:${L.success.bg};
---chrome:'Figtree',sans-serif;--display:'${d.family}',sans-serif;--body:'${b.family}',sans-serif;--mono:'${m.family}',monospace}
+--chrome:'Figtree',sans-serif;--display:'${cssStr(d.family)}',sans-serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"]{${vars(D)}}
 body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk{font-family:var(--chrome);font-size:13px;line-height:1.5;color:var(--bk-ink);background:var(--bk-ground);-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;position:relative}
 .bk :where(h1,h2,h3,p,ul,ol,dl,dd,figure){margin:0;padding:0}
 .bk :where(ul,ol){list-style:none}
 .bk :where(a){color:inherit}
-.bk .disp,.bk-disp{font-family:var(--display);font-stretch:${d.stretch || 100}%;font-weight:${d.weights[d.weights.length - 1]};letter-spacing:-0.01em}
+.bk .disp,.bk-disp{font-family:var(--display);font-stretch:${cssNum(d.stretch || 100)}%;font-weight:${cssNum(d.weights[d.weights.length - 1])};letter-spacing:-0.01em}
 .bk .num{font-variant-numeric:tabular-nums}
 .bk :focus-visible{outline:2px solid var(--bk-focus);outline-offset:2px}
 .bk-skip{position:absolute;left:16px;top:-80px;z-index:30;background:var(--bk-ink);color:var(--bk-ground);padding:12px 16px;border-radius:999px;font-weight:600;text-decoration:none}
@@ -362,7 +363,7 @@ body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk-dgrid{display:block;columns:280px 3;column-gap:24px}
 .bk-ds{min-width:0;break-inside:avoid;margin-bottom:24px;padding:28px 20px 12px;border-radius:28px;background:var(--bk-raised);box-shadow:inset 0 0 0 1px var(--bk-hair)}
 .bk-ds__h{padding:0 0 16px}
-.bk-ds__t{font-family:var(--display);font-weight:${d.weights[d.weights.length - 1]};font-size:30px;line-height:1.05;letter-spacing:-0.01em;margin-bottom:6px}
+.bk-ds__t{font-family:var(--display);font-weight:${cssNum(d.weights[d.weights.length - 1])};font-size:30px;line-height:1.05;letter-spacing:-0.01em;margin-bottom:6px}
 .bk-files li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--bk-hair)}
 .bk-file__n{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
 .bk-files .bk-cap{grid-column:1;grid-row:2}

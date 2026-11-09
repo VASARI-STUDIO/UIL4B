@@ -1,16 +1,17 @@
 // Styles for theme 02's gate pages (gate.js): cover, palette, colour-values, contrast. Classes start tk-.
 // Every page stands on Stock (the light surface) and prints in Night. Colours come from the brand roles; no hex is written here.
+import { cssStr, cssNum } from '../../engine/escape.js';
 export function cssGate(ctx, meta) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display;
   return `
 .pg.tk{--ground:${L.surface};--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--hair:${L.divider};--edge:${L.border};
-  --cond:'${meta.chrome.family}',sans-serif;--chrome:'${B.fonts.body.family}',sans-serif;--display:'${d.family}',sans-serif;
+  --cond:'${cssStr(meta.chrome.family)}',sans-serif;--chrome:'${cssStr(B.fonts.body.family)}',sans-serif;--display:'${cssStr(d.family)}',sans-serif;
   background:var(--ground);color:var(--ink);display:flex;flex-direction:column;padding:36px var(--m) 40px;gap:20px}
-.pg.tk .disp{font-family:var(--display);font-weight:${d.weights[0]};font-stretch:${d.stretch || 100}%;letter-spacing:-0.015em;line-height:0.9}
+.pg.tk .disp{font-family:var(--display);font-weight:${cssNum(d.weights[0])};font-stretch:${cssNum(d.stretch || 100)}%;letter-spacing:-0.015em;line-height:0.9}
 /* chrome heads: the condensed face is tight at 26 px, so it is set at 34 px with a little tracking; the expanded face stays for names */
 .tk-hd{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--cond);font-weight:700;font-size:34px;line-height:36px;letter-spacing:0.03em}
 .tk-sn{font-family:var(--cond);font-weight:700;font-size:20px;line-height:22px;letter-spacing:0.02em;font-variant-numeric:tabular-nums}
-.tk-mono,.tk-ff dd.tk-mono{font-family:'${B.fonts.mono.family}',monospace;font-size:13px;line-height:18px;white-space:pre}
+.tk-mono,.tk-ff dd.tk-mono{font-family:'${cssStr(B.fonts.mono.family)}',monospace;font-size:13px;line-height:18px;white-space:pre}
 .tk-lead{font-size:15px;line-height:1.5;color:var(--soft);max-width:68ch}
 .tk-h3{font-family:var(--cond);font-weight:700;font-size:26px;line-height:28px;letter-spacing:0.03em;margin-bottom:8px}
 .tk-edge{box-shadow:inset 0 0 0 1px var(--hair)}

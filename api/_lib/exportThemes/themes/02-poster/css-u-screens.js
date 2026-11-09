@@ -1,12 +1,13 @@
 // Styles for u-screens.js: screen-light, screen-dark, screen-mobile, tokens, code. Classes start tu4-.
 // Reads the .pg.tk custom properties set in css-gate.js; the gate's classes are used, never restyled. The screens are the kit's own
 // components (.ui, scoped to light or dark tokens in css-kit.js). No hex is written here.
+import { cssStr, cssNum } from '../../engine/escape.js';
 export const cssUScreens = (ctx) => {
   const D = ctx.roles.dark, B = ctx.brand, mono = B.fonts.mono, d = B.fonts.display, rc = B.ui.radius.card;
   return `
 /* the one page after dark in this run: Night ground, Stock ink */
 .pg.tk.tu4--night{--ground:${D.surface};--ink:${D.text};--soft:${D.textSoft};--quiet:${D.quiet};--hair:${D.divider};--edge:${D.border}}
-.tu4-mono{font-family:'${mono.family}',monospace;font-weight:400;font-size:0.9em;font-variant-numeric:tabular-nums}
+.tu4-mono{font-family:'${cssStr(mono.family)}',monospace;font-weight:400;font-size:0.9em;font-variant-numeric:tabular-nums}
 /* the perforation as a rule: a box the size of its holes, the holes drawn along it */
 .tu4-hr{position:relative;flex:none;height:3px}
 .tu4-vr{position:relative;flex:none;width:3px;align-self:stretch}
@@ -35,7 +36,7 @@ export const cssUScreens = (ctx) => {
 .tu4-tix__body{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:20px 20px 22px}
 .tu4-tix__top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .tu4-tix__eta{font:var(--fw-label) var(--fs-label)/var(--lh-label) var(--ff-body);color:var(--text-soft);font-variant-numeric:tabular-nums}
-.tu4-tix__act{margin:0;font-size:var(--fs-title);line-height:var(--lh-title);font-stretch:${d.stretch || 100}%;overflow-wrap:break-word}
+.tu4-tix__act{margin:0;font-size:var(--fs-title);line-height:var(--lh-title);font-stretch:${cssNum(d.stretch || 100)}%;overflow-wrap:break-word}
 /* the slot edition's act is a placeholder box wider than a two-word act: it steps down and wraps inside the body, short of the tear line */
 .tu4-tix--slot .tu4-tix__act{font-size:var(--fs-title-s);line-height:var(--lh-title-s);max-width:100%;overflow-wrap:anywhere}
 .tu4-tix--slot .tu4-tix__act *{white-space:normal!important;overflow-wrap:anywhere}
@@ -103,7 +104,7 @@ export const cssUScreens = (ctx) => {
 .tu4-tg__key{font-size:12px;line-height:16px;color:var(--quiet)}
 .tu4-tg ul{display:flex;flex-wrap:wrap;gap:6px 18px}
 .tu4-tk{display:flex;flex-direction:column;gap:1px;min-width:0}
-.tu4-tk__n{font-family:'${mono.family}',monospace;font-size:11px;line-height:15px;color:var(--soft)}
+.tu4-tk__n{font-family:'${cssStr(mono.family)}',monospace;font-size:11px;line-height:15px;color:var(--soft)}
 .tu4-tk__v{display:flex;align-items:center;gap:6px;font-size:13px;line-height:18px}
 .tu4-tk__v .tu4-sw{width:12px;height:12px}
 .tu4-tk__v .tu4-mono{font-size:12px}
@@ -122,7 +123,7 @@ export const cssUScreens = (ctx) => {
 .tu4-cd__pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
 .tu4-cb{margin:0;display:flex;flex-direction:column;min-width:0}
 .tu4-cb .tk-h3{font-size:22px;line-height:24px;margin-bottom:6px}
-.pg .ui.tu4-pre{margin:0;padding:14px 18px;border-radius:${rc}px;font:400 13px/20px '${mono.family}',monospace;white-space:pre;overflow:hidden}
+.pg .ui.tu4-pre{margin:0;padding:14px 18px;border-radius:${rc}px;font:400 13px/20px '${cssStr(mono.family)}',monospace;white-space:pre;overflow:hidden}
 .tu4-pre code{font:inherit}
 .tu4-cb--lead .tu4-pre{padding:16px 22px;font-size:14px;line-height:21px}
 .tu4-cd__stub{display:flex;flex-direction:column;min-height:0}

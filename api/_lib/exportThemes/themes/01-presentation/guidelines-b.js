@@ -3,6 +3,7 @@
 // Every page is a slide with one idea: a face set huge, a wall of six small slides, a photograph edge to edge, a row of slides on White
 // and a row on Asphalt, a recap on a dark foot.
 import { A, std } from './helpers.js';
+import { cssStr } from '../../engine/escape.js';
 
 // a slide whose picture or band runs to the slide's edges (class b-x), and a slide with the usual margins
 const bleed = (ctx, id, main, cls = '') => std(ctx, id, main, `b-x ${cls}`);
@@ -24,7 +25,7 @@ const own = {
     const lead = `Two faces do the work. ${A(d.family)} sets the line you read first. ${A(b.family)} carries everything after it.`;
     // the display face's name is the slide, set huge in itself; the body face and the mono sit in the footer
     const main = `<div class="b-tf">
-<div class="b-tf__top"><p class="lead">${lead}</p><p class="cap"><b>Display</b>Weight ${d.weights.join(', ')}, width ${d.stretch}. Used for ${A(tokensOf('display'))}.</p></div>
+<div class="b-tf__top"><p class="lead">${lead}</p><p class="cap"><b>Display</b>Weight ${d.weights.join(', ')}, width ${d.stretch || 100}. Used for ${A(tokensOf('display'))}.</p></div>
 <div><h2 class="disp b-tf__name">${A(d.family)}</h2><p class="b-glyphs disp">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789</p></div>
 <div class="b-tf__foot">
 <div><h3 class="b-fname">${A(b.family)}</h3><p class="cap"><b>Body</b>Used for ${A(tokensOf('body'))}.</p></div>
@@ -182,7 +183,7 @@ const own = {
     const spec = spec0.replace(/ x /g, ' × '), head = head0 || B.lines.others[1];
     const p = ctx.pages.find((x) => x.id === 'signage');
     const url = s.photo ? ctx.photoUrl(s.photo) : '';
-    const poster = `<div class="b-poster"><div class="b-poster__ink"></div>${url ? `<div class="b-glass" style="background-image:url(${A(url)})"></div>` : ''}<div class="b-poster__in"><span class="disp b-poster__h">${A(head)}</span><div class="b-poster__b"><span class="b-poster__l">${A(B.lines.primary).replace('. ', '.<br>')}</span><div class="b-poster__logo">${ctx.logo.html('colour', { colourway: 'on-signal', width: 190, label: 'Your logo goes here', color: 'var(--accent-ink)' })}</div></div></div></div>`;
+    const poster = `<div class="b-poster"><div class="b-poster__ink"></div>${url ? `<div class="b-glass" style="background-image:url('${cssStr(url)}')"></div>` : ''}<div class="b-poster__in"><span class="disp b-poster__h">${A(head)}</span><div class="b-poster__b"><span class="b-poster__l">${A(B.lines.primary).replace('. ', '.<br>')}</span><div class="b-poster__logo">${ctx.logo.html('colour', { colourway: 'on-signal', width: 190, label: 'Your logo goes here', color: 'var(--accent-ink)' })}</div></div></div></div>`;
     return `<section class="pg pg--sign" data-page="signage">${ctx.photo('busstop', { cls: 'b-scene' })}<span class="b-frame"></span>${poster}<div class="b-sfoot"><span><b class="num">${p.ref}</b>${A(p.title)}<i>${A(spec)}</i></span><span>${A(B.name)} brand guidelines<b class="num" style="margin:0 0 0 12px">${ctx.pageNo('signage')}</b></span></div></section>`;
   },
 

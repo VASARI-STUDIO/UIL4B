@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "themes:smoke": "node scripts/export-themes-smoke.mjs",
     "themes:check": "node scripts/export-themes-check.mjs",
+    "themes:sweep": "node scripts/export-themes-sweep.mjs",
     "apply:gated": "node scripts/apply-gated-patches.mjs",
     "preview": "vite preview",
     "setup:stripe": "node scripts/setup-stripe.js",

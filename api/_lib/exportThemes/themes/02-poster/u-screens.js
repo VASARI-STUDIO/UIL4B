@@ -39,7 +39,7 @@ const appLogo = (ctx, dark, w, h) => {
 };
 
 // a status chip for a product screen, where the one Door red is the button: the action-toned status (On sale) is drawn as plain neutral words, so the button keeps the only Door red
-const calm = (ctx, id) => { const s = ctx.status.find((x) => x.id === id); return s.tone === 'action' ? ctx.ui.chip(s.label, 'neutral') : ctx.ui.statusChip(id); };
+const calm = (ctx, id) => { const s = ctx.status.find((x) => x.id === id) || ctx.status[0]; return s.tone === 'action' ? ctx.ui.chip(s.label, 'neutral') : ctx.ui.statusChip(id); };
 
 // the live ticket as the app shows it: the body (the name, the place, the start and end, the update line), the app's tear line,
 // and the stub (the one code, what was paid, the stub's button). `tall` stacks the stub under the body for the phone.

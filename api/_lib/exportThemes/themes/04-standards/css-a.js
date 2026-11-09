@@ -1,8 +1,9 @@
 // Theme 04 css for run A pages (classes start a-). The work area is 721 x 634 px at the right of the title column.
+import { cssStr } from '../../engine/escape.js';
 export const cssA = (ctx) => {
   const mono = ctx.brand.fonts.mono, dw = ctx.brand.fonts.display.weights.at(-1);
   return `
-.pg{--mono:'${mono.family}',monospace}
+.pg{--mono:'${cssStr(mono.family)}',monospace}
 .pg .hairline{box-shadow:inset 0 0 0 1px var(--hair)}
 .pg figure{margin:0}
 .a-sw{display:block;flex:none;width:28px;height:28px;border-radius:2px}

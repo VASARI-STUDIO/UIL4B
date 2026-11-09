@@ -1,6 +1,7 @@
 // Styles for the brand kit PDF pages (read-me, palette sheet, specimen, photography). Scoped under .pg; classes start k-.
+import { cssStr } from '../../engine/escape.js';
 export function cssBookKit(ctx) {
-  const mono = ctx.brand.fonts.mono.family;
+  const mono = cssStr(ctx.brand.fonts.mono.family);
   return `
 .pg--k.pg--std{gap:18px}
 .k-mast{flex:none;display:flex;justify-content:space-between;align-items:baseline;padding:16px 0 12px;border-bottom:3px solid var(--ink)}

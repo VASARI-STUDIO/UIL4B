@@ -3,17 +3,18 @@
 // Broadsheet on the screen: ruled columns, a running head over a 4 px action rule, one display headline a section, no boxes.
 // Everything reads colours from the brand's roles; no hex is written here.
 import { cssBookKit } from './css-bookkit.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 const vars = (r) => `--bk-ground:${r.surface};--bk-raised:${r.raised};--bk-panel:${r.sunken};--bk-ink:${r.text};--bk-soft:${r.textSoft};--bk-quiet:${r.quiet};--bk-quiet-panel:${r.quietOnSunken};--bk-hair:${r.divider};--bk-edge:${r.border};--bk-action:${r.action};--bk-action-hover:${r.actionHover};--bk-action-ink:${r.actionLabel};--bk-focus:${r.focus};`;
 
 export function bookCss(ctx) {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono;
-  const bw = B.ui.border, dw = d.weights[d.weights.length - 1];
+  const bw = B.ui.border, dw = cssNum(d.weights[d.weights.length - 1]);
   // the brand's fill-only mark colour (role "mark"), else the action colour
   const mark = (B.colours.find((c) => c.role === 'mark') || { hex: L.action }).hex;
   const cw = B.logo.colourways;
   return `:root,.bk--board{${vars(L)}--bk-mark:${mark};--fix-ground:${L.surface};--fix-ink:${L.text};--fix-soft:${L.textSoft};--fix-quiet:${L.quiet};--fix-hair:${L.divider};--fix-panel:${L.sunken};
---chrome:'Schibsted Grotesk',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',sans-serif;--mono:'${m.family}',monospace}
+--chrome:'Schibsted Grotesk',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(m.family)}',monospace}
 [data-theme="dark"]{${vars(D)}}
 body{background:var(--bk-ground);color:var(--bk-ink)}
 .bk{font-family:var(--chrome);font-size:14px;line-height:1.45;color:var(--bk-ink);background:var(--bk-ground);-webkit-font-smoothing:antialiased;display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh;position:relative}

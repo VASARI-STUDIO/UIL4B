@@ -1,6 +1,7 @@
 // Styles for p-apps.js: business-card, social, signage, email-signature, digital, summary, contact-scope. Classes start ta-.
 // Reads the .pg.tk custom properties set in css-gate.js; the gate's classes are used, never restyled. No hex is written here.
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssNum } from '../../engine/escape.js';
 
 export const cssPApps = (ctx) => {
   const L = ctx.roles.light, D = ctx.roles.dark, B = ctx.brand, mono = B.fonts.mono;
@@ -122,7 +123,7 @@ ${uiScope}
 .ta-dl .ui-list>li>.ui-row{flex:1}
 .ta-trk__top{display:flex;gap:12px;align-items:center}
 .ta-trk__t{font-size:13px;color:${D.quiet}}
-.ta-trk__eta{margin:0;font-size:60px;line-height:0.95;font-weight:${B.fonts.display.weights[0]};font-stretch:${B.fonts.display.stretch || 100}%;white-space:nowrap;margin-top:8px}
+.ta-trk__eta{margin:0;font-size:60px;line-height:0.95;font-weight:${cssNum(B.fonts.display.weights[0])};font-stretch:${cssNum(B.fonts.display.stretch || 100)}%;white-space:nowrap;margin-top:8px}
 /* slot edition: the time promise stays at the display size (60 px is wider than the track in the slot face, so 52 px), on one line; the chip is capped at 20 px by default */
 .ta-trk__eta .ph-c{font-size:52px}
 .ta-trk__ft{display:flex;justify-content:space-between;font-size:12px;color:${D.quiet}}

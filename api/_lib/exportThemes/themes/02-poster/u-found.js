@@ -6,6 +6,7 @@
 import { A, ratioText, fit } from './helpers.js';
 import { page, perf, fields, serial, byRole, inkOn, same } from './gate.js';
 import { colourMap, tokenGroups } from '../../engine/tokens.js';
+import { cssNum } from '../../engine/escape.js';
 
 const m = (s) => `<span class="tu1-m">${A(s)}</span>`;
 const rt = (ctx, a, b) => ratioText(ctx.fmt(ctx.ratio(a, b)));
@@ -137,7 +138,7 @@ ${fields([['Kept by', 'Example project']], 'tu1-ff tu1-ff--kept')}</div>`;
     if (ctx.edition === 'slot') Object.assign(sample, { headline: 'Headline', title: 'Screen title', 'title-s': 'Card title' });
     const small = Math.min(...ctx.uiType.map((t) => t.size));
     const rows = [...ctx.uiType].reverse().map((t) => {
-      const face = t.face === 'display' ? `font-family:var(--display);font-stretch:${d.stretch || 100}%;letter-spacing:-0.01em;` : 'font-family:var(--body);';
+      const face = t.face === 'display' ? `font-family:var(--display);font-stretch:${cssNum(d.stretch || 100)}%;letter-spacing:-0.01em;` : 'font-family:var(--body);';
       return `<li class="tu1-ts__r"><span class="tu1-ts__px num">${t.size}</span><div class="tu1-ts__b"><p class="tu1-ts__s" style="${face}font-size:${t.size}px;line-height:${t.line}px;font-weight:${t.weight}">${A(sample[t.token] || t.use)}</p>
 <p class="tu1-ts__f"><span class="tu1-m">${A(t.token)}</span><b class="num">${t.size} / ${t.line} / ${t.weight}</b><span>${A(t.use)}</span></p></div></li>`;
     }).join('');
@@ -145,7 +146,7 @@ ${fields([['Kept by', 'Example project']], 'tu1-ff tu1-ff--kept')}</div>`;
     // each face named in itself at 38 px, straight under the lead
     const faceLine = (css, fam) => `<span class="tu1-ts__face" style="${css}">${A(fam)}</span>`;
     const stub = `<div class="tu1-ts__stub">${pv()}${head2('Two faces.', `${nw(ctx.uiType.length)} sizes.`, 'tu1-h--s')}<p class="tk-lead">${lead}</p>
-${fields([['Display', faceLine(`font-family:var(--display);font-stretch:${d.stretch || 100}%;letter-spacing:-0.01em;font-weight:800`, d.family)], ['Body', faceLine('font-family:var(--chrome);font-weight:400', B.fonts.body.family)]], 'tu1-ff tu1-ff--stack tu1-ff--faces')}</div>`;
+${fields([['Display', faceLine(`font-family:var(--display);font-stretch:${cssNum(d.stretch || 100)}%;letter-spacing:-0.01em;font-weight:800`, d.family)], ['Body', faceLine('font-family:var(--chrome);font-weight:400', B.fonts.body.family)]], 'tu1-ff tu1-ff--stack tu1-ff--faces')}</div>`;
     return page(ctx, 'type-scale', `<div class="tu1-ts"><ol class="tu1-ts__rs">${rows}</ol>${stub}</div>`, 'tu1 tu1--ts');
   },
 

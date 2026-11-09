@@ -30,6 +30,7 @@ import { cssKit } from './css-kit.js';
 import { cssBook, bookCss } from './css-book.js';
 import { brandBook } from './book.js';
 import { cssGate } from './css-gate.js';
+import { cssStr, cssNum } from '../../engine/escape.js';
 
 export const meta = {
   id: '02-poster', name: 'Ticket', tier: 'Pro', brand: 'encore',
@@ -50,13 +51,13 @@ export function css(ctx) {
   const lamp = D.action, lampInk = D.actionLabel;
   return `.pg{--night:${D.surface};--stage:${D.raised};--smoke:${L.surface};--lamp:${lamp};--lamp-ink:${lampInk};--m:${m}px;--r:${r.control}px;--rc:${r.card}px;
   --ground:${D.surface};--ink:${D.text};--soft:${D.textSoft};--quiet:${D.quiet};--hair:${D.divider};--panel:${D.raised};--lit:${lamp};
-  --chrome:'${meta.chrome.family}',sans-serif;--display:'${d.family}',serif;--body:'${b.family}',sans-serif;
+  --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',sans-serif;
   background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
 .pg--paper{--ground:${L.surface};--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--hair:${L.divider};--panel:${L.sunken};--lit:${L.text}}
 .pg--lamp{--ground:${lamp};--ink:${lampInk};--soft:${L.textSoft};--quiet:${L.quiet};--hair:${mix(ctx.C, lampInk, lamp, 0.35)};--panel:${mix(ctx.C, lampInk, lamp, 0.12)};--lit:${lampInk}}
 .pg :where(h1,h2,h3,p,ul,ol,figure){margin:0;padding:0}
 .pg :where(ul,ol){list-style:none}
-.disp{font-family:var(--display);font-style:normal;font-weight:${d.weights[0]};letter-spacing:-0.015em;line-height:0.92}
+.disp{font-family:var(--display);font-style:normal;font-weight:${cssNum(d.weights[0])};letter-spacing:-0.015em;line-height:0.92}
 .num{font-variant-numeric:tabular-nums}
 
 /* the poster page: running head, then the page */
