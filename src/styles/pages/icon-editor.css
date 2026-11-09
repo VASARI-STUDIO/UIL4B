@@ -152,7 +152,7 @@
 .ied-lblrow{display:flex;align-items:baseline;justify-content:space-between;height:20px}
 .ied-chips{margin-top:8px;display:flex;gap:4px}
 .ied-chip,.ied .ied-chip.cpk-trigger{flex:1 1 auto;display:flex;align-items:center;gap:6px;width:auto;height:36px;min-width:0;padding:0 8px;border:0;border-radius:12px;background:var(--ied-tonal);box-shadow:none;font-size:13px;line-height:20px;font-weight:500;text-align:left;color:var(--ied-ink)}
-.ied .ied-chip.cpk-trigger{display:flex;place-items:unset}
+.ied .ied-chip.cpk-trigger{display:flex;align-items:center;justify-content:flex-start}
 .ied-chip span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ied-chip[aria-checked="true"],.ied .ied-chip.cpk-trigger[aria-checked="true"],.ied-tile[aria-checked="true"],.ied-seg button[aria-checked="true"],.ied-ib[aria-pressed="true"]{background:var(--ied-sel)}
 .ied-sw{flex:none;width:16px;height:16px;border-radius:5px;box-shadow:inset 0 0 0 1px var(--ied-ring)}
@@ -346,6 +346,8 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
 
 /* ── spacing and states the markup needs beyond the sections above ── */
 .ied-sizes-pro{margin-left:auto}
+.ied-chips .cpk-wrap{flex:1 1 auto;display:flex;min-width:0}
+.ied .ied-chips .cpk-trigger{width:100%}
 .ied-tick{background:var(--ied-m3)}
 .ied-tick.on{background:var(--ied-surface)}
 .ied-rgw + .ied-seg{margin-top:12px}
