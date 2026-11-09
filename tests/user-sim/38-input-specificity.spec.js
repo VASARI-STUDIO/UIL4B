@@ -52,7 +52,7 @@ const FIELDS = [
   // shared colour picker, whose own field is the one a hex is typed into.
   {
     route: '/create/font-pair', sel: '.fpr-input', name: 'font pair preview field',
-    want: { padding: '0px 12px', borderRadius: '10px' },
+    want: { padding: '0px 16px', borderRadius: '999px' },
     wasWrongly: { padding: '9px 14px', borderRadius: '12px' },
   },
   {

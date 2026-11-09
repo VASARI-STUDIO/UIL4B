@@ -1,4 +1,4 @@
-// "Tally": a spending card, the Product example in the Pro set. The scene is a
+// "Tenner": a spending card, the Product example in the Pro set. The scene is a
 // card app spent the way a bank spends a brand: the card is the one coloured
 // object, the budget bar's spent part is the primary, the active tab is the
 // secondary, the pace tick is the accent, and the rest is neutral. Plain data,
@@ -193,7 +193,7 @@ function primaryFills(r) {
  * and the Limits form are left out.
  * @param {object} r derivePaletteRoles() output
  */
-export function tallyVars(r) {
+export function tennerVars(r) {
   const keep = Boolean(r.pair)
   const grounds = { text: r.text, canvas: r.canvas }
   const cardInk = inkOnField(r.primary, { on: r.onPrimary, ...grounds }, { keep }).hex

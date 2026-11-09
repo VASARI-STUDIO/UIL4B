@@ -23,7 +23,7 @@ export function useClipboard(toast) {
       return Promise.resolve(true)
     }
     if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') {
-      toast?.('Clipboard is not available in this browser')
+      toast?.('Clipboard is not available in this browser', 'error')
       return Promise.resolve(false)
     }
     try {
@@ -33,11 +33,11 @@ export function useClipboard(toast) {
           return true
         })
         .catch(() => {
-          toast?.('Failed to copy')
+          toast?.('Failed to copy', 'error')
           return false
         })
     } catch {
-      toast?.('Failed to copy')
+      toast?.('Failed to copy', 'error')
       return Promise.resolve(false)
     }
   }, [toast])

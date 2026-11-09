@@ -1,19 +1,8 @@
 const NON_TEXT_FAMILY_PATTERN = /(?:^|\s)(?:barcode|code|coding|console|emoji|icon|icons|math|mono|monospace|music|signwriting|symbol|symbols|terminal)(?:\s|$)/i
 const NON_TEXT_SUBSETS = new Set(['math', 'music', 'signwriting', 'symbols'])
 
-// The category set both font browsers offer. The Font Gallery uses it as is;
-// the picker dialog adds Mono on top (see FontBrowseDialog), because a picker
-// keeps monospace families and the gallery does not.
-export const FONT_CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'sans-serif', label: 'Sans Serif' },
-  { id: 'serif', label: 'Serif' },
-  { id: 'display', label: 'Display' },
-  { id: 'handwriting', label: 'Script' },
-]
-
-// Category names as they read in running text (the filter pills keep their own
-// casing). One map so every surface that names a category spells it the same.
+// Category names as they read in running text. One map so every surface that
+// names a category spells it the same.
 const CATEGORY_WORDS = { 'sans-serif': 'sans serif', serif: 'serif', display: 'display', handwriting: 'script', monospace: 'monospace' }
 export const categoryWord = (category) => CATEGORY_WORDS[category] || String(category || '').toLowerCase()
 // The same word with a capital, for a label or a meta line: "Sans serif".
@@ -21,6 +10,21 @@ export const categoryLabel = (category) => {
   const word = categoryWord(category)
   return word.charAt(0).toUpperCase() + word.slice(1)
 }
+
+// A chip or pill's label: the sentence-case label, except that monospace is
+// "Mono" where space is short. Chip and pill rows are built from this and the
+// id lists below, so no surface spells a category on its own.
+const CHIP_LABELS = { monospace: 'Mono' }
+export const categoryChipLabel = (category) => (
+  category === 'all' ? 'All' : CHIP_LABELS[category] || categoryLabel(category)
+)
+const chipOf = (id) => ({ id, label: categoryChipLabel(id) })
+
+// The category set both font browsers offer. The Font Gallery's list adds Mono
+// (GALLERY_CATEGORIES); the picker dialog adds it on top of this set (see
+// FontBrowseDialog), because a picker keeps monospace families too.
+export const FONT_CATEGORIES = ['all', 'sans-serif', 'serif', 'display', 'handwriting'].map(chipOf)
+export const GALLERY_CATEGORIES = [...FONT_CATEGORIES, chipOf('monospace')]
 
 // "6 weights", "1 weight".
 export const weightCount = (count) => `${count} weight${count === 1 ? '' : 's'}`
@@ -58,6 +62,19 @@ export function isPickableTypeface(font) {
 
 export function filterPickableTypefaces(fonts) {
   return Array.isArray(fonts) ? fonts.filter(isPickableTypeface) : []
+}
+
+// The Font Gallery's own list: the text families plus the catalogue's monospace
+// ones, so the Mono category has something to show. A monospace family still has
+// to render a specimen (the picker's rule), which drops the few that are icon or
+// symbol sets in disguise.
+export function isGalleryListTypeface(font) {
+  if (isGalleryTypeface(font)) return true
+  return String(font?.category).toLowerCase() === 'monospace' && isPickableTypeface(font)
+}
+
+export function filterGalleryListTypefaces(fonts) {
+  return Array.isArray(fonts) ? fonts.filter(isGalleryListTypeface) : []
 }
 
 // ── What a full-width specimen row shows about a family ─────────────────────

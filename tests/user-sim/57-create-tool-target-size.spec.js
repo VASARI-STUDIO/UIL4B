@@ -51,8 +51,9 @@ const HANDOFF = [
   // /create/tint is not listed: its
   // drawn screen has no cross-tool links, and its back button is the shared
   // toolbar's (see 100-tool-toolbar-one-row).
-  ['/create/type-scale', '.tsc-handoff', 'Find a pairing'],
-  ['/create/font-pair', '.fpr-handoff', 'Build a type scale'],
+  // Type Scale and Font Pair are not listed: on the 1440 toolbar the type-tools
+  // switcher (Gallery, Pair, Scale) is the way between the three, and its links
+  // are measured in the next block.
   ['/create/font-gallery', '.fg-pair-link', 'Build a font pair'],
   // '/create/contrast' is not listed: its drawn screen has no
   // cross-tool links (the Create menu carries them), so the link is gone.
@@ -82,6 +83,61 @@ test.describe('cross-tool handoff links meet the 24px target floor', () => {
         Math.round(box.height * 10) / 10,
         `${selector} is ${box.height.toFixed(1)}px tall — WCAG 2.5.8 asks ${MIN}px`,
       ).toBeGreaterThanOrEqual(MIN)
+    })
+  }
+})
+
+// The way between the three type tools is the switcher on the toolbar. Its
+// links are 36px tall with a 4px-per-side extension of the hit area, so the
+// target is measured the way a finger meets it: how far above and below the
+// link a point still lands on it.
+//
+// MUTATION: drop the `::after` extension from `.ttn-link` in type-tools-nav.css
+// and the 44px check goes red at 36px; drop a link from the switcher and the
+// count goes red.
+const TOUCH_TARGET = 44
+
+const SWITCHER = [
+  ['/create/font-gallery', 'Gallery'],
+  ['/create/font-pair', 'Pair'],
+  ['/create/type-scale', 'Scale'],
+]
+
+test.describe('the type-tools switcher meets the 44px target on all three tools', () => {
+  for (const [route, here] of SWITCHER) {
+    test(`Gallery, Pair and Scale on ${route}`, async ({ page }) => {
+      watch(page, 'a designer moving between the type tools')
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await go(page, route)
+      const links = page.locator('[data-tool-toolbar] nav[aria-label="Type tools"] .ttn-link')
+      await expect(links, 'the switcher holds Gallery, Pair and Scale').toHaveCount(3)
+      await expect(links.nth(0)).toHaveAccessibleName(/^Font Gallery/)
+      await expect(links.nth(1)).toHaveAccessibleName(/^Font Pair/)
+      await expect(links.nth(2)).toHaveAccessibleName(/^Type Scale/)
+      // POSITIVE CONTROL: the tool being shown is the one marked as the page.
+      const current = await links.evaluateAll((els) => els.map((el) => el.getAttribute('aria-current')))
+      expect(current, `${here} is the current link on ${route}`).toEqual(['Gallery', 'Pair', 'Scale'].map((n) => (n === here ? 'page' : null)))
+      await settle(page)
+
+      for (let i = 0; i < 3; i += 1) {
+        const link = links.nth(i)
+        await expect(link).toBeVisible()
+        const box = await link.boundingBox()
+        expect(box, `link ${i} has no box`).not.toBeNull()
+        expect(Math.round(box.height * 10) / 10, `link ${i} is ${box.height.toFixed(1)}px tall — WCAG 2.5.8 asks ${MIN}px`).toBeGreaterThanOrEqual(MIN)
+        const reach = await link.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const x = r.left + r.width / 2
+          const hits = (y) => { const t = document.elementFromPoint(x, y); return !!t && el.contains(t) }
+          const centre = r.top + r.height / 2
+          let up = centre
+          let down = centre
+          while (hits(up - 0.5) && centre - up < 40) up -= 0.5
+          while (hits(down + 0.5) && down - centre < 40) down += 0.5
+          return { height: down - up }
+        })
+        expect(reach.height, `link ${i}: a finger lands on it over ${reach.height}px of height, ${TOUCH_TARGET} asked`).toBeGreaterThanOrEqual(TOUCH_TARGET - 0.5)
+      }
     })
   }
 })

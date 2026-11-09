@@ -1,6 +1,6 @@
 // The six preview examples in the Palette Builder's "Preview on a UI" dialog:
 // Slack Water (Editorial hero), Sundial (Energy dashboard), Orra Workroom (Product page),
-// Ridgeline (Trail run app), Hale & Okoro (Architect portfolio, Pro) and Tally (Spending
+// Ridgeline (Trail run app), Hale & Okoro (Architect portfolio, Pro) and Tenner (Spending
 // card, Pro), each its own lazy chunk behind src/components/palette/examples/registry.js.
 //
 // WHAT IS HELD HERE, AND WHY IN A BROWSER
@@ -662,7 +662,7 @@ test.describe('the Energy dashboard chart labels', () => {
 // data. So no SVG part may carry an outline while a colour is traced.
 
 test.describe('the legend highlight on a drawing', () => {
-  // Tally and Orra are built from boxes and pictures, with no drawn part that carries a role (Orra's only
+  // Tenner and Orra are built from boxes and pictures, with no drawn part that carries a role (Orra's only
   // SVGs are icons with no data-role), so there is no SVG to check there.
   for (const ex of EXAMPLES.filter((e) => e.id !== 'card' && e.id !== 'product')) {
     test(`${ex.name}: tracing a colour puts no outline on any drawn part`, async ({ page }) => {

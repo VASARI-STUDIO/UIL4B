@@ -4,7 +4,7 @@
 //
 // This component only wraps the example and marks its roles. An example reads
 // nothing but what it is given. Most are pictures; one that is softly
-// interactive (Tally) keeps its own local state and is handed `onState`, so the
+// interactive (Tenner) keeps its own local state and is handed `onState`, so the
 // dialog's State menu can follow what the user does in it. The colours arrive as --pv-* custom properties on the scene root
 // (palettePreviewRoles.js `pvVars`), the layout is a container query on that
 // root, and nothing is scaled: text is its true pixel size at every width.
