@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import useOnline from '../../hooks/useOnline'
+import { openFirebaseGate } from '../../utils/firebaseAccess'
 import ReportProblemLink from '../ReportProblemLink'
 import { passwordProblem, EMAIL_MAX } from '../../utils/signupInput'
 import '../../styles/pages/auth.css'
@@ -63,6 +64,9 @@ export default function AuthForm({
   headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange, showLoginSub = false, showReport = false,
 }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
+  // The form is on screen, so the next thing that happens may be a sign-in. Start
+  // the SDK now: the Google popup has to open inside the click that asked for it.
+  useEffect(() => { openFirebaseGate() }, [])
   const { t } = useI18n()
   const online = useOnline()
   const offline = online === false
