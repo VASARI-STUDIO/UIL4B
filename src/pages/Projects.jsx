@@ -126,9 +126,9 @@ export default function Projects() {
     sheet = <KitSheet kit={{ ...kit, pill: { text: 'New project' } }} onPill={startNew} />
   } else sheet = <KitSheet kit={leadKit} openHref={`/projects/${encodeURIComponent(lead.id)}`} />
 
-  // New project: top right of the title row. Ink when signed out, outlined once there is work, and absent
-  // when the sheet's own pill is the same action (no project yet).
-  const showNew = !resolving && !loadingList && !loadFailed && (signedOut || lead)
+  // New project: top right of the title row. Ink when signed out, outlined once there is work (and while the
+  // list loads or fails to), and absent when the sheet's own pill is the same action (no project yet).
+  const showNew = !resolving && (signedOut || lead || loadingList || loadFailed)
   const newProject = showNew && (
     <div className={`db-newwrap${signedOut ? ' out' : ''}`}>
       {signedOut ? (
