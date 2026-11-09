@@ -10,13 +10,12 @@ import { useProModal, reportUpgradeGate } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { lockScroll } from '../utils/scrollLock'
 import useExportGate from '../hooks/useExportGate'
-import useModalDialog from '../hooks/useModalDialog'
+import { snapToTarget, stepFromKey } from '../utils/sliderKeys'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
-import SnapSlider from '../components/SnapSlider'
 import useMediaQuery from '../hooks/useMediaQuery'
 import SplitDownload from '../components/library/SplitDownload'
 import FooterGlyph from '../components/library/FooterGlyph'
@@ -84,6 +83,7 @@ import { iconSynonymFor } from '../data/iconSynonyms'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/library.css'
+import '../styles/pages/icon-editor.css'
 import '../styles/deferred/tool-shell.css'
 // The attribution line's own sheet. It is NOT in library.css, deliberately: a
 // licence condition should be editable — and reviewable — without opening a
@@ -1352,7 +1352,7 @@ function SimilarTile({ s, src, onPick, onReadyChange }) {
   return (
     <button
       type="button"
-      className="icust-similar-btn"
+      className="ied-sim"
       data-ready={ready ? 'true' : undefined}
       title={s.name}
       aria-label={`Open ${s.name}`}
@@ -1384,9 +1384,9 @@ function SimilarSection({ list, srcFor, onPick }) {
   }, [])
   const anyReady = list.some(s => readyIds[s.id])
   return (
-    <div className="icust-similar" data-ready={anyReady ? 'true' : undefined}>
-      <div className="icust-similar-label">Similar in this pack</div>
-      <div className="icust-similar-row">
+    <div className="ied-similar" data-ready={anyReady ? 'true' : undefined}>
+      <div className="ied-similar-label">Similar in this pack</div>
+      <div className="ied-similar-row">
         {list.map(s => (
           <SimilarTile key={s.id} s={s} src={srcFor(s)} onPick={onPick} onReadyChange={onReadyChange} />
         ))}
@@ -1398,23 +1398,105 @@ function SimilarSection({ list, srcFor, onPick }) {
 // What the stage says while its art is missing: Loading… for a screen reader only, or
 // that it could not load, with a way to ask again.
 function StageMsg({ failed, onRetry }) {
-  if (!failed) return <span className="icust-stage-msg" role="status"><span className="sr-only">Loading…</span></span>
+  if (!failed) return <span className="ied-stage-msg" role="status"><span className="sr-only">Loading…</span></span>
   return (
-    <span className="icust-stage-msg icust-stage-msg--failed">
+    <span className="ied-stage-msg ied-stage-msg--failed">
       <span role="status">Couldn’t load this icon.</span>
-      <button type="button" className="icust-stage-retry" onClick={onRetry}>Try again</button>
+      <button type="button" className="ied-stage-retry" onClick={onRetry}>Try again</button>
     </span>
   )
 }
 
 // One drawing in the size rail: the icon's own sanitised, serialised markup at an exact
 // pixel size (the cell's CSS sets the box). Set like the stage host, not by React.
-function SizeArt({ markup, className = 'icust-size-art' }) {
+function SizeArt({ markup, className = 'ied-size-art', style }) {
   const ref = useRef(null)
   useLayoutEffect(() => { if (ref.current) ref.current.innerHTML = markup || '' }, [markup])
-  return <span className={className} ref={ref} aria-hidden="true" />
+  return <span className={className} style={style} ref={ref} aria-hidden="true" />
 }
-const LineArt = ({ markup }) => <SizeArt markup={markup} className="icust-line-art" />
+const LineArt = ({ markup }) => <SizeArt markup={markup} className="ied-line-art" />
+
+// The stroke control: a native range over a drawn track and fill, ticks at the snap points,
+// and an always-visible number field. Pointer drags are pulled to the snaps (snapToTarget);
+// keys step exactly (stepFromKey), so a keyboard user can leave a snap. Double-click resets.
+// The thumb centre sits at 10px + (100% - 20px) * p, which is how the fill and ticks are placed.
+function IedStroke({ id, value, onChange }) {
+  const { min, max, step, snaps, inputMin, inputMax } = STROKE_PX
+  const pointerRef = useRef(false)
+  const [draft, setDraft] = useState(null)
+  const fmt = (v) => String(Number((+v).toFixed(2)))
+  const trackValue = Math.min(max, Math.max(min, value))
+  const at = (v) => `calc(10px + (100% - 20px) * ${(v - min) / (max - min)})`
+  const endPointer = () => { pointerRef.current = false }
+  const commitDraft = () => {
+    const n = parseFloat(draft)
+    setDraft(null)
+    if (Number.isNaN(n)) return
+    const next = Math.round(Math.min(inputMax, Math.max(inputMin, n)) * 100) / 100
+    if (next !== value) onChange(next)
+  }
+  return (
+    <>
+      <div className="ied-strokehead">
+        <label className="ied-lbl" htmlFor={`${id}-n`}>Stroke</label>
+        <span className="ied-numf">
+          <input
+            id={`${id}-n`}
+            className="ied-in"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Stroke width in pixels"
+            value={draft ?? fmt(value)}
+            onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, '').slice(0, 6))}
+            onFocus={(e) => e.currentTarget.select()}
+            onBlur={() => { if (draft !== null) commitDraft() }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitDraft()
+              else if (e.key === 'Escape' && draft !== null) { e.preventDefault(); e.stopPropagation(); setDraft(null) }
+            }}
+          />
+          <span className="px" aria-hidden="true">px</span>
+        </span>
+      </div>
+      <div className="ied-rgw">
+        <span className="ied-trk" aria-hidden="true" />
+        <span className="ied-fil" style={{ width: at(trackValue) }} aria-hidden="true" />
+        {snaps.map(s => (
+          <span key={s} className={`ied-tick${s <= trackValue ? ' on' : ''}`} style={{ left: at(s) }} aria-hidden="true" />
+        ))}
+        <input
+          id={id}
+          className="ied-rg"
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={trackValue}
+          aria-label="Stroke width"
+          aria-valuetext={`${fmt(value)} pixels`}
+          onPointerDown={() => { pointerRef.current = true }}
+          onPointerUp={endPointer}
+          onPointerCancel={endPointer}
+          onLostPointerCapture={endPointer}
+          onBlur={endPointer}
+          onChange={(e) => onChange(pointerRef.current ? snapToTarget(+e.target.value, { snaps, min, max, step }) : +e.target.value)}
+          onKeyDown={(e) => {
+            if (e.altKey || e.ctrlKey || e.metaKey) return
+            const next = stepFromKey(e.key, { value: trackValue, min, max, step })
+            if (next === null) return
+            e.preventDefault()
+            pointerRef.current = false
+            if (next !== trackValue) onChange(next)
+          }}
+          onDoubleClick={() => onChange(STROKE_PX.default)}
+          title={`Double-click to reset to ${fmt(STROKE_PX.default)}px`}
+        />
+      </div>
+    </>
+  )
+}
 
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
@@ -1503,7 +1585,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const groundGroupRef = useRef(null)
   const fixGround = (g) => {
     chooseGround(g)
-    requestAnimationFrame(() => groundGroupRef.current?.querySelector(`.icust-ground-sw--${g}`)?.focus())
+    requestAnimationFrame(() => groundGroupRef.current?.querySelector(`.ied-bgb[data-g="${g}"]`)?.focus())
   }
   const [copied, setCopied] = useState('')
   // The file format the Download button hands over; it follows the account.
@@ -1515,8 +1597,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Which project the current edit landed in — drives the "Saved to X" button
   // label. Seeded from a re-opened custom's stored projectId.
   const [savedProjectId, setSavedProjectId] = useState(() => (icon?.custom && icon.projectId) || null)
-  // Hovering a saved button re-arms it ("Save to another project").
-  const [saveHover, setSaveHover] = useState(false)
+  // The SVG code block under the controls is closed until opened.
+  const [codeOpen, setCodeOpen] = useState(false)
   // Inline new-project creation inside the picker: naming is REQUIRED before
   // an icon can be assigned to a fresh project.
   const [newProjOpen, setNewProjOpen] = useState(false)
@@ -1731,24 +1813,53 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     }
   }, [])
 
-  // The save picker is a dialog of its own, stacked on this one. The shared hook
-  // gives it the focus move, the Tab trap, and an Escape that closes only the
-  // picker and hands focus back to the Save button that opened it.
+  // The save picker is a panel inside this dialog, over the inspector and foot. While it is open
+  // those two are visibility:hidden, so the Tab trap below skips them. Escape closes the picker
+  // first and the dialog on the next press.
   const closeSavePicker = () => { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') }
-  const pickerRef = useModalDialog(closeSavePicker, { enabled: savePickerOpen })
-  // Read by the panel's key handler below. A ref, because that effect must not
-  // re-run (and re-focus the panel) every time the picker opens or closes.
+  // Read by the key handler below. A ref, because that effect must not re-run (and re-focus
+  // the panel) every time the picker opens or closes.
   const savePickerOpenRef = useRef(false)
   useEffect(() => { savePickerOpenRef.current = savePickerOpen }, [savePickerOpen])
 
-  // Move focus into the panel, trap Tab, close on Escape (mirror ExportPanel).
+  // Opening moves focus to the back arrow. Closing hands it to the Save button, but only when
+  // nothing else has it: a click on another control keeps its own focus.
+  const pickerWasOpenRef = useRef(false)
   useEffect(() => {
-    panelRef.current?.focus()
+    if (savePickerOpen) {
+      pickerWasOpenRef.current = true
+      requestAnimationFrame(() => document.getElementById('ied-spb')?.focus())
+      return undefined
+    }
+    if (!pickerWasOpenRef.current) return undefined
+    pickerWasOpenRef.current = false
+    const frame = requestAnimationFrame(() => {
+      const held = document.activeElement
+      if (!held || held === document.body) document.getElementById('ied-save')?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [savePickerOpen])
+  // A press anywhere outside the picker and the Save button closes it.
+  useEffect(() => {
+    if (!savePickerOpen) return undefined
+    const onDown = (e) => {
+      if (e.target.closest?.('.ied-spn, #ied-save')) return
+      setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('')
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [savePickerOpen])
+
+  // Move focus into the dialog once, on mount.
+  useEffect(() => { panelRef.current?.focus() }, [])
+
+  // Trap Tab, close on Escape (mirror ExportPanel).
+  useEffect(() => {
     const onKey = (e) => {
-      // While the picker is open it owns Escape and Tab. This does not rely on
-      // which listener runs first.
-      if (savePickerOpenRef.current) return
-      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'Escape') {
+        if (savePickerOpenRef.current) { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') } else onClose()
+        return
+      }
       if (e.key !== 'Tab') return
       // Only what can take focus right now: a hidden Similar tile (visibility
       // hidden, or inside a collapsed block) is not a Tab stop.
@@ -1912,8 +2023,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // size and paints nothing.
   const waitSrc = activeIcon?.cdn && !activeIcon.custom && (isColoredPack || !color) ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
   const stageWait = waitSrc
-    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={inspectPx} height={inspectPx} alt="" aria-hidden="true" />
-    : <span className="icust-stage-img icust-stage-wait" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
+    ? <img className={`ied-stage-img ied-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={inspectPx} height={inspectPx} alt="" aria-hidden="true" />
+    : <span className="ied-stage-img ied-stage-wait" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -2022,7 +2133,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     addRecentIcon(recentPayload(activeIcon), 'edit')
     setSavedProjectId(projectId)
     setSavedState('saved')
-    setSaveHover(false)
   }
 
   // "New" in the picker: a 4th free project is the upgrade moment — close the
@@ -2167,13 +2277,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // viewport reports it.
   const revealSizeField = useCallback(() => {
     const row = sizeRowRef.current
-    const body = panelRef.current?.querySelector('.icust-body')
-    if (!row || !body) return
-    const foot = body.querySelector(':scope > .icust-foot')
-    // The scroller is the left column on the two-column layout, the body below it.
+    const root = panelRef.current
+    if (!row || !root) return
+    const foot = root.querySelector('.ied-ft')
+    // The nearest ancestor that really scrolls. The stage column does not, so there may be none.
     let scroller = row.parentElement
-    while (scroller && scroller !== body && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
-    scroller = scroller || body
+    while (scroller && scroller !== root && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
+    if (!scroller || scroller === root) return
     const vv = window.visualViewport
     const floor = Math.min(foot ? foot.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
     const over = row.getBoundingClientRect().bottom - floor
@@ -2213,18 +2323,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     // savedState: re-check after each save so the note appears immediately.
   }, [activeIcon, projects, savedState]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The Save button's words for each width of the footer (the stylesheet shows
-  // one): the full label, a short one, and a glyph alone. The full label is
-  // always the accessible name.
+  // The Save button's words. The full label is always the accessible name; a saved button also
+  // carries `hv`, which the stylesheet swaps in on hover and focus where hover exists
+  // ("Save to another project"), so a tap never latches it.
   const saveLabel = savedState === 'saved'
-    ? (saveHover
-      ? { full: 'Save to another project', short: 'Save again', glyph: 'check' }
-      : { full: savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons', short: 'Saved', glyph: 'check' })
-    : savedState === 'error' ? { full: 'Couldn’t save. Retry', short: 'Retry', glyph: 'alert' }
-      : activeIcon?.custom ? { full: 'Save as new', short: 'Save new', glyph: 'folder-plus' }
-        : { full: 'Save to project', short: 'Save', glyph: 'folder-plus' }
-  // Hover re-arms a saved button only where there is a hover; a tap would latch it.
-  const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
+    ? { full: savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons', hv: 'Save to another project', glyph: 'check' }
+    : savedState === 'error' ? { full: 'Couldn’t save. Retry', glyph: 'alert' }
+      : activeIcon?.custom ? { full: 'Save as new', glyph: 'folder-plus' }
+        : { full: 'Save to project', glyph: 'folder-plus' }
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
   // "{Pack}, {weight}" under the name: the pack lives here on a touch screen, where the grid shows it on hover only.
@@ -2234,246 +2340,262 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const headSub = !activeIcon ? '' : [packName, ownColours ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
   const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
 
-  // Above 800px the two columns scroll on their own, and the foot draws its top hairline only while one
-  // of them has more under it (icon-emoji-library.css). The attribute is set straight on the body, so
-  // reading it never renders; it is re-read when a column resizes or its content changes.
+  // The inspector scrolls on its own. The head draws its bottom hairline once it has scrolled, and the
+  // foot its top hairline while more lies under the fold (icon-editor.css). The attributes are set
+  // straight on the elements, so reading them never renders; they are re-read on scroll, when the
+  // inspector resizes, and when its content changes.
   useEffect(() => {
-    const body = panelRef.current?.querySelector('.icust-body')
-    const cols = body ? [...body.querySelectorAll(':scope > .icust-left, :scope > .icust-right')] : []
-    if (!body || cols.length === 0) return undefined
+    const root = panelRef.current
+    const scroller = root?.querySelector('#ied-scroll')
+    const head = root?.querySelector('.ied-hd')
+    const foot = root?.querySelector('.ied-ft')
+    if (!scroller || !head || !foot) return undefined
     let frame = 0
     const measure = () => {
       frame = 0
-      body.toggleAttribute('data-scrolls', cols.some(c => c.scrollHeight - c.clientHeight > 1 && /auto|scroll/.test(getComputedStyle(c).overflowY)))
+      head.toggleAttribute('data-on', scroller.scrollTop > 1)
+      foot.toggleAttribute('data-on', scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 1)
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
     measure()
+    scroller.addEventListener('scroll', schedule, { passive: true })
     const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
     const changed = new MutationObserver(schedule)
-    cols.forEach(c => {
-      resized?.observe(c)
-      changed.observe(c, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['open'] })
-    })
+    resized?.observe(scroller)
+    changed.observe(scroller, { childList: true, subtree: true, characterData: true })
     return () => {
       cancelAnimationFrame(frame)
+      scroller.removeEventListener('scroll', schedule)
       resized?.disconnect()
       changed.disconnect()
-      body.removeAttribute('data-scrolls')
+      head.removeAttribute('data-on')
+      foot.removeAttribute('data-on')
     }
   }, [activeIcon])
 
   return (
-    <div className="icust-overlay" onMouseDown={onClose}>
+    <div className="ied-overlay" onMouseDown={onClose}>
       <div
-        className="icust-panel"
+        className={`ied${activeIcon ? '' : ' ied--paste'}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="icust-title"
+        aria-labelledby="ied-title"
         ref={panelRef}
         tabIndex={-1}
         data-lenis-prevent
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="icust-head">
-          <div className="icust-head-text">
-            <h2 className="icust-title" id="icust-title">{title}</h2>
-            {headSub && <p className="icust-sub">{headSub}</p>}
-          </div>
-          {/* Reset changes the controls and shows only once something differs. It stays before
-              Close in the tab order. */}
-          {activeIcon && edited && (
-            <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset</button>
-          )}
-          <button type="button" className="icust-close" onClick={onClose} aria-label="Close customizer">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
+        {activeIcon && (
+          <div className="ied-stagecol">
+            <div className="ied-grounds" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
+              {GROUND_OPTS.map(g => (
+                <button
+                  key={g.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={ground === g.id}
+                  aria-label={g.label}
+                  title={g.label}
+                  tabIndex={ground === g.id ? 0 : -1}
+                  className="ied-bgb"
+                  data-g={g.id}
+                  onClick={() => chooseGround(g.id)}
+                >
+                  <i className={`ied-gnd-${g.id}`} />
+                </button>
+              ))}
+            </div>
 
-        <div className="icust-body">
-        {!activeIcon ? (
-          <div className="icust-paste">
-            <p className="icust-paste-help">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
-            <textarea
-              className="icust-paste-input"
-              value={pasteText}
-              onChange={(e) => { setPasteText(e.target.value); setPasteErr(false) }}
-              placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; …>…</svg>"
-              aria-label="SVG markup"
-              spellCheck={false}
-            />
-            {pasteErr && <p className="icust-err">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
-            <div className="icust-foot">
-              <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>
-              <button type="button" className="lib-btn lib-btn--primary" onClick={applyPaste}>Add to stage</button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="icust-left">
-            <div className={`icust-stage icust-stage--${ground}${stageHalo ? ` icust-stage--${stageHalo}` : ''}`} ref={stageRef}>
-              {rendersInline ? (
-                <>
-                  <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && !loadErr && stageWait}
-                  {!baseSvgText && <StageMsg failed={loadErr} onRetry={retryLoad} />}
-                </>
-              ) : (
-                <>
-                  {shownSrc ? (
-                    <img
-                      className="icust-stage-img"
-                      src={shownSrc}
-                      width={inspectPx}
-                      height={inspectPx}
-                      alt={activeIcon.name}
-                      onLoad={brandKey ? onStageImgLoad : undefined}
-                      style={imageError ? { visibility: 'hidden' } : undefined}
-                    />
-                  ) : imageError ? (
-                    <span className="icust-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
-                  ) : stageWait}
-                  {(!shownSrc || imageError) && <StageMsg failed={imageError} onRetry={retryLoad} />}
-                </>
-              )}
-              <div className="icust-stage-foot">
-                {/* A contrast note takes the caption's place, so it holds no room of its own. */}
-                {contrastNote ? (
-                  <p className="icust-stage-cap icust-stage-cap--note">
-                    Hard to see on this background.
-                    {contrastNote.suggest && (
-                      <button type="button" className="icust-ground-fix" onClick={() => fixGround(contrastNote.suggest)}>
-                        Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
-                      </button>
-                    )}
-                  </p>
-                ) : (
-                  <p className="icust-stage-cap">Drawn large to inspect. Exports at <span className="icust-mono">{size}px</span>.</p>
+            {/* A contrast note sits over the stage's top edge. The visually hidden live region
+                below is always in the DOM, so a note that arrives is announced in full. */}
+            {contrastNote && (
+              <div className="ied-contrast">
+                <p>Hard to see on this background.</p>
+                {contrastNote.suggest && (
+                  <button type="button" className="ied-tn" onClick={() => fixGround(contrastNote.suggest)}>
+                    Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
+                  </button>
                 )}
-                <div className="icust-ground" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
-                  {GROUND_OPTS.map(g => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={ground === g.id}
-                      aria-label={g.label}
-                      title={g.label}
-                      tabIndex={ground === g.id ? 0 : -1}
-                      className={`icust-ground-sw icust-ground-sw--${g.id}`}
-                      onClick={() => chooseGround(g.id)}
-                    />
-                  ))}
-                </div>
               </div>
-            </div>
-            {/* Always in the DOM so a note that arrives is announced. Visually hidden: the note people
-                see is in the stage's caption slot, and this carries the full sentence for a screen reader. */}
-            <div className="icust-ground-note" aria-live="polite">
+            )}
+            <div className="ied-vh" aria-live="polite">
               {contrastNote && <p>{choiceName} is hard to see on this background.</p>}
             </div>
 
-              <div className="icust-size" ref={railRef}>
-                <div className="icust-size-head">
-                  <span className="icust-size-title" id="icust-size-label">Export size</span>
-                  <span className="icust-size-sub">shown at real pixels</span>
-                  {!isPro && <span className="icust-size-hint">Custom size is Pro</span>}
+            <div className="ied-fig">
+              <div className="ied-fig-in">
+                <div className={`ied-ground ied-ground--${ground}${stageHalo ? ` ied-ground--${stageHalo}` : ''}`} ref={stageRef}>
+                  {rendersInline ? (
+                    <>
+                      <div ref={hostRef} className="ied-stage-host" aria-hidden="true" />
+                      {!baseSvgText && !loadErr && stageWait}
+                      {!baseSvgText && <StageMsg failed={loadErr} onRetry={retryLoad} />}
+                    </>
+                  ) : (
+                    <>
+                      {shownSrc ? (
+                        <img
+                          className="ied-stage-img"
+                          src={shownSrc}
+                          width={inspectPx}
+                          height={inspectPx}
+                          alt={activeIcon.name}
+                          onLoad={brandKey ? onStageImgLoad : undefined}
+                          style={imageError ? { visibility: 'hidden' } : undefined}
+                        />
+                      ) : imageError ? (
+                        <span className="ied-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
+                      ) : stageWait}
+                      {(!shownSrc || imageError) && <StageMsg failed={imageError} onRetry={retryLoad} />}
+                    </>
+                  )}
                 </div>
-                <div className="icust-size-rail" role="radiogroup" aria-labelledby="icust-size-label" onKeyDown={steerRadios}>
-                  {railSizes.map(n => {
-                    const on = !customShown && size === n
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        aria-label={`${n} pixels`}
-                        tabIndex={on ? 0 : -1}
-                        className="icust-size-cell"
-                        data-s={n}
-                        onClick={() => pickPreset(n)}
-                      >
-                        <SizeArt markup={railArt[n]} />
-                        <span className="icust-size-num">{n}</span>
-                      </button>
-                    )
-                  })}
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={customShown}
-                    aria-label={customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}
-                    tabIndex={customShown ? 0 : -1}
-                    className="icust-size-cell icust-size-cell--custom"
-                    onClick={pickCustom}
-                  >
-                    <span className="icust-size-word">Custom</span>
-                    {customShown && customValue != null && <span className="icust-size-num">{customValue}</span>}
-                  </button>
-                </div>
-                {customShown && (
-                  <div className="icust-size-custom" ref={sizeRowRef}>
-                    <label htmlFor="icust-size-input">Custom size</label>
-                    <span className="icust-size-field">
-                      <input
-                        id="icust-size-input"
-                        ref={sizeInputRef}
-                        className="icust-size-input"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        enterKeyHint="done"
-                        autoComplete="off"
-                        spellCheck={false}
-                        value={sizeText}
-                        aria-describedby={clampedTo ? 'icust-size-range icust-size-note' : 'icust-size-range'}
-                        onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
-                        onKeyDown={onSizeKey}
-                        onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
-                        onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
-                      />
-                      <span className="icust-size-px" aria-hidden="true">px</span>
-                    </span>
-                    <span className="icust-size-range" id="icust-size-range">From <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span></span>
-                    {clampedTo && (
-                      <p className="icust-size-note" id="icust-size-note" role="status">
-                        Sizes go from <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="icust-mono">{clampedTo}px</span>.
-                      </p>
-                    )}
-                  </div>
-                )}
+                <p className="ied-note ied-cap">Drawn large to inspect. Exports at <span className="ied-mono">{size}px</span>.</p>
               </div>
             </div>
 
-            <div className="icust-right">
-            <div className="icust-controls">
-              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' || colourRow === 'brand' ? ' icust-row--colour' : ''}`}>
-                <label id="icust-colour-label">Colour</label>
-                {colourRow === 'original' ? (
-                  <span className="icust-value">Original colours</span>
-                ) : colourRow === 'wait' ? (
-                  <span className="icust-value">&nbsp;</span>
-                ) : (
+            <div className="ied-sizes" ref={railRef}>
+              <div className="ied-sizes-head">
+                <p id="ied-size-label">Export size</p>
+                <span>shown at real pixels</span>
+                {!isPro && <span className="ied-sizes-pro">Custom size is Pro</span>}
+              </div>
+              <div className="ied-sizes-rail" role="radiogroup" aria-labelledby="ied-size-label" onKeyDown={steerRadios}>
+                {railSizes.map(n => {
+                  const on = !customShown && size === n
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={`${n} pixels`}
+                      tabIndex={on ? 0 : -1}
+                      className="ied-cell-s"
+                      data-s={n}
+                      onClick={() => pickPreset(n)}
+                    >
+                      <span className="art"><SizeArt markup={railArt[n]} style={{ '--art': `${Math.min(n, 48)}px` }} /></span>
+                      <span className="num">{n}</span>
+                    </button>
+                  )
+                })}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={customShown}
+                  aria-label={customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}
+                  tabIndex={customShown ? 0 : -1}
+                  className="ied-cell-s ied-cell-s--custom"
+                  onClick={pickCustom}
+                >
+                  <span className="art"><span className="cu">Custom</span></span>
+                  <span className="num">{customShown && customValue != null ? customValue : ''}</span>
+                </button>
+              </div>
+              {customShown && (
+                <div className="ied-cus" ref={sizeRowRef}>
+                  <div className="ied-cus-in">
+                    <div className="ied-cus-row">
+                      <label htmlFor="ied-size-input">Custom size</label>
+                      <span className="ied-numf">
+                        <input
+                          id="ied-size-input"
+                          ref={sizeInputRef}
+                          className="ied-in"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          enterKeyHint="done"
+                          autoComplete="off"
+                          spellCheck={false}
+                          value={sizeText}
+                          aria-describedby={clampedTo ? 'ied-size-range ied-size-note' : 'ied-size-range'}
+                          onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
+                          onKeyDown={onSizeKey}
+                          onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
+                          onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
+                        />
+                        <span className="px" aria-hidden="true">px</span>
+                      </span>
+                      <span className="ied-val" id="ied-size-range">From <span className="ied-mono">{CUSTOM_SIZE_MIN}</span> to <span className="ied-mono">{CUSTOM_SIZE_MAX}px</span></span>
+                    </div>
+                    {clampedTo && (
+                      <p className="ied-cus-clamp" id="ied-size-note" role="status">
+                        Sizes go from <span className="ied-mono">{CUSTOM_SIZE_MIN}</span> to <span className="ied-mono">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="ied-mono">{clampedTo}px</span>.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="ied-hd">
+          <div className="ied-hd-text">
+            <h2 className="ied-title" id="ied-title">{title}</h2>
+            {headSub && <p className="ied-note">{headSub}</p>}
+          </div>
+          <div className="ied-hd-act">
+            {/* Reset changes the controls and shows only once something differs. It stays before
+                Close in the tab order. */}
+            {activeIcon && edited && (
+              <button type="button" className="ied-tn" onClick={handleReset}>Reset</button>
+            )}
+            <button type="button" className="ied-x" onClick={onClose} aria-label="Close customizer">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="ied-scroll" id="ied-scroll" data-hide={savePickerOpen ? 'true' : undefined}>
+          {!activeIcon ? (
+            <div className="ied-paste">
+              <p className="ied-note">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
+              <textarea
+                className="ied-ta"
+                value={pasteText}
+                onChange={(e) => { setPasteText(e.target.value); setPasteErr(false) }}
+                placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; …>…</svg>"
+                aria-label="SVG markup"
+                spellCheck={false}
+              />
+              {pasteErr && <p className="ied-err" role="alert">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
+            </div>
+          ) : (
+            <div className="ied-secs">
+              <div>
+                <div className="ied-lblrow">
+                  <label className="ied-lbl" id="ied-colour-label">Colour</label>
+                  {colourRow === 'original' ? (
+                    <span className="ied-val">Original colours</span>
+                  ) : colourRow === 'wait' ? (
+                    <span className="ied-val">&nbsp;</span>
+                  ) : (
+                    <span className="ied-val ied-mono">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : 'currentColor'}</span>
+                  )}
+                </div>
+                {colourRow !== 'original' && colourRow !== 'wait' && (
                   <>
-                    <span className="icust-colour-value">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : 'currentColor'}</span>
-                    {/* Four choices, exactly one selected. Text colour is the file's
-                        currentColor (no colour written); the rest write a hex. A brand
-                        logo's first choice is Original: no colour written, the art's own paint kept. */}
-                    <div className="icust-chips" role="radiogroup" aria-labelledby="icust-colour-label" onKeyDown={steerRadios}>
+                    {/* Four choices, exactly one selected. Default is the file's currentColor (no
+                        colour written); the rest write a hex. A brand logo's first choice is Original:
+                        no colour written, the art's own paint kept. */}
+                    <div className="ied-chips" role="radiogroup" aria-labelledby="ied-colour-label" onKeyDown={steerRadios}>
                       <button
                         type="button"
                         role="radio"
                         aria-checked={choice === 'text'}
                         tabIndex={choice === 'text' ? 0 : -1}
-                        className="icust-chip"
+                        className="ied-chip"
                         onClick={() => { setColor(''); markDirty() }}
                       >
                         {brandPaint
-                          ? <span className="icust-chip-sw" style={{ background: brandPaint }} aria-hidden="true" />
-                          : <span className="icust-chip-sw icust-chip-sw--text" aria-hidden="true" />}
-                        {isDuotone || brandPaint ? 'Original' : 'Text colour'}
+                          ? <span className="ied-sw" style={{ background: brandPaint }} aria-hidden="true" />
+                          : <span className="ied-sw ied-sw--text" aria-hidden="true" />}
+                        <span>{isDuotone || brandPaint ? 'Original' : 'Default'}</span>
                       </button>
                       {[['black', 'Black', '#000000'], ['white', 'White', '#ffffff']].map(([id, label, hex]) => (
                         <button
@@ -2482,30 +2604,31 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           role="radio"
                           aria-checked={choice === id}
                           tabIndex={choice === id ? 0 : -1}
-                          className="icust-chip"
+                          className="ied-chip"
                           onClick={() => { setColor(hex); markDirty() }}
                         >
-                          <span className="icust-chip-sw" style={{ background: hex }} aria-hidden="true" />
-                          {label}
+                          <span className="ied-sw" style={{ background: hex }} aria-hidden="true" />
+                          <span>{label}</span>
                         </button>
                       ))}
-                      {/* Portalled to <body>: the right column scrolls on its own above 800px, and an
-                          inline panel hung off the fourth chip would be cut off by it. */}
+                      {/* Portalled to <body>: the inspector scrolls on its own, and an inline panel hung
+                          off the fourth chip would be cut off by it. */}
                       <ColorPickerPop
                         portal
                         value={color || (brandPaint?.[0] === '#' ? brandPaint : themeInk)}
                         onChange={(v) => { setColor(v); markDirty() }}
-                        triggerClassName="icust-chip"
+                        triggerClassName="ied-chip"
+                        popClassName="ied-cpop"
                         triggerProps={{ role: 'radio', 'aria-checked': choice === 'custom', 'aria-expanded': undefined, 'aria-haspopup': undefined, 'data-opens-popup': '', tabIndex: choice === 'custom' ? 0 : -1 }}
                         triggerChildren={(
                           <>
-                            <span className={`icust-chip-sw${choice === 'custom' ? '' : ' icust-chip-sw--empty'}`} style={choice === 'custom' ? { background: color } : undefined} aria-hidden="true" />
-                            Custom
+                            <span className={`ied-sw${choice === 'custom' ? '' : ' ied-sw--empty'}`} style={choice === 'custom' ? { background: color } : undefined} aria-hidden="true" />
+                            <span>Custom</span>
                           </>
                         )}
                       />
                     </div>
-                    <p className="icust-colour-help">
+                    <p className="ied-note">
                       {choice === 'text' && brandPaint
                         ? 'The file keeps the logo\'s own colour. Pick another to recolour it.'
                         : choice === 'text'
@@ -2517,58 +2640,44 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
 
               {isStroke && (
-                <div className="icust-stroke">
-                  <div className="icust-row">
-                    <label htmlFor="icust-stroke">Stroke</label>
-                    {/* The `px` unit is half the fix: the slider now reports the
-                        width the exported file actually measures, at any size. */}
-                    <SnapSlider
-                      id="icust-stroke"
-                      min={STROKE_PX.min}
-                      max={STROKE_PX.max}
-                      step={STROKE_PX.step}
-                      value={stroke}
-                      defaultValue={STROKE_PX.default}
-                      snaps={STROKE_PX.snaps}
-                      unit="px"
-                      inputMin={STROKE_PX.inputMin}
-                      inputMax={STROKE_PX.inputMax}
-                      decimals={2}
-                      ariaLabel="Stroke width in pixels"
-                      onChange={(v) => { setStroke(v); writeStickyStroke(v, STROKE_REFERENCE_SIZE); markDirty() }}
-                    />
-                    {/* Relative: the stroke is a share of the icon and follows the Size and the PNG
-                        scale. Fixed: it keeps its pixels at every Size and PNG scale. */}
-                    <div className="icust-seg icust-mode" role="radiogroup" aria-label="Stroke scaling" aria-describedby="icust-stroke-note" onKeyDown={steerRadios}>
-                      {[['Relative', false], ['Fixed', true]].map(([name, abs]) => (
-                        <button
-                          key={name}
-                          type="button"
-                          role="radio"
-                          aria-checked={absStroke === abs}
-                          tabIndex={absStroke === abs ? 0 : -1}
-                          className={absStroke === abs ? 'active' : undefined}
-                          onClick={() => { setAbsStroke(abs); markDirty() }}
-                        >{name}</button>
-                      ))}
-                    </div>
+                <div>
+                  {/* The `px` unit is half the fix: the control reports the width the exported
+                      file actually measures, at any size. */}
+                  <IedStroke
+                    id="ied-stroke"
+                    value={stroke}
+                    onChange={(v) => { setStroke(v); writeStickyStroke(v, STROKE_REFERENCE_SIZE); markDirty() }}
+                  />
+                  {/* Relative: the stroke is a share of the icon and follows the Size and the PNG
+                      scale. Fixed: it keeps its pixels at every Size and PNG scale. */}
+                  <div className="ied-seg" role="radiogroup" aria-label="Stroke scaling" aria-describedby="ied-stroke-note" onKeyDown={steerRadios}>
+                    {[['Relative', false], ['Fixed', true]].map(([name, abs]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        role="radio"
+                        aria-checked={absStroke === abs}
+                        tabIndex={absStroke === abs ? 0 : -1}
+                        onClick={() => { setAbsStroke(abs); markDirty() }}
+                      >{name}</button>
+                    ))}
                   </div>
-                  <p id="icust-stroke-note" className="icust-stroke-note">
+                  <p id="ied-stroke-note" className="ied-note">
                     {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
                   </p>
                 </div>
               )}
 
               {isStroke && (
-                <div className="icust-line">
-                  <div className="icust-line-head">
-                    <span className="icust-line-title" id="icust-line-label">Line style</span>
-                    {!isPro && <span className="icust-line-hint">Sharp and Crisp are Pro</span>}
+                <div>
+                  <div className="ied-lblrow">
+                    <span className="ied-lbl" id="ied-line-label">Line style</span>
+                    {!isPro && <span className="ied-val">Sharp and Crisp are Pro</span>}
                   </div>
                   {/* Each tile draws the icon being edited in its own style. Pressing a Pro
                       tile previews it for a free viewer; the export block below is what holds
                       the file back. */}
-                  <div className="icust-line-tiles" role="radiogroup" aria-labelledby="icust-line-label" onKeyDown={steerRadios}>
+                  <div className="ied-tiles" role="radiogroup" aria-labelledby="ied-line-label" onKeyDown={steerRadios}>
                     {LINE_STYLES.map((s, i) => {
                       const on = lineStyle?.id === s.id
                       return (
@@ -2578,18 +2687,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           role="radio"
                           aria-checked={on}
                           aria-label={s.pro && !isPro ? `${s.name}, Pro` : s.name}
-                          aria-describedby={`icust-line-note-${s.id}`}
+                          aria-describedby={`ied-line-note-${s.id}`}
                           tabIndex={on || (!lineStyle && i === 0) ? 0 : -1}
-                          className="icust-line-tile"
+                          className="ied-tile"
                           data-style={s.id}
                           onClick={() => pickLineStyle(s)}
                         >
                           <LineArt markup={lineArt[s.id]} />
-                          <span className="icust-line-name">
+                          <span className="nm">
                             {s.name}
-                            {s.pro && !isPro && <span className="icust-line-pro">Pro</span>}
+                            {s.pro && !isPro && <span className="ied-tag">Pro</span>}
                           </span>
-                          <span className="icust-line-note" id={`icust-line-note-${s.id}`}>{s.note}</span>
+                          <span className="nm nt" id={`ied-line-note-${s.id}`}>{s.note}</span>
                         </button>
                       )
                     })}
@@ -2598,256 +2707,262 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       draws leaves every tile unselected, so the rows stay open to show it. */}
                   <button
                     type="button"
-                    className="icust-line-toggle"
+                    className="ied-disc"
                     aria-expanded={splitShown}
-                    aria-controls="icust-line-split"
+                    aria-controls="ied-line-split"
                     aria-disabled={lineStyle ? undefined : true}
                     onClick={() => { if (lineStyle) setSplitOpen(o => !o) }}
                   >
                     <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
                     Set ends and corners separately
                   </button>
-                  <div className="icust-line-split" id="icust-line-split" hidden={!splitShown}>
-                    <div className="icust-row">
-                      <label id="icust-ends-label">Ends</label>
-                      <div className="icust-seg" role="radiogroup" aria-labelledby="icust-ends-label" onKeyDown={steerRadios}>
+                  <div className="ied-split" id="ied-line-split" hidden={!splitShown}>
+                    <div>
+                      <p className="ied-split-lbl" id="ied-ends-label">Ends</p>
+                      <div className="ied-seg" role="radiogroup" aria-labelledby="ied-ends-label" onKeyDown={steerRadios}>
                         {LINE_ENDS.map(o => (
-                          <button key={o.v} type="button" role="radio" aria-checked={cap === o.v} tabIndex={cap === o.v ? 0 : -1} className={cap === o.v ? 'active' : ''}
+                          <button key={o.v} type="button" role="radio" aria-checked={cap === o.v} tabIndex={cap === o.v ? 0 : -1}
                             onClick={() => { setSplitOpen(true); setCap(o.v); markDirty() }}>{o.name}</button>
                         ))}
                       </div>
                     </div>
-                    <div className="icust-row">
-                      <label id="icust-corners-label">Corners</label>
-                      <div className="icust-seg" role="radiogroup" aria-labelledby="icust-corners-label" onKeyDown={steerRadios}>
+                    <div>
+                      <p className="ied-split-lbl" id="ied-corners-label">Corners</p>
+                      <div className="ied-seg" role="radiogroup" aria-labelledby="ied-corners-label" onKeyDown={steerRadios}>
                         {LINE_CORNERS.map(o => (
-                          <button key={o.v} type="button" role="radio" aria-checked={join === o.v} tabIndex={join === o.v ? 0 : -1} className={join === o.v ? 'active' : ''}
+                          <button key={o.v} type="button" role="radio" aria-checked={join === o.v} tabIndex={join === o.v ? 0 : -1}
                             onClick={() => { setSplitOpen(true); setJoin(o.v); markDirty() }}>{o.name}</button>
                         ))}
                       </div>
                     </div>
-                    {!isPro && <p className="icust-line-split-note">Anything other than Round ends with Round corners is Pro.</p>}
+                    {!isPro && <p className="ied-note">Anything other than Round ends with Round corners is Pro.</p>}
                   </div>
                 </div>
               )}
 
-              <div className="icust-rot">
-                <div className="icust-rot-head">
-                  <span className="icust-rot-title" id="icust-rot-label">Rotate and flip</span>
-                  <span className="icust-mono icust-rot-val" aria-hidden="true">{rotate}°</span>
+              <div className="ied-rot">
+                <div className="ied-rot-l">
+                  <span className="ied-lbl" id="ied-rot-label">Rotate and flip</span>
+                  <span className="ied-mono ied-val" aria-hidden="true">{rotate}°</span>
                   {/* Polite and always mounted, so each press of Rotate is announced. */}
-                  <span className="sr-only" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
+                  <span className="ied-vh" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
                 </div>
-                <div className="icust-rot-btns" role="group" aria-labelledby="icust-rot-label">
-                  <button type="button" className="icust-rot-btn" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
+                <div className="ied-rot-b" role="group" aria-labelledby="ied-rot-label">
+                  <button type="button" className="ied-ib" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8" /><path d="M4 4v4.5h4.5" /></svg>
                   </button>
-                  <button type="button" className="icust-rot-btn" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
+                  <button type="button" className="ied-ib" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /></svg>
                   </button>
-                  <span className="icust-rot-sep" aria-hidden="true" />
-                  <button type="button" className="icust-rot-btn" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
+                  <button type="button" className="ied-ib ied-ib--gap" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18" strokeDasharray="2 3" /><path d="M9 7 3.5 17H9z" /><path d="M15 7l5.5 10H15z" /></svg>
                   </button>
-                  <button type="button" className="icust-rot-btn" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
+                  <button type="button" className="ied-ib" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h18" strokeDasharray="2 3" /><path d="M7 9V3.5L17 9z" /><path d="M7 15v5.5L17 15z" /></svg>
                   </button>
                 </div>
               </div>
-            </div>
 
-            <details className="icust-code">
-              <summary className="icust-code-sum">
-                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="icust-code-caret"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
-                <span className="icust-code-name">SVG code</span>
-                <span className="icust-code-val"><span className="icust-mono">{size} × {size} · {codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
-              </summary>
-              <div className={`icust-code-box${previewing ? ' is-locked' : ''}`}>
+              <div>
                 <button
                   type="button"
-                  className="icust-code-copy"
-                  onClick={handleCopyCode}
+                  className="ied-disc"
+                  aria-expanded={codeOpen}
+                  aria-controls="ied-code"
+                  onClick={() => setCodeOpen(o => !o)}
+                >
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                  SVG code
+                  <span className="ied-bytes ied-val"><span className="ied-mono">{codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
+                </button>
+                {codeOpen && (
+                  <div className={`ied-code${previewing ? ' is-locked' : ''}`} id="ied-code">
+                    <div className="ied-code-hd">
+                      <span className="ied-val">{size} × {size}</span>
+                      <button
+                        type="button"
+                        className="ied-tn"
+                        onClick={handleCopyCode}
+                        disabled={!baseSvgText}
+                        aria-disabled={previewing || undefined}
+                        aria-describedby={previewing ? 'ied-preview-line' : undefined}
+                        aria-busy={!baseSvgText && !loadErr}
+                        aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
+                      >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
+                    </div>
+                    <pre tabIndex={0} aria-label="SVG code"><code>{serializedOutput}</code></pre>
+                  </div>
+                )}
+              </div>
+
+              {savedInProjects.length > 0 && (
+                <p className="ied-note">
+                  Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <b>{savedInProjects.join(', ')}</b>
+                </p>
+              )}
+
+              {similarList.length > 0 && (
+                <SimilarSection
+                  key={currentId}
+                  list={similarList}
+                  srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: ownColours ? undefined : themeInk })}
+                  onPick={onPick}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {activeIcon && savePickerOpen && (
+          <div className="ied-spn" id="ied-spn" role="group" aria-labelledby="ied-spt">
+            <div className="ied-spn-hd">
+              <button type="button" className="ied-x" id="ied-spb" aria-label="Back to the editor" onClick={closeSavePicker}>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+              </button>
+              <p id="ied-spt">Save to a project</p>
+            </div>
+            <p className="ied-note">
+              {Number.isFinite(saveLimit)
+                ? `Pick where this icon lives. The free plan saves up to ${saveLimit} icons per project.`
+                : 'Pick where this icon lives.'}
+            </p>
+            {projects.map((p) => {
+              const used = projectCounts[p.id] || 0
+              const full = !isPro && used >= saveLimit
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="ied-pj"
+                  aria-disabled={full || undefined}
+                  title={full ? `This project is at the free limit of ${saveLimit} icons.` : undefined}
+                  onClick={() => { if (!full) handleSaveToProject(p.id) }}
+                >
+                  <span>{p.name}</span>
+                  <span className="tg">
+                    {full && 'Full '}
+                    {Number.isFinite(saveLimit) ? `${used} of ${saveLimit} icons` : `${used} icons`}
+                  </span>
+                </button>
+              )
+            })}
+            {/* New-project path: naming is required, so the create button stays disabled until a
+                name is typed. A 4th free project routes to the upgrade gate instead (handleNewProject). */}
+            {newProjOpen ? (
+              <div className="ied-newp">
+                <label className="ied-small-label" htmlFor="ied-newp-name">Project name (required)</label>
+                <div className="ied-newp-row">
+                  <input
+                    id="ied-newp-name"
+                    className="ied-in"
+                    type="text"
+                    value={newProjName}
+                    onChange={(e) => setNewProjName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndSave() }}
+                    maxLength={60}
+                    autoFocus
+                  />
+                  <button type="button" className="ied-tn" disabled={!newProjName.trim()} onClick={handleCreateAndSave}>
+                    Create &amp; save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="ied-pj ied-newp" onClick={handleNewProject}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                <span>New project</span>
+                {!isPro && Number.isFinite(projectLimit) && (
+                  <span className="tg">{projects.length} of {projectLimit} projects</span>
+                )}
+              </button>
+            )}
+            <div className="ied-spa">
+              {!isPro && <Link className="ied-tn" to="/plans" target="_blank" rel="noopener">See Pro</Link>}
+              <button type="button" className="ied-tn" onClick={closeSavePicker}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="ied-ft" data-hide={savePickerOpen && activeIcon ? 'true' : undefined}>
+          {!activeIcon ? (
+            <div className="ied-foot-add">
+              <button type="button" className="ied-ghost" onClick={onClose}>Cancel</button>
+              <button type="button" className="ied-pri ied-pr" onClick={applyPaste}><span>Add to stage</span></button>
+            </div>
+          ) : (
+            <>
+              {/* The one preview line. Always mounted, so its first message is announced. With no
+                  preview it is out of sight and holds only the note that the settings are free again. */}
+              <div className={`ied-pv${previewing ? '' : ' ied-vh'}`}>
+                <p className="ied-note" id="ied-preview-line" role="status" aria-live="polite">
+                  {preview
+                    ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="ied-mono">{p.code}</span>))
+                    : leftPreview ? BACK_TO_FREE_NOTE : ''}
+                </p>
+                {previewing && <button type="button" className="ied-tn" onClick={backToFree}>Back to free settings</button>}
+              </div>
+
+              <div className="ied-foot-row">
+                <SplitDownload
+                  format={dlFormat}
+                  size={size}
+                  disabled={!baseSvgText}
+                  blocked={previewing}
+                  describedBy="ied-preview-line"
+                  loading={!baseSvgText && !loadErr}
+                  onPick={pickDownloadFormat}
+                  onDownload={handleDownload}
+                />
+                <button
+                  type="button"
+                  id="ied-save"
+                  className={`ied-tn ied-sv${savedState === 'saved' ? ' saved' : ''}`}
+                  onClick={handleSave}
                   disabled={!baseSvgText}
                   aria-disabled={previewing || undefined}
-                  aria-describedby={previewing ? 'icust-preview-line' : undefined}
+                  aria-describedby={previewing ? 'ied-preview-line' : undefined}
                   aria-busy={!baseSvgText && !loadErr}
-                  aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
-                >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
-                <code tabIndex={0} role="region" aria-label="SVG code">{serializedOutput}</code>
+                  aria-expanded={savePickerOpen}
+                  aria-controls="ied-spn"
+                  aria-label={saveLabel.full}
+                  title={saveLabel.full}
+                >
+                  <FooterGlyph name={saveLabel.glyph} />
+                  <span className="nm">{saveLabel.full}</span>
+                  {saveLabel.hv && <span className="hv">{saveLabel.hv}</span>}
+                </button>
               </div>
-            </details>
 
-            {savedInProjects.length > 0 && (
-              <p className="icust-savedin">
-                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
-              </p>
-            )}
-
-            {similarList.length > 0 && (
-              <SimilarSection
-                key={currentId}
-                list={similarList}
-                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: ownColours ? undefined : themeInk })}
-                onPick={onPick}
-              />
-            )}
-            </div>
-
-            {/* The one preview line. Always mounted, so its first message is announced. With no
-                preview it is out of sight and holds only the note that the settings are free again.
-                It sits in the scrolling body, just above the pinned foot, so it can wrap to as many
-                lines as it needs without making the foot (and the scroll area) taller. */}
-            <div className={`icust-preview${previewing ? ' is-on' : ''}`}>
-              <p className="icust-preview-text" id="icust-preview-line" role="status" aria-live="polite">
-                {preview
-                  ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="icust-mono">{p.code}</span>))
-                  : leftPreview ? BACK_TO_FREE_NOTE : ''}
-              </p>
-              {previewing && <button type="button" className="icust-preview-back" onClick={backToFree}>Back to free settings</button>}
-            </div>
-
-            <div className="icust-foot icust-foot--tool">
-              <div className="icust-foot-row">
+              <div className="ied-foot-pill">
                 {/* One button, two jobs: Copy SVG, or Upgrade to Pro while a Pro setting is previewed.
-                    The same node either way, so focus and tab order never move. The hidden faces hold
-                    the widest label, so the foot never reflows when the words swap. */}
+                    The same node either way, so focus and tab order never move. */}
                 <button
                   ref={primaryRef}
                   type="button"
-                  className={`lib-btn icust-copy ${previewing ? 'lib-btn--upgrade' : 'lib-btn--primary'}`}
+                  className="ied-pri ied-pr"
                   onClick={previewing ? openUpgrade : handleCopySvg}
                   disabled={!baseSvgText}
                   aria-haspopup={previewing ? 'dialog' : undefined}
                   aria-busy={!baseSvgText && !loadErr}
                   aria-label={previewing ? 'Upgrade to Pro' : copied === 'svg' ? undefined : 'Copy SVG'}
                 >
-                  {/* Each face wraps its words in one span: as separate flex items, " SVG" and " to Pro" would lose their leading space. */}
-                  <span className="icust-primary-faces">
-                    <span className="icust-face">
-                      {previewing ? <span>Upgrade<span className="icust-tier-w"> to Pro</span></span>
-                        : copied === 'svg' ? 'Copied!' : <span>Copy<span className="icust-tier-w"> SVG</span></span>}
+                  <span>{previewing ? 'Upgrade to Pro' : copied === 'svg' ? 'Copied!' : 'Copy SVG'}</span>
+                  {previewing ? (
+                    <span className="ied-gochip" aria-hidden="true">
+                      <svg className="a" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+                      <svg className="b" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
                     </span>
-                    <span className="icust-face icust-face--sizer" aria-hidden="true"><span>Copy<span className="icust-tier-w"> SVG</span></span></span>
-                    <span className="icust-face icust-face--sizer" aria-hidden="true"><span>Upgrade<span className="icust-tier-w"> to Pro</span></span></span>
-                  </span>
-                </button>
-
-                <SplitDownload
-                  format={dlFormat}
-                  size={size}
-                  disabled={!baseSvgText}
-                  blocked={previewing}
-                  describedBy="icust-preview-line"
-                  loading={!baseSvgText && !loadErr}
-                  onPick={pickDownloadFormat}
-                  onDownload={handleDownload}
-                />
-
-                <button
-                  type="button"
-                  className="lib-btn icust-save"
-                  onClick={handleSave}
-                  disabled={!baseSvgText}
-                  aria-disabled={previewing || undefined}
-                  aria-describedby={previewing ? 'icust-preview-line' : undefined}
-                  aria-busy={!baseSvgText && !loadErr}
-                  aria-label={saveLabel.full}
-                  title={saveLabel.full}
-                  onMouseEnter={() => { if (canHover() && !previewing) setSaveHover(true) }}
-                  onMouseLeave={() => setSaveHover(false)}
-                  onFocus={() => { if (canHover() && !previewing) setSaveHover(true) }}
-                  onBlur={() => setSaveHover(false)}
-                >
-                  <span className="icust-save-w">{saveLabel.full}</span>
-                  <span className="icust-save-p">{saveLabel.short}</span>
-                  <FooterGlyph name={saveLabel.glyph} className="icust-save-g" />
-                </button>
-              </div>
-            </div>
-
-          </>
-        )}
-        </div>
-
-        {savePickerOpen && (
-          <div className="icust-gate-backdrop" onMouseDown={() => setSavePickerOpen(false)}>
-            <div
-              className="icust-gate"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="icust-pick-title"
-              tabIndex={-1}
-              ref={pickerRef}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <h3 className="icust-gate-title" id="icust-pick-title">Save to a project</h3>
-              <p className="icust-gate-copy">
-                {Number.isFinite(saveLimit)
-                  ? `Pick where this icon lives. The free plan saves up to ${saveLimit} icons per project.`
-                  : 'Pick where this icon lives.'}
-              </p>
-              {projects.length > 0 && (
-                <div className="icust-proj-list">
-                  {projects.map((p) => {
-                    const used = projectCounts[p.id] || 0
-                    const full = !isPro && used >= saveLimit
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className="icust-proj-btn"
-                        disabled={full}
-                        title={full ? `This project is at the free limit of ${saveLimit} icons.` : undefined}
-                        onClick={() => handleSaveToProject(p.id)}
-                      >
-                        <span className="icust-proj-name">{p.name}</span>
-                        <span className="icust-proj-count">
-                          {Number.isFinite(saveLimit) ? `${used}/${saveLimit}` : `${used} saved`}
-                          {full && <span className="pnav-pop-tag">Full</span>}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              {/* New-project path: naming is required — the create button stays
-                  disabled until a name is typed. A 4th free project routes to
-                  the upgrade gate instead (handleNewProject). */}
-              {newProjOpen ? (
-                <div className="icust-newproj">
-                  <input
-                    className="icust-newproj-input"
-                    type="text"
-                    value={newProjName}
-                    onChange={(e) => setNewProjName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndSave() }}
-                    placeholder="Project name (required)"
-                    aria-label="New project name"
-                    maxLength={60}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    className="lib-btn lib-btn--primary"
-                    disabled={!newProjName.trim()}
-                    onClick={handleCreateAndSave}
-                  >
-                    Create &amp; save
-                  </button>
-                </div>
-              ) : (
-                <button type="button" className="icust-proj-btn icust-proj-btn--new" onClick={handleNewProject}>
-                  <span className="icust-proj-name">+ New project</span>
-                  {!isPro && Number.isFinite(projectLimit) && (
-                    <span className="icust-proj-count">{projects.length}/{projectLimit}</span>
+                  ) : (
+                    <span className="ied-pchip" aria-hidden="true">
+                      <svg className={`ied-g${copied === 'svg' ? '' : ' on'}`} viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V7A2.5 2.5 0 0 0 13 4.5H7A2.5 2.5 0 0 0 4.5 7v6A2.5 2.5 0 0 0 7 15.5h1.5" /></svg>
+                      <svg className={`ied-g${copied === 'svg' ? ' on' : ''}`} viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+                    </span>
                   )}
                 </button>
-              )}
-              {!isPro && <Link className="icust-upgrade" to="/plans" target="_blank" rel="noopener">Upgrade for unlimited →</Link>}
-              <button type="button" className="icust-gate-dismiss" onClick={closeSavePicker}>Cancel</button>
-            </div>
-          </div>
-        )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

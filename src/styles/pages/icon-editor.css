@@ -343,3 +343,28 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
   .ied-cus{position:static;height:auto;margin-bottom:8px}
   .ied-contrast{left:16px;right:16px;top:56px}
 }
+
+/* ── spacing and states the markup needs beyond the sections above ── */
+.ied-sizes-pro{margin-left:auto}
+.ied-tick{background:var(--ied-m3)}
+.ied-tick.on{background:var(--ied-surface)}
+.ied-rgw + .ied-seg{margin-top:12px}
+.ied-seg + .ied-note,.ied-chips + .ied-note{margin-top:8px}
+.ied-lblrow + .ied-tiles{margin-top:8px}
+.ied-tiles + .ied-disc{margin-top:4px}
+.ied-split[hidden]{display:none}
+.ied-disc svg,.ied-pj svg{flex:none}
+.ied-disc svg{transition:transform 150ms ease}
+.ied-disc[aria-expanded="true"] svg{transform:rotate(90deg)}
+.ied-disc .ied-bytes{font-size:13px}
+.ied-cus-row .ied-numf{flex:none}
+.ied-cus-row .ied-val{white-space:nowrap}
+.ied-pv .ied-tn{margin:0}
+.ied a.ied-tn{text-decoration:none;color:inherit}
+.ied-paste .ied-note{margin:0 0 12px}
+
+/* add mode: a single column dialog around the paste field */
+.ied--paste{width:min(560px,calc(100vw - 40px));height:auto;max-height:calc(100dvh - 120px);grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+.ied--paste .ied-hd{grid-column:1;grid-row:1}
+.ied--paste .ied-scroll{grid-column:1;grid-row:2;padding:4px 24px 24px}
+.ied--paste .ied-ft{grid-column:1;grid-row:3}
