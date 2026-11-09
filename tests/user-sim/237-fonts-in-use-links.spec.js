@@ -40,6 +40,13 @@ async function openDossier(page, width, family) {
   await page.locator('.fg-card-open').first().click()
   const dialog = page.getByRole('dialog', { name: family })
   await expect(dialog).toBeVisible()
+  // A phone sheet shows one tab at a time, so In use is opened first.
+  // (its panel is the tab's own, with no heading of its own).
+  if (width < 768) {
+    await dialog.getByRole('tab', { name: 'In use', exact: true }).click()
+    await expect(dialog.getByRole('tabpanel', { name: 'In use' })).toBeVisible()
+    return dialog
+  }
   const heading = dialog.getByRole('heading', { level: 3, name: 'In use', exact: true })
   await heading.scrollIntoViewIfNeeded()
   await expect(heading).toBeInViewport()
@@ -51,7 +58,7 @@ for (const width of [390, 1440]) {
     test('a family with documented uses lists them as new-tab links', async ({ page }) => {
       watch(page, 'designer checking where Roboto is used')
       const dialog = await openDossier(page, width, 'Roboto')
-      const section = dialog.locator('#fgd-inuse')
+      const section = dialog.locator('#fgd-inuse, #fgd-panel-inuse')
 
       const rows = section.locator('.fdx-use')
       await expect(rows).toHaveCount(REAL_WORLD_USES.Roboto.length)
@@ -96,7 +103,7 @@ for (const width of [390, 1440]) {
     test('the source note and the report link are under the list', async ({ page }) => {
       watch(page, 'designer who spots a wrong entry')
       const dialog = await openDossier(page, width, 'Roboto')
-      const section = dialog.locator('#fgd-inuse')
+      const section = dialog.locator('#fgd-inuse, #fgd-panel-inuse')
 
       await expect(section.locator('.fdx-uses-note'))
         .toContainText('Uses are listed from Fonts In Use and from brands’ own typography pages')
@@ -143,7 +150,7 @@ for (const width of [390, 1440]) {
     test('a family with no documented use keeps the honest empty state', async ({ page }) => {
       watch(page, 'designer opening a family nobody has listed yet')
       const dialog = await openDossier(page, width, 'Lora')
-      const section = dialog.locator('#fgd-inuse')
+      const section = dialog.locator('#fgd-inuse, #fgd-panel-inuse')
 
       await expect(section.locator('.fdx-uses')).toHaveCount(0)
       await expect(section.locator('.fdx-use-link')).toHaveCount(0)

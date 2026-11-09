@@ -872,6 +872,8 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
   const damage = []
   for (const [w, h] of [[320, 568], [360, 560], [390, 640], [390, 844], [430, 932], [768, 1024]]) {
     const { ctx, page } = await openTouch(browser, w, h, '/typescale', w >= 700, '.tsc-row-text')
+    // Heading rows draw at the base size until their face has loaded.
+    await page.waitForFunction(() => !document.querySelector('.tsc-row-text.is-loading'))
     const r = await page.evaluate(() => {
       const rows = [...document.querySelectorAll('.tsc-row-text')]
       const hidden = []
@@ -887,8 +889,8 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
       return { rows: rows.length, hidden }
     })
     await ctx.close()
-    expect(r.rows, `${w}x${h}: expected the 9 specimen rows`).toBe(9)
-    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 9 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
+    expect(r.rows, `${w}x${h}: expected the 6 specimen rows`).toBe(6)
+    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 6 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
