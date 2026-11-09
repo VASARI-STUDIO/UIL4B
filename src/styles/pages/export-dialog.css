@@ -217,3 +217,34 @@ html[data-reduced-motion="true"] .xd-swap{animation-duration:100ms}
 html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-cat,.xd-frame .exp-preview-retry){transition:none}
 /* The logo buttons come from the shared identity fields at 40px; below 1024 every target here is 44px. */
 @media (max-width:1023.98px){.xd .exp-logo-acts .btn-s{min-height:44px}}
+
+/* The Theme step: the sample pages, the chosen theme with a Change button, and the listbox of ten. Pictures only. */
+.xd-theme-stage{position:relative;isolation:isolate;display:flex;flex-wrap:wrap;gap:var(--s-4);justify-content:center;align-items:flex-start;min-width:0}
+.xd-theme-stage img{display:block;height:auto;max-width:100%;border-radius:3px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px;background:var(--bg-2)}
+.xd-theme-stage--wide img{flex:0 1 400px;width:400px;aspect-ratio:16/9;object-fit:cover}
+.xd-theme-stage--land img{flex:0 1 340px;width:340px;aspect-ratio:1416/1000;object-fit:cover}
+.xd-theme-stage--port img{flex:0 1 280px;width:280px;aspect-ratio:706/1000;object-fit:cover}
+.xd-theme-stage--book img{flex:0 1 100%;width:100%;aspect-ratio:1424/606;object-fit:cover}
+.xd-theme-stage.is-locked img{filter:blur(10px)}
+.xd-theme-lock{position:absolute;inset:auto auto var(--s-3) 50%;transform:translateX(-50%);z-index:1;padding:var(--s-1) var(--s-3);font-size:12px;font-weight:600;color:var(--t0);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill)}
+.xd-theme-cap{margin:0;text-align:center;font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
+.xd-theme{position:relative;display:flex;flex-direction:column;gap:var(--s-1)}
+.xd-theme-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3)}
+.xd-theme-name{display:flex;align-items:baseline;gap:var(--s-2);margin:0;font-size:16px;font-weight:600;color:var(--t0)}
+.xd-theme-tier{font-size:13px;font-weight:500;color:var(--t2)}
+.xd-theme-sample{margin:0;min-height:1.5em;font-size:13px;line-height:1.5;color:var(--t1)}
+.xd-theme-change{min-height:44px}
+.xd-theme-list{list-style:none;margin:var(--s-2) 0 0;padding:var(--s-2);display:flex;flex-direction:column;max-height:min(440px,60dvh);overflow-y:auto;overscroll-behavior:contain;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);animation:xd-pop 160ms var(--ease-entrance)}
+.xd-theme-list:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+.xd-theme-opt{display:flex;align-items:center;gap:var(--s-3);min-height:44px;padding:0 var(--s-3);border-radius:var(--radius-xs);cursor:pointer}
+.xd-theme-opt.is-active{background:var(--bg-2)}
+.xd[data-layout="strip"] .xd-theme-opt{min-height:52px}
+.xd-theme-thumb{flex:none;width:48px;height:40px;object-fit:contain;object-position:left center}
+.xd-theme-opt:not(:has(.xd-theme-thumb)) .xd-theme-thumb{display:none}
+.xd-theme-opt-t{flex:1;min-width:0;display:flex;align-items:baseline;gap:var(--s-2);white-space:nowrap}
+.xd-theme-opt-n{font-size:14px;font-weight:500;color:var(--t0)}
+.xd-theme-opt-b{font-size:13px;color:var(--t2);overflow:hidden;text-overflow:ellipsis}
+.xd-theme-opt-r{display:flex;align-items:center;gap:var(--s-1);flex:none;min-width:44px;justify-content:flex-end;font-size:13px;color:var(--t2)}
+@keyframes xd-pop{from{opacity:0;transform:translateY(4px)}}
+@media (prefers-reduced-motion:reduce){.xd-theme-list{animation:none}}
+html[data-reduced-motion="true"] .xd-theme-list{animation:none}

@@ -18,6 +18,8 @@ import ExportProTag from '../ExportProTag'
 import KitIdentityFields from '../KitIdentityFields'
 import BrandLogoField from '../BrandLogoField'
 import ExportFreePreview from './ExportFreePreview'
+import ExportThemeRow, { ThemeStage } from './ExportThemeRow'
+import { pickerTheme, themedFile, themedFileIsPro, themeLines } from '../../config/exportThemePicker'
 
 // The main column of the Export dialog (Preview, File, Layout, Details) and the
 // dock under it. Everything here follows the category and file the rail and the
@@ -119,8 +121,19 @@ function NameLine({ lead, name, project, onRenameState }) {
 // ExportProPreview, blurred in the pixels for a free account (and while the plan
 // is read, never sharp on a guess); the free ones by the free preview. Both sit
 // in a box whose height is reserved before any picture lands.
-function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen }) {
+function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen, shown }) {
   const kind = cat.preview
+  if (themedFile(file)) {
+    // A picture of the theme's own sample pages. A locked one is blurred, with the lock the live Pro previews carry.
+    const locked = !isPro && !checking && themedFileIsPro(file, shown.id)
+    const lines = themeLines(kind, shown)
+    return (
+      <div className="xd-prev">
+        <ThemeStage kind={kind} theme={shown} locked={locked} lockText={kind === 'kit' ? 'Pro theme' : 'Pro export'} />
+        <p className="xd-theme-cap">{lines.caption}</p>
+      </div>
+    )
+  }
   if (kind === 'book' || kind === 'guidelines') {
     // The book as page images has its own single layout, so it shows the default one.
     const template = file === 'book-png' ? defaultTemplate('book') : chosen[cat.layouts]
@@ -172,7 +185,7 @@ function Manifest({ rows, file, folded }) {
   )
 }
 
-export default function ExportSteps({ cat, file, onFile, onLayout, name, fileProject = '', project, strip, coming, onRenameState }) {
+export default function ExportSteps({ cat, file, onFile, onLayout, name, fileProject = '', project, strip, coming, onRenameState, theme, peek, onTheme, onPeek }) {
   const uid = useId()
   const { isPro, planKnown } = useSubscription()
   const { design: working, updateDesign } = useProject()
@@ -183,7 +196,9 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
   // A Pro kit is filed under its identity name when it has one (uiKitExport.js).
   const identityName = isPro ? readIdentity(design).name : ''
   const rows = files.map((f) => ({ ...f, saved: formatFileName(f.id === 'kit' && identityName ? identityName : fileProject, f.id) }))
-  const showLayout = Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1
+  const themed = Boolean(themedFile(file))
+  const shown = pickerTheme(peek || theme)
+  const showLayout = !themed && Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1
   const lead = NAME_LEAD[cat.preview]
   const hasLogo = Boolean(readLogo(working))
 
@@ -213,7 +228,7 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
 
   return (
     <>
-      <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} />
+      <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} shown={shown} />
 
       <section className="xd-step" aria-labelledby={`${uid}-file`}>
         <h3 className="xd-step-l" id={`${uid}-file`}>File</h3>
@@ -227,6 +242,14 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
         )}
         <Manifest rows={rows} file={file} folded={strip && rows.length > 1} />
       </section>
+
+      {themed && (
+        <section className="xd-step" aria-labelledby={`${uid}-theme`}>
+          <h3 className="xd-step-l" id={`${uid}-theme`}>Theme</h3>
+          <ExportThemeRow value={theme} onChange={onTheme} onPreview={onPeek} isPro={isPro} checking={checking} yourName={name} />
+          <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
+        </section>
+      )}
 
       {showLayout && (
         <section className="xd-step" aria-labelledby={`${uid}-layout`}>
@@ -260,12 +283,12 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
 // status line is one live region, mounted empty; an error is its own alert.
 // `upgrade` is 'checkout' (a saved project: the trial) or 'plans' for a free
 // account on a Pro file; `onPrimary` decides what the click does.
-export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrade, onPrimary, onCopy, primaryRef }) {
+export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrade, onPrimary, onCopy, primaryRef, locked: lockedBy }) {
   const { isPro, planKnown } = useSubscription()
   const proPrice = useProPrice()
   const { prices } = usePrices()
   const checking = planKnown === false
-  const locked = cat.pro && !isPro
+  const locked = lockedBy ?? (cat.pro && !isPro)
   const trialDays = PLAN_LADDER.find((e) => e.id === 'yearly')?.trialDays || 0
   // Read once when the dock mounts, so the cancel-by date holds still while it is open.
   const [mountedAt] = useState(() => Date.now())
@@ -291,7 +314,9 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
     } else line = 'Checkout shows the price before you pay.'
   } else if (locked) {
     // The bundle has no free, marked version, so "no watermark" would promise a difference that isn't there.
-    line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</> : <><strong>Pro</strong> unlocks this file with no watermark.</>
+    line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</>
+      : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in Standards and Specification.</>
+        : <><strong>Pro</strong> unlocks this file.</>
   } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
   else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
   else line = <><strong>Free.</strong> The file carries a small ‘Made with UIL4B’ mark.</>

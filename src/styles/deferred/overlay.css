@@ -84,8 +84,7 @@
 .exp-switch-label{display:none;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
 /* Up to tablet the switch sits under the Pro rows, so it needs its own label. */
 @media(max-width:900px){.exp-switch-label{display:block}}
-.exp-switch{display:flex;gap:8px;padding:4px;margin:-4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none}
-.exp-switch::-webkit-scrollbar{display:none}
+.exp-switch{display:flex;flex-wrap:wrap;gap:8px;padding:4px;margin:-4px}
 .exp-pill{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;scroll-snap-align:center;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font:inherit;font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 @media (hover:hover){.exp-pill:hover{background:var(--hvr);color:var(--t0)}}
 /* The chosen pill is told apart by a heavier edge and the ink, not by colour alone. */
