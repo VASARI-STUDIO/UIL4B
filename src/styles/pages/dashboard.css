@@ -12,7 +12,7 @@
  * press is scale(.97) over 120ms. Reduced motion keeps the fades and drops the movement. */
 
 /* The page runs the full width of the shell; the content column below sets its own 1240px measure. */
-.app-page:has(> .db) { max-width: none; padding-inline: 0; }
+.app-page:has(> .db) { max-width: none; padding-inline: 0; padding-top: var(--chrome-h); background: #060607; }
 .app-page > .db.db { padding-top: 0; }
 
 :where(.db) a { color: inherit; text-decoration: none; }
@@ -96,7 +96,7 @@
 .db-input{height:36px;width:100%;padding:0 14px;border-radius:12px;border:0;background:var(--ground);color:var(--ink);font:inherit;font-size:15px}
 .db-input::placeholder{color:var(--t56)}
 /* status slot, title, today */
-.db-main{padding-top:56px}
+.db-main{padding-top:84px}
 .db-status{height:24px;display:flex;align-items:center;position:relative;z-index:2;font-size:15px;line-height:24px;color:var(--t72)}
 .db-greetw{display:flex;align-items:center;gap:8px}
 .db-anchor{position:relative;display:inline-flex}
