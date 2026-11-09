@@ -11,7 +11,7 @@ import useOnline from '../hooks/useOnline'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { getSyncState } from '../utils/syncStatus'
-import { loadFirestore } from '../utils/firebaseAccess'
+import { loadFirestore, openFirebaseGate } from '../utils/firebaseAccess'
 import { AI_TERMS_PATH } from '../config/aiImageConsent'
 import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 import { requestAccountReset } from '../utils/accountEvents'
@@ -857,6 +857,8 @@ function rememberSection(id) {
 }
 
 export default function Settings({ toast }) {
+  // The account page, and it already loads the SDK: let a session the hint missed restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading, planKnown } = useSubscription()

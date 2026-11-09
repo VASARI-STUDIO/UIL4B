@@ -179,7 +179,10 @@ const assertFirebaseIsDeferred = () => ({
     const chunks = Object.values(bundle).filter((c) => c.type === 'chunk')
     const byName = new Map(chunks.map((c) => [c.fileName, c]))
     const seen = new Set()
-    const queue = chunks.filter((c) => c.isEntry).map((c) => c.fileName)
+    // The app's own entry only. `--mode test` adds fixture pages (a standalone
+    // tool page per entry) that import the SDK on purpose and are never served
+    // to a visitor.
+    const queue = chunks.filter((c) => c.isEntry && c.name === 'index').map((c) => c.fileName)
     const offenders = []
     while (queue.length) {
       const name = queue.shift()
