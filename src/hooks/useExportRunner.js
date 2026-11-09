@@ -17,6 +17,8 @@ import { storePick } from '../utils/kitGalleryPick'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import { readExportTemplates } from '../config/exportTemplates'
 import { needsNetwork, resolveUpgradeTarget } from '../config/dialogExport'
+import { requestThemeExport, printInWindow } from '../utils/exportThemeRequest'
+import { themedFile, themedFileIsPro } from '../config/exportThemePicker'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 import { formatFileName } from '../utils/exportFileName'
 
@@ -267,7 +269,7 @@ export default function useExportRunner() {
     return { status: 'upgrade', to: target.to }
   }
 
-  const runExport = async (format, projectId) => {
+  const runExport = async (format, projectId, theme) => {
     // The name the dialog shows on the file: the open project's, else the design's own.
     // `fileProject` is that name as typed ('' for an unnamed project), which the file
     // names are made from; `projectName` is what the documents print, with a stand-in.
@@ -290,7 +292,10 @@ export default function useExportRunner() {
     // trip. It is not what protects the document. The server decides, from the
     // account's own record, and the generators are not in this page (see
     // PRO_DOCUMENT above), so a forged `isPro` here reaches a 403 and no file.
-    if (fmt.pro && !isPro) return goUpgrade(format, projectId, Boolean(user))
+    // A file that takes a theme is Pro or free by the route's own table (isThemeExportPro), so the button and the server agree.
+    const themed = theme && themedFile(format) ? themedFile(format) : null
+    const needsPro = themed ? themedFileIsPro(format, theme) : Boolean(fmt.pro)
+    if (needsPro && !isPro) return goUpgrade(format, projectId, Boolean(user))
 
     // ── OFFLINE. ───────────────────────────────────────────────────────────
     // The server builds the book and the slides and the kit fetches its fonts, so
@@ -300,19 +305,19 @@ export default function useExportRunner() {
     // A paid file the server builds (the book as PDF or HTML, the guidelines) asks the
     // server; a paid file drawn here (the book as PNG) does not. Both are behind the same plan check.
     // Only the PDF opens a print window; the HTML is saved as a file.
-    const paidFile = Boolean(fmt.pro)
+    const paidFile = needsPro
     const bookPng = format === 'book-png'
     // The app-ready zip is also drawn here, from the saved design.
     const appBundle = format === 'app-bundle'
     const htmlDocument = format === 'book-html' || format === 'guidelines-html'
-    const proDocument = paidFile && !bookPng && !appBundle
+    const proDocument = paidFile && !themed && !bookPng && !appBundle
     // The document the server is asked for: the HTML variants are the same document.
     const documentKey = htmlDocument ? fmt.variantOf : format
 
     // The window the document will print in, opened NOW, inside the click. The
     // server round trip below is a network wait, and a window opened after it is
     // blocked by Safari. Every way out of this function closes it again.
-    let printWin = proDocument && !htmlDocument ? reservePrintWindow() : null
+    let printWin = (proDocument && !htmlDocument) || (themed && themed.format === 'pdf') ? reservePrintWindow() : null
     const closePrintWin = () => { releasePrintWindow(printWin); printWin = null }
 
     // ── ACCOUNT GATE ──────────────────────────────────────────────────────
@@ -356,7 +361,28 @@ export default function useExportRunner() {
     let savedFile = ''
     let opened = false
     try {
-      if (format === 'kit') {
+      if (themed) {
+        // A themed file: the server builds it in the chosen theme. A zip is saved under the server's name; a print row is written
+        // into the reserved window and printed from here (utils/exportThemeRequest.js), never opened from a blob.
+        activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
+        setStage(themed.format === 'pdf' ? 'document' : 'building')
+        labelPrintWindow(printWin, 'Preparing your document…')
+        const answer = await requestThemeExport({ theme, row: themed.row, format: themed.format, design, projectName }, { loadAuth: loadAuthSdk })
+        if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
+        if (answer.status !== 'ok') throw new Error(answer.line)
+        if (answer.zip) {
+          savedFile = download(answer.zip, answer.name)
+        } else {
+          const file = formatFileName(fileProject, format, { saved: true })
+          opened = printInWindow(printWin, answer.html, { title: formatFileName(fileProject, format).replace(/\.pdf$/, '') })
+          printWin = null
+          if (!opened) {
+            // No usable window: the same script-free document is saved instead.
+            savedFile = download(new Blob([answer.html], { type: 'text/html;charset=utf-8' }), file)
+            setNotice({ lead: 'The document downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
+          }
+        }
+      } else if (format === 'kit') {
         // The kit is built in the browser like everything else here, but it
         // fetches the selected font files first so the document opens offline.
         // Loaded on demand: the template and the font fetcher cost nothing to
@@ -503,10 +529,10 @@ export default function useExportRunner() {
   // second window and send a second request. The ref is set synchronously, so
   // the second call sees it at once; state would not be updated yet.
   const exporting = useRef(false)
-  const run = async (formatId, { projectId } = {}) => {
+  const run = async (formatId, { projectId, theme } = {}) => {
     if (exporting.current) return { status: 'busy' }
     exporting.current = true
-    try { return await runExport(formatId, projectId) } finally { exporting.current = false }
+    try { return await runExport(formatId, projectId, theme) } finally { exporting.current = false }
   }
 
   // Copy a Code file: the same text the download carries (with the credit
