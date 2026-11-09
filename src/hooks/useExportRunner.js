@@ -18,7 +18,7 @@ import { EXPORT_FORMATS } from '../config/exportFormats'
 import { readExportTemplates } from '../config/exportTemplates'
 import { needsNetwork, resolveUpgradeTarget } from '../config/dialogExport'
 import { requestThemeExport, printInWindow } from '../utils/exportThemeRequest'
-import { themedFile, themedFileIsPro } from '../config/exportThemePicker'
+import { themedFile, themedFileIsPro, themedZipName } from '../config/exportThemePicker'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 import { formatFileName } from '../utils/exportFileName'
 
@@ -362,7 +362,7 @@ export default function useExportRunner() {
     let opened = false
     try {
       if (themed) {
-        // A themed file: the server builds it in the chosen theme. A zip is saved under the server's name; a print row is written
+        // A themed file: the server builds it in the chosen theme. A zip is saved under the name the dialog lists (themedZipName); a print row is written
         // into the reserved window and printed from here (utils/exportThemeRequest.js), never opened from a blob.
         activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
         setStage(themed.format === 'pdf' ? 'document' : 'building')
@@ -371,7 +371,7 @@ export default function useExportRunner() {
         if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
         if (answer.status !== 'ok') throw new Error(answer.line)
         if (answer.zip) {
-          savedFile = download(answer.zip, answer.name)
+          savedFile = download(answer.zip, themedZipName(fileProject, format, theme) || answer.name)
         } else {
           const file = formatFileName(fileProject, format, { saved: true })
           opened = printInWindow(printWin, answer.html, { title: formatFileName(fileProject, format).replace(/\.pdf$/, '') })

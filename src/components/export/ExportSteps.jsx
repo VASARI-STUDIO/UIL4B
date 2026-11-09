@@ -19,7 +19,7 @@ import KitIdentityFields from '../KitIdentityFields'
 import BrandLogoField from '../BrandLogoField'
 import ExportFreePreview from './ExportFreePreview'
 import ExportThemeRow, { ThemeStage } from './ExportThemeRow'
-import { pickerTheme, themedFile, themedFileIsPro, themeLines } from '../../config/exportThemePicker'
+import { GUIDELINES_PAGES, UI_KIT_PAGES, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
 
 // The main column of the Export dialog (Preview, File, Layout, Details) and the
 // dock under it. Everything here follows the category and file the rail and the
@@ -28,16 +28,16 @@ import { pickerTheme, themedFile, themedFileIsPro, themeLines } from '../../conf
 // What each file is called, what it is, and what the button says. Keyed by
 // format id, so the book's PDF and the slides' PDF each keep their own sentence.
 const FILE_COPY = {
-  book: { label: 'PDF', blurb: 'A4 pages, ready to save as PDF. Text stays sharp at any size.', action: 'Export PDF' },
+  book: { label: 'PDF', blurb: 'The brand book as a print document, in light and dark. It opens in a print window: choose Save as PDF there.', action: 'Export PDF' },
   'book-png': { label: 'PNG pages', blurb: '2K page images, 1448 by 2048 px, in one zip.', action: 'Export PNG pages' },
-  'book-html': { label: 'HTML', blurb: 'Opens offline in any browser.', action: 'Export HTML' },
-  guidelines: { label: 'PDF', blurb: 'A 16:9 deck, ready to present or print.', action: 'Export PDF' },
-  'guidelines-html': { label: 'HTML', blurb: 'Opens offline in any browser.', action: 'Export HTML' },
+  'book-html': { label: 'HTML', blurb: 'The brand book as a site, in light and dark, in one zip. It opens offline.', action: 'Export HTML' },
+  guidelines: { label: 'PDF', blurb: `The ${GUIDELINES_PAGES}-page brand guidelines as a print document. It opens in a print window: choose Save as PDF there.`, action: 'Export PDF' },
+  'guidelines-html': { label: 'HTML', blurb: `The ${GUIDELINES_PAGES} guidelines pages as HTML, in one zip. They open offline.`, action: 'Export HTML' },
   html: { label: 'HTML', blurb: 'An A4 booklet. Prints to PDF from your browser.', action: 'Export style guide' },
   png: { label: 'PNG', blurb: 'One A4 sheet at 2x, for decks and tickets.', action: 'Export style guide' },
   jpeg: { label: 'JPEG', blurb: 'The same sheet, smaller file.', action: 'Export style guide' },
   md: { label: 'Markdown', blurb: 'For Notion or Google Docs.', action: 'Export style guide' },
-  kit: { label: 'HTML', blurb: 'One HTML file. Opens offline and carries its CSS, JSON and fonts.', action: 'Export UI kit' },
+  kit: { label: 'ZIP', blurb: `The ${UI_KIT_PAGES}-page UI kit as print-ready HTML, with a code package: CSS, JSON, Tailwind and an example page. In one zip.`, action: 'Export UI kit' },
   css: { label: 'CSS stylesheet', blurb: 'Custom properties for your palette, tints, semantic colours and type. Drop it into any site.', action: 'Export CSS' },
   json: { label: 'JSON', blurb: 'The same tokens in the W3C Design Tokens format, for token pipelines.', action: 'Export JSON' },
   tailwind: { label: 'Tailwind theme', blurb: 'A Tailwind v4 @theme file. Import it after Tailwind and your colours, fonts and type sizes become utilities.', action: 'Export Tailwind theme' },
@@ -176,7 +176,7 @@ function Manifest({ rows, file, folded }) {
       <ul className="xd-man-rows" id={rowsId} hidden={!shown}>
         {rows.map((r) => (
           <li key={r.id} className="xd-man-row" aria-current={r.id === file ? 'true' : undefined}>
-            <span className="xd-man-n">{r.saved}</span>
+            <span className={`xd-man-n${r.plain ? ' is-plain' : ''}`}>{r.saved}</span>
             <span className="xd-man-d">{r.blurb}</span>
           </li>
         ))}
@@ -195,7 +195,12 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
   const files = cat.files.map((id) => ({ id, ...copyOf(id) }))
   // A Pro kit is filed under its identity name when it has one (uiKitExport.js).
   const identityName = isPro ? readIdentity(design).name : ''
-  const rows = files.map((f) => ({ ...f, saved: formatFileName(f.id === 'kit' && identityName ? identityName : fileProject, f.id) }))
+  // A themed zip is named for its theme; a themed PDF is not saved at all, it opens as a print document, so it carries no file name.
+  const rows = files.map((f) => {
+    if (!themedFile(f.id)) return { ...f, saved: formatFileName(f.id === 'kit' && identityName ? identityName : fileProject, f.id) }
+    const zip = themedZipName(fileProject, f.id, theme)
+    return zip ? { ...f, saved: zip } : { ...f, saved: 'Print document', plain: true }
+  })
   const themed = Boolean(themedFile(file))
   const shown = pickerTheme(peek || theme)
   const showLayout = !themed && Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { UI_KIT_PAGES, GUIDELINES_PAGES, PICKER_THEMES, defaultThemeId, themedFile, themedFileIsPro } from '../../src/config/exportThemePicker.js'
+import { UI_KIT_PAGES, GUIDELINES_PAGES, PICKER_THEMES, defaultThemeId, themedFile, themedFileIsPro, themedZipName } from '../../src/config/exportThemePicker.js'
 import { requestThemeExport, isPrintSafe, zipNameFrom, ERROR_LINES } from '../../src/utils/exportThemeRequest.js'
 import { UIKIT_PAGES, GUIDE_PAGES } from '../../api/_lib/exportThemes/engine/pages.js'
 import { PRINT_CSP } from '../../api/_lib/exportThemeRoute.js'
@@ -61,4 +61,11 @@ test('a print document is written into a window only when it holds no script and
   assert.equal(isPrintSafe(doc.replace('</body>', '<script>1</script></body>')), false)
   assert.equal(isPrintSafe(doc.replace('<body>', '<body onload="x()">')), false)
   assert.equal(isPrintSafe(doc.replace(/<meta[^>]*>/, '')), false)
+})
+
+test('a themed zip is named for the project and the theme, and the PDF rows and the PNG pages have no themed name', () => {
+  assert.equal(themedZipName('Lumen Studio', 'kit', '04-standards'), 'lumen-studio-ui-kit-04-standards.zip')
+  assert.equal(themedZipName('Lumen', 'book-html', '01-presentation'), 'lumen-brand-book-01-presentation.zip')
+  assert.equal(themedZipName('', 'guidelines-html', '07-spec'), 'untitled-brand-guidelines-07-spec.zip')
+  for (const id of ['book', 'guidelines', 'book-png', 'css']) assert.equal(themedZipName('Lumen', id, '04-standards'), '', id)
 })

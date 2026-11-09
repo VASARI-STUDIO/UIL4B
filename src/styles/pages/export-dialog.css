@@ -84,6 +84,7 @@
 .xd-man-row[aria-current="true"]{background:var(--bg-2)}
 .xd-man-row[aria-current="true"]::before{content:"";position:absolute;left:0;top:var(--s-2);bottom:var(--s-2);width:2px;background:var(--accent-fill)}
 .xd-man-n{font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;line-height:1.4;color:var(--t0);overflow-wrap:anywhere}
+.xd-man-n.is-plain{font-family:inherit}
 .xd-man-d{font-size:var(--fs-caption);line-height:1.5;color:var(--t1);max-width:68ch}
 .xd-man-t:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 .xd-man-t:active{background:var(--bg-2)}

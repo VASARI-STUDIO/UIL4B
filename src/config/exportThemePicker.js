@@ -3,6 +3,7 @@
 // drawn from, the page shape, and the picture paths. No theme code is here: the previews are pictures of the sample brands' pages.
 
 import { EXPORT_THEMES, isThemeExportPro } from '../data/exportThemes.js'
+import { fileName } from '../utils/exportFileName.js'
 
 // Page counts of the two documents, checked against the engine's page lists by tests/unit/export-theme-picker.test.js.
 export const UI_KIT_PAGES = 25
@@ -40,6 +41,14 @@ export const THEMED_FILES = Object.freeze({
   'guidelines-html': Object.freeze({ row: 'slides', format: 'html' }),
 })
 export const themedFile = (fileId) => (Object.hasOwn(THEMED_FILES, fileId) ? THEMED_FILES[fileId] : null)
+
+// The zips a themed file downloads as, by file id. The PDF rows save nothing: the document opens in the print window.
+const THEMED_ZIPS = Object.freeze({ kit: 'ui-kit', 'book-html': 'brand-book', 'guidelines-html': 'brand-guidelines' })
+
+/** `lumen-ui-kit-04-standards.zip` from ('Lumen', 'kit', '04-standards'), or '' for a file that is not a themed zip. */
+export const themedZipName = (project, fileId, themeId) => (
+  Object.hasOwn(THEMED_ZIPS, fileId) ? fileName(project, `${THEMED_ZIPS[fileId]}-${themeId}`, 'zip') : ''
+)
 
 /** True when this file in this theme needs Pro (the same call the server makes). */
 export const themedFileIsPro = (fileId, themeId) => {
