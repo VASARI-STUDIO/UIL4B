@@ -54,7 +54,13 @@ function DiscoverColumn({ signedOut }) {
   const pro = useProLibrary('palettes')
   const picks = useMemo(() => {
     const rows = pro.items ?? LIBRARY_PALETTE_ROWS
-    return newestPalettes(signedOut ? rows.filter((r) => !isStub(r)) : rows, 4)
+    if (!signedOut) return newestPalettes(rows, 4)
+    // Signed out: four open palettes. The dated rows are all Pro, so after any dated open ones the library's
+    // own order fills in, latest appended first.
+    const open = rows.filter((r) => !isStub(r))
+    const dated = newestPalettes(open, 4)
+    const rest = open.filter((r) => !dated.includes(r)).reverse()
+    return [...dated, ...rest].slice(0, 4)
   }, [pro.items, signedOut])
   return (
     <div className="db-col">
