@@ -84,6 +84,7 @@
 
 .pricing .pa-hpl .hpl-free > .hpl-amount { margin-top: 24px; font-variant-numeric: tabular-nums; }
 .pricing .pa-freenote { max-width: 34ch; line-height: 1.5; text-wrap: pretty; }
+.pricing .hpl-freefoot p { line-height: 1.5; }
 /* Free's ticks are quiet ink; the colour is Pro's. */
 .pricing .pa-hpl .hpl-freelist li:not(.hpl-minus) > svg { stroke: rgba(var(--sp-ink-rgb), .56); }
 
