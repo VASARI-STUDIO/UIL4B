@@ -488,7 +488,7 @@ test('the export engine loads bookRaster only on demand, behind the same Pro che
   assert.match(runner, /formatFileName\(fileProject, 'book-png'\)/)
   // The PNG branch sits after the plan gate and the account gate in runExport.
   const raster = runner.indexOf("await import('../utils/bookRaster')")
-  const proCheck = runner.indexOf('if (fmt.pro && !isPro)')
+  const proCheck = runner.indexOf('if (needsPro && !isPro)')
   const account = runner.indexOf('requireExportAccount(reason)')
   assert.ok(raster > 0 && runner.indexOf("format === 'book-png'") > 0)
   assert.ok(proCheck > 0 && proCheck < raster, 'the Pro check must come before the PNG is drawn')

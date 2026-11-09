@@ -238,7 +238,7 @@ test('the runner keeps the gate order: Pro check, offline, account gate, plan wa
     return i
   }
   const order = [
-    at('if (fmt.pro && !isPro) return goUpgrade'),
+    at('if (needsPro && !isPro) return goUpgrade'),
     at('if (needsNetwork(format) && isOffline())'),
     at('await requireExportAccount(reason)'),
     at('await waitForPlan()'),
@@ -257,7 +257,7 @@ test('the runner moved the gate tables over unchanged, and asks the server for t
   assert.match(runner, /template: chosenTemplates\[documentKey\]/)
   // Only the PDF reserves a print window; the HTML is saved as a file.
   assert.match(runner, /reservePrintWindow\(\) : null/)
-  assert.match(runner, /proDocument && !htmlDocument \? reservePrintWindow/)
+  assert.match(runner, /\(proDocument && !htmlDocument\) \|\| \(themed && themed\.format === 'pdf'\) \? reservePrintWindow/)
 })
 
 test('the runner exports one hook with the contract names, and copy() never runs the account gate', () => {

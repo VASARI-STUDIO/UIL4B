@@ -239,7 +239,8 @@ test('the export dialog and the pricing page read ONE table', () => {
   const code = stripComments(RUNNER)
   assert.match(code, /const fmt = EXPORT_FORMATS\.find\(\(f\) => f\.id === format\)/,
     'the export entitlement gate no longer reads the shared table')
-  assert.match(code, /fmt\.pro && !isPro/, 'the export entitlement gate no longer reads the shared table')
+  assert.match(code, /Boolean\(fmt\.pro\)/, 'the export entitlement gate no longer reads the shared table')
+  assert.match(code, /needsPro && !isPro/, 'the export entitlement gate no longer reads the shared table')
 
   // The dialog's rows (src/config/dialogExport.js) only group ids; every one must be a
   // format of the shared table, or the dialog offers a file the table has never heard of.
