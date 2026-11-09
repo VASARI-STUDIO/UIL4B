@@ -256,7 +256,12 @@ test('nothing shipped still links to a retired Create URL', () => {
   // Sidebar/search registry, retired separately), and App.jsx names /color/ui
   // because it is a redirect SOURCE.
   const roots = ['src', 'public', 'api']
-  const skip = new Set([path.join('src', 'data', 'legacyRoutes.js')])
+  // The 10-inuse guidelines module strips a declaration with the regex literal
+  // /box-shadow[^;]*;?/, which reads like a path to this scan but is no link.
+  const skip = new Set([
+    path.join('src', 'data', 'legacyRoutes.js'),
+    path.join('api', '_lib', 'exportThemes', 'themes', '10-inuse', 'guidelines.js'),
+  ])
   const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const full = path.join(dir, e.name)
     if (e.isDirectory()) return walk(full)
@@ -278,8 +283,9 @@ test('nothing shipped still links to a retired Create URL', () => {
         //    right, so nothing is lost by requiring an exact segment match;
         //  · a preceding word char or hyphen means a deeper segment, so /color
         //    does NOT match inside /create/color — EXCEPT after `.com`, which
-        //    is an absolute URL and exactly the case llms.txt got wrong.
-        const re = new RegExp(`(?<=\\.com|[^\\w-]|^)${old.replace(/[-/]/g, '\\$&')}(?![\\w/-])`)
+        //    is an absolute URL and exactly the case llms.txt got wrong;
+        //  · a preceding dot is a relative module path (./color.js), not a link.
+        const re = new RegExp(`(?<=\\.com|[^\\w.-]|^)${old.replace(/[-/]/g, '\\$&')}(?![\\w/-])`)
         if (re.test(body)) offences.push(`${rel} → ${old}`)
       }
     }

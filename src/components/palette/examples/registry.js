@@ -20,7 +20,7 @@ const LOADERS = {
   product: () => import('./OrraWorkroom.jsx'),
   trail: () => import('./Ridgeline.jsx'),
   studio: () => import('./HaleOkoro.jsx'),
-  card: () => import('./Tally.jsx'),
+  card: () => import('./Tenner.jsx'),
 }
 
 export const hasExample = (id) => Object.hasOwn(LOADERS, id)
