@@ -402,7 +402,7 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
   .ied-tn{height:44px;padding:0 16px;font-size:14px}
 
   /* the stage card */
-  .ied-stagecol{flex:none;display:block;overflow:hidden;margin:0 16px 8px;padding:var(--ied-stz) 0 0;border-radius:16px}
+  .ied-stagecol{flex:none;display:block;overflow:hidden;isolation:isolate;margin:0 16px 8px;padding:var(--ied-stz) 0 0;border-radius:16px}
   .ied-stagecol[data-g="page"]{background:var(--ied-g-page)}
   .ied-stagecol[data-g="light"]{background:var(--ied-g-light);--ied-ink:#18181B;--ied-m1:rgba(24,24,27,.62);--ied-m2:rgba(24,24,27,.72);--ied-ring:rgba(24,24,27,.28);--ied-field:rgba(24,24,27,.08);--ied-cell:rgba(24,24,27,.07);--ied-cell-s:rgba(24,24,27,.16)}
   .ied-stagecol[data-g="dark"]{background:var(--ied-g-dark);--ied-ink:#EFEEEA;--ied-m1:rgba(239,238,234,.62);--ied-m2:rgba(239,238,234,.68);--ied-ring:rgba(239,238,234,.28);--ied-field:rgba(239,238,234,.10);--ied-cell:rgba(239,238,234,.07);--ied-cell-s:rgba(239,238,234,.18)}
@@ -581,6 +581,10 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
   .ied-tile .ied-line-art{grid-row:1 / span 2;margin:0;width:32px;height:32px}
   .ied-tile .ied-line-art svg{width:32px;height:32px}
   .ied-similar-row .ied-sim:nth-child(6){display:none}
+  .ied-rot{flex-wrap:wrap}
+  .ied-sizes-head{white-space:nowrap}
+  .ied-sizes-pro{display:none}
+  .ied-ft .dl-main{padding:0 8px}
   .ied-foot-row[data-sv="true"] .ied-sv{flex:none;width:44px;padding:0}
   .ied-foot-row[data-sv="true"] .ied-sv .nm,.ied-foot-row[data-sv="true"] .ied-sv .hv{display:none}
   .ied-fe-sv{display:flex;gap:8px;margin:0 0 8px;font-size:13px;line-height:20px;color:var(--ied-ink)}
@@ -592,7 +596,7 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
   .ied-pv .ied-tn{width:96px;padding:0 6px;white-space:normal;text-align:center}
   .ied:has(.ied-pv:not(.ied-vh)) .ied-sizes-head{display:none}
   .ied-ft .dl-more{display:none}
-  .ied-ft .dl-main{border-radius:12px}
+  .ied-ft .dl-main{width:76px;padding:0 8px;border-radius:12px}
   .ied-sv{flex:1 1 0;width:auto;min-width:0;padding:0 8px}
   .ied-sv .nm{display:inline}
   .ied-foot-pill{flex:none}
