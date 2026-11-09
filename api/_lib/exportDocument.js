@@ -196,13 +196,16 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
   const body = req.body && typeof req.body === 'object' ? req.body : {}
 
   // A request that names a theme or a row is a themed export: api/_lib/exportThemeRoute.js owns its allowlist, gate and
-  // limits. The session is already verified; the plan is read the same way as below.
+  // limits. The session is already verified. A theme, row or format outside its table is refused before the plan is read, so it
+  // costs no account read; the plan gate itself runs after the plan read, as below.
   if (body.theme !== undefined || body.row !== undefined) {
+    const { serveThemeExport, themeRequestProblem } = await import('./exportThemeRoute.js')
+    const problem = themeRequestProblem(body)
+    if (problem) return res.status(400).json(problem)
     let themePlan
     try { themePlan = await planOf(decoded, readUser) } catch {
       return res.status(500).json({ error: 'Could not check your plan' })
     }
-    const { serveThemeExport } = await import('./exportThemeRoute.js')
     return serveThemeExport(req, res, { body, decoded, plan: themePlan, consume, engine })
   }
 

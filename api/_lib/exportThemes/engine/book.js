@@ -157,11 +157,25 @@ export function bookSlot(ctx) {
   return `<span class="bk-for-light">${ctx.logo.html('colour', { width: 132 })}</span><span class="bk-for-dark">${ctx.logo.html('reversed', { width: 132 })}</span>`;
 }
 
-export function bookMarkup(ctx, T, { board = false, scripts = true } = {}) {
+// The print edition leaves out the downloads section, the last one: every link in it points into the kit folder, which a printed
+// or stand-alone document does not carry. Cuts at the section's opening tag, and refuses to cut if another section follows it.
+function withoutDownloads(body) {
+  const open = body.search(/<section[^>]*\bid="downloads"/);
+  if (open < 0) throw new Error('brandBook is missing section #downloads');
+  const after = body.slice(open + 1);
+  for (const s of BOOK_SECTIONS) {
+    if (s.id !== 'downloads' && new RegExp(`<section[^>]*\\bid="${s.id}"`).test(after)) throw new Error('the downloads section is not last');
+  }
+  return body.slice(0, open);
+}
+
+// print: the page for printing and stand-alone viewing. No script, and no link into the kit folder.
+export function bookMarkup(ctx, T, { board = false, scripts = true, print = false } = {}) {
   const B = ctx.brand;
-  const body = T.brandBook(ctx);
+  let body = T.brandBook(ctx);
   for (const s of BOOK_SECTIONS) if (!new RegExp(`<section[^>]*\\bid="${s.id}"`).test(body)) throw new Error(`brandBook is missing section #${s.id}`);
-  const nav = BOOK_SECTIONS.map((s, i) => `<li><a href="#${s.id}" data-sec="${s.id}"><span class="bk-n">${i + 1}</span>${esc(s.title)}</a></li>`).join('');
+  if (print) body = withoutDownloads(body);
+  const nav = BOOK_SECTIONS.filter((s) => !print || s.id !== 'downloads').map((s, i) => `<li><a href="#${s.id}" data-sec="${s.id}"><span class="bk-n">${i + 1}</span>${esc(s.title)}</a></li>`).join('');
   const mode = (m, label) => `<button type="button" data-mode="${m}" aria-pressed="${m === 'light'}">${label}</button>`;
   return `<div class="bk${board ? ' bk--board' : ''}">
 <a class="bk-skip" href="#main">Skip to content</a>
@@ -176,7 +190,7 @@ ${body}
 <footer class="bk-foot"><span>${esc(B.name)} brand book</span><span>${esc(ctx.versionLine)}</span></footer>
 </main>
 <div class="bk-live" id="bk-live" role="status" aria-live="polite" aria-atomic="true"></div>
-</div>${scripts ? `\n<script>${CLIENT_JS}</script>` : ''}`;
+</div>${scripts && !print ? `\n<script>${CLIENT_JS}</script>` : ''}`;
 }
 
 export function bookCssAll(ctx, T) {
@@ -184,13 +198,15 @@ export function bookCssAll(ctx, T) {
 }
 
 // the full document: fonts embedded as base64 woff2, all css inline. Opens from disk with no network.
-export function bookDoc(ctx, T) {
+// print: light only, no script (neither the colour-mode script in the head nor the client script), no downloads section.
+export function bookDoc(ctx, T, { print = false } = {}) {
   const faces = fontFaceCss(ctx, (f) => `data:font/woff2;base64,${Buffer.from(ctx.loaders.fontFile(f.stem, 'woff2')).toString('base64')}`, chromeFaces(T));
+  const modeScript = print ? '' : `
+<script>(function(){var m=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',m?'dark':'light');})();</script>`;
   return finishText(`<!doctype html>
 <html lang="en-AU" data-theme="light">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark">
-<title>${esc(ctx.brand.name)} brand book</title>
-<script>(function(){var m=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',m?'dark':'light');})();</script>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="${print ? 'light' : 'light dark'}">
+<title>${esc(ctx.brand.name)} brand book</title>${modeScript}
 <style>
 ${faces}
 *,*::before,*::after{box-sizing:border-box}
@@ -201,18 +217,30 @@ ${componentsCss(ctx)}
 ${bookCssAll(ctx, T)}
 </style></head>
 <body>
-${bookMarkup(ctx, T)}
+${bookMarkup(ctx, T, { print })}
 </body></html>
 `, 'index.html', ctx);
+}
+
+// ctx.book and ctx.mode for a book built from kit. fontUrl({ stem }) is where a theme's extra face declared in its own CSS loads from
+// (the print edition: a data URL). The site has none: its font files are not beside index.html.
+function bookContext(ctx, T, { kit, kitName, zipSize, outside, fontUrl }) {
+  const listing = kitListing(ctx, T, kit, { outside });
+  ctx.book = bookData(ctx, listing, { name: `${kitName}.zip`, size: zipSize });
+  ctx.mode = { kind: 'files', photoBase: ctx.book.photosBase, fontBase: '', ...(fontUrl ? { fontUrl } : {}) };
+}
+
+// The brand book as one stand-alone HTML string to print: fonts as data URLs, no script, no link into the kit folder.
+export function bookPrintDoc(ctx, T, { kit, kitName, fontUrl }) {
+  bookContext(ctx, T, { kit, kitName, zipSize: 0, outside: false, fontUrl });
+  return bookDoc(ctx, T, { print: true });
 }
 
 // The brand book as a file map: index.html plus assets/ (the brand kit's files and its zip, by relative link).
 // kit is the kit's file map, kitName its folder name, zip the zipped kit as a Buffer. outside: false when the PNG and PDF files made
 // outside the engine are not in that zip (the route's), so the book does not list them.
 export function bookFiles(ctx, T, { kit, kitName, zip, outside = true }) {
-  const listing = kitListing(ctx, T, kit, { outside });
-  ctx.book = bookData(ctx, listing, { name: `${kitName}.zip`, size: zip.length });
-  ctx.mode = { kind: 'files', photoBase: ctx.book.photosBase, fontBase: '' };
+  bookContext(ctx, T, { kit, kitName, zipSize: zip.length, outside });
   const files = { 'index.html': bookDoc(ctx, T), [`assets/${kitName}.zip`]: zip };
   for (const [rel, data] of Object.entries(kit)) files[`assets/brand-kit/${rel}`] = data;
   return files;

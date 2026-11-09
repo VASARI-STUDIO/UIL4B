@@ -212,7 +212,7 @@ const own = {
   digital(ctx) {
     const B = ctx.brand, S = B.ui.screen.content, ui = ctx.ui, F = S.form;
     const list = `<div class="b-site__l"><h3 class="disp b-site__h">${A(B.ui.screen.title)}</h3>${ui.deliveryRows(5)}</div>`;
-    const form = `<form class="b-site__f" onsubmit="return false"><h3 class="disp b-site__t">${A(F.title)}</h3>${ui.field({ id: 'sd-name', label: F.pickup, value: F.pickupValue })}${ui.field({ id: 'sd-time', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[0] })}<div class="b-site__tot"><span>${A(S.paidLabel)}</span><b class="num">${A(S.paid)}</b></div>${ui.btn(F.book, { block: true })}</form>`;
+    const form = `<div class="b-site__f"><h3 class="disp b-site__t">${A(F.title)}</h3>${ui.field({ id: 'sd-name', label: F.pickup, value: F.pickupValue })}${ui.field({ id: 'sd-time', label: F.size, kind: 'select', options: F.sizes, value: F.sizes[0] })}<div class="b-site__tot"><span>${A(S.paidLabel)}</span><b class="num">${A(S.paid)}</b></div>${ui.btn(F.book, { block: true })}</div>`;
     const bar = `<nav class="ui-topbar" aria-label="Main"><span class="b-bar__logo">${lg(ctx, 'horizontal', 140, { width: 140, label: 'Logo' })}</span><div class="ui-topbar__links">${ui.links(S.example.links, 0)}</div>${ui.btn(F.book, { size: 'sm' })}</nav>`;
     const win = `<div class="ui b-win"><div class="b-win__url"><span>${A(B.applications.site.url)}</span></div>${bar}<div class="b-win__body">${list}${form}</div></div>`;
     return std(ctx, 'digital', `<div class="b-fill">${win}</div>`);

@@ -12,11 +12,16 @@
 //  5. THE ZIP IS REAL: it opens, and holds the kit page and the code package.
 //     Break: leave 'ui-kit.html' out of the file map.
 //  6. THE TABLE MATCHES THE ENGINE: ids, names and the free tier in src/data/exportThemes.js equal each theme's own meta.
+//  7. PRINT HTML IS INERT AND STANDS ALONE: in every theme, the book and the slides print rows hold no script, no inline handler,
+//     no link to a file outside the document, fonts as data URLs, and the CSP meta first in the head.
+//     Break: leave the CSP meta out of withCsp, or build the print book with bookDoc(ctx, T) instead of bookPrintDoc.
+//  8. A BAD THEME COSTS NO ACCOUNT READ, AND AN OVERSIZE Content-Length COSTS NO LIMITER WRITE.
+//     Break: move themeRequestProblem below planOf in exportDocument.js; drop declaredLength in exportThemeRoute.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
-import { MAX_THEME_BODY_CHARS } from '../../api/_lib/exportThemeRoute.js'
+import { MAX_THEME_BODY_CHARS, PRINT_CSP } from '../../api/_lib/exportThemeRoute.js'
 import { EXPORT_THEMES, THEME_ROW_FORMATS, FREE_UI_KIT_THEMES, isThemeExportPro } from '../../src/data/exportThemes.js'
 
 const DESIGN = {
@@ -92,6 +97,32 @@ test('a body over the cap is a 413, after the plan check', async () => {
   assert.equal((await ask('tok-free', { ...huge, theme: '01-presentation' })).code, 403)
 })
 
+test('an oversize Content-Length is a 413 before the limiter, after the plan check', async () => {
+  let consumed = 0
+  const consume = async () => { consumed++; return { allowed: true } }
+  const ask2 = async (token, length, over) => {
+    const res = fakeRes()
+    await serveExportDocument({ headers: { authorization: `Bearer ${token}`, 'content-length': length }, body: body(over) }, res, deps({ consume }))
+    return res
+  }
+  assert.equal((await ask2('tok-pro', String(MAX_THEME_BODY_CHARS + 1))).code, 413)
+  assert.equal(consumed, 0, 'the limiter was not touched')
+  assert.equal((await ask2('tok-free', String(MAX_THEME_BODY_CHARS + 1), { theme: '01-presentation' })).code, 403)
+  assert.equal((await ask2('tok-pro', String(MAX_THEME_BODY_CHARS))).code, 200)
+  assert.equal((await ask2('tok-pro', 'not a number')).code, 200)
+})
+
+test('a theme, row or format outside the table is refused before the plan is read', async () => {
+  let reads = 0
+  const readUser = async (uid) => { reads++; return USERS[uid] }
+  for (const over of [{ theme: 'nope' }, { row: 'brand-kit' }, { format: 'png' }]) {
+    assert.equal((await ask('tok-free', body(over), { readUser })).code, 400)
+  }
+  assert.equal(reads, 0)
+  assert.equal((await ask('tok-free', body({ theme: '01-presentation' }), { readUser })).code, 403)
+  assert.equal(reads, 1, 'the plan gate still reads the plan')
+})
+
 test('a limiter that refuses is a 429 with Retry-After', async () => {
   const res = await ask('tok-pro', body(), { consume: async () => ({ allowed: false, retryAfter: 42 }) })
   assert.equal(res.code, 429)
@@ -152,6 +183,42 @@ test('the brand book: print HTML and the site zip, with the kit named from the s
   assert.match(site.headers['Content-Disposition'], /^attachment; filename="p-[a-z0-9-]+-brand-book-04-standards\.zip"$/)
   const names = Object.keys((await JSZip.loadAsync(site.buffer)).files)
   assert.ok(names.some((n) => /\/assets\/p-[a-z0-9-]+-brand-kit\.zip$/.test(n)), names.filter((n) => n.includes('.zip')).join())
+})
+
+// A print document is shown in the browser's print window, so it must hold nothing that runs or loads: checks on the strings,
+// over every theme and both print rows, with a project name that tries to break out of its text.
+test('print HTML, every theme: no script, no handler, no outside link, fonts as data URLs, the CSP meta first in the head', async () => {
+  for (const theme of EXPORT_THEMES.map((t) => t.id)) {
+    for (const row of ['book', 'slides']) {
+      const res = await ask('tok-pro', body({ theme, row, format: 'pdf', projectName: '"><script>alert(1)</script> <img src=x onerror=alert(2)>' }))
+      const label = `${theme} ${row}`
+      assert.equal(res.code, 200, label)
+      const html = res.body.html
+      assert.match(html, /^<!doctype html>/i, label)
+      assert.ok(!/<script/i.test(html), `${label}: script`)
+      assert.ok(!/\son[a-z]+\s*=/i.test(html), `${label}: inline handler`)
+      assert.ok(!/<form/i.test(html), `${label}: form`)
+      assert.ok(!/assets\//.test(html), `${label}: reference into assets/`)
+      assert.ok(!/@import|<link|<iframe|<object|<embed|<base|<img/i.test(html), `${label}: element or rule that loads`)
+      assert.ok(!/(?:src|href|action|poster)\s*=\s*(?!["']?(?:#|data:))/i.test(html), `${label}: link or source that is not a fragment or a data URL`)
+      assert.ok(!/url\(\s*(?!["']?(?:#|data:))/i.test(html), `${label}: css url() that is not a fragment or a data URL`)
+      assert.match(html, /data:font\/woff2;base64,/, label)
+      assert.ok(!/url\([^)]*\.woff2/.test(html), `${label}: font by file name`)
+      const head = html.slice(html.indexOf('<head>'))
+      assert.ok(head.startsWith(`<head><meta http-equiv="Content-Security-Policy" content="${PRINT_CSP}">`), `${label}: CSP meta first in the head`)
+      assert.equal(html.match(/Content-Security-Policy/g).length, 1, label)
+    }
+  }
+  assert.equal(PRINT_CSP, "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'")
+})
+
+test('the book print edition leaves out the downloads section; the site zip keeps it, with its script', async () => {
+  const pdf = (await ask('tok-pro', body({ row: 'book', format: 'pdf' }))).body.html
+  assert.ok(!/id="downloads"|href="#downloads"/.test(pdf))
+  const zip = await JSZip.loadAsync((await ask('tok-pro', body({ row: 'book', format: 'html' }))).buffer)
+  const index = await zip.file(/\/index\.html$/)[0].async('string')
+  assert.match(index, /id="downloads"/)
+  assert.match(index, /<script>/)
 })
 
 test('the data table matches the themes: ids, names and the free tier', async () => {
