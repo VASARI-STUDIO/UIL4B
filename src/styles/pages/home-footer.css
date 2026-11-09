@@ -299,10 +299,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) :is(.hm-close-cta, .hm-close-ghost, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
-  html:not([data-reduced-motion="false"]) .hm-close-cta:active, .hm-close-ghost:active { transform: none; }
+  html:not([data-reduced-motion="false"]) :is(.hm-close-cta, .hm-close-ghost):active { transform: none; }
 }
 html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
-html[data-reduced-motion="true"] .hm-close-cta:active, .hm-close-ghost:active { transform: none; }
+html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost):active { transform: none; }
 
 /* /plans drops the "This page" column, so the headline line has four columns
    instead of five. */
