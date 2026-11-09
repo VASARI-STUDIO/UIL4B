@@ -15,6 +15,8 @@ import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/wor
 import KitSheet, { FailedSheet, GoArrow, LoadingSheet } from '../components/dashboard/KitSheet'
 import { StatusRow, TodayLine } from '../components/dashboard/StatusRow'
 import { OtherProjects, OtherProjectsSkeleton } from '../components/dashboard/OtherProjects'
+import Shelf from '../components/dashboard/Shelf'
+import PlanLine from '../components/dashboard/PlanLine'
 import { exampleKit, kitFromProject } from '../components/dashboard/kit'
 import '../styles/pages/dashboard.css'
 
@@ -168,6 +170,8 @@ export default function Projects() {
             {!signedOut && !resolving && !loadFailed && !loadingList && (
               <OtherProjects others={others} room={!isPro && slots ? Math.max(0, slots.limit - slots.used) : 0} onNew={startNew} />
             )}
+            <Shelf projects={projects} signedOut={signedOut} loading={resolving || loadingList} />
+            <PlanLine loading={resolving || loadingList || planLoading} signedOut={signedOut} isPro={isPro} />
             <div className="db-end" />
           </div>
         </div>
