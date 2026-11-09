@@ -75,8 +75,6 @@ const list = (page) => page.getByRole('listbox', { name: 'Theme' })
 const option = (page, name) => list(page).getByRole('option', { name: new RegExp(`^${name}\\b`) })
 const activeName = (page) => list(page).evaluate((el) => document.getElementById(el.getAttribute('aria-activedescendant'))?.querySelector('.xd-theme-opt-n')?.textContent)
 const optionNames = (page) => list(page).locator('.xd-theme-opt-n').allTextContents()
-const eventsNamed = (page, name) => page.evaluate((wanted) => (window.vaq || [])
-  .filter((e) => e && e[0] === 'event' && e[1] === wanted).map((e) => e[2]), name)
 
 async function openList(page, panel) {
   await change(panel).click()
@@ -185,16 +183,12 @@ test.describe('Free and Pro', () => {
 
 /* ── keyboard ────────────────────────────────────────────────────────────── */
 
-// On a wide window the open list is a popover, and its focus() runs while the popover is still placed hidden, so focus stays on
-// Change and the arrow keys never reach the list (measured: document.activeElement is the Change button with the list visible).
-// On a phone the sheet takes focus. The wide runs are marked test.fail until that is fixed; the day it is, they go red to say remove the mark.
+// On a wide window the open list is a popover and on a phone a sheet; both take focus when they open, so the keys reach the list.
 const WIDTHS = [
-  { name: 'wide', size: { width: 1440, height: 900 }, defect: true },
-  { name: 'phone', size: { width: 390, height: 844 }, defect: false },
+  { name: 'wide', size: { width: 1440, height: 900 } },
+  { name: 'phone', size: { width: 390, height: 844 } },
 ]
-for (const { name: where, size, defect } of WIDTHS) test.describe(`keyboard, ${where}`, () => {
-  test.beforeEach(() => { test.fail(defect, 'app defect: the wide popover list is not focused when it opens, so the keys go to Change') })
-
+for (const { name: where, size } of WIDTHS) test.describe(`keyboard, ${where}`, () => {
   test('Change opens the list on the chosen theme; arrows, Home and End move, Enter keeps it and gives focus back to Change', async ({ page }) => {
     watch(page, 'a keyboard user choosing a theme')
     const panel = await open(page, { plan: 'free', file: 'kit', size })

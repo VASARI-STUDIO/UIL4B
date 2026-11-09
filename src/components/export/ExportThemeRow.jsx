@@ -108,9 +108,14 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
     return () => { window.removeEventListener('resize', place); document.removeEventListener('scroll', place, true) }
   }, [shown, sheet, host])
 
+  // The popover is placed hidden until its position is measured, and a hidden element cannot take focus; the sheet is shown at once.
+  const ready = open && (sheet || Boolean(pos))
+  useEffect(() => {
+    if (ready) list.current?.focus({ preventScroll: true })
+  }, [ready])
+
   useEffect(() => {
     if (!open) return undefined
-    list.current?.focus({ preventScroll: true })
     const away = (e) => {
       if (list.current?.closest('.xd-theme-pop,.xd-theme-sheet')?.contains(e.target) || button.current?.contains(e.target)) return
       shut(false)

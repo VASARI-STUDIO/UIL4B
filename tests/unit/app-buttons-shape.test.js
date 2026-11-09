@@ -64,8 +64,6 @@ const KEEP = {
     'icust-size-cell',
     // a line-style tile is a card: the icon drawn in that style, its name and note under it
     'icust-line-tile',
-    // an export template choice without a thumbnail is a bordered card holding its name and description
-    'exp-tpl-tile',
     // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
     'grd-preset',
     // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair

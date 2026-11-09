@@ -98,7 +98,6 @@ export default function ExportDialog({ onClose, preset, projectId }) {
       if (body) body.scrollTop = 0
     }
   }
-  const onLayout = () => { runner.reset(); setLocalError('') }
   const pickCategory = (typeId, catId) => {
     const c = EXPORT_TYPES.find((t) => t.id === typeId).categories.find((x) => x.id === catId)
     apply({ type: typeId, category: catId, file: lastFile.current[catId] || c.files[0] })
@@ -252,7 +251,6 @@ export default function ExportDialog({ onClose, preset, projectId }) {
                   cat={cat}
                   file={pick.file}
                   onFile={onFile}
-                  onLayout={onLayout}
                   name={name || 'Design System'}
                   fileProject={name}
                   project={project}

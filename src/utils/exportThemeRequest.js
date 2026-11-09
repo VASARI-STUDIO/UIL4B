@@ -28,11 +28,14 @@ const CODE_STATUS = Object.freeze({
   auth_required: 'signed-out',
 })
 
+// Retry-After in whole seconds only: digits and nothing else (not 1e1, 0x10, a sign, a fraction or an HTTP date), else NaN.
+const retryAfterSeconds = (header) => (/^\d+$/.test(String(header ?? '')) ? Number(header) : NaN)
+
 const fail = (code, retryAfter) => {
   let line = ERROR_LINES[code]
   // The one number a fixed line may carry: how long the server asked us to wait, when it said so in whole seconds.
   if (code === 'rate-limited' && Number.isInteger(retryAfter) && retryAfter > 0 && retryAfter <= 600) {
-    line = retryAfter < 90 ? `Too many exports just now. Try again in ${retryAfter} seconds.` : line
+    line = retryAfter < 90 ? `Too many exports just now. Try again in ${retryAfter} ${retryAfter === 1 ? 'second' : 'seconds'}.` : line
   }
   return { status: 'error', code, line }
 }
@@ -62,7 +65,7 @@ export async function requestThemeExport({ theme, row, format, design, projectNa
       if (res.status === 401) return fail('signed-out')
     }
     if (res.status === 413) return fail('too-large')
-    if (res.status === 429) return fail('rate-limited', Number(res.headers?.get?.('Retry-After')))
+    if (res.status === 429) return fail('rate-limited', retryAfterSeconds(res.headers?.get?.('Retry-After')))
     if (!res.ok) {
       const body = await res.json().catch(() => null)
       const code = CODE_STATUS[body?.code]

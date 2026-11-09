@@ -92,7 +92,7 @@
 @media (hover:hover){.xd-man-t:hover{background:var(--hvr)}}
 
 /* Reused pieces, fitted to the column. Their own captions are replaced by the step labels. */
-.xd .exp-switch-label,.xd .exp-tpl-label{display:none}
+.xd .exp-switch-label{display:none}
 .xd .exp-switch{padding:var(--s-1);margin:calc(-1 * var(--s-1))}
 .xd .exp-pill{flex:0 0 auto}
 .xd .exp-logo{padding:0;border-top:0}
@@ -272,5 +272,5 @@ html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-cat,.xd-frame .exp-previ
 .xd-theme-opt-r{display:flex;align-items:center;gap:var(--s-1);flex:none;justify-content:flex-end;font-size:13px;color:var(--t2)}
 @keyframes xd-pop{from{opacity:0;transform:translateY(4px)}}
 @keyframes xd-pop-off{to{opacity:0}}
-@media (prefers-reduced-motion:reduce){.xd-theme-pop,.xd-theme-sheet{animation:none}}
+@media (prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) :is(.xd-theme-pop,.xd-theme-sheet){animation:none}}
 html[data-reduced-motion="true"] :is(.xd-theme-pop,.xd-theme-sheet){animation:none}

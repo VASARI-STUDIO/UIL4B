@@ -79,9 +79,6 @@ async function shownPick(panel) {
   }
 }
 
-/** The name of the layout tile that is chosen. */
-const chosenLayout = (panel) => textOf(checkedIn(panel.getByRole('radiogroup', { name: 'Template' })))
-
 // Criteria 1, 2, 3 and 23: every entry point opens the one popup on its preset.
 //   - Make PillNav's Export open nothing: "the header Export" fails.
 //   - Open the Tint row on the default pick instead of Code > CSS: "the Tint tool row" fails.
@@ -509,24 +506,6 @@ test.describe('what a free account can take', () => {
 const eventsNamed = (page, name) => page.evaluate((wanted) => (window.vaq || [])
   .filter((q) => q[0] === 'event' && q[1].name === wanted)
   .map((q) => q[1].data || null), name)
-
-// Mean absolute difference between neighbouring pixels: high for a sharp picture,
-// low once it is blurred. Same-origin blob images do not taint a canvas.
-const sharpness = (locator) => locator.evaluate((img) => {
-  const c = document.createElement('canvas')
-  c.width = img.naturalWidth
-  c.height = img.naturalHeight
-  const x = c.getContext('2d')
-  x.drawImage(img, 0, 0)
-  const d = x.getImageData(0, 0, c.width, c.height).data
-  let sum = 0
-  let n = 0
-  for (let i = 4; i < d.length; i += 4) {
-    sum += Math.abs(d[i] - d[i - 4]) + Math.abs(d[i + 1] - d[i - 3]) + Math.abs(d[i + 2] - d[i - 2])
-    n += 1
-  }
-  return sum / n
-})
 
 const PRO_CATEGORIES = [
   { name: 'Book', gate: 'design-system-book-export' },

@@ -6,13 +6,11 @@ import { usePrices, useProPrice, formatPrice } from '../../hooks/usePrices'
 import { resolveOffers } from '../../config/planFacts'
 import { PLAN_LADDER } from '../../config/planLadder'
 import { defaultTemplate, liveTemplates, readExportTemplates } from '../../config/exportTemplates'
-import { templateThumb } from '../../utils/exportTemplateThumb'
 import { readLogo } from '../../utils/brandLogo'
 import { readIdentity } from '../../utils/kitIdentity'
 import { formatFileName } from '../../utils/exportFileName'
 import { trialLabel } from '../../utils/kitGalleryPick'
 import ExportFormatSwitch from '../ExportFormatSwitch'
-import ExportTemplatePicker from '../ExportTemplatePicker'
 import ExportProPreview from '../ExportProPreview'
 import ExportProTag from '../ExportProTag'
 import KitIdentityFields from '../KitIdentityFields'
@@ -185,10 +183,10 @@ function Manifest({ rows, file, folded }) {
   )
 }
 
-export default function ExportSteps({ cat, file, onFile, onLayout, name, fileProject = '', project, strip, coming, onRenameState, theme, peek, onTheme, onPeek }) {
+export default function ExportSteps({ cat, file, onFile, name, fileProject = '', project, strip, coming, onRenameState, theme, peek, onTheme, onPeek }) {
   const uid = useId()
   const { isPro, planKnown } = useSubscription()
-  const { design: working, updateDesign } = useProject()
+  const { design: working } = useProject()
   const design = useExportDesign()
   const checking = planKnown === false
   const chosen = readExportTemplates(working)
@@ -264,16 +262,7 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
       {showLayout && (
         <section className="xd-step" aria-labelledby={`${uid}-layout`}>
           <h3 className="xd-step-l" id={`${uid}-layout`}>Layout</h3>
-          {file === 'book-png'
-            ? <p className="xd-note">PNG pages use one layout.</p>
-            : (
-              <ExportTemplatePicker
-                format={cat.layouts}
-                value={chosen[cat.layouts]}
-                onChange={(id) => { updateDesign({ exportTemplates: { [cat.layouts]: id } }); onLayout?.() }}
-                thumbs={templateThumb}
-              />
-            )}
+          <p className="xd-note">PNG pages use one layout.</p>
         </section>
       )}
 
