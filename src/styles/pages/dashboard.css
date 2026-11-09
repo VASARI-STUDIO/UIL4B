@@ -29,7 +29,6 @@
   --ease: cubic-bezier(.23, 1, .32, 1); --db-out: cubic-bezier(.23, 1, .32, 1); --db-in: cubic-bezier(.4, 0, 1, 1);
   --db-gutter: 52px;
   --db-font: 'Geist', 'Geist Fallback', system-ui, sans-serif;
-  --db-mono: 'Geist Mono', ui-monospace, monospace;
   position: relative; isolation: isolate; background: var(--ground); color: var(--ink);
   font-family: var(--db-font); font-size: 15px; line-height: 1.5; overflow-x: clip; min-height: 640px;
   -webkit-font-smoothing: antialiased;
@@ -39,7 +38,7 @@
 .db *, .db *::before, .db *::after { box-sizing: border-box; }
 .db-wrap { padding: 0 var(--db-gutter); }
 .db-in { position: relative; max-width: 1240px; margin: 0 auto; }
-.db-mono { font-family: var(--db-mono); font-variant-numeric: tabular-nums; }
+.db-mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .db-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* focus: the page's own ink ring on every control (the app's default ring is its accent colour) */
@@ -70,7 +69,14 @@
   :hover>.db-arrow--ink{background:rgba(11,12,14,.12)}
 }
 :focus-visible>.db-arrow>.db-arrow-a{transform:rotate(var(--db-r));transition:transform 320ms cubic-bezier(.25,1,.5,1)}
-@media (prefers-reduced-motion:reduce){.db-arrow>.db-arrow-a,:hover>.db-arrow>.db-arrow-a,:focus-visible>.db-arrow>.db-arrow-a{transition:none}}
+:where(html[data-reduced-motion="true"]) .db-arrow>.db-arrow-a,
+:where(html[data-reduced-motion="true"]) :hover>.db-arrow>.db-arrow-a,
+:where(html[data-reduced-motion="true"]) :focus-visible>.db-arrow>.db-arrow-a{transition:none}
+@media (prefers-reduced-motion:reduce){
+  :where(html:not([data-reduced-motion="false"])) .db-arrow>.db-arrow-a,
+  :where(html:not([data-reduced-motion="false"])) :hover>.db-arrow>.db-arrow-a,
+  :where(html:not([data-reduced-motion="false"])) :focus-visible>.db-arrow>.db-arrow-a{transition:none}
+}
 @media (forced-colors:active){.db-ring::before{content:none}}
 /* forced colours: swatches keep their colour (it is the content), surfaces and the ink pill get a visible edge */
 @media (forced-colors:active){
@@ -139,13 +145,15 @@
 .db-plate::after{content:'';position:absolute;inset:0;border-radius:12px;pointer-events:none;z-index:3;box-shadow:inset 0 0 0 1px oklch(1 0 0 / .1);transition:box-shadow 150ms ease}
 .db-plate.l2{background:var(--raised);transition:background-color 150ms ease}
 .db-plate.l2::after{box-shadow:inset 0 0 0 1px transparent}
-.db-plate.pal{display:flex}
-.db-stop{flex:1;display:flex;align-items:flex-end;padding:0 0 12px 12px}
-.db-hex{font-family:'Geist Mono',ui-monospace,monospace;font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
+.db-plate.pal{display:flex;container-type:inline-size}
+.db-stop{flex:1;min-width:0;display:flex;align-items:flex-end;padding:0 0 12px 12px}
+.db-hex{font-family:var(--mono);font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
+/* five stops in a plate narrower than 400px (1200 to 1343 wide): the seven-character labels step down so none is cut */
+@container (max-width:399px){.db-stop{padding-left:8px}.db-stop .db-hex{font-size:12px}}
 .db-plate.sc{padding:24px;display:flex;flex-direction:column;justify-content:space-between;font-family:'Archivo',sans-serif;font-weight:800;color:var(--ink)}
 .db-sch{font-family:'Geist',system-ui,sans-serif;font-weight:400;font-size:14px;line-height:20px;color:var(--t62);letter-spacing:0}
 .db-plate.sc .row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;white-space:nowrap;letter-spacing:-.01em}
-.db-plate.sc .px{flex:none;font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;line-height:20px;font-weight:400;letter-spacing:0;color:var(--t62);font-variant-numeric:tabular-nums}
+.db-plate.sc .px{flex:none;font-family:var(--mono);font-size:13px;line-height:20px;font-weight:400;letter-spacing:0;color:var(--t62);font-variant-numeric:tabular-nums}
 .db-plate.fp{padding:24px;display:flex;flex-direction:column}
 .db-fname{font-size:40px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 .db-fm{margin-top:4px;font-size:14px;line-height:20px;color:var(--t62);font-variant-numeric:tabular-nums}
@@ -179,18 +187,48 @@
 }
 @keyframes db-pop{from{opacity:0;transform:scale(.97)}}
 @keyframes db-fade{from{opacity:0}}
+/* reduced motion: the fades stay, the movement goes. Each rule is written twice, once for the app's own motion setting and once for the OS preference. */
+:where(html[data-reduced-motion="true"]) .db-pop{animation:db-fade 200ms ease-out both}
+:where(html[data-reduced-motion="true"]) .db-go:active,
+:where(html[data-reduced-motion="true"]) .db-ghost:active,
+:where(html[data-reduced-motion="true"]) .db-textbtn:active,
+:where(html[data-reduced-motion="true"]) .db-tl:active,
+:where(html[data-reduced-motion="true"]) .db-part:has(.db-link:active){transform:none}
+:where(html[data-reduced-motion="true"]) .db-textbtn svg{transition:none}
+:where(html[data-reduced-motion="true"]) .db-ring::before{--db-a:140deg;padding:1.5px;transition:opacity 120ms linear}
+:where(html[data-reduced-motion="true"]) .db-ring:hover::before,
+:where(html[data-reduced-motion="true"]) .db-ring:focus-visible::before{transition:opacity 120ms linear}
+:where(html[data-reduced-motion="true"]) :hover>.db-arrow>.db-arrow-a,
+:where(html[data-reduced-motion="true"]) :focus-visible>.db-arrow>.db-arrow-a{transform:none}
+:where(html[data-reduced-motion="true"]) .db-arrow>.db-arrow-b{visibility:hidden}
+:where(html[data-reduced-motion="true"]) .db-ramp{clip-path:none;opacity:0;transition:opacity 120ms linear}
+:where(html[data-reduced-motion="true"]) .db-ramp.set{opacity:1}
+:where(html[data-reduced-motion="true"]) .db-ramp.rest{opacity:.65}
+:where(html[data-reduced-motion="true"]) .db-tn:hover .db-ramp,
+:where(html[data-reduced-motion="true"]) .db-sheet:has(.db-go.nx:hover) .db-ramp,
+:where(html[data-reduced-motion="true"]) .db-tn:has(.db-link:focus-visible) .db-ramp,
+:where(html[data-reduced-motion="true"]) .db-sheet:has(.db-go.nx:focus-visible) .db-ramp{clip-path:none;opacity:1;transition:opacity 120ms linear}
 @media (prefers-reduced-motion:reduce){
-  .db-pop{animation:db-fade 200ms ease-out both}
-  .db-go:active,.db-ghost:active,.db-textbtn:active,.db-tl:active,.db-part:has(.db-link:active){transform:none}
-  .db-textbtn svg{transition:none}
-  .db-ring::before{--db-a:140deg;padding:1.5px;transition:opacity 120ms linear}
-  .db-ring:hover::before,.db-ring:focus-visible::before{transition:opacity 120ms linear}
-  :hover>.db-arrow>.db-arrow-a,:focus-visible>.db-arrow>.db-arrow-a{transform:none}
-  .db-arrow>.db-arrow-b{visibility:hidden}
-  .db-ramp{clip-path:none;opacity:0;transition:opacity 120ms linear}
-  .db-ramp.set{opacity:1}
-  .db-ramp.rest{opacity:.65}
-  .db-tn:hover .db-ramp,.db-sheet:has(.db-go.nx:hover) .db-ramp,.db-tn:has(.db-link:focus-visible) .db-ramp,.db-sheet:has(.db-go.nx:focus-visible) .db-ramp{clip-path:none;opacity:1;transition:opacity 120ms linear}
+  :where(html:not([data-reduced-motion="false"])) .db-pop{animation:db-fade 200ms ease-out both}
+  :where(html:not([data-reduced-motion="false"])) .db-go:active,
+  :where(html:not([data-reduced-motion="false"])) .db-ghost:active,
+  :where(html:not([data-reduced-motion="false"])) .db-textbtn:active,
+  :where(html:not([data-reduced-motion="false"])) .db-tl:active,
+  :where(html:not([data-reduced-motion="false"])) .db-part:has(.db-link:active){transform:none}
+  :where(html:not([data-reduced-motion="false"])) .db-textbtn svg{transition:none}
+  :where(html:not([data-reduced-motion="false"])) .db-ring::before{--db-a:140deg;padding:1.5px;transition:opacity 120ms linear}
+  :where(html:not([data-reduced-motion="false"])) .db-ring:hover::before,
+  :where(html:not([data-reduced-motion="false"])) .db-ring:focus-visible::before{transition:opacity 120ms linear}
+  :where(html:not([data-reduced-motion="false"])) :hover>.db-arrow>.db-arrow-a,
+  :where(html:not([data-reduced-motion="false"])) :focus-visible>.db-arrow>.db-arrow-a{transform:none}
+  :where(html:not([data-reduced-motion="false"])) .db-arrow>.db-arrow-b{visibility:hidden}
+  :where(html:not([data-reduced-motion="false"])) .db-ramp{clip-path:none;opacity:0;transition:opacity 120ms linear}
+  :where(html:not([data-reduced-motion="false"])) .db-ramp.set{opacity:1}
+  :where(html:not([data-reduced-motion="false"])) .db-ramp.rest{opacity:.65}
+  :where(html:not([data-reduced-motion="false"])) .db-tn:hover .db-ramp,
+  :where(html:not([data-reduced-motion="false"])) .db-sheet:has(.db-go.nx:hover) .db-ramp,
+  :where(html:not([data-reduced-motion="false"])) .db-tn:has(.db-link:focus-visible) .db-ramp,
+  :where(html:not([data-reduced-motion="false"])) .db-sheet:has(.db-go.nx:focus-visible) .db-ramp{clip-path:none;opacity:1;transition:opacity 120ms linear}
 }
 /* the unset plates' one-line note */
 .db-plate.sc .rows{display:flex;flex-direction:column;gap:4px}
@@ -210,7 +248,7 @@
 .db-mini{position:relative;display:block;height:200px;border-radius:12px;background:var(--surface);overflow:hidden;isolation:isolate;transition:background-color 150ms ease,transform 120ms var(--ease)}
 @media (hover:hover){.db-mini:hover{background:var(--raised)}}
 .db-mini:active,.db-gt:active{transform:scale(.97)}
-.db .db-mini:focus-visible{outline-offset:2px;border-radius:12px}
+.db .db-mini:focus-visible{outline-offset:2px}
 .db-strip{display:flex;height:96px;background:var(--raised-h)}
 .db-strip span{flex:1}
 .db-strip.arch{opacity:.56}
@@ -257,13 +295,13 @@
 .db-dstops span{flex:1}
 .db-dstops.blur{filter:blur(10px);transform:scale(1.1)}
 .db-lock{position:absolute;z-index:1;left:50%;top:50%;transform:translate(-50%,-50%);height:28px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:rgba(6,6,7,.64);font-size:13px;font-weight:500;line-height:1;white-space:nowrap}
-.db-code{width:100%;height:160px;padding:16px;font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;line-height:20px;color:var(--t86)}
+.db-code{width:100%;height:160px;padding:16px;font-family:var(--mono);font-size:13px;line-height:20px;color:var(--t86)}
 .db-code .ln{display:block;white-space:pre;overflow:hidden}
 .db-code.msg{font-family:'Geist',system-ui,sans-serif;font-size:15px;line-height:22px;color:var(--t72);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:12px}
 .db-code.msg .db-tl{position:relative;z-index:1}
 .db-files{position:relative;z-index:1;margin-top:12px}
 .db-files li{height:24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.db-files .f{min-width:0;display:flex;align-items:center;gap:6px;font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:var(--t72);transition:color 150ms ease,transform 120ms var(--ease)}
+.db-files .f{min-width:0;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--t72);transition:color 150ms ease,transform 120ms var(--ease)}
 .db-files .f .fn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:underline;text-decoration-color:transparent;text-decoration-thickness:1px;text-underline-offset:4px;transition:text-decoration-color 150ms ease}
 .db-files .f:active{transform:scale(.97)}
 @media (hover:hover){.db-files .f:hover{color:var(--ink)}.db-files .f:hover .fn{text-decoration-color:var(--ink)}}
@@ -273,7 +311,7 @@
 .db-img{position:relative;width:168px;height:160px;isolation:isolate}
 .db-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .db-crop{position:absolute;z-index:1;left:20px;top:0;width:128px;height:160px;border:1px solid rgba(239,238,234,.72);box-shadow:0 0 0 200px rgba(6,6,7,.48)}
-.db-ratio{position:absolute;z-index:2;left:28px;top:8px;height:24px;padding:0 8px;display:inline-flex;align-items:center;border-radius:6px;background:rgba(6,6,7,.64);font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;line-height:1}
+.db-ratio{position:absolute;z-index:2;left:28px;top:8px;height:24px;padding:0 8px;display:inline-flex;align-items:center;border-radius:6px;background:rgba(6,6,7,.64);font-family:var(--mono);font-size:12px;line-height:1}
 .db-also{margin-top:24px;font-size:15px;line-height:24px;color:var(--t72)}
 .db-also a{display:inline-block;color:var(--ink);font-weight:500;transition:transform 120ms var(--ease)}
 .db-also a:active{transform:scale(.97)}
@@ -297,8 +335,19 @@
   .db-mini,.db-gt,.db-plate.raised{outline:1px solid CanvasText;outline-offset:-1px}
   .db-strip span,.db-dstops span,.db-lock{forced-color-adjust:none}
 }
+:where(html[data-reduced-motion="true"]) .db-mini:active,
+:where(html[data-reduced-motion="true"]) .db-gt:active,
+:where(html[data-reduced-motion="true"]) .db-dw:active,
+:where(html[data-reduced-motion="true"]) .db-also a:active,
+:where(html[data-reduced-motion="true"]) .db-files .f:active,
+:where(html[data-reduced-motion="true"]) .db-col:has(.db-sl-a:active){transform:none}
 @media (prefers-reduced-motion:reduce){
-  .db-mini:active,.db-gt:active,.db-dw:active,.db-also a:active,.db-files .f:active,.db-col:has(.db-sl-a:active){transform:none}
+  :where(html:not([data-reduced-motion="false"])) .db-mini:active,
+  :where(html:not([data-reduced-motion="false"])) .db-gt:active,
+  :where(html:not([data-reduced-motion="false"])) .db-dw:active,
+  :where(html:not([data-reduced-motion="false"])) .db-also a:active,
+  :where(html:not([data-reduced-motion="false"])) .db-files .f:active,
+  :where(html:not([data-reduced-motion="false"])) .db-col:has(.db-sl-a:active){transform:none}
 }
 
 .db-end { height: 96px; }
@@ -306,7 +355,7 @@
 /* drawn only below 1200 (see the block at the foot of this file) */
 .db-opent,.db-hexes,.db-tcm,.db-lbl,.db-bar{display:none}
 .db-gt .r{display:contents}
-.db-plate.sc .row{line-height:var(--lh)}
+.db-plate.sc .row{line-height:var(--lh,1.2)}
 
 /* Below 1200: the tablet and phone layout. The kit is a 2 x 2 of 120px plates, each cell a caption and its own
  * "Open in" link; the next step moves from the sheet's head to a solid bar docked at the foot of the page.
@@ -392,7 +441,7 @@
   /* lower sections */
   .db-group { margin-top: 48px; }
   .db-gh { flex-wrap: wrap; height: auto; min-height: 24px; }
-  .db-gh.find { flex-direction: column; align-items: stretch; gap: 12px; }
+  .db-gh.find { height: auto; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 12px; }
   .db-find label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .db-fwrap { width: 100%; }
   .db-fwrap svg { top: 14px; }
@@ -452,7 +501,7 @@
   .db-gt .r { display: contents; }
   .db-gt .gd { display: block; margin-top: 0; white-space: nowrap; }
   .db-gt:hover { background: var(--raised); }
-  .db-gh.find { flex-direction: row; align-items: center; }
+  .db-gh.find { flex-direction: row; align-items: center; height: 36px; }
   .db-fwrap { width: min(280px, 100%); }
 }
 @media (hover: hover) { .db-gt:hover .r { background: var(--raised); } }
@@ -462,6 +511,7 @@
 @media (max-width: 359px) {
   .db-title h1 { font-size: 32px; }
   .db-today { font-size: 13px; }
+  .db-ts { display: inline; white-space: normal; }
   .db-name { font-size: 32px; }
   .db-name.wrap { font-size: 22px; }
   .db-head .db-ghost { display: none; }
@@ -483,11 +533,30 @@
 @media (pointer: coarse) {
   .db-go, .db-ghost { min-height: 44px; }
   .db-input { height: 44px; }
-  .db-tl, .db-also a { position: relative; }
-  .db-tl::before, .db-also a::before { content: ''; position: absolute; inset: -10px -6px; }
+  .db-tl, .db-also a { display: inline-flex; align-items: center; min-height: 44px; margin-block: -10px; }
+  .db-today .see { display: inline-flex; margin-block: -12px; }
+  .db-pop.cap .db-tl { display: inline-flex; margin-top: -2px; }
+  .db-textbtn { min-height: 44px; margin-block: -10px; }
+  .db-textbtn::before { content: none; }
+  .db-pop .btns .db-textbtn { margin-block: 0; }
+  .db-open { height: auto; min-height: 44px; margin-top: -2px; margin-bottom: -10px; }
+  .db-col a.t:not(.db-sl-a) { position: relative; z-index: 1; }
+  .db-col a.t { display: flex; align-items: center; min-height: 44px; margin-top: 2px; margin-bottom: -10px; }
+  .db-col.o a.t { margin-top: 28px; }
   .db-files li { height: 44px; }
   .db-files .f { min-height: 44px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .db-tn.play .db-ramp:not(.rest) { clip-path: none; opacity: 1; transition: opacity 150ms linear; }
+@media (pointer: coarse) and (max-width: 1199px) {
+  .db-open { margin-top: -10px; }
+  .db-col.o a.t { margin-top: 2px; }
+}
+@media (pointer: coarse) and (max-width: 359px) {
+  .db-open { min-height: 0; height: 0; margin-block: 0; }
+}
+/* the phone's played ramp fades in instead of unrolling; at 1200 and up the ramp waits for hover and focus like the rest */
+@media (max-width:1199px){
+  :where(html[data-reduced-motion="true"]) .db-tn.play .db-ramp:not(.rest){clip-path:none;opacity:1;transition:opacity 150ms linear}
+}
+@media (prefers-reduced-motion:reduce) and (max-width:1199px){
+  :where(html:not([data-reduced-motion="false"])) .db-tn.play .db-ramp:not(.rest){clip-path:none;opacity:1;transition:opacity 150ms linear}
 }
