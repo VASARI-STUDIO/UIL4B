@@ -1545,7 +1545,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // and its field. Custom is "open" when it is chosen (or when the size is one the
   // rail has no cell for), and `lastCustom` keeps the last custom value for this open.
   const narrowRail = useMediaQuery(`(max-width: ${NARROW_RAIL_BELOW - 1}px)`)
-  const onSheet = useMediaQuery('(max-width: 640px)')
+  // The editor is a bottom sheet below this width (icon-editor.css), a two-column dialog above it.
+  const onSheet = useMediaQuery('(max-width: 899px)')
   const inspectPx = onSheet ? INSPECT_PX_SHEET : INSPECT_PX
   const [customOpen, setCustomOpen] = useState(() => !isPresetSize(size))
   const [lastCustom, setLastCustom] = useState(() => (isPresetSize(size) ? null : size))
@@ -1828,7 +1829,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   useEffect(() => {
     if (savePickerOpen) {
       pickerWasOpenRef.current = true
-      requestAnimationFrame(() => document.getElementById('ied-spb')?.focus())
+      // preventScroll: the sheet is still sliding in, and a scroll to it would move the clipped dialog.
+      requestAnimationFrame(() => document.getElementById('ied-spb')?.focus({ preventScroll: true }))
       return undefined
     }
     if (!pickerWasOpenRef.current) return undefined
@@ -1853,6 +1855,38 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Move focus into the dialog once, on mount.
   useEffect(() => { panelRef.current?.focus() }, [])
 
+  // On the phone sheet, follow the on-screen keyboard through the visual viewport. --ied-vh is a
+  // hundredth of the visible height and --ied-kb how far the keyboard lifts the sheet (both
+  // used by icon-editor.css); data-kb folds the stage to a bar ("up") or drops it ("tight", under
+  // 400px visible) so the field being typed in and its button always have room.
+  useEffect(() => {
+    const vv = window.visualViewport
+    const root = panelRef.current
+    if (!vv || !root || !onSheet) return undefined
+    let base = Math.max(window.innerHeight, vv.height)
+    let width = window.innerWidth
+    const sync = () => {
+      if (window.innerWidth !== width) { width = window.innerWidth; base = Math.max(window.innerHeight, vv.height) }
+      if (vv.scale > 1.01) return
+      base = Math.max(base, window.innerHeight, vv.height)
+      const up = base - vv.height > 120
+      root.style.setProperty('--ied-vh', `${vv.height / 100}px`)
+      root.style.setProperty('--ied-kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`)
+      if (up) root.setAttribute('data-kb', vv.height < 400 ? 'tight' : 'up')
+      else root.removeAttribute('data-kb')
+    }
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+      root.style.removeProperty('--ied-vh')
+      root.style.removeProperty('--ied-kb')
+      root.removeAttribute('data-kb')
+    }
+  }, [onSheet])
+
   // Trap Tab, close on Escape (mirror ExportPanel).
   useEffect(() => {
     const onKey = (e) => {
@@ -1865,7 +1899,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       // hidden, or inside a collapsed block) is not a Tab stop.
       const f = Array.from(panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[inert]'))
       if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
@@ -2373,6 +2407,22 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     }
   }, [activeIcon])
 
+  // The one preview line. Always mounted, so its first message is announced. With no preview it
+  // is out of sight and holds only the note that the settings are free again. It sits in the
+  // foot on a wide dialog and as a strip under the stage on the phone sheet.
+  const pvEl = activeIcon ? (
+    <div className={`ied-pv${previewing ? '' : ' ied-vh'}`}>
+      <p className="ied-note" id="ied-preview-line" role="status" aria-live="polite">
+        {preview
+          ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="ied-mono">{p.code}</span>))
+          : leftPreview ? BACK_TO_FREE_NOTE : ''}
+      </p>
+      {previewing && <button type="button" className="ied-tn" onClick={backToFree}>Back to free settings</button>}
+    </div>
+  ) : null
+  // While the save sheet covers the editor on a phone, everything beneath it is inert.
+  const lockBase = savePickerOpen && onSheet
+
   return (
     <div className="ied-overlay" onMouseDown={onClose}>
       <div
@@ -2385,8 +2435,31 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         data-lenis-prevent
         onMouseDown={(e) => e.stopPropagation()}
       >
+        {/* On the phone this is a bottom sheet (icon-editor.css): the grabber is its handle. The
+            head comes first in the source so the tab order matches the sheet's top-to-bottom order;
+            the desktop grid places every part explicitly. */}
+        <div className="ied-gb" aria-hidden="true" />
+        <div className="ied-hd" inert={lockBase || undefined}>
+          <div className="ied-hd-text">
+            <h2 className="ied-title" id="ied-title">{title}</h2>
+            {headSub && <p className="ied-note">{headSub}</p>}
+          </div>
+          <div className="ied-hd-act">
+            {/* Reset changes the controls and shows only once something differs. It stays before
+                Close in the tab order. */}
+            {activeIcon && edited && (
+              <button type="button" className="ied-tn" onClick={handleReset}>Reset</button>
+            )}
+            <button type="button" className="ied-x" onClick={onClose} aria-label="Close customizer">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
         {activeIcon && (
-          <div className="ied-stagecol">
+          <div className="ied-stagecol" data-g={ground} inert={lockBase || undefined}>
             <div className="ied-grounds" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
               {GROUND_OPTS.map(g => (
                 <button
@@ -2532,26 +2605,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         )}
 
-        <div className="ied-hd">
-          <div className="ied-hd-text">
-            <h2 className="ied-title" id="ied-title">{title}</h2>
-            {headSub && <p className="ied-note">{headSub}</p>}
-          </div>
-          <div className="ied-hd-act">
-            {/* Reset changes the controls and shows only once something differs. It stays before
-                Close in the tab order. */}
-            {activeIcon && edited && (
-              <button type="button" className="ied-tn" onClick={handleReset}>Reset</button>
-            )}
-            <button type="button" className="ied-x" onClick={onClose} aria-label="Close customizer">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        {onSheet && pvEl}
 
-        <div className="ied-scroll" id="ied-scroll" data-hide={savePickerOpen ? 'true' : undefined}>
+        <div className="ied-scroll" id="ied-scroll" data-hide={savePickerOpen ? 'true' : undefined} inert={savePickerOpen || undefined}>
           {!activeIcon ? (
             <div className="ied-paste">
               <p className="ied-note">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
@@ -2567,6 +2623,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             </div>
           ) : (
             <div className="ied-secs">
+              {/* The phone sheet shows the contrast note here, at the head of the inspector,
+                  where the wide dialog draws it over the stage (hidden by the stylesheet). */}
+              {contrastNote && (
+                <div className="ied-ctrow">
+                  <p>Hard to see on this background.</p>
+                  {contrastNote.suggest && (
+                    <button type="button" className="ied-tn" onClick={() => fixGround(contrastNote.suggest)}>
+                      Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
+                    </button>
+                  )}
+                </div>
+              )}
               <div>
                 <div className="ied-lblrow">
                   <label className="ied-lbl" id="ied-colour-label">Colour</label>
@@ -2883,7 +2951,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
           </div>
         )}
 
-        <div className="ied-ft" data-hide={savePickerOpen && activeIcon ? 'true' : undefined}>
+        <div className="ied-ft" data-hide={savePickerOpen && activeIcon ? 'true' : undefined} inert={savePickerOpen && activeIcon ? true : undefined}>
           {!activeIcon ? (
             <div className="ied-foot-add">
               <button type="button" className="ied-ghost" onClick={onClose}>Cancel</button>
@@ -2891,18 +2959,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             </div>
           ) : (
             <>
-              {/* The one preview line. Always mounted, so its first message is announced. With no
-                  preview it is out of sight and holds only the note that the settings are free again. */}
-              <div className={`ied-pv${previewing ? '' : ' ied-vh'}`}>
-                <p className="ied-note" id="ied-preview-line" role="status" aria-live="polite">
-                  {preview
-                    ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="ied-mono">{p.code}</span>))
-                    : leftPreview ? BACK_TO_FREE_NOTE : ''}
-                </p>
-                {previewing && <button type="button" className="ied-tn" onClick={backToFree}>Back to free settings</button>}
-              </div>
+              {!onSheet && pvEl}
 
-              <div className="ied-foot-row">
+              {savedState === 'saved' && (
+                <p className="ied-fe-sv"><FooterGlyph name="check" />{saveLabel.full}</p>
+              )}
+              <div className="ied-foot-row" data-sv={savedState === 'saved' ? 'true' : undefined}>
                 <SplitDownload
                   format={dlFormat}
                   size={size}
