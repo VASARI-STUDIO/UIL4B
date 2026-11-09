@@ -446,8 +446,10 @@ test.describe('the pricing page and the server agree', () => {
     watch(page, 'a visitor viewing the listed tools on plans')
     await go(page, '/plans')
     await expectRendered(page, 'the plans page')
-    const row = page.locator('.pr-compare-row', { has: page.locator('th', { hasText: 'Brand Starter' }) })
+    const row = page.locator('tr', { has: page.getByRole('rowheader', { name: 'Brand Starter' }) })
     await expect(row).toHaveCount(0)
+    // POSITIVE CONTROL: the comparison table is on the page, so no match means "omitted", not "not rendered".
+    await expect(page.getByRole('rowheader', { name: 'AI generations' }), 'the comparison table did not render').toHaveCount(1)
   })
 
   test('the tool is absent from the AI Studio menu', async ({ page }) => {

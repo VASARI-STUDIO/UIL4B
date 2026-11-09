@@ -42,7 +42,7 @@ const SURFACES = [
   ['/learn', ['.lbry-search']],
   ['/mobile', ['.spm-ic-search']],
   ['/create/contrast', ['.tl-pill']],
-  ['/plans', ['.pr-billing']],
+  ['/plans', ['.pl-switch']],
   ['/seo', ['.seo-seg']],
 ]
 
