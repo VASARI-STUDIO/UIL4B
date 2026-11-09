@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useLoginPrompt } from '../../contexts/LoginPromptContext'
@@ -7,9 +7,92 @@ import { useLoginPrompt } from '../../contexts/LoginPromptContext'
 // while the account is still resolving, so nothing moves when it fills.
 //
 //   signed in, a name     Welcome back, Alex.   (Welcome, Alex. in the first ten minutes of the account)
-//   signed in, no name    Welcome back.
+//   signed in, no name    Welcome back.  + Add your name (a small form: saves to the profile; "Not now" hides the
+//                         ask for 30 days)
 //   signed out            Hey, you look new around here.  + Tell us your name (opens sign-up)
 const FIRST_VISIT_MS = 10 * 60_000
+const ASKED_KEY = 'uil4b-name-ask-until'
+const THIRTY_DAYS = 30 * 86_400_000
+
+function askHidden() {
+  try { return Number(localStorage.getItem(ASKED_KEY)) > Date.now() } catch { return false }
+}
+
+// The greeting for an account. With no name on the profile it carries "Add your name": a button that opens a
+// small form under it (Save writes the profile's name; Escape, a press elsewhere and Tab past it close the form,
+// and "Not now" hides the ask for 30 days). After Save or Not now the button is gone, so focus goes to the
+// greeting line itself.
+function Greeting({ hello, first }) {
+  const { profileLoaded, updateProfile } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [hidden, setHidden] = useState(askHidden)
+  const [value, setValue] = useState('')
+  const [settled, setSettled] = useState(false)
+  const wrapRef = useRef(null)
+  const btnRef = useRef(null)
+  const inputRef = useRef(null)
+  const lineRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return undefined
+    inputRef.current?.focus()
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); btnRef.current?.focus() } }
+    const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    const onFocus = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('focusin', onFocus)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('focusin', onFocus)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!settled) return
+    lineRef.current?.focus()
+    setSettled(false)
+  }, [settled])
+
+  if (first) return <p data-testid="greeting" tabIndex={-1} ref={lineRef}>{`${hello}, ${first}.`}</p>
+
+  const save = (e) => {
+    e.preventDefault()
+    const name = value.trim()
+    if (!name) { inputRef.current?.focus(); return }
+    updateProfile({ displayName: name })
+    setOpen(false)
+    setSettled(true)
+  }
+  const notNow = () => {
+    try { localStorage.setItem(ASKED_KEY, String(Date.now() + THIRTY_DAYS)) } catch { /* private mode */ }
+    setHidden(true)
+    setOpen(false)
+    setSettled(true)
+  }
+
+  return (
+    <div className="db-greetw" data-testid="greeting" ref={wrapRef}>
+      <p tabIndex={-1} ref={lineRef} aria-live="polite">{`${hello}.`}</p>
+      {profileLoaded && !hidden && (
+        <span className="db-anchor">
+          <button type="button" className="db-textbtn" ref={btnRef} aria-haspopup="dialog" aria-expanded={open} aria-controls="db-name-pop" onClick={() => setOpen((v) => !v)}>Add your name</button>
+          {open && (
+            <form className="db-pop name" id="db-name-pop" role="dialog" aria-labelledby="db-first-l" onSubmit={save}>
+              <label id="db-first-l" htmlFor="db-first">Your first name</label>
+              <input id="db-first" ref={inputRef} className="db-input" type="text" value={value} maxLength={60} autoComplete="given-name" spellCheck="false" enterKeyHint="done" onChange={(e) => setValue(e.target.value)} />
+              <div className="btns">
+                <button type="submit" className="db-ghost db-ring">Save</button>
+                <button type="button" className="db-textbtn" onClick={notNow}>Not now</button>
+              </div>
+            </form>
+          )}
+        </span>
+      )}
+    </div>
+  )
+}
 
 export function StatusRow({ resolving, signedOut, offline }) {
   const { profileName, accountCreatedAt } = useAuth()
@@ -35,7 +118,7 @@ export function StatusRow({ resolving, signedOut, offline }) {
     const first = (profileName || '').split(/\s+/)[0]
     const fresh = accountCreatedAt != null && now - accountCreatedAt < FIRST_VISIT_MS && now - accountCreatedAt >= -60_000
     const hello = fresh ? 'Welcome' : 'Welcome back'
-    content = <p data-testid="greeting">{first ? `${hello}, ${first}.` : `${hello}.`}</p>
+    content = <Greeting hello={hello} first={first} />
   }
   return <div className="db-status">{content}</div>
 }

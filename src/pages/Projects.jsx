@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -60,11 +60,14 @@ export default function Projects() {
   const signedOut = !canSaveProjects && !resolving
 
   const [capRefusal, setCapRefusal] = useState('')
+  const capBtnRef = useRef(null)
+  const capLinkRef = useRef(null)
 
   // The cap refusal is a popover by New project: it closes on Escape and on a press elsewhere.
   useEffect(() => {
     if (!capRefusal) return undefined
-    const onKey = (e) => { if (e.key === 'Escape') setCapRefusal('') }
+    capLinkRef.current?.focus({ preventScroll: true })
+    const onKey = (e) => { if (e.key === 'Escape') { setCapRefusal(''); capBtnRef.current?.focus() } }
     const onDown = (e) => { if (!e.target.closest?.('.db-newwrap')) setCapRefusal('') }
     document.addEventListener('keydown', onKey)
     document.addEventListener('pointerdown', onDown)
@@ -131,7 +134,8 @@ export default function Projects() {
         <button
           type="button"
           className="db-ghost db-ring"
-          onClick={startNew}
+          ref={capBtnRef}
+          onClick={() => (capRefusal ? setCapRefusal('') : startNew())}
           aria-haspopup={atCap ? 'dialog' : undefined}
           aria-expanded={atCap ? !!capRefusal : undefined}
         >
@@ -140,9 +144,9 @@ export default function Projects() {
         </button>
       )}
       {capRefusal && (
-        <div className="db-pop cap" ref={showCap} role="alert" data-testid="project-create-refusal">
-          <p>{capRefusal}</p>
-          <Link to="/plans" className="db-tl">See plans</Link>
+        <div className="db-pop cap" ref={showCap} role="dialog" aria-labelledby="db-cap-t" data-testid="project-create-refusal">
+          <p id="db-cap-t">{capRefusal}</p>
+          <Link to="/plans" className="db-tl" ref={capLinkRef}>See plans</Link>
         </div>
       )}
     </div>
