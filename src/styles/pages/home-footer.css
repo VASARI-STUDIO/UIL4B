@@ -72,10 +72,38 @@
   .hm-close-cta:hover .hm-close-icon { background: rgba(11, 12, 14, .12); }
 }
 .hm-close-cta:active { transform: scale(.97); }
+.hm-close-btns {
+  margin-top: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.hm-close-btns > .hm-close-cta { margin-top: 0; }
+.hm-close-ghost {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 24px;
+  border: 1px solid rgba(239, 238, 234, .2);
+  border-radius: 999px;
+  background: transparent;
+  color: #EFEEEA;
+  font-size: 16px;
+  text-decoration: none;
+  transition: background-color 150ms ease, transform 150ms cubic-bezier(.23, 1, .32, 1);
+}
+@media (hover: hover) {
+  .hm-close-ghost:hover { background: rgba(239, 238, 234, .06); }
+}
+.hm-close-ghost:active { transform: scale(.97); }
 /* The ring traces the corners the link has at rest. */
 .sp-footer--home a { border-radius: 4px; }
 .sp-footer--home .app-footer-note { border-radius: var(--btn-radius); }
 .hm-close-cta:focus-visible,
+.hm-close-ghost:focus-visible,
 .sp-footer--home a:focus-visible,
 .sp-footer--home .app-footer-note:focus-visible {
   outline: 2px solid #EFEEEA;
@@ -88,6 +116,9 @@
   .hm-close h2 { margin: 0; max-width: 11ch; }
   .hm-close p { margin: 18px 0 0; max-width: none; font-size: 16px; line-height: 1.55; }
   .hm-close-cta { margin-top: 28px; display: flex; justify-content: space-between; height: 52px; min-height: 52px; }
+  .hm-close-btns { margin-top: 28px; flex-direction: column; align-items: stretch; }
+  .hm-close-btns > .hm-close-cta { display: flex; justify-content: space-between; }
+  .hm-close-ghost { justify-content: center; }
 }
 
 /* ── Footer, homepage variant ───────────────────────────────────────────────── */
@@ -267,8 +298,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduced-motion="false"]) :is(.hm-close-cta, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
-  html:not([data-reduced-motion="false"]) .hm-close-cta:active { transform: none; }
+  html:not([data-reduced-motion="false"]) :is(.hm-close-cta, .hm-close-ghost, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
+  html:not([data-reduced-motion="false"]) .hm-close-cta:active, .hm-close-ghost:active { transform: none; }
 }
-html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
-html[data-reduced-motion="true"] .hm-close-cta:active { transform: none; }
+html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost, .hm-close-icon, .sp-footer--home a, .sp-footer--home .app-footer-note) { transition: none; }
+html[data-reduced-motion="true"] .hm-close-cta:active, .hm-close-ghost:active { transform: none; }
+
+/* /plans drops the "This page" column, so the headline line has four columns
+   instead of five. */
+.pricing .sp-footer--no-page .sp-footer-grid {
+  grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .pricing .sp-footer--no-page .sp-footer-grid {
+    grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  }
+}
