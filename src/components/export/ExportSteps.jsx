@@ -124,8 +124,8 @@ function NameLine({ lead, name, project, onRenameState }) {
 function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen, shown }) {
   const kind = cat.preview
   if (themedFile(file)) {
-    // A picture of the theme's own sample pages. A locked one is blurred, with the lock the live Pro previews carry.
-    const locked = !isPro && !checking && themedFileIsPro(file, shown.id)
+    // A picture of the theme's own sample pages. The kit is previewed sharp in every theme (the button carries the Pro line); a locked book or guidelines file is blurred, with the lock the live Pro previews carry.
+    const locked = kind !== 'kit' && !isPro && !checking && themedFileIsPro(file, shown.id)
     const lines = themeLines(kind, shown)
     return (
       <div className="xd-prev">
@@ -231,9 +231,22 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
       )
   }
 
+  // The Theme step sits under the picture on a wide dialog; on a phone it comes first, so Change is in view before the pages.
+  const themeStep = themed && (
+    <section className={`xd-step${strip ? ' xd-step--lead' : ''}`} aria-labelledby={`${uid}-theme`}>
+      <h3 className="xd-step-l" id={`${uid}-theme`}>Theme</h3>
+      <ExportThemeRow value={theme} onChange={onTheme} onPreview={onPeek} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} sheet={strip} />
+      <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
+    </section>
+  )
+
   return (
     <>
+      {themed && strip && themeStep}
+
       <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} shown={shown} />
+
+      {themed && !strip && themeStep}
 
       <section className="xd-step" aria-labelledby={`${uid}-file`}>
         <h3 className="xd-step-l" id={`${uid}-file`}>File</h3>
@@ -247,14 +260,6 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
         )}
         <Manifest rows={rows} file={file} folded={strip && rows.length > 1} />
       </section>
-
-      {themed && (
-        <section className="xd-step" aria-labelledby={`${uid}-theme`}>
-          <h3 className="xd-step-l" id={`${uid}-theme`}>Theme</h3>
-          <ExportThemeRow value={theme} onChange={onTheme} onPreview={onPeek} isPro={isPro} checking={checking} yourName={name} />
-          <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
-        </section>
-      )}
 
       {showLayout && (
         <section className="xd-step" aria-labelledby={`${uid}-layout`}>

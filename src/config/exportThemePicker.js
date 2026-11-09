@@ -68,6 +68,16 @@ export function themeShots(kind, theme) {
   return [at('kitScreen', 'UI kit, app screen page'), at('kitButtons', 'UI kit, buttons page')]
 }
 
+const fetched = new Set()
+/** Fetch a theme's preview pictures for a kind ahead of showing them. Resolves when they are in (a failed one counts: the page shows its own). */
+export const preloadTheme = (kind, theme) => Promise.all(themeShots(kind, theme).map(({ src }) => (
+  fetched.has(src) ? true : new Promise((done) => {
+    const img = new Image()
+    img.onload = img.onerror = () => { fetched.add(src); done(true) }
+    img.src = src
+  })
+)))
+
 export const themeThumb = (theme) => `/export-themes/${theme.id}-thumb.webp`
 
 /** The preview caption and the file's description for a kind, in a theme. */
