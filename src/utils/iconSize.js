@@ -21,7 +21,7 @@ export const CUSTOM_SIZE_MAX = 1024
 export const NARROW_RAIL_BELOW = 375
 
 /** The size the stage draws the icon at, whatever the export size. */
-export const INSPECT_PX = 112
+export const INSPECT_PX = 160
 export const INSPECT_PX_SHEET = 88
 
 export const isPresetSize = (n) => ICON_SIZE_PRESETS.includes(Number(n))

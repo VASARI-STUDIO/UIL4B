@@ -92,7 +92,7 @@ export const FREE_POINTS = Object.freeze([
   `All ${numberWord(TOOL_COUNT)} tools`,
   `${AI.free.daily} AI generations a day, ${AI.free.monthly} a month`,
   `${freeUiKitLine()}, and style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`,
-  `${FREE_SAVE_LIMITS.projects} saved projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`,
+  `${FREE_SAVE_LIMITS.projects} saved projects, with ${FREE_SAVE_LIMITS.customIcons} icons in each`,
 ])
 
 /** /plans' one minus line on the Free card. */
@@ -153,7 +153,7 @@ export const PRO_VALUE = Object.freeze([
   ] },
   { group: 'Your work', rows: [
     { label: 'Saved projects', free: String(FREE_SAVE_LIMITS.projects), pro: 'Unlimited' },
-    { label: 'Custom icons', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
+    { label: 'Icons per project', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
   ] },
   { group: 'Exports', rows: [
     ...proOnlyFormats().map((f) => ({ label: f.name, free: null, pro: 'Included' })),
