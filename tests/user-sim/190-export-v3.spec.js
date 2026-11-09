@@ -20,6 +20,7 @@
 import fs from 'node:fs'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { mockThemeApi, cleanHtml } from './export-theme-mock.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
 import {
@@ -92,7 +93,8 @@ test.describe('every entry point opens the same popup', () => {
     let panel = await openFromHeader(page)
     await expect(panel.getByRole('heading', { level: 2 })).toHaveText('Export your design system')
     expect(await shownPick(panel)).toEqual({ type: 'Brand book', category: 'Book', file: 'PDF' })
-    expect(await chosenLayout(panel)).toMatch(/Specification/)
+    await expect(panel.getByRole('button', { name: 'Change theme, current Standards' }), 'the Theme step replaced the Layout tiles').toBeVisible()
+    await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
 
     await categoryRadio(panel, 'Style guide').click()
     await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'PNG', exact: true }).click()
@@ -348,7 +350,7 @@ test.describe('the sizes the spec names', () => {
       // A category with one file has nothing to fold.
       await typeRadio(panel, 'UI kit').click()
       await expect(panel.locator('.xd-man-t')).toHaveCount(0)
-      await expect(panel.locator('.xd-man-n')).toHaveText('untitled-ui-kit.html')
+      await expect(panel.locator('.xd-man-n')).toHaveText('untitled-ui-kit-04-standards.zip')
     })
 
     test('the title, the type control, the file pills and the dock text share one 16px left edge', async ({ page }) => {
@@ -451,9 +453,11 @@ test.describe('what a free account can take', () => {
     const panel = await openFromHeader(page)
     await typeRadio(panel, 'UI kit').click()
     await expect(primaryButton(panel)).toHaveText('Export UI kit')
+    const calls = await mockThemeApi(page)
     const file = await takeDownload(page)
-    expect(file.name).toMatch(/\.html$/)
-    expect(file.text).toMatch(/Made with UIL4B/)
+    expect(file.name, 'a free kit in Standards saves as a zip named for its theme').toBe('untitled-ui-kit-04-standards.zip')
+    expect(file.bytes.subarray(0, 2).toString(), 'and it is a real zip').toBe('PK')
+    expect(calls.map((c) => c.body)).toEqual([expect.objectContaining({ theme: '04-standards', row: 'ui-kit', format: 'zip' })])
   })
 
   test('the CSS file is a comment-led stylesheet that ends with the credit comment', async ({ page }) => {
@@ -531,7 +535,7 @@ const PRO_CATEGORIES = [
 
 // Criteria 8, 9, 10 and 12: Pro categories for a free account.
 //   - Draw the previews without bakeBlur (utils/proPreviews.js): "the blur is in the pixels" fails.
-//   - Render .xd-lock / the Pro tags for every account: "a Pro account sees no Pro furniture" fails.
+//   - Render .xd-theme-lock / the Pro tags for every account: "a Pro account sees no Pro furniture" fails.
 //   - Send a free account on a Pro file to the server instead of /plans: "goes to /plans" fails.
 //   - Drop from=kit-gallery from the checkout navigation: "a saved project goes to checkout" fails.
 test.describe('Pro categories for a free account', () => {
@@ -546,13 +550,12 @@ test.describe('Pro categories for a free account', () => {
       await typeRadio(panel, 'Brand book').click()
       await expect(categoryRadio(panel, name)).toHaveAccessibleName(`${name}, ${name === 'Book' ? 'A4 pages' : '16:9'}, Pro`)
       await categoryRadio(panel, name).click()
-      await expect(panel.locator('.xd-lock')).toBeVisible()
-      await expect(panel.locator('.xd-lock')).toContainText('Pro')
-      const thumbs = panel.locator('img[data-blurred]')
-      await expect(thumbs.first()).toBeVisible()
-      for (const img of await thumbs.all()) {
-        await expect(img).toHaveAttribute('data-blurred', 'true')
-        expect(await img.evaluate((el) => el.naturalWidth), 'a small picture, blurred before it reaches the page').toBeLessThanOrEqual(400)
+      await expect(panel.locator('.xd-theme-lock')).toBeVisible()
+      await expect(panel.locator('.xd-theme-lock')).toContainText('Pro')
+      const shots = panel.locator('.xd-theme-stage.is-locked img')
+      await expect(shots.first()).toBeVisible()
+      for (const img of await shots.all()) {
+        expect(await img.evaluate((el) => getComputedStyle(el).filter), 'the locked pictures are blurred').toMatch(/blur\(/)
       }
       await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
       await primaryButton(panel).click()
@@ -569,7 +572,7 @@ test.describe('Pro categories for a free account', () => {
     const panel = await openFromHeader(page)
     await expect(categoryRadio(panel, 'Style guide')).toHaveAccessibleName('Style guide, A4, free')
     await categoryRadio(panel, 'Style guide').click()
-    await expect(panel.locator('.xd-lock')).toHaveCount(0)
+    await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
     await expect(panel.locator('img[data-blurred="true"]')).toHaveCount(0)
   })
 
@@ -577,7 +580,7 @@ test.describe('Pro categories for a free account', () => {
     watch(page, 'a visitor on Book')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    await expect(panel.locator('.xd-lock')).toBeVisible()
+    await expect(panel.locator('.xd-theme-lock')).toBeVisible()
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)
     expect(await eventsNamed(page, 'upgrade_gate_shown')).toContainEqual({ gate: 'design-system-book-export' })
@@ -604,13 +607,12 @@ test.describe('Pro categories for a free account', () => {
       await signIn(page, { plan })
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      const img = panel.locator('img[data-blurred]').first()
-      await expect(img).toBeVisible()
-      await expect(img).toHaveAttribute('data-blurred', plan === 'free' ? 'true' : 'false')
-      sharp[plan] = await sharpness(img)
+      await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
+      sharp[plan] = await panel.locator('.xd-theme-stage img').first().evaluate((el) => getComputedStyle(el).filter)
       await context.close()
     }
-    expect(sharp.pro, `sharpness: free ${sharp.free}, pro ${sharp.pro}`).toBeGreaterThan(sharp.free * 1.5)
+    expect(sharp.free, 'free: the Book preview is blurred').toMatch(/blur\(/)
+    expect(sharp.pro, 'pro: the same preview is sharp').toBe('none')
   })
 })
 
@@ -626,37 +628,27 @@ test.describe('a Pro account', () => {
     for (const name of ['Book', 'Slides', 'Style guide']) {
       await expect(categoryRadio(panel, name)).not.toHaveAccessibleName(/, (Pro|free)$/)
     }
-    await expect(panel.locator('.xd-lock, .xd-pro, .xd-free')).toHaveCount(0)
-    const thumbs = panel.locator('img[data-blurred]')
-    await expect(thumbs.first()).toBeVisible()
-    await expect(panel.locator('img[data-blurred="true"]')).toHaveCount(0)
+    await expect(panel.locator('.xd-theme-lock, .xd-pro, .xd-free')).toHaveCount(0)
+    await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
+    await expect(panel.locator('.xd-theme-stage.is-locked')).toHaveCount(0)
     await expect(primaryButton(panel)).toHaveText('Export PDF')
     await expect(dockStatus(panel)).toContainText('No watermark')
   })
 
-  test('exports the book through the server: a POST with a Bearer token, format book', async ({ page }) => {
+  test('exports the book through the server: a POST with a Bearer token, row book, format pdf, in the chosen theme', async ({ page }) => {
     watch(page, 'a Pro subscriber exporting the book')
-    await page.addInitScript(() => { window.print = () => {} })
-    const asked = []
-    await page.route('**/api/ai?export=document', async (route) => {
-      const req = route.request()
-      asked.push({ method: req.method(), auth: req.headers().authorization, body: req.postDataJSON() })
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ok: true, format: 'book', html: buildDesignSystemBook({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }, { projectName: 'Stub' }) }),
-      })
-    })
+    await page.context().addInitScript(() => { window.print = () => {} })
+    const asked = await mockThemeApi(page, () => ({ html: cleanHtml('Stub book') }))
     await signIn(page, { plan: 'pro' })
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
     await expect(primaryButton(panel)).toBeEnabled()
     const [doc] = await Promise.all([page.context().waitForEvent('page'), primaryButton(panel).click()])
-    await expect(doc.locator('.cv-title')).toBeVisible()
+    await expect(doc.locator('#printed-doc')).toHaveText('Stub book')
     expect(asked, 'the popup asks the server exactly once').toHaveLength(1)
     expect(asked[0].method).toBe('POST')
     expect(asked[0].auth).toMatch(/^Bearer .+/)
-    expect(asked[0].body.format).toBe('book')
+    expect(asked[0].body).toMatchObject({ theme: '01-presentation', row: 'book', format: 'pdf' })
     await expect(panel, 'the popup stays open behind the new tab').toBeVisible()
   })
 })
@@ -802,7 +794,7 @@ test.describe('while the plan is still loading', () => {
       await signIn(page, { plan, uid, slowReads: [{ path: `users/${uid}`, hold: true }] })
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
-      const tags = panel.locator('.xd-pro, .xd-free, .xd-lock')
+      const tags = panel.locator('.xd-pro, .xd-free, .xd-theme-lock')
 
       // A Pro category, then a free one.
       await expect(primaryButton(panel), 'Book, plan unknown').toHaveText('Checking your plan…')
@@ -821,7 +813,7 @@ test.describe('while the plan is still loading', () => {
       await categoryRadio(panel, 'Book').click()
       await expect(primaryButton(panel), 'Book once the plan is known').toHaveText(plan === 'pro' ? 'Export PDF' : 'Unlock with Pro')
       await expect(categoryRadio(panel, 'Book'), 'the tag, free accounts only').toHaveAccessibleName(plan === 'free' ? 'Book, A4 pages, Pro' : 'Book, A4 pages')
-      await expect(panel.locator('.xd-lock')).toHaveCount(plan === 'free' ? 1 : 0)
+      await expect(panel.locator('.xd-theme-lock')).toHaveCount(plan === 'free' ? 1 : 0)
     })
   }
 })
@@ -851,18 +843,23 @@ test.describe('what the popup remembers and says', () => {
     watch(page, 'a designer choosing PNG pages')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
-    await expect(panel.getByRole('radiogroup', { name: 'Template' })).toBeVisible()
+    await expect(panel.getByRole('radiogroup', { name: 'Template' }), 'a themed file has a Theme step and no Layout tiles').toHaveCount(0)
+    await expect(panel.getByRole('heading', { name: 'Theme', level: 3 })).toBeVisible()
     await fileGroup(panel, 'Book').getByRole('radio', { name: 'PNG pages', exact: true }).click()
     await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
     await expect(panel.getByText('PNG pages use one layout.')).toBeVisible()
+    await expect(panel.getByRole('heading', { name: 'Theme', level: 3 }), 'PNG pages are drawn in the browser and take no theme').toHaveCount(0)
   })
 
-  test('the steps are File, Layout and Details, and a category with no layout has none', async ({ page }) => {
+  test('the steps are Theme, File and Details; only PNG pages keep a Layout; a category with none has none', async ({ page }) => {
     watch(page, 'a designer reading the steps')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
     const steps = async () => panel.getByRole('heading', { level: 3 }).allInnerTexts()
-    expect(await steps()).toEqual(['File', 'Layout', 'Details'])
+    expect(await steps(), 'a themed file leads with its Theme').toEqual(['Theme', 'File', 'Details'])
+    await fileGroup(panel, 'Book').getByRole('radio', { name: 'PNG pages', exact: true }).click()
+    expect(await steps(), 'only the PNG pages keep a Layout step').toEqual(['File', 'Layout', 'Details'])
+    await fileGroup(panel, 'Book').getByRole('radio', { name: 'PDF', exact: true }).click()
     await categoryRadio(panel, 'Style guide').click()
     expect(await steps()).toEqual(['File', 'Details'])
     await typeRadio(panel, 'Code').click()
