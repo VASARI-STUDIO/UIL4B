@@ -9,6 +9,7 @@ import { GoArrow, PlanFigure } from '../components/plans/PlanParts'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
+import useMediaQuery from '../hooks/useMediaQuery'
 import { usePriceRetry, usePrices, useProPrice } from '../hooks/usePrices'
 import { digitRuns } from '../utils/digitRuns'
 import { formatMoney } from '../config/planLadder'
@@ -18,7 +19,7 @@ import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // The offers, cadences and billed lines live in one module that every surface
 // describing Free and Pro reads: Settings, Checkout and the upgrade modal too.
 import {
-  BILLED_EVERY, BILLING_OPTIONS, DEFAULT_BILLING, FREE_EXPORT_NAMES, PRO_ROWS, PRO_VALUE,
+  BILLED_EVERY, BILLING_OPTIONS, DEFAULT_BILLING, MADE_WITH_LINE, sameExportNames, PRO_ROWS, PRO_VALUE,
   canCheckout, perMonth, priceState, priceStateCopy, resolveOffers, subscriptionCadence,
 } from '../config/planFacts'
 // The pair of cards reuses the homepage's sheet; the page's own sheet follows it,
@@ -54,12 +55,12 @@ const NBSP = ' '
 // The number and its noun stay on one line at any width ("1 / coffee" never splits).
 const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'.replace('1 coffee', `1${NBSP}coffee`)
 
-const HERO_LEAD =`Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, gives you unlimited projects, and removes the “Made with UI L4B” line from your exports.`
+const HERO_LEAD =`Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, gives you unlimited projects, and removes the ${MADE_WITH_LINE} from your exports.`
 
 const CANCEL_LINE = 'Cancel Pro any time. Keep every export you made.'
 const STRIPE_LINE = 'Secure checkout by Stripe.'
 
-const SAME_ON_BOTH = `All ${numberWord(TOOL_COUNT)} tools. Style guide exports in ${FREE_EXPORT_NAMES}, as often as you like. The same AI model. Files stay in your browser. ${comingLine()}`.trim()
+const SAME_ON_BOTH = `All ${numberWord(TOOL_COUNT)} tools. Style guide exports in ${sameExportNames()}, as often as you like. The same AI model. Files stay in your browser. ${comingLine()}`.trim()
 
 // The offer with a free trial and the one without, from the ladder.
 const TRIAL_OFFER = BILLING_OPTIONS.find((o) => o.trialDays)
@@ -85,7 +86,7 @@ const FAQS = [
   },
   {
     q: 'What happens to my work if Pro ends?',
-    a: `Every file you exported is yours: it’s on your computer. Your account stays, and Free’s limits apply from then on: ${FREE_SAVE_LIMITS.projects} saved projects with ${FREE_SAVE_LIMITS.customIcons} icons in each, ${AI.free.daily} AI generations a day, and the UI L4B line on new exports.`,
+    a: `Every file you exported is yours: it’s on your computer. Your account stays, and Free’s limits apply from then on: ${FREE_SAVE_LIMITS.projects} saved projects with ${FREE_SAVE_LIMITS.customIcons} icons in each, ${AI.free.daily} AI generations a day, and the “Made with UI L4B” line on new exports.`,
   },
   {
     q: 'Do my files get uploaded?',
@@ -355,6 +356,12 @@ export default function Pricing() {
     )
   }
   const hasAction = proCta !== null
+  // Side by side (1200 and up) Free is the left panel, so it comes first in the
+  // markup and Tab runs left to right. Stacked, Pro sits above Free and its
+  // action comes first. useMediaQuery picks one tree: CSS `order` would leave the
+  // tab order behind the picture.
+  const wide = useMediaQuery('(min-width: 1200px)')
+  const proFirst = hasAction && !wide
 
   // The docked bar's one action, by state: Pro's pill when the live price is
   // up, the recovery button when the price is down or missing, Free's toolkit
@@ -411,11 +418,12 @@ export default function Pricing() {
     </Link>
   )
 
-  // Free's card is placed in the markup by the Pro action: Pro first when it has
-  // one (that is the first thing a keyboard reaches, and it is first on the phone
-  // and tablet), Free first when Pro has none. Side by side, the grid seats it left.
+  // Free's card is placed in the markup by `proFirst`: Pro first when it has an
+  // action and the cards are stacked (its switch and button are the first thing a
+  // keyboard reaches, and it is first on the phone and tablet), Free first
+  // otherwise. Side by side, the grid seats Free left in either order.
   const freeCard = (
-    <div className="hpl-card hpl-free">
+    <div key="free" className="hpl-card hpl-free">
       <div className="pa-planrow">
         <h2 className="hpl-plan">Free</h2>
         {user && !isPro && !subLoading && <span className="pa-tag pa-tag--free">Your plan</span>}
@@ -436,6 +444,73 @@ export default function Pricing() {
   const stickyPro = stuck && showPill ? `Pro · ${liveAmount} a month, billed ${BILLED_EVERY[offer.id]}` : 'Pro'
   const pillOn = stuck && showPill
 
+  // The same card, built once so the pair can seat it before or after Free (see `proFirst`).
+  const proCard = (
+    <div key="pro" className="hpl-card hpl-pro pa-pro">
+      <span className="hpl-edge" aria-hidden="true" />
+      <div className="pa-pro-grid">
+        <div className="pa-pro-top">
+          <div className="pa-proline">
+            <div className="pa-planrow">
+              <h2 className="hpl-plan">Pro</h2>
+              {isPro && <span className="pa-tag pa-tag--pro">Your plan</span>}
+            </div>
+            {showSwitch && (
+              <div className="pl-switch" role="radiogroup" aria-label="Billing">
+                {offers.map((o, index) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    role="radio"
+                    ref={(node) => { segRefs.current[o.id] = node }}
+                    className={`pl-seg${billing === o.id ? ' pl-on' : ''}`}
+                    aria-checked={billing === o.id}
+                    tabIndex={billing === o.id ? 0 : -1}
+                    onClick={() => chooseBilling(o.id)}
+                    onKeyDown={(event) => onSegKey(event, index)}
+                  >
+                    {o.saving > 0 ? `${o.label} · Save ${o.saving}%` : o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {isPro && <p className="pa-active">Pro is active on this account.</p>}
+          <p className="hpl-tagline">The full studio, white-labelled.</p>
+          <p key={fxKey} className={`pa-price${fx}${hidePrice ? ' pa-price--hold' : ''}`} aria-live="polite">
+            {!hidePrice && <span className={priceSize}>{live ? liveAmount : stateCopy.word}</span>}
+            {live && !hidePrice && <span className="pa-per">{offer.months > 1 ? `a month, billed ${BILLED_EVERY[offer.id]}` : 'a month'}</span>}
+          </p>
+        </div>
+        <div key={`slot-${fxKey}`} className={`pa-slot${detailMin}${fx}`} id={outage ? 'pricing-noprice' : undefined}>
+          <p>{detail1}</p>
+          <p>{detail2}</p>
+        </div>
+        <PlanFigure />
+        <div className={`pa-act${hasAction ? '' : ' pa-act--none'}`} ref={actRef}>
+          {hasAction && <div className="pa-cta">{proCta}</div>}
+          <div key={`foot-${fxKey}`} className={`pa-foot${fx}`}>
+            <p>{foot1}</p>
+            <p>{foot2}</p>
+          </div>
+        </div>
+      </div>
+      <ProList live={EXPORT_THEMES_LIVE} collapsed={!allRows} />
+      <button
+        type="button"
+        className="hpl-more"
+        aria-expanded={allRows}
+        aria-controls="pp-prolist"
+        onClick={() => setAllRows((value) => !value)}
+      >
+        {allRows ? 'Show fewer' : `Show all ${PRO_ROWS.length} Pro features`}
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    </div>
+  )
+
   return (
     <div className="spectrum pricing" ref={rootRef}>
       {/* The marketing nav, exactly as `/` mounts it. */}
@@ -451,73 +526,7 @@ export default function Pricing() {
         <div className="pa-wrap">
           <div className="hpl pa-hpl">
             <div className={`pa-pair${hasAction ? '' : ' pa-pair--ff'}`}>
-              {!hasAction && freeCard}
-
-              <div className="hpl-card hpl-pro pa-pro">
-                <span className="hpl-edge" aria-hidden="true" />
-                <div className="pa-pro-grid">
-                  <div className="pa-pro-top">
-                    <div className="pa-proline">
-                      <div className="pa-planrow">
-                        <h2 className="hpl-plan">Pro</h2>
-                        {isPro && <span className="pa-tag pa-tag--pro">Your plan</span>}
-                      </div>
-                      {showSwitch && (
-                        <div className="pl-switch" role="radiogroup" aria-label="Billing">
-                          {offers.map((o, index) => (
-                            <button
-                              key={o.id}
-                              type="button"
-                              role="radio"
-                              ref={(node) => { segRefs.current[o.id] = node }}
-                              className={`pl-seg${billing === o.id ? ' pl-on' : ''}`}
-                              aria-checked={billing === o.id}
-                              tabIndex={billing === o.id ? 0 : -1}
-                              onClick={() => chooseBilling(o.id)}
-                              onKeyDown={(event) => onSegKey(event, index)}
-                            >
-                              {o.saving > 0 ? `${o.label} · Save ${o.saving}%` : o.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {isPro && <p className="pa-active">Pro is active on this account.</p>}
-                    <p className="hpl-tagline">The full studio, white-labelled.</p>
-                    <p key={fxKey} className={`pa-price${fx}${hidePrice ? ' pa-price--hold' : ''}`} aria-live="polite">
-                      {!hidePrice && <span className={priceSize}>{live ? liveAmount : stateCopy.word}</span>}
-                      {live && !hidePrice && <span className="pa-per">{offer.months > 1 ? `a month, billed ${BILLED_EVERY[offer.id]}` : 'a month'}</span>}
-                    </p>
-                  </div>
-                  <div key={`slot-${fxKey}`} className={`pa-slot${detailMin}${fx}`} id={outage ? 'pricing-noprice' : undefined}>
-                    <p>{detail1}</p>
-                    <p>{detail2}</p>
-                  </div>
-                  <PlanFigure />
-                  <div className={`pa-act${hasAction ? '' : ' pa-act--none'}`} ref={actRef}>
-                    {hasAction && <div className="pa-cta">{proCta}</div>}
-                    <div key={`foot-${fxKey}`} className={`pa-foot${fx}`}>
-                      <p>{foot1}</p>
-                      <p>{foot2}</p>
-                    </div>
-                  </div>
-                </div>
-                <ProList live={EXPORT_THEMES_LIVE} collapsed={!allRows} />
-                <button
-                  type="button"
-                  className="hpl-more"
-                  aria-expanded={allRows}
-                  aria-controls="pp-prolist"
-                  onClick={() => setAllRows((value) => !value)}
-                >
-                  {allRows ? 'Show fewer' : `Show all ${PRO_ROWS.length} Pro features`}
-                  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-              </div>
-
-              {hasAction && freeCard}
+              {proFirst ? [proCard, freeCard] : [freeCard, proCard]}
             </div>
           </div>
 

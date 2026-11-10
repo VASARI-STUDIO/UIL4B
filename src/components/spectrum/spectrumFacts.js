@@ -207,7 +207,7 @@ export const FREE_POINTS = [
  *  https://mobbin.com/sites/sections/23755ec5-0281-446a-b5b5-9433d63397c4
  *  On a page whose failure mode has twice been an overstated free tier, the
  *  exclusion is the more useful half. */
-export const FREE_EXCLUSION = 'A small “Made with UI L4B” line on exported files'
+export { FREE_EXCLUSION } from '../../config/planFacts.js'
 
 export const PRO_POINTS = [
   `${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month`,

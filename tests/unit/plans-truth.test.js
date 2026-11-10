@@ -118,6 +118,8 @@ function sellingRegions(src) {
   for (const m of code.matchAll(/const PRO_[A-Z_]+ = \[([\s\S]*?)\]/g)) regions.push(m[1])
   // The frozen lists in config/planFacts.js.
   for (const m of code.matchAll(/const (?:PRO|FREE)_[A-Z_]+ = Object\.freeze\(\[([\s\S]*?)\]\)/g)) regions.push(m[1])
+  // The comparison table's rows, which proValue(live) builds for either themes switch.
+  for (const m of code.matchAll(/const proValue = \([^)]*\) => Object\.freeze\(\[([\s\S]*?)\]\)\r?\nexport const PRO_VALUE/g)) regions.push(m[1])
   // A surface that takes its lines from planFacts sells what planFacts says, so
   // its regions are planFacts' regions — read, not assumed.
   if (src !== PLAN_FACTS && /from '\.\.\/config\/planFacts'/.test(src)) regions.push(...sellingRegions(PLAN_FACTS))
@@ -455,6 +457,39 @@ test('the themes are not sold as formats: no theme export is a Pro format in the
   for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(!formatNames.has(e.name), `${e.name} is in the format table without being built`)
 })
 
+
+// ── The comparison table tells the truth about the UI kit and the themes ─────
+import { proValue, sameExportNames } from '../../src/config/planFacts.js'
+import { documentFormats } from '../../src/config/exportFormats.js'
+
+const exportsGroup = (live) => proValue(live).find((g) => g.group === 'Exports').rows
+
+test('with the themes live, the Exports group has a themes row: Free previews all and exports the UI kit in its free themes, Pro gets every theme', () => {
+  const row = exportsGroup(true).find((r) => r.label === 'Export themes')
+  assert.ok(row, 'the comparison table has no export-themes row')
+  assert.ok(row.free.startsWith(`Preview all ${EXPORT_THEMES.length}`), row.free)
+  assert.ok(row.free.includes(`UI kit exports in ${freeThemes().length}`), row.free)
+  for (const t of freeThemes()) assert.ok(row.free.includes(t.name), `${t.name} is a free theme the row leaves out`)
+  assert.ok(row.pro.startsWith(`All ${EXPORT_THEMES.length}`), row.pro)
+  // The row prints numerals, never number words.
+  assert.ok(!/\b(two|ten|eight)\b/i.test(`${row.free} ${row.pro}`), 'a theme count is spelled as a word')
+})
+
+test('with the themes off, the table has no themes row and still lists every Pro format the dialog offers', () => {
+  const rows = exportsGroup(false)
+  assert.ok(!rows.some((r) => /theme/i.test(r.label)), 'a themes row shows before the themes export')
+  for (const live of [true, false]) {
+    for (const f of documentFormats().filter((x) => x.live && x.pro)) {
+      assert.ok(exportsGroup(live).some((r) => r.label === f.name && r.free === null && r.pro === 'Included'), `${f.name} is a Pro format the dialog still offers, missing with live=${live}`)
+    }
+  }
+})
+
+test('"Same on both plans" does not name the UI kit while it differs by plan', () => {
+  assert.ok(!/\bUI kit\b/.test(sameExportNames(true)), 'the UI kit is listed as the same on both plans')
+  assert.ok(/\bUI kit\b/.test(sameExportNames(false)), 'with the themes off the UI kit is the same on both plans')
+  assert.match(PLANS, /sameExportNames\(\)/, 'Pricing.jsx no longer reads the same-on-both names from planFacts')
+})
 // ── The homepage plans section sells only what the plan lists say ────────────
 test('the homepage plans section reads its lines from planFacts and its amounts from plansPrices', () => {
   const lists = stripComments(read('src/components/home/PlanLists.jsx'))
