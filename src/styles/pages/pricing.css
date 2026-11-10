@@ -73,9 +73,10 @@
   gap: 16px;
   align-items: stretch;
 }
-/* Pro comes first in the markup, so keyboard order starts at its switch and button.
-   Side by side, Free sits on the left by grid placement; under 1200 the one column
-   follows the markup (Pro, then Free), and with no Pro action the markup puts Free first. */
+/* Under 1200 Pro comes first in the markup, so keyboard order starts at its switch
+   and button, and the one column follows the markup (Pro, then Free). From 1200 the
+   markup puts Free first, so Tab runs left to right; the grid placement below seats
+   the two the same way whatever the markup order. With no Pro action Free is first at any width. */
 @media (min-width: 1200px) {
   .pricing .pa-pair > .hpl-free { grid-column: 1; grid-row: 1; }
   .pricing .pa-pair > .hpl-pro { grid-column: 2; grid-row: 1; }

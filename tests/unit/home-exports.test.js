@@ -107,7 +107,7 @@ test('the caption names the Presentation theme only while the themes are live', 
 test('with the themes live the copy takes its counts from the theme facts', () => {
   const { body, note } = exportCopy(true)
   assert.ok(body.includes(`leave as ${THEME_FACTS.exportsPerThemeWord} exports`), body)
-  assert.ok(body.includes(`Choose from ${THEME_FACTS.countWord} themes`), body)
+  assert.ok(body.includes(`Choose from ${THEME_FACTS.count} themes`), body)
   assert.equal(note, `${THEME_FACTS.uiKitNote}. Everything else is Pro.`)
 })
 

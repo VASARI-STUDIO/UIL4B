@@ -79,7 +79,7 @@ const EXPORTS_PER_THEME = EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length
 // The Free line about the UI kit. Without the themes it is the UI kit alone.
 // `live` is the themes switch; the tests pass it both ways.
 export const freeUiKitLine = (live = EXPORT_THEMES_LIVE) => (live
-  ? `The UI kit in ${numberWord(freeThemes().length)} export themes: ${FREE_THEME_NAMES}`
+  ? `The UI kit in ${freeThemes().length} export themes: ${FREE_THEME_NAMES}`
   : 'The UI kit')
 // ships with the export themes
 // The Pro-only exports of a theme, in the order the plan row names them.
@@ -96,8 +96,14 @@ export const FREE_POINTS = Object.freeze([
   `${FREE_SAVE_LIMITS.projects} saved projects, with ${FREE_SAVE_LIMITS.customIcons} icons in each`,
 ])
 
-/** /plans' one minus line on the Free card. */
-export const FREE_EXCLUSION = 'Small mark on exported files'
+/**
+ * The line Free carries and Pro removes. /plans, the homepage and Settings all
+ * print this wording, so the line has one name wherever it appears.
+ */
+export const MADE_WITH_LINE = '“Made with UI L4B” line'
+
+/** The one minus line on the Free card. */
+export const FREE_EXCLUSION = `A small ${MADE_WITH_LINE} on exported files`
 
 // The kinds of paid icon pack, in the order the plan lines name them. Every
 // `tier: 'paid'` entry in data/iconPackTiers.js carries one as its `group`.
@@ -132,7 +138,7 @@ export const CREDITED_EXPORT_NAMES = CREDIT_FREE_NAMES
  *   saved work          config/plans.js FREE_SAVE_LIMITS
  *   exports             config/exportFormats.js
  */
-export const PRO_VALUE = Object.freeze([
+export const proValue = (live = EXPORT_THEMES_LIVE) => Object.freeze([
   { group: 'AI', rows: [
     { label: 'AI generations', free: `${AI.free.daily} a day, ${AI.free.monthly} a month`, pro: `${AI.pro.daily} a day, ${AI.pro.monthly} a month` },
   ] },
@@ -157,6 +163,12 @@ export const PRO_VALUE = Object.freeze([
     { label: 'Icons per project', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
   ] },
   { group: 'Exports', rows: [
+    // The UI kit is not the same on both plans once the themes are live: Free has it in two, Pro in all.
+    ...(live ? [{
+      label: 'Export themes',
+      free: `Preview all ${THEME_COUNT}. UI kit exports in ${freeThemes().length}: ${FREE_THEME_NAMES}`,
+      pro: `All ${THEME_COUNT}, each with all ${numberWord(EXPORTS_PER_THEME)} exports`,
+    }] : []),
     ...proOnlyFormats().map((f) => ({ label: f.name, free: null, pro: 'Included' })),
     {
       label: '“Made with UI L4B” line on exports',
@@ -165,11 +177,19 @@ export const PRO_VALUE = Object.freeze([
     },
   ] },
 ])
+export const PRO_VALUE = proValue()
+
+/**
+ * The exports named under "Same on both plans". With the themes live the UI kit
+ * is not the same (two themes on Free, all of them on Pro), so it moves to the
+ * themes row and only the style guide and token files are listed here.
+ */
+export const sameExportNames = (live = EXPORT_THEMES_LIVE) => (live ? STYLE_GUIDE_EXPORT_NAMES : FREE_EXPORT_NAMES)
 
 // ships with the export themes
 // The export clause of the Pro line: the themes' documents, or the panel's own Pro documents.
 export const proDocumentsLine = (live = EXPORT_THEMES_LIVE) => (live
-  ? `${PRO_THEME_DOCS_TITLE} in all ${numberWord(THEME_COUNT)} export themes`
+  ? `${PRO_THEME_DOCS_TITLE} in all ${THEME_COUNT} export themes`
   : PRO_EXPORT_NAMES)
 
 /** What Pro adds — /plans' Pro card, Checkout, Settings and the upgrade modal, in order. */
@@ -179,7 +199,7 @@ export const PRO_POINTS = Object.freeze([
   'Every palette, gradient, prompt and brand palette',
   `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
-  `${proDocumentsLine()}, with no UI L4B line on anything`,
+  `${proDocumentsLine()}, with no ${MADE_WITH_LINE} on anything`,
 ])
 
 // ── The long-form lists ──────────────────────────────────────────────────────
@@ -189,8 +209,8 @@ export const PRO_POINTS = Object.freeze([
 // an icon key. FREE_POINTS and PRO_POINTS stay the short lists the other
 // surfaces print; both are written from the constants above and below.
 
-/** The Free card's minus line, in full. FREE_EXCLUSION is its short form. */
-export const FREE_EXCLUSION_FULL = 'A small “Made with UI L4B” line on exported files'
+/** The Free card's minus line in the full-width plan section: the same line as FREE_EXCLUSION. */
+export const FREE_EXCLUSION_FULL = FREE_EXCLUSION
 
 const FREE_SYSTEM_LABELS = COLOUR_SYSTEMS.filter((s) => s.free).map((s) => s.label.toLowerCase())
 const PRO_SYSTEM_ADDS = COLOUR_SYSTEMS.filter((s) => !s.free).map((s) => s.label.toLowerCase())
@@ -212,9 +232,9 @@ export const freeLines = (live = EXPORT_THEMES_LIVE) => Object.freeze([
 export const FREE_LINES = freeLines()
 
 // ships with the export themes
-const THEMES_ROW_SUB = `${capitalise(numberWord(proThemes().length))} more than Free: ${PRO_THEME_NAMES}. Each has all ${numberWord(EXPORTS_PER_THEME)} exports.`
+const THEMES_ROW_SUB = `${proThemes().length} more than Free: ${PRO_THEME_NAMES}. Each has all ${numberWord(EXPORTS_PER_THEME)} exports.`
 // ships with the export themes
-const THEMES_ROW_SUB_PHONE = `${capitalise(numberWord(proThemes().length))} more than Free, each with all ${numberWord(EXPORTS_PER_THEME)} exports.`
+const THEMES_ROW_SUB_PHONE = `${proThemes().length} more than Free, each with all ${numberWord(EXPORTS_PER_THEME)} exports.`
 // ships with the export themes
 const DOCUMENTS_ROW_SUB = `A ${EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages}-page guidelines PDF, and an HTML brand book that works offline, with the brand kit of colour, type and icon files inside.`
 
@@ -227,7 +247,7 @@ const GUIDELINES_GROUP = EXPORT_GROUPS.find((g) => g.id === 'guidelines')
 const proRow = (id, icon, title, sub, phoneSub = sub) => Object.freeze({ id, icon, title, sub, phoneSub })
 
 const proRowsById = (live) => Object.freeze(Object.fromEntries([
-  proRow('white-label', 'shield-check', 'White-label exports', 'No “Made with UI L4B” line on any file you hand over.'),
+  proRow('white-label', 'shield-check', 'White-label exports', `No ${MADE_WITH_LINE} on any file you hand over.`),
   live
     ? proRow('export-themes', 'layers', `All ${THEME_COUNT} export themes`, THEMES_ROW_SUB, THEMES_ROW_SUB_PHONE)
     : proRow('export-themes', 'layers', BOOK_GROUP.name, BOOK_GROUP.desc),
@@ -278,7 +298,7 @@ export const PRO_PHONE_COLLAPSED_ROWS = 4
 
 /** The line under the plans heading. */
 export const plansLead = (live = EXPORT_THEMES_LIVE) => `Every tool, the UI kit and the style guides stay free, with no time limit. Pro is the full studio: ${
-  live ? `all ${numberWord(THEME_COUNT)} export themes, brand guidelines` : 'client-ready books and decks'
+  live ? `all ${THEME_COUNT} export themes, brand guidelines` : 'client-ready books and decks'
 }, white-label exports, ${Number.isInteger(AI_MULTIPLE) ? `${numberWord(AI_MULTIPLE)} times the` : 'more'} AI and the whole library.`
 export const PLANS_LEAD = plansLead()
 
@@ -299,7 +319,10 @@ export const THEME_FACTS = Object.freeze({
   exportsPerTheme: EXPORTS_PER_THEME,
   exportsPerThemeWord: numberWord(EXPORTS_PER_THEME),
   freeTag: `Free in ${freeThemes().length} themes`,
-  uiKitNote: `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(THEME_COUNT)} themes`,
+  // /plans and the homepage's plans and exports sections print theme counts as numerals.
+  uiKitNote: `The UI kit is free in ${freeThemes().length} of the ${THEME_COUNT} themes`,
+  // The showcase section's own prose spells its counts, so its footnote does too.
+  uiKitNoteWords: `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(THEME_COUNT)} themes`,
 })
 
 // ── Cadences ─────────────────────────────────────────────────────────────────

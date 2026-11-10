@@ -85,7 +85,7 @@ export function exportRows(live = EXPORT_THEMES_LIVE) {
 export function exportCopy(live = EXPORT_THEMES_LIVE) {
   if (live) {
     return {
-      body: `Your colour, type and spacing leave as ${THEME_FACTS.exportsPerThemeWord} exports: brand guidelines, an HTML brand book with the brand kit inside, and a UI kit. Choose from ${THEME_FACTS.countWord} themes, each with its own design language.`,
+      body: `Your colour, type and spacing leave as ${THEME_FACTS.exportsPerThemeWord} exports: brand guidelines, an HTML brand book with the brand kit inside, and a UI kit. Choose from ${THEME_FACTS.count} themes, each with its own design language.`,
       note: `${THEME_FACTS.uiKitNote}. Everything else is Pro.`,
     }
   }

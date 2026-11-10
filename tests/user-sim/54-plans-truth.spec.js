@@ -31,6 +31,9 @@ import {
   freeFormats,
   proOnlyFormats,
   unbuiltFormats,
+  EXPORT_THEMES,
+  freeThemes,
+  proThemes,
 } from '../../src/config/exportFormats.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
@@ -188,6 +191,59 @@ test.describe('/plans advertises only what the product has', () => {
     for (const format of freeFormats().filter((f) => !f.kit)) {
       expect(named(shared, format), `the shared line no longer names the free "${format.name}" export`).toBe(true)
     }
+  })
+
+  test('the ledger shows the export themes, and the UI kit as it differs by plan', async ({ page }) => {
+    // Free previews every theme and exports the UI kit in its free themes; Pro has
+    // every theme. The UI kit is therefore NOT "the same on both plans", and the
+    // counts are numerals, as the board draws them.
+    watch(page, PERSONA)
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    const row = ledgerRow(page, 'Export themes')
+    await expect(row, 'the ledger has no export-themes row').toHaveCount(1)
+    const free = await cellText(row.locator('td').nth(0))
+    const pro = await cellText(row.locator('td').nth(1))
+    expect(free).toContain(`Preview all ${EXPORT_THEMES.length}`)
+    expect(free).toContain(`UI kit exports in ${freeThemes().length}`)
+    for (const t of freeThemes()) expect(free, `${t.name} is a free theme`).toContain(t.name)
+    expect(pro).toMatch(new RegExp(`^All ${EXPORT_THEMES.length}\b`))
+
+    const shared = await page.locator('.pl-same td').innerText()
+    expect(shared, 'the UI kit is listed as the same on both plans').not.toMatch(/\bUI kit\b/)
+
+    // The older formats stay while the export dialog still offers them.
+    for (const format of proOnlyFormats()) {
+      await expect(ledgerRow(page, format.name), `the dialog still offers "${format.name}"`).toHaveCount(1)
+    }
+
+    // Theme counts on the Pro card are numerals.
+    const proCard = await page.locator('.hpl-pro').evaluate((el) => el.textContent)
+    expect(proCard).toContain(`All ${EXPORT_THEMES.length} export themes`)
+    expect(proCard).toContain(`${proThemes().length} more than Free`)
+    expect(proCard).not.toMatch(/\b(?:ten|eight|two) (?:export )?themes\b/i)
+  })
+
+  test('Tab order follows the picture: Free then Pro from 1200 up, Pro then Free below', async ({ page }) => {
+    watch(page, PERSONA)
+    await stubPrices(page)
+    const freeFirst = () => page.evaluate(() => {
+      const free = document.querySelector('.pa-pair > .hpl-free')
+      const pro = document.querySelector('.pa-pair > .hpl-pro')
+      return !!(free.compareDocumentPosition(pro) & Node.DOCUMENT_POSITION_FOLLOWING)
+    })
+    for (const [width, expected] of [[1440, true], [1200, true], [1199, false], [768, false], [390, false]]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/plans')
+      await expectRendered(page)
+      expect(await freeFirst(), `at ${width}px Free ${expected ? 'should' : 'should not'} come first in the markup`).toBe(expected)
+    }
+    // Resizing across 1200 swaps the order without a reload.
+    await page.setViewportSize({ width: 1440, height: 900 })
+    expect(await freeFirst()).toBe(true)
+    await page.setViewportSize({ width: 1000, height: 900 })
+    await expect.poll(freeFirst).toBe(false)
   })
 
   test('the calls to action are actually painted, not merely present', async ({ page }) => {

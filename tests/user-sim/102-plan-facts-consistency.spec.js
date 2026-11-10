@@ -10,6 +10,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { proOnlyFormats, EXPORT_THEMES_LIVE, EXPORT_THEME_EXPORTS } from '../../src/config/exportFormats.js'
+import { FREE_EXCLUSION, MADE_WITH_LINE } from '../../src/config/planFacts.js'
 
 const PRICES = {
   monthly: { usd: 7 }, yearly: { usd: 48 },
@@ -108,6 +109,20 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
           .toMatch(new RegExp(`^All ${systems[1]}\\b`))
         claimed.add(line)
       }
+      // The export themes: Free's UI kit line and Pro's documents line carry theme counts as numerals,
+      // and /plans' themes row holds the same two counts.
+      const kitThemes = line.match(/^The UI kit in (\d+) export themes\b/)
+      if (kitThemes) {
+        expect(await plansCell('Export themes', plan), `Settings says "${line}" and the themes row on /plans differs`)
+          .toContain(`UI kit exports in ${kitThemes[1]}:`)
+        claimed.add(line)
+      }
+      const proThemes = line.match(/\bin all (\d+) export themes\b/)
+      if (proThemes) {
+        expect(await plansCell('Export themes', plan), `Settings says "${line}" and the themes row on /plans differs`)
+          .toMatch(new RegExp(`^All ${proThemes[1]}\\b`))
+        claimed.add(line)
+      }
       if (/^All \w+ tools$/.test(line)) {
         expect(plansText, `Settings says "${line}" and /plans does not`).toContain(line)
         claimed.add(line)
@@ -130,4 +145,30 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
     expect(settingsText.toLowerCase(), `Settings no longer names "${name}"`).toContain(name.toLowerCase())
     expect(plansText.toLowerCase(), `/plans no longer names "${name}"`).toContain(name.toLowerCase())
   }
+})
+
+// ── ONE NAME FOR THE LINE PRO REMOVES ───────────────────────────────────────────
+// Free's minus line and Pro's removal read the same on the homepage plans section,
+// /plans and Settings → Subscription: “Made with UI L4B”, never "small mark" or a
+// bare "UI L4B line".
+test('the homepage, /plans and Settings all name the export line “Made with UI L4B”', async ({ page }) => {
+  watch(page, 'a visitor comparing the export line on the homepage, /plans and Settings')
+  await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PRICES) }))
+
+  await go(page, '/')
+  const home = page.locator('#plans')
+  await expect(home.locator('.hpl-minus'), 'the homepage Free card lost its minus line').toHaveText(FREE_EXCLUSION)
+  expect(await home.innerText()).toContain(`No ${MADE_WITH_LINE}`)
+
+  await go(page, '/plans')
+  await expect(page.locator('.hpl-free .hpl-minus'), '/plans Free card words the export line differently').toHaveText(FREE_EXCLUSION)
+  expect(await page.locator('.hpl-pro').innerText()).toContain(`No ${MADE_WITH_LINE}`)
+
+  await signIn(page, { plan: 'free' })
+  await page.addInitScript(() => { try { localStorage.setItem('vs-settings-section', 'support') } catch { /* private mode */ } })
+  await go(page, '/settings')
+  const section = page.locator('#set-support')
+  await expect(section.locator('.sub-tier-free .sub-tier-minus'), 'Settings words the Free export line differently').toHaveText(FREE_EXCLUSION)
+  expect(await section.locator('.sub-tier-pro .sub-tier-list').innerText(), 'Settings words the line Pro removes differently')
+    .toContain(`no ${MADE_WITH_LINE}`)
 })

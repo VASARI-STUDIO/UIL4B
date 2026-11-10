@@ -363,7 +363,7 @@ export default function HomeShowcase() {
           {/* ships with the export themes */}
           <p className="hsc-footnote">
             {joinAnd(EXPORT_THEMES.map((t) => t.brand))} are sample brands; {EXPORT_THEMES[0].brand}’s photos are from Unsplash.{' '}
-            {THEME_FACTS.uiKitNote}; every other export is Pro.
+            {THEME_FACTS.uiKitNoteWords}; every other export is Pro.
           </p>
           <Link className="hsc-cta ui-pill-out" to="/projects">
             Open the toolkit
