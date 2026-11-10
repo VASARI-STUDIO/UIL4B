@@ -4,45 +4,47 @@ import { EXPORT_THEMES } from '../../config/exportFormats'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
-import { SHOWCASE_KINDS, showcaseImage } from './showcaseImages'
+import { SHOWCASE_KINDS, showcaseImage, viewerKinds } from './showcaseImages'
 import { preloadPage } from './showcasePreload'
 
 // ships with the export themes
-// The page viewer: one showcase page at a large size, stepping through the export
-// themes with the picked kind held fixed. useModalDialog supplies the focus trap, Escape,
+// The page viewer: one theme's pages at a large size, stepping through a few of its
+// export pages (the one clicked first). useModalDialog supplies the focus trap, Escape,
 // the scroll lock on <html> and the return of focus to the tile that opened it.
 // Below 768px it is a full-screen sheet with its controls in a bottom bar.
+// Only the page in view is fetched when the viewer opens; its neighbours are warmed after.
 
-const TOTAL = EXPORT_THEMES.length
 // How long the leaving animation runs before the viewer unmounts.
 const EXIT_MS = 150
 const EXIT_REDUCED_MS = 120
-// How long the new page takes to fade in over the old one, plus a frame of slack.
-const FADE_MS = 150
+// How long the new page takes to settle over the old one, plus a frame of slack.
+const FADE_MS = 220
 const FADE_REDUCED_MS = 120
 const SWIPE_PX = 48
 const SHEET_QUERY = '(max-width: 767px)'
 
 const capitalise = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
-const wrap = (at) => (at + TOTAL) % TOTAL
+const kindName = (id) => SHOWCASE_KINDS.find((k) => k.id === id).label
 
 // ── Which page is in view ────────────────────────────────────────────────────
 //
-// `index` is the theme in view and `under` the theme it fades in over. `phase`:
+// `index` is the page in view and `under` the page it fades in over. `phase`:
 //   idle  the page in view is settled
 //   wait  the new page is mounted at opacity 0 and is loading
-//   fade  it has loaded and is fading in
+//   fade  it has loaded and is moving in
+// `dir` is 1 after a step forward and -1 after one back: the new page comes in from that side.
 // A step made while the last one is still settling keeps the older page underneath,
 // so the page under the fade is always one that has been seen.
 function reduce(state, action) {
   switch (action.type) {
     case 'step':
       return {
-        index: wrap(state.index + action.delta),
+        index: (state.index + action.delta + action.total) % action.total,
         under: state.phase === 'idle' ? (state.failed ? null : state.index) : state.under,
         phase: 'wait',
         failed: false,
         steps: state.steps + 1,
+        dir: action.delta < 0 ? -1 : 1,
       }
     case 'loaded':
       return state.phase === 'wait' ? { ...state, phase: 'fade' } : state
@@ -92,20 +94,24 @@ function Page({ themeId, kindId, alt, className, imgRef, onLoad, onError }) {
   )
 }
 
-export default function ShowcaseViewer({ startIndex, kindId, onClose }) {
+export default function ShowcaseViewer({ themeIndex, kindId, onClose }) {
   const titleId = useId()
-  const [state, dispatch] = useReducer(reduce, { index: startIndex, under: null, phase: 'idle', failed: false, steps: 0 })
+  // The kinds this viewer steps through, fixed for as long as it is open.
+  const [kinds] = useState(() => viewerKinds(kindId))
+  const total = kinds.length
+  const [state, dispatch] = useReducer(reduce, { index: 0, under: null, phase: 'idle', failed: false, steps: 0, dir: 1 })
   const [closing, setClosing] = useState(false)
   const closeTimer = useRef(0)
   const topRef = useRef(null)
   const touch = useRef(null)
 
-  const { index, under, phase, failed, steps } = state
-  const theme = EXPORT_THEMES[index]
+  const { index, under, phase, failed, steps, dir } = state
+  const theme = EXPORT_THEMES[themeIndex]
+  const pageKind = kinds[index]
+  const pageLabel = kindName(pageKind).toLowerCase()
   // Said after each step. The first page is not announced: the dialog's name covers it.
-  const announce = steps ? `${theme.name}, ${theme.tier}. ${theme.brand}, sample brand. ${index + 1} of ${TOTAL}.` : ''
-  const kindLabel = SHOWCASE_KINDS.find((k) => k.id === kindId).label.toLowerCase()
-  const altFor = (at) => `${EXPORT_THEMES[at].brand} ${kindLabel} page, ${EXPORT_THEMES[at].name} theme, ${at + 1} of ${TOTAL}`
+  const announce = steps ? `${capitalise(pageLabel)} page, ${theme.name}. ${index + 1} of ${total}.` : ''
+  const altFor = (at) => `${theme.brand} ${kindName(kinds[at]).toLowerCase()} page, ${theme.name} theme, ${at + 1} of ${total}`
 
   // The exit animation plays, then the viewer unmounts; the hook's cleanup (unlock, focus
   // back to the tile) runs at that point, so the page stays locked until it has gone.
@@ -126,14 +132,14 @@ export default function ShowcaseViewer({ startIndex, kindId, onClose }) {
 
   const step = useCallback((delta) => {
     if (closeTimer.current) return
-    dispatch({ type: 'step', delta })
-  }, [])
+    dispatch({ type: 'step', delta, total })
+  }, [total])
 
   // Warm the pages either side of the one in view.
   useEffect(() => {
-    warm(EXPORT_THEMES[wrap(index + 1)].id, kindId)
-    warm(EXPORT_THEMES[wrap(index - 1)].id, kindId)
-  }, [index, kindId])
+    warm(theme.id, kinds[(index + 1) % total])
+    warm(theme.id, kinds[(index - 1 + total) % total])
+  }, [theme.id, kinds, index, total])
 
   // A new page that is already cached may have finished before React could hear its load.
   useEffect(() => {
@@ -141,7 +147,7 @@ export default function ShowcaseViewer({ startIndex, kindId, onClose }) {
     if (phase === 'wait' && img?.complete && img.naturalWidth > 0) dispatch({ type: 'loaded' })
   }, [index, phase])
 
-  // The fade starts two frames after the load, so the opacity change is a real transition.
+  // The move starts two frames after the load, so the change is a real transition.
   const onLoaded = useCallback(() => {
     requestAnimationFrame(() => requestAnimationFrame(() => dispatch({ type: 'loaded' })))
   }, [])
@@ -201,14 +207,14 @@ export default function ShowcaseViewer({ startIndex, kindId, onClose }) {
             <span>{theme.name}</span>
             <span className={theme.tier === 'free' ? 'hsv-tier hsv-tier--free' : 'hsv-tier'}>{capitalise(theme.tier)}</span>
           </p>
-          <p className="hsv-brand">{theme.brand}, sample brand</p>
+          <p className="hsv-brand">{theme.brand}, sample brand<span className="hsv-kind">{kindName(pageKind)} page</span></p>
         </div>
-        <p className="hsv-count">{index + 1} of {TOTAL}</p>
+        <p className="hsv-count">{index + 1} of {total}</p>
 
-        <div className="hsv-stage" data-hsv-close="" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="hsv-stage" data-hsv-close="" data-dir={dir} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           {under !== null && (
             <span className="hsv-under" aria-hidden="true">
-              <Page key={`under-${under}`} themeId={EXPORT_THEMES[under].id} kindId={kindId} alt="" className="hsv-img" />
+              <Page key={`under-${under}`} themeId={theme.id} kindId={kinds[under]} alt="" className="hsv-img" />
             </span>
           )}
           {failed ? (
@@ -217,7 +223,7 @@ export default function ShowcaseViewer({ startIndex, kindId, onClose }) {
             <Page
               key={`top-${index}`}
               themeId={theme.id}
-              kindId={kindId}
+              kindId={pageKind}
               alt={altFor(index)}
               className={topClass}
               imgRef={topRef}
@@ -227,11 +233,11 @@ export default function ShowcaseViewer({ startIndex, kindId, onClose }) {
           )}
         </div>
 
-        <button type="button" className="hsv-btn hsv-prev" aria-label="Previous theme" onClick={() => step(-1)}>
+        <button type="button" className="hsv-btn hsv-prev" aria-label="Previous page" onClick={() => step(-1)}>
           <Chevron back />
           <span className="hsv-steptext" aria-hidden="true">Previous</span>
         </button>
-        <button type="button" className="hsv-btn hsv-next" aria-label="Next theme" onClick={() => step(1)}>
+        <button type="button" className="hsv-btn hsv-next" aria-label="Next page" onClick={() => step(1)}>
           <span className="hsv-steptext" aria-hidden="true">Next</span>
           <Chevron />
         </button>

@@ -10,7 +10,7 @@
 // specs hold is what the dialog asks for, what it saves, and what it says.
 import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
-import { go, watch, signIn, overlaysSettled, ready } from './helpers.js'
+import { go, watch, signIn, overlaysSettled, ready, openProjectFromDashboard } from './helpers.js'
 import { mockThemeApi } from './export-theme-mock.js'
 import { MOTION_SETTINGS, MOTION_WIDTHS, motionState, chooseThemeWithKeys } from './export-reduced-motion.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -120,7 +120,7 @@ test.describe('the UI kit export', () => {
     const calls = await mockThemeApi(page)
     await signIn(page, { plan: 'free', projects: [savedProject('Harbour')] })
     await go(page, '/projects')
-    await page.locator('.uh-card-name[data-project="Harbour"]').click()
+    await openProjectFromDashboard(page, 'Harbour')
     await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
     await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project', exact: true }).click()
     const panel = exportPanel(page)

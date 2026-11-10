@@ -173,13 +173,13 @@ test.describe('projects states only quotas the product enforces', () => {
       watch(page, `a ${plan} user looking for the folders that used to be here`)
       await signIn(page, { plan, projects: 2 })
       await go(page, '/projects')
-      await expect(page.locator('.proj-card')).toHaveCount(2)
+      await expect(page.getByRole('link', { name: /^Open project/ }), 'the latest project is its sheet').toHaveCount(1)
+      await expect(page.locator('a.db-mini'), 'the other one is a mini').toHaveCount(1)
 
       await expect(page.locator('.proj-folders'), 'the chip row is gone').toHaveCount(0)
       await expect(page.locator('.proj-folder-chip'), 'no chip survives').toHaveCount(0)
-      await expect(page.locator('.uh-card-folder'), 'no per-card filer').toHaveCount(0)
       // The word itself, anywhere a reader could see it on this surface.
-      await expect(page.locator('.uh'), 'the surface still says "folder"')
+      await expect(page.locator('.db'), 'the surface still says "folder"')
         .not.toContainText(/folder/i)
     })
   }

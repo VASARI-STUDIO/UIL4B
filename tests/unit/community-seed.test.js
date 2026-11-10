@@ -108,11 +108,12 @@ test('positive control: the scan can actually see a name in the source', () => {
   // renamed file or a regex that stopped matching. It asserts the machinery
   // reports a fabrication when one is really there.
   const src = read('src/pages/Projects.jsx')
-  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-  assert.ok(code.length > 1000, 'the surface scan read an empty or missing file')
-  const planted = code + "\nconst x = { author: 'Maya R.' }\n"
-  assert.ok(planted.includes('Maya R.'), 'the scan cannot see a name it is meant to catch')
-  // And the comment-stripper must not be what is hiding it: the real file DOES
-  // name the four in its deletion note, and that note must survive stripping.
-  assert.ok(src.includes('Maya R.'), 'the record of what was deleted is gone from Projects.jsx')
+  const strip = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  assert.ok(strip(src).length > 1000, 'the surface scan read an empty or missing file')
+  // The comment-stripper must not be what is hiding a name: one planted in code survives it,
+  // and the same name planted in a comment does not.
+  const inCode = strip(src + "\nconst x = { author: 'Maya R.' }\n")
+  assert.ok(inCode.includes('Maya R.'), 'the scan cannot see a name it is meant to catch')
+  const inComment = strip(src + "\n// Maya R. was here\n")
+  assert.ok(!inComment.includes('Maya R.'), 'the stripper left a comment in the scanned text')
 })

@@ -357,12 +357,16 @@ function projectsCollection(fs, uid) {
  * `list` that has not been moved across — a fresh account on v1, or a device
  * still running the v1 client that pushed since the last migration.
  *
+ * `opts.step` wraps each network call (the document, then the collection) so a caller can bound one
+ * step at a time; it takes the call's promise and returns one.
+ *
  * @returns {{ list, tombstones, version, found, stored?, needsMigration? }}
  */
 export async function readRemoteProjects(fs, uid, opts = {}) {
   const perProject = opts.perProject ?? PER_PROJECT_SYNC_ENABLED
 
-  const snap = await fs.getDoc(legacyRef(fs, uid))
+  const step = opts.step || ((promise) => promise)
+  const snap = await step(fs.getDoc(legacyRef(fs, uid)))
   const head = snap.exists() ? snap.data() || {} : null
   const legacyList = head && Array.isArray(head.list) ? head.list : []
   const legacyTombstones = normaliseTombstones(head?.deleted)
@@ -372,7 +376,7 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
     return { list: legacyList, tombstones: legacyTombstones, version, found: !!head }
   }
 
-  const docs = await fs.getDocs(projectsCollection(fs, uid))
+  const docs = await step(fs.getDocs(projectsCollection(fs, uid)))
   const perList = []
   const perTombstones = {}
   const stored = new Map()
@@ -413,12 +417,15 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
  * has; `migration` carries the refusal so the caller can say sync is not
  * complete, and the next pull tries again (the migration is safe to repeat).
  *
+ * `opts.step` bounds each network step on its own (see readRemoteProjects); the migration is one step.
+ *
  * @returns {{ list, tombstones, version, found, stored?, migration? }}
  */
 export async function pullRemoteProjects(fs, uid, opts = {}) {
   const first = await readRemoteProjects(fs, uid, opts)
   if (!first.needsMigration) return first
-  const migration = await migrateToPerProject(fs, uid, { now: opts.now })
+  const step = opts.step || ((promise) => promise)
+  const migration = await step(migrateToPerProject(fs, uid, { now: opts.now }))
   if (!migration.ok) return { ...first, migration }
   const second = await readRemoteProjects(fs, uid, opts)
   return { ...second, migration }

@@ -133,6 +133,16 @@ const ALLOWED = {
     '.crd-more summary code': 'code',
     '.crd-row--pkg .crd-row-name': 'token',
   },
+  // The dashboard's kit sheet and shelf: hex labels, the px column of the type-scale plate, the code plate and
+  // its file rows. .db-mono wraps a hex, a px step or a file name, all of them code. (The "4:5" crop chip,
+  // .db-ratio, is a ratio and takes the UI face, so it is not listed.)
+  'pages/dashboard.css': {
+    '.db-code': 'code',
+    '.db-files .f': 'code',
+    '.db-hex': 'hex',
+    '.db-mono': 'hex',
+    '.db-plate.sc .px': 'value',
+  },
   'pages/export-dialog.css': {
     '.xd-man-n': 'token',
   },

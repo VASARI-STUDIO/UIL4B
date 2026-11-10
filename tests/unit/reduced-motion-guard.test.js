@@ -217,11 +217,13 @@ test('3 · every guarded selector has an explicit-attribute companion rule', () 
   // half-covers, because it reaches durations and delays but not opacity or
   // transform. Both halves are required for the both-directions contract.
   const companions = new Set()
-  const ruleRe = /(^|[{};])([^{};]*)\{/g
+  // A lookbehind, not a consumed delimiter: the `{` that opens an @media block is also the
+  // start of its first rule, and a pattern that eats it would skip that rule.
+  const ruleRe = /(?<=^|[{};])([^{};]*)\{/g
   let m
   while ((m = ruleRe.exec(CSS)) !== null) {
-    if (!m[2].includes(EXPLICIT)) continue
-    for (const sel of splitSelectors(m[2])) {
+    if (!m[1].includes(EXPLICIT)) continue
+    for (const sel of splitSelectors(m[1])) {
       const r = remainder(sel, EXPLICIT)
       if (r !== null) companions.add(r)
     }
