@@ -70,7 +70,7 @@ test('Pro has six ticks, in the order the card prints them, and the checkout rea
   assert.equal(PRO_POINTS[2], 'Every palette, gradient, prompt and brand palette')
   assert.match(PRO_POINTS[3], /icons, in any size and line style$/)
   assert.equal(PRO_POINTS[4], 'Unlimited saved projects and custom icons')
-  assert.match(PRO_POINTS[5], /, with no UIL4B line on anything$/)
+  assert.match(PRO_POINTS[5], /, with no UI L4B line on anything$/)
   // Checkout builds its feature list straight from PRO_POINTS, so the card, the
   // modal, Settings and the checkout summary cannot differ.
   assert.match(code(SURFACES.checkout), /const FEATURES = PRO_POINTS\b/)
@@ -162,7 +162,7 @@ import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 test('FREE_POINTS and PRO_POINTS keep their text while the themes are off, and name the themes when on', () => {
   const tail = `, and style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`
   assert.equal(FREE_POINTS[2], `${freeUiKitLine(EXPORT_THEMES_LIVE)}${tail}`)
-  assert.equal(PRO_POINTS[5], `${proDocumentsLine(EXPORT_THEMES_LIVE)}, with no UIL4B line on anything`)
+  assert.equal(PRO_POINTS[5], `${proDocumentsLine(EXPORT_THEMES_LIVE)}, with no UI L4B line on anything`)
   assert.equal(FREE_POINTS.length, 4)
   assert.equal(PRO_POINTS.length, 6)
   // Off: the exact lines /plans, Settings, the modal and checkout printed before the themes existed.

@@ -255,7 +255,7 @@ test('Pro is only sold on export benefits that exist', () => {
   // back it. If proOnlyFormats() ever empties, the Pro card must lose the line
   // rather than keep an empty promise — so the assertion is on the pairing, not
   // on the sentence.
-  const claimsExportBenefit = /no “Made with UIL4B” line|watermark-free|credit line/i.test(stripComments(PLANS))
+  const claimsExportBenefit = /no “Made with UI ?L4B” line|watermark-free|credit line/i.test(stripComments(PLANS))
   if (claimsExportBenefit) {
     assert.ok(freeFormats().length > 0,
       'Pro claims a cleaner version of an export that no free user can produce')
@@ -326,7 +326,7 @@ test('/plans derives the numbers inside the sub-line', () => {
     'the AI ends of the sub-line are typed rather than read from AI_LIMITS')
   assert.match(sub[1], /\$\{numberWord\(COLOUR_SYSTEMS\.length\)\} colour systems/, 'the colour-system count in the sub-line is typed')
   assert.ok(!/\btimes\b/.test(sub[1]), 'the sub-line claims a multiple, which the monthly ceiling does not bear out')
-  assert.ok(!/\d/.test(sub[1].replace(/\$\{[^}]*\}/g, '').replace(/UIL4B/g, '')), 'the sub-line types a digit the config owns')
+  assert.ok(!/\d/.test(sub[1].replace(/\$\{[^}]*\}/g, '').replace(/UI ?L4B/g, '')), 'the sub-line types a digit the config owns')
   assert.ok(!/\bsix times\b|\beight colour systems\b/.test(code), 'the page types a number the config owns')
   assert.match(code, /const AI = AI_LIMITS\b/, 'the sub-line no longer reads AI_LIMITS')
   // The numbers the line prints are the numbers the AI gate enforces, and they

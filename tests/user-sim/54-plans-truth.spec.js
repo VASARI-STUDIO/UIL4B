@@ -265,7 +265,7 @@ test.describe('/plans says what it claims', () => {
 
     await expect(page.locator('.pa-lead')).toHaveText(
       `Pro lifts AI from ${AI_LIMITS.free.daily} to ${AI_LIMITS.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, `
-      + 'gives you unlimited projects, and removes the “Made with UIL4B” line from your exports.',
+      + 'gives you unlimited projects, and removes the “Made with UI L4B” line from your exports.',
     )
     await expect(page.locator('.pl-same td')).toContainText(`All ${numberWord(TOOL_COUNT)} tools.`)
   })
