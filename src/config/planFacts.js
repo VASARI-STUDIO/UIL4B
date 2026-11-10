@@ -189,7 +189,7 @@ export const sameExportNames = (live = EXPORT_THEMES_LIVE) => (live ? STYLE_GUID
 // ships with the export themes
 // The export clause of the Pro line: the themes' documents, or the panel's own Pro documents.
 export const proDocumentsLine = (live = EXPORT_THEMES_LIVE) => (live
-  ? `${PRO_THEME_DOCS_TITLE} in all ${THEME_COUNT} export themes`
+  ? `${PRO_THEME_DOCS_TITLE} in all ${numberWord(THEME_COUNT)} export themes`
   : PRO_EXPORT_NAMES)
 
 /** What Pro adds — /plans' Pro card, Checkout, Settings and the upgrade modal, in order. */
@@ -232,9 +232,9 @@ export const freeLines = (live = EXPORT_THEMES_LIVE) => Object.freeze([
 export const FREE_LINES = freeLines()
 
 // ships with the export themes
-const THEMES_ROW_SUB = `${proThemes().length} more than Free: ${PRO_THEME_NAMES}. Each has all ${numberWord(EXPORTS_PER_THEME)} exports.`
+const THEMES_ROW_SUB = `${capitalise(numberWord(proThemes().length))} more than Free: ${PRO_THEME_NAMES}. Each has all ${numberWord(EXPORTS_PER_THEME)} exports.`
 // ships with the export themes
-const THEMES_ROW_SUB_PHONE = `${proThemes().length} more than Free, each with all ${numberWord(EXPORTS_PER_THEME)} exports.`
+const THEMES_ROW_SUB_PHONE = `${capitalise(numberWord(proThemes().length))} more than Free, each with all ${numberWord(EXPORTS_PER_THEME)} exports.`
 // ships with the export themes
 const DOCUMENTS_ROW_SUB = `A ${EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages}-page guidelines PDF, and an HTML brand book that works offline, with the brand kit of colour, type and icon files inside.`
 
@@ -298,7 +298,7 @@ export const PRO_PHONE_COLLAPSED_ROWS = 4
 
 /** The line under the plans heading. */
 export const plansLead = (live = EXPORT_THEMES_LIVE) => `Every tool, the UI kit and the style guides stay free, with no time limit. Pro is the full studio: ${
-  live ? `all ${THEME_COUNT} export themes, brand guidelines` : 'client-ready books and decks'
+  live ? `all ${numberWord(THEME_COUNT)} export themes, brand guidelines` : 'client-ready books and decks'
 }, white-label exports, ${Number.isInteger(AI_MULTIPLE) ? `${numberWord(AI_MULTIPLE)} times the` : 'more'} AI and the whole library.`
 export const PLANS_LEAD = plansLead()
 
@@ -319,10 +319,8 @@ export const THEME_FACTS = Object.freeze({
   exportsPerTheme: EXPORTS_PER_THEME,
   exportsPerThemeWord: numberWord(EXPORTS_PER_THEME),
   freeTag: `Free in ${freeThemes().length} themes`,
-  // /plans and the homepage's plans and exports sections print theme counts as numerals.
-  uiKitNote: `The UI kit is free in ${freeThemes().length} of the ${THEME_COUNT} themes`,
-  // The showcase section's own prose spells its counts, so its footnote does too.
-  uiKitNoteWords: `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(THEME_COUNT)} themes`,
+  // Running sentences spell their counts; labels (freeTag, the plan rows) print numerals, as the board does.
+  uiKitNote: `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(THEME_COUNT)} themes`,
 })
 
 // ── Cadences ─────────────────────────────────────────────────────────────────

@@ -191,8 +191,8 @@ test('the switch turns the Free UI kit line and the Pro export rows, both ways',
   const on = proRows(true)
   const proNames = proThemes().map((t) => t.name)
   assert.equal(on[1].title, `All ${EXPORT_THEMES.length} export themes`)
-  assert.equal(on[1].sub, `${proThemes().length} more than Free: ${proNames.slice(0, -1).join(', ')} and ${proNames.at(-1)}. Each has all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
-  assert.equal(on[1].phoneSub, `${proThemes().length} more than Free, each with all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
+  assert.equal(on[1].sub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free: ${proNames.slice(0, -1).join(', ')} and ${proNames.at(-1)}. Each has all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
+  assert.equal(on[1].phoneSub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free, each with all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
   assert.ok(on[1].phoneSub.length < on[1].sub.length)
   const pages = EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages
   assert.ok(on[2].sub.startsWith(`A ${pages}-page guidelines PDF`))
@@ -202,7 +202,7 @@ test('the switch turns the Free UI kit line and the Pro export rows, both ways',
   assert.match(on[2].sub, /brand book[^.]*with the brand kit[^.]*inside/, 'the documents row no longer says where the brand kit is')
   assert.ok(!/ui kit/i.test(on[2].title))
 
-  assert.match(plansLead(true), new RegExp(`all ${EXPORT_THEMES.length} export themes, brand guidelines`))
+  assert.match(plansLead(true), new RegExp(`all ${numberWord(EXPORT_THEMES.length)} export themes, brand guidelines`))
   assert.match(plansLead(false), /client-ready books and decks/)
   assert.ok(!/export themes/.test(plansLead(false)))
 })
@@ -245,7 +245,7 @@ test('THEME_FACTS is worked out from the theme list', () => {
   assert.equal(THEME_FACTS.freeCount, freeThemes().length)
   assert.equal(THEME_FACTS.proCount + THEME_FACTS.freeCount, THEME_FACTS.count)
   assert.equal(THEME_FACTS.freeTag, `Free in ${freeThemes().length} themes`)
-  assert.equal(THEME_FACTS.uiKitNote, `The UI kit is free in ${freeThemes().length} of the ${EXPORT_THEMES.length} themes`)
+  assert.equal(THEME_FACTS.uiKitNote, `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(EXPORT_THEMES.length)} themes`)
   assert.equal(THEME_FACTS.exportsPerThemeWord, numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length))
   assert.equal(PLANS_LEAD, plansLead(EXPORT_THEMES_LIVE))
 })
@@ -298,4 +298,20 @@ test('/plans, the homepage and Settings all name the export line “Made with UI
   for (const file of ['src/pages/Pricing.jsx', 'src/pages/Settings.jsx', 'src/components/home/PlanLists.jsx', 'src/components/home/HomePlans.jsx']) {
     assert.ok(!/UI L4B line|UIL4B line|Small mark|small mark/.test(code(file)), `${file} names the export line its own way`)
   }
+})
+
+// ── The board's rule for theme counts ───────────────────────────────────────
+// Short labels and row titles use numerals; running sentences use words
+// (PlansPageR3A, HomePlans, HomeExports boards).
+test('theme counts follow the board: numerals in labels, words in sentences', () => {
+  // Labels and row titles: numerals.
+  assert.equal(PRO_ROWS[1].title, 'All 10 export themes')
+  assert.equal(THEME_FACTS.freeTag, 'Free in 2 themes')
+  assert.equal(freeLines(true)[2], 'The UI kit in 2 export themes: Standards and Specification')
+  // Running sentences: words.
+  assert.match(plansLead(true), /Pro is the full studio: all ten export themes, brand guidelines,/)
+  assert.match(PRO_ROWS[1].sub, /^Eight more than Free: Presentation, Ticket, Broadsheet, Catalogue, Studio, Riso, Blueprint and In use\./)
+  assert.match(PRO_ROWS[1].phoneSub, /^Eight more than Free, each with all \w+ exports\.$/)
+  assert.equal(THEME_FACTS.uiKitNote, 'The UI kit is free in two of the ten themes')
+  assert.equal(THEME_FACTS.countWord, 'ten')
 })

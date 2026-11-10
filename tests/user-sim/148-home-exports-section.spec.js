@@ -196,7 +196,7 @@ test('card 2 lists the exports a theme offers, and the caption names the theme',
     expect(rows[1]).toMatch(/^HTML brand book .*with the brand kit inside.*Pro$/)
     expect(rows[2]).toMatch(/^UI kit .*Free in 2 themes$/)
     await expect(card(page, 1).locator('.hx-cap')).toHaveText('Kerbside, a sample brand, in the Presentation theme. Set in Archivo and IBM Plex Sans.')
-    await expect(card(page, 1).locator('.hx-note')).toHaveText('The UI kit is free in 2 of the 10 themes. Everything else is Pro.')
+    await expect(card(page, 1).locator('.hx-note')).toHaveText('The UI kit is free in two of the ten themes. Everything else is Pro.')
   } finally {
     await ctx.close()
   }

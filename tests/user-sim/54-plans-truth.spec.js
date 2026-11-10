@@ -33,7 +33,6 @@ import {
   unbuiltFormats,
   EXPORT_THEMES,
   freeThemes,
-  proThemes,
 } from '../../src/config/exportFormats.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
@@ -196,7 +195,7 @@ test.describe('/plans advertises only what the product has', () => {
   test('the ledger shows the export themes, and the UI kit as it differs by plan', async ({ page }) => {
     // Free previews every theme and exports the UI kit in its free themes; Pro has
     // every theme. The UI kit is therefore NOT "the same on both plans", and the
-    // counts are numerals, as the board draws them.
+    // row titles and labels carry numerals, running sentences words, as the board draws them.
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page)
@@ -218,10 +217,10 @@ test.describe('/plans advertises only what the product has', () => {
       await expect(ledgerRow(page, format.name), `the dialog still offers "${format.name}"`).toHaveCount(1)
     }
 
-    // Theme counts on the Pro card are numerals.
+    // The Pro card: the row title has a numeral, its sub-line (a sentence) a word.
     const proCard = await page.locator('.hpl-pro').evaluate((el) => el.textContent)
     expect(proCard).toContain(`All ${EXPORT_THEMES.length} export themes`)
-    expect(proCard).toContain(`${proThemes().length} more than Free`)
+    expect(proCard).toContain('Eight more than Free')
     expect(proCard).not.toMatch(/\b(?:ten|eight|two) (?:export )?themes\b/i)
   })
 
