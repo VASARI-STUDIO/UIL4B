@@ -135,6 +135,9 @@ test.describe('on a 390px phone, in a real touch context', () => {
       await expect(form).toBeVisible()
       await expect(form.getByRole('textbox', { name: 'Your first name' })).toBeFocused()
       expect(await form.evaluate((el) => getComputedStyle(el).position), 'a sheet in the flow, not floating').toBe('static')
+      // The sheet opens at scale(.97) and settles over 180ms; measure the box once the animation has finished,
+      // not mid-way (44px x .97 reads as 43).
+      await form.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
       const [save] = await boxes(form.getByRole('button', { name: 'Save', exact: true }))
       expect(save.h, 'Save is a thumb target').toBeGreaterThanOrEqual(44)
       await page.keyboard.press('Escape')
