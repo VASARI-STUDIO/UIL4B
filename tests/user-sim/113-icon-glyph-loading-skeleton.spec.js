@@ -326,7 +326,7 @@ test.describe('the customiser while its artwork is loading', () => {
     const r = node.getBoundingClientRect()
     const stage = node.parentElement.getBoundingClientRect()
     return { background: css.backgroundColor, backgroundImage: css.backgroundImage, shadow: css.boxShadow,
-      animation: css.animationName, width: r.width, height: r.height,
+      animation: css.animationName, width: node.offsetWidth, height: node.offsetHeight,
       dx: r.x + r.width / 2 - stage.x - stage.width / 2,
       dy: r.y + r.height / 2 - stage.y - stage.height / 2 }
   })
@@ -363,9 +363,9 @@ test.describe('the customiser while its artwork is loading', () => {
         expect(paint.backgroundImage, `${motion}: the waiting slot paints an image`).toBe('none')
         expect(paint.shadow, `${motion}: the waiting slot paints a shadow`).toBe('none')
         expect(paint.animation, `${motion}: the waiting slot animates`).toBe('none')
-        // The stage draws at the inspection size (112px), whatever the export size.
-        expect(paint.width).toBeCloseTo(112, 1)
-        expect(paint.height).toBeCloseTo(112, 1)
+        // The stage draws at the inspection size (160px), whatever the export size.
+        expect(paint.width).toBeCloseTo(160, 1)
+        expect(paint.height).toBeCloseTo(160, 1)
         expect(Math.abs(paint.dx)).toBeLessThan(1)
         expect(Math.abs(paint.dy)).toBeLessThan(1)
       }
@@ -411,10 +411,10 @@ test.describe('the customiser while its artwork is loading', () => {
       const placeholder = stage.locator('.ied-stage-wait')
       await expect.poll(() => artRequests).toBeGreaterThan(0)
 
-      // Nothing to show yet: an empty, unpainted 112px box (the inspection size), as for any cold stage.
+      // Nothing to show yet: an empty, unpainted 160px box (the inspection size), as for any cold stage.
       await expect(placeholder).toHaveCount(1)
       await expect(placeholder).not.toHaveAttribute('src', /./)
-      expect((await measureWait(placeholder)).width).toBeCloseTo(112, 1)
+      expect((await measureWait(placeholder)).width).toBeCloseTo(160, 1)
 
       // The grid's glyph lands first. The slot becomes that glyph, still unpainted.
       releaseBatch()
@@ -429,8 +429,8 @@ test.describe('the customiser while its artwork is loading', () => {
       expect(alphaOf(paint.background)).toBe(0)
       expect(paint.shadow).toBe('none')
       expect(paint.animation).toBe('none')
-      expect(paint.width).toBeCloseTo(112, 1)
-      expect(paint.height).toBeCloseTo(112, 1)
+      expect(paint.width).toBeCloseTo(160, 1)
+      expect(paint.height).toBeCloseTo(160, 1)
       expect(Math.abs(paint.dx)).toBeLessThan(1)
       expect(Math.abs(paint.dy)).toBeLessThan(1)
       await expect(stage.getByRole('status')).toHaveText('Loading…')
@@ -517,7 +517,7 @@ test.describe('the customiser while its artwork is loading', () => {
       expect(cold.length, 'frames recorded before the art arrived').toBeGreaterThan(0)
       expect(withArt.length, 'frames recorded with the art on screen').toBeGreaterThan(0)
       // Hand-checked: 2px default at the 24px export size over a 256 box is 2 / (24/256) = 21.33 units
-      // (the stage draws at 112px, with the stroke scaled to match),
+      // (the stage draws at 160px, with the stroke scaled to match),
       // against 2 units for a 24 box. If these matched, the test could not tell.
       expect(Number(settled)).toBeCloseTo(21.33, 1)
       expect(cold, 'the cold stage used the 24-unit stroke').toContain('2')

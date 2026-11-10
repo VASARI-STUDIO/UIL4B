@@ -261,7 +261,7 @@ for (const [who, plan] of VIEWERS) {
       await back(page).click()
       await expect(tile(page, 'Round'), 'line style is not Round').toHaveAttribute('aria-checked', 'true')
       await expect(sizeGroup(page).getByRole('radio', { name: '32 pixels' }), 'size is not the last preset').toHaveAttribute('aria-checked', 'true')
-      await expect(page.locator('.ied-cell-s--custom'), 'the custom row stayed open').toHaveCount(0)
+      await expect(page.locator('.ied-cus'), 'the custom row stayed open').toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Flip horizontally', exact: true }), 'another setting was reset').toHaveAttribute('aria-pressed', 'true')
       await expect(primary(page)).toHaveAccessibleName('Copy SVG')
       await expect(primary(page), 'focus did not land on Copy SVG').toBeFocused()
