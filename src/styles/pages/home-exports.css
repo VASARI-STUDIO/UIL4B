@@ -12,8 +12,11 @@
    tiles become a strip. Under 375px the smallest labels drop.
 
    The cards are fixed dark surfaces (their own greys), whatever the page theme.
-   Hairlines and one 2px ring carry the structure: nothing here casts a shadow,
-   and a covered card does not scale or dim. */
+   Hairlines and one 2px ring carry the structure. Each card rests on the shared
+   elevation (--hm-elev-3), and as the next card slides over it a card scales to
+   .96 from its top edge and dims, by scroll position and on the compositor only
+   (the Stack section below). Reduced motion, and a browser without scroll-driven
+   animations, keep the plain stack. */
 
 .hx {
   --hx-ease: cubic-bezier(.23, 1, .32, 1);
@@ -85,6 +88,29 @@
   background: #0F1012;
   color: #EFEEEA;
   overflow: hidden;
+  box-shadow: var(--hm-elev-3);
+  transform-origin: 50% 0;
+}
+/* The dimming layer: a flat near-black sheet over the whole card, clear at rest. */
+.hx-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: inherit;
+  background: #060607;
+  opacity: 0;
+  pointer-events: none;
+}
+/* Marks where a card's top travels while it slides over the card before it. It
+   draws nothing and takes no space. */
+.hx-track {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + var(--hx-dock, 116px));
+  width: 1px;
+  height: var(--hx-trav, 608px);
+  pointer-events: none;
 }
 @media (min-width: 1024px) {
   .hx-card[data-card="0"] { top: var(--stack-top-0, 84px); }
@@ -685,7 +711,43 @@
   .hx-file { height: auto; padding-top: 6px; padding-bottom: 6px; }
 }
 
+/* ── Stack: a covered card scales and dims with the card over it ─────────── */
+/* The tracker of the card that covers (--hx-t1 for card 2, --hx-t2 for card 3)
+   is a view timeline whose exit range runs from that card's top at the earlier
+   card's bottom edge (0%) to its top at its dock line (100%). The inset is zero
+   so the page's scroll-padding does not move the range. Transform and opacity
+   only; the browser keeps the animations on the compositor. */
+@keyframes hx-cover { to { transform: scale(.96); } }
+@keyframes hx-dim { to { opacity: .45; } }
+@supports (animation-timeline: view()) and (timeline-scope: --hx-t1) {
+  .hx-stack { timeline-scope: --hx-t1, --hx-t2; }
+  .hx-track { view-timeline-axis: block; view-timeline-inset: 0px; }
+  .hx-track[data-track="1"] { view-timeline-name: --hx-t1; }
+  .hx-track[data-track="2"] { view-timeline-name: --hx-t2; }
+  .hx-card[data-card="0"], .hx-card[data-card="0"]::after { animation-timeline: --hx-t1; }
+  .hx-card[data-card="1"], .hx-card[data-card="1"]::after { animation-timeline: --hx-t2; }
+  .hx-card:is([data-card="0"], [data-card="1"]) {
+    animation-name: hx-cover;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-range: exit;
+  }
+  .hx-card:is([data-card="0"], [data-card="1"])::after {
+    animation-name: hx-dim;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-range: exit;
+  }
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* The plain stack: no scroll-linked scale or dim. */
+:where(html[data-reduced-motion="true"]) .hx .hx-card,
+:where(html[data-reduced-motion="true"]) .hx .hx-card::after { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .hx .hx-card,
+  :where(html:not([data-reduced-motion="false"])) .hx .hx-card::after { animation: none; }
+}
 :where(html[data-reduced-motion="true"]) .hx :is(.hx-obj, .hx-row, .hx-seg, .hx-pill, .hx-pc, .hx-tile, .hx-tiles) { transition: none; }
 :where(html[data-reduced-motion="true"]) .hx :is(.hx-seg, .hx-pill, .hx-pc):active { transform: none; }
 @media (prefers-reduced-motion: reduce) {

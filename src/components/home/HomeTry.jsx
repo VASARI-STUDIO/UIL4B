@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getLenis } from '../../hooks/useSmoothScroll'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
@@ -18,6 +18,11 @@ import '../../styles/pages/home-try.css'
 // the window (with a margin before it hands over), or, under 1200, the last chapter
 // whose top has passed a line a third of the way down. Clicking a name scrolls to
 // its tool through Lenis, which owns the scroll on this page.
+//
+// The pinned column never changes layout: each name is a fixed 72px row, the open
+// description is drawn over the space beneath its name, and the names below it are
+// moved down by that description's height (--open-h) with a transform. The thin
+// progress line follows the scroll between the first tool and the last (--p).
 
 const WIDE = '(min-width: 1200px)'
 // Under 1200: the sticky names row is 44px tall, and a chapter lands 16px below it.
@@ -73,6 +78,9 @@ export default function HomeTry() {
   const [cur, setCur] = useState(0)
   const stages = useRef([])
   const names = useRef([])
+  const nav = useRef(null)
+  const infos = useRef([])
+  const progress = useRef(-1)
   // A name click owns the active tool until the scroll lands (or this long passes).
   const dest = useRef(null)
   const destTimer = useRef(0)
@@ -83,6 +91,15 @@ export default function HomeTry() {
   const track = useCallback(() => {
     const els = stages.current.filter(Boolean)
     if (els.length !== TOOLS.length) return
+    // How far the scroll has carried the view from the first tool to the last (0 to 1).
+    const tops = els.map((el) => { const r = el.getBoundingClientRect(); return isWide() ? r.top + r.height / 2 : r.top })
+    const mark = isWide() ? window.innerHeight / 2 : NAMES_H + window.innerHeight * 0.3
+    const span = tops[tops.length - 1] - tops[0]
+    const p = span > 0 ? Math.min(1, Math.max(0, (mark - tops[0]) / span)) : 0
+    if (nav.current && Math.abs(p - progress.current) > 0.002) {
+      progress.current = p
+      nav.current.style.setProperty('--p', p.toFixed(3))
+    }
     if (dest.current) {
       const r = els[dest.current.i].getBoundingClientRect()
       const there = isWide() ? Math.abs(r.top + r.height / 2 - window.innerHeight / 2) < 3 : Math.abs(r.top - (NAMES_H + CHAPTER_GAP)) < 3
@@ -119,6 +136,25 @@ export default function HomeTry() {
       if (raf) cancelAnimationFrame(raf)
     }
   }, [track])
+
+  // The open description's height, for the names below it to move down by. Only the
+  // pinned column from 1200 draws a description under its name.
+  const measure = useCallback((i) => {
+    const el = nav.current
+    if (!el) return
+    const h = isWide() ? (infos.current[i]?.offsetHeight ?? 0) : 0
+    el.style.setProperty('--open-h', `${h}px`)
+  }, [])
+  const open = useRef(0)
+  useLayoutEffect(() => { open.current = cur; measure(cur) }, [cur, measure])
+  useEffect(() => {
+    const again = () => measure(open.current)
+    window.addEventListener('resize', again)
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(again)
+    if (nav.current) ro?.observe(nav.current)
+    document.fonts?.ready.then(again)
+    return () => { window.removeEventListener('resize', again); ro?.disconnect() }
+  }, [measure])
 
   // A name click scrolls to that tool: centred from 1200, below the names row
   // under it. Lenis owns the scroll on this route and would undo a native scrollTo,
@@ -163,10 +199,12 @@ export default function HomeTry() {
 
         <div className="ht-split">
           <div className="ht-left">
-            <nav className="ht-names" aria-label="Tools in this section">
-              <i className="ht-mark" style={{ '--k': cur }} aria-hidden="true" />
+            <nav className="ht-names" aria-label="Tools in this section" ref={nav} style={{ '--k': cur }}>
+              <i className="ht-prog" aria-hidden="true" />
+              <i className="ht-mark" aria-hidden="true" />
+              <span className="ht-count" aria-hidden="true">{`0${cur + 1} / 0${TOOLS.length}`}</span>
               {TOOLS.map((t, i) => (
-                <div key={t.id} className="ht-it" data-on={cur === i ? 'true' : 'false'}>
+                <div key={t.id} className="ht-it" data-on={cur === i ? 'true' : 'false'} data-after={i > cur ? 'true' : 'false'}>
                   <button
                     type="button"
                     className="ht-n"
@@ -182,7 +220,7 @@ export default function HomeTry() {
                   {/* The same text is the tool's own description (aria-describedby), so it is read once. */}
                   <div className="ht-acc" aria-hidden="true">
                     <div className="ht-acc-in">
-                      <div className="ht-info"><p className="ht-lead">{t.lead}</p><p className="ht-next">{t.next}</p></div>
+                      <div className="ht-info" ref={(el) => { infos.current[i] = el }}><p className="ht-lead">{t.lead}</p><p className="ht-next">{t.next}</p></div>
                     </div>
                   </div>
                 </div>
