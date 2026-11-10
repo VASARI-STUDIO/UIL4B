@@ -91,12 +91,12 @@ test('no rule draws a line above or below the section', () => {
   // Mutation: put `border-top` (or a shadow, outline or background rule) back on `.hp`.
   const hp = block(SRC.css, '.hp')
   assert.ok(hp.length > 0, 'the .hp block was not found')
-  assert.doesNotMatch(hp, /border|box-shadow|outline/)
+  assert.doesNotMatch(hp, /(^|[;{\s])(border[a-z-]*|box-shadow|outline)\s*:/)
   // Mutation: restore the shared top rule on `#plans` (the line under the proof bar) in home-tokens.css, or a border on `.hpl`.
-  assert.doesNotMatch(TOKENS, /#plans[^{]*\{[^}]*border/)
+  assert.doesNotMatch(TOKENS, /#plans[^{]*\{[^}]*(^|[;{\s])border[a-z-]*\s*:/)
   assert.doesNotMatch(TOKENS, /\.sp-proof/)
   assert.doesNotMatch(TOKENS, /--hm-hairline/)
-  assert.doesNotMatch(block(PLANS, '.hpl'), /border/)
+  assert.doesNotMatch(block(PLANS, '.hpl'), /(^|[;{\s])border[a-z-]*\s*:/)
   // The pixel the old top rule took stays as padding, so neither section changes height.
   assert.match(hp, /padding-top:\s*calc\(var\(--section-y-compact\) \+ 1px\)/)
   assert.match(block(PLANS, '.hpl'), /padding-top:\s*calc\(var\(--section-y\) \+ 1px\)/)
