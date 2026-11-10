@@ -240,7 +240,7 @@ for (const { name: where, size } of WIDTHS) test.describe(`keyboard, ${where}`, 
     await expect(exportPanel(page), 'the next Escape closes the dialog').toHaveCount(0)
   })
 
-  test('Space chooses like Enter, and Change toggles the list shut', async ({ page }) => {
+  test('Space chooses like Enter and closes the list', async ({ page }) => {
     watch(page, 'a keyboard user using Space in the theme list')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
     await change(panel).focus()
@@ -249,6 +249,14 @@ for (const { name: where, size } of WIDTHS) test.describe(`keyboard, ${where}`, 
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('Space')
     await expect(themeName(panel), 'two rows below Standards').toHaveText('Studio')
+    await expect(list(page), 'choosing closes the list').toHaveCount(0)
+  })
+
+  // The popover leaves Change reachable, so Change toggles it. The phone's sheet covers the whole dialog (its own close button
+  // is exercised below), so a second tap on Change cannot land there.
+  if (where === 'wide') test('Change opens the list and a second press shuts it', async ({ page }) => {
+    watch(page, 'a pointer user toggling the theme list')
+    const panel = await open(page, { plan: 'free', file: 'kit', size })
     await change(panel).click()
     await expect(list(page)).toBeVisible()
     await change(panel).click()
