@@ -390,21 +390,24 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   /* Wide values; the tablet and phone ones follow. `--fg-y` is the room above
      the name and `--fg-yb` the room under the meta line and Copy CSS, both fixed
      so a short band at a small size keeps the same margins as a tall one.
-     `--fg-y-max` is the grid tiles' inset. */
-  --fg-y-max: 20px;
-  --fg-y: 28px;
-  --fg-yb: 20px;
+     `--fg-gap` is the room between the name and the meta line, and `--fg-y-max`
+     is the grid tiles' inset. The list's fixed height (src/utils/galleryBand.js)
+     is the sum of these, so change them together. */
+  --fg-y-max: var(--s-6);
+  --fg-y: var(--s-7);
+  --fg-yb: var(--s-6);
+  --fg-gap: var(--s-7);
   --fg-line: calc(var(--fg-name, 96px) * 1.1);
   --fg-right: calc(var(--fg-padr) + 56px);
   box-sizing: border-box;
-  height: var(--fg-band, 200px);
+  height: var(--fg-band, 253px);
   border-bottom: 1px solid var(--border);
 }
 @media (max-width: 1023px) {
-  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 16px; }
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: var(--s-5); }
 }
 @media (max-width: 767px) {
-  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: 12px; --fg-y: 16px; }
+  .fg-page :is(.fg-card, .fg-skel-row) { --fg-y-max: var(--s-5); --fg-y: var(--s-5); --fg-gap: var(--s-5); }
 }
 .fg-page .fg-card {
   /* The wake flips these four; everything inside reads them. */
@@ -740,9 +743,10 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 .fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) {
   --fg-y: var(--fg-y-max);
   --fg-yb: var(--fg-y-max);
+  --fg-gap: var(--s-5);
   --fg-line: calc(var(--fg-gname, 56px) * 2.2);
   --fg-right: 64px;
-  height: calc(var(--fg-gname, 56px) * 2.2 + var(--fg-y) * 2 + 30px);
+  height: calc(var(--fg-line) + var(--fg-y) + var(--fg-yb) + 18px + var(--fg-gap));
   border-right: 1px solid var(--border);
 }
 @media (max-width: 767px) {

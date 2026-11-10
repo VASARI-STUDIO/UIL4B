@@ -1,5 +1,6 @@
-// The Pro documents (the design system book and the brand guidelines) are built by
-// the server: the panel POSTs to /api/ai?export=document and prints what comes back.
+// The Pro documents (the design system book and the brand guidelines, which the route calls the
+// slides) are built by the server in the open theme: the panel POSTs to /api/ai?export=document
+// and prints what comes back.
 // The preview server has no /api, so each test answers that one route itself. The
 // server's own rules (401, 403, 200, 400, 413) are pinned in
 // tests/unit/export-document.test.js; what is checked HERE is what a person sees:
@@ -15,16 +16,13 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { chooseFormat, exportPanel, actionLabel } from './export-rows.js'
-import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
-import { buildBrandGuidelines } from '../../src/utils/brandGuidelines.js'
+import { mockThemeApi, cleanHtml } from './export-theme-mock.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
-const ROUTE = '**/api/ai?export=document'
-const DESIGN = { palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }
 
 const DOCS = {
-  book: { html: () => buildDesignSystemBook(DESIGN, { projectName: 'Stub' }), title: 'untitled-book', noun: 'book' },
-  guidelines: { html: () => buildBrandGuidelines(DESIGN, { projectName: 'Stub' }), title: 'untitled-brand-guidelines', noun: 'guidelines' },
+  book: { row: 'book', html: () => cleanHtml('Stub book') },
+  guidelines: { row: 'slides', html: () => cleanHtml('Stub guidelines') },
 }
 
 async function open(browser, plan) {
@@ -41,17 +39,13 @@ async function open(browser, plan) {
 
 /** Answer the export route, recording every request the panel makes. */
 async function answerWith(page, reply) {
-  const asked = []
-  await page.route(ROUTE, async (route) => {
-    const req = route.request()
-    asked.push({ method: req.method(), auth: req.headers().authorization, body: req.postDataJSON() })
-    const { status, body } = reply(asked.length, req.postDataJSON())
-    await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+  return mockThemeApi(page, (body, calls) => {
+    const { status, body: json, html } = reply(calls.length, body)
+    return html !== undefined ? { html } : { status, body: json }
   })
-  return asked
 }
 
-const ok = (id) => () => ({ status: 200, body: { ok: true, format: id, html: DOCS[id].html() } })
+const ok = (id) => () => ({ html: DOCS[id].html() })
 
 for (const id of ['book', 'guidelines']) {
   test.describe(`the Pro ${id} is built by the server`, () => {
@@ -67,16 +61,12 @@ for (const id of ['book', 'guidelines']) {
       ])
       // The window is reserved inside the click, so it exists before the answer
       // arrives: the document itself is what proves the round trip finished.
-      await expect(doc.locator('.cv-title')).toBeVisible()
-      // The print window is titled with the PDF's file name, which the browser offers on
-      // Save as PDF. This board has no project name, so it is `untitled-…`, not the
-      // "Stub | …" heading inside the server's document.
-      await expect(doc).toHaveTitle(DOCS[id].title)
+      await expect(doc.locator('#printed-doc')).toBeVisible()
 
       expect(asked, 'the panel must ask the server exactly once').toHaveLength(1)
       expect(asked[0].method).toBe('POST')
       expect(asked[0].auth).toMatch(/^Bearer .+/)
-      expect(asked[0].body.format).toBe(id)
+      expect(asked[0].body).toEqual(expect.objectContaining({ theme: expect.any(String), row: DOCS[id].row, format: 'pdf' }))
       await context.close()
     })
 
@@ -90,7 +80,7 @@ for (const id of ['book', 'guidelines']) {
       await exportPanel(page).getByRole('button', { name: actionLabel(id), exact: true }).click()
 
       const alert = exportPanel(page).getByRole('alert')
-      await expect(alert).toHaveText(`We couldn’t find a Pro plan on this account, so the ${DOCS[id].noun} wasn’t made.`)
+      await expect(alert).toHaveText('We couldn’t find a Pro plan on this account, so this file wasn’t made.')
       expect(page.url(), 'a refusal must not send anyone to the pricing page').toBe(before)
       expect(page.url()).not.toMatch(/\/plans/)
       await expect(exportPanel(page), 'the panel stays open to carry the message').toBeVisible()
@@ -110,7 +100,7 @@ for (const id of ['book', 'guidelines']) {
       await exportPanel(page).getByRole('button', { name: actionLabel(id), exact: true }).click()
 
       await expect(exportPanel(page).getByRole('alert'))
-        .toHaveText(`You’re signed out. Sign in again, then export the ${DOCS[id].noun}.`)
+        .toHaveText('You’re signed out. Sign in again, then export.')
       expect(page.url()).toBe(before)
       expect(asked, 'one try, then one more on a fresh token, then stop').toHaveLength(2)
       await expect.poll(() => context.pages().filter((p) => !p.isClosed()).length, 'a blank window was left open').toBe(1)
@@ -131,7 +121,7 @@ test('a 401 on a stale token is retried once and the document still opens', asyn
     context.waitForEvent('page'),
     exportPanel(page).getByRole('button', { name: actionLabel('book'), exact: true }).click(),
   ])
-  await expect(doc.locator('.cv-title')).toBeVisible()
+  await expect(doc.locator('#printed-doc')).toBeVisible()
   expect(asked).toHaveLength(2)
   await context.close()
 })
@@ -145,7 +135,7 @@ test('a server fault is a plain "try again", not a sign-in or a pricing page', a
 
   await exportPanel(page).getByRole('button', { name: actionLabel('book'), exact: true }).click()
 
-  await expect(exportPanel(page).getByRole('alert')).toHaveText('The book couldn’t be made. Check your connection and try again.')
+  await expect(exportPanel(page).getByRole('alert')).toHaveText('That file didn’t build. Try again.')
   expect(page.url()).toBe(before)
   await context.close()
 })

@@ -1319,3 +1319,32 @@ export async function openChosenDialog(page, entry = 'Log in') {
     await page.locator('.pnav-sheet').getByRole('button', { name: entry, exact: true }).click()
   }
 }
+
+/**
+ * Open a saved project's own page from /projects, the way a person does: the latest project is the kit
+ * sheet's "Open project" link, every other one is a mini sheet under it (behind "Show all" past the first
+ * four). Matches the project's exact name, so "Seeded Project 1" never opens "Seeded Project 10".
+ */
+export async function openProjectFromDashboard(page, name) {
+  const { lead, mini } = dashboardProjectLinks(page, name)
+  const showAll = page.getByTestId('other-projects').locator('..').getByRole('button', { name: /^Show all \d+$/ })
+  await expect(lead.or(mini).or(showAll).first(), `neither the latest sheet nor a mini names "${name}"`).toBeVisible()
+  if (await lead.count()) return lead.click()
+  if (!(await mini.count())) await showAll.click()
+  return mini.click()
+}
+
+/** The two places a saved project's name can be a link on /projects: { lead, mini }. */
+export function dashboardProjectLinks(page, name) {
+  const exact = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return {
+    lead: page.getByRole('link', { name: `Open project, ${name}`, exact: true }),
+    mini: page.getByTestId('other-projects').locator('a.db-mini').filter({ has: page.locator('.nm').filter({ hasText: new RegExp(`^${exact}$`) }) }),
+  }
+}
+
+/** One locator for a project's link on /projects, wherever it sits (the latest sheet or a mini). */
+export function projectLink(page, name) {
+  const { lead, mini } = dashboardProjectLinks(page, name)
+  return lead.or(mini)
+}

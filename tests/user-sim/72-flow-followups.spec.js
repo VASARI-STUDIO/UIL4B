@@ -56,7 +56,7 @@
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, watch, signIn } from './helpers.js'
+import { chooseMenuOption, go, watch, signIn, openProjectFromDashboard } from './helpers.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
@@ -266,10 +266,10 @@ test.describe('3 — the palette save menu refuses the cap under the field, not 
 // 4 — toasts: the clock follows the message, and an error can be sent away
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('4 — an error toast stays until it is read or dismissed; a success stays short', () => {
-  const duplicateAtCap = async (page) => {
+  const duplicateNewest = async (page, count) => {
     // The ⋯ menu is on a project's own page; open the first project, then
     // its menu.
-    await page.locator('.uh-card-name').first().click()
+    await openProjectFromDashboard(page, `Seeded Project ${count}`)
     await expect(page.locator('.pjd-h1')).toBeVisible()
     await page.getByRole('button', { name: /^Actions for/ }).first().click()
     const dup = page.getByRole('button', { name: 'Duplicate' })
@@ -287,7 +287,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
       watch(page, `a free account at the cap duplicating a project (${size[0]}px)`)
       await signIn(page, { plan: 'free', projects: CAP })
       await go(page, '/projects')
-      await duplicateAtCap(page)
+      await duplicateNewest(page, CAP)
 
       const toast = page.locator('.toast-error.show')
       await expect(toast).toBeVisible()
@@ -315,7 +315,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
     watch(page, 'a free account at the cap reading the refusal')
     await signIn(page, { plan: 'free', projects: CAP })
     await go(page, '/projects')
-    await duplicateAtCap(page)
+    await duplicateNewest(page, CAP)
     const toast = page.locator('.toast-error.show')
     await expect(toast).toBeVisible()
     await page.waitForTimeout(TOAST_ERROR_MIN_MS - 600)
@@ -329,7 +329,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
     watch(page, 'a free account with a slot to spare duplicating a project')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/projects')
-    await duplicateAtCap(page)
+    await duplicateNewest(page, CAP - 1)
     const toast = page.locator('.toast-success.show')
     await expect(toast).toContainText('Duplicated')
     await expect(toast).toHaveAttribute('role', 'status')

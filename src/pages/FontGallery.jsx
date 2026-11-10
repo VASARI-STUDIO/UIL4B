@@ -20,6 +20,7 @@ import {
 } from '../utils/googleFonts'
 import ToolIcon from '../components/tool/ToolIcon'
 import { GALLERY_CATEGORIES, categoryWord, filterGalleryListTypefaces, ladderWeights } from '../utils/fontGallery'
+import { bandHeight } from '../utils/galleryBand'
 import { ownFont, ownTypeScale, setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import {
   backdropFor, backdropKind, backdropReady, backdropUrls, backdropVars, loadBackdrop, loadBackdropsInTurn,
@@ -89,9 +90,9 @@ const MAX_COMPARE = 3
 // above and below it, never under a minimum), so changing the size moves the
 // whole list once and never one band on its own.
 const LAYOUTS = {
-  wide: { name: 96, floor: 72, grid: 56, band: n => Math.max(160, Math.round(n * 1.1) + 94) },
-  tablet: { name: 96, floor: 48, grid: 40, band: n => Math.max(160, Math.round(n * 1.1) + 94) },
-  phone: { name: 48, floor: 32, grid: 24, band: n => Math.max(112, Math.ceil(n * 1.1) + 68) },
+  wide: { name: 96, floor: 72, grid: 56, band: n => bandHeight('wide', n) },
+  tablet: { name: 96, floor: 48, grid: 40, band: n => bandHeight('tablet', n) },
+  phone: { name: 48, floor: 32, grid: 24, band: n => bandHeight('phone', n) },
 }
 const SIZE_MIN = 24
 const SIZE_MAX = 120

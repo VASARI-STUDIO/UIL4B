@@ -102,7 +102,7 @@ export function darkestColour(palette) {
 }
 
 /** The credit line, on the cover and the foot of every page when the free-tier mark is on. */
-export const CREDIT_LINE = 'Made with UIL4B · uil4b.com'
+export const CREDIT_LINE = 'Made with UI L4B · uil4b.com'
 
 const round = (n) => Math.round(n * 100) / 100
 const pad2 = (n) => String(n).padStart(2, '0')

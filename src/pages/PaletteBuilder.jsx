@@ -799,7 +799,7 @@ const SUBMIT_SURFACE = 'palette'
 // share link stays on `onCopy` and is not an activation — see
 // src/config/activationExports.js for why that decision lives in CreateTool.
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
-  const { design, setPalette, saveProject, overwriteProject, saveColourToProject, projects, projectsLoading, canSaveProjects, parkWorkingDesign } = useProject()
+  const { design, setPalette, saveProject, overwriteProject, saveColourToProject, projects, projectsLoading, projectCountPending, canSaveProjects, parkWorkingDesign } = useProject()
   const { registerExport, clearExport } = useExport()
   const { isPro, planKnown } = useSubscription()
   // The preview opens in the theme the site is showing.
@@ -1192,7 +1192,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // save projects". This effect re-runs with the fresh one once the account has
   // reached ProjectContext.
   useEffect(() => {
-    if (pendingSave == null || !canSaveProjects) return
+    // Waits for the account's list: the cap counts the account's projects, not this device's.
+    if (pendingSave == null || !canSaveProjects || projectCountPending) return
     setPendingSave(null)
     // The save is being attempted, so a remount has nothing left to reopen.
     clearPendingSave()
@@ -1214,7 +1215,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // as a link — the treatment /projects already gives the same refusal.
       setSaveError(err?.message || 'Couldn’t save')
     }
-  }, [pendingSave, canSaveProjects, saveProject, toast, coachOn, navigate])
+  }, [pendingSave, canSaveProjects, projectCountPending, saveProject, toast, coachOn, navigate])
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
@@ -2907,7 +2908,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       })
       // Free exports carry a small brand watermark; Pro exports stay clean.
       if (!isPro) {
-        const label = 'Made with UIL4B'
+        const label = 'Made with UI L4B'
         g.font = markFont
         const tw = g.measureText(label).width
         const padX = 14, bh = 34, margin = 22, bw = tw + padX * 2
