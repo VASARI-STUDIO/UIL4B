@@ -278,7 +278,7 @@ const DESIGN = {
   typeScale: { base: 16, ratio: 1.25, lineHeight: 1.5 },
 }
 const AT = new Date('2026-08-12T00:00:00Z')
-const CREDIT = /Made with \[UIL4B\]\(([^)]*)\)/g
+const CREDIT = /Made with \[UI L4B\]\(([^)]*)\)/g
 
 /** Every string the built export chunk will produce for this design. The chunk
  *  is minified, so its exports are single letters; rather than guess which one
