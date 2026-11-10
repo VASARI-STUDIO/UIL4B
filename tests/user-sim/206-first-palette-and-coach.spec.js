@@ -315,9 +315,9 @@ test.describe('the first-palette coach', () => {
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
       await expect(coach(page)).toHaveCount(0)
 
-      // And through the onboarding card again: the card is still there (no project yet) and the coach is not.
-      await go(page, '/onboarding')
-      await page.locator('[data-first-win="palette"]').click()
+      // And asked for again (the same router state the onboarding card sends): the coach stays gone. The
+      // onboarding page itself does not offer the card a second time, so the state is sent by hand.
+      await arriveWithState(page, '/projects')
       await expect(page).toHaveURL(/\/create\/palette$/)
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
       await expect(coach(page)).toHaveCount(0)
