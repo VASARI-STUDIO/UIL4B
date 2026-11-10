@@ -243,7 +243,7 @@ test('the Pro book carries no watermark and has no degraded free variant', () =>
   // The free tier keeps the style guide, which carries its credit line. There
   // is deliberately no `watermark` option here: a gate that ships a worse paid
   // artefact teaches the user that the paid thing is worse.
-  assert.ok(!/Made with UIL4B/.test(BOOK), 'the paid export is clean')
+  assert.ok(!/Made with UI L4B/.test(BOOK), 'the paid export is clean')
   const src = stripComments(read('src/utils/designSystemBook.js'))
   assert.ok(!/watermark/.test(src), 'the generator has no watermark option to get wrong')
 })
@@ -294,9 +294,11 @@ test('the book is a Pro format and the flag drives badge AND gate', () => {
   assert.match(NAV, /\{showTags && \(c\.pro \? <ExportProTag className="xd-pro" \/> : /, 'a Pro row no longer carries the Pro tag')
   assert.match(DIALOG, /showTags=\{!isPro && !checking\}/, 'the tag is shown to an account that is already Pro, or while the plan loads')
   // The same flag drives the lock, in the dialog and in the dock under it.
-  assert.match(DIALOG, /const locked = cat\.pro && !isPro/)
-  assert.match(STEPS, /const locked = cat\.pro && !isPro/)
-  assert.match(RUNNER, /if \(fmt\.pro && !isPro\) return goUpgrade\(/, 'the engine no longer gates on the format\'s own flag')
+  // A file that takes a theme is locked by the route's own table (themedFileIsPro); every other file by its row's flag.
+  assert.match(DIALOG, /const locked = themedNow \? !isPro && themedFileIsPro\(pick\.file, theme\) : cat\.pro && !isPro/)
+  assert.match(STEPS, /const locked = lockedBy \?\? \(cat\.pro && !isPro\)/)
+  assert.match(RUNNER, /const needsPro = themed \? themedFileIsPro\(format, theme\) : Boolean\(fmt\.pro\)/, 'the engine no longer gates on the format\'s own flag, or the themed table')
+  assert.match(RUNNER, /if \(needsPro && !isPro\) return goUpgrade\(/, 'the engine no longer gates on the paid flag')
   // …and the dialog must still be rendering the table this test just inspected.
   assert.match(DIALOG, /types=\{EXPORT_TYPES\}/,
     'ExportDialog no longer renders the shared table, so the flags asserted above drive nothing')
@@ -306,7 +308,7 @@ test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {
   // This is the test the whole feature rests on. The gate must be inside the
   // function that builds the file, not merely on the button — a relabelled
   // button is a hint, and runExport is reachable without it.
-  const gate = RUNNER.indexOf('fmt.pro && !isPro')
+  const gate = RUNNER.indexOf('needsPro && !isPro')
   assert.ok(gate > -1, 'runExport must check the paid flag against the live entitlement')
 
   // The generator is not in the browser at all: the engine asks the server for the
@@ -322,7 +324,7 @@ test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {
   // And it must bail rather than fall through. The wall goes to /plans, or for a
   // signed-in account with a saved project straight to the trial checkout (never a
   // modal or a login popup): goUpgrade navigates, and the gate returns its result.
-  assert.match(RUNNER.slice(gate, build), /^fmt\.pro && !isPro\) return goUpgrade\(/,
+  assert.match(RUNNER.slice(gate, build), /^needsPro && !isPro\) return goUpgrade\(/,
     'the gate sends the viewer on to /plans or checkout and returns without exporting')
   assert.match(RUNNER, /const goUpgrade = [\s\S]*?navigate\(target\.to\)\s*\r?\n\s*return \{ status: 'upgrade'/,
     'goUpgrade no longer navigates and stops')
@@ -346,7 +348,7 @@ test('the gate goes to /plans, and asks for no account first', () => {
   for (const [name, src] of [['useExportRunner', RUNNER], ['ExportDialog', DIALOG], ['ExportSteps', STEPS]]) {
     assert.ok(!/useProModal/.test(src), `${name}: the export wall must not raise the upgrade modal`)
   }
-  const pro = RUNNER.indexOf('fmt.pro && !isPro')
+  const pro = RUNNER.indexOf('needsPro && !isPro')
   const account = RUNNER.indexOf('requireExportAccount(')
   assert.ok(pro > -1 && account > -1 && pro < account, 'the Pro gate must run before the account gate')
 })

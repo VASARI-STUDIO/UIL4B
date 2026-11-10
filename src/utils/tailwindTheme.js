@@ -80,6 +80,6 @@ export function buildTailwindCss(design, { projectName = 'Design System', waterm
   ]
   for (const [n, v, note] of tailwindVars(design)) lines.push(`  ${n}: ${v};${note ? ` /* ${note} */` : ''}`)
   lines.push('}')
-  if (watermark) lines.push('', `/* Made with UIL4B: ${SITE_ORIGIN} */`)
+  if (watermark) lines.push('', `/* Made with UI L4B: ${SITE_ORIGIN} */`)
   return `${lines.join('\n')}\n`
 }

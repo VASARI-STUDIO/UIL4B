@@ -87,7 +87,7 @@ function HexGlyph() {
 function paletteCss(palette) {
   const slug = palette.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'palette'
   const lines = palette.colors.map((hex, i) => `  --${slug}-${(i + 1) * 100}: ${hex.toUpperCase()};`)
-  return `/* ${palette.name} — UIL4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
+  return `/* ${palette.name} — UI L4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
 }
 
 function CheckGlyph() {
