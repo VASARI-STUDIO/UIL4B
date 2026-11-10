@@ -320,11 +320,11 @@ test('/plans derives the numbers inside the sub-line', () => {
   // "six times" is true of the daily ceiling and false of the monthly one
   // (300 against 40).
   const code = stripComments(PLANS)
-  const sub = /const HERO_SUB = `([^`]*)`/.exec(code)
+  const sub = /const HERO_LEAD =\s*`([^`]*)`/.exec(code)
   assert.ok(sub, 'the sub-line constant was not found')
   assert.match(sub[1], /AI from \$\{AI\.free\.daily\} to \$\{AI\.pro\.daily\} generations a day/,
     'the AI ends of the sub-line are typed rather than read from AI_LIMITS')
-  assert.match(sub[1], /\$\{numberWord\(SYSTEMS_TOTAL\)\} colour systems/, 'the colour-system count in the sub-line is typed')
+  assert.match(sub[1], /\$\{numberWord\(COLOUR_SYSTEMS\.length\)\} colour systems/, 'the colour-system count in the sub-line is typed')
   assert.ok(!/\btimes\b/.test(sub[1]), 'the sub-line claims a multiple, which the monthly ceiling does not bear out')
   assert.ok(!/\d/.test(sub[1].replace(/\$\{[^}]*\}/g, '').replace(/UIL4B/g, '')), 'the sub-line types a digit the config owns')
   assert.ok(!/\bsix times\b|\beight colour systems\b/.test(code), 'the page types a number the config owns')

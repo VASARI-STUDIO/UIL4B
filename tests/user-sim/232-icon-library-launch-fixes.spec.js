@@ -99,9 +99,9 @@ test('a saved custom icon with <animate> and <foreignObject> opens in the custom
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
   await page.locator('.ig-toolbar button.ig-mine').click()
   await page.locator('.ig .ic', { hasText: 'Custom (pasted 1)' }).click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // Everything the stage draws: the inline host's markup and any image it shows as a data: URI.
-  const drawn = async () => page.locator('.icust-stage').evaluate((el) => (
+  const drawn = async () => page.locator('.ied-ground').evaluate((el) => (
     el.innerHTML + [...el.querySelectorAll('img')].map((i) => decodeURIComponent(i.getAttribute('src') || '')).join('\n')
   ))
   await expect.poll(async () => /<path/i.test(await drawn()), { message: 'POSITIVE CONTROL: the icon is drawn' }).toBe(true)

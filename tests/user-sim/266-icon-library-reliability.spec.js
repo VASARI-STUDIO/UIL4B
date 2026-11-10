@@ -159,12 +159,12 @@ for (const [shape, answer] of Object.entries(REFUSALS)) {
       await go(page, '/create/icons')
       await page.getByRole('button', { name: 'Copied arrow-right — open to customise' }).click({ timeout: 20_000 })
 
-      const stage = page.locator('.icust-stage')
+      const stage = page.locator('.ied-ground')
       await expect(stage).toBeVisible({ timeout: 20_000 })
       await expect(stage.getByRole('status').filter({ hasText: /Couldn.t load this icon/ })).toBeVisible({ timeout: 20_000 })
       const retry = stage.getByRole('button', { name: 'Try again' })
       await expect(retry, 'the failed stage offers Try again').toBeVisible()
-      await expect(stage.locator('.icust-stage-host svg'), 'POSITIVE CONTROL: nothing is drawn while the file is refused').toHaveCount(0)
+      await expect(stage.locator('.ied-stage-host svg'), 'POSITIVE CONTROL: nothing is drawn while the file is refused').toHaveCount(0)
       expect(refusing.hits, 'POSITIVE CONTROL: the refusal was hit').toBeGreaterThan(0)
       if (view.touch) expect(Math.round((await retry.boundingBox()).height), 'a thumb-sized target').toBeGreaterThanOrEqual(44)
 
@@ -172,7 +172,7 @@ for (const [shape, answer] of Object.entries(REFUSALS)) {
       refusing.on = false
       const hitsBefore = refusing.hits
       await retry.click()
-      await expect(stage.locator('.icust-stage-host svg'), 'the icon is drawn after Try again').toBeVisible({ timeout: 20_000 })
+      await expect(stage.locator('.ied-stage-host svg'), 'the icon is drawn after Try again').toBeVisible({ timeout: 20_000 })
       await expect(retry).toBeHidden()
       expect(refusing.hits, 'the retry did not reach the refusal again').toBe(hitsBefore)
       await ctx.close()

@@ -79,5 +79,5 @@ test('Try again on the stage evicts what is held and asks once more', () => {
   assert.match(fetchEffect, /if \(!clean\) evictSvgText\(activeIcon\.pack, activeIcon\.name\)/)
   // Both failure messages offer it.
   assert.equal((jsx.match(/<StageMsg failed=\{/g) || []).length, 2)
-  assert.match(jsx, /className="icust-stage-retry" onClick=\{onRetry\}>Try again</)
+  assert.match(jsx, /className="ied-stage-retry" onClick=\{onRetry\}>Try again</)
 })

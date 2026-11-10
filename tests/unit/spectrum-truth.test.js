@@ -298,11 +298,11 @@ test('every plan figure on the page is the figure plans.js carries', () => {
   const proText = PRO_POINTS.join(' | ')
   assert.match(freeText, new RegExp(`${AI_LIMITS.free.daily} AI generations a day, ${AI_LIMITS.free.monthly} a month`))
   assert.match(proText, new RegExp(`${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month`))
-  assert.match(freeText, new RegExp(`${FREE_SAVE_LIMITS.projects} saved projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`))
+  assert.match(freeText, new RegExp(`${FREE_SAVE_LIMITS.projects} saved projects, with ${FREE_SAVE_LIMITS.customIcons} icons in each`))
 
   const compareText = COMPARE.map((r) => `${r.label}:${r.free}:${r.pro}`).join(' | ')
   assert.match(compareText, new RegExp(`Saved projects:${FREE_SAVE_LIMITS.projects}:Unlimited`))
-  assert.match(compareText, new RegExp(`Custom icons:${FREE_SAVE_LIMITS.customIcons}:Unlimited`))
+  assert.match(compareText, new RegExp(`Icons per project:${FREE_SAVE_LIMITS.customIcons}:Unlimited`))
 
   // MUTATION GUARD: the assertions above would pass against any string that
   // happened to contain the digits, so pin that the numbers came from the module
