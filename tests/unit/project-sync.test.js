@@ -23,7 +23,7 @@
 // and "the write was refused" is trivially true of a writer that never wrote. So
 // each of those assertions is paired with its opposite in the same test: the
 // same call, one input changed, must produce the other answer.
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import fs2 from 'node:fs'
 import {
@@ -668,6 +668,90 @@ test('the first pull of a v1 account moves it to one document per project', asyn
   assert.deepEqual(docs.get(LEGACY).list, list, 'the v1 list survives as a copy')
   assert.equal(pulled.stored.get('a').updatedAt, T.early,
     'and the pull hands back what each document now holds')
+})
+
+/** A step bound like the provider's: the call's promise loses to a timer. */
+const STEP_LIMIT_MS = 15000
+function stepWithLimit(promise) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timed out')), STEP_LIMIT_MS)
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value) },
+      (error) => { clearTimeout(timer); reject(error) },
+    )
+  })
+}
+const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+test('a pull whose document read never answers fails at the 15 second step limit, and not before', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    const { fs } = fakeFirestore()
+    fs.getDoc = () => new Promise(() => {})
+    let outcome = 'pending'
+    pullRemoteProjects(fs, UID, { perProject: true, step: stepWithLimit })
+      .then(() => { outcome = 'resolved' }, (error) => { outcome = error.message })
+    mock.timers.tick(STEP_LIMIT_MS - 1)
+    await flush()
+    assert.equal(outcome, 'pending', 'the step gave up before 15 seconds')
+    mock.timers.tick(1)
+    await flush()
+    assert.equal(outcome, 'timed out', 'a document read that never answered did not fail the pull')
+  } finally {
+    mock.timers.reset()
+  }
+})
+
+test('a pull whose collection read never answers fails at the step limit', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    const { fs } = fakeFirestore({ [LEGACY]: { list: [project('a', T.mid)], v: 1 } })
+    fs.getDocs = () => new Promise(() => {})
+    let outcome = 'pending'
+    pullRemoteProjects(fs, UID, { perProject: true, step: stepWithLimit })
+      .then(() => { outcome = 'resolved' }, (error) => { outcome = error.message })
+    await flush()
+    mock.timers.tick(STEP_LIMIT_MS)
+    await flush()
+    assert.equal(outcome, 'timed out', 'a collection read that never answered did not fail the pull')
+  } finally {
+    mock.timers.reset()
+  }
+})
+
+test('each step has its own limit: a pull of several steps is not cut off by their total', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    const { fs } = fakeFirestore({ [LEGACY]: { list: [project('a', T.mid)], v: 1 } })
+    // Only the first document read and the first collection read are slow; the migration's own reads are not.
+    const slow = (inner) => {
+      let first = true
+      return async (...args) => {
+        if (first) {
+          first = false
+          await new Promise((resolve) => setTimeout(resolve, STEP_LIMIT_MS - 1000))
+        }
+        return inner(...args)
+      }
+    }
+    fs.getDoc = slow(fs.getDoc)
+    fs.getDocs = slow(fs.getDocs)
+    let steps = 0
+    let outcome = 'pending'
+    const bound = (promise) => { steps += 1; return stepWithLimit(promise) }
+    pullRemoteProjects(fs, UID, { perProject: true, now: 1000, step: bound })
+      .then((pulled) => { outcome = pulled }, (error) => { outcome = error.message })
+    for (let i = 0; i < 8 && outcome === 'pending'; i += 1) {
+      await flush()
+      mock.timers.tick(STEP_LIMIT_MS - 1000)
+    }
+    await flush()
+    assert.equal(typeof outcome, 'object', `the pull failed on the sum of its steps: ${outcome}`)
+    assert.deepEqual(outcome.list.map((p) => p.id), ['a'])
+    assert.equal(steps >= 3, true, 'the document read, the collection read and the migration were each bounded')
+  } finally {
+    mock.timers.reset()
+  }
 })
 
 test('a second pull of a migrated account migrates nothing', async () => {

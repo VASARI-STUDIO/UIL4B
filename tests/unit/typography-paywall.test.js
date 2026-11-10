@@ -272,7 +272,7 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [], read = true
       syncFailureMessage: projectSync.syncFailureMessage,
       classifyError: projectSync.classifyError,
       loadFirestore: async () => ({}),
-      pullRemoteProjects: (_fs, uid) => live.pull(uid),
+      pullRemoteProjects: (_fs, uid, opts) => opts.step(live.pull(uid)),
       writeRemoteProjects: async () => ({ ok: true }),
       reportSyncFailure: (channel, message) => reports.failures.push({ channel, message }),
       reportSyncOk: () => { reports.ok += 1 },
