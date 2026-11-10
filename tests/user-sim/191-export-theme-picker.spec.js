@@ -574,7 +574,7 @@ test.describe('the error line for each answer', () => {
   })
 
   test.describe('429 and Retry-After', () => {
-    const seconds = [['30', 'Too many exports just now. Try again in 30 seconds.'], ['2', 'Too many exports just now. Try again in 2 seconds.'], ['89', 'Too many exports just now. Try again in 89 seconds.']]
+    const seconds = [['30', 'Too many exports just now. Try again in 30 seconds.'], ['2', 'Too many exports just now. Try again in 2 seconds.'], ['89', 'Too many exports just now. Try again in 89 seconds.'], ['1', 'Too many exports just now. Try again in 1 second.']]
     for (const [header, line] of seconds) {
       test(`Retry-After ${header} shows the seconds`, async ({ page }) => {
         watch(page, `a Pro account told to wait ${header} seconds`)
@@ -587,7 +587,7 @@ test.describe('the error line for each answer', () => {
     }
 
     // Not whole seconds, or not seconds worth printing: the plain "in a minute" line, with no number.
-    const notSeconds = ['', 'abc', '2.5', '-5', '0', '120', '601', 'Wed, 21 Oct 2026 07:28:00 GMT', '30 seconds', 'NaN', 'Infinity']
+    const notSeconds = ['', 'abc', '2.5', '-5', '+5', '1e1', '0x10', '5.0', '0', '120', '601', 'Wed, 21 Oct 2026 07:28:00 GMT', '30 seconds', 'NaN', 'Infinity']
     for (const header of notSeconds) {
       test(`a Retry-After that is not whole seconds (${JSON.stringify(header)}) gives the line with no number`, async ({ page }) => {
         watch(page, `a Pro account sent Retry-After ${JSON.stringify(header)}`)
