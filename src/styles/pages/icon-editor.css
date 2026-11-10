@@ -149,6 +149,7 @@
 .ied-hd{grid-column:2;grid-row:1;display:flex;align-items:flex-start;justify-content:space-between;padding:24px 16px 12px 24px;background:var(--ied-surface);border-bottom:1px solid transparent;transition:border-color 150ms ease}
 .ied-hd[data-on]{border-bottom-color:var(--ied-hair)}
 .ied-hd-text{min-width:0}
+.ied-fchip,.ied-jump,.ied-hic{display:none}
 .ied-title{margin:0 0 4px;font-size:18px;line-height:24px;font-weight:600;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ied-hd-act{display:flex;align-items:center;gap:8px;flex:none}
 .ied-scroll{grid-column:2;grid-row:2;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 24px 24px;scrollbar-width:thin;scrollbar-color:var(--ied-track) transparent;transition:opacity 160ms var(--ied-out)}
@@ -434,7 +435,22 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
   .ied-cell-s--custom{justify-content:center;gap:2px}
   .ied-cell-s--custom .art{height:auto}
   .ied-cell-s--custom .num{color:var(--ied-ink)}
-  .ied-cus{position:static;height:auto;margin:8px 0 0}
+  .ied-cus{position:static;height:auto;margin:0}
+  /* the file chip, top left of the card (hidden on the short folds and with the keyboard up) */
+  .ied-fchip{position:absolute;left:12px;top:20px;z-index:3;max-width:calc(100% - 208px);display:inline-flex;align-items:center;height:28px;padding:0 10px 0 8px;border-radius:999px;background:rgba(11,12,14,.78);box-shadow:inset 0 0 0 1px rgba(239,238,234,.1);color:#EFEEEA}
+  .ied-nm{display:inline-flex;min-width:0;max-width:100%;font-family:var(--mono);font-size:13px;line-height:1;white-space:nowrap}
+  .ied-nm .st{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .ied-nm .ex{flex:none}
+  /* the jump row after the card: the way down to Stroke, Line style, Rotate and Code */
+  .ied-jump{display:flex;gap:8px;margin:-8px 0}
+  .ied-jb{flex:1 1 auto;min-width:0;height:44px;padding:0 10px;border:0;border-radius:12px;background:var(--ied-tonal);color:var(--ied-ink);display:flex;flex-direction:column;justify-content:center;text-align:left;font-family:inherit}
+  .ied-jb .l{font-size:13px;line-height:16px;font-weight:500;white-space:nowrap}
+  .ied-jb .r{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:13px;line-height:16px;color:var(--ied-m1);white-space:nowrap}
+  .ied-jb .r svg{flex:none}
+  .ied-jb:active{transform:scale(.97)}
+  /* the live icon in the head, only while the card is folded away (tight keyboard) */
+  .ied-hic{display:none;flex:none;width:40px;height:40px;place-items:center;border-radius:10px;box-shadow:inset 0 0 0 1px var(--ied-ring);color:var(--ied-ink)}
+  .ied[data-kb="tight"] .ied-hic{display:grid}
   .ied-cus-row{flex-wrap:wrap;gap:8px 12px}
   .ied-cus-in{gap:4px}
   .ied-numf{width:96px}
@@ -513,6 +529,7 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
 /* the shorter phones: 600 to 759 high (a 664 or 700 phone) folds the card to a bar, the file chip
    already absent here; the icon sits left at 72px with the caption beside it */
 @media (max-width:899px) and (max-height:759px){
+  .ied-fchip{display:none}
   .ied{--ied-stz:104px;--ied-art:72px}
   .ied-sizes{padding-top:4px;padding-bottom:8px}
   .ied-cell-s{height:64px}
@@ -550,7 +567,7 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
 .ied[data-kb] .ied-hd .ied-note{display:none}
 .ied[data-kb] .ied-scroll{padding:8px 16px;scroll-padding:8px 0}
 .ied[data-kb] .ied-secs{gap:20px}
-.ied[data-kb] .ied-sizes-head,.ied[data-kb] .ied-cap{display:none}
+.ied[data-kb] .ied-sizes-head,.ied[data-kb] .ied-cap,.ied[data-kb] .ied-fchip{display:none}
 .ied[data-kb] .ied-sizes{padding-top:4px;padding-bottom:8px}
 .ied[data-kb] .ied-cell-s{height:64px}
 .ied[data-kb] .ied-cell-s .art{height:48px}
@@ -587,6 +604,12 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
   .ied-sizes-head{white-space:nowrap}
   .ied-sizes-pro{display:none}
   .ied-ft .dl-main{padding:0 8px}
+  .ied-fchip{left:8px;max-width:calc(100% - 196px);padding:0 8px}
+  .ied-jump{display:grid;grid-template-columns:1fr 1fr}
+  /* the board's short label: PNG or SVG with the icon (SplitDownload's phone face and sizers) */
+  .ied-ft .dl-main .dl-w{display:none}
+  .ied-ft .dl-main>.dl-sizer.dl-p{display:inline-flex}
+  .ied-ft .dl-main .dl-show.dl-p{display:block}
   .ied-foot-row[data-sv="true"] .ied-sv{flex:none;width:44px;padding:0}
   .ied-foot-row[data-sv="true"] .ied-sv .nm,.ied-foot-row[data-sv="true"] .ied-sv .hv{display:none}
   .ied-fe-sv{display:flex;gap:8px;margin:0 0 8px;font-size:13px;line-height:20px;color:var(--ied-ink)}
@@ -607,6 +630,9 @@ html[data-reduced-motion="true"] :is(.ied-pr,.ied-g,.ied-hd,.ied-ft,.ied-scroll,
   .ied-ft:has(.ied-foot-row[data-sv="true"]) .ied-foot-pill{flex:1 1 0;min-width:0}
 }
 
+@media (max-width:380px){
+  .ied-jump{display:grid;grid-template-columns:1fr 1fr}
+}
 @media (hover:hover) and (pointer:fine) and (max-width:899px){
   .ied-cell-s:not([aria-checked="true"]):hover{background:var(--ied-cell-s)}
 }

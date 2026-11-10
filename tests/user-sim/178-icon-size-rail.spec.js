@@ -297,9 +297,9 @@ test.describe('size rail (phone)', () => {
     await ctx.close()
   })
 
-  // The 20 cell goes where six touch cells (308px of rail) do not fit, and not a pixel sooner:
-  // measured before the fix, 360 held six cells in a rail 14px too narrow.
-  for (const [width, cells] of [[321, 5], [360, 5], [374, 5], [375, 6], [390, 6], [430, 6]]) {
+  // The 20 cell goes on the phone sheet (under 900px), which shows four presets and Custom,
+  // and comes back with the wide dialog.
+  for (const [width, cells] of [[321, 5], [360, 5], [390, 5], [430, 5], [899, 5], [900, 6]]) {
     test(`on a ${width}px touch screen the rail holds ${cells} cells and does not overflow`, async ({ browser }) => {
       const { ctx, page } = await openCustomiser(browser, { width, height: 700, touch: true })
       const rail = page.locator('.icust-size-rail')

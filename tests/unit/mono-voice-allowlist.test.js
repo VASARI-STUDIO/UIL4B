@@ -182,6 +182,7 @@ const ALLOWED = {
   // stroke and size number fields) are not listed: a plain figure takes var(--font).
   'pages/icon-editor.css': {
     '.ied-hex': 'hex',
+    '.ied-nm': 'code',
     '.ied-ta': 'code',
     '.ied-note code': 'code',
     '.ied-code pre': 'code',

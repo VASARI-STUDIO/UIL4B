@@ -20,7 +20,7 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import SplitDownload from '../components/library/SplitDownload'
 import FooterGlyph from '../components/library/FooterGlyph'
 import {
-  downloadFileName, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
+  downloadFileName, effectiveFormat, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
 } from '../utils/iconDownload'
 import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
@@ -2420,6 +2420,64 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // While the save sheet covers the editor on a phone, everything beneath it is inert.
   const lockBase = savePickerOpen && onSheet
 
+  // The Custom size row. On the wide dialog it opens over the size strip; on the phone sheet it is
+  // the first thing in the inspector under the card (so the field and the pinned foot share the
+  // space the keyboard leaves), and the card keeps only the cells.
+  const fileName = downloadFileName(activeIcon?.name, effectiveFormat(dlFormat, size))
+  const customRowEl = (
+    <div className="ied-cus" ref={sizeRowRef}>
+      <div className="ied-cus-in">
+        <div className="ied-cus-row">
+          <label htmlFor="ied-size-input">Custom size</label>
+          <span className="ied-numf">
+            <input
+              id="ied-size-input"
+              ref={sizeInputRef}
+              className="ied-in"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              spellCheck={false}
+              value={sizeText}
+              aria-describedby={clampedTo ? 'ied-size-range ied-size-note' : 'ied-size-range'}
+              onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
+              onKeyDown={onSizeKey}
+              onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
+              onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
+            />
+            <span className="px" aria-hidden="true">px</span>
+          </span>
+          <span className="ied-val" id="ied-size-range">From <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span></span>
+        </div>
+        {clampedTo && (
+          <p className="ied-cus-clamp" id="ied-size-note" role="status">
+            Sizes go from <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="ied-num">{clampedTo}px</span>.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+  // The jump row (phone sheet): the way down to the settings below the fold, each button showing its
+  // current value. Stroke and Line style only exist for line icons.
+  const jumpTo = (sectionId, focusSel) => {
+    const scroller = document.getElementById('ied-scroll')
+    const target = document.getElementById(sectionId)
+    if (!scroller || !target) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    scroller.scrollTo({ top: scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 8, behavior: reduced ? 'auto' : 'smooth' })
+    target.querySelector(focusSel)?.focus({ preventScroll: true })
+  }
+  const jumps = [
+    ...(isStroke ? [
+      { id: 'stroke', label: 'Stroke', value: `${stroke}px`, section: 'ied-sec-stroke', focus: '#ied-stroke', aria: `Go to Stroke, ${stroke} pixels` },
+      { id: 'line', label: 'Line style', value: lineStyle?.name || 'Custom', section: 'ied-sec-line', focus: '.ied-tile[tabindex="0"], .ied-seg button', aria: `Go to Line style, ${lineStyle?.name || 'custom'}` },
+    ] : []),
+    { id: 'rotate', label: 'Rotate', value: `${rotate}°`, section: 'ied-sec-rotate', focus: '.ied-ib', aria: `Go to Rotate and flip, ${rotate ? `rotated ${rotate} degrees` : 'not rotated'}` },
+    { id: 'code', label: 'Code', value: `${codeBytes.toLocaleString('en-AU')} ${codeBytes === 1 ? 'byte' : 'bytes'}`, section: 'ied-sec-code', focus: '.ied-disc', aria: `Go to SVG code, ${codeBytes.toLocaleString('en-AU')} ${codeBytes === 1 ? 'byte' : 'bytes'}` },
+  ]
+
   return (
     <div className="ied-overlay" style={groundVars(theme)} onMouseDown={onClose}>
       <div
@@ -2441,6 +2499,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             <h2 className="ied-title" id="ied-title">{title}</h2>
             {headSub && <p className="ied-note">{headSub}</p>}
           </div>
+          {/* The live icon, shown only while the keyboard has folded the card away (data-kb="tight"). */}
+          {onSheet && activeIcon && (railArt[24] || railArt[16]) && (
+            <span className="ied-hic" aria-hidden="true"><SizeArt markup={railArt[24] || railArt[16]} style={{ '--art': '24px' }} /></span>
+          )}
           <div className="ied-hd-act">
             {/* Reset changes the controls and shows only once something differs. It stays before
                 Close in the tab order. */}
@@ -2457,6 +2519,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
         {activeIcon && (
           <div className="ied-stagecol" data-g={ground} inert={lockBase || undefined}>
+            {/* The file the Download button hands over (phone card only; the stylesheet hides it elsewhere). */}
+            {onSheet && (
+              <span className="ied-fchip" title={fileName}>
+                <span className="ied-nm"><span className="st">{fileName.slice(0, fileName.lastIndexOf('.'))}</span><span className="ex">{fileName.slice(fileName.lastIndexOf('.'))}</span></span>
+              </span>
+            )}
             <div className="ied-grounds" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
               {GROUND_OPTS.map(g => (
                 <button
@@ -2563,41 +2631,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   <span className="num">{customShown && customValue != null ? customValue : ''}</span>
                 </button>
               </div>
-              {customShown && (
-                <div className="ied-cus" ref={sizeRowRef}>
-                  <div className="ied-cus-in">
-                    <div className="ied-cus-row">
-                      <label htmlFor="ied-size-input">Custom size</label>
-                      <span className="ied-numf">
-                        <input
-                          id="ied-size-input"
-                          ref={sizeInputRef}
-                          className="ied-in"
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          enterKeyHint="done"
-                          autoComplete="off"
-                          spellCheck={false}
-                          value={sizeText}
-                          aria-describedby={clampedTo ? 'ied-size-range ied-size-note' : 'ied-size-range'}
-                          onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
-                          onKeyDown={onSizeKey}
-                          onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
-                          onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
-                        />
-                        <span className="px" aria-hidden="true">px</span>
-                      </span>
-                      <span className="ied-val" id="ied-size-range">From <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span></span>
-                    </div>
-                    {clampedTo && (
-                      <p className="ied-cus-clamp" id="ied-size-note" role="status">
-                        Sizes go from <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="ied-num">{clampedTo}px</span>.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+              {customShown && !onSheet && customRowEl}
             </div>
           </div>
         )}
@@ -2630,6 +2664,20 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
                     </button>
                   )}
+                </div>
+              )}
+              {onSheet && customShown && customRowEl}
+              {onSheet && (
+                <div className="ied-jump" role="group" aria-label="Jump to a setting">
+                  {jumps.map(j => (
+                    <button key={j.id} type="button" className="ied-jb" aria-label={j.aria} onClick={() => jumpTo(j.section, j.focus)}>
+                      <span className="l">{j.label}</span>
+                      <span className="r">
+                        <span className="ied-num">{j.value}</span>
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
               <div>
@@ -2705,7 +2753,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
 
               {isStroke && (
-                <div>
+                <div id="ied-sec-stroke">
                   {/* The `px` unit is half the fix: the control reports the width the exported
                       file actually measures, at any size. */}
                   <IedStroke
@@ -2734,7 +2782,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               )}
 
               {isStroke && (
-                <div>
+                <div id="ied-sec-line">
                   <div className="ied-lblrow">
                     <span className="ied-lbl" id="ied-line-label">Line style</span>
                     {!isPro && <span className="ied-val">Sharp and Crisp are Pro</span>}
@@ -2805,7 +2853,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </div>
               )}
 
-              <div className="ied-rot">
+              <div className="ied-rot" id="ied-sec-rotate">
                 <div className="ied-rot-l">
                   <span className="ied-lbl" id="ied-rot-label">Rotate and flip</span>
                   <span className="ied-num ied-val" aria-hidden="true">{rotate}°</span>
@@ -2828,7 +2876,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 </div>
               </div>
 
-              <div>
+              <div id="ied-sec-code">
                 <button
                   type="button"
                   className="ied-disc"
