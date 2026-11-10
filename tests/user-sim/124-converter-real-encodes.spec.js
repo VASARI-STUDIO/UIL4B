@@ -120,7 +120,7 @@ async function inspectImage(page, bytes, type, points) {
 
 const isRed = ([r, g, b]) => r > 190 && g < 110 && b < 110
 const isBlue = ([r, g, b]) => b > 190 && r < 90 && g < 120
-const isBlack = ([r, g, b]) => r < 40 && g < 40 && b < 40
+const isBlack = ([r, g, b, a]) => a === 255 && r < 40 && g < 40 && b < 40
 
 /** The width and height an MP4 declares for its first video track (tkhd, 16.16 fixed point). */
 function mp4Size(buf) {
@@ -150,7 +150,15 @@ async function inspectMp4(page, url, points) {
     await new Promise((r) => { v.onseeked = r })
     const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight
     const ctx = cv.getContext('2d', { willReadFrequently: true })
-    ctx.drawImage(v, 0, 0)
+    // `seeked` fires before the decoded frame is painted; until it is, drawImage leaves every pixel transparent.
+    const deadline = performance.now() + 10_000
+    for (;;) {
+      ctx.clearRect(0, 0, cv.width, cv.height)
+      ctx.drawImage(v, 0, 0)
+      if (ctx.getImageData(0, 0, 1, 1).data[3] === 255) break
+      if (performance.now() > deadline) throw new Error('the player never painted the frame')
+      await new Promise((r) => requestAnimationFrame(r))
+    }
     const px = {}
     for (const [name, x, y] of pts) px[name] = Array.from(ctx.getImageData(x, y, 1, 1).data)
     return { w: v.videoWidth, h: v.videoHeight, px }

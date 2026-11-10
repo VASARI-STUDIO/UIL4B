@@ -60,6 +60,8 @@ for (const width of [390, 1440]) {
           expect(calls[0].body.design.palette.colors[0], 'for this project\u2019s colours').toBe('#1F4B8E')
 
           await expect(panel.getByText('Downloaded harbour-ui-kit-04-standards.zip.')).toBeVisible()
+          // Focus returns to the button when the export ends; the dialog takes Escape only from then on.
+          await expect(panel.getByRole('button', { name: 'Export again', exact: true })).toBeFocused()
           await page.keyboard.press('Escape')
           await expect(panel).toHaveCount(0)
           await expect(page.locator('#main')).not.toHaveAttribute('inert', '')
