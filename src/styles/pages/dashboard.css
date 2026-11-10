@@ -58,6 +58,9 @@
 .db-ring:focus-visible::before{opacity:.92;padding:1.5px;--db-a:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1),padding 360ms cubic-bezier(.25,1,.5,1),--db-a 560ms cubic-bezier(.45,.05,.3,1)}
 @media (hover:none){.db-ring:active::before{opacity:.92;padding:1.5px;transition:none}}
 .db-ring:is(:disabled,[aria-disabled="true"],[data-fill="true"])::before{display:none}
+.db-ghost:disabled{color:var(--t56);cursor:default}
+.db-gt:disabled{opacity:.56;cursor:default}
+.db-ghost:disabled:active,.db-gt:disabled:active{transform:none}
 .db-arrow{position:relative;display:inline-grid;place-items:center;overflow:hidden;--db-r:45deg;transition:background-color 150ms ease}
 .db-arrow>svg{grid-area:1/1}
 .db-arrow>.db-arrow-b{display:none}
@@ -311,7 +314,7 @@
 .db-img{position:relative;width:168px;height:160px;isolation:isolate}
 .db-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .db-crop{position:absolute;z-index:1;left:20px;top:0;width:128px;height:160px;border:1px solid rgba(239,238,234,.72);box-shadow:0 0 0 200px rgba(6,6,7,.48)}
-.db-ratio{position:absolute;z-index:2;left:28px;top:8px;height:24px;padding:0 8px;display:inline-flex;align-items:center;border-radius:6px;background:rgba(6,6,7,.64);font-family:var(--mono);font-size:12px;line-height:1}
+.db-ratio{position:absolute;z-index:2;left:28px;top:8px;height:24px;padding:0 8px;display:inline-flex;align-items:center;border-radius:6px;background:rgba(6,6,7,.64);font-family:var(--font);font-variant-numeric:tabular-nums;font-size:12px;line-height:1}
 .db-also{margin-top:24px;font-size:15px;line-height:24px;color:var(--t72)}
 .db-also a{display:inline-block;color:var(--ink);font-weight:500;transition:transform 120ms var(--ease)}
 .db-also a:active{transform:scale(.97)}
@@ -406,6 +409,7 @@
   .db-kit .db-ramp.set { top: 0; height: 100%; }
   /* the one moment, on a phone: the first time the cell is 60% in view the ramp unrolls from the source stop, and the note beside it changes */
   .db-tn.play .db-ramp:not(.rest) { clip-path: inset(0); transition: clip-path 420ms var(--db-out); }
+  :where(html[data-reduced-motion="true"]) .db-tn.play .db-ramp:not(.rest) { clip-path: none; opacity: 1; transition: opacity 150ms linear; }
   .db-tcm { display: grid; flex-basis: 100%; min-width: 0; font-size: 14px; line-height: 20px; color: var(--t62); }
   .db-tcm > * { grid-area: 1 / 1; min-width: 0; transition: opacity 150ms ease; }
   .db-tcm > .b { opacity: 0; }
@@ -553,10 +557,8 @@
 @media (pointer: coarse) and (max-width: 359px) {
   .db-open { min-height: 0; height: 0; margin-block: 0; }
 }
-/* the phone's played ramp fades in instead of unrolling; at 1200 and up the ramp waits for hover and focus like the rest */
-@media (max-width:1199px){
-  :where(html[data-reduced-motion="true"]) .db-tn.play .db-ramp:not(.rest){clip-path:none;opacity:1;transition:opacity 150ms linear}
-}
+/* the phone's played ramp fades in instead of unrolling; at 1200 and up the ramp waits for hover and focus like the rest.
+   The explicit-setting rule sits with the played-ramp rule in the phone block above. */
 @media (prefers-reduced-motion:reduce) and (max-width:1199px){
   :where(html:not([data-reduced-motion="false"])) .db-tn.play .db-ramp:not(.rest){clip-path:none;opacity:1;transition:opacity 150ms linear}
 }
