@@ -159,9 +159,17 @@ function runFits() {
     })
   }
 }
+// How many lines a name wraps to. The text's own line fragments are counted, not the
+// element's scroll height: a face with tall ascent and descent metrics (Anek Bangla,
+// Sumana) paints a one-line name with an inline box far taller than its line, and
+// scrollHeight reports that overhang as extra lines.
+function nameLines(el) {
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  return range.getClientRects().length
+}
 // A grid tile's name wraps to two lines, so it fits when two lines hold it: shrink
-// in small steps until the name is no taller than its two-line box (a third line is a
-// whole line more, so a fifth of a box of slack covers a glyph that overhangs) and no word is
+// in small steps until the name wraps to no more than two lines and no word is
 // wider than the box, never below the floor. Each tile fits on its own, so one long
 // family name does not shrink the other tiles on a page of two dozen.
 function fitTiles(jobs) {
@@ -169,7 +177,7 @@ function fitTiles(jobs) {
   let open = jobs
   for (let pass = 0; pass < 14 && open.length; pass++) {
     open = open.filter(job => job.scale > job.floor
-      && (job.el.scrollHeight > job.el.clientHeight * 1.2 || job.el.scrollWidth > job.el.clientWidth + 1))
+      && (nameLines(job.el) > 2 || job.el.scrollWidth > job.el.clientWidth + 1))
     open.forEach(job => {
       job.scale = Math.max(job.scale * 0.94, job.floor)
       job.el.style.setProperty('--fg-fit', String(job.scale))
