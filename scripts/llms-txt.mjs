@@ -159,7 +159,7 @@ export function llmsClaims() {
   return {
     summary: `${line(SURFACE_LINE.llmsSummary)} ${pricingSentence()}`,
     freePlan: `Free: ${AI_LIMITS.free.daily} AI generations a day and ${AI_LIMITS.free.monthly} a month; `
-      + `${kit.length ? `${listNames(kit)} export, and ` : ''}style guide export in ${listNames(free)}, with a "Made with UIL4B" footer line.`,
+      + `${kit.length ? `${listNames(kit)} export, and ` : ''}style guide export in ${listNames(free)}, with a "Made with UI L4B" footer line.`,
     proPlan: `Pro, ${proPrice}: ${AI_LIMITS.pro.daily} AI generations a day and ${AI_LIMITS.pro.monthly} a month; `
       + `adds ${listNames(pro)}; removes the footer line. Same AI model as Free.`,
     notBuilt: `Not built, on any plan, and not for sale: ${listNames(unbuilt)}.`,
