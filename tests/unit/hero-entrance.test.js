@@ -47,10 +47,23 @@ test('the panel enters once: 12px rise and fade, 300ms, 80ms delay', () => {
   assert.ok(keyframes, 'the panel entrance keyframes are gone')
   assert.match(keyframes[1], /opacity:\s*0/)
   assert.match(keyframes[1], /translateY\(12px\)/)
-  const rule = declarationsFor(heroCss, '.hh-fig').find((d) => d.includes('animation:'))
+  const rule = declarationsFor(heroCss, '.hh-fig[data-ready]').find((d) => d.includes('animation:'))
   assert.ok(rule, 'the figure no longer runs the entrance')
   assert.match(rule, /animation:\s*hh-panel-in 300ms cubic-bezier\(\.23,\s*1,\s*\.32,\s*1\) 80ms both/)
   assert.ok(!/infinite/.test(heroCss), 'something in the hero loops forever')
+})
+
+test('the panel stays clear until the loop has drawn, then enters', () => {
+  // Rising in empty and having the loop pop into it a beat later is the defect
+  // this gate answers: the entrance is keyed on `data-ready`, which HomeHero sets
+  // when HeroLoop reports its panel has committed.
+  const clear = declarationsFor(heroCss, '.hh-fig:not([data-ready])')
+  assert.ok(clear.some((d) => /opacity:\s*0/.test(d)), 'the panel is no longer clear before it is ready')
+  assert.ok(!declarationsFor(heroCss, '.hh-fig').some((d) => d.includes('animation')),
+    'the entrance runs on every mount again, before the loop has drawn')
+  const hero = read('src/components/home/HomeHero.jsx')
+  assert.match(hero, /data-ready=\{loopReady \|\| undefined\}/)
+  assert.match(read('src/components/home/HeroLoop.jsx'), /<LoopReady onReady=\{onReady\} \/>/)
 })
 
 test('the entrance moves transform and opacity only, with no blur', () => {
@@ -74,8 +87,8 @@ test('the headline, sub-line, buttons and glow carry no entrance', () => {
 test('reduced motion swaps the rise for a 200ms fade, under both opt-outs', () => {
   assert.match(heroCss, /@keyframes hh-panel-fade\s*\{\s*from\s*\{\s*opacity:\s*0;?\s*\}\s*\}/)
   for (const guard of [
-    /prefers-reduced-motion: reduce\)\s*\{\s*html:not\(\[data-reduced-motion="false"\]\) \.hh-fig\s*\{[^}]*hh-panel-fade 200ms/,
-    /html\[data-reduced-motion="true"\] \.hh-fig\s*\{[^}]*hh-panel-fade 200ms/,
+    /prefers-reduced-motion: reduce\)\s*\{\s*html:not\(\[data-reduced-motion="false"\]\) \.hh-fig\[data-ready\]\s*\{[^}]*hh-panel-fade 200ms/,
+    /html\[data-reduced-motion="true"\] \.hh-fig\[data-ready\]\s*\{[^}]*hh-panel-fade 200ms/,
   ]) {
     assert.match(heroCss, guard)
   }

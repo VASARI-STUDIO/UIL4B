@@ -329,6 +329,8 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   // down, which this also catches, on the dialog never opening.
   test('all six scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
+    // Pro, so every scene is mounted: a free account is shown a stand-in for the Pro scenes (Spending card, Architect portfolio), not the scene.
+    await signIn(page, { plan: 'pro' })
     await go(page, '/create/palette')
     await clickPaletteAction(page, 'Preview')
     await expect(page.locator('.pvs')).toHaveCount(1)

@@ -138,15 +138,19 @@ async function openDialog(page, { plan = 'pro' } = {}) {
   return dialog
 }
 
-/** Pick a scene in whichever layout the width gives: rail, the 768 menu, or the phone strip. */
-async function pickScene(dialog, name) {
+/**
+ * Pick a scene in whichever layout the width gives: rail, the 768 menu, or the phone strip.
+ * `locked` is a Pro scene on a free account: its scene is never mounted, so the stage holds the stand-in instead.
+ */
+async function pickScene(dialog, name, { locked = false } = {}) {
   let option = dialog.getByRole('option', { name: rx(name) })
   if (!(await option.count())) {
     await dialog.locator('.pvd-menu-btn').click()
     option = dialog.getByRole('option', { name: rx(name) })
   }
   await option.click()
-  await expect(dialog.locator(`.pvs[data-preview-scene="${name}"]`)).toBeVisible()
+  if (locked) await expect(dialog.locator('.pvd-scene.is-locked .pvd-scene-stub')).toBeVisible()
+  else await expect(dialog.locator(`.pvs[data-preview-scene="${name}"]`)).toBeVisible()
 }
 
 async function setTheme(dialog, theme) {
@@ -1018,16 +1022,19 @@ test.describe('the free and Pro examples', () => {
     await expect(rail.getByRole('option'), 'six previews in the list').toHaveCount(SCENE_ORDER.length)
 
     for (const ex of EXAMPLES) {
-      await pickScene(dialog, ex.name)
+      await pickScene(dialog, ex.name, { locked: ex.pro })
       const option = rail.getByRole('option', { name: rx(ex.name) })
       const unlock = dialog.getByRole('button', { name: 'Unlock preview' })
-      // The real scene is behind the gate either way: a free account can see what it is missing.
-      await expect(dialog.locator('.pvs'), `${ex.name}: its real scene is on the stage`).toContainText(ex.text)
+      // A Pro scene is never mounted for a free account: the stage holds a stand-in drawn from their own colours, so there is no scene to un-blur.
+      if (!ex.pro) await expect(dialog.locator('.pvs'), `${ex.name}: its real scene is on the stage`).toContainText(ex.text)
       if (ex.pro) {
         await expect(option, `${ex.name} is marked Pro in the list`).toContainText(/Pro$/)
         await expect(dialog.getByText(`${ex.name} is a Pro preview`)).toBeVisible()
         await expect(unlock, `${ex.name}: one Unlock preview button`).toHaveCount(1)
         await expect(dialog.locator('.pvd-scene-in')).toHaveCSS('filter', 'blur(6px)')
+        await expect(dialog.locator('.pvd-scene-stub'), `${ex.name}: a stand-in on the stage`).toHaveCount(1)
+        await expect(dialog.locator('.pvs'), `${ex.name}: the real scene is not in the page`).toHaveCount(0)
+        expect(await dialog.locator('.pvd-scene').innerText(), `${ex.name}: none of its copy is in the page`).not.toContain(ex.text)
         await expect(dialog.locator('.pvd-scene-in'), `${ex.name}: out of reach of the keyboard and pointer`).toHaveAttribute('inert', '')
       } else {
         await expect(option, `${ex.name} is not marked Pro`).not.toContainText(/Pro$/)

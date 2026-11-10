@@ -30,13 +30,26 @@ const FACES = [
   ['IBM Plex Sans', [400, 500, 600]],
 ]
 
-export default function HeroLoop({ size, playing }) {
+// Rendered beside the panel inside its own Suspense boundary, so its effect runs
+// only once the panel's chunk has loaded and committed: that is the moment the
+// loop has something to show, and the frame's entrance waits for it.
+function LoopReady({ onReady }) {
+  useEffect(() => { onReady() }, [onReady])
+  return null
+}
+
+export default function HeroLoop({ size, playing, onReady }) {
   const { width, height } = LOOP_SIZES[size] || LOOP_SIZES.wide
   const Panel = PANELS[size]
 
   // The Font Pair scene sets the sample brand's heading and its alternatives in
   // their own faces. loadFont fetches a face once however many times a loop
   // mounts, and only the weights listed above.
+  // A size with no panel has nothing to wait for.
+  useEffect(() => {
+    if (!Panel) onReady?.()
+  }, [Panel, onReady])
+
   useEffect(() => {
     if (!Panel) return
     const faces = size === 'phone' ? PHONE_FACES : FACES
@@ -48,6 +61,7 @@ export default function HeroLoop({ size, playing }) {
       {Panel && (
         <Suspense fallback={null}>
           <Panel active={playing} />
+          {onReady && <LoopReady onReady={onReady} />}
         </Suspense>
       )}
     </div>

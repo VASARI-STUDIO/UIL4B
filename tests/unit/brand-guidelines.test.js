@@ -31,6 +31,7 @@ import { formatFileName } from '../../src/utils/exportFileName.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
+  .replace(/\r\n?/g, '\n') // a CRLF checkout (Windows autocrlf) must parse like an LF one
   .replace(/\/\*[\s\S]*?\*\//g, ' ')
   .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
   .replace(/^\s*\/\/.*$/gm, ' ')

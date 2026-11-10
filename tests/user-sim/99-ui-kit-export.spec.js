@@ -1,7 +1,7 @@
 // The UI kit, exported from the nav's Export popup (UI kit).
 //
 // Signed out, the kit is the panel's default format and pressing Export raises
-// the same create-account gate as every other file export, with nothing
+// the dialog's inline sign-in, as for every other file export, with nothing
 // asked of the server and nothing downloaded. With an account the same press asks
 // the export route (POST /api/ai?export=document, answered here by a stand-in) for
 // the kit in the open theme and saves the zip it sends back as
@@ -90,9 +90,9 @@ test.describe('the UI kit export', () => {
     await go(page, BOARD)
     const panel = await openPanel(page)
     await primaryButton(panel).click()
-    await expect(page.locator('#ui-login-title'), 'a file export asks for a free account')
-      .toHaveText(/create your free account/i, { timeout: 10000 })
-    await expect(page.getByText(/you were about to export this UI kit/i)).toBeVisible()
+    await expect(panel.locator('.xd-signin #ui-login-title'), 'a file export asks for an account, inside the dialog')
+      .toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.ui-modal-overlay'), 'no second modal over the dialog').toHaveCount(0)
     expect(calls, 'a signed-out press asks the route for nothing').toEqual([])
 
     // They make the account; the same press now hands over the kit.

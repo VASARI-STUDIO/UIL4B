@@ -14,6 +14,7 @@ import {
 } from './_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from './_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
+import { aiAccountRefusal, aiSharedRefusal, imagePayloadProblem } from './_lib/aiLimits.js'
 import {
   geminiRegionBlocked,
   REGION_BLOCKED_STATUS,
@@ -195,12 +196,25 @@ const TONE_CONFIGS = {
   },
 }
 
+const ALT_TEXT_MIME = /^image\/(jpeg|png|webp|gif|heic|heif)$/
+const SCAN_PHOTO_MIME = /^image\/(jpeg|png|webp|gif)$/
+
+// Why an image request cannot be sent to the provider, or null. Run by the
+// handler before an attempt is counted or a quota unit is reserved, so a
+// malformed request costs the account nothing and never reaches the provider.
+function imageRequestProblem(body, mimePattern) {
+  const { image, mimeType } = body || {}
+  if (!image || !mimeType) return 'image (base64) and mimeType required'
+  if (!mimePattern.test(mimeType)) return 'unsupported mimeType'
+  return imagePayloadProblem(image)
+}
+
 async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit, refundCapped }) {
   const { image, mimeType, context, tone } = req.body || {}
   if (!image || !mimeType) return res.status(400).json({ error: 'image (base64) and mimeType required' })
   const toneKey = typeof tone === 'string' && Object.hasOwn(TONE_CONFIGS, tone) ? tone : 'concise'
   const toneConfig = TONE_CONFIGS[toneKey]
-  if (!/^image\/(jpeg|png|webp|gif|heic|heif)$/.test(mimeType)) {
+  if (!ALT_TEXT_MIME.test(mimeType)) {
     return res.status(400).json({ error: 'unsupported mimeType' })
   }
 
@@ -317,7 +331,7 @@ Return ONLY a valid JSON array. No markdown, no explanation, no code fences. Aim
 async function runScanPhoto(req, res) {
   const { image, mimeType } = req.body || {}
   if (!image || !mimeType) return res.status(400).json({ error: 'image (base64) and mimeType required' })
-  if (!/^image\/(jpeg|png|webp|gif)$/.test(mimeType)) {
+  if (!SCAN_PHOTO_MIME.test(mimeType)) {
     return res.status(400).json({ error: 'unsupported mimeType' })
   }
 
@@ -979,6 +993,7 @@ const TASKS = {
     limitError: 'Daily limit reached',
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
+    validate: (body) => imageRequestProblem(body, ALT_TEXT_MIME),
     geminiOnly: true,
     run: runAltText,
     cutoffRefundCap: ALT_TEXT_CUTOFF_REFUND_CAP,
@@ -988,6 +1003,7 @@ const TASKS = {
     limitError: 'Daily scan limit reached',
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
+    validate: (body) => imageRequestProblem(body, SCAN_PHOTO_MIME),
     geminiOnly: true,
     run: runScanPhoto,
   },
@@ -1119,13 +1135,12 @@ async function serveBacklog(req, res) {
       MODULE_BOARD: modules.MODULE_BOARD,
     })
   } catch (err) {
-    // ── THE BOARDS ARE NOT DEPLOYED. THAT IS A DECISION, NOT A FAULT ────────
-    // 501 rather than 200, so a caller that does not know about this state
-    // fails loudly instead of rendering nothing and calling it a backlog; and
-    // rather than 500, because nothing here is broken. `localOnly` is the flag
-    // the Admin tabs branch on, and the sentence says which files, where they
-    // are and why — an administrator reading this should not have to guess
-    // whether the queue is empty or the data is elsewhere.
+    // The board modules are absent from a deployment by design, so this is not
+    // a fault. 501 rather than 200, so a caller that does not know about this
+    // state fails loudly instead of rendering nothing and calling it an empty
+    // backlog; and rather than 500, because nothing here is broken. `localOnly`
+    // is the flag the Admin tabs branch on, and the message says which files
+    // are missing so an empty queue is never mistaken for missing data.
     if (isBoardModuleMissing(err)) {
       return res.status(501).json({
         localOnly: true,
@@ -1141,6 +1156,46 @@ async function serveBacklog(req, res) {
     console.error('ai: could not load the internal boards', { error: err?.message, code: err?.code })
     return res.status(500).json({ error: `Could not load the boards: ${err?.message || 'unknown error'}` })
   }
+}
+
+// The checks that run before a quota unit is reserved: the request's own input,
+// then the account's own attempt limits (see _lib/aiLimits.js). A malformed
+// request does no provider work, so it is refused without being counted; a
+// counted attempt is never given back, which is what the generation meter
+// cannot do once it has refunded a failed call.
+//
+// The counters shared between people (address and site) are NOT spent here. A
+// request the quota meter then refuses costs the provider nothing and must not
+// use up an allowance other people rely on; refuseSharedAttempt spends them
+// inside the metered run.
+// Sends the refusal itself and returns true, or returns false to carry on.
+async function refuseBeforeMeter(req, res, { task, db, uid, plan }) {
+  const invalid = task.validate ? task.validate(req.body) : null
+  if (invalid) {
+    res.status(400).json({ error: invalid })
+    return true
+  }
+  const refused = await aiAccountRefusal(db, { uid, req, planId: plan.id })
+  if (!refused) return false
+  sendRefusal(res, refused)
+  return true
+}
+
+// The address and site counters, spent once the quota unit is reserved and
+// ahead of the provider call. It is the first thing the `run` callback of
+// runMeteredTask does: when this sends a refusal the runner returns null, which
+// makes runMeteredTask give the reserved unit back. Returns true when it sent
+// the refusal.
+async function refuseSharedAttempt(req, res, { db, plan }) {
+  const refused = await aiSharedRefusal(db, { req, planId: plan.id })
+  if (!refused) return false
+  sendRefusal(res, refused)
+  return true
+}
+
+function sendRefusal(res, refused) {
+  if (refused.retryAfter) res.setHeader('Retry-After', String(refused.retryAfter))
+  res.status(refused.status).json(refused.body)
 }
 
 // Per-visitor answer, so it must never be cached or shared between visitors.
@@ -1366,6 +1421,8 @@ export default async function handler(req, res) {
     const unverified = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
     if (unverified) return res.status(403).json(unverified)
 
+    if (await refuseBeforeMeter(req, res, { task, db: fireDb, uid, plan })) return
+
     const bucket = generationBucket(plan.id, monthStr())
     const ref = fireDb.doc(`daily-usage/${uid}_${bucket.suffix}`)
 
@@ -1379,6 +1436,10 @@ export default async function handler(req, res) {
       db: fireDb,
       meters,
       run: async ([used]) => {
+        // The unit is reserved, so this request is about to cost the provider:
+        // only now are the shared counters spent. A refusal returns null and
+        // runMeteredTask refunds the unit.
+        if (await refuseSharedAttempt(req, res, { db: fireDb, plan })) return null
         res.setHeader('Cache-Control', 'no-store')
         const generated = await task.run(req, res, { plan, bucket, used })
         // A runner that answered for itself — every failure path above does —
@@ -1425,6 +1486,8 @@ export default async function handler(req, res) {
   const blocked = emailGateBody({ emailVerified, subscription, lifetimeEntitlement })
   if (blocked) return res.status(403).json(blocked)
 
+  if (await refuseBeforeMeter(req, res, { task, db: fireDb, uid, plan })) return
+
   // BOTH ceilings are reserved in ONE transaction, month first. The order is the
   // reporting order: whichever is reached first is the one the message names,
   // and the message has to name WHICH period is exhausted and when it frees up —
@@ -1445,6 +1508,9 @@ export default async function handler(req, res) {
     // Which document holds the per-day count of capped refunds, if the task has one.
     cap: task.cutoffRefundCap ? { ref: usageRef, ...task.cutoffRefundCap } : undefined,
     run: async ([monthUsed, used], { refundCapped }) => {
+      // Reserved, so about to cost the provider: spend the shared counters now.
+      // A refusal returns null and runMeteredTask refunds both reserved units.
+      if (await refuseSharedAttempt(req, res, { db: fireDb, plan })) return null
       res.setHeader('Cache-Control', 'no-store')
       // Task runners either send an error response themselves (and return the
       // res object / undefined) or return the success payload for the shared
