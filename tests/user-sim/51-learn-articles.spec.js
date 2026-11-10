@@ -45,7 +45,7 @@ test.describe('Learn articles', () => {
       await expect(card).toContainText(article.title)
       await expect(card).toContainText(article.topic)
     }
-    // The guides, counted apart from the "Using UIL4B" group after them (Help and
+    // The guides, counted apart from the "Using UI L4B" group after them (Help and
     // Design Principles are pages that help, not guides; 207-learn-hub.spec.js
     // owns that group).
     await expect(page.locator('.lidx-sections section:not(#learn-topic-using-uil4b) .lidx-card'))

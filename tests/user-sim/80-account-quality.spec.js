@@ -122,7 +122,7 @@ test.describe('every account surface starts at heading 1', () => {
     await go(page, '/checkout/return?session_id=cs_test_paid')
     const h1 = page.locator('main h1')
     await expect(h1).toHaveCount(1)
-    await expect(h1).toContainText('You’re on UIL4B Pro')
+    await expect(h1).toContainText('You’re on UI L4B Pro')
     // It is styled as the confirmation panel's heading — `.checkout-page
     // .checkout-return-card h1`, the Spectrum pass's clamp(24px,3vw,30px) —
     // and NOT by whatever an unscoped h1 rule would give a bare <h1> (the

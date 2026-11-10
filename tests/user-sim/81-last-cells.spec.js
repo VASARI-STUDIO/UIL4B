@@ -465,7 +465,7 @@ test.describe('the login surfaces paint only what is true', () => {
       // The words and the type are untouched — this cell is a SPACING fix and
       // nothing else. `auth.welcomeBack` is approval-gated.
       expect(m.titleSize).toBe('22px')
-      await expect(page.locator('#ui-login-title')).toHaveText('Log in to UIL4B')
+      await expect(page.locator('#ui-login-title')).toHaveText('Log in to UI L4B')
 
       await ctx.close()
     })

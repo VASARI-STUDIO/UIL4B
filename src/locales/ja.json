@@ -30,10 +30,10 @@
     "colours": "カラー"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -434,7 +434,7 @@
     }
   },
   "auth": {
-    "logInTitle": "UIL4Bにログイン",
+    "logInTitle": "UI L4Bにログイン",
     "logInContinue": "続けるにはログインしてください",
     "createAccount": "無料アカウントを作成",
     "resetTitle": "パスワードをリセット",
@@ -501,7 +501,7 @@
   },
   "feedback": {
     "title": "フィードバック",
-    "subtitle": "UIL4B の改善にご協力ください。バグ、機能リクエスト、一般的なフィードバックをお寄せください。",
+    "subtitle": "UI L4B の改善にご協力ください。バグ、機能リクエスト、一般的なフィードバックをお寄せください。",
     "featureRequest": "機能リクエスト",
     "bugReport": "バグ報告",
     "general": "一般",
@@ -517,7 +517,7 @@
   },
   "community": {
     "title": "コミュニティ",
-    "subtitle": "UIL4B を使用する他のデザイナーや開発者とつながりましょう。",
+    "subtitle": "UI L4B を使用する他のデザイナーや開発者とつながりましょう。",
     "comingSoonDesc": "パレットを共有し、デザインのフィードバックを受け取り、コミュニティが作成したテンプレートを発見しましょう。",
     "github": "GitHubリポジトリ",
     "githubDesc": "ソースコードを閲覧、プロジェクトにスターを付け、貢献する。",

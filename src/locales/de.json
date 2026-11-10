@@ -30,10 +30,10 @@
     "colours": "Farben"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -434,7 +434,7 @@
     }
   },
   "auth": {
-    "logInTitle": "Bei UIL4B anmelden",
+    "logInTitle": "Bei UI L4B anmelden",
     "logInContinue": "Melden Sie sich an, um fortzufahren",
     "createAccount": "Erstellen Sie Ihr kostenloses Konto",
     "resetTitle": "Passwort zurücksetzen",
@@ -501,7 +501,7 @@
   },
   "feedback": {
     "title": "Feedback",
-    "subtitle": "Helfen Sie uns, UIL4B zu verbessern. Teilen Sie Fehler, Funktionswünsche oder allgemeines Feedback mit.",
+    "subtitle": "Helfen Sie uns, UI L4B zu verbessern. Teilen Sie Fehler, Funktionswünsche oder allgemeines Feedback mit.",
     "featureRequest": "Funktionswunsch",
     "bugReport": "Fehlerbericht",
     "general": "Allgemein",
@@ -517,7 +517,7 @@
   },
   "community": {
     "title": "Community",
-    "subtitle": "Vernetzen Sie sich mit anderen Designern und Entwicklern, die UIL4B nutzen.",
+    "subtitle": "Vernetzen Sie sich mit anderen Designern und Entwicklern, die UI L4B nutzen.",
     "comingSoonDesc": "Teilen Sie Paletten, erhalten Sie Feedback zu Ihren Designs und entdecken Sie von der Community erstellte Vorlagen.",
     "github": "GitHub-Repository",
     "githubDesc": "Quellcode durchsuchen, Projekt markieren und beitragen.",

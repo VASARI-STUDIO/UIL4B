@@ -63,7 +63,7 @@ test.describe('the /login page is a page, not a dialog', () => {
       h1s: [...document.querySelectorAll('h1')].map((h) => ({ text: (h.textContent || '').trim(), inMain: !!h.closest('main') })),
       dialogs: document.querySelectorAll('[role="dialog"], [aria-modal="true"]').length,
     }))
-    expect(seen.h1s, 'exactly one h1, inside main').toEqual([{ text: 'Log in to UIL4B', inMain: true }])
+    expect(seen.h1s, 'exactly one h1, inside main').toEqual([{ text: 'Log in to UI L4B', inMain: true }])
     expect(seen.dialogs, 'the page is not a dialog').toBe(0)
   })
 
@@ -242,7 +242,7 @@ test.describe('on a 390x844 phone', () => {
     const { ctx, page } = await phone(browser)
     watch(page, 'visitor on a phone logging in')
     await go(page, '/login')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UIL4B')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
     const google = await rect(page, '.auth-google-btn')
     expect(google.top, `the Google button starts ${google.top}px down`).toBeLessThanOrEqual(310)
     expect(google.top, 'and it is on the page').toBeGreaterThan(150)
@@ -386,7 +386,7 @@ test.describe('the /login page hands the visitor on', () => {
     await go(page, '/login')
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toBe('/login')
     // Retries: the URL leaves /login before the page does (see the test below).
-    await expect(page.getByRole('heading', { level: 1, name: 'Log in to UIL4B' }), 'the log-in form is still showing').toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1, name: 'Log in to UI L4B' }), 'the log-in form is still showing').toHaveCount(0)
   })
 
   // MUTATION: same effect as above. The page then sits on /login after sign-in.
@@ -395,7 +395,7 @@ test.describe('the /login page hands the visitor on', () => {
     await signIn(page, { plan: 'free', lateSignIn: true })
     await go(page, GATED)
     await expect.poll(() => new URL(page.url()).pathname).toBe('/login')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UIL4B')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
 
     await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe('/checkout/return')
@@ -403,7 +403,7 @@ test.describe('the /login page hands the visitor on', () => {
     // until its chunk arrives the log-in form is still on screen. A one-shot
     // count() read it in that gap (13 of 15 runs at 8x CPU throttling), so wait
     // for the form to be gone.
-    await expect(page.getByRole('heading', { level: 1, name: 'Log in to UIL4B' }), 'the log-in form is still showing').toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1, name: 'Log in to UI L4B' }), 'the log-in form is still showing').toHaveCount(0)
   })
 
   // MUTATION: in LoginPage.jsx delete `useEffect(() => { stashResumeTarget(from) }, [from])`.
@@ -411,7 +411,7 @@ test.describe('the /login page hands the visitor on', () => {
     watch(page, 'visitor sent to log in from a protected page')
     await go(page, GATED)
     await expect.poll(() => new URL(page.url()).pathname).toBe('/login')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UIL4B')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
     expect(await page.evaluate((k) => sessionStorage.getItem(k), RESUME_KEY)).toBe(GATED)
 
     // A bare visit is not a destination, and clears an earlier one. (Arrive from
@@ -419,7 +419,7 @@ test.describe('the /login page hands the visitor on', () => {
     // state, and with it the old destination.)
     await go(page, '/plans')
     await go(page, '/login')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UIL4B')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
     expect(await page.evaluate((k) => sessionStorage.getItem(k)
       , RESUME_KEY), 'a bare /login left an old destination behind').toBeNull()
   })
@@ -431,7 +431,7 @@ test.describe('the /login page hands the visitor on', () => {
     await go(page, '/login')
     const search = () => new URL(page.url()).search
     const h1 = page.getByRole('heading', { level: 1 })
-    await expect(h1).toHaveText('Log in to UIL4B')
+    await expect(h1).toHaveText('Log in to UI L4B')
     expect(search()).toBe('')
     await expect.poll(() => page.title()).toBe('UI L4B | Log in')
 
@@ -441,7 +441,7 @@ test.describe('the /login page hands the visitor on', () => {
     await expect.poll(() => page.title()).toBe('UI L4B | Create your free account')
 
     await page.getByRole('button', { name: /Log in$/ }).click()
-    await expect(h1).toHaveText('Log in to UIL4B')
+    await expect(h1).toHaveText('Log in to UI L4B')
     await expect.poll(search).toBe('')
     await expect.poll(() => page.title()).toBe('UI L4B | Log in')
 
@@ -476,7 +476,7 @@ test.describe('the chosen sign-in dialog shows a still strip of the wall from 76
       const page = await ctx.newPage()
       watch(page, `visitor choosing to log in at ${width}`)
       await openChosenDialog(page, 'Log in')
-      const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
+      const dialog = page.getByRole('dialog', { name: /log in to ui l4b/i })
       await expect(dialog).toBeVisible()
       // The dialog settles on its width after opening.
       await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity))

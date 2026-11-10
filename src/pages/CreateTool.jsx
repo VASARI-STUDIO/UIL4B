@@ -130,7 +130,7 @@ function SoonState({ title, isPro }) {
       <div className="coming-eyebrow">Shhh&hellip;</div>
       <h1 className="coming-title">{title} is still in the workshop.</h1>
       <p className="coming-sub">
-        This one isn&rsquo;t quite ready for the world yet &mdash; we&rsquo;re switching UIL4B
+        This one isn&rsquo;t quite ready for the world yet &mdash; we&rsquo;re switching UI L4B
         on one system at a time, and it&rsquo;ll light up right here the moment it&rsquo;s done.
         Thanks for being curious.
       </p>

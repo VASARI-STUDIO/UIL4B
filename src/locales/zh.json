@@ -30,10 +30,10 @@
     "colours": "颜色"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "仪表盘",
@@ -434,7 +434,7 @@
     }
   },
   "auth": {
-    "logInTitle": "登录 UIL4B",
+    "logInTitle": "登录 UI L4B",
     "logInContinue": "登录以继续",
     "createAccount": "创建你的免费账户",
     "resetTitle": "重置密码",
@@ -501,7 +501,7 @@
   },
   "feedback": {
     "title": "反馈",
-    "subtitle": "帮助我们改进 UIL4B。分享 Bug、功能请求或一般反馈。",
+    "subtitle": "帮助我们改进 UI L4B。分享 Bug、功能请求或一般反馈。",
     "featureRequest": "功能请求",
     "bugReport": "Bug 报告",
     "general": "一般反馈",
@@ -517,7 +517,7 @@
   },
   "community": {
     "title": "社区",
-    "subtitle": "与使用 UIL4B 的其他设计师和开发者建立联系。",
+    "subtitle": "与使用 UI L4B 的其他设计师和开发者建立联系。",
     "comingSoonDesc": "分享调色板、获取设计反馈，并发现社区创建的模板。",
     "github": "GitHub 仓库",
     "githubDesc": "浏览源代码、收藏项目并参与贡献。",

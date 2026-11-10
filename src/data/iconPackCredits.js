@@ -109,7 +109,7 @@ export const LICENCES = {
     name: 'MIT or GPL-3.0-or-later',
     url: 'https://opensource.org/licenses/MIT',
     required: true,
-    asks: 'Dual-licensed. UIL4B elects MIT, and keeps the MIT notice with every copy.',
+    asks: 'Dual-licensed. UI L4B elects MIT, and keeps the MIT notice with every copy.',
   },
   proprietary: {
     name: 'Proprietary terms',

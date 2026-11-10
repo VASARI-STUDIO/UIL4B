@@ -59,7 +59,7 @@ export default function Roadmap() {
           <div className="spt-group spt-group--vote">
             <header><h2>How voting works</h2></header>
             <dl className="rm-dl">
-              <div><dt>Who can vote</dt><dd>Anyone signed in to a free UIL4B account. Everyone can see the counts.</dd></div>
+              <div><dt>Who can vote</dt><dd>Anyone signed in to a free UI L4B account. Everyone can see the counts.</dd></div>
               <div><dt>What a vote does</dt><dd>It shows us what you&rsquo;d use.</dd></div>
               <div><dt>When a tool ships</dt><dd>Voting on it closes. It stays here under Shipped, with its final count, for 90 days.</dd></div>
             </dl>
