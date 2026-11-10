@@ -92,7 +92,7 @@
 // `prefers-reduced-motion` is untouched: those two rules in global.css already
 // say `animation:none`, and none of this restates them.
 // The hero's words: one module feeds both the hydrated hero and this shell.
-import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../src/components/spectrum/spectrumHero.js'
+import { SPECTRUM_HERO, SPECTRUM_HERO_SUB, SPECTRUM_SEARCH_PHRASES } from '../src/components/spectrum/spectrumHero.js'
 import { logoSvg } from '../src/config/brandLogo.js'
 
 /** Escape for text between tags. Same contract as prerender.mjs's `text()`. */
@@ -134,12 +134,34 @@ export const PREPAINTED_ATTR = 'data-hero-prepainted'
 export const HOME_FONT_PRELOAD = '<link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>'
 
 /**
- * index.html preloads Switzer, the face every other route is set in. The sales
- * page does not use it (its text is Geist), so on this shell the preload would
- * fetch 11 KB at high priority in the same wave as the stylesheets for a file
- * nothing paints with. Matched on the href so the rest of the tag can change.
+ * index.html preloads Switzer, the face every other route is set in, at the top
+ * of the head, ahead of the stylesheets. The shell's nav bar is set in it
+ * (`.spnav` takes --font), so the file is wanted here too, but not at that
+ * position: it would queue ahead of the render-blocking sheets. This pattern
+ * finds index.html's copy so the shell can take it out and put one tag straight
+ * after the sheets instead, beside Geist. Matched on the href so the rest of
+ * the tag can change.
+ *
+ * One file is enough. It is the variable upright, so the one preload covers
+ * every weight the nav paints, and the italic is never fetched because nothing
+ * in the shell is italic. Without the preload the file is requested only once
+ * the stylesheet is parsed, the nav paints in 'Switzer Fallback' (the
+ * metric-matched Arial in global.css: size-adjust, ascent-override,
+ * descent-override, font-display:swap) and the swap changes the nav's text
+ * widths: under a pixel on a Windows Chromium, several pixels where text is laid
+ * out on whole-pixel advances, which a layout-shift observer reports as a shift
+ * inside the nav. With the preload the file lands with the sheets, before the
+ * first paint on a fast link, so there is no swap to report.
+ *
+ * THE COST, measured on the throttled mobile profile (CDP 150 ms / 200 KB/s,
+ * CPU 4x, cold, median of 7): the 43 KB file shares the pipe with the sheets and
+ * moves LCP by about +180 ms at 1440 and +170 ms at 390 (`fetchpriority="low"`
+ * halves that, but then arrives no earlier than it would without the preload on a
+ * fast link, which is the case it is here for). LCP stays under 1.5 s.
  */
 export const SWITZER_PRELOAD = /<link\b[^>]*\brel="preload"[^>]*\bhref="[^"]*Switzer-Variable\.woff2"[^>]*>\n?/
+
+export const HOME_SWITZER_PRELOAD = '<link rel="preload" href="/fonts/switzer/Switzer-Variable.woff2" as="font" type="font/woff2" crossorigin>'
 
 /**
  * The URLs that serve the sales page, and therefore the only shells that get
@@ -220,8 +242,17 @@ const SHELL_CTA = `<div class="hh-cta">
             </div>`
 
 /** The search frame, same chain as SpectrumSearch, inert until the real one mounts. */
+/**
+ * The input carries a `placeholder` for one reason: spectrum.css hides the ghost
+ * phrase whenever the field is `:not(:placeholder-shown)`, and an input with no
+ * placeholder attribute never matches `:placeholder-shown`. Without it the
+ * served ghost was `display:none` and the phrase popped in at mount. The sheet
+ * paints the placeholder transparent, so it never shows; the visible words are
+ * the ghost's, the first of SpectrumSearch's phrases, which is also what the
+ * live search shows on its first frame before it starts to type.
+ */
 const SHELL_SEARCH = `<div class="hh-search" aria-hidden="true" inert>
-              <div class="sp-search"><div class="hcmd"><div class="hcmd-bar"><span class="hcmd-prompt">&gt;</span><input class="hcmd-input" type="text" tabindex="-1" readonly value=""><span class="hcmd-kbd"><kbd>Ctrl K</kbd></span></div></div><span class="sp-search-ghost">Search for<span class="sp-search-rot">a contrast ratio</span></span></div>
+              <div class="sp-search"><div class="hcmd"><div class="hcmd-bar"><span class="hcmd-prompt">&gt;</span><input class="hcmd-input" type="text" tabindex="-1" readonly value="" placeholder="Search every tool"><span class="hcmd-kbd"><kbd>Ctrl K</kbd></span></div></div><span class="sp-search-ghost">Search for<span class="sp-search-rot">${text(SPECTRUM_SEARCH_PHRASES[0])}</span></span></div>
             </div>`
 
 export function homeShellRoot() {
@@ -295,12 +326,15 @@ export function applyHomeShell(html) {
     throw new Error('home-shell: could not find </head> to put the Geist preload before.')
   }
   // Taken out first, so a shell that already carries it ends up with one, placed.
-  const unpreloaded = unswitzered.split(`${HOME_FONT_PRELOAD}\n`).join('').split(HOME_FONT_PRELOAD).join('')
+  const unpreloaded = [HOME_FONT_PRELOAD, HOME_SWITZER_PRELOAD].reduce(
+    (out, tag) => out.split(`${tag}\n`).join('').split(tag).join(''),
+    unswitzered,
+  )
   return fontPreloadAfterStylesheets(stylesheetsBeforeScripts(unpreloaded))
 }
 
 /**
- * Put the Geist preload straight after the last stylesheet link: ahead of the
+ * Put the Geist and Switzer preloads straight after the last stylesheet link: ahead of the
  * entry script and its ~70 modulepreload links, behind the sheets.
  *
  * The first paint waits on the stylesheets, so they keep the front of the
@@ -320,7 +354,7 @@ export function fontPreloadAfterStylesheets(html) {
   const last = sheets.at(-1)
   const at = last ? last.index + last[0].length : headEnd
   const lead = last && !last[0].endsWith('\n') ? '\n' : ''
-  return `${html.slice(0, at)}${lead}${HOME_FONT_PRELOAD}\n${html.slice(at)}`
+  return `${html.slice(0, at)}${lead}${HOME_FONT_PRELOAD}\n${HOME_SWITZER_PRELOAD}\n${html.slice(at)}`
 }
 
 // The built head lists the entry script and its ~70 modulepreload links, and
@@ -363,12 +397,14 @@ export function assertHomeShellApplied(html, where) {
     ['the highlight', `<span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>`],
     [`${PREPAINTED_ATTR} on <html>`, PREPAINTED_ATTR],
     ['the Geist preload', HOME_FONT_PRELOAD],
+    ['the Switzer preload', HOME_SWITZER_PRELOAD],
   ]
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)
-  if (SWITZER_PRELOAD.test(html)) {
-    throw new Error(`home-shell: ${where} still preloads Switzer, which the sales page does not use.`)
-  }
   const head = html.slice(0, Math.max(html.indexOf('</head>'), 0))
+  const switzers = head.match(new RegExp(SWITZER_PRELOAD.source, 'g')) || []
+  if (switzers.length > 1) {
+    throw new Error(`home-shell: ${where} preloads Switzer ${switzers.length} times; one is enough, and a second request is bandwidth taken from the headline.`)
+  }
   const script = head.match(ENTRY_SCRIPT)
   const lastSheet = head.lastIndexOf('rel="stylesheet"')
   if (script && lastSheet > script.index) {
@@ -377,6 +413,13 @@ export function assertHomeShellApplied(html, where) {
   const preloadAt = head.indexOf(HOME_FONT_PRELOAD)
   if (script && preloadAt > script.index) {
     throw new Error(`home-shell: ${where} lists the Geist preload behind the entry script and its modulepreloads, so the font arrives after the headline's first paint.`)
+  }
+  const switzerAt = head.indexOf(HOME_SWITZER_PRELOAD)
+  if (script && switzerAt > script.index) {
+    throw new Error(`home-shell: ${where} lists the Switzer preload behind the entry script and its modulepreloads, so the nav paints in the fallback face first.`)
+  }
+  if (switzerAt !== -1 && switzerAt < lastSheet) {
+    throw new Error(`home-shell: ${where} lists the Switzer preload ahead of a stylesheet, which queues the render-blocking CSS behind a font.`)
   }
   if (missing.length) {
     throw new Error(
