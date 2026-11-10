@@ -58,7 +58,10 @@ const KEEP = {
     // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners
     'fpr-card-apply',
     // the homepage bookmark board's folder rows (sidebar list) and its phone twin's pair rows, flush to the list edge
-    'bm-fold', 'bmp-pair'],
+    'bm-fold', 'bmp-pair',
+    // the dashboard's "New project, room for one more" row tile: a 12px-cornered tile in the minis row,
+    // a button because it starts the guide
+    'db-gt'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',
