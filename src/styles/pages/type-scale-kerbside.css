@@ -1,0 +1,112 @@
+/* type-scale-kerbside.css — the page half of /create/type-scale
+ * (components/typescale/KerbsidePage.jsx). The sample brand's colours are
+ * fixed values, not theme tokens: the screen is a drawn product, so it keeps
+ * its own ground in both app themes. Every selector is scoped under `.tsc-page`. */
+
+.tsc-page .tsk {
+  --k-signal: #FF5A1F; --k-asphalt: #1A1A1A; --k-concrete: #E6E4DE; --k-white: #FFFFFF;
+  --k-soft: #3A3936; --k-quiet: #6B6A66; --k-note: #5E5D59;
+  position: relative; isolation: isolate; display: flex; flex-direction: column; overflow: hidden;
+  padding: 32px 32px 32px 56px; border-radius: 16px; background: var(--k-white); color: var(--k-asphalt);
+  font-family: var(--tsc-body-ff);
+}
+.tsc-page .tsk :focus-visible { outline: 2px solid var(--k-asphalt); outline-offset: 2px; }
+.tsc-page .tsk-h { font-family: var(--tsc-heading-ff); }
+.tsc-page .tsk-b { font-family: var(--tsc-body-ff); }
+.tsc-page .tsk-hdr { margin: -32px -32px 28px -56px; padding: 32px 32px 28px 56px; background: var(--k-signal); color: var(--k-asphalt); }
+.tsc-page .tsk-hdr.is-mine { background: var(--k-concrete); }
+.tsc-page .tsk-sample { margin: 0 0 16px -24px; font-size: 13px; line-height: 18px; color: var(--k-note); }
+.tsc-page .tsk-ln { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 52px; column-gap: 12px; align-items: baseline; }
+.tsc-page .tsk-ln > * { min-width: 0; }
+.tsc-page .tsk-pt { margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+.tsc-page .tsk-tag { justify-self: end; font-family: var(--mono); font-size: 12px; line-height: 16px; color: var(--k-quiet); transition: color 150ms ease; }
+.tsc-page .tsk-hdr .tsk-tag { color: var(--k-asphalt); }
+.tsc-page .tsk-ln.is-lit .tsk-tag { color: var(--k-asphalt); font-weight: 600; }
+.tsc-page .tsk-kb { position: absolute; left: -32px; top: 0; height: 1lh; display: flex; align-items: center; opacity: 0; transform: scaleX(.6); transform-origin: left center; pointer-events: none; transition: opacity 200ms cubic-bezier(.23, 1, .32, 1), transform 200ms cubic-bezier(.23, 1, .32, 1); }
+.tsc-page .tsk-kb::before { content: ""; width: 24px; height: 3px; border-radius: 2px; background: var(--k-signal); }
+.tsc-page .tsk-hdr .tsk-kb::before { background: var(--k-asphalt); }
+.tsc-page .tsk-ln.is-lit > .tsk-kb { opacity: 1; transform: none; }
+.tsc-page .tsk-loading { margin: 0; font-family: var(--font); font-size: 15px; line-height: 24px; font-weight: 500; color: var(--k-note); }
+.tsc-page .tsk-track { display: flex; flex-direction: column; }
+.tsc-page .tsk-route { position: relative; height: 20px; margin: 20px 64px 0 0; }
+.tsc-page .tsk-rt, .tsc-page .tsk-rd { position: absolute; left: 0; top: 7px; height: 6px; }
+.tsc-page .tsk-rt { right: 0; background: var(--k-concrete); }
+.tsc-page .tsk-rd { width: 60%; background: var(--k-asphalt); }
+.tsc-page .tsk-rs { position: absolute; top: 3px; width: 14px; height: 14px; background: var(--k-asphalt); }
+.tsc-page .tsk-ra { left: 0; }
+.tsc-page .tsk-rb { right: 0; background: var(--k-white); border: 3px solid var(--k-asphalt); }
+.tsc-page .tsk-rr { position: absolute; top: 0; left: 60%; width: 20px; height: 20px; margin-left: -10px; background: var(--k-signal); border: 1.5px solid var(--k-asphalt); }
+.tsc-page .tsk-rl { display: flex; justify-content: space-between; gap: 12px; color: var(--k-soft); }
+.tsc-page .tsk-rl span { white-space: nowrap; }
+.tsc-page .tsk-rider { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; align-items: center; margin-top: 28px; }
+.tsc-page .tsk-rider .tsk-kb { left: -84px; }
+.tsc-page .tsk-ri { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--k-asphalt); color: var(--k-concrete); }
+.tsc-page .tsk-tl { margin-top: 20px; }
+.tsc-page .tsk-tc { display: grid; grid-template-columns: 10px 3.4em minmax(0, 1fr); column-gap: 12px; align-items: baseline; padding: 6px 0; color: var(--k-soft); border-top: 1px solid var(--k-concrete); }
+.tsc-page .tsk-tm { align-self: center; width: 10px; height: 10px; box-sizing: border-box; border: 1.5px solid var(--k-quiet); }
+.tsc-page .tsk-tt { font-variant-numeric: tabular-nums; }
+.tsc-page .tsk-tr.is-done .tsk-tm { background: var(--k-asphalt); border-color: var(--k-asphalt); }
+.tsc-page .tsk-tr.is-now .tsk-tc { color: var(--k-asphalt); font-weight: 600; }
+.tsc-page .tsk-tr.is-now .tsk-tm { background: var(--k-signal); border-color: var(--k-asphalt); }
+.tsc-page .tsk-tr.is-next .tsk-tc { color: var(--k-quiet); }
+.tsc-page .tsk-tr .tsk-kb { top: 6px; }
+.tsc-page .tsk-spacer { flex: 1 1 0; min-height: 0; }
+.tsc-page .tsk-foot { margin: 24px -32px -32px -56px; padding: 20px 32px 24px 56px; background: var(--k-concrete); }
+.tsc-page .tsk-fk { display: block; width: 24px; height: 4px; margin-bottom: 14px; background: var(--k-signal); }
+.tsc-page .tsk-ft { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; color: var(--k-asphalt); }
+.tsc-page .tsk-foot .tsk-tag { color: var(--k-note); }
+.tsc-page .tsk-dl { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 16px; align-items: baseline; }
+.tsc-page .tsk-dw, .tsc-page .tsk-dp { white-space: nowrap; color: var(--k-soft); font-variant-numeric: tabular-nums; }
+.tsc-page .tsk-dp { font-weight: 600; color: var(--k-asphalt); }
+.tsc-page .tsk-err { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 24px -32px -32px -56px; padding: 16px 32px 16px 56px; background: var(--k-concrete); font-size: 14px; line-height: 20px; }
+.tsc-page .tsk-retry { min-height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: rgba(26, 26, 26, .1); color: var(--k-asphalt); font: 500 14px/20px var(--font); cursor: pointer; }
+@media (max-width: 767px) {
+  .tsc-page .tsk { padding: 24px 20px 24px 40px; }
+  .tsc-page .tsk-hdr { margin: -24px -20px 24px -40px; padding: 24px 20px 24px 40px; }
+  .tsc-page .tsk-foot, .tsc-page .tsk-err { margin: 24px -20px -24px -40px; padding: 20px 20px 24px 40px; }
+  .tsc-page .tsk-kb { left: -24px; }
+  .tsc-page .tsk-retry { min-height: 44px; }
+}
+html[data-reduced-motion="true"] .tsc-page .tsk-kb { transform: none; transition: opacity 150ms linear; }
+html[data-reduced-motion="true"] .tsc-page .tsk-tag { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tsc-page .tsk-kb { transform: none; transition: opacity 150ms linear; }
+  html:not([data-reduced-motion="false"]) .tsc-page .tsk-tag { transition: none; }
+}
+
+/* ── Tighter headings: the switch under Line height ──────────────────────── */
+.tsc-page .tsc-tight { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 36px; margin: 8px 0 4px; padding: 0; border: 0; background: none; color: var(--tl-ink); font: 500 14px/20px var(--font); cursor: pointer; text-align: left; border-radius: var(--btn-radius); }
+.tsc-page .tsc-tight-trk { position: relative; flex: none; width: 36px; height: 20px; border-radius: 999px; background: var(--tl-wash-on); transition: background-color 150ms var(--tl-ease); }
+.tsc-page .tsc-tight-trk i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--tl-ink); transition: transform 150ms var(--tl-ease), background-color 150ms var(--tl-ease); }
+.tsc-page .tsc-tight[aria-checked="true"] .tsc-tight-trk { background: var(--tl-ink); }
+.tsc-page .tsc-tight[aria-checked="true"] .tsc-tight-trk i { background: var(--bg-0); transform: translateX(16px); }
+.tsc-page .tsc-tight:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+html[data-reduced-motion="true"] .tsc-page .tsc-tight-trk,
+html[data-reduced-motion="true"] .tsc-page .tsc-tight-trk i { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-tight-trk,
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-tight-trk i { transition: none; }
+}
+
+/* ── Copy CSS is the page's one ink pill ─────────────────────────────────── */
+.tsc-page .tsc-copy-primary { border: 0; background: var(--t0); color: var(--bg-0); }
+
+/* ── The ladder's ground ─────────────────────────────────────────────────── *
+ * Dark and Light each carry their own fixed ground and ink, so Dark stays dark
+ * when the app is in its light theme; the page beside it and the app keep their
+ * own grounds. The two share one box, so switching moves nothing. */
+.tsc-page .tsc-ladder[data-ground] { padding: 8px 16px; border-radius: 16px; }
+.tsc-page .tsc-ladder[data-ground="d"] {
+  --tl-ink: #EFEEEA; --tl-dim: rgba(239, 238, 234, .62); --tl-soft: rgba(239, 238, 234, .72);
+  --tl-hair: rgba(239, 238, 234, .08); --tl-wash: rgba(239, 238, 234, .08); --tl-wash-2: rgba(239, 238, 234, .14); --tl-wash-on: rgba(239, 238, 234, .14);
+  --tsc-hv: rgba(239, 238, 234, .08); --tsc-sel: rgba(239, 238, 234, .14);
+  background: #060607; color: #EFEEEA;
+}
+.tsc-page .tsc-ladder[data-ground="d"] .tsc-row:focus-visible { outline-color: #EFEEEA; }
+.tsc-page .tsc-ladder[data-ground="l"] {
+  --tl-ink: #0B0C0E; --tl-dim: rgba(11, 12, 14, .7); --tl-soft: rgba(11, 12, 14, .76);
+  --tl-hair: rgba(11, 12, 14, .1); --tl-wash: rgba(19, 20, 22, .06); --tl-wash-2: rgba(19, 20, 22, .1); --tl-wash-on: rgba(19, 20, 22, .1);
+  --tsc-hv: rgba(19, 20, 22, .06); --tsc-sel: rgba(19, 20, 22, .1);
+  background: #EFEEEA; color: #0B0C0E;
+}
+.tsc-page .tsc-ladder[data-ground="l"] .tsc-row:focus-visible { outline-color: #0B0C0E; }

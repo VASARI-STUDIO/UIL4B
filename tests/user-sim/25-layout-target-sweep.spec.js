@@ -188,6 +188,8 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
   const damage = []
   for (const [w, h] of TSC_WIDE) {
     const { ctx, page } = await open(browser, w, h, '/create/type-scale', '.tsc-row-text', { touch: w < 1000 })
+    // Heading rows draw at the base size until their face has loaded.
+    await page.waitForFunction(() => !document.querySelector('.tsc-row-text.is-loading'))
     const r = await page.evaluate(() => {
       const rows = [...document.querySelectorAll('.tsc-row-text')]
       const hidden = []
@@ -202,8 +204,8 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
       return { rows: rows.length, hidden }
     })
     await ctx.close()
-    expect(r.rows, `${w}x${h}: expected the 9 specimen rows`).toBe(9)
-    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 9 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
+    expect(r.rows, `${w}x${h}: expected the 6 specimen rows`).toBe(6)
+    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 6 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
   }
   expect(damage, damage.join('\n')).toEqual([])
 })

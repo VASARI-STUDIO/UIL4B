@@ -205,6 +205,19 @@ const NOT_A_PLAN_PRICE = [
       + 'dressing inside a picture of a palette, not tiers of UIL4B.',
   },
   {
+    file: 'src/components/typescale/KerbsidePage.jsx',
+    context: /OWN_DELIVERIES|Carrots|Leeks|Silverbeet/,
+    why: 'Kerbside is the invented Melbourne bike courier the Type Scale board draws its '
+      + 'sample page for: the greengrocer deliveries on its screen carry the courier\'s '
+      + 'own prices, not tiers of UIL4B.',
+  },
+  {
+    file: 'src/pages/FontMatcher.jsx',
+    context: /KS_STATS/,
+    why: 'The Kerbside sample page on the Font Pair board shows a delivery receipt '
+      + '(KS_STATS, "Paid") for the invented courier. It is set dressing, not a tier of UIL4B.',
+  },
+  {
     file: 'src/pages/PaletteBuilder.jsx',
     context: /\.replace\(/,
     why: 'Not money at all: normaliseForFilter uses the character class /[$5]/ and '

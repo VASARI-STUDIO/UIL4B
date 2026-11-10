@@ -433,27 +433,6 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
    Size only — the compare button's PLACEMENT is set once in the premium block
    below, which comes later in the cascade and would silently win anyway. */
 
-/* WRAPPED IN THE TABLET BAND TOO, FOR THE REASON THE PHONE BLOCK GIVES BELOW.
-   The slice defended on `.fg-card-pangram` above is the right call when the
-   line runs off the frame and the loss is a tail. Neither is true between 721
-   and 959px. MEASURED across the 77 families the catalogue serves, at 834px:
-   the box is 710px, the widest line wants 823px, and 48 of the 77 specimens
-   clip - Comfortaa by 113px, Sora 104, Montserrat 98, Poppins 91, Work Sans 89,
-   and the mildest survivors by 4. It is clean at 960 (836px of box) and above,
-   and clean at 720 and below where the phone block already wraps it, so this
-   band is the whole of the defect.
-   Two things make the slice wrong specifically here. `.fg-card-preview` holds
-   26px of right padding, so the cut lands 26px SHORT of the row edge rather
-   than bleeding past it - it reads as damage, not as continuation. And the loss
-   scales with the width of the face, so the specimen is least complete for
-   exactly the widest and most distinctive families, which inverts the job of
-   the page: the pangram is the sentence you read to judge a face.
-   So it takes the phone's answer at the desktop's 15px - two clamped lines, a
-   box reserved for exactly two at 24px each. It costs 24px a row and it keeps
-   the reserved-metrics contract, which is that rows agree WITH EACH OTHER: they
-   still all solve this from the same two numbers, so nothing moves as faces
-   stream in. */
-
 /* N1 (responsive-audit-2026-08): the family name is the content of a font
    gallery, and 7 of 48 were truncated at 320px — "Roboto Condensed" needing
    151px and getting 94.

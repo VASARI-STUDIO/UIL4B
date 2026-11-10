@@ -137,8 +137,29 @@ const ADDED_SELECTORS = {
   '/create/tint': ['.tl-dock'],
   '/create/contrast': ['.tl-dock'],
   '/create/alt-text': ['.tl-dock', '.alt-dropzone', '.ai-image-consent', '.alt-brief', '.alt-guide'],
-  '/create/font-gallery': ['.fg-card-reveal', '.fg-card-pangram', '.fg-card-weights', '.fg-card-step', '.fg-card-meta',
-    '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link'],
+  // Font Gallery: the phone's single filter bar (`.fg-bar2`) and the desktop's second row of
+  // category pills, preview field and selects (`.fg-row2`), plus the grid and the title.
+  // `.fg-pair-link` is painted from the desktop width only.
+  '/create/font-gallery': ['.fg-card-meta',
+    '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link',
+    '.fg-row2', '.fg-cats', '.fg-preview-field', '.fg-preview-k', '.fg-view', '.fg-view-btn', '.tl-select', '.tl-select-k',
+    '.tl-select-v', '.tl-pills', '.tl-pill', '.tl-title', '.fg-grid', '.fg-more-btn'],
+  // Font Pair. On a phone the families and suggestions live in sheets that are not mounted until
+  // opened, so the phone carries the family rows (`.fpr-frow*`), the dock pills and the output
+  // column instead of the panel and the cards. On the desktop width the panel, family cards and
+  // suggestion rows are mounted. The stage head (title, presets), the Street specimen and the delivery block
+  // are painted at both widths.
+  '/create/font-pair': ['.fpr-fampair', '.fpr-frow', '.fpr-frow-t', '.fpr-frow-n', '.fpr-frow-w', '.fpr-frow-chev',
+    '.fpr-pill', '.fpr-pill-l', '.fpr-pill-n', '.fpr-presets', '.fpr-input--stage', '.fpr-street', '.fpr-street-photo',
+    '.fpr-plate', '.fpr-plate--cap', '.fpr-plate--tag', '.fpr-street-page', '.fpr-street-lead', '.fpr-street-h',
+    '.fpr-street-voice', '.fpr-street-p', '.fpr-specimen--street', '.fpr-chev', '.tl-code', '.tl-pills', '.tl-pill',
+    '.tl-body', '.tl-grid', '.tl-main', '.tl-toolbar',
+    '.fpr-sug-group', '.fpr-reason', '.fpr-card-cta', '.svt-trigger-label'],
+  // Type Scale. The phone carries the docked ratio chip, the sheet trigger and the Kerbside
+  // screen (`.tsk*`); the desktop carries the ladder, the Kerbside page and the half switch.
+  '/create/type-scale': ['.tl-dock', '.tsc-dock-ratio', '.tsc-dock-ratio-v', '.tsc-dock-save', '.svt-wrap', '.svt-trigger',
+    '.tsc-copy-primary', '.tsc-width-btn', '.tsc-view', '.tsc-kerb', '.tsk-hdr', '.tsk-ln', '.tsk-pt', '.tsk-tag', '.tsk-track',
+    '.tsk-route', '.tsk-rider', '.tsk-foot'],
   // /sitemap now wears the /tools shell and none of its old class names exist, so the
   // frozen list would keep only the few shell classes. These are the page's own hooks.
   '/sitemap': ['.spm-intro', '.spm-h1', '.spm-lede', '.spt-section', '.spt-h2', '.spt-sub', '.spt-group', '.spt-rail',
@@ -377,6 +398,12 @@ async function openSettled(browser, route, width, selectors) {
     // full page (421 characters of chrome) and would be snapshotted as one.
     await go(page, route)
     await page.evaluate(() => document.fonts && document.fonts.ready).catch(() => {})
+    // `fonts.ready` resolves before the Type Scale and Font Pair pages have asked for their
+    // catalogue faces (it reads "loaded" ~270ms in, the request goes out ~240ms and lands ~800ms),
+    // so a snapshot taken on three equal reads can settle on the fallback face (15px/500) or on
+    // the loaded one (31.1px/800) depending only on how long the measure itself took. Waiting for
+    // the network to go quiet pins the loaded state.
+    await page.waitForLoadState('networkidle').catch(() => {})
     return await settledSnapshot(page, selectors)
   } finally {
     await context.close()

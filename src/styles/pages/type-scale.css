@@ -16,8 +16,9 @@
  * shows the Scale / Page / Code switch, one view at a time.
  * The panel is first in the source, so under 1024px it is a card above the
  * work with no CSS reordering, and from 1024px the grid puts it beside the
- * work. Phone: a Base and Ratio strip above the ladder, and a non-modal
- * settings sheet capped at 55% of the viewport.
+ * work. Phone: no view switch; the width, the page and the ladder are one
+ * scroll, and a non-modal sheet (Settings and Code tabs) holds everything else,
+ * capped at 55% of the viewport.
  * Docked bar: Save to a project (Code and Save in the split; Save and Copy CSS
  * on a phone). */
 
@@ -71,42 +72,60 @@
   line-height: 1.45;
   color: var(--tl-soft);
 }
+/* A row is a button: the token and its "size / lead" value on the left, the
+   sample on the right. Pressing it lights the row and copies its CSS. */
+.tsc-page .tsc-ladder { --tsc-hv: var(--tl-wash); --tsc-sel: var(--tl-wash-on); }
+.tsc-page .tsc-use { margin: 0 0 4px; padding: 12px 20px 0; font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); }
 .tsc-page .tsc-row {
+  position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto);
-  align-items: baseline;
-  gap: 12px;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
   width: 100%;
   min-width: 0;
-  padding: 12px 0;
+  margin: 0 0 8px;
+  padding: 16px 20px;
   scroll-margin-top: calc(var(--chrome-h) + var(--tl-bar-h) + 60px);
   border: 0;
+  border-radius: 12px;
   background: transparent;
   color: var(--tl-ink);
   text-align: left;
   cursor: pointer;
-  transition: background-color .16s ease;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
 }
-.tsc-page .tsc-row + .tsc-row { border-top: 1px solid var(--tl-hair); }
-.tsc-page .tsc-row:focus-visible { position: relative; z-index: 1; outline-offset: -2px; }
-.tsc-page .tsc-row:active { background: var(--tl-wash-2); }
-/* The longest token, --text-base, is about 80px at 12px mono. */
-@media (min-width: 768px) {
-  .tsc-page .tsc-row { grid-template-columns: 92px minmax(0, 1fr) auto; gap: 16px; }
-}
-/* Literal values only are mono: the token and the px. */
-.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
-.tsc-page .tsc-row-num { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-row:last-child { margin-bottom: 0; }
+.tsc-page .tsc-row:active { transform: scale(.99); }
+.tsc-page .tsc-row[aria-pressed="true"],
+.tsc-page .tsc-row[aria-pressed="true"]:hover { background: var(--tsc-sel); }
+.tsc-page .tsc-row:focus-visible { outline-offset: -2px; }
+.tsc-page .tsc-row--static { cursor: default; }
+.tsc-page .tsc-row--static:active { transform: none; }
+.tsc-page .tsc-fit-note { margin: 0 0 8px; padding: 12px 20px; border: 0; }
+/* The token, its value and the Copy label stack in the left cell. */
+.tsc-page .tsc-row-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 2px; }
+/* Literal values only are mono: the token and the size / lead. The --text- prefix is read, not shown. */
+.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 13px; line-height: 18px; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
+.tsc-page .tsc-row-prefix { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.tsc-page .tsc-row-num { font-family: var(--mono); font-size: 12px; line-height: 16px; color: var(--tl-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Copy shows on hover and focus; after a press the two words cross-fade to Copied. */
+.tsc-page .tsc-row-cp { display: inline-grid; margin-top: 6px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tl-dim); opacity: 0; pointer-events: none; transition: opacity 150ms var(--tl-ease); }
+.tsc-page .tsc-row-cp > span { grid-area: 1 / 1; transition: opacity 300ms var(--tl-ease); }
+.tsc-page .tsc-cp-b { opacity: 0; }
+.tsc-page .tsc-row-cp.is-did { opacity: 1; }
+.tsc-page .tsc-row-cp.is-did .tsc-cp-a { opacity: 0; }
+.tsc-page .tsc-row-cp.is-did .tsc-cp-b { opacity: 1; }
+.tsc-page .tsc-row:focus-visible .tsc-row-cp { opacity: 1; }
 .tsc-page .tsc-row-text {
+  display: block;
   min-width: 0;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   color: var(--tl-ink);
   font-family: var(--tsc-body-ff);
   font-size: var(--tsc-fs);
   font-weight: var(--tsc-body-fw);
-  /* A sample is judged by its size, so the ladder holds a tight leading; the
-     Line height control still sets the Page view and the export. */
-  line-height: min(1.2, var(--tsc-lh));
+  line-height: var(--tsc-lead);
   letter-spacing: var(--tsc-body-ls);
 }
 .tsc-page .tsc-row-text--heading {
@@ -114,8 +133,19 @@
   font-weight: var(--tsc-heading-fw);
   letter-spacing: var(--tsc-heading-ls);
 }
+/* A step too big for the whole line shows its first word at the step's true size, the size its row prints. */
+.tsc-page .tsc-row-text.is-loading { font-family: var(--font); font-size: 15px; font-weight: 500; line-height: 24px; letter-spacing: 0; color: var(--tl-dim); }
+.tsc-page .tsc-row-cap { display: block; margin-top: 4px; font-family: var(--font); font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0; color: var(--tl-dim); }
+.tsc-page .tsc-row-err { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; min-height: 36px; margin: -8px 0; font-family: var(--font); font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0; color: var(--tl-soft); }
+.tsc-page .tsc-retry {
+  min-height: 36px; margin: -4px 0; padding: 0 16px; border: 0; border-radius: 999px;
+  background: var(--tl-wash-on); color: var(--tl-ink); font: 500 14px/1 var(--font); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-retry:active { transform: scale(.97); }
 @media (hover: hover) and (pointer: fine) {
-  .tsc-page .tsc-row:hover { background: var(--tl-wash); }
+  .tsc-page .tsc-row:not(.tsc-row--static):hover { background: var(--tsc-hv); }
+  .tsc-page .tsc-row:hover .tsc-row-cp { opacity: 1; }
 }
 
 /* ── Page view ──────────────────────────────────────────────────────────── */
@@ -136,10 +166,6 @@
   gap: var(--tl-gap) 24px;
   align-items: start;
 }
-.tsc-page .tsc-view[data-view="split"] .tsc-row { grid-template-columns: 40px minmax(0, 1fr) minmax(48px, auto); gap: 12px; }
-.tsc-page .tsc-view[data-view="split"] .tsc-row-num { text-align: right; }
-.tsc-page .tsc-view[data-view="split"] .tsc-row-prefix,
-.tsc-page .tsc-view[data-view="split"] .tsc-row-rem { display: none; }
 /* A tall ladder keeps the page beside it: the page half stays under the toolbar
    while the steps scroll, when the screen is tall enough to hold it. A page
    taller than the room between the toolbar and the dock scrolls within itself. */
@@ -159,40 +185,6 @@
 /* The page is never scaled: the column is as wide as the chosen width, or the
    space there is, and the type inside keeps its true px. */
 .tsc-page .tsc-page-col { min-width: 0; }
-.tsc-page .tsc-article {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: var(--tsc-w, 100%);
-  padding: clamp(16px, 3vw, 32px);
-  border: 1px solid var(--tl-line);
-  border-radius: 18px;
-  background: var(--tl-card);
-}
-.tsc-page .tsc-article-h1,
-.tsc-page .tsc-article-h2 {
-  margin: 14px 0 8px;
-  color: var(--tl-ink);
-  font-family: var(--tsc-heading-ff);
-  font-size: var(--tsc-fs);
-  font-weight: var(--tsc-heading-fw);
-  line-height: var(--tsc-lh);
-  letter-spacing: var(--tsc-heading-ls);
-  overflow-wrap: break-word;
-}
-.tsc-page .tsc-article-h1 { margin-top: 0; }
-.tsc-page .tsc-article-lede,
-.tsc-page .tsc-article-body,
-.tsc-page .tsc-article-small {
-  max-width: 64ch;
-  margin: 0 0 14px;
-  color: var(--tl-soft);
-  font-family: var(--tsc-body-ff);
-  font-size: var(--tsc-fs);
-  font-weight: var(--tsc-body-fw);
-  line-height: var(--tsc-lh);
-  letter-spacing: var(--tsc-body-ls);
-}
-.tsc-page .tsc-article-small { margin-bottom: 0; color: var(--tl-dim); }
 
 /* ── Code view ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-developer-view { display: grid; gap: 10px; min-width: 0; }
@@ -207,19 +199,17 @@
 .tsc-page .tsc-developer-bar .tsc-fmt { min-width: 0; overflow-x: auto; }
 .tsc-page .tsc-export-copy { flex: none; }
 
-
 /* The save menu (SaveTypeSystemPanel) opens downward from the toolbar's Save from
-   768. On a phone it is mounted at the page root, outside the toolbar (whose
-   backdrop-filter would pin a fixed child to the bar), as a bottom sheet over the
-   tab bar. Below 561px global.css .svt-menu is already that sheet. */
+   768. On a phone the dock's SaveTypeSystem menu is a bottom sheet over the tab
+   bar (below 561px global.css .svt-menu is already that sheet). */
 .tsc-page .tsc-save-wrap { position: relative; display: inline-flex; }
 .tsc-page .tsc-primary-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tsc-page .tl-toolbar .svt-pop { display: block; position: absolute; top: calc(100% + 8px); bottom: auto; right: 0; z-index: 60; }
 .tsc-page .tl-toolbar .svt-pop .svt-menu { position: static; }
 .tsc-page .svt-pop { display: contents; }
 @media (max-width: 767px) {
-  .tsc-page .svt-pop .svt-menu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 16px 16px 0 0; z-index: 70; }
-  html.has-tabbar .tsc-page .svt-pop .svt-menu { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
+  .tsc-page :is(.svt-pop, .tl-dock) .svt-menu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: 16px 16px 0 0; z-index: 70; }
+  html.has-tabbar .tsc-page :is(.svt-pop, .tl-dock) .svt-menu { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ── The panel ──────────────────────────────────────────────────────────── */
@@ -365,10 +355,11 @@
 .tsc-page .tsc-slider-k { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
 .tsc-page .tsc-hint { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
 
-/* The sheet's row and head exist on a phone only. */
-.tsc-page .tsc-sheet-row,
+/* The sheet's head and the Code tab exist on a phone only. */
 .tsc-page .tsc-sheet-head { display: none; }
-.tsc-page .tsc-sheet-body { display: contents; }
+.tsc-page .tsc-sheet-body,
+.tsc-page .tsc-sheet-set { display: contents; }
+.tsc-page .tsc-sheet-set[hidden] { display: none; }
 
 /* ── The grid ────────────────────────────────────────────────────────────────
    The panel is first in the source, so under 1024 it reads, tabs and shows
@@ -386,34 +377,21 @@
 
 /* ── Phone ──────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  /* The panel dissolves: its first section is the Base and Ratio strip above
-     the ladder, its row opens the sheet, and the sheet floats. They come
-     before the ladder in the source, so nothing is reordered. */
+  /* The panel dissolves: only the floating sheet is left of it, and the work
+     column is the whole page. */
   .tsc-page .tsc-config { display: contents; }
-  .tsc-page .tsc-sec-scale { padding: 0; border: 0; }
+  .tsc-page .tsc-sec-scale { border: 0; }
   .tsc-page .tsc-scale-bar { grid-template-columns: 96px minmax(0, 1fr); gap: 8px; align-items: end; }
   .tsc-page .tsc-scale-term--base .tsc-range input[type="range"] { display: none; }
   .tsc-page .tsc-scale-term--base .snapv-value,
   .tsc-page .tsc-scale-term--base .snapv-input { order: 0; flex: 1; }
-  .tsc-page .tsc-scale-out { display: none; }
-  .tsc-page .tsc-sheet-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 44px;
-    padding: 0;
-    border: 0;
-    border-bottom: 1px solid var(--tl-hair);
-    background: transparent;
-    color: var(--tl-ink);
-    font-family: var(--font);
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-  }
-  .tsc-page .tsc-row-prefix,
-  .tsc-page .tsc-row-rem { display: none; }
+  /* Phone: the sample takes the row's full width, under its token and value. */
+  .tsc-page .tsc-row { padding-inline: 16px; }
+  .tsc-page .tsc-row:has(.is-first) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
+  .tsc-page .tsc-row:has(.is-first) .tsc-row-l { flex-direction: row; align-items: baseline; gap: 12px; padding-top: 0; }
+  .tsc-page .tsc-row:has(.is-first) .tsc-row-cp { display: none; }
+  .tsc-page .tsc-row { grid-template-columns: 88px minmax(0, 1fr); }
+  .tsc-page .tsc-use { padding-inline: 16px; }
 
   .tsc-page .tsc-sheet {
     --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom) + env(safe-area-inset-bottom, 0px));
@@ -423,9 +401,13 @@
     bottom: var(--tsc-sheet-bottom);
     z-index: 40;
     flex-direction: column;
-    /* At most 55% of the screen, and short enough that the top steps stay in
-       view above it. The contents scroll inside. */
-    max-height: min(55dvh, max(200px, calc(100dvh - var(--tsc-top) - var(--tsc-sheet-bottom) - 330px)));
+    /* A fixed 56% of the screen (480px at most). The page scrolls the sample
+       screen up under the toolbar when the sheet opens, so it stays in view
+       above the sheet; the sheet's contents scroll inside. */
+    /* The page's own chrome (site header, toolbar, tab bar) leaves less room than
+       a bare screen, so the height is what is left under the toolbar once the
+       pinned sample card keeps 245px; never under 300px or over 56%. */
+    height: clamp(300px, calc(100dvh - var(--tsc-sheet-bottom) - var(--tsc-top) - 16px - 245px), min(56dvh, 480px));
     border-radius: 16px 16px 0 0;
     border: 1px solid var(--tl-line-2);
     border-bottom: 0;
@@ -434,9 +416,21 @@
   }
   html.has-tabbar .tsc-page .tsc-sheet { --tsc-sheet-bottom: calc(var(--tl-dock-h) + var(--tool-dock-bottom)); }
   .tsc-page .tsc-sheet[data-open="true"] { display: flex; }
-  .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
-  .tsc-page .tsc-sheet-title { font-size: max(var(--fs-caption), 13px); color: var(--tl-dim); }
+  /* The Code tab is the taller sheet; its code scrolls with the sheet. */
+  .tsc-page .tsc-sheet[data-tab="code"] { height: min(72dvh, 620px); }
+  /* While the sheet is open the page keeps room under its last line, so the
+     sample screen can scroll up to the toolbar. */
+  .tsc-page .tsc-output[data-sheet="true"] { padding-bottom: min(56dvh, 480px); }
+  .tsc-page .tsc-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--tl-hair); }
+  .tsc-page .tsc-sheet-tabs { flex: 1 1 auto; max-width: 224px; flex-wrap: nowrap; }
+  .tsc-page .tsc-sheet-tabs .tsc-sheet-tab { flex: 1 1 0; min-width: 0; justify-content: center; padding-inline: 12px; white-space: nowrap; }
+  .tsc-page .tsc-sheet-done { flex: none; }
   .tsc-page .tsc-sheet-body { display: block; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-inline: max(0px, env(safe-area-inset-left, 0px)); }
+  .tsc-page .tsc-sheet-set { display: block; }
+  .tsc-page .tsc-sheet-code { display: grid; gap: 12px; min-width: 0; padding: 12px 16px 24px; }
+  .tsc-page .tsc-sheet-code .tsc-fmt { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; flex-wrap: nowrap; overflow: visible; }
+  .tsc-page .tsc-sheet-code .tsc-fmt-btn { justify-content: center; min-width: 0; white-space: nowrap; }
+  .tsc-page .tsc-sheet-code .tsc-export { max-height: none; overflow-x: auto; overflow-y: visible; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* The walkthrough's bar stacks on the dock (the tab bar is hidden then), so the
      sheet sits above both. */
@@ -497,12 +491,263 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
   .tsc-page .tsc-words-row .tsc-tuning-toggle { width: auto; }
 }
 
-/* Phone: Save is a 44px icon button on the toolbar row; the settings row shows the families. */
 @media (max-width: 767px) {
-  .tsc-page .tl-toolbar .tsc-save--icon { width: 44px; padding: 0; }
-  .tsc-page .tsc-sheet-row-value { margin-left: auto; min-width: 0; max-width: 55%; overflow: hidden; color: var(--tl-dim); text-overflow: ellipsis; white-space: nowrap; }
-  .tsc-page .tsc-sheet-row-label { flex: 0 0 auto; }
   .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); max-height: min(45dvh, calc(100dvh - var(--tl-kb-inset, 0px) - var(--tsc-top) - 120px)); }
   /* The tab bar's rule is more specific; with the keyboard up the sheet sits on the keyboard, not on the dock. */
   html.has-tabbar .tl--kb.tsc-page .tsc-sheet { --tsc-sheet-bottom: var(--tl-kb-inset, 0px); }
 }
+
+/* ── Ratio: previous and next beside the list ───────────────────────────── */
+.tsc-page .tsc-ratio-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; gap: 8px; align-items: center; }
+.tsc-page .tsc-ratio-step {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 999px;
+  background: var(--tl-wash); color: var(--tl-ink); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease), opacity 150ms var(--tl-ease);
+}
+.tsc-page .tsc-ratio-step:active:not(:disabled) { transform: scale(.97); }
+.tsc-page .tsc-ratio-step:disabled { opacity: .4; cursor: default; }
+.tsc-page .tsc-ratio-step:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tsc-ratio-step:hover:not(:disabled) { background: var(--tl-wash-on); }
+}
+
+/* ── Weight cells: one per weight the family has ────────────────────────── */
+.tsc-page .tsc-weights { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+.tsc-page .tsc-wt {
+  min-width: 40px; height: 36px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--tl-dim); font: 400 13px/1 var(--font); font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-wt:active { transform: scale(.97); }
+.tsc-page .tsc-wt[aria-pressed="true"] { background: var(--tl-wash-on); color: var(--tl-ink); font-weight: 500; }
+.tsc-page .tsc-wt:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tsc-wt:hover:not([aria-pressed="true"]) { background: var(--tl-wash); color: var(--tl-ink); }
+}
+@media (pointer: coarse) { .tsc-page .tsc-wt { height: 44px; min-width: 44px; } }
+
+/* ── The page header: Preview width, as a segment, with its note ────────── */
+.tsc-page .tsc-width-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 36px; min-width: 0; }
+.tsc-page .tsc-width-k { flex: none; font-size: max(var(--fs-caption), 13px); font-weight: 500; color: var(--tl-dim); white-space: nowrap; }
+.tsc-page .tsc-width-bar .tsc-width-seg { flex: none; flex-wrap: nowrap; }
+.tsc-page .tsc-width-px { margin-left: 8px; font-family: var(--mono); font-size: 12px; color: var(--tl-dim); }
+.tsc-page .tsc-width-btn.is-on .tsc-width-px { color: inherit; }
+.tsc-page .tsc-width-bar .tsc-width-note { flex: 1 1 240px; }
+@media (max-width: 767px) {
+  .tsc-page .tsc-width-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .tsc-page .tsc-width-bar .tsc-width-seg { flex: 1 1 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tsc-page .tsc-width-btn { justify-content: center; min-width: 0; padding-inline: 6px; white-space: nowrap; }
+  /* The pressed button is a full 44px target on touch. */
+  @media (pointer: coarse) { .tsc-page .tsc-width-btn { min-height: 44px; } }
+}
+
+/* ── The phone dock's scale trigger: opens the settings sheet ────────────── */
+@media (max-width: 767px) {
+  .tsc-page .tl-dock .tsc-dock-ratio {
+    flex: 1 1 0; display: flex; align-items: center; gap: 8px; height: 44px; min-height: 44px; min-width: 0; padding: 0 12px 0 16px;
+    border: 0; border-radius: 999px; background: var(--tl-wash); color: var(--tl-ink);
+    font: 500 14px/20px var(--font); text-align: left; cursor: pointer;
+    transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+  }
+  .tsc-page .tl-dock .tsc-dock-ratio:active { transform: scale(.97); }
+  .tsc-page .tsc-dock-ratio b { flex: 0 1 auto; min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+  .tsc-page .tsc-dock-ratio-v { flex: none; font-family: var(--mono); font-size: 13px; color: var(--tl-dim); }
+  .tsc-page .tsc-dock-ratio svg { flex: none; margin-left: auto; transition: transform 150ms var(--tl-ease); }
+  .tsc-page .tsc-dock-ratio[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .tsc-page .tl-dock .tsc-copy-primary { flex: 0 0 auto; }
+  .tsc-page .tl-dock { gap: 8px; }
+  /* Save is the bookmark alone: the label stays in the DOM as the button's name. */
+  .tsc-page .tl-dock .tsc-dock-save { flex: none; display: flex; }
+  .tsc-page .tl-dock .tsc-dock-save .svt-wrap { width: auto; }
+  .tsc-page .tl-dock .svt-trigger {
+    width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; justify-content: center;
+    border: 0; border-radius: 999px; background: var(--tl-wash); color: var(--tl-ink);
+    transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+  }
+  .tsc-page .tl-dock .svt-trigger:active { transform: scale(.97); }
+  .tsc-page .tl-dock .svt-trigger svg { width: 20px; height: 20px; }
+  .tsc-page .tl-dock .svt-trigger .svt-trigger-label {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+@media (max-width: 359px) {
+  .tsc-page .tsc-dock-ratio-v { display: none; }
+}
+
+/* ── Phone: width, page and ladder in one scroll ────────────────────────────── */
+@media (max-width: 767px) {
+  .tsc-page .tsc-view[data-view="stack"] { display: grid; gap: 24px; min-width: 0; }
+  .tsc-page .tsc-view[data-view="stack"] .tsc-page-view { gap: 0; }
+  .tsc-page .tsc-steps-line { margin: 0; padding: 12px 16px 0; font-size: max(var(--fs-caption), 13px); line-height: 18px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
+  .tsc-page .tsc-steps-line + .tsc-use { padding-top: 8px; }
+  .tsc-page .tsc-sample-line,
+  .tsc-page .tsc-lit-note { margin: 8px 0 0; font-size: max(var(--fs-caption), 13px); line-height: 18px; color: var(--tl-dim); text-wrap: pretty; }
+  .tsc-page .tsc-fit-note { margin: 0 0 8px; padding: 4px 16px 0; line-height: 18px; color: var(--tl-dim); text-wrap: pretty; }
+  .tsc-page .tsc-kerb { scroll-margin-top: calc(var(--tsc-top) + 4px); }
+
+  /* The sheet's ratio trigger reads like the dock's: the short name, then the value. */
+  .tsc-page .tsc-ratio-t { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .tsc-page .tsc-ratio-t b { flex: 0 1 auto; min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; }
+  .tsc-page .tsc-ratio-v { flex: none; font-family: var(--mono); font-size: 13px; color: var(--tl-dim); }
+
+  /* The dock chip: 44px, 8px above the dock, from the page gutter. */
+  .tsc-page .tl-dock .tsc-chip {
+    position: absolute; left: var(--page-inline); bottom: calc(100% + 8px); flex: none; box-sizing: border-box;
+    display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 2 * var(--page-inline)); height: 44px; margin: 0; padding: 0 16px;
+    border: 0; border-radius: 999px; background: var(--tl-card); box-shadow: inset 0 0 0 1px var(--tl-line-2);
+    color: var(--tl-ink); font: 500 14px/20px var(--font); white-space: nowrap;
+  }
+  .tsc-page .tl-dock button.tsc-chip { cursor: pointer; transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease); }
+  .tsc-page .tl-dock button.tsc-chip:active { transform: scale(.97); }
+  .tsc-page .tl-dock button.tsc-chip:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+  .tsc-page .tl-dock .tsc-chip--quiet { color: var(--tl-dim); font-weight: 400; }
+  .tsc-page .tsc-chip-n { padding: 2px 6px; border-radius: 6px; background: var(--tl-wash-on); font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--tl-ink); }
+  .tsc-page .tsc-chip-ico { display: inline-grid; flex: none; transition: transform 150ms var(--tl-ease); }
+  .tsc-page .tsc-chip-ico[data-down="true"] { transform: rotate(180deg); }
+  /* While a step is lit the page keeps 40px more below the last line, so the chip never covers it. */
+  .tl.tl--docked.tsc-page[data-chip="true"] .tl-body { padding-bottom: calc(clamp(12px, 2vw, 20px) + var(--tl-dock-h) + 40px); }
+  html[data-reduced-motion="true"] .tsc-page .tsc-chip-ico,
+  html[data-reduced-motion="true"] .tsc-page .tl-dock button.tsc-chip { transition: none; }
+}
+@media (hover: hover) and (pointer: fine) and (max-width: 767px) {
+  .tsc-page .tl-dock button.tsc-chip:hover { background: var(--tl-wash-on); }
+}
+@media (max-width: 359px) {
+  /* The three width buttons share a 320px row: the label alone fits. */
+  .tsc-page .tsc-width-btn .tsc-width-px { display: none; }
+}
+@media (max-width: 359px) {
+  /* Base size and Ratio take a row each, so the ratio's name has room. */
+  .tsc-page .tsc-scale-bar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}
+
+/* ── The docked bar and the Code drawer (from 768) ────────────────────────────
+   One bar at the foot of the page: Code and the save line on the left, Save to
+   a project on the right. Code opens a drawer that sits on the bar. */
+.tsc-page .tsc-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  margin: var(--tl-gap) calc(-1 * clamp(12px, 2vw, 20px)) calc(-1 * clamp(12px, 2vw, 20px));
+  padding: 8px clamp(12px, 2vw, 20px);
+  background: var(--tl-card);
+  border-top: 1px solid var(--tl-hair);
+}
+.tsc-page .tsc-dock-l { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.tsc-page .tsc-dock-status { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); }
+.tsc-page .tsc-code-btn[aria-expanded="true"] { background: var(--tl-wash-2); color: var(--tl-ink); }
+.tsc-page .tsc-dock .svt-pop { display: block; position: absolute; top: auto; bottom: calc(100% + 8px); right: 0; z-index: 60; }
+.tsc-page .tsc-dock .svt-pop .svt-menu { position: static; }
+.tsc-page .tsc-drawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(384px, 60dvh);
+  padding: 12px clamp(12px, 2vw, 20px) 16px;
+  background: var(--tl-card);
+  border-top: 1px solid var(--tl-hair);
+  overscroll-behavior: contain;
+  animation: tsc-drawer-in 200ms var(--tl-ease) both;
+}
+.tsc-page .tsc-drawer[hidden] { display: none; }
+.tsc-page .tsc-drawer-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tsc-page .tsc-drawer-head .tsc-fmt { margin-right: auto; min-width: 0; overflow-x: auto; }
+.tsc-page .tsc-drawer .tsc-export { flex: 1; min-height: 0; max-height: none; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+@keyframes tsc-drawer-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+html[data-reduced-motion="true"] .tsc-page .tsc-drawer { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-drawer { animation: none; }
+}
+html:has(.tsc-page .tsc-dock) { scroll-padding-bottom: 72px; }
+
+/* The switcher's wrapper adds no box of its own. */
+.tsc-page .tsc-switch { display: contents; }
+/* The project row in More: a label, not a button. */
+.tsc-page .tsc-menu-project { margin: 0; cursor: default; pointer-events: none; }
+.tsc-page .tsc-menu-sample { font-weight: 400; color: var(--tl-dim); }
+/* The More sheet's heading at the board's size (17/24, weight 600, -0.01em). The
+   sheet is portalled out of the page, so it is found by the project row it holds. */
+.tl-sheet:has(.tsc-menu-project) .tl-sheet-title { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -.01em; }
+
+/* ── Copy CSS: the label, then the copy glyph in a disc ───────────────────── */
+.tsc-page .tsc-copy-primary.tl-btn { gap: 8px; height: 36px; padding: 0 4px 0 16px; }
+.tsc-page .tsc-copy-primary .tl-btn-label { display: inline-flex; align-items: center; gap: 8px; }
+.tsc-page .tsc-copy-disc {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-ink) 8%, transparent);
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .tsc-page .tsc-copy-primary.tl-btn { height: 44px; min-height: 44px; padding: 0 6px 0 18px; }
+  .tsc-page .tsc-copy-disc { width: 32px; height: 32px; }
+}
+
+/* ── Preview width and the sheet's tabs: one segmented pill ───────────────── */
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) {
+  gap: 2px; padding: 2px; border-radius: 999px;
+  background: color-mix(in srgb, var(--t0) 6%, transparent);
+}
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs)[data-slide]::before {
+  border: 0; background: color-mix(in srgb, var(--t0) 14%, transparent);
+}
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill {
+  height: 32px; min-height: 0; padding: 0 14px; border: 0; background: transparent;
+  color: color-mix(in srgb, var(--t0) 56%, var(--bg-0)); font-size: 14px; font-weight: 500; line-height: 20px;
+}
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill.is-on { color: var(--t0); background: transparent; }
+.tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs):not([data-slide]) .tl-pill.is-on { background: color-mix(in srgb, var(--t0) 14%, transparent); }
+@media (max-width: 767px), (pointer: coarse) {
+  .tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) { gap: 0; padding: 0; }
+  .tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill { height: 44px; min-height: 44px; }
+}
+@media (max-width: 767px) {
+  .tsc-page .tsc-width-btn { padding-inline: 6px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tl-pills:is(.tsc-width-seg, .tsc-sheet-tabs) .tl-pill:not(.is-on):hover { color: var(--t0); background: color-mix(in srgb, var(--t0) 8%, transparent); }
+}
+
+/* ── Phone sheet: a family is its name, a weight chip and a browse button ─── */
+.tsc-page .tsc-fr { display: grid; gap: 8px; min-width: 0; }
+.tsc-page .tsc-fams-grid:has(.tsc-fr) { gap: 20px; }
+.tsc-page .tsc-fr-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tsc-page .tsc-fr-n { flex: 1 1 auto; display: grid; min-width: 0; }
+.tsc-page .tsc-fr-name { font-size: 24px; line-height: 30px; overflow-wrap: anywhere; color: var(--tl-ink); }
+.tsc-page .tsc-fr-meta { font-size: 13px; line-height: 18px; color: var(--tl-dim); }
+.tsc-page .tsc-fr-chip,
+.tsc-page .tsc-fr-ib,
+.tsc-page .tsc-fr-opt {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; height: 44px; margin: 0; border: 0; border-radius: 999px;
+  background: color-mix(in srgb, var(--t0) 7%, transparent); color: var(--tl-ink); cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.tsc-page .tsc-fr-chip { min-width: 56px; padding: 0 14px; font: 400 14px/20px var(--font); font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-fr-ib { width: 44px; padding: 0; }
+.tsc-page .tsc-fr-chip[aria-expanded="true"],
+.tsc-page .tsc-fr-opt[aria-selected="true"] { background: color-mix(in srgb, var(--t0) 14%, transparent); }
+.tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: scale(.97); }
+.tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
+.tsc-page .tsc-fr-tray { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.tsc-page .tsc-fr-opt { min-width: 0; padding: 0; background: transparent; font: 400 14px/20px var(--font); }
+.tsc-page .tsc-fr-opt[aria-selected="true"] { color: var(--tl-ink); }
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib):hover:not([aria-expanded="true"]) { background: color-mix(in srgb, var(--t0) 11%, transparent); }
+  .tsc-page .tsc-fr-opt:not([aria-selected="true"]):hover { background: color-mix(in srgb, var(--t0) 8%, transparent); }
+}
+html[data-reduced-motion="true"] .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt) { transition: background-color 150ms ease; }
+html[data-reduced-motion="true"] .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt) { transition: background-color 150ms ease; }
+  html:not([data-reduced-motion="false"]) .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: none; }
+}
+/* The width labels' number sits one pill-gap from its word, as on the board. */
+.tsc-page .tsc-width-seg .tl-pill { gap: 8px; }
+.tsc-page .tsc-width-seg .tsc-width-px { margin-left: 0; }

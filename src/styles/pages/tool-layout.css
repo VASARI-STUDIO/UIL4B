@@ -205,7 +205,10 @@
 }
 .tl-sheet-layer .tl-sheet-grab { display: block; width: 36px; height: 4px; margin: 2px auto 8px; border-radius: 999px; background: color-mix(in srgb, var(--t0) 22%, transparent); }
 .tl-sheet-layer .tl-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px 6px; }
-.tl-sheet-layer .tl-sheet-title { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
+/* The sheet's heading: bright, 15/22 at weight 500, the base every tool starts
+   from. A tool that sets its sheets larger overrides it from its own stylesheet
+   (the sheet is portalled out of the page, so it is found by what it holds). */
+.tl-sheet-layer .tl-sheet-title { font-family: var(--font); font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--tl-ink); }
 .tl-sheet-layer .tl-sheet-x {
   display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
   border: 0; border-radius: var(--btn-radius); background: transparent; color: var(--tl-ink); cursor: pointer;
@@ -280,7 +283,11 @@
   -webkit-tap-highlight-color: transparent;
   transition: transform .14s var(--tl-ease), background .16s ease, color .16s ease, border-color .16s ease;
 }
-:is(.tl, .tl-sheet-layer) .tl-btn:hover { text-decoration: none; color: var(--tl-ink); }
+/* Hover styles wait for a pointer that can hover, so a touch tap does not
+   leave a button in its hover colours. */
+@media (hover: hover) {
+  :is(.tl, .tl-sheet-layer) .tl-btn:hover { text-decoration: none; color: var(--tl-ink); }
+}
 :is(.tl, .tl-sheet-layer) .tl-btn:active { transform: scale(.97); }
 :is(.tl, .tl-sheet-layer) .tl-btn[disabled],
 :is(.tl, .tl-sheet-layer) .tl-btn[aria-disabled="true"] { cursor: not-allowed; color: color-mix(in srgb, var(--t0) 34%, var(--bg-0)); }
@@ -297,7 +304,9 @@
   color: var(--accent-ink);
   font-weight: 540;
 }
-:is(.tl, .tl-sheet-layer) .tl-btn--accent:hover { background: var(--accent-fill-hover); color: var(--accent-ink); }
+@media (hover: hover) {
+  :is(.tl, .tl-sheet-layer) .tl-btn--accent:hover { background: var(--accent-fill-hover); color: var(--accent-ink); }
+}
 :is(.tl, .tl-sheet-layer) .tl-btn--accent:active { background: var(--accent-fill-hover); }
 :is(.tl, .tl-sheet-layer) .tl-btn--dashed {
   justify-content: flex-start;

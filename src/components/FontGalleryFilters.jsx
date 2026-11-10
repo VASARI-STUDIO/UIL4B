@@ -1,18 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useRef, useState } from 'react'
 import useModalDialog from '../hooks/useModalDialog'
-import { fontStack, loadFont, bodyWeight } from '../utils/googleFonts'
 
 // The Font Gallery's Filters sheet and its list / grid toggle. The page owns
 // every value; this file only draws them. A change applies at once, and the
 // foot's count line says what the sheet is showing.
-
-// Per-item values go through custom properties, never inline styles.
-function vars(map) {
-  return (el) => {
-    if (!el) return
-    for (const key of Object.keys(map)) el.style.setProperty(key, map[key])
-  }
-}
 
 function ViewIcon({ kind }) {
   return (
@@ -53,16 +44,19 @@ const DRAG_CLOSE_DY = 96
 const DRAG_CLOSE_SPEED = 0.5
 const DRAG_JITTER = 12
 
-// `faces` maps a category id to the catalogue family that stands for it, so
-// each category pill is drawn in a face from its own class. `previewFirst` puts
-// the preview text field above Category, where the phone keyboard leaves it in
+// `counts` maps a category id to its family count. `previewFirst` puts the
+// preview text field above Category, where the phone keyboard leaves it in
 // view.
 export default function FiltersSheet({
-  onClose, cats, category, onCategory, sorts, sort, onSort, size, sizeMin, sizeMax, onSize,
-  view, onView, previewText, onPreviewText, faces, count, canClear, onClear, previewFirst,
+  onClose, cats, category, onCategory, counts, sorts, sort, onSort, size, sizeMin, sizeMax, onSize, ground, onGround,
+  view, onView, previewText, onPreviewText, count, canClear, onClear, previewFirst,
 }) {
   const ref = useModalDialog(onClose)
   const drag = useRef(null)
+  // While the Preview field has focus on a phone the sheet shrinks to that
+  // field and the foot, and the scrim thins, so the bands show in the typed words.
+  const [typing, setTyping] = useState(false)
+  const shrunk = typing && previewFirst
 
   // The drag is a phone gesture: from 768px the sheet is a centred dialog.
   const onDragStart = (e) => {
@@ -105,17 +99,15 @@ export default function FiltersSheet({
         enterKeyHint="done"
         placeholder="Type your own words"
         onChange={e => onPreviewText(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+        onFocus={() => setTyping(true)}
+        onBlur={() => setTyping(false)}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onClose() } }}
       />
     </div>
   )
 
-  useEffect(() => {
-    Object.values(faces).forEach(font => { if (font) loadFont(font.family, [bodyWeight(font)]) })
-  }, [faces])
-
   return (
-    <div className="fg-sheet-layer">
+    <div className="fg-sheet-layer" data-typing={shrunk ? '1' : undefined}>
       <div className="fg-sheet-scrim" aria-hidden="true" onClick={onClose} />
       <div className="fg-sheet" role="dialog" aria-modal="true" aria-label="Filters" tabIndex={-1} ref={ref}>
         <div
@@ -145,12 +137,12 @@ export default function FiltersSheet({
                 <button
                   key={c.id}
                   type="button"
-                  className={category === c.id ? 'fg-sheet-pill fg-sheet-pill--face is-on' : 'fg-sheet-pill fg-sheet-pill--face'}
+                  className={category === c.id ? 'fg-sheet-pill fg-sheet-pill--cat is-on' : 'fg-sheet-pill fg-sheet-pill--cat'}
                   aria-pressed={category === c.id}
                   onClick={() => onCategory(c.id)}
-                  ref={vars(faces[c.id] ? { '--fg-ff': fontStack(faces[c.id]) } : {})}
                 >
-                  {c.label}
+                  <span>{c.label}</span>
+                  <em>{(counts[c.id] || 0).toLocaleString()}</em>
                 </button>
               ))}
             </div>
@@ -207,10 +199,29 @@ export default function FiltersSheet({
             </div>
           </div>
 
+          <div className="fg-sheet-group" role="group" aria-labelledby="fg-sheet-ground">
+            <span className="fg-sheet-k" id="fg-sheet-ground">Specimen ground</span>
+            <div className="fg-sheet-pills">
+              {[['d', 'Dark'], ['l', 'Light']].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={ground === id ? 'fg-sheet-pill is-on' : 'fg-sheet-pill'}
+                  aria-pressed={ground === id}
+                  onClick={() => onGround(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {!previewFirst && previewGroup}
         </div>
 
-        <div className="fg-sheet-foot">
+        {/* A press on the foot keeps the field's focus, so the keyboard closing
+            does not move the buttons out from under the finger. */}
+        <div className="fg-sheet-foot" onMouseDown={e => { if (shrunk) e.preventDefault() }}>
           <button type="button" className="fg-sheet-btn" onClick={onClear} disabled={!canClear}>Clear filters</button>
           <button type="button" className="fg-sheet-btn fg-sheet-btn--primary" onClick={onClose}>
             Show {count.toLocaleString()} {count === 1 ? 'family' : 'families'}

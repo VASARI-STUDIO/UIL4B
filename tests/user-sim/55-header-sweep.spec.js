@@ -136,7 +136,7 @@ const STRIPS = [
     route: '/create/font-pair', cls: '.fpr-status', h1: 'Font Pair',
     // `.fpr-hero-pair` — the readout #382 kept, and which this strip duplicated
     // 350px lower. It is now true that it is the only statement of the pair.
-    survives: 'Inter',
+    survives: 'Archivo',
   },
 ]
 
@@ -191,7 +191,7 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
   // side panel, an <aside> named by its label rather than a visible head.
   const headings = page.locator('.fpr-section-head h2')
   await expect(headings).toHaveCount(1)
-  await expect(headings.nth(0)).toContainText('Bodies that suit')
+  await expect(headings.nth(0)).toContainText('Popular bodies for a sans heading')
   await expect(page.locator('.fpr-delivery > summary')).toHaveText('Prepare the handoff')
   await expect(page.getByRole('complementary', { name: 'Font Pair controls' })).toBeVisible()
 
