@@ -15,6 +15,7 @@ import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 import KitSheet, { FailedSheet, GoArrow, LoadingSheet } from '../components/dashboard/KitSheet'
 import { StatusRow, TodayLine } from '../components/dashboard/StatusRow'
+import ParkedLine from '../components/dashboard/ParkedLine'
 import { OtherProjects, OtherProjectsSkeleton } from '../components/dashboard/OtherProjects'
 import Shelf from '../components/dashboard/Shelf'
 import PlanLine from '../components/dashboard/PlanLine'
@@ -202,6 +203,7 @@ export default function Projects() {
               {newProject}
             </div>
             <TodayLine meters={meters} offline={offline} atCap={atCap} />
+            <ParkedLine />
             {sheet}
             {loadingList && <OtherProjectsSkeleton />}
             {!signedOut && !resolving && !loadFailed && !loadingList && (

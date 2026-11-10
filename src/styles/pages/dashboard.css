@@ -125,6 +125,13 @@
 .db-today{margin-top:12px;min-height:20px;display:block;font-size:14px;line-height:20px;color:var(--t72);font-variant-numeric:tabular-nums;text-wrap:pretty}
 .db-ts{display:inline-block;white-space:nowrap;margin-right:12px}
 .db-today .see{display:inline;margin-left:12px;font-weight:500}
+/* the put-aside kit: one text line under the Today line, the page's text buttons for its three actions */
+.db-parked{margin-top:8px;display:flex;flex-wrap:wrap;align-items:baseline;column-gap:16px;font-size:14px;line-height:20px;color:var(--t72)}
+.db-pk-t{min-width:0;text-wrap:pretty}
+.db-pk-a{display:inline-flex;flex-wrap:wrap;align-items:baseline;column-gap:16px}
+.db-parked .db-textbtn{font-size:14px;line-height:20px;color:var(--ink)}
+.db-pk-err{flex-basis:100%;margin-top:4px;color:var(--ink);text-wrap:pretty}
+.db-pk-err .db-tl{font-weight:500}
 /* kit sheet: L1, no border, 512 tall in every kit state */
 .db-sheet{margin-top:40px;position:relative;isolation:isolate;height:512px;padding:32px;border-radius:16px;background:var(--surface)}
 .db-sheet.failed{height:auto}
@@ -383,6 +390,7 @@
   .db-head .db-ghost { height: 44px; flex: none; }
   .db-name { font-size: 36px; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; text-wrap: balance; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .db-name.wrap { display: block; -webkit-line-clamp: none; font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: -.02em; overflow: visible; }
+  .db-parked + .db-sheet { margin-top: 16px; }
   .db-meta { margin-top: 4px; height: auto; text-wrap: pretty; }
   .db-opent { position: relative; margin-left: 8px; font-weight: 500; white-space: nowrap; text-decoration: underline; text-decoration-color: rgba(var(--ink-rgb), .35); text-decoration-thickness: 1px; text-underline-offset: 4px; }
   .db-opent::before { content: ''; position: absolute; inset: -13px -8px; }
