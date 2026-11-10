@@ -90,9 +90,9 @@ const MAX_COMPARE = 3
 // above and below it, never under a minimum), so changing the size moves the
 // whole list once and never one band on its own.
 const LAYOUTS = {
-  wide: { name: 96, floor: 72, grid: 56, band: n => bandHeight('wide', n) },
-  tablet: { name: 96, floor: 48, grid: 40, band: n => bandHeight('tablet', n) },
-  phone: { name: 48, floor: 32, grid: 24, band: n => bandHeight('phone', n) },
+  wide: { name: 96, floor: 72, grid: 44, band: n => bandHeight('wide', n) },
+  tablet: { name: 96, floor: 48, grid: 44, band: n => bandHeight('tablet', n) },
+  phone: { name: 48, floor: 32, grid: 28, band: n => bandHeight('phone', n) },
 }
 const SIZE_MIN = 24
 const SIZE_MAX = 120
@@ -131,8 +131,11 @@ const pendingFits = new Set()
 let fitFrame = 0
 function runFits() {
   fitFrame = 0
-  const jobs = Array.from(pendingFits).filter(job => !job.dead)
+  const queued = Array.from(pendingFits).filter(job => !job.dead)
   pendingFits.clear()
+  const tileJobs = queued.filter(job => job.tile)
+  const jobs = queued.filter(job => !job.tile)
+  if (tileJobs.length) fitTiles(tileJobs)
   jobs.forEach(job => job.el.style.setProperty('--fg-fit', '1'))
   jobs.forEach(job => {
     job.room = job.box.clientWidth
@@ -156,6 +159,31 @@ function runFits() {
     })
   }
 }
+// How many lines a name wraps to. The text's own line fragments are counted, not the
+// element's scroll height: a face with tall ascent and descent metrics (Anek Bangla,
+// Sumana) paints a one-line name with an inline box far taller than its line, and
+// scrollHeight reports that overhang as extra lines.
+function nameLines(el) {
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  return range.getClientRects().length
+}
+// A grid tile's name wraps to two lines, so it fits when two lines hold it: shrink
+// in small steps until the name wraps to no more than two lines and no word is
+// wider than the box, never below the floor. Each tile fits on its own, so one long
+// family name does not shrink the other tiles on a page of two dozen.
+function fitTiles(jobs) {
+  jobs.forEach(job => { job.scale = 1; job.el.style.setProperty('--fg-fit', '1') })
+  let open = jobs
+  for (let pass = 0; pass < 14 && open.length; pass++) {
+    open = open.filter(job => job.scale > job.floor
+      && (nameLines(job.el) > 2 || job.el.scrollWidth > job.el.clientWidth + 1))
+    open.forEach(job => {
+      job.scale = Math.max(job.scale * 0.94, job.floor)
+      job.el.style.setProperty('--fg-fit', String(job.scale))
+    })
+  }
+}
 // `now` fits synchronously, for the first measure after a name mounts, so it
 // never paints at the wrong size.
 function queueFit(job, now) {
@@ -175,7 +203,7 @@ function queueFit(job, now) {
 // once its face is confirmed, so it is measured in the right face.
 // In the grid view `size` is the tile's name size and the cell's width is the
 // room, so a long name shrinks to its cell rather than breaking mid-word.
-function useFitName(active, label, size, floor) {
+function useFitName(active, label, size, floor, tile) {
   const ref = useRef(null)
   useLayoutEffect(() => {
     const el = ref.current
@@ -187,8 +215,10 @@ function useFitName(active, label, size, floor) {
       floor: Math.min(floor, size) / size,
       natural: 0,
       room: 0,
+      tile: !!tile,
     }
     const fit = () => queueFit(job)
+
     queueFit(job, true)
     // A face can still land after this, such as a subset for typed preview
     // text. Ask for this name's own face and fit again when it is in.
@@ -220,7 +250,7 @@ function useFitName(active, label, size, floor) {
       if (fonts) fonts.removeEventListener?.('loadingdone', onLoaded)
       if (ro) ro.disconnect()
     }
-  }, [active, label, size, floor])
+  }, [active, label, size, floor, tile])
   return ref
 }
 
@@ -426,6 +456,7 @@ function GalleryCard({
     `${typed}|${font.family}`,
     tiles ? gridName : nameSize,
     tiles ? Math.max(18, Math.round(gridName * 0.6)) : floor,
+    tiles,
   )
   const weightLabel = `${weights} weight${weights === 1 ? '' : 's'}`
   // With the reader's own words in the name, the family name moves to the meta

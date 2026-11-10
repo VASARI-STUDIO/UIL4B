@@ -248,6 +248,67 @@ test.describe('Font Gallery bands', () => {
     await expect(page.locator('.fg-card')).toHaveCount(4)
   })
 
+  // The grid is the round-3 boards' tiles: filled and 8px apart with 12px corners, not
+  // flush hairline cells. A hover or keyboard focus changes the tile's fill, never its box.
+  // MUTATION: `gap: 0` on `.fg-grid--tiles`, or drop `.fg-card:hover { --fg-ground }`.
+  const TILES = [
+    { width: 1440, cols: 4, height: 224, fill: 'rgb(15, 16, 18)', wake: 'rgb(25, 25, 25)' },
+    { width: 768, cols: 3, height: 224, fill: 'rgb(15, 16, 18)', wake: 'rgb(25, 25, 25)' },
+    { width: 390, cols: 2, height: 144 },
+    { width: 320, cols: 2, height: 144 },
+  ]
+  for (const { width, cols, height, fill, wake } of TILES) {
+    test(`grid: at ${width} the tiles are ${cols} across, 8px apart, 12px corners, ${height}px tall`, async ({ page }) => {
+      watch(page, 'someone switching to the grid')
+      // The fill and wake numbers above are the dark theme's; the test browser opens light.
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await open(page, width)
+      if (width >= 768) {
+        await page.getByRole('button', { name: 'Grid view' }).click()
+      } else {
+        await page.getByRole('button', { name: 'Filters', exact: true }).click()
+        await page.getByRole('dialog', { name: 'Filters' }).getByRole('button', { name: 'Grid', exact: true }).click()
+        await page.keyboard.press('Escape')
+      }
+      const tiles = page.locator('.fg-grid--tiles .fg-card')
+      await expect(tiles).toHaveCount(4)
+      await page.evaluate(() => document.fonts.ready)
+      // The click that switched views leaves the pointer over the first tile, which then wakes.
+      // Park it clear and let the 200ms fill settle before reading the resting fill.
+      await page.mouse.move(0, 0)
+      if (width >= 768) {
+        await expect.poll(() => tiles.first().evaluate((el) => getComputedStyle(el).backgroundColor), { message: `${width}px tile fill settles`, timeout: 2000 }).toBe(fill)
+      }
+      const m = await tiles.evaluateAll((els) => {
+        const rects = els.map((el) => el.getBoundingClientRect())
+        const cs = getComputedStyle(els[0])
+        return {
+          tops: rects.map((r) => Math.round(r.top)),
+          lefts: rects.map((r) => Math.round(r.left)),
+          h: Math.round(rects[0].height),
+          gapX: rects[1].left - rects[0].right,
+          radius: cs.borderTopLeftRadius,
+          bg: cs.backgroundColor,
+          page: document.documentElement.scrollWidth - window.innerWidth,
+        }
+      })
+      expect(m.h, `${width}px tile height`).toBe(height)
+      expect(m.gapX, `${width}px gap between tiles`).toBe(8)
+      expect(m.radius, `${width}px corner radius`).toBe('12px')
+      expect(new Set(m.lefts).size, `${width}px columns`).toBe(Math.min(cols, 4))
+      expect(m.bg, `${width}px a tile is filled, not transparent`).not.toBe('rgba(0, 0, 0, 0)')
+      expect(m.page, `${width}px the page scrolls sideways`).toBeLessThanOrEqual(0)
+      if (width >= 768) {
+        expect(m.bg, `${width}px tile fill`).toBe(fill)
+        const first = tiles.first()
+        const before = await first.boundingBox()
+        await first.hover()
+        await expect.poll(() => first.evaluate((el) => getComputedStyle(el).backgroundColor), { message: `${width}px the wake fill`, timeout: 2000 }).toBe(wake)
+        expect(await first.boundingBox(), 'the wake moved the tile').toEqual(before)
+      }
+    })
+  }
+
   // The 44px floor is the coarse-pointer rule (36px with a mouse), so this runs as a phone.
   test.describe('on a touch phone', () => {
     test.use({ hasTouch: true, isMobile: true })
