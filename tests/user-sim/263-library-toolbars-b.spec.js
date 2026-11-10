@@ -165,7 +165,7 @@ test.describe('Faded cards behind the Pro gate', () => {
     // The only colours in the faded cards are the stand-in ramp's (a fixed list, written out here).
     // (A colour set from script is serialised as rgb(), so both spellings are read.)
     const hexes = [...new Set([
-      ...(html.match(/#[0-9a-f]{3,8}/gi) || []).map((h) => h.toLowerCase()),
+      ...(html.match(/#[0-9a-f]{3,8}\b/gi) || []).map((h) => h.toLowerCase()),
       ...[...html.matchAll(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/gi)].map((m) => `#${[m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`),
     ])]
     expect(hexes.length, 'no colour value in the faded cards - this check would be vacuous').toBeGreaterThan(0)
