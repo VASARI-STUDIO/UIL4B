@@ -260,6 +260,8 @@ test.describe('Font Gallery bands', () => {
   for (const { width, cols, height, fill, wake } of TILES) {
     test(`grid: at ${width} the tiles are ${cols} across, 8px apart, 12px corners, ${height}px tall`, async ({ page }) => {
       watch(page, 'someone switching to the grid')
+      // The fill and wake numbers above are the dark theme's; the test browser opens light.
+      await page.emulateMedia({ colorScheme: 'dark' })
       await open(page, width)
       if (width >= 768) {
         await page.getByRole('button', { name: 'Grid view' }).click()
@@ -271,6 +273,12 @@ test.describe('Font Gallery bands', () => {
       const tiles = page.locator('.fg-grid--tiles .fg-card')
       await expect(tiles).toHaveCount(4)
       await page.evaluate(() => document.fonts.ready)
+      // The click that switched views leaves the pointer over the first tile, which then wakes.
+      // Park it clear and let the 200ms fill settle before reading the resting fill.
+      await page.mouse.move(0, 0)
+      if (width >= 768) {
+        await expect.poll(() => tiles.first().evaluate((el) => getComputedStyle(el).backgroundColor), { message: `${width}px tile fill settles`, timeout: 2000 }).toBe(fill)
+      }
       const m = await tiles.evaluateAll((els) => {
         const rects = els.map((el) => el.getBoundingClientRect())
         const cs = getComputedStyle(els[0])
