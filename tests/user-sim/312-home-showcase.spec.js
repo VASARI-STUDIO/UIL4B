@@ -570,6 +570,25 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 320, heig
       }))
       expect(overflow, 'nothing scrolls sideways').toEqual({ sheet: 0, doc: 0 })
 
+      for (let i = 1; i <= PAGES; i += 1) {
+        const meta = await page.evaluate(() => {
+          const t = document.querySelector('.hsv-title')
+          const b = document.querySelector('.hsv-brand')
+          const text = t.getBoundingClientRect().right - parseFloat(getComputedStyle(t).paddingRight)
+          return { brand: b.textContent, brandCut: b.scrollWidth > b.clientWidth, titleEnd: text, countStart: document.querySelector('.hsv-count').getBoundingClientRect().left }
+        })
+        expect(meta.brandCut, `page ${i}: the brand line "${meta.brand}" shows in full`).toBe(false)
+        expect(meta.titleEnd, `page ${i}: the title stops short of the count`).toBeLessThanOrEqual(meta.countStart)
+        if (i < PAGES) {
+          await dialog(page).getByRole('button', { name: 'Next page' }).tap()
+          await expect(count(page)).toHaveText(`${i + 1} of ${PAGES}`)
+        }
+      }
+      await dialog(page).getByRole('button', { name: 'Previous page' }).tap()
+      await expect(count(page)).toHaveText(`${PAGES - 1} of ${PAGES}`)
+      for (let i = PAGES - 1; i > 1; i -= 1) await dialog(page).getByRole('button', { name: 'Previous page' }).tap()
+      await expect(count(page)).toHaveText(`1 of ${PAGES}`)
+
       // The sheet has no scrim: a tap on its empty space leaves it open.
       await page.touchscreen.tap(width / 2, 120)
       await page.waitForTimeout(400)

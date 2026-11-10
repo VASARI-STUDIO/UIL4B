@@ -497,11 +497,12 @@ html[data-reduced-motion="true"] .hsc[data-hsc-reveal] .hsc-row > li { opacity: 
     column-gap: 8px;
   }
   .hsv-dlg:focus-visible { outline-offset: -3px; }
-  /* The count shares the meta's row and sits over its right end, so the title and the
-     brand line get the full width less the count's room, not a third of the bar. Each
-     stays on one line and ends in an ellipsis if it still does not fit; the full text
-     is in the DOM, so assistive tech reads all of it. */
-  .hsv-meta { padding: 2px 56px 0 0; }
+  /* The count sits over the right end of the title's line, so only the title keeps room
+     for it; the brand line below takes the full width. Each stays on one line and ends
+     in an ellipsis if it still does not fit; the full text is in the DOM, so assistive
+     tech reads all of it. */
+  .hsv-meta { padding: 2px 0 0; }
+  .hsv-title { padding-right: 56px; }
   .hsv-title, .hsv-brand { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .hsv-count { grid-area: meta; justify-self: end; margin: 3px 0 0; }
   .hsv-stage { align-self: stretch; height: auto; margin: 12px 0; }
