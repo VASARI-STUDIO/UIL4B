@@ -19,7 +19,7 @@ import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // describing Free and Pro reads: Settings, Checkout and the upgrade modal too.
 import {
   BILLED_EVERY, BILLING_OPTIONS, DEFAULT_BILLING, FREE_EXPORT_NAMES, PRO_ROWS, PRO_VALUE,
-  canCheckout, perMonth, priceState, priceStateCopy, resolveOffers,
+  canCheckout, perMonth, priceState, priceStateCopy, resolveOffers, subscriptionCadence,
 } from '../config/planFacts'
 // The pair of cards reuses the homepage's sheet; the page's own sheet follows it,
 // every selector under `.pricing`. Imported here so it rides this lazy route's
@@ -51,7 +51,10 @@ import '../styles/pages/pricing.css'
 const AI = AI_LIMITS
 const NBSP = ' '
 
-const HERO_LEAD = `Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, gives you unlimited projects, and removes the “Made with UIL4B” line from your exports.`
+// The number and its noun stay on one line at any width ("1 / coffee" never splits).
+const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'.replace('1 coffee', `1${NBSP}coffee`)
+
+const HERO_LEAD =`Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, gives you unlimited projects, and removes the “Made with UIL4B” line from your exports.`
 
 const CANCEL_LINE = 'Cancel Pro any time. Keep every export you made.'
 const STRIPE_LINE = 'Secure checkout by Stripe.'
@@ -140,7 +143,7 @@ export default function Pricing() {
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   const navigate = useNavigate()
-  const { isPro, loading: subLoading } = useSubscription()
+  const { isPro, loading: subLoading, subscription } = useSubscription()
   const location = useLocation()
   // Seeded from `?billing=`, validated against the options the switch can
   // show, so a stale `?billing=quarterly` falls back rather than putting the
@@ -181,11 +184,17 @@ export default function Pricing() {
   const { retrying, retry } = usePriceRetry()
   const currency = price.currency
   const { offers } = resolveOffers({ prices, currency, loaded: price.loaded })
-  const offer = offers.find((o) => o.id === billing) || offers[0]
+  // A Pro account prints the cadence it is on, not the one the switch would offer.
+  // When the record cannot say (a founder account, or a month with no stored
+  // count), no price is printed for it.
+  const accountOffer = isPro ? offers.find((o) => o.id === subscriptionCadence(subscription)) : undefined
+  const offer = accountOffer || offers.find((o) => o.id === billing) || offers[0]
   // ONE STATE decides every price word and whether any button may reach
   // checkout: only 'live' does (planFacts.js priceState).
-  const state = priceState({ price, offers, selectedId: billing, retrying })
+  const state = priceState({ price, offers, selectedId: offer.id, retrying })
   const live = canCheckout(state)
+  // A Pro account has nothing to buy, so an outage or an unknown cadence prints no price and no outage line.
+  const hidePrice = isPro && !(accountOffer && live)
   const outage = state === 'unreachable' || state === 'no-currency' || state === 'cadence-missing'
   // When another cadence still has a price the service did answer, and only the
   // selected cadence is unavailable; the note says which.
@@ -265,8 +274,8 @@ export default function Pricing() {
   let detail2 = ''
   let foot1 = ''
   let foot2 = ''
-  if (live && isPro) {
-    detail1 = `${liveTotal} billed ${BILLED_EVERY[offer.id]}.`
+  if (isPro) {
+    if (!hidePrice) detail1 = `${liveTotal} billed ${BILLED_EVERY[offer.id]}.`
     foot1 = 'Manage your plan and receipts in Settings.'
   } else if (live) {
     detail1 = offer.trialDays
@@ -352,7 +361,8 @@ export default function Pricing() {
   let barKind = null
   if (!isPro && !subLoading) {
     if (live) barKind = 'price'
-    else if (state === 'unreachable' || state === 'cadence-missing') barKind = 'action'
+    // 'retrying' keeps the bar a Retry was pressed in, so the press has an answer on screen.
+    else if (state === 'unreachable' || state === 'cadence-missing' || state === 'retrying') barKind = 'action'
     else if (state === 'no-currency') barKind = 'toolkit'
   }
 
@@ -400,6 +410,26 @@ export default function Pricing() {
     </Link>
   )
 
+  // Free's card is placed in the markup by the Pro action: Pro first when it has
+  // one (that is the first thing a keyboard reaches, and it is first on the phone
+  // and tablet), Free first when Pro has none. Side by side, the grid seats it left.
+  const freeCard = (
+    <div className="hpl-card hpl-free">
+      <div className="pa-planrow">
+        <h2 className="hpl-plan">Free</h2>
+        {user && !isPro && !subLoading && <span className="pa-tag pa-tag--free">Your plan</span>}
+      </div>
+      <p className="hpl-amount">{freeAmount}</p>
+      <p className="hpl-note pa-freenote">You don’t need a card, and there’s no time limit.</p>
+      <FreeList live={EXPORT_THEMES_LIVE} />
+      <div className="hpl-freefoot">
+        {/* The toolkit opens without a sign-up gate and lands on the workspace. */}
+        <Link ref={freeGoRef} className="hpl-btn hpl-ghost ui-pill-out" to="/projects">Open the toolkit</Link>
+        {!user && <p>You don’t need an account to start.</p>}
+      </div>
+    </div>
+  )
+
   const showSwitch = !isPro && state !== 'no-currency'
   const showPill = live && !isPro
   const stickyPro = stuck && showPill ? `Pro · ${liveAmount} a month, billed ${BILLED_EVERY[offer.id]}` : 'Pro'
@@ -413,27 +443,14 @@ export default function Pricing() {
 
       <main id="main" tabIndex={-1}>
         <header className="pa-wrap pa-head">
-          <h1 className="pa-h1" id="pricing-h1">Improve your design systems for less than 1 coffee per month.</h1>
+          <h1 className="pa-h1" id="pricing-h1">{HEADLINE}</h1>
           <p className="pa-lead">{HERO_LEAD}</p>
         </header>
 
         <div className="pa-wrap">
           <div className="hpl pa-hpl">
             <div className={`pa-pair${hasAction ? '' : ' pa-pair--ff'}`}>
-              <div className="hpl-card hpl-free">
-                <div className="pa-planrow">
-                  <h2 className="hpl-plan">Free</h2>
-                  {user && !isPro && !subLoading && <span className="pa-tag pa-tag--free">Your plan</span>}
-                </div>
-                <p className="hpl-amount">{freeAmount}</p>
-                <p className="hpl-note pa-freenote">You don’t need a card, and there’s no time limit.</p>
-                <FreeList live={EXPORT_THEMES_LIVE} />
-                <div className="hpl-freefoot">
-                  {/* The toolkit opens without a sign-up gate and lands on the workspace. */}
-                  <Link ref={freeGoRef} className="hpl-btn hpl-ghost ui-pill-out" to="/projects">Open the toolkit</Link>
-                  {!user && <p>You don’t need an account to start.</p>}
-                </div>
-              </div>
+              {!hasAction && freeCard}
 
               <div className="hpl-card hpl-pro pa-pro">
                 <span className="hpl-edge" aria-hidden="true" />
@@ -466,9 +483,9 @@ export default function Pricing() {
                     </div>
                     {isPro && <p className="pa-active">Pro is active on this account.</p>}
                     <p className="hpl-tagline">The full studio, white-labelled.</p>
-                    <p key={fxKey} className={`pa-price${fx}`} aria-live="polite">
-                      <span className={priceSize}>{live ? liveAmount : stateCopy.word}</span>
-                      {live && <span className="pa-per">{offer.months > 1 ? `a month, billed ${BILLED_EVERY[offer.id]}` : 'a month'}</span>}
+                    <p key={fxKey} className={`pa-price${fx}${hidePrice ? ' pa-price--hold' : ''}`} aria-live="polite">
+                      {!hidePrice && <span className={priceSize}>{live ? liveAmount : stateCopy.word}</span>}
+                      {live && !hidePrice && <span className="pa-per">{offer.months > 1 ? `a month, billed ${BILLED_EVERY[offer.id]}` : 'a month'}</span>}
                     </p>
                   </div>
                   <div key={`slot-${fxKey}`} className={`pa-slot${detailMin}${fx}`} id={outage ? 'pricing-noprice' : undefined}>
@@ -498,6 +515,8 @@ export default function Pricing() {
                   </svg>
                 </button>
               </div>
+
+              {hasAction && freeCard}
             </div>
           </div>
 
@@ -512,15 +531,18 @@ export default function Pricing() {
                   <th scope="col" className="pl-ink">
                     <div className="pl-headpro">
                       <span key={`head-${fxKey}`} className={`pl-headlabel${stuck && showPill ? ' pl-headlabel--price' : ''}${fx}`}>{stickyPro}</span>
-                      <Link
-                        className={`pl-pill${pillOn ? ' is-on' : ''}`}
-                        to={proTo}
-                        onClick={openPro}
-                        aria-hidden={pillOn ? undefined : 'true'}
-                        tabIndex={pillOn ? 0 : -1}
-                      >
-                        {label}
-                      </Link>
+                      {/* Only a live price may link to checkout; every other state, and a Pro account, has no pill in the markup. */}
+                      {showPill && (
+                        <Link
+                          className={`pl-pill${pillOn ? ' is-on' : ''}`}
+                          to={proTo}
+                          onClick={openPro}
+                          aria-hidden={pillOn ? undefined : 'true'}
+                          tabIndex={pillOn ? 0 : -1}
+                        >
+                          {label}
+                        </Link>
+                      )}
                     </div>
                   </th>
                 </tr>
@@ -664,7 +686,13 @@ export default function Pricing() {
             </>
           )}
           {barKind === 'action' && (
-            <button type="button" className="hm-close-ghost ui-pill-out pl-bar-ghost" onClick={proCta.props.onClick} tabIndex={barOn ? 0 : -1}>
+            <button
+              type="button"
+              className="hm-close-ghost ui-pill-out pl-bar-ghost"
+              onClick={proCta.props.onClick}
+              aria-busy={state === 'retrying' ? 'true' : undefined}
+              tabIndex={barOn ? 0 : -1}
+            >
               {stateCopy.button}
             </button>
           )}

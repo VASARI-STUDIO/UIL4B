@@ -18,6 +18,9 @@
   --pa-tag-free: #16171A;
   --pa-tag-pro: #1C1D21;
   --pa-ease: cubic-bezier(.23, 1, .32, 1);
+  /* The quietest ink alpha text may use. Light needs more: .66 reads 5.3:1 on the
+     darkest surface it sits on (the switch track), .56 reads 3.9:1. */
+  --pa-quiet: .56;
   --hpl-ink: var(--sp-ink);
   --hpl-page: var(--sp-page);
   font-family: var(--hm-font);
@@ -27,6 +30,7 @@
   --pa-seg: #E3E3DD;
   --pa-tag-free: #ECECE7;
   --pa-tag-pro: #E3E3DD;
+  --pa-quiet: .66;
 }
 .pricing > main { line-height: normal; }
 
@@ -69,6 +73,13 @@
   gap: 16px;
   align-items: stretch;
 }
+/* Pro comes first in the markup, so keyboard order starts at its switch and button.
+   Side by side, Free sits on the left by grid placement; under 1200 the one column
+   follows the markup (Pro, then Free), and with no Pro action the markup puts Free first. */
+@media (min-width: 1200px) {
+  .pricing .pa-pair > .hpl-free { grid-column: 1; grid-row: 1; }
+  .pricing .pa-pair > .hpl-pro { grid-column: 2; grid-row: 1; }
+}
 .pricing .pa-planrow { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .pricing .pa-tag {
   display: inline-flex;
@@ -85,6 +96,10 @@
 .pricing .pa-hpl .hpl-free > .hpl-amount { margin-top: 24px; font-variant-numeric: tabular-nums; }
 .pricing .pa-freenote { max-width: 34ch; line-height: 1.5; text-wrap: pretty; }
 .pricing .hpl-freefoot p { line-height: 1.5; }
+/* The card sheet's quiet text, raised on light (home-plans.css keeps .56 for the homepage). */
+.pricing .hpl-note,
+.pricing .hpl-freelist .hpl-minus,
+.pricing .hpl-freefoot p { color: rgba(var(--sp-ink-rgb), var(--pa-quiet)); }
 /* Free's ticks are quiet ink; the colour is Pro's. */
 .pricing .pa-hpl .hpl-freelist li:not(.hpl-minus) > svg { stroke: rgba(var(--sp-ink-rgb), .56); }
 
@@ -199,7 +214,7 @@
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: rgba(var(--sp-ink-rgb), .56);
+  color: rgba(var(--sp-ink-rgb), var(--pa-quiet));
   font-family: inherit;
   font-size: 15px;
   font-weight: 500;
@@ -244,9 +259,20 @@
 }
 .pricing .pl-t th,
 .pricing .pl-t td { text-align: left; vertical-align: top; font-weight: 400; box-sizing: border-box; }
+/* The head sticks under the marketing nav while it shows (--spnav-h plus its 1px
+   rule) and at the very top once the nav has slid away on a scroll down. It
+   follows the nav's own flag and timing. With reduced motion the nav never slides
+   away, so the head stays under it. */
+.pricing { --pa-head-top: calc(var(--spnav-h) + 1px); }
+.pricing:has(.spnav[data-nav-hidden="1"]):not(:has(.spnav :focus-visible)) { --pa-head-top: 0px; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .pricing.pricing:has(.spnav[data-nav-hidden="1"]) { --pa-head-top: calc(var(--spnav-h) + 1px); }
+}
+html[data-reduced-motion="true"] .pricing.pricing:has(.spnav[data-nav-hidden="1"]) { --pa-head-top: calc(var(--spnav-h) + 1px); }
 .pricing .pl-t thead th {
   position: sticky;
-  top: var(--nav-h, 0px);
+  top: var(--pa-head-top);
+  transition: top var(--dur-3) cubic-bezier(.32, .72, 0, 1);
   z-index: 2;
   height: 64px;
   padding: 0;
@@ -256,7 +282,7 @@
   font-size: 15px;
   font-weight: 500;
 }
-.pricing .pl-t thead th:first-child { font-size: 13px; color: rgba(var(--sp-ink-rgb), .56); }
+.pricing .pl-t thead th:first-child { font-size: 13px; color: rgba(var(--sp-ink-rgb), var(--pa-quiet)); }
 .pricing .pl-t thead th.pl-ink { color: var(--sp-ink); }
 .pricing .pl-t th.pl-gh {
   padding: 32px 0 12px;
@@ -372,6 +398,9 @@
 .pricing .pa-more-p { margin: 8px 0 0; font-size: 16px; line-height: 1.6; color: rgba(var(--sp-ink-rgb), .68); }
 .pricing .pa-help { display: inline-flex; align-items: center; min-height: 44px; padding-block: 0; }
 
+/* The closing lead breaks evenly, so no single word is left on the last line. */
+.pricing .hm-close p { text-wrap: balance; }
+
 /* ── States shared by every control ──────────────────────────────────────── */
 .pricing :is(a, button)[aria-disabled="true"] { opacity: .5; pointer-events: none; }
 .pricing :is(a, button):focus-visible { outline: 2px solid var(--sp-ink); outline-offset: 3px; }
@@ -412,6 +441,8 @@
   .pricing .pa-slot { margin-top: 8px; min-height: 42px; }
   .pricing .pa-slot--short { min-height: 21px; }
   .pricing .pa-price { margin-top: 20px; min-height: 0; column-gap: 10px; }
+  /* A Pro account with no price to print holds the row only side by side. */
+  .pricing .pa-price--hold { display: none; }
   .pricing .pa-per { font-size: 15px; line-height: 1.4; }
 
   /* The action row: the button the width of the panel (420 at most on a tablet), the note centred under it. */
@@ -473,7 +504,7 @@
     align-items: baseline;
   }
   .pricing .pl-val + .pl-val { margin-top: 4px; }
-  .pricing .pl-vl { font-size: 13px; line-height: 1.5; color: rgba(var(--sp-ink-rgb), .56); }
+  .pricing .pl-vl { font-size: 13px; line-height: 1.5; color: rgba(var(--sp-ink-rgb), var(--pa-quiet)); }
   .pricing .pl-vv { margin: 0; font-size: 15px; line-height: 1.5; }
   .pricing .pl-val--free .pl-vv { color: rgba(var(--sp-ink-rgb), .62); }
   .pricing .pl-val--pro .pl-vv { color: var(--sp-ink); font-weight: 500; }
@@ -620,11 +651,11 @@
 }
 
 /* ── Reduced motion: no press, no fade; the plus still loses its bar ─────── */
-:where(html[data-reduced-motion="true"]) .pricing :is(.pl-seg, .pl-pill, .pl-pm, .pl-pmv, .pl-bar, .pl-bar-go) { transition: none; }
+:where(html[data-reduced-motion="true"]) .pricing :is(.pl-seg, .pl-pill, .pl-pm, .pl-pmv, .pl-bar, .pl-bar-go, .pl-t thead th) { transition: none; }
 :where(html[data-reduced-motion="true"]) .pricing .pl-seg:active { transform: none; }
 :where(html[data-reduced-motion="true"]) .pricing .pl-fx { animation: none; }
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .pricing :is(.pl-seg, .pl-pill, .pl-pm, .pl-pmv, .pl-bar, .pl-bar-go) { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .pricing :is(.pl-seg, .pl-pill, .pl-pm, .pl-pmv, .pl-bar, .pl-bar-go, .pl-t thead th) { transition: none; }
   :where(html:not([data-reduced-motion="false"])) .pricing .pl-seg:active { transform: none; }
   :where(html:not([data-reduced-motion="false"])) .pricing .pl-fx { animation: none; }
 }
