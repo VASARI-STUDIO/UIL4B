@@ -1075,6 +1075,12 @@ const REGION_STUBS = {
   MAX_PROMPT_CHARS: 500, MIN_PROMPT_CHARS: 3,
   parseStarterJson: () => ({ ok: true }),
   sanitizeBrandStarter: () => ({ ok: true, starter: { name: 'x' } }),
+  // The attempt limits (api/_lib/aiLimits.js) run before and after the quota
+  // reservation. Null is "not refused". They are tested for real, with the
+  // real counters, in ai-attempt-limits.test.js; this block is about the region
+  // gate, so a request that passes the gate must also get past them here.
+  aiAccountRefusal: async () => null,
+  aiSharedRefusal: async () => null,
   // The reservation is a Firestore write in the real runMeteredTask, so the
   // stub makes one: a test can then say "a refused request wrote nothing".
   runMeteredTask: async ({ meters, run }) => {

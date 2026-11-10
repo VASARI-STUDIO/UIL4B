@@ -38,6 +38,7 @@ import { planForUser, modelFor } from '../../api/_lib/plans.js'
 import { usageDayKey, usageMonthKey } from '../../api/_lib/aiUsage.js'
 import { emailGateBody } from '../../api/_lib/emailGate.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from '../../api/_lib/mail.js'
+import { geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR } from '../../api/_lib/geoBlock.js'
 
 const aiSource = fs.readFileSync(path.join(process.cwd(), 'api/ai.js'), 'utf8')
 const MIN = AI_ABUSE_LIMITS.perUidMinute
@@ -345,6 +346,7 @@ function loadAi({ user = {}, db = fakeDb(), decoded = { uid: 'u1', email: 'a@exa
     altTextGenerationConfig: () => ({}), altTextOutcome: () => ({}), altTextCutoffReply: () => ({}),
     ALT_TEXT_CUTOFF_REFUND_CAP: { field: 'x', limit: 1 },
     aiAccountRefusal, aiSharedRefusal, imagePayloadProblem,
+    geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
   }
   const api = vm.runInNewContext(`(function(){\n${out}\n;return { handler, TASKS };\n})()`, sandbox, { filename: 'api/ai.js' })
   for (const [name, task] of Object.entries(api.TASKS)) {
