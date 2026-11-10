@@ -41,6 +41,23 @@ async function settled(page) {
   }, { message: 'the scroll comes to rest', timeout: 10_000, intervals: [200] }).toBe(true)
 }
 
+// End scrolls to the bottom the page has at that instant. On a slow runner the guide
+// is still reflowing after domcontentloaded (the font-loading guide grows by about
+// 2000px when its text swaps font), so a key pressed early lands at an old bottom,
+// the page then grows under it, and the marker rightly stays on an earlier section.
+// Wait for the fonts and for the page height to hold still before pressing it.
+async function layoutSettled(page) {
+  await page.evaluate(() => document.fonts.ready)
+  let last = -1
+  let held = 0
+  await expect.poll(async () => {
+    const h = await page.evaluate(() => document.documentElement.scrollHeight)
+    held = h === last ? held + 1 : 0
+    last = h
+    return held >= 5
+  }, { message: 'the page height holds still', timeout: 15_000, intervals: [200] }).toBe(true)
+}
+
 const litIds = (page) => page.evaluate(() => [...document.querySelectorAll('.lart-toc a[data-active]')]
   .map((a) => a.getAttribute('href').slice(1)))
 
@@ -52,6 +69,7 @@ test.describe('the contents marker', () => {
       await go(page, `/learn/${article.slug}`)
       const ids = article.sections.map((s) => s.id)
       expect(await litIds(page), 'fresh load').toEqual([ids[0]])
+      await layoutSettled(page)
       // On a loaded runner the smooth scroll can take several seconds to land.
       await page.keyboard.press('End')
       await expect.poll(() => litIds(page), { message: 'after End', timeout: 10_000 }).toEqual([ids.at(-1)])
