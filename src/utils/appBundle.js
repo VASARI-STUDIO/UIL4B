@@ -193,7 +193,7 @@ ${colourTable}
 
 ## About this export
 
-Made with UIL4B. Exported ${date}.
+Made with UI L4B. Exported ${date}.
 `
 }
 
