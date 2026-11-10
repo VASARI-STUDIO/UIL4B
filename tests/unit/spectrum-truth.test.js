@@ -25,7 +25,6 @@ import {
   LADDER,
   LIBRARY_COUNTS,
   PROOF,
-  PROOF_STATS,
   PRO_POINTS,
   TOOL_COUNT,
   numberWord,
@@ -38,7 +37,8 @@ import { HERO_HEADLINE } from '../../src/data/positioning.js'
 import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
-import { ICON_PACK_TIERS } from '../../src/data/iconPackTiers.js'
+import { BOOKMARK_COUNT } from '../../src/components/home/bookmarkFolders.js'
+import { PROOF_ROWS, STATS } from '../../src/components/home/proofStats.js'
 import { ICON_GROUP_SHELF } from '../../src/components/spectrum/iconGroupShelf.js'
 import { listIconGroups } from '../../src/data/iconGroups.js'
 // WHERE THE SHEET IS TODAY, FOUND RATHER THAN TYPED.
@@ -52,8 +52,14 @@ const SPECTRUM_CSS_PATH = ['src/styles/deferred/spectrum.css', 'src/styles/pages
 if (!SPECTRUM_CSS_PATH) throw new Error('spectrum.css is in neither src/styles/deferred/ nor src/styles/pages/')
 
 const PAGE = stripComments(read('src/pages/Spectrum.jsx'))
+// The page with each mounted homepage section (`<HomeX />`) replaced by its own
+// source, so copy a section renders itself is read as part of the landing.
+const MOUNTED = PAGE.replace(/<(Home[A-Z]\w*)[^>]*\/>/g, (tag, name) => {
+  const file = `src/components/home/${name}.jsx`
+  return fs.existsSync(file) ? stripComments(read(file)) : tag
+})
+const HERO = stripComments(read('src/components/home/HomeHero.jsx'))
 const FACTS = stripComments(read('src/components/spectrum/spectrumFacts.js'))
-const BENCH = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
 // CSS COMMENTS ARE STRIPPED BEFORE ANY OF THIS IS ASSERTED.
 // #332's rule, one language over: a check that passes because a COMMENT still
 // names the old value is not an assertion — and the inverse bit this file on the
@@ -63,18 +69,16 @@ const BENCH = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
 // not the code.
 const stripCss = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '')
 const CSS = stripCss(read(SPECTRUM_CSS_PATH))
-const ALL_JSX = PAGE + FACTS + BENCH
+const ALL_JSX = PAGE + HERO + FACTS
   + stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumRamp.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
   + stripComments(read('src/components/spectrum/SpectrumIcon.jsx'))
-  // The landing's new pieces: the four bench windows, the exports
-  // stack, the search wrapper, the hero copy module and the design's tables.
-  + stripComments(read('src/components/spectrum/BenchConverter.jsx'))
-  + stripComments(read('src/components/spectrum/SpectrumExports.jsx'))
+  // The landing's remaining pieces: the search wrapper, the hero copy module and the design's tables.
   + stripComments(read('src/components/spectrum/SpectrumSearch.jsx'))
   + stripComments(read('src/components/spectrum/OpenPill.jsx'))
-  + stripComments(read('src/components/spectrum/SpectrumProof.jsx'))
+  + stripComments(read('src/components/home/HomeProof.jsx'))
+  + stripComments(read('src/components/home/proofStats.js'))
   + stripComments(read('src/components/spectrum/spectrumHero.js'))
   + stripComments(read('src/components/spectrum/spectrumKit.js'))
 // The same text with the JS `export` keyword removed. The export sweep below
@@ -90,20 +94,17 @@ test('the stripper still works, so every source read below can be trusted', () =
 /* ── the headline is the design's, to the character ────────────────────────── */
 
 test('the hero renders the Spectrum headline from its module, not a typed one', () => {
-  // The front door uses the Spectrum design's lines ("Build and export UI and
-  // brand kits from one place."). They live in
-  // spectrumHero.js, which the page and the served shell both read; the page
-  // must read them and must not type them.
-  assert.equal(SPECTRUM_HERO.text, 'Build and export UI and brand kits from one place.')
-  assert.equal(SPECTRUM_HERO.mark, 'one place')
-  assert.ok(PAGE.includes('SPECTRUM_HERO.text') && PAGE.includes('SPECTRUM_HERO.mark'),
-    'Spectrum.jsx no longer renders the headline from spectrumHero.js; this check is reading nothing')
-  assert.ok(!PAGE.includes('brand kits from one place'),
-    'Spectrum.jsx types the headline out rather than reading it from spectrumHero.js')
-  // The 09-10 sentence is not on the landing any more; its share card still is
-  // (positioning.js), which is a separate decision.
-  assert.ok(!PAGE.includes(HERO_HEADLINE.lead) && !PAGE.includes('heroHeadlineText()'),
-    'Spectrum.jsx renders the retired 09-10 headline again')
+  // The headline lives in spectrumHero.js, which the hero component and the
+  // served shell both read; the hero must read it and must not type it.
+  assert.equal(SPECTRUM_HERO.text, 'Your UI and brand kit, from one app.')
+  assert.equal(SPECTRUM_HERO.mark, 'one app')
+  assert.ok(HERO.includes('SPECTRUM_HERO.lead') && HERO.includes('SPECTRUM_HERO.mark') && HERO.includes('SPECTRUM_HERO.tail'),
+    'HomeHero.jsx no longer renders the headline from spectrumHero.js; this check is reading nothing')
+  for (const [name, src] of Object.entries({ 'Spectrum.jsx': PAGE, 'HomeHero.jsx': HERO })) {
+    assert.ok(!src.includes(HERO_HEADLINE.lead) && !src.includes(HERO_HEADLINE.mark),
+      `${name} types the headline out rather than reading it from spectrumHero.js`)
+  }
+  assert.ok(PAGE.includes('<HomeHero'), 'Spectrum.jsx no longer mounts the hero component')
 })
 
 /* ── prices ────────────────────────────────────────────────────────────────── */
@@ -123,8 +124,8 @@ test('no price is typed anywhere on this page', () => {
   assert.ok(!/\$\d/.test(PAGE), 'Spectrum.jsx quotes a price again; pricing lives on /plans')
   assert.ok(!PAGE.includes('/checkout') && !PAGE.includes('login?signup=1'),
     'a landing CTA goes to checkout or the sign-up route instead of /plans')
-  const plansLinks = PAGE.match(/to="\/plans"/g) || []
-  assert.ok(plansLinks.length >= 2, 'the landing no longer links "View plans" and "See the plans" to /plans')
+  const plansLinks = (MOUNTED + HERO).match(/to="\/plans"/g) || []
+  assert.ok(plansLinks.length >= 2, 'the landing no longer links its hero and its plans section to /plans')
 })
 
 test('the page offers no cadence that cannot reach checkout', () => {
@@ -193,7 +194,7 @@ test('the page claims no feature that does not exist', () => {
 
 /* ── proof ─────────────────────────────────────────────────────────────────── */
 
-test('not one of the prototype\'s proof numbers survives, and the band\'s figures are counted', () => {
+test('not one of the prototype\'s proof numbers survives, and the bar\'s figures are accounted for', () => {
   // "138 kits exported since we opened the toolkit · 27 designers building with
   // it every week · 4 studios using it on client work · 9,176 palettes
   // generated". None of those is measured anywhere in this repo, and the
@@ -207,26 +208,24 @@ test('not one of the prototype\'s proof numbers survives, and the band\'s figure
       `the Spectrum page carries the prototype's social-proof copy ${phrase}. `
       + 'There is no measurement behind it.')
   }
-  // HIS BAND IS BACK: "you are forgetting
-  // about the don't just take it from us section". Rebuilt as drawn, with FOUR
-  // REAL FIGURES, each the length of the array that decides it — and none of
-  // them a claim about other people, which is what the prototype's were.
-  assert.equal(PROOF_STATS.length, 4, 'the proof band no longer carries four figures')
-  assert.deepEqual(PROOF_STATS.map((s) => s.value), [
-    createTools().filter((t) => !t.soon && !t.beta).length,
-    LIBRARY_PALETTES.length,
-    GALLERY_GRADIENTS.length,
-    Object.keys(ICON_PACK_TIERS).length,
-  ], 'a proof figure is no longer the count of the array it names')
-  for (const s of PROOF_STATS) {
-    assert.ok(!/\b(users?|designers?|studios?|customers?|teams?|people)\b/i.test(s.label),
-      `the proof figure "${s.label}" makes a claim about other people, which nothing measures`)
-  }
-  // MUTATION GUARD: the module interpolates rather than types the figures.
-  assert.ok(FACTS.includes('LIBRARY_TOTALS.palettes') && FACTS.includes('LIBRARY_TOTALS.gradients') && FACTS.includes('Object.keys(ICON_PACK_TIERS).length'),
-    'spectrumFacts.js no longer counts its proof figures; something typed them')
-  assert.ok(stripComments(read('src/components/spectrum/SpectrumProof.jsx')).includes('PROOF_STATS.map'),
-    'SpectrumProof.jsx no longer renders PROOF_STATS')
+  // THE BAR SHIPS THREE PLACEHOLDER COUNTS ON PURPOSE, AND THEY ARE CONFINED.
+  // They are the only unmeasured figures on the page and sit in the one STATS
+  // array, so real counts replace them in a single edit (change the first
+  // assertion with that edit). The fourth figure is a fact about the product,
+  // derived rather than typed.
+  assert.deepEqual(STATS.map((s) => s.n), [186, 540, 72],
+    'a proof count changed; the three that ship are the ones in STATS')
+  assert.equal(PROOF_ROWS.length, 4, 'the proof bar no longer carries four figures')
+  assert.equal(PROOF_ROWS[3].n, createTools().filter((t) => !t.soon && !t.beta).length,
+    'the tools figure is no longer the count of the live tools')
+  assert.equal(PROOF_ROWS[3].label, `tools in place of ${BOOKMARK_COUNT} bookmarks`,
+    'the bookmarks figure is no longer the total of the bookmark folders')
+  // MUTATION GUARD: the derived figures are read, not typed.
+  const ROWS_SRC = stripComments(read('src/components/home/proofStats.js'))
+  assert.ok(ROWS_SRC.includes('n: TOOL_COUNT') && ROWS_SRC.includes('${BOOKMARK_COUNT}'),
+    'proofStats.js no longer derives its tools figure; something typed it')
+  assert.ok(stripComments(read('src/components/home/HomeProof.jsx')).includes('PROOF_ROWS.map'),
+    'HomeProof.jsx no longer renders the proof rows')
 })
 
 /* ── counts ────────────────────────────────────────────────────────────────── */
@@ -250,13 +249,13 @@ test('the tool count is counted off the tree, not typed', () => {
   // stylesheet's comments.
   const withoutTable = FACTS.replace(/const NUMBER_WORDS = \[[\s\S]*?\n\]/, '')
   assert.ok(!withoutTable.includes("'thirteen'"), 'the NUMBER_WORDS excision did not work; this scan is unreliable')
-  for (const [file, src] of Object.entries({ 'src/pages/Spectrum.jsx': PAGE, 'src/components/spectrum/spectrumFacts.js': withoutTable })) {
+  for (const [file, src] of Object.entries({ 'src/pages/Spectrum.jsx and its sections': MOUNTED, 'src/components/spectrum/spectrumFacts.js': withoutTable })) {
     assert.ok(!/\bthirteen\b/i.test(src),
       `${file} types the tool count. It is derived: shipping the UI Component Builder must `
       + 'change these sentences on the next build without an edit here.')
   }
-  assert.ok(PAGE.includes('numberWord(TOOL_COUNT'),
-    'Spectrum.jsx no longer renders the count through numberWord(TOOL_COUNT)')
+  assert.ok(/TOOL_COUNT/.test(MOUNTED),
+    'the landing no longer renders the tool count from TOOL_COUNT')
   assert.ok(FACTS.includes('numberWord(TOOL_COUNT)'),
     'spectrumFacts.js no longer builds its count sentences through numberWord(TOOL_COUNT)')
   assert.equal(numberWord(13, { capital: true }), 'Thirteen')
@@ -271,10 +270,11 @@ test('the library counts are counted off the arrays', () => {
   }
 })
 
-test('the Icon sets tab shows the premade icon groups, counted, and says nothing it cannot', () => {
-  // The third Discover tab shows real icon groups: every group a signed-out
-  // visitor can open, each with four of its own glyphs; the gallery count is
-  // every group, Pro included.
+test('the icon-group shelf data is sound, and the page claims nothing about icon sets it cannot back', () => {
+  // The shelf shows real icon groups: every group a signed-out visitor can
+  // open, each with four of its own glyphs. The homepage has no Discover
+  // section to hold it; whichever section shows the shelf asserts its own
+  // markup and count.
   const groups = listIconGroups({ tier: 'anon' })
   const open = groups.filter((g) => !g.locked).map((g) => g.id)
   const shelf = Object.keys(ICON_GROUP_SHELF)
@@ -284,13 +284,11 @@ test('the Icon sets tab shows the premade icon groups, counted, and says nothing
     assert.equal(ICON_GROUP_SHELF[id].length, 4, `${id} does not carry four of its own glyphs`)
     for (const body of ICON_GROUP_SHELF[id]) assert.match(body, /stroke="currentColor"/, `${id} carries a glyph that is not an outline`)
   }
-  assert.ok(PAGE.includes('listIconGroups('), 'the Icon sets tab no longer reads the icon groups')
-  assert.ok(PAGE.includes('ICON_GROUPS.length'), 'the icon-group count is no longer counted')
-  assert.ok(PAGE.includes('g.route'), 'a group card no longer links to its group')
-  // The groups draw on other people's packs, so the Discover footer may not
+  // The groups draw on other people's packs, so nothing on the page may
   // say every set here is made by UI L4B.
-  assert.ok(!/Every set here is made by UI L4B/.test(PAGE),
-    'the Discover footer claims the icon packs are made by UI L4B')
+  assert.ok(!/Every set here is made by UI L4B/.test(ALL_JSX),
+    'the page claims the icon packs are made by UI L4B')
+  assert.ok(!PAGE.includes('id="discover"'), 'the homepage carries the Discover section again')
 })
 
 /* ── limits ────────────────────────────────────────────────────────────────── */
@@ -353,26 +351,16 @@ test('the stylesheet hardcodes no accent colour', () => {
 
   // Every hex in the sheet, minus the ones that are legitimately fixed.
   const ALLOWED = new Set([
-    // The three window dots in the panel title bar: a picture of an operating
-    // system window, not a product colour. The design ships these exact values.
-    '#ED6A5E', '#F4BF4F', '#61C554',
-    // Neutral, and only inside a shadow/drop-shadow on a generated fill.
-    '#fff',
     // The design's ground is the spec:
     // the design's dark ink and ink-hover, and its light page / card / ink /
     // ink-hover. All neutrals; the dark page and card are the app's own tokens.
     '#EFEEEA', '#D5D4CE', '#F5F5F2', '#FFFFFF', '#121418', '#2C313B',
-    // A mask, not a colour: the converter's tab row fades out at its edge.
-    '#000',
-    // The converter's dimension badge: light text on a fixed dark scrim over
-    // a photograph, the same in both themes because the photo is.
-    '#F4F6FA',
   ])
   const hexes = [...CSS.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map((m) => m[0])
   const unexpected = hexes.filter((h) => !ALLOWED.has(h) && !ALLOWED.has(h.toUpperCase()))
   assert.deepEqual(unexpected, [],
     `spectrum.css carries unexpected literal colours: ${unexpected.join(', ')}. `
-    + 'Everything but the window dots resolves from the token layer.')
+    + 'Everything else resolves from the token layer.')
 
   // POSITIVE CONTROL: the sheet really does use the derived family, so the
   // assertion above is not passing on an empty stylesheet.

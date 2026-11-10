@@ -1,0 +1,90 @@
+/* The proof bar. Padding is the only space at its top and bottom, set by the
+   compact section token. Written for the phone first: two by two. */
+.hp {
+  box-sizing: border-box;
+  padding: var(--section-y-compact) var(--gutter-x);
+  border-top: 1px solid rgba(var(--sp-ink-rgb), .08);
+  color: var(--sp-ink);
+  font-family: var(--hm-font);
+}
+.hp-h {
+  margin: 0;
+  max-width: 18ch;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+.hp-h:focus-visible { outline: 2px solid var(--sp-ink); outline-offset: 4px; }
+.hp-l {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.hp-l li {
+  color: rgba(var(--sp-ink-rgb), .64);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.hp-l strong {
+  display: block;
+  color: var(--sp-ink);
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -.045em;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 10px;
+}
+
+/* Phone: a rule under the first row and beside the right-hand column. The last
+   row carries no padding or rule below it, so the section padding is the only
+   space under the figures. */
+@media (max-width: 767px) {
+  .hp-l { margin-top: 32px; }
+  .hp-l li {
+    padding: 24px 0;
+    border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
+  }
+  .hp-l li:nth-child(even) {
+    padding-left: 16px;
+    border-left: 1px solid rgba(var(--sp-ink-rgb), .1);
+  }
+  .hp-l li:nth-child(n + 3) {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+}
+
+/* Tablet: the heading sits above and the four figures run the full width. */
+@media (min-width: 768px) {
+  .hp-in {
+    max-width: 1336px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+  .hp-h { max-width: 24ch; font-size: 22px; }
+  .hp-l { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hp-l li { padding: 0 20px; font-size: 15px; line-height: 1.5; }
+  .hp-l li:first-child { padding-left: 0; }
+  .hp-l li + li { border-left: 1px solid rgba(var(--sp-ink-rgb), .1); }
+  .hp-l strong { font-size: 48px; margin-bottom: 14px; }
+}
+
+/* Desktop: the heading sits in a column to the left of the four figures. */
+@media (min-width: 1200px) {
+  .hp-in {
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+  .hp-h { max-width: 16ch; margin-top: 6px; }
+  .hp-l li,
+  .hp-l li:first-child { padding: 0 28px; }
+  .hp-l strong { font-size: 56px; }
+}

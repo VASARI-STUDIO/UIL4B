@@ -1,14 +1,9 @@
 // Premium-home regression coverage: the public promise, interactive proof and
 // responsive information hierarchy must remain usable without animation.
 import { test, expect } from './base.js'
-import { go, goRaw, ready, watch } from './helpers.js'
-// The front door's headline is the design's Spectrum line. Its accent run renders as ONE revealed word, as the design
-// draws it, so the word count is the sentence's words less the run's extras.
+import { go, goRaw, homeSectionsLoaded, ready, watch } from './helpers.js'
 import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
-import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
-
-const HERO_UNITS = SPECTRUM_HERO.text.trim().split(/\s+/).length
-  - (SPECTRUM_HERO.mark.trim().split(/\s+/).length - 1)
+import { TOOL_COUNT } from '../../src/components/spectrum/spectrumFacts.js'
 
 const PERSONA = 'prospective UI-system builder'
 
@@ -55,54 +50,64 @@ test.describe('premium homepage', () => {
   /* ── The shell's headline and React's headline are the same pixels ─────────
    *
    * scripts/prerender.mjs writes the real hero headline into the served `/`
-   * shell so the homepage's largest paint happens with the stylesheet rather
-   * than ~1.8s later with the entry chunk (LCP 3662ms -> 1702ms mean on
-   * scripts/home-field-metrics.mjs's profile, 10 cold runs each).
+   * shell so the largest paint happens with the stylesheet rather than when the
+   * entry chunk lands. Two claims rest on the shell and the hydrated headline
+   * being indistinguishable:
    *
-   * That is only a win if the two headlines are indistinguishable, and it is
-   * indistinguishable in a demanding sense — two SEPARATE claims rest on it:
+   *   LAYOUT. A shell headline anywhere but where React will put it is a layout
+   *   shift. CLS on this page is 0.
    *
-   *   LAYOUT. A shell headline anywhere but where React will put it is a
-   *   layout shift dressed up as a performance win. CLS on this page is 0.
+   *   THE METRIC. Chrome records a text element's LCP size on its first painted
+   *   frame. The hydrated headline is a different DOM node, so if it paints a
+   *   LARGER area than the shell's did it becomes a new candidate and LCP walks
+   *   back to hydration with the page looking identical.
    *
-   *   THE METRIC ITSELF. Chrome records a text element's LCP size on its first
-   *   painted frame. The hydrated headline is a different DOM node, so if it
-   *   paints a LARGER area than the shell's did it becomes a new candidate and
-   *   LCP walks straight back to hydration — with the page looking identical
-   *   and every other test still green.
+   * So this reads the headline in both states of one page load (entry bundle
+   * held, then released) and requires them equal: the h1's box, the highlighted
+   * run's box, each line box the text lays out as, and the typographic
+   * properties that decide where a headline wraps. A re-wrap shows up in the
+   * line boxes before it shows up in any single number.
    *
-   * So this reads the hero in BOTH states of one page load, while the entry
-   * bundle is held and again after it is released, and requires them equal.
-   * Position, box, and the five typographic properties that change where a
-   * headline wraps are all compared, because a re-wrap is how this breaks
-   * without any single number looking wrong.
+   * It waits for the stylesheet first: read any earlier and both headlines
+   * report the UA defaults and compare equal in a state the browser never
+   * paints. Asserted below rather than assumed.
    *
-   * IT WAITS FOR THE STYLESHEET FIRST, and that is not a nicety: read any
-   * earlier and both headlines report the UA defaults (32px, bold, no tracking)
-   * and the comparison passes on a state the browser never paints, since the
-   * sheet is render-blocking. Asserted below rather than assumed.
-   *
-   * Two widths, the same pair 64-computed-style-snapshot uses. 360, 480, 768,
-   * 1024, 1280 and 1920 were also measured identical by hand when this landed;
-   * these two are the ones worth a place in the suite.
+   * Two widths: one phone, one desktop.
    */
-  /* THE UNIT IS A WORD, NOT A LINE. Home.jsx split its headline into two
-   * `.home-hero-line-in` spans; Spectrum's `<SpectrumWords>` splits it per word
-   * into `.sp-w` inside a `.sp-wm` mask, and scripts/home-shell.mjs mirrors that
-   * structure into the served shell. Measuring per word is strictly stronger
-   * than per line: a re-wrap moves individual words before it moves a line box,
-   * so this now catches a drift the two-line version could not see. */
-  const HERO_GEOMETRY = () => [...document.querySelectorAll('.sp-hero-h1 .sp-w')].map((el) => {
-    const b = el.getBoundingClientRect()
-    const h1 = getComputedStyle(el.closest('.sp-hero-h1'))
+  const HERO_GEOMETRY = () => {
     const round = (n) => Math.round(n * 100) / 100
-    return {
-      text: el.textContent.replace(/\s+/g, ' ').trim(),
-      x: round(b.x), y: round(b.y), width: round(b.width), height: round(b.height),
-      fontFamily: h1.fontFamily, fontSize: h1.fontSize, fontWeight: h1.fontWeight,
-      lineHeight: h1.lineHeight, letterSpacing: h1.letterSpacing,
+    const box = (b) => ({ x: round(b.x), y: round(b.y), width: round(b.width), height: round(b.height) })
+    // One box per laid-out line: the text's rects merged by row, so the result
+    // does not depend on how the text is split into nodes.
+    const lines = (node) => {
+      const range = document.createRange()
+      range.selectNodeContents(node)
+      const rows = new Map()
+      for (const r of range.getClientRects()) {
+        if (r.width === 0) continue
+        const key = `${Math.round(r.top)}:${Math.round(r.height)}`
+        const row = rows.get(key)
+        if (row) { row.left = Math.min(row.left, r.left); row.right = Math.max(row.right, r.right) }
+        else rows.set(key, { left: r.left, right: r.right, top: r.top, height: r.height })
+      }
+      return [...rows.values()].map((r) => ({
+        x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.right - r.left), height: Math.round(r.height),
+      }))
     }
-  })
+    const h1 = document.querySelector('.hh-h1')
+    const mark = h1.querySelector('.hh-h1-mark')
+    const cs = getComputedStyle(h1)
+    return {
+      text: h1.textContent.replace(/\s+/g, ' ').trim(),
+      markText: mark ? mark.textContent.trim() : null,
+      h1Box: box(h1.getBoundingClientRect()),
+      markBox: mark ? box(mark.getBoundingClientRect()) : null,
+      lines: lines(h1),
+      markLines: mark ? lines(mark) : null,
+      fontFamily: cs.fontFamily, fontSize: cs.fontSize, fontWeight: cs.fontWeight,
+      lineHeight: cs.lineHeight, letterSpacing: cs.letterSpacing,
+    }
+  }
 
   for (const width of [390, 1440]) {
     test(`the pre-painted headline occupies the pixels React gives it, at ${width}px`, async ({ page }) => {
@@ -117,23 +122,24 @@ test.describe('premium homepage', () => {
       let shell
       try {
         await goRaw(page, '/', { waitUntil: 'commit' })
-        await page.waitForSelector('#boot-shell .sp-hero-h1 .sp-w')
+        await page.waitForSelector('#boot-shell .hh-h1 .hh-h1-mark')
         // The render-blocking sheet, then the fonts. Nothing paints before the
         // first and a late second is the classic cause of a re-wrap.
         //
-        // ASKED OF THE LINK ELEMENT, NOT OF A FILENAME. The first version of
-        // this waited for a stylesheet whose href contained `/assets/index-`,
-        // which is what `vite build` emits — but `vite build --mode test`, which
-        // is what this suite runs against, adds four fixture HTML inputs and the
-        // entry sheet becomes `global-<hash>.css`. The wait could never resolve
-        // and both widths failed on the timeout with nothing wrong with the page.
+        // Asked of the link element, not of a filename: the test build names
+        // its entry sheet differently from the production build.
         await page.waitForFunction(() => {
           const links = [...document.querySelectorAll('link[rel="stylesheet"]')]
           return links.length > 0 && links.every((l) => {
             try { return !!l.sheet && l.sheet.cssRules.length > 0 } catch { return false }
           })
         })
-        await page.waitForFunction(() => document.fonts.status === 'loaded')
+        // Not `document.fonts.status === 'loaded'`: that reads 'loaded' while the
+        // headline face is still unrequested (a face is only fetched once text
+        // that uses it has laid out), so the shell was measured in 'Geist
+        // Fallback' and the comparison caught the face swap, not a drift.
+        // `check` with the headline's own text is false until Geist itself is in.
+        await page.waitForFunction(() => document.fonts.check('600 80px Geist', 'Your UI and brand kit, from one app.'))
         shell = await page.evaluate(HERO_GEOMETRY)
         // Positive control on the read itself. Before the stylesheet applies
         // this reports the UA's own h1 — 32px, bold, `letter-spacing: normal` —
@@ -141,14 +147,17 @@ test.describe('premium homepage', () => {
         // Asserted as "not the UA default" rather than against global.css's
         // actual value, so it stays a control instead of becoming a second place
         // the hero's tracking is written down.
-        // DERIVED FROM THE HEADLINE, never typed: one `.sp-w` per word. A shell
-        // that writes half the headline still paints something, so a bare
-        // "greater than zero" would pass on a truncated hero.
+        // The words the shell paints are the headline's words, with the
+        // highlighted run wrapped as the headline module names it. A shell that
+        // writes half the headline still paints something, so a bare "has
+        // text" would pass.
         expect(
-          shell.length,
-          'the served `/` shell headline is not the founder headline word for word — prerender wrote a different one, or none',
-        ).toBe(HERO_UNITS)
-        expect(shell[0].letterSpacing, 'the shell headline was read before the stylesheet applied').not.toBe('normal')
+          shell.text,
+          'the served `/` shell headline is not the page headline word for word: prerender wrote a different one, or none',
+        ).toBe(SPECTRUM_HERO.text.replace(/\s+/g, ' ').trim())
+        expect(shell.markText, 'the shell does not wrap the highlighted run').toBe(SPECTRUM_HERO.mark)
+        expect(shell.lines.length, 'the shell headline laid out no line boxes').toBeGreaterThan(0)
+        expect(shell.letterSpacing, 'the shell headline was read before the stylesheet applied').not.toBe('normal')
       } finally {
         release()
       }
@@ -160,9 +169,9 @@ test.describe('premium homepage', () => {
       expect(
         hydrated,
         `at ${width}px the headline React renders is not the headline the shell painted. `
-        + 'Every property here is produced by one set of rules in global.css, so a difference '
-        + 'means the shell markup and src/pages/Spectrum.jsx have drifted apart — which costs a '
-        + 'layout shift AND hands Chrome a second, later LCP candidate.',
+        + 'Every property here comes from one set of rules, so a difference means the shell '
+        + 'markup and the hero component have drifted apart, which costs a layout shift and '
+        + 'hands Chrome a second, later LCP candidate.',
       ).toEqual(shell)
     })
   }
@@ -172,75 +181,35 @@ test.describe('premium homepage', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // The headline says what the product MAKES rather than naming a category.
-    //
-    // It used to be pinned verbatim ("Every design tool, / one search box
-    // away."). That sentence is gone: the page read
-    // instantly as "an AI-generated website", and a headline that could sit on
-    // any design product was part of why. The full reasoning and the property
-    // pins live in 10-home-chaos-to-calm, which owns this contract; here the
-    // check is only that the hero still names the work.
-    // THE EXPECTED WORDS CHANGED WITH THE HEADLINE. The hero now
-    // carries a line ("Build and
-    // export UI and brand design kits, in one unified location."), which names
-    // the OUTPUT rather than the material — so the old
-    // /colour|color|type|token|system/ probe no longer matches and would have
-    // failed on a correct page. It is replaced, not deleted: the contract this
-    // line stands for is that the h1 names the work, and "design kits" is how
-    // the shipped headline names it. 10-home-chaos-to-calm still owns the
-    // property pins.
-    // The design's Spectrum line ("Build and export UI and brand kits from
-    // one place.") names the output as "UI
-    // and brand kits".
+    // The headline names the output ("UI and brand kit"), not a category.
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText(/UI and brand kits/i)
+    await expect(heading).toContainText(/UI and brand kit/i)
 
-    // THE KICKER ASSERTION IS GONE, AND ITS INVERSE TAKES ITS PLACE.
-    // `.home-hero-kicker` carried "UI system toolkit"; it was removed as an
-    // AI-slop tell and nothing replaces it. So the check flips: the element must
-    // be ABSENT, which is what stops a future edit quietly reinstating a
-    // category line above the headline. Paired with the stat-strip check below,
-    // which has the same shape and the same history.
+    // Absent on purpose: a category line above the headline, and a figure strip
+    // under it. 70-anti-slop-marketing owns the rendered absence of invented
+    // figures.
     await expect(page.locator('.home-hero-kicker'), 'the hero kicker tagline is back').toHaveCount(0)
     await expect(page.locator('.home-hero-stats'), 'the hero stat strip is back').toHaveCount(0)
-
-    // The figures moved beside the toolset grid and were then removed: a three-up
-    // figure strip is an AI tell on a header, and a figure strip under a section
-    // heading matches that pattern. So this check flips the same way the kicker
-    // check did —
-    // the strip must be ABSENT, wherever it is put. The mock's invented
-    // "40+ TOOLS" cannot come back through a component that no longer exists;
-    // 70-anti-slop-marketing.spec.js owns the rendered absence.
     await expect(page.locator('.htools-facts'), 'the figure strip is back').toHaveCount(0)
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
 
-    /* ── THE BENCH IS THE PROOF ──────────────────────────────────────────────
-     *
-     * The design's four tool windows — Palette builder, Icon library, Font
-     * Gallery, File converter — beside a four-row rail, replacing the five
-     * category panels. The count the lede states is still COUNTED: it must be
-     * the live, non-beta tool count, spelled out, never typed.
-     *
-     * Each window still ends at the real tool rather than at a picture of it:
-     * its primary CTA is a link to that tool's live route. */
-    const rail = page.locator('.sp-rail-row')
-    await expect(rail).toHaveCount(4)
-    await expect(rail).toHaveText([/Palette Builder/, /Icon Library/, /Font Gallery/, /File Converter/])
-
-    const lede = (await page.locator('.sp-bench-lede').innerText()).toLowerCase()
-    expect(lede, 'the bench lede no longer states the tool count the tree gives')
-      .toContain(`${numberWord(TOOL_COUNT)} tools`)
-
-    const bench = page.locator('#bench')
+    // The bookmarks section is the proof. It states the live tool count (counted,
+    // never typed), and the window's sidebar has one link per live tool, each to
+    // that tool's route.
+    const bench = page.locator('#bookmarks')
     await bench.scrollIntoViewIfNeeded()
-    await expect(page.locator('.sp-panel[data-panel]')).toHaveCount(4)
+    const lede = (await bench.locator('.bm-sub').innerText()).toLowerCase()
+    expect(lede, 'the bookmarks sub-line no longer states the tool count the tree gives')
+      .toContain(`${TOOL_COUNT} tools`)
+
+    await expect(bench.locator('a[data-tool]'), 'one sidebar link per live tool').toHaveCount(TOOL_COUNT)
     for (const [name, href] of [
-      ['Open Palette Builder', '/create/palette'],
-      ['Open Icon Library', '/create/icons'],
-      ['Open Font Gallery', '/create/font-gallery'],
-      ['Open File Converter', '/create/file-converter'],
+      ['Palette', '/create/palette'],
+      ['Icon Library', '/create/icons'],
+      ['Font Gallery', '/create/font-gallery'],
+      ['File Converter', '/create/file-converter'],
     ]) {
-      await expect(page.getByRole('link', { name }), `the "${name}" window CTA`).toHaveAttribute('href', href)
+      await expect(bench.getByRole('link', { name, exact: true }), `the "${name}" tool link`).toHaveAttribute('href', href)
     }
 
     const overflow = await page.evaluate(
@@ -256,55 +225,50 @@ test.describe('premium homepage', () => {
     await go(page, '/')
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    // The hero's own call to action: a real <Link> straight into the app —
-    // /projects, no sign-up gate — so it survives middle-click,
-    // "open in new tab" and a JS failure.
-    const cta = page.locator('.sp-hero .sp-pill').first()
+    // The hero's own call to action is a real link straight into the app, with
+    // no sign-up gate, so it survives middle-click, "open in new tab" and a JS
+    // failure.
+    const cta = page.locator('#top .hh-go')
     await expect(cta).toBeVisible()
     await expect(cta).toHaveAttribute('href', '/projects')
-    // The design's four tool windows, each with its rail row, on a phone as well.
-    await expect(page.locator('.sp-rail-row')).toHaveCount(4)
-    // The phone gets the calm stacked arrangement: the rail does not stick, so
-    // the bench reads as one column instead of pinning a third of a small
-    // screen. The design's own rule (below 1000px the bench column is static).
-    const stickyPosition = await page.locator('.sp-bench-col').evaluate(
-      (element) => getComputedStyle(element).position,
-    )
-    expect(stickyPosition).toBe('static')
-    // The command bar is the hero's primary control and must be usable here.
-    await expect(page.locator('.hcmd-input')).toBeVisible()
+    // The hero's second link goes to the plans page, not to a section.
+    await expect(page.locator('#top .hh-ghost')).toHaveAttribute('href', '/plans')
+    // Every live tool is a link in the bookmarks section on a phone as well.
+    await expect(page.locator('#bookmarks a.bmp-tool')).toHaveCount(TOOL_COUNT)
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
     expect(overflow).toBeLessThanOrEqual(1)
   })
 
-  /* ── Carried over from 10-home-chaos-to-calm, which was deleted with Home.jsx
-   *
-   * That file's 25 tests described the old homepage's tabbed workbench — a page
-   * that has been replaced. Most of what it asserted went with the page. These
-   * two did not: the command bar and the width sweep are guarantees the FRONT
-   * DOOR makes, whichever page is behind it, so they move here rather than die
-   * with the file. */
-
-  test('the ⌘K keycap names a shortcut that actually works', async ({ page }) => {
+  test('the search pill names a shortcut that actually works', async ({ page }) => {
     await useReducedMotion(page)
     watch(page, PERSONA)
     await go(page, '/')
 
     // A keycap drawn on a control that does not answer the key is a lie the
-    // user only discovers by pressing it. HomeCommandBar survived the redesign
-    // — Spectrum mounts the same component in its hero — so the contract it
-    // advertises has to survive with it.
-    const keycap = page.locator('.hcmd-kbd').first()
+    // user only discovers by pressing it.
+    const keycap = page.locator('.spnav-search kbd')
     await expect(keycap).toBeVisible()
     const label = (await keycap.innerText()).trim()
-    expect(label, 'the hero keycap no longer names a key').toMatch(/K$/i)
+    expect(label, 'the nav keycap no longer names a key').toMatch(/K$/i)
 
-    // Control+K on this platform; the component accepts either modifier, and
-    // the suite's Chromium reports a non-Apple platform.
+    // The hero's command bar owns the chord while it is on the page: the nav
+    // palette stands down, and the bar takes focus. Control+K on this platform;
+    // the page accepts either modifier.
+    const heroInput = page.locator('#top .hcmd-input')
+    const palette = page.getByRole('dialog', { name: /search/i })
+    await expect(heroInput, 'the hero no longer mounts its command bar').toBeVisible()
+    await expect(heroInput).not.toBeFocused()
     await page.keyboard.press('Control+k')
-    await expect(page.locator('.hcmd-input')).toBeFocused()
+    await expect(heroInput, 'the keycap chord did not focus the hero command bar').toBeFocused()
+    await expect(palette, 'the chord opened the nav palette as well as focusing the hero bar').toHaveCount(0)
+
+    // "/" is still the nav palette's key, from anywhere that is not a text field.
+    await heroInput.evaluate((el) => el.blur())
+    await page.keyboard.press('/')
+    await expect(palette, 'the slash key did not open the search').toBeVisible()
+    await expect(palette.getByRole('combobox')).toBeFocused()
   })
 
   test('holds from 320px to 4K with no sideways scroll', async ({ page }) => {
@@ -312,17 +276,18 @@ test.describe('premium homepage', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // The four widths the old file swept, kept because the front door is the
-    // one page every visitor lands on. 320 is the narrowest phone still in the
+    // The widths a visitor may arrive at. 320 is the narrowest phone in the
     // support matrix; 3840 is where a fluid clamp stops being tested by any
     // other spec in this suite.
+    //
+    // The sections below the first screen load after it, on idle or on the first
+    // scroll, so the page is nudged and every section waited for before it is
+    // measured; otherwise the sweep would measure the hero and empty stand-ins.
+    await homeSectionsLoaded(page)
+
     for (const width of [320, 768, 1440, 3840]) {
       await page.setViewportSize({ width, height: 900 })
-      // The reveal observer and the hero's word stagger both move boxes, so the
-      // measurement waits on the animation layer rather than on a stopwatch.
-      await page.evaluate(async () => {
-        await Promise.all((document.getAnimations?.() || []).map((a) => a.finished.catch(() => {})))
-      })
+      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       )

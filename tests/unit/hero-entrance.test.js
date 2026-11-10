@@ -1,31 +1,21 @@
-// The hero entrance has to be smooth, and "smooth" here has specific causes.
+// The hero's entrance, and the faces it is set in.
 //
-// The hero animation read as choppy rather than smooth. Measuring rather than
-// guessing found three separate faults:
+// The homepage hero (src/components/home/HomeHero.jsx, styled by
+// src/styles/pages/home-hero.css) has exactly one motion: the loop panel enters
+// once, rising 12px as it fades in over 300ms after an 80ms delay. The
+// headline, the sub-line and the buttons have no entrance (the headline is the
+// page's largest paint and the served shell paints it settled), and the glow is
+// still.
 //
-//   1. The entrance ran from a GSAP timeline, so it could not START until a
-//      ~40KB dynamic import resolved. Until then a JS class held the headline at
-//      opacity:0 — roughly 350ms of blank hero on a throttled CPU, then a pop.
-//   2. It tweened `filter: blur(12px)` across the largest text on the page,
-//      which re-rasterises the layer every frame.
-//   3. `.home-hero-line` had no `overflow: hidden`, so the `yPercent: 110`
-//      "clip up" never clipped and the two headline lines slid through each
-//      other.
-//
-// And a fourth, found in the trace: the font came from two sequential
-// third-party round trips and landed at ~587ms, dirtying all 851 boxes in a
-// 262ms full-document relayout in the middle of the entrance. A warm cache did
-// the same page in 27ms of total layout, which is what proved the cost was
-// arrival time.
-//
-// These tests read shipped source. They cannot prove it FEELS smooth — only a
-// browser can — so they guard the specific regressions instead.
+// These tests read shipped source. They cannot prove it FEELS smooth, only a
+// browser can, so they guard the specific regressions instead.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { stripCss, stripJs } from '../helpers/strip-comments.js'
+import { geistWeights } from '../helpers/font-axis.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -38,34 +28,69 @@ const stripHtml = (s) => s.replace(/<!--[\s\S]*?-->/g, '')
 const css = stripCss(read('src/styles/global.css'))
 const html = stripHtml(read('index.html'))
 
-// ── WHAT THIS FILE STOPPED GUARDING, AND WHERE IT WENT ─────────────────────
-//
-// Seven tests stood here: the entrance was CSS and not a GSAP timeline, no JS
-// class held the headline hidden, the start state came from `animation-fill-mode`,
-// the keyframes touched transform and opacity only, the blur burn-off was gone,
-// and the clip container left room for descenders on both edges.
-//
-// Their subject is deleted. src/pages/Home.jsx, src/hooks/useHomeMotion.js and
-// the `.home-hero-line` / `.home-hero-line-in` clip-up went on 2026-09-18, when
-// src/pages/Spectrum.jsx became the front door. There is no hero left
-// with a GSAP timeline to avoid, an arming class to refuse, or a clip to size.
-//
-// THE ARGUMENTS SURVIVED THE PAGE, and they are held where the new hero lives:
-//   · "the entrance must not wait on a chunk" — Spectrum's word reveal is
-//     `@keyframes sp-word-up` in src/styles/pages/spectrum.css, which is now the
-//     RENDER-BLOCKING sheet (App.jsx imports the page statically), so it cannot
-//     wait on anything;
-//   · "no JS class holds the hero hidden" — the stronger version is asserted by
-//     tests/unit/spectrum-structure.test.js: `.sp-w` declares no transform at
-//     rest, so the resting state IS the final state and the headline is readable
-//     with the animation never running, in the prerendered shell and with motion
-//     off;
-//   · "the first painted frame is the settled one" — scripts/home-shell.mjs
-//     pre-paints that settled headline into the served `/` shell and
-//     tests/unit/home-shell-hero.test.js asserts the shell carries no `.is-in`.
-//
-// What is left in this file is the half that was never about one page: the
-// fonts, their preloads, and the weight axis.
+
+// ── The hero's one entrance ─────────────────────────────────────────────────
+
+const heroCss = stripCss(read('src/styles/pages/home-hero.css'))
+
+/** The declarations of every rule whose selector list includes `selector`. */
+function declarationsFor(source, selector) {
+  const out = []
+  for (const m of source.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+    if (m[1].split(',').some((s) => s.trim() === selector)) out.push(m[2])
+  }
+  return out
+}
+
+test('the panel enters once: 12px rise and fade, 300ms, 80ms delay', () => {
+  const keyframes = /@keyframes hh-panel-in\s*\{([^]*?\})\s*\}/.exec(heroCss)
+  assert.ok(keyframes, 'the panel entrance keyframes are gone')
+  assert.match(keyframes[1], /opacity:\s*0/)
+  assert.match(keyframes[1], /translateY\(12px\)/)
+  const rule = declarationsFor(heroCss, '.hh-fig').find((d) => d.includes('animation:'))
+  assert.ok(rule, 'the figure no longer runs the entrance')
+  assert.match(rule, /animation:\s*hh-panel-in 300ms cubic-bezier\(\.23,\s*1,\s*\.32,\s*1\) 80ms both/)
+  assert.ok(!/infinite/.test(heroCss), 'something in the hero loops forever')
+})
+
+test('the entrance moves transform and opacity only, with no blur', () => {
+  const frames = [...heroCss.matchAll(/@keyframes [\w-]+\s*\{([^]*?\})\s*\}/g)].map((m) => m[1]).join('\n')
+  assert.ok(frames.length > 0)
+  const props = new Set([...frames.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]))
+  for (const p of props) assert.ok(['opacity', 'transform'].includes(p), `the hero animates ${p}`)
+  assert.ok(!/blur\(/.test(frames), 'the hero animates a blur')
+})
+
+test('the headline, sub-line, buttons and glow carry no entrance', () => {
+  for (const selector of ['.hh-copy', '.hh-h1', '.hh-h1-mark', '.hh-sub', '.hh-cta', '.hh-go', '.hh-ghost', '.hh-glow', '.hh-glow > span']) {
+    for (const block of declarationsFor(heroCss, selector)) {
+      assert.ok(!/animation/.test(block), `${selector} animates: ${block.trim()}`)
+    }
+  }
+  // The glow's blur is a static filter on a layer that never changes.
+  assert.ok(!/will-change/.test(heroCss), 'the hero promotes a layer it never animates')
+})
+
+test('reduced motion swaps the rise for a 200ms fade, under both opt-outs', () => {
+  assert.match(heroCss, /@keyframes hh-panel-fade\s*\{\s*from\s*\{\s*opacity:\s*0;?\s*\}\s*\}/)
+  for (const guard of [
+    /prefers-reduced-motion: reduce\)\s*\{\s*html:not\(\[data-reduced-motion="false"\]\) \.hh-fig\s*\{[^}]*hh-panel-fade 200ms/,
+    /html\[data-reduced-motion="true"\] \.hh-fig\s*\{[^}]*hh-panel-fade 200ms/,
+  ]) {
+    assert.match(heroCss, guard)
+  }
+  // The fade must outrank the stylesheet-wide reduced-motion rule, which would
+  // otherwise cut it to a single frame.
+  assert.match(heroCss, /animation-duration:\s*200ms !important/)
+})
+
+test('only the visible loop is mounted, one size per breakpoint', () => {
+  const src = read('src/components/home/HomeHero.jsx')
+  assert.match(src, /useLoopSize\(\)/)
+  assert.match(src, /useAutoplaySlot\('hero'/)
+  assert.match(src, /<HeroLoop\b/)
+  assert.equal([...src.matchAll(/<HeroLoop\b/g)].length, 1, 'more than one loop is mounted')
+})
 
 // ── Reduced motion, both directions ─────────────────────────────────────────
 
@@ -190,14 +215,16 @@ test('every authored weight sits inside the variable axis that renders it', () =
   const faces = css.match(/@font-face\{[^}]*\}/g) || []
   assert.ok(faces.length >= 1, 'expected self-hosted @font-face rules')
   for (const f of faces) {
-    // 'Switzer Fallback' is a metric-matched stand-in for the swap period: a
-    // local() Arial with size-adjust and ascent/descent overrides. It has no
-    // file to load, but it still declares a range and swap (the Learn
-    // font-loading table reads every rule and needs both).
-    if (/font-family:\s*'Switzer Fallback'/.test(f)) {
+    // 'Switzer Fallback' and 'Geist Fallback' are metric-matched stand-ins for
+    // the swap period: a local() Arial with size-adjust and ascent/descent/
+    // line-gap overrides. They have no file to load, but they still declare a
+    // range and swap (the Learn font-loading table reads every rule and needs both).
+    if (/font-family:\s*'(Switzer|Geist) Fallback'/.test(f)) {
       assert.match(f, /src:\s*local\(/, 'the fallback must be a local() face, never a download')
       assert.match(f, /size-adjust:/, 'the fallback is only worth having if it is size-adjusted')
       assert.match(f, /ascent-override:/)
+      assert.match(f, /descent-override:/)
+      assert.match(f, /line-gap-override:/)
     }
     const single = /font-family:\s*'Caveat'/.test(f)
     if (single) {
@@ -228,7 +255,11 @@ test('every authored weight sits inside the variable axis that renders it', () =
 
   const used = styleFiles.flatMap((file) => {
     const text = fs.readFileSync(file, 'utf8').replace(/@font-face\{[^}]*\}/g, '')
-    return [...text.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1]))
+    // A rule that names its own quoted non-Geist face (the homepage's Archivo
+    // samples) renders on that face's axis, as with the JSX check below.
+    return [...text.matchAll(/\{[^{}]*\}/g)]
+      .filter(([rule]) => !/font-family:\s*["'](?!Geist)[^"']+["']/i.test(rule))
+      .flatMap(([rule]) => [...rule.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1])))
   })
 
   // AND THE WEIGHTS NO STYLESHEET CONTAINS. A component can set a weight two
@@ -256,8 +287,10 @@ test('every authored weight sits inside the variable axis that renders it', () =
 
   const inlineUsed = codeFiles.flatMap((file) => {
     const text = stripJs(fs.readFileSync(file, 'utf8'))
-    return [...text.matchAll(/fontWeight\s*[:=]\s*["']?(\d{3})["']?/g)].map((m) => Number(m[1]))
+    return geistWeights(text)
   })
+  // A weight set beside an explicit non-Geist `fontFamily` (the loop's Archivo
+  // headline) renders on that face's own axis and is not counted here.
   const inlineOutOfAxis = inlineUsed.filter((w) => w < 300 || w > 700)
   assert.deepEqual(inlineOutOfAxis, [],
     'a JSX fontWeight sits outside Geist\'s 300..700 axis — inline styles and SVG presentation '
@@ -286,4 +319,21 @@ test('every authored weight sits inside the variable axis that renders it', () =
   const outOfAxis = used.filter((w) => w < 300 || w > 700)
   assert.deepStrictEqual(outOfAxis, [],
     'an out-of-axis weight appeared; it will be silently clamped — pick one inside Geist\'s 300..700')
+})
+
+test('the Geist axis check reads the face beside each weight', () => {
+  // Without these cases the exemption could widen until nothing is checked.
+  const archivo = `<h1 style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800 }} />`
+  assert.deepEqual(geistWeights(archivo), [], 'an explicit Archivo weight is not a Geist weight')
+  const svgArchivo = `<text fontFamily="Archivo" fontWeight="800">x</text>`
+  assert.deepEqual(geistWeights(svgArchivo), [])
+  const geist = `<h1 style={{ fontFamily: "'Geist', sans-serif", fontWeight: 800 }} />`
+  assert.deepEqual(geistWeights(geist), [800], 'Geist at 800 is outside its axis and must be reported')
+  const bare = `<p style={{ margin: 0, fontWeight: 800 }}>x</p>`
+  assert.deepEqual(geistWeights(bare), [800], 'no family means the default face, which is Geist')
+  const computed = `<p style={{ fontFamily: v.headFont, fontWeight: 800 }}>x</p>`
+  assert.deepEqual(geistWeights(computed), [800], 'a computed family does not exempt a weight')
+  // The exemption stays inside the one style object it was written in.
+  const neighbours = `<><a style={{ fontFamily: "'Archivo'", fontWeight: 800 }} /><b style={{ fontWeight: 800 }} /></>`
+  assert.deepEqual(geistWeights(neighbours), [800], 'a sibling without a family stays on Geist')
 })

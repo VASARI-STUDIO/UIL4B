@@ -23,6 +23,14 @@
 /* The one ink pill: Copy CSS. */
 .fpr-page .fpr-copy-primary { border: 0; background: var(--t0); color: var(--bg-0); }
 .fpr-page .fpr-copy-primary:disabled { opacity: .5; }
+/* The dock's Copy CSS: the label, then the copy glyph in a 32px disc of the page ground. */
+.fpr-page .fpr-copy-primary--disc.tl-btn { height: 44px; min-height: 44px; padding: 0 6px 0 18px; gap: 10px; }
+.fpr-page .fpr-copy-primary--disc .tl-btn-label { display: inline-flex; align-items: center; gap: 10px; }
+@media (max-width: 359px) {
+  .fpr-page .fpr-dock .fpr-copy-primary--disc.tl-btn { padding: 0 4px 0 12px; }
+  .fpr-page .fpr-dock .fpr-copy-primary--disc .tl-btn-label { gap: 6px; }
+}
+.fpr-page .fpr-copy-disc { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; background: var(--bg-0); color: var(--t0); }
 
 /* ── Panel: one surface, one hairline between its sections ───────────────── */
 :is(.fpr-page, .fpr-sheet) .fpr-fam, :is(.fpr-page, .fpr-sheet) .fpr-text, .fpr-page .fpr-delivery { border: 0; }

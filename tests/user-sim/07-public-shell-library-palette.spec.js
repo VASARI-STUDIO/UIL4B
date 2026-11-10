@@ -123,7 +123,8 @@ test.describe('public UI quality release', () => {
     for (const route of ['/', '/learn', '/privacy', '/learn/help', '/create/icons']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
-      await expect(page.getByRole('link', { name: 'Pricing', exact: true }).last()).toBeVisible()
+      // The homepage footer names the link Plans and the reading pages' footer Pricing; both go to /plans.
+      await expect(page.getByRole('contentinfo').getByRole('link', { name: /^(Pricing|Plans)$/ }).and(page.locator('a[href="/plans"]')).last()).toBeVisible()
     }
     for (const route of ['/discover', '/create/palette', '/create/aspect-ratio']) {
       await go(page, route)

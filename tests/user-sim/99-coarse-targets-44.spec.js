@@ -13,7 +13,7 @@
 // invisible ring around a control whose painted size is part of the design —
 // and rejects a box that only looks bigger.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, homeSectionsLoaded } from './helpers.js'
 
 async function hitArea(page, selector) {
   return page.evaluate((sel) => {
@@ -56,8 +56,16 @@ const CASES = [
     sels: ['.ui-login-x'],
   },
   { route: '/projects', signin: true, sels: ['.uh-card-name'] },
-  // The sales page's bench header and the sales footer's link rows.
-  { route: '/', sels: ['.sp-shuffle'] },
+  // The sales page's Try-the-tools palette (its tool tabs, lock buttons and Randomise) and the sales footer's link rows.
+  {
+    route: '/',
+    label: '/ (Try the tools)',
+    open: async (page) => {
+      await homeSectionsLoaded(page)
+      await page.locator('#try').scrollIntoViewIfNeeded()
+    },
+    sels: ['#ht-n-0', '#ht-s-0 .ht-lock', '#ht-s-0 :not(.ht-tb) > .ht-btn'],
+  },
   { route: '/plans', sels: ['.sp-footer .sp-footer-col a'] },
   // The footer's small print on a tool page: the icon sets' links, the author credit and the about note.
   { route: '/create/icons', sels: ['.sp-footer .sp-footer-notice-list a', '.sp-footer .sp-footer-legal a.sp-footer-attrib', '.sp-footer .app-footer-note'] },
@@ -79,9 +87,10 @@ for (const c of CASES) {
       await loc.scrollIntoViewIfNeeded()
       // Settle on the animation layer: a dialog measured mid-entrance is scaled.
       // Only time-based animations finish; a scroll-driven one (the rail edge
-      // fade) follows the scroll position and never resolves `finished`.
+      // fade) follows the scroll position and never resolves `finished`, and neither
+      // does one held paused (the homepage pauses its looping art off screen).
       await page.evaluate(() => Promise.all(document.getAnimations()
-        .filter((a) => a.timeline === document.timeline)
+        .filter((a) => a.timeline === document.timeline && a.playState === 'running')
         .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
         .map((a) => a.finished.catch(() => {}))))
       const m = await hitArea(page, sel)
@@ -93,33 +102,39 @@ for (const c of CASES) {
 }
 
 // Controls drawn closer together than 44px cannot each own a 44px square; what
-// they must not do is steal each other's taps. The seed swatches on / sit 3px
-// apart: a tap 10px either side of a swatch's centre still lands inside its own
-// painted box, so it must pick that swatch and not a neighbour's hit area.
-test('/: a tap beside a seed swatch picks that swatch, not its neighbour', async ({ browser }) => {
+// they must not do is steal each other's taps. The icon tiles in the homepage's
+// Try-the-tools grid sit 12px apart across and 4px down: a tap 10px either side of a tile's centre
+// still lands inside its own painted box, so it must pick that tile and not a
+// neighbour's, and a tap 21px above the centre must still be on it.
+test('/: a tap beside an icon tile picks that tile, not its neighbour', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
   const page = await ctx.newPage()
-  watch(page, 'someone on a phone choosing a seed colour')
+  watch(page, 'someone on a phone choosing an icon')
   await go(page, '/')
   expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
-  const seeds = page.locator('.sp-seeds .sp-seed')
-  await expect(seeds.first()).toBeVisible({ timeout: 15000 })
-  await seeds.first().scrollIntoViewIfNeeded()
+  await homeSectionsLoaded(page)
+  await page.locator('#try').scrollIntoViewIfNeeded()
+  await page.locator('#ht-n-1').click()
+  await expect(page.locator('#ht-s-1')).toBeVisible()
+  const tiles = page.locator('#ht-s-1 .ht-ic-t')
+  await expect(tiles.first()).toBeVisible({ timeout: 15000 })
+  await tiles.first().scrollIntoViewIfNeeded()
   const result = await page.evaluate(() => {
-    const chips = [...document.querySelectorAll('.sp-seeds .sp-seed')]
+    const navBottom = document.querySelector('.spnav').getBoundingClientRect().bottom
+    const chips = [...document.querySelectorAll('#ht-s-1 .ht-ic-t')]
     return chips.map((el, i) => {
       const r = el.getBoundingClientRect()
       const cx = r.left + r.width / 2
       const cy = r.top + r.height / 2
-      const at = (x, y) => chips.indexOf(document.elementFromPoint(x, y)?.closest('.sp-seed'))
-      return { i, left: at(cx - 10, cy), right: at(cx + 10, cy), up: at(cx, cy - 21) }
-    })
+      const at = (x, y) => chips.indexOf(document.elementFromPoint(x, y)?.closest('.ht-ic-t'))
+      return { i, centre: at(cx, cy) === i, onScreen: cy - 21 >= navBottom && cy + 21 <= innerHeight && r.width > 0, left: at(cx - 10, cy), right: at(cx + 10, cy), up: at(cx, cy - 21) }
+    }).filter((s) => s.onScreen && s.centre)
   })
-  expect(result.length, 'no seed swatches rendered — this test would pass vacuously').toBeGreaterThan(1)
+  expect(result.length, 'fewer than a row of icon tiles was on screen — this test would pass vacuously').toBeGreaterThan(5)
   for (const s of result) {
-    expect(s.left, `a tap 10px left of seed ${s.i}'s centre picks seed ${s.left}`).toBe(s.i)
-    expect(s.right, `a tap 10px right of seed ${s.i}'s centre picks seed ${s.right}`).toBe(s.i)
-    expect(s.up, `a tap 21px above seed ${s.i}'s centre misses it`).toBe(s.i)
+    expect(s.left, `a tap 10px left of tile ${s.i}'s centre picks tile ${s.left}`).toBe(s.i)
+    expect(s.right, `a tap 10px right of tile ${s.i}'s centre picks tile ${s.right}`).toBe(s.i)
+    expect(s.up, `a tap 21px above tile ${s.i}'s centre misses it`).toBe(s.i)
   }
   await ctx.close()
 })
@@ -143,47 +158,34 @@ test('/create/palette: the tools sheet dividers run straight', async ({ browser 
   await ctx.close()
 })
 
-// The bench's Shuffle is a 36px icon button (drawn size, by design) whose 44px
-// hit area is an invisible ::after ring. The generic probe above only samples
-// the four points on the centre's axes; this one measures the ring as a SQUARE:
-// all four corners of a 44px box land on the button, a point well outside it
-// does not (so a stray full-width overlay cannot pass), and a real touch tap at
-// a corner of the ring shuffles the seed.
-test('/: Shuffle is drawn 36px, its ring is 44px, and a tap on the ring corner shuffles', async ({ browser }) => {
+// The Try-the-tools palette's Randomise button is drawn 44px tall on a phone. A real
+// touch tap 4px in from the bottom edge, and points at both ends and the top edge, must land on it and
+// change the colours: the hit box is the whole button, not a smaller inner area.
+test('/: Randomise is drawn at least 44px tall and a tap near its bottom edge changes the colours', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
   const page = await ctx.newPage()
-  watch(page, 'someone on a phone tapping the shuffle button')
+  watch(page, 'someone on a phone tapping Randomise')
   await go(page, '/')
   expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
-  const shuffle = page.locator('.sp-panel .sp-shuffle').first()
-  await expect(shuffle).toBeVisible({ timeout: 15000 })
-  await shuffle.scrollIntoViewIfNeeded()
-
-  const m = await shuffle.evaluate((el) => {
+  await homeSectionsLoaded(page)
+  await page.locator('#try').scrollIntoViewIfNeeded()
+  const button = page.locator('#ht-s-0 :not(.ht-tb) > .ht-btn').first()
+  await expect(button).toBeVisible({ timeout: 15000 })
+  // Centre it, clear of the fixed bar and the window's edge, so every point can be hit-tested.
+  await button.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+  const box = await button.boundingBox()
+  expect(box.height, 'Randomise is drawn under 44px tall').toBeGreaterThanOrEqual(43.5)
+  const corner = await button.evaluate((el) => {
     const r = el.getBoundingClientRect()
-    const ring = getComputedStyle(el, '::after')
-    const cx = r.left + r.width / 2
-    const cy = r.top + r.height / 2
     const lands = (x, y) => { const hit = document.elementFromPoint(x, y); return !!hit && (hit === el || el.contains(hit)) }
-    return {
-      drawn: [Math.round(r.width), Math.round(r.height)],
-      ring: [parseFloat(ring.width), parseFloat(ring.height)],
-      ringPosition: ring.position,
-      corners: [[-21, -21], [21, -21], [-21, 21], [21, 21]].map(([dx, dy]) => lands(cx + dx, cy + dy)),
-      outside: [[-26, 0], [26, 0], [0, -26], [0, 26]].map(([dx, dy]) => lands(cx + dx, cy + dy)),
-      cx, cy,
-    }
+    return [[22, r.height / 2], [r.width - 22, r.height / 2], [r.width / 2, 4], [r.width / 2, r.height - 4]].map(([dx, dy]) => lands(r.left + dx, r.top + dy))
   })
-  expect(m.drawn, 'the Shuffle button is no longer drawn at 36 x 36').toEqual([36, 36])
-  expect(m.ringPosition, 'the hit ring is not an absolutely positioned ::after').toBe('absolute')
-  expect(m.ring, 'the ::after hit ring is not 44 x 44').toEqual([44, 44])
-  expect(m.corners, 'a corner of the 44px square misses the button').toEqual([true, true, true, true])
-  expect(m.outside, 'the hit area reaches well past 44px').toEqual([false, false, false, false])
+  expect(corner, 'an end or an edge of the Randomise button misses it').toEqual([true, true, true, true])
 
-  const name = page.locator('.sp-panel .sp-seed-name b').first()
-  const before = await name.innerText()
-  await page.touchscreen.tap(m.cx + 20, m.cy + 20)
-  await expect(name, 'a tap on the ring corner did not shuffle the seed').not.toHaveText(before)
+  const hexes = () => page.locator('#ht-s-0 .ht-pal-hex').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')).join('|'))
+  const before = await hexes()
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height - 4)
+  await expect.poll(hexes, { message: 'a tap near the bottom edge of Randomise did not change the colours' }).not.toBe(before)
   await ctx.close()
 })
 

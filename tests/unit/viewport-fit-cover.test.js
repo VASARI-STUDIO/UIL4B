@@ -139,7 +139,6 @@ const SIDE_GUTTERS = [
   ['.app-page', 'padding'],
   ['.tl-toolbar', 'padding'],
   ['.tl-toolbar', 'padding-inline'],
-  ['.sp-shell', 'padding-inline'],
   ['.sp-footer-inner', 'padding'],
   ['.pop.cpk-pop[data-pop-fixed="true"]', 'padding'],
   ['.bkit-card.is-lifted', 'inset-inline'],
@@ -157,6 +156,17 @@ for (const [sel, prop] of SIDE_GUTTERS) {
     }
   })
 }
+
+// The sales pages pad their sections with --sp-gutter, so the token carries the side insets.
+test('--sp-gutter reads the left and right insets', () => {
+  const css = fs.readFileSync('src/styles/pages/spectrum.css', 'utf8')
+  const defs = [...css.matchAll(/--sp-gutter\s*:\s*([^;}]+)/g)].map((m) => m[1])
+  assert.ok(defs.length > 0, 'spectrum.css no longer defines --sp-gutter')
+  for (const d of defs) {
+    assert.match(d, /safe-area-inset-left/, `--sp-gutter: ${d}`)
+    assert.match(d, /safe-area-inset-right/, `--sp-gutter: ${d}`)
+  }
+})
 
 test('--bkit-reserve is built on --bkit-h, so a bar placed on it keeps the inset', () => {
   const css = fs.readFileSync('src/styles/deferred/tool-shell.css', 'utf8')

@@ -8,7 +8,9 @@ import PhGlyph from './PhGlyph'
 import { PH_ARROW_UP_RIGHT } from './phosphorNav'
 import { crossRouteHashClick, salesHref } from './salesLinks'
 import { TOOL_VOTES_ON } from '../../data/toolVotes'
+import { BrandLockup } from '../BrandLogo'
 import '../../styles/pages/spectrum-chrome.css'
+import '../../styles/pages/home-footer.css'
 
 // The marketing footer — `UIL4B - Spectrum.dc.html` lines 1595-1633.
 //
@@ -51,9 +53,11 @@ const TOOLS = [
 
 // PROJECT — the design's three (1617-1619): sections of the sales page, by anchor.
 const PROJECT = [
-  ['#bench', 'The bench'],
-  ['#specimens', 'Specimens'],
-  ['#index', 'Index'],
+  ['#bookmarks', 'Bookmarks'],
+  ['#try', 'Try the tools'],
+  ['#exports', 'Exports'],
+  ['#examples', 'Examples'],
+  ['#plans', 'Plans'],
 ]
 
 // EXPLORE — the destinations AppFooter reaches that the drawn columns do not.
@@ -62,7 +66,7 @@ const EXPLORE = [
   ['/learn', 'Learn'],
   ['/community', 'Community'],
   ['/learn/principles', 'Design principles'],
-  ['/plans', 'Pricing'],
+  ['/plans', 'Plans'],
   ...(TOOL_VOTES_ON ? [['/roadmap', 'Roadmap']] : []),
   ['/sitemap', 'Sitemap'],
   ['/learn/help', 'Help centre'],
@@ -144,15 +148,30 @@ function uncoverFooter(event) {
 function Column({ heading, className = '', children }) {
   return (
     <div className={className ? `sp-footer-col ${className}` : 'sp-footer-col'}>
-      <h2 className="sp-footer-col-h">{heading}</h2>
+      <h3 className="sp-footer-col-h">{heading}</h3>
       <ul>{children}</ul>
+    </div>
+  )
+}
+
+// The homepage's rising light, drawn on the footer's own box. Hue is one oklch
+// gradient and intensity is a separate eased mask (home-footer.css), so there is
+// no blur and no filter. It stays under the footer's top edge.
+function Sky() {
+  return (
+    <div className="sp-footer-sky" aria-hidden="true">
+      <div className="sp-footer-horizon" />
+      <div className="sp-footer-core" />
     </div>
   )
 }
 
 // `notice` is a small-print row between the link columns and the baseline: the
 // licence credits a library page owes, kept inside the contentinfo landmark.
-export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null }) {
+// `home` is the homepage's closing look: the rising light, the wordmark, the
+// "Save time" line without a second call to action (the final call above has
+// it), and the Legal column kept at every width. Every other page leaves it off.
+export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false }) {
   const year = new Date().getFullYear()
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
@@ -165,30 +184,34 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   return (
     <footer
       ref={footerRef}
-      className="sp-footer"
+      className={home ? 'sp-footer sp-footer--home' : 'sp-footer'}
       data-curtain={curtain || undefined}
       onFocus={curtain ? uncoverFooter : undefined}
     >
+      {home && <Sky />}
       <div className="sp-footer-inner">
         <div className="sp-footer-grid">
           <div className="sp-footer-brand">
             <p className="sp-footer-say">Save time, and save your mind.</p>
-            <Link className="sp-footer-cta" to={toolkitTo}>
-              <span>Open the toolkit</span>
-              <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
-            </Link>
+            {!home && (
+              <Link className="sp-footer-cta" to={toolkitTo}>
+                <span>Open the toolkit</span>
+                <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
+              </Link>
+            )}
           </div>
 
           {/* `display:contents`, so the columns are cells of the one grid
               while still sitting inside a Footer navigation landmark. */}
           <nav className="sp-footer-links" aria-label="Footer">
+            <h2 className="sr-only">Site links</h2>
             <Column heading="Tools">
               <li><NavLink to="/tools">All tools</NavLink></li>
               {TOOLS.map(([groupId, label]) => (
                 <li key={groupId}><NavLink to={categoryDestination(groupId)}>{label}</NavLink></li>
               ))}
             </Column>
-            <Column heading="Project">
+            <Column heading={home ? 'This page' : 'Project'}>
               {PROJECT.map(([hash, label]) => {
                 const href = salesHref(hash, pathname)
                 return (
@@ -221,13 +244,15 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
         {notice}
 
         <div className="sp-footer-legal">
-          <span className="sp-footer-copy">© {year} UI L4B. Spectrum.</span>
+          <span className="sp-footer-copy">© {year} UI L4B.{home ? '' : ' Spectrum.'}</span>
           <FounderNote />
-          <nav className="sp-footer-legal-links" aria-label="Legal">
-            {LEGAL.map(([to, label]) => (
-              <NavLink key={to} to={to}>{label}</NavLink>
-            ))}
-          </nav>
+          {!home && (
+            <nav className="sp-footer-legal-links" aria-label="Legal">
+              {LEGAL.map(([to, label]) => (
+                <NavLink key={to} to={to}>{label}</NavLink>
+              ))}
+            </nav>
+          )}
           <span className="sp-footer-place">
             Built in Brisbane by{' '}
             <a
@@ -236,11 +261,24 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
               target="_blank"
               rel="noopener noreferrer"
             >
-              Dylan Coleman<span aria-hidden="true"> ↗</span>
+              Dylan Coleman
+              {home
+                ? (
+                  <span className="mi-go sp-footer-attrib-icon" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M7 17L17 7M8 7h9v9" /></svg>
+                  </span>
+                )
+                : <span aria-hidden="true"> ↗</span>}
               <span className="sr-only"> (opens in a new tab)</span>
             </a>
           </span>
         </div>
+
+        {home && (
+          <div className="sp-footer-mark">
+            <BrandLockup label="UI L4B" />
+          </div>
+        )}
       </div>
     </footer>
   )

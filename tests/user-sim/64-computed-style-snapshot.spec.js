@@ -114,6 +114,14 @@ const ONLY_ROUTES = (process.env.UPDATE_STYLE_ROUTES || '').split(',').map((r) =
 // Elements a redesigned route gained. They join the measure only while
 // regenerating; once they are in the fixture they are compared like any other.
 const ADDED_SELECTORS = {
+  // The front door's classes, re-derived from the rendered page after the redesign: the nav bar,
+  // the hero with its command bar and search, and the footer. Only what is mounted on arrival;
+  // the sections below load as the visitor nears them, so they are not frozen here.
+  '/': ['.sr-only', '.sp-footer-col', '.sp-footer-col-h', '.brand-logo', '.brand-logo--lockup', '.spnav', '.spnav-bar',
+    '.spnav-mark', '.spnav-word', '.brand-logo-wide', '.spnav-end', '.hh-hero', '.hh-glow', '.hh-copy', '.hh-h1', '.hh-h1-mark',
+    '.hh-sub', '.hh-cta', '.hh-go', '.hh-go-disc', '.hh-ghost', '.ui-pill-out', '.hh-search', '.sp-search', '.hcmd', '.hcmd-bar',
+    '.hcmd-prompt', '.hcmd-input', '.hcmd-kbd', '.sp-search-ghost', '.sp-search-rot', '.hh-fig', '.hh-slot', '.hh-loop',
+    '.lp-root', '.sp-footer', '.sp-footer--home', '.sp-footer-sky', '.sp-footer-horizon', '.sp-footer-core'],
   // The guide shell's contents (rail from 1080, disclosure below), the content
   // column and the end-of-guide rows. Each is painted at only one of the two
   // widths, so the other width simply carries fewer rows.

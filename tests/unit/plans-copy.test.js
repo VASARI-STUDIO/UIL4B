@@ -6,6 +6,7 @@ import path from 'node:path'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const PLANS = read('src/pages/Pricing.jsx')
+const SPECTRUM_FACTS = read('src/components/spectrum/spectrumFacts.js')
 
 const pagesDir = path.join(process.cwd(), 'src/pages')
 const pageSources = fs.readdirSync(pagesDir, { recursive: true })
@@ -15,6 +16,14 @@ const pageSources = fs.readdirSync(pagesDir, { recursive: true })
 test('Pricing.jsx never says the tools "cost us nothing"', () => {
   assert.ok(!/cost us nothing/i.test(PLANS), 'the FAQ or the Free note says "cost us nothing" again')
   assert.match(PLANS, /Free because most tools run in your browser./)
+})
+
+test('the homepage FAQ never says the tools "cost us nothing" and answers the generation question as /plans does', () => {
+  assert.ok(!/cost us nothing/i.test(SPECTRUM_FACTS), 'spectrumFacts.js says "cost us nothing"')
+  const answer = (src) => /q: 'What counts as one generation\?',\s*a: '([^']+)'/.exec(src)?.[1]
+  assert.ok(answer(SPECTRUM_FACTS), 'the homepage generation answer was not found')
+  assert.equal(answer(SPECTRUM_FACTS), answer(PLANS), 'the homepage and /plans answers to "What counts as one generation?" differ')
+  assert.match(answer(SPECTRUM_FACTS), /, because they run in your browser\.$/)
 })
 
 test('no page says "Pricing unavailable right now", and the three price surfaces never call the service "unreachable"', () => {

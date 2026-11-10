@@ -1,0 +1,425 @@
+/* Homepage plans section: the Free and Pro cards (HomePlans.jsx) and the two
+   lists inside them (PlanLists.jsx, which /plans reuses with this sheet).
+
+   Spacing: the section's own padding is the only space above and below it, from
+   --section-y, and the sides from --gutter-x (home-tokens.css). Both are
+   measured from the cards' outer edge.
+
+   Breakpoints: 1200px and up is two columns, Free beside Pro. Up to 1199px the
+   cards stack with Pro first, Pro's list runs in two columns and the figure
+   sits under the price. Up to 767px it is the phone layout: the Pro list is one
+   column in its own order and can collapse to its first rows.
+
+   Ink and ground read the page's --sp-* tokens. The card grounds are darker
+   steps of the page ground, set below. */
+
+.hpl {
+  --hpl-ink: var(--sp-ink);
+  --hpl-page: var(--sp-page);
+  --hpl-free-bg: #0B0C0E;
+  --hpl-pro-bg: #141518;
+  --hpl-ease: cubic-bezier(.23, 1, .32, 1);
+  box-sizing: border-box;
+  padding: var(--section-y) var(--gutter-x);
+  color: var(--hpl-ink);
+  font-family: var(--hm-font);
+}
+[data-theme="light"] .hpl {
+  --hpl-free-bg: #FFFFFF;
+  --hpl-pro-bg: #ECECE7;
+}
+
+.hpl-wrap { max-width: 1240px; margin: 0 auto; }
+
+/* ── Heading ─────────────────────────────────────────────────────────────── */
+.hpl-head { text-align: center; }
+.hpl-h2 {
+  margin: 0 auto;
+  max-width: 18ch;
+  font-weight: 600;
+  font-size: 60px;
+  line-height: 1.02;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+}
+.hpl-lead {
+  margin: 24px auto 0;
+  max-width: 54ch;
+  font-size: 18px;
+  line-height: 1.6;
+  color: rgba(var(--sp-ink-rgb), .68);
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.hpl-grid {
+  margin-top: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 16px;
+}
+.hpl-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
+}
+.hpl-free {
+  border: 1px solid rgba(var(--sp-ink-rgb), .12);
+  background: var(--hpl-free-bg);
+  padding: 36px 36px 40px;
+}
+.hpl-pro {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(var(--sp-ink-rgb), .22);
+  background: var(--hpl-pro-bg);
+  padding: 40px;
+}
+
+.hpl-plan { margin: 0; font-size: 18px; font-weight: 500; }
+.hpl-amount {
+  margin: 0;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+.hpl-free > .hpl-amount { margin-top: 20px; }
+.hpl-note {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: rgba(var(--sp-ink-rgb), .56);
+}
+
+/* The site's spectrum as one hairline across the top: the only colour on the card. */
+.hpl-edge {
+  position: absolute;
+  top: 0;
+  left: -30%;
+  right: -30%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, hsl(10 80% 62%) 16%, hsl(40 84% 62%) 32%, hsl(160 36% 52%) 50%, hsl(205 44% 60%) 66%, hsl(262 34% 64%) 82%, transparent);
+}
+
+/* ── Free list ───────────────────────────────────────────────────────────── */
+.hpl-freelist {
+  margin: 32px 0;
+  padding: 24px 0 0;
+  border-top: 1px solid rgba(var(--sp-ink-rgb), .1);
+  list-style: none;
+  display: grid;
+  gap: 14px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.hpl-freelist li { display: flex; gap: 12px; }
+.hpl-freelist svg { flex: none; margin-top: 1px; }
+.hpl-freelist .hpl-minus { color: rgba(var(--sp-ink-rgb), .56); }
+
+/* The bottom row: its minimum height and the card's bottom padding put its
+   centre on the Pro call to action's. */
+.hpl-freefoot {
+  margin-top: auto;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.hpl-freefoot p {
+  margin: 0;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  text-wrap: balance;
+  color: rgba(var(--sp-ink-rgb), .56);
+}
+
+/* ── Buttons and links ───────────────────────────────────────────────────── */
+.hpl-btn {
+  box-sizing: border-box;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 150ms var(--hpl-ease), background-color 150ms ease, border-color 150ms ease;
+}
+.hpl-btn:active { transform: scale(.97); }
+.hpl .hpl-ghost,
+.hpl .hpl-ghost:hover {
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1px solid rgba(var(--sp-ink-rgb), .2);
+  background: transparent;
+  color: var(--hpl-ink);
+  font-size: 15px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.hpl .hpl-go {
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 6px 0 26px;
+  background: var(--hpl-ink);
+  color: var(--hpl-page);
+  font-size: 16px;
+  font-weight: 500;
+}
+.hpl-go-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(var(--sp-page-rgb), .08);
+  transition: transform 320ms cubic-bezier(.25, 1, .5, 1), background-color 150ms ease;
+}
+.hpl-link {
+  color: var(--hpl-ink);
+  text-decoration: underline;
+  text-decoration-color: rgba(var(--sp-ink-rgb), .35);
+  text-underline-offset: 4px;
+  white-space: nowrap;
+  /* Inline: the padding adds no height to the line, and takes the link's box from 18px to 26px. */
+  padding-block: 4px;
+  transition: text-decoration-color 150ms ease;
+}
+@media (hover: hover) {
+  .hpl .hpl-go:hover { background: #F7F6F2; }
+  [data-theme="light"] .hpl .hpl-go:hover { background: var(--sp-ink-hover); }
+  .hpl-go:hover > .hpl-go-icon { background: rgba(var(--sp-page-rgb), .12); }
+  .hpl-link:hover { text-decoration-color: var(--hpl-ink); }
+}
+.hpl :is(a, button):focus-visible {
+  outline: 2px solid #EFEEEA;
+  outline-offset: 3px;
+}
+[data-theme="light"] .hpl :is(a, button):focus-visible { outline-color: var(--sp-ink); }
+
+/* ── Pro head ────────────────────────────────────────────────────────────── */
+.hpl-prohead { display: flex; justify-content: space-between; gap: 32px; }
+.hpl-protext { min-width: 0; }
+.hpl-planrow { display: flex; align-items: center; gap: 10px; }
+.hpl-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--hpl-ink);
+  color: var(--hpl-page);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.hpl-tagline {
+  margin: 20px 0 0;
+  max-width: 14ch;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+.hpl-price {
+  margin: 24px 0 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.hpl-billed { font-size: 15px; color: rgba(var(--sp-ink-rgb), .68); }
+.hpl-save {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--sp-ink-rgb), .24);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.hpl-terms {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(var(--sp-ink-rgb), .62);
+}
+
+/* The two Pro cover pages. The outline sits inside the edge so it shades the
+   picture instead of growing the box. */
+.hpl-fig {
+  margin: 0;
+  flex: none;
+  width: 352px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.hpl-fig-row { display: flex; align-items: flex-end; gap: 10px; }
+.hpl-fig-img {
+  display: block;
+  border-radius: 4px;
+  outline: 1px solid oklch(1 0 0 / .1);
+  outline-offset: -1px;
+  object-fit: cover;
+}
+.hpl-fig-img--10-inuse { width: 100px; height: 141px; }
+.hpl-fig-img--01-presentation { width: 242px; height: 136px; }
+
+/* ── Pro list ────────────────────────────────────────────────────────────── */
+.hpl-prolist {
+  margin: 32px 0 0;
+  padding: 28px 0 0;
+  border-top: 1px solid rgba(var(--sp-ink-rgb), .1);
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 32px;
+}
+.hpl-prolist li { display: flex; gap: 14px; }
+.hpl-prolist svg { flex: none; margin-top: 1px; stroke: var(--hpl-c); }
+.hpl-row-t { display: block; font-size: 15px; font-weight: 500; line-height: 1.35; }
+.hpl-row-s {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(var(--sp-ink-rgb), .62);
+}
+.hpl-row-s--phone { display: none; }
+
+/* The phone toggle is only for the phone. */
+.hpl-more { display: none; }
+
+.hpl-foot {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(var(--sp-ink-rgb), .1);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.hpl-small {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(var(--sp-ink-rgb), .62);
+}
+
+/* ── 768 to 1199: stacked, Pro first ─────────────────────────────────────── */
+@media (max-width: 1199px) {
+  .hpl-grid { grid-template-columns: minmax(0, 1fr); }
+  .hpl-pro { order: -1; }
+  .hpl-freelist {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 32px;
+    margin-bottom: 32px;
+  }
+  .hpl-prohead { flex-direction: column; gap: 28px; }
+  .hpl-fig { width: auto; align-items: flex-start; }
+  .hpl-foot { flex-wrap: wrap; }
+}
+
+/* ── 767 and under: the phone ────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .hpl-head { text-align: left; }
+  .hpl-h2 { margin: 0; max-width: none; font-size: 38px; }
+  .hpl-h2 > span { display: block; }
+  .hpl-lead { margin: 16px 0 0; max-width: none; font-size: 16px; line-height: 1.55; }
+
+  .hpl-grid { margin-top: 32px; gap: 12px; }
+  .hpl-card { border-radius: 24px; }
+  .hpl-free, .hpl-pro { padding: 24px; }
+  .hpl-plan { font-size: 17px; }
+
+  .hpl-tagline { margin-top: 16px; max-width: none; font-size: 30px; line-height: 1.05; }
+  .hpl-amount { font-size: 42px; }
+  .hpl-free > .hpl-amount { margin-top: 16px; }
+  .hpl-note { margin-top: 8px; }
+  .hpl-price { margin-top: 20px; }
+  .hpl-terms { margin-top: 8px; }
+  .hpl-prohead { gap: 24px; }
+
+  .hpl-fig-row { gap: 8px; }
+  .hpl-fig-img--10-inuse { flex: none; width: 74px; height: 105px; }
+  .hpl-fig-img--01-presentation {
+    min-width: 0;
+    width: 187px;
+    max-width: calc(100% - 82px);
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .hpl-prolist { margin-top: 24px; padding-top: 20px; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .hpl-prolist li { gap: 12px; order: var(--hpl-phone-order); }
+  .hpl-prolist svg { stroke: var(--hpl-c-phone); }
+  .hpl-prolist[data-collapsed="true"] li[data-extra] { display: none; }
+  .hpl-row-t { text-wrap: balance; }
+  .hpl-row-s { margin-top: 3px; }
+  .hpl-row-s--full { display: none; }
+  .hpl-row-s--phone { display: block; }
+
+  .hpl-more {
+    margin-top: 8px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 8px;
+    min-height: 44px;
+    border: 0;
+    background: none;
+    color: var(--hpl-ink);
+    font: 500 15px var(--hm-font);
+    cursor: pointer;
+  }
+  /* The turn is the state cue beside aria-expanded, so it also runs under
+     reduced motion. */
+  .hpl-more svg { transition: transform 200ms var(--hpl-ease); }
+  .hpl-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+  .hpl-foot { margin-top: 0; padding-top: 0; border-top: 0; flex-direction: column; align-items: stretch; gap: 0; }
+  .hpl .hpl-go {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 6px 0 22px;
+    white-space: nowrap;
+  }
+  .hpl-small { margin-top: 12px; font-size: 13px; text-align: center; }
+  .hpl-link {
+    margin-top: 4px;
+    padding-block: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .hpl-freelist { margin: 24px 0 0; padding-top: 20px; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .hpl-freefoot { margin-top: 24px; min-height: 0; }
+  .hpl .hpl-ghost, .hpl .hpl-ghost:hover { min-height: 52px; padding: 0 24px; }
+}
+
+@media (max-width: 374px) {
+  .hpl-h2 { font-size: 32px; }
+}
+
+/* Under 360px the call to action is centred and its arrow dropped, and the
+   Free button and its line stack, so neither is crushed. */
+@media (max-width: 359px) {
+  .hpl .hpl-go { justify-content: center; padding: 0 16px; font-size: 15px; }
+  .hpl-go-icon { display: none; }
+  .hpl-freefoot { flex-direction: column; align-items: stretch; gap: 10px; }
+  .hpl-freefoot p { text-align: center; }
+}
+
+/* ── Reduced motion: no press, no arrow turn, no hover fade ──────────────── */
+:where(html[data-reduced-motion="true"]) .hpl .hpl-btn { transition: none; }
+:where(html[data-reduced-motion="true"]) .hpl .hpl-btn:active { transform: none; }
+:where(html[data-reduced-motion="true"]) .hpl :is(.hpl-go-icon, .hpl-link) { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .hpl .hpl-btn { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .hpl .hpl-btn:active { transform: none; }
+  :where(html:not([data-reduced-motion="false"])) .hpl :is(.hpl-go-icon, .hpl-link) { transition: none; }
+}

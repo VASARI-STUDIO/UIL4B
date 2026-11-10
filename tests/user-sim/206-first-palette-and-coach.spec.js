@@ -82,6 +82,10 @@ async function arriveFromCard(page, opts = {}) {
   await expectRendered(page, '/projects')
   await page.getByTestId('first-palette-card').getByRole('link', { name: 'Make your first palette' }).click()
   await expect(page).toHaveURL(/\/create\/palette$/)
+  // The URL changes before the lazy route has mounted: until it has, `main` holds the loading
+  // status and the coach is not in the page. Wait for the route itself (the suite's readiness
+  // wait), not for the coach inside the default 5s.
+  await expectRendered(page, '/create/palette')
   await expect(coach(page)).toBeVisible()
   await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
   await entered(page)
@@ -101,6 +105,7 @@ async function arriveWithState(page, from = '/') {
     window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }))
   })
   await expect(page).toHaveURL(/\/create\/palette$/)
+  await expectRendered(page, '/create/palette')
 }
 
 const rect = (locator) => locator.evaluate((el) => {
@@ -231,6 +236,7 @@ test.describe('the first-palette coach', () => {
     await go(page, '/onboarding')
     await page.locator('[data-first-win="palette"]').click()
     await expect(page).toHaveURL(/\/create\/palette$/)
+    await expectRendered(page, '/create/palette')
     await expect(coach(page)).toBeVisible()
   })
 
@@ -394,6 +400,7 @@ test.describe('the first-palette coach', () => {
       await expectRendered(page, '/projects')
       await page.getByTestId('first-palette-card').getByRole('link', { name: 'Make your first palette' }).click()
       await expect(page).toHaveURL(/\/create\/palette$/)
+      await expectRendered(page, '/create/palette')
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
       await expect(coach(page)).toHaveCount(0)
       expect(await stored(page)).toBe('1')
