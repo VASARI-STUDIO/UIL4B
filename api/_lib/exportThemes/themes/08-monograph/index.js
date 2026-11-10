@@ -44,8 +44,10 @@ export const meta = {
 
 export function css(ctx) {
   const L = ctx.roles.light, B = ctx.brand, d = B.fonts.display, b = B.fonts.body, cw = B.logo.colourways;
-  const fb = ctx.mode && ctx.mode.fontBase;
-  const italics = fb ? `@font-face{font-family:"${cssStr(d.family)}";font-style:italic;font-weight:500;font-display:swap;src:url(${fb}BodoniModa-i500.woff2) format("woff2")}\n` : '';
+  // the italic loads from the font folder beside the document, or (mode.fontUrl) from wherever the caller says, e.g. a data URL
+  const fb = ctx.mode && ctx.mode.fontBase, fu = ctx.mode && ctx.mode.fontUrl;
+  const italicSrc = fu ? fu({ stem: 'BodoniModa-i500' }) : fb ? `${fb}BodoniModa-i500.woff2` : '';
+  const italics = italicSrc ? `@font-face{font-family:"${cssStr(d.family)}";font-style:italic;font-weight:500;font-display:swap;src:url(${italicSrc}) format("woff2")}\n` : '';
   return italics + `.pg{--ink:${L.text};--soft:${L.textSoft};--quiet:${L.quiet};--panel:${L.sunken};--ground:${L.surface};--hair:${L.divider};--accent:${L.action};--accent-ink:${L.actionLabel};--dark:${cw.reversed.ground};--dark-ink:${cw.reversed.name};--plate:${cw.colour.plate};--m:${B.layout.margin}px;
   --chrome:'${cssStr(meta.chrome.family)}',sans-serif;--display:'${cssStr(d.family)}',serif;--body:'${cssStr(b.family)}',sans-serif;--mono:'${cssStr(B.fonts.mono.family)}',monospace;
   background:var(--ground);color:var(--ink);font-family:var(--chrome);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}

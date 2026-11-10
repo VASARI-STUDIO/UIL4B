@@ -131,8 +131,12 @@ ${logoPhones(ctx)}
 
 function colour(ctx) {
   const B = ctx.brand;
-  const col = (id) => ctx.colours.find((c) => c.id === id);
-  const tone = (id) => ctx.tones.find((t) => t.id === id);
+  // a project brand names its colours by role and carries no measured tones: a colour the key asks for takes the one in that role, a tone stands in from the interface roles
+  const ROLE = { 'deep-end': 'text', white: 'card', float: 'highlight', chalk: 'ground', lane: 'action' }, ALT = { card: 'panel' };
+  const col = (id) => ctx.colours.find((c) => c.id === id) || ctx.colours.find((c) => c.role === ROLE[id]) || ctx.colours.find((c) => c.role === ALT[ROLE[id]]);
+  const R = ctx.roles.light;
+  const ROLE_TONE = { quiet: { name: 'Quiet', hex: R.quiet, role: 'quiet text', lands: 'Captions, folios and help text.' }, soft: { name: 'Soft text', hex: R.textSoft, role: 'reading text', lands: 'Paragraphs.' }, hover: { name: 'Hover', hex: R.actionHover, role: 'hover', lands: 'An action under the pointer.' } };
+  const tone = (id) => ctx.tones.find((t) => t.id === id) || { id, ...ROLE_TONE[id] };
   // one key entry: its number, the swatch (a copy button for a colour), name, use, share of a page, the three values with their copy buttons beneath
   const entry = (c, n, on) => {
     const rgb = rgbOf(ctx, c.hex), ok = c.oklch || ctx.C.oklchString(c.hex), hair = hairlineOn(ctx, c.hex) ? ' is-hair' : '';
@@ -152,7 +156,7 @@ function colour(ctx) {
   // contrast: the same screen, each pair flagged where it sits; pairs the screen does not show are hollow
   const onScreen = { 0: 'head', 1: 'card', 3: 'para', 4: 'label', 5: 'btn', 7: 'fl' };
   const flags = {};
-  for (const [i, slot] of Object.entries(onScreen)) flags[slot] = flag(+i + 1, ctx.pairs[+i].ratioText + ' : 1');
+  for (const [i, slot] of Object.entries(onScreen)) if (ctx.pairs[+i]) flags[slot] = flag(+i + 1, ctx.pairs[+i].ratioText + ' : 1');  // a brand with fewer pairs leaves the flags past its last pair off
   const phoneB = phoneDone(ctx, flags);
   const pair = (p, i) => {
     const on = i in onScreen;

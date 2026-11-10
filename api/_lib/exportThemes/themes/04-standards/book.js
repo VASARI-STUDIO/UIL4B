@@ -3,6 +3,7 @@
 // The engine wraps these in the shell (skip link, section nav, light and dark switch) and adds the behaviour.
 // Copy, the type tester and the downloads read data attributes the engine script understands: data-copy, data-tester-*.
 import { A } from './helpers.js';
+import { nearestWeight } from '../../engine/brand.js';
 
 const rgbOf = (ctx, hex) => { const [r, g, b] = ctx.C.hexToRgb(hex); return `rgb(${r}, ${g}, ${b})`; };
 // the readable text colour on a brand colour: the better of the light-mode text and surface colours, checked
@@ -169,7 +170,7 @@ function typography(ctx) {
     return `<p class="bk-gt ${cls}" style="font-size:min(${size}px,13vw);line-height:${line};${st}">${ln('base', base)}${size >= 30 ? ln('x', base - m.xh) + ln('cap', base - m.cap) : ''}${br('cap', m.cap)}${br('x', m.xh)}${A(text)}</p>`;
   };
   const fm = (face, weight) => {
-    const f = ctx.loadFont(`${F[face].file}-${weight}`), u = f.unitsPerEm, o = f.tables.os2, h = f.tables.hhea, typo = o && (o.fsSelection & 128), top = (c) => f.charToGlyph(c).getBoundingBox().y2 / u;
+    const f = ctx.loadFont(`${F[face].file}-${nearestWeight(F[face].weights, weight)}`), u = f.unitsPerEm, o = f.tables.os2, h = f.tables.hhea, typo = o && (o.fsSelection & 128), top = (c) => f.charToGlyph(c).getBoundingBox().y2 / u;
     return { asc: (typo ? o.sTypoAscender : h.ascender) / u, desc: -(typo ? o.sTypoDescender : h.descender) / u, cap: top('H'), xh: top('x') };
   };
   const spec = (m, size) => `<p class="bk-cap num">Cap height ${px1(m.cap * size)} px, ${xs(m.cap * size)}<br>x-height ${px1(m.xh * size)} px, ${xs(m.xh * size)}</p>`;

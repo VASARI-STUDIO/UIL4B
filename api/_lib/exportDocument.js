@@ -34,6 +34,9 @@
 //   Pro format, Pro or admin             200  { ok: true, format, template, html }
 //   always                               Cache-Control: private, no-store
 //
+// A body that names a `theme` or a `row` is a themed export and is handed to
+// api/_lib/exportThemeRoute.js after the session check, with the plan already read.
+//
 // Auth is checked before the format, so a stranger cannot use the 400 to learn
 // which formats exist, and the plan is checked before the template is looked at
 // and before the generator is even loaded. Pro is decided by planForUser from users/{uid}, never from the request.
@@ -152,7 +155,17 @@ function pickDesign(design) {
  *                credentialProblem?() -> a string while the service credential is broken,
  *                builders? -> a BUILDERS-shaped table (tests) }
  */
-export async function serveExportDocument(req, res, { verifyIdToken, readUser, credentialProblem, builders = BUILDERS }) {
+// The caller's plan, from their user document. Only a Firebase-verified email may claim an admin entitlement.
+async function planOf(decoded, readUser) {
+  const user = (await readUser(decoded.uid)) || {}
+  return planForUser({
+    subscription: user.subscription || null,
+    lifetimeEntitlement: user.lifetimeEntitlement || null,
+    email: decoded.email_verified ? decoded.email : null,
+  })
+}
+
+export async function serveExportDocument(req, res, { verifyIdToken, readUser, credentialProblem, builders = BUILDERS, consume, engine }) {
   res.setHeader('Cache-Control', 'private, no-store')
   res.setHeader('Vary', 'Authorization')
 
@@ -181,6 +194,21 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
   }
 
   const body = req.body && typeof req.body === 'object' ? req.body : {}
+
+  // A request that names a theme or a row is a themed export: api/_lib/exportThemeRoute.js owns its allowlist, gate and
+  // limits. The session is already verified. A theme, row or format outside its table is refused before the plan is read, so it
+  // costs no account read; the plan gate itself runs after the plan read, as below.
+  if (body.theme !== undefined || body.row !== undefined) {
+    const { serveThemeExport, themeRequestProblem } = await import('./exportThemeRoute.js')
+    const problem = themeRequestProblem(body)
+    if (problem) return res.status(400).json(problem)
+    let themePlan
+    try { themePlan = await planOf(decoded, readUser) } catch {
+      return res.status(500).json({ error: 'Could not check your plan' })
+    }
+    return serveThemeExport(req, res, { body, decoded, plan: themePlan, consume, engine })
+  }
+
   const id = body.format
   const format = typeof id === 'string' ? EXPORT_FORMATS.find((f) => f.id === id) : null
   // Only a built Pro document is served from here. Everything else (a free
@@ -192,13 +220,7 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
 
   let plan
   try {
-    const user = (await readUser(decoded.uid)) || {}
-    plan = planForUser({
-      subscription: user.subscription || null,
-      lifetimeEntitlement: user.lifetimeEntitlement || null,
-      // Only a Firebase-verified email may claim an admin entitlement.
-      email: decoded.email_verified ? decoded.email : null,
-    })
+    plan = await planOf(decoded, readUser)
   } catch {
     return res.status(500).json({ error: 'Could not check your plan' })
   }

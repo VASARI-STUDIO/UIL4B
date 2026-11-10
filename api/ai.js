@@ -1196,6 +1196,8 @@ export default async function handler(req, res) {
       verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
       credentialProblem,
       readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+      // The themed exports (body { theme, row, format }) count against a per-account window; see exportThemeRoute.js.
+      consume: async (opts) => (await import('./_lib/rateLimit.js')).consume(adminDb(), opts),
     })
   }
 
