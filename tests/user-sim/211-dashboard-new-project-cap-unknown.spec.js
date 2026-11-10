@@ -23,6 +23,11 @@
 //     test goes red.
 //   ProjectContext.jsx projectCountKnown: put `pulledUid === uid &&` back before `hasDeviceCopy` -> the
 //     cached-copy tests go red.
+//   Projects.jsx loadFailed: drop the `|| unchecked` term -> "a failed list stays failed" goes red.
+//   Projects.jsx newProject: back to `showNew && (` (no wrapper while a refusal is open) -> both
+//     "every project archived" tests go red.
+//   projectSync.js pullRemoteProjects/readRemoteProjects: stop calling `opts.step` -> "one cached project"
+//     goes red (the slow read is no longer bounded per step) and the unit step tests go red.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { ago, DAY } from './fixtures/dashboard-projects.js'
@@ -195,6 +200,74 @@ test.describe('New project while the allowance is not known', () => {
     await expect(page.locator('.toast.show')).toHaveCount(0)
     expect([...(await accountIds(page))].sort(), 'the account still holds exactly its three').toEqual(['r1', 'r2', 'r3'])
     expect(await deviceIds(page), 'nothing was written to the device').toEqual([])
+  })
+
+  test('a failed list stays failed after the sync error clears, and New project still opens the dialog', async ({ page }) => {
+    test.setTimeout(120_000)
+    watch(page, 'a Free designer with three projects on a new device, list refused, an auto-save then goes through')
+    // The sync notice is recorded as it appears, so "it cleared" is told apart from "it never showed".
+    await page.addInitScript(() => {
+      window.__sawSyncNotice = false
+      new MutationObserver(() => {
+        if (document.querySelector('[data-testid="sync-notice"]')) window.__sawSyncNotice = true
+      }).observe(document, { childList: true, subtree: true })
+    })
+    await fullAccountOnAFreshDevice(page, { deny: [{ path: 'sync/projects', ops: ['get'] }] })
+    await go(page, '/projects')
+    const failed = page.getByRole('alert').filter({ hasText: /Your projects didn.t load\./ })
+    await expect(failed).toBeVisible({ timeout: 10_000 })
+    await expect.poll(() => page.evaluate(() => window.__sawSyncNotice), { message: 'the read failure reached the sync notice' }).toBe(true)
+    // The push after the failed read is not denied, so it succeeds and the notice goes.
+    await expect(page.locator('[data-testid="sync-notice"]'), 'the auto-save did not clear the sync error').toHaveCount(0, { timeout: 15_000 })
+    await expect(failed, 'the failed sheet went with the sync error').toBeVisible()
+    await expect(page.getByText(/Projects \d+ of \d+/), 'the page read as an account with a project count').toHaveCount(0)
+    await expect(page.getByTestId('other-projects')).toHaveCount(0)
+    await newInTitleRow(page).click()
+    const refusal = page.getByTestId('project-create-refusal')
+    await expect(refusal).toBeVisible()
+    await expect(refusal).toContainText('couldn’t be checked')
+    await expect(rail(page)).toHaveCount(0)
+    expect([...(await accountIds(page))].sort(), 'nothing was created on the account').toEqual(['r1', 'r2', 'r3'])
+  })
+
+  test.describe('at the cap with every project archived', () => {
+    const ALL_ARCHIVED = ACCOUNT.map((project) => ({ ...project, archived: true }))
+
+    async function signedInAtCap(page) {
+      await signIn(page, { plan: 'free', projects: ALL_ARCHIVED })
+      await go(page, '/projects')
+      await expect(page.locator('.db-sheet'), 'with every project archived there is no lead kit').toBeVisible()
+      await expect(page.getByRole('link', { name: /^Open project/ }), 'no lead project is open').toHaveCount(0)
+      await expect(newInTitleRow(page), 'the title row has no New project of its own').toHaveCount(0)
+    }
+
+    test('the sheet’s pill at 1440 opens the cap dialog', async ({ page }) => {
+      watch(page, 'a Free designer at 1440 with three archived projects')
+      await signedInAtCap(page)
+      await page.locator('.db-sheet').getByRole('button', { name: /^New project/ }).click()
+      const refusal = page.getByTestId('project-create-refusal')
+      await expect(refusal).toBeVisible()
+      await expect(refusal).toContainText(`The Free plan saves up to ${CAP} projects.`)
+      await expect(refusal.getByRole('link', { name: 'See plans' })).toBeVisible()
+      await expect(rail(page)).toHaveCount(0)
+      await expect(page).toHaveURL(/\/projects$/)
+    })
+
+    test.describe('on a 390px phone', () => {
+      test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+      test('the docked bar opens the cap dialog', async ({ page }) => {
+        watch(page, 'a thumb on a 390px phone with three archived projects')
+        await signedInAtCap(page)
+        await page.locator('.db-bar').getByRole('button', { name: /^New project/ }).click()
+        const refusal = page.getByTestId('project-create-refusal')
+        await expect(refusal).toBeVisible()
+        await expect(refusal).toContainText(`The Free plan saves up to ${CAP} projects.`)
+        await expect(refusal.getByRole('link', { name: 'See plans' })).toBeVisible()
+        await expect(rail(page)).toHaveCount(0)
+        await expect(page).toHaveURL(/\/projects$/)
+      })
+    })
   })
 
   test.describe('a read that never answers', () => {
