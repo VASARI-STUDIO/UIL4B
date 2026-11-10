@@ -659,6 +659,40 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       await expect(page.getByRole('button', { name: `Open ${names[0]}`, exact: true })).toBeFocused()
     } finally { release() }
   })
+
+  test('Escape after picking a Similar icon puts focus on the grid cell of the icon now open', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+    await choosePack(page, 'lucide')
+
+    const opener = page.locator('.ig .ic[aria-label="Customise arrow-right"]')
+    await expect(opener.locator(':is(img, svg.ig-sym)')).toBeVisible({ timeout: 20_000 })
+    await opener.click()
+    const editor = page.locator('.ied')
+    await expect(editor).toBeVisible()
+    const tiles = page.locator('.ied-similar-row .ied-sim')
+    await expect(tiles).toHaveCount(6)
+
+    // A tile whose own cell is on the grid, so there is a cell to land on.
+    const names = await tiles.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label').replace(/^Open /, '')))
+    const cells = await page.evaluate((list) => list.map((n) => !!document.querySelector(`.ig .ic[data-ic][aria-label="Customise ${n}"]`)), names)
+    const at = cells.indexOf(true)
+    expect(at, `POSITIVE CONTROL: one of ${names.join(', ')} has a cell on the grid`).toBeGreaterThanOrEqual(0)
+    const picked = names[at]
+    expect(picked).not.toBe('arrow-right')
+
+    const tile = page.getByRole('button', { name: `Open ${picked}`, exact: true })
+    await tile.scrollIntoViewIfNeeded()
+    await tile.click()
+    await expect(page.locator('#ied-title'), 'the editor swapped to the picked icon').toHaveText(picked)
+
+    await page.keyboard.press('Escape')
+    await expect(editor).toHaveCount(0)
+    const target = page.locator(`.ig .ic[data-ic][aria-label="Customise ${picked}"]`)
+    await expect(target, 'focus is on the cell of the icon that was open').toBeFocused()
+    await expect(opener, 'and not on the cell the editor was opened from').not.toBeFocused()
+  })
 })
 
 test('slow catalogues keep the skeleton and loading message until icons arrive', async ({ page }) => {
