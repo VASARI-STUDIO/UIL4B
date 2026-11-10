@@ -88,7 +88,7 @@ test('the phone grid is two columns, 8px in, 144px tiles', () => {
   assert.match(phone, /height:\s*max\(144px,/)
   assert.match(phone, /--fg-y:\s*16px;/)
   assert.match(phone, /--fg-padl:\s*12px;/)
-  assert.match(css, /@media \(max-width: 767px\) \{ \.fg-page \.fg-grid--tiles \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); padding: 0 8px; \} \}/)
+  assert.match(css, /@media \(max-width: 767px\) \{ \.fg-page \.fg-grid--tiles \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); padding: 8px; \} \}/)
 })
 
 test('a hovered or focused tile takes the wake fill, with no change of colour on the name', () => {
