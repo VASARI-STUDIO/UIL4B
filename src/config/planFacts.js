@@ -158,7 +158,7 @@ export const PRO_VALUE = Object.freeze([
   { group: 'Exports', rows: [
     ...proOnlyFormats().map((f) => ({ label: f.name, free: null, pro: 'Included' })),
     {
-      label: '“Made with UIL4B” line on exports',
+      label: '“Made with UI L4B” line on exports',
       free: CREDIT_NONE_NAMES ? `Small line, except on ${CREDIT_NONE_NAMES}` : 'Small line',
       pro: 'Removed',
     },
@@ -178,7 +178,7 @@ export const PRO_POINTS = Object.freeze([
   'Every palette, gradient, prompt and brand palette',
   `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
-  `${proDocumentsLine()}, with no UIL4B line on anything`,
+  `${proDocumentsLine()}, with no UI L4B line on anything`,
 ])
 
 // ── The long-form lists ──────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ export const PRO_POINTS = Object.freeze([
 // surfaces print; both are written from the constants above and below.
 
 /** The Free card's minus line, in full. FREE_EXCLUSION is its short form. */
-export const FREE_EXCLUSION_FULL = 'A small “Made with UIL4B” line on exported files'
+export const FREE_EXCLUSION_FULL = 'A small “Made with UI L4B” line on exported files'
 
 const FREE_SYSTEM_LABELS = COLOUR_SYSTEMS.filter((s) => s.free).map((s) => s.label.toLowerCase())
 const PRO_SYSTEM_ADDS = COLOUR_SYSTEMS.filter((s) => !s.free).map((s) => s.label.toLowerCase())
@@ -226,7 +226,7 @@ const GUIDELINES_GROUP = EXPORT_GROUPS.find((g) => g.id === 'guidelines')
 const proRow = (id, icon, title, sub, phoneSub = sub) => Object.freeze({ id, icon, title, sub, phoneSub })
 
 const proRowsById = (live) => Object.freeze(Object.fromEntries([
-  proRow('white-label', 'shield-check', 'White-label exports', 'No “Made with UIL4B” line on any file you hand over.'),
+  proRow('white-label', 'shield-check', 'White-label exports', 'No “Made with UI L4B” line on any file you hand over.'),
   live
     ? proRow('export-themes', 'layers', `All ${THEME_COUNT} export themes`, THEMES_ROW_SUB, THEMES_ROW_SUB_PHONE)
     : proRow('export-themes', 'layers', BOOK_GROUP.name, BOOK_GROUP.desc),
