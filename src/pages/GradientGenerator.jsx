@@ -35,6 +35,9 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
+import GradientFx from '../components/tool/GradientFx'
+import PreviewSwitch from '../components/tool/PreviewSwitch'
+import { PREVIEW_STYLES, isPreviewStyle } from '../utils/gradientPreviewStyles'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
@@ -656,7 +659,10 @@ const PREVIEW_CONTEXTS = [
   { id: 'hero', label: 'Hero', as: ', shown as a hero' },
   { id: 'card', label: 'Card', as: ', shown as a card' },
   { id: 'button', label: 'Button', as: ', shown as a button' },
+  ...PREVIEW_STYLES,
 ]
+// The switch's choices: the four contexts, then the styles as a second group.
+const PREVIEW_OPTIONS = PREVIEW_CONTEXTS.map((c) => ({ id: c.id, label: c.label, lead: c.id === PREVIEW_STYLES[0].id }))
 
 // Where text sits on the area it is drawn over, as fractions of that area, read from the
 // laid-out page so the ink follows the real layout at any width. `measure(root)` returns
@@ -941,7 +947,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const css = gradientCssIn(type, angle, stops, space)
   // What the canvas paints: the chosen space where the browser can, else sRGB.
   const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops)
-  // Where the gradient is previewed (Fill, Hero, Card, Button), kept for the session.
+  // Where the gradient is previewed (a context or a style), kept for the session.
   const [previewAs, setPreviewAs] = useState(() => {
     try { const v = sessionStorage.getItem(PREVIEW_KEY); return PREVIEW_CONTEXTS.some((c) => c.id === v) ? v : 'fill' } catch { return 'fill' }
   })
@@ -1965,11 +1971,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="grd-stage" data-ctx={previewAs}>
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${PREVIEW_CONTEXTS.find((c) => c.id === previewAs)?.as || ''}`} />
             <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
-            <div className="grd-ctx" role="group" aria-label="Preview as">
-              {PREVIEW_CONTEXTS.map((c) => (
-                <button key={c.id} type="button" className={`grd-ctx-opt${previewAs === c.id ? ' is-on' : ''}`} aria-pressed={previewAs === c.id} onClick={() => choosePreview(c.id)}>{c.label}</button>
-              ))}
-            </div>
+            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={paintCss === css && space === 'oklch'} />}
+            <PreviewSwitch options={PREVIEW_OPTIONS} value={previewAs} onChange={choosePreview} label="Preview as" moreLabel="More previews" />
           </div>
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
