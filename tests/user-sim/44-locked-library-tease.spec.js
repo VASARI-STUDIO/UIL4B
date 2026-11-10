@@ -101,7 +101,7 @@ test.describe('a locked library row hands nothing over — signed out', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor browsing for a palette')
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
   })
 
   test('the fixture discriminates and the page rendered — controls first', async ({ page }) => {
@@ -117,7 +117,7 @@ test.describe('a locked library row hands nothing over — signed out', () => {
     // The signed-out cap, checked on the page rather than in a unit test. The count
     // line is the honesty check: a page showing three may not claim the size
     // of the whole library, in the masthead or anywhere in it.
-    await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await expect(page.locator('.drh-head p')).toHaveText(`${LIBRARY_PALETTES.length} palettes · ${GALLERY_TIER_LIMITS.anonymous} shown`)
     await expect(page.locator('.dgh-hero')).not.toContainText(String(LIBRARY_PALETTES.length))
     await expect(page.locator('.dgh-hero')).not.toContainText(/\d+\s+palettes/i)
@@ -203,11 +203,11 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
     watch(page, 'a signed-in free visitor browsing for a palette')
     await signIn(page, { plan: 'free' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card').nth(GALLERY_TIER_LIMITS.free - 1)).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').nth(GALLERY_TIER_LIMITS.free - 1)).toBeVisible()
   })
 
   test('the free rung shows ten palettes and says so', async ({ page }) => {
-    await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.free)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.free)
     await expect(page.locator('.drh-head p')).toHaveText(`${LIBRARY_PALETTES.length} palettes · ${GALLERY_TIER_LIMITS.free} shown`)
     // The masthead is held to the same honesty: ten shown, so no library total.
     await expect(page.locator('.dgh-hero')).not.toContainText(String(LIBRARY_PALETTES.length))
@@ -274,7 +274,7 @@ test.describe('the masthead count — signed in, Pro', () => {
     watch(page, 'a Pro member browsing for a palette')
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
     // Pro sees every palette, so the masthead may state the whole library.
     await expect(page.locator('.dgh-hero')).toContainText(`${LIBRARY_PALETTES.length} palettes`)
     // And nothing is locked for them: no placeholders, no wall.
@@ -341,7 +341,7 @@ test.describe('the locked rows in the dark theme', () => {
     // Signed in free, the rung whose gate offers Pro.
     await signIn(page, { plan: 'free' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark')
     expect(await page.locator('.geg-fade .geg-ph').count(), 'the faded rows are missing').toBeGreaterThan(3)
     // The placeholder must actually be painted, not left transparent — a row

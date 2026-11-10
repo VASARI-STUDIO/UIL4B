@@ -42,20 +42,20 @@ const GALLERIES = [
     key: 'palettes', route: '/discover/palettes', kind: 'anon', login: true,
     heading: `Log in to access ${GALLERY_TIER_LIMITS.free} palettes`,
     body: `You're seeing ${GALLERY_TIER_LIMITS.anonymous} of the ${LIBRARY_PALETTES.length} palettes. A free account opens ${GALLERY_TIER_LIMITS.free}; Pro opens all ${LIBRARY_PALETTES.length}.`,
-    ready: (page) => expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous),
+    ready: (page) => expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous),
   },
   {
     key: 'gradients', route: '/discover/gradients', kind: 'anon', login: true,
     heading: `Log in to access ${GALLERY_TIER_LIMITS.free} gradients`,
     body: `You're seeing ${GALLERY_TIER_LIMITS.anonymous} of the ${GALLERY_GRADIENTS.length} gradients. A free account opens ${GALLERY_TIER_LIMITS.free}; Pro opens all ${GALLERY_GRADIENTS.length}.`,
-    ready: (page) => expect(page.locator('.grg-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous),
+    ready: (page) => expect(page.locator('.grg-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous),
   },
   {
     // The exception: logging in opens no more groups, so Pro is the only offer.
     key: 'icon groups', route: '/create/icons/groups', kind: 'pro', login: false,
     heading: `Pro opens ${PRO_GROUPS.length} more icon groups`,
     body: `You're seeing ${FREE_GROUPS.length} of the ${PREMADE_ICON_GROUPS.length} icon groups. Pro opens the remaining ${PRO_GROUPS.length}.`,
-    ready: (page) => expect(page.locator('.igp-cards a.igp-card')).toHaveCount(FREE_GROUPS.length, { timeout: 15000 }),
+    ready: (page) => expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(FREE_GROUPS.length, { timeout: 15000 }),
   },
 ]
 
@@ -197,5 +197,50 @@ for (const g of GALLERIES) {
         expect(b.x + b.width, `${sel} runs off the right edge`).toBeLessThanOrEqual(m.cw + 0.5)
       }
     })
+  })
+}
+
+// ── The faded cards are the gallery's own, on its grid ──────────────────────
+// To see these fail: render the fade in a grid of its own with another column
+// template (the 390px gradient fade goes back to one column), or put a Pro
+// palette into the stand-ins.
+const FADED = [
+  { key: 'palettes', route: '/discover/palettes', card: '.pgal-card', free: LIBRARY_PALETTES.filter((p) => p.pro !== true).slice(GALLERY_TIER_LIMITS.anonymous, GALLERY_TIER_LIMITS.free) },
+  { key: 'gradients', route: '/discover/gradients', card: '.grg-card', free: GALLERY_GRADIENTS.slice(GALLERY_TIER_LIMITS.anonymous, GALLERY_TIER_LIMITS.free) },
+]
+
+for (const f of FADED) {
+  test.describe(`${f.key}: the faded cards behind the signed-out gate`, () => {
+    test('are the next free-tier items, hidden from assistive tech and inert', async ({ page }) => {
+      watch(page, `a signed-out visitor at the end of ${f.key}`)
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await go(page, f.route)
+      await expect(page.locator(`${f.card}:not(.geg-fade *)`)).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+      const fade = page.locator('.geg[data-gate="anon"] .geg-fade')
+      await expect(fade).toHaveAttribute('aria-hidden', 'true')
+      await expect(fade).toHaveAttribute('inert', '')
+      const names = (await fade.locator('.lbry-card-name').allInnerTexts()).map((n) => n.trim())
+      expect(names.length, 'no faded cards - this check would be vacuous').toBeGreaterThan(0)
+      const real = new Set(f.free.map((r) => r.name))
+      expect(names.filter((n) => !real.has(n)), 'a faded card is not a free-tier item').toEqual([])
+      // Nothing inside is a tab stop: focusing a control in the fade leaves focus where it was.
+      const reached = await fade.evaluate((el) => [...el.querySelectorAll('a, button')].some((c) => { c.focus(); return document.activeElement === c }))
+      expect(reached, 'a faded control took focus').toBe(false)
+    })
+
+    for (const width of [390, 1440]) {
+      test(`sit on the live grid's edges at ${width}`, async ({ page }) => {
+        watch(page, `a signed-out visitor at ${width}px on ${f.key}`)
+        await page.setViewportSize({ width, height: width < 800 ? 844 : 900 })
+        await go(page, f.route)
+        await expect(page.locator(`${f.card}:not(.geg-fade *)`)).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+        const edges = (sel) => page.locator(sel).evaluateAll((els) => [...new Set(els.flatMap((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left * 2) / 2, Math.round(r.right * 2) / 2] }))])
+        const live = await edges(`${f.card}:not(.geg-fade *)`)
+        const faded = await edges(`.geg-fade ${f.card}`)
+        expect(faded.length, 'no faded cards').toBeGreaterThan(1)
+        for (const e of live) expect(faded, `a live card edge at ${e} is missing from the faded cards`).toContain(e)
+        for (const e of faded) expect(live.some((l) => Math.abs(l - e) <= 0.5) || e > Math.max(...live), `a faded edge at ${e} is off the live grid`).toBe(true)
+      })
+    }
   })
 }

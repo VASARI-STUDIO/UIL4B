@@ -415,7 +415,7 @@ test.describe('the Explore the library panel', () => {
       await go(page, ROUTE)
       await page.getByRole('link', { name: label }).click()
       await expect(page).toHaveURL(new RegExp(`/discover/gradients\\?mood=${mood.toLowerCase()}$`))
-      await expect(page.locator('.grg-card').first(), `${mood} lists a gradient`).toBeVisible()
+      await expect(page.locator('.grg-card:not(.geg-fade *)').first(), `${mood} lists a gradient`).toBeVisible()
       await expect(page.locator('.lbry-empty'), `${mood} is not an empty state`).toHaveCount(0)
     }
   })
@@ -588,7 +588,7 @@ test.describe('the library when the signed-out cap empties a mood', () => {
     const empty = emptyOf(page)
     await expect(empty).toBeVisible()
     await expect(page.getByRole('button', { name: 'Mood Dark' }), 'the filter really is on').toBeVisible()
-    await expect(page.locator('.grg-card'), 'nothing listed').toHaveCount(0)
+    await expect(page.locator('.grg-card:not(.geg-fade *)'), 'nothing listed').toHaveCount(0)
 
     await expect(empty).toContainText('Nothing open to you matches those filters.')
     // The first ten rows carry two dark ones (Bloody Mary, Ember Fade).
@@ -616,7 +616,7 @@ test.describe('the library when the signed-out cap empties a mood', () => {
     await go(page, `${LIBRARY}?mood=dark`)
     await expect(emptyOf(page)).toBeVisible()
     await emptyOf(page).getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.locator('.grg-card').first()).toBeVisible()
+    await expect(page.locator('.grg-card:not(.geg-fade *)').first()).toBeVisible()
     await expect(emptyOf(page)).toHaveCount(0)
   })
 
@@ -642,7 +642,7 @@ test.describe('the library when the signed-out cap empties a mood', () => {
     watch(page, 'a signed-in free visitor following a Dark link')
     await signIn(page, { plan: 'free' })
     await go(page, `${LIBRARY}?mood=dark`)
-    await expect(page.locator('.grg-card').filter({ hasText: 'Ember Fade' })).toHaveCount(1)
+    await expect(page.locator('.grg-card:not(.geg-fade *)').filter({ hasText: 'Ember Fade' })).toHaveCount(1)
     await expect(emptyOf(page)).toHaveCount(0)
   })
 
@@ -670,9 +670,9 @@ test.describe('the library when the signed-out cap empties a mood', () => {
       // "No gradients match" and no offer, and no card has appeared yet.
       await expect(page.locator('.lockt-status'), `${plan}: the neutral loading block shows while auth is pending`).toContainText('Loading the gradient library')
       await expect(emptyOf(page), `${plan}: no empty state while the plan is unknown`).toHaveCount(0)
-      await expect(page.locator('.grg-card')).toHaveCount(0)
+      await expect(page.locator('.grg-card:not(.geg-fade *)')).toHaveCount(0)
       // Then the account answers and the dark gradients arrive.
-      await expect(page.locator('.grg-card').filter({ hasText: 'Ember Fade' }), `${plan}: Ember Fade after auth`).toHaveCount(1, { timeout: 10000 })
+      await expect(page.locator('.grg-card:not(.geg-fade *)').filter({ hasText: 'Ember Fade' }), `${plan}: Ember Fade after auth`).toHaveCount(1, { timeout: 10000 })
       await expect(emptyOf(page)).toHaveCount(0)
       expect(await page.evaluate(() => window.__offerSeen), `${plan}: the sign-up offer was never on screen`).toBe(false)
     }

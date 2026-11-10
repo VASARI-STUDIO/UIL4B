@@ -97,7 +97,7 @@ async function expectSingleAnnouncement(page) {
 
 async function expectNoMatchStateGone(page) {
   await expect(page$(page)).not.toContainText('No palettes match')
-  await expect(page.locator('.pgal-card'), 'a brand card is open to this viewer').toHaveCount(0)
+  await expect(page.locator('.pgal-card:not(.geg-fade *)'), 'a brand card is open to this viewer').toHaveCount(0)
   await expect(page.locator('.lockt-card'), 'placeholders stand beside the single offer').toHaveCount(0)
   await expect(page.locator('.pgl-cta'), 'the bottom close CTA repeats the offer').toHaveCount(0)
 }
@@ -112,7 +112,7 @@ for (const width of [390, 1440]) {
         await signIn(page, { plan: 'free' })
         await go(page, ROUTE)
         // Positive control: the page rendered the free rung before the chip is pressed.
-        await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.free)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.free)
       })
 
       test('names the gate, the true count and one link to Pro', async ({ page }) => {
@@ -152,7 +152,7 @@ for (const width of [390, 1440]) {
         // The block must come from the emptied collection, not from the page
         // being in a filtered state: Curated still lists the ten open rows.
         await pick(page, COLLECTION_TRIGGER, COLLECTION_TRAY, 'Curated')
-        await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.free)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.free)
         await expect(gatedBlock(page)).toHaveCount(0)
       })
     })
@@ -161,7 +161,7 @@ for (const width of [390, 1440]) {
       test.beforeEach(async ({ page }) => {
         watch(page, 'a signed-out visitor tapping the Brand chip')
         await go(page, ROUTE)
-        await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
       })
 
       test('names the gate and offers one link to Pro, not an account', async ({ page }) => {
@@ -204,9 +204,9 @@ for (const width of [390, 1440]) {
         watch(page, 'a Pro subscriber tapping the Brand chip')
         await signIn(page, { plan: 'pro' })
         await go(page, ROUTE)
-        await expect(page.locator('.pgal-card').first()).toBeVisible()
+        await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
         await openBrand(page)
-        await expect(page.locator('.pgal-card')).toHaveCount(PRO_BRAND_ROWS)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(PRO_BRAND_ROWS)
         expect(PRO_BRAND_ROWS, 'the control is vacuous without brand rows').toBeGreaterThan(0)
         await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(PRO_BRAND_ROWS)
         await expect(gatedBlock(page)).toHaveCount(0)

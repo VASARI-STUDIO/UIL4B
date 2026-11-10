@@ -40,7 +40,7 @@ test.describe('palette library sections', () => {
     watch(page, 'a Pro subscriber browsing for a palette')
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
     // The free rows paint first; the sections below are the Pro library's.
     await proLibraryArrived(page, 'the palette library')
   })
@@ -59,7 +59,7 @@ test.describe('palette library sections', () => {
     const counts = await page.locator('.pgl-section-count').allTextContents()
     const total = counts.reduce((sum, n) => sum + Number(n), 0)
     expect(counts.length).toBe(2)
-    expect(total).toBe(await page.locator('.pgal-card').count())
+    expect(total).toBe(await page.locator('.pgal-card:not(.geg-fade *)').count())
   })
 
   // The reason to section a long list rather than filter it: the answer to
@@ -105,7 +105,7 @@ test.describe('palette library sections', () => {
   test('filtering collapses back to one flat grid', async ({ page }) => {
     await page.locator(TRAY).getByRole('button', { name: 'Brand', exact: true }).click()
     await expect(page.locator(HEAD)).toHaveCount(0)
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
 
     await page.locator(TRAY).getByRole('button', { name: 'All palettes', exact: true }).click()
     await expect(page.locator(HEAD)).toHaveCount(2)
@@ -236,7 +236,7 @@ test.describe('palette library sections', () => {
     // nothing open.
     await signIn(page, { plan: 'free' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card')).toHaveCount(10)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(10)
     const gate = page.locator('section.geg[aria-labelledby="pgl-gate-h"]')
     await expect(gate).toHaveCount(1)
     await expect(page.locator('#pgl-gate-h')).toHaveText(/^Pro opens \d+ more palettes$/)

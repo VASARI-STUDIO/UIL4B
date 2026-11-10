@@ -30,7 +30,7 @@ import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const ROUTE = '/discover/gradients'
-const CARD = '.grg-card'
+const CARD = '.grg-card:not(.geg-fade *)'
 
 // Nothing in this collection carries a paid flag — the cap IS the gate — so the
 // open set at a rung is simply the first n in the data file's own order.
@@ -107,7 +107,7 @@ for (const rung of RUNGS) {
       // small rather than metered.
       await expect(page.locator(CARD)).toHaveCount(rung.cap)
       await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_GRADIENTS.length} gradients · ${rung.cap} shown`)
-      const names = await page.locator('.grg-card .lbry-card-name, .grg-card h3').allInnerTexts()
+      const names = await page.locator(`${CARD} .lbry-card-name, ${CARD} h3`).allInnerTexts()
       expect(names.map((n) => n.trim()).sort()).toEqual(OPEN.map((g) => g.name).sort())
     })
 
@@ -135,7 +135,7 @@ for (const rung of RUNGS) {
       // and reports a leak that is not there. What the gate actually promises
       // is that the named rows on the page are the open ones plus, at most, the
       // three it is allowed to tease.
-      const rendered = (await page.locator('.grg-card .lbry-card-name').allInnerTexts())
+      const rendered = (await page.locator('.grg-card:not(.geg-fade *) .lbry-card-name').allInnerTexts())
         .map((n) => n.trim())
       // The faded rows under the gate are neutral shapes now, so the only named
       // rows are the open ones: no withheld name is teased at any rung.

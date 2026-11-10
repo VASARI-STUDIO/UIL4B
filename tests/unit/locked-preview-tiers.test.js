@@ -44,6 +44,7 @@ import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
 import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
+import { standinPalettes, standinGradients, STANDIN_COLOURS } from '../../src/utils/gateStandins.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 
@@ -523,16 +524,49 @@ test('no placeholder is stamped with a price the row does not carry', () => {
       `${file} must label a locked card 'account' only for a signed-out viewer on a row a free account opens`)
   }
   // The palette and gradient galleries no longer render those cards at all:
-  // the rows under the gate are GateFadeCards, neutral shapes with no text, so
+  // the rows under the gate are the gallery's own cards (GateFadeRows), real free-tier rows or neutral stand-ins, so
   // no rung can see a price on them.
   for (const [name, file] of Object.entries(PAGES)) {
     if (name === 'prompts') continue
     const src = stripComments(read(file))
-    assert.ok(/<GateFadeCards\b/.test(src), `${name} renders no faded rows - this assertion is vacuous`)
+    assert.ok(/<GateFadeRows\b/.test(src), `${name} renders no faded rows - this assertion is vacuous`)
     assert.ok(!/Locked(Palette|Prompt)Card/.test(src), `${name} renders a locked card that is stamped "Pro" on a row a free account opens`)
   }
   const fadeSrc = stripComments(read('src/components/library/GalleryEndGate.jsx'))
-  const fadeCards = fadeSrc.slice(fadeSrc.indexOf('export function GateFadeCards'))
-  assert.ok(fadeCards.length > 200, 'GateFadeCards not found - this assertion is vacuous')
+  const fadeCards = fadeSrc.slice(fadeSrc.indexOf('export function GateFadeRows'))
+  assert.ok(fadeCards.length > 200, 'GateFadeRows not found - this assertion is vacuous')
   assert.ok(!/\bPro\b/.test(fadeCards), 'the faded rows carry the word Pro')
+})
+
+// ── The faded cards behind the end gate ─────────────────────────────────────
+// To see these fail: drop the `eligible <= GALLERY_TIER_LIMITS.free` guard in
+// splitLockedLibrary (a Pro-tier row joins `next`), or add a real Pro colour to
+// the ramp in src/utils/gateStandins.js.
+
+const paletteRule = { isOpen: (p) => p.pro !== true, preview: (p) => ({ id: p.id, label: p.name, slots: p.colors?.length ?? p.slots }) }
+
+test('next is the real free-tier rows past the viewer\'s cap, and only for a signed-out viewer', () => {
+  const free = LIBRARY_PALETTES.filter((p) => p.pro !== true).slice(0, GALLERY_TIER_LIMITS.free)
+  const anon = splitLockedLibrary(LIBRARY_PALETTES, { unlocked: false, ...paletteRule, limit: GALLERY_TIER_LIMITS.anonymous })
+  assert.deepEqual(anon.next.map((p) => p.id), free.slice(GALLERY_TIER_LIMITS.anonymous).map((p) => p.id))
+  assert.ok(anon.next.length > 0 && anon.next.every((p) => p.pro !== true), 'a Pro palette is in next')
+  const signedIn = splitLockedLibrary(LIBRARY_PALETTES, { unlocked: false, ...paletteRule, limit: GALLERY_TIER_LIMITS.free })
+  assert.deepEqual(signedIn.next, [], 'a free viewer\'s next rung opens nothing in the free set')
+  assert.deepEqual(splitLockedLibrary(LIBRARY_PALETTES, { unlocked: true, ...paletteRule }).next, [])
+})
+
+test('next never holds a stub', () => {
+  const rows = LIBRARY_PALETTES.map((p, i) => (i < 5 ? p : { id: p.id, name: p.name, slots: p.colors.length }))
+  const { next } = splitLockedLibrary(rows, { unlocked: false, ...paletteRule, limit: 3 })
+  assert.deepEqual(next.map((p) => p.id), rows.slice(3, 5).map((p) => p.id))
+})
+
+test('the stand-ins carry no colour a Pro row holds', () => {
+  const proHex = new Set()
+  for (const p of LIBRARY_PALETTES) if (p.pro === true) p.colors.forEach((c) => proHex.add(c.toUpperCase()))
+  const freeGradients = new Set(GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.free).map((g) => g.id))
+  for (const g of GALLERY_GRADIENTS) if (!freeGradients.has(g.id)) g.stops.forEach((s) => proHex.add(s.color.toUpperCase()))
+  const used = [...standinPalettes().flatMap((p) => p.colors), ...standinGradients().flatMap((g) => g.stops.map((s) => s.color))]
+  assert.ok(used.length > 20 && STANDIN_COLOURS.length > 4, 'no stand-in colours - this assertion is vacuous')
+  assert.deepEqual(used.filter((c) => proHex.has(c.toUpperCase())), [], 'a stand-in colour equals a Pro colour')
 })

@@ -70,7 +70,7 @@ test.describe('icon groups', () => {
     // Every group is listed; the free ones open, the Pro ones are locked cards.
     const cards = page.locator('.igp-cards > li')
     await expect(cards).toHaveCount(PREMADE_ICON_GROUPS.length)
-    await expect(page.locator('.igp-cards a.igp-card')).toHaveCount(FREE.length)
+    await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(FREE.length)
     await expect(page.locator('.igp-cards .lockt-card--group')).toHaveCount(PRO.length)
 
     // A direct visit lands on the same tab, from the prerendered shell.
@@ -190,7 +190,7 @@ test.describe('icon groups', () => {
     watch(page, 'a signed-out visitor reaching the end of the group index')
     await page.setViewportSize({ width: 1280, height: 900 })
     await go(page, ROUTE)
-    await expect(page.locator('.igp-cards a.igp-card')).toHaveCount(FREE.length, { timeout: 15000 })
+    await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(FREE.length, { timeout: 15000 })
     // Positive control: a Pro group is on the page, so there is something to gate.
     expect(PRO.length).toBeGreaterThan(0)
     const gate = page.locator('.geg')
@@ -210,7 +210,7 @@ test.describe('icon groups', () => {
     await signIn(page, { plan: 'pro' })
     await page.setViewportSize({ width: 1280, height: 900 })
     await go(page, ROUTE)
-    await expect(page.locator('.igp-cards a.igp-card')).toHaveCount(PREMADE_ICON_GROUPS.length, { timeout: 15000 })
+    await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(PREMADE_ICON_GROUPS.length, { timeout: 15000 })
     await go(page, `${ROUTE}?group=commerce`)
     await expect(page.locator('.igp-grid .ic img')).toHaveCount(COMMERCE.icons.length, { timeout: 15000 })
   })
