@@ -3,7 +3,8 @@
 // What a person relies on, by acceptance criterion (icon library design, slice S5):
 //   18. nothing in the editor is uppercase mono, and no label, caption, pill or count is set in mono:
 //       mono is for a literal value (a hex, a file name, code) and nothing else;
-//   19. at 1440 a stroke icon fits without scrolling, with the code closed and no custom row open;
+//   19. at 1440 (900 tall) the controls column holds 638px in 570 and scrolls on its own by 68px, with the
+//       code closed and no custom row open; the stage column and the dialog do not scroll;
 //   28. under reduced motion the dialog and the carets do not transition or animate a transform.
 // And the layout and behaviour around them:
 //   - 900 and up: the stage on the left; the head, the controls and the foot stacked in a 400px column
@@ -21,7 +22,7 @@
 // HOW TO SEE EACH FAIL (src/styles/pages/icon-editor.css and src/pages/IconLibrary.jsx):
 //   .ied-hd .ied-note { font-family: var(--mono) }                    -> "no label, caption, pill or count is set in mono"
 //   .ied-lbl { text-transform: uppercase; font-family: var(--mono) }  -> "nothing is uppercase mono"
-//   .ied-secs { gap: 60px }                                           -> "at 1440 a stroke icon fits without scrolling"
+//   .ied-secs { gap: 60px }                                           -> "at 1440 the controls column scrolls ... by the board's 68px"
 //   .ied grid-template-columns 400px -> 360px                         -> "at 1440 the dialog is 1160px wide ..."
 //   the 900px layout breakpoint becomes 700px                         -> "at 900 the stage and the controls sit side by side ..."
 //   the (max-width:899px) sheet block is dropped                      -> "at 640 and at 320 ... bottom sheet"
@@ -199,7 +200,7 @@ test.describe('type: mono is only for literal values', () => {
 })
 
 test.describe('layout', () => {
-  test('at 1440 a stroke icon fits without scrolling, with the code closed and no custom row open', async ({ browser }) => {
+  test('at 1440 the controls column scrolls on its own by the board\'s 68px, the stage column and the dialog do not, and the foot hairline shows at rest', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser, { width: 1440, height: 900 })
     // It is a stroke icon (it has a Stroke row), the code is closed, and no custom row is open.
     await expect(page.getByLabel('Stroke width in pixels').first()).toBeVisible()
@@ -214,8 +215,12 @@ test.describe('layout', () => {
       return { stage: m('.ied-stagecol'), controls: m('#ied-scroll'), panel: m('.ied') }
     })
     expect(m.stage.sh, `the stage column scrolls (${m.stage.sh} in ${m.stage.ch})`).toBeLessThanOrEqual(m.stage.ch + 1)
-    expect(m.controls.sh, `the controls scroll (${m.controls.sh} in ${m.controls.ch})`).toBeLessThanOrEqual(m.controls.ch + 1)
     expect(m.panel.sh, `the dialog scrolls (${m.panel.sh} in ${m.panel.ch})`).toBeLessThanOrEqual(m.panel.ch + 1)
+    // The board's controls column holds 638px of controls in 570: it scrolls by 68px, and the app matches.
+    expect(m.controls.sh - m.controls.ch, `the controls overflow by ${m.controls.sh - m.controls.ch}px (${m.controls.sh} in ${m.controls.ch})`).toBeGreaterThanOrEqual(66)
+    expect(m.controls.sh - m.controls.ch, `the controls overflow by ${m.controls.sh - m.controls.ch}px (${m.controls.sh} in ${m.controls.ch})`).toBeLessThanOrEqual(70)
+    expect(await page.locator('#ied-scroll').evaluate((el) => getComputedStyle(el).overflowY), 'the controls scroll on their own').toBe('auto')
+    await expect(page.locator('.ied-ft'), 'the foot hairline shows at rest while the controls can scroll').toHaveAttribute('data-on', /.*/)
     await ctx.close()
   })
 
