@@ -54,7 +54,7 @@ const NBSP = ' '
 // The number and its noun stay on one line at any width ("1 / coffee" never splits).
 const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'.replace('1 coffee', `1${NBSP}coffee`)
 
-const HERO_LEAD =`Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, gives you unlimited projects, and removes the “Made with UIL4B” line from your exports.`
+const HERO_LEAD =`Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, gives you unlimited projects, and removes the “Made with UI L4B” line from your exports.`
 
 const CANCEL_LINE = 'Cancel Pro any time. Keep every export you made.'
 const STRIPE_LINE = 'Secure checkout by Stripe.'
@@ -663,7 +663,7 @@ export default function Pricing() {
         <HomeFinalCall
           toolkitTo="/projects"
           heading={`Start with all ${numberWord(TOOL_COUNT)} tools.`}
-          lead={`Free is ${freeAmount}. Pro raises the limits and removes the “Made with UIL4B” line.`}
+          lead={`Free is ${freeAmount}. Pro raises the limits and removes the “Made with UI L4B” line.`}
           actions={(
             <>
               <Link className="hm-close-ghost ui-pill-out" to="/projects">Open the toolkit</Link>

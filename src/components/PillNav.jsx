@@ -297,7 +297,7 @@ function ExportPreview() {
         </div>
         <div className="pnav-prev-foot">
           <span>Colour</span>
-          <span>Made with UIL4B</span>
+          <span>Made with UI L4B</span>
         </div>
       </div>
     </div>
