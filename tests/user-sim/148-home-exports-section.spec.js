@@ -186,18 +186,17 @@ test('with the clipboard denied, Copy file never says Copied', async ({ browser 
 
 // ── card 2 ─────────────────────────────────────────────────────────────────────
 
-test('card 2 lists the three exports the app makes today, and the caption names no theme', async ({ browser }) => {
+test('card 2 lists the exports a theme offers, and the caption names the theme', async ({ browser }) => {
   const { ctx, page } = await open(browser)
   try {
-    // Red if exportRows or exportCopy stop following EXPORT_THEMES_LIVE (the themes rows would show).
+    // Red if exportRows or exportCopy stop following EXPORT_THEMES_LIVE, or the brand kit gets a row of its own.
     await expect(docRows(page)).toHaveCount(3)
     const rows = (await docRows(page).allInnerTexts()).map(squash)
     expect(rows[0]).toMatch(/^Brand guidelines .*Pro$/)
-    expect(rows[1]).toMatch(/^Design system book .*Pro$/)
-    expect(rows[2]).toMatch(/^UI kit .*Free$/)
-    await expect(card(page, 1).locator('.hx-cap')).toHaveText('Kerbside, a sample brand. Set in Archivo and IBM Plex Sans.')
-    await expect(card(page, 1)).not.toContainText(/theme/i)
-    await expect(card(page, 1).locator('.hx-note')).toHaveText('The UI kit is free. The brand guidelines and design system book are Pro.')
+    expect(rows[1]).toMatch(/^HTML brand book .*with the brand kit inside.*Pro$/)
+    expect(rows[2]).toMatch(/^UI kit .*Free in 2 themes$/)
+    await expect(card(page, 1).locator('.hx-cap')).toHaveText('Kerbside, a sample brand, in the Presentation theme. Set in Archivo and IBM Plex Sans.')
+    await expect(card(page, 1).locator('.hx-note')).toHaveText('The UI kit is free in two of the ten themes. Everything else is Pro.')
   } finally {
     await ctx.close()
   }
