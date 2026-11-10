@@ -47,9 +47,9 @@ const FILE_COPY = {
 // Where the free credit sits in each code file, for the dock line. The contrast
 // files carry none.
 const CREDIT_LINE = {
-  css: 'The file ends with a small ‘Made with UIL4B’ credit comment.',
-  tailwind: 'The file ends with a small ‘Made with UIL4B’ credit comment.',
-  json: 'The file’s description carries a small ‘Made with UIL4B’ credit.',
+  css: 'The file ends with a small ‘Made with UI L4B’ credit comment.',
+  tailwind: 'The file ends with a small ‘Made with UI L4B’ credit comment.',
+  json: 'The file’s description carries a small ‘Made with UI L4B’ credit.',
   contrast: 'This file carries no credit line.',
   'contrast-json': 'This file carries no credit line.',
 }
@@ -224,7 +224,7 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
       : (
         <>
           <NameLine lead={lead} name={name} project={project} onRenameState={onRenameState} />
-          <p className="xd-note">Pro adds your description and logo, and removes the UIL4B mark.</p>
+          <p className="xd-note">Pro adds your description and logo, and removes the UI L4B mark.</p>
         </>
       )
   }
@@ -318,7 +318,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
         : <><strong>Pro</strong> unlocks this file.</>
   } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
   else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
-  else line = <><strong>Free.</strong> The file carries a small ‘Made with UIL4B’ mark.</>
+  else line = <><strong>Free.</strong> The file carries a small ‘Made with UI L4B’ mark.</>
 
   let label = copyOf(file).action
   if (busy) label = BUSY_LABEL[stage] || 'Exporting…'
