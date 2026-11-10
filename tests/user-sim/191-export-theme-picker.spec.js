@@ -14,11 +14,14 @@
 //   - the Retry-After seconds are read with parseFloat        -> "a Retry-After that is not whole seconds"
 //   - End moves to the second-last row                        -> "Home and End"
 //   - Escape closes the dialog as well as the list            -> "Escape closes the list"
+//   - the list asks for focus once, with no retry per frame   -> "reduced motion" at 1440 (both settings)
+//   - the tier label reads the UI kit's free rule for every file -> "the Free or Pro label matches the dock"
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { chooseFormat, exportPanel, primaryButton, dockStatus, dockError } from './export-rows.js'
 import { mockThemeApi, cleanHtml, tinyZip } from './export-theme-mock.js'
+import { MOTION_SETTINGS, MOTION_WIDTHS, motionState, chooseThemeWithKeys } from './export-reduced-motion.js'
 
 const ROUTE = '/projects/harbour/export'
 
@@ -138,6 +141,7 @@ test.describe('Free and Pro', () => {
         const calls = await mockThemeApi(page)
         const panel = await open(page, { plan: 'free', file, saved: false })
         await pick(page, panel, name)
+        await expect(themeTier(panel), 'the label says what the dock says').toHaveText('Pro')
         await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
         await expect(dockStatus(panel)).toHaveText('Pro unlocks this file.')
         await expect(panel.locator('.xd-theme-lock'), 'the blurred preview carries its lock').toBeVisible()
@@ -146,6 +150,29 @@ test.describe('Free and Pro', () => {
         expect(calls, 'a free account never asks the route for a Pro file').toHaveLength(0)
       })
     }
+  }
+
+  // The label and the dock decide from the same file and theme: the UI kit is free in two themes, every other file is Pro in all ten.
+  for (const file of Object.keys(FILES)) {
+    const freeThemes = file === 'kit' ? FREE_KIT : []
+    test(`free, ${file}: the Free or Pro label matches the dock for every theme`, async ({ page }) => {
+      watch(page, `a free account reading the tier of each theme on ${file}`)
+      const panel = await open(page, { plan: 'free', file, saved: file === 'kit' })
+      await openList(page, panel)
+      const rows = await list(page).locator('.xd-theme-opt').evaluateAll((els) => els.map((r) => ({
+        name: r.querySelector('.xd-theme-opt-n').textContent, tier: r.querySelector('.xd-theme-opt-r').textContent.trim(),
+      })))
+      expect(rows, 'the list labels every theme for this file').toEqual(NAMES.map((name) => ({ name, tier: freeThemes.includes(name) ? 'Free' : 'Pro' })))
+      await page.keyboard.press('Escape')
+      await expect(list(page)).toHaveCount(0)
+      for (const name of NAMES) {
+        const free = freeThemes.includes(name)
+        await pick(page, panel, name)
+        await expect(themeTier(panel), `${name}: the row`).toHaveText(free ? 'Free' : 'Pro')
+        await expect(primaryButton(panel), `${name}: the dock`).toHaveText(free ? FILES[file].label : 'Unlock with Pro')
+        await expect(panel.locator('.xd-theme-lock'), `${name}: the lock on the preview`).toHaveCount(free ? 0 : 1)
+      }
+    })
   }
 
   for (const file of Object.keys(FILES)) {
@@ -290,6 +317,20 @@ for (const { name: where, size } of WIDTHS) test.describe(`keyboard, ${where}`, 
     await expect(themeName(panel)).toHaveText('Standards')
   })
 })
+
+/* ── reduced motion ──────────────────────────────────────────────────────── */
+
+// Under reduced motion every property change gets a 0.01ms transition, so a popover that has just been placed can still read as
+// hidden for a frame. The list has to take focus all the same, from either setting, in the popover and in the sheet.
+for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTION_WIDTHS) {
+  test(`reduced motion (${setting.name}), ${where}: Enter on Change puts focus in the list, ArrowDown moves, Enter chooses and focus goes back to Change`, async ({ page }) => {
+    watch(page, `a keyboard user with reduced motion on, by ${setting.name}`)
+    await setting.apply(page)
+    const panel = await open(page, { plan: 'free', file: 'kit', size })
+    expect(await motionState(page), 'reduced motion is on').toMatchObject({ attribute: 'true' })
+    await chooseThemeWithKeys(page, panel)
+  })
+}
 
 /* ── where the list opens ────────────────────────────────────────────────── */
 

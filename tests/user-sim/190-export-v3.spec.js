@@ -236,6 +236,26 @@ for (const size of SIZES) {
   })
 }
 
+// The chip row under Brand book (Book, Slides, Style guide) on a free account at the narrowest width: every chip fits, so the row has nothing to scroll.
+//   - Put the strip chip padding back to var(--s-3) under 360px in export-dialog.css: each category fails, the row is wider than its box.
+test.describe('the category chips at 320px', () => {
+  test.use({ viewport: { width: 320, height: 700 } })
+  for (const name of ['Book', 'Slides', 'Style guide']) {
+    test(`free, ${name}: the chip row has no sideways scroll`, async ({ page }) => {
+      watch(page, `a free account at 320px choosing ${name} in the Brand book`)
+      await signIn(page, { plan: 'free' })
+      await go(page, WORKED_BOARD)
+      const panel = await openFromHeader(page)
+      await typeRadio(panel, 'Brand book').click()
+      await categoryRadio(panel, name).click()
+      const chips = panel.locator('.xd-chips')
+      await expect(chips.getByRole('radio')).toHaveCount(3)
+      const row = await chips.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }))
+      expect(row.scrollWidth, `the chip row scrolls sideways: ${JSON.stringify(row)}`).toBeLessThanOrEqual(row.clientWidth)
+    })
+  }
+})
+
 // Criteria 17, 18 and 19: the sizes the spec names.
 //   - Change the card or rail width in export-dialog.css: the 1440 and 768 tests fail.
 //   - Drop the 44px min-height on .xd-type / .xd-cat in the strip: the 390 test fails.

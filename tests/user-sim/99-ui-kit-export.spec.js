@@ -12,6 +12,7 @@ import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-r
 import { test, expect } from './base.js'
 import { go, watch, signIn, overlaysSettled, ready } from './helpers.js'
 import { mockThemeApi } from './export-theme-mock.js'
+import { MOTION_SETTINGS, MOTION_WIDTHS, motionState, chooseThemeWithKeys } from './export-reduced-motion.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 const PRIMARY = '#1F4B8E'
@@ -289,6 +290,23 @@ test.describe('the UI kit export', () => {
         expect(after.buttons, 'the actions keep their position and size').toEqual(before.buttons)
       })
     }
+  }
+
+  // Under reduced motion the Theme list has to take keyboard focus, from the system's setting and from the app's own, in the popover and the sheet.
+  for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTION_WIDTHS) {
+    test(`reduced motion (${setting.name}), ${where}: the kit's Theme list takes focus, ArrowDown moves, Enter chooses and focus goes back to Change`, async ({ page }) => {
+      watch(page, `a free account choosing the kit's theme by keyboard with reduced motion on, by ${setting.name}`)
+      await setting.apply(page)
+      await page.setViewportSize(size)
+      await mockThemeApi(page)
+      await signIn(page, { plan: 'free' })
+      await go(page, BOARD)
+      const panel = await openPanel(page)
+      await panel.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((animation) => animation.finished)))
+      await page.mouse.move(0, 0)
+      expect(await motionState(page), 'reduced motion is on').toMatchObject({ attribute: 'true' })
+      await chooseThemeWithKeys(page, panel)
+    })
   }
 
   test('free: no identity fields, and a finished export with a notice offers another go and the X', async ({ page }) => {
