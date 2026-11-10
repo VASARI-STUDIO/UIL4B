@@ -26,6 +26,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { splitLockedLibrary, LOCKED_TEASE, GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
+import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
@@ -196,20 +197,27 @@ test('every wall registers a real gate id rather than falling back to a title', 
   // The prompt library names its gates two ways since the overview: a `gate`
   // prop, and `reportUpgradeGate('<id>')` on the Pro links (the overview's
   // closing section, the list's offer, and PromptLockedCard's default gate).
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx',
-    'src/components/prompt/PromptOverview.jsx', 'src/components/prompt/PromptLockedCard.jsx']) {
+  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/GradientGallery.jsx',
+    'src/pages/IconGroups.jsx', 'src/components/prompt/PromptGate.jsx', 'src/components/prompt/PromptLockedCard.jsx']) {
     const src = stripComments(read(file))
     for (const m of src.matchAll(/gate="([a-z0-9-]+)"/g)) ids.push(m[1])
     for (const m of src.matchAll(/reportUpgradeGate\('([a-z0-9-]+)'\)/g)) ids.push(m[1])
     for (const m of src.matchAll(/gate = '([a-z0-9-]+)'/g)) ids.push(m[1])
   }
-  // Every Pro link on the prompt pages reports a gate: no bare link to /plans.
-  for (const file of ['src/pages/PromptLibrary.jsx', 'src/components/prompt/PromptOverview.jsx']) {
-    const src = stripComments(read(file))
-    const links = [...src.matchAll(/<Link\b[\s\S]*?<\/Link>/g)].map((m) => m[0]).filter((l) => l.includes('to="/plans"'))
-    assert.ok(links.length > 0, `${file} has no Pro link — this assertion would be vacuous`)
-    for (const link of links) assert.ok(link.includes("reportUpgradeGate('prompt-library-community-lock')"), `${file} has a Pro link that registers no gate: ${link}`)
+  // Every Pro control of the shared end gate reports a gate: no bare link to
+  // /plans. A Pro `primary` is `{ label, to: '/plans', onClick }`, and the
+  // onClick must register this gallery's gate id.
+  const GATE_USERS = {
+    'src/pages/PaletteGallery.jsx': 2, 'src/pages/GradientGallery.jsx': 1,
+    'src/pages/IconGroups.jsx': 2, 'src/components/prompt/PromptGate.jsx': 1,
   }
+  for (const [file, expected] of Object.entries(GATE_USERS)) {
+    const src = stripComments(read(file))
+    const primaries = [...src.matchAll(/primary=\{\{[^}]*\}\}/g)].map((m) => m[0]).filter((l) => l.includes("to: '/plans'"))
+    assert.equal(primaries.length, expected, `${file}: the number of Pro gate links changed - this assertion would be vacuous`)
+    for (const link of primaries) assert.ok(/reportUpgradeGate\('[a-z0-9-]+'\)/.test(link), `${file} has a Pro link that registers no gate: ${link}`)
+  }
+  assert.ok(stripComments(read('src/components/prompt/PromptGate.jsx')).includes("reportUpgradeGate('prompt-library-community-lock')"))
   assert.ok(ids.includes('palette-library-brand-lock'), 'the Palette Library wall must name its gate')
   assert.ok(ids.includes('palette-builder-brand-lock'), 'the Palette Builder wall must name its gate')
   assert.ok(ids.includes('prompt-library-community-lock'), 'the Prompt Library wall must name its gate')
@@ -229,7 +237,8 @@ test('the wall copy invents no scarcity, urgency, testimonial or metric', () => 
     read('src/components/library/LockedTease.jsx')
     + read('src/pages/PaletteGallery.jsx')
     + read('src/pages/PaletteBuilder.jsx')
-    + read('src/pages/PromptLibrary.jsx'),
+    + read('src/pages/PromptLibrary.jsx')
+    + read('src/data/galleryGateCopy.js'),
   )
   // Positive control: if stripping ever removed the copy as well, every
   // assertion below would pass for the wrong reason.
@@ -249,18 +258,29 @@ test('the CTA number is derived from the data, never written as a literal', () =
   // A hard-coded "another 30 brand systems" goes stale the moment a row is
   // added to brandPalettes.js, and a wall that lies about its own size is the
   // cheapest possible way to lose trust.
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx']) {
-    const src = stripComments(read(file))
-    assert.ok(/Another \$\{locked/.test(src), `${file} must interpolate the remaining count into its heading`)
+  const builder = stripComments(read('src/pages/PaletteBuilder.jsx'))
+  assert.ok(/Another \$\{locked/.test(builder), 'src/pages/PaletteBuilder.jsx must interpolate the remaining count into its heading')
+  // The galleries' gates take their words from data/galleryGateCopy.js, whose
+  // builders print only the number they are handed (behaviour, checked here
+  // with a count no library holds). The pages must hand them live counts.
+  for (const name of ['palettes', 'gradients', 'iconGroups', 'prompts']) {
+    const heading = GALLERY_GATE_COPY[name].pro.heading(7311)
+    assert.ok(heading.includes('7,311'), `${name}: the Pro heading does not print the count it is given: ${heading}`)
   }
-  // The prompt library's headings are `${n} more prompts open with Pro` in the
-  // list and `Free covers ${openCount} of the ${total}` on the overview, each
-  // counted from the data the page holds.
+  const PAGE_CALLS = {
+    'src/pages/PaletteGallery.jsx': [/copy\.pro\.heading\(lockedCount\)/, /copy\.anon\.heading\(opens\)/],
+    'src/pages/GradientGallery.jsx': [/copy\.pro\.heading\(lockedCount\)/, /copy\.anon\.heading\(opens\)/],
+    'src/components/prompt/PromptGate.jsx': [/copy\.pro\.heading\(more\)/, /copy\.anon\.heading\(accountOpens\)/],
+  }
+  for (const [file, patterns] of Object.entries(PAGE_CALLS)) {
+    const src = stripComments(read(file))
+    for (const pattern of patterns) assert.ok(pattern.test(src), `${file} must hand its live count to the gate copy: ${pattern}`)
+  }
   const list = stripComments(read('src/pages/PromptLibrary.jsx'))
-  assert.ok(/\$\{plural\(total\)\} open with Pro/.test(list), 'src/pages/PromptLibrary.jsx must interpolate the remaining count into its heading')
-  assert.ok(/const total = listItems\.locked\.length/.test(list), 'the list wall must count the locked rows it holds')
+  assert.ok(/total=\{communityRows\.length\}/.test(list), 'the list gate must count the library it holds')
+  assert.ok(/accountOpens=\{freeIds\.size\}/.test(list), 'the list gate must count what a free account opens')
   const overview = stripComments(read('src/components/prompt/PromptOverview.jsx'))
-  assert.ok(/Pro opens the other \$\{total - openCount\}/.test(overview), 'the overview must interpolate the remaining count')
+  assert.ok(/total=\{total\}/.test(overview) && /accountOpens=\{freeSet\.size\}/.test(overview), 'the overview gate must count from the data it holds')
 })
 
 test('a locked placeholder never animates, so it cannot read as a failed load', () => {

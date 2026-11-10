@@ -138,3 +138,10 @@ html[data-reduced-motion="true"] .iel-page .igp-page img{transition:none}
   .iel-page .igp-page .lockt-card--group .lockt-glyphs svg{width:24px;height:24px}
   .iel-page .igp-page .igp-title{font-size:26px}
 }
+
+/* The faded stand-in cards behind the index gate (GroupStandinGrid): the card's
+   own frame over neutral outline shapes, with bars where the name and meta go. */
+.iel-page .igp-page .igp-card-preview svg{width:22px;height:22px;color:var(--t1)}
+.iel-page .igp-page .igp-card-bar{display:block;height:10px;width:70%;border-radius:5px;background:color-mix(in srgb,var(--t0) 14%,var(--bg-0))}
+.iel-page .igp-page .igp-card-bar--short{height:8px;width:45%}
+@media(min-width:640px){.iel-page .igp-page .igp-card-preview svg{width:24px;height:24px}}

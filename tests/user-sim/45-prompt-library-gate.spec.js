@@ -336,33 +336,30 @@ for (const rung of RUNGS) {
     }
 
     for (const state of ['overview', 'list']) {
-      test(`the access wall states the true count, is keyboard reachable, and offers this rung its own next step — ${state}`, async ({ page }) => {
+      test(`the access gate states the true count, is keyboard reachable, and offers this rung its own next step — ${state}`, async ({ page }) => {
         // WHICH NEXT STEP IS THE POINT. From the bottom rung the next step is a
-        // free account and the honest number is how many more THAT opens; from
-        // the free rung it is Pro. Offering Pro to somebody whose next seven
-        // prompts are free would be selling a purchase that is not needed yet.
+        // free account and the honest number is how many prompts THAT opens in
+        // all; from the free rung it is Pro. Offering Pro to somebody whose next
+        // seven prompts are free would be selling a purchase that is not needed
+        // yet. The overview and the list close on the same shared gate
+        // (GalleryEndGate), so both states are held to the same words.
         if (state === 'list') await openList(page)
-        const wall = page.locator('.pl-close')
+        const wall = page.locator(`.geg[data-gate="${rung.wall === 'account' ? 'anon' : 'pro'}"]`)
         await expect(wall).toBeVisible()
         const total = COMMUNITY_PROMPTS.length
-        const gain = rung.wall === 'account'
-          ? rungSets(GALLERY_TIER_LIMITS.free).open.length - OPEN.length
-          : WITHHELD.length
-        if (state === 'overview') {
-          await expect(wall.getByRole('heading', { level: 2 })).toHaveText(
-            rung.wall === 'account'
-              ? `Signed out, you can open ${OPEN.length} of the ${total} community prompts.`
-              : `Free covers ${OPEN.length} of the ${total} community prompts.`,
-          )
-        } else {
-          await expect(wall.getByRole('heading', { level: 2 })).toHaveText(
-            rung.wall === 'account'
-              ? `${gain} more prompts open with a free account`
-              : `${gain} more prompts open with Pro`,
-          )
+        const freeOpens = rungSets(GALLERY_TIER_LIMITS.free).open.length
+        await expect(wall.getByRole('heading', { level: 2 })).toHaveText(
+          rung.wall === 'account'
+            ? `Log in to access ${freeOpens} community prompts`
+            : `Pro opens ${WITHHELD.length} more community prompts`,
+        )
+        await expect(wall.locator('.geg-p')).toContainText(`You're seeing ${OPEN.length} of the ${total} community prompts.`)
+        if (rung.wall === 'account') {
+          await expect(wall.locator('.geg-p')).toContainText(`A free account opens ${freeOpens}; Pro opens all ${total}.`)
+          await expect(wall.getByRole('link', { name: 'See the plans' })).toHaveAttribute('href', '/plans')
         }
         const cta = rung.wall === 'account'
-          ? wall.getByRole('button', { name: /Create your free account/ })
+          ? wall.getByRole('button', { name: 'Log in' })
           : wall.getByRole('link', { name: /See what Pro includes/ })
         await cta.focus()
         await expect(cta).toBeFocused()
@@ -498,13 +495,13 @@ for (const rung of RUNGS) {
       // It is also why the empty state does not say how many locked prompts DID
       // match: that sentence is the search oracle rebuilt in words.
       await openList(page)
-      await expect(page.locator('.pl-close')).toBeVisible()
+      await expect(page.locator('.geg')).toBeVisible()
       await expect(page.locator(LOCKED_CARDS).first()).toBeVisible()
       await page.getByLabel('Search community prompts').fill(CONTROL_WORD)
-      await expect(page.locator('.pl-close')).toHaveCount(0)
+      await expect(page.locator('.geg')).toHaveCount(0)
       await expect(page.locator(LOCKED_CARDS)).toHaveCount(0)
       await page.getByLabel('Search community prompts').fill('')
-      await expect(page.locator('.pl-close')).toBeVisible()
+      await expect(page.locator('.geg')).toBeVisible()
       await expect(page.locator(LOCKED_CARDS).first()).toBeVisible()
     })
 

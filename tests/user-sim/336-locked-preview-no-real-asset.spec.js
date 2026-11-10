@@ -86,7 +86,8 @@ test.describe('community prompt gallery', () => {
     watch(page, 'a signed-out visitor on the prompt gallery, with requests captured')
     const urls = capture(page)
     await go(page, '/discover/prompts')
-    const locked = page.locator('.pl-locked-card .pl-card-poster, .pl-mosaic-tile.is-locked img')
+    // The locked cards and the end gate's faded rows (GateFadeCards) both show stand-ins.
+    const locked = page.locator('.pl-locked-card .pl-card-poster, .pl-mosaic-tile.is-locked img, .geg-fade .geg-ph img')
     await expect(locked.first()).toBeAttached()
     const srcs = await locked.evaluateAll((els) => els.map((el) => el.getAttribute('src') || ''))
     expect(srcs.length, 'a free visitor sees locked previews').toBeGreaterThan(0)

@@ -1,9 +1,8 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { COMMUNITY_PROMPT_ROWS } from '../data/communityPrompts'
 import { LIBRARY_RULES, isStub } from '../utils/libraryRules'
@@ -19,6 +18,7 @@ import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import PromptCard from '../components/prompt/PromptCard'
 import PromptLockedCard from '../components/prompt/PromptLockedCard'
+import PromptGate from '../components/prompt/PromptGate'
 import PromptOverview from '../components/prompt/PromptOverview'
 import PromptFilters from '../components/prompt/PromptFilters'
 import PromptWindowButton from '../components/prompt/PromptWindowButton'
@@ -499,6 +499,10 @@ export default function PromptLibrary({ onCopy, toast }) {
   const signupFree = useCallback(() => {
     requireLogin('browse more of the community prompts', { free: true, signup: true })
   }, [requireLogin])
+  // The gate's "Log in" opens the log-in form, the same flow the icon library's gate uses.
+  const loginFree = useCallback(() => {
+    requireLogin('browse more of the community prompts')
+  }, [requireLogin])
   const lockedKind = (p) => (tier === 'anonymous' && freeIds.has(p.id) ? 'account' : 'pro')
 
   return (
@@ -610,6 +614,7 @@ export default function PromptLibrary({ onCopy, toast }) {
           onViewMore={openList}
           onBrowseAll={() => openList(ALL_SLUG)}
           onSignup={signupFree}
+          onLogin={loginFree}
           onSubmit={openSubmitFromClose}
         />
       ) : (
@@ -705,36 +710,16 @@ export default function PromptLibrary({ onCopy, toast }) {
             </div>
           </section>
         ) : listItems.locked.length > 0 ? (
-          <section className="pl-close" aria-labelledby="pl-wall-h">
-            {(() => {
-              const total = listItems.locked.length
-              const viaAccount = tier === 'anonymous' ? listItems.locked.filter((p) => freeIds.has(p.id)).length : 0
-              const plural = (n) => `${n} more ${n === 1 ? 'prompt' : 'prompts'}`
-              return viaAccount > 0 ? (
-                <>
-                  <div className="pl-close-text">
-                    <h2 id="pl-wall-h">{`${plural(viaAccount)} open with a free account`}</h2>
-                    <p>{`A free account opens ${freeIds.size} of the ${communityRows.length} community prompts. Pro opens all ${communityRows.length}.`}</p>
-                  </div>
-                  <div className="pl-close-actions">
-                    <button type="button" className="btn btn-accent pl-ov-btn" onClick={signupFree}>Create your free account</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="pl-close-text">
-                    <h2 id="pl-wall-h">{`${plural(total)} open with Pro`}</h2>
-                    <p>Each opens as the full brief its author wrote, ready to copy.</p>
-                  </div>
-                  <div className="pl-close-actions">
-                    <Link className="btn btn-accent pl-ov-btn" to="/plans" onClick={() => { reportUpgradeGate('prompt-library-community-lock') }}>
-                      See what Pro includes
-                    </Link>
-                  </div>
-                </>
-              )
-            })()}
-          </section>
+          <PromptGate
+            id="pl-wall-h"
+            tier={tier}
+            shown={openCommunity.length}
+            total={communityRows.length}
+            viaAccount={tier === 'anonymous' ? listItems.locked.filter((p) => freeIds.has(p.id)).length : 0}
+            accountOpens={freeIds.size}
+            locked={listItems.locked}
+            onLogin={loginFree}
+          />
         ) : null
       )}
 

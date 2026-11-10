@@ -126,16 +126,10 @@
   grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));
   gap:clamp(14px,2vw,22px);
 }
-.lib-surface.pgl-page .pgal-stripes,
-.lib-surface.pgl-page .lockt-stripes{height:clamp(200px,34vw,260px);border:0}
+.lib-surface.pgl-page .pgal-stripes{height:clamp(200px,34vw,260px);border:0}
 /* A near-white swatch ends against the card's own ground, so the stripes get a
    hairline along their foot and the last one reads as a swatch, not a hole. */
 .lib-surface.pgl-page .pgal-stripes{border-bottom:1px solid var(--border)}
-/* The three locked cards wrap by hand from the same 320px floor as the grid
-   above. When a row holds two, the third takes the whole row instead of sitting
-   beside an empty cell. */
-.lib-surface.pgl-page .pgal-grid--locked{display:flex;flex-wrap:wrap}
-.lib-surface.pgl-page .pgal-grid--locked > .lockt-card{flex:1 1 min(320px,100%);min-width:0}
 .lib-surface.pgl-page .pgal-card:hover .pgal-stripes{transform:none;box-shadow:none}
 .lib-surface.pgl-page .lbry-card-foot{align-items:baseline}
 .lib-surface.pgl-page .lbry-card .lbry-card-id{display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}

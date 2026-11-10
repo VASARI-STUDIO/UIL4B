@@ -45,7 +45,7 @@ async function openLibrary(page, width, plan) {
 }
 
 const search = (page, q) => page.getByLabel('Search icons').first().fill(q)
-const band = (page) => page.locator('.ig-end[data-gate="search"]')
+const band = (page) => page.locator('.geg[data-gate="search"]')
 
 /** No glyph request (batched or single) names any of these packs. */
 function expectNoGlyphFor(urls, packs) {
@@ -66,7 +66,7 @@ for (const width of [390, 1440]) {
       const b = band(page)
       await expect(b).toBeVisible({ timeout: 20_000 })
       await expect(b.getByRole('heading', { level: 2 })).toHaveText('3 icons match “apple” in Pro sets')
-      await expect(b.locator('.ig-end-p')).toContainText('Nothing matches in the sets you can open.')
+      await expect(b.locator('.geg-p')).toContainText('Nothing matches in the sets you can open.')
       await expect(page.getByText(/No icons match/)).toHaveCount(0)
 
       const link = b.getByRole('link', { name: 'See Pro' })
@@ -97,7 +97,7 @@ for (const width of [390, 1440]) {
       await expect(page.locator('.ig .ic:not(.ig-skel)')).toHaveCount(1)
       const [gridBox, bandBox] = await Promise.all([page.locator('.ig').boundingBox(), b.boundingBox()])
       expect(bandBox.y, 'the band comes after the grid').toBeGreaterThanOrEqual(gridBox.y + gridBox.height)
-      await expect(page.locator('.ig-end[data-gate="free"]'), 'the generic upgrade band is not stacked under it').toHaveCount(0)
+      await expect(page.locator('.geg[data-gate="free"]'), 'the generic upgrade band is not stacked under it').toHaveCount(0)
       await expect(b.getByRole('link', { name: 'See Pro' })).toHaveAttribute('href', '/plans')
       expectNoGlyphFor(urls, PRO_PACKS)
     })
@@ -123,7 +123,7 @@ test('a Pro viewer gets no band for the same search', async ({ page }) => {
   await search(page, 'apple')
   await expect(page.locator('.ig .ic:not(.ig-skel)').first()).toBeVisible({ timeout: 20_000 })
   await page.waitForTimeout(800)
-  await expect(page.locator('.ig-end')).toHaveCount(0)
+  await expect(page.locator('.geg')).toHaveCount(0)
   expect(urls.filter((u) => u.includes('/search?') && u.includes('prefixes=')), 'Pro sends no scoped count request').toEqual([])
 })
 
@@ -146,7 +146,7 @@ test('signed out, with results, the existing band carries the count instead of a
   watch(page, 'a visitor searching for github')
   await openLibrary(page, 1440)
   await search(page, 'github')
-  const anon = page.locator('.ig-end[data-gate="anon"]')
-  await expect(anon.locator('.ig-end-p')).toContainText('more icons match “github”', { timeout: 20_000 })
-  await expect(page.locator('.ig-end')).toHaveCount(1)
+  const anon = page.locator('.geg[data-gate="anon"]')
+  await expect(anon.locator('.geg-p')).toContainText('more icons match “github”', { timeout: 20_000 })
+  await expect(page.locator('.geg')).toHaveCount(1)
 })

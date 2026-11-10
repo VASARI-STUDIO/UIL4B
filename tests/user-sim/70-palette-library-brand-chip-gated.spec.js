@@ -78,12 +78,12 @@ async function openBrand(page, { mood } = {}) {
 
 const page$ = (page) => page.locator('.pgl-page')
 // Every way forward this block can offer, wherever it sits on the page.
-const offers = (page) => page$(page).locator('a, button').filter({ hasText: /^\s*(See what Pro includes|Create your free account)\s*$/ })
+const offers = (page) => page$(page).locator('a, button').filter({ hasText: /^\s*(See what Pro includes|Log in)\s*$/ })
 // The results region and every live region inside it: the gated block must be
 // the only one that announces a chip tap.
 const results = (page) => page.locator('section[aria-labelledby="pgl-grid-heading"]')
 const announcers = (page) => results(page).locator('[role="status"], [aria-live]:not([aria-live="off"])')
-const gatedBlock = (page) => page.locator('[role="status"]').filter({ hasText: HEADING })
+const gatedBlock = (page) => page.locator('[role="status"]').filter({ hasText: HEADING }).locator('.geg')
 
 // One empty status node is mounted before the tap and is the one announcer after.
 async function expectSingleAnnouncement(page) {
@@ -97,7 +97,7 @@ async function expectSingleAnnouncement(page) {
 
 async function expectNoMatchStateGone(page) {
   await expect(page$(page)).not.toContainText('No palettes match')
-  await expect(page.locator('.pgal-card'), 'a brand card is open to this viewer').toHaveCount(0)
+  await expect(page.locator('.pgal-card:not(.geg-fade *)'), 'a brand card is open to this viewer').toHaveCount(0)
   await expect(page.locator('.lockt-card'), 'placeholders stand beside the single offer').toHaveCount(0)
   await expect(page.locator('.pgl-cta'), 'the bottom close CTA repeats the offer').toHaveCount(0)
 }
@@ -112,15 +112,15 @@ for (const width of [390, 1440]) {
         await signIn(page, { plan: 'free' })
         await go(page, ROUTE)
         // Positive control: the page rendered the free rung before the chip is pressed.
-        await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.free)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.free)
       })
 
       test('names the gate, the true count and one link to Pro', async ({ page }) => {
         await openBrand(page)
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(FREE_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(FREE_BODY)
         await expect(offers(page)).toHaveCount(1)
         const link = block.getByRole('link', { name: 'See what Pro includes' })
         await expect(link).toHaveCount(1)
@@ -142,8 +142,8 @@ for (const width of [390, 1440]) {
         await openBrand(page, { mood: 'Warm' })
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(FREE_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(FREE_BODY)
         await expect(offers(page), 'the gated block and the close CTA both showed').toHaveCount(1)
         await expectNoMatchStateGone(page)
       })
@@ -152,7 +152,7 @@ for (const width of [390, 1440]) {
         // The block must come from the emptied collection, not from the page
         // being in a filtered state: Curated still lists the ten open rows.
         await pick(page, COLLECTION_TRIGGER, COLLECTION_TRAY, 'Curated')
-        await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.free)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.free)
         await expect(gatedBlock(page)).toHaveCount(0)
       })
     })
@@ -161,20 +161,20 @@ for (const width of [390, 1440]) {
       test.beforeEach(async ({ page }) => {
         watch(page, 'a signed-out visitor tapping the Brand chip')
         await go(page, ROUTE)
-        await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
       })
 
       test('names the gate and offers one link to Pro, not an account', async ({ page }) => {
         await openBrand(page)
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(ANON_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
         await expect(offers(page)).toHaveCount(1)
         const link = block.getByRole('link', { name: 'See what Pro includes' })
         await expect(link).toHaveCount(1)
         await expect(link).toHaveAttribute('href', '/plans')
-        await expect(block.getByRole('button', { name: 'Create your free account' }), 'a free account does not open Brand').toHaveCount(0)
+        await expect(block.getByRole('button', { name: 'Log in' }), 'a free account does not open Brand').toHaveCount(0)
         await expectNoMatchStateGone(page)
       })
 
@@ -192,8 +192,8 @@ for (const width of [390, 1440]) {
         await openBrand(page, { mood: 'Warm' })
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(ANON_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
         await expect(offers(page), 'the gated block and the close CTA both showed').toHaveCount(1)
         await expectNoMatchStateGone(page)
       })
@@ -204,9 +204,9 @@ for (const width of [390, 1440]) {
         watch(page, 'a Pro subscriber tapping the Brand chip')
         await signIn(page, { plan: 'pro' })
         await go(page, ROUTE)
-        await expect(page.locator('.pgal-card').first()).toBeVisible()
+        await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
         await openBrand(page)
-        await expect(page.locator('.pgal-card')).toHaveCount(PRO_BRAND_ROWS)
+        await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(PRO_BRAND_ROWS)
         expect(PRO_BRAND_ROWS, 'the control is vacuous without brand rows').toBeGreaterThan(0)
         await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(PRO_BRAND_ROWS)
         await expect(gatedBlock(page)).toHaveCount(0)
