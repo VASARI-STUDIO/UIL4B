@@ -80,10 +80,13 @@ test.describe('signed out, signing in from the dialog', () => {
     await primaryButton(panel).click()
     await expect(panel.locator('.xd-signin')).toBeVisible()
 
-    await page.waitForFunction(() => !!window.__UIL4B_TEST_AUTH__)
+    // The panel hands the export on when the form reports success, so the sign-in goes through the form
+    // (the test double completes the late sign-in on submit), not around it.
+    await panel.locator('#ui-login-email').fill('visitor@example.com')
+    await panel.locator('#ui-login-password').fill('correct-horse-battery')
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),
-      page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow()),
+      panel.locator('.xd-signin').getByRole('button', { name: 'Log in', exact: true }).click(),
     ])
     expect(download.suggestedFilename()).toBe('untitled-ui-kit-04-standards.zip')
     expect(calls.map((c) => c.body)).toEqual([expect.objectContaining({ theme: '04-standards', row: 'ui-kit', format: 'zip' })])

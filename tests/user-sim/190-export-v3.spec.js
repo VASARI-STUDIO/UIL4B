@@ -322,6 +322,8 @@ test.describe('the sizes the spec names', () => {
       watch(page, 'a designer exporting at 390px')
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
+    // Signed out, the popup starts on the UI kit; these steps are about the Brand book.
+    await typeRadio(panel, 'Brand book').click()
       for (const type of ['Brand book', 'UI kit', 'Code']) {
         expect(Math.round((await typeRadio(panel, type).boundingBox()).height), `${type} segment`).toBeGreaterThanOrEqual(44)
       }
@@ -829,6 +831,8 @@ test.describe('what the popup remembers and says', () => {
     watch(page, 'a designer switching categories')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
+    // Signed out, the popup starts on the UI kit; these steps are about the Brand book.
+    await typeRadio(panel, 'Brand book').click()
     await categoryRadio(panel, 'Style guide').click()
     await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'PNG', exact: true }).click()
     await categoryRadio(panel, 'Book').click()
@@ -846,6 +850,8 @@ test.describe('what the popup remembers and says', () => {
     watch(page, 'a designer choosing PNG pages')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
+    // Signed out, the popup starts on the UI kit; these steps are about the Brand book.
+    await typeRadio(panel, 'Brand book').click()
     await expect(panel.getByRole('radiogroup', { name: 'Template' }), 'a themed file has a Theme step and no Layout tiles').toHaveCount(0)
     await expect(panel.getByRole('heading', { name: 'Theme', level: 3 })).toBeVisible()
     await fileGroup(panel, 'Book').getByRole('radio', { name: 'PNG pages', exact: true }).click()
@@ -858,6 +864,8 @@ test.describe('what the popup remembers and says', () => {
     watch(page, 'a designer reading the steps')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
+    // Signed out, the popup starts on the UI kit; these steps are about the Brand book.
+    await typeRadio(panel, 'Brand book').click()
     const steps = async () => panel.getByRole('heading', { level: 3 }).allInnerTexts()
     expect(await steps(), 'a themed file leads with its Theme').toEqual(['Theme', 'File', 'Details'])
     await fileGroup(panel, 'Book').getByRole('radio', { name: 'PNG pages', exact: true }).click()
