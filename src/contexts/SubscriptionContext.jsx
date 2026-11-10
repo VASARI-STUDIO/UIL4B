@@ -49,6 +49,7 @@ const FREE_PLAN = {
   id: 'free', label: 'Free',
   limits: {
     'alt-text': AI_LIMITS.free.daily, 'prompts-ai': AI_LIMITS.free.daily, 'ai-default': AI_LIMITS.free.daily,
+    // 'custom-icons' is a per-project cap: the icon library compares it with each project's own count.
     projects: FREE_SAVE_LIMITS.projects, 'custom-icons': FREE_SAVE_LIMITS.customIcons,
   },
   monthlyLimits: {

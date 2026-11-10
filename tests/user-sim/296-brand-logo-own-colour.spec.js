@@ -33,7 +33,7 @@ const BODIES = {
   gitlab: '<path fill="#fc6d26" d="M3 3h18v18H3z"/><path fill="#e24329" d="M8 8h8v8H8z"/>',
 }
 // The ink an un-tinted icon is drawn in on the dark page.
-const DARK_INK = '#F4F4F5'
+const DARK_INK = '#EFEEEA'
 
 const choosePack = async (page, pack) => {
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
@@ -99,16 +99,16 @@ const openLogo = async (browser, name, { width = 1440, touch = false, noClipboar
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
   await choosePack(page, 'logos')
   await page.getByRole('button', { name: `Customise ${name}`, exact: true }).click()
-  await expect(page.locator('.icust-code-copy')).toBeEnabled({ timeout: 20000 })
+  await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeEnabled({ timeout: 20000 })
   return { ctx, page }
 }
 
-const colourRow = (page) => page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+const colourRow = (page) => page.locator('#ied-colour-label').locator('xpath=ancestor::div[2]')
 const chip = (page, name) => colourRow(page).getByRole('radio', { name, exact: true })
 
 /** The markup the stage image is drawn from, once it is a data: URI of the art. */
 const stageMarkup = async (page) => {
-  const src = await page.locator('img.icust-stage-img:not(.icust-stage-wait)').getAttribute('src')
+  const src = await page.locator('img.ied-stage-img:not(.ied-stage-wait)').getAttribute('src')
   return src && src.startsWith('data:') ? decodeURIComponent(src.replace(/^data:image\/svg\+xml;utf8,/, '')) : ''
 }
 
@@ -146,12 +146,12 @@ test('a one-colour brand logo opens in its own colour, in the stage, the copy an
   // The row offers the brand's colour as Original, selected, with a swatch of that colour.
   await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
   await expect(chip(page, 'Original')).toBeChecked()
-  await expect(chip(page, 'Text colour')).toHaveCount(0)
+  await expect(chip(page, 'Default')).toHaveCount(0)
   await expect(chip(page, 'Black')).toBeVisible()
   await expect(chip(page, 'White')).toBeVisible()
   await expect(colourRow(page).locator('.cpk-trigger')).toHaveCount(1)
-  await expect(chip(page, 'Original').locator('.icust-chip-sw')).toHaveCSS('background-color', BRAND_RGB)
-  await expect(colourRow(page).locator('.icust-colour-value')).toHaveText(BRAND.toUpperCase())
+  await expect(chip(page, 'Original').locator('.ied-sw')).toHaveCSS('background-color', BRAND_RGB)
+  await expect(colourRow(page).locator('.ied-lblrow .ied-val')).toHaveText(BRAND.toUpperCase())
 
   // The stage's paths compute to the brand colour, not the ink.
   await expect.poll(() => stageMarkup(page)).toContain(BRAND)
@@ -190,7 +190,7 @@ test('Black recolours a brand logo and Original restores the art\'s own paint', 
   expect(copiedBlack).not.toContain(BRAND)
   expect(await downloadSvg(page)).not.toContain(BRAND)
   // The row still offers the brand colour while another is chosen.
-  await expect(chip(page, 'Original').locator('.icust-chip-sw')).toHaveCSS('background-color', BRAND_RGB)
+  await expect(chip(page, 'Original').locator('.ied-sw')).toHaveCSS('background-color', BRAND_RGB)
 
   await chip(page, 'Original').click()
   await expect(chip(page, 'Original')).toBeChecked()
@@ -207,9 +207,9 @@ test('recolouring a brand logo changes nothing else: the header line, the Simila
     const u = new URL(r.url())
     if (ICONIFY_HOSTS.includes(u.hostname) && u.pathname.startsWith('/logos/') && u.searchParams.get('height') === '24') tiles.push(r.url())
   })
-  const sub = page.locator('.icust-sub')
+  const sub = page.locator('.ied-hd .ied-note')
   await expect(sub).toHaveText('Logos (colour)')
-  const tileImgs = page.locator('.icust-similar-btn img')
+  const tileImgs = page.locator('.ied-sim img')
   await expect(tileImgs).toHaveCount(1)
   const srcs = await tileImgs.evaluateAll((els) => els.map((e) => e.getAttribute('src')))
   const fetched = tiles.length
@@ -242,7 +242,7 @@ test('with no Clipboard API, Copy SVG still copies, through the textarea, once',
 
 test('near-black art still follows the theme ink, with no Original choice', async ({ browser }) => {
   const { ctx, page } = await openLogo(browser, 'github-icon')
-  await expect(chip(page, 'Text colour')).toBeChecked()
+  await expect(chip(page, 'Default')).toBeChecked()
   await expect(chip(page, 'Original')).toHaveCount(0)
   await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
   await expect.poll(() => stageMarkup(page)).toContain(DARK_INK)
@@ -281,7 +281,7 @@ test('a saved, never-recoloured brand logo comes back in its own colour', async 
   await page.locator('.ig .ic', { hasText: 'Custom (stripe 1)' }).click()
   await expect(chip(page, 'Original')).toBeChecked({ timeout: 20000 })
   await expect(page.getByText('Original colours', { exact: true })).toHaveCount(0)
-  const fills = await page.locator('.icust-stage-host path').evaluateAll(ps => ps.map(p => getComputedStyle(p).fill))
+  const fills = await page.locator('.ied-stage-host path').evaluateAll(ps => ps.map(p => getComputedStyle(p).fill))
   expect(fills).toEqual([BRAND_RGB, BRAND_RGB, BRAND_RGB])
   await ctx.close()
 })

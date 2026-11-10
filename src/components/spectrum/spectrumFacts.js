@@ -197,7 +197,7 @@ export const FREE_POINTS = [
   `All ${numberWord(TOOL_COUNT)} tools, without an account`,
   `${AI_LIMITS.free.daily} AI generations a day, ${AI_LIMITS.free.monthly} a month`,
   `Style guide exports in ${EXPORTS.freeNames}`,
-  `${FREE_SAVE_LIMITS.projects} saved projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`,
+  `${FREE_SAVE_LIMITS.projects} saved projects, with ${FREE_SAVE_LIMITS.customIcons} icons in each`,
   `${SYSTEMS_FREE.length} colour systems (${SYSTEMS_FREE.map((s) => s.label).join(' and ')})`,
 ]
 
@@ -223,7 +223,7 @@ export const COMPARE = [
   { group: 'AI AND CONTROLS', label: 'AI generations', free: `${AI_LIMITS.free.daily} a day, ${AI_LIMITS.free.monthly} a month`, pro: `${AI_LIMITS.pro.daily} a day, ${AI_LIMITS.pro.monthly} a month` },
   { label: 'Colour systems', free: `${SYSTEMS_FREE.length} of ${SYSTEMS_TOTAL}`, pro: `All ${SYSTEMS_TOTAL}, plus HCT editing` },
   { group: 'YOUR WORK', label: 'Saved projects', free: String(FREE_SAVE_LIMITS.projects), pro: 'Unlimited' },
-  { label: 'Custom icons', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
+  { label: 'Icons per project', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
   { label: 'Style guide exports', free: EXPORTS.freeNames, pro: `${EXPORTS.freeNames}, plus ${EXPORTS.proNames}` },
   { label: 'Export mark', free: '“Made with UIL4B” line', pro: 'Removed' },
 ]
