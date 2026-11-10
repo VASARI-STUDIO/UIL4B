@@ -145,7 +145,7 @@ test.describe('/create/icons · the masthead pill says what the grid is showing'
     const sets = setsFor('anon')
     expect(sets, 'a signed-out visitor is entitled to no packs at all, so this would measure nothing').toBeGreaterThan(0)
     await expect(
-      page.locator('.ig-end[data-gate="anon"] .ig-end-p'),
+      page.locator('.geg[data-gate="anon"] .geg-p'),
       'the gate never went back to naming the sets this visitor is browsing',
     ).toContainText(`from ${sets} sets`, { timeout: 20000 })
     // …and it is stating a POPULATED grid, not an empty one: the count is what

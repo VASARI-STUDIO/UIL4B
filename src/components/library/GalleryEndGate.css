@@ -1,0 +1,106 @@
+/* The end of a gallery (GalleryEndGate.jsx).
+   The closing block under the results, centred: a display sentence, one dim
+   line, one small detail line, one ink pill and, where a second way on is
+   true, a text link. It uses the app's own tokens (ink is --t0, the page is
+   --bg-0, the dim line is --t1). No card, no box, no hairline.
+
+   Two rows of faded placeholders continue the grid above it. They are
+   decoration: no focus, no pointer, no hover state. The block's words and
+   buttons are always on screen and hold the one way in. A mask fades the rows
+   into the block below them. */
+.geg{margin-top:0;margin-bottom:64px}
+@media(max-width:767px){.geg{margin-bottom:48px}}
+
+/* The grid dissolves into the block: the mask is transparency, not a painted colour. */
+.geg-fade{
+  margin-top:4px;pointer-events:none;user-select:none;
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 100%);
+}
+
+/* The block: centred, one column. With faded rows above it the heading is
+   pulled 24px up into the rows' foot; without them it sits 48px below the grid,
+   so it never overlaps a result. */
+.geg-band{display:flex;flex-direction:column;align-items:center;gap:24px;max-width:34rem;margin:48px auto 0;padding:0;text-align:center;position:relative}
+.geg-fade+.geg-band{margin-top:-24px}
+.geg-copy{min-width:0}
+.geg .geg-h{
+  margin:0;
+  font-family:var(--display);font-size:clamp(28px,2.2vw + 18px,40px);font-weight:560;line-height:1.1;letter-spacing:-.03em;
+  color:var(--t0);text-wrap:balance;overflow-wrap:anywhere;
+}
+.geg .geg-p{margin:12px auto 0;max-width:46ch;font-size:16px;line-height:1.55;color:var(--t1);text-wrap:pretty;overflow-wrap:anywhere}
+.geg .geg-detail{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--t2);overflow-wrap:anywhere}
+.geg-cta{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+@media(max-width:767px){.geg-cta{flex-direction:column;align-items:stretch;gap:8px;align-self:stretch}.geg-pill{justify-content:center}.geg-link{justify-content:center}}
+
+.geg-pill,.geg-link{
+  box-sizing:border-box;display:inline-flex;align-items:center;min-height:48px;
+  border-radius:var(--radius-pill);
+  font-family:var(--font);font-size:15px;line-height:1.2;
+  white-space:nowrap;text-decoration:none;cursor:pointer;
+}
+.geg-pill{
+  padding:10px 22px;border:0;
+  background:var(--t0);color:var(--bg-0);font-weight:540;
+  transition:background-color var(--dur-1) ease,transform 140ms cubic-bezier(.23,1,.32,1);
+}
+.geg-pill:active{transform:scale(.97)}
+.geg-link{
+  padding:0 8px;border:0;background:transparent;color:var(--t1);font-size:14px;font-weight:560;
+  text-decoration:underline;text-underline-offset:3px;
+  transition:color var(--dur-1) ease;
+}
+@media (hover:hover) and (pointer:fine){
+  .geg-pill:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
+  .geg-link:hover{color:var(--t0)}
+}
+.geg-pill:focus-visible,.geg-link:focus-visible{outline:2px solid var(--link,var(--accent-text));outline-offset:3px}
+
+@media (forced-colors:active){
+  .geg-pill{border:1px solid ButtonText}
+}
+
+/* Reduced motion: the in-app choice wins in both directions, then the OS
+   setting. The press does not scale. */
+html[data-reduced-motion="true"] :is(.geg-pill,.geg-link){transition:none}
+html[data-reduced-motion="true"] .geg-pill:is(:hover,:active){transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.geg-pill,.geg-link){transition:none}
+  html:not([data-reduced-motion="false"]) .geg-pill:is(:hover,:active){transform:none}
+}
+
+/* Placeholder rows for galleries whose items are not icons. Every cell is
+   neutral ink on the page: no hue, name or value of a locked item. The grid is
+   clipped to two rows, whatever the column count. */
+.geg-ph-grid{
+  --geg-ph-h:132px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--geg-ph-min,220px)),1fr));
+  grid-auto-rows:var(--geg-ph-h);gap:16px;
+  height:calc(var(--geg-ph-h)*2 + 16px);overflow:hidden;
+}
+.geg-ph-grid--poster{--geg-ph-h:180px}
+.geg-ph-grid--glyph{--geg-ph-h:92px;gap:10px;height:calc(var(--geg-ph-h)*2 + 10px)}
+.geg-ph{
+  position:relative;box-sizing:border-box;display:flex;overflow:hidden;min-width:0;
+  border-radius:var(--radius-md,12px);
+  background:color-mix(in srgb,var(--t0) 5%,var(--bg-0));
+}
+.geg-ph-grid--swatch .geg-ph{flex-direction:column}
+.geg-ph-band{flex:1;filter:blur(3px)}
+.geg-ph-band[data-band="0"]{background:color-mix(in srgb,var(--t0) 16%,var(--bg-0))}
+.geg-ph-band[data-band="1"]{background:color-mix(in srgb,var(--t0) 11%,var(--bg-0))}
+.geg-ph-band[data-band="2"]{background:color-mix(in srgb,var(--t0) 14%,var(--bg-0))}
+.geg-ph-band[data-band="3"]{background:color-mix(in srgb,var(--t0) 9%,var(--bg-0))}
+.geg-ph-grid--poster .geg-ph{background:none}
+.geg-ph img{display:block;width:100%;height:100%;object-fit:cover;filter:blur(3px)}
+.geg-ph-grid--glyph .geg-ph{background:none;justify-content:center;padding-top:16px;color:var(--t0)}
+.geg-ph-grid--glyph svg{width:24px;height:24px;filter:blur(3px);opacity:.6}
+.geg-ph-grid--lines .geg-ph{flex-direction:column;justify-content:center;gap:10px;padding:16px}
+.geg-ph-line{height:8px;border-radius:4px;background:color-mix(in srgb,var(--t0) 14%,var(--bg-0));filter:blur(2px)}
+.geg-ph-line[data-line="1"]{width:80%}
+.geg-ph-line[data-line="2"]{width:55%}
+@media(max-width:640px){
+  .geg-ph-grid{gap:8px;height:calc(var(--geg-ph-h)*2 + 8px)}
+  .geg-ph-grid--glyph{gap:2px;--geg-ph-h:72px;height:calc(var(--geg-ph-h)*2 + 2px)}
+}

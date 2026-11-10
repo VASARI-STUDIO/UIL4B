@@ -82,8 +82,8 @@ for (const [width, ctx] of [
       await expect(page.locator('.ig-credit'), 'the strip under the grid is gone').toHaveCount(0)
       await expectNoClose(page, '/create/icons')
       // The one thing between the grid and the footer is the gate, which is the page's single call to action.
-      await expect(page.getByRole('main').locator('.ig-end'), 'the gate is page content, inside main').toHaveCount(1)
-      await expect(footer(page).locator('.ig-end'), 'the gate is not inside the footer').toHaveCount(0)
+      await expect(page.getByRole('main').locator('.geg'), 'the gate is page content, inside main').toHaveCount(1)
+      await expect(footer(page).locator('.geg'), 'the gate is not inside the footer').toHaveCount(0)
       await expect(footer(page).getByRole('link', { name: 'Open the toolkit' })).toBeVisible()
     })
 
@@ -91,8 +91,8 @@ for (const [width, ctx] of [
       watch(page, SIGNED_OUT)
       await open(page, '/create/icons')
       await expect(page.getByRole('main').getByRole('button', { name: 'Log in', exact: true }), 'one Log in button in main, and it is the gate’s').toHaveCount(1)
-      await expect(page.locator('.ig-end .ig-end-pill')).toHaveText('Log in')
-      await expect(page.locator('.ig-end'), 'the gate says the new heading').toContainText('Log in to access')
+      await expect(page.locator('.geg .geg-pill')).toHaveText('Log in')
+      await expect(page.locator('.geg'), 'the gate says the new heading').toContainText('Log in to access')
     })
 
     test('/create/icons signed out: the licence row names each set with its licence and a link', async ({ page }) => {
@@ -168,7 +168,7 @@ for (const [width, ctx] of [
           const el = document.documentElement
           const view = el.clientWidth
           // Everything in the gate (when there is one) and the footer stays inside the window.
-          const wide = [...document.querySelectorAll('.ig-end, .ig-end *, footer, footer *')]
+          const wide = [...document.querySelectorAll('.geg, .geg *, footer, footer *')]
             .filter((n) => n.getClientRects().length)
             .map((n) => ({ n, r: n.getBoundingClientRect() }))
             .filter(({ r }) => r.right > view + 1 || r.left < -1)
@@ -190,11 +190,11 @@ test.describe('at 320', () => {
       watch(page, SIGNED_OUT)
       await go(page, route)
       await expect(footer(page)).toHaveCount(1)
-      if (route === '/create/icons') await expect(page.locator('.ig-end-h')).toBeVisible({ timeout: 20_000 })
+      if (route === '/create/icons') await expect(page.locator('.geg-h')).toBeVisible({ timeout: 20_000 })
       await page.locator('.sp-footer').scrollIntoViewIfNeeded()
       const m = await page.evaluate(() => {
         const el = document.documentElement
-        const h = document.querySelector('.ig-end-h')
+        const h = document.querySelector('.geg-h')
         const line = h ? parseFloat(getComputedStyle(h).lineHeight) : 0
         return { scrollWidth: el.scrollWidth, view: el.clientWidth, lines: h ? Math.round(h.getBoundingClientRect().height / line) : 0 }
       })
@@ -211,7 +211,7 @@ test.describe('keyboard', () => {
   test('Tab runs the gate’s Log in, then See the plans, then on into the footer', async ({ page }) => {
     watch(page, SIGNED_OUT)
     await open(page, '/create/icons')
-    await page.locator('.ig-end .ig-end-pill').focus()
+    await page.locator('.geg .geg-pill').focus()
     await page.keyboard.press('Tab')
     await expect(page.locator(':focus')).toHaveText('See the plans')
     // Anything focusable between the gate and the footer is page content that is not a call to action, so

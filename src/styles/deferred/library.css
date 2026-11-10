@@ -1508,23 +1508,16 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 
 
 
-/* ── The end of the icon grid ────────────────────────────────────────────────
-   The closing block under the results, centred: a display sentence, one dim
-   line, one ink pill and, where a second way on is true, a text link. It uses
-   the app's own tokens (ink is --t0, the page is --bg-0, the dim line is
-   --t1). No card, no box, no hairline.
-
-   Signed out, two rows of blurred built-in icons continue the grid above it.
-   The rows are decoration: no focus, no pointer, no hover state. The block's
-   words and buttons are always on screen and hold the one way in. A mask fades
-   the rows into the block below them. */
-.ig-end{margin-top:0}
-
+/* ── The faded rows of the icon grid's end ───────────────────────────────────
+   The block itself (heading, words, pill, link, and the mask that dissolves
+   these rows into it) is the shared GalleryEndGate. What is here is only the
+   icon-shaped rows it is handed: two rows of blurred built-in icons that
+   continue the grid. They are decoration; the wrapper already removes focus and
+   pointer events. */
 .ig-end-tease{
   --ig-end-cols:8;
   position:relative;isolation:isolate;
   display:grid;grid-template-columns:repeat(var(--ig-end-cols),minmax(0,1fr));gap:10px;
-  margin-top:4px;pointer-events:none;user-select:none;
 }
 .ig-end-cell{
   position:relative;box-sizing:border-box;display:grid;place-items:start center;
@@ -1536,62 +1529,6 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 @media(max-width:640px){
   .ig-end-tease{gap:2px}
   .ig-end-cell{min-height:var(--ig-end-cell-h,72px);padding-top:12px}
-}
-
-/* The block: centred, one column. With a blurred row above it the heading is
-   pulled 24px up into the row's faded foot; without one (the free plan's block)
-   it sits 48px below the grid, so it never overlaps a result. */
-.ig-end-band{display:flex;flex-direction:column;align-items:center;gap:24px;max-width:34rem;margin:48px auto 0;padding:0;text-align:center;position:relative}
-.ig-end-tease+.ig-end-band{margin-top:-24px}
-.ig-end{margin-bottom:64px}
-@media(max-width:767px){.ig-end{margin-bottom:48px}}
-/* The grid dissolves into the block: the mask is transparency, not a painted colour. */
-.ig-end-tease{-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 100%)}
-.ig-end-copy{min-width:0}
-.ig-end .ig-end-h{
-  margin:0;
-  font-family:var(--display);font-size:clamp(28px,2.2vw + 18px,40px);font-weight:560;line-height:1.1;letter-spacing:-.03em;
-  color:var(--t0);text-wrap:balance;overflow-wrap:anywhere;
-}
-.ig-end .ig-end-p{margin:12px auto 0;max-width:46ch;font-size:16px;line-height:1.55;color:var(--t1);text-wrap:pretty;overflow-wrap:anywhere}
-.ig-end .ig-end-sets{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--t2)}
-.ig-end-cta{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
-@media(max-width:767px){.ig-end-cta{flex-direction:column;align-items:stretch;gap:8px;align-self:stretch}.ig-end-pill{justify-content:center}.ig-end-link{justify-content:center}}
-
-.ig-end-pill,.ig-end-link{
-  box-sizing:border-box;display:inline-flex;align-items:center;min-height:48px;
-  border-radius:var(--radius-pill);
-  font-family:var(--font);font-size:15px;line-height:1.2;
-  white-space:nowrap;text-decoration:none;cursor:pointer;
-}
-.ig-end-pill{
-  padding:10px 22px;border:0;
-  background:var(--t0);color:var(--bg-0);font-weight:540;
-  transition:background-color var(--dur-1) ease,transform 140ms cubic-bezier(.23,1,.32,1);
-}
-.ig-end-pill:active{transform:scale(.97)}
-.ig-end-link{
-  padding:0 8px;border:0;background:transparent;color:var(--t1);font-size:14px;font-weight:560;
-  text-decoration:underline;text-underline-offset:3px;
-  transition:color var(--dur-1) ease;
-}
-@media (hover:hover) and (pointer:fine){
-  .ig-end-pill:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
-  .ig-end-link:hover{color:var(--t0)}
-}
-.ig-end-pill:focus-visible,.ig-end-link:focus-visible{outline:2px solid var(--link,var(--accent-text));outline-offset:3px}
-
-@media (forced-colors:active){
-  .ig-end-pill{border:1px solid ButtonText}
-}
-
-/* Reduced motion: the in-app choice wins in both directions, then the OS
-   setting. The arrow does not rotate and the press does not scale. */
-html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-link){transition:none}
-html[data-reduced-motion="true"] .ig-end-pill:is(:hover,:active){transform:none}
-@media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-link){transition:none}
-  html:not([data-reduced-motion="false"]) .ig-end-pill:is(:hover,:active){transform:none}
 }
 
 /* Dark --inp matches the toolbar card, so library and font-browser search fields step up to --bg-3 to stay visible against it. */
