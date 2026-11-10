@@ -315,7 +315,7 @@ for (const [who, plan] of VIEWERS) {
       await expect(line(page)).toHaveText(BOTH)
 
       // Closing the popup drops the kept preview: a second trip to /plans and back opens nothing.
-      await page.getByRole('button', { name: 'Close customizer' }).click()
+      await page.getByRole('button', { name: 'Close customiser' }).click()
       await expect(customiser(page)).toHaveCount(0)
       await page.evaluate(() => { window.history.pushState({}, '', '/plans') })
       await page.goBack()
