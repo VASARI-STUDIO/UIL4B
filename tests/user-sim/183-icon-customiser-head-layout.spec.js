@@ -95,6 +95,8 @@ const rotRight = (page) => page.getByRole('button', { name: 'Rotate right', exac
 const flipH = (page) => page.getByRole('button', { name: 'Flip horizontally', exact: true })
 const flipV = (page) => page.getByRole('button', { name: 'Flip vertically', exact: true })
 const sizeRadio = (page, name) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name })
+/** Let every finite animation and transition finish, so a computed colour is where it rests. */
+const settle = (page) => page.evaluate(() => Promise.all(document.getAnimations().filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime)).map((a) => a.finished.catch(() => {}))))
 const tileFor = (page, name) => page.getByRole('radiogroup', { name: 'Line style' }).getByRole('radio', { name: new RegExp(`^${name}`) })
 
 /** The stage drawing's computed transform, rounded so 6e-17 reads as 0 ('none' stays 'none'). */
@@ -227,6 +229,7 @@ test.describe('layout', () => {
     const scrolls = await short.page.locator('#ied-scroll').evaluate((el) => el.scrollHeight > el.clientHeight + 1)
     expect(scrolls, 'a 560px-tall window should make the controls scroll, so this test proves nothing').toBe(true)
     await expect.poll(async () => (await edge(short.page)).scrolls, { message: 'the foot was never marked as over a scroll' }).toBe(true)
+    await settle(short.page)
     const b = await edge(short.page)
     expect(b.width, 'the foot changes height when its hairline strengthens').toBe('1px')
     expect(b.shadow, 'a shadow is back on the foot').toBe('none')
@@ -235,6 +238,7 @@ test.describe('layout', () => {
     // At the end of the scroll nothing lies under the fold: the foot goes back to its resting hairline.
     await short.page.locator('#ied-scroll').evaluate((el) => { el.scrollTop = el.scrollHeight })
     await expect.poll(async () => (await edge(short.page)).scrolls, { message: 'the foot stays marked at the end of the scroll' }).toBe(false)
+    await settle(short.page)
     const a = await edge(short.page)
     expect(a.colour, 'the foot hairline did not go back to its resting colour').not.toBe(b.colour)
     await short.ctx.close()
@@ -251,7 +255,7 @@ test.describe('layout', () => {
     expect(rest.colour, 'the head draws a hairline before anything scrolled').toBe('rgba(0, 0, 0, 0)')
     await page.locator('#ied-scroll').evaluate((el) => { el.scrollTop = 120 })
     await expect.poll(async () => (await edge()).on, { message: 'the head was never marked once scrolled' }).toBe(true)
-    expect((await edge()).colour, 'the head has no hairline while scrolled').not.toBe('rgba(0, 0, 0, 0)')
+    await expect.poll(async () => (await edge()).colour, { message: 'the head has no hairline while scrolled' }).not.toBe('rgba(0, 0, 0, 0)')
     await page.locator('#ied-scroll').evaluate((el) => { el.scrollTop = 0 })
     await expect.poll(async () => (await edge()).on, { message: 'the head stays marked back at the top' }).toBe(false)
     await ctx.close()
