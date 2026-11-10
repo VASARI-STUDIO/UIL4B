@@ -160,8 +160,10 @@ test.describe('the icon weight segment', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/icons')
     await page.locator(REAL_CELL).first().click({ timeout: 20000 })
-    const copy = page.locator('.icust-panel').getByRole('button', { name: /^Copy SVG$/ })
+    const copy = page.locator('.ied').getByRole('button', { name: /^Copy SVG$/ })
     await expect(copy).toBeVisible()
+    // The sheet slides up as it opens: read the box once the finite animations have finished.
+    await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime)).map((a) => a.finished.catch(() => {}))))
     const hit = await copy.evaluate((el) => {
       const r = el.getBoundingClientRect()
       const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)

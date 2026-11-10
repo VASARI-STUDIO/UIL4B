@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { colourRowState } from '../../src/utils/iconColourRow.js'
-import { stripCss, stripJs } from '../helpers/strip-comments.js'
+import { stripJs } from '../helpers/strip-comments.js'
 
 const MULTI = '<svg><path fill="#123456"/><path fill="#abcdef"/></svg>'
 const GRADIENT = '<svg><defs><linearGradient id="a"/></defs><path fill="url(#a)"/></svg>'
@@ -101,19 +101,20 @@ test('an icon outside the coloured packs never waits', () => {
   assert.equal(colourRowState({ inColouredPack: false, svg: null }).row, 'choose')
 })
 
-test('the waiting row hides its control but keeps its height and its label', () => {
+test('the waiting row keeps its label, shows an empty value and draws no chips', () => {
   const jsx = stripJs(readFileSync(new URL('../../src/pages/IconLibrary.jsx', import.meta.url), 'utf8'))
-  assert.match(jsx, /icust-row\$\{colourRow === 'wait' \? ' icust-row--wait' : ''\}/)
-  const css = stripCss(readFileSync(new URL('../../src/styles/deferred/library.css', import.meta.url), 'utf8'))
-  assert.match(css, /\.icust-row--wait\s*>\s*:not\(label\)\s*\{\s*visibility:\s*hidden\s*\}/)
-  assert.doesNotMatch(css, /\.icust-row--wait\s*\{/)
+  // The label is outside the row branches, so it is there in every state.
+  assert.match(jsx, /<label className="ied-lbl" id="ied-colour-label">Colour<\/label>\s*\{colourRow === 'original' \?/)
+  assert.match(jsx, /colourRow === 'wait' \? \(\s*<span className="ied-val">&nbsp;<\/span>/)
+  // The chips (and with them the Default chip and the colour picker) mount only once the row has settled.
+  assert.match(jsx, /\{colourRow !== 'original' && colourRow !== 'wait' && \(\s*<>\s*(?:\{\s*\}\s*)?<div className="ied-chips" role="radiogroup"/)
 })
 
 test('the "Original colours" text is a plain value, never a Default pill', () => {
   const jsx = stripJs(readFileSync(new URL('../../src/pages/IconLibrary.jsx', import.meta.url), 'utf8'))
-  assert.match(jsx, /colourRow === 'original' \? \(\s*<span className="icust-value">Original colours<\/span>/)
+  assert.match(jsx, /colourRow === 'original' \? \(\s*<span className="ied-val">Original colours<\/span>/)
   assert.doesNotMatch(jsx, /icust-seg-static/)
-  assert.doesNotMatch(jsx, /icust-note/)
+  assert.doesNotMatch(jsx, />Default<\/button>/)
 })
 
 test('a caller that leaves the limit out reads art as the grid does', () => {

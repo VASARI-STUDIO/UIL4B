@@ -58,10 +58,11 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --cc-   Contrast Checker live pair
 //   --cq-   the admin community queue previews
 //   --quota- the AI quota meter fill
+//   --ied-g-  the icon editor's Light and Dark ground plates (IconLibrary.jsx writes them on the overlay from groundVars(theme))
 //   --si-   the sliding pill: useSlideIndicator measures the selected pill (--si-x/-y/-w/-h/-r)
 const RUNTIME_FAMILIES = [
   '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fgd-', '--fpr-',
-  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-', '--si-',
+  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-', '--si-', '--ied-g-',
 ]
 
 // Exact names set inline by a component, not a family: the /login wall gives
