@@ -227,7 +227,7 @@
   padding: 0 12px;
   border: 1px solid var(--tl-line-2);
   border-radius: 12px;
-  font-family: var(--font);
+  font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-size: 13px;
   font-weight: 400;
@@ -243,8 +243,17 @@
   min-height: 36px;
   padding: 0 12px;
   border-radius: 12px;
+  font-family: var(--mono);
   font-size: 13px;
   text-align: left;
+}
+/* The rail (from 1024): Base size is one row, the label, the track, then the value
+   field, as the board lays it out. */
+@media (min-width: 1024px) {
+  .tsc-page .tsc-scale-term--base { grid-template-columns: 60px minmax(0, 1fr); align-items: center; column-gap: 12px; }
+  .tsc-page .tsc-scale-term--base .tsc-range .snapv-value,
+  .tsc-page .tsc-scale-term--base .tsc-range .snapv-input { order: 0; }
+  .tsc-page .tsc-scale-term--base .tsc-range .snapv-value { justify-content: center; text-align: center; }
 }
 .tsc-page .tsc-range input[type="range"] {
   -webkit-appearance: none;
@@ -512,19 +521,19 @@ html[data-reduced-motion="true"] .tsc-page .tsc-tuning-caret { transition: none;
 }
 
 /* ── Weight cells: one per weight the family has ────────────────────────── */
-.tsc-page .tsc-weights { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
+.tsc-page .tsc-weights { --tsc-wt: 36px; display: grid; grid-template-columns: repeat(5, var(--tsc-wt)); gap: 8px; margin: 0 0 10px; }
 .tsc-page .tsc-wt {
-  min-width: 40px; height: 36px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent;
-  color: var(--tl-dim); font: 400 13px/1 var(--font); font-variant-numeric: tabular-nums; cursor: pointer;
+  width: var(--tsc-wt); height: var(--tsc-wt); padding: 0; border: 0; border-radius: 999px; background: var(--tl-wash);
+  color: var(--tl-dim); font: 500 13px/1 var(--font); font-variant-numeric: tabular-nums; cursor: pointer;
   transition: background-color 150ms var(--tl-ease), color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
 }
 .tsc-page .tsc-wt:active { transform: scale(.97); }
 .tsc-page .tsc-wt[aria-pressed="true"] { background: var(--tl-wash-on); color: var(--tl-ink); font-weight: 500; }
 .tsc-page .tsc-wt:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) {
-  .tsc-page .tsc-wt:hover:not([aria-pressed="true"]) { background: var(--tl-wash); color: var(--tl-ink); }
+  .tsc-page .tsc-wt:hover:not([aria-pressed="true"]) { background: color-mix(in srgb, var(--t0) 11%, transparent); color: var(--tl-ink); }
 }
-@media (pointer: coarse) { .tsc-page .tsc-wt { height: 44px; min-width: 44px; } }
+@media (pointer: coarse) { .tsc-page .tsc-weights { --tsc-wt: 44px; } }
 
 /* ── The page header: Preview width, as a segment, with its note ────────── */
 .tsc-page .tsc-width-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 36px; min-width: 0; }
@@ -729,14 +738,14 @@ html:has(.tsc-page .tsc-dock) { scroll-padding-bottom: 72px; }
   background: color-mix(in srgb, var(--t0) 7%, transparent); color: var(--tl-ink); cursor: pointer;
   transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
 }
-.tsc-page .tsc-fr-chip { min-width: 56px; padding: 0 14px; font: 400 14px/20px var(--font); font-variant-numeric: tabular-nums; }
+.tsc-page .tsc-fr-chip { min-width: 56px; padding: 0 14px; font: 400 14px/20px var(--mono); font-variant-numeric: tabular-nums; }
 .tsc-page .tsc-fr-ib { width: 44px; padding: 0; }
 .tsc-page .tsc-fr-chip[aria-expanded="true"],
 .tsc-page .tsc-fr-opt[aria-selected="true"] { background: color-mix(in srgb, var(--t0) 14%, transparent); }
 .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):active { transform: scale(.97); }
 .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib, .tsc-fr-opt):focus-visible { outline: 2px solid var(--tl-ink); outline-offset: 2px; }
 .tsc-page .tsc-fr-tray { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
-.tsc-page .tsc-fr-opt { min-width: 0; padding: 0; background: transparent; font: 400 14px/20px var(--font); }
+.tsc-page .tsc-fr-opt { min-width: 0; padding: 0; background: transparent; font: 400 14px/20px var(--mono); }
 .tsc-page .tsc-fr-opt[aria-selected="true"] { color: var(--tl-ink); }
 @media (hover: hover) and (pointer: fine) {
   .tsc-page :is(.tsc-fr-chip, .tsc-fr-ib):hover:not([aria-expanded="true"]) { background: color-mix(in srgb, var(--t0) 11%, transparent); }

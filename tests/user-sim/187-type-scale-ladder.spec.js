@@ -130,7 +130,7 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       expect(probe.type).toBe('range')
       expect(probe.base).toBe(probe.full)
       expect(probe.ratio).toBe(probe.full)
-      await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('15px')
+      await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('15 px')
     })
   }
 

@@ -18,9 +18,13 @@ export default function FamilyRow({ idBase, label, fonts, font, weight, onPickFo
   const chipRef = useRef(null)
   const trayRef = useRef(null)
 
-  // Opening moves focus onto the current weight so the keyboard lands in the list.
+  // Opening scrolls the sheet until the whole tray is in view (it opens below the
+  // chip, where the sheet's foot would otherwise hide the second row), then moves
+  // focus onto the current weight so the keyboard lands in the list.
   useEffect(() => {
-    if (open) trayRef.current?.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true })
+    if (!open) return
+    trayRef.current?.scrollIntoView({ block: 'nearest' })
+    trayRef.current?.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true })
   }, [open])
 
   const close = () => {
