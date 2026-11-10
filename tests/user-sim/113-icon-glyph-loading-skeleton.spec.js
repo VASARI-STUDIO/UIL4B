@@ -562,8 +562,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
   const SIMILAR_IMAGE = (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/lucide\/arrow-[^/]+\.svg$/.test(u.pathname)
   const tileState = (tile) => tile.evaluate((el) => {
     const css = getComputedStyle(el)
-    const r = el.getBoundingClientRect()
-    return { visibility: css.visibility, opacity: css.opacity, height: r.height, width: r.width, ready: el.dataset.ready }
+    return { visibility: css.visibility, opacity: css.opacity, height: el.offsetHeight, width: el.offsetWidth, ready: el.dataset.ready }
   })
 
   test('a tile is invisible, unfocusable and still 52px until its image loads, and a failed one stays hidden', async ({ page }) => {
@@ -615,7 +614,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
         expect(s.height, 'a waiting tile keeps its 52px box').toBe(52)
         expect(s.width).toBe(52)
       }
-      const rowBox = await row.evaluate((el) => el.getBoundingClientRect().height)
+      const rowBox = await row.evaluate((el) => el.offsetHeight)
       expect(rowBox, 'the row stays one 52px line while every tile waits').toBe(52)
       expect(await page.locator('.ied-similar').evaluate((el) => el.getBoundingClientRect().height), 'the section takes no room while every tile waits').toBe(0)
 
@@ -643,7 +642,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
         expect((await tileState(tile)).height).toBe(52)
       }
       await expect(row.locator('.ied-sim:visible'), 'exactly the five that loaded are shown').toHaveCount(5)
-      expect(await row.evaluate((el) => el.getBoundingClientRect().height)).toBe(52)
+      expect(await row.evaluate((el) => el.offsetHeight)).toBe(52)
 
       // The one whose image failed never appears, and keeps its place.
       const failed = tiles.nth(5)

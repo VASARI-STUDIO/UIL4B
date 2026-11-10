@@ -97,7 +97,7 @@ test.describe('size rail (desktop)', () => {
       await expect(drawing, `${n} cell: drawing height`).toHaveCSS('height', `${n}px`)
       await expect(radio(page, `${n} pixels`).locator('.num')).toHaveText(String(n))
     }
-    await expect(customRadio(page).locator('svg'), 'the Custom cell holds no drawing').toHaveCount(0)
+    await expect(customRadio(page).locator('.art svg'), 'the Custom cell holds no drawing (its Pro mark is not in the art)').toHaveCount(0)
     await ctx.close()
   })
 
