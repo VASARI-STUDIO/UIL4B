@@ -348,13 +348,12 @@ test.describe('The brand kit chooser', () => {
     await startNewBesideOlder(page)
   })
 
-  // the dashboard draws no put-aside row (ParkedRow is not rendered on /projects)
-  test.fixme('T22 the workspace row counts the kit waiting behind it, and Undo of a discard never overwrites', async ({ page }) => {
+  test('T22 the workspace row counts the kit waiting behind it, and Undo of a discard never overwrites', async ({ page }) => {
     watch(page, 'a designer with two unsaved kits')
     const OLDER = OLDER_KIT
     await startNewBesideOlder(page)
     await go(page, '/projects')
-    const row = page.locator('.uh-parked')
+    const row = page.locator('.db-parked')
     await expect(row).toContainText('1 more waiting behind it')
 
     // Discard the newest: the older one takes the row. Undo puts the newest back in front.
@@ -382,31 +381,29 @@ test.describe('The brand kit chooser', () => {
     await expect.poll(async () => (await readJson(page, PARKED))?.design?.palette?.colors, 'the kit the account held is put aside').toEqual(ACCOUNT.palette.colors)
   })
 
-  // the dashboard draws no put-aside row (ParkedRow is not rendered on /projects)
-  test.fixme('T24 a parked kit of the wrong shape (from an account document) still shows a row that can be discarded', async ({ page }) => {
+  test('T24 a parked kit of the wrong shape (from an account document) still shows a row that can be discarded', async ({ page }) => {
     watch(page, 'a designer whose put-aside kit came from an old client')
     await signIn(page, { plan: 'free', projects: 0 })
     await page.addInitScript((slot) => {
       try { if (!sessionStorage.getItem('__t24')) { sessionStorage.setItem('__t24', '1'); localStorage.setItem('vs-previous-design', JSON.stringify(slot)) } } catch { /* blocked */ }
     }, { design: { identity: { name: 5 }, palette: { colors: 'abc' } }, parkedAt: Date.now() - HOUR })
     await go(page, '/projects')
-    const row = page.locator('.uh-parked')
+    const row = page.locator('.db-parked')
     await expect(row).toContainText('Unsaved brand kit')
     await row.getByRole('button', { name: 'Discard' }).click()
     await expect(row).toHaveCount(0)
   })
 
-  // the dashboard draws no put-aside row (ParkedRow is not rendered on /projects)
-  test.fixme('the workspace row for an unsaved brand kit continues, saves and discards with Undo', async ({ page }) => {
+  test('the workspace row for an unsaved brand kit continues, saves and discards with Undo', async ({ page }) => {
     watch(page, 'a designer finding their put-aside kit on the workspace')
     await signIn(page, { plan: 'free', projects: 0 })
     await page.addInitScript((slot) => {
       try { if (!localStorage.getItem('vs-previous-design')) localStorage.setItem('vs-previous-design', JSON.stringify(slot)) } catch { /* blocked */ }
     }, { design: WORK, parkedAt: Date.now() - 2 * HOUR })
     await go(page, '/projects')
-    const row = page.locator('.uh-parked')
+    const row = page.locator('.db-parked')
     await expect(row).toContainText('Unsaved brand kit')
-    await expect(row).toContainText('Not saved yet')
+    await expect(row).toContainText('put aside')
 
     await row.getByRole('button', { name: 'Discard' }).click()
     await expect(row).toHaveCount(0)
@@ -418,5 +415,51 @@ test.describe('The brand kit chooser', () => {
     await row.getByRole('button', { name: 'Save as project' }).click()
     await expect(row).toHaveCount(0)
     expect(Object.values(await readJson(page, 'vs-projects')).flat()).toHaveLength(1)
+  })
+
+  test('Save as project at the Free cap is refused under the row, and the kit stays put aside', async ({ page }) => {
+    watch(page, 'a Free designer with three projects saving a put-aside kit')
+    await signIn(page, { plan: 'free', projects: 3 })
+    await page.addInitScript((slot) => {
+      try { if (!localStorage.getItem('vs-previous-design')) localStorage.setItem('vs-previous-design', JSON.stringify(slot)) } catch { /* blocked */ }
+    }, { design: WORK, parkedAt: Date.now() - 2 * HOUR })
+    await go(page, '/projects')
+    const row = page.locator('.db-parked')
+    await expect(row).toContainText('put aside')
+    await expect(page.getByTestId('parked-save-refusal'), 'no refusal before the press').toHaveCount(0)
+
+    await row.getByRole('button', { name: 'Save as project' }).click()
+    const refusal = page.getByTestId('parked-save-refusal')
+    await expect(refusal).toBeVisible()
+    await expect(refusal).toContainText('Free plan saves up to 3 projects')
+    await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+    await expect(row, 'the refusal is inside the row, which stays').toBeVisible()
+    expect((await readJson(page, PARKED))?.design?.palette?.colors, 'the kit is still put aside').toEqual(WORK.palette.colors)
+    expect(Object.values(await readJson(page, 'vs-projects')).flat(), 'nothing was added to the three').toHaveLength(3)
+    await expect(toast(page)).toHaveCount(0)
+  })
+
+  test('Save as project while the list could not be read says it cannot check, with no plans link', async ({ page }) => {
+    watch(page, 'a Free designer on a new device whose list was refused, saving a put-aside kit')
+    await signIn(page, {
+      plan: 'free',
+      projects: [],
+      docs: { 'users/test-uid-free/sync/projects': { list: [project('r1', 'Offcut', WORK, new Date().toISOString())], v: 1, _updatedAt: Date.now() - HOUR } },
+      deny: [{ path: 'sync/projects', ops: ['get'] }],
+    })
+    await page.addInitScript((slot) => {
+      try { if (!localStorage.getItem('vs-previous-design')) localStorage.setItem('vs-previous-design', JSON.stringify(slot)) } catch { /* blocked */ }
+    }, { design: WORK, parkedAt: Date.now() - 2 * HOUR })
+    await go(page, '/projects')
+    const row = page.locator('.db-parked')
+    await expect(row).toContainText('put aside')
+    await expect(page.getByRole('alert').filter({ hasText: /Your projects didn.t load\./ })).toBeVisible({ timeout: 10_000 })
+
+    await row.getByRole('button', { name: 'Save as project' }).click()
+    const refusal = page.getByTestId('parked-save-refusal')
+    await expect(refusal).toContainText('couldn’t be checked')
+    await expect(refusal.getByRole('link', { name: 'See what Pro adds' }), 'it is not the cap, so it does not point at plans').toHaveCount(0)
+    expect((await readJson(page, PARKED))?.design?.palette?.colors, 'the kit is still put aside').toEqual(WORK.palette.colors)
+    expect(Object.values((await readJson(page, 'vs-projects')) || {}).flat(), 'nothing was written to the device').toHaveLength(0)
   })
 })
