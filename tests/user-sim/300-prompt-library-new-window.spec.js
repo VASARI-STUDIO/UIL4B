@@ -33,7 +33,7 @@
 //   the full view lets a non-admin past RequireAdmin               -> "the gate"
 //   wantsFullView ignores the path                                 -> "the gate" (palettes keep their nav)
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, proLibraryArrived, watch, signIn } from './helpers.js'
 
 const ROUTE = '/discover/prompts'
 const FULL = `${ROUTE}?view=full`
@@ -169,6 +169,10 @@ for (const { width, height } of WIDTHS) {
     // The normal page first, as the control: the nav and footer exist and the shelves are these.
     await go(page, ROUTE)
     await expect(page.locator('.pl-overview')).toBeVisible()
+    // The admin is Pro, so the shelves are the free rows until the full library
+    // arrives from /api/ai?library=prompts, and a different set after it. The
+    // two pages here load it separately; compare them only once each has landed.
+    await proLibraryArrived(page, 'the prompt library on the normal page')
     await expect(page.locator('.pnav'), 'the normal page has its nav').toHaveCount(1)
     const shelvesNormal = await page.locator('[id^="pl-shelf-"]').evaluateAll((els) => els.map((e) => e.id))
     expect(shelvesNormal.length, 'the control page has shelves to compare').toBeGreaterThan(3)
@@ -177,6 +181,7 @@ for (const { width, height } of WIDTHS) {
     await go(page, FULL)
     await expect(page.locator('.plib-page h1'), 'the library masthead').toBeVisible()
     await expect(page.locator('.pl-overview')).toBeVisible()
+    await proLibraryArrived(page, 'the prompt library in the full-screen view')
     await expect(page.locator('.pnav'), 'no nav').toHaveCount(0)
     await expect(page.locator('.app-footer'), 'no footer').toHaveCount(0)
     await expect(page.locator('html'), 'no phone tab bar').not.toHaveClass(/has-tabbar/)
