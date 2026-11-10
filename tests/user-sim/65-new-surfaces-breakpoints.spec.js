@@ -466,12 +466,12 @@ test('/settings · at 320 the profile row and the Theme row both stay inside the
   expect(theme.metaWidth, 'the label must not be crushed into a five-line column').toBeGreaterThan(150)
 })
 
-test('/projects · the card’s title control is at least 24px tall at 390 and 1440', async ({ browser }) => {
-  // docs/RELEASE-READINESS.md §4 recorded it at 21px on a 390px screen; the
-  // sweep measured 21.25px at every width (17px type, line-height 1.25).
+test('/projects · the open-project control is at least 24px tall at 390 and 1440', async ({ browser }) => {
+  // The dashboard's way into a project is the latest sheet's "Open project" link (a ghost pill, or a text link
+  // on a phone). WCAG 2.5.8 sets 24px as the floor for a pointer target; the old title control sat at 21px.
   //
-  // MUTATION: drop `min-height:24px` from .uh-card-name — both widths fail
-  // at 21.3px.
+  // MUTATION: height under 24px on .db-ghost or .db-opent in dashboard.css — the failing width names it.
+
   test.setTimeout(60_000)
   const failures = []
   for (const width of [390, 1440]) {
@@ -482,7 +482,7 @@ test('/projects · the card’s title control is at least 24px tall at 390 and 1
     watch(page, `a designer opening a project card on a ${width}px screen`)
     await signIn(page, { plan: 'free', projects: 2 })
     await go(page, '/projects')
-    const name = page.locator('.uh-card-name').first()
+    const name = page.locator('a[aria-label^="Open project"]:visible').first()
     await expect(name).toBeVisible()
     await settle(page)
     const h = await name.evaluate((el) => +el.getBoundingClientRect().height.toFixed(1))

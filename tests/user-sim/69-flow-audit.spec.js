@@ -150,8 +150,8 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
 
       // A new account starts empty, with no seeded "Default Project";
       // 73-hero-headline-new-account holds the whole of it.
-      await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('link', { name: 'Make your first palette' })).toHaveCount(1)
+      await expect(page.getByText('Default Project')).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'Start your first brand kit' })).toHaveCount(1)
 
       // New project goes straight into the Palette Builder on a new, unsaved
       // project, named when it is saved.
@@ -166,7 +166,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       await expect(page.locator('.toast.show')).toContainText('Project saved')
 
       await go(page, '/projects')
-      await expect(page.locator('.proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
+      await expect(page.getByRole('region', { name: 'Brand v1, latest project' })).toHaveCount(1)
       await context.close()
     })
   }
@@ -186,7 +186,7 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
       watch(page, `a free account at the cap (${size[0]}px)`)
       const account = await signIn(page, { plan: 'free', projects: CAP })
       await go(page, '/projects')
-      await page.getByRole('button', { name: 'New project' }).click()
+      await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).click()
 
       const refusal = page.getByTestId('project-create-refusal')
       await expect(refusal).toBeVisible()
@@ -213,7 +213,8 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
     watch(page, 'a free account with a slot to spare')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/projects')
-    await page.getByRole('button', { name: 'New project' }).click()
+    // The title row's button: the other projects' list has a New project tile of its own while there is room.
+    await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).click()
     await expect(page).toHaveURL(/\/create\/palette$/)
     await expect(page.getByTestId('project-create-refusal')).toHaveCount(0)
     await context.close()
