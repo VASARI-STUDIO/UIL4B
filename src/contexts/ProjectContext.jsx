@@ -102,8 +102,9 @@ function newId() {
 // localStorage, and what to put on screen when either one fails.
 const PUSH_DEBOUNCE_MS = 1500
 
-// A read of the account's projects that has not answered by now takes the failure path. Until it
-// answers, New project waits on a device with no copy and saves wait on the count.
+// A network step of the account's pull (a read, or the migration) that has not answered by now takes the
+// failure path. The pull can take several steps, so the limit is per step. Until the pull answers, New
+// project waits on a device with no copy and saves wait on the count.
 const PULL_TIMEOUT_MS = 15000
 
 function withTimeout(promise, ms) {
@@ -634,7 +635,7 @@ export function ProjectProvider({ children }) {
     try {
       const fs = await loadFirestore()
       if (signal?.cancelled) return
-      const remote = await withTimeout(pullRemoteProjects(fs, uid), PULL_TIMEOUT_MS)
+      const remote = await pullRemoteProjects(fs, uid, { step: (promise) => withTimeout(promise, PULL_TIMEOUT_MS) })
       if (signal?.cancelled) return
       storedRef.current = remote.stored instanceof Map ? remote.stored : new Map()
 
