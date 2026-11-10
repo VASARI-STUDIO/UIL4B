@@ -151,6 +151,8 @@ test.describe('Palette Builder: Submit to the community…', () => {
 /* ── Prompt Library ──────────────────────────────────────────────────────── */
 
 test.describe('Prompt Library: Submit prompt', () => {
+  // parked: admin-only (non-admins are redirected to /)
+  test.skip(true, 'parked: admin-only')
   const submitPrompt = (page) => page.getByRole('button', { name: 'Submit prompt' })
 
   for (const screen of SCREENS) {
