@@ -90,9 +90,9 @@ const MAX_COMPARE = 3
 // above and below it, never under a minimum), so changing the size moves the
 // whole list once and never one band on its own.
 const LAYOUTS = {
-  wide: { name: 96, floor: 72, grid: 56, band: n => bandHeight('wide', n) },
-  tablet: { name: 96, floor: 48, grid: 40, band: n => bandHeight('tablet', n) },
-  phone: { name: 48, floor: 32, grid: 24, band: n => bandHeight('phone', n) },
+  wide: { name: 96, floor: 72, grid: 44, band: n => bandHeight('wide', n) },
+  tablet: { name: 96, floor: 48, grid: 44, band: n => bandHeight('tablet', n) },
+  phone: { name: 48, floor: 32, grid: 28, band: n => bandHeight('phone', n) },
 }
 const SIZE_MIN = 24
 const SIZE_MAX = 120
@@ -131,8 +131,11 @@ const pendingFits = new Set()
 let fitFrame = 0
 function runFits() {
   fitFrame = 0
-  const jobs = Array.from(pendingFits).filter(job => !job.dead)
+  const queued = Array.from(pendingFits).filter(job => !job.dead)
   pendingFits.clear()
+  const tileJobs = queued.filter(job => job.tile)
+  const jobs = queued.filter(job => !job.tile)
+  if (tileJobs.length) fitTiles(tileJobs)
   jobs.forEach(job => job.el.style.setProperty('--fg-fit', '1'))
   jobs.forEach(job => {
     job.room = job.box.clientWidth
@@ -156,6 +159,31 @@ function runFits() {
     })
   }
 }
+// A grid tile's name wraps to two lines, so it fits when two lines hold it: shrink
+// in small steps until the name is no taller than its two-line box and no word is
+// wider than the box, never below the floor. The names in one grid share the
+// smallest scale any of them needs (the boards set one size for the whole grid),
+// except a typed preview, which fits tile by tile.
+const tileGroups = new WeakMap()
+function fitTiles(jobs) {
+  jobs.forEach(job => { job.scale = 1; job.el.style.setProperty('--fg-fit', '1') })
+  let open = jobs
+  for (let pass = 0; pass < 14 && open.length; pass++) {
+    open = open.filter(job => job.scale > job.floor
+      && (job.el.scrollHeight > job.el.clientHeight + 1 || job.el.scrollWidth > job.el.clientWidth + 1))
+    open.forEach(job => {
+      job.scale = Math.max(job.scale * 0.94, job.floor)
+      job.el.style.setProperty('--fg-fit', String(job.scale))
+    })
+  }
+  new Set(jobs.map(job => job.group).filter(Boolean)).forEach(group => {
+    const set = tileGroups.get(group)
+    if (!set) return
+    let min = 1
+    set.forEach(job => { if (!job.dead && job.scale < min) min = job.scale })
+    set.forEach(job => { if (!job.dead) job.el.style.setProperty('--fg-fit', String(min)) })
+  })
+}
 // `now` fits synchronously, for the first measure after a name mounts, so it
 // never paints at the wrong size.
 function queueFit(job, now) {
@@ -175,7 +203,7 @@ function queueFit(job, now) {
 // once its face is confirmed, so it is measured in the right face.
 // In the grid view `size` is the tile's name size and the cell's width is the
 // room, so a long name shrinks to its cell rather than breaking mid-word.
-function useFitName(active, label, size, floor) {
+function useFitName(active, label, size, floor, tile) {
   const ref = useRef(null)
   useLayoutEffect(() => {
     const el = ref.current
@@ -187,8 +215,15 @@ function useFitName(active, label, size, floor) {
       floor: Math.min(floor, size) / size,
       natural: 0,
       room: 0,
+      tile: !!tile,
+      group: tile === 'grid' ? box.closest('.fg-grid') : null,
+    }
+    if (job.group) {
+      if (!tileGroups.has(job.group)) tileGroups.set(job.group, new Set())
+      tileGroups.get(job.group).add(job)
     }
     const fit = () => queueFit(job)
+
     queueFit(job, true)
     // A face can still land after this, such as a subset for typed preview
     // text. Ask for this name's own face and fit again when it is in.
@@ -217,10 +252,11 @@ function useFitName(active, label, size, floor) {
     return () => {
       job.dead = true
       pendingFits.delete(job)
+      if (job.group) tileGroups.get(job.group)?.delete(job)
       if (fonts) fonts.removeEventListener?.('loadingdone', onLoaded)
       if (ro) ro.disconnect()
     }
-  }, [active, label, size, floor])
+  }, [active, label, size, floor, tile])
   return ref
 }
 
@@ -426,6 +462,7 @@ function GalleryCard({
     `${typed}|${font.family}`,
     tiles ? gridName : nameSize,
     tiles ? Math.max(18, Math.round(gridName * 0.6)) : floor,
+    tiles ? (typed ? 'typed' : 'grid') : false,
   )
   const weightLabel = `${weights} weight${weights === 1 ? '' : 's'}`
   // With the reader's own words in the name, the family name moves to the meta

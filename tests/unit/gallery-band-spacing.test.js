@@ -25,11 +25,11 @@ const declared = (prop, query) => {
 }
 
 // What the bands used before the spacing was widened: room above the name,
-// room below, the gap between them and the tiles' inset, at each width.
-const WAS = { wide: { y: 28, yb: 20, gap: 27 }, phone: { y: 16, yb: 20, gap: 14 }, tile: { wide: 20, tablet: 16, phone: 12 } }
+// room below and the gap between them, at each width.
+const WAS = { wide: { y: 28, yb: 20, gap: 27 }, phone: { y: 16, yb: 20, gap: 14 } }
 
 test('a band\'s spacing is built from the spacing tokens, not loose pixels', () => {
-  for (const prop of ['--fg-y', '--fg-yb', '--fg-gap', '--fg-y-max']) {
+  for (const prop of ['--fg-y', '--fg-yb', '--fg-gap']) {
     assert.match(declared(prop), /^var\(--s-\d+\)$/, `${prop} is not a token`)
   }
 })
@@ -56,10 +56,47 @@ test('the room around a name is at least 1.5 times what it was', () => {
   assert.ok(BAND_SPACE.phone.gap >= WAS.phone.gap * 1.5, 'phone gap between name and meta shrank back')
 })
 
-test('the grid tiles\' inset is at least 1.5 times what it was at each width', () => {
-  assert.ok(token(declared('--fg-y-max')) >= WAS.tile.wide * 1.5, 'wide tile inset shrank back')
-  assert.ok(token(declared('--fg-y-max', 'max-width: 1023px')) >= WAS.tile.tablet * 1.5, 'tablet tile inset shrank back')
-  assert.ok(token(declared('--fg-y-max', 'max-width: 767px')) >= WAS.tile.phone * 1.5, 'phone tile inset shrank back')
+// The grid is the round-3 boards' tiles: filled, 8px apart, 12px corners, and the
+// boards' own insets (name 20 down and 16 in, meta 16 up, pick button 12), 224px
+// tall. A phone is 8px in, 144px tall, with the name 16 down and 12 in.
+const tileRule = (query) => {
+  const re = query
+    ? new RegExp(`@media \\(${query}\\) \\{\\s*\\.fg-page \\.fg-grid--tiles :is\\(\\.fg-card, \\.fg-skel-row\\) \\{([^}]*)\\}`)
+    : /\.fg-page \.fg-grid--tiles :is\(\.fg-card, \.fg-skel-row\) \{([^}]*)\}/
+  const block = css.match(re)?.[1]
+  assert.ok(block, `no tile rule for ${query || 'the wide grid'}`)
+  return block
+}
+
+test('the grid tiles are the board\'s: 8px apart, 12px corners, 224px tall with the board\'s insets', () => {
+  const grid = css.match(/\.fg-page \.fg-grid--tiles \{([^}]*)\}/)?.[1]
+  assert.match(grid, /gap:\s*8px;/, 'tiles are not 8px apart')
+  assert.match(grid, /padding:\s*0 24px;/, 'the grid is not 24px in from the edges')
+  const wide = tileRule()
+  assert.match(wide, /border-radius:\s*12px;/)
+  assert.match(wide, /height:\s*max\(224px,/)
+  assert.match(wide, /--fg-y:\s*20px;/)
+  assert.match(wide, /--fg-yb:\s*16px;/)
+  assert.match(wide, /--fg-padl:\s*16px;/)
+  assert.match(wide, /--fg-right:\s*64px;/)
+  assert.match(wide, /--fg-ground:\s*var\(--fg-tile\);/)
+  assert.doesNotMatch(wide, /border-right/, 'the flush grid\'s hairline came back')
+})
+
+test('the phone grid is two columns, 8px in, 144px tiles', () => {
+  const phone = tileRule('max-width: 767px')
+  assert.match(phone, /height:\s*max\(144px,/)
+  assert.match(phone, /--fg-y:\s*16px;/)
+  assert.match(phone, /--fg-padl:\s*12px;/)
+  assert.match(css, /@media \(max-width: 767px\) \{ \.fg-page \.fg-grid--tiles \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); padding: 0 8px; \} \}/)
+})
+
+test('a hovered or focused tile takes the wake fill, with no change of colour on the name', () => {
+  assert.match(css, /\.fg-grid--tiles \.fg-card:has\(:focus-visible\) \{ --fg-ground: var\(--fg-tile-wake\); \}/)
+  assert.match(css, /\(hover: hover\) and \(pointer: fine\) \{\s*\.fg-page \.fg-grid--tiles \.fg-card:hover \{ --fg-ground: var\(--fg-tile-wake\); \}/)
+  assert.doesNotMatch(css, /fg-grid--tiles \.fg-card:hover \.fg-card-name/, 'the old name-only hover came back')
+  assert.match(css, /--fg-tile: #0F1012;/)
+  assert.match(css, /\[data-theme="light"\] \.fg-page \{ --fg-tile: #E4E3DD; \}/)
 })
 
 test('band heights follow the sums, with a floor that only a tiny name reaches', () => {
