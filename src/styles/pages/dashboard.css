@@ -381,8 +381,8 @@
   .db-head { height: auto; min-height: 44px; gap: 12px; }
   .db-head .db-go { display: none; }
   .db-head .db-ghost { height: 44px; flex: none; }
-  .db-name { font-size: 36px; }
-  .db-name.wrap { font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: -.02em; white-space: normal; overflow: visible; text-wrap: balance; }
+  .db-name { font-size: 36px; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; text-wrap: balance; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .db-name.wrap { display: block; -webkit-line-clamp: none; font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: -.02em; overflow: visible; }
   .db-meta { margin-top: 4px; height: auto; text-wrap: pretty; }
   .db-opent { position: relative; margin-left: 8px; font-weight: 500; white-space: nowrap; text-decoration: underline; text-decoration-color: rgba(var(--ink-rgb), .35); text-decoration-thickness: 1px; text-underline-offset: 4px; }
   .db-opent::before { content: ''; position: absolute; inset: -13px -8px; }
@@ -556,6 +556,8 @@
 }
 @media (pointer: coarse) and (max-width: 359px) {
   .db-open { min-height: 0; height: 0; margin-block: 0; }
+  .db-opent { display: inline-flex; align-items: center; min-height: 44px; margin-block: -12px; vertical-align: middle; }
+  .db-opent::before { content: none; }
 }
 /* the phone's played ramp fades in instead of unrolling; at 1200 and up the ramp waits for hover and focus like the rest.
    The explicit-setting rule sits with the played-ramp rule in the phone block above. */

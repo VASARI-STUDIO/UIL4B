@@ -123,7 +123,9 @@ export default function Projects() {
   const hasProjects = projects.length > 0
   const loadingList = !signedOut && !resolving && projectsLoading && !hasProjects
   const syncError = sync.errors.find((e) => e.channel === 'projects')
-  const loadFailed = !signedOut && !resolving && !hasProjects && !projectsLoading && (!online || !!syncError)
+  // Failed holds until the account's list has been read: a read that failed leaves the count unchecked even
+  // after the sync error clears, and that is not an account with no projects.
+  const loadFailed = !signedOut && !resolving && !hasProjects && !projectsLoading && (!online || !!syncError || unchecked)
   const offline = !online && !signedOut
   const atCap = !!slots && !isPro && slots.used >= slots.limit
 
@@ -146,9 +148,11 @@ export default function Projects() {
   // New project: top right of the title row. Ink when signed out, outlined once there is work (and while the
   // list loads or fails to), and absent when the sheet's own pill is the same action (no project yet).
   const showNew = !resolving && (signedOut || lead || loadingList || loadFailed)
-  const newProject = showNew && (
+  // The refusal's dialog is drawn here whichever New project was pressed (this one, the sheet's pill, the
+  // docked bar or the Other projects tile), so the wrap stays while a refusal is open even with no button.
+  const newProject = (showNew || capRefusal) && (
     <div className={`db-newwrap${signedOut ? ' out' : ''}`}>
-      {signedOut ? (
+      {!showNew ? null : signedOut ? (
         <button type="button" className="db-go" onClick={startNew}>New project<GoArrow /></button>
       ) : (
         <button
