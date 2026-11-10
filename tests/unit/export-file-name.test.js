@@ -44,6 +44,13 @@ test('a project name is made safe for a file system', () => {
   assert.doesNotMatch(projectSlug(`${'a'.repeat(PROJECT_SLUG_MAX - 1)} b`), /-$/, 'a cut never leaves a trailing hyphen')
 })
 
+test('an accented letter keeps its base letter in the slug, whichever way it is typed', () => {
+  assert.equal(projectSlug('Café & Co.'), 'cafe-co')
+  assert.equal(projectSlug('Café & Co.'), 'cafe-co', 'e followed by a combining acute')
+  assert.equal(projectSlug('Zoë Ångström'), 'zoe-angstrom')
+  assert.equal(fileName('Café & Co.', 'ui-kit-06-studio', 'zip'), 'cafe-co-ui-kit-06-studio.zip')
+})
+
 test('a malformed artefact or extension throws rather than writing a stray name', () => {
   for (const bad of ['', 'UI Kit', 'ui_kit', '-kit', 'kit-', '../x', null]) assert.throws(() => fileName('Lumen', bad, 'html'), /artefact/, String(bad))
   for (const bad of ['', '.html', 'h.tml', 'HTML', null]) assert.throws(() => fileName('Lumen', 'ui-kit', bad), /extension/, String(bad))
