@@ -51,12 +51,20 @@ async function choosePack(page, pack) {
   const filters = page.getByRole('button', { name: 'Filters', exact: true })
   const sheet = page.getByRole('dialog', { name: 'Filters' })
   const packMenu = page.getByRole('button', { name: 'Icon pack' })
-  const behindFilters = await filters.isVisible()
+  // The toolbar is a lazy chunk: on a loaded machine it mounts hundreds of ms after the page
+  // opens, and until then NEITHER control exists. Where the pack control sits (behind Filters,
+  // or on the row) can only be read once one of the two is there, so it is read inside the
+  // retry, after that wait, never once up front (an early read said "on the row" at 390 and
+  // the loop then waited 40s for a pack control that was behind a Filters button it never
+  // pressed).
+  let behindFilters = false
   // On a slow runner the Filters sheet can close again while the page settles after
   // sign-in (CI at 390 saw the pack control appear, then vanish before the click). So the
   // whole open-and-choose is retried with short steps until the chosen pack is applied.
   const list = page.locator('.menu-select-list[role="listbox"]')
   await expect(async () => {
+    await expect(filters.or(packMenu).first()).toBeVisible({ timeout: 3_000 })
+    behindFilters = await filters.isVisible()
     if (behindFilters && await filters.getAttribute('aria-expanded') !== 'true') await filters.click({ timeout: 3_000 })
     if (!(await list.isVisible())) await packMenu.click({ timeout: 3_000 })
     await list.locator(`[role="option"][data-value="${pack}"]`).click({ timeout: 3_000 })

@@ -466,10 +466,13 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
 }
 .fg-page .fg-card-skeleton--sample { width: min(48%, 520px); height: calc(var(--fg-name, 96px) * .7); }
 
+/* The meta line is as wide as its text, so the tint behind it (see the open band
+   below) covers the text and no more. */
 .fg-page .fg-card-meta {
   position: absolute;
   left: var(--fg-padl);
-  right: var(--fg-right);
+  width: fit-content;
+  max-width: calc(100% - var(--fg-padl) - var(--fg-right));
   bottom: var(--fg-yb);
   font-family: var(--font);
   font-size: 13px;
@@ -477,8 +480,9 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   white-space: nowrap;
   overflow: hidden;
   color: var(--fg-ink-2);
+  background-color: var(--fg-meta-ground);
   font-variant-numeric: tabular-nums;
-  transition: color var(--dur-1) var(--ease-standard);
+  transition: color var(--dur-1) var(--ease-standard), background-color var(--dur-1) var(--ease-standard);
 }
 
 /* Tile hover: a hovered tile shows its name in the link colour. */
@@ -755,7 +759,7 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
   overflow: hidden;
 }
 /* The meta line runs to the cell's edge, past the compare button's column. */
-.fg-page .fg-grid--tiles .fg-card-meta { right: var(--fg-padr); text-overflow: ellipsis; white-space: nowrap; }
+.fg-page .fg-grid--tiles .fg-card-meta { right: var(--fg-padr); width: auto; max-width: none; text-overflow: ellipsis; white-space: nowrap; }
 .fg-page .fg-grid--tiles .fg-card-preview { overflow: hidden; }
 .fg-page .fg-grid--tiles .fg-card-compare { right: 10px; top: var(--fg-y); }
 
@@ -798,6 +802,13 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
 @media (max-width: 767px) { .fg-page .fg-sheet-drag { touch-action: none; } }
 .fg-page .fg-sheet-head { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 4px max(20px, env(safe-area-inset-left, 0px)); }
 .fg-page .fg-sheet-title { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.01em; line-height: 30px; }
+/* The More sheet is portalled out of the page, so it is found by the page class
+   ToolLayout puts on its layer. Its close is the same tonal disc as Filters. */
+.tl-sheet-layer[data-page~="fg-page"] .tl-sheet-x { border-radius: 999px; background: var(--tl-wash); transition: background-color var(--dur-1) var(--ease-standard); }
+@media (hover: hover) and (pointer: fine) {
+  .tl-sheet-layer[data-page~="fg-page"] .tl-sheet-x:hover { background: var(--tl-wash-on); }
+}
+html[data-reduced-motion="true"] .tl-sheet-layer[data-page~="fg-page"] .tl-sheet-x { transition: none; }
 .fg-page .fg-sheet-x { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--t0); background: color-mix(in srgb, var(--t0) 6%, var(--card)); border: 0; border-radius: var(--radius-pill); cursor: pointer; transition: background-color var(--dur-1) var(--ease-standard); }
 .fg-page .fg-sheet-body { display: grid; flex: 1 1 auto; gap: 20px; min-height: 0; padding: 12px max(20px, env(safe-area-inset-right, 0px)) 20px max(20px, env(safe-area-inset-left, 0px)); overflow-y: auto; overscroll-behavior: contain; }
 .fg-page .fg-sheet-group { display: grid; gap: 10px; min-width: 0; }
@@ -917,6 +928,13 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
    takes the AVIF and falls back to the WebP. */
 @media (max-width: 767px) { .fg-page .fg-card::before { background-image: var(--fg-bgimg-m, none); } }
 .fg-page .fg-card.is-open { --fg-ground: var(--fg-wake); }
+/* Behind the meta line, over a dark strip: the band's own ground at 75%. It dims
+   the strip's brightest specks under the text (3.1:1 at the worst pixel) to 4.5:1
+   or better, and is flat, so the ink keeps its dim value. A light strip already
+   clears 4.5:1 with the darker ink above. */
+.fg-page .fg-card { --fg-meta-ground: transparent; }
+.fg-page .fg-card.is-open.has-backdrop { --fg-meta-ground: color-mix(in srgb, var(--fg-ground) 75%, transparent); }
+[data-theme="light"] .fg-page .fg-card.is-open.has-backdrop { --fg-meta-ground: transparent; }
 .fg-page .fg-card--comparing, .fg-page .fg-card--comparing.is-open { --fg-ground: var(--fg-sel); }
 .fg-page .fg-card.is-open.has-backdrop::before { opacity: 1; transition: opacity 320ms var(--fg-ease); }
 .fg-page .fg-card.is-open.has-seen::before { transition: none; }
@@ -951,6 +969,10 @@ html[data-reduced-motion="true"] .fg-page :is(.fg-view-btn, .fg-sheet-pill, .fg-
 .fg-page .fg-card-copy:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
 .fg-page .fg-card-copy:active { transform: scale(.97); }
 @media (pointer: coarse) { .fg-page .fg-card-copy { height: 44px; } }
+/* On a phone Copy CSS takes the band's right margin; the pick button above it is
+   kept clear by sitting Copy CSS on the 44px footer row the meta line shares. */
+@media (max-width: 767px) { .fg-page .fg-card-copy { right: max(16px, env(safe-area-inset-right, 0px)); padding: 0 16px; } }
+@media (max-width: 767px) and (pointer: coarse) { .fg-page .fg-card-copy { bottom: 8px; } }
 [data-theme="light"] .fg-page .fg-card.is-open :is(.fg-card-copy, .fg-card-compare) {
   background: #E2E1DC;
   box-shadow: inset 0 0 0 1px rgba(26, 26, 26, .12);
