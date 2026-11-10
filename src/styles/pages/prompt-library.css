@@ -560,3 +560,9 @@
   .plib-page .pl-seg{display:grid;width:100%}
   .plib-page .pl-results-head h2{font-size:26px}
 }
+
+/* The shared gate (GalleryEndGate) under the overview and at the end of a list,
+   and the overview's "Browse all" control above it. */
+.plib-page .geg{margin-top:48px}
+.plib-page .pl-browse{display:flex;justify-content:center;margin-top:48px}
+.plib-page .pl-browse + .geg{margin-top:32px}

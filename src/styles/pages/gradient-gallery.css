@@ -40,8 +40,3 @@
   .lib-surface.grg-wrap .grg-grid--swatch{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 12px}
 }
 
-/* The three locked cards wrap by hand from the same 280px floor as the grid
-   above. When a row holds two, the third takes the whole row instead of sitting
-   beside an empty cell. */
-.lib-surface.grg-wrap .grg-grid--locked{display:flex;flex-wrap:wrap}
-.lib-surface.grg-wrap .grg-grid--locked > .lockt-card{flex:1 1 min(280px,100%);min-width:0}

@@ -6,8 +6,9 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
-import LibraryGrid from '../components/library/LibraryGrid'
-import { LockedPaletteCard, LockedTeaseCta } from '../components/library/LockedTease'
+import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
+import { reportUpgradeGate } from '../contexts/ProModalContext'
+import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -191,7 +192,7 @@ export default function PaletteGallery({ toast }) {
   // stubs standing in for the withheld ones, or the server's full list). The cap
   // counts down THAT list, never the filtered one — the distinction is the whole of
   // the prompt-library defect this module was written after.
-  const { open: browsable, locked: lockedPreviews, remaining: lockedCount, eligible } = useMemo(() => (
+  const { open: browsable, remaining: lockedCount, eligible } = useMemo(() => (
     splitLockedLibrary(rows, {
       unlocked: ready,
       isOpen: LIBRARY_RULES.palettes.isOpen,
@@ -276,26 +277,14 @@ export default function PaletteGallery({ toast }) {
     : group === 'curated' ? 'Curated collection'
       : 'Colours worth building with'
 
-  // The teased tail of the library: on the Pro rung's near side, three
-  // placeholders and one wall. Three is the gallery's desktop column count, so
-  // the tease reads as the next ROW of the collection rather than as a stub —
-  // see LOCKED_TEASE.
+  // The end of the open palettes: the shared gate (GalleryEndGate) over two
+  // rows of neutral placeholders. Signed out, the gate offers a free account;
+  // from the free rung, Pro. The rows are made of no palette, so nothing that
+  // is withheld is named, coloured or fetched.
   //
   // Shown only while the view is unnarrowed. Under a search or a mood filter
   // the user has asked a narrower question, and answering it with a paywall
   // would be an interruption rather than an offer.
-  //
-  // ── WHY A SIGNED-OUT VISITOR GETS THE WALL AND NO PLACEHOLDERS ────────────
-  //
-  // LockedPaletteCard stamps every placeholder "Pro". For a signed-in free
-  // viewer that is true — the next rows really are the paid ones. For a
-  // signed-out visitor it is NOT: the next seven arrive with a free account
-  // that costs nothing, so three cards reading "Pro" would price them wrong on
-  // the one screen where the offer is being made. The pill is inside
-  // components/library/LockedTease.jsx and is not this stream's file, so rather
-  // than mislabel the rows, the anonymous rung ships the wall alone and states
-  // the two numbers. If that card ever takes a tier-aware label, the
-  // placeholders belong here too — see the report note.
   const anonymous = tier === 'anonymous'
   const proPending = pro.active && !ready
 
@@ -313,47 +302,32 @@ export default function PaletteGallery({ toast }) {
   const brandNeedsPro = group === 'brand'
   // Where the viewer stands on the ladder, in words, for the wall and the close.
   const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'palettes' })
+  const copy = GALLERY_GATE_COPY.palettes
+  // What a free account opens in all; the gate names it, not the count on screen.
+  const opens = freeOpens({ eligible })
+  // The same sign-in flow the icon library's gate opens.
+  const logIn = () => requireLogin('browse more of the palette library')
+  const fade = <GateFadeCards shape="swatch" min={320} />
   const lockedBlock = proPending ? null : lockedCount > 0 ? (
-    anonymous ? (
-      // Same shape and the same stylesheet as LockedTeaseCta, with the one
-      // difference that makes it a different rung: the action opens the app's
-      // own sign-in gate (LoginPromptContext, `free: true` — a free account, not
-      // a purchase) instead of the Pro modal. Nothing here is a second gate;
-      // the data was already withheld above.
-      <div className="lockt-cta">
-        <div className="lockt-cta-copy">
-          <p className="lockt-cta-head">{`Another ${accountAdds} ${accountAdds === 1 ? 'palette' : 'palettes'} with a free account`}</p>
-          <p className="lockt-cta-body">{ladderLine}</p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-accent lockt-cta-btn"
-          onClick={() => requireLogin('browse more of the palette library', { free: true, signup: true })}
-        >
-          Create your free account
-        </button>
-      </div>
+    anonymous && accountAdds > 0 ? (
+      <GalleryEndGate
+        kind="anon"
+        id="pgl-gate-h"
+        heading={copy.anon.heading(opens)}
+        body={copy.anon.body(browsable.length, rows.length, opens)}
+        primary={{ label: copy.anon.action, onClick: logIn }}
+        secondary={{ label: copy.anon.secondary, to: '/plans' }}
+        fade={fade}
+      />
     ) : (
-      <>
-        {/* NOT aria-hidden as a group. The placeholder SHAPES are hidden inside
-            the card, but a palette's name is a real fact and the whole tease, so
-            a screen-reader user hears "Figma · Pro" exactly as a sighted one
-            reads it. Nothing announced here is invented, because the card holds
-            no values to invent. */}
-        {/* The locked grid names itself too. A screen-reader user meets three
-            more cards after the free ones and needs to know why they differ;
-            without a name this is an unexplained second grid. */}
-        <h4 className="sr-only" id="pgl-locked-more">Palettes included with Pro</h4>
-        <LibraryGrid className="pgal-grid pgal-grid--locked" labelledBy="pgl-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} kind="palettes" gate="palette-library-locked-card" />)}
-        </LibraryGrid>
-        <LockedTeaseCta
-          gate="palette-library-brand-lock"
-          heading={`Another ${lockedCount} ${lockedCount === 1 ? 'palette' : 'palettes'} with Pro`}
-          body={`Free covers ${browsable.length} of the ${rows.length}. Pro opens the remaining ${lockedCount}, including every brand system.`}
-          action="See what Pro includes"
-        />
-      </>
+      <GalleryEndGate
+        kind="pro"
+        id="pgl-gate-h"
+        heading={copy.pro.heading(lockedCount)}
+        body={copy.pro.body(browsable.length, rows.length, lockedCount)}
+        primary={{ label: copy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('palette-library-brand-lock') }}
+        fade={fade}
+      />
     )
   ) : null
 
@@ -547,29 +521,25 @@ export default function PaletteGallery({ toast }) {
             anonymous && !brandNeedsPro ? (
               // A curated collection emptied by the anonymous cap really does
               // open with a free account, so that is the offer here.
-              <div className="lockt-cta">
-                <div className="lockt-cta-copy">
-                  <p className="lockt-cta-head">{`${gatedNoun} palettes need an account`}</p>
-                  <p className="lockt-cta-body">{`A free account opens ${freeOpens({ eligible })} of the ${rows.length} palettes. Pro opens all ${rows.length}.`}</p>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-accent lockt-cta-btn"
-                  onClick={() => requireLogin('browse more of the palette library', { free: true, signup: true })}
-                >
-                  Create your free account
-                </button>
-              </div>
+              <GalleryEndGate
+                kind="anon"
+                id="pgl-gate-h"
+                heading={copy.emptied.anon.heading(opens)}
+                body={copy.emptied.anon.body(gatedNoun, opens, rows.length)}
+                primary={{ label: copy.emptied.anon.action, onClick: logIn }}
+                secondary={{ label: copy.emptied.anon.secondary, to: '/plans' }}
+                fade={fade}
+              />
             ) : (
-              <LockedTeaseCta
-                gate="palette-library-brand-chip"
-                heading={`${gatedNoun} palettes are part of Pro`}
-                body={anonymous
-                  // A free account does not open Brand, so signed out the only
-                  // offer is Pro, in the one sentence the button below keeps.
-                  ? `Pro opens all ${rows.length} palettes, brand systems included.`
-                  : `Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
-                action="See what Pro includes"
+              // A free account does not open Brand, so signed out the only
+              // offer is Pro.
+              <GalleryEndGate
+                kind="pro"
+                id="pgl-gate-h"
+                heading={copy.emptied.pro.heading(gatedNoun)}
+                body={copy.emptied.pro.body({ anonymous, total: rows.length, locked: lockedCount, brand: group === 'brand' })}
+                primary={{ label: copy.emptied.pro.action, to: '/plans', onClick: () => reportUpgradeGate('palette-library-brand-chip') }}
+                fade={fade}
               />
             )
           )}

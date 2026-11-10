@@ -6,8 +6,9 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
-import LibraryGrid from '../components/library/LibraryGrid'
-import { LockedPaletteCard, LockedTeaseCta } from '../components/library/LockedTease'
+import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
+import { reportUpgradeGate } from '../contexts/ProModalContext'
+import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { useProLibrary } from '../hooks/useProLibrary'
@@ -19,7 +20,7 @@ import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegac
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
-import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
+import { splitLockedLibrary, accountTierGain, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -180,7 +181,7 @@ export default function GradientGallery({ toast }) {
   // the grid: the haystack below indexes every stop's HEX, so filtering the
   // full collection would let a signed-out visitor confirm a withheld
   // gradient's colours by typing them, and read its name back from the result.
-  const { open: browsable, locked: lockedPreviews, remaining: lockedCount, eligible } = useMemo(() => (
+  const { open: browsable, remaining: lockedCount, eligible } = useMemo(() => (
     // A gradient's NAME is the tease and its stops are the product — the same
     // split as a brand palette, and the opposite of a community prompt, whose
     // title IS the thing being sold. `slots` is the stop count: how many values
@@ -234,47 +235,38 @@ export default function GradientGallery({ toast }) {
   // paywall is an interruption rather than an offer (same rule as the Palette
   // and Prompt libraries).
   //
-  // The anonymous rung gets the wall WITHOUT placeholders, because
-  // LockedPaletteCard stamps every placeholder "Pro" and the next rows are not
-  // Pro's — they come with a free account. See the longer note in
-  // PaletteGallery.jsx.
+  // The end of the open gradients is the shared gate (GalleryEndGate) over two
+  // rows of neutral placeholders, drawn from no gradient: a withheld
+  // gradient's name, stops and thumbnail never reach the page.
   const anonymous = tier === 'anonymous'
   const teaseVisible = !proPending && lockedCount > 0 && !query && tag === 'all' && types.includes('all')
   // Where the viewer stands on the ladder, in words, for the wall and the close.
   const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'gradients' })
+  const copy = GALLERY_GATE_COPY.gradients
+  // What a free account opens in all; the gate names it, not the count on screen.
+  const opens = freeOpens({ eligible })
+  const fade = <GateFadeCards shape="swatch" min={224} />
   const lockedBlock = teaseVisible ? (
-    anonymous ? (
-      <div className="lockt-cta">
-        <div className="lockt-cta-copy">
-          <p className="lockt-cta-head">{`Another ${accountAdds} ${accountAdds === 1 ? 'gradient' : 'gradients'} with a free account`}</p>
-          <p className="lockt-cta-body">{ladderLine}</p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-accent lockt-cta-btn"
-          onClick={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
-        >
-          Create your free account
-        </button>
-      </div>
+    anonymous && accountAdds > 0 ? (
+      <GalleryEndGate
+        kind="anon"
+        id="grg-gate-h"
+        heading={copy.anon.heading(opens)}
+        body={copy.anon.body(browsable.length, rows.length, opens)}
+        // The same sign-in flow the icon library's gate opens.
+        primary={{ label: copy.anon.action, onClick: () => requireLogin('browse more of the gradient library') }}
+        secondary={{ label: copy.anon.secondary, to: '/plans' }}
+        fade={fade}
+      />
     ) : (
-      <>
-        {/* The locked grid names itself. A screen-reader user meets three more
-            cards after the open ones and needs to know why they differ; without
-            a name this is an unexplained second grid. The placeholder SHAPES are
-            hidden inside the card, and the name it does carry is the gradient's
-            own — a fact, not an invention. */}
-        <h2 className="sr-only" id="grg-locked-more">Gradients included with Pro</h2>
-        <LibraryGrid className="grg-grid grg-grid--locked" min={280} labelledBy="grg-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} kind="gradients" gate="gradient-library-locked-card" />)}
-        </LibraryGrid>
-        <LockedTeaseCta
-          gate="gradient-library-tier-lock"
-          heading={`Another ${lockedCount} ${lockedCount === 1 ? 'gradient' : 'gradients'} with Pro`}
-          body={`Free covers ${browsable.length} of the ${rows.length}. Pro opens the remaining ${lockedCount}, each one editable in the Gradient Generator.`}
-          action="See what Pro includes"
-        />
-      </>
+      <GalleryEndGate
+        kind="pro"
+        id="grg-gate-h"
+        heading={copy.pro.heading(lockedCount)}
+        body={copy.pro.body(browsable.length, rows.length, lockedCount)}
+        primary={{ label: copy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('gradient-library-tier-lock') }}
+        fade={fade}
+      />
     )
   ) : null
 
