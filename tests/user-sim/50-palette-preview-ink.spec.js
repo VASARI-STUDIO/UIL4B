@@ -34,7 +34,7 @@
 //    parse() in the same commit: an unparsed ground does not fail loudly, it
 //    just stops being measured.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-helpers.js'
 
 // A DETERMINISTIC palette, not a reroll, so a failure is the same failure on
@@ -145,6 +145,8 @@ const SWEEP = `((inkVars, fillVars) => {
 test.describe('Palette Builder preview ink', () => {
   test('every text node clears its floor on its real ground, in all six scenes and both preview themes', async ({ page }) => {
     watch(page, 'designer checking a palette on a UI mockup')
+    // Pro, so every scene is mounted: a free account is shown a stand-in for the Pro scenes, with no scene text to measure.
+    await signIn(page, { plan: 'pro' })
     await page.addInitScript((colors) => {
       const raw = localStorage.getItem('vs-current-design')
       const design = raw ? JSON.parse(raw) : {}

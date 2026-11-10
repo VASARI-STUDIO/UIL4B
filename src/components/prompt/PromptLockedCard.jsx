@@ -1,15 +1,16 @@
 import { Link } from 'react-router-dom'
 import { reportUpgradeGate } from '../../contexts/ProModalContext'
-import { hasPromptPreview, promptPosterSrc } from '../../data/promptPreviewAssets'
+import { hasPromptPreview } from '../../data/promptPreviewAssets'
+import { promptStandinSrc } from '../../utils/lockedStandin'
 
-// A locked prompt on the gallery: the real output, blurred, a lock, a plain
+// A locked prompt on the gallery: a blurred stand-in for the output, a lock, a plain
 // access label and the prompt's tags. NEVER the title or the text.
 //
 // The component is handed a `preview` (id, tags) and nothing else, so it has
 // no way to draw a locked prompt's words. The title is the idea being sold, so
 // the heading line is the tag set, which is already public as the filter
-// facet. The poster is the one real thing shown: it is the same still the
-// open card shows, blurred past reading, and it carries no text of the brief.
+// facet. The poster is a tiny soft stand-in (utils/lockedStandin), never the real
+// still the open card shows, so no sharper file is in the page, and it carries no text of the brief.
 // Open prompts never come through here (PromptCard draws those); the page
 // splits the library through utils/lockedPreview first.
 //
@@ -65,7 +66,7 @@ export default function PromptLockedCard({
         {hasPromptPreview(preview.id) && (
           <img
             className="pl-card-poster"
-            src={promptPosterSrc(preview.id)}
+            src={promptStandinSrc(preview.id)}
             alt=""
             loading="lazy"
             decoding="async"
