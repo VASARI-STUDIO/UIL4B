@@ -160,29 +160,21 @@ function runFits() {
   }
 }
 // A grid tile's name wraps to two lines, so it fits when two lines hold it: shrink
-// in small steps until the name is no taller than its two-line box and no word is
-// wider than the box, never below the floor. The names in one grid share the
-// smallest scale any of them needs (the boards set one size for the whole grid),
-// except a typed preview, which fits tile by tile.
-const tileGroups = new WeakMap()
+// in small steps until the name is no taller than its two-line box (a third line is a
+// whole line more, so a fifth of a box of slack covers a glyph that overhangs) and no word is
+// wider than the box, never below the floor. Each tile fits on its own, so one long
+// family name does not shrink the other tiles on a page of two dozen.
 function fitTiles(jobs) {
   jobs.forEach(job => { job.scale = 1; job.el.style.setProperty('--fg-fit', '1') })
   let open = jobs
   for (let pass = 0; pass < 14 && open.length; pass++) {
     open = open.filter(job => job.scale > job.floor
-      && (job.el.scrollHeight > job.el.clientHeight + 1 || job.el.scrollWidth > job.el.clientWidth + 1))
+      && (job.el.scrollHeight > job.el.clientHeight * 1.2 || job.el.scrollWidth > job.el.clientWidth + 1))
     open.forEach(job => {
       job.scale = Math.max(job.scale * 0.94, job.floor)
       job.el.style.setProperty('--fg-fit', String(job.scale))
     })
   }
-  new Set(jobs.map(job => job.group).filter(Boolean)).forEach(group => {
-    const set = tileGroups.get(group)
-    if (!set) return
-    let min = 1
-    set.forEach(job => { if (!job.dead && job.scale < min) min = job.scale })
-    set.forEach(job => { if (!job.dead) job.el.style.setProperty('--fg-fit', String(min)) })
-  })
 }
 // `now` fits synchronously, for the first measure after a name mounts, so it
 // never paints at the wrong size.
@@ -216,11 +208,6 @@ function useFitName(active, label, size, floor, tile) {
       natural: 0,
       room: 0,
       tile: !!tile,
-      group: tile === 'grid' ? box.closest('.fg-grid') : null,
-    }
-    if (job.group) {
-      if (!tileGroups.has(job.group)) tileGroups.set(job.group, new Set())
-      tileGroups.get(job.group).add(job)
     }
     const fit = () => queueFit(job)
 
@@ -252,7 +239,6 @@ function useFitName(active, label, size, floor, tile) {
     return () => {
       job.dead = true
       pendingFits.delete(job)
-      if (job.group) tileGroups.get(job.group)?.delete(job)
       if (fonts) fonts.removeEventListener?.('loadingdone', onLoaded)
       if (ro) ro.disconnect()
     }
@@ -462,7 +448,7 @@ function GalleryCard({
     `${typed}|${font.family}`,
     tiles ? gridName : nameSize,
     tiles ? Math.max(18, Math.round(gridName * 0.6)) : floor,
-    tiles ? (typed ? 'typed' : 'grid') : false,
+    tiles,
   )
   const weightLabel = `${weights} weight${weights === 1 ? '' : 's'}`
   // With the reader's own words in the name, the family name moves to the meta
