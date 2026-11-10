@@ -99,7 +99,7 @@ export const RULE_MATCHER =
 
 /**
  * `git apply` rather than a hand-rolled splice, for the reason
- * scripts/firebase-deferral-trial.mjs gives: a patch verified by a bespoke
+ * the Firebase deferral trial once gave: a patch verified by a bespoke
  * applier is a patch verified against something other than what the owner
  * will run. `--directory` makes every byte git writes land inside the scratch
  * directory, so the gated originals are read and never written.
@@ -127,7 +127,6 @@ async function gitApplyInto(patchAbs, ws, { check = false } = {}) {
 const PER_PROJECT_PATCH = 'docs/design/per-project-sync-rules.patch'
 const MODERATOR_PATCH = 'docs/design/moderator-role-rules.patch'
 const MODERATOR_ROUTE_PATCH = 'docs/design/moderator-verify-admin.patch'
-const FIREBASE_PATCH = 'docs/design/firebase-deferral-gated.patch'
 const ICON_PATCH = 'docs/design/community-icon-rules.patch'
 const ANALYTICS_PATCH = 'docs/design/analytics-counters-rules.patch'
 const PROFILE_PATCH = 'docs/design/profile-types-rules.patch'
@@ -277,26 +276,6 @@ export const GATED_PATCHES = [
           const rel = 'firestore.rules'
           await ctx.write(rel, applyPendingAnchors(await ctx.read(rel)))
         },
-      },
-    ],
-  },
-  {
-    id: 'firebase-deferral',
-    title: 'Firebase deferral',
-    source: 'docs/design/firebase-deferral-gated.patch (PR #427)',
-    grants:
-      'the 116 KB Firebase SDK stops being fetched before the homepage can paint — '
-      + 'measured at FCP −360 ms, LCP −624 ms, first-wave bytes −21.8%',
-    files: ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx'],
-    parts: [
-      {
-        name: 'both contexts routed through the access broker',
-        file: 'src/contexts/AuthContext.jsx',
-        detect: (text) => lf(text).includes(
-          "import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'",
-        ),
-        apply: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx) },
-        check: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx, { check: true }) },
       },
     ],
   },

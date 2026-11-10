@@ -27,8 +27,8 @@
 //
 // NO EMULATOR AND NO BUILD. Whether the rules GRANT and REFUSE what they claim
 // is a different question, answered in tests/rules/; whether the deferred build
-// actually moves the chunk is answered by vite.config.js's own graph walk under
-// VITE_DEFER_FIREBASE=1. These run on every `npm run test:unit`.
+// actually moves the chunk is answered by vite.config.js's own graph walk on every
+// default build. These run on every `npm run test:unit`.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -60,7 +60,6 @@ const EXPECTED_IDS = [
   'per-project-sync',
   'moderator-role',
   'feedback-bounds',
-  'firebase-deferral',
   'community-icon',
   'analytics-counters',
   'profile-types',
@@ -98,18 +97,16 @@ test('every patch says what it touches, where it came from, and what it grants',
 })
 
 test('the applier reaches every file the changes are meant to change', () => {
-  // The three files the classifier blocks are the entire reason this command
+  // The files the classifier blocks are the entire reason this command
   // exists. If one falls out of the registry, the command still reports success
   // successes and the owner still cannot make the change.
   assert.ok(TARGET_FILES.includes('firestore.rules'))
   assert.ok(TARGET_FILES.includes('api/verify-admin.js'))
-  assert.ok(TARGET_FILES.includes('src/contexts/AuthContext.jsx'))
-  assert.ok(TARGET_FILES.includes('src/contexts/SubscriptionContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/utils/projectSync.js'))
   assert.ok(TARGET_FILES.includes('storage.rules'))
   assert.ok(TARGET_FILES.includes('src/utils/communityLimits.js'))
   assert.ok(TARGET_FILES.includes('src/data/toolVotes.js'))
-  assert.equal(TARGET_FILES.length, 8,'the applier has grown a target nobody reviewed')
+  assert.equal(TARGET_FILES.length, 6,'the applier has grown a target nobody reviewed')
 })
 
 test('nothing in the registry still claims a piece of this is uncovered', () => {
@@ -176,8 +173,6 @@ test('each patch actually grants its rule — applying cleanly is not enough', a
   const rules = lf(plan.after.get('firestore.rules'))
   const route = lf(plan.after.get('api/verify-admin.js'))
   const sync = lf(plan.after.get('src/utils/projectSync.js'))
-  const auth = lf(plan.after.get('src/contexts/AuthContext.jsx'))
-  const subs = lf(plan.after.get('src/contexts/SubscriptionContext.jsx'))
 
   // 1 · per-project sync — the rule AND the flag, which are one change.
   assert.match(rules, RULE_MATCHER, 'per-project sync: the rule is missing from the result')
@@ -209,15 +204,6 @@ test('each patch actually grants its rule — applying cleanly is not enough', a
   assert.match(rules, /function promptShapeOk\(\)/)
   assert.match(rules, /function submissionShapeOk\(\)/)
   assert.ok(rules.includes("day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')"))
-
-  // 4 · the deferral closes BOTH static edges. One is worse than none: the SDK
-  //     stays in the first wave and splits across two preloaded chunks.
-  assert.ok(auth.includes("from '../utils/firebaseAccess'"))
-  assert.ok(!/^import \{[\s\S]*?\} from 'firebase\/auth'/m.test(auth),
-    'AuthContext still imports firebase/auth statically after the patch')
-  assert.ok(subs.includes("import { loadFirestore, loadAuthSdk } from '../utils/firebaseAccess'"))
-  assert.ok(!/^import \{ doc, onSnapshot \} from 'firebase\/firestore'/m.test(subs),
-    'SubscriptionContext still imports firebase/firestore statically after the patch')
 })
 
 test('the four rules-audit fixes (M1-M4) each land their rule, and the route half lands too', async () => {
