@@ -17,7 +17,8 @@ import '../../styles/pages/home-bookmarks.css'
 // A browser bookmarks menu with four folders sits beside a UI L4B app window
 // holding the tools that replace them. The open folder's bookmarks are joined
 // to their tools by lines. A tour opens the folders in turn (useBookmarkTour.js);
-// pointing at, focusing or clicking a folder takes over from it.
+// pointing at, focusing or clicking a folder takes over from it. A mouse over
+// the section does not pause the tour; the Pause button does.
 //
 // The stage is a fixed 640px frame holding a 1336px composition, so nothing
 // shifts as it changes. Under 1440 the composition is scaled as one piece (CSS
@@ -72,7 +73,7 @@ export default function HomeBookmarks() {
             </div>
 
             {/* The folder's menu. The reader picks the folder. */}
-            <div className="bm-menu" {...tour.surface}>
+            <div className="bm-menu">
               <div className="bm-menu-h">
                 <span>{BOOKMARK_COUNT} bookmarks</span>
                 {mode !== 'off' ? (
@@ -106,7 +107,7 @@ export default function HomeBookmarks() {
             </div>
 
             {/* The open folder's bookmarks */}
-            <div className="bm-sub-menu" role="group" aria-label={`Bookmarks in ${FOLDERS[open].name}`} style={{ transform: `translateY(${subTopOf(open)}px)` }} {...tour.surface}>
+            <div className="bm-sub-menu" role="group" aria-label={`Bookmarks in ${FOLDERS[open].name}`} style={{ transform: `translateY(${subTopOf(open)}px)` }}>
               {FOLDERS.map((f, i) => (
                 <div key={f.name} className={i === open ? 'bm-list on' : 'bm-list'}>
                   {f.items.map(([title, j], k) => (
@@ -120,7 +121,7 @@ export default function HomeBookmarks() {
             </div>
 
             {/* One app: the UI L4B toolkit window. Sidebar: the tools. Main pane: the open folder's tools at work. */}
-            <div className="bm-win" role="group" aria-label={`The ${numberWord(TOOL_COUNT)} UI L4B tools`} {...tour.surface}>
+            <div className="bm-win" role="group" aria-label={`The ${numberWord(TOOL_COUNT)} UI L4B tools`}>
               <div className="bm-win-h">
                 <svg aria-hidden="true" width="26" height="16" viewBox="0 0 323.61 200" fill="currentColor"><path d="M0 0H100V123.61A123.61 123.61 0 0 0 126.43 200H76.39A76.39 76.39 0 0 1 0 123.61Z" /><path d="M125 0H177.79A47.21 47.21 0 0 1 225 47.21V125H276.39A47.21 47.21 0 0 1 323.61 172.21V200H201.39A76.39 76.39 0 0 1 125 123.61Z" /></svg>
                 UI L4B toolkit<span className="bm-win-n">{TOOL_COUNT} tools</span>

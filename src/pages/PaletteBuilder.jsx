@@ -2908,7 +2908,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       })
       // Free exports carry a small brand watermark; Pro exports stay clean.
       if (!isPro) {
-        const label = 'Made with UIL4B'
+        const label = 'Made with UI L4B'
         g.font = markFont
         const tw = g.measureText(label).width
         const padX = 14, bh = 34, margin = 22, bw = tw + padX * 2

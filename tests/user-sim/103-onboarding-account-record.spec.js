@@ -60,8 +60,9 @@ test.describe('onboarding is decided by the account record', () => {
         plan: 'free', onboarded: false, returning, uid: UID, email: EMAIL,
         docs: accountDoc({ completedAt: Date.now() - 30 * 86_400_000 }),
       })
-      await go(page, '/')
-      await settleOn(page, SIGNED_IN_HOME)
+      // No hint means no Firebase on `/`: a device that has not seen this person finds the account at the sign-in page.
+      await go(page, returning ? '/' : '/login')
+      await settleOn(page, returning ? SIGNED_IN_HOME : '/home')
       await expect.poll(() => flag(page), 'the account completion was never mirrored locally').toBe('1')
       expect(await routes(page), 'onboarding was painted for a finished account').not.toContain('/onboarding')
       await expect(page.getByTestId('onboarding-first-win')).toHaveCount(0)
@@ -126,14 +127,17 @@ test.describe('onboarding is decided by the account record', () => {
       plan: 'free', onboarded: false, returning: false, uid: UID, email: EMAIL,
       docs: accountDoc(null),
     })
-    await go(page, '/')
-    await settleOn(page, SIGNED_IN_HOME)
+    // A browser with no session hint asks Firebase nothing on `/` and shows the
+    // sales page; the account is found once something opens auth. On a device that
+    // has never seen this person, that is the sign-in page.
+    await go(page, '/login') // no session hint: the sign-in page starts auth and sends the account to /home
+    await settleOn(page, '/home')
     // The home is on screen; give the profile read and the resume check the
     // chance to act, then confirm neither moved the visitor.
     await page.waitForFunction(() => document.querySelector('main')?.innerText.length > 0)
     await page.waitForTimeout(500)
     expect(await routes(page)).not.toContain('/onboarding')
-    await expect(page).toHaveURL(new RegExp(`${SIGNED_IN_HOME}/?$`))
+    await expect(page).toHaveURL(/\/home\/?$/)
   })
 
   test('a profile read that fails leaves the account alone and writes nothing', async ({ page }) => {

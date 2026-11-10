@@ -14,6 +14,9 @@ export const OLD_ANCHORS = {
 // How long an arriving hash waits for the page to finish loading its sections,
 // and how many consecutive frames the target must hold still to count as settled.
 const ARRIVAL_DEADLINE_MS = 3000
+// A target that is still its loading stand-in has no heading to focus, so the
+// landing waits for it past the deadline, up to this ceiling.
+const HOLD_CEILING_MS = 15000
 const SETTLED_FRAMES = 3
 // Input that means the visitor has taken over the scroll position.
 const TAKEOVER_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown']
@@ -152,6 +155,7 @@ function landArrivingHash(id) {
   let fontsReady = !document.fonts
   if (document.fonts) document.fonts.ready.then(() => { fontsReady = true }, () => { fontsReady = true })
   const deadline = performance.now() + ARRIVAL_DEADLINE_MS
+  const ceiling = performance.now() + HOLD_CEILING_MS
   let lastTop = null
   let still = 0
 
@@ -166,7 +170,10 @@ function landArrivingHash(id) {
 
   const frame = () => {
     const el = document.getElementById(id)
-    const late = performance.now() >= deadline
+    const now = performance.now()
+    // A stand-in still loading carries data-deferred-hold; a failed chunk drops it.
+    const held = !!el && el.hasAttribute('data-deferred-hold')
+    const late = now >= ceiling || (now >= deadline && !held)
     const stillPending = el ? sectionsPending(el) : !!document.querySelector('[data-deferred-hold]')
     if (!el && !stillPending) {
       // Every section has arrived and none carries this id.

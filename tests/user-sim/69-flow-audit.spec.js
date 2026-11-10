@@ -59,6 +59,7 @@ import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { mockThemeApi } from './export-theme-mock.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
@@ -494,7 +495,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
   const FREE_LIVE = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
   // Each free format and the file name it must download under.
   const FILE = {
-    kit: /ui-kit\.html$/,
+    kit: /-ui-kit-04-standards\.zip$/,
     html: /-style-guide\.html$/,
     md: /-style-guide\.md$/,
     png: /-style-guide\.png$/,
@@ -509,6 +510,8 @@ test.describe('flow 4 — each live free format downloads under its own name', (
   test('every free format produces a file named for the format', async ({ browser }) => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account exporting every format it is entitled to')
+    // The kit is built by the export route (a zip in the open theme); a stand-in answers it.
+    await mockThemeApi(page)
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, WORKED_BOARD)
     expect(FREE_LIVE.map((f) => f.id).sort()).toEqual(Object.keys(FILE).sort())
@@ -526,8 +529,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
       expect(download.suggestedFilename(), `${fmt.name} must download as its own format`)
         .toMatch(FILE[fmt.id])
       // The popup stays open after a finished export and says so in its status line
-      // (the kit's line can instead carry a font it could not embed: the font hosts
-      // are live network here), so a second file is one more click.
+      // so a second file is one more click.
       await expect(cta, `${fmt.name}: the button offers another go`).toHaveText('Export again')
       await expect(panel.locator('.xd-status'), `${fmt.name}: the dock says it downloaded`).toContainText(/downloaded/i)
       await page.keyboard.press('Escape')
@@ -544,7 +546,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await expect(exportPanel(page)).toBeVisible()
     await chooseFormat(page, 'guidelines')
-    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
     await expect(categoryRadio(page, 'Slides'), 'and the rail names the document it locks').toHaveAccessibleName('Slides, 16:9, Pro')
     await expect(primaryButton(page)).toHaveText('Unlock with Pro')
     // The wall goes to /plans, and asks
