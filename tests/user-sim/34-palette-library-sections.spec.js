@@ -21,7 +21,7 @@
 // suite; this file signs in as Pro so the surface under test is the whole
 // library, exactly as it was when these assertions were written.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch, signIn } from './helpers.js'
+import { go, proLibraryArrived, restingScrollY, watch, signIn } from './helpers.js'
 
 const ROUTE = '/discover/palettes'
 const HEAD = '.pgl-section-head'
@@ -41,6 +41,8 @@ test.describe('palette library sections', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
     await expect(page.locator('.pgal-card').first()).toBeVisible()
+    // The free rows paint first; the sections below are the Pro library's.
+    await proLibraryArrived(page, 'the palette library')
   })
 
   test('browsing shows the categories in order', async ({ page }) => {
