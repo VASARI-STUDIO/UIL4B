@@ -1,10 +1,9 @@
-// The founder's note: the data contract, and the four properties that make it
-// the surface he asked for rather than the one the backlog item describes.
+// The founder note: the data contract, and the four properties that make it
+// a note that waits to be asked for rather than a welcome popup.
 //
-// `founder-intro-popup` in src/data/pipeline.js specifies a welcome popup shown
-// to a new visitor once per account. The founder was offered that and chose
-// something else — "maybe we make it visable when a user clicks a certian
-// section or button" — and the difference between the two is not decoration. A
+// A welcome popup shown to a new visitor once per account was considered and
+// not chosen. The note opens only when a visitor clicks a particular
+// section or button, and the difference between the two is not decoration. A
 // popup that opens itself and a note that waits to be asked for are opposite
 // answers to "should this interrupt you", and the second one is only true for as
 // long as nobody adds a `useEffect` that opens it on a timer.
@@ -50,8 +49,8 @@ const BLANK = { who: '', what: '', state: '', help: '' }
 test('1 · an unwritten note renders no prose at all', () => {
   // Asserted against a BLANK FIXTURE rather than against FOUNDER_NOTE itself,
   // and that is the whole point of the fixture. "The shipped note is empty" is
-  // true today and is supposed to STOP being true — the moment Dylan writes his
-  // four lines. A test that asserted it would turn his edit into a red suite,
+  // true today and is supposed to STOP being true — the moment the four lines
+  // are written. A test that asserted it would turn that edit into a red suite,
   // which is a test that punishes the one action it exists to enable.
   //
   // What must hold forever is the BEHAVIOUR: no words, no paragraphs, and
@@ -86,8 +85,8 @@ test('3 · a filled note renders four trimmed paragraphs in prompt order', () =>
 
 test('4 · the signature asserts only what the app already says in public', () => {
   // AppFooter has read "Built in Brisbane by Dylan Coleman" since before this
-  // note existed, so neither fact is invented here. Nothing else about him is
-  // stated anywhere in the module — a fabricated origin story is the exact
+  // note existed, so neither fact is invented here. Nothing else about the
+  // author is stated anywhere in the module — a fabricated origin story is the
   // opposite of the effect this note is for.
   assert.equal(FOUNDER_SIGNATURE.name, 'Dylan Coleman')
   assert.equal(FOUNDER_SIGNATURE.place, 'Brisbane')

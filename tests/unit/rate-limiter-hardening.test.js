@@ -3,7 +3,7 @@
 //   M3  production with no RATE_LIMIT_SALT refuses instead of counting per instance
 //   M4  an IPv6 client is keyed on its /64, an IPv4-mapped address as its IPv4
 //   M5  `failOpen: false` refuses on a database outage; the default still allows
-//   --  at most 30 founder emails an hour site-wide; the message is still stored
+//   --  at most 30 owner emails an hour site-wide; the message is still stored
 //
 // Runs the real limiter and the real support handler against in-memory fakes.
 // tests/unit/api-abuse-hardening.test.js covers the limiter's base behaviour and
@@ -193,7 +193,7 @@ test('failOpen:false changes nothing when the database is healthy', async () => 
   assert.deepEqual(verdicts, [true, true, true, false])
 })
 
-// ── Support: at most 30 founder emails an hour, site-wide ────────────────────
+// ── Support: at most 30 owner emails an hour, site-wide ────────────────────
 
 /** Firestore stand-in for the support route: feedback writes plus the limiter's transactions. */
 function supportDb() {

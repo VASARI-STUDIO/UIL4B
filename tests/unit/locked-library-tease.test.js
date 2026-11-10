@@ -168,8 +168,12 @@ test('the builder brand list renders the split output, never the raw library', (
   const src = stripComments(read('src/pages/PaletteBuilder.jsx'))
   // The bug this pins: reverting to BRAND_PALETTES.map(...) in the brands panel
   // puts every paid brand's colours back into barRef and back into the DOM.
-  assert.ok(src.includes('openBrands.map('), 'the brands panel must map the split output')
-  assert.ok(!src.includes('BRAND_PALETTES.map('), 'the brands panel must not map the raw library')
+  // The panel searches the split output (`openBrands.filter(...)` -> shownBrands) and
+  // renders only that; locked brands render as static rows from `lockedBrands`.
+  assert.ok(/shownBrands\s*=\s*openBrands\.filter\(/.test(src), 'the brands panel must build its rows from the split output')
+  assert.ok(src.includes('shownBrands.map('), 'the brands panel must map the filtered split output')
+  assert.ok(/shownLocked\s*=\s*lockedBrands\.filter\(/.test(src), 'the locked brand rows must come from the stub list')
+  assert.ok(!src.includes('BRAND_PALETTES.map(') && !src.includes('brandRows.map('), 'the brands panel must not map the raw library')
 })
 
 test('the gallery filters and searches the split output, closing the hex oracle', () => {
@@ -189,9 +193,22 @@ test('every wall registers a real gate id rather than falling back to a title', 
   // silently splits its history in two — upgrade-activation-events names that
   // as outstanding work.
   const ids = []
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx']) {
+  // The prompt library names its gates two ways since the overview: a `gate`
+  // prop, and `reportUpgradeGate('<id>')` on the Pro links (the overview's
+  // closing section, the list's offer, and PromptLockedCard's default gate).
+  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx',
+    'src/components/prompt/PromptOverview.jsx', 'src/components/prompt/PromptLockedCard.jsx']) {
     const src = stripComments(read(file))
     for (const m of src.matchAll(/gate="([a-z0-9-]+)"/g)) ids.push(m[1])
+    for (const m of src.matchAll(/reportUpgradeGate\('([a-z0-9-]+)'\)/g)) ids.push(m[1])
+    for (const m of src.matchAll(/gate = '([a-z0-9-]+)'/g)) ids.push(m[1])
+  }
+  // Every Pro link on the prompt pages reports a gate: no bare link to /plans.
+  for (const file of ['src/pages/PromptLibrary.jsx', 'src/components/prompt/PromptOverview.jsx']) {
+    const src = stripComments(read(file))
+    const links = [...src.matchAll(/<Link\b[\s\S]*?<\/Link>/g)].map((m) => m[0]).filter((l) => l.includes('to="/plans"'))
+    assert.ok(links.length > 0, `${file} has no Pro link — this assertion would be vacuous`)
+    for (const link of links) assert.ok(link.includes("reportUpgradeGate('prompt-library-community-lock')"), `${file} has a Pro link that registers no gate: ${link}`)
   }
   assert.ok(ids.includes('palette-library-brand-lock'), 'the Palette Library wall must name its gate')
   assert.ok(ids.includes('palette-builder-brand-lock'), 'the Palette Builder wall must name its gate')
@@ -232,10 +249,18 @@ test('the CTA number is derived from the data, never written as a literal', () =
   // A hard-coded "another 30 brand systems" goes stale the moment a row is
   // added to brandPalettes.js, and a wall that lies about its own size is the
   // cheapest possible way to lose trust.
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx']) {
+  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx']) {
     const src = stripComments(read(file))
     assert.ok(/Another \$\{locked/.test(src), `${file} must interpolate the remaining count into its heading`)
   }
+  // The prompt library's headings are `${n} more prompts open with Pro` in the
+  // list and `Free covers ${openCount} of the ${total}` on the overview, each
+  // counted from the data the page holds.
+  const list = stripComments(read('src/pages/PromptLibrary.jsx'))
+  assert.ok(/\$\{plural\(total\)\} open with Pro/.test(list), 'src/pages/PromptLibrary.jsx must interpolate the remaining count into its heading')
+  assert.ok(/const total = listItems\.locked\.length/.test(list), 'the list wall must count the locked rows it holds')
+  const overview = stripComments(read('src/components/prompt/PromptOverview.jsx'))
+  assert.ok(/Pro opens the other \$\{total - openCount\}/.test(overview), 'the overview must interpolate the remaining count')
 })
 
 test('a locked placeholder never animates, so it cannot read as a failed load', () => {
@@ -275,7 +300,7 @@ const LOCKED_PROMPTS = COMMUNITY_PROMPTS.filter((p) => p.free !== true)
 // the coupling the fix removed.
 //
 // Changing this list widens or narrows the free tier, which is a PRICING
-// decision and founder-owned. The test is here so that change has to be made
+// decision and the owner's call. The test is here so that change has to be made
 // on purpose rather than as a side effect of editing a number in a data file.
 const PINNED_FREE = ['c-1', 'c-2', 'c-3', 'c-9', 'c-13', 'c-14', 'c-15', 'c-16', 'c-17', 'c-18']
 
@@ -352,8 +377,14 @@ test('the prompt library gates on identity and never on a position', () => {
   // Search and grid must both read the split output. Filtering the full list
   // is the leak: the predicate reads p.text, so it answers "does a Pro prompt
   // contain this phrase" for anyone who types one.
-  assert.ok(src.includes('isCommunity ? browsableCommunity : prompts'),
+  // The list's open rows are the category's rows filtered through the split's
+  // open set BEFORE the search runs, and the search filters those open rows.
+  assert.ok(/let open = base\.filter\(\(p\) => openIds\.has\(p\.id\)\)/.test(src),
     'the grid source must be the split output, not the full community list')
+  assert.ok(/if \(q\) \{\s*open = open\.filter\(/.test(src),
+    'the search must run over the open rows, never over the full list')
+  assert.ok(/if \(isCommunity\) return listItems\.open/.test(src),
+    'the grid must be fed the open rows')
   assert.ok(!/isCommunity \? sortedCommunity : prompts/.test(src),
     'the full community list must not be the grid source')
 })

@@ -1,5 +1,5 @@
 // The Type Scale ladder, panel, phone sheet and default preview width
-// (fonts build spec, criteria 10 to 13; board card 42c6599fe4), the docked bar at
+// (fonts build spec, criteria 10 to 13), the docked bar at
 // 390, 768 and 1024+, and source order matching screen order below 1024.
 //
 // Test seam: the /create/type-scale page itself. Every check reads computed
@@ -11,11 +11,22 @@ import { settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './typ
 const SIZES = [[1440, 900], [1024, 800], [768, 1024], [390, 844]]
 
 test.describe('Type Scale · ladder, panel, sheet and default width', () => {
+  // The ladder draws each step at the width the preview is set to, and prints
+  // that size. Written out by hand for the defaults (desktop base 15 and golden
+  // ratio 1.618, mobile base 15 and ratio 1.2, joined between 375 and 1440, four
+  // steps up and one down): the top step is 102.8 on Desktop, 31.1 on Mobile, and
+  // 31.1 + (102.8 - 31.1) x (768 - 375) / (1440 - 375) = 57.56 on Tablet. A
+  // window opens on its own device's width. The ladder draws no step above 96px,
+  // so the 102.8 step is printed at 102.8 and drawn at 96 with a note saying so.
+  const PREVIEW_CAP = 96
+  const LARGEST = { 1440: 102.8, 1024: 102.8, 768: 57.56, 390: 31.1 }
   for (const [w, h] of SIZES) {
-    test(`10. every step's computed size equals its px, unscaled, at ${w}`, async ({ page }) => {
+    test(`10. every step is drawn at the size it prints, for the width the window opens on, unscaled, at ${w}`, async ({ page }) => {
       watch(page, 'designer reading the ladder')
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
+      // The heading rows read "Loading <family>" at 15px until the face is in.
+      await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
       const rows = await page.locator('.tsc-row').evaluateAll(els => els.map(el => {
         const text = el.querySelector('.tsc-row-text')
         const transforms = []
@@ -26,12 +37,45 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
         }
         return { px: parseFloat(el.dataset.px), fs: parseFloat(getComputedStyle(text).fontSize), label: el.querySelector('.tsc-row-num').textContent, transforms }
       }))
-      expect(rows).toHaveLength(9)
-      for (const r of rows) {
-        expect(r.fs, `${w}px: font-size matches the px value`).toBe(r.px)
-        expect(r.label).toContain(`${r.px}px`)
+      expect(rows, 'four steps up, the base and one down').toHaveLength(6)
+      if (w < 768) {
+        // A phone prints the scale's own size, the one the code keeps ("102.8px"
+        // down to "9.27px"), whatever width the preview is drawn at. The rows are
+        // drawn at the Mobile width it opens on (top step 31.1), never above their
+        // printed size, and nothing is fitted yet, so there is no note.
+        expect(rows.map(r => r.label), `${w}px: rows print the scale's own px`).toEqual(['102.8px', '63.54px', '39.27px', '24.27px', '15px', '9.27px'])
+        for (const r of rows) {
+          expect(r.label, `${w}px: the label is the step's own size`).toBe(`${r.px}px`)
+          expect(r.fs, `${w}px: no step is larger on a phone than on desktop`).toBeLessThanOrEqual(r.px)
+          expect(r.transforms, 'nothing is scaled with transform or zoom').toEqual([])
+        }
+        expect(Math.round(rows[0].fs * 10) / 10, `${w}px: the top step is drawn at the Mobile width's size`).toBe(LARGEST[390])
+        await expect(page.locator('.tsc-fit-note')).toHaveCount(0)
+        // Desktop width puts the 102.8 step past the cap: drawn at 96, still printed 102.8px.
+        await page.locator('#tsc-width').getByRole('button', { name: /Desktop/ }).click()
+        await expect(page.locator('.tsc-fit-note')).toHaveText('Preview sizes are fitted between 8px and 96px to keep the preview readable. The code keeps the true values.')
+        const top = page.locator('.tsc-row').first()
+        await expect(top.locator('.tsc-row-num')).toHaveText('102.8px')
+        expect(parseFloat(await top.locator('.tsc-row-text').evaluate(el => getComputedStyle(el).fontSize)), 'a step past the cap is drawn at the cap').toBe(PREVIEW_CAP)
+        return
+      }
+      const printed = rows.map(r => parseFloat(r.label))
+      expect(printed[0], `${w}px: the top step prints the size for the previewed width`).toBeCloseTo(LARGEST[w], 2)
+      for (const [i, r] of rows.entries()) {
+        const drawn = Math.round(r.fs * 100) / 100
+        if (printed[i] <= PREVIEW_CAP) {
+          expect(r.label, `${w}px: the printed size is the drawn size`).toMatch(new RegExp(`^${drawn} /`))
+        } else {
+          expect(drawn, `${w}px: a step past the cap is drawn at the cap`).toBe(PREVIEW_CAP)
+        }
+        expect(r.fs, `${w}px: no step is larger than its desktop size`).toBeLessThanOrEqual(r.px)
         expect(r.transforms, 'nothing is scaled with transform or zoom').toEqual([])
       }
+      expect(rows[0].px, 'the top step is 102.8px on desktop').toBe(102.8)
+      // The note shows exactly when a step is past the cap.
+      const capped = printed.some(n => n > PREVIEW_CAP)
+      await expect(page.locator('.tsc-fit-note'), `${w}px: the cap note shows only when a step is capped`).toHaveCount(capped ? 1 : 0)
+      if (capped) await expect(page.locator('.tsc-fit-note')).toContainText('fitted between 8px and 96px')
     })
   }
 
@@ -58,7 +102,7 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-width', want)
       // Below the split Page is a tab; at 1440 it is already beside the ladder.
       await showTypeScalePage(page)
-      await expect(page.locator('#tsc-width')).toContainText(label)
+      await expect(page.locator('#tsc-width button[aria-pressed="true"]')).toContainText(label)
     }
   })
 
@@ -86,11 +130,11 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
       expect(probe.type).toBe('range')
       expect(probe.base).toBe(probe.full)
       expect(probe.ratio).toBe(probe.full)
-      await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('16px')
+      await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('15 px')
     })
   }
 
-  test('13. the 390 settings sheet is at most 55% of the screen and 3 steps stay above it', async ({ page }) => {
+  test('13. the 390 settings sheet is at most 56% of the screen (480px) and the last step can still scroll above it', async ({ page }) => {
     watch(page, 'designer changing a family on a phone')
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/type-scale')
@@ -98,24 +142,23 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
     // also contains these words, so the loose label matches two elements.
     const sample = page.getByLabel('Preview text', { exact: true })
     await sample.waitFor({ state: 'hidden' })
-    await page.getByRole('button', { name: 'Families, preview text and fine tuning' }).click()
+    await page.getByRole('button', { name: /Scale, families and fine tuning/ }).click()
     const sheet = page.locator('#tsc-sheet')
     await expect(sheet).toBeVisible()
-    // The default sample is left alone on purpose: under 768 it is the short
-    // "Scale it", so every step is one line and 3 fit above the sheet.
     await page.getByRole('button', { name: 'Fine tuning', exact: true }).click()
-    const { sheetTop, sheetH, visibleRows } = await page.evaluate(() => {
+    const sheetBox = () => page.evaluate(() => {
       const box = document.querySelector('#tsc-sheet').getBoundingClientRect()
-      const top = document.querySelector('.tl-toolbar').getBoundingClientRect().bottom
-      const rows = [...document.querySelectorAll('.tsc-row')].filter(el => {
-        const r = el.getBoundingClientRect()
-        return r.top < box.top - 4 && r.bottom > top
-      })
-      return { sheetTop: box.top, sheetH: box.height, visibleRows: rows.length }
+      return { top: box.top, height: box.height }
     })
-    expect(sheetH, 'the sheet is capped at 55% of the viewport').toBeLessThanOrEqual(844 * 0.55 + 1)
-    expect(sheetTop).toBeGreaterThan(0)
-    expect(visibleRows, 'at least 3 ladder rows stay visible above the sheet').toBeGreaterThanOrEqual(3)
+    const { top: sheetTop, height: sheetH } = await sheetBox()
+    // The sheet is min(56dvh, 480px) tall: 472.64px on an 844px screen.
+    expect(sheetH, 'the sheet is capped at 56% of the viewport and 480px').toBeLessThanOrEqual(Math.min(844 * 0.56, 480) + 1)
+    expect(sheetTop, 'the sheet leaves the top of the screen showing').toBeGreaterThan(200)
+    // The page is one scroll (width, page, ladder), so the sheet must not make the
+    // foot of it unreachable: the last step scrolls up clear of the sheet.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    const last = await page.locator('.tsc-row').last().evaluate(el => el.getBoundingClientRect().bottom)
+    expect(last, 'the last step ends above the sheet').toBeLessThanOrEqual(sheetTop + 1)
     await page.getByRole('button', { name: 'Done' }).click()
     await expect(sheet).toBeHidden()
   })
@@ -123,7 +166,9 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
   // While the brand kit walkthrough is on, its bar takes the foot of a phone, the
   // tab bar goes, and the docked bar lifts onto the walkthrough's bar. The
   // sheet has to lift with it, or its last controls sit under the docked bar.
-  test('13b. with the brand kit bar showing, the 390 sheet ends where the docked bar begins', async ({ page }) => {
+  // The tool's own dock keeps the screen's bottom edge and the walkthrough bar
+  // sits on it; the sheet ends above both.
+  test('13b. with the brand kit bar showing, the 390 sheet ends where the walkthrough bar begins', async ({ page }) => {
     watch(page, 'designer changing a family on a phone, mid walkthrough')
     await page.addInitScript(() => {
       try {
@@ -136,16 +181,16 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/type-scale')
     await expect(page.getByRole('region', { name: 'Brand kit walkthrough' })).toBeVisible()
-    await page.getByRole('button', { name: 'Families, preview text and fine tuning' }).click()
+    await page.getByRole('button', { name: /Scale, families and fine tuning/ }).click()
     const sheet = page.locator('#tsc-sheet')
     await expect(sheet).toBeVisible()
     const m = await page.evaluate(() => ({
       sheetBottom: document.querySelector('#tsc-sheet').getBoundingClientRect().bottom,
-      dockTop: document.querySelector('.tsc-dock').getBoundingClientRect().top,
       railTop: document.querySelector('[aria-label="Brand kit walkthrough"]').getBoundingClientRect().top,
+      railBottom: document.querySelector('[aria-label="Brand kit walkthrough"]').getBoundingClientRect().bottom,
+      vh: window.innerHeight,
     }))
-    expect(m.dockTop, 'the docked bar sits on the walkthrough bar').toBeLessThanOrEqual(m.railTop)
-    expect(Math.round(m.sheetBottom), 'the sheet stops at the docked bar, not under it').toBeLessThanOrEqual(Math.round(m.dockTop) + 1)
+    expect(Math.round(m.sheetBottom), 'the sheet stops at the walkthrough bar, not under it').toBeLessThanOrEqual(Math.round(m.railTop) + 1)
   })
 
   test('K17 and K19: letter spacing survives Reset, and no step is larger on a phone', async ({ page }) => {
@@ -164,61 +209,59 @@ test.describe('Type Scale · ladder, panel, sheet and default width', () => {
   })
 })
 
-// ── The docked bar ────────────────────────────────────────────────────────────
-// Spec section 3: 1024 to 1439 and 768 carry Save to a project in a bar docked
-// to the foot of the screen; 390 carries Save and Copy CSS. Save is never in the
-// toolbar. The viewport is short on purpose, so the page is taller than the
-// screen and the bar has to stick.
+// ── Where Save to a project lives ─────────────────────────────────────────────
+// From 768 it is the right-hand button of the docked bar at the foot of the
+// screen, with Code and the status line on the left; the toolbar has no Save.
+// The dock is sticky, so it is on screen however far the page has scrolled, and
+// the Save menu opens upward from the button. A phone has its own dock (spec 306).
+// The viewport is short on purpose, so the page is taller than the screen and a
+// dock that is meant to stick has to.
 //
-// MUTATION: put the Save item back into `items` in TypeScale.jsx, or drop the
-// `.tsc-dock` position rule, and these go red.
-const DOCK_SIZES = [[390, 700], [768, 700], [1024, 700], [1200, 700]]
+// MUTATION: move Save back into the toolbar and the dock check goes red; drop the
+// dock's sticky position and the "stays on screen" check goes red.
+const DOCK_SIZES = [[768, 700], [1024, 700], [1200, 700], [1440, 900]]
 
-test.describe('Type Scale · the docked bar', () => {
+test.describe('Type Scale · where Save to a project lives', () => {
+
   for (const [w, h] of DOCK_SIZES) {
-    test(`the bar is docked to the foot of the screen with ${w < 768 ? 'Save and Copy CSS' : 'Save to a project'} at ${w}`, async ({ page }) => {
+    test(`${w}: Save to a project is the docked bar's right-hand button, stays on screen at the end of the page, and the toolbar has none`, async ({ page }) => {
       watch(page, 'designer keeping a scale')
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
       const dock = page.locator('.tsc-dock')
-      await expect(dock).toBeVisible()
+      const save = dock.getByRole('button', { name: 'Save to a project' })
+      await expect(save).toBeVisible()
+      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Save to a project' })).toHaveCount(0)
 
-      const names = await dock.getByRole('button').evaluateAll(els => els.map(el => el.textContent.trim()))
-      expect(names, `${w}px: what the bar holds`).toEqual(w < 768 ? ['Save', 'Copy CSS'] : ['Save to a project'])
-
-      // Save is never in the toolbar, and Copy CSS is there only where the bar
-      // does not carry it.
-      const bar = page.locator('[data-tool-toolbar]')
-      await expect(bar.getByRole('button', { name: /^Save/ })).toHaveCount(0)
-      await expect(bar.getByRole('button', { name: /^Copy CSS/ })).toHaveCount(w < 768 ? 0 : 1)
-
-      const box = await dock.evaluate((el) => {
-        const r = el.getBoundingClientRect()
-        const cs = getComputedStyle(el)
+      const boxes = await page.evaluate(() => {
+        const rect = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, height: r.height } }
         return {
-          left: r.left, right: r.right, bottom: r.bottom, vw: document.documentElement.clientWidth, vh: window.innerHeight,
-          // On a phone the tab bar owns the foot of the screen and the bar sits on it.
-          floor: (() => { const t = document.querySelector('.pnav-tabs'); const b = t && t.getBoundingClientRect(); return b && b.height > 0 ? b.top : window.innerHeight })(),
-          position: cs.position, tall: document.documentElement.scrollHeight - window.innerHeight,
+          dock: rect(document.querySelector('.tsc-dock')),
+          code: rect(document.querySelector('.tsc-dock .tsc-code-btn')),
+          save: rect(document.querySelector('.tsc-dock .tsc-save')),
+          vw: document.documentElement.clientWidth,
+          vh: window.innerHeight,
         }
       })
-      expect(box.tall, 'the page is taller than the screen, so the bar has to stick').toBeGreaterThan(100)
-      expect(['sticky', 'fixed']).toContain(box.position)
-      expect(Math.round(box.bottom), `${w}px: the bar sits on the foot of the screen (on the tab bar, on a phone)`).toBe(Math.round(box.floor))
-      if (w < 768) expect(box.floor, 'a phone has its tab bar under the bar').toBeLessThan(box.vh)
-      expect(box.left).toBeLessThanOrEqual(1)
-      expect(box.right).toBeGreaterThanOrEqual(box.vw - 1)
+      expect(boxes.code.right, `${w}px: Code is left of Save`).toBeLessThanOrEqual(boxes.save.left)
+      expect(Math.abs(boxes.save.top - boxes.code.top), `${w}px: Code and Save are on one row`).toBeLessThanOrEqual(2)
+      expect(boxes.save.right, `${w}px: Save is at the right of the dock`).toBeGreaterThan(boxes.vw - 40)
+      expect(boxes.save.right).toBeLessThanOrEqual(boxes.vw)
+      expect(Math.round(boxes.dock.bottom), `${w}px: the dock is the foot of the screen`).toBe(boxes.vh)
+      expect(boxes.dock.height, `${w}px: the dock is 64px tall`).toBe(64)
 
-      // Still there after the page scrolls to the end.
+      expect(await settleTypeScaleView(page), `${w}px is the ${w >= 1440 ? "split" : "switch"} layout`).toBe(w >= 1440 ? 'split' : 'switch')
+
+      // The dock is sticky: still in view after the page scrolls to the end.
+      const tall = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
+      expect(tall, 'the page is taller than the screen, so the dock has to stick').toBeGreaterThan(100)
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-      const after = await dock.evaluate(el => Math.round(el.getBoundingClientRect().bottom))
-      expect(after, `${w}px: the bar stays on the screen at the end of the page`).toBe(Math.round(box.floor))
-      await expect(dock).toBeInViewport()
+      await expect(save, `${w}px: Save stays in the viewport at the end of the page`).toBeInViewport()
     })
   }
 
   for (const [w, h] of [[768, 700], [1200, 700]]) {
-    test(`Save opens its menu upward from the bar, whole on the screen, at ${w}`, async ({ page }) => {
+    test(`Save opens its menu upward from the docked button, whole on the screen, at ${w}`, async ({ page }) => {
       watch(page, 'signed in designer keeping a scale')
       await signIn(page, { plan: 'free', projects: 1 })
       await page.setViewportSize({ width: w, height: h })
@@ -231,12 +274,11 @@ test.describe('Type Scale · the docked bar', () => {
       await expect(menu).toBeVisible()
       const m = await page.evaluate(() => {
         const r = document.querySelector('.svt-menu').getBoundingClientRect()
-        const d = document.querySelector('.tsc-dock').getBoundingClientRect()
         const t = document.querySelector('.tsc-dock .tsc-save').getBoundingClientRect()
-        return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, dockTop: d.top, triggerRight: t.right, vw: document.documentElement.clientWidth }
+        return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, triggerTop: t.top, triggerRight: t.right, vw: document.documentElement.clientWidth }
       })
-      expect(m.bottom, 'the menu opens above the bar').toBeLessThanOrEqual(m.dockTop)
-      expect(m.top, 'the menu is not cut off above the screen').toBeGreaterThanOrEqual(0)
+      expect(m.bottom, 'the menu opens above the button').toBeLessThanOrEqual(m.triggerTop)
+      expect(m.top, 'the menu is not cut off at the top of the screen').toBeGreaterThanOrEqual(0)
       expect(m.left).toBeGreaterThanOrEqual(0)
       expect(m.right, 'the menu is not cut off at the right').toBeLessThanOrEqual(m.vw)
       expect(Math.abs(m.right - m.triggerRight), 'the menu hangs from the right, under which Save sits').toBeLessThanOrEqual(24)
@@ -254,9 +296,9 @@ test.describe('Type Scale · the docked bar', () => {
 //
 // MUTATION: move <ToolPanel> back after <ToolMain> in TypeScale.jsx and give
 // `.tsc-config` / `.tsc-sec-scale` an `order`, and the source and Tab checks
-// go red at 390, 768 and 1023 while the screen check stays green.
+// go red at 768 and 1023 while the screen check stays green.
 test.describe('Type Scale · source order, Tab order and screen order agree below 1024', () => {
-  for (const [w, h] of [[390, 844], [768, 1024], [1023, 800]]) {
+  for (const [w, h] of [[768, 1024], [1023, 800]]) {
     test(`at ${w}`, async ({ page }) => {
       watch(page, 'keyboard designer on a phone and a tablet')
       await page.setViewportSize({ width: w, height: h })
@@ -270,20 +312,20 @@ test.describe('Type Scale · source order, Tab order and screen order agree belo
         const scale = document.querySelector('.tsc-sec-scale')
         const out = document.querySelector('.tsc-output')
         const tabs = document.querySelector('.tsc-view-switch')
-        const sheetRow = document.querySelector('.tsc-sheet-row')
-        const dock = document.querySelector('.tsc-dock')
+        const dock = document.querySelector('[data-tl-dock]')
         return {
           panelThenWork: follows(cfg, out),
           scaleThenTabs: follows(scale, tabs),
-          sheetRowThenTabs: follows(sheetRow, tabs),
-          workThenDock: follows(out, dock),
+          // Only a phone has a bar at the foot below 1024.
+          hasDock: !!dock,
+          workThenDock: dock ? follows(out, dock) : null,
           orders: [...document.querySelectorAll('.tsc-config, .tsc-config *, .tsc-output')].filter(el => getComputedStyle(el).order !== '0').map(el => el.className),
         }
       })
       expect(source.panelThenWork, 'the panel comes before the ladder in the source').toBe(true)
       expect(source.scaleThenTabs).toBe(true)
-      expect(source.sheetRowThenTabs).toBe(true)
-      expect(source.workThenDock, 'the docked bar is last, as it is on screen').toBe(true)
+      expect(source.hasDock, 'a bar at the foot is a phone thing, and a phone has its own test below').toBe(false)
+      expect(source.workThenDock).toBeNull()
       // The one `order` left is the value beside a slider's track, inside one control.
       expect(source.orders.filter(c => !/snapv-value/.test(c)), 'nothing is reordered with CSS').toEqual([])
 
@@ -324,6 +366,59 @@ test.describe('Type Scale · source order, Tab order and screen order agree belo
     })
   }
 
+  // A phone is one scroll: the width segment, then the Kerbside screen, then the
+  // ladder. Base, Ratio and the families are in the settings sheet the dock opens,
+  // which stays out of the way (and out of the Tab order) until it is opened.
+  test('at 390 the width, the page and the ladder are one scroll in that order, and the closed sheet is out of reach', async ({ page }) => {
+    watch(page, 'keyboard designer on a phone')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await go(page, '/create/type-scale')
+    await expect(page.locator('.tsc-row').first()).toBeVisible()
+
+    const source = await page.evaluate(() => {
+      const follows = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+      const width = document.querySelector('.tsc-width-bar')
+      const screen = document.querySelector('.tsk')
+      const ladder = document.querySelector('.tsc-ladder')
+      const dock = document.querySelector('[data-tl-dock]')
+      return {
+        widthThenScreen: follows(width, screen),
+        screenThenLadder: follows(screen, ladder),
+        ladderThenDock: !!dock && follows(ladder, dock),
+        tabs: document.querySelectorAll('.tsc-view-switch, [role="tab"]').length,
+        orders: [...document.querySelectorAll('.tsc-config, .tsc-config *, .tsc-output, .tsc-output *')].filter(el => getComputedStyle(el).order !== '0').map(el => el.className),
+      }
+    })
+    expect(source.widthThenScreen, 'Preview width is above the screen').toBe(true)
+    expect(source.screenThenLadder, 'the screen is above the ladder').toBe(true)
+    expect(source.ladderThenDock, 'the dock is last, as it is on screen').toBe(true)
+    expect(source.tabs, 'a phone has no page-level tabs').toBe(0)
+    expect(source.orders.filter(c => !/snapv-value/.test(c)), 'nothing is reordered with CSS').toEqual([])
+
+    const tops = await page.evaluate(() => {
+      const top = sel => document.querySelector(sel).getBoundingClientRect().top + window.scrollY
+      return { width: top('#tsc-width'), screen: top('.tsk'), row: top('.tsc-row') }
+    })
+    expect(tops.width, 'Preview width is above the screen').toBeLessThan(tops.screen)
+    expect(tops.screen, 'the screen is above the ladder').toBeLessThan(tops.row)
+
+    await expect(page.locator('#tsc-sheet')).toBeHidden()
+    await page.locator('[data-tool-toolbar] button:visible').last().focus()
+    const stops = []
+    for (let i = 0; i < 40; i += 1) {
+      await page.keyboard.press('Tab')
+      const stop = await page.evaluate(() => {
+        const el = document.activeElement
+        const zone = el.closest('.tsc-row') ? 'row' : el.closest('.tsc-sheet') ? 'sheet' : el.closest('.tsc-width-bar') ? 'width' : 'other'
+        return { zone, name: (el.getAttribute('aria-label') || el.textContent || el.id).trim().slice(0, 40) }
+      })
+      stops.push(stop)
+      if (stop.zone === 'row') break
+    }
+    const zones = stops.map(s => s.zone).filter(z => z !== 'other').filter((z, i, all) => z !== all[i - 1])
+    expect(zones, `Tab walked ${stops.map(s => `${s.zone}:${s.name}`).join(' > ')}`).toEqual(['width', 'row'])
+  })
+
   for (const [w, h] of [[1024, 800], [1200, 900], [1440, 900]]) {
     test(`from 1024 the panel stays in the right-hand column, as before, at ${w}`, async ({ page }) => {
       watch(page, 'designer on a laptop')
@@ -343,17 +438,17 @@ test.describe('Type Scale · source order, Tab order and screen order agree belo
   }
 })
 
-// ── The split and the Code drawer ─────────────────────────────────────────────
+// ── The split and its Scale | Page switch ────────────────────────────────────────
 // The work column is measured, not the viewport. From 1024px of column (a 1440
-// window) the ladder and the page sit side by side with no Scale / Page / Code
-// switch, and Code is a drawer opened from the docked bar. Below that the switch
-// stays. The 1024 test is the other half of every claim here: it is what makes
-// "no switch at 1440" a statement about the width and not about the page.
+// window) the ladder and the page sit side by side with no Scale / Page switch.
+// Code is a drawer opened from the docked bar at every width from 768. Below the
+// split the switch stays. The 1024 test is the other half of every claim here: it
+// is what makes "no switch at 1440" a statement about the width and not about the page.
 //
 // MUTATION: raise SPLIT_MIN in TypeScale.jsx past any column and the 1440 tests
-// go red while the 1024 one stays green; drop `hidden={!drawerOpen}` or the Escape
-// branch and the drawer tests go red.
-test.describe('Type Scale · the split and the Code drawer', () => {
+// go red while the 1024 one stays green; spec 306 pins the Code drawer at 1440.
+//
+test.describe('Type Scale · the split and its Scale | Page switch', () => {
   test('at 1440 the ladder and the page sit side by side and there is no tablist', async ({ page }) => {
     watch(page, 'designer on a wide screen')
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -365,8 +460,8 @@ test.describe('Type Scale · the split and the Code drawer', () => {
     await expect(page.locator('#tsc-view-panel')).not.toHaveAttribute('role', 'tabpanel')
 
     // Both halves are rendered at once, not one at a time.
-    await expect(page.locator('.tsc-row')).toHaveCount(9)
-    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsc-row')).toHaveCount(6)
+    await expect(page.locator('.tsk')).toBeVisible()
 
     const g = await page.evaluate(() => {
       const box = sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, width: r.width } }
@@ -388,115 +483,30 @@ test.describe('Type Scale · the split and the Code drawer', () => {
     // Visible with no tab to press, and already on the visitor's own size.
     await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-width', 'full')
     await expect(page.locator('#tsc-width')).toBeVisible()
-    await expect(page.locator('#tsc-width')).toContainText('Desktop')
+    await expect(page.locator('#tsc-width button[aria-pressed="true"]')).toContainText('Desktop')
     // The half is narrower than the 1440px page it shows, and the note says so.
     await expect(page.locator('.tsc-width-note')).toBeVisible()
     await expect(page.locator('.tsc-width-note')).toContainText('Sizes as on a 1440px screen')
   })
 
-  test('at 1440 the docked bar is named for Code and save and holds both buttons', async ({ page }) => {
-    watch(page, 'designer keeping a scale on a wide screen')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/create/type-scale')
-    expect(await settleTypeScaleView(page)).toBe('split')
 
-    const dock = page.getByRole('group', { name: 'Code and save' })
-    await expect(dock).toBeVisible()
-    const names = await dock.getByRole('button').evaluateAll(els => els.map(el => el.textContent.trim()))
-    expect(names).toEqual(['Code', 'Save to a project'])
-  })
-
-  test('the Code drawer opens with focus inside, does not trap Tab, and Escape closes it and returns focus', async ({ page }) => {
-    watch(page, 'keyboard designer reading the export')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/create/type-scale')
-    expect(await settleTypeScaleView(page)).toBe('split')
-
-    const button = page.locator('.tsc-code-btn')
-    const drawer = page.locator('#tsc-code-drawer')
-    const inDrawer = () => drawer.evaluate(el => el.contains(document.activeElement))
-
-    // Closed: the button says what it controls and the drawer is not on screen.
-    await expect(button).toHaveAttribute('aria-controls', 'tsc-code-drawer')
-    await expect(button).toHaveAttribute('aria-expanded', 'false')
-    await expect(drawer).toBeHidden()
-    await expect(page.getByRole('dialog', { name: 'Code' })).toHaveCount(0)
-
-    await button.focus()
-    await page.keyboard.press('Enter')
-    await expect(button).toHaveAttribute('aria-expanded', 'true')
-    await expect(page.getByRole('dialog', { name: 'Code' })).toBeVisible()
-    await expect(drawer.locator('#tsc-export')).toContainText('--text-base')
-    await expect(drawer.locator('.tsc-drawer-copy')).toBeVisible()
-    await expect(drawer.locator('.tsc-drawer-close')).toBeVisible()
-
-    // Focus moved into it. It is non-modal: no trap, so Tab walks on out of it.
-    await expect.poll(inDrawer, { message: 'focus is inside the drawer once it opens' }).toBe(true)
-    await expect(drawer).toHaveAttribute('aria-modal', 'false')
-    for (let i = 0; i < 12 && await inDrawer(); i += 1) await page.keyboard.press('Tab')
-    expect(await inDrawer(), 'Tab is not trapped in the drawer').toBe(false)
-
-    await drawer.locator('.tsc-drawer-copy').focus()
-    await page.keyboard.press('Escape')
-    await expect(drawer).toBeHidden()
-    await expect(button).toHaveAttribute('aria-expanded', 'false')
-    await expect(button, 'focus goes back to the button that opened the drawer').toBeFocused()
-  })
-
-  test('the Close button and a press outside also close the drawer, but a press in the panel does not', async ({ page }) => {
-    watch(page, 'designer dismissing the export')
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/create/type-scale')
-    expect(await settleTypeScaleView(page)).toBe('split')
-
-    const button = page.locator('.tsc-code-btn')
-    const drawer = page.locator('#tsc-code-drawer')
-
-    await button.click()
-    await expect(drawer).toBeVisible()
-    await page.locator('.tsc-drawer-close').click()
-    await expect(drawer).toBeHidden()
-    await expect(button, 'Close returns focus to the button').toBeFocused()
-
-    await button.click()
-    await expect(drawer).toBeVisible()
-    // A press in the settings panel beside it leaves it open, and the code follows the control.
-    const exportText = () => drawer.locator('#tsc-export').innerText()
-    const before = await exportText()
-    await page.locator('#tsc-ratio').click()
-    await page.getByRole('listbox').getByRole('option', { name: /^Perfect fifth/ }).click()
-    await expect(drawer, 'a press in the panel keeps the drawer open').toBeVisible()
-    await expect.poll(exportText, { message: 'the code updates as the ratio changes' }).not.toBe(before)
-    await expect(button).toHaveAttribute('aria-expanded', 'true')
-
-    // A press outside both closes it.
-    await page.locator('.tsc-dock').click({ position: { x: 400, y: 4 } })
-    await expect(drawer).toBeHidden()
-    await expect(button).toHaveAttribute('aria-expanded', 'false')
-
-    // The button is a toggle: a second press closes what the first opened.
-    await button.click()
-    await expect(drawer).toBeVisible()
-    await button.click()
-    await expect(drawer).toBeHidden()
-  })
-
-  test('at 1024 the switch is still there, Code is a tab, and there is no drawer', async ({ page }) => {
+  test('at 1024 the Scale / Page switch is still there and Code is a drawer from the docked bar', async ({ page }) => {
     watch(page, 'designer on a laptop')
     await page.setViewportSize({ width: 1024, height: 800 })
     await go(page, '/create/type-scale')
     expect(await settleTypeScaleView(page)).toBe('switch')
 
     await expect(page.getByRole('tablist', { name: 'Output view' })).toBeVisible()
-    await expect(page.getByRole('tab')).toHaveText(['Scale', 'Page', 'Code'])
+    await expect(page.getByRole('tab')).toHaveText(['Scale', 'Page'])
     await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-view', 'scale')
     await expect(page.locator('#tsc-view-panel')).toHaveAttribute('role', 'tabpanel')
-    await expect(page.locator('.tsc-code-btn')).toHaveCount(0)
-    await expect(page.locator('#tsc-code-drawer')).toHaveCount(0)
-    await expect(page.getByRole('group', { name: 'Save', exact: true })).toBeVisible()
+    // Code is not a view of the switch: it is a drawer, closed until the dock's Code is pressed.
+    await expect(page.locator('.tsc-dock .tsc-code-btn')).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.locator('#tsc-code-drawer')).toBeHidden()
+    await expect(page.locator('.tsc-dock').getByRole('button', { name: 'Save to a project' })).toBeVisible()
 
-    await page.getByRole('tab', { name: 'Code' }).click()
-    await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-view', 'code')
+    await showTypeScaleCode(page)
+    await expect(page.locator('#tsc-view-panel')).toHaveAttribute('data-view', 'scale')
     await expect(page.locator('#tsc-export')).toContainText('--text-base')
   })
 })

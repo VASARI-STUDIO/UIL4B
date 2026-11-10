@@ -27,7 +27,7 @@
 //  10  in `isLive`, drop the `!pair &&` AND hand the compare Stage an onState
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { clickPaletteAction, pickPreviewState } from './palette-helpers.js'
+import { clickPaletteAction, openCompareFromSuggest, pickPreviewState } from './palette-helpers.js'
 
 test.use({ viewport: { width: 1440, height: 900 } })
 
@@ -722,10 +722,7 @@ test.describe('the compare view', () => {
   test('shows the Product page twice as a still picture: no buttons, no radios, no links', async ({ page }) => {
     watch(page, 'designer comparing a suggested palette on the Product page')
     await openPalette(page, BLUE)
-    await clickPaletteAction(page, 'Suggest variations')
-    const compare = page.getByRole('button', { name: /^Compare .* with your palette$/ }).first()
-    await expect(compare).toBeVisible()
-    await compare.click()
+    await openCompareFromSuggest(page)
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     await expect(dialog.getByText('Compare palettes')).toBeVisible()
     await dialog.getByRole('option', { name: /^Product page/ }).click()

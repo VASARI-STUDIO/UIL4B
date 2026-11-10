@@ -5,9 +5,9 @@
 // Measured against LIVE production on 2026-09-13, with no credentials sent:
 //
 //   curl https://uil4b.com/assets/constants-KnpCfm5i.js
-//   -> 200, 1945 bytes, containing the founder's personal address TWICE
+//   -> 200, 1945 bytes, containing a personal address TWICE
 //
-// `src/utils/constants.js` held the founder's personal address twice: once as
+// `src/utils/constants.js` held a personal address twice: once as
 // the only entry of ADMIN_EMAILS, and once as the KEY of OWNER_HANDLES. Its
 // chunk is in the `modulepreload` list of every prerendered shell, so it was
 // fetched in the first request wave by every anonymous visitor, on every route,
@@ -51,19 +51,19 @@
 //     directory, and the allowlist must refuse it;
 //   · the real scan must find the allowlisted addresses, so "none of the hits
 //     is forbidden" is a claim about a non-empty set;
-//   · the raw substring search for the founder's address must FIND it in a
+//   · the raw substring search for the owner's address must FIND it in a
 //     fixture, before it is trusted to report dist/ clean.
 //
 // ── And the public identity must survive ────────────────────────────────────
 //
-// The founder's NAME is deliberately public; his address is not. A future
+// The owner's NAME is deliberately public; the address is not. A future
 // "cleanup" that deleted the crown, the handle, the tooltip or the publicId
 // along with the address would be a product regression, so the last groups
 // EXECUTE the shipped chunk and require the owner record to come back whole.
 //
 // ── AND THE ADDRESS IS NO LONGER IN THE REPOSITORY TO TEST WITH ─────────────
 //
-// This file used to read the founder's address out of api/_lib/plans.js — "the
+// This file used to read the owner's address out of api/_lib/plans.js — "the
 // one copy that is allowed to hold it, because api/_lib is never bundled". That
 // stopped being true when the repository went public: a plaintext address in
 // tracked source is published whether or not a browser ever fetches it. The
@@ -80,7 +80,7 @@
 //     definition;
 //   · the stronger sweep is unchanged and needs no address at all: every hit
 //     must be a published role address or an RFC 2606 placeholder, so the
-//     founder's gmail would fail it twice over;
+//     owner's gmail would fail it twice over;
 //   · the shipped chunk is exercised through the PUBLIC owner id, which reaches
 //     the same record by the other door.
 //
@@ -165,11 +165,19 @@ function allowed(address) {
 // scan reads every chunk EXCEPT the ones holding pixels: XMP, EXIF, ICC
 // profiles, PNG text chunks (inflated where compressed), any chunk the parser
 // does not recognise, and anything trailing the container are all still read.
+// AVIF and HEIC keep their pixels in the same `mdat` box as their EXIF and XMP
+// items, so those are cut out by the byte ranges the file's own item table
+// gives for coded-image items, and every other byte is still read.
 // A file that does not parse as its container is read whole, so a malformed
 // image can only make the scan stricter. Every other format is read whole.
 const WEBP_PIXELS = new Set(['VP8 ', 'VP8L', 'ALPH'])
 const PNG_PIXELS = new Set(['IDAT', 'fdAT'])
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+// Brands an AVIF or HEIC file declares in its `ftyp` box, and the item types
+// that are coded pixels. Grid, overlay and identity items hold a few bytes of
+// layout and stay readable, as does every item type not listed here.
+const HEIF_BRANDS = new Set(['avif', 'avis', 'heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1'])
+const HEIF_PIXEL_ITEMS = new Set(['av01', 'hvc1', 'hev1', 'avc1', 'vvc1', 'j2k1', 'jpeg'])
 
 /** RIFF chunks under `buf`, minus pixel chunks, pushed onto `out`. Animation
  *  frames (ANMF) are descended into past their 16-byte frame header. */
@@ -238,16 +246,150 @@ function pngText(bytes) {
   return out
 }
 
+/** The boxes laid end to end between `start` and `end`, as `{ type, from, to }`
+ *  where `from`..`to` is the box body. THROWS on a box that does not fit. */
+function isoBoxes(buf, start, end) {
+  const out = []
+  let at = start
+  while (at < end) {
+    if (at + 8 > end) throw new Error('truncated HEIF box header')
+    let size = buf.readUInt32BE(at)
+    const type = buf.toString('latin1', at + 4, at + 8)
+    let head = 8
+    if (size === 1) {
+      if (at + 16 > end) throw new Error('truncated HEIF large-size box header')
+      size = Number(buf.readBigUInt64BE(at + 8))
+      head = 16
+    } else if (size === 0) {
+      size = end - at
+    }
+    if (size < head || at + size > end) throw new Error(`HEIF box ${type} overruns the file`)
+    out.push({ type, from: at + head, to: at + size })
+    at += size
+  }
+  return out
+}
+
+/** A big-endian unsigned integer of 0, 4 or 8 bytes, the widths an item table allows. */
+function isoUint(buf, at, width) {
+  if (width === 0) return 0
+  if (width === 4) return buf.readUInt32BE(at)
+  if (width === 8) {
+    const v = buf.readBigUInt64BE(at)
+    if (v > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('HEIF offset beyond 2^53')
+    return Number(v)
+  }
+  throw new Error(`unsupported HEIF field width ${width}`)
+}
+
+/** Item id -> four-character item type, from the `iinf` box. */
+function heifItemTypes(bytes, iinf) {
+  const types = new Map()
+  const version = bytes[iinf.from]
+  const entries = isoBoxes(bytes, iinf.from + 4 + (version === 0 ? 2 : 4), iinf.to)
+  for (const infe of entries) {
+    if (infe.type !== 'infe') continue
+    const v = bytes[infe.from]
+    if (v < 2) continue // versions 0 and 1 carry no item type; such items are read
+    const idWidth = v === 2 ? 2 : 4
+    const at = infe.from + 4
+    const id = idWidth === 2 ? bytes.readUInt16BE(at) : bytes.readUInt32BE(at)
+    types.set(id, bytes.toString('latin1', at + idWidth + 2, at + idWidth + 6))
+  }
+  return types
+}
+
+/** The `[from, to)` file ranges of coded-image items, or null when `bytes` is
+ *  not an AVIF/HEIC file. THROWS on one whose item table does not hold together.
+ *  Only items stored in this file's own `mdat` are located (construction
+ *  method 0); anything else is not excluded, so it is read. */
+function heifPixelRanges(bytes) {
+  const top = isoBoxes(bytes, 0, bytes.length)
+  const ftyp = top.find((b) => b.type === 'ftyp')
+  if (!ftyp) return null
+  const brands = [bytes.toString('latin1', ftyp.from, ftyp.from + 4)]
+  for (let at = ftyp.from + 8; at + 4 <= ftyp.to; at += 4) brands.push(bytes.toString('latin1', at, at + 4))
+  if (!brands.some((b) => HEIF_BRANDS.has(b))) return null
+
+  const meta = top.find((b) => b.type === 'meta')
+  if (!meta) throw new Error('HEIF file without a meta box')
+  const inside = isoBoxes(bytes, meta.from + 4, meta.to)
+  const iinf = inside.find((b) => b.type === 'iinf')
+  const iloc = inside.find((b) => b.type === 'iloc')
+  if (!iinf || !iloc) throw new Error('HEIF file without an item table')
+  const types = heifItemTypes(bytes, iinf)
+
+  const version = bytes[iloc.from]
+  let at = iloc.from + 4
+  const offsetWidth = bytes[at] >> 4
+  const lengthWidth = bytes[at] & 15
+  const baseWidth = bytes[at + 1] >> 4
+  const indexWidth = version === 0 ? 0 : bytes[at + 1] & 15
+  at += 2
+  const count = version < 2 ? bytes.readUInt16BE(at) : bytes.readUInt32BE(at)
+  at += version < 2 ? 2 : 4
+
+  const ranges = []
+  for (let n = 0; n < count; n++) {
+    const id = version < 2 ? bytes.readUInt16BE(at) : bytes.readUInt32BE(at)
+    at += version < 2 ? 2 : 4
+    let method = 0
+    if (version >= 1) { method = bytes.readUInt16BE(at) & 15; at += 2 }
+    const dataReference = bytes.readUInt16BE(at)
+    at += 2
+    const base = isoUint(bytes, at, baseWidth)
+    at += baseWidth
+    const extents = bytes.readUInt16BE(at)
+    at += 2
+    for (let e = 0; e < extents; e++) {
+      if (version >= 1) at += indexWidth
+      const offset = isoUint(bytes, at, offsetWidth)
+      at += offsetWidth
+      const length = isoUint(bytes, at, lengthWidth)
+      at += lengthWidth
+      if (at > iloc.to) throw new Error('HEIF item table overruns its box')
+      if (!HEIF_PIXEL_ITEMS.has(types.get(id)) || method !== 0 || dataReference !== 0) continue
+      // A zero length means "to the end of the item", which this walk cannot
+      // bound, so it refuses rather than guesses.
+      if (length === 0) throw new Error('HEIF pixel extent of unknown length')
+      if (base + offset + length > bytes.length) throw new Error('HEIF pixel extent overruns the file')
+      ranges.push([base + offset, base + offset + length])
+    }
+  }
+  return ranges
+}
+
+/** Everything in an AVIF/HEIC file outside its coded-image items, or null when
+ *  it is not one. */
+function heifText(bytes) {
+  const ranges = heifPixelRanges(bytes)
+  if (!ranges) return null
+  ranges.sort((a, b) => a[0] - b[0])
+  const out = []
+  let at = 0
+  for (const [from, to] of ranges) {
+    if (from > at) out.push(bytes.subarray(at, from))
+    at = Math.max(at, to)
+  }
+  if (at < bytes.length) out.push(bytes.subarray(at))
+  return out
+}
+
 /** The text a file carries, and which container parser (if any) read it. */
 function readableText(bytes) {
   const isWebp = bytes.length >= 12
     && bytes.toString('latin1', 0, 4) === 'RIFF' && bytes.toString('latin1', 8, 12) === 'WEBP'
   const isPng = bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)
+  const isIsoBmff = bytes.length >= 12 && bytes.toString('latin1', 4, 8) === 'ftyp'
   try {
     // Joined with a newline, which the address pattern cannot cross, so no hit
     // is stitched together from the end of one chunk and the start of the next.
     if (isWebp) return { text: webpText(bytes).map((b) => b.toString('utf8')).join('\n'), container: 'webp' }
     if (isPng) return { text: pngText(bytes).map((b) => b.toString('utf8')).join('\n'), container: 'png' }
+    if (isIsoBmff) {
+      const parts = heifText(bytes)
+      if (parts) return { text: parts.map((b) => b.toString('utf8')).join('\n'), container: 'heif' }
+    }
   } catch {
     // Not a well-formed container: fall through and read every byte.
   }
@@ -442,6 +584,117 @@ test('a personal address in a PNG tEXt chunk is still caught', () => {
   fs.rmSync(dir, { recursive: true, force: true })
 })
 
+// AVIF and HEIC share one container (ISO base media): a `meta` box holds an
+// item table, and a single `mdat` box holds the bytes of every item, pixels
+// and EXIF/XMP alike. So unlike WebP and PNG there is no chunk to skip by id;
+// the item table says which byte ranges are pixels.
+
+const u16 = (n) => { const b = Buffer.alloc(2); b.writeUInt16BE(n, 0); return b }
+const u32 = (n) => { const b = Buffer.alloc(4); b.writeUInt32BE(n, 0); return b }
+
+function isoBox(type, ...parts) {
+  const body = Buffer.concat(parts)
+  return Buffer.concat([u32(8 + body.length), Buffer.from(type, 'latin1'), body])
+}
+
+function isoFullBox(type, version, ...parts) {
+  return isoBox(type, Buffer.from([version, 0, 0, 0]), ...parts)
+}
+
+/** An AVIF/HEIC-shaped file: `items` are `{ id, type, data }`, stored in `mdat`
+ *  in order and located by a version-0 `iloc` table. Never decoded as an image. */
+function buildHeif(brand, items) {
+  const ftyp = isoBox('ftyp', Buffer.from(brand, 'latin1'), u32(0), Buffer.from(brand, 'latin1'), Buffer.from('mif1', 'latin1'))
+  const meta = (offsets) => isoFullBox('meta', 0,
+    isoFullBox('iinf', 0, u16(items.length),
+      ...items.map((it) => isoFullBox('infe', 2, u16(it.id), u16(0), Buffer.from(it.type, 'latin1'), Buffer.from([0])))),
+    isoFullBox('iloc', 0, Buffer.from([0x44, 0x00]), u16(items.length),
+      ...items.map((it, n) => Buffer.concat([u16(it.id), u16(0), u16(1), u32(offsets[n]), u32(it.data.length)]))))
+  // Offsets are absolute and the table's size does not depend on them, so lay
+  // the file out once with zeros to learn where `mdat` starts.
+  let at = ftyp.length + meta(items.map(() => 0)).length + 8
+  const offsets = items.map((it) => { const here = at; at += it.data.length; return here })
+  return Buffer.concat([ftyp, meta(offsets), isoBox('mdat', ...items.map((it) => it.data))])
+}
+
+for (const [brand, pixelType] of [['avif', 'av01'], ['heic', 'hvc1']]) {
+  test(`a personal address in a ${brand} file's Exif item is still caught, and its pixel item is not read`, () => {
+    const email = 'someone@gmail.com'
+    const decoy = 'pixels@gmail.com'
+    // The decoy sits inside the pixel item: address-shaped bytes by design, so
+    // the only way it stays out of the scan is the item being excluded.
+    const pixels = Buffer.concat([crypto.randomBytes(64), Buffer.from(decoy, 'utf8'), crypto.randomBytes(64)])
+    const exif = Buffer.from(`Exif\0\0Artist=${email}`, 'utf8')
+    const file = buildHeif(brand, [
+      { id: 1, type: pixelType, data: pixels },
+      { id: 2, type: 'Exif', data: exif },
+    ])
+    const dir = binaryFixture({ [`planted.${brand}`]: file })
+    const { files, addresses } = scan(dir)
+    assert.equal(files[0].container, 'heif', `a well-formed ${brand} file was not read by the container parser`)
+    assert.ok(addresses.has(email), `an address planted in a ${brand} Exif item was not found by the scan`)
+    assert.ok(!addresses.has(decoy),
+      `address-shaped bytes inside a ${brand} pixel item reached the text scan — the false positive this fixes can still happen`)
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+}
+
+test('an item type the HEIF walk does not know as pixels is still read', () => {
+  // The same decoy as above, in an item whose type is not a coded image. It
+  // must be found, which is what makes the exclusion above a property of the
+  // item type and not of "anything inside mdat".
+  const decoy = 'pixels@gmail.com'
+  // Spaces keep the box name `mdat`, which sits right before the item, out of the address.
+  const file = buildHeif('avif', [{ id: 1, type: 'xyz1', data: Buffer.from(` ${decoy} `, 'utf8') }])
+  const dir = binaryFixture({ 'unknown-item.avif': file })
+  const { addresses } = scan(dir)
+  assert.ok(addresses.has(decoy), 'bytes in an item of unknown type were skipped — the exclusion is wider than the pixel items')
+  fs.rmSync(dir, { recursive: true, force: true })
+})
+
+test('an AVIF whose item table is cut short is read whole, not trusted', () => {
+  const decoy = 'pixels@gmail.com'
+  const whole = buildHeif('avif', [{ id: 1, type: 'av01', data: Buffer.from(decoy, 'utf8') }])
+  // Chop the file inside the `iloc` box: the walk throws, the scan falls back
+  // to reading every byte, and the address-shaped bytes are found.
+  const cut = whole.subarray(0, whole.indexOf('iloc', 0, 'latin1') + 6)
+  const dir = binaryFixture({ 'truncated.avif': Buffer.concat([cut, Buffer.from(decoy, 'utf8')]) })
+  const { files, addresses } = scan(dir)
+  assert.equal(files[0].container, null, 'a malformed AVIF was treated as a parsed container')
+  assert.ok(addresses.has(decoy), 'a malformed AVIF was not read whole')
+  fs.rmSync(dir, { recursive: true, force: true })
+})
+
+test('the AVIF files this site ships parse as containers and shed their pixels', () => {
+  // The synthetic files above prove the walk on bytes written to match it. This
+  // proves it on what a real encoder wrote, so an encoder that lays its item
+  // table out differently fails here instead of silently falling back to a
+  // whole-file read.
+  const found = []
+  const walk = (at) => {
+    for (const entry of fs.readdirSync(at, { withFileTypes: true })) {
+      const p = path.join(at, entry.name)
+      if (entry.isDirectory()) walk(p)
+      else if (/\.avif$/i.test(entry.name)) found.push(p)
+    }
+  }
+  walk(path.join(REPO, 'public'))
+  assert.ok(found.length > 0, 'no .avif files under public/ — this check is reading nothing')
+  for (const file of found) {
+    const bytes = fs.readFileSync(file)
+    const read = readableText(bytes)
+    const rel = path.relative(REPO, file)
+    assert.equal(read.container, 'heif', `${rel} did not parse as an AVIF container`)
+    // Characters, not re-encoded bytes: the non-pixel remainder of a small photo
+    // derivative is mostly an embedded colour profile, binary that UTF-8 decoding
+    // turns into three-byte replacement characters, which would count it three
+    // times over. One character per byte read keeps this a measure of what was
+    // skipped. Pixels left in would put it near the whole file.
+    assert.ok(read.text.length < bytes.length / 2,
+      `${rel}: ${read.text.length} of ${bytes.length} bytes were read — the pixel data is not being excluded`)
+  }
+})
+
 // ── The real build ──────────────────────────────────────────────────────────
 
 /** Every document the build publishes, addressed by the ROUTE it serves rather
@@ -561,7 +814,7 @@ function answersFor(mod, input) {
   return out
 }
 
-// The founder's deliberate public identity, spelled with escapes so that a file
+// The owner's deliberate public identity, spelled with escapes so that a file
 // whose encoding was mangled fails here rather than comparing mojibake to
 // mojibake.
 const OWNER_RECORD = {
@@ -634,7 +887,7 @@ test('the client check agrees with the server allowlist it mirrors', { skip: NO_
   // decides what to RENDER from a digest compiled into the bundle; the server
   // decides what is GRANTED from ADMIN_EMAILS in the deployment environment.
   // Nothing holds them together any more except this assertion, and this
-  // assertion is only possible where the variable is set — on the founder's
+  // assertion is only possible where the variable is set — on the owner's
   // machine, or in a CI job given it. Where it is not, the skip above says so.
   //
   // A disagreement is not fatal, and is worth knowing: the server would grant
@@ -658,11 +911,11 @@ test('the client check says no to everybody else', () => {
 })
 
 test('the founder-gated call site still gets a working admin check', () => {
-  // src/contexts/SubscriptionContext.jsx is one of the four founder-gated files
+  // src/contexts/SubscriptionContext.jsx is one of the four approval-gated files
   // (tests/unit/firebase-deferral.test.js), so it still writes
   // `ADMIN_EMAILS.includes(user.email.toLowerCase())` and could not be rewritten
-  // on this branch. If that stops answering true the founder silently loses his
-  // Pro entitlement — a downgraded founder on a green build — and if it starts
+  // on this branch. If that stops answering true the owner silently loses their
+  // Pro entitlement — a downgraded owner on a green build — and if it starts
   // holding addresses again the leak is back.
   // The positive half needs an address the shim should say yes to, and the
   // only one this repository can name is a configured server allowlist entry —

@@ -18,6 +18,7 @@ import { test } from 'node:test'
 import {
   SVG_ALLOWED_ATTRIBUTES, SVG_ALLOWED_ELEMENTS, SVG_LIMITS, sanitiseSvgInline,
 } from '../../src/utils/svgSanitise.js'
+import { markupHasStroke } from '../../src/utils/iconStroke.js'
 
 const ROOT = process.cwd()
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
@@ -67,7 +68,7 @@ function assertInert(svg, label = '') {
 test('a clean icon comes out byte-for-byte as it went in, with ok and nothing removed', () => {
   const src = read('tests/user-sim/fixtures/iconify/icon.svg').trim()
   const out = run(src)
-  assert.deepEqual(out, { ok: true, svg: src, removed: [] })
+  assert.deepEqual(out, { ok: true, css: false, svg: src, removed: [] })
 })
 
 test('the root always carries the SVG namespace, added when the source left it out', () => {
@@ -228,8 +229,359 @@ test('<style>, style attributes and class are dropped: expression(), url(javascr
     + '<rect style="width:expression(alert(1))" class="overlay" width="3"/>',
   ))
   assert.equal(out.svg, wrap('<path d="M0 0"/><rect width="3"/>'))
-  assert.deepEqual(out.removed.sort(), ['<style>', '@class', '@style'])
+  assert.deepEqual(out.removed.sort(), [
+    '<style> (@-rules)', '@class', 'style: -moz-binding', 'style: behavior', 'style: fill', 'style: width',
+  ])
   assertInert(out.svg)
+})
+
+// ── CSS presentation: style attributes and simple <style> blocks ───────────
+
+const PATH = 'd="M0 0L1 1"'
+const noCss = (svg) => assert.doesNotMatch(svg, /\sstyle=|\sclass=|<style/i, `css survived: ${svg}`)
+// The attributes of the one <path> in the output, as a plain object.
+function pathAttrs(svg) {
+  const m = /<path([^>]*)\/?>/.exec(svg)
+  assert.ok(m, `no <path> in ${svg}`)
+  return Object.fromEntries([...m[1].matchAll(/\s([^\s=]+)="([^"]*)"/g)].map(a => [a[1], a[2]]))
+}
+const styled = (style) => run(wrap(`<path ${PATH} style="${style.replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>`))
+
+test('a style attribute becomes presentation attributes, with the same value checks', () => {
+  const out = styled('stroke:#000;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin: round ; stroke-dasharray:2, 3;opacity:.5')
+  assert.equal(out.ok, true)
+  assert.deepEqual(pathAttrs(out.svg), {
+    d: 'M0 0L1 1', stroke: '#000', 'stroke-width': '2', fill: 'none', 'stroke-linecap': 'round',
+    'stroke-linejoin': 'round', 'stroke-dasharray': '2, 3', opacity: '.5',
+  })
+  noCss(out.svg)
+  assertInert(out.svg)
+})
+
+test('property names are case-insensitive, a trailing semicolon and odd spacing are fine', () => {
+  const out = styled('  FILL : Red ;\n\tStroke:\n currentColor;; ')
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', fill: 'Red', stroke: 'currentColor' })
+  assert.equal(out.ok, true)
+})
+
+test('!important is ignored; anything else after a bang is not a colour', () => {
+  assert.deepEqual(pathAttrs(styled('fill:red !important;stroke:blue!IMPORTANT').svg), { d: 'M0 0L1 1', fill: 'red', stroke: 'blue' })
+  const bad = styled('fill:red !nonsense')
+  assert.deepEqual(pathAttrs(bad.svg), { d: 'M0 0L1 1' })
+  assert.deepEqual(bad.removed, ['style: fill'])
+})
+
+test('a style attribute beats the presentation attribute of the same name', () => {
+  const out = run(wrap(`<path ${PATH} fill="red" stroke="blue" style="fill:green"/>`))
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', fill: 'green', stroke: 'blue' })
+})
+
+test('duplicate properties in one style: the last valid one wins, and a failed one does not undo an earlier one', () => {
+  assert.equal(pathAttrs(styled('fill:red;fill:blue').svg).fill, 'blue')
+  const out = styled('fill:red;fill:url(https://evil.example/x)')
+  assert.equal(pathAttrs(out.svg).fill, 'red')
+  assert.deepEqual(out.removed, ['style: fill'])
+})
+
+test('a failed style value does not override the attribute either', () => {
+  const out = run(wrap(`<path ${PATH} fill="red" style="fill:expression(alert(1))"/>`))
+  assert.equal(pathAttrs(out.svg).fill, 'red')
+  assert.deepEqual(out.removed, ['style: fill'])
+})
+
+test('unknown and layout properties are dropped with a note, never copied', () => {
+  const out = styled('position:fixed;display:none;behavior:url(x.htc);-moz-binding:url(x);filter:blur(2px);z-index:9999;stroke:red;--x:1')
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', stroke: 'red' })
+  assert.deepEqual(out.removed.sort(), ['style: --x', 'style: -moz-binding', 'style: behavior', 'style: display', 'style: filter', 'style: position', 'style: z-index'])
+  assert.equal(out.ok, false)
+  noCss(out.svg)
+})
+
+test('names that are not CSS properties are not turned into attributes, even when they are allow-listed attributes', () => {
+  const out = styled('d:M0 0L9 9;id:x;href:#a;points:1,2;viewBox:0 0 1 1;transform:rotate(45);xmlns:x;stroke:red')
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', stroke: 'red' })
+  assert.deepEqual(out.removed.sort(), ['style: d', 'style: href', 'style: id', 'style: points', 'style: transform', 'style: viewbox', 'style: xmlns'].sort())
+})
+
+test('a declaration with no property name is noted, the rest still convert', () => {
+  const out = styled('nonsense;:red;fill:blue;1x:y')
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', fill: 'blue' })
+  assert.deepEqual(out.removed, ['@style'])
+})
+
+test('every property keeps its own value check when it comes from CSS', () => {
+  const cases = [
+    ['fill', 'url(https://evil.example/x.svg#a)'], ['fill', 'url(javascript:alert(1))'], ['fill', 'url( "http://evil.example/" )'],
+    ['fill', 'url(data:image/svg+xml,x)'], ['fill', 'url(#a b)'], ['fill', 'url(#a) red blue'],
+    ['stroke', 'expression(alert(1))'], ['stroke', 'EXPRESSION(alert(1))'], ['stroke', 'ex/**/pression(alert(1))'],
+    ['stroke', 'var(--x)'], ['stroke', 'rgb(0,0,0) onload'], ['stroke-width', 'calc(1px + 1px)'],
+    ['stroke-linecap', 'round x'], ['stroke-linejoin', 'inherit'], ['stroke-dasharray', 'url(#a)'], ['clip-path', 'circle(5px)'],
+    ['clip-path', 'url(https://evil.example/#c)'], ['mask', 'url(javascript:1)'], ['opacity', 'javascript:1'], ['width', 'auto'],
+    ['fill-rule', 'evenodd evenodd'], ['color', 'url(#a)'], ['stop-color', 'url(#a)'],
+  ]
+  for (const [prop, value] of cases) {
+    const out = styled(`${prop}:${value}`)
+    assert.ok(out, `${prop}:${value}`)
+    assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1' }, `${prop}:${value} survived: ${out.svg}`)
+    assert.deepEqual(out.removed, [`style: ${prop}`], `${prop}:${value}`)
+    noCss(out.svg)
+    assertInert(out.svg, `${prop}:${value}`)
+  }
+})
+
+test('backslash escapes, comments, quotes, @, < and braces in a value refuse the declaration', () => {
+  const cases = [
+    'fill:\\75rl(javascript:alert(1))', 'fill:\\72 ed', 'fill:re\\64', 'fill:red/* x */', 'fill:/**/red', 'fill:re/**/d',
+    'fill:"red"', "fill:'red'", 'fill:url("#a")', "fill:url('#a')", 'fill:@import', 'fill:re<d', 'fill:red}', 'fill:{red',
+    'fill:red\u0085', 'fill: ',
+  ]
+  for (const decl of cases) {
+    const out = styled(decl)
+    assert.ok(out, decl)
+    assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1' }, `${JSON.stringify(decl)} survived: ${out.svg}`)
+    noCss(out.svg)
+  }
+})
+
+test('url(#id) in a style is kept like it is in an attribute, and an id outside the file is dropped', () => {
+  const ok = run(wrap(`<defs><linearGradient id="g"/></defs><path ${PATH} style="fill:url(#g) red;stroke:url(#nowhere)"/>`))
+  assert.match(ok.svg, /<path d="M0 0L1 1" fill="url\(#g\) red"\/>/)
+  assert.deepEqual(ok.removed, ['@stroke'])
+  const prefixed = run(wrap(`<defs><linearGradient id="g"/></defs><path ${PATH} style="fill:url(#g)"/>`), { idPrefix: 'p' })
+  assert.match(prefixed.svg, /fill="url\(#p\.g\)"/)
+})
+
+test('a very long style string is capped like any other attribute, and short ones stay fast', () => {
+  const started = Date.now()
+  const decls = 'fill:red;'.repeat(3000)
+  const out = run(wrap(`<path ${PATH} style="${decls}"/>`))
+  assert.equal(pathAttrs(out.svg).fill, 'red')
+  assert.equal(run(wrap(`<path ${PATH} style="${decls.repeat(2)}"/>`)), null, 'over the byte cap rejects the file')
+  assert.ok(run(wrap(`<path ${PATH} style="${decls.repeat(2)}"/>`), { maxBytes: 64 * 1024 }))
+  const spaced = ' '.repeat(20000)
+  for (const style of [`fill:red ${spaced}!`, `${spaced}fill:red${spaced}`, `fill:${spaced}x`, `fill:red!${spaced}important${spaced}x`, `${';'.repeat(20000)}`]) {
+    run(wrap(`<path ${PATH} style="${style}"/>`), { maxBytes: 64 * 1024 })
+  }
+  const many = Array.from({ length: 400 }, (_, i) => `s${i}:x`).join(';')
+  const noted = run(wrap(`<path ${PATH} style="${many}"/>`))
+  assert.ok(noted.removed.length <= 50, 'notes stay capped')
+  assert.ok(Date.now() - started < 2500, 'no catastrophic backtracking')
+})
+
+// ── <style> blocks ──
+
+test('a class rule in <style> is resolved onto the elements that use it, and the class is gone', () => {
+  const out = run(wrap(`<style>.a{fill:none;stroke:currentColor;stroke-width:1.5}</style><path class="a" ${PATH}/>`))
+  assert.equal(out.ok, true)
+  assert.deepEqual(out.removed, [])
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' })
+  noCss(out.svg)
+})
+
+test('a <style> after the elements, in <defs>, with CDATA, a type and comments, still applies', () => {
+  const out = run(wrap(`<path class="a" ${PATH}/><defs><style type="text/css"><![CDATA[
+    /* icon */ .a { fill : none ; /* c */ stroke : #123 }
+  ]]></style></defs>`))
+  assert.equal(out.ok, true)
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', fill: 'none', stroke: '#123' })
+  noCss(out.svg)
+  assert.ok(out.svg.includes('<defs/>'), 'the empty <defs> is all that is left of it')
+})
+
+test('escaped (non-CDATA) stylesheet text is read the same way', () => {
+  const out = run(wrap(`<style>.a{stroke:red}\n.b{fill:none}</style><path class="a b" ${PATH}/>`))
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', stroke: 'red', fill: 'none' })
+})
+
+test('comma lists of classes, a bare element name and a mix are accepted', () => {
+  const out = run(wrap(
+    `<style>.a, .b{stroke:red}\npath, circle{fill:none}\n.c,rect{stroke-width:3}</style>`
+    + `<path class="b" ${PATH}/><circle class="a" r="1"/><rect class="c" width="1"/>`,
+  ))
+  assert.equal(out.ok, true, out.removed.join())
+  assert.match(out.svg, /<path d="M0 0L1 1" fill="none" stroke="red"\/>/)
+  assert.match(out.svg, /<circle r="1" fill="none" stroke="red"\/>/)
+  assert.match(out.svg, /<rect width="1" stroke-width="3"\/>/)
+})
+
+test('an empty rule, an empty sheet and a sheet of only comments are accepted and say nothing', () => {
+  for (const css of ['.a{}', '', '   ', '/* nothing */', '.a{ }\n.b{;}']) {
+    const out = run(wrap(`<style>${css}</style><path class="a" ${PATH}/>`))
+    assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1' }, css)
+    noCss(out.svg)
+    assert.ok(out.removed.every(r => r === '@class'), `${css}: ${out.removed}`)
+  }
+})
+
+test('a stylesheet that is not simple rules is dropped whole, with one note, and applies nothing', () => {
+  const sheets = [
+    ['@import url(http://evil.example/x.css); .a{stroke:red}', '@-rules'],
+    ['@font-face{font-family:x;src:url(http://evil.example/f.woff)} .a{stroke:red}', '@-rules'],
+    ['.a{stroke:red} @media print{.a{stroke:blue}}', '@-rules'],
+    ['@charset "utf-8"; .a{stroke:red}', '@-rules'],
+    ['*{stroke:red}', 'selectors other than .class or an element'],
+    ['svg .a{stroke:red}', 'selectors other than .class or an element'],
+    ['svg>.a{stroke:red}', 'selectors other than .class or an element'],
+    ['.a+.b{stroke:red}', 'selectors other than .class or an element'],
+    ['.a.b{stroke:red}', 'selectors other than .class or an element'],
+    ['.a:hover{stroke:red}', 'selectors other than .class or an element'],
+    ['.a::before{stroke:red}', 'selectors other than .class or an element'],
+    ['[fill]{stroke:red}', 'selectors other than .class or an element'],
+    ['path[fill]{stroke:red}', 'selectors other than .class or an element'],
+    ['#x{stroke:red}', 'selectors other than .class or an element'],
+    ['text{stroke:red}', 'selectors other than .class or an element'],
+    ['PATH{stroke:red}', 'selectors other than .class or an element'],
+    ['body{stroke:red}', 'selectors other than .class or an element'],
+    ['{stroke:red}', 'selectors other than .class or an element'],
+    ['.a,{stroke:red}', 'selectors other than .class or an element'],
+    ['.a{stroke:red', 'not plain rules'],
+    ['.a{stroke:red} .b{', 'not plain rules'],
+    ['.a{stroke:red}}', 'not plain rules'],
+    ['.a{.b{stroke:red}}', 'not plain rules'],
+    ['.a{stroke:red} junk', 'not plain rules'],
+    ['/* open .a{stroke:red}', 'not plain rules'],
+    ['.a{stroke:red} */', 'not plain rules'],
+    ['/*/ .a{stroke:red}', 'not plain rules'],
+  ]
+  for (const [css, why] of sheets) {
+    const out = run(wrap(`<style>${css}</style><path class="a" ${PATH}/>`))
+    assert.ok(out, css)
+    assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1' }, `${css} applied: ${out.svg}`)
+    assert.deepEqual(out.removed.sort(), [`<style> (${why})`, '@class'], css)
+    assert.equal(out.ok, false)
+    noCss(out.svg)
+    assertInert(out.svg, css)
+  }
+})
+
+test('<style> with attributes beyond a plain type, or with child elements, is refused', () => {
+  for (const [open, inner] of [
+    ['<style media="print">', '.a{stroke:red}'], ['<style type="text/javascript">', '.a{stroke:red}'],
+    ['<style onload="x()">', '.a{stroke:red}'], ['<style href="x">', '.a{stroke:red}'], ['<style>', '<g/>.a{stroke:red}'],
+  ]) {
+    const out = run(wrap(`${open}${inner}</style><path class="a" ${PATH}/>`))
+    assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1' }, open + inner)
+    assert.ok(out.removed.some(r => r.startsWith('<style> (')), open + inner)
+    noCss(out.svg)
+  }
+  const plain = run(wrap(`<style type="text/css" media="screen" id="s">.a{stroke:red}</style><path class="a" ${PATH}/>`))
+  assert.equal(pathAttrs(plain.svg).stroke, 'red')
+})
+
+test('hostile declarations inside an accepted rule are dropped one by one, the good ones stay', () => {
+  const out = run(wrap(
+    `<style>.a{stroke:red;fill:url(https://evil.example/x);background:url(javascript:alert(1));behavior:url(x.htc);`
+    + `width:expression(alert(1));position:fixed;display:none;stroke-width:\\32 ;stroke-linecap:round}</style><path class="a" ${PATH}/>`,
+  ))
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1', stroke: 'red', 'stroke-linecap': 'round' })
+  assert.deepEqual(out.removed.sort(), [
+    'style: background', 'style: behavior', 'style: display', 'style: fill', 'style: position', 'style: stroke-width', 'style: width',
+  ])
+  noCss(out.svg)
+  assertInert(out.svg)
+})
+
+test('a class that an element outside the allow-list carries goes with that element', () => {
+  const out = run(wrap(`<style>.a{stroke:red}</style><text class="a">x</text><foreignObject class="a"><div class="a"/></foreignObject><path ${PATH}/>`))
+  assert.equal(out.svg, wrap(`<path ${PATH}/>`))
+  assert.deepEqual(out.removed.sort(), ['<foreignObject>', '<text>'])
+})
+
+test('a rule that names a class nothing uses, or a class no rule names, changes nothing', () => {
+  const unused = run(wrap(`<style>.nothing{stroke:red}</style><path ${PATH}/>`))
+  assert.equal(unused.svg, wrap(`<path ${PATH}/>`))
+  assert.equal(unused.ok, true)
+  const unnamed = run(wrap(`<style>.a{stroke:red}</style><path class="a hidden" ${PATH}/>`))
+  assert.deepEqual(pathAttrs(unnamed.svg), { d: 'M0 0L1 1', stroke: 'red' })
+  assert.deepEqual(unnamed.removed, ['@class'], 'one of the classes did nothing, so it is reported')
+})
+
+test('class names are case-sensitive, and a class never turns into markup', () => {
+  const out = run(wrap(`<style>.A{stroke:red}</style><path class="a" ${PATH}/>`))
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1' })
+  assert.deepEqual(out.removed, ['@class'])
+})
+
+test('a <style> inside <title>, <desc>, a dropped element, or a <style> in a <style> is never read', () => {
+  const out = run(wrap(
+    `<title><style>.a{stroke:red}</style></title><desc><style>.a{stroke:red}</style></desc>`
+    + `<foreignObject><style>.a{stroke:red}</style></foreignObject><path class="a" ${PATH}/>`,
+  ))
+  assert.deepEqual(pathAttrs(out.svg), { d: 'M0 0L1 1' })
+  noCss(out.svg)
+})
+
+test('precedence: attribute < element rule < class rule < style attribute, later rule wins within a level', () => {
+  const css = '.a{stroke:class-a} path{stroke:element-1;fill:element-1} .b{stroke:class-b} path{fill:element-2}'
+  const sheet = css.replace(/class-a/, 'red').replace(/class-b/, 'blue').replace(/element-1/g, 'green').replace(/element-2/, 'gold')
+  const at = (attrs) => pathAttrs(run(wrap(`<style>${sheet}</style><path ${PATH} ${attrs}/>`)).svg)
+  assert.deepEqual(at('stroke="black" fill="black" stroke-width="9"'), { d: 'M0 0L1 1', stroke: 'green', fill: 'gold', 'stroke-width': '9' }, 'element beats the attribute, the later element rule beats the earlier')
+  assert.deepEqual(at('class="a" stroke="black"'), { d: 'M0 0L1 1', stroke: 'red', fill: 'gold' }, 'a class beats an element rule that is later in the sheet')
+  assert.deepEqual(at('class="a b"'), { d: 'M0 0L1 1', stroke: 'blue', fill: 'gold' }, 'the later class rule wins, whatever order the class attribute lists them')
+  assert.deepEqual(at('class="b a"'), { d: 'M0 0L1 1', stroke: 'blue', fill: 'gold' })
+  assert.deepEqual(at('class="a b" style="stroke:pink"'), { d: 'M0 0L1 1', stroke: 'pink', fill: 'gold' }, 'the style attribute beats every rule')
+  assert.deepEqual(at('class="a" style="stroke:expression(x)"'), { d: 'M0 0L1 1', stroke: 'red', fill: 'gold' }, 'a failed style value overrides nothing')
+})
+
+test('precedence holds across two <style> blocks: the later block wins at equal weight', () => {
+  const out = run(wrap(`<style>.a{stroke:red}</style><style>.a{stroke:blue}</style><path class="a" ${PATH}/>`))
+  assert.equal(pathAttrs(out.svg).stroke, 'blue')
+  const oneBad = run(wrap(`<style>.a{stroke:red}</style><style>@import url(x);.a{stroke:blue}</style><path class="a" ${PATH}/>`))
+  assert.equal(pathAttrs(oneBad.svg).stroke, 'red', 'only the refused block is lost')
+  assert.deepEqual(oneBad.removed, ['<style> (@-rules)'])
+})
+
+test('rules also reach the root <svg> and elements inside <defs>, <g> and <symbol>', () => {
+  const out = run(
+    `<svg xmlns="${NS}" viewBox="0 0 24 24" class="icon"><style>.icon{width:24px;height:24px}g{fill:none}.s{stroke:currentColor}</style>`
+    + `<defs><symbol id="k"><path class="s" ${PATH}/></symbol></defs><g><path class="s" ${PATH}/></g><use href="#k"/></svg>`,
+    { idPrefix: 'q' },
+  )
+  assert.equal(out.ok, true, out.removed.join())
+  assert.match(out.svg, /<svg [^>]*width="24px" height="24px">/)
+  assert.match(out.svg, /<g fill="none"><path d="M0 0L1 1" stroke="currentColor"\/><\/g>/)
+  assert.match(out.svg, /<symbol id="q\.k"><path d="M0 0L1 1" stroke="currentColor"\/><\/symbol>/)
+})
+
+test('the output of any css input never carries style, class or <style>, and a second pass changes nothing', () => {
+  const inputs = [
+    wrap(`<style>.a{fill:none;stroke:currentColor;stroke-width:1.5}</style><path class="a" ${PATH} style="stroke-linecap:round;display:none"/>`),
+    wrap(`<style>@import url(x);</style><path class="a" style="fill:url(javascript:alert(1))" ${PATH}/>`),
+    wrap(`<style><![CDATA[.a{fill:red}]]></style><path class="a b" ${PATH}/>`),
+    wrap(`<path style="" class="" ${PATH}/>`),
+    wrap(`<g style="stroke:red"><path style="stroke:blue" ${PATH}/></g>`),
+  ]
+  for (const src of inputs) {
+    const first = run(src)
+    assert.ok(first, src)
+    noCss(first.svg)
+    assertInert(first.svg, src)
+    const second = run(first.svg)
+    assert.equal(second.svg, first.svg, `not idempotent: ${src}`)
+    assert.deepEqual(second.removed, [])
+  }
+})
+
+test('a stylesheet with thousands of rules over hundreds of elements finishes quickly', () => {
+  const started = Date.now()
+  const rules = Array.from({ length: 2500 }, (_, i) => `.c${i}{stroke:red}path{fill:none}`).join('')
+  const paths = Array.from({ length: 400 }, (_, i) => `<path class="c${i} c${i + 1}" ${PATH}/>`).join('')
+  const out = run(wrap(`<style>${rules}</style>${paths}`), { maxBytes: 128 * 1024 })
+  assert.ok(out)
+  assert.ok(Date.now() - started < 2500, 'cascade stays cheap')
+})
+
+test('an icon that keeps its stroke in CSS now gets stroke attributes, so the stroke control can edit it', () => {
+  const sheet = run(wrap(`<style>.a{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}</style><path class="a" ${PATH}/>`))
+  const inline = run(wrap(`<path ${PATH} style="stroke:#000;stroke-width:2;fill:none"/>`))
+  for (const out of [sheet, inline]) {
+    assert.equal(markupHasStroke(out.svg), true, out.svg)
+    assert.match(out.svg, /stroke="[^"]+"/)
+    assert.match(out.svg, /stroke-width="[\d.]+"/)
+  }
+  assert.equal(markupHasStroke(wrap(`<style>.a{fill:none;stroke:currentColor}</style><path class="a" ${PATH}/>`)), false, 'the raw markup is the thing that used to fail')
+  assert.equal(markupHasStroke(run(wrap(`<path ${PATH} style="fill:currentColor"/>`)).svg), false, 'a filled glyph still has no stroke')
+  assert.equal(markupHasStroke(run(wrap(`<path ${PATH} style="stroke:red;stroke-width:0"/>`)).svg), false, 'a zero width is not a stroke')
 })
 
 test('<foreignObject> is dropped with the HTML inside it, however it is dressed', () => {
@@ -315,7 +667,7 @@ test('no element survives inside <title> or <desc>, allow-listed or not, so inli
   assert.equal(run(wrap('<title><g/></title>')).svg, wrap('<title/>'))
   // Text beside the dropped child stays; a plain title is untouched.
   assert.equal(run(wrap('<title>a<g/>b</title>')).svg, wrap('<title>ab</title>'))
-  assert.deepEqual(run(wrap('<title>Flame</title><desc>A flame</desc>')), { ok: true, svg: wrap('<title>Flame</title><desc>A flame</desc>'), removed: [] })
+  assert.deepEqual(run(wrap('<title>Flame</title><desc>A flame</desc>')), { ok: true, css: false, svg: wrap('<title>Flame</title><desc>A flame</desc>'), removed: [] })
 })
 
 test('attribute values cannot break out of their quotes on the way out', () => {
@@ -394,7 +746,7 @@ test('tab, CR and LF still separate values, as in a pretty-printed or wrapped pa
 
 test('version, xml:space and xmlns:* declarations are dropped without a finding', () => {
   const out = run(`<svg xmlns="${NS}" version="1.1" xml:space="preserve" xmlns:xlink="http://www.w3.org/1999/xlink" baseProfile="full"/>`)
-  assert.deepEqual(out, { ok: true, svg: `<svg xmlns="${NS}"/>`, removed: [] })
+  assert.deepEqual(out, { ok: true, css: false, svg: `<svg xmlns="${NS}"/>`, removed: [] })
 })
 
 test('a duplicate id loses the second copy, so a reference cannot be ambiguous', () => {

@@ -9,7 +9,7 @@ import AngleWheel from '../components/tool/AngleWheel'
 import StopTintMenu from '../components/tool/StopTintMenu'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon, SlidePills,
 } from '../components/tool/ToolLayout'
 import { sampleStopsOklch } from '../components/tool/oklch'
 import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
@@ -30,6 +30,7 @@ import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { galleryTier } from '../utils/lockedPreview'
 import { openGradientRows } from '../utils/gradientMoods'
 import { consumeGradientDraft, readGradientDraft } from '../utils/colorHandoff'
+import { isOnLink } from '../utils/elementSignature'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
@@ -145,13 +146,14 @@ function FilterGroup({ label, options, value, onChange, coarse, onAnnounce, lock
     <div className="grd-shuf-row" data-locked={lockedNote ? '' : undefined}>
       <span className="grd-shuf-k" id={`grd-shuf-${label}`}>{label}</span>
       {lockedNote && <p className="grd-shuf-lock" id={`grd-shuf-lock-${label}`}>{lockedNote}</p>}
-      <div
+      <SlidePills
         className="tl-pills"
         role="group"
         aria-labelledby={`grd-shuf-${label}`}
         aria-disabled={lockedNote ? 'true' : undefined}
         aria-describedby={lockedNote ? `grd-shuf-lock-${label}` : undefined}
         onKeyDown={onKeyDown}
+        value={options.filter(isOn).join('|')}
       >
         {options.map((o, i) => (
           <button
@@ -164,7 +166,7 @@ function FilterGroup({ label, options, value, onChange, coarse, onAnnounce, lock
             onClick={(e) => { if (lockedNote) return; select(o, e); onAnnounce?.(label) }}
           >{String(o)}</button>
         ))}
-      </div>
+      </SlidePills>
     </div>
   )
 }
@@ -827,6 +829,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const anchorRef = useRef(0)
   const stopListRef = useRef(null) // the stop list's scrolling window (see syncStopScroll)
   const coarse =useMediaQuery('(pointer: coarse)')
+  // On a phone the toolbar row keeps the name, Random and More; Back, Reset and
+  // the stop count are off the row (Back and Reset are in More).
+  const phoneBar = useMediaQuery('(max-width: 767px)')
   const multi = picked.length >= 2
   // The stops a colour, lock or delete acts on: the selection, or the active stop.
   const targets = useMemo(() => (multi ? picked : [activeStop]), [multi, picked, activeStop])
@@ -1868,7 +1873,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Random', icon: 'shuffle', onSelect: pressRandom, title: randomTitle },
         },
         {
-          id: 'back', priority: 2,
+          id: 'back', priority: 2, inline: !phoneBar,
           render: () => (
             <ToolButton
               variant="square"
@@ -1883,12 +1888,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           menu: { label: 'Back', icon: 'arrow-u-up-left', ariaDisabled: backCount === 0, title: backCount === 0 ? 'Nothing to go back to yet' : 'Back to the previous gradient', onSelect: goBack },
         },
         {
-          id: 'reset', priority: 1,
+          id: 'reset', priority: 1, inline: !phoneBar,
           render: () => <ToolButton icon="arrow-counter-clockwise" onClick={reset} title="Reset to the starting gradient">Reset</ToolButton>,
           menu: { label: 'Reset', icon: 'arrow-counter-clockwise', onSelect: reset },
         },
         {
-          id: 'count', priority: 2, align: 'end', menu: false,
+          id: 'count', priority: 2, align: 'end', menu: false, inline: !phoneBar,
           render: () => <span className="tl-meta grd-count">{stops.length} {stops.length === 1 ? 'stop' : 'stops'}</span>,
         },
       ]}
@@ -2038,7 +2043,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     type="button"
                     role="tab"
                     aria-selected={effFmt === f.id}
-                    className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                    className={`tl-pill grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
                     onClick={() => { setFmt(f.id); clearTimeout(copiedTimer.current); setCopied(false) }}
                   >{f.label}</button>
                 ))}
@@ -2141,6 +2146,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 key={i}
                 className={`grd-stop${inSel ? ' is-on' : ''}${multi && inSel ? ' is-multi' : ''}`}
                 onContextMenu={(e) => {
+                  if (isOnLink(e.target)) return
                   // A finger's long press selects; the Tints button opens the menu there.
                   if (coarse) { e.preventDefault(); return }
                   openTintMenu(e, i, e.currentTarget.querySelector('.grd-stop-select'))

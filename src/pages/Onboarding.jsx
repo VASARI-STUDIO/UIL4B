@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from 'react'
 import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { FIRST_WINS, FIRST_WIN_SKIPPED } from '../utils/firstWin'
+import { FIRST_PALETTE_STATE } from '../utils/paletteCoach'
 import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
 import { onboardingDestination, knownProfile, localOnboardingFlag, SIGNED_IN_HOME } from '../utils/onboardingState'
 import { BrandLockup } from '../components/BrandLogo'
@@ -180,7 +181,9 @@ export default function Onboarding() {
     persist({ firstWin: win.id })
     recordFirstWin(win.id)
     const resume = takeResumeTarget()
-    navigate(isCheckoutTarget(resume) ? resume : win.route)
+    if (isCheckoutTarget(resume)) { navigate(resume); return }
+    // The palette card opens the builder with its first-palette coach (utils/paletteCoach.js).
+    navigate(win.route, win.id === 'palette' ? { state: FIRST_PALETTE_STATE } : undefined)
   }
 
   // Declined all three. Onboarding is still COMPLETE — the screen was answered

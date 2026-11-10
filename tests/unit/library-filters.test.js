@@ -1,7 +1,7 @@
 // The collapse rules behind the Library filter tray's multi-select.
 //
-// Founder request (2026-08-08): shift-click to pick more than one gradient
-// type, and "selecting all three types resets to All types".
+// Shift-click picks more than one gradient type, and "selecting all three types
+// resets to All types".
 //
 // Every rule here is a case somebody hits by accident rather than on purpose —
 // deselecting the last lit option, working through every option one at a time,
@@ -32,8 +32,8 @@ test('a second and third build the set up', () => {
 })
 
 test('selecting every option collapses to the reset option', () => {
-  // The founder's sentence, verbatim: "selecting all three types resets to
-  // All types". Three lit pills that exclude nothing claim a narrowing that is
+  // The rule: selecting all three types resets to All types. Three lit pills
+  // that exclude nothing claim a narrowing that is
   // not happening.
   assert.deepEqual(toggle(['Linear', 'Radial'], 'Conic'), ['all'])
 })

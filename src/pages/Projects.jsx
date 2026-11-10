@@ -15,7 +15,9 @@ import Greeting from '../components/userhome/Greeting'
 import TodayPanel from '../components/userhome/TodayPanel'
 import ContinueCard from '../components/userhome/ContinueCard'
 import StarterCard from '../components/userhome/StarterCard'
+import FirstPaletteCard from '../components/userhome/FirstPaletteCard'
 import ProjectRows from '../components/userhome/ProjectRows'
+import ParkedRow from '../components/userhome/ParkedRow'
 import StartSomething from '../components/userhome/StartSomething'
 import DiscoverPicks from '../components/userhome/DiscoverPicks'
 import ProPanel from '../components/userhome/ProPanel'
@@ -49,8 +51,8 @@ import '../styles/pages/spectrum-tools.css'
 // account, the plan config or the libraries (see components/userhome/workspace.js
 // for each one and what it replaced).
 //
-// ONE filled button per state: Continue when there is a project, Start the
-// walkthrough when there is none, New project when signed out. New project is
+// ONE filled button per state: Continue when there is a project, Make your first
+// palette when there is none, New project when signed out. New project is
 // outlined whenever something else leads.
 //
 // Managing one project — rename, duplicate, archive, delete, overwrite, and its
@@ -214,7 +216,9 @@ export default function Projects() {
       </div>
     )
   } else if (!hasProjects) {
-    body = <StarterCard design={design} onStart={() => startNew()} />
+    /* No project yet: one action, straight into the Palette Builder. New project (title row) still
+       starts the full walkthrough, so this card is the only filled button on the screen. */
+    body = <FirstPaletteCard design={design} />
   } else {
     body = (
       <>
@@ -256,6 +260,7 @@ export default function Projects() {
   )
   const main = (
     <div className="uh-dash-main">
+      <ParkedRow />
       {body}
       {!signedOut && newProject('foot')}
     </div>

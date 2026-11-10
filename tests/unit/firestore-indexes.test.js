@@ -27,6 +27,8 @@ const firebaseJson = JSON.parse(read('firebase.json'))
 
 const QUEUE_API = 'src/utils/communityQueueApi.js'
 const ADMIN_PAGE = 'src/pages/Admin.jsx'
+const ANALYTICS = 'src/utils/analytics.js'
+const AGG_COLLECTION_RE = /AGGREGATE_COLLECTION\s*=\s*'analytics-daily'/
 const queueApi = stripJs(read(QUEUE_API))
 const collectionName = /QUEUE_COLLECTION\s*=\s*'([^']+)'/.exec(stripJs(read('src/utils/communityQueue.js')))[1]
 
@@ -110,6 +112,23 @@ test('the Admin Prompts tab query (community-prompts, one status, newest first) 
   }
 })
 
+test('the Admin overview range read (analytics-daily, day >= since, newest day first) needs no composite index', () => {
+  const src = stripJs(read(ANALYTICS))
+  const start = src.indexOf('export async function getAggregateAnalytics(')
+  assert.notEqual(start, -1, 'getAggregateAnalytics moved; update this case')
+  const body = src.slice(start, src.indexOf('\n}', start) + 2)
+  // The range bound and the sort sit on the SAME field. Firestore serves a range filter plus an
+  // orderBy on that one field from the automatic single-field index, so no entry is needed. If the
+  // sort moved to another field, or a second inequality appeared, this would need a composite index.
+  const wheres = [...body.matchAll(/\bwhere\(\s*'([^']+)'\s*,\s*'([^']+)'/g)]
+  assert.deepEqual(wheres.map((m) => [m[1], m[2]]), [['day', '>=']], 'the range read must be one day >= filter')
+  const sort = ORDER_BY.exec(body)
+  assert.ok(sort && sort[1] === 'day' && sort[3] === 'desc', 'the range read must sort by day, newest first')
+  assert.ok(AGG_COLLECTION_RE.test(src), 'the analytics-daily collection name moved; update this case')
+  assert.ok(!indexes.some((ix) => ix.collectionGroup === 'analytics-daily'),
+    'analytics-daily now has a composite index; this query does not need one, so check the case still holds')
+})
+
 test('listMySubmissions has an index with and without the kind filter', () => {
   const shapes = requiredShapes(functionBody(queueApi, 'listMySubmissions'))
   assert.equal(shapes.length, 2)
@@ -138,7 +157,7 @@ function sourceFiles(dir) {
 }
 
 test('no other src/ or api/ query combines where with orderBy, or filters on two inequality fields, unaccounted for', () => {
-  const COVERED = new Set([QUEUE_API, ADMIN_PAGE])
+  const COVERED = new Set([QUEUE_API, ADMIN_PAGE, ANALYTICS])
   const INEQUALITY = new Set(['<', '<=', '>', '>=', '!=', 'not-in'])
   const orderedWhere = []
   const multiInequality = []

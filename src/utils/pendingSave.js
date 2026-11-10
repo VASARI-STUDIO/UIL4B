@@ -20,6 +20,16 @@ export function clearPendingSave(storage) {
   try { store(storage)?.removeItem(KEY) } catch { /* private mode */ }
 }
 
+/** Is a save waiting on a sign-up? Reads without consuming. */
+export function hasPendingSave(storage, now = Date.now()) {
+  try {
+    const parsed = JSON.parse(store(storage)?.getItem(KEY) || 'null')
+    return !!parsed && now - Number(parsed.at) < MAX_AGE_MS
+  } catch {
+    return false
+  }
+}
+
 /** The stashed name for this tool ('' when none was typed), or null. Consumes it. */
 export function takePendingSave(tool, storage, now = Date.now()) {
   const s = store(storage)

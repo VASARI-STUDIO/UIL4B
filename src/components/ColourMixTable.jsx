@@ -58,7 +58,7 @@ export default function ColourMixTable() {
   return (
     <figure className="lart-table-wrap">
       <div className="lart-table-scroll" tabIndex={0} role="group" aria-label="The same colour mix in four interpolation spaces">
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit">
           <thead>
             <tr>
               <th scope="col">Space</th>

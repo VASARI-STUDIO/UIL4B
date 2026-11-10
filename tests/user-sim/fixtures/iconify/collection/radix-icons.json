@@ -1,0 +1,27 @@
+{
+  "prefix": "radix-icons",
+  "total": 20,
+  "title": "Radix Icons",
+  "uncategorized": [
+    "home",
+    "magnifying-glass",
+    "person",
+    "gear",
+    "heart",
+    "star",
+    "bell",
+    "calendar",
+    "check",
+    "cross-1",
+    "plus",
+    "minus",
+    "arrow-right",
+    "arrow-left",
+    "arrow-up",
+    "arrow-down",
+    "chevron-down",
+    "download",
+    "upload",
+    "envelope-closed"
+  ]
+}

@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useExport } from '../contexts/ExportContext'
 import SnapSlider from '../components/SnapSlider'
 // `lazy` in this file is lazyRoute, not React's: if the dialog's file failed to
@@ -8,7 +8,7 @@ import SnapSlider from '../components/SnapSlider'
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode,
+  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolIcon, ToolCode, SlidePills,
 } from '../components/tool/ToolLayout'
 import {
   adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
@@ -24,6 +24,7 @@ import { freeVariationIds, paletteVariations, scorePalette } from '../utils/pale
 // utils/paletteNames.js for why `colorName` is deterministic and
 // `randomPaletteName` deliberately is not.
 import { colorName, randomPaletteName } from '../utils/paletteNames'
+import { isOnLink } from '../utils/elementSignature'
 import { roleLabel } from '../utils/paletteRoles'
 import { barRef, colRef } from '../utils/paletteBoard'
 import { VISION_HUES, VISION_MODES, VISION_NOTE, visionAnnouncement, visionMode } from '../utils/visionModes'
@@ -32,14 +33,13 @@ import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { useProLibrary } from '../hooks/useProLibrary'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
-import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
+import { IcoSearchSm, ProBlock, RovingRows, RowSkeletons, SwatchRow, YourPaletteRow } from '../components/palette/SwatchRows'
 // The preview dialog: the scene list and the role legend. Its own chunk, loaded
 // when Preview is first pointed at or opened (previewLoader.js).
 import { DEFAULT_SCENE, PREVIEW_SCENES, openingScene } from '../data/palettePreviewScenes'
 import { loadPreviewDialog } from '../components/palette/previewLoader'
 import NearestMatchPanel from '../components/palette/NearestMatchPanel'
 import HarmonyWheel from '../components/palette/HarmonyWheel'
-import { LockedTeaseCta } from '../components/library/LockedTease'
 import { splitLockedLibrary, GALLERY_TIER_LIMITS } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
 import { fileName } from '../utils/exportFileName'
@@ -50,6 +50,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import UIKitGuide from '../components/UIKitGuide'
+import PaletteCoach from '../components/PaletteCoach'
+import { isGuideActive } from '../utils/brandKitGuide'
+import { FIRST_PALETTE_NAME, coachDismissed, coachRequested, dismissCoach, COACH_KEY } from '../utils/paletteCoach'
+import { onAccountApplied } from '../utils/accountEvents'
 import SaveShareMenu from '../components/tool/SaveShareMenu'
 import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
@@ -73,8 +77,9 @@ import { columnPair, handoffUrl, readingPair } from '../utils/contrastHandoff'
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
 // Image → palette: the clustering, ranking and sampling live in a pure module.
-import { appendPicks, averageHex, clusterImage, colourShares, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters } from '../utils/imagePalette'
+import { appendPicks, averageHex, clusterImage, colourShares, isCutShort, MIN_VISIBLE_SHARE, MOOD_OPTIONS, moodArg, nextCandidate, pickPalette, placePicks, rankClusters, sampleRadius, visibleShare } from '../utils/imagePalette'
 import FromImageDialog from '../components/palette/FromImageDialog'
+import SaveColourDialog from '../components/palette/SaveColourDialog'
 
 // The preview dialog, as its own chunk. The Preview button warms it on hover and
 // focus, so a click usually finds it already loaded.
@@ -92,6 +97,21 @@ function returnMenuFocus(el, pointer) {
 }
 // A brand's tick in Explore shares `importedGalleryId` with the community palettes, so its id is prefixed.
 const brandTickId = (b) => `brand:${b.id}`
+// True from 1024px up, where Suggest and Explore dock beside the board.
+function useWideDock() {
+  const Q = '(min-width: 1024px)'
+  const get = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(Q).matches
+  const [wide, setWide] = useState(get)
+  useEffect(() => {
+    if (!window.matchMedia) return undefined
+    const mq = window.matchMedia(Q)
+    const on = () => setWide(mq.matches)
+    on()
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  return wide
+}
 // The phone layout's breakpoint (the same one ToolLayout's overflow uses).
 const PHONE_QUERY = '(max-width: 767px)'
 function usePhone() {
@@ -108,32 +128,6 @@ function usePhone() {
   return phone
 }
 
-// The Suggest footer: the score before and after, and a "?" that shows a one-line
-// explanation instead of leaving it to a tooltip (a tooltip never shows on touch
-// or to a keyboard). The line is always in the DOM so the button's
-// aria-describedby always has something to point at; `hidden` keeps it out of
-// sight until the button is pressed. Its own state, so it closes when the footer
-// goes away.
-function BalanceScoreFoot({ before, after }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="plb-sg-foot">
-      <span>Balance score <b>{before}</b> &rarr; <b>{after}</b></span>
-      <button
-        type="button"
-        className="plb-sg-info"
-        aria-label="What the balance score measures"
-        aria-expanded={open}
-        aria-describedby="plb-sg-score-help"
-        onClick={() => setOpen(o => !o)}
-      >
-        <span aria-hidden="true">?</span>
-      </button>
-      <p id="plb-sg-score-help" className="plb-sg-foot-help" hidden={!open}>It scores tone range, evenness, chroma profile and distinctness.</p>
-    </div>
-  )
-}
-
 // Marks a scrolling body that has more below it, so the CSS can fade its bottom
 // edge. A ref callback with a cleanup: it measures on mount, on scroll and when
 // the body resizes, and writes one data attribute straight to the element
@@ -147,9 +141,14 @@ function scrollCue(el) {
   el.addEventListener('scroll', check, { passive: true })
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null
   ro?.observe(el)
+  // Rows that arrive after mount (a list fetched late) change the scroll height
+  // without resizing the body, so watch its content too.
+  const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(check) : null
+  mo?.observe(el, { childList: true, subtree: true })
   return () => {
     el.removeEventListener('scroll', check)
     ro?.disconnect()
+    mo?.disconnect()
   }
 }
 
@@ -372,15 +371,13 @@ const IMG_SOURCE_MAX = 4096
 // The extraction reads a smaller copy. imagePalette caps the pixel count it
 // reads; this keeps the copy itself cheap to make and to scan.
 const IMG_ANALYSIS_MAX = 384
-// A marker reports the mean of the square this many pixels out from its point
-// (radius 2 is 5×5), so grain and anti-aliasing do not decide its colour.
-const IMG_SAMPLE_RADIUS = 2
 // Candidates ranked at load; "+" walks down this list.
 const IMG_CANDIDATES = 12
 const IMG_FORMATS = 'JPG, PNG, WebP or GIF'
 // Most markers the dialog holds, whatever the board's own ceiling is.
 const IMG_POINT_MAX = 8
 const IMG_HEIC = /\.(heic|heif)$/i
+const NO_COLOURS = 'This image has no visible colours. Try another.'
 
 // Decode with createImageBitmap, which decodes off the main thread and needs no
 // object URL, and fall back to an <img> for what it will not take (an SVG, or a
@@ -412,6 +409,7 @@ async function decodeImage(file) {
 // thumbnail of them: at 320px a 4000px-wide photo is one pixel in twelve, so the
 // loupe would draw one region and the readout would name another.
 async function loadImageData(file, maxSize = IMG_ANALYSIS_MAX) {
+  if (await isCutShort(file)) throw new Error('decode')
   const decoded = await decodeImage(file)
   try {
     const { image, width, height } = decoded
@@ -457,19 +455,22 @@ function sourcePixel(canvas, nx, ny) {
 }
 
 // Colour under a normalised (0–1) point, read at SOURCE resolution as the mean
-// of the IMG_SAMPLE_RADIUS neighbourhood (transparent pixels left out) — used
-// while dragging or nudging a picker point, and for the loupe's readout. Null
-// where nothing opaque is in reach.
+// of the neighbourhood `sampleRadius` reaches (transparent pixels left out), so
+// grain and anti-aliasing do not decide the colour. The reach is counted in the
+// image's own pixels and shrinks with the image: an 8×8 icon is read at one
+// pixel, a photo at 5×5. Used while dragging or nudging a picker point, and for
+// the loupe's readout. Null where nothing opaque is in reach.
 function sampleSourcePixel(canvas, nx, ny) {
   if (!canvas) return null
   const { px, py } = sourcePixel(canvas, nx, ny)
-  const x0 = Math.max(0, px - IMG_SAMPLE_RADIUS)
-  const y0 = Math.max(0, py - IMG_SAMPLE_RADIUS)
-  const w = Math.min(canvas.width - 1, px + IMG_SAMPLE_RADIUS) - x0 + 1
-  const h = Math.min(canvas.height - 1, py + IMG_SAMPLE_RADIUS) - y0 + 1
+  const radius = sampleRadius(canvas.width, canvas.height)
+  const x0 = Math.max(0, px - radius)
+  const y0 = Math.max(0, py - radius)
+  const w = Math.min(canvas.width - 1, px + radius) - x0 + 1
+  const h = Math.min(canvas.height - 1, py + radius) - y0 + 1
   try {
     const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(x0, y0, w, h).data
-    return averageHex(d, w, h, px - x0, py - y0, IMG_SAMPLE_RADIUS)
+    return averageHex(d, w, h, px - x0, py - y0, radius)
   } catch { return null }
 }
 
@@ -798,12 +799,12 @@ const SUBMIT_SURFACE = 'palette'
 // share link stays on `onCopy` and is not an activation — see
 // src/config/activationExports.js for why that decision lives in CreateTool.
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
-  const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
+  const { design, setPalette, saveProject, overwriteProject, saveColourToProject, projects, projectsLoading, canSaveProjects, parkWorkingDesign } = useProject()
   const { registerExport, clearExport } = useExport()
   const { isPro, planKnown } = useSubscription()
   // The preview opens in the theme the site is showing.
   const { theme: siteTheme } = useTheme()
-  const { openProModal } = useProModal()
+  const { openProModal: raiseProModal } = useProModal()
   // The gallery popup's two library tabs. The bundle holds the free brands and
   // the free curated palettes in full and a name-only stub for every Pro brand;
   // a Pro account's full set comes from the server (src/utils/proLibrary.js),
@@ -889,10 +890,24 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Age of the hand-off that won, captured during the same render that read it
   // — after the mount effect consumes the slot there is nothing left to ask.
   const [handoffAge] = useState(boardDraftAge)
+  // A shared link or a hand-off writes its palette over the working design a
+  // moment after mount (the persist effect below). If that design holds unsaved
+  // work it is put aside first. Going back drops the link's colours from the
+  // address, so the board opens again on the restored design and not the link.
+  useEffect(() => {
+    if (initial.source !== 'query' && initial.source !== 'handoff') return
+    parkWorkingDesign({
+      message: 'Opened the shared palette. Your brand kit is in Your workspace.',
+      label: 'Go back to it',
+      onRestore: () => navigate({ pathname: window.location.pathname, search: '' }, { replace: true }),
+    })
+  // Mount-only: `initial` is a frozen first-render read.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   useEffect(() => {
     consumeBoardDraft()
     // One line, once per mount, saying WHY this board looks the way it does.
-    // The founder's report is intermittent and state-shaped, so the thing worth
+    // The bug report is intermittent and state-shaped, so the thing worth
     // shipping is not a guess about which branch misfired but a record that
     // names it the next time it happens. `handoff` in particular should only
     // ever be minutes-fresh; an age near the ttl in a report is the smoking gun
@@ -929,12 +944,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   })
   const [locked, setLocked] = useState(() => new Set(design?.palette?.locked || []))
 
-  // P-003, founder verdict: the free tier is A FOOT IN THE DOOR.
+  // The free tier is A FOOT IN THE DOOR.
   //
   // That settles what this collapse should feel like. A free user opening a
   // board saved on a paid system got Auto silently: the chip still read
   // "Analogous" while the board rendered something else, so the product looked
-  // unreliable rather than paid. The proposal's own smallest version is "make
+  // unreliable rather than paid. The principle is "make
   // every gate EXPLICIT rather than silent — the user should always know they
   // hit a paid edge, never merely find that something behaved oddly."
   //
@@ -971,6 +986,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [imgSrc, setImgSrc] = useState('')      // object URL for the preview
   const [imgPoints, setImgPoints] = useState([]) // [{ x, y, hex, from }] normalised; `from` is the ranked candidate it came from, null once moved or tapped in
   const [imgError, setImgError] = useState('')
+  const [imgErrorSeq, setImgErrorSeq] = useState(0) // bumps on every error so the dialog moves focus to it even when the text repeats
   // The uploaded image's own width/height ratio. The stage is sized to it so a
   // point's normalised (x, y) in the SOURCE lands on the same spot of the
   // DISPLAYED image — see the CSS note on .plb-imgstage.
@@ -1010,10 +1026,16 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // menu shows the same list with the active row ticked; any real edit to the
   // palette clears both so the list regenerates off the new colours.
   const [varBase, setVarBase] = useState(null)
-  // { kind: 'variation', id, name, before, after, mine } while the board shows something applied
-  // from the Suggest panel; `suggestSnapRef` holds the board as it was before the first apply.
+  // The one thing on trial: { kind: 'variation' | 'explore', id, name, before, after, mine, compare }
+  // while the board shows something applied from the Suggest or the Explore panel.
+  // `compare` is what Your palette's Compare button lines up against the user's own.
   const [panelApplied, setPanelApplied] = useState(null)
-  const suggestSnapRef = useRef(null)
+  // ONE trial snapshot for both panels: the board as it was before the first apply
+  // from either of them (colours, lens, seed, colour system, and its score). It is taken
+  // on the first apply, cleared by pressing the applied row again or by any real
+  // edit to the board, and KEPT when the user switches between Suggest and Explore
+  // or between Explore's tabs, so going back always lands on the user's own palette.
+  const trialSnapRef = useRef(null)
   const skipVarInvalidate = useRef(false)
   // One info panel per board: a column's tints or its colour values. They share
   // one slot, so opening either closes the other and every existing
@@ -1152,6 +1174,19 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // The last preview viewed this visit: closing and reopening returns to it. Not saved, so a reload starts on the default.
   const [lastScene, setLastScene] = useState(DEFAULT_SCENE)
   const [saveName, setSaveName] = useState('')
+  // ── The first-palette coach (components/PaletteCoach.jsx) ───────────────
+  // Asked for by router state, once per arrival; not shown to someone who has
+  // dismissed it (on any device: the flag syncs with the account) or who is
+  // part-way through the brand-kit walkthrough, which has its own panel.
+  const location = useLocation()
+  const [coachAsked] = useState(() => coachRequested(location.state) && !isGuideActive())
+  const [coachGone, setCoachGone] = useState(() => coachDismissed())
+  const [coachBeat, setCoachBeat] = useState(0)
+  // The Save menu opened from the coach's Save palette: its name is prefilled, and the field takes focus with the name selected.
+  const [saveFromCoach, setSaveFromCoach] = useState(false)
+  const coachOn = coachAsked && !coachGone
+  // The account can bring a dismissal made on another device after this page mounted.
+  useEffect(() => onAccountApplied([COACH_KEY], () => setCoachGone(coachDismissed())), [])
   // The save runs here, not in doSave: right after the sign-in resolves, doSave's
   // closure still holds the signed-out `saveProject`, which throws "Sign in to
   // save projects". This effect re-runs with the fresh one once the account has
@@ -1163,8 +1198,15 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     clearPendingSave()
     try {
       saveProject(pendingSave)
-      setSaveName(''); setSaveError(''); setSaveNameError(''); setSaveNote(''); setSaveOpen(false)
-      toast?.('Project saved')
+      setSaveName(''); setSaveError(''); setSaveNameError(''); setSaveNote(''); setSaveOpen(false); setSaveFromCoach(false)
+      if (coachOn) {
+        // The coach's job is done: it closes for good, and the one next step is offered.
+        dismissCoach()
+        setCoachGone(true)
+        toast?.('Saved to your projects.', 'success', { action: { label: 'Pair fonts with it', onAction: () => navigate('/create/font-pair') } })
+      } else {
+        toast?.('Project saved')
+      }
     } catch (err) {
       // The cap's refusal went out as the SUCCESS toast — green tick, 1.8
       // seconds, "go Pro" with nothing to press (#436, flow 2). It stays under
@@ -1172,7 +1214,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // as a link — the treatment /projects already gives the same refusal.
       setSaveError(err?.message || 'Couldn’t save')
     }
-  }, [pendingSave, canSaveProjects, saveProject, toast])
+  }, [pendingSave, canSaveProjects, saveProject, toast, coachOn, navigate])
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
@@ -1202,12 +1244,10 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   })
   const [handleInput, setHandleInput] = useState('')
   const [handleErr, setHandleErr] = useState('')
-  // UI SYSTEM MODE IS GONE FROM THIS PAGE. Founder instruction, 2026-09-05:
-  // “lets remove the build UI system from the colour pallete also, lets make the
-  // one in the navigation the create Brand system should start a guided
-  // walkthrough to build a full system”. Both halves are one decision — the
-  // palette tool stops being a side door into system-building, and the nav
-  // becomes the single front door (see components/UIKitGuide.jsx).
+  // UI SYSTEM MODE IS GONE FROM THIS PAGE. Both halves are one decision — the
+  // palette tool stops being a side door into system-building, and the nav's
+  // “Create Brand system” becomes the single front door, starting a guided
+  // walkthrough to build a full system (see components/UIKitGuide.jsx).
   //
   // BOTH entry points went, not one: the “UI System / Admin” breadcrumb beside
   // the title AND the “Build UI system” toolbar button. They were already
@@ -1227,42 +1267,38 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // tabs. Explore has two, 'community' (Palettes) and 'brands'. A pick applies
   // straight onto the board.
   const [galleryTab, setGalleryTab] = useState('community') // community | variations | brands
-  // The toolbar button that opened the gallery, or null when it was opened from
-  // the Extra tools menu, which has no button on screen to sit under.
-  const [galleryAnchor, setGalleryAnchor] = useState(null)
+  // The panel is placed by CSS alone (a flex sibling of the board, a bottom dock,
+  // or a sheet), so nothing positions it from script.
   const galleryRef = useRef(null)
-  // Above phone width the gallery opens under the button that opened it, its
-  // right edge on the button's, kept 16px inside the viewport; without one on screen it keeps its docked place.
-  useLayoutEffect(() => {
-    const wrap = galleryRef.current
-    if (!galleryOpen || !wrap) return undefined
-    const place = () => {
-      const btn = galleryAnchor?.isConnected && galleryAnchor.getClientRects().length ? galleryAnchor : null
-      if (!btn || window.innerWidth <= 640) {
-        wrap.style.top = ''; wrap.style.left = ''; wrap.style.right = ''
-        return
-      }
-      const r = btn.getBoundingClientRect()
-      const max = window.innerWidth - wrap.offsetWidth - 16
-      wrap.style.top = `${Math.round(r.bottom + 8)}px`
-      wrap.style.right = 'auto'
-      wrap.style.left = `${Math.round(Math.max(16, Math.min(r.right - wrap.offsetWidth, max)))}px`
-    }
-    place()
-    window.addEventListener('resize', place)
-    return () => window.removeEventListener('resize', place)
-  }, [galleryOpen, galleryAnchor])
   // Focus goes to the selected tab (or Close) when a panel opens, and back to the
   // button that opened it, or Extra tools, when it closes with focus nowhere.
   const galleryOpenerRef = useRef({ el: null, pointer: false })
   const wasGalleryOpen = useRef(false)
   const exploring = galleryTab !== 'variations'
-  useEffect(() => {
-    if (!galleryOpen) return
+  // The search field's text (cleared when the panel or its tab changes), and the
+  // phone sheet's height: Peek or Full. Suggest and Brands open at Peek, Explore's
+  // Palettes at Full, because browsing needs height. At 1024 and up the panel docks
+  // beside the board as a complementary region; below that it is a non-modal dialog.
+  const [exQuery, setExQuery] = useState('')
+  const [sheetFull, setSheetFull] = useState(false)
+  const wideDock = useWideDock()
+  useEffect(() => { setExQuery(''); setSheetFull(galleryTab === 'community') }, [galleryOpen, galleryTab])
+  // Below 1024 the panel is a dock that sits directly on top of the adjust bar and
+  // never below it, so the bar's distance from the viewport bottom is measured.
+  // A phone sheet covers the bar and ignores it (bottom: 0 in the CSS).
+  useLayoutEffect(() => {
     const wrap = galleryRef.current
-    const target = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('.plb-pop-x')
-    target?.focus({ preventScroll: true })
-  }, [galleryOpen, exploring])
+    if (!galleryOpen || !wrap) return undefined
+    const bar = document.querySelector('.plb .plb-adjust')
+    const place = () => {
+      const top = bar ? bar.getBoundingClientRect().top : window.innerHeight
+      wrap.style.setProperty('--plb-dock-b', `${Math.max(0, Math.round(window.innerHeight - top))}px`)
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, { passive: true })
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place) }
+  }, [galleryOpen, wideDock])
   useEffect(() => {
     if (galleryOpen) { wasGalleryOpen.current = true; return }
     if (!wasGalleryOpen.current) return
@@ -1276,7 +1312,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // card again reverts to the pre-import system; any edit clears the tick because
   // the palette is now an edited derivative, not the untouched import.
   const [importedGalleryId, setImportedGalleryId] = useState(null)
-  const preImportRef = useRef(null)   // snapshot of the system before the import
   const importedSigRef = useRef(null) // baseline signature of the imported board
   // Palette history: rolling localStorage log (see HISTORY_KEY above).
   const [histOpen, setHistOpen] = useState(false)
@@ -1320,6 +1355,36 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // simply has no business being presented as the palette's colour when it is
   // not a colour the palette contains.
   const shownSeed = normaliseHex(adjusted[0]) || seed
+  // Every wall on this page raises the Pro modal with the colour the toolbar
+  // shows. Left out, the modal's colour preview reads the saved palette
+  // history, whose newest entry can lag the board after a randomise, undo or redo.
+  const openProModal = (opts) => raiseProModal({ seed: shownSeed, ...opts })
+
+  // The coach's first beat waits for the edit: the first colour changing (by hand, by
+  // Randomise, by any route) moves it on to Save.
+  const coachSeedRef = useRef(shownSeed)
+  useEffect(() => {
+    if (coachOn && coachBeat === 0 && shownSeed !== coachSeedRef.current) setCoachBeat(1)
+  }, [coachOn, coachBeat, shownSeed])
+
+  // Beat 1 rings the seed chip. When the toolbar has moved the chip into Extra tools (a phone) it
+  // is not drawn, so the ring goes to the Extra tools button instead, the way to the chip. Decided from
+  // the laid-out toolbar, not the viewport width: the toolbar re-measures itself as the row resizes.
+  const [seedOnRow, setSeedOnRow] = useState(true)
+  useLayoutEffect(() => {
+    if (!coachOn || coachBeat !== 0) return undefined
+    const bar = document.querySelector('[data-tool-toolbar]')
+    if (!bar) return undefined
+    const check = () => {
+      const chip = bar.querySelector(':scope > [data-tl-item="seed"]')
+      setSeedOnRow(!!chip && chip.offsetParent !== null && chip.getBoundingClientRect().width > 0)
+    }
+    check()
+    const observer = new MutationObserver(check)
+    observer.observe(bar, { childList: true })
+    window.addEventListener('resize', check)
+    return () => { observer.disconnect(); window.removeEventListener('resize', check) }
+  }, [coachOn, coachBeat])
 
   // Per-column derivations that are NOT the swatch itself. The strip was six
   // CAM16 solves per colour (60 on a full 10-colour board, three times the cost
@@ -1369,6 +1434,54 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     else out.push({ label: v.group, items: [v] })
     return out
   }, []), [variations])
+  // Focus moves into the panel on open. These read `variations`, so they sit below
+  // that memo: a const read before its declaration throws.
+  const hasRows = exploring || variations.length > 0
+  // Only an opening (or a switch between Suggest and Explore) moves focus. The
+  // close button stands in while the rows render; once a tab or row has focus,
+  // or the person has moved focus out of the panel (to an adjust slider, say),
+  // the rows coming and going as the board changes leave focus where it is.
+  const galleryFocusRef = useRef({ pending: false, standIn: null })
+  useEffect(() => {
+    if (galleryOpen) galleryFocusRef.current = { pending: true, standIn: null }
+  }, [galleryOpen, exploring])
+  useEffect(() => {
+    const pass = galleryFocusRef.current
+    if (!galleryOpen || !pass.pending) return
+    // Focus left the stand-in: the person chose somewhere else, so the arrival is over.
+    if (pass.standIn && document.activeElement !== pass.standIn) { pass.pending = false; return }
+    const wrap = galleryRef.current
+    const row = wrap?.querySelector('[role="tab"][aria-selected="true"]') || wrap?.querySelector('button.plb-sw-row')
+    if (row) {
+      pass.pending = false
+      row.focus({ preventScroll: true })
+      return
+    }
+    const close = wrap?.querySelector('.plb-pop-x')
+    if (close) {
+      pass.standIn = close
+      close.focus({ preventScroll: true })
+    }
+  }, [galleryOpen, exploring, hasRows])
+  // On a phone, applying a row (a variation, a palette or a brand) drops the sheet
+  // from Full to Peek so the board shows the change, then brings the applied row
+  // into view. The scroll waits for the Peek layout: at Peek most of the sheet is
+  // below the screen and the list's bottom padding makes up for it, so scrolling
+  // before the snap changes would measure against the Full layout.
+  const scrollAppliedRef = useRef(false)
+  useEffect(() => {
+    if (!panelApplied || !galleryOpen || wideDock) return
+    scrollAppliedRef.current = true
+    setSheetFull(false)
+  // Keyed on the apply alone: reopening a panel with a row already applied must
+  // keep that panel's own opening height (Explore Palettes opens at Full).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelApplied])
+  useEffect(() => {
+    if (!scrollAppliedRef.current || sheetFull) return
+    scrollAppliedRef.current = false
+    galleryRef.current?.querySelector('.plb-sw-row[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' })
+  }, [panelApplied, sheetFull])
 
   // Any genuine change to the palette (manual edit, randomise, harmony change,
   // brand pick) invalidates the frozen variation snapshot so the list rebuilds.
@@ -1378,7 +1491,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (skipVarInvalidate.current) { skipVarInvalidate.current = false; return }
     setVarBase(null)
     setPanelApplied(null)
-    suggestSnapRef.current = null
+    trialSnapRef.current = null
   }, [colors, adjust])
 
   // Freeze a snapshot the first time the variations tab is viewed (or after
@@ -1389,7 +1502,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the user's palette, not of the variation on the board.
   useEffect(() => {
     if (galleryOpen && galleryTab === 'variations' && !varBase) {
-      setVarBase(suggestSnapRef.current?.mine || applyAdjust(colors, adjust))
+      setVarBase(trialSnapRef.current?.mine || applyAdjust(colors, adjust))
     }
   }, [galleryOpen, galleryTab, varBase, colors, adjust])
 
@@ -1405,7 +1518,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // rapid changes collapse into one write ~200ms after the user settles.
   //
   // An UNTOUCHED RANDOM DRAW IS NOT SAVED WORK. Skipping the mount write for it
-  // is what makes the founder's "auto load a random palette" true on every
+  // is what makes "auto load a random palette" true on every
   // visit rather than only the first: this effect used to persist the drawn
   // board immediately, which turned a throwaway default into a saved palette
   // the user never made, and from then on the saved branch of the precedence
@@ -1468,7 +1581,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setSeed(norm)
     regen(norm, harmony)
     // Zero the lens, so the colour the user just named is the colour they get.
-    // Regenerating UNDER an active lens is what produced the founder's report:
+    // Regenerating UNDER an active lens is what produced a reported bug:
     // type #4A56AE with hue at +116° and every swatch lands 116° away from it,
     // including the seed swatch the field is supposedly reporting. There is no
     // reading of "set the seed to this" that ends with the seed being something
@@ -1498,6 +1611,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the HCT solver ever throws.
   const randomize = useCallback(() => {
     setColPanel(null)
+    // Every swatch locked leaves nothing to shuffle. Say so, in the same words
+    // Font Pair uses, rather than doing nothing.
+    if (colors.length > 0 && colors.every((_, i) => locked.has(i))) {
+      toast?.('Every colour is locked. Unlock one to shuffle.')
+      return
+    }
     // Same free-system guard as regen: a free user randomising from a paid/brand
     // system gets a free system instead, and the UI snaps to match.
     const sys = resolveSystem(harmony)
@@ -1518,7 +1637,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }))
     if (!locked.has(0)) { setSeed(fresh[0]); setSeedInput(fresh[0]) }
     setLiveMsg('Palette randomised')
-  }, [harmony, locked, toast, resolveSystem])
+  }, [harmony, colors, locked, toast, resolveSystem])
 
   // imgOpen is deliberately NOT here. The image picker is a centred modal now,
   // and this layer closes anything whose pointerdown misses a .plb-menuwrap —
@@ -1536,6 +1655,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const closePreview = useCallback(() => setPreview(null), [])
   const closeSubmit = useCallback(() => setSubmitOpen(false), [])
   const closeImageDialog = useCallback(() => { setImgOpen(false); setImgError('') }, [])
+  // Show an error in the dialog. The dialog moves focus onto it, so a refused
+  // file never leaves focus on the page behind the modal.
+  const showImageError = useCallback((message) => { setImgError(message); setImgErrorSeq(n => n + 1) }, [])
   // A fresh dialog lands on "Choose a photo", or on marker 1 once there is a photo.
   const imageDialogRef = useModalDialog(closeImageDialog, { enabled: imgOpen, initialFocus: '.plb-imgchoose, .plb-imgpoint' })
   // Full screen on a phone, so the system Back button closes it instead of leaving the page.
@@ -1563,15 +1685,38 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    setSaveOpen(false); setSaveFromCoach(false); setSaveError(''); setSaveNameError(''); setSaveNote(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
     // A closed menu has no save waiting on the account and nothing to reopen on a remount.
     setPendingSave(null); clearPendingSave()
   }, [])
   // A row in the Save or share menu closing it: the refusal under the field goes too.
   const closeSaveMenu = useCallback(() => {
-    setSaveOpen(false); setSaveError(''); setSaveNameError(''); setSaveNote('')
+    setSaveOpen(false); setSaveFromCoach(false); setSaveError(''); setSaveNameError(''); setSaveNote('')
     setPendingSave(null); clearPendingSave()
   }, [])
+
+  // Close the coach for good. A press inside it lands on a control that is about to unmount,
+  // so focus goes back to the control the beat pointed at; an Escape pressed elsewhere leaves focus where it is.
+  const closeCoach = useCallback(() => {
+    const inside = document.activeElement?.closest?.('.plb-coach')
+    dismissCoach()
+    setCoachGone(true)
+    if (inside) {
+      requestAnimationFrame(() => {
+        const bar = document.querySelector('[data-tool-toolbar]')
+        const target = (coachBeat === 0 ? bar?.querySelector('.plb-seedchip') : bar?.querySelector('.plb-save')) || bar?.querySelector('.tl-more-btn')
+        target?.focus({ preventScroll: true })
+      })
+    }
+  }, [coachBeat])
+  // Save palette: the Save menu opens with a name already in the field, and its
+  // field focused. The Save to project dialog uses it too when there is no project.
+  const coachSave = useCallback(() => {
+    closeAllMenus()
+    setSaveName((n) => (n.trim() ? n : FIRST_PALETTE_NAME))
+    setSaveFromCoach(true)
+    setSaveOpen(true)
+  }, [closeAllMenus])
 
   // The rail-fit measurement that lived here is gone: the shared ToolToolbar
   // (components/tool/ToolLayout.jsx) measures its own row and moves what does
@@ -1594,8 +1739,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const onDown = (e) => {
       // The image dialog is a modal of its own (it closes on its scrim), so a
       // drag inside it is not an outside press. Nor is a press in the sign-in
-      // dialog a gallery like opened: the gallery stays put behind it.
-      if (!e.target.closest('.plb-menuwrap, .plb-modal, [aria-labelledby="ui-login-title"]')) closeAllMenus()
+      // dialog a gallery like opened: the gallery stays put behind it. The Pro
+      // modal is the same, and the docked panel (wide screens) closes only by
+      // its Close button, Escape or its toolbar button, never by an outside press.
+      const dockedHeld = wideDock && galleryOpen && !saveOpen && !imgOpen && !histOpen
+      if (!dockedHeld && !e.target.closest('.plb-menuwrap, .plb-modal, .ui-modal-overlay, [aria-labelledby="ui-login-title"]')) closeAllMenus()
       if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) {
         // An open panel that held focus hands it back to its opener, unless the
         // press landed on something that takes focus itself. The press's own
@@ -1626,7 +1774,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('keydown', onEsc)
     return () => { window.removeEventListener('pointerdown', onDown); window.removeEventListener('keydown', onEsc) }
-  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu, setTintsIdx])
+  }, [anyPopover, toolsIdx, closeAllMenus, ctxMenu, setTintsIdx, wideDock, galleryOpen, saveOpen, imgOpen, histOpen])
 
   // Record the board into palette history. Debounced so slider scrubs and
   // rapid randomises collapse into one entry; identical heads are skipped.
@@ -1657,6 +1805,39 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Close the "…" menu after a choice and hand focus to the "…" of swatch `at`.
   const closeCtxMenu = (at) => { ctxReturnRef.current = at; setCtxMenu(null) }
+
+  // "Save to project" on a swatch: the project picker for that one colour.
+  // Signed out, the sign-in prompt comes first; the menu closes behind it. The
+  // prompt hands focus back to its opener a frame after it closes, so a
+  // dismissed prompt returns to the swatch a frame later still.
+  const [colourSaveIdx, setColourSaveIdx] = useState(null)
+  const returnToSwatch = (i) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      columnRefs.current[i]?.querySelector('.plb-tool--more')?.focus({ preventScroll: true })
+    }))
+  }
+  const openSaveColour = async (i) => {
+    if (canSaveProjects) { setCtxMenu(null); setColourSaveIdx(i); return }
+    const asking = requireLogin('save this colour', { free: true, signup: true })
+    setCtxMenu(null)
+    const signedIn = await asking
+    if (!mountedRef.current) return
+    if (signedIn) setColourSaveIdx(i); else returnToSwatch(i)
+  }
+  const closeSaveColour = () => {
+    ctxReturnRef.current = colourSaveIdx
+    setColourSaveIdx(null)
+  }
+  const chooseColourProject = (project) => {
+    const hex = String(adjusted[colourSaveIdx] || '').toUpperCase()
+    try {
+      const { added } = saveColourToProject(project.id, hex, columnNames[colourSaveIdx])
+      toast?.(added ? `Saved ${hex} to ${project.name}.` : `${hex} is already in ${project.name}.`, added ? 'success' : 'info')
+    } catch (err) {
+      toast?.(err?.message || 'Couldn’t save that colour', 'error')
+    }
+    closeSaveColour()
+  }
 
   // Opening a column's tints or colour values from the "..." menu: the menu
   // closes without sending focus back to "..." (closeCtxMenu would), and focus
@@ -1858,9 +2039,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (!file) return
     setImgError('')
     const heic = IMG_HEIC.test(file.name || '') || /^image\/hei[cf]/i.test(file.type)
-    if (!file.type.startsWith('image/') && !heic) { setImgError(`That file isn’t an image. Choose a ${IMG_FORMATS}.`); return }
+    if (!file.type.startsWith('image/') && !heic) { showImageError(`That file isn’t an image. Choose a ${IMG_FORMATS}.`); return }
     if (file.size > IMG_MAX_MB * 1024 * 1024) {
-      setImgError(`That photo is ${Math.ceil(file.size / 1048576)} MB. Choose one under ${IMG_MAX_MB} MB.`); return
+      showImageError(`That photo is ${Math.ceil(file.size / 1048576)} MB. Choose one under ${IMG_MAX_MB} MB.`); return
     }
     const seq = ++imgLoadSeq.current
     const stale = () => seq !== imgLoadSeq.current
@@ -1872,14 +2053,22 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     } catch {
       if (!stale()) {
         setImgLoading(false); setImgStatus('')
-        setImgError(heic
+        showImageError(heic
           ? 'This browser can’t open HEIC photos. Save it as JPG or PNG and try again.'
-          : 'We couldn’t read that photo. It may be damaged. Try another.')
+          : 'We couldn’t read that file. It looks damaged or isn’t a readable image. Try another.')
       }
       return
     }
     const { data, source, url, aspect } = loaded
     if (stale()) { URL.revokeObjectURL(url); return }
+    // An image with nothing visible in it is refused before it is shown, so it
+    // never flashes up and is gone again.
+    if (visibleShare(data) < MIN_VISIBLE_SHARE) {
+      URL.revokeObjectURL(url)
+      setImgLoading(false); setImgStatus('')
+      showImageError(NO_COLOURS)
+      return
+    }
     const ratio = Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 10
     const first = !imgSourceRef.current
     if (first) {
@@ -1894,17 +2083,16 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     await nextPaint()
     if (stale()) { if (!first) URL.revokeObjectURL(url); return }
     const found = clusterImage(data, { count: PRO_MAX })
-    const refusal = found.status === 'transparent' || found.status === 'empty'
-      ? 'This image has no visible colours. Try another.'
-      : found.status === 'flat' ? 'This photo has only 1 distinct colour. Try another.' : ''
-    if (refusal) {
+    // A single flat colour is not refused: it comes back as one marker, with the
+    // "only 1 distinct colour" note. Only an image with nothing visible is.
+    if (found.status === 'transparent' || found.status === 'empty') {
       if (first) {
         imgDataRef.current = null; imgSourceRef.current = null
         setImgSrc(''); setImgAspect(16 / 10)
       } else {
         URL.revokeObjectURL(url)
       }
-      setImgLoading(false); setImgStatus(''); setImgError(refusal)
+      setImgLoading(false); setImgStatus(''); showImageError(NO_COLOURS)
       return
     }
     const ranked = rankClusters(found.clusters, { mood: moodArg(imgMoodRef.current), limit: IMG_CANDIDATES })
@@ -1941,7 +2129,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       await loadImageFile(new File([blob], sample.file, { type: blob.type }), sample)
     } catch {
       setImgLoading(false); setImgStatus('')
-      setImgError('Couldn’t load this photo. Try again')
+      showImageError('Couldn’t load this photo. Try again')
     }
   }
 
@@ -2121,7 +2309,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       if (imgOpen) {
         e.preventDefault()
         if (file) loadImageFileRef.current?.(file)
-        else setImgError('Nothing to paste. Copy an image first.')
+        else showImageError('Nothing to paste. Copy an image first.')
         return
       }
       if (!file) return
@@ -2135,7 +2323,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
-  }, [imgOpen, closeAllMenus])
+  }, [imgOpen, closeAllMenus, showImageError])
 
   // While the dialog is open a file dropped anywhere is kept out of the
   // browser's own handling (which would navigate to it and throw the palette
@@ -2174,8 +2362,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // ── The loupe ────────────────────────────────────────────────────────────
   //
-  // Founder: "show me a large zoomed in view so i can [see] exactly what pixel
-  // im selecting". Five markers over a ~400px preview of a 4000px photo means
+  // The picker needs a large zoomed-in view so you can see exactly which pixel
+  // you are selecting. Five markers over a ~400px preview of a 4000px photo means
   // one marker covers roughly a hundred source pixels, so "which one am I on"
   // was genuinely unanswerable.
   //
@@ -2210,8 +2398,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // The sampled neighbourhood (the marker reports its mean), outlined in both
     // inks so it survives any photo under it — a single white box vanishes on a
     // white pixel, which is exactly the pixel a user is most likely to be hunting for.
-    const x0 = (half - IMG_SAMPLE_RADIUS) * cell
-    const span = (2 * IMG_SAMPLE_RADIUS + 1) * cell
+    const radius = sampleRadius(src.width, src.height)
+    const x0 = (half - radius) * cell
+    const span = (2 * radius + 1) * cell
     ctx.lineWidth = 3
     ctx.strokeStyle = 'rgba(0,0,0,.75)'
     ctx.strokeRect(x0 - 1.5, x0 - 1.5, span + 3, span + 3)
@@ -2252,7 +2441,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       )
     }
     if (!done) {
-      setImgError('Couldn’t apply these colours. Move a point onto a colour and try again.')
+      showImageError('Couldn’t apply these colours. Move a point onto a colour and try again.')
       return
     }
     setImgError('')
@@ -2313,12 +2502,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       vision,
       showContrast,
       importedGalleryId,
-      preImport: preImportRef.current,
+      preImport: trialSnapRef.current,
       importedSig: importedSigRef.current,
       at: Date.now(),
     }
-    // Founder request, 2026-09-03: "reset should reset the settings to default
-    // but randomise the colour." So the settings go back to DEFAULT_SYSTEM with
+    // Reset puts the settings back to default and randomises the colour. So the
+    // settings go back to DEFAULT_SYSTEM with
     // the lens at zero, and the COLOURS are a fresh draw from the same engine
     // the Randomise button uses — not a return to the fixed #4338E0 board, and
     // not the paid analogous system this used to rebuild under a free label.
@@ -2366,7 +2555,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setVision('normal')
     setShowContrast(false)
     setImportedGalleryId(null)
-    preImportRef.current = null
+    trialSnapRef.current = null
     importedSigRef.current = null
     setTintsIdx(null)
     setPickerIdx(null)
@@ -2374,7 +2563,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setPreview(null)
     setVarBase(null)
     setPanelApplied(null)
-    suggestSnapRef.current = null
+    trialSnapRef.current = null
     closeAllMenus()
     setLiveMsg('Settings reset to the default system, with a new random palette')
     toast?.('Palette reset · Undo is available')
@@ -2442,7 +2631,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       setVision(target.vision || 'normal')
       setShowContrast(Boolean(target.showContrast))
       setImportedGalleryId(target.importedGalleryId || null)
-      preImportRef.current = target.preImport || null
+      trialSnapRef.current = target.preImport || null
       importedSigRef.current = target.importedSig || null
       resetSnapshotRef.current = null
       if (editedAfterReset) {
@@ -2478,20 +2667,20 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
 
   const openVariationGate = () => openProModal({ gate: 'palette-variation-apply', eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
-  // The board as it was before the first apply from the Suggest panel. Moving
-  // from one card to another never replaces it, so Back always lands on the
-  // user's own palette. This only reads the stored one (or builds the candidate);
-  // `keepPanelSnap` stores it once an apply has gone through, so an apply that
-  // is refused never leaves a snapshot behind.
-  const panelSnap = () => suggestSnapRef.current
+  // The board as it was before the first apply from EITHER panel. Moving from
+  // one row to another (in Suggest, in Explore, or across them) never replaces it,
+  // so going back always lands on the user's own palette. This only reads the
+  // stored one (or builds the candidate); `keepPanelSnap` stores it once an apply
+  // has gone through, so an apply that is refused never leaves a snapshot behind.
+  const panelSnap = () => trialSnapRef.current
     || { colors: [...colors], adjust: { ...adjust }, seed, seedInput, harmony, before: paletteScore, mine: adjusted }
-  const keepPanelSnap = (snap) => { suggestSnapRef.current = snap }
+  const keepPanelSnap = (snap) => { trialSnapRef.current = snap }
   // True when applying `hexes` would leave the board exactly as it is.
   const isNoopApply = (hexes) => hexes.map(c => normaliseHex(c)).filter(Boolean).join(',') === colors.join(',') && !ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
   const pickVariation = (v, gated) => {
     if (gated) { openVariationGate(); return }
     // The applied card is a toggle: pressing it again puts the user's palette back.
-    if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) { backToMine(); return }
+    if (panelApplied?.kind === 'variation' && panelApplied.id === v.id) { revertTrial(); return }
     if (isNoopApply(v.colors)) return
     const snap = panelSnap()
     if (!applyPalette(v.colors, `Applied variation: ${v.label}`, { quiet: true })) return
@@ -2502,13 +2691,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // certain; after a refused apply it would sit armed and swallow the user's
     // next real edit.
     skipVarInvalidate.current = true
-    setPanelApplied({ kind: 'variation', id: v.id, name: v.label, before: snap.before, after: v.score, mine: snap.mine })
-    setLiveMsg(`${v.label} applied. Select it again, or Back to my palette, to undo it.`)
+    // A variation takes over from an Explore row as the one thing on trial. The
+    // snapshot stays, so going back still lands on the user's own palette.
+    importedSigRef.current = null
+    setImportedGalleryId(null)
+    setPanelApplied({ kind: 'variation', id: v.id, name: v.label, before: snap.before, after: v.score, mine: snap.mine, compare: v })
+    setLiveMsg(`${v.label} applied. Press it again to go back.`)
   }
-  // Put the board back as the first apply found it: colours, lens, seed and system.
-  // Called from the applied card (pressing it again) and from the Back button.
-  const backToMine = () => {
-    const snap = suggestSnapRef.current
+  // Put the board back as the first apply found it: colours, lens, seed and
+  // colour system. Pressing the applied row again, in either panel, comes here.
+  // Nothing disables, so focus stays on the row that was pressed.
+  const revertTrial = () => {
+    const snap = trialSnapRef.current
     if (!snap) return
     setColPanel(null)
     skipVarInvalidate.current = true
@@ -2516,28 +2710,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setAdjust({ ...snap.adjust })
     setSeed(snap.seed)
     setSeedInput(snap.seedInput)
-    setHarmony(snap.harmony)
-    suggestSnapRef.current = null
+    // A brand changes the colour system as well, so the snapshot carries it.
+    if (snap.harmony) setHarmony(snap.harmony)
+    trialSnapRef.current = null
+    importedSigRef.current = null
+    setImportedGalleryId(null)
     setPanelApplied(null)
-    setLiveMsg('Back to your palette')
-    // The Back button disables itself now it has nothing left to undo, which
-    // would drop focus to the page. Focus goes to the card that was applied
-    // (where it already is when the card itself was pressed), else to Close.
-    const target = (panelApplied && document.getElementById(`plb-sg-var-${panelApplied.id}`))
-      || galleryRef.current?.querySelector('.plb-pop-x')
-    target?.focus({ preventScroll: true })
-  }
-  const compareVariation = (v) => {
-    setGalleryOpen(false)
-    setPreview({ mode: siteTheme, scene: DEFAULT_SCENE, compare: v })
-  }
-  // Generic "line it up against the current palette" — used by the brand and
-  // community rows, which carry no precomputed score, so we compute one here.
-  const comparePalette = (label, colors) => {
-    const cols = colors.map(c => normaliseHex(c)).filter(Boolean)
-    if (cols.length < 2) return
-    setGalleryOpen(false)
-    setPreview({ mode: siteTheme, scene: DEFAULT_SCENE, compare: { label, colors: cols, score: scorePalette(cols) } })
+    setLiveMsg('Your palette is back.')
   }
   // Import a community-gallery palette as a toggle. The FIRST import snapshots
   // the user's own pre-gallery system; applying it ticks the card. Clicking the
@@ -2551,47 +2730,34 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // restored along with the colours.
   const importGalleryPalette = (cols, name, id, system = null) => {
     setColPanel(null)
-    if (importedGalleryId === id && preImportRef.current) {
-      const snap = preImportRef.current
-      setColors(snap.colors)
-      setAdjust(snap.adjust)
-      setSeed(snap.seed)
-      setSeedInput(snap.seedInput)
-      // A brand changes the colour system as well, so the snapshot carries it.
-      if (snap.harmony) setHarmony(snap.harmony)
-      preImportRef.current = null
-      importedSigRef.current = null
-      setImportedGalleryId(null)
-      setLiveMsg('Reverted to your previous palette')
-      toast?.('Reverted to your previous palette')
-      return
-    }
-    // Snapshot only the user's own palette — the one in place before any gallery
-    // import. Switching gallery A → B must NOT overwrite it, so revert always
-    // lands on the user's work, not the previously-selected gallery item.
-    //
-    // After a variation was applied from Suggest, the board is not the user's
-    // own any more. The Suggest snapshot is, so "mine" is taken from it:
-    // unticking an Explore card then lands on the user's palette, not on
-    // Variation X. An Explore import is a real change to the board, so it ends
-    // the Suggest session (the snapshot, the tick and Back all clear below).
-    // Explore has its own undo, and that one returns to the original palette.
-    const mine = suggestSnapRef.current
-    const original = preImportRef.current || (mine
-      ? { colors: mine.colors, adjust: mine.adjust, seed: mine.seed, seedInput: mine.seedInput, harmony: mine.harmony }
-      : { colors, adjust, seed, seedInput, harmony })
+    if (importedGalleryId === id && trialSnapRef.current) { revertTrial(); return }
+    // The snapshot is only ever the user's own palette: the one in place before
+    // the first apply from either panel. Switching row A -> B, or Suggest ->
+    // Explore, must NOT replace it, so going back lands on the user's work and not
+    // on the previous trial. When a variation is on the board the stored snapshot
+    // is what's used, not the live board.
+    const snap = panelSnap()
     // A refused apply (fewer than two valid colours) changes nothing, and must
-    // not leave a snapshot, a changed system or a cleared Suggest session behind.
-    if (!applyPalette(cols, `Loaded ${name}`)) return
+    // not leave a snapshot or a changed system behind.
+    if (!applyPalette(cols, `Loaded ${name}`, { quiet: true })) return
     if (system) setHarmony(system)
-    preImportRef.current = original
+    keepPanelSnap(snap)
+    // The Suggest list stays frozen on the user's own palette (the snapshot's), so
+    // the next look at Suggest still offers variations of THEIR colours.
+    skipVarInvalidate.current = true
     importedSigRef.current = null // let the effect record the imported baseline
-    suggestSnapRef.current = null
-    setPanelApplied(null)
-    setVarBase(null)
     setImportedGalleryId(id)
-    // Keep the gallery popup open so selecting swatches reads as a live toggle —
-    // the user can compare picks (and untick to revert) without reopening it.
+    setPanelApplied({
+      kind: 'explore',
+      id,
+      name,
+      before: snap.before,
+      mine: snap.mine,
+      compare: { label: name, colors: cols.map(c => normaliseHex(c)).filter(Boolean), score: scorePalette(cols) },
+    })
+    setLiveMsg(`${name} loaded. Press it again to go back.`)
+    // Keep the panel open so picking rows reads as a live toggle: the user can
+    // compare picks, and press the applied one again to go back, without reopening it.
   }
   // Clear the imported tick once the board diverges from the imported baseline.
   // The first run after an import records the baseline (colours + adjust lens);
@@ -2603,7 +2769,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       importedSigRef.current = sig
     } else if (sig !== importedSigRef.current) {
       importedSigRef.current = null
-      preImportRef.current = null
+      trialSnapRef.current = null
+      setPanelApplied(null)
       setImportedGalleryId(null)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2740,7 +2907,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       })
       // Free exports carry a small brand watermark; Pro exports stay clean.
       if (!isPro) {
-        const label = 'Made with UIL4B'
+        const label = 'Made with UI L4B'
         g.font = markFont
         const tw = g.measureText(label).width
         const padX = 14, bh = 34, margin = 22, bw = tw + padX * 2
@@ -2810,7 +2977,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Save the one-time community handle after the profanity/evasion filter.
   // NOTE: uniqueness is only checked against handles seen on THIS device — the
   // community store is localStorage today. Server-side (Firestore) uniqueness
-  // is deferred to the founder (flagged: needs a Firestore rule/transaction).
+  // is deferred (needs a Firestore rule/transaction).
   const saveHandle = () => {
     const problem = handleProblem(handleInput)
     if (problem) { setHandleErr(problem); return }
@@ -2891,7 +3058,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // "Save / export" used to ask for an account before it would OPEN, and behind
   // it sat Copy link to this palette, Copy CSS variables and Copy hex values.
   // So on this one surface copying was gated — which is the opposite of the rule
-  // the founder set on 2026-09-15: producing a FILE needs a free account,
+  // that producing a FILE needs a free account,
   // copying a value never does. The board's own per-swatch Copy and the
   // toolbar's Copy CSS were free the whole time, so the product disagreed with
   // itself inside a single page.
@@ -2935,7 +3102,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   const openGallery = (tab, anchor = null, pointer = false) => {
     galleryOpenerRef.current = { el: anchor, pointer }
-    closeAllMenus(); setGalleryTab(tab); setGalleryAnchor(anchor); setGalleryOpen(true)
+    closeAllMenus(); setGalleryTab(tab); setGalleryOpen(true)
   }
   const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
 
@@ -2996,7 +3163,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         value={shownSeed}
         onChange={(hex) => setFromSeedInput(hex.toUpperCase())}
         ariaLabel="Pick seed colour"
-        triggerClassName="tl-btn plb-seedchip"
+        triggerClassName={`tl-btn plb-seedchip${coachOn && coachBeat === 0 ? ' is-coached' : ''}`}
         triggerChildren={(
           <>
             <span className="plb-seedchip-sw" ref={barRef(shownSeed)} aria-hidden="true" />
@@ -3034,8 +3201,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const toolbarItems = [
     {
       id: 'back', priority: 2,
-      render: () => <ToolBack to="/projects" label="Back to projects" history={false} />,
-      menu: { label: 'Back to projects', icon: 'arrow-left', onSelect: () => navigate('/projects') },
+      render: () => <ToolBack />,
+      menu: { label: 'Back to all tools', icon: 'arrow-left', onSelect: () => navigate('/tools') },
     },
     { id: 'seed', priority: 4, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
     {
@@ -3109,13 +3276,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       bleed
       overflowLabel="Extra tools"
       overflowIcon="sliders-horizontal"
+      data-coach-ring={coachOn && coachBeat === 0 && !seedOnRow ? 'more' : undefined}
       items={toolbarItems}
       primary={(
         <span className="plb-menuwrap plb-savewrap">
           <ToolButton
             variant="accent"
             icon="bookmark-simple"
-            className="plb-save"
+            className={`plb-save${coachOn && coachBeat === 1 ? ' is-coached' : ''}`}
             aria-label="Save or share"
             aria-haspopup="dialog"
             aria-expanded={saveOpen}
@@ -3215,6 +3383,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   setToolsIdx(cur => (cur === i ? null : i))
                 }}
                 onContextMenu={(e) => {
+                  if (isOnLink(e.target)) return
                   e.preventDefault()
                   ctxTriggerRef.current = e.currentTarget.querySelector('.plb-tool--more')
                   setTintsIdx(null); setPickerIdx(null)
@@ -3463,6 +3632,179 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             )
           })}
         </div>
+        {/* Suggest / Explore: one docked panel beside the board (a bottom dock below
+            1024, a sheet on a phone). It pushes the board and never covers it.
+            `.plb-menuwrap` keeps the page's dismiss layer from closing it on a press
+            inside it. */}
+        {galleryOpen && (() => {
+          const mineColors = trialSnapRef.current?.mine || adjusted
+          const q = exQuery.trim().toLowerCase()
+          const match = (n) => !q || String(n).toLowerCase().includes(q)
+          const searchable = galleryTab === 'brands' || communityRows.length > 12
+          const shownPalettes = communityRows.filter(r => match(r.name))
+          const shownBrands = openBrands.filter(b => match(b.name))
+          const shownLocked = lockedBrands.filter(p => match(p.label))
+          const noun = galleryTab === 'brands' ? 'brands' : 'palettes'
+          const noMatch = Boolean(q) && (galleryTab === 'brands' ? shownBrands.length + shownLocked.length : shownPalettes.length) === 0
+          const rowLabel = (name, detail, on) => (on ? `${name}, on your board. Press again to go back to your palette.` : detail ? `${name}: ${detail}` : name)
+          const clearSearch = () => { setExQuery(''); document.getElementById('plb-sx-search')?.focus() }
+          return (
+            <div
+              className="plb-menuwrap plb-sx"
+              ref={galleryRef}
+              data-snap={sheetFull ? 'full' : 'peek'}
+              role={wideDock ? 'complementary' : 'dialog'}
+              aria-modal={wideDock ? undefined : 'false'}
+              aria-label={exploring ? 'Explore palettes and brands' : 'Suggest'}
+              data-lenis-prevent
+            >
+              <button type="button" className="plb-sx-handle" aria-label={sheetFull ? 'Collapse' : 'Expand'} onClick={() => setSheetFull(f => !f)}><span aria-hidden="true" /></button>
+              <div className="plb-sx-head">
+                <div className="plb-menu-title">{exploring ? 'Explore' : 'Suggest'}</div>
+                {exploring && (
+                  <SlidePills className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey} value={galleryTab}>
+                    {['community', 'brands'].map(tab => (
+                      <button
+                        key={tab}
+                        type="button"
+                        role="tab"
+                        id={`plb-ex-tab-${tab}`}
+                        aria-selected={galleryTab === tab}
+                        aria-controls={galleryTab === tab ? `plb-ex-panel-${tab}` : undefined}
+                        tabIndex={galleryTab === tab ? 0 : -1}
+                        className={galleryTab === tab ? 'tl-pill is-on' : 'tl-pill'}
+                        onClick={() => setGalleryTab(tab)}
+                      >
+                        {tab === 'community' ? 'Palettes' : 'Brands'}
+                      </button>
+                    ))}
+                  </SlidePills>
+                )}
+                <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
+              </div>
+              <YourPaletteRow
+                colors={mineColors}
+                detail={exploring ? null : `Balance ${trialSnapRef.current?.before ?? paletteScore}`}
+                help={exploring ? null : 'It scores tone range, evenness, chroma profile and distinctness.'}
+                onCompare={panelApplied?.compare ? () => { setGalleryOpen(false); setPreview({ mode: siteTheme, scene: DEFAULT_SCENE, compare: panelApplied.compare }) } : null}
+                compareLabel={`Compare ${panelApplied?.name || 'the applied option'} with your palette`}
+              />
+              <div className="plb-sx-body" ref={scrollCue} {...(exploring ? { role: 'tabpanel', id: `plb-ex-panel-${galleryTab}`, 'aria-labelledby': `plb-ex-tab-${galleryTab}` } : {})}>
+                {!exploring && (variations.length === 0 ? (
+                  <p className="plb-sx-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
+                ) : (
+                  <>
+                    <p className="plb-sx-intro plb-sx-intro--sg">Each one reworks the colours on your board. Click one to try it, and click it again to go back.</p>
+                    <RovingRows>
+                      {variationGroups.map(group => (
+                        <section key={group.label} aria-label={group.label}>
+                          <h3 className="plb-sx-group">{group.label}</h3>
+                          <ul className="plb-sw-list" role="list">
+                            {group.items.map(v => {
+                              const gated = !isPro && !freeVarIds.has(v.id)
+                              const active = panelApplied?.kind === 'variation' && panelApplied.id === v.id
+                              return (
+                                <SwatchRow
+                                  key={v.id}
+                                  id={`var-${v.id}`}
+                                  variant={gated ? 'gate' : 'press'}
+                                  name={v.label}
+                                  detail={v.desc}
+                                  meta={v.score}
+                                  colors={v.colors}
+                                  applied={active}
+                                  mine={mineColors}
+                                  ariaLabel={gated ? `${v.label}, Pro only. Opens Pro plans.` : rowLabel(v.label, v.desc, active)}
+                                  onPress={() => pickVariation(v, gated)}
+                                />
+                              )
+                            })}
+                          </ul>
+                        </section>
+                      ))}
+                    </RovingRows>
+                    {!isPro && variations.length > freeVarIds.size && (
+                      <ProBlock
+                        heading={`${variations.length - freeVarIds.size} more ${variations.length - freeVarIds.size === 1 ? 'variation' : 'variations'} with Pro`}
+                        body="Free covers the three best-balanced variations for your palette."
+                        gate="palette-variation-apply"
+                        onNavigate={() => setGalleryOpen(false)}
+                      />
+                    )}
+                  </>
+                ))}
+
+                {exploring && (
+                  <>
+                    <p className="plb-sx-intro">{galleryTab === 'brands'
+                      ? 'Loads a brand’s published colours and its colour system. Click it again to go back.'
+                      : 'Loads a palette in place of yours. Click it again to go back.'}</p>
+                    {searchable && (
+                      <div className="plb-sx-search">
+                        <IcoSearchSm />
+                        <label className="sr-only" htmlFor="plb-sx-search">{`Search ${noun}`}</label>
+                        <input
+                          id="plb-sx-search"
+                          type="search"
+                          enterKeyHint="search"
+                          autoComplete="off"
+                          placeholder={`Search ${noun}`}
+                          value={exQuery}
+                          onFocus={() => { if (!wideDock && window.matchMedia?.('(max-width: 640px)').matches) setSheetFull(true) }}
+                          onChange={(e) => setExQuery(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    {noMatch ? (
+                      <p className="plb-sx-note">No {noun} match &ldquo;{exQuery.trim()}&rdquo;. <button type="button" className="plb-sx-link" onClick={clearSearch}>Clear search</button></p>
+                    ) : (
+                      <RovingRows>
+                        <ul className="plb-sw-list" role="list">
+                          {galleryTab === 'community' && shownPalettes.map(p => {
+                            const on = importedGalleryId === p.id
+                            return (
+                              <SwatchRow key={p.id} id={`pal-${p.id}`} name={p.name} colors={p.colors} applied={on} mine={mineColors}
+                                ariaLabel={rowLabel(p.name, '', on)} onPress={() => importGalleryPalette(p.colors, p.name, p.id)} />
+                            )
+                          })}
+                          {galleryTab === 'brands' && shownBrands.map(b => {
+                            const on = importedGalleryId === brandTickId(b)
+                            return (
+                              <SwatchRow key={b.id} id={`brand-${b.id}`} name={b.name} colors={b.colors} applied={on} mine={mineColors}
+                                ariaLabel={rowLabel(b.name, '', on)} onPress={() => pickBrand(b)} />
+                            )
+                          })}
+                          {galleryTab === 'brands' && !proPending && shownLocked.map(p => (
+                            <SwatchRow key={p.id} id={`lock-${p.id}`} variant="static" name={p.label} slots={p.slots} />
+                          ))}
+                        </ul>
+                      </RovingRows>
+                    )}
+                    {proPending && <RowSkeletons />}
+                    {proPending && <ProLibraryStatus library={proLib} noun={galleryTab === 'brands' ? 'brand library' : 'palette library'} />}
+                    {!proPending && galleryTab === 'community' && communityLocked > 0 && (
+                      <ProBlock
+                        gate="palette-builder-community-lock"
+                        heading={`Another ${communityLocked} ${communityLocked === 1 ? 'palette' : 'palettes'} with Pro`}
+                        body={`Free covers ${communityRows.length} of the ${LIBRARY_TOTALS.curatedPalettes} curated palettes.`}
+                      />
+                    )}
+                    {!proPending && galleryTab === 'brands' && lockedBrandCount > 0 && (
+                      <ProBlock
+                        gate="palette-builder-brand-lock"
+                        heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
+                        body="Each brand loads its whole colour system, not only its swatches."
+                      />
+                    )}
+                    {galleryTab === 'community' && (
+                      <div className="plb-sx-foot">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })()}
         {/* The ADD rail (D:1037-1040). */}
         <button type="button" className="plb-add" onClick={addCol} aria-label="Add a colour">
           <ToolIcon name="plus" size={19} />
@@ -3524,6 +3866,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             items[next]?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
           }}>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { onCopy?.(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoCopy /> Copy hex</button>
+          <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openSaveColour(ctxMenu.i)}><ToolIcon name="bookmark-simple" size={14} /> Save to project</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { setFromSeedInput(adjusted[ctxMenu.i]); closeCtxMenu(ctxMenu.i) }}><IcoShuffle /> Use as seed</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openHctPicker(ctxMenu.i)}><IcoSliders /> Edit in HCT</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => openColPanel('tints', ctxMenu.i)}><IcoEye /> View tints</button>
@@ -3548,202 +3891,17 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* ── The floating panels: Suggest / Explore, History, Save or share ──
-          Fixed under the toolbar (a bottom sheet on a phone). The gallery is
-          moved under the button that opened it when there is one on screen;
-          opened from the Extra tools sheet it stays docked. `.plb-menuwrap`
-          keeps the page's one dismiss layer from closing a panel on a press
-          inside it. */}
-      {galleryOpen && (
-        <div className="plb-menuwrap plb-float" ref={galleryRef}>
-          <div className={exploring ? 'plb-menu plb-galpopup plb-galpopup--explore' : 'plb-menu plb-galpopup plb-galpopup--suggest'} role="dialog" aria-label={exploring ? 'Explore palettes and brands' : 'Suggest'} data-lenis-prevent>
-            <div className="plb-galpopup-head">
-              <div className="plb-menu-title">{exploring ? 'Explore palettes and brands' : 'Suggest'}</div>
-              {exploring && (
-                <div className="tl-pills plb-sg-tabs" role="tablist" aria-label="Explore sections" onKeyDown={onExploreTabKey}>
-                  {['community', 'brands'].map(tab => (
-                    <button
-                      key={tab}
-                      type="button"
-                      role="tab"
-                      id={`plb-ex-tab-${tab}`}
-                      aria-selected={galleryTab === tab}
-                      aria-controls={galleryTab === tab ? `plb-ex-panel-${tab}` : undefined}
-                      tabIndex={galleryTab === tab ? 0 : -1}
-                      className={galleryTab === tab ? 'tl-pill is-on' : 'tl-pill'}
-                      onClick={() => setGalleryTab(tab)}
-                    >
-                      {tab === 'community' ? 'Palettes' : 'Brands'}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {/* Suggest's one Back button sits between the title and Close in the
-                  DOM, so the tab order is the visual order at every width. Its text
-                  shortens to "Back" (still inside its name) on phones, and only the
-                  narrowest screens get the icon alone. */}
-              {!exploring && (
-                <button type="button" className="tl-btn plb-sg-back" disabled={!panelApplied} aria-label="Back to my palette" title="Back to my palette" onClick={() => backToMine()}>
-                  <span className="plb-sg-back-text">Back to my palette</span>
-                  <span className="plb-sg-back-short" aria-hidden="true">Back</span>
-                  <span className="plb-sg-back-icon" aria-hidden="true"><IcoUndo /></span>
-                </button>
-              )}
-              <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
-            </div>
-
-            {galleryTab === 'community' && (
-              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-ex-panel-community" aria-labelledby="plb-ex-tab-community">
-                <PaletteGalleryGrid
-                  toast={toast}
-                  palettes={communityRows}
-                  selectedId={importedGalleryId}
-                  onPick={(cols, name, id) => importGalleryPalette(cols, name, id)}
-                  onCompare={(cols, name) => comparePalette(name, cols)}
-                />
-                {proPending ? <ProLibraryStatus library={proLib} noun="palette library" /> : communityLocked > 0 && (
-                  <LockedTeaseCta
-                    gate="palette-builder-community-lock"
-                    heading={`Another ${communityLocked} ${communityLocked === 1 ? 'palette' : 'palettes'} with Pro`}
-                    body={`Free covers ${communityRows.length} of the ${LIBRARY_TOTALS.curatedPalettes} curated palettes.`}
-                    action="See what Pro includes"
-                  />
-                )}
-                <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
-              </div>
-            )}
-
-            {!exploring && (
-              <div className="plb-sg-pin">
-                <span className="plb-sg-pin-label">Your palette</span>
-                <div className="plb-sg-pin-strip" aria-hidden="true">
-                  {(panelApplied?.mine || adjusted).map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}
-                </div>
-              </div>
-            )}
-
-            {!exploring && (
-              <div className="plb-galpopup-body" ref={scrollCue}>
-                {variations.length === 0 ? (
-                  <p className="plb-sg-intro">Variations need at least two colours. Add another colour to the board to see them.</p>
-                ) : (
-                  <>
-                    <p className="plb-sg-intro">Each one changes the colours you have. Pick one to try it.</p>
-                    <div className="plb-sg-groups">
-                      {variationGroups.map(group => (
-                        <section key={group.label} className="plb-sg-group" aria-label={group.label}>
-                          <h3 className="plb-sg-group-label">{group.label}</h3>
-                          <div className="plb-sg-grid">
-                            {group.items.map(v => {
-                              const gated = !isPro && !freeVarIds.has(v.id)
-                              const active = panelApplied?.kind === 'variation' && panelApplied.id === v.id
-                              return (
-                                <div key={v.id} className={`plb-sg-card${gated ? ' plb-sg-card--locked' : ''}${active ? ' plb-sg-card--on' : ''}`}>
-                                  <button
-                                    type="button"
-                                    id={`plb-sg-var-${v.id}`}
-                                    className="plb-sg-main"
-                                    aria-pressed={gated ? undefined : active}
-                                    aria-label={gated ? `${v.label}, Pro only. Opens Pro plans.` : `${v.label}: ${v.desc}`}
-                                    onClick={() => pickVariation(v, gated)}
-                                  >
-                                    <span className="plb-sg-strip" aria-hidden="true">
-                                      <span className="plb-sg-cells">{v.colors.map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}</span>
-                                      {gated && <span className="plb-sg-lock"><IcoLock size={11} /> Pro</span>}
-                                      {active && <span className="plb-sg-tick"><IcoCheck size={12} /></span>}
-                                    </span>
-                                    <span className="plb-sg-name">{v.label}</span>
-                                    <span className="plb-sg-desc">{v.desc}</span>
-                                  </button>
-                                  {!gated && (
-                                    <button type="button" className="plb-sg-cmp" title="Compare" aria-label={`Compare ${v.label} with your palette`} onClick={() => compareVariation(v)}>
-                                      <IcoEye />
-                                    </button>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                    {!isPro && variations.length > freeVarIds.size && (
-                      <div className="plb-sg-pro">
-                        <span>{variations.length - freeVarIds.size} more {variations.length - freeVarIds.size === 1 ? 'variation' : 'variations'} with Pro</span>
-                        <button type="button" className="tl-btn" onClick={openVariationGate}>See what Pro includes</button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {galleryTab === 'brands' && (
-              <div className="plb-galpopup-body" ref={scrollCue} role="tabpanel" id="plb-ex-panel-brands" aria-labelledby="plb-ex-tab-brands">
-                <p className="plb-sg-intro">Loads the brand&rsquo;s colours and its colour system. Pick it again to put your palette back.</p>
-                {/* openBrands holds only the rows this viewer may load; a
-                    Pro-gated brand's colours never enter the DOM. */}
-                <div className="plb-sg-groups">
-                  <div className="plb-sg-grid plb-sg-grid--brands">
-                    {openBrands.map(b => {
-                      const active = importedGalleryId === brandTickId(b)
-                      return (
-                        <div key={b.id} className={`plb-sg-card plb-sg-card--brand${active ? ' plb-sg-card--on' : ''}`}>
-                          <button type="button" className="plb-sg-main" aria-pressed={active} aria-label={b.name} onClick={() => pickBrand(b)}>
-                            <span className="plb-sg-strip" aria-hidden="true">
-                              <span className="plb-sg-cells">{b.colors.map((c, k) => <span key={k} className="plb-sg-cell" ref={barRef(c)} />)}</span>
-                              {active && <span className="plb-sg-tick"><IcoCheck size={12} /></span>}
-                            </span>
-                            <span className="plb-sg-name">{b.name}</span>
-                          </button>
-                          <button type="button" className="plb-sg-cmp" title="Compare" aria-label={`Compare ${b.name} with your palette`} onClick={() => comparePalette(b.name, b.colors)}>
-                            <IcoEye />
-                          </button>
-                        </div>
-                      )
-                    })}
-                    {proPending && [0, 1, 2, 3].map(k => (
-                      <div key={`ph-${k}`} className="plb-sg-card plb-sg-card--brand plb-sg-card--ph" aria-hidden="true">
-                        <div className="plb-sg-main"><span className="plb-sg-strip" /><span className="plb-sg-name" /></div>
-                      </div>
-                    ))}
-                    {!proPending && lockedBrands.map(p => (
-                      <div key={p.id} className="plb-sg-card plb-sg-card--brand plb-sg-card--locked plb-sg-card--static">
-                        <div className="plb-sg-main">
-                          <span className="plb-sg-strip" aria-hidden="true">
-                            <span className="plb-sg-cells">
-                              {Array.from({ length: Math.max(1, Number(p.slots) || 1) }, (_, k) => <span key={k} className="plb-sg-cell lockt-rowcell" data-step={k % 4} />)}
-                            </span>
-                            <span className="plb-sg-lock"><IcoLock size={11} /> Pro</span>
-                          </span>
-                          <span className="plb-sg-name">{p.label}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {proPending && <ProLibraryStatus library={proLib} noun="brand library" />}
-                {!proPending && lockedBrandCount > 0 && (
-                  <LockedTeaseCta
-                    gate="palette-builder-brand-lock"
-                    heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
-                    body="Loading a brand applies its whole colour system, not only its swatches."
-                    action="See what Pro includes"
-                    modal={{
-                      eyebrow: 'Pro colour tools',
-                      title: 'Load any brand system',
-                      subtitle: `Free covers ${brandRows.length - lockedBrandCount} starter brands. Pro opens the remaining ${lockedBrandCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
-                    }}
-                  />
-                )}
-              </div>
-            )}
-
-            {!exploring && panelApplied?.kind === 'variation' && (
-              <BalanceScoreFoot before={panelApplied.before} after={panelApplied.after} />
-            )}
-          </div>
-        </div>
+      {colourSaveIdx != null && adjusted[colourSaveIdx] && (
+        <SaveColourDialog
+          hex={adjusted[colourSaveIdx].toUpperCase()}
+          name={columnNames[colourSaveIdx]}
+          projects={projects}
+          loading={projectsLoading}
+          currentId={design?.source?.projectId}
+          onChoose={chooseColourProject}
+          onSavePalette={() => { setColourSaveIdx(null); coachSave() }}
+          onClose={closeSaveColour}
+        />
       )}
 
       {histOpen && (
@@ -3802,6 +3960,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           note={saveNote}
           saveError={saveError}
           refusalTestId="palette-save-refusal"
+          focusOnOpen={saveFromCoach}
+          selectOnFocus={saveFromCoach}
           projects={projects}
           onOverwrite={(p) => {
             try { overwriteProject(p.id); closeSaveMenu(); toast?.('Updated: ' + p.name) }
@@ -3845,6 +4005,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           onClose={closeImageDialog}
           phone={imgPhone}
           error={imgError}
+          errorSeq={imgErrorSeq}
           loading={imgLoading}
           status={imgMax ? `${IMG_POINT_MAX} is the most. Remove one to add another.` : imgStatus}
           src={imgSrc}
@@ -4066,7 +4227,17 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
       {/* Step 1 of the brand-kit walkthrough; renders nothing unless the
           visitor is in the flow. */}
-      <UIKitGuide step="color" />
+      <UIKitGuide step="color" linked={initial.source === 'query' || initial.source === 'handoff'} />
+
+      {coachOn && (
+        <PaletteCoach
+          beat={coachBeat}
+          onNext={() => setCoachBeat(1)}
+          onSave={coachSave}
+          onDismiss={closeCoach}
+          anchorSelector=".plb-adjust"
+        />
+      )}
     </ToolLayout>
   )
 }

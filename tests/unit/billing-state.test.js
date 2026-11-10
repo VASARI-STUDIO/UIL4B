@@ -34,10 +34,10 @@ const DAY = 86_400_000
 // The millisecond-precision boundary test stays exact because it passes NOW in
 // explicitly and never calls `planForUser`.
 //
-// The real defect is upstream — a pure plan-resolution function reading an
-// ambient clock is untestable by construction. The fix is an injectable `now`
-// defaulting to `Date.now()`, which is additive and backwards-compatible, but
-// `api/_lib/plans.js` is founder-gated. Logged in src/data/pipeline.js.
+// `planForSubscription` and `planForUser` now take an injectable `now`
+// (tests/unit/plans-injected-clock.test.js checks the edges at a fixed
+// instant). This file keeps the real clock because its fixtures call
+// `planForUser` without one.
 const NOW = Date.now()
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 

@@ -6,8 +6,8 @@
 // string had already noticed: "Too large to export at @Nx — reduce Max
 // Dimension" is an admission that the maximum could be exceeded.
 //
-// Founder, 2026-09-15: "export scale should allow smaller and max dimensions
-// should be resolution scales, such as 4k, 2k, 1k, 720p."
+// The ceiling is expressed as resolution scales (4k, 2k, 1k, 720p), and the
+// export scale allows smaller sizes.
 //
 // The order is scale, then cap. The scale says what you want; the ceiling says
 // what you will accept.
@@ -52,7 +52,7 @@ test('a ceiling only ever reduces — it never enlarges a small image', () => {
 })
 
 test('the sizes offered are the named resolutions, each with its pixel count', () => {
-  // Founder asked for 4k, 2k, 1k and 720p by name. The label carries BOTH the
+  // The ceiling is offered as 4k, 2k, 1k and 720p by name. The label carries BOTH the
   // name and the number because the conventions genuinely disagree — "2K" is
   // 2048 in DCI and 2560 in consumer use, and 1K at 1024 is SMALLER than 720p
   // at 1280, so a name alone cannot be ordered.

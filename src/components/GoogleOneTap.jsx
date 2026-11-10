@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { GOOGLE_CLIENT_ID } from '../utils/firebase'
+import { whenAuthSdk } from '../utils/firebaseAccess'
 
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
 
@@ -40,8 +41,16 @@ export default function GoogleOneTap() {
 
     let cancelled = false
 
-    loadGis().then(() => {
-      if (cancelled || !window.google?.accounts?.id) return
+    // `loading` can clear before the auth SDK has answered (a visitor with no
+    // session hint settles as signed out without fetching it), so the prompt
+    // also waits for the SDK's first answer and is skipped if it finds a session.
+    const signedOut = whenAuthSdk().then(async (A) => {
+      await A.auth?.authStateReady?.()
+      return !A.auth?.currentUser
+    })
+
+    Promise.all([loadGis(), signedOut]).then(([, isSignedOut]) => {
+      if (cancelled || !isSignedOut || !window.google?.accounts?.id) return
 
       if (!initialised.current) {
         // Returning Google users get automatic single-click sign-in: Google

@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "Biblioteca de Ícones",
-      "description": "Pesquise milhares de ícones pela API do Iconify."
+      "description": "Pesquise packs de ícones de código aberto e copie SVG ou JSX."
     },
     "altText": {
       "label": "Alt Text Generator",
@@ -126,10 +126,6 @@
     "docsDesign": {
       "label": "Princípios de Design",
       "description": "Hierarquia visual, equilíbrio e psicologia do design."
-    },
-    "promptLibrary": {
-      "label": "Biblioteca de Prompts",
-      "description": "Salvar prompts de geração de imagens com IA com pré-visualizações."
     },
     "fontGallery": {
       "label": "Galeria de Fontes",
@@ -271,6 +267,7 @@
     "title": "Biblioteca de Ícones",
     "eyebrow": "BIBLIOTECA DE ÍCONES",
     "heading": "Encontre, personalize e copie qualquer ícone.",
+    "subtitleShort": "Mude a cor e copie um SVG limpo.",
     "subtitle": "Mude a cor, o tamanho e o estilo de qualquer ícone (ajuste o traço, defina a cor) e copie um SVG limpo ou exporte com um clique. Assine o Pro para salvar seus ícones personalizados.",
     "searchPlaceholder": "Buscar ícones…",
     "allPacks": "Todos os Pacotes",
@@ -284,9 +281,13 @@
     "noIcons": "Busque ícones acima",
     "loadingPacks": "Carregando pacotes de ícones…"
   },
+  "iconGroups": {
+    "subtitleShort": "Conjuntos de ícones com um só estilo."
+  },
   "emojiLibrary": {
     "eyebrow": "BIBLIOTECA DE EMOJIS",
     "heading": "Copie qualquer emoji, em qualquer tom de pele.",
+    "subtitleShort": "Emojis por categoria, um clique para copiar.",
     "subtitle": "Explore todos os emojis por categoria, mude o tom de pele de todo o conjunto e clique para copiar. Grátis, sempre."
   },
   "imageConverter": {
@@ -505,6 +506,9 @@
     "bugReport": "Relatório de Bug",
     "general": "Geral",
     "messagePlaceholder": "Conte-nos o que você acha…",
+    "helpTitle": "Falar com o suporte",
+    "helpSubtitle": "Ficou preso ou algo não está funcionando? Conte-nos o que você estava tentando fazer e o que aconteceu. Informe seu e-mail se quiser receber uma resposta.",
+    "helpPlaceholder": "O que você estava tentando fazer e o que aconteceu em vez disso?",
     "submitFeedback": "Enviar Feedback",
     "enterFeedback": "Por favor, insira seu feedback",
     "thankYou": "Obrigado pelo seu feedback!",
@@ -522,82 +526,5 @@
     "reportIssue": "Reportar um Problema",
     "reportIssueDesc": "Encontrou um bug? Nos avise.",
     "visitLink": "Visitar"
-  },
-  "privacy": {
-    "title": "Política de Privacidade",
-    "lastUpdated": "Última atualização: 27 de outubro de 2026",
-    "s1Title": "1. Sobre Esta Política",
-    "s1Text": "UIL4B (\"nós\", \"nos\", \"nosso\") está comprometido em proteger suas informações pessoais em conformidade com a Lei de Privacidade Australiana de 1988 (Cth) e os Princípios de Privacidade Australianos (APPs). Esta política explica como coletamos, usamos, divulgamos e protegemos suas informações pessoais.",
-    "s2Title": "2. Informações que Coletamos (APP 3)",
-    "s2Intro": "Coletamos apenas as informações razoavelmente necessárias para nossos serviços:",
-    "s2Items": [
-      "Informações da conta: endereço de e-mail, nome de exibição, foto de perfil (se usar login do Google)",
-      "Preferências de uso: configurações de tema, paletas salvas, configurações de tons, prompts",
-      "NÃO coletamos: dados de cartão de pagamento (processados pelo Stripe), dados de localização, identificadores de dispositivo ou cookies de rastreamento"
-    ],
-    "s3Title": "3. Como Usamos Suas Informações (APP 6)",
-    "s3Intro": "Suas informações são usadas exclusivamente para:",
-    "s3Items": [
-      "Fornecer e manter sua conta e os recursos do toolkit",
-      "Sincronizar suas configurações de design entre dispositivos",
-      "Enviar notificações essenciais do serviço (segurança da conta, alterações de política)",
-      "Provide AI features: the text and images you submit to AI tools are sent to the AI providers listed in section 6",
-      "NUNCA venderemos seus dados a terceiros ou os usaremos para publicidade"
-    ],
-    "s4Title": "4. Armazenamento e Segurança de Dados (APP 8 e 11)",
-    "s4Text": "Seus dados são armazenados no Google Cloud Firestore na região australia-southeast1 (Sydney). A autenticação é gerenciada pelo Firebase Authentication. Implementamos:",
-    "s4Items": [
-      "Criptografia em repouso e em trânsito (TLS 1.3)",
-      "Regras de segurança do Firestore para controle de acesso",
-      "Auditorias regulares de segurança da nossa configuração Firebase",
-      "AI features send what you submit to providers that may process it outside Australia, as section 6 describes"
-    ],
-    "s5Title": "5. Seus Direitos (APP 12 e 13)",
-    "s5Intro": "Você tem o direito de:",
-    "s5Items": [
-      "Acessar suas informações pessoais a qualquer momento pelas Configurações",
-      "Corrigir suas informações pessoais atualizando seu perfil",
-      "Exportar todos os seus dados como arquivo JSON em Configurações > Exportar Meus Dados",
-      "Excluir sua conta e todos os dados associados em Configurações > Excluir Conta",
-      "Revogar o consentimento saindo e excluindo sua conta"
-    ],
-    "s6Title": "6. Serviços de Terceiros",
-    "s6Items": [
-      "Firebase/Google Cloud — Autenticação e banco de dados (região de Sydney)",
-      "Google Fonts — Carregamento de fontes (nenhum dado pessoal enviado)",
-      "Iconify — API de busca de ícones (nenhum dado pessoal enviado)",
-      "Google Gemini — AI processing of the images and text you submit to AI tools",
-      "OpenRouter — passes the text you submit to AI tools to a third-party AI model host set not to retain or train on it",
-      "Stripe — Processamento de pagamentos (em conformidade com PCI DSS, entidade australiana)"
-    ],
-    "s7Title": "7. Contato",
-    "s7Text": "Para consultas sobre privacidade, solicitações de acesso a dados ou reclamações, entre em contato conosco em:",
-    "s7Complaint": "Se você não estiver satisfeito com nossa resposta, pode registrar uma reclamação junto ao Escritório do Comissário de Informação da Austrália (OAIC) em"
-  },
-  "terms": {
-    "title": "Termos de Serviço",
-    "lastUpdated": "Última atualização: 27 de outubro de 2026",
-    "s1Title": "1. Aceitação",
-    "s1Text": "Ao usar o UIL4B Design Toolkit (\"o Serviço\"), você concorda com estes Termos de Serviço. O Serviço é fornecido pela UIL4B, uma empresa sediada na Austrália. Estes termos são regidos pelas leis da Austrália.",
-    "s2Title": "2. Conta",
-    "s2Text": "Você pode criar uma conta usando e-mail/senha ou autenticação do Google. Você é responsável por manter a segurança das credenciais da sua conta. Você deve ter pelo menos 16 anos para criar uma conta.",
-    "s3Title": "3. Planos Gratuito e Pro",
-    "s3Text": "O Serviço oferece um plano gratuito com recursos essenciais e um plano Pro com ferramentas adicionais. As assinaturas Pro são cobradas mensal ou anualmente. Você pode cancelar a qualquer momento; o acesso continua até o final do período de cobrança. Reembolsos são tratados caso a caso, em conformidade com a Lei do Consumidor Australiana.",
-    "s4Title": "4. Propriedade Intelectual",
-    "s4Text": "Designs, paletas, gradientes e outros resultados que você criar usando o Serviço pertencem a você. O Serviço em si, incluindo seu código, design e documentação, é de propriedade da UIL4B e protegido pela lei de direitos autorais australiana.",
-    "s5Title": "5. Uso Aceitável",
-    "s5Intro": "Você concorda em não:",
-    "s5Items": [
-      "Usar o Serviço para qualquer finalidade ilegal",
-      "Tentar obter acesso não autorizado às contas de outros usuários",
-      "Fazer engenharia reversa, descompilar ou desmontar o Serviço",
-      "Usar sistemas automatizados para extrair dados do Serviço"
-    ],
-    "s6Title": "6. Limitação de Responsabilidade",
-    "s6Text": "O Serviço é fornecido \"como está\", sem garantias de qualquer tipo, exceto conforme exigido pela Lei do Consumidor Australiana. Na máxima extensão permitida por lei, a UIL4B não é responsável por quaisquer danos indiretos, incidentais ou consequenciais decorrentes do uso do Serviço.",
-    "s7Title": "7. Alterações",
-    "s7Text": "Podemos atualizar estes Termos periodicamente. Alterações significativas serão comunicadas por e-mail ou notificação no aplicativo com pelo menos 30 dias de antecedência antes de entrarem em vigor.",
-    "s8Title": "8. Contato",
-    "s8Text": "Dúvidas sobre estes Termos? Entre em contato conosco em"
   }
 }

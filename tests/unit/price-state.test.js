@@ -54,6 +54,24 @@ test('no-currency: a live price exists, but not in this currency', () => {
   assert.equal(stateOf(answer({ currencies: ['usd'] }), { currency: 'aud' }), 'no-currency')
 })
 
+test('a currency-only miss names the currency and never says the prices failed to load', () => {
+  // The service answered with live prices in USD only; the visitor is in NZD.
+  const prices = answer({ currencies: ['usd'] })
+  const ctx = { currencyLabel: 'NZD', selectedLabel: 'Yearly', otherLabel: 'Monthly' }
+  for (const selectedId of ['monthly', 'yearly']) {
+    const state = stateOf(prices, { currency: 'nzd', selectedId })
+    assert.equal(state, 'no-currency')
+    const copy = priceStateCopy(state, ctx)
+    assert.match(copy.line1, /NZD/)
+    assert.doesNotMatch([copy.line1, copy.line2].join(' '), /didn.t answer|didn.t load|no checkout can start/i)
+  }
+  // The same payload for a currency it does carry sells.
+  assert.equal(stateOf(prices, { currency: 'usd' }), 'live')
+  // A real outage reads differently.
+  assert.equal(stateOf(null, { currency: 'nzd' }), 'unreachable')
+  assert.doesNotMatch(priceStateCopy('unreachable', ctx).line1, /NZD/)
+})
+
 test('cadence-missing: the selected cadence has no price, another has', () => {
   const prices = answer({ yearly: 'fallback' })
   assert.equal(stateOf(prices, { selectedId: 'yearly' }), 'cadence-missing')

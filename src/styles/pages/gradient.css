@@ -205,7 +205,7 @@
   border-radius: 8px;
   background: rgba(10, 11, 13, .9);
   color: #fff;
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 12px;
   line-height: 1;
   white-space: nowrap;
@@ -213,6 +213,7 @@
   visibility: hidden;
   pointer-events: none;
   transition: opacity var(--dur-1) var(--ease-standard), visibility 0s linear var(--dur-1);
+  font-variant-numeric: tabular-nums; letter-spacing: 0;
 }
 .grd .grd-handle.is-dragging .grd-handle-val,
 .grd .grd-handle:focus-visible .grd-handle-val { opacity: 1; visibility: visible; transition-delay: 0s; }
@@ -330,7 +331,7 @@
 /* "1–3 of 12": which rows the window shows. Held to the widest label ("10–12 of
    12", eleven mono cells) and right-aligned, so the header does not shift as it
    scrolls. */
-.grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
+.grd .grd-stops-count { min-width: 11ch; text-align: right; margin-right: 6px; font-family: var(--font); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--tl-dim); white-space: nowrap; }
 /* "3 selected" and its Clear / Done button sit in the Stops head row, which the
    flip button already makes 26px (44 on touch), so showing them moves nothing. */
 .grd .grd-sel-count { margin-right: 6px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--tl-ink); }
@@ -410,7 +411,7 @@
 .grd .grd-stop-role { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--tl-ink); }
 .grd .grd-stop-role.is-custom { font-weight: 400; color: var(--tl-dim); }
 .grd .grd-stop-hex { min-width: 0; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-soft); }
-.grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; color: var(--tl-dim); }
+.grd .grd-stop-pos { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; text-align: right; color: var(--tl-dim); }
 /* Room for the role name on a fine pointer. The side card keeps one 15px scrollbar
    gutter and the window another, so "Secondary 500" had 64px of a 96px column once
    both were drawn. The window bleeds 8px into the section's padding each side (the
@@ -451,12 +452,12 @@
 /* The Tints button reads as a word beside its icon, not a bare glyph. */
 .grd .grd-tints-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; font-size: 12px; font-weight: 520; white-space: nowrap; }
 /* A free account sees "Pro" as a word beside Tints, not a second padlock. */
-.grd .grd-pro-tag { font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--tl-dim); }
+.grd .grd-pro-tag { font-size: var(--fs-caption); font-weight: 600; letter-spacing: normal; color: var(--tl-dim); }
 
 /* The line in the Selected stop and Geometry label rows that says what a lock does.
    Its line box is the label's height, so the row keeps the height it had. */
 .grd .tl-sec-head:has(> .grd-lock-cap) > .tl-sec-label { flex: none; white-space: nowrap; }
-.grd .grd-lock-cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 12px; color: var(--tl-dim); }
+.grd .grd-lock-cap { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 12px; color: var(--tl-dim); }
 .grd .grd-lock-cap-short { display: none; }
 @media (max-width: 379px) {
   .grd .grd-lock-cap-long { display: none; }
@@ -563,7 +564,6 @@
   color: var(--tl-ink);
   font-family: var(--mono);
   font-size: 12px;
-  letter-spacing: .02em;
   text-transform: uppercase;
 }
 /* The offset outline from :focus-visible is the one focus indicator. The global
@@ -688,12 +688,13 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--t0) 4.5%, transparent);
   color: var(--tl-ink);
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 12px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   -moz-appearance: textfield;
   appearance: textfield;
+  letter-spacing: 0;
 }
 .grd .grd-angle-input::-webkit-outer-spin-button,
 .grd .grd-angle-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -837,7 +838,7 @@
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
-  box-shadow: var(--shadow-cmd);
+  box-shadow: var(--shadow-cmd), 0 0 0 1px color-mix(in srgb, var(--t0) 4%, transparent);
   color: var(--t0);
   animation: grd-tintmenu-in var(--dur-2) var(--ease-entrance);
 }
@@ -854,31 +855,32 @@
 }
 /* The page's link colour (--tl-link is not in scope out here, so its source). */
 .grd-tintmenu:focus-visible { outline: 2px solid var(--link, var(--accent-text)); outline-offset: 2px; }
-.grd-tintmenu-head { padding: var(--s-2); font-size: 12px; color: var(--t2); }
+.grd-tintmenu-head { padding: var(--s-2) 10px var(--s-1); font-size: var(--fs-caption); color: var(--t2); }
 .grd-tintmenu-pro { display: inline-flex; align-items: center; gap: var(--s-2); }
 .grd-tintmenu-item {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: 10px;
   width: 100%;
-  min-height: 32px;
-  padding: 0 var(--s-2);
+  min-height: 40px;
+  padding: 0 10px;
   border: 0;
   border-radius: var(--radius-s);
   background: transparent;
   color: inherit;
-  font: inherit;
-  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 560;
+  font-size: var(--fs-body-s);
   text-align: left;
   cursor: pointer;
 }
 .grd-tintmenu-item[aria-disabled="true"] { color: var(--t2); }
 .grd-tintmenu-item:focus-visible { outline: 2px solid var(--link, var(--accent-text)); outline-offset: -2px; }
 @media (hover: hover) and (pointer: fine) {
-  .grd-tintmenu-item:hover { background: color-mix(in srgb, var(--t0) 6%, transparent); }
+  .grd-tintmenu-item:hover { background: var(--hvr); }
 }
 .grd-tintmenu-chip { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px oklch(0 0 0 / .12); }
-.grd-tintmenu-label { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.grd-tintmenu-label { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .grd-tintmenu-hex { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--t1); }
 /* A locked row's stand-in for the hex: blurred like the other Pro previews, not selectable. */
 .grd-tintmenu-hex--locked { filter: blur(3px); user-select: none; -webkit-user-select: none; pointer-events: none; }
@@ -984,7 +986,7 @@
 .grd .grd-gen-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: start; column-gap: 8px; }
 /* The label sits level with the first line of chips (28px tall, so 6px down), however many lines they take. */
 .grd .grd-gen-k { padding-top: 6px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
-.grd .grd-gen-pro { display: block; font-size: 10.5px; font-weight: 600; line-height: 12px; letter-spacing: .02em; color: var(--tl-dim); }
+.grd .grd-gen-pro { display: block; font-size: var(--fs-caption); font-weight: 600; line-height: 12px; letter-spacing: normal; color: var(--tl-dim); }
 .grd .grd-gen-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .grd .tl-pill.grd-gen-chip {
   justify-content: center;
@@ -1144,8 +1146,9 @@
   position: absolute; right: 12px; bottom: 12px;
   padding: 4px 8px; border-radius: 8px;
   background: rgba(10, 11, 13, .9); color: #fff;
-  font-family: var(--mono); font-size: 12px; line-height: 1.2; white-space: nowrap;
+  font-family: var(--font); font-size: 12px; line-height: 1.2; white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 .grd .grd-ctx-ratio.is-low { color: var(--warn, #F5B942); }
 /* The ground is the one bordered surface; the card on it is told apart by its colour alone. */

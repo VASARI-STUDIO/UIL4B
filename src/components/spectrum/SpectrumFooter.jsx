@@ -8,13 +8,15 @@ import PhGlyph from './PhGlyph'
 import { PH_ARROW_UP_RIGHT } from './phosphorNav'
 import { crossRouteHashClick, salesHref } from './salesLinks'
 import { TOOL_VOTES_ON } from '../../data/toolVotes'
+import { BrandLockup } from '../BrandLogo'
 import '../../styles/pages/spectrum-chrome.css'
+import '../../styles/pages/home-footer.css'
 
 // The marketing footer — `UIL4B - Spectrum.dc.html` lines 1595-1633.
 //
 /// The design's composition, reproduced: the display handoff "Save time, and
 // save your mind." over the ink "Open the toolkit" pill, then link columns
-// headed in uppercase mono (TOOLS / PROJECT / LEGAL), all in one auto-fit grid
+// headed in the UI sans (Tools / Project / Legal; the mono voice is retired), all in one auto-fit grid
 // of 220px floors, and a mono baseline under a hairline carrying the copyright
 // line, "© 2026 UI L4B. Spectrum." (the year is computed).
 //
@@ -30,7 +32,7 @@ import '../../styles/pages/spectrum-chrome.css'
 //   · CREDITS SITS IN LEGAL, where Cookies was. There is no cookies page, so
 //     Cookies is dropped; /credits is a licence condition (the CC-BY icon sets
 //     and OFL faces ask for their notices to be reachable).
-//   · THE BASELINE KEEPS THE FOUNDER'S NOTE AND THE BRISBANE CREDIT beside the
+//   · THE BASELINE KEEPS THE AUTHOR'S NOTE AND THE BRISBANE CREDIT beside the
 //     copyright line. The note never opens by itself: it is a button a person
 //     presses.
 //
@@ -51,9 +53,11 @@ const TOOLS = [
 
 // PROJECT — the design's three (1617-1619): sections of the sales page, by anchor.
 const PROJECT = [
-  ['#bench', 'The bench'],
-  ['#specimens', 'Specimens'],
-  ['#index', 'Index'],
+  ['#bookmarks', 'Bookmarks'],
+  ['#try', 'Try the tools'],
+  ['#exports', 'Exports'],
+  ['#examples', 'Examples'],
+  ['#plans', 'Plans'],
 ]
 
 // EXPLORE — the destinations AppFooter reaches that the drawn columns do not.
@@ -141,18 +145,35 @@ function uncoverFooter(event) {
   if (covered > 0) window.scrollBy({ top: covered, behavior: 'instant' })
 }
 
-function Column({ heading, children }) {
+function Column({ heading, className = '', children }) {
   return (
-    <div className="sp-footer-col">
-      <h2 className="sp-footer-col-h">{heading}</h2>
+    <div className={className ? `sp-footer-col ${className}` : 'sp-footer-col'}>
+      <h3 className="sp-footer-col-h">{heading}</h3>
       <ul>{children}</ul>
+    </div>
+  )
+}
+
+// The homepage's rising light, drawn on the footer's own box. Hue is one oklch
+// gradient and intensity is a separate eased mask (home-footer.css), so there is
+// no blur and no filter. It stays under the footer's top edge.
+function Sky() {
+  return (
+    <div className="sp-footer-sky" aria-hidden="true">
+      <div className="sp-footer-horizon" />
+      <div className="sp-footer-core" />
     </div>
   )
 }
 
 // `notice` is a small-print row between the link columns and the baseline: the
 // licence credits a library page owes, kept inside the contentinfo landmark.
-export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null }) {
+// `home` is the homepage's closing look: the rising light, the wordmark, the
+// "Save time" line without a second call to action (the final call above has
+// it), and the Legal column kept at every width. Every other page leaves it off.
+// `pageColumn={false}` drops the "This page" column (the homepage's section
+// anchors) for a page that has none to offer; it only applies with `home`.
+export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false, pageColumn = true }) {
   const year = new Date().getFullYear()
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
@@ -160,71 +181,76 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   // A phone's toolbar resizes the window as it scrolls, which would switch the
   // curtain on and off mid-scroll, so a coarse pointer gets a plain footer.
   const coarse = useMediaQuery('(pointer: coarse)')
-  // On a phone the three legal links leave their column and sit in the baseline
-  // row; from 761px up they are the fourth column, as drawn. One tree, chosen
-  // here, so no link exists twice in the DOM.
-  const phone = useMediaQuery('(max-width: 760px)')
   const curtain = useCurtain(footerRef, reveal && !reducedMotion && !coarse)
 
   return (
     <footer
       ref={footerRef}
-      className="sp-footer"
+      className={home ? `sp-footer sp-footer--home${pageColumn ? '' : ' sp-footer--no-page'}` : 'sp-footer'}
       data-curtain={curtain || undefined}
       onFocus={curtain ? uncoverFooter : undefined}
     >
+      {home && <Sky />}
       <div className="sp-footer-inner">
         <div className="sp-footer-grid">
           <div className="sp-footer-brand">
             <p className="sp-footer-say">Save time, and save your mind.</p>
-            <Link className="sp-footer-cta" to={toolkitTo}>
-              <span>Open the toolkit</span>
-              <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
-            </Link>
+            {!home && (
+              <Link className="sp-footer-cta" to={toolkitTo}>
+                <span>Open the toolkit</span>
+                <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
+              </Link>
+            )}
           </div>
 
           {/* `display:contents`, so the columns are cells of the one grid
               while still sitting inside a Footer navigation landmark. */}
           <nav className="sp-footer-links" aria-label="Footer">
-            <Column heading="TOOLS">
+            <h2 className="sr-only">Site links</h2>
+            <Column heading="Tools">
               <li><NavLink to="/tools">All tools</NavLink></li>
               {TOOLS.map(([groupId, label]) => (
                 <li key={groupId}><NavLink to={categoryDestination(groupId)}>{label}</NavLink></li>
               ))}
             </Column>
-            <Column heading="PROJECT">
-              {PROJECT.map(([hash, label]) => {
-                const href = salesHref(hash, pathname)
-                return (
-                  <li key={hash}>
-                    {href.startsWith('#')
-                      ? <a href={href}>{label}</a>
-                      : <Link to={href} onClick={crossRouteHashClick(href)}>{label}</Link>}
-                  </li>
-                )
-              })}
-            </Column>
-            <Column heading="EXPLORE">
+            {(pageColumn || !home) && (
+              <Column heading={home ? 'This page' : 'Project'}>
+                {PROJECT.map(([hash, label]) => {
+                  const href = salesHref(hash, pathname)
+                  return (
+                    <li key={hash}>
+                      {href.startsWith('#')
+                        ? <a href={href}>{label}</a>
+                        : <Link to={href} onClick={crossRouteHashClick(href)}>{label}</Link>}
+                    </li>
+                  )
+                })}
+              </Column>
+            )}
+            <Column heading="Explore">
               {EXPLORE.map(([to, label]) => (
                 <li key={to}><NavLink to={to}>{label}</NavLink></li>
               ))}
             </Column>
-            {!phone && (
-              <Column heading="LEGAL">
-                {LEGAL.map(([to, label]) => (
-                  <li key={to}><NavLink to={to}>{label}</NavLink></li>
-                ))}
-              </Column>
-            )}
+            {/* The three legal links are in the page twice: here as the fourth
+                column from 761px up, and in the baseline row below on a phone.
+                CSS shows one and hides the other (display:none also drops it from
+                the accessibility tree), so the prerendered tree is right at
+                every width and nothing reflows after hydration. */}
+            <Column heading="Legal" className="sp-footer-col--legal">
+              {LEGAL.map(([to, label]) => (
+                <li key={to}><NavLink to={to}>{label}</NavLink></li>
+              ))}
+            </Column>
           </nav>
         </div>
 
         {notice}
 
         <div className="sp-footer-legal">
-          <span className="sp-footer-copy">© {year} UI L4B. Spectrum.</span>
+          <span className="sp-footer-copy">© {year} UI L4B.{home ? '' : ' Spectrum.'}</span>
           <FounderNote />
-          {phone && (
+          {!home && (
             <nav className="sp-footer-legal-links" aria-label="Legal">
               {LEGAL.map(([to, label]) => (
                 <NavLink key={to} to={to}>{label}</NavLink>
@@ -239,11 +265,24 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
               target="_blank"
               rel="noopener noreferrer"
             >
-              Dylan Coleman<span aria-hidden="true"> ↗</span>
+              Dylan Coleman
+              {home
+                ? (
+                  <span className="mi-go sp-footer-attrib-icon" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M7 17L17 7M8 7h9v9" /></svg>
+                  </span>
+                )
+                : <span aria-hidden="true"> ↗</span>}
               <span className="sr-only"> (opens in a new tab)</span>
             </a>
           </span>
         </div>
+
+        {home && (
+          <div className="sp-footer-mark">
+            <BrandLockup label="UI L4B" />
+          </div>
+        )}
       </div>
     </footer>
   )

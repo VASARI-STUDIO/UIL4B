@@ -1,4 +1,4 @@
-// Emulator tests for the four rules-audit fixes (M1-M4) that ship as founder-gated
+// Emulator tests for the four rules-audit fixes (M1-M4) that ship as approval-gated
 // patches: docs/design/community-icon-rules.patch, analytics-counters-rules.patch,
 // profile-types-rules.patch and submission-payload-rules.patch.
 //
@@ -71,7 +71,7 @@ test('M2 (the bug): a non-admin cannot delete an existing counter, and the admin
   await seedDay()
   await assertFails(setDoc(dayDoc(aliceDb()), { day: DAY, view__home: deleteField() }, { merge: true }))
   await assertFails(setDoc(dayDoc(aliceDb()), { day: DAY, views: deleteField() }, { merge: true }))
-  // The founder's reset sweep (resetPageAnalytics) is a merge write that deletes fields.
+  // The owner's reset sweep (resetPageAnalytics) is a merge write that deletes fields.
   await assertSucceeds(setDoc(dayDoc(adminDb()), { day: DAY, views: deleteField(), view__home: deleteField() }, { merge: true }))
 })
 

@@ -19,10 +19,16 @@ export function applyDesignPatch(base, patch) {
  * copy for a caller that set the working design's identity in the same event.
  * `patch` is for a caller that has just changed the working design in that
  * event (the design passed in is still the render before it).
+ *
+ * `source` records which project the working design was opened from. It
+ * describes the working copy, not the work, so it never goes inside a saved
+ * project.
  */
 export function projectSnapshot(base, opts = {}) {
   const named = typeof opts.identityName === 'string'
     ? { ...base, identity: { ...(base?.identity || {}), name: opts.identityName } }
     : base
-  return applyDesignPatch(named, opts.patch)
+  const out = applyDesignPatch(named, opts.patch)
+  delete out.source
+  return out
 }

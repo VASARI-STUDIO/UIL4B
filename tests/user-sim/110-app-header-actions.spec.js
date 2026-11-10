@@ -156,8 +156,10 @@ test.describe('app header actions', () => {
     await exportBtn.click()
     await expect(exportPanel(page)).toBeVisible()
     await expect(exportPanel(page).getByRole('heading', { level: 2 }), 'the popup is named for the saved project').toHaveText('Export Seeded Project 2')
+    // The working design now names the project it was opened from; the rest is
+    // the saved design, unchanged.
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('vs-current-design'))))
-      .toEqual(savedDesign)
+      .toEqual({ ...savedDesign, source: { projectId: 'seed-2' } })
   })
 
   test('on the dashboard Dashboard is the current page and the logo goes to the home page', async ({ page }) => {

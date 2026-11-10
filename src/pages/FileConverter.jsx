@@ -1,15 +1,18 @@
 import MenuSelect from '../components/tool/MenuSelect'
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import useMediaQuery from '../hooks/useMediaQuery'
 import JSZip from 'jszip'
 import { ToolLayout, ToolButton } from '../components/tool/ToolLayout'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import DropZone from '../components/converter/DropZone'
 import AnimationBuilder from '../components/converter/AnimationBuilder'
+import EditBar from '../components/converter/EditBar'
+import useEditHistory from '../components/converter/useEditHistory'
 import JobStatus from '../components/converter/JobStatus'
 import {
-  loadImage, revealResult, scrollDocTo, stickyTopOffset, useGatedDownload,
+  loadImage, revealResult, scrollDocTo, stickyTopOffset, useActionBarLift, useGatedDownload,
 } from '../components/converter/shared'
 import {
   DRAFT_FORMATS,
@@ -26,11 +29,14 @@ import {
   outputDimensions,
 } from '../utils/imageResize'
 import Segmented from '../components/converter/Segmented'
+import CropBox from '../components/converter/CropBox'
+import ResultPreview from '../components/converter/ResultPreview'
 import {
-  ANIMATION_FORMATS, CROP_SHAPES, DIRECTIONS, DITHERS, FPS_MAX, FPS_MIN, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
-  MAX_ANIMATION_SIDE, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TURNS,
-  animatedImageSeconds, clampFps, commitNumber, cropRect, findFormat, formatBytes, formatTime, outputFrames, outputSize,
-  reverseFits, videoToAnimationArgs,
+  ANIMATION_FORMATS, CORNER_DEFAULT, CORNER_MAX, CORNER_MIN, CROP_SHAPES, CUTOUTS, DIRECTIONS, DITHERS, FIT_MODES,
+  FPS_MAX, FPS_MIN, FRAME_EXPORTS, GIF_COLOURS_MAX, GIF_COLOURS_MIN,
+  MAX_ANIMATION_SIDE, MAX_FRAMES as ENGINE_MAX_FRAMES, PLAY_OPTIONS, PROBE_MAX_BYTES, QUALITY_LEVELS, SPEEDS, TRANSPARENT, TURNS,
+  animatedImageSeconds, clampBox, clampFps, commitNumber, cropPlan, findVideoFormat, formatBytes, formatTime,
+  outputFrames, outputSize, resolveFill, reverseFits, spriteFits, spriteLayout, splitPngStream, videoToAnimationArgs,
 } from '../utils/mediaEncode'
 import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
 import {
@@ -191,6 +197,9 @@ function revealQueue(node) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FileConverter({ toast }) {
+  // On a phone the intro sits behind a "How it works" row so the drop zone is on
+  // the first screen; from 768px it is the plain paragraph under the tabs.
+  const phone = useMediaQuery('(max-width: 767px)')
   // Pick up anything handed over in memory — the dashboard's quick-upload tile
   // (files only) or the homepage Image panel (files plus an output draft).
   //
@@ -223,6 +232,8 @@ export default function FileConverter({ toast }) {
   }
 
   const navigate = useNavigate()
+  const panelRef = useRef(null)
+  useActionBarLift(panelRef)
 
   return (
     <ToolLayout
@@ -264,19 +275,31 @@ export default function FileConverter({ toast }) {
             </button>
           ))}
         </div>
-        <p className="fc-about">
-          Convert images between PNG, JPEG, WebP and favicon ICO (and to AVIF
-          where your browser can make it), build
-          animations from frames, edit videos and GIFs (crop, turn, speed,
-          reverse) and save them as GIF, WebP, APNG, MP4 or WebM, or pull frames
-          out of a video. It all runs in your browser and your files are never
-          uploaded. Image conversion works offline. The video tools download a
-          converter engine, about 9 MB, from a public code CDN the first time
-          you use one, then keep it cached.
-        </p>
+        {(() => {
+          const about = (
+            <p className="fc-about">
+              Convert images between PNG, JPEG, WebP and favicon ICO (and to AVIF
+              where your browser can make it), build
+              animations from frames, edit videos and GIFs (crop, turn, speed,
+              reverse) and save them as GIF, WebP, APNG, MP4 or WebM, or pull frames
+              out of a video. It all runs in your browser and your files are never
+              uploaded. Image conversion works offline. The video tools download a
+              converter engine, about 9 MB, from a public code CDN the first time
+              you use one, then keep it cached.
+            </p>
+          )
+          return phone
+            ? (
+              <details className="fc-howto">
+                <summary>How it works</summary>
+                {about}
+              </details>
+            )
+            : about
+        })()}
       </div>
 
-      <div className="fc-panel" role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
+      <div className="fc-panel" ref={panelRef} role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
         {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
         {mode === 'animation' && <AnimationBuilder toast={toast} />}
         {mode === 'video' && <VideoConvert toast={toast} />}
@@ -671,7 +694,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
 
             {!fmt.ico && (
               <div className="fc-insp-sec">
-                <div className="fc-pair">
+                <div className="fc-pair fc-pair--size">
                   <div>
                     <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
                     <MenuSelect label="Output size limit" id="fc-img-size" className="fc-field" value={maxDim} onChange={nextValue => setMaxDim(+nextValue)} disabled={busy} aria-label="Output size limit">
@@ -693,19 +716,26 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     reasoning about two multipliers. */}
                 {sized.length > 0 && (
                   <div className="fc-outsize" aria-live="polite">
-                    <span className="fc-outsize-k">Output</span>
-                    {sized.length === 1 ? (
-                      <span className="fc-outsize-v">
-                        {sized[0].srcW}×{sized[0].srcH}
-                        <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
-                        <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
-                      </span>
-                    ) : (
-                      <span className="fc-outsize-v">
-                        {sized.length} images, longest side <strong>{widestOut}</strong> px
-                      </span>
-                    )}
-                    {anyCapped && <span className="fc-note">held to the size limit</span>}
+                    <div className="fc-outsize-line">
+                      <span className="fc-outsize-k">Output</span>
+                      {sized.length === 1 ? (
+                        <span className="fc-outsize-v">
+                          {sized[0].srcW}×{sized[0].srcH}
+                          {/* Drawn as an arrow, spoken as "to": the arrow alone
+                              left a screen reader with two sizes and no link. */}
+                          <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
+                          <span className="sr-only"> to </span>
+                          <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
+                        </span>
+                      ) : (
+                        <span className="fc-outsize-v">
+                          {sized.length} images, longest side <strong>{widestOut}</strong> px
+                        </span>
+                      )}
+                    </div>
+                    {/* Always one line tall, so the note arriving does not push
+                        the Convert button down. */}
+                    <span className="fc-note fc-outsize-cap">{anyCapped ? 'held to the size limit' : ''}</span>
                   </div>
                 )}
               </div>
@@ -752,15 +782,17 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
  * ratio, so the crop overlay's percentages land on the picture and not on
  * letterbox bars. Without it (Extract frames) it is the plain player.
  */
-function VideoSource({ srcUrl, videoRef, onLoadedMetadata, onError, facts, onReplace, busy, editor }) {
+function VideoSource({ srcUrl, videoRef, imgRef, onLoadedMetadata, onError, facts, onReplace, busy, editor, toggle, after, edits }) {
   const size = editor?.size
   const crop = editor?.crop
   return (
     <div className="fc-source">
+      {toggle}
       {editor ? (
-        <div className="fc-vstage" style={size ? { '--src-w': size.w, '--src-h': size.h } : undefined}>
+        <div className="fc-vstage" hidden={editor.hidden} style={size ? { '--src-w': size.w, '--src-h': size.h } : undefined}>
           {editor.isImage ? (
             <img
+              ref={imgRef}
               src={srcUrl}
               alt="Animation preview"
               onLoad={e => editor.onImageLoad(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)}
@@ -769,7 +801,9 @@ function VideoSource({ srcUrl, videoRef, onLoadedMetadata, onError, facts, onRep
           ) : (
             <video ref={videoRef} src={srcUrl} controls muted playsInline aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} onError={onError} />
           )}
-          {crop && size && (
+          {editor.box && size ? (
+            <CropBox box={editor.box} size={size} onChange={editor.onBox} disabled={editor.disabled} />
+          ) : crop && size && (
             <div
               className="fc-crop-keep"
               aria-hidden="true"
@@ -785,6 +819,8 @@ function VideoSource({ srcUrl, videoRef, onLoadedMetadata, onError, facts, onRep
       ) : (
         <video ref={videoRef} src={srcUrl} controls muted className="fc-video" aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} />
       )}
+      {after}
+      {edits}
       <div className="fc-source-card">
         <dl className="fc-facts">
           {facts.map(([k, v]) => (
@@ -844,7 +880,25 @@ function ShapeGlyph({ w, h, dashed }) {
   )
 }
 
-const SHAPE_GLYPH_SIZE = { '1:1': [12, 12], '4:5': [11, 14], '16:9': [16, 9], '9:16': [9, 16] }
+const SHAPE_GLYPH_SIZE = { '1:1': [12, 12], '4:5': [11, 14], '16:9': [16, 9], '9:16': [9, 16], custom: [12, 9] }
+// The cut-outs, drawn as the outline they leave.
+const CUT_GLYPH = {
+  none: <rect x="2" y="3" width="12" height="10" rx="0" />,
+  circle: <circle cx="8" cy="8" r="5.5" />,
+  oval: <ellipse cx="8" cy="8" rx="6.5" ry="4.5" />,
+  rounded: <rect x="2" y="3" width="12" height="10" rx="4" />,
+}
+const cutGlyph = (id) => (
+  <svg className="fc-seg-glyph" viewBox="0 0 16 16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.5">
+    {CUT_GLYPH[id]}
+  </svg>
+)
+const FILL_MODES = [{ id: 'clear', label: 'Transparent' }, { id: 'colour', label: 'Colour' }]
+const VIEW_MODES = [{ id: 'before', label: 'Before' }, { id: 'after', label: 'After' }]
+const FRAME_NOUN = { frames: 'frames ZIP', sprite: 'sprite sheet' }
+const FRAMES_NOTE = 'Every frame the edits make, as numbered PNG files in one ZIP.'
+const SPRITE_UNKNOWN_NOTE = 'A sprite sheet needs to know how long the clip is, and this file doesn’t say, so it’s off.'
+const SPRITE_BIG_NOTE = 'That is too many frames for one sheet. Shorten the clip, lower the frame rate or make it narrower.'
 const ANCHOR_LABELS = {
   x: [{ id: 'start', label: 'Left' }, { id: 'centre', label: 'Centre' }, { id: 'end', label: 'Right' }],
   y: [{ id: 'start', label: 'Top' }, { id: 'centre', label: 'Centre' }, { id: 'end', label: 'Bottom' }],
@@ -889,6 +943,14 @@ function VideoConvert({ toast }) {
   const [trimEnd, setTrimEnd] = useState(null) // null = to the end
   const [shape, setShape] = useState('original')
   const [anchor, setAnchor] = useState('centre')
+  const [box, setBox] = useState(null) // the custom crop box, in source pixels
+  const [fit, setFit] = useState('crop') // 'crop' cuts to the shape, 'fit' adds bars
+  const [cut, setCut] = useState('none')
+  const [radius, setRadius] = useState(CORNER_DEFAULT)
+  const [fill, setFill] = useState(TRANSPARENT) // the colour outside bars and cut-outs
+  const [fillColour, setFillColour] = useState('#000000')
+  const [view, setView] = useState('before')
+  const imgRef = useRef(null)
   const [turn, setTurn] = useState(0)
   const [flipH, setFlipH] = useState(false)
   const [flipV, setFlipV] = useState(false)
@@ -899,12 +961,36 @@ function VideoConvert({ toast }) {
   const [job, setJob] = useState(null)
   const [engineFailed, setEngineFailed] = useState(false)
   const [result, setResult] = useState(null) // { url, blob, bytes, format, sig }
+  // The edits as one value, for Undo and Redo. The controls above stay plain
+  // state; stepping back writes an earlier recipe into them all at once.
+  const recipe = useMemo(
+    () => ({ trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction }),
+    [trimStart, trimEnd, shape, anchor, box, fit, cut, radius, fill, fillColour, turn, flipH, flipV, speed, direction],
+  )
+  const history = useEditHistory(recipe, (r) => {
+    setTrimStart(r.trimStart)
+    setTrimEnd(r.trimEnd)
+    setShape(r.shape)
+    setAnchor(r.anchor)
+    setBox(r.box)
+    setFit(r.fit)
+    setCut(r.cut)
+    setRadius(r.radius)
+    setFill(r.fill)
+    setFillColour(r.fillColour)
+    setTurn(r.turn)
+    setFlipH(r.flipH)
+    setFlipV(r.flipV)
+    setSpeed(r.speed)
+    setDirection(r.direction)
+  }, !!srcUrl && !job)
+  const resetEdits = history.reset
   const videoRef = useRef(null)
   // One token per run. Cancel (and unmount) bumps it, and so does every new run,
   // so a run can only ever act while it is the latest one. A shared boolean,
   // which the next run reset to false, let a cancelled run wake up and encode.
   const runRef = useRef(0)
-  const fmt = findFormat(format)
+  const fmt = findVideoFormat(format)
   const working = !!job
   const resultRef = useRef(null)
   const revealNext = useRef(false)
@@ -976,7 +1062,21 @@ function VideoConvert({ toast }) {
     setTrimEnd(null)
     setShape('original')
     setAnchor('centre')
-  }, [srcUrl, result, toast])
+    setBox(null)
+    setFit('crop')
+    setView('before')
+    // The edits above are the new file's starting point, not steps to undo.
+    resetEdits({ trimStart: 0, trimEnd: null, shape: 'original', anchor: 'centre', box: null, fit: 'crop' })
+  }, [srcUrl, result, toast, resetEdits])
+
+  // Picking Custom starts a box a tenth in from every edge, so there is
+  // something to drag; the typed fields and the drag edit the same box.
+  const pickShape = (id) => {
+    setShape(id)
+    if (id === 'custom' && !box && srcSize) {
+      setBox(clampBox({ x: srcSize.w * 0.1, y: srcSize.h * 0.1, w: srcSize.w * 0.8, h: srcSize.h * 0.8 }, srcSize.w, srcSize.h))
+    }
+  }
 
   // ── What the settings come to ──────────────────────────────────────────────
   const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
@@ -985,8 +1085,15 @@ function VideoConvert({ toast }) {
   const trimmed = clipLen > 0 && (start > 0 || end < duration)
   const trimInvalid = duration > 0 && end <= start
 
-  const crop = srcSize ? cropRect(srcSize.w, srcSize.h, shape, anchor) : null
-  const outSize = srcSize ? outputSize(srcSize.w, srcSize.h, { crop, turn, width }) : null
+  const plan = srcSize
+    ? cropPlan(srcSize.w, srcSize.h, { shape, anchor, box, fit })
+    : { crop: null, pad: null, frame: null }
+  const crop = plan.crop
+  const pad = plan.pad
+  const outSize = srcSize ? outputSize(srcSize.w, srcSize.h, { crop: plan.frame, turn, width }) : null
+  // Transparent only where the format can hold it; MP4 gets the colour.
+  const outside = resolveFill(fmt, fill === TRANSPARENT && fmt.alpha ? TRANSPARENT : fillColour)
+  const outsideShown = !!pad || cut !== 'none'
   const unreadable = srcFailed && !srcSize
   // The length Reverse is measured against: the clip for a video, the header's
   // sum of frame delays for a GIF or WebP. 0 means it is not known.
@@ -1008,10 +1115,20 @@ function VideoConvert({ toast }) {
   const frames = secs > 0 ? outputFrames(secs, speed, fps, dir) : 0
   const outSeconds = frames / clampFps(fps)
   const isGif = fmt.id === 'gif'
+  const isFramesOut = fmt.id === 'frames'
+  const isSprite = fmt.id === 'sprite'
+  const isFrameExport = isFramesOut || isSprite
+  // The sheet's grid, from how many frames the edits make (the engine writes at
+  // most ENGINE_MAX_FRAMES). Not known while the clip's length is not.
+  const sheet = isSprite && frames > 0 && outSize ? spriteLayout(Math.min(frames, ENGINE_MAX_FRAMES), outSize.w, outSize.h) : null
+  const sheetWhy = !isSprite || trimInvalid ? null : !sheet ? (lengthPending ? null : 'unknown') : spriteFits(sheet) ? null : 'big'
 
   // Everything a result depends on. A result made from a different signature is
   // labelled out of date rather than presented as the current one.
-  const sig = JSON.stringify([format, fps, width, isGif ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir, isGif ? colours : 0, isGif ? dither : 0])
+  const sig = JSON.stringify([
+    format, fps, width, isGif || isFrameExport ? 0 : quality, plays, trimStart, trimEnd, shape, anchor, turn, flipH, flipV, speed, dir,
+    isGif ? colours : 0, isGif ? dither : 0, shape === 'custom' ? box : 0, shape === 'original' ? 0 : fit, cut, cut === 'rounded' ? radius : 0, outsideShown ? outside : 0,
+  ])
 
   const convert = useCallback(async () => {
     if (!file || working) return
@@ -1062,15 +1179,31 @@ function VideoConvert({ toast }) {
         args: videoToAnimationArgs({
           format: target.id, input: inName, fps, width, plays, quality,
           start, length: trimmed ? clipLen : 0,
-          crop, turn, flipH, flipV, speed, direction: dir, colours, dither,
+          crop, pad, turn, flipH, flipV, speed, direction: dir, colours, dither,
+          fill: outside.transparent ? TRANSPARENT : outside.colour, cut, radius, sheet, maxFrames: ENGINE_MAX_FRAMES,
         }),
-        output: `output.${target.ext}`,
+        output: `output.${target.engineExt || target.ext}`,
         onTime: (t) => { if (!stale()) setJob({ stage: 'encode', done: t, total, unit: 'time' }) },
       })
       if (stale()) return
-      const blob = new Blob([bytes], { type: target.mime })
+      let blob
+      let count = 0
+      if (target.id === 'frames') {
+        // The engine wrote the frames as one PNG stream; each goes in the ZIP
+        // as its own numbered file. PNGs are already compressed, so they are stored.
+        const pngs = splitPngStream(bytes)
+        if (!pngs.length) throw new Error('the encoder produced no frames')
+        const zip = new JSZip()
+        const stem = (file.name || 'video').replace(/.[^.]+$/, '')
+        pngs.forEach((png, i) => zip.file(`${stem}-${String(i + 1).padStart(4, '0')}.png`, png))
+        blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' })
+        count = pngs.length
+        if (stale()) return
+      } else {
+        blob = new Blob([bytes], { type: target.mime })
+      }
       revealNext.current = true
-      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig })
+      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id, sig, count, sheet: target.id === 'sprite' ? sheet : null, size: outSize })
       setJob(null)
       toast(`${target.label} ready`)
     } catch (err) {
@@ -1082,7 +1215,7 @@ function VideoConvert({ toast }) {
           ? UNREADABLE_VIDEO_NOTE
           : 'Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, turn, flipH, flipV, speed, dir, colours, dither, frames, sig, toast])
+  }, [file, working, fmt, width, fps, plays, quality, trimInvalid, trimmed, clipLen, start, crop, pad, turn, flipH, flipV, speed, dir, colours, dither, outside, cut, radius, sheet, outSize, frames, sig, toast])
 
   const cancel = () => {
     runRef.current++
@@ -1098,8 +1231,9 @@ function VideoConvert({ toast }) {
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     setSrcUrl(null)
     setResult(prev => { if (prev?.url) URL.revokeObjectURL(prev.url); return null })
+    resetEdits({})
   }
-  const resultFmt = result ? findFormat(result.format) : null
+  const resultFmt = result ? findVideoFormat(result.format) : null
   const base = (file?.name || 'video').replace(/\.[^.]+$/, '')
 
   // ── The controls' options ──────────────────────────────────────────────────
@@ -1114,7 +1248,22 @@ function VideoConvert({ toast }) {
     }
     return { id: s.id, label: s.label, glyph }
   })
-  const anchorOptions = ANCHOR_LABELS[crop?.axis || 'x']
+  const anchorOptions = ANCHOR_LABELS[(crop || pad)?.axis || 'x']
+  const cutOptions = CUTOUTS.map(c => ({ id: c.id, label: c.label, glyph: cutGlyph(c.id) }))
+  const setBoxField = (key, raw) => {
+    if (!srcSize || !box) return
+    const room = { x: srcSize.w - box.w, y: srcSize.h - box.h, w: srcSize.w - box.x, h: srcSize.h - box.y }[key]
+    const next = commitNumber(raw, { min: key === 'x' || key === 'y' ? 0 : 2, max: Math.max(0, room), fallback: box[key] })
+    setBox(clampBox({ ...box, [key]: next }, srcSize.w, srcSize.h))
+  }
+  const defaultBox = srcSize
+    ? clampBox({ x: srcSize.w * 0.1, y: srcSize.h * 0.1, w: srcSize.w * 0.8, h: srcSize.h * 0.8 }, srcSize.w, srcSize.h)
+    : null
+  const switchView = (v) => {
+    setView(v)
+    if (v === 'after') videoRef.current?.pause()
+  }
+  const previewReady = view === 'after' && !!srcSize && !!outSize && !unreadable
   const speedOptions = SPEEDS.map(s => ({ id: s.id, label: s.label, name: s.name }))
   const flipBtn = (axis, on, set) => (
     <button
@@ -1131,7 +1280,14 @@ function VideoConvert({ toast }) {
 
   const consequence = !srcSize
     ? (unreadable ? NO_PREVIEW_NOTE : 'Reading the file…')
-    :`${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
+    : isSprite && sheet
+      ? `${sheet.cols} × ${sheet.rows} sheet · ${sheet.w} × ${sheet.h} px`
+      : isFramesOut && frames > 0
+        ? `${Math.min(frames, ENGINE_MAX_FRAMES)} PNG${frames === 1 ? '' : 's'} · ${outSize.w} × ${outSize.h} px each`
+        : `${outSize.w} × ${outSize.h} px` + (frames > 0 ? ` · ${outSeconds.toFixed(1)} s · ${frames} frame${frames === 1 ? '' : 's'}` : '')
+  const actionLabel = isFrameExport ? `Make ${FRAME_NOUN[fmt.id]}` : `Convert to ${fmt.label}`
+  const resultName = result?.format === 'frames' ? `${base}-frames.zip` : result?.format === 'sprite' ? `${base}-sprite.png` : `${base}.${resultFmt?.ext}`
+  const resultNoun = FRAME_NOUN[result?.format] || resultFmt?.label
 
   return (
     <>
@@ -1148,6 +1304,18 @@ function VideoConvert({ toast }) {
             <VideoSource
               srcUrl={srcUrl}
               videoRef={videoRef}
+              imgRef={imgRef}
+              toggle={srcSize && !unreadable ? (
+                <Segmented id="fc-vid-view" label="Preview" options={VIEW_MODES} value={view} onChange={switchView} className="fc-seg--view" />
+              ) : null}
+              after={previewReady ? (
+                <ResultPreview
+                  mediaRef={isImage ? imgRef : videoRef} isImage={isImage} srcSize={srcSize} plan={plan}
+                  turn={turn} flipH={flipH} flipV={flipV} cut={cut} radius={radius} outside={outside}
+                  outSize={outSize} dir={dir} speed={speed} fps={fps} start={start} len={secs} facts={consequence}
+                />
+              ) : null}
+              edits={<EditBar history={history} disabled={working} />}
               // A recorded WebM often reports Infinity until it is played
               // through; treat that as unknown rather than as a length.
               onError={() => setSrcFailed(true)}
@@ -1161,6 +1329,10 @@ function VideoConvert({ toast }) {
                 isImage,
                 size: srcSize,
                 crop,
+                box: shape === 'custom' ? box : null,
+                onBox: setBox,
+                disabled: working,
+                hidden: previewReady,
                 onImageLoad: (w, h) => { if (w > 0 && h > 0) setSrcSize({ w, h }) },
               }}
               facts={[
@@ -1177,18 +1349,24 @@ function VideoConvert({ toast }) {
                 <h2 className="fc-eyebrow">Result</h2>
                 {resultFmt.kind === 'video' ? (
                   <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
-                ) : (
+                ) : resultFmt.kind === 'frames' ? null : (
                   <img className="fc-result-media" src={result.url} alt={`${resultFmt.label} result`} />
                 )}
                 <p className="fc-meta">
                   {resultFmt.label} · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
                   {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
                 </p>
+                {result.format === 'frames' && result.size && (
+                  <p className="fc-note">{result.count} numbered PNG file{result.count === 1 ? '' : 's'}, {result.size.w} × {result.size.h} px each.</p>
+                )}
+                {result.format === 'sprite' && result.sheet && result.size && (
+                  <p className="fc-note">{result.sheet.cols} across, {result.sheet.rows} down. Each frame is {result.size.w} × {result.size.h} px.</p>
+                )}
                 {result.sig !== sig && (
                   <p className="fc-note fc-note--warn">Settings changed since this was made. Convert again to update it.</p>
                 )}
-                <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.blob, `${base}.${resultFmt.ext}`, `download the ${resultFmt.label}`)}>
-                  Download {resultFmt.label}
+                <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.blob, resultName, `download the ${resultNoun}`)}>
+                  Download {resultNoun}
                 </button>
               </section>
             )}
@@ -1199,9 +1377,23 @@ function VideoConvert({ toast }) {
             <div className="fc-insp-sec">
               <label className="fc-eyebrow" htmlFor="fc-vid-format">Output format</label>
               <MenuSelect label="Output format" id="fc-vid-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={working}>
-                {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                <optgroup label="Animation">
+                  {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
+                <optgroup label="Frames">
+                  {FRAME_EXPORTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </optgroup>
               </MenuSelect>
-              <p className="fc-note">Sound is removed</p>
+              {isFramesOut && <p className="fc-note">{FRAMES_NOTE}{frames > ENGINE_MAX_FRAMES ? ` The first ${ENGINE_MAX_FRAMES} of ${frames} are saved.` : ''}</p>}
+              {isSprite && (
+                <p className="fc-note">
+                  {sheetWhy === 'unknown' ? SPRITE_UNKNOWN_NOTE
+                    : sheetWhy === 'big' ? SPRITE_BIG_NOTE
+                      : sheet ? `One PNG: ${sheet.cols} across, ${sheet.rows} down, each frame ${outSize.w} × ${outSize.h} px.`
+                        : 'Every frame the edits make, tiled in one PNG.'}
+                </p>
+              )}
+              {!isFrameExport && <p className="fc-note">Sound is removed</p>}
             </div>
             {duration > 0 && (
               <div className="fc-insp-sec">
@@ -1232,17 +1424,72 @@ function VideoConvert({ toast }) {
             )}
             <div className="fc-insp-sec">
               <Segmented
-                id="fc-vid-shape" label="Shape" options={shapeOptions} value={shape} onChange={setShape}
+                id="fc-vid-shape" label="Shape" options={shapeOptions} value={shape} onChange={pickShape}
                 disabled={working || !srcSize} className="fc-seg--shape"
               />
               {!srcSize && <p className="fc-note">{unreadable ? NO_PREVIEW_NOTE : 'Reading the file…'}</p>}
-              {shape !== 'original' && (
+              {shape === 'custom' && box && srcSize && (
                 <>
+                  <div className="fc-box-grid">
+                    {[['x', 'Left'], ['y', 'Top'], ['w', 'Width'], ['h', 'Height']].map(([key, label]) => (
+                      <div key={key}>
+                        <label className="fc-eyebrow" htmlFor={`fc-vid-box-${key}`}>{label} (px)</label>
+                        <DraftNumber
+                          id={`fc-vid-box-${key}`} className="fc-field fc-field--num" disabled={working}
+                          shown={box[key]} onCommit={raw => setBoxField(key, raw)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="fc-note">Drag the box on the preview, or type its numbers. They are pixels of the original, {srcSize.w} × {srcSize.h}.</p>
+                  <button type="button" className="fc-btn fc-btn--quiet" onClick={() => setBox(defaultBox)} disabled={working}>Reset box</button>
+                  {!crop && <p className="fc-note">The box covers the whole picture, so nothing is cut.</p>}
+                </>
+              )}
+              {shape !== 'original' && shape !== 'custom' && (
+                <>
+                  <Segmented id="fc-vid-fit" label="Crop or fit" options={FIT_MODES} value={fit} onChange={setFit} disabled={working} />
+                  <p className="fc-note">{fit === 'fit' ? 'Fit keeps the whole picture and adds bars to reach the shape. Check them in After.' : 'Crop cuts off what does not fit the shape.'}</p>
                   <Segmented
                     id="fc-vid-anchor" label="Position" options={anchorOptions} value={anchor} onChange={setAnchor}
-                    disabled={working || !crop}
+                    disabled={working || !(crop || pad)}
                   />
-                  {!crop && <p className="fc-note">Nothing to cut at this shape</p>}
+                  {!(crop || pad) && <p className="fc-note">{fit === 'fit' ? 'Already this shape, so no bars are added' : 'Nothing to cut at this shape'}</p>}
+                </>
+              )}
+            </div>
+            <div className="fc-insp-sec">
+              <Segmented id="fc-vid-cut" label="Cut-out" options={cutOptions} value={cut} onChange={setCut} disabled={working} className="fc-seg--shape" />
+              {cut === 'rounded' && (
+                <div className="fc-pair">
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-vid-radius">Corner radius (%)</label>
+                    <DraftNumber
+                      id="fc-vid-radius" className="fc-field fc-field--num" disabled={working}
+                      shown={radius} onCommit={raw => setRadius(commitNumber(raw, { min: CORNER_MIN, max: CORNER_MAX, fallback: radius }))}
+                    />
+                  </div>
+                </div>
+              )}
+              {cut !== 'none' && <p className="fc-note">Everything outside the {cut === 'rounded' ? 'rounded corners' : cut} is cleared or filled.</p>}
+              {outsideShown && (
+                <>
+                  <Segmented
+                    id="fc-vid-outside" label="Outside" options={FILL_MODES} value={outside.transparent ? 'clear' : 'colour'}
+                    onChange={id => setFill(id === 'clear' ? TRANSPARENT : 'colour')} disabled={working}
+                    isOptionDisabled={o => o.id === 'clear' && !fmt.alpha}
+                  />
+                  {!outside.transparent && (
+                    <div className="fc-row">
+                      <ColorPickerPop
+                        value={fillColour} onChange={setFillColour} disabled={working}
+                        ariaLabel="Outside colour" triggerClassName="fc-bg-pick"
+                      />
+                      <p className="fc-note">{pad ? 'Colour of the bars' : 'Colour outside the cut-out'}</p>
+                    </div>
+                  )}
+                  {!fmt.alpha && <p className="fc-note">{fmt.label} has no transparency, so the outside is filled with a colour.</p>}
+                  {fmt.id === 'gif' && outside.transparent && <p className="fc-note">GIF transparency is on or off, so the edge of a cut-out is not smooth.</p>}
                 </>
               )}
             </div>
@@ -1284,7 +1531,7 @@ function VideoConvert({ toast }) {
                   </MenuSelect>
                 </div>
               </div>
-              {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
+              {!fmt.loops && !isFrameExport && <p className="fc-note">Video files store no loop count — the player decides</p>}
             </div>
             <div className="fc-insp-sec">
               <div className="fc-pair">
@@ -1314,6 +1561,8 @@ function VideoConvert({ toast }) {
                   <Segmented id="fc-vid-dither" label="Dither" options={DITHERS} value={dither} onChange={setDither} disabled={working} />
                   <p className="fc-note">Pattern is Bayer, Diffusion is Floyd-Steinberg.</p>
                 </>
+              ) : isFrameExport ? (
+                <p className="fc-note">PNG frames are lossless, so colours and quality do not apply.</p>
               ) : (
                 <>
                   <div className="fc-pair">
@@ -1331,8 +1580,8 @@ function VideoConvert({ toast }) {
           </aside>
           <div className="fc-actionbar fc-actions">
             <p className="fc-note fc-consequence" aria-live="polite">{consequence}</p>
-            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid}>
-              {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : `Convert to ${fmt.label}`}
+            <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy))}>
+              {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : actionLabel}
             </button>
             <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />
           </div>

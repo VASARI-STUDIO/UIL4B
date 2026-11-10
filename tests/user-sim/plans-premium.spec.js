@@ -20,14 +20,20 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
     await stub(page)
     await go(page, '/plans')
-    const faq = page.locator('.pr-faq-sec')
-    await expect(faq).toContainText(/charged/i)
-    await expect(faq).toContainText(/cancel/i)
-    await expect(faq).toContainText(/refund/i)
-    await expect(faq.getByText('When am I charged?')).toBeVisible()
+    const faq = page.getByRole('region', { name: 'Common questions' }).or(page.locator('section[aria-labelledby="pl-faq-h"]'))
+    await expect(faq.first()).toContainText(/charged/i)
+    await expect(faq.first()).toContainText(/cancel/i)
+    await expect(faq.first()).toContainText(/refund/i)
+    for (const q of ['When am I charged?', 'How do I cancel?', 'Can I get a refund?']) {
+      const button = page.getByRole('button', { name: q })
+      await expect(button).toHaveAttribute('aria-expanded', 'false')
+      await button.click()
+      await expect(button).toHaveAttribute('aria-expanded', 'true')
+      await expect(page.getByRole('region', { name: q })).toBeVisible()
+    }
     const text = await page.locator('main').innerText()
     expect(text).not.toMatch(/cost us nothing/i)
-    // The Free note belongs to the ledger's Free column.
-    if (width >= 1024) expect(text).toContain('Free because most tools run in your browser.')
+    // The Free card keeps its own reassurance line without the retired wording.
+    expect(text).toContain('there’s no time limit')
   })
 }

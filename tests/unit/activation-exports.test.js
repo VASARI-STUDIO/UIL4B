@@ -120,7 +120,7 @@ test('CreateTool resolves the name from the table, not from the tool', () => {
     /const activationId = ACTIVATION_EXPORTS\[normPath\(location\.pathname\)\] \|\| null/,
     'the decision must be a table lookup in CreateTool',
   )
-  assert.match(CODE, /<LiveTool onCopy=\{copy\} onExport=\{exportCopy\}/, 'the hook must reach the mounted tool')
+  assert.match(CODE, /<LiveTool (?:key=\{restoredCount\} )?onCopy=\{copy\} onExport=\{exportCopy\}/, 'the hook must reach the mounted tool')
 })
 
 test('the event fires only after the clipboard write actually succeeded', () => {

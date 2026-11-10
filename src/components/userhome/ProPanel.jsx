@@ -9,7 +9,7 @@ import { PRO_PERKS, UPGRADE_LINE, upgradeOffer } from './workspace'
 // FACTS CHANGED, LAYOUT NOT: the layout is the design's, the facts are the
 // product's. The price is live, in the visitor's own currency (workspace.js
 // upgradeOffer; no amount until one is live), "cancel any time"
-// is gone (there is no cancel flow), the version-history claims are
+// is left to /plans and Settings, the version-history claims are
 // gone (there is no version history), and "Curves and OKLCH controls" is the
 // HCT editor and the per-colour contrast chip, which are what the Palette
 // Builder actually gates. The pill goes to /plans, never to checkout.

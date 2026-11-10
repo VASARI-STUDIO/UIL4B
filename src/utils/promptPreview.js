@@ -1,7 +1,7 @@
 // How a prompt card previews the prompt.
 //
-// THE ASK, and the reference behind it. The founder asked the library to
-// "preivew the prompts" and pointed at motionsites.com: a gallery whose cards
+// THE GOAL, and the reference behind it. The library previews its prompts,
+// taking motionsites.com as the reference: a gallery whose cards
 // continuously auto-play a scrolling preview of the real page behind them, with
 // the title and category beneath and a badge on the paid entries. The
 // transferable idea is not the scrolling — it is that THE CARD SHOWS THE

@@ -58,9 +58,11 @@ const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].ma
 //   --cc-   Contrast Checker live pair
 //   --cq-   the admin community queue previews
 //   --quota- the AI quota meter fill
+//   --ied-g-  the icon editor's Light and Dark ground plates (IconLibrary.jsx writes them on the overlay from groundVars(theme))
+//   --si-   the sliding pill: useSlideIndicator measures the selected pill (--si-x/-y/-w/-h/-r)
 const RUNTIME_FAMILIES = [
   '--uis-', '--pv-', '--tsc-', '--tt-', '--fg-', '--fgd-', '--fpr-',
-  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-',
+  '--plb-', '--stc-', '--cc-', '--cq-', '--quota-', '--hw-type-', '--cs-', '--si-', '--ied-g-',
 ]
 
 // Exact names set inline by a component, not a family: the /login wall gives
@@ -69,7 +71,22 @@ const RUNTIME_FAMILIES = [
 // on each tick mark (its own rotation) and --grd-wheel-angle on the hand (the
 // current angle), which the stylesheet reads as `rotate(var(...))`. The From image dialog sets --c
 // (a point's or strip slot's sampled hex) inline on each marker and slot (FromImageDialog.jsx).
-const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px'])
+// A library toolbar brought back on a phone keeps the left edge and width it
+// had in the page as --peek-left and --peek-w (LibraryToolbar.jsx).
+//
+// The homepage sections hand their data to the stylesheet the same way, one inline property per value:
+//   HomeBookmarks    --l --nl --fd   (a connector's path length, its dash offset and its flow delay)
+//   BookmarkPanes / BookmarkPhonePane   --g   (a gradient swatch's colour stops)
+//   HomeExports      --px --chars --pos --pos-phone --w-px --w-k --w-pxp --proj
+//                    (a type specimen's size and length, a photo's focal point, a word mark's size, the tile strip's offset)
+//   PlanLists        --hpl-c --hpl-c-phone --hpl-phone-order   (a row's band colour and its phone order)
+//   HomeShowcase     --ar   (a screenshot's aspect ratio)
+//   HomeTry          --k   (the tab mark's index)
+//   PaletteTool      --ci --si   (the readable ink on a column, and on the shown colour under it)
+//   FontTool         --fs --fp --pitch   (the specimen size on desktop and phone, and the row pitch)
+const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px', '--peek-left', '--peek-w',
+  '--l', '--nl', '--fd', '--g', '--px', '--chars', '--pos', '--pos-phone', '--w-px', '--w-k', '--w-pxp', '--proj',
+  '--hpl-c', '--hpl-c-phone', '--hpl-phone-order', '--ar', '--k', '--ci', '--si', '--fs', '--fp', '--pitch'])
 
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()

@@ -1,6 +1,6 @@
 // THE ANIMATION BUILDER, DRIVEN END TO END, AND ITS OUTPUT READ BACK.
 //
-// Founder request, 2026-09-16: frames in → animated WebP / GIF / APNG / MP4 /
+// Frames in → animated WebP / GIF / APNG / MP4 /
 // WebM out, with reorder, frame rate, loop and a real preview, inside
 // /create/file-converter.
 //

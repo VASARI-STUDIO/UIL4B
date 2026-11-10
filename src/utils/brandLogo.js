@@ -4,14 +4,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder's reference material for the premium export (UI Examples/Brand kit
-// examples — DSC Labs, OpenPay, Hook) leans hard on logo pages: a mark page, the
+// Reference material for the premium export (the brand-guidelines examples)
+// leans hard on logo pages: a mark page, the
 // mark checked on light, dark and brand grounds, and a clear-space rule drawn
 // with X measurements. UIL4B holds colour, type, scale and icons. It does not
 // hold a logo, and there are exactly two honest ways to finish that sentence:
 // generate the pages that DO follow from a real logo, or omit them and say so.
 //
-// The founder chose the first: let people upload one. So this module is the
+// The choice is the first: let people upload one. So this module is the
 // contract for that upload. Everything the guidelines document knows about a
 // logo comes through here.
 //

@@ -1,12 +1,12 @@
-// Regression coverage for the third founder-reported batch.
+// Regression coverage for the third batch of reported bugs.
 //
-// Same rule as batches 1 and 2 (14- and 16-): each of these reached the founder
+// Same rule as batches 1 and 2 (14- and 16-): each of these reached users
 // because nothing measured the rendered result. These tests measure it.
 import { test, expect } from './base.js'
 import { go, restingScrollY, watch, wheelToRest } from './helpers.js'
 
 /* ── D5 · Auth from the nav must not navigate ────────────────────────────────
- * Founder: on the Palette Library, "Start for Free" changed the URL to /login,
+ * On the Palette Library, "Start for Free" changed the URL to /login,
  * and closing the popup landed on /home instead of back on the library.
  * Was: the nav CTAs were <Link to="/login">, so the SPA left the page before
  * any popup existed — and LoginRoute's dismiss handler fell back to /home. */
@@ -50,8 +50,8 @@ test.describe('nav auth opens over the page you are on', () => {
 
     await dialog.getByRole('button', { name: 'Close' }).click()
     await expect(dialog).toBeHidden()
-    // …and dismissing it is not a navigation either. This is the founder's
-    // report: the X used to land on /home.
+    // …and dismissing it is not a navigation either. This is the old bug:
+    // the X used to land on /home.
     expect(new URL(page.url()).pathname).toBe('/discover/palettes')
     // Nothing remounted, so the scroll position survived. The bug this guards
     // against was landing on a different page at scrollY 0 — a difference of
@@ -123,7 +123,7 @@ test.describe('nav auth opens over the page you are on', () => {
 })
 
 /* ── D3 · The Font Pair config panel must fit the viewport ───────────────────
- * Founder: the "choose the pair" panel ran off the bottom of the screen and cut
+ * The "choose the pair" panel ran off the bottom of the screen and cut
  * off "Build a scale from this pair".
  * Was: .fpr-config was position:sticky with no max-height, inside
  * .fpr-panel{overflow:hidden}, so the overhang could not even be scrolled to.
@@ -178,6 +178,11 @@ async function settleSticky(page, selector = '.fpr-config') {
     if (!el) return Number.POSITIVE_INFINITY
     const stickyTop = parseFloat(getComputedStyle(el).top)
     if (!Number.isFinite(stickyTop)) return Number.POSITIVE_INFINITY
+    // A grid no taller than the panel leaves the page nothing to scroll past it:
+    // the grid's end holds the panel above its offset, and the page is parked
+    // at its end.
+    const atEnd = window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1
+    if (grid && atEnd && el.getBoundingClientRect().bottom <= grid.getBoundingClientRect().bottom + 1) return 0
     return Math.abs(el.getBoundingClientRect().top - stickyTop)
   }, selector), {
     timeout: 10000,
@@ -205,11 +210,17 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
 
       // Whatever no longer fits is scrolled, not clipped: the panel's last
       // control can be reached.
-      const last = page.locator('.fpr-config #fpr-text')
+      const last = page.locator('.fpr-config .fpr-card-apply').last()
       await last.scrollIntoViewIfNeeded()
       await expect(last).toBeInViewport()
-      // The hand-off itself rides the sticky tool toolbar, so it is on screen.
-      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Build a type scale from this pair' })).toBeInViewport()
+      // The hand-off is a More entry, and the sticky tool toolbar that holds
+      // More is on screen.
+      const more = page.locator('[data-tool-toolbar]').getByRole('button', { name: 'More', exact: true })
+      await expect(more).toBeInViewport()
+      await more.click()
+      const handoff = page.getByRole('menuitem', { name: 'Build a type scale from this pair' })
+        .or(page.getByRole('button', { name: 'Build a type scale from this pair' }))
+      await expect(handoff.first()).toBeInViewport()
     })
   }
 
@@ -250,7 +261,7 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
 })
 
 /* ── D1 · Temperature must not jump across zero ──────────────────────────────
- * Founder: dragging Temperature slowly across zero went 7 → 0 → −7.
+ * Dragging Temperature slowly across zero went 7 → 0 → −7.
  * Was: snapValue() was a hard step, discontinuous by exactly snapRadius (6) at
  * the boundary — an ~8px dead band mid-track then a seven-unit leap. The unit
  * contract is in tests/unit/slider-snap.test.js; this is the rendered drag. */

@@ -55,6 +55,23 @@ export async function clickPaletteAction(page, inlineName, menuLabel = inlineNam
 }
 
 /**
+ * Open the docked Suggest panel, apply the first free variation, and click the
+ * Compare button that "Your palette" shows once something is applied. Compare
+ * only appears after an apply, so a person has to try a variation first.
+ */
+export async function openCompareFromSuggest(page) {
+  await clickPaletteAction(page, 'Suggest variations')
+  const panel = page.locator('.plb-sx')
+  // Locked (Pro-only) rows carry no aria-pressed, so this skips them.
+  const row = panel.locator('button.plb-sw-row[aria-pressed="false"]').first()
+  await expect(row).toBeVisible()
+  await row.click()
+  const compare = panel.locator('.plb-sw-pin').getByRole('button', { name: /^Compare .* with your palette$/ })
+  await expect(compare).toBeVisible()
+  await compare.click()
+}
+
+/**
  * Pick a state in the preview dialog's State menu, wherever the width puts it:
  * "State" in the header from 768, the "More" sheet on a phone. The menu closes
  * on a pick, so the next call opens it again.

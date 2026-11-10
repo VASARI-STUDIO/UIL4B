@@ -1,9 +1,9 @@
-// The two founder requests of 2026-08-08, measured in a browser.
+// Two gradient and nav behaviours, measured in a browser.
 //
-//   1. "a 2-stop linear gradient should come up slightly more often than the
-//      rest — a weighting, not an exclusion"
-//   2. "the nav search bar expands on hover and shows a typing animation
-//      cycling common search terms" (respecting reduced motion, and without
+//   1. a 2-stop linear gradient comes up slightly more often than the rest: a
+//      weighting, not an exclusion
+//   2. the nav search bar expands on hover and shows a typing animation
+//      cycling common search terms (respecting reduced motion, and without
 //      regressing the homepage CLS/LCP budgets)
 //
 // The weighting's arithmetic is asserted exactly, without a browser, in

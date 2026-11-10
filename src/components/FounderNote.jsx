@@ -12,16 +12,15 @@ import {
 // An OPT-IN note about this project. A footer link, and a short panel behind it.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THIS IS NOT THE POPUP THE BACKLOG ITEM ASKED FOR
+// WHY THIS IS NOT A WELCOME POPUP
 // ─────────────────────────────────────────────────────────────────────────────
-// `founder-intro-popup` in src/data/pipeline.js describes a welcome popup that
-// greets a new visitor. The founder was offered exactly that and chose something
-// else: "maybe we make it visable when a user clicks a certian section or button,
-// it will just be a short welcome from me and a what this app is for and what
-// state its in also asking for feedback support as im a solo developr".
+// A welcome popup that greets a new visitor was considered and set aside. This
+// is visible only when a user clicks a particular section or button: a short
+// welcome from the author, what the app is for, what state it is in, and a
+// request for feedback and support (it is built by a solo developer).
 //
-// Read literally, that is a different surface with a different contract, and the
-// difference is the whole design:
+// That is a different surface with a different contract, and the difference is
+// the whole design:
 //
 //   • It APPEARS ON A CLICK. It must never auto-open — not on a first visit, not
 //     on a timer, not at a scroll depth, not once-per-account. Nothing in this
@@ -31,10 +30,10 @@ import {
 //   • It says the state honestly, including that the state is early.
 //
 // Everything the popup version needed and this one does not follows from that
-// first bullet. The "once per person" rule from #240 does not apply, because
-// nothing is being shown to anyone unasked. "Must not fire on top of onboarding"
-// does not apply, because nothing fires. And "reachable again afterwards", which
-// that item flagged as the failure mode of one-time popups, is satisfied by
+// first bullet. The "once per person" rule a popup needs does not apply,
+// because nothing is being shown to anyone unasked. "Must not fire on top of onboarding"
+// does not apply, because nothing fires. And "reachable again afterwards", the failure mode of
+// one-time popups, is satisfied by
 // construction: the trigger is in the footer of every page that has one, and it
 // never goes away.
 //

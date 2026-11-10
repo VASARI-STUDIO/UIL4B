@@ -50,8 +50,8 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(pickerColour).toBe(firstColour)
 
     // This used to assert the seed SURVIVED a reload, which was true because
-    // `vs-palette-session-seed` pinned the first draw to the tab. The founder's
-    // 2026-09-03 request is that the page auto-loads a random palette, so an
+    // `vs-palette-session-seed` pinned the first draw to the tab. The page now
+    // auto-loads a random palette, so an
     // untouched board is now redrawn on arrival — and it must be, because the
     // board was also being persisted on mount, which meant "random on load"
     // held exactly once per device and never again.
@@ -326,7 +326,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const options = rail.getByRole('option')
     // Six previews, each a made-up product (Slack Water, Sundial, Orra Workroom,
-    // Ridgeline, Hale & Okoro, Tally). Four are open to a free account and two
+    // Ridgeline, Hale & Okoro, Tenner). Four are open to a free account and two
     // are marked Pro in the list. The Poster and Social previews raise this to
     // eight, with four Pro, when they are built.
     await expect(options).toHaveCount(6)
@@ -406,22 +406,20 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   }
 
   // Every tool's toolbar opens on the design's drawn back
-  // button, which returns to the workspace (D:613). The Palette Builder is one
-  // press away in the Create menu; what is held here is that the tool still
+  // button, which returns to the tools index. What is held here is that the tool
   // offers an immediate way out, at the start of its toolbar.
   test('Tint offers an immediate route back, at the start of its toolbar', async ({ page }) => {
     watch(page, 'designer moving between colour tools')
     await go(page, '/create/tint')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to workspace' })
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 
-// Founder request, 2026-09-03: "the pallete page should auto load a random
-// pallete on the default free settings. reset should reset the settings to
-// default but randomise the colour."
+// The palette page auto-loads a random palette on the default free settings.
+// Reset restores the default settings but randomises the colour.
 //
 // The two rules with teeth — that the default settings are the FREE ones, and
 // that a shared link outranks the draw — are enumerated in

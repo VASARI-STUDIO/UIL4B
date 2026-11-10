@@ -1,10 +1,8 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useProject } from '../../contexts/ProjectContext'
 import { createTools, toolRoute } from '../../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../../data/toolIndex'
-import { tintConfigFor } from '../../data/designDefaults'
-import { generateTintScale } from '../../utils/colors'
+import useWorkingRamp from './useWorkingRamp'
 import PhIcon from '../spectrum/PhIcon'
 import ToolArt from '../spectrum/ToolArt'
 import Glyph from './Glyph'
@@ -63,11 +61,7 @@ export default function StartSomething({ inLead = false }) {
   // THE LIVE RAMP. The Palette Builder row draws the working design's current colours: its
   // palette when it has one, otherwise the eleven-stop ramp the Tint tool builds from its base — the
   // same ramp /learn/help shows as "what a new project starts from".
-  const ramp = useMemo(() => {
-    const colors = (design?.palette?.colors || []).filter(Boolean)
-    if (colors.length > 1) return colors
-    try { return generateTintScale(tintConfigFor(design)) } catch { return colors }
-  }, [design])
+  const ramp = useWorkingRamp(design)
 
   const count = liveToolCount()
 

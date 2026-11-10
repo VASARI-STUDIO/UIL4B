@@ -6,12 +6,10 @@ import { useSaveTypeSystem } from '../hooks/useSaveTypeSystem'
 //
 // ── The decision this implements ────────────────────────────────────────────
 //
-// Founder, 2026-09-05, settling [typography-paywall-model]: "Browsing is free.
-// Saving is Pro." Anyone may browse fonts, pair them and build a scale without
+// The rule: "Browsing is free. Saving is Pro." Anyone may browse fonts, pair them and build a scale without
 // an account. What costs money is KEEPING a type system.
 //
-// He chose that option because it matches how the colour tools already work, so
-// the requirement is consistency with them rather than a scheme of our own. The
+// That option matches how the colour tools already work, so the requirement is consistency with them rather than a scheme of our own. The
 // colour line, read off the code rather than off the intention:
 //
 //   PaletteBuilder      building, seeding, extracting from an image, sharing a
@@ -255,7 +253,7 @@ export default function SaveTypeSystem(props) {
         aria-haspopup="dialog"
         onClick={trigger}
       >
-        <BookmarkIcon /> Save to a project
+        <BookmarkIcon /> <span className="svt-trigger-label">Save to a project</span>
       </button>
 
       {open && <SaveTypeSystemMenu {...menuProps} />}

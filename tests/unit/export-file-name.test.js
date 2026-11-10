@@ -44,6 +44,13 @@ test('a project name is made safe for a file system', () => {
   assert.doesNotMatch(projectSlug(`${'a'.repeat(PROJECT_SLUG_MAX - 1)} b`), /-$/, 'a cut never leaves a trailing hyphen')
 })
 
+test('an accented letter keeps its base letter in the slug, whichever way it is typed', () => {
+  assert.equal(projectSlug('Café & Co.'), 'cafe-co')
+  assert.equal(projectSlug('Café & Co.'), 'cafe-co', 'e followed by a combining acute')
+  assert.equal(projectSlug('Zoë Ångström'), 'zoe-angstrom')
+  assert.equal(fileName('Café & Co.', 'ui-kit-06-studio', 'zip'), 'cafe-co-ui-kit-06-studio.zip')
+})
+
 test('a malformed artefact or extension throws rather than writing a stray name', () => {
   for (const bad of ['', 'UI Kit', 'ui_kit', '-kit', 'kit-', '../x', null]) assert.throws(() => fileName('Lumen', bad, 'html'), /artefact/, String(bad))
   for (const bad of ['', '.html', 'h.tml', 'HTML', null]) assert.throws(() => fileName('Lumen', 'ui-kit', bad), /extension/, String(bad))
@@ -51,7 +58,7 @@ test('a malformed artefact or extension throws rather than writing a stray name'
 
 test('every format the dialog offers has a name, and the names are the specified ones', () => {
   for (const f of EXPORT_FORMATS.filter((x) => x.live)) assert.ok(hasFormatFile(f.id), `${f.id} has no file name`)
-  const names = Object.fromEntries(['book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'html', 'png', 'jpeg', 'md', 'kit', 'css', 'json', 'tailwind', 'contrast', 'contrast-json']
+  const names = Object.fromEntries(['book', 'book-png', 'book-html', 'guidelines', 'guidelines-html', 'html', 'png', 'jpeg', 'md', 'kit', 'css', 'json', 'tailwind', 'contrast', 'contrast-json', 'app-bundle']
     .map((id) => [id, formatFileName('Lumen', id)]))
   assert.deepEqual(names, {
     book: 'lumen-book.pdf',
@@ -69,6 +76,7 @@ test('every format the dialog offers has a name, and the names are the specified
     tailwind: 'lumen-tailwind.css',
     contrast: 'lumen-contrast-pairs.csv',
     'contrast-json': 'lumen-contrast-pairs.json',
+    'app-bundle': 'lumen-app-ready.zip',
   })
   assert.equal(formatFileName('Lumen', 'nope'), '')
   assert.equal(formatFileName('Lumen', 'book', { saved: true }), 'lumen-book.html', 'a print format that is saved is its HTML')
@@ -120,7 +128,7 @@ test('the export runner names every file through the helper', () => {
   assert.match(runner, /formatFileName\(fileProject, 'book-png'\)/)
   assert.match(runner, /formatFileName\(fileProject, format, \{ saved: true \}\)/)
   assert.match(runner, /codeFileName\(format, fileProject\)/)
-  assert.match(runner, /fileProject,\s*\n\s*template: chosenTemplates\.kit/, 'the kit is not told the name its files are made from')
+  assert.match(runner, /themedZipName\(kitName \|\| fileProject, format, theme\)/, 'the themed zip is not named from the project name')
 })
 
 test('the three kit templates save under the names the renderer gives them', () => {

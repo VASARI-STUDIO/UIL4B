@@ -51,9 +51,15 @@ function which(pathname) {
   return null
 }
 
-export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, onNavigate, createOpen, accountOpen }) {
+// The menu sheet's open section -> the tab that matches it. Learn has no tab,
+// so while it is open the route's own tab stays current.
+const TAB_FOR_SECTION = { create: 'create', discover: 'discover', account: 'you' }
+
+export default function PhoneTabBar({ signedIn, loading, onCreate, onAccount, onSignIn, onNavigate, createOpen, accountOpen, sheetSection }) {
   const { pathname } = useLocation()
-  const current = which(pathname)
+  // While the sheet is open, the current tab follows the section it shows;
+  // closed (sheetSection null), it is the route's tab.
+  const current = (sheetSection && TAB_FOR_SECTION[sheetSection]) || which(pathname)
 
   // The page reserves the bar's height at its foot so the last row of any page
   // can scroll clear of it; the class only exists while the bar is mounted.
@@ -77,6 +83,7 @@ export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, o
       <button
         type="button"
         className={'pnav-tab' + (current === 'create' ? ' is-current' : '')}
+        aria-current={current === 'create' ? 'page' : undefined}
         aria-haspopup="dialog"
         aria-expanded={!!createOpen}
         onClick={onCreate}
@@ -91,10 +98,23 @@ export default function PhoneTabBar({ signedIn, onCreate, onAccount, onSignIn, o
       {/* Signed in, You opens the account switcher in the menu
           sheet: this account, the others remembered here, Add account,
           settings and sign-out. */}
-      {signedIn ? (
+      {/* While the account loads, You is not yet "open the account" or "sign
+          in": it waits (aria-disabled keeps it in the Tab order and announced). */}
+      {loading ? (
         <button
           type="button"
           className={'pnav-tab' + (current === 'you' ? ' is-current' : '')}
+          aria-current={current === 'you' ? 'page' : undefined}
+          aria-disabled="true"
+        >
+          <UserGlyph />
+          <span>You</span>
+        </button>
+      ) : signedIn ? (
+        <button
+          type="button"
+          className={'pnav-tab' + (current === 'you' ? ' is-current' : '')}
+          aria-current={current === 'you' ? 'page' : undefined}
           aria-haspopup="dialog"
           aria-expanded={!!accountOpen}
           onClick={onAccount}

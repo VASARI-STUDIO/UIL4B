@@ -113,7 +113,8 @@ const markOf = (r) => (r >= 7 ? 'AAA' : r >= 4.5 ? 'AA' : r >= 3 ? 'Large only' 
 const toneOf = (r) => (r >= 4.5 ? 'ok' : r >= 3 ? 'warn' : 'err')
 
 // A field shows its hint only once the raw value is invalid AND long enough to
-// be a finished attempt, so "#6B" mid-typing stays quiet.
+// be a finished attempt, so "#6B" mid-typing stays quiet. Leaving the field
+// with a value that cannot be read is always a finished attempt: see HexField.
 const showsHint = (raw, valid) => !valid && (raw || '').trim().length >= 4
 
 // The kit: the person's palette, named by its role. Falls back to the colours
@@ -186,6 +187,21 @@ function swatchRef(hex, ink) {
 function HexField({ id, label, short, roleText, raw, valid, committed, onRaw, onBlur, onTouch }) {
   const hintId = `${id}-hint`
   const bad = showsHint(raw, valid)
+  // Leaving the field with something unreadable ("red", "zzz", an emoji) puts
+  // the last good colour back, which would also make the field valid and so
+  // silence the hint above. This remembers the colour that was kept: the hint
+  // stays until the next value that reads, or until the colour changes some
+  // other way (a swap, the picker, a palette swatch).
+  const [rejectedAt, setRejectedAt] = useState(null)
+  const refused = rejectedAt === committed
+  const setRaw = (value) => {
+    if (normaliseHex(value)) setRejectedAt(null)
+    onRaw(value)
+  }
+  const leave = () => {
+    if (!valid && (raw || '').trim()) setRejectedAt(committed)
+    onBlur()
+  }
   return (
     <div className="cc-field" onFocus={onTouch}>
       <label className="cc-field-k" htmlFor={id}>
@@ -196,7 +212,7 @@ function HexField({ id, label, short, roleText, raw, valid, committed, onRaw, on
       <div className="cc-field-row">
         <ColorPickerPop
           value={committed}
-          onChange={(hex) => { onTouch(); onRaw(hex.toUpperCase()) }}
+          onChange={(hex) => { onTouch(); setRaw(hex.toUpperCase()) }}
           ariaLabel={`Pick ${label.toLowerCase()}`}
           triggerClassName="cc-picker"
         />
@@ -205,8 +221,8 @@ function HexField({ id, label, short, roleText, raw, valid, committed, onRaw, on
           type="text"
           className={bad ? 'cc-hex-input cc-hex-input--bad' : 'cc-hex-input'}
           value={raw}
-          onChange={(e) => onRaw(e.target.value)}
-          onBlur={onBlur}
+          onChange={(e) => setRaw(e.target.value)}
+          onBlur={leave}
           onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
           inputMode="text"
           autoCapitalize="characters"
@@ -218,10 +234,10 @@ function HexField({ id, label, short, roleText, raw, valid, committed, onRaw, on
         />
       </div>
       <p id={hintId} className="cc-hint cc-hint--bad" aria-live="polite">
-        {bad && (
+        {(bad || refused) && (
           <>
             <ToolIcon name="warning" size={14} className="cc-hint-ico" />
-            <span>Use a hex code like #1F2937. Still checking {committed}.</span>
+            <span>Use a hex like #1A2B3C. Still checking {committed}.</span>
           </>
         )}
       </p>

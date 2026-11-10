@@ -20,7 +20,7 @@
 //      saves up to 3 projects — go Pro for unlimited." for 1.8 seconds.
 //   4  Toasts. Duplicate at the cap: `toast-error` shown for 1,862ms, zero
 //      buttons, pointer-events:none.
-//   5  /settings opened on "Subscription".
+//   5  /settings opened on "Plan and billing".
 //   6  The gate's "Not now? Closing this changes nothing" line:
 //      display:none at 390 on both the gate and the signup variant. The gate
 //      ended at y=785 of 844; the signup dialog at 822 with "Already have an
@@ -134,7 +134,7 @@ test.describe('1 — Export is in the header at every width and the phone sheet 
   // no route left to act on. The guarantee is the same one, asserted on the
   // nav a sales route actually has: its phone menu offers nothing to export,
   // and a signed-in visitor's saved projects are still one tap away.
-  test('a sales route has nothing to export, so the phone menu says nothing — and keeps the way to saved projects', async ({ browser }) => {
+  test('a sales route has nothing to export, so the phone menu says nothing, and does not repeat the hero call to action', async ({ browser }) => {
     const { context, page } = await open(browser, PHONE)
     watch(page, 'a phone visitor on /plans')
     await signIn(page, { plan: 'free', projects: 1 })
@@ -144,9 +144,9 @@ test.describe('1 — Export is in the header at every width and the phone sheet 
     await expect(sheet).toBeVisible()
     await expect(sheet.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
     await expect(sheet.getByRole('link', { name: 'Export', exact: true })).toHaveCount(0)
-    // The marketing menu has no account row; its way to saved projects is the
-    // toolkit link, which opens the workspace.
-    await expect(sheet.getByRole('link', { name: /Open the toolkit/ }), 'the way to saved projects stays').toHaveAttribute('href', '/projects')
+    // The hero holds the only "Open the toolkit"; the phone sheet repeats
+    // neither it nor the export.
+    await expect(sheet.getByRole('link', { name: /Open the toolkit/ }), 'the menu repeats the hero call to action').toHaveCount(0)
     await context.close()
   })
 })
@@ -343,7 +343,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('5 — settings opens on Account, and remembers the section you chose', () => {
   for (const size of [PHONE, DESK]) {
-    test(`${size[0]}px: Account first; Subscription is remembered across a reload`, async ({ browser }) => {
+    test(`${size[0]}px: Account first; Plan and billing is remembered across a reload`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a free account opening its settings (${size[0]}px)`)
       await signIn(page, { plan: 'free', projects: 1 })
@@ -363,11 +363,11 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
         await expect(page.locator('#set-support'), 'a reload keeps the open section').toBeVisible()
         await page.goBack()
         await expect(page.locator('.settings-nav')).toBeVisible()
-        await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Plan and billing/)
         // A fresh visit opens on the list, with the remembered row current.
         await go(page, '/settings?fresh=1')
         await expect(page.locator('.settings-nav')).toBeVisible()
-        await expect(current, 'the section chosen last time is the current row').toHaveText(/Subscription/)
+        await expect(current, 'the section chosen last time is the current row').toHaveText(/Plan and billing/)
         await context.close()
         return
       }
@@ -376,10 +376,10 @@ test.describe('5 — settings opens on Account, and remembers the section you ch
       await expect(page.locator('#set-account')).toBeVisible()
       await expect(page.locator('#set-support')).toBeHidden()
 
-      await page.getByRole('tab', { name: 'Subscription' }).click()
+      await page.getByRole('tab', { name: 'Plan and billing' }).click()
       await expect(page.locator('#set-support')).toBeVisible()
       await go(page, '/settings')
-      await expect(selected, 'the section chosen last time is where the page opens').toHaveText(/Subscription/)
+      await expect(selected, 'the section chosen last time is where the page opens').toHaveText(/Plan and billing/)
       await context.close()
     })
   }
@@ -490,7 +490,9 @@ test.describe('7 — an onboarded account typing /onboarding lands on its home',
 // 8 — the shared dialog hook hands focus back a frame later
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('8 — the dialog hook hands focus back a frame after the close, not inside it', () => {
-  for (const size of [PHONE, DESK]) {
+  // Desktop only: the floating Feedback button is not drawn below 768px, and it
+  // is the opener this test returns focus to.
+  for (const size of [DESK]) {
     // Neither the project detail nor New project is a dialog, so the dialog this
     // hook serves on /projects is the Feedback form, opened from the floating
     // Feedback button (FeedbackModal uses the same useModalDialog).

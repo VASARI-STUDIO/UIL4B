@@ -192,8 +192,8 @@ test.describe('on a phone', () => {
     expect(caps, 'device emulation lost — this test is meaningless without hover:none').toEqual({ hover: false, coarse: true })
 
     // A bare glyph on a transparent ground whose only affordance is
-    // :hover{background} is invisible as a control on touch. Founder direction,
-    // 2026-09-02: anything only discoverable on hover needs a persistent form.
+    // :hover{background} is invisible as a control on touch.
+    // Anything only discoverable on hover needs a persistent form.
     const close = dialog.getByRole('button', { name: 'Close' })
     const paint = await close.evaluate((el) => {
       const cs = getComputedStyle(el)

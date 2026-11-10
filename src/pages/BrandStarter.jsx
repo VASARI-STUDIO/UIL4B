@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { openFirebaseGate } from '../utils/firebaseAccess'
 import { Link } from 'react-router-dom'
 import { ToolLayout, ToolGrid, ToolMain, ToolPanel, ToolSection } from '../components/tool/ToolLayout'
 import { useAuth } from '../contexts/AuthContext'
@@ -11,14 +12,17 @@ import { loadFont } from '../utils/googleFonts'
 import { paletteBuilderUrl } from '../data/paletteGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import { navigatesThisTab } from '../utils/handoffSlot'
-import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
+import { describeProvider } from '../utils/aiProvider'
+import ProviderBadge from '../components/ProviderBadge'
 import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import AiLabel from '../components/AiLabel'
 import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
 import {
   BETA_NOTE,
   MAX_PROMPT_CHARS,
   MIN_PROMPT_CHARS,
   allowanceSentence,
+  signedOutAllowanceSentence,
   exhaustedMessage,
   generationAllowance,
   generationsRemaining,
@@ -42,7 +46,7 @@ import '../styles/pages/brand-starter.css'
 // implementation; public activation is deferred", with the next step written
 // down as "AI mode deferred to stay under Vercel 12-function limit — revisit".
 //
-// So the founder's request is not a new feature — it is the revisit. The
+// So this is not a new feature — it is the revisit. The
 // twelve-function limit no longer blocks it, because /api/ai is a consolidated
 // multi-task route and a generation is a MODE inside it rather than a
 // thirteenth file (which tests/unit/account-deletion.test.js fails the build
@@ -60,7 +64,7 @@ import '../styles/pages/brand-starter.css'
 // hero with invented copy — "Professional services you can trust" — over the
 // generated colours. That is the anti-slop bar's "decorative product mock-ups
 // contain implausible data" and "glow, blur, gradients layered as a generic
-// premium signal", on the one surface in the product where the founder's own
+// premium signal", on the one surface in the product where the
 // "AI slop" worry is sharpest.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,9 +74,8 @@ import '../styles/pages/brand-starter.css'
 // instantly in every tool. It deliberately does not.
 //
 // That store holds the work the person is already doing, and overwriting it
-// from a text box is the founder's own reported bug in another form: "sometimes
-// I open the palette builder and it has added many colours and it's a different
-// swatch" (see the EXPIRE note in utils/handoffSlot.js). A generator that
+// from a text box is the reported palette-builder bug in another form: it opens
+// with colours it was never given and a different swatch (see the EXPIRE note in utils/handoffSlot.js). A generator that
 // silently replaces your system is worse than one that does nothing.
 //
 // So each artefact carries an explicit hand-off into the tool that owns it,
@@ -125,9 +128,10 @@ import '../styles/pages/brand-starter.css'
 
 // A brief the tool can honestly say is enough. Written as a real product rather
 // than a placeholder mood board, because a placeholder that reads "your idea
-// here" teaches nothing about what a good input looks like.
-const EXAMPLE_BRIEF = 'A booking app for independent dog groomers. Calm and practical, '
-  + 'not corporate. Most of the screen is a schedule, so it has to stay readable all day.'
+// here" teaches nothing about what a good input looks like. Kept short enough
+// to sit inside the field's three rows on a 320px screen: a textarea clips its
+// placeholder instead of growing around it.
+const EXAMPLE_BRIEF = 'A booking app for independent dog groomers. Calm and practical, readable all day.'
 
 /**
  * The first family in a CSS font stack, with its quotes taken off.
@@ -256,7 +260,7 @@ function ladder(base, ratio) {
  * behaviour. The default export below is what wires the real token getter, and
  * tests/unit/ai-generation-truth.test.js asserts that it does.
  */
-export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount, toast, aside = null, sample = null }) {
+export function BrandStarterWorkbench({ planId = 'free', signedOut = false, getToken, ensureAccount, toast, aside = null, sample = null }) {
   const online = useOnline()
   const [brief, setBrief] = useState('')
   const [status, setStatus] = useState('idle') // idle | working | done | error
@@ -272,6 +276,24 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
   // error alert, and once the address is verified it repeats the request.
   const [needsVerify, setNeedsVerify] = useState(false)
   const resultRef = useRef(null)
+  // The brief grows to hold its text (or the example shown while it is empty), so
+  // neither is ever cut off inside the field; CSS caps the height and it scrolls.
+  const briefRef = useRef(null)
+  useEffect(() => {
+    const el = briefRef.current
+    if (!el) return undefined
+    const fit = () => {
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+    }
+    fit()
+    let width = el.clientWidth
+    const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+      if (el.clientWidth !== width) { width = el.clientWidth; fit() }
+    }) : null
+    watch?.observe(el)
+    return () => watch?.disconnect()
+  }, [brief])
 
   const allowance = generationAllowance(planId)
   const used = server?.used ?? 0
@@ -387,7 +409,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
           dropzone rather than beside the button. */}
       <p className="bs-allowance" data-testid="brand-starter-allowance">
         <span className="bs-allowance-plan">{planId === 'pro' ? 'Pro' : 'Free'}</span>
-        <span className="bs-allowance-figure">{allowanceSentence(planId)}</span>
+        <span className="bs-allowance-figure">{signedOut ? signedOutAllowanceSentence() : allowanceSentence(planId)}</span>
         {server && (
           <span className="bs-allowance-left" data-testid="brand-starter-remaining">
             {remaining} left
@@ -420,6 +442,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
         </p>
         <textarea
           id="bs-brief"
+          ref={briefRef}
           className="bs-field"
           aria-describedby="bs-brief-hint bs-brief-count"
           rows={3}
@@ -507,11 +530,8 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
         >
           <header className="bs-result-h">
             <h2 className="bs-result-name">{result.name}</h2>
-            {provider && (
-              <span style={providerBadgeStyle(provider)} title={provider.title} data-testid="ai-provider-badge">
-                {provider.label}
-              </span>
-            )}
+            <AiLabel what="brand starter" />
+            <ProviderBadge provider={provider} />
           </header>
           {result.rationale && <p className="bs-rationale">{result.rationale}</p>}
 
@@ -650,11 +670,13 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
  * Firebase ID token.
  */
 export default function BrandStarter({ toast }) {
+  // This tool needs an account, and the page already loads the SDK: let the session restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const { plan } = useSubscription()
   // Decides only whether the EXAMPLE is worth showing. A signed-in visitor gets
   // the workbench alone and does not need a sample of what they are about to
   // generate.
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   // The tool opens signed out: the brief is written without an account, and
   // one is asked for when Generate is pressed, because a generation is metered
@@ -679,6 +701,7 @@ export default function BrandStarter({ toast }) {
     >
       <BrandStarterWorkbench
         planId={plan?.id || 'free'}
+        signedOut={!user && !authLoading}
         getToken={() => firebaseAuth.currentUser?.getIdToken()}
         ensureAccount={ensureAccount}
         toast={toast}

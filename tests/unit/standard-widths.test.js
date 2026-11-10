@@ -6,9 +6,8 @@
 // almost never one of those, and the picker disappeared exactly when the user
 // had done the work to earn it.
 //
-// Founder, 2026-09-15: "lock the ratio based on the numbers supplied then chose
-// a standard size to match the ratio such as 1920 x or 800 x or 2480x or 1600x
-// or whatever else."
+// The intended behaviour: lock the ratio from the numbers supplied, then offer
+// a standard size to match it (1920 wide, 800, 2480, 1600 and so on).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { STANDARD_WIDTHS, standardSizesForRatio, ratioMatches } from '../../src/utils/standardWidths.js'
@@ -84,7 +83,7 @@ test('this guard is not toothless — the ladder is real and the shapes differ',
 
 // ── AND THEN A NAME TRAVELLED TO A SIZE IT DOES NOT DESCRIBE ───────────────
 //
-// Shipped the same day as the ladder above. Every rung took its label
+// Every rung took its label
 // unconditionally, so the RESOLUTION names followed the width to whatever
 // height the locked ratio asked for:
 //
@@ -96,9 +95,9 @@ test('this guard is not toothless — the ladder is real and the shapes differ',
 // other names are cut for, because 2480 is A4’s SHORT side and the sheet is
 // portrait — 2480 × 3508.
 //
-// This is the failure the page was reworked to remove. The founder asked for
-// standard sizes so he would be "working in real sizes not partial ratios",
-// and a real name printed over an invented size is worse than no name at all.
+// This is the failure the page was reworked to remove. Standard sizes exist so
+// people work in real sizes, not partial ratios, and a real name printed over
+// an invented size is worse than no name at all.
 // A label like "Desktop" describes a WIDTH and travels; "4K" describes a whole
 // resolution and does not.
 

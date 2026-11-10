@@ -12,6 +12,7 @@
       "sha256": "443d7af364200f8ec8352dc78e39485a118a1840d498c97967bf0ae402b39167",
       "licence": "MIT, (c) Tailwind Labs, Inc.",
       "licenceUrl": "https://github.com/tailwindlabs/tailwindcss/blob/main/LICENSE",
+      "owner": "Tailwind Labs, Inc.",
       "credit": "Tailwind CSS v4 colours, © Tailwind Labs, MIT licence.",
       "budgetGzip": 7168,
       "note": "The source defines each colour in OKLCH. Each is converted to hex with the app's own oklchToHex (channels clamped to sRGB), then to Lab, so a colour outside sRGB is stored as its clipped stand-in."
@@ -26,6 +27,7 @@
       "sha256": "116f7770f6b77d907243432307264f66a3bb7b2217c97fcd68bad32436b3f408",
       "licence": "W3C Software and Document License",
       "licenceUrl": "https://www.w3.org/copyright/software-license-2023/",
+      "owner": "World Wide Web Consortium (W3C)",
       "credit": "CSS named colours from the W3C CSS Color Module Level 4.",
       "budgetGzip": 4096,
       "note": "All 148 keywords, grey and gray spellings both."
@@ -40,6 +42,7 @@
       "sha256": "819240e8770d4d9129f85dcf80b36cc04e42128e09f412bfe86a29565c2c72dd",
       "licence": "Apache License 2.0, Copyright 2015 Google Inc.",
       "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "owner": "Google Inc.",
       "credit": "Material Design 2014 colour palette by Google.",
       "budgetGzip": 6144,
       "note": "19 hues, 50 to 900, plus A100 to A700 for the 16 hues that have accents."
@@ -53,6 +56,7 @@
       "sourceUrl": "https://raw.githubusercontent.com/colour-science/colour/v0.4.7/colour/notation/datasets/munsell/real.py",
       "licence": "BSD-3-Clause, Colour Developers (the library bundling the data)",
       "licenceUrl": "https://github.com/colour-science/colour/blob/develop/LICENSE.txt",
+      "owner": "Colour Developers (the colour-science library)",
       "credit": "Munsell notation from the 1943 renotation data. Munsell® is a trademark of X-Rite, Incorporated. This isn't the Munsell Book of Color, and UIL4B isn't affiliated with X-Rite.",
       "budgetGzip": 35840,
       "note": "CIE xyY under illuminant C (Y scaled by 0.975), converted to Lab D50 by Bradford. Only samples inside sRGB are kept. The nine neutral steps N1 to N9 are added from the ASTM D1535 value function, because the renotation list has no chroma-0 samples."
@@ -66,6 +70,7 @@
       "sourceUrl": "https://nvlpubs.nist.gov/nistpubs/jres/61/jresv61n5p427_A1b.pdf",
       "licence": "US Government publication (NIST), public domain in the US",
       "licenceUrl": "https://www.nist.gov/director/copyright-fair-use-and-licensing-statements-srd-data-and-software",
+      "owner": "US National Bureau of Standards (now NIST)",
       "credit": "ISCC-NBS colour names from NBS Special Publication 440 (1976); block centroids from the NBS central notations (J. Res. NBS 61(5), 1958).",
       "budgetGzip": 6144,
       "note": "Each centroid's Munsell notation is converted to xyY (illuminant C) with colour-science, then to Lab D50. A centroid outside sRGB has its chroma reduced at constant lightness and hue until it fits, so the swatch and the difference describe the same on-screen colour."

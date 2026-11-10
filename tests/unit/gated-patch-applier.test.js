@@ -1,8 +1,8 @@
 // THE ONE COMMAND, GUARDED WHERE IT CAN SILENTLY STOP WORKING.
 //
-// `npm run apply:gated` is the founder's whole path to the approved changes he
-// cannot otherwise get: three of them edit files the Claude Code auto-mode
-// classifier refuses to stage, so no agent can commit them and no agent will
+// `npm run apply:gated` is the owner's whole path to the approved changes they
+// cannot otherwise get: three of them edit files that automated commits
+// may not stage, so no agent can commit them and no agent will
 // notice when they rot. The command is written once and run once, months later,
 // by somebody who cannot read the diff — which is the worst possible moment to
 // discover any of the following, and every one of them leaves the build green:
@@ -15,7 +15,7 @@
 //      wrong tree; it lands cleanly and changes no rule. Worse than stale,
 //      because it reports success.
 //   3. THE APPLIER STOPS COVERING ONE. A patch is quietly dropped from the
-//      registry, and the changes silently become fewer. The founder is told
+//      registry, and the changes silently become fewer. The owner is told
 //      everything is done.
 //   4. THE SCRIPT ENTRY GOES. `apply:gated` disappears from package.json and
 //      the command in docs/OWNER-ACTIONS.md is a command that does not exist.
@@ -27,8 +27,8 @@
 //
 // NO EMULATOR AND NO BUILD. Whether the rules GRANT and REFUSE what they claim
 // is a different question, answered in tests/rules/; whether the deferred build
-// actually moves the chunk is answered by vite.config.js's own graph walk under
-// VITE_DEFER_FIREBASE=1. These run on every `npm run test:unit`.
+// actually moves the chunk is answered by vite.config.js's own graph walk on every
+// default build. These run on every `npm run test:unit`.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -43,12 +43,12 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
 // ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
 // Public repository, and that document is the current-state list of what is not
 // yet secured — including the diffs this very command applies — so it is kept on
-// the founder's machine and out of every clone (.gitignore carries why). Guard
+// the owner's machine and out of every clone (.gitignore carries why). Guard
 // 4 above is the one that reads it; it SKIPS WITH A REASON where the file is
 // absent rather than passing on nothing. The half of guard 4 that lives in
 // package.json does NOT skip, because the script entry is in every checkout:
 // losing the command is still caught everywhere, and only "the document still
-// tells him the command" needs the document.
+// tells the owner the command" needs the document.
 const OWNER_ACTIONS = path.join(ROOT, 'docs/OWNER-ACTIONS.md')
 const NO_OWNER_ACTIONS = !fs.existsSync(OWNER_ACTIONS)
   && 'docs/OWNER-ACTIONS.md is not in this checkout — it is local-only, by the founder '
@@ -60,7 +60,6 @@ const EXPECTED_IDS = [
   'per-project-sync',
   'moderator-role',
   'feedback-bounds',
-  'firebase-deferral',
   'community-icon',
   'analytics-counters',
   'profile-types',
@@ -82,8 +81,8 @@ test('the applier covers exactly the gated changes, in the order that composes',
 })
 
 test('every patch says what it touches, where it came from, and what it grants', () => {
-  // The summary the founder reads is assembled from these three fields. A patch
-  // with an empty `grants` prints a blank line where the sentence he acts on
+  // The summary the owner reads is assembled from these three fields. A patch
+  // with an empty `grants` prints a blank line where the sentence to act on
   // should be, and nothing else in the suite would notice.
   for (const patch of GATED_PATCHES) {
     assert.ok(patch.title?.length > 3, `${patch.id}: no title`)
@@ -98,18 +97,16 @@ test('every patch says what it touches, where it came from, and what it grants',
 })
 
 test('the applier reaches every file the changes are meant to change', () => {
-  // The three files the classifier blocks are the entire reason this command
+  // The files the classifier blocks are the entire reason this command
   // exists. If one falls out of the registry, the command still reports success
-  // successes and the founder still cannot make the change.
+  // successes and the owner still cannot make the change.
   assert.ok(TARGET_FILES.includes('firestore.rules'))
   assert.ok(TARGET_FILES.includes('api/verify-admin.js'))
-  assert.ok(TARGET_FILES.includes('src/contexts/AuthContext.jsx'))
-  assert.ok(TARGET_FILES.includes('src/contexts/SubscriptionContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/utils/projectSync.js'))
   assert.ok(TARGET_FILES.includes('storage.rules'))
   assert.ok(TARGET_FILES.includes('src/utils/communityLimits.js'))
   assert.ok(TARGET_FILES.includes('src/data/toolVotes.js'))
-  assert.equal(TARGET_FILES.length, 8,'the applier has grown a target nobody reviewed')
+  assert.equal(TARGET_FILES.length, 6,'the applier has grown a target nobody reviewed')
 })
 
 test('nothing in the registry still claims a piece of this is uncovered', () => {
@@ -150,7 +147,7 @@ test('every gated patch still applies to the files they were written for', async
   // the day somebody remembers. `patchStates` plans the whole run against the
   // real tree without writing a byte of it.
   //
-  // 'applied' is a passing answer: the founder has run the command. 'stale' is
+  // 'applied' is a passing answer: the owner has run the command. 'stale' is
   // the failure, and 'unknown' means an earlier patch went stale and this one
   // could not be judged — which is a failure of the run, not of this patch, and
   // is reported as such rather than hidden.
@@ -176,8 +173,6 @@ test('each patch actually grants its rule — applying cleanly is not enough', a
   const rules = lf(plan.after.get('firestore.rules'))
   const route = lf(plan.after.get('api/verify-admin.js'))
   const sync = lf(plan.after.get('src/utils/projectSync.js'))
-  const auth = lf(plan.after.get('src/contexts/AuthContext.jsx'))
-  const subs = lf(plan.after.get('src/contexts/SubscriptionContext.jsx'))
 
   // 1 · per-project sync — the rule AND the flag, which are one change.
   assert.match(rules, RULE_MATCHER, 'per-project sync: the rule is missing from the result')
@@ -209,15 +204,6 @@ test('each patch actually grants its rule — applying cleanly is not enough', a
   assert.match(rules, /function promptShapeOk\(\)/)
   assert.match(rules, /function submissionShapeOk\(\)/)
   assert.ok(rules.includes("day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')"))
-
-  // 4 · the deferral closes BOTH static edges. One is worse than none: the SDK
-  //     stays in the first wave and splits across two preloaded chunks.
-  assert.ok(auth.includes("from '../utils/firebaseAccess'"))
-  assert.ok(!/^import \{[\s\S]*?\} from 'firebase\/auth'/m.test(auth),
-    'AuthContext still imports firebase/auth statically after the patch')
-  assert.ok(subs.includes("import { loadFirestore, loadAuthSdk } from '../utils/firebaseAccess'"))
-  assert.ok(!/^import \{ doc, onSnapshot \} from 'firebase\/firestore'/m.test(subs),
-    'SubscriptionContext still imports firebase/firestore statically after the patch')
 })
 
 test('the four rules-audit fixes (M1-M4) each land their rule, and the route half lands too', async () => {
@@ -310,7 +296,7 @@ test('nothing the patches grant is taken away from the file they land in', async
   assert.match(rules, /function lockedUserFields\(\)[\s\S]*?'lifetimeEntitlement', 'subscription', 'stripeCustomerId'/,
     'the billing fields are no longer locked on users/{uid}')
   // The analytics read is gated on the `admin` CLAIM. It used to compare
-  // `request.auth.token.email` against the founder's address, written into the
+  // `request.auth.token.email` against the owner's address, written into the
   // rules file — which is what made this assertion a string match on a personal
   // address in a public repository. The claim is the stronger gate (it is
   // minted from a server-verified email against the server-side allowlist) and
@@ -327,11 +313,11 @@ test('nothing the patches grant is taken away from the file they land in', async
 })
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   3 · The command the founder types
+   3 · The command the owner types
    ═══════════════════════════════════════════════════════════════════════════ */
 
 test('package.json still carries the apply:gated script', () => {
-  // Guard 4. docs/OWNER-ACTIONS.md tells the founder to type exactly this.
+  // Guard 4. The owner is told to type exactly this.
   const pkg = JSON.parse(read('package.json'))
   assert.equal(pkg.scripts['apply:gated'], 'node scripts/apply-gated-patches.mjs',
     'the one command docs/OWNER-ACTIONS.md §1.3 tells the founder to run is gone from package.json')
@@ -339,9 +325,9 @@ test('package.json still carries the apply:gated script', () => {
 })
 
 test('the owner document names the command and still shows the diffs', { skip: NO_OWNER_ACTIONS }, () => {
-  // The document is the artefact: a founder who cannot find the command cannot
+  // The document is the artefact: an owner who cannot find the command cannot
   // run it, and a document that only names the command has taken away the
-  // diffs he was told to review.
+  // diffs they were told to review.
   const doc = read('docs/OWNER-ACTIONS.md')
   assert.ok(doc.length > 1000,
     `docs/OWNER-ACTIONS.md read as ${doc.length} bytes — an empty document cannot fail `
@@ -358,7 +344,7 @@ test('the owner document names the command and still shows the diffs', { skip: N
 
 test('the undo is one command, and it names every file the applier writes', () => {
   // It is printed on every failure path, and it is the only thing standing
-  // between a failed check and a founder who cannot get back to where he was.
+  // between a failed check and an owner who cannot get back to where they were.
   const undo = undoCommand()
   assert.match(undo, /^git checkout -- /)
   for (const file of TARGET_FILES) assert.ok(undo.includes(file), `the undo does not restore ${file}`)
@@ -373,7 +359,7 @@ test('planning the run leaves every gated file byte-identical', async () => {
   // dry run, this test, and the guard suite all plan the full run, and none of
   // them may touch the originals. The first draft of the per-project applier
   // did apply-read-reverse against the working tree, and a process killed
-  // between the second and third step would have left a founder-gated file
+  // between the second and third step would have left an approval-gated file
   // modified on an agent's branch.
   const before = TARGET_FILES.map((f) => read(f))
   await planGatedPatches()
@@ -386,7 +372,7 @@ test('line endings cannot make a live patch look like a stale one', async () => 
   // FOUND BY RUNNING IT, not by reading it. `git apply` compares context bytes,
   // so a CRLF patch against an LF file fails with "patch does not apply" —
   // indistinguishable from a patch that has genuinely gone stale, and it is the
-  // refusal the founder would have hit on his SECOND run: the dirty-tree check
+  // refusal the owner would have hit on their SECOND run: the dirty-tree check
   // reconstructs the committed file with `git show`, which is always LF, while
   // this repository checks the same file out as CRLF on Windows.
   //
@@ -401,7 +387,7 @@ test('line endings cannot make a live patch look like a stale one', async () => 
   for (const file of TARGET_FILES) {
     assert.equal(lf(fromLf.after.get(file)), lf(fromCrlf.after.get(file)),
       `${file} comes out differently depending on the line endings it went in with`)
-    // ...and each keeps the endings it arrived with, so the founder's diff is
+    // ...and each keeps the endings it arrived with, so the owner's diff is
     // the change and not a whole-file rewrite.
     assert.ok(!/\r\n/.test(fromLf.after.get(file)), `${file}: an LF file came back with CRLF in it`)
     assert.ok(!/(?<!\r)\n/.test(fromCrlf.after.get(file)), `${file}: a CRLF file came back with bare LF in it`)
@@ -409,7 +395,7 @@ test('line endings cannot make a live patch look like a stale one', async () => 
 })
 
 test('the plan is deterministic — two runs produce the same bytes', async () => {
-  // Idempotence at the level the founder experiences it: running the command
+  // Idempotence at the level the owner experiences it: running the command
   // twice must leave the tree exactly where the first run left it. Proved here
   // on the plan rather than the tree, so it runs on every unit test without
   // writing anything.

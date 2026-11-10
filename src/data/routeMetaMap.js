@@ -33,14 +33,27 @@ export function pageName(title) {
 // /login in its sign-up form (`?signup=1`). Set at runtime only: the served
 // shell is the log-in page.
 export const LOGIN_SIGNUP_TITLE = 'UI L4B | Create your free account'
+// The sales page's own title; `/` and `/home` share it.
+export const HOME_TITLE = 'UI L4B: your UI and brand kit, from one app'
+
+// The sales page's share image: a 1200x630 JPEG rendered from the built page
+// by scripts/render-home-og.mjs. `path` is site-relative; both the prerendered
+// `/` shell and routeMeta.js prefix it with SITE_ORIGIN, because og:image must
+// be absolute.
+export const HOME_SHARE_IMAGE = Object.freeze({
+  path: '/og/home.jpg',
+  width: 1200,
+  height: 630,
+  alt: 'The UI L4B homepage: the headline "Your UI and brand kit, from one app." above the Export panel, showing a style guide ready to export.',
+})
 
 // Titles/descriptions for real destinations only. Legacy redirect-only paths
 // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
 // <Navigate> and inherit their target's metadata, so an entry here would only
 // describe a page that no longer exists (AUDIT-B2).
 export const PAGE_TITLES = {
-  '/': 'UI L4B | Design Toolkit',
-  '/home': 'UI L4B | Design Toolkit',
+  '/': HOME_TITLE,
+  '/home': HOME_TITLE,
   '/create/color': 'Color System Generator for UI Design | UI L4B',
   '/create/palette': 'Color Palette Generator with Live UI Preview | UI L4B',
   '/create/semantic-color': 'Semantic Color Generator for Design Tokens | UI L4B',
@@ -64,6 +77,7 @@ export const PAGE_TITLES = {
   '/create/ai-tools': 'UI L4B | AI Tools',
   '/create/landing-prompts': 'AI Landing Page Prompts | UI L4B',
   '/discover/prompts': 'AI Website Design Prompts Library | UI L4B',
+  '/discover/buttons': 'CSS Button Library: Copy-Ready HTML and CSS | UI L4B',
   '/create/emoji': 'Emoji Library: Copy and Paste Emoji | UI L4B',
   '/create/aspect-ratio': 'Aspect Ratio and Resolution Calculator | UI L4B',
   '/create/box-shadow': 'CSS Box Shadow Generator | UI L4B',
@@ -102,15 +116,17 @@ export const PAGE_TITLES = {
 // consistent across meta, og, twitter AND the JSON-LD on every route.
 //
 // Deleted rather than rewritten because a replacement is a new claim and
-// those are the founder's to write. What is left is only what ships. The
+// those are the owner's to write. What is left is only what ships. The
 // tools DO have per-tool Copy CSS buttons, and index.html already words that
 // honestly — "Copy colour values and CSS from the individual tools that
-// support them" — so if he wants CSS mentioned here, that sentence is the
-// shape, and it is his call.
+// support them" — so if CSS should be mentioned here, that sentence is the
+// shape, and it is the owner's call.
 export const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion and video frames.'
+// The sales page's own description; `/` and `/home` share it.
+export const HOME_DESCRIPTION = 'Colours, type, icons and imagery in one app, exported as one file. Free to use, no account needed.'
 export const PAGE_DESCRIPTIONS = {
-  '/': DEFAULT_DESCRIPTION,
-  '/home': DEFAULT_DESCRIPTION,
+  '/': HOME_DESCRIPTION,
+  '/home': HOME_DESCRIPTION,
   // THE SAME DELETED CLAUSE AS DEFAULT_DESCRIPTION, LEFT BEHIND ON THE ONE
   // ROUTE THAT RENDERS A CREATE HOME. This ended "Export CSS, Tailwind, PNG and
   // SVG." Against src/config/exportFormats.js on 2026-09-15: `css` carries no
@@ -140,12 +156,13 @@ export const PAGE_DESCRIPTIONS = {
   '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, and community inspiration. Collections is marked Soon.',
   '/discover/gradients': 'Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
-  '/learn': 'Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.',
+  '/learn': 'Reference guides on colour, typography, accessibility and psychology for people who build interfaces — the thresholds, formulas and standards they come from.',
   '/create/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
   '/create/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
   '/create/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
   '/create/landing-prompts': 'Generate AI-powered landing page copy, headlines, and CTAs. Tailored to your product and audience.',
   '/discover/prompts': 'A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.',
+  '/discover/buttons': 'Ten button designs with hover, pressed, focus and disabled states. Copy the HTML and CSS free; edit size, corners and colour, and get an AI prompt, with Pro.',
   '/create/emoji': 'Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.',
   '/create/aspect-ratio': 'Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.',
   '/create/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',

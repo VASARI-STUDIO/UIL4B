@@ -1,7 +1,7 @@
 // COPYING IS FREE FOREVER. TAKING A FILE AWAY NEEDS AN ACCOUNT.
 //
-// Founder decision, 2026-09-15: "make users have to make an account to use alot
-// of the extra feature". The line was chosen from a measurement rather than a
+// Many of the extra features need an account. The line was chosen from a
+// measurement rather than a
 // guess — signed out, pressing each of the fourteen /create tools' own
 // take-away control, only TWO asked for an account: /create/palette
 // ("Save / export") and /create/type-scale ("Save to a project"). Saving, the

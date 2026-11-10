@@ -12,7 +12,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
-import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
+import { splitLockedLibrary, accountTierGain, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../utils/paletteMood'
 import { paletteHaystack } from '../utils/paletteSearch'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
@@ -344,8 +344,8 @@ export default function PaletteGallery({ toast }) {
             more cards after the free ones and needs to know why they differ;
             without a name this is an unexplained second grid. */}
         <h4 className="sr-only" id="pgl-locked-more">Palettes included with Pro</h4>
-        <LibraryGrid className="pgal-grid" labelledBy="pgl-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} gate="palette-library-locked-card" />)}
+        <LibraryGrid className="pgal-grid pgal-grid--locked" labelledBy="pgl-locked-more">
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} kind="palettes" gate="palette-library-locked-card" />)}
         </LibraryGrid>
         <LockedTeaseCta
           gate="palette-library-brand-lock"
@@ -376,9 +376,9 @@ export default function PaletteGallery({ toast }) {
         search={{
           value: query,
           onChange: setQuery,
-          // Says what the field now matches. The Gradient Library's reads
-          // "by name, hex or mood"; this one also has the hue names.
-          placeholder: 'Search by name, hex, colour or mood…',
+          // Short enough to show whole in the field at 390px; the field still
+          // matches name, hex, colour and mood.
+          placeholder: 'Search palettes',
           label: 'Search palettes',
         }}
         action={(
@@ -466,6 +466,10 @@ export default function PaletteGallery({ toast }) {
 
         {visible.length ? (
           <>
+            {/* Every card is about a dozen tab stops, so a keyboard user gets a
+                way past the lot. It reuses the site's skip link: out of view
+                until focused, then shown at the top of the screen. */}
+            <a className="skip-link" href="#pgl-after-grid">Skip past the palettes</a>
             {browsing ? (
               <>
                 {grouped.map((section) => (
@@ -487,6 +491,7 @@ export default function PaletteGallery({ toast }) {
                     />
                   </div>
                 ))}
+                <div id="pgl-after-grid" className="pgl-after" tabIndex={-1} />
                 {/* AFTER the sections, not inside the last one. It used to hang
                     off the Brand systems group, because the only locked rows
                     were brands and that group was always rendered. Under the
@@ -505,6 +510,7 @@ export default function PaletteGallery({ toast }) {
                   </p>
                 )}
                 <PaletteGalleryGrid toast={toast} palettes={visible} metaOf={cardMeta} hexChips />
+                <div id="pgl-after-grid" className="pgl-after" tabIndex={-1} />
                 {/* `mood === 'all'` is now written out. It used to be implied — one
                     tray meant picking Dark cleared Brand — and with two trays
                     the rule two comments above ("under a search or a mood filter
@@ -544,7 +550,7 @@ export default function PaletteGallery({ toast }) {
               <div className="lockt-cta">
                 <div className="lockt-cta-copy">
                   <p className="lockt-cta-head">{`${gatedNoun} palettes need an account`}</p>
-                  <p className="lockt-cta-body">Create a free account to see more of the library. Pro opens all of it.</p>
+                  <p className="lockt-cta-body">{`A free account opens ${freeOpens({ eligible })} of the ${rows.length} palettes. Pro opens all ${rows.length}.`}</p>
                 </div>
                 <button
                   type="button"
@@ -559,7 +565,9 @@ export default function PaletteGallery({ toast }) {
                 gate="palette-library-brand-chip"
                 heading={`${gatedNoun} palettes are part of Pro`}
                 body={anonymous
-                  ? `${gatedNoun} palettes need Pro. ${accountAdds > 0 ? `A free account opens ${accountAdds} more curated palettes; ` : ''}Pro opens all ${rows.length}.`
+                  // A free account does not open Brand, so signed out the only
+                  // offer is Pro, in the one sentence the button below keeps.
+                  ? `Pro opens all ${rows.length} palettes, brand systems included.`
                   : `Another ${lockedCount} ${lockedCount === 1 ? 'palette opens' : 'palettes open'} with Pro${group === 'brand' ? ', including every brand system' : ''}.`}
                 action="See what Pro includes"
               />

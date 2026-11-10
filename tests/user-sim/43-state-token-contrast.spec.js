@@ -228,18 +228,21 @@ test.describe('state-colour text clears its AA floor', () => {
 
   // The tint is the ground for most of these badges, so prove the harness can
   // actually see one. If color-mix ever computes to a form `parse` misses, this
-  // fails loudly instead of quietly making every badge look safe.
+  // fails loudly instead of quietly making every badge look safe. The probe is
+  // the translucent key chip on /privacy: it computes to the same
+  // `color(srgb ... / a)` form as the state tints, and the alt-text page no
+  // longer paints a tinted badge of its own.
   test('a tinted state badge reports a tinted ground, not the bare card', async ({ page }) => {
-    await go(page, '/create/alt-text')
+    await go(page, '/privacy')
     await settle(page)
     const seen = await page.evaluate(`(() => {
       ${HELPERS}
-      const el = document.querySelector('.alt-example-tag')
+      const el = document.querySelector('.storage-key')
       if (!el) return null
       const own = getComputedStyle(el).backgroundColor
       return { own, parsed: parse(own), ground: hex(groundOf(el)) }
     })()`)
-    expect(seen, '.alt-example-tag is not on this page any more').not.toBeNull()
+    expect(seen, '.storage-key is not on /privacy any more').not.toBeNull()
     expect(seen.parsed, `computed background ${seen.own} did not parse`).not.toBeNull()
     expect(seen.parsed.a, 'the badge tint should be translucent').toBeLessThan(1)
     expect(seen.ground.toLowerCase(), 'the ground should be the tint, not #ffffff')

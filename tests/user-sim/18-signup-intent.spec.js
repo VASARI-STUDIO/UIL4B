@@ -79,18 +79,18 @@ test.describe('signup intent', () => {
     // "Open the toolkit" is a free CTA and does its job WITHOUT an account: it
     // goes straight into the app at /projects, and no sign-up form stands in
     // the way. Sign-up is asked for only when saving or exporting.
-    const hero = page.locator('.sp-hero-cta .sp-pill').first()
+    const hero = page.locator('#top .hh-go').first()
     await expect(hero).toBeVisible()
     await expect(hero).toHaveAttribute('href', '/projects')
     await hero.click()
     await expect(page).toHaveURL(/\/projects$/)
     await expect(signupOnly(page), 'opening the toolkit put a sign-up form in the way').toHaveCount(0)
 
-    // The closing band's CTA is free too: the workspace, no sign-up form.
+    // The final call's link is free too: the workspace, no sign-up form.
     await go(page, '/')
-    const close = page.locator('.sp-close-cta').getByRole('link', { name: 'Use for free' })
+    const close = page.locator('#start').getByRole('link', { name: 'Open the toolkit' })
     await expect(close).toHaveAttribute('href', '/projects')
-    await expect(page.locator('.sp-close-cta').getByRole('button'), 'the closing band opens a sign-up form again').toHaveCount(0)
+    await expect(page.locator('#start').getByRole('button'), 'the final call opens a sign-up form again').toHaveCount(0)
 
     await go(page, '/login?signup=1')
     await expect(signupOnly(page), 'a signup form is open').toBeVisible()
@@ -112,7 +112,7 @@ test.describe('signup intent', () => {
     watch(page, PERSONA)
     await go(page, '/plans')
 
-    const free = page.locator('.pr-head--free').getByRole('link', { name: 'Open the toolkit' })
+    const free = page.locator('.hpl-free').getByRole('link', { name: 'Open the toolkit' })
     await expect(free).toHaveAttribute('href', '/projects')
     await free.click()
     await expect(page).toHaveURL(/\/projects$/)

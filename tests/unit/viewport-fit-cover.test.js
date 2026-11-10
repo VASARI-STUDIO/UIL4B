@@ -51,8 +51,9 @@ function bodies(selector) {
 }
 
 // Fixed or sticky bars on the bottom edge. A rule that places one with a
-// `bottom` value must carry the bottom inset itself, or read --bkit-h, which is
-// declared as 56px/112px plus that inset.
+// `bottom` value must carry the bottom inset itself, or read --bkit-h or
+// --tool-dock-h (the tool dock's height), each of which is
+// declared as a fixed height plus that inset.
 const BOTTOM_BARS = [
   '.pnav-tabs',
   '.bkit-rail',
@@ -67,7 +68,9 @@ for (const sel of BOTTOM_BARS) {
     const placed = bodies(sel).filter((b) => /(^|[;\s])bottom\s*:/.test(b) || /position\s*:\s*fixed/.test(b))
     assert.ok(placed.length > 0, `found a placing rule for ${sel}`)
     for (const body of placed) {
-      assert.match(body, /safe-area-inset-bottom|--bkit-h/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
+      // --bkit-reserve is --bkit-h plus the gap around the desktop pill, so it
+      // carries the inset too (checked below).
+      assert.match(body, /safe-area-inset-bottom|--bkit-h|--bkit-reserve|--tool-dock-h/, `${sel} { ${body.trim().slice(0, 90)} ... }`)
     }
   })
 }
@@ -110,6 +113,41 @@ test('phone sheets size their height against the top inset', () => {
   }
 })
 
+// The icon editor's phone sheet: its foot and its save panel sit on the bottom edge, so they pad
+// themselves by the bottom inset. (.icust-overlay and .icust-panel above are the emoji dialog's.)
+test('the icon editor pads its foot and its save panel by the bottom inset on a phone', () => {
+  for (const sel of ['.ied-ft', '.ied-spn']) {
+    const padded = bodies(sel).filter((b) => /(^|[;\s])padding\s*:/.test(b))
+    assert.ok(padded.some((b) => /safe-area-inset-bottom/.test(b)), `${sel} pads its bottom by the inset`)
+  }
+})
+
+// The phone sheet is bottom-aligned and flush with the screen's sides, so the overlay sets no padding.
+// What keeps it off the side insets is its width cap: a notched phone in landscape is far wider than
+// 560px plus both insets. If the overlay does pad, every rule that pads it reads all three insets.
+test('the icon editor overlay keeps clear of the notch at every width', () => {
+  const padded = bodies('.ied-overlay').filter((b) => /(^|[;\s])padding\s*:/.test(b))
+  for (const body of padded) {
+    assert.match(body, /safe-area-inset-top/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
+    assert.match(body, /safe-area-inset-left/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
+    assert.match(body, /safe-area-inset-right/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
+  }
+  if (padded.length === 0) {
+    const capped = bodies('.ied').some((b) => /(^|[;\s])max-width\s*:\s*560px/.test(b) && /(^|[;\s])width\s*:\s*100%/.test(b))
+    assert.ok(capped, 'the overlay pads nothing and the sheet is not capped at 560px, so it can reach the side insets')
+  }
+})
+
+// The sheet's height is the screen less a top gap. On a phone with a Dynamic Island the top inset
+// is 59px, so a fixed gap lets the sheet's top edge and grabber sit under the status bar.
+test('the icon editor phone sheet sizes its height against the top inset', () => {
+  const sheet = bodies('.ied').filter((b) => /(^|[;\s])(?:max-)?height\s*:[^;]*--ied-vh/.test(b))
+  assert.ok(sheet.length > 0, 'found the phone sheet height rule on .ied')
+  for (const body of sheet) {
+    assert.match(body, /safe-area-inset-top/, `.ied { ${body.trim().slice(0, 90)} ... }`)
+  }
+})
+
 test('the Export dialog phone sheet keeps its edges clear of the notch and the home indicator', () => {
   // The sheet is flush with the screen on a phone. Its sides are padded on the card
   // (every rule that pads it reads both side insets), the top inset sits in the head
@@ -136,7 +174,6 @@ const SIDE_GUTTERS = [
   ['.app-page', 'padding'],
   ['.tl-toolbar', 'padding'],
   ['.tl-toolbar', 'padding-inline'],
-  ['.sp-shell', 'padding-inline'],
   ['.sp-footer-inner', 'padding'],
   ['.pop.cpk-pop[data-pop-fixed="true"]', 'padding'],
   ['.bkit-card.is-lifted', 'inset-inline'],
@@ -154,3 +191,21 @@ for (const [sel, prop] of SIDE_GUTTERS) {
     }
   })
 }
+
+// The sales pages pad their sections with --sp-gutter, so the token carries the side insets.
+test('--sp-gutter reads the left and right insets', () => {
+  const css = fs.readFileSync('src/styles/pages/spectrum.css', 'utf8')
+  const defs = [...css.matchAll(/--sp-gutter\s*:\s*([^;}]+)/g)].map((m) => m[1])
+  assert.ok(defs.length > 0, 'spectrum.css no longer defines --sp-gutter')
+  for (const d of defs) {
+    assert.match(d, /safe-area-inset-left/, `--sp-gutter: ${d}`)
+    assert.match(d, /safe-area-inset-right/, `--sp-gutter: ${d}`)
+  }
+})
+
+test('--bkit-reserve is built on --bkit-h, so a bar placed on it keeps the inset', () => {
+  const css = fs.readFileSync('src/styles/deferred/tool-shell.css', 'utf8')
+  const defs = [...css.matchAll(/--bkit-reserve\s*:\s*([^;}]+)/g)].map((m) => m[1])
+  assert.ok(defs.length > 0, 'tool-shell.css no longer defines --bkit-reserve')
+  for (const d of defs) assert.match(d, /var\(--bkit-h\)/, `--bkit-reserve: ${d}`)
+})

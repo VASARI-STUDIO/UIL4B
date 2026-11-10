@@ -35,12 +35,16 @@ const measure = (page) => page.evaluate(() => {
     }
   }
   const notes = document.querySelector('.tt-notes').getBoundingClientRect()
+  const dockEl = document.querySelector('[data-tl-dock]')
+  const dock = dockEl && dockEl.getBoundingClientRect().height > 0 ? dockEl.getBoundingClientRect() : null
   return {
     docH: document.documentElement.scrollHeight,
     winH: window.innerHeight,
     sideways: document.documentElement.scrollWidth - window.innerWidth,
     scrollers,
     notesBottom: Math.round(notes.bottom + window.scrollY),
+    // The phone dock (below 768) is fixed above the tab bar; null where absent.
+    dock: dock ? { h: Math.round(dock.height), top: Math.round(dock.top) } : null,
   }
 })
 
@@ -80,8 +84,16 @@ test.describe('the Tint page scrolls only when it must', () => {
     expect(m.scrollers, 'something inside the page scrolls on its own').toEqual([])
     expect(m.sideways, 'the page scrolls sideways').toBeLessThanOrEqual(0)
     // The page is the only scroller and it stops at the last note plus the
-    // phone's tab bar, with no empty run beneath.
-    expect(m.docH - m.notesBottom, 'the page runs on past its content').toBeLessThanOrEqual(96)
+    // phone's tab bar and the tool dock, with no empty run beneath. Tint's
+    // primary action sits in the dock below 768, and the page reserves the dock's
+    // height once (measured at 390x844: notes end 1446, dock 69px tall, 12px
+    // gap, tab bar 61px, page 1588 = 142 past the notes). So the allowance is
+    // the old 96px plus the dock's own height, and the notes must end above the
+    // dock's top edge when scrolled to the bottom, so nothing hides behind it.
+    expect(m.dock, 'the tool dock is not shown on Tint at 390px').not.toBeNull()
+    expect(m.docH - m.notesBottom, 'the page runs on past its content').toBeLessThanOrEqual(96 + m.dock.h)
+    const dockTopAtEnd = m.docH - m.winH + m.dock.top
+    expect(m.notesBottom, 'the last note ends behind the dock').toBeLessThanOrEqual(dockTopAtEnd)
     // The controls come before the notes when stacked.
     const order = await page.evaluate(() => {
       const top = (s) => document.querySelector(s).getBoundingClientRect().top

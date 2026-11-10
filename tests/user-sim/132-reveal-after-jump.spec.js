@@ -1,6 +1,6 @@
 // A BLOCK THAT IS ON SCREEN MUST BE VISIBLE, WHETHER OR NOT THE VISITOR SCROLLED.
 //
-// Founder report, 2026-10-21 (card 259702de0b), measured on the live site: after
+// Measured on the live site: after
 // a hash link jump or a reload that restores scroll, the reveal block just
 // inside the fold stayed at opacity 0 and appeared only after 1-40px of
 // scrolling. Seen on /learn/principles (1440, mid-page reload, the 2nd
@@ -39,10 +39,12 @@ const WIDTHS = [
   [1440, 900],
 ]
 
+// /learn/help is not listed: it is a router with no reveal blocks, so the
+// non-vacuous check below would have nothing to measure. The last test in this
+// file fails if reveal blocks ever come back to it, so it gets listed then.
 const URLS = [
   '/learn/principles',
   '/learn#learn-topic-typography',
-  '/learn/help#faq',
   '/learn#learn-topic-colour',
 ]
 
@@ -132,4 +134,13 @@ test.describe('reveal blocks on screen are visible after a jump', () => {
       })
     }
   }
+})
+
+test('the help router has no reveal blocks, so it needs no entry in URLS', async ({ page }) => {
+  watch(page, PERSONA)
+  await go(page, '/learn/help#faq')
+  await expect(page.locator('#faq')).toBeAttached()
+  expect(await page.locator('[data-reveal], [data-reveal-group]').count(),
+    '/learn/help gained reveal blocks: add /learn/help#faq to URLS')
+    .toBe(0)
 })

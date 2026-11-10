@@ -6,7 +6,7 @@
 //     focus is not moved (it stays on the Sharp tile) and the foot does not change width;
 //   - Download SVG (both parts), Save to project and the code's Copy are aria-disabled, still in the
 //     tab order, and Enter, Space and click on them change nothing;
-//   - #icust-preview-line (a live region) says what is Pro and holds "Back to free settings".
+//   - #ied-preview-line (a live region) says what is Pro and holds "Back to free settings".
 // Upgrade to Pro opens the shared upgrade popup with the title for the gate hit, over a proof that
 // draws the viewer's own icon. Escape closes only that popup and focus returns to Upgrade to Pro.
 // Back to free settings restores Round and the last preset, keeps every other setting, and focuses
@@ -55,17 +55,17 @@ async function openAs(browser, plan, viewport = { width: 1440, height: 900 }) {
   const cell = page.locator('.ig .ic').first()
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // The code sits in a closed disclosure; open it so its Copy can be reached.
-  await page.locator('.icust-code-sum').click()
-  await expect(page.locator('.icust-line-tile svg').first()).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
+  await page.locator('#ied-sec-code .ied-disc').click()
+  await expect(page.locator('.ied-tile svg').first()).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-cell-s[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
   await expect(primary(page)).toBeEnabled({ timeout: 20_000 })
   return { ctx, page, downloads }
 }
 
-const primary = (page) => page.locator('.icust-copy')
-const line = (page) => page.locator('#icust-preview-line')
+const primary = (page) => page.locator('.ied-pri')
+const line = (page) => page.locator('#ied-preview-line')
 const back = (page) => page.getByRole('button', { name: 'Back to free settings', exact: true })
 const group = (page) => page.getByRole('radiogroup', { name: 'Line style' })
 const tile = (page, name) => group(page).getByRole('radio', { name: new RegExp(`^${name}`) })
@@ -73,14 +73,14 @@ const sizeGroup = (page) => page.getByRole('radiogroup', { name: 'Export size' }
 const customRadio = (page) => sizeGroup(page).getByRole('radio', { name: /^Custom(,|$)/ })
 const sizeInput = (page) => page.getByRole('textbox', { name: 'Custom size' })
 const dimmed = (page) => ({
-  'the code Copy': page.locator('.icust-code-copy'),
+  'the code Copy': page.locator('#ied-code .ied-tn'),
   'Download SVG': page.getByRole('button', { name: 'Download SVG', exact: true }),
   'Download formats': page.getByRole('button', { name: 'Download formats', exact: true }),
   'Save to project': page.getByRole('button', { name: 'Save to project', exact: true }),
 })
 const upgradeDialog = (page, title) => page.getByRole('dialog', { name: title, exact: true })
-const customiser = (page) => page.locator('.icust-panel')
-const stageCap = (page) => page.locator('.icust-stage').evaluate((el) => el.style.getPropertyValue('--ig-cap'))
+const customiser = (page) => page.locator('.ied')
+const stageCap = (page) => page.locator('.ied-ground').evaluate((el) => el.style.getPropertyValue('--ig-cap'))
 
 async function commitSize(page, n) {
   await customRadio(page).click()
@@ -102,7 +102,7 @@ for (const [who, plan] of VIEWERS) {
       const handle = await primary(page).elementHandle()
       const before = {
         button: (await primary(page).boundingBox()).width,
-        foot: (await page.locator('.icust-foot').boundingBox()).width,
+        foot: (await page.locator('.ied-ft').boundingBox()).width,
         x: (await primary(page).boundingBox()).x,
       }
       const dialogs = await page.locator('[role="dialog"]').count()
@@ -124,7 +124,7 @@ for (const [who, plan] of VIEWERS) {
 
       const after = {
         button: (await primary(page).boundingBox()).width,
-        foot: (await page.locator('.icust-foot').boundingBox()).width,
+        foot: (await page.locator('.ied-ft').boundingBox()).width,
         x: (await primary(page).boundingBox()).x,
       }
       expect(Math.abs(after.button - before.button), 'the button changed width with its label (a sizer face that drops its space measured 1.7 to 3px)').toBeLessThan(1)
@@ -154,23 +154,23 @@ for (const [who, plan] of VIEWERS) {
       await tile(page, 'Sharp').click()
       await expect(line(page)).toHaveText(SHARP)
 
-      // Tab order through the code and the foot: code Copy, Back, Upgrade, Download SVG, Download formats, Save.
-      // The scrolling code and any Similar tiles sit between the code Copy and Back; they are stepped over.
+      // Tab order through the code and the foot: code Copy, the code, Similar tiles, Back, Download SVG, Download formats, Save, Upgrade.
+      // The code box and any Similar tiles sit between the code Copy and Back; they are stepped over.
       const d = dimmed(page)
       await d['the code Copy'].focus()
       await expect(d['the code Copy']).toBeFocused()
       await page.keyboard.press('Tab')
       for (let i = 0; i < 14 && !(await back(page).evaluate((el) => el === document.activeElement)); i += 1) {
-        const between = await page.evaluate(() => document.activeElement?.tagName === 'CODE' || document.activeElement?.classList.contains('icust-similar-btn'))
+        const between = await page.evaluate(() => document.activeElement?.tagName === 'PRE' || document.activeElement?.classList.contains('ied-sim'))
         expect(between, 'Tab left the code Copy for something other than the code, a Similar tile or Back').toBe(true)
         await page.keyboard.press('Tab')
       }
       await expect(back(page), 'Tab did not reach Back to free settings').toBeFocused()
       for (const [label, next] of [
-        ['Upgrade to Pro', primary(page)],
         ['Download SVG', d['Download SVG']],
         ['Download formats', d['Download formats']],
         ['Save to project', d['Save to project']],
+        ['Upgrade to Pro', primary(page)],
       ]) {
         await page.keyboard.press('Tab')
         await expect(next, `Tab did not reach ${label}`).toBeFocused()
@@ -180,7 +180,7 @@ for (const [who, plan] of VIEWERS) {
       for (const [label, button] of Object.entries(d)) {
         await expect(button, `${label} is dimmed`).toHaveAttribute('aria-disabled', 'true')
         await expect(button, `${label} is a real button the Tab key can reach`).not.toHaveAttribute('disabled', /.*/)
-        await expect(button, `${label} points at the reason`).toHaveAttribute('aria-describedby', 'icust-preview-line')
+        await expect(button, `${label} points at the reason`).toHaveAttribute('aria-describedby', 'ied-preview-line')
         await button.focus()
         for (const key of ['Enter', 'Space']) {
           await page.keyboard.press(key)
@@ -261,7 +261,7 @@ for (const [who, plan] of VIEWERS) {
       await back(page).click()
       await expect(tile(page, 'Round'), 'line style is not Round').toHaveAttribute('aria-checked', 'true')
       await expect(sizeGroup(page).getByRole('radio', { name: '32 pixels' }), 'size is not the last preset').toHaveAttribute('aria-checked', 'true')
-      await expect(page.locator('.icust-size-custom'), 'the custom row stayed open').toHaveCount(0)
+      await expect(page.locator('.ied-cus'), 'the custom row stayed open').toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Flip horizontally', exact: true }), 'another setting was reset').toHaveAttribute('aria-pressed', 'true')
       await expect(primary(page)).toHaveAccessibleName('Copy SVG')
       await expect(primary(page), 'focus did not land on Copy SVG').toBeFocused()
@@ -307,15 +307,15 @@ for (const [who, plan] of VIEWERS) {
       await page.goBack()
 
       await expect(customiser(page), 'the popup did not reopen').toBeVisible({ timeout: 20_000 })
-      await expect(page.locator('#icust-title')).toHaveText(name)
+      await expect(page.locator('#ied-title')).toHaveText(name)
       await expect(tile(page, 'Sharp')).toHaveAttribute('aria-checked', 'true')
-      await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels')
+      await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels, Pro')
       await expect(page.getByRole('button', { name: 'Flip vertically', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
       await expect(line(page)).toHaveText(BOTH)
 
       // Closing the popup drops the kept preview: a second trip to /plans and back opens nothing.
-      await page.getByRole('button', { name: 'Close customizer' }).click()
+      await page.getByRole('button', { name: 'Close customiser' }).click()
       await expect(customiser(page)).toHaveCount(0)
       await page.evaluate(() => { window.history.pushState({}, '', '/plans') })
       await page.goBack()
@@ -397,6 +397,6 @@ test('a Pro viewer never sees a preview: no line, Copy SVG stays, and Sharp at 4
   expect(written).toMatch(/<svg[^>]* width="40" height="40"/)
   expect(written).toMatch(/stroke-linecap="square"/)
   expect(written).toMatch(/stroke-linejoin="miter"/)
-  await expect(page.locator('[role="dialog"]:not(.icust-panel)'), 'an upgrade popup opened for Pro').toHaveCount(0)
+  await expect(page.locator('[role="dialog"]:not(.ied)'), 'an upgrade popup opened for Pro').toHaveCount(0)
   await ctx.close()
 })

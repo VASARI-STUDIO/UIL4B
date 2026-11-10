@@ -49,6 +49,9 @@
 //  · 'local'   — the working design only. What is on screen at the moment of
 //                sign-in is what the person was just working on — signing in is
 //                exactly what the export gate asks for — so it wins and goes up.
+//                With `setAside`, a different account value it replaces (a design
+//                worked on another device) is returned in `setAside` so the caller
+//                can put it aside rather than lose it unseen.
 //  · 'union'   — collections (prompts, likes, saves, custom icons, recents,
 //                exports). Both sides are kept, de-duplicated by identity; the
 //                recency lists keep local first and are capped.
@@ -88,8 +91,9 @@ export const ACCOUNT_KEYS = Object.freeze([
   { key: 'vs-community-handle', doc: 'data', firstBind: 'account' },
   { key: 'vs-info-intro', doc: 'data', firstBind: 'account' },
   { key: 'vs-uikit-guide-seen', doc: 'data', firstBind: 'account' },
+  { key: 'vs-palette-coach', doc: 'data', firstBind: 'account' },
   // The working design
-  { key: 'vs-current-design', doc: 'data', firstBind: 'local' },
+  { key: 'vs-current-design', doc: 'data', firstBind: 'local', setAside: true },
   // Saved items and history
   { key: 'vs-prompts', doc: 'data', firstBind: 'union' },
   { key: 'vs-saved-prompt-ids', doc: 'data', firstBind: 'union', merge: 'stamped' },
@@ -112,7 +116,7 @@ export const ACCOUNT_KEY_NAMES = Object.freeze(ACCOUNT_KEYS.map((k) => k.key))
  * must not outlive the person they describe. Never pushed by this module;
  * cleared when the cache changes hands.
  */
-export const ACCOUNT_MIRROR_KEYS = Object.freeze(['vs-onboarded'])
+export const ACCOUNT_MIRROR_KEYS = Object.freeze(['vs-onboarded', 'vs-previous-design', 'vs-previous-designs'])
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THE INVENTORY — every storage key in src/, and where it belongs.
@@ -138,6 +142,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-community-handle': { scope: 'account', why: 'Their public community handle' },
   'vs-info-intro': { scope: 'account', why: 'Dismissed the /info intro — the person learned it, not the browser' },
   'vs-uikit-guide-seen': { scope: 'account', why: 'Has seen the brand-kit walkthrough' },
+  'vs-palette-coach': { scope: 'account', why: 'Dismissed the first-palette coach on the Palette Builder — the person learned it, not the browser' },
   'vs-current-design': { scope: 'account', why: 'The working design every Create tool edits' },
   'vs-prompts': { scope: 'account', why: 'Their prompt library' },
   'vs-saved-prompt-ids': { scope: 'account', why: 'Community prompts they saved' },
@@ -154,6 +159,8 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-project-icons': { scope: 'account-other', why: 'Legacy map; each icon now lives ON its project (utils/projectIcons.js) and migrates there' },
   'vs-profile-cache': { scope: 'account-other', why: 'Cache of users/{uid}, which AuthContext owns; keyed by uid' },
   'vs-onboarded': { scope: 'account-mirror', why: 'Mirror of profile.onboarding.completedAt' },
+  'vs-previous-design': { scope: 'account-mirror', why: 'Unsaved work put aside on this browser; cleared at sign-out and switch so the next person never sees it' },
+  'vs-previous-designs': { scope: 'account-mirror', why: 'Older unsaved work waiting behind the one put aside; cleared at sign-out and switch with it' },
   'vs-accounts': { scope: 'device', why: 'Accounts remembered on THIS device for the switcher' },
   'vs-google-returning': { scope: 'device', why: 'Has this browser used Google sign-in (One Tap hint)' },
   'vs-session': { scope: 'device', why: 'Synchronous "was signed in" hint for first paint' },
@@ -164,6 +171,9 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-icon-copy-day': { scope: 'device', why: 'Client-side daily copy meter (the server is not involved)' },
   'vs-icon-ground': { scope: 'device', why: 'Background behind the icon preview, a viewing preference' },
   'vs-uikit-guide': { scope: 'device', why: 'Mid-walkthrough position on this screen' },
+  'vs-uikit-guide-at': { scope: 'device', why: 'When the walkthrough was last used on this screen' },
+  'vs-current-design-at': { scope: 'device', why: 'When the working design last changed on this browser, so the brand kit chooser can tell a return after a gap' },
+  'vs-kit-session': { scope: 'session', why: 'Whether the brand kit chooser was already answered in this tab' },
   'vs-first-win-started': { scope: 'device', why: 'Time-to-value timer for local analytics' },
   'vs-analytics': { scope: 'device', why: 'In-browser usage counters' },
   'vs-sessions': { scope: 'device', why: 'In-browser session history' },
@@ -181,6 +191,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-verify-dismissed': { scope: 'session', why: 'Verify-your-email bar dismissed for this tab session (vs-verify-dismissed:<uid>)' },
   'vs-resume-after-onboarding': { scope: 'session', why: 'Where to go after onboarding, this tab only' },
   'vs-chunk-reload': { scope: 'session', why: 'Reload-loop guard after a deploy' },
+  'vs-reland-hash': { scope: 'session', why: 'Hash to land again after the chunk-failure reload' },
   'vs-gradient-keep-dismissed': { scope: 'session', why: 'Keep-these-gradients question answered "Not mine" for this tab session (vs-gradient-keep-dismissed:<uid>)' },
   'vs-pending-save': { scope: 'session', why: 'A save waiting on sign-up (tool and project name), so the Save menu can reopen after onboarding; this tab only' },
   'vs-gradient-shuffle-filters': { scope: 'session', why: 'Gradient Shuffle settings (types, stop counts, Keep the angle), this tab only' },
@@ -431,6 +442,7 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
   const mode = meta.owner === uid ? 'sync' : meta.owner ? 'switch' : 'bind'
   const apply = {}
   const stamps = { ...meta.stamps }
+  const setAside = []
   let push = false
 
   for (const spec of ACCOUNT_KEYS) {
@@ -471,7 +483,11 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
       if (rAbsent) { stamps[key] = ls || now; push = true; continue }
       if (lUntouched) { apply[key] = r; stamps[key] = rs; continue }
       if (spec.firstBind === 'account') { apply[key] = r; stamps[key] = rs; continue }
-      if (spec.firstBind === 'local') { stamps[key] = now; push = true; continue }
+      if (spec.firstBind === 'local') {
+        // The account held different work of its own: hand it back to be put aside.
+        if (spec.setAside && !isUntouched(key, r)) setAside.push({ key, value: r, stamp: rs })
+        stamps[key] = now; push = true; continue
+      }
       // union
       const merged = spec.recency ? unionList(l, r, spec.cap) : unionList(r, l, spec.cap)
       if (!sameValue(merged, l)) apply[key] = merged
@@ -491,7 +507,7 @@ export function reconcile({ uid, meta, local, remote, now = Date.now() }) {
     }
   }
 
-  return { mode, apply, stamps, owner: uid, push }
+  return { mode, apply, stamps, owner: uid, push, setAside }
 }
 
 /**
@@ -548,13 +564,21 @@ export function applyToStorage(storage, meta, apply) {
  * from defaults and their own sign-in migrates THEIR work, not the last
  * person's.
  *
- * Refused — returns false and changes nothing — while any key has a change the
- * account has not received. After sign-out it can no longer be sent (the rules
+ * Refused — returns false and keeps the account's keys — while any key has a
+ * change the account has not received (the put-aside work still goes, see below). After sign-out it can no longer be sent (the rules
  * need the owner's token), so deleting it would lose it; kept, it goes up the
  * next time that same account signs in here.
  */
 export function releaseCache(storage, meta) {
-  if (pendingKeys(meta).length) return { released: false, keys: [] }
+  if (pendingKeys(meta).length) {
+    // Work put aside on this browser is never synced, so it is owed to no account;
+    // it goes even when the rest has to stay, so the next person never sees it.
+    for (const key of ACCOUNT_MIRROR_KEYS) {
+      if (key === 'vs-onboarded') continue
+      try { storage?.removeItem(key) } catch { /* nothing to do */ }
+    }
+    return { released: false, keys: [] }
+  }
   const keys = [...ACCOUNT_KEY_NAMES, ...ACCOUNT_MIRROR_KEYS]
   for (const key of keys) {
     try { storage?.removeItem(key) } catch { /* nothing to do */ }

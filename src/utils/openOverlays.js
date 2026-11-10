@@ -1,6 +1,8 @@
 // Positioned popovers and mounted menu/dialog surfaces share these hooks.
 // The guide's own dialogs must never count as an obstruction to themselves.
-export const OPEN_OVERLAY_SELECTOR = '[data-pop-side], [role="dialog"], [role="menu"], [role="listbox"], .pnav-menu'
+// `.plb-sx` is the Suggest/Explore panel: docked, it is a complementary region
+// rather than a dialog, but it still fills the corner the card sits in.
+export const OPEN_OVERLAY_SELECTOR = '[data-pop-side], [role="dialog"], [role="menu"], [role="listbox"], .pnav-menu, .plb-sx'
 
 export function hasOpenOverlays(root) {
   return Array.from(root.querySelectorAll(OPEN_OVERLAY_SELECTOR)).some(panel =>

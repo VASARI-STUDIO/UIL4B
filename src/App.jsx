@@ -20,6 +20,7 @@ import { openFirebaseGate } from './utils/firebaseAccess'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
+import { wantsFullView } from './utils/libraryView'
 import { LOGIN_SIGNUP_TITLE } from './data/routeMetaMap'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaGated'
 import { LoginPromptProvider } from './contexts/LoginPromptContext'
@@ -30,6 +31,7 @@ import { useSessionHint } from './hooks/useSessionHint'
 import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
+import RouteLoading from './components/RouteLoading'
 import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
 // download waits for the recovery reload instead of crashing the route.
@@ -92,11 +94,21 @@ const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 // Moved from Create to Discover: it is a browse-and-take surface, not a tool
 // you operate, so it belongs beside the palette and gradient libraries.
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
+const ButtonLibrary = lazy(() => import('./pages/ButtonLibrary'))
 // One Learn article, rendered inside the PillNav app-shell. /learn itself is
 // chromeless (SurfaceIndex mounts its own nav); its articles are not, the same
 // way /discover is chromeless and /discover/palettes is not.
 const LearnArticle = lazy(() => import('./pages/LearnArticle'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+
+// The dev-only component sheet. The condition is written out here, in the
+// expressions Vite replaces with literals in a production build, so the
+// bundler drops both the `import()` below and the <Route> further down: the
+// page, its sheet and its fixtures never reach a deployed bundle.
+// tests/unit/dev-component-sheet-not-in-production.test.js builds both ways
+// and proves it. It is in no sitemap, nav, route-meta table or llms.txt.
+const DEV_SHEET = import.meta.env.DEV || import.meta.env.MODE === 'test'
+const DevComponents = DEV_SHEET ? lazy(() => import('./pages/DevComponents')) : null
 // /discover and /learn — the two surface INDEXES, in one component.
 //
 // STATIC UNTIL 2026-09-18, and it was static for a reason that expired: it
@@ -159,10 +171,13 @@ function RequireAuth({ children }) {
 // lie about why they can't be here, and the route's existence is not something
 // they need told.
 //
+// `notFound` swaps that redirect for the not-found page at the same address, for
+// a route whose existence should not be hinted at or silently redirected away from.
+//
 // Presentation only — see isAdminEmail in utils/constants.js. Routes holding
 // real data verify server-side (/api/verify-admin), which the Admin dashboard
 // already does and which this does not replace.
-function RequireAdmin({ children }) {
+function RequireAdmin({ children, notFound = false }) {
   const { user, loading } = useAuth()
   useEffect(() => { openFirebaseGate() }, [])
   if (loading) {
@@ -172,7 +187,7 @@ function RequireAdmin({ children }) {
       </div>
     )
   }
-  if (!isAdminEmail(user?.email)) return <Navigate to="/" replace />
+  if (!isAdminEmail(user?.email)) return notFound ? <NotFound /> : <Navigate to="/" replace />
   return children
 }
 
@@ -205,6 +220,20 @@ function AppInner({ toast }) {
   // 35910539677). A layout effect, so the stamp moves in the same commit as
   // the page, on every branch — the shell, /create, /, and the surface pages.
   useLayoutEffect(() => { document.documentElement.dataset.route = location.pathname }, [location.pathname])
+  // The full-screen view of a library (`?view=full`, utils/libraryView.js): the
+  // page in the shell's <main> with no PillNav and no AppFooter, so it can fill
+  // a window of its own. Only for the people the route admits: a visitor it
+  // turns away gets the not-found page WITH the nav, not a dead end without
+  // one. While auth resolves the route shows a loader, so that waits as full.
+  // `data-view` lets the stylesheet drop the nav's height from the offsets that
+  // clear it (global.css, beside .app-shell).
+  const fullScreen = wantsFullView(location.pathname, location.search) && (authLoading || isAdminEmail(authUser?.email))
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    if (fullScreen) root.dataset.view = 'full'
+    else delete root.dataset.view
+    return () => { delete root.dataset.view }
+  }, [fullScreen])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -288,7 +317,10 @@ function AppInner({ toast }) {
     // routeMeta.js cannot know /roadmap (it is bundled into api/ and must not read
     // the flag), so the page that exists only while the flag is on is cleared here.
     const roadmapPage = TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap'
-    const missing = !roadmapPage && isUnknownRoute(location.pathname)
+    // The dev sheet has no metadata entry on purpose (routeMetaMap is shipped),
+    // so it is cleared here the same way, and only where the route exists.
+    const devSheetPage = DEV_SHEET && location.pathname.replace(/\/+$/, '') === '/dev/components'
+    const missing = !roadmapPage && !devSheetPage && isUnknownRoute(location.pathname)
     // THE LOOKUP KEY IS NORMALISED, and it has to be, because the other two
     // readers of this same pathname already are: canonicalUrl() strips a
     // trailing slash (routeMeta.js) and so does isUnknownRoute() one line
@@ -306,7 +338,8 @@ function AppInner({ toast }) {
       && (location.state?.signup === true || new URLSearchParams(location.search).get('signup') === '1')
     const title = missing
       ? 'UI L4B | Page not found'
-      : signupLogin ? LOGIN_SIGNUP_TITLE : PAGE_TITLES[metaPath] || 'UI L4B | Design Toolkit'
+      : devSheetPage ? 'UI L4B | Component sheet (dev)'
+        : signupLogin ? LOGIN_SIGNUP_TITLE : PAGE_TITLES[metaPath] || 'UI L4B | Design Toolkit'
     const description = missing
       ? 'That page does not exist. Browse the tools, or head back to the homepage.'
       : PAGE_DESCRIPTIONS[metaPath] || DEFAULT_DESCRIPTION
@@ -324,19 +357,17 @@ function AppInner({ toast }) {
 
   // ── THE FRONT DOOR ────────────────────────────────────────────────────
   //
-  // `/` decides; `/home` never does. That split is the whole routing change, and
-  // it is the founder's own wording, approved explicitly on 2026-09-05:
-  //
-  //     “i want the sales page to mostly be for new users if a user is already
-  //      logged in and navigates to the website it takes them to the dashboard
-  //      page unless they click they home button or navigate to specifly /home”
+  // `/` decides; `/home` never does. That split is the whole routing change.
+  // The sales page is mostly for new users: a signed-in visitor who opens the
+  // site is taken to their dashboard, unless they click the home button or go to
+  // /home on purpose.
   //
   // So there are two URLs for one page and they answer different questions:
   //
   //   /home  is the sales page, unconditionally, for everybody. It is what the
   //          nav logo links to (PillNav), it is prerendered, and the branch below
   //          reads no auth state at all — there is no code path on which a signed-in
-  //          visitor at /home is sent anywhere. That is the founder's exception,
+  //          visitor at /home is sent anywhere. That is deliberate,
   //          and tests/unit/user-home.test.js asserts it structurally.
   //
   //   /      is the decision. Signed out it renders the same sales page (so the
@@ -369,7 +400,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/mobile') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <SpectrumMobile />
         </Suspense>
         <GoogleOneTap />
@@ -381,7 +412,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/tools') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <SpectrumTools />
         </Suspense>
         <GoogleOneTap />
@@ -393,7 +424,7 @@ function AppInner({ toast }) {
   if (TOOL_VOTES_ON && location.pathname.toLowerCase().replace(/\/+$/, '') === '/roadmap') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <Roadmap />
         </Suspense>
         <GoogleOneTap />
@@ -405,7 +436,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/sitemap') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <SiteMap />
         </Suspense>
         <GoogleOneTap />
@@ -421,7 +452,7 @@ function AppInner({ toast }) {
   if (location.pathname === '/plans' || location.pathname.toLowerCase().replace(/\/+$/, '') === '/plans') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <Pricing />
         </Suspense>
         <GoogleOneTap />
@@ -437,7 +468,7 @@ function AppInner({ toast }) {
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/login') {
     return (
       <>
-        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Suspense fallback={<RouteLoading />}>
           <LoginPage />
         </Suspense>
         <GoogleOneTap />
@@ -500,8 +531,8 @@ function AppInner({ toast }) {
     // live Create tool shell.
     //
     // /create/color IS NO LONGER INTERCEPTED. It was the one Create category home
-    // that rendered a page — ColorLanding, the colour sales page — and the founder
-    // deleted it with the other two landings. It now falls through to <CreateTool />
+    // that rendered a page — ColorLanding, the colour sales page — and it was
+    // deleted with the other two landings. It now falls through to <CreateTool />
     // and bounces to /create/palette exactly like /create/typography,
     // /create/imagery, /create/ai-tools and /create/icons-emoji already do.
     // CREATE_HOMES_THAT_RENDER in toolTree.js is the fact that says so, and it is
@@ -513,7 +544,7 @@ function AppInner({ toast }) {
           // Its own Suspense boundary: this branch returns ABOVE the app shell,
           // and the shell's <Suspense> is what every other lazy page leans on.
           ? (
-            <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+            <Suspense fallback={<RouteLoading />}>
               <SurfaceIndex key={surface} surface={surface} />
               <AppFooter />
             </Suspense>
@@ -526,11 +557,11 @@ function AppInner({ toast }) {
 
   return (
     <div className="app-shell">
-      <PillNav />
+      {!fullScreen && <PillNav />}
 
-      <main className="app-page" id="main" tabIndex={-1} key={location.pathname}>
+      <main className={fullScreen ? 'app-page app-page--full' : 'app-page'} id="main" tabIndex={-1} key={location.pathname}>
         <RouteErrorBoundary resetKey={location.pathname}>
-          <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <Suspense fallback={<RouteLoading />}>
             <Routes location={location}>
               {/* Every retired URL → its live replacement, rendered from the one
                   table in src/data/legacyRoutes.js that also generates
@@ -558,7 +589,12 @@ function AppInner({ toast }) {
                   threw `onCopy is not a function`, silently: no text, no toast,
                   no visible error, on the page whose whole product is the text
                   you came to copy. Same helper /seo is given below. */}
-              <Route path="/discover/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
+              {/* Parked: admins only until the library is opened up. Everyone
+                  else sees the not-found page, at this same address. */}
+              <Route path="/discover/prompts" element={<RequireAdmin notFound><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
+              {/* Copy-ready button designs. `onCopy` is required: every copy
+                  button on the page calls it. */}
+              <Route path="/discover/buttons" element={<ButtonLibrary onCopy={copy} />} />
 
               {/* Learn articles. An unknown slug renders NotFound from inside
                   LearnArticle rather than matching here, so /learn/nonsense is a
@@ -604,13 +640,15 @@ function AppInner({ toast }) {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/credits" element={<Credits />} />
-              <Route path="/sitemap" element={<SiteMap />} />
               <Route path="/learn/help" element={<HelpCentre />} />
               <Route path="/learn/principles" element={<DesignPrinciples />} />
               <Route path="/info" element={<InfoCentre />} />
               <Route path="/seo" element={<SeoInspector onCopy={copy} toast={toast} />} />
               <Route path="/admin" element={<RequireAuth><Admin toast={toast} /></RequireAuth>} />
               <Route path="/style-guide" element={<RequireAdmin><StyleGuide toast={toast} /></RequireAdmin>} />
+              {/* Dev and test builds only. DEV_SHEET is false in production, so
+                  this is `false` there and the route does not exist. */}
+              {DEV_SHEET && <Route path="/dev/components" element={<DevComponents toast={toast} />} />}
               {/* A real 404, not a redirect. The redirect made every typo and
                   dead backlink a 200-status indexable copy of the homepage, and
                   silently teleported the user so a broken link looked like it
@@ -621,7 +659,7 @@ function AppInner({ toast }) {
         </RouteErrorBoundary>
       </main>
 
-      <AppFooter />
+      {!fullScreen && <AppFooter />}
       <GoogleOneTap />
     </div>
   )
@@ -656,7 +694,7 @@ export default function App() {
             (the Create tools, `/`, /home, /onboarding, /discover, /learn), so
             a crash is a recovery screen rather than a blank page. The shell
             keeps its own boundary inside <main> so the nav survives there. */}
-        <RouteErrorBoundary resetKey={pathname}>
+        <RouteErrorBoundary resetKey={pathname} outer>
           <AppInner toast={toast} />
         </RouteErrorBoundary>
         <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />
@@ -680,7 +718,7 @@ export default function App() {
 
             Both now render as rows inside <NoticeStack>, which reserves the
             height they occupy instead of floating them over the toolbar of
-            whatever tool is open — founder decision, 2026-09-14. */}
+            whatever tool is open. */}
         {/* And the feedback entry points, for the same reason a fourth time —
             except that this one is about the RIGHT-CLICK menu rather than a
             banner. Mounted inside AppInner's shell it was absent from every

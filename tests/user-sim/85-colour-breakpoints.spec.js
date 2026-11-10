@@ -1,8 +1,7 @@
 // The colour tools, measured across the width matrix rather than read off CSS.
 //
-// The founder, 2026-09-13, from a screenshot of /create/palette at ~660px:
-// "im finding alot of basic UI problems that can be replaced with better UI
-// design such as replacing some buttons with a drop down or other large issues".
+// Prompted by a screenshot of /create/palette at ~660px that showed basic UI
+// problems that better UI design replaces, such as buttons becoming a drop down.
 //
 // Four things this spec holds, each of them a defect that was rendered and
 // measured before it was fixed:
@@ -31,7 +30,7 @@ import { go, signIn, watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
-/** The founder's matrix. 660 is his screenshot; the rest are the device band. */
+/** The width matrix. 660 is the screenshot width; the rest are the device band. */
 const WIDTHS = [320, 360, 390, 430, 660, 768, 834, 1024, 1280, 1440, 1920]
 
 /** The band where `.plb-col` is a row: the drawn phone layout, below 768px
@@ -342,7 +341,7 @@ test.describe('the palette board across the width matrix', () => {
 
       expect(board.h1.tag).toBe('H1')
       expect(board.h1.text).toBe('Palette Generator')
-      // FOUNDER, 2026-09-14: "Palette Generator" struck off a screenshot of
+      // A screenshot had "Palette Generator" struck out of
       // this page. A workspace does not spend a display heading restating the
       // route's own name, and this one pushed the board below the fold on a
       // phone. The h1 stays in the document because `.plb-board` is
@@ -436,7 +435,7 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       expect(read.inViewHeadings, `${theme}: no heading inside the preview`).toBe(0)
       expect(read.headings, `${theme}: the outline is the page's own`).toEqual(['Contrast Checker', 'Where each test lands', 'Pairs to check'])
 
-      // The claim the founder retired, and the tagline beside it.
+      // The claim that was retired, and the tagline beside it.
       expect(read.body, `${theme}`).not.toContain('Free while in beta')
       expect(read.body, `${theme}`).not.toContain('Ship a palette you can defend')
       await ctx.close()

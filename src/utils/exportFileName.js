@@ -20,9 +20,11 @@ const EXTENSION = /^[a-z0-9]+$/
 // Artefacts joined to the project with a dot instead of a hyphen.
 const DOTTED = new Set(['tokens'])
 
-/** A project name as the part of a file name: lowercase letters, digits and single hyphens. */
+/** A project name as the part of a file name: lowercase letters, digits and single hyphens. An accented letter keeps its base letter (Café is cafe). */
 export function projectSlug(project) {
   const slug = String(project ?? '')
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .slice(0, PROJECT_SLUG_MAX)
@@ -62,6 +64,7 @@ const FORMAT_FILES = Object.freeze({
   tailwind: Object.freeze(['tailwind', 'css']),
   contrast: Object.freeze(['contrast-pairs', 'csv']),
   'contrast-json': Object.freeze(['contrast-pairs', 'json']),
+  'app-bundle': Object.freeze(['app-ready', 'zip']),
 })
 
 /** True for an export format id this module can name. */

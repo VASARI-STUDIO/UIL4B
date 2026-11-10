@@ -1,9 +1,9 @@
-// The Palette Builder toolbar, measured across the widths the founder reported.
+// The Palette Builder toolbar, measured across the widths reported.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE FAULT
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder, 2026-09-05, two screenshots.
+// Two reported screenshots.
 //   DESKTOP: the toolbar "is a run of icon-only buttons of uneven weight and
 //   spacing sitting beside two labelled buttons and a select, and it reads as
 //   unresolved rather than designed."
@@ -106,15 +106,25 @@ test.describe('palette toolbar fits the row it is given', () => {
     }
     // Toolbar priorities: Undo, Randomise and Suggest 5; Seed and Redo 4; Preview and
     // From image 3; Explore and Back 2; System 1; Vision 0. Under 768 Preview is an
-    // Extra tools row only, and Explore (2) has left the row. Back to projects (2)
-    // is a link on the row from 640 to 767 (the icon-only buttons leave it room) and
-    // an Extra tools row at 390 and at 768 and up.
+    // Extra tools row only. Which of the rest have left depends on the room: Create
+    // tool primaries sit in the phone dock below 768, so the row has the whole
+    // width and Explore (2) and Back to all tools (2) fit at 662 (measured), where
+    // before the dock Explore was in Extra tools. So this does not pin which side
+    // each is on; it pins that every movable control is in exactly ONE place, the
+    // row or Extra tools, never lost and never doubled.
     await expect(page.locator(BAR).getByRole('button', { name: 'Preview', exact: true }), 'Preview is not on the row at 662px').toHaveCount(0)
     await expect(panel.getByRole('button', { name: 'Preview', exact: true }), 'Preview is in Extra tools').toBeVisible()
-    await expect(page.locator(BAR).getByRole('button', { name: 'Explore palettes and brands', exact: true }), 'Explore left the row at 662px').toHaveCount(0)
-    await expect(panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }), 'Explore is in Extra tools').toBeVisible()
-    await expect(page.locator(BAR).getByRole('link', { name: 'Back to projects', exact: true }), 'Back to projects is on the row at 662px').toBeVisible()
-    await expect(panel.getByRole('button', { name: 'Back to projects', exact: true }), 'and not doubled in Extra tools').toHaveCount(0)
+    const where = {}
+    for (const [key, role, name] of [
+      ['Explore', 'button', 'Explore palettes and brands'],
+      ['Back to all tools', 'link', 'Back to all tools'],
+    ]) {
+      const onRow = await page.locator(BAR).getByRole(role, { name, exact: true }).count()
+      const inPanel = await panel.getByRole('button', { name, exact: true }).count()
+      where[key] = onRow ? 'row' : 'Extra tools'
+      expect(onRow + inPanel, `${key} is on the row (${onRow}) or in Extra tools (${inPanel}), exactly once`).toBe(1)
+    }
+    test.info().annotations.push({ type: 'placement at 662px', description: JSON.stringify(where) })
     // And at 662 the row has handed over its lowest-priority controls too: the
     // System and Vision selects (priority 0) are here, not on the row.
     const bar = page.locator(BAR)

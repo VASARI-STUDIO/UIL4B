@@ -35,6 +35,9 @@ import {
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from '../../api/_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from '../../api/_lib/mail.js'
 import { emailGateBody, EMAIL_UNVERIFIED_CODE } from '../../api/_lib/emailGate.js'
+import {
+  geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
+} from '../../api/_lib/geoBlock.js'
 
 const AI_PATH = 'api/ai.js'
 const aiSource = fs.readFileSync(path.join(process.cwd(), AI_PATH), 'utf8')
@@ -83,6 +86,7 @@ function loadAi({ decoded, user = {} }) {
     FieldValueIncrement: async () => 1,
     requireAdmin: async () => ({ ok: false, status: 401 }),
     emailGateBody,
+    geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
     serveUsage: async (req, res) => { ledger.usageServed += 1; return res.status(200).json({ served: true }) },
     usageDayKey, usageMonthKey,
     planForUser, dailyLimitFor, monthlyLimitFor, modelFor,

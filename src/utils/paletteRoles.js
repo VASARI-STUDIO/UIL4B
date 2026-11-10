@@ -22,9 +22,9 @@
 //
 // So on an analogous palette, column 4 was labelled SUBTLE when it is a
 // softened −15° analogous, and column 2 read SECONDARY when it is a distinct
-// hue 30° away. The founder's report: "all systems say the same from left to
-// right… the subtle colour of the primary should be called subtle, or the
-// colour shown in the slot should be the subtle colour."
+// hue 30° away. The reported problem: all systems say the same from left to
+// right, so the subtle colour of the primary should be called subtle, or the
+// colour shown in the slot should be the subtle colour.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS ONLY CHANGES THE LABEL
@@ -50,7 +50,7 @@ const AUTO = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 
 // Each entry mirrors its generateHarmony branch in order. Where a slot is a
 // lightened or darkened version of another slot, the label says which — that is
-// the specific thing the founder asked for.
+// the specific thing that was missing.
 export const HARMONY_ROLE_LABELS = Object.freeze({
   auto: AUTO,
   complement: ['PRIMARY', 'COMPLEMENT', 'PRIMARY SOFT', 'COMPLEMENT SOFT', 'PRIMARY DEEP'],

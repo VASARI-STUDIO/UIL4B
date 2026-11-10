@@ -1,7 +1,7 @@
 // THE TOOLBAR STOPS CHANGING HEIGHT WHEN THE CHIP COUNT CHANGES.
 //
-// Founder, 2026-09-04: "the header design changes height switching from the
-// emoji to icon library. the bar is broken visually on a standard desktop."
+// The symptom: the header changed height when switching from the emoji to the
+// icon library, so the bar looked broken on a standard desktop.
 //
 // MEASURED at 1440x900 before the fix, in a rendered browser:
 //

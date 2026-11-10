@@ -101,9 +101,48 @@ test('unknown type and source fall back rather than being stored verbatim', () =
   assert.equal(entry.subject, '[general] Submission', 'a missing subject is labelled by type')
 })
 
+test('the auto source is kept, so a crash report can be told from a typed one', () => {
+  for (const source of ['auto', 'inline', 'email', 'feedback-form']) {
+    const { entry } = validateSupportBody({ message: 'hi', type: 'bug', source }, NOW)
+    assert.equal(entry.source, source, `${source} is stored as sent`)
+  }
+  // 'automatic' is not on the list: a near miss still falls back, it is not stored verbatim.
+  assert.equal(validateSupportBody({ message: 'hi', source: 'automatic' }, NOW).entry.source, 'feedback-form')
+})
+
 test('an empty email is allowed — the form does not require one', () => {
   assert.equal(validateSupportBody({ message: 'hi', email: '' }, NOW).entry.email, '')
   assert.equal(validateSupportBody({ message: 'hi', email: null }, NOW).entry.email, '')
+})
+
+// ── Routing choices: category and severity ──────────────────────────────────
+
+test('a category and severity the dialog offers are stored', () => {
+  const { entry } = validateSupportBody({
+    type: 'bug', message: 'hi', category: 'Icons', severity: 'Major — feature broken',
+  }, NOW)
+  assert.equal(entry.category, 'Icons')
+  assert.equal(entry.severity, 'Major — feature broken')
+})
+
+test('a category or severity outside the list for its type is dropped', () => {
+  // 'Icons' is a bug area, not a topic for general feedback; severity is bug-only.
+  const general = validateSupportBody({ type: 'feedback', message: 'hi', category: 'Icons', severity: 'Major — feature broken' }, NOW).entry
+  assert.equal('category' in general, false)
+  assert.equal('severity' in general, false)
+  for (const bad of ['<script>', 'x'.repeat(5000), ['Icons'], { a: 1 }, 7, null, 'icons']) {
+    const { entry } = validateSupportBody({ type: 'bug', message: 'hi', category: bad, severity: bad }, NOW)
+    assert.equal('category' in entry, false, `${JSON.stringify(bad)} must not be stored as a category`)
+    assert.equal('severity' in entry, false, `${JSON.stringify(bad)} must not be stored as a severity`)
+  }
+})
+
+test('the server allow-list equals what the dialog offers', async () => {
+  const { ROUTING_ALLOWED } = await import('../../api/support.js')
+  const { FEEDBACK_ROUTING } = await import('../../src/utils/feedbackRouting.js')
+  // The dialog files 'feedback' under the server's 'general'.
+  const asStored = { general: FEEDBACK_ROUTING.feedback, bug: FEEDBACK_ROUTING.bug, feature: FEEDBACK_ROUTING.feature, help: FEEDBACK_ROUTING.help }
+  assert.deepEqual(JSON.parse(JSON.stringify(ROUTING_ALLOWED)), JSON.parse(JSON.stringify(asStored)))
 })
 
 // ── The call site ───────────────────────────────────────────────────────────
@@ -115,7 +154,7 @@ test('the handler validates through the pure function and boots through the shar
   const src = fs.readFileSync(path.join(process.cwd(), 'api/support.js'), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/.*$/gm, '')
-  assert.match(src, /const validated = validateSupportBody\(\{ type, subject, message, email, source \}\)/,
+  assert.match(src, /const validated = validateSupportBody\(\{ type, subject, message, email, source, category, severity \}\)/,
     'the handler no longer validates through validateSupportBody')
   assert.match(src, /import \{[^}]*\badminDb\b[^}]*\} from '\.\/_lib\/firebase-admin\.js'/,
     'support.js must use the shared Firebase Admin bootstrap')
@@ -211,4 +250,11 @@ test('verifiedReporterEmail: a token that fails to verify logs one fixed line an
   )
   assert.equal(out, null)
   assert.deepEqual(warn.mock.calls.map((c) => c.arguments), [['support: report token could not be verified']])
+})
+
+test('an automatic report keeps no reply address, since anyone can send the label', () => {
+  const auto = validateSupportBody({ message: 'boom', source: 'auto', email: 'someone@example.com' }, NOW).entry
+  assert.equal(auto.email, '')
+  const typed = validateSupportBody({ message: 'hi', source: 'inline', email: 'someone@example.com' }, NOW).entry
+  assert.equal(typed.email, 'someone@example.com', 'a typed report keeps its address')
 })

@@ -21,7 +21,7 @@ const BILLING_INTERVALS = new Set(['monthly', 'yearly'])
 
 // The billing APIs return a generic message plus a correlation id (the real
 // Stripe/Firebase error stays in the server log). Show the id so a user can
-// quote it to support and the founder can find the exact log line.
+// quote it to support and the exact log line can be found.
 function billingError(data, status, fallback) {
   const base = data?.error || `${fallback} (server returned ${status})`
   const error = new Error(data?.correlationId ? `${base} [ref ${data.correlationId}]` : base)
@@ -49,6 +49,7 @@ const FREE_PLAN = {
   id: 'free', label: 'Free',
   limits: {
     'alt-text': AI_LIMITS.free.daily, 'prompts-ai': AI_LIMITS.free.daily, 'ai-default': AI_LIMITS.free.daily,
+    // 'custom-icons' is a per-project cap: the icon library compares it with each project's own count.
     projects: FREE_SAVE_LIMITS.projects, 'custom-icons': FREE_SAVE_LIMITS.customIcons,
   },
   monthlyLimits: {

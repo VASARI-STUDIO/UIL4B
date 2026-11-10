@@ -1,3 +1,4 @@
+import './utils/entryPath'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -14,6 +15,7 @@ import { I18nProvider } from './contexts/I18nContext'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 import { installGlobalErrorCapture } from './utils/errorReport'
 import { handlePreloadError } from './utils/lazyRoute'
+import { prepareReload } from './components/spectrum/usePageAnchors'
 import { exampleLoading } from './components/palette/examples/loading'
 import './styles/global.css'
 import { installDownloadObserver } from './utils/downloadObserver'
@@ -38,7 +40,10 @@ window.addEventListener('vite:preloadError', (event) => {
     online: true,
     storage,
     now: Date.now(),
-    reload: () => window.location.reload(),
+    reload: () => {
+      prepareReload()
+      window.location.reload()
+    },
   })
 })
 

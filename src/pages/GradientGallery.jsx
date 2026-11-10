@@ -97,8 +97,8 @@ export default function GradientGallery({ toast }) {
   // follows it. Keyed on the URL's mood only: picking a mood in the tray does
   // not touch the URL and so is not undone here.
   useEffect(() => { setTag(moodFromUrl) }, [moodFromUrl])
-  // An ARRAY, because the type tray is multi-select (founder request,
-  // 2026-08-08). `['all']` is the unfiltered state; picking every type collapses
+  // An ARRAY, because the type tray is multi-select.
+  // `['all']` is the unfiltered state; picking every type collapses
   // straight back to it, which LibraryFilterGroup handles.
   const [types, setTypes] = useState(['all'])
   // "Your submissions" belongs to the ACCOUNT, not to this browser: it is read
@@ -265,8 +265,8 @@ export default function GradientGallery({ toast }) {
             hidden inside the card, and the name it does carry is the gradient's
             own — a fact, not an invention. */}
         <h2 className="sr-only" id="grg-locked-more">Gradients included with Pro</h2>
-        <LibraryGrid className="grg-grid" min={280} labelledBy="grg-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} gate="gradient-library-locked-card" />)}
+        <LibraryGrid className="grg-grid grg-grid--locked" min={280} labelledBy="grg-locked-more">
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} kind="gradients" gate="gradient-library-locked-card" />)}
         </LibraryGrid>
         <LockedTeaseCta
           gate="gradient-library-tier-lock"
@@ -280,7 +280,7 @@ export default function GradientGallery({ toast }) {
 
   return (
     <div className="sec lib-surface grg-wrap">
-      {/* NO `description` (founder decision, 2026-09-13): the sentence here ran
+      {/* NO `description`: the sentence here ran
           the same template as the Palette Library’s — "…with a point of view …
           make it yours." — which is what held both pages at 7 on
           purpose-and-content. Deleted, not rewritten. The masthead is sized by
@@ -380,7 +380,7 @@ export default function GradientGallery({ toast }) {
         search={{
           value: rawQuery,
           onChange: setRawQuery,
-          placeholder: 'Search gradients by name, hex or mood…',
+          placeholder: 'Search gradients',
           label: 'Search gradients',
         }}
       >

@@ -3,7 +3,7 @@
 // REGRESSION GUARD: each board column was titled with a hard-coded positional
 // role (`ROLES[i]` → PRIMARY / SECONDARY / ACCENT / SUBTLE / DEEP). That names
 // a SLOT, not a colour, so switching the colour system left "SUBTLE" sitting
-// over a colour that was nothing of the kind — the founder's report. The title
+// over a colour that was nothing of the kind. The title
 // is now derived from the colour itself.
 //
 // Two properties have to hold together, and they pull in opposite directions:
@@ -34,8 +34,8 @@ function assertFromTheme(name, themeId, why) {
   )
 }
 
-// A monochromatic grey ramp — the founder's own example ("when I set it to
-// mono, the subtle swatch isn't what it's showing").
+// A monochromatic grey ramp — the case where the subtle swatch's title did not
+// match what it was showing.
 const GREYS = ['#F2F1EF', '#C9C6C1', '#8E8B86', '#59565222', '#2B2A28'].map(c => c.slice(0, 7))
 const GREENS = ['#03945A', '#0B6E45', '#23FBA4', '#095D3B', '#013E26']
 const BLUES = ['#1E788F', '#267CC9', '#5881DA', '#1B4F8A', '#0E3358']
@@ -121,7 +121,7 @@ test('an unreadable colour degrades to a mono title instead of throwing', () => 
 })
 
 test('a real system switch re-titles every column whose colour moved', () => {
-  // The founder's exact gesture, on the real engine: an analogous board
+  // The exact gesture, on the real engine: an analogous board
   // switched to Monochromatic. Slot 0 is the seed and does not move, so it
   // must keep its title; every other slot must be re-titled.
   const seed = '#4338E0'
@@ -168,7 +168,7 @@ test('the community-submit dice name stays deliberately random', () => {
 
 // ── The hue families are cut on HCT, not on sRGB ───────────────────────────
 //
-// REGRESSION GUARD, founder report 2026-09-13: "Bauhaus Mulberry" was sitting
+// REGRESSION GUARD: "Bauhaus Mulberry" was sitting
 // on #97ADCD, a pale blue. Mulberry is in the `cosmic` (purple) bank. The cause
 // was that `themeForHue`'s boundaries were spaced for an sRGB hue wheel while
 // every caller feeds it an HCT hue, and the two are rotated by up to 45° in the

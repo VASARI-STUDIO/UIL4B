@@ -94,7 +94,7 @@ export default function ThemeInversionTable() {
         role="group"
         aria-label="This page's own colour pairs, and the same pairs with every channel inverted"
       >
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit">
           <thead>
             <tr>
               <th scope="col">Pair</th>
@@ -110,7 +110,7 @@ export default function ThemeInversionTable() {
                 <th scope="row">{r.label}</th>
                 <td>
                   <span className="lart-swatch" style={{ background: r.bg, color: r.fg }} aria-hidden="true">Ag</span>
-                  <span className="lart-hex">{r.fg} on {r.bg}</span>
+                  <span className="lart-pair"><span className="lart-hex">{r.fg}</span> on <span className="lart-hex">{r.bg}</span></span>
                 </td>
                 <td data-num="true">{r.ratio.toFixed(2)}:1</td>
                 <td>
@@ -119,7 +119,7 @@ export default function ThemeInversionTable() {
                     style={{ background: r.flippedBg, color: r.flippedFg }}
                     aria-hidden="true"
                   >Ag</span>
-                  <span className="lart-hex">{r.flippedFg} on {r.flippedBg}</span>
+                  <span className="lart-pair"><span className="lart-hex">{r.flippedFg}</span> on <span className="lart-hex">{r.flippedBg}</span></span>
                 </td>
                 <td data-num="true">{r.flippedRatio.toFixed(2)}:1</td>
               </tr>
