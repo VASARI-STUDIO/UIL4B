@@ -104,7 +104,6 @@ test.describe('/plans advertises only what the product has', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    const answer = page.locator('.pr-faq-row', { has: page.locator('h3', { hasText: 'Which export formats can I actually get?' }) })
     // Open every question: a closed answer is hidden and has no text to read.
     const faq = page.locator('section[aria-labelledby="pl-faq-h"]')
     for (const q of await faq.getByRole('button').all()) await q.click()
@@ -117,6 +116,7 @@ test.describe('/plans advertises only what the product has', () => {
     // …and the Pro card names the exports Pro adds.
     const proCard = await page.locator('.hpl-pro').innerText()
     for (const format of proOnlyFormats()) expect(proCard + (await page.locator('table').innerText()), `Pro no longer names "${format.name}"`).toContain(format.name)
+  })
 
   test('every quoted limit matches the configuration the product enforces', async ({ page }) => {
     // The figures exist only after render, so only a rendered check can read
