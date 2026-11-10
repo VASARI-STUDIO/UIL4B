@@ -19,6 +19,26 @@
 //   `.ied-x` height 44px -> 36px on the sheet                                  -> (b) "every control is a 44px target"
 //   the editor's Tab handler returns before it wraps focus                    -> (b) "Tab and Shift+Tab stay inside"
 //   `.ied-hd` width 130% of the sheet                                          -> (b) "nothing runs off the side"
+//
+// Also pinned here (c to g):
+//   (c) With the dialog itself holding focus (the state on open, and after a press on a blank part of it),
+//       Shift+Tab goes to Copy SVG, the last control, and Tab goes to Close, the first. 1440 and 390.
+//   (d) The Download formats menu keeps 16px between its edges and the screen's, at 390 (chevron) and 320x568
+//       (the Download button itself opens it).
+//   (e) 320x568: Download is one button named "Download, choose a format" (aria-haspopup=menu) with no chevron;
+//       its menu holds SVG and PNG 24, 48 and 96; PNG 24px downloads `*-24px.png`; Save reads "Save" in full,
+//       keeps its accessible name "Save to project" and does not overflow. At 390x844 the chevron is still there.
+//   (f) With the save panel open at 1440, a press inside the dialog but outside the panel closes the panel and
+//       leaves the editor open; a press inside the panel does not close it.
+//   (g) The custom colour picker's Hue slider is 44px high on the phone sheet (390 and 320).
+//
+// HOW TO SEE (c) TO (g) FAIL (built output patched, run red, restored byte for byte):
+//   the Tab trap wraps only when focus is on `first` or `last` (the dialog and outside are not wrap points) -> (c)
+//   the folded-foot media query never matches                                  -> (e) all three, (d) at 320x568
+//   `.ied-sv .nm-l` no longer hidden on the phone                              -> (e) "Save reads Save"
+//   the menu's width is read during its entrance scale (getBoundingClientRect) -> (d) at 390 and 320x568
+//   the save panel's mousedown listener loses its capture flag                 -> (f)
+//   `.cpk-hue` height 44px -> 24px on touch                                    -> (g)
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -112,6 +132,40 @@ for (const [label, ctx] of [['1440', WIDE], ['390', PHONE_390]]) {
       await page.keyboard.press('Escape')
       await expect(picker(page)).toHaveCount(0)
       await expect(editor(page)).toBeVisible()
+    })
+  })
+}
+
+for (const [label, ctx] of [['1440', WIDE], ['390', PHONE_390]]) {
+  test.describe(`Tab from the dialog itself at ${label}`, () => {
+    test.use(ctx)
+
+    test('Shift+Tab from the dialog wraps to Copy SVG, the last control, and stays in the dialog', async ({ page }) => {
+      watch(page, PERSONA)
+      await openEditor(page)
+      await editor(page).focus()
+      await expect(editor(page), 'POSITIVE CONTROL: the dialog itself holds focus').toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeFocused()
+      expect(await focusInside(editor(page))).toBe(true)
+    })
+
+    test('Tab from the dialog goes to Close, the first control', async ({ page }) => {
+      watch(page, PERSONA)
+      await openEditor(page)
+      await editor(page).focus()
+      await expect(editor(page), 'POSITIVE CONTROL: the dialog itself holds focus').toBeFocused()
+      await page.keyboard.press('Tab')
+      await expect(page.getByRole('button', { name: 'Close customiser', exact: true })).toBeFocused()
+    })
+
+    test('after a press on a blank part of the dialog, Shift+Tab still wraps to Copy SVG', async ({ page }) => {
+      watch(page, PERSONA)
+      await openEditor(page)
+      await page.locator('#ied-title').click()
+      await editor(page).focus()
+      await page.keyboard.press('Shift+Tab')
+      await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeFocused()
     })
   })
 }
@@ -287,6 +341,169 @@ for (const [label, ctx] of [['390x844', PHONE_390], ['320x568', PHONE_320]]) {
       await expect(picker(page)).toBeVisible()
       await settle(page)
       expect(fits(await overflowOf(page)), 'sideways overflow, save panel open').toEqual([])
+    })
+  })
+}
+
+const formatsMenu = (page) => page.getByRole('menu', { name: 'Download format' })
+
+for (const [label, ctx, trigger] of [
+  ['390x844', PHONE_390, { name: 'Download formats', exact: true }],
+  ['320x568', PHONE_320, { name: 'Download, choose a format', exact: true }],
+]) {
+  test.describe(`the Download formats menu at ${label}`, () => {
+    test.use(ctx)
+    const { width: vw, height: vh } = ctx.viewport
+
+    test('it opens 16px inside the screen on every side', async ({ page }) => {
+      watch(page, PERSONA)
+      await openEditor(page)
+      await page.getByRole('button', trigger).click()
+      await expect(formatsMenu(page)).toBeVisible()
+      await expect(formatsMenu(page).getByRole('menuitemradio')).toHaveCount(4)
+      await settle(page)
+      const b = await formatsMenu(page).evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return { l: r.left, r: r.right, t: r.top, b: r.bottom }
+      })
+      expect(b.l, `menu left edge ${b.l} is under 16px from the screen's left`).toBeGreaterThanOrEqual(16 - 0.5)
+      expect(b.r, `menu right edge ${b.r} is under 16px from the screen's right (${vw})`).toBeLessThanOrEqual(vw - 16 + 0.5)
+      expect(b.t, 'menu top is off the screen').toBeGreaterThanOrEqual(0)
+      expect(b.b, 'menu bottom is off the screen').toBeLessThanOrEqual(vh)
+    })
+  })
+}
+
+test.describe('the foot at 320x568', () => {
+  test.use(PHONE_320)
+
+  test('Download is one button that opens the formats menu: SVG and PNG 24, 48 and 96, no chevron', async ({ page }) => {
+    watch(page, PERSONA)
+    await openEditor(page)
+    const download = page.getByRole('button', { name: 'Download, choose a format', exact: true })
+    await expect(download, 'exactly one Download button').toHaveCount(1)
+    await expect(download).toHaveAttribute('aria-haspopup', 'menu')
+    await expect(download).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.locator('.ied-ft .dl-more'), 'there is no formats chevron').toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^Download (SVG|formats)/ }), 'no second Download control').toHaveCount(0)
+
+    await download.click()
+    await expect(download).toHaveAttribute('aria-expanded', 'true')
+    await expect(formatsMenu(page)).toBeVisible()
+    await expect(formatsMenu(page).getByRole('menuitemradio')).toHaveText([/^SVG/, /^PNG 24px/, /^PNG 48px/, /^PNG 96px/])
+
+    await page.keyboard.press('Escape')
+    await expect(formatsMenu(page), 'Escape closes the menu').toHaveCount(0)
+    await expect(editor(page), 'and leaves the editor open').toBeVisible()
+    await expect(download, 'focus goes back to the Download button').toBeFocused()
+    await expect(download).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('PNG is reachable: PNG 24px downloads a file named *-24px.png', async ({ page }) => {
+    watch(page, PERSONA)
+    await openEditor(page)
+    await page.getByRole('button', { name: 'Download, choose a format', exact: true }).click()
+    const row = formatsMenu(page).getByRole('menuitemradio').filter({ hasText: /^PNG 24px/ })
+    await expect(row).toBeVisible()
+    const [download] = await Promise.all([page.waitForEvent('download'), row.click()])
+    expect(download.suggestedFilename()).toMatch(/^[a-z0-9-]+-24px\.png$/)
+  })
+
+  test('Save reads "Save", keeps its full accessible name, and nothing in the foot overflows', async ({ page }) => {
+    watch(page, PERSONA)
+    await openEditor(page)
+    await expect(saveBtn(page)).toHaveAccessibleName('Save to project')
+    const save = await saveBtn(page).evaluate((el) => {
+      const nm = el.querySelector('.nm')
+      const shown = [...nm.querySelectorAll('span')].filter((s) => getComputedStyle(s).display !== 'none')
+      return {
+        text: el.innerText.trim(),
+        nmOverflow: nm.scrollWidth - nm.clientWidth,
+        shownOverflow: shown.map((s) => s.scrollWidth - s.clientWidth),
+        shownCount: shown.length,
+      }
+    })
+    expect(save.text, 'the visible label').toBe('Save')
+    expect(save.shownCount, 'one label is drawn').toBe(1)
+    expect(save.nmOverflow, 'the label is cut off').toBeLessThanOrEqual(0)
+    expect(save.shownOverflow, 'the label is cut off').toEqual([0])
+
+    const foot = await page.evaluate(() => {
+      const ft = document.querySelector('.ied-ft')
+      const fr = ft.getBoundingClientRect()
+      const kids = [...ft.querySelectorAll('button')].filter((b) => b.getClientRects().length > 0)
+      const out = kids.filter((b) => { const r = b.getBoundingClientRect(); return r.left < fr.left - 1 || r.right > fr.right + 1 })
+      return { sw: ft.scrollWidth, cw: ft.clientWidth, n: kids.length, out: out.length }
+    })
+    expect(foot.n, 'POSITIVE CONTROL: the foot has its buttons').toBeGreaterThanOrEqual(3)
+    expect(foot.sw, 'the foot scrolls sideways').toBeLessThanOrEqual(foot.cw + 1)
+    expect(foot.out, 'a foot button runs past the foot').toBe(0)
+    await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(saveBtn(page)).toBeInViewport({ ratio: 1 })
+  })
+})
+
+test.describe('the foot at 390x844', () => {
+  test.use(PHONE_390)
+
+  test('Download is still the SVG button with a formats chevron beside it', async ({ page }) => {
+    watch(page, PERSONA)
+    await openEditor(page)
+    await expect(page.getByRole('button', { name: 'Download SVG', exact: true })).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Download formats', exact: true })).toHaveAttribute('aria-haspopup', 'menu')
+    await expect(page.getByRole('button', { name: 'Download, choose a format' })).toHaveCount(0)
+  })
+})
+
+test.describe('the save panel at 1440', () => {
+  test.use(WIDE)
+
+  test('a press inside the dialog but outside the panel closes the panel and leaves the editor open', async ({ page }) => {
+    watch(page, PERSONA)
+    await openEditor(page)
+    await saveBtn(page).click()
+    await expect(picker(page)).toBeVisible()
+    await settle(page)
+
+    await picker(page).click({ position: { x: 3, y: 3 } })
+    await expect(picker(page), 'a press inside the panel keeps it open').toBeVisible()
+
+    await page.locator('.ied-ground').click()
+    await expect(picker(page), 'a press on the stage closes the panel').toHaveCount(0)
+    await expect(editor(page), 'and leaves the editor open').toBeVisible()
+  })
+
+  test('a press on a background choice closes the panel and the choice still lands', async ({ page }) => {
+    watch(page, PERSONA)
+    await openEditor(page)
+    const light = page.getByRole('radiogroup', { name: 'Background', exact: true }).getByRole('radio', { name: 'Light', exact: true })
+    await expect(light, 'POSITIVE CONTROL: Light is not the chosen ground yet').not.toBeChecked()
+    await saveBtn(page).click()
+    await expect(picker(page)).toBeVisible()
+    await settle(page)
+    await light.click()
+    await expect(picker(page)).toHaveCount(0)
+    await expect(light).toBeChecked()
+    await expect(editor(page)).toBeVisible()
+  })
+})
+
+for (const [label, ctx] of [['390x844', PHONE_390], ['320x568', PHONE_320]]) {
+  test.describe(`the Hue slider at ${label}`, () => {
+    test.use(ctx)
+
+    test('is 44px high in the custom colour picker', async ({ page }) => {
+      watch(page, PERSONA)
+      await openEditor(page)
+      await page.getByRole('radiogroup', { name: 'Colour', exact: true }).getByRole('radio', { name: 'Custom' }).click()
+      const pop = page.getByRole('dialog', { name: 'Custom colour' })
+      await expect(pop).toBeVisible()
+      const hue = pop.locator('.cpk-hue')
+      await expect(hue, 'POSITIVE CONTROL: the Hue control is a slider').toHaveJSProperty('type', 'range')
+      await settle(page)
+      const box = await hue.boundingBox()
+      expect(box.height, `the Hue slider is ${box.height}px high`).toBeGreaterThanOrEqual(43.5)
+      expect(box.height, `the Hue slider is ${box.height}px high`).toBeLessThanOrEqual(44.5)
     })
   })
 }
