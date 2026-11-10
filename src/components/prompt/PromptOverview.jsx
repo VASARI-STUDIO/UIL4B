@@ -4,6 +4,7 @@ import { reportUpgradeGate } from '../../contexts/ProModalContext'
 import { LIBRARY_RULES } from '../../utils/libraryRules'
 import { galleryLimit } from '../../utils/lockedPreview'
 import { hasPromptPreview, promptPosterSrc } from '../../data/promptPreviewAssets'
+import { promptStandinSrc } from '../../utils/lockedStandin'
 import { buildOverview, countLine } from './promptGallery'
 import PromptCard from './PromptCard'
 import PromptLockedCard, { LockMark } from './PromptLockedCard'
@@ -164,7 +165,7 @@ export default function PromptOverview({
                     return (
                       <div key={p.id} className={`pl-mosaic-tile${kind ? ' is-locked' : ''}`}>
                         {hasPromptPreview(p.id) ? (
-                          <img src={promptPosterSrc(p.id)} alt="" loading="lazy" decoding="async" width="960" height="600" />
+                          <img src={kind ? promptStandinSrc(p.id) : promptPosterSrc(p.id)} alt="" loading="lazy" decoding="async" width="960" height="600" />
                         ) : !kind && <span className="pl-mosaic-name">{p.title}</span>}
                         {kind && <LockMark kind={kind} />}
                       </div>

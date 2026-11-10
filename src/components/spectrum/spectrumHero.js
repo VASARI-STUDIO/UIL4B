@@ -18,3 +18,10 @@ export const SPECTRUM_HERO = Object.freeze({
 })
 
 export const SPECTRUM_HERO_SUB = 'Colours, type, icons and imagery. Exported as one file.'
+
+// The hero search's ghost phrases, after "Search for". SpectrumSearch types
+// through them; the served `/` shell paints the first one as static text, so the
+// phrase is on screen from first paint and the live search starts from it.
+export const SPECTRUM_SEARCH_PHRASES = Object.freeze([
+  'a contrast ratio', 'a tint and shade ramp', 'an OKLCH gradient', 'a type scale', 'an icon set', 'a WebP export',
+])

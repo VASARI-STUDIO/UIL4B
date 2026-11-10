@@ -49,8 +49,8 @@ export function kerbsideRamp(seed = SIGNAL) {
 }
 
 // ships with the export themes
-// Card 2's rows. With the themes live they are the four exports of a theme, in
-// the order the card brings them forward; otherwise they are what the export
+// Card 2's rows. With the themes live they are the exports a theme offers, in
+// the order the card brings them forward (the brand kit is inside the brand book); otherwise they are what the export
 // panel makes today (the guidelines deck, the design system book, the UI kit),
 // read from the panel's own rows. `art` names the picture the row brings forward.
 export function exportRows(live = EXPORT_THEMES_LIVE) {
@@ -59,11 +59,10 @@ export function exportRows(live = EXPORT_THEMES_LIVE) {
     const pages = byId['brand-guidelines'].guidelinesPages
     const sub = {
       'brand-guidelines': `${pages} pages, as PDF and print-ready HTML`,
-      'brand-book': 'A small site your client browses offline',
-      'brand-kit': 'Logo, colour, type, icons and imagery',
+      'brand-book': 'A small site that works offline, with the brand kit inside',
       'ui-kit': 'A designed document and a code package',
     }
-    return ['brand-guidelines', 'brand-book', 'brand-kit', 'ui-kit'].map((id) => ({
+    return ['brand-guidelines', 'brand-book', 'ui-kit'].map((id) => ({
       id,
       art: id,
       name: byId[id].name,
@@ -86,7 +85,7 @@ export function exportRows(live = EXPORT_THEMES_LIVE) {
 export function exportCopy(live = EXPORT_THEMES_LIVE) {
   if (live) {
     return {
-      body: `Your colour, type and spacing leave as ${THEME_FACTS.exportsPerThemeWord} exports: a brand kit, brand guidelines, an HTML brand book and a UI kit. Choose from ${THEME_FACTS.countWord} themes, each with its own design language.`,
+      body: `Your colour, type and spacing leave as ${THEME_FACTS.exportsPerThemeWord} exports: brand guidelines, an HTML brand book with the brand kit inside, and a UI kit. Choose from ${THEME_FACTS.countWord} themes, each with its own design language.`,
       note: `${THEME_FACTS.uiKitNote}. Everything else is Pro.`,
     }
   }

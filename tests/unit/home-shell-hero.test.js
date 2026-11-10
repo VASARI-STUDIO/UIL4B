@@ -48,7 +48,7 @@ import { stripCss, stripJs } from '../helpers/strip-comments.js'
 // and read by both HomeHero.jsx and scripts/home-shell.mjs. The guards below:
 // nobody types it, the shell emits exactly it, and in the
 // element chain the hydrated page renders.
-import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../../src/components/spectrum/spectrumHero.js'
+import { SPECTRUM_HERO, SPECTRUM_HERO_SUB, SPECTRUM_SEARCH_PHRASES } from '../../src/components/spectrum/spectrumHero.js'
 import { SESSION_HINT_KEY } from '../../src/utils/sessionHint.js'
 import { SITE_ORIGIN } from '../../src/utils/routeMeta.js'
 import {
@@ -58,6 +58,7 @@ import {
   homeShellRoot,
   fontPreloadAfterStylesheets,
   HOME_FONT_PRELOAD,
+  HOME_SWITZER_PRELOAD,
 } from '../../scripts/home-shell.mjs'
 
 const ROOT = process.cwd()
@@ -362,4 +363,92 @@ test('assertHomeShellApplied fails on a shell whose Geist preload sits behind th
   const script = '<script type="module" crossorigin src="/assets/index-x.js"></script>'
   const behind = applied.replace(HOME_FONT_PRELOAD, `${script}\n${HOME_FONT_PRELOAD}`)
   assert.throws(() => assertHomeShellApplied(behind, 'x'), /Geist preload behind the entry script/)
+})
+
+// ── The nav's face and the search's first label ─────────────────────────────
+
+test('the shell preloads the one Switzer file the nav is set in, once, in CORS mode', () => {
+  const applied = applyHomeShell(read('index.html'))
+  const links = applied.match(/<link[^>]*rel="preload"[^>]*>/g) || []
+  const switzer = links.filter((l) => /Switzer/.test(l))
+  assert.equal(switzer.length, 1, 'exactly one Switzer preload in the sales page head, not the italic and not a second copy')
+  assert.equal(switzer[0], HOME_SWITZER_PRELOAD)
+  assert.match(switzer[0], /href="\/fonts\/switzer\/Switzer-Variable\.woff2"/)
+  assert.match(switzer[0], /as="font"/)
+  assert.match(switzer[0], /type="font\/woff2"/)
+  assert.match(switzer[0], /crossorigin/)
+  // Applying it to a shell that already carries it adds nothing.
+  assert.equal(applyHomeShell(applied).split('Switzer-Variable.woff2').length, 2)
+  // The preloaded file is the one the upright @font-face declares, and the face has the guards that
+  // make a late load cost nothing: font-display and a metric-matched local fallback.
+  const css = stripCss(read('src/styles/global.css'))
+  assert.match(css, /font-family:\s*'Switzer';font-style:normal;[^}]*font-display:swap;[^}]*url\('\/fonts\/switzer\/Switzer-Variable\.woff2'\)/)
+  const fallback = css.match(/@font-face\{font-family:'Switzer Fallback'[^}]*\}/g) || []
+  assert.ok(fallback.length >= 1)
+  for (const rule of fallback) {
+    for (const prop of ['font-display:swap', 'size-adjust', 'ascent-override', 'descent-override']) {
+      assert.ok(rule.includes(prop), `'Switzer Fallback' lacks ${prop}`)
+    }
+  }
+})
+
+test('the Switzer preload sits with the Geist one, behind the sheets and ahead of the entry script', () => {
+  const placed = fontPreloadAfterStylesheets(BUILT_HEAD)
+  const at = (needle) => placed.indexOf(needle)
+  assert.ok(at(HOME_SWITZER_PRELOAD) > at('b.css'), 'behind the stylesheets')
+  assert.ok(at(HOME_SWITZER_PRELOAD) < at('index-x.js'), 'ahead of the entry script')
+  assert.ok(at(HOME_SWITZER_PRELOAD) < at('modulepreload'), 'ahead of the modulepreloads')
+  assert.equal(placed.split('Switzer-Variable.woff2').length, 2, 'one preload')
+})
+
+test("index.html's own Switzer preload is moved, not duplicated, when the shell is applied", () => {
+  const built = [
+    '<html lang="en">',
+    '<head>',
+    HOME_SWITZER_PRELOAD,
+    '<link rel="stylesheet" crossorigin href="/assets/a.css">',
+    '<script type="module" crossorigin src="/assets/index-x.js"></script>',
+    '</head>',
+  ].join('\n')
+  const html = `${built}\n<body>\n${'<div id="root">'}</div>\n<noscript></noscript></body>`
+  const applied = applyHomeShell(html)
+  assert.equal(applied.split('Switzer-Variable.woff2').length, 2)
+  assert.ok(applied.indexOf(HOME_SWITZER_PRELOAD) > applied.indexOf('a.css'), 'now behind the sheet')
+})
+
+test('assertHomeShellApplied fails on a shell with a missing, duplicated or misplaced Switzer preload', () => {
+  const applied = applyHomeShell(read('index.html'))
+  assert.doesNotThrow(() => assertHomeShellApplied(applied, 'x'))
+  assert.throws(() => assertHomeShellApplied(applied.replace(HOME_SWITZER_PRELOAD, ''), 'x'), /Switzer preload/)
+  const twice = applied.replace(HOME_SWITZER_PRELOAD, `${HOME_SWITZER_PRELOAD}\n${HOME_SWITZER_PRELOAD}`)
+  assert.throws(() => assertHomeShellApplied(twice, 'x'), /preloads Switzer 2 times/)
+  const script = '<script type="module" crossorigin src="/assets/index-x.js"></script>'
+  const behind = applied.replace(HOME_SWITZER_PRELOAD, `${script}\n${HOME_SWITZER_PRELOAD}`)
+  assert.throws(() => assertHomeShellApplied(behind, 'x'), /Switzer preload behind the entry script/)
+})
+
+test("the shell's search frame carries the first label the live search shows, visibly", () => {
+  const shell = homeShellRoot()
+  const first = SPECTRUM_SEARCH_PHRASES[0]
+  // The same element and class the live search renders: the ghost, then the phrase span.
+  assert.ok(shell.includes(`<span class="sp-search-ghost">Search for<span class="sp-search-rot">${first}</span></span>`))
+  // The ghost is hidden by spectrum.css while the field is `:not(:placeholder-shown)`, and an input
+  // with no placeholder attribute never matches `:placeholder-shown`: that left the phrase
+  // `display:none` until React mounted. So the shell's input has a placeholder, painted transparent.
+  const input = shell.match(/<input class="hcmd-input"[^>]*>/)[0]
+  assert.match(input, /placeholder="[^"]+"/)
+  assert.match(input, /value=""/)
+  assert.match(stripCss(read('src/styles/pages/spectrum.css')), /\.sp-search \.hcmd-input::placeholder\s*\{\s*color:\s*transparent/)
+  assert.match(stripCss(read('src/styles/pages/spectrum.css')), /\.sp-search:has\(\.hcmd-input:not\(:placeholder-shown\)\) \.sp-search-ghost\s*\{\s*display:\s*none/)
+})
+
+test('the live search starts from that same first label and the phrases are read from one module', () => {
+  const live = stripJs(read('src/components/spectrum/SpectrumSearch.jsx'))
+  assert.match(live, /import \{ SPECTRUM_SEARCH_PHRASES \} from '\.\/spectrumHero\.js'/)
+  assert.match(live, /const ROTATIONS = SPECTRUM_SEARCH_PHRASES/)
+  // Before the animation has typed anything the ghost shows the first phrase, in full, with no caret.
+  assert.match(live, /const shown = typed \?\? ROTATIONS\[0\]/)
+  // Neither side restates the phrases.
+  assert.doesNotMatch(live, /contrast ratio/)
+  assert.doesNotMatch(stripJs(read('scripts/home-shell.mjs')), /contrast ratio/)
 })

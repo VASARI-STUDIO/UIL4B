@@ -34,10 +34,12 @@ test('the stripper still works, so the source reads below can be trusted', () =>
 
 // ── Card 2's rows ───────────────────────────────────────────────────────────
 
-test('with the themes live, card 2 has the four exports of a theme, in the config order and tiers', () => {
+test('with the themes live, card 2 has the exports a theme offers, in the config order and tiers', () => {
   const rows = exportRows(true)
-  assert.deepEqual(rows.map((r) => r.id), ['brand-guidelines', 'brand-book', 'brand-kit', 'ui-kit'])
-  assert.equal(rows.length, EXPORT_THEME_EXPORTS.length)
+  assert.deepEqual(rows.map((r) => r.id), ['brand-guidelines', 'brand-book', 'ui-kit'])
+  // An export carried inside another (the brand kit, in the brand book) has no row of its own.
+  assert.deepEqual(rows.map((r) => r.id).sort(), EXPORT_THEME_EXPORTS.filter((e) => !e.inside).map((e) => e.id).sort())
+  assert.match(rows.find((r) => r.id === 'brand-book').sub, /brand kit inside/, 'the brand book row no longer says the brand kit is inside it')
   for (const row of rows) {
     const exp = EXPORT_THEME_EXPORTS.find((e) => e.id === row.id)
     assert.equal(row.name, exp.name, `${row.id} is not named as the config names it`)
@@ -80,10 +82,11 @@ test('the art list was read from the component (five pictures)', () => {
   assert.deepEqual(OBJECTS.map((o) => o.key), ['gb', 'gf', 'kt', 'bk', 'ui'])
 })
 
-test('with the themes live every row brings a picture forward and no picture is left over', () => {
+test('with the themes live every row brings a picture forward, and only the brand kit sheet drops out', () => {
   const rowArts = new Set(exportRows(true).map((r) => r.art))
   for (const art of rowArts) assert.ok(OBJECTS.some((o) => o.art === art), `row "${art}" has no picture`)
-  for (const o of OBJECTS) assert.ok(rowArts.has(o.art), `picture "${o.key}" belongs to no row`)
+  const dropped = OBJECTS.filter((o) => !rowArts.has(o.art)).map((o) => o.image)
+  assert.deepEqual(dropped, ['brandkit-palette'])
 })
 
 test('with the themes off every row still has a picture, and only the brand kit sheet drops out', () => {

@@ -9,7 +9,7 @@
 // of facts, not of sentences.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { proOnlyFormats } from '../../src/config/exportFormats.js'
+import { proOnlyFormats, EXPORT_THEMES_LIVE, EXPORT_THEME_EXPORTS } from '../../src/config/exportFormats.js'
 
 const PRICES = {
   monthly: { usd: 7 }, yearly: { usd: 48 },
@@ -122,8 +122,12 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
   }
   // The Pro-only exports are named on both pages.
   const settingsText = lines.join('\n')
-  for (const format of proOnlyFormats()) {
-    expect(settingsText, `Settings no longer names "${format.name}"`).toContain(format.name)
-    expect(plansText, `/plans no longer names "${format.name}"`).toContain(format.name)
+  // While the themes are live these are the themes' own documents; otherwise the export panel's Pro formats.
+  const proNames = EXPORT_THEMES_LIVE
+    ? EXPORT_THEME_EXPORTS.filter((e) => e.proOnly && !e.inside).map((e) => e.short)
+    : proOnlyFormats().map((f) => f.name)
+  for (const name of proNames) {
+    expect(settingsText.toLowerCase(), `Settings no longer names "${name}"`).toContain(name.toLowerCase())
+    expect(plansText.toLowerCase(), `/plans no longer names "${name}"`).toContain(name.toLowerCase())
   }
 })

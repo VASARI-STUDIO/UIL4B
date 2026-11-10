@@ -29,6 +29,9 @@ import '../../styles/pages/home-exports.css'
 // makes. One DOM serves every width; home-exports.css decides which parts show.
 // Every count, price and list line comes from the config and the kit files.
 
+// A card is scaled and dimmed by how far the next one has travelled over it: that is
+// scroll-linked CSS in home-exports.css, with no script on the scroll.
+
 // The faces the cards draw are fetched only once the section is within this
 // distance of the viewport.
 const NEAR_MARGIN = '600px'
@@ -166,6 +169,7 @@ function IconsView() {
 export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
   const sectionRef = useRef(null)
   const cardRefs = useRef([])
+  const trackRefs = useRef([])
   const copyTimer = useRef(null)
   const [near, setNear] = useState(false)
   const [piece, setPiece] = useState(0)
@@ -247,14 +251,21 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
     const dock = () => {
       const style = getComputedStyle(section)
       const tops = readStackTops((name) => style.getPropertyValue(name))
-      cards.forEach((el, index) => {
-        el.style.top = `${dockTop({
-          index,
-          tops,
-          width: window.innerWidth,
-          height: window.innerHeight,
-          cardHeight: el.offsetHeight,
-        })}px`
+      const docks = cards.map((el, index) => dockTop({
+        index,
+        tops,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        cardHeight: el.offsetHeight,
+      }))
+      cards.forEach((el, index) => { el.style.top = `${docks[index]}px` })
+      // Each card after the first has a tracker for the scroll-linked cover of the card
+      // before it. Its height is the distance the card's top travels from the earlier
+      // card's bottom edge to its own dock line, and it sits that dock line above it.
+      trackRefs.current.forEach((track, index) => {
+        if (!track || index === 0 || !cards[index - 1]) return
+        track.style.setProperty('--hx-trav', `${Math.max(1, docks[index - 1] + cards[index - 1].offsetHeight - docks[index])}px`)
+        track.style.setProperty('--hx-dock', `${docks[index]}px`)
       })
     }
     dock()
@@ -272,6 +283,7 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
   const front = rows[Math.min(doc, rows.length - 1)]?.art
   const shown = OBJECTS.filter((o) => rows.some((r) => r.art === o.art))
   const stackTops = Object.fromEntries(STACK_TOPS.map((top, i) => [`--stack-top-${i}`, `${top}px`]))
+  const tracker = (i) => <span className="hx-track" data-track={i} ref={(el) => { trackRefs.current[i] = el }} aria-hidden="true" />
 
   const card1 = (
     <div className="hx-card" data-card="0" ref={(el) => { cardRefs.current[0] = el }}>
@@ -467,9 +479,11 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
             {card1}
             <div className="hx-gap" aria-hidden="true" />
             <div className="hx-nest">
+              {tracker(1)}
               {card2}
               <div className="hx-gap" aria-hidden="true" />
               <div className="hx-nest">
+                {tracker(2)}
                 {card3}
                 <div className="hx-tail" aria-hidden="true" />
               </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useProject } from '../../contexts/ProjectContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
+import { useAuth } from '../../contexts/AuthContext'
 import useExportDesign from '../../hooks/useExportDesign'
 import { usePrices, useProPrice, formatPrice } from '../../hooks/usePrices'
 import { resolveOffers } from '../../config/planFacts'
@@ -17,6 +18,7 @@ import KitIdentityFields from '../KitIdentityFields'
 import BrandLogoField from '../BrandLogoField'
 import ExportFreePreview from './ExportFreePreview'
 import ExportThemeRow, { ThemeStage } from './ExportThemeRow'
+import ExportSignIn from './ExportSignIn'
 import { GUIDELINES_PAGES, UI_KIT_PAGES, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
 
 // The main column of the Export dialog (Preview, File, Layout, Details) and the
@@ -122,12 +124,15 @@ function NameLine({ lead, name, project, onRenameState }) {
 function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen, shown }) {
   const kind = cat.preview
   if (themedFile(file)) {
-    // A picture of the theme's own sample pages. The kit is previewed sharp in every theme (the button carries the Pro line); a locked book or guidelines file is blurred, with the lock the live Pro previews carry.
-    const locked = kind !== 'kit' && !isPro && !checking && themedFileIsPro(file, shown.id)
+    // A picture of the theme's own sample pages. The kit is previewed sharp in every theme (the button carries the Pro line); a locked book or guidelines file shows a blurred stand-in, with the lock the live Pro previews carry.
+    // A file the account cannot export shows the blurred stand-in pictures, and never the real ones on a guess while the plan is
+    // read; the lock waits until the account is known not to be Pro.
+    const standin = kind !== 'kit' && !isPro && themedFileIsPro(file, shown.id)
+    const locked = standin && !checking
     const lines = themeLines(kind, shown)
     return (
       <div className="xd-prev">
-        <ThemeStage kind={kind} theme={shown} locked={locked} lockText={kind === 'kit' ? 'Pro theme' : 'Pro export'} />
+        <ThemeStage kind={kind} theme={shown} locked={locked} standin={standin} lockText={kind === 'kit' ? 'Pro theme' : 'Pro export'} />
         <p className="xd-theme-cap">{lines.caption}</p>
       </div>
     )
@@ -282,8 +287,9 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
 // status line is one live region, mounted empty; an error is its own alert.
 // `upgrade` is 'checkout' (a saved project: the trial) or 'plans' for a free
 // account on a Pro file; `onPrimary` decides what the click does.
-export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrade, onPrimary, onCopy, primaryRef, locked: lockedBy }) {
+export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrade, onPrimary, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn }) {
   const { isPro, planKnown } = useSubscription()
+  const { user } = useAuth()
   const proPrice = useProPrice()
   const { prices } = usePrices()
   const checking = planKnown === false
@@ -317,6 +323,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
       : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in Standards and Specification.</>
         : <><strong>Pro</strong> unlocks this file.</>
   } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
+  else if (!user) line = <><strong>Free with an account.</strong> Log in to export. The file carries a small ‘Made with UI L4B’ mark.</>
   else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
   else line = <><strong>Free.</strong> The file carries a small ‘Made with UI L4B’ mark.</>
 
@@ -325,6 +332,9 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
   else if (checking) label = 'Checking your plan…'
   else if (locked) label = upgrade === 'checkout' ? (trialDays > 0 ? trialLabel(trialDays) : 'Continue to checkout') : 'Unlock with Pro'
   else if (done) label = 'Export again'
+
+  // The sign-in step takes the dock over: the same form as the account dialog, in place.
+  if (signingIn) return <div className="xd-dock xd-dock--signin"><ExportSignIn onDone={onSignIn} /></div>
 
   return (
     <div className="xd-dock">

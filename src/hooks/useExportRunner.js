@@ -181,7 +181,8 @@ const showDocument = (html, filename, win, title) => {
 
 /**
  * The export engine behind the dialog.
- *   run(formatId, { projectId })  make the file; see the statuses above
+ *   run(formatId, { projectId, theme, signIn })  make the file; see the statuses above. `signIn(reason)` is an
+ *                                 optional async gate for a signed-out visitor: true once signed in, false if dismissed
  *   copy(formatId)                put a Code file on the clipboard: { ok, count } (count is the
  *                                 number of tokens). Never asks for an account. Raises no toast.
  *   upgradeTarget(formatId, projectId)  where a Pro pick goes for this account: { to, checkout, pick, gate }
@@ -270,7 +271,7 @@ export default function useExportRunner() {
     return { status: 'upgrade', to: target.to }
   }
 
-  const runExport = async (format, projectId, theme) => {
+  const runExport = async (format, projectId, theme, signIn) => {
     // The name the dialog shows on the file: the open project's, else the design's own.
     // `fileProject` is that name as typed ('' for an unnamed project), which the file
     // names are made from; `projectName` is what the documents print, with a stand-in.
@@ -328,7 +329,9 @@ export default function useExportRunner() {
     const tokenFile = isCodeFile(format)
     const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : bookPng ? 'export this design system book' : appBundle ? 'export this app-ready bundle' : 'export this style guide'
     const signedOut = !user
-    if (!(await requireExportAccount(reason))) { closePrintWin(); return { status: 'cancelled' } }
+    // A caller with its own sign-in (the dialog's inline panel) passes `signIn`; it resolves true once an account is signed in.
+    const accountOk = !user && signIn ? await signIn(reason) : await requireExportAccount(reason)
+    if (!accountOk) { closePrintWin(); return { status: 'cancelled' } }
 
     // ── THE PLAN OF AN ACCOUNT THAT JUST SIGNED IN. ───────────────────────
     // `isPro` above is the signed-out visitor's: free. Someone who is Pro and
@@ -509,10 +512,10 @@ export default function useExportRunner() {
   // second window and send a second request. The ref is set synchronously, so
   // the second call sees it at once; state would not be updated yet.
   const exporting = useRef(false)
-  const run = async (formatId, { projectId, theme } = {}) => {
+  const run = async (formatId, { projectId, theme, signIn } = {}) => {
     if (exporting.current) return { status: 'busy' }
     exporting.current = true
-    try { return await runExport(formatId, projectId, theme) } finally { exporting.current = false }
+    try { return await runExport(formatId, projectId, theme, signIn) } finally { exporting.current = false }
   }
 
   // Copy a Code file: the same text the download carries (with the credit

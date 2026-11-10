@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { readSeed, seedChip, paletteToolbar, openPaletteTools, clickPaletteAction } from './palette-helpers.js'
 import { hexToHct } from '../../src/utils/colors.js'
 
@@ -348,25 +348,45 @@ test.describe('Palette Builder recovery and tool continuity', () => {
       await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
     }
 
-    // A locked preview still shows its real scene, blurred and not reachable,
-    // behind a plain Unlock preview button.
+    // A locked preview is never mounted for a free viewer: the stage holds a blurred stand-in
+    // drawn from their colours, behind a plain Unlock preview button. None of the real scene's
+    // markup or copy is in the page to un-blur.
     const LOCKED = [
       ['Spending card', 'Marrickville Fresh Market'],
       ['Architect portfolio', 'Gully House'],
     ]
     for (const [name, text] of LOCKED) {
       await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
-      const scene = page.locator(`[data-preview-scene="${name}"]`)
-      await expect(scene).toContainText(text)
       await expect(page.getByText(`${name} is a Pro preview`)).toBeVisible()
+      await expect(page.locator('.pvd-scene.is-locked .pvd-scene-stub')).toHaveCount(1)
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toHaveCount(0)
+      await expect(page.locator('.pvs')).toHaveCount(0)
+      await expect(page.getByText(text)).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(1)
       await expect(page.locator('.pvd-scene-in')).toHaveCSS('filter', 'blur(6px)')
       await expect(page.locator('.pvd-scene-in')).toHaveAttribute('inert', '')
     }
 
+    // Back on an open scene so the theme switch has a real scene to repaint.
+    await rail.getByRole('option', { name: /^Editorial hero/ }).click()
     await dialog.getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(dialog.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.pvs')).toHaveAttribute('data-mode', 'dark')
+  })
+
+  test('a Pro account gets the real Pro scenes, with no stand-in and no lock', async ({ page }) => {
+    watch(page, 'pro designer opening the Pro previews')
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/palette')
+    await clickPaletteAction(page, 'Preview')
+    const rail = page.getByRole('dialog', { name: 'Palette preview' }).getByRole('listbox', { name: 'Previews' })
+
+    for (const [name, text] of [['Spending card', 'Marrickville Fresh Market'], ['Architect portfolio', 'Gully House']]) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toContainText(text)
+      await expect(page.locator('.pvd-scene-stub')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+    }
   })
 
   test('contrast and HCT stay attached to each swatch with clear Pro explanations', async ({ page }) => {
