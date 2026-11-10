@@ -18,6 +18,19 @@ export const SHOWCASE_KINDS = Object.freeze([
   Object.freeze({ id: 'kit-screen-light', label: 'Screen' }),
 ])
 
+/** How many of a theme's pages the viewer steps through. */
+export const VIEWER_PAGE_COUNT = 5
+
+/**
+ * The page kinds the viewer opens for one theme: the kind that was clicked, then the
+ * kinds after it in picker order, wrapping round. Every one is an existing export render.
+ */
+export function viewerKinds(kindId) {
+  const from = SHOWCASE_KINDS.findIndex((k) => k.id === kindId)
+  if (from < 0) throw new Error(`unknown showcase page kind ${kindId}`)
+  return Array.from({ length: VIEWER_PAGE_COUNT }, (_, at) => SHOWCASE_KINDS[(from + at) % SHOWCASE_KINDS.length].id)
+}
+
 /** The kind selected on load. */
 export const DEFAULT_KIND_ID = 'guide-palette'
 

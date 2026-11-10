@@ -31,7 +31,7 @@
 // archive test; dropping `onDelete` fails the delete test. The component keeps
 // rendering a full menu through all three, which is the point.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, openProjectFromDashboard, dashboardProjectLinks } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 
 const CAP = FREE_SAVE_LIMITS.projects
@@ -46,7 +46,7 @@ function stored(page, email) {
 
 /** Open a named project from the workspace, then its ⋯ menu. */
 async function openActions(page, projectName) {
-  await page.locator(`.uh-card-name[data-project="${projectName}"]`).click()
+  await openProjectFromDashboard(page, projectName)
   await expect(page.getByRole('heading', { level: 1, name: projectName })).toBeVisible()
   await page.getByRole('button', { name: `Actions for ${projectName}` }).click()
   // The menu is a real popover; wait for it rather than for a timeout.
@@ -137,10 +137,10 @@ test.describe('a returning free account managing its projects', () => {
       'it is archived, not removed').toBe(true)
 
     await page.getByRole('link', { name: 'All projects' }).click()
-    await expect(page.locator('.proj-card', { hasText: 'Seeded Project 1' }).locator('.uh-card-line'),
-      'and the workspace tells the account it still has it, marked archived').toHaveText(/^Archived · /)
+    await expect(dashboardProjectLinks(page, 'Seeded Project 1').mini.locator('.nx'),
+      'and the dashboard tells the account it still has it, marked archived').toHaveText('Archived')
 
-    await page.locator('.uh-card-name[data-project="Seeded Project 1"]').click()
+    await openProjectFromDashboard(page, 'Seeded Project 1')
     await page.getByRole('button', { name: 'Restore', exact: true }).click()
     await expect.poll(() => stored(page, account.email).then((p) => p.find((x) => x.name === 'Seeded Project 1')?.archived),
       { message: 'Restore must un-archive it in the store' }).toBe(false)

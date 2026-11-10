@@ -105,7 +105,9 @@ export function subscriptionAccessRevoked(subscription) {
   return subscription?.accessRevoked === true
 }
 
-export function planForSubscription(subscription) {
+// `now` is injectable so the period-end and grace checks can be tested at a
+// fixed instant; every caller in the app leaves it to the real clock.
+export function planForSubscription(subscription, now = Date.now()) {
   if (!subscription) return PLANS.free
   // Checked before anything else, including the past-due grace: money that has
   // gone back is not a reason to keep serving the product, and the grace window
@@ -114,7 +116,7 @@ export function planForSubscription(subscription) {
   const active = subscription.status === 'active' || subscription.status === 'trialing'
   if (active) {
     // Guard against an expired period that the webhook hasn't cleaned up yet.
-    if (subscription.currentPeriodEnd && Date.now() > subscription.currentPeriodEnd + 86_400_000) {
+    if (subscription.currentPeriodEnd && now > subscription.currentPeriodEnd + 86_400_000) {
       return PLANS.free
     }
     return PLANS.pro
@@ -124,7 +126,7 @@ export function planForSubscription(subscription) {
   // by the time that invoice fails the period end is already a month out —
   // anchoring there would hand out ~37 free days instead of 7.
   if (subscription.status === 'past_due' && Number.isFinite(subscription.paymentFailedAt)
-      && Date.now() <= subscription.paymentFailedAt + PAST_DUE_GRACE_MS) {
+      && now <= subscription.paymentFailedAt + PAST_DUE_GRACE_MS) {
     return PLANS.pro
   }
   return PLANS.free
@@ -157,10 +159,10 @@ export { isAdminEmail }
 // NOTE on lifetime: one-off Pro is not sold — create-checkout accepts recurring
 // intervals only. An entitlement already on an account is still honoured here,
 // deliberately: someone who holds one keeps Pro until it is revoked.
-export function planForUser({ subscription, lifetimeEntitlement, email } = {}) {
+export function planForUser({ subscription, lifetimeEntitlement, email, now = Date.now() } = {}) {
   if (isAdminEmail(email)) return PLANS.pro
   if (hasLifetimeEntitlement(lifetimeEntitlement)) return PLANS.pro
-  return planForSubscription(subscription)
+  return planForSubscription(subscription, now)
 }
 
 export function dailyLimitFor(plan, toolId) {

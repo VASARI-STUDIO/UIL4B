@@ -59,6 +59,9 @@ const KEEP = {
     'fpr-card-apply',
     // the homepage bookmark board's folder rows (sidebar list) and its phone twin's pair rows, flush to the list edge
     'bm-fold', 'bmp-pair',
+    // the dashboard's "New project, room for one more" row tile: a 12px-cornered tile in the minis row,
+    // a button because it starts the guide
+    'db-gt',
     // a Type Scale step: one full-width list row (name, size, specimen) whose hover and selected washes have soft 12px corners
     'tsc-row',
     // the Font Gallery More sheet's Project row: one full-width row (icon, name, caret) drawn at 12px
@@ -175,7 +178,7 @@ test('the readers find what they are about (positive control)', () => {
   assert.ok(blocksFor('.ui-pill').length >= 1, '.ui-pill not found')
   const classes = buttonClasses()
   assert.ok(classes.size > 150, `only ${classes.size} button classes read from the JSX`)
-  for (const c of ['btn', 'tl-btn', 'uh-new', 'pnav-act', 'pnav-export', 'pnav-avatar-btn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
+  for (const c of ['btn', 'tl-btn', 'db-go', 'pnav-act', 'pnav-export', 'pnav-avatar-btn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
 })
 
 test('the button token is the pill, and the base families read it', () => {

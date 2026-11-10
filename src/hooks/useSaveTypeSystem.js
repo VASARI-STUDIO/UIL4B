@@ -5,6 +5,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { reportUpgradeGate, useProModal } from '../contexts/ProModalContext'
 import { projectQuota } from '../utils/projectQuota'
+import { isCountUnknownError } from '../utils/projectCount'
 
 // The connected half of components/SaveTypeSystem.jsx: the store, the
 // entitlement and every refusal, with no markup. That file's header explains
@@ -90,8 +91,11 @@ export function useSaveTypeSystem({ gate, label, summary, toast }) {
       setName('')
       setOpen(false)
       toast?.(`${trimmed} saved — fonts and type scale included`)
-    } catch {
-      // saveProject throws only on the cap. Name the paid edge rather than
+    } catch (err) {
+      // Not the cap: the account's list is still loading or did not load. Nothing was
+      // created and the menu stays open so the name can be sent again.
+      if (isCountUnknownError(err)) { toast?.(err.message, 'error'); return }
+      // Otherwise saveProject threw on the cap. Name the paid edge rather than
       // surfacing its raw message as a failure (P-003: a gate must never read
       // as the product breaking).
       setOpen(false)
