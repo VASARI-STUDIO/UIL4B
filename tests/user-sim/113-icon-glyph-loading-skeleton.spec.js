@@ -566,7 +566,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
     return { visibility: css.visibility, opacity: css.opacity, height: r.height, width: r.width, ready: el.dataset.ready }
   })
 
-  test('a tile is invisible, unfocusable and still 44px until its image loads, and a failed one stays hidden', async ({ page }) => {
+  test('a tile is invisible, unfocusable and still 52px until its image loads, and a failed one stays hidden', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
@@ -612,11 +612,12 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
         expect(s.visibility).toBe('hidden')
         expect(s.opacity).toBe('0')
         expect(s.ready, 'data-ready is set before the image loaded').toBeUndefined()
-        expect(s.height, 'a waiting tile keeps its 44px box').toBe(44)
-        expect(s.width).toBe(44)
+        expect(s.height, 'a waiting tile keeps its 52px box').toBe(52)
+        expect(s.width).toBe(52)
       }
       const rowBox = await row.evaluate((el) => el.getBoundingClientRect().height)
-      expect(rowBox, 'the row stays one 44px line while every tile waits').toBe(44)
+      expect(rowBox, 'the row stays one 52px line while every tile waits').toBe(52)
+      expect(await page.locator('.ied-similar').evaluate((el) => el.getBoundingClientRect().height), 'the section takes no room while every tile waits').toBe(0)
 
       // Tab from the control before the row must not land on a waiting tile. The SVG code summary is
       // the last control ahead of the row (Reset is hidden, and so cannot take focus, until something
@@ -639,10 +640,10 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
         await expect(tile, `tile ${names[i]} shows once its image has loaded`).toBeVisible({ timeout: 20_000 })
         await expect(tile).toHaveCSS('opacity', '1')
         await expect(tile).toHaveAttribute('data-ready', 'true')
-        expect((await tileState(tile)).height).toBe(44)
+        expect((await tileState(tile)).height).toBe(52)
       }
       await expect(row.locator('.ied-sim:visible'), 'exactly the five that loaded are shown').toHaveCount(5)
-      expect(await row.evaluate((el) => el.getBoundingClientRect().height)).toBe(44)
+      expect(await row.evaluate((el) => el.getBoundingClientRect().height)).toBe(52)
 
       // The one whose image failed never appears, and keeps its place.
       const failed = tiles.nth(5)
@@ -650,7 +651,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       expect(await failed.evaluate((el) => el.querySelector('img').naturalWidth), 'the failed image has no pixels').toBe(0)
       await expect(failed).toBeHidden()
       await expect(failed).not.toHaveAttribute('data-ready', /.*/)
-      expect((await tileState(failed)).height).toBe(44)
+      expect((await tileState(failed)).height).toBe(52)
 
       // Positive control for the Tab check: a shown tile IS reachable from the same spot.
       await codeSum.focus()

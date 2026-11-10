@@ -154,23 +154,23 @@ for (const [who, plan] of VIEWERS) {
       await tile(page, 'Sharp').click()
       await expect(line(page)).toHaveText(SHARP)
 
-      // Tab order through the code and the foot: code Copy, Back, Upgrade, Download SVG, Download formats, Save.
-      // The scrolling code and any Similar tiles sit between the code Copy and Back; they are stepped over.
+      // Tab order through the code and the foot: code Copy, the code, Similar tiles, Back, Download SVG, Download formats, Save, Upgrade.
+      // The code box and any Similar tiles sit between the code Copy and Back; they are stepped over.
       const d = dimmed(page)
       await d['the code Copy'].focus()
       await expect(d['the code Copy']).toBeFocused()
       await page.keyboard.press('Tab')
       for (let i = 0; i < 14 && !(await back(page).evaluate((el) => el === document.activeElement)); i += 1) {
-        const between = await page.evaluate(() => document.activeElement?.tagName === 'CODE' || document.activeElement?.classList.contains('ied-sim'))
+        const between = await page.evaluate(() => document.activeElement?.tagName === 'PRE' || document.activeElement?.classList.contains('ied-sim'))
         expect(between, 'Tab left the code Copy for something other than the code, a Similar tile or Back').toBe(true)
         await page.keyboard.press('Tab')
       }
       await expect(back(page), 'Tab did not reach Back to free settings').toBeFocused()
       for (const [label, next] of [
-        ['Upgrade to Pro', primary(page)],
         ['Download SVG', d['Download SVG']],
         ['Download formats', d['Download formats']],
         ['Save to project', d['Save to project']],
+        ['Upgrade to Pro', primary(page)],
       ]) {
         await page.keyboard.press('Tab')
         await expect(next, `Tab did not reach ${label}`).toBeFocused()
