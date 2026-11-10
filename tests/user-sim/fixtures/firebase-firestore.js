@@ -23,14 +23,14 @@
  * `getFirestore()` returns the real instance and every downstream call takes
  * the real path.
  *
- * The five that take no reference — where, orderBy, limit, increment and
+ * The six that take no reference — where, orderBy, limit, startAfter, increment and
  * deleteField — cannot ask that question, so they dispatch on whether a store
  * exists at all. That is the same answer by a different route: if no session is
  * declared there is no store, and if one is declared then `getFirestore()`
  * returned the fake and every reference in the page is a fake reference. There
  * is no page on which the two disagree.
  *
- * COVERAGE IS EXACT. This implements the sixteen `firebase/firestore` exports
+ * COVERAGE IS EXACT. This implements the nineteen `firebase/firestore` exports
  * src/ imports and no more. Anything else stays the real function via the star
  * re-export — which for a fake reference would throw the SDK's own type error,
  * loudly, at the call site. A double that answered plausibly to a call it does
@@ -51,6 +51,9 @@ import {
   where as realWhere,
   orderBy as realOrderBy,
   limit as realLimit,
+  startAfter as realStartAfter,
+  writeBatch as realWriteBatch,
+  serverTimestamp as realServerTimestamp,
   increment as realIncrement,
   deleteField as realDeleteField,
 } from 'firebase/firestore'
@@ -160,6 +163,37 @@ export function deleteDoc(reference) {
   return Promise.resolve()
 }
 
+/* A batch applies all of its writes or none. A refusal is checked for every
+ * write before the first lands, as the real commit refuses the batch whole. */
+export function writeBatch(db) {
+  if (!isFakeDb(db)) return realWriteBatch(db)
+  const ops = []
+  const batch = {
+    set(reference, data, options) { ops.push({ type: 'set', reference, data, merge: !!options?.merge }); return batch },
+    update(reference, data) { ops.push({ type: 'update', reference, data }); return batch },
+    delete(reference) { ops.push({ type: 'delete', reference }); return batch },
+    commit() {
+      for (const op of ops) {
+        const denied = deniedFor(op.reference.path, 'set')
+        if (denied) return Promise.reject(denied)
+      }
+      for (const op of ops) {
+        if (op.type === 'delete') op.reference.store.remove(op.reference.path)
+        else op.reference.store.set(op.reference.path, op.data, op.type === 'update' || op.merge)
+      }
+      return Promise.resolve()
+    },
+  }
+  return batch
+}
+
+/* The server's clock is the browser's here: an ISO string, which sorts the way
+ * the stored timestamps do. */
+export function serverTimestamp() {
+  if (!fakeDb) return realServerTimestamp()
+  return new Date().toISOString()
+}
+
 export function addDoc(collectionRef, data) {
   if (!isFakeRef(collectionRef)) return realAddDoc(collectionRef, data)
   const path = `${collectionRef.path}/${newId()}`
@@ -186,6 +220,13 @@ export function limit(n) {
   return { [CONSTRAINT]: 'limit', n }
 }
 
+/* A cursor is a document snapshot the page was handed, or a bare value of the
+ * sort field. Either way the next page starts after it in the sort order. */
+export function startAfter(...fields) {
+  if (!fakeDb) return realStartAfter(...fields)
+  return { [CONSTRAINT]: 'startAfter', fields }
+}
+
 export function query(source, ...constraints) {
   if (!isFakeRef(source)) return realQuery(source, ...constraints)
   return ref('query', source.path, {
@@ -207,13 +248,21 @@ const OPS = {
 
 function runQuery(reference) {
   let rows = reference.store.list(reference.path)
+  let sortedBy = null
   for (const c of reference.constraints || []) {
     const kind = c?.[CONSTRAINT]
-    if (kind === 'where') {
+    if (kind === 'startAfter') {
+      if (!sortedBy) throw new Error(`[${FIXTURE_MARKER}] startAfter needs an orderBy before it`)
+      const [first] = c.fields
+      const at = typeof first?.data === 'function' ? first.data()?.[sortedBy.field] : first
+      const dir = sortedBy.direction === 'desc' ? -1 : 1
+      rows = rows.filter((r) => (r.data[sortedBy.field] > at ? 1 : r.data[sortedBy.field] < at ? -1 : 0) * dir > 0)
+    } else if (kind === 'where') {
       const op = OPS[c.op]
       if (!op) throw new Error(`[${FIXTURE_MARKER}] unmodelled Firestore query operator "${c.op}"`)
       rows = rows.filter((r) => op(r.data[c.field], c.value))
     } else if (kind === 'orderBy') {
+      sortedBy = c
       const dir = c.direction === 'desc' ? -1 : 1
       rows = [...rows].sort((a, b) => {
         const x = a.data[c.field], y = b.data[c.field]

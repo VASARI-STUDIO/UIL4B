@@ -447,6 +447,19 @@
   color: var(--cm-faint);
 }
 
+/* ── show more ────────────────────────────────────────────────────────────────
+   The control under the grid that brings the next page of members' designs. */
+.ch-spectrum .ch-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+.ch-spectrum .ch-more .btn {
+  min-height: 44px;
+  padding-inline: 24px;
+  border-radius: var(--radius-pill);
+}
+
 /* ── your submissions ─────────────────────────────────────────────────────────
    The queued-icon list. It was `<li className="toggle-row ch-toolbar">` with
    three inline `style` objects doing the layout, because at the time every

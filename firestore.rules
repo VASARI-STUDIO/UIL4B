@@ -209,6 +209,57 @@ service cloud.firestore {
       allow delete: if isReviewer() || isOwner();
     }
 
+    // Approved community designs, in a form anyone may read. One document per
+    // design, at the id of the community-submissions document it was copied
+    // from (utils/communityQueue.js, buildPublicDesign). It holds a name, the
+    // credit the submitter typed, a category, an http(s) link and two colours,
+    // and no uid, email, account name or reviewer, so the whole collection can
+    // be public. The keys are pinned below to keep it that way.
+    //
+    // Rules are not filters: a list must carry a limit, and 25 is the most it
+    // may ask for (the page size plus one).
+    match /community-public/{id} {
+      function pubShapeOk() {
+        return request.resource.data.keys().hasOnly([
+                 'name', 'credit', 'category', 'url', 'c1', 'c2', 'approvedAt', 'kind'])
+          && request.resource.data.keys().hasAll([
+                 'name', 'credit', 'category', 'c1', 'c2', 'approvedAt', 'kind'])
+          && request.resource.data.kind == 'design'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.credit is string
+          && request.resource.data.credit.size() > 0
+          && request.resource.data.credit.size() <= 60
+          && request.resource.data.category is string
+          && request.resource.data.category.size() <= 40
+          && (!('url' in request.resource.data)
+              || (request.resource.data.url is string
+                  && request.resource.data.url.size() <= 2048
+                  && request.resource.data.url.matches('^https?://.*$')))
+          && request.resource.data.c1 is string
+          && request.resource.data.c1.matches('^#[0-9a-fA-F]{6}$')
+          && request.resource.data.c2 is string
+          && request.resource.data.c2.matches('^#[0-9a-fA-F]{6}$')
+          && request.resource.data.approvedAt is timestamp;
+      }
+
+      allow get: if true;
+      allow list: if request.query.limit <= 25;
+
+      // Only a reviewer publishes. A public copy is never edited by a member.
+      allow create, update: if isReviewer() && pubShapeOk();
+
+      // A reviewer removes any copy. A member removes the copy at the id of
+      // their own submission: the id matches, and the submission it points at
+      // names them. `get` reads the submission as it stands before the write,
+      // so withdrawing a design (one batch deleting both) is allowed.
+      allow delete: if isReviewer()
+        || (request.auth != null
+            && get(/databases/$(database)/documents/community-submissions/$(id)).data.authorUid
+               == request.auth.uid);
+    }
+
     // Aggregate usage analytics — per-day counter documents ({YYYY-MM-DD}).
     // Signed-in users may create and update counters; reading requires the
     // `admin` claim.

@@ -8,8 +8,8 @@ import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { readCommunitySubmissions, sanitizeCommunitySubmission, writeCommunitySubmissions } from '../utils/communitySubmissions'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
-import { buildQueueRecord, mergeSubmissions, submissionStatusLabel } from '../utils/communityQueue'
-import { deleteSubmission, listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
+import { buildQueueRecord, mergeSubmissions, publicDesignFromDoc, publicDesignsForViewer, submissionStatusLabel } from '../utils/communityQueue'
+import { deleteSubmission, listApprovedDesigns, listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
 import { isPostLimit } from '../utils/communityLimits'
 import { TOAST_ACTION_MIN_MS } from '../utils/toastDuration'
 import {
@@ -112,17 +112,11 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
               </MenuSelect>
             </label>
             {error && <div className="ui-modal-err">{error}</div>}
-            {/* This note used to say submissions were saved to this browser
-                "for now". They now go to the review queue on your account, so
-                it says what actually happens.
-
-                A SECOND SENTENCE IS DELETED: "Nothing appears publicly until
-                it has been reviewed." Review is real — CommunityQueue.jsx in
-                the admin approves and rejects — but APPEARING is not: this
-                page renders [...mine, ...COMMUNITY_DESIGNS], listQueue() is
-                called from the admin queue and nowhere else, and pipeline.js
-                records that community publishing is deliberately unbuilt
-                (#377). "Until" promised an after that no code delivers. */}
+            {/* Says where a submission goes: the review queue on the account.
+                The grid also lists other members' approved designs
+                (listApprovedDesigns), so an approved design does appear for
+                everyone; the sentence stays about the queue because that is
+                the part the submitter controls. */}
             <p className="ui-modal-note">Submissions are saved to your account and queued for review, so they follow you across devices.</p>
           </div>
           <div className="ui-modal-actions ui-modal-actions--row">
@@ -312,6 +306,10 @@ export default function Community({ toast }) {
   // The account's copy, mapped into the card shape. Empty until it arrives (or
   // for good, when signed out or offline) — the local list renders either way.
   const [serverSubmissions, setServerSubmissions] = useState([])
+  // Approved designs from every account, read for any visitor: signed out, Free
+  // or Pro. A page at a time; `cursor` is where the next page starts.
+  const [publicDesigns, setPublicDesigns] = useState([])
+  const [publicPage, setPublicPage] = useState({ cursor: null, hasMore: false, loading: false })
   const [filter, setFilter] = useState('All')
   const [sort, setSort] = useState('popular')
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -400,6 +398,38 @@ export default function Community({ toast }) {
     return () => { cancelled = true }
   }, [uid, markRead])
 
+  // The first page of approved designs. It does not wait for sign-in: the read
+  // is open to everyone, and a failure leaves the grid as the starter cards and
+  // the viewer's own entries.
+  useEffect(() => {
+    let cancelled = false
+    listApprovedDesigns()
+      .then(({ items, cursor, hasMore }) => {
+        if (cancelled) return
+        setPublicDesigns(items.map(publicDesignFromDoc).filter(Boolean))
+        setPublicPage({ cursor, hasMore, loading: false })
+      })
+      .catch(() => { /* the starter cards and the viewer's own stand */ })
+    return () => { cancelled = true }
+  }, [])
+
+  const showMorePublic = useCallback(async () => {
+    if (publicPage.loading || !publicPage.hasMore) return
+    setPublicPage(prev => ({ ...prev, loading: true }))
+    try {
+      const { items, cursor, hasMore } = await listApprovedDesigns({ after: publicPage.cursor })
+      const more = items.map(publicDesignFromDoc).filter(Boolean)
+      setPublicDesigns(prev => {
+        const seen = new Set(prev.map(i => i.id))
+        return [...prev, ...more.filter(i => !seen.has(i.id))]
+      })
+      setPublicPage({ cursor, hasMore, loading: false })
+    } catch {
+      setPublicPage(prev => ({ ...prev, loading: false }))
+      toast?.('Could not load more designs. Try again.', 'error')
+    }
+  }, [publicPage, toast])
+
   // Server wins on conflict — it is the copy a reviewer acts on — and the local
   // entry it replaces is matched on `localId`. See utils/communityQueue.js.
   const mine = useMemo(
@@ -461,9 +491,17 @@ export default function Community({ toast }) {
     () => mine.filter(s => s.status === 'rejected' && !hiddenIds.has(s.id)),
     [mine, hiddenIds],
   )
+  // The viewer's own entries first, then other members' approved designs, then
+  // the starter cards: the order the page header describes. The viewer's own
+  // approved designs are left out of the public list, as they are already in
+  // their own with a status tag.
+  const strangers = useMemo(
+    () => publicDesignsForViewer(publicDesigns, { own: mine }),
+    [publicDesigns, mine],
+  )
   const all = useMemo(
-    () => [...mine.filter(s => s.status !== 'rejected' && !hiddenIds.has(s.id)), ...COMMUNITY_DESIGNS],
-    [mine, hiddenIds],
+    () => [...mine.filter(s => s.status !== 'rejected' && !hiddenIds.has(s.id)), ...strangers, ...COMMUNITY_DESIGNS],
+    [mine, hiddenIds, strangers],
   )
 
   // One list for everything in "Your submissions", newest first.
@@ -652,7 +690,7 @@ export default function Community({ toast }) {
     window.dispatchEvent(new CustomEvent('uil4b:toast-dismiss', { detail: { onAction: undo } }))
     setBusy(item.id, true)
     try {
-      if (item.docId) await deleteSubmission(item.docId)
+      if (item.docId) await deleteSubmission(item.docId, { kind })
       if (kind === 'icon') {
         setIconLocal(removeIconSubmission(item.id))
         setServerIcons(prev => prev.filter(s => s.id !== item.id))
@@ -893,16 +931,29 @@ export default function Community({ toast }) {
               : 'No designs in this category yet.'}
           </div>
         )}
+        {publicPage.hasMore && (
+          <div className="ch-more">
+            <button
+              type="button"
+              className="btn"
+              onClick={showMorePublic}
+              disabled={publicPage.loading}
+              aria-busy={publicPage.loading || undefined}
+            >
+              {publicPage.loading ? 'Loading…' : 'Show more designs'}
+            </button>
+          </div>
+        )}
       </section>
 
       {/* YOUR SUBMISSIONS — ICONS, AND DESIGNS A REVIEWER TURNED DOWN. NEITHER
           IS IN THE GRID ABOVE.
           Kept out of it on purpose, the same call GradientGallery.jsx makes and
           for the same reason: they are not in any library, and rendering them
-          among the browsable cards would imply they had been published. Nothing
-          outside src/components/admin reads the approved queue, so an approved
-          icon is shown to nobody but its author — and this section is the one
-          place it is shown, labelled with where it stands. A rejected design
+          among the browsable cards would imply they had been published. Only
+          approved DESIGNS are read for everyone (listApprovedDesigns), so an
+          approved icon is shown to nobody but its author — and this section is
+          the one place it is shown, labelled with where it stands. A rejected design
           joins it here for the mirror-image reason: it is no longer a card
           worth browsing, but its author should still see what became of it.
 
@@ -978,11 +1029,8 @@ export default function Community({ toast }) {
           a MODAL, which arrives where the user already is. */}
       <GalleryCloseCta
         className="ch-cta"
-        // ", and reviewed before it appears" is deleted — see the note in
-        // SubmitModal: nothing outside the admin reads the reviewed queue, so
-        // "appears" is a step with no code behind it. The same three promises
-        // still sit in COMMUNITY_SUBMIT_REASONS (utils/submitIntent.js), which
-        // is outside this lane and is filed in pipeline.js.
+        // The same three promises sit in COMMUNITY_SUBMIT_REASONS
+        // (utils/submitIntent.js).
         detail="Submit a design of your own — it is credited to you."
         action="Create and submit your own"
         onAction={openSubmit}

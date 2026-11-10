@@ -66,6 +66,31 @@ async function deleteQueryInBatches(db, query) {
   }
 }
 
+// Deletes a member's community submissions together with the public copy of
+// each (community-public, at the same document id). A public copy holds no uid,
+// so the submission is the only way to find it. Both go in one batch, so a
+// failure cannot leave a copy behind whose submission is gone. A submission with no
+// public copy (anything but an approved design) makes that delete a no-op.
+// Two deletes per submission, so half the page a single delete uses.
+async function deleteSubmissionsWithPublicCopies(db, uid) {
+  const submissions = db.collection('community-submissions').where('authorUid', '==', uid)
+  const publicCopies = db.collection('community-public')
+  const page = Math.floor(BATCH_LIMIT / 2)
+  let deleted = 0
+  for (;;) {
+    const snap = await submissions.limit(page).get()
+    if (snap.empty) return deleted
+    const batch = db.batch()
+    snap.docs.forEach((d) => {
+      batch.delete(publicCopies.doc(d.id))
+      batch.delete(d.ref)
+    })
+    await batch.commit()
+    deleted += snap.size
+    if (snap.size < page) return deleted
+  }
+}
+
 // Cancels every live subscription on the customer, immediately.
 //
 // Ownership is re-verified against Stripe's own copy exactly as create-portal
@@ -216,9 +241,10 @@ export default async function handler(req, res) {
     // tests/unit/account-deletion.test.js now derives the list of collections
     // this must reach from firestore.rules, so the next one cannot be missed
     // the same way.
-    deleted.communitySubmissions = await deleteQueryInBatches(
-      db, db.collection('community-submissions').where('authorUid', '==', uid),
-    )
+    //
+    // An approved design also has a public copy, which carries no uid. It goes
+    // with the submission it was copied from.
+    deleted.communitySubmissions = await deleteSubmissionsWithPublicCopies(db, uid)
 
     // Feedback carries the address they typed. api/support.js stores no uid, so
     // the email is the only handle — which is also why this is skipped for an

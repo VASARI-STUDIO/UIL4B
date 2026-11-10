@@ -173,3 +173,18 @@ test('no other src/ or api/ query combines where with orderBy, or filters on two
   assert.deepEqual(multiInequality, [], 'inequality filters on different fields need a composite index')
   assert.deepEqual([...orderedWhere].sort(), [...COVERED].sort(), 'the covered file no longer holds a where + orderBy query')
 })
+
+test('listApprovedDesigns (the public grid) needs no composite index', () => {
+  // It reads community-public with a sort on one field and no filter, which the
+  // automatic single-field index serves. Adding a filter would need a composite
+  // entry, and this case would then have to say so.
+  const body = functionBody(queueApi, 'listApprovedDesigns')
+  assert.ok(!/\bwhere\(/.test(body), 'the public grid gained a filter; it now needs a composite index')
+  const sort = ORDER_BY.exec(body)
+  assert.ok(sort && sort[1] === 'approvedAt' && sort[3] === 'desc', 'the public grid must sort by approvedAt, newest first')
+  assert.ok(/PUBLIC_COLLECTION\s*=\s*'community-public'/.test(stripJs(read('src/utils/communityQueue.js'))))
+  assert.ok(!indexes.some((ix) => ix.collectionGroup === 'community-public'),
+    'community-public has a composite index; the public query does not need one')
+  assert.ok(!indexes.some((ix) => ix.collectionGroup === collectionName && ix.fields.some((f) => f.fieldPath === 'reviewedAt')),
+    'the retired status + kind + reviewedAt index is back')
+})

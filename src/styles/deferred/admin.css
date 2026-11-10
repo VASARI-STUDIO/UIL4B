@@ -203,6 +203,8 @@
 .cq-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .cq-filters{display:flex;gap:6px;flex-wrap:wrap}
 .cq-filter-count{font-family:var(--font);font-size:var(--fs-caption);opacity:.85}
+.cq-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cq-publish-note{margin:0;font-size:var(--fs-caption);color:var(--t2)}
 .cq-msg{display:grid;gap:8px;justify-items:start;padding:28px;border:1px dashed var(--border);border-radius:var(--radius-l);color:var(--t2);font-size:13px}
 .cq-msg--error{border-style:solid;border-color:color-mix(in srgb,var(--err) 40%,transparent);background:color-mix(in srgb,var(--err) 6%,transparent);color:var(--err-strong)}
 .cq-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}

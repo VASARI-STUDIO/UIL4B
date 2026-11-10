@@ -157,7 +157,7 @@ export default function GradientGallery({ toast }) {
       // be found there and published again.
       removeLegacyGradientSubmission(s.localId)
       keepGradients.recount()
-      await deleteSubmission(s.docId)
+      await deleteSubmission(s.docId, { kind: 'gradient' })
       setQueue(q => ({ ...q, items: q.items.filter(x => x.docId !== s.docId) }))
       toast?.(s.status === 'pending' ? 'Submission withdrawn' : 'Submission removed')
     } catch {
