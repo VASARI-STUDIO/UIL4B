@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useProject } from '../../contexts/ProjectContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
+import { useAuth } from '../../contexts/AuthContext'
+import { stashResumeTarget } from '../../contexts/LoginPromptContext'
 import useExportDesign from '../../hooks/useExportDesign'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
@@ -30,7 +32,9 @@ import '../../styles/pages/export-dialog.css'
 // window, and a layout switch would unmount the field being typed in.
 const FIELD = 'input:not([type=checkbox],[type=radio],[type=button],[type=submit],[type=file],[type=color]),textarea,select,[contenteditable="true"]'
 const isField = (el) => Boolean(el && el.matches && el.matches(FIELD))
-const calmMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.reducedMotion === 'true'
+// Where a visitor with no account starts: a free file.
+const KIT_PICK = resolvePreset({ type: 'kit', category: 'kit', file: 'kit' })
+const calmMotion =() => window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.reducedMotion === 'true'
 
 export default function ExportDialog({ onClose, preset, projectId }) {
   const wide = useMediaQuery('(min-width: 1024px)')
@@ -46,11 +50,23 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const { busy } = runner
   const { isPro, planKnown } = useSubscription()
   const { projects } = useProject()
+  const signInGate = useRef(null)
+  const [signingIn, setSigningIn] = useState(false)
   const design = useExportDesign()
   const project = projectId ? projects.find((p) => String(p.id) === String(projectId)) || null : null
   const name = project?.name || design?.name || ''
 
-  const [pick, setPick] = useState(() => resolvePreset(preset || readLastPick() || DEFAULT_PRESET))
+  const { user } = useAuth()
+  // A visitor with no account starts on a free file: the UI kit, whose default theme is a free one. A Pro document is still one click away.
+  const signedOut = planKnown !== false && !user
+  const freeStart = (p) => (signedOut && EXPORT_TYPES.find((t) => t.id === p.type)?.categories.find((c) => c.id === p.category)?.pro ? KIT_PICK : p)
+  const [pick, setPick] = useState(() => freeStart(resolvePreset(preset || readLastPick() || DEFAULT_PRESET)))
+  // The plan can be unknown when the dialog opens (the session is still being read); once it settles for a visitor, the start applies if nothing has been picked.
+  const touched = useRef(false)
+  useEffect(() => {
+    if (signedOut && !touched.current) setPick((p) => freeStart(p))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedOut])
   const type = EXPORT_TYPES.find((t) => t.id === pick.type) || EXPORT_TYPES[0]
   const cat = type.categories.find((c) => c.id === pick.category) || type.categories[0]
   // The file last chosen in each category, so leaving Style guide on PNG and coming back finds PNG.
@@ -62,12 +78,35 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const onCloseRef = useRef(onClose)
   const renameStop = useRef(null)
   useEffect(() => { busyRef.current = busy; onCloseRef.current = onClose })
+  // The inline sign-in: askToSignIn() opens the panel and resolves true once signed in, false when it is dismissed.
+  // Escape and Cancel close only the panel and put focus back on Export.
+  const primaryRef = useRef(null)
+  const finishSignIn = useCallback((ok) => {
+    const resolve = signInGate.current
+    if (!resolve) return
+    signInGate.current = null
+    setSigningIn(false)
+    resolve(ok)
+    // The button is back one frame after the panel goes; while the plan loads it is disabled, so the card holds focus instead.
+    requestAnimationFrame(() => {
+      const btn = primaryRef.current
+      ;(btn && !btn.disabled ? btn : btn?.closest('.xd-card'))?.focus({ preventScroll: true })
+    })
+  }, [])
+  const askToSignIn = () => new Promise((resolve) => {
+    // A new account lands on onboarding; this is where it comes back to.
+    stashResumeTarget()
+    signInGate.current = resolve
+    setSigningIn(true)
+  })
+  useEffect(() => () => { signInGate.current?.(false) }, [])
   const requestClose = useCallback(() => {
+    if (signInGate.current) { finishSignIn(false); return }
     if (busyRef.current) return
     // An open rename field takes the Escape first.
     if (renameStop.current) { renameStop.current(); return }
     onCloseRef.current()
-  }, [])
+  }, [finishSignIn])
   const onRenameState = useCallback((stop) => { renameStop.current = stop }, [])
 
   useCloseOnBack(true, requestClose)
@@ -75,7 +114,6 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const dialogRef = useModalDialog(requestClose, { initialFocus: '.xd-title' })
 
   const mainRef = useRef(null)
-  const primaryRef = useRef(null)
   const [localError, setLocalError] = useState('')
   // The theme chosen for the themed files (the UI kit, the book and the slides as PDF or HTML), and the one a highlighted row
   // is previewing. Until a pick is made it is the plan's own default: Presentation for Pro, Standards (a free one) otherwise.
@@ -86,6 +124,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const apply = (next) => {
     if (next.type === pick.type && next.category === pick.category && next.file === pick.file) return
     const moved = next.type !== pick.type || next.category !== pick.category
+    touched.current = true
     setPick(next)
     storeLastPick(next)
     runner.reset()
@@ -120,7 +159,8 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const onPrimary = async () => {
     if (busy || checking) return
     setLocalError('')
-    const result = await runner.run(pick.file, { projectId, theme: themedNow ? theme : undefined })
+    if (signingIn) return
+    const result = await runner.run(pick.file, { projectId, theme: themedNow ? theme : undefined, signIn: askToSignIn })
     if (result?.status === 'upgrade') onCloseRef.current()
   }
   const onCopy = async () => {
@@ -239,14 +279,14 @@ export default function ExportDialog({ onClose, preset, projectId }) {
             onType={onType}
             onCategory={onCategory}
             strip={strip}
-            disabled={busy}
+            disabled={busy || signingIn}
             showTags={!isPro && !checking}
             coming={comingLine()}
           />
           <div className="xd-col">
             <div className="xd-scroll" ref={mainRef} onFocus={onScrollFocus}>
               {/* Keyed by category: a swap replays the 150ms fade. Fields stop while a file builds. */}
-              <fieldset className="xd-swap" key={`${type.id}/${cat.id}`} disabled={busy}>
+              <fieldset className="xd-swap" key={`${type.id}/${cat.id}`} disabled={busy || signingIn}>
                 <ExportSteps
                   cat={cat}
                   file={pick.file}
@@ -277,6 +317,8 @@ export default function ExportDialog({ onClose, preset, projectId }) {
               onCopy={onCopy}
               primaryRef={primaryRef}
               locked={locked}
+              signingIn={signingIn}
+              onSignIn={finishSignIn}
             />
           </div>
         </div>

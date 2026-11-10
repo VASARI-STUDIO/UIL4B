@@ -89,10 +89,12 @@ test.describe('every entry point opens the same popup', () => {
     await go(page, WORKED_BOARD)
     let panel = await openFromHeader(page)
     await expect(panel.getByRole('heading', { level: 2 })).toHaveText('Export your design system')
-    expect(await shownPick(panel)).toEqual({ type: 'Brand book', category: 'Book', file: 'PDF' })
+    // Signed out, the popup starts on a free file: the UI kit, in a free theme.
+    expect((await shownPick(panel)).type).toBe('UI kit')
     await expect(panel.getByRole('button', { name: 'Change theme, current Standards' }), 'the Theme step replaced the Layout tiles').toBeVisible()
     await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
 
+    await typeRadio(panel, 'Brand book').click()
     await categoryRadio(panel, 'Style guide').click()
     await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'PNG', exact: true }).click()
     await panel.getByRole('button', { name: 'Close export' }).click()
@@ -579,6 +581,8 @@ test.describe('Pro categories for a free account', () => {
     watch(page, 'a visitor on Book')
     await go(page, WORKED_BOARD)
     const panel = await openFromHeader(page)
+    await typeRadio(panel, 'Brand book').click()
+    await categoryRadio(panel, 'Book').click()
     await expect(panel.locator('.xd-theme-lock')).toBeVisible()
     await primaryButton(panel).click()
     await expect(page).toHaveURL(/\/plans(\?|$)/)

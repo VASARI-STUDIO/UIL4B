@@ -12,7 +12,7 @@
 .xd[data-layout="menu"] .xd-card{height:calc(100dvh - 2 * var(--s-5))}
 /* The sheet's top and bottom insets are padded inside the head and the dock (their own colours reach the screen edge); only the sides are padded here. While the keyboard is up, --xd-vh and --xd-top (set by the component) fit the sheet to the visual viewport. */
 .xd[data-layout="strip"] .xd-card{width:100%;height:var(--xd-vh,100dvh);margin-top:var(--xd-top,0);border:0;border-radius:0;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left);animation-name:xd-sheet}
-.xd-card[data-kbd] .xd-dock{display:none}
+.xd-card[data-kbd] .xd-dock:not(.xd-dock--signin){display:none}
 .xd-card:focus,.xd-title:focus{outline:none}
 @keyframes xd-fade{from{opacity:0}}
 @keyframes xd-rise{from{opacity:0;transform:translateY(12px)}}
@@ -136,8 +136,27 @@
 .xd-primary{min-width:176px}
 .xd-act:disabled{cursor:not-allowed}
 
+/* The sign-in step: the account form in place of the dock's line and buttons. It scrolls inside a capped height, so the dock never takes the whole dialog, and the form keeps a readable width on the wide layouts. */
+.xd-dock--signin{display:block;min-height:0;padding-block:var(--s-4)}
+.xd-signin{display:flex;flex-direction:column;gap:var(--s-3);width:min(100%,420px);max-height:min(26rem,52dvh);margin-inline:auto;overflow-y:auto;overscroll-behavior:contain}
+.xd-signin-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3)}
+.xd-signin-lead{margin:0;font-size:13px;line-height:1.5;color:var(--t1)}
+.xd-signin-lead strong{font-weight:600;color:var(--t0)}
+.xd-signin-x{flex:none;min-height:44px;padding:0 var(--s-4)}
+.xd-signin .auth-form-root .auth-title{font-size:16px}
+.xd-signin .auth-body{margin-top:var(--s-3)}
+.xd-signin .auth-form-root .auth-divider{margin:var(--s-2) 0}
+.xd-signin .auth-form-root .auth-links{margin-top:var(--s-2)}
+.xd-signin-x:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+@media (hover:hover){.xd-signin-x:hover:not(:disabled){background:var(--hvr)}}
+/* While the keyboard is up the sign-in step is the one thing left: the rail and the column step aside so the fields stay in view. */
+.xd-card[data-kbd] .xd-dock--signin{display:block}
+.xd-card[data-kbd]:has(.xd-dock--signin) :is(.xd-nav,.xd-scroll){display:none}
+.xd-card[data-kbd] .xd-signin{max-height:none}
+
 /* The phone sheet: the price line sits above full-width buttons. */
 .xd[data-layout="strip"] .xd-dock{flex-direction:column;align-items:stretch;gap:var(--s-2);padding:var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom))}
+.xd[data-layout="strip"] .xd-dock--signin{display:block}
 .xd[data-layout="strip"] .xd-dock-line{flex:none}
 .xd[data-layout="strip"] :is(.xd-dock-line,.xd-error){max-height:6.5em;overflow-y:auto}
 .xd[data-layout="strip"] .xd-dock-acts > .xd-act{flex:1 1 0;min-height:48px;min-width:0}
