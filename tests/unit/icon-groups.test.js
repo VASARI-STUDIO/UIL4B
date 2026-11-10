@@ -11,7 +11,7 @@ import {
   DEFAULT_GROUP_STROKE, GROUP_STROKES, GROUP_STYLE_PACKS, ICON_GROUPS_ROUTE, PREMADE_ICON_GROUPS,
   glyphRequestPlan, groupById, groupNeeds, groupPacks, groupRoute, isGroupOpen, listIconGroups, parseIconRef,
 } from '../../src/data/iconGroups.js'
-import { canSeePack } from '../../src/data/iconPackTiers.js'
+import { canSeePack, tierOf } from '../../src/data/iconPackTiers.js'
 import { loadGroupGlyphs, glyphFor, resetGroupGlyphs } from '../../src/utils/iconGroupGlyphs.js'
 import { groupFileNames, groupIconSvg, groupSprite } from '../../src/utils/iconGroupSvg.js'
 
@@ -22,9 +22,9 @@ const TIERS = ['anon', 'free', 'paid']
 
 // ── The data ────────────────────────────────────────────────────────────────
 
-test('there are eight to ten groups, each of 16–32 distinct icons', () => {
-  assert.ok(PREMADE_ICON_GROUPS.length >= 8 && PREMADE_ICON_GROUPS.length <= 10,
-    `expected 8–10 groups, found ${PREMADE_ICON_GROUPS.length}`)
+test('there are eight to twenty groups, each of 16–32 distinct icons', () => {
+  assert.ok(PREMADE_ICON_GROUPS.length >= 8 && PREMADE_ICON_GROUPS.length <= 20,
+    `expected 8–20 groups, found ${PREMADE_ICON_GROUPS.length}`)
   const ids = PREMADE_ICON_GROUPS.map((g) => g.id)
   assert.equal(new Set(ids).size, ids.length, 'group ids must be unique')
   for (const g of PREMADE_ICON_GROUPS) {
@@ -67,6 +67,75 @@ test('every group icon exists in its pack (recorded snapshot of the real glyph d
   assert.deepEqual(missing, [],
     'not in tests/unit/fixtures/icon-groups-snapshot.json. Run `node scripts/snapshot-icon-groups.mjs` '
     + '— it fails on an id the pack does not have.')
+})
+
+// The groups added from handover/specs/icon-group-use-cases-2026-11-06.md, with the label each shows.
+const ADDED_GROUPS = {
+  dashboard: 'Dashboard & analytics',
+  'app-navigation': 'App navigation',
+  code: 'Code & terminal',
+  portfolio: 'Portfolio & creative',
+  events: 'Events & tickets',
+  'tech-brands': 'Tech brands',
+  'payment-brands': 'Payments & crypto',
+  'developer-tools': 'Languages & frameworks',
+}
+const BRAND_GROUPS = ['tech-brands', 'payment-brands', 'developer-tools']
+
+/** Every name the pack's committed icon list (public/iconify/collections) carries. */
+function packNames(pack) {
+  const list = JSON.parse(read(`public/iconify/collections/${pack}.json`))
+  return new Set([...(list.uncategorized || []), ...Object.values(list.categories || {}).flat()])
+}
+
+test('the added groups exist with their labels, and the brand groups are Pro', () => {
+  for (const [id, label] of Object.entries(ADDED_GROUPS)) {
+    const g = groupById(id)
+    assert.ok(g, `no group "${id}"`)
+    assert.equal(g.label, label)
+    assert.equal(g.access, 'pro', `${id}: the free allowance stays at three groups`)
+  }
+  assert.deepEqual(BRAND_GROUPS.filter((id) => !groupById(id)), [])
+  assert.ok(BRAND_GROUPS.length >= 2, 'at least two brand groups')
+  // The brand marks must come from the outline packs; a filled or coloured brand pack is outside the style rule.
+  for (const id of BRAND_GROUPS) {
+    for (const pack of groupPacks(groupById(id))) assert.ok(pack in GROUP_STYLE_PACKS, `${id}: ${pack} is not an outline pack`)
+  }
+  assert.ok(groupById('tech-brands').icons.includes('tabler:brand-github'))
+  assert.ok(groupById('payment-brands').icons.includes('tabler:brand-stripe'))
+})
+
+test('every icon in every group resolves to a known pack and a name that pack lists', () => {
+  const lists = new Map()
+  const bad = []
+  for (const g of PREMADE_ICON_GROUPS) {
+    for (const ref of g.icons) {
+      const { pack, name } = parseIconRef(ref)
+      if (!(pack in GROUP_STYLE_PACKS)) { bad.push(`${g.id} → ${ref}: unknown group pack`); continue }
+      if (!tierOf(pack)) { bad.push(`${g.id} → ${ref}: pack has no tier`); continue }
+      if (!lists.has(pack)) lists.set(pack, packNames(pack))
+      if (lists.get(pack).has(name)) continue
+      // The committed Lucide list names canonical icons only; the pack's older names
+      // (music, smile, align-left…) are real glyphs the snapshot of the live data records.
+      // That allowance is for the groups that existed before the added ones: those must be on the list.
+      const older = !(g.id in ADDED_GROUPS)
+      if (!(older && SNAPSHOT.packs[pack]?.icons?.[name])) bad.push(`${g.id} → ${ref}: not in ${pack}'s icon list`)
+    }
+  }
+  assert.deepEqual(bad, [])
+  // The check can fail: a made-up name and an unknown pack are both caught.
+  assert.ok(!packNames('tabler').has('brand-not-a-real-brand'))
+  assert.equal('made-up' in GROUP_STYLE_PACKS, false)
+})
+
+test('a brand group is locked for a signed-out viewer and a free account, open on Pro', () => {
+  for (const id of BRAND_GROUPS) {
+    const g = groupById(id)
+    assert.equal(groupNeeds(g, 'anon'), 'paid')
+    assert.equal(groupNeeds(g, 'free'), 'paid')
+    assert.equal(groupNeeds(g, 'paid'), null)
+    assert.deepEqual(glyphRequestPlan([g], 'anon').size, 0, `${id}: a locked group requested glyphs`)
+  }
 })
 
 test('the snapshot holds exactly the icons the groups use, so it cannot go stale silently', () => {

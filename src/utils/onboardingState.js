@@ -119,12 +119,11 @@ export function localOnboardingFlag(storage) {
  * onboarding.
  *
  * THIS USED TO RETURN '/home', WHICH IS THE SALES PAGE. That was correct while
- * the sales page was the only home there was; it is not correct now. Founder
- * direction, 2026-09-05, approved explicitly: “i want the sales page to mostly
- * be for new users if a user is already logged in and navigates to the website
- * it takes them to the dashboard page unless they click they home button or
- * navigate to specifly /home”. tests/unit/first-run-destination.test.js already
- * recorded the same defect from the other direction (audit B4): finishing
+ * the sales page was the only home there was; it is not correct now. The
+ * sales page is mostly for new users: a signed-in visitor who navigates to the
+ * website goes to the dashboard, unless they click the home button or navigate
+ * to /home explicitly. tests/unit/first-run-destination.test.js already
+ * recorded the same defect from the other direction: finishing
  * onboarding landed a brand-new account on “No more tab hoarding” and a “Start
  * building free” CTA it had just used.
  *

@@ -11,9 +11,9 @@
 //       `backwards`, so a cancelled or skipped run costs the movement and never
 //       the content.
 //   U3  the keyframes move `transform` and `opacity` only (compositor work).
-//   U4  no scroll handler on the bench or the proof band, and the band's hue
-//       handler is attached from an IntersectionObserver callback and from
-//       nowhere else.
+//   U4  no scroll handler on the proof band, the proof figures
+//       are static text, and the colour band's hue handler is attached from an
+//       IntersectionObserver callback and from nowhere else.
 //   U5  the served shell is untouched: it carries none of the arrival markup, so
 //       the headline stays the page's one settled, full-size largest paint.
 //
@@ -31,8 +31,7 @@ const CSS_PATH = ['src/styles/pages/spectrum.css', 'src/styles/deferred/spectrum
 if (!CSS_PATH) throw new Error('spectrum.css is in neither src/styles/pages/ nor src/styles/deferred/')
 const CSS = read(CSS_PATH).replace(/\/\*[\s\S]*?\*\//g, '')
 const js = (p) => stripComments(read(p))
-const BENCH = js('src/components/spectrum/SpectrumBench.jsx')
-const PROOF = js('src/components/spectrum/SpectrumProof.jsx')
+const PROOF = js('src/components/home/HomeProof.jsx')
 const RAMP = js('src/components/spectrum/SpectrumRamp.jsx')
 
 // ── a small stylesheet reader ───────────────────────────────────────────────
@@ -118,13 +117,13 @@ const settingsGuards = SHEET.rules.filter((r) => !isReduceMedia(r) && r.selector
 const osGuards = SHEET.rules.filter((r) => isReduceMedia(r) && r.selector.includes(OS_GUARD))
 
 // The animations this build added, and the rules that start each of them.
-const NEW_ANIMATIONS = ['sp-arrive', 'sp-bar-set', 'sp-depth', 'sp-enter', 'sp-fade-a', 'sp-fade-b']
+const NEW_ANIMATIONS = ['sp-bar-set']
 const drivers = (name) => SHEET.rules.filter((r) => new RegExp(`(?:^|[;{\\s])animation(?:-name)?\\s*:[^;]*\\b${name}\\b`).test(r.body))
 
 test('the stripper and the sheet reader still work, so the checks below can be trusted', () => {
   assertStripperWorks(assert)
   // POSITIVE CONTROLS: a reader that found nothing would let every loop below pass.
-  assert.ok(SHEET.rules.length > 200, `only ${SHEET.rules.length} rules read from spectrum.css`)
+  assert.ok(SHEET.rules.length > 50, `only ${SHEET.rules.length} rules read from spectrum.css`)
   for (const name of NEW_ANIMATIONS) {
     assert.ok(SHEET.keyframes.some((k) => k.name === name), `@keyframes ${name} is gone`)
     assert.ok(drivers(name).length > 0, `nothing starts ${name}`)
@@ -153,23 +152,14 @@ test('U1: every new animation is switched off by both reduced-motion guards', ()
   }
 })
 
-test('U1: the tab pill\'s slide is switched off by both guards', () => {
-  const movers = SHEET.rules.filter((r) => subjects(r.selector).includes('.sp-rail-ind') && decl(r.body, 'transition'))
-  assert.ok(movers.length > 0, '.sp-rail-ind no longer has a transition')
-  const stopsIt = (g) => hasClass(g.selector, '.sp-rail-ind') && /^none\b/.test(decl(g.body, 'transition') || '') && /!important/.test(g.body)
-  assert.ok(settingsGuards.some(stopsIt), '.sp-rail-ind slides, but the Settings guard does not set transition: none !important on it')
-  assert.ok(osGuards.some(stopsIt), '.sp-rail-ind slides, but the OS guard does not set transition: none !important on it')
-})
-
 // ── U2 ──────────────────────────────────────────────────────────────────────
 
-test('U2: every new animation fills backwards (both, for the scroll-linked depth)', () => {
+test('U2: every new animation fills backwards', () => {
   for (const name of NEW_ANIMATIONS) {
     for (const r of drivers(name)) {
       const value = decl(r.body, 'animation') || ''
-      const fill = name === 'sp-depth' ? /\bboth\b/ : /\bbackwards\b/
-      assert.ok(fill.test(value),
-        `\`${r.selector}\` starts ${name} with "${value}", which does not fill ${name === 'sp-depth' ? 'both' : 'backwards'}. `
+      assert.ok(/\bbackwards\b/.test(value),
+        `\`${r.selector}\` starts ${name} with "${value}", which does not fill backwards. `
         + 'Without it the element keeps (or never gets) its first frame once the run ends or is cancelled.')
     }
   }
@@ -177,12 +167,9 @@ test('U2: every new animation fills backwards (both, for the scroll-linked depth
 
 test('U2: nothing the page animates is parked hidden or moved in plain CSS', () => {
   const animated = new Set(NEW_ANIMATIONS.flatMap((n) => drivers(n).flatMap((r) => subjects(r.selector))))
-  // The hero's controls and the library grid are the elements whose own rules must stay visible.
-  for (const cls of ['.sp-hero-sub', '.tim-anchor', '.sp-hero-cta', '.sp-disc-grid']) animated.add(cls)
-  assert.ok(animated.size >= 5, `only ${animated.size} animated subjects found`)
+  assert.ok(animated.size >= 1, `only ${animated.size} animated subjects found`)
   for (const r of SHEET.rules) {
     if (r.selector.includes('html[data-reduced-motion') || r.selector.includes('html:not([data-reduced-motion')) continue
-    // `.sp-panel`'s sp-depth rule and the windows' `data-on="false"` hiding are state, not resting paint.
     for (const sel of splitTop(r.selector)) {
       if (/:(hover|active|focus)/.test(sel)) continue
       if (!subjects(sel).some((c) => animated.has(c))) continue
@@ -199,7 +186,7 @@ test('U2: nothing the page animates is parked hidden or moved in plain CSS', () 
 // ── U3 ──────────────────────────────────────────────────────────────────────
 
 test('U3: every keyframe on the page moves transform and opacity only', () => {
-  assert.ok(SHEET.keyframes.length >= 7, `only ${SHEET.keyframes.length} @keyframes read`)
+  assert.ok(SHEET.keyframes.length >= 2, `only ${SHEET.keyframes.length} @keyframes read`)
   for (const k of SHEET.keyframes) {
     const props = new Set()
     for (const frame of k.body.matchAll(/\{([^{}]*)\}/g)) {
@@ -220,7 +207,7 @@ test('U3: nothing on the page uses transition: all or will-change', () => {
   assert.ok(!/transition\s*:\s*all\b/.test(CSS), 'spectrum.css has transition: all')
   assert.ok(!/transition-property\s*:\s*all\b/.test(CSS), 'spectrum.css has transition-property: all')
   assert.ok(!/will-change/.test(CSS), 'spectrum.css has will-change; the spec adds it only after a trace shows a stutter, naming the property')
-  for (const [file, src] of Object.entries({ BENCH, PROOF, RAMP, PAGE: js('src/pages/Spectrum.jsx') })) {
+  for (const [file, src] of Object.entries({ PROOF, RAMP, PAGE: js('src/pages/Spectrum.jsx') })) {
     assert.ok(!/transition\s*:\s*['"`]all\b/.test(src), `${file} sets an inline transition: all`)
   }
 })
@@ -248,13 +235,13 @@ const matching = (src, openAt, open, close) => {
   return -1
 }
 
-test('U4: the bench and the proof band listen to no scroll, and use an observer instead', () => {
-  assert.ok(BENCH.includes('new IntersectionObserver'), 'the bench no longer observes its steps')
-  assert.ok(PROOF.includes('new IntersectionObserver'), 'the proof band no longer observes its row')
-  for (const [file, src] of Object.entries({ 'SpectrumBench.jsx': BENCH, 'SpectrumProof.jsx': PROOF })) {
-    assert.ok(!scrollListener.test(src), `${file} adds a scroll listener. Both ran one per frame before; an observer replaced them.`)
-    assert.ok(!/onScroll|\.onscroll/.test(src), `${file} has an onScroll handler`)
-  }
+test('U4: the proof band neither listens to scroll nor animates', () => {
+  assert.ok(!scrollListener.test(PROOF), 'HomeProof.jsx adds a scroll listener')
+  assert.ok(!/onScroll|\.onscroll/.test(PROOF), 'HomeProof.jsx has an onScroll handler')
+  // The proof figures print as they are: no observer, timer or frame loop drives them.
+  assert.ok(!/IntersectionObserver|requestAnimationFrame|setInterval|setTimeout|useEffect/.test(PROOF),
+    'HomeProof.jsx drives its figures from an observer, timer or effect; they are static text')
+  assert.ok(PROOF.includes('PROOF_ROWS'), 'the proof bar no longer prints PROOF_ROWS')
 })
 
 test('U4: the band\'s hue listener is attached from an IntersectionObserver callback only', () => {
@@ -300,14 +287,15 @@ test('U5: the served shell carries none of the arrival', () => {
   for (const [where, html] of Object.entries(shells)) {
     for (const word of ARRIVAL) assert.ok(!html.includes(word), `${where} contains "${word}". The headline would be served mid-arrival.`)
   }
-  // POSITIVE CONTROL: it is the real shell, and the hero header is still the bare one.
-  assert.ok(shells['homeShellRoot()'].includes('<header class="sp-hero">'), 'the shell\'s hero header is no longer the bare <header class="sp-hero">')
-  assert.ok(shells['homeShellRoot()'].includes('<h1 class="sp-hero-h1">'), 'the shell lost its headline')
+  // POSITIVE CONTROL: it is the real shell, and the hero is still the bare section.
+  assert.ok(shells['homeShellRoot()'].includes('<section id="top" class="hh-hero">'), 'the shell\'s hero is no longer the bare <section id="top" class="hh-hero">')
+  assert.ok(/<h1 class="hh-h1"/.test(shells['homeShellRoot()']), 'the shell lost its headline')
 })
 
-test('U5: the hero\'s arrival is decided in React, from the same first render as the headline', () => {
-  const page = js('src/pages/Spectrum.jsx')
-  assert.match(page, /\[arrive\] = useState\(\(\) =>[^)]*prefersReducedMotion\(\)/,
-    'the arrival is no longer decided once, in the first render, with a reduced-motion check')
-  assert.ok(!/<h1[^>]*is-arriving/.test(page), 'the h1 carries the arrival class')
+test('U5: the hero copy has no arrival of its own', () => {
+  const hero = js('src/components/home/HomeHero.jsx')
+  for (const word of ['is-arriving', 'sp-arrive', 'heroLit', 'SpectrumWords']) {
+    assert.ok(!hero.includes(word), `HomeHero.jsx contains "${word}". The hero copy has no entrance.`)
+  }
+  assert.ok(/<h1[^>]*className="hh-h1"/.test(hero), 'HomeHero.jsx lost its headline')
 })

@@ -37,7 +37,7 @@ const FLAT_SECTIONS = [
     label: 'Your account',
     desc: 'Where your work and account live.',
     links: [
-      { label: 'Home', route: '/home', note: 'The overview and starting point.' },
+      { label: 'Home', route: '/', note: 'The front page: what UIL4B does, and your own home once you sign in.' },
       { label: 'Projects', route: '/projects', note: 'Saved palettes, fonts and exports.' },
       { label: 'Settings', route: '/settings', note: 'Theme, appearance, account and data.' },
       { label: 'Plans & pricing', route: '/plans', note: 'Compare Free and Pro.' },
@@ -229,8 +229,8 @@ export default function SiteMap() {
               hue="accent"
               label="Learn"
               desc={isAdmin
-                ? 'Reference guides on colour, type and accessibility, plus the topics still to be written.'
-                : 'Reference guides on colour, type and accessibility.'}
+                ? 'Reference guides on colour, type, accessibility and psychology, plus the topics still to be written.'
+                : 'Reference guides on colour, type, accessibility and psychology.'}
             />
             <ul className="spt-rows">
               {LEARN_ARTICLES.map((a) => (

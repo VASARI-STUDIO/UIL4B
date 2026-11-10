@@ -651,9 +651,14 @@
     "streamline-flex:packprobe-flex",
     "streamline:packprobe-sl",
     "ri:blockedonly-line",
-    "streamline-plump:blockedonly"
+    "streamline-plump:blockedonly",
+    "fluent:packbatchprobe-24-regular",
+    "fluent:packbatchprobe-16-regular",
+    "pixelarticons:packbatchprobe",
+    "radix-icons:packbatchprobe",
+    "bi:packbatchprobe"
   ],
-  "total": 652,
+  "total": 657,
   "limit": 999,
   "start": 0,
   "collections": {},

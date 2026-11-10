@@ -3,11 +3,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS EXISTS AND WHAT IT IS FOR
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder request, 2026-09-05, verbatim: “maybe a quick daily fact or tip from a
-// list of random ones, this makes it feel more personal. similar to video game
-// loading screen tips, make sure they are actually useful, maybe a few comedic
-// / satire ones or something to help keep the app feeling light and like a
-// little easter egg”.
+// A quick daily fact or tip from a list of random ones, like a video-game
+// loading-screen tip. It makes the app feel more personal, so the tips must be
+// actually useful, with a few comedic or satirical ones to keep the app light,
+// like a little easter egg.
 //
 // Two halves of that brief pull against each other and both have to hold:
 //

@@ -85,6 +85,8 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-accounts': { purpose: 'Email, name and photo for accounts used on this device (up to five)', pii: 'yes' },
   'vs-google-returning': { purpose: 'Whether you have signed in with Google before', pii: 'no' },
   'vs-onboarded': { purpose: 'Whether you completed onboarding', pii: 'no' },
+  'vs-previous-design': { purpose: 'Unsaved work put aside so Undo can bring it back; cleared at sign-out', pii: 'local' },
+  'vs-previous-designs': { purpose: 'Older unsaved work waiting behind the one put aside; cleared at sign-out', pii: 'local' },
   'vs-resume-after-onboarding': { purpose: 'Where to send you after onboarding', pii: 'no' },
   'vs-sessions': { purpose: 'Local session history used for your own usage stats', pii: 'local' },
   'vs-analytics': { purpose: 'Local, in-browser usage counters', pii: 'local' },
@@ -92,6 +94,9 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-feedback': { purpose: 'Feedback drafts written in this browser', pii: 'local' },
   'vs-usage': { purpose: 'AI generations used, per tool per day', pii: 'no' },
   'vs-uikit-guide': { purpose: 'Whether you are part-way through the brand kit walkthrough', pii: 'no' },
+  'vs-current-design-at': { purpose: 'When your working design last changed, so the brand kit asks whether to carry on after a long gap', pii: 'no' },
+  'vs-kit-session': { purpose: 'Whether the brand kit question was already answered in this tab', pii: 'no' },
+  'vs-uikit-guide-at': { purpose: 'When you last used a step of the brand kit walkthrough, so an old one stops showing', pii: 'no' },
   // `vs-uib-intro-dismissed` was here. Its only writer was src/pages/UIBuilder.jsx,
   // deleted in the 2026-09-06 dead-source sweep (no importer, no route, absent
   // from every sourcemap in a production build). A purpose entry for a key

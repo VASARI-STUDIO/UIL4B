@@ -153,6 +153,86 @@ export const PREMADE_ICON_GROUPS = Object.freeze([
     'lucide:x', 'lucide:plus', 'lucide:minus', 'lucide:octagon-alert',
     'tabler:progress', 'tabler:progress-check', 'tabler:progress-alert', 'tabler:alert-hexagon',
   ]),
+  // ── Added from handover/specs/icon-group-use-cases-2026-11-06.md ───────────
+  // Every name below was checked against the pack's own icon list
+  // (public/iconify/collections/<pack>.json) and its glyph data. All of them are
+  // Pro: the free allowance stays at three groups (see icon-groups.test.js).
+  group('dashboard', 'Dashboard & analytics', 'pro', [
+    'lucide:layout-dashboard', 'lucide:layout-grid', 'lucide:panel-left', 'lucide:gauge',
+    'lucide:circle-gauge', 'lucide:activity', 'lucide:trending-up', 'lucide:trending-down',
+    'lucide:target', 'lucide:funnel', 'lucide:list-filter', 'lucide:search',
+    'lucide:calendar-days', 'lucide:users', 'lucide:chart-column', 'lucide:chart-area',
+    'lucide:kanban', 'lucide:columns-3', 'lucide:table-2', 'lucide:sigma',
+    'tabler:dashboard', 'tabler:report-analytics', 'tabler:chart-donut', 'tabler:chart-radar',
+    'tabler:chart-candle', 'tabler:timeline', 'tabler:chart-arcs',
+  ]),
+  group('app-navigation', 'App navigation', 'pro', [
+    'lucide:house', 'lucide:search', 'lucide:bell', 'lucide:circle-user-round',
+    'lucide:menu', 'lucide:ellipsis', 'lucide:plus', 'lucide:circle-plus',
+    'lucide:heart', 'lucide:bookmark', 'lucide:settings', 'lucide:compass',
+    'lucide:map-pin', 'lucide:message-circle', 'lucide:inbox', 'lucide:calendar',
+    'lucide:camera', 'lucide:library', 'lucide:shopping-bag', 'lucide:wallet',
+    'lucide:log-in', 'lucide:log-out', 'lucide:list', 'tabler:apps',
+    'tabler:menu-2', 'tabler:dots-vertical',
+  ]),
+  group('code', 'Code & terminal', 'pro', [
+    'lucide:terminal', 'lucide:square-terminal', 'lucide:code', 'lucide:code-xml',
+    'lucide:braces', 'lucide:file-code', 'lucide:git-branch', 'lucide:git-commit-horizontal',
+    'lucide:git-merge', 'lucide:git-pull-request', 'lucide:git-fork', 'lucide:bug',
+    'lucide:webhook', 'lucide:server', 'lucide:database', 'lucide:container',
+    'lucide:cpu', 'lucide:command', 'lucide:binary', 'lucide:regex',
+    'lucide:variable', 'lucide:package', 'lucide:book-open', 'tabler:api',
+    'tabler:api-app', 'tabler:brackets-contain', 'tabler:git-compare',
+  ]),
+  group('portfolio', 'Portfolio & creative', 'pro', [
+    'lucide:briefcase', 'lucide:pen-tool', 'lucide:camera', 'lucide:image',
+    'lucide:film', 'lucide:clapperboard', 'lucide:paintbrush', 'lucide:layers',
+    'lucide:layout-template', 'lucide:award', 'lucide:trophy', 'lucide:user',
+    'lucide:mail', 'lucide:globe', 'lucide:link', 'lucide:folder-open',
+    'lucide:lightbulb', 'lucide:sparkles', 'lucide:ruler', 'lucide:crop',
+    'lucide:aperture', 'lucide:presentation', 'lucide:graduation-cap', 'lucide:external-link',
+    'tabler:palette', 'tabler:color-swatch', 'tabler:vector-bezier', 'tabler:typography',
+    'tabler:certificate', 'tabler:file-cv',
+  ]),
+  group('events', 'Events & tickets', 'pro', [
+    'lucide:calendar-check', 'lucide:calendar-plus', 'lucide:calendar-clock', 'lucide:clock',
+    'lucide:ticket', 'lucide:ticket-check', 'lucide:map-pin', 'lucide:map-pinned',
+    'lucide:users', 'lucide:user-plus', 'lucide:mic-vocal', 'tabler:music',
+    'lucide:party-popper', 'lucide:megaphone', 'lucide:bell', 'lucide:share-2',
+    'lucide:qr-code', 'lucide:utensils', 'lucide:coffee', 'lucide:wine',
+    'lucide:plane', 'lucide:hotel', 'lucide:handshake', 'lucide:accessibility',
+    'tabler:confetti', 'tabler:calendar-event', 'tabler:building-stadium', 'tabler:microphone-2',
+    'tabler:parking',
+  ]),
+  // The brand groups draw the OUTLINE brand marks the style rule allows (Tabler's
+  // brand-* glyphs, Iconoir's brand glyphs). Simple Icons, Logos and Logo.dev are
+  // filled or coloured, so they stay in the library's Brand logos chip, not here.
+  // Linear has no outline mark in any group pack, so it is not in Tech brands.
+  group('tech-brands', 'Tech brands', 'pro', [
+    'tabler:brand-github', 'tabler:brand-gitlab', 'tabler:brand-figma', 'tabler:brand-slack',
+    'tabler:brand-notion', 'tabler:brand-vercel', 'tabler:brand-stripe', 'tabler:brand-apple',
+    'tabler:brand-windows', 'tabler:brand-aws', 'tabler:brand-azure', 'tabler:brand-dropbox',
+    'tabler:brand-zoom', 'tabler:brand-openai', 'tabler:brand-meta', 'tabler:brand-amazon',
+    'tabler:brand-cloudflare', 'tabler:brand-airtable', 'tabler:brand-asana', 'tabler:brand-jira',
+    'tabler:brand-trello', 'tabler:brand-supabase', 'iconoir:google', 'iconoir:discord',
+    'iconoir:telegram',
+  ]),
+  group('payment-brands', 'Payments & crypto', 'pro', [
+    'tabler:brand-stripe', 'tabler:brand-paypal', 'tabler:brand-visa', 'tabler:brand-mastercard',
+    'tabler:brand-alipay', 'tabler:brand-cashapp', 'tabler:brand-revolut', 'tabler:brand-paypay',
+    'tabler:brand-samsungpass', 'tabler:brand-binance', 'tabler:brand-coinbase', 'tabler:brand-tether',
+    'tabler:brand-stellar', 'tabler:brand-gumroad', 'tabler:brand-patreon', 'tabler:brand-kickstarter',
+    'iconoir:bitcoin-circle', 'iconoir:ethereum-circle', 'iconoir:litecoin-circle', 'iconoir:dogecoin-circle',
+  ]),
+  group('developer-tools', 'Languages & frameworks', 'pro', [
+    'tabler:brand-git', 'tabler:brand-github-copilot', 'tabler:brand-docker', 'tabler:brand-npm',
+    'tabler:brand-nodejs', 'tabler:brand-python', 'tabler:brand-javascript', 'tabler:brand-typescript',
+    'tabler:brand-react', 'tabler:brand-vue', 'tabler:brand-angular', 'tabler:brand-svelte',
+    'tabler:brand-php', 'tabler:brand-swift', 'tabler:brand-golang', 'tabler:brand-rust',
+    'tabler:brand-flutter', 'tabler:brand-mongodb', 'tabler:brand-firebase', 'tabler:brand-redux',
+    'tabler:brand-sass', 'tabler:brand-tailwind', 'tabler:brand-vite', 'tabler:brand-vscode',
+    'tabler:brand-graphql', 'iconoir:html5', 'iconoir:css3', 'iconoir:codepen',
+  ]),
 ])
 
 /** How many icons an index card previews for an open group. */

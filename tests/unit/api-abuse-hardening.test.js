@@ -78,7 +78,7 @@ test('the admin allowlist exists in exactly one place, and it is the environment
 
   // The comparison is lowercase on both sides. requireAdmin lowercases the
   // token's email before asking, so an allowlist entry that kept its capitals
-  // could never match and the founder would be locked out by a typo in a
+  // could never match and the owner would be locked out by a typo in a
   // Vercel field.
   assert.equal(isAdminEmail('SOMEBODY@Example.Test'), false, 'nothing is configured, so nothing may match')
   process.env.ADMIN_EMAILS = 'SomeBody@Example.Test'
@@ -426,7 +426,7 @@ test('a signed-in caller is still told exactly which key the server is missing',
   // The fix is NOT "delete the configured() check". A signed-in user staring at
   // a broken deployment must still learn that the server is misconfigured and
   // which env var to set — that message is the only thing standing between the
-  // founder and a blind redeploy. It simply has to run AFTER the token check.
+  // owner and a blind redeploy. It simply has to run AFTER the token check.
   const ai = stripJs(read('ai.js'))
   const verify = ai.indexOf('verifyIdToken(')
   const configured = ai.indexOf('task.configured()')

@@ -11,8 +11,9 @@ import useOnline from '../hooks/useOnline'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { getSyncState } from '../utils/syncStatus'
-import { loadFirestore } from '../utils/firebaseAccess'
+import { loadFirestore, openFirebaseGate } from '../utils/firebaseAccess'
 import { AI_TERMS_PATH } from '../config/aiImageConsent'
+import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -25,6 +26,7 @@ import {
   canCheckout, priceState, priceStateCopy,
   subscriptionCadence, CADENCE_LABEL,
 } from '../config/planFacts'
+import { formatMoney } from '../config/planLadder'
 import { LOCATIONS } from '../data/locations'
 import { FLAIRS, getFlair } from '../utils/constants'
 import UserName from '../components/UserName'
@@ -72,8 +74,13 @@ function Chevron({ back = false }) {
 // Stripe's portal answers with a URL or an error. An error used to vanish:
 // A rejected openPortal() is shown, never dropped, so "Manage billing" and
 // "Cancel plan" say why when the portal is not configured. The reference is
-// what support needs.
+// what support needs. An account the server says is not linked to this login
+// cannot be fixed by retrying, so that case points at support instead.
 function portalErrorText(e) {
+  if (e?.code === 'billing-unlinked') {
+    const ref = e.correlationId || /\[ref ([^\]]+)\]/.exec(e.message || '')?.[1]
+    return `Billing could not be opened because this billing account isn't linked to your login. Nothing about your plan has changed. Email support@uil4b.com and we'll link it.${ref ? ` Quote reference ${ref}.` : ''}`
+  }
   const detail = e?.message ? ` (${e.message})` : ''
   return `Billing could not be opened, so nothing about your plan has changed${detail}. Please try again in a moment.`
 }
@@ -850,6 +857,8 @@ function rememberSection(id) {
 }
 
 export default function Settings({ toast }) {
+  // The account page, and it already loads the SDK: let a session the hint missed restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading, planKnown } = useSubscription()
@@ -1391,7 +1400,7 @@ export default function Settings({ toast }) {
     <div className="sub-tier sub-tier-free">
       <div className="sub-tier-head">
         <div className="sub-tier-name">Free</div>
-        <div className="sub-tier-price"><span className="sub-tier-amount">$0</span><span className="sub-tier-per">forever</span></div>
+        <div className="sub-tier-price"><span className="sub-tier-amount">{formatMoney(0, proPrice.currency)}</span><span className="sub-tier-per">forever</span></div>
       </div>
       <ul className="sub-tier-list">
         {FREE_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
@@ -1440,10 +1449,10 @@ export default function Settings({ toast }) {
 
   return (
     <div className="sec stg" data-phone-view={isPhone ? phoneView : undefined}>
-      {/* THE APP'S PAGE HEAD, NOT A DISPLAY TITLE. The design's App file has no big page
-          title: a surface is named by a 15px / 560 label in its bar, and this page follows the same pattern. The 40px "Make it
-          yours." and its lede went with it. On a phone, inside a section, the
-          bar carries the way back to the list. */}
+      {/* THE APP'S PAGE HEAD: a bar over a hairline, with the title at --fs-h2 so it
+          stays the largest heading on the page (at 15px it sat under the
+          section h2). The 40px "Make it yours." and its lede stay gone. On a
+          phone, inside a section, the bar carries the way back to the list. */}
       <div className="stg-bar">
         {isPhone && phoneView === 'section' && (
           <button type="button" className="stg-back" onClick={closeSection}>
@@ -1932,7 +1941,7 @@ export default function Settings({ toast }) {
                     'No ad networks and no third-party cookies.',
                     'Sign-in is handled by Firebase Authentication (Google).',
                     'Signed in, your settings and projects sync to your account so they follow you to other devices. Signed out, they stay in this browser only.',
-                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH}>Read the Terms</NavLink>.</>,
+                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH} onClick={crossRouteHashClick(AI_TERMS_PATH)}>Read the Terms</NavLink>.</>,
                     'You can export or delete your data yourself, any time, from Your data.',
                   ].map((line, i) => (
                     <li key={i}>{line}</li>

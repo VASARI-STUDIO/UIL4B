@@ -13,7 +13,9 @@ import { waitUntil } from '@vercel/functions'
 // 'report' is a content report from a community item (src/utils/contentReport.js).
 // A report is only ever read by a person: nothing here acts on it automatically.
 const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
-const VALID_SOURCES = ['feedback-form', 'inline', 'email']
+// 'auto' marks a report no person typed (a crash report, src/utils/errorReport.js),
+// so Admin can list it apart from what people wrote.
+const VALID_SOURCES = ['feedback-form', 'inline', 'email', 'auto']
 
 // The routing choices the feedback dialog offers, by the type they file under
 // ('feedback' in the dialog is stored as 'general'). A value outside the list for
@@ -90,7 +92,9 @@ export function validateSupportBody(body, now = new Date()) {
       ...(safeSeverity ? { severity: safeSeverity } : {}),
       subject: oneLine(subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
       message: message.trim().slice(0, MESSAGE_MAX),
-      email: (email || '').trim().slice(0, EMAIL_MAX),
+      // An automatic report has no one to reply to. The label is the caller's to send,
+      // so an address on it is dropped rather than shown as if the site had filed it.
+      email: safeSource === 'auto' ? '' : (email || '').trim().slice(0, EMAIL_MAX),
       source: safeSource,
       status: 'new',
       adminNotes: '',
@@ -165,14 +169,14 @@ export function stampReporter(entry, verifiedEmail) {
 const BURST = { limit: 3, windowMs: 60 * 1000 }
 const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
 
-// A site-wide ceiling on notification emails to the support inbox, on top of the
+// A site-wide ceiling on notification emails to the owner, on top of the
 // per-address limits above: many addresses together can still send a flood, and
 // every email spends Resend quota and sending reputation. Over the ceiling the
 // message is still stored and the sender still sees success, but no email goes.
 export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
 
 // One "the cap was reached" email an hour, so a spent cap is visible to the
-// support inbox instead of silent. Counted separately and never against MAIL_CAP.
+// owner instead of silent. Counted separately and never against MAIL_CAP.
 export const MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
 
 // Content reports have their own email allowance and their own notice, so a
@@ -335,12 +339,12 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
       if (verdict.contended) {
         // The counter could not be read or updated (an outage, contention, or a
         // missing salt in production): the allowance is not known to be spent,
-        // so this is neither logged as the cap nor announced by email.
-        console.warn('support: notification email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
+        // so this is neither logged as the cap nor announced to the owner.
+        console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
       } else {
         console.warn('support: notification email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
         // The cap itself must not hide that messages are arriving unseen, so the
-        // support inbox gets one notice an hour per allowance. It is exempt from the
+        // owner gets one notice an hour per allowance. It is exempt from the
         // caps and holds no user content.
         const notice = await consume(db, noticeCap)
         if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail, cap, label })

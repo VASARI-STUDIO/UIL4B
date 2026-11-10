@@ -761,16 +761,16 @@ test('the upgrade dialog offers an explicit way to decline', () => {
     + 'real label sitting next to the one that says yes.')
 })
 
-// The icon customizer's own Escape handler is a plain document listener, so it
-// cannot tell that the "Save to a project" picker is open on top of it. The
-// picker must be a real modal (the hook) and the customizer must stand down.
-test('the icon customizer\'s Escape handler stands down while the save picker is open', () => {
+// The icon editor's Escape handler is a plain document listener. The save picker is a panel inside
+// the dialog (not a second dialog with its own hook), so Escape has to close that panel first and the
+// dialog only when no panel is open. The order is run for real in user-sim spec 215; this pins the
+// branch and that Tab skips what is inert behind the panel.
+test('the icon editor closes its save panel on Escape before it closes the dialog', () => {
   const src = stripJs(fs.readFileSync(path.join(SRC, 'pages/IconLibrary.jsx'), 'utf8'))
-  assert.match(src, /useModalDialog\(closeSavePicker,\s*\{\s*enabled:\s*savePickerOpen\s*\}\)/,
-    'the save picker no longer uses the shared modal hook')
-  assert.match(src, /ref=\{pickerRef\}/, 'the picker dialog does not carry the hook\'s ref')
-  const guard = src.indexOf('if (savePickerOpenRef.current) return')
-  const escape = src.indexOf("if (e.key === 'Escape') { onClose(); return }")
-  assert.ok(guard > -1 && escape > -1 && guard < escape,
-    'the customizer closes on Escape before checking whether the picker is open')
+  assert.doesNotMatch(src, /useModalDialog\(closeSavePicker/, 'the save panel went back to being a second modal')
+  const branch = src.match(/if \(e\.key === 'Escape'\) \{\s*if \(savePickerOpenRef\.current\) \{([^}]*)\} else onClose\(\)\s*return\s*\}/)
+  assert.ok(branch, 'Escape no longer branches on the open save panel before it closes the dialog')
+  assert.match(branch[1], /setSavePickerOpen\(false\)/, 'Escape with the panel open does not close the panel')
+  assert.match(src, /!el\.closest\('\[inert\]'\)/, 'the Tab trap no longer skips the inert dialog behind the panel')
 })
+

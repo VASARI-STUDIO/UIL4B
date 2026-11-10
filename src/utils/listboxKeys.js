@@ -18,11 +18,13 @@ export function listboxKeyAction(key, open, disabled = false) {
   if (!open) return ['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(key) ? 'open' : null
   if (key === 'Enter' || key === ' ') return 'select'
   if (key === 'Escape' || key === 'Tab') return 'close'
-  if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(key)) return 'move'
+  if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'PageUp', 'PageDown'].includes(key)) return 'move'
   return key.length === 1 ? 'typeahead' : null
 }
 
-export function listboxTarget(key, index, options) {
+// `page` is how many rows PageUp and PageDown travel (the rows in view). They
+// clamp at the ends where the arrow keys wrap, as a native list does.
+export function listboxTarget(key, index, options, page = 10) {
   const enabled = options.map((option, i) => option.disabled ? -1 : i).filter(i => i >= 0)
   if (!enabled.length) return -1
   const position = enabled.indexOf(index)
@@ -31,6 +33,8 @@ export function listboxTarget(key, index, options) {
     case 'End': return enabled.at(-1)
     case 'ArrowDown': return enabled[(position + 1) % enabled.length]
     case 'ArrowUp': return enabled[position < 0 ? enabled.length - 1 : (position - 1 + enabled.length) % enabled.length]
+    case 'PageDown': return enabled[Math.min(position + Math.max(page, 1), enabled.length - 1)]
+    case 'PageUp': return enabled[position < 0 ? 0 : Math.max(position - Math.max(page, 1), 0)]
     default: return -1
   }
 }

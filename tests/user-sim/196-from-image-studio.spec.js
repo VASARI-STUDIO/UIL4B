@@ -10,6 +10,7 @@
 //   - marker positions against positions read before the drag
 // The sample photos are real files from public/samples/from-image/, so the colours
 // come out of the real extraction, not a stub.
+import zlib from 'node:zlib'
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
@@ -213,5 +214,96 @@ test.describe('From image studio at 390', () => {
     await expect.poll(() => stripHexes(page), { message: 'the Dark mood changes the strip' }).not.toEqual(balanced)
     await expect(dialog.getByRole('button', { name: /^Add|Replace palette/ }).first()).toBeVisible()
     await noSideways(page, 'after choosing a mood')
+  })
+})
+
+// ── Files the dialog cannot use ───────────────────────────────────────────────
+// Built in the test, so each file is exactly the case it names: a PNG cut short,
+// a PNG with nothing visible, and a PNG of one flat colour.
+const crcTable = Array.from({ length: 256 }, (_, n) => {
+  let c = n
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+  return c >>> 0
+})
+const crc32 = (buf) => {
+  let c = 0xffffffff
+  for (const b of buf) c = crcTable[(c ^ b) & 255] ^ (c >>> 8)
+  return (c ^ 0xffffffff) >>> 0
+}
+const pngChunk = (type, data) => {
+  const len = Buffer.alloc(4)
+  len.writeUInt32BE(data.length)
+  const body = Buffer.concat([Buffer.from(type), data])
+  const crc = Buffer.alloc(4)
+  crc.writeUInt32BE(crc32(body))
+  return Buffer.concat([len, body, crc])
+}
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+/** A size x size PNG, every pixel the same [r, g, b, a]. */
+function solidPng(size, [r, g, b, a]) {
+  const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array.from({ length: size }, () => [r, g, b, a]).flat())])
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(size, 0)
+  ihdr.writeUInt32BE(size, 4)
+  ihdr.set([8, 6, 0, 0, 0], 8)
+  const idat = zlib.deflateSync(Buffer.concat(Array.from({ length: size }, () => row)))
+  return Buffer.concat([PNG_SIGNATURE, pngChunk('IHDR', ihdr), pngChunk('IDAT', idat), pngChunk('IEND', Buffer.alloc(0))])
+}
+
+test.describe('From image studio: files that cannot be used', () => {
+  test.beforeEach(async ({ page }) => {
+    watch(page, 'designer dropping a broken or empty file into the From image dialog')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/create/palette')
+    await expect(page.locator('.plb-col').first()).toBeVisible()
+  })
+
+  /** Open the dialog, watch for the photo ever appearing, then hand it the file. */
+  async function feed(page, name, buffer) {
+    const dialog = await openDialog(page)
+    await page.evaluate(() => {
+      window.__sawPhoto = false
+      new MutationObserver(() => { if (document.querySelector('.plb-imgstage-img')) window.__sawPhoto = true })
+        .observe(document.body, { childList: true, subtree: true })
+    })
+    await page.locator('input.plb-file').setInputFiles({ name, mimeType: 'image/png', buffer })
+    return dialog
+  }
+
+  /** Focus is on something inside the dialog, never on the page behind it. */
+  const focusInDialog = (page) => expect.poll(() => page.evaluate(() => {
+    const el = document.activeElement
+    return !!el && el !== document.body && !!el.closest('[role="dialog"]')
+  }), { message: 'focus stays inside the open dialog' }).toBe(true)
+
+  test('a damaged PNG says it looks damaged, keeps focus in the dialog and never shows a photo', async ({ page }) => {
+    const dialog = await feed(page, 'broken.png', Buffer.concat([PNG_SIGNATURE, Buffer.alloc(300, 0xab)]))
+    const message = dialog.locator('.plb-imgerr')
+    await expect(message).toContainText(/damaged or isn.t a readable image/)
+    await expect(message).not.toContainText('no visible colours')
+    await expect(message).toBeFocused()
+    await focusInDialog(page)
+    await expect(page.locator('.plb-imgcard')).toHaveAttribute('data-state', 'empty')
+    expect(await page.evaluate(() => window.__sawPhoto), 'the photo flashed up before the error').toBe(false)
+  })
+
+  test('a fully transparent PNG says it has no visible colours, keeps focus in the dialog and never shows a photo', async ({ page }) => {
+    const dialog = await feed(page, 'empty.png', solidPng(16, [0, 0, 0, 0]))
+    const message = dialog.locator('.plb-imgerr')
+    await expect(message).toContainText('no visible colours')
+    await expect(message).not.toContainText('damaged')
+    await expect(message).toBeFocused()
+    await focusInDialog(page)
+    await expect(page.locator('.plb-imgcard')).toHaveAttribute('data-state', 'empty')
+    expect(await page.evaluate(() => window.__sawPhoto), 'the photo flashed up before the error').toBe(false)
+  })
+
+  test('a single flat colour is not an error: one marker, with the one-colour note', async ({ page }) => {
+    const dialog = await feed(page, 'flat.png', solidPng(16, [51, 102, 153, 255]))
+    await expect(page.locator('.plb-imgcard')).toHaveAttribute('data-state', 'loaded')
+    await expect(page.locator(MARKER)).toHaveCount(1)
+    await expect(page.locator(MARKER).first()).toHaveAttribute('data-hex', '#336699')
+    await expect(dialog.getByText('This photo has only 1 distinct colour.')).toBeVisible()
+    await expect(dialog.locator('.plb-imgerr')).toHaveCount(0)
   })
 })

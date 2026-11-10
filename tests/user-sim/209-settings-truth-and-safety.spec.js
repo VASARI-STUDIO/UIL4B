@@ -271,7 +271,7 @@ for (const vp of VIEWPORTS) {
       await expect(section).toContainText('Google Gemini')
       await expect(section).toContainText('OpenRouter')
       await expect(section).not.toContainText(/optionally/i)
-      await expect(section.getByRole('link', { name: 'Read the Terms' })).toHaveAttribute('href', '/terms#terms-s4')
+      await expect(section.getByRole('link', { name: 'Read the Terms' })).toHaveAttribute('href', '/terms#terms-s8')
     })
 
     test('with unsynced changes, Sign out warns and stays signed in; Sign out anyway signs out', async ({ page }) => {

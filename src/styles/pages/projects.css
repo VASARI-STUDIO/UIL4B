@@ -244,7 +244,7 @@ div.uh.uh { padding-top: 0; }
 .uh .uh-actions-trigger[aria-expanded="true"] { background: color-mix(in srgb, var(--t0) 7%, transparent); }
 @media (hover: hover) and (pointer: fine) { .uh .uh-actions-trigger:hover { background: color-mix(in srgb, var(--t0) 7%, transparent); } }
 .uh .uh-menu { min-width: 230px; border-radius: 14px; }
-.uh .uh-menu-hint { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--t2); }
+.uh .uh-menu-hint { font-family: var(--font); font-size: var(--fs-caption); font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--t2); }
 .uh .uh-menu-danger { color: var(--err-strong); }
 .uh .uh-menu-danger:hover { background: color-mix(in srgb, var(--err) 9%, transparent); color: var(--err-strong); }
 
@@ -253,7 +253,7 @@ div.uh.uh { padding-top: 0; }
    spacing and the heading; what is here is the row's structure and its hover. */
 .uh .uh-exports-list { list-style: none; padding: 0; display: grid; gap: 1px; }
 .uh .uh-export { display: flex; align-items: center; gap: 14px; min-width: 0; border-radius: 12px; color: color-mix(in srgb, var(--t0) 86%, transparent); transition: background .18s ease, color .18s ease; }
-.uh .uh-export-type { flex: none; font-family: var(--mono); color: var(--ws-dim); }
+.uh .uh-export-type { flex: none; font-family: var(--font); color: var(--ws-dim); }
 .uh .uh-export-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .uh .uh-export-meta { flex: none; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
@@ -465,11 +465,6 @@ h2.uh-continue-name { white-space: normal; }
      html.has-tabbar a scroll-padding-bottom of the bar's height, which lands the notice flush on the bar;
      this adds only 12px of air, so the notice ends 12px above the bar (not bar + 12 twice over). */
   html.has-tabbar .uh .uh-cap { scroll-margin-bottom: var(--s-3); }
-  /* The Feedback pill floats s-4 above the bar, 36px tall, and covers the notice's right edge. Where it is
-     shown (it is display:none on a coarse pointer), stop the notice s-3 above the pill too. */
-  @media not all and (pointer: coarse) {
-    html.has-tabbar .uh .uh-cap { scroll-margin-bottom: calc(var(--s-4) + 36px + var(--s-3)); }
-  }
 }
 @media (min-width: 641px) { .uh .uh-tool--all { display: none; } }
 
@@ -514,12 +509,6 @@ h2.uh-continue-name { white-space: normal; }
   .uh .uh-pop-actions > * { flex: 1; }
 }
 
-/* Feedback rides above the tab bar on this page and is hidden while any sheet is open. These two sit
-   outside `.uh` because the button is mounted app-wide; `:has(.uh)` keeps them to this page. */
-@media (max-width: 767px) {
-  html.has-tabbar:has(.uh) .global-feedback-btn { bottom: calc(var(--tabbar-h) + var(--s-4) + env(safe-area-inset-bottom)); }
-  html:has(.uh .uh-pop, .pnav-sheet) .global-feedback-btn { display: none; }
-}
 
 /* ══ The workspace in the /tools language ═══════════════════════════════════════════════════════════
    The page root also wears .spectrum (tokens, ground, ink) and .spt (the /tools rows and plates from
@@ -535,7 +524,7 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt button:disabled:disabled:active { transform: none; }
 
 /* Head */
-.uh.uh-spt .uh-greet { min-height: 20px; font-size: 15px; font-weight: 400; color: var(--sp-dim); }
+.uh.uh-spt .uh-greet { min-height: 21px; font-size: 15px; font-weight: 400; color: var(--sp-dim); }
 .uh.uh-spt .uh-h1 { font-family: var(--display); font-size: clamp(32px, 4.4vw, 56px); font-weight: 560; line-height: 1.04; letter-spacing: -.03em; color: var(--sp-ink); }
 .uh.uh-spt .uh-clock-line { color: var(--sp-dim); }
 .uh.uh-spt .uh-clk-time { color: var(--sp-ink); }
@@ -725,4 +714,25 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt .uh-pro-perk-note { font-size: 14px; color: var(--sp-dim); }
 @media (max-width: 640px) {
   .uh.uh-spt .uh-pro-cta { width: 100%; justify-content: space-between; }
+}
+
+/* Unsaved brand kit: the one row for work that was put aside. A ruled block, not a
+   card. The plate and the words sit side by side; the three actions share one
+   line under them and never wrap. */
+.uh.uh-spt .uh-parked { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 12px 16px; margin-bottom: var(--uh-section, 32px); padding: 0 0 16px; border-bottom: 1px solid var(--sp-line); }
+.uh.uh-spt .uh-parked .spt-thumb { grid-column: 1; }
+.uh.uh-spt .uh-parked-text { display: grid; gap: 4px; min-width: 0; }
+.uh.uh-spt .uh-parked-name { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 600; line-height: 1.3; color: var(--sp-ink); }
+.uh.uh-spt .uh-parked-meta { margin: 0; font-size: 14px; line-height: 1.4; color: var(--sp-dim); }
+.uh.uh-spt .uh-parked-actions { grid-column: 1 / -1; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; min-width: 0; }
+.uh.uh-spt .uh-parked-actions .uh-ghost { flex: 0 0 auto; padding: 0 14px; white-space: nowrap; }
+.uh.uh-spt .uh-parked-actions .uh-ghost:disabled { opacity: .55; cursor: default; }
+.uh.uh-spt .uh-parked-actions .uh-textbtn { flex: 0 0 auto; margin-block: 0; padding: 0 8px; white-space: nowrap; }
+.uh.uh-spt .uh-parked .uh-save-refusal { grid-column: 1 / -1; margin: 0; }
+@media (min-width: 768px) {
+  .uh.uh-spt .uh-parked { grid-template-columns: 112px minmax(0, 1fr) auto; }
+  .uh.uh-spt .uh-parked-actions { grid-column: 3; }
+}
+@media (max-width: 380px) {
+  .uh.uh-spt .uh-parked { grid-template-columns: 80px minmax(0, 1fr); }
 }

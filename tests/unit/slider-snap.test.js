@@ -3,7 +3,7 @@
 // REGRESSION GUARD: snapValue() was a hard step. Inside `snapRadius` it
 // returned the snap, outside it returned the raw value, so the output jumped by
 // a whole radius the instant the pointer crossed the boundary. On the ±100
-// Temperature track (radius 6) the founder saw the readout go 7 → 0 → −7:
+// Temperature track (radius 6) the readout went 7 → 0 → −7:
 // a dead band across the middle of the track, then a seven-unit leap, with
 // every value in between unreachable by pointer. #209's doubled TEMP_MAX_PULL
 // is what made that leap recolour the whole board in one frame.
@@ -56,7 +56,7 @@ function biggestJump(field) {
 test('THE BUG: one step of pointer input never moves the value by more than two', () => {
   // The old hard step produced a jump of 7 here (raw 6 → 0, raw 7 → 7) and 8 on
   // the hue track. Nothing about a magnetic snap requires that, and it is what
-  // the founder saw. Two is the ceiling the cubic fade allows: one step of
+  // users saw. Two is the ceiling the cubic fade allows: one step of
   // input times the peak gain of ~1.25, rounded onto the step grid.
   assert.equal(biggestJump(TEMP), 2)
   assert.equal(biggestJump(HUE), 2)
@@ -96,7 +96,7 @@ test('EVERY snap can actually capture a pointer one step away', () => {
 })
 
 test('THE DETENT: zero pulls harder than its neighbours, and only it does', () => {
-  // Item 1 of the founder batch: finding "unlensed" again after an experiment
+  // Finding "unlensed" again after an experiment
   // needed pixel precision, because 0 was no stickier than any other mark. A
   // pointer two steps out now lands on zero, while the same offset from ±50
   // does not — that asymmetry IS the feature.

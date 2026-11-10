@@ -31,7 +31,9 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
+import useSlideIndicator from '../../hooks/useSlideIndicator'
 import { requestFeedbackDialog } from '../../utils/errorReport'
+import { lockScroll } from '../../utils/scrollLock'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
 import MenuSelect from './MenuSelect'
@@ -140,7 +142,7 @@ function useKeyboardOpen(active) {
 // the brand kit walkthrough owns the foot of the screen.
 export function ToolLayout({
   className, title, titleId, showTitle = true, back, items, primary, overflowLabel, overflowIcon,
-  feedback, bleed = false, children, ...rest
+  feedback, bleed = false, onOverflowOpenChange, children, ...rest
 }) {
   const phone = useMedia(PHONE)
   const walkthrough = useRootClass('bkit-on')
@@ -153,12 +155,28 @@ export function ToolLayout({
     root.classList.add('has-tool-dock')
     return () => root.classList.remove('has-tool-dock')
   }, [dockShown])
+  // While the keyboard is up, its height is published as --tl-kb-inset on the
+  // root, so a sheet can ride on the keyboard instead of sitting behind it.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!keyboard || !vv) return undefined
+    const root = document.documentElement
+    const set = () => root.style.setProperty('--tl-kb-inset', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`)
+    set()
+    vv.addEventListener('resize', set)
+    vv.addEventListener('scroll', set)
+    return () => {
+      vv.removeEventListener('resize', set)
+      vv.removeEventListener('scroll', set)
+      root.style.removeProperty('--tl-kb-inset')
+    }
+  }, [keyboard])
   return (
-    <div className={cx('tl', dockShown && 'tl--docked', className)} {...rest}>
+    <div className={cx('tl', dockShown && 'tl--docked', keyboard && 'tl--kb', className)} {...rest}>
       <ToolToolbar
         title={title} titleId={titleId} showTitle={showTitle} back={back}
         items={items} primary={docked ? null : primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}
-        feedback={feedback}
+        feedback={feedback} onOpenChange={onOverflowOpenChange} sheetPage={className}
       />
       <div className={bleed ? 'tl-body tl-body--bleed' : 'tl-body'}>{children}</div>
       {docked && <div className={cx('tl-dock', keyboard && 'is-away')} data-tl-dock="">{primary}</div>}
@@ -167,11 +185,13 @@ export function ToolLayout({
 }
 
 // ── ToolToolbar ───────────────────────────────────────────────────────────
-// title        the tool's name — the h1 and the 15px label
+// title        the tool's name — the h1 and the 15px label (omit it on a
+//              second toolbar row that sits under a titled one)
 // titleId      optional id for the h1
 // showTitle    false → the h1 is sr-only
 // back         { to, label, text, hint, history } | false (see ToolBack).
-//              Default /projects, "Back to workspace".
+//              Default /tools, "Back to all tools": the tools index, never the
+//              browser history.
 //              A tool that wants the back button to collapse on a phone passes
 //              false and adds <ToolBack/> as an item instead.
 // items        the tool's actions, in row order:
@@ -201,10 +221,10 @@ export function ToolLayout({
 //              false for a toolbar that is not on a tool page.
 export function ToolToolbar({
   title, titleId, showTitle = true, back, items = [], primary, overflowLabel = 'More', overflowIcon = 'dots-three', className,
-  feedback = true,
+  feedback = true, onOpenChange, sheetPage,
 }) {
   const navigate = useNavigate()
-  const backProps = back === false ? null : { to: '/projects', label: 'Back to workspace', ...(back || {}) }
+  const backProps = back === false ? null : { to: '/tools', label: 'Back to all tools', history: false, ...(back || {}) }
   const rowRef = useRef(null)
   const widths = useRef(new Map())
   const [hidden, setHidden] = useState(() => new Set())
@@ -214,6 +234,10 @@ export function ToolToolbar({
   const menuId = useId().replace(/:/g, '')
   const close = useCallback(() => setOpen(false), [setOpen])
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { arrowNav: true })
+  // The phone sheet covers the page, so the page behind it must not scroll.
+  useEffect(() => (open && phone ? lockScroll() : undefined), [open, phone])
+  // The page can react to the phone sheet (the Font Pair scrolls its headline clear of it).
+  useEffect(() => { onOpenChange?.(open && phone) }, [open, phone, onOpenChange])
 
   // An item may carry `measure`: a value that changes its width (a select's label), so a new one is measured again.
   // The primary is measured with the row, so gaining or losing one is a new set too.
@@ -385,7 +409,7 @@ export function ToolToolbar({
 
   const panel = open && (overflow.length > 0 || feedback) && (phone
     ? createPortal(
-      <div className="tl-sheet-layer">
+      <div className="tl-sheet-layer" data-page={sheetPage || undefined}>
         <div className="tl-sheet-scrim" aria-hidden="true" onClick={close} />
         <div
           id={menuId}
@@ -420,7 +444,7 @@ export function ToolToolbar({
       data-tool-toolbar=""
     >
       {backProps && <span data-tl-fixed="" className="tl-fixed"><ToolBack {...backProps} /></span>}
-      <h1 id={titleId} data-tl-fixed="" className={showTitle ? 'tl-title' : 'sr-only'}>{title}</h1>
+      {title && <h1 id={titleId} data-tl-fixed="" className={showTitle ? 'tl-title' : 'sr-only'}>{title}</h1>}
       {inlineItems}
       {showMore && (
         <div data-tl-more="" className={cx('tl-more', !endStarted && 'tl-item--end')}>
@@ -452,21 +476,22 @@ export function ToolToolbar({
 // ── ToolBack ──────────────────────────────────────────────────────────────
 // The 36px hairline square with the left arrow.
 //
-// Where it goes depends on how the person got here. React Router writes an `idx`
-// into history.state: 0 for the entry a tab first loads on, one higher for every
-// in-app push. A replace keeps the idx, so a redirect landing (a retired path, or
-// the return from login) is still 0 and has nothing in the app behind it. So
-// idx > 0 means the page before this one is inside the app (Palette Builder ->
-// Tint, say) and the arrow steps back to it, as the browser's own back does. A
-// landing keeps the fixed `to` ("Back to workspace"). A modified click (new tab,
-// new window) keeps the plain link, and a tool that names its own destination
-// passes `history={false}`.
+// A tool's back arrow goes to the tools index (/tools) by default, wherever the
+// person came from. A tool that names a different destination (the Contrast
+// Checker opened from the Palette Builder) passes its own `to`.
+//
+// `history` opts in to the browser's own back. React Router writes an `idx` into
+// history.state: 0 for the entry a tab first loads on, one higher for every
+// in-app push. A replace keeps the idx, so a redirect landing is still 0 and has
+// nothing in the app behind it. So with `history`, idx > 0 means the page before
+// this one is inside the app and the arrow steps back to it. A modified click
+// (new tab, new window) keeps the plain link.
 const hasAppHistory = () => typeof window !== 'undefined' && window.history.state?.idx > 0
 
 // `text` draws the destination's name beside the arrow (the 36px hairline pill
 // instead of the square), and `hint` replaces the tooltip that repeats `label`
 // with a sentence a screen reader gets as the description.
-export function ToolBack({ to = '/projects', label = 'Back to workspace', history = true, text, hint }) {
+export function ToolBack({ to = '/tools', label = 'Back to all tools', history = false, text, hint }) {
   const navigate = useNavigate()
   // history.state is read on every render; subscribing to the location makes
   // each navigation render this again.
@@ -565,14 +590,17 @@ export function ToolSection({ label, labelId, heading = false, aside, className,
 // ── ToolPills ─────────────────────────────────────────────────────────────
 // The drawn chip group (Linear/Radial/Conic, OKLCH/sRGB, 9/11/13 steps).
 // Buttons with aria-pressed; the group is named by `label` or `labelledBy`.
-// mono:  the 10.5px Geist Mono variant (OKLCH/sRGB, "Step 500").
 // shape: 'pill' (999px, default) | 'block' (r12, stretched — Text/Background).
 // Options may carry `ariaLabel` (the button's accessible name) and `title`
 // (hover text); `describedBy` points the group at a visible description.
-export function ToolPills({ options, value, onChange, label, labelledBy, describedBy, mono = false, shape = 'pill', className, disabledValues }) {
+// The selected pill slides to the one chosen (useSlideIndicator; tool-layout.css).
+export function ToolPills({ options, value, onChange, label, labelledBy, describedBy, shape = 'pill', className, disabledValues }) {
   const opts = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o))
+  const ref = useRef(null)
+  useSlideIndicator(ref, value)
   return (
     <div
+      ref={ref}
       className={cx('tl-pills', shape === 'block' && 'tl-pills--block', className)}
       role="group"
       aria-label={labelledBy ? undefined : label}
@@ -583,7 +611,7 @@ export function ToolPills({ options, value, onChange, label, labelledBy, describ
         <button
           key={String(o.value)}
           type="button"
-          className={cx('tl-pill', mono && 'tl-pill--mono', o.value === value && 'is-on')}
+          className={cx('tl-pill', o.value === value && 'is-on')}
           aria-pressed={o.value === value}
           aria-label={o.ariaLabel}
           title={o.title}
@@ -595,6 +623,17 @@ export function ToolPills({ options, value, onChange, label, labelledBy, describ
       ))}
     </div>
   )
+}
+
+// ── SlidePills ────────────────────────────────────────────────────────────
+// A hand-built `.tl-pills` group that keeps its own buttons, roles and key
+// handling and only gains the sliding pill. `value` is whatever identifies the
+// selection (and the option set, when that can change): the pill is re-measured
+// when it changes. Everything else passes straight through to the <div>.
+export function SlidePills({ value, children, ...rest }) {
+  const ref = useRef(null)
+  useSlideIndicator(ref, value)
+  return <div ref={ref} {...rest}>{children}</div>
 }
 
 // ── ToolSlider ────────────────────────────────────────────────────────────

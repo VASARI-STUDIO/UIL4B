@@ -26,14 +26,24 @@
 .cp-input-wrap svg{color:var(--t2);flex-shrink:0}
 .cp-input{flex:1;background:none;border:none;outline:none;color:var(--t0);font-family:var(--font);font-size:17px;font-weight:400;letter-spacing:-.01em;padding:0}
 .cp-input::placeholder{color:var(--t3)}
-.cp-kbd{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--bg-2);padding:3px 7px;border-radius:var(--radius-s);border:1px solid var(--border)}
+.cp-kbd{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--bg-2);padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--border);cursor:pointer;flex-shrink:0;line-height:inherit}
+.cp-kbd-x{display:none}
+@media(hover:hover){.cp-kbd:hover{color:var(--t0)}}
+/* On a phone or tablet the chip becomes a 44px close button. */
+@media(pointer:coarse),(max-width:767px){
+  .cp-input-wrap{padding-right:10px}
+  .cp-kbd{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0}
+  .cp-kbd-key{display:none}
+  .cp-kbd-x{display:block}
+}
 .cp-results{flex:1;overflow-y:auto;padding:8px}
-.cp-section-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;padding:10px 14px 4px}
+.cp-section-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t3);letter-spacing:normal;text-transform:none;padding:10px 14px 4px}
 .cp-item-icon svg{width:13px;height:13px}
 .cp-item-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .cp-item-label{font-size:13px;font-weight:500;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cp-item-desc{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cp-item-cat{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;padding:3px 8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+@media(max-width:767px){.cp-item-desc{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word;font-size:12px;line-height:1.4}}
+.cp-item-cat{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t3);letter-spacing:normal;text-transform:none;flex-shrink:0;padding:3px 8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
 .cp-empty{padding:48px 20px;text-align:center;font-size:13px;color:var(--t2)}
 .cp-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--bg-2);font-size:11px;color:var(--t2);gap:12px;flex-wrap:wrap}
 .cp-footer-keys{display:flex;gap:14px}
@@ -43,7 +53,7 @@
 @media(pointer:coarse){.cp-footer-keys{display:none}}
 @media(max-width:767px){.cp-overlay{padding-top:calc(env(safe-area-inset-top) + 12px)}}
 /* The footer's label. It was an inline style object. */
-.cp-footer-brand{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.cp-footer-brand{font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t3)}
 
 /* ══ Export parts (exp-) — the pieces the export dialog reuses: the identity
    fields, the file-type switch, the preview strip, the template picker and the
@@ -74,8 +84,7 @@
 .exp-switch-label{display:none;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
 /* Up to tablet the switch sits under the Pro rows, so it needs its own label. */
 @media(max-width:900px){.exp-switch-label{display:block}}
-.exp-switch{display:flex;gap:8px;padding:4px;margin:-4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none}
-.exp-switch::-webkit-scrollbar{display:none}
+.exp-switch{display:flex;flex-wrap:wrap;gap:8px;padding:4px;margin:-4px}
 .exp-pill{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;scroll-snap-align:center;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t1);font:inherit;font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 @media (hover:hover){.exp-pill:hover{background:var(--hvr);color:var(--t0)}}
 /* The chosen pill is told apart by a heavier edge and the ink, not by colour alone. */
@@ -151,31 +160,4 @@
 @media (pointer:coarse){
   .exp-logo-acts .btn-s{min-height:44px}
   .exp-logo-drop{min-height:44px;padding:0 4px}
-}
-/* ── Template picker: three tiles in one row ── */
-.exp-tpl-label{margin:0 0 8px}
-.exp-tpl-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.exp-tpl-tile{display:flex;flex-direction:column;gap:8px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;min-width:0}
-/* With no picture the tile is a card: name and description, the chosen one outlined like an active pill. */
-.exp-tpl-tile:not(.has-pic){gap:4px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);transition:background-color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
-.exp-tpl-tile:not(.has-pic).is-active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent)}
-/* The selection border is reserved when not selected, so nothing shifts. */
-.exp-tpl-frame{display:block;width:100%;overflow:hidden;border:2px solid transparent;border-radius:var(--radius-s);background:var(--bg-1);box-shadow:inset 0 0 0 1px var(--border);transition:border-color var(--dur-2) var(--ease-out)}
-.exp-tpl-frame img{display:block;width:100%;height:100%;object-fit:cover}
-.exp-tpl-tile.is-active .exp-tpl-frame{border-color:var(--accent)}
-@media (hover:hover){
-  .exp-tpl-tile:not(.has-pic):not(.is-active):hover{background:var(--hvr)}
-  .exp-tpl-tile.has-pic:not(.is-active):hover .exp-tpl-frame{border-color:var(--t3)}
-}
-.exp-tpl-name{font-size:var(--fs-body-s);font-weight:500;color:var(--t0)}
-.exp-tpl-tile.is-active .exp-tpl-name{font-weight:600}
-.exp-tpl-desc{font-size:var(--fs-caption);line-height:1.45;color:var(--t1);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.exp-tpl-tile:focus-visible{outline:2px solid var(--link);outline-offset:2px}
-.exp-tpl-picked{display:none;margin:8px 0 0;font-size:var(--fs-caption);color:var(--t1)}
-@media(max-width:560px){
-  .exp-tpl-row{gap:8px}
-  .exp-tpl-tile:not(.has-pic){padding:10px 8px}
-  .exp-tpl-desc{display:none}
-  .exp-tpl-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .exp-tpl-picked{display:block}
 }

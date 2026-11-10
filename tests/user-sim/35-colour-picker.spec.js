@@ -212,7 +212,7 @@ test.describe('colour picker', () => {
   })
 
   // -- One picker, everywhere ------------------------------------------------
-  // The founder's second half: "i want this one used for all colour pickers".
+  // The rule: this one picker is used for all colour pickers.
   // A native <input type="color"> opens the OPERATING SYSTEM's dialog, so any
   // that survive are surfaces where the app's own picker - and the shared
   // recents with it - is simply not on offer.

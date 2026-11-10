@@ -21,7 +21,7 @@
 // suite; this file signs in as Pro so the surface under test is the whole
 // library, exactly as it was when these assertions were written.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch, signIn } from './helpers.js'
+import { go, proLibraryArrived, restingScrollY, watch, signIn } from './helpers.js'
 
 const ROUTE = '/discover/palettes'
 const HEAD = '.pgl-section-head'
@@ -41,6 +41,8 @@ test.describe('palette library sections', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
     await expect(page.locator('.pgal-card').first()).toBeVisible()
+    // The free rows paint first; the sections below are the Pro library's.
+    await proLibraryArrived(page, 'the palette library')
   })
 
   test('browsing shows the categories in order', async ({ page }) => {
@@ -175,8 +177,8 @@ test.describe('palette library sections', () => {
     await expect(eyebrow).not.toHaveText(/curated collection|brand/i)
   })
 
-  // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE (founder decision,
-  // 2026-09-13). It was "Colour systems with a point of view - ours, plus the
+  // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE.
+  // It was "Colour systems with a point of view - ours, plus the
   // published brand palettes behind the interfaces you already know...", the
   // same template the Gradient Library ran, and this test existed because the
   // first section blurb had opened on those same words 200px below it.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import usePopover from '../hooks/usePopover'
 import { chainFrom, elementSignature, invokedByPointer, nativeMenuWins } from '../utils/elementSignature'
+import { plainTargetLabel } from '../utils/menuTargetLabel'
 
 // Right-click anywhere → report THIS, with the context already filled in.
 //
@@ -49,7 +50,7 @@ function touchOnlyDevice() {
 }
 
 export default function FeedbackContextMenu({ onReport, suppressed = false }) {
-  const [at, setAt] = useState(null) // { x, y, signature }
+  const [at, setAt] = useState(null) // { x, y, signature, label }
 
   // Where focus was when the gesture happened. usePopover returns focus to the
   // trigger on Escape, but our "trigger" is a zero-height anchor floating at
@@ -74,7 +75,7 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
   // it a closer that does not restore focus is what made Escape lose it.
   const { triggerRef, popRef } = usePopover(!!at, dismiss, { arrowNav: true })
 
-  const openAt = useCallback((x, y, signature) => {
+  const openAt = useCallback((x, y, signature, label) => {
     // Clamp so the menu cannot hang off either edge. The anchor is MENU_W wide
     // with its LEFT edge here, so placePopover's end-alignment (right edge of
     // panel on right edge of anchor) puts the panel's left edge exactly on the
@@ -82,7 +83,7 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
     // does. Doing it this way means placement, edge-flipping and max-height all
     // still come from usePopover rather than a second placement system.
     const vw = typeof window !== 'undefined' ? window.innerWidth : MENU_W + EDGE * 2
-    setAt({ x: Math.max(EDGE, Math.min(x, vw - MENU_W - EDGE)), y, signature })
+    setAt({ x: Math.max(EDGE, Math.min(x, vw - MENU_W - EDGE)), y, signature, label })
   }, [])
 
   useEffect(() => {
@@ -114,11 +115,12 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
       e.preventDefault()
       openerRef.current = document.activeElement
       const signature = elementSignature(chain)
+      const label = plainTargetLabel(e.target)
       if (fromPointer) {
-        openAt(e.clientX, e.clientY, signature)
+        openAt(e.clientX, e.clientY, signature, label)
       } else {
         const r = document.activeElement?.getBoundingClientRect?.()
-        openAt(r ? r.left : EDGE, r ? r.bottom : EDGE, signature)
+        openAt(r ? r.left : EDGE, r ? r.bottom : EDGE, signature, label)
       }
     }
 
@@ -132,7 +134,7 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
       e.preventDefault()
       openerRef.current = target
       const r = target?.getBoundingClientRect?.()
-      openAt(r ? r.left : EDGE, r ? r.bottom : EDGE, elementSignature(chain))
+      openAt(r ? r.left : EDGE, r ? r.bottom : EDGE, elementSignature(chain), plainTargetLabel(target))
     }
 
     // Bubble phase, not capture: a local menu that calls stopPropagation has
@@ -183,7 +185,7 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
         aria-label="Send feedback about this"
         tabIndex={-1}
       >
-        <div className="pop-head">{at.signature || 'This page'}</div>
+        <div className="pop-head">{at.label || 'This page'}</div>
         <button type="button" className="pop-item" onClick={() => start('bug')}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />

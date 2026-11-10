@@ -16,23 +16,23 @@
 // THE ALLOWANCE
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** One per account, ever. */
+/** One per account, ever: a free user gets a single generation. */
 export const FREE_TOTAL_GENERATIONS = 1
 
-/** A Pro account's monthly allowance; src/config/aiGeneration.js mirrors it. */
+/** The owner's number to change — see src/config/aiGeneration.js. */
 export const PRO_MONTHLY_GENERATIONS = 20
 
 export const BRAND_STARTER_TOOL_ID = 'brand-starter'
 
 /**
- * WHERE THE COUNT LIVES, and why it needs no rules change.
+ * WHERE THE COUNT LIVES, and why this needed no rules change.
  *
  * Both buckets are documents in `daily-usage`, which appears NOWHERE in
  * firestore.rules. That file default-denies, so the collection is unreachable
  * from every client and only the Admin SDK — which bypasses rules — can touch
  * it. api/ai.js already relies on exactly this property for the daily and
  * monthly AI counts, and it is what keeps this change clear of a rules edit:
- * rules are published separately from the code.
+ * rules changes are approval-gated and published separately.
  *
  * The suffixes can never collide with the ones already in that collection:
  * days are `uid_2026-09-06`, months are `uid_m2026-09`, and a lifetime bucket

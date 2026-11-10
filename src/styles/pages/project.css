@@ -98,6 +98,21 @@
 .pjd .pjd-slot-foot button { flex: 1; min-height: 44px; padding: 12px; border: 0; background: transparent; color: color-mix(in srgb, var(--t0) 84%, transparent); font-family: var(--font); font-size: 13px; cursor: pointer; }
 .pjd .pjd-slot-foot button.is-copied { color: var(--ws-acc-text); }
 
+/* ── Saved colours ──────────────────────────────────────────────────────── */
+.pjd .pjd-saved { margin-top: clamp(22px, 3vw, 34px); }
+.pjd .pjd-saved-h { margin: 0 0 10px; font-family: var(--font); font-size: 15px; font-weight: 560; color: var(--t0); }
+.pjd .pjd-saved-list { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.pjd .pjd-saved-sw {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 14px 6px 6px;
+  border: 1px solid var(--ws-hair); border-radius: var(--btn-radius); background: transparent; color: var(--t0);
+  font-family: var(--font); font-size: 13px; font-weight: 540; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.pjd .pjd-saved-sw:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.pjd .pjd-saved-chip { flex: none; width: 30px; height: 30px; border-radius: 8px; box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.1); }
+@media (hover: hover) and (pointer: fine) {
+  .pjd .pjd-saved-sw:hover { background: color-mix(in srgb, var(--t0) 7%, transparent); }
+}
+
 /* ── Export bar ─────────────────────────────────────────────────────────── */
 .pjd .pjd-export { margin-top: clamp(22px, 3vw, 34px); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: 18px; background: var(--ws-card2); border: 1px solid var(--ws-hair); }
 .pjd .pjd-export-line { flex: 1 1 240px; min-width: 0; font-size: 14px; color: var(--t0); }

@@ -1,8 +1,7 @@
 // "About this project" — the opt-in note in the footer.
 //
-// The backlog item `founder-intro-popup` asks for a welcome popup. The founder
-// was offered one and chose the opposite: "maybe we make it visable when a user
-// clicks a certian section or button". Everything below tests THAT surface, and
+// The note is opt-in: it is visible only when a user clicks a section or button,
+// not a welcome popup. Everything below tests THAT surface, and
 // the first test is the one that matters most — the panel is not on screen until
 // somebody asks for it.
 //

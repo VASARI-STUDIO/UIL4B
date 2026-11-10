@@ -6,6 +6,7 @@ import useOnline from '../hooks/useOnline'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend, SUPPORT_MESSAGE_MAX } from '../utils/supportRequest'
+import { feedbackCopyKeys } from '../utils/feedbackCopy'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -21,8 +22,8 @@ import '../styles/pages/feedback.css'
 // `?from=support` marks an arrival that wants help rather than to suggest
 // something, and `?reason=` or `?ref=` says why. Any reason or ref at all means
 // the same, so a link can name one without also naming `from`. A failed-payment
-// link may carry the marker in either parameter.
-const PAYMENT_FAILED = 'payment_failed'
+// link may carry the marker in either parameter, spelt either way.
+const PAYMENT_FAILED = new Set(['payment_failed', 'failed-payment'])
 const PAYMENT_TITLE = 'Get help'
 const PAYMENT_CARD_LINK = 'Update your card'
 const PAYMENT_SUBTITLE = "Payment didn't go through? Tell us what happened and we'll sort it."
@@ -51,7 +52,7 @@ export default function Feedback({ toast }) {
   // A payment reason keeps priority over a broken-link report.
   const brokenPage = reason ? '' : sitePath(params.get('page'))
   const brokenFrom = brokenPage ? sitePath(params.get('referrer')) : ''
-  const paymentFailed = params.get('reason') === PAYMENT_FAILED || params.get('ref') === PAYMENT_FAILED
+  const paymentFailed = PAYMENT_FAILED.has(params.get('reason')) || PAYMENT_FAILED.has(params.get('ref'))
   const delivery = useSyncExternalStore(pageFeedbackSend.subscribe, pageFeedbackSend.getSnapshot)
   const sentHeadingRef = useRef(null)
   const retryRef = useRef(null)
@@ -226,11 +227,15 @@ export default function Feedback({ toast }) {
     void send(bodyRef.current)
   }
 
+  // Heading, intro and placeholder follow the chosen type, so switching types
+  // in the form changes them both ways. A payment link keeps its own copy.
+  const copy = feedbackCopyKeys(type)
+
   return (
     <div className="sec fb-page">
       <div className="sec-h">
-        <h1>{paymentFailed ? PAYMENT_TITLE : t('feedback.title')}</h1>
-        <p>{paymentFailed ? PAYMENT_SUBTITLE : t('feedback.subtitle')}</p>
+        <h1>{paymentFailed ? PAYMENT_TITLE : t(copy.title)}</h1>
+        <p>{paymentFailed ? PAYMENT_SUBTITLE : t(copy.subtitle)}</p>
         {/* Billing lives in Settings, which needs an account, so only a
             signed-in visitor is sent there. */}
         {paymentFailed && accountEmail && (
@@ -362,7 +367,7 @@ export default function Feedback({ toast }) {
                 className="fb-textarea"
                 value={message}
                 onChange={e => { setMessage(e.target.value); if (error) setError('') }}
-                placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t('feedback.messagePlaceholder')}
+                placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t(copy.placeholder)}
                 maxLength={SUPPORT_MESSAGE_MAX}
                 aria-invalid={!!error}
                 aria-describedby={error ? 'fb-error' : undefined}

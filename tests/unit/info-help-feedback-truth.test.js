@@ -46,8 +46,8 @@ test('/info reads its tool sections from the tree and types no tool name or lega
   }
   assert.ok(INFO.includes('AI_IMAGE_SENT') && INFO.includes('AI_TERMS_PATH'),
     '/info no longer reuses the AI image notice and its Terms link')
-  assert.equal(AI_TERMS_PATH, '/terms#terms-s4')
-  assert.ok(!INFO.includes('terms#terms-s4'), '/info types the Terms path instead of reading it')
+  assert.equal(AI_TERMS_PATH, '/terms#terms-s8')
+  assert.ok(!INFO.includes('terms#terms-s8'), '/info types the Terms path instead of reading it')
   for (const phrase of ['Colour Studio', 'fully searchable', 'Imagery, Icons', 'Free vs Pro', 'Saving & syncing']) {
     assert.ok(!INFO.includes(phrase), `/info carries "${phrase}" again`)
   }
@@ -80,7 +80,7 @@ test('/learn/help carries no section numerals and sets its labels in the UI sans
     assert.ok(rule[1].includes('var(--font)') && !rule[1].includes('var(--mono)'), `${sel} is not set in the UI sans`)
     assert.ok(!/text-transform:\s*uppercase/.test(rule[1]), `${sel} is uppercased in CSS`)
   }
-  assert.match(read('src/pages/HelpCentre.jsx'), />Opens with \{step\.opensWith\}</)
+  assert.match(read('src/pages/HelpCentre.jsx'), />Opens with \{job\.start\.opensWith\}</)
 })
 
 test('/feedback: type and send labels come from the locale, and offline blocks Send', () => {

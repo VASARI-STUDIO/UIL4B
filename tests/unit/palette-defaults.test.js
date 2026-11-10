@@ -1,6 +1,5 @@
-// Founder request, 2026-09-03: "the pallete page should auto load a random
-// pallete on the default free settings. reset should reset the settings to
-// default but randomise the colour."
+// The palette page auto-loads a random palette on the default free settings.
+// Reset restores the settings to default but randomises the colour.
 //
 // Two rules in here are load-bearing, and both are the kind that fail silently:
 //

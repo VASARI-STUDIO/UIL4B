@@ -34,7 +34,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 //
 // It used to read `ADMIN_EMAILS` out of api/_lib/plans.js, and the argument for
 // doing so was real: the fixture and the live gate could not drift apart
-// without this suite noticing. That coupling went when the founder's personal
+// without this suite noticing. That coupling went when the owner's personal
 // address came out of tracked source — it is set in Vercel now, and a public
 // repo has nothing to read.
 //
@@ -49,8 +49,8 @@ import { servePalettePreview } from '../../api/_lib/library/preview.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { resolveReportDir } from './report-dir.js'
 
-// A RESERVED TEST DOMAIN, never the founder's real address. The whole point
-// of moving the allowlist out of source was that his personal address stopped
+// A RESERVED TEST DOMAIN, never the owner's real address. The whole point
+// of moving the allowlist out of source was that a personal address stopped
 // being published; reinstating it here would put it straight back into a
 // public repo through the test suite.
 //
@@ -141,9 +141,10 @@ export function watch(page, persona) {
     // failure state. Chromium logs each refused response (75 of them: 25 packs
     // by 3 hosts), and none is a finding about the app. Same shape as the
     // motion persona above: keyed on the persona AND the host, so a refusal
-    // anywhere else still surfaces.
+    // anywhere else still surfaces. The refusal also takes the site's own copy
+    // of each pack list (a 404 on /iconify/collections/<pack>.json).
     const deliberateIconifyRefusal = persona === 'visitor whose icon catalogue is refused'
-      && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)/.test(url)
+      && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)|\/iconify\/collections\/[^/]+\.json/.test(url)
     if (deliberateIconifyRefusal) return
     // 153-preview-examples.spec.js aborts one preview example's chunk ON PURPOSE,
     // to see the dialog's "This example didn't load" stand in for it. Chromium
@@ -211,7 +212,7 @@ export function watch(page, persona) {
  * counts against it, `useSubscription().isPro` follows the plan, the export
  * gate opens or does not, and `auth.currentUser` carries it for the hooks that
  * read roles off a token. Nothing in src/ is aware any of this is happening,
- * and src/contexts/AuthContext.jsx — which is founder-gated — is untouched.
+ * and src/contexts/AuthContext.jsx — which is approval-gated — is untouched.
  *
  * IT CANNOT EXIST IN A PRODUCTION BUILD. The doubles are wired in by a Vite
  * plugin that is only constructed under `--mode test`; a production build does
@@ -309,7 +310,7 @@ function seedProject(i, design) {
  *              SubscriptionContext reads over a snapshot — NOT by setting a
  *              flag. So `planForSubscription()` is the code being exercised,
  *              and a change to it changes what these tests see.
- *   admin      true to use the founder's address from api/_lib/plans.js.
+ *   admin      true to use the admin address from api/_lib/plans.js.
  *              Separate from `plan` on purpose: admin implies Pro through a
  *              DIFFERENT branch (the email allowlist), and conflating the two
  *              would make an admin-only failure look like a Pro failure.
@@ -581,6 +582,27 @@ export async function go(page, url) {
   const res = await goRaw(page, url)
   await ready(page, url)
   return res
+}
+
+/** The homepage sections that load after the first screen, by id. */
+export const HOME_LAZY_SECTIONS = ['bookmarks', 'try', 'exports', 'examples', 'plans']
+
+/**
+ * Wait until every homepage section below the first screen has arrived.
+ *
+ * Each of those sections mounts when its stand-in is within 600px of the
+ * viewport, or all of them together on a hash, a click, or the first scroll,
+ * wheel, touchstart, keydown or pointerdown. Until a section arrives its id sits
+ * on an empty stand-in of about its final height, and a test that measures or
+ * scrolls before then reads the stand-in. A wheel nudge opens every section at
+ * once instead of waiting for the viewport to come near them, and each section
+ * is waited for by its own heading, which only the real section renders.
+ */
+export async function homeSectionsLoaded(page) {
+  await page.mouse.wheel(0, 1)
+  for (const id of HOME_LAZY_SECTIONS) {
+    await expect(page.locator(`#${id} h2`), `the ${id} section never loaded`).toBeAttached({ timeout: 20000 })
+  }
 }
 
 /**
@@ -944,6 +966,27 @@ export async function overlaysSettled(page, what = 'the overlay') {
   ).toBe(0)
 }
 
+/**
+ * Wait until a Pro viewer's library has arrived.
+ *
+ * Until the account answers, the Pro galleries (palettes, gradients, prompts)
+ * show the free rows with a "Loading the … library" status block in place of
+ * the upsell (ProLibraryStatus, `.lockt-status`). The first card is on screen
+ * at that point, so "the first card is visible" says nothing about the full
+ * set, its sections or its closing call to action. The status block is the
+ * page's own signal that the full library has landed: it renders for every
+ * waiting state and for a failed fetch, so a library that never arrives fails
+ * here by name instead of being measured half-loaded.
+ *
+ * Call it after the first card is visible and before reading the list.
+ */
+export async function proLibraryArrived(page, what = 'the Pro library') {
+  await expect(
+    page.locator('.lockt-status'),
+    `${what} never finished loading (the status block is still on screen)`,
+  ).toHaveCount(0, { timeout: 15000 })
+}
+
 export async function ready(page, what) {
   const where = what || page.url()
   await page.evaluate(() => {
@@ -1221,9 +1264,10 @@ export async function keyToRest(page, key, what = 'the page') {
 // (1024 and up) or the Filters sheet (below 1024), so open whichever the page offers,
 // type, check the value took, and close it again.
 export async function fillGalleryPreviewText(page, text) {
-  const bar = page.locator('[data-tool-toolbar]')
-  await expect(bar, 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
-  const onRow = bar.getByRole('textbox', { name: 'Preview text' })
+  // Font Gallery has two toolbars (name and filters); the field may sit on either.
+  const bars = page.locator('[data-tool-toolbar]')
+  await expect(bars.first(), 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
+  const onRow = bars.getByRole('textbox', { name: 'Preview text' }).first()
   if (await onRow.isVisible()) {
     await onRow.fill(text)
     await expect(onRow).toHaveValue(text)

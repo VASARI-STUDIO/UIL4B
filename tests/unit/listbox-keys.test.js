@@ -86,3 +86,38 @@ test('groups preserve option order, marks and values and inherit group disabling
   assert.equal(rows[1].mark, 'Pro')
   assert.equal(listboxTarget('ArrowDown', 0, rows), 2)
 })
+
+// A twelve-row list with a disabled row at 3 and at 11, so a page skips them.
+const long = Array.from({ length: 12 }, (_, i) => ({ value: i, label: `Row ${i}`, disabled: i === 3 || i === 11 }))
+
+test('PageUp and PageDown are list moves, closed or not they never open the list', () => {
+  for (const key of ['PageUp', 'PageDown']) {
+    assert.equal(listboxKeyAction(key, true), 'move')
+    assert.equal(listboxKeyAction(key, false), null)
+  }
+})
+
+test('PageDown moves by a page of enabled rows and clamps at the last enabled row', () => {
+  assert.equal(listboxTarget('PageDown', 0, long, 4), 5) // 1, 2, (3 skipped), 4, 5
+  assert.equal(listboxTarget('PageDown', 5, long, 4), 9)
+  assert.equal(listboxTarget('PageDown', 9, long, 4), 10) // 11 is disabled: stops on 10
+  assert.equal(listboxTarget('PageDown', 10, long, 4), 10) // already last: no wrap
+  assert.equal(listboxTarget('PageDown', -1, long, 4), 4) // nothing active yet: one page from the top
+})
+
+test('PageUp moves by a page of enabled rows and clamps at the first row', () => {
+  assert.equal(listboxTarget('PageUp', 10, long, 4), 6)
+  assert.equal(listboxTarget('PageUp', 6, long, 4), 1) // 5, 4, (3 skipped), 2, 1
+  assert.equal(listboxTarget('PageUp', 2, long, 4), 0)
+  assert.equal(listboxTarget('PageUp', 0, long, 4), 0) // already first: no wrap
+  assert.equal(listboxTarget('PageUp', -1, long, 4), 0)
+})
+
+test('a page is at least one row, and an empty or all-disabled list has no page target', () => {
+  assert.equal(listboxTarget('PageDown', 0, long, 0), 1)
+  assert.equal(listboxTarget('PageUp', 2, long, -3), 1)
+  for (const key of ['PageUp', 'PageDown']) {
+    assert.equal(listboxTarget(key, 0, []), -1)
+    assert.equal(listboxTarget(key, 0, [{ disabled: true }]), -1)
+  }
+})

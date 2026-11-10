@@ -1,0 +1,124 @@
+/* ══ /discover/buttons — the page's own sheet ═══════════════════════════════
+   The shell (masthead, toolbar, grid, card, empty state, closing line, dialog
+   frame) is the shared Library one in deferred/library.css. What is here is the
+   Button Library's own remainder, every selector rooted at `.blib-page`.
+
+   THE STAGE IS FIXED LIGHT. A button is judged against the page it was measured
+   on: the contrast test uses BUTTON_STAGE (src/data/buttonLibrary.js) as "the
+   page", and #fafafa below is that value. If the stage followed the theme, a
+   snippet copied from a dark-theme visit would sit on a page it was never
+   checked against. The snippets themselves carry their own colours; nothing
+   here styles a button. */
+
+/* ── The stage: one on every card, one in the dialog ───────────────────── */
+.blib-page .blib-stage,
+.blib-page .blib-live{
+  isolation:isolate;
+  display:flex;align-items:center;justify-content:center;
+  background:#fafafa;color:#18181b;
+  font-family:var(--font);
+}
+.blib-page .blib-stage{
+  min-height:152px;padding:32px 20px;
+  border-bottom:1px solid var(--border);
+}
+.blib-page .blib-demo{
+  display:flex;justify-content:center;
+  max-width:100%;min-width:0;
+}
+
+/* ── The card's two actions ────────────────────────────────────────────── */
+.blib-page .blib-act{
+  appearance:none;background:none;border:0;border-radius:var(--btn-radius);
+  min-height:32px;padding:0 4px;
+  font:inherit;font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
+  color:var(--t1);cursor:pointer;
+  transition:color var(--dur-1) var(--ease-standard);
+}
+.blib-page .blib-act--open{color:var(--accent-mid)}
+@media(hover:hover){
+  .blib-page .blib-act:hover{color:var(--t0);text-decoration:underline;text-underline-offset:3px}
+}
+.blib-page .blib-act:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.blib-page .blib-act{min-height:44px;padding:0 8px}}
+
+/* ── The dialog ────────────────────────────────────────────────────────── */
+.blib-page .blib-dialog{max-width:720px}
+.blib-page .blib-use{margin:4px 0 0;max-width:60ch;font-size:14px;line-height:1.5;color:var(--t1)}
+.blib-page .blib-body{display:flex;flex-direction:column;gap:24px;overscroll-behavior:contain}
+.blib-page .blib-body > *{min-width:0}
+
+.blib-page .blib-live{
+  flex-wrap:wrap;align-items:flex-end;gap:24px 40px;
+  padding:32px 20px;
+  border:1px solid var(--border);border-radius:var(--radius);
+}
+.blib-page .blib-live-cell{
+  margin:0;max-width:100%;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.blib-page .blib-live-demo{display:flex;justify-content:center;max-width:100%;min-width:0;width:100%}
+.blib-page .blib-live-cell figcaption{font-size:12px;line-height:1.4;color:#52525b}
+
+.blib-page .blib-note{margin:-8px 0 0;max-width:62ch;font-size:13px;line-height:1.6;color:var(--t2)}
+.blib-page .blib-note code{font-family:var(--mono);font-size:12px;color:var(--t1)}
+
+.blib-page .blib-code h3,
+.blib-page .blib-lock h3,
+.blib-page .blib-edits h3{margin:0;font-size:13px;font-weight:600;line-height:1.3;color:var(--t0)}
+.blib-page .blib-code-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.blib-page .blib-pre{
+  margin:0;padding:16px;max-height:280px;
+  overflow:auto;overscroll-behavior:contain;
+  background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);
+  font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--t0);tab-size:2;
+}
+.blib-page .blib-pre--wrap{white-space:pre-wrap;overflow-wrap:anywhere}
+.blib-page .blib-pre:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* A Pro block seen by everyone else: a hairline above, a line, one link. */
+.blib-page .blib-lock{
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  padding-top:16px;border-top:1px solid var(--border);
+}
+.blib-page .blib-lock p{margin:0;max-width:56ch;font-size:13px;line-height:1.55;color:var(--t2)}
+.blib-page .blib-lock-cta{margin-top:4px}
+
+/* ── Quick edits (Pro) ─────────────────────────────────────────────────── */
+.blib-page .blib-edits{display:flex;flex-direction:column;gap:16px;padding-top:16px;border-top:1px solid var(--border)}
+.blib-page .blib-edits-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.blib-page .blib-edit{margin:0;padding:0;border:0;min-width:0}
+.blib-page .blib-edit legend{padding:0;margin-bottom:8px;font-size:12px;font-weight:600;line-height:1.3;color:var(--t2)}
+.blib-page .blib-edit-opts{display:flex;flex-wrap:wrap;gap:8px}
+.blib-page .blib-opt{position:relative;display:inline-flex}
+.blib-page .blib-opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.blib-page .blib-opt span{
+  display:inline-flex;align-items:center;gap:8px;
+  min-height:40px;padding:0 14px;
+  border:1px solid var(--bh);border-radius:var(--radius);
+  font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
+  color:var(--t1);background:transparent;
+  transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard);
+}
+.blib-page .blib-opt input:checked + span{background:var(--t0);border-color:var(--t0);color:var(--bg-1)}
+.blib-page .blib-opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+@media(hover:hover){
+  .blib-page .blib-opt input:not(:checked):hover + span{background:var(--hvr);color:var(--t0)}
+}
+.blib-page .blib-dot{
+  width:12px;height:12px;border-radius:50%;flex-shrink:0;
+  box-shadow:0 0 0 1px color-mix(in srgb,currentColor 45%,transparent);
+}
+
+@media(pointer:coarse){
+  .blib-page .blib-opt span{min-height:44px}
+  .blib-page .blib-dialog .lib-btn{min-height:44px}
+}
+
+/* ── Phones ────────────────────────────────────────────────────────────── */
+@media(max-width:640px){
+  .blib-page .pl-modal-backdrop{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  .blib-page .pl-modal-header{padding:20px 16px 0}
+  .blib-page .pl-modal-body{padding:16px}
+  .blib-page .blib-live{padding:24px 12px;gap:20px 24px}
+}

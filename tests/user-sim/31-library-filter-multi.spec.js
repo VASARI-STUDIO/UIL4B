@@ -1,8 +1,7 @@
 // Multi-select in the Library filter tray, measured in a browser.
 //
-// Founder request (2026-08-08): "shift-click multi-select (selecting all three
-// types resets to All types) … Keyboard equivalents are required for the
-// shift-click behaviour."
+// Shift-click multi-select (selecting all three types resets to All types),
+// with keyboard equivalents required for the shift-click behaviour.
 //
 // The collapse rules themselves are asserted without a DOM in
 // tests/unit/library-filters.test.js. Three things only a browser can settle
@@ -71,7 +70,7 @@ test.describe('library filter multi-select', () => {
     expect(await cardCount(page)).toBe(all)
   })
 
-  // The requirement the founder called out by name.
+  // The requirement called out by name.
   test('Shift+Enter from the keyboard is the same gesture as shift-click', async ({ page }) => {
     await pill(page, 'Linear').click()
     await pill(page, 'Radial').focus()

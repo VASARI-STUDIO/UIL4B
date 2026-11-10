@@ -5,8 +5,8 @@
 // position:fixed card at `calc(var(--nav-h) + 10px)`. That coordinate is where
 // .plb-toolbar, .uis-command, .lbry-toolbar and .pgl-section-head all park,
 // because each of them derives from the same nav height — so the notice covered
-// the toolbar of whatever tool was open. The founder reported it on the Palette
-// Builder on 2026-09-14 and decided the notices move into the page flow.
+// the toolbar of whatever tool was open (seen on the Palette Builder), so the
+// notices now sit in the page flow.
 //
 // The fix is one token. `--chrome-h` is nav-top + nav-h + notice-h, every offset
 // derives from it, and NoticeStack.jsx publishes --notice-h from the measured

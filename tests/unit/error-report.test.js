@@ -42,7 +42,7 @@ test('a report carries no email address, even one quoted in the error', () => {
   assert.match(message, /Route: \/settings$/m)
 })
 
-test('a report passes the /api/support contract as a bug from the inline source', () => {
+test('a report passes the /api/support contract as a bug from the auto source', () => {
   let sent = null
   const report = createErrorReporter({ send: (b) => { sent = b }, storage: memoryStorage(), now: () => 1e12 })
   const err = new TypeError("Cannot read properties of undefined (reading 'join')")
@@ -53,7 +53,10 @@ test('a report passes the /api/support contract as a bug from the inline source'
   const { entry, error } = validateSupportBody(sent)
   assert.equal(error, undefined)
   assert.equal(entry.type, 'bug')
-  assert.equal(entry.source, 'inline')
+  // 'auto' is what Admin → Generated lists on; 'inline' would file the crash
+  // under Submissions beside what people typed.
+  assert.equal(sent.source, 'auto')
+  assert.equal(entry.source, 'auto')
   assert.match(entry.subject, /^Crash on \/admin: /)
 })
 

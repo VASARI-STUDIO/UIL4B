@@ -22,7 +22,7 @@
 // asserts they equal themselves can never fail for a reason worth knowing.
 // It asserts the POLICY the audit established: retired values stay retired, the
 // company/product distinction holds, the palette shape is uniform, and the free
-// set (a founder pricing decision, not a data detail) cannot drift.
+// set (a pricing decision, not a data detail) cannot drift.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -54,12 +54,12 @@ test('brand ids are unique', () => {
   assert.deepEqual([...new Set(ids)].sort(), [...ids].sort(), 'duplicate brand id')
 })
 
-// ── The founder's pricing decision ──────────────────────────────────────────
+// ── The pricing decision ────────────────────────────────────────────────────
 // Which rows are free is a pricing call, not a data detail, and `free` is one
 // keystroke from flipping in a file that gets edited for colour reasons. Pin the
 // SET, so giving a brand away (or taking one back) has to be deliberate.
 //
-// `google` was added 2026-09-05 by founder decision, taking the set from six to
+// `google` was added to the free set, taking it from six to
 // seven. Renaming "Material (Google)" to "Material 3 Baseline" had left the free
 // tier with nothing called Google in it, and Google's logo colours are both
 // public and among the most recognisable in the library — a strong free-tier

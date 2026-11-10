@@ -1,9 +1,9 @@
 // The moderator role: who may review, and whether the two halves of that
 // decision can drift apart.
 //
-// The founder's moderation decision (recorded on [community-backend]) is that
-// NOTHING PUBLISHES UNTIL IT IS APPROVED, chosen on liability grounds because
-// he is a solo developer. A moderator role is how that queue stops being a
+// The moderation policy is that NOTHING PUBLISHES UNTIL IT IS APPROVED, chosen
+// on liability grounds for a solo developer. A moderator role is how that
+// queue stops being a
 // single-person bottleneck — which makes the role a privilege-escalation
 // surface, and makes "the browser and the server agree about what a role is"
 // the property worth pinning.
@@ -16,7 +16,7 @@
 //      and this repository has shipped that exact shape twice. Reverting the
 //      wiring in Admin.jsx has to fail this file.
 //   4. THE ROUTE THAT MINTS THE CLAIM, executed rather than pattern-matched.
-//      api/verify-admin.js is founder-gated, so the version under test is the
+//      api/verify-admin.js is approval-gated, so the version under test is the
 //      one `npm run apply:gated` would write, planned in memory from the
 //      committed patch and run in a vm against an in-memory Firebase — the same
 //      harness tests/unit/ai-provider-path.test.js uses for api/ai.js. A regex
@@ -28,13 +28,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
 
-// api/verify-admin.js is founder-gated, so the version this file tests is the
+// api/verify-admin.js is approval-gated, so the version this file tests is the
 // one the applier would write, planned in memory from the committed patch. The
 // gated original is read and never written.
 import { fileTextThrough } from '../../scripts/gated-patches.mjs'
 
 import {
-  roleFromClaims, canReview, canAssignModerators, canSeeReporterEmail, accessNotice,
+  roleFromClaims, canReview, canAssignModerators, canSeeReporterEmail, canManageBilling, accessNotice,
   feedbackDecision, isFeedbackStatus, nextFeedbackStatus, pendingCounts,
   FEEDBACK_STATUSES, FEEDBACK_STATUS_LABELS, ROLES, MODERATOR_CLAIM, FOUNDER_CLAIM,
 } from '../../src/utils/moderation.js'
@@ -86,11 +86,18 @@ test('anything unrecognised is the least privileged answer', () => {
 test('only the founder may appoint moderators', () => {
   // The single most important line in utils/moderation.js. A moderator who can
   // appoint moderators is not a role, it is a self-replicating grant: one
-  // careless account becomes every account, and the founder's liability
-  // decision stops being his to make.
+  // careless account becomes every account, and the liability
+  // decision stops being the owner's to make.
   assert.equal(canAssignModerators('founder'), true)
   assert.equal(canAssignModerators('moderator'), false)
   assert.equal(canAssignModerators('user'), false)
+})
+
+test('only the founder may open the Stripe price panel', () => {
+  // /api/setup-stripe refuses everyone else, so the tab would offer a Save that 403s.
+  assert.equal(canManageBilling('founder'), true)
+  assert.equal(canManageBilling('moderator'), false)
+  assert.equal(canManageBilling('user'), false)
 })
 
 test('a moderator may review but may not read the reporter\'s address', () => {
@@ -164,7 +171,7 @@ test('the founder allowlist outranks a missing claim, but not a missing verifica
   // claim having been minted yet. It still requires a Firebase-verified email.
   //
   // It is the ADMIN_EMAILS environment variable now, set here for the duration
-  // — it used to be the founder's personal address, hard-coded in
+  // — it used to be a personal address, hard-coded in
   // api/_lib/admin.js and repeated in this file, in a public repository. The
   // empty case ("an unset variable grants admin to nobody") is asserted in
   // tests/unit/admin-allowlist.test.js against the real requireAdmin.
@@ -427,7 +434,7 @@ const NO_GATED_DOC = !fs.existsSync(path.join(process.cwd(), GATED_DOC))
 test('the two founder-gated files stay founder-gated', { skip: NO_GATED_DOC }, () => {
   // Approving a change does not un-gate the file. api/verify-admin.js and
   // firestore.rules are both applied by `npm run apply:gated` now, and the next
-  // agent to reach for either one still needs the founder's say-so, so the doc
+  // agent to reach for either one still needs the owner's say-so, so the doc
   // must still list all three.
   const gated = read(GATED_DOC)
   assert.ok(gated.length > 1000,
@@ -449,7 +456,7 @@ test('AuthContext stays untouched by the role', () => {
 // THE ROUTE THAT MINTS THE CLAIM
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// api/verify-admin.js is founder-gated AND refused by the auto-mode classifier,
+// api/verify-admin.js is approval-gated AND may not be staged by automated commits,
 // so the roster half of it lives as a committed, unapplied diff that
 // `npm run apply:gated` puts in (docs/design/moderator-verify-admin.patch).
 //
@@ -473,7 +480,7 @@ const ROSTER_MODULE = 'api/_lib/moderators.js'
 const routeSource = await fileTextThrough('moderator-role', ROUTE)
 const rosterSource = fs.readFileSync(path.join(process.cwd(), ROSTER_MODULE), 'utf8')
 
-// Any configured administrator. It used to be the founder's real address,
+// Any configured administrator. It used to be a real personal address,
 // written into this file and into api/_lib/admin.js; the allowlist is the
 // ADMIN_EMAILS environment variable now, so what this file needs is simply
 // "an address that is on it" — see the sandbox note in loadRoute.
@@ -827,7 +834,7 @@ test('revoking says out loud that it is not instant', async () => {
 test('minting the ADMIN claim does not clobber an existing moderator claim', async () => {
   // setCustomUserClaims REPLACES the whole claims object. A blind
   // `{ admin: true }` — which is what this route did until this patch — would
-  // delete the founder's own `moderator` claim the moment he held one.
+  // delete a founder's own `moderator` claim the moment they held one.
   const app = loadRoute({
     roster: [{ uid: FOUNDER_UID }],
     accounts: { [FOUNDER_UID]: { email: FOUNDER_EMAIL, customClaims: { moderator: true } } },
@@ -1070,7 +1077,7 @@ test('a refused grant is reported rather than assumed', () => {
 // ── The honest degradation ──────────────────────────────────────────────────
 //
 // THIS IS THE HALF THAT IS EASY TO GET WRONG. src/pages/Admin.jsx ships today;
-// api/verify-admin.js does not ship until the founder runs `npm run apply:gated`
+// api/verify-admin.js does not ship until the owner runs `npm run apply:gated`
 // and redeploys. In between, the UNPATCHED route ignores `moderatorAction`
 // entirely and falls through to its ordinary 200 — so a "Make moderator" button
 // wired straight to `res.ok` would report a grant that never happened, on the

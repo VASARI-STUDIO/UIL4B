@@ -1,46 +1,44 @@
-// Icon stroke width — the control means PIXELS.
+// Icon stroke width: the control means PIXELS, and a mode says how they behave when the
+// icon's size changes.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// WHY THIS EXISTS (founder bug report, 2026-09-02)
-// ─────────────────────────────────────────────────────────────────────────────
-// "I tried exporting a 2px stroke width and it exported at 4px."
+// SVG `stroke-width` is measured in viewBox USER UNITS, not pixels. A file whose viewBox is
+// 24 units wide and whose width/height is 48 is drawn at 2x, so `stroke-width="2"` lands
+// as 4px. This module owns the one conversion from the slider's pixels to the number
+// written into the file, so the stage, the size rail, the SVG code and the PNG all call
+// the same functions and cannot drift apart.
 //
-// SVG `stroke-width` is measured in viewBox USER UNITS, not pixels. Our icons
-// carry a 24-unit viewBox and the export writes width/height = `size`, whose
-// default is 48. The renderer therefore scales the whole drawing by size/24 —
-// 2x at the default — and a stroke-width of 2 lands on screen as 4px. At
-// size 64 it is worse and fractional: 2 becomes 5.33px.
+// The slider value S has two meanings, one per mode:
 //
-// Nothing in the serializer was wrong; it wrote the number it was given. The
-// CONTROL was lying. A slider labelled "Stroke" with stops at 1 / 1.5 / 2 /
-// 2.5 / 3 reads as pixels to every human being who has ever seen one.
+//   Relative  S is the stroke in pixels on a 24px icon. The stroke is a share of the icon
+//             (S/24 of its width), so every Size, and every PNG at 1x, 2x or 4x, is the
+//             same picture drawn larger or smaller. The attribute written never depends on
+//             the Size.
+//   Fixed     S is the stroke in pixels, full stop. It is the same weight at every Size and
+//             every PNG scale, so a larger icon looks lighter. The attribute written is
+//             S divided by the scale the file is drawn at.
 //
-// THE DECISION: the number the user sets is the number they measure in the
-// exported file — at any size, and for any viewBox. This module owns that one
-// conversion so the Stage preview and the exported markup cannot drift apart:
-// both call `strokeAttrForPx`, so they are the same arithmetic by construction.
+// At Size 24 (the reference size) and 1x the two modes draw the same pixels.
 //
-// DOM-free on purpose — it is pure arithmetic plus one regex, so the contract
-// is testable without a browser.
+// DOM-free on purpose: it is arithmetic plus a few regexes, so the contract is testable
+// without a browser.
 
 import { DEFAULT_EXPORT_SIZE } from './iconSize.js'
 
 /** Every pack we ship draws on a 24-unit grid; the fallback when none is given. */
 export const DEFAULT_VIEWBOX = 24
 
+/** The size at which a Relative stroke reads as pixels, and where the two modes agree. */
+export const STROKE_REFERENCE_SIZE = 24
+
 /**
  * The stroke slider's range, in pixels.
  *
- * The old range was 1–3 viewBox units, which at the default size 48 spanned
- * 2–6 rendered px. Reading those same numbers as pixels would have capped every
- * icon at a 3px stroke and halved the maximum weight available at large sizes,
- * so the range moves into pixel space rather than being reinterpreted in place:
- * 0.5–8px covers hairline through heavy for the sizes the editor offers, and
- * `inputMax` lets a 128px icon be typed up to a genuinely heavy stroke.
+ * 0.5 to 8 covers hairline through heavy on the sizes the editor offers. `inputMin` is low
+ * enough to hold a 2px stroke drawn at the largest custom size as a Relative value
+ * (2px at 1024 is 0.047px on the 24px reference), and `inputMax` lets a typed value go
+ * genuinely heavy.
  *
- * `default: 2` is deliberate. The editor opens at size 24 (DEFAULT_EXPORT_SIZE), where
- * 2px is 2 user units: the pack's own weight, and the same proportions the old
- * default (2 units at size 48, 4px) drew. At 24 a 4px default would be twice as heavy.
+ * `default: 2` is the pack's own weight on the 24 grid.
  */
 export const STROKE_PX = Object.freeze({
   min: 0.5,
@@ -48,27 +46,46 @@ export const STROKE_PX = Object.freeze({
   step: 0.25,
   snaps: Object.freeze([1, 2, 3, 4, 6]),
   default: 2,
-  inputMin: 0.25,
+  inputMin: 0.04,
   inputMax: 64,
 })
 
-/** Marker on a saved custom-icon record: its `stroke` field is already pixels. */
+/**
+ * Marker on a saved custom-icon record: its `stroke` is the slider value as it means
+ * today (pixels on the 24px reference when Relative, pixels when Fixed).
+ */
+export const STROKE_UNIT_REF = 'px24'
+
+/** Marker on a record that stored pixels at its own export size (the older meaning). */
 export const STROKE_UNIT_PX = 'px'
 
 /**
- * The size the editor used to open at, kept for saved records and homepage drafts that
- * carry no size, and for the pixel weight behind a sticky preference written while the
- * editor opened here. The editor itself now opens at 24; see iconSize.js.
+ * The size an older editor opened at, kept for saved records and homepage drafts that
+ * carry no size.
  */
 export const DEFAULT_ICON_SIZE = 48
 
-/** Visible explanation of scaling the exported file, in the slider's pixels. */
+const fmtPx = (n) => String(Math.round(n * 100) / 100)
+
+/**
+ * The line under the stroke control, in the slider's pixels, saying what the chosen mode
+ * does. `effect` is the part shown in bold.
+ */
 export function strokeScaleCaption({ size, stroke, absolute }) {
-  const fmtPx = (n) => String(Math.round(n * 100) / 100)
+  if (absolute) {
+    return {
+      prefix: 'Fixed: the stroke is ',
+      effect: `${fmtPx(stroke)}px`,
+      suffix: ' at every size and PNG scale, so bigger icons look lighter.',
+    }
+  }
+  const here = Number(size) === STROKE_REFERENCE_SIZE
+    ? `${fmtPx(stroke)}px at ${STROKE_REFERENCE_SIZE}px`
+    : `${fmtPx(stroke)}px at ${STROKE_REFERENCE_SIZE}px, ${fmtPx(stroke * size / STROKE_REFERENCE_SIZE)}px at ${fmtPx(size)}px`
   return {
-    prefix: `Resized to ${fmtPx(size * 2)}px, the stroke `,
-    effect: absolute ? `stays ${fmtPx(stroke)}px` : `grows to ${fmtPx(stroke * 2)}px`,
-    suffix: absolute ? '.' : `. Fixed keeps it at ${fmtPx(stroke)}px.`,
+    prefix: 'Relative: the stroke grows with the icon, ',
+    effect: here,
+    suffix: '. Every size and PNG scale looks the same.',
   }
 }
 
@@ -96,6 +113,18 @@ export function parseViewBox(attr) {
   }
 }
 
+/**
+ * The viewBox attribute's four numbers: origin and size. Missing or malformed gives the
+ * 24 grid at the origin. Commas and spaces both separate, as the browser allows.
+ */
+export function parseViewBoxRect(attr) {
+  const parts = String(attr ?? '').trim().split(/[\s,]+/).map(Number)
+  if (parts.length === 4 && parts.every(Number.isFinite) && parts[2] > 0 && parts[3] > 0) {
+    return { x: parts[0], y: parts[1], w: parts[2], h: parts[3] }
+  }
+  return { x: 0, y: 0, w: DEFAULT_VIEWBOX, h: DEFAULT_VIEWBOX }
+}
+
 /** Pull the viewBox out of raw SVG markup. Pasted and custom icons are not 24. */
 export function viewBoxOf(svgText) {
   const m = /<svg\b[^>]*?\sviewBox\s*=\s*(["'])([^"']*)\1/i.exec(String(svgText ?? ''))
@@ -119,8 +148,8 @@ function boxOf(viewBox) {
  *
  * Both width and height are set to `size`, so a NON-SQUARE viewBox is
  * letterboxed by the default `preserveAspectRatio` ("xMidYMid meet") and the
- * uniform scale is the SMALLER of the two ratios. Square viewBoxes — every pack
- * we ship — collapse to the familiar size / 24.
+ * uniform scale is the SMALLER of the two ratios. Square viewBoxes collapse to the
+ * familiar size / 24. The viewBox origin does not matter: only its size scales.
  */
 export function renderScale(size, viewBox = DEFAULT_VIEWBOX) {
   const s = Number(size)
@@ -130,24 +159,77 @@ export function renderScale(size, viewBox = DEFAULT_VIEWBOX) {
 }
 
 /**
- * The `stroke-width` value to write so the stroke MEASURES `px` pixels.
+ * The `stroke-width` value to write for a drawing `size` pixels wide.
  *
- * This is the whole fix. `null` for an unusable input, so callers can skip the
- * attribute rather than writing "NaN" into someone's file.
+ *   Relative  `px` is pixels on the 24px reference: the number depends on the icon's
+ *             viewBox only, never on `size`.
+ *   Fixed     `px` is pixels in this drawing: the number is `px` over the scale the
+ *             drawing is rendered at, so it measures `px` at `size`.
+ *
+ * `inside` is the factor an ancestor `transform` scales this element by (see
+ * `transformScale`); the attribute is divided by it so the painted stroke is unchanged.
+ * `null` for an unusable input, so callers can skip the attribute rather than writing
+ * "NaN" into someone's file.
  */
-export function strokeAttrForPx({ px, size, viewBox, absolute = false }) {
+export function strokeAttrForPx({ px, size, viewBox, absolute = false, inside = 1 }) {
   // Zero and below are rejected along with NaN: a zero-width stroke is an
   // invisible icon, and leaving the pack's own attribute in place is the less
   // destructive answer to input we cannot honour. (`Number(null)` and
   // `Number('')` are both 0, which is how empty state arrives here.)
   const wanted = Number(px)
   if (!Number.isFinite(wanted) || wanted <= 0) return null
-  // `vector-effect: non-scaling-stroke` already resolves stroke-width in the
-  // FINAL rendered space, so the pixel value passes through untouched — which
-  // is also why a legacy record with Absolute on needed no migration below.
-  if (absolute) return roundAttr(wanted)
-  const scale = renderScale(size, viewBox)
-  return roundAttr(scale > 0 ? wanted / scale : wanted)
+  const scale = renderScale(absolute ? size : STROKE_REFERENCE_SIZE, viewBox)
+  const k = Number.isFinite(inside) && inside > 0 ? inside : 1
+  return roundAttr(scale > 0 ? wanted / scale / k : wanted / k)
+}
+
+/**
+ * The slider value to hand to a drawing that is a zoomed view of the export. The stage
+ * draws the icon `drawSize` wide to inspect it, but it stands for a file `exportSize`
+ * wide: a Fixed stroke is magnified with the picture, a Relative one already is.
+ */
+export function zoomedStroke({ px, absolute, drawSize, exportSize }) {
+  const e = Number(exportSize)
+  return absolute && e > 0 ? Number(px) * drawSize / e : Number(px)
+}
+
+/**
+ * Whether a Fixed file may also carry `vector-effect="non-scaling-stroke"`. That property
+ * reads the width as screen pixels, so it only agrees with the width written for the
+ * export size when one user unit is one pixel; at any other scale it would paint the
+ * wrong weight, and a consumer that ignores it would paint another. Elements inside a
+ * scaled group are left to the plain attribute too.
+ */
+export function canPinWithVectorEffect({ size, viewBox, scaledGroups = false }) {
+  if (scaledGroups) return false
+  return Math.abs(renderScale(size, viewBox) - 1) < 1e-9
+}
+
+/**
+ * How much a `transform` attribute scales lengths, as one number: the geometric mean of
+ * its linear stretch. Translate, rotate and skew leave lengths alone; scale and matrix
+ * change them. A stroke inside a scaled group is scaled with it, so the width written for
+ * the element is divided by this. Unparseable or degenerate transforms count as 1.
+ */
+export function transformScale(transform) {
+  const text = String(transform ?? '')
+  if (!text.trim()) return 1
+  let total = 1
+  const call = /([a-zA-Z]+)\s*\(([^)]*)\)/g
+  let m
+  while ((m = call.exec(text))) {
+    const args = m[2].split(/[\s,]+/).filter(Boolean).map(Number)
+    if (args.some(n => !Number.isFinite(n))) return 1
+    const name = m[1].toLowerCase()
+    if (name === 'scale' && args.length >= 1) {
+      const sx = args[0]
+      const sy = args.length > 1 ? args[1] : sx
+      total *= Math.sqrt(Math.abs(sx * sy))
+    } else if (name === 'matrix' && args.length === 6) {
+      total *= Math.sqrt(Math.abs(args[0] * args[3] - args[1] * args[2]))
+    }
+  }
+  return Number.isFinite(total) && total > 0 ? total : 1
 }
 
 /** Keep a pixel width inside what the control can hold; never return NaN. */
@@ -158,45 +240,59 @@ export function clampStrokePx(n) {
 }
 
 /**
- * The pixel stroke a SAVED custom icon should re-open at.
+ * The slider value and mode a SAVED custom icon should re-open with.
  *
- * Records written before this fix stored `stroke` in viewBox user units, so
- * reading them as pixels would silently halve (or worse) a weight the user
- * already chose and saved. They carry their own `size` and their own baked
- * `svg`, so the viewBox is right there and the original pixel weight is exactly
- * recoverable: units x that record's own scale. New records stamp
- * `strokeUnit: 'px'` so they are never converted twice.
+ * Three eras of record, each mapped so the icon draws exactly as it did when saved:
+ *   strokeUnit 'px24'  written today: the value is already the slider value
+ *   strokeUnit 'px'    pixels at the record's own size, Relative: it was drawn with
+ *                      stroke-width = px / scale(size). Today's Relative writes the value
+ *                      over scale(24), so the same attribute needs px x scale(24)/scale(size)
+ *   no stamp           viewBox user units: stroke-width = the stored number, so the value
+ *                      is units x scale(24)
+ * A record saved as absolute (Fixed) held pixels in every era, and Fixed still means
+ * pixels, so it is carried over untouched.
  *
- * The round trip is lossless — a legacy record (size 48, viewBox 24, stroke 2)
- * migrates to 4px and re-serialises to stroke-width="2", byte-identical to the
- * markup already frozen in `record.svg`.
+ * `null` when the record has no usable stroke, so the caller seeds its default instead.
  */
-export function customIconStrokePx(record) {
+export function customIconStroke(record) {
   if (!record) return null
   const stored = Number(record.stroke)
   if (!Number.isFinite(stored) || stored <= 0) return null
-  if (record.strokeUnit === STROKE_UNIT_PX) return clampStrokePx(stored)
-  // Absolute was already resolved in rendered space, so it was already pixels.
-  if (record.absStroke) return clampStrokePx(stored)
-  return clampStrokePx(stored * renderScale(record.size || DEFAULT_ICON_SIZE, viewBoxOf(record.svg)))
+  const absStroke = !!record.absStroke
+  if (record.strokeUnit === STROKE_UNIT_REF || absStroke) return { px: clampStrokePx(stored), absStroke }
+  const box = viewBoxOf(record.svg)
+  const reference = renderScale(STROKE_REFERENCE_SIZE, box)
+  if (record.strokeUnit === STROKE_UNIT_PX) {
+    return { px: clampStrokePx(stored * reference / renderScale(record.size || DEFAULT_ICON_SIZE, box)), absStroke }
+  }
+  return { px: clampStrokePx(stored * reference), absStroke }
 }
 
-// A sticky stroke written now is "<viewBox units>u". Units do not depend on the export
-// size, so the weight survives the editor's opening size changing (it was 48, it is 24).
+/** The slider value of a saved record (see `customIconStroke`), or null. */
+export function customIconStrokePx(record) {
+  return customIconStroke(record)?.px ?? null
+}
+
+// A sticky stroke is "<viewBox units>u" on the 24 grid. Units do not depend on the export
+// size, so the weight survives the editor's opening size changing.
 const STICKY_UNITS = /^(\d*\.?\d+)u$/
 
-/** The text the sticky key stores for a stroke of `px` drawn at `size`: its weight in viewBox units. */
-export function stickyStrokeToken(px, size, viewBox = DEFAULT_VIEWBOX) {
-  return `${roundAttr(Number(px) / renderScale(size, viewBox))}u`
+/**
+ * The text the sticky key stores for slider value `px`. The slider value is already on
+ * the 24px reference, so on the 24 grid the token is the number itself; `size` and
+ * `viewBox` stay as optional inputs for a value that was measured at another size.
+ */
+export function stickyStrokeToken(px, size = STROKE_REFERENCE_SIZE, viewBox = DEFAULT_VIEWBOX) {
+  return `${roundAttr(Number(px) / renderScale(size, viewBox) * renderScale(STROKE_REFERENCE_SIZE, viewBox))}u`
 }
 
 /**
- * The pixel stroke the sticky preference should seed, at the size the editor opens at.
+ * The slider value the sticky preference should seed.
  *
  * `raw` is the pixel key and `legacyRaw` the older user-unit one. Three shapes:
- *   "2u"      units, written now: the same number at the 24 grid's opening size
+ *   "2u"      units on the 24 grid, written now: the same number is the slider value
  *   "4"       a bare pixel number, written while the editor opened at size 48 with the
- *             stroke measured at that size, so it carries half the weight at 24
+ *             stroke measured at that size, so it carries half the weight on the 24 grid
  *   legacy    a bare user-unit number (1 to 3), already a weight on the 24 grid
  * The aim is "the next icon starts at the same weight", so the weight survives, not the digit.
  */
@@ -214,13 +310,60 @@ export function stickyStrokePx(raw, legacyRaw) {
 }
 
 /**
- * The pixel stroke a homepage hand-off draft should open at. The homepage
- * preview draws a bare 24-viewBox Lucide path at `size`, so its user-unit
- * number converts the same way — which keeps the icon the exact weight the
- * visitor saw before they clicked through.
+ * The slider value a homepage hand-off draft should open at. The homepage preview draws
+ * a bare 24-viewBox glyph with its stroke in user units, which is the same share of the
+ * icon as a Relative stroke of that many pixels on the 24px reference.
  */
-export function draftStrokePx(draftStroke, draftSize) {
+export function draftStrokePx(draftStroke) {
   const units = Number(draftStroke)
   if (!Number.isFinite(units) || units <= 0) return null
-  return clampStrokePx(units * renderScale(draftSize || DEFAULT_ICON_SIZE, DEFAULT_VIEWBOX))
+  return clampStrokePx(units)
+}
+
+// ── Does the artwork draw with a stroke? ─────────────────────────────────────
+
+const ATTR = /([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g
+const NON_DRAWING = new Set(['defs', 'clippath', 'mask', 'symbol', 'pattern', 'marker', 'lineargradient', 'radialgradient', 'filter'])
+const NO_PAINT = new Set(['', 'none', 'transparent'])
+
+/**
+ * Whether the markup draws with a stroke that the Stroke control can change: some element
+ * outside defs, masks and clip paths sets a `stroke` other than `none` (a colour or
+ * `currentColor`) and does not turn the width off. Filled glyphs (Phosphor, Material,
+ * Solar bold) set none, outline sets (Lucide, Tabler, Solar linear, Iconoir) do.
+ * Read once per loaded SVG; it is one pass over the tags.
+ */
+export function markupHasStroke(svg) {
+  const text = String(svg ?? '')
+  if (!text) return false
+  const hidden = []
+  let match
+  // A flat scan of the tags with a depth counter for the non-drawing containers.
+  const tagRe = /<(\/?)([a-zA-Z][\w:-]*)([^>]*?)(\/?)>/g
+  while ((match = tagRe.exec(text))) {
+    const [, closing, rawName, attrText, selfClosing] = match
+    const name = rawName.toLowerCase()
+    if (closing) {
+      const at = hidden.lastIndexOf(name)
+      if (at >= 0) hidden.length = at
+      continue
+    }
+    if (NON_DRAWING.has(name)) {
+      if (!selfClosing) hidden.push(name)
+      continue
+    }
+    if (hidden.length) continue
+    let stroke = null
+    let width = null
+    ATTR.lastIndex = 0
+    let a
+    while ((a = ATTR.exec(attrText))) {
+      const key = a[1].toLowerCase()
+      const value = (a[2] ?? a[3] ?? a[4] ?? '').trim().toLowerCase()
+      if (key === 'stroke') stroke = value
+      else if (key === 'stroke-width') width = value
+    }
+    if (stroke !== null && !NO_PAINT.has(stroke) && !(width !== null && Number(width) === 0 && width !== '')) return true
+  }
+  return false
 }

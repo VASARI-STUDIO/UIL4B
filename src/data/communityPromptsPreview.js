@@ -15,8 +15,7 @@
 // and moving them to a lazy chunk does NOT make them secret: a static asset is
 // served to anybody who asks for it, which is the whole argument of
 // tests/unit/admin-chunk-carries-no-backlog.test.js. The secrecy half is
-// [locked-library-values-still-in-bundle] in pipeline.js and is a founder call
-// about a serverless route, untouched by this file. What this changes is that
+// a separate decision about a serverless route, untouched by this file. What this changes is that
 // the bytes stop being downloaded by every visitor on every route.
 //
 // WHY THESE VALUES ARE COPIED RATHER THAN COMPUTED. Computing them means

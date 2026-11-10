@@ -17,8 +17,8 @@ import '../styles/pages/font-picker.css'
 // list of names. You could not see a single one of the things you were
 // choosing between, in a tool whose entire subject is how type looks.
 //
-// That is the founder's report — selection "expects the user to remember and
-// type font names" — and it is structural, not a discoverability problem.
+// Selection expected the user to remember and type font names, and that is
+// structural, not a discoverability problem.
 //
 // So the control is now the specimen. The trigger shows the CURRENT family
 // rendered in itself, and opens a browsable dialog of specimen cards

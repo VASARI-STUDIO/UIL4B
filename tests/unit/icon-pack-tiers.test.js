@@ -127,6 +127,18 @@ test('the tiers widen, and an unknown pack is refused by everyone except Pro', (
   assert.equal(canSeePack('some-unlisted-set', 'paid'), true)
 })
 
+test('Fluent UI, Pixelarticons, Radix Icons and Bootstrap Icons are free-tier: an account opens them, a signed-out visitor does not', () => {
+  for (const pack of ['fluent', 'pixelarticons', 'radix-icons', 'bi']) {
+    assert.equal(tierOf(pack), 'free', `${pack} has a free official browser`)
+    assert.equal(canSeePack(pack, 'anon'), false, `${pack} needs an account`)
+    assert.equal(canSeePack(pack, 'free'), true)
+    assert.equal(canSeePack(pack, 'paid'), true)
+    assert.equal(ICON_PACK_TIERS[pack].group, undefined, `${pack} is an interface pack, not a brand, flag, emoji or colour set`)
+  }
+  // The signed-out sample is still the five, so adding free packs does not widen it.
+  assert.equal(Object.keys(ICON_PACK_TIERS).filter((p) => tierOf(p) === 'anon').length, 5)
+})
+
 test('viewerTier fails closed — only an explicit Pro is Pro, and an unresolved session is signed out', () => {
   assert.equal(viewerTier({ user: null, isPro: false }), 'anon')
   assert.equal(viewerTier({}), 'anon')
@@ -166,7 +178,7 @@ test('the signed-out cap spreads across every anon pack rather than slicing one'
 
 test('the signed-out cap fills whole rows: the 60 rounded up to the column count, never past 72', () => {
   assert.equal(ANON_ICON_CEILING, 72)
-  // The widths Dylan named: 1440 is 13 columns and shows 65.
+  // The widths that matter: 1440 is 13 columns and shows 65.
   assert.equal(anonCapForCols(13), 65)
   assert.equal(anonCapForCols(6), 60, '768')
   assert.equal(anonCapForCols(4), 60, '390 on the four-up phone grid')
@@ -298,18 +310,18 @@ test('the gate copy is complete, count-driven, and reuses the app\'s own action 
   // NO HARD-CODED NUMBER. Every count in a wall comes from the live table, so
   // moving a pack changes the sentence. A typed number would be a claim that
   // stops being true the first time the table is edited.
-  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 7), /from 5 sets\. .*plus 7 more sets/, "the body must render the counts it is handed")
-  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 1), /1 more set/, "one set is singular")
-  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 2), /2 more sets/, "two sets are plural")
-  assert.match(ICON_GATE_COPY.end.anon.body(65, 5, 7), /65/)
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 12), /from 5 sets\. .*across 12 sets/, "the body must render the counts it is handed")
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 1), /across 1 set\./, "one set is singular")
+  assert.match(ICON_GATE_COPY.end.anon.body(60, 5, 2), /across 2 sets\./, "two sets are plural")
+  assert.match(ICON_GATE_COPY.end.anon.body(65, 5, 12), /65/)
   assert.match(ICON_GATE_COPY.end.free.body(16, 10), /\b16\b[^.]*\b10\b/, 'the free body must render both counts it is handed')
-  // The signed-out heading is computed from the live set count; the free one is fixed.
-  assert.equal(ICON_GATE_COPY.end.anon.heading(12), 'Log in to open all 12 sets.')
-  assert.equal(ICON_GATE_COPY.end.anon.heading(1), 'Log in to open all 1 set.')
+  // The signed-out heading leads with the icon count a free account opens; the free one is fixed.
+  assert.equal(ICON_GATE_COPY.end.anon.heading(60017), 'Log in to access 60,017 icons')
+  assert.equal(ICON_GATE_COPY.end.anon.heading(1), 'Log in to access 1 icon')
   assert.doesNotMatch(ICON_GATE_COPY.end.free.heading, /\d/,
     'a fixed heading must not quote a count it cannot keep true')
   for (const text of [
-    ICON_GATE_COPY.end.anon.heading(12), ICON_GATE_COPY.end.anon.body(60, 5, 7), ICON_GATE_COPY.end.anon.chip,
+    ICON_GATE_COPY.end.anon.heading(60017), ICON_GATE_COPY.end.anon.body(60, 5, 12),
     ICON_GATE_COPY.end.free.heading, ICON_GATE_COPY.end.free.body(16, 10),
   ]) {
     assert.doesNotMatch(text, /—/, 'no em dash in the end band copy')

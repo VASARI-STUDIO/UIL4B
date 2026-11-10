@@ -157,7 +157,7 @@ test.describe('projects states only quotas the product enforces', () => {
   // #452 DELETED THE FOLDER SENTENCE AND KEPT THE FOLDERS. These two tests
   // pinned that halfway state: no invented allowance, but five chips of a fixed
   // taxonomy still on screen, and a Pro account seeing the same five "which is
-  // the point". The founder's call on 2026-09-13 finished it — folders are not
+  // the point". The decision since finished it — folders are not
   // an entitlement and the mechanism is gone — so the pin is inverted rather
   // than deleted, which is how 69-flow-audit's seeded-project assertion was
   // handled when that decision landed. What both tests were really protecting,
@@ -210,13 +210,13 @@ test.describe('projects states only quotas the product enforces', () => {
 
 test.describe('the admin overview states nothing it read from this browser', () => {
   // ── THE BADGE THIS DESCRIBE USED TO MEASURE IS GONE, AND SO IS ITS SUBJECT ─
-  // Until 2026-09-16 this measured the contrast of a "This device only" badge
+  // This used to measure the contrast of a "This device only" badge
   // over four headline figures — Page Views, Sessions, Bounce Rate, Avg
   // Duration — that were this browser's localStorage. The badge was correct
-  // and the figures were the defect: the largest numbers on the founder's
-  // dashboard described his own browsing, and a caption does not change what
-  // a four-figure "Page views" reads as. His instruction was to take "data
-  // from my specific browser window" off the dashboard, so the band went,
+  // and the figures were the defect: the largest numbers on the admin
+  // dashboard described one browser's own browsing, and a caption does not change what
+  // a four-figure "Page views" reads as. Data from a single browser window does
+  // not belong on the dashboard, so the band went,
   // with the Pages and Design tabs that read the same two blobs.
   //
   // What replaces the contrast check is the stronger claim it was standing

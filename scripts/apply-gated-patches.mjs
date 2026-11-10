@@ -1,4 +1,4 @@
-// APPLY THE FOUNDER-GATED CHANGES, THEN PROVE THEM.
+// APPLY THE APPROVAL-GATED CHANGES, THEN PROVE THEM.
 //
 //   npm run apply:gated              # says what it will do, then asks
 //   npm run apply:gated -- --yes     # says what it will do, then does it
@@ -8,15 +8,15 @@
 // WHAT THIS IS FOR
 // ═══════════════════════════════════════════════════════════════════════════
 // The changes are written, reviewed and tested, and none of them is in the
-// tree. Every one touches a file the Claude Code auto-mode classifier refuses
-// to stage, so an agent can produce the diff and cannot apply it. Until today
-// the founder's instructions were "open pull request #390, find the heading
-// FOUNDER APPROVAL NEEDED, paste the diff into firestore.rules", once per change,
-// into two files, in an order nobody had written down.
+// tree. Every one touches a file that automated commits may not stage, so
+// the diff can be written and tested but not applied. Before this
+// command, each change was pasted by hand into firestore.rules (or the other
+// gated file), once per change, into two files, in an order nobody had written
+// down.
 //
 // This is that, as one command, with the ordering handled, each patch applied
 // only if it is not already in, nothing written until every one has succeeded,
-// and the three suites run afterwards so the founder finds out here rather than
+// and the three suites run afterwards so the owner finds out here rather than
 // in production.
 //
 // IT COMMITS NOTHING AND PUSHES NOTHING. It leaves a working tree ready to
@@ -204,7 +204,7 @@ function runStep(label, command, args, { env = {}, mustPrint = null } = {}) {
   // ONE STRING, not a command plus an args array. `npm` on Windows is a `.cmd`
   // shim, which Node refuses to spawn without a shell — and passing an args
   // ARRAY alongside `shell: true` prints Node's DEP0190 warning about
-  // concatenation in the middle of the output the founder is meant to be
+  // concatenation in the middle of the output the person running this is meant to be
   // reading. Every argument below is a literal written here, so there is
   // nothing to escape.
   const res = spawnSync([command, ...args].join(' '), {
@@ -263,10 +263,6 @@ function summarise(steps, verifications, { dryRun = false } = {}) {
   out('  WHAT IS NOW TRUE THAT WAS NOT BEFORE')
   const truths = []
   const done = new Set([...landed, ...already].map((s) => s.id))
-  if (done.has('firebase-deferral')) {
-    truths.push('the homepage paints sooner — 360 ms to first paint and 624 ms to the '
-      + 'main heading, with 21.8% fewer bytes in the first request')
-  }
   if (done.has('feedback-bounds')) {
     truths.push('a stranger can no longer write anything into your feedback queue, and '
       + 'no signed-in account can write a document bigger or stranger than the app sends')

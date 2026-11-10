@@ -49,6 +49,15 @@ test('an icon the sanitiser would change stays out of the sprite', () => {
   }
 })
 
+test('an icon whose CSS converts cleanly still stays out of the sprite', () => {
+  for (const body of [
+    '<path style="fill:none;stroke:currentColor;stroke-width:2" d="M0 0h24v24H0z"/>',
+    '<style>.a{fill:none;stroke:currentColor}</style><path class="a" d="M0 0h24v24H0z"/>',
+  ]) {
+    assert.equal(symbolMarkup(wrap(body), 'ics8'), null, body)
+  }
+})
+
 test('malformed, empty and oversized markup is refused', () => {
   assert.equal(symbolMarkup('', 'ics7'), null)
   assert.equal(symbolMarkup('not svg', 'ics7'), null)

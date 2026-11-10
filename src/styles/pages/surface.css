@@ -17,8 +17,8 @@
  * 96px display headline over an empty first screen, a 48px grid-line wash
  * behind it, a second 56px centred headline, an orange dot before every
  * library title, cards that lifted 4px on hover, and --accent-strong / --brand
- * on every link and hover. The founder's call (2026-09-18) was that these two
- * pages "go straight to the real library/guide index". So they are laid out as
+ * on every link and hover. The decision was that these two
+ * pages go straight to the real library/guide index. So they are laid out as
  * an app surface: the title on the left at a page scale, section heads in the
  * design file's own form (a heading over a hairline), the library cards as its
  * "New in Discover" cards (18px, --card, the contents as a band across the top,
@@ -73,10 +73,10 @@
    delays a number. */
 .srf .srf-hint {
   margin: 14px 0 0;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--t2);
   font-variant-numeric: tabular-nums;
   animation: none;
@@ -124,7 +124,7 @@
 .srf .surface-card-desc { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--t1); }
 .srf .surface-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 6px; }
 .srf .surface-card-go { font-size: 13.5px; font-weight: 560; color: var(--accent-mid); white-space: nowrap; }
-.srf .surface-card-meta { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; color: var(--t2); white-space: nowrap; }
+.srf .surface-card-meta { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; color: var(--t2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .srf .surface-card .soon-badge { align-self: center; border-radius: var(--radius-xs); color: var(--t1); border-color: var(--srf-hair-2); }
 
 /* The contents, as a band across the top of the card, flush to its edges —
@@ -139,7 +139,7 @@
 .srf .scp-type { display: flex; flex-direction: column; justify-content: center; gap: 4px; height: 76px; overflow: hidden; color: var(--t0); }
 .srf .scp-type-display { font-family: var(--display); font-size: 30px; font-weight: 600; letter-spacing: -.015em; line-height: 1; }
 .srf .scp-type-body { font-size: 14px; line-height: 1.2; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.srf .scp-type-mono { font-family: var(--mono); font-size: 11px; letter-spacing: .02em; line-height: 1.2; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.srf .scp-type-mono { font-family: var(--mono); font-size: 11px; line-height: 1.2; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .srf .scp-icons { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 76px; color: var(--t1); }
 .srf .scp-icon svg { width: 22px; height: 22px; }
 .srf .scp-lines { display: flex; flex-direction: column; justify-content: center; gap: 5px; height: 76px; }
@@ -147,13 +147,35 @@
 
 /* ── Learn: the guide index ───────────────────────────────────────────────────
    Search and the topic jump-links on the left, at the page's edge — not a
-   centred 560px island under a centred headline. */
-.srf .lidx-tools { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 24px; max-width: none; margin: 0 0 4px; }
-.srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; box-shadow: none; }
-.srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
-.srf .lidx-topics { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 18px; font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; }
-.srf .lidx-topics a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--t1); text-decoration: none; border-bottom: 1px solid transparent; }
-.srf .lidx-topics a:hover { color: var(--t0); border-bottom-color: var(--t0); }
+   centred 560px island under a centred headline. Two rows below 1025px (search,
+   then the topics), one row above it. The topics are a single-line segmented
+   bar with 44px segments, never a wrapping row of text. */
+.srf .lidx-tools { display: flex; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 12px; max-width: 520px; margin: 0 0 4px; }
+.srf .lidx-tools .lbry-search { flex: 0 0 auto; max-width: none; box-shadow: none; }
+.srf .lidx-tools .lbry-search:focus-within { border-color: var(--accent); }
+/* The fill is an opaque mix, not a translucent wash, so the link text is
+   measured against one solid ground in both themes. */
+.srf .lidx-topics { display: flex; flex-wrap: nowrap; justify-content: stretch; gap: 0; border-radius: var(--radius-s); background: color-mix(in srgb, var(--t0) 5%, var(--bg-0)); font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; }
+.srf .lidx-topics a { position: relative; flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 6px; white-space: nowrap; color: var(--t1); text-decoration: none; border-bottom: 0; border-radius: var(--radius-s); }
+.srf .lidx-topics a + a::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 1px; background: var(--srf-hair-2); }
+.srf .lidx-topics a:hover { color: var(--t0); background: var(--srf-wash); }
+.srf .lidx-topics a:focus-visible { outline-offset: -2px; }
+@media (min-width: 1025px) {
+  .srf .lidx-tools { flex-direction: row; align-items: center; gap: 24px; max-width: none; }
+  .srf .lidx-tools .lbry-search { flex: 1 1 320px; max-width: 520px; }
+  .srf .lidx-topics { flex: 0 0 auto; }
+  .srf .lidx-topics a { padding: 0 12px; }
+}
+/* On a phone the bar holds the subject topics only: the counts step aside
+   (the headings below keep them), and "Using UIL4B", the last section on the
+   page, is reached by scrolling. */
+@media (max-width: 559px) {
+  .srf .lidx-topics .lidx-topic-n,
+  .srf .lidx-topics .lidx-topic-using { display: none; }
+}
+@media (max-width: 399px) {
+  .srf .lidx-topics a { padding: 0 4px; }
+}
 .srf .lidx-topic-n { font-family: var(--font); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--t2); font-variant-numeric: tabular-nums; }
 .srf .lidx-status { min-height: 1.5em; max-width: none; margin: 8px 0 0; text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
 
@@ -186,6 +208,10 @@
 }
 .srf .lidx-card::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 1px; background: var(--srf-hair); }
 .srf .lidx-card:hover { background: var(--srf-wash); box-shadow: none; transform: none; text-decoration: none; }
+/* A topic that is not written yet is the same row with nothing to press: the
+   title is quieter, and it has no hover band and no arrow. */
+.srf .lidx-card--soon:hover { background: transparent; }
+.srf .lidx-card--soon .lidx-title { color: var(--t1); }
 /* `.lidx-top` holds the topic and the time. The topic repeats the group
    heading directly above it on every row, so only the time is shown; the
    wrapper steps aside so the time can take its own column. */
@@ -231,9 +257,15 @@
      Dropping them leaves the card's own 16px padding above and below. */
   .srf .lidx-card:not(:has(.lidx-time)) { grid-template-areas: "title go" "dek dek"; }
 }
-@media (pointer: coarse) {
-  .srf .lidx-topics a { min-height: 44px; }
+@media (pointer: coarse), (max-width: 767px) {
   .srf .lidx-reset { min-height: 44px; }
+}
+/* The page gutter on a phone and a small tablet: 12px, the step the other
+   content pages use, in place of the shell's 16px. */
+@media (max-width: 768px) {
+  .srf.srf--learn .srf-wrap {
+    padding-inline: max(12px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+  }
 }
 
 /* ── Reduced motion ───────────────────────────────────────────────────────────

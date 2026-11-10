@@ -211,7 +211,7 @@ test.describe('/principles has a clean heading outline', () => {
 //
 // It does not qualify for the Inline exception. 58-target-size-24.spec.js
 // documents the one control on these surfaces that does (.app-footer-attrib,
-// "Dylan Coleman" inside the sentence "Built in Brisbane by …"); .prn-go is a
+// the credit name inside the sentence "Built in Brisbane by …"); .prn-go is a
 // standalone call to action on its own line. /principles is simply not one of
 // the four routes 58 measures, which is how a fifth control stayed under the
 // bar after that sweep fixed the other four.

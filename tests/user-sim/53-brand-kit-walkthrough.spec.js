@@ -157,8 +157,8 @@ test.describe('Brand kit walkthrough', () => {
     // ColorLanding, whose H1 is "One colour system, start to finish." — a page
     // of links. Step one has to be the tool.
     await expect(page).toHaveURL(/\/create\/palette$/)
-    // The h1 is sr-only while the page's lede is unwritten (founder struck the
-    // visible "Palette Generator"), so this asserts it is
+    // The h1 is sr-only while the page's lede is unwritten (the
+    // visible "Palette Generator" heading is removed), so this asserts it is
     // ATTACHED rather than visible — it still names the board via
     // aria-labelledby, and the visible proof that the right route arrived is
     // the seed chip below.
@@ -207,6 +207,41 @@ test.describe('Brand kit walkthrough', () => {
     await expect(guide).toHaveCount(0)
   })
 
+  test('a listbox and the Create menu each hide the orientation card, and it returns when they close', async ({ page }) => {
+    watch(page, 'designer opening a dropdown and the nav menu over the walkthrough card')
+    await go(page, MENU_ROUTE)
+    await pressBrandKit(page)
+    const guide = page.locator('.bkit-card')
+    await expect(guide).toBeVisible()
+    await settle(guide)
+
+    // A listbox (the colour system picker).
+    await page.getByRole('button', { name: /^Colour system/ }).click()
+    const list = page.locator('.menu-select-list[role="listbox"]')
+    await expect(list).toBeVisible()
+    await expect(guide).toBeHidden()
+    await expect(guide).toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).toHaveAttribute('inert', '')
+    await page.keyboard.press('Escape')
+    await expect(list).toBeHidden()
+    await expect(guide).toBeVisible()
+    await expect(guide).not.toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).not.toHaveAttribute('inert', '')
+
+    // The Create mega menu in the header.
+    await page.getByRole('button', { name: 'Create', exact: true }).click()
+    const menu = page.locator('.pnav-menu')
+    await expect(menu.first()).toBeVisible()
+    await expect(guide).toBeHidden()
+    await expect(guide).toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).toHaveAttribute('inert', '')
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    await expect(guide).toBeVisible()
+    await expect(guide).not.toHaveAttribute('aria-hidden', 'true')
+    await expect(guide).not.toHaveAttribute('inert', '')
+  })
+
   test('the orientation card is offered over step one and does NOT block it', async ({ page }) => {
     watch(page, 'designer reading the explanation while the tool stays live')
     await fresh(page)
@@ -215,8 +250,8 @@ test.describe('Brand kit walkthrough', () => {
 
     await expect(card(page)).toBeVisible()
 
-    // NOT A MODAL, and this is the founder's actual requirement rather than a
-    // styling preference: "go straight into step 1 then provide a popup". The
+    // NOT A MODAL, and this is a behavioural requirement rather than a
+    // styling preference: the walkthrough goes straight into step 1, then shows a card. The
     // step behind has to remain usable WHILE the card is up. So: type into the
     // tool's own field with the card open and watch the tool respond.
     await setSeed(page, '#3366FF')
@@ -247,8 +282,10 @@ test.describe('Brand kit walkthrough', () => {
     await pressBrandKit(page)
 
     await expect(card(page)).toBeVisible()
-    // It takes focus when it opens, which is what makes Escape work at once.
-    await expect(card(page)).toBeFocused()
+    // Focus lands on the card's own button (a ring on a control, never round the
+    // whole card), which is what makes Escape work at once.
+    await expect(card(page).getByRole('button', { name: /^Start with/ })).toBeFocused()
+    await expect(card(page)).not.toBeFocused()
 
     await page.keyboard.press('Escape')
     await expect(card(page)).toBeHidden()
@@ -274,8 +311,8 @@ test.describe('Brand kit walkthrough', () => {
     await expect(rail(page)).toBeVisible()
     await expect(card(page)).toBeHidden()
 
-    // But it is not gone — the failure mode the founder-note item recorded
-    // about one-time popups is that they become unreachable.
+    // But it is not gone — the failure mode of one-time popups
+    // is that they become unreachable.
     await page.getByRole('button', { name: /What.s this\?/ }).click()
     await expect(card(page)).toBeVisible()
   })
@@ -301,10 +338,9 @@ test.describe('Brand kit walkthrough', () => {
     // Jump to the last step. The colour step still reads as done AND still
     // shows its swatches — that is the whole point of a guided flow rather than
     // four bookmarks, and it is carried by the saved design, not by a cursor.
-    // The bar shows a built step's artefact only once its content box is 1240px
-    // wide (a container query). Below that the bar is one row of steps
-    // and buttons with no swatches, and the colours step one built are in the
-    // help panel; at 1440px the bar carries them itself.
+    // On desktop the bar is the floating pill, which holds only the steps and
+    // its buttons, so a built step's artefact (the colours step one made) is
+    // never drawn in it; it is in the help panel instead.
     await page.getByRole('link', { name: /Icons/ }).first().click()
     await expect(page).toHaveURL(/\/create\/icons$/)
     const colourChip = rail(page).getByRole('link', { name: /Colours/ })
@@ -320,11 +356,7 @@ test.describe('Brand kit walkthrough', () => {
     })
     const built = await page.evaluate((k) => (JSON.parse(localStorage.getItem(k) || '{}').palette?.colors || []).length, DESIGN_KEY)
     expect(built, 'step one saved no colours').toBeGreaterThan(0)
-    await expect.poll(barSwatches, { message: 'the bar does not show the colours step one built at 1440px' }).toBe('shown')
-    await expect(rail(page).locator('.bkit-step.is-done .bkit-step-swatch')).toHaveCount(built)
-    await page.setViewportSize({ width: 1100, height: 900 })
-    await expect.poll(barSwatches, { message: 'the bar shows swatches below 1240px of bar width; they live in the help panel there' }).toBe('hidden')
-    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect.poll(barSwatches, { message: 'the pill draws the colours step one built; they live in the help panel' }).toBe('hidden')
     await page.getByRole('button', { name: /What.s this\?/ }).click()
     await expect(card(page)).toBeVisible()
     await expect(card(page).locator('.bkit-card-artefact .bkit-step-swatch')).toHaveCount(built)
@@ -343,7 +375,7 @@ test.describe('Brand kit walkthrough', () => {
   })
 
   test('you can leave the flow mid-way and be resumed at the gap, not restarted', async ({ page }) => {
-    watch(page, 'designer coming back to a half-built system on another day')
+    watch(page, 'designer coming back to a half-built system after a short break')
     await fresh(page)
     // A palette already built, nothing else — the state of someone who did step
     // one, closed the tab, and came back. The flag is localStorage now, so it
@@ -352,6 +384,14 @@ test.describe('Brand kit walkthrough', () => {
       palette: { base: '#0051FF', harmony: 'auto', colors: ['#123456', '#654321', '#ABCDEF'], activeIdx: 0, extraColors: [] },
     })
     await page.addInitScript((k) => { try { localStorage.setItem(k, '1') } catch { /* ignore */ } }, GUIDE_KEY)
+    // Back within the hour in a tab that already answered the brand kit question,
+    // so nothing asks first (the chooser after a gap is spec 294).
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('vs-current-design-at', String(Date.now() - 60 * 60 * 1000))
+        sessionStorage.setItem('vs-kit-session', 'on')
+      } catch { /* ignore */ }
+    })
 
     await go(page, MENU_ROUTE)
     const label = await pressBrandKit(page)
@@ -388,10 +428,10 @@ test.describe('Brand kit walkthrough', () => {
     await expect(rail(page)).toBeHidden()
   })
 
-  // The desktop bar is chrome, not a card: full-bleed, 56px, fixed flush to the
-  // foot of the viewport, with no radius or shadow. Measured, not read from the
+  // The desktop bar is a floating glass pill: 896x50, centred, fixed 16px above the
+  // foot of the viewport, with a round end and a shadow. Measured, not read from the
   // stylesheet, so a rule that stops applying fails here.
-  test('1440px: the bar is a flush 56px strip with no radius or shadow, and on Colours it sits on the Adjust-all row', async ({ page }) => {
+  test('1440px: the bar is a centred 896x50 pill 16px above the foot, and on Colours it floats above the Adjust-all row', async ({ page }) => {
     watch(page, 'designer on a desktop with the walkthrough bar up')
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(([g, s]) => {
@@ -414,10 +454,12 @@ test.describe('Brand kit walkthrough', () => {
         shadow: cs.boxShadow,
       }
     })
-    expect(bar).toEqual({ height: 56, bottomGap: 0, left: 0, right: 0, position: 'fixed', radius: '0px', shadow: 'none' })
+    expect(bar.shadow, 'the pill floats, so it has a shadow').not.toBe('none')
+    expect(bar).toMatchObject({ height: 50, bottomGap: 16, left: 272, right: 272, position: 'fixed' })
+    expect(parseFloat(bar.radius), 'a pill, not a strip').toBeGreaterThanOrEqual(25)
 
-    // Colours: the Adjust-all row is the toolbar the bar rides on, so the bar's
-    // bottom edge is the toolbar's top edge.
+    // Colours: the Adjust-all row is the toolbar the pill floats above, so the pill's
+    // bottom edge is 16px above the toolbar's top edge.
     await go(page, '/create/palette')
     await expect(rail(page)).toBeVisible()
     const toolbar = page.locator('.plb-adjust')
@@ -425,17 +467,17 @@ test.describe('Brand kit walkthrough', () => {
     await expect.poll(async () => {
       const b = await rail(page).boundingBox()
       const t = await toolbar.boundingBox()
-      return Math.abs((b.y + b.height) - t.y) <= 1
-    }, { message: 'the bar is not directly above the Adjust-all row', timeout: 5000 }).toBe(true)
+      return Math.abs((t.y - (b.y + b.height)) - 16) <= 1
+    }, { message: 'the pill is not 16px above the Adjust-all row', timeout: 5000 }).toBe(true)
     const colours = await rail(page).evaluate((el) => ({
       height: el.getBoundingClientRect().height,
       toolbarBottomGap: window.innerHeight - document.querySelector('.plb-adjust').getBoundingClientRect().bottom,
     }))
-    expect(colours).toEqual({ height: 56, toolbarBottomGap: 0 })
+    expect(colours).toEqual({ height: 50, toolbarBottomGap: 0 })
   })
 
   test('the Palette page no longer offers Build UI system to anyone', async ({ page }) => {
-    // The other half of the same founder decision: the palette tool stops being
+    // The other half of the same decision: the palette tool stops being
     // a side door into system-building now that the nav is the front door.
     watch(page, 'designer looking for the removed UI system control')
     await fresh(page)
@@ -446,5 +488,75 @@ test.describe('Brand kit walkthrough', () => {
     await expect(page.getByRole('button', { name: /UI System/ })).toHaveCount(0)
     // The tool itself is still there and still works.
     await expect(page.locator('.plb-seedchip')).toBeVisible()
+  })
+})
+
+// The desktop bar (1024px and up) is a floating glass pill. Measured from the
+// rendered page so a rule that stops applying fails. Below 1024px the bar is
+// unchanged; see 99-brand-kit-phone-and-name.spec.js.
+test.describe('Brand kit walkthrough: the desktop pill', () => {
+  for (const [width, height] of [[1440, 900], [1024, 768]]) {
+    test(`${width}px: a centred 896x50 pill, nothing wraps inside it, and Next is the only accent fill`, async ({ page }) => {
+      watch(page, 'designer on a desktop with the walkthrough bar up')
+      await page.setViewportSize({ width, height })
+      await page.addInitScript(([g, s]) => {
+        try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
+      }, [GUIDE_KEY, SEEN_KEY])
+      for (const path of ['/create/font-pair', '/create/type-scale', '/create/icons']) {
+        await go(page, path)
+        await expect(rail(page), path).toBeVisible()
+        const m = await rail(page).evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          const cs = getComputedStyle(el)
+          const steps = el.querySelector('.bkit-steps')
+          const fill = getComputedStyle(document.documentElement).getPropertyValue('--accent-fill')
+          const swatch = document.createElement('i')
+          swatch.style.backgroundColor = fill
+          document.body.append(swatch)
+          const accent = getComputedStyle(swatch).backgroundColor
+          swatch.remove()
+          return {
+            w: Math.round(r.width), h: Math.round(r.height), bottomGap: Math.round(window.innerHeight - r.bottom),
+            centred: Math.abs(r.left - (document.documentElement.clientWidth - r.right)) <= 1,
+            round: parseFloat(cs.borderTopLeftRadius) >= 25, glass: cs.backdropFilter, overflow: cs.overflow,
+            fits: el.scrollWidth === el.clientWidth && steps.scrollWidth === steps.clientWidth,
+            filled: [...el.querySelectorAll('*')].filter((n) => n.getBoundingClientRect().width > 0 && getComputedStyle(n).backgroundColor === accent).map((n) => n.className.split(' ').find((c) => c.startsWith('bkit-')) || n.tagName),
+          }
+        })
+        expect(m, path).toEqual({ w: 896, h: 50, bottomGap: 16, centred: true, round: true, glass: 'saturate(1.6) blur(24px)', overflow: 'visible', fits: true, filled: ['bkit-rail-next'] })
+      }
+    })
+  }
+
+  test('on Colours the pill floats 16px above the Adjust-all row, which keeps the foot', async ({ page }) => {
+    watch(page, 'designer on the colour board with the bar up')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(([g, s]) => {
+      try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
+    }, [GUIDE_KEY, SEEN_KEY])
+    await go(page, '/create/palette')
+    await expect(page.locator('.plb-adjust')).toBeVisible()
+    await expect.poll(() => page.evaluate(() => {
+      const t = document.querySelector('.plb-adjust').getBoundingClientRect()
+      const r = document.querySelector('.bkit-rail').getBoundingClientRect()
+      return { rowBottomGap: Math.round(window.innerHeight - t.bottom), above: Math.round(t.top - r.bottom) }
+    })).toEqual({ rowBottomGap: 0, above: 16 })
+  })
+
+  test('the current step is a 2px accent underline 3px above the link foot, and the pill is solid for reduced transparency', async ({ page }) => {
+    watch(page, 'designer finding where they are')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript(([g, s]) => {
+      try { localStorage.setItem(g, '1'); localStorage.setItem(s, '1') } catch { /* private mode */ }
+    }, [GUIDE_KEY, SEEN_KEY])
+    await go(page, '/create/font-pair')
+    const lines = await rail(page).locator('.bkit-step').evaluateAll((links) => links.map((a) => {
+      const b = getComputedStyle(a, '::before')
+      return { current: a.getAttribute('aria-current') === 'step', drawn: b.content !== 'none', height: b.height, bottom: b.bottom }
+    }))
+    expect(lines.filter((l) => l.drawn)).toEqual([{ current: true, drawn: true, height: '2px', bottom: '3px' }])
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] })
+    await expect.poll(() => rail(page).evaluate((el) => getComputedStyle(el).backdropFilter), { message: 'reduced transparency left the blur on' }).toBe('none')
   })
 })

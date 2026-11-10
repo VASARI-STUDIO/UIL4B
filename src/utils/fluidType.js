@@ -98,9 +98,10 @@ export function fluidClamp(minPx, maxPx, viewports = FLUID_VIEWPORTS) {
     return { css: `${n(maxRem)}rem`, fluid: false, minRem, maxRem, slopeVw: 0, interceptRem: maxRem }
   }
 
-  // Slope in rem per px of viewport, then per 1vw (= maxVw/100 px of viewport).
+  // Slope in rem per px of viewport. A vw term resolves in px (1vw is 1% of the
+  // viewport width), so its coefficient is the px-per-px slope times 100.
   const slope = (maxRem - minRem) / (maxVw - minVw)
-  const slopeVw = slope * 100
+  const slopeVw = slope * 16 * 100
   const interceptRem = minRem - slope * minVw
 
   // clamp() needs its bounds in ascending order. A DESCENDING step — smaller at

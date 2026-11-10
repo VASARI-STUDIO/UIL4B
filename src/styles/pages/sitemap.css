@@ -5,11 +5,12 @@
 
 /* The intro here is a heading and a lede with no CTA beside it, so its bottom padding
    shrinks as the section's own top padding grows: the gap down to Create stays near 100px. */
-.spt.spt-sitemap .spm-intro { padding-bottom: clamp(0px, calc(100px - 6vw), 48px); }
+/* Capped at the sections' own width, so the heading lines up with them on a wide screen. */
+.spt.spt-sitemap .spm-intro { max-width: var(--sp-shell); padding-bottom: clamp(0px, calc(100px - 6vw), 48px); }
 /* A jump to a section (the lede's links) leaves its heading clear of the fixed nav:
    nav height + 24px of air, less the section's own top padding. */
 .spt-sitemap .spt-section[id] { scroll-margin-top: calc(var(--smap-nav-h) + 24px - clamp(40px, 6vw, 88px)); }
-.spt-sitemap { --smap-nav-h: calc(clamp(14px, 2vw, 26px) + 58px); }
+.spt-sitemap { --smap-nav-h: var(--spnav-h, 92px); }
 /* These two (and the .spt-group, .spt-row-text b rules below) override /tools rules of the
    same weight, so they carry .spt too. The two sheets load as separate chunks, and which
    one comes last depends on the route graph; the override cannot rest on load order. */
@@ -36,7 +37,8 @@
 
 /* Rows. The generic .spt-row-text span rule styles every span 15px dim, so the pieces
    below name themselves with three classes to win over it. */
-.spt-sitemap .spt-row { border-radius: 12px; }
+/* Square, as on /tools: a row has only a top rule, and a radius curls its ends. */
+.spt-sitemap .spt-row { border-radius: 0; }
 .spt-sitemap .spt-row-text .spt-lbl { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: inherit; color: var(--sp-ink); }
 .spt.spt-sitemap .spt-row-text b { line-height: 1.3; }
 .spt-sitemap .spt-row-text .spt-note { display: block; max-width: 68ch; }
@@ -70,4 +72,19 @@
 @media (max-width: 760px) {
   .spt.spt-sitemap .spt-group, .spt.spt-sitemap .spt-cols { margin-top: 32px; }
   .spt.spt-sitemap .spt-row-text b { font-size: 17px; }
+}
+
+/* The lede's jump links are the first links a thumb meets: a 44px touch strip on each,
+   as /tools gives its own inline links. */
+@media (pointer: coarse), (max-width: 767px) {
+  .spt-sitemap .spm-lede a { position: relative; }
+  .spt-sitemap .spm-lede a::after { content: ""; position: absolute; inset-inline: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+}
+
+/* Phones: the arrow on every row goes, so the text beside the plate has room to read in
+   three lines rather than four. The whole row is still the link. */
+@media (max-width: 480px) {
+  .spt.spt-sitemap .spt-row:not(.spt-row--text) { grid-template-columns: 112px minmax(0, 1fr); }
+  .spt.spt-sitemap .spt-row--text { grid-template-columns: minmax(0, 1fr); }
+  .spt.spt-sitemap .spt-row-go { display: none; }
 }

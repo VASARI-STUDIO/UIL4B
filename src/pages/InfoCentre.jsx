@@ -12,6 +12,7 @@ import '../styles/pages/info.css'
 // The front door's own glyph set. Inline SVG in the NavIcon idiom, already in
 // the entry chunk because Spectrum is a static import in App.jsx.
 import SpectrumIcon from '../components/spectrum/SpectrumIcon'
+import MenuSelect from '../components/tool/MenuSelect'
 // The keys the app actually binds. Printed from here so this page cannot
 // document a chord the handlers ignore — which is exactly what it did.
 import { SEARCH_KEY, DOCUMENTED_SHORTCUTS } from '../config/shortcuts'
@@ -22,6 +23,7 @@ import { infoToolGroup } from '../data/infoTools'
 // Where an image goes in an AI tool, and where the Terms say what the
 // providers may do with it. One copy of each, shared with the tool itself.
 import { AI_IMAGE_SENT, AI_TERMS_PATH } from '../config/aiImageConsent'
+import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,
@@ -36,10 +38,8 @@ const INTRO_KEY = 'vs-info-intro'
 // -stats heading, one in the page's own eyebrow, and five here.
 //
 // They are not replaced with icons. An emoji beside a heading is the cheapest
-// available signal that a page was generated rather than designed, and the
-// founder has been deleting that family of tell by name since 2026-09-14
-// ("remove this text its such a common AI trait, scan the whole site and
-// remove alot of them where applied"). Beyond the taste argument they are
+// available signal that a page was generated rather than designed, and that
+// family of tell is being removed across the site. Beyond the taste argument they are
 // measurably worse than nothing here: an emoji cannot be themed, cannot be
 // measured for contrast, renders as a different picture on every platform,
 // and five of these fourteen were the same phone glyph standing for five
@@ -191,7 +191,7 @@ const SECTIONS = [
         <ToolLinks group={GROUP.ai} />
         {/* The one group that sends an image to a server, so the page that
             explains the tools says where it goes. */}
-        <p>{AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link></p>
+        <p>{AI_IMAGE_SENT} <Link className="ic-hit" to={AI_TERMS_PATH} onClick={crossRouteHashClick(AI_TERMS_PATH)}>How providers may use them</Link></p>
       </>
     ),
   },
@@ -255,15 +255,12 @@ const SECTIONS = [
             "Settings → Support" is corrected to "Settings → Plan and billing",
             which is the label Settings.jsx gives that tab (`{ id: 'support',
             label: 'Plan and billing' }`) — a visitor looking for "Support" would
-            not find it. And "or cancel" is deleted from the second sentence
-            on the same evidence /plans used to delete "cancel any time": the
-            Stripe portal has no cancellation flow enabled until the
-            [stripe-retention-config] owner action is done (pipeline.js,
-            status 'blocked'), so the Cancel plan button opens a portal with
-            nothing to cancel in it. The guard test reads that row's status,
-            so finishing the dashboard work retires the check. */}
+            not find it. The second sentence says the visitor can cancel
+            there: the Stripe portal the Cancel plan button opens has
+            cancellation on, at the end of the paid period, so Pro stays
+            until then. */}
         <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
-        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>.</p>
+        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing or cancel in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>. Pro stays on until the end of the period you&rsquo;ve paid for.</p>
       </>
     ),
   },
@@ -271,12 +268,16 @@ const SECTIONS = [
     id: 'troubleshooting',
     title: 'Troubleshooting',
     body: (
+      <>
       <ul>
         <li><strong>An AI tool isn&rsquo;t responding?</strong> AI features need you to be signed in. If it keeps failing, the service may be briefly busy. Give it a moment and try again.</li>
         <li><strong>Something looks off?</strong> A hard refresh (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>) clears most glitches.</li>
         <li><strong>Working offline?</strong> Core tools run entirely in your browser and keep going; sign-in, sync and AI need a connection.</li>
         <li><strong>Lost something?</strong> Saved projects live in <Link to="/projects">Projects</Link>, and you can export a full backup any time from <Link to="/settings">Settings → Your data</Link>.</li>
       </ul>
+      {/* Ends the list with the way to a person, set to a help request. */}
+      <p className="ic-still-stuck">Still stuck? <Link to="/feedback?type=help">Contact support</Link></p>
+      </>
     ),
   },
   {
@@ -364,6 +365,12 @@ function ScreenStats() {
 
 const SECTION_IDS = SECTIONS.map((s) => s.id)
 
+// Every target the index reaches: the accordion sections, then the stats panel.
+const JUMP_OPTIONS = [
+  ...SECTIONS.map((s) => ({ value: s.id, label: s.title })),
+  { value: 'screen-stats', label: 'Screen stats' },
+]
+
 // The section a URL fragment names, or null.
 const hashSection = () => {
   if (typeof window === 'undefined') return null
@@ -434,6 +441,20 @@ export default function InfoCentre() {
     return () => handlers.forEach((off) => off())
   }, [])
 
+  // The narrow-width index: open the section, move the address to it so the
+  // jump is linkable and Back returns, scroll it under the fixed chrome
+  // (`scroll-margin-top` on every id), then put focus on its heading button so
+  // the next Tab continues from there rather than from the closed list.
+  const jumpTo = (id) => {
+    flushSync(() => openSection(id))
+    // Assigning the fragment (as a link would) keeps the router's history in step.
+    if (window.location.hash !== `#${id}`) window.location.hash = id
+    const target = document.getElementById(id)
+    if (!target) return
+    target.scrollIntoView({ block: 'start' })
+    document.getElementById(`ic-head-${id}`)?.focus({ preventScroll: true })
+  }
+
   const dismissIntro = () => {
     setIntroDismissed(true)
     try { localStorage.setItem(INTRO_KEY, '1') } catch { /* quota */ }
@@ -445,9 +466,9 @@ export default function InfoCentre() {
         {/* NO TAXONOMY EYEBROW. It read "Information Centre" behind an open-book
             glyph — a 10px mono-caps label, in --accent-strong, restating the
             page's own name directly above an h1 that names it, on a route the
-            nav already has lit. The founder has marked this exact element "AI"
-            and had it deleted from the Font Gallery, Font Pair, the Type Scale,
-            the Tint tool (#382, #386) and /privacy. Hierarchy is a control, not
+            nav already has lit. This exact element reads as AI-generated and
+            has been deleted from the Font Gallery, Font Pair, the Type Scale,
+            the Tint tool and /privacy. Hierarchy is a control, not
             a label. */}
         <h1 className="ic-head-title">Everything you need to know about UIL4B</h1>
         <p className="ic-head-sub">What each tool does, the keyboard shortcuts, and how your screen measures up, all on one page.</p>
@@ -480,6 +501,18 @@ export default function InfoCentre() {
           so this is the product's own pattern rather than a new one. */}
       <div className="cpg-split">
         <div className="cpg-rail-col">
+          {/* Below 1000px the 14 links would wrap to several rows and push the
+              content down the screen, so the rail gives way to one button that
+              opens the same list as a sheet (a popover from 768). The sticky
+              rail below returns at 1000px and up. */}
+          <MenuSelect
+            className="ic-jump"
+            label="Jump to section"
+            placeholder="Jump to section"
+            value=""
+            options={JUMP_OPTIONS}
+            onChange={jumpTo}
+          />
           <nav className="cpg-rail ic-toc" aria-label="On this page">
             <ol>
               {SECTIONS.map(s => (

@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { PREVIEW_GROUPS, PREVIEW_SCENES, DEFAULT_SCENE, sceneById } from '../../src/data/palettePreviewScenes.js'
-import { CATS, LIMITS, money, tallyVars } from '../../src/components/palette/examples/Tally.data.js'
+import { CATS, LIMITS, money, tennerVars } from '../../src/components/palette/examples/Tenner.data.js'
 import { derivePaletteRoles, pairRoles } from '../../src/utils/palettePreviewRoles.js'
 import { stripJs } from '../helpers/strip-comments.js'
 
@@ -76,17 +76,17 @@ test('the viewer wraps each example only, with no scene table left for the retir
   assert.doesNotMatch(viewer, /\bSCENES\b/)
 })
 
-test("Tally's error quotes the Eating out spend, and the limit really is under it", () => {
+test("Tenner's error quotes the Eating out spend, and the limit really is under it", () => {
   const eating = CATS.find((c) => c.name === 'Eating out')
   assert.ok(LIMITS.eating.error.includes(money(eating.amount)), 'the error message no longer prints the Eating out amount')
   assert.ok(LIMITS.eating.limit < eating.amount, 'the limit is no longer under the spend, so the error is not true')
 })
 
-test("Tally's Limits form is left out of a two-colour pair and its focus ring is always a real colour", () => {
-  assert.match(read('src/components/palette/examples/Tally.jsx'), /\{!pair && <Limits \/>\}/)
-  assert.equal(tallyVars(pairRoles('#222222', '#fafafa')).pair, true)
+test("Tenner's Limits form is left out of a two-colour pair and its focus ring is always a real colour", () => {
+  assert.match(read('src/components/palette/examples/Tenner.jsx'), /\{!pair && <Limits \/>\}/)
+  assert.equal(tennerVars(pairRoles('#222222', '#fafafa')).pair, true)
   const roles = derivePaletteRoles(['#f2c14e', '#1c2541', '#ffd43b', '#e8f0fe', '#0b132b'], { mode: 'light' })
-  const { vars, pair } = tallyVars(roles)
+  const { vars, pair } = tennerVars(roles)
   assert.equal(pair, false)
   assert.match(vars['--ty-ring'], /^#[0-9a-f]{6}$/i)
 })

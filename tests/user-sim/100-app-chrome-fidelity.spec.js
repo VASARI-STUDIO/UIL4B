@@ -84,7 +84,7 @@ test.describe('the mega menus', () => {
       }).map((el) => el.className))
       expect(boxes, `${name}: a panel inside the panel`).toEqual([])
       await expect(menu.locator('.pnav-menu-foot-note')).toHaveText(expectFoot[name])
-      await expect(menu.locator('.pnav-menu-foot-link')).toHaveText(`View all ${name.toLowerCase()} tools`)
+      await expect(menu.locator('.pnav-menu-foot-link')).toHaveText(name === 'Learn' ? 'See all guides' : `View all ${name.toLowerCase()} tools`)
       await expect(menu.locator('.pnav-tool-desc')).toHaveCount(0)
       await page.keyboard.press('Escape')
     }

@@ -32,8 +32,7 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
     // It used to be a <small> nested inside the Ratio stat, so this assertion
     // read both strings off one accessible name. That button copies, which is
     // why a nested control was impossible and the nearest standard could only
-    // ever be read — the founder's report on 2026-09-15 was exactly that: he
-    // typed a measured 1280×589, was shown its neighbour, and had no way into
+    // ever be read: a measured 1280×589 showed its neighbour with no way into
     // it, so the size ladder underneath kept building from the partial ratio.
     //
     // The assertion moves onto the markup that ships and gets stronger with it:

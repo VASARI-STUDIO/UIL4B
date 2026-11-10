@@ -1,8 +1,7 @@
 // What /create/palette opens on, and what Reset returns it to.
 //
-// Founder request, 2026-09-03: "the pallete page should auto load a random
-// pallete on the default free settings. reset should reset the settings to
-// default but randomise the colour."
+// The palette page auto-loads a random palette on the default free settings.
+// Reset puts the settings back to default but randomises the colour.
 //
 // This lives apart from PaletteBuilder.jsx for the same reason utils/
 // paletteSeed.js does: a plain module can be imported by a node:test unit

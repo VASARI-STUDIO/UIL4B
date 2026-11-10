@@ -58,8 +58,8 @@ export function exceedsCanvasLimit(w, h) {
 
 // ── The sizes offered, and why they are named rather than numbered ──────────
 //
-// Founder, 2026-09-15: "max dimensions should be resolution scales, such as 4k,
-// 2k, 1k, 720p." The list read 3840 / 1920 / 1200 / 800 — four bare numbers,
+// Max dimensions are resolution scales, such as 4K, 2K, 1K and 720p. The list
+// used to read 3840 / 1920 / 1200 / 800 — four bare numbers,
 // two of which (1200, 800) correspond to nothing anyone names.
 //
 // Each entry carries BOTH the name and the pixel count, because the two

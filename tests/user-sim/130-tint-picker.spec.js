@@ -2,7 +2,8 @@
 //
 // Four things were wrong, found on the live Tint page:
 //   · the toolbar's back arrow went to /projects even when the person had just
-//     come from the Palette Builder ("Open in Tint Generator");
+//     come from the Palette Builder ("Open in Tint Generator"). It now always goes
+//     to the tools index (/tools), the browser history never decides it;
 //   · at 1440, scrolling with the picker open left the panel pinned under the nav
 //     over "Copy variables" while its trigger scrolled away;
 //   · at 390 the picker was clamped under the nav, covered the tool header and
@@ -11,8 +12,9 @@
 //     screen, and the black preset vanished into the dark panel.
 //
 // MUTATIONS (each should fail the test named after it):
-//   · ToolBack: drop the `navigate(-1)` branch                -> "back arrow … palette"
-//   · ToolBack: test `key !== 'default'` again              -> "a redirect landing (/tints) …"
+//   · ToolBack: default `history` back to true (or `to` to /projects) -> "back arrow … tools index"
+//     (the history-aware back and the redirect-landing case now belong to a tool that opts in with
+//      `history`; no tool does today, so there is no test for them here)
 //   · usePopover: drop `closeWhenAnchorLeaves` from the picker -> "scrolling … closes"
 //   · global.css: delete the `@media(max-width:767px)` cpk sheet block
 //                                                              -> "390 · the picker is a sheet …"
@@ -55,7 +57,7 @@ async function openWithRecent(page) {
 }
 
 test.describe('the Tint back arrow', () => {
-  test('back arrow from palette -> tint returns to /create/palette', async ({ page }) => {
+  test('back arrow from palette -> tint still goes to the tools index', async ({ page }) => {
     watch(page, 'designer sending a palette colour to the Tint tool and changing their mind')
     await go(page, '/create/palette')
     await page.locator('.plb-ramp').first().click()
@@ -63,34 +65,22 @@ test.describe('the Tint back arrow', () => {
     await page.getByRole('button', { name: 'Open in Tint Generator' }).click()
     await expect(page).toHaveURL(/\/create\/tint$/)
 
-    // Named for where it goes, not for the workspace it used to go to.
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to previous page' })
-    await expect(back).toBeVisible()
-    await back.click()
-    await expect(page).toHaveURL(/\/create\/palette$/)
-  })
-
-  test('a direct landing on Tint keeps the workspace fallback', async ({ page }) => {
-    watch(page, 'designer opening Tint from a bookmark')
-    await go(page, '/create/tint')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to workspace' })
-    await expect(back).toHaveAttribute('href', '/projects')
-    await back.click()
-    await expect(page).toHaveURL(/\/projects$/)
-  })
-
-  test('a redirect landing (/tints) keeps the workspace fallback, not a dead "previous page"', async ({ page }) => {
-    watch(page, 'designer opening an old /tints bookmark')
-    await go(page, '/tints')
-    await expect(page).toHaveURL(/\/create\/tint$/)
-    // The redirect replaced the entry, so nothing in the app is behind it.
-    expect(await page.evaluate(() => window.history.state?.idx)).toBe(0)
+    // Always the tools index, not the browser history.
     const toolbar = page.locator('[data-tool-toolbar]')
     await expect(toolbar.getByRole('link', { name: 'Back to previous page' })).toHaveCount(0)
-    const back = toolbar.getByRole('link', { name: 'Back to workspace' })
-    await expect(back).toHaveAttribute('href', '/projects')
+    const back = toolbar.getByRole('link', { name: 'Back to all tools' })
+    await expect(back).toHaveAttribute('href', '/tools')
     await back.click()
-    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page).toHaveURL(/\/tools$/)
+  })
+
+  test('a direct landing on Tint goes to the tools index', async ({ page }) => {
+    watch(page, 'designer opening Tint from a bookmark')
+    await go(page, '/create/tint')
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
+    await expect(back).toHaveAttribute('href', '/tools')
+    await back.click()
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 
@@ -157,9 +147,14 @@ test.describe('390 · the picker on a phone', () => {
     expect(pop.top >= trigger.bottom, 'the trigger is clear above the sheet').toBe(true)
     expect(trigger.top, 'and it is still below the toolbar').toBeGreaterThanOrEqual(toolbar.bottom)
 
-    // Nothing scrolls inside it: the second preset row is whole.
-    const overflow = await picker.evaluate((el) => el.scrollHeight - el.clientHeight)
-    expect(overflow).toBeLessThanOrEqual(1)
+    // Where the sheet is shorter than its content (the project's palette and
+    // semantic presets add rows) it scrolls, and then it must say so: the fade at
+    // the bottom edge is drawn while content remains below, so a cut-off row never
+    // reads as the end of the list.
+    const { overflow, more } = await picker.evaluate((el) => ({
+      overflow: el.scrollHeight - el.clientHeight, more: el.hasAttribute('data-more'),
+    }))
+    if (overflow > 1) expect(more, 'a sheet with more below shows the fade').toBe(true)
   })
 
   test('every preset can be reached and hit', async ({ page }) => {
@@ -219,7 +214,9 @@ test.describe('390x520 · a short phone', () => {
     const last = picker.locator('.cpk-section:not(.cpk-recents) .cpk-swatch').last()
     await picker.evaluate((el) => { el.scrollTop = el.scrollHeight })
     await expect.poll(async () => (await state()).atEnd).toBe(true)
-    expect((await state()).more, 'the cue goes once the end is reached').toBe(false)
+    // The cue is cleared by the panel's scroll listener, which runs a frame
+    // after scrollTop is set, so it is waited for rather than read at once.
+    await expect.poll(async () => (await state()).more, { message: 'the cue goes once the end is reached' }).toBe(false)
     const reached = await last.evaluate((el) => {
       const b = el.getBoundingClientRect()
       return document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2) === el

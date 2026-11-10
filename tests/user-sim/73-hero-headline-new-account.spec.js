@@ -1,9 +1,8 @@
-// THE TWO DECISIONS THE FOUNDER MADE ON 2026-09-10, RENDERED.
+// THE TWO HEADLINE DECISIONS, RENDERED.
 //
-// Both had been sitting open in docs/RELEASE-READINESS.md § 2 with an agent's
-// measurement under them and no answer. He answered both on the same day, and
-// this file is the record that the answers are what actually ships — not what a
-// comment or a changelog line says ships.
+// Both had been open, with a measurement under them and no answer. Both are now
+// decided, and this file is the record that the answers are what actually ships
+// — not what a comment or a changelog line says ships.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · THE HERO HEADLINE IS APPROVED
@@ -97,49 +96,22 @@ async function saveFromBuilder(page, name) {
   await page.keyboard.press('Enter')
 }
 
-// THE SENTENCE HE APPROVED, TYPED OUT. Not imported — that is the whole point.
-// An assertion that the page renders `heroHeadlineText()` is satisfied by any
-// headline the module happens to hold; this one is satisfied only by his.
-// The front door uses the Spectrum design's headline. Still typed out, for
-// the same reason: only the design's sentence satisfies this, not whatever the
-// module happens to hold. The accent run reveals as ONE word, as drawn.
-const APPROVED = 'Build and export UI and brand kits from one place.'
-const APPROVED_MARK = 'one place'
-const APPROVED_UNITS = APPROVED.split(' ').length - (APPROVED_MARK.split(' ').length - 1)
+// THE APPROVED SENTENCE, TYPED OUT. Not imported: an assertion that the page
+// renders `heroHeadlineText()` is satisfied by any headline the module happens
+// to hold; this one is satisfied only by the approved wording.
+const APPROVED = 'Your UI and brand kit, from one app.'
+const APPROVED_MARK = 'one app'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HOW THE SENTENCE IS READ OFF SPECTRUM, AND WHY IT IS NOT `h1.innerText()`
-// ─────────────────────────────────────────────────────────────────────────────
-// Home.jsx painted the headline as two `.home-hero-line-in` spans and the h1's
-// innerText WAS the sentence. `<SpectrumWords>` paints it twice on purpose: a
-// `.sr-only` span carrying the whole sentence once for a screen reader, and an
-// `aria-hidden` visual split of one `.sp-w` per word inside a `.sp-wm` clipping
-// mask, because there is no CSS that can clip and offset individual words of a
-// text node. So `h1.innerText()` now returns the approved sentence CONCATENATED
-// WITH ITSELF — measured, and it is exactly what this test failed on after the
-// route swap.
-//
-// Reading the words is therefore the right subject and the stronger one: the
-// visual split is what a sighted visitor reads, and joining `.sp-w` proves the
-// split itself is intact — a lost space, a dropped word or a word rendered out
-// of order all fail here, and none of them would move `innerText`. The sr-only
-// copy is asserted separately below, because a screen-reader user and a sighted
-// one must be given the SAME sentence and nothing before this checked that.
-//
-// SCOPED TO `.sp-hero-h1`, always. `<SpectrumWords>` paints the section
-// headings too; an unscoped `.sp-w` matches 47 elements on this page.
-const HERO_WORDS = '.sp-hero-h1 .sp-words-visual .sp-w'
-const HERO_MARKED = '.sp-hero-h1 .sp-words-visual .sp-w--mark'
+// The hero headline is plain text in one h1, with the marked run in a single
+// span. It is scoped to `.hh-h1`, always: the page has other headings.
+// `textContent`, not `innerText`: innerText applies `text-transform`, so a
+// stylesheet that uppercased the hero would turn an equality against the
+// sentence into a failure about CSS rather than about copy.
+const HERO_H1 = 'main section#top h1.hh-h1'
+const HERO_MARKED = `${HERO_H1} .hh-h1-mark`
+const sentence = (s) => (s || '').replace(/\s+/g, ' ').trim()
 
-// `textContent`, not `innerText`, and that is not tidiness: innerText applies
-// `text-transform`, so a stylesheet that uppercased the hero would turn an
-// equality against the design's sentence into a failure about CSS rather than about
-// copy — and the claim here is what the page SAYS.
-const joinWords = async (locator) =>
-  (await locator.evaluateAll((els) => els.map((el) => (el.textContent || '').trim())))
-    .filter(Boolean).join(' ')
-
-/** A context at one width, in one theme — the shape 72-flow-followups uses. */
+/** A context at one width, in one theme. */
 async function open(browser, [w, h], theme = 'light') {
   const context = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: theme })
   await context.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* private mode */ } }, theme)
@@ -150,69 +122,41 @@ async function open(browser, [w, h], theme = 'light') {
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · THE APPROVED HEADLINE, ON THE PAGE
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('the hero headline the founder approved on 2026-09-10 is the one that ships', () => {
+test.describe('the approved hero headline is the one that ships', () => {
   for (const size of WIDTHS) {
-    test(`${size[0]}px: the h1 is his sentence, word for word, with his run highlighted`, async ({ browser }) => {
+    test(`${size[0]}px: the h1 is the approved sentence, word for word, with its run highlighted`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a first-time visitor reading the first sentence on the site (${size[0]}px)`)
       await go(page, '/')
       // The homepage has to have PAINTED before an absence or an equality on it
-      // means anything — a boot shell and an ErrorBoundary card both carry an
+      // means anything: a boot shell and an ErrorBoundary card both carry an
       // <h1> of their own.
       await expectRendered(page, '/')
 
-      const h1 = page.locator('main h1.sp-hero-h1')
+      const h1 = page.locator(HERO_H1)
       await expect(h1).toBeVisible()
+      await expect(page.locator('main h1'), 'the page must carry exactly one h1').toHaveCount(1)
 
-      const words = page.locator(HERO_WORDS)
-      // POSITIVE CONTROL for the join below: a headline that rendered no words
-      // would join to '' and every equality here would be reporting on nothing.
-      await expect(words, 'the hero headline painted no words at all')
-        .toHaveCount(APPROVED_UNITS)
-      const text = await joinWords(words)
-
+      const text = sentence(await h1.evaluate((el) => el.textContent))
       expect(text,
-        'the hero headline is not the sentence the founder approved on 2026-09-10. It is '
-        + 'assembled only from words he wrote and he read it before saying ship it — do not '
-        + 'reword it, in the page or in src/data/positioning.js, without asking him again.',
+        'the hero headline is not the approved sentence. Do not reword it, in the page or in '
+        + 'src/data/positioning.js, without getting the new wording approved.',
       ).toBe(APPROVED)
 
       // …and it agrees with the module, so the page is still DERIVING it rather
       // than having grown a typed copy that happens to match today.
       expect(text, 'the hero no longer renders src/components/spectrum/spectrumHero.js').toBe(SPECTRUM_HERO.text)
 
-      // THE SCREEN READER IS GIVEN THE SAME SENTENCE. `<SpectrumWords>` carries
-      // it once in a `.sr-only` span precisely because the visual split would
-      // otherwise be announced one word per line; if that copy ever drifts from
-      // the words beside it, two readers meet two different headlines and only
-      // one of them is the one he approved.
-      const spoken = await h1.locator('.sr-only').evaluate((el) => el.textContent || '')
-      expect(spoken.replace(/\s+/g, ' ').trim(),
-        'the headline a screen reader is given is not the one on screen',
-      ).toBe(APPROVED)
+      // No per-word wrappers: one text node run, one marked span.
+      await expect(h1.locator('.sp-w, [data-sp-w], .sr-only')).toHaveCount(0)
 
-      // THE HIGHLIGHT IS PART OF WHAT HE APPROVED. Moving a word across the
-      // lead/mark boundary leaves the sentence identical and changes what the
-      // page paints and what the share card paints.
-      //
-      // ONE RUN, NOT ONE ELEMENT. Home.jsx wrapped the run in a single <mark>;
-      // SpectrumWords marks it a word at a time, so the design-language budget
-      // of one --hi run per viewport is now a statement about CONTIGUITY rather
-      // than about node count. Asserted as both: the marked words join to his
-      // phrase, and they are consecutive in the headline — a second highlighted
-      // run elsewhere in the sentence would satisfy neither.
+      // THE HIGHLIGHT IS PART OF THE APPROVED HEADLINE. Moving a word across
+      // the lead/mark boundary leaves the sentence identical and changes what
+      // the page paints and what the share card paints. The full stop stays
+      // outside the run.
       const marked = page.locator(HERO_MARKED)
       await expect(marked, 'the hero highlights no run at all').toHaveCount(1)
-      // Trailing punctuation belongs to the sentence, not to the run: the mark
-      // ends the headline, so its last word renders as "location." while the
-      // run he approved is "…location". SpectrumWords matches it the same way.
-      expect((await joinWords(marked)).replace(/[.,;:!?]+$/, '')).toBe(APPROVED_MARK)
-      const contiguous = await page.locator('.sp-hero-h1 .sp-words-visual').evaluate((el) => {
-        const all = [...el.querySelectorAll('.sp-w')]
-        const hit = all.map((w, i) => (w.classList.contains('sp-w--mark') ? i : -1)).filter((i) => i > -1)
-        return hit.length > 0 && hit[hit.length - 1] - hit[0] === hit.length - 1
-      })
-      expect(contiguous, 'the highlighted words are not one contiguous run').toBe(true)
+      expect(sentence(await marked.evaluate((el) => el.textContent))).toBe(APPROVED_MARK)
       expect(SPECTRUM_HERO.mark).toBe(APPROVED_MARK)
 
       await context.close()

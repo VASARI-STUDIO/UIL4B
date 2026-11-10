@@ -129,32 +129,39 @@ test('every weight the surface asks for is inside Geist\'s 300..700 axis', () =>
     + 'so the page ships a weight nobody chose — remap it rather than leaving it.')
 })
 
-test('every value a person reads is in the mono face', () => {
-  // The rule that makes this surface look like this product. Each selector
-  // below is a figure, an id, a date or a status — something read off the
-  // screen or copied — and each must be carried by var(--mono).
-  const MUST_BE_MONO = [
+test('admin figures set in the UI face with tabular figures; only ids stay mono', () => {
+  // The mono voice is retired from figures (design 2026-10-29, mono-retire;
+  // tests/unit/mono-voice-allowlist.test.js holds the list). A count, a bar
+  // value or a plan cadence is read down a column, so it needs tabular figures
+  // and letter-spacing 0, in Geist. Mono stays on text that is copied as code.
+  const bodiesOf = (sel) => [...stripComments(CSS).matchAll(/([^{}]+)\{([^}]*)\}/g)]
+    .filter(([, selector]) => selector.split(',').some((s) => s.trim() === sel))
+    .map(([, , body]) => body)
+
+  const FIGURES = [
     '.adm-stat-value',
     '.adm-user-view-n',
     '.adm-bar-value',
     '.adm-donut-count',
     '.adm-user-count',
-    '.adm-copy-value',
     '.adm-plan-interval',
     '.adm-tab-badge',
   ]
-  const missing = MUST_BE_MONO.filter((sel) => {
-    // The selector appears in some rule whose block sets the mono family.
-    const re = new RegExp(`(^|[,\\s])${sel.replace('.', '\\.')}\\s*[,{][^}]*?font-family:\\s*var\\(--mono\\)`, 's')
-    // Rules are authored as selector lists, so search each block that names it.
-    const blocks = [...CSS.matchAll(/([^{}]+)\{([^}]*)\}/g)]
-    return !blocks.some(([, selector, body]) => (
-      selector.split(',').some((s) => s.trim() === sel)
-      && /font-family:\s*var\(--mono\)/.test(body)
-    )) && !re.test(CSS)
+  const wrong = FIGURES.filter((sel) => {
+    const bodies = bodiesOf(sel).join('\n')
+    return !bodies
+      || /var\(--mono\)/.test(bodies)
+      || !/font-family:\s*var\(--font\)/.test(bodies)
+      || !/font-variant-numeric:\s*tabular-nums/.test(bodies)
+      // the last letter-spacing declared is the one that wins
+      || !/^0(px|em)?$/.test([...bodies.matchAll(/letter-spacing:\s*([^;}\s]+)/g)].pop()?.[1] ?? '')
   })
-  assert.deepEqual(missing, [],
-    'these carry a value a person reads and are not in var(--mono):\n  ' + missing.join('\n  '))
+  assert.deepEqual(wrong, [],
+    'these figures must be var(--font) with tabular-nums and letter-spacing 0:\n  ' + wrong.join('\n  '))
+
+  const STILL_MONO = ['.adm-copy-value']
+  const lost = STILL_MONO.filter((sel) => !bodiesOf(sel).some((body) => /font-family:\s*var\(--mono\)/.test(body)))
+  assert.deepEqual(lost, [], 'these carry an id and should stay in var(--mono):\n  ' + lost.join('\n  '))
 
   // AND THE OTHER HALF: the mono rule must not have been applied to the whole
   // surface, which would satisfy the list above and destroy the contrast it
@@ -240,8 +247,8 @@ test('the restyle did not reinstate anything #484 removed', () => {
   const tabs = admin.match(/const TABS = \[([\s\S]*?)\n\]/)
   assert.ok(tabs, 'the TABS array is unreadable, so this is checking nothing')
   const ids = [...tabs[1].matchAll(/id:\s*'([a-z]+)'/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'community', 'prompts', 'stripe'],
-    'the tab set moved — #484 settled it at these six')
+  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'generated', 'community', 'prompts', 'stripe'],
+    'the tab set moved — #484 settled it at these six, and Generated (crash reports, listed apart from what people wrote) was added after')
 
   for (const dead of ['getPageViews', 'getSessions', 'getDesignAnalytics']) {
     assert.ok(!admin.includes(`${dead}(`),

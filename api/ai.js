@@ -10,10 +10,17 @@ import {
   altTextOutcome,
   altTextCutoffReply,
   ALT_TEXT_CUTOFF_REFUND_CAP,
+  thinkingConfigFor,
 } from './_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from './_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
 import { aiAccountRefusal, aiSharedRefusal, imagePayloadProblem } from './_lib/aiLimits.js'
+import {
+  geminiRegionBlocked,
+  REGION_BLOCKED_STATUS,
+  REGION_BLOCKED_CODE,
+  REGION_BLOCKED_ERROR,
+} from './_lib/geoBlock.js'
 import {
   BRAND_STARTER_TOOL_ID,
   MAX_PROMPT_CHARS,
@@ -40,6 +47,7 @@ import {
 //   task 'scan-photo'      → toolId 'scan-photo'      (Gemini vision, photo-rule JSON)
 //   task 'generate-prompt' → toolId 'prompts-ai'      (OpenRouter → Gemini fallback)
 //   task 'brand-starter'   → toolId 'brand-starter'   (OpenRouter → Gemini fallback)
+// Vision tasks refuse EEA, UK and CH visitors with 451; text tasks skip the Gemini fallback there.
 //
 // 'brand-starter' is a MODE here rather than a route of its own for the reason
 // this file exists: /api holds twelve handlers and Vercel allows twelve on this
@@ -71,7 +79,9 @@ const OPENROUTER_MODEL = (process.env.OPENROUTER_MODEL || 'deepseek/deepseek-cha
 const OPENROUTER_REFERER = process.env.OPENROUTER_SITE_URL || 'https://uil4b.com'
 // Allowlist, not a denylist: prompts only reach these US-based, zero-retention hosts, so a new host never gets them by default.
 const OPENROUTER_PROVIDER = { only: ['deepinfra'], data_collection: 'deny', zdr: true }
-const GEMINI_MODEL = 'gemini-2.0-flash'
+// Scan Photo and the text fallback. Alt Text picks its own model per plan (modelFor).
+// 2.0 Flash is retired, so this is the 2.5 Flash that Alt Text already runs.
+export const GEMINI_MODEL = 'gemini-2.5-flash'
 
 // `daysAgo` days back, as YYYY-MM-DD. The provider-health window reads a fixed
 // set of day docs by id, which needs no composite index and no ordering trick.
@@ -325,7 +335,7 @@ async function runScanPhoto(req, res) {
     return res.status(400).json({ error: 'unsupported mimeType' })
   }
 
-  const model = 'gemini-2.0-flash'
+  const model = GEMINI_MODEL
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`
 
   try {
@@ -349,6 +359,7 @@ async function runScanPhoto(req, res) {
           generationConfig: {
             temperature: 0.3,
             maxOutputTokens: 1000,
+            ...(thinkingConfigFor(model) ? { thinkingConfig: thinkingConfigFor(model) } : {}),
           },
         }),
       })
@@ -462,7 +473,10 @@ async function callGemini(userMessage, opts = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: `${opts.system || PROMPT_SYSTEM_PROMPT}\n\n${userMessage}` }] }],
-      generationConfig: { temperature: opts.temperature ?? 0.75, maxOutputTokens: opts.maxTokens ?? 600, topP: 0.9 },
+      generationConfig: {
+        temperature: opts.temperature ?? 0.75, maxOutputTokens: opts.maxTokens ?? 600, topP: 0.9,
+        ...(thinkingConfigFor(GEMINI_MODEL) ? { thinkingConfig: thinkingConfigFor(GEMINI_MODEL) } : {}),
+      },
     }),
   })
   if (!r.ok) {
@@ -657,10 +671,12 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
     summary = `No prompt generations in the last ${window} days, so nothing has exercised the OpenRouter path. This is not a pass — generate one prompt and look again.`
   } else if (totals.openrouterFail === 0) {
     status = 'ok'
-    summary = `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
+    summary = totals.openrouterOk === 1
+      ? `OpenRouter served the only generation in the last ${window} days.`
+      : `OpenRouter served all ${totals.openrouterOk} generations in the last ${window} days.`
   } else if (totals.openrouterOk === 0) {
     status = 'failing'
-    summary = `OpenRouter failed all ${totals.openrouterFail} times in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
+    summary = `OpenRouter failed ${totals.openrouterFail === 1 ? 'the only time it was tried' : `all ${totals.openrouterFail} times`} in the last ${window} days. EVERY generation came from the Gemini fallback, and every one of them looked perfectly fine to the user.`
   } else {
     status = 'degraded'
     summary = `OpenRouter failed ${totals.openrouterFail} of ${attempts} attempts in the last ${window} days.`
@@ -761,7 +777,7 @@ The object has exactly these keys:
 
 {
   "name": "a short name for this direction, 2-4 words, max 48 characters",
-  "rationale": "one plain sentence, max 200 characters, saying what the brief asked for and what you did about it",
+  "rationale": "one plain sentence, max 200 characters, saying what the brief asked for and how the draft answers it",
   "palette": [ { "role": "Background", "hex": "#FFFFFF" }, ... ],
   "fonts": { "heading": "Family Name", "body": "Family Name" },
   "typeScale": { "base": 16, "ratio": 1.25 }
@@ -791,7 +807,7 @@ ${fontChoiceList()}
 
 # rationale
 
-One sentence, in plain English, that a designer would accept from a colleague. Say what in the brief drove the choice. Do not use "effortless", "elevate", "seamless", "cutting-edge", "vibrant" or "modern". Do not praise the brief and do not praise your own answer.
+One sentence, in plain Australian English (colour, centre, organise), that a designer would accept from a colleague. Say what in the brief drove the choice. Write about the draft, never as yourself: no "I", "we" or "my". Write "Soft, neutral colours keep the focus on the product", not "I chose soft, neutral colors". Do not use "effortless", "elevate", "seamless", "cutting-edge", "vibrant" or "modern". Do not praise the brief and do not praise your own answer.
 
 # If the brief is thin
 
@@ -828,7 +844,8 @@ async function runBrandStarter(req, res, { plan, bucket, used }) {
     }
   }
 
-  if (!text && GEMINI_KEY) {
+  // No Gemini fallback for visitors in a blocked region (Google's terms).
+  if (!text && GEMINI_KEY && !geminiRegionBlocked(req.headers)) {
     try {
       text = await callGemini(userMessage, opts)
       servedBy = 'gemini'
@@ -927,7 +944,8 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     }
   }
 
-  if (!prompt && GEMINI_KEY) {
+  // No Gemini fallback for visitors in a blocked region (Google's terms).
+  if (!prompt && GEMINI_KEY && !geminiRegionBlocked(req.headers)) {
     try {
       prompt = await callGemini(userMessage)
       provider = 'gemini'
@@ -976,6 +994,7 @@ const TASKS = {
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
     validate: (body) => imageRequestProblem(body, ALT_TEXT_MIME),
+    geminiOnly: true,
     run: runAltText,
     cutoffRefundCap: ALT_TEXT_CUTOFF_REFUND_CAP,
   },
@@ -985,6 +1004,7 @@ const TASKS = {
     configError: 'AI is not configured on the server: GEMINI_API_KEY is missing.',
     configured: () => Boolean(GEMINI_KEY),
     validate: (body) => imageRequestProblem(body, SCAN_PHOTO_MIME),
+    geminiOnly: true,
     run: runScanPhoto,
   },
   'generate-prompt': {
@@ -1125,9 +1145,9 @@ async function serveBacklog(req, res) {
       return res.status(501).json({
         localOnly: true,
         modules: ['src/data/pipeline.js', 'src/data/moduleBoard.js'],
-        error: 'The internal boards are not part of this deployment. They are kept out of this public '
-          + 'repository, so this build has nothing to read. This is not an empty backlog: the rows '
-          + 'exist, on a checkout that has the files.',
+        error: 'The internal boards are not part of this deployment: their data files are kept out of '
+          + 'this public repository, so this build has nothing to read. THIS IS NOT AN EMPTY BACKLOG — '
+          + 'the rows exist on a checkout that has the files.',
       })
     }
     // Named in words rather than swallowed. A board that silently rendered zero
@@ -1178,11 +1198,21 @@ function sendRefusal(res, refused) {
   res.status(refused.status).json(refused.body)
 }
 
+// Per-visitor answer, so it must never be cached or shared between visitors.
+function serveRegion(req, res) {
+  res.setHeader('Cache-Control', 'private, no-store')
+  return res.status(200).json({ blocked: geminiRegionBlocked(req.headers) })
+}
+
 export default async function handler(req, res) {
   // ── The Pipeline board ────────────────────────────────────────────────────
   // GET /api/ai?backlog=1. Ahead of the diagnostic because it is a different
   // question with the same gate; see serveBacklog above for why it lives here.
   if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
+
+  // GET /api/ai?region=1: does the Gemini region gate apply to this visitor? The
+  // tool pages ask so they can show the explanation instead of an upload box.
+  if (req.method === 'GET' && 'region' in (req.query || {})) return serveRegion(req, res)
 
   // ── This account's AI usage ───────────────────────────────────────────────
   // GET /api/ai?usage=1. Token required, read-only; see api/_lib/aiUsage.js. The
@@ -1221,6 +1251,8 @@ export default async function handler(req, res) {
       verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
       credentialProblem,
       readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+      // The themed exports (body { theme, row, format }) count against a per-account window; see exportThemeRoute.js.
+      consume: async (opts) => (await import('./_lib/rateLimit.js')).consume(adminDb(), opts),
     })
   }
 
@@ -1339,6 +1371,15 @@ export default async function handler(req, res) {
   const task = TASKS[req.body?.task]
   if (!task) {
     return res.status(400).json({ error: `Unknown task — expected one of: ${Object.keys(TASKS).join(', ')}` })
+  }
+
+  // Region gate. After auth on purpose (an anonymous caller still gets 401 and
+  // learns nothing), before the quota reservation and any provider fetch, so a
+  // refused request costs nothing. Gemini-only tasks refuse outright; a task
+  // with an OpenRouter key skips the Gemini fallback instead (see the run fns).
+  if (geminiRegionBlocked(req.headers) && (task.geminiOnly || !OPENROUTER_KEY)) {
+    res.setHeader('Cache-Control', 'no-store')
+    return res.status(REGION_BLOCKED_STATUS).json({ error: REGION_BLOCKED_ERROR, code: REGION_BLOCKED_CODE, quotaSpent: false })
   }
 
   // …and only now, to a caller Firebase has vouched for, does the server say
