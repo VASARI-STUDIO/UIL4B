@@ -39,8 +39,9 @@ ${stackBg ? `@media screen{body.stack{background:${stackBg};padding:24px 0}body.
 }
 
 // One HTML document holding one or more pages, finished for the edition (slot placeholders swapped in).
-export function pageDoc(ctx, theme, { title, pages, size, stack = false }) {
-  const faces = fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`, chromeFaces(theme));
+// fontUrl(face) is where a face loads from: the assets/fonts folder beside the document, or a data URL for a document that stands alone.
+export function pageDoc(ctx, theme, { title, pages, size, stack = false, fontUrl = (f) => `assets/fonts/${f.stem}.woff2` }) {
+  const faces = fontFaceCss(ctx, fontUrl, chromeFaces(theme));
   return finishText(`<!doctype html>
 <html lang="en-AU">
 <head><meta charset="utf-8"><meta name="viewport" content="width=${size.w}"><title>${esc(title)}</title>

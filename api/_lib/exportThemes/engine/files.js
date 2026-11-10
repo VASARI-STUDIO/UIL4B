@@ -183,18 +183,19 @@ export function kitDocs(ctx, theme) {
 const NOMINAL = { png512: 9000, png1024: 22000, png2048: 60000, logoPdf: 6000, readMePdf: 180000, palettePdf: 120000, typefacesPdf: 220000, photographyPdf: 120000 };
 
 // The kit as the book lists it: the real files plus the PNG and PDF files made outside the engine, each with a nominal size.
-// Returns [{ rel, size }] sorted by path.
-export function kitListing(ctx, theme, files) {
+// Returns [{ rel, size }] sorted by path. With outside: false the kit holds only the files given (a zip that never gets the PNGs and PDFs
+// lists none of them, so the book links nothing the download lacks).
+export function kitListing(ctx, theme, files, { outside = true } = {}) {
   const list = Object.entries(files).map(([rel, v]) => ({ rel, size: typeof v === 'string' ? Buffer.byteLength(v) : v.length }));
   const add = (rel, size) => { if (!list.some((f) => f.rel === rel)) list.push({ rel, size }); };
-  if (ctx.edition !== 'slot') {
+  if (outside && ctx.edition !== 'slot') {
     for (const id of ctx.logo.versions) {
       const n = `${ctx.slug}-${logoFileName(id)}`;
       add(`01 Logo/png/${n}-512.png`, NOMINAL.png512); add(`01 Logo/png/${n}-1024.png`, NOMINAL.png1024); add(`01 Logo/png/${n}-2048.png`, NOMINAL.png2048);
       add(`01 Logo/pdf/${n}.pdf`, NOMINAL.logoPdf);
     }
   }
-  if (theme.readMe && theme.sheets) {
+  if (outside && theme.readMe && theme.sheets) {
     add('00 Read me.pdf', NOMINAL.readMePdf); add(`02 Colour/${ctx.slug}-palette.pdf`, NOMINAL.palettePdf);
     add('03 Type/Typefaces.pdf', NOMINAL.typefacesPdf); add('05 Imagery/Photography.pdf', NOMINAL.photographyPdf);
   }
