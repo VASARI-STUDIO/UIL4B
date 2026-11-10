@@ -67,19 +67,19 @@ async function openEditor(page, { sampleName, pack = 'lucide', plan = 'pro', sch
   await go(page, '/create/icons')
   await choosePack(page, pack)
   await page.locator('.ig .ic:not(.ig-skel)').first().click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.icust-copy')).toBeEnabled({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-pri')).toBeEnabled({ timeout: 20_000 })
   await showCode(page)
   await expect(code(page)).not.toContainText('M13 2', { timeout: 20_000 })
 }
 
-const code = (page) => page.locator('.icust-code code')
+const code = (page) => page.locator('#ied-code code')
 const modeRadio = (page, name) => page.getByRole('radiogroup', { name: 'Stroke scaling' }).getByRole('radio', { name })
 const sizeRadio = (page, name) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name })
 
 async function showCode(page) {
   const details = page.locator('details.icust-code')
-  if (!(await details.evaluate((el) => el.open))) await page.locator('.icust-code-sum').click()
+  if (!(await details.evaluate((el) => el.open))) await page.locator('#ied-sec-code .ied-disc').click()
   await expect(code(page)).toBeVisible()
 }
 
@@ -93,7 +93,7 @@ async function setSize(page, n) {
     await input.fill(String(n))
     await input.press('Enter')
   }
-  await expect(page.locator('.icust-stage-cap')).toContainText(`Exports at ${n}px`)
+  await expect(page.locator('.ied-cap')).toContainText(`Exports at ${n}px`)
   await expect(code(page)).toContainText(`width="${n}" height="${n}"`)
 }
 
@@ -142,15 +142,15 @@ test.describe('the pop-up keeps its layout', () => {
     await openEditor(page, { sampleName: 'stroke-line-24', plan: 'free' })
     const box = await page.evaluate(() => {
       const r = (sel) => { const e = document.querySelector(sel); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, r: b.right, b: b.bottom } }
-      return { panel: r('.icust-panel'), left: r('.icust-left'), right: r('.icust-right'), foot: r('.icust-body > .icust-foot') }
+      return { panel: r('.ied'), left: r('.icust-left'), right: r('.icust-right'), foot: r('.icust-body > .ied-ft') }
     })
     expect(Math.round(box.panel.w), 'panel width').toBe(760)
     expect(Math.round(box.left.w), 'left column width').toBe(320)
     expect(box.right.x, 'the controls sit beside the stage column').toBeGreaterThanOrEqual(box.left.r - 1)
     expect(box.foot.y, 'the foot is under both columns').toBeGreaterThanOrEqual(Math.max(box.left.b, box.right.b) - 1)
     expect(box.foot.r - box.foot.x, 'the foot runs across both').toBeGreaterThanOrEqual(box.panel.w - 2)
-    await expect(page.locator('.icust-head .icust-sub')).toHaveText(/^[^,]+, (outline|solid)$/)
-    await expect(page.locator('.icust-left .icust-stage')).toBeVisible()
+    await expect(page.locator('.ied-hd .icust-sub')).toHaveText(/^[^,]+, (outline|solid)$/)
+    await expect(page.locator('.icust-left .ied-ground')).toBeVisible()
     await expect(page.locator('.icust-right .icust-stroke')).toBeVisible()
     const stroke = page.locator('.icust-stroke')
     await expect(stroke.locator('label')).toHaveText('Stroke')
@@ -159,9 +159,9 @@ test.describe('the pop-up keeps its layout', () => {
     await expect(pair.getByRole('radio')).toHaveText(['Relative', 'Fixed'])
     await expect(modeRadio(page, 'Relative')).toHaveAttribute('aria-checked', 'true')
     await expect(modeRadio(page, 'Fixed')).toHaveAttribute('aria-checked', 'false')
-    await expect(page.locator('.icust-stroke-note')).toHaveText('Relative: the stroke grows with the icon, 2px at 24px. Every size and PNG scale looks the same.')
+    await expect(page.locator('#ied-stroke-note')).toHaveText('Relative: the stroke grows with the icon, 2px at 24px. Every size and PNG scale looks the same.')
     await modeRadio(page, 'Fixed').click()
-    await expect(page.locator('.icust-stroke-note')).toHaveText('Fixed: the stroke is 2px at every size and PNG scale, so bigger icons look lighter.')
+    await expect(page.locator('#ied-stroke-note')).toHaveText('Fixed: the stroke is 2px at every size and PNG scale, so bigger icons look lighter.')
   })
 })
 
@@ -202,13 +202,13 @@ test.describe('the Stroke control follows the artwork', () => {
     try {
       await choosePackWhileHeld(page, 'ph')
       await page.locator('.ig .ic').first().click()
-      await expect(page.locator('.icust-stage')).toBeVisible()
+      await expect(page.locator('.ied-ground')).toBeVisible()
       await expect.poll(() => asked).toBeGreaterThan(0)
-      await expect(page.locator('.icust-stage-host svg'), 'the artwork has not arrived').toHaveCount(0)
+      await expect(page.locator('.ied-stage-host svg'), 'the artwork has not arrived').toHaveCount(0)
       await expect(page.locator('.icust-stroke'), 'Stroke shown for a Phosphor icon while it loads').toHaveCount(0)
-      await expect(page.locator('.icust-stage-host'), 'the stage drew inline before it knew the artwork').toHaveCount(0)
+      await expect(page.locator('.ied-stage-host'), 'the stage drew inline before it knew the artwork').toHaveCount(0)
       release()
-      await expect(page.locator('.icust-stage img')).toBeVisible()
+      await expect(page.locator('.ied-ground img')).toBeVisible()
       await expect(page.locator('.icust-stroke'), 'Stroke shown once the artwork arrived').toHaveCount(0)
     } finally { release() }
   })
@@ -325,7 +325,7 @@ test.describe('colour', () => {
     await expect(code(page)).toContainText('color="#000000"')
     await expect(code(page)).not.toContainText('e11d48')
     // What the stage paints: the circle follows the colour too, not only the file.
-    await expect.poll(() => page.locator('.icust-stage-host svg circle').evaluate((el) => getComputedStyle(el).stroke)).toBe('rgb(0, 0, 0)')
+    await expect.poll(() => page.locator('.ied-stage-host svg circle').evaluate((el) => getComputedStyle(el).stroke)).toBe('rgb(0, 0, 0)')
   })
 })
 
@@ -361,7 +361,7 @@ test.describe('a saved icon from the older editor', () => {
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
       await page.locator('.ig-toolbar button.ig-mine').click()
       await page.locator('.ig .ic', { hasText: saved.name }).click()
-      await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+      await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
       await showCode(page)
       await expect(code(page)).toContainText('<path', { timeout: 20_000 })
       expect(await writtenStrokeWidth(page), 'the stroke-width written on the file').toBe(widthOnFile)

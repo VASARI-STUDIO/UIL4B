@@ -18,7 +18,7 @@ const BOLT = 'M13 2 3 14h9l-1 8 10-12h-9l1-8z'
 const INLINE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path style="fill:none;stroke:#000;stroke-width:2;stroke-linecap:round" d="${BOLT}"/></svg>`
 const SHEET = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs><style>.a{fill:none;stroke:currentColor;stroke-width:1.5}</style></defs><path class="a" d="${BOLT}"/></svg>`
 
-const code = (page) => page.locator('.icust-code code')
+const code = (page) => page.locator('#ied-code code')
 
 async function paste(page, markup) {
   watch(page, PERSONA)
@@ -29,9 +29,9 @@ async function paste(page, markup) {
   await page.locator('.ig-addbtn').first().click()
   await page.getByRole('textbox', { name: 'SVG markup' }).fill(markup)
   await page.getByRole('button', { name: 'Add to stage' }).click()
-  await expect(page.locator('.icust-stage')).toBeVisible()
+  await expect(page.locator('.ied-ground')).toBeVisible()
   const details = page.locator('details.icust-code')
-  if (!(await details.evaluate((el) => el.open))) await page.locator('.icust-code-sum').click()
+  if (!(await details.evaluate((el) => el.open))) await page.locator('#ied-sec-code .ied-disc').click()
   await expect(code(page)).toContainText('M13 2')
 }
 

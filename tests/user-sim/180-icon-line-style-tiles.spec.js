@@ -40,26 +40,26 @@ async function openAs(browser, plan) {
   const cell = page.locator('.ig .ic').first()
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // The code sits in a closed disclosure; open it so its Copy can be reached.
-  await page.locator('.icust-code-sum').click()
-  await expect(page.locator('.icust-line-tile svg').first()).toBeVisible({ timeout: 20_000 })
+  await page.locator('#ied-sec-code .ied-disc').click()
+  await expect(page.locator('.ied-tile svg').first()).toBeVisible({ timeout: 20_000 })
   return { ctx, page }
 }
 
 const group = (page) => page.getByRole('radiogroup', { name: 'Line style' })
 const tile = (page, name) => group(page).getByRole('radio', { name: new RegExp(`^${name}`) })
 /** Copy SVG, then Upgrade to Pro: the one node, found by class because its name changes. */
-const primary = (page) => page.locator('.icust-copy')
+const primary = (page) => page.locator('.ied-pri')
 /** The ones that dim (aria-disabled) while a Pro setting is previewed. */
 const dimmable = (page) => ({
-  'the code Copy': page.locator('.icust-code-copy'),
+  'the code Copy': page.locator('#ied-code .ied-tn'),
   'Download SVG': page.getByRole('button', { name: 'Download SVG', exact: true }),
   'Download formats': page.getByRole('button', { name: 'Download formats', exact: true }),
   'Save to project': page.getByRole('button', { name: 'Save to project', exact: true }),
 })
-const reason = (page) => page.locator('#icust-preview-line')
-const stageCap = (page) => page.locator('.icust-stage').evaluate((el) => el.style.getPropertyValue('--ig-cap'))
+const reason = (page) => page.locator('#ied-preview-line')
+const stageCap = (page) => page.locator('.ied-ground').evaluate((el) => el.style.getPropertyValue('--ig-cap'))
 const toggle = (page) => page.getByRole('button', { name: 'Set ends and corners separately' })
 
 test('three tiles, Round selected, and each draws its own ends and corners at 56px', async ({ browser }) => {
@@ -68,9 +68,9 @@ test('three tiles, Round selected, and each draws its own ends and corners at 56
   await expect(tile(page, 'Round')).toHaveAttribute('aria-checked', 'true')
   await expect(tile(page, 'Sharp')).toHaveAttribute('aria-checked', 'false')
   await expect(tile(page, 'Crisp')).toHaveAttribute('aria-checked', 'false')
-  await expect(page.locator('.icust-seg--icon'), 'the old icon-only rows are gone').toHaveCount(0)
+  for (const name of ['Round', 'Sharp', 'Crisp']) await expect(tile(page, name), 'every style tile carries its name as text').toContainText(name)
 
-  const drawn = async (id) => page.locator(`.icust-line-tile[data-style="${id}"] svg`).first().evaluate((svg) => {
+  const drawn = async (id) => page.locator(`.ied-tile[data-style="${id}"] svg`).first().evaluate((svg) => {
     const box = svg.getBoundingClientRect()
     return { cap: svg.getAttribute('stroke-linecap'), join: svg.getAttribute('stroke-linejoin'), w: Math.round(box.width), h: Math.round(box.height) }
   })
@@ -134,7 +134,7 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
     test('a mix no tile draws leaves every tile unselected, keeps the rows open, and is Pro', async ({ browser }) => {
       const { ctx, page } = await openAs(browser, plan)
       await expect(toggle(page)).toHaveAttribute('aria-expanded', 'false')
-      await expect(page.locator('#icust-line-split')).toBeHidden()
+      await expect(page.locator('#ied-line-split')).toBeHidden()
       await toggle(page).click()
       await expect(toggle(page)).toHaveAttribute('aria-expanded', 'true')
 
@@ -175,7 +175,7 @@ test('arrow keys steer through the tiles, and focus stays in the group', async (
 test('a Pro viewer sees no hint, no reason, and exports the style', async ({ browser }) => {
   const { ctx, page } = await openAs(browser, 'pro')
   await expect(page.getByText('Sharp and Crisp are Pro', { exact: true }), 'a Pro viewer sees no hint').toHaveCount(0)
-  await expect(page.locator('.icust-line-pro')).toHaveCount(0)
+  await expect(page.locator('.ied-tile .ied-tag'), 'a Pro viewer sees no Pro tag on a tile').toHaveCount(0)
   await expect(tile(page, 'Sharp')).toHaveAccessibleName('Sharp')
   await tile(page, 'Sharp').click()
   await expect(reason(page), 'a Pro viewer is told nothing').toHaveText('')

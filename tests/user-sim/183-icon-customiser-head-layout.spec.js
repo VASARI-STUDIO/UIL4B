@@ -19,11 +19,11 @@
 // HOW TO SEE EACH FAIL (src/styles/pages/icon-emoji-library.css and src/pages/IconLibrary.jsx):
 //   .icust-sub { font-family: var(--mono) }                    -> "no label, caption, pill or count is set in mono"
 //   .icust-rot-title { text-transform: uppercase; font-family: var(--mono) } -> "nothing is uppercase mono"
-//   .icust-line-tile { padding-block: 40px }                   -> "at 1440 a stroke icon fits without scrolling"
-//   .icust-panel width 760px -> 700px (min-width:801px rule)   -> "at 1440 the panel is 760px ..."
+//   .ied-tile { padding-block: 40px }                   -> "at 1440 a stroke icon fits without scrolling"
+//   .ied width 760px -> 700px (min-width:801px rule)   -> "at 1440 the panel is 760px ..."
 //   the 801px breakpoint becomes 700px                          -> "at 800 the panel is one column"
 //   the (max-width:640px) sheet rule is dropped                 -> "at 640 and at 320 ... bottom sheet"
-//   .icust-body>.icust-foot loses position:sticky               -> "... the foot stays pinned"
+//   .icust-body>.ied-ft loses position:sticky               -> "... the foot stays pinned"
 //   handleReset stops resetting rotate                          -> "Reset appears only after a change ..."
 //   the Rotate left handler adds 90 instead of 270              -> "Rotate left and right turn the preview"
 //   <details className="icust-code"> gets `open`                -> "the SVG code is closed ..."
@@ -34,7 +34,7 @@
 //   .icust-code-caret drops out of the reduced-motion :is(...)  -> "under reduced motion ..."
 //   the (max-width:640px) stage loses `min-height:168px`, or the held note lines go back into it -> "... the stage is at most 172px"
 //   <code> loses tabIndex, role or aria-label                   -> "the open code is a named region ..."
-//   .icust-code-sum loses its pointer:coarse min-height:44px    -> "touch targets ..."
+//   #ied-sec-code .ied-disc loses its pointer:coarse min-height:44px    -> "touch targets ..."
 //   the Rotate buttons stop writing the rotation status         -> "Rotate announces ..."
 //   data-scrolls is never set (or the foot border is always on) -> "the foot's hairline ..."
 //   <ColorPickerPop> loses `portal`                             -> "the custom colour picker opens outside the scrolling column"
@@ -63,11 +63,11 @@ async function openCustomiser(browser, { width = 1440, height = 900, touch = fal
   const cell = page.locator('.ig .ic').first()
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // The rail and the stage draw the icon's own markup, so wait for it rather than for the frame.
-  await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.icust-stage-host svg')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.icust-copy')).toBeEnabled({ timeout: 20_000 })
+  await expect(page.locator('.ied-cell-s[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-stage-host svg')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-pri')).toBeEnabled({ timeout: 20_000 })
   // The sheet slides up as it opens: let every finite animation finish so a box read now is
   // where it rests (CI read the bottom edge at 639 of 640 mid-slide). A loading shimmer
   // elsewhere runs forever, so only finite ones are awaited.
@@ -77,12 +77,12 @@ async function openCustomiser(browser, { width = 1440, height = 900, touch = fal
   return { ctx, page }
 }
 
-const panel = (page) => page.locator('.icust-panel')
-const head = (page) => page.locator('.icust-head')
+const panel = (page) => page.locator('.ied')
+const head = (page) => page.locator('.ied-hd')
 const reset = (page) => head(page).getByRole('button', { name: 'Reset', exact: true })
-const summary = (page) => page.locator('.icust-code-sum')
+const summary = (page) => page.locator('#ied-sec-code .ied-disc')
 const codeBox = (page) => page.locator('.icust-code-box')
-const codeCopy = (page) => page.locator('.icust-code-copy')
+const codeCopy = (page) => page.locator('#ied-code .ied-tn')
 const rotLeft = (page) => page.getByRole('button', { name: 'Rotate left', exact: true })
 const rotRight = (page) => page.getByRole('button', { name: 'Rotate right', exact: true })
 const flipH = (page) => page.getByRole('button', { name: 'Flip horizontally', exact: true })
@@ -91,7 +91,7 @@ const sizeRadio = (page, name) => page.getByRole('radiogroup', { name: 'Export s
 
 /** The stage drawing's computed transform, rounded so 6e-17 reads as 0 ('none' stays 'none'). */
 async function stageTransform(page) {
-  return page.locator('.icust-stage-host svg').evaluate((el) => {
+  return page.locator('.ied-stage-host svg').evaluate((el) => {
     const t = getComputedStyle(el).transform
     if (t === 'none') return t
     return t.replace(/-?\d+(\.\d+)?(e-?\d+)?/g, (n) => String(Math.round(Number(n) * 1000) / 1000 + 0))
@@ -107,8 +107,8 @@ const boxes = (page) => page.evaluate(() => {
     return { x: b.x, y: b.y, w: b.width, h: b.height, r: b.right, b: b.bottom }
   }
   return {
-    panel: r('.icust-panel'), left: r('.icust-left'), right: r('.icust-right'), foot: r('.icust-body > .icust-foot'),
-    body: r('.icust-body'), head: r('.icust-head'), vh: window.innerHeight, vw: window.innerWidth,
+    panel: r('.ied'), left: r('.icust-left'), right: r('.icust-right'), foot: r('.icust-body > .ied-ft'),
+    body: r('.icust-body'), head: r('.ied-hd'), vh: window.innerHeight, vw: window.innerWidth,
   }
 })
 
@@ -139,7 +139,7 @@ function typeSweep(page) {
     const bad = []
     let seen = 0
     let codeSeen = 0
-    for (const el of document.querySelectorAll('.icust-panel, .icust-panel *')) {
+    for (const el of document.querySelectorAll('.ied, .ied *')) {
       if (!el.getClientRects().length) continue
       const cs = getComputedStyle(el)
       const mono = isMono(cs)
@@ -176,7 +176,7 @@ test.describe('type: mono is only for literal values', () => {
 
     await rotRight(page).click()
     await tileFor(page, 'Sharp').click()
-    await expect(page.locator('#icust-preview-line')).not.toBeEmpty()
+    await expect(page.locator('#ied-preview-line')).not.toBeEmpty()
     expect((await typeSweep(page)).bad, 'Reset showing and a Pro preview line showing').toEqual([])
     await ctx.close()
   })
@@ -196,9 +196,9 @@ test.describe('layout', () => {
     // It is a stroke icon (it has a Stroke row), the code is closed, and no custom row is open.
     await expect(page.getByLabel('Stroke width in pixels').first()).toBeVisible()
     await expect(page.locator('details.icust-code')).not.toHaveAttribute('open', /.*/)
-    await expect(page.locator('.icust-size-custom')).toHaveCount(0)
+    await expect(page.locator('.ied-cell-s--custom')).toHaveCount(0)
     // The Similar row arrives with the grid's list; measure with it in, as a person sees it.
-    await page.locator('.icust-similar-btn').first().waitFor({ state: 'visible', timeout: 8_000 }).catch(() => {})
+    await page.locator('.ied-sim').first().waitFor({ state: 'visible', timeout: 8_000 }).catch(() => {})
 
     const m = await page.evaluate(() => {
       const m = (sel) => { const el = document.querySelector(sel); return { sh: el.scrollHeight, ch: el.clientHeight } }
@@ -213,7 +213,7 @@ test.describe('layout', () => {
 
   test("the foot's hairline shows only while a column can scroll", async ({ browser }) => {
     const edge = (page) => page.evaluate(() => {
-      const foot = document.querySelector('.icust-body > .icust-foot')
+      const foot = document.querySelector('.icust-body > .ied-ft')
       const body = document.querySelector('.icust-body')
       const cs = getComputedStyle(foot)
       return { scrolls: body.hasAttribute('data-scrolls'), colour: cs.borderTopColor, width: cs.borderTopWidth, shadow: cs.boxShadow }
@@ -242,7 +242,7 @@ test.describe('layout', () => {
       await page.getByRole('radiogroup', { name: 'Colour', exact: true }).getByRole('radio', { name: 'Custom' }).click()
       const pop = page.getByRole('dialog', { name: 'Custom colour' })
       await expect(pop).toBeVisible()
-      expect(await pop.evaluate((el) => !!el.closest('.icust-right, .icust-panel')), 'the picker is still inside a clipping column').toBe(false)
+      expect(await pop.evaluate((el) => !!el.closest('.icust-right, .ied')), 'the picker is still inside a clipping column').toBe(false)
       const box = await pop.boundingBox()
       expect(box.x, 'the picker is cut off on the left').toBeGreaterThanOrEqual(0)
       expect(box.y, 'the picker is cut off at the top').toBeGreaterThanOrEqual(0)
@@ -282,7 +282,7 @@ test.describe('layout', () => {
     expect(b.right.y, 'the controls sit under the left column').toBeGreaterThanOrEqual(b.left.b - 1)
     expect(Math.abs(b.right.x - b.left.x), 'the two share one left edge').toBeLessThanOrEqual(1)
     expect(Math.abs(b.right.w - b.left.w), 'the two share one width').toBeLessThanOrEqual(1)
-    const stage = await page.locator('.icust-stage').boundingBox()
+    const stage = await page.locator('.ied-ground').boundingBox()
     expect(stage.y, 'the stage is the first thing under the head').toBeLessThan(b.right.y)
     await ctx.close()
   })
@@ -304,7 +304,7 @@ test.describe('layout', () => {
       expect(radii.bottom, 'the bottom corners are square').toBe(0)
       expect(Math.round(b.right.y), 'one column: the controls are under the left column').toBeGreaterThanOrEqual(Math.round(b.left.b) - 1)
       // The stage is its 168px, not 168px plus the lines a contrast note might need.
-      const stageBox = await page.locator('.icust-stage').boundingBox()
+      const stageBox = await page.locator('.ied-ground').boundingBox()
       expect(stageBox.height, `the stage is ${stageBox.height}px tall; the sheet gives it 168`).toBeLessThanOrEqual(172)
 
       // The body scrolls (there is more than a screen of controls); the foot does not move while it does.
@@ -329,10 +329,10 @@ test.describe('layout', () => {
         expect(f.y, 'the foot is above the top of the screen').toBeGreaterThanOrEqual(0)
       }
       // Its three controls are all on screen and none of them is cut off.
-      await expect(page.locator('.icust-copy')).toBeInViewport({ ratio: 1 })
+      await expect(page.locator('.ied-pri')).toBeInViewport({ ratio: 1 })
       await expect(page.getByRole('button', { name: 'Download SVG', exact: true })).toBeInViewport({ ratio: 1 })
-      await expect(page.locator('.icust-save')).toBeInViewport({ ratio: 1 })
-      const footRow = await page.locator('.icust-foot-row').evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }))
+      await expect(page.locator('#ied-save')).toBeInViewport({ ratio: 1 })
+      const footRow = await page.locator('.ied-foot-row').evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }))
       expect(footRow.sw, 'the foot scrolls sideways').toBeLessThanOrEqual(footRow.cw + 1)
       await ctx.close()
     })
@@ -342,7 +342,7 @@ test.describe('layout', () => {
 test.describe('head and Reset', () => {
   test('the head holds the name and "{Pack}, {weight}"; the eyebrow and the tag chips are gone', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser)
-    await expect(head(page).locator('#icust-title')).not.toBeEmpty()
+    await expect(head(page).locator('#ied-title')).not.toBeEmpty()
     await expect(head(page).locator('.icust-sub')).toHaveText(/^[^,]+, (outline|solid)$/)
     await expect(page.locator('.icust-eyebrow')).toHaveCount(0)
     await expect(page.locator('.icust-meta')).toHaveCount(0)
@@ -360,7 +360,7 @@ test.describe('head and Reset', () => {
     await expect(reset(page)).toBeVisible()
     expect(
       await page.evaluate(() => {
-        const r = [...document.querySelectorAll('.icust-head button')].find((b) => b.textContent.trim() === 'Reset')
+        const r = [...document.querySelectorAll('.ied-hd button')].find((b) => b.textContent.trim() === 'Reset')
         const c = document.querySelector('.icust-close')
         return !!(r.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING)
       }),
@@ -369,7 +369,7 @@ test.describe('head and Reset', () => {
     await expect(page.locator('.icust-rot-val')).toHaveText('90°')
 
     await reset(page).click()
-    await expect(page.getByRole('radio', { name: 'Text colour', exact: true }), 'colour was not put back').toBeChecked()
+    await expect(page.getByRole('radio', { name: 'Default', exact: true }), 'colour was not put back').toBeChecked()
     await expect(page.locator('.icust-rot-val'), 'rotation was not put back').toHaveText('0°')
     expect(await stageTransform(page), 'the preview is still turned').toBe('none')
     await expect(reset(page), 'Reset stays after it has done its job').toHaveCount(0)
@@ -511,7 +511,7 @@ test.describe('SVG code disclosure', () => {
   test('the byte count groups its digits, and only the numbers are mono: the word "bytes" is in the UI face', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser)
     const parts = await page.locator('.icust-code-val').evaluate((el) => {
-      const num = el.querySelector('.icust-mono')
+      const num = el.querySelector('.ied-num')
       return {
         outer: getComputedStyle(el).fontFamily,
         inner: getComputedStyle(num).fontFamily,
@@ -611,7 +611,7 @@ function motionOf(page, selector) {
 }
 
 test.describe('reduced motion', () => {
-  const TARGETS = [['the panel', '.icust-panel'], ['the code caret', '.icust-code-caret'], ['the Ends and corners caret', '.icust-line-toggle svg']]
+  const TARGETS = [['the panel', '.ied'], ['the code caret', '.icust-code-caret'], ['the Ends and corners caret', '.icust-line-toggle svg']]
 
   test('under reduced motion no transform transitions on the panel or the carets, and the panel does not animate in', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser, { reducedMotion: 'reduce' })

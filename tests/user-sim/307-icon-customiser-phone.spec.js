@@ -20,7 +20,7 @@
 //   render the note in its old place below the stage (IconLibrary.jsx: a `.icust-ground-note` with the
 //       sentence, and the caption left as it was)
 //       -> "the stage and the rail do not move" at 768 and 1440, and "the note shows in the stage's caption slot"
-//   `.icust-stroke-note{padding-left:68px}` at 641 to 800px
+//   `#ied-stroke-note{padding-left:68px}` at 641 to 800px
 //       -> "the Stroke note starts at the left edge of the other help lines" at 768
 //   delete the `@media(min-width:801px){ .icust-size-sub{display:none} }` rule
 //       -> "Custom size is Pro stays on the header line" at 1440
@@ -82,10 +82,10 @@ async function openPopup(browser, { width, height, plan = null, pack = null }) {
   const cell = page.locator('.ig .ic:not(.ig-skel)').first()
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // The rail draws the icon's own markup, so wait for it rather than for the frame.
-  await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.icust-stroke-note, .icust-colour-help').first()).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-cell-s[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('#ied-stroke-note, .icust-colour-help').first()).toBeVisible({ timeout: 20_000 })
   await settle(page)
   return { ctx, page }
 }
@@ -98,7 +98,7 @@ async function settle(page) {
     .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime))
     .map((a) => a.finished.catch(() => {}))))
   await expect.poll(() => page.evaluate(() => new Promise((done) => {
-    const at = () => [...document.querySelectorAll('.icust-overlay, .icust-stage')].map((el) => `${el.scrollTop}:${el.getBoundingClientRect().y}`).join()
+    const at = () => [...document.querySelectorAll('.icust-overlay, .ied-ground')].map((el) => `${el.scrollTop}:${el.getBoundingClientRect().y}`).join()
     const first = at()
     requestAnimationFrame(() => requestAnimationFrame(() => done(first === at())))
   }))).toBe(true)
@@ -142,19 +142,19 @@ test.describe('the "hard to see" note', () => {
     // the rail drops (390) when Black is pressed.
     test(`the stage and the rail do not move when the note arrives, and it shows in the caption slot, ${size.width}`, async ({ browser }) => {
       const { ctx, page } = await openPopup(browser, size)
-      const stage = page.locator('.icust-stage')
+      const stage = page.locator('.ied-ground')
       const rail = page.locator('.icust-size')
-      await page.getByRole('radio', { name: 'Text colour', exact: true }).click()
-      await expect(page.locator('.icust-stage-cap--note')).toHaveCount(0)
+      await page.getByRole('radio', { name: 'Default', exact: true }).click()
+      await expect(page.locator('.ied-contrast')).toHaveCount(0)
       const before = { stage: await box(stage), rail: await box(rail) }
 
       await colourChips(page).filter({ hasText: 'Black' }).click()
-      const note = page.locator('.icust-stage .icust-stage-cap--note')
+      const note = page.locator('.ied-ground .ied-contrast')
       await expect(note, 'the note shows inside the stage, in the caption slot').toBeVisible()
       await settle(page)
       await expect(note).toContainText('Hard to see on this background.')
       await expect(note.getByRole('button', { name: 'Show on Light', exact: true })).toBeVisible()
-      await expect(page.locator('.icust-stage-cap:not(.icust-stage-cap--note)'), 'the note replaces the caption').toHaveCount(0)
+      await expect(page.locator('.ied-cap:not(.ied-contrast)'), 'the note replaces the caption').toHaveCount(0)
       const after = { stage: await box(stage), rail: await box(rail), note: await box(note) }
 
       expect(after.stage.height, 'the note changed the stage height').toBeCloseTo(before.stage.height, 0)
@@ -167,8 +167,8 @@ test.describe('the "hard to see" note', () => {
 
       // Taking the offer puts the caption back, and still nothing moves.
       await note.getByRole('button', { name: 'Show on Light', exact: true }).click()
-      await expect(page.locator('.icust-stage-cap--note')).toHaveCount(0)
-      await expect(page.locator('.icust-stage-cap')).toContainText('Exports at 24px')
+      await expect(page.locator('.ied-contrast')).toHaveCount(0)
+      await expect(page.locator('.ied-cap')).toContainText('Exports at 24px')
       await settle(page)
       // Read against the stage: tapping the button may scroll the overlay, which moves both together.
       const back = { stage: await box(stage), rail: await box(rail) }
@@ -182,7 +182,7 @@ test.describe('the "hard to see" note', () => {
     test(`no empty band sits between the stage and Export size, with or without the note, ${size.width}`, async ({ browser }) => {
       const { ctx, page } = await openPopup(browser, size)
       const gap = async () => {
-        const s = await box(page.locator('.icust-stage'))
+        const s = await box(page.locator('.ied-ground'))
         const r = await box(page.locator('.icust-size'))
         return r.y - (s.y + s.height)
       }
@@ -190,7 +190,7 @@ test.describe('the "hard to see" note', () => {
       expect(rest, `a ${rest}px band between the stage and Export size at rest (the column gap is 12px)`).toBeLessThanOrEqual(16)
       expect(rest).toBeGreaterThanOrEqual(8)
       await colourChips(page).filter({ hasText: 'Black' }).click()
-      await expect(page.locator('.icust-stage-cap--note')).toBeVisible()
+      await expect(page.locator('.ied-contrast')).toBeVisible()
       await settle(page)
       const withNote = await gap()
       expect(withNote, `a ${withNote}px band with the note showing`).toBeLessThanOrEqual(16)
@@ -204,10 +204,10 @@ test.describe('the Stroke caption', () => {
   // Signing in as Pro and choosing a pack on a slow runner needs more than the default 30s.
   test.describe.configure({ timeout: 60_000 })
   for (const size of SIZES) {
-    // MUTATION: `.icust-stroke-note{padding-left:68px}` from 641 to 800px -> red at 768.
+    // MUTATION: `#ied-stroke-note{padding-left:68px}` from 641 to 800px -> red at 768.
     test(`the Stroke note starts at the left edge of the other help lines, ${size.width}`, async ({ browser }) => {
       const { ctx, page } = await openPopup(browser, { ...size, plan: 'pro', pack: 'lucide' })
-      const note = page.locator('.icust-stroke-note')
+      const note = page.locator('#ied-stroke-note')
       const help = page.locator('.icust-colour-help')
       await expect(note).toBeVisible({ timeout: 20_000 })
       await expect(help).toBeVisible()

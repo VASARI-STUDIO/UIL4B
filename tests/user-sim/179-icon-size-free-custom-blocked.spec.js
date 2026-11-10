@@ -2,7 +2,7 @@
 //
 // Typing in the Custom field and picking Custom are never blocked, for anyone. But the file at a
 // size outside the five presets is Pro. A free or signed-out viewer who commits 40 sees the icon
-// at 40 and the reason in the preview line (#icust-preview-line, a live region). The primary
+// at 40 and the reason in the preview line (#ied-preview-line, a live region). The primary
 // button is still the same node but reads "Upgrade to Pro"; the code's Copy, Download SVG (both
 // parts) and Save to project are aria-disabled: still in the tab order, never `disabled`, and a
 // click does nothing. Picking a preset again turns them back on, and the clipboard has been
@@ -12,7 +12,7 @@
 //   isProSetting always returns false                     -> every test here: nothing is dimmed
 //   drop `aria-disabled={previewing || undefined}` from Save / the code box -> "a committed 40 ..."
 //   drop `blocked` from SplitDownload's onClick guard      -> "a click that lands anyway ..."
-//   the preview line stops being #icust-preview-line       -> "a committed 40 ... says why"
+//   the preview line stops being #ied-preview-line       -> "a committed 40 ... says why"
 //   src restored byte for byte                             -> all of them pass again.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -37,23 +37,23 @@ async function openAs(browser, plan) {
   const cell = page.locator('.ig .ic').first()
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // The code sits in a closed disclosure; open it so its Copy can be reached.
-  await page.locator('.icust-code-sum').click()
-  await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
+  await page.locator('#ied-sec-code .ied-disc').click()
+  await expect(page.locator('.ied-cell-s[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
   return { ctx, page }
 }
 
 /** Copy SVG, then Upgrade to Pro: the one node, found by class because its name changes. */
-const primary = (page) => page.locator('.icust-copy')
+const primary = (page) => page.locator('.ied-pri')
 /** The ones that dim (aria-disabled) while a Pro setting is previewed. */
 const dimmable = (page) => ({
-  'the code Copy': page.locator('.icust-code-copy'),
+  'the code Copy': page.locator('#ied-code .ied-tn'),
   'Download SVG': page.getByRole('button', { name: 'Download SVG', exact: true }),
   'Download formats': page.getByRole('button', { name: 'Download formats', exact: true }),
   'Save to project': page.getByRole('button', { name: 'Save to project', exact: true }),
 })
-const reason = (page) => page.locator('#icust-preview-line')
+const reason = (page) => page.locator('#ied-preview-line')
 const customRadio = (page) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name: /^Custom(,|$)/ })
 const sizeInput = (page) => page.getByRole('textbox', { name: 'Custom size' })
 
@@ -86,13 +86,13 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       for (const [label, button] of Object.entries(dimmable(page))) {
         await expect(button, `${label} is dimmed`).toHaveAttribute('aria-disabled', 'true')
         await expect(button, `${label} stays focusable (aria-disabled, not disabled)`).not.toHaveAttribute('disabled', /.*/)
-        await expect(button, `${label} says why`).toHaveAttribute('aria-describedby', 'icust-preview-line')
+        await expect(button, `${label} says why`).toHaveAttribute('aria-describedby', 'ied-preview-line')
       }
       await expect(reason(page), 'the reason is the preview line').toHaveText(REASON)
       await expect(reason(page)).toHaveAttribute('role', 'status')
       // The live region never names the size (an arrow key would have it read again); the stage does.
-      await expect(reason(page).locator('.icust-mono'), 'the live region names a value').toHaveCount(0)
-      await expect(page.locator('.icust-stage-cap .icust-mono'), 'the stage names the size').toHaveText('40px')
+      await expect(reason(page).locator('.ied-num'), 'the live region names a value').toHaveCount(0)
+      await expect(page.locator('.ied-cap .ied-num'), 'the stage names the size').toHaveText('40px')
       await ctx.close()
     })
 
@@ -143,7 +143,7 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
       await sizeInput(page).fill('48')
       await sizeInput(page).press('Enter')
-      await expect(page.locator('.icust-size-custom')).toHaveCount(0)
+      await expect(page.locator('.ied-cell-s--custom')).toHaveCount(0)
       for (const [label, button] of Object.entries(dimmable(page))) await expect(button, `${label} stays dimmed at the 48 preset`).toBeEnabled()
       await expect(primary(page)).toHaveAccessibleName('Copy SVG')
       await expect(reason(page)).not.toContainText('Custom sizes are Pro')
