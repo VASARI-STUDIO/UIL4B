@@ -170,6 +170,13 @@ const WINDOW = 400
 // what we charge."
 const NOT_A_PLAN_PRICE = [
   {
+    file: 'src/utils/communityHandle.js',
+    context: /\.replace\(\/\[\$5\]\/g, 's'\)|collapse repeated-character padding/,
+    why: 'Regex syntax in the community-handle lookalike filter: "[$5]" is a character class '
+      + '(dollar sign or 5, mapped to "s") and "$1" is the capture-group reference in a '
+      + 'String.replace template. Neither is an amount.',
+  },
+  {
     file: 'src/components/contrast/views/Landing.data.js',
     context: /Sole trader|Officeworks/,
     why: 'Copy for Tidewell, the invented bookkeeping product the Landing pair view '
