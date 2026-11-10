@@ -762,8 +762,12 @@ test.describe('the viewer\'s motion', () => {
     expect(await root.evaluate((el) => getComputedStyle(el).opacity), 'the showcase itself is shown').toBe('1')
     const shown = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => getComputedStyle(li).opacity))
     expect(shown, 'and every tile is shown').toEqual(Array(TOTAL).fill('1'))
-    const rest = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => ({ opacity: getComputedStyle(li).opacity, transform: getComputedStyle(li).transform, transition: getComputedStyle(li).transitionDuration })))
-    expect(rest.every((r) => r.opacity === '1' && r.transform === 'none' && parseFloat(r.transition) === 0), 'every tile is opaque, flat and has no transition left').toBe(true)
+    // "done" is set on a timer that can fire a frame before the last tile's transition ends on a
+    // loaded machine, so the tiles are read until they settle rather than once.
+    await expect.poll(async () => {
+      const rest = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => ({ opacity: getComputedStyle(li).opacity, transform: getComputedStyle(li).transform, transition: getComputedStyle(li).transitionDuration })))
+      return rest.every((r) => r.opacity === '1' && r.transform === 'none' && parseFloat(r.transition) === 0)
+    }, { message: 'every tile is opaque, flat and has no transition left', timeout: 2000 }).toBe(true)
     await ctx.close()
   })
 
