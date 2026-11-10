@@ -23,6 +23,8 @@ const calm = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const LEAVE_MS = 120
 const GAP = 8
 const POP_W = 320
+// Frames the list gets to take focus: a popover that has only just been placed can still read as hidden for its first frame.
+const FOCUS_FRAMES = 10
 
 export function ThemeStage({ kind, theme, locked, lockText }) {
   const shots = themeShots(kind, theme)
@@ -109,9 +111,21 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
   }, [shown, sheet, host])
 
   // The popover is placed hidden until its position is measured, and a hidden element cannot take focus; the sheet is shown at once.
+  // Under reduced motion the global rule gives every property change a 0.01ms transition, so the flip from hidden to visible
+  // still reads hidden for one frame after the render; focus is asked for again each frame until the list has it.
   const ready = open && (sheet || Boolean(pos))
   useEffect(() => {
-    if (ready) list.current?.focus({ preventScroll: true })
+    if (!ready) return undefined
+    let frame = 0
+    let left = FOCUS_FRAMES
+    const take = () => {
+      const box = list.current
+      if (!box) return
+      box.focus({ preventScroll: true })
+      if (document.activeElement !== box && left-- > 0) frame = requestAnimationFrame(take)
+    }
+    take()
+    return () => cancelAnimationFrame(frame)
   }, [ready])
 
   useEffect(() => {
