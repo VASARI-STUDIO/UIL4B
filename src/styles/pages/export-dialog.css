@@ -162,7 +162,7 @@
 .xd[data-layout="strip"] .xd-cat.is-on{background:var(--bg-2);border-color:var(--t2)}
 .xd[data-layout="strip"] .xd-free{display:none}
 @media (max-width:359px){
-  .xd[data-layout="strip"] .xd-cat{padding:0 var(--s-3)}
+  .xd[data-layout="strip"] .xd-cat{padding:0 var(--s-2)}
   .xd[data-layout="strip"] .xd-cat .exp-pro-lock{display:none}
 }
 .xd[data-layout="strip"] .xd-coming{margin:var(--s-6) 0 0}
