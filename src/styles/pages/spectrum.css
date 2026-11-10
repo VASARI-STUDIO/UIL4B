@@ -102,8 +102,8 @@
 .spectrum [id] { scroll-margin-top: 104px; }
 .spectrum ::selection { background: var(--accent); color: var(--accent-ink); }
 .spectrum :is(button, input) { font-variant-numeric: tabular-nums; }
-.spectrum button:not(.sp-pill):not(.hcmd-kbd) { transition: transform .14s var(--sp-ease), background .16s ease, color .16s ease, border-color .16s ease; }
-.spectrum button:not(.sp-pill):active { transform: scale(.97); }
+.spectrum button:not(.sp-pill):not(.hcmd-kbd):not(.hsc-tab):not(.hsc-open) { transition: transform .14s var(--sp-ease), background .16s ease, color .16s ease, border-color .16s ease; }
+.spectrum button:not(.sp-pill):not(.hsc-tab):not(.hsc-open):active { transform: scale(.97); }
 
 /* The film grain: the design's own layer, fixed at 5%, under the nav. */
 .sp-grain {
