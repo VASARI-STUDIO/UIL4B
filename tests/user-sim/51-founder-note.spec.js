@@ -270,11 +270,17 @@ test('a wheel over the note scrolls the note, not the page behind it', async ({ 
   // measures), and that half is asserted first, before anything is injected.
   watch(page, 'a reader wheeling through a long note')
   await go(page, '/')
+  // The page is measured below as the fixed point the wheel must not move. The
+  // footer is brought into view and the smooth scroll left to settle before the
+  // click, so the scroll lock does not freeze the page partway through an ease.
+  await page.locator('.app-footer-note').scrollIntoViewIfNeeded()
+  await atRest(page)
   await page.locator('.app-footer-note').click()
   await expect(page.locator('.fnote')).toBeVisible()
   // The wheel is aimed at a bounding box, and a rising panel's box is 8px low
   // and 2% narrow while the entrance is still playing.
   await settle(page)
+  await atRest(page)
 
   const marked = await page.evaluate(() => {
     const body = document.querySelector('.fnote-body')
