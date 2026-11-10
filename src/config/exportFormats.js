@@ -175,16 +175,13 @@ export function assertGroupsCoherent(formats = EXPORT_FORMATS, groups = EXPORT_G
 //
 // Ten designed looks for the brand documents. They are their own data, NOT
 // entries in EXPORT_FORMATS: a format listed there as `pro` must be `live`
-// (assertFormatsCoherent), and these are not built into the export panel yet.
-// Nothing below changes what the panel offers, what Pro unlocks or what
-// runExport() gates.
+// (assertFormatsCoherent). The export panel's Theme row picks one of them.
 
 // ships with the export themes
 // The one switch for every line that talks about the themes (the plan lists,
 // the homepage's export and showcase sections). While it is false, those lines
-// read as the export panel works today. Turn it on in the change that makes the
-// themes export from the panel.
-export const EXPORT_THEMES_LIVE = false
+// read as the export panel works without themes.
+export const EXPORT_THEMES_LIVE = true
 
 // ships with the export themes
 // The page shapes a theme can print at.
@@ -193,9 +190,11 @@ export const EXPORT_THEME_SHAPES = Object.freeze(['16:9', 'A4 landscape', 'A4'])
 // ships with the export themes
 // The four things every theme makes. `proOnly` marks an export that needs Pro in
 // every theme; an export without it is free in the free themes only.
-// `guidelinesPages` is the page count of the guidelines document.
+// `guidelinesPages` is the page count of the guidelines document. `inside` names
+// the export that carries this one: the brand kit has no row of its own in the
+// export panel and is zipped inside the HTML brand book.
 export const EXPORT_THEME_EXPORTS = Object.freeze([
-  Object.freeze({ id: 'brand-kit', name: 'Brand kit', short: 'kit', proOnly: true }),
+  Object.freeze({ id: 'brand-kit', name: 'Brand kit', short: 'kit', proOnly: true, inside: 'brand-book' }),
   Object.freeze({ id: 'brand-guidelines', name: 'Brand guidelines', short: 'guidelines', proOnly: true, guidelinesPages: 33 }),
   Object.freeze({ id: 'brand-book', name: 'HTML brand book', short: 'brand book', proOnly: true }),
   Object.freeze({ id: 'ui-kit', name: 'UI kit', short: 'UI kit', proOnly: false }),

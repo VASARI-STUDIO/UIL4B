@@ -175,7 +175,7 @@ test('the switch turns the Free UI kit line and the Pro export rows, both ways',
   const free = freeThemes()
   const freeNames = free.map((t) => t.name).join(' and ')
   assert.equal(freeLines(false)[2], 'The UI kit')
-  assert.equal(freeLines(true)[2], `The UI kit in ${free.length} export themes: ${freeNames}`)
+  assert.equal(freeLines(true)[2], `The UI kit in ${numberWord(free.length)} export themes: ${freeNames}`)
   assert.equal(freeLines(true).length, 8)
   assert.equal(freeLines(false).length, 8)
 
@@ -191,13 +191,15 @@ test('the switch turns the Free UI kit line and the Pro export rows, both ways',
   const on = proRows(true)
   const proNames = proThemes().map((t) => t.name)
   assert.equal(on[1].title, `All ${EXPORT_THEMES.length} export themes`)
-  assert.equal(on[1].sub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free: ${proNames.slice(0, -1).join(', ')} and ${proNames.at(-1)}. Each has all ${numberWord(EXPORT_THEME_EXPORTS.length)} exports.`)
-  assert.equal(on[1].phoneSub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free, each with all ${numberWord(EXPORT_THEME_EXPORTS.length)} exports.`)
+  assert.equal(on[1].sub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free: ${proNames.slice(0, -1).join(', ')} and ${proNames.at(-1)}. Each has all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
+  assert.equal(on[1].phoneSub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free, each with all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
   assert.ok(on[1].phoneSub.length < on[1].sub.length)
   const pages = EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages
   assert.ok(on[2].sub.startsWith(`A ${pages}-page guidelines PDF`))
   // The documents row names every export that is Pro in all themes, and not the free UI kit.
-  for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(on[2].title.toLowerCase().includes(e.short), `the documents row leaves out ${e.id}`)
+  for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly && !x.inside)) assert.ok(on[2].title.toLowerCase().includes(e.short), `the documents row leaves out ${e.id}`)
+  // The brand kit has no panel row of its own; the documents row says it comes inside the brand book.
+  assert.match(on[2].sub, /brand book[^.]*with the brand kit[^.]*inside/, 'the documents row no longer says where the brand kit is')
   assert.ok(!/ui kit/i.test(on[2].title))
 
   assert.match(plansLead(true), new RegExp(`all ${numberWord(EXPORT_THEMES.length)} export themes, brand guidelines`))
@@ -244,7 +246,7 @@ test('THEME_FACTS is worked out from the theme list', () => {
   assert.equal(THEME_FACTS.proCount + THEME_FACTS.freeCount, THEME_FACTS.count)
   assert.equal(THEME_FACTS.freeTag, `Free in ${freeThemes().length} themes`)
   assert.equal(THEME_FACTS.uiKitNote, `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(EXPORT_THEMES.length)} themes`)
-  assert.equal(THEME_FACTS.exportsPerThemeWord, numberWord(EXPORT_THEME_EXPORTS.length))
+  assert.equal(THEME_FACTS.exportsPerThemeWord, numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length))
   assert.equal(PLANS_LEAD, plansLead(EXPORT_THEMES_LIVE))
 })
 

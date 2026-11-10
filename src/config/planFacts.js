@@ -73,16 +73,17 @@ const FREE_THEME_NAMES = joinNames(freeThemes())
 // ships with the export themes
 const PRO_THEME_NAMES = joinNames(proThemes())
 // ships with the export themes
-const EXPORTS_PER_THEME = EXPORT_THEME_EXPORTS.length
+// The exports a person picks; the brand kit rides inside the brand book.
+const EXPORTS_PER_THEME = EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length
 // ships with the export themes
 // The Free line about the UI kit. Without the themes it is the UI kit alone.
 // `live` is the themes switch; the tests pass it both ways.
 export const freeUiKitLine = (live = EXPORT_THEMES_LIVE) => (live
-  ? `The UI kit in ${freeThemes().length} export themes: ${FREE_THEME_NAMES}`
+  ? `The UI kit in ${numberWord(freeThemes().length)} export themes: ${FREE_THEME_NAMES}`
   : 'The UI kit')
 // ships with the export themes
 // The Pro-only exports of a theme, in the order the plan row names them.
-const PRO_THEME_DOCS = ['brand-guidelines', 'brand-book', 'brand-kit']
+const PRO_THEME_DOCS = ['brand-guidelines', 'brand-book']
   .map((id) => EXPORT_THEME_EXPORTS.find((e) => e.id === id))
 // ships with the export themes
 const PRO_THEME_DOCS_TITLE = capitalise(joinAnd(PRO_THEME_DOCS.map((e) => e.short)))
@@ -168,7 +169,7 @@ export const PRO_VALUE = Object.freeze([
 // ships with the export themes
 // The export clause of the Pro line: the themes' documents, or the panel's own Pro documents.
 export const proDocumentsLine = (live = EXPORT_THEMES_LIVE) => (live
-  ? `${PRO_THEME_DOCS_TITLE} in all ${THEME_COUNT} export themes`
+  ? `${PRO_THEME_DOCS_TITLE} in all ${numberWord(THEME_COUNT)} export themes`
   : PRO_EXPORT_NAMES)
 
 /** What Pro adds — /plans' Pro card, Checkout, Settings and the upgrade modal, in order. */
@@ -215,7 +216,7 @@ const THEMES_ROW_SUB = `${capitalise(numberWord(proThemes().length))} more than 
 // ships with the export themes
 const THEMES_ROW_SUB_PHONE = `${capitalise(numberWord(proThemes().length))} more than Free, each with all ${numberWord(EXPORTS_PER_THEME)} exports.`
 // ships with the export themes
-const DOCUMENTS_ROW_SUB = `A ${EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages}-page guidelines PDF, an HTML brand book that works offline, and the brand kit of logo, colour, type and icon files.`
+const DOCUMENTS_ROW_SUB = `A ${EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages}-page guidelines PDF, and an HTML brand book that works offline, with the brand kit of colour, type and icon files inside.`
 
 // Without the themes the two export rows describe the panel's own Pro documents.
 const BOOK_GROUP = EXPORT_GROUPS.find((g) => g.id === 'book')

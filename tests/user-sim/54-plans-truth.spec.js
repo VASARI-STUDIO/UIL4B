@@ -285,9 +285,9 @@ test.describe('/plans says what it claims', () => {
     }
     // The unit is a "project", never a "kit" ("toolkit", the
     // product's name for itself, is not the unit and is allowed).
-    // "UI kit" names the exported file, the one thing the word may mean here.
+    // "UI kit" and "brand kit" name exported files, the one thing the word may mean here.
     const main = await page.locator('.pricing main').innerText()
-    expect(main.replace(/\bUI kit\b/g, ''), 'the pricing page calls a saved project a "kit"').not.toMatch(/\bkits?\b/i)
+    expect(main.replace(/\b(UI|brand) kit\b/gi, ''), 'the pricing page calls a saved project a "kit"').not.toMatch(/\bkits?\b/i)
     expect(main, 'the pricing page no longer names the unit at all').toMatch(/\bprojects\b/)
     // Positive control: the assurances are present, and cancelling is said in
     // one place (the Pro note), not repeated down the page.
