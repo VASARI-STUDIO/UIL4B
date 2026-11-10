@@ -38,7 +38,7 @@
 //   `.ied-disc svg` transition has no reduced-motion override         -> "under reduced motion ..."
 //   the reduced-motion rule for .ied is removed (ied-dlg's scale runs) -> "under reduced motion ..."
 //   .ied-contrast on the sheet loses display:none                     -> "the stage card is its top zone plus the size strip"
-//   <pre> loses tabIndex or aria-label                                -> "the open code is a named region ..."
+//   <pre> loses tabIndex, role="region" or aria-label                 -> "the open code is a named region ..."
 //   .ied-disc loses its max-width:899px height:44px                   -> "touch targets ..."
 //   the Rotate buttons stop writing the rotation status               -> "Rotate announces ..."
 //   <ColorPickerPop> loses `portal`                                   -> "the custom colour picker opens outside the scrolling column"
@@ -576,7 +576,9 @@ test.describe('SVG code disclosure', () => {
     await summary(page).click()
     const code = codeEl(page)
     await expect(code).toHaveAttribute('tabindex', '0')
+    await expect(code).toHaveAttribute('role', 'region')
     await expect(code).toHaveAttribute('aria-label', 'SVG code')
+    await expect(page.getByRole('region', { name: 'SVG code' }), 'the code is one named region in the accessibility tree').toHaveCount(1)
     // Tab from the summary: the Copy button first, then the code itself.
     await summary(page).focus()
     await page.keyboard.press('Tab')
