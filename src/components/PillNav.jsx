@@ -1323,6 +1323,11 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             {t.mins && <span className="pnav-tool-mins">{t.mins}</span>}
                             {t.soon && <span className="soon-badge">Soon</span>}
                             {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
+                            {isHere(t) && (
+                              <span className="pnav-tool-here" aria-hidden="true">
+                                <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
+                              </span>
+                            )}
                           </Link>
                         </li>
                         )
