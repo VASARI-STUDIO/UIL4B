@@ -183,14 +183,19 @@ test.describe('a lazy page that fails to download', () => {
     const seen = watchReports(page)
     await go(page, '/privacy')
     await probeDocument(page)
-    let requests = 0
-    await page.route(CREDITS_CHUNK, (route) => {
-      requests += 1
-      return requests === 1 ? route.abort() : route.continue()
-    })
-    // Held until the old document has had its chance to crash, then let
+    // Fail the chunk for as long as the old document is the one asking, and serve it once the
+    // reload has been asked for. Failing only the first request is not enough: Chromium 158
+    // retries a failed dynamic import once by itself, so a single failure is quietly healed
+    // with no reload at all, which is not the path this test is about.
+    // The reload is held until the old document has had its chance to crash, then let
     // through: an unheld reload can win the race and hide the crash.
     const held = await holdReloads(page, '/credits')
+    const chunk = { aborted: 0, served: 0 }
+    await page.route(CREDITS_CHUNK, (route) => {
+      if (held.length === 0) { chunk.aborted += 1; return route.abort() }
+      chunk.served += 1
+      return route.continue()
+    })
     await navigateInApp(page, '/credits')
     await expectWaitingForReload(page, seen, held)
     const reloaded = page.waitForEvent('domcontentloaded')
@@ -198,7 +203,8 @@ test.describe('a lazy page that fails to download', () => {
     await reloaded
     await ready(page, '/credits')
     await expectRendered(page, '/credits')
-    expect(requests, 'the chunk should have failed once and then been fetched by the reload').toBe(2)
+    expect(chunk.aborted, 'the old document should have had its chunk failed').toBeGreaterThanOrEqual(1)
+    expect(chunk.served, 'the reloaded document should have fetched the chunk').toBeGreaterThanOrEqual(1)
     expect(seen.defaultThrows).toEqual([])
     expect(seen.reports, 'the recovered page filed a report on the way').toEqual([])
     expect(seen.posted).toEqual([])
