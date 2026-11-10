@@ -123,6 +123,85 @@ test.describe('home Try the tools', () => {
   })
 })
 
+// The pinned column: a name is a fixed row, the names after the open one glide down by the open
+// description's height with a transform, and the progress line follows the scroll.
+const column = (page) => page.evaluate(() => ({
+  rows: [...document.querySelectorAll('#try .ht-it')].map((it) => ({
+    top: it.offsetTop,
+    on: it.dataset.on,
+    shift: new DOMMatrix(getComputedStyle(it).transform).m42,
+  })),
+  open: parseFloat(getComputedStyle(document.querySelector('#try .ht-names')).getPropertyValue('--open-h')),
+  info: [...document.querySelectorAll('#try .ht-it .ht-info')].map((el) => Number(getComputedStyle(el).opacity)),
+  p: parseFloat(getComputedStyle(document.querySelector('#try .ht-names')).getPropertyValue('--p')),
+  prog: new DOMMatrix(getComputedStyle(document.querySelector('#try .ht-prog')).transform),
+}))
+
+test.describe('home Try the tools pinned column', () => {
+  test.use({ viewport: { width: 1440, height: 900 } })
+
+  test('the names never reflow: only a transform moves those after the open one', async ({ page }) => {
+    watch(page, 'visitor')
+    await go(page, '/')
+    await openTool(page, 0)
+    const first = await column(page)
+    for (const i of [2, 1, 3]) {
+      await openTool(page, i)
+      // Red if the description opens by a height or grid-rows change again (offsetTop would move).
+      await expect.poll(async () => (await column(page)).rows.map((r) => r.shift > 1), { timeout: 4000 }).toEqual([0, 1, 2, 3].map((k) => k > i))
+      const now = await column(page)
+      expect(now.rows.map((r) => r.top)).toEqual(first.rows.map((r) => r.top))
+      expect(now.open).toBeGreaterThan(60)
+      for (const r of now.rows.filter((x) => x.shift > 1)) expect(Math.round(r.shift)).toBe(Math.round(now.open))
+      // The description of the open tool shows and the others do not.
+      expect(now.info.map((o) => o === 1)).toEqual([0, 1, 2, 3].map((k) => k === i))
+    }
+  })
+
+  test('the progress line follows the scroll from the first tool to the last', async ({ page }) => {
+    watch(page, 'visitor')
+    await go(page, '/')
+    await openTool(page, 0)
+    await expect.poll(async () => (await column(page)).p, { timeout: 4000 }).toBeLessThan(0.08)
+    await openTool(page, 3)
+    // Red if track() stops writing --p, or the line stops scaling by it.
+    await expect.poll(async () => (await column(page)).p, { timeout: 4000 }).toBeGreaterThan(0.92)
+    const end = await column(page)
+    expect(end.prog.d).toBeGreaterThan(0.9)
+    await openTool(page, 2)
+    await expect.poll(async () => (await column(page)).p, { timeout: 4000 }).toBeGreaterThan(0.55)
+    expect((await column(page)).p).toBeLessThan(0.8)
+  })
+})
+
+for (const [how, media] of [['the OS preference', 'reduce'], ['the Settings choice', 'no-preference']]) {
+  test(`with ${how} the column keeps its layout, drops the glide and steps its progress line with the active tool`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: media })
+    if (media === 'no-preference') {
+      await ctx.addInitScript(() => localStorage.setItem('vs-appearance', JSON.stringify({ rounding: 'default', density: 'cozy', reducedMotion: true })))
+    }
+    const page = await ctx.newPage()
+    try {
+      watch(page, 'visitor')
+      await go(page, '/')
+      await openTool(page, 2)
+      // Red if the reduced-motion rules for .ht-it / .ht-prog are dropped (the names would glide and the line would follow the scroll).
+      const look = await page.evaluate(() => {
+        const it = getComputedStyle(document.querySelector('#try .ht-it[data-after="true"]'))
+        const info = getComputedStyle(document.querySelector('#try .ht-it[data-on="true"] .ht-info'))
+        return { glide: it.transitionProperty, rise: info.transform }
+      })
+      expect(look).toEqual({ glide: 'none', rise: 'none' })
+      const col = await column(page)
+      expect(col.prog.d).toBeCloseTo(0.75, 2)
+      // The names after the open one are still placed.
+      expect(col.rows[3].shift).toBeGreaterThan(60)
+    } finally {
+      await ctx.close()
+    }
+  })
+}
+
 test.describe('home Try the tools on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 

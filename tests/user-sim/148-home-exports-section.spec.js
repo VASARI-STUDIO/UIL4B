@@ -279,30 +279,103 @@ for (const width of [390, 320]) {
 
 // ── docking at 1440 ────────────────────────────────────────────────────────────
 
-test('at 1440 the cards dock at 84, 116 and 148 and carry no effect that would show a card through another', async ({ browser }) => {
+// What a card looks like now: its sticky top, its scale (the x scale of the transform matrix), the
+// opacity of its dimming layer, and the cast of its shadow. A card's own opacity stays 1 so no card shows through another.
+const LOOKS = () => [...document.querySelectorAll('#exports .hx-card')].map((c) => {
+  const s = getComputedStyle(c)
+  const m = s.transform === 'none' ? 1 : Number(s.transform.match(/matrix\(([^,]+),/)[1])
+  return {
+    top: Math.round(c.getBoundingClientRect().top),
+    scale: Math.round(m * 1000) / 1000,
+    dim: Number(getComputedStyle(c, '::after').opacity),
+    shadow: s.boxShadow !== 'none',
+    opacity: s.opacity,
+    filter: s.filter,
+    animated: getComputedStyle(c).animationName,
+  }
+})
+const dockAll = (page, extra = 30) => page.evaluate((x) => {
+  const third = document.querySelector('#exports .hx-card[data-card="2"]')
+  window.scrollTo(0, third.parentElement.getBoundingClientRect().top + window.scrollY - (window.innerWidth >= 1024 ? 148 : 72) + x)
+}, extra)
+
+test('at 1440 the cards dock at 84, 116 and 148, and a covered card scales to .96 and dims while the last stays whole', async ({ browser }) => {
   const { ctx, page } = await open(browser)
   try {
     // Scroll until the third card is past its dock line, so all three are stuck.
-    await page.evaluate(() => {
-      const third = document.querySelector('#exports .hx-card[data-card="2"]')
-      window.scrollTo(0, third.parentElement.getBoundingClientRect().top + window.scrollY - 148 + 30)
-    })
+    await dockAll(page)
     // Red if STACK_TOPS, the --stack-top tokens or dockTop change.
-    await expect.poll(() => page.evaluate(() =>
-      [...document.querySelectorAll('#exports .hx-card')].map((c) => Math.round(c.getBoundingClientRect().top))))
-      .toEqual([84, 116, 148])
-    // Red if a card gains a transform, filter, shadow or fade (covered cards would scale, dim or show through).
-    const looks = await page.evaluate(() => [...document.querySelectorAll('#exports .hx-card')].map((c) => {
-      const s = getComputedStyle(c)
-      return { position: s.position, transform: s.transform, filter: s.filter, shadow: s.boxShadow, opacity: s.opacity }
-    }))
-    for (const look of looks) {
-      expect(look).toEqual({ position: 'sticky', transform: 'none', filter: 'none', shadow: 'none', opacity: '1' })
-    }
+    await expect.poll(async () => (await page.evaluate(LOOKS)).map((l) => l.top)).toEqual([84, 116, 148])
+    // Red if the view timelines, the trackers' sizes (--hx-trav, --hx-dock) or the scale stop reaching a covered card.
+    await expect.poll(async () => (await page.evaluate(LOOKS)).map((l) => l.scale), { timeout: 5000 }).toEqual([0.96, 0.96, 1])
+    const looks = await page.evaluate(LOOKS)
+    expect(looks.map((l) => l.dim)).toEqual([0.45, 0.45, 0])
+    // Red if a card loses its elevation, or gains a fade or filter (it would show through the one over it).
+    for (const look of looks) expect(look).toMatchObject({ shadow: true, opacity: '1', filter: 'none' })
   } finally {
     await ctx.close()
   }
 })
+
+test('the cover follows the scroll: a card is partly scaled when the next one is half way over it', async ({ browser }) => {
+  const { ctx, page } = await open(browser)
+  try {
+    // Card 2's top, half way between card 1's bottom edge and its own dock line.
+    await page.evaluate(() => {
+      const [a, b] = [...document.querySelectorAll('#exports .hx-card')]
+      const mid = (a.getBoundingClientRect().bottom + 116) / 2
+      window.scrollTo(0, window.scrollY + b.getBoundingClientRect().top - mid)
+    })
+    // Red if the exit range is changed to a step, or the scale stops following the position.
+    await expect.poll(async () => (await page.evaluate(LOOKS))[0].scale, { timeout: 5000 }).toBeGreaterThan(0.965)
+    const first = (await page.evaluate(LOOKS))[0]
+    expect(first.scale).toBeLessThan(0.995)
+    expect(first.dim).toBeGreaterThan(0.05)
+    expect(first.dim).toBeLessThan(0.4)
+  } finally {
+    await ctx.close()
+  }
+})
+
+for (const [label, width, height, touch] of [['1440', 1440, 900, false], ['390', 390, 844, true], ['320', 320, 640, true]]) {
+  test(`at ${label} a visitor who asked for no motion gets the plain stack, by the OS and by the Settings`, async ({ browser }) => {
+    for (const how of ['os', 'settings']) {
+      const ctx = await browser.newContext({
+        viewport: { width, height },
+        reducedMotion: how === 'os' ? 'reduce' : 'no-preference',
+        ...(touch ? { hasTouch: true, isMobile: true } : {}),
+      })
+      if (how === 'settings') {
+        await ctx.addInitScript(() => localStorage.setItem('vs-appearance', JSON.stringify({ rounding: 'default', density: 'cozy', reducedMotion: true })))
+      }
+      const page = await ctx.newPage()
+      try {
+        await go(page, '/')
+        await homeSectionsLoaded(page)
+        await dockAll(page)
+        await page.waitForTimeout(300)
+        // Red if the reduced-motion guards for .hx-card are dropped (the covered cards would be scaled and dimmed).
+        const looks = await page.evaluate(LOOKS)
+        for (const look of looks) expect(look, `${how} at ${width}`).toMatchObject({ scale: 1, dim: 0, animated: 'none', shadow: true })
+      } finally {
+        await ctx.close()
+      }
+    }
+  })
+}
+
+for (const [width, height] of [[768, 1024], [390, 844], [320, 640]]) {
+  test(`at ${width} a covered card scales and dims too`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width, height, touch: width < 500 })
+    try {
+      await dockAll(page, 60)
+      // Red if the narrow layout loses the trackers' sizes (cards dock together here, so the whole height is the travel).
+      await expect.poll(async () => (await page.evaluate(LOOKS)).map((l) => l.scale), { timeout: 5000 }).toEqual([0.96, 0.96, 1])
+    } finally {
+      await ctx.close()
+    }
+  })
+}
 
 // ── phone ──────────────────────────────────────────────────────────────────────
 
