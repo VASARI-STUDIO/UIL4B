@@ -207,7 +207,7 @@ test.describe('/plans advertises only what the product has', () => {
     expect(free).toContain(`Preview all ${EXPORT_THEMES.length}`)
     expect(free).toContain(`UI kit exports in ${freeThemes().length}`)
     for (const t of freeThemes()) expect(free, `${t.name} is a free theme`).toContain(t.name)
-    expect(pro).toMatch(new RegExp(`^All ${EXPORT_THEMES.length}\b`))
+    expect(pro).toMatch(new RegExp(`^All ${EXPORT_THEMES.length}\\b`))
 
     const shared = await page.locator('.pl-same td').innerText()
     expect(shared, 'the UI kit is listed as the same on both plans').not.toMatch(/\bUI kit\b/)

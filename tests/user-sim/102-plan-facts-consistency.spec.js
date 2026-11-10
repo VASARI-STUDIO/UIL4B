@@ -151,6 +151,8 @@ test('the homepage, /plans and Settings all name the export line “Made with UI
 
   await go(page, '/')
   const home = page.locator('#plans')
+  // The plans section is deferred below the fold; bring it into view so it mounts.
+  await home.scrollIntoViewIfNeeded()
   await expect(home.locator('.hpl-minus'), 'the homepage Free card lost its minus line').toHaveText(FREE_EXCLUSION)
   expect(await home.innerText()).toContain(`No ${MADE_WITH_LINE}`)
 

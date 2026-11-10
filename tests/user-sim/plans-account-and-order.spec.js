@@ -110,19 +110,20 @@ test.describe('the order the pair is read in', () => {
   const order = (page) => page.locator('.pa-pair').evaluate((el) => [...el.children].map((c) => (c.classList.contains('hpl-pro') ? 'pro' : c.classList.contains('hpl-free') ? 'free' : 'other')))
 
   for (const width of [1440, 390]) {
-    test(`at ${width} Pro comes first in the markup when it has an action, and Free sits left of it side by side`, async ({ page }) => {
+    test(`at ${width} the pair is read in the order it is drawn: ${width >= 1200 ? 'Free then Pro, side by side' : 'Pro then Free, stacked'}`, async ({ page }) => {
       watch(page, 'a keyboard user reaching the Pro button')
       await page.setViewportSize({ width, height: 900 })
       await stub(page)
       await go(page, '/plans')
       await expect(pro(page).locator('.pa-amt')).toHaveText('US$4')
-      expect(await order(page), 'Free comes before Pro in the markup').toEqual(['pro', 'free'])
+      const wide = width >= 1200
+      expect(await order(page), `at ${width} the markup is not in the order drawn`).toEqual(wide ? ['free', 'pro'] : ['pro', 'free'])
 
-      // The first Tab stop inside the pair is the Pro switch, not Free's button.
+      // The first Tab stop inside the pair is the card drawn first: Free from 1200 up, Pro below.
       await page.locator('.pa-pair').evaluate((el) => el.scrollIntoView())
       await page.locator('#main').focus()
       await page.keyboard.press('Tab')
-      expect(await page.evaluate(() => document.activeElement.closest('.hpl-pro, .hpl-free')?.className.includes('hpl-pro')), 'the first stop in the pair is not in Pro').toBe(true)
+      expect(await page.evaluate(() => document.activeElement.closest('.hpl-pro, .hpl-free')?.className.includes('hpl-pro')), `the first stop in the pair is not in ${wide ? 'Free' : 'Pro'}`).toBe(!wide)
 
       const [freeBox, proBox] = await Promise.all([page.locator('.hpl-free').boundingBox(), pro(page).boundingBox()])
       if (width >= 1200) expect(freeBox.x, 'Free is not seated on the left').toBeLessThan(proBox.x)
