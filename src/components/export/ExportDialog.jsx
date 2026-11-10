@@ -86,6 +86,8 @@ export default function ExportDialog({ onClose, preset, projectId }) {
     if (!resolve) return
     signInGate.current = null
     setSigningIn(false)
+    // A dismissed panel drops the stashed return path, so a later unrelated sign-up does not land back here.
+    if (!ok) stashResumeTarget('/')
     resolve(ok)
     // The button is back one frame after the panel goes; while the plan loads it is disabled, so the card holds focus instead.
     requestAnimationFrame(() => {
