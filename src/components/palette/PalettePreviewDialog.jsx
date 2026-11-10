@@ -31,7 +31,7 @@ import useModalDialog from '../../hooks/useModalDialog'
 import useBackClosesDialog from '../../hooks/useBackClosesDialog'
 import { PREVIEW_GROUPS, PREVIEW_SCENES, sceneById } from '../../data/palettePreviewScenes'
 import { statesOf } from '../../data/previewStates'
-import { BRAND_ROLES, derivePaletteRoles } from '../../utils/palettePreviewRoles'
+import { BRAND_ROLES, derivePaletteRoles, pvVars } from '../../utils/palettePreviewRoles'
 import { roleLabel } from '../../utils/paletteRoles'
 import { simCvd } from '../../utils/colors'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
@@ -516,14 +516,35 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
 
 // ── One scene, gated ────────────────────────────────────────────────────────
 
+// What a locked scene shows in place of itself: the viewer's own colours laid out as a few
+// plain blocks (header, hero, cards), blurred by the CSS. The Pro scene is never mounted, so
+// none of its markup, copy or layout is in the page to un-blur.
+function SceneStub({ roles }) {
+  return (
+    <div className="pvd-scene-stub" style={pvVars(roles)} aria-hidden="true">
+      <span className="pvd-stub-bar" />
+      <span className="pvd-stub-hero" />
+      <span className="pvd-stub-row">
+        <span className="pvd-stub-card" />
+        <span className="pvd-stub-card" />
+        <span className="pvd-stub-card" />
+      </span>
+      <span className="pvd-stub-line" />
+      <span className="pvd-stub-line pvd-stub-line--short" />
+    </div>
+  )
+}
+
 function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock, state, onState }) {
   const locked = gate !== 'open'
   return (
     <div className={locked ? 'pvd-scene is-locked' : 'pvd-scene'}>
       <div className="pvd-scene-in" inert={locked}>
-        <Suspense fallback={<div className="pvd-scene-wait" style={{ background: roles.canvas }} aria-hidden="true" />}>
-          <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} state={state} onState={onState} />
-        </Suspense>
+        {locked ? <SceneStub roles={roles} /> : (
+          <Suspense fallback={<div className="pvd-scene-wait" style={{ background: roles.canvas }} aria-hidden="true" />}>
+            <PreviewScene key={scene.id} roles={roles} labels={labels} sceneId={scene.id} highlight={highlight} onRoles={onRoles} state={state} onState={onState} />
+          </Suspense>
+        )}
       </div>
       {locked && (
         <div className="pvd-lock">

@@ -30,7 +30,7 @@ function Chips({ colors, hex = true, className = '' }) {
   )
 }
 
-// Neutral stand-in chips for a locked row whose colours never reach the page
+// Neutral stand-in chips for a locked row (a teased palette or brand, or a Pro variation) whose colours never reach the page
 // (utils/lockedPreview.js): the tokenised steps, blurred by the CSS.
 function LockedChips({ slots }) {
   return (
@@ -43,7 +43,7 @@ function LockedChips({ slots }) {
 /**
  * variant:
  *   'press'  a button that applies the row (and, when applied, puts the board back)
- *   'gate'   a button on a locked variation: opens Pro plans; chips blurred
+ *   'gate'   a button on a locked variation: opens Pro plans; neutral chips, blurred (its colours are never drawn)
  *   'static' a teased locked palette or brand: not pressable
  */
 export function SwatchRow({
@@ -53,7 +53,7 @@ export function SwatchRow({
   const cls = `plb-sw-row${applied ? ' is-on' : ''}${locked ? ' is-locked' : ''}${variant === 'static' ? ' is-static' : ''}`
   const strip = (
     <span className="plb-sw-strip" aria-hidden="true">
-      {variant === 'static' ? <LockedChips slots={slots} /> : <Chips colors={colors} hex={!locked} />}
+      {locked ? <LockedChips slots={slots ?? colors?.length} /> : <Chips colors={colors} hex />}
       {applied && mine?.length > 0 && <Chips colors={mine} hex={false} className="plb-sw-chips--mine" />}
     </span>
   )
