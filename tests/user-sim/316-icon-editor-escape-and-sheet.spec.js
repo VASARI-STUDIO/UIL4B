@@ -17,8 +17,8 @@
 //   focus is not handed back to the opener when the editor closes             -> (a) "focus goes back to the icon"
 //   `.ied` sheet height loses `- max(48px, ...)`                                -> (b) "at least 48px of page above"
 //   `.ied-x` height 44px -> 36px on the sheet                                  -> (b) "every control is a 44px target"
-//   the Tab handler's `!el.closest('[inert]')` filter is dropped / the trap removed -> (b) "Tab stays inside"
-//   `.ied-ft .ied-foot-row` width 120% of the sheet                            -> (b) "nothing runs off the side"
+//   the editor's Tab handler returns before it wraps focus                    -> (b) "Tab and Shift+Tab stay inside"
+//   `.ied-hd` width 130% of the sheet                                          -> (b) "nothing runs off the side"
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
