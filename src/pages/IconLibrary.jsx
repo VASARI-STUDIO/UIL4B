@@ -2902,7 +2902,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                         aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
                       >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
                     </div>
-                    <pre tabIndex={0} aria-label="SVG code"><code>{serializedOutput}</code></pre>
+                    <pre tabIndex={0} role="region" aria-label="SVG code"><code>{serializedOutput}</code></pre>
                   </div>
                 )}
               </div>
