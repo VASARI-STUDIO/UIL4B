@@ -164,15 +164,23 @@ test('the contrast note sits over the stage and holds no room, and its live regi
 // The swatch is 32px with a mouse. Touch gets 44 by 44 two ways: the wide dialog's coarse-pointer block,
 // and the phone sheet (below 900px), which sets 44 whatever the pointer is. Each block is cut out whole,
 // so a later rule elsewhere in the sheet cannot stand in for it.
+// The sheet may hold several blocks under one query; the one that styles the swatch is the one cut out.
 function mediaBlock(css, header) {
-  const at = css.indexOf(header)
-  assert.ok(at >= 0, `${header} block is missing`)
-  let depth = 0
-  for (let i = css.indexOf('{', at); i < css.length; i++) {
-    if (css[i] === '{') depth++
-    else if (css[i] === '}' && --depth === 0) return css.slice(at, i + 1)
+  let from = 0
+  const found = []
+  for (let at = css.indexOf(header, from); at >= 0; at = css.indexOf(header, from)) {
+    let depth = 0
+    let end = -1
+    for (let i = css.indexOf('{', at); i < css.length; i++) {
+      if (css[i] === '{') depth++
+      else if (css[i] === '}' && --depth === 0) { end = i + 1; break }
+    }
+    assert.ok(end > 0, `${header} block never closes`)
+    found.push(css.slice(at, end))
+    from = end
   }
-  throw new Error(`${header} block never closes`)
+  assert.ok(found.length > 0, `${header} block is missing`)
+  return found.find((b) => b.includes('.ied-bgb')) ?? found[0]
 }
 
 for (const header of ['@media (pointer:coarse) and (min-width:900px)', '@media (max-width:899px){']) {
