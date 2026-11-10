@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, signIn } from './helpers.js'
+import { go, signIn, openProjectFromDashboard } from './helpers.js'
 import { exportPanel, typeRadio } from './export-rows.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
@@ -36,7 +36,7 @@ for (const width of [390, 1440]) {
             route.fulfill({ status: 404, body: '' }))
           await signIn(page, { plan: 'free', projects: [savedProject()] })
           await go(page, '/projects')
-          await page.locator('.uh-card-name[data-project="Harbour"]').click()
+          await openProjectFromDashboard(page, 'Harbour')
           await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
 
           const opener = page.locator(area).getByRole('button', { name: 'Export project', exact: true })

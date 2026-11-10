@@ -13,7 +13,7 @@
 import fs from 'node:fs'
 import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
-import { go, watch, signIn, overlaysSettled, ready } from './helpers.js'
+import { go, watch, signIn, overlaysSettled, ready, openProjectFromDashboard } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 const PRIMARY = '#1F4B8E'
@@ -148,7 +148,7 @@ test.describe('the UI kit export', () => {
       : route.continue()))
     await signIn(page, { plan: 'free', projects: [savedProject('Harbour')] })
     await go(page, '/projects')
-    await page.locator('.uh-card-name[data-project="Harbour"]').click()
+    await openProjectFromDashboard(page, 'Harbour')
     await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
     await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project', exact: true }).click()
     const panel = exportPanel(page)
