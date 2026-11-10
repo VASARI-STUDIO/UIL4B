@@ -131,6 +131,14 @@ const ADDED_SELECTORS = {
   // Below 768px a Create tool's primary is in the dock fixed to the foot of the screen, not
   // the toolbar (`.tl-primary` is not rendered at 390 any more). The dock takes its place
   // in the measure at 390; it is not mounted at 1440.
+  // The dashboard's own classes replace the old page's `.uh-*` hooks. Those the signed-out example
+  // kit does not mount are skipped by the measure.
+  '/projects': ['.db', '.db-wrap', '.db-main', '.db-head', '.db-title', '.db-today', '.db-greetw', '.db-col', '.db-sheet',
+    '.db-kit', '.db-plate', '.db-part', '.db-lbl', '.db-meta', '.db-stop', '.db-dstops', '.db-tstop', '.db-hexes', '.db-hex',
+    '.db-ts', '.db-ratio', '.db-files', '.db-code', '.db-fm', '.db-fname', '.db-fsample', '.db-icons', '.db-go', '.db-ghost',
+    '.db-link', '.db-open', '.db-opent', '.db-textbtn', '.db-tl', '.db-ring', '.db-bt', '.db-shelf', '.db-plan', '.db-perks',
+    '.db-bar', '.db-end', '.db-status', '.db-sr', '.db-sch', '.db-circle', '.db-img', '.db-mono', '.db-group', '.db-minis',
+    '.db-mini', '.db-gt', '.db-more', '.db-find', '.db-input', '.db-tick', '.db-also', '.db-anchor'],
   '/create/palette': ['.tl-dock'],
   '/create/semantic-color': ['.tl-dock'],
   '/create/gradient': ['.tl-dock'],
