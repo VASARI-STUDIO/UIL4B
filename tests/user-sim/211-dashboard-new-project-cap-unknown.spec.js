@@ -26,8 +26,8 @@
 //   Projects.jsx loadFailed: drop the `|| unchecked` term -> "a failed list stays failed" goes red.
 //   Projects.jsx newProject: back to `showNew && (` (no wrapper while a refusal is open) -> both
 //     "every project archived" tests go red.
-//   projectSync.js pullRemoteProjects/readRemoteProjects: stop calling `opts.step` -> "one cached project"
-//     goes red (the slow read is no longer bounded per step) and the unit step tests go red.
+//   projectSync.js pullRemoteProjects/readRemoteProjects: stop calling `opts.step` -> the "a read that never
+//     answers" tests go red (the stalled read is no longer bounded) and so do the unit step tests.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { ago, DAY } from './fixtures/dashboard-projects.js'

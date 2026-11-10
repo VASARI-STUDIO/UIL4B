@@ -21,6 +21,8 @@
 //   dashboard.css   `.db:has(.db-pop) .db-bar` rule removed                        -> "the docked bar hides while the name sheet is open"
 //   dashboard.css   `.db-minis` single column -> two                               -> "minis are one to a row ..."
 //   dashboard.css   `.db-newwrap .db-ghost { width: 44px }` -> 30px                -> "New project is a 44px plus"
+//   dashboard.css   `.db-opent { display: inline-flex; min-height: 44px ... }` in the coarse 359 block -> `display: inline` -> "Open project is a 44px target on touch at 320 / 340 / 359px"
+//   dashboard.css   `.db-name` line-clamp / white-space: normal in the phone block removed -> "a lead name that does not fit one line wraps to two ..."
 import { test, expect } from './base.js'
 import { go, watch, expectRendered, signIn } from './helpers.js'
 import { MINUTE, ago, complete, half, noTints, many } from './fixtures/dashboard-projects.js'
