@@ -18,6 +18,17 @@
   mask-image:linear-gradient(to bottom,#000 0%,#000 40%,transparent 100%);
 }
 
+/* The gallery's own cards, faded (GateFadeRows). The cards are drawn by the
+   gallery's grid component, so columns and gap are the live grid's; this only
+   sets what the viewer sees of them. Row 1 is slightly blurred and dimmed, row 2
+   heavily blurred and nearly transparent, and the box is cut part-way down
+   row 2 so a tall card does not push the block a screen away. The first row sits
+   one grid gap below the last live row, so the faded cards read as the next ones. */
+.geg-fade:has(>.geg-rows){margin-top:0;max-height:var(--geg-fade-max,460px);overflow:hidden}
+.geg-rows{display:flex;flex-direction:column;gap:var(--geg-gap,24px);padding-top:var(--geg-gap,24px)}
+.geg-row[data-row="0"]{filter:blur(1.5px);opacity:.78}
+.geg-row[data-row="1"]{filter:blur(5px);opacity:.28}
+
 /* The block: centred, one column. With faded rows above it the heading is
    pulled 24px up into the rows' foot; without them it sits 48px below the grid,
    so it never overlaps a result. */
@@ -86,12 +97,6 @@ html[data-reduced-motion="true"] .geg-pill:is(:hover,:active){transform:none}
   border-radius:var(--radius-md,12px);
   background:color-mix(in srgb,var(--t0) 5%,var(--bg-0));
 }
-.geg-ph-grid--swatch .geg-ph{flex-direction:column}
-.geg-ph-band{flex:1;filter:blur(3px)}
-.geg-ph-band[data-band="0"]{background:color-mix(in srgb,var(--t0) 16%,var(--bg-0))}
-.geg-ph-band[data-band="1"]{background:color-mix(in srgb,var(--t0) 11%,var(--bg-0))}
-.geg-ph-band[data-band="2"]{background:color-mix(in srgb,var(--t0) 14%,var(--bg-0))}
-.geg-ph-band[data-band="3"]{background:color-mix(in srgb,var(--t0) 9%,var(--bg-0))}
 .geg-ph-grid--poster .geg-ph{background:none}
 .geg-ph img{display:block;width:100%;height:100%;object-fit:cover;filter:blur(3px)}
 .geg-ph-grid--glyph .geg-ph{background:none;justify-content:center;padding-top:16px;color:var(--t0)}

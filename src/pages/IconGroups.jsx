@@ -7,7 +7,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import ColorPickerPop from '../components/ColorPickerPop'
 import { LockedIconGroupCard } from '../components/library/LockedTease'
-import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
+import GalleryEndGate, { GateFadeCards, GateFadeRows } from '../components/library/GalleryEndGate'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import {
@@ -60,6 +60,38 @@ function Glyph({ iconRef, color, stroke }) {
   )
 }
 
+/* The faded cards behind the index gate. A group's own glyphs are fetched by
+   tier, and the groups the viewer lacks are the ones whose glyphs they may not
+   load, so these are the group card's own markup over neutral outline shapes and
+   bars where the name and meta go: the same card, with nothing of any group in it. */
+const STANDIN_SHAPES = ['circle', 'square', 'arrow', 'circle', 'square', 'arrow', 'circle', 'square']
+const GROUP_STANDINS = Array.from({ length: 12 }, (_, i) => i)
+function GroupStandinGrid({ items }) {
+  return (
+    <ul className="igp-cards">
+      {items.map((i) => (
+        <li key={i}>
+          <span className="igp-card">
+            <span className="igp-card-preview">
+              {STANDIN_SHAPES.map((kind, k) => (
+                <svg key={k} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+                  {kind === 'circle' && <circle cx="12" cy="12" r="8" />}
+                  {kind === 'square' && <rect x="4" y="4" width="16" height="16" rx="3" />}
+                  {kind === 'arrow' && <path d="M5 12h14M13 6l6 6-6 6" />}
+                </svg>
+              ))}
+            </span>
+            <span className="igp-card-foot">
+              <span className="igp-card-bar" />
+              <span className="igp-card-bar igp-card-bar--short" />
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function GroupCard({ group, tier }) {
   const need = groupNeeds(group, tier)
   if (need) return <li><LockedIconGroupCard preview={{ id: group.id, label: group.label, slots: group.icons.length }} /></li>
@@ -87,7 +119,7 @@ function GroupIndexGate({ tier }) {
   const shown = PREMADE_ICON_GROUPS.filter((g) => !groupNeeds(g, tier)).length
   const opens = PREMADE_ICON_GROUPS.filter((g) => !groupNeeds(g, 'free')).length
   if (shown >= total) return null
-  const fade = <GateFadeCards shape="glyph" count={24} min={136} />
+  const fade = <GateFadeRows items={GROUP_STANDINS} render={(slice) => <GroupStandinGrid items={slice} />} />
   if (tier === 'anon' && opens > shown) {
     return (
       <GalleryEndGate

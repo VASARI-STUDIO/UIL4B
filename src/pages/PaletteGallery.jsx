@@ -6,7 +6,7 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
-import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
+import GalleryEndGate, { GateFadeRows } from '../components/library/GalleryEndGate'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -21,6 +21,7 @@ import { useProLibrary } from '../hooks/useProLibrary'
 import { LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
 import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { LIBRARY_RULES } from '../utils/libraryRules'
+import { standinPalettes } from '../utils/gateStandins'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -158,6 +159,10 @@ const cardMetaFor = (moodsById) => (palette) => {
   return first ? `${MOOD_LABELS[first]}, ${size}` : size
 }
 
+// Neutral palettes for the gate's faded cards where the next ones are Pro's.
+const PALETTE_STANDINS = standinPalettes()
+const standinMeta = (palette) => `${palette.colors.length} colours`
+
 export default function PaletteGallery({ toast }) {
   const [query, setQuery] = useState('')
   // Two independent axes. `group` is provenance, `mood` is what the colours
@@ -192,7 +197,7 @@ export default function PaletteGallery({ toast }) {
   // stubs standing in for the withheld ones, or the server's full list). The cap
   // counts down THAT list, never the filtered one — the distinction is the whole of
   // the prompt-library defect this module was written after.
-  const { open: browsable, remaining: lockedCount, eligible } = useMemo(() => (
+  const { open: browsable, next: nextOpen, remaining: lockedCount, eligible } = useMemo(() => (
     splitLockedLibrary(rows, {
       unlocked: ready,
       isOpen: LIBRARY_RULES.palettes.isOpen,
@@ -278,9 +283,10 @@ export default function PaletteGallery({ toast }) {
       : 'Colours worth building with'
 
   // The end of the open palettes: the shared gate (GalleryEndGate) over two
-  // rows of neutral placeholders. Signed out, the gate offers a free account;
-  // from the free rung, Pro. The rows are made of no palette, so nothing that
-  // is withheld is named, coloured or fetched.
+  // faded rows of this gallery's own cards. Signed out, the gate offers a free
+  // account and the rows are the next palettes it opens; from the free rung it
+  // offers Pro and the rows are neutral stand-ins, so nothing that is Pro's is
+  // named, coloured or fetched.
   //
   // Shown only while the view is unnarrowed. Under a search or a mood filter
   // the user has asked a narrower question, and answering it with a paywall
@@ -307,7 +313,15 @@ export default function PaletteGallery({ toast }) {
   const opens = freeOpens({ eligible })
   // The same sign-in flow the icon library's gate opens.
   const logIn = () => requireLogin('browse more of the palette library')
-  const fade = <GateFadeCards shape="swatch" min={320} />
+  // The card foot's mood word for the faded free-tier palettes, classified the
+  // way the open ones are.
+  const nextMeta = useMemo(() => cardMetaFor(new Map(nextOpen.map((palette) => [palette.id, classifyPalette(palette.colors)]))), [nextOpen])
+  // The faded cards behind a gate, drawn by this gallery's own grid. `rows` are
+  // the real palettes a free account opens next; with none, neutral stand-ins
+  // take their place (a Pro palette's colours never go in).
+  const fadeOf = (rows) => (rows.length
+    ? <GateFadeRows items={rows} render={(slice) => <PaletteGalleryGrid palettes={slice} metaOf={nextMeta} hexChips />} />
+    : <GateFadeRows items={PALETTE_STANDINS} render={(slice) => <PaletteGalleryGrid palettes={slice} metaOf={standinMeta} hexChips />} />)
   const lockedBlock = proPending ? null : lockedCount > 0 ? (
     anonymous && accountAdds > 0 ? (
       <GalleryEndGate
@@ -317,7 +331,7 @@ export default function PaletteGallery({ toast }) {
         body={copy.anon.body(browsable.length, rows.length, opens)}
         primary={{ label: copy.anon.action, onClick: logIn }}
         secondary={{ label: copy.anon.secondary, to: '/plans' }}
-        fade={fade}
+        fade={fadeOf(nextOpen)}
       />
     ) : (
       <GalleryEndGate
@@ -326,7 +340,7 @@ export default function PaletteGallery({ toast }) {
         heading={copy.pro.heading(lockedCount)}
         body={copy.pro.body(browsable.length, rows.length, lockedCount)}
         primary={{ label: copy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('palette-library-brand-lock') }}
-        fade={fade}
+        fade={fadeOf([])}
       />
     )
   ) : null
@@ -528,7 +542,7 @@ export default function PaletteGallery({ toast }) {
                 body={copy.emptied.anon.body(gatedNoun, opens, rows.length)}
                 primary={{ label: copy.emptied.anon.action, onClick: logIn }}
                 secondary={{ label: copy.emptied.anon.secondary, to: '/plans' }}
-                fade={fade}
+                fade={fadeOf(nextOpen.filter((palette) => palette.kind === group))}
               />
             ) : (
               // A free account does not open Brand, so signed out the only
@@ -539,7 +553,7 @@ export default function PaletteGallery({ toast }) {
                 heading={copy.emptied.pro.heading(gatedNoun)}
                 body={copy.emptied.pro.body({ anonymous, total: rows.length, locked: lockedCount, brand: group === 'brand' })}
                 primary={{ label: copy.emptied.pro.action, to: '/plans', onClick: () => reportUpgradeGate('palette-library-brand-chip') }}
-                fade={fade}
+                fade={fadeOf([])}
               />
             )
           )}

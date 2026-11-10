@@ -6,7 +6,7 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
-import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
+import GalleryEndGate, { GateFadeRows } from '../components/library/GalleryEndGate'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
@@ -15,6 +15,7 @@ import { useProLibrary } from '../hooks/useProLibrary'
 import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
+import { standinGradients } from '../utils/gateStandins'
 import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
 import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
@@ -70,6 +71,9 @@ const TYPE_OPTIONS = [
   { id: 'all', label: 'All types' },
   ...TYPES.map(t => ({ id: t, label: t })),
 ]
+
+// Neutral gradients for the gate's faded cards where the next ones are Pro's.
+const GRADIENT_STANDINS = standinGradients()
 
 export default function GradientGallery({ toast }) {
   const { user, loading: authLoading } = useAuth()
@@ -181,7 +185,7 @@ export default function GradientGallery({ toast }) {
   // the grid: the haystack below indexes every stop's HEX, so filtering the
   // full collection would let a signed-out visitor confirm a withheld
   // gradient's colours by typing them, and read its name back from the result.
-  const { open: browsable, remaining: lockedCount, eligible } = useMemo(() => (
+  const { open: browsable, next: nextOpen, remaining: lockedCount, eligible } = useMemo(() => (
     // A gradient's NAME is the tease and its stops are the product — the same
     // split as a brand palette, and the opposite of a community prompt, whose
     // title IS the thing being sold. `slots` is the stop count: how many values
@@ -235,8 +239,8 @@ export default function GradientGallery({ toast }) {
   // paywall is an interruption rather than an offer (same rule as the Palette
   // and Prompt libraries).
   //
-  // The end of the open gradients is the shared gate (GalleryEndGate) over two
-  // rows of neutral placeholders, drawn from no gradient: a withheld
+  // The end of the open gradients is the shared gate (GalleryEndGate) over two faded
+  // rows of this gallery's cards, never a Pro gradient: a withheld
   // gradient's name, stops and thumbnail never reach the page.
   const anonymous = tier === 'anonymous'
   const teaseVisible = !proPending && lockedCount > 0 && !query && tag === 'all' && types.includes('all')
@@ -245,7 +249,11 @@ export default function GradientGallery({ toast }) {
   const copy = GALLERY_GATE_COPY.gradients
   // What a free account opens in all; the gate names it, not the count on screen.
   const opens = freeOpens({ eligible })
-  const fade = <GateFadeCards shape="swatch" min={224} />
+  // The faded cards behind the gate, drawn by this gallery's own grid: the next
+  // gradients a free account opens, or neutral stand-ins where they are Pro's.
+  const fadeOf = (rows) => (
+    <GateFadeRows items={rows.length ? rows : GRADIENT_STANDINS} render={(slice) => <GradientGalleryGrid gradients={slice} />} />
+  )
   const lockedBlock = teaseVisible ? (
     anonymous && accountAdds > 0 ? (
       <GalleryEndGate
@@ -256,7 +264,7 @@ export default function GradientGallery({ toast }) {
         // The same sign-in flow the icon library's gate opens.
         primary={{ label: copy.anon.action, onClick: () => requireLogin('browse more of the gradient library') }}
         secondary={{ label: copy.anon.secondary, to: '/plans' }}
-        fade={fade}
+        fade={fadeOf(nextOpen)}
       />
     ) : (
       <GalleryEndGate
@@ -265,7 +273,7 @@ export default function GradientGallery({ toast }) {
         heading={copy.pro.heading(lockedCount)}
         body={copy.pro.body(browsable.length, rows.length, lockedCount)}
         primary={{ label: copy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('gradient-library-tier-lock') }}
-        fade={fade}
+        fade={fadeOf([])}
       />
     )
   ) : null

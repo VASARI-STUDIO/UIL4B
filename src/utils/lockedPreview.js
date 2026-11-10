@@ -75,6 +75,8 @@
 // gated is the PRODUCT — the copy button, the handoff into the Builder, the
 // export, the search — not the bytes.
 //
+import { isStub } from './libraryRules.js'
+
 // Keys a preview is allowed to carry. Anything else is dropped.
 const SANITISE_KEYS = ['id', 'label', 'tags', 'slots']
 
@@ -219,6 +221,12 @@ function sanitise(preview) {
 // Returns:
 //   open       real items the viewer may have, untouched, at most `limit`.
 //   locked     sanitised previews — at most `tease` of them, never payloads.
+//   next       real rows the NEXT rung up opens and this viewer does not have:
+//              the eligible rows past this viewer's cap but within the free
+//              tier's, in order. Full records only (a stub has nothing to
+//              draw), and empty for a free or Pro viewer, whose next rung opens
+//              nothing in the free set. They are free with an account, so the
+//              signed-out end gate may fade them in behind its copy.
 //   remaining  how many rows this viewer does not have. The CTA's number.
 //   eligible   how many rows pass `isOpen` regardless of the cap. The tier
 //              arithmetic needs it and it is a fact about the LIBRARY, not
@@ -226,7 +234,7 @@ function sanitise(preview) {
 export function splitLockedLibrary(items, { unlocked, isOpen, preview, tease = LOCKED_TEASE, limit = Infinity } = {}) {
   const all = Array.isArray(items) ? items : []
   if (unlocked === true) {
-    return { open: all, locked: [], remaining: 0, eligible: all.length }
+    return { open: all, locked: [], next: [], remaining: 0, eligible: all.length }
   }
   // A non-numeric or negative cap collapses to zero rather than to Infinity:
   // the same fail-closed reflex as `unlocked`, so a limit that arrives
@@ -241,18 +249,23 @@ export function splitLockedLibrary(items, { unlocked, isOpen, preview, tease = L
   // are. `shut` is everything the flag locks outright.
   const over = []
   const shut = []
+  const next = []
   let eligible = 0
   for (const item of all) {
     if (isOpen(item) === true) {
       eligible += 1
       if (open.length < cap) open.push(item)
-      else over.push(item)
+      else {
+        over.push(item)
+        if (eligible <= GALLERY_TIER_LIMITS.free && !isStub(item)) next.push(item)
+      }
     } else shut.push(item)
   }
   const withheld = [...over, ...shut]
   return {
     open,
     locked: withheld.slice(0, Math.max(0, tease)).map(item => sanitise(preview(item))),
+    next,
     remaining: withheld.length,
     eligible,
   }
