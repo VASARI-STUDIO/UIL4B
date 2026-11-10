@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { PICKER_THEMES, pickerTheme, preloadTheme, themeShots, shapeClass } from '../../config/exportThemePicker'
+import { PICKER_THEMES, pickerTheme, preloadTheme, themeShots, shapeClass, themedFileIsPro } from '../../config/exportThemePicker'
 
 // The Theme step of the Export dialog: the chosen theme with its tier, a line naming the sample brand the pictures come from,
 // and a Change button that opens a listbox of the ten themes. Highlighting a row previews it at once (onPreview); Enter or a
@@ -37,7 +37,7 @@ export function ThemeStage({ kind, theme, locked, lockText }) {
   )
 }
 
-export default function ExportThemeRow({ value, onChange, onPreview, isPro, checking, yourName, kind = 'kit', sheet = false }) {
+export default function ExportThemeRow({ value, onChange, onPreview, isPro, checking, yourName, kind = 'kit', file = 'kit', sheet = false }) {
   const uid = useId()
   const theme = pickerTheme(value)
   const [open, setOpen] = useState(false)
@@ -49,7 +49,8 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
   const list = useRef(null)
   const leaveTimer = useRef(0)
   const hot = useRef(-1)
-  const tier = (t) => (isPro || checking ? '' : t.free ? 'Free' : 'Pro')
+  // Free or Pro for this file in this theme: the dock's own call, so a label never says Free for a file the dock locks.
+  const tier = (t) => (isPro || checking ? '' : themedFileIsPro(file, t.id) ? 'Pro' : 'Free')
   const shown = open || leaving
 
   useEffect(() => () => clearTimeout(leaveTimer.current), [])

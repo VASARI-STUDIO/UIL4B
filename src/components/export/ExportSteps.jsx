@@ -233,7 +233,7 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
   const themeStep = themed && (
     <section className={`xd-step${strip ? ' xd-step--lead' : ''}`} aria-labelledby={`${uid}-theme`}>
       <h3 className="xd-step-l" id={`${uid}-theme`}>Theme</h3>
-      <ExportThemeRow value={theme} onChange={onTheme} onPreview={onPeek} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} sheet={strip} />
+      <ExportThemeRow value={theme} onChange={onTheme} onPreview={onPeek} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} file={file} sheet={strip} />
       <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
     </section>
   )
