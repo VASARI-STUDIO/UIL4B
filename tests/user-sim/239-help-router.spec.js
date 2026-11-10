@@ -154,7 +154,7 @@ test.describe('Help router: today\'s content is still here', () => {
     const savePanel = panelOf(page, save)
     await expect(savePanel).toContainText('In this browser, until you sign in.')
     await expect(savePanel.getByRole('heading', { level: 3, name: 'Do I need an account?' })).toBeVisible()
-    await expect(savePanel).toContainText(`${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`)
+    await expect(savePanel).toContainText(`${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} icons per project`)
     await expect(savePanel.locator('a.hlr-btn')).toHaveAttribute('href', '/privacy')
 
     // Money: the allowance bars and "Why are the AI allowances small?".

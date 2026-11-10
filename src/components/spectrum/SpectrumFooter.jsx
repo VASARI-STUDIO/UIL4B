@@ -171,7 +171,9 @@ function Sky() {
 // `home` is the homepage's closing look: the rising light, the wordmark, the
 // "Save time" line without a second call to action (the final call above has
 // it), and the Legal column kept at every width. Every other page leaves it off.
-export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false }) {
+// `pageColumn={false}` drops the "This page" column (the homepage's section
+// anchors) for a page that has none to offer; it only applies with `home`.
+export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false, notice = null, home = false, pageColumn = true }) {
   const year = new Date().getFullYear()
   const { pathname } = useLocation()
   const { reducedMotion } = useAppearance() || {}
@@ -184,7 +186,7 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
   return (
     <footer
       ref={footerRef}
-      className={home ? 'sp-footer sp-footer--home' : 'sp-footer'}
+      className={home ? `sp-footer sp-footer--home${pageColumn ? '' : ' sp-footer--no-page'}` : 'sp-footer'}
       data-curtain={curtain || undefined}
       onFocus={curtain ? uncoverFooter : undefined}
     >
@@ -211,18 +213,20 @@ export default function SpectrumFooter({ toolkitTo = '/projects', reveal = false
                 <li key={groupId}><NavLink to={categoryDestination(groupId)}>{label}</NavLink></li>
               ))}
             </Column>
-            <Column heading={home ? 'This page' : 'Project'}>
-              {PROJECT.map(([hash, label]) => {
-                const href = salesHref(hash, pathname)
-                return (
-                  <li key={hash}>
-                    {href.startsWith('#')
-                      ? <a href={href}>{label}</a>
-                      : <Link to={href} onClick={crossRouteHashClick(href)}>{label}</Link>}
-                  </li>
-                )
-              })}
-            </Column>
+            {(pageColumn || !home) && (
+              <Column heading={home ? 'This page' : 'Project'}>
+                {PROJECT.map(([hash, label]) => {
+                  const href = salesHref(hash, pathname)
+                  return (
+                    <li key={hash}>
+                      {href.startsWith('#')
+                        ? <a href={href}>{label}</a>
+                        : <Link to={href} onClick={crossRouteHashClick(href)}>{label}</Link>}
+                    </li>
+                  )
+                })}
+              </Column>
+            )}
             <Column heading="Explore">
               {EXPLORE.map(([to, label]) => (
                 <li key={to}><NavLink to={to}>{label}</NavLink></li>

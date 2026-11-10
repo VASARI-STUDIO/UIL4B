@@ -112,7 +112,7 @@ test.describe('signup intent', () => {
     watch(page, PERSONA)
     await go(page, '/plans')
 
-    const free = page.locator('.pr-head--free').getByRole('link', { name: 'Open the toolkit' })
+    const free = page.locator('.hpl-free').getByRole('link', { name: 'Open the toolkit' })
     await expect(free).toHaveAttribute('href', '/projects')
     await free.click()
     await expect(page).toHaveURL(/\/projects$/)
