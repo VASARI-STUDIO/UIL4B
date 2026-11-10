@@ -67,9 +67,10 @@ export default function AuthForm({
   // The form is on screen, so the next thing that happens may be a sign-in. Start
   // the SDK now: the Google popup has to open inside the click that asked for it.
   useEffect(() => { openFirebaseGate() }, [])
-  // The Google button stays disabled until the auth SDK is in: signInWithPopup
-  // must run inside the click, and awaiting the download first can lose the
-  // browser's user activation. A failed load enables it so the click reports it.
+  // The Google button is aria-disabled (still focusable, click ignored) until the
+  // auth SDK is in: signInWithPopup must run inside the click, and awaiting the
+  // download first can lose the browser's user activation. A failed load enables
+  // it so the click reports it.
   const [sdkReady, setSdkReady] = useState(() => !!authNow())
   useEffect(() => {
     let live = true
@@ -162,7 +163,7 @@ export default function AuthForm({
   }
 
   const handleGoogle = async () => {
-    if (offline) return
+    if (offline || !sdkReady) return
     setError(null)
     setBusy('google')
     try {
@@ -249,7 +250,7 @@ export default function AuthForm({
             <>
               {isEntry && (
                 <>
-                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={blocked || !sdkReady} aria-busy={!sdkReady || undefined} aria-describedby={offline ? 'ui-login-offline' : undefined}>
+                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={blocked} aria-disabled={!sdkReady || undefined} aria-busy={!sdkReady || undefined} aria-describedby={offline ? 'ui-login-offline' : undefined}>
                     {busy === 'google' ? <Spinner /> : <span className="auth-google-mark"><GoogleIcon /></span>}
                     {busy === 'google' ? t('auth.googleLoading') : t('auth.continueWithGoogle')}
                   </button>
