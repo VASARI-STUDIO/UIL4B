@@ -295,6 +295,10 @@ const ALLOWED = {
   'pages/type-scale.css': {
     '.tsc-page .tsc-dock-ratio-v': 'value',
     '.tsc-page .tsc-ratio-v': 'value',
+    '.tsc-page .tsc-fr-chip': 'value',
+    '.tsc-page .tsc-fr-opt': 'value',
+    '.tsc-page .tsc-range .snapv-value': 'value',
+    '.tsc-page .tsc-range .snapv-input': 'value',
     '.tsc-page .tsc-chip-n': 'token',
     '.tsc-page .tsc-row-name': 'token',
     '.tsc-page .tsc-row-num': 'value',
