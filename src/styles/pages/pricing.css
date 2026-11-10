@@ -152,13 +152,14 @@
   gap: 4px 8px;
 }
 .pricing .pa-amt {
-  font-size: 64px;
+  --pa-amt: 64px;
+  font-size: var(--pa-amt);
   font-weight: 500;
   line-height: 1;
   letter-spacing: -.04em;
   font-variant-numeric: tabular-nums;
 }
-.pricing .pa-amt--word { font-size: 40px; }
+.pricing .pa-amt--word { font-size: 40px; line-height: var(--pa-amt); }
 .pricing .pa-per { font-size: 14px; color: rgba(var(--sp-ink-rgb), .68); }
 .pricing .pa-slot {
   margin-top: 10px;
@@ -615,7 +616,7 @@ html[data-reduced-motion="true"] .pricing.pricing:has(.spnav[data-nav-hidden="1"
   .pricing .pl-seg { flex: 1 1 auto; min-width: 0; height: 40px; padding: 0 12px; }
 
   .pricing .pa-price { gap: 4px 10px; }
-  .pricing .pa-amt { font-size: 42px; }
+  .pricing .pa-amt { --pa-amt: 42px; }
   .pricing .pa-amt--word { font-size: 40px; }
   .pricing .pa-slot { min-height: 63px; }
   .pricing .pa-slot--short { min-height: 21px; }
@@ -642,7 +643,7 @@ html[data-reduced-motion="true"] .pricing.pricing:has(.spnav[data-nav-hidden="1"
   .pricing { --pa-pp: 20px; }
   .pricing .pa-head { padding-top: calc(var(--chrome-h) + 16px); }
   .pricing .pa-hpl { margin-top: 16px; }
-  .pricing .pa-amt { font-size: 36px; }
+  .pricing .pa-amt { --pa-amt: 36px; }
   .pricing .pa-amt--word { font-size: 34px; }
   .pricing .pl-bar { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); gap: 8px; }
   .pricing .pl-bar-go { padding: 0 14px; font-size: 14px; }

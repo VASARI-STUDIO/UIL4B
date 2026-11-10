@@ -93,7 +93,7 @@ const FAQS = [
   },
   {
     q: 'What counts as one generation?',
-    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser and cost us nothing.',
+    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser.',
   },
 ]
 
@@ -294,7 +294,8 @@ export default function Pricing() {
     foot1 = stateCopy.under
   }
   const priceSize = live || state === 'loading' || state === 'retrying' ? 'pa-amt' : 'pa-amt pa-amt--word'
-  const detailMin = isPro || state === 'no-currency' || state === 'loading' || state === 'retrying' ? ' pa-slot--short' : ''
+  // Every price state holds the live slot's height, so the Pro button does not move when the price lands.
+  const detailMin = isPro ? ' pa-slot--short' : ''
   const fx = switched ? ' pl-fx' : ''
   const fxKey = switched ? billing : 'first'
 
