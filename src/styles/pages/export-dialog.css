@@ -157,6 +157,9 @@
 /* The phone sheet: the price line sits above full-width buttons. */
 .xd[data-layout="strip"] .xd-dock{flex-direction:column;align-items:stretch;gap:var(--s-2);padding:var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom))}
 .xd[data-layout="strip"] .xd-dock--signin{display:block}
+/* On a phone the sign-in step takes the sheet: the type picker and preview step aside, so the fields and Log in sit in one scroll. */
+.xd[data-layout="strip"] .xd-card:has(.xd-dock--signin) :is(.xd-nav,.xd-scroll){display:none}
+.xd[data-layout="strip"] .xd-signin{max-height:none}
 .xd[data-layout="strip"] .xd-dock-line{flex:none}
 .xd[data-layout="strip"] :is(.xd-dock-line,.xd-error){max-height:6.5em;overflow-y:auto}
 .xd[data-layout="strip"] .xd-dock-acts > .xd-act{flex:1 1 0;min-height:48px;min-width:0}

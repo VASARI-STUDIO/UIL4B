@@ -41,7 +41,7 @@ for (const size of SIZES) {
       await expect(primaryButton(panel)).toHaveText('Export UI kit')
       await expect(panel.getByRole('button', { name: 'Change theme, current Standards' })).toBeVisible()
       await expect(panel.locator('.xd-theme-stage img').first()).toBeVisible()
-      await expect(dockStatus(panel)).toHaveText(/Free with an account\. Sign in to export\./)
+      await expect(dockStatus(panel)).toHaveText(/Free with an account\. Log in to export\. The file carries a small ‘Made with UI L4B’ mark\./)
       await expect(panel.locator('#ui-login-title'), 'the sign-in is not asked for until Export is pressed').toHaveCount(0)
     })
 

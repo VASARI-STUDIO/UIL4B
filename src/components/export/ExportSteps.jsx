@@ -320,7 +320,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
       : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in Standards and Specification.</>
         : <><strong>Pro</strong> unlocks this file.</>
   } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
-  else if (!user) line = <><strong>Free with an account.</strong> Sign in to export.</>
+  else if (!user) line = <><strong>Free with an account.</strong> Log in to export. The file carries a small ‘Made with UI L4B’ mark.</>
   else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
   else line = <><strong>Free.</strong> The file carries a small ‘Made with UI L4B’ mark.</>
 

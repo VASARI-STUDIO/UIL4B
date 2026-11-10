@@ -18,9 +18,9 @@ export default function ExportSignIn({ onDone }) {
   }, [])
 
   return (
-    <section className="xd-signin" ref={root} aria-label="Sign in to export">
+    <section className="xd-signin" ref={root} aria-label="Log in to export">
       <div className="xd-signin-head">
-        <p className="xd-signin-lead"><strong>Free with an account.</strong> Sign in to export.</p>
+        <p className="xd-signin-lead"><strong>Free with an account.</strong> The file carries a small ‘Made with UI L4B’ mark.</p>
         <button type="button" className="btn xd-signin-x" onClick={() => onDone(false)} disabled={busy}>Cancel</button>
       </div>
       <AuthForm
