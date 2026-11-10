@@ -799,7 +799,7 @@ const SUBMIT_SURFACE = 'palette'
 // share link stays on `onCopy` and is not an activation — see
 // src/config/activationExports.js for why that decision lives in CreateTool.
 export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
-  const { design, setPalette, saveProject, overwriteProject, saveColourToProject, projects, projectsLoading, canSaveProjects, parkWorkingDesign } = useProject()
+  const { design, setPalette, saveProject, overwriteProject, saveColourToProject, projects, projectsLoading, projectCountPending, canSaveProjects, parkWorkingDesign } = useProject()
   const { registerExport, clearExport } = useExport()
   const { isPro, planKnown } = useSubscription()
   // The preview opens in the theme the site is showing.
@@ -1193,7 +1193,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // reached ProjectContext.
   useEffect(() => {
     // Waits for the account's list: the cap counts the account's projects, not this device's.
-    if (pendingSave == null || !canSaveProjects || projectsLoading) return
+    if (pendingSave == null || !canSaveProjects || projectCountPending) return
     setPendingSave(null)
     // The save is being attempted, so a remount has nothing left to reopen.
     clearPendingSave()
@@ -1215,7 +1215,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // as a link — the treatment /projects already gives the same refusal.
       setSaveError(err?.message || 'Couldn’t save')
     }
-  }, [pendingSave, canSaveProjects, projectsLoading, saveProject, toast, coachOn, navigate])
+  }, [pendingSave, canSaveProjects, projectCountPending, saveProject, toast, coachOn, navigate])
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }

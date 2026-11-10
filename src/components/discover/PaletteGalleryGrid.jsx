@@ -108,7 +108,7 @@ function CheckGlyph() {
 export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = [], labelledBy, metaOf, hexChips = false }) {
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
-  const { saveProject, canSaveProjects, projectsLoading } = useProject()
+  const { saveProject, canSaveProjects, projectCountPending } = useProject()
   const { requireLogin } = useLoginPrompt()
 
   // Likes belong to an account: signed out, a press asks to sign in first and
@@ -179,11 +179,11 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
   // on the render where saving is allowed.
   const pendingSaveRef = useRef(null)
   useEffect(() => {
-    if (!canSaveProjects || projectsLoading || !pendingSaveRef.current) return
+    if (!canSaveProjects || projectCountPending || !pendingSaveRef.current) return
     const palette = pendingSaveRef.current
     pendingSaveRef.current = null
     saveNow(palette)
-  }, [canSaveProjects, projectsLoading, saveNow])
+  }, [canSaveProjects, projectCountPending, saveNow])
 
   const saveToProject = useCallback(async (palette) => {
     if (canSaveProjects) {

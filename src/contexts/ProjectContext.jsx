@@ -297,12 +297,15 @@ export function ProjectProvider({ children }) {
   // True from sign-in until the account's projects have been read once. The
   // list above may be missing projects that exist on the account until then.
   const projectsLoading = !!uid && pulledUid !== uid
-  // Whether the number of projects on this device is the account's number. It is once the
-  // account's list was read. If the read failed it stays so only for a device that already
-  // holds a copy of the account (an offline session keeps saving to it); a device with no
-  // copy has an empty list that says nothing about the account.
+  // Whether the number of projects on this device can be used for the cap. It can once the
+  // account's list was read, and for a device that already holds a copy of the account, whether
+  // the read is still running or failed (a returning session keeps saving against the cached
+  // count, and the merge that follows only ever blocks the NEXT new project, never removes one).
+  // A device with no copy has an empty list that says nothing about the account.
   const hasDeviceCopy = (allProjects[userKey] || []).length > 0
-  const projectCountKnown = !uid || countedUid === uid || (pulledUid === uid && hasDeviceCopy)
+  const projectCountKnown = !uid || countedUid === uid || hasDeviceCopy
+  // No cached copy and the account has not answered yet: a new project has to wait.
+  const projectCountPending = projectsLoading && !projectCountKnown
 
   const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
@@ -750,6 +753,7 @@ export function ProjectProvider({ children }) {
     canSaveProjects: !!userKey,
     projectsLoading,
     projectCountKnown,
+    projectCountPending,
     projectLimit,
     atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,

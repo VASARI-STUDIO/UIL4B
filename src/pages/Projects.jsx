@@ -50,7 +50,7 @@ export default function Projects() {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const { plan, isPro, loading: planLoading } = useSubscription()
-  const { projects, projectsLoading, projectCountKnown, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
+  const { projects, projectsLoading, projectCountKnown, projectCountPending, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
   useProjectIcons()
   const online = useSyncExternalStore(subscribeOnline, readOnline, () => true)
   const sync = useSyncExternalStore(subscribeSync, getSyncState, getSyncState)
@@ -64,7 +64,7 @@ export default function Projects() {
 
   // The cap is the account's, so a new project waits for the account's own count: `checking` while the
   // list is on its way, `unchecked` once it failed on a device that holds no copy of the account.
-  const checking = !signedOut && !resolving && projectsLoading
+  const checking = !signedOut && !resolving && projectCountPending
   const unchecked = !signedOut && !resolving && !projectsLoading && !projectCountKnown
 
   const [capRefusal, setCapRefusal] = useState('')
