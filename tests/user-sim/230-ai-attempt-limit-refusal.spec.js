@@ -6,11 +6,11 @@
 // { error, rateLimited } and no `usage`, and the long waits send no `retryAfter`
 // in the body, so the Alt Text page shows the sentence as it is and does not
 // sleep on it. The page must show the server's sentence, leave the image in
-// place with a Retry button, and not mark the attempt as spent.
+// place with a Try again button, and not mark the attempt as spent.
 //
 // MUTATION: make the page treat any 429 as retryable (retry on a body without
 // retryAfter) and the second request below appears; drop the `error` text from
-// the card and the sentence assertion fails.
+// the row and the sentence assertion fails.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -48,14 +48,14 @@ for (const width of [390, 1440]) {
       await go(page, '/create/alt-text')
       await page.locator('.alt-dropzone input[type="file"]')
         .setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: await pngBytes(page) })
-      await expect(page.locator('.alt-card-ready')).toHaveCount(1, { timeout: 10000 })
+      await expect(page.locator('.alt-row-ready')).toHaveCount(1, { timeout: 10000 })
 
       const generateHome = width < 768 ? '[data-tl-dock]' : '[data-tool-toolbar]'
-      await page.locator(generateHome).getByRole('button', { name: /^Generate/ }).click()
+      await page.locator(generateHome).getByRole('button', { name: /^Write alt text/ }).click()
 
-      await expect(page.locator('.alt-card-error-msg')).toHaveText(error)
-      await expect(page.locator('.alt-card')).toHaveCount(1)
-      await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible()
+      await expect(page.locator('.alt-row-problem span')).toHaveText(error)
+      await expect(page.locator('.alt-row')).toHaveCount(1)
+      await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
       expect(calls, 'a refusal without retryAfter must not be retried automatically').toHaveLength(1)
     })
   }
