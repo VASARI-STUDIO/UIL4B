@@ -196,6 +196,10 @@ test.describe('premium homepage', () => {
     // The bookmarks section is the proof. It states the live tool count (counted,
     // never typed), and the window's sidebar has one link per live tool, each to
     // that tool's route.
+    // #bookmarks is an empty stand-in until the section's chunk arrives, and the
+    // stand-in is replaced while the scroll below is under way, so wait for the
+    // real sections first.
+    await homeSectionsLoaded(page)
     const bench = page.locator('#bookmarks')
     await bench.scrollIntoViewIfNeeded()
     const lede = (await bench.locator('.bm-sub').innerText()).toLowerCase()

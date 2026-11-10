@@ -56,6 +56,9 @@ async function seedSignedIn(page, baseURL) {
   await page.route('**://identitytoolkit.googleapis.com/**', (r) => r.abort())
   await page.goto(baseURL + '/robots.txt')
   const result = await page.evaluate(async (apiKey) => {
+    // A returning browser carries the first-paint session hint; without it the
+    // app does not fetch the auth SDK on a cold load and never reads the record.
+    localStorage.setItem('vs-session', '1')
     const user = {
       uid: 'usersim-first-win',
       email: 'first.win@example.com',
