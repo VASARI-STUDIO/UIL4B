@@ -84,6 +84,24 @@ test('nothing counts up, listens or animates', () => {
   assert.ok(!/@keyframes|animation\s*:|transition\s*:/.test(SRC.css), 'home-proof.css animates something')
 })
 
+test('no rule draws a line above or below the section', () => {
+  const TOKENS = read('src/styles/pages/home-tokens.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const PLANS = read('src/styles/pages/home-plans.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const block = (css, sel) => (css.match(new RegExp(`${sel.replace(/[.#]/g, '\\$&')}\\s*\\{([^}]*)\\}`)) || [])[1] || ''
+  // Mutation: put `border-top` (or a shadow, outline or background rule) back on `.hp`.
+  const hp = block(SRC.css, '.hp')
+  assert.ok(hp.length > 0, 'the .hp block was not found')
+  assert.doesNotMatch(hp, /border|box-shadow|outline/)
+  // Mutation: restore the shared top rule on `#plans` (the line under the proof bar) in home-tokens.css, or a border on `.hpl`.
+  assert.doesNotMatch(TOKENS, /#plans[^{]*\{[^}]*border/)
+  assert.doesNotMatch(TOKENS, /\.sp-proof/)
+  assert.doesNotMatch(TOKENS, /--hm-hairline/)
+  assert.doesNotMatch(block(PLANS, '.hpl'), /border/)
+  // The pixel the old top rule took stays as padding, so neither section changes height.
+  assert.match(hp, /padding-top:\s*calc\(var\(--section-y-compact\) \+ 1px\)/)
+  assert.match(block(PLANS, '.hpl'), /padding-top:\s*calc\(var\(--section-y\) \+ 1px\)/)
+})
+
 test('the compact section token is the only vertical space, and the last phone row is flat', () => {
   assert.match(SRC.css, /\.hp\s*\{[^}]*padding:\s*var\(--section-y-compact\)\s+var\(--gutter-x\)/)
   assert.match(SRC.css, /\.hp-l li:nth-child\(n \+ 3\)\s*\{[^}]*padding-bottom:\s*0[^}]*border-bottom:\s*0/)

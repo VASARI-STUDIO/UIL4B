@@ -21,6 +21,8 @@
   --hpl-ease: cubic-bezier(.23, 1, .32, 1);
   box-sizing: border-box;
   padding: var(--section-y) var(--gutter-x);
+  /* One pixel more than the token, so the section keeps its height with no rule on its top edge. */
+  padding-top: calc(var(--section-y) + 1px);
   color: var(--hpl-ink);
   font-family: var(--hm-font);
 }
