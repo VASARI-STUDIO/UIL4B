@@ -414,24 +414,33 @@ test.describe('the page viewer at 1440', () => {
     await dialog(page).getByRole('button', { name: 'Previous page' }).click()
     await expect(count(page)).toHaveText(`1 of ${PAGES}`)
     await expect(dialog(page).locator('.hsv-top')).toHaveAttribute('src', largeSrc('03-broadsheet', 'Colour'))
-    await expect(live(page).last(), 'a step is announced with its page and place').toHaveText(`Colour page, Broadsheet. 1 of ${PAGES}.`)
+    // The viewer's own status line: the dialog is a portal outside #examples, so `live` would find the picker's.
+    await expect(dialog(page).getByRole('status'), 'a step is announced with its page and place').toHaveText(`Colour page, Broadsheet. 1 of ${PAGES}.`)
     await ctx.close()
   })
 
   test('a step slides the new page in from the side it came from, then the old page goes', async ({ browser }) => {
     const { ctx, page } = await openSection(browser, { width: 1440 })
     await openViewer(page, 2)
+    // Let the neighbours finish loading, so the step lands on a cached page: the case where the new page
+    // is complete before it is painted, and must still be painted waiting before it moves.
+    await page.waitForLoadState('networkidle')
     await page.waitForTimeout(400)
-    // Records what the stage looks like at each change, so the short wait state is caught however fast the page loads.
+    // Reads the stage once per animation frame, so only what the visitor could have seen is
+    // counted. (A MutationObserver also sees a class that was set and replaced inside one
+    // frame, which is never painted and so never slides.) The neighbours are already warmed,
+    // so this is the cached-page path: the one that must still start from the waiting pose.
     const record = () => page.evaluate(() => new Promise((resolve) => {
       const stage = document.querySelector('.hsv-stage')
       const seen = []
-      const mo = new MutationObserver(() => {
+      const started = performance.now()
+      const sample = () => {
         const top = stage.querySelector('.hsv-top')
         if (top) seen.push({ cls: top.className, transform: getComputedStyle(top).transform, opacity: getComputedStyle(top).opacity, under: !!stage.querySelector('.hsv-under') })
-      })
-      mo.observe(stage, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] })
-      window.setTimeout(() => { mo.disconnect(); resolve({ seen, under: !!stage.querySelector('.hsv-under') }) }, 900)
+        if (performance.now() - started < 900) requestAnimationFrame(sample)
+        else resolve({ seen, under: !!stage.querySelector('.hsv-under') })
+      }
+      requestAnimationFrame(sample)
     }))
     const forward = record()
     await page.keyboard.press('ArrowRight')
