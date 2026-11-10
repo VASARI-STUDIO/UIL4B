@@ -4,8 +4,8 @@
 // The copy is the design's, from that table, word for word. The NUMBERS in it
 // are not typed: each is counted here from the data the menus list, so the
 // sentence cannot be wrong on the day a tool ships.
-import { createTools, DISCOVER_GROUPS } from '../../data/toolTree'
-import { LEARN_ARTICLES, readingMinutes } from '../../data/learnIndex'
+import { createTools, DISCOVER_LIBRARIES } from '../../data/toolTree'
+import { LEARN_ARTICLES } from '../../data/learnIndex'
 
 const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
   'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty']
@@ -26,7 +26,7 @@ export function betaCreateToolCount() {
 }
 
 export function liveLibraryCount() {
-  return DISCOVER_GROUPS.filter((g) => !g.soon).length
+  return DISCOVER_LIBRARIES.length
 }
 
 export function publishedGuideCount() {
@@ -71,6 +71,7 @@ export function menuFootNote(section) {
 
 /** "View all create tools" — the file builds it the same way (line 2082). */
 export function menuViewAll(section) {
+  if (section.id === 'learn') return 'See all guides'
   return `View all ${section.label.toLowerCase()} tools`
 }
 
@@ -85,7 +86,7 @@ export function menuPromo(section) {
   }
   if (section.id === 'discover') {
     return {
-      title: 'Palettes, gradients, fonts, icons and prompts',
+      title: 'Palettes, gradients, fonts, icons and buttons',
       blurb: `${numberWord(liveLibraryCount())} libraries you can open without an account, each with a way straight into the tool that finishes the job.`,
       cta: 'Open Discover',
       href: '/discover',
@@ -97,13 +98,4 @@ export function menuPromo(section) {
     cta: 'Read the guides',
     href: '/learn',
   }
-}
-
-/** The Learn pane: every published guide, its route and its reading time. */
-export function menuGuides() {
-  return LEARN_ARTICLES.map((a) => ({
-    label: a.title,
-    to: `/learn/${a.slug}`,
-    mins: `${readingMinutes(a.words)} MIN`,
-  }))
 }

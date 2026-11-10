@@ -170,12 +170,6 @@ const WINDOW = 400
 // what we charge."
 const NOT_A_PLAN_PRICE = [
   {
-    file: 'src/components/spectrum/benchSummary.js',
-    context: /\.replace\(\/ \(id\|width\|viewBox\|fill\)=\/g/,
-    why: 'The "$1" is the capture-group reference in a String.replace template that '
-      + 'breaks the icon code peek at its attributes. It is regex syntax, not an amount.',
-  },
-  {
     file: 'src/utils/communityHandle.js',
     context: /\.replace\(\/\[\$5\]\/g, 's'\)|collapse repeated-character padding/,
     why: 'Regex syntax in the community-handle lookalike filter: "[$5]" is a character class '
@@ -218,10 +212,41 @@ const NOT_A_PLAN_PRICE = [
       + 'dressing inside a picture of a palette, not tiers of UIL4B.',
   },
   {
+    file: 'src/components/typescale/KerbsidePage.jsx',
+    context: /OWN_DELIVERIES|Carrots|Leeks|Silverbeet/,
+    why: 'Kerbside is the invented Melbourne bike courier the Type Scale board draws its '
+      + 'sample page for: the greengrocer deliveries on its screen carry the courier\'s '
+      + 'own prices, not tiers of UIL4B.',
+  },
+  {
+    file: 'src/pages/FontMatcher.jsx',
+    context: /KS_STATS/,
+    why: 'The Kerbside sample page on the Font Pair board shows a delivery receipt '
+      + '(KS_STATS, "Paid") for the invented courier. It is set dressing, not a tier of UIL4B.',
+  },
+  {
     file: 'src/pages/PaletteBuilder.jsx',
     context: /\.replace\(/,
     why: 'Not money at all: normaliseForFilter uses the character class /[$5]/ and '
       + 'the backreference "$1". A dollar sign in regex syntax is punctuation.',
+  },
+  {
+    file: 'src/data/learn/valueProposition.jsx',
+    // Excused only while the surrounding text says nothing about our own plans:
+    // a sentence that quoted a UIL4B tier would still be checked against the ladder.
+    context: /^(?![\s\S]*(?:UIL4B (?:Pro|plans?)|\/plans\b))/,
+    why: 'The value-proposition guide reports other parties\' figures: penalties and '
+      + 'settlements in consumer-law cases (A$15m, US$1bn), the maximum fine for fake '
+      + 'reviews, and the prices in a published buyer-and-seller experiment. They are '
+      + 'cited research and enforcement amounts, not tiers of UIL4B.',
+  },
+  {
+    file: 'src/data/learn/sources.js',
+    context: /J\.C\. Penney|Emma Sleep|Service Seeking|settlement against Amazon/,
+    why: 'Four source labels in the value-proposition guide name the amount a retailer '
+      + 'lost (US$1 billion), a penalty a court ordered (A$15m), a fine for fake reviews '
+      + 'and a settlement (US$2.5 billion). They are headline figures from the cited '
+      + 'pages, not tiers of UIL4B.',
   },
   {
     file: 'src/pages/IconLibrary.jsx',
@@ -282,30 +307,33 @@ function normalise(text) {
   return formatMoney(amount, currency)
 }
 
+// The per-file half of the scan, split out so the positive control below can
+// run the identical code over an in-memory string instead of a file on disk.
+function scanSource(file, raw) {
+  const occurrences = []
+  // CSS has no line comments; JSON has no comments at all, but running the
+  // same string-aware pass over it is harmless and keeps one code path.
+  const code = stripComments(raw, { lineComments: /\.jsx?$/.test(file) })
+  const lines = raw.split('\n')
+  for (const match of code.matchAll(PRICE)) {
+    const line = code.slice(0, match.index).split('\n').length
+    occurrences.push({
+      file: rel(file),
+      line,
+      text: match[0],
+      source: (lines[line - 1] || '').trim(),
+      window: code.slice(
+        Math.max(0, match.index - WINDOW),
+        match.index + match[0].length + WINDOW,
+      ),
+    })
+  }
+  return occurrences
+}
+
 function scan() {
   const files = walk(SRC)
-  const occurrences = []
-
-  for (const file of files) {
-    const raw = fs.readFileSync(file, 'utf8')
-    // CSS has no line comments; JSON has no comments at all, but running the
-    // same string-aware pass over it is harmless and keeps one code path.
-    const code = stripComments(raw, { lineComments: /\.jsx?$/.test(file) })
-    const lines = raw.split('\n')
-    for (const match of code.matchAll(PRICE)) {
-      const line = code.slice(0, match.index).split('\n').length
-      occurrences.push({
-        file: rel(file),
-        line,
-        text: match[0],
-        source: (lines[line - 1] || '').trim(),
-        window: code.slice(
-          Math.max(0, match.index - WINDOW),
-          match.index + match[0].length + WINDOW,
-        ),
-      })
-    }
-  }
+  const occurrences = files.flatMap((file) => scanSource(file, fs.readFileSync(file, 'utf8')))
   return { files, occurrences }
 }
 
@@ -314,6 +342,13 @@ function excusedBy(hit) {
     (entry.file instanceof RegExp ? entry.file.test(hit.file) : entry.file === hit.file)
     && entry.context.test(hit.window)
   ))
+}
+
+// The verdict on one hit: not excused, and not an amount the ladder produces.
+function disagreesWithLadder(hit, allowed) {
+  if (excusedBy(hit)) return false
+  const label = normalise(hit.text)
+  return !(label && allowed.has(label))
 }
 
 const report = (hit) => {
@@ -325,11 +360,7 @@ const report = (hit) => {
 test('every price shown in src agrees with src/config/planLadder.js', () => {
   const allowed = allowedLabels()
   const { occurrences } = scan()
-  const offenders = occurrences.filter((hit) => {
-    if (excusedBy(hit)) return false
-    const label = normalise(hit.text)
-    return !(label && allowed.has(label))
-  })
+  const offenders = occurrences.filter((hit) => disagreesWithLadder(hit, allowed))
 
   assert.ok(offenders.length === 0,
     `${offenders.length} price${offenders.length === 1 ? '' : 's'} on screen `
@@ -367,20 +398,33 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   assert.ok(occurrences.length >= 18,
     `expected src/ to be full of price-shaped strings, found only ${occurrences.length}`)
 
-  // The stronger half of the bound: prices that were actually COMPARED, rather
-  // than waved through by the allowlist. If this drops, either the app stopped
-  // quoting prices in code or NOT_A_PLAN_PRICE has grown wide enough to swallow
-  // the thing it was meant to leave exposed.
+  // The other half of the bound is a positive control, not a count. The raw
+  // floor above only proves the scanner finds price-shaped text; it says
+  // nothing about whether the verdict still flags a wrong one. Surfaces render
+  // the ladder through its own arithmetic and type no amount by hand, so the
+  // population that survives the allowlist can legitimately be empty and a
+  // minimum on it would be the wrong thing to require.
   //
-  // The floor is 1 because /plans renders its "$0" through
-  // formatMoney(0, currency), so Pricing.jsx quotes no amount by hand and the
-  // one literal left is Settings' "$0". A floor of 1 still fails if nothing is
-  // compared at all; the day Settings stops typing it too, this becomes a
-  // question about whether the scan has a job left.
-  const checked = occurrences.filter((hit) => !excusedBy(hit))
-  assert.ok(checked.length >= 1,
-    `only ${checked.length} price-shaped strings survived the allowlist to be checked `
-    + 'against the ladder — the guard is close to guarding nothing')
+  // Instead, run the same scanSource() and disagreesWithLadder() the guard uses
+  // over an in-memory fixture. Three amounts no tier can produce ($9, $13, $70)
+  // must be flagged, one the ladder does produce ($7, the monthly tier) must
+  // not, and a price quoted only in a comment must not be read at all. If the
+  // PRICE pattern, the stripper or the verdict goes blind, the sweep over src/
+  // would still pass on an empty result; this assertion fails.
+  const allowed = allowedLabels()
+  const fixture = [
+    'export const A = () => <p>Just $9 a month</p>',
+    "export const B = { total: '$13 billed quarterly' }",
+    'export const C = () => <p>From $70 a year</p>',
+    'export const D = () => <p>$7 billed monthly</p>',
+    '// a comment that quotes $99 is not on screen',
+  ].join('\n')
+  const hits = scanSource('src/pages/FixtureSurface.jsx', fixture)
+  assert.deepEqual(hits.map((hit) => hit.text), ['$9', '$13', '$70', '$7'],
+    'the scanner should read every typed amount in the fixture and skip the comment')
+  const flagged = hits.filter((hit) => disagreesWithLadder(hit, allowed)).map((hit) => hit.text)
+  assert.deepEqual(flagged, ['$9', '$13', '$70'],
+    'the verdict should flag exactly the amounts the ladder cannot produce')
 })
 
 test('the allowed set is derived from the ladder and is not empty', () => {
@@ -469,4 +513,32 @@ test('no allowlist entry outlives the thing it excuses', () => {
   assert.deepEqual(dead.map((entry) => `${entry.file} ${entry.context}`), [],
     'these NOT_A_PLAN_PRICE entries no longer excuse anything. Delete them — an '
     + 'allowlist entry with nothing behind it is a hole waiting for a future price.')
+})
+
+// ── The plan lists carry no money ────────────────────────────────────────────
+import { FREE_LINES, PRO_ROWS, PLANS_LEAD, FREE_POINTS as FACT_FREE, PRO_POINTS as FACT_PRO } from '../../src/config/planFacts.js'
+
+test('the plan lists and rows hold no price: amounts come from the ladder at render time', () => {
+  const all = [...FACT_FREE, ...FACT_PRO, ...FREE_LINES, PLANS_LEAD, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub])]
+  for (const line of all) assert.ok(!/[$€£]\s?\d|\b\d+(\.\d+)?\s?(USD|AUD|dollars)\b|\d+%/i.test(line), `a plan line types a price or a saving: ${line}`)
+})
+
+// ── The homepage components carry no money ───────────────────────────────────
+// src/components/home prints the plans section. Its amounts come from
+// plansPrices.js at render time, so no file there may type one.
+test('src/components/home types no price, saving or count', () => {
+  const dir = path.join(SRC, 'components', 'home')
+  const files = walk(dir).filter((f) => /\.jsx?$/.test(f))
+  assert.ok(files.length >= 4, `expected the home components, found ${files.length} files`)
+  for (const file of files) {
+    const code = stripComments(fs.readFileSync(file, 'utf8'), { lineComments: true })
+    assert.ok(!PRICE.test(code) && !/US\$/.test(code), `${rel(file)} types a price`)
+    PRICE.lastIndex = 0
+    // Savings and count words are product facts only in the plans files; elsewhere
+    // a percentage is a style value and a count word is sample-brand copy.
+    if (!/plan/i.test(path.basename(file))) continue
+    assert.ok(!/\d\s?%/.test(code.replace(/(?:hsla?|oklch|rgba?)\([^)]*\)/g, '')), `${rel(file)} types a percentage`)
+    assert.ok(!/\b(?:eight|ten|two|four|six|thirteen)\b/i.test(code), `${rel(file)} types a count word`)
+    assert.ok(!/['">]\s*\d+\s+(?:export |Pro |free )?(?:themes|tools|features|days|projects)\b/i.test(code), `${rel(file)} types a count`)
+  }
 })

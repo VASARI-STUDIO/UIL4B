@@ -56,10 +56,10 @@ test('every declared face is served from /fonts, never from a catalogue', () => 
   assert.ok(faces.length >= 2, `expected self-hosted @font-face rules, found ${faces.length}`)
   for (const face of faces) {
     const urls = [...face.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)].map(m => m[1])
-    // 'Switzer Fallback' is the one face with no file: a local() Arial scaled to
-    // Switzer's metrics. It must say local(), so a download cannot hide in it.
-    if (/font-family:\s*'Switzer Fallback'/.test(face)) {
-      assert.deepEqual(urls, [], 'the Switzer fallback must be local() only')
+    // 'Switzer Fallback' and 'Geist Fallback' have no file: a local() Arial scaled to
+    // the real face's metrics. They must say local(), so a download cannot hide in them.
+    if (/font-family:\s*'(Switzer|Geist) Fallback'/.test(face)) {
+      assert.deepEqual(urls, [], 'a metric-matched fallback must be local() only')
       assert.match(face, /src:\s*local\(/)
       continue
     }
@@ -156,17 +156,12 @@ test('the render-blocking stylesheet stays inside its byte budget', async () => 
 
   const css = fs.readFileSync(path.join(assets, entrySheets[0]), 'utf8')
   // It is the app's sheet: the design tokens and the homepage hero are in it.
-  //
-  // THE CONTROL MOVED WITH THE HOMEPAGE, and it was re-pointed rather than
-  // deleted. It read `.home-hero-h1` while Home.jsx was the front door; Spectrum
-  // is the front door now and its sheet is `src/styles/pages/spectrum.css`,
-  // imported statically, so `.sp-hero-h1` is the rule that proves this is the
-  // sheet the first paint actually blocks on. Dropping the assertion instead
-  // would have left both budgets below passing against whichever stylesheet the
-  // build happened to name `index-*.css` — which is the failure mode the
-  // positive controls above exist to stop.
+  // `.hh-h1` is the rule that proves home-hero.css, imported statically by the
+  // page, is in the sheet the first paint actually blocks on. Without the
+  // control, both budgets below would pass against whichever stylesheet the
+  // build happened to name `index-*.css`.
   assert.match(css, /--bg-0:/, 'the entry stylesheet carries no design tokens — is this the right file?')
-  assert.match(css, /\.sp-hero-h1/, 'the entry stylesheet does not style the sales page headline')
+  assert.match(css, /\.hh-h1/, 'the entry stylesheet does not style the homepage hero headline')
 
   const raw = Buffer.byteLength(css)
   const gzip = zlib.gzipSync(Buffer.from(css), { level: 9 }).length
@@ -237,7 +232,7 @@ test('the deferred stylesheets exist, are substantial, and are imported by lazy 
   // The default floor guards a family being emptied back into global.css. A
   // sheet that is small on purpose (one component's own rules, not a page
   // family) names its own, still real, floor here instead of lowering everyone's.
-  const FLOOR = { 'save-share-menu.css': 2000 }
+  const FLOOR = { 'save-share-menu.css': 2000, 'font-uses.css': 1500 }
   for (const sheet of sheets) {
     const bytes = fs.statSync(path.join(dir, sheet)).size
     const floor = FLOOR[sheet] ?? 5000

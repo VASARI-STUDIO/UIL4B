@@ -17,14 +17,14 @@
 // dynamic import, which changed WHEN a browser fetched it and nothing about WHO
 // could. The board then read GET /api/ai?backlog=1 behind requireAdmin().
 //
-// ── 2026-09-16: THE BOARDS LEFT THE DASHBOARD ──────────────────────────────
+// ── THE BOARDS LEFT THE DASHBOARD ──────────────────────────────
 //
 // The repository went public to use free GitHub Actions minutes, which made
-// this backlog world-readable, so the founder took both modules out of it and
-// kept them on his machine (.gitignore carries the decision and its date).
+// this backlog world-readable, so both modules were taken out of it and kept on
+// the owner's machine (.gitignore carries the decision).
 // From that moment /api/ai?backlog=1 answered 501 `localOnly` in every
 // deployment and the Pipeline and Board tabs rendered a paragraph explaining
-// why they were empty. He then asked for the pipeline to go, and it went, with
+// why they were empty. The pipeline was then removed, with
 // the module board beside it: no tab, no request, no component.
 //
 // This file used to drive those two tabs — rows, notes, statuses, the refusal
@@ -32,7 +32,7 @@
 // that no longer exists, so they are not here any more. What IS here is the
 // half that outlives the tabs:
 //
-//   · the founder's dashboard, toured tab by tab, makes no request for the
+//   · the admin dashboard, toured tab by tab, makes no request for the
 //     boards at all — the property the tabs' removal was supposed to buy;
 //   · a SIGNED-OUT visitor walks the real chunk graph over the real preview
 //     server and reaches no note text anywhere — the acceptance test that
@@ -46,7 +46,7 @@
 // ── WHY THE ANONYMOUS WALK NEEDS THE BOARDS PRESENT ────────────────────────
 //
 // Its needles are long printable runs taken from the REAL rows of both boards,
-// read here in Node, so what is searched for is the founder's actual backlog
+// read here in Node, so what is searched for is the actual backlog
 // and not a fixture that could drift away from it. Without the rows it has
 // nothing to search for and it SKIPS WITH A REASON, loudly, rather than
 // walking the chunk graph for nothing and reporting that as proof. The tour

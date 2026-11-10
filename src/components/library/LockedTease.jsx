@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { reportUpgradeGate } from '../../contexts/ProModalContext'
 
@@ -85,22 +86,32 @@ function UpgradeLink({ gate, name }) {
   )
 }
 
-// One placeholder standing in for a locked palette.
+// One placeholder standing in for a locked palette or gradient.
 //
-// `slots` draws that many bands, blurred. THE BANDS ARE NOT THE PALETTE'S
-// COLOURS and cannot be: the preview carries no values (utils/lockedPreview),
-// so they are four fixed decorative tints in the stylesheet — the same ramp on
-// every locked card, each checked against every hex in src/data so that no tint
-// is a withheld colour. The blur says "there is something here"; the tints stop
-// it reading as a grey box that failed to load.
-export function LockedPaletteCard({ preview, gate = 'library-locked-card' }) {
+// With a `kind` ('palettes' or 'gradients') the card shows the row's own soft
+// preview: a small committed PNG made from the server data
+// (scripts/library/lockedThumbs.mjs). Every colour in it is shifted by a keyed
+// amount before it is drawn, so even a perfect fit of the image gives back
+// colours of the same family that are not the row's values
+// (tests/unit/locked-thumbs.test.js runs that fit). The image is decoration (empty alt), addressed by the row's id,
+// and has no path to copy, export or search; the card stays a link to /plans.
+//
+// Under it, and on its own without a `kind`, are four fixed decorative tints
+// in the stylesheet, checked against every hex in src/data so that no tint is
+// a withheld colour. If the image cannot load, the tints show instead.
+export function LockedPaletteCard({ preview, kind, gate = 'library-locked-card' }) {
   const slots = Math.max(1, Number(preview.slots) || 1)
+  const [thumbFailed, setThumbFailed] = useState(false)
+  const thumb = kind && preview.id && !thumbFailed
+    ? `/locked-previews/${encodeURIComponent(kind)}/${encodeURIComponent(preview.id)}.png`
+    : null
   return (
-    <div className="lockt-card lockt-card--blur">
+    <div className={`lockt-card lockt-card--blur${thumb ? ' lockt-card--thumb' : ''}`}>
       <div className="lockt-stripes" aria-hidden="true">
         {Array.from({ length: slots }, (_, i) => (
           <span key={i} className="lockt-stripe" data-step={i % 4} />
         ))}
+        {thumb && <img className="lockt-thumb" src={thumb} alt="" width="24" height="24" loading="lazy" decoding="async" onError={() => setThumbFailed(true)} />}
       </div>
       <div className="lockt-foot">
         <span className="lockt-name">{preview.label}</span>

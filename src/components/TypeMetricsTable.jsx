@@ -159,7 +159,7 @@ export default function TypeMetricsTable() {
         role="group"
         aria-label="The x-height and cap height of each face on this page, measured per em"
       >
-        <table className="lart-table">
+        <table className="lart-table lart-table--fit lart-table--stack">
           <thead>
             <tr>
               <th scope="col">Face</th>
@@ -177,10 +177,10 @@ export default function TypeMetricsTable() {
                   <span className="lart-hex" data-nowrap="true">{r.name}</span>
                   <span className="lart-face-role">{r.role}</span>
                 </th>
-                <td data-num="true">{r.aspect.toFixed(3)}</td>
-                <td data-num="true">{r.cap.toFixed(3)}</td>
-                <td data-num="true">{((r.aspect / r.cap) * 100).toFixed(1)}%</td>
-                <td data-num="true">{((reference.aspect / r.aspect) * AT_PX).toFixed(1)}px</td>
+                <td data-label="x-height ÷ em" data-num="true">{r.aspect.toFixed(3)}</td>
+                <td data-label="Cap height ÷ em" data-num="true">{r.cap.toFixed(3)}</td>
+                <td data-label="x as % of cap" data-num="true">{((r.aspect / r.cap) * 100).toFixed(1)}%</td>
+                <td data-label={`${AT_PX}px matched to ${reference.name}`} data-num="true">{((reference.aspect / r.aspect) * AT_PX).toFixed(1)}px</td>
               </tr>
             ))}
           </tbody>

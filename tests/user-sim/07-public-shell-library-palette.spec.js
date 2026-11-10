@@ -123,7 +123,8 @@ test.describe('public UI quality release', () => {
     for (const route of ['/', '/learn', '/privacy', '/learn/help', '/create/icons']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
-      await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
+      // The homepage footer names the link Plans and the reading pages' footer Pricing; both go to /plans.
+      await expect(page.getByRole('contentinfo').getByRole('link', { name: /^(Pricing|Plans)$/ }).and(page.locator('a[href="/plans"]')).last()).toBeVisible()
     }
     for (const route of ['/discover', '/create/palette', '/create/aspect-ratio']) {
       await go(page, route)
@@ -132,14 +133,12 @@ test.describe('public UI quality release', () => {
     }
   })
 
-  /* The footer credits the founder, and does it on EVERY route.
+  /* The footer credits its builder, and does it on EVERY route.
    *
-   * This is the shape of the bug it closes: the attribution was asked for in the
-   * founder batch of 2026-08-20 (item A3) and was the only item of that batch
-   * that never shipped, because it LOOKS like homepage work. It is not — the
-   * footer renders on every page, so it belonged to none of the four parked
-   * homepage PRs and fell between them. So the route loop is the point of this
-   * test, not decoration: it fails the same way the omission did.
+   * This is the shape of the bug it closes: the attribution LOOKS like homepage
+   * work, but it is not: the footer renders on every page, so a homepage-only
+   * change misses it. So the route loop is the point of this test, not
+   * decoration: it fails the same way the omission did.
    *
    * The resting underline is a real requirement, not styling trivia. Every other
    * link in this footer is an internal NavLink; this is the only one that leaves
@@ -149,8 +148,8 @@ test.describe('public UI quality release', () => {
     for (const route of ['/', '/learn', '/privacy']) {
       await go(page, route)
       // BOTH footers, because '/' is Spectrum and mounts `.sp-footer` while the
-      // app routes mount `.app-footer`. The credit is the founder's own ask and
-      // it is owed on every route, so the selector covers whichever one the
+      // app routes mount `.app-footer`. The credit is owed on every route, so the
+      // selector covers whichever one the
       // route renders rather than quietly skipping the front door.
       // The landmark, not the tag: /create/palette also has a `<footer>` inside
       // <main> for its ADJUST toolbar, which is not a contentinfo landmark.
@@ -162,14 +161,14 @@ test.describe('public UI quality release', () => {
       await expect(footer, `${route} should have dropped the old tagline`)
         .not.toContainText('for people who ship interfaces')
 
-      // The settled URL — CHANGELOG.md, founder decisions 2026-08-20, decision 3.
+      // The settled URL for the portfolio link.
       await expect(attrib).toHaveAttribute('href', 'https://dylan-coleman.com/')
       await expect(attrib).toHaveAttribute('target', '_blank')
       const rel = await attrib.getAttribute('rel')
       expect(rel, `${route} external credit needs the app's new-tab guard`).toContain('noopener')
       expect(rel).toContain('noreferrer')
 
-      // Discoverable WITHOUT hover — founder direction 2026-09-02. Asserted in
+      // Discoverable WITHOUT hover. Asserted in
       // BOTH themes and by CONTRAST, not just by presence: the first version of
       // this rule pinned the underline to --bh, which is a real underline that
       // happens to sit at 1.7:1 on the dark footer. "Has an underline" would
@@ -356,7 +355,7 @@ test.describe('public UI quality release', () => {
     await expect(page.getByRole('button', { name: 'Unlock Primary' })).toBeVisible()
 
     await (await openPaletteTools(page)).getByRole('button', { name: 'Reset palette' }).click()
-    // Founder request 2026-09-03: Reset restores the default SETTINGS but draws
+    // Reset restores the default SETTINGS but draws
     // a NEW random colour, so the post-reset seed is captured rather than pinned
     // to the old fixed #4338E0. What this test is actually about — the two-step
     // Undo chain — is unchanged, and the lock still has to be cleared.

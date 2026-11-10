@@ -8,6 +8,7 @@ import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import useExportRunner from '../../hooks/useExportRunner'
 import { DEFAULT_PRESET, EXPORT_TYPES, readLastPick, resolvePreset, storeLastPick } from '../../config/dialogExport'
 import { comingLine } from '../../config/exportFormats'
+import { defaultThemeId, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
 import ExportNav from './ExportNav'
 import ExportSteps, { ExportDock } from './ExportSteps'
 // The reused pieces (pills, tiles, fields, the Pro preview) are styled by the
@@ -76,6 +77,11 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const mainRef = useRef(null)
   const primaryRef = useRef(null)
   const [localError, setLocalError] = useState('')
+  // The theme chosen for the themed files (the UI kit, the book and the slides as PDF or HTML), and the one a highlighted row
+  // is previewing. Until a pick is made it is the plan's own default: Presentation for Pro, Standards (a free one) otherwise.
+  const [themePick, setThemePick] = useState(null)
+  const [peek, setPeek] = useState(null)
+  const theme = themePick || defaultThemeId(isPro)
 
   const apply = (next) => {
     if (next.type === pick.type && next.category === pick.category && next.file === pick.file) return
@@ -92,7 +98,6 @@ export default function ExportDialog({ onClose, preset, projectId }) {
       if (body) body.scrollTop = 0
     }
   }
-  const onLayout = () => { runner.reset(); setLocalError('') }
   const pickCategory = (typeId, catId) => {
     const c = EXPORT_TYPES.find((t) => t.id === typeId).categories.find((x) => x.id === catId)
     apply({ type: typeId, category: catId, file: lastFile.current[catId] || c.files[0] })
@@ -105,7 +110,8 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   }
 
   const checking = planKnown === false
-  const locked = cat.pro && !isPro
+  const themedNow = Boolean(themedFile(pick.file))
+  const locked = themedNow ? !isPro && themedFileIsPro(pick.file, theme) : cat.pro && !isPro
   const target = locked && !checking ? runner.upgradeTarget(pick.file, projectId) : null
   const upgrade = target?.checkout ? 'checkout' : 'plans'
 
@@ -114,7 +120,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const onPrimary = async () => {
     if (busy || checking) return
     setLocalError('')
-    const result = await runner.run(pick.file, { projectId })
+    const result = await runner.run(pick.file, { projectId, theme: themedNow ? theme : undefined })
     if (result?.status === 'upgrade') onCloseRef.current()
   }
   const onCopy = async () => {
@@ -245,13 +251,16 @@ export default function ExportDialog({ onClose, preset, projectId }) {
                   cat={cat}
                   file={pick.file}
                   onFile={onFile}
-                  onLayout={onLayout}
                   name={name || 'Design System'}
                   fileProject={name}
                   project={project}
                   strip={strip}
                   coming={comingLine()}
                   onRenameState={onRenameState}
+                  theme={theme}
+                  peek={peek}
+                  onTheme={(id) => { setThemePick(id); runner.reset(); setLocalError('') }}
+                  onPeek={setPeek}
                 />
               </fieldset>
             </div>
@@ -267,6 +276,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
               onPrimary={onPrimary}
               onCopy={onCopy}
               primaryRef={primaryRef}
+              locked={locked}
             />
           </div>
         </div>

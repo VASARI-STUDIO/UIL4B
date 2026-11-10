@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY IT EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder's report was "the mega menu feels AI generated as well as the
-// hover animation for the sub categories within the menu". Taken as a defect
+// The report was that the mega menu feels AI generated, as does the hover
+// animation for the sub categories within the menu. Taken as a defect
 // report rather than as taste, it resolved into one measurable rule that the
 // panel was breaking in six places at once:
 //
@@ -44,10 +44,10 @@
 // Two layout transitions in this nav are deliberate, and both are already
 // pinned by other specs. Asserting "none" would delete somebody's shipped work
 // the first time it was run; asserting an exact set fails BOTH ways — when a
-// seventh one grows back, and when one of the two the founder asked for goes
+// seventh one grows back, and when one of the two deliberate ones goes
 // missing.
 //
-//   · `.pnav-search-field` 300 → 390px on hover. Founder-directed, and
+//   · `.pnav-search-field` 300 → 390px on hover. Deliberate, and
 //     30-gradient-random-nav-search holds the expansion, the typed placeholder and
 //     the fact that the section menus and the theme cycle do not move when it
 //     happens — sampled every frame of the transition. `transform` cannot do
@@ -76,7 +76,7 @@ import { go, watch } from './helpers.js'
 
 // An app route, not a sales one: `.pnav--sales` sets `display:none` on the
 // search field, and an element that is not rendered cannot be shown to still
-// carry the expansion the founder asked for.
+// carry the expansion.
 const ROUTE = '/create/palette'
 
 // The properties whose animation forces a layout pass. `all` is on the list

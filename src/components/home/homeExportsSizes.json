@@ -1,0 +1,35 @@
+{
+  "measuredIn": "Chromium 149.0.7827.55",
+  "photos": [
+    {
+      "id": "evening",
+      "file": "evening.png",
+      "was": 3158540,
+      "now": 301616
+    },
+    {
+      "id": "riders",
+      "file": "riders.png",
+      "was": 3101928,
+      "now": 367780
+    },
+    {
+      "id": "busstop",
+      "file": "busstop.png",
+      "was": 3794618,
+      "now": 467754
+    },
+    {
+      "id": "riders-jacket",
+      "file": "riders-jacket.png",
+      "was": 341632,
+      "now": 40756
+    },
+    {
+      "id": "busstop-poster",
+      "file": "busstop-poster.png",
+      "was": 508116,
+      "now": 43518
+    }
+  ]
+}

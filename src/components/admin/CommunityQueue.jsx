@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listQueue, decideSubmission, deleteSubmission } from '../../utils/communityQueueApi'
+import { listQueue, decideSubmission, deleteSubmission, reopenSubmission } from '../../utils/communityQueueApi'
+import { safeHttpUrl } from '../../utils/urlSafety'
 import { gradientCss } from '../../data/gradientGallery'
 import { sanitizeGradientSubmission } from '../../utils/gradientSubmissions'
 import IconSubmissionPreview from '../discover/IconSubmissionPreview'
@@ -72,12 +73,35 @@ function Preview({ item }) {
   return <span className="cq-preview cq-preview--none" aria-hidden="true" />
 }
 
+// What a reviewer needs to judge a design: where it points, what it claims to
+// be, and who it says made it. A design is only a link and a name, so approving
+// one without seeing the link is approving it blind. The address is the
+// author's own text, so it becomes a link only if it is plain http or https;
+// anything else is named as refused rather than drawn as a clickable thing.
+function DesignDetails({ item }) {
+  const p = item.payload || {}
+  const href = safeHttpUrl(p.url)
+  const typed = typeof p.url === 'string' && p.url.trim() && p.url.trim() !== '#'
+  const credit = typeof p.author === 'string' && p.author.trim() && p.author.trim() !== item.authorName
+  return (
+    <p className="cq-item-link">
+      {p.category && <span className="cq-cat">{p.category}</span>}
+      {href
+        ? <a href={href} target="_blank" rel="noopener noreferrer nofollow">{href}</a>
+        : <span>{typed ? 'Link refused: not an http or https address' : 'No link supplied'}</span>}
+      {credit && <span>Credited as {p.author}</span>}
+    </p>
+  )
+}
+
 export default function CommunityQueue({ toast }) {
   const [status, setStatus] = useState('pending')
   const [items, setItems] = useState([])
   const [state, setState] = useState('loading')
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
+  // The row whose Delete has been pressed once and is waiting for the answer.
+  const [confirmingId, setConfirmingId] = useState(null)
 
   const load = useCallback(async (which) => {
     setState('loading')
@@ -94,7 +118,7 @@ export default function CommunityQueue({ toast }) {
     }
   }, [])
 
-  useEffect(() => { load(status) }, [load, status])
+  useEffect(() => { setConfirmingId(null); load(status) }, [load, status])
 
   const decide = async (item, next) => {
     setBusyId(item.id)
@@ -115,7 +139,21 @@ export default function CommunityQueue({ toast }) {
     }
   }
 
+  const reopen = async (item) => {
+    setBusyId(item.id)
+    try {
+      await reopenSubmission(item.id)
+      setItems(list => list.filter(i => i.id !== item.id))
+      toast?.('Moved back to awaiting review')
+    } catch (err) {
+      toast?.(err?.message || 'That did not save.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const remove = async (item) => {
+    setConfirmingId(null)
     setBusyId(item.id)
     try {
       await deleteSubmission(item.id)
@@ -202,6 +240,7 @@ export default function CommunityQueue({ toast }) {
                       treatment like every other figure on the surface. */}
                   {item.createdAt && <> · <span className="mono">{new Date(item.createdAt).toLocaleDateString()}</span></>}
                 </p>
+                {item.kind === 'design' && <DesignDetails item={item} />}
               </div>
               <div className="cq-item-actions">
                 {status === 'pending' ? (
@@ -214,9 +253,26 @@ export default function CommunityQueue({ toast }) {
                     </button>
                   </>
                 ) : (
-                  <button className="btn btn-s cq-delete" disabled={busyId === item.id} onClick={() => remove(item)}>
-                    Delete
-                  </button>
+                  <>
+                    <button className="btn btn-s" disabled={busyId === item.id} onClick={() => reopen(item)}>
+                      Back to pending
+                    </button>
+                    {confirmingId === item.id ? (
+                      <>
+                        <span className="cq-confirm-q">Delete?</span>
+                        <button className="btn btn-s cq-delete cq-delete-yes" disabled={busyId === item.id} onClick={() => remove(item)} aria-label={`Yes, delete ${item.name}`}>
+                          Yes
+                        </button>
+                        <button className="btn btn-s" onClick={() => setConfirmingId(null)} aria-label={`No, keep ${item.name}`}>
+                          No
+                        </button>
+                      </>
+                    ) : (
+                      <button className="btn btn-s cq-delete" disabled={busyId === item.id} onClick={() => setConfirmingId(item.id)}>
+                        Delete
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </li>

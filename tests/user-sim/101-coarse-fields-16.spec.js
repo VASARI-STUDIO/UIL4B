@@ -19,7 +19,7 @@ import { go, signIn } from './helpers.js'
 // selected stop's hex field and the angle wheel's number field.
 const ROUTES = [['/projects', 0], ['/create/palette', 0], ['/create/gradient', 2], ['/create/type-scale', 1],
   ['/create/tint', 1], ['/create/icons', 1], ['/create/font-gallery', 1], ['/discover/palettes', 1],
-  ['/discover/prompts', 1], ['/feedback', 2], ['/create/alt-text', 1], ['/settings', 0]]
+  ['/feedback', 2], ['/create/alt-text', 1], ['/settings', 0]]
 const TEXTLIKE = 'input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])'
   + ':not([type=button]):not([type=submit]):not([type=reset]):not([type=image]):not([type=hidden]),select,textarea'
 
@@ -36,7 +36,7 @@ for (const width of [390, 820]) {
         // Type Scale's preview field lives in the settings sheet on a phone, which
         // is closed on arrival, so open it before counting what a person can reach.
         if (route === '/create/type-scale' && width < 768) {
-          await page.getByRole('button', { name: 'Families, preview text and fine tuning' }).click()
+          await page.locator('.tl-dock .tsc-dock-ratio').click()
         }
         await expect.poll(() => page.evaluate((sel) => [...document.querySelectorAll(sel)].filter((el) => el.getClientRects().length).length, TEXTLIKE), {
           message: `${route} never showed its ${expected} text field(s)`, timeout: 15000,
@@ -48,7 +48,7 @@ for (const width of [390, 820]) {
         for (const r of rows) if (r.px < 16) small.push(`${route} ${r.sig} ${r.px}px`)
       }
       // POSITIVE CONTROL: the walk really found fields, so an empty list means something.
-      expect(seen, 'no text fields were found on any route — the walk is blind').toBeGreaterThan(10)
+      expect(seen, 'no text fields were found on any route — the walk is blind').toBeGreaterThanOrEqual(ROUTES.reduce((n, [, expected]) => n + expected, 0))
       expect(small, 'fields that make iOS zoom on focus').toEqual([])
     })
   })

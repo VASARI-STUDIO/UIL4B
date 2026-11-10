@@ -61,8 +61,8 @@ test.describe('the front door', () => {
   })
 
   test('/home is the sales page for EVERYONE, session or not', async ({ page }) => {
-    // The founder's stated exception: "unless they click they home button or
-    // navigate to specifly /home".
+    // The exception: a visitor can always reach the sales page by clicking the home
+    // button or navigating to /home.
     //
     // Both states on one page, unhinted first: addInitScript accumulates, so
     // once the hint is installed it stays installed for every later load. That

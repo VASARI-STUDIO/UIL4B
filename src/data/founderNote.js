@@ -1,41 +1,31 @@
 // The founder's note — the WORDS, kept in their own file away from the component.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THE WORDS SHIPPED EMPTY, AND WHO LIFTED THAT
+// WHY THE WORDS ARE A DRAFT
 // ─────────────────────────────────────────────────────────────────────────────
-// This note is FOUNDER-OWNED COPY and no agent may write it. That was a standing
-// rule here with two precedents behind it. An agent correctly refused to draft
-// the homepage hero's headline sentence on the grounds that drafting it would be
-// an agent imitating Dylan's voice. And the homepage intro has been rejected
-// twice as "MEGA AI generated" — most recently for a rule of three with anaphora
-// and an imperative aimed at the reader.
+// This note is the author's own voice, so it is not written by a tool on his
+// behalf without his say-so. A note whose entire purpose is to sound like one
+// specific person cannot be written by something that is not that person.
+// Writing a convincing one would be the failure, not the success: the point is
+// to help the app feel more down to earth to people who think "oh, another app
+// from another company", and a fabricated voice is the exact opposite of that.
 //
-// A note whose entire purpose is to sound like one specific person cannot be
-// written by something that is not that person. Writing a convincing one would
-// be the failure, not the success: the request that started this item said the
-// point was "to help the app feel more down to earth to people who think oh
-// another app from another company", and a fabricated voice is the exact
-// opposite of that.
-//
-// ON 2026-09-15 DYLAN LIFTED IT, for this piece only: "write this in austrlan
-// english based on the information you know". So the draft below is an agent's,
-// written to his brief, and it is a DRAFT — the rule above is his and he is the
-// only one who can say these sentences sound like him. Anything here that does
-// not, he changes; that is four edits in this file and nothing else.
+// The draft below was written in Australian English from what the code shows,
+// and it is a DRAFT. Only the author can say whether these sentences sound like
+// him. Anything here that does not, he changes; that is four edits in this file
+// and nothing else.
 //
 // EVERY CLAIM IN IT WAS CHECKED against the code rather than imagined, because
-// the one instruction the rule above still enforces absolutely is the last
-// paragraph of this header: no invented biography. So the note says he builds it
-// alone in Brisbane (which AppFooter.jsx has said since before this file
-// existed) and nothing else about him. What it says about the PRODUCT is
-// checkable: the tool list is the Create groups, "saving and downloading need a
-// free account" is useExportGate.js, and the feedback link is in the Support
-// column of this very footer on every page.
+// the one rule that still holds absolutely is the last paragraph of this
+// header: no invented biography. So the note says he builds it alone in
+// Brisbane (which AppFooter.jsx has said since before this file existed) and
+// nothing else about him. What it says about the PRODUCT is checkable: the tool
+// list is the Create groups, "saving and downloading need a free account" is
+// useExportGate.js, and the feedback link is in the Support column of this very
+// footer on every page.
 //
-// The AI sentence follows the founder's own standing instruction on how AI
-// usage is described to a reader: lowered while the product is in beta, lifted
-// if there is enough support. The instruction is his, recorded in a local-only
-// document, and is not reproduced here.
+// The AI sentence describes AI usage the way the product positions it: lowered
+// while the product is in beta, lifted if there is enough support.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE PLACEHOLDER REMOVES ITSELF
@@ -48,9 +38,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // AUSTRALIAN ENGLISH, AND WHY THAT IS NOT A STYLE NOTE
 // ─────────────────────────────────────────────────────────────────────────────
-// The original request: "make sure to use real australian style english to sound
-// like me not an AI written statement." Whoever fills these in should write them
-// the way they would say them out loud. Contractions are fine. An unfinished
+// The note is written in real Australian English, in the author's own register,
+// not as an AI-written statement. Whoever fills these in should write them the
+// way they would say them out loud. Contractions are fine. An unfinished
 // thought is fine. What is not fine is the register that got the homepage intro
 // rejected — three parallel clauses in a row, "not just X but Y", or an
 // instruction pointed at the reader.
@@ -61,7 +51,7 @@
 /**
  * The four things the note has to say, in the order it says them.
  *
- * These are the FOUNDER'S PROMPTS, not product copy — the panel shows them only
+ * These are PROMPTS FOR THE AUTHOR, not product copy — the panel shows them only
  * while the note is unwritten, as the list of what is still missing. They are
  * deliberately one question each: the person answering them is time-poor and
  * building this alone, so the ask has to be four one-line answers rather than

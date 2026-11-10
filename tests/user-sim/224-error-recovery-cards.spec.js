@@ -145,10 +145,11 @@ async function landChromelessCrash(page, variant) {
 }
 
 /** The home page itself: the command palette's file throws when it opens. */
-async function landHomeCrash(page, variant) {
+async function landHomeCrash(page) {
   await crashChunk(page, COMMAND_PALETTE_CHUNK)
   await go(page, '/')
-  await expectTheme(page, variant)
+  // The homepage is dark under both colour schemes.
+  await expectTheme(page, { scheme: 'dark' })
   await spendReload(page)
   await page.keyboard.press('/')
   const card = page.locator('.error-boundary')
@@ -323,7 +324,7 @@ for (const variant of VARIANTS) {
 
     test('Go to the home page, when the crash is on the home page itself, loads the document afresh', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
-        const { card } = await landHomeCrash(page, variant)
+        const { card } = await landHomeCrash(page)
         // A client-side link to the page you are on changes nothing, so the
         // crash would stay. A marker on window proves the document was replaced.
         await page.evaluate(() => { window.__sameDocument = true })
@@ -346,7 +347,7 @@ for (const variant of VARIANTS) {
         await expect(dialog.locator('#fb-subject')).toHaveValue(new RegExp(`^Crash on /settings: .*${PROBE}`))
         await expect(dialog.locator('#fb-message')).toHaveValue(/Route: \/settings\n/)
         await expect(dialog.locator('#fb-message')).toHaveValue(/What were you doing when this happened\?/)
-        await expect(dialog.getByRole('button', { name: 'Bug', exact: true })).toHaveAttribute('aria-pressed', 'true')
+        await expect(dialog.getByRole('button', { name: 'Bug report', exact: true })).toHaveAttribute('aria-pressed', 'true')
         // The card behind the dialog still shows no raw error.
         expect(await card.innerText()).not.toContain(PROBE)
       })
@@ -539,8 +540,8 @@ for (const variant of VARIANTS) {
 }
 
 // ───────────────────────────────── the 404 ─────────────────────────────────
-
-const BASE = () => `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT || 4174}`
+// The referrer has to be an address on the origin under test, whatever port the preview runs on, so it
+// is built from the config's baseURL; a fixed port would name another origin and read as another site.
 
 for (const variant of VARIANTS) {
   test.describe(`the 404, ${variant.id}`, () => {
@@ -555,9 +556,9 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('a fresh load keeps the browser\'s own focus, and the report link names the path and the linking page', async ({ browser }) => {
+    test('a fresh load keeps the browser\'s own focus, and the report link names the path and the linking page', async ({ browser, baseURL }) => {
       await withPage(browser, variant, async (page) => {
-        await goRaw(page, '/nope-xyz', { referer: `${BASE()}/plans?utm=ignored#top` })
+        await goRaw(page, '/nope-xyz', { referer: `${baseURL}/plans?utm=ignored#top` })
         await expectTheme(page, variant)
         const h1 = page.getByRole('heading', { level: 1, name: 'That page doesn’t exist' })
         await expect(h1).toBeVisible()
@@ -577,10 +578,10 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('after in-app navigation the report does not blame the page the visit started from', async ({ browser }) => {
+    test('after in-app navigation the report does not blame the page the visit started from', async ({ browser, baseURL }) => {
       await withPage(browser, variant, async (page) => {
         // Started from /plans (a full load with that referrer), then walked on.
-        await goRaw(page, '/privacy', { referer: `${BASE()}/plans` })
+        await goRaw(page, '/privacy', { referer: `${baseURL}/plans` })
         await expectRendered(page, '/privacy')
         await pushInApp(page, '/nope-xyz')
         await expect(page.getByRole('heading', { level: 1, name: 'That page doesn’t exist' })).toBeVisible()
@@ -589,13 +590,13 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('Report a broken link opens the form as a bug report with the path filled in', async ({ browser }) => {
+    test('Report a broken link opens the form as a bug report with the path filled in', async ({ browser, baseURL }) => {
       await withPage(browser, variant, async (page) => {
-        await goRaw(page, '/nope-xyz', { referer: `${BASE()}/plans` })
+        await goRaw(page, '/nope-xyz', { referer: `${baseURL}/plans` })
         await page.getByRole('link', { name: 'Report a broken link' }).click()
         const form = page.locator('.fb-page')
         await expect(form).toBeVisible()
-        await expect(form.locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug Report')
+        await expect(form.locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug report')
         await expect(form.locator('#fb-subject')).toHaveValue('Broken link: /nope-xyz')
         await expect(form.locator('#fb-message')).toHaveValue('The link to /nope-xyz on /plans doesn\'t work.')
       })
@@ -611,7 +612,7 @@ test.describe('the feedback form takes a broken-link report from the address onl
 
   test('a same-site page and referrer fill the subject and the message', async ({ page }) => {
     await go(page, '/feedback?type=bug&page=%2Fnope-xyz%3Fa%3D1&referrer=%2Flearn%2Fhelp')
-    await expect(checked(page)).toHaveText('Bug Report')
+    await expect(checked(page)).toHaveText('Bug report')
     await expect(form(page).locator('#fb-subject')).toHaveValue('Broken link: /nope-xyz?a=1')
     await expect(form(page).locator('#fb-message')).toHaveValue('The link to /nope-xyz?a=1 on /learn/help doesn\'t work.')
   })
@@ -633,7 +634,7 @@ test.describe('the feedback form takes a broken-link report from the address onl
       await expect(form(page).locator('#fb-subject')).toHaveValue('')
       await expect(form(page).locator('#fb-message')).toHaveValue('')
       // The type is still honoured: it names no address.
-      await expect(checked(page)).toHaveText('Bug Report')
+      await expect(checked(page)).toHaveText('Bug report')
     })
   }
 
@@ -659,13 +660,13 @@ test.describe('the feedback form takes a broken-link report from the address onl
 
   test('an unknown type falls back to the default', async ({ page }) => {
     await go(page, '/feedback?type=sneaky')
-    await expect(checked(page)).toHaveText('Feature Request')
+    await expect(checked(page)).toHaveText('Feature request')
   })
 
   test('a payment reason still gives "Get help", its own subject, and ignores a broken-link page', async ({ page }) => {
     await go(page, '/feedback?reason=payment_failed&type=bug&page=%2Fnope-xyz')
     await expect(page.getByRole('heading', { level: 1, name: 'Get help' })).toBeVisible()
-    await expect(checked(page)).toHaveText('Help Request')
+    await expect(checked(page)).toHaveText('Help request')
     await expect(form(page).locator('#fb-subject')).toHaveValue('Payment failed')
     await expect(form(page).locator('#fb-message')).toHaveValue('')
   })

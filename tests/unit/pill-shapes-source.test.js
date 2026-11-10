@@ -2,9 +2,8 @@
 //
 // tests/user-sim/129-pill-shapes.spec.js measures the rendered shape on the
 // pages it can reach. This reads the stylesheets, so it also covers the ones
-// that sit behind a click or a sign-in (the account menu's theme tray, the icon
-// customiser's segments, the admin search, the font browser), and it names the
-// file and rule that regressed.
+// that sit behind a click or a sign-in (the account menu's theme tray, the
+// admin search, the font browser), and it names the file and rule that regressed.
 //
 // For each selector below, every rule whose subject is that selector and that
 // declares a corner radius must declare the pill token. Three readings are
@@ -24,8 +23,10 @@ const TARGETS = [
   // search bars
   '.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search',
   // pill toolbars and segmented trays
-  '.lbry-toolbar', '.lbry-filters', '.lbry-filter-ind', '.theme-seg', '.sp-seeds', '.sp-seed',
-  '.icust-seg', '.icust-seg button', '.adm-tabs', '.fc-seg', '.fc-seg-opt',
+  '.lbry-toolbar', '.lbry-filters', '.lbry-filter-ind', '.theme-seg',
+  '.adm-tabs', '.fc-seg', '.fc-seg-opt',
+  // The icon editor's segments (.ied-seg) are not listed: its board draws them as a tonal tray with
+  // 12px corners, the same as the editor's other controls (see KEEP in app-buttons-shape.test.js).
 ]
 
 /** Split a selector list on the commas that are not inside parentheses. */
@@ -117,12 +118,13 @@ for (const target of SEARCH_BARS) {
 // painted-and-borderless. Measured on 25 Oct 2026 the bordered ones were the
 // large majority (the library and palette toolbars, the seed and format
 // trays, the billing, SEO, admin, modal and icon-customiser trays, the file
-// converter's), so the borderless ones (.lbry-filters, .theme-seg, .ig-weight)
+// converter's; /plans' .pl-switch is a filled track with no hairline, and 129-pill-shapes
+// measures its pill shape on the rendered page), so the borderless ones (.lbry-filters, .theme-seg, .ig-weight)
 // took the hairline. Each tray below must declare a 1px hairline somewhere (a
 // border, or the converter's inset ring).
 const TRAYS = [
-  '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.icust-seg', '.adm-tabs',
-  '.sp-seeds', '.sp-seg', '.seo-seg', '.pr-billing', '.fc-seg',
+  '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.adm-tabs',
+  '.seo-seg', '.fc-seg',
 ]
 for (const target of TRAYS) {
   test(`${target} carries the tray hairline`, () => {

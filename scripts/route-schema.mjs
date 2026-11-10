@@ -80,6 +80,7 @@
 // above, same answer.
 import { CREATE_GROUPS } from '../src/data/toolTree.js'
 import { pageName } from '../src/data/routeMetaMap.js'
+import { LEARN_ARTICLES } from '../src/data/learnIndex.js'
 import { PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { CREATE_HOMES_THAT_RENDER } from './route-matrix.mjs'
 import { SITE_ORIGIN } from '../src/utils/routeMeta.js'
@@ -153,4 +154,41 @@ export function breadcrumbJsonLd(pathname, origin) {
 /** Every route that gets a breadcrumb — for the tests, and for the build log. */
 export function breadcrumbRoutes(routes, origin = SITE_ORIGIN) {
   return routes.filter((r) => breadcrumbFor(r, origin))
+}
+
+// ── Article, on the Learn guides only ──────────────────────────────────────
+//
+// Every field is the guide's own registry record (src/data/learnIndex.js), so
+// the markup describes the page and nothing else. The author and publisher are
+// the organisation: the guides carry no byline, and a person's name here would
+// be invented. `dateModified` is the guide's review date; there is no
+// first-published date on record, so `datePublished` is left out rather than
+// guessed. FAQPage and HowTo stay out for the reason given above: the guides
+// have no question-and-answer or numbered-procedure content to mark up.
+const PUBLISHER = Object.freeze({ '@type': 'Organization', name: 'UI L4B' })
+
+/** The Article block for a `/learn/<slug>` guide, or null for any other route. */
+export function articleFor(pathname, origin) {
+  const route = norm(pathname)
+  const m = /^\/learn\/([^/]+)$/.exec(route)
+  const article = m && LEARN_ARTICLES.find((a) => a.slug === m[1])
+  if (!article) return null
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.description,
+    dateModified: article.updated,
+    inLanguage: 'en',
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `${origin}${route}` },
+    author: PUBLISHER,
+    publisher: PUBLISHER,
+  }
+}
+
+/** That Article as a script tag, or '' for a route that is not a guide. */
+export function articleJsonLd(pathname, origin) {
+  const article = articleFor(pathname, origin)
+  if (!article) return ''
+  return `<script type="application/ld+json">\n${JSON.stringify(article, null, 2)}\n</script>\n`
 }

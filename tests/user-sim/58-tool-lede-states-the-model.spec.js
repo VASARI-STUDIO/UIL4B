@@ -1,7 +1,7 @@
 // The Create tools' opening sentence states the MODEL, not the workflow.
 //
-// The founder has named "copy that argues for the product instead of showing
-// it" as an AI motif five times, and #386 fixed it on the Type Scale by
+// "Copy that argues for the product instead of showing it" is a recurring AI
+// motif, and #386 fixed it on the Type Scale by
 // keeping the one fact a first-time visitor needs and cannot infer:
 // "One base size and one ratio. Every step below is that multiplication."
 //

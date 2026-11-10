@@ -206,13 +206,16 @@ function recordAggregateOpen(id) {
   bumpAggregate(aggField(AGG_PREFIX.open, id), 1)
 }
 
-// Read the last `days` daily docs and sum them into a dashboard-friendly shape.
+// Read the newest `days` daily docs and sum them into a dashboard-friendly shape.
+// With `since` (a YYYY-MM-DD day id) only docs on or after that day are read, so
+// a quiet stretch with no documents cannot pull in days from before the window.
 // Returns a safe empty shape on any failure (offline, rules, no docs yet).
-export async function getAggregateAnalytics(days = 30) {
+export async function getAggregateAnalytics(days = 30, { since } = {}) {
   const empty = { totalViews: 0, byPath: [], byTool: [], byOpen: [], byIcon: [], byPack: [], funnel: [], iconCopies: 0, days: [] }
   try {
     const fs = await loadFirestore()
-    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(days))
+    const bounds = since ? [fs.where('day', '>=', since)] : []
+    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), ...bounds, fs.orderBy('day', 'desc'), fs.limit(days))
     const snap = await fs.getDocs(q)
     let totalViews = 0
     let iconCopies = 0
@@ -588,7 +591,7 @@ export function getDesignAnalytics() {
 }
 
 // ── Admin resets ─────────────────────────────────────────────
-// Founder-invoked from the Admin dashboard. Clearing this browser's blobs is
+// Invoked from the Admin dashboard. Clearing this browser's blobs is
 // instant; the Firestore aggregate is scrubbed field-by-field (merge writes
 // with deleteField) so tool counters survive a page-analytics reset.
 

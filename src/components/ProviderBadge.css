@@ -1,0 +1,47 @@
+/* The provider badge on an AI result (ProviderBadge.jsx). Colour, size and
+ * border come from providerBadgeStyle; this file adds what an inline style
+ * cannot: the pressable states, the tap area and the note's line. */
+
+.ai-prov {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  font-family: inherit;
+  line-height: 1.2;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+/* The visible pill stays small; the press lands anywhere within 44px. */
+.ai-prov::after {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: max(100%, 44px);
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.ai-prov-ico { flex-shrink: 0; opacity: .8; }
+
+@media (hover: hover) {
+  .ai-prov:hover { background: var(--hvr); border-color: var(--bh); }
+}
+
+.ai-prov[aria-expanded="true"] { background: var(--hvr); border-color: currentColor; }
+
+.ai-prov-note {
+  flex: 1 0 100%;
+  max-width: 60ch;
+  margin: 0;
+  font-size: var(--fs-caption, 13px);
+  line-height: 1.5;
+  color: var(--t1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-prov { transition: none; }
+}

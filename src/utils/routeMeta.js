@@ -4,7 +4,7 @@
 // static canonical/description, so every one of the ~30 public routes was
 // telling crawlers and social unfurls it was the homepage).
 import { resolveTool } from '../data/toolTree.js'
-import { PAGE_TITLES } from '../data/routeMetaMap.js'
+import { HOME_SHARE_IMAGE, PAGE_TITLES } from '../data/routeMetaMap.js'
 
 // The one origin this site claims as its own. Every canonical link, og:url,
 // og:image, twitter:image, JSON-LD `url`, sitemap `<loc>`, llms.txt row and
@@ -20,7 +20,7 @@ import { PAGE_TITLES } from '../data/routeMetaMap.js'
 // `cname.vercel-dns.com`. So every shell shipped before this told crawlers
 // its authoritative URL was a host that does not answer, and every shared
 // link unfurled with a broken preview image on Slack, LinkedIn, X, Discord
-// and iMessage. Founder decision, 2026-09-13: point the site at the apex,
+// and iMessage. The decision is to point the site at the apex,
 // which already serves and is the only configured domain, rather than do the
 // DNS work to make the second spelling real.
 //
@@ -30,10 +30,12 @@ import { PAGE_TITLES } from '../data/routeMetaMap.js'
 export const SITE_ORIGIN = 'https://uil4b.com'
 
 // Routes that exist and work, but must never be indexed: they are either
-// private to one account or a step inside a flow that means nothing on its own.
+// private to one account, a step inside a flow that means nothing on its own, or
+// parked behind the admin gate (/discover/prompts).
 // Landing on any of these from a search result is a dead end.
 const PRIVATE_PREFIXES = Object.freeze([
   '/settings', '/projects', '/admin', '/login', '/checkout', '/onboarding', '/style-guide',
+  '/discover/prompts',
 ])
 
 // Routes that render the same page as another URL and must point their canonical
@@ -135,6 +137,9 @@ export function robotsFor(pathname) {
   return 'index,follow'
 }
 
+// `/` itself. `/home` is a canonicalised duplicate that keeps its own shell's card.
+const isHomePath = (pathname) => (String(pathname || '/').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/') === '/'
+
 export function updateRouteMeta({ pathname, title, description }) {
   const url = canonicalUrl(pathname)
 
@@ -155,5 +160,15 @@ export function updateRouteMeta({ pathname, title, description }) {
   upsertMeta('property', 'og:url', url)
   upsertMeta('name', 'twitter:title', title)
   upsertMeta('name', 'twitter:description', description)
+  // The sales page carries its own share image; every other route keeps the one
+  // its served shell was written with.
+  if (isHomePath(pathname)) {
+    const image = `${SITE_ORIGIN}${HOME_SHARE_IMAGE.path}`
+    upsertMeta('property', 'og:image', image)
+    upsertMeta('property', 'og:image:width', String(HOME_SHARE_IMAGE.width))
+    upsertMeta('property', 'og:image:height', String(HOME_SHARE_IMAGE.height))
+    upsertMeta('property', 'og:image:alt', HOME_SHARE_IMAGE.alt)
+    upsertMeta('name', 'twitter:image', image)
+  }
   upsertMeta('name', 'robots', robotsFor(pathname))
 }

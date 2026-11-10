@@ -1,0 +1,103 @@
+/* Homepage spacing tokens. Padding is the only space at a section's top and
+   bottom; every section reads these instead of its own numbers. */
+.spectrum {
+  --hm-font: "Geist", "Geist Fallback", system-ui, sans-serif;
+  --section-y: 152px;
+  --section-y-join: 136px;
+  --section-y-compact: 96px;
+  --section-y-close: 176px;
+  --gutter-x: 52px;
+}
+
+@media (max-width: 1199px) {
+  .spectrum {
+    --section-y: 120px;
+    --section-y-join: 104px;
+    --section-y-compact: 80px;
+    --section-y-close: 144px;
+    --gutter-x: 40px;
+  }
+}
+
+@media (max-width: 767px) {
+  .spectrum {
+    --section-y: 88px;
+    --section-y-join: 72px;
+    --section-y-compact: 56px;
+    --section-y-close: 112px;
+    --gutter-x: 16px;
+  }
+}
+
+@media (max-width: 374px) {
+  .spectrum {
+    --section-y: 72px;
+    --section-y-join: 64px;
+    --section-y-compact: 48px;
+    --section-y-close: 96px;
+  }
+}
+
+/* The 104px that clears the sticky nav lives on the page scroller, so it holds
+   for an anchor jump, a Lenis glide and keyboard focus alike (focus is kept
+   clear of the nav, WCAG 2.4.11). A jump lands a target at its scroll-margin-top
+   PLUS the scroller's scroll-padding-top, so the `.spectrum [id]` margin
+   (spectrum.css, still right for the other sales pages) is zeroed here;
+   leaving both put every section link 208px down. */
+html:has(.spectrum-home) { scroll-padding-top: 104px; }
+.spectrum.spectrum-home [id] { scroll-margin-top: 0; }
+
+/* The page's focus ring: 2px #EFEEEA on every control. The page-wide
+   `.spectrum :focus-visible` ring is blue, and the global `.hcmd-kbd` and nav
+   rules win it on source order in some bundles, so this sits a class above all
+   of them. Width, style and colour only: each section's own offset (and the
+   swatch controls' own ink, which are one class deeper) stands. No radius in
+   a focus rule. */
+.spectrum.spectrum-home :focus-visible {
+  outline-style: solid;
+  outline-width: var(--hm-ring-w, 2px);
+  outline-color: #EFEEEA;
+}
+
+/* The two scaled stages (the hero loop slot and the bookmarks stage) take their
+   scale from --hm-zoom, which the width steps in home-hero.css and
+   home-bookmarks.css set. `zoom` multiplies an outline width too, and the
+   browser floors the result to whole device pixels: 2px under .96 is 1.92 and
+   draws 1px. So inside a stage the ring is asked for at 2px / zoom, which
+   lands on 2px on screen at every step. The extra .02px keeps float error from
+   landing just under 2 and flooring to 1. --hm-zoom is 1 outside a stage. */
+.hh-slot,
+.bm-stage {
+  zoom: var(--hm-zoom, 1);
+  --hm-ring-w: calc(2.02px / var(--hm-zoom, 1));
+}
+html:has(.spectrum-home) .skip-link:focus { outline-color: #EFEEEA; }
+
+/* Arrow buttons. A go arrow (a link to another page) turns in place to point
+   the way it goes and never travels: a diagonal arrow turns 45deg clockwise, a
+   right arrow (--r, --e) turns 45deg anticlockwise. Keyboard focus turns it too.
+   Reduced motion turns nothing; the arrow changes at once. */
+.spectrum :is(.sp-pill, .sp-cta, .sp-disc-cta):focus-visible :is(.sp-pill-icon, .sp-cta-icon) { transform: rotate(45deg); }
+.sp-footer .sp-footer-cta:focus-visible .sp-footer-cta-icon { transform: rotate(45deg); }
+.mi-go { display: inline-grid; place-items: center; transition: transform 320ms cubic-bezier(.25,1,.5,1); }
+@media (hover: hover) and (pointer: fine) {
+  :hover > .mi-go { transform: rotate(45deg); }
+  :hover > .mi-go--r, :hover > .mi-go--e { transform: rotate(-45deg); }
+}
+:focus-visible > .mi-go { transform: rotate(45deg); }
+:focus-visible > .mi-go--r, :focus-visible > .mi-go--e { transform: rotate(-45deg); }
+/* A step forward is not leaving: the arrow leans 3px and holds, further on press. */
+.mi-nx { transition: transform 180ms cubic-bezier(.23,1,.32,1); }
+@media (hover: hover) and (pointer: fine) {
+  :hover > .mi-nx { transform: translateX(3px); }
+}
+:focus-visible > .mi-nx { transform: translateX(3px); }
+:active > .mi-nx { transform: translateX(5px); transition-duration: 100ms; }
+html[data-reduced-motion="true"] :is(.mi-go, .mi-nx) { transition: none; transform: none !important; }
+html[data-reduced-motion="true"] .spectrum :is(.sp-pill, .sp-cta, .sp-disc-cta):focus-visible :is(.sp-pill-icon, .sp-cta-icon),
+html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:focus-visible .sp-footer-cta-icon { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) :is(.mi-go, .mi-nx) { transition: none; transform: none !important; }
+  html:not([data-reduced-motion="false"]) .spectrum :is(.sp-pill, .sp-cta, .sp-disc-cta):focus-visible :is(.sp-pill-icon, .sp-cta-icon),
+  html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-cta:focus-visible .sp-footer-cta-icon { transform: none; }
+}

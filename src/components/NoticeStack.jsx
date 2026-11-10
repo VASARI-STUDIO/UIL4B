@@ -18,8 +18,8 @@ import SyncNotice from './SyncNotice'
 // the nav. That coordinate is where every sticky toolbar on the site parks
 // itself — .plb-toolbar, .uis-command, .lbry-toolbar, .pgl-section-head all
 // derive from the nav height — so a notice covered the toolbar of whatever
-// tool was open. The founder reported it on the Palette Builder on 2026-09-14
-// and decided the notices move into the page flow.
+// tool was open (seen on the Palette Builder), so the notices now move into the
+// page flow.
 //
 // A notice cannot be a plain flow element here: the nav is position:fixed and
 // every page starts its own content below it with --nav-clear, so an element
@@ -241,21 +241,29 @@ export default function NoticeStack() {
     const clear = () => root.style.removeProperty('--notice-h')
     if (!el) return clear
 
-    const publish = () => {
-      const h = el.offsetHeight
+    const publish = (h) => {
       if (h > 0) root.style.setProperty('--notice-h', `${h}px`)
       else clear()
     }
-    publish()
 
     // No ResizeObserver (an old browser, a test harness): the height is still
     // published on every mount and on resize, which covers the two changes
     // that matter — a notice appearing, and the sentence rewrapping.
     if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', publish)
-      return () => { window.removeEventListener('resize', publish); clear() }
+      const measure = () => publish(el.offsetHeight)
+      measure()
+      window.addEventListener('resize', measure)
+      return () => { window.removeEventListener('resize', measure); clear() }
     }
-    const ro = new ResizeObserver(publish)
+    // The observer reports the box size it has already laid out, so nothing here
+    // forces a layout, and it reports once as soon as it starts observing: the
+    // first value lands in the frame the strip mounts in, before that frame
+    // paints. Until then `--notice-h` is the 0px that :root declares.
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[entries.length - 1]
+      const box = entry.borderBoxSize?.[0]
+      publish(Math.round(box ? box.blockSize : entry.target.offsetHeight))
+    })
     ro.observe(el)
     return () => { ro.disconnect(); clear() }
   }, [])

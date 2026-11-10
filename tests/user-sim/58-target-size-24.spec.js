@@ -14,7 +14,7 @@
 //
 // THE TWO EXCEPTIONS IN THE SUCCESS CRITERION ARE IMPLEMENTED HERE, because a
 // check that ignores them reports conforming controls as defects and gets
-// switched off. `.app-footer-attrib` ("Dylan Coleman", inside the sentence
+// switched off. `.app-footer-attrib` (the credit name, inside the sentence
 // "Built in Brisbane by …") is 94.7x18 and legitimately exempt under Inline;
 // asserting on it would have forced a pointless change to a link that is fine.
 //
@@ -28,7 +28,7 @@ const PERSONA = 'someone using this on a phone, pressing with a thumb'
 
 // The widths each fixed control was measured failing at, not a round-number
 // selection: 320 is where `.plb-hex` is trimmed hardest, 768 is the last width
-// the narrow rule applies at, 1440 is the founder's desktop.
+// the narrow rule applies at, 1440 is the standard desktop.
 const CASES = [
   { route: '/', widths: [320, 390, 768, 1440] },
   { route: '/seo', widths: [390, 662, 1440] },

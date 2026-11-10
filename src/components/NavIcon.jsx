@@ -173,6 +173,13 @@ const ICONS = {
       <path d="M8 4.5h10.5a2 2 0 0 1 2 2V17" />
     </>
   ),
+  // A pill-shaped button with its label line: a library of buttons.
+  'button-library': (
+    <>
+      <rect x="3" y="8" width="18" height="8" rx="4" />
+      <path d="M8.5 12h7" />
+    </>
+  ),
   // -- Learn guides: one mark each, none shared with a tool --
   'guide-contrast': (
     <>

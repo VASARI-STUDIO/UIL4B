@@ -12,7 +12,7 @@
 // never throws.
 //
 // Empty catch bodies have bitten this repo twice this week — the feedback queue
-// rendered a permission refusal as "No submissions yet". The founder's standing
+// rendered a permission refusal as "No submissions yet". The no-silent-failure
 // rule applies, and this is the version of it that costs money: the prices a
 // visitor is quoted stop being the prices in Stripe, and no one finds out.
 //

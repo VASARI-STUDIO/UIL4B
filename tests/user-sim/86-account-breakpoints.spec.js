@@ -7,8 +7,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY IT EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder said, unprompted and without elaborating, "i dont like the
-// projects page". Rendered on the built preview at 320/360/390/430/768/834/
+// The projects page was disliked, with no detail given.
+// Rendered on the built preview at 320/360/390/430/768/834/
 // 1024/1280/1440/1920 in both themes, signed out, empty, with one project, at
 // the free cap of three and as Pro, the page had no horizontal overflow, no
 // element painting outside its container and no operable target under 24px.
@@ -33,7 +33,7 @@
 //      a project sorted on a laptop was unsorted on the phone, on a page whose
 //      own subtitle promises "yours to open anywhere you sign in". #452 had
 //      already deleted the false "3 folders · Upgrade for 10" sentence and left
-//      the mechanism; the founder's call on 2026-09-13 was to drop folders as
+//      the mechanism; the decision since was to drop folders as
 //      an entitlement entirely.
 //
 //   3. THE PROMOS SAT ABOVE THE WORK. This is the one a person actually hits,

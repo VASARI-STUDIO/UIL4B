@@ -40,7 +40,7 @@ test('the heading SIZE was preserved — only the level changed', () => {
   // for a worse one.
   const css = read('src/styles/global.css')
   assert.match(css, /\.legal-h\{[^}]*font-size:22px/)
-  // .legal-h--sm is GONE (founder decision, 2026-09-13). /terms was its only
+  // .legal-h--sm is GONE. /terms was its only
   // caller and it set the same kind of heading 6px smaller and in a different
   // family from /privacy's. The assertion inverts rather than disappears: the
   // point was never that a second size existed, it was that the heading did not

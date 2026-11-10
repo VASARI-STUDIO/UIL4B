@@ -99,9 +99,8 @@ test('buildBoardDraft validates without staging anything', () => {
 
 /* ── THE STALE-DRAFT DEFECT (palette-opens-with-wrong-state) ───────────────
  *
- * Founder, 2026-09-05: "somtimes i open the pallete builder and it has added
- * many colours and its a different swatch". Intermittent, and this is the
- * mechanism.
+ * The palette builder sometimes opened with extra colours and a different
+ * swatch. Intermittent, and this is the mechanism.
  *
  * The homepage staged the draft from a `<Link onClick>`. React Router composes
  * a caller's onClick UNCONDITIONALLY and only afterwards asks its own
@@ -153,7 +152,7 @@ test('GUARD 2: a hand-off expires, so a leaked draft cannot ambush a later visit
 test('GUARD 2: the ttl is long enough for a real route change', () => {
   // A lazy chunk on a cold cache is ~1s, so the window must clear that by an
   // order of magnitude — and stay far under the gap that made the bug
-  // reportable, since the founder was opening the builder much later, by a
+  // reportable, since the builder can be opened much later, by a
   // different route, in the same tab.
   assert.ok(BOARD_HANDOFF_TTL_MS >= 10_000, 'must survive a slow lazy route')
   assert.ok(BOARD_HANDOFF_TTL_MS <= 60_000, 'must not outlive the intent')

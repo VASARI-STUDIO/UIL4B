@@ -17,9 +17,10 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { canSeePack } from '../../src/data/iconPackTiers.js'
+import { ICON_PACK_COUNTS } from '../../src/data/iconPackCounts.generated.js'
 import { stripJs as strip } from '../helpers/strip-comments.js'
 import {
-  TEASE_PACKS, endBandKind, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
+  TEASE_PACKS, TEASE_ROWS, endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../../src/utils/iconEndBand.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -139,9 +140,10 @@ test('bad input gives an empty tease rather than a throw', () => {
 
 // ── layout helpers ──────────────────────────────────────────────────────────
 
-test('two rows of whatever the live grid has', () => {
-  assert.equal(teaseCellCount(8), 8)
-  assert.equal(teaseCellCount(3), 3)
+test('two whole rows of whatever the live grid has', () => {
+  assert.equal(TEASE_ROWS, 2)
+  assert.equal(teaseCellCount(8), 16)
+  assert.equal(teaseCellCount(3), 6)
   assert.equal(teaseCellCount(0), 0)
   assert.equal(teaseColsFallback(true), 3)
   assert.equal(teaseColsFallback(false), 8)
@@ -153,6 +155,17 @@ test('cell position drives the second-row fade and the chip clamp', () => {
   assert.deepEqual(teaseCellPlace(3, 4), { row: 0, edge: 'last' })
   assert.deepEqual(teaseCellPlace(4, 4), { row: 1, edge: 'first' })
   assert.deepEqual(teaseCellPlace(7, 4), { row: 1, edge: 'last' })
+})
+
+test('the icons a free account opens come from the pack counts, less the Pro-only names', () => {
+  const free = iconsOpenTo(['lucide', 'carbon', 'simple-icons', 'ri'], 'free')
+  const paid = iconsOpenTo(['lucide', 'carbon', 'simple-icons', 'ri'], 'paid')
+  assert.ok(free > 0)
+  assert.equal(iconsOpenTo(['simple-icons'], 'free'), 0, 'a Pro pack adds nothing to a free account')
+  assert.equal(iconsOpenTo(['ri'], 'paid'), 0, 'a blocked pack adds nothing to anyone')
+  assert.equal(paid - free, ICON_PACK_COUNTS['simple-icons'][0] + ICON_PACK_COUNTS.carbon[1],
+    'Pro adds the brand pack and the Carbon logo-* names')
+  assert.equal(iconsOpenTo([], 'free'), 0)
 })
 
 test('the Pro pack count is derived from the table', () => {

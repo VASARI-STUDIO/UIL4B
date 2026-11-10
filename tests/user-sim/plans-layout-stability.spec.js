@@ -14,7 +14,7 @@ const stub = (page, delay) => page.route('**/api/get-prices*', async (route) => 
   if (delay) await delay
   await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(LIVE)) })
 })
-const cta = (page) => page.locator('.pr-head--pro .pr-cta').first()
+const cta = (page) => page.locator('.hpl-pro .pa-cta').locator('a, button').first()
 const top = async (page) => Math.round((await cta(page).boundingBox()).y + await page.evaluate(() => window.scrollY))
 
 for (const width of [1024, 1090, 1359]) {
@@ -23,12 +23,12 @@ for (const width of [1024, 1090, 1359]) {
     await page.setViewportSize({ width, height: 900 })
     await stub(page)
     await go(page, '/plans')
-    const amt = page.locator('.pr-head--pro .pr-amt')
+    const amt = page.locator('.hpl-pro .pa-amt')
     await expect(amt).toHaveText(/A\$/)
     const oneLine = () => amt.evaluate((el) => el.getBoundingClientRect().height <= parseFloat(getComputedStyle(el).lineHeight) + 1)
     const yearly = await top(page)
     expect(await oneLine(), 'Yearly price wraps').toBe(true)
-    await page.locator('.pr-billing-opt', { hasText: /^Monthly/ }).click()
+    await page.getByRole('radiogroup', { name: 'Billing' }).getByRole('radio', { name: /^Monthly/ }).click()
     await expect(amt).toHaveText('A$10')
     expect(await oneLine(), 'Monthly price wraps').toBe(true)
     expect(await top(page), 'the Pro button jumped between cadences').toBe(yearly)
@@ -42,10 +42,79 @@ test('at 320 the Pro button is where it was while the prices load, and nothing s
   const held = new Promise((resolve) => { release = resolve })
   await stub(page, held)
   await go(page, '/plans')
-  await expect(page.locator('.pr-head--pro .pr-amt')).toHaveText('—')
+  await expect(page.locator('.hpl-pro .pa-amt')).toHaveText('—')
   const loading = await top(page)
   release()
-  await expect(page.locator('.pr-head--pro .pr-amt')).toHaveText(/A\$/)
+  await expect(page.locator('.hpl-pro .pa-amt')).toHaveText(/A\$/)
   expect(await top(page), 'the Pro button moved when the prices landed').toBe(loading)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
 })
+
+// A price such as A$6.25 wraps "a month, billed yearly" below 370, so each
+// currency is walked through every price state and the Pro button's top and
+// the Pro card's height are compared with the loading state.
+const CURRENCIES = [
+  { name: 'USD', locale: 'en-US', live: { source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } }, yearly: 'US$4', monthly: 'US$7' },
+  { name: 'AUD', locale: 'en-AU', live: LIVE, yearly: 'A$6.25', monthly: 'A$10' },
+]
+
+for (const { name, locale, live, yearly, monthly } of CURRENCIES) {
+  test.describe(`${name} prices`, () => {
+    test.use({ locale })
+    for (const width of [320, 365, 390, 768]) {
+      test(`at ${width} the Pro button and card hold still through loading, outage, retry and live prices`, async ({ page }) => {
+        watch(page, `someone on a ${width}px screen while the prices come and go`)
+        await page.setViewportSize({ width, height: 800 })
+        let calls = 0
+        const gates = []
+        await page.route('**/api/get-prices*', async (route) => {
+          const index = calls
+          calls += 1
+          if (gates[index]) await gates[index].held
+          if (index === 0) return route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(withAvailability(live)) })
+        })
+        const gate = () => {
+          let release
+          const held = new Promise((resolve) => { release = resolve })
+          return { held, release }
+        }
+        gates[0] = gate()
+        gates[1] = gate()
+
+        const pro = page.locator('.hpl-pro')
+        const amt = pro.locator('.pa-amt')
+        const cardHeight = async () => Math.round((await pro.boundingBox()).height)
+        const seen = []
+        const measure = async (state) => { seen.push({ state, y: await top(page), height: await cardHeight() }) }
+
+        await go(page, '/plans')
+        await expect(amt).toHaveText('—')
+        await measure('loading')
+
+        gates[0].release()
+        await expect(amt).toHaveText('Unavailable')
+        await measure('outage')
+
+        await pro.locator('.pa-cta').getByRole('button', { name: 'Retry live pricing' }).click()
+        await expect(pro.locator('.pa-cta button')).toHaveText('Checking Stripe…')
+        await measure('retrying')
+
+        gates[1].release()
+        await expect(amt).toHaveText(yearly)
+        await measure('live Yearly')
+
+        await page.getByRole('radiogroup', { name: 'Billing' }).getByRole('radio', { name: /^Monthly/ }).click()
+        await expect(amt).toHaveText(monthly)
+        await measure('live Monthly')
+
+        const first = seen[0]
+        for (const row of seen) {
+          expect(row.y, `the Pro button's top in ${row.state} against ${first.state}`).toBe(first.y)
+          expect(row.height, `the Pro card's height in ${row.state} against ${first.state}`).toBe(first.height)
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+      })
+    }
+  })
+}

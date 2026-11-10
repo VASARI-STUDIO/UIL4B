@@ -30,6 +30,7 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
+import { getArticleSources } from '../../src/data/learn/sources.js'
 
 const PHONE = { width: 390, height: 844 }
 const TABLET = { width: 768, height: 1024 }
@@ -38,8 +39,9 @@ const DESKTOP = { width: 1440, height: 900 }
 const RAIL_FROM = 1080
 
 // Hand-written, not derived: what the "Keep reading" row must point at.
-// Accessibility holds one guide, so it has no neighbour in its topic and falls
-// back to the next guide in the registry. Typography and Colour wrap inside
+// Accessibility and Psychology each hold one guide, so they have no neighbour
+// in their topic and fall back to the next guide in the registry (which wraps
+// from the last guide to the first). Typography and Colour wrap inside
 // their own topic (font-loading goes back to type-scales, brand-colour back to
 // colour-spaces).
 const KEEP_READING = {
@@ -50,6 +52,7 @@ const KEEP_READING = {
   'colour-spaces': { kicker: 'Next in Colour', to: 'theme-systems' },
   'theme-systems': { kicker: 'Next in Colour', to: 'brand-colour' },
   'brand-colour': { kicker: 'Next in Colour', to: 'colour-spaces' },
+  'improving-value-proposition': { kicker: 'Read next', to: 'colour-contrast' },
 }
 
 test('the registry this spec walks is not empty and the table covers every guide', async () => {
@@ -355,14 +358,26 @@ test.describe('the lit contents link', () => {
           await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
           await frames(page)
           await page.keyboard.press('End')
+          // On a loaded runner the smooth scroll can start after settled() has
+          // already seen twelve still frames at the top, so wait for the page to
+          // arrive before waiting for it to stop.
+          // The guide can still grow while that scroll runs (a late image or
+          // font), so a scroll aimed at the old bottom stops short of the new
+          // one. Once it has stopped short, End is pressed again, as a reader
+          // would.
+          let lastY = -1
+          await expect.poll(async () => {
+            const at = await page.evaluate(() => ({ y: scrollY, bottom: Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2 }))
+            if (!at.bottom && at.y === lastY) await page.keyboard.press('End')
+            lastY = at.y
+            return at.bottom
+          }, { message: 'End did not reach the bottom', timeout: 15_000 }).toBe(true)
           await settled(page)
-          const bottom = await page.evaluate(() => Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2)
-          expect(bottom, 'End did not reach the bottom').toBe(true)
           await expect.poll(() => litIds(page), { message: 'after End' }).toEqual([ids.at(-1)])
 
           await page.keyboard.press('Home')
+          await expect.poll(() => page.evaluate(() => scrollY), { message: 'Home did not reach the top', timeout: 10_000 }).toBe(0)
           await settled(page)
-          expect(await page.evaluate(() => scrollY), 'Home did not reach the top').toBe(0)
           await expect.poll(() => litIds(page), { message: 'after Home' }).toEqual([ids[0]])
 
           const bad = await page.evaluate(() => window.__litBad)
@@ -442,12 +457,12 @@ test.describe('the end of a guide', () => {
           // Sources: folded, counted, 44px summary.
           const sources = page.locator('details.lart-sources')
           expect(await sources.evaluate((d) => d.open), 'Sources open on load').toBe(false)
-          await expect(sources.locator('summary')).toContainText(`Sources (${article.sources.length})`)
+          await expect(sources.locator('summary')).toContainText(`Sources (${getArticleSources(article.slug).length})`)
           expect((await sources.locator('summary').boundingBox()).height, 'Sources summary height').toBeGreaterThanOrEqual(44)
           await sources.locator('summary').click()
-          await expect(sources.locator('a')).toHaveCount(article.sources.length)
-          for (let i = 0; i < article.sources.length; i += 1) {
-            await expect(sources.locator('a').nth(i)).toHaveAttribute('href', article.sources[i].href)
+          await expect(sources.locator('a')).toHaveCount(getArticleSources(article.slug).length)
+          for (let i = 0; i < getArticleSources(article.slug).length; i += 1) {
+            await expect(sources.locator('a').nth(i)).toHaveAttribute('href', getArticleSources(article.slug)[i].href)
           }
         } finally {
           await ctx.close()
@@ -492,7 +507,7 @@ test.describe('colour of the guide furniture, both themes', () => {
 
             await page.locator('details.lart-sources summary').click()
             const n = await page.locator('.lart-sources a').count()
-            expect(n, `${where}: no source links`).toBe(article.sources.length)
+            expect(n, `${where}: no source links`).toBe(getArticleSources(article.slug).length)
             for (let i = 0; i < n; i += 1) {
               const r = await contrast(page, '.lart-sources a', { nth: i })
               expect(r.ratio, `${where}: source link ${i} is ${r.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)

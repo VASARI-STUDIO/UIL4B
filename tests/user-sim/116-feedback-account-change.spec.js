@@ -115,14 +115,14 @@ test.describe('an account change under a send', () => {
     await go(page, '/feedback')
     await page.locator('#fb-subject').fill('Export is broken')
     await page.locator('#fb-message').fill(TEXT)
-    await page.getByRole('radio', { name: 'Bug Report' }).click()
+    await page.getByRole('radio', { name: 'Bug report' }).click()
     await expect(page.locator('#fb-message')).toHaveValue(TEXT)
 
     await page.evaluate(() => window.__UIL4B_TEST_AUTH__.switchTo({ uid: 'test-uid-other', email: 'other.user@uil4b.test' }))
 
     await expect(page.locator('#fb-message')).toHaveValue('')
     await expect(page.locator('#fb-subject')).toHaveValue('')
-    await expect(page.locator('[role="radio"][aria-checked="true"]')).not.toHaveText('Bug Report')
+    await expect(page.locator('[role="radio"][aria-checked="true"]')).not.toHaveText('Bug report')
   })
 
   test('signing out clears what was typed on /feedback', async ({ page }) => {

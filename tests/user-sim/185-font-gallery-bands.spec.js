@@ -8,12 +8,9 @@
 //                stays green: the toolbar moves what does not fit into Filters before
 //                anything can wrap, so the mutation has to force the overflow.
 //   criterion 2  put `text-transform: uppercase` back on `.fg-page .fg-count`
-//   criterion 3  `.fg-card-reveal { display: none }` with `display: flex` on `.fg-card:hover`
-//                and `:has(:focus-visible)`, so the reveal enters the layout on a wake.
-//                `position: static` alone stays green: the box is the same either way.
-//   criterion 4  delete the two `@container fg-reveal` rules for the 1024px+ layout (the
-//                48 and 72 sizes then cut the pangram or weights mid-glyph), or drop the
-//                `* .14` descender room from `.fg-card-reveal`'s `top`
+//   criterion 3  `.fg-card.is-open .fg-card-preview { top: 0 }`, so the name moves when the
+//                band opens
+//   criterion 4  `.fg-card-meta { top: var(--fg-y) }`, so the meta line runs over the name
 //   criterion 5  make the count or the placeholder ignore the category
 //
 // Criterion 2 is asserted on the base list state only. The compare tray, the
@@ -30,11 +27,17 @@ const CATALOGUE = {
     { family: 'Pacifico', category: 'handwriting', variants: [400], subsets: ['latin'], popularity: 3 },
   ],
 }
-
+// Band height is max(200, round(size * 1.1) + 147) from a tablet up and
+// max(140, ceil(size * 1.1) + 99) on a phone (src/utils/galleryBand.js). Lists open
+// at Size 96 on a desktop and a tablet, and 48 on a phone. `top` is the room above
+// the name, `gap` the room between the name and the meta line, and `below` the room
+// under the meta line, each a spacing token (--s-7 and --s-6 wide, --s-5 and --s-6
+// on a phone). Each is at least 1.5 times what it was, so a band that tightens back
+// fails on these numbers.
 const LAYOUTS = [
-  { width: 1440, band: 240, name: 96 },
-  { width: 768, band: 200, name: 64 },
-  { width: 390, band: 120, name: 40 },
+  { width: 1440, band: 253, name: 96, top: 48, gap: 48, below: 32 },
+  { width: 768, band: 253, name: 96, top: 48, gap: 48, below: 32 },
+  { width: 390, band: 152, name: 48, top: 24, gap: 24, below: 32 },
 ]
 
 async function open(page, width) {
@@ -90,7 +93,7 @@ test.describe('Font Gallery bands', () => {
     expect(count).toBe('none')
   })
 
-  for (const { width, band, name } of LAYOUTS) {
+  for (const { width, band, name, top, gap, below } of LAYOUTS) {
     test(`criterion 3: at ${width} the band is ${band}px, the name ${name}px, and a wake moves no box`, async ({ page }) => {
       watch(page, 'someone hovering a band')
       await open(page, width)
@@ -101,6 +104,24 @@ test.describe('Font Gallery bands', () => {
       expect(Math.round(box.height), `${width}px band height`).toBe(band)
       const size = await nameEl.evaluate((el) => Math.round(parseFloat(getComputedStyle(el).fontSize)))
       expect(size, `${width}px name size`).toBe(name)
+      const inset = await card.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const meta = el.querySelector('.fg-card-meta').getBoundingClientRect()
+        const copy = [...el.querySelectorAll('button')].find((b) => /Copy CSS/.test(b.textContent || ''))
+        return {
+          name: el.querySelector('.fg-card-name').getBoundingClientRect().top - r.top,
+          meta: r.bottom - meta.bottom,
+          copy: copy ? r.bottom - copy.getBoundingClientRect().bottom : null,
+          gap: meta.top - el.querySelector('.fg-card-preview').getBoundingClientRect().bottom,
+        }
+      })
+      expect(Math.round(inset.name), `${width}px name inset from the top`).toBe(top)
+      // The room under the meta line, then the band's 1px divider.
+      expect(inset.meta, `${width}px meta line sits ${below}px above the bottom`).toBeGreaterThanOrEqual(below)
+      expect(inset.meta, `${width}px meta line sits ${below}px above the bottom`).toBeLessThanOrEqual(below + 1)
+      expect(inset.copy, `${width}px Copy CSS is on the meta line's bottom edge`).toBeGreaterThanOrEqual(below)
+      expect(inset.copy, `${width}px Copy CSS is on the meta line's bottom edge`).toBeLessThanOrEqual(below + 1)
+      expect(inset.gap, `${width}px room between the name and the meta line shrank back`).toBeGreaterThanOrEqual(gap - 1)
       const family = await nameEl.evaluate((el) => getComputedStyle(el).fontFamily)
       expect(family).toContain('Lora')
 
@@ -132,6 +153,33 @@ test.describe('Font Gallery bands', () => {
     })
   }
 
+  // The Size menu has 11 steps; the band follows each of them.
+  const SIZE_STEPS = [
+    { width: 1440, size: 56, band: 209 },
+    { width: 1440, size: 80, band: 235 },
+    { width: 1440, size: 112, band: 270 },
+    { width: 390, size: 56, band: 161 },
+    { width: 390, size: 112, band: 223 },
+  ]
+  for (const { width, size, band } of SIZE_STEPS) {
+    test(`criterion 3: at ${width} and Size ${size} the band is ${band}px`, async ({ page }) => {
+      watch(page, 'someone choosing a specimen size')
+      await open(page, width)
+      if (width >= 1024) {
+        await page.getByRole('button', { name: /^Specimen size/ }).click()
+        await expect(page.getByRole('option')).toHaveCount(11)
+        await page.getByRole('option', { name: String(size), exact: true }).click()
+      } else {
+        // A phone sets the size with the slider in the Filters sheet.
+        await page.getByRole('button', { name: 'Filters', exact: true }).click()
+        await page.getByRole('dialog', { name: 'Filters' }).getByRole('slider', { name: 'Size' }).fill(String(size))
+      }
+      const card = page.locator('.fg-card').first()
+      await expect(card.locator('.fg-card-name')).toHaveCSS('font-size', `${size}px`)
+      expect(Math.round((await card.boundingBox()).height), `${width}px band at Size ${size}`).toBe(band)
+    })
+  }
+
   test('criterion 3: a long name shrinks to its floor and is clipped, never ellipsised', async ({ page }) => {
     watch(page, 'someone typing a long phrase')
     await open(page, 1440)
@@ -145,44 +193,37 @@ test.describe('Font Gallery bands', () => {
     expect(info.ellipsis).toBe(false)
   })
 
-  // The band follows the Size choice but the reveal's type does not, so at a
-  // small size the reveal must drop what does not fit instead of cutting it.
+  // The band follows the Size choice, so at a small size the meta line must
+  // still sit below the name instead of running into it.
   for (const size of [72, 48]) {
-    test(`criterion 4: at Size ${size} the reveal is hidden or its content fits, and it clears the name`, async ({ page }) => {
+    test(`criterion 4: at Size ${size} the band holds its height and the meta line clears the name`, async ({ page }) => {
       watch(page, 'someone hovering a small-size band')
       await open(page, 1440)
       await page.getByRole('button', { name: /^Specimen size/ }).click()
       await page.getByRole('option', { name: String(size), exact: true }).click()
       const card = page.locator('.fg-card').first()
       await expect(card.locator('.fg-card-name')).toHaveText('Lora')
+      const heightAtRest = (await card.boundingBox()).height
       await card.hover()
       await page.waitForTimeout(400)
       const m = await card.evaluate((el) => {
-        const reveal = el.querySelector('.fg-card-reveal')
-        const r = reveal.getBoundingClientRect()
+        const band = el.getBoundingClientRect()
         const preview = el.querySelector('.fg-card-preview').getBoundingClientRect()
-        const lines = ['.fg-card-pangram', '.fg-card-weights'].map((sel) => {
-          const line = reveal.querySelector(sel)
-          const shown = getComputedStyle(line).display !== 'none'
-          const b = line.getBoundingClientRect()
-          return { sel, shown, overflow: shown ? b.bottom - r.bottom : 0 }
-        })
+        const meta = el.querySelector('.fg-card-meta')
+        const mb = meta.getBoundingClientRect()
         return {
           name: parseFloat(getComputedStyle(el.querySelector('.fg-card-name')).fontSize),
-          opacity: getComputedStyle(reveal).opacity,
-          gap: r.top - preview.bottom,
-          clipped: reveal.scrollHeight - reveal.clientHeight,
-          lines,
+          height: band.height,
+          gap: mb.top - preview.bottom,
+          inside: band.bottom - mb.bottom,
+          clipped: meta.scrollWidth - meta.clientWidth,
         }
       })
-      expect(m.opacity, 'the wake shows the reveal').toBe('1')
       expect(m.name, 'the Size choice took').toBe(size)
-      expect(m.gap, 'the reveal starts below the descender room under the name').toBeGreaterThanOrEqual(size * 0.14 - 0.5)
-      for (const line of m.lines) expect(line.overflow, `${line.sel} runs past the reveal`).toBeLessThanOrEqual(0.5)
-      expect(m.clipped, 'something in the reveal is cut off').toBeLessThanOrEqual(0)
-      // 72 has room for the pangram; the check above proves nothing if the
-      // reveal is hidden everywhere.
-      if (size === 72) expect(m.lines[0].shown, 'the pangram fits at Size 72 and should show').toBe(true)
+      expect(m.height, 'the open band keeps the height it had at rest').toBe(heightAtRest)
+      expect(m.gap, 'the meta line starts below the name').toBeGreaterThanOrEqual(0)
+      expect(m.inside, 'the meta line stays inside the band').toBeGreaterThanOrEqual(0)
+      expect(m.clipped, 'the meta line is cut off').toBeLessThanOrEqual(0)
     })
   }
 
@@ -207,6 +248,9 @@ test.describe('Font Gallery bands', () => {
     await expect(page.locator('.fg-card')).toHaveCount(4)
   })
 
+  // The 44px floor is the coarse-pointer rule (36px with a mouse), so this runs as a phone.
+  test.describe('on a touch phone', () => {
+    test.use({ hasTouch: true, isMobile: true })
   test('the compare button is 44px and named for the family', async ({ page }) => {
     watch(page, 'someone adding a font to compare')
     await open(page, 390)
@@ -216,5 +260,6 @@ test.describe('Font Gallery bands', () => {
     expect(box.height).toBeGreaterThanOrEqual(44)
     await add.click()
     await expect(page.getByRole('button', { name: 'Remove Lora from comparison' })).toBeVisible()
+  })
   })
 })

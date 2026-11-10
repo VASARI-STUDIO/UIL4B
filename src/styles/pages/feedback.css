@@ -125,6 +125,111 @@
   .fb-page .fb-again { min-height: 44px; }
 }
 
+/* ── Phone and tablet (under 900px) ──────────────────────────────────────────
+   The page is the surface: no outer card, one centred column no wider than
+   560px, so a tablet shows a balanced form instead of one pushed to the left.
+   `.fb-page` is a flex item of the app page, where an auto margin switches off
+   stretch, so it takes `width: 100%` and lets the cap and the auto margins
+   centre it. `.card` clips its overflow, which would stop the Send bar from
+   sticking, so the clip is lifted here. */
+@media (max-width: 899px) {
+  .fb-page { width: 100%; max-width: 560px; margin-inline: auto; }
+  .fb-page .fb-card {
+    max-width: none;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+  .fb-page .sec-h p { font-size: 16px; }
+
+  .fb-page .seg-label { margin-bottom: 8px; font-size: 14px; }
+  .fb-page .fb-hint,
+  .fb-page .fb-sending-as { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
+
+  .fb-page .fb-input,
+  .fb-page .fb-textarea { font-size: 16px; }
+  .fb-page .fb-input { min-height: 48px; }
+  .fb-page .fb-textarea { min-height: 144px; }
+
+  /* The type choice: four radios, a row of four at tablet width. */
+  .fb-page .fb-types { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .fb-page .pt-t { justify-content: center; min-height: 44px; padding: 0 8px; font-size: 14px; }
+  .fb-page .pt-t.on,
+  .fb-page .pt-t[aria-checked="true"] { box-shadow: inset 0 0 0 1px var(--accent-mid); }
+
+  /* Error line: 14px, a glyph in front, tucked under the field above it. */
+  .fb-page .fb-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .fb-page .fb-error::before {
+    content: "";
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 7v6M12 17h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 7v6M12 17h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  .fb-page .fb-form > .fb-error { margin-top: -12px; }
+
+  /* Send: 160px, left aligned under the message. */
+  .fb-page .fb-submit { min-width: 160px; min-height: 48px; font-size: 16px; }
+}
+
+/* Phone: the type radios are a 2x2 grid of 48px pills, the selected one carries
+   a tick as well as its colour, and Send is the full-width bar above the tab
+   bar so it stays reachable however far the form scrolls. */
+@media (max-width: 599px) {
+  .fb-page .fb-types { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fb-page .pt-t { min-height: 48px; }
+  .fb-page .pt-t[aria-checked="true"]::before {
+    content: "";
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  .fb-page { --fb-send-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .fb-page .fb-submit {
+    position: sticky;
+    bottom: var(--fb-send-bottom);
+    z-index: 2;
+    align-self: stretch;
+    width: 100%;
+    /* A ring in the page colour keeps the form from showing through around it. */
+    box-shadow: 0 0 0 8px rgb(var(--page-rgb));
+  }
+  /* While the message is being typed the bar would sit over its last lines and
+     hide the caret, so it drops back into place under the box until focus moves. */
+  .fb-page .fb-form:has(#fb-message:focus) .fb-submit { position: static; }
+  .fb-page #fb-message { scroll-margin-bottom: calc(var(--fb-send-bottom) + 16px); }
+  /* The error sits just under the message, which on a short screen is where the
+     sticky Send bar is. It sticks above the bar's ring (48px bar + 8px ring + 4px)
+     instead of being hidden behind it, with the page colour behind the text. */
+  .fb-page .fb-form > .fb-error {
+    position: sticky;
+    bottom: calc(var(--fb-send-bottom) + 60px);
+    z-index: 2;
+    padding-block: 4px;
+    background: rgb(var(--page-rgb));
+  }
+}
+
+/* With the tab bar showing, the Send bar rests on top of it. */
+@media (max-width: 599px) {
+  html.has-tabbar .fb-page { --fb-send-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 8px); }
+}
+
 /* Forced colours: the chosen type has to survive without its wash. */
 @media (forced-colors: active) {
   .fb-page .pt-t.on,

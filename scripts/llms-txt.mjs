@@ -19,7 +19,7 @@
 //
 // ── Everything below is read from the module that owns it ───────────────────
 //
-//   the value claim     src/data/positioning.js — the founder's own sentence,
+//   the value claim     src/data/positioning.js — the product's own sentence,
 //                       by the id SURFACE_LINE assigns to this surface
 //   the price + limits  scripts/site-pricing.mjs, which is what index.html's
 //                       <noscript> already prints — one sentence, two surfaces
@@ -108,6 +108,14 @@ export function llmsRoutes() {
 
   const live = createTools().filter((t) => !t.soon)
   const liveRoutes = new Set(live.map((t) => t.route))
+
+  // Discover rows that are live and are not a Create tool wearing a second
+  // hat (Font Gallery and Icon Library are Create routes, listed above).
+  const browse = DISCOVER_GROUPS
+    .filter((g) => !g.soon && !liveRoutes.has(g.route) && g.route !== '/discover')
+    .map((g) => mustBePrerendered(g.route, 'the Browse section'))
+  const browseRoutes = new Set(browse)
+
   // The Create tools that mount, in tree order.
   const tools = live.map((t) => ({
     route: mustBePrerendered(t.route, 'the Tools section'),
@@ -115,23 +123,17 @@ export function llmsRoutes() {
   }))
   // Surfaces the search index declares outside the Create tree, kept only when
   // they render as a page of their own rather than resolving to a Discover or
-  // Learn destination those sections already list, or to a page the More
-  // section lists. Today that is /seo.
+  // Learn destination those sections already list, or to a page the More or
+  // Browse section lists. Today that is /seo.
   for (const entry of TOOL_ENTRIES) {
     const route = entry.path
-    if (liveRoutes.has(route) || moreRoutes.has(route) || /^\/(discover|learn)(\/|$)/.test(route)) continue
+    if (liveRoutes.has(route) || moreRoutes.has(route) || browseRoutes.has(route) || /^\/(discover|learn)(\/|$)/.test(route)) continue
     if (!prerendered.has(route)) continue
     if (tools.some((t) => t.route === route)) continue
     tools.push({ route, beta: false })
   }
 
   const learn = LEARN_ARTICLES.map((a) => mustBePrerendered(`/learn/${a.slug}`, 'the Learn section'))
-
-  // Discover rows that are live and are not a Create tool wearing a second
-  // hat (Font Gallery and Icon Library are Create routes, listed above).
-  const browse = DISCOVER_GROUPS
-    .filter((g) => !g.soon && !liveRoutes.has(g.route) && g.route !== '/discover')
-    .map((g) => mustBePrerendered(g.route, 'the Browse section'))
 
   // Tools still in the workshop are not listed anywhere in this file: a page
   // the site hides from visitors is not advertised to a crawler either.

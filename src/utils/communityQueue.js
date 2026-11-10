@@ -37,14 +37,12 @@ export const QUEUE_COLLECTION = 'community-submissions'
 export const QUEUE_STATUSES = Object.freeze(['pending', 'approved', 'rejected'])
 export const CLIENT_WRITABLE_STATUS = 'pending'
 
-// 'icon' is the fourth, added 2026-09-18 on the founder's instruction ("people
-// can submit icons to the community they just need to be reviewed"). It needed
-// no fourth code path here, which is what this list being generalised over
+// 'icon' is the fourth, so people can submit icons to the community once they
+// are reviewed. It needed no fourth code path here, which is what this list being generalised over
 // `kind` was for — but it DOES need a rules change, because
 // firestore.rules pins `kind in ['gradient', 'design', 'palette']` and an icon
-// also carries a payload key ('svg') the rules' allowlist does not name. That
-// diff is docs/design/community-icon-rules.patch and it is the founder's to
-// publish; until he does, an icon submission is refused by Firestore and the
+// also carries a payload key ('svg') the rules' allowlist does not name. Until
+// the rules are updated, an icon submission is refused by Firestore and the
 // submitter is told so rather than told it reached a reviewer.
 export const QUEUE_KINDS = Object.freeze(['gradient', 'design', 'palette', 'icon'])
 
@@ -74,6 +72,25 @@ export function buildQueueRecord({ kind, payload, user, name, authorName }) {
   }
 }
 
+
+// What a submission says about where it stands. 'approved' and 'rejected' are a
+// reviewer's words; anything unknown reads as pending.
+export const QUEUE_STATUS_LABEL = Object.freeze({
+  pending: 'Pending review',
+  approved: 'Approved',
+  rejected: 'Not approved',
+})
+
+/**
+ * The tag for one of a person's own submissions. An entry the account does not
+ * hold (`synced` false) is one cache clear from gone, so it never claims a
+ * reviewer status it has not earned: it reads "Not sent", or "Sending…" while a
+ * publish is in flight.
+ */
+export function submissionStatusLabel({ status, synced = true, sending = false } = {}) {
+  if (!synced) return sending ? 'Sending…' : 'Not sent'
+  return Object.hasOwn(QUEUE_STATUS_LABEL, status) ? QUEUE_STATUS_LABEL[status] : QUEUE_STATUS_LABEL.pending
+}
 
 /**
  * Merge the server's copy of someone's submissions with this browser's local

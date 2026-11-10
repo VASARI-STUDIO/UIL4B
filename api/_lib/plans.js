@@ -9,7 +9,7 @@ import { isAdminEmail } from './adminEmails.js'
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THESE NUMBERS ARE SMALL — read before raising any of them
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder constraint: AI runs on FREE provider tiers only until the app earns.
+// Constraint: AI runs on FREE provider tiers only until the app earns.
 // Free tiers are metered PER PROJECT, not per user, so every signed-in user is
 // drawing from ONE shared bucket:
 //
@@ -105,7 +105,9 @@ export function subscriptionAccessRevoked(subscription) {
   return subscription?.accessRevoked === true
 }
 
-export function planForSubscription(subscription) {
+// `now` is injectable so the period-end and grace checks can be tested at a
+// fixed instant; every caller in the app leaves it to the real clock.
+export function planForSubscription(subscription, now = Date.now()) {
   if (!subscription) return PLANS.free
   // Checked before anything else, including the past-due grace: money that has
   // gone back is not a reason to keep serving the product, and the grace window
@@ -114,7 +116,7 @@ export function planForSubscription(subscription) {
   const active = subscription.status === 'active' || subscription.status === 'trialing'
   if (active) {
     // Guard against an expired period that the webhook hasn't cleaned up yet.
-    if (subscription.currentPeriodEnd && Date.now() > subscription.currentPeriodEnd + 86_400_000) {
+    if (subscription.currentPeriodEnd && now > subscription.currentPeriodEnd + 86_400_000) {
       return PLANS.free
     }
     return PLANS.pro
@@ -124,7 +126,7 @@ export function planForSubscription(subscription) {
   // by the time that invoice fails the period end is already a month out —
   // anchoring there would hand out ~37 free days instead of 7.
   if (subscription.status === 'past_due' && Number.isFinite(subscription.paymentFailedAt)
-      && Date.now() <= subscription.paymentFailedAt + PAST_DUE_GRACE_MS) {
+      && now <= subscription.paymentFailedAt + PAST_DUE_GRACE_MS) {
     return PLANS.pro
   }
   return PLANS.free
@@ -134,13 +136,13 @@ export function hasLifetimeEntitlement(entitlement) {
   return entitlement?.active === true && !entitlement.revokedAt
 }
 
-// Founder/admin accounts get Pro entitlements without a Stripe subscription so
+// Admin accounts get Pro entitlements without a Stripe subscription so
 // the team can dog-food paid features. The email is read from a verified
 // Firebase ID token on the server, so a non-admin can't spoof their way in.
 //
 // THE LIST IS NOT HERE ANY MORE. It was a second copy of the literal in
-// api/_lib/admin.js — the defect that file's own header names — and both were
-// the founder's personal address in tracked, public source. It now comes from
+// api/_lib/admin.js — the defect that file's own header names — and both carried
+// a personal address in tracked, public source. It now comes from
 // the ADMIN_EMAILS environment variable, defined once in ./adminEmails.js,
 // which is a dependency-free module precisely so this one can import it without
 // dragging firebase-admin into every consumer of the plan table.
@@ -157,10 +159,10 @@ export { isAdminEmail }
 // NOTE on lifetime: one-off Pro is not sold — create-checkout accepts recurring
 // intervals only. An entitlement already on an account is still honoured here,
 // deliberately: someone who holds one keeps Pro until it is revoked.
-export function planForUser({ subscription, lifetimeEntitlement, email } = {}) {
+export function planForUser({ subscription, lifetimeEntitlement, email, now = Date.now() } = {}) {
   if (isAdminEmail(email)) return PLANS.pro
   if (hasLifetimeEntitlement(lifetimeEntitlement)) return PLANS.pro
-  return planForSubscription(subscription)
+  return planForSubscription(subscription, now)
 }
 
 export function dailyLimitFor(plan, toolId) {
@@ -219,11 +221,8 @@ export function modelFor(plan, toolId) {
 //
 // The remaining half is not code: findOrCreateProduct now calls
 // stripe.products.update when a live product's description differs, but nothing
-// runs that until the founder POSTs /api/setup-stripe. That is logged in
-// docs/OWNER-ACTIONS.md, which is local-only since 2026-09-16 and is not in this
-// repository (.gitignore carries why). The DERIVATION below is the half that
-// protects a customer and it is all here; only the founder's runbook entry is
-// elsewhere.
+// runs that until the owner POSTs /api/setup-stripe. The DERIVATION below is
+// the half that protects a customer.
 export function proProductDescription(plan = PLANS.pro) {
   const daily = dailyLimitFor(plan, 'ai-default')
   const monthly = monthlyLimitFor(plan, 'ai-default')

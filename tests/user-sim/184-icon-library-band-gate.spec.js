@@ -17,7 +17,7 @@
 //   <p className="ig-status">Showing X of Y</p> comes back before the gate   -> "no result line"
 //   ICON_GATE_COPY.end.anon.heading gets an em dash                           -> "the gate heading" and "no em dash"
 //   ICON_GATE_COPY.end.anon.heading goes back to "Log in to browse the full sets."  -> "the gate heading"
-//   TEASE_ROWS goes back to 2 (utils/iconEndBand.js)                           -> "one blurred row"
+//   TEASE_ROWS goes back to 1 (utils/iconEndBand.js)                           -> "two blurred rows"
 //   .ig-end-band gets its border-top back, or loses margin:-24px auto 0 / text-align:center
 //                                                                              (deferred/library.css) -> "the gate block"
 //   .ig-end-tease loses its mask-image (deferred/library.css)                  -> "fades into the block"
@@ -80,7 +80,7 @@ const boxes = (page, selectors) => page.evaluate((sels) => {
 
 test.describe('no result line, and the count is announced rather than drawn', () => {
   for (const width of WIDTHS) {
-    test(`${width}: signed out, nothing but the grid, one blurred row and the gate`, async ({ page }) => {
+    test(`${width}: signed out, nothing but the grid, two blurred rows and the gate`, async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, width)
       await expect(page.locator('.ig-end[data-gate="anon"]')).toBeVisible()
@@ -174,10 +174,10 @@ test.describe('the gate names what is on screen', () => {
       watch(page, SIGNED_OUT)
       const cells = await open(page, width)
       const gate = page.locator('.ig-end[data-gate="anon"]')
-      // 12 = the five sets a signed-out viewer sees plus the seven a free account adds.
-      await expect(gate.getByRole('heading', { level: 2 })).toHaveText('Log in to open all 12 sets.')
+      // 16 = the five sets a signed-out viewer sees plus the eleven a free account adds.
+      await expect(gate.getByRole('heading', { level: 2 })).toHaveText(/^Log in to access [\d,]+ icons$/)
       const body = (await gate.locator('.ig-end-p').textContent()).trim()
-      const m = body.match(/^You're seeing ([\d,]+) icons from 5 sets\. A free account opens every icon in them, plus 7 more sets\. Copying needs no account\.$/)
+      const m = body.match(/^You're seeing ([\d,]+) icons from 5 sets\. A free account opens every icon across 16 sets\. Copying needs no account\.$/)
       expect(m, `the gate body is not the expected sentence: "${body}"`).not.toBeNull()
       expect(Number(m[1].replace(/,/g, '')), 'the gate quotes the number of icons actually drawn').toBe(cells)
       // The five set names are the five sets the grid draws from, so "5 sets" points at something real.
@@ -187,15 +187,15 @@ test.describe('the gate names what is on screen', () => {
       expect([...named].sort(), 'the sets named under the gate are the sets in the grid').toEqual(drawn)
     })
 
-    test(`${width}: one blurred row that fades into a centred block, with no hairline`, async ({ page }) => {
+    test(`${width}: two blurred rows that fade into a centred block, with no hairline`, async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, width)
       const cols = await gridColumns(page)
       const tease = await page.locator('.ig-end-tease > *').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))
-      expect(tease.length, 'the blurred row has exactly one cell per grid column').toBe(cols)
-      expect(new Set(tease).size, 'and they sit on one row').toBe(1)
+      expect(tease.length, 'the blurred rows have exactly two cells per grid column').toBe(cols * 2)
+      expect(new Set(tease).size, 'and they sit on two rows').toBe(2)
       const b = await boxes(page, { tease: '.ig-end-tease', band: '.ig-end-band' })
-      expect(Math.abs(b.band.t - b.tease.b + 24), `the block rises 24px into the blurred row (it is ${b.band.t - b.tease.b} from its bottom edge)`).toBeLessThanOrEqual(1)
+      expect(Math.abs(b.band.t - b.tease.b + 24), `the block rises 24px into the blurred rows (it is ${b.band.t - b.tease.b} from its bottom edge)`).toBeLessThanOrEqual(1)
       const mask = await page.locator('.ig-end-tease').evaluate((el) => { const cs = getComputedStyle(el); return cs.maskImage || cs.webkitMaskImage || '' })
       expect(mask, 'the blurred row fades into the block with a transparency mask').toContain('linear-gradient')
       expect(await page.locator('.ig-end-band').evaluate((el) => getComputedStyle(el).borderTopWidth), 'no hairline sets the block off').toBe('0px')

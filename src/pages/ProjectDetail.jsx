@@ -7,6 +7,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useClipboard } from '../hooks/useClipboard'
 import { buildCSSVars } from '../utils/exportBuilder'
 import { tintsCurrent } from '../utils/projectTints'
+import { savedColoursOf } from '../utils/savedColours'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
 import IconPicker from '../components/userhome/IconPicker'
@@ -125,6 +126,7 @@ function ProjectDetail({ id, toast }) {
   const slots = projectSlots4(project).map((s) => (
     s.id === 'tints' && s.done && madeFromColours ? { ...s, detail: `${s.detail}, made from your colours` } : s
   ))
+  const savedColours = savedColoursOf(project)
   const complete = digest.done === digest.total
   const open = digest.total - digest.done
   const others = projects.filter((p) => p.id !== id).sort(byRecent)
@@ -334,6 +336,28 @@ function ProjectDetail({ id, toast }) {
             </section>
           ))}
         </div>
+
+        {savedColours.length > 0 && (
+          <section className="pjd-saved" aria-labelledby="pjd-saved-h">
+            <h2 className="pjd-saved-h" id="pjd-saved-h">Saved colours</h2>
+            <ul className="pjd-saved-list">
+              {savedColours.map((c) => (
+                <li key={c.hex}>
+                  <button
+                    type="button"
+                    className="pjd-saved-sw"
+                    onClick={() => copy(c.hex).then((ok) => ok && toast(`Copied ${c.hex}`))}
+                    aria-label={`Copy ${c.hex}${c.name ? `, ${c.name}` : ''}`}
+                    title="Copy hex"
+                  >
+                    <span className="pjd-saved-chip" style={{ background: c.hex }} aria-hidden="true" />
+                    <span>{c.hex}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className="pjd-export">
           <span className="pjd-export-line">

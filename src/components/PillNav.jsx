@@ -13,7 +13,10 @@ import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useExportDesign from '../hooks/useExportDesign'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
+import { BRAND_KIT_STEPS, guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
+import { chooserDecision, workingStatus } from '../utils/brandKitChooser'
+import { SESSION_DONE, SESSION_ON, markSession, readEditedAt, readSession } from '../utils/kitSession'
+import { hasPendingSave } from '../utils/pendingSave'
 import { getRecentIcons } from '../utils/recentIcons'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -31,7 +34,7 @@ import FoldersGlyph from './nav/FoldersGlyph'
 import SpectrumNav from './SpectrumNav'
 import { AccountSwitcher, OfflineNote, SignOutRows } from './nav/AccountSwitcher'
 import useOfflineGate from './nav/useOfflineGate'
-import { menuFootNote, menuGuides, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
+import { menuFootNote, menuPromo, menuStacks, menuViewAll } from './nav/menuModel'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
@@ -42,11 +45,14 @@ import { initialsOf } from '../utils/initials.js'
 import { readSessionHint } from '../utils/sessionHint'
 
 // Overlays are code-split: they load the first time a visitor opens them. The
-// Discover pane's counts too — they render only inside the open Discover menu,
-// and the prompt count comes from a data module nothing else here imports.
+// Discover pane's counts and suggested gallery too — they render only inside
+// the open Discover menu, and the prompt count comes from a data module nothing
+// else here imports.
 const CommandPalette = lazy(() => import('./CommandPalette'))
 const ExportDialog = lazy(() => import('./export/ExportDialog'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
+const DiscoverRecommended = lazy(() => import('./nav/DiscoverRecommended'))
+const LearnRecommended = lazy(() => import('./nav/LearnRecommended'))
 
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
@@ -144,6 +150,14 @@ function GearIcon() {
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
       <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6L12 3Z" />
     </svg>
   )
 }
@@ -283,7 +297,7 @@ function ExportPreview() {
         </div>
         <div className="pnav-prev-foot">
           <span>Colour</span>
-          <span>Made with UIL4B</span>
+          <span>Made with UI L4B</span>
         </div>
       </div>
     </div>
@@ -324,8 +338,28 @@ function AppHeader() {
   })
   const launchBrandKit = () => {
     closeAll()
+    // Coming back to a kit after a gap asks first (the chooser on step one), even
+    // when the walkthrough is already running and would resume.
+    const chooser = chooserDecision({
+      status: workingStatus(design, projects),
+      arrival: 'brand-kit',
+      flagActive: isGuideActive(),
+      editedAt: readEditedAt(),
+      session: readSession(),
+      pendingSave: hasPendingSave(),
+    })
+    // A kit that is not asked about this time is the answer for this tab.
+    if (chooser.eligible && !chooser.show && readSession() !== SESSION_DONE) markSession(SESSION_ON)
     startGuide()
-    navigate(brandKitEntry.path, { state: brandKitEntry.resume ? null : { openBrandKitCard: true } })
+    const toFirstStep = chooser.show || !brandKitEntry.resume
+    const target = chooser.show ? BRAND_KIT_STEPS[0].path : brandKitEntry.path
+    // Only the first step reads the arrival marker.
+    const arrives = target === BRAND_KIT_STEPS[0].path
+    navigate(target, {
+      state: toFirstStep || arrives
+        ? { ...(arrives ? { brandKitArrival: true } : null), ...(toFirstStep ? { openBrandKitCard: true } : null) }
+        : null,
+    })
   }
   const path = (location.pathname || '/').replace(/\/+$/, '') || '/'
   const isSalesPage = SALES_PATHS.has(path)
@@ -850,7 +884,7 @@ function AppHeader() {
                     <div className="pnav-pop-sep" />
                     <Link className="pnav-pop-item" to="/settings" onClick={closeAll}>
                       <GearIcon />
-                      <span>Account &amp; settings</span>
+                      <span>Account and settings</span>
                     </Link>
                     {/* Which plan row is right is not known until the plan is. */}
                     {planKnown && (
@@ -869,7 +903,8 @@ function AppHeader() {
                     </Link>
                     {isAdmin && (
                       <Link className="pnav-pop-item" to="/admin" onClick={closeAll}>
-                        Admin dashboard
+                        <ShieldIcon />
+                        <span>Admin dashboard</span>
                       </Link>
                     )}
                     <div className="pnav-pop-sep" />
@@ -916,7 +951,7 @@ function AppHeader() {
                     <div className="pnav-pop-sep" />
                     <Link className="pnav-pop-item" to="/plans" onClick={closeAll}>
                       <TagIcon />
-                      <span>Pricing &amp; plans</span>
+                      <span>Pricing</span>
                     </Link>
                     <button type="button" className="pnav-pop-item" aria-haspopup="dialog" onClick={() => { if (menuOffline.online) startLogin() }} {...menuOffline.gate}>
                       <LoginArrowIcon />
@@ -949,6 +984,7 @@ function AppHeader() {
         <MegaMenu
           ref={menuRef}
           section={activeSection}
+          path={path}
           showSoon={isAdmin}
           onMouseEnter={clearClose}
           onMouseLeave={hoverLeave}
@@ -1005,6 +1041,16 @@ function AppHeader() {
                     </div>
                   )
                 })}
+                {section.id === 'discover' && (
+                  <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                    <DiscoverRecommended path={path} onPick={closeAll} />
+                  </Suspense>
+                )}
+                {section.id === 'learn' && (
+                  <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                    <LearnRecommended path={path} onPick={closeAll} />
+                  </Suspense>
+                )}
                 {section.id === 'create' ? (
                   <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
                     {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
@@ -1026,7 +1072,7 @@ function AppHeader() {
           <div className="pnav-sheet-group">
             {!user && !accountPending && (
               <Link className="pnav-sheet-row" to="/plans" onClick={closeAll}>
-                <TagIcon /><span>Pricing &amp; plans</span>
+                <TagIcon /><span>Pricing</span>
               </Link>
             )}
             <Link className="pnav-sheet-row" to="/learn/help" onClick={closeAll}>
@@ -1055,7 +1101,7 @@ function AppHeader() {
                 <div id="pnav-sheet-account">
                   <AccountSwitcher onDone={closeSheetAndRestoreFocus} />
                   <Link className="pnav-sheet-row" to="/settings" onClick={closeAll}>
-                    <GearIcon /><span>Account &amp; settings</span>
+                    <GearIcon /><span>Account and settings</span>
                   </Link>
                   {isPro ? (
                     planKnown && (
@@ -1092,6 +1138,7 @@ function AppHeader() {
       <PhoneTabBar
         signedIn={!!user}
         loading={accountPending}
+        sheetSection={sheet ? sheetSection : null}
         createOpen={sheet && sheetSection === 'create'}
         onCreate={() => openSheetAt('create')}
         accountOpen={sheet && sheetSection === 'account'}
@@ -1125,13 +1172,13 @@ function AppHeader() {
 //
 // It is a function component with a forwarded ref only in name: React 19
 // passes `ref` as a prop.
-function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
+function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, onKeyDown, onPick, onBrandKit, brandKitLabel }) {
   const stacks = menuStacks(section, { showSoon })
   const promo = menuPromo(section)
-  // The file opens every menu with its first row lit (feat = flatNav[0] when
-  // nothing is hovered, App line 1414); CSS lights it only while no other row
-  // is hovered or focused.
-  const featId = stacks[0]?.[0]?.tools?.[0]?.id
+  // A row is marked only when it is the page the visitor is on: aria-current,
+  // which the CSS draws. Hover and keyboard focus light a row separately, and an
+  // open menu lights nothing by itself.
+  const isHere = (t) => !!t.route && (path === t.route || path.startsWith(t.route + '/') || !!t.views?.includes(path))
 
   // THE READOUT. One row is "active" while the pointer is on it or keyboard focus
   // is in it; the foot's line then says what that row is for, and goes back to
@@ -1253,7 +1300,7 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
                             data-moment={moment}
                             data-live={moment && t.id === liveId ? '' : undefined}
                             aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
-                            data-feat={t.id === featId ? 'true' : undefined}
+                            aria-current={isHere(t) ? 'page' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
                             onClick={onPick}
                             data-pnav-menuitem
@@ -1273,8 +1320,14 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
                                   >{t.label}</span>
                                 )}
                             </span>
+                            {t.mins && <span className="pnav-tool-mins">{t.mins}</span>}
                             {t.soon && <span className="soon-badge">Soon</span>}
                             {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
+                            {isHere(t) && (
+                              <span className="pnav-tool-here" aria-hidden="true">
+                                <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
+                              </span>
+                            )}
                           </Link>
                         </li>
                         )
@@ -1293,19 +1346,21 @@ function MegaMenu({ ref, section, showSoon, onMouseEnter, onMouseLeave, onKeyDow
             </div>
             {section.id === 'create' && <ExportPreview />}
             {section.id === 'discover' && (
-              <Suspense fallback={<div className="pnav-dcounts pnav-dcounts--wait" />}>
-                <DiscoverCounts />
-              </Suspense>
+              <div className="pnav-dside">
+                <Suspense fallback={<div className="pnav-dcounts pnav-dcounts--wait" />}>
+                  <DiscoverCounts />
+                </Suspense>
+                <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                  <DiscoverRecommended path={path} onPick={onPick} />
+                </Suspense>
+              </div>
             )}
             {section.id === 'learn' && (
-              <ul className="pnav-guides">
-                {menuGuides().map((g) => (
-                  <li className="pnav-guide" key={g.to}>
-                    <span className="pnav-guide-label">{g.label}</span>
-                    <span className="pnav-guide-mins">{g.mins}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="pnav-dside">
+                <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                  <LearnRecommended path={path} onPick={onPick} />
+                </Suspense>
+              </div>
             )}
             {section.id === 'create' ? (
               <button type="button" className="pnav-editorial-cta" onClick={onBrandKit} data-pnav-menuitem>

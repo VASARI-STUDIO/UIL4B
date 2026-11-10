@@ -26,7 +26,7 @@
 //                       already asked for an ellipsis; `min-width: auto` on the
 //                       parent flex item meant it never applied.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
 
 // 320px is the narrowest viewport WCAG 1.4.10 requires (it is 400px CSS at
 // 400% zoom). Chromium reports ~315px of client width after the scrollbar.
@@ -35,7 +35,6 @@ const NARROW = { width: 320, height: 800 }
 const ROUTES = [
   '/',
   '/create/palette',
-  '/discover/prompts',
   '/create/type-scale',
   '/create/icons',
   '/plans',
@@ -120,6 +119,8 @@ test.describe('reflow at 320px', () => {
     // runs first returns an empty list, which would pass a "nothing overflows"
     // check by measuring nothing at all.
     await expect(page.locator('.tsc-row-text').first()).toBeVisible()
+    // A heading row draws at the base size until its face has loaded.
+    await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
 
     const sizes = await page.evaluate(() =>
       [...document.querySelectorAll('.tsc-row-text')].map(t => parseFloat(getComputedStyle(t).fontSize)))
@@ -129,7 +130,8 @@ test.describe('reflow at 320px', () => {
     for (let i = 1; i < sizes.length; i++) {
       expect(sizes[i], `step ${i} is not smaller than step ${i - 1}`).toBeLessThan(sizes[i - 1])
     }
-    expect(sizes[0], 'the display step is still rendered at its real size').toBeGreaterThan(40)
+    // The phone anchor is 15px at a 1.2 ratio with four steps up: 15 * 1.2^4.
+    expect(sizes[0], 'the display step is still rendered at its real size').toBeCloseTo(31.1, 1)
   })
 
   test('the palette row keeps its controls at a usable target size', async ({ page }) => {
@@ -226,9 +228,11 @@ test.describe('reflow at 320px', () => {
     }
   })
 
+  // parked: only an admin can open /discover/prompts, so this phone signs in as one.
   test('the prompt library CTA is on screen and tappable', async ({ page }) => {
     await page.setViewportSize(NARROW)
     watch(page, 'a designer submitting a prompt from a phone')
+    await signIn(page, { admin: true })
     await go(page, '/discover/prompts')
 
     const cta = page.locator('.pl-add-btn')

@@ -9,7 +9,7 @@
   "installCommand": "npm ci",
   "functions": {
     "api/ai.js": {
-      "includeFiles": "{src/{config/export*,data/{designDefaults,learnIndex,routeMetaMap,toolTree},utils/{book{M,T}*,brand{G,L}*,colors,designS*,exportTemplates/{*,*/*},meshF*,palette[ANR]*,projectT*,routeMeta,styleGuideE*,tintL*}}.js,public/fonts/{b,h,i,l,mar,s}*-latin.woff2}"
+      "includeFiles": "{src/{config/export*s,data/{*p,s*,u*,fa*,l*x,t*e,d*D*,*mes},utils/{b*s,b*l,b*o,d*k,p*t,r*a,t*s,sys*,c*ors,m*ats,p*mes,*ints,st*rt,*eRoles,exp*/{*,*/*}}}.js,src/data/fontLicences.json,public/fonts/{b,h,i,l,mar,s}*-latin.woff2,api/_lib/exportThemes/fonts/*}"
     }
   },
   "git": {
@@ -262,6 +262,11 @@
       "permanent": true
     },
     {
+      "source": "/contact",
+      "destination": "/feedback?type=help",
+      "permanent": true
+    },
+    {
       "source": "/resources",
       "destination": "/discover",
       "permanent": true
@@ -389,16 +394,16 @@
       "destination": "/discover/index.html"
     },
     {
+      "source": "/discover/buttons",
+      "destination": "/discover/buttons/index.html"
+    },
+    {
       "source": "/discover/gradients",
       "destination": "/discover/gradients/index.html"
     },
     {
       "source": "/discover/palettes",
       "destination": "/discover/palettes/index.html"
-    },
-    {
-      "source": "/discover/prompts",
-      "destination": "/discover/prompts/index.html"
     },
     {
       "source": "/feedback",
@@ -435,6 +440,10 @@
     {
       "source": "/learn/help",
       "destination": "/learn/help/index.html"
+    },
+    {
+      "source": "/learn/improving-value-proposition",
+      "destination": "/learn/improving-value-proposition/index.html"
     },
     {
       "source": "/learn/principles",
@@ -529,6 +538,10 @@
       "destination": "/404.html"
     },
     {
+      "source": "/discover/prompts",
+      "destination": "/404.html"
+    },
+    {
       "source": "/login",
       "destination": "/404.html"
     },
@@ -556,6 +569,15 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/iconify/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
         }
       ]
     },
@@ -594,6 +616,15 @@
         {
           "key": "Content-Security-Policy-Report-Only",
           "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.iconify.design https://img.logo.dev https://flagcdn.com https://*.googleusercontent.com https://*.stripe.com https://firebasestorage.googleapis.com; connect-src 'self' blob: https://*.googleapis.com https://fonts.gstatic.com https://*.firebaseapp.com https://api.iconify.design https://cdn.jsdelivr.net https://api.stripe.com https://checkout.stripe.com https://accounts.google.com; frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; media-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        }
+      ]
+    },
+    {
+      "source": "/discover/prompts",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
         }
       ]
     },

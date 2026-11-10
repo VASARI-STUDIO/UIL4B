@@ -28,14 +28,38 @@
 //    url(#id) in fill / stroke / clip-path / mask must name an id that is IN the
 //    cleaned document. Anything else (external, data:, javascript:, a page id) is
 //    dropped, so inlined markup can never pull in something from the host page.
-//  · Dropped, never parsed: <script>, <style>, <foreignObject>, <image>, <a>,
+//  · Dropped, never parsed: <script>, <foreignObject>, <image>, <a>,
 //    <animate>, <set>, <text>, <filter>, metadata, every prefixed element, plus
-//    style / class / on* attributes, comments, processing instructions, CDATA
-//    outside <title>/<desc>. A dropped element takes its whole subtree with it.
+//    on* attributes, comments, processing instructions, CDATA outside
+//    <title>/<desc>. A dropped element takes its whole subtree with it.
 //  · <title> and <desc> keep text only: any element inside one is dropped, even
 //    an allow-listed one (an HTML parser would end the <svg> at it).
-//  · `class` is dropped on purpose: inlined, it would hook the host page's own
+//  · `class` is never kept: inlined, it would hook the host page's own
 //    stylesheet (position: fixed overlays, display: none, spoofed UI).
+//
+// CSS THAT SETS HOW AN ICON DRAWS
+// Icons from design tools often keep their stroke and fill in CSS, not in
+// attributes. Neither `style` nor <style> is ever echoed, but the plain
+// presentation they carry is converted into the attributes the file would have
+// had, so the drawing survives and its stroke can still be edited:
+//  · A `style="prop: value; ..."` attribute is read as declarations. A <style>
+//    block is read only when it is nothing but rules whose selectors are one
+//    class (`.a`), one allow-listed element name (`path`), or a comma list of
+//    those. Any other block (at-rules, `*`, combinators, pseudo-classes,
+//    attribute selectors, nesting, unbalanced braces or comments, attributes on
+//    the <style> beyond a plain type) is dropped whole with one note. /* */
+//    comments are stripped first; CDATA content is read as plain text.
+//  · Rules are resolved onto the elements they match before `class` goes, so a
+//    class that a stylesheet used is dropped without a note.
+//  · A declaration becomes an attribute only when its property is in
+//    STYLE_PROPERTIES (the CSS-settable part of the attribute list) and its
+//    value passes the very check that attribute gets. A value with a url() other
+//    than url(#id), a backslash, a quote, `@`, `<`, a comment or expression() is
+//    refused before that check. `!important` is ignored. What does not convert
+//    is dropped with a note such as `style: filter`.
+//  · Order, lowest to highest: the presentation attribute, element-name rules,
+//    class rules, the style attribute. Within one level the later rule or
+//    declaration wins. A declaration that fails does not override anything.
 //
 // WHAT REJECTS THE WHOLE FILE (returns null)
 //  · A DOCTYPE, ENTITY or any other `<!` declaration (billion laughs / XXE), or
@@ -44,12 +68,15 @@
 //  · Over a cap: bytes, element count, nesting depth, <use> count (a <use> chain
 //    can multiply what the renderer has to draw, so the count is bounded).
 //
-// RETURN: `{ ok, svg, removed }`, or `null` on a reject.
+// RETURN: `{ ok, css, svg, removed }`, or `null` on a reject.
 //  · `svg`     the cleaned markup, always with the SVG xmlns on the root.
 //  · `removed` plain-text notes of what was dropped (`<script>`, `@onload`), at
 //              most 50, de-duplicated. Never put these in innerHTML.
 //  · `ok`      true when nothing needed removing. A display path can use `svg`
 //              whatever `ok` says; an upload path can refuse when it is false.
+//  · `css`     true when the file carried a style, class or <style>, converted
+//              or not, so a caller that wants the file exactly as drawn can
+//              tell that the output was rewritten.
 //  Comments, the <?xml?> declaration, xmlns:* declarations, `version` and
 //  `xml:space` are dropped without a note: they are noise, not content.
 //  `null` rather than `{ ok: false }` keeps the contract of the private
@@ -214,6 +241,154 @@ export const SVG_ALLOWED_ATTRIBUTES = Object.freeze([...ATTRIBUTES.keys(), 'xmln
 // Dropped without a note: they carry no content and no risk.
 const SILENT_ATTRIBUTES = new Set(['version', 'baseProfile', 'xml:space'])
 
+// ── CSS presentation ────────────────────────────────────────────────────────
+// A style attribute or a plain <style> is never kept; the declarations in them
+// that map onto an allow-listed attribute are turned into that attribute.
+
+// The properties CSS can set that have an attribute of the same name. `d`,
+// `transform`, `id`, `href`, `points` and the like are not here: their CSS
+// grammar differs from the attribute's, or they are not properties at all.
+const STYLE_PROPERTIES = new Set([
+  'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit',
+  'stroke-dasharray', 'stroke-dashoffset', 'fill-opacity', 'stroke-opacity', 'opacity',
+  'fill-rule', 'clip-rule', 'clip-path', 'mask', 'mask-type', 'vector-effect',
+  'stop-color', 'stop-opacity', 'color',
+  'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'width', 'height',
+])
+
+// Refused before the attribute's own check: a backslash (CSS escapes), comments,
+// `@`, markup, any quote or brace, expression(), and any url() that is not a
+// local `url(#id)`.
+const STYLE_REFUSED_RE = /[\\@<>"'{}]|\/\*|\*\/|expression|url\((?![ \t\r\n]*#)/i
+const IMPORTANT_RE = /![ \t\r\n]*important$/i
+const PROP_NAME_RE = /^-{0,2}[a-zA-Z][\w-]*$/
+const CLASS_SELECTOR_RE = /^\.(-?[A-Za-z_][\w-]*)$/
+const XML_SPACE_RE = /[ \t\r\n]+/
+
+function styleValue(name, raw) {
+  const value = raw.trim().replace(IMPORTANT_RE, '').trim()
+  if (!value || STYLE_REFUSED_RE.test(value) || HOSTILE_RE.test(value.replace(CLOAK_RE, ''))) return null
+  return ATTRIBUTES.get(name)(value)
+}
+
+// `prop: value; ...` to a Map of attribute name to cleaned value. The last valid
+// declaration of a property wins; one that fails is dropped with a note and
+// leaves an earlier one standing, as CSS does.
+function declarations(text, ctx) {
+  const out = new Map()
+  for (const part of text.split(';')) {
+    const decl = part.trim()
+    if (!decl) continue
+    const colon = decl.indexOf(':')
+    const name = colon > 0 ? decl.slice(0, colon).trim().toLowerCase() : ''
+    if (!PROP_NAME_RE.test(name)) { ctx.note('@style'); continue }
+    const clean = STYLE_PROPERTIES.has(name) ? styleValue(name, decl.slice(colon + 1)) : null
+    if (clean === null) ctx.note(`style: ${name.slice(0, 40)}`)
+    else out.set(name, clean)
+  }
+  return out
+}
+
+// Strips /* */ comments, each becoming one space. null when one is unterminated
+// or a stray terminator is left.
+function stripComments(css) {
+  let out = ''
+  let at = 0
+  for (;;) {
+    const open = css.indexOf('/*', at)
+    if (open < 0) break
+    const close = css.indexOf('*/', open + 2)
+    if (close < 0) return null
+    out += `${css.slice(at, open)} `
+    at = close + 2
+  }
+  out += css.slice(at)
+  return out.includes('*/') ? null : out
+}
+
+// One <style> element: `{ rules }` when it is only simple rules, else `{ why }`.
+// Nothing is converted here, so a refused sheet leaves no trace but its note.
+function parseSheet(node, ctx) {
+  const PLAIN = 'not plain rules'
+  for (const [name, value] of node.attrs) {
+    const plain = (name === 'type' && (value === '' || value === 'text/css'))
+      || (name === 'media' && (value === '' || value === 'all' || value === 'screen'))
+      || name === 'id' || name === 'xml:space'
+    if (!plain) return { why: 'attributes' }
+  }
+  let text = ''
+  for (const c of node.children) {
+    if (c.text === undefined) return { why: PLAIN }
+    text += c.text
+  }
+  const css = stripComments(text)
+  if (css === null) return { why: PLAIN }
+  if (css.includes('@')) return { why: '@-rules' }
+
+  const parsed = []
+  let at = 0
+  for (;;) {
+    while (at < css.length && XML_SPACE_RE.test(css[at])) at++
+    if (at >= css.length) break
+    const open = css.indexOf('{', at)
+    if (open < 0) return { why: PLAIN }
+    const head = css.slice(at, open).trim()
+    const close = css.indexOf('}', open + 1)
+    const body = close < 0 ? '' : css.slice(open + 1, close)
+    if (close < 0 || body.includes('{')) return { why: PLAIN }
+    const selectors = []
+    for (const part of head.split(',')) {
+      const sel = part.trim()
+      const cls = CLASS_SELECTOR_RE.exec(sel)
+      if (cls) selectors.push({ cls: cls[1] })
+      else if (ELEMENTS.has(sel)) selectors.push({ element: sel })
+      else return { why: 'selectors other than .class or an element' }
+    }
+    parsed.push({ selectors, body })
+    at = close + 1
+  }
+
+  const rules = parsed.map(({ selectors, body }) => ({
+    order: ctx.rules++, selectors, decls: declarations(body, ctx),
+  }))
+  return { rules }
+}
+
+// Reads every <style> in the kept part of the tree, before any element is
+// cleaned, so a rule applies to elements that come before its <style> too.
+function collectSheets(node, ctx) {
+  for (const child of node.children) {
+    if (child.name === 'style') {
+      child.sheet = parseSheet(child, ctx)
+      for (const rule of child.sheet.rules ?? []) {
+        for (const sel of rule.selectors) {
+          const index = sel.cls !== undefined ? ctx.byClass : ctx.byElement
+          const key = sel.cls ?? sel.element
+          if (!index.has(key)) index.set(key, [])
+          index.get(key).push(rule)
+        }
+      }
+    } else if (child.name && ELEMENTS.has(child.name) && !TEXT_ELEMENTS.has(child.name)) {
+      collectSheets(child, ctx)
+    }
+  }
+}
+
+// What the stylesheet and the style attribute say about one element, as a Map of
+// attribute name to value, lowest precedence first.
+function cascade(node, classValue, styleText, ctx) {
+  const out = new Map()
+  const apply = (decls) => { for (const [k, v] of decls) out.set(k, v) }
+  for (const rule of ctx.byElement.get(node.name) ?? []) apply(rule.decls)
+  if (classValue !== undefined) {
+    const hit = new Set()
+    for (const c of classValue.split(XML_SPACE_RE)) for (const rule of ctx.byClass.get(c) ?? []) hit.add(rule)
+    for (const rule of [...hit].sort((a, b) => a.order - b.order)) apply(rule.decls)
+  }
+  if (styleText !== undefined) apply(declarations(styleText, ctx))
+  return out
+}
+
 // ── parser ──────────────────────────────────────────────────────────────────
 
 class Reject extends Error {}
@@ -336,6 +511,13 @@ function parse(src, limits) {
 // ── pruning ─────────────────────────────────────────────────────────────────
 
 function cleanElement(node, ctx) {
+  // A <style> that collectSheets() read is gone either way; only a refused one
+  // earns a note.
+  if (node.name === 'style' && node.sheet) {
+    ctx.css = true
+    if (node.sheet.why) ctx.note(`<style> (${node.sheet.why})`)
+    return null
+  }
   if (!ELEMENTS.has(node.name)) {
     ctx.note(`<${node.name.slice(0, 40)}>`)
     return null
@@ -343,8 +525,12 @@ function cleanElement(node, ctx) {
   if (node.name === 'use' && ++ctx.uses > ctx.limits.maxUse) reject('too many <use>')
 
   const attrs = []
+  let classValue
+  let styleText
   for (const [rawName, value] of node.attrs) {
     const name = rawName === 'xlink:href' ? 'href' : rawName
+    if (rawName === 'class') { classValue = value; ctx.css = true; continue }
+    if (rawName === 'style') { styleText = value; ctx.css = true; continue }
     if (rawName === 'xmlns' && value === SVG_NS) { attrs.push(['xmlns', SVG_NS]); continue }
     if (rawName.startsWith('xmlns:')) continue
     if (SILENT_ATTRIBUTES.has(rawName)) continue
@@ -362,6 +548,18 @@ function cleanElement(node, ctx) {
     }
     if (clean === null) ctx.note(`@${name}`)
     else attrs.push([name, clean])
+  }
+
+  // The class itself never stays; it only picks the rules. A note is left when
+  // no kept stylesheet rule named it, since then it did nothing we can keep.
+  if (classValue !== undefined) {
+    const names = classValue.split(XML_SPACE_RE).filter(Boolean)
+    if (!names.length || !names.every(c => ctx.byClass.has(c))) ctx.note('@class')
+  }
+  for (const [name, value] of cascade(node, classValue, styleText, ctx)) {
+    const at = attrs.findIndex(a => a[0] === name)
+    if (at >= 0) attrs[at] = [name, value]
+    else attrs.push([name, value])
   }
 
   const children = []
@@ -463,7 +661,7 @@ function serialise(node) {
  * @param {string} source
  * @param {{ idPrefix?: string, maxBytes?: number, maxElements?: number,
  *           maxDepth?: number, maxUse?: number }} [options]
- * @returns {{ ok: boolean, svg: string, removed: string[] } | null}
+ * @returns {{ ok: boolean, css: boolean, svg: string, removed: string[] } | null}
  */
 export function sanitiseSvgInline(source, options = {}) {
   const idPrefix = options.idPrefix ?? ''
@@ -485,13 +683,18 @@ export function sanitiseSvgInline(source, options = {}) {
     limits,
     idPrefix,
     uses: 0,
+    rules: 0,
+    byClass: new Map(),
+    byElement: new Map(),
     referenced: new Set(),
+    css: false,
     note: (what) => { if (removed.size < MAX_REMOVED_NOTES) removed.add(what) },
   }
 
   try {
     const { root, processing } = parse(src, limits)
     for (const p of processing) ctx.note(p)
+    collectSheets(root, ctx)
     const clean = cleanElement(root, ctx)
     if (!clean.attrs.some(a => a[0] === 'xmlns')) clean.attrs.unshift(['xmlns', SVG_NS])
     const ids = new Set()
@@ -499,7 +702,7 @@ export function sanitiseSvgInline(source, options = {}) {
     resolveRefs(clean, ids, ctx)
     if (!idPrefix) dropUnreferencedIds(clean, ctx.referenced)
     const notes = [...removed]
-    return { ok: notes.length === 0, svg: serialise(clean), removed: notes }
+    return { ok: notes.length === 0, css: ctx.css, svg: serialise(clean), removed: notes }
   } catch (err) {
     if (err instanceof Reject) return null
     throw err

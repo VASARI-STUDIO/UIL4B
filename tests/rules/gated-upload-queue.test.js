@@ -1,5 +1,5 @@
 // Emulator tests for the two abuse-audit patches H1 and H2 that ship as
-// founder-gated rules patches:
+// approval-gated rules patches:
 //   docs/design/upload-limits-rules.patch   (storage.rules)
 //   docs/design/queue-limits-rules.patch    (firestore.rules)
 //

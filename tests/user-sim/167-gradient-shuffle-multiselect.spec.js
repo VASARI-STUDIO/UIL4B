@@ -2,9 +2,8 @@
 // Colours row and its Pick… checklist), selecting several stops, and chip presses on a
 // selection.
 //
-// Expected values are hand-checked from the spec (handover/specs/
-// gradient-tool-overhaul-spec-2026-10-28.md §4, §5, §16), not read back from the
-// code. The seeded gradient puts the stops OUT of rail order on purpose:
+// Expected values are hand-checked from the gradient tool spec (§4, §5,
+// §16), not read back from the code. The seeded gradient puts the stops OUT of rail order on purpose:
 //
 //   list position   stop 1   stop 2   stop 3   stop 4   stop 5
 //   rail position     0%       60%      100%     30%      80%

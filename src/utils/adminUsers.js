@@ -9,7 +9,7 @@
 //
 // Every other Stripe status collapsed into the word "Free". So a subscriber
 // whose card expired this morning — `past_due`, still being retried, still
-// being served Pro by api/_lib/plans.js — appeared on the founder's dashboard
+// being served Pro by api/_lib/plans.js — appeared on the admin dashboard
 // as somebody who had never paid. So did a customer whose retries had run out,
 // and a customer who cancelled last week, and a signup whose first charge never
 // completed. Four different situations, four different things to do about them,
@@ -40,7 +40,7 @@
 // had not heard of into "Free", which is the failure mode that hid `past_due`
 // in the first place. `unknown` is a state of its own here, it sorts to the top
 // with the other accounts needing attention, and it prints the raw status
-// string so the founder can see what Stripe actually said.
+// string so an admin can see what Stripe actually said.
 //
 // Pure and DOM-free, like utils/moderation.js and utils/billingState.js next to
 // it: these are rules about money and access, and rules about money and access
@@ -96,7 +96,7 @@ export function planStateOf(subscription) {
   return id ? PLAN_STATES[id] : PLAN_STATES.unknown
 }
 
-/** True when the row is one the founder should look at rather than scroll past. */
+/** True when the row is one an admin should look at rather than scroll past. */
 export function needsAttention(subscription) {
   return planStateOf(subscription).attention === true
 }

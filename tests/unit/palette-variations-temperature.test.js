@@ -1,6 +1,6 @@
 // Warmer and Cooler in the Palette Builder's Suggest panel.
 //
-// Founder-reported bug (2026-10-31): on a teal palette, Warmer turned teal into
+// Reported bug: on a teal palette, Warmer turned teal into
 // green and periwinkle. The old recipe pulled each hue 22% of the way to the pole
 // along the short arc, so a hue 165° away moved 36° and left its family.
 //

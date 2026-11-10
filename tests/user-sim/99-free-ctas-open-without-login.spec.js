@@ -49,14 +49,13 @@ for (const [route, width] of SALES) {
       await target.click()
       await assertOpened(page, `"${l.text}" on ${route}`)
     }
-    // The phone menu's own free CTAs.
+    // The phone menu carries no call to action: "Open the toolkit" lives in the page itself.
     if (width < 768) {
       await go(page, route)
       await page.getByRole('button', { name: 'Open menu' }).click()
       const menu = page.getByRole('dialog', { name: 'Menu' })
       await expect(menu).toBeVisible()
-      await menu.getByRole('link', { name: /Open the toolkit/ }).click()
-      await assertOpened(page, `the ${route} menu's toolkit link`)
+      expect(await freeLinks(page, '.spnav-menu'), `the ${route} menu carries a free call to action`).toEqual([])
     }
     await context.close()
   })

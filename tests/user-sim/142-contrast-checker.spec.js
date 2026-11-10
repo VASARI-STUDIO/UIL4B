@@ -375,9 +375,9 @@ test.describe('Contrast Checker · a hex that is not finished or not right', () 
     watch(page, 'someone mistyping a hex')
     await go(page, '/create/contrast')
     await fgInput(page).fill('#6B72Z')
-    await expect(hint(page, 'fg')).toHaveText('Use a hex code like #1F2937. Still checking #6B7280.')
+    await expect(hint(page, 'fg')).toHaveText('Use a hex like #1A2B3C. Still checking #6B7280.')
     await expect(fgInput(page)).toHaveAttribute('aria-invalid', 'true')
-    await expect(fgInput(page)).toHaveAccessibleDescription(/Use a hex code like #1F2937/)
+    await expect(fgInput(page)).toHaveAccessibleDescription(/Use a hex like #1A2B3C/)
     // Only the field that is wrong speaks, and it speaks politely, not as an alert.
     await expect(hint(page, 'bg')).toHaveText('')
     await expect(bgInput(page)).toHaveAttribute('aria-invalid', 'false')
@@ -387,16 +387,16 @@ test.describe('Contrast Checker · a hex that is not finished or not right', () 
     await expect(page.locator('.cc-ratio-num')).toHaveText('4.83:1')
 
     await bgInput(page).fill('GGGGGG')
-    await expect(hint(page, 'bg')).toHaveText('Use a hex code like #1F2937. Still checking #FFFFFF.')
+    await expect(hint(page, 'bg')).toHaveText('Use a hex like #1A2B3C. Still checking #FFFFFF.')
   })
 
   // Leaving the field puts the last valid colour back, so the field is valid
-  // again and the hint goes with it. The state to rule out is the other one: a
-  // field left holding a wrong value with its hint gone.
+  // again, and the hint STAYS: a value that was refused is never put right
+  // without a word. It goes on the next value that reads.
   //
   // MUTATION: in ContrastChecker.jsx make the field's onBlur do nothing; the
   // field keeps "#6B72Z" while the hint stays, and the revert expectation goes red.
-  test('on blur the field returns to the last valid colour, so it is never invalid and silent', async ({ page }) => {
+  test('on blur the field returns to the last valid colour and the hint stays until a value reads', async ({ page }) => {
     watch(page, 'someone tabbing away from a typo')
     await go(page, '/create/contrast')
     await fgInput(page).fill('#6B72Z')
@@ -404,10 +404,11 @@ test.describe('Contrast Checker · a hex that is not finished or not right', () 
     await bgInput(page).focus()
     await expect(fgInput(page)).toHaveValue('#6B7280')
     await expect(fgInput(page)).toHaveAttribute('aria-invalid', 'false')
-    await expect(hint(page, 'fg')).toHaveText('')
+    await expect(hint(page, 'fg')).toHaveText('Use a hex like #1A2B3C. Still checking #6B7280.')
 
-    // A valid edit survives a blur untouched.
+    // A valid edit survives a blur untouched, and clears the hint.
     await fgInput(page).fill('#1F2937')
+    await expect(hint(page, 'fg')).toHaveText('')
     await bgInput(page).focus()
     await expect(fgInput(page)).toHaveValue('#1F2937')
 
@@ -416,7 +417,7 @@ test.describe('Contrast Checker · a hex that is not finished or not right', () 
     await expect(hint(page, 'fg')).not.toHaveText('')
     await fgInput(page).press('Enter')
     await expect(fgInput(page)).toHaveValue('#1F2937')
-    await expect(hint(page, 'fg')).toHaveText('')
+    await expect(hint(page, 'fg')).toHaveText('Use a hex like #1A2B3C. Still checking #1F2937.')
   })
 })
 

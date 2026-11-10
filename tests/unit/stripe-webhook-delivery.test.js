@@ -402,7 +402,9 @@ test('the handler routes every verified event through the once-only path', () =>
 
 test('a payment failure is flagged with the Stripe client, so the invoice can be re-read', () => {
   const src = stripComments(read('api/stripe-webhook.js'))
-  assert.match(src, /case 'invoice\.payment_failed': \{\s*await flagPaymentFailed\(stripe, event\.data\.object\)/)
+  // The event time travels with it, so a late subscription event from before the
+  // failure cannot clear it (writeSubscriptionForEvent).
+  assert.match(src, /case 'invoice\.payment_failed': \{\s*await flagPaymentFailed\(stripe, event\.data\.object, db, event\.created\)/)
 })
 
 test('every subscription write from an event carries the event time', () => {

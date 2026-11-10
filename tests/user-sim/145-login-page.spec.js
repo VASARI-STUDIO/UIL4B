@@ -93,7 +93,7 @@ test.describe('the /login page is a page, not a dialog', () => {
     expect(seen.formBeforeWall, 'the wall comes before the form in the document').toBe(true)
     expect(seen.navs, 'the page carries a nav').toBe(0)
     expect(seen.footers, 'the page carries a footer').toBe(0)
-    expect(seen.wallLabelled, 'the wall is a named region').toBe("Made with UIL4B's own tools")
+    expect(seen.wallLabelled, 'the wall is a named region').toBe("Made with UI L4B's own tools")
   })
 })
 

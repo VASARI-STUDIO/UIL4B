@@ -11,7 +11,7 @@
 // role labels (`ROLES[i]` → PRIMARY / SECONDARY / ACCENT / SUBTLE / DEEP), so
 // they described a slot rather than a colour and could never track the colour
 // the slot was showing. Switching the palette to Monochromatic left "SUBTLE"
-// sitting over a colour that was nothing of the kind — the founder's report.
+// sitting over a colour that was nothing of the kind, as reported.
 // The vocabulary to describe a colour already existed here; nothing was
 // deriving a per-colour name from it. Pulling it out of the page component
 // makes the determinism contract directly unit-testable.
@@ -86,8 +86,8 @@ export const NAME_MOVEMENTS = ['Bauhaus', 'Atelier', 'Modernist', 'Nordic', 'Stu
  *          240 blue 285 · 260 indigo 300 · 280 violet 318 · 300 magenta 334
  *
  * Against the old cuts that put EVERY ordinary blue in the purple vocabulary
- * and every purple in the pink one — the founder's report was "Bauhaus
- * Mulberry" sitting on #97ADCD, a pale blue. #97ADCD is HCT hue 256; the old
+ * and every purple in the pink one — "Bauhaus
+ * Mulberry" was reported sitting on #97ADCD, a pale blue. #97ADCD is HCT hue 256; the old
  * `h < 255 → ocean` missed it by one degree and it fell through to `cosmic`.
  * It was not an edge case: azure (269) and blue (285) are both past that cut,
  * so #3558B9 was "Dusky Iris" and #405C9D was "Smoked Mauve". The second break

@@ -1,8 +1,8 @@
-// THE USERS TAB, RENDERED: what the founder can see about a person, what he
+// THE USERS TAB, RENDERED: what the owner can see about a person, what they
 // can do to them, and what the table does on a phone.
 //
-// 2026-09-16, verbatim: "make sure my admin dashboard has a much better ux in
-// terms of managing user resources". Each test here is the rendered evidence
+// The brief: a much better admin UX for managing user resources. Each test here is
+// the rendered evidence
 // for one of the four things that means — find a person, see what they are
 // paying, change what they can reach, act on a problem account — and every
 // one was watched go red with the corresponding piece reverted (the mutation
@@ -142,7 +142,7 @@ test.describe('seeing who somebody is and what they are paying', () => {
     const detail = table.locator('.adm-detail').first()
     await expect(detail).toBeVisible()
     // The uid was not rendered anywhere on the old tab. It is the one string
-    // the founder needs to act in the Firebase console or Stripe.
+    // the owner needs to act in the Firebase console or Stripe.
     await expect(detail.locator('.adm-copy-row').filter({ hasText: 'User ID' })).toContainText('u-past-due')
     await expect(detail.locator('.adm-copy-row').filter({ hasText: 'Email' })).toContainText('card.expired@example.test')
     await expect(detail.getByRole('button', { name: 'Copy' })).toHaveCount(2)
@@ -248,7 +248,7 @@ test.describe('changing what somebody can reach', () => {
 })
 
 test.describe('the table at three widths', () => {
-  // 390 is the founder's phone, 834 an iPad in portrait, 1440 his desktop.
+  // 390 is a phone, 834 an iPad in portrait, 1440 a desktop.
   // The three are the same DOM: the decision at each width is recorded in
   // src/styles/deferred/admin.css above the two media rules.
   const SHOTS = path.join(REPORT_DIR, 'admin-users')

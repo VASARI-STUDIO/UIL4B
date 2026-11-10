@@ -8,20 +8,21 @@
 //     consumer keeps the eager module, and the SDK stays in the first wave;
 //   · a new static `firebase/...` import added to a module on the boot path,
 //     which puts the whole 116268-byte chunk back;
-//   · the two brokers drifting apart, so a flagged build calls something the
-//     lazy half does not export — a runtime failure no unflagged test can see;
-//   · the founder-gated patch going stale against the tree it was written for,
-//     which would make the whole design unappliable exactly when it is approved.
+//   · the two brokers drifting apart, so the deferred build calls something the
+//     lazy half does not export — a runtime failure the eager build cannot show;
+//   · a page that needs the SDK to show its content forgetting to open the gate,
+//     so a signed-in visitor on it is shown as signed out;
 //
-// The build itself catches the FIRST of those at `VITE_DEFER_FIREBASE=1` (see
+// The build itself catches the FIRST of those on every default build (see
 // `assertFirebaseIsDeferred` in vite.config.js, which walks the emitted chunk
-// graph). These run on every `npm run test:unit`, unflagged, so the design is
-// held together on the default path too.
+// graph). These run on every `npm run test:unit`, so the design is
+// held together without a build too.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { pathToFileURL } from 'node:url'
 import { DEFERRAL_SEAMS, seamSpecifier } from '../../vite.config.js'
 
 const ROOT = process.cwd()
@@ -97,34 +98,16 @@ test('every import of a deferral seam is written in the form the build alias mat
 // 2. What still reaches Firebase statically
 // ─────────────────────────────────────────────────────────────────────────────
 
-// HAS THE FOUNDER APPLIED IT YET? Everything below has two correct answers, one
-// for each side of that, and getting the wrong one is not a matter of taste: an
-// inventory of static Firebase importers that still names the two contexts
-// after they have been converted is a lie about the codebase, and one that
-// omits them before is a guard that has stopped guarding.
-//
-// Read off the RESULT — the broker import the patch adds — rather than off
-// `git apply --check`, because the two questions differ the moment the file has
-// been touched at all, and this is the one that decides what the tree contains.
-const PATCH_IS_APPLIED = fs
-  .readFileSync(path.join(ROOT, 'src/contexts/AuthContext.jsx'), 'utf8')
-  .includes("from '../utils/firebaseAccess'")
-
 // The complete inventory of modules that import the Firebase SDK — or the
 // module that constructs it — with a STATIC import. Every one of these is a
 // reason the chunk can end up in the first wave, so the list is written down
 // rather than derived: adding to it must be a deliberate, reviewed act.
 //
-// The four gated files (docs/reference/human-validation-zones.md) are the ones
-// this design cannot touch. AuthContext and SubscriptionContext are the two the
-// unapplied patch closes; utils/firebase.js is the module being deferred, so it
-// is meant to import the SDK; GoogleOneTap is reached only through the
-// oneTapMount seam, so its own import is held back with it.
+// AuthContext and SubscriptionContext are NOT here: they reach the SDK only through
+// the broker. utils/firebase.js is the module being deferred, so it is meant to
+// import the SDK; GoogleOneTap is reached only through the oneTapMount seam, so
+// its own import is held back with it.
 const EXPECTED_STATIC_FIREBASE_IMPORTERS = [
-  // Founder-gated. The first two are closed by docs/design/firebase-deferral-gated.patch,
-  // which `npm run apply:gated` applies — so on the day the founder runs it they
-  // drop off this list, and PATCH_IS_APPLIED below is what takes them off.
-  ...(PATCH_IS_APPLIED ? [] : ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx']),
   'src/components/GoogleOneTap.jsx',
   'src/utils/firebase.js',
   // The eager broker. Being the one static importer is its entire job.
@@ -175,13 +158,15 @@ test('nothing new imports the Firebase SDK statically', () => {
 })
 
 test('the modules on the boot path reach Firebase only through the broker', () => {
-  // The four the deferral actually converted. Named individually because this
+  // The ones the deferral converted. Named individually because this
   // is the assertion that would have caught the change being reverted.
   const converted = [
     'src/utils/analytics.js',
     'src/hooks/useFirestoreSync.js',
     'src/contexts/ProjectContext.jsx',
     'src/App.jsx',
+    'src/contexts/AuthContext.jsx',
+    'src/contexts/SubscriptionContext.jsx',
   ]
   for (const file of converted) {
     const source = read(file)
@@ -249,66 +234,141 @@ test('the deferred broker never imports Firebase statically, and the eager one a
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. The unapplied founder-gated patch
+// 4. The deferral is the DEFAULT build, and `VITE_DEFER_FIREBASE=0` is the way out
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PATCH = 'docs/design/firebase-deferral-gated.patch'
+// Resolved in a child process because the flag is read once, when vite.config.js
+// is first evaluated; the test process's own environment must not decide it.
+function aliasCountFor(flag) {
+  const env = { ...process.env }
+  delete env.VITE_DEFER_FIREBASE
+  if (flag !== undefined) env.VITE_DEFER_FIREBASE = flag
+  const configUrl = pathToFileURL(path.join(ROOT, 'vite.config.js')).href
+  const script = `const m = await import(${JSON.stringify(configUrl)}); `
+    + `const c = m.default({ mode: 'production', command: 'build' }); `
+    + 'process.stdout.write(String(c.resolve.alias.length))'
+  return Number(execFileSync(process.execPath, ['--input-type=module', '-e', script], { cwd: ROOT, env, encoding: 'utf8' }))
+}
 
-test('the founder-gated patch still applies to the tree it describes', () => {
-  // The design is blocked on approval, and an approved patch that no longer
-  // applies is a design that has to be redone at the worst possible moment.
-  // When this fails, AuthContext.jsx or SubscriptionContext.jsx has moved and
-  // the patch needs regenerating — not deleting.
-  assert.ok(fs.existsSync(path.join(ROOT, PATCH)), `${PATCH} is missing — the design has no diff to approve`)
-  if (PATCH_IS_APPLIED) {
-    // `npm run apply:gated` has run. There is nothing left to apply, and
-    // `git apply --check` would refuse for the one reason that is good news.
-    // The property that still has to hold is that BOTH files were converted —
-    // half a deferral leaves the SDK in the first wave AND splits it across two
-    // preloaded chunks, which vite.config.js measures as worse than not doing it.
-    assert.match(
-      read('src/contexts/SubscriptionContext.jsx'),
-      /import \{ loadFirestore, loadAuthSdk \} from '\.\.\/utils\/firebaseAccess'/,
-      'AuthContext was converted and SubscriptionContext was not — half a deferral is worse than none',
-    )
-    return
-  }
-  execFileSync('git', ['apply', '--check', PATCH], { cwd: ROOT, stdio: 'pipe' })
+test('a build with no flag, and one with VITE_DEFER_FIREBASE=1, alias every deferral seam to its lazy half', () => {
+  assert.equal(aliasCountFor(undefined), DEFERRAL_SEAMS.length, 'the default build is no longer the deferred one')
+  assert.equal(aliasCountFor('1'), DEFERRAL_SEAMS.length)
 })
 
-test('the patch closes both remaining static edges and touches nothing else', () => {
-  const patch = read(PATCH)
-  const targets = [...patch.matchAll(/^\+\+\+ b\/(.+)$/gm)].map((m) => m[1].trim())
-  assert.deepEqual(
-    targets.sort(),
-    ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx'],
-    'the gated patch must touch exactly the two founder-gated contexts that still import Firebase statically',
-  )
-  // It has to actually remove the static imports, not merely edit the files.
-  assert.match(patch, /^-import \{ doc, onSnapshot \} from 'firebase\/firestore'/m)
-  assert.match(patch, /^-} from 'firebase\/auth'/m)
-  assert.match(patch, /^\+import \{ whenAuthSdk, loadAuthSdk, loadFirestore, authNow \} from '\.\.\/utils\/firebaseAccess'/m)
+test('VITE_DEFER_FIREBASE=0 builds the eager variant: no seam is aliased', () => {
+  assert.equal(aliasCountFor('0'), 0, 'the opt-out no longer restores the eager modules')
 })
 
-test('the founder-gated files are unmodified on this branch', (t) => {
-  // The whole premise of the design is that these were not touched. A patch in
-  // docs/ plus a quiet edit to the file it describes would be worse than either.
-  //
-  // Once the patch is IN, that premise has been retired on purpose — the
-  // founder ran `npm run apply:gated` and the files are meant to differ — so
-  // this stops being a rule and would only be a trap that fires the moment he
-  // commits what he was told to apply.
-  if (PATCH_IS_APPLIED) return t.skip('the gated patch has been applied; these files are meant to differ')
-  const gated = ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx', 'src/utils/firebase.js', 'src/components/GoogleOneTap.jsx']
-  let changed
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. When the deferred broker lets a visitor settle without Firebase
+// ─────────────────────────────────────────────────────────────────────────────
+
+let freshCount = 0
+// A new copy of the module per call: the gate is module state, and one test
+// opening it must not leak into the next. The source is loaded as a data: URL
+// with its one extensionless sibling import made absolute, because Node cannot
+// resolve the bundler-style './sessionHint' and the broker must not be edited
+// to suit the test. Its Firebase imports are dynamic, so none of them run here.
+const sessionHintUrl = pathToFileURL(path.join(ROOT, 'src/utils/sessionHint.js')).href
+function freshBroker() {
+  const source = read('src/utils/firebaseAccess.lazy.js').replace("from './sessionHint'", `from '${sessionHintUrl}'`)
+  assert.ok(source.includes(sessionHintUrl), 'the broker no longer imports ./sessionHint, so this loader is out of date')
+  const copy = `${source}\n// copy ${++freshCount}`
+  return import(`data:text/javascript;base64,${Buffer.from(copy).toString('base64')}`)
+}
+
+async function inBrowser({ hint = false, search = '' }, body) {
+  const hadWindow = Object.getOwnPropertyDescriptor(globalThis, 'window')
+  const hadStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+  Object.defineProperty(globalThis, 'window', { value: { location: { search } }, configurable: true, writable: true })
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: { getItem: (k) => (hint && k === 'vs-session' ? '1' : null) }, configurable: true, writable: true,
+  })
   try {
-    changed = execFileSync('git', ['diff', '--name-only', 'origin/main...HEAD', '--', ...gated], { cwd: ROOT, encoding: 'utf8' }).trim()
-  } catch {
-    // A shallow clone has no merge base with origin/main, and a checkout with
-    // no origin at all has no ref. Neither is a founder-gated file being
-    // edited, and reporting it as one would make the suite unrunnable
-    // wherever it is not a full clone.
-    return t.skip('origin/main is not reachable from here, so this branch cannot be compared to it')
+    return await body(await freshBroker())
+  } finally {
+    if (hadWindow) Object.defineProperty(globalThis, 'window', hadWindow)
+    else delete globalThis.window
+    if (hadStorage) Object.defineProperty(globalThis, 'localStorage', hadStorage)
+    else delete globalThis.localStorage
   }
-  assert.equal(changed, '', `founder-gated files changed on this branch: ${changed}`)
+}
+
+test('a browser with no session hint and nothing asking for Firebase may settle as signed out', async () => {
+  await inBrowser({}, (b) => assert.equal(b.canSkipAuthWait(), true))
+})
+
+test('a browser with a session hint may not skip the wait: its session has to be restored', async () => {
+  await inBrowser({ hint: true }, (b) => assert.equal(b.canSkipAuthWait(), false))
+})
+
+test('?firebase=eager may not skip the wait', async () => {
+  await inBrowser({ search: '?firebase=eager' }, (b) => assert.equal(b.canSkipAuthWait(), false))
+})
+
+test('opening the gate ends the skip: whoever opened it is waiting on the answer', async () => {
+  await inBrowser({}, (b) => {
+    assert.equal(b.canSkipAuthWait(), true)
+    b.openFirebaseGate()
+    assert.equal(b.canSkipAuthWait(), false)
+  })
+})
+
+test('the auth bootstrap alone neither opens the gate nor schedules it for a browser with no hint', async () => {
+  await inBrowser({}, async (b) => {
+    const scheduled = []
+    const realSetTimeout = globalThis.setTimeout
+    globalThis.window.addEventListener = (type) => scheduled.push(`listener:${type}`)
+    globalThis.window.requestIdleCallback = () => scheduled.push('idle')
+    globalThis.setTimeout = (fn, ms, ...rest) => { scheduled.push(`timer:${ms}`); return realSetTimeout(fn, 0, ...rest) }
+    try {
+      // Pending forever by design: nothing has asked. Not awaited, so it cannot
+      // import the SDK in this process even if it were wrong.
+      b.whenAuthSdk()
+    } finally {
+      globalThis.setTimeout = realSetTimeout
+    }
+    assert.equal(b.canSkipAuthWait(), true, 'whenAuthSdk() opened the gate on its own, so every visitor downloads Firebase')
+    assert.deepEqual(scheduled, [], 'whenAuthSdk() armed the LCP / idle / first-touch schedule, which fetches Firebase for a visitor who never asked')
+  })
+})
+
+test('the eager broker never has a wait to skip', () => {
+  assert.match(read('src/utils/firebaseAccess.js'), /^export function canSkipAuthWait\(\) \{ return false \}$/m)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. Everything that needs the answer still opens the gate
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Reads source, so it proves the call is WRITTEN, not that it runs. The running
+// half is tests/user-sim/57-firebase-deferral.spec.js and 57-firebase-cold-visit.
+// A page missing here shows a signed-in visitor as signed out with no error.
+const OPENS_THE_GATE_ON_MOUNT = {
+  'src/pages/Settings.jsx': 1,
+  'src/pages/AiPromptGenerator.jsx': 1,
+  'src/pages/AltTextGenerator.jsx': 1,
+  'src/pages/BrandStarter.jsx': 1,
+  'src/pages/Checkout.jsx': 1,
+  'src/pages/LoginPage.jsx': 1,
+  'src/components/auth/AuthForm.jsx': 1,
+  // RequireAuth and RequireAdmin.
+  'src/App.jsx': 2,
+}
+
+for (const [file, expected] of Object.entries(OPENS_THE_GATE_ON_MOUNT)) {
+  test(`${file} opens the Firebase gate when it mounts`, () => {
+    const source = read(file)
+    assert.match(source, /import \{[^}]*\bopenFirebaseGate\b[^}]*\} from '(?:\.\.?\/)+(?:utils\/)?firebaseAccess'/)
+    const calls = source.match(/useEffect\(\(\) => \{ openFirebaseGate\(\) \}, \[\]\)/g) || []
+    assert.equal(calls.length, expected, `${file}: expected ${expected} mount-time openFirebaseGate() call(s), found ${calls.length}`)
+  })
+}
+
+test('AuthContext settles without Firebase only through the broker\'s own answer', () => {
+  const source = read('src/contexts/AuthContext.jsx')
+  assert.match(source, /canSkipAuthWait\(\)\) setLoading\(false\)/)
+  // The listener must still attach when the gate opens, or a session the hint
+  // missed is never restored.
+  assert.match(source, /whenAuthSdk\(\)\.then\(\(A\) => \{[\s\S]*?onAuthStateChanged\(A\.auth, onAuthUser\)/)
 })

@@ -114,7 +114,7 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // lockScroll() puts the lock on <html> (see utils/scrollLock.js for why not
     // <body>) and stops Lenis. It is counted, so a dialog opened over another
     // surface leaves the outer lock in place until the last one closes.
-    const unlockScroll = lockScroll()
+    const unlockScroll = lockScroll({ hold: true })
     const unmark = markScrollContainers(node)
 
     const focusables = () => Array.from(
@@ -122,9 +122,11 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     ).filter(el => el.offsetParent !== null || el === document.activeElement)
 
     // Read once per open: the landing spot is decided when the dialog opens.
+    // preventScroll on every focus() here and in the restore below: moving
+    // focus must never scroll the page the dialog sits over.
     const initial = initialFocusRef.current
     const target = initial ? node?.querySelector(initial) : null
-    ;(target || node)?.focus()
+    ;(target || node)?.focus({ preventScroll: true })
 
     const entry = {}
     openDialogs.push(entry)
@@ -197,7 +199,7 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
         if (restore.tabIndex < 0 && !restore.hasAttribute('tabindex')) {
           restore.setAttribute('tabindex', '-1')
         }
-        restore.focus()
+        restore.focus({ preventScroll: true })
       })
       pendingRestore.current = { frame, chain }
     }

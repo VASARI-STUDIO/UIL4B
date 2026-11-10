@@ -6,8 +6,7 @@
 // HEADING: open the dossier from the "Heading family" picker on Inter and every
 // example is an interface, a data table and a form. Not one headline.
 //
-// Founder, 2026-09-14: "for the heading family examples popup show it more in
-// heading uses."
+// The heading-family examples popup should lean toward heading uses.
 //
 // `scenesFor(font, 'heading')` now leads with the display scenes and KEEPS the
 // role scenes after them — a heading face still has to survive a label

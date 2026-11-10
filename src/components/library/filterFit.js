@@ -1,8 +1,7 @@
 // Does a filter tray fit the toolbar row, or must it collapse to a menu?
 //
-// Founder, 2026-09-04: "the header design changes height switching from the
-// emoji to icon library. the bar is broken visually on a standard desktop."
-// Measured at 1440x900: /create/icons rendered a 68px toolbar, /create/emoji a
+// The header changed height when switching from the emoji to the icon library,
+// and the bar was broken visually on a standard desktop. Measured at 1440x900: /create/icons rendered a 68px toolbar, /create/emoji a
 // 213px one, so switching tabs moved the page by 145px.
 //
 // #318 had already met this shape and answered it with a media query, because

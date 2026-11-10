@@ -1,10 +1,10 @@
-// The two taglines the founder retired, and the proof they are gone from every
+// The two taglines that were retired, and the proof they are gone from every
 // route the site prerenders.
 //
 // ── Why this file exists ────────────────────────────────────────────────────
 //
-// Founder, 2026-09-07: "remove the no credit card required tag line and the Ui
-// system toolkit tag line these all over the place is a huge AI Slop feature".
+// The "no credit card required" tag line and the "UI system toolkit" tag line
+// were removed because repeating them all over the place is an AI-slop tell.
 //
 // "All over the place" is the important half. Both strings had spread across
 // surfaces that do not import each other — the hero, the sign-up popup, the
@@ -60,8 +60,8 @@ import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 // `/` and `/home` currently FAIL on 'no card'. The front door's reassurance row
 // ships `{ icon: 'card', label: 'No card needed for Free' }` —
 // src/components/spectrum/spectrumFacts.js, `ASSURANCES` — which is the exact
-// class of line the founder retired on 2026-09-07 ("remove the no credit card
-// required tag line … these all over the place is a huge AI Slop feature").
+// class of line that was retired (the "no credit card required" tag line, an
+// AI-slop tell when repeated all over the place).
 //
 // That row's own comment shows the check that was made and the one that was
 // not: it records dropping the design's "Cancel Pro any time" because /plans
@@ -72,17 +72,17 @@ import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 // indistinguishable from the tagline being allowed back — which is the exact
 // mechanism the file's header describes ("removing them once, in the place you
 // happen to be looking, is how this comes back"). The fix is one line in
-// spectrumFacts.js and it is the founder's call whether anything replaces it;
-// his instruction last time was to delete the clause, not reword it.
+// spectrumFacts.js and it is the owner's call whether anything replaces it;
+// last time the clause was deleted, not reworded.
 const RETIRED = [
   'no credit card',
   'credit card required',
   'no card',
   'ui system toolkit',
   // ── Retired by the 2026-09-09 anti-slop audit (70-anti-slop-marketing) ──
-  // Each of these was on a surface the founder had ruled on the shape of; the
+  // Each of these was on a surface whose shape had been ruled on; the
   // walk keeps them off every route rather than the one they were found on.
-  // "Systems worth stealing." — his verdict: "bad copy" — was back on
+  // "Systems worth stealing." (rejected as "bad copy") was back on
   // /discover as "Find systems worth stealing."
   'worth stealing',
   // The footer tagline, on every page. A tagline is the thing he retired.

@@ -4,10 +4,9 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 
 // COPYING A VALUE IS FREE FOREVER. TAKING A FILE AWAY NEEDS AN ACCOUNT.
 //
-// Founder decision, 2026-09-15: "make users have to make an account to use alot
-// of the extra feature". The line he picked, from a measured map of what the
-// product actually gated, is EXPORT AND DOWNLOAD — and the measurement is why
-// the line sits there rather than somewhere else.
+// Users need an account for the extra features. The line, picked from a
+// measured map of what the product actually gated, is EXPORT AND DOWNLOAD — and
+// the measurement is why the line sits there rather than somewhere else.
 //
 // Measured signed out across all fourteen /create tools, by pressing each
 // page's own take-away control and watching for the login dialog: only TWO
@@ -21,8 +20,8 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 // WHAT THIS DELIBERATELY DOES NOT GATE, because the distinction is the whole
 // design and getting it wrong would cost more than it earns:
 //
-//   * Using a tool. Every tool stays fully usable signed out. This is the
-//     founder's "gate depth, not the tools", and /info's promise — "No account
+//   * Using a tool. Every tool stays fully usable signed out. This is
+//     "gate depth, not the tools", and /info's promise — "No account
 //     needed — open any tool and start working" — stays literally true.
 //   * COPYING. Copy CSS, copy a hex, copy an SVG snippet, copy an emoji: all
 //     free, permanently. A copy is ephemeral and it is how someone decides the
