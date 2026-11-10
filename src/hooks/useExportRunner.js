@@ -21,6 +21,7 @@ import { requestThemeExport, printInWindow } from '../utils/exportThemeRequest'
 import { themedFile, themedFileIsPro, themedZipName } from '../config/exportThemePicker'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 import { formatFileName } from '../utils/exportFileName'
+import { readIdentity } from '../utils/kitIdentity'
 
 // Everything that happens between a click on Export and a file in the downloads
 // folder: the gates, the build, the download. The dialog owns what is on screen;
@@ -367,11 +368,13 @@ export default function useExportRunner() {
         activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
         setStage(themed.format === 'pdf' ? 'document' : 'building')
         labelPrintWindow(printWin, 'Preparing your document…')
-        const answer = await requestThemeExport({ theme, row: themed.row, format: themed.format, design, projectName }, { loadAuth: loadAuthSdk })
+        // A Pro kit is named for the identity name typed in the panel, in the request and on the zip; any other file keeps the project's name.
+        const kitName = themed.row === 'ui-kit' && proNow ? readIdentity(design).name : ''
+        const answer = await requestThemeExport({ theme, row: themed.row, format: themed.format, design, projectName: kitName || projectName }, { loadAuth: loadAuthSdk })
         if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
         if (answer.status !== 'ok') throw new Error(answer.line)
         if (answer.zip) {
-          savedFile = download(answer.zip, themedZipName(fileProject, format, theme) || answer.name)
+          savedFile = download(answer.zip, themedZipName(kitName || fileProject, format, theme) || answer.name)
         } else {
           const file = formatFileName(fileProject, format, { saved: true })
           opened = printInWindow(printWin, answer.html, { title: formatFileName(fileProject, format).replace(/\.pdf$/, '') })
@@ -381,29 +384,6 @@ export default function useExportRunner() {
             savedFile = download(new Blob([answer.html], { type: 'text/html;charset=utf-8' }), file)
             setNotice({ lead: 'The document downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
           }
-        }
-      } else if (format === 'kit') {
-        // The kit is built in the browser like everything else here, but it
-        // fetches the selected font files first so the document opens offline.
-        // Loaded on demand: the template and the font fetcher cost nothing to
-        // anyone who never exports a kit. The tier is the live entitlement.
-        const { buildUiKit } = await import('../utils/uiKitAssets')
-        activation = 'ui-kit'
-        const { blob, filename, missing } = await buildUiKit(design, {
-          tier: proNow ? 'pro' : 'free',
-          projectName,
-          fileProject,
-          template: chosenTemplates.kit,
-          onStage: setStage,
-        })
-        savedFile = download(blob, filename)
-        if (missing.length) {
-          // The kit WAS produced and says the same inside itself; the dialog
-          // carries the notice rather than closing over it.
-          setNotice({
-            lead: 'Your UI kit downloaded.',
-            detail: `${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`,
-          })
         }
       } else if (bookPng) {
         // The book as page images, drawn on a canvas like the style guide PNG (see

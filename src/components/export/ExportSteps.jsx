@@ -196,7 +196,7 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
   // A themed zip is named for its theme; a themed PDF is not saved at all, it opens as a print document, so it carries no file name.
   const rows = files.map((f) => {
     if (!themedFile(f.id)) return { ...f, saved: formatFileName(f.id === 'kit' && identityName ? identityName : fileProject, f.id) }
-    const zip = themedZipName(fileProject, f.id, theme)
+    const zip = themedZipName(f.id === 'kit' && identityName ? identityName : fileProject, f.id, theme)
     return zip ? { ...f, saved: zip } : { ...f, saved: 'Print document', plain: true }
   })
   const themed = Boolean(themedFile(file))
