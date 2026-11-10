@@ -524,7 +524,7 @@ h2.uh-continue-name { white-space: normal; }
 .uh.uh-spt button:disabled:disabled:active { transform: none; }
 
 /* Head */
-.uh.uh-spt .uh-greet { min-height: 20px; font-size: 15px; font-weight: 400; color: var(--sp-dim); }
+.uh.uh-spt .uh-greet { min-height: 21px; font-size: 15px; font-weight: 400; color: var(--sp-dim); }
 .uh.uh-spt .uh-h1 { font-family: var(--display); font-size: clamp(32px, 4.4vw, 56px); font-weight: 560; line-height: 1.04; letter-spacing: -.03em; color: var(--sp-ink); }
 .uh.uh-spt .uh-clock-line { color: var(--sp-dim); }
 .uh.uh-spt .uh-clk-time { color: var(--sp-ink); }

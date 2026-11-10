@@ -8,7 +8,7 @@
 // list's cards play their animation; the overview's compact "rest" cards and
 // the cover tiles stay still, so a section decodes one animation, not five.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { go, proLibraryArrived, signIn, watch } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS } from '../../src/data/promptPreviewAssets.js'
 
@@ -24,6 +24,8 @@ async function openLibrary(browser, { width = 1440, height = 900, reducedMotion 
   await signIn(page, { admin: true })
   await go(page, `/discover/prompts${hash}`)
   await expect(page.locator('.pl-card').first()).toBeVisible()
+  // The free rows paint first; the list's last open card is the Pro library's.
+  await proLibraryArrived(page, 'the prompt library')
   return { context, page }
 }
 

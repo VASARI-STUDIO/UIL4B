@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { openFirebaseGate } from '../utils/firebaseAccess'
 import { Link } from 'react-router-dom'
 import { ToolLayout, ToolGrid, ToolMain, ToolPanel, ToolSection } from '../components/tool/ToolLayout'
 import { useAuth } from '../contexts/AuthContext'
@@ -669,6 +670,8 @@ export function BrandStarterWorkbench({ planId = 'free', signedOut = false, getT
  * Firebase ID token.
  */
 export default function BrandStarter({ toast }) {
+  // This tool needs an account, and the page already loads the SDK: let the session restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const { plan } = useSubscription()
   // Decides only whether the EXAMPLE is worth showing. A signed-in visitor gets
   // the workbench alone and does not need a sample of what they are about to

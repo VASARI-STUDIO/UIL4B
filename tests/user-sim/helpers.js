@@ -966,6 +966,27 @@ export async function overlaysSettled(page, what = 'the overlay') {
   ).toBe(0)
 }
 
+/**
+ * Wait until a Pro viewer's library has arrived.
+ *
+ * Until the account answers, the Pro galleries (palettes, gradients, prompts)
+ * show the free rows with a "Loading the … library" status block in place of
+ * the upsell (ProLibraryStatus, `.lockt-status`). The first card is on screen
+ * at that point, so "the first card is visible" says nothing about the full
+ * set, its sections or its closing call to action. The status block is the
+ * page's own signal that the full library has landed: it renders for every
+ * waiting state and for a failed fetch, so a library that never arrives fails
+ * here by name instead of being measured half-loaded.
+ *
+ * Call it after the first card is visible and before reading the list.
+ */
+export async function proLibraryArrived(page, what = 'the Pro library') {
+  await expect(
+    page.locator('.lockt-status'),
+    `${what} never finished loading (the status block is still on screen)`,
+  ).toHaveCount(0, { timeout: 15000 })
+}
+
 export async function ready(page, what) {
   const where = what || page.url()
   await page.evaluate(() => {

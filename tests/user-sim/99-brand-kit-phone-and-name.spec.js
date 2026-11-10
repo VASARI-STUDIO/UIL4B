@@ -582,7 +582,11 @@ test.describe('Brand kit walkthrough: Name your project', () => {
   const storedProjects = (page) => page.evaluate(
     () => Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat(),
   )
-  const completeSignIn = (page) => page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+  // The test double exists once the sign-in form has started the SDK, a moment after the form is on screen.
+  const completeSignIn = async (page) => {
+    await page.waitForFunction(() => !!window.__UIL4B_TEST_AUTH__)
+    await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+  }
   async function nameAndAskToSave(page, name) {
     await rail(page).getByRole('button', { name: /^Name your project/ }).click()
     await nameField(page).fill(name)
