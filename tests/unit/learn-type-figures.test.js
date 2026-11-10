@@ -279,18 +279,23 @@ test('the inventory the guide describes is the inventory global.css declares', (
   // The count is asserted rather than derived on purpose: a family appearing or
   // disappearing is a first-paint decision, and this is where the guide's
   // sentence and the stylesheet are held to the same number.
-  assert.equal(faces.length, 10, `global.css now declares ${faces.length} @font-face rules`)
+  assert.equal(faces.length, 14, `global.css now declares ${faces.length} @font-face rules`)
   const families = [...new Set(faces.map((f) => f.family))]
-  assert.equal(families.length, 6, `global.css now declares ${families.length} families`)
-  assert.match(loadingProse, /Six families, ten rules/)
+  assert.equal(families.length, 8, `global.css now declares ${families.length} families`)
+  assert.match(loadingProse, /Eight families, fourteen rules/)
+  // The homepage text face's stand-in is local, like the interface face's.
+  const homeStandIn = facesOf('Geist Fallback')
+  assert.ok(homeStandIn.length === 2 && homeStandIn.every((f) => f.local && f.range === null),
+    'Geist Fallback is no longer a pair of local faces')
+  assert.match(loadingProse, /The homepage text face has a stand-in of the same kind/)
 
   // Which families are subset, and which ship whole, is the claim the section
   // turns on. The UI face is the one that must carry no range at all; the
-  // stand-in is local; the other two are the split pairs.
+  // stand-in is local; the other three are the split pairs.
   const uiFamily = firstFamily(rootToken('--font'))
   const standIn = firstFamily(rootToken('--font').split(',').slice(1).join(','))
   const split = families.filter((f) => facesOf(f).every((r) => r.range !== null))
-  assert.deepEqual(split.sort(), ['Caveat', 'Geist Mono'],
+  assert.deepEqual(split.sort(), ['Caveat', 'Geist', 'Geist Mono'],
     `the families split by unicode-range are now ${split.join(', ')}`)
   for (const face of facesOf(uiFamily)) {
     assert.equal(face.range, null, `${uiFamily} declares a unicode-range, so it is no longer shipped whole`)
@@ -299,7 +304,7 @@ test('the inventory the guide describes is the inventory global.css declares', (
   assert.equal(facesOf(uiFamily).length, 2, `${uiFamily} is no longer one upright file and one italic file`)
   assert.ok(facesOf(standIn).length === 2 && facesOf(standIn).every((f) => f.local && f.range === null),
     `${standIn}, the stack's second entry, is no longer a pair of local faces`)
-  assert.match(loadingProse, /only two of the families are subset/)
+  assert.match(loadingProse, /only three of the families are subset/)
   assert.match(loadingProse, /one variable file for the upright and one for the italic/)
 
   for (const family of split) {
@@ -352,7 +357,7 @@ test('THE OTHER ONE THAT MATTERS: the two subsets share exactly the code points 
   const faces = fontFaces().filter((f) => f.range !== null)
   const families = [...new Set(faces.map((f) => f.family))]
   const expected = [0x131, 0x152, 0x153, 0x304, 0x308, 0x329, 0x2020]
-  assert.equal(families.length, 2, `${families.join(', ')} are subset, not two families`)
+  assert.equal(families.length, 3, `${families.join(', ')} are subset, not three families`)
 
   for (const family of families) {
     const [a, b] = faces.filter((f) => f.family === family).map((f) => codepointsOf(f.range))

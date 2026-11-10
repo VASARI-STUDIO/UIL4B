@@ -28,18 +28,22 @@ test.describe('/tools shell', () => {
   test('the Tools link goes to /tools and is current only there', async ({ page }) => {
     watch(page, 'a visitor following the Tools link')
     await go(page, '/')
-    const tools = page.locator('.spnav-quiet-link', { hasText: 'Tools' })
-    await expect(tools).toHaveAttribute('href', '/tools')
+    // On the sales page the link jumps to its Try the tools section and names no screen.
+    await expect(page.locator('.spnav-quiet-link', { hasText: 'Tools' })).toHaveAttribute('href', '#try')
     // Mutation: activeQuiet returns 'tools' on '/' → this fails.
     await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveCount(0)
+    await go(page, '/plans')
+    const tools = page.locator('.spnav-quiet-link', { hasText: 'Tools' })
+    await expect(tools).toHaveAttribute('href', '/tools')
+    await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Plans')
     await tools.click()
     await expect(page).toHaveURL(/\/tools$/)
     await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Tools')
   })
 
-  test('the homepage lede links to /tools; the footer lists All tools first', async ({ page }) => {
+  test('the homepage bookmarks heading is there; the footer lists All tools first', async ({ page }) => {
     await go(page, '/')
-    await expect(page.locator('.sp-bench-lede').getByRole('link', { name: 'See all of them.' })).toHaveAttribute('href', '/tools')
+    await expect(page.locator('#bookmarks h2#bm-h')).toHaveText('Say goodbye to bookmark folders.')
     await expect(page.locator('.sp-footer-col').first().locator('a').first()).toHaveText('All tools')
   })
 })

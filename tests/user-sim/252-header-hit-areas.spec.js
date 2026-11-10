@@ -26,7 +26,7 @@
 // /projects (signed in), the public header on / and, signed out, on /learn.
 //
 // The headers on these routes are two components: PillNav (`.pnav-*`: every route
-// except the home page) and SpectrumNav (`.spnav-*`: the home page). One collector
+// except the home page) and SpectrumNav (`.spnav-*`: the sales pages). One collector
 // reads both.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -43,7 +43,7 @@ const APP_WIDE = ['pnav-logo', 'pnav-search-field', 'pnav-trigger', 'pnav-export
 const OUT_PHONE = ['pnav-logo', 'pnav-search-field', 'pnav-export', 'pnav-mobile']
 const OUT_WIDE = ['pnav-logo', 'pnav-search-field', 'pnav-trigger', 'pnav-login', 'pnav-upgrade', 'pnav-more']
 const HOME_PHONE = ['spnav-mark', 'spnav-icon', 'spnav-burger']
-const HOME_WIDE = ['spnav-mark', 'spnav-quiet-link', 'spnav-icon', 'spnav-burger']
+const HOME_WIDE = ['spnav-mark', 'spnav-quiet-link', 'spnav-search']
 
 const ROUTES = [
   { label: 'a tool page', path: '/create/palette', signedIn: true, slug: 'tool', phone: APP_PHONE, wide: APP_WIDE },
@@ -64,8 +64,10 @@ const DRAWN = {
   'pnav-trigger': { wide: [null, 34.8] },
   'pnav-upgrade': { wide: [null, 34.8] },
   'pnav-logo': { phone: [110.7, 25.8], wide: [null, 24.1] },
-  'spnav-icon': { phone: [38, 38], wide: [38, 38] },
-  'spnav-quiet-link': { wide: [null, 32] },
+  'spnav-icon': { phone: [44, 44] },
+  'spnav-quiet-link': { wide: [null, 44] },
+  // The pill is a 44px target on a touch screen and 40px for a mouse.
+  'spnav-search': { wide: (w, touch) => [null, touch ? 44 : 40] },
   'spnav-mark': { phone: [null, 44], wide: [null, 44] },
 }
 const DRAWN_TOLERANCE = 0.6
@@ -111,8 +113,16 @@ function collectControls() {
       ring = { left, top, right: left + w, bottom: top + h, pointerEvents: after.pointerEvents }
     }
     const misses = []
-    for (const dy of OFFSETS) {
-      for (const dx of OFFSETS) {
+    // A control already drawn 44px tall (the home bar's links, logo and round icon
+    // buttons) is probed along the plus through its centre: a round button's
+    // corners are not part of the control, and a text link is narrower than 44px.
+    const drawn44 = r.height >= 43.5 && !ring
+    const halfW = Math.min(21, r.width / 2 - 1)
+    const probes = drawn44
+      ? [[0, 0], [0, -21], [0, 21], [-halfW, 0], [halfW, 0]]
+      : OFFSETS.flatMap((dy) => OFFSETS.map((dx) => [dx, dy]))
+    for (const [dx, dy] of probes) {
+      {
         const hit = document.elementFromPoint(cx + dx, cy + dy)
         if (!owns(el, hit)) {
           misses.push({ dx, dy, hit: hit ? `${hit.tagName.toLowerCase()}.${String(hit.className).split(' ')[0]}` : 'nothing' })
@@ -173,13 +183,13 @@ const overlaps = (controls) => {
 const round = (n) => Math.round(n * 10) / 10
 
 // Every control with a recorded drawn size, checked against it.
-const drawnSizeFailures = (controls, width) => {
+const drawnSizeFailures = (controls, width, touch) => {
   const out = []
   for (const c of controls) {
     for (const [cls, spec] of Object.entries(DRAWN)) {
       if (!c.classes.includes(cls)) continue
       let want = width < 768 ? spec.phone : spec.wide
-      if (typeof want === 'function') want = want(width)
+      if (typeof want === 'function') want = want(width, touch)
       if (!want) continue
       const [w, h] = want
       if (w != null && Math.abs(c.box.width - w) > DRAWN_TOLERANCE) out.push(`${cls} is ${round(c.box.width)} wide, drawn ${w}`)
@@ -207,20 +217,20 @@ for (const route of ROUTES) {
         expect(wanted.filter((cls) => !present.has(cls)), `controls missing from the header: found ${[...present].join(', ')}`).toEqual([])
 
         // DRAWN SIZE: nothing grew to reach 44.
-        const drawnFailures = drawnSizeFailures(controls, size.width)
+        const drawnFailures = drawnSizeFailures(controls, size.width, size.touch)
         // MUTATION: in global.css change `.pnav-mobile{...width:36px;height:36px...}` to 44px, or give the
         // logo `min-height:44px`; the box grows, the reach below still passes, and this fails.
         expect(drawnFailures, 'a control was resized to reach 44px').toEqual([])
 
         if (size.needs44) {
           // REACH: all 25 points across the 44 x 44 box land on the control.
-          const reachFailures = controls.filter((c) => c.misses.length).map((c) => `${c.name} (${c.label}) misses ${c.misses.length} of 25: ${c.misses.slice(0, 4).map((m) => `${m.dx},${m.dy} -> ${m.hit}`).join('; ')}`)
+          const reachFailures = controls.filter((c) => c.misses.length).map((c) => `${c.name} (${c.label}) misses ${c.misses.length}: ${c.misses.slice(0, 4).map((m) => `${m.dx},${m.dy} -> ${m.hit}`).join('; ')}`)
           // MUTATION: in global.css change `@media(pointer:coarse),(max-width:767px)` back to `@media(pointer:coarse)`:
           // the 390 mouse cases fail here. (The menu button's own ::after is the one inside @media(max-width:767px).)
           // In spectrum-chrome.css do the same to `.spnav-icon::after`: the home page fails.
           expect(reachFailures, 'part of a 44 x 44 box around a control does not land on it').toEqual([])
           // The ring is also what makes the area: a control shorter than 44 has one.
-          const noRing = controls.filter((c) => (c.box.height < 43.5 || c.box.width < 43.5) && !c.ring).map((c) => c.name)
+          const noRing = controls.filter((c) => c.box.height < 43.5 && !c.ring).map((c) => c.name)
           expect(noRing, 'short controls with no ::after hit area').toEqual([])
         } else {
           // A mouse on a wide window: nothing past the drawn box belongs to the control.

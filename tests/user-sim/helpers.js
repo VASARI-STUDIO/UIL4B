@@ -584,6 +584,27 @@ export async function go(page, url) {
   return res
 }
 
+/** The homepage sections that load after the first screen, by id. */
+export const HOME_LAZY_SECTIONS = ['bookmarks', 'try', 'exports', 'examples', 'plans']
+
+/**
+ * Wait until every homepage section below the first screen has arrived.
+ *
+ * Each of those sections mounts when its stand-in is within 600px of the
+ * viewport, or all of them together on a hash, a click, or the first scroll,
+ * wheel, touchstart, keydown or pointerdown. Until a section arrives its id sits
+ * on an empty stand-in of about its final height, and a test that measures or
+ * scrolls before then reads the stand-in. A wheel nudge opens every section at
+ * once instead of waiting for the viewport to come near them, and each section
+ * is waited for by its own heading, which only the real section renders.
+ */
+export async function homeSectionsLoaded(page) {
+  await page.mouse.wheel(0, 1)
+  for (const id of HOME_LAZY_SECTIONS) {
+    await expect(page.locator(`#${id} h2`), `the ${id} section never loaded`).toBeAttached({ timeout: 20000 })
+  }
+}
+
 /**
  * Navigate, but keep the app's entry script (`/assets/index-*.js`, the one that
  * calls `createRoot`) from running until `untilPainted()` says the prerendered
@@ -1222,9 +1243,10 @@ export async function keyToRest(page, key, what = 'the page') {
 // (1024 and up) or the Filters sheet (below 1024), so open whichever the page offers,
 // type, check the value took, and close it again.
 export async function fillGalleryPreviewText(page, text) {
-  const bar = page.locator('[data-tool-toolbar]')
-  await expect(bar, 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
-  const onRow = bar.getByRole('textbox', { name: 'Preview text' })
+  // Font Gallery has two toolbars (name and filters); the field may sit on either.
+  const bars = page.locator('[data-tool-toolbar]')
+  await expect(bars.first(), 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
+  const onRow = bars.getByRole('textbox', { name: 'Preview text' }).first()
   if (await onRow.isVisible()) {
     await onRow.fill(text)
     await expect(onRow).toHaveValue(text)

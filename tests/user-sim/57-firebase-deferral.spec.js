@@ -45,13 +45,10 @@ test('the homepage boots through the Firebase access broker and renders real con
   // broken export there throws while the module graph is still evaluating —
   // which paints nothing at all. A page that renders nothing paints fast and
   // passes every check that does not look at its text.
-  // `.home-hero-h1` until the route swap. `/` renders src/pages/Spectrum.jsx
-  // now and its headline is `.sp-hero-h1` (SpectrumWords splits it into
-  // `.sp-w` spans, so this reads the h1 and not one word of it). The control is
-  // doing exactly the same job: a broken export in firebaseAccess throws while
-  // the module graph is evaluating, which paints nothing, and a blank page
-  // passes every check below.
-  const hero = page.locator('.sp-hero-h1')
+  // The headline is the one `h1.hh-h1`. The control does one job: a broken export
+  // in firebaseAccess throws while the module graph is evaluating, which paints
+  // nothing, and a blank page passes every check below.
+  const hero = page.locator('section#top h1.hh-h1')
   await expect(hero).toBeVisible()
   const heroText = (await hero.innerText()).trim()
   expect(
@@ -108,12 +105,12 @@ test('the account affordance resolves, so auth still reaches the chrome', async 
   await expectRendered(page, 'the homepage')
 
   // THROUGH THE FRONT DOOR'S ONE WAY IN. The marketing chrome is the design
-  // exactly: a pill with no account block and a menu of four items. "Open the
+  // exactly: a flat bar with no account block. The hero's "Open the
   // toolkit" enters the app with no sign-up gate, so the sign-in affordance a
   // signed-out visitor meets is the app header's, one press from `/`. It is
   // still rendered from `user`, so it cannot show "Log in" until AuthContext
   // has resolved to signed out — which is the whole point of this test.
-  await page.locator('.spnav-cta').click()
+  await page.locator('#top .hh-go').click()
   await expect(page).toHaveURL(/\/projects$/)
 
   const signIn = page.getByRole('link', { name: /sign in|log ?in/i })

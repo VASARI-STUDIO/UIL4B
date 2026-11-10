@@ -67,18 +67,18 @@ test('the banned-word check can see a hit: each pattern matches a sample line', 
 })
 
 test('the retired Fernway scenes are gone from the scene list and the viewer', () => {
-  // The Invoices and Settings scenes were folded into Tally and Hale & Okoro.
+  // The Invoices and Settings scenes were folded into Tenner and Hale & Okoro.
   // Nothing may bring the invented invoicing product back by the side door.
   for (const file of ['src/data/palettePreviewScenes.js', 'src/components/palette/PalettePreview.jsx', 'src/styles/pages/palette-preview.css']) {
     assert.doesNotMatch(read(file), /fernway|FW-0\d\d\d|Harbour Physio/i, `${file} still names Fernway`)
   }
 })
 
-test('the Limits form states live in Tally, which the old Settings scene used to carry', () => {
-  // If Tally lost its form, the focus, error, disabled and toast states would
+test('the Limits form states live in Tenner, which the old Settings scene used to carry', () => {
+  // If Tenner lost its form, the focus, error, disabled and toast states would
   // have no preview. Read it back and require each one.
-  const tally = read('src/components/palette/examples/Tally.jsx')
+  const tenner = read('src/components/palette/examples/Tenner.jsx')
   for (const state of ['is-focus', 'is-error', 'is-on', 'is-disabled', 'ty-toast', 'is-hover']) {
-    assert.ok(tally.includes(state) || read('src/components/palette/examples/Tally.data.js').includes(state), `Tally no longer draws ${state}`)
+    assert.ok(tenner.includes(state) || read('src/components/palette/examples/Tenner.data.js').includes(state), `Tenner no longer draws ${state}`)
   }
 })

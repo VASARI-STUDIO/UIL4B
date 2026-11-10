@@ -10,9 +10,10 @@
  * kept for the CSS code block only. */
 
 /* ── The grid ────────────────────────────────────────────────────────────────
-   The panel is first in the source, so below 1024 the families, then the
-   preview text, then the specimen read in that order. From 1024 the panel
-   takes the right-hand column and the work the left. */
+   Below 1024 the panel is first in the source, so the families, then the
+   preview text, then the specimen read in that order. From 1024 the work is
+   first in the source and takes the left column, the panel the right, so Tab
+   follows what is drawn. */
 .fpr-page .fpr-grid { grid-template-columns: minmax(0, 1fr); }
 .fpr-page .fpr-output { gap: var(--tl-gap); }
 @media (min-width: 1024px) {
@@ -32,26 +33,26 @@
 }
 
 /* ── The panel: family cards, then the preview text ─────────────────────── */
-.fpr-page .fpr-fams { display: grid; gap: 0; }
-.fpr-page .fpr-fam,
-.fpr-page .fpr-text { display: grid; gap: 8px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--tl-hair); }
+:is(.fpr-page, .fpr-sheet) .fpr-fams { display: grid; gap: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam,
+:is(.fpr-page, .fpr-sheet) .fpr-text { display: grid; gap: 8px; min-width: 0; padding: 16px; border-bottom: 1px solid var(--tl-hair); }
 /* Side by side at 768 the taller card would otherwise hand its spare height to
    the other card's rows, centring that card's name lower. */
-.fpr-page .fpr-fam { align-content: start; }
-.fpr-page .fpr-text { border-bottom: 0; }
-.fpr-page .fpr-label { font-family: var(--font); font-size: max(var(--fs-caption), 13px); font-weight: 400; line-height: 1.3; color: var(--tl-dim); }
+:is(.fpr-page, .fpr-sheet) .fpr-fam { align-content: start; }
+:is(.fpr-page, .fpr-sheet) .fpr-text { border-bottom: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-label { font-family: var(--font); font-size: max(var(--fs-caption), 13px); font-weight: 400; line-height: 1.3; color: var(--tl-dim); }
 /* The label line: the family label left, the body family's Best match right. */
-.fpr-page .fpr-fam-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; min-width: 0; }
-.fpr-page .fpr-fam-head .fpr-wand { min-height: 36px; padding-inline: 10px; margin-inline-end: -10px; border-color: transparent; background: transparent; font-size: 13px; }
-.fpr-page .fpr-fam-head .fpr-wand:disabled { color: var(--tl-dim); opacity: 1; cursor: default; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; min-width: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-head .fpr-wand { min-height: 36px; padding-inline: 10px; margin-inline-end: -10px; border-color: transparent; background: transparent; font-size: 13px; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-head .fpr-wand:disabled { color: var(--tl-dim); opacity: 1; cursor: default; }
 @media (hover: hover) and (pointer: fine) {
-  .fpr-page .fpr-fam-head .fpr-wand:hover:not(:disabled) { background: var(--tl-wash); }
+  :is(.fpr-page, .fpr-sheet) .fpr-fam-head .fpr-wand:hover:not(:disabled) { background: var(--tl-wash); }
 }
 @media (pointer: coarse) { .fpr-page .fpr-fam-head .fpr-wand { min-height: 44px; } }
-.fpr-page .fpr-fam-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
-.fpr-page .fpr-fam-id { flex: 1 1 9rem; min-width: 0; display: grid; gap: 2px; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-id { flex: 1 1 9rem; min-width: 0; display: grid; gap: 2px; }
 /* The name wraps rather than clipping, so no family is ever cut. */
-.fpr-page .fpr-fam-name {
+:is(.fpr-page, .fpr-sheet) .fpr-fam-name {
   font-family: var(--fpr-fam-ff, var(--font));
   font-weight: var(--fpr-fam-fw, 400);
   font-size: 22px;
@@ -59,17 +60,17 @@
   color: var(--tl-ink);
   overflow-wrap: anywhere;
 }
-.fpr-page .fpr-fam-meta { font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); overflow-wrap: anywhere; }
-.fpr-page .fpr-fam-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-meta { font-size: max(var(--fs-caption), 13px); line-height: 1.4; color: var(--tl-dim); overflow-wrap: anywhere; }
+:is(.fpr-page, .fpr-sheet) .fpr-fam-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 /* On a phone both rows stack the same way: the name, then its buttons. */
 @media (max-width: 767px) {
-  .fpr-page .fpr-fam-row { flex-direction: column; align-items: stretch; }
-  .fpr-page .fpr-fam-id { flex: 0 0 auto; }
-  .fpr-page .fpr-fam-acts { flex-wrap: wrap; margin-left: 0; }
+  :is(.fpr-page, .fpr-sheet) .fpr-fam-row { flex-direction: column; align-items: stretch; }
+  :is(.fpr-page, .fpr-sheet) .fpr-fam-id { flex: 0 0 auto; }
+  :is(.fpr-page, .fpr-sheet) .fpr-fam-acts { flex-wrap: wrap; margin-left: 0; }
 }
-.fpr-page .fpr-weights { gap: 4px; }
-.fpr-page .fpr-wmenu { min-width: 0; }
-.fpr-page .fpr-input {
+:is(.fpr-page, .fpr-sheet) .fpr-weights { gap: 4px; }
+:is(.fpr-page, .fpr-sheet) .fpr-wmenu { min-width: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-input {
   width: 100%;
   min-width: 0;
   height: 36px;
@@ -81,13 +82,13 @@
   font-family: var(--font);
   font-size: 13px;
 }
-.fpr-page .fpr-input:focus { border-color: var(--tl-line-on); }
-.fpr-page .fpr-hint { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
+:is(.fpr-page, .fpr-sheet) .fpr-input:focus { border-color: var(--tl-line-on); }
+:is(.fpr-page, .fpr-sheet) .fpr-hint { margin: 0; font-size: max(var(--fs-caption), 13px); line-height: 1.5; color: var(--tl-dim); }
 /* A tablet sets the two family cards side by side. */
 @media (min-width: 768px) and (max-width: 1023px) {
-  .fpr-page .fpr-fams { grid-template-columns: 1fr 1fr; }
-  .fpr-page .fpr-fam { border-bottom: 1px solid var(--tl-hair); }
-  .fpr-page .fpr-fam + .fpr-fam { border-left: 1px solid var(--tl-hair); }
+  :is(.fpr-page, .fpr-sheet) .fpr-fams { grid-template-columns: 1fr 1fr; }
+  :is(.fpr-page, .fpr-sheet) .fpr-fam { border-bottom: 1px solid var(--tl-hair); }
+  :is(.fpr-page, .fpr-sheet) .fpr-fam + .fpr-fam { border-left: 1px solid var(--tl-hair); }
 }
 
 /* ── The specimen: flat on the page, no container ───────────────────────── */
@@ -136,19 +137,19 @@
 .fpr-page .fpr-specimen-raw .fpr-body { margin-top: 16px; }
 
 /* ── Suggestions: a hairline list under the specimen ────────────────────── */
-.fpr-page .fpr-suggest { display: grid; gap: 4px; min-width: 0; margin-top: 8px; }
-.fpr-page .fpr-section-head h2 { margin: 0; font-size: 13px; font-weight: 400; line-height: 1.4; color: var(--tl-dim); }
-.fpr-page .fpr-suggest-loading { display: flex; align-items: center; gap: 12px; min-height: 120px; font-size: 13px; color: var(--tl-dim); }
-.fpr-page .fpr-suggest-loading .fg-loader { margin: 0; }
-.fpr-page .fpr-suggest-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 18px 0; border-top: 1px solid var(--tl-hair); }
-.fpr-page .fpr-suggest-empty strong { font-size: 13.5px; font-weight: 560; color: var(--tl-ink); }
-.fpr-page .fpr-suggest-empty span { max-width: 62ch; font-size: max(var(--fs-caption), 13px); line-height: 1.55; color: var(--tl-dim); }
-.fpr-page .fpr-suggest-grid { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--tl-hair); }
-.fpr-page .fpr-card { min-width: 0; border-bottom: 1px solid var(--tl-hair); }
+:is(.fpr-page, .fpr-sheet) .fpr-suggest { display: grid; gap: 4px; min-width: 0; margin-top: 8px; }
+:is(.fpr-page, .fpr-sheet) .fpr-section-head h2 { margin: 0; font-size: 13px; font-weight: 400; line-height: 1.4; color: var(--tl-dim); }
+:is(.fpr-page, .fpr-sheet) .fpr-suggest-loading { display: flex; align-items: center; gap: 12px; min-height: 120px; font-size: 13px; color: var(--tl-dim); }
+:is(.fpr-page, .fpr-sheet) .fpr-suggest-loading .fg-loader { margin: 0; }
+:is(.fpr-page, .fpr-sheet) .fpr-suggest-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 18px 0; border-top: 1px solid var(--tl-hair); }
+:is(.fpr-page, .fpr-sheet) .fpr-suggest-empty strong { font-size: 13.5px; font-weight: 560; color: var(--tl-ink); }
+:is(.fpr-page, .fpr-sheet) .fpr-suggest-empty span { max-width: 62ch; font-size: max(var(--fs-caption), 13px); line-height: 1.55; color: var(--tl-dim); }
+:is(.fpr-page, .fpr-sheet) .fpr-suggest-grid { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--tl-hair); }
+:is(.fpr-page, .fpr-sheet) .fpr-card { min-width: 0; border-bottom: 1px solid var(--tl-hair); }
 /* A row is one tap target: the pair drawn in both faces (the heading line in
    the current heading face, the body line in the candidate), the family and the
    action on one line, then the reason in plain view. Flat on the page, no card. */
-.fpr-page .fpr-card-apply {
+:is(.fpr-page, .fpr-sheet) .fpr-card-apply {
   display: grid;
   gap: 4px;
   width: 100%;
@@ -164,7 +165,7 @@
   cursor: pointer;
   transition: background-color .16s var(--tl-ease);
 }
-.fpr-page .fpr-card-head {
+:is(.fpr-page, .fpr-sheet) .fpr-card-head {
   min-width: 0;
   font-family: var(--fpr-h-ff);
   font-weight: var(--fpr-h-fw);
@@ -173,7 +174,7 @@
   letter-spacing: -.015em;
   overflow-wrap: anywhere;
 }
-.fpr-page .fpr-card-text {
+:is(.fpr-page, .fpr-sheet) .fpr-card-text {
   min-width: 0;
   font-family: var(--fpr-b-ff);
   font-weight: var(--fpr-b-fw);
@@ -182,8 +183,8 @@
   color: var(--tl-soft);
   overflow-wrap: anywhere;
 }
-.fpr-page .fpr-card-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; margin-top: 4px; }
-.fpr-page .fpr-card-name {
+:is(.fpr-page, .fpr-sheet) .fpr-card-line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; margin-top: 4px; }
+:is(.fpr-page, .fpr-sheet) .fpr-card-name {
   flex: 1 1 auto;
   min-width: 0;
   font-family: var(--fpr-b-ff);
@@ -193,13 +194,13 @@
   color: var(--tl-ink);
   overflow-wrap: anywhere;
 }
-.fpr-page .fpr-card-cta { flex: none; font-size: 13px; line-height: 1.3; color: var(--tl-dim); white-space: nowrap; }
-.fpr-page .fpr-card-reason { max-width: 62ch; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
+:is(.fpr-page, .fpr-sheet) .fpr-card-cta { flex: none; font-size: 13px; line-height: 1.3; color: var(--tl-dim); white-space: nowrap; }
+:is(.fpr-page, .fpr-sheet) .fpr-card-reason { max-width: 62ch; font-size: 13px; line-height: 1.5; color: var(--tl-dim); }
 /* The pair in use is marked, not hidden: the row stays pressable but reads as chosen. */
-.fpr-page .fpr-card-apply[aria-pressed="true"] { background: var(--tl-wash); cursor: default; }
-.fpr-page .fpr-card-apply[aria-pressed="true"] .fpr-card-cta { color: var(--tl-ink); }
+:is(.fpr-page, .fpr-sheet) .fpr-card-apply[aria-pressed="true"] { background: var(--tl-wash); cursor: default; }
+:is(.fpr-page, .fpr-sheet) .fpr-card-apply[aria-pressed="true"] .fpr-card-cta { color: var(--tl-ink); }
 @media (hover: hover) and (pointer: fine) {
-  .fpr-page .fpr-card-apply:hover:not([aria-pressed="true"]) { background: var(--tl-wash); }
+  :is(.fpr-page, .fpr-sheet) .fpr-card-apply:hover:not([aria-pressed="true"]) { background: var(--tl-wash); }
   .fpr-page .fpr-delivery > summary:hover { color: var(--tl-ink); }
 }
 /* A drawn caret so it can rotate; the UA marker is hidden below. */
@@ -253,6 +254,12 @@
    scrolls clear of it. On phones it sits on the tab bar, so both are counted. */
 html:has(.fpr-page) { scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 html.has-tabbar:has(.fpr-page) { scroll-padding-bottom: calc(var(--tabbar-h) + 72px + env(safe-area-inset-bottom, 0px)); }
+/* On a phone the toast rides above the dock: the dock's height (10px + a 44px
+   control + 10px + the hairline) is published for the toast's bottom offset in
+   global.css. From 768px the toast's own lift already clears the shorter dock. */
+@media (max-width: 767px) {
+  html:has(.fpr-page .fpr-dock) { --toast-dock: 65px; }
+}
 .fpr-page .fpr-dock-note { flex: 1; margin: 0; font-size: 13px; color: var(--tl-dim); }
 .fpr-page .fpr-dock-save { display: flex; }
 /* Save carries the same 13px label as the tool buttons beside it. */
@@ -303,23 +310,81 @@ html.has-tabbar:has(.fpr-page) { scroll-padding-bottom: calc(var(--tabbar-h) + 7
   .fpr-page .tl-pills { gap: 8px; }
   .fpr-page .svt-trigger { min-height: 44px; }
   .fpr-page .fpr-input { height: 44px; font-size: 16px; }
-  .fpr-page .fpr-card-apply { min-height: 56px; }
+  :is(.fpr-page, .fpr-sheet) .fpr-card-apply { min-height: 56px; }
 }
 /* The disclosure caret and the row wash ease; reduced motion drops it. */
 html[data-reduced-motion="true"] .fpr-page .fpr-delivery > summary::after,
+html[data-reduced-motion="true"] :is(.fpr-page, .fpr-sheet) .fpr-chev,
 html[data-reduced-motion="true"] .fpr-page .fpr-card-apply { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-delivery > summary::after,
+  :where(html:not([data-reduced-motion="false"])) :is(.fpr-page, .fpr-sheet) .fpr-chev,
   :where(html:not([data-reduced-motion="false"])) .fpr-page .fpr-card-apply { transition: none; }
 }
 
 /* ── Lock toggle: pressed reads as a filled wash, never colour alone (the icon
    and the word change too) ─────────────────────────────────────────────── */
-.fpr-page .fpr-lock[aria-pressed="true"] { background: var(--tl-wash-on); border-color: var(--tl-line-on); color: var(--tl-ink); }
+:is(.fpr-page, .fpr-sheet) .fpr-lock[aria-pressed="true"] { background: var(--tl-wash-on); border-color: var(--tl-line-on); color: var(--tl-ink); }
 
 /* ── Phone: the specimen leads, compact, and the controls follow ────────── */
 @media (max-width: 767px) {
   .fpr-page .fpr-specimen { min-height: 0; padding-top: 4px; }
   .fpr-page .fpr-h1 { font-size: clamp(28px, 9vw, 36px); margin-bottom: 8px; }
   .fpr-page .fpr-article .fpr-h2 { display: none; }
+}
+
+/* ── Street: the pair on a photograph ───────────────────────────────────────
+   Sample-brand colours live on this stage only. The photo carries a caption
+   plate in the body face; the heading and the paragraph sit on the page under
+   it. Light ground turns that page white. */
+.fpr-page .fpr-specimen--street { min-height: 0; padding: 0; border-radius: 16px; overflow: hidden; background: #E6E4DE; }
+.fpr-page .fpr-street-photo { position: relative; height: 300px; overflow: hidden; background: #3A3936; }
+.fpr-page .fpr-street-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 62% 30%; outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
+.fpr-page .fpr-plate { position: absolute; padding: 6px 10px; border-radius: 8px; background: rgba(19, 20, 22, .72); color: #EFEEEA; }
+.fpr-page .fpr-plate--cap { left: 12px; bottom: 12px; max-width: calc(100% - 24px); font-family: var(--fpr-b-ff); font-weight: 500; font-size: 14px; line-height: 20px; text-wrap: pretty; }
+.fpr-page .fpr-plate--tag { top: 12px; right: 12px; padding: 4px 8px; font-size: 12px; line-height: 16px; }
+.fpr-page .fpr-street-page { display: grid; gap: 16px; padding: 20px; color: #3A3936; }
+.fpr-page .fpr-street-h {
+  margin: 0;
+  min-height: 2lh;
+  color: #1A1A1A;
+  font-family: var(--fpr-h-ff);
+  font-weight: var(--fpr-h-fw);
+  font-size: 40px;
+  line-height: .95;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.fpr-page .fpr-street-voice { margin: 8px 0 0; color: #1A1A1A; font-family: var(--fpr-b-ff); font-weight: 500; font-size: 13px; line-height: 18px; }
+.fpr-page .fpr-street-p { max-width: 60ch; margin: 0; color: #3A3936; font-family: var(--fpr-b-ff); font-weight: var(--fpr-b-fw); font-size: 15px; line-height: 24px; text-wrap: pretty; }
+@media (min-width: 768px) {
+  .fpr-page .fpr-street-photo { height: 380px; }
+  .fpr-page .fpr-plate--cap { left: 20px; bottom: 16px; max-width: 190px; font-size: 15px; line-height: 22px; text-wrap: balance; }
+  .fpr-page .fpr-plate--tag { top: 16px; right: 16px; }
+  .fpr-page .fpr-street-page { padding: 24px 32px 28px; }
+  .fpr-page .fpr-street-h { font-size: 56px; }
+  .fpr-page .fpr-street-p { font-size: 16px; line-height: 25px; }
+}
+@media (min-width: 1024px) {
+  .fpr-page .fpr-street-page { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 32px; align-items: start; }
+  .fpr-page .fpr-street-h { font-size: 48px; }
+}
+@media (min-width: 1280px) {
+  .fpr-page .fpr-street-photo { height: 380px; }
+  .fpr-page .fpr-street-page { padding: 24px 40px 28px; column-gap: 40px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+  .fpr-page .fpr-street-h { font-size: 64px; }
+  .fpr-page .fpr-street-p { font-size: 17px; line-height: 27px; }
+}
+@media (max-width: 359px) { .fpr-page .fpr-street-h { font-size: 32px; } }
+
+/* ── The type-tools switcher in the bar ──────────────────────────────────── */
+.fpr-page .tl-item:has(> .ttn) { flex: 0 0 auto; }
+@media (max-width: 767px) {
+  .fpr-page .tl-item:has(> .ttn) { flex: 1 1 180px; min-width: 180px; }
 }

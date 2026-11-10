@@ -35,7 +35,7 @@
 // sentences those headlines are not.
 
 import { test, expect } from './base.js'
-import { go, watch, expectRendered } from './helpers.js'
+import { go, homeSectionsLoaded, watch, expectRendered } from './helpers.js'
 
 // The heading slots the front door still has. A rejected line is only half the
 // rule — the other half is that the page still says SOMETHING in its headings,
@@ -52,9 +52,8 @@ import { go, watch, expectRendered } from './helpers.js'
 //
 // Home.jsx's `#hsteps-title` / `#htools-title` / `#hcomm-title` are gone with
 // the page. Their successors on Spectrum, where one exists:
-//   · #hsteps-title (the tools/workbench heading)  → #sp-bench-h, which renders
-//     `SURFACE_LINE.toolsSectionHeading` — the design's line for that section, and
-//     the slot both rejected workbench headings were aimed at.
+//   · #hsteps-title (the tools/workbench heading)  → #bm-h, the bookmarks
+//     section's heading — the slot both rejected workbench headings were aimed at.
 //   · #hcomm-title  (the community showcase)        → #sp-disc-h, the library
 //     section. "Systems worth stealing." was rejected in this slot.
 //   · #htools-title (the six-category strip)        → NOTHING. Spectrum has no
@@ -67,7 +66,7 @@ import { go, watch, expectRendered } from './helpers.js'
 //
 // The pricing and FAQ headings are on /plans (the Pricing screen), not the
 // landing, and the design's proof band has a heading.
-const SLOTS = ['sp-bench-h', 'sp-disc-h', 'sp-spec-h', 'sp-proof-h', 'sp-close-h']
+const SLOTS = ['bm-h', 'exports-h', 'proof-h', 'start-h']
 
 const REJECTED = [
   {
@@ -128,6 +127,8 @@ test.describe('homepage copy the founder has already ruled out', () => {
   test('no headline the founder rejected by name is back on the page', async ({ page }) => {
     watch(page, 'the founder re-reading his own homepage')
     await go(page, '/')
+    // The sections below the first screen carry their headings only once they have mounted.
+    await homeSectionsLoaded(page)
 
     // POSITIVE CONTROL 1 — the route rendered its own content and is not the
     // ErrorBoundary card. Without this, every absence below is free.
@@ -189,6 +190,9 @@ test.describe('homepage copy the founder has already ruled out', () => {
     watch(page, 'a screen-reader user listing the front door by landmark')
     await go(page, '/')
     await expectRendered(page, '/')
+    // The sections under the first screen sit on an empty, labelled stand-in until they load;
+    // their headings only exist once they have.
+    await homeSectionsLoaded(page)
 
     const sections = await page.locator('main#main section[aria-labelledby]').evaluateAll(
       (els) => els.map((el) => {

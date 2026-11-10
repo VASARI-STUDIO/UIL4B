@@ -326,7 +326,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const options = rail.getByRole('option')
     // Six previews, each a made-up product (Slack Water, Sundial, Orra Workroom,
-    // Ridgeline, Hale & Okoro, Tally). Four are open to a free account and two
+    // Ridgeline, Hale & Okoro, Tenner). Four are open to a free account and two
     // are marked Pro in the list. The Poster and Social previews raise this to
     // eight, with four Pro, when they are built.
     await expect(options).toHaveCount(6)

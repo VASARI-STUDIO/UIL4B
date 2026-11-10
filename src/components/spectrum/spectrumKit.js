@@ -220,7 +220,7 @@ export function formatBytes(n) {
 export const EX_PIECES = ['Palette', 'Type scale', 'Compressed files', 'Icons']
 // The design's four sample files and its measured before/after sizes (KB).
 export const EX_FILES = [
-  ['image', 'hero-plateau.png', 4944, 263],
+  ['image', 'hero-cover.png', 4944, 263],
   ['image', 'card-ridge.png', 1820, 108],
   ['file-image', 'logo-mark.png', 74, 11],
   ['film-strip', 'loop-cover.png', 2410, 171],

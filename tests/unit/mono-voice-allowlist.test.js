@@ -143,6 +143,16 @@ const ALLOWED = {
     '.xfp-code': 'code',
     '.xfp-file': 'token',
   },
+  'pages/font-detail.css': {
+    '.fgd-code': 'code',
+    '.fgd-spec .fgd-weight-tag strong': 'value',
+    '.fgd-wpill': 'value',
+  },
+  'pages/font-pair-board.css': {
+    ':is(.fpr-page, .fpr-sheet) .fpr-wmenu': 'value',
+    ':is(.fpr-page, .fpr-sheet) .fpr-wopt': 'value',
+    '.fpr-page .fpr-frow-w': 'value',
+  },
   'pages/from-image-dialog.css': {
     '.plb-imgsel-hex': 'hex',
     '.plb-imgslot-hex': 'hex',
@@ -162,6 +172,20 @@ const ALLOWED = {
     '.hlp-run-hex': 'hex',
     '.hlp-run-note code': 'code',
     '.hlp-run-stop-hex': 'hex',
+  },
+  // the homepage boards: hex, size, byte and file-name values
+  'pages/home-bookmarks.css': {
+    '.bm-mono': 'value',
+    '.bmp-mono': 'value',
+  },
+  'pages/home-exports.css': {
+    '.hx-mono': 'value',
+  },
+  'pages/home-try.css': {
+    '.ht-cv-bytes': 'value',
+    '.ht-cv-meta': 'value',
+    '.ht-pal-hex': 'value',
+    '.ht-val': 'value',
   },
   'pages/icon-emoji-library.css': {
     '.iel-page .emd-value': 'code',
@@ -215,6 +239,9 @@ const ALLOWED = {
     '.seo-page .seo-tags-code': 'code',
     '.seo-page .seo-tags-note code': 'code',
   },
+  'pages/spectrum-chrome.css': {
+    '.spnav-search kbd': 'kbd',
+  },
   'pages/spectrum-mobile.css': {
     '.spm .spm-ic-fmt': 'debt',
     '.spm .spm-pb-add': 'debt',
@@ -237,8 +264,6 @@ const ALLOWED = {
     '.spt .spt-art .spt-alt-s': 'code',
   },
   'pages/spectrum.css': {
-    '.sp-ex-filebar b': 'token',
-    '.sp-ico-peek': 'code',
     '.sp-search .hcmd-kbd kbd': 'kbd',
     '.sp-search .hcmd-prompt::after': 'glyph',
   },
@@ -254,9 +279,23 @@ const ALLOWED = {
     ':is(.tl, .tl-sheet-layer) .tl-code': 'code',
     ':is(.tl, .tl-sheet-layer) .tl-kbd': 'kbd',
   },
+  'pages/type-scale-kerbside.css': {
+    '.tsc-page .tsk-tag': 'value',
+  },
   'pages/type-scale.css': {
+    '.tsc-page .tsc-dock-ratio-v': 'value',
+    '.tsc-page .tsc-ratio-v': 'value',
+    '.tsc-page .tsc-fr-chip': 'value',
+    '.tsc-page .tsc-fr-opt': 'value',
+    '.tsc-page .tsc-range .snapv-value': 'value',
+    '.tsc-page .tsc-range .snapv-input': 'value',
+    '.tsc-page .tsc-chip-n': 'token',
     '.tsc-page .tsc-row-name': 'token',
     '.tsc-page .tsc-row-num': 'value',
+    '.tsc-page .tsc-width-px': 'value',
+  },
+  'pages/type-tools-nav.css': {
+    '.ttn-mono': 'value',
   },
 }
 

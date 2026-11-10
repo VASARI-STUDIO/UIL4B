@@ -11,7 +11,7 @@ import { go, watch, expectRendered, signIn } from './helpers.js'
 const ring = (loc) => loc.evaluate((el) => {
   const cs = getComputedStyle(el, '::before')
   const box = el.getBoundingClientRect()
-  return { opacity: Number(cs.opacity), animation: cs.animationName, content: cs.content, w: box.width, h: box.height, x: box.x, y: box.y }
+  return { opacity: Number(cs.opacity), animation: cs.animationName, padding: cs.paddingTop, angle: cs.getPropertyValue('--chroma-angle').trim(), content: cs.content, w: box.width, h: box.height, x: box.x, y: box.y }
 })
 
 async function openPalette(page) {
@@ -34,9 +34,13 @@ test.describe('the chromatic outline', () => {
     const rest = await ring(quiet)
     expect(rest.opacity, 'the ring shows at rest').toBe(0)
     await quiet.hover()
-    await expect.poll(async () => (await ring(quiet)).opacity).toBe(1)
+    await expect.poll(async () => (await ring(quiet)).opacity).toBeCloseTo(0.92, 2)
     const on = await ring(quiet)
-    expect(on.animation).toBe('chroma-spin')
+    // It turns once and holds: no animation, 1.5px thick (from .5px at rest), at 140deg.
+    expect(rest.padding, 'the ring starts at .5px').toBe('0.5px')
+    await expect.poll(async () => (await ring(quiet)).padding).toBe('1.5px')
+    expect(on.animation).toBe('none')
+    await expect.poll(async () => (await ring(quiet)).angle).toBe('140deg')
     expect([on.w, on.h, on.x, on.y], 'hovering moved or resized the button').toEqual([rest.w, rest.h, rest.x, rest.y])
 
     await accent.hover()
@@ -55,7 +59,7 @@ test.describe('the chromatic outline', () => {
     await btn.focus()
     await page.keyboard.press('Shift+Tab')
     await page.keyboard.press('Tab')
-    await expect.poll(async () => (await ring(btn)).opacity).toBe(1)
+    await expect.poll(async () => (await ring(btn)).opacity).toBeCloseTo(0.92, 2)
   })
 
   test('reduced motion keeps the ring still', async ({ browser }) => {
@@ -65,8 +69,9 @@ test.describe('the chromatic outline', () => {
     const bar = await openPalette(page)
     const quiet = bar.locator('.tl-btn--quiet:visible').first()
     await quiet.hover()
-    await expect.poll(async () => (await ring(quiet)).opacity).toBe(1)
+    await expect.poll(async () => (await ring(quiet)).opacity).toBeCloseTo(0.92, 2)
     expect((await ring(quiet)).animation).toBe('none')
+    expect((await ring(quiet)).padding, 'the still ring is 1.5px').toBe('1.5px')
     await context.close()
   })
 
@@ -80,8 +85,9 @@ test.describe('the chromatic outline', () => {
     // A tap leaves the touch point over the button; on a touch screen that
     // must not count as hover.
     await btn.tap()
-    await page.waitForTimeout(300)
-    expect((await ring(btn)).opacity, 'the hover ring showed on a touch screen').toBe(0)
+    // The :active ring fades out over 280ms once the finger lifts; wait for it to settle at 0,
+    // which a hover ring stuck on by the touch point never would.
+    await expect.poll(async () => (await ring(btn)).opacity, { message: 'the hover ring showed on a touch screen' }).toBe(0)
     await context.close()
   })
 })

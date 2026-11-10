@@ -147,7 +147,7 @@ test('the selling regions this test scopes to actually exist', () => {
   // arbitrary list. At least one region has to name a real format.
   const known = EXPORT_FORMATS.map((f) => f.name)
   const plansRegions = sellingRegions(PLANS).join('')
-  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS|PRO_EXPORT_NAMES|FREE_EXPORT_NAMES/.test(plansRegions),
+  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS|PRO_EXPORT_NAMES|FREE_EXPORT_NAMES|proDocumentsLine|STYLE_GUIDE_EXPORT_NAMES/.test(plansRegions),
     'no export claim is visible inside the parsed benefit lists — the format guard is reading the wrong region')
 })
 
@@ -419,4 +419,54 @@ test('the "Made with UI L4B" line is claimed only for the free files that carry 
     const text = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: true })
     assert.equal(text.includes('Made with UI L4B'), f.credit !== false, `${id}: exportFormats.js says ${f.credit !== false ? 'credited' : 'no credit'}, the file disagrees`)
   }
+})
+
+// ── Export themes: no plan line sells them until they export ─────────────────
+import { EXPORT_THEMES_LIVE, EXPORT_THEME_EXPORTS, EXPORT_THEMES, freeThemes, themeExports } from '../../src/config/exportFormats.js'
+import { FREE_POINTS, FREE_LINES, PRO_ROWS, PLANS_LEAD, THEME_FACTS } from '../../src/config/planFacts.js'
+
+test('while the themes are off, no plan line mentions them; the Pro export lines are the panel\'s own', () => {
+  const lines = [...FREE_POINTS, ...PRO_POINTS, ...FREE_LINES, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub]), PLANS_LEAD].join(' | ')
+  if (EXPORT_THEMES_LIVE) {
+    assert.match(lines, /export themes/, 'the themes are on but no plan line names them')
+    return
+  }
+  for (const word of [/export themes?/i, /Presentation, Ticket/, /brand book/i, /Standards and Specification/]) {
+    assert.ok(!word.test(lines), `a plan line sells the export themes before they export: ${word}`)
+  }
+  for (const f of proOnlyFormats().filter((x) => x.group === 'book' || x.group === 'guidelines')) {
+    assert.ok(PRO_POINTS.at(-1).includes(f.name), `Pro no longer names ${f.name}`)
+  }
+})
+
+test('what the theme lines promise is what the theme data gates', () => {
+  // "UI kit free in N themes" and "Guidelines, brand book and kit" are Pro everywhere.
+  assert.equal(freeThemes().length, THEME_FACTS.freeCount)
+  for (const t of EXPORT_THEMES) {
+    const exportsOf = themeExports(t.id)
+    assert.equal(exportsOf.find((e) => e.id === 'ui-kit').pro, t.tier !== 'free', `${t.id}: the UI kit gate disagrees with the tier`)
+    for (const e of exportsOf.filter((x) => x.id !== 'ui-kit')) assert.equal(e.pro, true, `${t.id}/${e.id} is not Pro`)
+  }
+  assert.equal(EXPORT_THEME_EXPORTS.filter((e) => !e.proOnly).length, 1, 'more than the UI kit can be free')
+})
+
+test('the themes are not sold as formats: no theme export is a Pro format in the table', () => {
+  const formatNames = new Set(EXPORT_FORMATS.map((f) => f.name))
+  for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(!formatNames.has(e.name), `${e.name} is in the format table without being built`)
+})
+
+// ── The homepage plans section sells only what the plan lists say ────────────
+test('the homepage plans section reads its lines from planFacts and its amounts from plansPrices', () => {
+  const lists = stripComments(read('src/components/home/PlanLists.jsx'))
+  const section = stripComments(read('src/components/home/HomePlans.jsx'))
+  assert.match(lists, /from '\.\.\/\.\.\/config\/planFacts'/)
+  assert.match(lists, /\bfreeLines\b/)
+  assert.match(lists, /\bproRows\b/)
+  assert.match(lists, /\bFREE_EXCLUSION_FULL\b/)
+  assert.match(section, /\bplansLead\b/)
+  assert.match(section, /\bplanPriceFacts\b/)
+  assert.match(section, /usePrices\(\{ enabled: near \}\)/, 'the prices are not held back until the section is near')
+  // The figure of two Pro pages is true only once the themes export.
+  assert.match(section, /\{live && <PlanFigure \/>\}/, 'the figure shows without the themes switch')
+  assert.match(section, /themeById/, 'the figure\'s alt text is not read from the theme data')
 })

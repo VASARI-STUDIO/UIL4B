@@ -19,7 +19,7 @@
 // The footer rows hold hand-checked values (11px mono, 700, margin 0 0 3px,
 // line-height 1.65 x 11px), not values read back from the stylesheet.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { go, homeSectionsLoaded, signIn, watch } from './helpers.js'
 
 const SIZES = [
   { name: '390 touch', width: 390, height: 844, touch: true },
@@ -138,9 +138,16 @@ for (const size of SIZES) {
 
       test('a pointer click on a bar control does not pin the bar open', async ({ browser }) => {
         const { ctx, page } = await openPage(browser, size, account, url)
-        const theme = page.locator('.spnav-bar .spnav-icon:not(.spnav-burger)')
-        if (size.touch) await theme.tap()
-        else await theme.click()
+        // The search control: the pill from 768px, the icon button below. A full
+        // click would open the search dialog and take focus into it, so the
+        // press is released off the control: the press focuses it (as a pointer
+        // does) and no click follows.
+        const search = page.locator(size.width >= 768 ? '.spnav-search' : '.spnav-bar .spnav-icon:not(.spnav-burger)')
+        const box = await search.boundingBox()
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+        await page.mouse.down()
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height + 40)
+        await page.mouse.up()
         expect(await page.evaluate(() => document.activeElement.closest('.spnav') !== null),
           'precondition: the click left focus on a bar control').toBe(true)
         expect(await page.evaluate(() => document.activeElement.matches(':focus-visible')),
@@ -338,21 +345,18 @@ for (const size of SIZES) {
   const size = SIZES[0]
   test(`a same-page section link in the marketing menu lands focus on the section at ${size.name}`, async ({ browser }) => {
     const { ctx, page } = await openPage(browser, size, SIGNED_OUT, '/')
+    await homeSectionsLoaded(page)
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toBeVisible()
-    const hashLinks = page.locator('.spnav-menu a.spnav-mi[href^="#"]')
-    // Every item in the menu today is a route, so there is no hash link to take.
-    // When one is added this test starts exercising it.
-    test.skip(await hashLinks.count() === 0, 'the menu has no same-page section link (every item is a route)')
-    const href = await hashLinks.first().getAttribute('href')
-    await hashLinks.first().click()
+    await page.locator('.spnav-menu').getByRole('group', { name: 'This page' }).getByRole('link', { name: 'Examples' }).click()
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
-    await expect.poll(() => page.evaluate((id) => document.activeElement?.id === id, href.slice(1))).toBe(true)
-    const covered = await page.evaluate((id) => {
-      const top = document.getElementById(id).getBoundingClientRect().top
-      return top - document.querySelector('.spnav-bar').getBoundingClientRect().bottom
-    }, href.slice(1))
-    expect(covered, 'the section starts below the pill').toBeGreaterThanOrEqual(0)
+    // Focus lands on the section's heading, and the heading is on screen.
+    await expect.poll(() => page.evaluate(() => document.activeElement?.tagName === 'H2' && !!document.activeElement.closest('#examples')),
+      { message: 'focus did not land on the Examples heading' }).toBe(true)
+    await expect.poll(() => page.evaluate(() => {
+      const r = document.activeElement.getBoundingClientRect()
+      return r.top >= 0 && r.bottom <= innerHeight
+    }), { message: 'the heading is not on screen' }).toBe(true)
     await ctx.close()
   })
 }

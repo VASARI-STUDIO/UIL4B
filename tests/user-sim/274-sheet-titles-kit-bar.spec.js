@@ -30,6 +30,8 @@ const trigger = (page) => page.locator('#tsc-ratio')
 
 async function openPage(page) {
   await go(page, ROUTE)
+  // On a phone the ratio menu is in the settings sheet the dock opens.
+  if (page.viewportSize().width < 768) await page.locator('.tl-dock .tsc-dock-ratio').click()
   await expect(trigger(page)).toBeVisible()
 }
 

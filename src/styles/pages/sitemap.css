@@ -10,7 +10,7 @@
 /* A jump to a section (the lede's links) leaves its heading clear of the fixed nav:
    nav height + 24px of air, less the section's own top padding. */
 .spt-sitemap .spt-section[id] { scroll-margin-top: calc(var(--smap-nav-h) + 24px - clamp(40px, 6vw, 88px)); }
-.spt-sitemap { --smap-nav-h: calc(clamp(14px, 2vw, 26px) + 58px); }
+.spt-sitemap { --smap-nav-h: var(--spnav-h, 92px); }
 /* These two (and the .spt-group, .spt-row-text b rules below) override /tools rules of the
    same weight, so they carry .spt too. The two sheets load as separate chunks, and which
    one comes last depends on the route graph; the override cannot rest on load order. */
