@@ -232,8 +232,27 @@ const threeDecodersOffOrigin = () => ({
   },
 })
 
+// api/_lib/exportThemes is server-only: about 5 MB of themes, fonts and brand data that reads its fonts from disk. Nothing under
+// src/ may import it, whether directly or through an alias, or the browser bundle would carry it. The hook resolves every import
+// that comes from src/ and fails the build if one lands in that folder.
+const normPath = (p) => p.replace(/\?.*$/, '').replace(/\\/g, '/').toLowerCase()
+const SRC_DIR = normPath(resolve(import.meta.dirname, 'src')) + '/'
+const EXPORT_THEMES_DIR = normPath(resolve(import.meta.dirname, 'api/_lib/exportThemes')) + '/'
+const exportThemesStayOnServer = () => ({
+  name: 'uil4b-export-themes-server-only',
+  enforce: 'pre',
+  async resolveId(source, importer, options) {
+    if (!importer || !normPath(importer).startsWith(SRC_DIR) || source.startsWith('\0')) return null
+    const found = await this.resolve(source, importer, { ...options, skipSelf: true })
+    if (found && normPath(found.id).startsWith(EXPORT_THEMES_DIR)) {
+      this.error(`${importer.replace(/\\/g, '/')} imports ${source}, which is under api/_lib/exportThemes. That folder is server-only and must not reach the browser bundle.`)
+    }
+    return null
+  },
+})
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), threeDecodersOffOrigin(), pricingHtml(), learnSearchTextPlugin(), assertFirebaseIsDeferred(), ...(mode === 'test' ? [testSessionDouble()] : [])],
+  plugins: [react(), threeDecodersOffOrigin(), exportThemesStayOnServer(), pricingHtml(), learnSearchTextPlugin(), assertFirebaseIsDeferred(), ...(mode === 'test' ? [testSessionDouble()] : [])],
   resolve: { alias: firebaseAccessAlias },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),

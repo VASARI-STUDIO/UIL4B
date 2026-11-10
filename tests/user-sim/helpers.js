@@ -1243,9 +1243,10 @@ export async function keyToRest(page, key, what = 'the page') {
 // (1024 and up) or the Filters sheet (below 1024), so open whichever the page offers,
 // type, check the value took, and close it again.
 export async function fillGalleryPreviewText(page, text) {
-  const bar = page.locator('[data-tool-toolbar]')
-  await expect(bar, 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
-  const onRow = bar.getByRole('textbox', { name: 'Preview text' })
+  // Font Gallery has two toolbars (name and filters); the field may sit on either.
+  const bars = page.locator('[data-tool-toolbar]')
+  await expect(bars.first(), 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
+  const onRow = bars.getByRole('textbox', { name: 'Preview text' }).first()
   if (await onRow.isVisible()) {
     await onRow.fill(text)
     await expect(onRow).toHaveValue(text)

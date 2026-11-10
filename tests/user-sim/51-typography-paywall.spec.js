@@ -157,14 +157,19 @@ test.describe('Typography: browsing stays free under every view', () => {
     const seenFirst = new Set()
     let drove = 0
 
-    for (const cat of ['Sans Serif', 'Serif', 'Display', 'Script', 'All']) {
-      if (!(await chooseFilter(page, 'Category', cat))) continue
+    // The gallery's categories as it spells them, Mono included. A label the
+    // control does not offer would be skipped without a word, so a miss fails.
+    const missed = []
+    for (const cat of ['Sans serif', 'Serif', 'Display', 'Script', 'Mono', 'All']) {
+      if (!(await chooseFilter(page, 'Category', cat))) { missed.push(cat); continue }
       drove += 1
       await page.waitForTimeout(300)
       const state = await galleryState(page)
       expect(state.locked, `a locked placeholder appeared in category "${cat}"`).toBe(0)
       if (state.first) seenFirst.add(`${cat}:${state.first}`)
     }
+
+    expect(missed, 'categories the gallery did not offer').toEqual([])
 
     for (const sort of ['Popular', 'A–Z', 'Most weights']) {
       if (!(await chooseFilter(page, 'Sort', sort))) continue
@@ -197,13 +202,13 @@ test.describe('Typography: browsing stays free under every view', () => {
     expect(await page.locator(LOCKED).count(), 'Font Pair rendered a locked placeholder').toBe(0)
 
     await go(page, SCALE)
-    // At 1440 the export is the Code half of the Page | Code switch; below the split it is the Code
-    // view of the Scale / Page / Code switch.
+    // From 768 the export is the Code drawer the docked bar's Code button opens; a phone
+    // finds it on the settings sheet's Code tab.
     expect(await showTypeScaleCode(page), 'the default window is wide enough for the split').toBe('split')
     const scaleExport = await page.locator('#tsc-export').innerText()
     expect(scaleExport.length, 'Type Scale produced no tokens signed out').toBeGreaterThan(120)
     await expect(page.getByRole('button', { name: /^Copy (CSS|config|SCSS)$/i })).toBeEnabled()
-    await expect(page.getByRole('button', { name: 'Code', exact: true }), 'Code is a view beside the scale').toBeVisible()
+    await expect(page.getByRole('button', { name: 'Code', exact: true }), 'Code is a button in the docked bar').toBeVisible()
     expect(await page.locator(LOCKED).count(), 'Type Scale rendered a locked placeholder').toBe(0)
   })
 })

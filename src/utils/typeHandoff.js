@@ -15,8 +15,25 @@
 // Explicit extension so `node --test` can import this module directly for the
 // unit suite; Vite resolves it identically.
 import { createHandoffSlot } from './handoffSlot.js'
+import { DEFAULT_DESIGN } from '../data/designDefaults.js'
 
 export const TYPE_HANDOFF_VERSION = 1
+
+// A design's type scale or family as the user's own choice, or null. A design
+// with nothing saved carries the blank project's seed (Inter, 16px, 1.25), and
+// that seed is not a choice, so it must not outrank a tool's own defaults.
+export function ownTypeScale(design) {
+  const seed = DEFAULT_DESIGN.typeScale
+  const own = design?.typeScale
+  if (!own) return null
+  return Object.keys({ ...seed, ...own }).some(k => own[k] !== seed[k]) ? own : null
+}
+
+export function ownFont(design, slot) {
+  const seed = DEFAULT_DESIGN.fonts[slot]
+  const own = design?.fonts?.[slot]
+  return own?.family && (own.family !== seed.family || own.weight !== seed.weight) ? own : null
+}
 
 // Google's own category vocabulary. Anything else is dropped rather than
 // guessed at — a bogus category would pick the wrong generic fallback.

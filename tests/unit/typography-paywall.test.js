@@ -438,7 +438,9 @@ test('4 · the tools that build a type system offer a way to keep it', () => {
   // the page must call it, put a trigger in the toolbar items and mount the panel.
   assert.match(SCALE, /^import \{ useSaveTypeSystemToolbar \} from '\.\.\/hooks\/useSaveTypeSystem'$/m,
     'TypeScale does not use the save gate')
-  assert.match(SCALE, /useSaveTypeSystemToolbar\(\{/, 'TypeScale imports the save gate but never calls it')
+  assert.match(SCALE, /useSaveTypeSystemToolbar\((?:\{|saveOptions\))/, 'TypeScale imports the save gate but never calls it')
+  // On phones the same options mount the save control in the dock.
+  assert.match(SCALE, /<SaveTypeSystem \{\.\.\.saveOptions\} \/>/, 'TypeScale has no save control in the phone dock')
   assert.match(SCALE, /onClick=\{save\.trigger\}/, 'TypeScale has no toolbar button wired to the save gate')
   assert.match(SCALE, /<SaveTypeSystemPanel[\s/>]/, 'TypeScale never mounts the save menu')
   // Distinct gate ids, so P-001's funnel can say WHICH surface converted rather

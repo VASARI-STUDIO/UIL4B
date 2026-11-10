@@ -1,0 +1,147 @@
+/* The type-tools switcher: a track of three links, each naming the tool and the
+ * project's answer for it. Two-line stacks on a phone, one line from 768. */
+.ttn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  height: 44px;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--t0) 5%, var(--bg-0));
+}
+.ttn-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--t0);
+  font-family: var(--font);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.ttn-link::after { content: ""; position: absolute; inset: -4px 0; }
+.ttn-link:active { transform: scale(.97); }
+.ttn-link[aria-current="page"] { background: color-mix(in srgb, var(--t0) 14%, transparent); }
+.ttn-link:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+.ttn-l { font-size: 13px; line-height: 18px; font-weight: 500; color: color-mix(in srgb, var(--t0) 56%, var(--bg-0)); }
+.ttn-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 15px; line-height: 20px; color: color-mix(in srgb, var(--t0) 72%, var(--bg-0)); }
+.ttn-link[aria-current="page"] .ttn-v { color: var(--t0); }
+.ttn-mono { font-family: var(--mono, 'Geist Mono', ui-monospace, monospace); font-size: 14px; font-weight: 400; }
+.ttn-ls, .ttn-vs { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .ttn-link:not([aria-current="page"]):hover { background: color-mix(in srgb, var(--t0) 8%, transparent); }
+  .ttn-link:hover .ttn-v { color: var(--t0); }
+}
+@media (max-width: 899px) {
+  .ttn-wt { display: none; }
+  .ttn-link { padding: 0 12px; }
+}
+@media (max-width: 767px) {
+  .ttn { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; height: 52px; }
+  .ttn-link { flex-direction: column; justify-content: center; gap: 0; height: 44px; padding: 0 4px; }
+  .ttn-link::after { inset: 0; }
+  .ttn-lw, .ttn-vw { display: none; }
+  .ttn-ls, .ttn-vs { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .ttn-ls { font-size: 13px; line-height: 18px; font-weight: 500; color: color-mix(in srgb, var(--t0) 56%, var(--bg-0)); }
+  .ttn-vs { font-size: 12px; line-height: 16px; }
+  .ttn-link[aria-current="page"] .ttn-ls { color: var(--t0); }
+  .ttn-l, .ttn-v { display: contents; }
+  .ttn-v { color: inherit; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .ttn-link { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .ttn-link:active { transform: none; }
+}
+html[data-reduced-motion="true"] .ttn-link { transition: none; }
+html[data-reduced-motion="true"] .ttn-link:active { transform: none; }
+
+/* ── The rest of the shared bar: round Back, project chip, ground control ───
+   Controls are fills with no border: the ink at 5% over the page. */
+.ttb-back, .ttb-chip, .ttb-seg, .ttb-menu-ground {
+  --ttb-fill: color-mix(in srgb, var(--t0) 5%, var(--bg-0));
+  --ttb-sel: color-mix(in srgb, var(--t0) 14%, transparent);
+  --ttb-hover: color-mix(in srgb, var(--t0) 8%, transparent);
+}
+.ttb-back .tl-btn { border: 0; border-radius: 999px; background: var(--ttb-fill); color: var(--t0); }
+.ttb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: var(--ttb-fill);
+  color: var(--t0);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+}
+.ttb-chip-ico { flex: none; color: color-mix(in srgb, var(--t0) 72%, var(--bg-0)); }
+.ttb-chip-name { min-width: 0; max-width: 18ch; overflow: hidden; text-overflow: ellipsis; }
+.ttb-chip-tag { color: color-mix(in srgb, var(--t0) 56%, var(--bg-0)); font-weight: 400; }
+.ttb-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--ttb-fill);
+  flex: none;
+}
+.ttb-seg > button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: color-mix(in srgb, var(--t0) 56%, var(--bg-0));
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms var(--tl-ease), color 150ms var(--tl-ease), transform 120ms var(--tl-ease);
+}
+.ttb-seg > button::after { content: ""; position: absolute; inset: -6px 0; }
+.ttb-seg > button:active { transform: scale(.97); }
+.ttb-seg > button[aria-pressed="true"] { background: var(--ttb-sel); color: var(--t0); }
+.ttb-seg > button:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+.ttb-sq { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.ttb-sq--dark { background: #060607; box-shadow: inset 0 0 0 1px rgba(239, 238, 234, .4); }
+.ttb-sq--light { background: #EFEEEA; box-shadow: inset 0 0 0 1px rgba(11, 12, 14, .2); }
+.ttb-menu-ground { display: grid; gap: 4px; padding: 6px 8px 8px; }
+.ttb-menu-label { font-family: var(--font); font-size: 13px; line-height: 18px; font-weight: 500; color: color-mix(in srgb, var(--t0) 72%, var(--bg-0)); }
+.ttb-seg--full { display: flex; height: 44px; padding: 4px; }
+.ttb-seg--full > button { flex: 1; height: 36px; }
+@media (hover: hover) and (pointer: fine) {
+  .ttb-back .tl-btn:hover { background: color-mix(in srgb, var(--t0) 10%, var(--bg-0)); }
+  .ttb-seg > button:not([aria-pressed="true"]):hover { color: var(--t0); background: var(--ttb-hover); }
+}
+@media (max-width: 767px) {
+  .ttb-chip { display: none; }
+  .ttb-seg { height: 44px; padding: 4px; }
+  .ttb-seg > button { height: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .ttb-seg > button { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .ttb-seg > button:active { transform: none; }
+}
+html[data-reduced-motion="true"] .ttb-seg > button { transition: none; }
+html[data-reduced-motion="true"] .ttb-seg > button:active { transform: none; }

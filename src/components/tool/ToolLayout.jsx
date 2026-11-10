@@ -33,6 +33,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import usePopover from '../../hooks/usePopover'
 import useSlideIndicator from '../../hooks/useSlideIndicator'
 import { requestFeedbackDialog } from '../../utils/errorReport'
+import { lockScroll } from '../../utils/scrollLock'
 import { snapToTarget, stepFromKey } from '../../utils/sliderKeys'
 import ToolIcon from './ToolIcon'
 import MenuSelect from './MenuSelect'
@@ -141,7 +142,7 @@ function useKeyboardOpen(active) {
 // the brand kit walkthrough owns the foot of the screen.
 export function ToolLayout({
   className, title, titleId, showTitle = true, back, items, primary, overflowLabel, overflowIcon,
-  feedback, bleed = false, children, ...rest
+  feedback, bleed = false, onOverflowOpenChange, children, ...rest
 }) {
   const phone = useMedia(PHONE)
   const walkthrough = useRootClass('bkit-on')
@@ -175,7 +176,7 @@ export function ToolLayout({
       <ToolToolbar
         title={title} titleId={titleId} showTitle={showTitle} back={back}
         items={items} primary={docked ? null : primary} overflowLabel={overflowLabel} overflowIcon={overflowIcon}
-        feedback={feedback}
+        feedback={feedback} onOpenChange={onOverflowOpenChange}
       />
       <div className={bleed ? 'tl-body tl-body--bleed' : 'tl-body'}>{children}</div>
       {docked && <div className={cx('tl-dock', keyboard && 'is-away')} data-tl-dock="">{primary}</div>}
@@ -184,7 +185,8 @@ export function ToolLayout({
 }
 
 // ── ToolToolbar ───────────────────────────────────────────────────────────
-// title        the tool's name — the h1 and the 15px label
+// title        the tool's name — the h1 and the 15px label (omit it on a
+//              second toolbar row that sits under a titled one)
 // titleId      optional id for the h1
 // showTitle    false → the h1 is sr-only
 // back         { to, label, text, hint, history } | false (see ToolBack).
@@ -219,7 +221,7 @@ export function ToolLayout({
 //              false for a toolbar that is not on a tool page.
 export function ToolToolbar({
   title, titleId, showTitle = true, back, items = [], primary, overflowLabel = 'More', overflowIcon = 'dots-three', className,
-  feedback = true,
+  feedback = true, onOpenChange,
 }) {
   const navigate = useNavigate()
   const backProps = back === false ? null : { to: '/tools', label: 'Back to all tools', history: false, ...(back || {}) }
@@ -232,6 +234,10 @@ export function ToolToolbar({
   const menuId = useId().replace(/:/g, '')
   const close = useCallback(() => setOpen(false), [setOpen])
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { arrowNav: true })
+  // The phone sheet covers the page, so the page behind it must not scroll.
+  useEffect(() => (open && phone ? lockScroll() : undefined), [open, phone])
+  // The page can react to the phone sheet (the Font Pair scrolls its headline clear of it).
+  useEffect(() => { onOpenChange?.(open && phone) }, [open, phone, onOpenChange])
 
   // An item may carry `measure`: a value that changes its width (a select's label), so a new one is measured again.
   // The primary is measured with the row, so gaining or losing one is a new set too.
@@ -438,7 +444,7 @@ export function ToolToolbar({
       data-tool-toolbar=""
     >
       {backProps && <span data-tl-fixed="" className="tl-fixed"><ToolBack {...backProps} /></span>}
-      <h1 id={titleId} data-tl-fixed="" className={showTitle ? 'tl-title' : 'sr-only'}>{title}</h1>
+      {title && <h1 id={titleId} data-tl-fixed="" className={showTitle ? 'tl-title' : 'sr-only'}>{title}</h1>}
       {inlineItems}
       {showMore && (
         <div data-tl-more="" className={cx('tl-more', !endStarted && 'tl-item--end')}>
