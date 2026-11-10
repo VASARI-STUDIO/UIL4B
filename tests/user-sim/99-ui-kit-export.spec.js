@@ -187,9 +187,7 @@ test.describe('the UI kit export', () => {
     await expect(again.getByRole('group', { name: 'Identity' }).getByLabel('Name')).toHaveValue('Harbour Studio')
   })
 
-  // The Pro panel promises the kit "with your name, in the kit's identity section", and a Pro kit used to be filed and titled by
-  // that name. Themed zips are named from the open project (themedZipName) and the request carries the project's name, so the
-  // typed name reaches neither. Red on purpose until the runner (or the design) says which way this should go.
+  // A Pro kit is titled and filed by the identity name typed in the panel: it is the themed request's projectName and the zip's name.
   test('Pro: the name typed in the panel names the kit, in the request and on the file', async ({ page }) => {
     watch(page, 'a Pro subscriber naming their kit before exporting it')
     const calls = await mockThemeApi(page)
