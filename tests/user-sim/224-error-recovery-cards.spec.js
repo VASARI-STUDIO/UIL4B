@@ -413,11 +413,14 @@ for (const variant of VARIANTS) {
     test('Try again requests the failed file a second time', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card, asked } = await landLoadFailed(page, variant)
-        expect(asked.count).toBe(1)
+        // Chromium 158 retries a failed dynamic import once by itself, so the card can stand on
+        // one or two failed requests. Pin that the file was asked for, then that Try again asks again.
+        expect(asked.count).toBeGreaterThanOrEqual(1)
+        const before = asked.count
         const reloaded = page.waitForEvent('domcontentloaded')
         await card.getByRole('button', { name: 'Try again' }).click({ noWaitAfter: true })
         await reloaded
-        await expect.poll(() => asked.count, { message: 'Try again did not request the file again' }).toBe(2)
+        await expect.poll(() => asked.count, { message: 'Try again did not request the file again' }).toBeGreaterThan(before)
       })
     })
 

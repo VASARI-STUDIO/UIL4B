@@ -780,10 +780,9 @@ export default function UIKitGuide({ step, linked = false }) {
     const fresh = startNewMeta({ status, name: home?.name || '', slotWhen })
     const others = canSaveProjects ? otherProjects(projects, home?.id ?? design?.source?.projectId ?? null) : []
     const startFirst = status === 'saved'
-    const rowRef = (which) => ((which === 'new') === startFirst ? defaultRowRef : null)
     const continueItem = (
       <li key="continue" className="bkit-choose-item">
-        <button type="button" className="bkit-choose-row" data-choose-row="continue" ref={rowRef('continue')} onClick={continueKit}>
+        <button type="button" className="bkit-choose-row" data-choose-row="continue" ref={startFirst ? null : defaultRowRef} onClick={continueKit}>
           <span className="bkit-choose-text">
             <span className="bkit-choose-label">{cont.label}</span>
             <span className="bkit-choose-meta">{cont.meta}</span>
@@ -798,7 +797,7 @@ export default function UIKitGuide({ step, linked = false }) {
     )
     const newItem = (
       <li key="new" className="bkit-choose-item">
-        <button type="button" className="bkit-choose-row" data-choose-row="new" ref={rowRef('new')} onClick={startNewKit}>
+        <button type="button" className="bkit-choose-row" data-choose-row="new" ref={startFirst ? defaultRowRef : null} onClick={startNewKit}>
           <span className="bkit-choose-text">
             <span className="bkit-choose-label">Start a new brand kit</span>
             {fresh && <span className="bkit-choose-meta">{fresh}</span>}

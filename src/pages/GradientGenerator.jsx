@@ -997,6 +997,52 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // A gallery gradient is free to view + copy; reshaping it — adding/moving/
+  // recolouring stops, switching type or angle, flipping — is Pro. `editLocked`
+  // drives the visual cues; `guardEdit` intercepts every edit action, raises the
+  // Pro modal and returns false so the caller bails. Returns true (edit allowed)
+  // for Pro users and for any gradient not sourced from the gallery.
+  const editLocked = fromLibrary && !isPro
+  const guardEdit = useCallback(() => {
+    if (!fromLibrary || isPro) return true
+    openProModal({
+      gate: 'gradient-gallery-edit',
+      eyebrow: 'Pro gradient tools',
+      title: 'Editing gallery gradients is Pro',
+      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Press Reset, Random or Shuffle from palette to start an editable gradient of your own.',
+      features: [
+        'Add, move & recolour stops on any gallery gradient',
+        'Switch gradient type and fine-tune the angle',
+        'Flip and randomise straight from your own palette',
+        'Unlimited saved projects across every colour tool',
+      ],
+    })
+    return false
+  }, [fromLibrary, isPro, openProModal])
+
+  // Back: the last ten looks a roll, a preset or Reset replaced (utils/gradientHistory).
+  // `lookRef` holds the look on screen, so the push needs no stale closure.
+  const lookRef = useRef(null)
+  useLayoutEffect(() => { lookRef.current = { stops, type, angle, space } })
+  const historyRef = useRef([])
+  const [backCount, setBackCount] = useState(0)
+  const pushHistory = useCallback(() => {
+    historyRef.current = pushLook(historyRef.current, lookRef.current)
+    setBackCount(historyRef.current.length)
+  }, [])
+
+  const applyPreset = useCallback((p) => {
+    // A preset replaces the stops, so stop locks clear; the geometry locks are the
+    // person's settings and stay on (a locked angle keeps the one the preset set).
+    pushHistory()
+    setStops(clearStopLocks(normaliseStops(p.stops)))
+    setType(p.type)
+    setAngle(p.angle)
+    if (p.space) setSpace(p.space)
+    selectOnly(0)
+    setFromLibrary(false)
+  }, [selectOnly, pushHistory])
+
   // ── Hand-offs: gallery (?gs=…&gt=…&ga=…) and Discover (?preset=&tab=) ──
   useEffect(() => {
     const incoming = decodeGradientParams(searchParams)
@@ -1025,52 +1071,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // A gallery gradient is free to view + copy; reshaping it — adding/moving/
-  // recolouring stops, switching type or angle, flipping — is Pro. `editLocked`
-  // drives the visual cues; `guardEdit` intercepts every edit action, raises the
-  // Pro modal and returns false so the caller bails. Returns true (edit allowed)
-  // for Pro users and for any gradient not sourced from the gallery.
-  const editLocked = fromLibrary && !isPro
-  const guardEdit = useCallback(() => {
-    if (!fromLibrary || isPro) return true
-    openProModal({
-      gate: 'gradient-gallery-edit',
-      eyebrow: 'Pro gradient tools',
-      title: 'Editing gallery gradients is Pro',
-      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Press Reset, Random or Shuffle from palette to start an editable gradient of your own.',
-      features: [
-        'Add, move & recolour stops on any gallery gradient',
-        'Switch gradient type and fine-tune the angle',
-        'Flip and randomise straight from your own palette',
-        'Unlimited saved projects across every colour tool',
-      ],
-    })
-    return false
-  }, [fromLibrary, isPro, openProModal])
-
-  // Back: the last ten looks a roll, a preset or Reset replaced (utils/gradientHistory).
-  // `lookRef` holds the look on screen, so the push needs no stale closure.
-  const lookRef = useRef(null)
-  lookRef.current = { stops, type, angle, space }
-  const historyRef = useRef([])
-  const [backCount, setBackCount] = useState(0)
-  const pushHistory = useCallback(() => {
-    historyRef.current = pushLook(historyRef.current, lookRef.current)
-    setBackCount(historyRef.current.length)
-  }, [])
-
-  const applyPreset = useCallback((p) => {
-    // A preset replaces the stops, so stop locks clear; the geometry locks are the
-    // person's settings and stay on (a locked angle keeps the one the preset set).
-    pushHistory()
-    setStops(clearStopLocks(normaliseStops(p.stops)))
-    setType(p.type)
-    setAngle(p.angle)
-    if (p.space) setSpace(p.space)
-    selectOnly(0)
-    setFromLibrary(false)
-  }, [selectOnly, pushHistory])
 
   const goBack = useCallback(() => {
     const { look, history } = popLook(historyRef.current)

@@ -837,7 +837,14 @@ test.describe('selecting several stops by touch at 390px', () => {
     // screenshot. A laptop with a touch screen, or a pen, reads the same: the mode
     // a long press started is what the taps follow, not the media query.
     await page.screenshot({ fullPage: true })
-    expect(await coarse(), 'the screenshot made the pointer fine').toBe(false)
+    // Playwright 1.65 no longer flips the pointer on a full-page screenshot, so
+    // when it has not, do the same thing it used to do: turn touch emulation off,
+    // which makes the page read (pointer: fine).
+    if (await coarse()) {
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false })
+    }
+    expect(await coarse(), 'the pointer reads fine').toBe(false)
     await expect(selCount(page), 'and the mode is still on').toHaveText('1 selected')
     await expect(page.locator('.grd-sel-clear')).toHaveText('Done')
     await stopSelect(page, 4).tap()

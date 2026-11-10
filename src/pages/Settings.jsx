@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useId } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { processAvatarImage } from '../utils/imageProcessing'
@@ -1053,7 +1053,9 @@ export default function Settings({ toast }) {
   // the latest auth state, and the edit is dropped if it is no longer the
   // account the edit was made for.
   const uidRef = useRef(user?.uid)
-  uidRef.current = user?.uid
+  useLayoutEffect(() => { uidRef.current = user?.uid })
+  // Set by the signed-out landing's sign-in action; read by the effect that finishes it.
+  const [finishAfterSignIn, setFinishAfterSignIn] = useState(false)
   const saveProfile = async (fields, what) => {
     const refused = () => new Error(`Your ${what} could not be saved. Nothing was changed. Please try again.`)
     const uid = user?.uid
@@ -1202,7 +1204,6 @@ export default function Settings({ toast }) {
   // the answer is said, the same words the signed-in landing uses. It waits for
   // the account to be in (refreshEmailVerified belongs to the signed-in user),
   // and a null answer (the account changed mid-read) stays silent.
-  const [finishAfterSignIn, setFinishAfterSignIn] = useState(false)
   useEffect(() => {
     if (!finishAfterSignIn || !user) return
     setFinishAfterSignIn(false)

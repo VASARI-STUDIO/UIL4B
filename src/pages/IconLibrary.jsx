@@ -3710,7 +3710,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // parallel but append per-pack as each resolves (never Promise.all-block), and
   // keep pack order as lists arrive. Hold the skeleton until a page is ready
   // or all packs settle, with a timeout for slow packs.
-  const browseAll = useCallback((manualRetry = false) => {
+  const browseAll = useCallback(function browseAll(manualRetry = false) {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
@@ -3844,7 +3844,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // Logo.dev pack — a curated grid of popular brands. No network: the logos are
   // <img> URLs resolved lazily by the browser as cells scroll into view.
-  const browseLogos = useCallback(() => {
+  const browseLogos = useCallback(function browseLogos() {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
@@ -3878,7 +3878,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // Browse an entire icon set via the /collection endpoint.
   // Browse one pack, optionally narrowed by an active collection chip — pack
   // and chip are independent filters that compose (chip = style within pack).
-  const browsePack = useCallback((packFilter, groupKey = null, manualRetry = false) => {
+  const browsePack = useCallback(function browsePack(packFilter, groupKey = null, manualRetry = false) {
     groupKey = ICON_GROUPS[groupKey] ? groupKey : null
     setSource('pack'); setGroup(groupKey || null)
     // "All packs" first: the empty string is not a pack and must never be put
@@ -3928,7 +3928,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
-  const browseGroup = useCallback((groupKey, manualRetry = false) => {
+  const browseGroup = useCallback(function browseGroup(groupKey, manualRetry = false) {
     const g = ICON_GROUPS[groupKey]
     if (!g) { browseAll(); return }
     // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
@@ -3981,7 +3981,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // markup (`icon.svg`), so nothing here is fetched and nothing here belongs to
   // a pack we sell. `setGated(null)` is the line that guarantees it — reaching
   // My Icons always clears a wall rather than inheriting one.
-  const browseCustom = useCallback(() => {
+  const browseCustom = useCallback(function browseCustom() {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack(''); setGated(null)
@@ -4041,7 +4041,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       .catch(() => { if (rid === reqId.current) setTeasePending(false) })
   }, [tier])
 
-  const doSearch = useCallback((q, scope = {}, manualRetry = false) => {
+  const doSearch = useCallback(function doSearch(q, scope = {}, manualRetry = false) {
     q = (q || '').trim()
     const { pack: packFilter = '', group: requestedGroup = null } = scope
     const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null

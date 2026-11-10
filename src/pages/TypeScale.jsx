@@ -284,12 +284,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // the Scale / Page / Code switch.
   const [workEl, setWorkEl] = useState(null)
   const [work, setWork] = useState({ left: 0, width: 0 })
-  // The split is entered at SPLIT_MIN and left only below SPLIT_LEAVE, held in a
-  // ref, so a scrollbar appearing or going away cannot flip the layout back and forth.
-  const splitRef = useRef(false)
-  if (work.width >= SPLIT_MIN) splitRef.current = true
-  else if (work.width < SPLIT_LEAVE) splitRef.current = false
-  const split = splitRef.current
+  // The split is entered at SPLIT_MIN and left only below SPLIT_LEAVE, held in
+  // state, so a scrollbar appearing or going away cannot flip the layout back and forth.
+  const [split, setSplit] = useState(false)
+  if (work.width >= SPLIT_MIN && !split) setSplit(true)
+  else if (work.width < SPLIT_LEAVE && split) setSplit(false)
   // A phone is one scroll: the width, the page, then the ladder, with Code in the
   // sheet. From 768 the Scale / Page / Code switch (or the split) takes over.
   const stackedView = phone && !split
@@ -740,7 +739,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     summary: `${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}. Kept with the project’s palette and tokens.`,
     toast,
   }
-  const save = useSaveTypeSystemToolbar(saveOptions)
+  const { triggerRef: saveTriggerRef, popRef: savePopRef, ...save } = useSaveTypeSystemToolbar(saveOptions)
 
   // The open project's name, or empty for the sample (the chip then reads "Kerbside · Sample").
   const projectName = ((projects || []).find(p => p.id === design?.source?.projectId)?.name || '').trim()
@@ -1561,7 +1560,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           </div>
           <div className="tsc-save-wrap">
             <ToolButton
-              ref={save.triggerRef}
+              ref={saveTriggerRef}
               icon="bookmark-simple"
               className="tsc-save"
               aria-expanded={save.open}
@@ -1570,7 +1569,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
             >
               Save to a project
             </ToolButton>
-            <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
+            <SaveTypeSystemPanel open={save.open} panelRef={savePopRef} menuProps={save.menuProps} />
           </div>
         </div>
       )}

@@ -56,6 +56,12 @@ const RUNGS = [
   { name: 'signed in, free', plan: 'free', cap: GALLERY_TIER_LIMITS.free, wall: 'pro' },
 ]
 
+// A hex is found when it stands alone, or as rgb(). It is NOT found inside a longer
+// hex run: the build minifies the boot skeleton's `rgba(15,23,42,.1)` to the
+// 8-digit `#0f172a1a`, whose first six digits are a withheld stop's value by
+// coincidence and are not a gradient handing its stops over.
+const inHay = (hay, hex) => new RegExp(`(?<![0-9A-F])${hex.slice(1)}(?![0-9A-F])`).test(hay) || hay.includes(rgbOf(hex).toUpperCase())
+
 // `skipFade` leaves the end gate's faded cards out: the live gallery and the rest
 // of the page, text, markup, gradient CSS, paint and names alike.
 async function surfaces(page, { skipFade = false } = {}) {
@@ -111,7 +117,7 @@ for (const rung of RUNGS) {
       // owns. Both forms are searched below; this proves at least one of them
       // can be found when the value really is there.
       const { html, images } = await surfaces(page)
-      const found = (hay, hex) => hay.includes(hex) || hay.includes(hex.slice(1)) || hay.includes(rgbOf(hex).toUpperCase())
+      const found = inHay
       expect(found(html, CONTROL), `the open control ${CONTROL} is missing — the gallery did not render`).toBe(true)
       expect(found(images, CONTROL), 'no gradient is painted — the gallery did not render').toBe(true)
     })
@@ -130,7 +136,7 @@ for (const rung of RUNGS) {
       // Searched in BOTH forms everywhere. See the control above: the page
       // writes its gradients as rgb(), so hex alone would be a check that
       // cannot fail.
-      const hit = (hay, hex) => hay.includes(hex) || hay.includes(hex.slice(1)) || hay.includes(rgbOf(hex).toUpperCase())
+      const hit = inHay
       const sweep = (s, telltale) => {
         const painted = new Set(s.paint)
         return [

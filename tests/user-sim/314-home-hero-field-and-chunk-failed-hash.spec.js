@@ -33,15 +33,17 @@ const WAIT_MS = 15000
 const TOLERANCE_PX = 8
 
 /**
- * Fail the Plans chunk `times` times (Infinity: every time) and count what the
- * page asked for, so a test can tell that the failure happened and that the
+ * Fail the Plans chunk `times` times (Infinity: every time; 'first-document':
+ * every request the first document makes and none after its reload) and count
+ * what the page asked for, so a test can tell that the failure happened and that the
  * reload followed it.
  */
 async function failPlansChunk(page, times) {
   const seen = { aborted: 0, served: 0, documents: 0, urls: new Set() }
   await page.route(PLANS_CHUNK, (route) => {
     seen.urls.add(route.request().url())
-    if (seen.aborted < times) {
+    const fail = times === 'first-document' ? seen.documents < 2 : seen.aborted < times
+    if (fail) {
       seen.aborted += 1
       return route.abort('failed')
     }
@@ -93,11 +95,11 @@ for (const vp of VIEWPORTS) {
 
     test('the chunk fails once: the reload keeps #plans, lands the real section and shows no error card', async ({ page }) => {
       watch(page, 'a visitor opening /#plans while the Plans file fails to download once')
-      const seen = await failPlansChunk(page, 1)
+      const seen = await failPlansChunk(page, 'first-document')
       await go(page, '/#plans')
 
       // POSITIVE CONTROLS: the failure happened, and the page reloaded after it.
-      await expect.poll(() => seen.aborted, { timeout: WAIT_MS, message: 'the Plans file was never asked for, so nothing was failed' }).toBe(1)
+      await expect.poll(() => seen.aborted, { timeout: WAIT_MS, message: 'the Plans file was never asked for, so nothing was failed' }).toBeGreaterThanOrEqual(1)
       await expect.poll(() => seen.documents, { timeout: WAIT_MS, message: 'the page did not reload after the failed download' }).toBeGreaterThanOrEqual(2)
       expect([...seen.urls], 'the route matched more than the one Plans file').toHaveLength(1)
 

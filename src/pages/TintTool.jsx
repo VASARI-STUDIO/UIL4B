@@ -246,12 +246,11 @@ export default function TintTool({ onCopy, toast }) {
   )
   const keptKey = `${selected.hex}|${keptRamp.join(',')}`
   const keptFirstRef = useRef(true)
-  const ownColoursRef = useRef(false)
-  ownColoursRef.current = partsPresent(design).palette
+  const ownColours = partsPresent(design).palette
   useEffect(() => {
     const first = keptFirstRef.current
     keptFirstRef.current = false
-    if (!ownColoursRef.current) return undefined
+    if (!ownColours) return undefined
     if (first && !(projectHex && !carried && tintsNeedWrite(design?.tints, projectHex))) return undefined
     const from = selected?.hex
     const t = setTimeout(() => setTints({ scale: keptRamp, from }), first ? 0 : 200)
@@ -293,49 +292,6 @@ export default function TintTool({ onCopy, toast }) {
     h.pending = null
     h.timer = 0
   }
-  // The hold ends TIP_HOLD_MS after the pointer last got nearer the card: the note
-  // the pointer is over takes the hover, or, over no note, the card goes.
-  const expireHold = () => {
-    const { held, pending, inside } = holdRef.current
-    clearHold()
-    if (pending?.el.isConnected) {
-      openTip(pending.label, pending.el, false, true)
-    } else if (held && inside !== held) {
-      setTip((cur) => (cur?.label === held && !cur.pinned ? null : cur))
-    }
-  }
-  const armHold = () => {
-    const h = holdRef.current
-    clearTimeout(h.timer)
-    h.timer = setTimeout(expireHold, TIP_HOLD_MS)
-  }
-  const startHold = (label) => {
-    holdRef.current.held = label
-    holdRef.current.pending = null
-    armHold()
-  }
-  // Whether a pointer event is on its way to a note's card: inside the card's box,
-  // or nearer to it than the pointer was at its last move.
-  const nearer = (label, e) => {
-    const prev = holdRef.current.last
-    const d = distToTip(label, e.clientX, e.clientY)
-    return d === 0 || (!!prev && d < distToTip(label, prev.x, prev.y) - 0.5)
-  }
-  useEffect(() => {
-    const h = holdRef.current
-    const onMove = (e) => {
-      if (e.pointerType === 'touch') return
-      const prev = h.last
-      h.last = { x: e.clientX, y: e.clientY }
-      if (h.held && prev && distToTip(h.held, e.clientX, e.clientY) < distToTip(h.held, prev.x, prev.y) - 0.5) armHold()
-    }
-    document.addEventListener('pointermove', onMove)
-    return () => {
-      document.removeEventListener('pointermove', onMove)
-      clearTimeout(h.timer)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
   const openTip = (label, el, pinned = false, byPointer = false) => {
     clearHold()
     const rect = el.getBoundingClientRect()
@@ -436,6 +392,49 @@ export default function TintTool({ onCopy, toast }) {
     }
     setTip({ label, pinned, end, pointer: byPointer, ...place })
   }
+  // The hold ends TIP_HOLD_MS after the pointer last got nearer the card: the note
+  // the pointer is over takes the hover, or, over no note, the card goes.
+  const expireHold = () => {
+    const { held, pending, inside } = holdRef.current
+    clearHold()
+    if (pending?.el.isConnected) {
+      openTip(pending.label, pending.el, false, true)
+    } else if (held && inside !== held) {
+      setTip((cur) => (cur?.label === held && !cur.pinned ? null : cur))
+    }
+  }
+  const armHold = () => {
+    const h = holdRef.current
+    clearTimeout(h.timer)
+    h.timer = setTimeout(expireHold, TIP_HOLD_MS)
+  }
+  const startHold = (label) => {
+    holdRef.current.held = label
+    holdRef.current.pending = null
+    armHold()
+  }
+  // Whether a pointer event is on its way to a note's card: inside the card's box,
+  // or nearer to it than the pointer was at its last move.
+  const nearer = (label, e) => {
+    const prev = holdRef.current.last
+    const d = distToTip(label, e.clientX, e.clientY)
+    return d === 0 || (!!prev && d < distToTip(label, prev.x, prev.y) - 0.5)
+  }
+  useEffect(() => {
+    const h = holdRef.current
+    const onMove = (e) => {
+      if (e.pointerType === 'touch') return
+      const prev = h.last
+      h.last = { x: e.clientX, y: e.clientY }
+      if (h.held && prev && distToTip(h.held, e.clientX, e.clientY) < distToTip(h.held, prev.x, prev.y) - 0.5) armHold()
+    }
+    document.addEventListener('pointermove', onMove)
+    return () => {
+      document.removeEventListener('pointermove', onMove)
+      clearTimeout(h.timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const ghostHeld = tip?.ghost && tip.pointer && !tip.pinned
   useEffect(() => {
     if (!ghostHeld) return undefined

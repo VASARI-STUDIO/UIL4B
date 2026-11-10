@@ -52,14 +52,15 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   const headRef = useRef(null)
   // Under 768px the list is a bottom sheet (global.css) and gets a header.
   const phone = useMediaQuery('(max-width: 767px)')
-  const { triggerRef, popRef } = usePopover(open, () => {
-    triggerRef.current?.focus({ preventScroll: true })
-    setOpen(false)
-  }, { autoFocus: false })
+  // usePopover calls this on an outside press or a Tab out. It needs the trigger
+  // ref the hook itself returns, so it reaches `close` through a ref set below.
+  const closeRef = useRef(null)
+  const { triggerRef, popRef } = usePopover(open, () => closeRef.current?.(), { autoFocus: false })
   const close = () => {
     triggerRef.current?.focus({ preventScroll: true })
     setOpen(false)
   }
+  useEffect(() => { closeRef.current = close })
   const show = () => {
     if (disabled) return
     setActive(selectedOptionIndex(value, rows))
