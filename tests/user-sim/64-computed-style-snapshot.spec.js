@@ -309,8 +309,14 @@ const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) =>
    * the same run — 65,358 of 65,373 values agreed — which is what makes a single
    * differing value in them worth reading as a regression. */
   const LAYOUT_RESOLVED = new Set(['margin-left', 'margin-right', 'grid-template-columns'])
+  /* Chromium 158 (Playwright 1.65) serialises the computed `flex-start` and
+   * `flex-end` of align-items and justify-content as `flow-start` and
+   * `flow-end`. Same keyword, new spelling, and the baseline was frozen with the
+   * old one, so the new spelling is folded back rather than the baseline
+   * regenerated (which would fail on every older Chromium instead). */
+  const KEYWORD_ALIAS = { 'flow-start': 'flex-start', 'flow-end': 'flex-end' }
   const normalise = (prop, value) => (
-    LAYOUT_RESOLVED.has(prop) ? value.replace(/-?\d*\.?\d+px/g, '<len>') : value
+    LAYOUT_RESOLVED.has(prop) ? value.replace(/-?\d*\.?\d+px/g, '<len>') : (KEYWORD_ALIAS[value] || value)
   )
   const out = {}
   for (const s of selectors) {
