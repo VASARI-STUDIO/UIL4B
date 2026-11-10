@@ -463,7 +463,9 @@ html[data-reduced-motion="true"] .pricing.pricing:has(.spnav[data-nav-hidden="1"
   }
   .pricing .pa-act .pa-go--plain { justify-content: center; padding: 0 22px; }
   .pricing .pa-act .hpl-ghost { display: flex; justify-content: center; width: 100%; margin-top: 20px; min-height: 52px; }
-  .pricing .pa-foot { margin-top: 12px; font-size: 13px; text-align: center; }
+  /* Two lines held (live: the cancel line and the Stripe line), so an outage or a retry does not pull the page up. */
+  .pricing .pa-foot { margin-top: 12px; min-height: 3em; font-size: 13px; text-align: center; }
+  .pricing .pa-act--none .pa-foot { min-height: 0; }
   .pricing .pa-foot p { text-wrap: balance; }
 
   /* The covers sit under the note: the book at 240 high, the deck takes the rest of the row (606 wide at most). */
@@ -645,10 +647,23 @@ html[data-reduced-motion="true"] .pricing.pricing:has(.spnav[data-nav-hidden="1"
   .pricing .pa-hpl { margin-top: 16px; }
   .pricing .pa-amt { --pa-amt: 36px; }
   .pricing .pa-amt--word { font-size: 34px; }
+  /* The price and its cadence line stack at this width in every state: 36 + 4 + 21. */
+  .pricing .pa-price { min-height: 61px; }
+  .pricing .pa-per { flex-basis: 100%; }
   .pricing .pl-bar { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); gap: 8px; }
   .pricing .pl-bar-go { padding: 0 14px; font-size: 14px; }
   .pricing .pl-bar-top { font-size: 14px; }
   .pricing .pl-bar-sub { font-size: 13px; }
+}
+@media (min-width: 360px) and (max-width: 369px) {
+  /* A price such as A$6.25 still wraps its cadence line here: held the same way. */
+  .pricing .pa-price { min-height: 67px; }
+  .pricing .pa-per { flex-basis: 100%; }
+}
+@media (max-width: 377px) {
+  /* The cancel and Stripe lines run to three lines in this range. */
+  .pricing .pa-foot { min-height: 4.5em; }
+  .pricing .pa-act--none .pa-foot { min-height: 0; }
 }
 
 /* ── Reduced motion: no press, no fade; the plus still loses its bar ─────── */
