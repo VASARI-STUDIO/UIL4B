@@ -178,7 +178,7 @@ export const PRO_POINTS = Object.freeze([
   'Every palette, gradient, prompt and brand palette',
   `${capitalise(joinAnd(PAID_PACK_WORDS))} icons, in any size and line style`,
   'Unlimited saved projects and custom icons',
-  `${proDocumentsLine()}, with no UIL4B line on anything`,
+  `${proDocumentsLine()}, with no UI L4B line on anything`,
 ])
 
 // ── The long-form lists ──────────────────────────────────────────────────────

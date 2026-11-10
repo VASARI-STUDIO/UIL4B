@@ -16,5 +16,6 @@ for (const file of SOURCES) {
   test(`${file} spells the mark "Made with UI L4B"`, () => {
     const src = readFileSync(file, 'utf8')
     assert.doesNotMatch(src, /Made with UIL4B/, 'the mark is spelt without the space')
+    assert.doesNotMatch(src, /UIL4B (line|mark)/, 'the mark is named without the space')
   })
 }

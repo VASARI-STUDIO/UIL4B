@@ -85,7 +85,7 @@ const FAQS = [
   },
   {
     q: 'What happens to my work if Pro ends?',
-    a: `Every file you exported is yours: it’s on your computer. Your account stays, and Free’s limits apply from then on: ${FREE_SAVE_LIMITS.projects} saved projects with ${FREE_SAVE_LIMITS.customIcons} icons in each, ${AI.free.daily} AI generations a day, and the UIL4B line on new exports.`,
+    a: `Every file you exported is yours: it’s on your computer. Your account stays, and Free’s limits apply from then on: ${FREE_SAVE_LIMITS.projects} saved projects with ${FREE_SAVE_LIMITS.customIcons} icons in each, ${AI.free.daily} AI generations a day, and the UI L4B line on new exports.`,
   },
   {
     q: 'Do my files get uploaded?',
