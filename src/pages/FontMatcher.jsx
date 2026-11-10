@@ -1198,8 +1198,9 @@ export default function FontMatcher({ onCopy, toast }) {
         {phone && dockPill('body', 'Body', bodyFont, bodyW)}
         {saveButton}
         {phone && (
-          <ToolButton variant="accent" icon="copy" iconSize={14} className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)} disabled={!cssExport}>
+          <ToolButton variant="accent" className="fpr-copy-primary fpr-copy-primary--disc" onClick={() => onCopy?.(cssExport)} disabled={!cssExport}>
             Copy CSS
+            <span className="fpr-copy-disc" aria-hidden="true"><ToolIcon name="copy" size={16} /></span>
           </ToolButton>
         )}
       </div>
