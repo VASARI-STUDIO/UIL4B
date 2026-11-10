@@ -1122,6 +1122,19 @@ function PlanBadge({ state }) {
   return <span className={`adm-badge adm-plan adm-plan--${state.tone}`}>{state.label}</span>
 }
 
+// A sortable column head. Declared here, not inside UsersPanel, so React keeps
+// the same component between renders instead of remounting every head.
+function SortTh({ k, sortKey, sortDir, onSort, children, ...rest }) {
+  return (
+    <th {...rest} scope="col">
+      <button type="button" className={`adm-th-sort${sortKey === k ? ' active' : ''}`} onClick={() => onSort(k)}>
+        {children}
+        <span className="adm-th-arrow">{sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
+      </button>
+    </th>
+  )
+}
+
 function UsersPanel({ localUsers, toast, role }) {
   const [users, setUsers] = useState(null) // null = loading
   const [source, setSource] = useState('server')
@@ -1364,14 +1377,7 @@ function UsersPanel({ localUsers, toast, role }) {
     toast?.(`Exported ${filtered.length} users`)
   }
 
-  const SortTh = ({ k, children, ...rest }) => (
-    <th {...rest} scope="col">
-      <button type="button" className={`adm-th-sort${sortKey === k ? ' active' : ''}`} onClick={() => toggleSort(k)}>
-        {children}
-        <span className="adm-th-arrow">{sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
-      </button>
-    </th>
-  )
+  const sortProps = { sortKey, sortDir, onSort: toggleSort }
 
   // User · Plan · Joined · Last seen · Location · Details, plus Access when the
   // reader has the founder role. Counted once so the empty row cannot go out of
@@ -1487,12 +1493,12 @@ function UsersPanel({ localUsers, toast, role }) {
               <table className="adm-table adm-users-table" role="table">
                 <thead>
                   <tr role="row">
-                    <SortTh k="email">User</SortTh>
-                    {founderView && <SortTh k="access">Access</SortTh>}
-                    <SortTh k="plan">Plan</SortTh>
-                    <SortTh k="createdAt">Joined</SortTh>
-                    <SortTh k="lastLoginAt">Last seen</SortTh>
-                    <SortTh k="country">Location</SortTh>
+                    <SortTh k="email" {...sortProps}>User</SortTh>
+                    {founderView && <SortTh k="access" {...sortProps}>Access</SortTh>}
+                    <SortTh k="plan" {...sortProps}>Plan</SortTh>
+                    <SortTh k="createdAt" {...sortProps}>Joined</SortTh>
+                    <SortTh k="lastLoginAt" {...sortProps}>Last seen</SortTh>
+                    <SortTh k="country" {...sortProps}>Location</SortTh>
                     <th scope="col"><span className="sr-only">Details</span></th>
                   </tr>
                 </thead>
@@ -1888,6 +1894,8 @@ export default function Admin({ toast }) {
     }
     setFeedback(merged)
     await loadPrompts(promptFilterRef.current)
+    // False positive: this runs after an await in an effect-driven callback, never during render.
+    // eslint-disable-next-line react-hooks/purity
     setRefreshedAt(Date.now())
   }, [loadPrompts])
 

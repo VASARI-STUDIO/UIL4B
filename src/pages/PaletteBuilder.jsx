@@ -1003,7 +1003,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [imgIntro, setImgIntro] = useState(false)    // true for the moment after an extraction
   const imgDataRef = useRef(null)               // small ImageData — extraction and share measure only
   const imgSourceRef = useRef(null)             // full-resolution canvas — every sample and the loupe
-  const imgRankedRef = useRef([])               // ranked candidate colours; "+" and Reset points draw from these
   const loadImageFileRef = useRef(null)         // latest loadImageFile, for the paste and drop listeners
   const imgDragIdx = useRef(null)               // point index being dragged
   const imgStageRef = useRef(null)              // the preview stage element
@@ -1013,8 +1012,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const imgSilentFocus = useRef(false)          // that focus must not arm the loupe or announce
   const imgMoodRef = useRef('balanced')         // mood and count as the latest render saw them, for a load that outlives its render
   const imgWantRef = useRef(5)
-  imgMoodRef.current = imgMood
-  imgWantRef.current = imgWant
+  useLayoutEffect(() => {
+    imgMoodRef.current = imgMood
+    imgWantRef.current = imgWant
+  })
+  // The ranked candidate colours; "+" and Reset points draw from these. A mood re-ranks
+  // the clusters already found, so this follows them both.
+  const imgRanked = useMemo(() => rankClusters(imgClusters, { mood: moodArg(imgMood), limit: IMG_CANDIDATES }), [imgClusters, imgMood])
   const imgPhone = useMediaQuery('(max-width:599.98px)')
   // Which marker the loupe is following. Set by a drag, a click, a focus or an
   // arrow-key nudge, so the mouse and the keyboard drive one thing rather than
@@ -1035,7 +1039,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // on the first apply, cleared by pressing the applied row again or by any real
   // edit to the board, and KEPT when the user switches between Suggest and Explore
   // or between Explore's tabs, so going back always lands on the user's own palette.
-  const trialSnapRef = useRef(null)
+  const [trialSnap, setTrialSnap] = useState(null)
   const skipVarInvalidate = useRef(false)
   // One info panel per board: a column's tints or its colour values. They share
   // one slot, so opening either closes the other and every existing
@@ -1053,7 +1057,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // swaps the palette or changes how many columns there are closes it; a stale
   // index would point past the end and leave an open panel nobody can see.
   const colPanelRef = useRef(null)
-  colPanelRef.current = colPanel
+  useLayoutEffect(() => { colPanelRef.current = colPanel })
   useEffect(() => { setColPanel((cur) => (cur ? null : cur)) }, [colors.length])
   // Closing the panel hands focus back to the control that opened it: the
   // column's "..." button, or its tint strip. The panel's own close button
@@ -1317,7 +1321,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Palette history: rolling localStorage log (see HISTORY_KEY above).
   const [histOpen, setHistOpen] = useState(false)
   const [history, setHistory] = useState(loadHistory)
-  const resetSnapshotRef = useRef(null)
+  // The board Reset left behind, and the default it went to, so Undo can restore it.
+  const [resetSnapshot, setResetSnapshot] = useState(null)
   const fileRef = useRef(null)
   const swapTriggerRef = useRef(null) // the open column's Swap button, where focus returns when its menu closes
   const swapPointerRef = useRef(false)
@@ -1492,7 +1497,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (skipVarInvalidate.current) { skipVarInvalidate.current = false; return }
     setVarBase(null)
     setPanelApplied(null)
-    trialSnapRef.current = null
+    setTrialSnap(null)
   }, [colors, adjust])
 
   // Freeze a snapshot the first time the variations tab is viewed (or after
@@ -1503,9 +1508,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // the user's palette, not of the variation on the board.
   useEffect(() => {
     if (galleryOpen && galleryTab === 'variations' && !varBase) {
-      setVarBase(trialSnapRef.current?.mine || applyAdjust(colors, adjust))
+      setVarBase(trialSnap?.mine || applyAdjust(colors, adjust))
     }
-  }, [galleryOpen, galleryTab, varBase, colors, adjust])
+  }, [galleryOpen, galleryTab, varBase, colors, adjust, trialSnap])
 
   // Keep ProjectContext in sync so Save/overwrite capture the live palette and
   // the merged studio picks it up (same persisted shape as the studio writes).
@@ -1587,7 +1592,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // including the seed swatch the field is supposedly reporting. There is no
     // reading of "set the seed to this" that ends with the seed being something
     // else. Announced only when a lens was actually discarded, and Undo
-    // restores it — see resetSnapshotRef.
+    // restores it — see resetSnapshot.
     if (ADJUST_FIELDS.some(f => adjust[f.key] !== 0)) {
       setAdjust(ZERO_ADJUST)
       setLiveMsg('Seed set — global adjustments cleared so the palette matches the hex')
@@ -2076,7 +2081,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // The photo goes up before its colours are worked out.
       imgDataRef.current = data
       imgSourceRef.current = source
-      imgRankedRef.current = []
       setImgClusters([]); setImgPoints([]); setImgActive(null)
       setImgAspect(ratio)
       setImgSrc(url)
@@ -2099,7 +2103,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const ranked = rankClusters(found.clusters, { mood: moodArg(imgMoodRef.current), limit: IMG_CANDIDATES })
     imgDataRef.current = data
     imgSourceRef.current = source
-    imgRankedRef.current = ranked
     setImgClusters(found.clusters)
     if (!first) { setImgAspect(ratio); setImgSrc(url) }
     setImgSample(sample)
@@ -2110,7 +2113,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
   // The window-level paste and drop handlers below outlive a render; they call
   // the latest loader through this.
-  loadImageFileRef.current = loadImageFile
+  useLayoutEffect(() => { loadImageFileRef.current = loadImageFile })
 
   const onImageFile = (e) => {
     const file = e.target.files?.[0]
@@ -2137,7 +2140,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Back to the photo's own picks for the current mood and count.
   const autoExtractImage = () => {
     if (!imgSourceRef.current) return
-    placeMarkers(imgRankedRef.current, imgWant)
+    placeMarkers(imgRanked, imgWant)
     setImgStatus('Points reset')
   }
 
@@ -2146,7 +2149,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     imgLoadSeq.current += 1
     imgDataRef.current = null
     imgSourceRef.current = null
-    imgRankedRef.current = []
     setImgSrc(''); setImgPoints([]); setImgClusters([]); setImgActive(null)
     setImgError(''); setImgAspect(16 / 10); setImgSample(null)
     setImgFew(0); setImgMax(false); setImgIntro(false); setImgLoading(false); setImgStatus('Photo removed')
@@ -2165,7 +2167,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // The best-ranked colour the markers do not already cover, to be offered by "+".
   const imgNext = imgSrc && imgPoints.length < IMG_POINT_MAX
-    ? nextCandidate(imgRankedRef.current.filter(c => !imgPoints.some(p => p.from === c.rank)), imgPoints.map(p => p.hex))
+    ? nextCandidate(imgRanked.filter(c => !imgPoints.some(p => p.from === c.rank)), imgPoints.map(p => p.hex))
     : null
 
   // "+" adds that colour at its own place in the picture, so a new marker never
@@ -2202,7 +2204,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setImgMood(id)
     if (!imgSourceRef.current || !imgClusters.length) return
     const ranked = rankClusters(imgClusters, { mood: moodArg(id), limit: IMG_CANDIDATES })
-    imgRankedRef.current = ranked
     const points = placeMarkers(ranked, imgWant)
     setImgStatus(`${MOOD_OPTIONS.find(m => m.id === id)?.label || id}: ${colourWord(points.length)}`)
   }
@@ -2503,8 +2504,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       vision,
       showContrast,
       importedGalleryId,
-      preImport: trialSnapRef.current,
+      preImport: trialSnap,
       importedSig: importedSigRef.current,
+      // eslint-disable-next-line react-hooks/purity -- False positive: stamps a snapshot in a handler, never during render.
       at: Date.now(),
     }
     // Reset puts the settings back to default and randomises the colour. So the
@@ -2534,11 +2536,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     // Preserve the first meaningful pre-reset snapshot when Reset is pressed
     // repeatedly. Without this guard, a defensive double-click replaces the
     // recoverable state with an already-reset board.
-    if (!resetSnapshotRef.current || !defaultPalette) {
-      resetSnapshotRef.current = {
+    if (!resetSnapshot || !defaultPalette) {
+      setResetSnapshot({
         before: current,
         baseline,
-      }
+      })
     }
     setHistory(prev => {
       const signature = paletteSignature(current)
@@ -2556,7 +2558,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setVision('normal')
     setShowContrast(false)
     setImportedGalleryId(null)
-    trialSnapRef.current = null
+    setTrialSnap(null)
     importedSigRef.current = null
     setTintsIdx(null)
     setPickerIdx(null)
@@ -2564,7 +2566,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setPreview(null)
     setVarBase(null)
     setPanelApplied(null)
-    trialSnapRef.current = null
+    setTrialSnap(null)
     closeAllMenus()
     setLiveMsg('Settings reset to the default system, with a new random palette')
     toast?.('Palette reset · Undo is available')
@@ -2573,13 +2575,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // ── Redo (the drawn tray has both). Undo pushes the board it leaves onto
   // this stack; redo restores it. Any other change to the board empties it.
-  const redoRef = useRef([])
+  const [redoStack, setRedoStack] = useState([])
   const restoringRef = useRef(null)
-  const [redoTick, setRedoTick] = useState(0)
-  const boardNow = () => ({
+  const boardSettings = () => ({
     colors: [...colors], seed, seedInput, harmony, locked: [...locked], adjust: { ...adjust },
-    vision, showContrast, importedGalleryId, at: Date.now(),
+    vision, showContrast, importedGalleryId,
   })
+  // eslint-disable-next-line react-hooks/purity -- False positive: stamps a snapshot in a handler, never during render.
+  const boardNow = () => ({ ...boardSettings(), at: Date.now() })
   const applySnapshot = (h) => {
     setColPanel(null)
     const restored = h.colors.slice(0, HARD_MAX)
@@ -2593,28 +2596,26 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setShowContrast(Boolean(h.showContrast))
     setImportedGalleryId(h.importedGalleryId || null)
   }
-  const currentSig = paletteSignature(boardNow())
+  const currentSig = paletteSignature(boardSettings())
   useEffect(() => {
     // A change that is not the restore itself ends the redo line.
     if (restoringRef.current && restoringRef.current === currentSig) { restoringRef.current = null; return }
-    if (redoRef.current.length) { redoRef.current = []; setRedoTick((t) => t + 1) }
+    setRedoStack((stack) => (stack.length ? [] : stack))
   }, [currentSig])
   const redoPalette = () => {
-    const next = redoRef.current.pop()
+    const next = redoStack[redoStack.length - 1]
     if (!next) return
+    setRedoStack((stack) => stack.slice(0, -1))
     restoringRef.current = paletteSignature(next)
     applySnapshot(next)
-    setRedoTick((t) => t + 1)
     setLiveMsg('Palette change redone')
   }
-  const canRedo = redoTick >= 0 && redoRef.current.length > 0
+  const canRedo = redoStack.length > 0
   const undoPalette = () => {
     setColPanel(null)
     const leaving = boardNow()
-    redoRef.current.push(leaving)
-    setRedoTick((t) => t + 1)
+    setRedoStack((stack) => [...stack, leaving])
     const markRestore = (target) => { restoringRef.current = paletteSignature(target) }
-    const resetSnapshot = resetSnapshotRef.current
     if (resetSnapshot) {
       const current = {
         colors, seed, seedInput, harmony, locked: [...locked], adjust, vision,
@@ -2632,9 +2633,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       setVision(target.vision || 'normal')
       setShowContrast(Boolean(target.showContrast))
       setImportedGalleryId(target.importedGalleryId || null)
-      trialSnapRef.current = target.preImport || null
+      setTrialSnap(target.preImport || null)
       importedSigRef.current = target.importedSig || null
-      resetSnapshotRef.current = null
+      setResetSnapshot(null)
       if (editedAfterReset) {
         const editedSignature = paletteSignature(current)
         setHistory(prev => {
@@ -2651,7 +2652,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     })
     const entry = history.find((item) => paletteSignature(item) !== currentSignature)
-    if (!entry) { redoRef.current.pop(); setRedoTick((t) => t + 1); return }
+    if (!entry) { setRedoStack((stack) => stack.slice(0, -1)); return }
     markRestore(entry)
     const restored = entry.colors.slice(0, HARD_MAX)
     setColors(restored)
@@ -2673,9 +2674,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // so going back always lands on the user's own palette. This only reads the
   // stored one (or builds the candidate); `keepPanelSnap` stores it once an apply
   // has gone through, so an apply that is refused never leaves a snapshot behind.
-  const panelSnap = () => trialSnapRef.current
+  const panelSnap = () => trialSnap
     || { colors: [...colors], adjust: { ...adjust }, seed, seedInput, harmony, before: paletteScore, mine: adjusted }
-  const keepPanelSnap = (snap) => { trialSnapRef.current = snap }
+  const keepPanelSnap = (snap) => { setTrialSnap(snap) }
   // True when applying `hexes` would leave the board exactly as it is.
   const isNoopApply = (hexes) => hexes.map(c => normaliseHex(c)).filter(Boolean).join(',') === colors.join(',') && !ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
   const pickVariation = (v, gated) => {
@@ -2703,7 +2704,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // colour system. Pressing the applied row again, in either panel, comes here.
   // Nothing disables, so focus stays on the row that was pressed.
   const revertTrial = () => {
-    const snap = trialSnapRef.current
+    const snap = trialSnap
     if (!snap) return
     setColPanel(null)
     skipVarInvalidate.current = true
@@ -2713,7 +2714,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setSeedInput(snap.seedInput)
     // A brand changes the colour system as well, so the snapshot carries it.
     if (snap.harmony) setHarmony(snap.harmony)
-    trialSnapRef.current = null
+    setTrialSnap(null)
     importedSigRef.current = null
     setImportedGalleryId(null)
     setPanelApplied(null)
@@ -2731,7 +2732,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // restored along with the colours.
   const importGalleryPalette = (cols, name, id, system = null) => {
     setColPanel(null)
-    if (importedGalleryId === id && trialSnapRef.current) { revertTrial(); return }
+    if (importedGalleryId === id && trialSnap) { revertTrial(); return }
     // The snapshot is only ever the user's own palette: the one in place before
     // the first apply from either panel. Switching row A -> B, or Suggest ->
     // Explore, must NOT replace it, so going back lands on the user's work and not
@@ -2770,7 +2771,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       importedSigRef.current = sig
     } else if (sig !== importedSigRef.current) {
       importedSigRef.current = null
-      trialSnapRef.current = null
+      setTrialSnap(null)
       setPanelApplied(null)
       setImportedGalleryId(null)
     }
@@ -3096,7 +3097,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
 
   const adjustDirty = ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
-  const canUndo = resetSnapshotRef.current != null || history.some((h) => paletteSignature(h) !== currentSig)
+  const canUndo = resetSnapshot != null || history.some((h) => paletteSignature(h) !== currentSig)
     || history.some((entry) => paletteSignature(entry) !== paletteSignature({
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     }))
@@ -3334,6 +3335,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           landmark per swatch. */}
       <div className="plb-stage">
         <div className="plb-board" role="group" aria-labelledby="plb-page-title">
+          {/* eslint-disable-next-line react-hooks/refs -- False positive: runs on a press, never during render. */}
           {adjusted.map((c, i) => {
             // Vision check: the TOP half paints the real colour, the BOTTOM
             // half simulates it through the chosen colour-vision deficiency.
@@ -3637,8 +3639,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             1024, a sheet on a phone). It pushes the board and never covers it.
             `.plb-menuwrap` keeps the page's dismiss layer from closing it on a press
             inside it. */}
+        {/* eslint-disable-next-line react-hooks/refs -- False positive: runs on a press, never during render. */}
         {galleryOpen && (() => {
-          const mineColors = trialSnapRef.current?.mine || adjusted
+          const mineColors = trialSnap?.mine || adjusted
           const q = exQuery.trim().toLowerCase()
           const match = (n) => !q || String(n).toLowerCase().includes(q)
           const searchable = galleryTab === 'brands' || communityRows.length > 12
@@ -3685,7 +3688,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               </div>
               <YourPaletteRow
                 colors={mineColors}
-                detail={exploring ? null : `Balance ${trialSnapRef.current?.before ?? paletteScore}`}
+                detail={exploring ? null : `Balance ${trialSnap?.before ?? paletteScore}`}
                 help={exploring ? null : 'It scores tone range, evenness, chroma profile and distinctness.'}
                 onCompare={panelApplied?.compare ? () => { setGalleryOpen(false); setPreview({ mode: siteTheme, scene: DEFAULT_SCENE, compare: panelApplied.compare }) } : null}
                 compareLabel={`Compare ${panelApplied?.name || 'the applied option'} with your palette`}
@@ -3716,6 +3719,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                                   applied={active}
                                   mine={mineColors}
                                   ariaLabel={gated ? `${v.label}, Pro only. Opens Pro plans.` : rowLabel(v.label, v.desc, active)}
+                                  // eslint-disable-next-line react-hooks/refs -- False positive: runs on a press, never during render.
                                   onPress={() => pickVariation(v, gated)}
                                 />
                               )
@@ -3765,6 +3769,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                             const on = importedGalleryId === p.id
                             return (
                               <SwatchRow key={p.id} id={`pal-${p.id}`} name={p.name} colors={p.colors} applied={on} mine={mineColors}
+                                // eslint-disable-next-line react-hooks/refs -- False positive: runs on a press, never during render.
                                 ariaLabel={rowLabel(p.name, '', on)} onPress={() => importGalleryPalette(p.colors, p.name, p.id)} />
                             )
                           })}
@@ -3772,6 +3777,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                             const on = importedGalleryId === brandTickId(b)
                             return (
                               <SwatchRow key={b.id} id={`brand-${b.id}`} name={b.name} colors={b.colors} applied={on} mine={mineColors}
+                                // eslint-disable-next-line react-hooks/refs -- False positive: runs on a press, never during render.
                                 ariaLabel={rowLabel(b.name, '', on)} onPress={() => pickBrand(b)} />
                             )
                           })}
@@ -3816,6 +3822,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       {/* ── Colour actions / insert menus (right-click and ⋯) ── */}
       {ctxMenu && ctxMenu.kind === 'gap' && (
         <div className="plb-pop plb-ctx" role="menu" aria-label="Insert colours" ref={ctxMenuRef}>
+          {/* eslint-disable-next-line react-hooks/refs -- False positive: runs on a press, never during render. */}
           {(() => {
             const ceiling = isPro ? HARD_MAX : PRO_MAX
             const room = ceiling - colors.length

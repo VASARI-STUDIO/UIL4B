@@ -272,10 +272,9 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
   const front = rows[Math.min(doc, rows.length - 1)]?.art
   const shown = OBJECTS.filter((o) => rows.some((r) => r.art === o.art))
   const stackTops = Object.fromEntries(STACK_TOPS.map((top, i) => [`--stack-top-${i}`, `${top}px`]))
-  const setCard = (i) => (el) => { cardRefs.current[i] = el }
 
   const card1 = (
-    <div className="hx-card" data-card="0" ref={setCard(0)}>
+    <div className="hx-card" data-card="0" ref={(el) => { cardRefs.current[0] = el }}>
       <div className="hx-grid">
         <div className="hx-say">
           <h3>From small jobs.</h3>
@@ -333,7 +332,7 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
   )
 
   const card2 = (
-    <div className="hx-card" data-card="1" ref={setCard(1)}>
+    <div className="hx-card" data-card="1" ref={(el) => { cardRefs.current[1] = el }}>
       <div className="hx-grid">
         <div className="hx-say">
           <h3>To whole design systems.</h3>
@@ -382,7 +381,7 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
   )
 
   const card3 = (
-    <div className="hx-card" data-card="2" ref={setCard(2)}>
+    <div className="hx-card" data-card="2" ref={(el) => { cardRefs.current[2] = el }}>
       <div className="hx-grid">
         <div className="hx-say">
           <h3>Still here when you return.</h3>

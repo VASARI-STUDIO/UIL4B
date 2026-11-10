@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { getLenis } from '../../hooks/useSmoothScroll'
 import { requestSections } from '../home/useBelowFoldReady'
@@ -210,7 +210,7 @@ export function usePageAnchors() {
   const navigate = useNavigate()
   // Back and forward restore the scroll position they left, so only a first
   // load (the router's initial entry) or a pushed link counts as an arrival.
-  const reland = useRef(relandPending).current
+  const [reland] = useState(relandPending)
   const arriving = useRef(navType !== 'POP' || key === 'default' || reland)
 
   // Before the first paint, so the browser has no fragment to scroll to. Only
