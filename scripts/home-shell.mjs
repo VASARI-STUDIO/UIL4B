@@ -191,11 +191,45 @@ function heroH1() {
   return `<h1 class="hh-h1">${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>${text(SPECTRUM_HERO.tail)}</h1>`
 }
 
+/**
+ * A static copy of the hydrated nav bar (src/components/SpectrumNav.jsx), same
+ * classes, so the stylesheet that sizes the real one sizes this one and React's
+ * mount replaces it pixel for pixel. It is `inert` and `aria-hidden` for the
+ * seconds before hydration: nothing in it takes focus or a click, and the real
+ * nav is the one assistive tech meets. The links are the ones the real bar has
+ * on the sales page, written out because the component cannot be imported here.
+ */
+function shellNav() {
+  const glass = (size) => `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>`
+  return `<nav class="spnav" aria-hidden="true" inert data-nav-hidden="0" data-nav-pinned="0" data-scrolled="0">
+        <div class="spnav-bar">
+          <span class="spnav-mark"><span class="spnav-word">${logoSvg({ attrs: 'class="brand-logo brand-logo--lockup brand-logo-wide" focusable="false"' })}</span></span>
+          <div class="spnav-end">
+            <div class="spnav-quiet"><span class="spnav-quiet-link">Tools</span><span class="spnav-quiet-link">Plans</span><span class="spnav-quiet-link">On mobile</span></div>
+            <span class="spnav-search">${glass(15)}<span>Search tools</span><kbd>Ctrl K</kbd></span>
+            <div class="spnav-phone"><span class="spnav-icon">${glass(17)}</span><span class="spnav-icon spnav-burger"><span class="spnav-burger-ico" data-burger="out"><span></span><span></span></span></span></div>
+          </div>
+        </div>
+      </nav>`
+}
+
+/** The hero's two buttons: real links, so they work before React arrives. */
+const SHELL_CTA = `<div class="hh-cta">
+              <a class="hh-go" href="/projects">Open the toolkit<span class="hh-go-disc" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7M8 7h9v9"></path></svg></span></a>
+              <a class="hh-ghost ui-pill-out" href="/plans">View plans</a>
+            </div>`
+
+/** The search frame, same chain as SpectrumSearch, inert until the real one mounts. */
+const SHELL_SEARCH = `<div class="hh-search" aria-hidden="true" inert>
+              <div class="sp-search"><div class="hcmd"><div class="hcmd-bar"><span class="hcmd-prompt">&gt;</span><input class="hcmd-input" type="text" tabindex="-1" readonly value=""><span class="hcmd-kbd"><kbd>Ctrl K</kbd></span></div></div><span class="sp-search-ghost">Search for<span class="sp-search-rot">a contrast ratio</span></span></div>
+            </div>`
+
 export function homeShellRoot() {
   return `${ROOT_OPEN}
   <div class="boot-shell boot-shell-home" id="boot-shell">
     <span class="boot-status" role="status" aria-live="polite">Loading UIL4B</span>
     <div class="spectrum">
+      ${shellNav()}
       <div class="sp-grain" aria-hidden="true"></div>
       <main>
         <section id="top" class="hh-hero">
@@ -203,15 +237,12 @@ export function homeShellRoot() {
           <div class="hh-copy">
             ${heroH1()}
             <p class="hh-sub">${text(SPECTRUM_HERO_SUB)}</p>
+            ${SHELL_CTA}
+            ${SHELL_SEARCH}
           </div>
         </section>
       </main>
       <div class="boot-decoration" aria-hidden="true">
-        <div class="boot-nav">
-          ${logoSvg({ attrs: 'class="boot-mark" aria-hidden="true" focusable="false"' })}
-          <span class="boot-nav-lines"><span class="boot-line"></span><span class="boot-line"></span><span class="boot-line"></span></span>
-          <span class="boot-actions"><span class="boot-action"></span><span class="boot-action"></span></span>
-        </div>
         <div class="boot-below">
           <div class="boot-cards"><span class="boot-card"></span><span class="boot-card"></span><span class="boot-card"></span></div>
         </div>
