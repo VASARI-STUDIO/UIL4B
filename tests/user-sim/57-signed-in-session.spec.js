@@ -42,7 +42,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn, firebaseRequests } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
+import { mockThemeApi } from './export-theme-mock.js'
 import { chooseFormat, exportPanel, categoryRadio, primaryButton } from './export-rows.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
@@ -192,7 +192,7 @@ test.describe('the export gate, driven', () => {
       'the Book category must carry its Pro badge for a free account',
     ).toBeVisible()
     await expect(categoryRadio(page, 'Book'), 'and its name says Pro').toHaveAccessibleName('Book, A4 pages, Pro')
-    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
 
     const action = page.getByRole('button', { name: /Unlock with Pro/i })
     await expect(action, 'the button must say what is about to happen').toBeVisible()
@@ -219,17 +219,12 @@ test.describe('the export gate, driven', () => {
 
     await expect(primaryButton(page), 'the plan has loaded and the button names the export').toHaveText('Export PDF')
     await expect(page.locator('.xd-pro'), 'Pro sees no Pro badges').toHaveCount(0)
-    await expect(page.locator('.xd-lock'), 'and no lock over the preview').toHaveCount(0)
+    await expect(page.locator('.xd-theme-lock'), 'and no lock over the preview').toHaveCount(0)
 
     // The book is built by the server (POST /api/ai?export=document); the preview
     // server has no /api, so the answer is stubbed with the real generator's
     // output. The server's own rules are in tests/unit/export-document.test.js.
-    const asked = []
-    await page.route('**/api/ai?export=document', async (route) => {
-      asked.push({ auth: route.request().headers().authorization, body: route.request().postDataJSON() })
-      const html = buildDesignSystemBook({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }, { projectName: 'Stub' })
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, format: 'book', html }) })
-    })
+    const asked = await mockThemeApi(page)
 
     const [book] = await Promise.all([
       context.waitForEvent('page'),
@@ -240,13 +235,13 @@ test.describe('the export gate, driven', () => {
     // your design system book…") until the server answers, so its title alone proves
     // nothing, and the request may not have been made yet when the window appears.
     // The generated artefact is what shows the round trip finished.
-    await expect(book.locator('.cv-title')).toBeVisible()
+    await expect(book.locator('#printed-doc')).toBeVisible()
     // The print window takes the PDF's file name as its title, so Save as PDF
     // offers the same name the file list shows.
     await expect(book).toHaveTitle(/-book$/)
     expect(asked, 'the panel must ask the server once, with the account token and the format').toHaveLength(1)
     expect(asked[0].auth).toMatch(/^Bearer .+/)
-    expect(asked[0].body.format).toBe('book')
+    expect(asked[0].body).toEqual(expect.objectContaining({ row: 'book', format: 'pdf' }))
     await context.close()
   })
 })
