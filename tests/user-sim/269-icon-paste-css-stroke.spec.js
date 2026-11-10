@@ -30,8 +30,8 @@ async function paste(page, markup) {
   await page.getByRole('textbox', { name: 'SVG markup' }).fill(markup)
   await page.getByRole('button', { name: 'Add to stage' }).click()
   await expect(page.locator('.ied-ground')).toBeVisible()
-  const details = page.locator('details.icust-code')
-  if (!(await details.evaluate((el) => el.open))) await page.locator('#ied-sec-code .ied-disc').click()
+  const disc = page.locator('#ied-sec-code .ied-disc')
+  if ((await disc.getAttribute('aria-expanded')) !== 'true') await disc.click()
   await expect(code(page)).toContainText('M13 2')
 }
 
@@ -40,7 +40,7 @@ const widths = async (page) => [...(await code(page).innerText()).matchAll(/stro
 for (const [label, markup] of [['a style attribute', INLINE], ['a <style> rule on a class', SHEET]]) {
   test(`an icon with its stroke in ${label} gets the Stroke control, and the slider edits it`, async ({ page }) => {
     await paste(page, markup)
-    const stroke = page.locator('.icust-stroke')
+    const stroke = page.locator('#ied-sec-stroke')
     await expect(stroke, 'no Stroke control for a CSS-stroked icon').toBeVisible()
 
     const text = await code(page).innerText()

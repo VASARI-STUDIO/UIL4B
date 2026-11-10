@@ -99,11 +99,11 @@ const openLogo = async (browser, name, { width = 1440, touch = false, noClipboar
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
   await choosePack(page, 'logos')
   await page.getByRole('button', { name: `Customise ${name}`, exact: true }).click()
-  await expect(page.locator('#ied-code .ied-tn')).toBeEnabled({ timeout: 20000 })
+  await expect(page.getByRole('button', { name: 'Copy SVG', exact: true })).toBeEnabled({ timeout: 20000 })
   return { ctx, page }
 }
 
-const colourRow = (page) => page.locator('.icust-row').filter({ has: page.locator('label', { hasText: /^Colour$/ }) })
+const colourRow = (page) => page.locator('#ied-colour-label').locator('xpath=ancestor::div[2]')
 const chip = (page, name) => colourRow(page).getByRole('radio', { name, exact: true })
 
 /** The markup the stage image is drawn from, once it is a data: URI of the art. */
@@ -151,7 +151,7 @@ test('a one-colour brand logo opens in its own colour, in the stage, the copy an
   await expect(chip(page, 'White')).toBeVisible()
   await expect(colourRow(page).locator('.cpk-trigger')).toHaveCount(1)
   await expect(chip(page, 'Original').locator('.ied-sw')).toHaveCSS('background-color', BRAND_RGB)
-  await expect(colourRow(page).locator('.icust-colour-value')).toHaveText(BRAND.toUpperCase())
+  await expect(colourRow(page).locator('.ied-lblrow .ied-val')).toHaveText(BRAND.toUpperCase())
 
   // The stage's paths compute to the brand colour, not the ink.
   await expect.poll(() => stageMarkup(page)).toContain(BRAND)
@@ -207,7 +207,7 @@ test('recolouring a brand logo changes nothing else: the header line, the Simila
     const u = new URL(r.url())
     if (ICONIFY_HOSTS.includes(u.hostname) && u.pathname.startsWith('/logos/') && u.searchParams.get('height') === '24') tiles.push(r.url())
   })
-  const sub = page.locator('.icust-sub')
+  const sub = page.locator('.ied-hd .ied-note')
   await expect(sub).toHaveText('Logos (colour)')
   const tileImgs = page.locator('.ied-sim img')
   await expect(tileImgs).toHaveCount(1)

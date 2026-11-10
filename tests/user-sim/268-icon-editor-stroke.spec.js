@@ -78,8 +78,8 @@ const modeRadio = (page, name) => page.getByRole('radiogroup', { name: 'Stroke s
 const sizeRadio = (page, name) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name })
 
 async function showCode(page) {
-  const details = page.locator('details.icust-code')
-  if (!(await details.evaluate((el) => el.open))) await page.locator('#ied-sec-code .ied-disc').click()
+  const disc = page.locator('#ied-sec-code .ied-disc')
+  if ((await disc.getAttribute('aria-expanded')) !== 'true') await disc.click()
   await expect(code(page)).toBeVisible()
 }
 
@@ -138,24 +138,31 @@ async function exportPng(page, mark) {
 }
 
 test.describe('the pop-up keeps its layout', () => {
-  test('the stage column, the controls beside it and one foot across both, with a Stroke row of a slider and Relative / Fixed', async ({ page }) => {
+  test('the stage column on the left, the head, controls and foot in one column beside it, with a Stroke row of a slider and Relative / Fixed', async ({ page }) => {
     await openEditor(page, { sampleName: 'stroke-line-24', plan: 'free' })
     const box = await page.evaluate(() => {
       const r = (sel) => { const e = document.querySelector(sel); if (!e) return null; const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, r: b.right, b: b.bottom } }
-      return { panel: r('.ied'), left: r('.icust-left'), right: r('.icust-right'), foot: r('.icust-body > .ied-ft') }
+      return { panel: r('.ied'), stage: r('.ied-stagecol'), head: r('.ied-hd'), controls: r('#ied-scroll'), foot: r('.ied-ft') }
     })
-    expect(Math.round(box.panel.w), 'panel width').toBe(760)
-    expect(Math.round(box.left.w), 'left column width').toBe(320)
-    expect(box.right.x, 'the controls sit beside the stage column').toBeGreaterThanOrEqual(box.left.r - 1)
-    expect(box.foot.y, 'the foot is under both columns').toBeGreaterThanOrEqual(Math.max(box.left.b, box.right.b) - 1)
-    expect(box.foot.r - box.foot.x, 'the foot runs across both').toBeGreaterThanOrEqual(box.panel.w - 2)
-    await expect(page.locator('.ied-hd .icust-sub')).toHaveText(/^[^,]+, (outline|solid)$/)
-    await expect(page.locator('.icust-left .ied-ground')).toBeVisible()
-    await expect(page.locator('.icust-right .icust-stroke')).toBeVisible()
-    const stroke = page.locator('.icust-stroke')
+    // getBoundingClientRect reads the dialog's opening scale (98% to 100%), so widths are compared to a few pixels.
+    expect(box.panel.w, 'panel width').toBeGreaterThan(1160 * 0.97)
+    expect(box.panel.w, 'panel width').toBeLessThanOrEqual(1160)
+    expect(box.controls.w, 'the controls column is 400px').toBeGreaterThan(400 * 0.97)
+    expect(box.controls.w, 'the controls column is 400px').toBeLessThanOrEqual(400)
+    expect(box.stage.w, 'the stage column takes the rest').toBeGreaterThan(box.panel.w - 410)
+    expect(box.controls.x, 'the controls sit beside the stage column').toBeGreaterThanOrEqual(box.stage.r - 1)
+    for (const part of ['head', 'foot']) expect(box[part].x, `the ${part} is in the controls column`).toBeGreaterThanOrEqual(box.stage.r - 1)
+    expect(box.controls.y, 'the controls are under the head').toBeGreaterThanOrEqual(box.head.b - 1)
+    expect(box.foot.y, 'the foot is under the controls').toBeGreaterThanOrEqual(box.controls.b - 1)
+    expect(box.foot.b, 'the foot ends at the bottom of the stage column').toBeLessThanOrEqual(box.stage.b + 1)
+    await expect(page.locator('.ied-hd .ied-note')).toHaveText(/^[^,]+, (outline|solid)$/)
+    await expect(page.locator('.ied-stagecol .ied-ground')).toBeVisible()
+    await expect(page.locator('#ied-scroll #ied-sec-stroke')).toBeVisible()
+    const stroke = page.locator('#ied-sec-stroke')
     await expect(stroke.locator('label')).toHaveText('Stroke')
-    await expect(stroke.getByRole('slider').or(stroke.getByRole('spinbutton')).first()).toBeVisible()
-    const pair = stroke.locator('.icust-seg.icust-mode')
+    await expect(stroke.getByRole('slider')).toBeVisible()
+    await expect(stroke.getByRole('textbox', { name: 'Stroke width in pixels' })).toHaveValue('2')
+    const pair = stroke.getByRole('radiogroup', { name: 'Stroke scaling' })
     await expect(pair.getByRole('radio')).toHaveText(['Relative', 'Fixed'])
     await expect(modeRadio(page, 'Relative')).toHaveAttribute('aria-checked', 'true')
     await expect(modeRadio(page, 'Fixed')).toHaveAttribute('aria-checked', 'false')
@@ -168,14 +175,14 @@ test.describe('the pop-up keeps its layout', () => {
 test.describe('the Stroke control follows the artwork', () => {
   test('a stroked icon has it', async ({ page }) => {
     await openEditor(page, { sampleName: 'stroke-line-24' })
-    await expect(page.locator('.icust-stroke')).toBeVisible()
+    await expect(page.locator('#ied-sec-stroke')).toBeVisible()
   })
 
   test('a filled glyph has no Stroke control and no Line style', async ({ page }) => {
     await openEditor(page, { sampleName: 'fill-disc-256', pack: 'ph' })
     await expect(code(page)).toContainText('M128 40')
-    await expect(page.locator('.icust-stroke')).toHaveCount(0)
-    await expect(page.locator('.icust-line')).toHaveCount(0)
+    await expect(page.locator('#ied-sec-stroke')).toHaveCount(0)
+    await expect(page.locator('#ied-sec-line')).toHaveCount(0)
     await expect(page.getByRole('radiogroup', { name: 'Stroke scaling' })).toHaveCount(0)
   })
 
@@ -205,11 +212,11 @@ test.describe('the Stroke control follows the artwork', () => {
       await expect(page.locator('.ied-ground')).toBeVisible()
       await expect.poll(() => asked).toBeGreaterThan(0)
       await expect(page.locator('.ied-stage-host svg'), 'the artwork has not arrived').toHaveCount(0)
-      await expect(page.locator('.icust-stroke'), 'Stroke shown for a Phosphor icon while it loads').toHaveCount(0)
+      await expect(page.locator('#ied-sec-stroke'), 'Stroke shown for a Phosphor icon while it loads').toHaveCount(0)
       await expect(page.locator('.ied-stage-host'), 'the stage drew inline before it knew the artwork').toHaveCount(0)
       release()
       await expect(page.locator('.ied-ground img')).toBeVisible()
-      await expect(page.locator('.icust-stroke'), 'Stroke shown once the artwork arrived').toHaveCount(0)
+      await expect(page.locator('#ied-sec-stroke'), 'Stroke shown once the artwork arrived').toHaveCount(0)
     } finally { release() }
   })
 })
