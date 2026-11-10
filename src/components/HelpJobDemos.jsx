@@ -196,7 +196,7 @@ export function SaveDemo() {
       </div>
       <div>
         <b>Free account</b>
-        <span>{FREE_SAVE_LIMITS.projects} projects and {FREE_SAVE_LIMITS.customIcons} custom icons, on any device.</span>
+        <span>{FREE_SAVE_LIMITS.projects} projects, with {FREE_SAVE_LIMITS.customIcons} icons in each, on any device.</span>
       </div>
     </div>
   )

@@ -66,9 +66,6 @@ const ALLOWED = {
     '.plb-tint-hex': 'hex',
   },
   'deferred/library.css': {
-    '.icust-code-box code': 'code',
-    '.icust-paste-help code': 'code',
-    '.icust-paste-input': 'code',
     '.ig-attrib code': 'code',
     '.pl-modal-prompt pre': 'ask',
   },
@@ -187,11 +184,19 @@ const ALLOWED = {
     '.ht-pal-hex': 'value',
     '.ht-val': 'value',
   },
+  // The icon editor sets code in mono: the pasted SVG markup, inline <code>, the SVG code box and
+  // the colour picker's hex field and the hex shown in the colour row. Its figures (.ied-num, the
+  // stroke and size number fields) are not listed: a plain figure takes var(--font).
+  'pages/icon-editor.css': {
+    '.ied-hex': 'hex',
+    '.ied-nm': 'code',
+    '.ied-ta': 'code',
+    '.ied-note code': 'code',
+    '.ied-code pre': 'code',
+    '.ied-cpop .cpk-hex': 'hex',
+  },
   'pages/icon-emoji-library.css': {
     '.iel-page .emd-value': 'code',
-    '.iel-page .icust-colour-help code': 'code',
-    '.iel-page .icust-colour-value': 'hex',
-    '.iel-page .icust-mono': 'code',
   },
   'pages/info.css': {
     '.ic-acc-body-inner kbd': 'kbd',

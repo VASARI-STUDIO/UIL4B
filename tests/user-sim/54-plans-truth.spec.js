@@ -147,8 +147,8 @@ test.describe('/plans advertises only what the product has', () => {
     expect(await cellText(saved.locator('td.pr-c--free')), 'the page states the wrong free project cap')
       .toBe(String(FREE_SAVE_LIMITS.projects))
     expect(await cellText(saved.locator('td.pr-c--pro'))).toBe('Unlimited')
-    const icons = ledgerRow(page, 'Custom icons')
-    expect(await cellText(icons.locator('td.pr-c--free')), 'the page states the wrong free custom-icon cap')
+    const icons = ledgerRow(page, 'Icons per project')
+    expect(await cellText(icons.locator('td.pr-c--free')), 'the page states the wrong free icons-per-project cap')
       .toBe(String(FREE_SAVE_LIMITS.customIcons))
   })
 
