@@ -1229,7 +1229,7 @@
   --fx-to: 100%;
   --k: 0;
   /* Film grain: a monochrome noise tile, pushed to high contrast. */
-  --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='2.4' intercept='-.7'/%3E%3CfeFuncG type='linear' slope='2.4' intercept='-.7'/%3E%3CfeFuncB type='linear' slope='2.4' intercept='-.7'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27120%27 height=%27120%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27120%27 height=%27120%27 filter='url(%23n)'/%3E%3C/svg%3E");
   position: absolute; inset: 0;
   container-type: size;
   isolation: isolate;
@@ -1242,19 +1242,26 @@
 .grd .grd-fx > *, .grd .grd-fx-flutes, .grd .grd-fx-slice, .grd .grd-fx-slice-in { position: absolute; inset: 0; }
 .grd .grd-fx-grain {
   background-image: var(--fx-grain);
-  background-size: 160px 160px;
-  mix-blend-mode: hard-light;
-  opacity: .5;
+  background-size: 120px 120px;
+  mix-blend-mode: overlay;
+  opacity: .3;
 }
 
-/* Grain: a soft shape with a feathered edge, under heavy grain. */
+/* Grain: the gradient seen through three overlapping, uneven ellipses whose edges dissolve
+   into the ground, under a fine, soft film grain. */
 .grd .grd-fx-blob {
-  inset: 12% 10%;
-  border-radius: 26%;
   background: var(--fx-paint);
-  filter: blur(clamp(12px, 5cqmin, 36px));
+  filter: blur(clamp(4px, 1.5cqmin, 12px));
+  mask-image:
+    radial-gradient(ellipse 34% 40% at 28% 54%, #000 25%, transparent 100%),
+    radial-gradient(ellipse 36% 44% at 55% 42%, #000 25%, transparent 100%),
+    radial-gradient(ellipse 30% 38% at 78% 60%, #000 25%, transparent 100%);
+  -webkit-mask-image:
+    radial-gradient(ellipse 34% 40% at 28% 54%, #000 25%, transparent 100%),
+    radial-gradient(ellipse 36% 44% at 55% 42%, #000 25%, transparent 100%),
+    radial-gradient(ellipse 30% 38% at 78% 60%, #000 25%, transparent 100%);
 }
-.grd .grd-fx[data-fx="grain"] .grd-fx-grain { opacity: .85; }
+.grd .grd-fx[data-fx="grain"] .grd-fx-grain { opacity: .34; }
 
 /* Fluted glass and Glow ring: the scene is repeated in thin slices of every flute, each
    copy shifted a little further across, so a flute shows a reversed sweep of the scene
@@ -1284,6 +1291,18 @@
     rgb(0 0 0 / .26) var(--fx-pitch));
 }
 .grd .grd-fx[data-fx="ring"] { --fx-step: .9%; }
+/* Fluted glass bends colour harder at each flute and shades every reed as a curved
+   surface: a dark edge, a broad highlight on the bulge, a darker falling side. */
+.grd .grd-fx[data-fx="fluted"] { --fx-step: 3.6%; }
+.grd .grd-fx[data-fx="fluted"] .grd-fx-flutes::after {
+  background: repeating-linear-gradient(90deg,
+    rgb(0 0 0 / .3) 0,
+    rgb(255 255 255 / .03) calc(var(--fx-pitch) * .2),
+    rgb(255 255 255 / .3) calc(var(--fx-pitch) * .42),
+    rgb(255 255 255 / .04) calc(var(--fx-pitch) * .64),
+    rgb(0 0 0 / .18) calc(var(--fx-pitch) * .88),
+    rgb(0 0 0 / .34) var(--fx-pitch));
+}
 .grd .grd-fx[data-fx="ring"] .grd-fx-flutes::after { opacity: .6; }
 
 /* Glow ring: a luminous ring with a wide halo, both soft-edged by their masks. */
@@ -1346,7 +1365,7 @@
   background: radial-gradient(closest-side, var(--fx-high) 0, color-mix(in srgb, var(--fx-high) 60%, transparent) 45%, transparent 100%);
 }
 .grd .grd-fx-vignette { background: radial-gradient(ellipse closest-side at 50% 50%, transparent 52%, var(--fx-ground) 100%); }
-.grd .grd-fx[data-fx="glow"] .grd-fx-grain { opacity: .45; }
+.grd .grd-fx[data-fx="glow"] .grd-fx-grain { opacity: .2; }
 
 /* Fade: a wash from the light ground down through the stops. */
 .grd .grd-fx[data-fx="fade"] { --fx-ground: #f2f1ee; }
@@ -1355,7 +1374,7 @@
   mask-image: linear-gradient(180deg, transparent 0, #000 45%);
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 45%);
 }
-.grd .grd-fx[data-fx="fade"] .grd-fx-grain { opacity: .6; }
+.grd .grd-fx[data-fx="fade"] .grd-fx-grain { opacity: .28; }
 
 @media (max-width: 600px) {
   .grd .grd-fx { --fx-pitch: 18px; --fx-slice: 3px; }
