@@ -309,7 +309,7 @@ for (const [who, plan] of VIEWERS) {
       await expect(customiser(page), 'the popup did not reopen').toBeVisible({ timeout: 20_000 })
       await expect(page.locator('#ied-title')).toHaveText(name)
       await expect(tile(page, 'Sharp')).toHaveAttribute('aria-checked', 'true')
-      await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels')
+      await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels, Pro')
       await expect(page.getByRole('button', { name: 'Flip vertically', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
       await expect(line(page)).toHaveText(BOTH)

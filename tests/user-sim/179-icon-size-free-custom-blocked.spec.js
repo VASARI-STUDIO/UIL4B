@@ -61,7 +61,12 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
   test.describe(who, () => {
     test('can pick Custom and type a size, and nothing about that is blocked', async ({ browser }) => {
       const { ctx, page } = await openAs(browser, plan)
-      await expect(page.getByText('Custom size is Pro', { exact: true }), 'the hint is in the rail header').toBeVisible()
+      await expect(page.getByText('Custom size is Pro', { exact: true }), 'the text hint is gone').toHaveCount(0)
+      await expect(customRadio(page), 'the Custom cell says Pro to a screen reader').toHaveAccessibleName('Custom, Pro')
+      const mark = customRadio(page).locator('.ied-tag')
+      await expect(mark, 'the Custom cell says Pro').toHaveText('Pro')
+      await expect(mark.locator('svg'), 'the Custom cell has a lock').toBeVisible()
+      await expect(page.locator('.ied-sizes-rail .ied-tag'), 'only the Custom cell is marked').toHaveCount(1)
       await customRadio(page).click()
       await expect(sizeInput(page)).toBeFocused()
       await sizeInput(page).fill('40')
@@ -79,7 +84,7 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       await sizeInput(page).fill('40')
       await sizeInput(page).press('Enter')
 
-      await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels')
+      await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels, Pro')
       await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
       await expect(primary(page), 'the Upgrade button is live, not dimmed').toBeEnabled()
       await expect(primary(page)).toHaveAttribute('aria-haspopup', 'dialog')
@@ -143,7 +148,7 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
       await expect(primary(page)).toHaveAccessibleName('Upgrade to Pro')
       await sizeInput(page).fill('48')
       await sizeInput(page).press('Enter')
-      await expect(page.locator('.ied-cell-s--custom')).toHaveCount(0)
+      await expect(page.locator('.ied-cus')).toHaveCount(0)
       for (const [label, button] of Object.entries(dimmable(page))) await expect(button, `${label} stays dimmed at the 48 preset`).toBeEnabled()
       await expect(primary(page)).toHaveAccessibleName('Copy SVG')
       await expect(reason(page)).not.toContainText('Custom sizes are Pro')
@@ -154,6 +159,8 @@ for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out v
 
 test('a Pro viewer is never blocked at a custom size, and sees no hint or reason', async ({ browser }) => {
   const { ctx, page } = await openAs(browser, 'pro')
+  await expect(customRadio(page), 'the cell is there to be tagged').toHaveAccessibleName('Custom')
+  await expect(page.locator('.ied-sizes-rail .ied-tag'), 'a Pro viewer sees no Pro mark').toHaveCount(0)
   await expect(page.getByText('Custom size is Pro', { exact: true })).toHaveCount(0)
   await customRadio(page).click()
   await sizeInput(page).fill('40')

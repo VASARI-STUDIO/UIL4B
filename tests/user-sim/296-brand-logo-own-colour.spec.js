@@ -33,7 +33,7 @@ const BODIES = {
   gitlab: '<path fill="#fc6d26" d="M3 3h18v18H3z"/><path fill="#e24329" d="M8 8h8v8H8z"/>',
 }
 // The ink an un-tinted icon is drawn in on the dark page.
-const DARK_INK = '#F4F4F5'
+const DARK_INK = '#EFEEEA'
 
 const choosePack = async (page, pack) => {
   const filters = page.getByRole('button', { name: 'Filters', exact: true })

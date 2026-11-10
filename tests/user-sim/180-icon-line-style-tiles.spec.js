@@ -62,7 +62,7 @@ const reason = (page) => page.locator('#ied-preview-line')
 const stageCap = (page) => page.locator('.ied-ground').evaluate((el) => el.style.getPropertyValue('--ig-cap'))
 const toggle = (page) => page.getByRole('button', { name: 'Set ends and corners separately' })
 
-test('three tiles, Round selected, and each draws its own ends and corners at 56px', async ({ browser }) => {
+test('three tiles, Round selected, and each draws its own ends and corners at 40px', async ({ browser }) => {
   const { ctx, page } = await openAs(browser, null)
   await expect(group(page).getByRole('radio')).toHaveCount(3)
   await expect(tile(page, 'Round')).toHaveAttribute('aria-checked', 'true')
@@ -74,17 +74,28 @@ test('three tiles, Round selected, and each draws its own ends and corners at 56
     const box = svg.getBoundingClientRect()
     return { cap: svg.getAttribute('stroke-linecap'), join: svg.getAttribute('stroke-linejoin'), w: Math.round(box.width), h: Math.round(box.height) }
   })
-  expect(await drawn('round')).toEqual({ cap: 'round', join: 'round', w: 56, h: 56 })
-  expect(await drawn('sharp')).toEqual({ cap: 'square', join: 'miter', w: 56, h: 56 })
-  expect(await drawn('crisp')).toEqual({ cap: 'butt', join: 'bevel', w: 56, h: 56 })
+  expect(await drawn('round')).toEqual({ cap: 'round', join: 'round', w: 40, h: 40 })
+  expect(await drawn('sharp')).toEqual({ cap: 'square', join: 'miter', w: 40, h: 40 })
+  expect(await drawn('crisp')).toEqual({ cap: 'butt', join: 'bevel', w: 40, h: 40 })
+  for (const name of ['Round', 'Sharp', 'Crisp']) {
+    await expect(tile(page, name), `${name} tile width`).toHaveCSS('width', '112px')
+    await expect(tile(page, name), `${name} tile height`).toHaveCSS('height', '122px')
+  }
   await ctx.close()
 })
 
 for (const [who, plan] of [['a signed-in free viewer', 'free'], ['a signed-out viewer', null]]) {
   test.describe(who, () => {
-    test('is told which styles are Pro, in words', async ({ browser }) => {
+    test('is told which styles are Pro: a lock and "Pro" on Sharp and Crisp, nothing on Round', async ({ browser }) => {
       const { ctx, page } = await openAs(browser, plan)
-      await expect(page.getByText('Sharp and Crisp are Pro', { exact: true })).toBeVisible()
+      await expect(page.getByText('Sharp and Crisp are Pro', { exact: true }), 'the text hint is gone').toHaveCount(0)
+      await expect(page.locator('.ied-tile .ied-tag'), 'two tiles carry the mark').toHaveCount(2)
+      for (const name of ['Sharp', 'Crisp']) {
+        const mark = tile(page, name).locator('.ied-tag')
+        await expect(mark, `${name} says Pro`).toHaveText('Pro')
+        await expect(mark.locator('svg'), `${name} has a lock`).toBeVisible()
+      }
+      await expect(tile(page, 'Round').locator('.ied-tag'), 'Round is free').toHaveCount(0)
       await expect(tile(page, 'Sharp')).toHaveAccessibleName('Sharp, Pro')
       await expect(tile(page, 'Round')).toHaveAccessibleName('Round')
       await ctx.close()
@@ -175,6 +186,7 @@ test('arrow keys steer through the tiles, and focus stays in the group', async (
 test('a Pro viewer sees no hint, no reason, and exports the style', async ({ browser }) => {
   const { ctx, page } = await openAs(browser, 'pro')
   await expect(page.getByText('Sharp and Crisp are Pro', { exact: true }), 'a Pro viewer sees no hint').toHaveCount(0)
+  await expect(page.locator('.ied-tile'), 'the tiles are there to be tagged').toHaveCount(3)
   await expect(page.locator('.ied-tile .ied-tag'), 'a Pro viewer sees no Pro tag on a tile').toHaveCount(0)
   await expect(tile(page, 'Sharp')).toHaveAccessibleName('Sharp')
   await tile(page, 'Sharp').click()
