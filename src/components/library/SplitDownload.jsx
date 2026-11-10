@@ -16,6 +16,8 @@ import FooterGlyph from './FooterGlyph'
 //   blocked       a Pro preview is on screen: both parts are dimmed with aria-disabled (still
 //                 reachable by Tab) and do nothing. `describedBy` is the id of the line saying why.
 //   loading       as above, but still arriving: only changes aria-busy
+//   folded        no room for the arrow part: it is not drawn, and the main part opens the menu
+//                 instead of downloading (it still retries a failed download)
 //   onPick(id)    the person chose a format in the menu: remember it
 //   onDownload(f) build and hand over the file for the described format `f`;
 //                 resolves { status: 'done', file } | { status: 'failed' } |
@@ -30,7 +32,7 @@ import FooterGlyph from './FooterGlyph'
 const SIZER_WIDE = ['SVG', 'PNG 2048px', 'Retry']
 const SIZER_PHONE = ['SVG', 'PNG', 'Retry']
 
-export default function SplitDownload({ format, size, disabled = false, blocked = false, describedBy, loading = false, onPick, onDownload }) {
+export default function SplitDownload({ format, size, disabled = false, blocked = false, describedBy, loading = false, folded = false, onPick, onDownload }) {
   const uid = useId()
   const menuId = `dl-menu-${uid}`
   const moreId = `dl-more-${uid}`
@@ -52,6 +54,12 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
   const building = phase === 'building'
 
   const { triggerRef, popRef } = usePopover(open, () => setOpen(false), { autoFocus: false, portalled: true })
+
+  // Folded, the menu hangs off the main part, so that is the popover's trigger.
+  const setMain = useCallback((el) => {
+    mainRef.current = el
+    if (folded) triggerRef.current = el
+  }, [folded, triggerRef])
 
   useEffect(() => {
     const t = timers.current
@@ -114,8 +122,16 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
       const pop = popRef.current
       if (!group || !pop) return
       const box = group.getBoundingClientRect()
-      pop.style.setProperty('--dl-right', `${Math.max(8, window.innerWidth - box.right)}px`)
       pop.style.setProperty('--dl-w', `${box.width}px`)
+      // End-aligned to the split; start-aligned when that runs off the left; always 16px inside
+      // the viewport.
+      const gutter = 16
+      // Layout width: the entrance animation scales the box, so its rect reads narrower.
+      const wide = pop.offsetWidth
+      let left = box.right - wide
+      if (left < gutter) left = box.left
+      left = Math.max(gutter, Math.min(left, window.innerWidth - gutter - wide))
+      pop.style.setProperty('--dl-right', `${window.innerWidth - left - wide}px`)
     }
     align()
     const enabled = rows.map((r, i) => (r.over ? -1 : i)).filter(i => i >= 0)
@@ -165,7 +181,13 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
   }
 
   const retry = phase === 'failed'
-  const mainName = retry ? `Retry download ${current.name}` : `Download ${current.name}`
+  const opensMenu = folded && !retry
+  const mainName = retry ? `Retry download ${current.name}` : opensMenu ? 'Download, choose a format' : `Download ${current.name}`
+  const arrowKeys = (e) => {
+    if (blocked) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) openMenu('first') }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (!open) openMenu('last') }
+  }
 
   return (
     <div
@@ -178,7 +200,8 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
       data-spin={spin ? 'true' : undefined}
     >
       <button
-        ref={mainRef}
+        ref={setMain}
+        id={folded ? moreId : undefined}
         type="button"
         className="dl-main"
         disabled={disabled}
@@ -187,7 +210,16 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
         aria-busy={loading || building || undefined}
         aria-label={mainName}
         title={mainName}
-        onClick={() => { if (!building && !blocked) run(current) }}
+        aria-haspopup={opensMenu ? 'menu' : undefined}
+        aria-expanded={opensMenu ? open : undefined}
+        aria-controls={opensMenu && open ? menuId : undefined}
+        onKeyDown={opensMenu ? arrowKeys : undefined}
+        onClick={() => {
+          if (building || blocked) return
+          if (!opensMenu) run(current)
+          else if (open) closeToTrigger()
+          else openMenu('checked')
+        }}
       >
         {/* The face is the visible icon and label. The hidden sizers hold every
             face of each width tier (formats and Retry), all in grid cell 1/1, so the button
@@ -207,28 +239,26 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
         {SIZER_WIDE.map(t => <span key={`w-${t}`} className="dl-sizer dl-w" aria-hidden="true"><span className="dl-ico" />{t}</span>)}
         {SIZER_PHONE.map(t => <span key={`p-${t}`} className="dl-sizer dl-p" aria-hidden="true"><span className="dl-ico" />{t}</span>)}
       </button>
-      <button
-        ref={triggerRef}
-        id={moreId}
-        type="button"
-        className="dl-more"
-        disabled={disabled || building}
-        aria-label="Download formats"
-        title="Other formats"
-        aria-disabled={blocked || undefined}
-        aria-describedby={blocked ? describedBy : undefined}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => { if (blocked) return; if (open) closeToTrigger(); else openMenu('checked') }}
-        onKeyDown={(e) => {
-          if (blocked) return
-          if (e.key === 'ArrowDown') { e.preventDefault(); if (!open) openMenu('first') }
-          else if (e.key === 'ArrowUp') { e.preventDefault(); if (!open) openMenu('last') }
-        }}
-      >
-        <FooterGlyph name="caret-down" size={14} className="dl-caret" />
-      </button>
+      {!folded && (
+        <button
+          ref={triggerRef}
+          id={moreId}
+          type="button"
+          className="dl-more"
+          disabled={disabled || building}
+          aria-label="Download formats"
+          title="Other formats"
+          aria-disabled={blocked || undefined}
+          aria-describedby={blocked ? describedBy : undefined}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          onClick={() => { if (blocked) return; if (open) closeToTrigger(); else openMenu('checked') }}
+          onKeyDown={arrowKeys}
+        >
+          <FooterGlyph name="caret-up" size={16} className="dl-caret" />
+        </button>
+      )}
       <span className="sr-only" role="status">{note}</span>
       {open && createPortal(<>
         <div

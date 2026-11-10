@@ -19,13 +19,13 @@ test('the caption names the mode and its numbers at the current size', () => {
 })
 
 test('Relative and Fixed are a two-way radio choice described by the live caption', () => {
-  const group = src.match(/<div className="icust-seg icust-mode"[^>]*>/)?.[0]
+  const group = src.match(/<div className="ied-seg" role="radiogroup" aria-label="Stroke scaling"[^>]*>/)?.[0]
   assert.ok(group, 'the choice exists')
-  assert.match(group, /role="radiogroup"/)
-  assert.match(group, /aria-describedby="icust-stroke-note"/)
+  assert.match(group, /aria-describedby="ied-stroke-note"/)
   assert.match(src, /\[\['Relative', false\], \['Fixed', true\]\]/)
+  assert.match(src, /aria-checked=\{absStroke === abs\}/)
   assert.match(src, /strokeScaleCaption\(\{ size, stroke, absolute: absStroke \}\)/)
-  assert.match(src, /<p id="icust-stroke-note" className="icust-stroke-note">\r?\n\s*\{strokeCaption\.prefix\}<b>\{strokeCaption\.effect\}<\/b>\{strokeCaption\.suffix\}\r?\n/)
+  assert.match(src, /<p id="ied-stroke-note" className="ied-note">\r?\n\s*\{strokeCaption\.prefix\}<b>\{strokeCaption\.effect\}<\/b>\{strokeCaption\.suffix\}\r?\n/)
 })
 
 test('the PNG is serialised at its own pixel size with the slider value, not a scaled copy of it', () => {

@@ -1,736 +1,677 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   PRICING — /plans: the plan ledger from 1024px, the offer first below it.
-
-   Free and Pro are two columns of one comparison: the billing switch, the
-   prices and every difference sit in a single table. Emphasis is spent once:
-   the Pro button is the only filled accent, and the Pro column (below 1024, the Pro card) is the only
-   tinted surface. No gradient, glow, shadow, badge or strike-through.
+   PRICING — /plans: the homepage's Free and Pro cards, grown, then one
+   comparison table, the questions and the closing call.
 
    EVERY SELECTOR IS UNDER `.pricing`. The page root also carries `.spectrum`,
-   which supplies the ground, the ink ramp (`--sp-ink`, `--sp-dim`, `--sp-faint`,
-   `--sp-hair`, `--sp-wash`), the film grain, the colour band and the footer
-   (spectrum.css, shared with `/`). Nothing here restyles a `.sp-*` class.
+   which supplies the ground, the ink ramp (`--sp-ink`, `--sp-ink-rgb`,
+   `--sp-page`) and the homepage spacing tokens (home-tokens.css). The cards
+   and the two lists are home-plans.css (`.hpl-*`); the closing call and the
+   footer are home-footer.css. Nothing here restyles a `.sp-*` class.
 
-   Type is Switzer only, sentence case: 64 display (clamp), 56 price, 36 h2
-   (clamp), 20 plan name, 16 group / question / button, 15 body and rows,
-   14 notes, 13 small. Money is tabular. Space is the --s-1…--s-9 scale.
+   Page width: a 52px gutter and a 1240px box at 1440; a 40px gutter below 1344.
+   Breakpoints: 1200 (the pair stacks, Pro first), 768 (phone).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .pricing {
-  /* The sales accent and the ink on it, in both themes: 4.98:1 at rest and
-     6.14:1 on hover (--accent-fill-hover, measured in global.css). */
-  --accent: #2A60E8;
-  --accent-ink: #F4F7FF;
-
-  /* The ledger's three columns: labels, Free, Pro. The bar, the table, the
-     footnote and the questions all read this one value so they line up. */
-  --pr-cols: minmax(0, 5fr) minmax(0, 3.5fr) minmax(0, 3.5fr);
-  --pr-pad: var(--s-5);
+  --pa-panel: #0B0C0E;
+  --pa-seg: #0F1012;
+  --pa-tag-free: #16171A;
+  --pa-tag-pro: #1C1D21;
+  --pa-ease: cubic-bezier(.23, 1, .32, 1);
+  /* The quietest ink alpha text may use. Light needs more: .66 reads 5.3:1 on the
+     darkest surface it sits on (the switch track), .56 reads 3.9:1. */
+  --pa-quiet: .56;
+  --hpl-ink: var(--sp-ink);
+  --hpl-page: var(--sp-page);
+  font-family: var(--hm-font);
 }
-
+[data-theme="light"] .pricing {
+  --pa-panel: #FFFFFF;
+  --pa-seg: #E3E3DD;
+  --pa-tag-free: #ECECE7;
+  --pa-tag-pro: #E3E3DD;
+  --pa-quiet: .66;
+}
 .pricing > main { line-height: normal; }
 
-.pricing .pr-shell {
-  min-width: 0;
-  max-width: calc(1200px + 2 * var(--sp-gutter));
-  margin-inline: auto;
-  padding-inline: var(--sp-gutter);
+.pricing .pa-wrap {
+  width: 100%;
+  max-width: 1344px;
+  margin: 0 auto;
+  padding: 0 52px;
+  box-sizing: border-box;
+}
+@media (max-width: 1343px) {
+  .pricing .pa-wrap { max-width: 1320px; padding: 0 40px; }
 }
 
-/* ── hero ─────────────────────────────────────────────────────────────────── */
-
-.pricing .pr-hero { padding-top: calc(var(--chrome-h) + var(--s-8)); }
-
-.pricing .pr-h1-cup { display: inline-block; vertical-align: -0.12em; color: var(--accent); }
-.pricing .pr-h1-nowrap { white-space: nowrap; }
-.pricing .pr-h1 {
+/* ── Head ────────────────────────────────────────────────────────────────── */
+/* The app nav is fixed at --chrome-h, so the head clears it with its own padding. */
+.pricing .pa-head { padding-top: calc(var(--chrome-h) + 68px); }
+.pricing .pa-h1 {
   margin: 0;
-  max-width: 28ch;
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: clamp(40px, 4.4vw, 64px);
-  line-height: 1.04;
-  letter-spacing: -.02em;
+  max-width: 30ch;
+  font-weight: 600;
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -.04em;
   text-wrap: balance;
-  color: var(--sp-ink);
 }
-
-.pricing .pr-sub {
-  margin: var(--s-5) 0 0;
-  max-width: 52ch;
-  font-size: clamp(16px, 1.25vw, 18px);
+.pricing .pa-lead {
+  margin: 24px 0 0;
+  max-width: 72ch;
+  font-size: 18px;
   line-height: 1.6;
-  color: var(--sp-dim);
-  text-wrap: pretty;
+  color: rgba(var(--sp-ink-rgb), .68);
 }
 
-/* ── the ledger ───────────────────────────────────────────────────────────── */
-
-.pricing .pr-ledger-sec { margin-top: var(--s-8); }
-.pricing .pr-ledger { position: relative; isolation: isolate; }
-
-/* A real <table> that lays out as a grid. Every row is `display: contents`,
-   so each cell is a grid item and the Pro column can be one unbroken tint.
-   The ARIA roles on the elements keep the table semantics. */
-.pricing .pr-table {
+/* ── The pair: Free 4fr, Pro 8fr, both panels one height ─────────────────── */
+.pricing .pa-hpl { padding: 0; margin-top: 48px; }
+.pricing .pa-pair {
   display: grid;
-  grid-template-columns: var(--pr-cols);
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 16px;
+  align-items: stretch;
 }
-.pricing .pr-table thead,
-.pricing .pr-table tbody,
-.pricing .pr-table tr { display: contents; }
-
-.pricing .pr-c {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  min-height: 52px;
-  padding: var(--s-3) var(--pr-pad);
-  border-top: 1px solid var(--sp-hair);
-  font-size: 15px;
-  font-weight: 400;
-  line-height: 1.45;
-  text-align: left;
-  overflow-wrap: anywhere;
+/* Pro comes first in the markup, so keyboard order starts at its switch and button.
+   Side by side, Free sits on the left by grid placement; under 1200 the one column
+   follows the markup (Pro, then Free), and with no Pro action the markup puts Free first. */
+@media (min-width: 1200px) {
+  .pricing .pa-pair > .hpl-free { grid-column: 1; grid-row: 1; }
+  .pricing .pa-pair > .hpl-pro { grid-column: 2; grid-row: 1; }
 }
-.pricing .pr-c--label { padding-left: 0; color: var(--sp-ink); }
-.pricing .pr-c--free { color: var(--sp-dim); }
-.pricing .pr-c--pro {
-  color: var(--sp-ink);
-  background: var(--sp-wash);
-}
-.pricing .pr-c--pro.is-last { border-radius: 0 0 var(--radius-2xl) var(--radius-2xl); }
-.pricing .pr-none { color: var(--sp-faint); }
-.pricing .pr-tag { display: none; }
-
-/* Group rows: the name sits in the label column, the plan cells stay blank. */
-.pricing .pr-c--group {
-  align-items: flex-end;
-  min-height: 0;
-  padding-top: var(--s-6);
-  padding-bottom: var(--s-2);
-  border-top: 0;
-  font-size: 16px;
-  font-weight: 560;
-}
-.pricing .pr-c--blank { border-top: 0; }
-
-/* "Same on both plans": one row, the value spans both plan columns, and the
-   Pro tint has already ended above it. */
-.pricing .pr-group--same .pr-c {
-  margin-top: var(--s-5);
-  align-items: flex-start;
-  border-top: 1px solid var(--sp-hair);
-}
-.pricing .pr-group--same .pr-c--group { padding-top: var(--s-4); padding-bottom: var(--s-4); }
-.pricing .pr-c--same {
-  grid-column: 2 / 4;
-  padding-block: var(--s-4);
-  color: var(--sp-dim);
-  max-width: 62ch;
-}
-
-/* ── plan heads ───────────────────────────────────────────────────────────── */
-
-.pricing .pr-head {
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding-top: var(--s-6);
-  padding-bottom: var(--s-5);
-  border-top: 0;
-}
-.pricing .pr-head--pro { border-radius: var(--radius-2xl) var(--radius-2xl) 0 0; }
-
-.pricing .pr-k { font-size: 14px; font-weight: 500; color: var(--sp-dim); }
-.pricing .pr-cur {
-  display: block;
-  min-height: 1.4em;
-  margin-top: var(--s-3);
-  font-size: 13px;
-  color: var(--sp-faint);
-}
-
-.pricing .pr-plan {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-3);
-  font-size: 20px;
-  font-weight: 560;
-  letter-spacing: -.01em;
-}
-.pricing .pr-plan-tag { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--sp-dim); }
-
-/* The price slot is reserved, so "—", "$4" and "$7" never move the row. */
-.pricing .pr-price {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-2);
-  min-height: 56px;
-  margin: var(--s-4) 0 0;
-}
-.pricing .pr-amt {
-  min-width: 2ch;
-  /* A price never breaks mid-number: .pr-c's overflow-wrap would put "A$6.25"
-     on two lines on one cadence only, and the Pro button would jump. */
-  white-space: nowrap;
-  overflow-wrap: normal;
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: 56px;
-  line-height: 1;
-  letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--sp-ink);
-}
-.pricing .pr-amt.is-word { font-size: 28px; letter-spacing: -.02em; }
-/* The ledger's Pro column is 227px wide at 1024: the size follows the width so
-   "A$10.00" fits it on one line. */
-.pricing .pr-c--pro .pr-amt:not(.is-word) { font-size: clamp(40px, 4.2vw, 56px); }
-.pricing .pr-per { font-size: 15px; color: var(--sp-dim); }
-
-.pricing .pr-note {
-  margin: var(--s-3) 0 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--sp-dim);
-}
-.pricing .pr-note span { display: block; }
-
-/* Every state's note shares one grid cell; the slot is as tall as the tallest
-   and the hidden ones take no part in reading or focus. */
-.pricing .pr-stack { display: grid; }
-.pricing .pr-stack > * { grid-area: 1 / 1; }
-.pricing .pr-stack .is-ghost { visibility: hidden; }
-
-.pricing .pr-under {
-  display: block;
-  min-height: 1.4em;
-  margin: var(--s-3) 0 0;
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--sp-faint);
-}
-.pricing .pr-stack--under { margin-top: var(--s-3); }
-.pricing .pr-stack--under .pr-under { margin: 0; }
-
-/* The price changes in place, and fades up when the switch is used. */
-.pricing .pr-swap.is-swapped { animation: pr-in 180ms var(--ease-out) both; }
-@keyframes pr-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
-}
-
-/* ── billing switch ───────────────────────────────────────────────────────── */
-
-.pricing .pr-billing {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: auto;
-  max-width: 100%;
-  margin-top: var(--s-3);
-  padding: var(--s-1);
-  border: 1px solid var(--sp-hair);
-  border-radius: var(--radius-pill);
-  background: var(--sp-wash);
-}
-.pricing .pr-billing-opt { position: relative; display: flex; min-width: 0; }
-.pricing .pr-billing-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.pricing .pr-billing-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding-inline: var(--s-4);
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--sp-dim);
-  transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
-}
-.pricing .pr-billing-save { color: var(--accent-mid); white-space: pre; }
-.pricing .pr-billing-input:checked + .pr-billing-text { background: var(--sp-ink); color: var(--sp-page); }
-.pricing .pr-billing-input:checked + .pr-billing-text .pr-billing-save { color: inherit; }
-.pricing .pr-billing-input:focus-visible + .pr-billing-text { outline: 2px solid var(--link); outline-offset: 3px; }
-@media (hover: hover) and (pointer: fine) {
-  .pricing .pr-billing-input:not(:checked):hover + .pr-billing-text { color: var(--sp-ink); }
-}
-@media (pointer: coarse) {
-  .pricing .pr-billing-text { height: 44px; }
-}
-
-/* ── buttons ──────────────────────────────────────────────────────────────── */
-
-.pricing .pr-cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 48px;
-  margin-top: var(--s-5);
-  padding: var(--s-2) var(--s-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  font-family: var(--font);
-  font-size: 16px;
-  font-weight: 560;
-  line-height: 1.2;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) ease;
-}
-.pricing .pr-cta:hover { text-decoration: none; }
-.pricing .pr-cta:active { transform: scale(.98); }
-.pricing .pr-cta:focus-visible,
-.pricing .pr-bar-btn:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
-
-.pricing .pr-cta--pro { background: var(--accent); color: var(--accent-ink); }
-.pricing .pr-cta--free { background: transparent; color: var(--sp-ink); border-color: var(--sp-line-strong); }
-@media (hover: hover) and (pointer: fine) {
-  .pricing .pr-cta--pro:hover { background: var(--accent-fill-hover); color: var(--accent-ink); }
-  .pricing .pr-cta--free:hover { border-color: var(--sp-ink); }
-}
-.pricing .pr-cta--pro[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
-.pricing .pr-cta--pro[aria-disabled="true"]:active { transform: none; }
-
-/* ── the plan bar ─────────────────────────────────────────────────────────── */
-
-/* Pinned under the nav once the header row leaves the screen. It reserves no
-   space (negative bottom margin), so it can never shift the page. */
-.pricing .pr-bar {
-  position: sticky;
-  top: var(--chrome-h);
-  z-index: 5;
-  display: grid;
-  grid-template-columns: var(--pr-cols);
-  height: 56px;
-  margin-bottom: -56px;
-  border-bottom: 1px solid var(--sp-hair);
-  background: var(--sp-page);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity var(--dur-2) var(--ease-out), visibility 0s linear var(--dur-2);
-}
-.pricing .pr-bar.is-on {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition-delay: 0s;
-}
-.pricing .pr-bar > span {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  min-width: 0;
-  padding-inline: var(--pr-pad);
-  font-size: 15px;
-  font-weight: 560;
-}
-.pricing .pr-bar-lead { padding-left: 0; font-size: 14px; font-weight: 500; color: var(--sp-dim); }
-.pricing .pr-bar-pro { justify-content: space-between; }
-.pricing .pr-bar-price { display: flex; align-items: baseline; gap: var(--s-3); }
-.pricing .pr-bar-name { font-weight: 560; }
-/* The billing cadence is for the docked bar; the sticky row's Pro column
-   already states it above. */
-.pricing .pr-bar-bill { display: none; }
-.pricing .pr-bar-amt { font-weight: 500; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pricing .pr-bar-btn {
+.pricing .pa-planrow { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.pricing .pa-tag {
   display: inline-flex;
   align-items: center;
-  height: 36px;
-  padding-inline: var(--s-4);
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 14px;
-  font-weight: 560;
-  line-height: 1;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.pricing .pr-foot { display: grid; grid-template-columns: var(--pr-cols); }
-.pricing .pr-foot p {
-  grid-column: 2 / 4;
-  margin: 0;
-  padding: var(--s-4) var(--pr-pad) 0;
-  font-size: 13px;
-  color: var(--sp-faint);
-}
-
-/* ── questions, on the ledger's grid ──────────────────────────────────────── */
-
-.pricing .pr-faq-sec { margin-top: var(--s-9); margin-bottom: var(--s-9); }
-
-.pricing .pr-h2 {
-  margin: 0 0 var(--s-5);
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: clamp(28px, 2.6vw, 36px);
-  line-height: 1.1;
-  letter-spacing: -.025em;
-}
-
-.pricing .pr-faq-row {
-  display: grid;
-  grid-template-columns: var(--pr-cols);
-  padding-block: var(--s-5);
-  border-top: 1px solid var(--sp-hair);
-}
-.pricing .pr-faq-row h3 {
-  grid-column: 1;
-  margin: 0;
-  padding-right: var(--s-5);
-  font-size: 16px;
-  font-weight: 560;
-  line-height: 1.45;
-}
-.pricing .pr-faq-row p {
-  grid-column: 2 / 4;
-  max-width: calc(62ch + var(--pr-pad));
-  margin: 0;
-  padding-left: var(--pr-pad);
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--sp-dim);
-}
-.pricing .pr-faq-row a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; border-radius: 2px; }
-.pricing .pr-faq-row a:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
-
-/* ── 1024 to 1359: the plan bar docks to the bottom ──────────────────────── */
-
-/* Below 1360 the Pro column cannot hold a price and a button, so the bar docks
-   to the bottom (thumb reach, safe area) after the Pro button leaves the
-   screen. It goes again when the closing colour band (1024 and up) or the
-   closing section (below 1024) comes into view. */
-@media (max-width: 1359px) {
-  .pricing .pr-bar {
-    position: fixed;
-    inset: auto 0 0 0;
-    z-index: 15;
-    display: flex;
-    align-items: center;
-    height: auto;
-    margin: 0;
-    padding: var(--s-3) max(var(--sp-gutter), env(safe-area-inset-right))
-      calc(var(--s-3) + env(safe-area-inset-bottom)) max(var(--sp-gutter), env(safe-area-inset-left));
-    border-top: 1px solid var(--sp-hair);
-    border-bottom: 0;
-    transform: translateY(8px);
-    transition: opacity var(--dur-2) var(--ease-out), transform var(--dur-2) var(--ease-out), visibility 0s linear var(--dur-2);
-  }
-  .pricing .pr-bar.is-on { transform: none; transition-delay: 0s; }
-  /* Keyboard focus scrolls clear of the docked bar: its height (button, padding,
-     hairline, safe area) plus a gap for the focus ring. Only while the bar is on. */
-  html:has(.pricing .pr-bar.is-on) {
-    scroll-padding-bottom: calc(48px + 2 * var(--s-3) + 1px + env(safe-area-inset-bottom) + var(--s-4));
-  }
-  .pricing .pr-bar > .pr-bar-lead,
-  .pricing .pr-bar > .pr-bar-free { display: none; }
-  .pricing .pr-bar > .pr-bar-pro { flex: 1; gap: var(--s-4); padding: 0; white-space: nowrap; }
-  .pricing .pr-bar-price { flex-direction: column; align-items: flex-start; gap: 0; }
-  .pricing .pr-bar-name { font-size: 13px; font-weight: 500; color: var(--sp-dim); }
-  .pricing .pr-bar-bill { display: inline; }
-  .pricing .pr-bar-amt { font-size: 15px; font-weight: 560; color: var(--sp-ink); }
-  .pricing .pr-bar-btn { height: 48px; padding-inline: var(--s-5); font-size: 16px; }
-}
-
-/* ── below 1024: the offer first ─────────────────────────────────────────── */
-
-/* The ledger needs three columns, so below 1024 the page is a different tree:
-   the headline, the billing switch, the Pro card (price, billed line, trial
-   line, button, what Pro adds), Free in one row, the three-column comparison,
-   the questions as an accordion and a closing band. The headline and the
-   sub-line keep the base rules from 768 up. */
-
-.pricing .pr-offer { margin-top: var(--s-6); }
-
-.pricing .pr-offer-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-2) var(--s-4);
-}
-.pricing .pr-offer-top .pr-billing { margin-top: 0; }
-.pricing .pr-offer-top .pr-cur { min-height: 0; margin-top: 0; }
-
-/* Pro: the one tinted block. The text column holds the price and the button,
-   the second one what Pro adds. */
-.pricing .pr-pro {
-  display: grid;
-  gap: var(--s-5);
-  margin-top: var(--s-4);
-  padding: var(--s-5) var(--s-4);
-  border-radius: var(--radius-2xl);
-  background: var(--sp-wash);
-}
-.pricing .pr-pro-main { display: flex; flex-direction: column; min-width: 0; }
-/* The saving is its own line under the plan name, reserved and never wrapped,
-   so it arriving with the prices moves nothing (it stays on one line at 320). */
-.pricing .pr-pro-top { display: block; }
-.pricing .pr-pro-top .pr-plan { margin: 0; }
-.pricing .pr-save {
-  min-height: 1.4em;
-  margin: var(--s-1) 0 0;
-  font-size: 13px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
   font-weight: 500;
+}
+.pricing .pa-tag--free { background: var(--pa-tag-free); }
+.pricing .pa-tag--pro { background: var(--pa-tag-pro); }
+
+.pricing .pa-hpl .hpl-free > .hpl-amount { margin-top: 24px; font-variant-numeric: tabular-nums; }
+.pricing .pa-freenote { max-width: 34ch; line-height: 1.5; text-wrap: pretty; }
+.pricing .hpl-freefoot p { line-height: 1.5; }
+/* The card sheet's quiet text, raised on light (home-plans.css keeps .56 for the homepage). */
+.pricing .hpl-note,
+.pricing .hpl-freelist .hpl-minus,
+.pricing .hpl-freefoot p { color: rgba(var(--sp-ink-rgb), var(--pa-quiet)); }
+/* Free's ticks are quiet ink; the colour is Pro's. */
+.pricing .pa-hpl .hpl-freelist li:not(.hpl-minus) > svg { stroke: rgba(var(--sp-ink-rgb), .56); }
+
+/* Pro head: the price column on the left, the covers (100 + 10 + 242 = 352 wide)
+   on the right; the detail slot spans under the price column only. The action
+   row sits under the slot so it is on the first screen at 1440x900. */
+.pricing .pa-pro-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 352px;
+  column-gap: 32px;
+  align-items: start;
+}
+.pricing .pa-pro-top { grid-column: 1; grid-row: 1; min-width: 0; }
+.pricing .pa-slot { grid-column: 1; grid-row: 2; }
+.pricing .pa-fig { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+.pricing .pa-act {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin-top: 24px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.pricing .pa-act--none { margin-top: 8px; min-height: 0; gap: 0; }
+.pricing .pa-cta { flex: none; display: flex; align-items: center; }
+.pricing .pa-foot {
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(var(--sp-ink-rgb), .62);
+}
+.pricing .pa-foot p { margin: 0; }
+
+.pricing .pa-proline { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.pricing .pa-active {
+  margin: 8px 0 0;
+  font-size: 14px;
   line-height: 1.4;
   white-space: nowrap;
-  text-align: left;
-  color: var(--accent-mid);
+  color: rgba(var(--sp-ink-rgb), .62);
 }
-.pricing .pr-pro .pr-price { min-height: 48px; margin-top: var(--s-3); }
-.pricing .pr-pro .pr-amt { font-size: 48px; }
-/* The word that stands in for a price keeps its small size: this rule has one
-   more class than the price sizes here and in the 768 to 1023 block, so it wins
-   at every width and "Unavailable" stays inside its column. */
-.pricing .pr-pro .pr-amt.is-word { font-size: 28px; letter-spacing: -.02em; }
-.pricing .pr-pro .pr-note { margin-top: var(--s-2); }
-.pricing .pr-pro .pr-cta { margin-top: var(--s-4); }
-.pricing .pr-pro .pr-under { margin-top: var(--s-3); text-align: center; }
+.pricing .pa-price {
+  margin: 24px 0 0;
+  min-height: 64px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.pricing .pa-amt {
+  --pa-amt: 64px;
+  font-size: var(--pa-amt);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
+}
+.pricing .pa-amt--word { font-size: 40px; line-height: var(--pa-amt); }
+.pricing .pa-per { font-size: 14px; color: rgba(var(--sp-ink-rgb), .68); }
+.pricing .pa-slot {
+  margin-top: 10px;
+  min-height: 63px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(var(--sp-ink-rgb), .62);
+}
+.pricing .pa-slot--short { min-height: 21px; }
+.pricing .pa-slot p { margin: 0; text-wrap: balance; }
 
-.pricing .pr-pro-adds { min-width: 0; padding-top: var(--s-5); border-top: 1px solid var(--sp-hair); }
-.pricing .pr-pro-adds-h { margin: 0 0 var(--s-4); font-size: 16px; font-weight: 560; line-height: 1.3; }
-.pricing .pr-ticks { display: grid; gap: var(--s-3); margin: 0; padding: 0; list-style: none; }
-.pricing .pr-ticks li {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  gap: var(--s-3);
+.pricing .pa-go { min-width: 240px; justify-content: space-between; }
+.pricing .pa-go--plain {
+  justify-content: center;
+  padding: 0 26px;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* The covers. */
+.pricing .pa-covers { display: flex; align-items: flex-end; justify-content: flex-end; gap: 10px; }
+.pricing .pa-cap {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(var(--sp-ink-rgb), .62);
+  text-wrap: pretty;
+}
+.pricing .pa-fig img {
+  display: block;
+  box-sizing: border-box;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--sp-ink-rgb), .14);
+  object-fit: cover;
+}
+.pricing .pa-cover--book { flex: none; width: 100px; height: 141px; }
+.pricing .pa-cover--deck { flex: none; width: 242px; height: 136px; }
+
+/* Billing switch: the thumb changes at once (a switch is used often); only the press scales. */
+.pricing .pl-switch {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--pa-seg);
+}
+.pricing .pl-seg {
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--sp-ink-rgb), var(--pa-quiet));
+  font-family: inherit;
   font-size: 15px;
-  line-height: 1.45;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 150ms var(--pa-ease);
+}
+.pricing .pl-seg:active { transform: scale(.97); }
+.pricing .pl-seg.pl-on { background: rgba(var(--sp-ink-rgb), .14); color: var(--sp-ink); }
+.pricing .pl-seg:focus-visible { outline: 2px solid var(--sp-ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .pricing .pl-seg:not(.pl-on):hover { background: rgba(var(--sp-ink-rgb), .08); color: var(--sp-ink); }
+}
+@media (max-width: 1343px) {
+  .pricing .pl-seg { padding: 0 14px; }
+}
+
+/* 1200 to 1249: the price column is under 303px, so the price label wraps under
+   the amount on Yearly; both billing states hold one height so the panels never change height. */
+@media (min-width: 1200px) and (max-width: 1249px) {
+  .pricing .pa-price { min-height: 86px; }
+}
+
+/* ── Comparison: a native table. No overflow on the panel, or the sticky head breaks. ── */
+.pricing .pl-panel {
+  margin-top: 16px;
+  padding: 0 40px 16px;
+  border-radius: 28px;
+  border: 1px solid rgba(var(--sp-ink-rgb), .12);
+  background: var(--pa-panel);
+}
+.pricing .pl-t thead th:nth-child(1) { width: 33.333%; }
+.pricing .pl-t thead th:nth-child(2) { width: 25%; }
+.pricing .pl-t thead th:nth-child(3) { width: 41.667%; }
+.pricing .pl-t {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.pricing .pl-t th,
+.pricing .pl-t td { text-align: left; vertical-align: top; font-weight: 400; box-sizing: border-box; }
+/* The head sticks under the marketing nav while it shows (--spnav-h plus its 1px
+   rule) and at the very top once the nav has slid away on a scroll down. It
+   follows the nav's own flag and timing. With reduced motion the nav never slides
+   away, so the head stays under it. */
+.pricing { --pa-head-top: calc(var(--spnav-h) + 1px); }
+.pricing:has(.spnav[data-nav-hidden="1"]):not(:has(.spnav :focus-visible)) { --pa-head-top: 0px; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .pricing.pricing:has(.spnav[data-nav-hidden="1"]) { --pa-head-top: calc(var(--spnav-h) + 1px); }
+}
+html[data-reduced-motion="true"] .pricing.pricing:has(.spnav[data-nav-hidden="1"]) { --pa-head-top: calc(var(--spnav-h) + 1px); }
+.pricing .pl-t thead th {
+  position: sticky;
+  top: var(--pa-head-top);
+  transition: top var(--dur-3) cubic-bezier(.32, .72, 0, 1);
+  z-index: 2;
+  height: 64px;
+  padding: 0;
+  vertical-align: middle;
+  background: var(--pa-panel);
+  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08);
+  font-size: 15px;
+  font-weight: 500;
+}
+.pricing .pl-t thead th:first-child { font-size: 13px; color: rgba(var(--sp-ink-rgb), var(--pa-quiet)); }
+.pricing .pl-t thead th.pl-ink { color: var(--sp-ink); }
+.pricing .pl-t th.pl-gh {
+  padding: 32px 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--sp-ink);
 }
-.pricing .pr-tick { margin-top: 3px; color: var(--accent-mid); }
-
-/* Free: the name and price, what it holds, and the way in. One hairline under. */
-.pricing .pr-free {
-  display: grid;
-  gap: var(--s-3);
-  padding: var(--s-5) 0 var(--s-6);
-  border-bottom: 1px solid var(--sp-hair);
+.pricing .pl-ghin { display: inline-flex; align-items: center; gap: 10px; }
+.pricing .pl-ghin svg { flex: none; }
+.pricing .pl-r > * { padding: 18px 16px 18px 0; border-top: 1px solid rgba(var(--sp-ink-rgb), .08); }
+.pricing .pl-r > .pl-l { color: rgba(var(--sp-ink-rgb), .86); }
+.pricing .pl-r > .pl-f { color: rgba(var(--sp-ink-rgb), .62); }
+.pricing .pl-r > .pl-p { color: var(--sp-ink); font-weight: 500; }
+.pricing .pl-n { font-weight: 700; color: var(--sp-ink); font-variant-numeric: tabular-nums; }
+.pricing .pl-v { display: inline-flex; align-items: flex-start; gap: 10px; }
+.pricing .pl-v svg { flex: none; margin-top: 3px; }
+.pricing .pl-f .pl-v svg { stroke: rgba(var(--sp-ink-rgb), .56); }
+.pricing .pl-p .pl-v svg { stroke: var(--sp-ink); }
+.pricing .pl-same th {
+  padding: 24px 16px 28px 0;
+  border-top: 1px solid rgba(var(--sp-ink-rgb), .12);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--sp-ink);
 }
-.pricing .pr-free-id { display: flex; align-items: baseline; gap: var(--s-3); }
-.pricing .pr-free .pr-plan { margin: 0; }
-.pricing .pr-free-amt { margin: 0; }
-.pricing .pr-free .pr-amt { min-width: 0; font-size: 20px; font-weight: 560; letter-spacing: -.01em; }
-.pricing .pr-free-says { margin: 0; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
-.pricing .pr-free-says span { display: block; }
-.pricing .pr-free .pr-cta { width: auto; margin-top: var(--s-2); justify-self: start; padding-inline: var(--s-5); }
-
-/* The comparison: Free and Pro side by side, one row per difference. */
-.pricing .pr-diff { margin-top: var(--s-7); }
-.pricing .pr-diff .pr-h2 { margin-bottom: var(--s-3); }
-.pricing .pr-lede { max-width: 62ch; margin: 0; font-size: 14px; line-height: 1.55; color: var(--sp-dim); text-wrap: pretty; }
-.pricing .pr-lede strong { font-weight: 560; color: var(--sp-ink); }
-
-.pricing .pr-dtable {
-  width: 100%;
-  margin-top: var(--s-5);
-  border-collapse: collapse;
-  table-layout: fixed;
+.pricing .pl-same td {
+  padding: 24px 0 28px;
+  border-top: 1px solid rgba(var(--sp-ink-rgb), .12);
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(var(--sp-ink-rgb), .68);
 }
-.pricing .pr-dtable th,
-.pricing .pr-dtable td {
-  padding: var(--s-4) var(--s-2) var(--s-4) 0;
+.pricing .pl-same td p { margin: 0; max-width: 62ch; }
+
+/* The sticky head's Pro cell: the price line and the pill. The pill fades by opacity only. */
+.pricing .pl-headpro { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pricing .pl-headlabel { font-size: 15px; white-space: nowrap; }
+.pricing .pl-headlabel--price { font-size: 14px; }
+.pricing .pl-pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--sp-ink);
+  color: var(--sp-page);
   font-size: 14px;
-  font-weight: 400;
-  line-height: 1.45;
-  text-align: left;
-  vertical-align: top;
-  overflow-wrap: anywhere;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 150ms ease, visibility 150ms, background-color 150ms ease;
 }
-.pricing .pr-dtable thead th { padding-top: 0; font-size: 13px; font-weight: 560; color: var(--sp-ink); }
-.pricing .pr-dtable tbody tr { border-top: 1px solid var(--sp-hair); }
-.pricing .pr-dtable tbody tr:last-child { border-bottom: 1px solid var(--sp-hair); }
-.pricing .pr-dtable thead th:nth-child(1) { width: 36%; }
-.pricing .pr-dtable thead th:nth-child(2) { width: 31%; }
-.pricing .pr-dtable tbody th { color: var(--sp-ink); font-weight: 400; }
-.pricing .pr-dtable td { color: var(--sp-dim); }
-.pricing .pr-dtable td.is-pro { color: var(--sp-ink); font-weight: 500; }
-.pricing .pr-dtable td.is-none { color: var(--sp-faint); }
+.pricing .pl-pill.is-on { opacity: 1; visibility: visible; }
+@media (hover: hover) {
+  .pricing .pl-pill:hover { background: #F7F6F2; }
+}
 
-/* The questions: native disclosure, the first open. */
-.pricing .pr-faq-sec--acc { margin-top: var(--s-8); margin-bottom: var(--s-8); }
-.pricing .pr-qa-list { border-bottom: 1px solid var(--sp-hair); }
-.pricing .pr-qa { border-top: 1px solid var(--sp-hair); }
-.pricing .pr-qa summary {
+/* ── Price and notes: the page's one moment, a 200ms fade after the first use ── */
+@keyframes plFx { from { opacity: 0; } to { opacity: 1; } }
+.pricing .pl-fx { animation: plFx 200ms var(--pa-ease) both; }
+
+/* ── Questions: closed at rest, one press opens, one press closes ────────── */
+.pricing .pa-faq { margin-top: 128px; }
+.pricing .pa-faq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 16px;
+}
+.pricing .pa-h2 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: -.04em;
+}
+.pricing .pl-item h3 { margin: 0; font-size: inherit; font-weight: inherit; }
+.pricing .pl-q {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-4);
-  min-height: 56px;
-  padding-block: var(--s-3);
-  font-size: 16px;
-  font-weight: 560;
-  line-height: 1.4;
-  list-style: none;
-  cursor: pointer;
-  border-radius: var(--radius-xs);
-}
-.pricing .pr-qa summary::-webkit-details-marker { display: none; }
-.pricing .pr-qa summary:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
-.pricing .pr-qa p {
-  max-width: 62ch;
+  gap: 24px;
+  width: 100%;
+  min-height: 72px;
+  padding: 20px 0;
   margin: 0;
-  padding-bottom: var(--s-5);
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--sp-dim);
+  border: 0;
+  background: transparent;
+  color: var(--sp-ink);
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
 }
-/* The plus becomes a cross by turning, so one shape carries both states. */
-.pricing .pr-qa-mark { position: relative; flex: none; width: 12px; height: 12px; color: var(--sp-dim); }
-.pricing .pr-qa-mark::before,
-.pricing .pr-qa-mark::after {
-  content: "";
-  position: absolute;
-  inset: 5px 0 auto;
-  height: 1.5px;
-  background: currentColor;
-  transition: transform var(--dur-2) var(--ease-out);
+.pricing .pl-pm { flex: none; opacity: .62; transition: opacity 150ms ease; }
+.pricing .pl-pm .pl-pmv { transition: opacity 150ms ease; }
+.pricing .pl-q[aria-expanded="true"] .pl-pmv { opacity: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .pricing .pl-q:hover .pl-pm { opacity: 1; }
 }
-.pricing .pr-qa-mark::after { transform: rotate(90deg); }
-.pricing .pr-qa[open] .pr-qa-mark::before { transform: rotate(45deg); }
-.pricing .pr-qa[open] .pr-qa-mark::after { transform: rotate(135deg); }
-.pricing .pr-qa-more { margin: 0; padding-block: var(--s-4); border-top: 1px solid var(--sp-hair); font-size: 15px; line-height: 1.6; color: var(--sp-dim); }
-.pricing .pr-qa-more a { display: inline-block; padding-block: 10px; margin-block: -10px; color: var(--link); text-decoration: underline; text-underline-offset: 3px; border-radius: 2px; }
-.pricing .pr-qa-more a:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
+.pricing .pl-item { border-top: 1px solid rgba(var(--sp-ink-rgb), .08); }
+.pricing .pl-item.pl-endq { border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08); }
+.pricing .pl-ans { padding: 0 48px 24px 0; font-size: 16px; line-height: 1.6; color: rgba(var(--sp-ink-rgb), .68); }
+.pricing .pl-ans p { margin: 0; max-width: 62ch; }
+.pricing .pa-more { margin-top: 48px; }
+.pricing .pa-more-h { margin: 0; font-size: 20px; font-weight: 500; line-height: 1.35; }
+.pricing .pa-more-p { margin: 8px 0 0; font-size: 16px; line-height: 1.6; color: rgba(var(--sp-ink-rgb), .68); }
+.pricing .pa-help { display: inline-flex; align-items: center; min-height: 44px; padding-block: 0; }
 
-/* The closing band: the same Pro button as the card, on the selected cadence. */
-.pricing .pr-close {
-  display: grid;
-  gap: var(--s-5);
-  margin-bottom: var(--s-8);
-  padding-top: var(--s-7);
-  border-top: 1px solid var(--sp-hair);
-}
-.pricing .pr-close-copy .pr-h2 { margin-bottom: var(--s-2); }
-.pricing .pr-close-copy p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--sp-dim); }
-.pricing .pr-close-btns { display: grid; gap: var(--s-3); }
-.pricing .pr-close .pr-cta { margin-top: 0; }
-.pricing .pr-close-fine { margin: 0; font-size: 13px; color: var(--sp-faint); }
+/* The closing lead breaks evenly, so no single word is left on the last line. */
+.pricing .hm-close p { text-wrap: balance; }
 
-/* ── 768 to 1023: two columns where the width allows ─────────────────────── */
+/* ── States shared by every control ──────────────────────────────────────── */
+.pricing :is(a, button)[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+.pricing :is(a, button):focus-visible { outline: 2px solid var(--sp-ink); outline-offset: 3px; }
+.pricing .pl-seg:focus-visible { outline-offset: 2px; }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  .pricing .pr-billing-text { height: calc(var(--s-6) + var(--s-3)); }
-  .pricing .sp-footer .sp-footer-inner { padding-bottom: var(--s-7); }
-  .pricing:has(.pr-bar.is-on) .sp-footer .sp-footer-inner {
-    padding-bottom: calc(2 * var(--s-7) + 2 * var(--s-3) + env(safe-area-inset-bottom));
-  }
-  .pricing .pr-offer { margin-top: var(--s-7); }
-  .pricing .pr-pro {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    column-gap: var(--s-6);
-    padding: var(--s-6);
-  }
-  .pricing .pr-pro-adds { padding: 0 0 0 var(--s-6); border-top: 0; border-left: 1px solid var(--sp-hair); }
-  .pricing .pr-pro .pr-amt { font-size: 56px; }
-  .pricing .pr-pro .pr-price { min-height: 56px; }
-  .pricing .pr-pro .pr-cta { align-self: flex-start; width: auto; padding-inline: var(--s-5); }
-  .pricing .pr-pro .pr-under { text-align: left; }
+/* Under 1200 the table gives way to the stacked list; both are in the markup. */
+.pricing .pl-stack,
+.pricing .pl-bar { display: none; }
+.pricing .pl-switch .pl-seg { position: relative; }
+/* The segment is 36 high inside its 44 track; this makes the tap area the whole track. */
+.pricing .pl-seg::after { content: ""; position: absolute; inset: -4px 0; }
 
-  .pricing .pr-free {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "identity action" "description action";
-    column-gap: var(--s-6);
-    align-items: center;
-    padding-block: var(--s-5);
-  }
-  .pricing .pr-free-id { grid-area: identity; }
-  .pricing .pr-free-says { grid-area: description; }
-  .pricing .pr-free .pr-cta { grid-area: action; margin-top: 0; }
+/* ═══════════════════════════════════════════════════════════════════════════
+   UNDER 1200: the tablet and the phone.
+   The panels stack with Pro first, the Pro head is one column, the table gives
+   way to a stack per group, the questions run in one column, and a docked bar
+   carries the Pro action while the page's own is off screen.
+   Tokens: --pa-g the page gutter, --pa-pp a panel's padding, --pa-cp the
+   comparison panel's. 768 and up take 40, 40 and 32; the phone 16, 24 and 20.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1199px) {
+  .pricing { --pa-g: 40px; --pa-pp: 40px; --pa-cp: 32px; }
+  .pricing .pa-wrap { padding: 0 var(--pa-g); }
 
-  .pricing .pr-diff { margin-top: var(--s-8); }
-  .pricing .pr-dtable thead th:nth-child(1) { width: 42%; }
-  .pricing .pr-dtable thead th:nth-child(2) { width: 29%; }
-  .pricing .pr-dtable th,
-  .pricing .pr-dtable td { padding-right: var(--s-4); font-size: 15px; }
+  .pricing .pa-head { padding-top: calc(var(--chrome-h) + 40px); }
+  .pricing .pa-h1 { font-size: 48px; line-height: 1.08; letter-spacing: -.035em; }
+  .pricing .pa-lead { margin-top: 16px; font-size: 16px; line-height: 1.55; }
 
-  .pricing .pr-faq-sec--acc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); column-gap: var(--s-7); align-items: start; margin-top: var(--s-9); }
-  .pricing .pr-faq-sec--acc .pr-h2 { margin: 0; }
+  /* The pair: one column, Pro first (home-plans.css orders it), 12 apart. */
+  .pricing .pa-hpl { margin-top: 32px; }
+  .pricing .pa-pair { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .pricing .pa-hpl .hpl-free,
+  .pricing .pa-hpl .hpl-pro { padding: var(--pa-pp); }
+  /* No Pro action (no price in the visitor's currency): Free goes first, so its button is on the first screen. */
+  .pricing .pa-pair--ff .hpl-pro { order: 0; }
 
-  .pricing .pr-close { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--s-6); }
-  .pricing .pr-close-btns { display: flex; }
-  .pricing .pr-close .pr-cta { width: auto; padding-inline: var(--s-5); }
-  .pricing .pr-close-fine { grid-column: 1 / -1; }
-}
+  .pricing .pa-pro-grid { grid-template-columns: minmax(0, 1fr); }
+  .pricing .pa-slot { margin-top: 8px; min-height: 42px; }
+  .pricing .pa-slot--short { min-height: 21px; }
+  .pricing .pa-price { margin-top: 20px; min-height: 0; column-gap: 10px; }
+  /* A Pro account with no price to print holds the row only side by side. */
+  .pricing .pa-price--hold { display: none; }
+  .pricing .pa-per { font-size: 15px; line-height: 1.4; }
 
-/* ── below 768: one column, 44px and 48px targets ────────────────────────── */
-
-@media (max-width: 767px) {
-  .pricing .pr-hero { padding-top: calc(var(--chrome-h) + var(--s-6)); }
-  .pricing .pr-h1 { max-width: none; font-size: var(--fs-h3); line-height: 1.08; text-wrap: balance; }
-  .pricing .pr-sub { margin-top: var(--s-4); font-size: 16px; }
-  .pricing .pr-billing-text { height: 44px; padding-inline: var(--s-5); }
-  .pricing .pr-h2 { font-size: 28px; }
-}
-
-/* Compact phones keep the offer action close to the headline and switch. */
-@media (max-width: 390px) {
-  .pricing .pr-hero { padding-top: calc(var(--chrome-h) + var(--s-4) + var(--s-3)); }
-  .pricing .pr-offer { margin-top: var(--s-3); }
-  .pricing .pr-pro { margin-top: var(--s-2); }
-  .pricing .pr-close-btns .pr-cta--free { display: none; }
-}
-
-/* At 320 the nav needs extra clearance and the comparison labels need more room. */
-@media (max-width: 359px) {
-  .pricing .pr-sub { margin-top: var(--s-3); font-size: 15px; }
-  .pricing .pr-pro { padding: var(--s-4) var(--s-3); }
-  .pricing .pr-dtable thead th:nth-child(1) { width: 44%; }
-  .pricing .pr-dtable thead th:nth-child(2) { width: 28%; }
-  .pricing .pr-dtable th,
-  .pricing .pr-dtable td { padding-right: var(--s-1); font-size: var(--fs-caption); letter-spacing: -.01em; text-wrap: balance; }
-  .pricing .pr-dtable th:last-child,
-  .pricing .pr-dtable td:last-child { padding-right: 0; }
-  .pricing .pr-bar > .pr-bar-pro { gap: var(--s-2); }
-  .pricing .pr-bar-btn { padding-inline: var(--s-2); font-size: var(--fs-caption); justify-content: center; }
-}
-
-/* ── reduced motion ───────────────────────────────────────────────────────── */
-
-@media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-swap,
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-billing-text,
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta,
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-bar,
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-qa-mark::before,
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-qa-mark::after { animation: none; transition: none; }
-  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta:active { transform: none; }
-}
-:where(html[data-reduced-motion="true"]) .pricing .pr-swap,
-:where(html[data-reduced-motion="true"]) .pricing .pr-billing-text,
-:where(html[data-reduced-motion="true"]) .pricing .pr-cta,
-:where(html[data-reduced-motion="true"]) .pricing .pr-bar,
-:where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::before,
-:where(html[data-reduced-motion="true"]) .pricing .pr-qa-mark::after { animation: none; transition: none; }
-:where(html[data-reduced-motion="true"]) .pricing .pr-cta:active { transform: none; }
-
-/* Below 360 the billing switch leaves room for the currency code only; the
-   words stay for screen readers so the row never wraps when prices land. */
-@media (max-width: 359px) {
-  .pricing .pr-offer-top .pr-cur-pre {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
+  /* The action row: the button the width of the panel (420 at most on a tablet), the note centred under it. */
+  .pricing .pa-act { grid-column: 1; display: block; min-height: 0; margin-top: 0; max-width: 420px; }
+  .pricing .pa-act--none { margin-top: 0; }
+  .pricing .pa-cta { display: block; }
+  .pricing .pa-act .pa-go {
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    height: 56px;
+    margin-top: 20px;
+    padding: 0 6px 0 22px;
     white-space: nowrap;
   }
+  .pricing .pa-act .pa-go--plain { justify-content: center; padding: 0 22px; }
+  .pricing .pa-act .hpl-ghost { display: flex; justify-content: center; width: 100%; margin-top: 20px; min-height: 52px; }
+  /* Two lines held (live: the cancel line and the Stripe line), so an outage or a retry does not pull the page up. */
+  .pricing .pa-foot { margin-top: 12px; min-height: 3em; font-size: 13px; text-align: center; }
+  .pricing .pa-act--none .pa-foot { min-height: 0; }
+  .pricing .pa-foot p { text-wrap: balance; }
+
+  /* The covers sit under the note: the book at 240 high, the deck takes the rest of the row (606 wide at most). */
+  .pricing .pa-fig { grid-column: 1; grid-row: 4; max-width: 606px; margin-top: 24px; }
+  .pricing .pa-covers { gap: 8px; align-items: flex-start; justify-content: flex-start; }
+  .pricing .pa-covers picture { display: block; min-width: 0; }
+  .pricing .pa-covers picture:first-child { flex: none; }
+  .pricing .pa-covers picture:last-child { flex: 1 1 0; }
+  .pricing .pa-cover { height: 240px; min-width: 0; }
+  .pricing .pa-cover--book { width: auto; aspect-ratio: 83 / 117; }
+  .pricing .pa-cover--deck { width: 100%; }
+  .pricing .pa-cap { margin-top: 8px; }
+
+  .pricing .hpl-more { margin-top: 8px; }
+
+  /* The comparison: a panel of stacked groups. */
+  .pricing .pl-t { display: none; }
+  .pricing .pl-stack { display: block; }
+  .pricing .pl-panel { margin-top: 12px; padding: 0 var(--pa-cp) 8px; border-radius: 24px; }
+  .pricing .pl-sh {
+    margin: 0;
+    padding: 24px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .pricing .pl-sh svg { flex: none; }
+  .pricing .pl-stack dl { margin: 0; }
+  .pricing .pl-srow { padding: 16px 0; border-top: 1px solid rgba(var(--sp-ink-rgb), .08); }
+  .pricing .pl-srow dt { font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--sp-ink); }
+  .pricing .pl-val {
+    margin: 8px 0 0;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 8px;
+    align-items: baseline;
+  }
+  .pricing .pl-val + .pl-val { margin-top: 4px; }
+  .pricing .pl-vl { font-size: 13px; line-height: 1.5; color: rgba(var(--sp-ink-rgb), var(--pa-quiet)); }
+  .pricing .pl-vv { margin: 0; font-size: 15px; line-height: 1.5; }
+  .pricing .pl-val--free .pl-vv { color: rgba(var(--sp-ink-rgb), .62); }
+  .pricing .pl-val--pro .pl-vv { color: var(--sp-ink); font-weight: 500; }
+  .pricing .pl-stack .pl-v { align-items: center; gap: 6px; }
+  .pricing .pl-stack .pl-v svg { margin-top: 0; }
+  .pricing .pl-val--free .pl-v svg { stroke: rgba(var(--sp-ink-rgb), .56); }
+  .pricing .pl-val--pro .pl-v svg { stroke: var(--sp-ink); }
+  .pricing .pl-ssame h3 {
+    margin: 24px 0 0;
+    padding-top: 24px;
+    border-top: 1px solid rgba(var(--sp-ink-rgb), .12);
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .pricing .pl-ssame p { margin: 8px 0 16px; font-size: 15px; line-height: 1.6; color: rgba(var(--sp-ink-rgb), .68); }
+
+  /* The questions: the heading over the list. */
+  .pricing .pa-faq { margin-top: 96px; padding-bottom: 48px; }
+  .pricing .pa-faq-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .pricing .pa-h2 { font-size: 40px; }
+
+  /* The docked bar: fixed, one height, solid, no shadow and no transform. It fades on opacity only,
+     and only while the page's own Pro action is off screen. z-index 20 is this page's one overlay layer. */
+  .pricing .pl-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    box-sizing: border-box;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 0 max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--pa-panel);
+    border-top: 1px solid rgba(var(--sp-ink-rgb), .08);
+    color: var(--sp-ink);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 150ms ease, visibility 0s linear 150ms;
+  }
+  .pricing .pl-bar[data-on="true"] { opacity: 1; visibility: visible; transition: opacity 150ms ease, visibility 0s; }
+  /* The text side may shrink and ends in an ellipsis, so the button never leaves the screen. */
+  .pricing .pl-bar-text { flex: 1 1 auto; min-width: 0; }
+  .pricing .pl-bar-top,
+  .pricing .pl-bar-sub { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pricing .pl-bar-top { font-size: 15px; font-weight: 500; line-height: 1.3; }
+  .pricing .pl-bar-sub { font-size: 13px; line-height: 1.4; color: rgba(var(--sp-ink-rgb), .62); }
+  .pricing .pl-bar-go {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    height: 48px;
+    padding: 0 20px;
+    border-radius: 999px;
+    background: var(--sp-ink);
+    color: var(--sp-page);
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color 150ms ease;
+  }
+  .pricing .pl-bar-go:active { background: rgba(var(--sp-ink-rgb), .78); }
+  .pricing .pl-bar-ghost {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    height: 48px;
+    min-height: 48px;
+    padding: 0 24px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .pricing .pl-bar-ghost:active { transform: none; }
+}
+@media (max-width: 1199px) and (hover: hover) and (pointer: fine) {
+  .pricing .pl-bar-go:hover { background: rgba(var(--sp-ink-rgb), .9); }
+}
+/* A link that scrolls into view stops short of the docked bar. */
+@media (max-width: 1199px) {
+  html:has(.pricing .pl-bar) { scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Phone. */
+@media (max-width: 767px) {
+  .pricing { --pa-g: 16px; --pa-pp: 24px; --pa-cp: 20px; }
+  .pricing .pa-head { padding-top: calc(var(--chrome-h) + 24px); }
+  .pricing .pa-h1 { font-size: 32px; letter-spacing: -.035em; }
+  .pricing .pa-lead { margin-top: 12px; font-size: 15px; line-height: 1.5; }
+  .pricing .pa-hpl { margin-top: 24px; }
+
+  .pricing .hpl-plan { font-size: 17px; }
+  .pricing .pa-planrow { min-height: 28px; }
+  .pricing .pa-hpl .hpl-free > .hpl-amount { margin-top: 16px; }
+  .pricing .pa-active { margin-top: 16px; white-space: normal; line-height: 1.5; }
+
+  /* The billing switch runs the width of the panel: a 48 track, 40 segments. */
+  .pricing .pa-proline { display: block; min-height: 0; }
+  .pricing .pl-switch { display: flex; width: 100%; height: 48px; margin-top: 16px; }
+  .pricing .pl-seg { flex: 1 1 auto; min-width: 0; height: 40px; padding: 0 12px; }
+
+  .pricing .pa-price { gap: 4px 10px; }
+  .pricing .pa-amt { --pa-amt: 42px; }
+  .pricing .pa-amt--word { font-size: 40px; }
+  .pricing .pa-slot { min-height: 63px; }
+  .pricing .pa-slot--short { min-height: 21px; }
+  .pricing .pa-act { max-width: none; }
+
+  /* The two covers fill the panel's width at one height, each taking its share of the row by its own ratio. */
+  .pricing .pa-cover { height: auto; }
+  .pricing .pa-covers picture:first-child { flex: 83 1 0; }
+  .pricing .pa-cover--book { width: 100%; aspect-ratio: 83 / 117; }
+  .pricing .pa-covers picture:last-child { flex: 209 1 0; }
+  .pricing .pa-cover--deck { width: 100%; aspect-ratio: 209 / 117; }
+
+  .pricing .pl-panel { margin-top: 12px; }
+  .pricing .pa-faq { margin-top: 88px; }
+  .pricing .pa-h2 { font-size: 30px; line-height: 1.1; }
+  .pricing .pl-q { min-height: 64px; padding: 12px 0; gap: 16px; font-size: 17px; }
+  .pricing .pl-pm { opacity: .5; }
+  .pricing .pl-ans { padding: 0 40px 24px 0; font-size: 15px; }
+  .pricing .pa-more { margin-top: 40px; }
+  .pricing .pa-more-h { font-size: 17px; line-height: 1.3; }
+  .pricing .pa-more-p { font-size: 15px; }
+}
+@media (max-width: 359px) {
+  .pricing { --pa-pp: 20px; }
+  .pricing .pa-head { padding-top: calc(var(--chrome-h) + 16px); }
+  .pricing .pa-hpl { margin-top: 16px; }
+  .pricing .pa-amt { --pa-amt: 36px; }
+  .pricing .pa-amt--word { font-size: 34px; }
+  /* The price and its cadence line stack at this width in every state: 36 + 4 + 21. */
+  .pricing .pa-price { min-height: 61px; }
+  .pricing .pa-per { flex-basis: 100%; }
+  .pricing .pl-bar { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); gap: 8px; }
+  .pricing .pl-bar-go { padding: 0 14px; font-size: 14px; }
+  .pricing .pl-bar-top { font-size: 14px; }
+  .pricing .pl-bar-sub { font-size: 13px; }
+}
+@media (min-width: 360px) and (max-width: 369px) {
+  /* A price such as A$6.25 still wraps its cadence line here: held the same way. */
+  .pricing .pa-price { min-height: 67px; }
+  .pricing .pa-per { flex-basis: 100%; }
+}
+@media (max-width: 377px) {
+  /* The cancel and Stripe lines run to three lines in this range. */
+  .pricing .pa-foot { min-height: 4.5em; }
+  .pricing .pa-act--none .pa-foot { min-height: 0; }
+}
+
+/* ── Reduced motion: no press, no fade; the plus still loses its bar ─────── */
+:where(html[data-reduced-motion="true"]) .pricing :is(.pl-seg, .pl-pill, .pl-pm, .pl-pmv, .pl-bar, .pl-bar-go, .pl-t thead th) { transition: none; }
+:where(html[data-reduced-motion="true"]) .pricing .pl-seg:active { transform: none; }
+:where(html[data-reduced-motion="true"]) .pricing .pl-fx { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .pricing :is(.pl-seg, .pl-pill, .pl-pm, .pl-pmv, .pl-bar, .pl-bar-go, .pl-t thead th) { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .pricing .pl-seg:active { transform: none; }
+  :where(html:not([data-reduced-motion="false"])) .pricing .pl-fx { animation: none; }
 }

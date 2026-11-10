@@ -44,7 +44,7 @@ const KEEP = {
   // colour chip with its role name under it, in one 10px-cornered target)
   swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'cpk-preset', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
   // rows in a menu, list or popover
-  row: ['plb-menu-item', 'plb-sc-row', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
+  row: ['plb-menu-item', 'plb-sc-row', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'ied-pj',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's
@@ -72,10 +72,13 @@ const KEEP = {
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',
-    // a size-rail cell is a tile: the icon drawn at its size, with the number under it
-    'icust-size-cell',
-    // a line-style tile is a card: the icon drawn in that style, its name and note under it
-    'icust-line-tile',
+    // the icon editor draws its own controls at 8px and 12px, as its board does: a size-rail cell is a
+    // tile (the icon at its size, the number under it), a line-style tile is a card (the icon in that
+    // style, its name and note), a Similar tile is a card, and its colour chips, tonal buttons (Reset,
+    // Save, Copy in the code box) and round icon buttons (rotate, flip) are 12px fields and controls.
+    // The editor's one primary button (Copy SVG, Upgrade to Pro) is still a pill.
+    // The phone jump row (Stroke, Line style, Rotate, Code) is four 12px tonal fields with a label over a value.
+    'ied-cell-s', 'ied-tile', 'ied-sim', 'ied-chip', 'ied-tn', 'ied-ib', 'ied-jb',
     // an export template choice without a thumbnail is a bordered card holding its name and description
     'exp-tpl-tile',
     // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
@@ -95,7 +98,7 @@ const KEEP = {
   // a segment inside a tray of segments: the tray carries the outer shape, each segment its own inner radius
   segment: ['hx-seg'],
   // the two halves of one split button: together they draw a single pill, so each keeps its
-  // outer corners round and squares the edge where they meet (.icust-foot .dl-main / .dl-more)
+  // outer corners round and squares the edge where they meet (.ied-ft .dl-main / .dl-more)
   split: ['dl-main', 'dl-more'],
   // a switch track, drawn by its own geometry
   switch: ['toggle-switch', 'aipg-rule'],

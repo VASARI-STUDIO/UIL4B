@@ -20,7 +20,7 @@
 //   render the note in its old place below the stage (IconLibrary.jsx: a `.icust-ground-note` with the
 //       sentence, and the caption left as it was)
 //       -> "the stage and the rail do not move" at 768 and 1440, and "the note shows in the stage's caption slot"
-//   `.icust-stroke-note{padding-left:68px}` at 641 to 800px
+//   `#ied-stroke-note{padding-left:68px}` at 641 to 800px
 //       -> "the Stroke note starts at the left edge of the other help lines" at 768
 //   delete the `@media(min-width:801px){ .icust-size-sub{display:none} }` rule
 //       -> "Custom size is Pro stays on the header line" at 1440
@@ -37,6 +37,8 @@ const SAMPLE = fs.readFileSync(path.join(FIXTURE_DIR, 'samples', 'stroke-line-24
 const CORS = { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }
 const SIZES = [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]
 const touchAt = (width) => width <= 768
+// The wide dialog from 900px; below it the phone sheet.
+const wide = (size) => size.width >= 900
 
 /** Answer every glyph .svg of every pack with the stroked sample. */
 async function serveSample(page) {
@@ -90,10 +92,10 @@ async function openPopup(browser, { width, height, plan = null, pack = null }) {
   const cell = page.locator('.ig .ic:not(.ig-skel)').first()
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // The rail draws the icon's own markup, so wait for it rather than for the frame.
-  await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('.icust-stroke-note, .icust-colour-help').first()).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-cell-s[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-colnote')).toBeVisible({ timeout: 20_000 })
   await settle(page)
   return { ctx, page }
 }
@@ -106,7 +108,7 @@ async function settle(page) {
     .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime))
     .map((a) => a.finished.catch(() => {}))))
   await expect.poll(() => page.evaluate(() => new Promise((done) => {
-    const at = () => [...document.querySelectorAll('.icust-overlay, .icust-stage')].map((el) => `${el.scrollTop}:${el.getBoundingClientRect().y}`).join()
+    const at = () => [...document.querySelectorAll('.ied-overlay, #ied-scroll, .ied-ground')].map((el) => `${el.scrollTop}:${el.getBoundingClientRect().y}`).join()
     const first = at()
     requestAnimationFrame(() => requestAnimationFrame(() => done(first === at())))
   }))).toBe(true)
@@ -146,63 +148,49 @@ test.describe('colour chips on a phone', () => {
 
 test.describe('the "hard to see" note', () => {
   for (const size of SIZES) {
-    // MUTATION: render the note in its own box under the stage again -> the stage shrinks (768, 1440) or
-    // the rail drops (390) when Black is pressed.
-    test(`the stage and the rail do not move when the note arrives, and it shows in the caption slot, ${size.width}`, async ({ browser }) => {
+    // MUTATION: make `.ied-contrast` (wide) or `.ied-ctrow` (sheet) take a row in the stage column, or let the
+    // wide note push `.ied-fig` down -> the stage or the size strip moves when Black is pressed.
+    test(`the stage and the size strip do not move when the note arrives, ${size.width}`, async ({ browser }) => {
       const { ctx, page } = await openPopup(browser, size)
-      const stage = page.locator('.icust-stage')
-      const rail = page.locator('.icust-size')
-      await page.getByRole('radio', { name: 'Text colour', exact: true }).click()
-      await expect(page.locator('.icust-stage-cap--note')).toHaveCount(0)
+      const stage = page.locator('.ied-ground')
+      const rail = page.locator('.ied-sizes-rail')
+      // Wide: a note over the stage's top edge. Sheet: a row at the head of the inspector.
+      const note = page.locator(wide(size) ? '.ied-contrast' : '.ied-ctrow')
+      await page.getByRole('radio', { name: 'Default', exact: true }).click()
+      await expect(note).toHaveCount(0)
       const before = { stage: await box(stage), rail: await box(rail) }
 
       await colourChips(page).filter({ hasText: 'Black' }).click()
-      const note = page.locator('.icust-stage .icust-stage-cap--note')
-      await expect(note, 'the note shows inside the stage, in the caption slot').toBeVisible()
+      await expect(note, 'the note shows').toBeVisible()
       await settle(page)
       await expect(note).toContainText('Hard to see on this background.')
       await expect(note.getByRole('button', { name: 'Show on Light', exact: true })).toBeVisible()
-      await expect(page.locator('.icust-stage-cap:not(.icust-stage-cap--note)'), 'the note replaces the caption').toHaveCount(0)
+      await expect(page.locator('.ied-cap'), 'the caption stays').toContainText('Exports at 24px')
       const after = { stage: await box(stage), rail: await box(rail), note: await box(note) }
 
       expect(after.stage.height, 'the note changed the stage height').toBeCloseTo(before.stage.height, 0)
       expect(after.stage.y, 'the note moved the stage').toBeCloseTo(before.stage.y, 0)
-      expect(after.rail.y, 'the note moved the size rail').toBeCloseTo(before.rail.y, 0)
-      // The note sits inside the stage box, not hanging out of it.
-      expect(after.note.x).toBeGreaterThanOrEqual(after.stage.x - 0.5)
-      expect(after.note.x + after.note.width).toBeLessThanOrEqual(after.stage.x + after.stage.width + 0.5)
-      expect(after.note.y + after.note.height).toBeLessThanOrEqual(after.stage.y + after.stage.height + 0.5)
-
-      // Taking the offer puts the caption back, and still nothing moves.
-      await note.getByRole('button', { name: 'Show on Light', exact: true }).click()
-      await expect(page.locator('.icust-stage-cap--note')).toHaveCount(0)
-      await expect(page.locator('.icust-stage-cap')).toContainText('Exports at 24px')
-      await settle(page)
-      // Read against the stage: tapping the button may scroll the overlay, which moves both together.
-      const back = { stage: await box(stage), rail: await box(rail) }
-      expect(back.rail.y - back.stage.y, 'taking the offer moved the size rail').toBeCloseTo(before.rail.y - before.stage.y, 0)
-      expect(back.stage.height, 'taking the offer changed the stage height').toBeCloseTo(before.stage.height, 0)
-      await ctx.close()
-    })
-
-    // MUTATION: give `.icust-left .icust-ground-note` a visible in-flow box with `min-height:calc(2em * 1.4)`
-    // -> the gap between the stage and "Export size" is the 12px column gap plus the held lines (48px at 390).
-    test(`no empty band sits between the stage and Export size, with or without the note, ${size.width}`, async ({ browser }) => {
-      const { ctx, page } = await openPopup(browser, size)
-      const gap = async () => {
-        const s = await box(page.locator('.icust-stage'))
-        const r = await box(page.locator('.icust-size'))
-        return r.y - (s.y + s.height)
+      expect(after.rail.y, 'the note moved the size strip').toBeCloseTo(before.rail.y, 0)
+      if (wide(size)) {
+        // The note sits over the stage column, not hanging out of it.
+        const col = await box(page.locator('.ied-stagecol'))
+        expect(after.note.x).toBeGreaterThanOrEqual(col.x - 0.5)
+        expect(after.note.x + after.note.width).toBeLessThanOrEqual(col.x + col.width + 0.5)
+        expect(after.note.y + after.note.height).toBeLessThanOrEqual(col.y + col.height + 0.5)
+      } else {
+        // On the sheet it is a row of the inspector, clear of the pinned stage card.
+        const card = await box(page.locator('.ied-stagecol'))
+        expect(after.note.y, 'the note sits under the stage card').toBeGreaterThanOrEqual(card.y + card.height - 0.5)
       }
-      const rest = await gap()
-      expect(rest, `a ${rest}px band between the stage and Export size at rest (the column gap is 12px)`).toBeLessThanOrEqual(16)
-      expect(rest).toBeGreaterThanOrEqual(8)
-      await colourChips(page).filter({ hasText: 'Black' }).click()
-      await expect(page.locator('.icust-stage-cap--note')).toBeVisible()
+
+      // Taking the offer removes the note, and still nothing moves.
+      await note.getByRole('button', { name: 'Show on Light', exact: true }).click()
+      await expect(note).toHaveCount(0)
+      await expect(page.locator('.ied-cap')).toContainText('Exports at 24px')
       await settle(page)
-      const withNote = await gap()
-      expect(withNote, `a ${withNote}px band with the note showing`).toBeLessThanOrEqual(16)
-      expect(withNote, 'the gap changed when the note arrived').toBeCloseTo(rest, 0)
+      // The Light ground fills the stage box, so its height is not compared; the strip below must not move.
+      const back = { rail: await box(rail) }
+      expect(back.rail.y, 'taking the offer moved the size strip').toBeCloseTo(before.rail.y, 0)
       await ctx.close()
     })
   }
@@ -212,11 +200,11 @@ test.describe('the Stroke caption', () => {
   // Signing in as Pro and choosing a pack on a slow runner needs more than the default 30s.
   test.describe.configure({ timeout: 60_000 })
   for (const size of SIZES) {
-    // MUTATION: `.icust-stroke-note{padding-left:68px}` from 641 to 800px -> red at 768.
+    // MUTATION: `#ied-stroke-note{padding-left:68px}` from 641 to 800px -> red at 768.
     test(`the Stroke note starts at the left edge of the other help lines, ${size.width}`, async ({ browser }) => {
       const { ctx, page } = await openPopup(browser, { ...size, plan: 'pro', pack: 'lucide' })
-      const note = page.locator('.icust-stroke-note')
-      const help = page.locator('.icust-colour-help')
+      const note = page.locator('#ied-stroke-note')
+      const help = page.locator('.ied-colnote')
       await expect(note).toBeVisible({ timeout: 20_000 })
       await expect(help).toBeVisible()
       const [n, h] = [await box(note), await box(help)]
@@ -229,22 +217,21 @@ test.describe('the Stroke caption', () => {
   }
 })
 
-test.describe('the custom size hint', () => {
+test.describe('the Pro mark on the Custom cell', () => {
   for (const size of SIZES) {
-    // MUTATION: delete the `@media(min-width:801px){ .icust-size-sub{display:none} }` rule -> at 1440 the
-    // hint drops onto its own line under "Export size".
-    test(`"Custom size is Pro" stays on the Export size header line, ${size.width}`, async ({ browser }) => {
+    // MUTATION: give `.ied-tag` `white-space:normal` and a 24px max width in the cell, or `.ied-cell-s--custom`
+    // a `width:40px` -> the mark wraps or hangs out of its cell.
+    test(`"Pro" sits inside the Custom cell on one line, ${size.width}`, async ({ browser }) => {
       const { ctx, page } = await openPopup(browser, size)
-      const title = page.locator('.icust-size-title')
-      const hint = page.locator('.icust-size-hint')
-      await expect(hint).toHaveText('Custom size is Pro')
-      const [t, h] = [await box(title), await box(hint)]
-      const mid = h.y + h.height / 2
-      expect(mid, `the hint (y ${h.y}, h ${h.height}) is not on the title's line (y ${t.y}, h ${t.height})`).toBeGreaterThanOrEqual(t.y)
-      expect(mid).toBeLessThanOrEqual(t.y + t.height)
-      expect(h.height, 'the hint wraps over more than one line').toBeLessThan(24)
-      const left = await box(page.locator('.icust-size'))
-      expect(h.x + h.width, 'the hint hangs out of its column').toBeLessThanOrEqual(left.x + left.width + 0.5)
+      const cell = page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name: /^Custom(,|$)/ })
+      const mark = cell.locator('.ied-tag')
+      await expect(mark).toHaveText('Pro')
+      const [c, m] = [await box(cell), await box(mark)]
+      expect(m.x, 'the mark hangs out of the cell on the left').toBeGreaterThanOrEqual(c.x - 0.5)
+      expect(m.x + m.width, 'the mark hangs out of the cell on the right').toBeLessThanOrEqual(c.x + c.width + 0.5)
+      expect(m.y, 'the mark is above the cell').toBeGreaterThanOrEqual(c.y - 0.5)
+      expect(m.y + m.height, 'the mark is below the cell').toBeLessThanOrEqual(c.y + c.height + 0.5)
+      expect(m.height, 'the mark wraps over more than one line').toBeLessThan(24)
       await ctx.close()
     })
   }
