@@ -367,8 +367,14 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   --fg-padl: max(var(--fg-pad), env(safe-area-inset-left, 0px));
   --fg-padr: max(var(--fg-pad), env(safe-area-inset-right, 0px));
 }
+/* A fixed row with the text centred in it, as on the board: 40px from a tablet up
+   (11px of room above and below the 18px line), 36px on a phone. The sticky toolbar
+   ends above the row, so it never covers the text at the top of the page. */
 .fg-page .fg-count {
-  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 0;
   padding-inline: var(--fg-padl) var(--fg-padr);
   font-family: var(--font);
   font-size: 13px;
@@ -378,6 +384,8 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
   color: var(--t1);
   font-variant-numeric: tabular-nums;
 }
+.fg-page .fg-count:empty { min-height: 0; }
+@media (max-width: 767px) { .fg-page .fg-count:not(:empty) { min-height: 36px; } }
 
 /* ── Bands: a hairline between each, no container ─────────────────────────
    Every band is the same fixed height (the name's box plus its room, set on
@@ -751,7 +759,7 @@ html.fg-tray { scroll-padding-bottom: calc(var(--fg-tray-h, 60px) + 8px); }
   border-top: 0;
 }
 @media (max-width: 1023px) { .fg-page .fg-grid--tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 767px) { .fg-page .fg-grid--tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 8px; } }
+@media (max-width: 767px) { .fg-page .fg-grid--tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px; } }
 .fg-page .fg-grid--tiles :is(.fg-card, .fg-skel-row) {
   --fg-padl: 16px;
   --fg-padr: 16px;
