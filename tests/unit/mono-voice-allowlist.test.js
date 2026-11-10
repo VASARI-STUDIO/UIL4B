@@ -66,9 +66,6 @@ const ALLOWED = {
     '.plb-tint-hex': 'hex',
   },
   'deferred/library.css': {
-    '.icust-code-box code': 'code',
-    '.icust-paste-help code': 'code',
-    '.icust-paste-input': 'code',
     '.ig-attrib code': 'code',
     '.pl-modal-prompt pre': 'ask',
   },
@@ -190,9 +187,6 @@ const ALLOWED = {
   },
   'pages/icon-emoji-library.css': {
     '.iel-page .emd-value': 'code',
-    '.iel-page .icust-colour-help code': 'code',
-    '.iel-page .icust-colour-value': 'hex',
-    '.iel-page .icust-mono': 'code',
   },
   'pages/info.css': {
     '.ic-acc-body-inner kbd': 'kbd',
