@@ -70,8 +70,10 @@ test('no banned effect in either sheet: gradient, glow, transition: all, will-ch
     assert.ok(!/will-change/.test(css), `${name} has will-change`)
     // The Try font list fades its foot with a mask; that is the one gradient, and it is not paint.
     const gradients = css.match(/(linear|radial|conic)-gradient\(/g) ?? []
-    assert.ok(gradients.length <= (name === 'home-try.css' ? 2 : 0), `${name} paints a gradient`)
+    // The exports tile's wordmark band is one black fade, the tile's own design; nothing else paints one.
+    assert.ok(gradients.length <= (name === 'home-try.css' ? 2 : 1), `${name} paints a gradient`)
   }
+  assert.match(EXPORTS, /\.hx-scrim\s*\{[^}]*linear-gradient\(to top, rgba\(0, 0, 0, \.86\) 0%, rgba\(0, 0, 0, \.76\) 68%, rgba\(0, 0, 0, 0\) 100%\)/, 'the one exports gradient is the wordmark band')
 })
 
 test('the elevation scale is defined once and the cards use it', () => {

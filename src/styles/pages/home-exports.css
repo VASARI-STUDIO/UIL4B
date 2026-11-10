@@ -486,14 +486,15 @@
   object-fit: cover;
   object-position: var(--pos);
 }
-/* The wordmark sits on a flat band so it reads over any photo. */
+/* The wordmark sits on a black fade that is densest at the bottom, so it reads over any
+   photo. The stops and the 40px of fade above the wordmark are the tile's design. */
 .hx-scrim {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 12px 14px;
-  background: rgba(11, 12, 14, .86);
+  padding: 40px 14px 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, .86) 0%, rgba(0, 0, 0, .76) 68%, rgba(0, 0, 0, 0) 100%);
 }
 /* The wordmark sizes from the tile's own width (100cqw), not the viewport. */
 .hx-word {
@@ -694,7 +695,7 @@
   .hx-tile { flex: none; width: 220px; }
   .hx-ph { height: 220px; aspect-ratio: auto; }
   .hx-tphoto { object-position: var(--pos-phone); }
-  .hx-scrim { padding: 12px; }
+  .hx-scrim { padding: 36px 12px 12px; }
   .hx-word { font-size: calc(var(--w-pxp) * 1px); }
   .hx-pal { margin-top: 9px; }
   .hx-open { height: 28px; padding: 0 11px; font-size: 12px; }
