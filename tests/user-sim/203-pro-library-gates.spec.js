@@ -49,7 +49,7 @@ const VIEWPORTS = [
   { name: '1440', use: { viewport: { width: 1440, height: 900 } }, phone: false },
 ]
 
-// The tiers, as the sentence prints them. Typed
+// The tiers, as the gate and the closing line print them. Typed
 // here rather than imported, so a change to the cap has to change a test.
 const ANON_SEES = 3
 const FREE_OPENS = 10
@@ -63,13 +63,13 @@ const FIRST_OPEN = {
 
 const LIBS = [
   {
-    key: 'palettes', route: '/discover/palettes', card: '.pgal-card', noun: 'palettes', singular: 'palette',
+    key: 'palettes', route: '/discover/palettes', card: '.pgal-card:not(.geg-fade *)', noun: 'palettes', singular: 'palette',
     total: LIBRARY_PALETTES.length, totalFromData: LIBRARY_TOTALS.palettes,
     status: 'palette library', head: true,
     search: (page) => page.getByLabel('Search palettes'),
   },
   {
-    key: 'gradients', route: '/discover/gradients', card: '.grg-card', noun: 'gradients', singular: 'gradient',
+    key: 'gradients', route: '/discover/gradients', card: '.grg-card:not(.geg-fade *)', noun: 'gradients', singular: 'gradient',
     total: GALLERY_GRADIENTS.length, totalFromData: LIBRARY_TOTALS.gradients,
     status: 'gradient library', head: true,
     search: (page) => page.getByLabel('Search gradients'),
@@ -90,6 +90,11 @@ const API = /\/api\/ai\?library=/
 const sentenceFor = (lib) =>
   `Signed out, you see ${ANON_SEES} of the ${lib.total} ${lib.noun}. A free account opens ${FREE_OPENS}; Pro opens all ${lib.total}.`
 
+/** The end gate's heading and body for a signed-out visitor, worked out by hand. */
+const gateHeadingFor = (lib) => `Log in to access ${FREE_OPENS} ${lib.noun}`
+const gateBodyFor = (lib) =>
+  `You're seeing ${ANON_SEES} of the ${lib.total} ${lib.noun}. A free account opens ${FREE_OPENS}; Pro opens all ${lib.total}.`
+
 /** Sit in front of the stubbed library endpoint for ONE kind; the others pass through. */
 async function standInFront(page, lib, handler) {
   const seen = { calls: 0 }
@@ -109,7 +114,7 @@ async function capture(page, theme, lib, vp, state) {
   const fullPage = !vp.phone && state !== 'pro-ready'
   // On a phone the state under test sits below the header, so bring it into the viewport.
   if (vp.phone) {
-    const target = page.locator('.lockt-status, .lockt-cta, .gcta').first()
+    const target = page.locator('.lockt-status, .geg, .gcta').first()
     if (await target.count()) await target.scrollIntoViewIfNeeded()
   }
   await page.screenshot({ path: path.join(CAPTURE_DIR, `${lib.key}-${state}-${vp.name}-${theme}.png`), fullPage })
@@ -117,8 +122,8 @@ async function capture(page, theme, lib, vp, state) {
 
 /** The block a viewer sees where a free viewer sees the upsell. */
 const statusOf = (page) => page.locator('.lockt-status')
-/** The wall: a call to action that is not the status block. */
-const wallOf = (page) => page.locator('.lockt-cta:not(.lockt-status)')
+/** The wall: the shared end gate (GalleryEndGate) under the open rows. */
+const wallOf = (page) => page.locator('.geg')
 
 test.describe('the fixtures this file leans on', () => {
   test('the sizes the page prints match the data the server holds', () => {
@@ -139,7 +144,7 @@ for (const vp of VIEWPORTS) {
         test.use(vp.use)
         test.beforeEach(async ({ page }) => { await page.emulateMedia({ colorScheme: theme }) })
 
-        test('signed out: the wall states the tiers and the head states the size', async ({ page }) => {
+        test('signed out: the gate states the tiers and the head states the size', async ({ page }) => {
           watch(page, `a signed-out visitor on the ${lib.key} library`)
           await go(page, lib.route)
           await expect(page.locator(lib.card).first()).toBeVisible()
@@ -149,14 +154,20 @@ for (const vp of VIEWPORTS) {
             // the closing block, which counts what a free account adds.
             await expect(page.locator('.pl-card:not(.pl-locked-card)')).toHaveCount(ANON_SEES)
             await expect(page.locator('.pl-locked-card')).toHaveCount(lib.total - ANON_SEES)
-            const close = page.locator('.pl-close')
-            await expect(close.locator('h2')).toHaveText(`${FREE_OPENS - ANON_SEES} more prompts open with a free account`)
-            await expect(close.locator('p')).toHaveText(`A free account opens ${FREE_OPENS} of the ${lib.total} community prompts. Pro opens all ${lib.total}.`)
+            const gate = wallOf(page)
+            await expect(gate.getByRole('heading')).toHaveText(gateHeadingFor(lib))
+            await expect(gate.locator('.geg-p')).toHaveText(gateBodyFor(lib))
           } else {
             await expect(page.locator(lib.card)).toHaveCount(ANON_SEES)
 
-            // The wall, on the unnarrowed view.
-            await expect(wallOf(page).locator('.lockt-cta-body')).toHaveText(sentenceFor(lib))
+            // The gate, on the unnarrowed view: one heading, the tiers, and the
+            // two ways on (Log in, then the plans).
+            const gate = wallOf(page)
+            await expect(gate).toHaveCount(1)
+            await expect(gate.getByRole('heading')).toHaveText(gateHeadingFor(lib))
+            await expect(gate.locator('.geg-p')).toHaveText(gateBodyFor(lib))
+            await expect(gate.getByRole('button', { name: 'Log in' })).toBeVisible()
+            await expect(gate.getByRole('link', { name: 'See the plans' })).toHaveAttribute('href', '/plans')
           }
           if (lib.head) {
             await expect(page.locator('.drh-head p')).toHaveText(`${lib.total} ${lib.noun} · ${ANON_SEES} shown`)
@@ -172,12 +183,12 @@ for (const vp of VIEWPORTS) {
           await lib.search(page).fill(FIRST_OPEN[lib.key])
           // The control: the search found the open row, so this is a real result.
           await expect(page.locator(lib.card).first()).toBeVisible()
-          // The wall steps aside for a narrowed view; the closing line carries the offer.
+          // The gate steps aside for a narrowed view; the closing line carries the offer.
           await expect(wallOf(page)).toHaveCount(0)
           if (lib.key === 'prompts') {
             // A search gets no paywall and no locked card, so it cannot say how
             // many locked prompts matched.
-            await expect(page.locator('.pl-close')).toHaveCount(0)
+            await expect(page.locator('.geg')).toHaveCount(0)
             await expect(page.locator('.pl-locked-card')).toHaveCount(0)
           } else {
             await expect(page.locator('.gcta-detail')).toHaveText(sentenceFor(lib))

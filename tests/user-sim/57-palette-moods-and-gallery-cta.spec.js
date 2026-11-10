@@ -317,7 +317,7 @@ test.describe('the end of a capped result offers more access to free, submission
     watch(page, 'a free account at the end of the palette library')
     await signIn(page, { plan: 'free' })
     await go(page, PALETTES)
-    await expect(page.locator('.lockt-cta')).toBeVisible()
+    await expect(page.locator('.geg[data-gate="pro"]')).toBeVisible()
     await expect(page.locator('.gcta')).toHaveCount(0)
     await expect(page.getByText('Create and submit your own')).toHaveCount(0)
   })

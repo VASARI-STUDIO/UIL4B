@@ -453,8 +453,8 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
 
   // The cap is SAID, not only done — a count with no explanation is what makes
   // a limit feel punitive rather than deliberate.
-  await expect(page.locator('.ig-end[data-gate="anon"]')).toBeVisible()
-  await expect(page.locator('.ig-end[data-gate="anon"]')).toContainText(String(cells))
+  await expect(page.locator('.geg[data-gate="anon"]')).toBeVisible()
+  await expect(page.locator('.geg[data-gate="anon"]')).toContainText(String(cells))
   // And it is not the outage state: nothing refused anything here.
   await expect(page.locator('.ig-notice')).toHaveCount(0)
   await ctx.close()
@@ -490,7 +490,7 @@ test('signed in free: the account packs open, the brand, flag and emoji packs ar
   // group tray are the whole of it until the results run out; browsing every
   // pack never runs out, so neither the wall nor the end band is on screen.
   await expect(page.locator('.ig-gate')).toHaveCount(0)
-  await expect(page.locator('.ig-end')).toHaveCount(0)
+  await expect(page.locator('.geg')).toHaveCount(0)
   await ctx.close()
 })
 
@@ -563,7 +563,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   await expect(page.locator('button.ig-mine')).toHaveAttribute('aria-pressed', 'true')
   await page.waitForTimeout(1500)
   await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
-  await expect(page.locator('.ig-end'), 'My Icons carries no end band at any tier').toHaveCount(0)
+  await expect(page.locator('.geg'), 'My Icons carries no end band at any tier').toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Recently copied' })).toBeVisible()
 
@@ -668,7 +668,7 @@ test('reloading retains all five packs, and listing them never asks /collection'
     watch(page, REFUSED)
     await withholdSnapshots(page)
     await go(page, '/create/icons')
-    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
+    await expect(page.locator('.geg[data-gate="anon"] .geg-p')).toContainText('from 5 sets', { timeout: 20000 })
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     // The default listing names its packs from the committed heads, so there is nothing to ask /collection.
     expect(iconifyRequests(ctx).collection).toBe(0)
@@ -676,7 +676,7 @@ test('reloading retains all five packs, and listing them never asks /collection'
     expect(new Set(packs).size).toBe(5)
 
     await page.reload()
-    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
+    await expect(page.locator('.geg[data-gate="anon"] .geg-p')).toContainText('from 5 sets', { timeout: 20000 })
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     expect(await page.locator('.ic .ic-pack').allTextContents()).toEqual(packs)
     expect(iconifyRequests(ctx).collection).toBe(0)

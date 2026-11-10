@@ -80,6 +80,7 @@ import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
 import { iconSynonymFor } from '../data/iconSynonyms'
+import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -3401,7 +3402,7 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
 
    NOT A FAILED LOAD, and not the refused state either. `.ig-notice` — "Couldn't
    reach the icon service" — is a plain row with a Try again button and means
-   the network said no. This is an accent band with a padlock and a plan word
+   the network said no. This is the gallery closing block (GalleryEndGate) naming the plan
    and means the product said no. The two never render together: a gated scope
    never asks for anything, so there is nothing for the service to refuse. */
 // The wall's words for a SIGNED-OUT visitor on a Pro scope. Logging in is the way in, but it does
@@ -3414,63 +3415,53 @@ const GATE_COPY_PRO_ANON = {
   secondary: 'See Pro plans',
 }
 
+// A pack or group this viewer cannot open: the same closing block as the end of
+// the grid, over placeholder glyph rows. No icon of the locked pack is fetched
+// or drawn; the rows are neutral shapes.
 function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary }) {
   return (
-    <div className={`lockt-cta ig-gate ig-gate--${kind}`} data-gate={kind} role="status">
-      <div className="lockt-cta-copy">
-        <p className="lockt-cta-head">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="ig-gate-lock">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          {heading}
-        </p>
-        <p className="lockt-cta-body">{body}</p>
-      </div>
-      <button type="button" className="btn btn-accent lockt-cta-btn" onClick={onAction}>{action}</button>
-      {/* A second way on, for a wall whose primary button cannot open it by itself:
-          a signed-out visitor on a Pro pack logs in with the button and reads the
-          plans here. Same link the end band uses (`ig-end-link`). */}
-      {secondary && <Link to="/plans" className="ig-end-link" onClick={onSecondary}>{secondary}</Link>}
-    </div>
+    <GalleryEndGate
+      kind={kind}
+      id="ig-gate-h"
+      className={`ig-gate ig-gate--${kind}`}
+      heading={heading}
+      body={body}
+      live="copy"
+      primary={{ label: action, onClick: onAction }}
+      secondary={secondary ? { label: secondary, to: '/plans', onClick: onSecondary } : undefined}
+      fade={<GateFadeCards shape="glyph" count={24} min={92} />}
+    />
   )
 }
 
 /* ── THE END OF THE GRID ─────────────────────────────────────────────────────
-   The closing block at the bottom of the results, centred: one display
-   sentence, one dim line, one filled pill and, where a second way on is true, a
-   text link. It is one surface with no card and no hairline. The text and both
-   controls are always on screen; nothing here depends on hover.
+   The closing block at the bottom of the results is the shared GalleryEndGate
+   (components/library): one display sentence, one dim line, one filled pill
+   and, where a second way on is true, a text link. This function only maps the
+   icon library's states onto it.
 
    `kind` is 'anon' or 'free' (see endBandKind), or 'search' for the band a
    search raises for matches above the viewer's tier (see searchTeaseBand); that
    one speaks as a status, since it can stand in for the empty message. `to`
    makes the primary control a link to /plans; without it the primary control is
-   a button that calls `onAction`. `tease` is a slot above the copy: the
+   a button that calls `onAction`. `tease` is the faded rows above the copy: the
    signed-out band and the search band fill it with IconEndTease, the free band
    leaves it empty. A blurred row for free viewers is passed here, as long as it
    holds no markup of a pack that viewer may not load (see
    src/utils/lockedPreview.js). */
 function IconEndBand({ kind, heading, body, names, action, onAction, to, secondary, tease }) {
   return (
-    <section className="ig-end" data-gate={kind} data-end={kind} aria-labelledby="ig-end-h">
-      {tease}
-      <div className="ig-end-band">
-        {/* A search band announces its heading too: the count and the term are
-            in it, and the body alone ("They are in …") says nothing. */}
-        <div className="ig-end-copy" role={kind === 'search' ? 'status' : undefined}>
-          <h2 id="ig-end-h" className="ig-end-h">{heading}</h2>
-          <p className="ig-end-p" role={kind === 'anon' ? 'status' : undefined}>{body}</p>
-          {names && <p className="ig-end-sets">{names}</p>}
-        </div>
-        <div className="ig-end-cta">
-          {to
-            ? <Link to={to} className="ig-end-pill" onClick={onAction}>{action}</Link>
-            : <button type="button" className="ig-end-pill" onClick={onAction}>{action}</button>}
-          {secondary && <Link to="/plans" className="ig-end-link">{secondary}</Link>}
-        </div>
-      </div>
-    </section>
+    <GalleryEndGate
+      kind={kind}
+      id="ig-end-h"
+      heading={heading}
+      body={body}
+      detail={names}
+      live={kind === 'search' ? 'copy' : kind === 'anon' ? 'body' : undefined}
+      primary={{ label: action, to, onClick: onAction }}
+      secondary={secondary ? { label: secondary, to: '/plans' } : undefined}
+      fade={tease || undefined}
+    />
   )
 }
 

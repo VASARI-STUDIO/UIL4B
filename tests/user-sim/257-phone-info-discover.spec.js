@@ -179,7 +179,7 @@ for (const width of WIDTHS) {
 
       test('the card actions sit inside the card as 44px icon buttons that keep their names', async ({ browser }) => {
         const { ctx, page } = await open(browser, width, theme, '/discover/palettes')
-        const cards = page.locator('.pgal-card:has(.pgal-act)')
+        const cards = page.locator('.pgal-card:has(.pgal-act):not(.geg-fade *)')
         // POSITIVE CONTROL: free palettes carry the four actions, so "inside the card" below is about real buttons.
         expect(await cards.count()).toBeGreaterThan(0)
         const NAMES = [/project/i, /Gradient/, /CSS/, /hex codes/i]

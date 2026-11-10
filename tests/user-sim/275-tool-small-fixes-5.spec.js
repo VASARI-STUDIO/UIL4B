@@ -3,8 +3,8 @@
 //   1. Gradient tool: at 360px and under a free account still sees a visible
 //      "Pro" on the Selected stop's Tints button, the hex field shows its whole
 //      value, and a finger still gets a 44px target.
-//   2. Palette and Gradient libraries, signed in on a free plan: the three locked
-//      cards never leave a lone card beside an empty cell at 768 (nor at any
+//   2. Palette and Gradient libraries, signed in on a free plan: the faded cards
+//      behind the end gate never leave a lone card beside an empty cell at 768 (nor at any
 //      other width), and a near-white swatch has a hairline along the foot of its
 //      stripes.
 //   3. Learn hub: the unwritten topics are plain rows (title, summary, "Soon"),
@@ -17,10 +17,9 @@
 // MUTATIONS (each should turn the named test red):
 //   - gradient.css: hide `.grd-pro-tag` in the `max-width: 360px` block: "Tints
 //     keeps a visible Pro" fails;
-//   - palette-gallery.css: delete the `.pgal-grid--locked` flex rules: "the locked
-//     cards share their rows" fails at 768;
-//   - gradient-gallery.css: delete the `.grg-grid--locked` flex rules: the same
-//     test fails on the Gradient Library;
+//   - GalleryEndGate.jsx: have GateFadeRows read `cols` as a fixed 3 instead of the
+//     live grid's column count: "the faded cards share their rows" fails at the
+//     widths whose grid is not three columns, on both libraries;
 //   - palette-gallery.css: delete the `.pgal-stripes` border-bottom: "the stripes
 //     end in a hairline" fails;
 //   - SurfaceIndex.jsx: render the Learn roadmap as `.surface-card` articles again
@@ -58,48 +57,53 @@ for (const [width, touch] of [[320, true], [360, true], [320, false], [360, fals
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2 · Pro libraries: the locked cards share their rows
+// 2 · Pro libraries: the faded placeholder cells share their rows
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Every row of the locked grid ends where the grid ends: a row whose last card
-// stops short leaves an empty cell beside it.
-const lockedRows = (page, gridSelector) => page.evaluate((sel) => {
-  const grid = document.querySelector(sel)
-  if (!grid) return null
-  const box = grid.getBoundingClientRect()
-  const cards = [...grid.querySelectorAll(':scope > .lockt-card')].map((c) => c.getBoundingClientRect())
-  const rows = new Map()
-  for (const r of cards) rows.set(Math.round(r.top), [...(rows.get(Math.round(r.top)) || []), r])
+// Every row of the faded cards under the end gate ends where the live grid ends:
+// a row whose last card stops short leaves an empty cell beside it. The faded
+// cards are the gallery's own card (neutral stand-ins here, a free account), in
+// two `.geg-row` grids. The fade clips the second row part-way, so the rows are
+// read from the DOM rather than from what shows.
+const lockedRows = (page, card) => page.evaluate((sel) => {
+  const fade = document.querySelector('.geg-fade')
+  if (!fade) return null
+  const live = [...document.querySelectorAll(sel)].filter((c) => !c.closest('.geg-fade')).map((c) => c.getBoundingClientRect())
+  const rows = [...fade.querySelectorAll('.geg-row')].map((row) => {
+    const cards = [...row.querySelectorAll(sel)].map((c) => c.getBoundingClientRect())
+    return { cards: cards.length, right: Math.max(...cards.map((r) => r.right)) }
+  })
   return {
-    count: cards.length,
-    gridRight: box.right,
-    rows: [...rows.values()].map((row) => ({ cards: row.length, right: Math.max(...row.map((r) => r.right)) })),
+    count: rows.reduce((n, row) => n + row.cards, 0),
+    gridRight: Math.max(...live.map((r) => r.right)),
+    rows,
   }
-}, gridSelector)
+}, card)
 
 const LOCKED_LIBRARIES = [
-  { name: 'Palette Library', route: '/discover/palettes', grid: '.pgal-grid--locked' },
-  { name: 'Gradient Library', route: '/discover/gradients', grid: '.grg-grid--locked' },
+  { name: 'Palette Library', route: '/discover/palettes', card: '.pgal-card' },
+  { name: 'Gradient Library', route: '/discover/gradients', card: '.grg-card' },
 ]
 
 for (const width of [390, 600, 768, 1024, 1440]) {
-  test.describe(`Locked cards at ${width}px`, () => {
+  test.describe(`Faded gallery cards at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 }, hasTouch: width < 800, isMobile: width < 800 })
 
     for (const lib of LOCKED_LIBRARIES) {
-      test(`${lib.name}: the locked cards share their rows, no empty cell`, async ({ page }) => {
-        watch(page, `a free designer meeting the locked ${lib.name} cards at ${width}px`)
+      test(`${lib.name}: the faded cards share their rows, no empty cell`, async ({ page }) => {
+        watch(page, `a free designer meeting the ${lib.name} end gate at ${width}px`)
         await signIn(page, { plan: 'free' })
         await go(page, lib.route)
-        const grid = page.locator(lib.grid)
-        await grid.scrollIntoViewIfNeeded()
-        await expect(grid.locator(':scope > .lockt-card').first()).toBeVisible()
-        const r = await lockedRows(page, lib.grid)
-        expect(r.count, 'locked cards on the page').toBeGreaterThan(1)
+        const fade = page.locator('.geg-fade')
+        await fade.scrollIntoViewIfNeeded()
+        await expect(fade.locator(lib.card).first()).toBeVisible()
+        const r = await lockedRows(page, lib.card)
+        expect(r.count, 'faded cards').toBeGreaterThan(1)
+        expect(r.rows.length, 'the faded cards draw two rows').toBe(2)
         for (const row of r.rows) {
-          expect(Math.abs(row.right - r.gridRight), `a row of ${row.cards} locked card(s) stops ${Math.round(r.gridRight - row.right)}px short of the grid edge`).toBeLessThanOrEqual(1)
+          expect(Math.abs(row.right - r.gridRight), `a row of ${row.cards} faded card(s) stops ${Math.round(r.gridRight - row.right)}px short of the live grid edge`).toBeLessThanOrEqual(1)
         }
-        await page.screenshot({ path: `${SHOTS}/${lib.route.split('/').pop()}-locked-${width}.png` })
+        await page.screenshot({ path: `${SHOTS}/${lib.route.split('/').pop()}-end-gate-${width}.png` })
       })
     }
   })

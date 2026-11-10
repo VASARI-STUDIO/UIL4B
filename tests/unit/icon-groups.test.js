@@ -167,6 +167,18 @@ test('every group icon is a 24-grid outline glyph with round caps and joins at i
 
 // ── Who may open which group ────────────────────────────────────────────────
 
+test('a free account opens no group a signed-out viewer cannot, so the index gate offers Pro only', () => {
+  // The deliberate exception to the other galleries' Log in gate: logging in
+  // buys nothing here, so IconGroups ends on a Pro-only gate for anon and free.
+  for (const g of PREMADE_ICON_GROUPS) {
+    assert.equal(isGroupOpen(g, 'free'), isGroupOpen(g, 'anon'), `${g.id}: a free account changes what opens`)
+  }
+  assert.ok(PREMADE_ICON_GROUPS.some((g) => !isGroupOpen(g, 'anon')), 'no locked group - this assertion is vacuous')
+  const src = strip(read('src/pages/IconGroups.jsx'))
+  const gate = src.slice(src.indexOf('function GroupIndexGate'), src.indexOf('function GroupIndexGate') + 1600)
+  assert.ok(gate.includes("tier === 'anon' && opens > shown"), 'the Log in gate must only appear when an account opens more groups')
+})
+
 test('free groups open for every viewer; Pro groups only on Pro', () => {
   for (const g of PREMADE_ICON_GROUPS) {
     for (const tier of TIERS) {

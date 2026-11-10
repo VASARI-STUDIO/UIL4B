@@ -6,7 +6,10 @@ import { useProject } from '../contexts/ProjectContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import ColorPickerPop from '../components/ColorPickerPop'
-import { LockedIconGroupCard, LockedTeaseCta } from '../components/library/LockedTease'
+import { LockedIconGroupCard } from '../components/library/LockedTease'
+import GalleryEndGate, { GateFadeCards, GateFadeRows } from '../components/library/GalleryEndGate'
+import { reportUpgradeGate } from '../contexts/ProModalContext'
+import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import {
   DEFAULT_GROUP_STROKE, GROUP_PREVIEW_COUNT, GROUP_STROKES, GROUP_STYLE_PACKS, ICON_GROUPS_ROUTE,
   PREMADE_ICON_GROUPS, glyphRequestPlan, groupById, groupNeeds, groupPacks, groupRoute, parseIconRef,
@@ -57,6 +60,38 @@ function Glyph({ iconRef, color, stroke }) {
   )
 }
 
+/* The faded cards behind the index gate. A group's own glyphs are fetched by
+   tier, and the groups the viewer lacks are the ones whose glyphs they may not
+   load, so these are the group card's own markup over neutral outline shapes and
+   bars where the name and meta go: the same card, with nothing of any group in it. */
+const STANDIN_SHAPES = ['circle', 'square', 'arrow', 'circle', 'square', 'arrow', 'circle', 'square']
+const GROUP_STANDINS = Array.from({ length: 12 }, (_, i) => i)
+function GroupStandinGrid({ items }) {
+  return (
+    <ul className="igp-cards">
+      {items.map((i) => (
+        <li key={i}>
+          <span className="igp-card">
+            <span className="igp-card-preview">
+              {STANDIN_SHAPES.map((kind, k) => (
+                <svg key={k} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+                  {kind === 'circle' && <circle cx="12" cy="12" r="8" />}
+                  {kind === 'square' && <rect x="4" y="4" width="16" height="16" rx="3" />}
+                  {kind === 'arrow' && <path d="M5 12h14M13 6l6 6-6 6" />}
+                </svg>
+              ))}
+            </span>
+            <span className="igp-card-foot">
+              <span className="igp-card-bar" />
+              <span className="igp-card-bar igp-card-bar--short" />
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function GroupCard({ group, tier }) {
   const need = groupNeeds(group, tier)
   if (need) return <li><LockedIconGroupCard preview={{ id: group.id, label: group.label, slots: group.icons.length }} /></li>
@@ -75,6 +110,42 @@ function GroupCard({ group, tier }) {
   )
 }
 
+// The gate under the index for a viewer who cannot open every group. Signed
+// out it offers a free account when one opens more groups; otherwise Pro.
+function GroupIndexGate({ tier }) {
+  const { requireLogin } = useLoginPrompt()
+  const copy = GALLERY_GATE_COPY.iconGroups
+  const total = PREMADE_ICON_GROUPS.length
+  const shown = PREMADE_ICON_GROUPS.filter((g) => !groupNeeds(g, tier)).length
+  const opens = PREMADE_ICON_GROUPS.filter((g) => !groupNeeds(g, 'free')).length
+  if (shown >= total) return null
+  const fade = <GateFadeRows items={GROUP_STANDINS} render={(slice) => <GroupStandinGrid items={slice} />} />
+  if (tier === 'anon' && opens > shown) {
+    return (
+      <GalleryEndGate
+        kind="anon"
+        id="igp-gate-h"
+        heading={copy.anon.heading(opens)}
+        body={copy.anon.body(shown, total, opens)}
+        primary={{ label: copy.anon.action, onClick: () => requireLogin('browse every icon pack') }}
+        secondary={{ label: copy.anon.secondary, to: '/plans' }}
+        fade={fade}
+      />
+    )
+  }
+  const more = total - shown
+  return (
+    <GalleryEndGate
+      kind="pro"
+      id="igp-gate-h"
+      heading={copy.pro.heading(more)}
+      body={copy.pro.body(shown, total, more)}
+      primary={{ label: copy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('icon-group-locked-view') }}
+      fade={fade}
+    />
+  )
+}
+
 function GroupIndex({ tier }) {
   const [, failed, retry] = useGroupGlyphs(PREMADE_ICON_GROUPS, tier, GROUP_PREVIEW_COUNT)
   return (
@@ -83,6 +154,7 @@ function GroupIndex({ tier }) {
       <ul className="igp-cards" aria-label="Icon groups">
         {PREMADE_ICON_GROUPS.map((g) => <GroupCard key={g.id} group={g} tier={tier} />)}
       </ul>
+      <GroupIndexGate tier={tier} />
     </div>
   )
 }
@@ -181,24 +253,32 @@ function GroupView({ group, tier, onCopy }) {
   )
 
   if (need) {
+    const lockedCopy = GALLERY_GATE_COPY.iconGroups.locked
     return (
       <div className="igp-view" data-group={group.id} data-locked="true">
         {head}
+        {/* Neutral glyph rows: nothing of the group's own icons is fetched. */}
         {need === 'paid' ? (
-          <LockedTeaseCta
-            gate="icon-group-locked-view"
-            heading={`${group.label} is Pro`}
-            body={`${group.icons.length} icons from ${packNames(group)}.`}
-            action="See what Pro includes"
+          <GalleryEndGate
+            kind="pro"
+            id="igp-gate-h"
+            level={3}
+            heading={lockedCopy.pro.heading(group.label)}
+            body={lockedCopy.pro.body(group.icons.length, packNames(group))}
+            primary={{ label: lockedCopy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('icon-group-locked-view') }}
+            fade={<GateFadeCards shape="glyph" count={24} min={92} />}
           />
         ) : (
-          <div className="lockt-cta">
-            <div className="lockt-cta-copy">
-              <p className="lockt-cta-head">{`${group.label} needs a free account`}</p>
-              <p className="lockt-cta-body">{`${group.icons.length} icons from ${packNames(group)}.`}</p>
-            </div>
-            <button type="button" className="btn btn-accent lockt-cta-btn" onClick={() => requireLogin('open this icon group')}>Log in</button>
-          </div>
+          <GalleryEndGate
+            kind="anon"
+            id="igp-gate-h"
+            level={3}
+            heading={lockedCopy.free.heading(group.label)}
+            body={lockedCopy.free.body(group.icons.length, packNames(group))}
+            primary={{ label: lockedCopy.free.action, onClick: () => requireLogin('open this icon group') }}
+            secondary={{ label: lockedCopy.free.secondary, to: '/plans' }}
+            fade={<GateFadeCards shape="glyph" count={24} min={92} />}
+          />
         )}
       </div>
     )

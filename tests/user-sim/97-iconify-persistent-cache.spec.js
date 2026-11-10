@@ -298,7 +298,7 @@ test('after a total failure a reload stays quiet, and Try again clears the cool-
   await notice.getByRole('button', { name: 'Try again' }).click()
   await expect(notice).toHaveCount(0, { timeout: 20000 })
   // Signed out: the grid is the five-set sample, and the page says so under it.
-  await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
+  await expect(page.locator('.geg[data-gate="anon"] .geg-p')).toContainText('from 5 sets', { timeout: 20000 })
   await paint(page)
   await expect(page.getByText(/Built-in icons/)).toHaveCount(0)
   // The default listing names its packs from the committed heads, so the glyph
