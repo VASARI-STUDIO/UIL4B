@@ -208,8 +208,10 @@
   overflow: hidden;
   display: flex;
   justify-content: center;
-  animation: hh-panel-in 300ms cubic-bezier(.23, 1, .32, 1) 80ms both;
 }
+/* Clear until HomeHero says the loop has drawn something, then its one entrance. */
+.hh-fig:not([data-ready]) { opacity: 0; }
+.hh-fig[data-ready] { animation: hh-panel-in 300ms cubic-bezier(.23, 1, .32, 1) 80ms both; }
 @media (min-width: 1440px) {
   .hh-fig { max-width: 1400px; }
 }
@@ -320,7 +322,7 @@
 /* ── reduced motion ───────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduced-motion="false"]) .hh-fig {
+  html:not([data-reduced-motion="false"]) .hh-fig[data-ready] {
     animation: hh-panel-fade 200ms ease-out 80ms both !important;
     animation-duration: 200ms !important;
     animation-delay: 80ms !important;
@@ -331,7 +333,7 @@
   html:not([data-reduced-motion="false"]) .hh-ghost:active { transform: none; }
   html:not([data-reduced-motion="false"]) .hh-go-disc > svg { transition: none; transform: none !important; }
 }
-html[data-reduced-motion="true"] .hh-fig {
+html[data-reduced-motion="true"] .hh-fig[data-ready] {
   animation: hh-panel-fade 200ms ease-out 80ms both !important;
   animation-duration: 200ms !important;
   animation-delay: 80ms !important;

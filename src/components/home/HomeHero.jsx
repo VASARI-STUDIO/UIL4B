@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { lazyRoute as lazy } from '../../utils/lazyRoute'
 import { Link } from 'react-router-dom'
 import { SPECTRUM_HERO, SPECTRUM_HERO_SUB } from '../spectrum/spectrumHero'
@@ -29,8 +29,10 @@ const HeroLoop = lazy(() => import('./HeroLoop'))
 // rest of the hero stays and the page does not fall to the route's error card.
 
 /** The loop's panel with nothing drawn in it: what the frame holds when the loop's code did not arrive. */
-function LoopStandIn({ size }) {
+function LoopStandIn({ size, onReady }) {
   const { width, height } = LOOP_SIZES[size] || LOOP_SIZES.wide
+  // The stand-in is all there will be, so the frame may enter around it.
+  useEffect(() => { onReady() }, [onReady])
   return <div className="hh-loop" data-size={size} style={{ width, height }} aria-hidden="true" />
 }
 
@@ -40,6 +42,12 @@ export default function HomeHero() {
   // The loop reads this in the run that draws it; the frame reports its own
   // visibility to the page's autoplay owner either way.
   const playing = useAutoplaySlot('hero', frameEl)
+  // The panel holds clear until the loop has drawn something, then makes its one
+  // entrance (home-hero.css, `.hh-fig[data-ready]`). Without this the frame rose in
+  // empty and the loop popped into it a beat later. The frame keeps its box
+  // throughout, so waiting moves nothing.
+  const [loopReady, setLoopReady] = useState(false)
+  const markReady = useCallback(() => setLoopReady(true), [])
 
   return (
     <section id="top" className="hh-hero">
@@ -69,11 +77,11 @@ export default function HomeHero() {
         </div>
       </div>
 
-      <figure className="hh-fig">
+      <figure className="hh-fig" data-ready={loopReady || undefined}>
         <div className="hh-slot" data-size={size} data-playing={playing ? 'true' : 'false'} ref={setFrameEl}>
-          <ChunkBoundary key={size} fallback={<LoopStandIn size={size} />}>
+          <ChunkBoundary key={size} fallback={<LoopStandIn size={size} onReady={markReady} />}>
             <Suspense fallback={null}>
-              <HeroLoop size={size} playing={playing} />
+              <HeroLoop size={size} playing={playing} onReady={markReady} />
             </Suspense>
           </ChunkBoundary>
         </div>

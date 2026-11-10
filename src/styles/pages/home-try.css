@@ -71,7 +71,7 @@
   display: block; width: 100%; height: 44px; padding: 0; border: 0; background: none;
   font-size: 14px; font-weight: 500; line-height: 1.1; text-align: center; white-space: nowrap;
   color: rgba(var(--ink), .62);
-  transition: color 150ms var(--ease);
+  transition: color 240ms var(--ease);
 }
 .ht .ht-n[aria-current="true"] { color: #EFEEEA; }
 .ht.ht .ht-n:focus-visible { outline-offset: -2px; }
@@ -80,6 +80,13 @@
   .ht .ht-n:hover { color: rgba(var(--ink), .86); }
   .ht .ht-n[aria-current="true"]:hover { color: #EFEEEA; }
 }
+/* The quiet progress line: it lies along the row's hairline and fills with the
+   scroll from the first tool to the last (--p, 0 to 1, set by the script). */
+.ht-prog {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: rgba(var(--ink), .4); pointer-events: none;
+  transform-origin: 0 50%; transform: scaleX(var(--p, 0));
+}
+.ht-count { display: none; }
 /* The marker slides under the active name (one quarter of the row each). */
 .ht-mark {
   position: absolute; left: 0; bottom: -1px; width: 25%; height: 2px; background: #EFEEEA; pointer-events: none;
@@ -92,7 +99,8 @@
   position: relative; display: flex; flex-direction: column; height: 600px; padding: 24px;
   border-radius: 16px; background: #0F1012; isolation: isolate; overflow: hidden; container-type: inline-size;
 }
-.ht-fr::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--hair); border-radius: 16px; pointer-events: none; z-index: 1; }
+/* The frame's edge is a hairline, a little lighter along the top where the light falls. */
+.ht-fr::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--hair); border-top-color: rgba(var(--ink), .14); border-radius: 16px; pointer-events: none; z-index: 1; }
 @media (max-width: 767px) { .ht-fr { padding: 16px; } }
 
 @media (min-width: 1200px) {
@@ -102,22 +110,33 @@
   /* The name and description are read by assistive tech but drawn in the pinned column. */
   .ht-h3, .ht-d { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .ht-left { display: block; grid-column: 1; grid-row: 1; position: sticky; top: max(8px, calc(50vh - 300px)); height: 600px; align-self: start; }
-  .ht-names { position: relative; top: auto; z-index: auto; display: block; height: auto; max-width: none; margin: 0; background: none; border: 0; }
-  .ht-it { display: block; }
+  .ht-names { position: relative; top: auto; z-index: auto; display: block; height: 100%; max-width: none; margin: 0; background: none; border: 0; }
+  /* A name is a fixed 72px row. The names after the open one move down by the open
+     description's height (--open-h), by transform, so nothing in the column reflows. */
+  .ht-it { position: relative; display: block; height: 72px; transform: translateY(0); transition: transform 280ms var(--ease); }
+  .ht-it[data-after="true"] { transform: translateY(var(--open-h, 0px)); }
+  /* The line runs under the names as a vertical rule instead of along a row. */
+  .ht-prog { left: 0; right: auto; top: 0; bottom: 0; width: 1px; height: auto; transform-origin: 50% 0; transform: scaleY(var(--p, 0)); }
+  .ht-count {
+    display: block; position: absolute; left: 28px; bottom: 0; font-size: 13px; line-height: 16px; font-weight: 500;
+    font-variant-numeric: tabular-nums; letter-spacing: .02em; color: rgba(var(--ink), .56);
+  }
   .ht .ht-n {
     position: relative; height: 72px; padding: 0 0 0 28px; font-size: 48px; font-weight: 600;
     line-height: 1.1; letter-spacing: -.035em; text-align: left; color: rgba(var(--ink), .56);
   }
   .ht-mark { display: none; }
   /* Each name carries its own bar, so it stays put while the rows above it open and close. */
-  .ht-n::before { content: ""; position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: #EFEEEA; opacity: 0; transition: opacity 150ms var(--ease); }
-  .ht-n[aria-current="true"]::before { opacity: 1; }
-  /* The active tool's description opens under its name: 0fr to 1fr, no height jump. */
-  .ht-acc { display: grid; grid-template-rows: 0fr; padding-left: 28px; transition: grid-template-rows 300ms var(--ease); }
-  .ht-it[data-on="true"] .ht-acc { grid-template-rows: 1fr; }
-  .ht-acc-in { min-height: 0; overflow: hidden; }
-  .ht-acc .ht-info { padding: 0 0 24px; opacity: 0; transition: opacity 100ms ease-out; }
-  .ht-it[data-on="true"] .ht-acc .ht-info { opacity: 1; transition: opacity 180ms var(--ease) 80ms; }
+  .ht-n::before {
+    content: ""; position: absolute; left: 0; top: 0; width: 2px; height: 100%; background: #EFEEEA; opacity: 0;
+    transform: scaleY(.4); transition: opacity 150ms var(--ease), transform 240ms var(--ease);
+  }
+  .ht-n[aria-current="true"]::before { opacity: 1; transform: scaleY(1); }
+  /* The active tool's description is drawn under its name and crossfades with the
+     last one: the old fades out first, the new rises into place a beat later. */
+  .ht-acc { display: block; position: absolute; left: 0; right: 0; top: 72px; padding-left: 28px; pointer-events: none; }
+  .ht-acc .ht-info { padding: 0 0 24px; opacity: 0; transform: translateY(6px); transition: opacity 100ms ease-out, transform 100ms ease-out; }
+  .ht-it[data-on="true"] .ht-acc .ht-info { opacity: 1; transform: translateY(0); transition: opacity 200ms var(--ease) 80ms, transform 240ms var(--ease) 80ms; }
 }
 
 /* ── controls ─────────────────────────────────────────────────────────────── */
@@ -570,6 +589,29 @@ html[data-reduced-motion="true"] .ht-lock:active .ht-lk { transform: none; }
   html:not([data-reduced-motion="false"]) .ht-pal-swap > span { transition: none; }
   html:not([data-reduced-motion="false"]) .ht-lock:active .ht-lk { transform: none; }
 }
+
+/* Reduced motion keeps the layout and drops the movement: the names below the open
+   one are still placed, but do not glide; the description and the active bar show
+   without a rise or a grow; and the progress line steps with the active tool
+   instead of following the scroll. */
+html[data-reduced-motion="true"] .ht-it,
+html[data-reduced-motion="true"] .ht-prog { transition: none; }
+html[data-reduced-motion="true"] .ht-acc .ht-info,
+html[data-reduced-motion="true"] .ht-it[data-on="true"] .ht-acc .ht-info,
+html[data-reduced-motion="true"] .ht-n::before,
+html[data-reduced-motion="true"] .ht-n[aria-current="true"]::before { transform: none; }
+html[data-reduced-motion="true"] .ht-prog { transform: scaleX(calc((var(--k, 0) + 1) / 4)); }
+@media (min-width: 1200px) { html[data-reduced-motion="true"] .ht-prog { transform: scaleY(calc((var(--k, 0) + 1) / 4)); } }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .ht-it,
+  html:not([data-reduced-motion="false"]) .ht-prog { transition: none; }
+  html:not([data-reduced-motion="false"]) .ht-acc .ht-info,
+  html:not([data-reduced-motion="false"]) .ht-it[data-on="true"] .ht-acc .ht-info,
+  html:not([data-reduced-motion="false"]) .ht-n::before,
+  html:not([data-reduced-motion="false"]) .ht-n[aria-current="true"]::before { transform: none; }
+  html:not([data-reduced-motion="false"]) .ht-prog { transform: scaleX(calc((var(--k, 0) + 1) / 4)); }
+}
+@media (prefers-reduced-motion: reduce) and (min-width: 1200px) { html:not([data-reduced-motion="false"]) .ht-prog { transform: scaleY(calc((var(--k, 0) + 1) / 4)); } }
 
 /* ── desktop details: the pressed comparison chip, the output line ────────── */
 

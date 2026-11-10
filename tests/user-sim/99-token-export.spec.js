@@ -2,7 +2,7 @@
 //
 // Signed in, each format downloads a file named for the project whose contents
 // hold the palette on the board. Signed out, choosing either one and pressing
-// Export raises the same create-account gate as the style guide, and no file is
+// Export opens the same inline sign-in as the style guide, and no file is
 // produced. The free files carry the "Made with UI L4B" line; the Pro files do
 // not, because that line is what Pro removes.
 import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
@@ -133,7 +133,8 @@ test.describe('token export, signed out', () => {
       await expect(cta).toHaveText(`Export ${label}`)
       await expect(cta, 'a free format is not relabelled as a Pro unlock').toBeVisible()
       await cta.click()
-      await expect(page.locator('#ui-login-title')).toHaveText(/create your free account/i, { timeout: 10000 })
+      await expect(panel.locator('.xd-signin #ui-login-title'), 'the sign-in opens inside the dialog').toBeVisible({ timeout: 10000 })
+      await expect(page.locator('.ui-modal-overlay'), 'no second modal over the dialog').toHaveCount(0)
       expect(await page.evaluate(() => window.__dl || 0), 'a file was produced anyway').toBe(0)
       await expect(page, 'a free format does not send anyone to /plans').not.toHaveURL(/\/plans/)
     })
