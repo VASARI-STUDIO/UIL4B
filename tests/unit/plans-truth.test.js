@@ -412,11 +412,11 @@ test('every paid icon pack has a group the plan lines name', () => {
   for (const g of PAID_PACK_GROUPS) assert.ok(paid.some(([, t]) => t.group === g), `no paid pack in the "${g}" group`)
 })
 
-test('the "Made with UIL4B" line is claimed only for the free files that carry one', async () => {
+test('the "Made with UI L4B" line is claimed only for the free files that carry one', async () => {
   const design = { palette: { colors: ['#1F4B8E', '#F4F1EA', '#1B2433'] } }
   for (const id of Object.keys(CODE_FILES)) {
     const f = EXPORT_FORMATS.find((x) => x.id === id)
     const text = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: true })
-    assert.equal(text.includes('Made with UIL4B'), f.credit !== false, `${id}: exportFormats.js says ${f.credit !== false ? 'credited' : 'no credit'}, the file disagrees`)
+    assert.equal(text.includes('Made with UI L4B'), f.credit !== false, `${id}: exportFormats.js says ${f.credit !== false ? 'credited' : 'no credit'}, the file disagrees`)
   }
 })
