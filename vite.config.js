@@ -183,6 +183,11 @@ const assertFirebaseIsDeferred = () => ({
     // tool page per entry) that import the SDK on purpose and are never served
     // to a visitor.
     const queue = chunks.filter((c) => c.isEntry && c.name === 'index').map((c) => c.fileName)
+    // An empty start set would walk nothing and pass, so a renamed entry would
+    // silently disable the guard.
+    if (!queue.length) {
+      this.error('no app entry chunk named "index" found; the Firebase deferral cannot be verified')
+    }
     const offenders = []
     while (queue.length) {
       const name = queue.shift()

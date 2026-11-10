@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import useOnline from '../../hooks/useOnline'
-import { openFirebaseGate } from '../../utils/firebaseAccess'
+import { authNow, loadAuthSdk, openFirebaseGate } from '../../utils/firebaseAccess'
 import ReportProblemLink from '../ReportProblemLink'
 import { passwordProblem, EMAIL_MAX } from '../../utils/signupInput'
 import '../../styles/pages/auth.css'
@@ -67,6 +67,15 @@ export default function AuthForm({
   // The form is on screen, so the next thing that happens may be a sign-in. Start
   // the SDK now: the Google popup has to open inside the click that asked for it.
   useEffect(() => { openFirebaseGate() }, [])
+  // The Google button stays disabled until the auth SDK is in: signInWithPopup
+  // must run inside the click, and awaiting the download first can lose the
+  // browser's user activation. A failed load enables it so the click reports it.
+  const [sdkReady, setSdkReady] = useState(() => !!authNow())
+  useEffect(() => {
+    let live = true
+    loadAuthSdk().catch(() => {}).then(() => { if (live) setSdkReady(true) })
+    return () => { live = false }
+  }, [])
   const { t } = useI18n()
   const online = useOnline()
   const offline = online === false
@@ -240,7 +249,7 @@ export default function AuthForm({
             <>
               {isEntry && (
                 <>
-                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={blocked} aria-describedby={offline ? 'ui-login-offline' : undefined}>
+                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={blocked || !sdkReady} aria-busy={!sdkReady || undefined} aria-describedby={offline ? 'ui-login-offline' : undefined}>
                     {busy === 'google' ? <Spinner /> : <span className="auth-google-mark"><GoogleIcon /></span>}
                     {busy === 'google' ? t('auth.googleLoading') : t('auth.continueWithGoogle')}
                   </button>
