@@ -126,7 +126,8 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
       // End-aligned to the split; start-aligned when that runs off the left; always 16px inside
       // the viewport.
       const gutter = 16
-      const wide = pop.getBoundingClientRect().width
+      // Layout width: the entrance animation scales the box, so its rect reads narrower.
+      const wide = pop.offsetWidth
       let left = box.right - wide
       if (left < gutter) left = box.left
       left = Math.max(gutter, Math.min(left, window.innerWidth - gutter - wide))
