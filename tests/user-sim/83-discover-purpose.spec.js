@@ -61,7 +61,7 @@
 // `go()` resolving on a loading shell would otherwise be reported as a
 // confident fact about a page that was not there.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, proLibraryArrived, watch, signIn } from './helpers.js'
 
 const LANDMARKS = new Set([
   'region', 'banner', 'complementary', 'contentinfo', 'form', 'main', 'navigation', 'search',
@@ -264,6 +264,10 @@ test.describe('the Discover surfaces say what they are made of', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/discover/palettes')
     await arrived(page, 'Palette Library')
+    // The free rows paint first; the category sections are the Pro library's, and
+    // the tree below must be read from the page those headings are read from.
+    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await proLibraryArrived(page, 'the palette library')
 
     const tree = await axTree(page)
     const before = await landmarks(page)

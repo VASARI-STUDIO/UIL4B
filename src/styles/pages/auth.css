@@ -37,9 +37,9 @@
 /* Continue with Google: the one accent fill. */
 .auth-form-root .auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:var(--ctl);padding:0 16px;border-radius:var(--btn-radius);border:1px solid var(--border);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:15px;font-weight:600;cursor:pointer;transition:background-color 150ms ease-out,border-color 150ms ease-out,transform var(--dur-1) ease-out}
 .auth-form-root .auth-google-btn--primary{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill)}
-@media(hover:hover){.auth-form-root .auth-google-btn--primary:hover:not(:disabled){background:var(--accent-fill-hover);border-color:var(--accent-fill-hover)}}
-.auth-form-root .auth-google-btn:active:not(:disabled),.auth-form-root .auth-submit:active:not(:disabled){transform:scale(.97)}
-.auth-form-root .auth-google-btn:disabled,.auth-form-root .auth-submit:disabled{opacity:.5;cursor:not-allowed}
+@media(hover:hover){.auth-form-root .auth-google-btn--primary:hover:not(:disabled):not([aria-disabled="true"]){background:var(--accent-fill-hover);border-color:var(--accent-fill-hover)}}
+.auth-form-root .auth-google-btn:active:not(:disabled):not([aria-disabled="true"]),.auth-form-root .auth-submit:active:not(:disabled){transform:scale(.97)}
+.auth-form-root .auth-google-btn:disabled,.auth-form-root .auth-google-btn[aria-disabled="true"],.auth-form-root .auth-submit:disabled{opacity:.5;cursor:not-allowed}
 .auth-google-mark{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:var(--radius-xs);background:#fff}
 
 .auth-form-root .auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--t3);font-size:13px;line-height:16px;font-family:var(--font)}

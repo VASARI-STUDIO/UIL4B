@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react'
+import { openFirebaseGate } from '../utils/firebaseAccess'
 import { Link } from 'react-router-dom'
 import {
   ToolLayout, ToolButton, ToolMain, SlidePills, ToolIcon,
@@ -158,6 +159,8 @@ function fileToResizedBase64(file) {
 }
 
 export default function AltTextGenerator({ toast }) {
+  // This tool needs an account, and the page already loads the SDK: let the session restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const [items, setItems] = useState([])
   const [context, setContext] = useState('')
   const [tone, setTone] = useState('concise')

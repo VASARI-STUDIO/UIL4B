@@ -47,7 +47,7 @@ export default function BookmarkPhone({ tour, stageRef, paneRef }) {
   const { open, hot, mode } = tour
   const run = mode === 'run'
   return (
-    <div className="bmp" {...tour.surface}>
+    <div className="bmp">
       <div className="bmp-stage" data-r7ap-stage ref={stageRef}>
         <div className="bmp-bar">
           <FolderIcon size={15} stroke={1.8} style={{ flex: 'none', opacity: 0.8 }} />

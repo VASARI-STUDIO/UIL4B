@@ -7,7 +7,6 @@
   --section-y-compact: 96px;
   --section-y-close: 176px;
   --gutter-x: 52px;
-  --hm-hairline: rgba(239, 238, 234, .08);
   /* One elevation scale for surfaces that float over another: layered, low
      alpha, wide and soft. They reach above the box as well as below it, so a
      card sliding over another is seen to lie on it. */
@@ -79,11 +78,6 @@ html:has(.spectrum-home) { scroll-padding-top: 104px; }
   --hm-ring-w: calc(2.02px / var(--hm-zoom, 1));
 }
 html:has(.spectrum-home) .skip-link:focus { outline-color: #EFEEEA; }
-
-/* The page's two hairlines: the proof bar's top edge and the plans section's
-   top edge. */
-.spectrum .sp-proof,
-.spectrum #plans { border-top: 1px solid var(--hm-hairline); }
 
 /* Arrow buttons. A go arrow (a link to another page) turns in place to point
    the way it goes and never travels: a diagonal arrow turns 45deg clockwise, a

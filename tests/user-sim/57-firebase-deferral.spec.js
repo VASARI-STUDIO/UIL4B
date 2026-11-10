@@ -1,27 +1,12 @@
-// The Firebase deferral, in the browser, on the DEFAULT (unflagged) build.
+// The Firebase access broker, in the browser, on the default (deferred) build.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT THIS CAN AND CANNOT PROVE, STATED FIRST
-// ─────────────────────────────────────────────────────────────────────────────
-// `VITE_DEFER_FIREBASE` is a BUILD flag — it changes which chunk the SDK lands
-// in, which rolldown decides before a browser is involved. `npm run test:users`
-// builds with `vite build --mode test` and no flag, so this suite cannot run the
-// deferred code path at all. Pretending otherwise by asserting something that
-// happens to be true in both builds is exactly the failure this repo has paid
-// for four times: a test beside a correct fix that exercises nothing.
-//
-// So this spec guards the half that IS live on every build — the seams the
-// deferral routes the app through, which now sit between App.jsx and Firebase on
-// the default path too. If a seam is broken, the flagged build is irrelevant
-// because the shipped one is already wrong.
-//
-// The deferred build's own behaviour is measured, not asserted, by
-// `scripts/firebase-deferral-trial.mjs` + `scripts/home-field-metrics.mjs`,
-// for the same reason #402 kept the timings out of this suite: they depend on
-// the machine, and a guard that fails at random is one people learn to ignore.
-// The STRUCTURE of the deferral — which is exact, and is what regresses
-// silently — is guarded by `tests/unit/firebase-deferral.test.js` and by the
-// build itself (`assertFirebaseIsDeferred` in vite.config.js).
+// This guards that the seams the deferral routes the app through boot and
+// render: a broken export in `src/utils/firebaseAccess` throws while the module
+// graph evaluates and paints nothing. What the deferral actually saves (no SDK
+// request for a cold signed-out visit, the SDK arriving when sign-in opens) is
+// asserted in `57-firebase-cold-visit.spec.js`; the import-graph structure is
+// guarded by `tests/unit/firebase-deferral.test.js` and by the build itself
+// (`assertFirebaseIsDeferred` in vite.config.js).
 import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
 

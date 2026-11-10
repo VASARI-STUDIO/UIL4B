@@ -82,3 +82,7 @@ export function whenFirestore() { return Promise.resolve(firestoreNs) }
 // No gate to open when nothing is deferred.
 export function openFirebaseGate() {}
 export function whenFirebaseGate() { return Promise.resolve() }
+
+// Nothing is deferred here, so the SDK is always already answering and there is
+// never a wait that could be skipped.
+export function canSkipAuthWait() { return false }

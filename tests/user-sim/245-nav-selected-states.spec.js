@@ -8,7 +8,9 @@
 //       stays on the trigger. (Cause: a "featured first row" rule lit the first
 //       row of every menu; it was neither roving focus nor autofocus.)
 //     · On a page that is a menu row, that row, and only that row, has
-//       aria-current="page" and the leading bar.
+//       aria-current="page", a heavier label and a check, with no coloured left
+//       edge. Hovering another row gives that row the grey tile and leaves the
+//       current row's look (heavier, checked, no tile) distinct from it.
 //     · Keyboard focus and hover still light a row (the controls), so the rows
 //       are not simply unstyled.
 //
@@ -112,6 +114,10 @@ const readRows = (page) => page.locator('#pnav-mega .pnav-tool').evaluateAll((ro
     id: el.getAttribute('data-row-id'),
     tile: cs.backgroundColor,
     bar: cs.boxShadow !== 'none',
+    // Any coloured edge: a left border, an inset-shadow bar or a painted image.
+    edge: parseFloat(cs.borderLeftWidth) > 0 || cs.boxShadow !== 'none' || cs.backgroundImage !== 'none',
+    weight: Number(getComputedStyle(el.querySelector('.pnav-tool-label')).fontWeight),
+    check: !!el.querySelector('.pnav-tool-here'),
     current: el.getAttribute('aria-current'),
     focused: el.matches(':focus'),
   }
@@ -190,15 +196,42 @@ for (const size of [TABLET, DESKTOP]) {
       const rows = await readRows(page)
       expect(rows.filter((r) => r.current === 'page').map((r) => r.id), 'one row is the current page').toEqual(['palette'])
       const here = rows.find((r) => r.id === 'palette')
-      expect(here.bar, 'the current row wears the bar').toBe(true)
+      // The current row is told apart by weight and a check, never by an edge.
+      expect(here.edge, 'the current row has a coloured left edge, bar or image').toBe(false)
+      expect(here.check, 'the current row shows its check').toBe(true)
       for (const row of rows.filter((r) => r.id !== 'palette')) {
-        expect(row.bar, `${row.id} wears the current-page bar`).toBe(false)
+        expect(row.edge, `${row.id} has a coloured edge`).toBe(false)
+        expect(row.check, `${row.id} shows a check`).toBe(false)
+        expect(row.weight, `${row.id} is as heavy as the current row`).toBeLessThan(here.weight)
         expect(alpha(row.tile), `${row.id} has a tile`).toBe(0)
       }
       await shot(page, `menu-create-on-palette-${size.tag}-${who ? 'in' : 'out'}`)
       await ctx.close()
     })
   }
+}
+
+// The current row and a hovered row look different: the hover is a grey tile on a
+// lighter label with no check; the current row is a heavier label with a check and no tile.
+for (const theme of THEMES) {
+  test(`the current row and a hovered row are told apart, 1440, ${theme}`, async ({ browser }) => {
+    const { ctx, page } = await openPage(browser, DESKTOP, theme, null, '/create/palette')
+    await openCreateMenu(page, DESKTOP)
+    await page.locator('#pnav-mega .pnav-tool[data-row-id="gradient"]').hover()
+    await expect.poll(async () => alpha((await readRows(page)).find((r) => r.id === 'gradient').tile)).toBeGreaterThan(0)
+    const rows = await readRows(page)
+    const here = rows.find((r) => r.id === 'palette')
+    const hovered = rows.find((r) => r.id === 'gradient')
+    expect(here.current, 'the current row keeps aria-current').toBe('page')
+    expect(hovered.current, 'the hovered row is not the current page').toBeNull()
+    expect(alpha(here.tile), 'the current row has no hover tile').toBe(0)
+    expect(here.edge, 'the current row has a coloured edge').toBe(false)
+    expect(hovered.edge, 'the hovered row has a coloured edge').toBe(false)
+    expect(here.weight, 'the current label is heavier than the hovered one').toBeGreaterThan(hovered.weight)
+    expect([here.check, hovered.check], 'only the current row is checked').toEqual([true, false])
+    await shot(page, `menu-create-current-vs-hover-1440-${theme}`)
+    await ctx.close()
+  })
 }
 
 // ── a71a40fbd9: the phone tab bar with the sheet open ────────────────────────

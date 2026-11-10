@@ -98,8 +98,8 @@ const testSessionDouble = () => ({
 
 // ── THE FIREBASE DEFERRAL FLAG ───────────────────────────────────────
 //
-//   VITE_DEFER_FIREBASE=1 npm run build      # deferred
-//   npm run build                            # today, unchanged (default)
+//   npm run build                            # deferred (default)
+//   VITE_DEFER_FIREBASE=0 npm run build      # eager, for comparison
 //
 // WHY A BUILD FLAG AND NOT A QUERY PARAM. The thing being changed is which
 // chunk `firebase-*.js` belongs to, and that is decided by rolldown at build
@@ -112,8 +112,8 @@ const testSessionDouble = () => ({
 //
 // `src/utils/firebaseAccess.js` (eager) is the default and resolves normally
 // everywhere — Node, ESLint, the unit tests — with no alias in play at all.
-// The alias below is the entire opt-in, and it exists only when the env var is
-// set, so an unflagged build is the build that ships today.
+// The alias below is the entire switch. It is present unless the build sets
+// VITE_DEFER_FIREBASE=0, which restores the eager modules.
 //
 // The alias matches the CANONICAL specifier `.../firebaseAccess`, written with
 // no file extension. `tests/unit/firebase-deferral.test.js` fails the build if
@@ -131,7 +131,8 @@ const testSessionDouble = () => ({
 //
 // `scripts/prerender.mjs` and the tests read the built output, not this list,
 // so adding a third seam needs only a line here and the `.lazy` twin.
-const DEFER_FIREBASE = process.env.VITE_DEFER_FIREBASE === '1'
+// ON unless VITE_DEFER_FIREBASE=0, which builds the eager variant for comparison.
+const DEFER_FIREBASE = process.env.VITE_DEFER_FIREBASE !== '0'
 
 // EXPORTED so tests/unit/firebase-deferral.test.js can check every import
 // against the REAL regex rather than a second copy of it. A test that rebuilt
@@ -166,12 +167,9 @@ const firebaseAccessAlias = DEFER_FIREBASE
 // STATIC IMPORT GRAPH from the entry chunks and fails if the Firebase SDK is
 // still reachable without a dynamic `import()`.
 //
-// This is why `VITE_DEFER_FIREBASE=1` refuses to build against an unpatched
-// tree today. The two founder-gated contexts still import the SDK statically,
-// which not only leaves it in the first wave but SPLITS it across two
-// preloaded chunks — measured at 553193 first-wave bytes against 521019
-// unflagged, a 32 KB regression. Half a deferral is worse than none, and a
-// build that fails says so where a comment would not.
+// A static edge left behind not only keeps the SDK in the first wave but can
+// SPLIT it across two preloaded chunks, which is worse than not deferring at
+// all, so a build that fails says so where a comment would not.
 const FIREBASE_MODULE = /(?:^|[/\\])(?:node_modules[/\\]@?firebase|node_modules[/\\]firebase[/\\]|src[/\\]utils[/\\]firebase\.js$)/
 const assertFirebaseIsDeferred = () => ({
   name: 'uil4b-assert-firebase-deferred',
@@ -181,7 +179,15 @@ const assertFirebaseIsDeferred = () => ({
     const chunks = Object.values(bundle).filter((c) => c.type === 'chunk')
     const byName = new Map(chunks.map((c) => [c.fileName, c]))
     const seen = new Set()
-    const queue = chunks.filter((c) => c.isEntry).map((c) => c.fileName)
+    // The app's own entry only. `--mode test` adds fixture pages (a standalone
+    // tool page per entry) that import the SDK on purpose and are never served
+    // to a visitor.
+    const queue = chunks.filter((c) => c.isEntry && c.name === 'index').map((c) => c.fileName)
+    // An empty start set would walk nothing and pass, so a renamed entry would
+    // silently disable the guard.
+    if (!queue.length) {
+      this.error('no app entry chunk named "index" found; the Firebase deferral cannot be verified')
+    }
     const offenders = []
     while (queue.length) {
       const name = queue.shift()
@@ -196,12 +202,11 @@ const assertFirebaseIsDeferred = () => ({
     }
     if (offenders.length) {
       this.error(
-        'VITE_DEFER_FIREBASE=1, but the Firebase SDK is still reachable from the entry chunk '
+        'The Firebase deferral is on, but the Firebase SDK is still reachable from the entry chunk '
         + 'by STATIC import, so it stays in the first request wave:\n  '
         + offenders.join('\n  ')
-        + '\n\nThe remaining static edges are in the two founder-gated contexts. Apply '
-        + 'docs/design/firebase-deferral-gated.patch (or run scripts/firebase-deferral-trial.mjs, '
-        + 'which applies it to temporary copies) and build again.',
+        + '\n\nRoute the importing module through src/utils/firebaseAccess (or load it with import()), '
+        + 'or build with VITE_DEFER_FIREBASE=0 to opt out.',
       )
     }
   },
