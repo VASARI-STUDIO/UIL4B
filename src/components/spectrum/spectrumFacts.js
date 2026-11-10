@@ -313,7 +313,7 @@ export const PROOF = [
 export const FAQS = [
   {
     q: 'What counts as one generation?',
-    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered — they run in your browser and cost us nothing.',
+    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser.',
   },
   {
     q: 'Is the Pro model different?',
