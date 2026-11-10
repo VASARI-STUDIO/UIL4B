@@ -116,7 +116,7 @@ test('the checker the stylesheet paints has the squares the note measures, in bo
     const darker = painted.sort((a, b) => lum(a) - lum(b))[0]
     assert.equal(darker, groundHex('checker', theme).toLowerCase(), `${theme} checker, darker square`)
     // and the same pair in the small swatch checker and the upgrade preview
-    assert.equal(decodeURIComponent(vars['--ied-checker-s']).match(/#[0-9a-f]{6}/gi).map((h) => h.toLowerCase()).sort().join(), painted.slice().sort().join())
+    assert.equal(decodeURIComponent(vars['--ied-checker-s']).match(/#[0-9a-f]{6}/gi).map((h) => h.toLowerCase()).filter((h, i, all) => all.indexOf(h) === i).sort().join(), painted.slice().sort().join())
     assert.ok(decodeURIComponent(checkerUri(theme, 8)).toLowerCase().includes(darker), `${theme} preview checker`)
   }
 })
@@ -161,15 +161,27 @@ test('the contrast note sits over the stage and holds no room, and its live regi
   assert.doesNotMatch(css, /--note-lines|--stage-rest/, 'a held note band is back')
 })
 
-// The editor's phone layout (a bottom sheet with a coarse-pointer block) is not built yet.
-test('on a touch screen each ground swatch has a 44 by 44 hit area', { skip: 'phone layout not built yet: re-check when the coarse-pointer block lands in icon-editor.css' }, () => {
-  const css = flatCss(ICON_CSS)
-  const at = css.indexOf('@media (pointer:coarse)')
-  assert.ok(at >= 0, 'the coarse-pointer block is missing')
-  const coarse = css.slice(at)
-  assert.match(coarse, /\.ied-bgb ?\{[^}]*(?:width: ?44px|min-width: ?44px)/)
-  assert.match(coarse, /\.ied-bgb ?\{[^}]*(?:height: ?44px|min-height: ?44px)/)
-})
+// The swatch is 32px with a mouse. Touch gets 44 by 44 two ways: the wide dialog's coarse-pointer block,
+// and the phone sheet (below 900px), which sets 44 whatever the pointer is. Each block is cut out whole,
+// so a later rule elsewhere in the sheet cannot stand in for it.
+function mediaBlock(css, header) {
+  const at = css.indexOf(header)
+  assert.ok(at >= 0, `${header} block is missing`)
+  let depth = 0
+  for (let i = css.indexOf('{', at); i < css.length; i++) {
+    if (css[i] === '{') depth++
+    else if (css[i] === '}' && --depth === 0) return css.slice(at, i + 1)
+  }
+  throw new Error(`${header} block never closes`)
+}
+
+for (const header of ['@media (pointer:coarse) and (min-width:900px)', '@media (max-width:899px){']) {
+  test(`on a touch screen each ground swatch has a 44 by 44 hit area (${header.replace('{', '')})`, () => {
+    const block = mediaBlock(flatCss(ICON_CSS), header)
+    assert.match(block, /\.ied-bgb ?\{[^}]*(?:width: ?44px|min-width: ?44px)/)
+    assert.match(block, /\.ied-bgb ?\{[^}]*(?:height: ?44px|min-height: ?44px)/)
+  })
+}
 
 test('the Custom radio claims no popup, and the note names a custom colour', () => {
   const jsx = stripJs(read('src/pages/IconLibrary.jsx'))

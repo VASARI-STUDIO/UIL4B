@@ -122,16 +122,28 @@ test('the icon editor pads its foot and its save panel by the bottom inset on a 
   }
 })
 
-test('the icon editor overlay keeps its padding clear of the notch at every width', { skip: 'phone layout not built yet: .ied-overlay sets no padding; re-check when it does' }, () => {
-  for (const body of everyBodyWith('.ied-overlay', 'padding')) {
+// The phone sheet is bottom-aligned and flush with the screen's sides, so the overlay sets no padding.
+// What keeps it off the side insets is its width cap: a notched phone in landscape is far wider than
+// 560px plus both insets. If the overlay does pad, every rule that pads it reads all three insets.
+test('the icon editor overlay keeps clear of the notch at every width', () => {
+  const padded = bodies('.ied-overlay').filter((b) => /(^|[;\s])padding\s*:/.test(b))
+  for (const body of padded) {
     assert.match(body, /safe-area-inset-top/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
     assert.match(body, /safe-area-inset-left/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
     assert.match(body, /safe-area-inset-right/, `.ied-overlay { ${body.trim().slice(0, 90)} ... }`)
   }
+  if (padded.length === 0) {
+    const capped = bodies('.ied').some((b) => /(^|[;\s])max-width\s*:\s*560px/.test(b) && /(^|[;\s])width\s*:\s*100%/.test(b))
+    assert.ok(capped, 'the overlay pads nothing and the sheet is not capped at 560px, so it can reach the side insets')
+  }
 })
 
-test('the icon editor phone sheet sizes its height against the top inset', { skip: 'phone layout not built yet: .ied sets no max-height against the inset; re-check when it does' }, () => {
-  for (const body of everyBodyWith('.ied', 'max-height')) {
+// The sheet's height is the screen less a top gap. On a phone with a Dynamic Island the top inset
+// is 59px, so a fixed gap lets the sheet's top edge and grabber sit under the status bar.
+test('the icon editor phone sheet sizes its height against the top inset', () => {
+  const sheet = bodies('.ied').filter((b) => /(^|[;\s])(?:max-)?height\s*:[^;]*--ied-vh/.test(b))
+  assert.ok(sheet.length > 0, 'found the phone sheet height rule on .ied')
+  for (const body of sheet) {
     assert.match(body, /safe-area-inset-top/, `.ied { ${body.trim().slice(0, 90)} ... }`)
   }
 })

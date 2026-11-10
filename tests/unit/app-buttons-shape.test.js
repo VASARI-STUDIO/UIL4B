@@ -67,7 +67,8 @@ const KEEP = {
     // style, its name and note), a Similar tile is a card, and its colour chips, tonal buttons (Reset,
     // Save, Copy in the code box) and round icon buttons (rotate, flip) are 12px fields and controls.
     // The editor's one primary button (Copy SVG, Upgrade to Pro) is still a pill.
-    'ied-cell-s', 'ied-tile', 'ied-sim', 'ied-chip', 'ied-tn', 'ied-ib',
+    // The phone jump row (Stroke, Line style, Rotate, Code) is four 12px tonal fields with a label over a value.
+    'ied-cell-s', 'ied-tile', 'ied-sim', 'ied-chip', 'ied-tn', 'ied-ib', 'ied-jb',
     // an export template choice without a thumbnail is a bordered card holding its name and description
     'exp-tpl-tile',
     // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
