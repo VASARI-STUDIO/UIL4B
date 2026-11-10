@@ -18,7 +18,6 @@ import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 // Palette Builder will LOAD, which is why both sets are still named here.
 const FREE_BRANDS = BRAND_PALETTES.filter((brand) => brand.free === true)
 const PAID_BRANDS = BRAND_PALETTES.filter((brand) => brand.free !== true)
-const TEASED = 3 // LOCKED_TEASE — placeholders shown before the wall
 
 // `eyebrow` is the results-row label each library shows WHILE BROWSING, and the
 // two are deliberately different now. Parity here is of STRUCTURE — same
@@ -365,8 +364,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     for (const brand of PAID_BRANDS) {
       await expect(page.locator('.pgal-card', { hasText: brand.name })).toHaveCount(1)
     }
-    await expect(page.locator('.lockt-card')).toHaveCount(0)
-    await expect(page.locator('.lockt-cta')).toHaveCount(0)
+    await expect(page.locator('.geg')).toHaveCount(0)
 
     // Distinguishable: every brand card carries a visible Brand badge, and no
     // curated card does.
@@ -487,15 +485,24 @@ test.describe('the Palette Library carries the brand systems', () => {
     await expect(page.locator('.pgal-name', { hasText: paid.name })).toHaveCount(0)
     await search.fill('')
 
-    // What replaces them: placeholders and one wall into the canonical gate,
-    // naming the true remainder.
+    // What replaces them: the Pro end gate over faded neutral cards, naming the
+    // true remainder. The faded cards are stand-ins: no withheld brand's name
+    // or colour is in them.
     await page.getByRole('button', { name: 'All palettes' }).click()
-    await expect(page.locator('.lockt-card')).toHaveCount(TEASED)
+    const gate = page.locator('.geg[data-gate="pro"]')
+    await expect(gate).toHaveCount(1)
     // The remainder as a NUMBER: a substring check for "91" is satisfied by
     // "191" and by any other figure that happens to contain it.
     const remaining = LIBRARY_PALETTES.length - 10
-    expect((await page.locator('.lockt-cta-head').innerText()).match(/\d+/g).map(Number))
+    expect((await gate.locator('.geg-h').innerText()).match(/\d+/g).map(Number))
       .toContain(remaining)
+    const fade = gate.locator('.geg-fade')
+    expect(await fade.locator('.pgal-card').count(), 'the gate has no faded cards - the check below would be vacuous').toBeGreaterThan(0)
+    const fadedHtml = await fade.evaluate((el) => el.innerHTML)
+    for (const brand of [PAID_BRANDS[0], FREE_BRANDS[0]]) {
+      expect(fadedHtml, `${brand.name} is named in the faded cards`).not.toContain(brand.name)
+      for (const hex of brand.colors) expect(fadedHtml.toLowerCase(), `${brand.name}'s ${hex} is in the faded cards`).not.toContain(hex.toLowerCase())
+    }
   })
 })
 

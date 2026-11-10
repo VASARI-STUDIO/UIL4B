@@ -41,7 +41,12 @@ export default function GalleryEndGate({
   const headId = id || `geg-h-${auto.replace(/:/g, '')}`
   const Heading = `h${level}`
   return (
-    <section className={`geg${className ? ` ${className}` : ''}`} data-gate={kind} data-end={kind} aria-labelledby={headId}>
+    // A named group, not a region: a named <section> is a landmark, and this block
+    // changes with the viewer (its name differs by tier and it is absent under a
+    // filter), so as a landmark it would make the page's landmark list differ
+    // between signed-out and signed-in, and between a full and a filtered grid.
+    // The gallery's own results region stays the one landmark (spec 83).
+    <section role="group" className={`geg${className ? ` ${className}` : ''}`} data-gate={kind} data-end={kind} aria-labelledby={headId}>
       {fade && <div className="geg-fade" aria-hidden="true" inert>{fade}</div>}
       <div className="geg-band">
         <div className="geg-copy" role={live === 'copy' ? 'status' : undefined}>

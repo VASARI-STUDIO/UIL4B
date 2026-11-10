@@ -75,7 +75,9 @@ test.describe('nav auth opens over the page you are on', () => {
     watch(page, 'keyboard user on the palette library')
     await go(page, '/discover/palettes')
 
-    await page.getByRole('button', { name: 'Log in' }).click()
+    // The nav's button. The gallery's end gate also has a Log in, so the name alone
+    // matches two.
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Log in' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await page.keyboard.press('Escape')

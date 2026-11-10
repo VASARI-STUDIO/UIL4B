@@ -194,7 +194,7 @@ test.describe('palette gallery: tab stops', () => {
 
     const where = await page.evaluate(() => {
       const active = document.activeElement
-      const cards = [...document.querySelectorAll('.pgal-card')]
+      const cards = [...document.querySelectorAll('.pgal-card:not(.geg-fade *)')]
       const last = cards[cards.length - 1]
       return {
         insideACard: !!active?.closest('.pgal-card'),
