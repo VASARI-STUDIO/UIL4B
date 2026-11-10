@@ -73,6 +73,7 @@ import { transformWithOxc } from 'vite'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { projectSnapshot } from '../../src/utils/designPatch.js'
+import { countUnknownError } from '../../src/utils/projectCount.js'
 import { stripCss } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css; a test that keeps reading one file after a lift like that does
@@ -151,7 +152,7 @@ const projects = (n) => Array.from({ length: n }, (_, i) => project(i + 1))
  * Execute the provider once, as React would for one render, and hand back the
  * context value it gives its children plus the store and the activation log.
  */
-function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
+function loadProjectContext({ user = ALICE, plan = FREE, saved = [], read = true } = {}) {
   let out = ctxCompiled
 
   const rewrite = (re, to, what) => {
@@ -173,6 +174,14 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
   rewrite(/^export function ProjectProvider/m, 'function ProjectProvider', 'the provider export')
   rewrite(/^export const useProject/m, 'const useProject', 'the hook export')
   assert.ok(!/^\s*export\s/m.test(out), `${CTX_PATH} still has an export the harness did not strip`)
+
+  // `read` is whether the account's own list has been read on this device. The harness runs one
+  // render and models no pull, so the state that records the read is seeded here.
+  rewrite(
+    /(const \[countedUid, setCountedUid\] = useState\()null\)/,
+    `$1${JSON.stringify(read ? user?.uid ?? null : null)})`,
+    'the state that records the account\'s list was read',
+  )
 
   const store = new Map()
   if (user) store.set('vs-projects', JSON.stringify({ [ALICE_KEY]: saved }))
@@ -219,6 +228,7 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
     DEFAULT_DESIGN,
     // The real snapshot/patch merge saveProject calls; pure, so it runs as-is.
     projectSnapshot,
+    countUnknownError,
   }
 
   const body = `(function(){\n${out}\n;return { ProjectProvider };\n})()`
@@ -453,6 +463,27 @@ test('8d · a blank project is a container, not work — no activation', () => {
   const { render, activations } = loadProjectContext({ saved: [] })
   render().saveProject('', { blank: true })
   assert.deepEqual(activations, [], 'creating an empty shell was counted as the first real win')
+})
+
+test('8d2 · before the account\'s list is read, a device with no copy refuses a new project and writes nothing', () => {
+  const { render, stored, activations } = loadProjectContext({ saved: [], read: false })
+  let thrown
+  try { render().saveProject('Fourth kit') } catch (error) { thrown = error }
+  assert.ok(thrown, 'a save went through with the account\'s count unknown')
+  assert.equal(thrown.code, 'projects-unknown')
+  assert.match(thrown.message, /Still checking your projects/)
+  assert.deepEqual(stored(), [], 'a refused save wrote a project')
+  assert.deepEqual(activations, [], 'a refused save counted as a first win')
+})
+
+test('8d3 · before the account\'s list is read, a device holding a copy counts against that copy', () => {
+  const LIMIT = FREE_SAVE_LIMITS.projects
+  const room = loadProjectContext({ saved: projects(1), read: false })
+  assert.ok(room.render().saveProject('Second kit'), 'a device holding a copy of the account was made to wait')
+  assert.equal(room.stored().length, 2)
+  const full = loadProjectContext({ saved: projects(LIMIT), read: false })
+  assert.throws(() => full.render().saveProject('Fourth kit'), new RegExp(`up to ${LIMIT} projects`))
+  assert.equal(full.stored().length, LIMIT, 'nothing is removed or added')
 })
 
 test('8e · duplicating is a new save and answers to the same cap', () => {
