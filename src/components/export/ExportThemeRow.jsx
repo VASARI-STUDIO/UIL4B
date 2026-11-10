@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PICKER_THEMES, pickerTheme, preloadTheme, themeShots, shapeClass, themedFileIsPro } from '../../config/exportThemePicker'
+import { preloadThemeStandins, themeStandinShots } from '../../utils/lockedStandin'
 
 // The Theme step of the Export dialog: the chosen theme with its tier, a line naming the sample brand the pictures come from,
 // and a Change button that opens a listbox of the ten themes. Highlighting a row previews it at once (onPreview); Enter or a
@@ -12,6 +13,9 @@ import { PICKER_THEMES, pickerTheme, preloadTheme, themeShots, shapeClass, theme
 //
 // The previews are pictures (public/export-themes), so no theme code is in the page. A theme's pictures are fetched when its
 // row gets hover or focus, and the preview swaps once they are in, so a swap never shows a half-loaded page.
+//
+// A file the viewer cannot export in that theme is previewed from a tiny blurred stand-in (utils/lockedStandin), fetched and drawn
+// in place of the real picture, so the real file never reaches the page or the network for that viewer.
 
 const CheckIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
@@ -26,11 +30,13 @@ const POP_W = 320
 // Frames the list gets to take focus: a popover that has only just been placed can still read as hidden for its first frame.
 const FOCUS_FRAMES = 10
 
-export function ThemeStage({ kind, theme, locked, lockText }) {
-  const shots = themeShots(kind, theme)
+// `standin` swaps the real pictures for their stand-ins; `locked` adds the Pro lock over them. They differ while the plan is still
+// being read: the pictures are held back at once, and the lock waits until the account is known not to be Pro.
+export function ThemeStage({ kind, theme, locked, standin = locked, lockText }) {
+  const shots = standin ? themeStandinShots(kind, theme) : themeShots(kind, theme)
   const cls = kind === 'book' ? 'book' : shapeClass(theme.shape)
   return (
-    <div className={`xd-theme-stage xd-theme-stage--${cls}${locked ? ' is-locked' : ''}`}>
+    <div className={`xd-theme-stage xd-theme-stage--${cls}${standin ? ' is-locked' : ''}`}>
       {shots.map((s) => <img key={s.src} src={s.src} alt={s.alt} decoding="async" />)}
       {locked && <span className="xd-theme-lock">{lockText}</span>}
     </div>
@@ -69,9 +75,11 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
   const move = (i) => {
     setActive(i)
     hot.current = i
-    const loading = preloadTheme(kind, PICKER_THEMES[i].id)
+    const id = PICKER_THEMES[i].id
+    // A file this account cannot export in that theme preloads its stand-ins, never the real pictures.
+    const loading = kind !== 'kit' && !isPro && themedFileIsPro(file, id) ? preloadThemeStandins(kind, id) : preloadTheme(kind, id)
     // The preview follows the row once its pictures are in; a row left before then never swaps.
-    if (!sheet) loading.then(() => { if (hot.current === i) onPreview?.(PICKER_THEMES[i].id) })
+    if (!sheet) loading.then(() => { if (hot.current === i) onPreview?.(id) })
   }
   const start = () => {
     clearTimeout(leaveTimer.current)

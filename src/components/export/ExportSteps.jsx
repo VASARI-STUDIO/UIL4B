@@ -122,12 +122,15 @@ function NameLine({ lead, name, project, onRenameState }) {
 function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen, shown }) {
   const kind = cat.preview
   if (themedFile(file)) {
-    // A picture of the theme's own sample pages. The kit is previewed sharp in every theme (the button carries the Pro line); a locked book or guidelines file is blurred, with the lock the live Pro previews carry.
-    const locked = kind !== 'kit' && !isPro && !checking && themedFileIsPro(file, shown.id)
+    // A picture of the theme's own sample pages. The kit is previewed sharp in every theme (the button carries the Pro line); a locked book or guidelines file shows a blurred stand-in, with the lock the live Pro previews carry.
+    // A file the account cannot export shows the blurred stand-in pictures, and never the real ones on a guess while the plan is
+    // read; the lock waits until the account is known not to be Pro.
+    const standin = kind !== 'kit' && !isPro && themedFileIsPro(file, shown.id)
+    const locked = standin && !checking
     const lines = themeLines(kind, shown)
     return (
       <div className="xd-prev">
-        <ThemeStage kind={kind} theme={shown} locked={locked} lockText={kind === 'kit' ? 'Pro theme' : 'Pro export'} />
+        <ThemeStage kind={kind} theme={shown} locked={locked} standin={standin} lockText={kind === 'kit' ? 'Pro theme' : 'Pro export'} />
         <p className="xd-theme-cap">{lines.caption}</p>
       </div>
     )
