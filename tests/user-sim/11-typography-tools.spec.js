@@ -1366,8 +1366,11 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   const expectTarget = async (locator, label) => {
     const box = await locator.boundingBox()
     expect(box, `${label} should have a rendered box`).not.toBeNull()
-    expect(box.width, `${label} width`).toBeGreaterThanOrEqual(44)
-    expect(box.height, `${label} height`).toBeGreaterThanOrEqual(44)
+    // Layout can land a 44px box a few hundred-thousandths short (43.99997) when its
+    // position is fractional, so the size is read to the hundredth of a pixel.
+    const px = (n) => Math.round(n * 100) / 100
+    expect(px(box.width), `${label} width`).toBeGreaterThanOrEqual(44)
+    expect(px(box.height), `${label} height`).toBeGreaterThanOrEqual(44)
   }
 
   await go(page, '/create/font-gallery')
