@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { isCountUnknownMessage } from '../utils/projectCount'
 
 // The free cap's refusal, rendered where it was thrown.
 //
@@ -15,10 +16,12 @@ import { NavLink } from 'react-router-dom'
 // toast. Its two rules are in global.css, because pages/projects.css only ships
 // with the /projects chunk and the homepage renders the palette tool.
 export default function SaveRefusal({ message, testId }) {
+  // "Still checking your projects" is not the cap, so it points nowhere.
+  const isCap = !isCountUnknownMessage(message)
   return (
     <p className="uh-save-refusal" role="alert" data-testid={testId}>
-      <span>{message}</span>{' '}
-      <NavLink to="/plans" className="uh-quota-link">See what Pro adds</NavLink>
+      <span>{message}</span>
+      {isCap && <>{' '}<NavLink to="/plans" className="uh-quota-link">See what Pro adds</NavLink></>}
     </p>
   )
 }

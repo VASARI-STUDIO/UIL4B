@@ -138,15 +138,19 @@ async function openDialog(page, { plan = 'pro' } = {}) {
   return dialog
 }
 
-/** Pick a scene in whichever layout the width gives: rail, the 768 menu, or the phone strip. */
-async function pickScene(dialog, name) {
+/**
+ * Pick a scene in whichever layout the width gives: rail, the 768 menu, or the phone strip.
+ * `locked` is a Pro scene on a free account: its scene is never mounted, so the stage holds the stand-in instead.
+ */
+async function pickScene(dialog, name, { locked = false } = {}) {
   let option = dialog.getByRole('option', { name: rx(name) })
   if (!(await option.count())) {
     await dialog.locator('.pvd-menu-btn').click()
     option = dialog.getByRole('option', { name: rx(name) })
   }
   await option.click()
-  await expect(dialog.locator(`.pvs[data-preview-scene="${name}"]`)).toBeVisible()
+  if (locked) await expect(dialog.locator('.pvd-scene.is-locked .pvd-scene-stub')).toBeVisible()
+  else await expect(dialog.locator(`.pvs[data-preview-scene="${name}"]`)).toBeVisible()
 }
 
 async function setTheme(dialog, theme) {
@@ -1018,7 +1022,7 @@ test.describe('the free and Pro examples', () => {
     await expect(rail.getByRole('option'), 'six previews in the list').toHaveCount(SCENE_ORDER.length)
 
     for (const ex of EXAMPLES) {
-      await pickScene(dialog, ex.name)
+      await pickScene(dialog, ex.name, { locked: ex.pro })
       const option = rail.getByRole('option', { name: rx(ex.name) })
       const unlock = dialog.getByRole('button', { name: 'Unlock preview' })
       // A Pro scene is never mounted for a free account: the stage holds a stand-in drawn from their own colours, so there is no scene to un-blur.

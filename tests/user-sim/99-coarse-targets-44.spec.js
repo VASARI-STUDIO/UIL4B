@@ -55,7 +55,7 @@ const CASES = [
     },
     sels: ['.ui-login-x'],
   },
-  { route: '/projects', signin: true, sels: ['.uh-card-name'] },
+  { route: '/projects', signin: true, sels: ['a[aria-label^="Open project"]', '.db-mini'] },
   // The sales page's Try-the-tools palette (its tool tabs, lock buttons and Randomise) and the sales footer's link rows.
   {
     route: '/',

@@ -131,14 +131,14 @@ test('the projects empty state still teaches, since it is now the first thing se
   // and offers "Start a project"; the tool it names is one tap away in the
   // "Start something" grid on the same page, the Palette Builder leading it.
   const src = read('src/pages/Projects.jsx')
-  assert.match(src, /StarterCard/)
-  // The starter runs startNew() (wrapped so the click event is not passed as its argument).
-  assert.match(src, /onStart=\{(\(\) => startNew\(\)|startNew)\}/)
-  assert.match(src, /<StartSomething \/>/, 'the workspace no longer mounts the tool grid')
-  const start = read('src/components/userhome/StartSomething.jsx')
-  // The tools are /tools rows built from one list of tool ids (the old lead tile, a <Link to={toolRoute('palette')}>,
-  // was retired with the /tools restyle). The Palette Builder must still be the first entry, on its route.
-  assert.match(start, /const TILE_IDS = \['palette',/,
+  // The empty account gets the example kit titled "Start your first brand kit", whose pill runs startNew()
+  // (a function that takes no argument, so a click event is never passed in as one).
+  assert.match(src, /exampleKit\('empty'\)/)
+  assert.match(src, /onPill=\{startNew\}/, 'the empty sheet\'s pill no longer starts a project')
+  assert.match(src, /<Shelf /, 'the workspace no longer mounts the tools shelf')
+  const kit = read('src/components/dashboard/kit.js')
+  assert.match(kit, /title: 'Start your first brand kit'/)
+  // Each of the four parts links to the tool that makes it, the Palette Builder first.
+  assert.match(kit, /id: 'palette'[^\n]*tool: tool\.palette[^\n]*linkLabel: 'Open in Palette Builder'/,
     'the empty workspace should still lead with the tool that produces a project')
-  assert.match(start, /to: toolRoute\(id\)/, 'the rows no longer link to the tool tree routes')
 })

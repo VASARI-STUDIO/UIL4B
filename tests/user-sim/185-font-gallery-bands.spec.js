@@ -27,13 +27,17 @@ const CATALOGUE = {
     { family: 'Pacifico', category: 'handwriting', variants: [400], subsets: ['latin'], popularity: 3 },
   ],
 }
-// Band height is max(160, round(size * 1.1) + 94) from a tablet up and
-// max(112, ceil(size * 1.1) + 68) on a phone. Lists open at Size 96 on a desktop
-// and a tablet, and 48 on a phone.
+// Band height is max(200, round(size * 1.1) + 147) from a tablet up and
+// max(140, ceil(size * 1.1) + 99) on a phone (src/utils/galleryBand.js). Lists open
+// at Size 96 on a desktop and a tablet, and 48 on a phone. `top` is the room above
+// the name, `gap` the room between the name and the meta line, and `below` the room
+// under the meta line, each a spacing token (--s-7 and --s-6 wide, --s-5 and --s-6
+// on a phone). Each is at least 1.5 times what it was, so a band that tightens back
+// fails on these numbers.
 const LAYOUTS = [
-  { width: 1440, band: 200, name: 96, top: 28 },
-  { width: 768, band: 200, name: 96, top: 28 },
-  { width: 390, band: 121, name: 48, top: 16 },
+  { width: 1440, band: 253, name: 96, top: 48, gap: 48, below: 32 },
+  { width: 768, band: 253, name: 96, top: 48, gap: 48, below: 32 },
+  { width: 390, band: 152, name: 48, top: 24, gap: 24, below: 32 },
 ]
 
 async function open(page, width) {
@@ -89,7 +93,7 @@ test.describe('Font Gallery bands', () => {
     expect(count).toBe('none')
   })
 
-  for (const { width, band, name, top } of LAYOUTS) {
+  for (const { width, band, name, top, gap, below } of LAYOUTS) {
     test(`criterion 3: at ${width} the band is ${band}px, the name ${name}px, and a wake moves no box`, async ({ page }) => {
       watch(page, 'someone hovering a band')
       await open(page, width)
@@ -108,14 +112,16 @@ test.describe('Font Gallery bands', () => {
           name: el.querySelector('.fg-card-name').getBoundingClientRect().top - r.top,
           meta: r.bottom - meta.bottom,
           copy: copy ? r.bottom - copy.getBoundingClientRect().bottom : null,
+          gap: meta.top - el.querySelector('.fg-card-preview').getBoundingClientRect().bottom,
         }
       })
       expect(Math.round(inset.name), `${width}px name inset from the top`).toBe(top)
-      // 20px above the band's 1px divider.
-      expect(inset.meta, `${width}px meta line sits 20px above the bottom`).toBeGreaterThanOrEqual(20)
-      expect(inset.meta, `${width}px meta line sits 20px above the bottom`).toBeLessThanOrEqual(21)
-      expect(inset.copy, `${width}px Copy CSS is on the meta line's bottom edge`).toBeGreaterThanOrEqual(20)
-      expect(inset.copy, `${width}px Copy CSS is on the meta line's bottom edge`).toBeLessThanOrEqual(21)
+      // The room under the meta line, then the band's 1px divider.
+      expect(inset.meta, `${width}px meta line sits ${below}px above the bottom`).toBeGreaterThanOrEqual(below)
+      expect(inset.meta, `${width}px meta line sits ${below}px above the bottom`).toBeLessThanOrEqual(below + 1)
+      expect(inset.copy, `${width}px Copy CSS is on the meta line's bottom edge`).toBeGreaterThanOrEqual(below)
+      expect(inset.copy, `${width}px Copy CSS is on the meta line's bottom edge`).toBeLessThanOrEqual(below + 1)
+      expect(inset.gap, `${width}px room between the name and the meta line shrank back`).toBeGreaterThanOrEqual(gap - 1)
       const family = await nameEl.evaluate((el) => getComputedStyle(el).fontFamily)
       expect(family).toContain('Lora')
 
@@ -149,11 +155,11 @@ test.describe('Font Gallery bands', () => {
 
   // The Size menu has 11 steps; the band follows each of them.
   const SIZE_STEPS = [
-    { width: 1440, size: 56, band: 160 },
-    { width: 1440, size: 80, band: 182 },
-    { width: 1440, size: 112, band: 217 },
-    { width: 390, size: 56, band: 130 },
-    { width: 390, size: 112, band: 192 },
+    { width: 1440, size: 56, band: 209 },
+    { width: 1440, size: 80, band: 235 },
+    { width: 1440, size: 112, band: 270 },
+    { width: 390, size: 56, band: 161 },
+    { width: 390, size: 112, band: 223 },
   ]
   for (const { width, size, band } of SIZE_STEPS) {
     test(`criterion 3: at ${width} and Size ${size} the band is ${band}px`, async ({ page }) => {

@@ -240,8 +240,8 @@ test.describe('billing banner layout', () => {
    * signed-out state instead, which also removes a redirect loop (see the route
    * note in App.jsx).
    *
-   * So the visitor now STAYS on /projects and sees the sign-in panel that has sat
-   * unreachable inside Projects.jsx since it was written. What must not change is
+   * So the visitor now STAYS on /projects and sees the example brand kit (the page's signed-out
+   * state). What must not change is
    * the thing in this test's title: the free-plan allowance lives BELOW that
    * early return and a stranger must never be told what their plan allows. That
    * is asserted more directly than before — against the page they actually reach,
@@ -257,7 +257,7 @@ test.describe('billing banner layout', () => {
       // Auto-retrying, so this reads the SETTLED signed-out state rather than
       // whatever is on screen while auth is still resolving.
       await expect(
-        page.getByRole('button', { name: /sign in/i }).first(),
+        page.getByRole('region', { name: 'Example brand kit' }),
         `${width}px: the signed-out state must actually render`,
       ).toBeVisible()
       await expect(page, `${width}px: /projects must not bounce a stranger anywhere`)

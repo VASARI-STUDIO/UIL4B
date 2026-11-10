@@ -124,7 +124,7 @@ test('the sign-in resolving no longer clears the stash; a save, a cancel or a cl
   // The save that runs once the account is known clears it before it saves (browser: spec 169, "the sign-up stash").
   for (const file of ['src/pages/GradientGenerator.jsx', 'src/pages/PaletteBuilder.jsx']) {
     const src = read(file)
-    const effect = src.slice(src.indexOf('if (pendingSave == null || !canSaveProjects) return'))
+    const effect = src.slice(src.indexOf('if (pendingSave == null || !canSaveProjects'))
     assert.match(effect.slice(0, effect.indexOf('saveProject(pendingSave)')), /clearPendingSave\(\)/, `${file}: the waiting save clears the stash as it runs`)
   }
   const palette = read('src/pages/PaletteBuilder.jsx')

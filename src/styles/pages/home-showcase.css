@@ -1,7 +1,9 @@
 /* The homepage page showcase (#examples). ships with the export themes.
    Spacing comes from the homepage tokens in home-tokens.css. Page images carry a
-   hairline outline and no shadow; the picked tab is the section's only filled
-   control. */
+   hairline outline; on a pointer hover a page lifts and takes a soft shadow. The
+   picked tab is the section's only filled control. Motion is transform and opacity
+   only: hover lift, the scroll-in reveal (data-reveal on .hsc) and the crossfade
+   when a pick swaps the pages (.hsc-in over .hsc-out). */
 .hsc {
   --hsc-ink: #EFEEEA;
   --hsc-ink-2: rgba(239, 238, 234, .68);
@@ -107,8 +109,29 @@
   font: inherit;
   text-align: inherit;
   cursor: zoom-in;
+  isolation: isolate;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 220ms var(--hsc-ease);
 }
+/* Two layers that fade in on hover: a soft shadow beneath the page and a brighter hairline over it.
+   They are separate from .hsc-page (which clips) so opacity is all that animates. */
+.hsc-open::before,
+.hsc-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms var(--hsc-ease);
+}
+.hsc-open::before { z-index: -1; box-shadow: 0 1px 3px rgba(0, 0, 0, .5), 0 16px 32px -12px rgba(0, 0, 0, .8); }
+.hsc-open::after { z-index: 5; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .4); }
+@media (hover: hover) and (pointer: fine) {
+  .hsc-open:hover { transform: translateY(-3px) scale(1.02); }
+  .hsc-open:hover::before, .hsc-open:hover::after { opacity: 1; }
+}
+.hsc-open:active { transform: scale(.985); transition-duration: 120ms; }
 .hsc-page {
   position: relative;
   display: block;
@@ -126,13 +149,19 @@
   border-radius: 4px;
   box-shadow: inset 0 0 0 1px oklch(1 0 0 / .1);
   pointer-events: none;
-  transition: box-shadow 150ms ease;
-}
-@media (hover: hover) {
-  .hsc-open:hover .hsc-page::after { box-shadow: inset 0 0 0 1px oklch(1 0 0 / .4); }
 }
 .hsc-page picture { display: contents; }
 .hsc-page img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+/* A pick: the new page fades in over the old one, a beat after the tile before it
+   (--fade-delay is set per tile); the old page is removed once the fade is done. */
+.hsc-in { animation: hsc-in 240ms var(--hsc-ease) both; animation-delay: var(--fade-delay, 0ms); }
+@keyframes hsc-in { from { opacity: 0; } }
+
+/* Scroll-in: the tiles are held back, then rise and fade in a beat apart. */
+.hsc[data-reveal="armed"] .hsc-row > li { opacity: 0; transform: translateY(8px); }
+.hsc[data-reveal="in"] .hsc-row > li {
+  transition: opacity 300ms var(--hsc-ease) var(--reveal-delay, 0ms), transform 300ms var(--hsc-ease) var(--reveal-delay, 0ms);
+}
 .hsc-zoom {
   position: absolute;
   right: 8px;
@@ -276,15 +305,40 @@
   .hsc-tab { font-size: 13px; }
 }
 
+/* Reduced motion: no lift, no press, no rise and no stagger. The shadow and hairline
+   still appear on hover (instantly), and a pick keeps its opacity crossfade at 120ms.
+   The site-wide backstop cuts every duration to a hundredth of a millisecond, so the
+   crossfade's 120ms is set here with enough weight to win, under the same two inputs
+   as the backstop (the Settings choice, else the operating system's). */
 html[data-reduced-motion="true"] .hsc-tab,
-html[data-reduced-motion="true"] .hsc-page::after,
+html[data-reduced-motion="true"] .hsc-open,
+html[data-reduced-motion="true"] .hsc-open::before,
+html[data-reduced-motion="true"] .hsc-open::after,
 html[data-reduced-motion="true"] .hsc-zoom { transition: none; }
-html[data-reduced-motion="true"] .hsc-tab:active { transform: none; }
+html[data-reduced-motion="true"] .hsc-tab:active,
+html[data-reduced-motion="true"] .hsc-open:active,
+html[data-reduced-motion="true"] .hsc-open:hover { transform: none; }
+html[data-reduced-motion="true"] .hsc .hsc-in {
+  animation-duration: 120ms !important;
+  animation-delay: 0ms !important;
+  animation-timing-function: linear !important;
+}
+html[data-reduced-motion="true"] .hsc[data-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .hsc-tab,
-  html:not([data-reduced-motion="false"]) .hsc-page::after,
+  html:not([data-reduced-motion="false"]) .hsc-open,
+  html:not([data-reduced-motion="false"]) .hsc-open::before,
+  html:not([data-reduced-motion="false"]) .hsc-open::after,
   html:not([data-reduced-motion="false"]) .hsc-zoom { transition: none; }
-  html:not([data-reduced-motion="false"]) .hsc-tab:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .hsc-tab:active,
+  html:not([data-reduced-motion="false"]) .hsc-open:active,
+  html:not([data-reduced-motion="false"]) .hsc-open:hover { transform: none; }
+  html:not([data-reduced-motion="false"]) .hsc .hsc-in {
+    animation-duration: 120ms !important;
+    animation-delay: 0ms !important;
+    animation-timing-function: linear !important;
+  }
+  html:not([data-reduced-motion="false"]) .hsc[data-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
 }
 
 /* ── Page viewer ─────────────────────────────────────────────────────────────
@@ -345,6 +399,8 @@ html[data-reduced-motion="true"] .hsc-tab:active { transform: none; }
 .hsv-tier::before { content: "\00a0\00b7\00a0"; }
 .hsv-tier--free { color: var(--hsv-ink); }
 .hsv-brand { margin: 2px 0 0; font-size: 14px; line-height: 1.4; color: var(--hsv-ink-2); }
+.hsv-kind { color: var(--hsv-ink-3); }
+.hsv-kind::before { content: "\00a0\00b7\00a0"; }
 .hsv-count {
   grid-area: count;
   margin: 0 8px 0 0;
@@ -400,8 +456,11 @@ html[data-reduced-motion="true"] .hsc-tab:active { transform: none; }
 }
 .hsv-under { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .hsv-top { z-index: 2; opacity: 1; }
-.hsv-top.is-wait { opacity: 0; }
-.hsv-top.is-fade { transition: opacity 150ms var(--hsv-ease); }
+/* A step brings the new page in from the side it came from: it waits 16px off and
+   transparent, then slides home as it fades in over the old page. */
+.hsv-top.is-wait { opacity: 0; transform: translateX(16px); }
+.hsv-stage[data-dir="-1"] .hsv-top.is-wait { transform: translateX(-16px); }
+.hsv-top.is-fade { transition: opacity 220ms var(--hsv-ease), transform 220ms var(--hsv-ease); }
 .hsv-fail {
   position: absolute;
   inset: 0;
@@ -473,6 +532,7 @@ html[data-reduced-motion="true"] .hsv-ov .hsv-top.is-fade {
   transition-duration: 120ms !important;
   transition-timing-function: linear !important;
 }
+html[data-reduced-motion="true"] .hsv-ov .hsv-top.is-wait { transform: none; }
 html[data-reduced-motion="true"] .hsv-ov .hsv-btn { transition: none; }
 html[data-reduced-motion="true"] .hsv-ov .hsv-btn:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
@@ -487,6 +547,7 @@ html[data-reduced-motion="true"] .hsv-ov .hsv-btn:active { transform: none; }
     transition-duration: 120ms !important;
     transition-timing-function: linear !important;
   }
+  html:not([data-reduced-motion="false"]) .hsv-ov .hsv-top.is-wait { transform: none; }
   html:not([data-reduced-motion="false"]) .hsv-ov .hsv-btn { transition: none; }
   html:not([data-reduced-motion="false"]) .hsv-ov .hsv-btn:active { transform: none; }
 }

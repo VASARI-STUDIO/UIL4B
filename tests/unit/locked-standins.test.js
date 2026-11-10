@@ -42,7 +42,9 @@ test('a stand-in is too small to carry detail', () => {
   for (const job of standinJobs()) {
     const buf = fs.readFileSync(job.to)
     const { w, h } = webpSize(buf)
-    assert.ok(w <= STANDIN_MAX_W && h <= STANDIN_MAX_W, `${job.to} is ${w}x${h}`)
+    // The width is capped; a portrait page (A4) is taller than it is wide, so the height is held by the area a square
+    // STANDIN_MAX_W picture would have, not by the width.
+    assert.ok(w <= STANDIN_MAX_W && w * h <= STANDIN_MAX_W ** 2, `${job.to} is ${w}x${h}`)
     assert.ok(buf.length < 2048, `${job.to} is ${buf.length} bytes`)
   }
 })

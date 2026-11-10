@@ -18,6 +18,7 @@ import { PARKED_KEY, PARKED_SHELF_KEY, dropParked, parkIfAtRisk, putBack, readPa
 import { SESSION_AUTH, SESSION_DONE, SESSION_ON, markSession, readSession, stampEdited } from '../utils/kitSession'
 import { editKey } from '../utils/brandKitChooser'
 import { addSavedColour } from '../utils/savedColours'
+import { countUnknownError } from '../utils/projectCount'
 
 const ProjectContext = createContext()
 
@@ -101,6 +102,19 @@ function newId() {
 // localStorage, and what to put on screen when either one fails.
 const PUSH_DEBOUNCE_MS = 1500
 
+// A network step of the account's pull (a read, or the migration) that has not answered by now takes the
+// failure path. The pull can take several steps, so the limit is per step. Until the pull answers, New
+// project waits on a device with no copy and saves wait on the count.
+const PULL_TIMEOUT_MS = 15000
+
+function withTimeout(promise, ms) {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Reading the account’s projects timed out')), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
 // The channel this provider reports into. See src/utils/syncStatus.js.
 const SYNC_CHANNEL = 'projects'
 
@@ -153,6 +167,13 @@ export function ProjectProvider({ children }) {
   // device with no local copy of an account's projects has an empty list until
   // then, so "no such project" cannot be said before it (see projectsLoading).
   const [pulledUid, setPulledUid] = useState(null)
+  // The account whose list was READ, and merged into this device's copy. The count a cap
+  // is checked against is the account's only from then on (see projectCountKnown).
+  const [countedUid, setCountedUid] = useState(null)
+  // Signing out forgets both, so the same account signing back in starts unread again.
+  useEffect(() => {
+    if (!uid) { setPulledUid(null); setCountedUid(null) }
+  }, [uid])
 
   // The working design as the last write left it. A replace (reset, open a
   // project) sets it at once, so a second call in the same tick checks the
@@ -290,8 +311,23 @@ export function ProjectProvider({ children }) {
     return true
   }, [allProjects, userKey, restoreParked, setParked])
 
+  // True from sign-in until the account's projects have been read once. The
+  // list above may be missing projects that exist on the account until then.
+  const projectsLoading = !!uid && pulledUid !== uid
+  // Whether the number of projects on this device can be used for the cap. It can once the
+  // account's list was read, and for a device that already holds a copy of the account, whether
+  // the read is still running or failed (a returning session keeps saving against the cached
+  // count, and the merge that follows only ever blocks the NEXT new project, never removes one).
+  // A device with no copy has an empty list that says nothing about the account.
+  const hasDeviceCopy = (allProjects[userKey] || []).length > 0
+  const projectCountKnown = !uid || countedUid === uid || hasDeviceCopy
+  // No cached copy and the account has not answered yet: a new project has to wait.
+  const projectCountPending = projectsLoading && !projectCountKnown
+
   const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
+    // A new project takes a slot, and the slots taken are the account's, not this device's.
+    if (!projectCountKnown) throw countUnknownError(projectsLoading)
     // Free-tier cap: block a NEW save once the allowance is reached. Never
     // touches existing projects (non-destructive) and never blocks sync merges.
     const current = allProjects[userKey] || []
@@ -327,7 +363,7 @@ export function ProjectProvider({ children }) {
       if (!opts.from) setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
     }
     return id
-  }, [design, userKey, allProjects, projectLimit])
+  }, [design, userKey, allProjects, projectLimit, projectCountKnown, projectsLoading])
 
   /**
    * Copy a project, cap and all.
@@ -345,6 +381,7 @@ export function ProjectProvider({ children }) {
    */
   const duplicateProject = useCallback((id) => {
     if (!userKey) throw new Error('Sign in to save projects')
+    // No known-count check as in saveProject(): the source is in this list, so the list has been read.
     const current = allProjects[userKey] || []
     if (current.length >= projectLimit) {
       throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
@@ -598,7 +635,7 @@ export function ProjectProvider({ children }) {
     try {
       const fs = await loadFirestore()
       if (signal?.cancelled) return
-      const remote = await pullRemoteProjects(fs, uid)
+      const remote = await pullRemoteProjects(fs, uid, { step: (promise) => withTimeout(promise, PULL_TIMEOUT_MS) })
       if (signal?.cancelled) return
       storedRef.current = remote.stored instanceof Map ? remote.stored : new Map()
 
@@ -620,6 +657,7 @@ export function ProjectProvider({ children }) {
           return next
         })
       }
+      setCountedUid(uid)
       const nextTombstones = mergeTombstones(localTombstones, merged.tombstones)
       if (JSON.stringify(nextTombstones) !== JSON.stringify(localTombstones)) {
         setAllTombstones(prev => {
@@ -642,6 +680,7 @@ export function ProjectProvider({ children }) {
       }
       reportSyncOk(SYNC_CHANNEL)
     } catch (error) {
+      if (signal?.cancelled) return
       reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), retry)
     } finally {
       if (!signal?.cancelled) {
@@ -731,9 +770,9 @@ export function ProjectProvider({ children }) {
     design,
     projects,
     canSaveProjects: !!userKey,
-    // True from sign-in until the account's projects have been read once. The
-    // list above may be missing projects that exist on the account until then.
-    projectsLoading: !!uid && pulledUid !== uid,
+    projectsLoading,
+    projectCountKnown,
+    projectCountPending,
     projectLimit,
     atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,
