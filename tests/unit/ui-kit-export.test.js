@@ -237,12 +237,10 @@ test('the export panel offers the kit as a free format, and the plan lines say s
   const panel = read('src/hooks/useExportRunner.js')
   assert.match(panel, /let proNow = isPro\b/, 'the export starts from the live entitlement')
   assert.match(panel, /proNow = live\.current\.isPro/, 'an account that signed in at the gate is re-read before building')
-  assert.match(panel, /tier: proNow \? 'pro' : 'free'/, 'the kit tier comes from the live entitlement')
-  // The kit is titled with the project's name, the one the dialog shows on its name line;
-  // a Pro identity name still takes its place inside the renderer.
-  const call = panel.slice(panel.indexOf('buildUiKit(design'), panel.indexOf('savedFile = download(blob, filename)'))
-  assert.ok(call.length > 0, 'the kit call is no longer found — this assertion has gone blind')
-  assert.match(call, /projectName/, 'the kit is not handed the project name the dialog shows')
+  // A Pro account's typed identity name is the themed request's project name and the zip's name; any other account keeps the open project's name.
+  assert.match(panel, /const kitName = themed\.row === 'ui-kit' && proNow \? readIdentity\(design\)\.name : ''/, 'the identity name is read only for the kit row, on the live entitlement')
+  assert.match(panel, /requestThemeExport\(\{[^}]*projectName: kitName \|\| projectName \}/, 'the themed request is not handed the identity name, then the project name')
+  assert.match(panel, /themedZipName\(kitName \|\| fileProject, format, theme\)/, 'the zip is not named from the identity name')
   assert.match(panel, /projects\.find\(\(p\) => String\(p\.id\) === String\(projectId\)\)\?\.name/, 'the name comes from the open project, not from a design that holds none')
 })
 

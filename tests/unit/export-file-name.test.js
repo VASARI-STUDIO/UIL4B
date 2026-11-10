@@ -121,7 +121,7 @@ test('the export runner names every file through the helper', () => {
   assert.match(runner, /formatFileName\(fileProject, 'book-png'\)/)
   assert.match(runner, /formatFileName\(fileProject, format, \{ saved: true \}\)/)
   assert.match(runner, /codeFileName\(format, fileProject\)/)
-  assert.match(runner, /fileProject,\s*\n\s*template: chosenTemplates\.kit/, 'the kit is not told the name its files are made from')
+  assert.match(runner, /themedZipName\(kitName \|\| fileProject, format, theme\)/, 'the themed zip is not named from the project name')
 })
 
 test('the three kit templates save under the names the renderer gives them', () => {
