@@ -122,7 +122,7 @@ test.describe('the watermark is the thing Pro actually removes', () => {
     watch(page, 'a free account reading the footer of its own export')
     const free = await exportStyleGuide(page, 'free')
     expect(free, 'the free export must carry the line Pro pays to remove')
-      .toMatch(/Made with UIL4B/i)
+      .toMatch(/Made with UI L4B/i)
   })
 
   test('and a Pro export does not — the other half of the same claim', async ({ page }) => {
@@ -131,6 +131,6 @@ test.describe('the watermark is the thing Pro actually removes', () => {
     // The control for the absence: the same document, really built.
     expect(pro.length, 'the Pro export must be a real document').toBeGreaterThan(500)
     expect(pro, 'and Pro must actually get what /plans sells')
-      .not.toMatch(/Made with UIL4B/i)
+      .not.toMatch(/Made with UI L4B/i)
   })
 })

@@ -22,8 +22,8 @@ test('the file is one @theme block that parses, with no custom property declared
   root.walkDecls((d) => props.push(d.prop))
   assert.equal(new Set(props).size, props.length)
   assert.ok(props.every((p) => /^--[a-z0-9-]+$/.test(p)))
-  assert.doesNotMatch(css, /Made with UIL4B/)
-  assert.match(buildTailwindCss(DESIGN, { watermark: true, date: AT }), /Made with UIL4B/)
+  assert.doesNotMatch(css, /Made with UI L4B/)
+  assert.match(buildTailwindCss(DESIGN, { watermark: true, date: AT }), /Made with UI L4B/)
 })
 
 test('colour names are the CSS tokens names, values the same hex (lower case)', () => {

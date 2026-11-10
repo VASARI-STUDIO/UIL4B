@@ -87,7 +87,7 @@ function HexGlyph() {
 function paletteCss(palette) {
   const slug = palette.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'palette'
   const lines = palette.colors.map((hex, i) => `  --${slug}-${(i + 1) * 100}: ${hex.toUpperCase()};`)
-  return `/* ${palette.name} — UIL4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
+  return `/* ${palette.name} — UI L4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
 }
 
 function CheckGlyph() {
@@ -108,7 +108,7 @@ function CheckGlyph() {
 export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = [], labelledBy, metaOf, hexChips = false }) {
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
-  const { saveProject, canSaveProjects } = useProject()
+  const { saveProject, canSaveProjects, projectCountPending } = useProject()
   const { requireLogin } = useLoginPrompt()
 
   // Likes belong to an account: signed out, a press asks to sign in first and
@@ -179,11 +179,11 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
   // on the render where saving is allowed.
   const pendingSaveRef = useRef(null)
   useEffect(() => {
-    if (!canSaveProjects || !pendingSaveRef.current) return
+    if (!canSaveProjects || projectCountPending || !pendingSaveRef.current) return
     const palette = pendingSaveRef.current
     pendingSaveRef.current = null
     saveNow(palette)
-  }, [canSaveProjects, saveNow])
+  }, [canSaveProjects, projectCountPending, saveNow])
 
   const saveToProject = useCallback(async (palette) => {
     if (canSaveProjects) {

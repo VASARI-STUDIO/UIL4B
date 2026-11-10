@@ -6,18 +6,18 @@ import { usePrices, useProPrice, formatPrice } from '../../hooks/usePrices'
 import { resolveOffers } from '../../config/planFacts'
 import { PLAN_LADDER } from '../../config/planLadder'
 import { defaultTemplate, liveTemplates, readExportTemplates } from '../../config/exportTemplates'
-import { templateThumb } from '../../utils/exportTemplateThumb'
 import { readLogo } from '../../utils/brandLogo'
 import { readIdentity } from '../../utils/kitIdentity'
 import { formatFileName } from '../../utils/exportFileName'
 import { trialLabel } from '../../utils/kitGalleryPick'
 import ExportFormatSwitch from '../ExportFormatSwitch'
-import ExportTemplatePicker from '../ExportTemplatePicker'
 import ExportProPreview from '../ExportProPreview'
 import ExportProTag from '../ExportProTag'
 import KitIdentityFields from '../KitIdentityFields'
 import BrandLogoField from '../BrandLogoField'
 import ExportFreePreview from './ExportFreePreview'
+import ExportThemeRow, { ThemeStage } from './ExportThemeRow'
+import { GUIDELINES_PAGES, UI_KIT_PAGES, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
 
 // The main column of the Export dialog (Preview, File, Layout, Details) and the
 // dock under it. Everything here follows the category and file the rail and the
@@ -26,16 +26,16 @@ import ExportFreePreview from './ExportFreePreview'
 // What each file is called, what it is, and what the button says. Keyed by
 // format id, so the book's PDF and the slides' PDF each keep their own sentence.
 const FILE_COPY = {
-  book: { label: 'PDF', blurb: 'A4 pages, ready to save as PDF. Text stays sharp at any size.', action: 'Export PDF' },
+  book: { label: 'PDF', blurb: 'The brand book as a print document, in light and dark. It opens in a print window: choose Save as PDF there.', action: 'Export PDF' },
   'book-png': { label: 'PNG pages', blurb: '2K page images, 1448 by 2048 px, in one zip.', action: 'Export PNG pages' },
-  'book-html': { label: 'HTML', blurb: 'Opens offline in any browser.', action: 'Export HTML' },
-  guidelines: { label: 'PDF', blurb: 'A 16:9 deck, ready to present or print.', action: 'Export PDF' },
-  'guidelines-html': { label: 'HTML', blurb: 'Opens offline in any browser.', action: 'Export HTML' },
+  'book-html': { label: 'HTML', blurb: 'The brand book as a site, in light and dark, in one zip. It opens offline.', action: 'Export HTML' },
+  guidelines: { label: 'PDF', blurb: `The ${GUIDELINES_PAGES}-page brand guidelines as a print document. It opens in a print window: choose Save as PDF there.`, action: 'Export PDF' },
+  'guidelines-html': { label: 'HTML', blurb: `The ${GUIDELINES_PAGES} guidelines pages as HTML, in one zip. They open offline.`, action: 'Export HTML' },
   html: { label: 'HTML', blurb: 'An A4 booklet. Prints to PDF from your browser.', action: 'Export style guide' },
   png: { label: 'PNG', blurb: 'One A4 sheet at 2x, for decks and tickets.', action: 'Export style guide' },
   jpeg: { label: 'JPEG', blurb: 'The same sheet, smaller file.', action: 'Export style guide' },
   md: { label: 'Markdown', blurb: 'For Notion or Google Docs.', action: 'Export style guide' },
-  kit: { label: 'HTML', blurb: 'One HTML file. Opens offline and carries its CSS, JSON and fonts.', action: 'Export UI kit' },
+  kit: { label: 'ZIP', blurb: `The ${UI_KIT_PAGES}-page UI kit as print-ready HTML, with a code package: CSS, JSON, Tailwind and an example page. In one zip.`, action: 'Export UI kit' },
   css: { label: 'CSS stylesheet', blurb: 'Custom properties for your palette, tints, semantic colours and type. Drop it into any site.', action: 'Export CSS' },
   json: { label: 'JSON', blurb: 'The same tokens in the W3C Design Tokens format, for token pipelines.', action: 'Export JSON' },
   tailwind: { label: 'Tailwind theme', blurb: 'A Tailwind v4 @theme file. Import it after Tailwind and your colours, fonts and type sizes become utilities.', action: 'Export Tailwind theme' },
@@ -47,9 +47,9 @@ const FILE_COPY = {
 // Where the free credit sits in each code file, for the dock line. The contrast
 // files carry none.
 const CREDIT_LINE = {
-  css: 'The file ends with a small ‘Made with UIL4B’ credit comment.',
-  tailwind: 'The file ends with a small ‘Made with UIL4B’ credit comment.',
-  json: 'The file’s description carries a small ‘Made with UIL4B’ credit.',
+  css: 'The file ends with a small ‘Made with UI L4B’ credit comment.',
+  tailwind: 'The file ends with a small ‘Made with UI L4B’ credit comment.',
+  json: 'The file’s description carries a small ‘Made with UI L4B’ credit.',
   contrast: 'This file carries no credit line.',
   'contrast-json': 'This file carries no credit line.',
 }
@@ -119,8 +119,19 @@ function NameLine({ lead, name, project, onRenameState }) {
 // ExportProPreview, blurred in the pixels for a free account (and while the plan
 // is read, never sharp on a guess); the free ones by the free preview. Both sit
 // in a box whose height is reserved before any picture lands.
-function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen }) {
+function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen, shown }) {
   const kind = cat.preview
+  if (themedFile(file)) {
+    // A picture of the theme's own sample pages. The kit is previewed sharp in every theme (the button carries the Pro line); a locked book or guidelines file is blurred, with the lock the live Pro previews carry.
+    const locked = kind !== 'kit' && !isPro && !checking && themedFileIsPro(file, shown.id)
+    const lines = themeLines(kind, shown)
+    return (
+      <div className="xd-prev">
+        <ThemeStage kind={kind} theme={shown} locked={locked} lockText={kind === 'kit' ? 'Pro theme' : 'Pro export'} />
+        <p className="xd-theme-cap">{lines.caption}</p>
+      </div>
+    )
+  }
   if (kind === 'book' || kind === 'guidelines') {
     // The book as page images has its own single layout, so it shows the default one.
     const template = file === 'book-png' ? defaultTemplate('book') : chosen[cat.layouts]
@@ -163,7 +174,7 @@ function Manifest({ rows, file, folded }) {
       <ul className="xd-man-rows" id={rowsId} hidden={!shown}>
         {rows.map((r) => (
           <li key={r.id} className="xd-man-row" aria-current={r.id === file ? 'true' : undefined}>
-            <span className="xd-man-n">{r.saved}</span>
+            <span className={`xd-man-n${r.plain ? ' is-plain' : ''}`}>{r.saved}</span>
             <span className="xd-man-d">{r.blurb}</span>
           </li>
         ))}
@@ -172,18 +183,25 @@ function Manifest({ rows, file, folded }) {
   )
 }
 
-export default function ExportSteps({ cat, file, onFile, onLayout, name, fileProject = '', project, strip, coming, onRenameState }) {
+export default function ExportSteps({ cat, file, onFile, name, fileProject = '', project, strip, coming, onRenameState, theme, peek, onTheme, onPeek }) {
   const uid = useId()
   const { isPro, planKnown } = useSubscription()
-  const { design: working, updateDesign } = useProject()
+  const { design: working } = useProject()
   const design = useExportDesign()
   const checking = planKnown === false
   const chosen = readExportTemplates(working)
   const files = cat.files.map((id) => ({ id, ...copyOf(id) }))
   // A Pro kit is filed under its identity name when it has one (uiKitExport.js).
   const identityName = isPro ? readIdentity(design).name : ''
-  const rows = files.map((f) => ({ ...f, saved: formatFileName(f.id === 'kit' && identityName ? identityName : fileProject, f.id) }))
-  const showLayout = Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1
+  // A themed zip is named for its theme; a themed PDF is not saved at all, it opens as a print document, so it carries no file name.
+  const rows = files.map((f) => {
+    if (!themedFile(f.id)) return { ...f, saved: formatFileName(f.id === 'kit' && identityName ? identityName : fileProject, f.id) }
+    const zip = themedZipName(f.id === 'kit' && identityName ? identityName : fileProject, f.id, theme)
+    return zip ? { ...f, saved: zip } : { ...f, saved: 'Print document', plain: true }
+  })
+  const themed = Boolean(themedFile(file))
+  const shown = pickerTheme(peek || theme)
+  const showLayout = !themed && Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1
   const lead = NAME_LEAD[cat.preview]
   const hasLogo = Boolean(readLogo(working))
 
@@ -206,14 +224,27 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
       : (
         <>
           <NameLine lead={lead} name={name} project={project} onRenameState={onRenameState} />
-          <p className="xd-note">Pro adds your description and logo, and removes the UIL4B mark.</p>
+          <p className="xd-note">Pro adds your description and logo, and removes the UI L4B mark.</p>
         </>
       )
   }
 
+  // The Theme step sits under the picture on a wide dialog; on a phone it comes first, so Change is in view before the pages.
+  const themeStep = themed && (
+    <section className={`xd-step${strip ? ' xd-step--lead' : ''}`} aria-labelledby={`${uid}-theme`}>
+      <h3 className="xd-step-l" id={`${uid}-theme`}>Theme</h3>
+      <ExportThemeRow value={theme} onChange={onTheme} onPreview={onPeek} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} file={file} sheet={strip} />
+      <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
+    </section>
+  )
+
   return (
     <>
-      <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} />
+      {themed && strip && themeStep}
+
+      <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} shown={shown} />
+
+      {themed && !strip && themeStep}
 
       <section className="xd-step" aria-labelledby={`${uid}-file`}>
         <h3 className="xd-step-l" id={`${uid}-file`}>File</h3>
@@ -231,16 +262,7 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
       {showLayout && (
         <section className="xd-step" aria-labelledby={`${uid}-layout`}>
           <h3 className="xd-step-l" id={`${uid}-layout`}>Layout</h3>
-          {file === 'book-png'
-            ? <p className="xd-note">PNG pages use one layout.</p>
-            : (
-              <ExportTemplatePicker
-                format={cat.layouts}
-                value={chosen[cat.layouts]}
-                onChange={(id) => { updateDesign({ exportTemplates: { [cat.layouts]: id } }); onLayout?.() }}
-                thumbs={templateThumb}
-              />
-            )}
+          <p className="xd-note">PNG pages use one layout.</p>
         </section>
       )}
 
@@ -260,12 +282,12 @@ export default function ExportSteps({ cat, file, onFile, onLayout, name, filePro
 // status line is one live region, mounted empty; an error is its own alert.
 // `upgrade` is 'checkout' (a saved project: the trial) or 'plans' for a free
 // account on a Pro file; `onPrimary` decides what the click does.
-export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrade, onPrimary, onCopy, primaryRef }) {
+export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrade, onPrimary, onCopy, primaryRef, locked: lockedBy }) {
   const { isPro, planKnown } = useSubscription()
   const proPrice = useProPrice()
   const { prices } = usePrices()
   const checking = planKnown === false
-  const locked = cat.pro && !isPro
+  const locked = lockedBy ?? (cat.pro && !isPro)
   const trialDays = PLAN_LADDER.find((e) => e.id === 'yearly')?.trialDays || 0
   // Read once when the dock mounts, so the cancel-by date holds still while it is open.
   const [mountedAt] = useState(() => Date.now())
@@ -291,10 +313,12 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
     } else line = 'Checkout shows the price before you pay.'
   } else if (locked) {
     // The bundle has no free, marked version, so "no watermark" would promise a difference that isn't there.
-    line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</> : <><strong>Pro</strong> unlocks this file with no watermark.</>
+    line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</>
+      : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in Standards and Specification.</>
+        : <><strong>Pro</strong> unlocks this file.</>
   } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
   else if (cat.preview === 'code') line = <><strong>Free.</strong> {CREDIT_LINE[file] || CREDIT_LINE.css}</>
-  else line = <><strong>Free.</strong> The file carries a small ‘Made with UIL4B’ mark.</>
+  else line = <><strong>Free.</strong> The file carries a small ‘Made with UI L4B’ mark.</>
 
   let label = copyOf(file).action
   if (busy) label = BUSY_LABEL[stage] || 'Exporting…'

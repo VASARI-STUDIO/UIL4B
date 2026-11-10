@@ -57,7 +57,7 @@ import { tintConfigFor, DEFAULT_DESIGN } from '../data/designDefaults.js'
 import { semanticShades, SEMANTIC_ROLES, SEMANTIC_STEPS, SEMANTIC_LABELS } from '../data/semanticPresets.js'
 import { gradientCss } from '../data/gradientGallery.js'
 
-const CREDIT = `Made with UIL4B: ${SITE_ORIGIN}`
+const CREDIT = `Made with UI L4B: ${SITE_ORIGIN}`
 export const HEADING_LINE_HEIGHT = 1.1
 
 export { paletteRole }

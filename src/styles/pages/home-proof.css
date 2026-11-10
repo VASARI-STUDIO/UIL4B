@@ -3,7 +3,8 @@
 .hp {
   box-sizing: border-box;
   padding: var(--section-y-compact) var(--gutter-x);
-  border-top: 1px solid rgba(var(--sp-ink-rgb), .08);
+  /* One pixel more than the token, so the section keeps its height with no rule on its top edge. */
+  padding-top: calc(var(--section-y-compact) + 1px);
   color: var(--sp-ink);
   font-family: var(--hm-font);
 }

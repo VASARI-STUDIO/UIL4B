@@ -579,16 +579,16 @@ export function renderUiKit(design, {
   const coverNote = identityText || typeLine(sel.fonts.display, sel.fonts.body)
 
   const arrow = icon('arrow')
-  const siteLinks = free ? `<aside class="site-links"><div><h3>Keep building with UIL4B.</h3><p>Explore more tools, refine your selections, and build your next kit.</p></div><nav aria-label="UIL4B website links"><a href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer">Visit uil4b.com${arrow}</a><a href="${SITE_ORIGIN}/create/palette" target="_blank" rel="noopener noreferrer">Build a colour palette${arrow}</a><a href="${SITE_ORIGIN}/create/font-pair" target="_blank" rel="noopener noreferrer">Explore font pairings${arrow}</a></nav><small>Website links open in a new tab and require an internet connection.</small></aside>` : ''
+  const siteLinks = free ? `<aside class="site-links"><div><h3>Keep building with UI L4B.</h3><p>Explore more tools, refine your selections, and build your next kit.</p></div><nav aria-label="UIL4B website links"><a href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer">Visit uil4b.com${arrow}</a><a href="${SITE_ORIGIN}/create/palette" target="_blank" rel="noopener noreferrer">Build a colour palette${arrow}</a><a href="${SITE_ORIGIN}/create/font-pair" target="_blank" rel="noopener noreferrer">Explore font pairings${arrow}</a></nav><small>Website links open in a new tab and require an internet connection.</small></aside>` : ''
 
   const pageNumber = `@bottom-right { content:counter(page); font-family:${PRINT_META_FONT}; font-size:8pt; color:${PRINT_META_INK}; }`
-  const attributionMargin = free ? `@bottom-left { content:"Made with UIL4B / Free UI kit"; font-family:${PRINT_META_FONT}; font-size:8pt; color:${PRINT_META_INK}; } ` : ''
+  const attributionMargin = free ? `@bottom-left { content:"Made with UI L4B / Free UI kit"; font-family:${PRINT_META_FONT}; font-size:8pt; color:${PRINT_META_INK}; } ` : ''
 
   const data = {
     brand: { files: sel.files, tier },
     // The free credit line the CSS download opens with. Carried as data so a
     // Pro document holds no credit text at all.
-    cssCredit: free ? `/* Made with UIL4B · Free UI kit · ${SITE_ORIGIN}/ */\n` : '',
+    cssCredit: free ? `/* Made with UI L4B · Free UI kit · ${SITE_ORIGIN}/ */\n` : '',
     css: appCss,
     json: appJson,
     licenses,

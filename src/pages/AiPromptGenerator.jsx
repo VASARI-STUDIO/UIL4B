@@ -1,4 +1,5 @@
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
+import { openFirebaseGate } from '../utils/firebaseAccess'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { AI_LIMITS } from '../config/plans'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
@@ -37,6 +38,8 @@ const STYLES = [
 ]
 
 export default function AiPromptGenerator({ toast }) {
+  // This tool needs an account, and the page already loads the SDK: let the session restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const [mode, setMode] = useState('builder') // 'builder' | 'brief'
   const [description, setDescription] = useState('')
   const [platform, setPlatform] = useState('general')

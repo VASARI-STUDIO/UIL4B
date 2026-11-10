@@ -31,7 +31,7 @@
 //   · not passing `tombstones` to writeRemoteProjects → the same test fails
 //     with the project gone locally and resurrected remotely.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, projectLink } from './helpers.js'
 
 /** What the account keeps locally, read the way the product stores it. */
 function stored(page, email) {
@@ -82,11 +82,11 @@ const OLDER = '2026-09-01T09:00:00.000Z'
 const NEWER = '2026-09-05T09:00:00.000Z'
 const DELETED_AT = '2026-09-06T09:00:00.000Z'
 
-/** A project's open link on the workspace, by its exact name (the lead card's Open project, or a row). The open
+/** A project's link on the dashboard, by its exact name (the latest sheet's Open project, or a mini). The open
  *  link is what marks a project as on screen; its actions live on the
  *  project's own page. */
 function projectCard(page, name) {
-  return page.locator(`.uh-card-name[data-project="${name}"]`)
+  return projectLink(page, name)
 }
 
 test.describe('sync has a visible state, in both directions', () => {

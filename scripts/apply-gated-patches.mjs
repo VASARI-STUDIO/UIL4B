@@ -263,10 +263,6 @@ function summarise(steps, verifications, { dryRun = false } = {}) {
   out('  WHAT IS NOW TRUE THAT WAS NOT BEFORE')
   const truths = []
   const done = new Set([...landed, ...already].map((s) => s.id))
-  if (done.has('firebase-deferral')) {
-    truths.push('the homepage paints sooner — 360 ms to first paint and 624 ms to the '
-      + 'main heading, with 21.8% fewer bytes in the first request')
-  }
   if (done.has('feedback-bounds')) {
     truths.push('a stranger can no longer write anything into your feedback queue, and '
       + 'no signed-in account can write a document bigger or stranger than the app sends')

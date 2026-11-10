@@ -17,10 +17,10 @@ import { FOLDERS, INTENT_MS, RESUME_MS } from './bookmarksData.js'
 //                      pause button (folders still open when picked)
 //
 // Holds pause the fill in place and let it carry on from there:
-//   - a mouse or pen on the menu, sub-menu or window, until RESUME_MS after it leaves
 //   - a finger down on the section, until RESUME_MS after it lifts
 //   - keyboard focus (focus-visible) in the section, until RESUME_MS after it leaves
-// Hover opens a folder after INTENT_MS, and so does focus. A click stops the tour.
+// A mouse or pen over the section never pauses the tour. Hover opens a folder
+// after INTENT_MS, and so does focus. A click stops the tour.
 
 const FINE = '(hover: hover) and (pointer: fine)'
 const finePointer = (e) =>
@@ -58,16 +58,16 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
   const [seen, setSeen] = useState(false)
   const [chosen, setChosen] = useState('run')
   const [hot, setHotState] = useState(null)
-  const [pointerHold, setPointerHold] = useState(false)
+  const [touchHold, setTouchHold] = useState(false)
   const [focusHold, setFocusHold] = useState(false)
-  const timers = useRef({ intent: 0, pointer: 0, focus: 0 })
+  const timers = useRef({ intent: 0, touch: 0, focus: 0 })
   const mode = reduced ? 'off' : chosen
 
   useEffect(() => {
     const t = timers.current
     return () => {
       clearTimeout(t.intent)
-      clearTimeout(t.pointer)
+      clearTimeout(t.touch)
       clearTimeout(t.focus)
     }
   }, [])
@@ -89,10 +89,10 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
     })
   }, [])
 
-  const holdPointer = useCallback((on) => {
-    clearTimeout(timers.current.pointer)
-    if (on) setPointerHold(true)
-    else timers.current.pointer = setTimeout(() => setPointerHold(false), RESUME_MS)
+  const holdTouch = useCallback((on) => {
+    clearTimeout(timers.current.touch)
+    if (on) setTouchHold(true)
+    else timers.current.touch = setTimeout(() => setTouchHold(false), RESUME_MS)
   }, [])
 
   const stop = () => setChosen((m) => (m === 'run' ? 'stopped' : m))
@@ -108,9 +108,9 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
 
   const section = {
     // A finger down holds the tour (a scroll starts as a touch) and lets go a second after it lifts.
-    onPointerDown: (e) => { if (e.pointerType === 'touch' && mode !== 'off') holdPointer(true) },
-    onPointerUp: (e) => { if (e.pointerType === 'touch' && mode !== 'off') holdPointer(false) },
-    onPointerCancel: (e) => { if (e.pointerType === 'touch' && mode !== 'off') holdPointer(false) },
+    onPointerDown: (e) => { if (e.pointerType === 'touch' && mode !== 'off') holdTouch(true) },
+    onPointerUp: (e) => { if (e.pointerType === 'touch' && mode !== 'off') holdTouch(false) },
+    onPointerCancel: (e) => { if (e.pointerType === 'touch' && mode !== 'off') holdTouch(false) },
     onFocus: (e) => {
       const t = e.target
       if (mode !== 'off' && t.matches && t.matches(':focus-visible')) {
@@ -131,13 +131,6 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
       clearTimeout(timers.current.focus)
       timers.current.focus = setTimeout(() => setFocusHold(false), RESUME_MS)
     },
-  }
-
-  // Menu, sub-menu and window hold the tour for a mouse or pen. The empty stage
-  // between them does not.
-  const surface = {
-    onPointerEnter: (e) => { if (mode !== 'off' && finePointer(e)) holdPointer(true) },
-    onPointerLeave: (e) => { if (mode !== 'off' && finePointer(e)) holdPointer(false) },
   }
 
   // Pointing at a bookmark or a tool lights its pair; leaving the stage clears it.
@@ -183,9 +176,9 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
       return
     }
     // Play: the reader asked for it, so the holds lift and the tour goes on from the next folder.
-    clearTimeout(timers.current.pointer)
+    clearTimeout(timers.current.touch)
     clearTimeout(timers.current.focus)
-    setPointerHold(false)
+    setTouchHold(false)
     setFocusHold(false)
     setChosen('run')
     setOpen((cur) => (cur + 1) % FOLDERS.length)
@@ -199,14 +192,13 @@ export function useBookmarkTour(stageEl, groupOf, rowsOf) {
     hot: lit,
     // The fill and the travelling light only run while the owner says so and no hold is on.
     playing,
-    paused: !playing || pointerHold || focusHold,
+    paused: !playing || touchHold || focusHold,
     away: !playing,
     pick,
     toggle,
     togglePair,
     folder,
     section,
-    surface,
     stage,
   }
 }

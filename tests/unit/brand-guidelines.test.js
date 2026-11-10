@@ -321,7 +321,7 @@ test('the logo field is offered beside the format that needs it, and nowhere els
   // The dialog's Details step is one branch per kind of document; the field sits in
   // the branches of the two brand documents (the book's monograph layout and the
   // slides both draw the logo) and in none of the others.
-  const details = /let details = null([\s\S]*?)\r?\n\s*return \(/.exec(code)?.[1] || ''
+  const details = /let details = null([\s\S]*?\r?\n {2}\})\r?\n/.exec(code)?.[1] || ''
   const branches = Object.fromEntries(
     [...details.matchAll(/cat\.preview === '(\w+)'\) \{([\s\S]*?)(?=\r?\n {2}\} else if|\r?\n {2}\}\s*$)/g)].map(m => [m[1], m[2]]))
   assert.deepEqual(Object.keys(branches).sort(), ['book', 'guide', 'guidelines', 'kit'],

@@ -66,6 +66,39 @@ test('the sample contrast reads 5.6 and the cycle is 12.8 seconds', () => {
   assert.equal(CYCLE_MS, 12800)
 })
 
+test('a mouse or pen over the section never pauses the tour', () => {
+  const CSS = read('src/styles/pages/home-bookmarks.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const PHONE_SRC = stripComments(read('src/components/home/BookmarkPhone.jsx'))
+  // Mutation: bring back a `surface` prop set (onPointerEnter/onPointerLeave holding the tour) and spread it on the menu, sub-menu, window or phone layout.
+  assert.doesNotMatch(HOOK, /\bsurface\b/)
+  for (const src of [VIEW, PHONE_SRC]) assert.doesNotMatch(src, /tour\.surface/)
+  // Mutation: restore a `pointerHold` state, or any hold that is not a finger or a keyboard focus.
+  assert.doesNotMatch(HOOK, /pointerHold|holdPointer/)
+  assert.match(HOOK, /paused: !playing \|\| touchHold \|\| focusHold,/)
+  // Every call that holds the tour for a pointer is for a touch: no mouse, pen or fine-pointer test gates one.
+  const holds = HOOK.split('\n').filter((l) => /holdTouch\((true|false)\)/.test(l))
+  assert.equal(holds.length, 3, 'the finger down, up and cancel handlers')
+  holds.forEach((l) => assert.match(l, /e\.pointerType === 'touch'/))
+  // The folder buttons are the only pointer-enter handler left, and they open a folder rather than hold the tour.
+  assert.equal((HOOK.match(/onPointerEnter/g) || []).length, 1)
+  assert.match(HOOK, /onPointerEnter: \(e\) => \{\s*if \(!finePointer\(e\)\) return\s*clearTimeout\(timers\.current\.intent\)/)
+  // Mutation: add `.bm:hover .bm-fill`, `.bm-stage:hover ...` or any hover rule that sets animation-play-state.
+  assert.doesNotMatch(CSS, /:hover[^{]*\{[^}]*animation-play-state/)
+  // The fill is paused by the one `.bm-paused` class and nothing else.
+  assert.equal((CSS.match(/animation-play-state/g) || []).length, 1)
+  assert.match(CSS, /\.bm-paused \.bm-fill\s*\{\s*animation-play-state:\s*paused;\s*\}/)
+})
+
+test('the pause control, keyboard focus, the autoplay owner and reduced motion still hold the tour', () => {
+  // Mutation: stop the toggle setting 'stopped', or drop the focus hold from `paused`.
+  assert.match(HOOK, /if \(mode === 'run'\) \{\s*setChosen\('stopped'\)\s*return\s*\}/)
+  assert.match(HOOK, /t\.matches\(':focus-visible'\)/)
+  assert.match(HOOK, /setFocusHold\(true\)/)
+  assert.match(HOOK, /paused: !playing \|\|/)
+  assert.match(VIEW, /tour\.paused \? 'bm-paused' : ''/)
+  assert.match(VIEW, /onClick=\{tour\.toggle\}/)
+})
+
 test('the sub-line is derived from the two counts, never typed', () => {
   // Mutation: type "13" or "26" into the sub-line.
   assert.match(VIEW, /\{TOOL_COUNT\} tools that would otherwise be \{BOOKMARK_COUNT\} tabs/)

@@ -208,10 +208,10 @@ test('the CSS parses, holds one :root rule of unique custom properties, then the
 test('the free file carries the credit line at its foot; the Pro file does not', () => {
   const free = buildTokensCss(DESIGN, { projectName: 'Harbour', watermark: true, date: AT })
   const pro = buildTokensCss(DESIGN, { projectName: 'Harbour', watermark: false, date: AT })
-  assert.match(free.trim().split('\n').pop(), /Made with UIL4B/)
-  assert.doesNotMatch(pro, /Made with UIL4B/)
-  assert.match(buildTokensJson(DESIGN, { projectName: 'Harbour', watermark: true }), /Made with UIL4B/)
-  assert.doesNotMatch(buildTokensJson(DESIGN, { projectName: 'Harbour', watermark: false }), /Made with UIL4B/)
+  assert.match(free.trim().split('\n').pop(), /Made with UI L4B/)
+  assert.doesNotMatch(pro, /Made with UI L4B/)
+  assert.match(buildTokensJson(DESIGN, { projectName: 'Harbour', watermark: true }), /Made with UI L4B/)
+  assert.doesNotMatch(buildTokensJson(DESIGN, { projectName: 'Harbour', watermark: false }), /Made with UI L4B/)
 })
 
 test('a project name cannot close the header comment', () => {

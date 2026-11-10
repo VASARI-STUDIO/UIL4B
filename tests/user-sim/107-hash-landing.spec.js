@@ -176,6 +176,24 @@ test('a footer section link from another route puts focus on the section heading
   await expect(page.locator('#plans-h')).toBeFocused()
 })
 
+test('a section that arrives after the landing deadline still takes focus on its heading', async ({ page }) => {
+  watch(page, 'a keyboard visitor following Plans from the footer on a slow connection')
+  // Hold the Plans chunk past the 3s landing deadline, so the jump meets the loading stand-in first.
+  // Red if the landing focuses the stand-in and lets focus fall to the page when the real section replaces it.
+  let held = 0
+  await page.route(/\/assets\/HomePlans-[\w-]+\.js(\?.*)?$/, async (route) => {
+    held += 1
+    await new Promise((resolve) => setTimeout(resolve, 4500))
+    await route.continue()
+  })
+  await go(page, '/mobile')
+  await page.locator('.sp-footer a[href="/home#plans"]').first().click()
+  await ready(page, '/home')
+  await homeLanding(page, 'plans')
+  expect(held, 'the Plans chunk was never requested, so nothing was held').toBeGreaterThan(0)
+  await expect(page.locator('#plans-h')).toBeFocused()
+})
+
 test('an in-page section link lands below the nav bar and moves focus to the heading', async ({ page }) => {
   watch(page, 'a visitor following Plans from the footer of the homepage')
   await go(page, '/')

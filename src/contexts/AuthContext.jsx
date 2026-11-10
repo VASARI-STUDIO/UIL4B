@@ -9,8 +9,11 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 // had painted (#402 measured it at 25% of that wave).
 //
 //   whenAuthSdk()  PATIENT. Used by the bootstrap listener ONLY. Waits for the
-//                  deferral gate — LCP, idle, first touch, or a signed-in hint,
-//                  whichever comes first. See src/utils/firebaseAccess.lazy.js.
+//                  deferral gate, which opens at once for a browser whose
+//                  session hint is set and for any URGENT caller, and for
+//                  nobody else. See src/utils/firebaseAccess.lazy.js.
+//   canSkipAuthWait()  True when no hint is set and nothing has opened the gate:
+//                  `loading` clears as signed out without fetching the SDK.
 //   loadAuthSdk()  URGENT. Used by every action a person actually initiates:
 //   loadFirestore() sign in, sign up, sign out, reset, switch, profile writes,
 //                  delete. These open the gate rather than wait on it, so no
@@ -27,7 +30,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 // deleteUser/deleteDoc are deliberately gone: deletion is now a single
 // server-side transaction (api/delete-account.js) that cancels billing and
 // reaches the subcollections a client never could.
-import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'
+import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow, canSkipAuthWait } from '../utils/firebaseAccess'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 import { openOnboardingRecord, planProfileRead } from '../utils/onboardingState'
 import { needsEmailVerification, reloadVerified, sendVerificationLink } from '../utils/emailVerification'
@@ -285,6 +288,16 @@ export function AuthProvider({ children }) {
         setLoading(false)
       }
     }
+    // A browser with no session hint, on a page that has asked for nothing, is
+    // signed out as far as anything can tell, and downloading the SDK to confirm
+    // it is what the deferral exists to avoid. Settle now; the listener below
+    // still attaches the moment anything opens the gate, and a session the hint
+    // missed is restored then through the same `onAuthUser`. A page that needs
+    // the real answer (RequireAuth, the sign-in form) opens the gate in its own
+    // effect, so it keeps its loader.
+    // Checked after this commit's effects have all run, so the gate is read
+    // after every child that needs the answer has had its say.
+    Promise.resolve().then(() => { if (!cancelled && canSkipAuthWait()) setLoading(false) })
     whenAuthSdk().then((A) => {
       if (cancelled) return
       unsub = A.onAuthStateChanged(A.auth, onAuthUser)

@@ -1,6 +1,7 @@
 import { test, expect } from './base.js'
-import { go, signIn } from './helpers.js'
+import { go, signIn, openProjectFromDashboard } from './helpers.js'
 import { exportPanel, typeRadio } from './export-rows.js'
+import { mockThemeApi } from './export-theme-mock.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 function savedProject() {
@@ -22,21 +23,11 @@ for (const width of [390, 1440]) {
     for (const [openerName, area] of [['the header Export project', '.pjd-head-actions'], ['the export bar Export project', '.pjd-export']]) {
       for (const input of ['mouse', 'touch', 'Enter']) {
         test(`${openerName} downloads a UI kit with ${input}`, async ({ page }) => {
-          // A missing font licence still produces a kit and leaves the panel
-          // open with a notice, so closing and focus restoration are testable.
-          await page.route(/fonts\.googleapis\.com\/css2/, (route) =>
-            route.request().resourceType() === 'fetch'
-              ? route.fulfill({
-                status: 200,
-                contentType: 'text/css',
-                body: "@font-face { font-family: 'Manrope'; font-weight: 400 700; src: url(https://fonts.gstatic.com/s/fixture/latin.woff2) format('woff2'); }",
-              })
-              : route.continue())
-          await page.route(/cdn\.jsdelivr\.net\/gh\/google\/fonts/, (route) =>
-            route.fulfill({ status: 404, body: '' }))
+          // The kit comes from the export route as a zip; a stand-in answers it and records what the dialog asked for.
+          const calls = await mockThemeApi(page)
           await signIn(page, { plan: 'free', projects: [savedProject()] })
           await go(page, '/projects')
-          await page.locator('.uh-card-name[data-project="Harbour"]').click()
+          await openProjectFromDashboard(page, 'Harbour')
           await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
 
           const opener = page.locator(area).getByRole('button', { name: 'Export project', exact: true })
@@ -59,14 +50,16 @@ for (const width of [390, 1440]) {
             page.waitForEvent('download'),
             activate(panel.getByRole('button', { name: 'Export UI kit', exact: true })),
           ])
-          expect(download.suggestedFilename()).toMatch(/ui-kit\.html$/)
+          expect(download.suggestedFilename()).toBe('harbour-ui-kit-04-standards.zip')
           expect(await download.failure()).toBeNull()
           const stream = await download.createReadStream()
           const chunks = []
           for await (const chunk of stream) chunks.push(chunk)
-          expect(Buffer.concat(chunks).toString('utf8')).toContain('#1F4B8E')
+          expect(Buffer.concat(chunks).subarray(0, 2).toString(), 'a real zip').toBe('PK')
+          expect(calls.map((c) => c.body)).toEqual([expect.objectContaining({ row: 'ui-kit', format: 'zip', projectName: 'Harbour' })])
+          expect(calls[0].body.design.palette.colors[0], 'for this project\u2019s colours').toBe('#1F4B8E')
 
-          await expect(panel.getByText(/Your UI kit downloaded/)).toBeVisible()
+          await expect(panel.getByText('Downloaded harbour-ui-kit-04-standards.zip.')).toBeVisible()
           await page.keyboard.press('Escape')
           await expect(panel).toHaveCount(0)
           await expect(page.locator('#main')).not.toHaveAttribute('inert', '')
