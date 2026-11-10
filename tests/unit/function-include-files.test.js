@@ -76,6 +76,9 @@ function importedFromApi() {
 
 const includeFilesGlob = () => vercel.functions?.['api/ai.js']?.includeFiles || ''
 
+/** The one alternative outside src/ and public/: the export themes' own font folder (`*` or `**`; the folder is flat). */
+const EXPORT_THEME_FONTS = /^api\/_lib\/exportThemes\/fonts\/\*{1,2}$/
+
 /**
  * Expands brace groups, nested or not:
  * `a/{b,c/{d,e}}.js` -> ['a/b.js', 'a/c/d.js', 'a/c/e.js'].
@@ -161,6 +164,8 @@ function bundledByArea(area) {
   if (!glob) return []
   const all = expandBraces(glob)
   for (const a of all) {
+    // The export themes read their font files from disk by name, so their folder is named whole (checked by its own test below).
+    if (EXPORT_THEME_FONTS.test(a)) continue
     assert.match(a, /^(src|public)\//, `includeFiles is "${glob}", which has an alternative outside src/ and public/ — this file cannot read it`)
   }
   const files = all.filter((a) => a.startsWith(`${area}/`)).map((a) => a.slice(area.length + 1)).flatMap((rel) => expandStars(rel, area))
@@ -248,15 +253,21 @@ test('the api functions import exactly the two internal boards and the Pro expor
   // it has to be classified below as bundled or as deliberately absent. The export files
   // are the format list, the two Pro document generators and the font coercion that
   // api/_lib/exportDocument.js builds on the server (they are not in the browser
-  // bundle at all), and vercel.json bundles them.
+  // bundle at all), and vercel.json bundles them. The export themes' brand-from-project step adds the font
+  // catalogue (fallback list and licence table), the semantic presets, the UI kit foundations and the system roles.
   assert.deepEqual(IMPORTED, [
     'config/exportFormats.js',
     'config/exportTemplates.js',
+    'data/fallbackFonts.js',
+    'data/fontLicences.json',
     'data/moduleBoard.js',
     'data/pipeline.js',
+    'data/semanticPresets.js',
+    'data/uiKitFoundations.js',
     'utils/brandGuidelines.js',
     'utils/designSystemBook.js',
     'utils/styleGuideExport.js',
+    'utils/systemRoles.js',
   ],
   'api/ imports changed — every src/ file a function imports must be either named by '
     + 'vercel.json includeFiles or gitignored on purpose, and a new one is neither')
@@ -294,7 +305,8 @@ test('CONTROL: the import walk follows imports to the leaves, and dropping any o
   // the direct imports (which is exactly the gap this was written for).
   const reachedFiles = [...reached()].sort()
   for (const rel of ['utils/bookModel.js', 'utils/paletteRoles.js', 'utils/colors.js', 'utils/paletteAdjust.js',
-    'utils/routeMeta.js', 'data/toolTree.js', 'data/routeMetaMap.js', 'data/learnIndex.js', 'utils/meshFormats.js']) {
+    'utils/routeMeta.js', 'data/toolTree.js', 'data/routeMetaMap.js', 'data/learnIndex.js', 'utils/meshFormats.js',
+    'utils/systemRoles.js', 'data/semanticPresets.js', 'data/fontLicences.json', 'data/uiKitFoundations.js', 'data/fallbackFonts.js']) {
     assert.ok(reachedFiles.includes(rel), `the import walk no longer reaches src/${rel}`)
   }
   assert.ok(reachedFiles.length > IMPORTED.filter((rel) => !IGNORED.has(`src/${rel}`)).length,
@@ -427,5 +439,27 @@ test('the chrome-font glob reaches exactly the six chrome faces, and every templ
     const text = fs.readFileSync(path.join(root, 'src', 'utils', 'exportTemplates', rel), 'utf8')
     assert.ok(text.includes(`file: '${face}-latin.woff2'`), `${rel} no longer embeds ${face}; update this table`)
     assert.ok(bundled.has(`fonts/${face}-latin.woff2`), `${rel}'s chrome face ${face} is not carried by includeFiles`)
+  }
+})
+
+// The export themes read a font by name from api/_lib/exportThemes/fonts, which no import reaches, so
+// the folder is named whole; a deploy without it fails on the first font read.
+test('includeFiles carries the export themes font folder, and the loader reads that folder', () => {
+  const alternatives = expandBraces(includeFilesGlob()).filter((a) => EXPORT_THEME_FONTS.test(a))
+  assert.equal(alternatives.length, 1, 'includeFiles must name api/_lib/exportThemes/fonts/ exactly once')
+  const dir = path.join(root, 'api', '_lib', 'exportThemes', 'fonts')
+  const files = fs.readdirSync(dir)
+  assert.ok(files.some((f) => f.endsWith('.ttf')) && files.some((f) => f.endsWith('.woff2')), 'the font folder has no .ttf and .woff2 files')
+  const loader = fs.readFileSync(path.join(root, 'api', '_lib', 'exportThemes', 'node-loaders.js'), 'utf8')
+  assert.match(loader, /new URL\('\.\/fonts\/', import\.meta\.url\)/, 'the loader reads fonts from somewhere other than the folder includeFiles names')
+})
+
+test('CONTROL: an alternative outside src/, public/ and the export themes font folder is still refused', () => {
+  const real = vercel.functions['api/ai.js'].includeFiles
+  try {
+    vercel.functions['api/ai.js'].includeFiles = `{${real.slice(1, -1)},api/_lib/other/*}`
+    assert.throws(() => bundledFiles(), /outside src\/ and public\//)
+  } finally {
+    vercel.functions['api/ai.js'].includeFiles = real
   }
 })

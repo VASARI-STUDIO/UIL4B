@@ -186,6 +186,28 @@
   padding: var(--s-6) 56px var(--s-4) 0;
 }
 
+/* On a phone the hero carries its family's strip behind the name, edge to edge:
+   a decorative layer that fades in once over 320ms and holds. */
+.fgd-hero--bg {
+  position: relative;
+  isolation: isolate;
+  margin-inline: calc(-1 * var(--fgd-pad));
+  padding-inline: var(--fgd-pad) calc(var(--fgd-pad) + 56px);
+}
+.fgd-hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--fgd-bgimg, none) center / cover no-repeat;
+  animation: fgd-bg-in 320ms cubic-bezier(.23, 1, .32, 1) both;
+}
+@keyframes fgd-bg-in { from { opacity: 0; } to { opacity: 1; } }
+html[data-reduced-motion="true"] .fgd-hero-bg { animation-duration: 120ms; animation-timing-function: linear; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fgd-hero-bg { animation-duration: 120ms; animation-timing-function: linear; }
+}
+
 .fgd-name {
   margin: 0;
   color: var(--t0);
@@ -459,7 +481,6 @@
 }
 
 .fgd-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: var(--accent-fill); }
-.fgd-btn--icon { width: 40px; padding: 0; }
 .fgd-btn--small { min-height: 36px; padding: 0 var(--s-3); font-size: 13px; }
 .fgd-btn--compare { gap: var(--s-2); }
 .fgd-ext { margin-left: .25em; }
@@ -483,17 +504,14 @@
   .fgd-btn { padding: 0 var(--s-3); }
 }
 
-/* On the sheet Find a pairing fills the row; the compare toggle and More are
-   44px squares. */
+/* On the sheet Open in Font Pair fills the row beside the Compare toggle. */
 @media (max-width: 767px) {
   .fgd-bar-row .fgd-btn--primary { flex: 1 1 auto; min-width: 0; }
   .fgd-btn { min-height: 44px; }
-  .fgd-btn--icon { width: 44px; }
 }
 
 @media (pointer: coarse) {
   .fgd-btn { min-height: 44px; }
-  .fgd-btn--icon { width: 44px; }
   /* 44px at s-2 ends at 52px, clear of the 56px name strip's rule. */
   .fgd-close { top: var(--s-2); width: 44px; height: 44px; }
   .fgd-field input { font-size: 16px; }
@@ -539,31 +557,6 @@
 }
 
 .fgd-menu-item:active { background: var(--hvr); }
-
-/* On the phone sheet More is a bottom sheet over the bar, under its own scrim
-   that covers the whole pop-up. */
-@media (max-width: 767px) {
-  .fgd-more { position: static; }
-  .fgd-menu-scrim {
-    position: absolute;
-    z-index: 4;
-    inset: 0;
-    padding: 0;
-    border: 0;
-    background: var(--scrim);
-    cursor: default;
-  }
-  .fgd-menu {
-    position: absolute;
-    z-index: 5;
-    inset: auto 0 0 0;
-    min-width: 0;
-    padding: var(--s-2) var(--s-4) calc(var(--s-2) + env(safe-area-inset-bottom, 0px));
-    border-width: 1px 0 0;
-    border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
-  }
-  .fgd-menu-item { min-height: 48px; font-size: 16px; }
-}
 
 /* ── Phone and tablet sizes ──────────────────────────────────────────────── */
 
@@ -617,4 +610,131 @@ html[data-reduced-motion="true"] :is(.fgd-btn, .fgd-close):active { transform: n
   html:not([data-reduced-motion="false"]) .fgd-menu { animation: none; }
   html:not([data-reduced-motion="false"]) :is(.fgd-btn, .fgd-close, .fgd-strip, .fgd-field) { transition: none; }
   html:not([data-reduced-motion="false"]) :is(.fgd-btn, .fgd-close):active { transform: none; }
+}
+
+/* On a phone the sheet's one primary action is the ink pill (cream on dark),
+   as in the type tools' other docks. */
+@media (max-width: 767px) {
+  .fgd-btn--primary { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+  .fgd-btn--primary:not(:disabled):hover { background: color-mix(in srgb, var(--t0) 90%, var(--bg-0)); border-color: transparent; }
+  .fgd-btn--primary:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+}
+
+/* ── Phone sheet: tabs, the specimen tab and the foot ──────────────────────── */
+
+@media (max-width: 767px) {
+  /* The four tabs as one pill strip; the selected tab is a filled pill, so the
+     sliding underline is dropped. */
+  .fgd .fdx-tabs {
+    gap: 0;
+    height: 48px;
+    margin: var(--s-4) 0 var(--s-2);
+    padding: 2px;
+    background: var(--bg-2);
+    border: 0;
+    border-radius: var(--radius-pill);
+  }
+  .fgd .fdx-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 8px;
+    color: var(--t1);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    border-radius: var(--radius-pill);
+    transition: background-color 150ms var(--ease-standard);
+  }
+  .fgd .fdx-tab--on { color: var(--t0); background: color-mix(in srgb, var(--t0) 14%, transparent); }
+  .fgd .fdx-tabs[data-slide]::after,
+  .fgd .fdx-tab--on::after { content: none; }
+  .fgd .fdx-tab:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+
+  .fgd-spec { padding-top: var(--s-2); }
+  .fgd-spec:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+  .fgd-spec-sec + .fgd-spec-sec { margin-top: var(--s-6); }
+  .fgd-spec .fgd-h { margin: 0 0 var(--s-2); color: var(--t1); font-size: 13px; font-weight: 500; line-height: 18px; }
+
+  /* A weight reads as its line, then its number and name under it. */
+  .fgd-spec .fgd-weight { flex-direction: column; gap: 0; padding: 10px 0; border-bottom: 0; }
+  .fgd-spec .fgd-weight-line {
+    overflow: hidden;
+    font-size: 24px;
+    line-height: 30px;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .fgd-spec .fgd-weight-tag { line-height: 18px; }
+  .fgd-spec .fgd-weight-tag strong { font-family: var(--mono); font-weight: 400; }
+
+  /* Which weights the CSS carries: five to a row, numerals in the mono face. */
+  .fgd-wpills { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .fgd-wpill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 4px;
+    color: var(--t1);
+    font-family: var(--mono);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    background: var(--bg-2);
+    border: 0;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: background-color 150ms var(--ease-standard), transform 120ms var(--ease-standard);
+  }
+  .fgd-wpill[aria-pressed="true"] { color: var(--t0); background: color-mix(in srgb, var(--t0) 14%, transparent); }
+  .fgd-wpill[aria-disabled="true"] { cursor: default; }
+  .fgd-wpill:not([aria-disabled="true"]):active { transform: scale(.97); }
+  .fgd-wpill:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+
+  .fgd-code {
+    margin: var(--s-3) 0 0;
+    padding: 12px 14px;
+    color: var(--t0);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 20px;
+    background: var(--bg-0);
+    border-radius: var(--radius);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  .fgd-code code { font: inherit; }
+  .fgd-carries { margin: var(--s-2) 0 0; color: var(--t1); font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+
+  .fgd-acts { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
+  .fgd-bodyset { display: flex; align-items: center; gap: var(--s-2); margin: var(--s-3) 0 0; color: var(--t1); font-size: 13px; line-height: 18px; }
+  .fgd-link,
+  .fgd-golink {
+    min-height: 44px;
+    padding: 0;
+    color: var(--t0);
+    font: inherit;
+    font-weight: 500;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .fgd-link { padding: 0 var(--s-2); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+  .fgd-golink { display: inline-flex; align-items: center; gap: var(--s-2); margin-top: var(--s-2); font-size: 14px; line-height: 20px; }
+  .fgd-golink span { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .fgd-link:focus-visible,
+  .fgd-golink:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+
+  /* The foot's arrow sits in a small disc at the pill's right edge. */
+  .fgd-bar-row .fgd-btn--primary { justify-content: space-between; padding-right: 6px; }
+  .fgd-bar-row .fgd-btn--primary svg {
+    box-sizing: content-box;
+    padding: 8px;
+    background: color-mix(in srgb, var(--bg-0) 12%, transparent);
+    border-radius: 50%;
+  }
 }

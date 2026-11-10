@@ -67,4 +67,12 @@ export default defineConfig([
       },
     },
   },
+  {
+    // The export themes are page-markup builders ported whole. Every builder takes
+    // the same (ctx) argument and many helpers keep values a variant of the page
+    // uses, so unused names are left in place rather than reshaped; all other
+    // rules still apply here.
+    files: ['api/_lib/exportThemes/themes/**/*.js'],
+    rules: { 'no-unused-vars': 'off' },
+  },
 ])

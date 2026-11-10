@@ -48,6 +48,7 @@ test.describe('Type Scale · the overhaul', () => {
     // 4. THE DISPLAY h1. On a page about type, the largest type on it was the
     //    one string the visitor cannot change. The ladder is the loudest thing
     //    here now, so the title must be smaller than the top step it sits over.
+    await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
     const h1 = await page.locator('[data-tool-toolbar] h1').evaluate(
       el => parseFloat(getComputedStyle(el).fontSize),
     )
@@ -87,25 +88,25 @@ test.describe('Type Scale · the overhaul', () => {
     await go(page, '/create/type-scale')
 
     // WIRING. The ratio is a control in the bar; the range beside it and the
-    // top row of the ladder are both computed from it. At the default
-    // nearest-0.5px rounding: 16 x 1.25^6 = 61.04 -> 61 and 16 / 1.25^2 = 10.24
-    // -> 10; 16 x 1.5^6 = 182.25 -> 182.5 and 16 / 1.5^2 = 7.11 -> 7; then
-    // 20 x 1.5^6 = 227.81 -> 228.
+    // top row of the ladder are both computed from it. The scale opens on base 15,
+    // golden ratio 1.618, four steps up and one down, to two decimals:
+    // 15 x 1.618^4 = 102.8 and 15 / 1.618 = 9.27; then 15 x 1.5^4 = 75.94 and
+    // 15 / 1.5 = 10; then 20 x 1.5^4 = 101.25.
     const range = page.locator('.tsc-scale-range')
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
-    await expect(range).toHaveText('9 steps, 10px to 61px')
-    await expect(largest).toContainText('61px')
+    await expect(range).toHaveText('6 steps, 9.27px to 102.8px')
+    await expect(largest).toHaveText(/^102\.8 \//)
 
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(range).toHaveText('9 steps, 7px to 182.5px')
-    await expect(largest).toContainText('182.5px')
+    await expect(range).toHaveText('6 steps, 10px to 75.94px')
+    await expect(largest).toHaveText(/^75\.94 \//)
 
     // And the base, from its own control in the same bar.
     await page.locator('#tsc-base + .snapv-value').click()
     await page.getByRole('spinbutton', { name: /Base font size/ }).fill('20')
     await page.getByRole('spinbutton', { name: /Base font size/ }).press('Enter')
     await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('20px')
-    await expect(largest).toContainText('228px')
+    await expect(largest).toHaveText(/^101\.25 \//)
   })
 
   test('the panel is a card above the ladder when stacked, and the ladder is the left column beside it', async ({ page }) => {
@@ -141,37 +142,45 @@ test.describe('Type Scale · the overhaul', () => {
 
       // The homepage Typography panel and Font Pair have both had this control
       // all along. The tool whose only job is judging sizes did not.
+      // The heading rows read "Loading <family>" until the face is in.
       const rows = page.locator('.tsc-row-text')
-      await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
+      await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
+      // The two steps drawn at 49px or more show only the first word of the line;
+      // the other four hold the whole of it.
+      const FIRST_WORD_ROWS = 2
+      await expect(rows.first()).toHaveText('There')
+      // The smallest step also prints its "Under 12px" note inside the row.
+      await expect(rows.last()).toHaveText(/^There at 11:40\./)
       await showTypeScalePage(page)
-      await expect(page.locator('.tsc-article-h1')).toHaveText('A page set on this scale')
+      await expect(page.locator('.tsk-hdr .tsk-h').first()).toHaveText('There at')
       await showTypeScaleLadder(page)
 
       // Exact: the 390 settings sheet's name also contains "preview text".
       await page.getByLabel('Preview text', { exact: true }).fill('Checkout · 3 items')
 
       // WIRING, and the point of the control: EVERY step takes the words, so the
-      // question "is this size usable for this string" can be asked at all nine.
+      // question "is this size usable for this string" can be asked at all six.
       const count = await rows.count()
-      expect(count).toBe(9)
+      expect(count).toBe(6)
       for (let i = 0; i < count; i++) {
-        await expect(rows.nth(i)).toHaveText('Checkout · 3 items')
+        await expect(rows.nth(i)).toHaveText(i < FIRST_WORD_ROWS ? 'Checkout' : /^Checkout · 3 items/)
       }
       // One string, both previews.
       await showTypeScalePage(page)
-      await expect(page.locator('.tsc-article-h1')).toHaveText('Checkout · 3 items')
+      await expect(page.locator('.tsk-hdr .tsk-h').first()).toHaveText('Checkout · 3 items')
       await showTypeScaleLadder(page)
 
-      // Emptying it falls back to the pangram rather than to nothing.
+      // Emptying it falls back to the default line rather than to nothing.
       await page.getByLabel('Preview text', { exact: true }).fill('')
-      await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
+      await expect(rows.first()).toHaveText('There')
+      await expect(rows.last()).toHaveText(/^There at 11:40\./)
     })
   }
 
   test('fine tuning is closed on arrival and every control is still reachable', async ({ page }) => {
     watch(page, 'designer who needs letter spacing')
     await go(page, '/create/type-scale')
-    // At 1440 the Scale / Page / Code switch is gone, so any tab here is a stray.
+    // At 1440 the Scale / Page switch is gone, so any tab here is a stray.
     expect(await settleTypeScaleView(page)).toBe('split')
 
     const toggle = page.getByRole('button', { name: 'Fine tuning' })
@@ -195,12 +204,12 @@ test.describe('Type Scale · the overhaul', () => {
     // Opening the disclosure adds buttons, never tabs.
     await expect(page.getByRole('tab')).toHaveCount(0)
 
-    // And it still drives the maths from in there. The ladder prints each size to
-    // one decimal, so the top step (61.04) reads 61px with or without rounding; the
-    // second step shows it: 16 x 1.25^5 = 48.83 reads 49px rounded and 48.8px not.
+    // And it still drives the maths from in there. The scale opens exact to two
+    // decimals; the second step shows the rounding: 15 x 1.618^3 = 63.54 exact
+    // and 64 on whole pixels.
     const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
-    await expect(second).toContainText('49px')
-    await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
-    await expect(second).toContainText('48.8px')
+    await expect(second).toHaveText(/^63\.54 \//)
+    await chooseMenuOption(page, page.getByLabel('Rounding'), 'whole')
+    await expect(second).toHaveText(/^64 \//)
   })
 })
