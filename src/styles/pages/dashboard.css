@@ -118,7 +118,7 @@
 .db-newwrap{position:relative;display:flex;flex:none;z-index:2}
 .db-pop{position:absolute;z-index:2;width:320px;padding:16px;border-radius:12px;background:var(--raised);box-shadow:0 0 0 1px var(--hl08),var(--shadow);animation:db-pop 180ms var(--ease) both;overscroll-behavior:contain}
 .db-pop.name{top:calc(100% + 8px);left:0;transform-origin:top left}
-.db-pop.cap{bottom:0;right:calc(100% + 12px);transform-origin:bottom right;font-size:14px;line-height:1.5;color:var(--t86)}
+.db-pop.cap{scroll-margin-top:var(--nav-clear);bottom:0;right:calc(100% + 12px);transform-origin:bottom right;font-size:14px;line-height:1.5;color:var(--t86)}
 .db-pop label{display:block;font-size:13px;line-height:18px;font-weight:500;color:var(--t72);margin-bottom:8px}
 .db-pop .btns{margin-top:12px;display:flex;align-items:center;gap:16px}
 .db-pop.cap .db-tl{display:inline-block;margin-top:8px;font-size:14px;font-weight:500}
@@ -485,7 +485,7 @@
   .db-pop.name .btns { flex-direction: column; align-items: stretch; gap: 8px; }
   .db-pop.name .db-ghost { width: 100%; height: 44px; }
   .db-pop.name .btns .db-textbtn { justify-content: center; height: 48px; }
-  .db-pop.cap { top: calc(100% + 8px); bottom: auto; right: 0; width: min(350px, calc(100vw - 32px)); transform-origin: top right; }
+  .db-pop.cap { scroll-margin-top: calc(var(--nav-clear) + 52px); top: calc(100% + 8px); bottom: auto; right: 0; width: min(350px, calc(100vw - 32px)); transform-origin: top right; }
   .db-newwrap .db-ghost { width: 44px; height: 44px; padding: 0; }
   .db-newwrap .db-bt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .db-newwrap .db-ghost svg { width: 18px; height: 18px; }

@@ -102,6 +102,18 @@ function newId() {
 // localStorage, and what to put on screen when either one fails.
 const PUSH_DEBOUNCE_MS = 1500
 
+// A read of the account's projects that has not answered by now takes the failure path. Until it
+// answers, New project waits on a device with no copy and saves wait on the count.
+const PULL_TIMEOUT_MS = 15000
+
+function withTimeout(promise, ms) {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Reading the account’s projects timed out')), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
 // The channel this provider reports into. See src/utils/syncStatus.js.
 const SYNC_CHANNEL = 'projects'
 
@@ -157,6 +169,10 @@ export function ProjectProvider({ children }) {
   // The account whose list was READ, and merged into this device's copy. The count a cap
   // is checked against is the account's only from then on (see projectCountKnown).
   const [countedUid, setCountedUid] = useState(null)
+  // Signing out forgets both, so the same account signing back in starts unread again.
+  useEffect(() => {
+    if (!uid) { setPulledUid(null); setCountedUid(null) }
+  }, [uid])
 
   // The working design as the last write left it. A replace (reset, open a
   // project) sets it at once, so a second call in the same tick checks the
@@ -364,6 +380,7 @@ export function ProjectProvider({ children }) {
    */
   const duplicateProject = useCallback((id) => {
     if (!userKey) throw new Error('Sign in to save projects')
+    // No known-count check as in saveProject(): the source is in this list, so the list has been read.
     const current = allProjects[userKey] || []
     if (current.length >= projectLimit) {
       throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
@@ -617,7 +634,7 @@ export function ProjectProvider({ children }) {
     try {
       const fs = await loadFirestore()
       if (signal?.cancelled) return
-      const remote = await pullRemoteProjects(fs, uid)
+      const remote = await withTimeout(pullRemoteProjects(fs, uid), PULL_TIMEOUT_MS)
       if (signal?.cancelled) return
       storedRef.current = remote.stored instanceof Map ? remote.stored : new Map()
 
@@ -662,6 +679,7 @@ export function ProjectProvider({ children }) {
       }
       reportSyncOk(SYNC_CHANNEL)
     } catch (error) {
+      if (signal?.cancelled) return
       reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), retry)
     } finally {
       if (!signal?.cancelled) {
