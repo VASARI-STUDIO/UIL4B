@@ -1,8 +1,9 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PhIcon from '../spectrum/PhIcon'
 import { EXPORT_THEMES } from '../../config/exportFormats'
 import { THEME_FACTS, numberWord } from '../../config/planFacts'
+import { prefersReducedMotion } from '../spectrum/reducedMotion'
 import { DEFAULT_KIND_ID, SHOWCASE_KINDS, showcaseImage, showcaseRatio } from './showcaseImages'
 import { preloadPage } from './showcasePreload'
 import ShowcaseViewer from './ShowcaseViewer'
@@ -11,9 +12,11 @@ import '../../styles/pages/home-showcase.css'
 // ships with the export themes
 // "Pick a page, compare ten themes": a picker of page kinds over two rows that show
 // the picked kind in every export theme. Only the picked kind's images are in the
-// DOM. A pick swaps all of them in one commit, once every new page has loaded, or after
-// SLOW_SWAP_MS with the ones that have. A page is replaced, never faded: the new one is
-// already in the cache when it appears.
+// DOM (bar the old page for a moment while it fades out). A pick swaps all of them in one
+// commit, once every new page has loaded, or after SLOW_SWAP_MS with the ones that have. The
+// new page is already in the cache when it appears, and crossfades in over the old one, each
+// tile a beat after the one before. When the section first scrolls into view the tiles rise in
+// the same way. Opacity and transform only; reduced motion drops the movement and the stagger.
 
 const capitalise = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`
 const joinAnd = (items) => (items.length < 2
@@ -28,6 +31,14 @@ const PORTRAIT = SLOTS.filter((s) => !s.landscape)
 const INTENT_DELAY_MS = 80
 // How long a pick waits for all ten pages before swapping the ones it has.
 const SLOW_SWAP_MS = 600
+// A page crossfades in over FADE_MS (the same in home-showcase.css); each tile, in theme order,
+// starts FADE_STEP_MS after the one before it.
+const FADE_MS = 240
+const FADE_STEP_MS = 24
+// The scroll-in reveal: each tile moves for REVEAL_MS (the same in the CSS), REVEAL_STEP_MS apart.
+const REVEAL_MS = 300
+const REVEAL_STEP_MS = 32
+const REVEAL_LAST = EXPORT_THEMES.length - 1
 const kindIndex = (id) => SHOWCASE_KINDS.findIndex((k) => k.id === id)
 const kindLabel = (id) => SHOWCASE_KINDS[kindIndex(id)].label
 
@@ -56,14 +67,40 @@ const loadKind = (kindId) => Promise.all(EXPORT_THEMES.map((t) => loadPage(t.id,
 
 // ── One page ─────────────────────────────────────────────────────────────────
 
+// The kind a tile showed before its last swap, while the new page fades in over it; null
+// once the fade is done. It is derived from the kind changing, so the old page is in the
+// same commit as the new one.
+function useLeavingKind(kindId, place) {
+  const [seen, setSeen] = useState({ kind: kindId, leaving: null })
+  if (seen.kind !== kindId) setSeen({ kind: kindId, leaving: seen.kind })
+  const { leaving } = seen
+  useEffect(() => {
+    if (leaving === null) return undefined
+    const timer = window.setTimeout(() => {
+      setSeen((prev) => (prev.leaving === leaving ? { ...prev, leaving: null } : prev))
+    }, FADE_MS + place * FADE_STEP_MS + 60)
+    return () => window.clearTimeout(timer)
+  }, [leaving, place])
+  const drop = useCallback(() => setSeen((prev) => (prev.leaving === null ? prev : { ...prev, leaving: null })), [])
+  return [leaving, drop]
+}
+
 const ShowcaseTile = memo(function ShowcaseTile({ slot, kindId, failed, onFailed, onOpen }) {
   const { theme, index } = slot
   const label = kindLabel(kindId).toLowerCase()
   const alt = `${theme.brand} ${label} page, ${theme.name} theme`
   const { thumb } = showcaseImage(theme.id, kindId)
   const tier = capitalise(theme.tier)
+  const [leaving, dropLeaving] = useLeavingKind(kindId, index)
+  const out = leaving !== null && !failed ? showcaseImage(theme.id, leaving).thumb : null
   return (
-    <li style={{ '--ar': showcaseRatio(theme.id) }}>
+    <li
+      style={{
+        '--ar': showcaseRatio(theme.id),
+        '--fade-delay': `${index * FADE_STEP_MS}ms`,
+        '--reveal-delay': `${index * REVEAL_STEP_MS}ms`,
+      }}
+    >
       <figure className="hsc-fig">
         <button
           type="button"
@@ -81,19 +118,29 @@ const ShowcaseTile = memo(function ShowcaseTile({ slot, kindId, failed, onFailed
             {failed ? (
               <span className="hsc-fail">Page didn’t load</span>
             ) : (
-              <picture>
-                <source type="image/avif" srcSet={thumb.avif} />
-                <source type="image/webp" srcSet={thumb.webp} />
-                <img
-                  src={thumb.webp}
-                  alt={alt}
-                  width={thumb.width}
-                  height={thumb.height}
-                  loading="lazy"
-                  decoding="async"
-                  onError={() => onFailed(index)}
-                />
-              </picture>
+              <>
+                {out && (
+                  <picture key={`out-${leaving}`} aria-hidden="true">
+                    <source type="image/avif" srcSet={out.avif} />
+                    <source type="image/webp" srcSet={out.webp} />
+                    <img src={out.webp} alt="" width={out.width} height={out.height} className="hsc-out" onError={dropLeaving} />
+                  </picture>
+                )}
+                <picture key={kindId}>
+                  <source type="image/avif" srcSet={thumb.avif} />
+                  <source type="image/webp" srcSet={thumb.webp} />
+                  <img
+                    src={thumb.webp}
+                    alt={alt}
+                    width={thumb.width}
+                    height={thumb.height}
+                    className={out ? 'hsc-in' : undefined}
+                    loading={leaving === null ? 'lazy' : 'eager'}
+                    decoding="async"
+                    onError={() => onFailed(index)}
+                  />
+                </picture>
+              </>
             )}
           </span>
           <span className="hsc-zoom" aria-hidden="true">
@@ -130,6 +177,32 @@ export default function HomeShowcase() {
   const [announce, setAnnounce] = useState('')
   // The page open in the viewer: its position in the theme list and the kind it was showing.
   const [viewer, setViewer] = useState(null)
+  // The scroll-in reveal: off (no motion, or already on screen when mounted), armed (tiles
+  // held back until the panel scrolls near), in (tiles moving), done (all at rest).
+  const [reveal, setReveal] = useState('off')
+
+  // Armed before the first paint, so a tile is never seen and then hidden. Without an
+  // observer, or with motion off, the tiles are simply there.
+  useLayoutEffect(() => {
+    const panel = rootRef.current?.querySelector('.hsc-panel')
+    if (!panel || typeof IntersectionObserver === 'undefined' || prefersReducedMotion()) return undefined
+    if (panel.getBoundingClientRect().top < window.innerHeight * 0.85) return undefined
+    let settle = 0
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      observer.disconnect()
+      setReveal('in')
+      settle = window.setTimeout(() => setReveal('done'), REVEAL_MS + REVEAL_LAST * REVEAL_STEP_MS + 80)
+    }, { rootMargin: '0px 0px -12% 0px' })
+    observer.observe(panel)
+    // The layout effect runs before paint, so this arms the tiles in the same frame; it needs the DOM measure above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReveal('armed')
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(settle)
+    }
+  }, [])
 
   useEffect(() => () => {
     window.clearTimeout(intentTimer.current)
@@ -231,7 +304,7 @@ export default function HomeShowcase() {
   )
 
   return (
-    <div className="hsc" ref={rootRef}>
+    <div className="hsc" ref={rootRef} data-reveal={reveal}>
       <div className="hsc-inner">
         <div className="hsc-head">
           <h2 id="examples-h" className="hsc-h" tabIndex={-1}>
@@ -298,7 +371,7 @@ export default function HomeShowcase() {
           </Link>
         </div>
       </div>
-      {viewer && <ShowcaseViewer startIndex={viewer.index} kindId={viewer.kindId} onClose={closeViewer} />}
+      {viewer && <ShowcaseViewer themeIndex={viewer.index} kindId={viewer.kindId} onClose={closeViewer} />}
     </div>
   )
 }
