@@ -2,7 +2,7 @@
    Spacing comes from the homepage tokens in home-tokens.css. Page images carry a
    hairline outline; on a pointer hover a page lifts and takes a soft shadow. The
    picked tab is the section's only filled control. Motion is transform and opacity
-   only: hover lift, the scroll-in reveal (data-reveal on .hsc) and the crossfade
+   only: hover lift, the scroll-in reveal (data-hsc-reveal on .hsc) and the crossfade
    when a pick swaps the pages (.hsc-in over .hsc-out). */
 .hsc {
   --hsc-ink: #EFEEEA;
@@ -158,8 +158,8 @@
 @keyframes hsc-in { from { opacity: 0; } }
 
 /* Scroll-in: the tiles are held back, then rise and fade in a beat apart. */
-.hsc[data-reveal="armed"] .hsc-row > li { opacity: 0; transform: translateY(8px); }
-.hsc[data-reveal="in"] .hsc-row > li {
+.hsc[data-hsc-reveal="armed"] .hsc-row > li { opacity: 0; transform: translateY(8px); }
+.hsc[data-hsc-reveal="in"] .hsc-row > li {
   transition: opacity 300ms var(--hsc-ease) var(--reveal-delay, 0ms), transform 300ms var(--hsc-ease) var(--reveal-delay, 0ms);
 }
 .hsc-zoom {
@@ -323,7 +323,7 @@ html[data-reduced-motion="true"] .hsc .hsc-in {
   animation-delay: 0ms !important;
   animation-timing-function: linear !important;
 }
-html[data-reduced-motion="true"] .hsc[data-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
+html[data-reduced-motion="true"] .hsc[data-hsc-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-reduced-motion="false"]) .hsc-tab,
   html:not([data-reduced-motion="false"]) .hsc-open,
@@ -338,7 +338,7 @@ html[data-reduced-motion="true"] .hsc[data-reveal] .hsc-row > li { opacity: 1; t
     animation-delay: 0ms !important;
     animation-timing-function: linear !important;
   }
-  html:not([data-reduced-motion="false"]) .hsc[data-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
+  html:not([data-reduced-motion="false"]) .hsc[data-hsc-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
 }
 
 /* ── Page viewer ─────────────────────────────────────────────────────────────
