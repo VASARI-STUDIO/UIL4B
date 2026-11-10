@@ -110,3 +110,26 @@ test('the small files are the phone\'s and stay well under the full ones', () =>
     assert.ok(statSync(publicFile(small.file)).size < statSync(publicFile(full.file)).size, `${small.file} is not smaller than ${full.file}`)
   }
 })
+
+test('all four files of every strip, AVIF and the phone sizes too, stay under 200KB', () => {
+  // The first cap test reads only the WebP url a strip is picked by; the AVIF
+  // and the small files are what most browsers actually fetch.
+  for (const url of [...backdropUrls('dark'), ...backdropUrls('light')]) {
+    for (const { file } of filesOf(url)) {
+      const bytes = statSync(publicFile(file)).size
+      assert.ok(bytes < 200 * 1000, `${file} is ${bytes} bytes, over 200KB`)
+    }
+  }
+})
+
+test('the strips keep the higher-quality encode: the 120 files together are far above the old soft ones', () => {
+  // The 30 strips were re-encoded at about 45 dB PSNR. The soft encodes they
+  // replaced came to 1.95 MB in all; the re-encode is 8.2 MB. A floor of 6 MB
+  // fails if a later pass squeezes them back down, which no size cap or
+  // dimension check would notice.
+  let total = 0
+  for (const url of [...backdropUrls('dark'), ...backdropUrls('light')]) {
+    for (const { file } of filesOf(url)) total += statSync(publicFile(file)).size
+  }
+  assert.ok(total > 6 * 1000 * 1000, `the strips total ${total} bytes, under the 6 MB the higher-quality encode needs`)
+})
