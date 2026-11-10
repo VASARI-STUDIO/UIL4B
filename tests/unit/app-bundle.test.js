@@ -95,7 +95,7 @@ test('the README lists every swatch hex, its sections in order, and the fonts', 
   assert.ok(readme.includes('Font files are not included'))
   assert.ok(readme.includes('exactly "Primitives"'))
   assert.ok(readme.includes('Figma Professional'))
-  assert.ok(readme.includes('Made with UIL4B. Exported 2026-10-31.'))
+  assert.ok(readme.includes('Made with UI L4B. Exported 2026-10-31.'))
 })
 
 test('the how-to files repeat the app steps', () => {

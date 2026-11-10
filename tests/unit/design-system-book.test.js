@@ -243,7 +243,7 @@ test('the Pro book carries no watermark and has no degraded free variant', () =>
   // The free tier keeps the style guide, which carries its credit line. There
   // is deliberately no `watermark` option here: a gate that ships a worse paid
   // artefact teaches the user that the paid thing is worse.
-  assert.ok(!/Made with UIL4B/.test(BOOK), 'the paid export is clean')
+  assert.ok(!/Made with UI L4B/.test(BOOK), 'the paid export is clean')
   const src = stripComments(read('src/utils/designSystemBook.js'))
   assert.ok(!/watermark/.test(src), 'the generator has no watermark option to get wrong')
 })

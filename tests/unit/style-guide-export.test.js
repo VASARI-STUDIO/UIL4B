@@ -128,9 +128,9 @@ test('the free watermark is visible, and Pro removes it', () => {
   const free = buildStyleGuideHtml(DESIGN, { watermark: true, date: AT })
   const pro = buildStyleGuideHtml(DESIGN, { watermark: false, date: AT })
   // In the page footer, not a comment — a watermark you cannot see is not one.
-  assert.ok(free.includes('Made with UIL4B'))
-  assert.ok(!pro.includes('Made with UIL4B'), 'Pro must export clean')
-  assert.ok(buildStyleGuideMarkdown(DESIGN, { watermark: true, date: AT }).includes('Made with [UIL4B]'))
+  assert.ok(free.includes('Made with UI L4B'))
+  assert.ok(!pro.includes('Made with UI L4B'), 'Pro must export clean')
+  assert.ok(buildStyleGuideMarkdown(DESIGN, { watermark: true, date: AT }).includes('Made with [UI L4B]'))
   assert.ok(!buildStyleGuideMarkdown(DESIGN, { watermark: false, date: AT }).includes('Made with'))
 })
 

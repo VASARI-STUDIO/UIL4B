@@ -297,7 +297,7 @@ test('every Code file builds from a design, and only the files with a place for 
     const free = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: true })
     const pro = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: false })
     assert.ok(free.length > 100, id)
-    assert.equal(free.includes('Made with UIL4B'), ['css', 'json', 'tailwind'].includes(id), `${id}: credit on a free build`)
-    assert.equal(pro.includes('Made with UIL4B'), false, `${id}: no credit on a Pro build`)
+    assert.equal(free.includes('Made with UI L4B'), ['css', 'json', 'tailwind'].includes(id), `${id}: credit on a free build`)
+    assert.equal(pro.includes('Made with UI L4B'), false, `${id}: no credit on a Pro build`)
   }
 })

@@ -621,7 +621,7 @@ test('a one-colour cover has no strip and its title block sits 144 lower than wi
 // ── Copy ────────────────────────────────────────────────────────────────────
 
 test('the credit line is one constant, with a middle dot and no em dash anywhere in drawn text', () => {
-  assert.equal(CREDIT_LINE, 'Made with UIL4B · uil4b.com')
+  assert.equal(CREDIT_LINE, 'Made with UI L4B · uil4b.com')
   const book = build(DESIGN, { watermark: true })
   for (const page of book.pages) {
     // The glyph specimen shows the em dash as a character to look at; it is the one exception.
@@ -629,7 +629,7 @@ test('the credit line is one constant, with a middle dot and no em dash anywhere
     assert.ok(!drawn.some((t) => t.includes('—')), `${page.id} draws an em dash`)
   }
   const src = read('src/utils/bookRaster.js')
-  assert.equal((src.match(/Made with UIL4B/g) || []).length, 1, 'the credit text is copied rather than shared')
+  assert.equal((src.match(/Made with UI L4B/g) || []).length, 1, 'the credit text is copied rather than shared')
 })
 
 test('the Colour opening is a count and a tally of pairs, with "1 colour" singular', () => {

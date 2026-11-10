@@ -429,7 +429,7 @@ test.describe('what a free account can take', () => {
     expect(file.bytes.length, 'a drawn page, not an empty canvas').toBeGreaterThan(5000)
   })
 
-  test('Style guide as HTML downloads a page that carries "Made with UIL4B"', async ({ page }) => {
+  test('Style guide as HTML downloads a page that carries "Made with UI L4B"', async ({ page }) => {
     watch(page, 'a free account exporting the style guide as HTML')
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
@@ -438,7 +438,7 @@ test.describe('what a free account can take', () => {
     await fileGroup(panel, 'Style guide').getByRole('radio', { name: 'HTML', exact: true }).click()
     const file = await takeDownload(page)
     expect(file.name).toMatch(/-style-guide\.html$/)
-    expect(file.text).toMatch(/Made with UIL4B/)
+    expect(file.text).toMatch(/Made with UI L4B/)
     expect(file.text).toMatch(/#1F4B8E/i)
   })
 
@@ -467,7 +467,7 @@ test.describe('what a free account can take', () => {
     const file = await takeDownload(page)
     expect(file.name).toMatch(/\.css$/)
     expect(file.text, 'the file opens with a comment').toMatch(/^\s*\/\*/)
-    expect(file.text, 'and closes with the credit comment').toMatch(/\/\* Made with UIL4B[^*]*\*\/\s*$/)
+    expect(file.text, 'and closes with the credit comment').toMatch(/\/\* Made with UI L4B[^*]*\*\/\s*$/)
     expect(file.text).toMatch(/--/)
   })
 
@@ -483,7 +483,7 @@ test.describe('what a free account can take', () => {
     await expect(panel).toBeVisible()
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toMatch(/--/)
     const copied = await page.evaluate(() => navigator.clipboard.readText())
-    expect(copied, 'the copy carries the same credit comment').toMatch(/\/\* Made with UIL4B[^*]*\*\/\s*$/)
+    expect(copied, 'the copy carries the same credit comment').toMatch(/\/\* Made with UI L4B[^*]*\*\/\s*$/)
   })
 
   test('Copy file is offered beside the JSON file and copies JSON', async ({ page }) => {
