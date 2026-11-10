@@ -88,7 +88,7 @@ test.describe('nav auth opens over the page you are on', () => {
     await go(page, '/login')
     // The route is a page of its own now: its h1 and form sit in main, and no
     // dialog is involved.
-    await expect(page.locator('main').getByRole('heading', { level: 1, name: 'Log in to UIL4B' })).toBeVisible()
+    await expect(page.locator('main').getByRole('heading', { level: 1, name: 'Log in to UI L4B' })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
     // A protected route still bounces a signed-out visitor here rather than

@@ -50,7 +50,7 @@ import { readIdentity } from '../utils/kitIdentity'
 export const PRO_GATE = {
   book: {
     gate: 'design-system-book-export',
-    eyebrow: 'UIL4B Pro',
+    eyebrow: 'UI L4B Pro',
     title: 'Export the design system book',
     subtitle: 'An A4 book of your system: cover, contents, colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
     features: [
@@ -63,7 +63,7 @@ export const PRO_GATE = {
   },
   guidelines: {
     gate: 'brand-guidelines-export',
-    eyebrow: 'UIL4B Pro',
+    eyebrow: 'UI L4B Pro',
     title: 'Export the brand guidelines',
     subtitle: 'A 16:9 landscape brand book of your system: cover, numbered sections, named swatches, alphabet grids, and your palette set in your own type. Add a logo and it gains a logo section. The style guide stays free.',
     features: [
@@ -75,7 +75,7 @@ export const PRO_GATE = {
   },
   'app-bundle': {
     gate: 'app-ready-bundle-export',
-    eyebrow: 'UIL4B Pro',
+    eyebrow: 'UI L4B Pro',
     title: 'Export the app-ready bundle',
     subtitle: 'One zip of your system, ready for the apps you design and build in, with a folder for each app and a README that says where to start. The style guide and the code tokens stay free.',
     features: [

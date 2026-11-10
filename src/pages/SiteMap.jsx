@@ -37,7 +37,7 @@ const FLAT_SECTIONS = [
     label: 'Your account',
     desc: 'Where your work and account live.',
     links: [
-      { label: 'Home', route: '/', note: 'The front page: what UIL4B does, and your own home once you sign in.' },
+      { label: 'Home', route: '/', note: 'The front page: what UI L4B does, and your own home once you sign in.' },
       { label: 'Projects', route: '/projects', note: 'Saved palettes, fonts and exports.' },
       { label: 'Settings', route: '/settings', note: 'Theme, appearance, account and data.' },
       { label: 'Plans & pricing', route: '/plans', note: 'Compare Free and Pro.' },
@@ -168,10 +168,10 @@ export default function SiteMap() {
               <p className="spm-lede">
                 {isAdmin ? (
                   <>
-                    Every page in UIL4B, laid out end to end. Categories still in the workshop
+                    Every page in UI L4B, laid out end to end. Categories still in the workshop
                     keep a <SoonPill inline /> badge, so the map only ever promises what&rsquo;s actually live.
                   </>
-                ) : 'Every page in UIL4B, laid out end to end.'}{' '}
+                ) : 'Every page in UI L4B, laid out end to end.'}{' '}
                 Jump to <a href="#create">Create</a>, <a href="#browse">Discover &amp; Learn</a> or <a href="#account">Account &amp; more</a>.
               </p>
             </div>

@@ -821,7 +821,7 @@ const OWNER_RECORD = {
   name: 'Dylan Coleman',
   crown: '\u{1F451}',
   publicHandle: 'Dylan Coleman \u{1F451}',
-  title: 'UIL4B founder',
+  title: 'UI L4B founder',
   publicId: 'uil4b-founder',
 }
 

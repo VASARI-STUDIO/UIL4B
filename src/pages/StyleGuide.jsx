@@ -134,7 +134,7 @@ export default function StyleGuide({ toast }) {
       <div className="sec-h">
         <div className="sec-h-eyebrow" style={{ color: 'var(--warn)' }}>Admin Only</div>
         <h1>Design System</h1>
-        <p>UIL4B's internal style reference. Styles, components, and patterns.</p>
+        <p>UI L4B's internal style reference. Styles, components, and patterns.</p>
       </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, flexWrap: 'wrap' }}>

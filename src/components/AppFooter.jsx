@@ -126,7 +126,7 @@ export default function AppFooter({ compact = false }) {
           ))}
         </nav>
         <div className="app-footer-legal">
-          <span className="app-footer-copy">© {year} UIL4B</span>
+          <span className="app-footer-copy">© {year} UI L4B</span>
           {/* The opt-in note about this project — see FounderNote.jsx for why it
               is a link here and not a popup that opens itself.
 

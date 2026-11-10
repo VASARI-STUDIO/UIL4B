@@ -1507,7 +1507,7 @@ export default function Settings({ toast }) {
           <section id="set-support" className="settings-section" role="tabpanel" aria-labelledby="settab-support" hidden={active !== 'support'}>
             <div className="settings-section-h">
               <h2 tabIndex={-1}>Plan and billing</h2>
-              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You’re on UIL4B Pro. Thanks for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
+              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You’re on UI L4B Pro. Thanks for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
             </div>
 
             {planPending ? (
@@ -1529,7 +1529,7 @@ export default function Settings({ toast }) {
                   <div className="settings-row settings-row--fact">
                     <div className="settings-row-label">Plan</div>
                     <div className="settings-fact-body">
-                      <div className="settings-row-value sub-active-title">UIL4B Pro</div>
+                      <div className="settings-row-value sub-active-title">UI L4B Pro</div>
                       {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
                     </div>
                   </div>
@@ -1663,7 +1663,7 @@ export default function Settings({ toast }) {
           <section id="set-language" className="settings-section" role="tabpanel" aria-labelledby="settab-language" hidden={active !== 'language'}>
             <div className="settings-section-h">
               <h2 tabIndex={-1}>Language</h2>
-              <p>UIL4B is in English for now. Choosing a language here changes only a few labels; menus, tools and pages stay in English.</p>
+              <p>UI L4B is in English for now. Choosing a language here changes only a few labels; menus, tools and pages stay in English.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body settings-card-body--grid">
@@ -1771,7 +1771,7 @@ export default function Settings({ toast }) {
                 <div className="settings-card-h">
                   <div>
                     <h3 id="acct-h-signin">Sign-in and security</h3>
-                    <p>How you sign in to UIL4B.</p>
+                    <p>How you sign in to UI L4B.</p>
                   </div>
                 </div>
                 <div className="settings-card-body">
@@ -1798,7 +1798,7 @@ export default function Settings({ toast }) {
                   <div className="settings-row">
                     <div className="settings-row-main">
                       <div className="settings-row-label">Sign out</div>
-                      <div className="settings-row-meta">Signs out of UIL4B in this browser.</div>
+                      <div className="settings-row-meta">Signs out of UI L4B in this browser.</div>
                     </div>
                     <button type="button" className="btn btn-s" onClick={() => signOut()} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
                   </div>
@@ -1860,7 +1860,7 @@ export default function Settings({ toast }) {
               <p>
                 {user
                   ? 'Some of it lives in this browser, and some on our server so it follows you between devices. Either way it is yours.'
-                  : 'Signed out, everything UIL4B keeps is in this browser, and only here.'}
+                  : 'Signed out, everything UI L4B keeps is in this browser, and only here.'}
               </p>
             </div>
             <div className="settings-card">
@@ -1959,7 +1959,7 @@ export default function Settings({ toast }) {
       </div>
 
       <div className="stg-credit">
-        UIL4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a>
+        UI L4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a>
       </div>
     </div>
   )

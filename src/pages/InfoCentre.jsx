@@ -105,7 +105,7 @@ const SECTIONS = [
             the most personal input is the one sentence on this page that
             must not be approximately true. The rest of the paragraph is
             what the product is. */}
-        <p>UIL4B is a free, browser-based design toolkit.</p>
+        <p>UI L4B is a free, browser-based design toolkit.</p>
         <ul>
           {/* "only" is deleted from the second sentence. Since e2309608
               taking a FILE away — the export panel, the icon SVG, the
@@ -309,7 +309,7 @@ const SECTIONS = [
     title: 'Privacy and your data',
     body: (
       <>
-        <p>UIL4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
+        <p>UI L4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
       </>
     ),
   },
@@ -470,7 +470,7 @@ export default function InfoCentre() {
             has been deleted from the Font Gallery, Font Pair, the Type Scale,
             the Tint tool and /privacy. Hierarchy is a control, not
             a label. */}
-        <h1 className="ic-head-title">Everything you need to know about UIL4B</h1>
+        <h1 className="ic-head-title">Everything you need to know about UI L4B</h1>
         <p className="ic-head-sub">What each tool does, the keyboard shortcuts, and how your screen measures up, all on one page.</p>
       </header>
 

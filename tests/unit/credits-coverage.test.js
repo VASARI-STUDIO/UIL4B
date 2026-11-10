@@ -290,7 +290,7 @@ test('jszip’s dual licence is ELECTED on the page, not merely restated', () =>
   assert.ok(row, 'jszip is no longer a dependency — if it really went, delete this test with it')
   assert.match(row.licence, /MIT OR GPL/, `jszip now declares "${row.licence}"`)
   assert.match(CREDITS_PAGE, /jszip: '[^']*\bMIT\b[^']*'/,
-    'Credits.jsx no longer states which half of jszip’s dual licence UIL4B elects')
+    'Credits.jsx no longer states which half of jszip’s dual licence UI L4B elects')
   assert.match(CREDITS_PAGE, /jszip: '[^']*elects[^']*'/,
     'the jszip note no longer says the election is a choice we made')
 })

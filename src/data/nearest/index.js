@@ -12,7 +12,7 @@ export const NEAREST_SYSTEMS = [
   { id: "material", label: "Material", group: "screen", count: 254, version: "Material Design 2014 palette",
     credit: "Material Design 2014 colour palette by Google." },
   { id: "munsell", label: "Munsell", group: "physical", count: 1555, version: "1943 renotation, real colours",
-    credit: "Munsell notation from the 1943 renotation data. Munsell® is a trademark of X-Rite, Incorporated. This isn't the Munsell Book of Color, and UIL4B isn't affiliated with X-Rite." },
+    credit: "Munsell notation from the 1943 renotation data. Munsell® is a trademark of X-Rite, Incorporated. This isn't the Munsell Book of Color, and UI L4B isn't affiliated with X-Rite." },
   { id: "iscc-nbs", label: "ISCC-NBS", group: "physical", count: 267, version: "ISCC-NBS 267 colour-name blocks",
     credit: "ISCC-NBS colour names from NBS Special Publication 440 (1976); block centroids from the NBS central notations (J. Res. NBS 61(5), 1958)." },
 ]

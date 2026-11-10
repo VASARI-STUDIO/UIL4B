@@ -96,7 +96,7 @@ for (const width of [390, 768, 1440]) {
     // line lives inside the card, with the way out.
     await expect(page.locator('summary', { hasText: 'How to write good alt text' })).toBeVisible()
     await expect(page.locator('.alt-brief')).toHaveCount(0)
-    await expect(card.getByText('Every other UIL4B tool works as normal where you are.')).toBeVisible()
+    await expect(card.getByText('Every other UI L4B tool works as normal where you are.')).toBeVisible()
     await expect(card.getByRole('link', { name: 'Browse other tools' })).toHaveAttribute('href', '/create')
 
     // The card sits inside the screen.

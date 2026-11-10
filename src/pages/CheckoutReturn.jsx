@@ -88,7 +88,7 @@ export default function CheckoutReturn() {
             <div className="checkout-success-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             </div>
-            <h1>{activationPending ? 'Payment received' : 'You’re on UIL4B Pro'}</h1>
+            <h1>{activationPending ? 'Payment received' : 'You’re on UI L4B Pro'}</h1>
             <p>
               {checkoutMode !== 'payment'
                 ? activationPending

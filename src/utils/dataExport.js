@@ -213,7 +213,7 @@ export function buildExport({ local: rawLocal = {}, session: rawSession = {}, fi
     exportedAt: now.toISOString(),
     format: 'uil4b-data-export/2',
     about: {
-      description: 'Everything UIL4B holds about you, from this browser and from our server.',
+      description: 'Everything UI L4B holds about you, from this browser and from our server.',
       browserKeys: keys.length,
       includesServerData: !!firestore || !!account,
       withheldKeys,

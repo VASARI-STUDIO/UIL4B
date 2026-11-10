@@ -946,7 +946,7 @@ test.describe('the walkthrough and the way back from checkout', () => {
       const session = await signIn(page, { plan: 'free', projects: [savedProject()] })
       await page.addInitScript((value) => { sessionStorage.setItem('uil4b.kitGalleryPick', JSON.stringify({ ...value, at: Date.now() })) }, pickFor(session.uid))
       await go(page, '/checkout/return?session_id=cs_test_paid')
-      await expect(page.locator('main h1')).toContainText('You’re on UIL4B Pro')
+      await expect(page.locator('main h1')).toContainText('You’re on UI L4B Pro')
       return { context, page }
     }
     const back = (page) => page.getByRole('link', { name: 'Back to your export' })

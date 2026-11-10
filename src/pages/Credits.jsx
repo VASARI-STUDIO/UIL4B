@@ -166,7 +166,7 @@ const ASSET_CREDITS = [
    leaves a reader unable to tell which notice we are bound to keep. Keyed by
    package name so the row it annotates is still generated. */
 const DEPENDENCY_NOTES = {
-  jszip: 'Dual-licensed. UIL4B elects the MIT half, and keeps the MIT notice with every copy.',
+  jszip: 'Dual-licensed. UI L4B elects the MIT half, and keeps the MIT notice with every copy.',
   gsap: 'Not an open-source licence. Used under GSAP’s own standard “no charge” terms.',
   '@ffmpeg/core': 'This MIT package only wraps the FFmpeg binary, which is GPL-2.0-or-later. See FFmpeg under Data & services.',
 }
@@ -272,7 +272,7 @@ export default function Credits() {
       <div className="sec-h">
         <h1>Credits &amp; licences.</h1>
         <p>
-          UIL4B is built on other people’s work. Everything below is here because
+          UI L4B is built on other people’s work. Everything below is here because
           its licence asks for it, or because leaving it out would be mean. Every
           row is read from the same tables the product runs on, so a set, a
           typeface or a package cannot ship here uncredited. Every link out of

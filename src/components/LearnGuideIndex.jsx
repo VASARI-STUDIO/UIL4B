@@ -166,7 +166,7 @@ export default function LearnGuideIndex() {
                 <span className="lidx-topic-n">{g.total}</span>
               </a>
             ))}
-            <a className="lidx-topic-using" href={`#${USING_ID}`}>Using UIL4B</a>
+            <a className="lidx-topic-using" href={`#${USING_ID}`}>Using UI L4B</a>
           </nav>
         )}
       </div>
@@ -220,7 +220,7 @@ export default function LearnGuideIndex() {
           ))}
           {!searching && USING_ROWS.length > 0 && (
             <section className="lidx-topic-sec" id={USING_ID} aria-labelledby={`${USING_ID}-h`}>
-              <h3 className="lidx-topic-h" id={`${USING_ID}-h`}>Using UIL4B</h3>
+              <h3 className="lidx-topic-h" id={`${USING_ID}-h`}>Using UI L4B</h3>
               <div className="lidx-grid">
                 {USING_ROWS.map((r) => (
                   <Link className="lidx-card" key={r.id} to={r.route} {...reveal}>

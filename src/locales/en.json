@@ -30,10 +30,10 @@
     "colours": "Colours"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -448,7 +448,7 @@
     }
   },
   "auth": {
-    "logInTitle": "Log in to UIL4B",
+    "logInTitle": "Log in to UI L4B",
     "logInContinue": "Log in to continue",
     "logInSub": "Your projects, palettes and kits are where you left them.",
     "createAccount": "Create your free account",
@@ -496,7 +496,7 @@
     "wordmarkLabel": "UI L4B home",
     "wall": {
       "title": "Made with UI L4B's own tools",
-      "note": "Each piece was exported from the UIL4B tool named under it.",
+      "note": "Each piece was exported from the UI L4B tool named under it.",
       "pause": "Pause",
       "play": "Play",
       "pauseLabel": "Pause the moving wall",
@@ -530,7 +530,7 @@
   },
   "feedback": {
     "title": "Feedback",
-    "subtitle": "Help us make UIL4B even better. Chuck us your bugs, feature ideas, or a good yarn.",
+    "subtitle": "Help us make UI L4B even better. Chuck us your bugs, feature ideas, or a good yarn.",
     "featureRequest": "Feature request",
     "bugReport": "Bug report",
     "general": "General",
@@ -560,7 +560,7 @@
   },
   "community": {
     "title": "Community",
-    "subtitle": "Connect with other designers and developers using UIL4B.",
+    "subtitle": "Connect with other designers and developers using UI L4B.",
     "comingSoonDesc": "Share palettes, get feedback on your designs, and discover templates created by the community.",
     "github": "GitHub Repository",
     "githubDesc": "Browse source code, star the project, and contribute.",

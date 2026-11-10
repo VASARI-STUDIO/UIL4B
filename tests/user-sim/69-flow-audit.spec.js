@@ -386,7 +386,7 @@ test.describe('flow 2 — the checkout return page', () => {
       await go(page, '/checkout/return?session_id=cs_test_flow_audit')
 
       const card = page.locator('.checkout-return-card')
-      await expect(card.getByRole('heading')).toContainText(/on UIL4B Pro/i)
+      await expect(card.getByRole('heading')).toContainText(/on UI L4B Pro/i)
       // No "a confirmation has been sent to …": whether Stripe emails a
       // receipt is a dashboard setting nobody here can see, so the page no
       // longer claims one was sent (or names the address it went to).

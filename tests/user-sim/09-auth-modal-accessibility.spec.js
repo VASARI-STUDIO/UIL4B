@@ -7,7 +7,7 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
   watch(page, PERSONA)
   await openChosenDialog(page, 'Log in')
 
-  const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
+  const dialog = page.getByRole('dialog', { name: /log in to ui l4b/i })
   await expect(dialog).toBeVisible()
   const google = dialog.getByRole('button', { name: /continue with google/i })
   await expect(google).toBeFocused()
@@ -100,7 +100,7 @@ test('closing the dialog restores focus even when its opener was in a menu that 
   const menuLogin = page.locator('.pnav-pop-item').filter({ hasText: /^Log in$/ })
   await menuLogin.click()
 
-  const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
+  const dialog = page.getByRole('dialog', { name: /log in to ui l4b/i })
   await expect(dialog).toBeVisible()
   await expect(menuLogin, 'the opener really is gone — otherwise this proves nothing').toHaveCount(0)
 
@@ -182,7 +182,7 @@ test.describe('on a phone', () => {
     watch(page, PERSONA)
     await openChosenDialog(page, 'Log in')
 
-    const dialog = page.getByRole('dialog', { name: /log in to uil4b/i })
+    const dialog = page.getByRole('dialog', { name: /log in to ui l4b/i })
     await expect(dialog).toBeVisible()
 
     const caps = await page.evaluate(() => ({
@@ -233,7 +233,7 @@ test.describe('the sign-in form titles itself for the context it appears in', ()
 
     expect(seen.titleTag, 'the form title on /login is not an h1').toBe('H1')
     expect(seen.titleInMain, 'the h1 is not inside main').toBe(true)
-    expect(seen.h1s, 'exactly one h1, and it is the form title').toEqual(['Log in to UIL4B'])
+    expect(seen.h1s, 'exactly one h1, and it is the form title').toEqual(['Log in to UI L4B'])
     expect(seen.dialogs, 'the page is not a dialog').toBe(0)
   })
 

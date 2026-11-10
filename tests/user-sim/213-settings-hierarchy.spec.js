@@ -169,7 +169,7 @@ test.describe('settings hierarchy: Plan and billing', () => {
       await openSection(page, 'support')
 
       expect(await factPairs(page)).toEqual([
-        ['Plan', 'UIL4B Pro'],
+        ['Plan', 'UI L4B Pro'],
         ['Status', 'Active'],
         ['Billing cycle', cycle],
         ['Next payment', '4 March 2027'],
@@ -186,7 +186,7 @@ test.describe('settings hierarchy: Plan and billing', () => {
     const section = page.locator('#set-support')
 
     expect(await factPairs(page)).toEqual([
-      ['Plan', 'UIL4B Pro'],
+      ['Plan', 'UI L4B Pro'],
       ['Status', 'Ends on 4 March 2027'],
       ['Billing cycle', 'Monthly'],
     ])
@@ -213,7 +213,7 @@ test.describe('settings hierarchy: Plan and billing', () => {
     await signIn(page, { plan: 'pro', admin: true, subscription: null })
     await go(page, '/settings')
     await openSection(page, 'support')
-    expect(await factPairs(page)).toEqual([['Plan', 'UIL4B Pro']])
+    expect(await factPairs(page)).toEqual([['Plan', 'UI L4B Pro']])
     await expect(page.locator('#set-support')).toContainText('Admin account — Pro included, no billing')
     await expect(page.locator('#set-support').getByText('Billing cycle')).toHaveCount(0)
   })

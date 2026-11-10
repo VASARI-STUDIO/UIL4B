@@ -820,7 +820,7 @@ function StripeSetupPanel({ toast }) {
           <div className="adm-card" style={{ marginBottom: 16 }}>
             <div className="adm-card-body">
               <p className="adm-stripe-desc">
-                Set the {intervals.map(intervalLabel).join(', ').toLowerCase()} price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
+                Set the {intervals.map(intervalLabel).join(', ').toLowerCase()} price for the <strong>UI L4B Pro</strong> plan per currency. Each customer is
                 shown their local currency at checkout automatically (detected from their browser locale).
               </p>
               {/* No ".99" tip: the ladder is whole dollars ($7 / $18 / $48),

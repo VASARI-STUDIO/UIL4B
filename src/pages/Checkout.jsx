@@ -40,7 +40,7 @@ function trialLine(planId) {
 const PLANS = {
   monthly: {
     interval: 'monthly',
-    name: 'UIL4B Pro',
+    name: 'UI L4B Pro',
     cadence: 'Monthly',
     per: 'per month',
     months: 1,
@@ -48,7 +48,7 @@ const PLANS = {
   },
   yearly: {
     interval: 'yearly',
-    name: 'UIL4B Pro',
+    name: 'UI L4B Pro',
     cadence: 'Yearly',
     per: 'per year',
     months: 12,
