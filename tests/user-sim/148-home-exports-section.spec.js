@@ -317,21 +317,23 @@ test('at 1440 the cards dock at 84, 116 and 148, and a covered card scales to .9
   }
 })
 
-test('the cover follows the scroll: a card is partly scaled when the next one is half way over it', async ({ browser }) => {
+test('the cover follows the scroll: a quarter, half and three quarters of the way over, the card is that far scaled and dimmed', async ({ browser }) => {
   const { ctx, page } = await open(browser)
   try {
-    // Card 2's top, half way between card 1's bottom edge and its own dock line.
-    await page.evaluate(() => {
-      const [a, b] = [...document.querySelectorAll('#exports .hx-card')]
-      const mid = (a.getBoundingClientRect().bottom + 116) / 2
-      window.scrollTo(0, window.scrollY + b.getBoundingClientRect().top - mid)
-    })
-    // Red if the exit range is changed to a step, or the scale stops following the position.
-    await expect.poll(async () => (await page.evaluate(LOOKS))[0].scale, { timeout: 5000 }).toBeGreaterThan(0.965)
-    const first = (await page.evaluate(LOOKS))[0]
-    expect(first.scale).toBeLessThan(0.995)
-    expect(first.dim).toBeGreaterThan(0.05)
-    expect(first.dim).toBeLessThan(0.4)
+    for (const f of [0.25, 0.5, 0.75]) {
+      // Card 2's top, this fraction of the way from card 1's bottom edge to its own dock line (116).
+      await page.evaluate((frac) => {
+        const [a, b] = [...document.querySelectorAll('#exports .hx-card')]
+        const bottom = a.getBoundingClientRect().bottom
+        window.scrollTo(0, window.scrollY + b.getBoundingClientRect().top - (bottom + (116 - bottom) * frac))
+      }, f)
+      // Red if the exit range is changed to a step, a different length, or the scale stops following the position.
+      // Linear: scale 1 - .04 f, dim .45 f. The tolerance covers the card's own shrinking bottom edge.
+      await expect.poll(async () => {
+        const first = (await page.evaluate(LOOKS))[0]
+        return Math.abs(first.scale - (1 - 0.04 * f)) < 0.004 && Math.abs(first.dim - 0.45 * f) < 0.04
+      }, { timeout: 5000, message: `card 1 at ${f} of the way over` }).toBe(true)
+    }
   } finally {
     await ctx.close()
   }
@@ -368,7 +370,12 @@ for (const [width, height] of [[768, 1024], [390, 844], [320, 640]]) {
   test(`at ${width} a covered card scales and dims too`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width, height, touch: width < 500 })
     try {
-      await dockAll(page, 60)
+      // Carry the last card to its own dock line: on a short phone the cards are taller than the screen, so
+      // its travel over the one before is long and a fixed push past the section's start does not finish it.
+      await page.evaluate(() => {
+        const last = document.querySelector('#exports .hx-card[data-card="2"]')
+        window.scrollTo(0, window.scrollY + last.getBoundingClientRect().top - parseFloat(getComputedStyle(last).top) + 40)
+      })
       // Red if the narrow layout loses the trackers' sizes (cards dock together here, so the whole height is the travel).
       await expect.poll(async () => (await page.evaluate(LOOKS)).map((l) => l.scale), { timeout: 5000 }).toEqual([0.96, 0.96, 1])
     } finally {

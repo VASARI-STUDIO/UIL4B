@@ -149,12 +149,17 @@ test.describe('home Try the tools pinned column', () => {
       await openTool(page, i)
       // Red if the description opens by a height or grid-rows change again (offsetTop would move).
       await expect.poll(async () => (await column(page)).rows.map((r) => r.shift > 1), { timeout: 4000 }).toEqual([0, 1, 2, 3].map((k) => k > i))
+      // The glide takes a moment, so wait until every name after the open one has arrived at the description's height.
+      await expect.poll(async () => {
+        const c = await column(page)
+        return c.rows.filter((x) => x.shift > 0.5).map((x) => Math.round(x.shift) === Math.round(c.open))
+      }, { timeout: 4000 }).toEqual([0, 1, 2, 3].filter((k) => k > i).map(() => true))
       const now = await column(page)
       expect(now.rows.map((r) => r.top)).toEqual(first.rows.map((r) => r.top))
       expect(now.open).toBeGreaterThan(60)
       for (const r of now.rows.filter((x) => x.shift > 1)) expect(Math.round(r.shift)).toBe(Math.round(now.open))
-      // The description of the open tool shows and the others do not.
-      expect(now.info.map((o) => o === 1)).toEqual([0, 1, 2, 3].map((k) => k === i))
+      // The description of the open tool shows and the others do not (they crossfade, so wait for the fade to finish).
+      await expect.poll(async () => (await column(page)).info.map((o) => o === 1), { timeout: 4000 }).toEqual([0, 1, 2, 3].map((k) => k === i))
     }
   })
 
@@ -169,8 +174,8 @@ test.describe('home Try the tools pinned column', () => {
     const end = await column(page)
     expect(end.prog.d).toBeGreaterThan(0.9)
     await openTool(page, 2)
-    await expect.poll(async () => (await column(page)).p, { timeout: 4000 }).toBeGreaterThan(0.55)
-    expect((await column(page)).p).toBeLessThan(0.8)
+    // Wait for the scroll to land on tool 3 (two thirds of the way): the old value, near 1, must not satisfy this.
+    await expect.poll(async () => { const { p } = await column(page); return p > 0.55 && p < 0.8 }, { timeout: 6000 }).toBe(true)
   })
 })
 

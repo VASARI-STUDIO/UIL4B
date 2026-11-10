@@ -81,7 +81,8 @@ test('the elevation scale is defined once and the cards use it', () => {
 
 test('exports: the cover adds no scroll listener', () => {
   assert.ok(!/addEventListener\(\s*['"]scroll['"]/.test(EXPORTS_JSX), 'HomeExports.jsx listens to scroll')
-  assert.ok(!/IntersectionObserver[\s\S]*scale/.test(EXPORTS_JSX))
+  // Nor does it write a transform or opacity from script: the scale and dim are the stylesheet's alone.
+  assert.ok(!/style\.(transform|opacity)\s*=|setProperty\(\s*['"](transform|opacity)['"]/.test(EXPORTS_JSX), 'HomeExports.jsx sets transform or opacity from script')
 })
 
 test('try: the pinned column moves by transform, and its progress line follows the scroll', () => {
