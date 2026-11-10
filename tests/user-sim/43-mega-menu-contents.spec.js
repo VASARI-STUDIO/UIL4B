@@ -205,7 +205,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     // section number, the heading, and the footer a FREE export carries.
     await expect(page.locator('.pnav-prev-eyebrow')).toHaveText('01 — Colour')
     await expect(page.locator('.pnav-prev-title')).toHaveText('The palette')
-    await expect(page.locator('.pnav-prev-foot')).toContainText('Made with UIL4B')
+    await expect(page.locator('.pnav-prev-foot')).toContainText('Made with UI L4B')
 
     // THE PART THAT CANNOT DRIFT. The preview computes its ink and its ratio
     // with the exporter's own inkFor() and grade(), so this asserts the printed

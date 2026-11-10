@@ -117,7 +117,7 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
   // A line that carries a figure no check above reads is a new fact this test
   // has not been taught; fail it rather than let it go unchecked.
   for (const line of lines) {
-    const figures = line.replace(/UIL4B/g, '').match(/\d+/g) || []
+    const figures = line.replace(/UI ?L4B/g, '').match(/\d+/g) || []
     expect(figures.length === 0 || claimed.has(line), `Settings line "${line}" has figures this test does not compare with /plans`).toBe(true)
   }
   // The Pro-only exports are named on both pages.

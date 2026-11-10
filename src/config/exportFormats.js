@@ -114,7 +114,7 @@ export const comingLine = () => {
 // Built, and available without paying.
 export const freeFormats = () => EXPORT_FORMATS.filter((f) => f.live && !f.pro)
 
-// Free formats that carry the small "Made with UIL4B" line. The contrast pairs
+// Free formats that carry the small "Made with UI L4B" line. The contrast pairs
 // files have no place for one (`credit: false`).
 export const creditedFormats = () => freeFormats().filter((f) => f.credit !== false)
 
