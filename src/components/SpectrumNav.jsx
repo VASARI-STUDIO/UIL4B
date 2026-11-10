@@ -1,53 +1,49 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { PH_ARROW_UP_RIGHT, PH_X } from './spectrum/phosphorNav'
-import { crossRouteHashClick, normPath, salesHref } from './spectrum/salesLinks'
+import { PH_X } from './spectrum/phosphorNav'
+import { crossRouteHashClick, normPath, onSalesPage } from './spectrum/salesLinks'
+import { jumpToSection } from './spectrum/usePageAnchors'
 import { useCloseOnBack } from './spectrum/useCloseOnBack'
-import { getLenis } from '../hooks/useSmoothScroll'
 import { SEARCH_KEY } from '../config/shortcuts'
 import { useAppearance } from '../contexts/AppearanceContext'
-import ThemeCycle from './nav/ThemeCycle'
 import '../styles/pages/spectrum-chrome.css'
 // `lazy` in this file is lazyRoute, not React's: if the file for an overlay
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
 import { lockScroll } from '../utils/scrollLock'
 import { markScrollContainers } from '../utils/scrollContainment.js'
-import { BrandLockup, BrandSymbol } from './BrandLogo'
+import { BrandLockup } from './BrandLogo'
+import { useShortcutHint } from '../hooks/useShortcutHint'
 
 const CommandPalette = lazy(() => import('./CommandPalette'))
 
-// THE MARKETING NAV — `UIL4B - Spectrum.dc.html` lines 217-258, reproduced.
+// The marketing nav: a flat, full-width bar. On a wide screen it holds the
+// logo, three links and a search pill. At 767px and under the links move into
+// a full-screen menu, opened from a button that sits beside a search button.
 //
-// The design file is the spec, so this is its bar and its menu, not an
-// adaptation of them:
+// It is not a mega menu. Every tool is still reachable from the page's own
+// sections, the hero's tool search and the footer. Entering the app is the
+// hero's call to action, so the bar carries none.
 //
-//   · the pill — wordmark + TOOLKIT, a rule, the three quiet links, the theme
-//     cycle, the burger and the "Open the toolkit" CTA (218-245);
-//   · the quiet links are Tools / Pricing / On mobile (226-228), and the one
-//     for the screen you are on is painted in ink (`navLanding` /
-//     `navPricing` / `navMobile`, 2368-2371) and announced with aria-current;
-//   · the full-screen menu is the four big items and the "EVERY CORE TOOL IS
-//     FREE, FOREVER" note (248-257), with the design's stagger in and fade out.
-//
-// IT IS NOT A MEGA MENU: the menu is four items. Every tool is still reachable
-// from this page: the bench, the hero's tool search, the footer's Tools column
-// and its Sitemap link; the theme is the pill's cycle; signing in happens in
-// the app, which "Open the toolkit" enters directly, with no sign-up gate.
-// The "/" search shortcut still opens the command palette — it draws nothing.
-//
-// DESTINATIONS. Tools is the `/tools` page. Pricing is the
-// separate Pricing screen, which is the route `/plans`. On mobile is the
-// "mobile" screen, `/mobile`. Off the sales page, Tools goes to `/home#bench`
-// and lands there (salesLinks.js).
+// Tools is the page's `#try` section on the sales page and the `/tools` page
+// anywhere else. Plans is `/plans`, On mobile is `/mobile`.
 const QUIET = [
-  { id: 'tools', label: 'Tools', to: '/tools' },
-  { id: 'pricing', label: 'Pricing', to: '/plans' },
+  { id: 'tools', label: 'Tools', to: '/tools', hash: '#try' },
+  { id: 'pricing', label: 'Plans', to: '/plans' },
   { id: 'mobile', label: 'On mobile', to: '/mobile' },
 ]
 
-// Which quiet link names the screen you are on. The sales page's own screen
-// is Tools — the design's `goLanding`.
+// The sales page's sections in page order: the phone menu's second list.
+const PAGE_ANCHORS = [
+  { id: 'bookmarks', label: 'Bookmarks' },
+  { id: 'try', label: 'Try the tools' },
+  { id: 'exports', label: 'Exports' },
+  { id: 'examples', label: 'Examples' },
+  { id: 'plans', label: 'Plans' },
+]
+
+// Which quiet link names the screen you are on. The sales page has none: its
+// Tools link jumps within the page and does not name a screen.
 function activeQuiet(pathname) {
   const p = normPath(pathname)
   if (p === '/tools') return 'tools'
@@ -56,14 +52,14 @@ function activeQuiet(pathname) {
   return null
 }
 
-// The design's menu opens over .28s and closes over .24s with the items
-// leaving over .2s, then unmounts after 260ms (`menuTimer`, line 2031). The
-// same beat here, so the close animation has a layer to play on.
+// The menu fades in over .28s and out over .24s, the items leaving over .2s,
+// then unmounts after 260ms so the close animation has a layer to play on.
 const MENU_EXIT_MS = 260
 
-// Phosphor `x` and `arrow-up-right`, drawn from Phosphor's own outlines
-// (phosphorNav.js) at the design's font-sizes, 14px and 12px. The design loads
-// Phosphor from a CDN; this product adds no origin to the first paint.
+// Where the phone layout ends. Past it the menu is not drawn, so an open menu
+// is closed when the window grows beyond it.
+const WIDE = '(min-width: 768px)'
+
 function CloseGlyph() {
   return (
     <svg viewBox="0 0 256 256" width="14" height="14" fill="currentColor" aria-hidden="true">
@@ -72,63 +68,81 @@ function CloseGlyph() {
   )
 }
 
-function ArrowUpRightGlyph() {
+function SearchGlyph({ size }) {
   return (
-    <svg viewBox="0 0 256 256" width="12" height="12" fill="currentColor" aria-hidden="true">
-      <path d={PH_ARROW_UP_RIGHT} />
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
     </svg>
   )
 }
 
-// One quiet destination, as the element it has to be: a bare hash on the
-// sales page is a plain anchor (Lenis scrolls it); anything that changes route
-// is a router <Link>, so it never reloads the app. `current` is the design's
-// "this is the screen you are on" — announced, and painted by .is-active.
+// One destination, as the element it has to be: a bare hash on the sales page
+// is a plain anchor (the page's anchor handler scrolls it and focuses the
+// section heading); anything that changes route is a router <Link>, so it
+// never reloads the app. `current` is "this is the screen you are on":
+// announced, and painted by .is-active.
 //
 // IN THE MENU (`mi`) a link must not leave a dead history step behind: the
 // menu owns one entry while open (useCloseOnBack), so a route link REPLACES
 // it, and a same-page section link swaps it for the section's URL and scrolls
 // there itself (`onHash`) instead of pushing over it.
-function QuietLink({ href, label, className, current, mi, onClick, onHash }) {
+function QuietLink({ href, label, className, current, mi, index, onClick, onHash }) {
   const props = {
     className: current ? `${className} is-active` : className,
     onClick: crossRouteHashClick(href, onClick),
     'aria-current': current ? 'page' : undefined,
     'data-mi': mi ? '' : undefined,
+    style: mi ? { '--i': index } : undefined,
   }
   return href.startsWith('#')
     ? <a href={href} {...props} onClick={onHash ? (e) => onHash(e, href) : props.onClick}>{label}</a>
     : <Link to={href} replace={mi} {...props}>{label}</Link>
 }
 
-// The bar hides going down and comes back coming up — the design's `syncNav`
-// (lines 2094-2116), with its own numbers: nothing hides in the first 120px, a
-// downward move of more than 2px hides it, and an upward move waits 140ms
-// before bringing it back so a stray wheel nudge does not flash the bar. The
-// menu being open pins it visible, and so does keyboard focus inside the bar: a
-// bar that hides while a control in it holds focus leaves the focus indicator
-// off screen (WCAG 2.4.7 / 2.4.11).
+// The bar hides going down and comes back coming up: nothing hides in the
+// first 120px, a downward move of more than 2px hides it, and an upward move
+// waits 140ms before bringing it back so a stray wheel nudge does not flash
+// the bar. The menu being open pins it visible, and so does keyboard focus
+// inside the bar: a bar that hides while a control in it holds focus leaves
+// the focus indicator off screen (WCAG 2.4.7 / 2.4.11).
 //
-// IT RETURNS A FLAG, NOT A STYLE. The design wrote `transform` and `opacity`
-// straight onto the element and branched on reduced motion in JS. Here the flag
-// goes on `data-nav-hidden` and the CSS decides what that means, so the
-// reduced-motion companion is a media query beside the animation it cancels.
+// IT KEEPS A FLAG, NOT A STYLE. The flag goes on `data-nav-hidden` and the CSS
+// decides what that means, so the reduced-motion companion is a media query
+// beside the animation it cancels.
 const HIDE_AFTER = 120
 const RETURN_DELAY = 140
+
+// A pinned stage (the tools column, the exports stack) marks its root with
+// `data-pins`. While the top of the viewport is inside one, the bar is hidden
+// whichever way the page scrolls: a bar that is showing when the box is entered
+// from below goes away, and scrolling up does not bring it back. Keyboard focus
+// into the bar, a skip-link jump and leaving the box still do.
+function viewportTopInPinnedBox() {
+  return [...document.querySelectorAll('[data-pins]')].some((el) => {
+    const r = el.getBoundingClientRect()
+    return r.top <= 0 && r.bottom > 0
+  })
+}
 
 export default function SpectrumNav() {
   const { reducedMotion } = useAppearance()
   const location = useLocation()
   const active = activeQuiet(location.pathname)
-  const quietHref = (q) => q.to || salesHref(q.hash, location.pathname)
+  const onSales = onSalesPage(location.pathname)
+  const quietHref = (q) => (onSales && q.hash ? q.hash : q.to)
+  const shortcut = useShortcutHint()
 
   const [hidden, setHidden] = useState(false)
-  // True while the page's own "Open the toolkit" row is on screen, so the pill
-  // does not offer the same action a second time (spectrum-chrome.css hides it).
-  const [heroCta, setHeroCta] = useState(false)
-  // 'closed' → 'in' while open → 'out' for the design's exit, then 'closed'.
-  // The menu stays MOUNTED through 'out' so the close animation has something
-  // to play on.
+  // True while a pinned stage holds the bar away. Its own flag, because the
+  // reduced-motion rules switch the scroll-hide off but must still clear the
+  // bar from a pinned stage's sticky content.
+  const [pinHidden, setPinHidden] = useState(false)
+  // True once the page has scrolled, so the bar draws its lower edge only when
+  // content passes under it.
+  const [scrolled, setScrolled] = useState(false)
+  // 'closed' → 'in' while open → 'out' for the exit, then 'closed'. The menu
+  // stays MOUNTED through 'out' so the close animation has something to play on.
   const [menu, setMenu] = useState('closed')
   const open = menu === 'in'
   const setOpen = useCallback((next) => {
@@ -146,8 +160,8 @@ export default function SpectrumNav() {
   useEffect(() => { openRef.current = open }, [open])
 
   // Keyboard focus arriving in the bar while it is hidden brings it back at
-  // once. :focus-visible, not any focus, so a mouse click on the theme button
-  // does not pin the bar open. The stylesheet's :has(:focus-visible) shows it on
+  // once. :focus-visible, not any focus, so a mouse click on a control does
+  // not pin the bar open. The stylesheet's :has(:focus-visible) shows it on
   // the same frame; this keeps the hidden flag in step.
   const onNavFocus = (e) => {
     if (!e.target.matches(':focus-visible')) return
@@ -163,27 +177,30 @@ export default function SpectrumNav() {
     return () => clearTimeout(t)
   }, [menu, reducedMotion])
 
-  // Hide-on-scroll. Listener only — no state is set synchronously in the effect
+  // Hide-on-scroll. Listener only: no state is set synchronously in the effect
   // body, which is the rule the rest of this codebase's nav follows.
   useEffect(() => {
     const onScroll = () => {
       const y = Math.max(0, window.scrollY || 0)
       const dy = y - lastY.current
       lastY.current = y
-      const active = document.activeElement
-      const focusInBar = !!(active && navRef.current?.contains(active) && active.matches(':focus-visible'))
+      setScrolled(y > 8)
+      const focused = document.activeElement
+      const focusInBar = !!(focused && navRef.current?.contains(focused) && focused.matches(':focus-visible'))
+      const inPinnedBox = y >= HIDE_AFTER && !openRef.current && !focusInBar && viewportTopInPinnedBox()
+      setPinHidden(inPinnedBox)
       if (y < HIDE_AFTER || openRef.current || focusInBar) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(false)
-      } else if (dy > 2) {
+      } else if (dy > 2 || (dy < -2 && inPinnedBox)) {
         clearTimeout(returnTimer.current)
         returnTimer.current = null
         setHidden(true)
       } else if (dy < -2 && !returnTimer.current) {
         returnTimer.current = setTimeout(() => {
           returnTimer.current = null
-          setHidden(false)
+          if (!viewportTopInPinnedBox()) setHidden(false)
         }, RETURN_DELAY)
       }
     }
@@ -196,37 +213,38 @@ export default function SpectrumNav() {
     }
   }, [])
 
-  // One observer on the hero's action row. A page without one (pricing,
-  // mobile) never sets the flag, and the pill keeps its own button. The flag is
-  // seeded from the row's position before paint, so the pill's button never
-  // shows for a frame on load. The top margin is the pill's height: a hero row
-  // hidden under the pill counts as out of view, so one button always shows.
-  useLayoutEffect(() => {
-    const row = document.querySelector('.sp-hero-cta')
-    if (!row || typeof IntersectionObserver === 'undefined') return undefined
-    const PILL = 72
-    // A microtask still runs before the first paint, and keeps the setState
-    // out of the effect body.
-    const r = row.getBoundingClientRect()
-    queueMicrotask(() => setHeroCta(r.bottom > PILL && r.top < window.innerHeight))
-    const io = new IntersectionObserver(([entry]) => setHeroCta(entry.isIntersecting), { threshold: 0, rootMargin: `-${PILL}px 0px 0px 0px` })
-    io.observe(row)
-    return () => { io.disconnect(); setHeroCta(false) }
-  }, [location.pathname])
+  // The phone menu is not drawn on a wide window, so growing past the phone
+  // layout closes it.
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE)
+    const onChange = (e) => { if (e.matches) setOpen(false) }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [setOpen])
 
-  // ESCAPE CLOSES AND GIVES FOCUS BACK TO THE BURGER (WCAG 2.4.3 / APG). The
-  // SEARCH_KEY branch is the same contract PillNav holds: "/" opens the command
-  // palette, but never while the visitor is typing into a field.
+  // ESCAPE CLOSES AND GIVES FOCUS BACK TO THE BURGER (WCAG 2.4.3 / APG).
   const closeMenu = useCallback(() => {
     setOpen(false)
     requestAnimationFrame(() => burgerRef.current?.focus())
   }, [setOpen])
 
+  // The keys that open the command palette. "/" opens it, but never while the
+  // visitor is typing into a field. Control or Command K opens it too, unless
+  // the page has a hero command bar: that bar binds the same chord to focus
+  // itself, and one chord has one handler.
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape' && openRef.current) {
         e.preventDefault()
         closeMenu()
+        return
+      }
+      const chord = (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')
+      if (chord) {
+        if (document.querySelector('.hcmd-input')) return
+        e.preventDefault()
+        setOpen(false)
+        setSearchOpen(true)
         return
       }
       if (e.key === SEARCH_KEY && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -248,33 +266,19 @@ export default function SpectrumNav() {
 
   // A section link inside the open menu: take the menu's history entry over
   // with the section's URL (so nothing is left for back to pop), close, and
-  // scroll — through Lenis when it owns the page, honouring the section's
-  // scroll-margin so it clears the fixed pill.
+  // jump to the section, which scrolls through Lenis when it owns the page and
+  // moves focus to the section's heading.
   const menuHash = useCallback((e, href) => {
     e.preventDefault()
     const state = { ...(window.history.state || {}) }
     delete state.spnavMenu
     window.history.replaceState(state, '', href)
     setOpen(false)
-    const el = document.getElementById(href.slice(1))
-    if (!el) return
     // The open menu holds the page's scroll lock, which keeps Lenis stopped, and
     // a stopped Lenis ignores scrollTo. The lock is released when the close
-    // commits, so the scroll waits one frame.
-    requestAnimationFrame(() => {
-      const lenis = getLenis()
-      // Lenis reads the target's scroll-margin-top itself.
-      if (lenis) lenis.scrollTo(el)
-      else el.scrollIntoView({ block: 'start' })
-      // The link that held focus has just unmounted, so focus would fall to the
-      // body and the next Tab would restart at the skip link. Focus goes to the
-      // section instead; a plain section is made focusable by script only.
-      if (!el.hasAttribute('tabindex') && el.tabIndex < 0) {
-        el.setAttribute('tabindex', '-1')
-        el.setAttribute('data-menu-jump', '')
-      }
-      el.focus({ preventScroll: true })
-    })
+    // commits, so the jump waits one frame. The link that held focus has just
+    // unmounted, so the heading takes focus rather than the body.
+    requestAnimationFrame(() => jumpToSection(href.slice(1)))
   }, [setOpen])
 
   // Scroll lock + focus move-in + focus trap: a full-screen layer that leaves
@@ -310,11 +314,10 @@ export default function SpectrumNav() {
     }
   }, [open])
 
-  // "Open the toolkit" ENTERS THE APP, signed in or not, with no sign-up
-  // gate: it lands on /projects, the
-  // workspace, and sign-up happens only when the visitor saves or exports. A
-  // real <Link>, so it is middle-clickable. The design's `goDashboard`.
-  const TOOLKIT = '/projects'
+  const openSearch = () => {
+    setOpen(false)
+    setSearchOpen(true)
+  }
 
   return (
     <>
@@ -324,7 +327,8 @@ export default function SpectrumNav() {
         onFocus={onNavFocus}
         aria-label="Primary"
         data-nav-hidden={hidden ? '1' : '0'}
-        data-hero-cta={heroCta ? '1' : '0'}
+        data-nav-pinned={pinHidden ? '1' : '0'}
+        data-scrolled={scrolled ? '1' : '0'}
       >
         <div className="spnav-bar">
           <Link className="spnav-mark" to="/" onClick={() => setOpen(false)}>
@@ -332,40 +336,43 @@ export default function SpectrumNav() {
                 "UIL4B home" and not "UI L 4 B". */}
             <span className="spnav-word" aria-hidden="true">
               <BrandLockup className="brand-logo-wide" />
-              <BrandSymbol className="brand-logo-narrow" />
             </span>
             <span className="sr-only">UIL4B home</span>
           </Link>
 
-          <span className="spnav-rule" aria-hidden="true" />
+          <div className="spnav-end">
+            <div className="spnav-quiet">
+              {QUIET.map((q) => (
+                <QuietLink key={q.id} className="spnav-quiet-link" label={q.label} href={quietHref(q)} current={active === q.id} onClick={() => setOpen(false)} />
+              ))}
+            </div>
 
-          <div className="spnav-quiet">
-            {QUIET.map((q) => (
-              <QuietLink key={q.id} className="spnav-quiet-link" label={q.label} href={quietHref(q)} current={active === q.id} onClick={() => setOpen(false)} />
-            ))}
+            <button type="button" className="spnav-search" aria-keyshortcuts={shortcut === 'Ctrl K' ? 'Control+K' : 'Meta+K'} onClick={openSearch}>
+              <SearchGlyph size={15} />
+              <span>Search tools</span>
+              <kbd aria-hidden="true">{shortcut}</kbd>
+            </button>
+
+            <div className="spnav-phone">
+              <button type="button" className="spnav-icon" aria-label="Search tools" onClick={openSearch}>
+                <SearchGlyph size={17} />
+              </button>
+              <button
+                type="button"
+                className="spnav-icon spnav-burger"
+                ref={burgerRef}
+                aria-label={open ? 'Close menu' : 'Open menu'}
+                aria-expanded={open}
+                aria-controls={open ? 'spnav-menu' : undefined}
+                onClick={() => (open ? closeMenu() : setOpen(true))}
+              >
+                {/* Two bars that become a cross. */}
+                <span className="spnav-burger-ico" aria-hidden="true" data-burger={open ? 'in' : 'out'}>
+                  <span /><span />
+                </span>
+              </button>
+            </div>
           </div>
-
-          <ThemeCycle className="spnav-icon" glyphs="phosphor" />
-
-          <button
-            type="button"
-            className="spnav-icon spnav-burger"
-            ref={burgerRef}
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            aria-expanded={open}
-            aria-controls={open ? 'spnav-menu' : undefined}
-            onClick={() => (open ? closeMenu() : setOpen(true))}
-          >
-            {/* Three bars that become a cross (lines 234-237 + 129-132). */}
-            <span className="spnav-burger-ico" aria-hidden="true" data-burger={open ? 'in' : 'out'}>
-              <span /><span /><span />
-            </span>
-          </button>
-
-          <Link className="spnav-cta" data-cta to={TOOLKIT} onClick={() => setOpen(false)}>
-            <span>Open the toolkit</span>
-            <span className="spnav-cta-icon" aria-hidden="true"><ArrowUpRightGlyph /></span>
-          </Link>
         </div>
       </nav>
 
@@ -384,17 +391,21 @@ export default function SpectrumNav() {
             <span aria-hidden="true"><CloseGlyph /></span>
           </button>
 
-          {/* The design's four big items and its note (251-255). `data-mi` is
-              the design's attribute and the CSS keys the stagger off
-              nth-child exactly as it does — the note is the fifth. */}
+          {/* `data-mi` marks what staggers in; `--i` is its place in the order. */}
           <div className="spnav-rail">
-            {QUIET.map((q) => (
-              <QuietLink key={q.id} className="spnav-mi" mi label={q.label} href={quietHref(q)} current={active === q.id} onClick={() => setOpen(false)} onHash={menuHash} />
+            {QUIET.map((q, i) => (
+              <QuietLink key={q.id} className="spnav-mi" mi index={i} label={q.label} href={quietHref(q)} current={active === q.id} onClick={() => setOpen(false)} onHash={menuHash} />
             ))}
-            <Link className="spnav-mi spnav-mi--accent" data-mi to={TOOLKIT} replace onClick={() => setOpen(false)}>
-              Open the toolkit <span aria-hidden="true">&#8599;</span>
-            </Link>
-            <p className="spnav-mi-note" data-mi data-mi-note>Every core tool is free, forever</p>
+            {onSales && (
+              <>
+                <p className="spnav-mi-label" id="spnav-menu-page" data-mi style={{ '--i': QUIET.length }}>This page</p>
+                <div className="spnav-mi-group" role="group" aria-labelledby="spnav-menu-page">
+                  {PAGE_ANCHORS.map((a, i) => (
+                    <QuietLink key={a.id} className="spnav-mi spnav-mi--sub" mi index={QUIET.length + 1 + i} label={a.label} href={`#${a.id}`} onClick={() => setOpen(false)} onHash={menuHash} />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -406,7 +417,7 @@ export default function SpectrumNav() {
       )}
 
       {/* `reducedMotion` is read so the component participates in the app's own
-          preference rather than only the OS media query — AppearanceContext
+          preference rather than only the OS media query. AppearanceContext
           writes html[data-reduced-motion], which the stylesheet honours, and
           this attribute lets a test assert that the bar knows. */}
       <span hidden data-spnav-reduced={reducedMotion ? '1' : '0'} />

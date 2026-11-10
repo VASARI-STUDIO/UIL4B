@@ -95,8 +95,18 @@
 @font-face{font-family:'Switzer';font-style:italic;font-weight:100 900;font-display:swap;src:url('/fonts/switzer/Switzer-VariableItalic.woff2') format('woff2')}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:100 599;font-display:swap;src:local('Arial'),local('Liberation Sans'),local('Helvetica');size-adjust:101%;ascent-override:98%;descent-override:25%;line-gap-override:9%}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:600 900;font-display:swap;src:local('Arial Bold'),local('Arial-BoldMT'),local('Liberation Sans Bold'),local('Helvetica Bold');size-adjust:96%;ascent-override:102.1%;descent-override:26%;line-gap-override:9.4%}
+/* 'Geist Fallback' does for the homepage (--hm-font) what 'Switzer Fallback' does for the
+   rest of the site: a local Arial scaled to Geist's advance widths and line box, so the swap
+   moves neither the glyphs nor the lines. Geist's vertical metrics are hhea 1005 / -295 / 0 on
+   a 1000 upm (OS/2 typo identical, USE_TYPO_METRICS set), divided by the size-adjust because the
+   overrides apply before it. Measured in Chromium at 100px: Geist / Arial is 1.01 at weight 400
+   (the sub-line) and 0.983 at 600 (the headline), hence two faces. */
+@font-face{font-family:'Geist Fallback';font-style:normal;font-weight:100 599;font-display:swap;src:local('Arial'),local('Liberation Sans'),local('Helvetica');size-adjust:101%;ascent-override:99.5%;descent-override:29.2%;line-gap-override:0%}
+@font-face{font-family:'Geist Fallback';font-style:normal;font-weight:600 900;font-display:swap;src:local('Arial Bold'),local('Arial-BoldMT'),local('Liberation Sans Bold'),local('Helvetica Bold');size-adjust:98.3%;ascent-override:102.2%;descent-override:30%;line-gap-override:0%}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 /* Caveat: the handwritten annotation only. NOT preloaded — see the note above. */
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
@@ -496,41 +506,56 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 
 /* ── THE CHROMATIC OUTLINE on outline-only buttons ──────────────────────────
    An outline button (a hairline over a quiet or card ground: the default .btn,
-   .ui-pill-out and the tool layout's quiet and square buttons) draws its
-   outline as a rotating conic gradient in the colour-band hues on hover and on
+   .ui-pill-out, the marketing nav's search controls and the tool layout's quiet
+   and square buttons) draws its outline in the colour-band hues on hover and on
    :focus-visible. Filled buttons (accent, primary, inverse) and borderless
    ghost buttons do not.
 
-   The ring is a ::before laid over the border box and masked to its edge, so
-   nothing moves and the label stays ink. Only --chroma-angle animates.
+   The ring is a ::before laid exactly over the border box and masked to its
+   edge, so nothing moves and the label stays ink. It fades in while it
+   thickens from .5px to 1.5px and turns once to 140deg, then holds. Three
+   registered properties carry that: --chroma-angle, --chroma-w and opacity, all
+   plain transitions, so a pointer that leaves mid-way reverses from where the
+   ring is. On leave the width and angle reset only after the ring has faded out,
+   so the hues never jump.
    The hues are the chromatic bars of the colour band (SpectrumRamp.jsx BARS,
    in order, the first repeated to close the circle); a unit test holds the two
    together.
 
    Contrast, measured against the grounds a button sits on: in dark every hue
    clears 3:1 (weakest 3.98:1, hue 238 on the card). In light the weakest is
-   1.83:1 (hue 48 on the page), so light adds a 1px ink ring just inside the
-   colour, which holds the edge at 6:1 or more whatever the hue under it.
+   1.83:1 (hue 48 on the page); the 1.5px ring is not re-measured there.
 
    Hover only where the pointer can hover: a tap on a phone must not leave the
-   ring stuck on. :focus-visible shows it on every device. Reduced motion keeps
-   a still ring; forced colours draw the plain system border. */
+   ring stuck on, so touch gets a flash while pressed. :focus-visible shows it on
+   every device. Reduced motion keeps a still 1.5px ring; forced colours draw the
+   plain system border. */
 @property --chroma-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
-@keyframes chroma-spin{to{--chroma-angle:360deg}}
-:where(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){position:relative;--chroma-inner:transparent}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{content:"";position:absolute;inset:-1px;border:1.5px solid transparent;padding:1px;border-radius:inherit;background:linear-gradient(var(--chroma-inner),var(--chroma-inner)) padding-box,conic-gradient(from var(--chroma-angle),hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%)) border-box;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0) border-box;-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0) border-box;opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease-out)}
-[data-theme="light"] :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){--chroma-inner:var(--t2)}
+@property --chroma-w{syntax:'<length>';inherits:false;initial-value:.5px}
+:where(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){position:relative}
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{content:"";position:absolute;inset:-1px;padding:var(--chroma-w);border-radius:inherit;background:conic-gradient(from var(--chroma-angle),hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0;pointer-events:none;transition:opacity 280ms cubic-bezier(.25,1,.5,1),--chroma-w 0s linear 280ms,--chroma-angle 0s linear 280ms}
 :is(.tl,.tl-sheet-layer) .tl-tray .tl-btn::before{content:none}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:1;animation:chroma-spin 2.4s linear infinite}
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1),--chroma-w 360ms cubic-bezier(.25,1,.5,1),--chroma-angle 560ms cubic-bezier(.45,.05,.3,1)}
 @media (hover:hover) and (pointer:fine){
-  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:1;animation:chroma-spin 2.4s linear infinite}
+  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-w 360ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-angle 560ms cubic-bezier(.45,.05,.3,1) 40ms}
 }
-html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{animation:none!important}
+@media (hover:none){
+  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):active:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:none}
+}
+/* Reduced motion: a still ring at its final width and angle with a 120ms fade. */
+html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important}
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.tl-btn)::before{animation:none!important}
+  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important}
 }
 @media (forced-colors:active){
-  :is(.btn,.ui-pill-out,.tl-btn)::before{content:none}
+  :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{content:none}
+}
+/* Press: every pill button shrinks to .97 over 150ms; disabled controls and
+   reduced motion do not scale. */
+:is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):not(:disabled):not([aria-disabled="true"]):active{transform:scale(.97);transition-property:transform,background-color,border-color,color,opacity;transition-duration:150ms;transition-timing-function:cubic-bezier(.23,1,.32,1)}
+html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):active{transform:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):active{transform:none}
 }
 .tag{display:inline-flex;padding:4px 12px;border-radius:var(--radius-s);font-size:10px;font-weight:600}
 
@@ -1266,6 +1291,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--accent-fg);outline-offset:2px}
 html[data-reduced-motion="true"] .skip-link{transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .skip-link{transition:none}}
+@media(pointer:coarse){.skip-link{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box}}
 /* Recovery affordance for the price-service-down state (Murphy's law: error +
    offline both land here). Sits under the price slot, never inside the
    aria-live region, so retrying doesn't re-announce the amount. */
@@ -2848,7 +2874,6 @@ html.lenis{scroll-behavior:auto!important}
 .brand-logo-narrow{display:none}
 .pnav-word .brand-logo-narrow{display:none}
 @media(min-width:768px) and (max-width:939px){.pnav-word .brand-logo-wide{display:none}.pnav-word .brand-logo-narrow{display:block}}
-@media(min-width:768px) and (max-width:899px){.spnav-word .brand-logo-wide{display:none}.spnav-word .brand-logo-narrow{display:inline-block}}
 
 /* Search (App lines 103-107): flex 1 1 240px up to 380px, 41px, 12px radius,
    an ink .045 wash inside an ink .09 hairline, the magnifier and placeholder in

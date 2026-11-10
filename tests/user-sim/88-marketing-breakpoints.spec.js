@@ -426,14 +426,14 @@ test.describe('the homepage headline keeps its proportion on a short desktop', (
       //
       // The above-the-fold marker is now the hero's CTA, which is the lowest
       // element of the hero block the way `.home-hero-hint` was on the old one.
-      const h1 = page.locator('.sp-hero-h1')
+      const h1 = page.locator('h1.hh-h1')
       await expect(h1).toBeVisible()
       await page.waitForTimeout(160)
 
       const m = await page.evaluate(() => {
-        const el = document.querySelector('.sp-hero-h1')
+        const el = document.querySelector('h1.hh-h1')
         const r = el.getBoundingClientRect()
-        const hint = document.querySelector('.sp-hero .sp-pill')?.getBoundingClientRect()
+        const hint = document.querySelector('#top .hh-go')?.getBoundingClientRect()
         return {
           fs: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
           height: Math.round(r.height),

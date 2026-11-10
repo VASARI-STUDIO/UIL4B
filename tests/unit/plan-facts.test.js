@@ -147,3 +147,127 @@ test('"no card needed" stays out of the surfaces that sell Pro, and cancelling i
     assert.match(l, /\buser \?/, `the upgrade modal offers cancelling to a visitor with no account: ${l.trim()}`)
   }
 })
+
+// ── The long-form lists and the export themes switch ─────────────────────────
+import {
+  FREE_LINES, PRO_ROWS, PRO_ROWS_PHONE, PRO_PHONE_COLLAPSED_ROWS, PLANS_LEAD, THEME_FACTS,
+  STYLE_GUIDE_EXPORT_NAMES, PRO_EXPORT_NAMES, freeLines, proRows, plansLead, freeUiKitLine, proDocumentsLine, numberWord,
+} from '../../src/config/planFacts.js'
+import {
+  EXPORT_GROUPS, EXPORT_THEMES, EXPORT_THEMES_LIVE, EXPORT_THEME_EXPORTS, freeThemes, proThemes,
+} from '../../src/config/exportFormats.js'
+import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
+import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
+
+test('FREE_POINTS and PRO_POINTS keep their text while the themes are off, and name the themes when on', () => {
+  const tail = `, and style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`
+  assert.equal(FREE_POINTS[2], `${freeUiKitLine(EXPORT_THEMES_LIVE)}${tail}`)
+  assert.equal(PRO_POINTS[5], `${proDocumentsLine(EXPORT_THEMES_LIVE)}, with no UIL4B line on anything`)
+  assert.equal(FREE_POINTS.length, 4)
+  assert.equal(PRO_POINTS.length, 6)
+  // Off: the exact lines /plans, Settings, the modal and checkout printed before the themes existed.
+  assert.equal(freeUiKitLine(false) + tail, `The UI kit${tail}`)
+  assert.equal(proDocumentsLine(false), PRO_EXPORT_NAMES)
+  assert.ok(!/export themes/.test(`${freeUiKitLine(false)} ${proDocumentsLine(false)}`))
+})
+
+test('the switch turns the Free UI kit line and the Pro export rows, both ways', () => {
+  const free = freeThemes()
+  const freeNames = free.map((t) => t.name).join(' and ')
+  assert.equal(freeLines(false)[2], 'The UI kit')
+  assert.equal(freeLines(true)[2], `The UI kit in ${free.length} export themes: ${freeNames}`)
+  assert.equal(freeLines(true).length, 8)
+  assert.equal(freeLines(false).length, 8)
+
+  // Off: the panel's own two Pro documents, named from the export rows.
+  const book = EXPORT_GROUPS.find((g) => g.id === 'book')
+  const guidelines = EXPORT_GROUPS.find((g) => g.id === 'guidelines')
+  const off = proRows(false)
+  assert.equal(off[1].title, book.name)
+  assert.equal(off[2].title, guidelines.name)
+  assert.ok(off.every((r) => !/export themes/i.test(`${r.title} ${r.sub} ${r.phoneSub}`)))
+
+  // On: counts and names come from the theme list.
+  const on = proRows(true)
+  const proNames = proThemes().map((t) => t.name)
+  assert.equal(on[1].title, `All ${EXPORT_THEMES.length} export themes`)
+  assert.equal(on[1].sub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free: ${proNames.slice(0, -1).join(', ')} and ${proNames.at(-1)}. Each has all ${numberWord(EXPORT_THEME_EXPORTS.length)} exports.`)
+  assert.equal(on[1].phoneSub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free, each with all ${numberWord(EXPORT_THEME_EXPORTS.length)} exports.`)
+  assert.ok(on[1].phoneSub.length < on[1].sub.length)
+  const pages = EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages
+  assert.ok(on[2].sub.startsWith(`A ${pages}-page guidelines PDF`))
+  // The documents row names every export that is Pro in all themes, and not the free UI kit.
+  for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(on[2].title.toLowerCase().includes(e.short), `the documents row leaves out ${e.id}`)
+  assert.ok(!/ui kit/i.test(on[2].title))
+
+  assert.match(plansLead(true), new RegExp(`all ${numberWord(EXPORT_THEMES.length)} export themes, brand guidelines`))
+  assert.match(plansLead(false), /client-ready books and decks/)
+  assert.ok(!/export themes/.test(plansLead(false)))
+})
+
+test('the long lists have the rows the plan section prints, in order', () => {
+  assert.equal(FREE_LINES.length, 8)
+  assert.equal(FREE_LINES[0], FREE_POINTS[0])
+  assert.equal(FREE_LINES[1], FREE_POINTS[1])
+  assert.equal(FREE_LINES[4], `${FREE_SAVE_LIMITS.projects} saved projects, with ${FREE_SAVE_LIMITS.customIcons} icons in each`)
+  assert.equal(FREE_LINES[5], 'Auto and monochromatic colour systems')
+  assert.equal(FREE_LINES[6], `The first ${GALLERY_CAP} of each library`)
+  assert.match(FREE_LINES[7], /^Outline and solid icon packs, at five set sizes$/)
+  assert.equal(PRO_ROWS.length, 10)
+  assert.deepEqual(PRO_ROWS.map((r) => r.id), [
+    'white-label', 'export-themes', 'export-documents', 'icon-packs', 'icon-tools',
+    'ai', 'colour-systems', 'library', 'prompts', 'saves',
+  ])
+  const by = Object.fromEntries(PRO_ROWS.map((r) => [r.id, r]))
+  assert.equal(by.ai.title, `${numberWord(AI_LIMITS.pro.daily / AI_LIMITS.free.daily).replace(/^./, (c) => c.toUpperCase())} times the AI`)
+  assert.equal(by.ai.sub, `${AI_LIMITS.pro.daily} generations a day and ${AI_LIMITS.pro.monthly} a month, up from ${AI_LIMITS.free.daily} and ${AI_LIMITS.free.monthly}.`)
+  assert.equal(by.library.sub, `All ${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.brandPalettes} brand palettes.`)
+  assert.equal(by.prompts.sub, `All ${LIBRARY_TOTALS.prompts} starting directions in the Prompt Library, up from ${GALLERY_CAP}.`)
+  assert.ok(by['colour-systems'].sub.startsWith(`All ${COLOUR_SYSTEMS.length}, adding `))
+  for (const s of COLOUR_SYSTEMS.filter((x) => !x.free)) assert.ok(by['colour-systems'].sub.includes(s.label.toLowerCase()), `${s.id} is not named as a Pro colour system`)
+  assert.equal(new Set(PRO_ROWS.map((r) => r.icon)).size, 10, 'two rows share an icon key')
+  assert.ok(PRO_ROWS.every((r) => r.title && r.sub && r.phoneSub))
+})
+
+test('the phone order is the same ten rows, with the AI row among the rows shown first', () => {
+  assert.deepEqual([...PRO_ROWS_PHONE.map((r) => r.id)].sort(), [...PRO_ROWS.map((r) => r.id)].sort())
+  assert.equal(PRO_PHONE_COLLAPSED_ROWS, 4)
+  assert.ok(PRO_ROWS_PHONE.slice(0, PRO_PHONE_COLLAPSED_ROWS).some((r) => r.id === 'ai'))
+  assert.ok(PRO_ROWS_PHONE.slice(0, PRO_PHONE_COLLAPSED_ROWS).some((r) => r.id === 'export-themes'))
+  assert.equal(proRows(false, { phone: true }).length, 10)
+})
+
+test('THEME_FACTS is worked out from the theme list', () => {
+  assert.equal(THEME_FACTS.live, EXPORT_THEMES_LIVE)
+  assert.equal(THEME_FACTS.count, EXPORT_THEMES.length)
+  assert.equal(THEME_FACTS.freeCount, freeThemes().length)
+  assert.equal(THEME_FACTS.proCount + THEME_FACTS.freeCount, THEME_FACTS.count)
+  assert.equal(THEME_FACTS.freeTag, `Free in ${freeThemes().length} themes`)
+  assert.equal(THEME_FACTS.uiKitNote, `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(EXPORT_THEMES.length)} themes`)
+  assert.equal(THEME_FACTS.exportsPerThemeWord, numberWord(EXPORT_THEME_EXPORTS.length))
+  assert.equal(PLANS_LEAD, plansLead(EXPORT_THEMES_LIVE))
+})
+
+test('planFacts types no count word or price into the lists', () => {
+  const src = code('src/config/planFacts.js')
+  assert.ok(!/\b(Eight|Ten|Two|Four|Six|Thirteen)\b/.test(src), 'a count word is typed in planFacts')
+  assert.ok(!/All \d+|\b\d+ (export )?themes\b|-page/.test(src.replace(/\$\{[^}]*\}-page/g, '')), 'a count is typed in planFacts')
+  const text = [...FREE_LINES, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub]), PLANS_LEAD].join(' ')
+  assert.ok(!/(US|A|C)?\$\d/.test(text), 'a price is typed into a plan list')
+})
+
+import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
+const GALLERY_CAP = GALLERY_TIER_LIMITS.free
+
+test('the homepage components type no plan line, count word or price', () => {
+  for (const file of ['PlanLists.jsx', 'HomePlans.jsx', 'plansPrices.js', 'planListArt.js']) {
+    const src = code(`src/components/home/${file}`)
+    for (const line of [...FREE_LINES, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub]), PLANS_LEAD]) {
+      assert.ok(!src.includes(line), `${file} types the plan line "${line}"`)
+    }
+    assert.ok(!/\b(Eight|Ten|Two|Four|Six|Thirteen)\b/.test(src), `${file} types a count word`)
+    assert.ok(!/(US|A|C)?\$\d/.test(src), `${file} types a price`)
+  }
+  const section = code('src/components/home/HomePlans.jsx')
+  assert.match(section, /proRows\(live\)\.length/, 'the "Show all" count is not derived')
+})

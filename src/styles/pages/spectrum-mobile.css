@@ -37,7 +37,7 @@
 
 /* data-nav-spacer (line 217). --notice-h so a notice strip, when one shows,
    pushes the screen down with the nav rather than sliding under it. */
-.spm .spm-spacer { height: calc(clamp(14px, 2vw, 26px) + 50px + var(--notice-h, 0px)); }
+.spm .spm-spacer { height: calc(var(--spnav-h, 92px) + var(--notice-h, 0px)); }
 
 /* ── the intro section (1345) ────────────────────────────────────────────── */
 .spm .spm-intro {

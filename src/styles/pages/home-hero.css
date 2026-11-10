@@ -1,0 +1,343 @@
+/* ── Homepage hero (#top) ─────────────────────────────────────────────────────
+   Imported statically by the page so it is in the render-blocking sheet: the
+   headline is the page's largest paint and the served shell (scripts/
+   home-shell.mjs) writes the same `.hh-hero > .hh-copy > h1.hh-h1` chain.
+
+   The headline and its sub-line have no entrance and the glow is still. Only
+   the loop panel enters, once. `--hh-nav-h` is the room reserved above the hero
+   for the navigation. The hero stays on its dark ground in either page theme,
+   so its inks are its own. */
+
+.hh-hero {
+  --hh-nav-h: 92px;
+  --hh-ink: #EFEEEA;
+  --hh-ink-rgb: 239, 238, 234;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 900px;
+  padding: var(--hh-nav-h) 0 56px;
+  overflow: hidden;
+  background: #060607;
+  color: var(--hh-ink);
+  font-family: var(--hm-font, "Geist", system-ui, sans-serif);
+}
+
+/* The glow: a still conic wash, masked to fade out, ending inside the hero. */
+.hh-glow {
+  position: absolute;
+  z-index: -1;
+  left: -6%;
+  right: -6%;
+  top: 330px;
+  height: 700px;
+  opacity: .5;
+  filter: blur(140px);
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+  pointer-events: none;
+}
+.hh-glow > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, hsl(8 58% 56%), hsl(48 58% 56%), hsl(134 28% 44%), hsl(200 38% 50%), hsl(262 28% 54%), hsl(350 48% 56%), hsl(8 58% 56%));
+}
+
+/* ── copy ─────────────────────────────────────────────────────────────────── */
+
+.hh-copy {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(48px, 6vw, 84px) clamp(20px, 4vw, 52px) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hh-h1 {
+  margin: 0;
+  /* 20ch of Geist 600 (its "0" is 0.683em), written in em. ch is read from whichever
+     face is on screen, so a ch width would change when Geist swaps in over the fallback. */
+  max-width: 13.66em;
+  font-weight: 600;
+  font-size: clamp(40px, 5.8vw, 84px);
+  line-height: .98;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+  color: rgba(var(--hh-ink-rgb), .56);
+}
+.hh-h1-mark { color: var(--hh-ink); }
+
+.hh-sub {
+  margin: 24px 0 0;
+  max-width: 52ch;
+  font-size: clamp(16.5px, 1.4vw, 18px);
+  line-height: 1.6;
+  color: rgba(var(--hh-ink-rgb), .68);
+}
+
+.hh-cta {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.hh-go,
+.hh-ghost {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 15px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms cubic-bezier(.23, 1, .32, 1);
+}
+.hh-go {
+  gap: 10px;
+  padding: 0 6px 0 22px;
+  background: var(--hh-ink);
+  color: #0B0C0E;
+  font-weight: 500;
+}
+.hh-go-disc {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(11, 12, 14, .08);
+  overflow: hidden;
+  transition: background-color 150ms ease;
+}
+.hh-go-disc > svg { transition: transform 320ms cubic-bezier(.25, 1, .5, 1); }
+/* `.ui-pill-out` brings the chroma ring (global.css) and its own ground and
+   inks; the hero keeps its own, whichever page theme is on. */
+.hh-ghost {
+  padding: 0 22px;
+  border: 1px solid rgba(var(--hh-ink-rgb), .16);
+  color: var(--hh-ink);
+}
+.hh-ghost.ui-pill-out {
+  background: transparent;
+  color: var(--hh-ink);
+  border-color: rgba(var(--hh-ink-rgb), .16);
+}
+.hh-go:active,
+.hh-ghost:active { transform: scale(.97); }
+.hh-go:focus-visible,
+.hh-ghost:focus-visible { outline: 2px solid var(--hh-ink); outline-offset: 3px; }
+.hh-go:focus-visible .hh-go-disc > svg { transform: rotate(45deg); }
+
+@media (hover: hover) and (pointer: fine) {
+  .hh-go:hover { background: #F7F6F2; }
+  .hh-go:hover .hh-go-disc { background: rgba(11, 12, 14, .12); }
+  .hh-go:hover .hh-go-disc > svg { transform: rotate(45deg); }
+  .hh-ghost.ui-pill-out:hover { background: transparent; border-color: rgba(var(--hh-ink-rgb), .3); }
+}
+
+/* ── the search ───────────────────────────────────────────────────────────────
+   SpectrumSearch (its look is spectrum.css, `.sp-search`) under the links. The
+   hero is dark in either page theme, so the tokens that bar and its results read
+   are restated here with the dark theme's values, scoped to this wrapper. The
+   results open as a layer under the bar, over the loop, so a search never moves
+   the loop. */
+.hh-search {
+  --sp-card: #0F1012;
+  --sp-ink: var(--hh-ink);
+  --sp-ink-rgb: var(--hh-ink-rgb);
+  --sp-shade-rgb: 0, 0, 0;
+  --sp-shade-a: 1;
+  --sp-faint-a: .62;
+  --sp-link: var(--hh-ink);
+  --bg-1: #0B0C0E;
+  --bg-2: #111215;
+  --border: #202125;
+  --t0: #F2F1EC;
+  --t2: #9F9F98;
+  --hvr: rgba(242, 241, 236, .065);
+  --accent-mid: color-mix(in srgb, var(--accent) 78%, var(--accent-paper));
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 660px;
+  margin-top: 24px;
+  text-align: left;
+}
+.hh-search .hcmd-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+/* The field has no outline of its own (it is a bare input inside the bar), so
+   the bar draws the ring when the field has keyboard focus, in place of the
+   blue border and shadow ring. The outline follows the bar's pill corners. */
+/* The bar's vertical padding sits on the field instead, so the field is as tall
+   as the bar (a tap anywhere along it lands in the field, not on the bar's
+   edge) and the bar keeps the height it has always had. */
+.hh-search .sp-search .hcmd-bar { padding-block: 0; }
+.hh-search .sp-search input.hcmd-input { padding-block: 18px; }
+.hh-search input.hcmd-input:focus-visible { outline: none; }
+.hh-search .hcmd-bar:has(.hcmd-input:focus-visible) {
+  border-color: rgba(var(--hh-ink-rgb), .14);
+  box-shadow: 0 30px 70px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
+  outline: 2px solid #EFEEEA;
+  outline-offset: 3px;
+}
+
+/* ── the loop panel ───────────────────────────────────────────────────────── */
+
+.hh-fig {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1240px;
+  margin: 56px auto 0;
+  padding: 0 clamp(20px, 4vw, 52px);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  animation: hh-panel-in 300ms cubic-bezier(.23, 1, .32, 1) 80ms both;
+}
+@media (min-width: 1440px) {
+  .hh-fig { max-width: 1400px; }
+}
+
+@keyframes hh-panel-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+@keyframes hh-panel-fade {
+  from { opacity: 0; }
+}
+
+/* The slot is the box the page's autoplay owner watches. It is sized here, not
+   by the loop inside it, so the loop arriving cannot move anything. */
+.hh-slot { flex: none; }
+.hh-slot[data-size="large"] { width: 1296px; height: 600px; }
+.hh-slot[data-size="wide"] { width: 1136px; height: 460px; }
+.hh-slot[data-size="tablet"] { width: 704px; height: 620px; }
+.hh-slot[data-size="phone"] { width: 358px; height: 444px; }
+
+.hh-loop {
+  box-sizing: border-box;
+  border: 1px solid rgba(var(--hh-ink-rgb), .1);
+  border-radius: 18px;
+  background: #0F1012;
+}
+
+/* Tablet zoom steps, so the panel never clips and a short landscape tablet
+   still sees it whole. The wide loop is 1136 inside a content column that is
+   .92 of the window, which falls short of it just above 1200. */
+@media (min-width: 1200px) and (max-width: 1234px) {
+  .hh-slot[data-size="wide"] { --hm-zoom: .96; }
+}
+@media (min-width: 900px) and (max-width: 1023px) { .hh-slot[data-size="tablet"] { --hm-zoom: 1.15; } }
+@media (min-width: 1024px) and (max-width: 1099px) { .hh-slot[data-size="tablet"] { --hm-zoom: 1.3; } }
+@media (min-width: 1100px) and (max-width: 1199px) { .hh-slot[data-size="tablet"] { --hm-zoom: 1.4; } }
+@media (min-width: 900px) and (max-width: 1199px) and (max-height: 900px) { .hh-slot[data-size="tablet"] { --hm-zoom: 1.1; } }
+@media (min-width: 768px) and (max-width: 1199px) and (max-height: 760px) { .hh-slot[data-size="tablet"] { --hm-zoom: 1; } }
+
+/* ── phone ────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .hh-hero {
+    --hh-nav-h: 56px;
+    min-height: 844px;
+    padding-bottom: 28px;
+  }
+  .hh-glow {
+    left: -40%;
+    right: -40%;
+    height: 500px;
+    filter: blur(110px);
+  }
+  .hh-copy { padding: 40px 16px 0; }
+  .hh-h1 {
+    max-width: none;
+    font-size: 40px;
+    line-height: 1;
+  }
+  .hh-sub {
+    margin-top: 16px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .hh-cta {
+    margin-top: 24px;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .hh-go,
+  .hh-ghost {
+    height: 52px;
+    font-size: 16px;
+  }
+  .hh-go {
+    justify-content: space-between;
+    padding: 0 6px 0 24px;
+  }
+  .hh-go-disc { width: 40px; height: 40px; }
+  .hh-go-disc > svg { width: 15px; height: 15px; }
+  .hh-ghost { justify-content: center; padding: 0; }
+  .hh-search { margin-top: 16px; }
+  .hh-search .sp-search .hcmd-bar { padding: 0 20px; }
+  .hh-search .sp-search input.hcmd-input { padding-block: 14px; }
+  .hh-search .sp-search-ghost { left: 42px; }
+
+  .hh-fig {
+    margin: 28px 16px 0;
+    width: auto;
+    max-width: none;
+    padding: 0;
+    flex: none;
+  }
+  .hh-slot { --hm-zoom: .95; }
+  .hh-loop { border-radius: 22px; }
+}
+/* On the narrowest phones the typed phrase has no room beside the key chip, and
+   a phone has no key to name. */
+@media (max-width: 374px) {
+  .hh-search .sp-search .hcmd-kbd { display: none; }
+  .hh-search .sp-search-ghost { font-size: 14px; }
+}
+@media (max-width: 374px) { .hh-slot { --hm-zoom: .88; } }
+@media (max-width: 349px) { .hh-slot { --hm-zoom: .8; } }
+
+/* ── reduced motion ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .hh-fig {
+    animation: hh-panel-fade 200ms ease-out 80ms both !important;
+    animation-duration: 200ms !important;
+    animation-delay: 80ms !important;
+  }
+  html:not([data-reduced-motion="false"]) .hh-go,
+  html:not([data-reduced-motion="false"]) .hh-ghost { transition: none; }
+  html:not([data-reduced-motion="false"]) .hh-go:active,
+  html:not([data-reduced-motion="false"]) .hh-ghost:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .hh-go-disc > svg { transition: none; transform: none !important; }
+}
+html[data-reduced-motion="true"] .hh-fig {
+  animation: hh-panel-fade 200ms ease-out 80ms both !important;
+  animation-duration: 200ms !important;
+  animation-delay: 80ms !important;
+}
+html[data-reduced-motion="true"] .hh-go,
+html[data-reduced-motion="true"] .hh-ghost { transition: none; }
+html[data-reduced-motion="true"] .hh-go:active,
+html[data-reduced-motion="true"] .hh-ghost:active { transform: none; }
+html[data-reduced-motion="true"] .hh-go-disc > svg { transition: none; transform: none !important; }

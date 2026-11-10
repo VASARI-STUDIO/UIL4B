@@ -134,7 +134,7 @@ test.describe('1 — Export is in the header at every width and the phone sheet 
   // no route left to act on. The guarantee is the same one, asserted on the
   // nav a sales route actually has: its phone menu offers nothing to export,
   // and a signed-in visitor's saved projects are still one tap away.
-  test('a sales route has nothing to export, so the phone menu says nothing — and keeps the way to saved projects', async ({ browser }) => {
+  test('a sales route has nothing to export, so the phone menu says nothing, and does not repeat the hero call to action', async ({ browser }) => {
     const { context, page } = await open(browser, PHONE)
     watch(page, 'a phone visitor on /plans')
     await signIn(page, { plan: 'free', projects: 1 })
@@ -144,9 +144,9 @@ test.describe('1 — Export is in the header at every width and the phone sheet 
     await expect(sheet).toBeVisible()
     await expect(sheet.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
     await expect(sheet.getByRole('link', { name: 'Export', exact: true })).toHaveCount(0)
-    // The marketing menu has no account row; its way to saved projects is the
-    // toolkit link, which opens the workspace.
-    await expect(sheet.getByRole('link', { name: /Open the toolkit/ }), 'the way to saved projects stays').toHaveAttribute('href', '/projects')
+    // The hero holds the only "Open the toolkit"; the phone sheet repeats
+    // neither it nor the export.
+    await expect(sheet.getByRole('link', { name: /Open the toolkit/ }), 'the menu repeats the hero call to action').toHaveCount(0)
     await context.close()
   })
 })

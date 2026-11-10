@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { SITE_ORIGIN, canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
 import { prerenderRoutes } from './route-matrix.mjs'
-import { DEFAULT_CARD, cardFor, cardUrl, twitterCardUrl } from './share-cards.mjs'
+import { DEFAULT_CARD, HOME_CARD, cardFor, cardUrl, twitterCardUrl } from './share-cards.mjs'
 import { articleJsonLd, breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
 import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 import { buildLlmsTxt } from './llms-txt.mjs'
@@ -92,7 +92,7 @@ const text = (s) => String(s)
  * no-op here would ship the homepage's metadata again while the build stayed
  * green, which is precisely the failure this script exists to end.
  */
-export function rewriteHead(html, { title, description, robots, canonical, card, schema = '' }) {
+export function rewriteHead(html, { title, description, robots, canonical, card, schema = '', keepNoscript = false }) {
   const misses = []
   const sub = (label, re, next) => {
     if (!re.test(html)) { misses.push(label); return }
@@ -171,12 +171,15 @@ export function rewriteHead(html, { title, description, robots, canonical, card,
   }
 
   // The <noscript> fallback was the homepage's own sales copy, repeated on
-  // every URL. Replaced with something true for the page it is actually on.
-  html = html.replace(
-    /<noscript>[\s\S]*?<\/noscript>/,
-    `<noscript><h1>${text(title)}</h1><p>${text(description)}</p>`
-    + `<p>UIL4B needs JavaScript enabled. <a href="${attr(ORIGIN)}/">Return to the homepage</a>.</p></noscript>`,
-  )
+  // every URL. Replaced with something true for the page it is actually on;
+  // `keepNoscript` is for the one page that copy is true for.
+  if (!keepNoscript) {
+    html = html.replace(
+      /<noscript>[\s\S]*?<\/noscript>/,
+      `<noscript><h1>${text(title)}</h1><p>${text(description)}</p>`
+      + `<p>UIL4B needs JavaScript enabled. <a href="${attr(ORIGIN)}/">Return to the homepage</a>.</p></noscript>`,
+    )
+  }
 
   return { html, misses }
 }
@@ -284,15 +287,24 @@ async function main() {
     await writeFile(path.join(dir, 'index.html'), body, 'utf8')
   }
 
-  // ── `/`, the one shell this script has never written ──────────────────────
+  // ── `/`, the one shell that is not a matrix route ─────────────────────────
   //
   // The route matrix carries `/home`, not `/` — routeMeta.js canonicalises the
-  // first onto the second — so the front door is served straight out of
-  // dist/index.html exactly as vite emitted it. Its HEAD needs nothing: it is
-  // already the homepage's, which is why it was left alone. Its BODY is the
-  // whole point of this change, so it is rewritten here, in place, from the
-  // same function the `/home` shell used.
-  const homeShell = applyHomeShell(shell)
+  // first onto the second — so the front door is written here, in place, over
+  // dist/index.html. That file's own head is the site-wide default, not the
+  // homepage's, so the head is rewritten from the same title and description
+  // tables as every other shell, plus the homepage's own share image, and the
+  // body from the same function the `/home` shell uses. Its <noscript> keeps
+  // the sales copy and prices index.html carries.
+  const homeHead = rewriteHead(shell, {
+    title: PAGE_TITLES['/'],
+    description: PAGE_DESCRIPTIONS['/'] || DEFAULT_DESCRIPTION,
+    canonical: canonicalUrl('/'),
+    card: HOME_CARD,
+    keepNoscript: true,
+  })
+  homeHead.misses.forEach(m => allMisses.add(m))
+  const homeShell = applyHomeShell(homeHead.html)
   assertHomeShellApplied(homeShell, 'dist/index.html')
   await writeFile(path.join(dist, 'index.html'), homeShell, 'utf8')
 

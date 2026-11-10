@@ -24,7 +24,7 @@ const TARGETS = [
   // search bars
   '.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search',
   // pill toolbars and segmented trays
-  '.lbry-toolbar', '.lbry-filters', '.lbry-filter-ind', '.theme-seg', '.sp-seeds', '.sp-seed',
+  '.lbry-toolbar', '.lbry-filters', '.lbry-filter-ind', '.theme-seg',
   '.icust-seg', '.icust-seg button', '.adm-tabs', '.fc-seg', '.fc-seg-opt',
 ]
 
@@ -122,7 +122,7 @@ for (const target of SEARCH_BARS) {
 // border, or the converter's inset ring).
 const TRAYS = [
   '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.icust-seg', '.adm-tabs',
-  '.sp-seeds', '.sp-seg', '.seo-seg', '.pr-billing', '.fc-seg',
+  '.seo-seg', '.pr-billing', '.fc-seg',
 ]
 for (const target of TRAYS) {
   test(`${target} carries the tray hairline`, () => {

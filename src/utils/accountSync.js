@@ -191,6 +191,7 @@ export const STORAGE_INVENTORY = Object.freeze({
   'vs-verify-dismissed': { scope: 'session', why: 'Verify-your-email bar dismissed for this tab session (vs-verify-dismissed:<uid>)' },
   'vs-resume-after-onboarding': { scope: 'session', why: 'Where to go after onboarding, this tab only' },
   'vs-chunk-reload': { scope: 'session', why: 'Reload-loop guard after a deploy' },
+  'vs-reland-hash': { scope: 'session', why: 'Hash to land again after the chunk-failure reload' },
   'vs-gradient-keep-dismissed': { scope: 'session', why: 'Keep-these-gradients question answered "Not mine" for this tab session (vs-gradient-keep-dismissed:<uid>)' },
   'vs-pending-save': { scope: 'session', why: 'A save waiting on sign-up (tool and project name), so the Save menu can reopen after onboarding; this tab only' },
   'vs-gradient-shuffle-filters': { scope: 'session', why: 'Gradient Shuffle settings (types, stop counts, Keep the angle), this tab only' },

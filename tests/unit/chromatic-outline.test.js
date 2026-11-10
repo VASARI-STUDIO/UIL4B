@@ -25,9 +25,19 @@ test('the ring draws the colour band\'s chromatic hues, in order, closed', () =>
   assert.deepEqual(stops, [...hues, hues[0]])
 })
 
+test('nothing loops: the old spin is gone and the ring turns once', () => {
+  assert.doesNotMatch(css, /chroma-spin/, 'the infinite chroma-spin is still declared or used')
+  assert.doesNotMatch(css, /::before\{[^}]*animation:[^}]*infinite/, 'a ring rule still loops')
+  assert.match(css, /::before\{opacity:\.92;--chroma-w:1\.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier\(\.25,1,\.5,1\),--chroma-w 360ms cubic-bezier\(\.25,1,\.5,1\),--chroma-angle 560ms cubic-bezier\(\.45,\.05,\.3,1\)\}/,
+    'keyboard focus no longer fades in, thickens and turns once')
+  assert.match(css, /@property --chroma-w\{syntax:'<length>';inherits:false;initial-value:\.5px\}/, 'the ring does not start at .5px')
+  // Leaving: the width and angle reset only after the 280ms fade-out.
+  assert.match(css, /opacity 280ms cubic-bezier\(\.25,1,\.5,1\),--chroma-w 0s linear 280ms,--chroma-angle 0s linear 280ms/)
+})
+
 test('hover shows the ring only where the pointer can hover; focus shows it everywhere', () => {
-  const hoverRules = [...css.matchAll(/([^{}]*):hover[^{}]*::before\{[^}]*chroma-spin[^}]*\}/g)]
-  assert.ok(hoverRules.length >= 1, 'no hover rule starts the ring')
+  const hoverRules = [...css.matchAll(/([^{}]*):hover[^{}]*::before\{[^}]*--chroma-w:1\.5px[^}]*\}/g)]
+  assert.ok(hoverRules.length >= 1, 'no hover rule thickens the ring')
   for (const m of hoverRules) {
     const before = css.slice(0, m.index)
     const media = before.lastIndexOf('@media')
@@ -35,15 +45,37 @@ test('hover shows the ring only where the pointer can hover; focus shows it ever
     const closes = before.slice(media).split('}').length - 1
     assert.ok(media >= 0 && opens > closes, 'a hover ring rule sits outside any media query')
     assert.match(before.slice(media), /^@media \(hover:hover\) and \(pointer:fine\)\{/, 'the hover ring is not gated on a hover-capable pointer')
+    // The 40ms intent delay on all three properties.
+    assert.equal((m[0].match(/ 40ms/g) || []).length, 3, 'hover does not wait 40ms on opacity, width and angle')
   }
-  assert.match(css, /\):focus-visible::before\{opacity:1;animation:chroma-spin/, 'keyboard focus no longer shows the ring')
+  assert.match(css, /\):focus-visible::before\{opacity:\.92;/, 'keyboard focus no longer shows the ring')
+  assert.match(css, /@media \(hover:none\)\{[^@]*:active[^@]*::before\{opacity:\.92;[^}]*transition:none\}/, 'touch has no press flash')
 })
 
-test('reduced motion keeps it still in both spellings; forced colours drop it', () => {
-  assert.match(css, /html\[data-reduced-motion="true"\] :is\(\.btn,\.ui-pill-out,\.tl-btn\)::before\{animation:none!important\}/)
-  assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{\s*html:not\(\[data-reduced-motion="false"\]\) :is\(\.btn,\.ui-pill-out,\.tl-btn\)::before\{animation:none!important\}/)
-  assert.match(css, /@media \(forced-colors:active\)\{\s*:is\(\.btn,\.ui-pill-out,\.tl-btn\)::before\{content:none\}/)
+test('reduced motion keeps a still 1.5px ring in both spellings; forced colours drop it', () => {
+  assert.match(css, /html\[data-reduced-motion="true"\] :is\([^)]*\.tl-btn\)::before\{--chroma-w:1\.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important\}/)
+  assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{\s*html:not\(\[data-reduced-motion="false"\]\) :is\([^)]*\.tl-btn\)::before\{--chroma-w:1\.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important\}/)
+  assert.match(css, /@media \(forced-colors:active\)\{\s*:is\([^)]*\.tl-btn\)::before\{content:none\}/)
   assert.match(css, /@property --chroma-angle\{syntax:'<angle>'/)
+})
+
+test('go arrows turn in place in 320ms and never travel; Next leans 3px', () => {
+  // These two sheets are written one declaration per line; fold whitespace so the rules read the same either way.
+  const flat = (p) => stripCss(read(p)).replace(/\s+/g, ' ')
+  const home = flat('src/styles/pages/home-tokens.css')
+  const hoverOnly = '@media \\(hover: ?hover\\) and \\(pointer: ?fine\\) ?\\{[^@]*?'
+  assert.match(home, /\.mi-go ?\{[^}]*transition: ?transform 320ms cubic-bezier\(\.25, ?1, ?\.5, ?1\)/)
+  assert.match(home, new RegExp(`${hoverOnly}:hover > \\.mi-go ?\\{ ?transform: ?rotate\\(45deg\\)`), 'a diagonal go arrow does not turn 45deg on hover')
+  assert.match(home, new RegExp(`${hoverOnly}:hover > \\.mi-go--r, :hover > \\.mi-go--e ?\\{ ?transform: ?rotate\\(-45deg\\)`), 'a right go arrow does not turn -45deg on hover')
+  assert.match(home, /:focus-visible > \.mi-go ?\{ ?transform: ?rotate\(45deg\)/, 'keyboard focus does not turn the go arrow')
+  assert.match(home, new RegExp(`${hoverOnly}:hover > \\.mi-nx ?\\{ ?transform: ?translateX\\(3px\\)`), 'Next does not lean 3px on hover')
+  assert.match(home, /\.mi-nx ?\{ ?transition: ?transform 180ms/)
+  assert.match(home, /:active > \.mi-nx ?\{[^}]*transition-duration: ?100ms/)
+  assert.doesNotMatch(home, /\.mi-go[^{]*\{[^}]*translate/, 'a go arrow travels')
+  assert.match(home, /html\[data-reduced-motion="true"\] :is\(\.mi-go, \.mi-nx\) ?\{ ?transition: ?none; ?transform: ?none !important/)
+  assert.match(home, /@media \(prefers-reduced-motion: ?reduce\) ?\{ ?html:not\(\[data-reduced-motion="false"\]\) :is\(\.mi-go, \.mi-nx\) ?\{ ?transition: ?none/)
+  const spectrum = flat('src/styles/pages/spectrum.css')
+  assert.match(spectrum, /\.sp-pill-icon ?\{[^}]*transition: ?transform 320ms cubic-bezier\(\.25, ?1, ?\.5, ?1\)/)
 })
 
 test('filled buttons are left out of the ring', () => {

@@ -144,24 +144,32 @@ for (const scheme of THEMES) {
       expectOneIndicator('gradient stop hex', await focusedLook(page, hex))
     })
 
-    test('the Home search fields leave the underline on the wrapper and the halo off the input', async ({ page }) => {
+    test('the Home hero search draws its ring on the bar and keeps the halo and outline off the input', async ({ page }) => {
       await go(page, '/')
       await globalSheetLast(page)
-      for (const placeholder of ['Search the set', 'Search families']) {
-        const input = page.getByPlaceholder(placeholder)
-        const wrapper = page.locator('label.sp-find', { has: input })
-        await input.scrollIntoViewIfNeeded()
-        await parkPointer(page)
-        const restShadow = await wrapper.evaluate((el) => getComputedStyle(el).boxShadow)
-        await input.click()
-        await parkPointer(page)
-        await expect(input).toBeFocused()
-        await expect.poll(() => wrapper.evaluate((el) => getComputedStyle(el).boxShadow), {
-          message: `${placeholder}: the wrapper underline never appeared`,
-        }).not.toBe(restShadow)
-        expect((await look(input)).boxShadow, `${placeholder}: the input paints its own halo`).toBe('none')
-        expect(await wrapper.evaluate((el) => getComputedStyle(el).boxShadow), `${placeholder}: the wrapper lost its underline`).toMatch(/inset/)
-      }
+      const input = page.locator('.hh-search input.hcmd-input')
+      const bar = page.locator('.hh-search .hcmd-bar')
+      await expect(input).toBeVisible()
+      const ring = () => bar.evaluate((el) => {
+        const c = getComputedStyle(el)
+        return { style: c.outlineStyle, width: parseFloat(c.outlineWidth), color: c.outlineColor, shadow: c.boxShadow }
+      })
+      await input.scrollIntoViewIfNeeded()
+      await parkPointer(page)
+      const rest = await ring()
+      expect(rest.style, 'POSITIVE CONTROL: the bar has no ring before the field is focused').toBe('none')
+      await input.click()
+      await parkPointer(page)
+      await expect(input).toBeFocused()
+      expect((await look(input)).focusVisible, 'the field is not matching :focus-visible, so the check proves nothing').toBe(true)
+      await expect.poll(async () => (await ring()).style, { message: 'the bar ring never appeared' }).toBe('solid')
+      const focused = await ring()
+      expect(focused.width, 'the bar ring has no width').toBeGreaterThan(0)
+      expect(focused.color, 'the bar ring is transparent').not.toMatch(/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)|transparent/)
+      expect(focused.shadow, 'a halo is stacked on the bar ring').not.toMatch(/(^|\s)0px 0px 0px /)
+      const inner = await look(input)
+      expect(inner.boxShadow, 'the input paints its own halo').toBe('none')
+      expect(inner.outlineStyle, 'the input paints its own outline inside the bar ring').toBe('none')
     })
   })
 }
