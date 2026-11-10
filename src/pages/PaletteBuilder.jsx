@@ -1192,7 +1192,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // save projects". This effect re-runs with the fresh one once the account has
   // reached ProjectContext.
   useEffect(() => {
-    if (pendingSave == null || !canSaveProjects) return
+    // Waits for the account's list: the cap counts the account's projects, not this device's.
+    if (pendingSave == null || !canSaveProjects || projectsLoading) return
     setPendingSave(null)
     // The save is being attempted, so a remount has nothing left to reopen.
     clearPendingSave()
@@ -1214,7 +1215,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // as a link — the treatment /projects already gives the same refusal.
       setSaveError(err?.message || 'Couldn’t save')
     }
-  }, [pendingSave, canSaveProjects, saveProject, toast, coachOn, navigate])
+  }, [pendingSave, canSaveProjects, projectsLoading, saveProject, toast, coachOn, navigate])
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }

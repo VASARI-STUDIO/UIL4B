@@ -52,7 +52,7 @@ function Mini({ m, withFace }) {
 }
 
 /** The grid of minis, with the heading row (and Find) above it. `others` are already ordered. */
-export function OtherProjects({ others, room, onNew }) {
+export function OtherProjects({ others, room, onNew, busy = false }) {
   const [showAll, setShowAll] = useState(false)
   const [q, setQ] = useState('')
   const minis = useMemo(() => others.map(miniOf), [others])
@@ -103,7 +103,7 @@ export function OtherProjects({ others, room, onNew }) {
         {shown.map((m, i) => <li key={m.id}><Mini m={m} withFace={i < FACES} /></li>)}
         {room > 0 && (
           <li>
-            <button type="button" className="db-gt" onClick={onNew}>
+            <button type="button" className="db-gt" onClick={onNew} disabled={busy} aria-busy={busy || undefined}>
               <span className="r">
                 <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                 <span className="gn">New project</span>

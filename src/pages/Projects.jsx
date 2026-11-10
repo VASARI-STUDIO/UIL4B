@@ -8,6 +8,7 @@ import { NEW_PROJECT_STATE, guideEntry, startGuide } from '../utils/brandKitGuid
 import { getUsageCount } from '../utils/usageTracker'
 import { getSyncState, subscribeSync } from '../utils/syncStatus'
 import { mostRecentProject } from '../utils/userHome'
+import { COUNT_FAILED_NEW_MESSAGE } from '../utils/projectCount'
 import { useServerAiUsage } from '../hooks/useServerAiUsage'
 import useProjectIcons from '../hooks/useProjectIcons'
 import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
@@ -49,7 +50,7 @@ export default function Projects() {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const { plan, isPro, loading: planLoading } = useSubscription()
-  const { projects, projectsLoading, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
+  const { projects, projectsLoading, projectCountKnown, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
   useProjectIcons()
   const online = useSyncExternalStore(subscribeOnline, readOnline, () => true)
   const sync = useSyncExternalStore(subscribeSync, getSyncState, getSyncState)
@@ -60,6 +61,11 @@ export default function Projects() {
   const [hintedSession] = useState(readSessionHint)
   const resolving = authLoading && hintedSession
   const signedOut = !canSaveProjects && !resolving
+
+  // The cap is the account's, so a new project waits for the account's own count: `checking` while the
+  // list is on its way, `unchecked` once it failed on a device that holds no copy of the account.
+  const checking = !signedOut && !resolving && projectsLoading
+  const unchecked = !signedOut && !resolving && !projectsLoading && !projectCountKnown
 
   const [capRefusal, setCapRefusal] = useState('')
   const capBtnRef = useRef(null)
@@ -76,6 +82,11 @@ export default function Projects() {
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown) }
   }, [capRefusal])
 
+  // The "could not check" message goes once the list has loaded.
+  useEffect(() => {
+    if (!unchecked && capRefusal === COUNT_FAILED_NEW_MESSAGE) setCapRefusal('')
+  }, [unchecked, capRefusal])
+
   // The refusal can open below the fold on a short window; `nearest` moves the page only as far as it takes.
   const showCap = useCallback((el) => {
     el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
@@ -84,6 +95,11 @@ export default function Projects() {
   // A new blank project: the cap refusal first, then the default design and the walkthrough's first step,
   // with its orientation card open.
   const startNew = () => {
+    if (checking) return
+    if (unchecked) {
+      setCapRefusal(COUNT_FAILED_NEW_MESSAGE)
+      return
+    }
     if (canSaveProjects && atProjectLimit) {
       setCapRefusal(`The Free plan saves up to ${projectLimit} projects. Pro saves as many as you like.`)
       return
@@ -116,9 +132,10 @@ export default function Projects() {
     : null
 
   const leadKit = lead ? kitFromProject(lead) : null
+  const retryList = () => (syncError?.retry ? syncError.retry() : window.location.reload())
   let sheet
-  if (resolving || loadingList) sheet = <LoadingSheet />
-  else if (loadFailed) sheet = <FailedSheet onRetry={() => (syncError?.retry ? syncError.retry() : window.location.reload())} />
+  if (resolving || loadingList || (checking && !lead)) sheet = <LoadingSheet />
+  else if (loadFailed) sheet = <FailedSheet onRetry={retryList} />
   else if (signedOut) sheet = <KitSheet kit={exampleKit('out')} />
   else if (!lead) {
     // No project yet (or every project is archived): the example, with New project as its one next step.
@@ -139,8 +156,10 @@ export default function Projects() {
           className="db-ghost db-ring"
           ref={capBtnRef}
           onClick={() => (capRefusal ? setCapRefusal('') : startNew())}
-          aria-haspopup={atCap ? 'dialog' : undefined}
-          aria-expanded={atCap ? !!capRefusal : undefined}
+          aria-haspopup={atCap || unchecked ? 'dialog' : undefined}
+          aria-expanded={atCap || unchecked ? !!capRefusal : undefined}
+          disabled={checking}
+          aria-busy={checking || undefined}
         >
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           <span className="db-bt">New project</span>
@@ -149,7 +168,9 @@ export default function Projects() {
       {capRefusal && (
         <div className="db-pop cap" ref={showCap} role="dialog" aria-labelledby="db-cap-t" data-testid="project-create-refusal">
           <p id="db-cap-t">{capRefusal}</p>
-          <Link to="/plans" className="db-tl" ref={capLinkRef}>See plans</Link>
+          {capRefusal === COUNT_FAILED_NEW_MESSAGE
+            ? <button type="button" className="db-textbtn" ref={capLinkRef} onClick={retryList}>Try again</button>
+            : <Link to="/plans" className="db-tl" ref={capLinkRef}>See plans</Link>}
         </div>
       )}
     </div>
@@ -162,7 +183,7 @@ export default function Projects() {
   if (lead4 && !signedOut && lead) {
     const pill = leadKit.pill
     bar = { text: pill.text, href: pill.href }
-  } else if (lead4) {
+  } else if (lead4 && !checking) {
     bar = { text: 'New project', onClick: startNew }
   }
 
@@ -180,7 +201,7 @@ export default function Projects() {
             {sheet}
             {loadingList && <OtherProjectsSkeleton />}
             {!signedOut && !resolving && !loadFailed && !loadingList && (
-              <OtherProjects others={others} room={!isPro && slots ? Math.max(0, slots.limit - slots.used) : 0} onNew={startNew} />
+              <OtherProjects others={others} room={!isPro && slots ? Math.max(0, slots.limit - slots.used) : 0} onNew={startNew} busy={checking} />
             )}
             <Shelf projects={projects} signedOut={signedOut} loading={resolving || loadingList} />
             <PlanLine loading={resolving || loadingList || planLoading} signedOut={signedOut} isPro={isPro} />

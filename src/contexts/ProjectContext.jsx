@@ -18,6 +18,7 @@ import { PARKED_KEY, PARKED_SHELF_KEY, dropParked, parkIfAtRisk, putBack, readPa
 import { SESSION_AUTH, SESSION_DONE, SESSION_ON, markSession, readSession, stampEdited } from '../utils/kitSession'
 import { editKey } from '../utils/brandKitChooser'
 import { addSavedColour } from '../utils/savedColours'
+import { countUnknownError } from '../utils/projectCount'
 
 const ProjectContext = createContext()
 
@@ -153,6 +154,9 @@ export function ProjectProvider({ children }) {
   // device with no local copy of an account's projects has an empty list until
   // then, so "no such project" cannot be said before it (see projectsLoading).
   const [pulledUid, setPulledUid] = useState(null)
+  // The account whose list was READ, and merged into this device's copy. The count a cap
+  // is checked against is the account's only from then on (see projectCountKnown).
+  const [countedUid, setCountedUid] = useState(null)
 
   // The working design as the last write left it. A replace (reset, open a
   // project) sets it at once, so a second call in the same tick checks the
@@ -290,8 +294,20 @@ export function ProjectProvider({ children }) {
     return true
   }, [allProjects, userKey, restoreParked, setParked])
 
+  // True from sign-in until the account's projects have been read once. The
+  // list above may be missing projects that exist on the account until then.
+  const projectsLoading = !!uid && pulledUid !== uid
+  // Whether the number of projects on this device is the account's number. It is once the
+  // account's list was read. If the read failed it stays so only for a device that already
+  // holds a copy of the account (an offline session keeps saving to it); a device with no
+  // copy has an empty list that says nothing about the account.
+  const hasDeviceCopy = (allProjects[userKey] || []).length > 0
+  const projectCountKnown = !uid || countedUid === uid || (pulledUid === uid && hasDeviceCopy)
+
   const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
+    // A new project takes a slot, and the slots taken are the account's, not this device's.
+    if (!projectCountKnown) throw countUnknownError(projectsLoading)
     // Free-tier cap: block a NEW save once the allowance is reached. Never
     // touches existing projects (non-destructive) and never blocks sync merges.
     const current = allProjects[userKey] || []
@@ -327,7 +343,7 @@ export function ProjectProvider({ children }) {
       if (!opts.from) setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
     }
     return id
-  }, [design, userKey, allProjects, projectLimit])
+  }, [design, userKey, allProjects, projectLimit, projectCountKnown, projectsLoading])
 
   /**
    * Copy a project, cap and all.
@@ -620,6 +636,7 @@ export function ProjectProvider({ children }) {
           return next
         })
       }
+      setCountedUid(uid)
       const nextTombstones = mergeTombstones(localTombstones, merged.tombstones)
       if (JSON.stringify(nextTombstones) !== JSON.stringify(localTombstones)) {
         setAllTombstones(prev => {
@@ -731,9 +748,8 @@ export function ProjectProvider({ children }) {
     design,
     projects,
     canSaveProjects: !!userKey,
-    // True from sign-in until the account's projects have been read once. The
-    // list above may be missing projects that exist on the account until then.
-    projectsLoading: !!uid && pulledUid !== uid,
+    projectsLoading,
+    projectCountKnown,
     projectLimit,
     atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,

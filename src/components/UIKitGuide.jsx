@@ -142,7 +142,7 @@ export default function UIKitGuide({ step, linked = false }) {
   const navType = useNavigationType()
   const location = useLocation()
   const {
-    design, updateDesign, saveProject, overwriteProject, projects, canSaveProjects,
+    design, updateDesign, saveProject, overwriteProject, projects, canSaveProjects, projectsLoading,
     loadProject, resetDesign, remountTool, parked, projectLimit, atProjectLimit,
   } = useProject()
   const { exportActions } = useExport() || {}
@@ -558,10 +558,10 @@ export default function UIKitGuide({ step, linked = false }) {
   // checked against the plan the person is actually on.
   useEffect(() => {
     const name = pendingNameRef.current
-    if (!name || !canSaveProjects || !planKnown) return
+    if (!name || !canSaveProjects || !planKnown || projectsLoading) return
     pendingNameRef.current = null
     save(name)
-  }, [canSaveProjects, planKnown, save])
+  }, [canSaveProjects, planKnown, projectsLoading, save])
 
   // Same focus contract as the orientation panel, and focus goes back to the
   // control that opened it on close. On a touch screen focus goes to the title

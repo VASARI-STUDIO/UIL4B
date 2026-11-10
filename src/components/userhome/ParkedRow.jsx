@@ -26,7 +26,7 @@ const toast = (detail) => window.dispatchEvent(new CustomEvent('uil4b:toast', { 
 
 export default function ParkedRow() {
   const navigate = useNavigate()
-  const { parked, parkedMore = 0, canSaveProjects, saveProject, continueParked, discardParked, putBackParked } = useProject()
+  const { parked, parkedMore = 0, canSaveProjects, projectsLoading, saveProject, continueParked, discardParked, putBackParked } = useProject()
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
   const headId = useId()
@@ -55,10 +55,10 @@ export default function ParkedRow() {
   }, [discardParked, name, parked, saveProject])
 
   useEffect(() => {
-    if (!pendingRef.current || !canSaveProjects || !planKnown) return
+    if (!pendingRef.current || !canSaveProjects || !planKnown || projectsLoading) return
     pendingRef.current = false
     queueMicrotask(saveParked)
-  }, [canSaveProjects, planKnown, saveParked])
+  }, [canSaveProjects, planKnown, projectsLoading, saveParked])
 
   if (!parked?.design) return null
 

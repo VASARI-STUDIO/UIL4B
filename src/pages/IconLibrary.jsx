@@ -83,6 +83,7 @@ import { iconSynonymFor } from '../data/iconSynonyms'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
+import { isCountUnknownError } from '../utils/projectCount'
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 // The attribution line's own sheet. It is NOT in library.css, deliberately: a
@@ -2042,8 +2043,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     try {
       const id = saveProject(name, { blank: true })
       handleSaveToProject(id)
-    } catch {
+    } catch (err) {
       setSavePickerOpen(false)
+      // Not the cap: the account's list is still loading or did not load, and nothing was created.
+      if (isCountUnknownError(err)) { setSavedState('error'); return }
       showProGate('projects')
     }
   }

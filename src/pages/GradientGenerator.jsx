@@ -756,7 +756,7 @@ function PreviewSample({ id, paint, stops, type, angle }) {
 // correctly if it is ever mounted outside CreateTool; the activation naming
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
-  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
+  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects, projectsLoading } = useProject()
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   // Gradients an earlier visit queued in this browser: a signed-in person is
@@ -1505,7 +1505,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setPendingSave(name)
   }
   useEffect(() => {
-    if (pendingSave == null || !canSaveProjects) return
+    if (pendingSave == null || !canSaveProjects || projectsLoading) return
     setPendingSave(null)
     // The save is being attempted, so a remount has nothing left to reopen.
     clearPendingSave()
@@ -1517,7 +1517,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       // The free cap's refusal stays under the field, with the way forward as a link.
       setSaveError(err?.message || 'Couldn’t save')
     }
-  }, [pendingSave, canSaveProjects, saveProject, closeSave, toast])
+  }, [pendingSave, canSaveProjects, projectsLoading, saveProject, closeSave, toast])
   const overwriteWith = (project) => {
     try {
       overwriteProject(project.id)
