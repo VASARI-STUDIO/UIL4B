@@ -1,11 +1,13 @@
 // How /create/type-scale arranges its work column, for the specs that drive it.
 //
 // The page measures the work column (.tsc-output), not the viewport. From
-// SPLIT_MIN (1024px of column) the ladder and the page sit side by side and Code
-// is a view of the right half, chosen with the Page | Code switch
-// (.tsc-half-switch); below it one of Scale / Page / Code shows at a time
-// behind a tablist. A 1440 window gives a column of about 1046px,
-// so it is the split; 1024 and 768 windows keep the tablist.
+// SPLIT_MIN (1024px of column) the ladder and the page sit side by side; below it
+// one of Scale / Page shows at a time behind a tablist. A 1440 window gives a
+// column of about 1046px, so it is the split; 1024 and 768 windows keep the
+// tablist. From 768 Code is a drawer opened by the Code button in the docked bar
+// (.tsc-code-btn), whatever the layout. A phone (767px and under) has neither:
+// the width, the page and the ladder are one scroll, and Code is a tab in the
+// settings sheet the dock opens.
 //
 // The column is measured after mount, so the first paint is the narrow layout
 // even at 1440. Anything that reads the layout has to wait for the marker rather
@@ -13,12 +15,22 @@
 
 import { expect } from './base.js'
 
+// The viewport width at which the phone's one scroll takes over from the tablist.
+// Duplicated from the page's media query for the same reason as SPLIT_MIN.
+export const PHONE_MAX = 767
+
 // The column width at which the page splits. Duplicated from TypeScale.jsx on
 // purpose: a spec that imported the constant would move with it and never notice.
 export const SPLIT_MIN = 1024
 
-/** Wait for the layout the measured column calls for, and return which it is. */
+/** Wait for the layout the screen calls for, and return which it is: 'stack' (phone), 'switch' or 'split'. */
 export async function settleTypeScaleView(page) {
+  const viewport = page.viewportSize()
+  if (viewport && viewport.width <= PHONE_MAX) {
+    await expect(page.locator('#tsc-view-panel'), 'a phone shows the width, the page and the ladder as one scroll').toHaveAttribute('data-view', 'stack')
+    await expect(page.locator('.tsc-view-switch')).toHaveCount(0)
+    return 'stack'
+  }
   const column = page.locator('.tsc-output')
   await column.waitFor({ state: 'visible' })
   const width = await column.evaluate(el => el.clientWidth)
@@ -33,40 +45,55 @@ export async function settleTypeScaleView(page) {
 
 /**
  * Show the exported code the way a visitor does at the current width: press Code
- * in the split's Page | Code switch, press the Code tab otherwise. Safe to call
- * when the code is already showing.
+ * in the docked bar to open the drawer from 768; on a phone open the settings
+ * sheet from the dock and press its Code tab. Safe to call when the code is
+ * already showing.
  */
 export async function showTypeScaleCode(page) {
   const layout = await settleTypeScaleView(page)
-  if (layout === 'split') {
-    const half = page.locator('.tsc-half-switch').getByRole('button', { name: 'Code', exact: true })
-    if ((await half.getAttribute('aria-pressed')) !== 'true') await half.click()
+  if (layout === 'stack') {
+    const sheet = page.locator('#tsc-sheet')
+    if ((await sheet.getAttribute('data-open')) !== 'true') await page.locator('.tl-dock .tsc-dock-ratio').click()
+    await expect(sheet).toBeVisible()
+    await sheet.getByRole('button', { name: 'Code', exact: true }).click()
     await expect(page.locator('#tsc-export')).toBeVisible()
     return layout
   }
-  await page.getByRole('tab', { name: 'Code' }).click()
+  const code = page.locator('.tsc-dock .tsc-code-btn')
+  if ((await code.getAttribute('aria-expanded')) !== 'true') await code.click()
+  await expect(page.locator('#tsc-code-drawer')).toBeVisible()
   await expect(page.locator('#tsc-export')).toBeVisible()
   return layout
 }
 
 /**
- * Show the page preview: in the split press Page in the right half's switch (the
- * half may be showing Code), below it press the Page tab. Safe to call when the
- * page is already showing.
+ * Close the Code drawer from 768 (it covers the foot of the page) and wait for it
+ * to go. A phone's code is a tab in the settings sheet, so there is nothing to
+ * close. Safe to call when the drawer is already closed.
  */
-export async function showTypeScalePage(page) {
+export async function hideTypeScaleCode(page) {
   const layout = await settleTypeScaleView(page)
-  if (layout === 'split') {
-    const half = page.locator('.tsc-half-switch').getByRole('button', { name: 'Page', exact: true })
-    if ((await half.getAttribute('aria-pressed')) !== 'true') await half.click()
-  } else {
-    await page.getByRole('tab', { name: 'Page' }).click()
-  }
-  await expect(page.locator('.tsc-article')).toBeVisible()
+  if (layout === 'stack') return layout
+  const code = page.locator('.tsc-dock .tsc-code-btn')
+  if ((await code.getAttribute('aria-expanded')) === 'true') await page.getByRole('button', { name: 'Close code' }).click()
+  await expect(page.locator('#tsc-code-drawer')).toBeHidden()
   return layout
 }
 
-/** Show the ladder: it is already beside the page in the split. */
+/**
+ * Show the page preview: the split and a phone already have it on screen; the
+ * tablist layout needs its Page tab. Safe to call when the page is already showing.
+ */
+export async function showTypeScalePage(page) {
+  const layout = await settleTypeScaleView(page)
+  if (layout === 'switch') {
+    await page.getByRole('tab', { name: 'Page' }).click()
+  }
+  await expect(page.locator('.tsk')).toBeVisible()
+  return layout
+}
+
+/** Show the ladder: it is already beside the page in the split, and in the phone's one scroll. */
 export async function showTypeScaleLadder(page) {
   const layout = await settleTypeScaleView(page)
   if (layout === 'switch') await page.getByRole('tab', { name: 'Scale' }).click()

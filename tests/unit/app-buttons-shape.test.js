@@ -58,7 +58,14 @@ const KEEP = {
     // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners
     'fpr-card-apply',
     // the homepage bookmark board's folder rows (sidebar list) and its phone twin's pair rows, flush to the list edge
-    'bm-fold', 'bmp-pair'],
+    'bm-fold', 'bmp-pair',
+    // a Type Scale step: one full-width list row (name, size, specimen) whose hover and selected washes have soft 12px corners
+    'tsc-row',
+    // the Font Gallery More sheet's Project row: one full-width row (icon, name, caret) drawn at 12px
+    'fg-more-proj-row',
+    // the Font Pair More sheet's Save row: icon and label in a full-width row with a soft hover wash. Only
+    // that sheet rule squares the trigger off; the dock's Save trigger stays a pill
+    'svt-trigger'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',

@@ -140,6 +140,16 @@ const ALLOWED = {
     '.xfp-code': 'code',
     '.xfp-file': 'token',
   },
+  'pages/font-detail.css': {
+    '.fgd-code': 'code',
+    '.fgd-spec .fgd-weight-tag strong': 'value',
+    '.fgd-wpill': 'value',
+  },
+  'pages/font-pair-board.css': {
+    ':is(.fpr-page, .fpr-sheet) .fpr-wmenu': 'value',
+    ':is(.fpr-page, .fpr-sheet) .fpr-wopt': 'value',
+    '.fpr-page .fpr-frow-w': 'value',
+  },
   'pages/from-image-dialog.css': {
     '.plb-imgsel-hex': 'hex',
     '.plb-imgslot-hex': 'hex',
@@ -274,9 +284,23 @@ const ALLOWED = {
     ':is(.tl, .tl-sheet-layer) .tl-code': 'code',
     ':is(.tl, .tl-sheet-layer) .tl-kbd': 'kbd',
   },
+  'pages/type-scale-kerbside.css': {
+    '.tsc-page .tsk-tag': 'value',
+  },
   'pages/type-scale.css': {
+    '.tsc-page .tsc-dock-ratio-v': 'value',
+    '.tsc-page .tsc-ratio-v': 'value',
+    '.tsc-page .tsc-fr-chip': 'value',
+    '.tsc-page .tsc-fr-opt': 'value',
+    '.tsc-page .tsc-range .snapv-value': 'value',
+    '.tsc-page .tsc-range .snapv-input': 'value',
+    '.tsc-page .tsc-chip-n': 'token',
     '.tsc-page .tsc-row-name': 'token',
     '.tsc-page .tsc-row-num': 'value',
+    '.tsc-page .tsc-width-px': 'value',
+  },
+  'pages/type-tools-nav.css': {
+    '.ttn-mono': 'value',
   },
 }
 

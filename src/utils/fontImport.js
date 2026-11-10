@@ -29,10 +29,10 @@ export function buildFontImportUrl(families) {
   return `https://fonts.googleapis.com/css2?${params}&display=swap`
 }
 
-// What the specimen and preview draw, per role. The heading face is only ever
-// set at the one heading weight. The body face is set at its regular weight,
-// at 600 in the preview's buttons, and bold (<strong>) and italic (<em>) in the
-// running text, so each of those has to be loaded or the browser fakes it.
+// What the specimen draws, per role. The heading face is only ever set at the
+// one heading weight. The body face is set at its regular weight and at 600 on
+// the status pill; the page loads just those. The copied import adds a bold and
+// an italic cut as well, since running text built from it will use both.
 
 const heavier = (variants, from) => variants.filter((w) => w > from).sort((a, b) => a - b)
 
@@ -53,7 +53,10 @@ export function headingFaceWeights(font, weight) {
  *            is no real bold to load.
  *   italic:  one italic cut, at 400 when the family ships it (else the regular
  *            weight), only when the catalogue says the family has italics.
- * `{ upright: number[], italic: number[], buttons: number, bold: number }`
+ *   drawn:   the upright weights the Font Pair specimen itself paints (regular
+ *            and the status pill's 600), which is what the page loads; the
+ *            rest of `upright` and `italic` are for the copied import.
+ * `{ upright: number[], italic: number[], drawn: number[], buttons: number, bold: number }`
  */
 export function bodyFaceWeights(font, regular) {
   const variants = uniqueSorted(font?.variants)
@@ -68,7 +71,7 @@ export function bodyFaceWeights(font, regular) {
   const italic = font?.italics === true
     ? [variants.includes(400) ? 400 : regular]
     : []
-  return { upright: uniqueSorted([regular, buttons, bold]), italic, buttons, bold }
+  return { upright: uniqueSorted([regular, buttons, bold]), italic, drawn: uniqueSorted([regular, buttons]), buttons, bold }
 }
 
 /**
