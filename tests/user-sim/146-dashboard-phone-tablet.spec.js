@@ -225,6 +225,42 @@ test.describe('on a 390px phone, in a real touch context', () => {
     })
   })
 
+  for (const width of [320, 340, 359]) {
+    test(`Open project is a 44px target on touch at ${width}px`, async ({ browser }) => {
+      await onPhone(browser, { width, height: 700 }, async (page) => {
+        const [link] = await boxes(sheetOf(page, LEAD_SHEET).locator('.db-opent'))
+        expect(link.h, 'Open project height').toBeGreaterThanOrEqual(44)
+        expect(link.w, 'Open project width').toBeGreaterThanOrEqual(44)
+        expect(await overflowOf(page), 'no sideways scroll').toBe(0)
+      })
+    })
+  }
+
+  test('at 360px Open project is the 44px button and the text link is not drawn', async ({ browser }) => {
+    await onPhone(browser, { width: 360, height: 700 }, async (page) => {
+      const sheet = sheetOf(page, LEAD_SHEET)
+      await expect(sheet.locator('.db-opent'), 'the text link is for 320-359').toBeHidden()
+      const [button] = await boxes(sheet.locator('.db-head .db-ghost'))
+      expect(button.h).toBeGreaterThanOrEqual(44)
+    })
+  })
+
+  test('a lead name that does not fit one line wraps to two, and a short one stays on one', async ({ browser }) => {
+    const lines = (heading) => heading.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return Math.round(el.getBoundingClientRect().height / parseFloat(cs.lineHeight))
+    })
+    await onPhone(browser, PHONE, async (page) => {
+      const name = sheetOf(page, 'Shallow End, latest project').getByRole('heading', { level: 2 })
+      expect(await lines(name), 'Shallow End on 390').toBe(2)
+      expect(await overflowOf(page)).toBe(0)
+    }, { projects: [complete('p-shallow', 'Shallow End', ago(10 * MINUTE)), half()] })
+    await onPhone(browser, PHONE, async (page) => {
+      const name = sheetOf(page, 'Violet, latest project').getByRole('heading', { level: 2 })
+      expect(await lines(name), 'a short name on 390').toBe(1)
+    }, { projects: [complete('p-short', 'Violet', ago(10 * MINUTE)), half()] })
+  })
+
   test('the Tints ramp unrolls once the part is 60% in view, and with reduced motion it only fades', async ({ browser }) => {
     await onPhone(browser, { width: 390, height: 600 }, async (page) => {
       const tints = sheetOf(page, 'Offcut, latest project').locator('.db-tn')
