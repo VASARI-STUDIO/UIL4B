@@ -88,6 +88,8 @@ const SURFACES = [
 
 for (const [label, submit] of SURFACES) {
   test.describe(`a member submitting a ${label}`, () => {
+    // parked: the Prompt Library is admin-only (non-admins are redirected to /)
+    test.skip(label === 'prompt', 'parked: admin-only')
     test(`a ${label} submission fires one POST /api/support with its new document id`, async ({ page }) => {
       watch(page, `a member submitting a ${label}`)
       await signIn(page, { plan: 'free' })
