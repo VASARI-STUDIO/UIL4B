@@ -40,7 +40,7 @@
 - [Community](https://uil4b.com/community): Join the UI L4B community. Share designs and discover inspiration.
 
 ## Plans
-- Free: 5 AI generations a day and 40 a month; UI kit export, and style guide export in HTML, Markdown, PNG, JPEG, CSS tokens, JSON tokens, Tailwind theme, Contrast pairs CSV and Contrast pairs JSON, with a "Made with UIL4B" footer line.
+- Free: 5 AI generations a day and 40 a month; UI kit export, and style guide export in HTML, Markdown, PNG, JPEG, CSS tokens, JSON tokens, Tailwind theme, Contrast pairs CSV and Contrast pairs JSON, with a "Made with UI L4B" footer line.
 - Pro, from $4 USD a month: 30 AI generations a day and 300 a month; adds Design system book (PDF), Brand guidelines (presentation) and App-ready bundle; removes the footer line. Same AI model as Free.
 - Not built, on any plan, and not for sale: Asset bundle.
 

@@ -304,7 +304,7 @@ export default function HomeShowcase() {
   )
 
   return (
-    <div className="hsc" ref={rootRef} data-reveal={reveal}>
+    <div className="hsc" ref={rootRef} data-hsc-reveal={reveal}>
       <div className="hsc-inner">
         <div className="hsc-head">
           <h2 id="examples-h" className="hsc-h" tabIndex={-1}>
