@@ -36,7 +36,7 @@
     "icons:ico": "node scripts/favicon-ico.mjs"
   },
   "dependencies": {
-    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/core": "^0.12.6",
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
     "@stripe/react-stripe-js": "^6.6.0",
@@ -53,7 +53,7 @@
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",
     "stripe": "^22.2.0",
-    "three": "^0.187.0"
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
