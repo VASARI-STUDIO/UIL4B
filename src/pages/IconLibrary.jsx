@@ -24,6 +24,7 @@ import {
 } from '../utils/iconDownload'
 import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
+import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
 import { loadPackHead } from '../data/iconHeads'
@@ -1092,6 +1093,13 @@ function cellGlyph(icon, src, onGlyphError, gone) {
 // viewport: the same focusable element at its measured height, holding only its
 // name. It stays the same element so focus and find-in-page can still land on
 // it, and scrolling it back into view restores the glyph in place.
+// The identity a grid cell and the editor share (pack, name, saved or not), so the editor can find
+// the cell of the icon it has open when it closes.
+const iconCellKey = (icon) => `${icon.pack || ''}|${icon.name}|${icon.custom ? 'c' : ''}`
+const findIconCell = (icon) => (icon
+  ? Array.from(document.querySelectorAll('.ic[data-ic]')).find(el => el.dataset.ic === iconCellKey(icon) && el.isConnected) || null
+  : null)
+
 const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
   const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
@@ -1104,6 +1112,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
   return (
     <div
       className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
+      data-ic={ghost ? undefined : iconCellKey(icon)}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
@@ -1497,7 +1506,7 @@ function IedStroke({ id, value, onChange }) {
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
-function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
+function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef, onClose, onCopy, onPick }) {
   const { user } = useAuth()
   const { projects, saveProject, projectLimit } = useProject()
   const { openProModal } = useProModal()
@@ -1542,6 +1551,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const narrowRail = useMediaQuery(`(max-width: ${NARROW_RAIL_BELOW - 1}px)`)
   // The editor is a bottom sheet below this width (icon-editor.css), a two-column dialog above it.
   const onSheet = useMediaQuery('(max-width: 899px)')
+  // The shortest, narrowest phone: Download is one button that opens the formats menu.
+  const footFolded = useMediaQuery('(max-width: 340px) and (max-height: 599px)')
   const inspectPx = onSheet ? INSPECT_PX_SHEET : INSPECT_PX
   const [customOpen, setCustomOpen] = useState(() => !isPresetSize(size))
   const [lastCustom, setLastCustom] = useState(() => (isPresetSize(size) ? null : size))
@@ -1607,11 +1618,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const presets = {
       copies: {
         title: 'You’ve hit today’s free copy limit',
-        subtitle: `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day — the counter resets tomorrow. Go Pro for unlimited copies.`,
+        subtitle: `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day. The counter resets tomorrow. Go Pro for unlimited copies.`,
       },
       projects: {
         title: 'You’re at the free project limit',
-        subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects and icon saves.`,
+        subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : FREE_SAVE_LIMITS.projects} projects. Go Pro for unlimited projects and icon saves.`,
       },
     }
     // `gate` is DERIVED from the kind rather than written into each preset, so
@@ -1802,12 +1813,22 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Lock page scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
     const unlockScroll = lockScroll()
-    const opener = restoreRef.current
+    // What had focus when the editor first opened. Picking a Similar tile swaps this component for
+    // a new one whose own activeElement is a tile in the old dialog, so the page hands it down.
+    const opener = openerRef?.current?.el || restoreRef.current
     return () => {
       unlockScroll()
-      if (opener && typeof opener.focus === 'function') opener.focus()
+      // Swapped for another icon's editor (Similar): that one takes focus itself.
+      if (document.querySelector('.ied')) return
+      // Still the icon it opened on: back to whatever opened it. Swapped through Similar: the
+      // cell of the icon now open, else whatever opened the editor.
+      const openedOn = openerRef?.current?.key
+      const live = opener?.isConnected ? opener : null
+      const target = openedOn && openedOn === iconCellKey(icon || {}) ? (live || findIconCell(icon)) : (findIconCell(icon) || live)
+      if (target && typeof target.focus === 'function') target.focus()
     }
-  }, [])
+    // icon is fixed for this instance: a different icon remounts it (key).
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The save picker is a panel inside this dialog, over the inspector and foot. While it is open
   // those two are visibility:hidden, so the Tab trap below skips them. Escape closes the picker
@@ -1836,15 +1857,16 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     })
     return () => cancelAnimationFrame(frame)
   }, [savePickerOpen])
-  // A press anywhere outside the picker and the Save button closes it.
+  // A press anywhere outside the picker and the Save button closes it. Capture phase: the dialog
+  // stops mousedown from bubbling, so a bubble listener never hears a press inside the dialog.
   useEffect(() => {
     if (!savePickerOpen) return undefined
     const onDown = (e) => {
       if (e.target.closest?.('.ied-spn, #ied-save')) return
       setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('')
     }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    document.addEventListener('mousedown', onDown, true)
+    return () => document.removeEventListener('mousedown', onDown, true)
   }, [savePickerOpen])
 
   // Move focus into the dialog once, on mount.
@@ -1898,8 +1920,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      // The dialog itself holds focus on open and after a press on a blank part of it, and focus
+      // can be outside it: both enter the loop from the end Tab was heading for.
+      const here = document.activeElement
+      const outside = !here || here === panelRef.current || !panelRef.current?.contains(here)
+      if (e.shiftKey && (here === first || outside)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && (here === last || outside)) { e.preventDefault(); first.focus() }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -2357,9 +2383,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // ("Save to another project"), so a tap never latches it.
   const saveLabel = savedState === 'saved'
     ? { full: savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons', hv: 'Save to another project', glyph: 'check' }
-    : savedState === 'error' ? { full: 'Couldn’t save. Retry', glyph: 'alert' }
-      : activeIcon?.custom ? { full: 'Save as new', glyph: 'folder-plus' }
-        : { full: 'Save to project', glyph: 'folder-plus' }
+    : savedState === 'error' ? { full: 'Couldn’t save. Retry', short: 'Retry', glyph: 'alert' }
+      : activeIcon?.custom ? { full: 'Save as new', short: 'Save', glyph: 'folder-plus' }
+        : { full: 'Save to project', short: 'Save', glyph: 'folder-plus' }
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
   // "{Pack}, {weight}" under the name: the pack lives here on a touch screen, where the grid shows it on hover only.
@@ -2507,7 +2533,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             {activeIcon && edited && (
               <button type="button" className="ied-tn" onClick={handleReset}>Reset</button>
             )}
-            <button type="button" className="ied-x" onClick={onClose} aria-label="Close customizer">
+            <button type="button" className="ied-x" onClick={onClose} aria-label="Close customiser">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
                 <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
@@ -2847,7 +2873,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                         ))}
                       </div>
                     </div>
-                    {!isPro && <p className="ied-note">Anything other than Round ends with Round corners is Pro.</p>}
+                    {!isPro && <p className="ied-note">Round ends with round corners are free. Any other mix is Pro.</p>}
                   </div>
                 </div>
               )}
@@ -3016,6 +3042,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   blocked={previewing}
                   describedBy="ied-preview-line"
                   loading={!baseSvgText && !loadErr}
+                  folded={footFolded}
                   onPick={pickDownloadFormat}
                   onDownload={handleDownload}
                 />
@@ -3034,7 +3061,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   title={saveLabel.full}
                 >
                   <FooterGlyph name={saveLabel.glyph} />
-                  <span className="nm">{saveLabel.full}</span>
+                  {saveLabel.short ? (
+                    <span className="nm"><span className="nm-l">{saveLabel.full}</span><span className="nm-s" aria-hidden="true">{saveLabel.short}</span></span>
+                  ) : (
+                    <span className="nm">{saveLabel.full}</span>
+                  )}
                   {saveLabel.hv && <span className="hv">{saveLabel.hv}</span>}
                 </button>
               </div>
@@ -3590,6 +3621,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     }
   })
   const [addMode, setAddMode] = useState(false)
+  // The element that had focus when the editor opened, and the icon it opened on. Kept across a
+  // swap to a Similar icon, so closing can still hand focus back (see IconCustomizer).
+  const editorOpenerRef = useRef(null)
+  const noteEditorOpener = (icon) => {
+    if (selected || addMode) return
+    editorOpenerRef.current = { el: document.activeElement, key: icon ? iconCellKey(icon) : null }
+  }
   const [recents, setRecents] = useState(() => getRecentIcons())
   const timer = useRef(null)
   const firstPageTimer = useRef(null)
@@ -4409,11 +4447,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       onCopy?.(logodevUrl(icon.ref, 512))
       return
     }
+    noteEditorOpener(icon)
     setAddMode(false)
     setSelected(icon)
   }
 
   const handleAddIcon = () => {
+    noteEditorOpener(null)
     setSelected(null)
     setAddMode(true)
   }
@@ -5638,6 +5678,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           addMode={addMode && !selected}
           isPro={isPro}
           saveLimit={customIconLimit}
+          openerRef={editorOpenerRef}
           onClose={handleCloseCustomizer}
           onCopy={onCopy}
           onPick={handleIconClick}

@@ -1311,7 +1311,7 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
 .pop.dl-menu[data-pop-fixed="true"]{
   position:fixed;inset:auto;left:auto;right:var(--dl-right,8px);bottom:auto;top:var(--select-top,0px);
   z-index:var(--select-layer,130);isolation:isolate;
-  min-width:max(200px,var(--dl-w,0px));width:max-content;max-width:calc(100vw - 16px);
+  min-width:max(200px,var(--dl-w,0px));width:max-content;max-width:calc(100vw - 32px);
   max-height:var(--pop-max-h,100dvh);
 }
 .dl-scrim{position:fixed;inset:0;z-index:calc(var(--select-layer,130) - 1);background:transparent}
