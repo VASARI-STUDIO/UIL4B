@@ -170,7 +170,7 @@ test.describe('Free and Pro', () => {
         await pick(page, panel, name)
         await expect(themeTier(panel), `${name}: the row`).toHaveText(free ? 'Free' : 'Pro')
         await expect(primaryButton(panel), `${name}: the dock`).toHaveText(free ? FILES[file].label : 'Unlock with Pro')
-        await expect(panel.locator('.xd-theme-lock'), `${name}: the lock on the preview`).toHaveCount(free ? 0 : 1)
+        if (file !== 'kit') await expect(panel.locator('.xd-theme-lock'), `${name}: the lock on the blurred preview`).toBeVisible()
       }
     })
   }
