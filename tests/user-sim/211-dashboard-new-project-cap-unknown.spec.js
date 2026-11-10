@@ -69,6 +69,47 @@ const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' 
 /** The title row's New project (the Other projects list draws a second one). */
 const newInTitleRow = (page) => page.locator('.db-newwrap').getByRole('button', { name: 'New project' })
 
+/** The account's read answers ten minutes late; the app gives up on it after 15 seconds. */
+const NEVER = [{ path: 'sync/projects', ms: 10 * 60_000 }]
+const GIVE_UP_MS = 15_000
+
+/** A new device whose account read never answers, on /projects once the app has given up waiting. */
+async function stalledThenFailed(page) {
+  await page.clock.install()
+  await fullAccountOnAFreshDevice(page, { slowReads: NEVER })
+  await go(page, '/projects')
+  await expect(page.getByRole('region', { name: 'Loading your projects' }), 'the list has not arrived').toBeVisible()
+  await expect(newInTitleRow(page)).toBeDisabled()
+  await page.clock.fastForward(GIVE_UP_MS + 1000)
+  await expect(page.getByRole('alert').filter({ hasText: /Your projects didn.t load\./ })).toBeVisible({ timeout: 10_000 })
+  await expect(newInTitleRow(page)).toBeEnabled()
+}
+
+/** Bottom edges, in viewport pixels, of the fixed nav alone and of the nav with the notice strip under it. */
+const chromeEdge = (page) => page.evaluate(() => {
+  const bottom = (selector) => {
+    const box = document.querySelector(selector)?.getBoundingClientRect()
+    return box && box.height > 0 ? box.bottom : 0
+  }
+  const nav = bottom('.pnav')
+  return { nav, all: Math.max(nav, bottom('.notice-stack')) }
+})
+
+const topOf = (locator) => locator.evaluate((el) => el.getBoundingClientRect().top)
+
+/** Wait for a smooth scroll to finish: the page has not moved for fifteen frames. */
+const scrollEnded = (page) => page.evaluate(() => new Promise((resolve) => {
+  let last = -1
+  let still = 0
+  const frame = () => {
+    still = window.scrollY === last ? still + 1 : 0
+    last = window.scrollY
+    if (still >= 15) resolve()
+    else requestAnimationFrame(frame)
+  }
+  frame()
+}))
+
 /** On /create/palette: open Save or share, name the project and press Enter. */
 async function nameAndSaveFromPalette(page, name) {
   await page.getByRole('button', { name: /^Save or share/ }).click()
@@ -154,6 +195,60 @@ test.describe('New project while the allowance is not known', () => {
     await expect(page.locator('.toast.show')).toHaveCount(0)
     expect([...(await accountIds(page))].sort(), 'the account still holds exactly its three').toEqual(['r1', 'r2', 'r3'])
     expect(await deviceIds(page), 'nothing was written to the device').toEqual([])
+  })
+
+  test.describe('a read that never answers', () => {
+    test('it fails after 15 seconds, and New project then opens the "couldn’t be checked" dialog', async ({ page }) => {
+      watch(page, 'a Free designer with three projects on a new device, the account never answers')
+      await stalledThenFailed(page)
+      await newInTitleRow(page).click()
+      const refusal = page.getByTestId('project-create-refusal')
+      await expect(refusal).toBeVisible()
+      await expect(refusal).toContainText('couldn’t be checked')
+      await expect(refusal.getByRole('button', { name: 'Try again' })).toBeVisible()
+      await expect(rail(page)).toHaveCount(0)
+      await expect(page).toHaveURL(/\/projects$/)
+      expect(await deviceIds(page), 'nothing was written to the device').toEqual([])
+      expect([...(await accountIds(page))].sort(), 'nothing was created on the account').toEqual(['r1', 'r2', 'r3'])
+    })
+
+    test.describe('on a 390px phone', () => {
+      test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+      test('the dialog opened from further down the page clears the fixed nav, and so does the button that opened it', async ({ page }) => {
+        watch(page, 'a thumb on a 390px phone, the account never answers, scrolled down the page')
+        await stalledThenFailed(page)
+        // The docked bar is not drawn while the list has failed, so the press is sent to the title row's button
+        // with the page scrolled to where that button is out of sight.
+        await page.evaluate(() => window.scrollTo({ top: 900, behavior: 'instant' }))
+        await newInTitleRow(page).evaluate((el) => el.click())
+        const refusal = page.getByTestId('project-create-refusal')
+        await expect(refusal).toBeVisible()
+        await scrollEnded(page)
+        const [chrome, popover, button] = [await chromeEdge(page), await topOf(refusal), await topOf(newInTitleRow(page))]
+        expect(popover, `the dialog starts at ${popover}, under the fixed nav and notice that end at ${chrome.all}`).toBeGreaterThanOrEqual(chrome.all)
+        expect(popover, 'the dialog is below the nav').toBeGreaterThanOrEqual(chrome.nav)
+        expect(button, `New project starts at ${button}, under the fixed nav and notice that end at ${chrome.all}`).toBeGreaterThanOrEqual(chrome.all)
+        expect(button, 'New project is below the nav').toBeGreaterThanOrEqual(chrome.nav)
+      })
+    })
+
+    test('at 1440, the dialog opened by a button just under the fixed nav clears the nav', async ({ page }) => {
+      watch(page, 'a Free designer at 1440, the account never answers, the page scrolled until New project meets the nav')
+      await stalledThenFailed(page)
+      const chrome = await chromeEdge(page)
+      await newInTitleRow(page).evaluate((el, edge) => {
+        window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - edge - 6, behavior: 'instant' })
+      }, chrome.all)
+      await newInTitleRow(page).click()
+      const refusal = page.getByTestId('project-create-refusal')
+      await expect(refusal).toBeVisible()
+      await scrollEnded(page)
+      const popover = await topOf(refusal)
+      expect(popover, `the dialog starts at ${popover}, under the fixed nav and notice that end at ${chrome.all}`).toBeGreaterThanOrEqual(chrome.all)
+      expect(popover, 'the dialog is below the nav').toBeGreaterThanOrEqual(chrome.nav)
+      expect(await topOf(newInTitleRow(page)), 'New project is below the nav').toBeGreaterThanOrEqual(chrome.all)
+    })
   })
 
   test.describe('a device that already holds a copy of the account', () => {
