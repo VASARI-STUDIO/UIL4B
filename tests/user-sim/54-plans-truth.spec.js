@@ -196,9 +196,9 @@ test.describe('/plans advertises only what the product has', () => {
     // every other check missed: toBeVisible() passed, .innerText() returned the
     // copy, and .click() worked — on a block no human could see.
     //
-    // The page has no closing call to action; its ways in are the two plan
-    // buttons and the footer's "Open the toolkit". Each one, and
-    // every ancestor it paints through, must be opaque after a scroll to it.
+    // The page's ways in are the two plan buttons and the closing call's two
+    // buttons. Each one, and every ancestor it paints through, must be opaque
+    // after a scroll to it.
     watch(page, PERSONA)
     await stubPrices(page)
     await go(page, '/plans')
@@ -207,7 +207,8 @@ test.describe('/plans advertises only what the product has', () => {
     const ctas = [
       page.locator('.hpl-free').getByRole('link', { name: 'Open the toolkit' }),
       page.locator('.hpl-pro .pa-cta').locator('a, button').first(),
-      page.getByRole('contentinfo').getByRole('link', { name: /Open the toolkit/ }),
+      page.locator('.hm-close').getByRole('link', { name: 'Open the toolkit' }),
+      page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' }),
     ]
     for (const cta of ctas) {
       await expect(cta).toBeVisible()

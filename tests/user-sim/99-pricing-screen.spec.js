@@ -1,23 +1,20 @@
-// /plans — the plan ledger (src/pages/Pricing.jsx). What a person choosing how to
+// /plans — the plans page (src/pages/Pricing.jsx). What a person choosing how to
 // pay for Pro depends on:
 //
-//   1. THE BILLING SWITCH. A native radio group, Monthly and Yearly (quarterly is
-//      not sold), with the live saving as text in the Yearly option. Every figure
-//      is computed here from the stubbed /api/get-prices answer, never typed, so a
+//   1. THE BILLING SWITCH. A radio group, Monthly and Yearly (quarterly is not
+//      sold), with the live saving as text in the Yearly option. Every figure is
+//      computed here from the stubbed /api/get-prices answer, never typed, so a
 //      page that starts typing a price goes red.
 //   2. THE PRO CTA FLOW. Signed in, straight to /checkout for the chosen cadence;
 //      signed out, the login popup opens over /plans and then goes on to that
 //      checkout. /checkout opened directly still asks for the sign-in itself.
 //   3. NOTHING MOVES. Switching cadence must not shift the Pro button, at a phone
 //      and a desktop width.
-//   4. THE DOCKED PLAN BAR below 1360px, and the offer-first layout below 1024px:
-//      billing, then Pro (price, billed line, trial line, button on the first
-//      screen), then Free, a three-column table, an accordion, and a closing band
-//      whose Pro button goes to checkout on the selected cadence.
-//   5. THE PLAN BAR ON THE LEDGER WIDTHS: docked at the bottom from 1024 to 1359
-//      (dropping as the closing colour band comes into view) and pinned under the
-//      nav from 1360, and still tracking the Pro button after a resize swaps the
-//      layout.
+//   4. THE COMPARISON, THE QUESTIONS AND THE CLOSING CALL: one table whose head
+//      sticks under the nav and carries the Pro price once the pair has scrolled
+//      away, seven closed questions, and a closing band whose Pro button goes to
+//      checkout on the selected cadence.
+//   5. A PAGE CURRENCY WITH ONE CADENCE MISSING, and the price service being down.
 //
 // The suite's preview has no serverless functions, so /api/get-prices is stubbed
 // with production's own answer shape. The outage path is asserted too, because a
@@ -102,7 +99,6 @@ const pro = (page) => page.locator('.hpl-pro')
 const free = (page) => page.locator('.hpl-free')
 const proCta = (page) => pro(page).locator('.pa-cta').locator('a, button').first()
 const note = (page) => pro(page).locator('.pa-slot')
-const under = (page) => pro(page).locator('.pa-foot')
 
 test.describe('the billing switch', () => {
   test('offers Monthly and Yearly only, Yearly selected, with the live saving in the Yearly option', async ({ page }) => {
@@ -373,10 +369,10 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await expectRendered(page)
 
     await expect(page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' })).toHaveAttribute('href', '/checkout?plan=yearly')
-    await expect(page.locator('thead').getByRole('link', { name: /free trial|Upgrade to Pro/ })).toHaveAttribute('href', '/checkout?plan=yearly')
+    await expect(page.locator('thead a.pl-pill')).toHaveAttribute('href', '/checkout?plan=yearly')
     await choose(page, 'Monthly')
     await expect(page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' })).toHaveAttribute('href', '/checkout?plan=monthly')
-    await expect(page.locator('thead').getByRole('link', { name: /free trial|Upgrade to Pro/ })).toHaveAttribute('href', '/checkout?plan=monthly')
+    await expect(page.locator('thead a.pl-pill')).toHaveAttribute('href', '/checkout?plan=monthly')
 
     // Each of them starts the login flow on this page too. Closing the popup
     // leaves the visitor on /plans with nothing started.
@@ -508,7 +504,7 @@ test.describe('the Pro CTA starts the real upgrade', () => {
 test.describe('when one cadence has no price in the page currency', () => {
   test.use({ locale: 'en-AU' })
 
-  test('the Yearly note names no monthly price when Monthly has none in AUD, and never a USD one', async ({ page }) => {
+  test('the Yearly detail names no monthly price when Monthly has none in AUD, and never a USD one', async ({ page }) => {
     watch(page, 'an Australian visitor when Monthly has no AUD price')
     await stubPrices(page, {
       source: { monthly: 'live', yearly: 'live' },
@@ -519,12 +515,12 @@ test.describe('when one cadence has no price in the page currency', () => {
     await expectRendered(page)
 
     await expect(pro(page).locator('.pa-amt')).toHaveText('A$6.25')
-    await expect(note(page)).toContainText('A$75 billed yearly.')
+    await expect(note(page)).toContainText('Free for 7 days, then A$75 a year.')
     await expect(note(page), 'a USD monthly price was set beside an AUD yearly one').not.toContainText(/billed monthly|US\$|A\$7(?!\d)/)
     await expect(page.getByText(/Save d+%/), 'a saving was stated across two currencies').toHaveCount(0)
   })
 
-  test('the Yearly note reads the same when both cadences have an AUD price, and never adds the monthly one', async ({ page }) => {
+  test('the Yearly detail names the Monthly price only when both cadences have an AUD price', async ({ page }) => {
     watch(page, 'an Australian visitor when both cadences have an AUD price')
     await stubPrices(page, {
       source: { monthly: 'live', yearly: 'live' },
@@ -534,8 +530,9 @@ test.describe('when one cadence has no price in the page currency', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    await expect(note(page)).toContainText('A$75 billed yearly.')
-    await expect(note(page), 'the Yearly note offered a monthly billing alongside').not.toContainText(/billed monthly|A\$11/)
+    await expect(note(page)).toContainText('Free for 7 days, then A$75 a year.')
+    await expect(note(page)).toContainText('Monthly is A$11 a month, with no free trial.')
+    await expect(note(page), 'the Yearly detail printed a USD figure beside AUD ones').not.toContainText('US$')
   })
 
   test('a live price with no option for AUD is not offered in AUD, whatever number the table carries', async ({ page }) => {
@@ -549,7 +546,7 @@ test.describe('when one cadence has no price in the page currency', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    await expect(note(page)).toContainText('A$75 billed yearly.')
+    await expect(note(page)).toContainText('Free for 7 days, then A$75 a year.')
     await expect(note(page), 'an AUD figure with no live AUD price behind it was named').not.toContainText(/billed monthly|A\$11/)
     await go(page, '/plans?billing=monthly')
     await expectRendered(page)
@@ -557,7 +554,7 @@ test.describe('when one cadence has no price in the page currency', () => {
     await expect(pro(page).getByRole('link', { name: /Upgrade to Pro|free trial/ })).toHaveCount(0)
   })
 
-  test('the Yearly note does not name a monthly price the service serves from its fallback table', async ({ page }) => {
+  test('the Yearly detail does not name a monthly price the service serves from its fallback table', async ({ page }) => {
     watch(page, 'an Australian visitor when Monthly is only a fallback default')
     await stubPrices(page, {
       source: { monthly: 'fallback', yearly: 'live' },
@@ -567,7 +564,7 @@ test.describe('when one cadence has no price in the page currency', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    await expect(note(page)).toContainText('A$75 billed yearly.')
+    await expect(note(page)).toContainText('Free for 7 days, then A$75 a year.')
     await expect(note(page), 'a fallback default was named as a price').not.toContainText(/billed monthly|A\$11/)
   })
 
@@ -582,8 +579,8 @@ test.describe('when one cadence has no price in the page currency', () => {
     await expectRendered(page)
 
     await expect(pro(page).locator('.pa-amt')).toHaveText('A$11')
-    await expect(under(page), 'no cross-sell for a cadence that cannot be bought here').toHaveText('')
-    await expect(pro(page)).not.toContainText('works out at')
+    await expect(note(page)).toContainText('Billed monthly. No free trial on Monthly; billing starts today.')
+    await expect(pro(page), 'no cross-sell for a cadence that cannot be bought here').not.toContainText('works out at')
   })
 })
 
