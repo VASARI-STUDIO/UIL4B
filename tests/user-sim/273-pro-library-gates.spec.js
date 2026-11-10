@@ -78,8 +78,8 @@ for (const width of [390, 1440]) {
     test('makes one offer, Pro, and never mentions a free account', async ({ page }) => {
       watch(page, 'a signed-out visitor reading the Brand gate')
       const block = await openBrandSignedOut(page)
-      await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-      await expect(block.locator('.lockt-cta-body')).toHaveText(ANON_BODY)
+      await expect(block.locator('.geg-h')).toHaveText(HEADING)
+      await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
       expect(await block.innerText(), 'the gate talks about a free account that does not open Brand')
         .not.toMatch(/free account/i)
       await expect(block.locator('a, button'), 'the gate offers more than one way forward').toHaveCount(1)

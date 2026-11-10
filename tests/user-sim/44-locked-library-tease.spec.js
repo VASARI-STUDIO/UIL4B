@@ -148,25 +148,34 @@ test.describe('a locked library row hands nothing over — signed out', () => {
     expect(names, 'no open hex in any accessible name — this assertion is vacuous').toContain(ANON_CONTROL)
   })
 
-  test('the signed-out wall offers the free account, and offers it honestly', async ({ page }) => {
+  test('the signed-out gate offers the free account, and offers it honestly', async ({ page }) => {
     // THE RUNG MISMATCH THIS PREVENTS: selling a purchase to somebody whose
     // next step costs nothing. Seven of the ninety-eight withheld palettes
     // arrive with a free account, so "another 98 with Pro" would be false here
-    // even though every number in it is real.
-    const cta = page.locator('.lockt-cta-btn')
+    // even though every number in it is real. The gate is the shared
+    // GalleryEndGate: "Log in to access N palettes", where N is what a free
+    // account opens in all, and a "See the plans" link for Pro.
+    const gate = page.locator('.geg[data-gate="anon"]')
+    await expect(gate).toBeVisible()
+    const cta = gate.getByRole('button', { name: 'Log in' })
     await expect(cta).toBeVisible()
-    await expect(cta).toHaveText(/Create your free account/)
+    await expect(gate.getByRole('link', { name: 'See the plans' })).toHaveAttribute('href', '/plans')
     // Read as NUMBERS rather than as substrings: `toContain('7')` is satisfied
     // by "Another 98 palettes" — the Pro remainder — which is precisely the
     // wrong answer this assertion exists to catch.
     const numbersIn = (s) => (s.match(/\d+/g) || []).map(Number)
-    const heading = await page.locator('.lockt-cta-head').first().innerText()
-    expect(numbersIn(heading), 'the wall must name how many more an ACCOUNT opens').toContain(ANON_GAIN)
-    const body = await page.locator('.lockt-cta-body').first().innerText()
-    expect(numbersIn(body), 'the wall must state the size of the library it is metering')
+    const heading = await gate.getByRole('heading').innerText()
+    expect(heading).toBe(`Log in to access ${GALLERY_TIER_LIMITS.free} palettes`)
+    expect(numbersIn(heading), 'the heading must name what an ACCOUNT opens in all').toContain(GALLERY_TIER_LIMITS.free)
+    expect(numbersIn(heading), 'the heading must not price the Pro remainder').not.toContain(LIBRARY_PALETTES.length)
+    const body = await gate.locator('.geg-p').innerText()
+    expect(numbersIn(body), 'the gate must state what this viewer has now')
+      .toContain(GALLERY_TIER_LIMITS.anonymous)
+    expect(numbersIn(body), 'the gate must state the size of the library it is metering')
       .toContain(LIBRARY_PALETTES.length)
-    expect(numbersIn(body), 'the wall must state what the next rung actually opens')
+    expect(numbersIn(body), 'the gate must state what the next rung actually opens')
       .toContain(GALLERY_TIER_LIMITS.free)
+    expect(ANON_GAIN, 'the rung gain is the gap between the two caps').toBe(GALLERY_TIER_LIMITS.free - GALLERY_TIER_LIMITS.anonymous)
     // Keyboard reachable, and it opens the app's own sign-in dialog rather
     // than a checkout — the same gate the export flow uses.
     await cta.focus()
@@ -176,11 +185,13 @@ test.describe('a locked library row hands nothing over — signed out', () => {
   })
 
   test('no placeholder is stamped with a price the row does not carry', async ({ page }) => {
-    // LockedPaletteCard hard-codes a "Pro" pill. At this rung the next rows are
-    // not Pro's — they come with a free account — so the page renders the wall
-    // alone. If that card ever takes a tier-aware label, this is the assertion
-    // to come back and relax.
+    // The faded rows under the gate are neutral decoration. They carry no "Pro"
+    // pill (the next rows are not Pro's, they come with a free account), no
+    // text at all, and no old locked-card markup.
     await expect(page.locator('.lockt-card')).toHaveCount(0)
+    const faded = page.locator('.geg-fade .geg-ph')
+    expect(await faded.count(), 'the faded rows are missing — this check would be vacuous').toBeGreaterThan(3)
+    expect((await faded.allInnerTexts()).join('').trim(), 'a placeholder carries text').toBe('')
   })
 })
 
@@ -216,33 +227,32 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
       'a withheld colour is painted on an element').toEqual([])
   })
 
-  test('a locked card copies and opens nothing — its one control is the way to Pro', async ({ page }) => {
-    const cards = page.locator('.lockt-card')
-    await expect(cards).toHaveCount(3)
-    // a locked card is blurred
-    // and shows "Upgrade to Pro" on hover or focus, going to /plans. So each
-    // card carries exactly ONE control, and it is that link — never a button
-    // that copies, opens or hands off the item it stands for.
-    const controls = cards.locator('button, a, [tabindex]')
-    expect(await controls.count(), 'each locked card carries exactly one control').toBe(3)
-    for (let i = 0; i < 3; i++) {
-      await expect(controls.nth(i)).toHaveAttribute('href', '/plans')
-      await expect(controls.nth(i)).toHaveAccessibleName(/^Upgrade to Pro/)
-    }
-    // Hidden at rest on a mouse, shown on hover — the card is blurred, not greyed.
-    const first = cards.first()
-    expect(await first.locator('.lockt-stripes').evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
-    await first.hover()
-    await expect(first.locator('.lockt-upgrade')).toHaveCSS('opacity', '1')
+  test('the faded rows copy and open nothing — the one control is the way to Pro', async ({ page }) => {
+    // The placeholders under the gate are decoration made of stand-ins: they
+    // are hidden from assistive tech, inert and click-through, and none of
+    // them is a control. The gate holds the single way on, a link to /plans.
+    const gate = page.locator('.geg[data-gate="pro"]')
+    await expect(gate).toBeVisible()
+    const fade = gate.locator('.geg-fade')
+    expect(await fade.locator('.geg-ph').count(), 'the faded rows are missing - this check would be vacuous').toBeGreaterThan(3)
+    await expect(fade).toHaveAttribute('aria-hidden', 'true')
+    await expect(fade).toHaveAttribute('inert', '')
+    await expect(fade).toHaveCSS('pointer-events', 'none')
+    expect(await fade.locator('button, a, [tabindex], input').count(), 'a faded row carries a control').toBe(0)
+    // Blurred, not greyed.
+    expect(await fade.locator('.geg-ph-band').first().evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
+    const controls = gate.locator('button, a')
+    expect(await controls.count(), 'the gate has exactly one way on at this rung').toBe(1)
+    await expect(controls.first()).toHaveAttribute('href', '/plans')
   })
 
-  test('the wall is keyboard reachable, named, and opens the real Pro gate', async ({ page }) => {
+  test('the gate is keyboard reachable, named, and goes to the plans', async ({ page }) => {
     // The failure a recent PR shipped: a card whose only CTA could not be
     // reached by Tab in either direction. So this focuses it the way a keyboard
     // user would rather than clicking it.
-    const cta = page.locator('.lockt-cta-btn')
+    const gate = page.locator('.geg[data-gate="pro"]')
+    const cta = gate.getByRole('link', { name: 'See what Pro includes' })
     await expect(cta).toBeVisible()
-    await expect(cta).toHaveText(/See what Pro includes/)
     await cta.focus()
     await expect(cta).toBeFocused()
     await page.keyboard.press('Enter')
@@ -250,10 +260,12 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
     await expect(page).toHaveURL(/\/plans$/)
   })
 
-  test('the wall states the true remaining count, not a rounded boast', async ({ page }) => {
-    const heading = await page.locator('.lockt-cta-head').first().innerText()
+  test('the gate states the true remaining count, not a rounded boast', async ({ page }) => {
+    const gate = page.locator('.geg[data-gate="pro"]')
+    const heading = await gate.getByRole('heading').innerText()
+    expect(heading).toBe(`Pro opens ${FREE_REMAINING} more palettes`)
     const numbersIn = (s) => (s.match(/\d+/g) || []).map(Number)
-    expect(numbersIn(heading), 'the CTA must name how many rows are locked').toContain(FREE_REMAINING)
+    expect(numbersIn(heading), 'the gate must name how many rows are locked').toContain(FREE_REMAINING)
   })
 })
 
@@ -326,16 +338,15 @@ test.describe('the locked rows in the dark theme', () => {
   test('placeholders are visible and still leak nothing', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
-    // Signed in free, because that is the rung the placeholders belong to now:
-    // a signed-out visitor gets the wall alone (see the note on the "Pro" pill).
+    // Signed in free, the rung whose gate offers Pro.
     await signIn(page, { plan: 'free' })
     await go(page, ROUTE)
     await expect(page.locator('.pgal-card').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark')
-    await expect(page.locator('.lockt-card')).toHaveCount(3)
-    // The placeholder must actually be painted, not left transparent — a card
-    // that vanishes in dark is not a tease, it is a hole in the grid.
-    const band = await page.locator('.lockt-stripe').first().evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(await page.locator('.geg-fade .geg-ph').count(), 'the faded rows are missing').toBeGreaterThan(3)
+    // The placeholder must actually be painted, not left transparent — a row
+    // that vanishes in dark is not a tease, it is a hole in the page.
+    const band = await page.locator('.geg-ph-band').first().evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(band, 'the placeholder band has no ground in dark').not.toBe('rgba(0, 0, 0, 0)')
     const { text, html } = await surfaces(page)
     expect(TELLTALE.filter((hex) => text.includes(hex) || html.includes(hex)),

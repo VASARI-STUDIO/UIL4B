@@ -78,12 +78,12 @@ async function openBrand(page, { mood } = {}) {
 
 const page$ = (page) => page.locator('.pgl-page')
 // Every way forward this block can offer, wherever it sits on the page.
-const offers = (page) => page$(page).locator('a, button').filter({ hasText: /^\s*(See what Pro includes|Create your free account)\s*$/ })
+const offers = (page) => page$(page).locator('a, button').filter({ hasText: /^\s*(See what Pro includes|Log in)\s*$/ })
 // The results region and every live region inside it: the gated block must be
 // the only one that announces a chip tap.
 const results = (page) => page.locator('section[aria-labelledby="pgl-grid-heading"]')
 const announcers = (page) => results(page).locator('[role="status"], [aria-live]:not([aria-live="off"])')
-const gatedBlock = (page) => page.locator('[role="status"]').filter({ hasText: HEADING })
+const gatedBlock = (page) => page.locator('[role="status"]').filter({ hasText: HEADING }).locator('.geg')
 
 // One empty status node is mounted before the tap and is the one announcer after.
 async function expectSingleAnnouncement(page) {
@@ -119,8 +119,8 @@ for (const width of [390, 1440]) {
         await openBrand(page)
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(FREE_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(FREE_BODY)
         await expect(offers(page)).toHaveCount(1)
         const link = block.getByRole('link', { name: 'See what Pro includes' })
         await expect(link).toHaveCount(1)
@@ -142,8 +142,8 @@ for (const width of [390, 1440]) {
         await openBrand(page, { mood: 'Warm' })
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(FREE_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(FREE_BODY)
         await expect(offers(page), 'the gated block and the close CTA both showed').toHaveCount(1)
         await expectNoMatchStateGone(page)
       })
@@ -168,13 +168,13 @@ for (const width of [390, 1440]) {
         await openBrand(page)
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(ANON_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
         await expect(offers(page)).toHaveCount(1)
         const link = block.getByRole('link', { name: 'See what Pro includes' })
         await expect(link).toHaveCount(1)
         await expect(link).toHaveAttribute('href', '/plans')
-        await expect(block.getByRole('button', { name: 'Create your free account' }), 'a free account does not open Brand').toHaveCount(0)
+        await expect(block.getByRole('button', { name: 'Log in' }), 'a free account does not open Brand').toHaveCount(0)
         await expectNoMatchStateGone(page)
       })
 
@@ -192,8 +192,8 @@ for (const width of [390, 1440]) {
         await openBrand(page, { mood: 'Warm' })
         const block = gatedBlock(page)
         await expect(block).toBeVisible()
-        await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-        await expect(block.locator('.lockt-cta-body')).toHaveText(ANON_BODY)
+        await expect(block.locator('.geg-h')).toHaveText(HEADING)
+        await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
         await expect(offers(page), 'the gated block and the close CTA both showed').toHaveCount(1)
         await expectNoMatchStateGone(page)
       })

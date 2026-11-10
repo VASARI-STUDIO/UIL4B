@@ -7,7 +7,7 @@
 //
 // Two surfaces, with request capture:
 //   - the Export dialog's book and guidelines previews in a Pro theme
-//   - the community prompt gallery's locked cards
+//   - the community prompt gallery's locked cards (parked: skipped until the gallery is public, see its block below)
 // A Pro account is the control: it must still get the real pictures, or the test would pass
 // by loading nothing.
 //
@@ -18,7 +18,8 @@ import { go, watch, signIn } from './helpers.js'
 import { chooseFormat, exportPanel } from './export-rows.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
-const REAL_THEME = /\/export-themes\/[\w-]+-(book|guideCover|guidePalette)\.webp/
+// Not preceded by locked-images: the stand-in's path ends in the same /export-themes/<file> and must not count as the real one.
+const REAL_THEME = /(?<!locked-images)\/export-themes\/[\w-]+-(book|guideCover|guidePalette)\.webp/
 const STANDIN_THEME = /\/locked-images\/export-themes\/[\w-]+-(book|guideCover|guidePalette)\.webp/
 
 function capture(page) {
@@ -75,12 +76,18 @@ test.describe('export dialog theme previews', () => {
   }
 })
 
+// PARKED, like 45-prompt-library-gate: /discover/prompts opens for an admin only (App.jsx RequireAdmin), and an admin is
+// always Pro, so no account that can open the gallery is shown a locked card. Until the gallery is public this test cannot
+// reach the surface it checks; the address half is held by tests/unit/locked-standins.test.js.
 test.describe('community prompt gallery', () => {
+  test.skip(true, 'parked: admin-only, and an admin is Pro, so no locked card is reachable')
+
   test('locked cards load stand-ins, never the real poster, and the page has no real poster for them', async ({ page }) => {
     watch(page, 'a signed-out visitor on the prompt gallery, with requests captured')
     const urls = capture(page)
     await go(page, '/discover/prompts')
-    const locked = page.locator('.pl-locked-card .pl-card-poster, .pl-mosaic-tile.is-locked img')
+    // The locked cards and the end gate's faded rows (GateFadeCards) both show stand-ins.
+    const locked = page.locator('.pl-locked-card .pl-card-poster, .pl-mosaic-tile.is-locked img, .geg-fade .geg-ph img')
     await expect(locked.first()).toBeAttached()
     const srcs = await locked.evaluateAll((els) => els.map((el) => el.getAttribute('src') || ''))
     expect(srcs.length, 'a free visitor sees locked previews').toBeGreaterThan(0)

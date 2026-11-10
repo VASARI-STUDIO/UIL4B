@@ -177,11 +177,32 @@ test.describe('icon groups', () => {
 
     // A deep link to the locked group shows the wall and fetches nothing.
     await go(page, `${ROUTE}?group=commerce`)
-    await expect(page.getByText(`${COMMERCE.label} is Pro`)).toBeVisible()
-    await expect(page.getByRole('link', { name: 'See what Pro includes' })).toHaveAttribute('href', '/plans')
+    const lockedGate = page.locator('.geg')
+    await expect(lockedGate.getByRole('heading', { name: `${COMMERCE.label} is Pro` })).toBeVisible()
+    await expect(lockedGate.getByRole('link', { name: 'See what Pro includes' })).toHaveAttribute('href', '/plans')
+    await expect(lockedGate.getByRole('button', { name: 'Log in' }), 'a free account does not open a Pro group').toHaveCount(0)
     await expect(page.locator('.igp-grid')).toHaveCount(0)
     await page.waitForTimeout(500)
     expect(asked.filter((r) => PRO_ONLY.has(r)), 'a Pro group\'s icons were requested for a signed-out visitor').toEqual([])
+  })
+
+  test('signed out, the index closes on the shared gate: Pro only, because a free account opens no more groups', async ({ page }) => {
+    watch(page, 'a signed-out visitor reaching the end of the group index')
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await go(page, ROUTE)
+    await expect(page.locator('.igp-cards a.igp-card')).toHaveCount(FREE.length, { timeout: 15000 })
+    // Positive control: a Pro group is on the page, so there is something to gate.
+    expect(PRO.length).toBeGreaterThan(0)
+    const gate = page.locator('.geg')
+    await expect(gate).toHaveCount(1)
+    await expect(gate).toHaveAttribute('data-gate', 'pro')
+    await expect(gate.getByRole('heading')).toHaveText(`Pro opens ${PRO.length} more icon groups`)
+    await expect(gate.locator('.geg-p')).toContainText(`You're seeing ${FREE.length} of the ${PREMADE_ICON_GROUPS.length} icon groups.`)
+    // One way on, and it is Pro: no Log in, because a free account opens no more groups.
+    await expect(gate.locator('a, button')).toHaveCount(1)
+    await expect(gate.getByRole('link', { name: 'See what Pro includes' })).toHaveAttribute('href', '/plans')
+    await expect(gate.getByRole('button', { name: 'Log in' })).toHaveCount(0)
+    await expect(gate.getByRole('link', { name: 'See the plans' })).toHaveCount(0)
   })
 
   test('on Pro every group opens', async ({ page }) => {

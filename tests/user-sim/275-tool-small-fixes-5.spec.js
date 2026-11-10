@@ -58,16 +58,18 @@ for (const [width, touch] of [[320, true], [360, true], [320, false], [360, fals
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2 · Pro libraries: the locked cards share their rows
+// 2 · Pro libraries: the faded placeholder cells share their rows
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Every row of the locked grid ends where the grid ends: a row whose last card
-// stops short leaves an empty cell beside it.
+// Every row of the faded placeholder grid under the end gate ends where the grid
+// ends: a row whose last cell stops short leaves an empty cell beside it. Only
+// the rows the grid shows count (it is clipped to two).
 const lockedRows = (page, gridSelector) => page.evaluate((sel) => {
   const grid = document.querySelector(sel)
   if (!grid) return null
   const box = grid.getBoundingClientRect()
-  const cards = [...grid.querySelectorAll(':scope > .lockt-card')].map((c) => c.getBoundingClientRect())
+  const cards = [...grid.querySelectorAll(':scope > .geg-ph')].map((c) => c.getBoundingClientRect())
+    .filter((r) => r.top < box.bottom - 1)
   const rows = new Map()
   for (const r of cards) rows.set(Math.round(r.top), [...(rows.get(Math.round(r.top)) || []), r])
   return {
@@ -78,28 +80,29 @@ const lockedRows = (page, gridSelector) => page.evaluate((sel) => {
 }, gridSelector)
 
 const LOCKED_LIBRARIES = [
-  { name: 'Palette Library', route: '/discover/palettes', grid: '.pgal-grid--locked' },
-  { name: 'Gradient Library', route: '/discover/gradients', grid: '.grg-grid--locked' },
+  { name: 'Palette Library', route: '/discover/palettes', grid: '.geg-ph-grid' },
+  { name: 'Gradient Library', route: '/discover/gradients', grid: '.geg-ph-grid' },
 ]
 
 for (const width of [390, 600, 768, 1024, 1440]) {
-  test.describe(`Locked cards at ${width}px`, () => {
+  test.describe(`Faded placeholder rows at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 }, hasTouch: width < 800, isMobile: width < 800 })
 
     for (const lib of LOCKED_LIBRARIES) {
-      test(`${lib.name}: the locked cards share their rows, no empty cell`, async ({ page }) => {
-        watch(page, `a free designer meeting the locked ${lib.name} cards at ${width}px`)
+      test(`${lib.name}: the faded cells share their rows, no empty cell`, async ({ page }) => {
+        watch(page, `a free designer meeting the ${lib.name} end gate at ${width}px`)
         await signIn(page, { plan: 'free' })
         await go(page, lib.route)
         const grid = page.locator(lib.grid)
         await grid.scrollIntoViewIfNeeded()
-        await expect(grid.locator(':scope > .lockt-card').first()).toBeVisible()
+        await expect(grid.locator(':scope > .geg-ph').first()).toBeVisible()
         const r = await lockedRows(page, lib.grid)
-        expect(r.count, 'locked cards on the page').toBeGreaterThan(1)
+        expect(r.count, 'placeholder cells in the faded rows').toBeGreaterThan(1)
+        expect(r.rows.length, 'the faded rows draw two rows').toBe(2)
         for (const row of r.rows) {
-          expect(Math.abs(row.right - r.gridRight), `a row of ${row.cards} locked card(s) stops ${Math.round(r.gridRight - row.right)}px short of the grid edge`).toBeLessThanOrEqual(1)
+          expect(Math.abs(row.right - r.gridRight), `a row of ${row.cards} placeholder cell(s) stops ${Math.round(r.gridRight - row.right)}px short of the grid edge`).toBeLessThanOrEqual(1)
         }
-        await page.screenshot({ path: `${SHOTS}/${lib.route.split('/').pop()}-locked-${width}.png` })
+        await page.screenshot({ path: `${SHOTS}/${lib.route.split('/').pop()}-end-gate-${width}.png` })
       })
     }
   })

@@ -228,18 +228,24 @@ test.describe('palette library sections', () => {
     ])
   })
 
-  test('the teased grid names itself too, and stands outside the sections', async ({ page }) => {
-    // A screen reader meeting three more cards after the open ones needs to
-    // know why they differ; an unnamed second grid is exactly the unexplained
-    // repetition this file exists to prevent.
+  test('the end gate names itself, and stands outside the sections', async ({ page }) => {
+    // A screen reader meeting the closing block after the open cards needs to
+    // know what it is: it is a section named by its own heading, and it is
+    // one the faded rows do not add to (they are hidden from assistive tech).
+    // The gate is not nested in a section, so it survives a section with
+    // nothing open.
     await signIn(page, { plan: 'free' })
     await go(page, ROUTE)
     await expect(page.locator('.pgal-card')).toHaveCount(10)
-    const locked = page.locator('.lbry-grid[aria-labelledby="pgl-locked-more"]')
-    await expect(locked).toHaveCount(1)
-    await expect(page.locator('#pgl-locked-more')).toHaveText('Palettes included with Pro')
-    expect(await page.locator('.pgl-section .lbry-grid[aria-labelledby="pgl-locked-more"]').count(),
-      'the teased grid is nested inside a section again — it disappears when that section has nothing open').toBe(0)
+    const gate = page.locator('section.geg[aria-labelledby="pgl-gate-h"]')
+    await expect(gate).toHaveCount(1)
+    await expect(page.locator('#pgl-gate-h')).toHaveText(/^Pro opens \d+ more palettes$/)
+    await expect(page.locator('#pgl-gate-h')).toHaveJSProperty('tagName', 'H2')
+    await expect(gate.locator('.geg-fade')).toHaveAttribute('aria-hidden', 'true')
+    expect(await page.locator('.pgl-section .geg').count(),
+      'the gate is nested inside a section again - it disappears when that section has nothing open').toBe(0)
+    expect(await page.locator('.lbry-grid[aria-labelledby="pgl-locked-more"]').count(),
+      'the old teased grid is back beside the gate').toBe(0)
   })
 })
 

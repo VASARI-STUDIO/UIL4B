@@ -52,8 +52,8 @@ const withheldHexes = (cap) => {
 const rgbOf = (hex) => `rgb(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)})`
 
 const RUNGS = [
-  { name: 'signed out', plan: null, cap: GALLERY_TIER_LIMITS.anonymous, placeholders: 0, wall: 'account' },
-  { name: 'signed in, free', plan: 'free', cap: GALLERY_TIER_LIMITS.free, placeholders: 3, wall: 'pro' },
+  { name: 'signed out', plan: null, cap: GALLERY_TIER_LIMITS.anonymous, wall: 'account' },
+  { name: 'signed in, free', plan: 'free', cap: GALLERY_TIER_LIMITS.free, wall: 'pro' },
 ]
 
 async function surfaces(page) {
@@ -135,11 +135,14 @@ for (const rung of RUNGS) {
       // and reports a leak that is not there. What the gate actually promises
       // is that the named rows on the page are the open ones plus, at most, the
       // three it is allowed to tease.
-      const rendered = (await page.locator('.grg-card .lbry-card-name, .lockt-card .lockt-name').allInnerTexts())
+      const rendered = (await page.locator('.grg-card .lbry-card-name').allInnerTexts())
         .map((n) => n.trim())
-      const allowed = [...OPEN, ...WITHHELD.slice(0, rung.placeholders)].map((g) => g.name)
+      // The faded rows under the gate are neutral shapes now, so the only named
+      // rows are the open ones: no withheld name is teased at any rung.
+      const allowed = OPEN.map((g) => g.name)
       expect(rendered.filter((name) => !allowed.includes(name)),
         'a withheld gradient is named on the page').toEqual([])
+      expect(await page.locator('.geg-fade').innerText(), 'the faded rows carry text').toBe('')
       expect(rendered.length, 'nothing is named at all — this assertion is vacuous').toBeGreaterThan(0)
     })
 
@@ -163,32 +166,45 @@ for (const rung of RUNGS) {
       await expect(page.locator(CARD)).toHaveCount(1)
     })
 
-    test('the wall offers this rung its own next step, with its own true number', async ({ page }) => {
+    test('the gate offers this rung its own next step, with its own true number', async ({ page }) => {
       // From the bottom rung the next step is a free account and the honest
-      // number is how many more THAT opens; from the free rung it is Pro and
+      // number is what THAT opens in all; from the free rung it is Pro and
       // the number is everything still withheld. Selling Pro to somebody whose
       // next seven gradients are free is the untruth this pins shut.
-      const head = page.locator('.lockt-cta-head')
+      const gate = page.locator(`.geg[data-gate="${rung.wall === 'account' ? 'anon' : 'pro'}"]`)
+      await expect(gate).toBeVisible()
+      const head = gate.getByRole('heading')
       const expected = rung.wall === 'account'
-        ? GALLERY_TIER_LIMITS.free - rung.cap
+        ? GALLERY_TIER_LIMITS.free
         : GALLERY_GRADIENTS.length - rung.cap
+      expect(await head.innerText()).toBe(rung.wall === 'account'
+        ? `Log in to access ${expected} gradients`
+        : `Pro opens ${expected} more gradients`)
       // THE NUMBERS ARE READ AS NUMBERS, not as substrings. `toContainText('7')`
       // is satisfied by "Another 97 gradients", which is the exact wrong answer
       // this assertion exists to catch — the Pro remainder printed on the
-      // account wall. Verified: that mutation survives a substring check.
+      // account gate. Verified: that mutation survives a substring check.
       const numbersIn = (s) => (s.match(/\d+/g) || []).map(Number)
-      expect(numbersIn(await head.innerText()), 'the wall does not state this rung\'s own number')
-        .toContain(expected)
+      const headNumbers = numbersIn(await head.innerText())
+      expect(headNumbers, 'the gate does not state this rung\'s own number').toContain(expected)
+      if (rung.wall === 'account') {
+        expect(headNumbers, 'the account gate prices the Pro remainder').not.toContain(GALLERY_GRADIENTS.length)
+      }
 
-      // And the body states the arithmetic behind it: how many this rung's next
-      // step opens, out of how many exist. Without both, "another 7" is a
-      // number with nothing to measure it against.
-      const bodyNumbers = numbersIn(await page.locator('.lockt-cta-body').innerText())
-      expect(bodyNumbers, 'the wall does not say how big the library is').toContain(GALLERY_GRADIENTS.length)
-      expect(bodyNumbers, 'the wall does not say how much the next rung opens')
-        .toContain(rung.wall === 'account' ? GALLERY_TIER_LIMITS.free : rung.cap)
-      const cta = page.locator('.lockt-cta-btn')
-      await expect(cta).toHaveText(rung.wall === 'account' ? /Create your free account/ : /See what Pro includes/)
+      // And the body states the arithmetic behind it: what this viewer has now,
+      // out of how many exist. Without both, "access 10" is a number with
+      // nothing to measure it against.
+      const bodyNumbers = numbersIn(await gate.locator('.geg-p').innerText())
+      expect(bodyNumbers, 'the gate does not say how big the library is').toContain(GALLERY_GRADIENTS.length)
+      expect(bodyNumbers, 'the gate does not say what the viewer has now').toContain(rung.cap)
+      if (rung.wall === 'account') {
+        expect(bodyNumbers, 'the gate does not say how much the free account opens').toContain(GALLERY_TIER_LIMITS.free)
+        await expect(gate.getByRole('link', { name: 'See the plans' })).toHaveAttribute('href', '/plans')
+      }
+      const cta = rung.wall === 'account'
+        ? gate.getByRole('button', { name: 'Log in' })
+        : gate.getByRole('link', { name: 'See what Pro includes' })
+      await expect(cta).toBeVisible()
       // Keyboard reachable, and it opens the canonical dialog for that step
       // rather than a second one built for this surface.
       await cta.focus()
@@ -199,23 +215,19 @@ for (const rung of RUNGS) {
       else await expect(page).toHaveURL(/\/plans$/)
     })
 
-    test('the placeholders carry no payload, no control and no wrong price', async ({ page }) => {
-      const cards = page.locator('.lockt-card')
-      // Zero at the bottom rung: LockedPaletteCard stamps every placeholder
-      // "Pro", and the next gradients are not Pro's — they come with a free
-      // account. At the free rung the pill is true and the three are back.
-      await expect(cards).toHaveCount(rung.placeholders)
-      // Each placeholder carries ONE
-      // control: an "Upgrade to Pro" link to /plans, shown on hover/focus. It
-      // opens nothing and copies nothing of the item it stands for.
-      const controls = cards.locator('button, a, [tabindex]')
-      expect(await controls.count(), 'each placeholder carries exactly one control').toBe(rung.placeholders)
-      for (let i = 0; i < rung.placeholders; i++) {
-        await expect(controls.nth(i)).toHaveAttribute('href', '/plans')
-      }
-      const painted = await cards.locator('*').evaluateAll(
-        (els) => els.map((el) => getComputedStyle(el).backgroundImage).join(' ').toUpperCase())
-      expect(TELLTALE.filter((hex) => painted.includes(hex)),
+    test('the faded rows carry no payload, no control and no wrong price', async ({ page }) => {
+      const fade = page.locator('.geg-fade')
+      const cells = fade.locator('.geg-ph')
+      // No old locked-card markup at either rung: the next gradients are not
+      // all Pro's (a free account opens more), so none is stamped "Pro".
+      await expect(page.locator('.lockt-card')).toHaveCount(0)
+      expect(await cells.count(), 'the faded rows are missing - this check would be vacuous').toBeGreaterThan(3)
+      await expect(fade).toHaveAttribute('aria-hidden', 'true')
+      await expect(fade).toHaveAttribute('inert', '')
+      expect(await fade.locator('button, a, [tabindex]').count(), 'a faded row carries a control').toBe(0)
+      const painted = await cells.locator('xpath=descendant-or-self::*').evaluateAll(
+        (els) => els.map((el) => `${getComputedStyle(el).backgroundImage} ${getComputedStyle(el).backgroundColor}`).join(' ').toUpperCase())
+      expect(TELLTALE.filter((hex) => painted.includes(hex) || painted.includes(rgbOf(hex).toUpperCase())),
         'a placeholder is painted from the gradient it stands for').toEqual([])
     })
 
@@ -223,12 +235,11 @@ for (const rung of RUNGS) {
       // Under a narrower question the visitor has already said what they want,
       // and answering it with a wall is an interruption rather than an offer —
       // the same rule the palette and prompt libraries follow.
-      await expect(page.locator('.lockt-cta')).toBeVisible()
+      await expect(page.locator('.geg')).toBeVisible()
       await page.getByLabel('Search gradients').fill(OPEN[0].name)
-      await expect(page.locator('.lockt-cta')).toHaveCount(0)
-      await expect(page.locator('.lockt-card')).toHaveCount(0)
+      await expect(page.locator('.geg')).toHaveCount(0)
       await page.getByLabel('Search gradients').fill('')
-      await expect(page.locator('.lockt-cta')).toBeVisible()
+      await expect(page.locator('.geg')).toBeVisible()
     })
   })
 }
@@ -242,7 +253,7 @@ test.describe('the gradient library at the top rung', () => {
     await go(page, ROUTE)
     await expect(page.locator(CARD)).toHaveCount(GALLERY_GRADIENTS.length)
     await expect(page.locator('.drh-head p')).toHaveText(`${GALLERY_GRADIENTS.length} gradients`)
-    await expect(page.locator('.lockt-cta')).toHaveCount(0)
+    await expect(page.locator('.geg')).toHaveCount(0)
     await expect(page.locator('.lockt-card')).toHaveCount(0)
   })
 })
