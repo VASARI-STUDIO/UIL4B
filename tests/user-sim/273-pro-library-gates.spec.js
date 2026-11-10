@@ -82,7 +82,7 @@ for (const width of [390, 1440]) {
       await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
       expect(await block.innerText(), 'the gate talks about a free account that does not open Brand')
         .not.toMatch(/free account/i)
-      await expect(block.locator('a, button'), 'the gate offers more than one way forward').toHaveCount(1)
+      await expect(block.locator('a:not(.geg-fade *), button:not(.geg-fade *)'), 'the gate offers more than one way forward').toHaveCount(1)
       await expect(block.getByRole('button', { name: /free account/i })).toHaveCount(0)
       await page.screenshot() // viewport only, never fullPage
     })

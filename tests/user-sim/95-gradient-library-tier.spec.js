@@ -56,24 +56,39 @@ const RUNGS = [
   { name: 'signed in, free', plan: 'free', cap: GALLERY_TIER_LIMITS.free, wall: 'pro' },
 ]
 
-async function surfaces(page) {
-  return page.evaluate(() => ({
-    text: document.body.innerText.toUpperCase(),
-    html: document.documentElement.outerHTML.toUpperCase(),
-    // Every gradient on the page is painted through background-image, so the
-    // computed value of THAT is the surface a stop actually reaches.
-    images: [...document.querySelectorAll('*')].map((el) => getComputedStyle(el).backgroundImage).join(' ').toUpperCase(),
-    paint: [...document.querySelectorAll('*')].map((el) => getComputedStyle(el).backgroundColor),
-    names: [...document.querySelectorAll('[aria-label],[title],button,a')]
-      .map((el) => `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''} ${el.textContent || ''}`)
-      .join(' | ').toUpperCase(),
-  }))
+// `skipFade` leaves the end gate's faded cards out: the live gallery and the rest
+// of the page, text, markup, gradient CSS, paint and names alike.
+async function surfaces(page, { skipFade = false } = {}) {
+  return page.evaluate((skip) => {
+    const root = document.documentElement.cloneNode(true)
+    if (skip) root.querySelectorAll('.geg-fade').forEach((n) => n.remove())
+    const fades = skip ? [...document.querySelectorAll('.geg-fade')] : []
+    const shown = fades.map((f) => f.style.display)
+    fades.forEach((f) => { f.style.display = 'none' })
+    const text = document.body.innerText.toUpperCase()
+    fades.forEach((f, i) => { f.style.display = shown[i] })
+    const els = [...document.querySelectorAll('*')].filter((el) => !skip || !el.closest('.geg-fade'))
+    return {
+      text,
+      html: root.outerHTML.toUpperCase(),
+      // Every gradient on the page is painted through background-image, so the
+      // computed value of THAT is the surface a stop actually reaches.
+      images: els.map((el) => getComputedStyle(el).backgroundImage).join(' ').toUpperCase(),
+      paint: els.map((el) => getComputedStyle(el).backgroundColor),
+      // The faded cards are aria-hidden, so a screen reader never reads their names.
+      names: [...document.querySelectorAll('[aria-label],[title],button,a')]
+        .filter((el) => !el.closest('[aria-hidden="true"]') && (!skip || !el.closest('.geg-fade')))
+        .map((el) => `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''} ${el.textContent || ''}`)
+        .join(' | ').toUpperCase(),
+    }
+  }, skipFade)
 }
 
 for (const rung of RUNGS) {
   const OPEN = openAt(rung.cap)
   const WITHHELD = GALLERY_GRADIENTS.slice(rung.cap)
   const TELLTALE = withheldHexes(rung.cap)
+  const PRO_TELLTALE = withheldHexes(GALLERY_TIER_LIMITS.free)
   const CONTROL = hexesOf(OPEN).find((hex) => !achromatic(hex))
 
   test.describe(`the gradient library's tier holds — ${rung.name}`, () => {
@@ -112,20 +127,26 @@ for (const rung of RUNGS) {
     })
 
     test('a withheld gradient reaches no text, markup, paint, gradient CSS or accessible name', async ({ page }) => {
-      const { text, html, images, paint, names } = await surfaces(page)
-      const painted = new Set(paint)
       // Searched in BOTH forms everywhere. See the control above: the page
       // writes its gradients as rgb(), so hex alone would be a check that
       // cannot fail.
       const hit = (hay, hex) => hay.includes(hex) || hay.includes(hex.slice(1)) || hay.includes(rgbOf(hex).toUpperCase())
-      const leaks = [
-        ...TELLTALE.filter((hex) => hit(text, hex)).map((h) => `text:${h}`),
-        ...TELLTALE.filter((hex) => hit(html, hex)).map((h) => `markup:${h}`),
-        ...TELLTALE.filter((hex) => hit(images, hex)).map((h) => `gradient-css:${h}`),
-        ...TELLTALE.filter((hex) => painted.has(rgbOf(hex))).map((h) => `paint:${h}`),
-        ...TELLTALE.filter((hex) => hit(names, hex)).map((h) => `name:${h}`),
-      ]
-      expect(leaks, 'a withheld gradient handed its stops over').toEqual([])
+      const sweep = (s, telltale) => {
+        const painted = new Set(s.paint)
+        return [
+          ...telltale.filter((hex) => hit(s.text, hex)).map((h) => `text:${h}`),
+          ...telltale.filter((hex) => hit(s.html, hex)).map((h) => `markup:${h}`),
+          ...telltale.filter((hex) => hit(s.images, hex)).map((h) => `gradient-css:${h}`),
+          ...telltale.filter((hex) => painted.has(rgbOf(hex))).map((h) => `paint:${h}`),
+          ...telltale.filter((hex) => hit(s.names, hex)).map((h) => `name:${h}`),
+        ]
+      }
+      // The page outside the end gate's faded cards hands over nothing past the rung.
+      expect(sweep(await surfaces(page, { skipFade: true }), TELLTALE), 'a withheld gradient handed its stops over').toEqual([])
+      // The faded cards are the next free-tier gradients (signed out) or neutral
+      // stand-ins (free), so the whole page, fade included, holds nothing past the
+      // free rung: no Pro gradient's stop is anywhere in the DOM.
+      expect(sweep(await surfaces(page), PRO_TELLTALE), 'a Pro gradient\'s stop is in the page').toEqual([])
       // And not by name either: the name is the tease, but only on a row the
       // page is allowed to tease.
       //
@@ -142,7 +163,15 @@ for (const rung of RUNGS) {
       const allowed = OPEN.map((g) => g.name)
       expect(rendered.filter((name) => !allowed.includes(name)),
         'a withheld gradient is named on the page').toEqual([])
-      expect(await page.locator('.geg-fade').innerText(), 'the faded rows carry text').toBe('')
+      // The faded rows under the gate are the gallery's own cards: the next
+      // free-tier gradients signed out, neutral stand-ins named "Gradient" for a
+      // free account. So the only names in them are the next rows a free account
+      // opens, or the stand-in's own: no Pro gradient is named anywhere.
+      const freeNames = openAt(GALLERY_TIER_LIMITS.free).map((g) => g.name)
+      const fadedNames = (await page.locator('.geg-fade .lbry-card-name').allInnerTexts()).map((n) => n.trim())
+      expect(fadedNames.length, 'the faded cards carry no names - this assertion is vacuous').toBeGreaterThan(0)
+      expect(fadedNames.filter((name) => name !== 'Gradient' && !freeNames.includes(name)),
+        'a Pro gradient is named in the fade').toEqual([])
       expect(rendered.length, 'nothing is named at all — this assertion is vacuous').toBeGreaterThan(0)
     })
 
@@ -215,20 +244,31 @@ for (const rung of RUNGS) {
       else await expect(page).toHaveURL(/\/plans$/)
     })
 
-    test('the faded rows carry no payload, no control and no wrong price', async ({ page }) => {
+    test('the faded rows are inert, hidden from assistive tech and carry no payload or wrong price', async ({ page }) => {
+      // The faded cards are the gallery's own card. They carry text and controls
+      // (a name, a type, Copy CSS), so the guard is the subtree: aria-hidden,
+      // inert, click-through, nothing in it takes focus, and no Pro gradient's
+      // stop is painted in it. (The page-wide hex sweep is the test above.)
       const fade = page.locator('.geg-fade')
-      const cells = fade.locator('.geg-ph')
+      const cells = fade.locator('.grg-card')
       // No old locked-card markup at either rung: the next gradients are not
       // all Pro's (a free account opens more), so none is stamped "Pro".
       await expect(page.locator('.lockt-card')).toHaveCount(0)
       expect(await cells.count(), 'the faded rows are missing - this check would be vacuous').toBeGreaterThan(3)
       await expect(fade).toHaveAttribute('aria-hidden', 'true')
       await expect(fade).toHaveAttribute('inert', '')
-      expect(await fade.locator('button, a, [tabindex]').count(), 'a faded row carries a control').toBe(0)
+      await expect(fade).toHaveCSS('pointer-events', 'none')
+      const { tried, reached } = await fade.evaluate((el) => {
+        const controls = [...el.querySelectorAll('a, button, input, [tabindex]')]
+        return { tried: controls.length, reached: controls.filter((c) => { c.focus(); return document.activeElement === c }).length }
+      })
+      expect(tried, 'the fade holds no control to try - the focus check would be vacuous').toBeGreaterThan(0)
+      expect(reached, 'a faded control took focus').toBe(0)
+      expect(await fade.innerText(), 'a faded card is stamped Pro').not.toMatch(/\bPro\b/)
       const painted = await cells.locator('xpath=descendant-or-self::*').evaluateAll(
         (els) => els.map((el) => `${getComputedStyle(el).backgroundImage} ${getComputedStyle(el).backgroundColor}`).join(' ').toUpperCase())
-      expect(TELLTALE.filter((hex) => painted.includes(hex) || painted.includes(rgbOf(hex).toUpperCase())),
-        'a placeholder is painted from the gradient it stands for').toEqual([])
+      expect(PRO_TELLTALE.filter((hex) => painted.includes(hex) || painted.includes(rgbOf(hex).toUpperCase())),
+        'a faded card is painted from a Pro gradient').toEqual([])
     })
 
     test('the wall steps aside while the visitor is searching or filtering', async ({ page }) => {

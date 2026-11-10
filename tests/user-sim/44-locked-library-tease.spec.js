@@ -89,12 +89,43 @@ const FREE_CONTROL = openControl('free')
 const ANON_GAIN = RUNGS.free.length - RUNGS.anonymous.length
 const FREE_REMAINING = LIBRARY_PALETTES.length - RUNGS.free.length
 
-async function surfaces(page) {
-  return page.evaluate(() => ({
-    text: document.body.innerText.toUpperCase(),
-    html: document.documentElement.outerHTML.toUpperCase(),
-    paint: [...document.querySelectorAll('*')].map((el) => getComputedStyle(el).backgroundColor),
-  }))
+// The colours the signed-out gate's faded cards may show: the free-tier palettes
+// a free account opens next. They are real, so they sit in the fade (aria-hidden,
+// inert) and nowhere else. Chromatic and not in an open row, so each one discriminates.
+const FADE_TAIL = [...hexesOf(RUNGS.free)].filter((hex) => !achromatic(hex) && !hexesOf(RUNGS.anonymous).has(hex))
+
+// The end gate's faded cards are decoration: hidden from assistive tech, inert,
+// click-through, and nothing in them takes focus. Real cards carry controls (copy
+// chips), so the positive control is that there are some to try.
+async function expectFadeInert(fade) {
+  await expect(fade).toHaveAttribute('aria-hidden', 'true')
+  await expect(fade).toHaveAttribute('inert', '')
+  await expect(fade).toHaveCSS('pointer-events', 'none')
+  const { tried, reached } = await fade.evaluate((el) => {
+    const controls = [...el.querySelectorAll('a, button, input, [tabindex]')]
+    return { tried: controls.length, reached: controls.filter((c) => { c.focus(); return document.activeElement === c }).length }
+  })
+  expect(tried, 'the fade holds no control to try - the focus check would be vacuous').toBeGreaterThan(0)
+  expect(reached, 'a faded control took focus').toBe(0)
+}
+
+// What the page hands over. `skipFade` leaves the end gate's faded cards out,
+// leaving the live gallery and the rest of the page (text, markup and paint alike).
+async function surfaces(page, { skipFade = false } = {}) {
+  return page.evaluate((skip) => {
+    const root = document.documentElement.cloneNode(true)
+    const fades = skip ? [...document.querySelectorAll('.geg-fade')] : []
+    if (skip) root.querySelectorAll('.geg-fade').forEach((n) => n.remove())
+    const shown = fades.map((f) => f.style.display)
+    fades.forEach((f) => { f.style.display = 'none' })
+    const text = document.body.innerText.toUpperCase()
+    fades.forEach((f, i) => { f.style.display = shown[i] })
+    return {
+      text,
+      html: root.outerHTML.toUpperCase(),
+      paint: [...document.querySelectorAll('*')].filter((el) => !skip || !el.closest('.geg-fade')).map((el) => getComputedStyle(el).backgroundColor),
+    }
+  }, skipFade)
 }
 
 test.describe('a locked library row hands nothing over — signed out', () => {
@@ -124,21 +155,39 @@ test.describe('a locked library row hands nothing over — signed out', () => {
   })
 
   test('no withheld palette colour appears in the text, the markup or the paint', async ({ page }) => {
-    const { text, html, paint } = await surfaces(page)
-    const painted = new Set(paint)
-    const inText = ANON_WITHHELD.filter((hex) => text.includes(hex) || text.includes(hex.slice(1)))
-    const inHtml = ANON_WITHHELD.filter((hex) => html.includes(hex) || html.includes(hex.slice(1)))
-    const inPaint = ANON_WITHHELD.filter((hex) => painted.has(rgbOf(hex)))
-    expect(inText, 'a withheld hex is readable as text').toEqual([])
-    expect(inHtml, 'a withheld hex is in the markup — devtools and CSS-off both read it').toEqual([])
-    expect(inPaint, 'a withheld colour is painted on an element — an eyedropper lifts it').toEqual([])
+    // Two sweeps. The page outside the end gate's faded cards holds none of the
+    // capped tail. And the page as a whole, faded cards included, holds nothing
+    // past the free rung: the fade may show the free-tier palettes a free account
+    // opens next, and no Pro palette's colour.
+    const live = await surfaces(page, { skipFade: true })
+    const livePainted = new Set(live.paint)
+    expect(ANON_WITHHELD.filter((hex) => live.text.includes(hex) || live.text.includes(hex.slice(1))),
+      'a withheld hex is readable as text').toEqual([])
+    expect(ANON_WITHHELD.filter((hex) => live.html.includes(hex) || live.html.includes(hex.slice(1))),
+      'a withheld hex is in the markup — devtools and CSS-off both read it').toEqual([])
+    expect(ANON_WITHHELD.filter((hex) => livePainted.has(rgbOf(hex))),
+      'a withheld colour is painted on an element — an eyedropper lifts it').toEqual([])
+    const all = await surfaces(page)
+    const allPainted = new Set(all.paint)
+    expect(FREE_WITHHELD.filter((hex) => all.text.includes(hex) || all.text.includes(hex.slice(1))),
+      'a Pro hex is readable as text').toEqual([])
+    expect(FREE_WITHHELD.filter((hex) => all.html.includes(hex) || all.html.includes(hex.slice(1))),
+      'a Pro hex is in the markup').toEqual([])
+    expect(FREE_WITHHELD.filter((hex) => allPainted.has(rgbOf(hex))), 'a Pro colour is painted on an element').toEqual([])
+    // Positive control: the fade really carries free-tier colours, so "none outside
+    // it" is a statement about where they are, not about their absence.
+    expect(FADE_TAIL.length, 'no free-tier tail hexes to look for').toBeGreaterThan(3)
+    expect(FADE_TAIL.filter((hex) => all.html.includes(hex)).length, 'the fade carries no free-tier colour').toBeGreaterThan(0)
   })
 
   test('no withheld palette colour reaches the accessibility tree', async ({ page }) => {
     // The route a blur cannot close: a screen reader reads the DOM, not the
     // filter. Accessible names are collected rather than the raw tree so the
     // assertion covers aria-label, title and text content together.
+    // The faded cards are aria-hidden and inert, so they are not in the tree a
+    // screen reader reads (checked below); they are left out of the sweep.
     const names = await page.evaluate(() => [...document.querySelectorAll('[aria-label],[title],button,a')]
+      .filter((el) => !el.closest('[aria-hidden="true"]'))
       .map((el) => `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''} ${el.textContent || ''}`)
       .join(' | ').toUpperCase())
     const leaked = ANON_WITHHELD.filter((hex) => names.includes(hex) || names.includes(hex.slice(1)))
@@ -185,13 +234,16 @@ test.describe('a locked library row hands nothing over — signed out', () => {
   })
 
   test('no placeholder is stamped with a price the row does not carry', async ({ page }) => {
-    // The faded rows under the gate are neutral decoration. They carry no "Pro"
-    // pill (the next rows are not Pro's, they come with a free account), no
-    // text at all, and no old locked-card markup.
+    // The faded rows under the gate are the gallery's own next cards (free-tier
+    // palettes a free account opens). They carry text, so the guard is that the
+    // subtree is hidden from assistive tech, inert and unfocusable, and that no
+    // card in it is stamped "Pro" (the next rows are not Pro's) or locked.
     await expect(page.locator('.lockt-card')).toHaveCount(0)
-    const faded = page.locator('.geg-fade .geg-ph')
+    const fade = page.locator('.geg-fade')
+    const faded = fade.locator('.pgal-card')
     expect(await faded.count(), 'the faded rows are missing — this check would be vacuous').toBeGreaterThan(3)
-    expect((await faded.allInnerTexts()).join('').trim(), 'a placeholder carries text').toBe('')
+    await expectFadeInert(fade)
+    expect(await fade.innerText(), 'a faded card is stamped Pro').not.toMatch(/\bPro\b/)
   })
 })
 
@@ -228,20 +280,24 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
   })
 
   test('the faded rows copy and open nothing — the one control is the way to Pro', async ({ page }) => {
-    // The placeholders under the gate are decoration made of stand-ins: they
-    // are hidden from assistive tech, inert and click-through, and none of
-    // them is a control. The gate holds the single way on, a link to /plans.
+    // The faded cards under the gate are the palette card over neutral stand-ins
+    // (no Pro palette's name or colours). They are hidden from assistive tech,
+    // inert, click-through and unfocusable. The gate holds the single way on, a
+    // link to /plans.
     const gate = page.locator('.geg[data-gate="pro"]')
     await expect(gate).toBeVisible()
     const fade = gate.locator('.geg-fade')
-    expect(await fade.locator('.geg-ph').count(), 'the faded rows are missing - this check would be vacuous').toBeGreaterThan(3)
-    await expect(fade).toHaveAttribute('aria-hidden', 'true')
-    await expect(fade).toHaveAttribute('inert', '')
-    await expect(fade).toHaveCSS('pointer-events', 'none')
-    expect(await fade.locator('button, a, [tabindex], input').count(), 'a faded row carries a control').toBe(0)
-    // Blurred, not greyed.
-    expect(await fade.locator('.geg-ph-band').first().evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
-    const controls = gate.locator('button, a')
+    expect(await fade.locator('.pgal-card').count(), 'the faded rows are missing - this check would be vacuous').toBeGreaterThan(3)
+    await expectFadeInert(fade)
+    // Blurred, not greyed: the first row a little, the second a lot.
+    expect(await fade.locator('.geg-row[data-row="0"]').evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
+    expect(await fade.locator('.geg-row[data-row="1"]').evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
+    // No Pro value: not a withheld hex, in the markup or the paint.
+    const html = (await fade.evaluate((el) => el.outerHTML)).toUpperCase()
+    expect(FREE_WITHHELD.filter((hex) => html.includes(hex) || html.includes(hex.slice(1))), 'a Pro hex is in the fade').toEqual([])
+    const painted = new Set(await fade.locator('*').evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor)))
+    expect(FREE_WITHHELD.filter((hex) => painted.has(rgbOf(hex))), 'a Pro colour is painted in the fade').toEqual([])
+    const controls = gate.locator('a:not(.geg-fade *), button:not(.geg-fade *)')
     expect(await controls.count(), 'the gate has exactly one way on at this rung').toBe(1)
     await expect(controls.first()).toHaveAttribute('href', '/plans')
   })
@@ -343,11 +399,12 @@ test.describe('the locked rows in the dark theme', () => {
     await go(page, ROUTE)
     await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark')
-    expect(await page.locator('.geg-fade .geg-ph').count(), 'the faded rows are missing').toBeGreaterThan(3)
-    // The placeholder must actually be painted, not left transparent — a row
-    // that vanishes in dark is not a tease, it is a hole in the page.
-    const band = await page.locator('.geg-ph-band').first().evaluate((el) => getComputedStyle(el).backgroundColor)
-    expect(band, 'the placeholder band has no ground in dark').not.toBe('rgba(0, 0, 0, 0)')
+    expect(await page.locator('.geg-fade .pgal-card').count(), 'the faded rows are missing').toBeGreaterThan(3)
+    // The faded cards must actually be painted, not left transparent — a row
+    // that vanishes in dark is not a tease, it is a hole in the page. A stand-in's
+    // swatches are the first thing to paint.
+    const band = await page.locator('.geg-fade .pgal-stripe').first().evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(band, 'the faded card has no ground in dark').not.toBe('rgba(0, 0, 0, 0)')
     const { text, html } = await surfaces(page)
     expect(TELLTALE.filter((hex) => text.includes(hex) || html.includes(hex)),
       'a locked brand hex surfaced in the dark theme').toEqual([])

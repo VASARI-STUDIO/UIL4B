@@ -68,10 +68,10 @@ test.describe('icon groups', () => {
     await expect(groupsTab).toHaveAttribute('aria-selected', 'true')
 
     // Every group is listed; the free ones open, the Pro ones are locked cards.
-    const cards = page.locator('.igp-cards > li')
+    const cards = page.locator('.igp-cards > li:not(.geg-fade *)')
     await expect(cards).toHaveCount(PREMADE_ICON_GROUPS.length)
     await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(FREE.length)
-    await expect(page.locator('.igp-cards .lockt-card--group')).toHaveCount(PRO.length)
+    await expect(page.locator('.igp-cards .lockt-card--group:not(.geg-fade *)')).toHaveCount(PRO.length)
 
     // A direct visit lands on the same tab, from the prerendered shell.
     await go(page, ROUTE)

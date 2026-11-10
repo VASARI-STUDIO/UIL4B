@@ -131,7 +131,7 @@ test('the added premade groups are listed on the Groups tab, locked signed out a
   watch(page, 'someone looking for a ready-made brand set')
   await page.setViewportSize({ width: 1280, height: 900 })
   await go(page, '/create/icons/groups')
-  const cards = page.locator('.igp-cards > li')
+  const cards = page.locator('.igp-cards > li:not(.geg-fade *)')
   await expect(cards).toHaveCount(PREMADE_ICON_GROUPS.length, { timeout: 15000 })
   for (const label of ADDED) {
     await expect(page.locator('.lockt-card--group').filter({ hasText: label }), `${label} is a locked card signed out`).toHaveCount(1)

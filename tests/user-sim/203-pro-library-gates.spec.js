@@ -63,13 +63,13 @@ const FIRST_OPEN = {
 
 const LIBS = [
   {
-    key: 'palettes', route: '/discover/palettes', card: '.pgal-card', noun: 'palettes', singular: 'palette',
+    key: 'palettes', route: '/discover/palettes', card: '.pgal-card:not(.geg-fade *)', noun: 'palettes', singular: 'palette',
     total: LIBRARY_PALETTES.length, totalFromData: LIBRARY_TOTALS.palettes,
     status: 'palette library', head: true,
     search: (page) => page.getByLabel('Search palettes'),
   },
   {
-    key: 'gradients', route: '/discover/gradients', card: '.grg-card', noun: 'gradients', singular: 'gradient',
+    key: 'gradients', route: '/discover/gradients', card: '.grg-card:not(.geg-fade *)', noun: 'gradients', singular: 'gradient',
     total: GALLERY_GRADIENTS.length, totalFromData: LIBRARY_TOTALS.gradients,
     status: 'gradient library', head: true,
     search: (page) => page.getByLabel('Search gradients'),

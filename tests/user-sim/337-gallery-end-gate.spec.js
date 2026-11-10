@@ -107,11 +107,11 @@ for (const g of GALLERIES) {
       if (g.login) {
         await expect(login).toBeVisible()
         await expect(gate.getByRole('link', { name: 'See the plans' })).toHaveAttribute('href', '/plans')
-        await expect(gate.locator('a, button')).toHaveCount(2)
+        await expect(gate.locator('a:not(.geg-fade *), button:not(.geg-fade *)')).toHaveCount(2)
       } else {
         await expect(login, 'a free account opens no more groups, so there is no Log in').toHaveCount(0)
         await expect(gate.getByRole('link', { name: 'See what Pro includes' })).toHaveAttribute('href', '/plans')
-        await expect(gate.locator('a, button')).toHaveCount(1)
+        await expect(gate.locator('a:not(.geg-fade *), button:not(.geg-fade *)')).toHaveCount(1)
       }
     })
 
