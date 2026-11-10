@@ -51,14 +51,15 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
   // Then /plans, the same cadences.
   await go(page, '/plans')
   const group = page.getByRole('radiogroup', { name: 'Billing' })
-  const planLabels = (await group.locator('.pr-billing-opt').allInnerTexts()).map((t) => t.split('·')[0].trim())
+  const planLabels = (await group.getByRole('radio').allInnerTexts()).map((t) => t.split('·')[0].trim())
   expect(planLabels, 'the two pages offer different cadences').toEqual(labels)
   for (const label of labels) {
-    await group.locator('label', { hasText: new RegExp(`^${label}`) }).click()
+    await group.getByRole('radio', { name: new RegExp(`^${label}`) }).click()
     await expect(group.getByRole('radio', { name: new RegExp(`^${label}`) })).toBeChecked()
-    const head = page.locator('.pr-head--pro')
-    await expect(head.locator('.pr-amt'), `${label}: /plans does not show ${settings[label].amount}`)
-      .toHaveText(settings[label].amount)
+    const head = page.locator('.hpl-pro')
+    await expect(head.locator('.pa-amt'), `${label}: /plans does not show ${settings[label].amount}`)
+      // /plans qualifies the dollar for a US visitor ("US$4"); Settings prints "$4". The figure is the same.
+      .toHaveText(new RegExp(`^(US)?${settings[label].amount.replace(/[$.]/g, '\\$&')}$`))
     const body = await head.innerText()
     // Every money figure and trial length in Settings' billed line is on /plans.
     for (const money of settings[label].billed.match(/\$\d[\d,.]*/g) || []) {

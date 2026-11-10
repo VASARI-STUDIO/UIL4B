@@ -15,7 +15,7 @@ const pageSources = fs.readdirSync(pagesDir, { recursive: true })
 
 test('Pricing.jsx never says the tools "cost us nothing"', () => {
   assert.ok(!/cost us nothing/i.test(PLANS), 'the FAQ or the Free note says "cost us nothing" again')
-  assert.match(PLANS, /Free because most tools run in your browser./)
+  assert.match(PLANS, /You don’t need a card, and there’s no time limit/, 'the Free card note is gone')
 })
 
 test('the homepage FAQ never says the tools "cost us nothing" and answers the generation question as /plans does', () => {
@@ -42,15 +42,15 @@ test('the FAQ answers when you are charged, how to cancel and whether you get a 
   const faq = /const FAQS = \[([\s\S]*?)\r?\n\]\r?\n/.exec(PLANS)
   assert.ok(faq, 'the FAQS array was not found')
   const questions = [...faq[1].matchAll(/q: '([^']+)'/g)].map((m) => m[1])
-  assert.deepEqual(questions.slice(0, 6), [
+  assert.deepEqual(questions, [
     'When am I charged?',
     'How do I cancel?',
     'Can I get a refund?',
-    'Where are my receipts?',
     'Do prices include tax?',
     'What happens to my work if Pro ends?',
+    'Do my files get uploaded?',
+    'What counts as one generation?',
   ])
-  assert.ok(questions.includes('Which export formats can I actually get?'), 'the export formats answer is gone')
 })
 
 test('the FAQ does not offer the 14-day withdrawal, which has no screen to start it', () => {

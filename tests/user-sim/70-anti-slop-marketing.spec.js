@@ -173,28 +173,22 @@ test.describe('the Help centre', () => {
   })
 })
 
-// /plans has no closing SystemCTA band: it is the design's Pricing screen, which ends on the colour band and
-// the footer's handoff. What this block guarded — no payment reassurance in a
-// micro-line slot, and the numbers derived — is guarded where the design puts
-// the same kind of line: the Free card's note.
+// /plans: the Free card's note is the one reassurance line on the page, no
+// retired payment wording sits anywhere in the copy, and the lead's numbers are derived.
 test.describe('the Plans page reassurance lines', () => {
-  test('the Free card note is the design\'s sentence without the retired payment reassurances', async ({ page }) => {
-    // The page once read "Free because the tools cost us nothing to run. No trial
-    // clock, no card." Both trailing clauses are the retired "no card" class
-    // the product no longer makes; the sentence before them
-    // stays, and the slot keeps the design's two-line height.
+  test('the Free card note carries no retired payment reassurance', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page, '/plans')
 
-    const note = page.locator('.pr-head--free .pr-note')
-    await expect(note).toHaveText('Free because most tools run in your browser.')
+    const note = page.locator('.hpl-free .pa-freenote')
+    await expect(note).toHaveText('You don’t need a card, and there’s no time limit.')
     const text = (await page.locator('.pricing main').innerText()).toLowerCase()
     for (const phrase of ['no trial clock', 'no card', 'ready today', 'upgrade when your workflow']) {
       expect(text, `/plans says "${phrase}" again`).not.toContain(phrase)
     }
     // The sub-line's colour-system count is derived, not typed.
-    await expect(page.locator('.pr-sub')).toContainText(`colour systems`)
+    await expect(page.locator('.pa-lead')).toContainText(`colour systems`)
     expect(COLOUR_SYSTEMS.length).toBeGreaterThan(2)
   })
 })

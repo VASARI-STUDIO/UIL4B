@@ -118,12 +118,13 @@ for (const target of SEARCH_BARS) {
 // painted-and-borderless. Measured on 25 Oct 2026 the bordered ones were the
 // large majority (the library and palette toolbars, the seed and format
 // trays, the billing, SEO, admin, modal and icon-customiser trays, the file
-// converter's), so the borderless ones (.lbry-filters, .theme-seg, .ig-weight)
+// converter's; /plans' .pl-switch is a filled track with no hairline, and 129-pill-shapes
+// measures its pill shape on the rendered page), so the borderless ones (.lbry-filters, .theme-seg, .ig-weight)
 // took the hairline. Each tray below must declare a 1px hairline somewhere (a
 // border, or the converter's inset ring).
 const TRAYS = [
   '.lbry-toolbar', '.lbry-filters', '.theme-seg', '.ig-weight', '.adm-tabs',
-  '.seo-seg', '.pr-billing', '.fc-seg',
+  '.seo-seg', '.fc-seg',
 ]
 for (const target of TRAYS) {
   test(`${target} carries the tray hairline`, () => {

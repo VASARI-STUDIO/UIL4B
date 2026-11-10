@@ -174,6 +174,26 @@ const ADDED_SELECTORS = {
     '.hlr-stage', '.hlr-ans', '.hlr-h2', '.hlr-lede', '.hlr-demo', '.hlr-seed', '.hlr-seed-pick', '.hlr-seed-hex', '.hlr-strip',
     '.hlr-stop', '.hlr-stop-sw', '.hlr-stop-n', '.hlr-read', '.hlr-leaves', '.hlr-btn', '.hlr-btn--ink', '.hlr-seg', '.hlr-ladder',
     '.hlr-note', '.hlr-search', '.hlr-icons', '.hlr-drop', '.hlr-store', '.hlr-more', '.hlr-allow', '.hlr-bar'],
+  // /plans is the pair of plan cards, the comparison and the closing call. These are the classes painted at
+  // either width, so the stacked comparison (under 1200) and the table (from 1200) each carry their own.
+  '/plans': [
+    '.sp-grain', '.pa-wrap', '.pa-head', '.pa-h1', '.pa-lead', '.pa-hpl', '.pa-pair', '.hpl-card', '.hpl-pro',
+    '.pa-pro', '.hpl-edge', '.pa-pro-grid', '.pa-pro-top', '.pa-proline', '.pa-planrow', '.hpl-plan', '.pl-switch',
+    '.pl-seg', '.pl-on', '.hpl-tagline', '.pa-price', '.pa-amt', '.pa-per', '.pa-slot', '.pa-fig', '.pa-covers',
+    '.pa-cover', '.pa-cover--book', '.pa-cover--deck', '.pa-cap', '.pa-act', '.pa-cta', '.hpl-btn', '.hpl-go',
+    '.pa-go', '.hpl-go-icon', '.pa-foot', '.hpl-prolist', '.hpl-row-t', '.hpl-row-s', '.hpl-more', '.hpl-free',
+    '.hpl-amount', '.hpl-note', '.pa-freenote', '.hpl-freelist', '.hpl-minus', '.hpl-freefoot', '.hpl-ghost',
+    '.ui-pill-out', '.pl-panel', '.pl-stack', '.pl-sh', '.pl-srow', '.pl-val', '.pl-val--free', '.pl-vl', '.pl-vv',
+    '.pl-n', '.pl-val--pro', '.pl-v', '.pl-ssame', '.pa-faq', '.pa-faq-grid', '.pa-h2', '.pl-item', '.pl-q', '.pl-pm',
+    '.pl-pmv', '.pl-endq', '.pa-more', '.pa-more-h', '.pa-more-p', '.hpl-link', '.pa-help', '.hm-close',
+    '.hm-close-in', '.hm-close-btns', '.hm-close-ghost', '.hm-close-cta', '.hm-close-icon', '.pl-bar', '.pl-bar-text',
+    '.pl-bar-top', '.pl-bar-pro', '.pl-bar-sub', '.pl-bar-go', '.sp-footer', '.sp-footer--home',
+    '.sp-footer--no-page', '.sp-footer-sky', '.sp-footer-horizon', '.sp-footer-core', '.sp-footer-inner',
+    '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-links', '.sp-footer-col', '.sp-footer-col-h',
+    '.sp-footer-col--legal', '.sp-footer-legal', '.sp-footer-copy', '.sp-footer-place', '.sp-footer-attrib',
+    '.sp-footer-attrib-icon', '.sp-footer-mark', '.pl-t', '.pl-ink', '.pl-headpro', '.pl-headlabel', '.pl-pill',
+    '.pl-gh', '.pl-ghin', '.pl-r', '.pl-l', '.pl-f', '.pl-p', '.pl-same',
+  ],
 }
 
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'))

@@ -44,29 +44,28 @@ test.describe('the Pro column is reachable on a phone (A2)', () => {
     watch(page, 'someone deciding whether to pay, on their phone')
     await go(page, '/plans')
     await expectRendered(page)
-    // The phone comparison keeps both plans inside the table without scrolling.
-    await expect(page.locator('.pr-dtable')).toBeVisible()
+    // Under 1200 the comparison is a stack: each row prints Free and Pro on their own lines.
+    await expect(page.locator('.pl-stack')).toBeVisible()
+    await expect(page.locator('.pl-t')).toBeHidden()
 
     const report = await page.evaluate(() => {
-      const wrap = document.querySelector('.pr-dtable')
       const vw = document.documentElement.clientWidth
-      const cells = [...wrap.querySelectorAll('td.is-pro')]
+      const cells = [...document.querySelectorAll('.pl-stack .pl-val--pro .pl-vv')]
       return {
-        // The table needs no horizontal scroll at all any more.
-        needsScroll: wrap.scrollWidth > wrap.clientWidth + 1,
+        // Nothing on the page needs a sideways gesture.
+        needsScroll: document.documentElement.scrollWidth > vw,
         proCells: cells.length,
-        // A cell whose right edge is past the viewport, or past the box that
-        // clips it, is a value the reader cannot see.
+        // A value whose right edge is past the viewport is one the reader cannot see.
         offscreen: cells
           .map((c) => ({ text: c.textContent.trim(), right: Math.round(c.getBoundingClientRect().right) }))
-          .filter((c) => c.right > Math.min(vw, Math.round(wrap.getBoundingClientRect().right)) + 1),
+          .filter((c) => c.right > vw + 1),
         // …and one clipped to nothing is just as unreadable.
         collapsed: cells.filter((c) => c.getBoundingClientRect().width < 40).length,
       }
     })
 
-    expect(report.proCells, 'the comparison table should still have Pro cells to check').toBeGreaterThan(5)
-    expect(report.needsScroll, 'the plans table should not need a horizontal gesture at 390px').toBe(false)
+    expect(report.proCells, 'the comparison should still have Pro cells to check').toBeGreaterThan(5)
+    expect(report.needsScroll, 'the plans page should not need a horizontal gesture at 390px').toBe(false)
     expect(report.offscreen, 'Pro values sitting past the right edge').toEqual([])
     expect(report.collapsed, 'Pro cells crushed too narrow to read').toBe(0)
   })
