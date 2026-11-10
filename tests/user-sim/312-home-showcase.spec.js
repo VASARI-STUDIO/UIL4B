@@ -135,7 +135,7 @@ async function openSection(browser, opts) {
   await expect(tabs(page)).toHaveCount(KINDS.length)
   await page.locator('#examples').scrollIntoViewIfNeeded()
   // The tiles rise in as the section arrives; wait for them to be at rest before anything is measured.
-  await expect(page.locator('#examples .hsc'), 'the scroll-in reveal never finished').toHaveAttribute('data-reveal', /^(off|done)$/)
+  await expect(page.locator('#examples .hsc'), 'the scroll-in reveal never finished').toHaveAttribute('data-hsc-reveal', /^(off|done)$/)
   return { ctx, page }
 }
 
@@ -729,7 +729,7 @@ test.describe('the viewer\'s motion', () => {
     await expect(tabs(page)).toHaveCount(KINDS.length)
     const root = page.locator('#examples .hsc')
     // Before it is near, the tiles are held back.
-    await expect(root).toHaveAttribute('data-reveal', 'armed')
+    await expect(root).toHaveAttribute('data-hsc-reveal', 'armed')
     const held = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => ({ opacity: getComputedStyle(li).opacity, transform: getComputedStyle(li).transform })))
     expect(held.map((h) => h.opacity), 'transparent').toEqual(Array(TOTAL).fill('0'))
     expect(held.every((h) => h.transform === 'matrix(1, 0, 0, 1, 0, 8)'), 'and 8px low').toBe(true)
@@ -738,7 +738,7 @@ test.describe('the viewer\'s motion', () => {
       window.__hscReveal = new Promise((resolve) => {
         const el = document.querySelector('#examples .hsc')
         const mo = new MutationObserver(() => {
-          if (el.getAttribute('data-reveal') !== 'in') return
+          if (el.getAttribute('data-hsc-reveal') !== 'in') return
           mo.disconnect()
           const lis = [...el.querySelectorAll('#hsc-panel li')]
           resolve({
@@ -747,7 +747,7 @@ test.describe('the viewer\'s motion', () => {
             properties: [...new Set(lis.flatMap((li) => getComputedStyle(li).transitionProperty.split(',').map((s) => s.trim())))].sort(),
           })
         })
-        mo.observe(el, { attributes: true, attributeFilter: ['data-reveal'] })
+        mo.observe(el, { attributes: true, attributeFilter: ['data-hsc-reveal'] })
       })
     })
     await page.locator('#examples').scrollIntoViewIfNeeded()
@@ -757,7 +757,11 @@ test.describe('the viewer\'s motion', () => {
     expect(moving.delays[0], 'the first tile starts at once').toBe(0)
     expect(new Set(moving.delays).size, 'every tile starts on its own beat').toBe(TOTAL)
     expect(Math.max(...moving.delays), 'and the last starts under half a second in').toBeLessThan(0.5)
-    await expect(root, 'then it is at rest').toHaveAttribute('data-reveal', 'done')
+    await expect(root, 'then it is at rest').toHaveAttribute('data-hsc-reveal', 'done')
+    // The section and every tile end fully shown: nothing outside the showcase may hold it at opacity 0.
+    expect(await root.evaluate((el) => getComputedStyle(el).opacity), 'the showcase itself is shown').toBe('1')
+    const shown = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => getComputedStyle(li).opacity))
+    expect(shown, 'and every tile is shown').toEqual(Array(TOTAL).fill('1'))
     const rest = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => ({ opacity: getComputedStyle(li).opacity, transform: getComputedStyle(li).transform, transition: getComputedStyle(li).transitionDuration })))
     expect(rest.every((r) => r.opacity === '1' && r.transform === 'none' && parseFloat(r.transition) === 0), 'every tile is opaque, flat and has no transition left').toBe(true)
     await ctx.close()
@@ -768,7 +772,7 @@ test.describe('the viewer\'s motion', () => {
     await go(page, '/')
     await homeSectionsLoaded(page)
     await expect(tabs(page)).toHaveCount(KINDS.length)
-    await expect(page.locator('#examples .hsc'), 'no scroll-in reveal').toHaveAttribute('data-reveal', 'off')
+    await expect(page.locator('#examples .hsc'), 'no scroll-in reveal').toHaveAttribute('data-hsc-reveal', 'off')
     const tiles = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => ({ opacity: getComputedStyle(li).opacity, transform: getComputedStyle(li).transform })))
     expect(tiles.every((t) => t.opacity === '1' && t.transform === 'none'), 'every tile is visible and flat from the start').toBe(true)
 
