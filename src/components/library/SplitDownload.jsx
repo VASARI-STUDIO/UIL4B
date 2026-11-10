@@ -227,7 +227,7 @@ export default function SplitDownload({ format, size, disabled = false, blocked 
           else if (e.key === 'ArrowUp') { e.preventDefault(); if (!open) openMenu('last') }
         }}
       >
-        <FooterGlyph name="caret-down" size={14} className="dl-caret" />
+        <FooterGlyph name="caret-up" size={16} className="dl-caret" />
       </button>
       <span className="sr-only" role="status">{note}</span>
       {open && createPortal(<>

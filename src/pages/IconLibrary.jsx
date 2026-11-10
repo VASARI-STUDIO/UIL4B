@@ -1331,10 +1331,8 @@ function recentPayload(icon) {
   return null
 }
 
-// A line-style tile draws the icon at 56px with a stroke of 3 in the 24-unit grid, thick
-// enough that the ends and corners show. The stroke is in pixels, as the customiser's is.
-const LINE_TILE_PX = 56
-const LINE_TILE_STROKE_PX = 3
+// A line-style tile draws the icon at 40px with the stroke the editor is set to, in each style.
+const LINE_TILE_PX = 40
 
 // One "Similar in this pack" tile. It stays invisible (but in layout, so the
 // 44px row never shifts) until its glyph has loaded, then fades in: an empty
@@ -1510,7 +1508,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // The stage follows the site theme: in light mode an un-tinted icon previews
   // dark-on-light, in dark mode white-on-dark — so what you see matches where
   // you'll paste it. An explicit colour choice always overrides this.
-  const themeInk = theme === 'light' ? '#18181B' : '#F4F4F5'
+  const themeInk = theme === 'light' ? '#18181B' : '#EFEEEA'
   const panelRef = useRef(null)
   const stageRef = useRef(null)
   const hostRef = useRef(null)
@@ -1951,12 +1949,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const out = {}
     for (const s of LINE_STYLES) {
       out[s.id] = serializeCustomizedSvg(baseSvgText, {
-        size: LINE_TILE_PX, color: isColoredPack ? undefined : themeInk, stroke: LINE_TILE_STROKE_PX,
-        isStroke, absStroke: false, cap: s.cap, join: s.join, rotate, flipH, flipV,
+        size: LINE_TILE_PX, color: isColoredPack ? undefined : themeInk, stroke,
+        isStroke, absStroke, cap: s.cap, join: s.join, rotate, flipH, flipV,
       })
     }
     return out
-  }, [baseSvgText, themeInk, isColoredPack, isStroke, rotate, flipH, flipV])
+  }, [baseSvgText, themeInk, isColoredPack, isStroke, stroke, absStroke, rotate, flipH, flipV])
   const serializedOutput = useMemo(
     () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
     [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
@@ -2519,9 +2517,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
         {activeIcon && (
           <div className="ied-stagecol" data-g={ground} inert={lockBase || undefined}>
-            {/* The file the Download button hands over (phone card only; the stylesheet hides it elsewhere). */}
-            {onSheet && (
+            {/* The file the Download button hands over (the card's top left; hidden on the short phone folds). */}
+            {(
               <span className="ied-fchip" title={fileName}>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l4 4v14H7z M14 3v4h4" /></svg>
                 <span className="ied-nm"><span className="st">{fileName.slice(0, fileName.lastIndexOf('.'))}</span><span className="ex">{fileName.slice(fileName.lastIndexOf('.'))}</span></span>
               </span>
             )}
@@ -2596,7 +2595,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               <div className="ied-sizes-head">
                 <p id="ied-size-label">Export size</p>
                 <span>shown at real pixels</span>
-                {!isPro && <span className="ied-sizes-pro">Custom size is Pro</span>}
               </div>
               <div className="ied-sizes-rail" role="radiogroup" aria-labelledby="ied-size-label" onKeyDown={steerRadios}>
                 {railSizes.map(n => {
@@ -2622,13 +2620,15 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   type="button"
                   role="radio"
                   aria-checked={customShown}
-                  aria-label={customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}
+                  aria-label={`${customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}${isPro ? '' : ', Pro'}`}
                   tabIndex={customShown ? 0 : -1}
                   className="ied-cell-s ied-cell-s--custom"
                   onClick={pickCustom}
                 >
                   <span className="art"><span className="cu">Custom</span></span>
-                  <span className="num">{customShown && customValue != null ? customValue : ''}</span>
+                  {isPro
+                    ? <span className="num">{customShown && customValue != null ? customValue : ''}</span>
+                    : <span className="num ied-tag"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" /></svg>Pro</span>}
                 </button>
               </div>
               {customShown && !onSheet && customRowEl}
@@ -2688,7 +2688,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   ) : colourRow === 'wait' ? (
                     <span className="ied-val">&nbsp;</span>
                   ) : (
-                    <span className="ied-val ied-hex">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : 'currentColor'}</span>
+                    <span className="ied-val ied-hex">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : '\u00a0'}</span>
                   )}
                 </div>
                 {colourRow !== 'original' && colourRow !== 'wait' && (
@@ -2741,7 +2741,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                         )}
                       />
                     </div>
-                    <p className="ied-note">
+                    <p className="ied-note ied-colnote">
                       {choice === 'text' && brandPaint
                         ? 'The file keeps the logo\'s own colour. Pick another to recolour it.'
                         : choice === 'text'
@@ -2785,7 +2785,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 <div id="ied-sec-line">
                   <div className="ied-lblrow">
                     <span className="ied-lbl" id="ied-line-label">Line style</span>
-                    {!isPro && <span className="ied-val">Sharp and Crisp are Pro</span>}
                   </div>
                   {/* Each tile draws the icon being edited in its own style. Pressing a Pro
                       tile previews it for a free viewer; the export block below is what holds
@@ -2809,7 +2808,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           <LineArt markup={lineArt[s.id]} />
                           <span className="nm">
                             {s.name}
-                            {s.pro && !isPro && <span className="ied-tag">Pro</span>}
+                            {s.pro && !isPro && <span className="ied-tag"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" /></svg>Pro</span>}
                           </span>
                           <span className="nm nt" id={`ied-line-note-${s.id}`}>{s.note}</span>
                         </button>
@@ -2868,10 +2867,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /></svg>
                   </button>
                   <button type="button" className="ied-ib ied-ib--gap" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18" strokeDasharray="2 3" /><path d="M9 7 3.5 17H9z" /><path d="M15 7l5.5 10H15z" /></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7l5 5-5 5z M21 7l-5 5 5 5z M12 20v2 M12 14v2 M12 8v2 M12 2v2" /></svg>
                   </button>
                   <button type="button" className="ied-ib" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h18" strokeDasharray="2 3" /><path d="M7 9V3.5L17 9z" /><path d="M7 15v5.5L17 15z" /></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 3l-5 5-5-5z M17 21l-5-5-5 5z M4 12H2 M10 12H8 M16 12h-2 M22 12h-2" /></svg>
                   </button>
                 </div>
               </div>
