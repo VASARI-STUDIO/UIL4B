@@ -334,10 +334,31 @@ for (const view of [1440, 390]) {
     await page.waitForTimeout(3800) // longer than one folder's 3200ms
     expect(await tourRunning(page), 'the tour kept running after Pause').toBe(false)
     expect(await openFolder(), 'a folder opened while the tour was paused').toBe(held)
+    // The mouse stays on the button, which sits on the stage: Play starts the tour with no move away.
     await pause.click()
-    // A mouse over the stage holds the tour until a second after it leaves, and the button sits on the stage.
-    await page.mouse.move(2, 2)
     await expect.poll(() => tourRunning(page), { message: 'Play did not start the tour again' }).toBe(true)
+    await ctx.close()
+  })
+
+  // A mouse over the stage is not a hold: only Pause, keyboard focus, a finger and the autoplay owner stop the tour.
+  test(`T3 a mouse over the bookmarks stage does not pause the tour (${view}px)`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, view)
+    await go(page, '/')
+    await homeSectionsLoaded(page)
+    await tourStage(page).scrollIntoViewIfNeeded()
+    await expect.poll(() => tourRunning(page), { message: 'the tour never started with its stage in view' }).toBe(true)
+    const box = await tourStage(page).boundingBox()
+    // The middle of the stage, which at 1440 lands on the window (a surface that used to hold the tour).
+    await page.mouse.move(box.x + box.width * 0.75, box.y + box.height * 0.5)
+    await page.mouse.move(box.x + box.width * 0.76, box.y + box.height * 0.5)
+    const paused = () => page.evaluate(() => document.querySelector('#bookmarks').classList.contains('bm-paused'))
+    const openFolder = () => page.locator('#bookmarks [role="group"][aria-label="Folders inside Graphic design"] button[aria-pressed="true"]').and(page.locator(':visible')).first().innerText()
+    const before = await openFolder()
+    await page.waitForTimeout(1400) // longer than the 1000ms a hold used to take to lift
+    expect(await paused(), 'the section was marked paused with a mouse over it').toBe(false)
+    expect(await tourRunning(page), 'the fill stopped with a mouse over the stage').toBe(true)
+    await page.waitForTimeout(3600) // longer than one folder's 3200ms, still hovering
+    expect(await openFolder(), 'the tour did not move on while a mouse was over the stage').not.toBe(before)
     await ctx.close()
   })
 
