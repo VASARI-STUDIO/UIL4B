@@ -24,7 +24,7 @@
 //                                                                      -> "the layout" (a button drops under its text, or is 40px)
 //   styles/pages/icon-emoji-library.css the 641px .emd-panel width rule loses its media query
 //                                                                      -> the phone "layout": the sheet stops being full width
-//   EmojiDetailDialog.jsx body class emd-body -> icust-body            -> the desktop "layout": the body becomes a two-column grid
+//   styles/pages/icon-emoji-library.css .iel-page .emd-body display:flex -> grid  -> the desktop "layout": the body is not a single flex column
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -198,7 +198,7 @@ for (const view of VIEWS) {
         expect(m.panel.x, 'panel starts inside the screen').toBeGreaterThanOrEqual(-0.5)
         expect(m.panel.right, 'panel ends inside the screen').toBeLessThanOrEqual(m.vw + 0.5)
         expect(m.bodyOverflow, 'the body scrolls sideways').toBeLessThanOrEqual(1)
-        // Its own column, not .icust-body's two-column grid.
+        // One flex column.
         expect(m.bodyDisplay).toBe('flex')
 
         if (view.phone) {
