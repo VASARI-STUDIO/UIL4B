@@ -56,7 +56,7 @@ const TOOLS = [
   },
   // Back is an icon-only square on the row (named "Back to the previous gradient") and a
   // text row named "Back" in the overflow.
-  { route: '/create/gradient', actions: ['Random', { row: 'Back to the previous gradient', menu: 'Back' }, 'Reset'], primary: /^Save or share/, title: 'Gradient', phoneDock: true },
+  { route: '/create/gradient', actions: ['Random', { row: 'Back to the previous gradient', menu: 'Back' }, { row: 'Redo', menu: 'Redo' }, 'Reset'], primary: /^Save or share/, title: 'Gradient', phoneDock: true },
   { route: '/create/contrast', actions: [], primary: /^Copy/, title: 'Contrast Checker', phoneDock: true },
   { route: '/create/tint', actions: [], primary: /^Copy or save/, title: 'Tint', phoneDock: true },
   // Signed out, so "Add to project" (canSaveProjects) is not offered here. The
