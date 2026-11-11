@@ -907,6 +907,8 @@ async function walkToSave(page) {
     await page.locator('.pnav-editorial-cta').click()
   }
   await expect(walkthrough(page)).toBeVisible()
+  // The arrival state is cleared by a replace navigation that would overwrite an earlier press on Next.
+  await expect.poll(() => page.evaluate(() => window.history.state?.usr ?? null), 'the walkthrough has taken up its arrival').toBeNull()
   for (const [button, url] of [
     [/^Next: Fonts/, /\/create\/font-pair$/],
     [/^Next: Type scale/, /\/create\/type-scale$/],
