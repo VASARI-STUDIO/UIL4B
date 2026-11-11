@@ -25,10 +25,18 @@ const LIBRARIES = [
 
 // Scrolls in small steps, a frame apart, the way a finger does: one jump fires
 // one scroll event and says nothing about direction over time.
-const scrollBy = (page, dy, steps = 8) => page.evaluate(async ({ dy, steps }) => {
+//
+// One frame per step is all the hook samples (it reads scrollY once a frame), and
+// it keeps the cost down: this runs inside one page.evaluate that no expect
+// timeout can interrupt, so every extra frame is spent against the 30 s test
+// budget. On a loaded CI runner a frame on the Emoji Library takes long enough
+// that the old 2 frames x 8-10 steps per scroll ran the budget out mid-loop
+// (the "page.evaluate: Test timeout of 30000ms exceeded" at scrollBy). Few steps,
+// each past the hook's thresholds, still read as a direction.
+const scrollBy = (page, dy, steps = 4) => page.evaluate(async ({ dy, steps }) => {
   for (let i = 0; i < steps; i += 1) {
     window.scrollBy(0, dy / steps)
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    await new Promise((r) => requestAnimationFrame(r))
   }
 }, { dy, steps })
 
@@ -46,7 +54,7 @@ async function scrollAway(page) {
   const home = await barState(page)
   // Far enough for the bar to be well off screen, short of the page's end.
   const room = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)
-  await scrollBy(page, Math.min(1400, room - 200), 10)
+  await scrollBy(page, Math.min(1400, room - 200), 2)
   await expect.poll(async () => (await barState(page)).bottom, { message: 'the bar scrolled away' }).toBeLessThan(0)
   return home
 }
@@ -85,7 +93,7 @@ test.describe('Library toolbar on a phone', () => {
     const home = await scrollAway(page)
     await scrollBy(page, -160)
     await expect.poll(async () => (await barState(page)).peek).toBe('in')
-    await scrollBy(page, -5000, 20)
+    await scrollBy(page, -5000, 8)
     await expect.poll(async () => (await barState(page)).peek).toBe('')
     const at = await barState(page)
     expect(at.position).toBe('relative')
