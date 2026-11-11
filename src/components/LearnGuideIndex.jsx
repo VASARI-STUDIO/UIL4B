@@ -5,6 +5,8 @@ import LibrarySearch from './library/LibrarySearch'
 import { LEARN_ARTICLES, TOPICS, readingMinutes } from '../data/learnIndex'
 import { LEARN_GROUPS } from '../data/toolTree'
 import { PLACES, searchGuides, termsOf } from '../utils/learnSearch'
+import { pickForDay } from '../utils/userHome'
+import { dayNumber } from '../data/dailyTips'
 
 // The guide index on /learn: every published guide, grouped by the topic its
 // own registry entry declares, behind one search field that reads the guides'
@@ -41,15 +43,60 @@ import { PLACES, searchGuides, termsOf } from '../utils/learnSearch'
 // routes are read from LEARN_GROUPS so the rows cannot drift from the menu; the
 // summaries are the ones the site map prints for the same two pages. Search
 // does not match these rows.
-//
-// ── The reveal attribute ───────────────────────────────────────────────────
-//
-// The cards carry `data-reveal` for the landing's one-shot scroll reveal,
-// which useReveal() scans ONCE on mount. A card re-mounted by a search would
-// get the attribute back with no observer left to add `.is-in`, and sit at
-// opacity 0 for ever. So the attribute is only rendered until the first
-// keystroke; after that the cards are plainly visible, which is also what a
-// reader who has just typed a query expects.
+
+const Go = ({ small }) => (
+  <span className={small ? 'srf-go srf-go--s' : 'srf-go'} aria-hidden="true">
+    <svg className="srf-go-a" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 17L17 7M8 7h9v9" />
+    </svg>
+  </span>
+)
+
+// Two guides a day, each with the tool that does what it explains.
+function LearnToday() {
+  const picks = useMemo(() => pickForDay(LEARN_ARTICLES, dayNumber(new Date()), 2), [])
+  if (!picks.length) return null
+  return (
+    <section className="srf-today" aria-labelledby="srf-learn-today-h">
+      <h2 className="srf-tt" id="srf-learn-today-h">Two guides for today</h2>
+      <p className="srf-tl">Two guides a day, each with the tool that does what it explains.</p>
+      <ul className="lidx-ty">
+        {picks.map((a) => (
+          <li className="lidx-art" key={a.slug}>
+            <div className="lidx-ah">
+              <Link className="lidx-title" to={`/learn/${a.slug}`}>{a.title}<Go /></Link>
+              <span className="srf-meta lidx-time">{readingMinutes(a.words)} min</span>
+            </div>
+            <p className="lidx-dek">{a.dek}</p>
+            <Link className="srf-td-l" to={a.toolTo}>Open in {a.toolLabel}<Go small /></Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+// A guide's headings as links into it. Always in the DOM so aria-controls
+// resolves; on a phone a closed list is hidden by CSS.
+function Contents({ article, open, onToggle }) {
+  const id = `cx-${article.slug}`
+  return (
+    <>
+      <button type="button" className="lidx-cx" aria-expanded={open} aria-controls={id} onClick={onToggle}>
+        Contents
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      <ol className="lidx-ol" id={id} data-open={open} aria-label={`${article.title}: contents`}>
+        {article.sections.map((x, n) => (
+          <li key={x.id}>
+            <span className="lidx-sn" aria-hidden="true">{n + 1}</span>
+            <Link to={`/learn/${article.slug}#${x.id}`}>{x.title}</Link>
+          </li>
+        ))}
+      </ol>
+    </>
+  )
+}
 
 const topicId = (topic) => `learn-topic-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 
@@ -140,7 +187,13 @@ export default function LearnGuideIndex() {
     status = `Showing all ${LEARN_ARTICLES.length} guides.`
   }
 
-  const reveal = touched ? {} : { 'data-reveal': true }
+  // The first guide of each topic starts with its contents open (phone only).
+  const [toggled, setToggled] = useState({})
+  const isOpen = (a) => {
+    if (a.slug in toggled) return toggled[a.slug]
+    return LEARN_ARTICLES.find((x) => x.topic === a.topic)?.slug === a.slug
+  }
+  const toggle = (a) => setToggled((t) => ({ ...t, [a.slug]: !isOpen(a) }))
   const empty = searching && !!bodies && hits.length === 0
   // The live region keeps its sentence for assistive technology in every
   // state, but when the empty state prints the same sentence as its heading
@@ -171,6 +224,7 @@ export default function LearnGuideIndex() {
         )}
       </div>
       <p className={statusClass} role="status" aria-live="polite" aria-atomic="true">{status}</p>
+      {!searching && <LearnToday />}
 
       {empty ? (
         <div className="lidx-empty">
@@ -198,38 +252,40 @@ export default function LearnGuideIndex() {
                   {searching ? `${g.hits.length} of ${g.total}` : plural(g.total, 'guide')}
                 </span>
               </h3>
-              <div className="lidx-grid">
+              <ul className="lidx-grid">
                 {g.hits.map(({ article: a, snippet }) => (
-                  <Link className="lidx-card" key={a.slug} to={`/learn/${a.slug}`} {...reveal}>
-                    <span className="lidx-top">
-                      <span className="lidx-topic">{a.topic}</span>
-                      <span className="lidx-time">{readingMinutes(a.words)} min</span>
-                    </span>
-                    <span className="lidx-title">{a.title}</span>
-                    <span className="lidx-dek">{a.dek}</span>
+                  <li className="lidx-card lidx-art" key={a.slug}>
+                    <div className="lidx-ah">
+                      <Link className="lidx-title" to={`/learn/${a.slug}`}>{a.title}<Go /></Link>
+                      <span className="srf-meta lidx-time">{readingMinutes(a.words)} min</span>
+                    </div>
+                    <p className="lidx-dek">{a.dek}</p>
                     {snippet && (
-                      <span className="lidx-hit">
+                      <Link className="lidx-hit" to={`/learn/${a.slug}`}>
                         {snippet.before}<mark>{snippet.match}</mark>{snippet.after}
-                      </span>
+                      </Link>
                     )}
-                    <span className="lidx-go" aria-hidden="true">&rarr;</span>
-                  </Link>
+                    {!searching && a.sections?.length > 0 && (
+                      <Contents article={a} open={isOpen(a)} onToggle={() => toggle(a)} />
+                    )}
+                  </li>
                 ))}
-              </div>
+              </ul>
             </section>
           ))}
           {!searching && USING_ROWS.length > 0 && (
             <section className="lidx-topic-sec" id={USING_ID} aria-labelledby={`${USING_ID}-h`}>
               <h3 className="lidx-topic-h" id={`${USING_ID}-h`}>Using UI L4B</h3>
-              <div className="lidx-grid">
+              <ul className="lidx-grid">
                 {USING_ROWS.map((r) => (
-                  <Link className="lidx-card" key={r.id} to={r.route} {...reveal}>
-                    <span className="lidx-title">{r.label}</span>
-                    <span className="lidx-dek">{r.dek}</span>
-                    <span className="lidx-go" aria-hidden="true">&rarr;</span>
-                  </Link>
+                  <li className="lidx-card lidx-art" key={r.id}>
+                    <div className="lidx-ah">
+                      <Link className="lidx-title" to={r.route}>{r.label}<Go /></Link>
+                    </div>
+                    <p className="lidx-dek">{r.dek}</p>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </section>
           )}
         </div>
