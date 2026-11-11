@@ -14,11 +14,6 @@ import {
 } from '../../config/exportFormats.js'
 import { ratio } from '../spectrum/spectrumKit.js'
 
-// Where the pinned cards dock, in px from the top of the screen with the nav
-// hidden. The CSS custom properties --stack-top-0/1/2 and the script's TOPS both
-// read this one list.
-export const STACK_TOPS = Object.freeze([84, 116, 148])
-
 // Kerbside's primary. Every colour on the card is derived from it.
 export const SIGNAL = '#FF5A1F'
 

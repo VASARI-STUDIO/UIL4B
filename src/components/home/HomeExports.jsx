@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EXPORT_THEMES_LIVE } from '../../config/exportFormats'
-import { exportCopy, exportRows, kerbsideRamp, projectsLimit, STACK_TOPS } from './homeExportsData'
+import { exportCopy, exportRows, kerbsideRamp, projectsLimit } from './homeExportsData'
 import { HOME_EXPORT_IMAGES, homeExportSrc, homeExportSrcSet } from './homeExportsImages'
 import {
   FACES_URL,
@@ -16,8 +16,8 @@ import {
   iconSvg,
   iconsBytes,
   photoCells,
-  readStackTops,
   smallSize,
+  stacks,
   tokenText,
   typeSteps,
   zipTotal,
@@ -25,12 +25,13 @@ import {
 import SIZES from './homeExportsSizes.json'
 import '../../styles/pages/home-exports.css'
 
-// The homepage's exports section: three pinned cards, each showing the thing it
+// The homepage's exports section: three stacked cards, each showing the thing it
 // makes. One DOM serves every width; home-exports.css decides which parts show.
 // Every count, price and list line comes from the config and the kit files.
 
-// A card is scaled and dimmed by how far the next one has travelled over it: that is
-// scroll-linked CSS in home-exports.css, with no script on the scroll.
+// A card slides over the one before it with the page's own scroll (sticky, in
+// home-exports.css) and the covered card does not change. The script only marks a
+// covered card inert, so keyboard focus never lands behind the card over it.
 
 // The faces the cards draw are fetched only once the section is within this
 // distance of the viewport.
@@ -239,35 +240,41 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
     return () => observer.disconnect()
   }, [near])
 
-  // Dock each card at its top. From 1024 the tops come from the --stack-top-N
-  // tokens; below that a card taller than the screen docks by its bottom edge.
-  // Card heights change with the answer picked and with the faces, so it
-  // re-runs on each.
+  // Keep each tracker on its card's dock line, and mark a card inert once the card
+  // after it has docked. A tracker's bottom edge sits on that dock line, so a tracker
+  // that has fully left the top of the screen means its card is on the line and the
+  // card before it is covered. In the plain column nothing is covered and nothing is
+  // inert. Card heights change with the answer picked and with the faces, so the
+  // docks are read again on each.
   useEffect(() => {
-    const section = sectionRef.current
     const cards = cardRefs.current.filter(Boolean)
-    if (!section || cards.length === 0) return undefined
+    if (cards.length === 0) return undefined
     let mounted = true
-    const dock = () => {
-      const style = getComputedStyle(section)
-      const tops = readStackTops((name) => style.getPropertyValue(name))
-      const docks = cards.map((el, index) => dockTop({
-        index,
-        tops,
-        width: window.innerWidth,
-        height: window.innerHeight,
-        cardHeight: el.offsetHeight,
-      }))
-      cards.forEach((el, index) => { el.style.top = `${docks[index]}px` })
-      // Each card after the first has a tracker for the scroll-linked cover of the card
-      // before it. Its height is the distance the card's top travels from the earlier
-      // card's bottom edge to its own dock line, and it sits that dock line above it.
-      trackRefs.current.forEach((track, index) => {
-        if (!track || index === 0 || !cards[index - 1]) return
-        track.style.setProperty('--hx-trav', `${Math.max(1, docks[index - 1] + cards[index - 1].offsetHeight - docks[index])}px`)
-        track.style.setProperty('--hx-dock', `${docks[index]}px`)
-      })
+    const arrived = []
+    const cover = () => {
+      const on = stacks(window.innerWidth, window.innerHeight)
+      cards.forEach((el, index) => { el.inert = on && arrived[index + 1] === true })
     }
+    const dock = () => {
+      trackRefs.current.forEach((track, index) => {
+        if (!track || index === 0 || !cards[index]) return
+        const top = dockTop({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          top: getComputedStyle(cards[index]).top,
+        })
+        if (top === null) track.style.removeProperty('--hx-dock')
+        else track.style.setProperty('--hx-dock', `${top}px`)
+      })
+      cover()
+    }
+    const watcher = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        arrived[Number(entry.target.dataset.track)] = !entry.isIntersecting && entry.boundingClientRect.bottom <= 0
+      })
+      cover()
+    })
+    trackRefs.current.forEach((track, index) => { if (track && index > 0) watcher?.observe(track) })
     dock()
     window.addEventListener('resize', dock)
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(dock)
@@ -277,12 +284,13 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
       mounted = false
       window.removeEventListener('resize', dock)
       observer?.disconnect()
+      watcher?.disconnect()
+      cards.forEach((el) => { el.inert = false })
     }
   }, [])
 
   const front = rows[Math.min(doc, rows.length - 1)]?.art
   const shown = OBJECTS.filter((o) => rows.some((r) => r.art === o.art))
-  const stackTops = Object.fromEntries(STACK_TOPS.map((top, i) => [`--stack-top-${i}`, `${top}px`]))
   const tracker = (i) => <span className="hx-track" data-track={i} ref={(el) => { trackRefs.current[i] = el }} aria-hidden="true" />
 
   const card1 = (
@@ -466,7 +474,7 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
   )
 
   return (
-    <section id="exports" ref={sectionRef} className="hx" aria-labelledby="exports-h" data-pins style={stackTops}>
+    <section id="exports" ref={sectionRef} className="hx" aria-labelledby="exports-h" data-pins>
       {near && <link rel="stylesheet" href={FACES_URL} />}
       <div className="hx-wrap">
         <div className="hx-head">

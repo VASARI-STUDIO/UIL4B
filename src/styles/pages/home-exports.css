@@ -1,22 +1,23 @@
-/* Homepage exports section (HomeExports.jsx): three pinned cards, each showing
+/* Homepage exports section (HomeExports.jsx): three stacked cards, each showing
    the thing it makes.
 
    Spacing: the section's padding is the only space above and below it, from
    --section-y, and the sides from --gutter-x (home-tokens.css).
 
-   Breakpoints: 1024px and up is two columns (words, then the art) and the cards
-   dock at the three --stack-top-N tokens set on the section. Up to 1023px a
-   card is words on top with the art full width underneath, and the script docks
-   a card taller than the screen by its bottom edge. Up to 767px is the phone
-   layout: the pieces become chips, the file bar sits under the art, and card 3's
-   tiles become a strip. Under 375px the smallest labels drop.
+   The stack: from 1024px wide and 560px tall the cards are sticky and each docks
+   12px lower than the one before, so a covered card keeps its top edge showing
+   and the edges count the pile. A covered card never changes: no scale, dim,
+   shadow or filter. The window height sets the dock line (--hx-base), so the
+   last card fits a short laptop. Narrower or shorter, the cards scroll as a
+   plain column. Nothing here is animated, so reduced motion needs no rule.
+
+   Breakpoints: 1024px and up is two columns (words, then the art). Up to 1023px
+   a card is words on top with the art full width underneath. Up to 767px is the
+   phone layout: the pieces become chips, the file bar sits under the art, and
+   card 3's tiles become a strip. Under 375px the smallest labels drop.
 
    The cards are fixed dark surfaces (their own greys), whatever the page theme.
-   Hairlines and one 2px ring carry the structure. Each card rests on the shared
-   elevation (--hm-elev-3), and as the next card slides over it a card scales to
-   .96 from its top edge and dims, by scroll position and on the compositor only
-   (the Stack section below). Reduced motion, and a browser without scroll-driven
-   animations, keep the plain stack. */
+   Hairlines and one 2px ring carry the structure. */
 
 .hx {
   --hx-ease: cubic-bezier(.23, 1, .32, 1);
@@ -26,6 +27,7 @@
   --hx-text: rgba(239, 238, 234, .68);
   --hx-quiet: rgba(239, 238, 234, .56);
   --hx-gap: 48px;
+  --hx-edge: 12px;
   /* Room the specimen lines draw in: the art column's width, less its padding. */
   --hx-aw: min(880px, 100vw - 560px);
   --hx-room: calc(var(--hx-aw) - 200px);
@@ -62,14 +64,14 @@
 }
 
 /* ── The stack ───────────────────────────────────────────────────────────── */
-/* Each nest holds its card, a gap and the next nest, so a card stays pinned
+/* Each nest holds its card, a gap and the next nest, so a card stays docked
    until the last one has arrived. */
 .hx-stack { margin-top: 64px; }
 .hx-nest { position: relative; }
 .hx-gap { height: var(--hx-gap); }
-.hx-tail { height: 40px; }
+.hx-tail { height: 0; }
 .hx-foot {
-  margin: 0;
+  margin: 48px 0 0;
   text-align: center;
   font-size: 14px;
   line-height: 1.6;
@@ -77,8 +79,6 @@
 }
 
 .hx-card {
-  position: sticky;
-  top: 72px;
   display: grid;
   min-height: 640px;
   isolation: isolate;
@@ -88,34 +88,32 @@
   background: #0F1012;
   color: #EFEEEA;
   overflow: hidden;
-  box-shadow: var(--hm-elev-3);
-  transform-origin: 50% 0;
 }
-/* The dimming layer: a flat near-black sheet over the whole card, clear at rest. */
-.hx-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  border-radius: inherit;
-  background: #060607;
-  opacity: 0;
-  pointer-events: none;
-}
-/* Marks where a card's top travels while it slides over the card before it. It
-   draws nothing and takes no space. */
+/* Marks where the card after it docks. It draws nothing and takes no space; its
+   bottom edge sits on that card's dock line, so once it has left the top of the
+   screen the card before it is covered. */
 .hx-track {
   position: absolute;
   left: 0;
-  bottom: calc(100% + var(--hx-dock, 116px));
+  bottom: calc(100% + var(--hx-dock, 0px));
   width: 1px;
-  height: var(--hx-trav, 608px);
+  height: 1px;
   pointer-events: none;
 }
-@media (min-width: 1024px) {
-  .hx-card[data-card="0"] { top: var(--stack-top-0, 84px); }
-  .hx-card[data-card="1"] { top: var(--stack-top-1, 116px); }
-  .hx-card[data-card="2"] { top: var(--stack-top-2, 148px); }
+/* The window height sets the first dock line so the last card ends inside the
+   screen: 664px is a 640px card and its two 12px edges. The gap is also the hold
+   before a card reaches the one it covers, and the tail is how long the whole
+   pile rests before it leaves. */
+@media (min-width: 1024px) and (min-height: 560px) {
+  .hx {
+    --hx-base: clamp(24px, calc((100svh - 664px) / 2), 84px);
+    --hx-gap: 96px;
+  }
+  .hx-card { position: sticky; }
+  .hx-card[data-card="0"] { top: var(--hx-base); }
+  .hx-card[data-card="1"] { top: calc(var(--hx-base) + var(--hx-edge)); }
+  .hx-card[data-card="2"] { top: calc(var(--hx-base) + var(--hx-edge) * 2); }
+  .hx-tail { height: 240px; }
 }
 .hx-grid {
   display: grid;
@@ -577,6 +575,7 @@
   .hx-h2 { font-size: 38px; }
   .hx-lead { margin: 16px 0 0; max-width: none; font-size: 16px; line-height: 1.55; }
   .hx-stack { margin-top: 32px; }
+  .hx-foot { margin-top: 32px; }
   .hx-card { border-radius: 24px; }
 
   .hx-say { padding: 24px 20px 20px; }
@@ -712,43 +711,8 @@
   .hx-file { height: auto; padding-top: 6px; padding-bottom: 6px; }
 }
 
-/* ── Stack: a covered card scales and dims with the card over it ─────────── */
-/* The tracker of the card that covers (--hx-t1 for card 2, --hx-t2 for card 3)
-   is a view timeline whose exit range runs from that card's top at the earlier
-   card's bottom edge (0%) to its top at its dock line (100%). The inset is zero
-   so the page's scroll-padding does not move the range. Transform and opacity
-   only; the browser keeps the animations on the compositor. */
-@keyframes hx-cover { to { transform: scale(.96); } }
-@keyframes hx-dim { to { opacity: .45; } }
-@supports (animation-timeline: view()) and (timeline-scope: --hx-t1) {
-  .hx-stack { timeline-scope: --hx-t1, --hx-t2; }
-  .hx-track { view-timeline-axis: block; view-timeline-inset: 0px; }
-  .hx-track[data-track="1"] { view-timeline-name: --hx-t1; }
-  .hx-track[data-track="2"] { view-timeline-name: --hx-t2; }
-  .hx-card[data-card="0"], .hx-card[data-card="0"]::after { animation-timeline: --hx-t1; }
-  .hx-card[data-card="1"], .hx-card[data-card="1"]::after { animation-timeline: --hx-t2; }
-  .hx-card:is([data-card="0"], [data-card="1"]) {
-    animation-name: hx-cover;
-    animation-timing-function: linear;
-    animation-fill-mode: both;
-    animation-range: exit;
-  }
-  .hx-card:is([data-card="0"], [data-card="1"])::after {
-    animation-name: hx-dim;
-    animation-timing-function: linear;
-    animation-fill-mode: both;
-    animation-range: exit;
-  }
-}
-
 /* ── Reduced motion ──────────────────────────────────────────────────────── */
-/* The plain stack: no scroll-linked scale or dim. */
-:where(html[data-reduced-motion="true"]) .hx .hx-card,
-:where(html[data-reduced-motion="true"]) .hx .hx-card::after { animation: none; }
-@media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .hx .hx-card,
-  :where(html:not([data-reduced-motion="false"])) .hx .hx-card::after { animation: none; }
-}
+/* The stack itself has no animation. These stop the picture swaps and the press states. */
 :where(html[data-reduced-motion="true"]) .hx :is(.hx-obj, .hx-row, .hx-seg, .hx-pill, .hx-pc, .hx-tile, .hx-tiles) { transition: none; }
 :where(html[data-reduced-motion="true"]) .hx :is(.hx-seg, .hx-pill, .hx-pc):active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
