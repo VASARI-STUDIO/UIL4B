@@ -373,3 +373,6 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
   .hlp .hlr-h2{font-size:32px;line-height:1.02}
   .hlp .rd-end{margin-top:calc(112px - var(--cpg-sec))}
 }
+@media(max-width:374px){
+  .hlp .rd-end{margin-top:calc(96px - var(--cpg-sec))}
+}
