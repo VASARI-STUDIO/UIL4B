@@ -379,14 +379,39 @@ test.describe('the wall moves slowly and can be stopped', () => {
 
 test.describe('the /login page hands the visitor on', () => {
   // MUTATION: in LoginPage.jsx delete the effect that calls
-  //   navigate(from, { replace: true }) once the user is set
-  test('a signed-in visitor is sent away from /login', async ({ page }) => {
+  //   navigate(from, { replace: true }) once the user is set, or change the
+  //   fallback back to '/home' (the sales page)
+  test('a signed-in visitor is sent away from /login to their workspace', async ({ page }) => {
     watch(page, 'signed-in visitor opening an old log-in bookmark')
     await signIn(page, { plan: 'free' })
     await go(page, '/login')
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).not.toBe('/login')
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe('/projects')
     // Retries: the URL leaves /login before the page does (see the test below).
     await expect(page.getByRole('heading', { level: 1, name: 'Log in to UI L4B' }), 'the log-in form is still showing').toHaveCount(0)
+    await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' })).toBeVisible()
+  })
+
+  // MUTATION: as above. Signing in on a bare /login then lands on /home.
+  test('signing in on a bare /login lands in the workspace, not on the sales page', async ({ page }) => {
+    watch(page, 'visitor who opened /login directly and signed in')
+    await signIn(page, { plan: 'free', lateSignIn: true })
+    await go(page, '/login')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
+
+    await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe('/projects')
+    await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' })).toBeVisible()
+    expect(await page.evaluate((k) => sessionStorage.getItem(k), RESUME_KEY), 'the workspace was stashed as a resume target').toBeNull()
+  })
+
+  // MUTATION: in LoginPage.jsx make `from` the bare '/projects' again, ignoring
+  //   the account's record. An account that still owes onboarding then lands in the workspace.
+  test('an account that still owes onboarding is sent there from a bare /login, not to the workspace', async ({ page }) => {
+    watch(page, 'existing account that has not finished onboarding opening /login')
+    await signIn(page, { plan: 'free', onboarded: false })
+    await go(page, '/login')
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe('/onboarding')
+    await expect(page.getByTestId('onboarding-first-win')).toBeVisible()
   })
 
   // MUTATION: same effect as above. The page then sits on /login after sign-in.

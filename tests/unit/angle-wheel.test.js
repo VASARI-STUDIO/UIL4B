@@ -154,7 +154,7 @@ test('the wheel keyboard path goes through stepAngle with the Shift flag', () =>
 test('the Gradient Generator sets its angle with the wheel, behind the Pro guard', () => {
   const src = read('src/pages/GradientGenerator.jsx')
   assert.match(src, /import AngleWheel from/)
-  assert.match(src, /<AngleWheel[\s\S]*?onChange=\{\(v\) => \{ if \(guardEdit\(\)\) setAngle\(v\) \}\}/)
+  assert.match(src, /<AngleWheel[\s\S]*?onChange=\{\(v\) => \{ if \(v !== angle && guardEdit\(\)\) \{ beginEdit\('angle'\); setAngle\(v\) \} \}\}/)
   assert.match(src, /<AngleWheel[\s\S]*?locked=\{editLocked\}/)
   assert.doesNotMatch(src, /<ToolSlider[^>]*label="Angle"/)
 })
