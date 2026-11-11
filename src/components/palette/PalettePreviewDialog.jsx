@@ -29,7 +29,7 @@ import ToolIcon from '../tool/ToolIcon'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import useBackClosesDialog from '../../hooks/useBackClosesDialog'
-import { PREVIEW_GROUPS, PREVIEW_SCENES, sceneById } from '../../data/palettePreviewScenes'
+import { PREVIEW_GROUPS, PREVIEW_SCENES, sceneById, scenesToPreload } from '../../data/palettePreviewScenes'
 import { statesOf } from '../../data/previewStates'
 import { BRAND_ROLES, derivePaletteRoles, pvVars } from '../../utils/palettePreviewRoles'
 import { roleLabel } from '../../utils/paletteRoles'
@@ -714,9 +714,9 @@ export default function PalettePreviewDialog({
 
   // Fetch the neighbours of the open example when the browser has nothing else
   // to do, in list order, so stepping with the arrows or a swipe is instant.
+  // A neighbour this viewer cannot open is skipped: its chunk is the Pro scene.
   useEffect(() => {
-    const i = PREVIEW_SCENES.findIndex((s) => s.id === scene.id)
-    const near = [PREVIEW_SCENES[i - 1], PREVIEW_SCENES[i + 1]].filter((s) => s && s.example)
+    const near = scenesToPreload(scene.id, isLocked)
     if (!near.length) return undefined
     const run = () => near.forEach((s) => preloadExample(s.id))
     if (typeof window.requestIdleCallback === 'function') {
@@ -725,7 +725,7 @@ export default function PalettePreviewDialog({
     }
     const t = window.setTimeout(run, 400)
     return () => window.clearTimeout(t)
-  }, [scene.id])
+  }, [scene.id, isLocked])
 
   // Swipe the stage to step through the previews on a phone.
   const touch = useRef(null)
