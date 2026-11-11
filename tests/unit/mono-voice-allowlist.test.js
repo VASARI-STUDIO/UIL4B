@@ -123,7 +123,7 @@ const ALLOWED = {
   },
   'pages/checkout.css': {
     '.checkout-page .checkout-error code': 'code',
-    '.checkout-page .checkout-return-ref-code': 'code',
+    '.checkout-page .co-ref-code': 'token',
   },
   'pages/contrast.css': {
     '.cc .cc-hex-input': 'hex',
