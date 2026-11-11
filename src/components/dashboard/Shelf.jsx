@@ -7,7 +7,7 @@ import { useProLibrary } from '../../hooks/useProLibrary'
 import { isStub } from '../../utils/libraryRules'
 import { buildTokensCss } from '../../utils/designTokens'
 import { formatBytes, formatWhen } from '../../utils/recentExports'
-import { CONVERTER_SOURCE } from '../spectrum/spectrumKit'
+import { CONVERTER_SOURCE, CONVERTER_SRCSET } from '../spectrum/spectrumKit'
 import { liveToolCount, newestPalettes, numberWord } from '../userhome/workspace'
 import { GoArrow } from './KitSheet'
 import openCreateMenu from './openCreateMenu'
@@ -183,7 +183,9 @@ export default function Shelf({ projects, signedOut, loading }) {
           </div>
           <div className="db-col o">
             <span className="db-plate db-img" aria-hidden="true">
-              <img src={CONVERTER_SOURCE} alt="" width="168" height="160" loading="lazy" decoding="async" />
+              {/* A 168 x 160 slot cropped (object-fit: cover) from a 16:9 photo needs it about 284 px wide; below
+                  1200px the column is full width (dashboard.css), so the whole viewport is the bound. */}
+              <img src={CONVERTER_SOURCE} srcSet={CONVERTER_SRCSET} sizes="(max-width: 1199px) 100vw, 284px" alt="" width="168" height="160" loading="lazy" decoding="async" />
               <span className="db-crop" />
               <span className="db-ratio">4:5</span>
             </span>
