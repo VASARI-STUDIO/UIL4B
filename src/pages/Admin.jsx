@@ -1749,7 +1749,7 @@ export default function Admin({ toast }) {
   // fine for deciding what to render, worthless as a fact. This hook is also
   // what finally reads /api/verify-admin's `claimUpdated` and forces the token
   // refresh that makes a freshly minted claim usable in the same session.
-  const { role, loading: roleLoading } = useModerationRole()
+  const { role, loading: roleLoading, confirmed: roleConfirmed } = useModerationRole()
   const [tab, setTab] = useState('overview')
   const tabs = TABS.filter(t => (!t.adminOnly || isAdminUser) && (!t.show || t.show(role)))
   // Roving-tabindex keyboard navigation for the tab bar. A tablist is ONE tab
@@ -2221,7 +2221,9 @@ export default function Admin({ toast }) {
   // A signed-in account without admin access is sent home without a word, as
   // /style-guide does (RequireAdmin in App.jsx): the route's existence is not
   // something to name to them.
-  if (!effectiveUnlocked && user) return <Navigate to="/" replace />
+  // Only once the server has confirmed the role: a moderator whose cached token predates
+  // their claim would otherwise be sent away before the handshake upgrades it.
+  if (!effectiveUnlocked && user && roleConfirmed) return <Navigate to="/" replace />
 
   if (!effectiveUnlocked) {
     return (
