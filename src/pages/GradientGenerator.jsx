@@ -19,8 +19,9 @@ import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
 import { pushLook, popLook, canGoBack } from '../utils/gradientHistory'
 import useMediaQuery from '../hooks/useMediaQuery'
-import { hexToRgb, hexToOklch } from '../utils/colors'
+import { hexToOklch } from '../utils/colors'
 import { pickInk, INK_DARK, INK_LIGHT } from '../utils/gradientInk'
+import { normaliseHex, newStopColour, presetMatches } from '../utils/gradientEdit'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { allColoursLocked, nextPaintTarget } from '../utils/gradientPaint'
 import { NO_GEOMETRY_LOCKS, normaliseStop, normaliseStops, clearStopLocks, hasStopLock, setStopLock, parseGeometryLocks, lockedRollOptions } from '../utils/gradientLocks'
@@ -226,13 +227,6 @@ const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-
 // rule can't drift between call sites.
 const isValidHex = (c) => /^#[0-9a-f]{6}$/i.test(c || '')
 
-// Interpolated colour between two hex values at a 0–1 ratio — used when
-// inserting a stop so the new swatch blends its neighbours.
-function mixHex(a, b, t = 0.5) {
-  const c1 = hexToRgb(a), c2 = hexToRgb(b)
-  return '#' + [0, 1, 2].map(i => Math.round(c1[i] + (c2[i] - c1[i]) * t).toString(16).padStart(2, '0')).join('').toUpperCase()
-}
-
 // The starting look is the first preset: its stops, and this one angle. A first
 // visit and Reset both read it (Reset applies PRESETS[0]), so they cannot drift.
 const DEFAULT_ANGLE = PRESETS[0].angle
@@ -430,13 +424,18 @@ function ColourChip({ hex, label, on, unavailable = false, onPick }) {
 const paintKey = (idxs, list) => `${idxs.join(',')}|${list.map((st) => st.color).join('')}|${list.map((st) => (st.lockColour ? 1 : 0)).join('')}`
 
 // Hex text field with a local draft, so partially-typed values aren't wiped by
-// the controlled stop colour on every keystroke. Commits when the text is a
-// valid #rrggbb; reverts to the stop's colour on blur if left invalid.
+// the controlled stop colour on every keystroke. It commits while typing once
+// there are six digits (with or without #) and on a paste; Enter and blur also
+// take a 3-digit hex. Text that is not a hex leaves the stop's last colour in
+// place, and blur or Escape put that colour back in the field.
 function StopHexInput({ color, label, onCommit }) {
   const [draft, setDraft] = useState(color.toUpperCase())
+  // Enter and Escape blur the field themselves; the blur that follows has nothing left to do.
+  const handled = useRef(false)
   useEffect(() => { setDraft(color.toUpperCase()) }, [color])
-  const valid = isValidHex(draft)
+  const valid = normaliseHex(draft) !== null
   const revert = () => setDraft(color.toUpperCase())
+  const commit = (hex) => { setDraft(hex); onCommit(hex) }
   return (
     <span className="grd-hex-field">
       <input
@@ -446,25 +445,35 @@ function StopHexInput({ color, label, onCommit }) {
         onChange={(e) => {
           const v = e.target.value
           setDraft(v)
-          if (isValidHex(v)) onCommit(v.toUpperCase())
+          const hex = normaliseHex(v)
+          const pasted = e.nativeEvent.inputType === 'insertFromPaste'
+          if (hex && (pasted || v.trim().replace('#', '').length === 6)) commit(hex)
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
-            if (valid) onCommit(draft.toUpperCase())
+            const hex = normaliseHex(draft)
+            if (hex) commit(hex)
             else revert()
+            handled.current = true
             e.currentTarget.blur()
           } else if (e.key === 'Escape') {
             revert()
+            handled.current = true
             e.currentTarget.blur()
           }
         }}
-        onBlur={revert}
+        onBlur={() => {
+          if (handled.current) { handled.current = false; return }
+          const hex = normaliseHex(draft)
+          if (hex) commit(hex)
+          else revert()
+        }}
         aria-label={label}
         aria-invalid={!valid}
         spellCheck="false"
         autoComplete="off"
       />
-      {!valid && <span className="grd-field-error" role="status">Use a 6-digit hex</span>}
+      {!valid && <span className="grd-field-error" role="status">Use a hex like #2F6BFF</span>}
     </span>
   )
 }
@@ -1129,21 +1138,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       return null
     }
     const idx = stops.length // appended below, so this is the new stop's index
-    setStops(prev => {
-      const sorted = [...prev].sort((a, b) => a.position - b.position)
-      let lo = sorted[0], hi = sorted[sorted.length - 1]
-      for (let i = 0; i < sorted.length - 1; i++) {
-        if (pct >= sorted[i].position && pct <= sorted[i + 1].position) { lo = sorted[i]; hi = sorted[i + 1]; break }
-      }
-      const span = hi.position - lo.position
-      const t = span > 0 ? (pct - lo.position) / span : 0.5
-      const next = [...prev, { color: mixHex(lo.color, hi.color, t), position: Math.round(pct) }]
-      return next
-    })
+    // The rail draws in the space the canvas really uses, so the new stop is
+    // sampled in that one and the gradient looks the same after the add.
+    const railSpace = supportsOklchGradients ? space : 'srgb'
+    setStops(prev => [...prev, { color: newStopColour(prev, pct, railSpace), position: Math.round(pct) }])
     selectOnly(idx)
     focusStopRef.current = idx
     return idx
-  }, [stops.length, guardEdit, toast, selectOnly])
+  }, [stops.length, space, guardEdit, toast, selectOnly])
 
   const addStop = useCallback(() => {
     const sorted = [...stops].sort((a, b) => a.position - b.position)
@@ -1892,10 +1894,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // itself there, which for a radial or conic would put no stop where its
   // handle sits.
   const railCss = gradientCssIn('Linear', 90, stops, supportsOklchGradients ? space : 'srgb')
-  const presetOn = (p) => p.type === type
-    && p.stops.length === stops.length
-    && [...p.stops].sort((a, b) => a.position - b.position)
-      .every((s, i) => s.color.toUpperCase() === sortedForBar[i].color.toUpperCase() && Math.round(s.position) === Math.round(sortedForBar[i].position))
+  const presetOn = (p) => presetMatches(p, { type, angle, space, stops })
   // One tile. The user's own palettes and the twelve starters share it but sit in
   // separate grids, so the starter grid always holds exactly its twelve.
   const renderPreset = (p, key) => {
