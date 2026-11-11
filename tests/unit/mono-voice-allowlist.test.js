@@ -299,7 +299,7 @@ const ALLOWED = {
     '.sp-search .hcmd-prompt::after': 'glyph',
   },
   'pages/surface.css': {
-    '.srf .scp-type-mono': 'code',
+    '.srf .srf-hex': 'hex',
   },
   'pages/tint.css': {
     '.tt .tt-hex-input': 'hex',
