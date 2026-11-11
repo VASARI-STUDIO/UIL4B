@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import useShortCode from '../hooks/useShortCode'
 import NotFound from './NotFound'
 import ReadingEnd from '../components/ReadingEnd'
+import { ContrastSpecimen, TryColourAction } from '../components/ContrastFigures'
+import { resetContrastPick } from '../hooks/useContrastPick'
 import { LEARN_ARTICLES, findArticle, nextInTopic, readingMinutes, topicAnchorId } from '../data/learnIndex'
 import { getArticleSources } from '../data/learn/sources'
 import ColourContrast from '../data/learn/colourContrast'
@@ -115,6 +117,8 @@ function Article({ article }) {
   const proseRef = useRef(null)
   useShortCode(proseRef)
   useFocusableHeadings(article.sections)
+  useEffect(() => resetContrastPick, [])
+  const specimen = article.slug === 'colour-contrast'
   const next = nextInTopic(article.slug)
   const nextInSameTopic = Boolean(next) && next.topic === article.topic
   const minutes = readingMinutes(article.words)
@@ -133,7 +137,7 @@ function Article({ article }) {
 
   return (
     <div className="sec lart">
-      <header className="lart-hero">
+      <header className={`lart-hero${specimen ? ' lart-hero--spec' : ''}`}>
         <div className="lart-head">
           <nav className="lart-crumb" aria-label="Breadcrumb">
             <Link to="/learn">Learn</Link>
@@ -146,21 +150,37 @@ function Article({ article }) {
             <span>{minutes} min read</span>
             <span>Reviewed <time dateTime={article.updated}>{formatDate(article.updated)}</time></span>
           </p>
+          {specimen && (
+            <nav className="lart-toc-inline" aria-labelledby="lart-toc-i-h">
+              <h2 className="lart-toc-h" id="lart-toc-i-h">In this guide</h2>
+              <ol>
+                {article.sections.map((s) => (
+                  <li key={s.id}>
+                    <a href={`#${s.id}`} onClick={() => chooseSection(s.id)}>{s.title}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
         </div>
+
+        {specimen && <ContrastSpecimen />}
 
         {/* The wide-screen list and the phone disclosure are the same list
             from article.sections. CSS shows one of them, so only one landmark
             is ever exposed. */}
-        <nav className="lart-toc" aria-labelledby="lart-toc-h">
-          <h2 className="lart-toc-h" id="lart-toc-h">In this guide</h2>
-          <ol>
-            {article.sections.map((s) => (
-              <li key={s.id}>
-                <a href={`#${s.id}`} onClick={() => chooseSection(s.id)}>{s.title}</a>
-              </li>
-            ))}
-          </ol>
-        </nav>
+        {!specimen && (
+          <nav className="lart-toc" aria-labelledby="lart-toc-h">
+            <h2 className="lart-toc-h" id="lart-toc-h">In this guide</h2>
+            <ol>
+              {article.sections.map((s) => (
+                <li key={s.id}>
+                  <a href={`#${s.id}`} onClick={() => chooseSection(s.id)}>{s.title}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
 
         <nav className="lart-toc-nav" aria-labelledby="lart-toc-m-h">
           <details className="lart-toc-m" ref={contentsRef}>
@@ -180,7 +200,7 @@ function Article({ article }) {
         </nav>
       </header>
 
-      <article className="lart-prose" ref={proseRef}>
+      <article className={`lart-prose${specimen ? ' lart-prose--wide' : ''}`} ref={proseRef}>
         <Body />
       </article>
 
@@ -192,9 +212,13 @@ function Article({ article }) {
           <h2 id="lart-next-h">{TRY_HEAD[article.slug] || `Try it in the ${article.toolLabel}.`}</h2>
           <p className="lart-next-lede">{TOOL_LEDE[article.slug]}</p>
         </div>
-        <Link className="lart-next-go" to={article.toolTo}>
-          Open in {article.toolLabel}
-        </Link>
+        {specimen ? (
+          <TryColourAction to={article.toolTo} label={article.toolLabel} />
+        ) : (
+          <Link className="lart-next-go" to={article.toolTo}>
+            Open in {article.toolLabel}
+          </Link>
+        )}
       </aside>
 
       <nav className="lart-onward" aria-labelledby="lart-onward-h">

@@ -9,13 +9,25 @@
 
 import { Aside, DataTable, Formula, Spec } from '../../components/LearnParts'
 import TokenContrastTable from '../../components/TokenContrastTable'
+import { ChannelBars, FailureSpecimens, FieldPair, SizeRuler, Working } from '../../components/ContrastFigures'
+import { blendWhite, lumText, ratioText } from '../../utils/contrastFormat'
 
 const WCAG = 'https://www.w3.org/TR/WCAG22'
+
+// Every ratio and lightness figure quoted in the prose below, measured with the
+// product's own contrastRatio() and luminance().
+const EDGE_PALE = '#E5E5E5'
+const EDGE_DARK = '#949494'
+const HUE_A = '#C25E00'
+const HUE_B = '#4D8000'
+const RED = '#DC2626'
+const WHITE = '#FFFFFF'
+const BLEND = blendWhite(RED, 0.9)
 
 export default function ColourContrast() {
   return (
     <>
-      <section id="thresholds">
+      <section id="thresholds" className="lcc-sec lcc-s1">
         <h2>Body text needs 4.5:1. Large text needs 3:1.</h2>
 
         <DataTable
@@ -30,20 +42,22 @@ export default function ColourContrast() {
           caption="WCAG 2.2, Guideline 1.4 Distinguishable. 1.4.11 covers non-text content, so it has no text-size split: its 3:1 applies to component boundaries, states and meaningful graphics."
         />
 
-        <p>
-          WCAG measures contrast as a ratio between how light two colours are.
-          Which number applies depends on the size and weight of the text, not on
-          what the text is for.
-        </p>
+        <div className="lcc-s1-text lcc-fig-gap">
+          <p>
+            WCAG measures contrast as a ratio between how light two colours are.
+            Which number applies depends on the size and weight of the text, not on
+            what the text is for.
+          </p>
 
-        <p>
-          The three exceptions are narrower than people often read them. A disabled
-          button is exempt because it is an <i>inactive</i> component. A
-          low-contrast label on an enabled control is not. Placeholder text
-          isn&rsquo;t exempt either: it is text on screen, so 4.5:1 applies.
-        </p>
+          <p>
+            The three exceptions are narrower than people often read them. A disabled
+            button is exempt because it is an <i>inactive</i> component. A
+            low-contrast label on an enabled control is not. Placeholder text
+            isn&rsquo;t exempt either: it is text on screen, so 4.5:1 applies.
+          </p>
+        </div>
 
-        <div className="lart-wk">
+        <Working>
           <Spec
             source="WCAG 2.2 — SC 1.4.3 Contrast (Minimum)"
             href={`${WCAG}/#contrast-minimum`}
@@ -67,27 +81,31 @@ export default function ColourContrast() {
             target makes up for roughly 20/40 vision. That is an acuity commonly
             reported as typical at around age 80.
           </p>
-        </div>
+        </Working>
       </section>
 
-      <section id="large-text">
-        <h2>Large means 24px, or 18.5px in bold.</h2>
+      <section id="large-text" className="lcc-sec lcc-s2">
+        <div className="lcc-txt">
+          <h2>Large means 24px, or 18.5px in bold.</h2>
 
-        <p>
-          WCAG is written in points, and the web uses CSS pixels. 18pt is about 24px
-          and 14pt is about 18.5px, so the 3:1 allowance starts at 24px, or at
-          18.5px when the text is bold. Everything else needs 4.5:1.
-        </p>
+          <p>
+            WCAG is written in points, and the web uses CSS pixels. 18pt is about 24px
+            and 14pt is about 18.5px, so the 3:1 allowance starts at 24px, or at
+            18.5px when the text is bold. Everything else needs 4.5:1.
+          </p>
 
-        <p>
-          What counts is the size on the screen. A heading set with{' '}
-          <code>clamp(20px, 4vw, 32px)</code> is large on a desktop, and drops under
-          24px in a window narrower than 600px. WCAG never says which weight is
-          bold, so treat anything under 24px as normal text unless it is 700 or
-          heavier.
-        </p>
+          <p>
+            What counts is the size on the screen. A heading set with{' '}
+            <code>clamp(20px, 4vw, 32px)</code> is large on a desktop, and drops under
+            24px in a window narrower than 600px. WCAG never says which weight is
+            bold, so treat anything under 24px as normal text unless it is 700 or
+            heavier.
+          </p>
+        </div>
 
-        <div className="lart-wk">
+        <SizeRuler />
+
+        <Working>
           <Spec
             source="WCAG 2.2 — large scale (text)"
             href={`${WCAG}/#dfn-large-scale`}
@@ -101,26 +119,30 @@ export default function ColourContrast() {
             between sizes in points and CSS pixels is 1pt = 1.333px, therefore 14pt
             and 18pt are equivalent to approximately 18.5px and 24px.&rdquo;
           </p>
-        </div>
+        </Working>
       </section>
 
-      <section id="formula">
-        <h2>The ratio compares lightness, and green does most of the work.</h2>
+      <section id="formula" className="lcc-sec lcc-s3">
+        <div className="lcc-txt">
+          <h2>The ratio compares lightness, and green does most of the work.</h2>
 
-        <p>
-          Each colour becomes one lightness number between 0 and 1, called relative
-          luminance. Red, green and blue are weighted 0.2126, 0.7152 and 0.0722, so
-          green counts about ten times as much as blue.
-        </p>
+          <p>
+            Each colour becomes one lightness number between 0 and 1, called relative
+            luminance. Red, green and blue are weighted 0.2126, 0.7152 and 0.0722, so
+            green counts about ten times as much as blue.
+          </p>
 
-        <p>
-          The ratio is the lighter value plus 0.05, divided by the darker value plus
-          0.05. Black on white comes to exactly 21:1, identical colours to 1:1, and
-          nothing on an sRGB screen goes higher. That is why 4.5 and 7 work as fixed
-          numbers.
-        </p>
+          <p>
+            The ratio is the lighter value plus 0.05, divided by the darker value plus
+            0.05. Black on white comes to exactly 21:1, identical colours to 1:1, and
+            nothing on an sRGB screen goes higher. That is why 4.5 and 7 work as fixed
+            numbers.
+          </p>
+        </div>
 
-        <div className="lart-wk">
+        <ChannelBars />
+
+        <Working>
           <p>
             There are two steps. First, each 8-bit channel is divided by 255 and
             linearised, which undoes the sRGB transfer curve. Then the three linear
@@ -163,26 +185,30 @@ ratio  = (L_lighter + 0.05) / (L_darker + 0.05)`}</Formula>
             because they are the colours this page is painted in.
           </p>
           <TokenContrastTable />
-        </div>
+        </Working>
       </section>
 
-      <section id="non-text">
-        <h2>A field&rsquo;s edge needs 3:1 too.</h2>
+      <section id="non-text" className="lcc-sec lcc-s4">
+        <div className="lcc-txt">
+          <h2>A field&rsquo;s edge needs 3:1 too.</h2>
 
-        <p>
-          When a 1px border is the only thing that shows where a field is, the
-          border needs 3:1. <code>#E5E5E5</code> on white measures 1.26:1 and fails.
-          The lightest grey that passes on white is <code>#949494</code>, at 3.03:1.
-        </p>
+          <p>
+            When a 1px border is the only thing that shows where a field is, the
+            border needs 3:1. <code>{EDGE_PALE}</code> on white measures {ratioText(EDGE_PALE, WHITE)} and fails.
+            The lightest grey that passes on white is <code>{EDGE_DARK}</code>, at {ratioText(EDGE_DARK, WHITE)}.
+          </p>
 
-        <p>
-          The same goes for a checkbox tick, a switch&rsquo;s thumb, a focus ring,
-          and chart bars you can&rsquo;t read any other way. A filled button
-          doesn&rsquo;t need 3:1 against the page if its label and shape already
-          make it clear. That is this page&rsquo;s reading of the rule.
-        </p>
+          <p>
+            The same goes for a checkbox tick, a switch&rsquo;s thumb, a focus ring,
+            and chart bars you can&rsquo;t read any other way. A filled button
+            doesn&rsquo;t need 3:1 against the page if its label and shape already
+            make it clear. That is this page&rsquo;s reading of the rule.
+          </p>
+        </div>
 
-        <div className="lart-wk">
+        <FieldPair />
+
+        <Working>
           <Spec
             source="WCAG 2.2 — SC 1.4.11 Non-text Contrast"
             href={`${WCAG}/#non-text-contrast`}
@@ -205,50 +231,25 @@ ratio  = (L_lighter + 0.05) / (L_darker + 0.05)`}</Formula>
             decorative divider or a background texture either. Disabled controls are
             excluded by name, as inactive components.
           </p>
-        </div>
+        </Working>
       </section>
 
-      <section id="blind-spots">
-        <h2>A pass can still be hard to read.</h2>
-        <p>
-          The formula turns three channels into one number. Four common failures
-          get past it.
-        </p>
-
-        <p>
-          <b>Hue.</b> <code>#C25E00</code> and <code>#4D8000</code> look nothing
-          alike, but they measure 1.11:1 because they are almost equally light. A
-          red and a green that pass can still look the same to someone with
-          deuteranopia. That is why WCAG has a separate rule, 1.4.1 Use of Color at
-          Level A: colour must never be the only signal.
-        </p>
-
-        <p>
-          <b>Stroke weight.</b> 4.5:1 is the same bar for a 300 and a 700 weight
-          word, yet the thin word looks fainter. WCAG&rsquo;s numbers don&rsquo;t
-          measure stroke width, though a note in the standard warns that very thin
-          fonts are harder to read. The WCAG 3 draft of 10 September 2026
-          hasn&rsquo;t chosen a contrast method yet. With a light weight, set
-          yourself a target above 4.5.
-        </p>
-
-        <p>
-          <b>Alpha.</b> Measure the colour that ends up on screen. White on{' '}
-          <code>#DC2626</code> measures 4.83:1. The same white at 90% opacity blends
-          to <code>#FCE9E9</code> and drops to 4.13:1, under AA.
-        </p>
-
-        <p>
-          <b>The background you assumed.</b> Text over a photo, a gradient or a
-          see-through panel has a different ratio at every pixel. The worst pixel
-          decides the result.
-        </p>
-
-        <div className="lart-wk">
+      <section id="blind-spots" className="lcc-sec lcc-s5">
+        <div className="lcc-txt">
+          <h2>A pass can still be hard to read.</h2>
           <p>
-            <b>Hue, in full.</b> Luminance is hue-blind. <code>#C25E00</code> and{' '}
-            <code>#4D8000</code> are a mid orange and a mid green. Their relative
-            luminances are 0.1947 and 0.1702, so the pair measures 1.11:1. The
+            The formula turns three channels into one number. Four common failures
+            get past it.
+          </p>
+        </div>
+
+        <FailureSpecimens />
+
+        <Working>
+          <p>
+            <b>Hue, in full.</b> Luminance is hue-blind. <code>{HUE_A}</code> and{' '}
+            <code>{HUE_B}</code> are a mid orange and a mid green. Their relative
+            luminances are {lumText(HUE_A)} and {lumText(HUE_B)}, so the pair measures {ratioText(HUE_A, HUE_B)}. The
             colours look very different, but they are almost the same brightness.
             The reverse case matters more. A red and a green with <i>different</i>{' '}
             luminance can pass 1.4.3 and still look the same to a viewer with
@@ -269,8 +270,8 @@ ratio  = (L_lighter + 0.05) / (L_darker + 0.05)`}</Formula>
             <b>Alpha, in full.</b> A contrast ratio is defined for two opaque
             colours. A translucent foreground has to be blended with its background
             before you can measure it. The cost is larger than it looks. Opaque
-            white on <code>#DC2626</code> measures 4.83:1. The same white at 90%
-            opacity blends to <code>#FCE9E9</code> and measures 4.13:1. Ninety per
+            white on <code>{RED}</code> measures {ratioText(WHITE, RED)}. The same white at 90%
+            opacity blends to <code>{BLEND}</code> and measures {ratioText(BLEND, RED)}. Ninety per
             cent of the way to white gives up 0.7 of the ratio and takes the label
             below AA. A tool fed the two source colours will not show this failure.
             It needs the painted result.
@@ -283,7 +284,7 @@ ratio  = (L_lighter + 0.05) / (L_darker + 0.05)`}</Formula>
             against the average is a measurement of a colour that appears nowhere on
             the screen.
           </p>
-        </div>
+        </Working>
       </section>
     </>
   )
