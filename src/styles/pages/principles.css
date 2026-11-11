@@ -251,6 +251,10 @@
 .prn-cx-ratio { font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -.04em; color: var(--t0); font-variant-numeric: tabular-nums; }
 .prn-cx-hex { font-family: var(--mono); font-size: 12px; color: var(--t1); }
 
+/* Phone-only parts of the two tile pairs; the desktop figures do not show them. */
+.prn-cx-name, .prn-cx-verdict, .prn-cx-small,
+.prn-th-sample, .prn-th-verdict { display: none; }
+
 /* Proof 2 — one role, one value per ground. Each tile paints its own theme's
  * colours regardless of the theme the reader is in; that is the point, and it
  * is why these two are the only fixed grounds on the page. Their inks are
@@ -369,15 +373,103 @@
 }
 @media (max-width: 560px) {
   .prn-h1, .prn-lede, .prn-rule, .prn-body { max-width: none; }
-  .prn-cx-cells { grid-template-columns: minmax(0, 1fr); }
-  .prn-cx-cell { min-height: 0; }
-  .prn-th-grid { grid-template-columns: minmax(0, 1fr); }
-  .prn-th-panel { min-height: 0; }
-  .prn-th-panel:first-child { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
-  .prn-th-panel:last-child { border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
-  .prn-ty-rows { padding: var(--s-4) var(--s-5); }
-  .prn-ty-row { grid-template-columns: minmax(56px, 1fr) 48px minmax(0, 2fr); column-gap: var(--s-3); }
-  .prn-proof > figure { border-radius: var(--radius-xl); }
+  .prn-item[data-lead="true"] .prn-rule { max-width: none; }
+  .prn { --prn-sy: 88px; --prn-join: 72px; }
+  .prn-hero { padding-bottom: calc(var(--prn-sy) - var(--cpg-sec)); }
+  .prn-list { gap: var(--prn-sy); }
+  .prn > .rd-next { margin-top: calc(var(--prn-join) - var(--cpg-sec)); }
+  .prn-say { gap: var(--s-4); }
+  .prn-item { gap: var(--s-6); }
+
+  /* The three drawn proofs sit in one framed card each, as ReadingR2APhone's
+   * .pf: 16px radius, 16px padding, a hairline, no shadow. */
+  .prn-proof > figure,
+  .prn-proof > figure.prn-cx,
+  .prn-proof > figure.prn-th,
+  .prn-proof > figure.prn-ty {
+    padding: var(--s-4);
+    border: 1px solid var(--cpg-line);
+    border-radius: 16px;
+    background: none;
+    box-shadow: none;
+  }
+  .prn-cx .prn-cap,
+  .prn-th .prn-cap,
+  .prn-ty .prn-cap { margin-top: var(--s-4); font-size: 13px; }
+
+  /* The two tile pairs: side by side, name, ratio, hex, sample, verdict. */
+  .prn-cx-cells, .prn-th-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+  .prn-cx-cell,
+  .prn-th-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0;
+    min-height: 148px;
+    padding: var(--s-3);
+    border-radius: var(--s-3);
+    box-shadow: inset 0 0 0 1px var(--cpg-line);
+  }
+  .prn-cx-cell { background: var(--bg-0); }
+  .prn-th-panel:first-child,
+  .prn-th-panel:last-child { border-radius: var(--s-3); }
+  .prn-cx-name, .prn-cx-verdict, .prn-cx-small,
+  .prn-th-sample, .prn-th-verdict { display: block; }
+  .prn-cx-big, .prn-th-aa { display: none; }
+  .prn-cx-name { order: 1; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--t0); }
+  .prn-cx-read { order: 2; display: contents; }
+  .prn-cx-ratio { order: 2; margin-top: var(--s-2); font-size: 24px; line-height: 1.2; color: var(--cx-ink); }
+  .prn-cx-hex { order: 3; margin-top: var(--s-1); color: var(--t0); }
+  .prn-cx-sample { order: 4; margin-top: var(--s-2); font-size: 17px; line-height: 1.3; font-weight: 400; letter-spacing: 0; white-space: normal; }
+  .prn-cx-verdict { order: 5; margin-top: 2px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--t0); }
+
+  .prn-th-theme { order: 1; }
+  .prn-th-read { order: 2; display: contents; }
+  .prn-th-ratio { order: 2; margin-top: var(--s-2); font-size: 24px; line-height: 1.2; color: var(--th-ink); }
+  .prn-th-hex { order: 3; margin-top: var(--s-1); }
+  .prn-th-on { display: none; }
+  .prn-th-sample { order: 4; margin-top: var(--s-2); font-size: 17px; line-height: 1.3; }
+  .prn-th-verdict { order: 5; margin-top: 2px; font-size: 13px; line-height: 18px; font-weight: 600; }
+
+  /* The ladder: one row per step, name left, Ag in the middle, px right; the
+   * ratio is its own line between two rows. */
+  .prn-ty-rows { padding: 0; background: none; border-radius: 0; }
+  .prn-ty-row {
+    grid-template-columns: 32px auto minmax(0, 1fr);
+    grid-template-areas: "x x x" "name spec px";
+    column-gap: var(--s-3);
+    padding: 0;
+  }
+  .prn-ty-row + .prn-ty-row { border-top: 0; }
+  .prn-ty-step { display: contents; }
+  .prn-ty-name { grid-area: name; padding: 10px 0; font-size: 12px; }
+  .prn-ty-spec { grid-area: spec; padding: 10px 0; letter-spacing: -.03em; line-height: 1; }
+  .prn-ty-px { grid-area: px; justify-self: end; padding: 10px 0; font-size: 12px; color: var(--t1); }
+  .prn-ty-x { grid-area: x; padding: 2px 0 2px calc(32px + var(--s-3)); font-size: 12px; color: var(--t1); }
+
+  /* The export lists, as the board's .fmt: a quiet label, plain rows, no rule. */
+  .prn-ex-cols { gap: 20px; }
+  .prn-ex-h { margin: 0 0 var(--s-1); padding-bottom: 0; border-bottom: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--t1); }
+  .prn-ex-col ul { gap: 0; font-size: 15px; line-height: 1.4; }
+  .prn-ex-col li { padding: var(--s-1) 0; gap: var(--s-2); }
+
+  /* "Open ..." links: ink, underlined, no arrow. */
+  .prn-go {
+    margin-top: calc(var(--s-2) - var(--s-4));
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--t0);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--t0) 35%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+  .prn-go:hover { color: var(--t0); text-decoration-color: var(--t0); }
+  .prn-go > span { display: none; }
+}
+
+@media (max-width: 374px) {
+  .prn { --prn-sy: 72px; --prn-join: 64px; }
 }
 
 /* ── REDUCED MOTION ───────────────────────────────────────────────────────────

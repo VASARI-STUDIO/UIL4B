@@ -52,6 +52,9 @@ const INK_3 = { light: LIGHT_INK_3, dark: DARK_INK_3 }
 /** WCAG 2.2 SC 1.4.3 (text). */
 const TEXT_MIN = 4.5
 
+/** The verdict printed under a measured pair. */
+const passesAA = (ratio) => (ratio >= TEXT_MIN ? 'Passes AA' : 'Fails AA')
+
 /** The theme the page is painted in; dark when no provider is mounted. */
 function useThemeName() {
   const ctx = useTheme()
@@ -77,19 +80,24 @@ export function ContrastProof() {
     return [
       { id: 'read', label: 'Read this', hex: strong, ratio: contrastRatio(strong, ground) },
       { id: 'not', label: 'Not this', hex: faint, ratio: contrastRatio(faint, ground) },
-    ]
+    ].map((c) => ({ ...c, verdict: passesAA(c.ratio) }))
   }, [theme])
 
   return (
     <figure className="prn-cx">
       <div className="prn-cx-cells">
         {cells.map((c) => (
-          <div className="prn-cx-cell" key={c.id} data-job={c.id}>
-            <span className="prn-cx-sample" style={{ color: c.hex }}>{c.label}</span>
+          <div className="prn-cx-cell" key={c.id} data-job={c.id} style={{ '--cx-ink': c.hex }}>
+            <span className="prn-cx-name">{c.label}</span>
+            <span className="prn-cx-sample" style={{ color: c.hex }}>
+              <span className="prn-cx-big">{c.label}</span>
+              <span className="prn-cx-small">Sample text</span>
+            </span>
             <span className="prn-cx-read">
               <span className="prn-cx-ratio">{c.ratio.toFixed(2)}:1</span>
               <span className="prn-cx-hex">{c.hex}</span>
             </span>
+            <span className="prn-cx-verdict">{c.verdict}</span>
           </div>
         ))}
       </div>
@@ -111,19 +119,24 @@ export function ThemeValueProof() {
   const panels = useMemo(() => ([
     { theme: 'Dark', ground: DARK_GROUND, ink: DARK_INK, ink2: DARK_INK_2 },
     { theme: 'Light', ground: LIGHT_GROUND, ink: LIGHT_INK, ink2: LIGHT_INK_2 },
-  ].map((p) => ({ ...p, ratio: contrastRatio(p.ink2, p.ground) }))), [])
+  ].map((p) => {
+    const ratio = contrastRatio(p.ink2, p.ground)
+    return { ...p, ratio, verdict: passesAA(ratio) }
+  })), [])
 
   return (
     <figure className="prn-th">
       <div className="prn-th-grid">
         {panels.map((p) => (
-          <div className="prn-th-panel" key={p.theme} style={{ background: p.ground, color: p.ink }}>
+          <div className="prn-th-panel" key={p.theme} style={{ background: p.ground, color: p.ink, '--th-ink': p.ink2 }}>
             <span className="prn-th-theme">{p.theme}</span>
             <span className="prn-th-aa" style={{ color: p.ink2 }} aria-hidden="true">Aa</span>
             <span className="prn-th-read">
               <span className="prn-th-ratio">{p.ratio.toFixed(2)}:1</span>
-              <span className="prn-th-hex" style={{ color: p.ink2 }}>{p.ink2} on {p.ground}</span>
+              <span className="prn-th-hex" style={{ color: p.ink2 }}>{p.ink2}<span className="prn-th-on"> on {p.ground}</span></span>
             </span>
+            <span className="prn-th-sample" style={{ color: p.ink2 }}>Sample text</span>
+            <span className="prn-th-verdict">{p.verdict}</span>
           </div>
         ))}
       </div>
