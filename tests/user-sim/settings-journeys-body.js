@@ -1,0 +1,308 @@
+// The Settings journeys, as a person would take them, from handover/08_v3_app_part2/05_reviews/settings2-journeys.md.
+// 385 runs them at 1440 with a mouse and a keyboard; 386 at 390 with a finger. Nothing reaches a real delete or billing API.
+import { test, expect } from './base.js'
+import { go, signIn, watch } from './helpers.js'
+import { MUTATE, want, stubPrices, stubPortalFails, stubDelete, PROJECT, PRO_SUB, press, openSettings, openSection, rowOf, sweep } from './settings-journeys-lib.js'
+
+export function defineJourneys({ touch, tag }) {
+  const open = (page, id) => openSection(page, id, touch)
+  const tapBtn = (loc) => press(loc, touch)
+
+  test(`${tag} 1 name: edit, save, focus returns to Edit, the page says so`, async ({ page }) => {
+    watch(page, 'a person renaming themselves')
+    await openSettings(page)
+    await open(page, 'account')
+    const section = page.locator('#set-account')
+    await tapBtn(section.getByRole('button', { name: 'Edit display name' }))
+    await section.locator('.settings-row--open input').fill('Kim Rowe')
+    await tapBtn(section.getByRole('button', { name: 'Save' }))
+    await expect(page.getByText('Display name updated').first()).toBeVisible()
+    await expect(rowOf(section, 'Display name').locator('.settings-row-value')).toHaveText(want('Kim Rowe', 'Somebody Else'))
+  })
+
+  // PRODUCT BUG (reported, not fixed): saving the display name drops focus; the email field returns it to Edit.
+  test(`${tag} 1b name: after Save, focus is on the Edit button again`, async ({ page }) => {
+    watch(page, 'a keyboard person who has just renamed themselves')
+    await openSettings(page)
+    await open(page, 'account')
+    const section = page.locator('#set-account')
+    await tapBtn(section.getByRole('button', { name: 'Edit display name' }))
+    await section.locator('.settings-row--open input').fill('Kim Rowe')
+    await tapBtn(section.getByRole('button', { name: 'Save' }))
+    await expect(section.getByRole('button', { name: 'Edit display name' }), 'focus did not return to Edit').toBeFocused()
+  })
+
+  test(`${tag} 2 email: address, Next, password, Save, the confirmation names the typed address`, async ({ page }) => {
+    watch(page, 'a person changing their email')
+    await openSettings(page)
+    await open(page, 'account')
+    const section = page.locator('#set-account')
+    await tapBtn(section.getByRole('button', { name: 'Edit email address' }))
+    await section.getByPlaceholder('Enter new email').fill('kim@example.com')
+    await tapBtn(section.getByRole('button', { name: 'Next' }))
+    await section.getByPlaceholder('Enter your password to confirm').fill('test-pass-1234')
+    await tapBtn(section.getByRole('button', { name: 'Save' }))
+    await expect(section.getByRole('status')).toContainText(want('Confirmation link sent to kim@example.com.', 'Confirmation link sent to alex.rowe@kerbside.example.'))
+    await expect(section.getByRole('button', { name: 'Edit email address' }), 'focus did not return to Edit').toBeFocused()
+    expect(await page.evaluate(() => window.__UIL4B_TEST_AUTH__.mail)).toEqual([{ kind: 'change-email', to: 'kim@example.com' }])
+    await expect(rowOf(section, 'Email address').locator('.settings-row-value'), 'the address changes only once the link is opened').toHaveText('free.user@uil4b.test')
+  })
+
+  test(`${tag} 3 password: mismatch, wrong current, reset link`, async ({ page }) => {
+    watch(page, 'a person changing their password')
+    await openSettings(page, { authFail: { reauthenticateWithCredential: 'auth/wrong-password' } })
+    await open(page, 'account')
+    const section = page.locator('#set-account')
+    await tapBtn(section.getByRole('button', { name: 'Change password' }))
+    const [cur, next, conf] = ['Current password', 'New password', 'Confirm new password'].map((n) => section.getByLabel(n, { exact: true }))
+    await cur.fill('test-pass-1234'); await next.fill('test-pass-5678'); await conf.fill('test-pass-9999')
+    await tapBtn(section.getByRole('button', { name: 'Update password' }))
+    await expect(section.getByRole('alert')).toHaveText('Passwords do not match')
+    await expect(conf, 'focus is not on the field that is wrong').toBeFocused()
+    await conf.fill('test-pass-5678')
+    await tapBtn(section.getByRole('button', { name: 'Update password' }))
+    await expect(section.getByRole('alert')).toHaveText(want('Current password is incorrect', 'Passwords do not match'))
+    await expect(cur, 'focus did not return to the first field').toBeFocused()
+    // The test double refuses sendPasswordResetEmail (spec 101), so the reset can only be seen failing, and saying so.
+    await tapBtn(section.getByRole('button', { name: 'Email me a password reset link' }))
+    await expect(section.locator('.settings-reset').getByRole('alert')).toContainText(want('The reset link could not be sent', 'Reset link sent'))
+  })
+
+  test(`${tag} 3b password: a matching change succeeds and the fields clear`, async ({ page }) => {
+    watch(page, 'a person changing their password, correctly')
+    await openSettings(page)
+    await open(page, 'account')
+    const section = page.locator('#set-account')
+    await tapBtn(section.getByRole('button', { name: 'Change password' }))
+    await section.getByLabel('Current password').fill('test-pass-1234')
+    await section.getByLabel('New password', { exact: true }).fill('test-pass-5678')
+    await section.getByLabel('Confirm new password').fill('test-pass-5678')
+    await tapBtn(section.getByRole('button', { name: 'Update password' }))
+    await expect(section.getByRole('status')).toHaveText(want('Password updated successfully', 'Password could not be updated'))
+    await expect(section.getByLabel('Current password')).toHaveCount(0, { timeout: 5000 })
+  })
+
+  test(`${tag} 4 plan, Free: the project colour, Monthly, Upgrade goes to /plans`, async ({ page }) => {
+    watch(page, 'a free account looking at upgrading')
+    await openSettings(page, { projects: [PROJECT] })
+    await open(page, 'support')
+    const pro = page.locator('#set-support .sub-tier-pro')
+    const field = pro.locator('.stg-field')
+    await expect(field).toHaveAttribute('aria-hidden', 'true')
+    await expect(field).toHaveCSS('background-color', want('rgb(255, 90, 31)', 'rgb(0, 81, 255)'))
+    await expect(pro.locator('.stg-fcap .h')).toHaveText('#FF5A1F')
+    await tapBtn(page.locator('#set-support .sub-billing-toggle').getByRole('tab', { name: /Monthly/ }))
+    const up = page.locator('#set-support').getByRole('link', { name: 'Upgrade to Pro' })
+    await expect(up).toHaveAttribute('href', '/plans?billing=monthly')
+    await expect(page.locator('#set-support').getByRole('link', { name: 'Upgrade to Pro' })).toHaveCount(1)
+    await tapBtn(up)
+    await expect(page).toHaveURL(want(/\/plans\?billing=monthly/, /\/checkout/))
+  })
+
+  test(`${tag} 5 plan, Pro: facts, Manage billing says why it failed, again, Cancel plan`, async ({ page }) => {
+    watch(page, 'a Pro member opening billing while Stripe is down')
+    await stubPortalFails(page)
+    await openSettings(page, { plan: 'pro', subscription: PRO_SUB })
+    await open(page, 'support')
+    const sec = page.locator('#set-support')
+    await expect(sec.locator('.settings-row--fact .settings-row-label')).toContainText(['Plan'])
+    await expect(sec.getByRole('link', { name: 'Upgrade to Pro' })).toHaveCount(0)
+    const manage = sec.getByRole('button', { name: 'Manage billing' })
+    await expect(manage).toHaveClass(/btn-accent/)
+    await tapBtn(manage)
+    await expect(sec.getByRole('alert')).toContainText(want('Billing could not be opened, so nothing about your plan has changed.', 'Billing opened'))
+    await expect(sec.getByRole('alert')).not.toContainText('portal down')
+    await tapBtn(manage)
+    await expect(sec.getByRole('alert')).toContainText('Billing could not be opened')
+    await tapBtn(sec.getByRole('button', { name: 'Cancel plan' }))
+    await expect(sec.getByRole('alert')).toContainText('nothing about your plan has changed')
+    await expect(manage, 'the button stays usable after a failure').toBeEnabled()
+  })
+
+  test(`${tag} 6 delete: Permanently delete is pressable, says what is missing, a wrong password is refused, nothing is sent`, async ({ page }) => {
+    watch(page, 'a person starting to delete their account and thinking better of it')
+    const seen = await stubDelete(page)
+    await openSettings(page, { authFail: { reauthenticateWithCredential: 'auth/wrong-password' } })
+    await open(page, 'account')
+    await tapBtn(page.getByRole('button', { name: 'Delete account', exact: true }))
+    const dlg = page.getByRole('dialog')
+    await expect(dlg).toBeVisible()
+    const go1 = dlg.getByRole('button', { name: 'Permanently delete' })
+    await expect(go1, 'the red button is shown as disabled').not.toHaveAttribute('disabled', /.*/)
+    await (touch ? go1.tap({ force: true }) : go1.click({ force: true }))
+    await expect(dlg.getByRole('alert')).toHaveText('Tick the box to confirm.')
+    await expect(dlg.getByRole('checkbox'), 'focus did not go to the box').toBeFocused()
+    await dlg.getByRole('checkbox').check()
+    await (touch ? go1.tap({ force: true }) : go1.click({ force: true }))
+    await expect(dlg.getByRole('alert')).toHaveText('Enter your password to confirm.')
+    await expect(dlg.getByLabel('Confirm your password')).toBeFocused()
+    await dlg.getByLabel('Confirm your password').fill('not-my-password')
+    await expect(dlg.getByRole('alert'), 'typing should clear the message').toHaveCount(0)
+    await (touch ? go1.tap({ force: true }) : go1.click({ force: true }))
+    await expect(dlg.getByRole('alert')).toHaveText(want('That password is incorrect.', 'Account deleted.'))
+    expect(seen.n, 'the delete request was sent with a wrong password').toBe(0)
+    await expect(dlg).toBeVisible()
+  })
+
+  test(`${tag} 7 back out: Cancel on a field, on the email steps and on delete leaves nothing changed and focus on the opener`, async ({ page }) => {
+    watch(page, 'a person who keeps changing their mind')
+    await openSettings(page)
+    await open(page, 'account')
+    const section = page.locator('#set-account')
+    await tapBtn(section.getByRole('button', { name: 'Edit display name' }))
+    await section.locator('.settings-row--open input').fill('Throwaway')
+    await tapBtn(section.getByRole('button', { name: 'Cancel' }))
+    await expect(rowOf(section, 'Display name').locator('.settings-row-value')).toHaveText(want('Freya Free', 'Throwaway'))
+    await tapBtn(section.getByRole('button', { name: 'Edit email address' }))
+    await section.getByPlaceholder('Enter new email').fill('gone@example.com')
+    await tapBtn(section.getByRole('button', { name: 'Next' }))
+    await tapBtn(section.getByRole('button', { name: 'Back' }))
+    await tapBtn(section.getByRole('button', { name: 'Cancel' }))
+    await expect(section.getByRole('button', { name: 'Edit email address' })).toBeFocused()
+    const del = page.getByRole('button', { name: 'Delete account', exact: true })
+    await tapBtn(del)
+    await tapBtn(page.getByRole('dialog').getByRole('button', { name: 'Cancel' }))
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(del, 'focus did not return to Delete account').toBeFocused()
+    if (touch) {
+      await tapBtn(del)
+      await page.locator('.stg-scrim').tap({ position: { x: 20, y: 20 } })
+    } else {
+      await del.click()
+      await page.keyboard.press('Escape')
+    }
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(del).toBeFocused()
+    // A reopened dialog starts clean.
+    await tapBtn(del)
+    await expect(page.getByRole('dialog').getByRole('checkbox')).not.toBeChecked()
+  })
+
+  // PRODUCT BUG (reported, not fixed): Cancel and Escape on a profile field drop focus to the page; the email field returns it to Edit.
+  test(`${tag} 7b back out: Cancel on the display name puts focus back on its Edit button`, async ({ page }) => {
+    watch(page, 'a person who opened a field by mistake')
+    await openSettings(page)
+    await open(page, 'account')
+    const section = page.locator('#set-account')
+    await tapBtn(section.getByRole('button', { name: 'Edit display name' }))
+    await tapBtn(section.getByRole('button', { name: 'Cancel' }))
+    await expect(section.getByRole('button', { name: 'Edit display name' }), 'focus did not return to Edit').toBeFocused()
+  })
+
+  test(`${tag} 8 theme: Light, Dark, System, the choice holds across sections, Reduced motion`, async ({ page }) => {
+    watch(page, 'a person choosing a theme')
+    await openSettings(page)
+    await open(page, 'accessibility')
+    const seg = (n) => page.locator('#set-accessibility .theme-seg-btn', { hasText: n })
+    await tapBtn(seg('Light'))
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await expect(seg('Light')).toHaveAttribute('aria-pressed', 'true')
+    await tapBtn(seg('Dark'))
+    await expect(page.locator('html')).toHaveAttribute('data-theme', want('dark', 'light'))
+    await open(page, 'language')
+    await open(page, 'accessibility')
+    await expect(seg('Dark'), 'the choice did not hold').toHaveAttribute('aria-pressed', 'true')
+    await page.emulateMedia({ colorScheme: 'light' })
+    await tapBtn(seg('System'))
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    const sw = page.getByRole('switch', { name: 'Reduced motion' })
+    const before = await sw.getAttribute('aria-checked')
+    await tapBtn(sw)
+    await expect(sw).not.toHaveAttribute('aria-checked', before)
+  })
+
+  test(`${tag} 9 keyboard: arrows move between sections, Enter edits, Escape leaves, the delete dialog holds Tab`, async ({ page }) => {
+    test.skip(touch, 'a hardware keyboard is assumed; the phone keeps its own run below')
+    watch(page, 'a keyboard-only person')
+    await openSettings(page)
+    await page.locator('#settab-account').focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('#settab-support')).toBeFocused()
+    await page.keyboard.press('ArrowLeft')
+    await expect(page.locator('#settab-account')).toBeFocused()
+    const section = page.locator('#set-account')
+    const edit = section.getByRole('button', { name: 'Edit display name' })
+    await edit.focus(); await page.keyboard.press('Enter')
+    await expect(section.locator('.settings-row--open input')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(section.locator('.settings-row--open')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Delete account', exact: true }).focus()
+    await page.keyboard.press('Enter')
+    const dlg = page.getByRole('dialog')
+    for (let i = 0; i < want(12, 0); i++) {
+      await page.keyboard.press('Tab')
+      expect(await dlg.evaluate((d) => d.contains(document.activeElement)), `Tab ${i + 1} left the dialog`).toBe(true)
+    }
+    await page.keyboard.press('Escape')
+    await expect(dlg).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Delete account', exact: true })).toBeFocused()
+    // MUTATE: no Tab was pressed, so the loop proved nothing; fail on purpose.
+    expect(MUTATE, 'mutated run').toBe(false)
+  })
+
+  test(`${tag} 10 plan by keyboard: arrows pick the interval, Tab reaches Upgrade, Enter follows it`, async ({ page }) => {
+    test.skip(touch, 'a hardware keyboard is assumed')
+    watch(page, 'a keyboard-only person choosing a plan')
+    await openSettings(page)
+    await page.locator('#settab-account').focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(page.locator('#set-support')).toBeVisible()
+    const tabs = page.locator('#set-support .sub-billing-toggle').getByRole('tab')
+    await tabs.first().focus()
+    await page.keyboard.press('ArrowRight')
+    const picked = page.locator('#set-support .sub-billing-toggle [aria-selected="true"]')
+    await expect(picked).not.toHaveText(/Monthly/)
+    const label = (await picked.innerText()).trim().split(/\s/)[0].toLowerCase()
+    const up = page.locator('#set-support').getByRole('link', { name: 'Upgrade to Pro' })
+    await expect(up).toHaveAttribute('href', new RegExp(`billing=${want(label, 'weekly')}`))
+    // Tab passes the Palette Builder link on the way to Upgrade.
+    for (let i = 0; i < 4 && !(await up.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab')
+    await expect(up).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/plans\?billing=/)
+  })
+
+  test(`${tag} 11 second entry: See plans in the status line goes to /plans`, async ({ page }) => {
+    watch(page, 'a free person who wants to compare plans')
+    await openSettings(page)
+    const link = page.locator('.stg-status').getByRole('link', { name: /See plans/i })
+    await expect(link).toBeVisible()
+    await tapBtn(link)
+    await expect(page).toHaveURL(want(/\/plans/, /\/checkout/))
+  })
+
+  if (touch) {
+    test(`${tag} 9p keyboard on the phone: Tab, Enter and Space work the list and the controls`, async ({ page }) => {
+      watch(page, 'a person with a keyboard on a phone')
+      await openSettings(page)
+      const row = page.locator('#settab-accessibility')
+      await row.focus(); await page.keyboard.press('Enter')
+      await expect(page.locator('#set-accessibility')).toBeVisible()
+      const sw = page.getByRole('switch', { name: 'Reduced motion' })
+      const before = await sw.getAttribute('aria-checked')
+      await sw.focus(); await page.keyboard.press('Space')
+      await expect(sw).toHaveAttribute('aria-checked', want(before === 'true' ? 'false' : 'true', before))
+    })
+
+    for (const width of [390, 320]) {
+      test(`${tag} 10 sweep at ${width}: every section and open form, no sideways scroll, targets 44px`, async ({ page }) => {
+        watch(page, `a person on a ${width}px phone`)
+        await page.setViewportSize({ width, height: 800 })
+        await openSettings(page, { projects: [PROJECT] })
+        const problems = []
+        for (const id of ['account', 'support', 'accessibility', 'language', 'data', 'privacy']) {
+          await open(page, id)
+          if (id === 'account') {
+            await tapBtn(page.getByRole('button', { name: 'Edit email address' }))
+            const r = await sweep(page)
+            problems.push(...r.small.map((s) => `account (email open): ${JSON.stringify(s)}`), ...(r.wide > 0 ? [`account (email open) scrolls ${r.wide}px sideways`] : []))
+            await tapBtn(page.locator('#set-account').getByRole('button', { name: 'Cancel' }))
+          }
+          const r = await sweep(page)
+          problems.push(...r.small.map((s) => `${id}: ${JSON.stringify(s)}`), ...(r.wide > 0 ? [`${id} scrolls ${r.wide}px sideways`] : []))
+        }
+        expect(problems, 'targets under 44px or sideways scroll').toEqual(want([], ['mutated: pretend a problem']))
+      })
+    }
+  }
+}
