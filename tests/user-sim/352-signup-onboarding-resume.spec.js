@@ -83,7 +83,13 @@ test('a signed-out buyer on the checkout return signs up, onboards, and is sent 
 
   await page.getByRole('button', { name: 'Not now, take me to my projects' }).click()
   await expect.poll(() => here(page), { message: 'the buyer resumes where they were headed, not on /projects' }).toBe(RETURN)
-  await expect(page.locator('.checkout-return-card')).toContainText(SESSION)
+  // The redesigned return page (#569) shows only the last 8 characters of the session id, as
+  // "…p_resume" under Reference; the full id is no longer in the page. The URL (the `here` check
+  // above) carries the whole id, so it proves the buyer is back on THEIR session; the page's own
+  // reference proves the return page read it. The mocked status is a paid subscription still
+  // settling, so the headline is "Payment received."
+  await expect(page.locator('.co-return h1')).toHaveText('Payment received.')
+  await expect(page.locator('.co-details .co-detail', { has: page.locator('dt', { hasText: /^Reference$/ }) }).locator('.co-ref-code')).toHaveText(`…${SESSION.slice(-8)}`)
   await expect.poll(async () => (await record(page))?.completedAt, { message: 'onboarding is recorded as finished' }).toEqual(expect.any(Number))
   expect(await page.evaluate((k) => sessionStorage.getItem(k), RESUME_KEY), 'the stash is used up').toBeNull()
 })
