@@ -239,8 +239,9 @@ test.describe('/plans advertises only what the product has', () => {
       expect(await freeFirst(), `at ${width}px Free ${expected ? 'should' : 'should not'} come first in the markup`).toBe(expected)
     }
     // Resizing across 1200 swaps the order without a reload.
+    // The order follows a media query listener, so it is read until it has caught up with the resize.
     await page.setViewportSize({ width: 1440, height: 900 })
-    expect(await freeFirst()).toBe(true)
+    await expect.poll(freeFirst).toBe(true)
     await page.setViewportSize({ width: 1000, height: 900 })
     await expect.poll(freeFirst).toBe(false)
   })

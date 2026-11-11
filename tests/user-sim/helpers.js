@@ -837,7 +837,7 @@ export async function renderStateThroughReload(page) {
 const ASSET_TROUBLE = Symbol.for('uil4b.buildAssetTrouble')
 
 function buildAssetHint(page) {
-  let bad = []
+  let bad
   try { bad = page.context()[ASSET_TROUBLE] || [] } catch { return '' }
   if (!bad.length) return ''
   const uniq = [...new Set(bad)]

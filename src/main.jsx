@@ -34,7 +34,7 @@ window.addEventListener('vite:preloadError', (event) => {
   // A palette preview example that fails to download is answered by its own
   // "This example didn't load" state, and a reload would close the dialog.
   if (exampleLoading()) return
-  let storage = null
+  let storage
   try { storage = window.sessionStorage } catch { storage = null }
   handlePreloadError(event, {
     online: true,

@@ -52,7 +52,7 @@ function fakeStripe({ invoices = {}, error = null, during = null } = {}) {
         options.push(opts)
         if (during) await during(id)
         if (error) throw error
-        if (!invoices[id]) throw new Error(`No such invoice: ${id}`)
+        if (!invoices[id]) throw Object.assign(new Error(`No such invoice: ${id}`), { type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 })
         return invoices[id]
       },
     },
@@ -247,6 +247,89 @@ test('flagging a failed invoice records which invoice failed', async (t) => {
   assert.equal(sub.hostedInvoiceUrl, 'https://pay.example/in_old')
 })
 
+test('a failure whose invoice was since paid starts a fresh grace window for the next failing invoice', async (t) => {
+  quiet(t)
+  const LATER = FAILED_AT + 30 * 86_400_000
+  t.mock.method(Date, 'now', () => LATER)
+  for (const status of ['paid']) {
+    const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old', hostedInvoiceUrl: 'https://pay.example/in_old' }))
+    const stripe = fakeStripe({ invoices: {
+      in_old: { id: 'in_old', status },
+      in_new: { id: 'in_new', status: 'open' },
+    } })
+
+    assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged', status)
+    const sub = stored(db)
+    assert.equal(sub.paymentFailedAt, LATER, `${status}: the new failure gets its own grace clock`)
+    assert.equal(sub.failedInvoiceId, 'in_new', status)
+    assert.equal(sub.hostedInvoiceUrl, 'https://pay.example/in_new', status)
+    assert.deepEqual(stripe.calls.sort(), ['in_new', 'in_old'], `${status}: both invoices were read`)
+  }
+})
+
+test('the same invoice failing again keeps its grace clock without asking about an older one', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(failingAccount())
+  const stripe = openInvoices('in_new')
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT)
+  assert.deepEqual(stripe.calls, ['in_new'], 'only the re-read of the failing invoice itself')
+})
+
+test('a voided earlier invoice was never paid, so the original grace clock is kept', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 30 * 86_400_000)
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old', hostedInvoiceUrl: 'https://pay.example/in_old' }))
+  const stripe = fakeStripe({ invoices: {
+    in_old: { id: 'in_old', status: 'void' },
+    in_new: { id: 'in_new', status: 'open' },
+  } })
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  const sub = stored(db)
+  assert.equal(sub.paymentFailedAt, FAILED_AT, 'void: no money arrived, so no new window')
+  assert.equal(sub.failedInvoiceId, 'in_new')
+})
+
+test('a read of the earlier invoice that may succeed on a retry throws, so Stripe redelivers the event', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old' }))
+  const outage = Object.assign(new Error('Stripe is unavailable'), { type: 'StripeAPIError', statusCode: 503 })
+  const stripe = fakeStripe({ error: outage })
+
+  await assert.rejects(flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), /unavailable/)
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT, 'nothing was written')
+  assert.equal(stored(db).failedInvoiceId, 'in_old')
+})
+
+test('when Stripe says the earlier failed invoice does not exist the original grace clock is kept', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old' }))
+  const missing = Object.assign(new Error('No such invoice: in_old'), { type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 })
+  const base = openInvoices('in_new')
+  const stripe = { ...base, invoices: { async retrieve(id, opts) { if (id === 'in_old') { base.calls.push(id); throw missing } return base.invoices.retrieve(id, opts) } } }
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  const sub = stored(db)
+  assert.equal(sub.paymentFailedAt, FAILED_AT, 'unreadable: stay on the safe side and do not move the clock')
+  assert.equal(sub.failedInvoiceId, 'in_new')
+})
+
+test('a legacy record with no stored invoice id keeps its grace clock', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(legacyAccount())
+  const stripe = openInvoices('in_new')
+
+  await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db)
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT)
+  assert.deepEqual(stripe.calls, ['in_new'])
+})
+
 test('a retried failure keeps the first paymentFailedAt but follows the newest failing invoice', async (t) => {
   quiet(t)
   const clock = t.mock.method(Date, 'now', () => FAILED_AT)
@@ -399,6 +482,8 @@ const TRANSIENT_ERRORS = {
   'a bare 401': { statusCode: 401 },
   'a bare 403': { statusCode: 403 },
   'a 403 carried on raw': { raw: { statusCode: 403 } },
+  'an authentication error carrying no status code': { type: 'StripeAuthenticationError' },
+  'a permission error carrying no status code': { type: 'StripePermissionError' },
 }
 
 test('a permanent read error keeps the failure and returns, without throwing', async (t) => {
@@ -661,4 +746,153 @@ test('paying the failed invoice clears the recorded event time too', async (t) =
   await flagAt(db, FAILED_EVENT)
   assert.equal(await clearPaymentFailure(fakeStripe(), paidInvoice('in_new'), db), 'cleared')
   assert.equal(stored(db).paymentFailedEventCreated, null)
+})
+
+test('a failure event older than the failure on record does not replace it, and reports why', async (t) => {
+  quiet(t)
+  const db = memoryDb(failingAccount({ id: 'sub_1', status: 'past_due', paymentFailedEventCreated: FAILED_EVENT }))
+  const before = structuredClone(db.doc('users/uid_1'))
+
+  const outcome = await flagPaymentFailed(openInvoices('in_old'), failedInvoice('in_old', 'https://pay.example/in_old'), db, FAILED_EVENT - 60)
+
+  assert.equal(outcome, 'kept_newer_failure')
+  assert.deepEqual(db.doc('users/uid_1'), before)
+})
+
+test('a failure event newer than the one on record follows the newest invoice and keeps the grace clock', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(failingAccount({ id: 'sub_1', status: 'past_due', paymentFailedEventCreated: FAILED_EVENT }))
+
+  const outcome = await flagPaymentFailed(openInvoices('in_new', 'in_newer'), failedInvoice('in_newer', 'https://pay.example/in_newer'), db, FAILED_EVENT + 60)
+
+  assert.equal(outcome, 'flagged')
+  const sub = stored(db)
+  assert.equal(sub.failedInvoiceId, 'in_newer')
+  assert.equal(sub.paymentFailedEventCreated, FAILED_EVENT + 60)
+  assert.equal(sub.paymentFailedAt, FAILED_AT, 'the first failure still anchors the grace window')
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// flagPaymentFailed writes against the record as it is NOW, in a transaction
+// ─────────────────────────────────────────────────────────────────────────────
+test('a failure flagged during the lookup keeps its own grace clock instead of a stale one', async (t) => {
+  quiet(t)
+  const LATER = FAILED_AT + 30 * 86_400_000
+  t.mock.method(Date, 'now', () => LATER)
+  // The recorded failure (in_old) is paid, so the decision is "start a fresh clock".
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old' }))
+  const stripe = fakeStripe({
+    invoices: { in_old: { id: 'in_old', status: 'paid' }, in_new: { id: 'in_new', status: 'open' } },
+    // Another delivery flags a failure while the earlier invoice is being read.
+    during: (id) => (id === 'in_old' ? writeSubscription(db, NEWER_FAILURE) : undefined),
+  })
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  const sub = stored(db)
+  assert.equal(sub.paymentFailedAt, FAILED_AT + 5 * SECOND, 'the failure flagged meanwhile owns the clock, not "now"')
+  assert.equal(sub.failedInvoiceId, 'in_new')
+})
+
+test('a failure cleared during the lookup starts a new clock instead of reviving the old one', async (t) => {
+  quiet(t)
+  const LATER = FAILED_AT + 30 * 86_400_000
+  t.mock.method(Date, 'now', () => LATER)
+  // The recorded failure is still open, so the decision is "keep the original clock".
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old' }))
+  const stripe = fakeStripe({
+    invoices: { in_old: { id: 'in_old', status: 'open' }, in_new: { id: 'in_new', status: 'open' } },
+    during: (id) => (id === 'in_old'
+      ? writeSubscription(db, { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null })
+      : undefined),
+  })
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  assert.equal(stored(db).paymentFailedAt, LATER, 'a payment settled the old failure, so this one starts now')
+})
+
+test('a Firestore handle without transactions still flags the failure', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb({ 'users/uid_1': { stripeCustomerId: 'cus_1', subscription: { status: 'active' } } })
+  delete db.runTransaction
+
+  assert.equal(await flagPaymentFailed(openInvoices('in_new'), failedInvoice('in_new', 'https://pay.example/in_new'), db, FAILED_EVENT), 'flagged')
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT)
+  assert.equal(stored(db).paymentFailedEventCreated, FAILED_EVENT)
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A failure event older than a healthy update already stored for the same subscription
+// ─────────────────────────────────────────────────────────────────────────────
+// The invoice read errors, so the "already paid" check cannot save the account:
+// only the stored event time can say the failure is old news.
+const HEALTHY_EVENT = 1_700_000_300
+const healthyAccount = (subscription = {}) => ({
+  'users/uid_1': {
+    stripeCustomerId: 'cus_1',
+    subscription: { id: 'sub_1', status: 'active', stripeEventCreated: HEALTHY_EVENT, paymentFailed: false, ...subscription },
+  },
+})
+const failedOnSubscription = (id) => ({ ...failedInvoice('in_late', 'https://pay.example/in_late'), ...onSubscription(id) })
+const unreadableInvoices = () => fakeStripe({ error: Object.assign(new Error('stripe is down'), { statusCode: 500 }) })
+
+test('a failure event created before a newer active update for the same subscription is skipped', async (t) => {
+  quiet(t)
+  for (const status of ['active', 'trialing']) {
+    const db = memoryDb(healthyAccount({ status }))
+    const before = structuredClone(db.doc('users/uid_1'))
+
+    const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT - 100)
+
+    assert.equal(outcome, 'kept_newer_state', status)
+    assert.deepEqual(db.doc('users/uid_1'), before, `${status}: nothing written`)
+  }
+})
+
+test('a failure event newer than the stored healthy update still lands', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount())
+
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT + 1)
+
+  assert.equal(outcome, 'flagged')
+  assert.equal(stored(db).paymentFailed, true)
+  assert.equal(stored(db).failedInvoiceId, 'in_late')
+  assert.equal(stored(db).paymentFailedEventCreated, HEALTHY_EVENT + 1)
+})
+
+test('a failure on a different subscription than the stored one still lands', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount())
+
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_2'), db, HEALTHY_EVENT - 100)
+
+  assert.equal(outcome, 'flagged')
+  assert.equal(stored(db).failedInvoiceId, 'in_late')
+})
+
+test('a failure event created in the same second as the stored update still lands', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount())
+
+  // Same-second events cannot be ordered by timestamp; only a strictly older
+  // event is held back (the rule subscriptionWriteDecision uses).
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT)
+
+  assert.equal(outcome, 'flagged')
+  assert.equal(stored(db).paymentFailedEventCreated, HEALTHY_EVENT)
+})
+
+test('a failure older than the stored event still lands when the stored subscription no longer grants access', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT)
+  const db = memoryDb(healthyAccount({ status: 'past_due' }))
+
+  const outcome = await flagPaymentFailed(unreadableInvoices(), failedOnSubscription('sub_1'), db, HEALTHY_EVENT - 100)
+
+  assert.equal(outcome, 'flagged')
 })
