@@ -24,16 +24,19 @@
 //   - remove `.ht.ht .ht-ic-t:focus-visible { outline-offset: -2px }` in home-try.css -> test 5.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { gridColumns } from './icon-grid-rows.js'
 
 const TABBABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 const CELLS = '#ht-s-1 .ht-ic-grid [role="option"]'
+
+/** The grid's live column count. */
+const gridColumns = (page) => page.locator('#ht-s-1 .ht-ic-grid').evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length)
+
 
 /** Every control in the tab order that is drawn, in document order, each with its place relative to the grid. */
 const tabOrder = (page) => page.evaluate((sel) => {
   const grid = document.querySelector('#ht-s-1 .ht-ic-grid')
   return [...document.querySelectorAll(sel)]
-    .filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
+    .filter((el) => el.tabIndex >= 0 && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
     .map((el) => ({ inGrid: grid.contains(el), label: el.getAttribute('aria-label') || el.textContent.trim().slice(0, 30) }))
 }, TABBABLE)
 
@@ -41,7 +44,7 @@ const tabOrder = (page) => page.evaluate((sel) => {
 const focusBeforeGrid = (page) => page.evaluate((sel) => {
   const grid = document.querySelector('#ht-s-1 .ht-ic-grid')
   const list = [...document.querySelectorAll(sel)]
-    .filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
+    .filter((el) => el.tabIndex >= 0 && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
   const at = list.findIndex((el) => grid.contains(el))
   list[at - 1].focus()
   return list[at - 1].getAttribute('aria-label') || list[at - 1].textContent.trim().slice(0, 30)
