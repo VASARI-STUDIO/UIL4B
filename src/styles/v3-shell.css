@@ -46,13 +46,18 @@
 /* ── The bar ───────────────────────────────────────────────────────────── */
 .pnav{background:var(--v3-ground);-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:1px solid var(--v3-hair)}
 .pnav-inner{gap:20px;padding:0 max(24px,env(safe-area-inset-right,0px)) 0 max(24px,env(safe-area-inset-left,0px))}
+@media(max-width:819px){.pnav-inner{gap:12px}}
 .pnav-logo{min-height:36px;padding:0 4px;border-radius:8px;color:var(--v3-ink)}
 .pnav-word{color:var(--v3-ink)}
 .pnav-search-field{height:36px;border:0;background:var(--v3-l2);color:var(--v3-t56);transition:background-color 100ms linear,color 100ms linear}
 @media(hover:hover){.pnav-search-field:hover{background:var(--v3-l2h);color:var(--v3-ink);border-color:transparent}}
 .pnav-search-ph--typing{color:var(--v3-ink)}
-.pnav-search-kbd{display:inline-flex;align-items:center;height:22px;padding:0 7px;border:0;border-radius:6px;background:var(--v3-ground);color:var(--v3-t56);font-family:var(--mono);font-size:12px;line-height:1}
-@media(min-width:1100px){.pnav-search-field{padding:0 7px 0 14px}}
+.pnav-search-kbd{align-items:center;height:22px;padding:0 7px;border:0;border-radius:6px;background:var(--v3-ground);color:var(--v3-t56);font-family:var(--mono);font-size:12px;line-height:1}
+/* Search width ladder: keycap from 1140, text-only 1100-1139, icon below 1100 (global.css folds it). */
+@media(min-width:1100px){.pnav-search-field{padding:0 7px 0 14px;min-width:128px}.pnav-search-kbd{display:none}}
+@media(min-width:1140px){.pnav-search-field{min-width:164px}.pnav-search-kbd{display:inline-flex}}
+/* The symbol wordmark takes over at 999px and below (global.css stops at 939). */
+@media(min-width:768px) and (max-width:999px){.pnav-word .brand-logo-wide{display:none}.pnav-word .brand-logo-narrow{display:block}}
 .pnav-items{gap:0}
 .pnav-trigger{gap:6px;height:36px;padding:0 12px;border-radius:999px;color:var(--v3-sec);font-weight:400;transition:background-color 100ms linear,color 100ms linear}
 .pnav-chev{opacity:.65;transition:transform 200ms var(--v3-ease)}
