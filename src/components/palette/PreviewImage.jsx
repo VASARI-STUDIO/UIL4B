@@ -23,7 +23,7 @@ export default function PreviewImage({ asset, sizes = '100vw', eager = false, al
       <source type="image/avif" srcSet={srcSet(asset, 'avif')} sizes={sizes} />
       <source type="image/webp" srcSet={srcSet(asset, 'webp')} sizes={sizes} />
       <img
-        className={className}
+        className={className} data-pin-nopin="true"
         src={assetUrl(asset, widest, 'webp')}
         alt={alt}
         width={asset.width}

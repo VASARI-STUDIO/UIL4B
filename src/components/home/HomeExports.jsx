@@ -61,7 +61,7 @@ function Picture({ id, sizes, alt = '', className, style, ...rest }) {
       <source type="image/avif" srcSet={homeExportSrcSet(id, 'avif')} sizes={sizes} />
       <source type="image/webp" srcSet={homeExportSrcSet(id, 'webp')} sizes={sizes} />
       <img
-        className={className}
+        className={className} data-pin-nopin="true"
         style={style}
         src={homeExportSrc(id, 'webp', fallback)}
         sizes={sizes}

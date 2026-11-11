@@ -40,3 +40,13 @@ export const openingScene = (lastId, canSeePro) => {
   const last = PREVIEW_SCENES.find(sceneIs(lastId))
   return last && (last.free || canSeePro) ? last.id : DEFAULT_SCENE
 }
+
+// The scenes worth fetching ahead of time for the open one: its neighbours in
+// the list that have a chunk and are not locked for this viewer. A locked
+// scene's chunk holds its markup, copy and layout, so a viewer who cannot open
+// it is never sent it. `isLocked` is the dialog's own test, so the preload and
+// the gate cannot disagree.
+export const scenesToPreload = (id, isLocked) => {
+  const i = PREVIEW_SCENES.findIndex(sceneIs(id))
+  return [PREVIEW_SCENES[i - 1], PREVIEW_SCENES[i + 1]].filter((s) => s && s.example && !isLocked(s))
+}

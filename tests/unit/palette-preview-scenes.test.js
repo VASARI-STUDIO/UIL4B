@@ -12,7 +12,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { PREVIEW_GROUPS, PREVIEW_SCENES, DEFAULT_SCENE, sceneById } from '../../src/data/palettePreviewScenes.js'
+import { PREVIEW_GROUPS, PREVIEW_SCENES, DEFAULT_SCENE, sceneById, scenesToPreload } from '../../src/data/palettePreviewScenes.js'
 import { CATS, LIMITS, money, tennerVars } from '../../src/components/palette/examples/Tenner.data.js'
 import { derivePaletteRoles, pairRoles } from '../../src/utils/palettePreviewRoles.js'
 import { stripJs } from '../helpers/strip-comments.js'
@@ -89,4 +89,36 @@ test("Tenner's Limits form is left out of a two-colour pair and its focus ring i
   const { vars, pair } = tennerVars(roles)
   assert.equal(pair, false)
   assert.match(vars['--ty-ring'], /^#[0-9a-f]{6}$/i)
+})
+
+// A Pro scene's chunk holds its markup, copy and layout, so the idle preload of the
+// open scene's neighbours must skip any scene this viewer cannot open.
+// To make it fail: drop `!isLocked(s)` from scenesToPreload (src/data/palettePreviewScenes.js).
+test('a free viewer is never sent a neighbouring Pro scene', () => {
+  const free = (s) => !s.free
+  assert.deepEqual(scenesToPreload('trail', free).map((s) => s.id), ['energy'])
+  assert.deepEqual(scenesToPreload('editorial', free).map((s) => s.id), ['product'])
+  assert.deepEqual(scenesToPreload('product', free).map((s) => s.id), ['editorial'])
+  for (const open of PREVIEW_SCENES) {
+    for (const s of scenesToPreload(open.id, free)) assert.equal(s.free, true, `${open.id} would preload Pro scene ${s.id}`)
+  }
+})
+
+test('a viewer whose plan is still loading is sent no Pro scene either', () => {
+  const pending = (s) => !s.free
+  for (const open of PREVIEW_SCENES) {
+    assert.ok(scenesToPreload(open.id, pending).every((s) => s.free), open.id)
+  }
+})
+
+test('a Pro viewer still gets both neighbours', () => {
+  const pro = () => false
+  assert.deepEqual(scenesToPreload('trail', pro).map((s) => s.id), ['energy', 'card'])
+  assert.deepEqual(scenesToPreload('energy', pro).map((s) => s.id), ['trail'])
+})
+
+test('the dialog preloads through scenesToPreload with its own isLocked', () => {
+  const src = read('src/components/palette/PalettePreviewDialog.jsx')
+  assert.match(src, /scenesToPreload\(scene\.id, isLocked\)/)
+  assert.doesNotMatch(src, /PREVIEW_SCENES\[i - 1\]/, 'an unfiltered neighbour preload is back')
 })

@@ -80,7 +80,7 @@ function Page({ themeId, kindId, alt, className, imgRef, onLoad, onError }) {
       <source type="image/webp" srcSet={large.webp} />
       <img
         ref={imgRef}
-        className={className}
+        className={className} data-pin-nopin="true"
         src={large.webp}
         alt={alt}
         width={large.width}

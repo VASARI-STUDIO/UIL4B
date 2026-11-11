@@ -247,20 +247,25 @@ function AppInner({ toast }) {
 
   // Brand-new sign-ups must reach onboarding no matter where they signed up from
   // (the /home logo, a tool's AuthGate, or an in-context save prompt). Auth
-  // resolves without a route change, so we route here once, keyed off the
+  // resolves without a route change, so we route here, keyed off the
   // account-creation flag — returning users never carry it, so they are never
-  // bounced (AUDIT-A1). Idempotent under StrictMode's dev double-invoke:
-  // clearPendingOnboarding() flips the flag off before the second run's guard,
-  // and a replace-navigation to the path we're already on is a no-op.
+  // bounced (AUDIT-A1).
+  //
+  // The flag stays raised until the route is /onboarding. The login page holds
+  // its own redirect while the flag is up, and clearing it before the route
+  // change lands let that redirect win and skip onboarding.
   useEffect(() => {
     if (authLoading || !authUser || !pendingOnboarding) return
+    if (location.pathname !== '/onboarding') {
+      // `fresh` tells Onboarding this is a brand-new account: it must render the
+      // flow even if this browser holds another account's completion flag.
+      navigate('/onboarding', { replace: true, state: { fresh: true } })
+      return
+    }
     // pendingOnboarding is raised only for a brand-new account, email or
     // Google, and cleared on the next line, so this counts each sign-up once.
     sendEvent(EVENTS.signUp)
     clearPendingOnboarding()
-    // `fresh` tells Onboarding this is a brand-new account: it must render the
-    // flow even if this browser holds another account's completion flag.
-    if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true, state: { fresh: true } })
   }, [authLoading, authUser, pendingOnboarding, clearPendingOnboarding, location.pathname, navigate])
 
   // A returning account that opened onboarding and never finished it resumes
