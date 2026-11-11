@@ -430,29 +430,35 @@ test.describe('the page viewer at 1440', () => {
     // counted. (A MutationObserver also sees a class that was set and replaced inside one
     // frame, which is never painted and so never slides.) The neighbours are already warmed,
     // so this is the cached-page path: the one that must still start from the waiting pose.
-    const record = () => page.evaluate(() => new Promise((resolve) => {
-      const stage = document.querySelector('.hsv-stage')
-      const seen = []
-      const started = performance.now()
-      const sample = () => {
-        const top = stage.querySelector('.hsv-top')
-        if (top) seen.push({ cls: top.className, transform: getComputedStyle(top).transform, opacity: getComputedStyle(top).opacity, under: !!stage.querySelector('.hsv-under') })
-        if (performance.now() - started < 900) requestAnimationFrame(sample)
-        else resolve({ seen, under: !!stage.querySelector('.hsv-under') })
-      }
-      requestAnimationFrame(sample)
-    }))
-    const forward = record()
+    // The sampler is running before the key is pressed, so the step's first frame is in it.
+    const record = async () => {
+      await page.evaluate(() => new Promise((ready) => {
+        const stage = document.querySelector('.hsv-stage')
+        const seen = []
+        let started = 0
+        window.__hsvRecord = new Promise((resolve) => {
+          const sample = () => {
+            const top = stage.querySelector('.hsv-top')
+            if (top) seen.push({ cls: top.className, transform: getComputedStyle(top).transform, opacity: getComputedStyle(top).opacity, under: !!stage.querySelector('.hsv-under') })
+            if (performance.now() - started < 900) requestAnimationFrame(sample)
+            else resolve({ seen, under: !!stage.querySelector('.hsv-under') })
+          }
+          requestAnimationFrame(() => { started = performance.now(); sample(); ready() })
+        })
+      }))
+      return () => page.evaluate(() => window.__hsvRecord)
+    }
+    const forward = await record()
     await page.keyboard.press('ArrowRight')
-    const fwd = await forward
+    const fwd = await forward()
     const waiting = fwd.seen.find((s) => s.cls.includes('is-wait'))
     expect(waiting, 'the new page waits off to the right, transparent, over the page it replaces').toMatchObject({ transform: 'matrix(1, 0, 0, 1, 16, 0)', opacity: '0', under: true })
     expect(fwd.seen.some((s) => s.cls.includes('is-fade')), 'then moves home').toBe(true)
     expect(fwd.under, 'and the old page is gone once it has').toBe(false)
 
-    const back = record()
+    const back = await record()
     await page.keyboard.press('ArrowLeft')
-    const bwd = await back
+    const bwd = await back()
     expect(bwd.seen.find((s) => s.cls.includes('is-wait')), 'a step back comes in from the left').toMatchObject({ transform: 'matrix(1, 0, 0, 1, -16, 0)' })
     await ctx.close()
   })
