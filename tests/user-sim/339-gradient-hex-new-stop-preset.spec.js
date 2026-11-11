@@ -214,7 +214,7 @@ test.describe('adding a stop leaves the canvas as it was, at 1440px', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   test.beforeEach(async ({ page }) => { watch(page, 'a designer adding a stop to a Perceived gradient') })
 
-  test('the canvas before and after differs in under 1% of its pixels', async ({ page }) => {
+  test('no pixel of the canvas moves by more than 8 levels in a channel', async ({ page }) => {
     await seed(page, CITRUS)
     await open(page)
     const canvas = page.locator('.grd-canvas')
@@ -222,7 +222,7 @@ test.describe('adding a stop leaves the canvas as it was, at 1440px', () => {
     await page.getByRole('button', { name: 'Add a stop' }).click()
     await expect(stopSelect(page, 3)).toBeVisible()
     const after = await canvas.screenshot({ animations: 'disabled' })
-    const share = await page.evaluate(async ([a, b]) => {
+    const largest = await page.evaluate(async ([a, b]) => {
       const read = async (b64) => {
         const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob())
         const cv = new OffscreenCanvas(bmp.width, bmp.height)
@@ -232,12 +232,14 @@ test.describe('adding a stop leaves the canvas as it was, at 1440px', () => {
       }
       const [p, q] = [await read(a), await read(b)]
       if (p.length !== q.length) return 1
-      let off = 0
+      let worst = 0
       for (let i = 0; i < p.length; i += 4) {
-        if (Math.max(Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2])) > 4) off++
+        worst = Math.max(worst, Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2]))
       }
-      return off / (p.length / 4)
+      return worst
     }, [before.toString('base64'), after.toString('base64')])
-    expect(share, 'share of pixels that moved by more than 4 in a channel').toBeLessThan(0.01)
+    // The Citrus midpoint lies outside sRGB, so its hex stop is the clamped colour and the
+    // ramp beside it moves by up to 7 levels. A blend in sRGB moves it by about 54.
+    expect(largest, 'the largest move in any channel of any pixel').toBeLessThanOrEqual(8)
   })
 })
