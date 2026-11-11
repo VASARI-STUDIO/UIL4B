@@ -199,7 +199,7 @@ function VerifyEmailPrompt({ email, onResend, onRetry }) {
   )
 }
 
-export default function Checkout() {
+export default function Checkout({ toast }) {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const { user, loading, sendVerificationEmail, refreshEmailVerified } = useAuth()
@@ -348,10 +348,12 @@ export default function Checkout() {
   // A failed load is not cached; the form asks again and reports it.
   useEffect(() => { if (user) getStripe()?.catch(() => {}) }, [user])
 
-  // Already-Pro accounts have nothing to buy here.
+  // Already-Pro accounts have nothing to buy here. They land on their plan, told why.
   useEffect(() => {
-    if (!loading && user && isPro) navigate('/settings', { replace: true })
-  }, [user, loading, isPro, navigate])
+    if (loading || !user || !isPro) return
+    toast?.('You’re already on Pro, so there’s nothing to buy. Your plan is here.', 'info')
+    navigate('/settings', { replace: true, state: { section: 'support' } })
+  }, [user, loading, isPro, navigate, toast])
 
   // Choosing a period needs no account; paying does. The popup opens over this
   // page and resolves in place, so the period in the URL is still the one
