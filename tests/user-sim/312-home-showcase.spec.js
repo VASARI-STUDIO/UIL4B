@@ -783,12 +783,10 @@ test.describe('the viewer\'s motion', () => {
     expect(new Set(moving.delays).size, 'every tile starts on its own beat').toBe(TOTAL)
     expect(Math.max(...moving.delays), 'and the last starts under half a second in').toBeLessThan(0.5)
     await expect(root, 'then it is at rest').toHaveAttribute('data-hsc-reveal', 'done')
-    // The section and every tile end fully shown: nothing outside the showcase may hold it at opacity 0.
+    // Nothing outside the showcase may hold it at opacity 0.
     expect(await root.evaluate((el) => getComputedStyle(el).opacity), 'the showcase itself is shown').toBe('1')
-    const shown = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => getComputedStyle(li).opacity))
-    expect(shown, 'and every tile is shown').toEqual(Array(TOTAL).fill('1'))
     // "done" is set on a timer that can fire a frame before the last tile's transition ends on a
-    // loaded machine, so the tiles are read until they settle rather than once.
+    // loaded machine, so the tiles are read until every one is fully shown and still, rather than once.
     await expect.poll(async () => {
       const rest = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => ({ opacity: getComputedStyle(li).opacity, transform: getComputedStyle(li).transform, transition: getComputedStyle(li).transitionDuration })))
       return rest.every((r) => r.opacity === '1' && r.transform === 'none' && parseFloat(r.transition) === 0)
