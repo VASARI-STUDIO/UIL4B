@@ -54,14 +54,25 @@ test.describe('Randomise with everything locked', () => {
 
     // Unlock one: the message is gone from the path, and the palette shuffles.
     await page.getByRole('button', { name: /^Unlock / }).last().click()
-    await page.waitForTimeout(3500) // let the first toast leave
-    await expect(page.locator('.toast.show')).toHaveCount(0)
-    // The seed stays locked, so compare every column: the freed one changes.
-    const columns = () => page.locator('.plb-col').allTextContents()
-    const held = await columns()
-    await page.locator('.plb-random').click()
+    await expect(page.locator('.toast.show'), 'the first toast leaves on its own').toHaveCount(0, { timeout: 10000 })
+    // The seed stays locked, so only the freed column may change.
+    const cols = page.locator('.plb-col')
+    const free = cols.filter({ has: page.getByRole('button', { name: /^Lock / }) })
+    const frozen = cols.filter({ hasNot: page.getByRole('button', { name: /^Lock / }) })
+    await expect(free).toHaveCount(1)
+    await expect(frozen).toHaveCount(n - 1)
+    const heldFree = await free.textContent()
+    const heldFrozen = await frozen.allTextContents()
+    // The last unlock frees DEEP, whose tone is fixed, so a roll can hand it the
+    // colour it already holds (about 1 roll in several hundred; CI run
+    // 42984819347 hit it, every column identical). Roll again until it moves; a
+    // swatch that never moves in 10 seconds of rolls is a real fault, not chance.
+    await expect.poll(async () => {
+      await page.locator('.plb-random').click()
+      return free.textContent()
+    }, { message: 'one free swatch shuffles', intervals: [100], timeout: 10000 }).not.toBe(heldFree)
     await expect(page.locator('.toast.show', { hasText: LOCKED_MSG })).toHaveCount(0)
-    await expect.poll(columns, { message: 'one free swatch shuffles' }).not.toEqual(held)
+    expect(await frozen.allTextContents(), 'the locked swatches did not move').toEqual(heldFrozen)
     await expect(swatches(page).first()).toBeVisible()
   })
 })
