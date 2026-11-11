@@ -86,6 +86,16 @@ function Minus() {
   )
 }
 
+function GoArrow() {
+  return (
+    <span className="mi-go" aria-hidden="true">
+      <svg className="mi-a" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 17L17 7M8 7h9v9" />
+      </svg>
+    </span>
+  )
+}
+
 function Chevron({ back = false }) {
   return (
     <svg className="stg-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1484,7 +1494,7 @@ export default function Settings({ toast }) {
       {priceStatus === 'live' && !subLoading ? (
         // Every upgrade starts at /plans, which reads ?billing= for the period
         // picked here and carries on to checkout from there.
-        <Link className="btn btn-accent sub-tier-btn" to={`/plans?billing=${encodeURIComponent(offer.id)}`}>Upgrade to Pro</Link>
+        <Link className="btn btn-accent sub-tier-btn sub-tier-btn--go" to={`/plans?billing=${encodeURIComponent(offer.id)}`}>Upgrade to Pro<GoArrow /></Link>
       ) : priceStatus === 'cadence-missing' ? (
         <button type="button" className="btn btn-accent sub-tier-btn" onClick={() => setBilling(otherOffer.id)}>{priceCopy.button}</button>
       ) : (
@@ -1780,10 +1790,7 @@ export default function Settings({ toast }) {
                       </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
-                        {/* "English (AU)" over "English (AU)": where the tiles are
-                            rows (640 and below, with `tiersStacked`) the repeat
-                            is dropped. The wider tiles keep both lines. */}
-                        {(!tiersStacked || l.native !== l.label) && <span className="lang-tile-code">{l.label}</span>}
+                        {l.native !== l.label && <span className="lang-tile-code">{l.label}</span>}
                       </div>
                       {lang === l.code && (
                         <svg className="lang-tile-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1973,13 +1980,13 @@ export default function Settings({ toast }) {
                     {localKeyCount} item{localKeyCount === 1 ? '' : 's'} in this browser
                     {user ? ', plus your account’s copy on the server' : ''}
                   </p>
+                  <p className="settings-data-note">
+                    We don&rsquo;t sell your data or use third-party trackers.
+                  </p>
                 </div>
                 <NavLink to="/privacy" className="btn btn-s">Read the privacy policy</NavLink>
               </div>
               <div className="settings-card-body">
-                <p className="settings-data-note">
-                  We don&rsquo;t sell your data or use third-party trackers.
-                </p>
                 <div className="settings-row settings-row--pad">
                   <div className="settings-row-main">
                     <div className="settings-row-label">Export</div>
