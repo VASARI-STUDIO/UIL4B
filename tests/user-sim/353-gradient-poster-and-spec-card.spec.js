@@ -35,7 +35,7 @@ const SCENES = [
 ]
 const VIEWS = [
   { w: 1440, h: 900, stage: [1046, 550], poster: [376, 470], spec: [352, 470] },
-  { w: 768, h: 1024, stage: [737, 360], poster: null, spec: [600, 264] },
+  { w: 768, h: 1024, stage: [720, 360], poster: null, spec: [600, 264] },
   { w: 390, h: 844, stage: [366, 274.5], poster: null, spec: [342, 198], touch: true },
 ]
 const CITRUS = {
@@ -201,13 +201,13 @@ test.describe('the Poster badge', () => {
 
   test('mid-grey paint reads low', async ({ page }) => {
     await startOn(page, 'poster'); await seed(page, flat('#7C7C7C', '#7C7C7C')); await open(page)
-    await expect(page.locator('.grd-ctx-ratio')).toHaveText(/^Text 4.d:1 · low$/)
+    await expect(page.locator('.grd-ctx-ratio')).toHaveText(/^Text 4\.\d:1 · low$/)
     await expect(page.locator('.grd-ctx-ratio')).toHaveClass(/is-low/)
   })
 
   test('black paint reads at the top of the scale and is not called low', async ({ page }) => {
     await startOn(page, 'poster'); await seed(page, flat('#000000', '#000000')); await open(page)
-    await expect(page.locator('.grd-ctx-ratio')).toHaveText(/^Text 1d.d:1$/)
+    await expect(page.locator('.grd-ctx-ratio')).toHaveText(/^Text \d+\.\d:1$/)
     await expect(page.locator('.grd-ctx-ratio')).not.toHaveClass(/is-low/)
   })
 

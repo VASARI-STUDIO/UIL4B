@@ -1428,9 +1428,9 @@
 .grd .grd-poster-foot { width: fit-content; font-size: 14px; line-height: 20px; font-weight: 400; }
 
 /* The Spec card: the gradient as a header, then the facts in the order they are read. */
-.grd .grd-spec-box { display: flex; align-items: center; justify-content: center; }
+.grd .grd-spec-box { display: flex; align-items: center; justify-content: center; padding-top: 56px; }
 .grd .grd-spec {
-  display: flex; flex-direction: column; width: 352px; height: calc(100% - 80px);
+  display: flex; flex-direction: column; width: 352px; height: calc(100% - 24px);
   overflow: hidden; border-radius: 14px; background: var(--tl-card);
 }
 .grd .grd-spec-head { flex: 0 1 55%; min-height: 48px; }
