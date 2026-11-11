@@ -366,6 +366,11 @@ export function TryColourAction({ to, label }) {
       <TryColour />
       <Link className="lart-next-go" to={`${to}?fg=${hex.slice(1)}&bg=FFFFFF`}>
         Open in {label}
+        <span className="lcc-go" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </span>
       </Link>
     </div>
   )

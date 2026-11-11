@@ -235,7 +235,7 @@ function Article({ article }) {
                   <span className="lart-onward-title">{next.title}</span>
                   <span className="lart-onward-dek">{next.dek}</span>
                 </span>
-                <span className="lart-onward-go" aria-hidden="true">&rarr;</span>
+                <span className="lart-onward-go" aria-hidden="true">{specimen ? <ArrowIcon /> : '\u2192'}</span>
               </Link>
             </li>
           )}
@@ -244,7 +244,7 @@ function Article({ article }) {
               <span className="lart-onward-text">
                 <span className="lart-onward-title">All {LEARN_ARTICLES.length} guides</span>
               </span>
-              <span className="lart-onward-go" aria-hidden="true">&rarr;</span>
+              <span className="lart-onward-go" aria-hidden="true">{specimen ? <ArrowIcon /> : '\u2192'}</span>
             </Link>
           </li>
         </ul>
@@ -268,6 +268,14 @@ function Article({ article }) {
         </details>
       )}
     </div>
+  )
+}
+
+function ArrowIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
   )
 }
 

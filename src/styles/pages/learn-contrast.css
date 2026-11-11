@@ -251,3 +251,92 @@ html[data-reduced-motion="true"] .lart .lcc-ch{transition-property:opacity!impor
   .lart .lcc-s1 .lart-table--stack tbody td[data-label="Level"]{grid-column:1/-1;margin-top:var(--s-1);font-size:13px;line-height:18px;font-weight:400;letter-spacing:0;color:var(--t1)}
   .lart .lcc-s1 .lart-table--stack tbody td[data-label="Level"]::before{display:inline;content:attr(data-label) " "}
 }
+
+/* ── Close of the guide: the tool button, Keep reading and Sources ── */
+.lart .lart-next:has(.lcc-try) h2{font-size:clamp(32px,3.33vw,48px);line-height:1.02;letter-spacing:-.04em}
+.lart .lart-next:has(.lcc-try) .lart-next-lede{line-height:1.65}
+.lart .lcc-try{gap:20px}
+.lart .lcc-try .lart-next-go{gap:var(--s-3);padding:0 6px 0 var(--s-5);font-size:15px;font-weight:500}
+.lcc-go{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:999px}
+.lcc-go svg,.lart-onward-go svg{transition:transform 320ms cubic-bezier(.25,1,.5,1)}
+@media(hover:hover) and (pointer:fine){
+  .lart .lcc-try .lart-next-go:hover .lcc-go svg{transform:rotate(45deg)}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead:hover .lart-onward-go svg{transform:rotate(45deg)}
+}
+.lart .lcc-try .lart-next-go:focus-visible .lcc-go svg,
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead:focus-visible .lart-onward-go svg{transform:rotate(45deg)}
+html[data-reduced-motion="true"] .lart .lcc-go svg,
+html[data-reduced-motion="true"] .lart .lart-onward-go svg{transition:none;transform:none!important}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lart .lcc-go svg,
+  html:not([data-reduced-motion="false"]) .lart .lart-onward-go svg{transition:none;transform:none!important}
+}
+
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-label{margin-bottom:var(--s-5);line-height:1.4}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-kicker{line-height:22.5px}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row{min-height:52px;padding:0;border:0}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead{gap:var(--s-5);padding:var(--s-6) 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-text{gap:0}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-kicker{line-height:22.5px;color:var(--t2)}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-title{margin-top:var(--s-2);font-size:32px;line-height:1.1;letter-spacing:-.04em}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-dek{margin-top:var(--s-3);max-width:62ch;font-size:17px;line-height:1.55}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-go{display:grid;place-items:center;font-size:0;transform:none!important}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go{width:56px;height:56px;border-radius:999px;background:var(--bg-3);color:var(--t0);transition:background-color 150ms ease}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go svg{width:20px;height:20px}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead){color:var(--t1);transition:color 150ms ease}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-title{font-size:15px;font-weight:500;line-height:1.4;color:inherit}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-go{color:inherit}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-go svg{width:14px;height:14px}
+@media(hover:hover){
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead:hover .lart-onward-go{background:color-mix(in srgb,var(--t0) 8%,var(--bg-3))}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead):hover{color:var(--t0)}
+}
+
+.lart .lart-prose--wide ~ .lart-sources summary{display:inline-flex;gap:var(--s-2);min-height:36px;padding:0 var(--s-4);border:0;border-radius:999px;background:var(--bg-3);font-size:14px;font-weight:500;color:var(--t0);transition:background-color 150ms ease}
+.lart .lart-prose--wide ~ .lart-sources summary:focus-visible{outline:2px solid var(--t0);outline-offset:2px}
+.lart .lart-prose--wide ~ .lart-sources .lart-chev{width:12px;height:12px;margin-left:0;color:inherit;stroke-width:2.3}
+.lart .lart-prose--wide ~ .lart-sources ul{margin:var(--s-4) 0 0;padding:0;gap:var(--s-2)}
+.lart .lart-prose--wide ~ .lart-sources li{font-size:15px;line-height:1.5}
+.lart .lart-prose--wide ~ .lart-sources a{color:var(--t1);text-underline-offset:4px;text-decoration-color:color-mix(in srgb,var(--t0) 30%,transparent)}
+@media(hover:hover){
+  .lart .lart-prose--wide ~ .lart-sources summary:hover{background:color-mix(in srgb,var(--t0) 8%,var(--bg-3))}
+  .lart .lart-prose--wide ~ .lart-sources a:hover{color:var(--t0)}
+}
+
+/* Phone */
+@media(max-width:767px){
+  .lart .lart-next:has(.lcc-try){padding:var(--s-5) var(--s-4)}
+  .lart .lart-next:has(.lcc-try) h2{font-size:32px;line-height:1.02;letter-spacing:-.04em}
+  .lart .lart-next:has(.lcc-try) .lart-next-copy{gap:var(--s-4)}
+  .lart .lart-next:has(.lcc-try) .lart-next-lede{line-height:1.65}
+  .lart .lcc-try{gap:0}
+  .lart .lcc-try .lcc-tsw{order:1;gap:var(--s-4);margin-top:0}
+  .lart .lcc-try .lcc-tsw div{flex-direction:column;align-items:flex-start;gap:6px;font-size:12px;line-height:18px;color:var(--t0)}
+  .lart .lcc-try .lcc-hx{order:2;gap:0;margin-top:20px}
+  .lart .lcc-try .lcc-hxrow{flex-direction:column;align-items:flex-start;gap:var(--s-2)}
+  .lart .lcc-try .lcc-hx label{font-weight:600;color:var(--t0)}
+  .lart .lcc-try .lcc-hx input{height:48px;font-size:15px}
+  .lart .lcc-try .lcc-hxerr{min-height:0}
+  .lart .lcc-try .lcc-hxerr:not(:empty){margin-top:6px}
+  .lart .lcc-try .lcc-ntry{order:3;margin-top:var(--s-4)}
+  .lart .lcc-try .lart-next-go{order:4;margin-top:var(--s-4);justify-content:space-between;padding:0 6px 0 22px;font-size:16px}
+  .lart .lcc-try .lcc-go{width:40px;height:40px;background:color-mix(in srgb,var(--bg-0) 14%,transparent)}
+  [data-theme="dark"] .lart .lcc-try .lcc-go{background:color-mix(in srgb,var(--bg-0) 8%,transparent)}
+
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-label{margin-bottom:var(--s-2);line-height:18px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-kicker{line-height:22.5px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead{align-items:flex-start;gap:var(--s-4);padding:20px 0;border:0}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-title{margin-top:var(--s-1);font-size:28px;line-height:1.08}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-dek{margin-top:var(--s-2);max-width:52ch;font-size:15px;line-height:1.5}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go{width:44px;height:44px;margin-top:2px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go svg{width:18px;height:18px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead){display:inline-flex;min-height:44px;color:var(--t0)}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-title{text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--t0) 35%,transparent);text-decoration-thickness:1px;text-underline-offset:4px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-go{display:none}
+
+  .lart .lart-prose--wide ~ .lart-sources{margin-top:56px}
+  .lart .lart-prose--wide ~ .lart-sources summary{min-height:44px;padding:0 var(--s-4) 0 20px;font-size:15px}
+  .lart .lart-prose--wide ~ .lart-sources .lart-chev{width:14px;height:14px}
+  .lart .lart-prose--wide ~ .lart-sources ul{margin-top:12px}
+  .lart .lart-prose--wide ~ .lart-sources li a{padding:4px 0;font-size:15px;line-height:1.4;color:var(--t0);text-decoration-color:color-mix(in srgb,var(--t0) 25%,transparent)}
+}
