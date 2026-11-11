@@ -611,7 +611,10 @@ export const HOME_LAZY_SECTIONS = ['bookmarks', 'try', 'exports', 'examples', 'p
  */
 export async function homeSectionsLoaded(page) {
   await expect.poll(async () => {
-    await page.mouse.wheel(0, 1)
+    // A key is intent to the page (useBelowFoldReady) but scrolls nothing. A wheel would
+    // also start the smooth scroll, which keeps writing its own position for a second and
+    // undoes any scroll a spec aims next (spec 148).
+    await page.keyboard.press('Shift')
     return page.locator('[data-deferred-hold]').count()
   }, { message: 'the below-fold sections never mounted', timeout: 20000, intervals: [500] }).toBe(0)
   for (const id of HOME_LAZY_SECTIONS) {
