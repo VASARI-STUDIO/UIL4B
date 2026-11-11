@@ -513,6 +513,8 @@ function AppHeader() {
       } else {
         openedBy.current = 'click'
         hoverLock.current = true
+        // A hover-leave close may still be pending from a pointer that just left the header.
+        if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
         setSheet(false)
         setOpen(id)
       }
