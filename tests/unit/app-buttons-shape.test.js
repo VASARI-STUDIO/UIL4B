@@ -114,8 +114,9 @@ const KEEP = {
   state: ['is-current'],
 }
 const KEEP_SET = new Set(Object.values(KEEP).flat())
-// Menu rows that reuse the filter-chip class inside a filter menu.
-const KEEP_CONTEXT = ['.lbry-filtermenu']
+// Menu rows that reuse the filter-chip class inside a filter menu, and the Learn index's Clear search:
+// a 40px square with 10px corners inside the 12px-cornered search field (index spec, Learn tools row).
+const KEEP_CONTEXT = ['.lbry-filtermenu', '.srf .lidx-tools .lbry-search-clear']
 // The sales pages are built to their own drawn radii.
 const SALES_SHEETS = new Set(['spectrum.css', 'spectrum-mobile.css', 'spectrum-tools.css', 'spectrum-chrome.css', 'pricing.css'])
 

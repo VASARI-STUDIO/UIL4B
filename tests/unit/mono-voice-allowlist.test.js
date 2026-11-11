@@ -300,6 +300,8 @@ const ALLOWED = {
   },
   'pages/surface.css': {
     '.srf .srf-hex': 'hex',
+    // index spec: mono only on a hex value or the clamp() literal; the matched text in a search hit is that literal
+    '.srf .lidx-hit mark': 'code',
   },
   'pages/tint.css': {
     '.tt .tt-hex-input': 'hex',
