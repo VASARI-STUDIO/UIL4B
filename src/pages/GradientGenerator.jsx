@@ -312,7 +312,7 @@ const tailwindValue = (css) => `bg-[${css.replace(/ /g, '_')}]`
 // it is "Standard", not "Linear".
 const SPACES = [
   { value: 'oklch', label: 'Perceived', real: 'OKLCH', hint: 'OKLCH: blends the way the eye sees colour, so steps look even' },
-  { value: 'srgb', label: 'Standard', real: 'sRGB', hint: 'sRGB — the CSS default, blends the raw red, green and blue values' },
+  { value: 'srgb', label: 'Standard', real: 'sRGB', hint: 'sRGB: the CSS default, blends the raw red, green and blue values' },
 ].map((o) => ({ ...o, ariaLabel: `${o.label} (${o.real})`, title: o.hint }))
 function gradientCssIn(type, angle, stops, space) {
   const css = gradientCss(type, angle, stops)
@@ -730,9 +730,9 @@ function PreviewHero({ stops, type, angle }) {
   return (
     <div className="grd-ctx-view grd-ctx-hero" ref={ref}>
       <div className="grd-ctx-sample" data-box aria-hidden="true" style={{ color: ink.css }}>
-        <p className="grd-ctx-h">Launch week starts Monday</p>
-        <p className="grd-ctx-p">Everything your team needs, in one place.</p>
-        <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Get started</span>
+        <p className="grd-ctx-h">Lessons that fit after school.</p>
+        <p className="grd-ctx-p">Week by week, length by length.</p>
+        <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Book lessons</span>
       </div>
       <span className={`grd-ctx-ratio${ink.low ? ' is-low' : ''}`} role="status">{badge(ink)}</span>
     </div>
@@ -746,7 +746,7 @@ function PreviewButtons({ paint, stops, type, angle }) {
     <div className="grd-ctx-view grd-ctx-ground grd-ctx-btns" aria-hidden="true" ref={ref}>
       {sizes.map((h, i) => {
         const ink = inkFor(stops, type, angle, spots?.[i])
-        return <span key={h} data-box className="grd-ctx-btn" title={badge(ink)} style={{ background: paint, color: ink.css, height: h }}>Get started</span>
+        return <span key={h} data-box className="grd-ctx-btn" title={badge(ink)} style={{ background: paint, color: ink.css, height: h }}>Save limits</span>
       })}
     </div>
   )
@@ -763,8 +763,8 @@ function PreviewSample({ id, paint, stops, type, angle }) {
     <div className="grd-ctx-view grd-ctx-ground" aria-hidden="true">
       <div className="grd-ctx-card">
         <div className="grd-ctx-card-head" style={{ background: paint }} />
-        <p className="grd-ctx-card-t">Quarterly report</p>
-        <p className="grd-ctx-card-p">Revenue is up on last quarter. Open the report to see what changed.</p>
+        <p className="grd-ctx-card-t">Quote on site. Paid by Friday.</p>
+        <p className="grd-ctx-card-p">Write a quote on site, turn it into an invoice with one tap, and see who has paid.</p>
       </div>
     </div>
   )
@@ -1009,7 +1009,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       gate: 'gradient-gallery-edit',
       eyebrow: 'Pro gradient tools',
       title: 'Editing gallery gradients is Pro',
-      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Press Reset, Random or Shuffle from palette to start an editable gradient of your own.',
+      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one is a Pro tool: adding stops, recolouring, changing the type or angle. Prefer to stay free? Press Reset, Random or Shuffle from palette to start an editable gradient of your own.',
       features: [
         'Add, move & recolour stops on any gallery gradient',
         'Switch gradient type and fine-tune the angle',
@@ -2097,7 +2097,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           {editLocked && (
             <p className="grd-note">
               <ToolIcon name="lock-simple" size={13} />
-              <span>Gallery gradient — free to preview &amp; copy. Editing it is a Pro tool; Reset or Random to start a free, editable one.</span>
+              <span>Gallery gradient: free to preview and copy. Editing it is Pro. Press Reset or Random to start one of your own.</span>
             </p>
           )}
           {/* The stage is the canvas's fixed slot. */}
