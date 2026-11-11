@@ -18,6 +18,16 @@ const measurePoster = (view) => {
   return { top: spot('top'), foot: spot('foot') }
 }
 
+// How many hexes fit the Spec card's hex line. Every hex is set in the mono face, so the
+// first one's width stands for all of them; the "+N" takes one slot of its own.
+const measureHexRoom = (view) => {
+  const line = view.querySelector('.grd-spec-hexes')
+  const hex = line?.querySelector('span')
+  if (!line || !hex || !line.clientWidth) return null
+  const gap = parseFloat(getComputedStyle(line).columnGap) || 0
+  return Math.max(2, Math.floor((line.clientWidth + gap) / (hex.getBoundingClientRect().width + gap)))
+}
+
 function Badge({ badge }) {
   if (!badge) return null
   return <span className={`grd-ctx-ratio${badge.low ? ' is-low' : ''}`} role="status">{badge.text}</span>
@@ -46,10 +56,11 @@ function PosterText({ stops, type, angle }) {
 }
 
 function SpecText({ paint, stops, type, angle, oklch, name }) {
-  const hexes = fitHexes(specHexes(stops))
+  const [ref, room] = useMeasured(measureHexRoom)
+  const hexes = fitHexes(specHexes(stops), room || undefined)
   const note = specSampledNote(stops)
   return (
-    <div className="grd-txt">
+    <div className="grd-txt" ref={ref}>
       <div className="grd-txt-box grd-spec-box" aria-hidden="true">
         <div className="grd-spec">
           <div className="grd-spec-head" style={{ background: paint }} />

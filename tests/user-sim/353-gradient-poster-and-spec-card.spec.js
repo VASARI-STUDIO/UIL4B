@@ -234,3 +234,65 @@ test.describe('the Poster badge', () => {
     expect(later).toBe(true)
   })
 })
+
+const FIVE = {
+  type: 'Linear', angle: 90, space: 'oklch', source: 'own',
+  stops: ['#FFD84D', '#F0436A', '#6E6BFF', '#22C55E', '#0EA5E9'].map((color, i) => ({ color, position: i * 25 })),
+}
+const overlap = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+
+test.describe('the scenes clear the preview switch', () => {
+  for (const w of [1440, 1024]) {
+    test(`the poster frame sits below the switch at ${w}`, async ({ page }) => {
+      watch(page, 'a designer looking at the whole poster')
+      await page.setViewportSize({ width: w, height: 900 })
+      await startOn(page, 'poster'); await seed(page, CITRUS); await open(page)
+      const frame = await box(page, '.grd-txt .grd-poster-frame')
+      const bar = await box(page, '.grd-ctx')
+      expect(overlap(frame, bar), `frame top ${frame.y}, switch bottom ${bar.y + bar.height}`).toBe(false)
+    })
+  }
+
+  for (const w of [320, 360, 390]) {
+    test(`the spec card sits below the switch on a ${w} phone`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width: w, height: 760 }, hasTouch: true, isMobile: true })
+      const page = await context.newPage()
+      watch(page, 'a designer on a small phone looking at the spec card')
+      await startOn(page, 'spec'); await seed(page, CITRUS); await open(page)
+      const card = await box(page, '.grd-spec')
+      const bar = await box(page, '.grd-ctx')
+      expect(overlap(card, bar), `card top ${card.y}, switch bottom ${bar.y + bar.height}`).toBe(false)
+      const head = await box(page, '.grd-spec-head')
+      expect(head.height, 'the gradient header still shows').toBeGreaterThanOrEqual(16)
+      const clipped = await page.evaluate(() => { const b = document.querySelector('.grd-spec-body'); return b.scrollHeight - b.clientHeight })
+      expect(clipped, 'the card body is not cut off').toBeLessThanOrEqual(1)
+      await context.close()
+    })
+  }
+})
+
+test.describe('the spec card hex line', () => {
+  for (const w of [1440, 768]) {
+    test(`a five-stop gradient lists all five hexes at ${w}`, async ({ page }) => {
+      watch(page, 'a designer reading the stops off the spec card')
+      await page.setViewportSize({ width: w, height: 1000 })
+      await startOn(page, 'spec'); await seed(page, FIVE); await open(page)
+      await expect(page.locator('.grd-spec-hexes span')).toHaveText(['#FFD84D', '#F0436A', '#6E6BFF', '#22C55E', '#0EA5E9'])
+      const fits = await page.evaluate(() => { const l = document.querySelector('.grd-spec-hexes'); return l.scrollWidth <= l.clientWidth })
+      expect(fits, 'the line does not overflow').toBe(true)
+    })
+  }
+
+  test('nine stops fill the line and count the rest', async ({ page }) => {
+    watch(page, 'a designer with a many-stop gradient')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const nine = { ...FIVE, stops: Array.from({ length: 9 }, (_, i) => ({ color: `#${(i + 1).toString(16).repeat(6)}`.slice(0, 7).toUpperCase(), position: i * 12.5 })) }
+    await startOn(page, 'spec'); await seed(page, nine); await open(page)
+    const shown = await page.locator('.grd-spec-hexes span').allTextContents()
+    const more = shown[shown.length - 1]
+    expect(more).toMatch(/^\+\d$/)
+    expect(shown.length - 1 + Number(more.slice(1))).toBe(9)
+    const fits = await page.evaluate(() => { const l = document.querySelector('.grd-spec-hexes'); return l.scrollWidth <= l.clientWidth })
+    expect(fits, 'the line does not overflow').toBe(true)
+  })
+})

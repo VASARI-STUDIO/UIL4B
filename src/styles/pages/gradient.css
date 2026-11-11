@@ -1412,9 +1412,9 @@
 .grd .grd-txt { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; pointer-events: none; font-family: var(--font); }
 .grd .grd-txt-box { position: absolute; inset: 1px; }
 
-/* The poster is a 4:5 object on the ground from 901px; under that it is the whole stage. */
+/* The poster is a 4:5 object on the ground from 901px, set below the preview switch; under that it is the whole stage. */
 .grd .grd-poster-frame {
-  position: absolute; inset: 40px auto auto 50%;
+  position: absolute; inset: 56px auto auto 50%;
   height: calc(100% - 80px); aspect-ratio: 4 / 5; translate: -50% 0;
   border-radius: 14px; overflow: hidden; isolation: isolate;
 }
@@ -1460,9 +1460,9 @@
   .grd .grd-poster-in { padding: 68px 16px 16px; }
   .grd .grd-poster-h { font-size: 24px; line-height: 1.1; }
   .grd .grd-poster-foot { font-size: 13px; line-height: 18px; }
-  .grd .grd-spec-box { align-items: flex-end; padding: 0 12px 8px; }
-  .grd .grd-spec { flex-direction: column; width: 100%; height: 198px; }
-  .grd .grd-spec-head { flex: 0 0 52px; }
+  .grd .grd-spec-box { align-items: flex-end; padding: 60px 12px 8px; }
+  .grd .grd-spec { flex-direction: column; width: 100%; height: min(198px, 100%); }
+  .grd .grd-spec-head { flex: 0 1 52px; min-height: 16px; }
   .grd .grd-spec-body { flex: 1 1 auto; padding: 12px; }
   .grd .grd-spec-name { font-size: 18px; line-height: 24px; }
   .grd .grd-spec-hexes { display: none; }
