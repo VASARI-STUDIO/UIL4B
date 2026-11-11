@@ -52,6 +52,17 @@ const Go = ({ small }) => (
   </span>
 )
 
+// The last word and the arrow never part, so a wrapped title cannot strand the arrow.
+function TitleGo({ title }) {
+  const i = title.lastIndexOf(' ')
+  return (
+    <>
+      {i > 0 && `${title.slice(0, i)} `}
+      <span className="lidx-nw">{i > 0 ? title.slice(i + 1) : title}<Go /></span>
+    </>
+  )
+}
+
 // Two guides a day, each with the tool that does what it explains.
 function LearnToday() {
   const picks = useMemo(() => pickForDay(LEARN_ARTICLES, dayNumber(new Date()), 2), [])
@@ -64,7 +75,7 @@ function LearnToday() {
         {picks.map((a) => (
           <li className="lidx-art" key={a.slug}>
             <div className="lidx-ah">
-              <Link className="lidx-title" to={`/learn/${a.slug}`}>{a.title}<Go /></Link>
+              <Link className="lidx-title" to={`/learn/${a.slug}`}><TitleGo title={a.title} /></Link>
               <span className="srf-meta lidx-time">{readingMinutes(a.words)} min</span>
             </div>
             <p className="lidx-dek">{a.dek}</p>
@@ -256,7 +267,7 @@ export default function LearnGuideIndex() {
                 {g.hits.map(({ article: a, snippet }) => (
                   <li className="lidx-card lidx-art" key={a.slug}>
                     <div className="lidx-ah">
-                      <Link className="lidx-title" to={`/learn/${a.slug}`}>{a.title}<Go /></Link>
+                      <Link className="lidx-title" to={`/learn/${a.slug}`}><TitleGo title={a.title} /></Link>
                       <span className="srf-meta lidx-time">{readingMinutes(a.words)} min</span>
                     </div>
                     <p className="lidx-dek">{a.dek}</p>
@@ -280,7 +291,7 @@ export default function LearnGuideIndex() {
                 {USING_ROWS.map((r) => (
                   <li className="lidx-card lidx-art" key={r.id}>
                     <div className="lidx-ah">
-                      <Link className="lidx-title" to={r.route}>{r.label}<Go /></Link>
+                      <Link className="lidx-title" to={r.route}><TitleGo title={r.label} /></Link>
                     </div>
                     <p className="lidx-dek">{r.dek}</p>
                   </li>

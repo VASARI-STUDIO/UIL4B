@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import NavIcon from '../components/NavIcon'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { DISCOVER_GROUPS, DISCOVER_LIBRARIES, LEARN_ROADMAP } from '../data/toolTree'
@@ -14,6 +13,7 @@ import { gradientCss } from '../data/gradientGallery'
 import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { BUTTON_ITEMS, buttonCss } from '../data/buttonLibrary'
 import { startersForDay } from '../data/dailyStarters'
+import { KERBSIDE_ICONS, KERBSIDE_BODIES } from '../components/home/try/kerbsideIcons'
 import { FALLBACK_FONTS } from '../data/fallbackFonts'
 import { loadFont, fontStack } from '../utils/googleFonts'
 import { contrastRatio } from '../utils/colors'
@@ -43,7 +43,7 @@ const SURFACES = {
 // Plate samples: the first free rows of each library, as the library lists them.
 const PLATE_PALETTES = LIBRARY_PALETTE_ROWS.slice(0, 3)
 const PLATE_GRADIENTS = LIBRARY_GRADIENT_ROWS.slice(0, 3)
-const PLATE_ICONS = ['palette', 'type', 'icons', 'imagery', 'ai', 'community-prompts']
+const PLATE_ICONS = KERBSIDE_ICONS.slice(0, 6)
 const PLATE_BUTTONS = ['solid', 'outline']
   .map((id) => BUTTON_ITEMS.find((b) => b.id === id))
   .filter(Boolean)
@@ -144,7 +144,11 @@ function FontPlate() {
 function IconPlate() {
   return (
     <div className="srf-icons">
-      {PLATE_ICONS.map((id) => <span key={id}><NavIcon id={id} /></span>)}
+      {PLATE_ICONS.map((id) => (
+        <span key={id}>
+          <svg viewBox="0 0 256 256" fill="currentColor" focusable="false" dangerouslySetInnerHTML={{ __html: KERBSIDE_BODIES[id] }} />
+        </span>
+      ))}
     </div>
   )
 }
