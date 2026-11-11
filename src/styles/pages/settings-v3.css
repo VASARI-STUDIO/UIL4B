@@ -138,3 +138,40 @@ html[data-theme="light"] .stg.stg {
   .stg.stg #set-account .settings-cards > :nth-child(2) { grid-column: 2; }
   .stg.stg #set-account .settings-cards > :nth-child(3) { grid-column: 2; margin-top: 8px; }
 }
+
+/* plan and billing, Pro: facts strip with the colour field above, then Billing and Included side by side */
+.stg.stg .stg-pro { display: flex; flex-direction: column; gap: 32px; }
+.stg.stg .stg-facts { display: block; padding: 32px; border-radius: 16px; overflow: hidden; }
+.stg.stg .stg-facts .settings-card-body { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.stg.stg .stg-facts .settings-row--fact { display: block; padding: 0; box-shadow: none; }
+.stg.stg .stg-facts .settings-row--fact > .settings-row-label { margin: 0 0 4px; font-size: 14px; }
+.stg.stg .stg-facts .settings-row-value { margin: 0; font-size: 20px; line-height: 1.3; font-weight: 600; letter-spacing: -.01em; }
+.stg.stg .stg-facts .sub-active-meta { margin-top: 4px; font-size: 14px; font-weight: 400; color: var(--sec); }
+.stg.stg .stg-facts .sub-ends-note { grid-column: 1 / -1; margin: 0; }
+.stg.stg .stg-facts.sub-checking .settings-card-body { display: block; }
+.stg.stg .stg-facts.sub-checking .settings-row-value { font-size: 20px; color: var(--sec); }
+.stg.stg .stg-pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px; align-items: stretch; }
+.stg.stg .stg-pair--solo { grid-template-columns: minmax(0, 1fr); }
+.stg.stg .stg-billing, .stg.stg .stg-incl { display: block; padding: 32px; background: var(--surface); border-radius: 16px; }
+.stg.stg .stg-h3 { margin: 0; font-family: inherit; font-size: 20px; line-height: 1.3; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+.stg.stg .stg-meta { margin: 16px 0 24px; font-size: 14px; line-height: 1.45; color: var(--sec); }
+.stg.stg .stg-incl .sub-tier-list { display: block; columns: 2; column-gap: 32px; margin: 24px 0 0; padding: 0; list-style: none; }
+.stg.stg .stg-incl .sub-tier-list li { break-inside: avoid; margin: 0 0 12px; font-size: 16px; line-height: 1.5; color: var(--ink); }
+.stg.stg .stg-billing .sub-active-btns { flex-wrap: wrap; }
+.stg.stg .stg-billing .sub-active-cancel { color: var(--ink); }
+.stg.stg .stg-billing .sub-portal-err { margin-top: 16px; }
+@media (max-width: 1023px) { .stg.stg .stg-facts .settings-card-body { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stg.stg .stg-pair { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 719px) { .stg.stg .stg-facts, .stg.stg .stg-billing, .stg.stg .stg-incl { padding: 24px; } .stg-field { margin: -24px -24px 12px; } .stg.stg .stg-incl .sub-tier-list { columns: 1; } }
+
+/* price cross-fade: 150ms, opacity only */
+.stg-xf { display: inline-grid; }
+.stg-xf > * { grid-area: 1 / 1; }
+.stg-xf-in { animation: stg-xf-in 150ms ease-out; }
+.stg-xf-out { animation: stg-xf-out 150ms ease-out forwards; pointer-events: none; }
+@keyframes stg-xf-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes stg-xf-out { from { opacity: 1; } to { opacity: 0; } }
+.stg.stg .sub-billing-toggle button { gap: 0; }
+.stg.stg .sub-tier .stg-field { margin-bottom: 0; }
+.stg.stg .sub-tier .stg-fcap { margin-bottom: 0; }
+.stg.stg .sub-tier-btn { align-self: flex-start; width: max-content; min-width: 168px; }
+@media (max-width: 719px) { .stg.stg .sub-tier-btn { align-self: stretch; width: auto; } }

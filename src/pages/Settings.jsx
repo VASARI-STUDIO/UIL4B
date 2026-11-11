@@ -50,6 +50,24 @@ import '../styles/deferred/tool-shell.css'
 import '../styles/pages/settings.css'
 import '../styles/pages/settings-v3.css'
 
+// Two prices, one slot: the new figure fades in over 150ms while the old one fades out on top of it.
+// Opacity only, so reduced motion needs no second version.
+function PriceXfade({ value }) {
+  const [state, setState] = useState({ cur: value, prev: null })
+  if (state.cur !== value) setState({ cur: value, prev: state.cur })
+  useEffect(() => {
+    if (state.prev === null) return undefined
+    const t = setTimeout(() => setState((s) => ({ ...s, prev: null })), 150)
+    return () => clearTimeout(t)
+  }, [state.prev])
+  return (
+    <span className="stg-xf">
+      <span className={state.prev === null ? undefined : 'stg-xf-in'} key={state.cur}>{state.cur}</span>
+      {state.prev !== null && <span className="stg-xf-out" aria-hidden="true">{state.prev}</span>}
+    </span>
+  )
+}
+
 function Check() {
   return (
     <svg className="sub-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1421,24 +1439,25 @@ export default function Settings({ toast }) {
     .sort((a, b) => (Date.parse(b.updatedAt || b.createdAt) || 0) - (Date.parse(a.updatedAt || a.createdAt) || 0))
     .find((p) => { const c = activeColour(p.design); return c && c.toLowerCase() !== '#0051ff' })
   const leadColour = leadProject ? activeColour(leadProject.design) : ''
+  const colourField = leadProject ? (
+    <>
+      <div className="stg-field" aria-hidden="true" style={{ background: leadColour }} />
+      <div className="stg-fcap"><span className="n">{leadProject.name || 'Untitled'} · your latest project</span><span className="h">{leadColour.toUpperCase()}</span></div>
+    </>
+  ) : (
+    <div className="stg-field stg-field--empty">
+      <p>Your brand colour shows here once you save a palette.</p>
+      <Link className="settings-linkbtn" to="/create/palette">Open in Palette Builder</Link>
+    </div>
+  )
   const tierPro = (
     <div className="sub-tier sub-tier-pro">
-      {leadProject ? (
-        <>
-          <div className="stg-field" aria-hidden="true" style={{ background: leadColour }} />
-          <div className="stg-fcap"><span className="n">{leadProject.name || 'Untitled'} · your latest project</span><span className="h">{leadColour.toUpperCase()}</span></div>
-        </>
-      ) : (
-        <div className="stg-field stg-field--empty">
-          <p>Your brand colour shows here once you save a palette.</p>
-          <Link className="settings-linkbtn" to="/create/palette">Open in Palette Builder</Link>
-        </div>
-      )}
+      {colourField}
       <div className="sub-tier-head">
         <div className="sub-tier-name">Pro</div>
         <div className="sub-tier-price">
           <span className={`sub-tier-amount${priceStatus === 'live' || priceStatus === 'loading' || priceStatus === 'retrying' ? '' : ' is-word'}`}>
-            {canCheckout(priceStatus) ? offer.amountLabel : priceCopy.word}
+            <PriceXfade value={canCheckout(priceStatus) ? offer.amountLabel : priceCopy.word} />
           </span>
           {canCheckout(priceStatus) && <span className="sub-tier-per">per month</span>}
         </div>
@@ -1552,7 +1571,8 @@ export default function Settings({ toast }) {
               // have both answered: before that, isPro is false for everyone,
               // so a Pro subscriber would see Free marked as their plan. One row
               // at the Pro Plan row's height, so nothing jumps when it resolves.
-              <div className="settings-card sub-active sub-checking" aria-busy="true">
+              <div className="settings-card sub-active sub-checking stg-facts" aria-busy="true">
+                {colourField}
                 <div className="settings-card-body">
                   <div className="settings-row settings-row--fact">
                     <div className="settings-row-label">Plan</div>
@@ -1561,33 +1581,37 @@ export default function Settings({ toast }) {
                 </div>
               </div>
             ) : isPro ? (
-              <div className="settings-card sub-active">
-                <div className="settings-card-body">
-                  <div className="settings-row settings-row--fact">
-                    <div className="settings-row-label">Plan</div>
-                    <div className="settings-fact-body">
-                      <div className="settings-row-value sub-active-title">UI L4B Pro</div>
-                      {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
+              <div className="stg-pro">
+                <div className="settings-card sub-active stg-facts">
+                  {colourField}
+                  <div className="settings-card-body">
+                    <div className="settings-row settings-row--fact">
+                      <div className="settings-row-label">Plan</div>
+                      <div className="settings-fact-body">
+                        <div className="settings-row-value sub-active-title">UI L4B Pro</div>
+                        {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
+                      </div>
                     </div>
+                    {!noBillingNote && proFacts.map(([label, value]) => (
+                      <div className="settings-row settings-row--fact" key={label}>
+                        <div className="settings-row-label">{label}</div>
+                        <div className="settings-row-value">{value}</div>
+                      </div>
+                    ))}
+                    {!noBillingNote && endsOn && (
+                      <p className="settings-row-meta sub-ends-note">Your plan ends on {endsOn}. Open billing to keep Pro.</p>
+                    )}
                   </div>
-                  {!noBillingNote && proFacts.map(([label, value]) => (
-                    <div className="settings-row settings-row--fact" key={label}>
-                      <div className="settings-row-label">{label}</div>
-                      <div className="settings-row-value">{value}</div>
-                    </div>
-                  ))}
-                  {!noBillingNote && endsOn && (
-                    <p className="settings-row-meta sub-ends-note">Your plan ends on {endsOn}. Open billing to keep Pro.</p>
-                  )}
+                </div>
+                <div className={`stg-pair${subscription ? '' : ' stg-pair--solo'}`}>
                   {/* Admins without a real Stripe subscription have no billing
                       portal to open — no buttons rather than a 500. */}
                   {!!subscription && (
-                    <div className="settings-row sub-active-actions">
-                      <div className="settings-row-main">
-                        <div className="settings-row-label">Billing</div>
-                      </div>
+                    <div className="settings-card stg-billing sub-active-actions">
+                      <h3 className="stg-h3" id="set-billing-h">Billing</h3>
+                      <p className="stg-meta">Opens Stripe’s billing page in this tab.</p>
                       <div className="sub-active-btns">
-                        <button className="btn btn-s" onClick={() => openBilling()} disabled={!!portalBusy} aria-busy={portalBusy === 'manage'}>
+                        <button className="btn btn-accent" onClick={() => openBilling()} disabled={!!portalBusy} aria-busy={portalBusy === 'manage'}>
                           {portalBusy === 'manage' ? 'Opening…' : 'Manage billing'}
                         </button>
                         {!subscription?.cancelAtPeriodEnd && (
@@ -1599,9 +1623,9 @@ export default function Settings({ toast }) {
                       {portalError && <div className="settings-field-err sub-portal-err" role="alert">{portalError}</div>}
                     </div>
                   )}
-                  <div className="settings-row settings-row--open">
-                    <div className="settings-row-label">Included</div>
-                    <ul className="sub-tier-list">
+                  <div className="settings-card stg-incl">
+                    <h3 className="stg-h3" id="set-included-h">Included</h3>
+                    <ul className="sub-tier-list" aria-labelledby="set-included-h">
                       {PRO_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
                     </ul>
                   </div>
