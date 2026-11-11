@@ -159,7 +159,7 @@ export async function serveThemeExport(req, res, { body, decoded, plan, consume,
     return res.status(500).json({ error: 'The document could not be created', code: 'build_failed' })
   }
 
-  let size = 0
+  let size
   try { size = JSON.stringify(body).length } catch { size = Infinity }
   if (size > MAX_THEME_BODY_CHARS) {
     return res.status(413).json({ error: 'That design is too large to export', code: 'design_too_large' })
