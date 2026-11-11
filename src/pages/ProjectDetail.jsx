@@ -11,6 +11,7 @@ import { savedColoursOf } from '../utils/savedColours'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
 import IconPicker from '../components/userhome/IconPicker'
+import ConfirmDialog from '../components/overlay/ConfirmDialog'
 import ProjectLinkGone from '../components/userhome/ProjectLinkGone'
 import { useWasSignedIn } from '../hooks/useWasSignedIn'
 import { UPGRADE_LINE, byRecent, projectSlots4, projectStatus, upgradeOffer } from '../components/userhome/workspace'
@@ -81,7 +82,6 @@ function ProjectDetail({ id, toast }) {
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleteText, setDeleteText] = useState('')
   const [exporting, setExporting] = useState(false)
   // The pick the export dialog opens on, fixed when it opens.
   const [exportPreset, setExportPreset] = useState(null)
@@ -259,24 +259,16 @@ function ProjectDetail({ id, toast }) {
           </div>
         </div>
 
-        {confirmDelete && (
-          <div className="pjd-confirm">
-            <p>Type <strong>{project.name}</strong> to delete it. This cannot be undone.</p>
-            <input
-              value={deleteText}
-              onChange={(e) => setDeleteText(e.target.value)}
-              placeholder={project.name}
-              aria-label={`Type the project name to confirm deleting ${project.name}`}
-              autoFocus
-            />
-            <div className="pjd-confirm-actions">
-              <button type="button" className="pjd-btn is-danger" disabled={deleteText !== project.name} onClick={onDelete}>
-                Permanently delete
-              </button>
-              <button type="button" className="pjd-btn" onClick={() => { setConfirmDelete(false); setDeleteText('') }}>Cancel</button>
-            </div>
-          </div>
-        )}
+        <ConfirmDialog
+          open={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={onDelete}
+          name={project.name}
+          title={`Delete ${project.name}?`}
+          action="Permanently delete"
+          fieldLabel={`Type the project name to confirm deleting ${project.name}`}
+          strip={savedColours.slice(0, 4).map((c) => c.hex)}
+        />
 
         <div className="pjd-progress">
           <div className="pjd-progress-track" aria-hidden="true"><span style={{ width: status.pct }} /></div>
