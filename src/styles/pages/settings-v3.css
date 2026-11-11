@@ -129,3 +129,12 @@ html[data-theme="light"] .stg.stg {
 @media (max-width: 1343px) { .stg.stg .sub-tiers { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 @media (max-width: 899px) { .stg.stg .sub-tiers { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .stg.stg .btn:active, .stg.stg .settings-nav-item:active { transform: none; } }
+
+/* account: Public profile left, Sign-in and security and Delete account right */
+.stg.stg #set-account { max-width: none; }
+@media (min-width: 1024px) {
+  .stg.stg #set-account .settings-cards { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 32px 24px; align-items: start; }
+  .stg.stg #set-account .settings-cards > :nth-child(1) { grid-row: 1 / span 2; }
+  .stg.stg #set-account .settings-cards > :nth-child(2) { grid-column: 2; }
+  .stg.stg #set-account .settings-cards > :nth-child(3) { grid-column: 2; margin-top: 8px; }
+}
