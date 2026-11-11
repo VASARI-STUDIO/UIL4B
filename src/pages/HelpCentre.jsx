@@ -22,10 +22,9 @@
 //
 // The "What is not built yet?" job is admin-only: unfinished tools are hidden
 // from everyone else, and the answer would promise a list they cannot see.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useIsAdmin } from '../hooks/useIsAdmin'
-import useMediaQuery from '../hooks/useMediaQuery'
 import {
   ColourDemo, CostDemo, FilesDemo, IconsDemo, SaveDemo, SoonDemo, TypeDemo,
 } from '../components/HelpJobDemos'
@@ -35,6 +34,9 @@ import { HELP_ANSWERS, HELP_JOBS, HELP_JOB_HASHES, LIVE_TOOLS, SOON_TOOLS } from
 // types the sentence instead.
 import { SURFACE_LINE, line } from '../data/positioning'
 import SpectrumIcon from '../components/spectrum/SpectrumIcon'
+import ReadingNext from '../components/ReadingNext'
+import ReadingEnd from '../components/ReadingEnd'
+import { LEARN_ARTICLES } from '../data/learnIndex'
 import '../styles/pages/content.css'
 import '../styles/pages/help.css'
 import '../styles/pages/help-router.css'
@@ -59,12 +61,33 @@ function jobFromHash(hash, jobs) {
   return jobs.find((j) => j.id === id)?.id || null
 }
 
+/** Every string a job answers with, for the search to look through. */
+function jobTexts(job) {
+  const more = (job.more || []).flatMap((id) => {
+    const item = HELP_ANSWERS.find((a) => a.id === id)
+    return item ? [item.q, item.a] : []
+  })
+  return [job.label, job.heading, job.lede, ...more]
+}
+
+/** The stretch of text around a match, split so the match can be set bold. */
+function around(text, query) {
+  const at = text.toLowerCase().indexOf(query)
+  const from = Math.max(0, at - 36)
+  const to = Math.min(text.length, at + query.length + 56)
+  return {
+    before: (from > 0 ? '\u2026' : '') + text.slice(from, at),
+    hit: text.slice(at, at + query.length),
+    after: text.slice(at + query.length, to) + (to < text.length ? '\u2026' : ''),
+  }
+}
+
 function Panel({ job, open }) {
   const Demo = DEMOS[job.id]
   return (
     <div className="hlr-ans" id={panelId(job)} hidden={!open}>
       {job.start && <p className="hlp-start-opens">Opens with {job.start.opensWith}</p>}
-      <h2 className="hlr-h2">{job.heading}</h2>
+      <h2 className="hlr-h2" id={`${panelId(job)}-h`} tabIndex={-1}>{job.heading}</h2>
       <p className="hlr-lede">{job.lede}</p>
       {Demo && <Demo />}
       {(job.more || []).map((id) => {
@@ -93,7 +116,6 @@ export default function HelpCentre() {
   // Unfinished tools are hidden from everyone but admins, so the page's
   // "still being built" figure and its job about them are admin-only too.
   const { isAdmin } = useIsAdmin()
-  const wide = useMediaQuery('(min-width: 960px)')
   const { hash } = useLocation()
   const jobs = useMemo(() => HELP_JOBS.filter((j) => !j.adminOnly || isAdmin), [isAdmin])
 
@@ -109,8 +131,21 @@ export default function HelpCentre() {
     if (target) setOpenId(target)
   }
 
-  const known = jobs.some((j) => j.id === openId)
-  const active = known ? openId : (wide ? jobs[0].id : null)
+  const active = jobs.some((j) => j.id === openId) ? openId : null
+  const [q, setQ] = useState('')
+  const focusJob = useRef(null)
+  const query = q.trim().toLowerCase()
+  const hits = useMemo(() => {
+    if (!query) return null
+    const jobHits = jobs.flatMap((j) => {
+      const found = jobTexts(j).find((t) => t.toLowerCase().includes(query))
+      if (!found) return []
+      const named = j.label.toLowerCase().includes(query)
+      return [{ job: j, snip: named ? null : around(found, query) }]
+    })
+    const guideHits = LEARN_ARTICLES.filter((a) => `${a.title} ${a.dek}`.toLowerCase().includes(query))
+    return { jobHits, guideHits }
+  }, [query, jobs])
 
   useEffect(() => {
     const target = jobFromHash(hash, jobs)
@@ -118,9 +153,24 @@ export default function HelpCentre() {
   }, [hash, jobs])
 
   const press = (id) => {
-    // On a narrow screen a second press closes the row; the stage always has one.
-    setOpenId(!wide && active === id ? null : id)
+    setOpenId(active === id ? null : id)
   }
+
+  // Choosing a search result opens its answer and puts focus on the answer's
+  // heading, since the result row it came from is gone.
+  const choose = (job) => {
+    focusJob.current = job
+    setQ('')
+    setOpenId(job.id)
+  }
+  useEffect(() => {
+    const job = focusJob.current
+    if (!job || query) return
+    focusJob.current = null
+    const h = document.getElementById(`${panelId(job)}-h`)
+    h?.focus({ preventScroll: true })
+    h?.scrollIntoView({ block: 'start' })
+  }, [query, openId])
 
   return (
     <div className="sec cpg hlp">
@@ -144,9 +194,56 @@ export default function HelpCentre() {
         </p>
       </header>
 
-      <section className="hlr" id="faq" aria-labelledby="hlr-q">
-        <p className="hlr-q" id="hlr-q">What are you here to do?</p>
-        <div className="hlr-grid">
+      <div className="hlf">
+        <label className="hlf-label" htmlFor="hlf-q">Search help and guides</label>
+        <input
+          id="hlf-q"
+          className="hlf-input"
+          type="search"
+          autoComplete="off"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+
+      {hits ? (
+        <section className="hlr" id="faq" aria-labelledby="hlr-q">
+          <p className="hlr-q" id="hlr-q" role="status">
+            {hits.jobHits.length + hits.guideHits.length > 0
+              ? `${hits.jobHits.length + hits.guideHits.length} results for \u201c${q.trim()}\u201d`
+              : `Nothing matches \u201c${q.trim()}\u201d. Try a tool name, or ask us.`}
+          </p>
+          {hits.jobHits.length + hits.guideHits.length === 0 && (
+            <Link className="hlp-contact-link" to="/feedback?type=help">Contact support</Link>
+          )}
+          <ul className="hlr-jobs" id="about">
+            {hits.jobHits.map(({ job, snip }) => (
+              <li key={job.id}>
+                <button type="button" className="hlr-job hlr-hit" onClick={() => choose(job)}>
+                  <span className="hlr-hit-text">
+                    <span>{job.label}</span>
+                    {snip && <span className="hlr-hit-d">{snip.before}<b>{snip.hit}</b>{snip.after}</span>}
+                  </span>
+                  <span className="hlr-tick" aria-hidden="true"><SpectrumIcon name="arrow-right" size={18} /></span>
+                </button>
+              </li>
+            ))}
+            {hits.guideHits.map((a) => (
+              <li key={a.slug}>
+                <Link className="hlr-job hlr-hit" to={`/learn/${a.slug}`}>
+                  <span className="hlr-hit-text">
+                    <span>{a.title}</span>
+                    <span className="hlr-hit-d">Guide</span>
+                  </span>
+                  <span className="hlr-tick" aria-hidden="true"><SpectrumIcon name="arrow-right" size={18} /></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <section className="hlr" id="faq" aria-labelledby="hlr-q">
+          <p className="hlr-q" id="hlr-q">What are you here to do?</p>
           <ul className="hlr-jobs" id="about" aria-labelledby="hlr-q">
             {jobs.map((job) => (
               <li key={job.id}>
@@ -161,17 +258,15 @@ export default function HelpCentre() {
                   <span>{job.label}</span>
                   <span className="hlr-tick" aria-hidden="true"><SpectrumIcon name="arrow-right" size={18} /></span>
                 </button>
-                {!wide && <Panel job={job} open={active === job.id} />}
+                <Panel job={job} open={active === job.id} />
               </li>
             ))}
           </ul>
-          {wide && (
-            <div className="hlr-stage">
-              {jobs.map((job) => <Panel key={job.id} job={job} open={active === job.id} />)}
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
+
+      <ReadingNext label="Learn why the tools work the way they do" slugs={['colour-contrast', 'type-scales', 'typeface-metrics']} />
+      <ReadingEnd />
     </div>
   )
 }

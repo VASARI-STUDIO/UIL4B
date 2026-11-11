@@ -163,7 +163,7 @@ export const HELP_JOBS = Object.freeze([
     heading: 'The palette tool opens with a palette already drawn.',
     lede: 'Change the base and the tints, the gradient and the contrast readings all move with it.',
     to: startOf('colour').to,
-    cta: 'Open the palette builder',
+    cta: 'Open in Palette',
   }),
   Object.freeze({
     id: 'type',
@@ -172,7 +172,7 @@ export const HELP_JOBS = Object.freeze([
     heading: 'Two numbers set every size: a base and a ratio.',
     lede: 'The Type Scale tool opens on the ladder, not a form, and exports the clamp() that carries it between two viewports.',
     to: startOf('type').to,
-    cta: 'Open Type Scale',
+    cta: 'Open in Type Scale',
   }),
   Object.freeze({
     id: 'icons',
@@ -181,7 +181,7 @@ export const HELP_JOBS = Object.freeze([
     heading: 'Search the whole library and copy the SVG, signed out.',
     lede: `Saving your own custom icons needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
     to: startOf('icons').to,
-    cta: 'Open the Icon Library',
+    cta: 'Open in Icon Library',
   }),
   Object.freeze({
     id: 'files',
@@ -190,7 +190,7 @@ export const HELP_JOBS = Object.freeze([
     heading: 'Drop a file. It converts in your browser.',
     lede: 'Images change format; videos give up their frames. Conversion and frame extraction run in your browser.',
     to: startOf('files').to,
-    cta: 'Open the File Converter',
+    cta: 'Open in File Converter',
   }),
   Object.freeze({
     id: 'save',
