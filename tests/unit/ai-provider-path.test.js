@@ -767,7 +767,8 @@ test('the break-glass code is never read from the query string', async () => {
 
 test('a failed plan or usage read returns fixed text and keeps the detail in the log', async () => {
   const DETAIL = 'PERMISSION_DENIED: Missing or insufficient permissions on projects/uil4b-prod'
-  const signedIn = { adminAuth: () => ({ verifyIdToken: async () => ({ uid: 'u1', email: 'a@example.com', email_verified: true }) }) }
+  // The attempt limits are not under test here; null lets the request reach the plan and usage reads.
+  const signedIn = { adminAuth: () => ({ verifyIdToken: async () => ({ uid: 'u1', email: 'a@example.com', email_verified: true }) }), aiAccountRefusal: async () => null, aiSharedRefusal: async () => null }
   const post = { method: 'POST', query: {}, headers: { authorization: 'Bearer t' }, body: { task: 'generate-prompt', description: 'a red bicycle' } }
 
   const planFails = loadAi({ stubs: { ...signedIn, planForUser: () => { throw new Error(DETAIL) } } })
