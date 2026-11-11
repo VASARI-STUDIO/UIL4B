@@ -11,7 +11,7 @@ import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import {
   ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon, SlidePills,
 } from '../components/tool/ToolLayout'
-import { sampleStopsOklch } from '../components/tool/oklch'
+import { gradientCssIn, gradientCssText, gradientSvg } from '../utils/gradientExport'
 import SaveShareMenu, { SaveShareItem } from '../components/tool/SaveShareMenu'
 import { GRAD_TYPE_WEIGHTS, rollGradient, parseMoodFilters, moodFor, moodWords, poolMatching } from '../utils/gradientRandom'
 import { pushRecent } from '../utils/gradientScore'
@@ -262,32 +262,6 @@ function CopyFace({ icon, className, children }) {
   )
 }
 
-// Build a standalone, paste-ready SVG for a linear or radial gradient. The CSS
-// angle (0deg = up, 90deg = right, clockwise) is converted to the gradient
-// vector SVG wants. Conic isn't representable as an SVG gradient, so callers
-// only offer SVG for linear/radial.
-function gradientSvg(type, angle, stops, space = 'srgb') {
-  // SVG gradients only interpolate in sRGB, so an OKLCH gradient is exported
-  // as sRGB stops sampled every 5% along the OKLCH path — the SVG then paints
-  // the same ramp the CSS does rather than silently a different one.
-  const source = space === 'oklch' ? sampleStopsOklch(stops, 5) : stops
-  const stopEls = [...source]
-    .sort((a, b) => a.position - b.position)
-    .map(s => `      <stop offset="${Math.round(s.position)}%" stop-color="${s.color.toUpperCase()}" />`)
-    .join('\n')
-  let def
-  if (type === 'Radial') {
-    def = `    <radialGradient id="grad" cx="50%" cy="50%" r="75%">\n${stopEls}\n    </radialGradient>`
-  } else {
-    const rad = ((angle % 360) + 360) % 360 * Math.PI / 180
-    const dx = Math.sin(rad), dy = -Math.cos(rad)
-    const x1 = (50 - dx * 50).toFixed(1), y1 = (50 - dy * 50).toFixed(1)
-    const x2 = (50 + dx * 50).toFixed(1), y2 = (50 + dy * 50).toFixed(1)
-    def = `    <linearGradient id="grad" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">\n${stopEls}\n    </linearGradient>`
-  }
-  return `<svg width="600" height="400" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">\n  <defs>\n${def}\n  </defs>\n  <rect width="600" height="400" fill="url(#grad)" />\n</svg>`
-}
-
 // Turn a CSS gradient value into a Tailwind arbitrary value. Tailwind reads
 // underscores as spaces inside arbitrary values, so every space becomes `_`.
 const tailwindValue = (css) => `bg-[${css.replace(/ /g, '_')}]`
@@ -308,14 +282,6 @@ const SPACES = [
   { value: 'oklch', label: 'Perceived', real: 'OKLCH', hint: 'OKLCH: blends the way the eye sees colour, so steps look even' },
   { value: 'srgb', label: 'Standard', real: 'sRGB', hint: 'sRGB — the CSS default, blends the raw red, green and blue values' },
 ].map((o) => ({ ...o, ariaLabel: `${o.label} (${o.real})`, title: o.hint }))
-function gradientCssIn(type, angle, stops, space) {
-  const css = gradientCss(type, angle, stops)
-  if (space !== 'oklch') return css
-  const open = css.indexOf('(') + 1
-  if (type === 'Radial') return `${css.slice(0, open)}in oklch, ${css.slice(open)}`
-  const comma = css.indexOf(', ', open)
-  return `${css.slice(0, comma)} in oklch${css.slice(comma)}`
-}
 
 // A browser without `in oklch` (Chrome < 111, Safari < 16.2) drops the whole
 // declaration, and the canvas would paint nothing. It paints the sRGB twin
@@ -984,7 +950,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const exportCode = useMemo(() => {
     if (effFmt === 'tailwind') return tailwindValue(css)
     if (effFmt === 'svg') return gradientSvg(type, angle, stops, space)
-    return `background: ${css};`
+    return gradientCssText(type, angle, stops, space)
   }, [effFmt, css, type, angle, stops, space])
 
   // Persist to the shared design so the gradient follows the user across tools.
@@ -2043,7 +2009,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               {/* Seams, no rows yet: "Copy CSS with finishes" (a finish is on),
                   Curtains and Beams (their own CSS and the SVG refusal), and
                   "Download image" (Pro). */}
-              <SaveShareItem onClick={() => copyExport(`background: ${css};`)}>Copy CSS</SaveShareItem>
+              <SaveShareItem onClick={() => copyExport(gradientCssText(type, angle, stops, space))}>Copy CSS</SaveShareItem>
               <SaveShareItem onClick={() => copyExport(tailwindValue(css))}>Copy Tailwind class</SaveShareItem>
               <SaveShareItem
                 icon="download"
