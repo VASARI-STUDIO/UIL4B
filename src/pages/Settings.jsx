@@ -34,6 +34,7 @@ import UserName from '../components/UserName'
 import { useProject } from '../contexts/ProjectContext'
 import { activeColour } from '../utils/projectTints'
 import ThemeChoice from '../components/ThemeChoice'
+import { useTheme } from '../contexts/ThemeContext'
 import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
 import { collectStorage, buildExport, keysToClear } from '../utils/dataExport'
 import { initialOf } from '../utils/initials'
@@ -878,6 +879,7 @@ export default function Settings({ toast }) {
   useEffect(() => { openFirebaseGate() }, [])
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
+  const { themePref } = useTheme()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading, planKnown } = useSubscription()
   // True until both the account and its plan have answered. Neither plan is
   // shown before then: isPro is false for everyone while the plan is on its way.
@@ -1234,9 +1236,9 @@ export default function Settings({ toast }) {
   // Recount whenever the Data panel is opened, and after a clear, so the figure
   // shown is the figure on disk.
   useEffect(() => {
-    if (active !== 'data') return
+    if (active !== 'data' && !(isPhone && phoneView === 'list')) return
     setLocalKeyCount(Object.keys(collectStorage(window.localStorage)).length)
-  }, [active, confirmClear])
+  }, [active, confirmClear, isPhone, phoneView])
 
   // Enumerates storage rather than walking a hand-written list. The old version
   // iterated 15 named keys while the app writes about forty — measured on a
@@ -1347,6 +1349,20 @@ export default function Settings({ toast }) {
     { id: 'data', label: t('settings.dataManagement') || 'Your data' },
     { id: 'privacy', label: t('settings.privacyLegal') || 'Privacy' },
   ]
+
+  // The phone overview: the sections in three groups, each row carrying its
+  // current value. Signed out, Account is not among the sections.
+  const THEME_WORD = { light: 'Light', dark: 'Dark', system: 'System' }
+  const rowValues = {
+    account: userProfile?.displayName || (user?.email || '').split('@')[0],
+    support: !user || planPending ? '' : isPro ? 'UI L4B Pro' : 'Free',
+    accessibility: `${THEME_WORD[themePref] || ''}${reducedMotion ? ', reduced motion on' : ''}`,
+    language: languages.find((l) => l.code === lang)?.native || '',
+    data: `${localKeyCount} item${localKeyCount === 1 ? '' : 's'}`,
+  }
+  const sectionGroups = [['account', 'support'], ['accessibility', 'language'], ['data', 'privacy']]
+    .map((ids) => sections.filter((s) => ids.includes(s.id)))
+  const showOverview = isPhone && phoneView === 'list'
 
   // Roving tabindex: Arrow/Home/End move the active tab, matching the ARIA
   // authoring pattern for a vertical tablist.
@@ -1499,7 +1515,19 @@ export default function Settings({ toast }) {
           </button>
         )}
         <h1 className="stg-title">Settings</h1>
-        {!(isPhone && phoneView === 'section') && (
+        {showOverview && user && (
+          <div className="stg-id">
+            <div className="stg-id-av" aria-hidden="true">
+              {userProfile?.photoURL ? <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" /> : <span>{initialOf(userProfile?.displayName, user.email)}</span>}
+            </div>
+            <div className="stg-id-n">
+              <b>{rowValues.account}</b>
+              <span>{user.email}</span>
+            </div>
+          </div>
+        )}
+        {showOverview && !user && !authLoading && <Link className="stg-signin" to="/login">Sign in</Link>}
+        {!(isPhone && phoneView === 'section') && !(showOverview && !user) && (
           <p className="stg-status">
             {!user ? 'Signed out, everything UI L4B keeps is in this browser, and only here.' : (
               <>
@@ -1533,24 +1561,39 @@ export default function Settings({ toast }) {
           aria-orientation={isPhone ? undefined : 'vertical'}
           hidden={isPhone && phoneView === 'section'}
         >
-          {sections.map((s, i) => (
-            <button
-              key={s.id}
-              id={`settab-${s.id}`}
-              role={isPhone ? undefined : 'tab'}
-              aria-selected={isPhone ? undefined : active === s.id}
-              aria-controls={isPhone ? undefined : `set-${s.id}`}
-              tabIndex={isPhone || active === s.id ? 0 : -1}
-              ref={(node) => { tabRefs.current[i] = node }}
-              className={`settings-nav-item${active === s.id ? ' active' : ''}`}
-              onClick={() => pickSection(s.id)}
-              onKeyDown={isPhone ? undefined : (event) => onTabKeyDown(event, i)}
-            >
-              <NavIcon id={s.id} />
-              <span>{s.label}</span>
-              {isPhone && <Chevron />}
-            </button>
-          ))}
+          {(isPhone ? sectionGroups : [sections]).map((group, g) => {
+            const rows = group.map((s) => {
+              const i = sections.indexOf(s)
+              return (
+                <button
+                  key={s.id}
+                  id={`settab-${s.id}`}
+                  role={isPhone ? undefined : 'tab'}
+                  aria-selected={isPhone ? undefined : active === s.id}
+                  aria-controls={isPhone ? undefined : `set-${s.id}`}
+                  tabIndex={isPhone || active === s.id ? 0 : -1}
+                  ref={(node) => { tabRefs.current[i] = node }}
+                  className={`settings-nav-item${active === s.id ? ' active' : ''}`}
+                  onClick={() => pickSection(s.id)}
+                  onKeyDown={isPhone ? undefined : (event) => onTabKeyDown(event, i)}
+                >
+                  {isPhone ? (
+                    <>
+                      <span className="stg-ll">{s.label}</span>
+                      <span className="stg-lv">{rowValues[s.id]}</span>
+                      <Chevron />
+                    </>
+                  ) : (
+                    <>
+                      <NavIcon id={s.id} />
+                      <span>{s.label}</span>
+                    </>
+                  )}
+                </button>
+              )
+            })
+            return isPhone ? <div key={g} className="stg-lgroup">{rows}</div> : rows
+          })}
         </nav>
 
         <div className="settings-content" hidden={isPhone && phoneView === 'list'}>

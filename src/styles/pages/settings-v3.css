@@ -31,6 +31,7 @@ html[data-theme="light"] .stg.stg {
 @media (hover: hover) { .stg.stg .settings-nav-item:hover { background: transparent; color: var(--ink); } .stg.stg .settings-nav-item.active:hover { background: var(--surface); } }
 .stg.stg .settings-nav-item:active { transform: scale(.97); }
 .stg.stg .settings-content { display: block; max-width: none; margin-top: 48px; }
+.stg.stg .settings-nav[hidden], .stg.stg .settings-content[hidden] { display: none; }
 
 /* section head and panels */
 .stg.stg .settings-section-h { margin: 0 0 32px; }
@@ -226,13 +227,36 @@ html[data-theme="light"] .stg.stg .stg-scrim { background: rgba(18, 20, 24, .45)
 @keyframes stg-sheet { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .stg.stg .stg-dlg, .stg.stg .stg-scrim { animation: stg-fade 120ms linear; } }
 
-/* phone: the section bar scrolls sideways; the older 720px list rules (clipped, bordered, 52px rows) no longer apply to it */
+/* phone: the overview. The identity card, then the sections as three grouped panels of 56px rows with their current values.
+   Opening a row swaps the list for the section (Settings.jsx), so the list and the section never show together. */
+.stg.stg .stg-id { display: none; }
+.stg.stg .stg-signin { display: none; }
 @media (max-width: 720px) {
-  .stg.stg .settings-nav { display: flex; width: 100%; overflow-x: auto; overflow-y: hidden; border: 0; border-radius: 999px; background: var(--raised); scrollbar-width: none; overscroll-behavior-x: contain; }
-  .stg.stg .settings-nav::-webkit-scrollbar { display: none; }
-  .stg.stg .settings-nav-item { flex: none; min-height: 44px; height: 44px; padding: 0 16px; border: 0; border-bottom: 0; border-radius: 999px; font-size: 14px; color: var(--sec); }
-  .stg.stg .settings-nav-item.active { color: var(--ink); }
-  .stg.stg .settings-nav-item .stg-chev { display: none; }
+  .stg.stg .stg-id { display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 16px; align-items: center; margin-top: 32px; }
+  .stg.stg .stg-id-av { width: 56px; height: 56px; border-radius: 999px; background: var(--raised); display: grid; place-items: center; overflow: hidden; font-size: 20px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+  .stg.stg .stg-id-av img { width: 100%; height: 100%; object-fit: cover; }
+  .stg.stg .stg-id-n { min-width: 0; }
+  .stg.stg .stg-id-n b { display: block; font-size: 16px; line-height: 1.3; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stg.stg .stg-id-n span { display: block; font-size: 14px; line-height: 1.45; color: var(--sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stg.stg .stg-signin { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; margin-top: 32px; border: 1px solid var(--hl16); border-radius: 999px; font-size: 15px; font-weight: 500; line-height: 1.2; color: var(--ink); text-decoration: none; transition: background-color 150ms ease, transform 120ms var(--stg-ease); }
+  .stg.stg .stg-signin:active { transform: scale(.97); }
+  @media (hover: hover) { .stg.stg .stg-signin:hover { background: var(--raised); } }
+  .stg.stg .settings-grid { margin-top: 32px; }
+  .stg.stg .settings-nav { display: block; width: 100%; max-width: none; padding: 0; border: 0; border-radius: 0; background: none; }
+  .stg.stg .stg-lgroup { isolation: isolate; background: var(--surface); border-radius: 16px; }
+  .stg.stg .stg-lgroup + .stg-lgroup { margin-top: 16px; }
+  .stg.stg .stg-lgroup .settings-nav-item { display: flex; align-items: center; gap: 12px; width: 100%; height: auto; min-height: 56px; padding: 0 16px; border: 0; border-radius: 0; background: none; box-shadow: none; text-align: left; font-size: 16px; line-height: 1.3; font-weight: 500; color: var(--ink); white-space: normal; transition: background-color 150ms ease; }
+  .stg.stg .stg-lgroup .settings-nav-item.active { background: none; box-shadow: none; font-weight: 500; }
+  .stg.stg .stg-lgroup .settings-nav-item + .settings-nav-item { border-top: 1px solid var(--hl08); }
+  .stg.stg .stg-lgroup .settings-nav-item:first-child { border-radius: 16px 16px 0 0; }
+  .stg.stg .stg-lgroup .settings-nav-item:last-child { border-radius: 0 0 16px 16px; }
+  .stg.stg .stg-lgroup .settings-nav-item:only-child { border-radius: 16px; }
+  .stg.stg .stg-lgroup .settings-nav-item:focus-visible { outline-offset: -2px; }
+  .stg.stg .stg-lgroup .settings-nav-item:active { background: var(--raised); transform: none; }
+  @media (hover: hover) { .stg.stg .stg-lgroup .settings-nav-item:hover, .stg.stg .stg-lgroup .settings-nav-item.active:hover { background: var(--raised); } }
+  .stg.stg .stg-ll { flex: none; white-space: nowrap; }
+  .stg.stg .stg-lv { flex: 1 1 auto; min-width: 0; text-align: right; font-size: 14px; font-weight: 400; color: var(--sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stg.stg .stg-lgroup .settings-nav-item svg { display: block; flex: none; color: var(--ter); }
   .stg.stg .settings-section-h h2 { font-size: 28px; }
   .stg.stg .settings-section-h p { font-size: 16px; }
 }
