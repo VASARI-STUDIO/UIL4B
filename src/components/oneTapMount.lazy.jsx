@@ -11,7 +11,9 @@
 // Google prompt over the page, and "not there yet" is what it already looks
 // like for the seconds before Google Identity Services loads.
 import { Suspense } from 'react'
+import { useLocation } from 'react-router-dom'
 import { whenFirebaseGate } from '../utils/firebaseAccess'
+import { oneTapAllowed } from './oneTapRoutes'
 // `lazy` in this file is lazyRoute, not React's: if the file for the One Tap prompt
 // failed to download, it waits for the recovery reload instead of crashing.
 import { lazyRoute as lazy } from '../utils/lazyRoute'
@@ -19,6 +21,9 @@ import { lazyRoute as lazy } from '../utils/lazyRoute'
 const GoogleOneTap = lazy(() => whenFirebaseGate().then(() => import('./GoogleOneTap')))
 
 export default function OneTapMount(props) {
+  // Off this route the dynamic import never starts, so no Google script loads.
+  const { pathname } = useLocation()
+  if (!oneTapAllowed(pathname)) return null
   return (
     <Suspense fallback={null}>
       <GoogleOneTap {...props} />

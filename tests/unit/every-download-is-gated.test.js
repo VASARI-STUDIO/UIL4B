@@ -1,6 +1,6 @@
 // A NEW DOWNLOAD MUST NOT BE ABLE TO APPEAR WITHOUT A GATE.
 //
-// Founder decision, 2026-09-15: producing a FILE needs a free account; copying
+// Producing a FILE needs a free account; copying
 // a value never does. Seven call sites were gated in one pass — the nav export
 // panel, the icon SVG, the converter's four downloads, the palette PNG and the
 // colour-system pair.

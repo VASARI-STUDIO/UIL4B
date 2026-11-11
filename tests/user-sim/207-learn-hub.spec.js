@@ -1,4 +1,4 @@
-// The Learn hub, slice 1 of the soft redesign (handover/specs/learn-soft-redesign-2026-10-31.md).
+// The Learn hub, slice 1 of the soft redesign.
 //
 // What a reader who arrives at /learn can now do, and what the page stopped
 // saying. 67-learn-index-search-card.spec.js owns the search, the grouping of
@@ -6,7 +6,7 @@
 //
 //   1. THE HELP PAGES ARE REACHABLE FROM THE HUB. /learn/help and /learn/principles
 //      were linked from the menu and the footer and nowhere on /learn. They sit in
-//      one group, "Using UIL4B", under an h3, inside <main>, at every width.
+//      one group, "Using UI L4B", under an h3, inside <main>, at every width.
 //   2. THE HEADING AND THE WORDS. The section heading is the approved line, and no
 //      visible text carries the denial "not opinion" or an em dash.
 //   3. THE LABELS ARE QUIET. The hint, the topic links, their counts and the read
@@ -20,7 +20,7 @@
 //      where a row with no read time has two empty grid tracks, the extra space is
 //      measured rather than assumed.
 //
-// The Using UIL4B rows are read from the tool tree (LEARN_GROUPS), the same source
+// The Using UI L4B rows are read from the tool tree (LEARN_GROUPS), the same source
 // the component reads, so a renamed route fails here rather than being copied.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
@@ -57,12 +57,12 @@ for (const width of [390, 768, 1440]) {
   test.describe(`signed out at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 } })
 
-    test('Help and Design Principles are linked from the hub, under an h3 "Using UIL4B", inside main', async ({ page }) => {
+    test('Help and Design Principles are linked from the hub, under an h3 "Using UI L4B", inside main', async ({ page }) => {
       watch(page, 'visitor who came to Learn looking for help with the tools')
       await go(page, '/learn')
 
       const main = page.locator('main')
-      const heading = main.getByRole('heading', { level: 3, name: 'Using UIL4B', exact: true })
+      const heading = main.getByRole('heading', { level: 3, name: 'Using UI L4B', exact: true })
       await expect(heading).toHaveCount(1)
       await expect(heading).toBeVisible()
 
@@ -72,7 +72,7 @@ for (const width of [390, 768, 1440]) {
       await expect(group).toHaveAttribute('id', USING_ID)
       for (const g of USING) {
         const link = group.getByRole('link', { name: new RegExp(`^${g.label}`) })
-        await expect(link, `${g.label} is not a link inside the Using UIL4B group`).toHaveAttribute('href', g.route)
+        await expect(link, `${g.label} is not a link inside the Using UI L4B group`).toHaveAttribute('href', g.route)
         await expect(link).toBeVisible()
       }
       await expect(group.getByRole('link')).toHaveCount(USING_HREFS.length)
@@ -82,7 +82,7 @@ for (const width of [390, 768, 1440]) {
 
       // The topic jump list gains a fourth link to it (three topics plus Using).
       const jump = page.locator('.lidx-topics a').last()
-      await expect(jump).toHaveText('Using UIL4B')
+      await expect(jump).toHaveText('Using UI L4B')
       await expect(jump).toHaveAttribute('href', `#${USING_ID}`)
 
       // No sideways scroll from the new rows.
@@ -115,7 +115,7 @@ for (const width of [390, 768, 1440]) {
         return out
       })
       // Positive control: the walk really read the page, headings and all.
-      expect(words.join(' ')).toContain('Using UIL4B')
+      expect(words.join(' ')).toContain('Using UI L4B')
       expect(words.join(' ')).toContain(HEADING)
       expect(words.filter((w) => /not opinion/i.test(w)), 'the denial is back').toEqual([])
       expect(words.filter((w) => w.includes('—')), 'an em dash is visible on /learn').toEqual([])
@@ -263,7 +263,7 @@ test.describe('keyboard', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
   for (const theme of ['light', 'dark']) {
-    test(`Tab reaches the Using UIL4B rows after every guide, with a visible focus ring (${theme})`, async ({ page }) => {
+    test(`Tab reaches the Using UI L4B rows after every guide, with a visible focus ring (${theme})`, async ({ page }) => {
       watch(page, 'keyboard-only reader walking down the hub')
       await go(page, '/learn')
       await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
@@ -342,7 +342,7 @@ test.describe('keyboard', () => {
 })
 
 test.describe('Discover shares the hint component and keeps its own look', () => {
-  test('the Discover hint is still mono capitals', async ({ page }) => {
+  test('the Discover hint is in the body face, sentence case, at the 13px floor', async ({ page }) => {
     watch(page, 'visitor on Discover, which must not change')
     await go(page, '/discover')
     const hint = page.locator('.srf-hint')
@@ -352,10 +352,10 @@ test.describe('Discover shares the hint component and keeps its own look', () =>
       return { family: cs.fontFamily, transform: cs.textTransform, size: cs.fontSize, spacing: cs.letterSpacing, learn: !!el.closest('.srf--learn') }
     })
     expect(s.learn, 'this is the Learn page, not Discover').toBe(false)
-    expect(s.family).toMatch(/mono/i)
-    expect(s.transform).toBe('uppercase')
-    expect(s.size).toBe('11.5px')
-    expect(parseFloat(s.spacing), 'the tracking was removed from the Discover hint').toBeGreaterThan(0)
+    expect(s.family).not.toMatch(/mono/i)
+    expect(s.transform).toBe('none')
+    expect(parseFloat(s.size), 'the hint is at least the 13px caption floor').toBeGreaterThanOrEqual(13)
+    expect(['normal', '0px'], 'the hint is untracked').toContain(s.spacing)
     // Control: Learn's hint on the same component is not.
     await go(page, '/learn')
     const learn = await styleOf(page, '.srf-hint')

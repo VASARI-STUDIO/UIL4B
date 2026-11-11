@@ -1,3 +1,5 @@
+import { parseColor } from './colorFormats.js'
+
 const IGNORED_PAINTS = new Set(['none', 'currentcolor', 'transparent', 'inherit'])
 
 function normalizePaint(value) {
@@ -87,14 +89,23 @@ export function singlePaint(svg) {
 
 const toLinear = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
 
-// WCAG relative luminance (0 black, 1 white) of a plain colour: #rrggbb, black or
-// white. Anything else (a url() paint, a name this does not know) is null.
+// A paint that starts like a hex, rgb() or hsl() colour. parseColor also takes a bare run
+// of hex digits, which is not a paint, so the start is checked first.
+const COLOUR_PAINT = /^(?:#|(?:rgb|hsl)a?\s*\()/i
+
+// WCAG relative luminance (0 black, 1 white) of a plain colour: black, white, a hex
+// (alpha ignored), rgb() or hsl(). Anything else (a url() paint, a name this does not
+// know) is null.
 export function paintLuminance(paint) {
   if (paint === 'black') return 0
   if (paint === 'white') return 1
-  const m = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(paint || '')
-  if (!m) return null
-  const [r, g, b] = m.slice(1).map(h => toLinear(parseInt(h, 16)))
+  const text = String(paint || '').trim()
+  if (!COLOUR_PAINT.test(text)) return null
+  // A 4-digit #rgba is not one parseColor knows; it widens like #rgb does, alpha last.
+  const wide = /^#[\da-f]{4}$/i.test(text) ? '#' + [...text.slice(1)].map((c) => c + c).join('') : text
+  const parsed = parseColor(wide)
+  if (!parsed) return null
+  const [r, g, b] = [1, 3, 5].map(i => toLinear(parseInt(parsed.hex.slice(i, i + 2), 16)))
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 

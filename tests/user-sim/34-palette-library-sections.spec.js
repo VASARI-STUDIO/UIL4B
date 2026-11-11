@@ -21,7 +21,7 @@
 // suite; this file signs in as Pro so the surface under test is the whole
 // library, exactly as it was when these assertions were written.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch, signIn } from './helpers.js'
+import { go, proLibraryArrived, restingScrollY, watch, signIn } from './helpers.js'
 
 const ROUTE = '/discover/palettes'
 const HEAD = '.pgl-section-head'
@@ -40,7 +40,9 @@ test.describe('palette library sections', () => {
     watch(page, 'a Pro subscriber browsing for a palette')
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
+    // The free rows paint first; the sections below are the Pro library's.
+    await proLibraryArrived(page, 'the palette library')
   })
 
   test('browsing shows the categories in order', async ({ page }) => {
@@ -57,7 +59,7 @@ test.describe('palette library sections', () => {
     const counts = await page.locator('.pgl-section-count').allTextContents()
     const total = counts.reduce((sum, n) => sum + Number(n), 0)
     expect(counts.length).toBe(2)
-    expect(total).toBe(await page.locator('.pgal-card').count())
+    expect(total).toBe(await page.locator('.pgal-card:not(.geg-fade *)').count())
   })
 
   // The reason to section a long list rather than filter it: the answer to
@@ -103,7 +105,7 @@ test.describe('palette library sections', () => {
   test('filtering collapses back to one flat grid', async ({ page }) => {
     await page.locator(TRAY).getByRole('button', { name: 'Brand', exact: true }).click()
     await expect(page.locator(HEAD)).toHaveCount(0)
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
 
     await page.locator(TRAY).getByRole('button', { name: 'All palettes', exact: true }).click()
     await expect(page.locator(HEAD)).toHaveCount(2)
@@ -175,8 +177,8 @@ test.describe('palette library sections', () => {
     await expect(eyebrow).not.toHaveText(/curated collection|brand/i)
   })
 
-  // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE (founder decision,
-  // 2026-09-13). It was "Colour systems with a point of view - ours, plus the
+  // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE.
+  // It was "Colour systems with a point of view - ours, plus the
   // published brand palettes behind the interfaces you already know...", the
   // same template the Gradient Library ran, and this test existed because the
   // first section blurb had opened on those same words 200px below it.
@@ -226,18 +228,24 @@ test.describe('palette library sections', () => {
     ])
   })
 
-  test('the teased grid names itself too, and stands outside the sections', async ({ page }) => {
-    // A screen reader meeting three more cards after the open ones needs to
-    // know why they differ; an unnamed second grid is exactly the unexplained
-    // repetition this file exists to prevent.
+  test('the end gate names itself, and stands outside the sections', async ({ page }) => {
+    // A screen reader meeting the closing block after the open cards needs to
+    // know what it is: it is a section named by its own heading, and it is
+    // one the faded rows do not add to (they are hidden from assistive tech).
+    // The gate is not nested in a section, so it survives a section with
+    // nothing open.
     await signIn(page, { plan: 'free' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card')).toHaveCount(10)
-    const locked = page.locator('.lbry-grid[aria-labelledby="pgl-locked-more"]')
-    await expect(locked).toHaveCount(1)
-    await expect(page.locator('#pgl-locked-more')).toHaveText('Palettes included with Pro')
-    expect(await page.locator('.pgl-section .lbry-grid[aria-labelledby="pgl-locked-more"]').count(),
-      'the teased grid is nested inside a section again — it disappears when that section has nothing open').toBe(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(10)
+    const gate = page.locator('section.geg[aria-labelledby="pgl-gate-h"]')
+    await expect(gate).toHaveCount(1)
+    await expect(page.locator('#pgl-gate-h')).toHaveText(/^Pro opens \d+ more palettes$/)
+    await expect(page.locator('#pgl-gate-h')).toHaveJSProperty('tagName', 'H2')
+    await expect(gate.locator('.geg-fade')).toHaveAttribute('aria-hidden', 'true')
+    expect(await page.locator('.pgl-section .geg').count(),
+      'the gate is nested inside a section again - it disappears when that section has nothing open').toBe(0)
+    expect(await page.locator('.lbry-grid[aria-labelledby="pgl-locked-more"]').count(),
+      'the old teased grid is back beside the gate').toBe(0)
   })
 })
 

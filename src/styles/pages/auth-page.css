@@ -21,7 +21,7 @@
 [data-theme="dark"] .aw-img{outline-color:oklch(1 0 0/.1)}
 .aw-cap{display:block;padding:12px}
 .aw-name{display:block;font-size:13px;line-height:18px;font-weight:560;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.aw-meta{display:block;margin-top:2px;font-family:var(--mono);font-size:11px;line-height:16px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aw-meta{display:block;margin-top:2px;font-family:var(--font);letter-spacing:0;font-size:11px;line-height:16px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aw-icons{display:grid;grid-template-columns:repeat(3,1fr);padding:12px;color:var(--t0)}
 .aw-ico{display:grid;place-items:center;height:48px}
 .aw-ico svg{width:24px;height:24px}

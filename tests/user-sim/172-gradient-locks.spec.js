@@ -1,5 +1,5 @@
 // /create/gradient, gradient generation v2 G2 part 2: the locks in the UI
-// (handover/specs/gradient-generation-v2-2026-10-28.md 4.1, 4.3).
+// (gradient generation v2 spec, 4.1 and 4.3).
 //
 // Every expected sentence and size is hand-checked from the spec, not read back
 // from the code. The seeded gradient is a three-stop Linear at 160 degrees with

@@ -1,10 +1,10 @@
 // THE BRAND GUIDELINES — the second Pro document.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// THE FOUNDER'S ASK, 2026-09-05
+// WHAT IT IS FOR
 // ─────────────────────────────────────────────────────────────────────────────
-// “for our enhanced exporting system … i want multiple export variations for
-// premium users”, with reference material at UI Examples/Brand kit examples.
+// Premium users get multiple export variations, modelled on reference material
+// for brand guidelines.
 //
 // The references are not token files and they are not a longer style guide. They
 // are PRESENTATION-QUALITY BRAND GUIDELINES: landscape spreads with a cover, a
@@ -18,7 +18,7 @@
 // utils/designSystemBook.js already ships and is very good at its job: a 12-page
 // A4 PORTRAIT specification manual — bands, a contrast matrix, a token listing,
 // a colophon. It is the thing an engineer implements from. What it is not is the
-// thing you present, and the founder's references are unambiguously the latter.
+// thing you present, and the reference material is unambiguously the latter.
 //
 // So “multiple export variations” is answered with a genuinely different
 // document rather than the same pages at another paper size, and Pro now offers

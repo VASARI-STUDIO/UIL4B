@@ -6,9 +6,8 @@ import FounderNote from './FounderNote'
 import { footerShowsOn } from './nav/footerRoutes'
 import { BrandLockup } from './BrandLogo'
 
-// Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
-// decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
-// link it exactly this way. Like those two it stays a literal rather than going
+// Author credit. The Help Centre and Settings already link the portfolio exactly
+// this way. Like those two it stays a literal rather than going
 // through safeHttpUrl(): that guard is for URLs arriving at RUNTIME (community
 // submissions, prompt profile links), and a constant in this file has no
 // untrusted path to guard. No rel="nofollow" either — that is for the curated
@@ -89,20 +88,19 @@ export default function AppFooter({ compact = false }) {
       <div className="app-footer-inner">
         <div className="app-footer-brand">
           <span className="app-footer-mark"><BrandLockup label="UI L4B" /></span>
-          {/* THE TAGLINE IS GONE — anti-slop audit, 2026-09-09. Under the
-              wordmark sat "The operating workspace for building, validating
-              and exporting interface foundations." on every page of the site:
-              a tagline (the founder's word for the "UI system toolkit" line he
-              retired as "a huge AI Slop feature"), and a value claim typed by
-              an agent rather than read from positioning.js, which is exactly
-              what positioning-truth.test.js exists to stop. Nothing replaces
-              it — the four founder lines each already have a surface, and a
-              footer that repeats one of them under every page would be the
-              "all over the place" he named. The wordmark and the way in stay. */}
-          {/* READ FROM THE TREE, not typed. This said `/create/color` until
-              2026-09-18, which was correct while that was the one Create
-              category home that rendered a page. The founder deleted the colour
-              landing when Spectrum became `/`, so the URL now answers a 301 at
+          {/* THE TAGLINE IS GONE. Under the wordmark sat "The operating
+              workspace for building, validating and exporting interface
+              foundations." on every page of the site: a generic tagline, and
+              a value claim typed in place rather than read from
+              positioning.js, which is exactly what positioning-truth.test.js
+              exists to stop. Nothing replaces it — each core value line
+              already has a surface, and a footer that repeats one of them
+              under every page would be noise. The wordmark and the way in
+              stay. */}
+          {/* READ FROM THE TREE, not typed. This used to say `/create/color`,
+              which was correct while that was the one Create category home
+              that rendered a page. The colour landing was deleted when
+              Spectrum became `/`, so the URL now answers a 301 at
               the edge and a bounce in the client — exactly the defect the
               comment on FOOTER_CREATE above describes ("Imagery" pointing at
               /create/imagery). categoryDestination() answers it from
@@ -128,7 +126,7 @@ export default function AppFooter({ compact = false }) {
           ))}
         </nav>
         <div className="app-footer-legal">
-          <span className="app-footer-copy">© {year} UIL4B</span>
+          <span className="app-footer-copy">© {year} UI L4B</span>
           {/* The opt-in note about this project — see FounderNote.jsx for why it
               is a link here and not a popup that opens itself.
 

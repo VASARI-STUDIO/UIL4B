@@ -1,9 +1,9 @@
-// The Palette Builder toolbar, measured across the widths the founder reported.
+// The Palette Builder toolbar, measured across the widths reported.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE FAULT
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder, 2026-09-05, two screenshots.
+// Two reported screenshots.
 //   DESKTOP: the toolbar "is a run of icon-only buttons of uneven weight and
 //   spacing sitting beside two labelled buttons and a select, and it reads as
 //   unresolved rather than designed."
@@ -108,7 +108,7 @@ test.describe('palette toolbar fits the row it is given', () => {
     // From image 3; Explore and Back 2; System 1; Vision 0. Under 768 Preview is an
     // Extra tools row only. Which of the rest have left depends on the room: Create
     // tool primaries sit in the phone dock below 768, so the row has the whole
-    // width and Explore (2) and Back to projects (2) fit at 662 (measured), where
+    // width and Explore (2) and Back to all tools (2) fit at 662 (measured), where
     // before the dock Explore was in Extra tools. So this does not pin which side
     // each is on; it pins that every movable control is in exactly ONE place, the
     // row or Extra tools, never lost and never doubled.
@@ -117,7 +117,7 @@ test.describe('palette toolbar fits the row it is given', () => {
     const where = {}
     for (const [key, role, name] of [
       ['Explore', 'button', 'Explore palettes and brands'],
-      ['Back to projects', 'link', 'Back to projects'],
+      ['Back to all tools', 'link', 'Back to all tools'],
     ]) {
       const onRow = await page.locator(BAR).getByRole(role, { name, exact: true }).count()
       const inPanel = await panel.getByRole('button', { name, exact: true }).count()

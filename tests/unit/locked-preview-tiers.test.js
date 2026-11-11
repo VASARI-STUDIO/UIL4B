@@ -1,7 +1,7 @@
 // Three rungs, not two — and the cap that makes the third one real.
 //
-// Founder instruction, 2026-09-18: "for the galleries non logged in users get 3
-// free ones logged in get 10 and paid get full". tests/unit/locked-library-tease
+// The tiers: signed-out visitors get 3 free items in the galleries, signed-in
+// users get 10, and paid users get everything. tests/unit/locked-library-tease
 // .test.js already proves the OLD half of this gate: that a locked row's payload
 // never reaches a preview, and that only an exact `true` opens it. This file
 // proves the new half, and the new half is where the danger is:
@@ -14,7 +14,7 @@
 //   that bug with a nicer name.
 //
 // So the assertions below are about three things and nothing else:
-//   1. the numbers are the founder's, and the ladder only ever climbs on an
+//   1. the numbers are the agreed ones, and the ladder only ever climbs on an
 //      exact `true`;
 //   2. the cap is applied to the CANONICAL library, inside the splitter, before
 //      any control on the page can reach the data;
@@ -42,7 +42,9 @@ import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
+import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
+import { standinPalettes, standinGradients, STANDIN_COLOURS } from '../../src/utils/gateStandins.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 
@@ -350,10 +352,16 @@ test('the prompt gate is handed the library, not the view of it the reader built
     'the splitter must be given the canonical prompt library')
   assert.ok(!/splitLockedLibrary\(sorted/.test(src),
     'the splitter is being given a sorted view — the Sort control can move the gate')
+  // The sort now runs inside the list memo, over the split's open rows only
+  // (`open = base.filter(openIds.has)`, then `[...open].sort(`). It must stay
+  // after the split, and it must sort the open rows, never the canonical list.
   const split = src.indexOf('splitLockedLibrary(')
-  const sort = src.indexOf('[...openCommunity]')
+  const sort = src.indexOf('[...open].sort(')
   assert.ok(split > -1 && sort > -1, 'the page no longer splits then sorts — re-read this test')
   assert.ok(split < sort, 'the sort runs before the gate — the reader owns the boundary again')
+  assert.ok(/let open = base\.filter\(\(p\) => openIds\.has\(p\.id\)\)/.test(src),
+    'the list must take its open rows from the split (openIds), not from the unfiltered category')
+  assert.ok(!/\[\.\.\.communityRows\]\.sort\(/.test(src), 'the canonical library is being sorted in place of the open rows')
 })
 
 test('the gradient gallery filters and searches the split output, closing its hex oracle', () => {
@@ -370,25 +378,53 @@ test('no wall writes a tier number as a literal', () => {
   // the moment a row is added, and the cap makes these numbers move more often
   // than the library does.
   for (const [name, file] of Object.entries(PAGES)) {
+    if (name === 'prompts') continue
     const src = stripComments(read(file))
-    assert.ok(/Another \$\{accountAdds\}/.test(src), `${name}'s account wall must interpolate its own count`)
-    assert.ok(/Another \$\{locked/.test(src), `${name}'s Pro wall must interpolate the remaining count`)
+    // The gate's words are built by data/galleryGateCopy.js from the numbers
+    // the page hands over; the page works those out from its own data.
+    assert.ok(/freeOpens\(\{ eligible \}\)/.test(src), `${name}'s account gate must work out what a free account opens`)
+    assert.ok(/copy\.anon\.heading\(opens\)/.test(src), `${name}'s account gate must print its own count`)
+    assert.ok(/copy\.pro\.heading\(lockedCount\)/.test(src), `${name}'s Pro gate must print the remaining count`)
     assert.ok(/accountTierGain\(\{/.test(src), `${name} must compute the account gain rather than assume it`)
   }
+  // The prompt library's walls are the overview's closing section and the
+  // list's offer under the grid. Each states a count, and each count is
+  // interpolated from the data the page holds.
+  // Both close on PromptGate, which prints the counts it is handed.
+  const overview = stripComments(read('src/components/prompt/PromptOverview.jsx'))
+  const list = stripComments(read(PAGES.prompts))
+  const gate = stripComments(read('src/components/prompt/PromptGate.jsx'))
+  assert.ok(/shown=\{openCount\}/.test(overview) && /total=\{total\}/.test(overview) && /accountOpens=\{freeSet\.size\}/.test(overview),
+    "the overview's gate must count from the data it holds")
+  assert.ok(/shown=\{openCommunity\.length\}/.test(list) && /total=\{communityRows\.length\}/.test(list) && /accountOpens=\{freeIds\.size\}/.test(list),
+    "the list's gate must count from the data it holds")
+  assert.ok(/copy\.anon\.body\(shown, total, accountOpens\)/.test(gate) && /copy\.pro\.heading\(more\)/.test(gate) && /const more = total - shown/.test(gate),
+    'PromptGate must print the counts it is handed')
+  assert.ok(!/\b\d+ (more )?(community )?prompts? (open|with)/.test(overview + list + gate), 'a prompt gate writes its count as a literal')
 })
 
 test('the signed-out wall offers the free account, and the paid wall offers Pro', () => {
   // The rung mismatch this prevents: selling a purchase to somebody whose next
   // step costs nothing. `free: true` is what makes the dialog present an
   // account rather than a checkout — the same flag useExportGate passes.
-  for (const [name, file] of Object.entries(PAGES)) {
+  // Behaviour first: the copy every gate prints.
+  for (const name of ['palettes', 'gradients', 'iconGroups', 'prompts']) {
+    const { anon, pro } = GALLERY_GATE_COPY[name]
+    assert.equal(anon.action, 'Log in', `${name}: the account rung is not Log in`)
+    assert.equal(anon.secondary, 'See the plans', `${name}: the account rung lost its plans link`)
+    assert.equal(pro.action, 'See what Pro includes', `${name}: the Pro rung lost its action`)
+  }
+  // Then the pages: each renders both kinds of gate, opens the sign-in flow for
+  // the account one and branches on the rung.
+  const GATE_FILES = { palettes: PAGES.palettes, gradients: PAGES.gradients, prompts: 'src/components/prompt/PromptGate.jsx' }
+  for (const [name, file] of Object.entries(GATE_FILES)) {
     const src = stripComments(read(file))
-    assert.ok(src.includes('Create your free account'), `${name} has no account rung on its wall`)
-    assert.ok(/requireLogin\('[a-z ]+', \{ free: true, signup: true \}\)/.test(src),
-      `${name}'s account wall must open the free-account dialog, not a checkout`)
-    assert.ok(src.includes('See what Pro includes'), `${name} lost its Pro wall`)
+    assert.ok(src.includes('kind="anon"') && src.includes('kind="pro"'), `${name} does not render both rungs of the gate`)
+    assert.ok(src.includes('copy.anon.action') && src.includes('copy.pro.action'), `${name}'s gate does not use the shared actions`)
+    assert.ok(/secondary=\{\{ label: copy\.anon\.secondary, to: '\/plans' \}\}/.test(src), `${name}'s account gate must link to the plans`)
+    assert.ok(/onLogin|requireLogin\('[a-z ]+'\)/.test(src), `${name}'s account gate must open the sign-in flow`)
     assert.ok(/tier === 'anonymous'/.test(src) || /anonymous =\s*tier === 'anonymous'/.test(src),
-      `${name} does not branch on the rung, so one of its two walls is unreachable`)
+      `${name} does not branch on the rung, so one of its two gates is unreachable`)
   }
 })
 
@@ -397,8 +433,8 @@ test('the Community tab counts what it will show, and only when nothing is withh
   // disagrees with the page. Its sibling tab counts the prompts you have. While
   // anything is locked neither number is right, so the badge stands down.
   const src = stripComments(read(PAGES.prompts))
-  assert.ok(/lockedCount === 0 && <span className="pl-tab-count">\{browsableCommunity\.length\}/.test(src),
-    'the Community tab count must be the browsable set, and only drawn when no row is locked')
+  assert.ok(/lockedCount === 0 && <span className="pl-tab-count">\{openCommunity\.length\}/.test(src),
+    'the Community tab count must be the open set, and only drawn when no row is locked')
 })
 
 test('freeOpens is the free cap, or fewer when the library holds fewer open rows', () => {
@@ -436,7 +472,17 @@ test('the real libraries agree with LIBRARY_TOTALS, so the sentence is true for 
 })
 
 test('the pages build the closing lines and the walls from the helper, with no second set of numbers', () => {
+  // The prompt library is split across the page, the overview and the list's
+  // offer, and states its tier counts from the gate itself (galleryLimit and the
+  // split's open rows). It is held to the same two rules below: no tier number
+  // typed in, and a free-account action for a signed-out visitor.
+  for (const file of [PAGES.prompts, 'src/components/prompt/PromptOverview.jsx', 'src/components/prompt/PromptGate.jsx']) {
+    const src = stripComments(read(file))
+    if (file.endsWith('PromptGate.jsx')) assert.ok(src.includes('copy.anon.action'), `${file} has no sign-in action for a signed-out visitor`)
+    assert.ok(!/\b(of the|opens|shown) (3|10|20|100|101)\b/.test(src), `${file} writes a tier number as a literal`)
+  }
   for (const [name, file] of Object.entries(PAGES)) {
+    if (name === 'prompts') continue
     const src = stripComments(read(file))
     assert.ok(/tierSentence\(\{/.test(src), `${name} does not use the shared tier sentence`)
     assert.ok(!/A free account opens \$\{(browsable|openCommunity)/.test(src), `${name} still writes its own free-account arithmetic`)
@@ -463,13 +509,64 @@ test('no placeholder is stamped with a price the row does not carry', () => {
   // anonymous rung the next rows are NOT Pro's — they come with a free account
   // — so those cards may not be rendered there. If that component ever takes a
   // tier-aware label, this test is the thing to come back and relax.
-  for (const [name, file] of Object.entries(PAGES)) {
+  //
+  // It was relaxed for prompts, on exactly that condition: PromptLockedCard takes
+  // a `kind` and prints "Opens with a free account" or "Opens with Pro" itself,
+  // and both pages choose 'account' only for a signed-out viewer on a row a free
+  // account opens.
+  const locked = stripComments(read('src/components/prompt/PromptLockedCard.jsx'))
+  assert.ok(locked.includes('Opens with a free account') && locked.includes('Opens with Pro'),
+    'PromptLockedCard must name what each locked card opens with')
+  assert.ok(/kind === 'account'/.test(locked), 'PromptLockedCard must branch on kind')
+  for (const file of [PAGES.prompts, 'src/components/prompt/PromptOverview.jsx']) {
     const src = stripComments(read(file))
-    const anon = src.indexOf("=== 'anonymous'")
-    const card = src.search(/Locked(Palette|Prompt)Card key=/)
-    assert.ok(anon > -1, `${name} does not identify the anonymous rung`)
-    assert.ok(card > -1, `${name} renders no placeholders at all — this assertion is vacuous`)
-    assert.ok(anon < card,
-      `${name} renders its placeholders before it has branched on the rung, so a signed-out visitor sees "Pro" on rows a free account opens`)
+    assert.ok(/tier === 'anonymous' && (freeIds|freeSet)\.has\(p\.id\)\s*\?\s*'account'\s*:\s*'pro'/.test(src),
+      `${file} must label a locked card 'account' only for a signed-out viewer on a row a free account opens`)
   }
+  // The palette and gradient galleries no longer render those cards at all:
+  // the rows under the gate are the gallery's own cards (GateFadeRows), real free-tier rows or neutral stand-ins, so
+  // no rung can see a price on them.
+  for (const [name, file] of Object.entries(PAGES)) {
+    if (name === 'prompts') continue
+    const src = stripComments(read(file))
+    assert.ok(/<GateFadeRows\b/.test(src), `${name} renders no faded rows - this assertion is vacuous`)
+    assert.ok(!/Locked(Palette|Prompt)Card/.test(src), `${name} renders a locked card that is stamped "Pro" on a row a free account opens`)
+  }
+  const fadeSrc = stripComments(read('src/components/library/GalleryEndGate.jsx'))
+  const fadeCards = fadeSrc.slice(fadeSrc.indexOf('export function GateFadeRows'))
+  assert.ok(fadeCards.length > 200, 'GateFadeRows not found - this assertion is vacuous')
+  assert.ok(!/\bPro\b/.test(fadeCards), 'the faded rows carry the word Pro')
+})
+
+// ── The faded cards behind the end gate ─────────────────────────────────────
+// To see these fail: drop the `eligible <= GALLERY_TIER_LIMITS.free` guard in
+// splitLockedLibrary (a Pro-tier row joins `next`), or add a real Pro colour to
+// the ramp in src/utils/gateStandins.js.
+
+const paletteRule = { isOpen: (p) => p.pro !== true, preview: (p) => ({ id: p.id, label: p.name, slots: p.colors?.length ?? p.slots }) }
+
+test('next is the real free-tier rows past the viewer\'s cap, and only for a signed-out viewer', () => {
+  const free = LIBRARY_PALETTES.filter((p) => p.pro !== true).slice(0, GALLERY_TIER_LIMITS.free)
+  const anon = splitLockedLibrary(LIBRARY_PALETTES, { unlocked: false, ...paletteRule, limit: GALLERY_TIER_LIMITS.anonymous })
+  assert.deepEqual(anon.next.map((p) => p.id), free.slice(GALLERY_TIER_LIMITS.anonymous).map((p) => p.id))
+  assert.ok(anon.next.length > 0 && anon.next.every((p) => p.pro !== true), 'a Pro palette is in next')
+  const signedIn = splitLockedLibrary(LIBRARY_PALETTES, { unlocked: false, ...paletteRule, limit: GALLERY_TIER_LIMITS.free })
+  assert.deepEqual(signedIn.next, [], 'a free viewer\'s next rung opens nothing in the free set')
+  assert.deepEqual(splitLockedLibrary(LIBRARY_PALETTES, { unlocked: true, ...paletteRule }).next, [])
+})
+
+test('next never holds a stub', () => {
+  const rows = LIBRARY_PALETTES.map((p, i) => (i < 5 ? p : { id: p.id, name: p.name, slots: p.colors.length }))
+  const { next } = splitLockedLibrary(rows, { unlocked: false, ...paletteRule, limit: 3 })
+  assert.deepEqual(next.map((p) => p.id), rows.slice(3, 5).map((p) => p.id))
+})
+
+test('the stand-ins carry no colour a Pro row holds', () => {
+  const proHex = new Set()
+  for (const p of LIBRARY_PALETTES) if (p.pro === true) p.colors.forEach((c) => proHex.add(c.toUpperCase()))
+  const freeGradients = new Set(GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.free).map((g) => g.id))
+  for (const g of GALLERY_GRADIENTS) if (!freeGradients.has(g.id)) g.stops.forEach((s) => proHex.add(s.color.toUpperCase()))
+  const used = [...standinPalettes().flatMap((p) => p.colors), ...standinGradients().flatMap((g) => g.stops.map((s) => s.color))]
+  assert.ok(used.length > 20 && STANDIN_COLOURS.length > 4, 'no stand-in colours - this assertion is vacuous')
+  assert.deepEqual(used.filter((c) => proHex.has(c.toUpperCase())), [], 'a stand-in colour equals a Pro colour')
 })

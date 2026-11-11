@@ -141,48 +141,66 @@ test.describe('the upgrade modal offers only live cadences', () => {
   })
 })
 
+// The Pro action's slot is `.pa-cta`; the unavailable words sit in `.pa-slot` (#pricing-noprice) and `.pa-foot`.
 test.describe('/plans shows the unavailable state in the buyable state\'s slots', () => {
-  const proCta = (page) => page.locator('.pr-head--pro').locator('.pr-cta--pro, .pr-cta--free').first()
-  const topOf = async (page) => Math.round((await proCta(page).boundingBox()).y + await page.evaluate(() => window.scrollY))
+  const pro = (page) => page.locator('.hpl-pro')
+  const slotAction = (page) => pro(page).locator('.pa-cta').locator('a, button').first()
+  const topOf = async (page) => Math.round((await slotAction(page).boundingBox()).y + await page.evaluate(() => window.scrollY))
 
-  for (const width of [390, 1440]) {
+  for (const width of [1440, 390]) {
     test(`at ${width}px the Pro button stays put and becomes the switch to the live cadence`, async ({ page }) => {
       watch(page, 'a visitor choosing a cadence the service cannot price')
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
       await stub(page, MONTHLY_ONLY)
       await go(page, '/plans')
-      const pro = page.locator('.pr-head--pro')
-      await expect(pro.locator('.pr-amt')).toBeVisible()
+      await expect(pro(page).locator('.pa-amt')).toBeVisible()
 
       // Monthly is the cadence that is live; Yearly is the one that is not.
       const group = page.getByRole('radiogroup', { name: 'Billing' })
-      const choose = (name) => group.locator('label', { hasText: new RegExp(`^${name}`) }).click()
+      const choose = (name) => group.getByRole('radio', { name: new RegExp(`^${name}`) }).click()
       await choose('Monthly')
-      await expect(pro.locator('.pr-amt')).toHaveText('$7')
-      await expect(pro.locator('button'), 'a live price carries no button in the Pro cell').toHaveCount(0)
+      await expect(pro(page).locator('.pa-amt')).toHaveText('US$7')
+      await expect(pro(page).locator('.pa-cta button'), 'a live price carries no button in the Pro slot').toHaveCount(0)
+      await expect(pro(page).locator('.pa-cta').getByRole('link')).toHaveAttribute('href', '/checkout?plan=monthly')
       await expect(page.locator('#pricing-noprice')).toHaveCount(0)
       const live = await topOf(page)
 
       await choose('Yearly')
-      await expect(pro.locator('.pr-amt')).toHaveText('Unavailable')
-      const note = pro.locator('#pricing-noprice')
-      await expect(note.locator('span')).toHaveText(['No USD price for Yearly yet.', 'Monthly can be bought in USD.'])
-      await expect(pro.locator('.pr-stack button'), 'the recovery action sits in the Pro button slot, not the note stack').toHaveCount(0)
-      const lines = await note.locator('span').evaluateAll((nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)))
+      await expect(pro(page).locator('.pa-amt')).toHaveText('Unavailable')
+      const note = pro(page).locator('#pricing-noprice')
+      await expect(note.locator('p')).toHaveText(['No USD price for Yearly yet.', 'Monthly can be bought in USD.'])
+      const lines = await note.locator('p').evaluateAll((nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().height)))
       expect(Math.max(...lines), 'an unavailable line wrapped').toBeLessThan(Math.min(...lines) * 1.5)
-      const sw = pro.getByRole('button', { name: 'Switch to Monthly' })
-      await expect(sw).toBeVisible()
-      await expect(pro.locator('.pr-under:not(.is-ghost)').filter({ hasText: 'Everything on Free keeps working.' })).toBeVisible()
+      const sw = pro(page).locator('.pa-cta').getByRole('button', { name: 'Switch to Monthly' })
+      await expect(sw, 'the recovery action is not in the Pro button slot').toBeVisible()
+      await expect(pro(page).locator('.pa-cta').getByRole('link'), 'a link to checkout is offered with no price').toHaveCount(0)
+      await expect(pro(page).locator('.pa-foot')).toContainText('Everything on Free keeps working.')
       expect(await topOf(page), 'the Pro button moved when the cadence landed unavailable').toBe(live)
 
       // The switch buys the live cadence, and focus stays on the Pro button.
       await sw.click()
-      await expect(pro.locator('.pr-amt')).toHaveText('$7')
+      await expect(pro(page).locator('.pa-amt')).toHaveText('US$7')
       await expect(group.getByRole('radio', { name: /^Monthly/ })).toBeChecked()
-      await expect(pro.getByRole('link', { name: /free trial|Upgrade to Pro/ })).toBeFocused()
+      await expect(pro(page).locator('.pa-cta').getByRole('link', { name: /free trial|Upgrade to Pro/ })).toBeFocused()
       expect(await topOf(page), 'the Pro button did not return').toBe(live)
     })
   }
+
+  test('while the price is checked, the Pro button and the closing Choose Pro are not links to checkout', async ({ page }) => {
+    watch(page, 'a visitor on a slow connection')
+    let release
+    const held = new Promise((resolve) => { release = resolve })
+    await page.route('**/api/get-prices*', async (route) => { await held; await answer(withAvailability(LIVE))(route) })
+    await go(page, '/plans')
+    await expect(pro(page).locator('.pa-amt')).toHaveText('—')
+    await expect(pro(page).locator('.pa-cta').getByRole('link'), 'a checkout link while the price is unknown').toHaveCount(0)
+    await expect(pro(page).locator('.pa-cta button')).toHaveAttribute('aria-disabled', 'true')
+    await expect(page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' }), 'closing Choose Pro links to checkout before a price').toHaveCount(0)
+    release()
+    await expect(pro(page).locator('.pa-amt')).toHaveText('US$4')
+    await expect(pro(page).locator('.pa-cta').getByRole('link')).toHaveAttribute('href', '/checkout?plan=yearly')
+    await expect(page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' })).toHaveAttribute('href', '/checkout?plan=yearly')
+  })
 
   test('with prices already cached, Retry live pricing fetches again and lands on the buy link', async ({ page }) => {
     watch(page, 'a visitor who reached /plans after another page cached an all-fallback answer')
@@ -201,17 +219,16 @@ test.describe('/plans shows the unavailable state in the buyable state\'s slots'
       window.history.pushState({}, '', '/plans')
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
-    const pro = page.locator('.pr-head--pro')
-    await expect(pro.locator('.pr-amt')).toHaveText('Unavailable')
-    await expect(pro.locator('#pricing-noprice')).toContainText('Stripe didn’t answer')
+    await expect(pro(page).locator('.pa-amt')).toHaveText('Unavailable')
+    await expect(pro(page).locator('#pricing-noprice')).toContainText('Stripe didn’t answer')
     expect(calls, 'opening /plans refetched cached prices').toBe(1)
-    const retry = pro.getByRole('button', { name: 'Retry live pricing' })
-    await expect(retry).toHaveClass(/pr-cta--pro/)
+    const retry = pro(page).locator('.pa-cta').getByRole('button', { name: 'Retry live pricing' })
+    await expect(retry, 'Retry is not in the Pro button slot').toBeVisible()
     await retry.click()
 
-    await expect(pro.locator('.pr-amt')).toHaveText('$4')
+    await expect(pro(page).locator('.pa-amt')).toHaveText('US$4')
     expect(calls, 'Retry made no request').toBe(2)
     await expect(retry).toHaveCount(0)
-    await expect(pro.getByRole('link', { name: /free trial|Upgrade to Pro/ })).toBeFocused()
+    await expect(pro(page).locator('.pa-cta').getByRole('link', { name: /free trial|Upgrade to Pro/ })).toBeFocused()
   })
 })

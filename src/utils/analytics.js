@@ -206,13 +206,16 @@ function recordAggregateOpen(id) {
   bumpAggregate(aggField(AGG_PREFIX.open, id), 1)
 }
 
-// Read the last `days` daily docs and sum them into a dashboard-friendly shape.
+// Read the newest `days` daily docs and sum them into a dashboard-friendly shape.
+// With `since` (a YYYY-MM-DD day id) only docs on or after that day are read, so
+// a quiet stretch with no documents cannot pull in days from before the window.
 // Returns a safe empty shape on any failure (offline, rules, no docs yet).
-export async function getAggregateAnalytics(days = 30) {
+export async function getAggregateAnalytics(days = 30, { since } = {}) {
   const empty = { totalViews: 0, byPath: [], byTool: [], byOpen: [], byIcon: [], byPack: [], funnel: [], iconCopies: 0, days: [] }
   try {
     const fs = await loadFirestore()
-    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(days))
+    const bounds = since ? [fs.where('day', '>=', since)] : []
+    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), ...bounds, fs.orderBy('day', 'desc'), fs.limit(days))
     const snap = await fs.getDocs(q)
     let totalViews = 0
     let iconCopies = 0
@@ -425,8 +428,7 @@ export function trackFontCopy(fontFamily) {
 }
 
 // ── P-001: the two events that make the funnel answerable ───────────────────
-// Both are APPROVED in docs/PROPOSALS.md - local-only since 2026-09-16 and not
-// in this repository, per .gitignore. Until they existed there was no way
+// Until they existed there was no way
 // to answer "did this user build something?", "what did they do before
 // upgrading?" or "where do people stop?" — which is why nearly every other
 // proposal in that file is 'inferred' rather than 'measured'.
@@ -588,7 +590,7 @@ export function getDesignAnalytics() {
 }
 
 // ── Admin resets ─────────────────────────────────────────────
-// Founder-invoked from the Admin dashboard. Clearing this browser's blobs is
+// Invoked from the Admin dashboard. Clearing this browser's blobs is
 // instant; the Firestore aggregate is scrubbed field-by-field (merge writes
 // with deleteField) so tool counters survive a page-analytics reset.
 

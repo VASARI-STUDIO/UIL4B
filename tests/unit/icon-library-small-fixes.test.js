@@ -17,8 +17,8 @@ test('.ic never uses transition: all', () => {
 
 test('no em dash in the gate copy or the save picker line', () => {
   const gate = [
-    ICON_GATE_COPY.end.anon.heading(12), ICON_GATE_COPY.end.anon.body(65, 5, 7),
-    ICON_GATE_COPY.end.anon.action, ICON_GATE_COPY.end.anon.secondary, ICON_GATE_COPY.end.anon.chip,
+    ICON_GATE_COPY.end.anon.heading(60017), ICON_GATE_COPY.end.anon.body(65, 5, 12),
+    ICON_GATE_COPY.end.anon.action, ICON_GATE_COPY.end.anon.secondary,
   ].join(' ')
   assert.doesNotMatch(gate, /\u2014/)
   const page = fs.readFileSync('src/pages/IconLibrary.jsx', 'utf8')

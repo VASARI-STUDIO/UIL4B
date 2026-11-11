@@ -226,7 +226,7 @@ test('Resend and Dismiss have 44px targets on a phone and on any touch screen, w
   const css = stripComments(read('src/styles/global.css'))
   const block = css.match(/@media \(max-width:520px\),\(pointer:coarse\)\{[\s\S]*?\n\}/)
   assert.ok(block, 'a block for narrow widths and touch screens exists')
-  assert.match(block[0], /\.verify-notice \.btn-s::after\{[^}]*inset:-8px 0/)
+  assert.match(block[0], /\.verify-notice \.btn-s::after\{[^}]*inset:-9px 0/)
   assert.match(block[0], /\.verify-notice \.sync-notice-dismiss::after\{[^}]*inset:-10px -14px -10px -6px/)
   assert.doesNotMatch(block[0], /min-height|padding/)
 })

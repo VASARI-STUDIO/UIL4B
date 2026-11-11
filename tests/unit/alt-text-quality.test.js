@@ -265,11 +265,11 @@ test('the route does not retry on its own — the budget prevents the cut-off, a
 
 test('the client shows only finished answers, and a failed card can be retried', () => {
   assert.ok(!/truncated/.test(PAGE), 'the page still carries a half-answer path')
-  assert.ok(!/\.alt-card-warn\s*\{/.test(CSS), 'the half-answer warning style is dead and should go')
+  assert.ok(!/\.alt-row-warn\s*\{/.test(CSS), 'the half-answer warning style is dead and should go')
   assert.match(PAGE, /altText: data\.altText, status: 'done'/)
-  // A card in the error state still offers a button to try again.
-  assert.match(PAGE, /\{!it\.altText && it\.status !== 'generating' && \(/)
-  assert.match(PAGE, /\{it\.status === 'error' \? 'Retry' : 'Generate'\}/)
+  // A card in the error state still offers a button to try again, unless the allowance is used up.
+  assert.match(PAGE, /!hasText && !it\.decorative && !writing && \(it\.status === 'ready' \|\| \(it\.status === 'error' && !blocked\)\)/)
+  assert.match(PAGE, /\{it\.status === 'error' \? 'Try again' : 'Write'\}/)
 })
 
 test('a failed reply that used the allowance is counted locally, before the meter reads it', () => {
@@ -298,7 +298,7 @@ test('the result field grows to fit instead of clipping into a 3-row box', () =>
 })
 
 test('the result field is still editable — editing must not regress', () => {
-  assert.match(PAGE, /<AutoGrowTextarea[\s\S]{0,300}?onChange=\{\(e\) => editAlt\(it\.id, e\.target\.value\)\}/,
+  assert.match(PAGE, /<AutoGrowTextarea[\s\S]{0,300}?onChange=\{\(e\) => onEdit\(e\.target\.value\)\}/,
     'the auto-growing field must still write edits back through editAlt')
   assert.match(PAGE, /const editAlt = \(id, value\) =>[\s\S]{0,160}?altText: value/)
 })
@@ -307,12 +307,12 @@ test('the autosize ceiling and the CSS backstop agree', () => {
   // If the script fails to run, max-height is all that stops a runaway box.
   // Two numbers that must match are a drift risk, so this is where it is caught.
   const js = /ALT_TEXT_MAX_HEIGHT = (\d+)/.exec(PAGE)
-  const css = /\.alt-card-text\s*\{[^}]*max-height:\s*(\d+)px/.exec(CSS)
+  const css = /\.alt-row-text\s*\{[^}]*max-height:\s*(\d+)px/.exec(CSS)
   assert.ok(js && css, 'both the JS ceiling and the CSS backstop must exist')
-  assert.equal(js[1], css[1], 'ALT_TEXT_MAX_HEIGHT and .alt-card-text max-height have drifted apart')
-  assert.match(CSS, /\.alt-card-text\s*\{[^}]*resize:\s*none/,
+  assert.equal(js[1], css[1], 'ALT_TEXT_MAX_HEIGHT and .alt-row-text max-height have drifted apart')
+  assert.match(CSS, /\.alt-row-text\s*\{[^}]*resize:\s*none/,
     'a self-sizing field must not also carry a manual resize handle that its next keystroke overwrites')
-  assert.ok(!/\.alt-card-text\s*\{[^}]*min-height/.test(CSS),
+  assert.ok(!/\.alt-row-text\s*\{[^}]*min-height/.test(CSS),
     'a min-height fights the measured height on a one-line result')
 })
 
@@ -413,9 +413,9 @@ test('page context is injected as relevance-only, at the point of use', () => {
 })
 
 test('the UI promises relevance, not ranking tricks', () => {
-  assert.match(PAGE, /never inserted as keywords/,
+  assert.match(PAGE, /never added as keywords/,
     'the context field must say what it is NOT used for')
-  assert.match(PAGE, /Stuffing keywords breaks Google/)
+  assert.match(PAGE, /Stuffing in keywords breaks Google/)
   assert.ok(!/keyword density/i.test(PAGE), 'no density language in user-facing copy')
 })
 
@@ -435,7 +435,8 @@ test('the guidance is rendered, not hidden in a title tooltip', () => {
   // first-time user has: which one do I pick?
   assert.match(PAGE, /\{activeTone\.desc\}/)
   assert.match(PAGE, /\{activeTone\.when\}/)
-  assert.match(PAGE, /const activeTone = TONES\.find/)
+  assert.match(PAGE, /const activeTone = toneOf\(tone\)/)
+  assert.match(PAGE, /const toneOf = \(id\) => TONES\.find/)
   assert.match(CSS, /\.alt-field-help\s*\{/, 'the help text must be styled, not unstyled fallback')
 })
 

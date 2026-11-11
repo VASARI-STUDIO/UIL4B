@@ -159,9 +159,13 @@ test.describe('Preview is a main toolbar button', () => {
       await paletteToolbar(page).getByRole('button', { name: 'Extra tools' }).click()
       await page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview', exact: true }).click()
     }
+    const entries = await page.evaluate(() => window.history.length)
     await openPreview()
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     await expect(dialog).toBeVisible()
+    // The viewer adds its history entry once the page settles; a Back pressed
+    // before that would leave the builder, which a person cannot do this fast.
+    await expect.poll(() => page.evaluate(() => window.history.length), { message: 'the viewer never added its history entry' }).toBeGreaterThan(entries)
     await page.goBack()
     await expect(dialog).toHaveCount(0)
     expect(page.url()).toBe(before)

@@ -193,7 +193,9 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
     const resting = await loaded.evaluate((el) => getComputedStyle(el).backgroundColor)
     expect(alphaOf(resting), `a loaded slot paints ${resting}`).toBe(0)
     await expect(loaded.locator('img')).toHaveCSS('opacity', '1')
-    await expect(loaded.locator('img')).toHaveCSS('transition-duration', '0.16s')
+    // A loaded glyph fades in by an opacity-only keyframe animation (ig-glyph-in, 200ms), not a transition.
+    await expect(loaded.locator('img')).toHaveCSS('animation-name', 'ig-glyph-in')
+    await expect(loaded.locator('img')).toHaveCSS('animation-duration', '0.2s')
     const atLoad = await page.evaluate(() => window.__flagLoadOpacity)
     expect(atLoad.length).toBeGreaterThan(0)
     expect(atLoad.every(opacity => opacity === '0'), 'flags remain hidden until their image load event').toBe(true)
@@ -206,20 +208,35 @@ test.describe('the icon grid while a coloured pack is still loading', () => {
 const batchOf = (pack) => (u) => ICONIFY_HOSTS.includes(u.hostname)
   && u.pathname === `/${pack}.json` && u.search.includes('icons=')
 
+// The page asks for the pack's first page only after the batch for the grid it
+// opened on has landed, so the first answer is not the last. Wait until no slot is
+// still waiting and every request has been answered: only then has a later batch
+// that carried the missing name (and would put it back) been drawn.
+async function settleAnswers(page, missing, waitingSlot) {
+  await expect(page.locator(waitingSlot), 'slots are still waiting after the batches returned').toHaveCount(0, { timeout: 20_000 })
+  await expect.poll(() => missing.answered, { timeout: 20_000 }).toBe(missing.requests)
+}
+
 async function answerWithMissing(page, pack, pick) {
   let release
   const held = new Promise((resolve) => { release = resolve })
-  const state = { name: null, requests: 0, release }
+  const state = { name: null, requests: 0, answered: 0, release }
   await page.route(batchOf(pack), async (route) => {
     state.requests += 1
     await held
     const answer = answerIconify(route.request().url())
     const data = JSON.parse(answer.body)
-    const drop = state.name ? null : pick(Object.keys(data.icons))
+    // The service lacks this name for good, so EVERY answer that carries it leaves
+    // it out. The page may ask for the same name in more than one batch (the grid
+    // it opened on, then the chosen pack's first page); dropping it from only the
+    // first answer let a later batch put it back.
+    const drop = state.name ?? pick(Object.keys(data.icons))
     if (drop) {
       state.name = drop
-      delete data.icons[drop]
-      data.not_found = [drop]
+      if (drop in data.icons) {
+        delete data.icons[drop]
+        data.not_found = [drop]
+      }
     }
     await route.fulfill({
       status: 200,
@@ -227,6 +244,7 @@ async function answerWithMissing(page, pack, pick) {
       headers: { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' },
       body: JSON.stringify(data),
     })
+    state.answered += 1
   })
   return state
 }
@@ -258,6 +276,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect(slot).toHaveClass(/ig-chip--wait/, { timeout: 20_000 })
     await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
     missing.release()
+    await settleAnswers(page, missing, '.ig .ig-chip--wait')
 
     // Its neighbours drew their artwork; the missing name did not, and does not wait.
     await expect(page.locator('.ig .ic[aria-label="Customise github-icon"] .ig-chip img')).toBeVisible({ timeout: 20_000 })
@@ -286,6 +305,7 @@ test.describe('the icon grid for a name the service does not have', () => {
     await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible({ timeout: 20_000 })
     await expect.poll(() => missing.requests, { timeout: 20_000 }).toBeGreaterThan(0)
     missing.release()
+    await settleAnswers(page, missing, '.ig .ic .ig-glyph-wait')
 
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').nth(8)).toBeVisible({ timeout: 20_000 })
     expect(missing.name, 'the answer listed nothing as not found').toBeTruthy()
@@ -306,12 +326,12 @@ test.describe('the customiser while its artwork is loading', () => {
     const r = node.getBoundingClientRect()
     const stage = node.parentElement.getBoundingClientRect()
     return { background: css.backgroundColor, backgroundImage: css.backgroundImage, shadow: css.boxShadow,
-      animation: css.animationName, width: r.width, height: r.height,
+      animation: css.animationName, width: node.offsetWidth, height: node.offsetHeight,
       dx: r.x + r.width / 2 - stage.x - stage.width / 2,
       dy: r.y + r.height / 2 - stage.y - stage.height / 2 }
   })
   // Only the artwork the customiser finally shows, never the waiting slot.
-  const FINAL_ART = 'img.icust-stage-img:not(.icust-stage-wait)'
+  const FINAL_ART = 'img.ied-stage-img:not(.ied-stage-wait)'
 
   test('a cold coloured preview paints no square while the held artwork loads', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -330,8 +350,8 @@ test.describe('the customiser while its artwork is loading', () => {
     try {
       await choosePack(page, 'logos')
       await page.locator('.ig .ic').first().click()
-      const stage = page.locator('.icust-stage')
-      const placeholder = stage.locator('.icust-stage-wait')
+      const stage = page.locator('.ied-ground')
+      const placeholder = stage.locator('.ied-stage-wait')
       await expect(placeholder).toBeVisible()
       await expect.poll(() => requests).toBeGreaterThan(0)
       // No grid glyph has arrived for this icon, so the slot is an empty box.
@@ -343,9 +363,9 @@ test.describe('the customiser while its artwork is loading', () => {
         expect(paint.backgroundImage, `${motion}: the waiting slot paints an image`).toBe('none')
         expect(paint.shadow, `${motion}: the waiting slot paints a shadow`).toBe('none')
         expect(paint.animation, `${motion}: the waiting slot animates`).toBe('none')
-        // The stage draws at the inspection size (112px), whatever the export size.
-        expect(paint.width).toBeCloseTo(112, 1)
-        expect(paint.height).toBeCloseTo(112, 1)
+        // The stage draws at the inspection size (160px), whatever the export size.
+        expect(paint.width).toBeCloseTo(160, 1)
+        expect(paint.height).toBeCloseTo(160, 1)
         expect(Math.abs(paint.dx)).toBeLessThan(1)
         expect(Math.abs(paint.dy)).toBeLessThan(1)
       }
@@ -387,44 +407,44 @@ test.describe('the customiser while its artwork is loading', () => {
       await choosePack(page, 'tabler')
       await expect(page.locator('.ig .ic .ig-glyph-wait').first()).toBeVisible()
       await page.locator('.ig .ic').first().click()
-      const stage = page.locator('.icust-stage')
-      const placeholder = stage.locator('.icust-stage-wait')
+      const stage = page.locator('.ied-ground')
+      const placeholder = stage.locator('.ied-stage-wait')
       await expect.poll(() => artRequests).toBeGreaterThan(0)
 
-      // Nothing to show yet: an empty, unpainted 112px box (the inspection size), as for any cold stage.
+      // Nothing to show yet: an empty, unpainted 160px box (the inspection size), as for any cold stage.
       await expect(placeholder).toHaveCount(1)
       await expect(placeholder).not.toHaveAttribute('src', /./)
-      expect((await measureWait(placeholder)).width).toBeCloseTo(112, 1)
+      expect((await measureWait(placeholder)).width).toBeCloseTo(160, 1)
 
       // The grid's glyph lands first. The slot becomes that glyph, still unpainted.
       releaseBatch()
-      const glyph = stage.locator('img.icust-stage-wait')
+      const glyph = stage.locator('img.ied-stage-wait')
       await expect(glyph).toHaveCount(1)
       await expect(glyph).toHaveAttribute('src', /^data:image\/svg\+xml/)
       await expect(glyph).toHaveAttribute('alt', '')
       await expect(glyph).toHaveAttribute('aria-hidden', 'true')
       await expect(stage.locator(FINAL_ART)).toHaveCount(0)
-      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(0)
+      await expect(stage.locator('.ied-stage-host svg')).toHaveCount(0)
       const paint = await measureWait(glyph)
       expect(alphaOf(paint.background)).toBe(0)
       expect(paint.shadow).toBe('none')
       expect(paint.animation).toBe('none')
-      expect(paint.width).toBeCloseTo(112, 1)
-      expect(paint.height).toBeCloseTo(112, 1)
+      expect(paint.width).toBeCloseTo(160, 1)
+      expect(paint.height).toBeCloseTo(160, 1)
       expect(Math.abs(paint.dx)).toBeLessThan(1)
       expect(Math.abs(paint.dy)).toBeLessThan(1)
       await expect(stage.getByRole('status')).toHaveText('Loading…')
 
       // The art arrives: the glyph and the message leave together, the art stays.
       releaseArt()
-      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(1)
+      await expect(stage.locator('.ied-stage-host svg')).toHaveCount(1)
       await expect(placeholder).toHaveCount(0)
       await expect(stage.getByRole('status')).toHaveCount(0)
       await expect(stage.locator('img')).toHaveCount(0)
     } finally { releaseBatch(); releaseArt() }
   })
 
-  test('a Phosphor icon whose art arrives after the modal opens never shows the art with a stroke other than its settled one', async ({ page }) => {
+  test('a Lucide icon whose art arrives after the modal opens never shows the art with a stroke other than its settled one', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await signIn(page, { plan: 'pro' })
     await go(page, '/create/icons')
@@ -436,16 +456,17 @@ test.describe('the customiser while its artwork is loading', () => {
     // The grid's glyph batch is held too, so the cell has no markup to hand the
     // stage and the art can only arrive after the modal is open.
     await page.route(u => ICONIFY_HOSTS.includes(u.hostname)
-      && /^\/ph\.json$/.test(u.pathname) && u.search.includes('icons='), async route => {
+      && /^\/lucide\.json$/.test(u.pathname) && u.search.includes('icons='), async route => {
       await heldBatch
       await route.fallback()
     })
-    // A 256-unit viewBox, as Phosphor draws. Until the art is here the stage has no
+    // A 256-unit viewBox, Phosphor's grid. Phosphor itself now draws as an image (it is not a stroke
+    // pack), so a stroke pack carries the odd viewBox here. Until the art is here the stage has no
     // viewBox to read, so its first stroke value is the 24-unit one; the settled
     // value for this art is a different number. A frame holding both is the fault.
     const ART = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" '
       + 'stroke="currentColor"><circle cx="128" cy="128" r="96"/></svg>'
-    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/ph\/[^/]+\.svg$/.test(u.pathname), async route => {
+    await page.route(u => ICONIFY_HOSTS.includes(u.hostname) && /^\/lucide\/[^/]+\.svg$/.test(u.pathname), async route => {
       artRequests += 1
       await heldArt
       await route.fulfill({
@@ -454,17 +475,17 @@ test.describe('the customiser while its artwork is loading', () => {
       })
     })
     try {
-      await choosePack(page, 'ph')
+      await choosePack(page, 'lucide')
       await page.locator('.ig .ic').first().click()
-      const stage = page.locator('.icust-stage')
+      const stage = page.locator('.ied-ground')
       await expect.poll(() => artRequests).toBeGreaterThan(0)
-      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(0)
+      await expect(stage.locator('.ied-stage-host svg')).toHaveCount(0)
 
       // Sample the stage's stroke variable on every frame, and again the instant
       // art lands in the host (before any later task could set it right).
       await page.evaluate(() => {
-        const stageEl = document.querySelector('.icust-stage')
-        const hostEl = stageEl.querySelector('.icust-stage-host')
+        const stageEl = document.querySelector('.ied-ground')
+        const hostEl = stageEl.querySelector('.ied-stage-host')
         const read = () => ({
           art: !!hostEl.querySelector('svg'),
           stroke: stageEl.style.getPropertyValue('--ig-stroke'),
@@ -482,13 +503,13 @@ test.describe('the customiser while its artwork is loading', () => {
       await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))
 
       releaseArt()
-      await expect(stage.locator('.icust-stage-host svg')).toHaveCount(1)
+      await expect(stage.locator('.ied-stage-host svg')).toHaveCount(1)
       // Settle, then take a few more frames so a late correction would show too.
       await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))))
       const { frames, injected, settled } = await page.evaluate(() => ({
         frames: window.__strokeFrames,
         injected: window.__strokeAtInjection,
-        settled: document.querySelector('.icust-stage').style.getPropertyValue('--ig-stroke'),
+        settled: document.querySelector('.ied-ground').style.getPropertyValue('--ig-stroke'),
       }))
 
       const cold = frames.filter(f => !f.art).map(f => f.stroke)
@@ -496,7 +517,7 @@ test.describe('the customiser while its artwork is loading', () => {
       expect(cold.length, 'frames recorded before the art arrived').toBeGreaterThan(0)
       expect(withArt.length, 'frames recorded with the art on screen').toBeGreaterThan(0)
       // Hand-checked: 2px default at the 24px export size over a 256 box is 2 / (24/256) = 21.33 units
-      // (the stage draws at 112px, with the stroke scaled to match),
+      // (the stage draws at 160px, with the stroke scaled to match),
       // against 2 units for a 24 box. If these matched, the test could not tell.
       expect(Number(settled)).toBeCloseTo(21.33, 1)
       expect(cold, 'the cold stage used the 24-unit stroke').toContain('2')
@@ -518,15 +539,15 @@ test.describe('the customiser while its artwork is loading', () => {
     await page.evaluate(() => {
       window.__stagePaints = []
       new MutationObserver(() => {
-        const stage = document.querySelector('.icust-stage')
+        const stage = document.querySelector('.ied-ground')
         if (stage) window.__stagePaints.push({
-          waiting: !!stage.querySelector('.icust-stage-wait, [role="status"]'),
-          image: !!stage.querySelector('img[src^="data:"]:not(.icust-stage-wait)'),
+          waiting: !!stage.querySelector('.ied-stage-wait, [role="status"]'),
+          image: !!stage.querySelector('img[src^="data:"]:not(.ied-stage-wait)'),
         })
       }).observe(document.body, { childList: true, subtree: true })
     })
     await cell.click()
-    await expect(page.locator('.icust-stage img')).toBeVisible()
+    await expect(page.locator('.ied-ground img')).toBeVisible()
     const paints = await page.evaluate(() => window.__stagePaints)
     expect(paints.length).toBeGreaterThan(0)
     expect(paints.every(p => !p.waiting && p.image)).toBe(true)
@@ -541,11 +562,10 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
   const SIMILAR_IMAGE = (u) => ICONIFY_HOSTS.includes(u.hostname) && /^\/lucide\/arrow-[^/]+\.svg$/.test(u.pathname)
   const tileState = (tile) => tile.evaluate((el) => {
     const css = getComputedStyle(el)
-    const r = el.getBoundingClientRect()
-    return { visibility: css.visibility, opacity: css.opacity, height: r.height, width: r.width, ready: el.dataset.ready }
+    return { visibility: css.visibility, opacity: css.opacity, height: el.offsetHeight, width: el.offsetWidth, ready: el.dataset.ready }
   })
 
-  test('a tile is invisible, unfocusable and still 44px until its image loads, and a failed one stays hidden', async ({ page }) => {
+  test('a tile is invisible, unfocusable and still 52px until its image loads, and a failed one stays hidden', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/create/icons')
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
@@ -572,8 +592,8 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       const opened = page.locator('.ig .ic[aria-label="Customise arrow-right"]')
       await expect(opened.locator(':is(img, svg.ig-sym)')).toBeVisible({ timeout: 20_000 })
       await opened.click()
-      const row = page.locator('.icust-similar-row')
-      const tiles = row.locator('.icust-similar-btn')
+      const row = page.locator('.ied-similar-row')
+      const tiles = row.locator('.ied-sim')
       await expect(tiles).toHaveCount(6)
       // Lazy images only start once the row is near the viewport.
       await row.evaluate((el) => el.scrollIntoView({ block: 'center' }))
@@ -591,22 +611,23 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
         expect(s.visibility).toBe('hidden')
         expect(s.opacity).toBe('0')
         expect(s.ready, 'data-ready is set before the image loaded').toBeUndefined()
-        expect(s.height, 'a waiting tile keeps its 44px box').toBe(44)
-        expect(s.width).toBe(44)
+        expect(s.height, 'a waiting tile keeps its 52px box').toBe(52)
+        expect(s.width).toBe(52)
       }
-      const rowBox = await row.evaluate((el) => el.getBoundingClientRect().height)
-      expect(rowBox, 'the row stays one 44px line while every tile waits').toBe(44)
+      const rowBox = await row.evaluate((el) => el.offsetHeight)
+      expect(rowBox, 'the row stays one 52px line while every tile waits').toBe(52)
+      expect(await page.locator('.ied-similar').evaluate((el) => el.getBoundingClientRect().height), 'the section takes no room while every tile waits').toBe(0)
 
       // Tab from the control before the row must not land on a waiting tile. The SVG code summary is
       // the last control ahead of the row (Reset is hidden, and so cannot take focus, until something
       // is edited), and the guard proves the focus really started there.
-      const codeSum = page.locator('.icust-code-sum')
-      await expect(page.locator('.icust-save')).toBeEnabled()
+      const codeSum = page.locator('#ied-sec-code .ied-disc')
+      await expect(page.locator('#ied-save')).toBeEnabled()
       await codeSum.focus()
       await expect(codeSum, 'the Tab walk starts on the control just before the row').toBeFocused()
       for (let i = 0; i < 4; i += 1) {
         await page.keyboard.press('Tab')
-        const onTile = await page.evaluate(() => document.activeElement?.classList.contains('icust-similar-btn'))
+        const onTile = await page.evaluate(() => document.activeElement?.classList.contains('ied-sim'))
         expect(onTile, `Tab ${i + 1} landed on a Similar tile that is not shown`).toBe(false)
       }
 
@@ -618,10 +639,10 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
         await expect(tile, `tile ${names[i]} shows once its image has loaded`).toBeVisible({ timeout: 20_000 })
         await expect(tile).toHaveCSS('opacity', '1')
         await expect(tile).toHaveAttribute('data-ready', 'true')
-        expect((await tileState(tile)).height).toBe(44)
+        expect((await tileState(tile)).height).toBe(52)
       }
-      await expect(row.locator('.icust-similar-btn:visible'), 'exactly the five that loaded are shown').toHaveCount(5)
-      expect(await row.evaluate((el) => el.getBoundingClientRect().height)).toBe(44)
+      await expect(row.locator('.ied-sim:visible'), 'exactly the five that loaded are shown').toHaveCount(5)
+      expect(await row.evaluate((el) => el.offsetHeight)).toBe(52)
 
       // The one whose image failed never appears, and keeps its place.
       const failed = tiles.nth(5)
@@ -629,7 +650,7 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       expect(await failed.evaluate((el) => el.querySelector('img').naturalWidth), 'the failed image has no pixels').toBe(0)
       await expect(failed).toBeHidden()
       await expect(failed).not.toHaveAttribute('data-ready', /.*/)
-      expect((await tileState(failed)).height).toBe(44)
+      expect((await tileState(failed)).height).toBe(52)
 
       // Positive control for the Tab check: a shown tile IS reachable from the same spot.
       await codeSum.focus()
@@ -637,6 +658,40 @@ test.describe('the customiser\'s "Similar in this pack" row while its images are
       await page.keyboard.press('Tab')
       await expect(page.getByRole('button', { name: `Open ${names[0]}`, exact: true })).toBeFocused()
     } finally { release() }
+  })
+
+  test('Escape after picking a Similar icon puts focus on the grid cell of the icon now open', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/create/icons')
+    await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
+    await choosePack(page, 'lucide')
+
+    const opener = page.locator('.ig .ic[aria-label="Customise arrow-right"]')
+    await expect(opener.locator(':is(img, svg.ig-sym)')).toBeVisible({ timeout: 20_000 })
+    await opener.click()
+    const editor = page.locator('.ied')
+    await expect(editor).toBeVisible()
+    const tiles = page.locator('.ied-similar-row .ied-sim')
+    await expect(tiles).toHaveCount(6)
+
+    // A tile whose own cell is on the grid, so there is a cell to land on.
+    const names = await tiles.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label').replace(/^Open /, '')))
+    const cells = await page.evaluate((list) => list.map((n) => !!document.querySelector(`.ig .ic[data-ic][aria-label="Customise ${n}"]`)), names)
+    const at = cells.indexOf(true)
+    expect(at, `POSITIVE CONTROL: one of ${names.join(', ')} has a cell on the grid`).toBeGreaterThanOrEqual(0)
+    const picked = names[at]
+    expect(picked).not.toBe('arrow-right')
+
+    const tile = page.getByRole('button', { name: `Open ${picked}`, exact: true })
+    await tile.scrollIntoViewIfNeeded()
+    await tile.click()
+    await expect(page.locator('#ied-title'), 'the editor swapped to the picked icon').toHaveText(picked)
+
+    await page.keyboard.press('Escape')
+    await expect(editor).toHaveCount(0)
+    const target = page.locator(`.ig .ic[data-ic][aria-label="Customise ${picked}"]`)
+    await expect(target, 'focus is on the cell of the icon that was open').toBeFocused()
+    await expect(opener, 'and not on the cell the editor was opened from').not.toBeFocused()
   })
 })
 

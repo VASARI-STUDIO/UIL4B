@@ -1,4 +1,4 @@
-// /mobile — the Spectrum design's "On mobile" screen, and the nav that reaches it.
+// /mobile, the "On mobile" screen, and the nav that reaches it.
 //
 // The design file (`UIL4B - Spectrum.dc.html`) has a separate
 // "mobile" screen reached from the nav's third quiet link; this is that screen
@@ -90,7 +90,7 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     const [on, off] = await page.evaluate(() => {
       const q = [...document.querySelectorAll('.spnav-quiet-link')]
       const c = (label) => getComputedStyle(q.find((a) => a.textContent.trim() === label)).color
-      return [c('On mobile'), c('Pricing')]
+      return [c('On mobile'), c('Plans')]
     })
     expect(on, 'the current screen is painted like the others').not.toBe(off)
   })
@@ -99,13 +99,13 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     const { ctx, page } = await ctxAt(browser, 390)
     watch(page, PERSONA)
     await go(page, '/')
-    // Below 760 the quiet links are the menu's first three items.
+    // Up to 767px the quiet links are the menu's first three items.
     await expect(page.locator('.spnav-quiet')).toBeHidden()
     await page.locator('.spnav-burger').click()
     const menu = page.locator('.spnav-menu')
     await expect(menu).toHaveAttribute('data-menu', 'in')
-    await expect(menu.locator('.spnav-rail .spnav-mi')).toHaveText(['Tools', 'Pricing', 'On mobile', 'Open the toolkit ↗'])
-    await expect(menu.locator('.spnav-mi-note')).toHaveText('EVERY CORE TOOL IS FREE, FOREVER')
+    await expect(menu.locator('.spnav-rail > a.spnav-mi')).toHaveText(['Tools', 'Plans', 'On mobile'])
+    await expect(menu.getByText('Open the toolkit'), 'the menu carries a call to action again').toHaveCount(0)
     await menu.locator('.spnav-mi', { hasText: 'On mobile' }).click()
     await expect(page).toHaveURL(/\/mobile$/)
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
@@ -116,22 +116,23 @@ test.describe('the nav reaches /mobile and says where you are', () => {
   test('Tools from /mobile opens the /tools page', async ({ page }) => {
     await go(page, '/mobile')
     await page.locator('.spnav-quiet-link', { hasText: 'Tools' }).click()
-    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /home#bench.
+    // Mutation: point Tools at '#try' on every page → the URL stays /mobile.
     await expect(page).toHaveURL(/\/tools$/)
     await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Tools')
   })
 
-  test('Pricing is the design\'s separate Pricing screen, /plans', async ({ page }) => {
+  test('Plans is its own screen, /plans, and the hero and footer calls to action enter the app', async ({ page }) => {
     await go(page, '/mobile')
-    await expect(page.locator('.spnav-quiet-link', { hasText: 'Pricing' })).toHaveAttribute('href', '/plans')
-    // "Open the toolkit" enters the app with no gate, in the pill,
-    // the hero and the footer alike.
-    const hrefs = await page.locator('.spnav-cta, .spm-cta, .sp-footer-cta').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
-    expect(hrefs).toEqual(['/projects', '/projects', '/projects'])
+    await expect(page.locator('.spnav-quiet-link', { hasText: 'Plans' })).toHaveAttribute('href', '/plans')
+    // "Open the toolkit" enters the app with no gate, in the page and the footer; the bar has none.
+    await expect(page.locator('.spnav-cta')).toHaveCount(0)
+    const hrefs = await page.locator('.spm-cta, .sp-footer-cta').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
+    expect(hrefs).toEqual(['/projects', '/projects'])
   })
 
   test('the menu leaves with the design\'s exit, then unmounts', async ({ page }) => {
     await go(page, '/mobile')
+    await page.setViewportSize({ width: 390, height: 844 })
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     await page.keyboard.press('Escape')
@@ -146,6 +147,7 @@ test.describe('the back gesture and the menu', () => {
   test('back closes the open menu and stays on the page', async ({ page }) => {
     await go(page, '/')
     await go(page, '/mobile')
+    await page.setViewportSize({ width: 390, height: 844 })
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     // Mutation: drop useCloseOnBack → back leaves /mobile with the menu open.
@@ -157,6 +159,7 @@ test.describe('the back gesture and the menu', () => {
   test('closing the menu another way leaves no dead step for back to press', async ({ page }) => {
     await go(page, '/')
     await go(page, '/mobile')
+    await page.setViewportSize({ width: 390, height: 844 })
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     await page.keyboard.press('Escape')
@@ -168,11 +171,12 @@ test.describe('the back gesture and the menu', () => {
   })
 
   test('Tools in the menu closes it and opens the /tools page', async ({ page }) => {
-    await go(page, '/')
+    await go(page, '/mobile')
+    await page.setViewportSize({ width: 390, height: 844 })
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     await page.locator('.spnav-menu .spnav-mi', { hasText: 'Tools' }).click()
-    // Mutation: point QUIET[0] back at '#bench' in SpectrumNav.jsx → the URL is /#bench and the page stays the sales page.
+    // Mutation: point Tools at '#try' on every page → the URL stays /mobile.
     await expect(page.locator('.spnav-menu')).toHaveCount(0)
     await expect(page).toHaveURL(/\/tools$/)
   })
@@ -184,25 +188,21 @@ test.describe('the marketing footer is the design\'s', () => {
     const footer = page.locator('footer.sp-footer')
     // TOOLS / PROJECT / LEGAL are the design's (1606-1629); EXPLORE carries the
     // destinations AppFooter reaches that the design's three do not.
-    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['TOOLS', 'PROJECT', 'EXPLORE', 'LEGAL'])
+    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Project', 'Explore', 'Legal'])
     await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['All tools', 'Colour', 'Type', 'Assets', 'Imagery'])
     await expect(footer.getByRole('link', { name: 'Cookies' }), 'there is no cookies page to link').toHaveCount(0)
     await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
-    // The founder note and credit link sit beside it.
+    // The about note and credit link sit beside it.
     await expect(footer.locator('.app-footer-note')).toHaveCount(1)
     await expect(footer.locator('.sp-footer-attrib')).toHaveAttribute('href', 'https://dylan-coleman.com/')
     // Off the sales page the PROJECT links carry the page with them…
     const project = await footer.locator('.sp-footer-col').nth(1).locator('a')
       .evaluateAll((els) => els.map((a) => a.getAttribute('href')))
-    expect(project).toEqual(['/home#bench', '/home#specimens', '/home#index'])
-    // …and on it, they are sections that exist. #index is the design's tool
-    // index (line 1030); it is not asserted here.
+    expect(project).toEqual(['/home#bookmarks', '/home#try', '/home#exports', '/home#examples', '/home#plans'])
+    // …and on it, they are sections that exist.
     await go(page, '/')
-    for (const id of ['bench', 'specimens']) {
+    for (const id of ['bookmarks', 'try', 'exports', 'examples', 'plans']) {
       await expect(page.locator(`#${id}`), `#${id} is not on the sales page`).toHaveCount(1)
-    }
-    if (!(await page.locator('#index').count())) {
-      test.info().annotations.push({ type: 'finding', description: 'the footer\'s Index link points at #index, which / does not render yet' })
     }
   })
 })
@@ -220,8 +220,9 @@ test.describe('/mobile at every width', () => {
         // Mutation: drop the strip's negative-margin/padding pair balance
         // (margin-right only) → the page scrolls sideways at every phone width.
         expect(over, `${w}px ${theme}: the page scrolls sideways by ${over}px`).toBeLessThanOrEqual(0)
-        const pill = await page.locator('.spnav-bar').boundingBox()
-        expect(pill.height, `${w}px: the pill wrapped`).toBeLessThan(80)
+        const bar = await page.locator('.spnav-bar').boundingBox()
+        // One row: the 92px band from 768px, the 56px phone band below.
+        expect(bar.height, `${w}px: the bar wrapped or changed band`).toBe(w >= 768 ? 92 : 56)
         await ctx.close()
       })
     }
@@ -265,7 +266,7 @@ test.describe('the phone row', () => {
 
 test.describe('reduced motion', () => {
   test('nothing moves: no word entrance, no menu stagger, no exit wait', async ({ browser }) => {
-    const { ctx, page } = await ctxAt(browser, 1440, { reducedMotion: 'reduce' })
+    const { ctx, page } = await ctxAt(browser, 390, { reducedMotion: 'reduce' })
     await page.clock.install()
     await go(page, '/mobile')
     // Mutation: drop prefersReducedMotion() from heroLit → .is-in lands.

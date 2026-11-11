@@ -1,19 +1,15 @@
-// NOTHING ON THE ADMIN DASHBOARD IS A READING OF THE FOUNDER'S OWN BROWSER.
+// NOTHING ON THE ADMIN DASHBOARD IS A READING OF THE VIEWER'S OWN BROWSER.
 //
 // ═══════════════════════════════════════════════════════════════════════════
-// THE INSTRUCTION AND WHAT IT WAS ABOUT
+// THE PROBLEM THIS GUARDS AGAINST
 // ═══════════════════════════════════════════════════════════════════════════
-// 2026-09-16, verbatim: "this admin dashboard get remove alot of shit it does
-// not need such as data from my specific browser window".
+// Headline figures such as "Page Views", "Sessions", "Bounce Rate" and
+// "Avg Duration" must not come from `localStorage.getItem('vs-analytics')` on
+// whichever machine the dashboard happens to be open on. A "this device only"
+// badge does not fix that: a large "Page views" figure reads as traffic, and a
+// grey caption under it reads as a footnote.
 //
-// The dashboard's largest figures — "Page Views", "Sessions", "Bounce Rate",
-// "Avg Duration", across a Today / 7 days / 30 days / All time selector — were
-// `localStorage.getItem('vs-analytics')` on the machine the dashboard happened
-// to be open on. They were badged "This device only · not site-wide" and the
-// badge did not fix it: a four-figure "Page views" reads as traffic, and a grey
-// caption under it reads as a footnote.
-//
-// Two more tabs were the same thing without the badge:
+// Two further tabs had the same defect without a badge:
 //
 //   Pages   Most Visited Pages, Bounce Rate by Entry Page, Top Exit Pages,
 //           Top Entry Pages — every one from getAnalyticsSummary(), which is
@@ -72,10 +68,10 @@ const importedFromAnalytics = () => {
 // Every reader utils/analytics exports, split by what it reads.
 const SITE_WIDE = new Set(['getAggregateAnalytics'])
 // ── THE TWO LOCAL READERS THAT MAY STAY, AND WHY EACH ONE MAY ─────────────
-// An entry here is a decision with a reason attached, not an exemption. Both
-// of these render under a line that states where the rows came from, which is
-// the property the badged-but-uncorrected traffic band did NOT have: it said
-// the scope in a caption and then printed the figure as a headline.
+// An entry here is an allowance with a reason attached, not a blanket
+// exemption. Both of these render under a line that states where the rows came
+// from. A caption that states the scope and then prints the figure as a
+// headline does not meet that bar.
 //
 //   getAnalyticsSummary  the Users tab's fallback when the server list cannot
 //                        be read, under "This browser only · profile cache".
@@ -111,8 +107,8 @@ test('no headline on the dashboard is read out of this browser', () => {
   ))
   assert.deepEqual(offenders, [],
     'src/pages/Admin.jsx imports a reader that returns THIS BROWSER\'S localStorage: '
-    + `${offenders.join(', ')}. The founder asked for "data from my specific browser window" to come `
-    + 'off this dashboard on 2026-09-16. If a new reader genuinely belongs here, it has to be a '
+    + `${offenders.join(', ')}. Data from a single browser window does not belong on this `
+    + 'dashboard. If a new reader genuinely belongs here, it has to be a '
     + 'cross-user one — or be rendered as a labelled fallback the way getAnalyticsSummary is, and '
     + 'added to ALLOWED_LOCAL with the reason.')
   // And it is not reached around the import either.
@@ -138,23 +134,22 @@ test('the one local reader that is allowed is only ever the Users fallback', () 
     + 'drop the import instead')
 })
 
-test('the four tabs the founder had removed are gone, and stay gone', () => {
+test('the four removed tabs (pipeline, board, design, pages) are gone, and stay gone', () => {
   const m = CODE.match(/const TABS = \[([\s\S]*?)\n\]/)
   assert.ok(m, 'the TABS array is gone or reshaped — this test is reading nothing')
   const ids = [...m[1].matchAll(/id:\s*'([^']+)'/g)].map(x => x[1])
   assert.ok(ids.length >= 5, `only ${ids.length} tabs parsed — the matcher is wrong`)
   for (const dead of ['pipeline', 'board', 'design', 'pages']) {
     assert.ok(!ids.includes(dead),
-      `the "${dead}" tab is back. Pipeline and Board render nothing in any deployment — their data has `
-      + 'been local-only since 2026-09-16 — and Design and Pages were both readings of one browser. '
-      + 'The founder asked for the pipeline to go and for the browser-local data to go with it.')
+      `the "${dead}" tab is back. Pipeline and Board render nothing in any deployment, because their data `
+      + 'is local-only, and Design and Pages were both readings of one browser.')
   }
   // The positive half: the tabs that stayed are the ones that had a source
   // capable of answering them, and Overview is still first because the route
   // opens on it.
-  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'community', 'prompts', 'stripe'],
+  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'generated', 'community', 'prompts', 'stripe', 'settings'],
     'the tab set changed. Adding one is fine; this assertion exists so that it is a decision rather '
-    + 'than a drift, and so the order Overview-first survives (tests/user-sim/57 opens on it).')
+    + 'than a drift, and so Overview stays first, because the route opens on it.')
   // And each id must actually have a branch, or the tab is a dead button.
   for (const id of ids) {
     assert.ok(CODE.includes(`tab === '${id}'`), `the "${id}" tab is in the bar and renders nothing`)
@@ -162,7 +157,7 @@ test('the four tabs the founder had removed are gone, and stay gone', () => {
 })
 
 test('the Plan column reads the shared module rather than a two-way expression of its own', () => {
-  // The original defect was one line of inline arithmetic:
+  // The defect this guards against is one line of inline arithmetic:
   //   plan: status === 'active' || status === 'trialing' ? 'pro' : 'free'
   // A perfect utils/adminUsers.js that Admin.jsx does not call would leave that
   // line exactly where it was.
@@ -178,8 +173,8 @@ test('the Plan column reads the shared module rather than a two-way expression o
 test('the analytics reset says what it reaches before it is run', () => {
   // resetPageAnalytics() deletes the `views` field and every `view__<path>`
   // field from up to 400 documents in `analytics-daily` — the shared record,
-  // for every administrator, with no backup. It was confirmed by the words
-  // "Wipe page views? Yes / No", which describes a local button.
+  // for every administrator, with no backup. A confirmation worded like a local
+  // button ("Wipe page views? Yes / No") would understate that.
   assert.ok(CODE.includes('confirmPageReset'), 'the reset no longer asks at all')
   const start = CODE.indexOf('Reset page analytics for everyone?')
   assert.ok(start > -1,

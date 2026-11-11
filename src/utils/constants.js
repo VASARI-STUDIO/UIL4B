@@ -126,7 +126,7 @@ export const OWNER_HANDLES = {
     name: 'Dylan Coleman',
     crown: '👑',
     publicHandle: 'Dylan Coleman 👑',
-    title: 'UIL4B founder',
+    title: 'UI L4B founder',
     publicId: PUBLIC_OWNER_ID,
   },
 }

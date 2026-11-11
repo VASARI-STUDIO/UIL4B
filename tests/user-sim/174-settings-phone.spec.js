@@ -1,6 +1,6 @@
 // /settings on a phone: a section is a history entry, focus follows the view,
 // the back bar stays put, and a free account sees Upgrade to Pro first.
-// (board card 2612b30345, page-level fixes)
+// (page-level fixes)
 //
 // Held here:
 //   · at 390, opening a section and pressing the browser's Back lands on the
@@ -351,7 +351,7 @@ test.describe('settings on a phone: Subscription order', () => {
 })
 
 // ── Part B: Data, Accessibility, Account, Language ─────────────────────────────
-// (board card 2612b30345, section-level fixes)
+// (section-level fixes)
 
 /** How many lines of text each button holds: the distinct tops of its text boxes. */
 const textLines = (page, selector) => page.evaluate((sel) => [...document.querySelectorAll(sel)].map((btn) => {

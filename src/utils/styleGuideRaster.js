@@ -200,7 +200,7 @@ export function buildStyleGuideLayout(design, { projectName = 'Design System', w
     // Free exports carry the credit; Pro exports are clean. Same policy as the
     // HTML guide, read from the live entitlement by the caller.
     ops.push({
-      op: 'text', text: 'Made with UIL4B — uil4b.com', x: A4.width - MARGIN, y: footY,
+      op: 'text', text: 'Made with UI L4B — uil4b.com', x: A4.width - MARGIN, y: footY,
       font: `400 10px ${JSON.stringify(d.body)}`, fill: MUTED, align: 'right',
     })
   }

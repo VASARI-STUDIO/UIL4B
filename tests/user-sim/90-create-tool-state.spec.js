@@ -420,7 +420,8 @@ test.describe('the catalogue tools name the thing they are for', () => {
     expect(await landmarks(page)).toEqual([
       'navigation("Primary")',
       'main',
-      'region("77 families, most popular first")',
+      'navigation("Type tools")',
+      'region("84 families, most popular first")',
     ])
 
     // AND IT SURVIVES THE EMPTY STATE. A section wrapped around only the
@@ -433,6 +434,7 @@ test.describe('the catalogue tools name the thing they are for', () => {
     expect(await landmarks(page)).toEqual([
       'navigation("Primary")',
       'main',
+      'navigation("Type tools")',
       'region("0 families match “zzzzqqq”, most popular first")',
     ])
   })

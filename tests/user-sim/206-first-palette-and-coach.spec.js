@@ -1,14 +1,14 @@
-// A NEW ACCOUNT'S FIRST PALETTE: the workspace card (S2) and the builder's coach (S3).
+// A NEW ACCOUNT'S FIRST PALETTE: the builder's coach (S3), and the dashboard's part in it.
 //
-// The card (components/userhome/FirstPaletteCard.jsx) is the first block under the title for a
-// signed-in account with no project. It opens the Palette Builder with router state
-// { firstPalette: true }, and only that state turns the coach on (components/PaletteCoach.jsx,
-// rules in utils/paletteCoach.js). A direct go() to /create/palette sends no state, so this spec
-// reaches the builder the way a person does: through the card.
+// The coach (components/PaletteCoach.jsx, rules in utils/paletteCoach.js) opens only on router state
+// { firstPalette: true }. The one link that sends it today is the palette card on /onboarding; the
+// dashboard (/projects) used to carry a "Make your first palette" card and no longer does, so this spec
+// reaches the builder the way a new person does: through the onboarding card. A direct go() to
+// /create/palette sends no state.
 //
-//   · THE CARD: first under the title at 390 / 768 / 1440, light and dark; one filled .uh-cta; a
-//     ramp of at least 48px; a headline of at most two lines; the button full width at 390.
-//   · THE COACH: card -> builder shows it. Beat 1 rings the seed chip and moves on when the seed
+//   · THE DASHBOARD: no first-palette card on /projects, whatever the account holds; its own link to the
+//     Palette Builder opens the builder with no coach.
+//   · THE COACH: onboarding -> builder shows it. Beat 1 rings the seed chip and moves on when the seed
 //     changes (by hand or Randomise), never on mount; Next moves it on too. Both beats are one
 //     height. It sits on the adjust bar, not under the phone tab bar.
 //   · STOPPING: the X, Hide tips and Escape each write vs-palette-coach=1 and it never returns;
@@ -75,13 +75,16 @@ function errorsOf(page) {
   return seen
 }
 
-/** Signed in with nothing saved, through the workspace card into the builder, coach up. */
-async function arriveFromCard(page, opts = {}) {
-  await signIn(page, { plan: 'free', projects: 0, ...opts })
-  await go(page, '/projects')
-  await expectRendered(page, '/projects')
-  await page.getByTestId('first-palette-card').getByRole('link', { name: 'Make your first palette' }).click()
+/** Signed in with nothing saved, through the onboarding palette card into the builder, coach up. */
+async function arriveFromOnboarding(page, opts = {}) {
+  await signIn(page, { plan: 'free', projects: 0, onboarded: false, ...opts })
+  await go(page, '/onboarding')
+  await page.locator('[data-first-win="palette"]').click()
   await expect(page).toHaveURL(/\/create\/palette$/)
+  // The URL changes before the lazy route has mounted: until it has, `main` holds the loading
+  // status and the coach is not in the page. Wait for the route itself (the suite's readiness
+  // wait), not for the coach inside the default 5s.
+  await expectRendered(page, '/create/palette')
   await expect(coach(page)).toBeVisible()
   await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
   await entered(page)
@@ -101,6 +104,7 @@ async function arriveWithState(page, from = '/') {
     window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }))
   })
   await expect(page).toHaveURL(/\/create\/palette$/)
+  await expectRendered(page, '/create/palette')
 }
 
 const rect = (locator) => locator.evaluate((el) => {
@@ -109,95 +113,31 @@ const rect = (locator) => locator.evaluate((el) => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// S2 · THE WORKSPACE CARD
+// S2 · THE DASHBOARD CARRIES NO FIRST-PALETTE CARD
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('the first-palette card on the workspace', () => {
-  for (const size of SIZES) {
-    for (const theme of THEMES) {
-      test(`${size.width}px ${theme}: first under the title, one filled button, a ramp, a short headline`, async ({ browser }) => {
-        const { context, page, mobile } = await open(browser, size, theme)
-        watch(page, `a new account opening its workspace on a ${size.name}, ${theme}`)
-        await signIn(page, { plan: 'free', projects: 0 })
-        await go(page, '/projects')
-        await expectRendered(page, '/projects')
-        const card = page.getByTestId('first-palette-card')
-        await expect(card).toBeVisible()
-
-        const m = await page.evaluate(() => {
-          const box = (el) => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width, height: r.height } }
-          const card = document.querySelector('[data-testid="first-palette-card"]')
-          const main = card.closest('.uh-main') || document.querySelector('.uh-main')
-          const title = main.querySelector('.uh-h1')
-          const ramp = card.querySelector('.uh-first-ramp')
-          const cta = card.querySelector('.uh-cta')
-          const head = card.querySelector('h2')
-          const body = card.querySelector('.uh-continue-body')
-          const hcs = getComputedStyle(head)
-          const lineHeight = Number.parseFloat(hcs.lineHeight) || Number.parseFloat(hcs.fontSize) * 1.2
-          const bcs = getComputedStyle(body)
-          const inner = body.clientWidth - Number.parseFloat(bcs.paddingLeft) - Number.parseFloat(bcs.paddingRight)
-          const cardTop = card.getBoundingClientRect().top
-          // Every other block in the content column that starts above the card (the title row and greeting are not blocks of content).
-          const above = [...main.querySelectorAll('section, [class*="uh-start"], [class*="uh-plan"], [class*="uh-disc"], [class*="uh-pro"]')]
-            .filter((el) => {
-              const r = el.getBoundingClientRect()
-              const cr = card.getBoundingClientRect()
-              // Only blocks in the card's own column count: the Today rail beside it is not "above" it.
-              const sameColumn = r.left < cr.right - 1 && r.right > cr.left + 1
-              return !card.contains(el) && el !== card && !el.contains(card) && r.height > 0 && sameColumn && r.top < cardTop - 1
-            })
-            .map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`)
-          const filled = [...document.querySelectorAll('.uh .uh-cta')].filter((el) => el.getBoundingClientRect().width > 0)
-          const bg = (el) => getComputedStyle(el).backgroundColor
-          return {
-            card: box(card), title: box(title), ramp: box(ramp), cta: box(cta), inner,
-            headLines: Math.round(head.getBoundingClientRect().height / lineHeight * 10) / 10,
-            above,
-            ctas: filled.length, ctaBg: filled.map(bg), ctaInCard: filled.every((el) => card.contains(el)),
-            accentButtons: document.querySelectorAll('.uh .btn-accent').length,
-            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-          }
-        })
-
-        expect(m.card.top, 'the card is not under the title').toBeGreaterThanOrEqual(m.title.bottom - 1)
-        expect(m.above, 'a block sits between the title and the card').toEqual([])
-        expect(m.ctas, 'exactly one .uh-cta on the page').toBe(1)
-        expect(m.ctaInCard, 'the one .uh-cta is not the card’s').toBe(true)
-        expect(m.ctaBg[0], 'the one .uh-cta is not filled').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
-        expect(m.accentButtons, 'a second accent button on the page').toBe(0)
-        expect(m.ramp.height, `the ramp is ${m.ramp.height}px tall`).toBeGreaterThanOrEqual(48)
-        expect(m.ramp.width, 'the ramp is not the width of the card’s content').toBeGreaterThan(m.inner * 0.95)
-        expect(m.headLines, `the headline runs to ${m.headLines} lines`).toBeLessThanOrEqual(2.05)
-        expect(m.cta.height, `the button is ${m.cta.height}px tall`).toBeGreaterThanOrEqual(44)
-        if (size.width === 390) expect(m.cta.width, `the button is ${m.cta.width}px in a ${m.inner}px card`).toBeGreaterThanOrEqual(m.inner - 1)
-        expect(m.overflow, 'the page scrolls sideways').toBe(0)
-
-        await capture(page, `s2-first-palette-card-${size.width}-${theme}.png`, { mobile })
-        await context.close()
-      })
-    }
+test.describe('the dashboard and the coach', () => {
+  for (const [label, signInOpts] of [['a new account with no project', { projects: 0 }], ['an account with one project', { projects: 1 }]]) {
+    test(`${label}: no first-palette card on /projects`, async ({ page }) => {
+      watch(page, label)
+      await signIn(page, { plan: 'free', ...signInOpts })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+      await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' }), 'the page has to have rendered, or "no card" proves nothing').toBeVisible()
+      await expect(page.getByTestId('first-palette-card')).toHaveCount(0)
+      await expect(page.getByRole('link', { name: 'Make your first palette' })).toHaveCount(0)
+    })
   }
 
-  test('an account with every project archived keeps the old starter, and no first-palette card', async ({ page }) => {
-    watch(page, 'a designer whose only project is archived')
-    const archived = {
-      id: 'p-old', name: 'Old Harbour', archived: true,
-      design: JSON.parse(JSON.stringify((await import('../../src/data/designDefaults.js')).DEFAULT_DESIGN)),
-      createdAt: '2026-09-01T09:00:00.000Z', updatedAt: '2026-09-02T09:00:00.000Z',
-    }
-    await signIn(page, { plan: 'free', projects: [archived] })
+  test('the empty dashboard’s own link to the Palette Builder opens the builder without the coach', async ({ page }) => {
+    watch(page, 'a new account using the empty dashboard’s palette link')
+    await signIn(page, { plan: 'free', projects: 0 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await expect(page.getByTestId('starter-card').getByRole('button', { name: 'Start the walkthrough' })).toBeVisible()
-    await expect(page.getByTestId('first-palette-card')).toHaveCount(0)
-  })
-
-  test('with a project the card is gone', async ({ page }) => {
-    watch(page, 'a designer with one project')
-    await signIn(page, { plan: 'free', projects: 1 })
-    await go(page, '/projects')
-    await expectRendered(page, '/projects')
-    await expect(page.getByTestId('first-palette-card')).toHaveCount(0)
+    await page.getByRole('link', { name: 'Open in Palette Builder' }).first().click()
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
+    await expect(coach(page), 'the dashboard link sends no firstPalette state').toHaveCount(0)
+    expect(await stored(page), 'a plain visit wrote the dismissal').toBeNull()
   })
 })
 
@@ -214,9 +154,9 @@ test.describe('the first-palette coach', () => {
     expect(await stored(page), 'a render wrote the dismissal').toBeNull()
   })
 
-  test('the card opens the builder with beat 1 up, and nothing is written to storage', async ({ page }) => {
-    watch(page, 'a new account arriving from the workspace card')
-    await arriveFromCard(page)
+  test('the onboarding card opens the builder with beat 1 up, and nothing is written to storage', async ({ page }) => {
+    watch(page, 'a new account arriving from the onboarding card')
+    await arriveFromOnboarding(page)
     await expect(coach(page).getByRole('heading', { name: 'Make it yours' })).toBeVisible()
     await expect(count(page)).toHaveText('1 of 2')
     await expect(coach(page)).toContainText('Change the first colour to your brand colour. Every other colour updates with it.')
@@ -225,18 +165,9 @@ test.describe('the first-palette coach', () => {
     expect(await stored(page), 'showing the coach wrote the dismissal').toBeNull()
   })
 
-  test('the onboarding palette card opens it too', async ({ page }) => {
-    watch(page, 'a brand-new account choosing the palette on /onboarding')
-    await signIn(page, { plan: 'free', projects: 0, onboarded: false })
-    await go(page, '/onboarding')
-    await page.locator('[data-first-win="palette"]').click()
-    await expect(page).toHaveURL(/\/create\/palette$/)
-    await expect(coach(page)).toBeVisible()
-  })
-
   test('it does not move on from beat 1 on its own', async ({ page }) => {
     watch(page, 'a new account looking at beat 1 without touching the board')
-    await arriveFromCard(page)
+    await arriveFromOnboarding(page)
     const seed = await readSeed(page)
     // Several frames after the board has painted and the toolbar has settled.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))))
@@ -246,7 +177,7 @@ test.describe('the first-palette coach', () => {
 
   test('beat 1 moves to beat 2 when the seed is edited', async ({ page }) => {
     watch(page, 'a new account typing its brand colour')
-    await arriveFromCard(page)
+    await arriveFromOnboarding(page)
     await setSeed(page, '#E0422B')
     await expect(count(page)).toHaveText('2 of 2')
     await expect(coach(page).getByRole('heading', { name: 'Keep it' })).toBeVisible()
@@ -257,14 +188,14 @@ test.describe('the first-palette coach', () => {
 
   test('beat 1 moves to beat 2 on Randomise', async ({ page }) => {
     watch(page, 'a new account pressing Randomise')
-    await arriveFromCard(page)
+    await arriveFromOnboarding(page)
     await clickPaletteAction(page, 'Randomise')
     await expect(count(page)).toHaveText('2 of 2')
   })
 
   test('Next moves to beat 2 without an edit', async ({ page }) => {
     watch(page, 'a new account happy with the first draw')
-    await arriveFromCard(page)
+    await arriveFromOnboarding(page)
     const seed = await readSeed(page)
     await coach(page).getByRole('button', { name: 'Next' }).click()
     await expect(count(page)).toHaveText('2 of 2')
@@ -278,7 +209,7 @@ test.describe('the first-palette coach', () => {
     test(`${size.width}px: beat 1's ring is on a control the person can see`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a new account reading beat 1 on a ${size.name}`)
-      await arriveFromCard(page)
+      await arriveFromOnboarding(page)
       const seed = page.locator('.plb .plb-seedchip')
       const onRow = (await seed.count()) > 0 && await seed.first().isVisible()
       if (size.width >= 768) expect(onRow, 'the seed chip is on the toolbar row from 768px up').toBe(true)
@@ -303,7 +234,7 @@ test.describe('the first-palette coach', () => {
     test(`${size.width}px: the coach is clear of the phone tab bar and its buttons can be pressed`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a new account reading the coach on a ${size.name}`)
-      await arriveFromCard(page)
+      await arriveFromOnboarding(page)
       const tabs = page.locator('.pnav-tabs')
       const phoneTabs = (await tabs.count()) > 0 && await tabs.first().isVisible()
       expect(phoneTabs, 'the tab bar is only on a phone').toBe(size.width < 768)
@@ -328,7 +259,7 @@ test.describe('the first-palette coach', () => {
       test(`${size.width}px ${theme}: both beats are one height and one place, on the adjust bar, and the toolbar does not move`, async ({ browser }) => {
         const { context, page, mobile } = await open(browser, size, theme)
         watch(page, `a new account in the builder on a ${size.name}, ${theme}`)
-        await arriveFromCard(page)
+        await arriveFromOnboarding(page)
 
         const bar1 = await rect(toolbar(page))
         const one = await rect(coach(page))
@@ -378,7 +309,7 @@ test.describe('the first-palette coach', () => {
   ]) {
     test(`${how} closes it for good`, async ({ page }) => {
       watch(page, `a new account dismissing the coach with ${how}`)
-      await arriveFromCard(page)
+      await arriveFromOnboarding(page)
       expect(await stored(page)).toBeNull()
       await act(page)
       await expect(coach(page)).toHaveCount(0)
@@ -389,11 +320,11 @@ test.describe('the first-palette coach', () => {
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
       await expect(coach(page)).toHaveCount(0)
 
-      // And through the card again: the card is still there (no project yet) and the coach is not.
-      await go(page, '/projects')
-      await expectRendered(page, '/projects')
-      await page.getByTestId('first-palette-card').getByRole('link', { name: 'Make your first palette' }).click()
+      // And asked for again (the same router state the onboarding card sends): the coach stays gone. The
+      // onboarding page itself does not offer the card a second time, so the state is sent by hand.
+      await arriveWithState(page, '/projects')
       await expect(page).toHaveURL(/\/create\/palette$/)
+      await expectRendered(page, '/create/palette')
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
       await expect(coach(page)).toHaveCount(0)
       expect(await stored(page)).toBe('1')
@@ -402,7 +333,7 @@ test.describe('the first-palette coach', () => {
 
   test('Escape is ignored while the seed picker is open', async ({ page }) => {
     watch(page, 'a new account pressing Escape inside the colour picker')
-    await arriveFromCard(page)
+    await arriveFromOnboarding(page)
     await page.locator('.plb .plb-seedchip').click()
     const picker = page.getByRole('dialog', { name: 'Pick seed colour' })
     await expect(picker).toBeVisible()
@@ -418,7 +349,7 @@ test.describe('the first-palette coach', () => {
 
   test('Escape is ignored while the save menu is open', async ({ page }) => {
     watch(page, 'a new account pressing Escape in the save menu')
-    await arriveFromCard(page)
+    await arriveFromOnboarding(page)
     await coach(page).getByRole('button', { name: 'Next' }).click()
     await coach(page).getByRole('button', { name: 'Save palette' }).click()
     await expect(page.locator('.plb-savemenu')).toBeVisible()
@@ -435,10 +366,9 @@ test.describe('the first-palette coach', () => {
       const { context, page, mobile } = await open(browser, size, 'light', { isMobile: false, hasTouch: false })
       watch(page, `a new account saving its first palette on a ${size.name}`)
       const errors = errorsOf(page)
-      const account = await signIn(page, { plan: 'free', projects: 0 })
-      await go(page, '/projects')
-      await expectRendered(page, '/projects')
-      await page.getByTestId('first-palette-card').getByRole('link', { name: 'Make your first palette' }).click()
+      const account = await signIn(page, { plan: 'free', projects: 0, onboarded: false })
+      await go(page, '/onboarding')
+      await page.locator('[data-first-win="palette"]').click()
       await expect(coach(page)).toBeVisible()
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
 
@@ -496,14 +426,14 @@ test.describe('the first-palette coach', () => {
   test('reduced motion fades the coach in and never moves it', async ({ browser }) => {
     const calm = await open(browser, SIZES[2], 'light', { reducedMotion: 'reduce' })
     watch(calm.page, 'a new account that asked for reduced motion')
-    await arriveFromCard(calm.page)
+    await arriveFromOnboarding(calm.page)
     expect(await coach(calm.page).evaluate((el) => getComputedStyle(el).animationName), 'reduced motion still slides').toBe('plb-coach-fade')
     await calm.context.close()
 
     // The positive control: without the preference it rises.
     const lively = await open(browser, SIZES[2], 'light', { reducedMotion: 'no-preference' })
     watch(lively.page, 'a new account with no motion preference')
-    await arriveFromCard(lively.page)
+    await arriveFromOnboarding(lively.page)
     expect(await coach(lively.page).evaluate((el) => getComputedStyle(el).animationName)).toBe('plb-coach-in')
     await lively.context.close()
   })
@@ -511,7 +441,7 @@ test.describe('the first-palette coach', () => {
   test('the whole path runs without a console error', async ({ page }) => {
     watch(page, 'a new account walking the coach end to end')
     const errors = errorsOf(page)
-    await arriveFromCard(page)
+    await arriveFromOnboarding(page)
     await setSeed(page, '#2B8AE2')
     await expect(count(page)).toHaveText('2 of 2')
     await page.keyboard.press('Escape')

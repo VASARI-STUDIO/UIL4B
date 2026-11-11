@@ -13,5 +13,5 @@ export const FROM_IMAGE_SAMPLES = [
   src: `${DIR}/${s.file}`,
   thumbSrc: `${DIR}/${s.thumb}`,
   // Shown as one line under the photo once a sample is loaded.
-  credit: 'Sample image made for UIL4B',
+  credit: 'Sample image made for UI L4B',
 }))

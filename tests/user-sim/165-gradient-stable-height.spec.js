@@ -504,6 +504,7 @@ test.describe('the interpolation hint at a width where the two hints differ in l
     let best = []
     for (let w = 320; w <= 700; w += 2) {
       await page.setViewportSize({ width: w, height: 900 })
+      await settle(page)
       const h = await measure()
       expect(h.length, 'both hints are in the panel').toBe(2)
       seen.push(`${w}:${h.join('/')}`)
@@ -742,6 +743,18 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         const panel = panelOf(page)
         while ((await stopRows(page).count()) < n) await addButton(panel).click()
         await expect(stopRows(page)).toHaveCount(n)
+        // The newest stop is active, so the page scrolls its row into view with a smooth scrollTo that
+        // is still running when the last row appears. A test that then sets scrollTop itself races that
+        // animation (the count read "10–12 of 12" after the test had asked for the top, and the window
+        // stopped a few pixels short). Wait for the window to reach the foot and stop, so what follows
+        // is the only thing that moves it.
+        if (n > 3) {
+          await expect.poll(
+            () => page.locator('.grd-stops').evaluate((el) => el.scrollTop + el.clientHeight >= el.scrollHeight - 1),
+            { message: 'the window has scrolled to the newest row' },
+          ).toBe(true)
+        }
+        await windowSettled(page)
       }
       /** Which "Select stop n" buttons are pressed (1-based), and every row's hex. */
       const selection = (page) => page.evaluate(() => {
@@ -899,9 +912,11 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
         await expect.poll(async () => (await selection(page)).pressed).toEqual([MAX_STOPS - 1])
         expect((await selection(page)).hexes[MAX_STOPS - 2]).toBe(was.hexes[MAX_STOPS - 2])
+        // Still down the list, with the selected row inside the window. The page's smooth scroll to the
+        // new last row can start after the window has looked still, so poll rather than read once.
+        await expect.poll(() => windowScroll(page), { message: 'the window did not return to the top' }).toBeGreaterThanOrEqual(pitch * 7)
         await windowSettled(page)
-        // Still down the list, with the selected row inside the window.
-        expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 7)
+        expect(await windowScroll(page), 'the window moved off the last row').toBeGreaterThanOrEqual(pitch * 7)
         const inView = await page.locator('.grd-stops').evaluate((win) => {
           const w = win.getBoundingClientRect()
           const r = win.children[win.children.length - 1].getBoundingClientRect()
@@ -921,8 +936,14 @@ test.describe('the stop-count limits and the selection when a stop is removed', 
         await expect(stopRows(page)).toHaveCount(MAX_STOPS - 1)
         await expect.poll(async () => (await selection(page)).pressed).toEqual([8])
         expect((await selection(page)).hexes[7], 'old row 9 slid into row 8').toBe(was.hexes[8])
+        // Where the window sits after the click depends on how Playwright aligned the row it pressed
+        // (centred, or with the button at the window's foot, which leaves the row 6px clipped). The page
+        // then scrolls the row fully into view with a smooth scrollTo that can start after the window has
+        // looked still for ten frames, so a single read after windowSettled can land on the clipped
+        // position. Poll for the position the page settles on instead.
+        await expect.poll(() => windowScroll(page), { message: 'the window did not return to the top' }).toBeGreaterThanOrEqual(pitch * 5)
         await windowSettled(page)
-        expect(await windowScroll(page), 'the window did not return to the top').toBeGreaterThanOrEqual(pitch * 5)
+        expect(await windowScroll(page), 'the window moved off the selected row').toBeGreaterThanOrEqual(pitch * 5)
       })
 
       // The angle lock sits at the top right of the angle row and holds the angle

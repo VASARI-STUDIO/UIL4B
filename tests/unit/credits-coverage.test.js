@@ -290,7 +290,7 @@ test('jszip’s dual licence is ELECTED on the page, not merely restated', () =>
   assert.ok(row, 'jszip is no longer a dependency — if it really went, delete this test with it')
   assert.match(row.licence, /MIT OR GPL/, `jszip now declares "${row.licence}"`)
   assert.match(CREDITS_PAGE, /jszip: '[^']*\bMIT\b[^']*'/,
-    'Credits.jsx no longer states which half of jszip’s dual licence UIL4B elects')
+    'Credits.jsx no longer states which half of jszip’s dual licence UI L4B elects')
   assert.match(CREDITS_PAGE, /jszip: '[^']*elects[^']*'/,
     'the jszip note no longer says the election is a choice we made')
 })
@@ -356,11 +356,11 @@ test('/credits is a real route in every registry a live route needs', () => {
   assert.match(read('public/llms.txt'), /\/credits\)/, 'run `npm run sync:llms`')
 })
 
-/* ── 8 · THE TWO CREDITS WITH NO FILE TO READ ───────────────────────────────
+/* ── 8 · THE CREDITS WITH NO FILE TO READ ───────────────────────────────────
  *
- * Unicode CLDR and the Iconify API are stated on the page because there is no
- * manifest for either. That makes them the two rows that CAN go stale, so each
- * one is checked against the file that would have to change. */
+ * Unicode CLDR, gemoji and the Iconify API are stated on the page because there
+ * is no manifest for any of them. That makes them the rows that CAN go stale, so
+ * each one is checked against the file that would have to change. */
 
 test('the CLDR credit is still true of the script that builds the emoji index', () => {
   const script = stripComments(read('scripts/build-emoji-index.mjs'))
@@ -374,8 +374,62 @@ test('the CLDR credit is still true of the script that builds the emoji index', 
     'the emoji index is gone — if it really went, this credit should go with it')
 })
 
+test('the gemoji credit is still true of the script that builds the emoji shortcodes', () => {
+  const script = stripComments(read('scripts/build-emoji-meta.mjs'))
+  assert.match(script, /github\/gemoji/,
+    'scripts/build-emoji-meta.mjs no longer sources GitHub gemoji, so the credit on '
+    + '/credits describes a source the emoji shortcodes do not use any more')
+  assert.match(CREDITS_PAGE, /name: 'gemoji'/, 'Credits.jsx no longer credits gemoji')
+  assert.match(CREDITS_PAGE, /github\.com\/github\/gemoji/, 'the gemoji credit lost its link')
+  assert.match(CREDITS_PAGE, /licenceName: 'MIT'[^}]*emojiShortcodes\.txt/s,
+    'the gemoji credit no longer states its licence and the file it explains')
+  assert.ok(fs.existsSync(path.join(ROOT, 'src', 'data', 'emojiShortcodes.txt')),
+    'the shortcode table is gone — if it really went, this credit should go with it')
+})
+
 test('the Iconify credit is still true of the page that fetches through it', () => {
   assert.match(ICON_PAGE, /api\.iconify\.design/,
     'IconLibrary.jsx no longer fetches from Iconify, so the credit on /credits is stale')
   assert.match(CREDITS_PAGE, /Iconify/, 'Credits.jsx no longer credits Iconify')
+})
+
+test('every colour system Nearest match compares against is credited, with its owner and licence', () => {
+  const registry = JSON.parse(read('scripts/nearest-sources/systems.json'))
+  for (const sys of registry.systems) {
+    assert.ok(sys.owner, `${sys.id} in systems.json names no owner, so its /credits row credits nobody`)
+    assert.ok(sys.licence && /^https:\/\//.test(sys.licenceUrl), `${sys.id} has no licence or licence link`)
+  }
+  assert.match(CREDITS_PAGE, /from '\.\.\/\.\.\/scripts\/nearest-sources\/systems\.json'/,
+    'Credits.jsx no longer reads the colour systems from the registry the build uses')
+  assert.match(read('src/data/nearest/index.js'), new RegExp(`id: "${registry.systems.at(-1).id}"`),
+    'the shipped nearest-match index and the registry disagree')
+})
+
+test('every engine fetched from jsDelivr is credited, beside the file that pins it', () => {
+  // [package as it appears in the CDN URL, row name on /credits, file that pins it]
+  const engines = [
+    ['@ffmpeg/core@', 'FFmpeg (WebAssembly build)', 'src/utils/ffmpegEngine.js'],
+    ['occt-import-js@', 'occt-import-js', 'src/utils/cadEngine.js'],
+    ['web-ifc@', 'web-ifc', 'src/utils/ifcEngine.js'],
+    ['rhino3dm@', 'rhino3dm', 'src/utils/mesh/rhino.js'],
+    ['meshoptimizer@', 'meshoptimizer', 'src/utils/mesh/meshopt.js'],
+  ]
+  for (const [pkg, name, file] of engines) {
+    assert.ok(read(file).includes(`cdn.jsdelivr.net/npm/${pkg}`),
+      `${file} no longer fetches ${pkg} from jsDelivr, so its /credits row may be stale`)
+    const row = CREDITS_PAGE.match(new RegExp(`name: '${name.replace(/[()]/g, '\\$&')}'[^}]*`))
+    assert.ok(row, `Credits.jsx does not credit ${name}`)
+    assert.ok(row[0].includes(`checkedIn: '${file}'`), `the ${name} row no longer names ${file}`)
+  }
+  // The ffmpeg.wasm build is configured with --enable-gpl, so the MIT wrapper
+  // must not be the only licence the page shows for it.
+  assert.match(CREDITS_PAGE, /licenceName: 'GPL-2\.0-or-later'/, 'the FFmpeg binary is not credited as GPL')
+  assert.match(CREDITS_PAGE, /'@ffmpeg\/core': '[^']*GPL/, 'the @ffmpeg/core package row no longer points at the GPL binary')
+})
+
+test('Switzer, the one non-OFL face this site serves, is credited', () => {
+  assert.match(read('scripts/fetch-switzer.mjs'), /fontshare/i,
+    'fetch-switzer.mjs no longer fetches from Fontshare, so the Switzer credit may be stale')
+  assert.match(CREDITS_PAGE, /name: 'Switzer'[^}]*licenceUrl: 'https:\/\/www\.fontshare\.com\/licenses\/itf-ffl'/s,
+    'Credits.jsx no longer credits Switzer with its licence link')
 })

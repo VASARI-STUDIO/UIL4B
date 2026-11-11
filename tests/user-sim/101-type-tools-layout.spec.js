@@ -33,12 +33,11 @@ const TOOLS = [
     route: '/create/font-pair',
     title: 'Font Pair',
     output: '.fpr-page .fpr-specimen',
-    // Pair A puts the family rows and the preview text ahead of the specimen on
-    // a phone (fonts build spec, criterion 7), so below 768 the first screen
-    // holds the controls and the specimen is the next screen. The first screen
-    // is checked on the family rows; the specimen must still start within the
-    // second screen, so it can't be pushed out of reach.
-    phone: { first: '.fpr-page .fpr-fam', outputWithin: 2 },
+    // A phone opens on the specimen (it is the first thing in the DOM), so the
+    // default rule applies: the output starts on the first screen. At 768 the
+    // two family cards and the preview text lead (the panel sits above the
+    // specimen until 1024), so the first screen must hold the cards themselves.
+    outputAt: { 768: '.fpr-page .fpr-fams' },
   },
   {
     route: '/create/type-scale',
@@ -47,7 +46,9 @@ const TOOLS = [
     // At 768 the panel card leads and is about a screen tall, so the first ladder
     // row starts below the fold by design (fonts build spec, section 3). What
     // must be on the first screen there is the work itself: Base and Ratio.
-    outputAt: { 768: '.tsc-page .tsc-sec-scale' },
+    // On a phone the work is the Kerbside screen, under the width segment; the
+    // ladder follows it and starts below the fold.
+    outputAt: { 390: '.tsc-page .tsk', 768: '.tsc-page .tsc-sec-scale' },
   },
   {
     route: '/create/font-gallery',
@@ -79,7 +80,8 @@ for (const tool of TOOLS) {
             await go(page, tool.route)
             await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 
-            const bar = page.locator('[data-tool-toolbar]')
+            // The first toolbar carries the h1; Font Gallery has a second one for its filters.
+            const bar = page.locator('[data-tool-toolbar]').first()
             await expect(bar).toBeVisible()
             await expect(bar.getByRole('heading', { level: 1, name: tool.title })).toBeAttached()
             await expect(bar).not.toHaveClass(/is-measuring/)
@@ -188,7 +190,7 @@ test('/create/font-gallery · a category chosen in the phone sheet filters the l
   await expect(count).not.toContainText('serif')
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const serif = sheet.getByRole('button', { name: 'Serif', exact: true })
+  const serif = sheet.getByRole('button', { name: /^Serif \d/ })
   await serif.click()
   await expect(serif).toHaveAttribute('aria-pressed', 'true')
   await page.keyboard.press('Escape')

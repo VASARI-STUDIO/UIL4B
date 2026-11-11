@@ -1,17 +1,16 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect } from 'react'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, describeColor, autoTonalPalette, applyAdjust, roleHueArcs } from '../utils/colors'
-import { tintLabelsFor } from '../utils/tintLabels'
 import {
   SEMANTIC_ROLES as ROLE_IDS, SEMANTIC_STEPS as STATE_LABELS, STATE_PRESETS, INFO_PURPLE,
   resolveStateShades, readSemanticStates,
 } from '../data/semanticPresets'
 import { useProject } from '../contexts/ProjectContext'
 import { fileName } from '../utils/exportFileName'
-import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo'
+import { semanticTokensCSS, semanticSwatchHTML } from '../utils/semanticExport'
 import {
   ToolLayout, ToolButton, ToolPills, ToolSlider, ToolCode, ToolIcon,
 } from '../components/tool/ToolLayout'
-import { useExport } from '../contexts/ExportContext'
+import ExportMenu from '../components/tool/ExportMenu'
 // The keyboard + dismissal contract every non-modal popover in this app owes
 // its user (Escape closes and hands focus back, a press outside closes, opening
 // moves focus in, tabbing past either end closes). The Add-to-Project panel
@@ -19,13 +18,12 @@ import { useExport } from '../contexts/ExportContext'
 import { reconcileStudioPalette, sameColours, studioRoleCount, resolveStudioRoles } from '../utils/studioPalette'
 import { tintsNeedWrite } from '../utils/projectTints'
 import usePopover from '../hooks/usePopover'
-import useExportGate from '../hooks/useExportGate'
+import { useGatedDownload } from '../components/converter/shared'
 // The free-tier cap's refusal, rendered where it was thrown. Shared with the
 // Palette Builder and /projects so one refusal cannot be worded — or styled —
 // two ways on two surfaces.
 import SaveRefusal from '../components/SaveRefusal'
 import { useTheme } from '../contexts/ThemeContext'
-import { useAppearance } from '../contexts/AppearanceContext'
 // The `semantic-color` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -193,11 +191,10 @@ const alphaOf = (hex, a) => `color-mix(in srgb, ${hex} ${Math.round(a * 100)}%, 
 
 
 export default function ColorStudio({ onCopy, toast }) {
-  // downloadHTML and downloadCSS produce FILES and need a free account;
-  // copyCSS beside them stays free forever. See src/hooks/useExportGate.js.
-  const requireExportAccount = useExportGate()
+  // The two downloads produce FILES and need a free account (the gate asks);
+  // Copy tokens stays free forever. See src/hooks/useExportGate.js.
+  const gatedDownload = useGatedDownload()
   const { theme } = useTheme()
-  const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient, saveProject, projects, loadProject, overwriteProject, canSaveProjects } = useProject()
 
   const [undoToast, setUndoToast] = useState(null)
@@ -429,253 +426,6 @@ export default function ColorStudio({ onCopy, toast }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lumBias, satDecay, oled, tintScale.join(',')])
 
-  const { registerExport, clearExport } = useExport()
-
-  useEffect(() => {
-    const labels = allColors.map((_, i) => ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface'][i] || `Colour ${i + 1}`)
-    const stateLabels = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
-
-    const buildVars = () => {
-      const colorVars = allColors.map((c, i) => `  --color-${labels[i].toLowerCase().replace(/\s+/g, '-')}: ${c};`).join('\n')
-      const tintNames = tintLabelsFor(tintScale.length)
-      const tintVars = tintScale.map((c, i) => `  --tint-${tintNames[i]}: ${c};`).join('\n')
-      const stateVars = ROLE_IDS.map((state) => {
-        const shades = resolveStateShades(state, stateColors[state], infoHue)
-        return shades.map((c, i) => `  --${state}-${stateLabels[i]}: ${c};`).join('\n')
-      }).join('\n')
-      return { colorVars, tintVars, stateVars }
-    }
-
-    const generateHTML = () => {
-      const { colorVars, tintVars, stateVars } = buildVars()
-      const stateEntries = ROLE_IDS.map((state) => ({
-        name: state, shades: resolveStateShades(state, stateColors[state], infoHue)
-      }))
-      const isDark = theme === 'dark'
-      const rdMap = { none: ['0px', '0px'], subtle: ['6px', '4px'], default: ['12px', '8px'], pronounced: ['20px', '14px'] }
-      const [rdVal, rdSVal] = rdMap[rounding] || rdMap.default
-      return `<!DOCTYPE html>
-<html lang="en" data-theme="${isDark ? 'dark' : 'light'}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design System — UIL4B</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-:root {
-${colorVars}
-${tintVars}
-${stateVars}
-  --ds-bg: #faf9f7; --ds-bg2: #fff; --ds-text: #1a1a17; --ds-text2: #6b6b63;
-  --ds-text3: #a3a299; --ds-border: rgba(0,0,0,.08); --ds-border2: rgba(0,0,0,.05);
-  --ds-code-bg: #1a1a17; --ds-code-text: #e5e5dd;
-  --ds-sidebar: rgba(255,255,255,.85); --ds-hover: rgba(0,0,0,.04);
-  --ds-accent: #a78bfa; --ds-accent-bg: rgba(167,139,250,.1);
-  --ds-radius: ${rdVal}; --ds-radius-s: ${rdSVal};
-  --ds-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
-  --ds-shadow-lg: 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04);
-  --ds-glass: rgba(255,255,255,.6);
-}
-[data-theme="dark"] {
-  --ds-bg: #0d0d0c; --ds-bg2: #161614; --ds-text: #e8e8e2; --ds-text2: #8a8a80;
-  --ds-text3: #555550; --ds-border: rgba(255,255,255,.07); --ds-border2: rgba(255,255,255,.04);
-  --ds-code-bg: #111110; --ds-code-text: #d4d4cc;
-  --ds-sidebar: rgba(17,17,15,.9); --ds-hover: rgba(255,255,255,.04);
-  --ds-accent: #a78bfa; --ds-accent-bg: rgba(167,139,250,.12);
-  --ds-shadow: 0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.15);
-  --ds-shadow-lg: 0 4px 16px rgba(0,0,0,.3), 0 12px 40px rgba(0,0,0,.2);
-  --ds-glass: rgba(255,255,255,.04);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--ds-bg); color: var(--ds-text); line-height: 1.6; display: flex; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-.sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--ds-sidebar); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-right: 1px solid var(--ds-border); padding: 24px 0; overflow-y: auto; z-index: 10; }
-.sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid var(--ds-border); margin-bottom: 12px; }
-.sidebar-brand h3 { line-height: 0; }
-.sidebar-brand .brand-sub { font-size: 10px; color: var(--ds-accent); display: block; margin-top: 2px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-.sidebar-brand .brand-date { font-size: 10px; color: var(--ds-text3); display: block; margin-top: 4px; }
-.sidebar .nav-label { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ds-text3); padding: 16px 20px 6px; }
-.sidebar a { display: block; padding: 8px 20px; font-size: 12px; font-weight: 500; color: var(--ds-text2); text-decoration: none; transition: all .15s; border-left: 2px solid transparent; }
-.sidebar a:hover { color: var(--ds-text); background: var(--ds-hover); }
-.sidebar a.active { color: var(--ds-accent); background: var(--ds-accent-bg); border-left-color: var(--ds-accent); }
-.sidebar-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; border-top: 1px solid var(--ds-border); }
-.sidebar-footer span { font-size: 9px; color: var(--ds-text3); letter-spacing: .04em; }
-.content { margin-left: 220px; flex: 1; padding: 48px 48px; max-width: 920px; }
-header { margin-bottom: 48px; }
-header .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ds-accent); background: var(--ds-accent-bg); padding: 4px 12px; border-radius: 20px; margin-bottom: 14px; }
-header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-bottom: 8px; }
-header p { font-size: 14px; color: var(--ds-text2); line-height: 1.7; }
-.meta { font-size: 11px; color: var(--ds-text3); margin-top: 8px; font-family: 'SF Mono', 'Fira Code', monospace; }
-.format-bar { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
-.fmt-btn { padding: 6px 14px; border: 1px solid var(--ds-border); background: var(--ds-glass); color: var(--ds-text2); font-size: 10px; font-weight: 600; letter-spacing: .04em; border-radius: var(--ds-radius-s); cursor: pointer; font-family: inherit; text-transform: uppercase; transition: all .2s cubic-bezier(.16,1,.3,1); }
-.fmt-btn:hover { border-color: var(--ds-text2); color: var(--ds-text); transform: translateY(-1px); }
-.fmt-btn.active { background: var(--ds-accent-bg); color: var(--ds-accent); border-color: rgba(167,139,250,.3); box-shadow: 0 0 0 1px rgba(167,139,250,.1); }
-section { margin-bottom: 56px; scroll-margin-top: 24px; }
-section h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--ds-border2); color: var(--ds-text3); }
-.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-.color-card { border-radius: var(--ds-radius); overflow: hidden; border: 1px solid var(--ds-border); background: var(--ds-bg2); cursor: pointer; transition: all .25s cubic-bezier(.16,1,.3,1); box-shadow: var(--ds-shadow); }
-.color-card:hover { transform: translateY(-3px); box-shadow: var(--ds-shadow-lg); }
-.color-swatch { height: 80px; position: relative; transition: filter .2s ease; }
-.color-card:hover .color-swatch { filter: brightness(1.12) saturate(1.05); }
-.color-swatch .swatch-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-weight: 600; color: #fff; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); opacity: 0; transition: opacity .2s; }
-.color-card:hover .swatch-overlay { opacity: 1; }
-.swatch-overlay .hex-val { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
-.swatch-overlay .rgb-val { font-size: 9px; opacity: .85; font-family: 'SF Mono', 'Fira Code', monospace; }
-.color-info { padding: 12px; }
-.color-name { font-weight: 600; font-size: 12px; margin-bottom: 3px; }
-.color-val { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--ds-text2); }
-.tint-row { display: flex; gap: 4px; }
-.tint-swatch { flex: 1; height: 48px; border-radius: var(--ds-radius-s); cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; transition: transform .15s cubic-bezier(.16,1,.3,1); box-shadow: inset 0 -1px 0 rgba(0,0,0,.06); }
-.tint-swatch:hover { transform: scaleY(1.2) translateY(-2px); }
-.tint-swatch span { font-size: 7px; font-family: 'SF Mono', 'Fira Code', monospace; opacity: .5; }
-.state-section { margin-bottom: 24px; }
-.state-label { font-size: 11px; font-weight: 700; text-transform: capitalize; margin-bottom: 8px; letter-spacing: .02em; }
-.state-row { display: flex; gap: 4px; }
-.state-chip { flex: 1; height: 40px; border-radius: var(--ds-radius-s); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; cursor: pointer; transition: transform .15s cubic-bezier(.16,1,.3,1); }
-.state-chip:hover { transform: scaleY(1.15) translateY(-1px); }
-.state-chip span { font-size: 7px; font-family: 'SF Mono', 'Fira Code', monospace; opacity: .5; }
-pre.code { background: var(--ds-code-bg); color: var(--ds-code-text); padding: 24px; border-radius: var(--ds-radius); overflow-x: auto; font-size: 11px; line-height: 1.9; border: 1px solid var(--ds-border); font-family: 'SF Mono', 'Fira Code', monospace; }
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--ds-text); color: var(--ds-bg); padding: 10px 20px; border-radius: var(--ds-radius-s); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 100; transform: translateY(8px); box-shadow: var(--ds-shadow-lg); }
-.toast.show { opacity: 1; transform: translateY(0); }
-.theme-toggle { position: fixed; top: 16px; right: 16px; z-index: 20; background: var(--ds-glass); border: 1px solid var(--ds-border); backdrop-filter: blur(12px); padding: 8px 14px; border-radius: var(--ds-radius-s); cursor: pointer; font-size: 11px; font-weight: 600; color: var(--ds-text2); font-family: inherit; transition: all .15s; }
-.theme-toggle:hover { color: var(--ds-text); border-color: var(--ds-text2); }
-@media (max-width: 700px) {
-  .sidebar { display: none; }
-  .content { margin-left: 0; padding: 24px 16px; }
-  .theme-toggle { top: 12px; right: 12px; }
-}
-  </style>
-</head>
-<body>
-  <button class="theme-toggle" onclick="var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;this.textContent=t==='dark'?'Light Mode':'Dark Mode'">${isDark ? 'Light Mode' : 'Dark Mode'}</button>
-  <nav class="sidebar">
-    <div class="sidebar-brand"><h3>${logoSvg({ attrs: `height="14" width="${Math.round(14 * LOCKUP_WIDTH / LOGO_HEIGHT)}" role="img" aria-label="UI L4B"` })}</h3><span class="brand-sub">Design System</span><span class="brand-date">Generated ${new Date().toLocaleDateString()}</span></div>
-    <div class="nav-label">Sections</div>
-    <a href="#colours" class="active">Colours</a>
-    <a href="#tint-scale">Tint Scale</a>
-    <a href="#state-colours">State Colours</a>
-    <a href="#css-properties">CSS Properties</a>
-    <div class="sidebar-footer"><span>Exported from UIL4B</span></div>
-  </nav>
-  <div class="content">
-    <header>
-      <span class="tag">Design System Export</span>
-      <h1>Colour System</h1>
-      <p>Complete colour palette, tint scale, and UI state colours with CSS custom properties ready for production.</p>
-    </header>
-    <div class="format-bar">
-      <button class="fmt-btn active" data-fmt="hex">HEX</button>
-      <button class="fmt-btn" data-fmt="rgb">RGB</button>
-      <button class="fmt-btn" data-fmt="hsl">HSL</button>
-      <button class="fmt-btn" data-fmt="hsb">HSB</button>
-      <button class="fmt-btn" data-fmt="cmyk">CMYK</button>
-      <button class="fmt-btn" data-fmt="oklch">OKLCH</button>
-    </div>
-    <section id="colours">
-      <h2>Colours</h2>
-      <div class="color-grid">
-${allColors.map((c, i) => {
-          const rgb = hexToRgb(c)
-          return `        <div class="color-card" data-hex="${c}">
-          <div class="color-swatch" style="background:${c}">
-            <div class="swatch-overlay">
-              <span class="hex-val">${c.toUpperCase()}</span>
-              <span class="rgb-val">rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})</span>
-            </div>
-          </div>
-          <div class="color-info">
-            <div class="color-name">${labels[i]}</div>
-            <div class="color-val">${c.toUpperCase()}</div>
-          </div>
-        </div>`
-        }).join('\n')}
-      </div>
-    </section>
-    <section id="tint-scale">
-      <h2>Tint Scale</h2>
-      <div class="tint-row">
-${tintScale.map((c) => `        <div class="tint-swatch" data-hex="${c}" style="background:${c}"><span>${c.toUpperCase()}</span></div>`).join('\n')}
-      </div>
-    </section>
-    <section id="state-colours">
-      <h2>State Colours</h2>
-${stateEntries.map(s => `      <div class="state-section">
-        <div class="state-label">${s.name}</div>
-        <div class="state-row">
-${s.shades.map((c, i) => `          <div class="state-chip" data-hex="${c}" style="background:${c};color:${i < 5 ? '#000' : '#fff'}"><span>${stateLabels[i]}</span></div>`).join('\n')}
-        </div>
-      </div>`).join('\n')}
-    </section>
-    <section id="css-properties">
-      <h2>CSS Custom Properties</h2>
-      <pre class="code">:root {
-${colorVars}
-${tintVars}
-${stateVars}
-}</pre>
-    </section>
-  </div>
-  <div class="toast" id="toast"></div>
-  <script>
-(function(){
-  function hexToRgb(h){h=h.replace('#','');var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return{r:r,g:g,b:b}}
-  function hexToHsl(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,s=0,hh=0;if(mx!==mn){var d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);if(mx===r)hh=((g-b)/d+(g<b?6:0))/6;else if(mx===g)hh=((b-r)/d+2)/6;else hh=((r-g)/d+4)/6}return{h:Math.round(hh*360),s:Math.round(s*100),l:Math.round(l*100)}}
-  function hexToHsb(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn,s=mx===0?0:d/mx,v=mx,hh=0;if(d!==0){if(mx===r)hh=((g-b)/d+(g<b?6:0))/6;else if(mx===g)hh=((b-r)/d+2)/6;else hh=((r-g)/d+4)/6}return{h:Math.round(hh*360),s:Math.round(s*100),b:Math.round(v*100)}}
-  function hexToCmyk(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,k=1-Math.max(r,g,b);if(k===1)return{c:0,m:0,y:0,k:100};return{c:Math.round((1-r-k)/(1-k)*100),m:Math.round((1-g-k)/(1-k)*100),y:Math.round((1-b-k)/(1-k)*100),k:Math.round(k*100)}}
-  function hexToOklch(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255;function lin(v){return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)}var lr=lin(r),lg=lin(g),lb=lin(b);var l=Math.cbrt(.4122214708*lr+.5363325363*lg+.0514459929*lb);var m=Math.cbrt(.2119034982*lr+.6806995451*lg+.1073969566*lb);var s=Math.cbrt(.0883024619*lr+.2817188376*lg+.6299787005*lb);var L=.2104542553*l+.793617785*m-.0040720468*s;var a=1.9779984951*l-2.428592205*m+.4505937099*s;var bb=.0259040371*l+.7827717662*m-.808675766*s;var C=Math.sqrt(a*a+bb*bb);var H=Math.atan2(bb,a)*180/Math.PI;if(H<0)H+=360;var Cr=+C.toFixed(3);return{l:+(L*100).toFixed(1),c:Cr,h:Cr===0?0:+H.toFixed(1)}}
-  function fmt(hex,f){hex=hex.trim();switch(f){case'hex':return hex.toUpperCase();case'rgb':var c=hexToRgb(hex);return'rgb('+c.r+', '+c.g+', '+c.b+')';case'hsl':var h=hexToHsl(hex);return'hsl('+h.h+', '+h.s+'%, '+h.l+'%)';case'hsb':var v=hexToHsb(hex);return'hsb('+v.h+', '+v.s+'%, '+v.b+'%)';case'cmyk':var k=hexToCmyk(hex);return'cmyk('+k.c+'%, '+k.m+'%, '+k.y+'%, '+k.k+'%)';case'oklch':var o=hexToOklch(hex);return'oklch('+o.l+'% '+o.c+' '+o.h+')';default:return hex.toUpperCase()}}
-  var cur='hex';
-  var toast=document.getElementById('toast');var tid;
-  function show(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tid);tid=setTimeout(function(){toast.classList.remove('show')},1800)}
-  function update(){document.querySelectorAll('.color-val').forEach(function(el){var card=el.closest('[data-hex]');if(card)el.textContent=fmt(card.dataset.hex,cur)});document.querySelectorAll('.tint-swatch span, .state-chip span').forEach(function(el){var p=el.closest('[data-hex]');if(p)el.textContent=fmt(p.dataset.hex,cur)})}
-  document.querySelectorAll('.fmt-btn').forEach(function(btn){btn.addEventListener('click',function(){cur=btn.dataset.fmt;document.querySelectorAll('.fmt-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');update()})});
-  document.querySelectorAll('[data-hex]').forEach(function(el){el.addEventListener('click',function(){var t=fmt(el.dataset.hex,cur);navigator.clipboard.writeText(t).then(function(){show('Copied: '+t)}).catch(function(){show('Copied: '+t)})})});
-  document.querySelectorAll('.sidebar a').forEach(function(a){a.addEventListener('click',function(){document.querySelectorAll('.sidebar a').forEach(function(l){l.classList.remove('active')});a.classList.add('active')})});
-  var sections=document.querySelectorAll('section[id]');var links=document.querySelectorAll('.sidebar a');
-  var io=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.toggle('active',l.getAttribute('href')==='#'+e.target.id)})}})},{rootMargin:'-20% 0px -60% 0px'});
-  sections.forEach(function(s){io.observe(s)});
-})();
-  </script>
-</body>
-</html>`
-    }
-
-    registerExport({
-      label: 'Colour System',
-      downloadHTML: async () => {
-        if (!(await requireExportAccount('download the colour system'))) return
-        const html = generateHTML()
-        const blob = new Blob([html], { type: 'text/html' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = fileName(design?.name, 'colour-system', 'html')
-        a.click()
-        URL.revokeObjectURL(url)
-      },
-      downloadCSS: async () => {
-        if (!(await requireExportAccount('download the colour system CSS'))) return
-        const { colorVars, tintVars, stateVars } = buildVars()
-        const css = `:root {\n${colorVars}\n\n${tintVars}\n\n${stateVars}\n}\n`
-        const blob = new Blob([css], { type: 'text/css' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = fileName(design?.name, 'colour-system', 'css')
-        a.click()
-        URL.revokeObjectURL(url)
-      },
-      copyCSS: () => {
-        const { colorVars, tintVars, stateVars } = buildVars()
-        onCopy(`:root {\n${colorVars}\n\n${tintVars}\n\n${stateVars}\n}`)
-      },
-    })
-
-    return () => clearExport()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors), infoHue, theme, rounding])
-
 
 
   // Colour System popup (CS#3.14, Slice 3) — replaced the old cs-add-menu dropdown.
@@ -760,12 +510,13 @@ ${stateVars}
 
   const shadesOf = (state) => resolveStateShades(state, stateColors[state], infoHue)
   const baseOf = (state) => shadesOf(state)[baseStep]
-  // The export: the base-step aliases (the design's "SEED AND BASE STEP" code, D:1469)
-  // and then every step of every role, `--color-<role>-<step>`.
-  const baseCSS = ROLE_IDS.map((state) => `  --color-${state}: ${baseOf(state)};`).join('\n')
-  const stateCSS = ROLE_IDS.map((state) => shadesOf(state)
-    .map((c, i) => `  --color-${state}-${STATE_LABELS[i]}: ${c};`).join('\n')).join('\n')
-  const tokensCSS = `:root {\n${baseCSS}\n\n${stateCSS}\n}`
+  // The export: the base-step aliases and then every step of every role,
+  // `--color-<role>-<step>`. Copy tokens, the code box, the stylesheet download
+  // and the swatch sheet all read this one list of roles.
+  const exportRoles = ROLE_IDS.map((state) => ({
+    id: state, label: STATE_META[state].label, intent: STATE_META[state].intent, base: baseOf(state), shades: shadesOf(state),
+  }))
+  const tokensCSS = semanticTokensCSS(exportRoles, STATE_LABELS)
   const sameRoles = (a, b) => ROLE_IDS.every((r) => JSON.stringify(a[r]) === JSON.stringify(b[r]))
   const bundleRoles = (bundle) => ({ ...bundle.config, info: infoHue === 'purple' ? bundle.purple : bundle.config.info })
   const activeStateBundleIndex = STATE_BUNDLES.findIndex((bundle) => sameRoles(stateColors, bundleRoles(bundle)))
@@ -860,6 +611,39 @@ ${stateVars}
   }
 
 
+  // Copying is free (Copy tokens); the two downloads ask for an account inside
+  // gatedDownload, and say so on the row while signed out.
+  const accountHint = canSaveProjects ? undefined : 'Free account'
+  const exportRows = [
+    {
+      id: 'download-css', label: 'Download CSS', icon: 'download-simple', hint: accountHint,
+      onSelect: () => gatedDownload(new Blob([`${tokensCSS}\n`],{ type: 'text/css' }), fileName(design?.name, 'colour-system', 'css'), 'download the colour tokens'),
+    },
+    {
+      id: 'download-html', label: 'Download HTML', icon: 'download-simple', hint: accountHint,
+      onSelect: () => gatedDownload(new Blob([semanticSwatchHTML(exportRoles, STATE_LABELS, baseStep)], { type: 'text/html' }), fileName(design?.name, 'colour-system', 'html'), 'download the colour swatches'),
+    },
+  ]
+  const exportItem = {
+    id: 'export', priority: 0,
+    render: () => <ExportMenu variant="quiet" label="Download" icon="download-simple" items={exportRows} />,
+    // In the overflow the same rows are listed flat, each closing the panel first.
+    menu: (close) => exportRows.map((row) => (
+      <button
+        key={row.id}
+        type="button"
+        className="tl-menu-row"
+        data-export-item={row.id}
+        aria-describedby={row.hint ? `stc-more-${row.id}-hint` : undefined}
+        onClick={() => { close(); row.onSelect() }}
+      >
+        <ToolIcon name={row.icon} size={16} />
+        <span className="tl-menu-row-label">{row.label}</span>
+        {row.hint && <span id={`stc-more-${row.id}-hint`} className="tl-menu-row-hint" aria-hidden="true">{row.hint}</span>}
+      </button>
+    )),
+  }
+
   const saveItem = canSaveProjects ? [{
     id: 'save', priority: 1,
     render: () => (
@@ -884,7 +668,7 @@ ${stateVars}
       className="stc"
       title="Semantic Colour"
       titleId="stc-title"
-      items={saveItem}
+      items={[...saveItem, exportItem]}
       primary={(
         <ToolButton variant="accent" icon="copy" iconSize={14} onClick={copyStateTokens}>
           {semCopied ? 'Copied' : 'Copy tokens'}
@@ -940,7 +724,6 @@ ${stateVars}
               <span className="stc-label" id="stc-base-label">Base step</span>
               <ToolPills
                 labelledBy="stc-base-label"
-                mono
                 options={BASE_STEPS}
                 value={baseStep}
                 onChange={(v) => { setBaseStep(v); setSemCopied(false) }}
@@ -1158,7 +941,13 @@ ${stateVars}
               <div className="stc-save-sub">Load</div>
               {projects.slice(-5).map(p => (
                 <button key={`load-${p.id}`} type="button" className="stc-save-item"
-                  onClick={() => { loadProject(p.id); closeSaveMenu(); toast?.('Loaded: ' + p.name) }}
+                  onClick={() => {
+                    // Unsaved work that was put aside has its own toast (with Undo); it names this project.
+                    const putAside = loadProject(p.id)
+                    closeSaveMenu()
+                    if (putAside === null) toast?.(`Couldn't open ${p.name}. It may have been deleted on another device.`)
+                    else if (!putAside) toast?.('Loaded: ' + p.name)
+                  }}
                 >{p.name}</button>
               ))}
             </>

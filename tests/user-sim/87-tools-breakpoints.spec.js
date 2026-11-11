@@ -4,9 +4,8 @@ import { go, watch } from './helpers.js'
 // ─────────────────────────────────────────────────────────────────────────────
 // THE CONTROL-PATTERN SWEEP over the ten Create/SEO tool surfaces.
 //
-// The founder's words, 2026-09-13: "im finding alot of basic UI problems that
-// can be replaced with better UI design such as replacing some buttons with a
-// drop down or other large issues", alongside a screenshot of seven icon-only
+// The report: basic UI problems that better UI design replaces, such as buttons
+// that should be a drop down, alongside a screenshot of seven icon-only
 // buttons crammed into every row of a list.
 //
 // So this suite is not another geometry sweep — #451 already swept these

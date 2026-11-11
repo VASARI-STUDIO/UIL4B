@@ -31,7 +31,7 @@ const user = { uid: 'u1', displayName: 'Dylan', email: 'd@example.com' }
 
 // ── The rules, as the moderator role leaves them ────────────────────────────
 //
-// firestore.rules is founder-gated, so `isReviewer()` is not in the file on
+// firestore.rules is approval-gated, so `isReviewer()` is not in the file on
 // disk until `npm run apply:gated` has been run. Asserting it against the file
 // would be red every day until then and green afterwards; asserting the
 // unpatched shape would be the reverse. Both are a test that measures the
@@ -79,11 +79,11 @@ test('only a reviewer may approve, and the owner may only withdraw', () => {
 //
 // Against the PLANNED rules, not the file — see the note at the top. These are
 // the properties the role must not cost, asserted where they can be asserted
-// today rather than on the day the founder runs the command.
+// today rather than on the day the owner runs the command.
 
 test('a reviewer is the founder OR a moderator, and nothing else', () => {
   // The predicate the whole role rests on. Both arms are asserted, because
-  // dropping either one is silent: without the admin arm the founder loses his
+  // dropping either one is silent: without the admin arm the admin loses their
   // own queue, and without the moderator arm the role is decoration.
   const fn = /function isReviewer\(\) \{[\s\S]*?\n {4}\}/.exec(reviewerRules)?.[0] || ''
   assert.ok(fn, 'isReviewer() is gone')
@@ -264,13 +264,16 @@ test('the local copy is still written FIRST, in both flows', () => {
   // Local-first is the whole reason submitting works offline and the list
   // updates without waiting on a round trip. Publishing before the local write
   // would make a dropped connection lose the submission outright.
-  for (const [file, local] of [
-    ['src/pages/PaletteBuilder.jsx', 'appendCommunitySubmission('],
-    ['src/pages/Community.jsx', 'setSubmissions(prev => [item, ...prev])'],
+  // Community.jsx sends from a helper its submit handler calls, so its order is
+  // read inside that handler.
+  for (const [file, from, local, publish] of [
+    ['src/pages/PaletteBuilder.jsx', '', 'appendCommunitySubmission(', 'await publishToQueue('],
+    ['src/pages/Community.jsx', 'const handleSubmit', 'setSubmissions(prev => [item, ...prev])', 'await publishDesign(item)'],
   ]) {
-    const src = read(file)
+    const whole = read(file)
+    const src = from ? whole.slice(whole.indexOf(from)) : whole
     const localAt = src.indexOf(local)
-    const publishAt = src.indexOf('await publishToQueue(')
+    const publishAt = src.indexOf(publish)
     assert.ok(localAt > -1, `${file} must still keep a local copy`)
     assert.ok(publishAt > -1, `${file} must publish to the queue`)
     assert.ok(localAt < publishAt, `${file} must write locally before publishing`)

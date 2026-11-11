@@ -1,0 +1,530 @@
+/* The bookmarks section. Padding is the only space at its top and bottom: the
+   join token above (it sits under the hero) and the standard token below.
+   Written desktop first: a fixed 640px stage holding a 1336px composition.
+   Below 1024px the composition would be too small to read, so narrow screens
+   show the tools as a plain list. */
+.bm {
+  --e: cubic-bezier(.23, 1, .32, 1);
+  --x: cubic-bezier(.4, 0, 1, 1);
+  box-sizing: border-box;
+  padding: var(--section-y-join) var(--gutter-x) var(--section-y);
+  color: #EFEEEA;
+  font-family: var(--hm-font);
+}
+.bm-wide { max-width: 1336px; margin: 0 auto; }
+.bm-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Heading and sub-line */
+.bm-head { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: end; }
+.bm-h {
+  margin: 0; max-width: 13ch;
+  font-size: 60px; font-weight: 600; line-height: 1.02; letter-spacing: -.04em; text-wrap: balance;
+}
+.bm-h:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 4px; }
+.bm-sub { margin: 0 0 6px; max-width: 44ch; justify-self: end; font-size: 18px; line-height: 1.6; color: rgba(239, 238, 234, .68); }
+
+/* Controls */
+.bm button { font-family: inherit; cursor: pointer; transition: background-color 120ms ease, color 120ms ease, transform 120ms var(--e); }
+.bm button:active { transform: scale(.97); }
+.bm button:focus-visible, .bm a:focus-visible { outline: 2px solid #EFEEEA; outline-offset: calc(-2px / var(--hm-zoom, 1)); }
+.bm-fold:active { transform: none; background-color: rgba(239, 238, 234, .12); }
+
+/* ── The stage ─────────────────────────────────────────────────────────────── */
+/* The gap above the stage sits on the stage, so the zoom scales it with the rest. */
+.bm-stage { position: relative; isolation: isolate; width: 1336px; height: 640px; margin: 80px auto 0; }
+/* Scaled as one piece so nothing scrolls sideways; zoom shrinks the layout height too. */
+@media (max-width: 1439px) { .bm-stage { --hm-zoom: .86; } }
+@media (max-width: 1252px) { .bm-stage { --hm-zoom: .82; } }
+@media (max-width: 1199px) { .bm-stage { --hm-zoom: .7; } }
+
+.bm-bar {
+  position: absolute; left: 0; top: 0; height: 44px; box-sizing: border-box; padding: 0 8px;
+  border-radius: 12px; border: 1px solid rgba(239, 238, 234, .08); background: #0E0F11;
+  display: flex; align-items: center; font-size: 13px;
+}
+.bm-bar span {
+  height: 30px; padding: 0 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(239, 238, 234, .1); color: #EFEEEA;
+}
+
+.bm-menu, .bm-sub-menu {
+  position: absolute; box-sizing: border-box; padding: 6px; border-radius: 12px;
+  border: 1px solid rgba(239, 238, 234, .1);
+}
+.bm-menu { left: 0; top: 56px; width: 256px; background: #121316; box-shadow: 0 24px 48px rgba(0, 0, 0, .45); }
+.bm-sub-menu {
+  left: 262px; top: 0; width: 300px; background: #16171A; box-shadow: 0 24px 48px rgba(0, 0, 0, .5);
+  transition: transform 220ms var(--e);
+}
+.bm-menu-h {
+  height: 40px; padding-left: 10px; display: flex; align-items: center;
+  border-bottom: 1px solid rgba(239, 238, 234, .08); margin-bottom: 8px; font-size: 13.5px; font-weight: 500;
+}
+
+/* The pause control: 24px visual, WCAG 2.2.2 */
+.bm-pause {
+  flex: none; width: 24px; height: 24px; margin-left: auto; margin-right: 8px; padding: 0;
+  border: 1px solid rgba(239, 238, 234, .16); border-radius: var(--btn-radius); background-color: transparent;
+  color: rgba(239, 238, 234, .72); display: grid; place-items: center;
+}
+
+/* The run bar: the bookmarks as their four parts. The open folder's segment is full strength. */
+.bm-run { display: grid; gap: 2px; margin: 0 12px 8px; }
+.bm-run i { position: relative; isolation: isolate; height: 4px; border-radius: 2px; }
+.bm-run i::before {
+  content: ''; position: absolute; inset: 0; border-radius: 2px; background: var(--c);
+  opacity: .35; transition: opacity 160ms ease;
+}
+.bm-run i.on::before { opacity: 1; }
+/* The tour's clock: this fill ending opens the next folder. Paused, the clock and the bar stop together. */
+.bm-fill {
+  position: absolute; inset: 0; border-radius: 2px; background: var(--c);
+  transform-origin: left; transform: scaleX(0); animation: bmFill 3200ms linear forwards;
+}
+.bm-paused .bm-fill { animation-play-state: paused; }
+@keyframes bmFill { to { transform: scaleX(1); } }
+
+/* Folder rows */
+.bm-fold {
+  position: relative; width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 8px;
+  display: flex; align-items: center; gap: 10px; font-size: 13.5px; text-align: left;
+  background-color: transparent; color: rgba(239, 238, 234, .82);
+}
+.bm-fold.on { background-color: rgba(239, 238, 234, .09); color: #EFEEEA; }
+.bm-fold-n { flex: 1; }
+.bm-dot { flex: none; width: 6px; height: 6px; border-radius: 1px; }
+.bm-fold-c { min-width: 2ch; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: rgba(239, 238, 234, .62); }
+.bm-chev { flex: none; opacity: .5; transition: opacity 150ms ease, transform 150ms var(--e); }
+.bm-fold.on .bm-chev { opacity: .86; transform: translateX(2px); }
+
+/* The open folder's bookmarks; each lights as its line leaves */
+.bm-list { display: none; }
+.bm-list.on { display: block; }
+.bm-mk {
+  height: 32px; padding: 0 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #EFEEEA; background-color: transparent; transition: background-color 120ms ease;
+}
+.bm-mk.hot { background-color: rgba(239, 238, 234, .08); }
+.bm-mk-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-fav {
+  flex: none; width: 16px; height: 16px; border-radius: 4px; color: #0B0C0E;
+  display: grid; place-items: center; font-size: 9.5px; font-weight: 600;
+}
+.bm-list.on .bm-mk { animation: bmLight 260ms var(--e) backwards; }
+.bm-list.on .bm-fav { animation: bmFav 260ms var(--e) backwards; }
+@keyframes bmLight { from { color: rgba(239, 238, 234, .6); } }
+@keyframes bmFav { from { opacity: .35; } }
+/* Nothing moves until the reader acts or the tour has opened a second folder */
+.bm-still .bm-list.on .bm-mk, .bm-still .bm-list.on .bm-fav { animation: none; }
+
+/* ── Lines: bookmark to tool ─────────────────────────────────────────────────── */
+.bm-set { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 160ms var(--x); }
+.bm-set.on { opacity: 1; transition: none; }
+.bm-ln { position: absolute; left: 562px; top: 0; overflow: visible; opacity: 1; transition: opacity 120ms ease; }
+.bm-ln.dim { opacity: .2; }
+.bm-set path { stroke-dasharray: var(--l); stroke-dashoffset: 0; }
+.bm-set.on path { animation: bmDraw 520ms var(--e) backwards; }
+.bm-set.on circle { animation: bmDot 160ms ease-out backwards; }
+.bm-set path.bm-p2 { opacity: 0; transition: opacity 120ms ease; }
+.bm-ln.lit path.bm-p2 { opacity: 1; }
+@keyframes bmDraw { from { stroke-dashoffset: var(--l); } to { stroke-dashoffset: 0; } }
+@keyframes bmDot { from { opacity: 0; } }
+/* The light: one short dash travels each open line, bookmark to tool, once the
+   line has drawn, then rests. 3400ms is 1400ms of travel and 2000ms of rest; it
+   fades in leaving the bookmark and out reaching the tool. Dashoffset and
+   opacity only. */
+.bm-set path.bm-fl { opacity: 0; stroke-dasharray: 28 var(--l); stroke-dashoffset: 28; }
+.bm-set.on path.bm-fl {
+  animation: bmFlow 3400ms cubic-bezier(.65, 0, .35, 1) var(--fd) infinite backwards,
+    bmFlowFade 3400ms linear var(--fd) infinite backwards;
+}
+@keyframes bmFlow { 0% { stroke-dashoffset: 28; } 41.18%, 100% { stroke-dashoffset: var(--nl); } }
+@keyframes bmFlowFade { 0%, 4% { opacity: 0; } 17.4%, 23.7% { opacity: .8; } 41.18%, 100% { opacity: 0; } }
+/* Still before the first change, with nobody looking (out of view or a hidden tab), or stopped (one sweep, then rest) */
+.bm-still .bm-set.on path, .bm-still .bm-set.on circle { animation: none; }
+.bm-still .bm-set.on path.bm-fl, .bm-away .bm-set.on path.bm-fl { animation: none; }
+.bm-once .bm-set.on path.bm-fl { animation-iteration-count: 1; }
+
+/* ── The window ──────────────────────────────────────────────────────────────── */
+.bm-win {
+  position: absolute; left: 760px; top: 0; width: 576px; height: 640px; box-sizing: border-box;
+  border-radius: 16px; background: #16171A; overflow: hidden;
+  display: grid; grid-template-columns: 200px 1fr; grid-template-rows: 44px 1fr;
+}
+.bm-win::after { content: ''; position: absolute; inset: 0; border-radius: 16px; border: 1px solid rgba(239, 238, 234, .16); pointer-events: none; }
+.bm-win-h {
+  grid-column: 1 / -1; height: 44px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(239, 238, 234, .08); font-size: 14px; font-weight: 500;
+}
+.bm-win-n { margin-left: auto; font-size: 13px; font-weight: 400; color: rgba(239, 238, 234, .62); }
+.bm-side {
+  box-sizing: border-box; padding-top: 8px; background: #121316; border-right: 1px solid rgba(239, 238, 234, .08);
+  display: flex; flex-direction: column; min-width: 0;
+}
+.bm-lab {
+  flex: none; height: 22px; padding: 0 12px; display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 500; color: rgba(239, 238, 234, .62);
+}
+.bm-lab.on { color: rgba(239, 238, 234, .86); }
+.bm-g { flex: none; width: 16px; height: 16px; color: rgba(239, 238, 234, .86); }
+.bm-g svg { display: block; width: 16px; height: 16px; }
+.bm-tool {
+  position: relative; flex: none; height: 32px; padding: 0 12px; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #EFEEEA; background-color: transparent; text-decoration: none; isolation: isolate;
+  transition: background-color 120ms ease;
+}
+.bm-tool::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; background-color: rgba(239, 238, 234, .04);
+  opacity: 0; pointer-events: none; transition: opacity 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.bm-tool.on::before { opacity: 1; }
+.bm-tool::after {
+  content: ''; position: absolute; inset: 0; border: 1px solid rgba(239, 238, 234, .24);
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+}
+.bm-tool.hot { background-color: rgba(239, 238, 234, .14); }
+.bm-tool.hot::after { opacity: 1; }
+.bm-tool:active { background-color: rgba(239, 238, 234, .12); transition: none; }
+.bm-rule { margin-top: 8px; height: 1px; flex: none; background: rgba(239, 238, 234, .08); }
+.bm-brand {
+  margin-top: 7px; height: 32px; flex: none; padding: 0 12px; display: flex; align-items: center;
+  font-size: 13px; color: rgba(239, 238, 234, .86);
+}
+.bm-brand span {
+  margin-left: auto; width: 48px; height: 10px; display: grid; grid-template-columns: repeat(4, 12px);
+  border-radius: 3px; overflow: hidden; outline: 1px solid rgba(239, 238, 234, .16); outline-offset: -1px;
+}
+
+@media (hover: hover) {
+  .bm-fold:not(.on):hover { background-color: rgba(239, 238, 234, .05); }
+  .bm-tool:hover { background-color: rgba(239, 238, 234, .08); }
+  .bm-pause:hover { color: rgba(239, 238, 234, .86); background-color: rgba(239, 238, 234, .06); }
+}
+
+/* ── The pane: four layers in one grid cell. Out 100ms on the exit curve, in
+   160ms ease-out after an 80ms delay, so the two are never both above about .3. */
+.bm-panes { box-sizing: border-box; padding: 16px; min-width: 0; display: grid; grid-template-columns: 344px; grid-template-rows: 564px; }
+.bm-lay { grid-area: 1 / 1; min-width: 0; opacity: 0; pointer-events: none; transition: opacity 100ms var(--x); }
+.bm-lay.on { opacity: 1; pointer-events: auto; transition: opacity 160ms ease-out 80ms; }
+.bm-lay-h { height: 24px; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: rgba(239, 238, 234, .86); }
+.bm-lay-g { margin-top: 12px; height: 528px; display: grid; gap: 8px; }
+
+.bm-card {
+  position: relative; box-sizing: border-box; min-width: 0; padding: 12px; border-radius: 10px;
+  display: flex; flex-direction: column; color: #EFEEEA; text-decoration: none;
+}
+.bm-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: 10px; border: 1px solid rgba(239, 238, 234, .08);
+  pointer-events: none; transition: border-color 120ms ease;
+}
+.bm-card.hot::after { border-color: rgba(239, 238, 234, 0); }
+.bm-card::before {
+  content: ''; position: absolute; inset: -1px; border-radius: 11px; border: 2px solid #EFEEEA;
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+}
+.bm-card.hot::before { opacity: 1; }
+.bm-card .pv { flex: 1; min-height: 0; overflow: hidden; }
+.bm-card .ft {
+  flex: none; height: 20px; margin: 8px -8px 0 0; white-space: nowrap; display: flex; align-items: center;
+  gap: 8px; font-size: 13px; font-weight: 500; color: #EFEEEA;
+}
+.bm-card .fg { flex: none; display: block; width: 16px; height: 16px; color: rgba(239, 238, 234, .86); }
+.bm-card .fg svg { display: block; width: 16px; height: 16px; }
+/* A colour tool never fades its colour: the hot card gets a ring, the others lose
+   their words and hairline, and the colour stays exact. */
+.bm-card .ink, .bm-card .ft { transition: opacity 120ms ease; }
+.bm-card.dim .ink, .bm-card.dim .ft { opacity: .40; }
+.bm-card.dim::after { border-color: rgba(239, 238, 234, 0); }
+.bm-mono { font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.bm-gr {
+  background: linear-gradient(var(--a, 135deg), var(--g));
+  background: linear-gradient(var(--a, 135deg) in oklch, var(--g));
+}
+.bm-gt { --a: 90deg; }
+
+/* ── Below 1024px: the phone layout ──────────────────────────────────────────── */
+.bmp { display: none; }
+@media (max-width: 1023px) {
+  .bm-head { grid-template-columns: 1fr; gap: 12px; }
+  .bm-h { max-width: 12ch; font-size: 38px; }
+  .bm-sub { justify-self: start; margin: 0; font-size: 16px; line-height: 1.55; }
+  .bm-frame { display: none; }
+  .bmp { display: block; margin-top: 20px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .bm-h { max-width: 13ch; font-size: 60px; }
+  .bm-head { gap: 16px; }
+  .bm-sub { font-size: 18px; line-height: 1.6; }
+  /* Heading, sub-line and the layout share one centred 640px column; the tools go three up. */
+  .bm-wide { max-width: 640px; }
+  .bmp .bmp-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.bmp, .bmp *, .bmp *::before, .bmp *::after { box-sizing: border-box; }
+.bmp button { -webkit-tap-highlight-color: transparent; }
+
+/* The menu block's header: the folder, its bookmarks, and the pause control */
+.bmp-bar { height: 36px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.bmp-bar-n { font-weight: 500; }
+.bmp-bar-c { font-size: 13px; color: rgba(239, 238, 234, .62); }
+/* 24px to look at, 44px to hit. The ::after is measured from the padding box, 22px inside the 1px border, so it needs 11px each side to reach 44. */
+.bmp-pb {
+  position: relative; flex: none; width: 24px; height: 24px; margin-left: auto; padding: 0;
+  border: 1px solid rgba(239, 238, 234, .16); border-radius: var(--btn-radius); background-color: transparent;
+  color: rgba(239, 238, 234, .72); display: grid; place-items: center;
+}
+.bmp-pb::after { content: ''; position: absolute; inset: -11px; }
+.bmp-pb svg { display: block; }
+.bmp-run { margin: 4px 0 0; }
+
+/* Folders: a 2x2 grid, the open one filled */
+.bmp-folds { margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bmp .bmp-fold {
+  position: relative; min-height: 44px; padding: 6px 12px; border-radius: 12px; border: 1px solid rgba(239, 238, 234, .14);
+  background-color: transparent; color: rgba(239, 238, 234, .86); text-align: left;
+  display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 2px;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 120ms var(--e);
+}
+.bmp .bmp-fold.on { background-color: rgba(239, 238, 234, .10); border-color: rgba(239, 238, 234, .86); color: #EFEEEA; }
+.bmp-fold-n { font-size: 14px; font-weight: 500; line-height: 1.3; }
+.bmp-cnt { display: flex; align-items: center; gap: 6px; font-size: 12px; font-variant-numeric: tabular-nums; color: rgba(239, 238, 234, .62); }
+.bmp-fold.on .bmp-cnt { color: rgba(239, 238, 234, .86); }
+
+/* The open folder's pairs, sized to the longest folder so nothing below moves */
+.bmp-sub {
+  position: relative; margin-top: 12px; border-radius: 16px; border: 1px solid rgba(239, 238, 234, .1);
+  background: #121316; overflow: hidden;
+}
+.bmp-list { display: none; }
+.bmp-list.on { display: block; }
+.bmp-list.on .bmp-pair { animation: bmpIn 260ms var(--e) backwards; }
+@keyframes bmpIn { from { opacity: 0; transform: translateY(6px); } }
+/* Each pair is one button, 64px tall and the full width: two bookmarks, then the tool as plain text */
+.bmp .bmp-pair {
+  position: relative; width: 100%; height: 64px; margin: 0; padding: 4px 14px; border: 0; border-radius: 0;
+  background-color: transparent; color: inherit; font-size: 13.5px; line-height: normal; text-align: left;
+  display: flex; flex-direction: column; justify-content: center;
+  transition: background-color 120ms ease;
+}
+.bmp .bmp-pair + .bmp-pair { border-top: 1px solid rgba(239, 238, 234, .06); }
+.bmp .bmp-pair:active { transform: none; background-color: rgba(239, 238, 234, .12); transition: none; }
+.bmp .bmp-pair.hot { background-color: rgba(239, 238, 234, .08); }
+.bmp-mk { flex: none; height: 18px; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.bmp-mk-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmp-fav {
+  flex: none; width: 16px; height: 16px; border-radius: 4px; color: #0B0C0E;
+  display: grid; place-items: center; font-size: 9.5px; font-weight: 600;
+}
+.bmp-tl {
+  flex: none; height: 20px; padding-left: 26px; display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: rgba(239, 238, 234, .86);
+}
+.bmp-pn { font-weight: 500; }
+.bmp-ar { flex: none; }
+.bmp-ar path { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.bmp-list.on .bmp-ar path { animation: bmpDraw 300ms var(--e) backwards; }
+.bmp-list.on .bmp-pn, .bmp-list.on .bmp-pg { animation: bmpName 200ms ease-out backwards; }
+@keyframes bmpDraw { from { stroke-dashoffset: 1; } }
+@keyframes bmpName { from { opacity: 0; } }
+/* Nothing moves until a tap or the tour's first change */
+.bm-still .bmp-list.on .bmp-pair, .bm-still .bmp-list.on .bmp-ar path,
+.bm-still .bmp-list.on .bmp-pn, .bm-still .bmp-list.on .bmp-pg { animation: none; }
+/* A count line pinned to the bottom edge, so a short folder does not read as empty */
+.bmp-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 36px; padding: 0 14px;
+  border-top: 1px solid rgba(239, 238, 234, .08); display: flex; align-items: center;
+  font-size: 13px; line-height: 16px; font-variant-numeric: tabular-nums; color: rgba(239, 238, 234, .62);
+}
+
+/* Tool glyphs */
+.bmp-gl { flex: none; display: block; width: 20px; height: 20px; color: rgba(239, 238, 234, .86); }
+.bmp-gl svg { display: block; width: 100%; height: 100%; }
+.bmp-pg, .bmp-ft .bmp-gl, .bmp-cv .bmp-gl { width: 16px; height: 16px; }
+
+/* The toolkit window: the pane, then all of the tools, two up */
+.bmp-win {
+  container-type: inline-size; margin-top: 10px; border-radius: 16px; border: 1px solid rgba(239, 238, 234, .16);
+  background: #16171A; overflow: hidden;
+}
+.bmp-win-h { height: 44px; padding: 0 14px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.bmp-win-n { margin-left: auto; font-size: 13px; color: rgba(239, 238, 234, .62); }
+.bmp-grp { border-top: 1px solid rgba(239, 238, 234, .08); }
+.bmp-pane + .bmp-grp { border-top-color: transparent; }
+.bmp-gh {
+  margin: 0; padding: 10px 14px 4px; display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 400; line-height: 16px; color: rgba(239, 238, 234, .62);
+}
+.bmp-grp.on .bmp-gh { color: rgba(239, 238, 234, .86); }
+.bmp-tools { margin: 0; padding: 0 8px 6px; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 8px; }
+.bmp-tools li { min-width: 0; display: flex; flex-direction: column; }
+@container (max-width: 239px) { .bmp-tools { grid-template-columns: minmax(0, 1fr); } }
+.bmp-tool {
+  position: relative; isolation: isolate; min-height: 48px; padding: 4px 6px; border-radius: 6px;
+  display: flex; align-items: center; gap: 8px; font-size: 15px; line-height: 20px; font-weight: 500; text-wrap: balance;
+  text-decoration: none; color: #EFEEEA; background-color: transparent;
+  transition: background-color 150ms ease, transform 120ms var(--e);
+}
+.bmp-tool:active { transform: scale(.97); }
+.bmp-tool::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background-color: rgba(239, 238, 234, .04);
+  box-shadow: inset 0 0 0 1.5px transparent; opacity: 0; pointer-events: none;
+  transition: opacity 240ms cubic-bezier(.4, 0, .2, 1), box-shadow 160ms ease;
+}
+/* The open folder reaches these tiles: a 1.5px ring in the folder's own colour */
+.bmp-grp.on .bmp-tool::before { opacity: 1; box-shadow: inset 0 0 0 1.5px var(--ring); }
+.bmp-tool::after {
+  content: ''; position: absolute; inset: 0; border-radius: 6px; border: 1px solid rgba(239, 238, 234, .24);
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+}
+.bmp-tool.hot { background-color: rgba(239, 238, 234, .14); }
+.bmp-tool.hot::after { opacity: 1; }
+@media (hover: hover) {
+  .bmp .bmp-fold:not(.on):hover { background-color: rgba(239, 238, 234, .06); }
+  .bmp-tool:hover { background-color: rgba(239, 238, 234, .08); }
+  .bmp-pb:hover { color: rgba(239, 238, 234, .86); background-color: rgba(239, 238, 234, .06); }
+}
+
+/* The pane: four layers in one grid cell, only the open one shows. Fixed at 296px so nothing below moves. */
+.bmp-pane { height: 330px; padding: 16px; border-top: 1px solid rgba(239, 238, 234, .08); border-bottom: 1px solid rgba(239, 238, 234, .08); }
+.bmp-lyrs { display: grid; height: 296px; }
+.bmp-lyr {
+  grid-area: 1 / 1; min-width: 0; opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 100ms var(--x), visibility 0s linear 100ms;
+}
+.bmp-lyr.on { opacity: 1; visibility: visible; transition: opacity 160ms ease-out 80ms, visibility 0s; }
+.bmp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; height: 296px; }
+.bmp-grid0 { grid-template-rows: 120px 80px 80px; }
+.bmp-grid1, .bmp-grid3 { grid-template-rows: 144px 144px; }
+.bmp-grid2 { grid-template-rows: 184px 104px; }
+.bmp-wide { grid-column: 1 / -1; }
+/* The hot card takes a 2px ring (its border plus ::before); the others lose their hairline and their words drop to .40. Colour is never dimmed. */
+.bmp-card {
+  position: relative; min-width: 0; min-height: 0; padding: 10px 12px; border: 1px solid rgba(239, 238, 234, .08); border-radius: 10px;
+  display: flex; flex-direction: column; overflow: hidden; transition: border-color 120ms ease;
+}
+.bmp-card::before {
+  content: ''; position: absolute; inset: 0; border-radius: 9px; border: 1px solid #EFEEEA;
+  opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+}
+.bmp-card.hot { border-color: #EFEEEA; }
+.bmp-card.hot::before { opacity: 1; }
+.bmp-dim { transition: opacity 120ms ease; }
+.bmp-pane.has-hot .bmp-card:not(.hot) { border-color: rgba(239, 238, 234, 0); }
+.bmp-pane.has-hot .bmp-card:not(.hot) .bmp-dim { opacity: .40; }
+.bmp-pv { flex: 1; min-height: 0; min-width: 0; }
+.bmp-ft {
+  flex: none; height: 20px; margin-top: 6px; min-width: 0; display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; line-height: 20px; color: #EFEEEA; white-space: nowrap;
+}
+.bmp-ft span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bmp-nog .bmp-gl { display: none; }
+.bmp-mid { display: flex; align-items: center; }
+.bmp-mid > * { width: 100%; }
+.bmp-mono { font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.bmp-ph {
+  display: block; object-fit: cover; object-position: center 45%; border-radius: 6px;
+  outline: 1px solid oklch(1 0 0 / .1); outline-offset: -1px;
+}
+/* Palette: one joined strip, each column labelled inside with its ink chosen per column */
+.bmp-pal {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 100%; border-radius: 8px; overflow: hidden;
+  outline: 1px solid rgba(239, 238, 234, .12); outline-offset: -1px;
+}
+.bmp-pal > div {
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 8px;
+  white-space: nowrap; text-align: center; font-size: 12px; line-height: 16px;
+}
+.bmp-pal b { font-weight: 600; }
+/* Semantic: four joined 10-step ramps, the 500 step outlined */
+.bmp-sem { display: grid; gap: 2px; }
+.bmp-sem > div { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); height: 7px; border-radius: 2px; overflow: hidden; }
+.bmp-sem i.b, .bmp-tint i.b { outline: 1px solid #EFEEEA; outline-offset: -1px; }
+.bmp-tint { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); height: 100%; border-radius: 4px; overflow: hidden; }
+.bmp-grad {
+  height: 100%; border-radius: 6px;
+  background: linear-gradient(135deg, var(--g));
+  background: linear-gradient(135deg in oklch, var(--g));
+}
+.bmp-ctr { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.bmp-ctr b { font-weight: 600; font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; color: #84BF9F; }
+.bmp-ctr b small { font-size: 13px; font-weight: 600; }
+.bmp-ctr > span { font-size: 12px; font-weight: 500; color: rgba(239, 238, 234, .86); }
+.bmp-word { font-family: 'Archivo', var(--hm-font), sans-serif; font-weight: 800; font-stretch: 125%; letter-spacing: -.01em; line-height: 1; color: #EFEEEA; }
+.bmp-w22 { font-size: 19px; white-space: nowrap; }
+/* Font Gallery: family names set in their own face, a meta line each, a hairline between */
+.bmp-gal { display: grid; grid-template-rows: 1fr 1fr; height: 100%; }
+.bmp-gal > div { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.bmp-gal > div + div { border-top: 1px solid rgba(239, 238, 234, .08); }
+.bmp-gn { font-size: 22px; line-height: 26px; letter-spacing: -.03em; white-space: nowrap; }
+.bmp-gn.bmp-word { letter-spacing: -.03em; }
+.bmp-dms { font-family: 'IBM Plex Sans', var(--hm-font), sans-serif; font-weight: 400; color: #EFEEEA; }
+.bmp-gm { font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .62); white-space: nowrap; }
+.bmp-fp { position: relative; }
+.bmp-dm { margin-top: 6px; text-wrap: balance; font-family: 'IBM Plex Sans', var(--hm-font), sans-serif; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .86); }
+.bmp-fpc { position: absolute; left: 0; bottom: 0; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .62); white-space: nowrap; }
+.bmp-fpc span { margin-left: 6px; color: rgba(239, 238, 234, .86); }
+.bmp-aa { font-family: 'IBM Plex Sans', var(--hm-font), sans-serif; font-weight: 600; line-height: 1; color: #EFEEEA; }
+.bmp-ic { display: flex; flex-direction: column; }
+.bmp-sunbox { flex: 1; min-height: 0; margin-bottom: 8px; display: grid; place-items: center; border-radius: 8px; background-color: rgba(239, 238, 234, .03); color: #EFEEEA; }
+.bmp-ic5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.bmp-ic5 span { aspect-ratio: 1; display: grid; place-items: center; border-radius: 8px; color: rgba(239, 238, 234, .72); }
+.bmp-ic5 span.sel { background-color: rgba(239, 238, 234, .08); }
+.bmp-meta { margin-top: 8px; height: 16px; display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 500; line-height: 16px; color: rgba(239, 238, 234, .86); }
+.bmp-sv { display: flex; align-items: baseline; gap: 4px; font-size: 12px; font-weight: 400; color: rgba(239, 238, 234, .62); }
+.bmp-sv code { color: rgba(239, 238, 234, .62); }
+.bmp-em { display: flex; align-items: center; }
+.bmp-em6 { width: 100%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.bmp-em6 span { aspect-ratio: 1; display: grid; place-items: center; border-radius: 8px; font-size: 26px; line-height: 1; }
+.bmp-em6 span.sel { background-color: rgba(239, 238, 234, .08); }
+/* Images: each card has a photo (output, not dimmed) and its text, and keeps its footer */
+.bmp-fc { display: flex; gap: 12px; }
+.bmp-fcp { flex: none; width: 78px; height: 100%; object-position: 80% 50%; }
+.bmp-fcc { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.bmp-fcc code { color: rgba(239, 238, 234, .62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmp-fcc code.bmp-out { color: #EFEEEA; }
+.bmp-cv { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 600; color: #EFEEEA; white-space: nowrap; }
+.bmp-asr { display: flex; align-items: center; gap: 10px; }
+.bmp-asp { flex: none; width: 62px; height: 78px; }
+.bmp-asr b { display: block; font-weight: 600; font-size: 16px; line-height: 20px; font-variant-numeric: tabular-nums; color: #EFEEEA; white-space: nowrap; }
+.bmp-asr b i { font-style: normal; font-size: 12px; font-weight: 400; margin-left: 3px; color: rgba(239, 238, 234, .62); }
+.bmp-asr small { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .62); }
+.bmp-alt { width: 100%; height: 40px; }
+.bmp-at {
+  margin: 6px 0 0; font-size: 12px; line-height: 16px; color: rgba(239, 238, 234, .72); text-wrap: wrap;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+/* A narrow window (320): the same cards, less text */
+@container (max-width: 330px) {
+  .bmp-pal .bmp-mono, .bmp-fpc { display: none; }
+  .bmp-gn { font-size: 20px; }
+  .bmp-w22 { font-size: 15px; }
+  /* the full alt text is the point of this card, so it gets the room the photo had */
+  .bmp-alt { display: none; }
+  .bmp-at { margin-top: 0; -webkit-line-clamp: unset; display: block; }
+  .bmp-em6 span { font-size: 20px; }
+  .bmp-fcp { width: 72px; }
+  .bmp-asp { width: 40px; height: 50px; }
+  .bmp-asr { gap: 8px; }
+  .bmp-asr b { font-size: 14px; line-height: 18px; }
+  .bmp-card { padding-left: 10px; padding-right: 10px; }
+  .bmp-ft { gap: 6px; font-size: 12px; }
+  .bmp-grid0 .bmp-card:not(.bmp-wide) .bmp-ft .bmp-gl { display: none; }
+  .bmp-card[data-j="11"] .bmp-ft { height: auto; align-items: flex-end; }
+  .bmp-card[data-j="11"] .bmp-ft span:last-child { white-space: normal; line-height: 16px; }
+}
+
+/* ── Reduced motion: nothing moves, every state still shows ──────────────────── */
+.bm-rm *, .bm-rm *::before, .bm-rm *::after { transition: none !important; animation: none !important; }
+.bm-rm button:active { transform: none; }
+.bm-rm .bm-set path.bm-fl { display: none; }
+html[data-reduced-motion="true"] .bm *, html[data-reduced-motion="true"] .bm *::before, html[data-reduced-motion="true"] .bm *::after {
+  transition: none !important; animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .bm *, html:not([data-reduced-motion="false"]) .bm *::before, html:not([data-reduced-motion="false"]) .bm *::after {
+    transition: none !important; animation: none !important;
+  }
+}

@@ -40,7 +40,7 @@ function trialLine(planId) {
 const PLANS = {
   monthly: {
     interval: 'monthly',
-    name: 'UIL4B Pro',
+    name: 'UI L4B Pro',
     cadence: 'Monthly',
     per: 'per month',
     months: 1,
@@ -48,7 +48,7 @@ const PLANS = {
   },
   yearly: {
     interval: 'yearly',
-    name: 'UIL4B Pro',
+    name: 'UI L4B Pro',
     cadence: 'Yearly',
     per: 'per year',
     months: 12,
@@ -301,8 +301,9 @@ export default function Checkout() {
   const otherOption = resolved.offers.find((o) => o.id !== chosenOption?.id)
   const priceCopy = priceStateCopy(priceStatus, { currencyLabel: proPrice.currencyLabel, selectedLabel: chosenOption?.label, otherLabel: otherOption?.label })
   const note = !proPrice.loaded
-    // Not settled: no rate yet, because there is no offer to take it from.
-    ? 'Checking the live price…'
+    // Not settled: no rate yet, because there is no offer to take it from. The
+    // loading and retrying states share one line.
+    ? priceCopy.line1
     : priceStatus === 'unreachable'
       ? priceCopy.line1
       // THE SERVICE ANSWERED FOR OTHER CADENCES, BUT NOT WITH A LIVE PRICE FOR
@@ -365,7 +366,9 @@ export default function Checkout() {
       <div className="sec checkout-page">
         <div className="checkout-return">
           <div className="card checkout-return-card">
-            <div className="checkout-error-icon" aria-hidden="true">!</div>
+            <div className="checkout-error-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+            </div>
             <h1>Invalid checkout selection</h1>
             {/* The cadences are read from the plan ladder, not typed. */}
             <p>Choose {CADENCE_WORDS} from Plans. No payment session was created.</p>
@@ -433,8 +436,9 @@ export default function Checkout() {
                 <div className="checkout-plan-cadence">{plan.cadence} plan</div>
               </div>
               <div className="checkout-plan-price">
-                {/* `amount || 'Unavailable'` is the same word /plans prints, for
-                    the reason given above: `loaded` means settled, not known. */}
+                {/* Without an amount the slot prints the state's word from the
+                    shared copy, and neither the cadence suffix nor the trial
+                    band below renders: `loaded` means settled, not known. */}
                 <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{amount || priceCopy.word}</span>
                 {amount && <span className="checkout-plan-per">{plan.per}</span>}
               </div>

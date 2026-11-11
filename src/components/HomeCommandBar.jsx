@@ -4,6 +4,7 @@ import { getCategory, localiseCategories, localiseTools } from '../data/tools'
 import { categoryPillFor, queryCommandIndex, searchHints } from '../data/toolIndex'
 import { useI18n } from '../contexts/I18nContext'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { useShortcutHint } from '../hooks/useShortcutHint'
 
 // The V2 hero's command bar — the "front door" the design gives the ⌘K palette.
 //
@@ -24,9 +25,9 @@ const MAX_ROWS = 5
 
 // ── The typed placeholder ───────────────────────────────────────────────────
 //
-// The founder asked on 2026-09-03 for the nav search's typing animation to play
-// here instead, on load rather than on hover, and for the "Search every tool"
-// line above the bar and the "Try …" chips below it to go.
+// The nav search's typing animation plays here instead, on load rather than on
+// hover, and the "Search every tool" line above the bar and the "Try …" chips
+// below it are gone.
 //
 // Those chips were the only thing on the page telling a visitor what is
 // searchable. That job does not disappear with them — it moves here, which is
@@ -48,17 +49,17 @@ const MAX_ROWS = 5
 // data/tools beside the other registry helpers — see `searchHints`.
 
 // Milliseconds per character typed and deleted, and the caret blink while a
-// completed word is held. From PillNav, which the founder has already signed
-// off on the feel of — this is the same animation, moved.
+// completed word is held. From PillNav, whose feel is already settled — this
+// is the same animation, moved.
 //
 // PROVENANCE, stated plainly because the alternative is dressing a guess up as
 // research: Mobbin was searched for this pattern (web, hero search bars with a
-// self-typing placeholder) when it was first built and again on 2026-09-06, and
+// self-typing placeholder) when it was first built and again later, and
 // it returns NO evidence for any of these numbers. It cannot: the corpus is
 // still screenshots, so it can show that example-query placeholders are common
 // — Exa, Klook and Shop all ship one — and it structurally cannot show whether
 // such a placeholder animates, at what pace, or whether it loops. Every value
-// below is judgement plus the founder's sign-off on the feel, and each one is a
+// below is judgement tuned by feel, and each one is a
 // named constant so a change of mind is a one-line change.
 const TYPE_MS = 55
 const ERASE_MS = 28
@@ -67,7 +68,7 @@ const HOLD_BLINKS = 3
 
 // ── One pass, then it stops ─────────────────────────────────────────────────
 //
-// FOUNDER (PR #269, C6): the demo runs "one pass … then it stops. No loop."
+// The demo runs one pass, then it stops. No loop.
 //
 // It used to loop for as long as the tab was open: the word getter read
 // `hints[index % hints.length]`, so the term after the last one was the first
@@ -78,8 +79,7 @@ const HOLD_BLINKS = 3
 //
 // Two reasons that is wrong and neither is taste:
 //
-//   1. It is the founder's stated ask, and it was the one part of C6 that never
-//      landed when the rest of the hero was rebuilt.
+//   1. It is the intended design: one pass, then it stops.
 //   2. WCAG 2.2.2 (Pause, Stop, Hide). This auto-starts, runs well past five
 //      seconds and sits alongside other content, so a stop has to exist AND be
 //      findable. A pass that ends by itself is the strongest form of that — the
@@ -106,10 +106,13 @@ const CARET = '▏'
 
 function RowIcon({ item }) {
   const cat = item.kind === 'tool' ? getCategory(item.category) : getCategory(item.id)
+  // A Learn guide has no category, so it draws its own glyph rather than a
+  // blank circle.
+  const glyph = item.guide ? item.icon : cat?.icon
   return (
     <span className="hcmd-row-glyph" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        {cat?.icon || <circle cx="12" cy="12" r="9" />}
+        {glyph || <circle cx="12" cy="12" r="9" />}
       </svg>
     </span>
   )
@@ -119,6 +122,7 @@ function RowIcon({ item }) {
 // ghost (SpectrumSearch): the placeholder then stays at its resting sentence,
 // and `demoRunning` tells the ⌘K keycap whether the wrapper's demo is moving.
 export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = false } = {}) {
+  const shortcut = useShortcutHint()
   const { t } = useI18n()
   const navigate = useNavigate()
   const { reducedMotion } = useAppearance()
@@ -342,7 +346,7 @@ export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = 
           <span className="sr-only">
             {demoMoving ? 'Stop the search demo and focus the tool search' : 'Focus the tool search'}
           </span>
-          <kbd aria-hidden="true">⌘K</kbd>
+          <kbd aria-hidden="true">{shortcut}</kbd>
         </button>
       </div>
 
@@ -370,7 +374,9 @@ export default function HomeCommandBar({ labelledBy, demo = true, demoRunning = 
                 // See categoryPillFor: the pill must not be localised past
                 // the row's own words, or one row reads in two spellings.
                 // A tool with no category (the Learn guides) has no pill.
-                const pill = item.kind === 'tool'
+                const pill = item.guide
+                  ? 'Guide'
+                  : item.kind === 'tool'
                   ? categoryPillFor(item, cat, t)
                   : t('common.category')
                 return (

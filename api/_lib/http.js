@@ -3,7 +3,7 @@
 //
 // Raw Stripe/Firebase error messages leak internal detail — price ids, customer
 // ids, account ids, credential state — so they must never be echoed to the
-// browser. But the founder still has to be able to tie "it failed for me" to a
+// browser. But the owner still has to be able to tie "it failed for me" to a
 // specific server log line. So the browser gets a fixed, generic message plus a
 // short correlation id, and the real error is logged server-side under that
 // same id.

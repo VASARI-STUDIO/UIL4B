@@ -24,7 +24,10 @@
  * content.css's `--cpg-*` aliases. There is no hex in this file.
  */
 
-.lgl { --lgl-measure: 72ch; }
+/* --lgl-col is the single column at 1000px and narrower: 68ch of the 15px clause
+ * text, written in px because `ch` on this wrapper would be measured in the
+ * wrapper's 16px face, not the clauses'. */
+.lgl { --lgl-measure: 72ch; --lgl-col: 612px; }
 
 /* ── The head ──
  * The h1 and the date, and nothing between them. The date is the first thing a
@@ -34,10 +37,6 @@
  * label (labels and dates stay out of mono caps; mono is for literal values). */
 .lgl-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
 .lgl-head .cpg-h1 { max-width: 16ch; }
-/* `em` inside the h1 is /privacy's own emphasis on the word "data". The
- * italic display cut carries it; `--cpg-dim` at 64px is display type and well
- * over its 3:1 floor (8.02:1 light on --bg-0, 9.1:1 dark). */
-.lgl-head .cpg-h1 em { font-style: italic; font-weight: 400; color: var(--cpg-dim); padding-right: .06em; }
 /* `.cpg-cap` (mono, 10.5px, tracked capitals) is still on the element; two
  * classes here beat it without editing content.css. The string is unchanged.
  * --cpg-faint is --t2: 5.62:1 on the page ground. */
@@ -129,12 +128,39 @@
   .lgl-toc-m-row:hover { color: var(--cpg-ink); }
 }
 
+/* ── The way back to the contents ──
+ * The last line of each clause. Drawn only where the contents is the
+ * disclosure above the document (1000px and narrower); beside the sticky rail
+ * the index is always on screen, so the link is not drawn at all. 44px tall,
+ * the same target as a contents row. The paragraph or list it follows gives up
+ * its last-child margin to the link's own spacing, and does so at every width
+ * so the wide layout keeps the spacing it had without the link. */
+.lgl-back { display: none; }
+.lgl-p:has(+ .lgl-back), .lgl-list:has(+ .lgl-back) { margin-bottom: 0; }
+@media (max-width: 1000px) {
+  .lgl-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: 44px;
+    margin-top: var(--s-2);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 560;
+    color: var(--cpg-dim);
+    text-decoration: none;
+  }
+}
+@media (max-width: 1000px) and (hover: hover) {
+  .lgl-back:hover { color: var(--cpg-ink); }
+}
+
 /* ── The document ──
  * `.legal-card` STAYS ON THIS ELEMENT, and that is a contract rather than a
  * leftover: tests/user-sim/88-marketing-breakpoints.spec.js reads the first
  * visible `.legal-card h2` on /terms and on /privacy and compares the two
  * pages' computed heading styles to each other — the check that caught the
- * 16px-vs-22px split the 2026-09-13 founder decision resolved. Drop the class
+ * 16px-vs-22px split that setting both headings the same way resolved. Drop the class
  * and that check has nothing to measure and fails on its own positive control.
  * It costs nothing to keep: `.legal-card` in global.css is only
  * `max-width:72ch; margin-inline:auto; line-height:1.8`. The BOX was `.card`,
@@ -153,7 +179,7 @@
  * class) whatever order the two sheets end up in. global.css's rule is NOT
  * edited and must not be: tests/unit/heading-and-meta.test.js asserts the
  * literal `.legal-h{…font-size:22px…}` in that file, because it is the record
- * of the founder's 2026-09-13 decision that the two legal pages set a section
+ * of the decision that the two legal pages set a section
  * heading the same way. This rule keeps that true — both pages read it — and
  * only lifts the size onto the Spectrum display clamp.
  *
@@ -263,17 +289,17 @@
  * literal value and stays mono. */
 .lgl .storage-table th {
   font-family: var(--font);
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
   font-weight: 600;
-  letter-spacing: 0;
+  letter-spacing: normal;
   text-transform: none;
   color: var(--cpg-faint);
 }
 .lgl .storage-table .storage-pii {
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--fs-caption);
   font-weight: 560;
-  letter-spacing: 0;
+  letter-spacing: normal;
   text-transform: none;
 }
 .lgl .storage-table td { color: var(--cpg-dim); }
@@ -305,11 +331,136 @@
   }
 }
 
+/* ── Phone: the storage disclosure as a list ──
+ * One hairline-ruled row per key instead of one stacked card per key: the key
+ * and its Personal-data tag on the first line, the purpose beneath. global.css
+ * still owns the base table; this keeps its `data-label` cells and only changes
+ * how a row is laid out, so the markup is the same table at every width. The
+ * selectors carry `tbody` so they out-rank global.css's own stacked-card rules
+ * whichever sheet is applied last. */
+@media (max-width: 640px) {
+  .lgl .storage-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--s-3);
+    row-gap: 2px;
+    align-items: start;
+    min-height: 56px;
+    margin: 0;
+    padding: var(--s-3) 0;
+    border: 0;
+    border-top: 1px solid var(--cpg-line);
+    border-radius: 0;
+    background: none;
+  }
+  .lgl .storage-table tbody tr:first-child { border-top: 0; }
+  .lgl .storage-table tbody td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  /* The row labels are not drawn: the key, the sentence and the tag read for
+   * themselves, and the tag carries its label as hidden text in the markup. */
+  .lgl .storage-table td::before { display: none; }
+  .lgl .storage-table tbody td:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .lgl .storage-table tbody td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; font-size: 14px; line-height: 1.5; }
+  .lgl .storage-table tbody td:nth-child(3) { grid-column: 2; grid-row: 1; justify-self: end; }
+  .lgl .storage-table .storage-key {
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .lgl .storage-table .storage-pii {
+    display: inline-block;
+    padding: 1px var(--s-2);
+    border: 1px solid var(--cpg-line);
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+}
+
+/* ── Tablet and wider: the table keeps its three columns ──
+ * The key was 11px mono in global.css; 12px is the floor. The last column holds
+ * "Account-bound" on one line instead of breaking it across two. */
+@media (min-width: 641px) {
+  .lgl .storage-table .storage-key { font-size: max(12px, .75rem); }
+  .lgl .storage-table th:last-child,
+  .lgl .storage-table td:last-child { min-width: 120px; white-space: nowrap; }
+}
+
+/* ── Tables of prose: AI tools, providers, plans ──
+ * `.storage-table` is the localStorage list: a short key, one sentence and a
+ * Yes / No tag, and its phone layout and nowrap last column are built for that
+ * shape. These tables hold sentences in every cell, so they are a separate
+ * class: the same hairline-ruled look, and on a phone each row stacks with its
+ * `data-label` above each value. */
+.lgl .lgl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.lgl .lgl-table thead { background: var(--cpg-wash); }
+.lgl .lgl-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--cpg-faint);
+  border-bottom: 1px solid var(--cpg-line);
+}
+.lgl .lgl-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  line-height: 1.5;
+  color: var(--cpg-dim);
+  border-bottom: 1px solid var(--cpg-line);
+  overflow-wrap: break-word;
+}
+.lgl .lgl-table tr:last-child td { border-bottom: 0; }
+.lgl .lgl-table td strong { color: var(--cpg-ink); font-weight: 560; }
+@media (max-width: 640px) {
+  .lgl .lgl-table thead { display: none; }
+  .lgl .lgl-table,
+  .lgl .lgl-table tbody,
+  .lgl .lgl-table tr,
+  .lgl .lgl-table td { display: block; width: 100%; }
+  .lgl .lgl-table tbody tr {
+    padding: var(--s-3) 0;
+    border-top: 1px solid var(--cpg-line);
+  }
+  .lgl .lgl-table tbody tr:first-child { border-top: 0; }
+  .lgl .lgl-table tbody td {
+    padding: 2px 0;
+    border: 0;
+    font-size: 14px;
+  }
+  .lgl .lgl-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cpg-faint);
+  }
+}
+
 /* ── Narrow ── */
 @media (max-width: 1000px) {
-  /* The document is the whole column once the rail is a row above it, so the
-   * measure cap becomes the only thing holding the line length. */
-  .lgl-doc { max-width: var(--lgl-measure); }
+  /* The contents is a row above the document, so the whole page is one column.
+   * It is capped at one measure and centred, and the title, the contents row,
+   * the clause rules and the clause text all share that column's edges. The
+   * clause text keeps no cap of its own here: the column is the measure, which
+   * is what stops the rules and the text ending at different places. */
+  .sec.lgl { max-width: var(--lgl-col); margin-inline: auto; }
+  .lgl-doc, .lgl-p, .lgl-list, .lgl-aside { max-width: none; }
 }
 @media (max-width: 560px) {
   .lgl-head .cpg-h1 { max-width: none; }
@@ -327,7 +478,7 @@
 @page { margin: 18mm 16mm; }
 @media print {
   .skip-link, .pnav, .pnav-menu, .notice-stack, .bill-banner, .toast,
-  .app-footer, .sp-footer, .global-feedback-btn, .lgl .lgl-toc-col {
+  .app-footer, .sp-footer, .global-feedback-btn, .lgl .lgl-toc-col, .lgl .lgl-back {
     display: none !important;
   }
   html, body, .app-shell { background: none !important; }
@@ -353,7 +504,7 @@
   .lgl .lgl-h { font-size: 13pt; break-after: avoid; }
   .lgl-p, .lgl-list { font-size: 10.5pt; line-height: 1.5; orphans: 3; widows: 3; }
   .lgl-aside { font-size: 9.5pt; }
-  .lgl .storage-table tr { break-inside: avoid; }
-  .lgl .storage-table { font-size: 9.5pt; }
+  .lgl .storage-table tr, .lgl .lgl-table tr { break-inside: avoid; }
+  .lgl .storage-table, .lgl .lgl-table { font-size: 9.5pt; }
   .lgl-a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .9em; }
 }

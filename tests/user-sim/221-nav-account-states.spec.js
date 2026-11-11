@@ -10,8 +10,8 @@
 //   · While the account loads for a browser whose last session was signed in, the
 //     header holds an empty avatar-sized slot: no "Log in", no Upgrade, no plan
 //     row until the plan is known, and the You tab waits (aria-disabled, dimmed).
-//   · A browser with no session hint shows the signed-out controls at once and
-//     nothing in the header moves when auth answers.
+//   · A browser with no session hint shows the signed-out controls at once, never
+//     asks Firebase until sign-in opens, and nothing in the header moves when auth answers.
 //   · Manage plan (Pro) and Upgrade to Pro (Free) are in the account surfaces,
 //     and none of them links to /checkout.
 //   · Offline, the sign-in rows are aria-disabled and described by an offline
@@ -270,15 +270,17 @@ for (const size of SIZES) {
       await ctx.close()
     })
 
-    test('with no session hint the signed-out controls show at once and nothing moves when auth answers', async ({ browser }) => {
+    test('with no session hint the signed-out controls show at once, nothing asks Firebase, and nothing moves when sign-in opens and auth answers', async ({ browser }) => {
       const { ctx, page } = await open(browser, size, 'a first-time visitor while auth is pending')
       await watchHeader(page)
       await signIn(page, { returning: false, lateSignIn: true, authDelay: 4000 })
       await go(page, '/discover')
       const first = size.touch ? page.locator('.pnav-mobile') : page.locator('.pnav-login')
       await expect(first).toBeVisible()
+      // The test double is the Firebase SDK's stand-in: it exists only once the
+      // SDK chunk has loaded. `undefined` is "nothing has been asked yet".
       const measure = () => page.evaluate(() => ({
-        answered: window.__UIL4B_TEST_AUTH__.answered,
+        answered: window.__UIL4B_TEST_AUTH__?.answered,
         slot: document.querySelectorAll('.pnav-avatar-slot').length,
         busy: document.querySelector('.pnav-actions')?.hasAttribute('aria-busy'),
         boxes: [...document.querySelectorAll('.pnav-actions, .pnav-actions > *, .pnav-actions > * > *, .pnav-mobile')].map((el) => {
@@ -287,12 +289,25 @@ for (const size of SIZES) {
         }),
       }))
       const before = await measure()
-      expect(before.answered, 'precondition: auth has not answered yet').toBe(false)
+      // A visitor with no hint is signed out without waiting on anyone: auth is
+      // not pending, it was never started, so there is nothing to answer later.
+      expect(before.answered, 'precondition: with no hint nothing has loaded Firebase, so auth was never asked').toBeUndefined()
       expect(before.slot).toBe(0)
       expect(before.busy).toBe(false)
       expect(before.boxes.length).toBeGreaterThan(4)
 
+      // Asking to sign in is what starts auth. It answers after the 4 s hold.
+      if (size.touch) {
+        await page.locator('.pnav-mobile').click()
+        await page.locator('.pnav-sheet-login').click()
+      } else {
+        await page.locator('.pnav-login').click()
+      }
+      await expect(loginDialog(page)).toBeVisible()
+      await expect.poll(() => page.evaluate(() => window.__UIL4B_TEST_AUTH__?.answered), 'opening sign-in never started auth').toBe(false)
       await expect.poll(() => authAnswered(page), { timeout: 10000 }).toBe(true)
+      await page.keyboard.press('Escape')
+      await expect(loginDialog(page)).toHaveCount(0)
       await frames(page)
       const after = await measure()
       expect(after.boxes, 'every header control keeps its box').toEqual(before.boxes)

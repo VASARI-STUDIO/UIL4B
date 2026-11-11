@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import HomeCommandBar from '../HomeCommandBar'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { SPECTRUM_SEARCH_PHRASES } from './spectrumHero.js'
 
 // THE HERO SEARCH, IN THE DESIGN'S PILL — HomeCommandBar wrapped, not forked.
 //
@@ -19,7 +20,8 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 // It STOPS, once and for good, when the visitor takes the bar or the field
 // holds a value — a one-way stop, so blurring never restarts it (WCAG 2.2.2) —
 // and never starts under reduced motion, where the first phrase simply stays.
-const ROTATIONS = ['a contrast ratio', 'a tint and shade ramp', 'an OKLCH gradient', 'a type scale', 'an icon set', 'a WebP export']
+// The phrases live in spectrumHero.js so the served `/` shell paints the first.
+const ROTATIONS = SPECTRUM_SEARCH_PHRASES
 
 // Per character typed and erased, the caret blink while a phrase is held, and
 // the wait for the hero's entrance to land before the first erase.

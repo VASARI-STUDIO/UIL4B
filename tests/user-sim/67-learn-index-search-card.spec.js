@@ -34,7 +34,7 @@ const topicsWithGuides = TOPICS.filter((t) => LEARN_ARTICLES.some((a) => a.topic
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 // Help and Design Principles live under /learn/ but are not guides, so they sit
-// in one extra group after the topics ("Using UIL4B") while the field is empty.
+// in one extra group after the topics ("Using UI L4B") while the field is empty.
 // They are asserted on their own so a guide count never absorbs them, and a
 // guide that went missing is never hidden by two rows that happen to be there.
 const USING_ID = 'learn-topic-using-uil4b'
@@ -63,7 +63,7 @@ const field = (page) => page.getByRole('searchbox', { name: 'Search the guides' 
  * from the middle of the transition — measured once at 1.07:1, the light ink
  * on the dark ground — and would fail a page that reads perfectly well.
  */
-const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+const settled = (page) => page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).map((a) => a.finished.catch(() => {}))))
 
 /** Computed opacity of every element matching `sel`. */
 const opacities = (page, sel) => page.$$eval(sel, (els) => els.map((el) => getComputedStyle(el).opacity))
@@ -106,7 +106,7 @@ test.describe('the Learn index', () => {
     // One labelled section per topic that has a guide, in the registry's order,
     // and nothing for a topic that has none.
     const sections = page.locator('.lidx-sections section[aria-labelledby]')
-    await expect(sections).toHaveCount(topicsWithGuides.length + 1) // the topics, then "Using UIL4B"
+    await expect(sections).toHaveCount(topicsWithGuides.length + 1) // the topics, then "Using UI L4B"
     for (let i = 0; i < topicsWithGuides.length; i += 1) {
       const topic = topicsWithGuides[i]
       const section = sections.nth(i)
@@ -138,12 +138,12 @@ test.describe('the Learn index', () => {
     await expect(using).toHaveAttribute('id', USING_ID)
     const usingHeading = using.getByRole('heading', { level: 3 })
     await expect(usingHeading).toHaveCount(1)
-    await expect(usingHeading).toHaveText('Using UIL4B')
+    await expect(usingHeading).toHaveText('Using UI L4B')
     await expect(usingHeading).toHaveAttribute('id', await using.getAttribute('aria-labelledby'))
     const usingCards = using.locator('.lidx-card')
     await expect(usingCards).toHaveCount(USING_HREFS.length)
     for (let i = 0; i < USING_HREFS.length; i += 1) {
-      await expect(usingCards.nth(i), `Using UIL4B row ${i}`).toHaveAttribute('href', USING_HREFS[i])
+      await expect(usingCards.nth(i), `Using UI L4B row ${i}`).toHaveAttribute('href', USING_HREFS[i])
       await expect(usingCards.nth(i).locator('.lidx-time'), 'these rows are not read-timed').toHaveCount(0)
     }
 
@@ -156,7 +156,7 @@ test.describe('the Learn index', () => {
       expect(href).toBe(`#${topicId(topicsWithGuides[i])}`)
       await expect(page.locator(href)).toBeAttached()
     }
-    await expect(links.last()).toHaveText('Using UIL4B')
+    await expect(links.last()).toHaveText('Using UI L4B')
     await expect(links.last()).toHaveAttribute('href', `#${USING_ID}`)
     await expect(page.locator(`#${USING_ID}`)).toBeAttached()
     // And following one moves the reader to that section.

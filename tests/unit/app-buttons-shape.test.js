@@ -42,9 +42,9 @@ function blocksFor(sel, source = css) {
 const KEEP = {
   // colour swatches and swatch triggers: the sample is the control (a Contrast Checker swatch is the
   // colour chip with its role name under it, in one 10px-cornered target)
-  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
+  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'cpk-preset', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
   // rows in a menu, list or popover
-  row: ['plb-menu-item', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'icust-proj-btn',
+  row: ['plb-menu-item', 'plb-sc-row', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'ied-pj',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's
@@ -54,28 +54,51 @@ const KEEP = {
     // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
     'grd-stop-select', 'grd-tintmenu-item',
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
-    'plb-match-btn'],
+    'plb-match-btn',
+    // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners
+    'fpr-card-apply',
+    // the homepage bookmark board's folder rows (sidebar list) and its phone twin's pair rows, flush to the list edge
+    'bm-fold', 'bmp-pair',
+    // the dashboard's "New project, room for one more" row tile: a 12px-cornered tile in the minis row,
+    // a button because it starts the guide
+    'db-gt',
+    // a Type Scale step: one full-width list row (name, size, specimen) whose hover and selected washes have soft 12px corners
+    'tsc-row',
+    // the Font Gallery More sheet's Project row: one full-width row (icon, name, caret) drawn at 12px
+    'fg-more-proj-row',
+    // the Font Pair More sheet's Save row: icon and label in a full-width row with a soft hover wash. Only
+    // that sheet rule squares the trigger off; the dock's Save trigger stays a pill
+    'svt-trigger'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',
-    // a size-rail cell is a tile: the icon drawn at its size, with the number under it
-    'icust-size-cell',
-    // a line-style tile is a card: the icon drawn in that style, its name and note under it
-    'icust-line-tile',
+    // the icon editor draws its own controls at 8px and 12px, as its board does: a size-rail cell is a
+    // tile (the icon at its size, the number under it), a line-style tile is a card (the icon in that
+    // style, its name and note), a Similar tile is a card, and its colour chips, tonal buttons (Reset,
+    // Save, Copy in the code box) and round icon buttons (rotate, flip) are 12px fields and controls.
+    // The editor's one primary button (Copy SVG, Upgrade to Pro) is still a pill.
+    // The phone jump row (Stroke, Line style, Rotate, Code) is four 12px tonal fields with a label over a value.
+    'ied-cell-s', 'ied-tile', 'ied-sim', 'ied-chip', 'ied-tn', 'ied-ib', 'ied-jb',
     // an export template choice without a thumbnail is a bordered card holding its name and description
     'exp-tpl-tile',
     // a Gradient Generator preset is a tile: swatch, name and use, in one bordered card
     'grd-preset',
     // a Contrast Checker legend chip is a tile of three lines (test name, threshold, pass or fail), like cc-pair
-    'cc-lg-chip'],
+    'cc-lg-chip',
+    // a locked prompt card: a button (signed-out) or a link (Pro) drawn as the card it stands in for
+    'pl-card',
+    // the homepage's folder tiles on the phone board, its piece chips, its screenshot thumbnails and the icon grid's cells
+    'bmp-fold', 'hx-pc', 'hsc-open', 'ht-ic-t'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
     'plb-imgmoodbtn'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
+  // a segment inside a tray of segments: the tray carries the outer shape, each segment its own inner radius
+  segment: ['hx-seg'],
   // the two halves of one split button: together they draw a single pill, so each keeps its
-  // outer corners round and squares the edge where they meet (.icust-foot .dl-main / .dl-more)
+  // outer corners round and squares the edge where they meet (.ied-ft .dl-main / .dl-more)
   split: ['dl-main', 'dl-more'],
   // a switch track, drawn by its own geometry
   switch: ['toggle-switch', 'aipg-rule'],
@@ -110,6 +133,20 @@ function buttonClasses() {
   return found
 }
 
+/** Splits a selector list on commas that sit outside any parentheses. */
+function topLevelSplit(sel) {
+  const out = []
+  let depth = 0
+  let from = 0
+  for (let i = 0; i < sel.length; i++) {
+    if (sel[i] === '(') depth++
+    else if (sel[i] === ')') depth--
+    else if (sel[i] === ',' && depth === 0) { out.push(sel.slice(from, i)); from = i + 1 }
+  }
+  out.push(sel.slice(from))
+  return out
+}
+
 function nonPillButtonRules(classes) {
   const res = [...classes].map((c) => [c, new RegExp(`\\.${c.replace(/[-]/g, '\\-')}(?![\\w-])`)])
   const out = []
@@ -121,6 +158,9 @@ function nonPillButtonRules(classes) {
       if (sel.startsWith('@')) continue
       const r = /border-radius\s*:\s*([^;}]+)/.exec(m[2])
       if (!r || PILL.test(r[1].trim())) continue
+      // A ring or overlay drawn on ::before / ::after takes its host's corners with `inherit`; the host
+      // is swept through its own rule, so the overlay is a pill exactly when the button is.
+      if (r[1].trim() === 'inherit' && topLevelSplit(sel).every((one) => /::(before|after)\s*$/.test(one.trim()))) continue
       for (const one of sel.split(',')) {
         if (KEEP_CONTEXT.some((c) => one.includes(c))) continue
         const parts = one.replace(/::?[\w-]+(\([^)]*\))?/g, '').trim().split(/\s*[\s>+~]\s*/)
@@ -138,7 +178,7 @@ test('the readers find what they are about (positive control)', () => {
   assert.ok(blocksFor('.ui-pill').length >= 1, '.ui-pill not found')
   const classes = buttonClasses()
   assert.ok(classes.size > 150, `only ${classes.size} button classes read from the JSX`)
-  for (const c of ['btn', 'tl-btn', 'uh-new', 'pnav-act', 'pnav-export', 'pnav-avatar-btn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
+  for (const c of ['btn', 'tl-btn', 'db-go', 'pnav-act', 'pnav-export', 'pnav-avatar-btn']) assert.ok(classes.has(c), `${c} was not read as a button class`)
 })
 
 test('the button token is the pill, and the base families read it', () => {

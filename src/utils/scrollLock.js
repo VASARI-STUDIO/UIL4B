@@ -20,21 +20,43 @@ import { getLenis } from '../hooks/useSmoothScroll.js'
 //
 // scrollbar-gutter is deliberately not set: reserving the gutter grew the page
 // at phone widths and moved scrollY.
+//
+// `overflow: hidden` only stops the user scrolling. Script can still move the
+// page: focus() on a control, scrollIntoView, and a test driver that scrolls a
+// target into view before tapping it (a tap on a trigger that the dialog now
+// covers is retried, and each retry scrolls). A dialog passes `hold: true` to
+// pin the position it opened at, so none of those can move the page behind it.
+// Menus and panels do not hold: they can navigate while open, and the new
+// page's scroll reset must go through.
 
 let depth = 0
 
 /** Lock the page scroll. Returns an `unlock` that releases this lock once. */
-export function lockScroll() {
+export function lockScroll({ hold = false } = {}) {
   if (depth === 0) {
     document.documentElement.style.overflow = 'hidden'
     getLenis()?.stop()
   }
   depth += 1
 
+  let stopHolding = null
+  if (hold && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    const x = window.scrollX
+    const y = window.scrollY
+    // A scroll event fires before the frame that shows the move is painted, so
+    // putting the page back here is not seen.
+    const pin = () => {
+      if (window.scrollX !== x || window.scrollY !== y) window.scrollTo({ left: x, top: y, behavior: 'instant' })
+    }
+    window.addEventListener('scroll', pin, { passive: true })
+    stopHolding = () => window.removeEventListener('scroll', pin)
+  }
+
   let released = false
   return function unlock() {
     if (released) return
     released = true
+    stopHolding?.()
     depth -= 1
     if (depth === 0) {
       document.documentElement.style.overflow = ''

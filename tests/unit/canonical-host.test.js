@@ -21,7 +21,7 @@
 // X, Discord and iMessage, and every page told crawlers its authoritative URL
 // was a host that does not answer. scripts/prerender.mjs already called a wrong
 // canonical "an explicit instruction to drop them from the index" — it fixed the
-// per-ROUTE half, and the HOST was never checked. Founder decision: point the
+// per-ROUTE half, and the HOST was never checked. The fix is to point the
 // site at the apex, which already serves and is the only configured domain.
 //
 // ── Why this reads dist/ rather than src/ ───────────────────────────────────
@@ -278,7 +278,7 @@ const DESIGN = {
   typeScale: { base: 16, ratio: 1.25, lineHeight: 1.5 },
 }
 const AT = new Date('2026-08-12T00:00:00Z')
-const CREDIT = /Made with \[UIL4B\]\(([^)]*)\)/g
+const CREDIT = /Made with \[UI L4B\]\(([^)]*)\)/g
 
 /** Every string the built export chunk will produce for this design. The chunk
  *  is minified, so its exports are single letters; rather than guess which one

@@ -36,7 +36,7 @@
 //   src restored byte for byte            -> all of them pass again.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, headPackNames, headPackOfUrl, isLiveIconify } from './iconify-stub.js'
+import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, SNAPSHOT_PATH_RE, headPackNames, headPackOfUrl, isLiveIconify } from './iconify-stub.js'
 
 const PERSONA = 'a designer scrolling the icon library and copying an icon out of it'
 const LIVE = 'the live API decides which icons exist; this spec controls the answers'
@@ -66,8 +66,12 @@ const TOTAL = 800
 async function servePack(page, prefix, bodyOf, nameOf = NAME) {
   const names = Array.from({ length: TOTAL }, (_, i) => nameOf(i))
   const headers = { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }
-  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === prefix,
-    (route) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix, total: TOTAL, title: prefix, uncategorized: names }) }))
+  const list = (route) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix, total: TOTAL, title: prefix, uncategorized: names }) })
+  // The page reads a pack's list from its own site first (/iconify/collections/<pack>.json) and
+  // asks Iconify only when that fails, so the invented list has to answer BOTH or the committed
+  // snapshot's real names win and none of ours ever appear.
+  await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === prefix, list)
+  await page.route((u) => u.pathname.match(SNAPSHOT_PATH_RE)?.[1] === prefix, list)
   await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === `/${prefix}.json` && u.search.includes('icons='),
     (route) => {
       const asked = (new URL(route.request().url()).searchParams.get('icons') || '').split(',').filter(Boolean)
@@ -297,7 +301,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
       await cell.focus()
       await expect(cell).toBeFocused()
       await page.keyboard.press(key)
-      await expect(page.locator('.icust-stage'), 'the customiser did not open').toBeVisible({ timeout: 20_000 })
+      await expect(page.locator('.ied-ground'), 'the customiser did not open').toBeVisible({ timeout: 20_000 })
       await expect(page.getByText(name, { exact: true }).first()).toBeVisible()
     })
   }
@@ -522,7 +526,7 @@ test.describe('the icon grid draws monochrome icons from one inline sprite', () 
     const cell = page.locator('.ig .ic', { has: page.locator('svg.ig-sym') }).first()
     await expect(cell).toBeVisible({ timeout: 20_000 })
     await cell.click()
-    await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
 
     const copy = page.getByRole('button', { name: 'Copy SVG', exact: true })
     await expect(copy).toBeEnabled({ timeout: 20_000 })

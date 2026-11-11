@@ -14,7 +14,7 @@ for (const width of [390, 1440]) {
     await expect(notice).toBeVisible()
     await expect(notice).toContainText('sent to Google Gemini')
     await expect(notice).not.toContainText('Google may use them')
-    await expect(notice.locator('a')).toHaveAttribute('href', '/terms#terms-s4')
+    await expect(notice.locator('a')).toHaveAttribute('href', '/terms#terms-s8')
 
     const zone = page.locator('.alt-dropzone')
     await expect(zone).toHaveAttribute('aria-describedby', 'alt-ai-consent')

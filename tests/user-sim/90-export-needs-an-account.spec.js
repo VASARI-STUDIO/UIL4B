@@ -1,7 +1,7 @@
 // COPYING IS FREE FOREVER. TAKING A FILE AWAY NEEDS AN ACCOUNT.
 //
-// Founder decision, 2026-09-15: "make users have to make an account to use alot
-// of the extra feature". The line was chosen from a measurement rather than a
+// Many of the extra features need an account. The line was chosen from a
+// measurement rather than a
 // guess — signed out, pressing each of the fourteen /create tools' own
 // take-away control, only TWO asked for an account: /create/palette
 // ("Save / export") and /create/type-scale ("Save to a project"). Saving, the
@@ -134,8 +134,9 @@ test.describe('a file needs a free account', () => {
     // called Export.
     const panel = page.locator('[role="dialog"]').filter({ hasText: /export/i }).first()
     await expect(panel, 'the export panel never opened').toBeVisible({ timeout: 15000 })
-    // The popup opens on the Pro book; the style guide is the free file a
-    // visitor can build, so that is the one that has to ask for an account.
+    // The popup opens on the free UI kit; the style guide is another free file a
+    // visitor can build, so that one has to ask for an account too.
+    await panel.getByRole('radio', { name: /^Brand book/ }).click()
     await panel.getByRole('radio', { name: /^Style guide/ }).click()
     const run = panel.getByRole('button', { name: /^export/i }).last()
     await expect(run, 'the export panel never rendered its own export action')
@@ -147,22 +148,12 @@ test.describe('a file needs a free account', () => {
       .toBeVisible({ timeout: 10000 })
     expect(await downloadsSeen(page), 'a file was produced anyway').toBe(0)
 
-    // AND IT OPENS ON THE CREATE-ACCOUNT FORM, not "Log in to continue".
-    //
-    // This gate fires ONLY for somebody the product has no account for — a
-    // signed-in visitor never reaches it. Greeting all of them with a sign-in
-    // form is the defect LoginPromptContext already records and fixed on the
-    // four highest-traffic paths: a control that asks for a new free account
-    // and answers "Welcome Back" tells the visitor they already have one.
-    await expect(page.locator('#ui-login-title'),
-      'the export gate opened on the sign-in form. Everyone who reaches it has no '
-      + 'account — that is why it fired — so it must open on create-account. Pass '
-      + '`signup: true` in useExportGate.js.')
-      .toHaveText(/create your free account/i)
-
-    // It must also say WHICH action was interrupted, or the wall is unexplained.
-    await expect(page.getByText(/you were about to export/i),
-      'the dialog does not name the action the visitor was taking').toBeVisible()
+    // THE SIGN-IN IS INSIDE THE EXPORT DIALOG, not a second modal over it, and the
+    // dock says why: a file is free, with an account. Create-account is one link away.
+    await expect(panel.locator('.xd-signin #ui-login-title'),
+      'the sign-in did not open inside the export dialog').toBeVisible()
+    await expect(page.locator('.ui-modal-overlay'), 'a second modal opened over the dialog').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: /create one/i })).toBeVisible()
   })
 
   test('the icon download asks, after an icon has been chosen', async ({ page }) => {

@@ -12,7 +12,7 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
 `card-front` · Source: Generated
 
 - Author: Generated with OpenAI image generation via Codex CLI
-- Licence: Generated image, made for UIL4B; no person depicted
+- Licence: Generated image, made for UI L4B; no person depicted
 - URL: none
 - Changes: Cropped to the card with its corners made transparent, brightened so the face reads as a neutral light grey (the chip keeps its own colour and the contactless grooves are deepened), resized to 640 and 1080 pixels wide, and a mask of the face made from it.
 - Files:
@@ -27,7 +27,7 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
 `ferry-morning` · Source: Generated
 
 - Author: Generated with OpenAI image generation via Codex CLI
-- Licence: Generated image, made for UIL4B; no person depicted
+- Licence: Generated image, made for UI L4B; no person depicted
 - URL: none
 - Changes: Two small shapes on the upper deck and in the wheelhouse glass painted out, saturation lowered by a tenth, highlights held under 97 percent, and resized to 640 and 1080 pixels wide.
 - Files:
@@ -39,7 +39,7 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
 `ferry-morning-portrait` · Source: Generated
 
 - Author: Generated with OpenAI image generation via Codex CLI
-- Licence: Generated image, made for UIL4B; no person depicted
+- Licence: Generated image, made for UI L4B; no person depicted
 - URL: none
 - Changes: The upright 4 by 5 crop of the same picture, with the same retouching and grade, resized to 480 and 752 pixels wide.
 - Files:
@@ -53,7 +53,7 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
 `overshirt-front` · Source: Generated
 
 - Author: Generated with OpenAI image generation via Codex CLI
-- Licence: Generated image, made for UIL4B; no person depicted
+- Licence: Generated image, made for UI L4B; no person depicted
 - URL: none
 - Changes: Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the buttons and their holes left out of the mask.
 - Files:
@@ -66,7 +66,7 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
 `overshirt-back` · Source: Generated
 
 - Author: Generated with OpenAI image generation via Codex CLI
-- Licence: Generated image, made for UIL4B; no person depicted
+- Licence: Generated image, made for UI L4B; no person depicted
 - URL: none
 - Changes: Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep and the buttons left out of the mask.
 - Files:
@@ -79,7 +79,7 @@ preview's own footer line. Unsplash and CC0 images are credited here only.
 `overshirt-pocket` · Source: Generated
 
 - Author: Generated with OpenAI image generation via Codex CLI
-- Licence: Generated image, made for UIL4B; no person depicted
+- Licence: Generated image, made for UI L4B; no person depicted
 - URL: none
 - Changes: Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the buttons left out of the mask.
 - Files:

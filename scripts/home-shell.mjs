@@ -27,7 +27,7 @@
 // string reappears in index.html. tests/unit/home-shell-hero.test.js is the
 // equivalent guard for this sentence: index.html and this file must both
 // contain none of it, and what this module emits must equal what
-// src/pages/Home.jsx renders, part for part.
+// src/components/home/HomeHero.jsx renders, part for part.
 //
 // ── WHY THE MARKUP IS THE HYDRATED MARKUP, ELEMENT FOR ELEMENT ──────────────
 //
@@ -44,14 +44,13 @@
 //   DOM node, so if it paints bigger than the shell's did, LCP moves back to
 //   hydration and this whole file buys nothing.
 //
-// Both are answered the same way: emit `.home > main > header.home-hero >
-// .home-hero-core > h1.home-hero-h1` with the same two `.home-hero-line` /
-// `.home-hero-line-in` spans and the same `<mark class="home-mark">`, and let
-// src/styles/global.css — the render-blocking sheet, already paid for by FCP —
-// do the typography. Font, size, weight, line-height, letter-spacing, wrap
-// points and position then come from ONE set of rules, not from a copy of them.
-// `.home-hero`'s padding-top already reserves the fixed nav's height, so the
-// skeleton nav below is `position:fixed` and contributes nothing to flow.
+// Both are answered the same way: emit `.spectrum > main > section.hh-hero >
+// .hh-copy > h1.hh-h1` with the marked run in one `span.hh-h1-mark`, and let
+// src/styles/pages/home-hero.css, the render-blocking sheet, do the typography.
+// Font, size, weight, line-height, letter-spacing, wrap points and position
+// then come from ONE set of rules, not from a copy of them. The hero's
+// padding-top reserves the nav's height, so the skeleton nav below is
+// `position:fixed` and contributes nothing to flow.
 //
 // ── WHAT A VISITOR SEES BETWEEN FIRST PAINT AND HYDRATION, AND WHY ──────────
 //
@@ -92,13 +91,9 @@
 // there — an arrival — and the clip-up plays as it always has.
 // `prefers-reduced-motion` is untouched: those two rules in global.css already
 // say `animation:none`, and none of this restates them.
-// The Spectrum headline. ONE module feeds both the hydrated hero and this
-// shell.
-import { SPECTRUM_HERO } from '../src/components/spectrum/spectrumHero.js'
+// The hero's words: one module feeds both the hydrated hero and this shell.
+import { SPECTRUM_HERO, SPECTRUM_HERO_SUB, SPECTRUM_SEARCH_PHRASES } from '../src/components/spectrum/spectrumHero.js'
 import { logoSvg } from '../src/config/brandLogo.js'
-
-const heroHeadlineText = () => SPECTRUM_HERO.text
-const HERO_HEADLINE = SPECTRUM_HERO
 
 /** Escape for text between tags. Same contract as prerender.mjs's `text()`. */
 const text = (s) => String(s)
@@ -122,6 +117,51 @@ export const AFTER_ROOT = '<noscript>'
  * unmounts, so the next arrival at `/` is a real arrival and animates.
  */
 export const PREPAINTED_ATTR = 'data-hero-prepainted'
+
+/**
+ * The sales page sets its text in Geist, which no other route uses, so the file
+ * is preloaded in this shell's head and nowhere else. It is one variable file,
+ * so the one preload covers the 600 headline and the 400 sub-line. Without it
+ * the file is only discovered once the stylesheet is parsed, the headline
+ * paints in the fallback face first, and the swap shifts it.
+ *
+ * This lives here, not in the per-route head rewrite in prerender.mjs: `/` is
+ * not in the route matrix (see HOME_SHELL_ROUTES), so a head rewrite keyed on
+ * `/` never ran, and `/home` is a second shell for the same page.
+ * `crossorigin` is required: fonts are fetched in CORS mode, and a preload
+ * without it is downloaded twice.
+ */
+export const HOME_FONT_PRELOAD = '<link rel="preload" href="/fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>'
+
+/**
+ * index.html preloads Switzer, the face every other route is set in, at the top
+ * of the head, ahead of the stylesheets. The shell's nav bar is set in it
+ * (`.spnav` takes --font), so the file is wanted here too, but not at that
+ * position: it would queue ahead of the render-blocking sheets. This pattern
+ * finds index.html's copy so the shell can take it out and put one tag straight
+ * after the sheets instead, beside Geist. Matched on the href so the rest of
+ * the tag can change.
+ *
+ * One file is enough. It is the variable upright, so the one preload covers
+ * every weight the nav paints, and the italic is never fetched because nothing
+ * in the shell is italic. Without the preload the file is requested only once
+ * the stylesheet is parsed, the nav paints in 'Switzer Fallback' (the
+ * metric-matched Arial in global.css: size-adjust, ascent-override,
+ * descent-override, font-display:swap) and the swap changes the nav's text
+ * widths: under a pixel on a Windows Chromium, several pixels where text is laid
+ * out on whole-pixel advances, which a layout-shift observer reports as a shift
+ * inside the nav. With the preload the file lands with the sheets, before the
+ * first paint on a fast link, so there is no swap to report.
+ *
+ * THE COST, measured on the throttled mobile profile (CDP 150 ms / 200 KB/s,
+ * CPU 4x, cold, median of 7): the 43 KB file shares the pipe with the sheets and
+ * moves LCP by about +180 ms at 1440 and +170 ms at 390 (`fetchpriority="low"`
+ * halves that, but then arrives no earlier than it would without the preload on a
+ * fast link, which is the case it is here for). LCP stays under 1.5 s.
+ */
+export const SWITZER_PRELOAD = /<link\b[^>]*\brel="preload"[^>]*\bhref="[^"]*Switzer-Variable\.woff2"[^>]*>\n?/
+
+export const HOME_SWITZER_PRELOAD = '<link rel="preload" href="/fonts/switzer/Switzer-Variable.woff2" as="font" type="font/woff2" crossorigin>'
 
 /**
  * The URLs that serve the sales page, and therefore the only shells that get
@@ -148,114 +188,94 @@ export const HOME_SHELL_ROUTES = new Set(['/', '/home'])
 /**
  * The `/` shell's #root contents.
  *
- * ── RE-POINTED AT SPECTRUM, 2026-09-18 ──────────────────────────────────────
+ * The hero is the chain src/components/home/HomeHero.jsx renders, so the served
+ * headline sits on the same pixels the hydrated one will:
+ * `.spectrum > main > section#top.hh-hero > .hh-copy > h1.hh-h1`, with the
+ * marked run in a single `span.hh-h1-mark`, then the sub-line. The headline is
+ * plain text with no entrance, so its first painted frame is its settled one.
+ * The typography comes from src/styles/pages/home-hero.css, which is in the
+ * render-blocking sheet.
  *
- * This emitted `.home-hero > .home-hero-core > h1.home-hero-h1` for as long as
- * Home.jsx was the sales page. Home.jsx is deleted and `/` renders
- * src/pages/Spectrum.jsx, so the shell emits SPECTRUM's hero chain. Leaving the
- * old chain would have been worse than emitting nothing: the rules that painted
- * it went out of global.css in the same commit, so the served document would
- * have flashed an unstyled headline and then jumped.
- *
- * THE WORD SPANS ARE NOT DECORATION AND THEY HAVE TO BE HERE. `.sp-wm` is
- * `display:inline-block; overflow:hidden; vertical-align:bottom`, and an
- * inline-block with `overflow:hidden` takes its baseline from its bottom margin
- * edge rather than from its last line box. Emitting the sentence as plain text
- * would therefore paint it on a different baseline from the hydrated copy —
- * a layout shift, and a second LCP candidate, which is the pair of failures the
- * header of this file exists to prevent.
- *
- * AND THEY ARE SAFE TO PRE-PAINT, which the old hero's were not. The header
- * above records why the home hero could not be shown settled without also
- * disabling its clip-up: its resting state was a 2369px² sliver. `.sp-w`
- * declares no transform at rest — spectrum.css puts the movement in
- * `@keyframes sp-word-up`, which only exists under an ancestor carrying
- * `.is-in` — so the resting state IS the final state. The shell paints the full
- * box on its first frame, and Spectrum.jsx reads `data-hero-prepainted` on
- * mount and never adds `.is-in`, so the hydrated copy never animates over it.
- *
- * THE SPLIT IS REIMPLEMENTED, NOT IMPORTED, and that is a deliberate limit.
- * src/components/spectrum/SpectrumWords.jsx is JSX and this is a Node script;
- * what must not be duplicated is the SENTENCE, and it is not — every word here
- * comes from HERO_HEADLINE. tests/unit/home-shell-hero.test.js compares what
- * this emits against `heroHeadlineText()` and against the class chain read out
- * of SpectrumWords.jsx, so the two splitters cannot drift in either the words
- * or the elements without the build going red.
- *
- * `id="boot-shell"` STAYS, and so do the three things read through it:
+ * `id="boot-shell"` stays, and so do the things read through it:
  * tests/user-sim/helpers.js `ready()` treats its absence as "React has
  * committed", and 04-premium-home.spec.js asserts the status live region, the
- * single `aria-hidden` decoration wrapper and a `.boot-card` whose shimmer is
- * off under reduced motion. The decoration moved AFTER `<main>` so the skeleton
- * strip flows below the hero instead of pushing it down; the nav inside it is
- * fixed, so where it sits in the tree does not matter.
+ * single `aria-hidden` decoration wrapper and a `.boot-card`. The decoration
+ * comes AFTER `<main>` so the skeleton strip flows below the hero instead of
+ * pushing it down; the nav inside it is fixed, so where it sits in the tree
+ * does not matter.
+ *
+ * The skeleton bars are `<span>`s, not `<i>`s. `<i>` is italic by default, and
+ * an italic box set in Switzer (the `.boot-shell` face) makes the browser fetch
+ * Switzer-VariableItalic.woff2 for a bar with no text in it. The sheet gives
+ * every bar `display:block`, so they draw the same.
  */
+function heroH1() {
+  return `<h1 class="hh-h1">${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>${text(SPECTRUM_HERO.tail)}</h1>`
+}
 
 /**
- * The headline as SpectrumWords renders it: one `.sp-wm` clip per word, one
- * `.sp-w` inside it carrying its stagger index, and a REAL space text node
- * between the wrappers — two adjacent inline-blocks with nothing between them
- * render "Buildandexport", which is a defect SpectrumWords.jsx records finding
- * in the browser.
- *
- * The marked run is matched as WHOLE WORDS, with trailing punctuation stripped
- * from the last one only, which is SpectrumWords' own rule: a substring match
- * could paint half a word in the accent.
+ * A static copy of the hydrated nav bar (src/components/SpectrumNav.jsx), same
+ * classes, so the stylesheet that sizes the real one sizes this one and React's
+ * mount replaces it pixel for pixel. It is `inert` and `aria-hidden` for the
+ * seconds before hydration: nothing in it takes focus or a click, and the real
+ * nav is the one assistive tech meets. The links are the ones the real bar has
+ * on the sales page, written out because the component cannot be imported here.
  */
-function heroWords() {
-  const words = heroHeadlineText().split(/\s+/).filter(Boolean)
-  const markWords = HERO_HEADLINE.mark.split(/\s+/).filter(Boolean)
-
-  let markStart = -1
-  for (let i = 0; markWords.length && i + markWords.length <= words.length; i += 1) {
-    const window = words.slice(i, i + markWords.length)
-    const ok = window.every((w, j) => {
-      const isLast = j === markWords.length - 1
-      return (isLast ? w.replace(/[.,;:!?]+$/, '') : w) === markWords[j]
-    })
-    if (ok) { markStart = i; break }
-  }
-
-  // The marked run is ONE word, its trailing punctuation outside the accent in
-  // a .sp-w-tail: SpectrumWords' `joinMark`, which the hero uses.
-  const items = []
-  for (let i = 0; i < words.length; i += 1) {
-    if (markStart > -1 && i === markStart) {
-      const run = words.slice(markStart, markStart + markWords.length).join(' ')
-      const tail = /[.,;:!?]+$/.exec(run)?.[0] || ''
-      items.push({ word: tail ? run.slice(0, -tail.length) : run, marked: true, tail })
-      i = markStart + markWords.length - 1
-    } else {
-      items.push({ word: words[i], marked: false, tail: '' })
-    }
-  }
-  return items.map(({ word, marked, tail }, i) => {
-    const tailHtml = tail ? `<span class="sp-w-tail">${text(tail)}</span>` : ''
-    return `<span class="sp-wm" data-sp-wm=""><span class="${marked ? 'sp-w sp-w--mark' : 'sp-w'}" data-sp-w="" style="--sp-wi:${i}">${text(word)}${tailHtml}</span></span>`
-  }).join(' ')
+function shellNav() {
+  const glass = (size) => `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>`
+  return `<nav class="spnav" aria-hidden="true" inert data-nav-hidden="0" data-nav-pinned="0" data-scrolled="0">
+        <div class="spnav-bar">
+          <span class="spnav-mark"><span class="spnav-word">${logoSvg({ attrs: 'class="brand-logo brand-logo--lockup brand-logo-wide" focusable="false"' })}</span></span>
+          <div class="spnav-end">
+            <div class="spnav-quiet"><span class="spnav-quiet-link">Tools</span><span class="spnav-quiet-link">Plans</span><span class="spnav-quiet-link">On mobile</span></div>
+            <span class="spnav-search">${glass(15)}<span>Search tools</span><kbd>Ctrl K</kbd></span>
+            <div class="spnav-phone"><span class="spnav-icon">${glass(17)}</span><span class="spnav-icon spnav-burger"><span class="spnav-burger-ico" data-burger="out"><span></span><span></span></span></span></div>
+          </div>
+        </div>
+      </nav>`
 }
+
+/** The hero's two buttons: real links, so they work before React arrives. */
+const SHELL_CTA = `<div class="hh-cta">
+              <a class="hh-go" href="/projects">Open the toolkit<span class="hh-go-disc" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7M8 7h9v9"></path></svg></span></a>
+              <a class="hh-ghost ui-pill-out" href="/plans">View plans</a>
+            </div>`
+
+/** The search frame, same chain as SpectrumSearch, inert until the real one mounts. */
+/**
+ * The input carries a `placeholder` for one reason: spectrum.css hides the ghost
+ * phrase whenever the field is `:not(:placeholder-shown)`, and an input with no
+ * placeholder attribute never matches `:placeholder-shown`. Without it the
+ * served ghost was `display:none` and the phrase popped in at mount. The sheet
+ * paints the placeholder transparent, so it never shows; the visible words are
+ * the ghost's, the first of SpectrumSearch's phrases, which is also what the
+ * live search shows on its first frame before it starts to type.
+ */
+const SHELL_SEARCH = `<div class="hh-search" aria-hidden="true" inert>
+              <div class="sp-search"><div class="hcmd"><div class="hcmd-bar"><span class="hcmd-prompt">&gt;</span><input class="hcmd-input" type="text" tabindex="-1" readonly value="" placeholder="Search every tool"><span class="hcmd-kbd"><kbd>Ctrl K</kbd></span></div></div><span class="sp-search-ghost">Search for<span class="sp-search-rot">${text(SPECTRUM_SEARCH_PHRASES[0])}</span></span></div>
+            </div>`
 
 export function homeShellRoot() {
   return `${ROOT_OPEN}
   <div class="boot-shell boot-shell-home" id="boot-shell">
     <span class="boot-status" role="status" aria-live="polite">Loading UIL4B</span>
     <div class="spectrum">
+      ${shellNav()}
       <div class="sp-grain" aria-hidden="true"></div>
       <main>
-        <header class="sp-hero">
-          <div class="sp-shell sp-hero-core">
-            <h1 class="sp-hero-h1"><span class="sp-words"><span class="sr-only">${text(heroHeadlineText())}</span><span aria-hidden="true" class="sp-words-visual">${heroWords()}</span></span></h1>
+        <section id="top" class="hh-hero">
+          <div class="hh-glow" aria-hidden="true"><span></span></div>
+          <div class="hh-copy">
+            ${heroH1()}
+            <p class="hh-sub">${text(SPECTRUM_HERO_SUB)}</p>
+            ${SHELL_CTA}
+            ${SHELL_SEARCH}
           </div>
-        </header>
+        </section>
       </main>
       <div class="boot-decoration" aria-hidden="true">
-        <div class="boot-nav">
-          ${logoSvg({ attrs: 'class="boot-mark" aria-hidden="true" focusable="false"' })}
-          <span class="boot-nav-lines"><i class="boot-line"></i><i class="boot-line"></i><i class="boot-line"></i></span>
-          <span class="boot-actions"><i class="boot-action"></i><i class="boot-action"></i></span>
-        </div>
         <div class="boot-below">
-          <div class="boot-cards"><i class="boot-card"></i><i class="boot-card"></i><i class="boot-card"></i></div>
+          <div class="boot-cards"><span class="boot-card"></span><span class="boot-card"></span><span class="boot-card"></span></div>
         </div>
       </div>
     </div>
@@ -300,7 +320,64 @@ export function applyHomeShell(html) {
       + 'whose headline waits for React.',
     )
   }
-  return opened.slice(0, open) + homeShellRoot() + opened.slice(after)
+  const shelled = opened.slice(0, open) + homeShellRoot() + opened.slice(after)
+  const unswitzered = shelled.replace(SWITZER_PRELOAD, '')
+  if (!unswitzered.includes('</head>')) {
+    throw new Error('home-shell: could not find </head> to put the Geist preload before.')
+  }
+  // Taken out first, so a shell that already carries it ends up with one, placed.
+  const unpreloaded = [HOME_FONT_PRELOAD, HOME_SWITZER_PRELOAD].reduce(
+    (out, tag) => out.split(`${tag}\n`).join('').split(tag).join(''),
+    unswitzered,
+  )
+  return fontPreloadAfterStylesheets(stylesheetsBeforeScripts(unpreloaded))
+}
+
+/**
+ * Put the Geist and Switzer preloads straight after the last stylesheet link: ahead of the
+ * entry script and its ~70 modulepreload links, behind the sheets.
+ *
+ * The first paint waits on the stylesheets, so they keep the front of the
+ * queue; a 29 KB font requested ahead of them cost 95 to 170 ms of LCP on the
+ * throttled mobile profile. But with the sheets ahead of the scripts, a preload
+ * left last in the head sat behind about 400 KB of modulepreloads, so Geist
+ * arrived after the headline's first paint and the swap from 'Geist Fallback'
+ * moved the headline's text by a fraction of a pixel. Straight after the sheets
+ * the font is requested in the same wave and arrives with them. A head with no
+ * stylesheet link gets it before `</head>`.
+ */
+export function fontPreloadAfterStylesheets(html) {
+  const headEnd = html.indexOf('</head>')
+  if (headEnd === -1) return html
+  const head = html.slice(0, headEnd)
+  const sheets = [...head.matchAll(HEAD_STYLESHEETS)]
+  const last = sheets.at(-1)
+  const at = last ? last.index + last[0].length : headEnd
+  const lead = last && !last[0].endsWith('\n') ? '\n' : ''
+  return `${html.slice(0, at)}${lead}${HOME_FONT_PRELOAD}\n${HOME_SWITZER_PRELOAD}\n${html.slice(at)}`
+}
+
+// The built head lists the entry script and its ~70 modulepreload links, and
+// only then the stylesheets. The browser asks for them in that order, so on a
+// slow connection the stylesheets the first paint waits on queue behind about
+// 400 KB of script that nothing paints with. Moved ahead of them, LCP fell by
+// about 570 ms on the throttled mobile profile, to just under the 2.5 s budget.
+// The sheets keep their order among themselves (the cascade depends on it) and
+// the entry script stays in the head, so it starts as soon as it did.
+const HEAD_STYLESHEETS = /<link\b[^>]*\brel="stylesheet"[^>]*>\n?/g
+const ENTRY_SCRIPT = /<script\b[^>]*\btype="module"[^>]*\bsrc="\/assets\/[^"]*"[^>]*><\/script>\n?/
+
+/** A no-op on a head with no built entry script (the source index.html). */
+export function stylesheetsBeforeScripts(html) {
+  const headEnd = html.indexOf('</head>')
+  if (headEnd === -1) return html
+  const head = html.slice(0, headEnd)
+  const sheets = head.match(HEAD_STYLESHEETS)
+  if (!sheets || !ENTRY_SCRIPT.test(head)) return html
+  const block = sheets.map((sheet) => (sheet.endsWith('\n') ? sheet : `${sheet}\n`)).join('')
+  // Replacer function, so a `$` in a path is never read as a substitution pattern.
+  const moved = head.replace(HEAD_STYLESHEETS, '').replace(ENTRY_SCRIPT, (script) => block + script)
+  return moved + html.slice(headEnd)
 }
 
 /**
@@ -314,14 +391,36 @@ export function applyHomeShell(html) {
  */
 export function assertHomeShellApplied(html, where) {
   const wanted = [
-    ['the h1', '<h1 class="sp-hero-h1">'],
-    ['the LCP element', 'class="sp-words-visual"'],
-    ['the highlight', 'class="sp-w sp-w--mark"'],
-    ['the screen-reader sentence', `<span class="sr-only">${text(heroHeadlineText())}</span>`],
-    ['the word split', 'data-sp-w=""'],
+    ['the hero section', '<section id="top" class="hh-hero">'],
+    ['the h1', '<h1 class="hh-h1">'],
+    ['the lead', `${text(SPECTRUM_HERO.lead)} <span class="hh-h1-mark">`],
+    ['the highlight', `<span class="hh-h1-mark">${text(SPECTRUM_HERO.mark)}</span>`],
     [`${PREPAINTED_ATTR} on <html>`, PREPAINTED_ATTR],
+    ['the Geist preload', HOME_FONT_PRELOAD],
+    ['the Switzer preload', HOME_SWITZER_PRELOAD],
   ]
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)
+  const head = html.slice(0, Math.max(html.indexOf('</head>'), 0))
+  const switzers = head.match(new RegExp(SWITZER_PRELOAD.source, 'g')) || []
+  if (switzers.length > 1) {
+    throw new Error(`home-shell: ${where} preloads Switzer ${switzers.length} times; one is enough, and a second request is bandwidth taken from the headline.`)
+  }
+  const script = head.match(ENTRY_SCRIPT)
+  const lastSheet = head.lastIndexOf('rel="stylesheet"')
+  if (script && lastSheet > script.index) {
+    throw new Error(`home-shell: ${where} lists the entry script ahead of a stylesheet, which queues the render-blocking CSS behind the JS.`)
+  }
+  const preloadAt = head.indexOf(HOME_FONT_PRELOAD)
+  if (script && preloadAt > script.index) {
+    throw new Error(`home-shell: ${where} lists the Geist preload behind the entry script and its modulepreloads, so the font arrives after the headline's first paint.`)
+  }
+  const switzerAt = head.indexOf(HOME_SWITZER_PRELOAD)
+  if (script && switzerAt > script.index) {
+    throw new Error(`home-shell: ${where} lists the Switzer preload behind the entry script and its modulepreloads, so the nav paints in the fallback face first.`)
+  }
+  if (switzerAt !== -1 && switzerAt < lastSheet) {
+    throw new Error(`home-shell: ${where} lists the Switzer preload ahead of a stylesheet, which queues the render-blocking CSS behind a font.`)
+  }
   if (missing.length) {
     throw new Error(
       `home-shell: ${where} was written without ${missing.join(', ')}. The homepage would `

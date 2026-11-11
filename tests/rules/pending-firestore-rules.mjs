@@ -4,20 +4,14 @@
 // WHY THIS FILE EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// `firestore.rules` is founder-gated (docs/reference/human-validation-zones.md)
-// AND the Claude Code auto-mode classifier refuses to stage it regardless of
-// approval — the same block recorded against the moderator role in
-// docs/OWNER-ACTIONS.md §1.3 (local-only since 2026-09-16 and not in this
-// repository; .gitignore carries why), which stopped an agent and the Director
-// both. So
-// the two rules findings from the 2026-09-06 engineering review
-// ([firestore-feedback-create-open-to-anyone], [firestore-signed-in-writes-unbounded])
-// ship as a diff in the pull request body for the founder to apply by hand.
+// `firestore.rules` is approval-gated, so it is not edited directly. The two
+// rules findings (open feedback create, unbounded signed-in writes) ship as a
+// diff in the pull request body for the owner to apply by hand.
 //
 // A diff nobody has run is a guess. This module applies that exact diff to an
 // in-memory copy of the real rules file so the tests in
 // firestore-rules-pending.test.js can run the emulator against the rules the
-// founder is being asked to publish — before he publishes them.
+// owner is being asked to publish — before they are published.
 //
 // EVERY ANCHOR MUST MATCH EXACTLY ONCE. If `firestore.rules` moves underneath
 // this patch (the moderator role's held diff touches the same file), applying it
@@ -156,7 +150,7 @@ const SUBMISSIONS_CREATE = {
   id: 'community-submissions-bounded-create',
   // The anchor deliberately swallows the comment above the rule, so the two new
   // functions land BEFORE it rather than between a comment and the rule it
-  // describes. The founder applies this file by hand; leaving an orphaned
+  // describes. The owner applies this file by hand; leaving an orphaned
   // comment in the middle of it is how a hand-applied diff goes wrong.
   find: `      // A client may only ever create its OWN submission, and only as
       // 'pending'. 'approved' is a reviewer's word — reachable from nowhere on
@@ -298,7 +292,7 @@ export const PENDING_MARKERS = {
  *
  * Throws unless every anchor matched EXACTLY once, OR the patch is already in
  * the file. A patch that silently half-applies is worse than no patch: the
- * tests would go green against rules the founder is not being handed.
+ * tests would go green against rules the owner is not being handed.
  *
  * THE DAY IT IS APPLIED IS NOT A FAILURE. `npm run apply:gated` writes this
  * diff into firestore.rules for real, and from then on the anchors are gone. A
@@ -311,7 +305,7 @@ export async function pendingRulesText(rulesPath = RULES_PATH) {
   // The working tree is CRLF and the patch anchors below are written LF, so an
   // un-normalised match finds nothing and the whole suite reports "the rules
   // moved" when nothing has. Normalise first; the emulator does not care about
-  // line endings, and neither does the diff the founder applies.
+  // line endings, and neither does the diff the owner applies.
   const original = (await readFile(rulesPath, 'utf8')).replace(/\r\n/g, '\n')
   let text = original
   let applied = 0
@@ -334,7 +328,7 @@ export async function pendingRulesText(rulesPath = RULES_PATH) {
     applied += 1
   }
   // The whole point is that the returned text carries the patch. Whether this
-  // run put it there or the founder already had is not the question.
+  // run put it there or the owner already had is not the question.
   for (const patch of PENDING_PATCHES) {
     if (!PENDING_MARKERS[patch.id](text)) {
       throw new Error(`the pending patch "${patch.id}" applied and granted nothing`)

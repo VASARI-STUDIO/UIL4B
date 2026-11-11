@@ -9,7 +9,7 @@
 //
 // Drift here is a display bug (a wrong lock badge), never a gating bypass.
 // PaletteBuilder should import from this module when its workstream next
-// touches that file; it is not edited here because another agent owns it.
+// touches that file; this change leaves that file alone.
 //
 // Every id is one `generateHarmony` understands, except 'auto', which is the
 // tonal HCT engine (autoTonalFromSeed) rather than a hue-rotation harmony.

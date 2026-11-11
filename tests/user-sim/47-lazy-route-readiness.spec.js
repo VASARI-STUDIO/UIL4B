@@ -560,6 +560,6 @@ for (const [route, chunk, where] of [
     await expect(dialog.locator('#fb-message')).toHaveValue(new RegExp(`Route: ${route}\\n`))
     // Bug is preselected: the person should not have to say what kind of
     // report a crash is.
-    await expect(dialog.getByRole('button', { name: 'Bug', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(dialog.getByRole('button', { name: 'Bug report', exact: true })).toHaveAttribute('aria-pressed', 'true')
   })
 }

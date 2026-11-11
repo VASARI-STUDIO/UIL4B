@@ -14,7 +14,7 @@
 //   the toggle goes back to a pack-menu entry ('custom')            -> "pressing My icons again returns to the app packs"
 //   <LibraryToolbar> gets the Add icon button back as its action    -> "Add icon is not on the toolbar"
 //   IconEmojiLibrary.jsx renders a SpectrumClose again              -> "the page has one call to action"
-//   .ig-end-band loses its 48px top margin (free block, no tease)   -> "a free account ... sees the Pro block"
+//   .geg-band loses its 48px top margin (free block, no tease)   -> "a free account ... sees the Pro block"
 //   .lbry-toolbar-pinned loses margin-left:auto                     -> "My icons holds the row's right end"
 //   the pack menu leaves the right of the row for its old place     -> "the pack menu sits left of My icons"
 // Each of these was also run against the build from before the change: every test below that names a
@@ -61,7 +61,7 @@ test.describe('the My icons toggle', () => {
       await mine.click()
       await expect(mine).toHaveAttribute('aria-pressed', 'true')
       await expect(page.getByRole('heading', { name: 'Saved', exact: true }), 'Saved is showing').toBeVisible()
-      await expect(page.locator('.ig-end'), 'the gate belongs to the app packs, not Saved').toHaveCount(0)
+      await expect(page.locator('.geg'), 'the gate belongs to the app packs, not Saved').toHaveCount(0)
 
       await mine.click()
       await expect(mine, 'one more press turns it off').toHaveAttribute('aria-pressed', 'false')
@@ -69,7 +69,7 @@ test.describe('the My icons toggle', () => {
       await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
       const packsAfter = [...new Set(await page.locator('.ig .ic .ic-pack').allTextContents())].sort()
       expect(packsAfter, 'the same app packs are back').toEqual(packsBefore)
-      await expect(page.locator('.ig-end[data-gate="anon"]'), 'and the gate with them').toBeVisible()
+      await expect(page.locator('.geg[data-gate="anon"]'), 'and the gate with them').toBeVisible()
     })
   }
 
@@ -163,6 +163,10 @@ const BODY = '<path fill="none" stroke="currentColor" stroke-width="2" d="M3 12h
 async function serveShortLucide(page) {
   const names = Array.from({ length: TOTAL }, (_, i) => NAME(i))
   const headers = { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }
+  // The page reads a pack's list from the site's own copy first, so the synthetic list is served there.
+  // The /collection route below stays for the request a pack with no copy falls back to.
+  await page.route((u) => u.pathname === '/iconify/collections/lucide.json',
+    (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ prefix: 'lucide', total: TOTAL, title: 'lucide', uncategorized: names }) }))
   await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'lucide',
     (route) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix: 'lucide', total: TOTAL, title: 'lucide', uncategorized: names }) }))
   await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/lucide.json' && u.search.includes('icons='),
@@ -174,20 +178,20 @@ async function serveShortLucide(page) {
 }
 
 /** Everything that would be a sales call to action inside <main>, by the old close's and the gate's classes. */
-const ctaPills = (page) => page.getByRole('main').locator('.ig-end-pill, .sp-pill, .sp-ghost, .sp-close')
+const ctaPills = (page) => page.getByRole('main').locator('.geg-pill, .sp-pill, .sp-ghost, .sp-close')
 
 test.describe('the page has one call to action before the footer, centred on the grid', () => {
   for (const width of WIDTHS) {
     test(`${width}: signed out, the gate is the one call to action, centred, above the footer`, async ({ page }) => {
       watch(page, SIGNED_OUT)
       await open(page, width)
-      await expect(page.locator('.ig-end[data-gate="anon"]')).toHaveCount(1)
+      await expect(page.locator('.geg[data-gate="anon"]')).toHaveCount(1)
       await expect(ctaPills(page), 'one primary action in the page, and no sales close').toHaveCount(1)
-      await expect(page.locator('.ig-end-pill')).toHaveText('Log in')
-      await expect(page.locator('.ig-end-link')).toHaveText('See the plans')
+      await expect(page.locator('.geg-pill')).toHaveText('Log in')
+      await expect(page.locator('.geg-link')).toHaveText('See the plans')
       await expect(page.locator('.ig-close, .sp-ramp')).toHaveCount(0)
-      await page.locator('.ig-end').scrollIntoViewIfNeeded()
-      const b = await boxes(page, { grid: '.ig', gate: '.ig-end', h: '.ig-end-h', cta: '.ig-end-cta', footer: 'footer' })
+      await page.locator('.geg').scrollIntoViewIfNeeded()
+      const b = await boxes(page, { grid: '.ig', gate: '.geg', h: '.geg-h', cta: '.geg-cta', footer: 'footer' })
       expect(Math.abs((b.h.l + b.h.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the heading is centred on the grid').toBeLessThanOrEqual(2)
       expect(Math.abs((b.cta.l + b.cta.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the action row is centred on the grid').toBeLessThanOrEqual(2)
       expect(b.gate.b, 'the gate ends before the footer starts').toBeLessThanOrEqual(b.footer.t + 1)
@@ -223,14 +227,14 @@ test.describe('the page has one call to action before the footer, centred on the
         await expect(panel).toBeHidden()
       }
       await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`)).toBeVisible({ timeout: 20_000 })
-      await expect(page.locator('.ig-end[data-gate="free"]')).toHaveCount(1)
-      await expect(page.locator('.ig-end[data-gate="free"] .ig-end-h')).toHaveText('Brand marks, flags and emoji are on Pro.')
+      await expect(page.locator('.geg[data-gate="free"]')).toHaveCount(1)
+      await expect(page.locator('.geg[data-gate="free"] .geg-h')).toHaveText('Brand marks, flags and emoji are on Pro.')
       await expect(ctaPills(page), 'one primary action in the page, and no sales close').toHaveCount(1)
-      await expect(page.locator('.ig-end-pill')).toHaveText('See what Pro includes')
-      await expect(page.locator('.ig-end-pill')).toHaveAttribute('href', '/plans')
+      await expect(page.locator('.geg-pill')).toHaveText('See what Pro includes')
+      await expect(page.locator('.geg-pill')).toHaveAttribute('href', '/plans')
       await expect(page.locator('.ig-close, .sp-ramp')).toHaveCount(0)
-      await page.locator('.ig-end').scrollIntoViewIfNeeded()
-      const b = await boxes(page, { grid: '.ig', gate: '.ig-end', h: '.ig-end-h', cta: '.ig-end-cta', footer: 'footer' })
+      await page.locator('.geg').scrollIntoViewIfNeeded()
+      const b = await boxes(page, { grid: '.ig', gate: '.geg', h: '.geg-h', cta: '.geg-cta', footer: 'footer' })
       expect(Math.abs((b.cta.l + b.cta.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the action row is centred on the grid').toBeLessThanOrEqual(2)
       expect(Math.abs((b.h.l + b.h.r) / 2 - (b.grid.l + b.grid.r) / 2), 'the heading is centred on the grid').toBeLessThanOrEqual(2)
       expect(b.gate.b, 'the block ends before the footer starts').toBeLessThanOrEqual(b.footer.t + 1)
@@ -245,7 +249,7 @@ test.describe('the page has one call to action before the footer, centred on the
     test(`${width}: a Pro account has no call to action between the grid and the footer`, async ({ page }) => {
       watch(page, 'a Pro designer browsing the icon library')
       await open(page, width, { plan: 'pro' })
-      await expect(page.locator('.ig-end')).toHaveCount(0)
+      await expect(page.locator('.geg')).toHaveCount(0)
       await expect(ctaPills(page), 'Pro sees no sales block at all').toHaveCount(0)
       await expect(page.locator('.ig-close, .sp-ramp')).toHaveCount(0)
       await expect(page.getByRole('contentinfo')).toHaveCount(1)

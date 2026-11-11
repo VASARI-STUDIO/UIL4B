@@ -149,9 +149,28 @@ export function projectListsEqual(a, b) {
     if (!other) return false
     if ((other.updatedAt || '') !== (p.updatedAt || '')) return false
     if ((other.iconAt || '') !== (p.iconAt || '')) return false
+    if ((other.colorsAt || '') !== (p.colorsAt || '')) return false
+    if ((other.savedColors?.length || 0) !== (p.savedColors?.length || 0)) return false
   }
   return true
 }
+
+// A project's single saved colours from two copies, each colour once (by hex,
+// whatever its spelling), the first copy's order first. Saving a colour does
+// not move `updatedAt`, so whichever copy wins the merge, neither device's
+// colours are dropped; `colorsAt` is the later of the two.
+function unionSavedColours(a, b) {
+  const list = []
+  const seen = new Set()
+  for (const c of [...(Array.isArray(a?.savedColors) ? a.savedColors : []), ...(Array.isArray(b?.savedColors) ? b.savedColors : [])]) {
+    const key = String(c?.hex || '').toUpperCase()
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    list.push(c)
+  }
+  return list
+}
+const laterStamp = (a, b) => (newerSide(a, b) === 'remote' ? b : a) || b || null
 
 /**
  * NON-DESTRUCTIVE merge of two project lists, with deletes.
@@ -196,14 +215,23 @@ export function mergeProjects(localList, remoteList, opts = {}) {
       continue
     }
     const side = newerSide(existing.updatedAt, r.updatedAt)
+    let winner = existing
     if (side === 'remote') {
-      byId.set(r.id, r)
+      winner = r
       replaced.push({ id: r.id, name: r.name || existing.name || 'Untitled' })
     } else if (side === 'equal' && newerSide(existing.iconAt, r.iconAt) === 'remote') {
       // Same edit time, but the icon was chosen later on the other device. An icon choice does
       // not move `updatedAt`, so it carries its own stamp.
-      byId.set(r.id, r)
+      winner = r
     }
+    if (existing.savedColors?.length || r.savedColors?.length) {
+      const savedColors = unionSavedColours(existing, r)
+      const colorsAt = laterStamp(existing.colorsAt, r.colorsAt)
+      if (savedColors.length !== (winner.savedColors?.length || 0) || (winner.colorsAt || null) !== colorsAt) {
+        winner = { ...winner, savedColors, colorsAt }
+      }
+    }
+    byId.set(r.id, winner)
   }
 
   let tombstones = mergeTombstones(opts.localTombstones, opts.remoteTombstones)
@@ -329,12 +357,16 @@ function projectsCollection(fs, uid) {
  * `list` that has not been moved across — a fresh account on v1, or a device
  * still running the v1 client that pushed since the last migration.
  *
+ * `opts.step` wraps each network call (the document, then the collection) so a caller can bound one
+ * step at a time; it takes the call's promise and returns one.
+ *
  * @returns {{ list, tombstones, version, found, stored?, needsMigration? }}
  */
 export async function readRemoteProjects(fs, uid, opts = {}) {
   const perProject = opts.perProject ?? PER_PROJECT_SYNC_ENABLED
 
-  const snap = await fs.getDoc(legacyRef(fs, uid))
+  const step = opts.step || ((promise) => promise)
+  const snap = await step(fs.getDoc(legacyRef(fs, uid)))
   const head = snap.exists() ? snap.data() || {} : null
   const legacyList = head && Array.isArray(head.list) ? head.list : []
   const legacyTombstones = normaliseTombstones(head?.deleted)
@@ -344,7 +376,7 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
     return { list: legacyList, tombstones: legacyTombstones, version, found: !!head }
   }
 
-  const docs = await fs.getDocs(projectsCollection(fs, uid))
+  const docs = await step(fs.getDocs(projectsCollection(fs, uid)))
   const perList = []
   const perTombstones = {}
   const stored = new Map()
@@ -353,6 +385,7 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
     stored.set(d.id, {
       updatedAt: data.project?.updatedAt ?? data.updatedAt ?? null,
       iconAt: data.project?.iconAt ?? null,
+      colorsAt: data.project?.colorsAt ?? null,
       deletedAt: data.deletedAt || null,
     })
     if (data.deletedAt) { perTombstones[d.id] = data.deletedAt; return }
@@ -384,12 +417,15 @@ export async function readRemoteProjects(fs, uid, opts = {}) {
  * has; `migration` carries the refusal so the caller can say sync is not
  * complete, and the next pull tries again (the migration is safe to repeat).
  *
+ * `opts.step` bounds each network step on its own (see readRemoteProjects); the migration is one step.
+ *
  * @returns {{ list, tombstones, version, found, stored?, migration? }}
  */
 export async function pullRemoteProjects(fs, uid, opts = {}) {
   const first = await readRemoteProjects(fs, uid, opts)
   if (!first.needsMigration) return first
-  const migration = await migrateToPerProject(fs, uid, { now: opts.now })
+  const step = opts.step || ((promise) => promise)
+  const migration = await step(migrateToPerProject(fs, uid, { now: opts.now }))
   if (!migration.ok) return { ...first, migration }
   const second = await readRemoteProjects(fs, uid, opts)
   return { ...second, migration }
@@ -452,13 +488,15 @@ export async function writeRemoteProjects(fs, uid, opts = {}) {
       const there = stored.get(project.id)
       const updatedAt = project.updatedAt || null
       const iconAt = project.iconAt || null
-      if (there && !there.deletedAt && there.updatedAt === updatedAt && (there.iconAt || null) === iconAt) continue
+      const colorsAt = project.colorsAt || null
+      if (there && !there.deletedAt && there.updatedAt === updatedAt && (there.iconAt || null) === iconAt
+        && (there.colorsAt || null) === colorsAt) continue
       await fs.setDoc(
         projectRef(fs, uid, project.id),
         { project, updatedAt, deletedAt: null, _updatedAt: now },
         { merge: false },
       )
-      stored.set(project.id, { updatedAt, iconAt, deletedAt: null })
+      stored.set(project.id, { updatedAt, iconAt, colorsAt, deletedAt: null })
       written += 1
     }
     for (const [id, deletedAt] of Object.entries(tombstones)) {

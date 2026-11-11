@@ -2,8 +2,8 @@
 //
 // Signed in, each format downloads a file named for the project whose contents
 // hold the palette on the board. Signed out, choosing either one and pressing
-// Export raises the same create-account gate as the style guide, and no file is
-// produced. The free files carry the "Made with UIL4B" line; the Pro files do
+// Export opens the same inline sign-in as the style guide, and no file is
+// produced. The free files carry the "Made with UI L4B" line; the Pro files do
 // not, because that line is what Pro removes.
 import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
@@ -62,7 +62,7 @@ test.describe('token export, signed in', () => {
     expect(body).toMatch(/--color-primary-500: #[0-9a-f]{6};/)
     expect(body).toMatch(/--color-success-500: #[0-9a-f]{6};/)
     expect(body).toMatch(/--font-heading: "/)
-    expect(body, 'the free file carries the line Pro removes').toMatch(/Made with UIL4B/)
+    expect(body, 'the free file carries the line Pro removes').toMatch(/Made with UI L4B/)
   })
 
   test('JSON tokens: a DTCG document holding the same colour', async ({ page }) => {
@@ -76,7 +76,7 @@ test.describe('token export, signed in', () => {
     expect(doc.color.primary.$root.$value.hex).toBe(PRIMARY.toLowerCase())
     expect(doc.color.primary['500'].$value.colorSpace).toBe('srgb')
     expect(doc.font.size.base.$value).toEqual({ value: 16, unit: 'px' })
-    expect(doc.$description).toMatch(/Made with UIL4B/)
+    expect(doc.$description).toMatch(/Made with UI L4B/)
   })
 
   test('a Pro account gets both files without the credit line', async ({ page }) => {
@@ -85,10 +85,10 @@ test.describe('token export, signed in', () => {
     await boardWithPalette(page)
     const css = await exportFormat(page, 'CSS tokens', 'CSS')
     expect(css.body).toContain(`--color-primary: ${PRIMARY.toLowerCase()};`)
-    expect(css.body).not.toMatch(/Made with UIL4B/)
+    expect(css.body).not.toMatch(/Made with UI L4B/)
     const json = await exportFormat(page, 'JSON tokens', 'JSON')
     expect(JSON.parse(json.body).color.primary.$root.$value.hex).toBe(PRIMARY.toLowerCase())
-    expect(json.body).not.toMatch(/Made with UIL4B/)
+    expect(json.body).not.toMatch(/Made with UI L4B/)
   })
 })
 
@@ -133,7 +133,8 @@ test.describe('token export, signed out', () => {
       await expect(cta).toHaveText(`Export ${label}`)
       await expect(cta, 'a free format is not relabelled as a Pro unlock').toBeVisible()
       await cta.click()
-      await expect(page.locator('#ui-login-title')).toHaveText(/create your free account/i, { timeout: 10000 })
+      await expect(panel.locator('.xd-signin #ui-login-title'), 'the sign-in opens inside the dialog').toBeVisible({ timeout: 10000 })
+      await expect(page.locator('.ui-modal-overlay'), 'no second modal over the dialog').toHaveCount(0)
       expect(await page.evaluate(() => window.__dl || 0), 'a file was produced anyway').toBe(0)
       await expect(page, 'a free format does not send anyone to /plans').not.toHaveURL(/\/plans/)
     })

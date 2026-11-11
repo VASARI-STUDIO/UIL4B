@@ -1,7 +1,7 @@
 // The admin Stripe panel must offer every interval the route will accept.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// THE BUG THIS EXISTS FOR, found 2026-09-15
+// THE BUG THIS EXISTS FOR
 // ─────────────────────────────────────────────────────────────────────────────
 // /api/setup-stripe validates its POST against BILLING_INTERVALS and answers
 // 400 for anything short of the full set:
@@ -18,10 +18,10 @@
 // the failure is on the server and the two columns it drew were the two
 // columns it meant to draw.
 //
-// That is a bad shape of bug: the founder is told to go and set his prices in
-// the admin panel, the panel loads, shows the right currencies, takes his
-// edits, and refuses at the last step for a reason that names an interval the
-// screen never mentioned.
+// That is a bad shape of bug: the owner is told to set prices in the admin
+// panel, the panel loads, shows the right currencies, takes the edits, and
+// refuses at the last step for a reason that names an interval the screen
+// never mentioned.
 //
 // THE FIX was to stop restating the list: the route's GET already returns
 // `defaults` (DEFAULT_PRICES), whose keys ARE the intervals and whose

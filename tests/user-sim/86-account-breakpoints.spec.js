@@ -7,8 +7,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY IT EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder said, unprompted and without elaborating, "i dont like the
-// projects page". Rendered on the built preview at 320/360/390/430/768/834/
+// The projects page was disliked, with no detail given.
+// Rendered on the built preview at 320/360/390/430/768/834/
 // 1024/1280/1440/1920 in both themes, signed out, empty, with one project, at
 // the free cap of three and as Pro, the page had no horizontal overflow, no
 // element painting outside its container and no operable target under 24px.
@@ -33,7 +33,7 @@
 //      a project sorted on a laptop was unsorted on the phone, on a page whose
 //      own subtitle promises "yours to open anywhere you sign in". #452 had
 //      already deleted the false "3 folders · Upgrade for 10" sentence and left
-//      the mechanism; the founder's call on 2026-09-13 was to drop folders as
+//      the mechanism; the decision since was to drop folders as
 //      an entitlement entirely.
 //
 //   3. THE PROMOS SAT ABOVE THE WORK. This is the one a person actually hits,
@@ -128,7 +128,7 @@ async function axControls(page, context) {
     // so the primary nav and the footer came back inside what was supposed to
     // be the page's own controls. Found by a mutation that should have failed
     // this file and did not.
-    const sel = parts.map((part) => '.uh ' + part).join(',')
+    const sel = parts.map((part) => '.db ' + part).join(',')
     const els = [...document.querySelectorAll(sel)].filter((el) => {
       const r = el.getBoundingClientRect()
       return r.width > 0 && r.height > 0
@@ -216,14 +216,14 @@ test.describe('/projects offers no folder it cannot keep', () => {
       await signIn(page, { plan, projects: 2 })
       await go(page, '/projects')
       await expectRendered(page, '/projects')
-      // The lead card and one row: two projects, drawn once each.
-      await expect(page.locator('.proj-card')).toHaveCount(2)
-      await expect(page.locator('.uh-card-pencil, .uh-grid, .uh-empty'), 'the old project grid, its pencil or its empty state is back').toHaveCount(0)
+      // The latest project's sheet and one mini: two projects, drawn once each.
+      await expect(page.locator('.db-sheet')).toHaveCount(1)
+      await expect(page.locator('.db-mini')).toHaveCount(1)
 
       // The word, anywhere a reader could see it on this surface. It covers the
       // chip row, the per-card select, the modal field and the sentence about
       // an allowance, without naming any of their classes.
-      await expect(page.locator('.uh'), 'the surface still says "folder"')
+      await expect(page.locator('.db'), 'the surface still says "folder"')
         .not.toContainText(/folder/i)
 
       // AN ALLOWLIST, NOT A DENYLIST, and the reason is a mutation that got
@@ -234,8 +234,8 @@ test.describe('/projects offers no folder it cannot keep', () => {
       // the anti-slop bar calls “the same control, renamed”.
       //
       // So this names what SHOULD be above the work, and fails on anything
-      // else. On the workspace the only operable control above the lead card is
-      // New project. "All thirteen tools" belongs to Start something, which
+      // else. On the workspace the only operable control above the kit sheet is
+      // New project. "All thirteen tools" belongs to the tools shelf, which
       // comes after the work (held below, and by the order tests), so it is
       // allowed nowhere above it.
       const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen']
@@ -243,12 +243,12 @@ test.describe('/projects offers no folder it cannot keep', () => {
       const ALL_TOOLS = `All ${WORDS[live] || live} tools`
       const ALLOWED_ABOVE_THE_WORK = ['New project']
       const above = await page.evaluate((parts) => {
-        const lead = document.querySelector('.uh-dash-main > .uh-continue')
+        const lead = document.querySelector('.db-sheet')
         const gridTop = lead.getBoundingClientRect().top + window.scrollY
         // Operable controls only — buttons, fields and menus. Links inside the
-        // quota sentence ("Pro lifts the cap") are prose, they come and go with
+        // allowance line ("See plans") are prose, they come and go with
         // the allowance, and they are not what a filter row is made of.
-        const sel = parts.map((part) => '.uh ' + part).join(',')
+        const sel = parts.map((part) => '.db ' + part).join(',')
         return [...document.querySelectorAll(sel)]
           .filter((el) => {
             const r = el.getBoundingClientRect()
@@ -259,9 +259,9 @@ test.describe('/projects offers no folder it cannot keep', () => {
             // options. el.innerText on the sort menu returns all three option
             // labels run together, which is the menu's contents rather than
             // what the control is called.
-            // .proj-sort wraps BOTH its caption and the menu, so the label's
-            // full text is the caption followed by every option. The caption is
-            // its first element child.
+            // A label that wraps both its caption and the menu reads as the
+            // caption followed by every option. The caption is its first
+            // element child.
             const label = el.labels && el.labels[0]
             const labelled = label ? (label.firstElementChild || label).innerText : ''
             const name = el.getAttribute('aria-label') || labelled || el.placeholder || el.innerText || el.tagName
@@ -276,7 +276,8 @@ test.describe('/projects offers no folder it cannot keep', () => {
         .toBe(ALLOWED_ABOVE_THE_WORK.length)
       // The Create menu button is still on the page, just after the work.
       const toolsTop = await page.getByRole('button', { name: ALL_TOOLS }).evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
-      const workBottom = await page.locator('.uh-dash-main').evaluate((el) => el.getBoundingClientRect().bottom + window.scrollY)
+      // The work ends where the last project ends: the other-projects list when there is one, else the sheet.
+      const workBottom = await page.locator('[data-testid="other-projects"], .db-sheet').last().evaluate((el) => el.getBoundingClientRect().bottom + window.scrollY)
       expect(toolsTop, `${plan}: "${ALL_TOOLS}" (y=${toolsTop}) is above the work (ends y=${workBottom})`).toBeGreaterThan(workBottom)
 
       // Paying must not bring it back, which is what #452's "a Pro account sees
@@ -299,7 +300,7 @@ test.describe('/projects offers no folder it cannot keep', () => {
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    await page.getByRole('button', { name: 'New project' }).click()
+    await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).click()
     await expect(page).toHaveURL(/\/create\/palette$/)
     await expect(page.getByRole('dialog'), 'a form stood between New project and the work').toHaveCount(0)
   })
@@ -322,19 +323,15 @@ test.describe('a person sees their own projects before anything else', () => {
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    // The lead card is the newest project; the other two follow as rows. All
-    // three are the account's whole list at the cap, so all three must be
-    // inside the fold, not just the first.
-    const card = await boxOf(page, '.uh-dash-main > .uh-continue')
-    expect(card, 'no lead project card rendered at all').not.toBeNull()
-    expect(card.bottom, `the lead project ends at y=${card.bottom}, past the fold`).toBeLessThanOrEqual(900)
-    const rows = await page.evaluate(() => {
-      const all = [...document.querySelectorAll('.uh-row')]
-      const last = all.at(-1)?.getBoundingClientRect()
-      return { count: all.length, bottom: last ? Math.round(last.bottom) : null }
+    // The kit sheet is the newest project and ends inside the fold; the other two follow it as minis.
+    const card = await boxOf(page, '.db-sheet')
+    expect(card, 'no kit sheet rendered at all').not.toBeNull()
+    expect(card.bottom, `the kit sheet ends at y=${card.bottom}, past the fold`).toBeLessThanOrEqual(900)
+    const minis = await page.evaluate(() => {
+      const all = [...document.querySelectorAll('.db-mini')]
+      return { count: all.length, tops: all.map((m) => Math.round(m.getBoundingClientRect().top)) }
     })
-    expect(rows.count, 'the other two projects are not drawn as rows').toBe(2)
-    expect(rows.bottom, `the last project row ends at y=${rows.bottom}, past the fold`).toBeLessThanOrEqual(900)
+    expect(minis.count, 'the other two projects are not drawn as minis').toBe(2)
     expect(await page.evaluate(() => window.scrollY), 'the page scrolled itself before we measured').toBe(0)
   })
 
@@ -345,22 +342,24 @@ test.describe('a person sees their own projects before anything else', () => {
       await go(page, '/projects')
       await expectRendered(page, '/projects')
 
-      // The work is the lead card, or the starter card for an account with none.
-      const contentSel = '.uh-dash-main > .uh-continue'
+      // The work is the kit sheet (the example kit for an account with no project).
+      const contentSel = '.db-sheet'
       const tops = await page.evaluate((sel) => {
         const at = (q) => {
           const el = document.querySelector(q)
           return el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : null
         }
-        return { start: at('.uh-start'), content: at(sel), discover: at('.uh-disc-head'), pro: at('.uh-pro') }
+        return { shelf: at('#db-sh'), content: at(sel), discover: at('.db-dis'), plan: at('.db-plan') }
       }, contentSel)
       expect(tops.content, 'no content rendered — the state did not seed').not.toBeNull()
-      // Start something is a way to begin more work; it follows the work, and Discover follows it.
-      expect(tops.start, '"Start something" sits above the person\'s own work').toBeGreaterThan(tops.content)
-      expect(tops.discover, `Discover (y=${tops.discover}) is above Start something (y=${tops.start})`).toBeGreaterThan(tops.start)
+      // The tools shelf is a way to begin more work; it follows the work, Discover is in it, and the plan line closes the page.
+      expect(tops.shelf, '"Tools and library" sits above the person\'s own work').toBeGreaterThan(tops.content)
       expect(tops.discover, `Discover (y=${tops.discover}) is above the work (y=${tops.content})`).toBeGreaterThan(tops.content)
-      if (state.opts.plan === 'pro') expect(tops.pro, 'a Pro account is sold Pro').toBeNull()
-      else expect(tops.pro, `the Pro panel (y=${tops.pro}) is above the work`).toBeGreaterThan(tops.content)
+      expect(tops.plan, `the plan line (y=${tops.plan}) is above the tools shelf (y=${tops.shelf})`).toBeGreaterThan(tops.shelf)
+      // Pro is not sold to a Pro account: its plan line is the plan and a link to manage it, with no perks control.
+      const perks = page.getByRole('button', { name: 'What Pro adds' })
+      if (state.opts.plan === 'pro') await expect(perks, 'a Pro account is offered what Pro adds').toHaveCount(0)
+      else await expect(perks).toHaveCount(1)
     })
   }
 
@@ -371,12 +370,12 @@ test.describe('a person sees their own projects before anything else', () => {
     await expectRendered(page, '/projects')
 
     const controls = await axControls(page, page.context())
-    // The lead card's two links are named "Continue <project>: …" and "Open <project>"; a row is named by the project.
-    const firstProject = controls.findIndex((c) => /^((Continue|Open) )?Seeded Project/.test(c.name))
-    // "See Pro" with no live price loaded (this run), "Upgrade for <price>" once one has.
-    const promo = controls.findIndex((c) => /^(Upgrade for |See Pro$)/.test(c.name))
+    // The sheet's two links are named "Continue: <step>, <project>" and "Open project, <project>"; a mini is named by the project.
+    const firstProject = controls.findIndex((c) => /^(Continue: .*, |Open project, )?Seeded Project/.test(c.name))
+    // The plan line's perks control is the first thing on the page that sells Pro.
+    const promo = controls.findIndex((c) => /^What Pro adds$/.test(c.name))
     expect(firstProject, 'no project control in the tab order at all').toBeGreaterThanOrEqual(0)
-    expect(promo, 'the Pro panel link is gone, so this test is measuring nothing').toBeGreaterThanOrEqual(0)
+    expect(promo, 'the plan line\'s Pro control is gone, so this test is measuring nothing').toBeGreaterThanOrEqual(0)
     expect(firstProject, `the upgrade link (${promo}) comes before the first project (${firstProject})`)
       .toBeLessThan(promo)
   })
@@ -396,7 +395,7 @@ test.describe('/projects states a number once', () => {
 
     await expect(page.locator('[data-testid="project-quota-note"]'), 'a second counter of the same quantity').toHaveCount(1)
     await expect(page.locator('[data-testid="project-quota-note"]')).toContainText('3 of 3')
-    const text = await page.locator('.uh').innerText()
+    const text = await page.locator('.db').innerText()
     expect(text.split('3 of 3').length - 1, 'the count is printed more than once').toBe(1)
   })
 })
@@ -424,12 +423,12 @@ test.describe('/projects holds every width in both themes', () => {
             })
             .slice(0, 4)
             .map((el) => `${el.tagName.toLowerCase()}.${(typeof el.className === 'string' ? el.className : '').split(' ')[0]}`)
-          return { overflow: de.scrollWidth - de.clientWidth, bleed, cards: document.querySelectorAll('.proj-card').length }
+          return { overflow: de.scrollWidth - de.clientWidth, bleed, cards: document.querySelectorAll('.db-sheet, .db-mini').length }
         })
         expect(report.overflow, `${theme} @${width}: the document scrolls sideways by ${report.overflow}px`).toBe(0)
         expect(report.bleed, `${theme} @${width}: painting outside the viewport`).toEqual([])
         // A positive control on the sweep itself: a width that rendered no
-        // cards would report zero overflow for the wrong reason.
+        // projects would report zero overflow for the wrong reason.
         expect(report.cards, `${theme} @${width}: the page rendered no projects to measure`).toBe(3)
       }
     })
@@ -475,10 +474,10 @@ test('the probe can see what it is looking for', async ({ page }) => {
 
   await page.evaluate(() => {
     // Planted into the PAGE's own container, because that is what the probes
-    // above are scoped to. When the scope tightened from <main> to .sec.uh this
+    // above are scoped to. When the scope tightened from <main> to .db this
     // test went red and the four absence tests stayed green — which is the
     // entire reason it is here.
-    const main = document.querySelector('.uh .uh-main')
+    const main = document.querySelector('.db .db-main')
     const planted = document.createElement('div')
     planted.id = 'axprobe-control'
     planted.innerHTML = `
@@ -516,23 +515,20 @@ test('the probe can see what it is looking for', async ({ page }) => {
   expect(small, 'the target-size sweep cannot see a 10x10 control').toBeGreaterThan(0)
 
   // (e) the geometry probe returns a real box, in viewport coordinates.
-  const card = await boxOf(page, '.uh-dash-main > .uh-continue')
-  expect(card, 'the geometry probe returned nothing for a card that is on screen').not.toBeNull()
+  const card = await boxOf(page, '.db-sheet')
+  expect(card, 'the geometry probe returned nothing for a sheet that is on screen').not.toBeNull()
   expect(card.bottom, 'the geometry probe returned a zero-height box').toBeGreaterThan(card.top)
 })
 
-// WCAG 2.4.3. The old cards painted the icon pencil and then the open link, and a
-// bug once had the DOM the other way round. The workspace has no pencil now (the
-// icon is chosen on the project's page), so what is held is the order the page is
-// read in: New project, then the lead card's Continue and Open project, then each
-// row, then Today's See plans, then Start something, Discover and the Pro panel. On a phone the
-// title row's New project is not drawn and the one under the work is met after the last row.
-// Driven with the real Tab key from New project, not read off the markup, and
-// checked against where each stop is PAINTED.
+// WCAG 2.4.3. The order a keyboard walks the page is the order it is read and painted in: New project,
+// the allowance line's See plans (at the cap), the sheet's Open project and Continue, the four tool links
+// under it, each other project, then the tools and library shelf, then the plan line. Below 1200 the sheet's
+// Continue moves to a docked bar that comes last in the DOM and is painted at the foot of the screen.
+// Driven with the real Tab key from New project, not read off the markup, and checked against where each
+// stop is PAINTED.
 test.describe('/projects tabs in the order it is read', () => {
-  // Three projects whose Colour is set. A project with no palette draws "Build the palette" in the
-  // lead's picture area, above Continue, and that link is a stop of its own (held in 141); these
-  // three keep the walk to the spec's order. Seeded Project 3 is the newest.
+  // Three projects whose Colour is set, so the sheet's palette part is a link to the builder like the others.
+  // Seeded Project 3 is the newest.
   const coloured = Array.from({ length: 3 }, (_, i) => {
     const design = JSON.parse(JSON.stringify(DEFAULT_DESIGN))
     design.palette.colors = ['#0B2A45', '#1F4E79', '#F2A488', '#FDEDE4']
@@ -540,26 +536,17 @@ test.describe('/projects tabs in the order it is read', () => {
     return { id: `seed-${i + 1}`, name: `Seeded Project ${i + 1}`, design, createdAt: at, updatedAt: at }
   })
 
-  // At 640px and under New project sits under the work (the title row's copy is not drawn), so the
-  // walk meets it after the last row; wider, it is the first stop.
-  const FIRST_STOPS = [
-    /^New project$/,
-    /^Continue: set the type scale, Seeded Project 3$/,
-    /^Open project, Seeded Project 3$/,
-    /^Seeded Project 2/,
-    /^Seeded Project 1/,
-    /^See plans$/,
-  ]
-  const PHONE_STOPS = [FIRST_STOPS[1], FIRST_STOPS[2], FIRST_STOPS[3], FIRST_STOPS[4], FIRST_STOPS[0], FIRST_STOPS[5]]
-  // The Contrast Checker row's thumbnail draws a ratio and a grade ("Aa 8.9:1 AAA"), which is part of the row's text.
-  const CONTRAST = /^(Aa [\d.]+:1( \w+)? )?Contrast Checker/
-  const THEN = [/^All \w+ tools$/, /^Palette/, /^Gradient/, /^Tint/, /^Semantic Colour/, CONTRAST, /^Icon Library/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
-  // On a phone the heading's button is not drawn: the "All thirteen tools" row closes the five tool
-  // rows instead, and Semantic Colour is not drawn (it is reached in the Create sheet).
-  const THEN_PHONE = [/^Palette/, /^Gradient/, /^Tint/, CONTRAST, /^Icon Library/, /^All \w+ tools$/, /^Browse the Palette Library/, /^(Upgrade for |See Pro$)/]
+  const NEW = /^New project$/
+  const PLANS = /^See plans$/
+  const OPEN = /^Open project, Seeded Project 3$/
+  const CONTINUE = /^Continue: set the type scale(, Seeded Project 3)?$/
+  const TOOLS = [/^Open in Palette Builder$/, /^Open in Type Scale$/, /^Open in Font Pair$/, /^Open in Tint$/]
+  const MINIS = [/^Seeded Project 2/, /^Seeded Project 1/]
+  const SHELF = [/Pro palette, opens with Pro$/, /^New in Discover$/, /^How exporting works$/, /^Icons and emoji$/, /^Image tools$/, /^Gradient/, /^Semantic Colour/, /^Contrast Checker/, /^Font Gallery/, /^All \w+ tools$/]
+  const PLAN_LINE = [/^What Pro adds$/, PLANS]
 
   for (const width of [1440, 768, 390]) {
-    test(`Continue, Open project and the rows are met in order, and painted in order, at ${width}px`, async ({ browser }) => {
+    test(`New project, the sheet, the minis, the shelf and the plan line are met in order, and painted in order, at ${width}px`, async ({ browser }) => {
       const context = await browser.newContext({ viewport: { width, height: 900 } })
       const page = await context.newPage()
       watch(page, `a keyboard user tabbing through their workspace at ${width}px`)
@@ -567,64 +554,80 @@ test.describe('/projects tabs in the order it is read', () => {
       await go(page, '/projects')
       await expectRendered(page, '/projects')
 
-      const phone = width <= 640
-      // Exactly one New project is on the page to a keyboard or a screen reader: the other is not drawn.
+      // Exactly one New project control is on the page to a keyboard or a screen reader (the minis' "room" tile
+      // only draws below the cap).
       await expect(page.getByRole('button', { name: 'New project' })).toHaveCount(1)
-      await (phone ? page.getByRole('link', { name: /^Continue: / }) : page.getByRole('button', { name: 'New project' })).focus()
+      await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).focus()
+      const readStop = () => page.evaluate(() => {
+        const el = document.activeElement
+        const r = el.getBoundingClientRect()
+        return {
+          name: (el.getAttribute('aria-label') || el.innerText || '').trim().replace(/\s+/g, ' '),
+          top: Math.round(r.top + window.scrollY), bottom: Math.round(r.bottom + window.scrollY),
+          left: Math.round(r.left), right: Math.round(r.right),
+          inPage: !!el.closest('.db'),
+          inPlan: !!el.closest('.db-plan'),
+          inBar: !!el.closest('.db-bar'),
+        }
+      })
       const stops = []
-      for (let i = 0; i < 40; i++) {
-        const stop = await page.evaluate(() => {
-          const el = document.activeElement
-          const r = el.getBoundingClientRect()
-          return {
-            name: (el.getAttribute('aria-label') || el.innerText || '').trim().replace(/\s+/g, ' '),
-            top: Math.round(r.top + window.scrollY), bottom: Math.round(r.bottom + window.scrollY),
-            left: Math.round(r.left), right: Math.round(r.right),
-            inPage: !!el.closest('.uh'),
-          }
-        })
+      for (let i = 0; i < 60; i++) {
+        const stop = await readStop()
         stops.push(stop)
-        if (/^(Upgrade for |See Pro$)/.test(stop.name)) break
+        if (stop.inPlan && PLANS.test(stop.name)) break
         await page.keyboard.press('Tab')
       }
-      const names = stops.map((s) => s.name)
-      // POSITIVE CONTROL: the walk reached the Pro panel, still inside the page.
-      expect(names.at(-1), `the Tab walk never reached the Pro panel: ${names.join(' | ')}`).toMatch(/^(Upgrade for |See Pro$)/)
-      expect(stops.every((s) => s.inPage), `the Tab walk left the page: ${names.join(' | ')}`).toBe(true)
+      // Below 1200 the docked bar follows the page in the DOM: one more stop.
+      const barDrawn = await page.locator('.db-bar').isVisible()
+      if (barDrawn) {
+        await page.keyboard.press('Tab')
+        stops.push(await readStop())
+      }
+      const names = stops.map((st) => st.name)
+      const walk = names.join(' | ')
+      // POSITIVE CONTROL: the walk reached the plan line, still inside the page.
+      expect(stops.some((st) => st.inPlan && PLANS.test(st.name)), `the Tab walk never reached the plan line: ${walk}`).toBe(true)
+      expect(stops.every((st) => st.inPage), `the Tab walk left the page: ${walk}`).toBe(true)
+      expect(barDrawn, `the docked bar is ${barDrawn ? '' : 'not '}drawn at ${width}px`).toBe(width < 1200)
 
-      // The first six stops are exactly these, in this order, with nothing between.
-      ;(phone ? PHONE_STOPS : FIRST_STOPS).forEach((re, i) => expect(names[i], `stop ${i + 1} of ${names.join(' | ')}`).toMatch(re))
-      // Then the rest of the page, in order, though other stops (the other tools) sit between.
-      let at = FIRST_STOPS.length
-      for (const re of phone ? THEN_PHONE : THEN) {
+      // The page's own stops, in order, with nothing between them.
+      const lead = width < 1200 ? [NEW, PLANS, OPEN] : [NEW, PLANS, OPEN, CONTINUE]
+      const expected = [...lead, ...TOOLS, ...MINIS]
+      expected.forEach((re, i) => expect(names[i], `stop ${i + 1} of ${walk}`).toMatch(re))
+      // Then the rest of the page, in order, though other stops (the other palettes, the also-in-Create links) sit between.
+      let at = expected.length
+      for (const re of [...SHELF, ...PLAN_LINE]) {
         const found = names.findIndex((n, i) => i >= at && re.test(n))
-        expect(found, `${re} is missing or out of order after stop ${at}: ${names.join(' | ')}`).toBeGreaterThanOrEqual(at)
+        expect(found, `${re} is missing or out of order after stop ${at}: ${walk}`).toBeGreaterThanOrEqual(at)
         at = found + 1
       }
+      if (barDrawn) {
+        expect(names.at(-1), `the docked bar is not the last stop: ${walk}`).toMatch(CONTINUE)
+        expect(stops.at(-1).inBar, 'the last stop is not in the docked bar').toBe(true)
+      }
 
-      // Painted order. Continue is above or beside Open project; the rows run down the page;
-      // the page's own stops (from New project to the Pro panel) never go back up.
-      const [newBtn, cont, open, row1, row2, plans] = phone ? [stops[4], stops[0], stops[1], stops[2], stops[3], stops[5]] : stops
-      if (phone) {
-        expect(newBtn.top, 'New project is painted above the last row').toBeGreaterThanOrEqual(row2.bottom - 1)
-        expect(plans.top, 'Today is painted above New project').toBeGreaterThanOrEqual(newBtn.bottom - 1)
-      } else {
-        expect(cont.top, 'Continue is painted above New project').toBeGreaterThanOrEqual(newBtn.bottom - 1)
+      // Painted order. From New project to the last mini the stops never go back up the page, and the
+      // sheet's head reads Open project then Continue, left to right. The shelf is a row of columns walked
+      // column by column, so its stops are held to a band: all below the minis, and the plan line below all of them.
+      const flow = stops.slice(0, expected.length)
+      for (let i = 1; i < flow.length; i++) {
+        expect(flow[i].top, `"${flow[i].name}" is painted above "${flow[i - 1].name}", the stop before it`).toBeGreaterThanOrEqual(flow[i - 1].top - 1)
       }
-      expect(cont.bottom <= open.top + 1 || cont.right <= open.left + 1, 'Open project is painted before Continue').toBe(true)
-      expect(row1.top, 'the first row is painted above the lead card\'s actions').toBeGreaterThanOrEqual(Math.max(cont.bottom, open.bottom) - 1)
-      expect(row2.top, 'the second row is painted above the first').toBeGreaterThanOrEqual(row1.bottom - 1)
-      if (width <= 1000) {
-        // Stacked: Today comes after the work.
-        expect(plans.top, 'Today is painted above the rows at a stacked width').toBeGreaterThanOrEqual(row2.bottom - 1)
-      } else {
-        // Two columns: Today is beside the lead, in the rail, and still follows it in the DOM.
-        expect(plans.left, 'the rail is not to the right of the work at a wide width').toBeGreaterThan(row2.right)
+      const planStops = stops.filter((st) => st.inPlan)
+      const shelfStops = stops.slice(expected.length).filter((st) => !st.inPlan && !st.inBar)
+      expect(shelfStops.length, 'the walk found no stop on the shelf').toBeGreaterThan(5)
+      const minisBottom = Math.max(...stops.slice(lead.length + TOOLS.length, expected.length).map((st) => st.bottom))
+      for (const st of shelfStops) expect(st.top, `"${st.name}" on the shelf is painted above the last mini`).toBeGreaterThanOrEqual(minisBottom - 1)
+      const shelfBottom = Math.max(...shelfStops.map((st) => st.bottom))
+      for (const st of planStops) expect(st.top, `"${st.name}" in the plan line is painted above the shelf`).toBeGreaterThanOrEqual(shelfBottom - 1)
+      if (width >= 1200) {
+        const [open, cont] = [stops[2], stops[3]]
+        expect(cont.left, 'Continue is painted before Open project').toBeGreaterThanOrEqual(open.right - 1)
       }
-      const rest = stops.slice(6)
-      for (let i = 1; i < rest.length; i++) {
-        expect(rest[i].top, `"${rest[i].name}" is painted above "${rest[i - 1].name}", the stop before it`).toBeGreaterThanOrEqual(rest[i - 1].top - 1)
-      }
+      const sheetTools = stops.slice(lead.length, lead.length + TOOLS.length)
+      const firstMini = stops[lead.length + TOOLS.length]
+      expect(firstMini.top, 'the first other project is painted above the sheet\'s tool links')
+        .toBeGreaterThanOrEqual(Math.max(...sheetTools.map((st) => st.bottom)) - 1)
       await context.close()
     })
   }

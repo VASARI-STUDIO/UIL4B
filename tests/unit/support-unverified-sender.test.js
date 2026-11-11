@@ -1,4 +1,4 @@
-// The founder's notification email says whose address a message came with, and
+// The owner's notification email says whose address a message came with, and
 // whether the server could vouch for it.
 //
 //   - a feedback, bug or help message carries whatever address the form sent, so

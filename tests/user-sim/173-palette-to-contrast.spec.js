@@ -199,8 +199,10 @@ test.describe('Palette Builder to Contrast Checker', () => {
     await expect(bgField(page)).toHaveValue('#FFFFFF')
     await expect(backLink(page)).toHaveCount(0)
     await expect(root(page)).not.toHaveAttribute('data-from', /.*/)
-    // The toolbar still goes back to the workspace, as before.
-    await expect(page.getByRole('link', { name: /^Back to (workspace|previous page)$/ })).toBeVisible()
+    // With no hand-off the toolbar's Back is the default: the tools index.
+    const toolsBack = page.getByRole('link', { name: 'Back to all tools', exact: true })
+    await expect(toolsBack).toBeVisible()
+    await expect(toolsBack).toHaveAttribute('href', '/tools')
 
     // A shared pair (no `from`) is a direct visit too.
     await go(page, '/create/contrast?fg=0B1220&bg=F7F7F4')

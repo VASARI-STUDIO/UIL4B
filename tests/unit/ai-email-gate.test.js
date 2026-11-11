@@ -35,6 +35,9 @@ import {
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from '../../api/_lib/geminiFinish.js'
 import { mailFrom, REPLY_TO, sendingDomainConfigured } from '../../api/_lib/mail.js'
 import { emailGateBody, EMAIL_UNVERIFIED_CODE } from '../../api/_lib/emailGate.js'
+import {
+  geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
+} from '../../api/_lib/geoBlock.js'
 
 const AI_PATH = 'api/ai.js'
 const aiSource = fs.readFileSync(path.join(process.cwd(), AI_PATH), 'utf8')
@@ -83,6 +86,7 @@ function loadAi({ decoded, user = {} }) {
     FieldValueIncrement: async () => 1,
     requireAdmin: async () => ({ ok: false, status: 401 }),
     emailGateBody,
+    geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
     serveUsage: async (req, res) => { ledger.usageServed += 1; return res.status(200).json({ served: true }) },
     usageDayKey, usageMonthKey,
     planForUser, dailyLimitFor, monthlyLimitFor, modelFor,
@@ -99,6 +103,11 @@ function loadAi({ decoded, user = {} }) {
       return { ok: true, result, counts: meters.map(() => 0) }
     },
     altTextGenerationConfig, altTextOutcome, altTextCutoffReply, ALT_TEXT_CUTOFF_REFUND_CAP,
+    // The attempt limits and image check sit after this gate and are covered by
+    // ai-attempt-limits.test.js; here they let everything through.
+    aiAccountRefusal: async () => null,
+    aiSharedRefusal: async () => null,
+    imagePayloadProblem: () => null,
   }
   const api = vm.runInNewContext(`(function(){\n${out}\n;return { handler, TASKS };\n})()`, sandbox, { filename: AI_PATH })
 
@@ -106,6 +115,7 @@ function loadAi({ decoded, user = {} }) {
   // auth, the plan lookup and the gate are the real code.
   for (const [name, task] of Object.entries(api.TASKS)) {
     task.configured = () => true
+    task.validate = undefined
     task.run = async () => { ledger.ran.push(name); return { ok: true, task: name } }
   }
 
