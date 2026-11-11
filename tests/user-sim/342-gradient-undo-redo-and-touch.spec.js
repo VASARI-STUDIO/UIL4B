@@ -181,8 +181,8 @@ test.describe('Back and Redo for every edit, at 1440', () => {
     await page.keyboard.press('Control+y')
     expect(await look(page), 'Ctrl+Y redoes').toEqual(edited)
     await page.keyboard.press('Control+z')
-    await hexField(page, 2).fill('00ff88')
-    await hexField(page, 2).press('Enter')
+    await hexField(page, 1).fill('00ff88')
+    await hexField(page, 1).press('Enter')
     await expect(redo(page), 'a new edit empties Redo').toHaveAttribute('aria-disabled', 'true')
   })
 
@@ -298,7 +298,7 @@ for (const width of [390, 768]) {
         await b.click()
         expect(await look(page)).toEqual(start)
       } else {
-        await page.getByRole('button', { name: 'More' }).click()
+        await page.getByRole('button', { name: 'More', exact: true }).click()
         await page.getByRole('button', { name: /^Back/ }).click()
         expect(await look(page)).toEqual(start)
       }
