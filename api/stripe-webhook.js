@@ -555,13 +555,41 @@ async function invoiceNowPaid(stripe, invoice) {
   }
 }
 
+// Whether the failure on record belongs to a different invoice that Stripe now
+// reports as paid. That failure is over, so a new failing invoice is a new
+// failure and gets its own grace window rather than inheriting the old start
+// time. A voided invoice was never paid, so it does not restart the window. A
+// record without an invoice id, the same invoice failing again, or an invoice
+// Stripe says it cannot find all count as "not settled" and keep the original
+// start time. A read that may succeed on a retry throws instead, so the event
+// is released and Stripe redelivers it.
+async function oldFailureSettled(stripe, existing, invoice, uid) {
+  const oldId = typeof existing?.failedInvoiceId === 'string' ? existing.failedInvoiceId : null
+  if (!stripe || !oldId || oldId === invoice?.id) return false
+  try {
+    const old = await stripe.invoices.retrieve(oldId)
+    return old?.status === 'paid'
+  } catch (err) {
+    if (isTransientStripeError(err)) throw Object.assign(err, { redeliver: true })
+    console.error('stripe-webhook: could not read the earlier failed invoice — keeping its failure start time', {
+      uid, invoiceId: oldId, error: err?.message,
+    })
+    return false
+  }
+}
+
 /**
  * Flag a failed invoice payment on the customer's account, unless the invoice
- * has been paid since. Returns 'no_account', 'already_paid' or 'flagged'.
+ * has been paid since. Returns 'no_account', 'already_paid', 'flagged',
+ * 'kept_newer_failure' (a failure created after this event is already recorded)
+ * or 'kept_newer_state' (a newer event has stored the same subscription as
+ * healthy).
  *
- * `eventCreated` is the delivering event's `created` time (seconds). It is stored
- * as `paymentFailedEventCreated` so writeSubscriptionForEvent can tell a
- * subscription delivery from before this failure from one that follows it.
+ * `eventCreated` is the Stripe event's `created` (seconds). It is stored as
+ * `paymentFailedEventCreated` so writeSubscriptionForEvent can tell a
+ * subscription delivery from before this failure from one that follows it, and
+ * it orders failures against each other and against a late healthy
+ * customer.subscription.updated.
  */
 export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated = null) {
   const database = db || adminDb()
@@ -579,46 +607,101 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
   // (api/_lib/plans.js), so it has to be stamped ONCE — on the transition into
   // failure — and then survive every retry. Stripe fires invoice.payment_failed
   // again on each Smart Retry; re-stamping here would push the window forward
-  // each time, which is the same as having no window at all.
-  let failedAt = Date.now()
-  let failedEventCreated = Number.isFinite(eventCreated) ? eventCreated : null
-  // A late delivery for an OLDER failing invoice keeps the newer invoice on
-  // record, or paying the older one would clear a failure it does not settle.
-  let keepRecordedInvoice = null
+  // each time, which is the same as having no window at all. The exception is a
+  // failure whose invoice has since been paid (oldFailureSettled): the
+  // next failing invoice is a new failure and starts a fresh window.
+  let decidedAt = Date.now()
+  let priorFailure = null
   try {
     const existing = (await ref.get()).data()?.subscription
-    if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)) {
-      failedAt = existing.paymentFailedAt
-    }
-    // A Smart Retry re-flag keeps the latest event time seen for this failure.
-    if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedEventCreated)) {
-      failedEventCreated = Math.max(existing.paymentFailedEventCreated, failedEventCreated ?? -Infinity)
-      const olderDelivery = Number.isFinite(eventCreated) && eventCreated < existing.paymentFailedEventCreated
-      if (olderDelivery && typeof existing.failedInvoiceId === 'string' && existing.failedInvoiceId) {
-        keepRecordedInvoice = { id: existing.failedInvoiceId, url: existing.hostedInvoiceUrl ?? null }
-      }
+    if (existing?.paymentFailed === true) priorFailure = existing
+    if (existing?.paymentFailed === true && Number.isFinite(existing?.paymentFailedAt)
+      && !(await oldFailureSettled(stripe, existing, invoice, uid))) {
+      decidedAt = existing.paymentFailedAt
     }
   } catch (err) {
+    if (err?.redeliver) throw err
     // A read failure must not swallow the failure flag. Stamping "now" can only
     // ever be generous to the customer by at most one retry interval.
     console.error('stripe-webhook: could not read existing payment state', { uid, error: err?.message })
   }
 
-  await ref.set({
-    subscription: {
-      paymentFailed: true,
-      paymentFailedAt: failedAt,
-      paymentFailedEventCreated: failedEventCreated,
-      // Hosted invoice page the customer can use to retry payment.
-      hostedInvoiceUrl: keepRecordedInvoice ? keepRecordedInvoice.url : (invoice.hosted_invoice_url || null),
-      // Which invoice the failure belongs to, so a later invoice.paid only clears
-      // the failure it actually settles (clearPaymentFailure). Unlike
-      // paymentFailedAt this follows the failing invoice with the newest event.
-      failedInvoiceId: keepRecordedInvoice ? keepRecordedInvoice.id : (invoice.id || null),
-      updatedAt: Date.now(),
-    },
-  }, { merge: true })
-  return 'flagged'
+  // The decisions above rest on a read taken before the Stripe lookups, so the
+  // write re-reads the record inside a transaction (as clearPaymentFailure
+  // does). A failure flagged or cleared in the meantime is taken into account
+  // instead of being overwritten with a stale clock.
+  const basis = priorFailure
+    ? { failedInvoiceId: storedFailedInvoiceId(priorFailure), paymentFailedAt: priorFailure.paymentFailedAt ?? null }
+    : null
+  // Why planWrite last returned null, for the caller's outcome.
+  let skipped = 'kept_newer_failure'
+  const planWrite = (current) => {
+    // A failure event created BEFORE the newest event stored for the same
+    // subscription, which now grants access, is older news: the subscription has
+    // recovered since. Events created in the same second are not ordered by their
+    // timestamps, so a tie still lands (as in subscriptionWriteDecision). A
+    // different or unknown subscription id is never held back by this rule.
+    const failedSubscriptionId = invoiceSubscription(invoice).id
+    if (failedSubscriptionId && current?.id === failedSubscriptionId
+      && subscriptionStatusGrantsAccess(current)
+      && Number.isFinite(eventCreated) && Number.isFinite(current.stripeEventCreated)
+      && eventCreated < current.stripeEventCreated) {
+      console.warn('stripe-webhook: payment failure skipped — the subscription has a newer healthy state', {
+        uid, invoiceId: invoice.id, eventCreated, storedEventCreated: current.stripeEventCreated,
+      })
+      skipped = 'kept_newer_state'
+      return null
+    }
+    skipped = 'kept_newer_failure'
+    const failure = current?.paymentFailed === true ? current : null
+    // A failure event created BEFORE the failure on record is older news: it
+    // must not move the record back to an older invoice or event time, or paying
+    // the older invoice would clear a failure it does not settle.
+    if (failure && Number.isFinite(eventCreated) && Number.isFinite(failure.paymentFailedEventCreated)
+      && eventCreated < failure.paymentFailedEventCreated) {
+      console.warn('stripe-webhook: payment failure skipped — a newer failure is already recorded', {
+        uid, invoiceId: invoice.id, eventCreated, recordedEventCreated: failure.paymentFailedEventCreated,
+      })
+      return null
+    }
+    // The clock decided above holds only while the failure on record is still the
+    // one it was decided about; otherwise the record as it is now decides.
+    let failedAt = Date.now()
+    if (failure && basis && sameFailureOnRecord(failure, basis)) failedAt = decidedAt
+    else if (failure && Number.isFinite(failure.paymentFailedAt)) failedAt = failure.paymentFailedAt
+    return {
+      subscription: {
+        paymentFailed: true,
+        paymentFailedAt: failedAt,
+        // Hosted invoice page the customer can use to retry payment.
+        hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+        // Which invoice the failure belongs to, so a later invoice.paid only clears
+        // the failure it actually settles (clearPaymentFailure). Unlike
+        // paymentFailedAt this follows the NEWEST failing invoice.
+        failedInvoiceId: invoice.id || null,
+        // When Stripe created the failure event, so a healthy
+        // customer.subscription.updated created before it cannot clear the
+        // failure (writeSubscriptionForEvent).
+        ...(Number.isFinite(eventCreated) ? { paymentFailedEventCreated: eventCreated } : {}),
+        updatedAt: Date.now(),
+      },
+    }
+  }
+
+  // Only a Firestore handle without runTransaction (an older test double) falls
+  // back to a plain re-read, which narrows the window but does not close it.
+  if (typeof database.runTransaction !== 'function') {
+    const write = planWrite((await ref.get()).data()?.subscription)
+    if (!write) return skipped
+    await ref.set(write, { merge: true })
+    return 'flagged'
+  }
+  return database.runTransaction(async (tx) => {
+    const write = planWrite((await tx.get(ref)).data()?.subscription)
+    if (!write) return skipped
+    tx.set(ref, write, { merge: true })
+    return 'flagged'
+  })
 }
 
 const TRANSIENT_STRIPE_ERRORS = new Set([

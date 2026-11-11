@@ -40,6 +40,9 @@ test.describe('library filter multi-select', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
     await expect(page.locator(TRAY)).toBeVisible()
+    // The grid first renders at the Free cap of ten and widens once the Pro plan has
+    // loaded, so every count below waits for the whole collection.
+    await expect.poll(() => cardCount(page), { timeout: 10000 }).toBeGreaterThan(10)
   })
 
   test('a plain click still replaces the selection', async ({ page }) => {

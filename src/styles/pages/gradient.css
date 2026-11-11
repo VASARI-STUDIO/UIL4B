@@ -69,7 +69,7 @@
    go portrait), and the group is centred when that cap leaves room over. The panel
    scrolls inside itself; only extras (More options, the shades) ever reach that. */
 .grd { --grd-body-pad: clamp(12px, 2vw, 20px); }
-.grd .tl-body { padding: var(--grd-body-pad); }
+.grd .tl-body { padding: var(--grd-body-pad); padding-inline: max(var(--grd-body-pad), env(safe-area-inset-left, 0px)) max(var(--grd-body-pad), env(safe-area-inset-right, 0px)); }
 @media (min-width: 901px) {
   .grd {
     --grd-frame: calc(100dvh - var(--chrome-h) - var(--tl-bar-h) - 2 * var(--grd-body-pad));
@@ -926,7 +926,11 @@
   .grd .grd-tints-btn { width: auto; min-width: 44px; }
   .grd .grd-stop-swatch { width: 44px; height: 44px; }
   .grd .grd-hex { height: 44px; font-size: 16px; }
-  .grd .grd-fmt-btn { min-height: 44px; }
+  .grd .grd-fmt-btn { min-height: 44px; min-width: 44px; }
+  /* A tap on a control is a tap, never a double-tap zoom or a 300ms wait; the rail, handles
+     and wheel keep touch-action: none so a drag on them does not scroll the page. */
+  .grd :is(.grd-iconbtn, .grd-chip, .grd-stop-select, .grd-stop-swatch, .grd-preset, .grd-gen-lockbtn, .grd-sel-clear, .grd-gen-more, .grd-paint-src, .grd-explore-chip, .grd-chips-more, .grd-pool-opt) { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .grd .grd-wheel, .grd .grd-handle, .grd .grd-rail { -webkit-tap-highlight-color: transparent; }
   .grd .grd-copy { height: 44px; min-height: 44px; padding: 0 12px; }
   .grd .grd-rail { height: 44px; }
   .grd .grd-handle { width: 44px; height: 44px; --lm-drop: 23px; }
@@ -1071,10 +1075,12 @@
   content: ""; position: absolute; top: 9px; left: 25px; width: 6px; height: 6px;
   border-radius: 50%; background: var(--t0); forced-color-adjust: none;
 }
-/* Back with nothing to go back to: stepped back, never scaled, still focusable so
+/* Back or Redo with nowhere to go: stepped back, never scaled, still focusable so
    its title can say why. */
-.grd .tl-btn.grd-back[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
-.grd .tl-btn.grd-back[aria-disabled="true"]:active { transform: none; }
+.grd .tl-btn.grd-back[aria-disabled="true"],
+.grd .tl-btn.grd-redo[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+.grd .tl-btn.grd-back[aria-disabled="true"]:active,
+.grd .tl-btn.grd-redo[aria-disabled="true"]:active { transform: none; }
 
 /* The filter rows in the Random section (Type, Stops) and the
    checklist behind "Pick…". */

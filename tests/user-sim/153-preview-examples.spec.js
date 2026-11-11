@@ -359,6 +359,7 @@ test.describe('a slow network', () => {
     // The option shows it is loading while the old scene stays.
     await expect(dialog.getByRole('option', { name: /^Energy dashboard/ })).toContainText('Loading')
     await expect(dialog.locator('.pvs[data-preview-scene="Energy dashboard"]')).toBeVisible({ timeout: 15000 })
+    await expect.poll(() => page.evaluate(() => window.__stage.at(-1).name), { message: 'the sampler has not yet seen the new scene' }).toBe('Energy dashboard')
     const frames = await page.evaluate(() => { cancelAnimationFrame(window.__raf); return window.__stage })
 
     const empty = frames.filter((f) => f.count < 1 || f.words < 30 || f.height < 300)
