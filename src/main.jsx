@@ -19,6 +19,7 @@ import { prepareReload } from './components/spectrum/usePageAnchors'
 import { exampleLoading } from './components/palette/examples/loading'
 import './styles/global.css'
 import './styles/v3-menus.css'
+import './styles/v3-overlays.css'
 import { installDownloadObserver } from './utils/downloadObserver'
 
 // Recent exports: every tool download is recorded where
