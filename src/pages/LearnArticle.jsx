@@ -87,6 +87,15 @@ const TRY_HEAD = {
   'colour-contrast': 'Check your own colours.',
 }
 
+// The page heading and lead where a guide's page words differ from its index
+// title and dek. The index title stays the <title>, the card and the menu entry.
+const HERO = {
+  'colour-contrast': {
+    title: 'How much contrast your text needs, and how to check it.',
+    lead: 'Most text needs a contrast ratio of at least 4.5:1 against its background. Large text, and the outline of a field or a checkbox you need to see, need 3:1. The stricter AAA level asks for 7:1. Pick a grey and see which it clears.',
+  },
+}
+
 export default function LearnArticle() {
   const { slug } = useParams()
   const article = findArticle(slug)
@@ -109,6 +118,7 @@ function Article({ article }) {
   const next = nextInTopic(article.slug)
   const nextInSameTopic = Boolean(next) && next.topic === article.topic
   const minutes = readingMinutes(article.words)
+  const hero = { title: article.title, lead: article.dek, ...HERO[article.slug] }
 
   // Choosing a section from the phone contents folds it away, then puts focus on
   // that section's heading. The anchor's own jump runs after this handler, so
@@ -130,8 +140,8 @@ function Article({ article }) {
             <span aria-hidden="true">/</span>
             <Link to={`/learn#${topicAnchorId(article.topic)}`}>{article.topic}</Link>
           </nav>
-          <h1>{article.title}</h1>
-          <p className="lart-dek">{article.dek}</p>
+          <h1>{hero.title}</h1>
+          <p className="lart-dek">{hero.lead}</p>
           <p className="lart-meta">
             <span>{minutes} min read</span>
             <span>Reviewed <time dateTime={article.updated}>{formatDate(article.updated)}</time></span>
