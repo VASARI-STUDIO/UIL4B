@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -11,6 +11,8 @@ import { savedColoursOf } from '../utils/savedColours'
 import Glyph from '../components/userhome/Glyph'
 import ProjectActions from '../components/userhome/ProjectActions'
 import IconPicker from '../components/userhome/IconPicker'
+import ProjectLinkGone from '../components/userhome/ProjectLinkGone'
+import { useWasSignedIn } from '../hooks/useWasSignedIn'
 import { UPGRADE_LINE, byRecent, projectSlots4, projectStatus, upgradeOffer } from '../components/userhome/workspace'
 import { usePrices, useProPrice } from '../hooks/usePrices'
 import '../styles/deferred/account.css'
@@ -86,6 +88,8 @@ function ProjectDetail({ id, toast }) {
   const copyTimer = useRef(null)
 
   const project = projects.find((p) => p.id === id)
+  const wasSignedIn = useWasSignedIn(canSaveProjects)
+  const [leaving, setLeaving] = useState(false)
 
   // A project missing from the list is "not found" only once the list is known.
   // On a fresh load the account has not answered yet (sign-in is still settling,
@@ -114,9 +118,8 @@ function ProjectDetail({ id, toast }) {
       </div>
     )
   }
-  // No account, or no such project on it (deleted here or on another device):
-  // the workspace is the page that can say what there is.
-  if (!canSaveProjects || !project) return <Navigate to="/projects" replace />
+  // No account, or no such project on it (deleted here or on another device).
+  if (!canSaveProjects || !project) return <ProjectLinkGone quiet={leaving || (wasSignedIn && !canSaveProjects)} />
 
   const status = projectStatus(project)
   const { digest } = status
@@ -193,6 +196,7 @@ function ProjectDetail({ id, toast }) {
   }
 
   const onDelete = () => {
+    setLeaving(true)
     deleteProject(project.id)
     toast('Project deleted')
     navigate('/projects', { replace: true })
