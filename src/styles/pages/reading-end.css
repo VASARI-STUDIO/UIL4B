@@ -1,0 +1,10 @@
+/* reading-end.css — the signed-out close of a reading page (ReadingEnd).
+   Imported by the component, so it rides the lazy chunk of whichever reading
+   page mounts it. */
+.rd-end{--rd-y:clamp(72px,8.4vw,120px);margin-top:var(--rd-y);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4);max-width:640px}
+.rd-end h2{font-family:var(--display);font-size:clamp(28px,2.8vw,40px);font-weight:600;letter-spacing:-.035em;line-height:1.05;color:var(--t0);text-wrap:balance}
+.rd-end p{max-width:52ch;font-size:17px;line-height:1.6;color:var(--t1);margin:0}
+.rd-end .ui-pill{margin-top:var(--s-2)}
+@media(max-width:767px){
+  .rd-end .ui-pill{width:100%}
+}
