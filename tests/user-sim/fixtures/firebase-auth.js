@@ -99,6 +99,10 @@ export function signInWithEmailAndPassword(auth, email, password) {
 
 export function createUserWithEmailAndPassword(auth, email, password) {
   if (!isFakeAuth(auth)) return realCreateUserWithEmailAndPassword(auth, email, password)
+  // A `lateSignIn` page is a visitor who has not signed in yet, so the sign-up form
+  // may make them a new account (uid test-uid-new). Any other session already has
+  // an account and nothing to make one with.
+  if (auth.awaitingLateSignIn?.()) return Promise.resolve({ user: auth.signUpNow(email) })
   return refuse('Creating an account')
 }
 
