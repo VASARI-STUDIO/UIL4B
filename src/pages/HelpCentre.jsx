@@ -222,7 +222,9 @@ export default function HelpCentre() {
                 <button type="button" className="hlr-job hlr-hit" onClick={() => choose(job)}>
                   <span className="hlr-hit-text">
                     <span>{job.label}</span>
-                    {snip && <span className="hlr-hit-d">{snip.before}<b>{snip.hit}</b>{snip.after}</span>}
+                    {snip
+                      ? <span className="hlr-hit-d">Help &middot; {snip.before}<b>{snip.hit}</b>{snip.after}</span>
+                      : <span className="hlr-hit-d">Help &middot; {job.heading}</span>}
                   </span>
                   <span className="hlr-tick" aria-hidden="true"><SpectrumIcon name="arrow-right" size={18} /></span>
                 </button>
@@ -233,7 +235,7 @@ export default function HelpCentre() {
                 <Link className="hlr-job hlr-hit" to={`/learn/${a.slug}`}>
                   <span className="hlr-hit-text">
                     <span>{a.title}</span>
-                    <span className="hlr-hit-d">Guide</span>
+                    <span className="hlr-hit-d">Guide &middot; {a.dek}</span>
                   </span>
                   <span className="hlr-tick" aria-hidden="true"><SpectrumIcon name="arrow-right" size={18} /></span>
                 </Link>
