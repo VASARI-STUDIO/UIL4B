@@ -91,7 +91,7 @@ test.describe('right-click feedback reaches the whole product', () => {
       await expect(menu, `the feedback menu must reach ${route}`).toBeVisible()
       await expect(page.getByRole('button', { name: 'Report a problem here' })).toBeVisible()
       // It names what the report will be about BEFORE anything is committed to.
-      await expect(menu.locator('.pop-head')).not.toBeEmpty()
+      await expect(menu.locator('.v3m-t')).not.toBeEmpty()
     })
   }
 

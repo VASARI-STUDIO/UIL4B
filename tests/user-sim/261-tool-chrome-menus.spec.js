@@ -224,7 +224,7 @@ test.describe('Right-click on a link keeps the browser menu', () => {
     expect(await rightClickPrevented(link.asElement()), 'the link keeps the native menu').toBe(false)
     await link.evaluate((a) => a.remove())
     expect(await rightClickPrevented(stop), 'the row opens the tints menu').toBe(true)
-    await expect(page.locator('.grd-tintmenu')).toBeVisible()
+    await expect(page.getByRole('menu', { name: /^Tints of stop/ })).toBeVisible()
     await ctx.close()
   })
 
@@ -298,7 +298,7 @@ test.describe('Right-click menus share the dropdown row', () => {
     await ctx.close()
   })
 
-  // MUTATION: in global.css change `.pop-item`'s `min-height:40px`, or give `.fbx-menu` its own radius.
+  // MUTATION: in v3-menus.css change `.v3m-i`'s `min-height:36px`, or give `.fbx-menu` its own radius.
   test('the app right-click menu row is the dropdown row: height, radius, type, surface (1440)', async ({ browser }) => {
     const { base, ctx } = await dropdownBase(browser)
     const page = base.page
@@ -321,7 +321,7 @@ test.describe('Right-click menus share the dropdown row', () => {
     await page.mouse.click(point.x, point.y, { button: 'right' })
     const menu = page.locator('.fbx-menu')
     await expect(menu).toBeVisible()
-    const item = await menu.locator('.pop-item').first().evaluate(read)
+    const item = await menu.getByRole('menuitem').first().evaluate(read)
     expect(item).toEqual(base.row)
     expect(await menu.evaluate(surface)).toEqual(base.surface)
     await ctx.close()

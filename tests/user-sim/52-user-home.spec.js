@@ -464,7 +464,7 @@ test.describe('the kit sheet is read off the newest project', () => {
     await go(page, '/projects/p-half')
     await expectRendered(page, '/projects/p-half')
     await page.getByRole('button', { name: 'Actions for Harbour Rebrand' }).click()
-    await page.getByRole('button', { name: 'Rename', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
     await page.getByRole('textbox', { name: /Rename Harbour Rebrand/i }).fill('Harbour Two')
     await page.getByRole('button', { name: 'Save', exact: true }).click()
 
@@ -1125,14 +1125,14 @@ test.describe('the project menu', () => {
     await expectRendered(page, '/projects/p-half')
 
     await page.getByRole('button', { name: 'Actions for Harbour Rebrand' }).click()
-    const menu = page.getByRole('group', { name: 'Actions for Harbour Rebrand' })
+    const menu = page.getByRole('menu', { name: 'Actions for Harbour Rebrand' })
     await expect(menu).toBeVisible()
     for (const name of ['Duplicate', 'Rename', 'Copy CSS variables', 'Archive']) {
-      await expect(menu.getByRole('button', { name, exact: true })).toBeVisible()
+      await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible()
     }
-    await expect(menu.getByRole('button', { name: /Delete/ })).toBeVisible()
-    await expect(menu.getByRole('button', { name: /Type scale/ })).toContainText('empty')
-    await expect(menu.getByRole('button', { name: /^Palette/ })).not.toContainText('empty')
+    await expect(menu.getByRole('menuitem', { name: /Delete/ })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /Type scale/ })).toContainText('empty')
+    await expect(menu.getByRole('menuitem', { name: /^Palette/ })).not.toContainText('empty')
   })
 
   test('Escape closes it and gives focus back to its trigger', async ({ page }) => {
@@ -1143,9 +1143,12 @@ test.describe('the project menu', () => {
 
     const trigger = page.getByRole('button', { name: 'Actions for Violet Lime' })
     await trigger.click()
-    const menu = page.getByRole('group', { name: 'Actions for Violet Lime' })
+    const menu = page.getByRole('menu', { name: 'Actions for Violet Lime' })
     await expect(menu).toBeVisible()
-    await expect(menu.locator(':focus')).toHaveCount(1)
+    // A pointer-opened menu holds focus on the panel itself; the first arrow moves to a row.
+    await expect(menu).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await expect(menu.getByRole('menuitem').first()).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
     await expect(trigger).toBeFocused()

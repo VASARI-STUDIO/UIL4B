@@ -4931,26 +4931,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 }
 @keyframes menu-select-sheet-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
-/* ─── The app-wide right-click menu (FeedbackContextMenu) ────────────────────
-   The anchor is a zero-height, MENU-WIDE box whose left edge sits on the
-   pointer. That width is not decorative: usePopover's placePopover end-aligns
-   a panel on its trigger's right edge, so an anchor exactly one menu wide
-   lands the panel's LEFT edge on the pointer — a menu that opens down-and-right
-   like every native one, with the hook's own edge-flipping and max-height
-   still doing the work. A zero-WIDTH anchor would open leftward.
-
-   pointer-events:none so the invisible anchor box cannot eat clicks on the
-   page it is floating over; the panel turns them back on for itself. */
-.fbx-anchor{position:fixed;width:260px;height:0;z-index:400;pointer-events:none}
-.fbx-menu{width:100%;pointer-events:auto}
-/* The row focus ring of the dropdown rows: link colour, inside the row. */
-.fbx-menu .pop-item:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
-/* The head is a plain-words name for what was clicked ("Button: Copy #3A5F2B"),
-   in the sans label voice; the selector the report carries is never shown. */
-.fbx-menu .pop-head{overflow-wrap:anywhere;color:var(--t2)}
-.fbx-note{font-size:var(--fs-caption);line-height:1.5;color:var(--t3);margin:0;padding:2px 10px 4px}
-.fbx-dismiss{display:block;width:100%;padding:6px 10px 4px;border:none;background:none;font-family:var(--font);font-size:11px;line-height:1.5;color:var(--t3);text-align:left;cursor:pointer;border-radius:var(--btn-radius)}
-.fbx-dismiss:hover{background:var(--hvr);color:var(--t2)}
+/* The app-wide right-click menu (FeedbackContextMenu) is the shared Menu
+   (components/menu/Menu.jsx, styles/v3-menus.css); its head wraps long names. */
 
 
 /* ── Modals ─────────────────────────────────────────────────────────────── */
@@ -5409,7 +5391,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 /* The trigger is ALWAYS visible, never hover-revealed: a hover-only affordance
    does not exist on touch and is invisible to a keyboard user until they land
    on it. 32px so it clears the 24px pointer-target floor with room. */
-.uh-menu .pop-item{justify-content:space-between}
 
 
 @media(max-width:640px){
