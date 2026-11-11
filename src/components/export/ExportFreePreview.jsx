@@ -119,7 +119,7 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
     body = (
       <img
         key={`${kitPic.src}|${attempt}`}
-        className="xfp-img xfp-in"
+        className="xfp-img xfp-in" data-pin-nopin="true"
         src={kitPic.src}
         srcSet={kitPic.srcSet}
         sizes="240px"
@@ -132,7 +132,7 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
     body = (
       <img
         key={shown.id}
-        className="xfp-img xfp-in"
+        className="xfp-img xfp-in" data-pin-nopin="true"
         src={shown.src}
         width={shown.width}
         height={shown.height}

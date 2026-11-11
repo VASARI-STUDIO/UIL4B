@@ -96,7 +96,7 @@ export function GateFadeCards({ shape = 'glyph', srcs = [], count = 12, min = 22
     <div className={`geg-ph-grid geg-ph-grid--${shape}`} style={{ '--geg-ph-min': `${min}px` }}>
       {cells.map((cell, i) => (
         <span key={shape === 'poster' ? cell : i} className="geg-ph" data-step={i % 4}>
-          {shape === 'poster' && <img src={cell} alt="" width="960" height="600" loading="lazy" decoding="async" />}
+          {shape === 'poster' && <img src={cell} data-pin-nopin="true" alt="" width="960" height="600" loading="lazy" decoding="async" />}
           {shape === 'glyph' && <Shape kind={SHAPES[i % SHAPES.length]} />}
           {shape === 'lines' && [0, 1, 2].map((s) => <span key={s} className="geg-ph-line" data-line={s} />)}
         </span>

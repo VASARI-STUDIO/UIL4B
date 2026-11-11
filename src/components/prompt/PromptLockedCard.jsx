@@ -65,7 +65,7 @@ export default function PromptLockedCard({
       <span className="pl-card-preview pl-card-shot" aria-hidden="true">
         {hasPromptPreview(preview.id) && (
           <img
-            className="pl-card-poster"
+            className="pl-card-poster" data-pin-nopin="true"
             src={promptStandinSrc(preview.id)}
             alt=""
             loading="lazy"

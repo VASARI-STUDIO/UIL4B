@@ -37,7 +37,7 @@ export function ThemeStage({ kind, theme, locked, standin = locked, lockText }) 
   const cls = kind === 'book' ? 'book' : shapeClass(theme.shape)
   return (
     <div className={`xd-theme-stage xd-theme-stage--${cls}${standin ? ' is-locked' : ''}`}>
-      {shots.map((s) => <img key={s.src} src={s.src} alt={s.alt} decoding="async" />)}
+      {shots.map((s) => <img key={s.src} src={s.src} data-pin-nopin="true" alt={s.alt} decoding="async" />)}
       {locked && <span className="xd-theme-lock">{lockText}</span>}
     </div>
   )

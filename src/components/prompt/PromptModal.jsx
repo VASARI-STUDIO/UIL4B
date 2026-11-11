@@ -56,7 +56,7 @@ function LiveFrame({ id, title, onEscape }) {
       <div className="pl-modal-stage" data-state={state.status}>
         {/* The poster holds the frame's place while the page loads, so the
             view opens on the output rather than on an empty box. */}
-        <img className="pl-modal-stage-poster" src={promptPosterSrc(id)} alt="" aria-hidden="true" width="960" height="600" />
+        <img className="pl-modal-stage-poster" data-pin-nopin="true" src={promptPosterSrc(id)} alt="" aria-hidden="true" width="960" height="600" />
         {state.status === 'ready' && (
           <iframe
             ref={frameRef}

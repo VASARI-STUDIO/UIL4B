@@ -123,7 +123,7 @@ const ShowcaseTile = memo(function ShowcaseTile({ slot, kindId, failed, onFailed
                   <picture key={`out-${leaving}`} aria-hidden="true">
                     <source type="image/avif" srcSet={out.avif} />
                     <source type="image/webp" srcSet={out.webp} />
-                    <img src={out.webp} alt="" width={out.width} height={out.height} className="hsc-out" onError={dropLeaving} />
+                    <img src={out.webp} alt="" width={out.width} height={out.height} className="hsc-out" data-pin-nopin="true" onError={dropLeaving} />
                   </picture>
                 )}
                 <picture key={kindId}>
@@ -134,7 +134,7 @@ const ShowcaseTile = memo(function ShowcaseTile({ slot, kindId, failed, onFailed
                     alt={alt}
                     width={thumb.width}
                     height={thumb.height}
-                    className={out ? 'hsc-in' : undefined}
+                    className={out ? 'hsc-in' : undefined} data-pin-nopin="true"
                     loading={leaving === null ? 'lazy' : 'eager'}
                     decoding="async"
                     onError={() => onFailed(index)}
