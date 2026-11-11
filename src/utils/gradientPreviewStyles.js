@@ -1,11 +1,12 @@
 // The Gradient Generator's preview styles: Grain, Fluted glass, Glow ring, Streak,
-// Soft glow and Fade. Each is a real-time CSS render of the person's own stops (see
-// GradientFx.jsx); this module is the part that is plain data and string building, so
-// the colours a style draws can be checked without a browser.
+// Soft glow, Fade, Poster and Spec card. Each is a real-time CSS render of the person's
+// own stops (see GradientFx.jsx); this module is the part that is plain data and string
+// building, so the colours a style draws can be checked without a browser.
 //
 // A style never invents a colour. Every colour it paints comes from the stops, in the
 // interpolation space the canvas uses; the only other colours are the neutral grounds
 // the styles sit on, which are set in gradient.css.
+import { colourAt } from './gradientScore.js'
 
 /** The styles, in switcher order. `as` completes the canvas's spoken name. */
 export const PREVIEW_STYLES = [
@@ -15,9 +16,22 @@ export const PREVIEW_STYLES = [
   { id: 'streak', label: 'Streak', as: ', shown as a streak' },
   { id: 'glow', label: 'Soft glow', as: ', shown as a soft glow' },
   { id: 'fade', label: 'Fade', as: ', shown as a fade' },
+  { id: 'poster', label: 'Poster', as: ', shown as a poster' },
+  { id: 'spec', label: 'Spec card', as: ', shown as a spec card' },
 ]
 
 export const isPreviewStyle = (id) => PREVIEW_STYLES.some((s) => s.id === id)
+
+/** The styles whose words are set in a text layer drawn after the effects layer (GradientText.jsx). */
+export const TEXT_STYLES = ['poster', 'spec']
+export const isTextStyle = (id) => TEXT_STYLES.includes(id)
+
+/** The Poster's words: the Shallow End brand's own name, primary line and sample caption. */
+export const POSTER_COPY = {
+  brand: 'Shallow End',
+  display: 'Lessons that fit after school.',
+  footer: 'Pool 2, Sandy Bay. Tuesdays at 4:15.',
+}
 
 const byPosition = (stops) => [...stops].sort((a, b) => a.position - b.position)
 
@@ -61,3 +75,38 @@ export function styleVars(id, { stops, paint, oklch }) {
     default: return { '--fx-paint': paint }
   }
 }
+
+/** Where along the ramp the Spec card samples its strip, in percent. */
+export const SPEC_POSITIONS = [0, 25, 50, 75, 100]
+/** How many hexes the Spec card's list holds on one line, the "+N" counted as one. */
+export const SPEC_HEX_ROOM = 4
+/** Under this many stops the strip holds colours between the stops, and the card says so. */
+export const SPEC_FULL_STOPS = 5
+
+/** The five colours of the Spec card's strip: the ramp at 0, 25, 50, 75 and 100%, blended as the canvas blends (`oklch`, else sRGB). */
+export function specStrip(stops, oklch = true) {
+  const ramp = byPosition(stops)
+  return SPEC_POSITIONS.map((pos) => colourAt(ramp, pos, oklch ? 'oklch' : 'srgb'))
+}
+
+/** The stops' hexes in position order, upper-case. */
+export const specHexes = (stops) => byPosition(stops).map((s) => s.color.toUpperCase())
+
+/** `hexes` cut to what fits one line: all of them, or `room - 1` and the count left over as "+N". */
+export function fitHexes(hexes, room = SPEC_HEX_ROOM) {
+  if (hexes.length <= room) return [...hexes]
+  const shown = hexes.slice(0, room - 1)
+  return [...shown, `+${hexes.length - shown.length}`]
+}
+
+/** "Linear 135° · OKLCH", "Radial · sRGB", "Conic 90° · OKLCH". */
+export function specTypeLine(type, angle, oklch) {
+  const turn = type === 'Radial' ? '' : ` ${Math.round(angle)}°`
+  return `${type}${turn} · ${oklch ? 'OKLCH' : 'sRGB'}`
+}
+
+/** The line under the strip. Only a gradient with fewer than five stops has one. */
+export const specSampledNote = (stops) => (stops.length < SPEC_FULL_STOPS ? 'Sampled at 0, 25, 50, 75 and 100%' : null)
+
+/** The card's name: the saved project's, else the type's plain name (as the save field opens with). */
+export const specName = (savedName, type) => String(savedName ?? '').trim() || `${type} gradient`

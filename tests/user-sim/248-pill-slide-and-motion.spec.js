@@ -48,6 +48,9 @@ async function pillAt(group) {
 }
 
 // Click the last unselected option, then sample the pill every frame for 600ms.
+// A frame slower than the 200ms move skips straight to its end, so the pill's own
+// transform transition is also paused at its midpoint once and read there: the
+// pill is on the way between the two options whatever the frame rate.
 async function clickAndTrace(group) {
   return group.evaluate(async (g, unselected) => {
     const read = () => {
@@ -58,11 +61,25 @@ async function clickAndTrace(group) {
     const target = options[options.length - 1]
     const from = read()
     const label = target.textContent.trim()
-    target.click()
     const seen = []
+    let midRead = false
+    const readMidMove = () => {
+      if (midRead) return
+      const move = document.getAnimations().find((a) => a.transitionProperty === 'transform'
+        && a.effect && a.effect.target === g && a.effect.pseudoElement === '::before' && a.playState === 'running')
+      if (!move) return
+      midRead = true
+      move.pause()
+      move.currentTime = move.effect.getComputedTiming().endTime / 2
+      seen.push(read())
+      move.play()
+    }
+    target.click()
+    readMidMove()
     const t0 = performance.now()
     while (performance.now() - t0 < 600) {
       await new Promise(requestAnimationFrame)
+      readMidMove()
       seen.push(read())
     }
     const on = g.querySelector('[aria-pressed="true"],[aria-checked="true"],[aria-selected="true"]')

@@ -168,7 +168,7 @@ export default function MetaInspector({ onCopy, toast }) {
         <div className="seo-inputs">
           <label className="seo-field">
             <span className="seo-field-label">Page title <em>{title.trim().length}/{TITLE_MAX}</em></span>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Free Aspect Ratio Calculator — UIL4B" />
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Free Aspect Ratio Calculator — UI L4B" />
             <span className="seo-meter"><span className={`seo-meter-fill seo-tone--${meterTone(title.trim().length, TITLE_MIN, TITLE_MAX)}`} style={{ width: `${Math.min(100, (title.trim().length / TITLE_MAX) * 100)}%` }} /></span>
           </label>
 

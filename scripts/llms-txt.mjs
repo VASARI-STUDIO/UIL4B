@@ -173,7 +173,7 @@ export function buildLlmsTxt() {
   const row = (route, suffix = '') => `- [${nameOf(route)}${suffix}](${canonicalUrl(route)}): ${descriptionOf(route)}`
 
   return [
-    '# UIL4B',
+    '# UI L4B',
     '',
     `> ${claims.summary}`,
     '',

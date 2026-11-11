@@ -216,6 +216,12 @@ function loadAi({
     geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
     // api/_lib/emailGate.js — the real, pure email gate.
     emailGateBody,
+    // api/_lib/http.js — the response shape is the real one; only the log
+    // line goes to the ledger, so a test can read what was kept server-side.
+    failRequest: (res, { status = 500, scope, message, err = null }) => {
+      errors.push(`${scope} failed: ${err?.message || ''}`)
+      return res.status(status).json({ error: message })
+    },
     // Per-test replacements for the stubs above, for the paths a test drives.
     ...stubs,
   }
@@ -714,9 +720,12 @@ test('the health verdict rides on the admin diagnostic, behind the gate it alrea
 })
 
 test('the break-glass exists only when DIAG_CODE is set, and a GET without ?diag is a 405', async () => {
+  // The code travels in the x-diag-code header; ?diag=1 only selects the diagnostic.
+  const withCode = (code) => ({ method: 'GET', query: { diag: '1' }, headers: { 'x-diag-code': code } })
+
   const shipped = loadAi({ admin: { ok: false, status: 401 } })
   const guessed = shipped.response()
-  await shipped.handler(diagRequest({ diag: 'letmein' }), guessed)
+  await shipped.handler(withCode('letmein'), guessed)
   assert.equal(guessed.statusCode, 404, 'with DIAG_CODE unset, some code let a non-admin in')
 
   const provisioned = loadAi({
@@ -724,16 +733,65 @@ test('the break-glass exists only when DIAG_CODE is set, and a GET without ?diag
     admin: { ok: false, status: 401 },
   })
   const opened = provisioned.response()
-  await provisioned.handler(diagRequest({ diag: 'letmein' }), opened)
+  await provisioned.handler(withCode('letmein'), opened)
   assert.equal(opened.statusCode, 200, 'the break-glass code did not open the diagnostic when the admin credential is the thing that is broken')
   const wrong = provisioned.response()
-  await provisioned.handler(diagRequest({ diag: 'letmeinx' }), wrong)
+  await provisioned.handler(withCode('letmeinx'), wrong)
   assert.equal(wrong.statusCode, 404)
 
   const plain = loadAi()
   const nope = plain.response()
   await plain.handler({ method: 'GET', query: {}, headers: {} }, nope)
   assert.equal(nope.statusCode, 405)
+})
+
+test('the break-glass code is never read from the query string', async () => {
+  const provisioned = loadAi({
+    env: { OPENROUTER_API_KEY: OPENROUTER_KEY, GEMINI_API_KEY: GEMINI_KEY, DIAG_CODE: 'letmein' },
+    admin: { ok: false, status: 401 },
+  })
+  // The right code, but in the URL where request logs would keep it.
+  const inQuery = provisioned.response()
+  await provisioned.handler({ method: 'GET', query: { diag: 'letmein' }, headers: {} }, inQuery)
+  assert.equal(inQuery.statusCode, 404, 'a code in the query string opened the diagnostic')
+  const otherKey = provisioned.response()
+  await provisioned.handler({ method: 'GET', query: { diag: '1', code: 'letmein' }, headers: {} }, otherKey)
+  assert.equal(otherKey.statusCode, 404)
+  // A repeated header reaches Node joined with a comma, so it is not the code.
+  const joined = provisioned.response()
+  await provisioned.handler({ method: 'GET', query: { diag: '1' }, headers: { 'x-diag-code': 'letmein, letmein' } }, joined)
+  assert.equal(joined.statusCode, 404)
+})
+
+// ── A storage failure tells the caller nothing about the storage ────────────
+
+test('a failed plan or usage read returns fixed text and keeps the detail in the log', async () => {
+  const DETAIL = 'PERMISSION_DENIED: Missing or insufficient permissions on projects/uil4b-prod'
+  // The attempt limits are not under test here; null lets the request reach the plan and usage reads.
+  const signedIn = { adminAuth: () => ({ verifyIdToken: async () => ({ uid: 'u1', email: 'a@example.com', email_verified: true }) }), aiAccountRefusal: async () => null, aiSharedRefusal: async () => null }
+  const post = { method: 'POST', query: {}, headers: { authorization: 'Bearer t' }, body: { task: 'generate-prompt', description: 'a red bicycle' } }
+
+  const planFails = loadAi({ stubs: { ...signedIn, planForUser: () => { throw new Error(DETAIL) } } })
+  const res = planFails.response()
+  await planFails.handler(post, res)
+  assert.equal(res.statusCode, 500)
+  assert.ok(!JSON.stringify(res.body).includes('PERMISSION_DENIED'), `the 500 echoed the Firestore error: ${JSON.stringify(res.body)}`)
+  assert.ok(planFails.errors.some((l) => l.includes(DETAIL)), 'the real error was not logged server-side')
+
+  const storeFails = loadAi({
+    stubs: {
+      ...signedIn,
+      planForUser: () => ({ id: 'free' }),
+      dailyLimitFor: () => 5,
+      monthlyLimitFor: () => 60,
+      runMeteredTask: async () => ({ ok: false, storeError: new Error(DETAIL) }),
+    },
+  })
+  const res2 = storeFails.response()
+  await storeFails.handler(post, res2)
+  assert.equal(res2.statusCode, 500)
+  assert.ok(!JSON.stringify(res2.body).includes('PERMISSION_DENIED'), `the 500 echoed the store error: ${JSON.stringify(res2.body)}`)
+  assert.ok(storeFails.errors.some((l) => l.includes(DETAIL)), 'the real error was not logged server-side')
 })
 
 // ── The alert, EXECUTED ─────────────────────────────────────────────────────

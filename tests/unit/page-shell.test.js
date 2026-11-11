@@ -152,6 +152,7 @@ test('every guide has an Article block built from its registry record', () => {
     assert.equal(ld.headline, a.title)
     assert.equal(ld.description, a.description)
     assert.equal(ld.dateModified, a.updated)
+    assert.equal(ld.image, `${ORIGIN}/previews/og-learn.png`)
     assert.equal(ld.mainEntityOfPage['@id'], `${ORIGIN}/learn/${a.slug}`)
     assert.equal(ld.author['@type'], 'Organization', 'no invented byline')
     assert.equal('datePublished' in ld, false, 'no first-published date is on record')

@@ -28,7 +28,7 @@ function Mail() {
 function Acceptance() {
   return (
     <p className="lgl-p">
-      UIL4B Design Toolkit (&quot;UIL4B&quot; or &quot;the Service&quot;) is provided by Dylan Coleman, a sole trader based in Brisbane, Queensland, Australia (&quot;we&quot;, &quot;us&quot;). By creating an account or using the Service, you agree to these Terms and to our <Link className="lgl-a" to="/privacy">Privacy Policy</Link>.
+      UI L4B Design Toolkit (&quot;UI L4B&quot; or &quot;the Service&quot;) is provided by Dylan Coleman, a sole trader based in Brisbane, Queensland, Australia (&quot;we&quot;, &quot;us&quot;). By creating an account or using the Service, you agree to these Terms and to our <Link className="lgl-a" to="/privacy">Privacy Policy</Link>.
     </p>
   )
 }
@@ -36,7 +36,7 @@ function Acceptance() {
 function Account() {
   return (
     <p className="lgl-p">
-      You can create an account with an email and password, or with Google. You are responsible for keeping your sign-in details secure and for what happens under your account. You must be at least 18 years old to create an account or use UIL4B&apos;s AI features. If we learn that an account belongs to someone under 18, we will close it and delete its data.
+      You can create an account with an email and password, or with Google. You are responsible for keeping your sign-in details secure and for what happens under your account. You must be at least 18 years old to create an account or use UI L4B&apos;s AI features. If we learn that an account belongs to someone under 18, we will close it and delete its data.
     </p>
   )
 }
@@ -45,7 +45,7 @@ function Plans() {
   return (
     <>
       <p className="lgl-p">
-        UIL4B has a free plan with core features and a Pro plan with more. What each plan includes, and the AI generation allowances, are on the <Link className="lgl-a" to="/plans">Plans page</Link>. Those allowances are part of what you buy, and we will not reduce them during a billing period you have already paid for.
+        UI L4B has a free plan with core features and a Pro plan with more. What each plan includes, and the AI generation allowances, are on the <Link className="lgl-a" to="/plans">Plans page</Link>. Those allowances are part of what you buy, and we will not reduce them during a billing period you have already paid for.
       </p>
       <p className="lgl-p"><strong>Pro subscriptions.</strong> Pro is billed on one of these cycles:</p>
       <div className="lgl-table-wrap">
@@ -88,7 +88,7 @@ function TrialsAndRenewal() {
       <li><strong>Yearly starts with a 7-day free trial.</strong> You add a card at checkout. If you do not cancel before the trial ends, your card is charged the full yearly price (for example US$48) automatically. If you cancel during the trial, you pay nothing.</li>
       <li><strong>Subscriptions renew automatically.</strong> After the trial (or straight away, for monthly), your subscription renews at the end of each cycle at the plan price and charges your card, until you cancel.</li>
       <li><strong>Price changes.</strong> If we change the price of your plan, we will email you at least 30 days before it applies to your next renewal, so you can cancel first.</li>
-      <li><strong>Reminders.</strong> We show a notice in UIL4B shortly before a trial ends. We do not currently promise reminder emails, so note the date your trial ends.</li>
+      <li><strong>Reminders.</strong> We show a notice in UI L4B shortly before a trial ends. We do not currently promise reminder emails, so note the date your trial ends.</li>
     </ul>
   )
 }
@@ -96,7 +96,7 @@ function TrialsAndRenewal() {
 function Cancelling() {
   return (
     <ul className="lgl-list">
-      <li><strong>Online, any time.</strong> Go to Settings → Subscription → <strong>Manage billing</strong> (or <strong>Cancel plan</strong>). This opens our secure billing portal, run by Stripe, where you can cancel, change your card and see your invoices. You can also email <Mail /> and we will cancel for you.</li>
+      <li><strong>Online, any time.</strong> Go to Settings → Plan and billing → <strong>Manage billing</strong> (or <strong>Cancel plan</strong>). This opens our secure billing portal, run by Stripe, where you can cancel, change your card and see your invoices. You can also email <Mail /> and we will cancel for you.</li>
       <li><strong>When cancelling takes effect.</strong> Pro continues until the end of the period you have already paid for, then your account moves to the free plan. You will not be charged again. Your work stays in your account.</li>
       <li><strong>During a trial.</strong> Cancelling before the trial ends means you are never charged.</li>
       <li><strong>Deleting your account</strong> (Settings → Delete account) cancels your subscription <strong>immediately</strong> and deletes your data. If you delete your account part-way through a period you have paid for, email <Mail /> before or after deleting and we will refund the unused part.</li>
@@ -137,7 +137,7 @@ function Withdrawal() {
         <strong>Refund.</strong> We refund every payment you made for the subscription within 14 days of receiving your withdrawal, to the payment method you used, at no cost to you. We do not deduct anything for the days you used Pro.
       </p>
       <p className="lgl-p">
-        <strong>Model withdrawal form.</strong> To Dylan Coleman, <Mail />: I give notice that I withdraw from my contract for the UIL4B Pro subscription. Subscribed on: ___. Name: ___. Account email: ___. Date: ___.
+        <strong>Model withdrawal form.</strong> To Dylan Coleman, <Mail />: I give notice that I withdraw from my contract for the UI L4B Pro subscription. Subscribed on: ___. Name: ___. Account email: ___. Date: ___.
       </p>
       <p className="lgl-p">
         These rights add to your rights under section 6 and to any other rights your local law gives you.
@@ -150,15 +150,15 @@ function YourWork() {
   return (
     <>
       <p className="lgl-p">
-        <strong>Your work is yours.</strong> Designs, palettes, gradients, type scales, exports and other things you make with UIL4B belong to you. You give us permission to store, copy and process your work only as needed to run the Service for you. That includes syncing it to your account and sending it to our AI providers when you use an AI tool (see our <Link className="lgl-a" to="/privacy">Privacy Policy</Link>).
+        <strong>Your work is yours.</strong> Designs, palettes, gradients, type scales, exports and other things you make with UI L4B belong to you. You give us permission to store, copy and process your work only as needed to run the Service for you. That includes syncing it to your account and sending it to our AI providers when you use an AI tool (see our <Link className="lgl-a" to="/privacy">Privacy Policy</Link>).
       </p>
       <p className="lgl-p">
-        <strong>Third-party material.</strong> Some of what UIL4B gives you (icon sets, fonts, logos and similar) comes from other people under their own licences, listed on our <Link className="lgl-a" to="/credits">Credits</Link> page. Using UIL4B does not change those licences. You must follow those licences: some require credit, and some require that works using them carry the same licence. For example, a font in your export is still under its own licence, and company logos stay their owners&apos; trade marks.
+        <strong>Third-party material.</strong> Some of what UI L4B gives you (icon sets, fonts, logos and similar) comes from other people under their own licences, listed on our <Link className="lgl-a" to="/credits">Credits</Link> page. Using UI L4B does not change those licences. You must follow those licences: some require credit, and some require that works using them carry the same licence. For example, a font in your export is still under its own licence, and company logos stay their owners&apos; trade marks.
       </p>
-      <p className="lgl-p"><strong>Community submissions.</strong> When you submit a prompt, palette, gradient, design or media to the UIL4B community:</p>
+      <p className="lgl-p"><strong>Community submissions.</strong> When you submit a prompt, palette, gradient, design or media to the UI L4B community:</p>
       <ul className="lgl-list">
         <li>you confirm you have the right to share it, and that it does not infringe anyone else&apos;s rights;</li>
-        <li>you give us a non-exclusive, worldwide, royalty-free licence to host, display, reproduce, adapt (for example resize or reformat) and distribute it within UIL4B and in material that promotes UIL4B, for as long as it is published and a reasonable time after;</li>
+        <li>you give us a non-exclusive, worldwide, royalty-free licence to host, display, reproduce, adapt (for example resize or reformat) and distribute it within UI L4B and in material that promotes UI L4B, for as long as it is published and a reasonable time after;</li>
         <li>you understand we review submissions and may decline or remove any of them;</li>
         <li>you can ask us to remove a submission at any time, and deleting your account removes all of them.</li>
       </ul>
@@ -213,7 +213,7 @@ function AcceptableUse() {
 function ChangesToService() {
   return (
     <p className="lgl-p">
-      UIL4B is still being built. We may add, change or remove features. If we remove something that is a material part of Pro during a period you have paid for, we will email you and you can cancel and get a pro-rata refund.
+      UI L4B is still being built. We may add, change or remove features. If we remove something that is a material part of Pro during a period you have paid for, we will email you and you can cancel and get a pro-rata refund.
     </p>
   )
 }

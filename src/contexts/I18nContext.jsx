@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import en from '../locales/en.json'
 import { onAccountApplied } from '../utils/accountEvents'
-import enUS from '../locales/en-US.json'
 
 const I18nContext = createContext()
 const STORAGE_KEY = 'vs-lang'
@@ -30,11 +29,30 @@ function detectBrowserLang() {
   return 'en'
 }
 
-// Seed both English locales into the cache so first paint is synchronous for the
-// dominant en / en-US segment — t() never returns a raw key on the first frame,
-// and en-US users don't see the Colour→Color flash. Other locales (es, …) still
-// load async and swap in via the effect below.
-let localeCache = { en, 'en-US': enUS }
+// Only `en` ships with the entry, so first paint is synchronous and t() never
+// returns a raw key on the first frame. en-US is a real locale (a US or GB
+// browser lands on it, and it is in the language picker) but differs from `en` in
+// 24 of 471 strings, so it loads like every other locale: it is NOT in the first
+// wave, and a visitor who lands on it sees the `en` copy until its chunk arrives,
+// which is started here at module evaluation rather than after the first render.
+// Other locales (es, …) load async and swap in via the effect below.
+let localeCache = { en }
+
+const localeLoads = {}
+function loadLocale(code) {
+  localeLoads[code] ||= import(`../locales/${code}.json`).then((mod) => {
+    const data = mod.default || mod
+    localeCache[code] = data
+    return data
+  }).catch((err) => {
+    delete localeLoads[code]   // a failed fetch is tried again, not remembered
+    throw err
+  })
+  return localeLoads[code]
+}
+try {
+  if ((localStorage.getItem(STORAGE_KEY) || detectBrowserLang()) === 'en-US') loadLocale('en-US').catch(() => {})
+} catch { /* no storage, or no window: the effect below loads it */ }
 
 function resolve(obj, path) {
   return path.split('.').reduce((o, k) => o?.[k], obj)
@@ -80,10 +98,7 @@ export function I18nProvider({ children }) {
         return
       }
       try {
-        const fileKey = lang === 'en-US' ? 'en-US' : lang
-        const mod = await import(`../locales/${fileKey}.json`)
-        const data = mod.default || mod
-        localeCache[lang] = data
+        const data = await loadLocale(lang)
         if (!cancelled) setMessages(data)
       } catch {
         if (lang !== 'en') {

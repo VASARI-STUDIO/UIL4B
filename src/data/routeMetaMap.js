@@ -153,7 +153,7 @@ export const PAGE_DESCRIPTIONS = {
   '/create/icons/groups': 'Sets of icons from multiple packs that follow a similar style and fit a theme or task. Recolour a whole set and export it in one go.',
   '/create/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
   '/create/icons-emoji': 'Search icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
-  '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, and community inspiration. Collections is marked Soon.',
+  '/discover': 'The UI L4B library of curated colour palettes, CSS gradients and copy-ready buttons, plus community inspiration.',
   '/discover/gradients': 'Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
   '/learn': 'Reference guides on colour, typography, accessibility and psychology for people who build interfaces — the thresholds, formulas and standards they come from.',
