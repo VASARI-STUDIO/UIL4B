@@ -12,9 +12,11 @@
 //   Onboarding, signed in: no bordered box wraps the rows (at either width); from
 //     521px the rows are 560px, centred, hairline-bordered and unfilled; "Not now"
 //     is a 48px bordered pill at both widths.
-//   Checkout and checkout/return: the alert icon is a drawn 24px svg in the error
-//     tone, not a text glyph; the card is a centred column (up to 480px) with
-//     balanced margins; it sits about 15vh below the nav, not pinned to the top.
+//   Checkout: the alert icon is a drawn 24px svg in the error tone, not a text
+//     glyph; the card is a centred column (up to 480px) with balanced margins; it
+//     sits about 15vh below the nav, not pinned to the top.
+//   Checkout return, no session: the alert icon is a drawn svg in the error tone;
+//     the column (up to 600px, no card) is centred with balanced margins.
 //   Every width, both themes: no overflow and no target under 44px.
 //
 // STATES REACHED
@@ -186,12 +188,11 @@ for (const theme of THEMES) {
         await ctx.close()
       })
 
-      // The same card serves three states: /checkout signed out, /checkout signed
-      // in, and /checkout/return with no session. All three get the same checks.
+      // The same card serves two states: /checkout signed out and /checkout signed
+      // in. The return page is a column without a card and has its own test below.
       const CHECKOUT_STATES = [
         { name: '/checkout signed out', url: '/checkout', signedIn: false, shot: 'checkout' },
         { name: '/checkout signed in', url: '/checkout', signedIn: true, shot: 'checkout--in' },
-        { name: '/checkout/return signed in, no session', url: '/checkout/return', signedIn: true, shot: 'checkout-return--in' },
       ]
       for (const st of CHECKOUT_STATES) {
         test(`${st.name}: drawn alert icon, a centred column about 15vh below the nav`, async ({ browser }) => {
@@ -264,6 +265,50 @@ for (const theme of THEMES) {
           await ctx.close()
         })
       }
+
+      test(`/checkout/return signed in, no session: drawn alert icon, a centred column, nothing under 44px`, async ({ browser }) => {
+        const { ctx, page } = await open(browser, { width, theme })
+        watch(page, `a buyer on /checkout/return with no session at ${width}px, ${theme}`)
+        await signIn(page, { plan: 'free' })
+        await go(page, '/checkout/return')
+        const view = page.locator('.co-return')
+        await expect(view.getByRole('heading', { level: 1 })).toBeVisible()
+        await settle(page)
+        await expectTheme(page, '.co-return h1', theme)
+
+        const m = await page.evaluate(() => {
+          const icon = document.querySelector('.co-return .co-alert')
+          const probe = document.createElement('span')
+          probe.style.color = 'var(--err-strong)'
+          document.body.append(probe)
+          const tone = getComputedStyle(probe).color
+          probe.remove()
+          const col = document.querySelector('.co-return').getBoundingClientRect()
+          return {
+            svg: icon ? { w: icon.getBoundingClientRect().width, color: getComputedStyle(icon).color, shapes: icon.querySelectorAll('circle,line,path').length } : null,
+            glyphText: (document.querySelector('.co-return .co-glyph')?.textContent || '').trim(),
+            tone,
+            col: { x: col.x, w: col.width },
+            vw: window.innerWidth,
+          }
+        })
+
+        // MUTATION: swap `.co-alert` for a text "!" in CheckoutReturn.jsx and the svg is gone.
+        expect(m.svg, 'the alert icon is not a drawn svg').not.toBeNull()
+        expect(m.glyphText, 'the alert icon is still a text character').toBe('')
+        expect(m.svg.shapes, 'the drawn icon has no shapes').toBeGreaterThan(0)
+        expect(m.svg.color, 'the alert icon is not in the error tone').toBe(m.tone)
+        // MUTATION: put `.co-return { margin-inline: auto }` back to 0 and the
+        // column hugs the left at 768, so the margins differ by far more than 1px.
+        const left = m.col.x
+        const right = m.vw - m.col.x - m.col.w
+        expect(Math.abs(left - right), 'the column is not centred (unbalanced margins)').toBeLessThanOrEqual(1.5)
+        expect(m.col.w, 'the column is wider than 600px').toBeLessThanOrEqual(600.5)
+
+        await expectFitsAndTouchable(page, 'main', `/checkout/return at ${width}px ${theme}`)
+        await shot(page, `checkout-return--in-${width}-${theme}`)
+        await ctx.close()
+      })
     })
   }
 }
