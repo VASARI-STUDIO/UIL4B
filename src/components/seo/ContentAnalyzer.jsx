@@ -71,7 +71,7 @@ function analyze(text, keyword) {
     // out), with Unicode-safe word boundaries so "café"/CJK keywords still match.
     const raw = trimmed.toLowerCase()
     const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    let count = 0
+    let count
     try {
       count = (raw.match(new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'gu')) || []).length
     } catch {

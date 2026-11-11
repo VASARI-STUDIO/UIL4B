@@ -811,7 +811,7 @@ export function adjustTrackStops(baseColors, adj) {
     const stops = []
     for (let i = 0; i < ADJUST_TRACK_STOPS; i++) {
       const pos = i / (ADJUST_TRACK_STOPS - 1)
-      let hex = rep
+      let hex
       try { hex = applyAdjust([rep], { ...base, [key]: min + (max - min) * pos })[0] || rep } catch { hex = rep }
       stops.push({ hex, pos })
     }
@@ -1465,7 +1465,7 @@ export function inkOnGradient(from, to, target = 4.5, samples = 33) {
 // textColorForBg returns rgba() strings; for solid hex roles we want a hex pole
 // so downstream mixHex/contrast maths stay in hex space. Pure, never throws.
 function textColorOnSolid(hex) {
-  let lum = 0
+  let lum
   try { lum = pvLum(hex) } catch { lum = 0 }
   return lum > 0.179 ? PV_NEAR_BLACK : PV_NEAR_WHITE
 }

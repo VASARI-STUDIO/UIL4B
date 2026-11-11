@@ -62,7 +62,7 @@ export function colorsFromSearch(search, max = 10) {
 /** A fresh board on the default free settings: a random palette drawn by the
  *  Randomise engine, on DEFAULT_SYSTEM, with the adjust lens at zero. */
 export function defaultPaletteBoard(random = randomSystemPalette) {
-  let colors = []
+  let colors
   try {
     colors = (random(DEFAULT_SYSTEM) || []).map(normaliseHex).filter(Boolean)
   } catch {
