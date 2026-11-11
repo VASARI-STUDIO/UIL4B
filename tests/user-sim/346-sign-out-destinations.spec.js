@@ -58,8 +58,10 @@ async function signOutFromNav(page, size) {
   await expect.poll(() => signedIn(page), 'the session ended').toBe(false)
 }
 
+// On a phone each row reads its name and then what is set under it, so the row is found by
+// the name it starts with, as a whole word.
 const section = (page, name) => page.getByRole('tab', { name }).or(
-  page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name, exact: true }),
+  page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name: new RegExp(`^${name}(\\s|$)`) }),
 )
 
 async function showSectionList(page) {

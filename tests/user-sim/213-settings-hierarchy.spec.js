@@ -13,7 +13,8 @@
 //   6. every open field has a label and every Edit button its own name;
 //   7. Bio is a textarea with a live count, Enter adds a line, Ctrl or Cmd
 //      plus Enter saves;
-//   8. the content column stops at 720px on a wide screen;
+//   8. on a wide screen the page column is 1240px, the sections are a pill bar above it,
+//      and the single-column sections stop at 760px;
 //   9. at 390 and 360 no section scrolls sideways and its controls are 44px;
 //  10. the fact labels and values read at 4.5:1 or better, light and dark;
 //  11. labels use the UI sans, in sentence case; settings.css holds no raw
@@ -24,6 +25,10 @@
 //   the 'support' tab label set back to 'Subscription'          -> "the sections run ..." and 19's order test
 //   PasswordChange renders its row for a Google-only account    -> "a Google-only account has no Password row ..."
 //   the Bio Ctrl/Cmd+Enter branch removed from EditField        -> "Bio saves on Ctrl+Enter ..."
+//   the (min-width: 1024px) grid on #set-account .settings-cards removed -> "Public profile, Sign-in and security and Delete account are siblings ..."
+//   `.app-page:has(> .stg)` max-width lowered from 1312px        -> "at 1440 the page column is 1240px ..."
+//   `.settings-nav` flex-direction row -> column                 -> the same test (the bar wraps)
+//   `.settings-row-label` font-size 14px -> 13px                 -> "labels use the UI sans ..."
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
@@ -115,10 +120,23 @@ test.describe('settings hierarchy: Account in three cards', () => {
     await expect(del.getByRole('button', { name: 'Delete account' })).toBeVisible()
     await expect(section.getByRole('button', { name: 'Sign out' })).toHaveCount(1)
 
-    // 32px between cards (--s-6) on a wide screen.
-    const boxes = await cards.evaluateAll((els) => els.map((el) => el.getBoundingClientRect()))
-    expect(boxes[1].top - boxes[0].bottom, 'gap between the first two cards').toBeGreaterThanOrEqual(31.5)
-    expect(boxes[2].top - boxes[1].bottom, 'gap between the last two cards').toBeGreaterThanOrEqual(31.5)
+    // At 1440 (a two-column grid from 1024) Public profile fills the left column; Sign-in and
+    // security sits at its top on the right, Delete account stacked under it: 24px between the
+    // columns, at least 32px between the two on the right.
+    const boxes = await cards.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom } }))
+    expect(Math.abs(boxes[1].top - boxes[0].top), 'Sign-in and security is not level with the top of Public profile').toBeLessThan(1)
+    expect(boxes[1].left - boxes[0].right, 'gap between the columns').toBeGreaterThanOrEqual(23.5)
+    expect(boxes[1].left - boxes[0].right, 'gap between the columns').toBeLessThan(40)
+    expect(Math.abs(boxes[2].left - boxes[1].left), 'Delete account is not in the same column as Sign-in and security').toBeLessThan(1)
+    expect(boxes[2].top - boxes[1].bottom, 'gap between the cards on the right').toBeGreaterThanOrEqual(31.5)
+    expect(boxes[1].right, 'the right column is wider than the page').toBeLessThanOrEqual(1240 + boxes[0].left + 1)
+
+    // Under 1024 the three stack in one column, 32px apart.
+    await page.setViewportSize({ width: 900, height: 900 })
+    const stacked = await cards.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, bottom: r.bottom } }))
+    expect(Math.abs(stacked[1].left - stacked[0].left), 'at 900 the cards are not in one column').toBeLessThan(1)
+    expect(stacked[1].top - stacked[0].bottom, 'stacked: gap between the first two cards').toBeGreaterThanOrEqual(31.5)
+    expect(stacked[2].top - stacked[1].bottom, 'stacked: gap between the last two cards').toBeGreaterThanOrEqual(31.5)
   })
 
   test('a password account says it signs in with email and password, and has a Password row', async ({ page }) => {
@@ -431,7 +449,7 @@ test.describe('settings hierarchy: type', () => {
     const label = await style('#set-account .settings-row-label')
     expect(label.family, 'row labels are still mono').not.toMatch(/mono/i)
     expect(label.transform).toBe('none')
-    expect(label.size).toBe('13px')
+    expect(label.size).toBe('14px')
     expect(label.text, 'a row label is still capitals').not.toBe(label.text.toUpperCase())
 
     const h3 = await style('#set-account .settings-card-h h3')
@@ -457,7 +475,7 @@ test.describe('settings hierarchy: type', () => {
 })
 
 test.describe('settings hierarchy: measure', () => {
-  test('at 1440 the content column and every card stop at 720px, and the nav stays 220px', async ({ page }) => {
+  test('at 1440 the page column is 1240px, the single-column sections stop at 760px, and the nav is a pill bar above it', async ({ page }) => {
     watch(page, 'a person on a wide screen')
     await stubPrices(page)
     await signIn(page, { plan: 'pro', subscription: proSub() })
@@ -466,14 +484,29 @@ test.describe('settings hierarchy: measure', () => {
     const width = (selector) => page.locator(selector).first().evaluate((el) => el.getBoundingClientRect().width)
     for (const id of ['account', 'support', 'accessibility', 'language', 'data', 'privacy']) {
       await openSection(page, id)
-      expect(await width('.settings-content'), `${id}: the content column`).toBeLessThanOrEqual(720.5)
+      expect(await width('.settings-content'), `${id}: the content column`).toBeCloseTo(1240, 0)
       const cards = await page.locator(`#set-${id} .settings-card`).evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width))
       expect(cards.length, `${id}: no card found`).toBeGreaterThan(0)
-      for (const w of cards) expect(w, `${id}: a card is ${w}px wide`).toBeLessThanOrEqual(720.5)
+      // Account and Plan and billing use the whole column; the rest are one card of at most 760px.
+      const cap = id === 'account' || id === 'support' ? 1240.5 : 760.5
+      for (const w of cards) expect(w, `${id}: a card is ${w}px wide`).toBeLessThanOrEqual(cap)
     }
-    // The column is wide enough to be capped, not just narrow.
-    expect(await width('.settings-content')).toBeGreaterThanOrEqual(700)
-    expect(Math.round(await width('.settings-nav'))).toBe(220)
+    await openSection(page, 'accessibility')
+    expect(await width('#set-accessibility .settings-card'), 'a single-column card is not held at 760px').toBeCloseTo(760, 0)
+
+    // The sections are a pill bar in one row, over the content and not beside it.
+    const nav = await page.locator('.settings-nav').evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      const items = [...el.querySelectorAll('.settings-nav-item')].map((i) => i.getBoundingClientRect())
+      const content = document.querySelector('.settings-content').getBoundingClientRect()
+      return { radius: parseFloat(getComputedStyle(el).borderTopLeftRadius), height: r.height, width: r.width, bottom: r.bottom, contentTop: content.top, oneRow: new Set(items.map((i) => Math.round(i.top))).size === 1, n: items.length }
+    })
+    expect(nav.n, 'POSITIVE CONTROL: the six sections are in the bar').toBe(6)
+    expect(nav.oneRow, 'the section bar wraps onto more than one row').toBe(true)
+    expect(nav.radius, 'the section bar is not a pill').toBeGreaterThan(20)
+    expect(nav.height, 'the pill bar is not a single 44px bar').toBeLessThan(60)
+    expect(nav.width, 'the section bar is a sidebar, not a bar').toBeGreaterThan(300)
+    expect(nav.bottom, 'the section bar is not above the content').toBeLessThanOrEqual(nav.contentTop)
   })
 })
 

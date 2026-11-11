@@ -186,9 +186,10 @@ test.describe('/settings (signed out)', () => {
         gap: el.getBoundingClientRect().top - grid.bottom,
       }
     })
-    // MUTATION: put `text-align: center` back on `.stg .stg-credit`.
+    // MUTATION: put `text-align: center` back on `.stg .stg-credit`, or a `border-top` on `.stg.stg .stg-credit`.
     expect(info.align, 'not centred').not.toBe('center')
-    expect(info.hair, 'a hairline marks the end of the content').toBeGreaterThan(0)
+    // The board draws no rule over the credit; the space above it is what sets it off.
+    expect(info.hair, 'a hairline is drawn over the credit').toBe(0)
     expect(info.last, 'last thing on the page').toBe(true)
     expect(info.gap, 'set off from the panels above').toBeGreaterThanOrEqual(32)
     await ctx.close()

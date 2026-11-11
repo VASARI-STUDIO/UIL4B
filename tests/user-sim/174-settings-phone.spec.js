@@ -17,9 +17,9 @@
 //   · at 1440 the Reduced motion switch flips once on Space and once on Enter;
 //   · focus is on the section's heading after opening, and on the row that was
 //     opened after coming back; the page keeps an h1 inside a section;
-//   · at 390 the Pro block comes before Free, the toggle sits over its price and
-//     Upgrade to Pro is inside the first screen; at 700 (nav is a list, tiers
-//     still two columns) and at 1440 Free stays first, on the left;
+//   · at 390 the Pro block comes before Free, the toggle sits over its price (only the
+//     colour field between) and Upgrade to Pro is inside the first screen; the tiers stack,
+//     Pro over Free, up to 899; from 900 they sit side by side, Pro on the left (7 to 5 at 1440);
 //   · the "All settings" bar stays under the site header after a scroll;
 //   · Data: Export JSON, Clear data and the Confirm pair are one line each at 768
 //     and 390, and the Clear data confirm takes focus (on Cancel) and gives it
@@ -27,11 +27,11 @@
 //   · Accessibility on touch: Reduced motion is a switch (role, aria-checked), its
 //     tap target is 44 high, its words flip it, the theme segments are 44 tall;
 //   · Account on touch at 390: an open edit row has the field full width and Save /
-//     Cancel sharing a line; the delete confirm's pair too; the avatar's camera cue
-//     is drawn without a hover;
-//   · Language at 390 is hairline rows in one card (no bordered tile) and "English (AU)"
-//     is printed once; at 1440 the tiles and both lines are as they were;
-//   · at 1440 with a mouse the switch, segments and camera cue are as they were.
+//     Cancel sharing a line; the Delete account sheet stacks Permanently delete over
+//     Cancel, each the sheet's width; the avatar's camera cue is drawn without a hover;
+//   · Language at 390 is one column of borderless 56px rows (the chosen one filled and
+//     ticked) and "English (AU)" is printed once; at 1440 the same tiles in two columns;
+//   · at 1440 with a mouse the switch is 44x24, the segments 36px and the camera cue waits for hover.
 //
 // Positions are read from the layout, in document coordinates, with no
 // screenshots: viewport contexts only. The touch cases use isMobile + hasTouch so
@@ -49,8 +49,10 @@
 //   the focus effect removed, or the h2 loses tabIndex={-1}    -> "opening a section moves focus to its heading"
 //   `.stg-back + .stg-title` back to display: none             -> "inside a section the page still has its h1"
 //   tiersStacked always false                                  -> "at 390 Pro comes first ..."
-//   tiersStacked uses (max-width: 720px)                       -> "at 700 the tiers are still two columns, Free on the left"
-//   tiersStacked always true                                   -> "at 700 ...", "at 1440 ..."
+//   the (max-width: 899px) single-column rule on .sub-tiers removed -> "at 700 the tiers stack ...", "at 899 the tiers stack ..."
+//   the 7fr / 5fr columns on .sub-tiers back to 1fr 1fr        -> "at 1440 Pro is on the left at 7 parts ..."
+//   `.theme-seg-btn { height: 36px }` changed                   -> "the switch has no extra reach, the segments are 36px ..."
+//   `.sub-tier-price { margin-top }` raised to 200px (the price pushed away from the colour field) -> "at 390 Pro comes first ..."
 //   the `.stg[data-phone-view="section"] .stg-bar` rule removed -> "the All settings bar stays under the site header after a scroll"
 //   `settings-row-main` back to a bare <div> on Export or Clear  -> "at 768 Export JSON, Clear data ..." (the text block takes the row and the button breaks)
 //   `white-space: nowrap` / `flex: none` dropped from the `.settings-row > .btn` rule -> the same test, at 768
@@ -61,11 +63,10 @@
 //   `.stg .toggle-switch::before` (the 44px reach) removed     -> "Reduced motion is a switch ..." (target 24 high)
 //   `.stg .toggle-row .theme-seg-btn { height: 44px }` removed -> "the theme segments are 44px tall on touch"
 //   the 520 `.settings-edit-line > input { flex: 1 1 100% }` or `> .btn { flex: 1 1 0 }` removed -> "Account edit rows ..."
-//   `.danger-confirm-actions { gap: 12px }` / its `> .btn` flex removed -> "the Delete account confirm keeps its two buttons ..."
+//   the sheet's `flex-direction: column-reverse` or `.btn { width: 100% }` removed (max-width 719px) -> "the Delete account sheet stacks ..."
 //   the `@media (hover: none)` avatar rule removed             -> "the avatar shows it can be tapped ..."
-//   the Language block in the 640 query removed                -> "at 390 the card holds hairline rows ..."
-//   `.stg .lang-tile:hover, .stg .lang-tile.active { border-color }` restatement removed -> "at 390 the card holds hairline rows" (the chosen row's divider turns ink)
-//   the `!tiersStacked ||` gate dropped from the code line      -> "at 1440 the tiles are unchanged ..."; `l.native !== l.label` dropped -> "at 390 the card holds hairline rows ..."
+//   the Language block in the 640 query removed                -> "at 390 the card is one column of borderless 56px rows ..."
+//   `.stg .lang-tile { border }` added back                     -> both Language tests
 //   `.stg .settings-avatar-edit` touch band, or the 1440 opacity:0 base, changed -> "the switch has no extra reach ..."
 import { test, expect } from './base.js'
 import { go, restingScrollY, signIn, watch, wheelToRest, continueWithEmail } from './helpers.js'
@@ -301,6 +302,7 @@ test.describe('settings on a phone: Subscription order', () => {
       pro: doc(q('#set-support .sub-tier-pro')),
       free: doc(q('#set-support .sub-tier-free')),
       amount: doc(q('#set-support .sub-tier-pro .sub-tier-amount')),
+      field: q('#set-support .stg-field') ? doc(q('#set-support .stg-field')) : null,
       cta: doc(q('#set-support .sub-tier-btn')),
       tabbarTop: q('.pnav-tabs') ? q('.pnav-tabs').getBoundingClientRect().top : null,
       proFirstInDom: !!(q('#set-support .sub-tier-pro').compareDocumentPosition(q('#set-support .sub-tier-free')) & Node.DOCUMENT_POSITION_FOLLOWING),
@@ -315,8 +317,11 @@ test.describe('settings on a phone: Subscription order', () => {
     expect(b.proFirstInDom, 'Pro is not before Free in the page order').toBe(true)
     expect(b.toggle.bottom, 'the cadence toggle is not above the Pro block').toBeLessThanOrEqual(b.pro.top + 1)
     expect(b.free.top, 'Free is not below Pro').toBeGreaterThanOrEqual(b.pro.bottom - 1)
-    // The toggle controls the price right under it, not one a screen away.
-    expect(b.amount.top - b.toggle.bottom, 'the toggle is far from the price it changes').toBeLessThan(120)
+    // The toggle controls the price under it, with only the project-colour field between them.
+    expect(b.field, 'POSITIVE CONTROL: the colour field is on the Pro block').not.toBeNull()
+    expect(b.field.top, 'the colour field is not under the toggle').toBeGreaterThanOrEqual(b.toggle.bottom)
+    expect(b.field.bottom, 'the colour field is not above the price').toBeLessThanOrEqual(b.amount.top)
+    expect(b.amount.top - b.field.bottom, 'the price is far below the colour field').toBeLessThan(120)
     // Inside the first 844px, and above the tab bar that covers the foot of it.
     expect(b.cta.bottom, 'Upgrade to Pro is below the first screen').toBeLessThanOrEqual(844)
     expect(b.tabbarTop, 'POSITIVE CONTROL: the tab bar is on the page').not.toBeNull()
@@ -329,24 +334,38 @@ test.describe('settings on a phone: Subscription order', () => {
     expect(borders).toEqual({ pro: '0px', free: '1px' })
   })
 
-  test('at 700 the tiers are still two columns, Free on the left', async ({ page }) => {
-    // 641 to 720 is the phone list but not yet the stacked tiers.
-    watch(page, 'a free account on a large phone or small tablet')
-    await openSubscription(page, 700, 900)
+  for (const width of [700, 899]) {
+    test(`at ${width} the tiers stack, Pro over Free, each the full column`, async ({ page }) => {
+      // 641 to 899 keep the page order (Free first) but CSS stacks the tiers and puts Pro on top.
+      watch(page, 'a free account on a large phone or small tablet')
+      await openSubscription(page, width, 900)
+      const b = await boxes(page)
+      expect(b.proFirstInDom, 'the page order should still be Free first from 641').toBe(false)
+      expect(b.free.top, 'Free should be under Pro').toBeGreaterThanOrEqual(b.pro.bottom - 1)
+      expect(Math.abs(b.free.left - b.pro.left), 'the tiers should share one column').toBeLessThan(2)
+      expect(Math.abs(b.free.right - b.pro.right), 'the tiers should be the same width').toBeLessThan(2)
+    })
+  }
+
+  test('at 900 the tiers sit side by side, Pro on the left', async ({ page }) => {
+    watch(page, 'a free account on a small laptop')
+    await openSubscription(page, 900, 900)
     const b = await boxes(page)
-    expect(b.proFirstInDom, 'Free should come first in the page order').toBe(false)
-    expect(b.free.left, 'Free should be the left column').toBeLessThan(b.pro.left)
+    expect(b.pro.left, 'Pro should be the left column').toBeLessThan(b.free.left)
     expect(Math.abs(b.free.top - b.pro.top), 'the tiers should share a row').toBeLessThan(2)
+    expect(Math.abs((b.pro.right - b.pro.left) - (b.free.right - b.free.left)), 'under 1344 the two columns are equal').toBeLessThan(2)
   })
 
-  test('at 1440 Free is first, on the left, as before', async ({ page }) => {
+  test('at 1440 Pro is on the left at 7 parts and Free on the right at 5', async ({ page }) => {
     watch(page, 'a free account on a desktop')
     await openSubscription(page, 1440, 900)
     const b = await boxes(page)
-    expect(b.proFirstInDom, 'Free should come first in the page order').toBe(false)
-    expect(b.free.left).toBeLessThan(b.pro.left)
+    expect(b.pro.left, 'Pro should be the left column').toBeLessThan(b.free.left)
     expect(Math.abs(b.free.top - b.pro.top)).toBeLessThan(2)
-    // The toggle is above both, as it always was.
+    const proW = b.pro.right - b.pro.left
+    const freeW = b.free.right - b.free.left
+    expect(proW / freeW, `Pro ${proW}px to Free ${freeW}px is not 7 to 5`).toBeCloseTo(7 / 5, 1)
+    // The toggle is above both.
     expect(b.toggle.bottom).toBeLessThanOrEqual(Math.min(b.free.top, b.pro.top) + 1)
   })
 })
@@ -525,23 +544,34 @@ test.describe('settings on a touch phone: Accessibility and Account', () => {
     }
   })
 
-  test('the Delete account confirm keeps its two buttons on one line, 12px apart', async ({ page }) => {
+  test('the Delete account sheet stacks Permanently delete over Cancel, each the full width of the sheet', async ({ page }) => {
     watch(page, 'a person reading the delete confirmation on a phone')
     await open(page, 'account')
     await page.getByRole('button', { name: 'Delete account', exact: true }).tap()
     const actions = page.locator('.danger-confirm-actions')
     await expect(actions).toBeVisible()
     const m = await actions.evaluate((el) => {
-      const boxes = [...el.querySelectorAll(':scope > .btn')].map((x) => x.getBoundingClientRect())
-      const [a, b] = boxes
-      return { n: boxes.length, sameLine: Math.abs(a.top - b.top) < 1, gap: Math.round(b.left - a.right), widthGap: Math.abs(a.width - b.width) }
+      const btns = [...el.querySelectorAll(':scope > .btn')]
+      // Top to bottom as drawn, whatever the page order is.
+      const [first, second] = btns.map((x) => ({ text: x.textContent.trim(), r: x.getBoundingClientRect() })).sort((p, q) => p.r.top - q.r.top)
+      const sheet = el.closest('.stg-dlg').getBoundingClientRect()
+      return {
+        n: btns.length, order: [first.text, second.text], sameColumn: Math.abs(first.r.left - second.r.left) < 1,
+        gap: Math.round(second.r.top - first.r.bottom), widthGap: Math.abs(first.r.width - second.r.width),
+        fill: Math.round(first.r.width), room: Math.round(sheet.width - 32), heights: btns.map((x) => Math.round(x.getBoundingClientRect().height)),
+        clipped: btns.some((x) => x.scrollWidth > x.clientWidth + 1),
+      }
     })
     expect(m.n).toBe(2)
-    expect(m.sameLine, 'Permanently delete and Cancel are on different lines').toBe(true)
-    expect(m.gap, 'the two buttons are too close').toBeGreaterThanOrEqual(12)
+    expect(m.order, 'Permanently delete should be drawn first, Cancel under it').toEqual(['Permanently delete', 'Cancel'])
+    const [del, cancel] = await Promise.all([page.getByRole('button', { name: 'Permanently delete' }).boundingBox(), actions.getByRole('button', { name: 'Cancel' }).boundingBox()])
+    expect(del.y + del.height, 'Permanently delete is not above Cancel').toBeLessThanOrEqual(cancel.y + 1)
+    expect(m.sameColumn, 'the two buttons are not in one column').toBe(true)
+    expect(m.gap, 'the two buttons are too close').toBeGreaterThanOrEqual(8)
     expect(m.widthGap, 'the pair should be equal width').toBeLessThan(2)
-    const clipped = await actions.evaluate((el) => [...el.querySelectorAll(':scope > .btn')].some((b) => b.scrollWidth > b.clientWidth + 1))
-    expect(clipped, 'a button label is cut off').toBe(false)
+    expect(m.fill, 'the buttons do not fill the sheet').toBeGreaterThanOrEqual(m.room - 2)
+    for (const h of m.heights) expect(h, `a sheet button is ${h}px tall`).toBeGreaterThanOrEqual(44)
+    expect(m.clipped, 'a button label is cut off').toBe(false)
   })
 
   test('the avatar shows it can be tapped: the camera band is drawn without a hover', async ({ page }) => {
@@ -569,10 +599,10 @@ test.describe('settings: Language is rows on a phone, tiles on a desktop', () =>
       active: t.classList.contains('active'),
       sides: [cs.borderTopWidth, cs.borderRightWidth, cs.borderLeftWidth].map(parseFloat),
       foot: parseFloat(cs.borderBottomWidth),
-      footColor: cs.borderBottomColor,
+      fill: cs.backgroundColor,
       radius: parseFloat(cs.borderTopLeftRadius),
       ring: cs.boxShadow,
-      top: r.top, bottom: r.bottom, height: r.height,
+      top: r.top, bottom: r.bottom, left: r.left, height: r.height,
       lines: [...t.querySelectorAll('.lang-tile-label, .lang-tile-code')].map((e) => e.textContent.trim()),
     }
   }))
@@ -586,22 +616,22 @@ test.describe('settings: Language is rows on a phone, tiles on a desktop', () =>
     await restingScrollY(page, 'Language')
   }
 
-  test('at 390 the card holds hairline rows: no bordered tile, no ring, no repeated line', async ({ page }) => {
+  test('at 390 the card is one column of borderless 56px rows: no ring, no repeated line, the chosen row filled and ticked', async ({ page }) => {
     watch(page, 'a person choosing a language on a phone')
     await openLanguage(page, 390)
     const rows = await tiles(page)
     expect(rows.length, 'POSITIVE CONTROL: the language list is there').toBeGreaterThanOrEqual(8)
     rows.forEach((row, i) => {
-      expect(row.sides, `row ${i} still has a bordered edge`).toEqual([0, 0, 0])
-      expect(row.radius, `row ${i} still has rounded tile corners`).toBe(0)
-      expect(row.ring, `row ${i} still has a ring`).toBe('none')
+      expect(row.sides, `row ${i} has a bordered edge`).toEqual([0, 0, 0])
+      expect(row.foot, `row ${i} has a border under it`).toBe(0)
+      expect(row.ring, `row ${i} has a ring`).toBe('none')
       expect(row.height, `row ${i} is under 52px`).toBeGreaterThanOrEqual(52)
-      // A hairline between rows, none under the last.
-      expect(row.foot, `row ${i} divider`).toBe(i === rows.length - 1 ? 0 : 1)
-      // The chosen row's divider is the same hairline as the others, not ink.
-      if (i < rows.length - 1) expect(row.footColor, `row ${i} divider is a different colour`).toBe(rows[rows.length - 2].footColor)
+      expect(Math.abs(row.left - rows[0].left), `row ${i} is not in the same column`).toBeLessThan(1)
       if (i > 0) expect(Math.abs(row.top - rows[i - 1].bottom), `row ${i} has a gap above it`).toBeLessThan(1)
       expect(new Set(row.lines).size, `row ${i} prints a line twice: ${row.lines.join(' / ')}`).toBe(row.lines.length)
+      // Only the chosen row is filled.
+      if (row.active) expect(row.fill, 'the chosen row has no fill').not.toBe('rgba(0, 0, 0, 0)')
+      else expect(row.fill, `row ${i} is filled but not chosen`).toBe('rgba(0, 0, 0, 0)')
     })
     expect(rows.filter((r) => r.active).length).toBe(1)
     // The chosen row is marked by a tick, not by colour alone.
@@ -610,20 +640,24 @@ test.describe('settings: Language is rows on a phone, tiles on a desktop', () =>
     expect(body, 'the card still pads a panel inside itself').toBe('0px')
   })
 
-  test('at 1440 the tiles are unchanged: bordered, rounded, with both lines', async ({ page }) => {
+  test('at 1440 the tiles are two columns, borderless, rounded, and print one name where both are the same', async ({ page }) => {
     watch(page, 'a person choosing a language on a desktop')
     await openLanguage(page, 1440)
     const grid = await tiles(page)
-    expect(grid[0].sides, 'the 1440 tiles lost their border').toEqual([1, 1, 1])
-    expect(grid[0].radius).toBeGreaterThan(0)
-    expect(grid[0].lines, 'the English (AU) tile lost its second line at 1440').toEqual(['English (AU)', 'English (AU)'])
+    expect(grid[0].sides, 'the 1440 tiles gained a border').toEqual([0, 0, 0])
+    expect(grid[0].radius, 'the 1440 tiles lost their corners').toBeGreaterThan(0)
+    expect(grid[0].lines, 'the English (AU) tile prints its name twice').toEqual(['English (AU)'])
+    const koreanLines = grid.map((t) => t.lines).find((l) => l.includes('한국어'))
+    expect(koreanLines, 'a tile with a different native name lost its second line').toEqual(['한국어', 'Korean'])
+    const lefts = new Set(grid.map((t) => Math.round(t.left)))
+    expect(lefts.size, 'the tiles are not in two columns').toBe(2)
   })
 })
 
 test.describe('settings with a mouse at 1440: Accessibility and Account are as they were', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('the switch has no extra reach, the segments are 34px, and the camera cue waits for hover', async ({ page }) => {
+  test('the switch has no extra reach, the segments are 36px, and the camera cue waits for hover', async ({ page }) => {
     watch(page, 'a person on a desktop')
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
@@ -645,7 +679,7 @@ test.describe('settings with a mouse at 1440: Accessibility and Account are as t
     expect(box.up, 'the mouse switch grew a hidden margin').toBeLessThanOrEqual(13)
 
     const heights = await page.locator('#set-accessibility .theme-seg-btn').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
-    expect(heights).toEqual([34, 34, 34])
+    expect(heights, 'the mouse segments changed height').toEqual([36, 36, 36])
 
     await page.locator('#settab-account').click()
     await expect(page.locator('#set-account')).toBeVisible()
