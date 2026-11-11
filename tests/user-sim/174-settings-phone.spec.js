@@ -334,13 +334,14 @@ test.describe('settings on a phone: Subscription order', () => {
     expect(borders).toEqual({ pro: '0px', free: '1px' })
   })
 
-  for (const width of [700, 899]) {
+  for (const width of [641, 700, 899]) {
     test(`at ${width} the tiers stack, Pro over Free, each the full column`, async ({ page }) => {
-      // 641 to 899 keep the page order (Free first) but CSS stacks the tiers and puts Pro on top.
+      // Wherever the CSS stacks the tiers (to 899) Pro is first in the page order too, so a
+      // keyboard or screen reader meets the same order the eye does.
       watch(page, 'a free account on a large phone or small tablet')
       await openSubscription(page, width, 900)
       const b = await boxes(page)
-      expect(b.proFirstInDom, 'the page order should still be Free first from 641').toBe(false)
+      expect(b.proFirstInDom, `at ${width} the tiers stack, so Pro should be first in the page order`).toBe(true)
       expect(b.free.top, 'Free should be under Pro').toBeGreaterThanOrEqual(b.pro.bottom - 1)
       expect(Math.abs(b.free.left - b.pro.left), 'the tiers should share one column').toBeLessThan(2)
       expect(Math.abs(b.free.right - b.pro.right), 'the tiers should be the same width').toBeLessThan(2)
