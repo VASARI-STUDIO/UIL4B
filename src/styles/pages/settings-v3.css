@@ -66,7 +66,7 @@ html[data-theme="light"] .stg.stg {
 .stg.stg .btn:active { transform: scale(.97); }
 .stg.stg .btn-accent { background: var(--ink); color: var(--on-ink); }
 .stg.stg .btn:disabled, .stg.stg .btn[aria-disabled="true"] { opacity: .48; cursor: not-allowed; transform: none; }
-.stg.stg .settings-row--field > .btn, .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger) { height: auto; min-height: 44px; padding: 12px 8px; margin-right: -8px; background: transparent; border-radius: 8px; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent; align-self: center; }
+.stg.stg .settings-row--field > .btn, .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger) { height: auto; min-height: 44px; padding: 12px 8px; margin-right: -8px; background: transparent; border-radius: var(--btn-radius); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent; align-self: center; }
 @media (hover: hover) { .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger):hover { background: transparent; text-decoration-color: var(--ink); } }
 .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger):focus-visible { text-decoration-color: var(--ink); }
 .stg.stg .settings-danger, .stg.stg .danger-zone-open { color: var(--err); background: var(--raised); border: 0; }
@@ -121,7 +121,7 @@ html[data-theme="light"] .stg.stg {
 .stg-field { height: 72px; margin: -32px -32px 12px; border-radius: 16px 16px 0 0; background: var(--raised); box-shadow: inset 0 0 0 1px var(--hl14); forced-color-adjust: none; }
 .stg-fcap { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; font-size: 13px; line-height: 1.4; }
 .stg-fcap .n { font-weight: 500; color: var(--sec); }
-.stg-fcap .h { font-family: 'Geist Mono', ui-monospace, monospace; color: var(--ter); }
+.stg-fcap .h { font-family: var(--mono); color: var(--ter); }
 .stg-field--empty { display: flex; flex-direction: column; justify-content: center; gap: 4px; height: auto; min-height: 72px; padding: 20px 32px; margin-bottom: 24px; }
 .stg-field--empty p { font-size: 15px; line-height: 1.45; color: var(--sec); }
 .stg.stg .stg-credit { margin-top: 64px; padding: 0; border: 0; font-size: 14px; color: var(--ter); }
@@ -129,7 +129,8 @@ html[data-theme="light"] .stg.stg {
 @media (forced-colors: active) { .stg-field { outline: 1px solid CanvasText; outline-offset: -1px; } }
 @media (max-width: 1343px) { .stg.stg .sub-tiers { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 @media (max-width: 899px) { .stg.stg .sub-tiers { grid-template-columns: minmax(0, 1fr); } }
-@media (prefers-reduced-motion: reduce) { .stg.stg .btn:active, .stg.stg .settings-nav-item:active { transform: none; } }
+html[data-reduced-motion="true"] .stg.stg .btn:active, html[data-reduced-motion="true"] .stg.stg .settings-nav-item:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { html:not([data-reduced-motion="false"]) .stg.stg .btn:active, html:not([data-reduced-motion="false"]) .stg.stg .settings-nav-item:active { transform: none; } }
 
 /* account: Public profile left, Sign-in and security and Delete account right */
 .stg.stg #set-account { max-width: none; }
@@ -225,7 +226,8 @@ html[data-theme="light"] .stg.stg .stg-scrim { background: rgba(18, 20, 24, .45)
   .stg.stg .stg-dlg .danger-confirm-actions .btn { width: 100%; }
 }
 @keyframes stg-sheet { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .stg.stg .stg-dlg, .stg.stg .stg-scrim { animation: stg-fade 120ms linear; } }
+html[data-reduced-motion="true"] .stg.stg .stg-dlg, html[data-reduced-motion="true"] .stg.stg .stg-scrim { animation: stg-fade 120ms linear; }
+@media (prefers-reduced-motion: reduce) { html:not([data-reduced-motion="false"]) .stg.stg .stg-dlg, html:not([data-reduced-motion="false"]) .stg.stg .stg-scrim { animation: stg-fade 120ms linear; } }
 
 /* phone: the overview. The identity card, then the sections as three grouped panels of 56px rows with their current values.
    Opening a row swaps the list for the section (Settings.jsx), so the list and the section never show together. */
@@ -337,7 +339,8 @@ html[data-theme="light"] .stg.stg .stg-scrim { background: rgba(18, 20, 24, .45)
 .stg.stg .mi-go > .mi-a { transition: transform 260ms cubic-bezier(.25, 1, .5, 1); }
 @media (hover: hover) and (pointer: fine) { .stg.stg .sub-tier-btn--go:hover > .mi-go > .mi-a { transform: rotate(45deg); transition-duration: 320ms; } }
 .stg.stg .sub-tier-btn--go:focus-visible > .mi-go > .mi-a { transform: rotate(45deg); }
-@media (prefers-reduced-motion: reduce) { .stg.stg .mi-go > .mi-a { transition: none; } }
+html[data-reduced-motion="true"] .stg.stg .mi-go > .mi-a { transition: none; }
+@media (prefers-reduced-motion: reduce) { html:not([data-reduced-motion="false"]) .stg.stg .mi-go > .mi-a { transition: none; } }
 
 /* your data: labels read as secondary text on desktop; the first row sits under the head without a rule */
 .stg.stg #set-data .settings-row-label { color: var(--sec); }

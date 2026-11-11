@@ -267,6 +267,9 @@ const ALLOWED = {
     '.seo-page .seo-tags-code': 'code',
     '.seo-page .seo-tags-note code': 'code',
   },
+  'pages/settings-v3.css': {
+    '.stg-fcap .h': 'hex',
+  },
   'pages/spectrum-chrome.css': {
     '.spnav-search kbd': 'kbd',
   },
