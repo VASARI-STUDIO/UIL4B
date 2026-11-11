@@ -198,3 +198,14 @@
 @media(min-width:768px){
   .lart .lcc-try{flex:0 0 min(44%,420px)}
 }
+
+.lart .lart-prose.lart-prose--wide{max-width:none}
+.lart .lart-prose .lcc-paper b,.lart .lart-prose .lcc-paper strong{color:inherit}
+
+@media(max-width:420px){
+  .lcc-swh{font-size:10px;letter-spacing:-.02em}
+  .lcc-vr li{grid-template-columns:minmax(0,1fr) 56px;grid-template-areas:"name vd" "need vd";padding:var(--s-2) 0}
+  .lcc-vr li>span:nth-child(1){grid-area:name}
+  .lcc-vr li>.lcc-nd{grid-area:need}
+  .lcc-vr li>.lcc-vd{grid-area:vd}
+}
