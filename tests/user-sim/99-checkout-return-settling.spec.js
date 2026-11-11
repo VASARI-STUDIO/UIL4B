@@ -67,6 +67,9 @@ test.describe('the checkout return page only reports Pro when this checkout is c
     await expect(view(page)).not.toContainText(/on UI L4B Pro/i)
     await expect(view(page).locator('.co-details dt', { hasText: /^Paid for$/ })).toHaveCount(1)
     await expect(view(page).getByRole('link', { name: 'Start building' })).toHaveCount(0)
+    // A one-off has no subscription to manage, settling or not.
+    await expect(view(page).getByRole('link', { name: 'View account details' })).toBeVisible()
+    await expect(view(page).getByRole('link', { name: 'Manage subscription' })).toHaveCount(0)
   })
 
   test('an account that is already Pro is still told the payment is settling when the subscription is not confirmed', async ({ page }) => {

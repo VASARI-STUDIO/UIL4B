@@ -298,7 +298,7 @@ export default function CheckoutReturn() {
             <>
               {backToExport}
               <button type="button" className={galleryPick ? 'btn' : 'btn btn-accent'} onClick={() => window.location.reload()}>Check again</button>
-              <NavLink to="/settings" state={settingsState} className="btn">Manage subscription</NavLink>
+              <NavLink to="/settings" state={settingsState} className="btn">{oneOff ? 'View account details' : 'Manage subscription'}</NavLink>
             </>
           )}
           {view === 'failed' && (
