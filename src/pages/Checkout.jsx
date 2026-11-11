@@ -91,6 +91,7 @@ const SESSION_DEBOUNCE_MS = 400
 const EMBED_TIMEOUT_MS = 20000
 const EMBED_TIMEOUT_ERROR = 'The payment form is taking too long to load. Check your connection, then try again.'
 const STRIPE_LOAD_ERROR = 'The payment form couldn’t load. Check your connection, then try again.'
+const ALREADY_PRO_MESSAGE = 'You’re already on Pro, so there’s nothing to buy. Your plan is managed here.'
 
 function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
   const nodeRef = useRef(null)
@@ -199,7 +200,7 @@ function VerifyEmailPrompt({ email, onResend, onRetry }) {
   )
 }
 
-export default function Checkout({ toast }) {
+export default function Checkout() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const { user, loading, sendVerificationEmail, refreshEmailVerified } = useAuth()
@@ -348,12 +349,13 @@ export default function Checkout({ toast }) {
   // A failed load is not cached; the form asks again and reports it.
   useEffect(() => { if (user) getStripe()?.catch(() => {}) }, [user])
 
-  // Already-Pro accounts have nothing to buy here. They land on their plan, told why.
+  // Already-Pro accounts have nothing to buy here: they go to Settings, open at Plan and billing, and are told why.
+  // A buyer whose payment started on this page and has just gone through is not told "already".
   useEffect(() => {
     if (loading || !user || !isPro) return
-    toast?.('You’re already on Pro, so there’s nothing to buy. Your plan is here.', 'info')
+    if (!startedSent.current) window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message: ALREADY_PRO_MESSAGE, type: 'info' } }))
     navigate('/settings', { replace: true, state: { section: 'support' } })
-  }, [user, loading, isPro, navigate, toast])
+  }, [user, loading, isPro, navigate])
 
   // Choosing a period needs no account; paying does. The popup opens over this
   // page and resolves in place, so the period in the URL is still the one
