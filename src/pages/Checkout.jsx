@@ -349,12 +349,12 @@ export default function Checkout() {
   // A failed load is not cached; the form asks again and reports it.
   useEffect(() => { if (user) getStripe()?.catch(() => {}) }, [user])
 
-  // Already-Pro accounts have nothing to buy here: they go to Settings, and are told why.
+  // Already-Pro accounts have nothing to buy here: they go to Settings, open at Plan and billing, and are told why.
   // A buyer whose payment started on this page and has just gone through is not told "already".
   useEffect(() => {
     if (loading || !user || !isPro) return
     if (!startedSent.current) window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message: ALREADY_PRO_MESSAGE, type: 'info' } }))
-    navigate('/settings', { replace: true })
+    navigate('/settings', { replace: true, state: { section: 'support' } })
   }, [user, loading, isPro, navigate])
 
   // Choosing a period needs no account; paying does. The popup opens over this
