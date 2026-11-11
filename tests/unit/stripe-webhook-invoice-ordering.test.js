@@ -52,7 +52,7 @@ function fakeStripe({ invoices = {}, error = null, during = null } = {}) {
         options.push(opts)
         if (during) await during(id)
         if (error) throw error
-        if (!invoices[id]) throw new Error(`No such invoice: ${id}`)
+        if (!invoices[id]) throw Object.assign(new Error(`No such invoice: ${id}`), { type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 })
         return invoices[id]
       },
     },
@@ -247,11 +247,11 @@ test('flagging a failed invoice records which invoice failed', async (t) => {
   assert.equal(sub.hostedInvoiceUrl, 'https://pay.example/in_old')
 })
 
-test('a failure whose invoice was since paid or voided starts a fresh grace window for the next failing invoice', async (t) => {
+test('a failure whose invoice was since paid starts a fresh grace window for the next failing invoice', async (t) => {
   quiet(t)
   const LATER = FAILED_AT + 30 * 86_400_000
   t.mock.method(Date, 'now', () => LATER)
-  for (const status of ['paid', 'void']) {
+  for (const status of ['paid']) {
     const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old', hostedInvoiceUrl: 'https://pay.example/in_old' }))
     const stripe = fakeStripe({ invoices: {
       in_old: { id: 'in_old', status },
@@ -278,12 +278,40 @@ test('the same invoice failing again keeps its grace clock without asking about 
   assert.deepEqual(stripe.calls, ['in_new'], 'only the re-read of the failing invoice itself')
 })
 
-test('when the earlier failed invoice cannot be read the original grace clock is kept', async (t) => {
+test('a voided earlier invoice was never paid, so the original grace clock is kept', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 30 * 86_400_000)
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old', hostedInvoiceUrl: 'https://pay.example/in_old' }))
+  const stripe = fakeStripe({ invoices: {
+    in_old: { id: 'in_old', status: 'void' },
+    in_new: { id: 'in_new', status: 'open' },
+  } })
+
+  assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
+  const sub = stored(db)
+  assert.equal(sub.paymentFailedAt, FAILED_AT, 'void: no money arrived, so no new window')
+  assert.equal(sub.failedInvoiceId, 'in_new')
+})
+
+test('a read of the earlier invoice that may succeed on a retry throws, so Stripe redelivers the event', async (t) => {
   quiet(t)
   t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
   const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old' }))
-  // in_new reads fine (open); in_old is unknown to the double, so its read throws.
-  const stripe = openInvoices('in_new')
+  const outage = Object.assign(new Error('Stripe is unavailable'), { type: 'StripeAPIError', statusCode: 503 })
+  const stripe = fakeStripe({ error: outage })
+
+  await assert.rejects(flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), /unavailable/)
+  assert.equal(stored(db).paymentFailedAt, FAILED_AT, 'nothing was written')
+  assert.equal(stored(db).failedInvoiceId, 'in_old')
+})
+
+test('when Stripe says the earlier failed invoice does not exist the original grace clock is kept', async (t) => {
+  quiet(t)
+  t.mock.method(Date, 'now', () => FAILED_AT + 86_400_000)
+  const db = memoryDb(failingAccount({ failedInvoiceId: 'in_old' }))
+  const missing = Object.assign(new Error('No such invoice: in_old'), { type: 'StripeInvalidRequestError', code: 'resource_missing', statusCode: 404 })
+  const base = openInvoices('in_new')
+  const stripe = { ...base, invoices: { async retrieve(id, opts) { if (id === 'in_old') { base.calls.push(id); throw missing } return base.invoices.retrieve(id, opts) } } }
 
   assert.equal(await flagPaymentFailed(stripe, failedInvoice('in_new', 'https://pay.example/in_new'), db), 'flagged')
   const sub = stored(db)

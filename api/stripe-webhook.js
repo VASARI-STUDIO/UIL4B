@@ -556,18 +556,21 @@ async function invoiceNowPaid(stripe, invoice) {
 }
 
 // Whether the failure on record belongs to a different invoice that Stripe now
-// reports as paid or void. That failure is over, so a new failing invoice is a
-// new failure and gets its own grace window rather than inheriting the old
-// start time. A record without an invoice id, the same invoice failing again,
-// or an invoice that cannot be read all count as "not settled": the original
-// start time is kept, which is the safe side for the customer's grace window.
+// reports as paid. That failure is over, so a new failing invoice is a new
+// failure and gets its own grace window rather than inheriting the old start
+// time. A voided invoice was never paid, so it does not restart the window. A
+// record without an invoice id, the same invoice failing again, or an invoice
+// Stripe says it cannot find all count as "not settled" and keep the original
+// start time. A read that may succeed on a retry throws instead, so the event
+// is released and Stripe redelivers it.
 async function oldFailureSettled(stripe, existing, invoice, uid) {
   const oldId = typeof existing?.failedInvoiceId === 'string' ? existing.failedInvoiceId : null
   if (!stripe || !oldId || oldId === invoice?.id) return false
   try {
     const old = await stripe.invoices.retrieve(oldId)
-    return old?.status === 'paid' || old?.status === 'void'
+    return old?.status === 'paid'
   } catch (err) {
+    if (isTransientStripeError(err)) throw Object.assign(err, { redeliver: true })
     console.error('stripe-webhook: could not read the earlier failed invoice — keeping its failure start time', {
       uid, invoiceId: oldId, error: err?.message,
     })
@@ -605,7 +608,7 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
   // failure — and then survive every retry. Stripe fires invoice.payment_failed
   // again on each Smart Retry; re-stamping here would push the window forward
   // each time, which is the same as having no window at all. The exception is a
-  // failure whose invoice has since been paid or voided (oldFailureSettled): the
+  // failure whose invoice has since been paid (oldFailureSettled): the
   // next failing invoice is a new failure and starts a fresh window.
   let decidedAt = Date.now()
   let priorFailure = null
@@ -617,6 +620,7 @@ export async function flagPaymentFailed(stripe, invoice, db = null, eventCreated
       decidedAt = existing.paymentFailedAt
     }
   } catch (err) {
+    if (err?.redeliver) throw err
     // A read failure must not swallow the failure flag. Stamping "now" can only
     // ever be generous to the customer by at most one retry interval.
     console.error('stripe-webhook: could not read existing payment state', { uid, error: err?.message })
