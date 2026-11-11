@@ -1199,7 +1199,7 @@
 }
 @media (max-width: 600px) {
   /* A sample under the switch needs more room than the 16:9 Fill preview gives it. */
-  .grd .grd-stage:is([data-ctx="hero"], [data-ctx="card"], [data-ctx="button"]) { aspect-ratio: 4 / 3; }
+  .grd .grd-stage:is([data-ctx="hero"], [data-ctx="card"], [data-ctx="button"], [data-ctx="poster"], [data-ctx="spec"]) { aspect-ratio: 4 / 3; }
   .grd .grd-ctx-h { font-size: 22px; }
   .grd .grd-ctx-btns { grid-auto-flow: row; gap: 8px; }
   .grd .grd-ctx-btn { height: auto; min-height: 32px; }
@@ -1403,3 +1403,70 @@
 .grd .grd-ctx-gauge { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .grd .grd-ctx-gauge-row { display: flex; gap: 2px; width: max-content; }
 .grd .grd-ctx-gauge .grd-ctx-opt { display: inline-flex; align-items: center; }
+
+/* Poster and Spec card. The effects layer (.grd-fx) draws the Poster's field and the
+   neutral ground; the text layer (.grd-txt) is drawn after it and holds the words. Both
+   layers use the same 1px-inset box, so the poster frame, which exists in each, is the
+   same rectangle. Text is a solid ink, never faded. */
+.grd .grd-fx:is([data-fx="poster"], [data-fx="spec"]) { --fx-ground: color-mix(in srgb, var(--t0) 6%, var(--tl-card)); }
+.grd .grd-txt { position: absolute; inset: 0; border-radius: 18px; overflow: hidden; pointer-events: none; font-family: var(--font); }
+.grd .grd-txt-box { position: absolute; inset: 1px; }
+
+/* The poster is a 4:5 object on the ground from 901px; under that it is the whole stage. */
+.grd .grd-poster-frame {
+  position: absolute; inset: 40px auto auto 50%;
+  height: calc(100% - 80px); aspect-ratio: 4 / 5; translate: -50% 0;
+  border-radius: 14px; overflow: hidden; isolation: isolate;
+}
+.grd .grd-fx .grd-poster-frame { background: var(--fx-paint); }
+.grd .grd-poster-frame > .grd-fx-grain { position: absolute; inset: 0; }
+.grd .grd-txt .grd-poster-frame { container-type: inline-size; }
+.grd .grd-poster-in { display: flex; flex-direction: column; justify-content: space-between; height: 100%; padding: 28px; }
+.grd .grd-poster-top { display: grid; justify-items: start; gap: 8px; width: fit-content; max-width: 100%; }
+.grd .grd-poster-brand { font-size: 14px; line-height: 20px; font-weight: 600; }
+.grd .grd-poster-h { max-width: 14em; font-size: clamp(28px, 9cqi, 44px); line-height: 1.05; font-weight: 600; letter-spacing: -.02em; text-wrap: balance; }
+.grd .grd-poster-foot { width: fit-content; font-size: 14px; line-height: 20px; font-weight: 400; }
+
+/* The Spec card: the gradient as a header, then the facts in the order they are read. */
+.grd .grd-spec-box { display: flex; align-items: center; justify-content: center; }
+.grd .grd-spec {
+  display: flex; flex-direction: column; width: 352px; height: calc(100% - 80px);
+  overflow: hidden; border-radius: 14px; background: var(--tl-card);
+}
+.grd .grd-spec-head { flex: 0 1 55%; min-height: 48px; }
+.grd .grd-spec-body { flex: 0 0 auto; min-width: 0; padding: 20px; }
+.grd .grd-spec-name { overflow: hidden; font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -.02em; color: var(--tl-ink); white-space: nowrap; text-overflow: ellipsis; }
+.grd .grd-spec-hexes { display: flex; gap: 8px; margin-top: 4px; overflow: hidden; font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; color: var(--tl-ink); white-space: nowrap; }
+.grd .grd-spec-type { margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+.grd .grd-spec-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 16px; list-style: none; }
+.grd .grd-spec-sw { display: block; height: 40px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--tl-line); }
+.grd .grd-spec-hex { display: block; margin-top: 4px; font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; text-align: center; color: var(--tl-ink); white-space: nowrap; }
+.grd .grd-spec-note { margin-top: 8px; font-size: 12px; line-height: 16px; color: var(--tl-dim); }
+
+@media (max-width: 900px) {
+  .grd .grd-poster-frame { inset: 0; height: auto; aspect-ratio: auto; translate: none; border-radius: 0; }
+  .grd .grd-poster-in { padding: 64px 24px 24px; }
+  .grd .grd-poster-h { font-size: 40px; }
+  .grd .grd-poster-foot { max-width: calc(100% - 112px); }
+  .grd .grd-spec-box { padding-top: 48px; }
+  .grd .grd-spec { flex-direction: row; width: min(600px, 100% - 32px); height: min(264px, 100%); }
+  .grd .grd-spec-head { flex: 0 1 44%; min-height: 0; }
+  .grd .grd-spec-body { flex: 1 0 316px; }
+}
+@media (max-width: 900px) and (pointer: coarse) {
+  .grd .grd-spec-box { padding-top: 60px; }
+}
+@media (max-width: 600px) {
+  .grd .grd-poster-in { padding: 68px 16px 16px; }
+  .grd .grd-poster-h { font-size: 24px; line-height: 1.1; }
+  .grd .grd-poster-foot { font-size: 13px; line-height: 18px; }
+  .grd .grd-spec-box { align-items: flex-end; padding: 0 12px 8px; }
+  .grd .grd-spec { flex-direction: column; width: 100%; height: 198px; }
+  .grd .grd-spec-head { flex: 0 0 52px; }
+  .grd .grd-spec-body { flex: 1 1 auto; padding: 12px; }
+  .grd .grd-spec-name { font-size: 18px; line-height: 24px; }
+  .grd .grd-spec-hexes { display: none; }
+  .grd .grd-spec-strip { margin-top: 8px; }
+  .grd .grd-spec-sw { height: 28px; }
+  .grd .grd-spec-note { margin-top: 4px; }
+}
