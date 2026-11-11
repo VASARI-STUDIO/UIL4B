@@ -8,3 +8,28 @@
 @media(max-width:767px){
   .rd-end .ui-pill{width:100%}
 }
+
+/* The read-on list. Rows are hairline-separated; the lead row is the largest
+   type below the content. */
+.rd-next{--rd-y:clamp(72px,8.4vw,120px);margin-top:var(--rd-y)}
+.rd-next-label{font-family:var(--font);font-size:13px;font-weight:600;color:var(--t0);margin-bottom:var(--s-4)}
+.rd-next ul{list-style:none;margin:0;padding:0}
+.rd-next-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-5);min-height:52px;padding:var(--s-4) 0;border-top:1px solid var(--border);color:var(--t0);text-decoration:none}
+.rd-next li:last-child .rd-next-row{border-bottom:1px solid var(--border)}
+.rd-next-row[data-lead="true"]{padding:var(--s-6) 0}
+.rd-next-text{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
+.rd-next-title{font-size:17px;font-weight:600;line-height:1.35;color:var(--t0)}
+.rd-next-row[data-lead="true"] .rd-next-title{font-family:var(--display);font-size:clamp(24px,2.2vw,32px);letter-spacing:-.035em;line-height:1.1;text-wrap:balance}
+.rd-next-dek{max-width:52ch;font-size:15px;line-height:1.55;color:var(--t1)}
+.rd-next-row[data-lead="true"] .rd-next-dek{font-size:17px;line-height:1.6}
+.rd-next-go{flex:none;font-size:24px;line-height:1;color:var(--t2);transition:transform 320ms cubic-bezier(.23,1,.32,1),color 120ms ease}
+@media(hover:hover){
+  .rd-next-row:hover .rd-next-go{color:var(--t0);transform:translateX(3px)}
+  .rd-next-row[data-lead="true"]:hover .rd-next-go{transform:rotate(-45deg)}
+}
+.rd-next-row:focus-visible .rd-next-go{color:var(--t0)}
+.rd-end :focus-visible,.rd-next :focus-visible{outline:2px solid var(--t0);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .rd-next-go{transition:none;transform:none!important}
+}
+html[data-reduced-motion="true"] .rd-next-go{transition:none;transform:none!important}
