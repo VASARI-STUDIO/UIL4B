@@ -88,7 +88,7 @@ function PalettePlate() {
         <div className="srf-pal" key={p.id}>
           {p.colors.map((c, i) => (
             <span className="srf-stop" key={`${c}-${i}`} style={{ background: c }}>
-              {i === 0 && <span className="srf-hex" style={{ color: inkOn(c) }}>{c.toLowerCase()}</span>}
+              {i === 0 && <span className="srf-hex" style={{ color: inkOn(c) }}>{c}</span>}
             </span>
           ))}
         </div>
