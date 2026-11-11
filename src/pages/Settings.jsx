@@ -8,6 +8,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice, usePrices, usePriceRetry } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useOnline from '../hooks/useOnline'
+import useModalDialog from '../hooks/useModalDialog'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { getSyncState } from '../utils/syncStatus'
@@ -713,138 +714,133 @@ function deleteErrorText(e) {
   return 'We could not delete your account. Please try again.'
 }
 
-function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending }) {
+function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending, email, projectCount }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
-  // The acknowledgement every account type must tick before the button arms.
+  // The acknowledgement every account type must tick before the action runs.
   const [ack, setAck] = useState(false)
   const [error, setError] = useState('')
+  // Which of the two missing steps the person last tried to skip: 'ack' or 'pw'.
+  const [attempt, setAttempt] = useState('')
   const [busy, setBusy] = useState(false)
-  const panelRef = useRef(null)
-  // On Cancel the panel that held focus unmounts, so focus returns to the
-  // button that opened it rather than dropping to <body>.
-  const openBtnRef = useRef(null)
-  const returnFocus = useRef(false)
-  useEffect(() => {
-    if (open || !returnFocus.current) return
-    returnFocus.current = false
-    openBtnRef.current?.focus()
-  }, [open])
+  const ackRef = useRef(null)
+  const pwRef = useRef(null)
+  const titleId = useId()
 
-  // Opening the confirmation unmounts the "Delete account" button that was
-  // just pressed, and a keyboard user's focus went with it — measured on
-  // 2026-09-09: document.activeElement was <body> the moment the panel
-  // appeared, so the next Tab started from the top of the page and a screen
-  // reader announced nothing about the list of what is destroyed. Focus lands
-  // on the password field where there is one (it is the next thing to do),
-  // and on the panel itself for a Google-only account, so the itemised list is
-  // read before the destructive button is reached. Never on the button: Enter
-  // on a freshly focused "Permanently delete" would be a one-keystroke
-  // deletion.
-  useEffect(() => {
-    if (!open) return
-    const input = panelRef.current?.querySelector('#del-confirm-pw')
-    ;(input || panelRef.current)?.focus()
-  }, [open])
-
-  // A password account cannot delete with an empty password — Firebase refuses
-  // the re-authentication — so the button waits for one. The label directly
-  // above the field says what it is waiting for. It also waits for the
-  // acknowledgement, which is the same for a Google-only account.
+  // A password account cannot delete with an empty password (Firebase refuses
+  // the re-authentication), and every account must tick the box. The button
+  // says so with aria-disabled and stays pressable: pressing it explains what
+  // is missing and moves focus there, and never starts the delete.
   const needsPassword = !googleOnly && !password
   const notReady = !ack || needsPassword
 
-  const closePanel = () => { returnFocus.current = true; setOpen(false); setError(''); setPassword(''); setAck(false) }
+  const closePanel = () => { setOpen(false); setError(''); setPassword(''); setAck(false); setAttempt('') }
 
-  // Enter in the password field submits (the button is disabled until there is
-  // a password, which blocks the implicit submit too); Escape closes the panel
-  // from anywhere inside it, unless the delete is already running.
+  // Focus trap, Escape, scroll lock and focus back to "Delete account" come from
+  // the app's modal hook. Focus opens on the password field where there is one
+  // (the next thing to do), else on the dialog itself so its heading is read
+  // before the destructive button is reached. Never on the button.
+  const dialogRef = useModalDialog(() => { if (!busy) closePanel() }, { enabled: open, initialFocus: '#del-confirm-pw' })
+
   const handleDelete = async (e) => {
     e?.preventDefault()
-    if (busy || notReady) return
+    if (busy) return
+    if (!ack) { setAttempt('ack'); ackRef.current?.focus(); return }
+    if (needsPassword) { setAttempt('pw'); pwRef.current?.focus(); return }
     setBusy(true)
     setError('')
     try {
       await onDelete(password)
       // On success the account is gone and AuthContext has signed out; the app
       // re-renders signed out from under this component.
-    } catch (e) {
+    } catch (err) {
       setBusy(false)
-      setError(deleteErrorText(e))
+      setError(deleteErrorText(err))
     }
   }
 
-  if (!open) {
-    return (
-      // Waits for the plan to be known: the list below names Pro's cancellation
-      // only for a Pro account.
-      <button ref={openBtnRef} className="btn danger-zone-open" onClick={() => setOpen(true)} disabled={planPending}>
-        Delete account
-      </button>
-    )
-  }
+  const ackErr = attempt === 'ack' && !ack
+  const pwErr = attempt === 'pw' && needsPassword
+  const fieldErr = pwErr ? 'Enter your password to confirm.' : error
+  const counts = projectCount > 0 ? `${projectCount} project${projectCount === 1 ? '' : 's'} ${projectCount === 1 ? 'is' : 'are'} deleted.` : ''
 
   return (
-    <form
-      className="danger-confirm"
-      ref={panelRef}
-      tabIndex={-1}
-      noValidate
-      onSubmit={handleDelete}
-      onKeyDown={(e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); closePanel() } }}
-    >
-      <ul className="danger-confirm-list">
-        {isPro && <li>Pro is cancelled straight away, and you won&rsquo;t be billed again.</li>}
-        <li>Your profile, saved projects, icons and synced designs are deleted.</li>
-        <li>Prompts you submitted to the community, and any media with them, are removed.</li>
-        <li>You can sign up again with the same email, but it starts as a new, empty account.</li>
-      </ul>
+    <>
+      {/* Waits for the plan to be known: the list below names Pro's cancellation
+          only for a Pro account. */}
+      <button className="btn danger-zone-open" onClick={() => setOpen(true)} disabled={planPending}>
+        Delete account
+      </button>
+      {open && (
+        <div className="stg-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closePanel() }}>
+          <form className="danger-confirm stg-dlg" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} noValidate onSubmit={handleDelete}>
+            <h2 id={titleId} className="stg-dlg-h">Delete {email} and everything in it?</h2>
+            {counts && <p className="stg-dlg-count">{counts}</p>}
+            <ul className="danger-confirm-list">
+              {isPro && <li>Pro is cancelled straight away, and you won&rsquo;t be billed again.</li>}
+              <li>Your profile, saved projects, icons and synced designs are deleted.</li>
+              <li>Prompts you submitted to the community, and any media with them, are removed.</li>
+              <li>You can sign up again with the same email, but it starts as a new, empty account.</li>
+            </ul>
 
-      {/* A way out to the export, before anything is deleted. It only changes
-          section; nothing is deleted by it. */}
-      <p className="danger-confirm-note">
-        Want a copy first?{' '}
-        <button type="button" className="danger-confirm-link" onClick={onExportFirst} disabled={busy}>Download your data</button>
-      </p>
+            {/* A way out to the export, before anything is deleted. It only changes
+                section; nothing is deleted by it. */}
+            <p className="danger-confirm-note">
+              Want a copy first?{' '}
+              <button type="button" className="danger-confirm-link" onClick={() => { closePanel(); onExportFirst() }} disabled={busy}>Download your data</button>
+            </p>
 
-      <div className="danger-confirm-ack">
-        <input id="del-ack" type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={busy} />
-        <label htmlFor="del-ack">I understand my account and everything in it will be deleted, and this can&rsquo;t be undone.</label>
-      </div>
+            <div className="danger-confirm-ack">
+              <input
+                id="del-ack"
+                ref={ackRef}
+                type="checkbox"
+                checked={ack}
+                onChange={(e) => { setAck(e.target.checked); setAttempt('') }}
+                disabled={busy}
+                aria-invalid={ackErr || undefined}
+                aria-describedby={ackErr ? 'del-ack-err' : undefined}
+              />
+              <label htmlFor="del-ack">I understand my account and everything in it will be deleted, and this can&rsquo;t be undone.</label>
+            </div>
+            {ackErr && <div id="del-ack-err" className="danger-confirm-err" role="alert">Tick the box to confirm.</div>}
 
-      {googleOnly ? (
-        // A Google-only account HAS no password. The old dialog asked for one
-        // unconditionally, which was unanswerable — and then deletion threw
-        // requires-recent-login anyway.
-        <p className="danger-confirm-note">
-          Google will ask you to confirm it&rsquo;s you before anything is deleted.
-        </p>
-      ) : (
-        <>
-          <label className="seg-label" htmlFor="del-confirm-pw">Confirm your password</label>
-          <input
-            id="del-confirm-pw"
-            type="password"
-            className="danger-confirm-input"
-            autoComplete="current-password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            aria-invalid={!!error}
-            aria-describedby={error ? 'del-confirm-err' : undefined}
-          />
-        </>
+            {googleOnly ? (
+              // A Google-only account HAS no password: Google asks it to confirm.
+              <p className="danger-confirm-note">
+                Google will ask you to confirm it&rsquo;s you before anything is deleted.
+              </p>
+            ) : (
+              <>
+                <label className="seg-label" htmlFor="del-confirm-pw">Confirm your password</label>
+                <input
+                  id="del-confirm-pw"
+                  ref={pwRef}
+                  type="password"
+                  className="danger-confirm-input"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setAttempt('') }}
+                  aria-invalid={!!fieldErr}
+                  aria-describedby={fieldErr ? 'del-confirm-err' : undefined}
+                />
+                {fieldErr && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{fieldErr}</div>}
+              </>
+            )}
+            {googleOnly && error && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{error}</div>}
+
+            <div className="danger-confirm-actions">
+              <button type="button" className="btn btn-s" onClick={closePanel} disabled={busy}>
+                Cancel
+              </button>
+              <button type="submit" className="btn danger-confirm-go" disabled={busy} aria-disabled={notReady || undefined}>
+                {busy ? 'Deleting…' : 'Permanently delete'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
-
-      <div className="danger-confirm-actions">
-        <button type="submit" className="btn danger-confirm-go" disabled={busy || notReady}>
-          {busy ? 'Deleting…' : 'Permanently delete'}
-        </button>
-        <button type="button" className="btn btn-s" onClick={closePanel} disabled={busy}>
-          Cancel
-        </button>
-      </div>
-      {error && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{error}</div>}
-    </form>
+    </>
   )
 }
 
@@ -1902,6 +1898,8 @@ export default function Settings({ toast }) {
                       onExportFirst={() => pickSection('data')}
                       planPending={planPending}
                       googleOnly={isGoogleOnlyAccount()}
+                      email={user.email}
+                      projectCount={Array.isArray(projects) ? projects.length : 0}
                       isPro={isPro}
                     />
                   </div>
