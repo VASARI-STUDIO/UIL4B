@@ -77,6 +77,15 @@
   box-shadow: var(--ov-ring), var(--ov-shadow-modal);
   animation: ov-in 200ms var(--ov-ease);
 }
+:root .fbd-overlay .fbd-dialog {
+  background: var(--ov-surface);
+  border: 0;
+  border-radius: var(--ov-r-modal);
+  box-shadow: var(--ov-ring), var(--ov-shadow-modal);
+  animation: ov-in 200ms var(--ov-ease);
+}
+:root .fbd-overlay .fbd-close { border: 0; border-radius: 999px; background: var(--ov-tone); }
+:root .fbd-overlay :is(button, a, input, [tabindex]):focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
 :root .ui-modal { overflow: hidden auto; }
 :root .ui-modal-x,
 :root .ov-dialog-x {
@@ -275,6 +284,29 @@ body:has(.toast.show) .global-feedback-btn { transform: translateY(-52px); }
   font: 500 13px/1.3 var(--font);
   pointer-events: none;
   animation: ov-fade 120ms ease-out;
+}
+
+/* ── Colour picker (ColorPickerPop): 264 wide, tonal controls, 24 on a phone
+   sheet. The panel's own surface and shadow belong to the shared popover skin
+   and are left to it. ─────────────────────────────────────────────────────── */
+:root .pop.cpk-pop { border-radius: var(--ov-r-pop); }
+@media (min-width: 768px) { :root .pop.cpk-pop { width: 264px; } }
+:root .cpk-trigger { border: 0; background: var(--ov-tone); border-radius: var(--ov-r-row); }
+:root .cpk-trigger:hover,
+:root .cpk-trigger[aria-expanded="true"] { background: color-mix(in srgb, var(--t0) 12%, transparent); box-shadow: none; }
+:root .cpk-trigger:focus-visible,
+:root .cpk-dropper:focus-visible,
+:root .cpk-format:focus-visible,
+:root .cpk-hex:focus-visible,
+:root .cpk-swatch:focus-visible,
+:root .cpk-preset:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+:root .cpk-dropper,
+:root .cpk-hex,
+:root .cpk-format { border: 0; border-radius: var(--ov-r-row); background: var(--ov-tone); }
+:root .cpk-hex:focus-visible { box-shadow: none; }
+@media (max-width: 767px) {
+  :root .pop.cpk-pop[data-pop-fixed="true"],
+  :root .pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"] { border-radius: var(--ov-r-modal) var(--ov-r-modal) 0 0; }
 }
 
 /* ── Reduced motion: opacity only ────────────────────────────────────────── */
