@@ -57,7 +57,7 @@ import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
+import { resolvePlanLadder, cheapestPerMonth, formatMoney } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { mockThemeApi } from './export-theme-mock.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
@@ -324,8 +324,8 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     // Each purchasable row: per-month, total and cadence from the same module.
     for (const plan of [monthly, yearly]) {
       const tile = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(tile).toContainText(plan.perMonthLabel)
-      await expect(tile).toContainText(`${plan.totalLabel} ${plan.cadence}`)
+      await expect(tile).toContainText(formatMoney(plan.perMonth, plan.currency, { qualify: true }))
+      await expect(tile).toContainText(`${formatMoney(plan.total, plan.currency, { qualify: true })} ${plan.cadence}`)
     }
 
     // THE TRIAL IS ON EVERY CADENCE THAT CARRIES ONE — counted off the ladder,
@@ -337,7 +337,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       .toHaveCount(trialPlans.length)
     for (const plan of trialPlans) {
       const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-total')).toContainText(`${plan.totalLabel} ${plan.cadence} · ${plan.trialDays}-day free trial`)
+      await expect(row.locator('.ui-pro-plan-total')).toContainText(`${formatMoney(plan.total, plan.currency, { qualify: true })} ${plan.cadence} · ${plan.trialDays}-day free trial`)
     }
     // ...and a cadence that bills today says nothing about a trial.
     for (const plan of ladder.filter((pl) => pl.purchasable && !pl.trialDays)) {
@@ -353,7 +353,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await expect(modal.locator('.ui-pro-steps')).toContainText(`Days 1 to ${chosen.trialDays}:`)
       await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays + 1}:`)
     }
-    await expect(modal.locator('.ui-pro-steps')).toContainText(chosen.totalLabel)
+    await expect(modal.locator('.ui-pro-steps')).toContainText(formatMoney(chosen.total, chosen.currency, { qualify: true }))
 
     // THE CTA NAMES THE TRIAL. It must be more obvious than
     // a line of small print, and the button is the last thing read before the

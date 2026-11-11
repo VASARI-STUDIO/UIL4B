@@ -74,7 +74,7 @@ const FAQS = [
   },
   {
     q: 'How do I cancel?',
-    a: 'Open Settings, then Subscription, and choose Cancel plan. Stripe’s billing page opens to confirm it. Pro stays on until the end of the period you’ve paid for, and Settings shows the date it ends.',
+    a: 'Open Settings, then Plan and billing, and choose Cancel plan. Stripe’s billing page opens to confirm it. Pro stays on until the end of the period you’ve paid for, and Settings shows the date it ends.',
   },
   {
     q: 'Can I get a refund?',

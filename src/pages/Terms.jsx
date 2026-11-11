@@ -96,7 +96,7 @@ function TrialsAndRenewal() {
 function Cancelling() {
   return (
     <ul className="lgl-list">
-      <li><strong>Online, any time.</strong> Go to Settings → Subscription → <strong>Manage billing</strong> (or <strong>Cancel plan</strong>). This opens our secure billing portal, run by Stripe, where you can cancel, change your card and see your invoices. You can also email <Mail /> and we will cancel for you.</li>
+      <li><strong>Online, any time.</strong> Go to Settings → Plan and billing → <strong>Manage billing</strong> (or <strong>Cancel plan</strong>). This opens our secure billing portal, run by Stripe, where you can cancel, change your card and see your invoices. You can also email <Mail /> and we will cancel for you.</li>
       <li><strong>When cancelling takes effect.</strong> Pro continues until the end of the period you have already paid for, then your account moves to the free plan. You will not be charged again. Your work stays in your account.</li>
       <li><strong>During a trial.</strong> Cancelling before the trial ends means you are never charged.</li>
       <li><strong>Deleting your account</strong> (Settings → Delete account) cancels your subscription <strong>immediately</strong> and deletes your data. If you delete your account part-way through a period you have paid for, email <Mail /> before or after deleting and we will refund the unused part.</li>

@@ -1,6 +1,6 @@
 // TWO PRICE LINES BESIDE /plans, RENDERED, IN A NON-DOLLAR CURRENCY.
 //
-//   · Settings → Subscription prices Free in the page's currency. A "$0" typed
+//   · Settings → Plan and billing prices Free in the page's currency. A "$0" typed
 //     into the markup reads fine to a US visitor and wrong next to "£6".
 //   · The upgrade dialog's timeline: the free days are 1 to 7 and the charge
 //     lands on the day after, so no day is both free and charged.
