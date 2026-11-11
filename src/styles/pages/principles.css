@@ -352,18 +352,18 @@
  * The figures are the object here, so they are set at the display scale and
  * the tiles lose their boxes to the panel, like every other proof. */
 .prn-sn-figures { display: flex; flex-wrap: wrap; gap: var(--s-5); }
-.prn-sn-fig { display: flex; flex-direction: column; gap: var(--s-2); flex: 1 1 180px; min-width: 0; }
+.prn-sn-fig { display: flex; align-items: baseline; gap: var(--s-5); flex: 1 1 180px; min-width: 0; }
 .prn-sn-fig b {
   font-family: var(--display);
-  font-size: clamp(44px, 6vw, 72px);
+  font-size: 120px;
   font-weight: 600;
-  line-height: .92;
-  letter-spacing: -.02em;
+  line-height: 1;
+  letter-spacing: -.04em;
   color: var(--cpg-ink);
   font-variant-numeric: tabular-nums;
 }
 .prn-sn-fig[data-soon="true"] b { color: var(--cpg-faint); }
-.prn-sn-fig > span { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--cpg-faint); line-height: 1.4; }
+.prn-sn-fig > span { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 24px; color: var(--cpg-dim); line-height: 1.2; }
 
 /* ── Narrow ── */
 @media (max-width: 960px) {
@@ -381,6 +381,9 @@
   .prn-go { min-height: 44px; min-width: 44px; }
 }
 @media (max-width: 560px) {
+  .prn-sn-fig { flex-direction: column; align-items: flex-start; gap: var(--s-1); }
+  .prn-sn-fig b { letter-spacing: -.05em; }
+  .prn-sn-fig > span { font-size: 13px; line-height: 1.5; }
   .prn-h1, .prn-lede, .prn-rule, .prn-body { max-width: none; }
   .prn-item[data-lead="true"] .prn-rule { max-width: none; }
   .prn { --prn-sy: 88px; --prn-join: 72px; }
