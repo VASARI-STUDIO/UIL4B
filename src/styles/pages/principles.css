@@ -331,16 +331,16 @@
 .prn-ex-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; line-height: 1.45; color: var(--cpg-dim); }
 .prn-ex-col li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .prn-ex-col[data-unbuilt="true"] ul { color: var(--cpg-faint); }
+.prn-ex-m { display: none; }
 .prn-ex-h {
   margin: 0 0 var(--s-3);
-  padding-bottom: var(--s-2);
-  border-bottom: 1px solid var(--cpg-line);
   font-family: var(--font);
   font-size: var(--fs-caption);
-  font-weight: 500;
+  line-height: 1.4;
+  font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--cpg-faint);
+  color: var(--cpg-ink);
 }
 
 /* Proof 5 — the two counts, off the registry, beside the badge itself.
@@ -453,9 +453,13 @@
 
   /* The export lists, as the board's .fmt: a quiet label, plain rows, no rule. */
   .prn-ex-cols { gap: 20px; }
+  .prn-ex-d { display: none; }
+  .prn-ex-m { display: inline; }
   .prn-ex-h { margin: 0 0 var(--s-1); padding-bottom: 0; border-bottom: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--t1); }
-  .prn-ex-col ul { gap: 0; font-size: 15px; line-height: 1.4; }
+  .prn-ex-col ul,
+  .prn-ex-col[data-unbuilt="true"] ul { gap: 0; font-size: 15px; line-height: 1.4; color: var(--cpg-ink); }
   .prn-ex-col li { padding: var(--s-1) 0; gap: var(--s-2); }
+  .prn-ex-col .soon-badge { padding: 0; border: 0; background: none; font-size: 12px; font-weight: 400; line-height: 1.4; color: var(--t1); }
 
   /* "Open ..." links: ink, underlined, no arrow. */
   .prn-go {

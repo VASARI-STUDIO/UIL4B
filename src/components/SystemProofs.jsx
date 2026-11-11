@@ -249,15 +249,24 @@ export function ExportProof() {
     <figure className="prn-ex">
       <div className="prn-ex-cols">
         <div className="prn-ex-col">
-          <p className="prn-ex-h" id="prn-ex-free">Built, free</p>
+          <p className="prn-ex-h" id="prn-ex-free">
+            <span className="prn-ex-d">Built free</span>
+            <span className="prn-ex-m">Built, free ({free.length})</span>
+          </p>
           <ul aria-labelledby="prn-ex-free">{free.map((f) => <li key={f.id}>{f.name}</li>)}</ul>
         </div>
         <div className="prn-ex-col">
-          <p className="prn-ex-h" id="prn-ex-pro">Built, Pro</p>
+          <p className="prn-ex-h" id="prn-ex-pro">
+            <span className="prn-ex-d">Built Pro</span>
+            <span className="prn-ex-m">Built, Pro ({pro.length})</span>
+          </p>
           <ul aria-labelledby="prn-ex-pro">{pro.map((f) => <li key={f.id}>{f.name}</li>)}</ul>
         </div>
         <div className="prn-ex-col" data-unbuilt="true">
-          <p className="prn-ex-h" id="prn-ex-unbuilt">Not built</p>
+          <p className="prn-ex-h" id="prn-ex-unbuilt">
+            <span className="prn-ex-d">Not built</span>
+            <span className="prn-ex-m">Not built ({unbuilt.length})</span>
+          </p>
           <ul aria-labelledby="prn-ex-unbuilt">
             {unbuilt.map((f) => (
               <li key={f.id}>{f.name} <span className="soon-badge">Soon</span></li>
@@ -268,7 +277,8 @@ export function ExportProof() {
       <figcaption className="prn-cap">
         All {documentFormats().length} formats the export panel knows about, split by
         the same <code>live</code> flag that decides whether its button does
-        anything. The third column cannot be sold on any plan.
+        anything. The third <span className="prn-ex-d">column</span>
+        <span className="prn-ex-m">group</span> cannot be sold on any plan.
       </figcaption>
     </figure>
   )
