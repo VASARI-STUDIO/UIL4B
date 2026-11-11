@@ -398,11 +398,18 @@ test('at 1440 the top 12px of a covered card stays in view, holds no text, and t
   const { ctx, page } = await open(browser)
   try {
     // Red if the dock step changes from 12px, a card is lifted above the one before it, or text moves into a card's top 12px.
-    await expect.poll(async () => (await readAt(page, 120)).map((l) => l.top), { timeout: 10_000 }).toEqual([84, 96, 108])
+    // Read only once the pile has settled: docked at its lines AND the covered cards marked inert. The inert flags arrive a
+    // frame or more after the scroll (IntersectionObserver), and an inert card is skipped by elementsFromPoint, so reading
+    // before they land finds the cards, and reading after finds nothing: the read must not depend on which.
+    await expect.poll(async () => (await readAt(page, 120)).map((l) => `${l.top}:${l.inert}`), { timeout: 10_000 }).toEqual(['84:true', '96:true', '108:false'])
     const edges = await page.evaluate(() => {
-      const cardAt = (x, y) => document.elementsFromPoint(x, y).find((el) => el.closest(".hx-card"))?.closest(".hx-card")?.dataset.card ?? null
       const cards = [...document.querySelectorAll('#exports .hx-card')]
-      return cards.map((c, i) => {
+      // The hit-test is about stacking order, so it is read with the inert flags lifted for this one synchronous pass
+      // (no observer callback can run inside it) and put back before it returns.
+      const was = cards.map((c) => c.inert)
+      for (const c of cards) c.inert = false
+      const cardAt = (x, y) => document.elementsFromPoint(x, y).find((el) => el.closest(".hx-card"))?.closest(".hx-card")?.dataset.card ?? null
+      const edges = cards.map((c, i) => {
         const r = c.getBoundingClientRect()
         const x = r.left + r.width / 2
         const text = []
@@ -417,6 +424,8 @@ test('at 1440 the top 12px of a covered card stays in view, holds no text, and t
         }
         return { top: r.top, seen: cardAt(x, r.top + 6), text }
       })
+      cards.forEach((c, i) => { c.inert = was[i] })
+      return edges
     })
     expect(edges.map((e) => e.seen)).toEqual(['0', '1', '2'])
     expect(edges[1].top - edges[0].top).toBe(12)
