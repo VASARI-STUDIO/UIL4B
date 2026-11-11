@@ -39,6 +39,7 @@ function headersFor(p) {
   return out
 }
 const corp = (p) => headersFor(p)['cross-origin-resource-policy']
+const robots = (p) => headersFor(p)['x-robots-tag']
 
 const IMAGE = /\.(webp|avif|png|jpe?g|gif|svg)$/i
 
@@ -153,5 +154,33 @@ test('CORP is same-site, never same-origin (www and the apex serve each other)',
 test('fonts, /assets and the API carry no CORP', () => {
   for (const p of ['/assets/index-abc.js', '/fonts/switzer-latin.woff2', '/api/share', '/api/ai', '/']) {
     assert.equal(corp(p), undefined, p)
+  }
+})
+
+// The real preview files (the Pro prompt posters and demo pages, the scene
+// pictures, the theme pages and their stand-ins) are not pages to find in
+// search. The share cards in the /previews root stay indexable: they are the
+// pictures social sites unfurl, and nothing else in that folder is.
+test('the real preview files ask not to be indexed', () => {
+  const files = [
+    ...walk(path.join(PUBLIC, 'previews')).map(urlOf).filter((u) => u.split('/').length > 3),
+    ...walk(path.join(PUBLIC, 'locked-images')).map(urlOf),
+    ...walk(path.join(PUBLIC, 'export-themes')).map(urlOf),
+  ]
+  assert.ok(files.length > 250, `only ${files.length} preview files found`)
+  const missing = files.filter((u) => robots(u) !== 'noindex')
+  assert.deepEqual(missing.slice(0, 10), [], `${missing.length} preview file(s) lack X-Robots-Tag: noindex`)
+  for (const p of ['/previews/prompts/c-4.html', '/previews/prompts/poster/c-4.webp', '/locked-images/prompts/c-4.webp', '/export-themes/01-presentation-book.webp']) {
+    assert.equal(robots(p), 'noindex', p)
+  }
+})
+
+test('share cards, pages and the API are not noindexed by these rules', () => {
+  for (const p of shareCardPaths()) {
+    if (p.startsWith('/api/') || p.startsWith('/p/')) continue
+    assert.equal(robots(p), undefined, p)
+  }
+  for (const p of ['/', '/create/palette', '/learn', '/plans', '/home-showcase/01-presentation/guide-cover-l.avif']) {
+    assert.equal(robots(p), undefined, p)
   }
 })

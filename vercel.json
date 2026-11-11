@@ -647,6 +647,24 @@
       ]
     },
     {
+      "source": "/previews/(prompts|card|overshirt|ridgeline|ferry|vendor)/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/(locked-images|export-themes)/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
       "source": "/previews/(prompts|card|overshirt|ridgeline|ferry)/(.*)\\.(webp|avif|png|jpe?g|gif|svg)",
       "headers": [
         {
