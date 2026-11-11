@@ -513,6 +513,8 @@ function AppHeader() {
       } else {
         openedBy.current = 'click'
         hoverLock.current = true
+        // A hover-leave close may still be pending from a pointer that just left the header.
+        if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
         setSheet(false)
         setOpen(id)
       }
@@ -547,7 +549,7 @@ function AppHeader() {
       // Focus in another layer (a dialog opened from the sheet) is not ours.
       if (at < 0) return
       const last = ring.length - 1
-      let next = null
+      let next
       if (event.shiftKey) next = at === 0 ? last : (ring[0] === closeBtn && at === 1 ? 0 : null)
       else next = at === last ? 0 : (ring[0] === closeBtn && at === 0 ? 1 : null)
       if (next === null || ring.length < 2) return

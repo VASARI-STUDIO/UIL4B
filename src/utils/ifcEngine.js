@@ -45,7 +45,7 @@ const deliverEngine = sharedDownload(async (report, signal) => {
     ])
   } catch (err) {
     if (err?.name === 'IntegrityError') throw err
-    throw new Error(`the IFC engine could not be fetched (${err?.message || err})`)
+    throw new Error(`the IFC engine could not be fetched (${err?.message || err})`, { cause: err })
   }
   if (!worker) worker = new Worker(new URL('./ifcWorker.js', import.meta.url), { type: 'classic' })
   worker.postMessage({ type: 'engine', script, wasm }, [script, wasm])

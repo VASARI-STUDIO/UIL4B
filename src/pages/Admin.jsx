@@ -1,5 +1,5 @@
 import { Fragment, useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 // ── WHAT THIS PAGE IS ALLOWED TO READ FROM utils/analytics ────────────────
 // getAggregateAnalytics() is the only cross-user reader in that module: it sums
 // the `analytics-daily` documents every signed-in session writes, so what it
@@ -1749,7 +1749,7 @@ export default function Admin({ toast }) {
   // fine for deciding what to render, worthless as a fact. This hook is also
   // what finally reads /api/verify-admin's `claimUpdated` and forces the token
   // refresh that makes a freshly minted claim usable in the same session.
-  const { role, loading: roleLoading } = useModerationRole()
+  const { role, loading: roleLoading, confirmed: roleConfirmed } = useModerationRole()
   const [tab, setTab] = useState('overview')
   const tabs = TABS.filter(t => (!t.adminOnly || isAdminUser) && (!t.show || t.show(role)))
   // Roving-tabindex keyboard navigation for the tab bar. A tablist is ONE tab
@@ -2218,13 +2218,20 @@ export default function Admin({ toast }) {
     )
   }
 
+  // A signed-in account without admin access is sent home without a word, as
+  // /style-guide does (RequireAdmin in App.jsx): the route's existence is not
+  // something to name to them.
+  // Only once the server has confirmed the role: a moderator whose cached token predates
+  // their claim would otherwise be sent away before the handshake upgrades it.
+  if (!effectiveUnlocked && user && roleConfirmed) return <Navigate to="/" replace />
+
   if (!effectiveUnlocked) {
     return (
       <div className="sec">
         <div className="adm-lock">
           <div className="adm-lock-eyebrow">Admin Access</div>
           <h1>Developer Dashboard</h1>
-          <p>{user ? 'Your account does not have admin access.' : 'Sign in with an owner account.'}</p>
+          <p>Sign in with an owner account.</p>
         </div>
       </div>
     )

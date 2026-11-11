@@ -273,7 +273,7 @@ export default function Pricing() {
   const liveTotal = live ? money(offer.total) : ''
   let detail1 = ''
   let detail2 = ''
-  let foot1 = ''
+  let foot1
   let foot2 = ''
   if (isPro) {
     if (!hidePrice) detail1 = `${liveTotal} billed ${BILLED_EVERY[offer.id]}.`

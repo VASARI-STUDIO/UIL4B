@@ -73,7 +73,7 @@ export function useModerationRole() {
         // a round trip.
         const cached = await read(false)
         if (cancelled) return
-        setResolved({ uid, role: cached.role, error: '' })
+        setResolved({ uid, role: cached.role, error: '', confirmed: false })
 
         const { auth } = await import('../utils/firebase')
         const token = await auth.currentUser?.getIdToken()
@@ -99,7 +99,9 @@ export function useModerationRole() {
         if (data?.claimUpdated === true || (serverSaysPrivileged && cached.role === 'user')) {
           const fresh = await read(true)
           if (cancelled) return
-          setResolved({ uid, role: fresh.role, error: '' })
+          setResolved({ uid, role: fresh.role, error: '', confirmed: true })
+        } else {
+          setResolved((prev) => (prev?.uid === uid ? { ...prev, confirmed: true } : prev))
         }
       } catch (err) {
         if (cancelled) return
@@ -112,6 +114,7 @@ export function useModerationRole() {
           uid,
           role: prev?.uid === uid ? prev.role : 'user',
           error: err?.message || 'Could not confirm your role with the server.',
+          confirmed: true,
         }))
       }
     })()
@@ -129,11 +132,14 @@ export function useModerationRole() {
     // token being read — combining two is how the order gets got wrong.
     loading: authLoading || (!!uid && !current),
     error: current?.error || '',
+    // True once the server handshake has answered (or failed), so a role read
+    // from a stale cached token is not mistaken for the final word.
+    confirmed: !uid || !!current?.confirmed,
     signedIn: !!uid,
     /** Re-read the token from Firebase, forcing a refresh. */
     refresh: useCallback(async () => {
       const fresh = await read(true)
-      setResolved({ uid, role: fresh.role, error: '' })
+      setResolved({ uid, role: fresh.role, error: '', confirmed: true })
       return fresh.role
     }, [read, uid]),
   }

@@ -2053,7 +2053,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const stale = () => seq !== imgLoadSeq.current
     setImgLoading(true)
     setImgStatus('Finding colours…')
-    let loaded = null
+    let loaded
     try {
       loaded = await loadImageData(file)
     } catch {
@@ -2426,7 +2426,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   const applyImagePalette = (mode) => {
     if (imgPicks.length < 2) return
-    let done = false
+    let done
     if (mode === 'add') {
       const add = appendPicks(colors, imgPicks, imgCeiling)
       if (!add.used) return

@@ -150,7 +150,7 @@ let reporter = null
 
 function getReporter() {
   if (!reporter) {
-    let storage = null
+    let storage
     try { storage = window.sessionStorage } catch { storage = null }
     reporter = createErrorReporter({
       send: canWriteSharedAnalytics() ? postToSupport : consoleOnly,

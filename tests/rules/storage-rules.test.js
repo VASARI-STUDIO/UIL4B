@@ -238,7 +238,7 @@ async function refused(label, promise) {
   try {
     await assertFails(promise)
   } catch (error) {
-    throw new Error(`${label} should have been refused: ${error.message}`)
+    throw new Error(`${label} should have been refused: ${error.message}`, { cause: error })
   }
 }
 

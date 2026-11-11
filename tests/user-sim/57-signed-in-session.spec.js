@@ -311,6 +311,19 @@ test.describe('RequireAuth and RequireAdmin', () => {
     await expect(page, 'RequireAuth must send a stranger to the login route').toHaveURL(/\/login/)
   })
 
+  // MUTATION: in Admin.jsx delete `if (!effectiveUnlocked && user) return <Navigate to="/" replace />`.
+  // The page then names itself and says "Your account does not have admin access".
+  test('a signed-in non-admin is sent home from /admin without a word, as from /style-guide', async ({ page }) => {
+    watch(page, 'an ordinary Free account trying the admin URL')
+    await signIn(page, { plan: 'free' })
+    await go(page, '/admin')
+    await expect(page, 'a non-admin must not stay on /admin').not.toHaveURL(/\/admin/)
+    await expect(page, 'and must not be told to sign in for something they cannot have').not.toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page.getByText(/admin access/i), 'the page named the hidden route').toHaveCount(0)
+    await expect(page.getByText('Developer Dashboard')).toHaveCount(0)
+  })
+
   test('the internal style guide is admin-only, not merely signed-in-only', async ({ page }) => {
     // RequireAdmin is a different gate from RequireAuth and was unreachable
     // from a signed-out session, so nothing had ever rendered it. It sends a

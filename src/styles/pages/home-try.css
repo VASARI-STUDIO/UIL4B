@@ -283,7 +283,8 @@
   background: transparent; color: rgba(var(--ink), .62);
   transition: transform 120ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease);
 }
-.ht-ic-t[aria-pressed="true"] { background: var(--l3); color: #EFEEEA; }
+.ht-ic-t[aria-selected="true"] { background: var(--l3); color: #EFEEEA; }
+.ht.ht .ht-ic-t:focus-visible { outline-offset: -2px; }
 .ht-ic-t:not(:disabled):active { transform: scale(.97); }
 .ht .ht-ic-g { width: 24px; height: 24px; }
 .ht-ic-pv { flex: none; width: 184px; display: flex; flex-direction: column; }
@@ -305,7 +306,7 @@
 .ht-swatch:has(:focus-visible) { outline: 2px solid #EFEEEA; outline-offset: 2px; }
 .ht.ht .ht-swatch input:focus-visible { outline: none; }
 @media (hover: hover) and (pointer: fine) {
-  .ht-ic-t:hover:not([aria-pressed="true"]) { background: var(--l2); }
+  .ht-ic-t:hover:not([aria-selected="true"]) { background: var(--l2); }
 }
 
 /* ── fonts ────────────────────────────────────────────────────────────────── */
