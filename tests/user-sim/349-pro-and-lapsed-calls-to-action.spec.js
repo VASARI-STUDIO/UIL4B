@@ -24,7 +24,7 @@
 // show the Upgrade button whatever the plan. For the lapsed side, treat status
 // 'canceled' as Pro in SubscriptionContext planForSubscription.
 import { test, expect } from './base.js'
-import { go, goRaw, ready, signIn, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { ROUTES, PROJECT_ROUTES } from './site-routes.js'
 import { withAvailability } from './price-payload.js'
 
@@ -73,8 +73,7 @@ test.describe('a Pro account is never asked to upgrade', () => {
 
     const asked = []
     for (const route of [...ROUTES, ...PROJECT_ROUTES]) {
-      await goRaw(page, route)
-      await ready(page, route)
+      await go(page, route)
       for (const cta of await visibleCtas(page)) asked.push(`${route} (landed ${pathOf(page)}): "${cta.words}" [${cta.cls}]`)
     }
     expect(asked, 'calls to action a Pro account can see').toEqual([])

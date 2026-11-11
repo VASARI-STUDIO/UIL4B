@@ -19,7 +19,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
-import { goRaw, ready, signIn, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { ROUTES, PROJECT_ROUTES } from './site-routes.js'
 
 // Routes the router has that this crawl does not walk, and why.
@@ -76,8 +76,7 @@ function crawl(page, persona, origin) {
   const visit = async (target, from) => {
     if (visited.has(target.key)) return
     visited.add(target.key)
-    await goRaw(page, target.route + target.search)
-    await ready(page, target.key)
+    await go(page, target.key)
     const allowed = allowedLandings(target.route, persona)
     const pathNow = () => normalise(new URL(page.url()).pathname)
     // A gate answers after auth resolves, so give it time to move before judging where it landed.
