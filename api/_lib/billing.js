@@ -581,7 +581,7 @@ export function subscriptionMoneyHealth(charge) {
  *              Free, which is the worse of the two errors.
  */
 export async function subscriptionChargeHealth(stripe, sub) {
-  let charge = null
+  let charge
   try {
     charge = await latestSubscriptionCharge(stripe, sub)
   } catch (err) {

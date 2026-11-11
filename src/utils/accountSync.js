@@ -385,7 +385,7 @@ export function writeMeta(storage, meta) {
 export function readLocal(storage, keys = ACCOUNT_KEY_NAMES) {
   const out = {}
   for (const key of keys) {
-    let raw = null
+    let raw
     try { raw = storage?.getItem(key) ?? null } catch { raw = null }
     out[key] = decodeValue(raw)
   }
@@ -404,7 +404,7 @@ export function readLocal(storage, keys = ACCOUNT_KEY_NAMES) {
 export function detectLocalChanges(storage, meta, now = Date.now()) {
   const changed = []
   for (const key of ACCOUNT_KEY_NAMES) {
-    let raw = null
+    let raw
     try { raw = storage?.getItem(key) ?? null } catch { raw = null }
     const print = fingerprint(raw)
     const known = Object.hasOwn(meta.prints, key)

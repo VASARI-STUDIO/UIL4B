@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { stashResumeTarget } from '../contexts/LoginPromptContext'
 import { isLocalPath } from '../utils/localPath'
+import { knownProfile, onboardingDestination } from '../utils/onboardingState'
 import { openFirebaseGate } from '../utils/firebaseAccess'
 import { LOGIN_SIGNUP_TITLE, PAGE_TITLES } from '../data/routeMetaMap'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -17,15 +18,17 @@ import '../styles/pages/auth.css'
 // RequireAuth redirects and Checkout's `state.from` hand-off keep working. The
 // nav opens the modal in place and never comes here.
 export default function LoginPage() {
-  const { user, loading, pendingOnboarding } = useAuth()
+  const { user, loading, pendingOnboarding, userProfile, profileLoaded } = useAuth()
   const { t } = useI18n()
   const location = useLocation()
   const navigate = useNavigate()
   // A hand-built link can put anything in state, so only a path on this origin counts.
   // /login itself is not somewhere to be sent on to: it would leave a
-  // signed-in visitor on this page.
+  // signed-in visitor on this page. With nowhere to resume, a signed-in visitor
+  // belongs in the workspace, or in onboarding while their account still owes it.
   const sent = location.state?.from
-  const from = isLocalPath(sent) && sent.split('?')[0].replace(/\/+$/, '') !== '/login' ? sent : '/home'
+  const sentFrom = isLocalPath(sent) && sent.split('?')[0].replace(/\/+$/, '') !== '/login' ? sent : null
+  const from = sentFrom || onboardingDestination(knownProfile(userProfile, profileLoaded))
   // `/login?signup=1` (or `state.signup`) opens the sign-up form. The hero's
   // "Start building free" is a real link, so the intent has to survive a full
   // navigation.
@@ -39,7 +42,8 @@ export default function LoginPage() {
 
   // A brand-new sign-up is intercepted into /onboarding by AppInner, which
   // would discard where the visitor was headed; onboarding reads this stash.
-  useEffect(() => { stashResumeTarget(from) }, [from])
+  // The workspace is no resume target: a bare visit stashes '/', which clears it.
+  useEffect(() => { stashResumeTarget(sentFrom || '/') }, [sentFrom])
 
   // Leaving is skipped while onboarding is owed: AppInner sends a new account
   // there, and a second navigation here would win the race and undo it. Only

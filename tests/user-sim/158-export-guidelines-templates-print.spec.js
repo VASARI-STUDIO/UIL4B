@@ -15,18 +15,21 @@
 //      clamp (the slide itself clips) has no more content than it shows.
 //   3. No text is under 7 pt.
 //   4. The slide count is the one the deck's structure gives, worked out here by hand from
-//      the palette size and whether there is a logo (the formulas are beside SLIDES).
+//      the palette size and whether there is a logo (the formulas are beside SLIDES;
+//      Presentation's does not depend on the palette size).
 //   5. Printed to PDF, there is one PDF page per slide and every page is 297 x 167 mm,
 //      landscape (read from its MediaBox).
 //   6. Slide numbers are true: Poster's and Grid's printed numbers are their slide's own,
 //      Grid's contents entries name the slide that carries their title, Presentation's
-//      folios are each slide's place in the PDF, with none on the cover or the openings.
+//      folios (`.ch-folio`) are each slide's place in the PDF, with none on the cover.
 //   7. Grid only: a slide holds one to three topics and two text sizes outside the
 //      masthead. The scale's specimens (`td.sp`) are set at the sizes they show and are
 //      excluded, and a control checks that they would break the rule if they were not.
 //   8. A name cut on the cover is printed whole somewhere that does not cut it.
-//   9. Logo slides exist only when there is a logo: the mark, grounds and clear-space
-//      slides, and every <img>, are absent from a deck with none, and all present with one.
+//   9. Logo slides exist only when there is a logo: the mark, clear-space and logo-facts
+//      slides (and Poster's and Grid's grounds slide), and every <img>, are absent from a
+//      deck with none, and all present with one. Each template is checked against the
+//      section labels it prints.
 //
 // THE FIXTURE. The user's own faces are linked from Google Fonts in a real export. This
 // suite makes no live call, so the Google Fonts stylesheet and files are answered from
@@ -53,18 +56,23 @@
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // Each of these was applied to the source (and restored), and turned the named test red.
 // The table with the results is in the lane report. Test names are the titles below.
-//   - "every box stays inside its slide"    poster.js `.pn-facts` margin-left:260mm
-//   - "nothing that clips hides content"    presentation.js `.sw` (swatch, overflow hidden) gains max-height:12mm,
+//   - "every box stays inside its slide"    poster.js `.pn-facts` margin-left:260mm,
+//                                           and presentation.js `.cl-strip` gains max-height:12mm
+//   - "nothing that clips hides content"    presentation.js `.cap` (caption) gains max-height:2mm with overflow hidden,
 //                                           and grid.js `.stage` (logo stage, overflow hidden) height 62mm -> 10mm
-//   - "no text is under 7 pt"               presentation.js `.sw-role` 7pt -> 6pt
-//   - "the slide count"                     poster.js the closing slide left out
+//   - "no text is under 7 pt"               presentation.js `.cap` 7.5pt -> 6pt
+//   - "the slide count"                     poster.js the closing slide left out,
+//                                           and presentation.js `typeScaleSlide` dropped from the plan in slides()
 //   - "printed to PDF"                      grid.js `@page` 297mm 167mm -> 297mm 210mm
-//   - "slide numbers are true"              poster.js `pad(n)` in slide() -> `pad(n + 1)`
+//   - "slide numbers are true"              poster.js `pad(n)` in slide() -> `pad(n + 1)`,
+//                                           and presentation.js `pad(n)` in chrome() -> `pad(n + 1)`
 //   - "Grid: a slide holds ... two sizes"   grid.js `.kv dt` 9pt and `.kv dd` 10pt
 //   - "a cut name is printed whole"         grid.js the cover's `cv-full` line left out
 //   - "logo slides exist only with a logo"  brandGuidelines.js guidelineSections `if (d.logo)` -> `if (d.logo || d.palette)`
 //                                           and the build's `if (section.id === 'logo')` -> `... && d.logo` (a Logo opening
-//                                           with no logo, and no page behind it)
+//                                           with no logo, and no page behind it);
+//                                           presentation.js `d.logo && logoFactsSlide` -> `logoFactsSlide`, and the clear-space
+//                                           label `Logo · Clear space` -> `Clear space`
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
@@ -94,7 +102,7 @@ const SLIDE_PT = { w: 297 / 25.4 * 72, h: 167 / 25.4 * 72 }
 const markSvg = (w, h) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="#222222"/><circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) / 3}" fill="#E8B04A"/></svg>`
 const logoOf = (w, h) => ({ src: `data:image/svg+xml;base64,${Buffer.from(markSvg(w, h), 'utf8').toString('base64')}`, width: w, height: h, type: 'image/svg+xml', name: 'mark.svg' })
 const LOGOS = { wide: logoOf(240, 60), tall: logoOf(60, 180), square: logoOf(100, 100) }
-// Logo cases: [logo, palette size]. The palette size moves Poster's ground slides and Presentation's palette pages.
+// Logo cases: [logo, palette size]. The palette size moves Poster's ground slides.
 const LOGO_CASES = [['wide', 3], ['wide', 13], ['tall', 5], ['square', 8]]
 
 const design = (n, logo) => ({
@@ -105,22 +113,26 @@ const design = (n, logo) => ({
 
 /**
  * The slides each deck has, from its structure (heading face and body face differ here).
- * Presentation: cover, a Colour opening, the palette, one "in use" page per six of the first 13
- * colours, a Typography opening, two face pages, the scale, the scope; a logo adds its opening,
- * the mark, the grounds and the clear-space rule.
+ * Presentation: cover, colour, type, the appendix's colour values and type scale, the scope
+ * (6 slides, whatever the palette size, because the palette is one colour slide and one table
+ * slide). The designs here have no description, so there is no line slide. A logo adds the mark
+ * and clear-space slides after the cover and the appendix's logo facts before the scope (+3).
+ * The clear-space slide is skipped only when the logo has no usable width and height; every
+ * logo in LOGO_CASES has both, so each logo deck carries it.
  * Poster: cover, one slide per colour, the summary, [mark, paper + ink + up to four brand
  * grounds, clear space], two face slides, the scale, the scope.
  * Grid: cover, colour and type, [logo], the scale, usage notes, scope.
  */
 const SLIDES = {
-  presentation: (n, logo) => 8 + Math.ceil(Math.min(n, 13) / 6) + (logo ? 4 : 0),
+  presentation: (n, logo) => 6 + (logo ? 3 : 0),
   poster: (n, logo) => 1 + n + 1 + (logo ? 1 + (2 + Math.min(4, n)) + 1 : 0) + 2 + 1 + 1,
   grid: (n, logo) => 5 + (logo ? 1 : 0),
 }
 
 // Where each template prints its own slide number, and what it calls a slide's section.
-const NUMBER = { presentation: '.rail-folio', poster: '.pn-num', grid: '.mh-num, .mh-line .num' }
-const HEADS = { presentation: '.hd-title, .op-head', poster: '.pn-sec', grid: '.tp-h, .mh-sec' }
+// Presentation's one chrome line (`.ch`) holds the section on the left and the folio on the right.
+const NUMBER = { presentation: '.ch-folio', poster: '.pn-num', grid: '.mh-num, .mh-line .num' }
+const HEADS = { presentation: '.ch > span:first-child', poster: '.pn-sec', grid: '.tp-h, .mh-sec' }
 
 // The Google Fonts answers: one stylesheet naming the two project faces, and the files.
 const FACE_FILES = { Outfit: 'outfit-latin.woff2', Manrope: 'manrope-latin.woff2' }
@@ -263,7 +275,18 @@ async function clipsInk(page, index) {
   return Buffer.compare(hidden, visible) !== 0
 }
 
-const LOGO_HEADS = ['The mark', 'On grounds', 'Clear space']
+// The section labels a logo deck prints, by template.
+const LOGO_HEADS = {
+  presentation: ['Logo', 'Logo · Clear space', 'Appendix · Logo'],
+  poster: ['The mark', 'On grounds', 'Clear space'],
+  grid: ['The mark', 'On grounds', 'Clear space'],
+}
+// A label that belongs to a logo slide: with no logo none may appear.
+const isLogoHead = {
+  presentation: (h) => h.startsWith('Logo') || h === 'Appendix · Logo',
+  poster: (h) => [...LOGO_HEADS.poster, 'Logo'].includes(h),
+  grid: (h) => [...LOGO_HEADS.grid, 'Logo'].includes(h),
+}
 const shortName = (name) => (name.length > 24 ? name.slice(0, 21) + '...' : name)
 
 // Every case is [template, name, palette size, logo key or null].
@@ -363,9 +386,10 @@ for (const [template, name, n, logo] of CASES) {
     test('slide numbers are true', async () => {
       const nums = screen.numbers
       if (template === 'presentation') {
-        // The folio is the slide's place in the PDF (the cover is 1). The cover and the openings carry none.
+        // The folio is the slide's place in the PDF (the cover is 1). The cover carries none; every slide after it does.
+        expect(nums[0], 'the cover prints no folio').toBe('')
         expect(nums.filter(Boolean).length, 'most content slides print a folio').toBeGreaterThanOrEqual(4)
-        expect(nums.map((t, i) => (t ? `${i + 1}:${t}` : '')).filter(Boolean).filter((x) => x.split(':')[0].padStart(2, '0') !== x.split(':')[1]), 'a slide prints a folio that is not its own place in the PDF').toEqual([])
+        expect(nums.slice(1), 'a slide prints a folio that is not its own place in the PDF').toEqual(nums.slice(1).map((_, i) => String(i + 2).padStart(2, '0')))
       } else {
         // The cover prints the year in the same place; every slide after it prints its own number.
         expect(nums[0], 'the cover prints the year').toBe('2026')
@@ -403,10 +427,10 @@ for (const [template, name, n, logo] of CASES) {
       const heads = screen.headings.flat()
       if (logo) {
         expect(screen.images, 'a deck with a logo draws the mark').toBeGreaterThan(2)
-        for (const h of LOGO_HEADS) expect(heads, `the logo deck has no "${h}" slide`).toContain(h)
+        for (const h of LOGO_HEADS[template]) expect(heads, `the logo deck has no "${h}" slide`).toContain(h)
       } else {
         expect(screen.images, 'a deck with no logo has an image on a slide').toBe(0)
-        const found = heads.filter((h) => [...LOGO_HEADS, 'Logo'].includes(h))
+        const found = heads.filter(isLogoHead[template])
         expect(found, 'a deck with no logo has a logo slide or section').toEqual([])
       }
     })

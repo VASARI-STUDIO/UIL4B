@@ -144,7 +144,7 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
   const paletteSection = (design?.palette?.colors || []).map((c, i) => {
     const label = PALETTE_LABELS[i] || `Colour ${i + 1}`
     const textColor = contrastText(c)
-    let rgbStr = ''
+    let rgbStr
     try { const [r, g, b] = hexToRgb(c); rgbStr = `rgb(${r}, ${g}, ${b})` } catch { rgbStr = '' }
     return `<div class="sg-color-card" data-hex="${c}">
         <div class="sg-color-swatch" style="background:${c};color:${textColor}">

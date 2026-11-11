@@ -101,7 +101,7 @@ function linesInJsx(src, steps, up, mine) {
     const at = m.index
     const lineStart = src.lastIndexOf('\n', at) + 1
     const sameLine = src.slice(lineStart, src.indexOf('\n', at))
-    let audience = 'both'
+    let audience
     if (at < mineAt) audience = sameLine.includes('!mine &&') ? 'kerb' : 'both'
     else if (at < kerbAt) audience = 'mine'
     else if (at < spacerAt) audience = 'kerb'

@@ -86,7 +86,7 @@ export function stampPreviewDraft(now = Date.now()) {
 export function readPreviewDraft(now = Date.now()) {
   const s = store()
   if (!s) return null
-  let draft = null
+  let draft
   try { draft = validatePreviewDraft(JSON.parse(s.getItem(PREVIEW_DRAFT_KEY)), now) } catch { draft = null }
   if (draft && draft.leftAt !== undefined) return draft
   clearPreviewDraft()

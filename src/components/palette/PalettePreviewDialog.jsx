@@ -230,7 +230,7 @@ function SceneStrip({ sceneId, pendingId, onPick, isLocked }) {
 function StateList({ states, value, onPick, listRef }) {
   const onKeyDown = (e) => {
     const i = states.findIndex((s) => s.id === value)
-    let next = i
+    let next
     if (e.key === 'ArrowDown') next = Math.min(i + 1, states.length - 1)
     else if (e.key === 'ArrowUp') next = Math.max(i - 1, 0)
     else if (e.key === 'Home') next = 0

@@ -81,7 +81,7 @@ export function fitTitle(name, { maxLines = 3, steps = [], measure = 100, advanc
       const width = titleWidth(word)
       const need = used ? used + 1 + width : width
       if (need <= cap) { used = need; continue }
-      if (used) { lines += 1; used = 0 }
+      if (used) lines += 1
       if (width > cap) {
         broken = true
         lines += Math.ceil(width / cap) - 1
@@ -197,7 +197,7 @@ export function paletteLayout(n, template = 'specification', kinds = null) {
  * is '' and the page falls back to the system face rather than failing to render.
  */
 export function chromeFor(chrome, fontData) {
-  let base64 = null
+  let base64
   try { base64 = typeof fontData === 'function' ? fontData(chrome.file) : null } catch { base64 = null }
   return chromeFace(chrome, base64)
 }
