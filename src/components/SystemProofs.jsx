@@ -13,157 +13,117 @@
 // caption on evidence rather than as a promise.
 // https://mobbin.com/sites/sections/ce305258-5218-49f8-8cf0-cc49059d10e4
 //
-// ── The four written-down hexes, and why they are allowed ─────────────────
+// ── The written-down hexes, and why they are allowed ──────────────────────
 //
-// Three of these proofs are about BOTH themes at once and only one theme is
-// ever mounted, so the other theme's values cannot be read out of the running
-// document. They are written down here — and read back out of
-// src/styles/global.css by tests/unit/help-and-principles-claims.test.js, which
-// fails if either theme's --bg-0 or --accent-strong moves. That check is the
-// reason the constants are allowed to exist at all; it is the same arrangement
-// BrandRampTable.jsx uses for the Learn guide, for the same reason.
-import { useMemo } from 'react'
+// The theme pair shows BOTH themes at once and only one theme is ever mounted,
+// so the other theme's values cannot be read out of the running document.
+// They are written down here — and read back out of src/styles/global.css by
+// tests/unit/help-and-principles-claims.test.js, which fails if any of them
+// moves. That check is the reason the constants are allowed to exist at all;
+// it is the same arrangement BrandRampTable.jsx uses for the Learn guide, for
+// the same reason. Every ratio printed from them is computed, never typed.
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { contrastRatio } from '../utils/colors'
+import { contrastRatio, mixHex } from '../utils/colors'
 import { stepName, stepPx } from '../utils/fluidType'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { documentFormats, freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
 import { LIVE_TOOLS, SOON_TOOLS } from '../data/helpStart'
 import { useIsAdmin } from '../hooks/useIsAdmin'
+import { useTheme } from '../contexts/ThemeContext'
 
-/** --bg-0 in each theme, from the :root blocks in src/styles/global.css. */
+/** The ground, --bg-0, in each theme (src/styles/global.css). */
 const LIGHT_GROUND = '#F5F5F2'
 const DARK_GROUND = '#060607'
-/** --link in each theme — the design's link colour (UIL4B App.dc.html lines 19-21). */
-const LIGHT_LINK = '#1F4FD8'
-const DARK_LINK = '#8FAEFF'
-/**
- * The fill this proof was written against. It is not the product's accent:
- * --accent (#2A60E8) measures 4.88:1 on the light page and so does not
- * demonstrate the boundary-only case. Pinned until Principle 1's proof is
- * rewritten.
- */
-const LIGHT_FILL = '#0F6FFF'
-
-/** WCAG 2.2 SC 1.4.3 (text) and SC 1.4.11 (component boundaries). */
-const TEXT_MIN = 4.5
-const BOUNDARY_MIN = 3
-
-/** Light --t0. The ink both samples' own labels are set in, so the proof about
- *  contrast does not itself ship text below its floor. */
+/** The primary ink, --t0. */
 const LIGHT_INK = '#0F0F10'
-/** Light --t1, --t2 and --border: the quieter inks and the hairline of the
- *  contrast proof's fixed light ground (see ContrastProof). */
-const LIGHT_DIM = '#50504A'
-const LIGHT_FAINT = '#5F5F59'
-const LIGHT_LINE = '#DAD8CF'
+const DARK_INK = '#F2F1EC'
+/** The secondary ink, --t1. */
+const LIGHT_INK_2 = '#50504A'
+const DARK_INK_2 = '#BFBEB6'
+/** The tertiary ink, --t3: the quietest ink that still reads as text. */
+const LIGHT_INK_3 = '#66665F'
+const DARK_INK_3 = '#8E8E88'
+
+const GROUND = { light: LIGHT_GROUND, dark: DARK_GROUND }
+const INK = { light: LIGHT_INK, dark: DARK_INK }
+const INK_3 = { light: LIGHT_INK_3, dark: DARK_INK_3 }
+
+/** WCAG 2.2 SC 1.4.3 (text). */
+const TEXT_MIN = 4.5
+
+/** The theme the page is painted in; dark when no provider is mounted. */
+function useThemeName() {
+  const ctx = useTheme()
+  return ctx?.theme === 'light' ? 'light' : 'dark'
+}
 
 /**
- * Principle 1. The same blue, one step apart, each shown doing the job its
- * measured ratio permits — which is the reason the product ships two roles
- * rather than one value used everywhere.
+ * Principle 1. The product's own ink at two strengths, on the ground of the
+ * theme the reader is in, each with the ratio it measures. One strength is the
+ * tertiary ink token and clears the text floor; the other is the primary ink at
+ * 40% and does not, which is why the product ships a step between them rather
+ * than a single value used everywhere.
  *
- * THE SECOND ROW IS NOT RENDERED AS TEXT, deliberately. --accent measures
- * 3.82:1 on the light ground: above SC 1.4.11's 3:1 floor for a boundary,
- * below SC 1.4.3's 4.5:1 for text. Painting the words in it to illustrate the
- * shortfall would have put a genuinely unreadable line on a page whose whole
- * argument is that the threshold is not negotiable. So it is drawn as the
- * boundary it is allowed to be, and the sentence beside it does the explaining.
+ * Both ratios are measured on the painted (rounded) hex, so the number printed
+ * is the number of the colour on the screen.
  */
 export function ContrastProof() {
-  const rows = useMemo(() => ([
-    {
-      hex: LIGHT_LINK,
-      job: 'text',
-      role: 'Links and body text',
-      ratio: contrastRatio(LIGHT_LINK, LIGHT_GROUND),
-    },
-    {
-      hex: LIGHT_FILL,
-      job: 'boundary',
-      role: 'Fills, borders and focus rings',
-      ratio: contrastRatio(LIGHT_FILL, LIGHT_GROUND),
-    },
-  ]), [])
+  const theme = useThemeName()
+  const cells = useMemo(() => {
+    const ground = GROUND[theme]
+    const strong = INK_3[theme]
+    const faint = mixHex(ground, INK[theme], 0.4)
+    return [
+      { id: 'read', label: 'Read this', hex: strong, ratio: contrastRatio(strong, ground) },
+      { id: 'not', label: 'Not this', hex: faint, ratio: contrastRatio(faint, ground) },
+    ]
+  }, [theme])
 
   return (
-    // ONE surface. The figure is the light ground the ratios are measured on
-    // (it was a tinted tile and an outlined pill inside a white card: a card in
-    // a card), and the two samples are specimens set straight on it. The inks
-    // and hairline are pinned to light's own so the measurement reads the same
-    // in either theme.
-    <figure
-      className="prn-cx"
-      style={{
-        background: LIGHT_GROUND,
-        '--cpg-ink': LIGHT_INK,
-        '--cpg-dim': LIGHT_DIM,
-        '--cpg-faint': LIGHT_FAINT,
-        '--cpg-line': LIGHT_LINE,
-      }}
-    >
-      <ul className="prn-cx-rows">
-        {rows.map((r) => {
-          const floor = r.job === 'text' ? TEXT_MIN : BOUNDARY_MIN
-          return (
-            <li className="prn-cx-row" key={r.hex} data-job={r.job}>
-              {r.job === 'text' ? (
-                <span className="prn-cx-sample" style={{ color: r.hex }}>
-                  Read this
-                </span>
-              ) : (
-                <span
-                  className="prn-cx-sample"
-                  style={{ borderColor: r.hex, color: LIGHT_INK }}
-                  data-boundary="true"
-                >
-                  Not this
-                </span>
-              )}
-              <span className="prn-cx-read">
-                <span className="prn-cx-ratio">{r.ratio.toFixed(2)}:1</span>
-                <span className="prn-cx-verdict">
-                  {r.job === 'text'
-                    ? `over ${floor}:1, the floor for text`
-                    : `over ${floor}:1 but under ${TEXT_MIN}:1 — a boundary, never a word`}
-                </span>
-              </span>
-              <span className="prn-cx-role">
-                <b>{r.hex}</b>
-                {r.role}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
+    <figure className="prn-cx">
+      <div className="prn-cx-cells">
+        {cells.map((c) => (
+          <div className="prn-cx-cell" key={c.id} data-job={c.id}>
+            <span className="prn-cx-sample" style={{ color: c.hex }}>{c.label}</span>
+            <span className="prn-cx-read">
+              <span className="prn-cx-ratio">{c.ratio.toFixed(2)}:1</span>
+              <span className="prn-cx-hex">{c.hex}</span>
+            </span>
+          </div>
+        ))}
+      </div>
       <figcaption className="prn-cap">
-        The product&rsquo;s own blue at two lightnesses on its own light ground,
-        measured here by <code>contrastRatio()</code>. One step decides which of
-        the two jobs each value is allowed to take.
+        The product&rsquo;s own ink at two strengths on its own ground, measured
+        here by <code>contrastRatio()</code>. One step decides which of the two
+        jobs each value is allowed to take.
       </figcaption>
     </figure>
   )
 }
 
 /**
- * Principle 2. One role, one name, two values — and both clear the same floor
- * on their own ground, which an inversion of either would not.
+ * Principle 2. One role, two values, one per ground — and each clears the same
+ * floor on its own ground, which an inversion of either would not. The role is
+ * the secondary ink.
  */
 export function ThemeValueProof() {
   const panels = useMemo(() => ([
-    { theme: 'Light', ground: LIGHT_GROUND, ink: LIGHT_LINK, ratio: contrastRatio(LIGHT_LINK, LIGHT_GROUND) },
-    { theme: 'Dark', ground: DARK_GROUND, ink: DARK_LINK, ratio: contrastRatio(DARK_LINK, DARK_GROUND) },
-  ]), [])
+    { theme: 'Dark', ground: DARK_GROUND, ink: DARK_INK, ink2: DARK_INK_2 },
+    { theme: 'Light', ground: LIGHT_GROUND, ink: LIGHT_INK, ink2: LIGHT_INK_2 },
+  ].map((p) => ({ ...p, ratio: contrastRatio(p.ink2, p.ground) }))), [])
 
   return (
     <figure className="prn-th">
       <div className="prn-th-grid">
         {panels.map((p) => (
-          <div className="prn-th-panel" key={p.theme} style={{ background: p.ground }}>
-            <span className="prn-th-theme" style={{ color: p.ink }}>{p.theme}</span>
-            <span className="prn-th-token" style={{ color: p.ink }}>--link</span>
-            <span className="prn-th-hex" style={{ color: p.ink }}>{p.ink}</span>
-            <span className="prn-th-ratio" style={{ color: p.ink }}>{p.ratio.toFixed(2)}:1</span>
+          <div className="prn-th-panel" key={p.theme} style={{ background: p.ground, color: p.ink }}>
+            <span className="prn-th-theme">{p.theme}</span>
+            <span className="prn-th-aa" style={{ color: p.ink2 }} aria-hidden="true">Aa</span>
+            <span className="prn-th-read">
+              <span className="prn-th-ratio">{p.ratio.toFixed(2)}:1</span>
+              <span className="prn-th-hex" style={{ color: p.ink2 }}>{p.ink2} on {p.ground}</span>
+            </span>
           </div>
         ))}
       </div>
@@ -178,9 +138,19 @@ export function ThemeValueProof() {
 /** The steps the ladder shows. Enough to see the ratio compounding, no more. */
 const LADDER_STEPS = [3, 2, 1, 0, -1]
 
+/** Rows stagger outward from the base step, this far apart. */
+const LADDER_STAGGER_MS = 100
+/** Share of the ladder that must be on screen before it plays. */
+const LADDER_PLAY_AT = 0.4
+
 /**
  * Principle 3. The ladder is not a list of chosen sizes; it is base × ratio^step
  * evaluated in front of the reader by the type scale's own function.
+ *
+ * It plays once: the rows are held back until 40% of the ladder is on screen,
+ * then each rises and fades in, base first and outward, 100ms apart. The hold
+ * is skipped when there is no IntersectionObserver, so the rows can never stay
+ * hidden. Under reduced motion the CSS keeps the fade and drops the rise.
  */
 export function TypeLadderProof() {
   const { base, ratio } = DEFAULT_DESIGN.typeScale
@@ -190,20 +160,38 @@ export function TypeLadderProof() {
     px: stepPx(base, ratio, exp, 'half'),
   })), [base, ratio])
 
+  const ref = useRef(null)
+  const [played, setPlayed] = useState(() => typeof IntersectionObserver === 'undefined')
+  useEffect(() => {
+    const el = ref.current
+    if (played || !el) return undefined
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setPlayed(true)
+        io.disconnect()
+      }
+    }, { threshold: LADDER_PLAY_AT })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [played])
+
   return (
     <figure className="prn-ty">
-      <ol className="prn-ty-rows">
-        {rows.map((r) => (
-          <li className="prn-ty-row" key={r.name}>
+      <ol className="prn-ty-rows" ref={ref} data-play={played ? 'on' : 'armed'}>
+        {rows.map((r, i) => (
+          <li className="prn-ty-row" key={r.name} style={{ '--dl': `${Math.abs(r.exp) * LADDER_STAGGER_MS}ms` }}>
             <span className="prn-ty-spec" style={{ fontSize: `${r.px}px` }}>Ag</span>
             <span className="prn-ty-name">{r.name}</span>
-            <span className="prn-ty-px">{r.px}px</span>
+            <span className="prn-ty-step">
+              <span className="prn-ty-px">{r.px}px</span>
+              {i > 0 && <span className="prn-ty-x" aria-hidden="true">&times;{ratio}</span>}
+            </span>
           </li>
         ))}
       </ol>
       <figcaption className="prn-cap">
         <code>{base} &times; {ratio}<sup>step</sup></code>, evaluated by{' '}
-        <code>stepPx()</code>. Change either number and every row moves — which is
+        <code>stepPx()</code>. Change either number and every row moves: which is
         why a scale hands over as two numbers rather than five.
       </figcaption>
     </figure>

@@ -18,7 +18,7 @@ import { expectRendered, go, signIn, watch } from './helpers.js'
 import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { EXPORT_FORMATS, documentFormats } from '../../src/config/exportFormats.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
-import { contrastRatio, generateTintScale, T_LABELS } from '../../src/utils/colors.js'
+import { contrastRatio, generateTintScale, mixHex, T_LABELS } from '../../src/utils/colors.js'
 import { stepPx } from '../../src/utils/fluidType.js'
 import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 
@@ -179,12 +179,12 @@ test.describe('Design Principles', () => {
     expect(numeral, 'a rule heading carries a generated numeral').toMatch(/^(none|normal)$/)
     // The samples sit left in their row and carry no pointer cursor.
     const samples = await page.locator('.prn-cx-sample').evaluateAll((els) => els.map((el) => {
-      const row = el.closest('.prn-cx-row').getBoundingClientRect()
+      const row = el.closest('.prn-cx-cell').getBoundingClientRect()
       return { cursor: getComputedStyle(el).cursor, left: Math.round(el.getBoundingClientRect().left - row.left) }
     }))
     for (const s of samples) {
       expect(s.cursor, 'a sample shows a pointer cursor').not.toBe('pointer')
-      expect(s.left, 'a sample is not left-aligned in its row').toBeLessThanOrEqual(1)
+      expect(s.left, 'a sample is not left-aligned in its cell').toBeLessThanOrEqual(40)
     }
 
     await revealAll(page)
@@ -225,30 +225,24 @@ test.describe('Design Principles', () => {
       const s = getComputedStyle(document.documentElement)
       return {
         ground: s.getPropertyValue('--bg-0').trim(),
-        link: s.getPropertyValue('--link').trim(),
+        ink: s.getPropertyValue('--t0').trim(),
+        third: s.getPropertyValue('--t3').trim(),
       }
     })
-    // The FILL is pinned to the value Principle 1's proof was written against.
-    // The live --accent (#2A60E8) clears 4.5:1 on the light page and cannot
-    // show the boundary-only case, so that proof is owed new copy;
-    // help-and-principles-claims.test.js pins the same.
-    tokens.fill = '#0F6FFF'
+    const faint = mixHex(tokens.ground, tokens.ink, 0.4)
     const expected = [
-      `${contrastRatio(tokens.link, tokens.ground).toFixed(2)}:1`,
-      `${contrastRatio(tokens.fill, tokens.ground).toFixed(2)}:1`,
+      `${contrastRatio(tokens.third, tokens.ground).toFixed(2)}:1`,
+      `${contrastRatio(faint, tokens.ground).toFixed(2)}:1`,
     ]
     await expect(page.locator('.prn-cx-ratio')).toHaveText(expected)
 
-    // The split is the argument: one clears the text floor, the other does not.
-    expect(contrastRatio(tokens.link, tokens.ground)).toBeGreaterThanOrEqual(4.5)
-    expect(contrastRatio(tokens.fill, tokens.ground)).toBeLessThan(4.5)
+    // The split is the argument: one strength clears the text floor, the other does not.
+    expect(contrastRatio(tokens.third, tokens.ground)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(faint, tokens.ground)).toBeLessThan(4.5)
 
-    // And the one that does not is NOT painted as text — putting an unreadable
-    // line on this page would contradict the page.
-    const boundary = page.locator('.prn-cx-sample[data-boundary="true"]')
-    await expect(boundary).toHaveCount(1)
-    const ink = await boundary.evaluate((el) => getComputedStyle(el).color)
-    expect(ink, 'the sub-threshold blue is being used as text after all').not.toBe(toRgb(tokens.fill))
+    // And each sample is painted in the colour it measures.
+    const inks = await page.locator('.prn-cx-sample').evaluateAll((els) => els.map((el) => getComputedStyle(el).color))
+    expect(inks).toEqual([toRgb(tokens.third), toRgb(faint)])
   })
 
   test('the export and Soon proofs read the same tables the product reads', async ({ page }) => {

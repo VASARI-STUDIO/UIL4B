@@ -200,94 +200,117 @@
 /* Inline code that has to stay one token in a narrow column (useShortCode). */
 .prn code[data-short] { white-space: nowrap; }
 
-/* Proof 1 — the two blues, each doing the job its ratio permits.
- * NO background or border on the row any more: the panel is the box. */
-.prn-cx-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.prn-cx-row {
-  display: grid;
-  grid-template-columns: minmax(112px, auto) minmax(0, 1fr);
-  gap: var(--s-2) var(--s-4);
-  align-items: center;
-  padding: var(--s-4) 0;
-  border-top: 1px solid var(--cpg-line);
-  min-width: 0;
+/* The three proofs that are drawn as surfaces, not as a framed panel: two ink
+ * strengths, a theme pair and the ladder carry their own fills, so the shared
+ * figure frame is taken off them (a card in a card otherwise). Their caption
+ * sits straight under the surface with no rule. */
+.prn-proof > figure.prn-cx,
+.prn-proof > figure.prn-th,
+.prn-proof > figure.prn-ty {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
-.prn-cx-row:first-child { border-top: 0; padding-top: 0; }
-/* Background, colour and border-colour are INLINE here — they are the sample.
- * This rule sets geometry and type only. */
-.prn-cx-sample {
+.prn-cx .prn-cap,
+.prn-th .prn-cap,
+.prn-ty .prn-cap {
+  margin-top: var(--s-4);
+  padding-top: 0;
+  border-top: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--cpg-faint);
+  max-width: 68ch;
+}
+
+/* Proof 1 — the product's own ink at two strengths, on the ground of the theme
+ * the reader is in. Both samples are text, painted in the colour measured. */
+.prn-cx-cells { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-5); }
+.prn-cx-cell {
   display: flex;
-  align-items: center;
-  /* A specimen, not a tile: no fill, no box. The boundary one carries a single
-     2px rule under its word (the way a text field's boundary is drawn); the
-     text one carries nothing. Both reserve the rule's height so the two
-     words share a baseline row to row. */
-  padding: 0 0 var(--s-1);
-  border: 0 solid transparent;
-  border-bottom-width: 2px;
-  font-size: var(--fs-h3);
-  line-height: 1.2;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s-6);
+  min-width: 0;
+  min-height: 240px;
+  padding: var(--s-6);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+.prn-cx-sample {
+  font-size: clamp(36px, 7vw, 64px);
+  line-height: 1;
   font-weight: 600;
+  letter-spacing: -.04em;
   white-space: nowrap;
-  /* A sample, not a control: as wide as its words at every width, left-aligned
-     when the row stacks, and with no pointer cursor. */
-  inline-size: fit-content;
-  justify-self: start;
   cursor: default;
 }
-/* The boundary sample's rule runs the full width of the sample column, so it
-   reads as a field's bottom edge, not an underlined word or a link. */
-.prn-cx-sample[data-boundary="true"] { font-weight: 500; inline-size: auto; justify-self: stretch; }
-.prn-cx-read { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.prn-cx-ratio { font-family: var(--font); font-size: 17px; font-weight: 500; color: var(--cpg-ink); line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-.prn-cx-verdict { font-size: 12.5px; line-height: 1.5; color: var(--cpg-faint); }
-.prn-cx-role {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--s-2);
-  padding-top: var(--s-3);
-  font-size: 12.5px;
-  color: var(--cpg-faint);
-}
-.prn-cx-role b { font-family: var(--mono); font-weight: 500; color: var(--cpg-dim); }
+.prn-cx-read { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; font-size: 15px; line-height: 1.4; color: var(--t1); }
+.prn-cx-ratio { font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -.04em; color: var(--t0); font-variant-numeric: tabular-nums; }
+.prn-cx-hex { font-family: var(--mono); font-size: 12px; color: var(--t1); }
 
-/* Proof 2 — one token name, one value per ground. Both tiles paint their own
- * theme's colours regardless of the theme the reader is in; that is the point,
- * and it is why these two are the only fixed grounds on the page. Their inks
- * are inline and are not touched here.
- * NO OPACITY on either label, and that is a fix rather than a preference:
- * measured 2026-09-15 with the alpha composited, `.prn-th-theme` was 3.61:1
- * light and `.prn-th-hex` 3.93:1, both under the 4.5 floor, on the one page
- * arguing for measured contrast. */
-.prn-th-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+/* Proof 2 — one role, one value per ground. Each tile paints its own theme's
+ * colours regardless of the theme the reader is in; that is the point, and it
+ * is why these two are the only fixed grounds on the page. Their inks are
+ * inline and are not touched here.
+ * NO OPACITY on any label: a label at reduced alpha measured under the 4.5
+ * floor on the one page arguing for measured contrast. */
+.prn-th-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
 .prn-th-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-5);
-  /* A filled tile, not a card: the figure around it already has the border,
-     and a bordered tile in a bordered panel is a card in a card. */
-  border: 0;
-  border-radius: var(--radius-xl);
+  justify-content: space-between;
+  gap: var(--s-5);
   min-width: 0;
+  min-height: 320px;
+  padding: var(--s-6);
 }
-.prn-th-theme { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; }
-.prn-th-token { font-family: var(--mono); font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; }
-.prn-th-hex { font-family: var(--mono); font-size: 12.5px; }
-.prn-th-ratio { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.2; margin-top: var(--s-2); font-variant-numeric: tabular-nums; }
+.prn-th-panel:first-child { border-radius: var(--radius-xl) 0 0 var(--radius-xl); }
+.prn-th-panel:last-child { border-radius: 0 var(--radius-xl) var(--radius-xl) 0; }
+.prn-th-theme { font-size: 13px; line-height: 1.4; font-weight: 600; }
+.prn-th-aa { font-size: 48px; line-height: 1.05; font-weight: 600; letter-spacing: -.04em; }
+.prn-th-read { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.prn-th-ratio { font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.prn-th-hex { font-family: var(--mono); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
 
 /* Proof 3 — the ladder, at the sizes the arithmetic produces.
  * `.prn-ty-spec` HAS NO font-size HERE. It is `stepPx(base, ratio, exponent)`
  * written inline by SystemProofs, and 57-help-and-principles reads all five
- * back and compares them to the same function. */
-.prn-ty-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.prn-ty-row { display: flex; align-items: baseline; gap: var(--s-4); padding: var(--s-2) 0; border-top: 1px solid var(--cpg-line); min-width: 0; }
-.prn-ty-row:first-child { border-top: 0; }
-.prn-ty-spec { flex: 0 0 auto; min-width: 2.6em; font-family: var(--display); font-weight: 600; color: var(--cpg-ink); line-height: 1.05; letter-spacing: -.03em; }
-.prn-ty-name { font-family: var(--mono); font-size: 12.5px; color: var(--cpg-dim); }
-.prn-ty-px { margin-left: auto; font-family: var(--mono); font-size: 12.5px; color: var(--cpg-faint); font-variant-numeric: tabular-nums; }
+ * back and compares them to the same function.
+ * It plays once on scroll: rows rise 12px and fade in, base first and outward
+ * (--dl is set per row), the "×ratio" labels fade with them. */
+.prn-ty-rows {
+  --ty-ease: cubic-bezier(.23, 1, .32, 1);
+  list-style: none;
+  margin: 0;
+  padding: var(--s-5) var(--s-6);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+.prn-ty-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) 72px minmax(0, 1.6fr);
+  align-items: baseline;
+  column-gap: var(--s-5);
+  padding: var(--s-3) 0;
+  min-width: 0;
+  opacity: 1;
+  transform: none;
+  transition: opacity 300ms var(--ty-ease), transform 300ms var(--ty-ease);
+  transition-delay: var(--dl, 0ms);
+}
+.prn-ty-row + .prn-ty-row { border-top: 1px solid var(--border); }
+.prn-ty-spec { font-family: var(--display); font-weight: 600; color: var(--t0); line-height: 1.1; letter-spacing: -.04em; }
+.prn-ty-name { font-size: 15px; color: var(--t1); }
+.prn-ty-step { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); min-width: 0; }
+.prn-ty-px { font-family: var(--mono); font-size: 13px; color: var(--t0); font-variant-numeric: tabular-nums; }
+.prn-ty-x { font-family: var(--mono); font-size: 13px; color: var(--t1); transition: opacity 300ms var(--ty-ease); transition-delay: var(--dl, 0ms); }
+.prn-ty-rows[data-play="armed"] .prn-ty-row { opacity: 0; transform: translateY(12px); }
+.prn-ty-rows[data-play="armed"] .prn-ty-x { opacity: 0; }
 
 /* Proof 4 — the export offer, split by the flag that decides whether each
  * button does anything. `.prn-ex-h` is a <p> with an id, and the <ul> beside
@@ -346,8 +369,14 @@
 }
 @media (max-width: 560px) {
   .prn-h1, .prn-lede, .prn-rule, .prn-body { max-width: none; }
-  .prn-cx-row { grid-template-columns: minmax(0, 1fr); }
+  .prn-cx-cells { grid-template-columns: minmax(0, 1fr); }
+  .prn-cx-cell { min-height: 0; }
   .prn-th-grid { grid-template-columns: minmax(0, 1fr); }
+  .prn-th-panel { min-height: 0; }
+  .prn-th-panel:first-child { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+  .prn-th-panel:last-child { border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
+  .prn-ty-rows { padding: var(--s-4) var(--s-5); }
+  .prn-ty-row { grid-template-columns: minmax(56px, 1fr) 48px minmax(0, 2fr); column-gap: var(--s-3); }
   .prn-proof > figure { border-radius: var(--radius-xl); }
 }
 
@@ -386,5 +415,25 @@
   :where(html:not([data-reduced-motion="false"])) .prn .prn-go:hover span,
   :where(html:not([data-reduced-motion="false"])) .prn .prn-go:focus-visible span {
     transform: none !important;
+  }
+}
+
+/* The ladder under reduced motion: the fade stays, the rise goes. The global
+   clamp zeroes every duration with !important, so the fade is restored here at
+   a higher specificity and the stagger is dropped. */
+:where(html[data-reduced-motion="true"]) .prn .prn-ty-rows[data-play="armed"] .prn-ty-row { transform: none; }
+html[data-reduced-motion="true"] .prn .prn-ty-row,
+html[data-reduced-motion="true"] .prn .prn-ty-x {
+  transition-property: opacity !important;
+  transition-duration: 300ms !important;
+  transition-delay: 0s !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .prn .prn-ty-rows[data-play="armed"] .prn-ty-row { transform: none; }
+  html:not([data-reduced-motion="false"]) .prn .prn-ty-row,
+  html:not([data-reduced-motion="false"]) .prn .prn-ty-x {
+    transition-property: opacity !important;
+    transition-duration: 300ms !important;
+    transition-delay: 0s !important;
   }
 }

@@ -244,11 +244,10 @@ const ALLOWED = {
   },
   'pages/principles.css': {
     '.prn-cap code': 'code',
-    '.prn-cx-role b': 'token',
+    '.prn-cx-hex': 'hex',
     '.prn-th-hex': 'hex',
-    '.prn-th-token': 'token',
-    '.prn-ty-name': 'token',
     '.prn-ty-px': 'value',
+    '.prn-ty-x': 'value',
   },
   'pages/projects.css': {
   },

@@ -24,7 +24,7 @@ import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { isPrivateRoute, isSoonRoute } from '../../src/utils/routeMeta.js'
-import { contrastRatio, generateTintScale, T_LABELS } from '../../src/utils/colors.js'
+import { contrastRatio, generateTintScale, mixHex, T_LABELS } from '../../src/utils/colors.js'
 import { stepPx } from '../../src/utils/fluidType.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css on
@@ -217,20 +217,19 @@ function themeToken(theme, token) {
   return hit[1].toUpperCase()
 }
 
-test('the hexes the proofs draw are still the product\'s own values', () => {
-  // These four cannot be read out of the running document, because three of the
-  // proofs are about BOTH themes at once and only one is ever mounted. This is
-  // the check that makes writing them down safe.
+test('the hexes the proofs draw are still the product’s own values', () => {
+  // These cannot be read out of the running document, because the theme pair
+  // shows BOTH themes at once and only one is ever mounted. This is the check
+  // that makes writing them down safe.
   const expected = {
     LIGHT_GROUND: themeToken('light', '--bg-0'),
     DARK_GROUND: themeToken('dark', '--bg-0'),
-    LIGHT_LINK: themeToken('light', '--link'),
-    DARK_LINK: themeToken('dark', '--link'),
-    // PINNED, not read: the proof's fill is the previous accent. The live
-    // --accent (#2A60E8) clears 4.5:1 on the light page and cannot demonstrate
-    // the boundary-only case, so Principle 1's proof is owed new copy.
-    LIGHT_FILL: '#0F6FFF',
     LIGHT_INK: themeToken('light', '--t0'),
+    DARK_INK: themeToken('dark', '--t0'),
+    LIGHT_INK_2: themeToken('light', '--t1'),
+    DARK_INK_2: themeToken('dark', '--t1'),
+    LIGHT_INK_3: themeToken('light', '--t3'),
+    DARK_INK_3: themeToken('dark', '--t3'),
   }
   for (const [name, value] of Object.entries(expected)) {
     const declared = PROOFS_SRC.match(new RegExp(`const ${name} = '(#[0-9A-Fa-f]{6})'`))
@@ -242,18 +241,18 @@ test('the hexes the proofs draw are still the product\'s own values', () => {
   }
 })
 
-test('the contrast proof still demonstrates the split it claims', () => {
-  const ground = themeToken('light', '--bg-0')
-  const link = contrastRatio(themeToken('light', '--link'), ground)
-  const fill = contrastRatio('#0F6FFF', ground)
-
-  // The whole argument of the first principle: one of these two is text-safe
-  // and one is not. If the palette ever moves so both pass, or both fail, the
-  // page is still true but the proof no longer shows anything and must be
-  // rewritten rather than left standing.
-  assert.ok(link >= 4.5, `--accent-strong is ${link.toFixed(2)}:1 and no longer clears the text floor`)
-  assert.ok(fill < 4.5, `--accent is ${fill.toFixed(2)}:1 and now clears the text floor, so the proof shows nothing`)
-  assert.ok(fill >= 3, `--accent is ${fill.toFixed(2)}:1 and no longer clears the boundary floor either`)
+test('the contrast proof and the theme pair still make the claims their captions state', () => {
+  // The theme pair says both values clear 4.5:1 on their own ground; the
+  // contrast proof says one strength reads as text and the other does not.
+  for (const theme of ['light', 'dark']) {
+    const ground = themeToken(theme, '--bg-0')
+    const second = contrastRatio(themeToken(theme, '--t1'), ground)
+    assert.ok(second >= 4.5, `${theme} --t1 is ${second.toFixed(2)}:1 and no longer clears the text floor`)
+    const third = contrastRatio(themeToken(theme, '--t3'), ground)
+    assert.ok(third >= 4.5, `${theme} --t3 is ${third.toFixed(2)}:1 and no longer clears the text floor`)
+    const faint = contrastRatio(mixHex(ground, themeToken(theme, '--t0'), 0.4), ground)
+    assert.ok(faint < 4.5, `${theme} ink at 40% is ${faint.toFixed(2)}:1 and now clears the text floor, so "Not this" shows nothing`)
+  }
 })
 
 /* ── the ramp on /help is the ramp the Colour Studio generates ───────────── */
