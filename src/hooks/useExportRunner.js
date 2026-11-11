@@ -17,8 +17,11 @@ import { storePick } from '../utils/kitGalleryPick'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import { readExportTemplates } from '../config/exportTemplates'
 import { needsNetwork, resolveUpgradeTarget } from '../config/dialogExport'
+import { requestThemeExport, printInWindow } from '../utils/exportThemeRequest'
+import { themedFile, themedFileIsPro, themedZipName } from '../config/exportThemePicker'
 import { buildCodeFile, codeFileName, CODE_FILES, isCodeFile } from '../utils/codeFiles'
 import { formatFileName } from '../utils/exportFileName'
+import { readIdentity } from '../utils/kitIdentity'
 
 // Everything that happens between a click on Export and a file in the downloads
 // folder: the gates, the build, the download. The dialog owns what is on screen;
@@ -47,7 +50,7 @@ import { formatFileName } from '../utils/exportFileName'
 export const PRO_GATE = {
   book: {
     gate: 'design-system-book-export',
-    eyebrow: 'UIL4B Pro',
+    eyebrow: 'UI L4B Pro',
     title: 'Export the design system book',
     subtitle: 'An A4 book of your system: cover, contents, colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
     features: [
@@ -60,7 +63,7 @@ export const PRO_GATE = {
   },
   guidelines: {
     gate: 'brand-guidelines-export',
-    eyebrow: 'UIL4B Pro',
+    eyebrow: 'UI L4B Pro',
     title: 'Export the brand guidelines',
     subtitle: 'A 16:9 landscape brand book of your system: cover, numbered sections, named swatches, alphabet grids, and your palette set in your own type. Add a logo and it gains a logo section. The style guide stays free.',
     features: [
@@ -72,7 +75,7 @@ export const PRO_GATE = {
   },
   'app-bundle': {
     gate: 'app-ready-bundle-export',
-    eyebrow: 'UIL4B Pro',
+    eyebrow: 'UI L4B Pro',
     title: 'Export the app-ready bundle',
     subtitle: 'One zip of your system, ready for the apps you design and build in, with a folder for each app and a README that says where to start. The style guide and the code tokens stay free.',
     features: [
@@ -178,7 +181,8 @@ const showDocument = (html, filename, win, title) => {
 
 /**
  * The export engine behind the dialog.
- *   run(formatId, { projectId })  make the file; see the statuses above
+ *   run(formatId, { projectId, theme, signIn })  make the file; see the statuses above. `signIn(reason)` is an
+ *                                 optional async gate for a signed-out visitor: true once signed in, false if dismissed
  *   copy(formatId)                put a Code file on the clipboard: { ok, count } (count is the
  *                                 number of tokens). Never asks for an account. Raises no toast.
  *   upgradeTarget(formatId, projectId)  where a Pro pick goes for this account: { to, checkout, pick, gate }
@@ -267,7 +271,7 @@ export default function useExportRunner() {
     return { status: 'upgrade', to: target.to }
   }
 
-  const runExport = async (format, projectId) => {
+  const runExport = async (format, projectId, theme, signIn) => {
     // The name the dialog shows on the file: the open project's, else the design's own.
     // `fileProject` is that name as typed ('' for an unnamed project), which the file
     // names are made from; `projectName` is what the documents print, with a stand-in.
@@ -290,7 +294,10 @@ export default function useExportRunner() {
     // trip. It is not what protects the document. The server decides, from the
     // account's own record, and the generators are not in this page (see
     // PRO_DOCUMENT above), so a forged `isPro` here reaches a 403 and no file.
-    if (fmt.pro && !isPro) return goUpgrade(format, projectId, Boolean(user))
+    // A file that takes a theme is Pro or free by the route's own table (isThemeExportPro), so the button and the server agree.
+    const themed = theme && themedFile(format) ? themedFile(format) : null
+    const needsPro = themed ? themedFileIsPro(format, theme) : Boolean(fmt.pro)
+    if (needsPro && !isPro) return goUpgrade(format, projectId, Boolean(user))
 
     // ── OFFLINE. ───────────────────────────────────────────────────────────
     // The server builds the book and the slides and the kit fetches its fonts, so
@@ -300,19 +307,19 @@ export default function useExportRunner() {
     // A paid file the server builds (the book as PDF or HTML, the guidelines) asks the
     // server; a paid file drawn here (the book as PNG) does not. Both are behind the same plan check.
     // Only the PDF opens a print window; the HTML is saved as a file.
-    const paidFile = Boolean(fmt.pro)
+    const paidFile = needsPro
     const bookPng = format === 'book-png'
     // The app-ready zip is also drawn here, from the saved design.
     const appBundle = format === 'app-bundle'
     const htmlDocument = format === 'book-html' || format === 'guidelines-html'
-    const proDocument = paidFile && !bookPng && !appBundle
+    const proDocument = paidFile && !themed && !bookPng && !appBundle
     // The document the server is asked for: the HTML variants are the same document.
     const documentKey = htmlDocument ? fmt.variantOf : format
 
     // The window the document will print in, opened NOW, inside the click. The
     // server round trip below is a network wait, and a window opened after it is
     // blocked by Safari. Every way out of this function closes it again.
-    let printWin = proDocument && !htmlDocument ? reservePrintWindow() : null
+    let printWin = (proDocument && !htmlDocument) || (themed && themed.format === 'pdf') ? reservePrintWindow() : null
     const closePrintWin = () => { releasePrintWindow(printWin); printWin = null }
 
     // ── ACCOUNT GATE ──────────────────────────────────────────────────────
@@ -322,7 +329,9 @@ export default function useExportRunner() {
     const tokenFile = isCodeFile(format)
     const reason = format === 'kit' ? 'export this UI kit' : tokenFile ? 'export these design tokens' : bookPng ? 'export this design system book' : appBundle ? 'export this app-ready bundle' : 'export this style guide'
     const signedOut = !user
-    if (!(await requireExportAccount(reason))) { closePrintWin(); return { status: 'cancelled' } }
+    // A caller with its own sign-in (the dialog's inline panel) passes `signIn`; it resolves true once an account is signed in.
+    const accountOk = !user && signIn ? await signIn(reason) : await requireExportAccount(reason)
+    if (!accountOk) { closePrintWin(); return { status: 'cancelled' } }
 
     // ── THE PLAN OF AN ACCOUNT THAT JUST SIGNED IN. ───────────────────────
     // `isPro` above is the signed-out visitor's: free. Someone who is Pro and
@@ -356,28 +365,28 @@ export default function useExportRunner() {
     let savedFile = ''
     let opened = false
     try {
-      if (format === 'kit') {
-        // The kit is built in the browser like everything else here, but it
-        // fetches the selected font files first so the document opens offline.
-        // Loaded on demand: the template and the font fetcher cost nothing to
-        // anyone who never exports a kit. The tier is the live entitlement.
-        const { buildUiKit } = await import('../utils/uiKitAssets')
-        activation = 'ui-kit'
-        const { blob, filename, missing } = await buildUiKit(design, {
-          tier: proNow ? 'pro' : 'free',
-          projectName,
-          fileProject,
-          template: chosenTemplates.kit,
-          onStage: setStage,
-        })
-        savedFile = download(blob, filename)
-        if (missing.length) {
-          // The kit WAS produced and says the same inside itself; the dialog
-          // carries the notice rather than closing over it.
-          setNotice({
-            lead: 'Your UI kit downloaded.',
-            detail: `${missing.join(' and ')} could not be embedded, so the kit shows ${missing.length > 1 ? 'them' : 'it'} in a fallback font and says so.`,
-          })
+      if (themed) {
+        // A themed file: the server builds it in the chosen theme. A zip is saved under the name the dialog lists (themedZipName); a print row is written
+        // into the reserved window and printed from here (utils/exportThemeRequest.js), never opened from a blob.
+        activation = themed.row === 'ui-kit' ? 'ui-kit' : themed.row === 'book' ? PRO_DOCUMENT.book.activation : PRO_DOCUMENT.guidelines.activation
+        setStage(themed.format === 'pdf' ? 'document' : 'building')
+        labelPrintWindow(printWin, 'Preparing your document…')
+        // A Pro kit is named for the identity name typed in the panel, in the request and on the zip; any other file keeps the project's name.
+        const kitName = themed.row === 'ui-kit' && proNow ? readIdentity(design).name : ''
+        const answer = await requestThemeExport({ theme, row: themed.row, format: themed.format, design, projectName: kitName || projectName }, { loadAuth: loadAuthSdk })
+        if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
+        if (answer.status !== 'ok') throw new Error(answer.line)
+        if (answer.zip) {
+          savedFile = download(answer.zip, themedZipName(kitName || fileProject, format, theme) || answer.name)
+        } else {
+          const file = formatFileName(fileProject, format, { saved: true })
+          opened = printInWindow(printWin, answer.html, { title: formatFileName(fileProject, format).replace(/\.pdf$/, '') })
+          printWin = null
+          if (!opened) {
+            // No usable window: the same script-free document is saved instead.
+            savedFile = download(new Blob([answer.html], { type: 'text/html;charset=utf-8' }), file)
+            setNotice({ lead: 'The document downloaded instead.', detail: 'Your browser blocked the print window. Open the file and print to PDF.' })
+          }
         }
       } else if (bookPng) {
         // The book as page images, drawn on a canvas like the style guide PNG (see
@@ -503,10 +512,10 @@ export default function useExportRunner() {
   // second window and send a second request. The ref is set synchronously, so
   // the second call sees it at once; state would not be updated yet.
   const exporting = useRef(false)
-  const run = async (formatId, { projectId } = {}) => {
+  const run = async (formatId, { projectId, theme, signIn } = {}) => {
     if (exporting.current) return { status: 'busy' }
     exporting.current = true
-    try { return await runExport(formatId, projectId) } finally { exporting.current = false }
+    try { return await runExport(formatId, projectId, theme, signIn) } finally { exporting.current = false }
   }
 
   // Copy a Code file: the same text the download carries (with the credit

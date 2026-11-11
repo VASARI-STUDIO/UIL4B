@@ -20,7 +20,7 @@ import { ICONIFY_HOSTS, ICONIFY_STUB_HEADER, REFUSED_VALUE, isLiveIconify } from
 const LIVE = 'the live API decides what it serves; this spec pins the refused shape'
 const REFUSED = 'visitor whose icon catalogue is refused'
 
-test('the group chips are Coloured, Brand logos and Flags, with no Emoji chip, and the emoji sets stay in the pack menu', async ({ page }) => {
+test('the group chips are All icons, Coloured, Brand logos and Flags, with no Emoji chip, and the emoji sets stay in the pack menu', async ({ page }) => {
   watch(page, 'a designer looking for the icon group chips')
   await page.setViewportSize({ width: 1440, height: 900 })
   await signIn(page, { plan: 'pro' })
@@ -31,8 +31,8 @@ test('the group chips are Coloured, Brand logos and Flags, with no Emoji chip, a
   const tray = page.getByRole('group', { name: 'Filter by icon group' }).first()
   await expect(tray).toBeVisible({ timeout: 20_000 })
   const names = await tray.locator('.lbry-filter').allTextContents()
-  expect(names.map((n) => n.replace(/\s+/g, ' ').trim()), 'PRESENCE: the three chips are there').toEqual([
-    expect.stringMatching(/^Coloured/), expect.stringMatching(/^Brand logos/), expect.stringMatching(/^Flags/),
+  expect(names.map((n) => n.replace(/\s+/g, ' ').trim()), 'PRESENCE: All icons first, then the three group chips').toEqual([
+    expect.stringMatching(/^All icons/), expect.stringMatching(/^Coloured/), expect.stringMatching(/^Brand logos/), expect.stringMatching(/^Flags/),
   ])
   await expect(tray.getByRole('button', { name: /^Emoji/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
@@ -50,9 +50,13 @@ test('Try again after a failed search sends exactly one /search request', async 
   watch(page, REFUSED)
   const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE, 'access-control-allow-origin': '*' }
   const isSearch = (u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/search'
+  // The count of matches in locked sets is a second /search that names only
+  // those sets; it is not the visitor's search and is not counted here.
+  const isCountProbe = (u) => !(u.searchParams.get('prefixes') || '').split(',').includes('lucide')
   let searches = 0
   let refusing = true
   await page.route(isSearch, (route) => {
+    if (isCountProbe(new URL(route.request().url()))) return route.fallback()
     searches += 1
     if (!refusing) return route.fallback()
     return route.fulfill({ status: 503, contentType: 'text/plain', headers, body: 'Service Unavailable' })
@@ -95,9 +99,9 @@ test('a saved custom icon with <animate> and <foreignObject> opens in the custom
   await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20_000 })
   await page.locator('.ig-toolbar button.ig-mine').click()
   await page.locator('.ig .ic', { hasText: 'Custom (pasted 1)' }).click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // Everything the stage draws: the inline host's markup and any image it shows as a data: URI.
-  const drawn = async () => page.locator('.icust-stage').evaluate((el) => (
+  const drawn = async () => page.locator('.ied-ground').evaluate((el) => (
     el.innerHTML + [...el.querySelectorAll('img')].map((i) => decodeURIComponent(i.getAttribute('src') || '')).join('\n')
   ))
   await expect.poll(async () => /<path/i.test(await drawn()), { message: 'POSITIVE CONTROL: the icon is drawn' }).toBe(true)

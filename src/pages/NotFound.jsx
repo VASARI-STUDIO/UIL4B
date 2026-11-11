@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../data/toolTree'
+import { CREATE_GROUPS, DISCOVER_LIBRARIES, createTools } from '../data/toolTree'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -52,7 +52,7 @@ const suggestTool = (id) => {
   if (!tool) throw new Error(`NotFound suggests "${id}", which is not a live tool in CREATE_GROUPS`)
   return { to: tool.route, label: tool.label, desc: GROUP_LABEL[tool.group] }
 }
-const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
+const DISCOVER_LIVE = DISCOVER_LIBRARIES.length
 const SUGGESTIONS = [
   suggestTool('palette'),
   suggestTool('font-pair'),
@@ -94,6 +94,13 @@ export default function NotFound() {
     if (arrivedInApp(pathname)) headingRef.current?.focus()
   }, [pathname])
 
+  // A known route can render this page too (an admin-only route seen by
+  // everyone else), and the app's route title would then name that route. The
+  // tab says what the visitor is looking at; the string matches App.jsx.
+  useEffect(() => {
+    document.title = 'UI L4B | Page not found'
+  }, [pathname])
+
   // The report form opens as a bug report with the broken path filled in.
   const report = new URLSearchParams({ type: 'bug', page: pathname })
   const from = linkingPath(pathname)
@@ -131,6 +138,8 @@ export default function NotFound() {
           {/* The audit found four surfaces pointing here as the way to report a
               problem, so a dead link is exactly the moment to offer it again. */}
           <span className="trail-item"><NavLink to={`/feedback?${report}`}>Report a broken link</NavLink></span>
+          {/* Someone who hit a dead link may be looking for help, not a page. */}
+          <span className="trail-item"><NavLink to="/learn/help">Help centre</NavLink></span>
         </span>
       </p>
     </div>

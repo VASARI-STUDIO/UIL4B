@@ -180,9 +180,6 @@ function StorageSection() {
       <p className="lgl-aside">
         <strong>Note:</strong> &quot;Account-bound&quot; means the data is tied to your account. Signed out, it never leaves your device. While you are signed in, some of it is also stored in your account (Google Firebase). Deleting your account deletes that copy, and clearing local data deletes the device copy.
       </p>
-      <p className="lgl-p">
-        Beyond the keys above, we store small markers named <span className="storage-key">uil4b-event-once:</span> followed by an event name in localStorage. One is set the first time you use a tool, and another the first time you copy or export a result, so each of those events is sent once per browser. They hold no personal information. Clearing your browser&apos;s site data removes them.
-      </p>
     </>
   )
 }

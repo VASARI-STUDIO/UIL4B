@@ -33,7 +33,7 @@
 //
 // ── The one thing here that is typed ────────────────────────────────────────
 //
-// ASSET_CREDITS below. Three sources have no manifest to read — an emoji search
+// ASSET_CREDITS below. Some sources have no manifest to read — an emoji search
 // index built from Unicode CLDR, the emoji shortcodes taken from GitHub's
 // gemoji, and the Iconify API the icon grid fetches through — so their
 // provenance lives in a comment in the script that uses them. They are stated
@@ -100,6 +100,65 @@ const ASSET_CREDITS = [
     used: `Nearest match finds the closest named colour in this set (${sys.version}).`,
     checkedIn: 'scripts/nearest-sources/systems.json',
   })),
+  // Engines fetched from jsDelivr at a pinned version and never bundled, so no
+  // package.json entry generates a row for them. Each `checkedIn` is the file
+  // that pins the URL; the coverage test fails if it stops naming the package.
+  {
+    name: 'FFmpeg (WebAssembly build)',
+    author: 'The FFmpeg developers, compiled by ffmpeg.wasm',
+    url: 'https://github.com/ffmpegwasm/ffmpeg.wasm',
+    licenceUrl: 'https://www.gnu.org/licenses/old-licenses/gpl-2.0.html',
+    licenceName: 'GPL-2.0-or-later',
+    used: 'The File converter’s video, audio and GIF work runs FFmpeg compiled to WebAssembly. That build includes x264 and x265, so the binary is under the GPL even though the npm wrapper around it is MIT. It is loaded from jsDelivr at a pinned version, not served from this site; its source is in the ffmpeg.wasm repository.',
+    checkedIn: 'src/utils/ffmpegEngine.js',
+  },
+  {
+    name: 'occt-import-js',
+    author: 'Viktor Kovacs, on Open CASCADE Technology',
+    url: 'https://github.com/kovacsv/occt-import-js',
+    licenceUrl: 'https://github.com/kovacsv/occt-import-js/blob/main/LICENSE.md',
+    licenceName: 'LGPL-2.1',
+    used: 'STEP, IGES and BREP files open through Open CASCADE compiled to WebAssembly, loaded from jsDelivr at a pinned version.',
+    checkedIn: 'src/utils/cadEngine.js',
+  },
+  {
+    name: 'web-ifc',
+    author: 'That Open Company',
+    url: 'https://github.com/ThatOpen/engine_web-ifc',
+    licenceUrl: 'https://github.com/ThatOpen/engine_web-ifc/blob/main/LICENSE.md',
+    licenceName: 'MPL-2.0',
+    used: 'IFC building models open through web-ifc, loaded from jsDelivr at a pinned version.',
+    checkedIn: 'src/utils/ifcEngine.js',
+  },
+  {
+    name: 'rhino3dm',
+    author: 'Robert McNeel & Associates',
+    url: 'https://github.com/mcneel/rhino3dm',
+    licenceUrl: 'https://github.com/mcneel/rhino3dm/blob/main/LICENSE',
+    licenceName: 'MIT',
+    used: 'Rhino .3dm files open through openNURBS compiled to WebAssembly, loaded from jsDelivr at a pinned version.',
+    checkedIn: 'src/utils/mesh/rhino.js',
+  },
+  {
+    name: 'meshoptimizer',
+    author: 'Arseny Kapoulkine',
+    url: 'https://github.com/zeux/meshoptimizer',
+    licenceUrl: 'https://github.com/zeux/meshoptimizer/blob/master/LICENSE.md',
+    licenceName: 'MIT',
+    used: 'Compressed GLB exports use meshoptimizer’s lossless encoder, loaded from jsDelivr at a pinned version.',
+    checkedIn: 'src/utils/mesh/meshopt.js',
+  },
+  // Switzer is not OFL, so sync-credits.mjs (which reads *-OFL.txt) never sees
+  // it. Its licence does not ask for credit; the row is a courtesy.
+  {
+    name: 'Switzer',
+    author: 'Jérémie Hornus, Indian Type Foundry',
+    url: 'https://www.fontshare.com/fonts/switzer',
+    licenceUrl: 'https://www.fontshare.com/licenses/itf-ffl',
+    licenceName: 'ITF Free Font License 2.0',
+    used: 'The site’s interface typeface, served from this site as the unmodified files from Fontshare. It is never offered as a font in a tool or included in anything you download.',
+    checkedIn: 'scripts/fetch-switzer.mjs',
+  },
 ]
 
 /* jszip is dual-licensed and a dual licence is a CHOICE, not a description.
@@ -107,8 +166,9 @@ const ASSET_CREDITS = [
    leaves a reader unable to tell which notice we are bound to keep. Keyed by
    package name so the row it annotates is still generated. */
 const DEPENDENCY_NOTES = {
-  jszip: 'Dual-licensed. UIL4B elects the MIT half, and keeps the MIT notice with every copy.',
+  jszip: 'Dual-licensed. UI L4B elects the MIT half, and keeps the MIT notice with every copy.',
   gsap: 'Not an open-source licence. Used under GSAP’s own standard “no charge” terms.',
+  '@ffmpeg/core': 'This MIT package only wraps the FFmpeg binary, which is GPL-2.0-or-later. See FFmpeg under Data & services.',
 }
 
 /* NO PER-LINK "(opens in a new tab)". AppFooter carries that span because it has
@@ -212,7 +272,7 @@ export default function Credits() {
       <div className="sec-h">
         <h1>Credits &amp; licences.</h1>
         <p>
-          UIL4B is built on other people’s work. Everything below is here because
+          UI L4B is built on other people’s work. Everything below is here because
           its licence asks for it, or because leaving it out would be mean. Every
           row is read from the same tables the product runs on, so a set, a
           typeface or a package cannot ship here uncredited. Every link out of
@@ -303,6 +363,8 @@ export default function Credits() {
               <Ext href="https://openfontlicense.org/">SIL Open Font License 1.1</Ext>,
               which asks that each font’s own notice travel with the files. These
               are those notices, read out of the licence files beside the fonts.
+              The template previews load further OFL families, each with its
+              licence file beside it.
             </p>
           </div>
           <ul className="crd-list crd-list--fonts">
@@ -398,8 +460,9 @@ export default function Credits() {
           <div className="crd-sec-head">
             <h2 className="crd-h2" id="crd-data">Data &amp; services</h2>
             <p className="crd-sec-note">
-              Sources that are neither a package nor an icon set, and would
-              otherwise go unnamed.
+              Sources that are neither an installed package nor an icon set:
+              data the tools read, engines loaded while you use them, and this
+              site’s own typeface.
             </p>
           </div>
           <ul className="crd-list">

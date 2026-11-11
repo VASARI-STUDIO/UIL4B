@@ -504,6 +504,7 @@ test.describe('the interpolation hint at a width where the two hints differ in l
     let best = []
     for (let w = 320; w <= 700; w += 2) {
       await page.setViewportSize({ width: w, height: 900 })
+      await settle(page)
       const h = await measure()
       expect(h.length, 'both hints are in the panel').toBe(2)
       seen.push(`${w}:${h.join('/')}`)

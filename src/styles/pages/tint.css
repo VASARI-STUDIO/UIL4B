@@ -150,7 +150,7 @@
   font-family: var(--font);
 }
 .tt .tt-note-sw { width: 20px; height: 20px; border-radius: 6px; flex: 0 0 auto; background: var(--tt-c, transparent); }
-.tt .tt-note-step { width: 34px; flex: 0 0 auto; font-family: var(--mono); font-size: 12px; color: var(--tl-faint); }
+.tt .tt-note-step { width: 34px; flex: 0 0 auto; font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-faint); }
 .tt .tt-note-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
 /* The text colour that reads best on a tint and its grade ("White AAA"). The
    better of white and black always passes AA, so the word is plain dim ink: the
@@ -239,7 +239,8 @@
 .tt .tt-tip-top { display: flex; align-items: center; gap: 8px; }
 /* The tint's own chip: the note's swatch, same size and radius. */
 .tt .tt-tip-sw { width: 20px; height: 20px; border-radius: 6px; flex: 0 0 auto; background: var(--tt-c, transparent); }
-.tt .tt-tip-head { font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+.tt .tt-tip-head { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--tl-ink); }
+.tt .tt-tip-hex { font-family: var(--mono); }
 .tt .tt-tip-row {
   display: grid;
   grid-template-columns: 14px auto 1fr;
@@ -250,7 +251,7 @@
 }
 .tt .tt-tip-mark { grid-area: mark; align-self: center; display: grid; place-items: center; color: var(--tl-dim); }
 .tt .tt-tip-who { grid-area: who; color: var(--tl-ink); }
-.tt .tt-tip-ratio { grid-area: ratio; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); font-variant-numeric: tabular-nums; }
+.tt .tt-tip-ratio { grid-area: ratio; font-family: var(--font); font-size: 12px; color: var(--tl-ink); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .tt .tt-tip-grade { grid-area: grade; font-size: 12px; color: var(--tl-dim); }
 .tt .tt-tip-row[data-pass="true"] .tt-tip-mark { color: var(--ok-strong); }
 .tt .tt-tip-row[data-grade="large"] .tt-tip-mark { color: var(--warn-strong); }

@@ -67,7 +67,8 @@ const open = async (browser, theme, contrast) => {
   await page.addInitScript((t) => {
     try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
   }, theme)
-  await go(page, '/')
+  // The homepage is dark under both colour schemes, so the light pass needs a route that follows the stored theme.
+  await go(page, '/tools')
   await expect
     .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
     .toBe(theme)

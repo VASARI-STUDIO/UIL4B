@@ -52,6 +52,7 @@
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
+  DISCOVER_GROUPS,
   LEARN_GROUPS,
   createTools,
 } from './toolTree.js'
@@ -91,6 +92,7 @@ function treeRoute(rows, id) {
 const ROUTE_PRINCIPLES = treeRoute(LEARN_GROUPS, 'principles')
 const ROUTE_THEMES = treeRoute(LEARN_GROUPS, 'themes')
 const ROUTE_BRAND_COLOUR = treeRoute(LEARN_GROUPS, 'brand')
+const ROUTE_COMMUNITY = treeRoute(DISCOVER_GROUPS, 'inspiration')
 
 // ── Categories ──────────────────────────────────────────────────────────────
 //
@@ -314,6 +316,7 @@ const STATIC_TOOL_DEFS = [
   { id: 'docs-design', label: 'Design Principles', path: ROUTE_PRINCIPLES, guide: true, subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
   { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, guide: true, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
   { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, guide: true, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
+  { id: 'community', label: 'Community', path: ROUTE_COMMUNITY, description: 'Browse design inspiration, save your favourites and submit your own.', keywords: ['community', 'inspiration', 'submit', 'submit a design', 'submission', 'share', 'showcase', 'designs'] },
   { id: 'seo', label: 'SEO Specialist', path: '/seo', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Live SERP + social preview, scored checklist, copy-ready meta tags, and a JSON-LD structured-data generator.', keywords: ['seo', 'meta', 'serp', 'title', 'description', 'snippet', 'preview', 'open graph', 'social', 'score', 'inspector', 'specialist', 'schema', 'json-ld', 'structured data'] },
 ]
 

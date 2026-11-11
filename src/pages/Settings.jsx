@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useId } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { processAvatarImage } from '../utils/imageProcessing'
@@ -11,8 +11,9 @@ import useOnline from '../hooks/useOnline'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { getSyncState } from '../utils/syncStatus'
-import { loadFirestore } from '../utils/firebaseAccess'
+import { loadFirestore, openFirebaseGate } from '../utils/firebaseAccess'
 import { AI_TERMS_PATH } from '../config/aiImageConsent'
+import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 import { requestAccountReset } from '../utils/accountEvents'
 import { verifyErrorText, verifiedLandingMessage } from '../utils/emailVerification'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -856,6 +857,8 @@ function rememberSection(id) {
 }
 
 export default function Settings({ toast }) {
+  // The account page, and it already loads the SDK: let a session the hint missed restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading, planKnown } = useSubscription()
@@ -1050,7 +1053,9 @@ export default function Settings({ toast }) {
   // the latest auth state, and the edit is dropped if it is no longer the
   // account the edit was made for.
   const uidRef = useRef(user?.uid)
-  uidRef.current = user?.uid
+  useLayoutEffect(() => { uidRef.current = user?.uid })
+  // Set by the signed-out landing's sign-in action; read by the effect that finishes it.
+  const [finishAfterSignIn, setFinishAfterSignIn] = useState(false)
   const saveProfile = async (fields, what) => {
     const refused = () => new Error(`Your ${what} could not be saved. Nothing was changed. Please try again.`)
     const uid = user?.uid
@@ -1199,7 +1204,6 @@ export default function Settings({ toast }) {
   // the answer is said, the same words the signed-in landing uses. It waits for
   // the account to be in (refreshEmailVerified belongs to the signed-in user),
   // and a null answer (the account changed mid-read) stays silent.
-  const [finishAfterSignIn, setFinishAfterSignIn] = useState(false)
   useEffect(() => {
     if (!finishAfterSignIn || !user) return
     setFinishAfterSignIn(false)
@@ -1446,10 +1450,10 @@ export default function Settings({ toast }) {
 
   return (
     <div className="sec stg" data-phone-view={isPhone ? phoneView : undefined}>
-      {/* THE APP'S PAGE HEAD, NOT A DISPLAY TITLE. The design's App file has no big page
-          title: a surface is named by a 15px / 560 label in its bar, and this page follows the same pattern. The 40px "Make it
-          yours." and its lede went with it. On a phone, inside a section, the
-          bar carries the way back to the list. */}
+      {/* THE APP'S PAGE HEAD: a bar over a hairline, with the title at --fs-h2 so it
+          stays the largest heading on the page (at 15px it sat under the
+          section h2). The 40px "Make it yours." and its lede stay gone. On a
+          phone, inside a section, the bar carries the way back to the list. */}
       <div className="stg-bar">
         {isPhone && phoneView === 'section' && (
           <button type="button" className="stg-back" onClick={closeSection}>
@@ -1504,7 +1508,7 @@ export default function Settings({ toast }) {
           <section id="set-support" className="settings-section" role="tabpanel" aria-labelledby="settab-support" hidden={active !== 'support'}>
             <div className="settings-section-h">
               <h2 tabIndex={-1}>Plan and billing</h2>
-              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You’re on UIL4B Pro. Thanks for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
+              <p>{planPending ? 'Your plan and billing.' : isPro ? 'You’re on UI L4B Pro. Thanks for supporting the project.' : 'Free covers the essentials. Upgrade to Pro when you need more AI.'}</p>
             </div>
 
             {planPending ? (
@@ -1526,7 +1530,7 @@ export default function Settings({ toast }) {
                   <div className="settings-row settings-row--fact">
                     <div className="settings-row-label">Plan</div>
                     <div className="settings-fact-body">
-                      <div className="settings-row-value sub-active-title">UIL4B Pro</div>
+                      <div className="settings-row-value sub-active-title">UI L4B Pro</div>
                       {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
                     </div>
                   </div>
@@ -1660,7 +1664,7 @@ export default function Settings({ toast }) {
           <section id="set-language" className="settings-section" role="tabpanel" aria-labelledby="settab-language" hidden={active !== 'language'}>
             <div className="settings-section-h">
               <h2 tabIndex={-1}>Language</h2>
-              <p>UIL4B is in English for now. Choosing a language here changes only a few labels; menus, tools and pages stay in English.</p>
+              <p>UI L4B is in English for now. Choosing a language here changes only a few labels; menus, tools and pages stay in English.</p>
             </div>
             <div className="settings-card">
               <div className="settings-card-body settings-card-body--grid">
@@ -1768,7 +1772,7 @@ export default function Settings({ toast }) {
                 <div className="settings-card-h">
                   <div>
                     <h3 id="acct-h-signin">Sign-in and security</h3>
-                    <p>How you sign in to UIL4B.</p>
+                    <p>How you sign in to UI L4B.</p>
                   </div>
                 </div>
                 <div className="settings-card-body">
@@ -1795,7 +1799,7 @@ export default function Settings({ toast }) {
                   <div className="settings-row">
                     <div className="settings-row-main">
                       <div className="settings-row-label">Sign out</div>
-                      <div className="settings-row-meta">Signs out of UIL4B in this browser.</div>
+                      <div className="settings-row-meta">Signs out of UI L4B in this browser.</div>
                     </div>
                     <button type="button" className="btn btn-s" onClick={() => signOut()} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button>
                   </div>
@@ -1857,7 +1861,7 @@ export default function Settings({ toast }) {
               <p>
                 {user
                   ? 'Some of it lives in this browser, and some on our server so it follows you between devices. Either way it is yours.'
-                  : 'Signed out, everything UIL4B keeps is in this browser, and only here.'}
+                  : 'Signed out, everything UI L4B keeps is in this browser, and only here.'}
               </p>
             </div>
             <div className="settings-card">
@@ -1938,7 +1942,7 @@ export default function Settings({ toast }) {
                     'No ad networks and no third-party cookies.',
                     'Sign-in is handled by Firebase Authentication (Google).',
                     'Signed in, your settings and projects sync to your account so they follow you to other devices. Signed out, they stay in this browser only.',
-                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH}>Read the Terms</NavLink>.</>,
+                    <>Images you give our AI tools are sent to Google Gemini. Text-only AI requests go first to a model reached through OpenRouter, set to hosts that do not keep or train on them, and fall back to Gemini if that route is unavailable. <NavLink to={AI_TERMS_PATH} onClick={crossRouteHashClick(AI_TERMS_PATH)}>Read the Terms</NavLink>.</>,
                     'You can export or delete your data yourself, any time, from Your data.',
                   ].map((line, i) => (
                     <li key={i}>{line}</li>
@@ -1956,7 +1960,7 @@ export default function Settings({ toast }) {
       </div>
 
       <div className="stg-credit">
-        UIL4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a>
+        UI L4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a>
       </div>
     </div>
   )

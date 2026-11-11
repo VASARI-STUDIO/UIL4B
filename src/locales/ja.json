@@ -30,10 +30,10 @@
     "colours": "カラー"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -267,6 +267,7 @@
     "title": "アイコンライブラリ",
     "eyebrow": "アイコンライブラリ",
     "heading": "あらゆるアイコンを見つけて、カスタマイズして、コピー。",
+    "subtitleShort": "色を変えて、きれいな SVG をコピー。",
     "subtitle": "20万以上のオープンソースアイコンを検索 — Lucide、Tabler、Phosphor、Material など。どんなアイコンも色・サイズ・スタイルを変更でき（線の太さを調整、色を設定）、きれいな SVG をコピーするか、ワンクリックでエクスポートできます。閲覧とコピーは無料 — Pro ならカスタムアイコンを保存できます。",
     "searchPlaceholder": "アイコンを検索…",
     "allPacks": "すべてのパック",
@@ -280,9 +281,13 @@
     "noIcons": "上からアイコンを検索",
     "loadingPacks": "アイコンパックを読み込み中…"
   },
+  "iconGroups": {
+    "subtitleShort": "テーマ別アイコンセット、統一スタイル。"
+  },
   "emojiLibrary": {
     "eyebrow": "絵文字ライブラリ",
     "heading": "どんな絵文字も、どんな肌の色でもコピー。",
+    "subtitleShort": "カテゴリ別の絵文字を、クリックでコピー。",
     "subtitle": "カテゴリ別にすべての絵文字を閲覧し、セット全体の肌の色を切り替えて、クリックでコピー。いつでも無料。"
   },
   "imageConverter": {
@@ -429,7 +434,7 @@
     }
   },
   "auth": {
-    "logInTitle": "UIL4Bにログイン",
+    "logInTitle": "UI L4Bにログイン",
     "logInContinue": "続けるにはログインしてください",
     "createAccount": "無料アカウントを作成",
     "resetTitle": "パスワードをリセット",
@@ -496,11 +501,14 @@
   },
   "feedback": {
     "title": "フィードバック",
-    "subtitle": "UIL4B の改善にご協力ください。バグ、機能リクエスト、一般的なフィードバックをお寄せください。",
+    "subtitle": "UI L4B の改善にご協力ください。バグ、機能リクエスト、一般的なフィードバックをお寄せください。",
     "featureRequest": "機能リクエスト",
     "bugReport": "バグ報告",
     "general": "一般",
     "messagePlaceholder": "ご意見をお聞かせください…",
+    "helpTitle": "サポートに問い合わせる",
+    "helpSubtitle": "困っていることや、うまく動かないことはありませんか？ 何をしようとしていたか、何が起きたかをお知らせください。返信が必要な場合はメールアドレスもご入力ください。",
+    "helpPlaceholder": "何をしようとして、代わりに何が起きましたか？",
     "submitFeedback": "フィードバックを送信",
     "enterFeedback": "フィードバックを入力してください",
     "thankYou": "フィードバックをいただきありがとうございます！",
@@ -509,7 +517,7 @@
   },
   "community": {
     "title": "コミュニティ",
-    "subtitle": "UIL4B を使用する他のデザイナーや開発者とつながりましょう。",
+    "subtitle": "UI L4B を使用する他のデザイナーや開発者とつながりましょう。",
     "comingSoonDesc": "パレットを共有し、デザインのフィードバックを受け取り、コミュニティが作成したテンプレートを発見しましょう。",
     "github": "GitHubリポジトリ",
     "githubDesc": "ソースコードを閲覧、プロジェクトにスターを付け、貢献する。",

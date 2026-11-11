@@ -64,7 +64,7 @@
 //     the `free: true` login prompt, commit() re-resolving the quota) are
 //     source by nature.
 //   · Pricing.jsx copy: the page copy is the artefact.
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -73,6 +73,8 @@ import { transformWithOxc } from 'vite'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { projectSnapshot } from '../../src/utils/designPatch.js'
+import * as projectSync from '../../src/utils/projectSync.js'
+import { countUnknownError } from '../../src/utils/projectCount.js'
 import { stripCss } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css; a test that keeps reading one file after a lift like that does
@@ -150,8 +152,12 @@ const projects = (n) => Array.from({ length: n }, (_, i) => project(i + 1))
 /**
  * Execute the provider once, as React would for one render, and hand back the
  * context value it gives its children plus the store and the activation log.
+ *
+ * `live: { pull }` runs it as a mounted component instead: effects run (with their cleanups) when
+ * their dependencies change, state changes re-render, and the account's read is `pull(uid)`.
+ * Timers are the global ones, so a test fakes them with `mock.timers`.
  */
-function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
+function loadProjectContext({ user = ALICE, plan = FREE, saved = [], read = true, live = null } = {}) {
   let out = ctxCompiled
 
   const rewrite = (re, to, what) => {
@@ -174,16 +180,41 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
   rewrite(/^export const useProject/m, 'const useProject', 'the hook export')
   assert.ok(!/^\s*export\s/m.test(out), `${CTX_PATH} still has an export the harness did not strip`)
 
+  // `read` is whether the account's own list has been read on this device. The harness runs one
+  // render and models no pull, so the state that records the read is seeded here.
+  rewrite(
+    /(const \[countedUid, setCountedUid\] = useState\()null\)/,
+    `$1${JSON.stringify(read ? user?.uid ?? null : null)})`,
+    'the state that records the account\'s list was read',
+  )
+
   const store = new Map()
   if (user) store.set('vs-projects', JSON.stringify({ [ALICE_KEY]: saved }))
   const activations = []
 
   // A React small enough to run one render of one provider.
   const slots = []
+  const effectSlots = new Set()
   let cursor = 0
+  let dirty = false
+  let queued = []
+  let lastValue = null
+  const auth = { user }
+  const reports = { failures: [], ok: 0, notices: [] }
   const notModelled = (name) => () => { throw new Error(`${name} is not modelled by this harness`) }
+  const depsChanged = (a, b) => !a || !b || a.length !== b.length || a.some((x, k) => !Object.is(x, b[k]))
+  const memo = (fn, deps) => {
+    const i = cursor++
+    const slot = slots[i]
+    if (slot && !depsChanged(slot.deps, deps)) return slot.value
+    const value = fn()
+    slots[i] = { deps, value }
+    return value
+  }
   const sandbox = {
     console,
+    setTimeout: (...args) => globalThis.setTimeout(...args),
+    clearTimeout: (...args) => globalThis.clearTimeout(...args),
     localStorage: {
       getItem: (k) => (store.has(k) ? store.get(k) : null),
       setItem: (k, v) => store.set(k, String(v)),
@@ -194,13 +225,23 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
     useState: (init) => {
       const i = cursor++
       if (slots.length <= i) slots[i] = typeof init === 'function' ? init() : init
-      const set = (next) => { slots[i] = typeof next === 'function' ? next(slots[i]) : next }
+      const set = (next) => {
+        const value = typeof next === 'function' ? next(slots[i]) : next
+        if (!Object.is(value, slots[i])) dirty = true
+        slots[i] = value
+      }
       return [slots[i], set]
     },
-    useCallback: (fn) => fn,
-    useMemo: (fn) => fn(),
-    useRef: (v) => ({ current: v }),
-    useEffect: () => {},
+    useCallback: live ? (fn, deps) => memo(() => fn, deps) : (fn) => fn,
+    useMemo: live ? memo : (fn) => fn(),
+    useRef: live ? (v) => { const i = cursor++; return (slots[i] ??= { current: v }) } : (v) => ({ current: v }),
+    useEffect: live
+      ? (fn, deps) => {
+        const i = cursor++
+        if (slots[i] && !depsChanged(slots[i].deps, deps)) return
+        queued.push({ i, fn, deps })
+      }
+      : () => {},
     h: (type, props, ...children) => ({ type, props, children }),
     trackActivation: (...args) => activations.push(args),
     loadFirestore: notModelled('loadFirestore'),
@@ -214,11 +255,36 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
     syncFailureMessage: notModelled('syncFailureMessage'),
     classifyError: notModelled('classifyError'),
     reportSyncFailure() {}, reportSyncNotice() {}, reportSyncOk() {},
-    useAuth: () => ({ user }),
+    useAuth: () => ({ user: auth.user }),
     useSubscription: () => ({ plan }),
     DEFAULT_DESIGN,
     // The real snapshot/patch merge saveProject calls; pure, so it runs as-is.
     projectSnapshot,
+    countUnknownError,
+  }
+  if (live) {
+    Object.assign(sandbox, {
+      // The merge and the failure wording are the real ones; only the network read is the test's.
+      mergeProjects: projectSync.mergeProjects,
+      projectListsEqual: projectSync.projectListsEqual,
+      mergeTombstones: projectSync.mergeTombstones,
+      pruneTombstones: projectSync.pruneTombstones,
+      syncFailureMessage: projectSync.syncFailureMessage,
+      classifyError: projectSync.classifyError,
+      loadFirestore: async () => ({}),
+      pullRemoteProjects: (_fs, uid, opts) => opts.step(live.pull(uid)),
+      writeRemoteProjects: async () => ({ ok: true }),
+      reportSyncFailure: (channel, message) => reports.failures.push({ channel, message }),
+      reportSyncOk: () => { reports.ok += 1 },
+      reportSyncNotice: (channel, message) => reports.notices.push({ channel, message }),
+      onAccountApplied: () => () => {},
+      editKey: (design) => JSON.stringify(design),
+      stampEdited() {}, markSession() {},
+      SESSION_AUTH: 'auth',
+      PARKED_KEY: 'vs-parked', PARKED_SHELF_KEY: 'vs-parked-shelf',
+      readParked: () => null,
+      readShelf: () => [],
+    })
   }
 
   const body = `(function(){\n${out}\n;return { ProjectProvider };\n})()`
@@ -227,13 +293,43 @@ function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
   /** One render. The Provider element's `value` prop IS the context. */
   const render = () => {
     cursor = 0
+    queued = []
     const element = ProjectProvider({ children: null })
     assert.equal(element.type, 'ProjectContext.Provider', 'the provider no longer renders its context Provider')
-    return element.props.value
+    lastValue = element.props.value
+    if (live) {
+      const run = queued
+      queued = []
+      for (const { i } of run) slots[i]?.cleanup?.()
+      for (const { i, deps } of run) { slots[i] = { deps, cleanup: undefined }; effectSlots.add(i) }
+      for (const { i, fn } of run) {
+        const cleanup = fn()
+        slots[i].cleanup = typeof cleanup === 'function' ? cleanup : undefined
+      }
+    }
+    return lastValue
   }
 
   const stored = () => JSON.parse(store.get('vs-projects') || '{}')[ALICE_KEY] || []
-  return { render, stored, activations }
+  const harness = { render, stored, activations }
+  if (live) {
+    const ticks = async () => { for (let k = 0; k < 25; k += 1) await Promise.resolve() }
+    /** Let pending promises finish and re-render until no state is left changing. */
+    const settle = async () => {
+      await ticks()
+      for (let n = 0; n < 25 && dirty; n += 1) { dirty = false; render(); await ticks() }
+    }
+    Object.assign(harness, {
+      reports,
+      settle,
+      /** The context as of the last render. */
+      ctx: () => lastValue,
+      /** Sign in as `next`, or out with null, and re-render. */
+      async setUser(next) { auth.user = next; dirty = true; await settle() },
+      unmount() { for (const i of effectSlots) slots[i]?.cleanup?.() },
+    })
+  }
+  return harness
 }
 
 // ── The free half ───────────────────────────────────────────────────────────
@@ -323,7 +419,7 @@ test('3 · every export and copy action stays ungated', () => {
   // places is how the two drift apart.
   // The ledger states it on its "Same on both plans" row, so it is a claim about
   // both plans at once: Pro does not get more exports, Free does not get fewer.
-  assert.match(PLANS, /const SAME_ON_BOTH = `[^`]*Style guide exports in \$\{FREE_EXPORT_NAMES\}, as often as you like/,
+  assert.match(PLANS, /const SAME_ON_BOTH = `[^`]*Style guide exports in \$\{sameExportNames\(\)\}, as often as you like/,
     'the page no longer states that the NUMBER of exports is unlimited on Free — '
     + 'that is the half of the export promise this test depends on')
 })
@@ -342,7 +438,9 @@ test('4 · the tools that build a type system offer a way to keep it', () => {
   // the page must call it, put a trigger in the toolbar items and mount the panel.
   assert.match(SCALE, /^import \{ useSaveTypeSystemToolbar \} from '\.\.\/hooks\/useSaveTypeSystem'$/m,
     'TypeScale does not use the save gate')
-  assert.match(SCALE, /useSaveTypeSystemToolbar\(\{/, 'TypeScale imports the save gate but never calls it')
+  assert.match(SCALE, /useSaveTypeSystemToolbar\((?:\{|saveOptions\))/, 'TypeScale imports the save gate but never calls it')
+  // On phones the same options mount the save control in the dock.
+  assert.match(SCALE, /<SaveTypeSystem \{\.\.\.saveOptions\} \/>/, 'TypeScale has no save control in the phone dock')
   assert.match(SCALE, /onClick=\{save\.trigger\}/, 'TypeScale has no toolbar button wired to the save gate')
   assert.match(SCALE, /<SaveTypeSystemPanel[\s/>]/, 'TypeScale never mounts the save menu')
   // Distinct gate ids, so P-001's funnel can say WHICH surface converted rather
@@ -453,6 +551,110 @@ test('8d · a blank project is a container, not work — no activation', () => {
   const { render, activations } = loadProjectContext({ saved: [] })
   render().saveProject('', { blank: true })
   assert.deepEqual(activations, [], 'creating an empty shell was counted as the first real win')
+})
+
+test('8d2 · before the account\'s list is read, a device with no copy refuses a new project and writes nothing', () => {
+  const { render, stored, activations } = loadProjectContext({ saved: [], read: false })
+  let thrown
+  try { render().saveProject('Fourth kit') } catch (error) { thrown = error }
+  assert.ok(thrown, 'a save went through with the account\'s count unknown')
+  assert.equal(thrown.code, 'projects-unknown')
+  assert.match(thrown.message, /Still checking your projects/)
+  assert.deepEqual(stored(), [], 'a refused save wrote a project')
+  assert.deepEqual(activations, [], 'a refused save counted as a first win')
+})
+
+test('8d3 · before the account\'s list is read, a device holding a copy counts against that copy', () => {
+  const LIMIT = FREE_SAVE_LIMITS.projects
+  const room = loadProjectContext({ saved: projects(1), read: false })
+  assert.ok(room.render().saveProject('Second kit'), 'a device holding a copy of the account was made to wait')
+  assert.equal(room.stored().length, 2)
+  const full = loadProjectContext({ saved: projects(LIMIT), read: false })
+  assert.throws(() => full.render().saveProject('Fourth kit'), new RegExp(`up to ${LIMIT} projects`))
+  assert.equal(full.stored().length, LIMIT, 'nothing is removed or added')
+})
+
+// The tests below mount the provider (loadProjectContext's `live`), so the pull effect and the
+// effect that resets the read state on sign-out really run.
+const PULL_TIMEOUT_MS = 15000
+const never = () => new Promise(() => {})
+const emptyAccount = () => Promise.resolve({ list: [], tombstones: {}, stored: new Map(), migration: null })
+
+/** Run `body` with timers faked and the mounted provider torn down afterwards. */
+async function withMounted(options, body) {
+  mock.timers.enable({ apis: ['setTimeout'] })
+  const mounted = loadProjectContext({ read: false, ...options })
+  try {
+    mounted.render()
+    await mounted.settle()
+    await body(mounted)
+  } finally {
+    mounted.unmount()
+    mock.timers.reset()
+  }
+}
+
+test('8d4 · signing out and back in as the same account on an empty device makes the count unknown again until the read lands', async () => {
+  let reads = 0
+  let landSecondRead
+  const pull = () => {
+    reads += 1
+    if (reads === 1) return emptyAccount()
+    return new Promise((resolve) => { landSecondRead = () => resolve({ list: projects(1), tombstones: {}, stored: new Map(), migration: null }) })
+  }
+  await withMounted({ live: { pull }, saved: [] }, async (m) => {
+    assert.equal(m.ctx().projectCountKnown, true, 'the first read of the account did not make its count known')
+    assert.equal(m.ctx().projectsLoading, false)
+
+    await m.setUser(null)
+    await m.setUser(ALICE)
+    assert.equal(reads, 2, 'signing back in did not read the account again')
+    assert.equal(m.ctx().projectsLoading, true, 'the second sign-in still counted as read')
+    assert.equal(m.ctx().projectCountKnown, false, 'the count from the previous sign-in survived the sign-out')
+    assert.equal(m.ctx().projectCountPending, true)
+    let thrown
+    try { m.ctx().saveProject('Fourth kit') } catch (error) { thrown = error }
+    assert.equal(thrown?.code, 'projects-unknown', 'a new project was saved before the account was read again')
+    assert.deepEqual(m.stored(), [], 'a refused save wrote a project')
+
+    landSecondRead()
+    await m.settle()
+    assert.equal(m.ctx().projectCountKnown, true)
+    assert.equal(m.ctx().projectsLoading, false)
+    assert.deepEqual(m.stored().map((p) => p.id), ['p1'], 'the account\'s project was not merged in')
+  })
+})
+
+test('8d5 · an account read that never answers fails after 15 seconds, and not before', async () => {
+  await withMounted({ live: { pull: never }, saved: [] }, async (m) => {
+    assert.equal(m.ctx().projectsLoading, true)
+    mock.timers.tick(PULL_TIMEOUT_MS - 1)
+    await m.settle()
+    assert.equal(m.ctx().projectsLoading, true, 'the read gave up before 15 seconds')
+    assert.deepEqual(m.reports.failures, [])
+
+    mock.timers.tick(1)
+    await m.settle()
+    assert.equal(m.ctx().projectsLoading, false, 'a stalled read never reached the failed state')
+    assert.equal(m.ctx().projectCountKnown, false, 'a failed read made the count known')
+    assert.equal(m.reports.failures.length, 1, 'the stalled read did not report its failure')
+    assert.equal(m.reports.failures[0].channel, 'projects')
+    assert.equal(m.reports.ok, 0)
+    let thrown
+    try { m.ctx().saveProject('Fourth kit') } catch (error) { thrown = error }
+    assert.equal(thrown?.code, 'projects-unknown')
+    assert.match(thrown.message, /couldn’t be checked/, 'the save said it was still checking after the read had failed')
+  })
+})
+
+test('8d6 · a stalled read that is left by signing out reports nothing when it times out', async () => {
+  await withMounted({ live: { pull: never }, saved: [] }, async (m) => {
+    await m.setUser(null)
+    mock.timers.tick(PULL_TIMEOUT_MS)
+    await m.settle()
+    assert.deepEqual(m.reports.failures, [], 'a read abandoned at sign-out put a failure on screen')
+    assert.equal(m.reports.ok, 0)
+  })
 })
 
 test('8e · duplicating is a new save and answers to the same cap', () => {

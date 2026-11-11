@@ -59,7 +59,7 @@
  */
 export const NOTE_PROMPTS = [
   { key: 'who', prompt: 'Who you are' },
-  { key: 'what', prompt: 'What UIL4B is for' },
+  { key: 'what', prompt: 'What UI L4B is for' },
   { key: 'state', prompt: 'What state it is in' },
   { key: 'help', prompt: 'What help you want' },
 ]
@@ -72,7 +72,7 @@ export const NOTE_PROMPTS = [
  * the unwritten state instead of a half-written note.
  */
 export const FOUNDER_NOTE = {
-  who: 'I\'m Dylan. I build UIL4B on my own, out of Brisbane.',
+  who: 'I\'m Dylan. I build UI L4B on my own, out of Brisbane.',
   what: 'It\'s a pile of design tools in one place — colour, type, icons, contrast, a few converters. You can use most of it without an account; saving and downloading need a free one.',
   state: 'It\'s early. I\'m adding tools and fixing things most days, so you\'ll find rough edges. AI usage is dialled down while it\'s in beta — if enough people get use out of it, I\'ll upgrade the plans behind it.',
   help: 'The most useful thing I get sent is what\'s missing or what broke. There\'s a feedback link in the footer of every page.',

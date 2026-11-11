@@ -109,7 +109,7 @@ export const LICENCES = {
     name: 'MIT or GPL-3.0-or-later',
     url: 'https://opensource.org/licenses/MIT',
     required: true,
-    asks: 'Dual-licensed. UIL4B elects MIT, and keeps the MIT notice with every copy.',
+    asks: 'Dual-licensed. UI L4B elects MIT, and keeps the MIT notice with every copy.',
   },
   proprietary: {
     name: 'Proprietary terms',
@@ -163,6 +163,11 @@ export const ICON_PACK_CREDITS = {
   //    Apache §6 grants no trademark rights: "Carbon (IBM)" is a credit, never an endorsement. ──
   mingcute: { name: 'MingCute Icon', author: 'MingCute Design', url: 'https://github.com/Richard9394/MingCute', copyright: 'MingCute Design. The upstream licence file leaves its copyright line blank.', licenceUrl: 'https://github.com/Richard9394/MingCute/blob/main/LICENSE', spdx: 'Apache-2.0' },
   carbon: { name: 'Carbon', author: 'IBM', url: 'https://github.com/carbon-design-system/carbon/tree/main/packages/icons', copyright: 'Copyright 2015 IBM Corp.', licenceUrl: 'https://github.com/carbon-design-system/carbon/blob/main/LICENSE', spdx: 'Apache-2.0' },
+  // ── MIT, copyright lines read from the upstream LICENSE files on 2026-11-05. ──
+  fluent: { name: 'Fluent UI System Icons', author: 'Microsoft Corporation', url: 'https://github.com/microsoft/fluentui-system-icons', copyright: 'Copyright (c) 2020 Microsoft Corporation', licenceUrl: 'https://github.com/microsoft/fluentui-system-icons/blob/main/LICENSE', spdx: 'MIT' },
+  pixelarticons: { name: 'Pixelarticons', author: 'Gerrit Halfmann', url: 'https://github.com/halfmage/pixelarticons', copyright: 'Copyright (c) 2019 Gerrit Halfmann', licenceUrl: 'https://github.com/halfmage/pixelarticons/blob/master/LICENSE', spdx: 'MIT' },
+  'radix-icons': { name: 'Radix Icons', author: 'WorkOS', url: 'https://github.com/radix-ui/icons', copyright: 'Copyright (c) 2022 WorkOS', licenceUrl: 'https://github.com/radix-ui/icons/blob/master/LICENSE', spdx: 'MIT' },
+  bi: { name: 'Bootstrap Icons', author: 'The Bootstrap Authors', url: 'https://github.com/twbs/icons', copyright: 'Copyright (c) 2019-2024 The Bootstrap Authors', licenceUrl: 'https://github.com/twbs/icons/blob/main/LICENSE', spdx: 'MIT' },
 
   'simple-icons': { name: 'Simple Icons', author: 'Simple Icons Collaborators', url: 'https://github.com/simple-icons/simple-icons', copyright: null, spdx: 'CC0-1.0' },
   logos: { name: 'SVG Logos', author: 'Gil Barbara', url: 'https://github.com/gilbarbara/logos', copyright: null, spdx: 'CC0-1.0' },

@@ -65,6 +65,17 @@
   .hlr-job:hover { color: var(--cpg-ink); }
   .hlr-job:hover .hlr-tick { opacity: 1; }
 }
+/* The accordion (under 960px, the JS `wide` line) has no hover on touch, so a closed row
+   shows its arrow too, and the arrow turns down once the row is open. */
+@media (max-width: 959px) {
+  .hlr-tick { opacity: 1; color: var(--cpg-faint); transition: transform 150ms var(--cpg-ease); }
+  .hlr-job[aria-expanded="true"] .hlr-tick { color: var(--cpg-ink); transform: rotate(90deg); }
+}
+/* A tablet's accordion is capped, so a row's arrow stays near its label; the 11-stop
+   strip still gives every stop about 54px at 640. */
+@media (min-width: 600px) and (max-width: 959px) {
+  .hlr-grid { max-width: 640px; }
+}
 
 /* ── An answer ── */
 .hlr-ans[hidden] { display: none; }
@@ -165,9 +176,9 @@
 [data-theme="dark"] .hlr-stop-sw { box-shadow: inset 0 0 0 1px oklch(1 0 0 / .14); }
 .hlr-stop input:checked + .hlr-stop-sw { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
 .hlr-stop input:focus-visible + .hlr-stop-sw { outline: 2px solid var(--accent); outline-offset: 2px; }
-.hlr-stop-n { display: block; margin-top: var(--s-2); font: 500 12px/1 var(--mono); text-align: center; color: var(--cpg-dim); }
+.hlr-stop-n { display: block; margin-top: var(--s-2); font: 500 12px/1 var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0; text-align: center; color: var(--cpg-dim); }
 .hlr-read { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); margin: var(--s-4) 0 0; font-size: 15px; line-height: 1.5; color: var(--cpg-dim); }
-.hlr-read b { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--cpg-ink); }
+.hlr-read b { font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--cpg-ink); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .hlr-leaves { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-5); margin-top: var(--s-4); font-size: 15px; color: var(--cpg-dim); }
 .hlr-leaves h3 { margin: 0; font: 500 14px/1.4 var(--font); color: var(--cpg-faint); }
 .hlr-leaves ul { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-5); margin: 0; padding: 0; list-style: none; }
@@ -192,7 +203,7 @@
 .hlr-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hlr-ladder { display: grid; gap: var(--s-1); margin-top: var(--s-4); }
 .hlr-ladder > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: var(--s-3); align-items: baseline; }
-.hlr-ladder span { font: 400 13px/1.2 var(--mono); font-variant-numeric: tabular-nums; color: var(--cpg-faint); }
+.hlr-ladder span { font: 400 13px/1.2 var(--font); letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--cpg-faint); }
 .hlr-ladder b { font-weight: 600; line-height: 1.15; letter-spacing: -.02em; overflow-wrap: anywhere; color: var(--cpg-ink); }
 
 /* Icons: a search over a small sample. */
@@ -241,7 +252,7 @@
 .hlr-allow > div { display: grid; grid-template-columns: 48px minmax(0, 1fr) 72px; gap: var(--s-3); align-items: center; font-size: 15px; color: var(--cpg-dim); }
 .hlr-bar { position: relative; display: block; height: 12px; overflow: hidden; border-radius: 999px; background: var(--bg-3); }
 .hlr-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--cpg-ink); }
-.hlr-allow output { font: 400 14px/1 var(--mono); text-align: right; font-variant-numeric: tabular-nums; color: var(--cpg-ink); }
+.hlr-allow output { font: 400 14px/1 var(--font); text-align: right; font-variant-numeric: tabular-nums; color: var(--cpg-ink); letter-spacing: 0; }
 
 /* Soon: one cell per tool. */
 .hlr-count { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: var(--s-1); }

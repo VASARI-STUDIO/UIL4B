@@ -27,10 +27,16 @@
    300–700, Geist Mono 300–600.
 
    ── SPECTRUM, 2026-09-18: Manrope and JetBrains Mono are retired ────────────
-   The "UIL4B - Spectrum" design system sets the whole product in GEIST, with Geist Mono for every value a user
-   copies and Caveat for the one handwritten annotation the homepage has always
-   carried. Adopting it half-way — new layout on the old faces — is exactly the
+   The "UIL4B - Spectrum" design system sets the whole product in one UI face
+   (var(--font)), with Geist Mono for text a user reads or copies as code and
+   Caveat for the one handwritten annotation the homepage has always carried.
+   Adopting it half-way — new layout on the old faces — is exactly the
    disjointedness the 2026-09-16 audit measured, so the faces move with it.
+
+   The mono rule: Geist Mono is for code, hex, tokens, IDs, keyboard keys and
+   CSS-value columns (px and rem) only. Figures, sizes, ratios and dates are
+   UI-face text with tabular-nums and letter-spacing 0. The guard is
+   tests/unit/mono-voice-allowlist.test.js.
 
    Caveat is a THIRD family and the note above used to argue against one. The
    argument was about a serif for body text, which would be a first-paint cost
@@ -89,8 +95,18 @@
 @font-face{font-family:'Switzer';font-style:italic;font-weight:100 900;font-display:swap;src:url('/fonts/switzer/Switzer-VariableItalic.woff2') format('woff2')}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:100 599;font-display:swap;src:local('Arial'),local('Liberation Sans'),local('Helvetica');size-adjust:101%;ascent-override:98%;descent-override:25%;line-gap-override:9%}
 @font-face{font-family:'Switzer Fallback';font-style:normal;font-weight:600 900;font-display:swap;src:local('Arial Bold'),local('Arial-BoldMT'),local('Liberation Sans Bold'),local('Helvetica Bold');size-adjust:96%;ascent-override:102.1%;descent-override:26%;line-gap-override:9.4%}
+/* 'Geist Fallback' does for the homepage (--hm-font) what 'Switzer Fallback' does for the
+   rest of the site: a local Arial scaled to Geist's advance widths and line box, so the swap
+   moves neither the glyphs nor the lines. Geist's vertical metrics are hhea 1005 / -295 / 0 on
+   a 1000 upm (OS/2 typo identical, USE_TYPO_METRICS set), divided by the size-adjust because the
+   overrides apply before it. Measured in Chromium at 100px: Geist / Arial is 1.01 at weight 400
+   (the sub-line) and 0.983 at 600 (the headline), hence two faces. */
+@font-face{font-family:'Geist Fallback';font-style:normal;font-weight:100 599;font-display:swap;src:local('Arial'),local('Liberation Sans'),local('Helvetica');size-adjust:101%;ascent-override:99.5%;descent-override:29.2%;line-gap-override:0%}
+@font-face{font-family:'Geist Fallback';font-style:normal;font-weight:600 900;font-display:swap;src:local('Arial Bold'),local('Arial-BoldMT'),local('Liberation Sans Bold'),local('Helvetica Bold');size-adjust:98.3%;ascent-override:102.2%;descent-override:30%;line-gap-override:0%}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Geist Mono';font-style:normal;font-weight:300 600;font-display:swap;src:url('/fonts/geist-mono-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 /* Caveat: the handwritten annotation only. NOT preloaded — see the note above. */
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:'Caveat';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
@@ -115,7 +131,7 @@
 :root{
   /* ── TYPE — two families (V2). Docs: docs/reference/design-language-v2.md#type ──
      TWO families ship and there is no serif role. --display is an alias of
-     --font: the same Manrope face, named for the job it does (hero type,
+     --font: the same UI face, named for the job it does (hero type,
      section heads, wordmarks) rather than for a face we do not have.
 
      IT WAS CALLED --serif UNTIL 2026-09-04 and resolved to Manrope the whole
@@ -127,8 +143,8 @@
      families and a third is a first-paint cost, not a token edit — see the
      @font-face note at the top of this file. If you ever DO want serif/sans
      contrast, that is a type-system decision, not a token rename.
-     Contrast in this system comes from Manrope vs JetBrains Mono, plus
-     weight and scale. Fallback stacks are unchanged from the Outfit era. */
+     Contrast in this system comes from the UI face vs Geist Mono (code, hex,
+     tokens, IDs, keys and CSS-value columns only), plus weight and scale. */
   /* Display tracking scale. Switzer's word space is narrow, so heavy negative
      tracking closes the gaps between words at large sizes. By size: 28-42px
      headings -.015em, 43px and up -.02em, the .dgh-hero headline -.025em at most.
@@ -490,41 +506,56 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 
 /* ── THE CHROMATIC OUTLINE on outline-only buttons ──────────────────────────
    An outline button (a hairline over a quiet or card ground: the default .btn,
-   .ui-pill-out and the tool layout's quiet and square buttons) draws its
-   outline as a rotating conic gradient in the colour-band hues on hover and on
+   .ui-pill-out, the marketing nav's search controls and the tool layout's quiet
+   and square buttons) draws its outline in the colour-band hues on hover and on
    :focus-visible. Filled buttons (accent, primary, inverse) and borderless
    ghost buttons do not.
 
-   The ring is a ::before laid over the border box and masked to its edge, so
-   nothing moves and the label stays ink. Only --chroma-angle animates.
+   The ring is a ::before laid exactly over the border box and masked to its
+   edge, so nothing moves and the label stays ink. It fades in while it
+   thickens from .5px to 1.5px and turns once to 140deg, then holds. Three
+   registered properties carry that: --chroma-angle, --chroma-w and opacity, all
+   plain transitions, so a pointer that leaves mid-way reverses from where the
+   ring is. On leave the width and angle reset only after the ring has faded out,
+   so the hues never jump.
    The hues are the chromatic bars of the colour band (SpectrumRamp.jsx BARS,
    in order, the first repeated to close the circle); a unit test holds the two
    together.
 
    Contrast, measured against the grounds a button sits on: in dark every hue
    clears 3:1 (weakest 3.98:1, hue 238 on the card). In light the weakest is
-   1.83:1 (hue 48 on the page), so light adds a 1px ink ring just inside the
-   colour, which holds the edge at 6:1 or more whatever the hue under it.
+   1.83:1 (hue 48 on the page); the 1.5px ring is not re-measured there.
 
    Hover only where the pointer can hover: a tap on a phone must not leave the
-   ring stuck on. :focus-visible shows it on every device. Reduced motion keeps
-   a still ring; forced colours draw the plain system border. */
+   ring stuck on, so touch gets a flash while pressed. :focus-visible shows it on
+   every device. Reduced motion keeps a still 1.5px ring; forced colours draw the
+   plain system border. */
 @property --chroma-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
-@keyframes chroma-spin{to{--chroma-angle:360deg}}
-:where(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){position:relative;--chroma-inner:transparent}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{content:"";position:absolute;inset:-1px;border:1.5px solid transparent;padding:1px;border-radius:inherit;background:linear-gradient(var(--chroma-inner),var(--chroma-inner)) padding-box,conic-gradient(from var(--chroma-angle),hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%)) border-box;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0) border-box;-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0) border-box;opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease-out)}
-[data-theme="light"] :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){--chroma-inner:var(--t2)}
+@property --chroma-w{syntax:'<length>';inherits:false;initial-value:.5px}
+:where(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)){position:relative}
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square))::before{content:"";position:absolute;inset:-1px;padding:var(--chroma-w);border-radius:inherit;background:conic-gradient(from var(--chroma-angle),hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0;pointer-events:none;transition:opacity 280ms cubic-bezier(.25,1,.5,1),--chroma-w 0s linear 280ms,--chroma-angle 0s linear 280ms}
 :is(.tl,.tl-sheet-layer) .tl-tray .tl-btn::before{content:none}
-:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:1;animation:chroma-spin 2.4s linear infinite}
+:is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):focus-visible::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1),--chroma-w 360ms cubic-bezier(.25,1,.5,1),--chroma-angle 560ms cubic-bezier(.45,.05,.3,1)}
 @media (hover:hover) and (pointer:fine){
-  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:1;animation:chroma-spin 2.4s linear infinite}
+  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):hover:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 320ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-w 360ms cubic-bezier(.25,1,.5,1) 40ms,--chroma-angle 560ms cubic-bezier(.45,.05,.3,1) 40ms}
 }
-html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.tl-btn)::before{animation:none!important}
+@media (hover:none){
+  :is(.btn:not(.btn-accent):not(.btn-primary):not(.btn-inverse):not(.btn-ghost),.ui-pill-out,.spnav-search,.spnav-icon,:is(.tl,.tl-sheet-layer) :is(.tl-btn--quiet,.tl-btn--square)):active:not(:disabled):not([aria-disabled="true"])::before{opacity:.92;--chroma-w:1.5px;--chroma-angle:140deg;transition:none}
+}
+/* Reduced motion: a still ring at its final width and angle with a 120ms fade. */
+html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important}
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.tl-btn)::before{animation:none!important}
+  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{--chroma-w:1.5px;--chroma-angle:140deg;transition:opacity 120ms linear!important}
 }
 @media (forced-colors:active){
-  :is(.btn,.ui-pill-out,.tl-btn)::before{content:none}
+  :is(.btn,.ui-pill-out,.spnav-search,.spnav-icon,.tl-btn)::before{content:none}
+}
+/* Press: every pill button shrinks to .97 over 150ms; disabled controls and
+   reduced motion do not scale. */
+:is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):not(:disabled):not([aria-disabled="true"]):active{transform:scale(.97);transition-property:transform,background-color,border-color,color,opacity;transition-duration:150ms;transition-timing-function:cubic-bezier(.23,1,.32,1)}
+html[data-reduced-motion="true"] :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):active{transform:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) :is(.btn,.ui-pill-out,.sp-pill,.sp-ghost):active{transform:none}
 }
 .tag{display:inline-flex;padding:4px 12px;border-radius:var(--radius-s);font-size:10px;font-weight:600}
 
@@ -723,7 +754,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    decorative. */
 /* The label rule below must not reach the glyph chip (`.ig-chip`, a flex slot
    that centres its image): `:where()` keeps the specificity at 0,1,1. */
-.ic span:not(:where(.ig-chip)){max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;font-size:11px;color:var(--t2);text-align:center;font-family:var(--mono);line-height:1.25}
+.ic span:not(:where(.ig-chip)){max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere;font-size:11px;color:var(--t2);text-align:center;font-family:var(--font);letter-spacing:0;line-height:1.25}
 
 /* ─── Image Converter ─── */
 .pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
@@ -802,12 +833,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:calc(24px + var(--toast-lift) + env(safe-area-inset-bottom,0px));right:max(24px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
+.toast{position:fixed;bottom:calc(24px + var(--toast-lift) + var(--toast-dock,0px) + env(safe-area-inset-bottom,0px));right:max(24px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 /* The Feedback button (.global-feedback-btn) floats in the same bottom-right
    corner and is hidden only on a coarse pointer, so everywhere else the toast
    stack rides above it: 44px clears the 36px desktop button, 52px clears the
-   compact icon-only form used on narrow or short viewports. */
+   compact icon-only form used on narrow or short viewports.
+   A page whose own bar is docked to the foot of the screen sets --toast-dock
+   on <html> to that bar's height (excluding the safe-area inset the toast
+   already counts); the toast adds it to its bottom offset. Unset, it is 0. */
 :root{--toast-lift:0px}
 @media not all and (pointer:coarse){:root{--toast-lift:44px}}
 @media (pointer:fine) and (max-width:640px),(pointer:fine) and (max-height:500px){:root{--toast-lift:52px}}
@@ -1052,10 +1086,10 @@ img,svg,video{max-width:100%;height:auto}
 @media(max-width:640px){
 
   /* Toast */
-  .toast{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + var(--toast-lift) + env(safe-area-inset-bottom,0px));max-width:none}}
+  .toast{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + var(--toast-lift) + var(--toast-dock,0px) + env(safe-area-inset-bottom,0px));max-width:none}}
 /* The phone tab bar is fixed over the foot of the screen; a toast sits above it. */
 @media(max-width:767px){
-  html.has-tabbar .toast{bottom:calc(var(--tabbar-h) + 12px + var(--toast-lift) + env(safe-area-inset-bottom))}
+  html.has-tabbar .toast{bottom:calc(var(--tabbar-h) + 12px + var(--toast-lift) + var(--toast-dock,0px) + env(safe-area-inset-bottom))}
 }
 
 
@@ -1257,6 +1291,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--accent-fg);outline-offset:2px}
 html[data-reduced-motion="true"] .skip-link{transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .skip-link{transition:none}}
+@media(pointer:coarse){.skip-link{display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box}}
 /* Recovery affordance for the price-service-down state (Murphy's law: error +
    offline both land here). Sits under the price slot, never inside the
    aria-live region, so retrying doesn't re-announce the amount. */
@@ -1490,7 +1525,8 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 @media(hover:hover){.error-boundary-report:hover{text-decoration-thickness:2px}}
 
 /* ─── Alt Text Generator ─── */
-.alt-dropzone:hover,.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
+.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
+@media(hover:hover){.alt-dropzone:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}}
 /* flex-start, not flex-end: each field now carries a help line beneath it, so
    the two columns differ in height and bottom-aligning them staggered the
    labels. */
@@ -1846,7 +1882,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-cap-name{flex-shrink:0;font-size:12px;font-weight:560;color:var(--t1)}
 /* The value is the evidence. It gets the mono face because it is a literal —
    the exact string that will appear in the report, not a paraphrase of it. */
-.fb-cap-value{flex:1;min-width:0;font-family:var(--mono);font-size:11px;color:var(--t2);text-align:right;overflow-wrap:anywhere}
+.fb-cap-value{flex:1;min-width:0;font-family:var(--font);font-size:11px;color:var(--t2);text-align:right;overflow-wrap:anywhere; font-variant-numeric: tabular-nums; letter-spacing: 0;}
 /* Struck through rather than hidden, so an unticked row still shows WHAT was
    declined. Removing the row on untick would make the list shrink under the
    pointer and lose the record of the choice. */
@@ -2838,7 +2874,6 @@ html.lenis{scroll-behavior:auto!important}
 .brand-logo-narrow{display:none}
 .pnav-word .brand-logo-narrow{display:none}
 @media(min-width:768px) and (max-width:939px){.pnav-word .brand-logo-wide{display:none}.pnav-word .brand-logo-narrow{display:block}}
-@media(min-width:768px) and (max-width:899px){.spnav-word .brand-logo-wide{display:none}.spnav-word .brand-logo-narrow{display:inline-block}}
 
 /* Search (App lines 103-107): flex 1 1 240px up to 380px, 41px, 12px radius,
    an ink .045 wash inside an ink .09 hairline, the magnifier and placeholder in
@@ -3028,10 +3063,14 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-tool:hover,.pnav-tool:focus-visible{background:rgba(var(--ink-rgb),.07);color:rgb(var(--ink-rgb));text-decoration:none}
 .pnav-tool:not([data-hue]):hover .pnav-tool-ico,.pnav-tool:not([data-hue]):focus-visible .pnav-tool-ico{color:var(--accent-soft)}
 .pnav-tool:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
-/* The page the visitor is on: full ink and a leading bar. An open menu draws no
-   other row as selected; the grey tile is hover and keyboard focus only. */
-.pnav-tool[aria-current="page"]{color:rgb(var(--ink-rgb));box-shadow:inset 3px 0 0 var(--accent-fill)}
-.pnav-tool[aria-current="page"]:not([data-hue]) .pnav-tool-ico{color:var(--accent-soft)}
+/* The page the visitor is on: the label at full ink and a heavier weight, and a
+   check after it. No tile, bar or colour, so the grey tile stays hover and
+   keyboard focus only and the two never read alike. An open menu draws no other
+   row as selected. */
+.pnav-tool[aria-current="page"]{color:rgb(var(--ink-rgb))}
+.pnav-tool[aria-current="page"] .pnav-tool-label{font-weight:620}
+.pnav-tool-here{display:grid;place-items:center;flex:0 0 auto;width:16px;height:16px;color:rgba(var(--ink-rgb),var(--ink-dim))}
+.pnav-tool-here svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 /* HUE GLYPHS (mega menu). A row wears its category as the glyph's colour: the
    category's STRONG colour, drawn straight on the menu with no tile behind it.
    Menu-scoped on purpose: the global --hue-* set has almost no margin (see the
@@ -3317,15 +3356,17 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;border-radius:6px;color:var(--accent-mid);font-size:12.5px;text-decoration:none}
 .pnav-menu-foot-link:hover{color:var(--accent-text);text-decoration:none}
 .pnav-menu-foot-link:focus-visible{outline:2px solid var(--link);outline-offset:2px}
-/* 768 to 900: Create's three columns are about 245px each, and the 3D Model Converter row
-   (tile, name, Beta pill) needs more than the column holds at 768. The list track is
-   minmax(0,1fr) above, so a row can never run past its column; this band also trims the side
-   padding, the tile-to-name gaps and the badge so the full name and pill fit. Rows stay 48px. */
+/* 768 to 900: Create's three columns are about 248px each, and the 3D Model Converter row
+   (tile, name, Beta pill) needs about 8px more than the column holds at 768 with the
+   desktop spacing. The list track is minmax(0,1fr) above, so a row can never run past its
+   column; this band trims the column inset, the row's side padding, the tile-to-name gaps
+   and the badge's side padding (16px in all) so the full name and pill fit with room to
+   spare. Rows stay 48px. */
 @media(max-width:900px){
   .pnav-menu{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px))}
-  .pnav-menu[data-menu="create"] .pnav-colstack{padding-inline:6px}
-  .pnav-menu[data-menu="create"] .pnav-tool{gap:10px;padding-inline:8px}
-  .pnav-menu[data-menu="create"] .pnav-tool .soon-badge,.pnav-menu[data-menu="create"] .pnav-tool .beta-badge{padding-inline:6px}
+  .pnav-menu[data-menu="create"] .pnav-colstack{padding-inline:4px}
+  .pnav-menu[data-menu="create"] .pnav-tool{gap:8px;padding-inline:6px}
+  .pnav-menu[data-menu="create"] .pnav-tool .soon-badge,.pnav-menu[data-menu="create"] .pnav-tool .beta-badge{padding-inline:4px}
 }
 /* 768-1240: the promo content stays (the brief), and moves under the columns
    as one full-width band — text and button on the left, its picture on the
@@ -3388,8 +3429,11 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 /* ── The phone menu sheet ───────────────────────────────────────────────────
    A page between the header and the tab bar, on the opaque page ground, so
    nothing scrolls under the translucent header (audit A9). Live rows only,
-   one line each, at a 48px touch height. */
-.pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
+   one line each, at a 48px touch height. The sheet is the scroller and it ends
+   where the bar begins (bottom), so no row can sit under the bar; the end
+   padding lets the last row scroll clear of the sheet's edge, and the scroll
+   padding does the same for a row scrolled into view by focus. */
+.pnav-sheet{position:fixed;top:var(--chrome-h);left:0;right:0;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));z-index:110;padding:4px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px));scroll-padding-block:8px 28px;overflow-y:auto;overscroll-behavior:contain;background:rgb(var(--page-rgb));animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
 /* Opacity only: a rise would put the segments 8px low while the sheet opens, so they would not sit at one top on every tab. */
 @keyframes pnav-sheet-in{from{opacity:0}to{opacity:1}}
 @media(min-width:768px){.pnav-sheet{bottom:0}}
@@ -3447,10 +3491,11 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
     .pnav-tab[aria-disabled="true"]:hover{color:rgba(var(--ink-rgb),var(--ink-dim))}
   }
   .pnav-tab[aria-disabled="true"]{opacity:.55;cursor:default}
-  /* Only the page's own tab is drawn as selected: ink, weight and a bar on the
-     bar's top edge. A tab that opened the menu sheet (aria-expanded) or is
-     hovered or focused is never drawn this way, so two tabs never both read as
-     current, and the bar is a cue that does not depend on colour. */
+  /* Only one tab is drawn as selected: ink, weight and a bar on the bar's top
+     edge. It is the route's tab, or, while the menu sheet is open, the tab for
+     the section the sheet shows (PhoneTabBar sets is-current for both). A tab
+     that is merely hovered or focused is never drawn this way, so two tabs never
+     both read as current, and the bar is a cue that does not depend on colour. */
   .pnav-tab.is-current{color:rgb(var(--ink-rgb));font-weight:560}
   .pnav-tab.is-current::before{content:"";position:absolute;top:-6px;left:50%;width:24px;height:2px;margin-left:-12px;border-radius:0 0 2px 2px;background:currentColor}
   .pnav-tab:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
@@ -3476,29 +3521,11 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .exp-fmt-gap{flex:0 0 auto;height:16px;background:var(--bg-0);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .exp-fmt-check{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--bh);border-radius:50%;transition:border-color var(--dur-2) var(--ease-out)}
 .exp-fmt.is-active .exp-fmt-check{border-color:var(--accent);box-shadow:inset 0 0 0 4px var(--accent)}
-/* Add-mode: paste-SVG affordance */
-.icust-paste{display:flex;flex-direction:column;gap:12px;padding:8px 24px 24px}
-.icust-paste .icust-foot{padding:16px 0 0}
-/* Stage: a flat ground the ground switch picks (library.css holds the other three).
-   The base is the Page ground, the theme's own. The colour never changes it. */
-.icust-stage{position:relative;display:grid;place-items:center;min-height:220px;margin:4px 24px 0;padding:24px;border-radius:var(--radius-xl);background:var(--bg-0);box-shadow:inset 0 0 0 1px var(--border);overflow:hidden;--ig-size:112px;--ig-stroke:2;--ig-color:#F4F4F5;--ig-transform:none;--ig-cap:round;--ig-join:round}
-.icust-stage-host{display:grid;place-items:center;line-height:0}
-.icust-stage-host svg{width:var(--ig-size);height:var(--ig-size);color:var(--ig-color);transform:var(--ig-transform,none);transform-origin:center;transition:width var(--dur-2) var(--ease-out),height var(--dur-2) var(--ease-out)}
-.icust-stage-host svg,.icust-stage-host svg *{stroke-width:var(--ig-stroke);stroke-linecap:var(--ig-cap);stroke-linejoin:var(--ig-join)}
-.icust-stage-host svg *{stroke-width:calc(var(--ig-stroke) / var(--ig-k,1))}
-/* Controls */
-.icust-controls{display:flex;flex-direction:column;gap:14px;padding:18px 24px 4px}
-.icust-row{display:flex;align-items:center;gap:12px;min-height:32px}
-.icust-row>label{flex:0 0 56px;color:var(--t2);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none}
-.icust-row input[type="range"]{flex:1;min-width:0;accent-color:var(--accent)}
-.snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+/* SnapSlider: the value readout and its edit field */
+.snapv-value{flex:0 0 auto;min-width:48px;padding:2px 6px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;text-align:right;font-family:var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;font-size:var(--fs-caption);color:var(--t1);cursor:text;transition:border-color var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .snapv--edited .snapv-value,.snapv--edited .snapv-input{font-weight:700;color:var(--t0)}
 .snapv-value:hover{border-color:var(--border);color:var(--t0)}
-.snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
-.icust-seg{display:inline-flex;flex:1;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill)}
-.icust-seg button{flex:1;padding:6px 8px;border:none;background:none;border-radius:var(--radius-pill);color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none}
-.icust-seg button:hover{color:var(--t0)}
-.icust-seg button.active{background:var(--bg-0);color:var(--t0);box-shadow:var(--shadow-xs)}
+.snapv-input{flex:0 0 auto;width:72px;padding:2px 6px;border:1px solid var(--accent);border-radius:var(--radius-xs);background:var(--inp);text-align:right;font-family:var(--font);font-variant-numeric:tabular-nums;letter-spacing:0;font-size:var(--fs-caption);color:var(--t0);outline:none;-moz-appearance:textfield;appearance:textfield}
 /* cpk — THE colour input for this app (src/components/ColorPickerPop.jsx).
    It replaces the OS-native colour dialog on EVERY surface that picks a colour;
    the component header carries the call-site inventory and the emit contract.
@@ -3567,14 +3594,18 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 .cpk-instrument .cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
 .cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .cpk-row{display:flex;align-items:center;gap:var(--s-1)}
+/* The refusal under the value field: a live region that is empty, and so takes no room, until a typed value is refused. */
+.cpk-hint{margin:0;font-size:var(--fs-caption);line-height:1.5;color:var(--err-strong)}
+.cpk-hint:not(:empty){margin-top:var(--s-1)}
 /* Eyedropper. Present only where the browser has the API — see the component. */
 .cpk-dropper{flex:0 0 auto;display:grid;place-items:center;width:32px;height:32px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),border-color var(--dur-1) var(--ease-out)}
 .cpk-dropper:hover{color:var(--t0);border-color:var(--bh)}
 .cpk-dropper:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cpk-hex{flex:1 1 auto;min-width:0;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-family:var(--mono);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
-/* The notation select. Sized to its widest option (HEX/RGB/HSL are all three
-   characters) so switching never reflows the row under the pointer. */
-.cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer}
+/* The notation select. Sized to its widest option (HEX/RGB/HSL) so switching
+   never reflows the row under the pointer. It is a UI-face button, not a code
+   value; the width comes from the option labels, not equal-width glyphs. */
+.cpk-format{flex:0 0 auto;height:32px;padding:0 4px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t1);font-family:var(--font);font-size:var(--fs-micro);font-weight:500;letter-spacing:0;text-transform:none;cursor:pointer}
 .cpk-format:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 /* Each swatch group is headed. An unheaded second grid is indistinguishable
    from the first — to the eye, and to a screen reader, which is why the label
@@ -3598,6 +3629,20 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
    the white light panel and better on the dark one, which clears the 3:1 that
    WCAG 1.4.11 asks of a non-text boundary. */
 .cpk-swatch{border-color:color-mix(in srgb,var(--t0) 50%,transparent)}
+/* The project's own colours (palette, semantic). The button is the hit area and
+   the chip inside is the sample, so the sample can stay small while the target
+   grows to 44px on touch and on phone widths. The row wraps inside the panel and
+   never sets its width. */
+.cpk-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(28px,1fr));gap:var(--s-1)}
+.cpk-preset{display:grid;place-items:center;min-width:0;height:28px;padding:0;border:0;border-radius:var(--radius-xs);background:none;cursor:pointer}
+.cpk-preset-chip{width:22px;height:22px;border-radius:var(--radius-xs);border:1px solid color-mix(in srgb,var(--t0) 50%,transparent);transition:box-shadow var(--dur-1) var(--ease-out)}
+.cpk-preset:focus-visible{outline:2px solid var(--accent);outline-offset:0}
+.cpk-preset[aria-pressed="true"] .cpk-preset-chip{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
+@media(pointer:coarse),(max-width:767px){
+  .cpk-presets{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+  .cpk-preset{height:44px}
+  .cpk-preset-chip{width:28px;height:28px}
+}
 /* Content continues below the fold: a fade on the bottom edge, drawn only while
    ColorPickerPop's `data-more` is set. It is the scroll cue — a flat
    cut-off row reads as the end of the list. Sticky so it stays on the panel's
@@ -3610,7 +3655,7 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
 @media(pointer:coarse){
   .cpk-dropper{width:44px;height:44px}
   .cpk-hex{height:44px;font-size:16px}
-  .cpk-format{height:44px;padding:0 8px;font-size:12px}
+  .cpk-format{height:44px;padding:0 8px;font-size:var(--fs-caption)}
   /* Swatches (presets and Recent alike) are tap targets too. Five 44px columns
      and four 4px gaps are 236px, so the panel widens from 244px to hold them
      with its 12px padding; the swatches no longer shrink to fit. */
@@ -3630,6 +3675,8 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   html.has-tabbar .pop.cpk-pop[data-pop-fixed="true"]{bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));padding-bottom:var(--s-3)}
   .cpk-pop[data-pop-fixed="true"]::before{content:"";flex:0 0 auto;display:block;width:36px;height:4px;margin:0 auto;border-radius:var(--radius-pill);background:var(--border)}
   .cpk-pop[data-pop-fixed="true"] .cpk-swatches{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+  /* The sheet scrolls as a whole; its header (name and Close) stays in reach. */
+  .cpk-pop[data-pop-fixed="true"] .cpk-head{position:sticky;top:calc(-1 * var(--s-3));z-index:1;margin-top:calc(-1 * var(--s-3));padding-top:var(--s-3);background:var(--bg-1)}
   /* The scrim is the notation sheet's (.menu-select-scrim, dimmed at this width);
      it only needs the picker's own layer number, one under the panel. */
   .menu-select-scrim.cpk-scrim{z-index:calc(var(--cpk-layer,130) - 1)}
@@ -3638,11 +3685,6 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
   .cpk-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .cpk-close:active{background:var(--hvr)}
 }
-.icust-mode{flex:0 0 auto}
-/* Footer + Pro save-lock — the actions share the row width evenly. On the icon
-   page the footer holds one row at every width (see icon-emoji-library.css); the
-   wrap here is the fallback for anywhere else it is used. */
-.icust-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
 /* overflow / scrollbar / edge fade come from `.rail-overflow` (see the block by
    the global scrollbar rules). This was the eighth instance of the hidden-
    scroller shape: `overflow-x:auto` with the scrollbar deleted on both
@@ -3673,13 +3715,6 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
    way, and the customiser's head names it on a tap). The tile's box is the same hidden
    or shown, so nothing moves. Those rules live in library.css under `.lib-surface .ig .ic`. */
 .ic{position:relative}
-@media(max-width:560px){
-  .icust-stage{margin:4px 16px 0;padding:20px}
-  .icust-controls{padding:16px 16px 4px}}
-
-@media(max-width:560px){
-  .icust-row{flex-wrap:wrap}
-  .icust-row>label{flex-basis:100%}}
 
 
 /* ══ App shell — the account / billing / legal / system pages now live under the
@@ -3695,6 +3730,12 @@ html[data-reduced-motion="true"] .pnav-menu .pnav-tool:is([data-moment="palette"
    need to. */
 .app-page{flex:1 0 auto;display:flex;flex-direction:column;width:100%;max-width:1240px;margin:0 auto;padding:calc(var(--chrome-h) + clamp(14px,2.6vw,32px)) max(clamp(12px,3vw,36px),env(safe-area-inset-right,0px)) clamp(44px,6vw,80px) max(clamp(12px,3vw,36px),env(safe-area-inset-left,0px))}
 .app-page>*{min-width:0}
+/* The full-screen view of a library (?view=full, utils/libraryView.js): the shell
+   renders no PillNav and no AppFooter, so the nav's height leaves the offsets that
+   clear it (the notice strip, the page's top padding, scroll-margin) and the page
+   fills the window instead of the 1240px column. */
+html[data-view="full"]{--nav-h:0px}
+.app-page--full{max-width:none}
 
 /* ══ Tool-page shell (rail-) ══ */
 /* The in-tool left rail is retired — navigation lives entirely in the PillNav
@@ -3813,7 +3854,7 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
 .hcmd-bar:focus-within{border-color:var(--accent)}
 /* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
    (5.55:1 light, 8.48:1 dark), so a premium accent reaches them. */
-.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
+.hcmd-prompt{font-family:var(--font);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
 /* `input.` prefix, the same idiom as input.cs-hue-slider above and for the same
    reason: this MUST outrank the global input[type="text"] reset at the top of
    the file, whose 0,1,1 beats a bare 0,1,0 class no matter which comes later.
@@ -4301,6 +4342,17 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 @media(max-width:640px){
   .dgh-copy>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}}
 
+/* A page may hand the masthead a one-line phone description alongside the full
+   one (DiscoverGalleryHero's descriptionShort). Both are real text; the media
+   query shows one at a time, so there is no script and no layout shift. The
+   selectors carry the paragraph's tag so they outrank the 640px clamp above. */
+.dgh-copy>p.dgh-desc-short{display:none}
+@media(max-width:767px){
+  .dgh-copy>p.dgh-desc-full{display:none}
+  .dgh-copy>p.dgh-desc-short{display:block}}
+@media(max-width:640px){
+  .dgh-copy>p.dgh-desc-short{display:-webkit-box}}
+
 
 /* Palette Library */
 .pgl-page{padding-bottom:72px}
@@ -4373,9 +4425,17 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */
 .lbry-search input::-webkit-search-cancel-button{display:none}
-/* The field shows focus with a border colour and a box-shadow ring, and the inner
-   input paints no outline of its own. Forced colours drops the shadow and
-   flattens the border, so the wrapper takes a real outline there. */
+/* The inner input paints no outline of its own, so the wrapper is the focus
+   ring: a 2px outline while the input has keyboard focus, on top of the border
+   colour each surface sets. (Not :focus-within, so the clear button, which has
+   its own ring, does not get a second one around the field.) Forced colours
+   swaps the colour for a system one below. */
+.lbry-search:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+@media (forced-colors:active){
+  .lbry-search:has(input:focus-visible){outline-color:Highlight}
+}
+/* Forced colours drops any shadow and flattens the border, so the wrapper takes
+   a real outline there. */
 @media (forced-colors:active){
   .lbry-search:focus-within{outline:2px solid Highlight;outline-offset:2px}
 }
@@ -4885,11 +4945,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .fbx-menu{width:100%;pointer-events:auto}
 /* The row focus ring of the dropdown rows: link colour, inside the row. */
 .fbx-menu .pop-item:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
-/* The head is the element signature, and it is the one place a monospace
-   literal belongs in this menu: it is a selector, not a label. .pop-head is
-   a sans label, so this one sets it back in the value face, in its own case —
-   a selector uppercased is a different selector. */
-.fbx-menu .pop-head{font-family:var(--mono);text-transform:none;letter-spacing:normal;overflow-wrap:anywhere;color:var(--t2)}
+/* The head is a plain-words name for what was clicked ("Button: Copy #3A5F2B"),
+   in the sans label voice; the selector the report carries is never shown. */
+.fbx-menu .pop-head{overflow-wrap:anywhere;color:var(--t2)}
 .fbx-note{font-size:var(--fs-caption);line-height:1.5;color:var(--t3);margin:0;padding:2px 10px 4px}
 .fbx-dismiss{display:block;width:100%;padding:6px 10px 4px;border:none;background:none;font-family:var(--font);font-size:11px;line-height:1.5;color:var(--t3);text-align:left;cursor:pointer;border-radius:var(--btn-radius)}
 .fbx-dismiss:hover{background:var(--hvr);color:var(--t2)}

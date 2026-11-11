@@ -8,14 +8,17 @@
 //       stays on the trigger. (Cause: a "featured first row" rule lit the first
 //       row of every menu; it was neither roving focus nor autofocus.)
 //     · On a page that is a menu row, that row, and only that row, has
-//       aria-current="page" and the leading bar.
+//       aria-current="page", a heavier label and a check, with no coloured left
+//       edge. Hovering another row gives that row the grey tile and leaves the
+//       current row's look (heavier, checked, no tile) distinct from it.
 //     · Keyboard focus and hover still light a row (the controls), so the rows
 //       are not simply unstyled.
 //
 //   Phone tab bar and sheet (390)
 //     · With the menu sheet open from the Create tab on /projects, only the
-//       Dashboard tab (the current route) reads as selected. The Create tab,
-//       which is aria-expanded, does not.
+//       Create tab (the section the sheet shows) reads as selected and carries
+//       aria-current; Dashboard does not. Closing the sheet hands it back to the
+//       route's tab.
 //     · Signed out on /create/palette, only the Create tab reads as selected;
 //       the You tab matches the other resting tabs, before and after the
 //       sign-in dialog opens and closes, with a finger, with a mouse and with
@@ -41,9 +44,8 @@
 //     row as selected" fails (Palette has a .07 tile) at 768 and 1440.
 //   · Remove aria-current from the mega menu rows (isHere in PillNav.jsx): "the
 //     row for this page is the only one marked" fails.
-//   · Change `.pnav-tab.is-current{...}` back to
-//     `.pnav-tab.is-current,.pnav-tab[aria-expanded="true"]{...}`: "with the sheet
-//     open, only the current route's tab reads as selected" fails (two tabs).
+//   · Drop `sheetSection` from the `current` line in PhoneTabBar.jsx: "with the
+//     sheet open, only the section's tab reads as selected" fails (Dashboard).
 //   · Add `font-weight:560` to `.pnav-tab[aria-haspopup]` (or give the signed-out
 //     You button className 'pnav-tab is-current'): the You-tab tests fail.
 //   · Delete the `.pnav-mobile::after` rule inside @media(max-width:767px) in
@@ -112,6 +114,10 @@ const readRows = (page) => page.locator('#pnav-mega .pnav-tool').evaluateAll((ro
     id: el.getAttribute('data-row-id'),
     tile: cs.backgroundColor,
     bar: cs.boxShadow !== 'none',
+    // Any coloured edge: a left border, an inset-shadow bar or a painted image.
+    edge: parseFloat(cs.borderLeftWidth) > 0 || cs.boxShadow !== 'none' || cs.backgroundImage !== 'none',
+    weight: Number(getComputedStyle(el.querySelector('.pnav-tool-label')).fontWeight),
+    check: !!el.querySelector('.pnav-tool-here'),
     current: el.getAttribute('aria-current'),
     focused: el.matches(':focus'),
   }
@@ -190,9 +196,13 @@ for (const size of [TABLET, DESKTOP]) {
       const rows = await readRows(page)
       expect(rows.filter((r) => r.current === 'page').map((r) => r.id), 'one row is the current page').toEqual(['palette'])
       const here = rows.find((r) => r.id === 'palette')
-      expect(here.bar, 'the current row wears the bar').toBe(true)
+      // The current row is told apart by weight and a check, never by an edge.
+      expect(here.edge, 'the current row has a coloured left edge, bar or image').toBe(false)
+      expect(here.check, 'the current row shows its check').toBe(true)
       for (const row of rows.filter((r) => r.id !== 'palette')) {
-        expect(row.bar, `${row.id} wears the current-page bar`).toBe(false)
+        expect(row.edge, `${row.id} has a coloured edge`).toBe(false)
+        expect(row.check, `${row.id} shows a check`).toBe(false)
+        expect(row.weight, `${row.id} is as heavy as the current row`).toBeLessThan(here.weight)
         expect(alpha(row.tile), `${row.id} has a tile`).toBe(0)
       }
       await shot(page, `menu-create-on-palette-${size.tag}-${who ? 'in' : 'out'}`)
@@ -201,15 +211,38 @@ for (const size of [TABLET, DESKTOP]) {
   }
 }
 
+// The current row and a hovered row look different: the hover is a grey tile on a
+// lighter label with no check; the current row is a heavier label with a check and no tile.
+for (const theme of THEMES) {
+  test(`the current row and a hovered row are told apart, 1440, ${theme}`, async ({ browser }) => {
+    const { ctx, page } = await openPage(browser, DESKTOP, theme, null, '/create/palette')
+    await openCreateMenu(page, DESKTOP)
+    await page.locator('#pnav-mega .pnav-tool[data-row-id="gradient"]').hover()
+    await expect.poll(async () => alpha((await readRows(page)).find((r) => r.id === 'gradient').tile)).toBeGreaterThan(0)
+    const rows = await readRows(page)
+    const here = rows.find((r) => r.id === 'palette')
+    const hovered = rows.find((r) => r.id === 'gradient')
+    expect(here.current, 'the current row keeps aria-current').toBe('page')
+    expect(hovered.current, 'the hovered row is not the current page').toBeNull()
+    expect(alpha(here.tile), 'the current row has no hover tile').toBe(0)
+    expect(here.edge, 'the current row has a coloured edge').toBe(false)
+    expect(hovered.edge, 'the hovered row has a coloured edge').toBe(false)
+    expect(here.weight, 'the current label is heavier than the hovered one').toBeGreaterThan(hovered.weight)
+    expect([here.check, hovered.check], 'only the current row is checked').toEqual([true, false])
+    await shot(page, `menu-create-current-vs-hover-1440-${theme}`)
+    await ctx.close()
+  })
+}
+
 // ── a71a40fbd9: the phone tab bar with the sheet open ────────────────────────
 for (const theme of THEMES) {
   for (const who of [null, FREE]) {
     const label = `${theme}, ${who ? 'signed in' : 'signed out'}`
     test.describe(`phone sheet at 390, ${label}`, () => {
-      test('with the sheet open, only the current route\'s tab reads as selected', async ({ browser }) => {
+      test('with the sheet open, only the section\'s tab reads as selected, and the route\'s tab returns on close', async ({ browser }) => {
         const { ctx, page } = await openPage(browser, PHONE, theme, who, '/projects')
         const before = await readTabs(page)
-        expect(selectedLabels(before), 'POSITIVE CONTROL: the bar starts with the current tab drawn').toEqual(['Dashboard'])
+        expect(selectedLabels(before), 'POSITIVE CONTROL: the bar starts with the route\'s tab drawn').toEqual(['Dashboard'])
 
         await page.locator('.pnav-tab', { hasText: 'Create' }).tap()
         await expect(page.locator('.pnav-sheet')).toBeVisible()
@@ -217,12 +250,17 @@ for (const theme of THEMES) {
         const tabs = await readTabs(page)
         const create = tabs.find((t) => t.label === 'Create')
         expect(create.expanded, 'the Create tab is the one that opened the sheet').toBe('true')
-        expect(selectedLabels(tabs), 'only one tab reads as selected').toEqual(['Dashboard'])
-        expect(tabs.filter((t) => t.current === 'page').map((t) => t.label)).toEqual(['Dashboard'])
-        // The opened tab rests like the tabs that are not open.
-        const rest = tabs.find((t) => t.label === 'Discover')
-        expect(create.colour, 'Create is inked like a resting tab').toBe(rest.colour)
+        expect(create.current, 'Create is the current tab while its section is open').toBe('page')
+        expect(tabs.find((t) => t.label === 'Dashboard').current, 'Dashboard is no longer current').toBeNull()
+        expect(selectedLabels(tabs), 'only one tab reads as selected').toEqual(['Create'])
+        expect(tabs.filter((t) => t.current === 'page').map((t) => t.label)).toEqual(['Create'])
         await shot(page, `sheet-create-from-dashboard-390-${theme}-${who ? 'in' : 'out'}`)
+
+        await page.getByRole('button', { name: 'Close menu' }).tap()
+        await expect(page.locator('.pnav-sheet')).toBeHidden()
+        const after = await readTabs(page)
+        expect(after.filter((t) => t.current === 'page').map((t) => t.label), 'the route\'s tab is current again').toEqual(['Dashboard'])
+        expect(selectedLabels(after)).toEqual(['Dashboard'])
         await ctx.close()
       })
 
@@ -246,7 +284,7 @@ for (const theme of THEMES) {
     })
   }
 
-  test(`on Create's own page the sheet still shows one selected tab, ${theme}`, async ({ browser }) => {
+  test(`from Create's own page the account sheet still shows one selected tab, ${theme}`, async ({ browser }) => {
     const { ctx, page } = await openPage(browser, PHONE, theme, FREE, '/create/palette')
     expect(selectedLabels(await readTabs(page)), 'the page loads with Create selected').toEqual(['Create'])
     await page.locator('.pnav-tab', { hasText: 'You' }).tap()
@@ -254,7 +292,7 @@ for (const theme of THEMES) {
     await page.waitForTimeout(450)
     const tabs = await readTabs(page)
     expect(tabs.find((t) => t.label === 'You').expanded).toBe('true')
-    expect(selectedLabels(tabs), 'You opened the account, Create is still the page').toEqual(['Create'])
+    expect(selectedLabels(tabs), 'the sheet shows the account, so You is the one selected').toEqual(['You'])
     await shot(page, `sheet-account-on-palette-390-${theme}`)
     await ctx.close()
   })

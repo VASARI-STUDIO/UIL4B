@@ -724,7 +724,6 @@ export default function ColorStudio({ onCopy, toast }) {
               <span className="stc-label" id="stc-base-label">Base step</span>
               <ToolPills
                 labelledBy="stc-base-label"
-                mono
                 options={BASE_STEPS}
                 value={baseStep}
                 onChange={(v) => { setBaseStep(v); setSemCopied(false) }}
@@ -942,7 +941,13 @@ export default function ColorStudio({ onCopy, toast }) {
               <div className="stc-save-sub">Load</div>
               {projects.slice(-5).map(p => (
                 <button key={`load-${p.id}`} type="button" className="stc-save-item"
-                  onClick={() => { loadProject(p.id); closeSaveMenu(); toast?.('Loaded: ' + p.name) }}
+                  onClick={() => {
+                    // Unsaved work that was put aside has its own toast (with Undo); it names this project.
+                    const putAside = loadProject(p.id)
+                    closeSaveMenu()
+                    if (putAside === null) toast?.(`Couldn't open ${p.name}. It may have been deleted on another device.`)
+                    else if (!putAside) toast?.('Loaded: ' + p.name)
+                  }}
                 >{p.name}</button>
               ))}
             </>

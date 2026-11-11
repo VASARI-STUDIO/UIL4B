@@ -117,11 +117,11 @@ test.describe('public route contract', () => {
     // page caps with, never typed — 44-locked-library-tease.spec.js proves the
     // ladder itself at all three rungs, and this file only needs the route to
     // serve the library at all.
-    await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     // Midnight Teal is the first eligible palette, so it is inside the
     // anonymous cap and the search still has something to narrow to.
     await page.getByPlaceholder('Search palettes').fill('Midnight Teal')
-    await expect(page.locator('.pgal-card')).toHaveCount(1)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(1)
   })
 
   test('crawler sitemap contains every live canonical route and no staged or redirect destination', async ({ request }) => {

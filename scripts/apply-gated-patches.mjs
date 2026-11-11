@@ -8,8 +8,8 @@
 // WHAT THIS IS FOR
 // ═══════════════════════════════════════════════════════════════════════════
 // The changes are written, reviewed and tested, and none of them is in the
-// tree. Every one touches a file the Claude Code auto-mode classifier refuses
-// to stage, so an agent can produce the diff and cannot apply it. Before this
+// tree. Every one touches a file that automated commits may not stage, so
+// the diff can be written and tested but not applied. Before this
 // command, each change was pasted by hand into firestore.rules (or the other
 // gated file), once per change, into two files, in an order nobody had written
 // down.
@@ -263,10 +263,6 @@ function summarise(steps, verifications, { dryRun = false } = {}) {
   out('  WHAT IS NOW TRUE THAT WAS NOT BEFORE')
   const truths = []
   const done = new Set([...landed, ...already].map((s) => s.id))
-  if (done.has('firebase-deferral')) {
-    truths.push('the homepage paints sooner — 360 ms to first paint and 624 ms to the '
-      + 'main heading, with 21.8% fewer bytes in the first request')
-  }
   if (done.has('feedback-bounds')) {
     truths.push('a stranger can no longer write anything into your feedback queue, and '
       + 'no signed-in account can write a document bigger or stranger than the app sends')

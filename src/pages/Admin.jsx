@@ -18,14 +18,16 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, 
 import { db } from '../utils/firebase'
 import { createPromptLoader, promptReadErrorText, ADMIN_PROMPT_DEFAULT_FILTER, ADMIN_PROMPT_FILTERS, ADMIN_PROMPT_LIMIT } from '../utils/adminPromptQuery'
 import CommunityQueue from '../components/admin/CommunityQueue'
+import CommunityNotifySettings from '../components/admin/CommunityNotifySettings'
 import { listFeedback, setFeedbackStatus, setFeedbackNotes, deleteFeedbackDoc } from '../utils/feedbackQueueApi'
 import { useModerationRole } from '../hooks/useModerationRole'
 import {
   FEEDBACK_STATUSES, FEEDBACK_STATUS_LABELS, nextFeedbackStatus,
-  canReview, canSeeReporterEmail, canAssignModerators,
+  canReview, canSeeReporterEmail, canAssignModerators, canManageBilling,
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { isTrustedMediaUrl } from '../utils/mediaUrl'
+import { replyMailto } from '../utils/replyMailto'
 import { queueOrderField, mergeUnstamped } from '../utils/communityLimits'
 import { listUnstamped } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
@@ -89,9 +91,12 @@ const TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'users', label: 'Users' },
   { id: 'submissions', label: 'Submissions' },
+  { id: 'generated', label: 'Generated' },
   { id: 'community', label: 'Community' },
   { id: 'prompts', label: 'Prompts' },
-  { id: 'stripe', label: 'Stripe' },
+  { id: 'stripe', label: 'Stripe', show: canManageBilling },
+  // Server-side settings, visible to the administrator allowlist only.
+  { id: 'settings', label: 'Settings', adminOnly: true },
 ]
 
 function fmtDate(iso) {
@@ -318,7 +323,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
               rendered, saying what is withheld — a silently missing field
               reads as a report with no sender. */}
           {item.email && (canSeeEmail
-            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong>{isUnverifiedReporter(item) && <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}> (unverified, typed by the reporter)</span>}</div>
+            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong>{isUnverifiedReporter(item) && <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}> (unverified, typed by the reporter)</span>}{replyMailto(item) && <> · <a className="adm-reply-link" href={replyMailto(item)}>Reply by email</a></>}</div>
             : <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 12 }}>From: <span style={{ fontStyle: 'italic' }}>address withheld from moderators</span></div>)}
 
           {/* WHO ACTED ON THIS.
@@ -821,7 +826,7 @@ function StripeSetupPanel({ toast }) {
           <div className="adm-card" style={{ marginBottom: 16 }}>
             <div className="adm-card-body">
               <p className="adm-stripe-desc">
-                Set the {intervals.map(intervalLabel).join(', ').toLowerCase()} price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
+                Set the {intervals.map(intervalLabel).join(', ').toLowerCase()} price for the <strong>UI L4B Pro</strong> plan per currency. Each customer is
                 shown their local currency at checkout automatically (detected from their browser locale).
               </p>
               {/* No ".99" tip: the ladder is whole dollars ($7 / $18 / $48),
@@ -1123,6 +1128,19 @@ function PlanBadge({ state }) {
   return <span className={`adm-badge adm-plan adm-plan--${state.tone}`}>{state.label}</span>
 }
 
+// A sortable column head. Declared here, not inside UsersPanel, so React keeps
+// the same component between renders instead of remounting every head.
+function SortTh({ k, sortKey, sortDir, onSort, children, ...rest }) {
+  return (
+    <th {...rest} scope="col">
+      <button type="button" className={`adm-th-sort${sortKey === k ? ' active' : ''}`} onClick={() => onSort(k)}>
+        {children}
+        <span className="adm-th-arrow">{sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
+      </button>
+    </th>
+  )
+}
+
 function UsersPanel({ localUsers, toast, role }) {
   const [users, setUsers] = useState(null) // null = loading
   const [source, setSource] = useState('server')
@@ -1345,7 +1363,8 @@ function UsersPanel({ localUsers, toast, role }) {
     // the raw word beside it — a spreadsheet that collapsed past-due into
     // "free" would rebuild the defect this panel was fixed for, one export
     // later and somewhere nobody is looking.
-    const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'stripeStatus', 'interval', 'access', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
+    // The address goes in only for the founder, as in the feedback export.
+    const cols = [...(canSeeReporterEmail(role) ? ['email'] : []), 'displayName', 'provider', 'emailVerified', 'plan', 'stripeStatus', 'interval', 'access', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
     // displayName, company and location are user-controlled profile fields, so
     // the cells go through csvCell rather than bare quote-escaping. See utils/csv.js.
     const csv = toCsv(cols, filtered, (r, c) => (
@@ -1364,14 +1383,7 @@ function UsersPanel({ localUsers, toast, role }) {
     toast?.(`Exported ${filtered.length} users`)
   }
 
-  const SortTh = ({ k, children, ...rest }) => (
-    <th {...rest} scope="col">
-      <button type="button" className={`adm-th-sort${sortKey === k ? ' active' : ''}`} onClick={() => toggleSort(k)}>
-        {children}
-        <span className="adm-th-arrow">{sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
-      </button>
-    </th>
-  )
+  const sortProps = { sortKey, sortDir, onSort: toggleSort }
 
   // User · Plan · Joined · Last seen · Location · Details, plus Access when the
   // reader has the founder role. Counted once so the empty row cannot go out of
@@ -1487,12 +1499,12 @@ function UsersPanel({ localUsers, toast, role }) {
               <table className="adm-table adm-users-table" role="table">
                 <thead>
                   <tr role="row">
-                    <SortTh k="email">User</SortTh>
-                    {founderView && <SortTh k="access">Access</SortTh>}
-                    <SortTh k="plan">Plan</SortTh>
-                    <SortTh k="createdAt">Joined</SortTh>
-                    <SortTh k="lastLoginAt">Last seen</SortTh>
-                    <SortTh k="country">Location</SortTh>
+                    <SortTh k="email" {...sortProps}>User</SortTh>
+                    {founderView && <SortTh k="access" {...sortProps}>Access</SortTh>}
+                    <SortTh k="plan" {...sortProps}>Plan</SortTh>
+                    <SortTh k="createdAt" {...sortProps}>Joined</SortTh>
+                    <SortTh k="lastLoginAt" {...sortProps}>Last seen</SortTh>
+                    <SortTh k="country" {...sortProps}>Location</SortTh>
                     <th scope="col"><span className="sr-only">Details</span></th>
                   </tr>
                 </thead>
@@ -1742,20 +1754,21 @@ export default function Admin({ toast }) {
   // refresh that makes a freshly minted claim usable in the same session.
   const { role, loading: roleLoading } = useModerationRole()
   const [tab, setTab] = useState('overview')
+  const tabs = TABS.filter(t => (!t.adminOnly || isAdminUser) && (!t.show || t.show(role)))
   // Roving-tabindex keyboard navigation for the tab bar. A tablist is ONE tab
   // stop; arrows move within it. Without this the ten tabs were ten separate
   // stops, so reaching the content of the last one meant ten presses.
   const tabRefs = useRef({})
   const onTabKeyDown = (e) => {
-    const i = TABS.findIndex(t => t.id === tab)
+    const i = tabs.findIndex(t => t.id === tab)
     let next = null
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % TABS.length
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + TABS.length) % TABS.length
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % tabs.length
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length
     else if (e.key === 'Home') next = 0
-    else if (e.key === 'End') next = TABS.length - 1
+    else if (e.key === 'End') next = tabs.length - 1
     if (next === null) return
     e.preventDefault()
-    const id = TABS[next].id
+    const id = tabs[next].id
     setTab(id)
     tabRefs.current[id]?.focus()
   }
@@ -1777,6 +1790,11 @@ export default function Admin({ toast }) {
   const [subSearch, setSubSearch] = useState('')
   const [subSort, setSubSort] = useState('newest')
   const [expandedId, setExpandedId] = useState(null)
+  // The Generated tab's own search, status filter and sort. Its rows are all
+  // bugs, so it has no type filter.
+  const [genSearch, setGenSearch] = useState('')
+  const [genStatus, setGenStatus] = useState('all')
+  const [genSort, setGenSort] = useState('newest')
   const [pendingPrompts, setPendingPrompts] = useState([])
   const [promptFilter, setPromptFilter] = useState(ADMIN_PROMPT_DEFAULT_FILTER)
   // The refresh callback below has no dependencies, so it reads the filter here.
@@ -1882,6 +1900,8 @@ export default function Admin({ toast }) {
     }
     setFeedback(merged)
     await loadPrompts(promptFilterRef.current)
+    // False positive: this runs after an await in an effect-driven callback, never during render.
+    // eslint-disable-next-line react-hooks/purity
     setRefreshedAt(Date.now())
   }, [loadPrompts])
 
@@ -1989,15 +2009,23 @@ export default function Admin({ toast }) {
 
   // ── Derived data ──
 
-  // Submission stats
-  const newCount = feedback.filter(f => f.status === 'new').length
-  const inProgressCount = feedback.filter(f => f.status === 'in-progress').length
+  // The `feedback` collection holds two kinds of row: what people wrote, and
+  // reports nobody typed (crash reports carry source 'auto', src/utils/errorReport.js).
+  // Submissions lists the first kind, Generated the second. Documents filed
+  // before 'auto' existed stay 'inline' and stay under Submissions.
+  const humanFeedback = useMemo(() => feedback.filter(f => f.source !== 'auto'), [feedback])
+  const autoFeedback = useMemo(() => feedback.filter(f => f.source === 'auto'), [feedback])
+
+  // Submission stats. The tab badge counts what people wrote only, so a crash
+  // loop cannot bury the number a reviewer is waiting on.
+  const newCount = humanFeedback.filter(f => f.status === 'new').length
+  const inProgressCount = humanFeedback.filter(f => f.status === 'in-progress').length
 
   const filteredFeedback = useMemo(() => {
     // Every whitespace-separated token must match somewhere, so multi-word
     // queries like "export bug" narrow instead of failing outright.
     const tokens = subSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
-    const out = feedback.filter(item => {
+    const out = humanFeedback.filter(item => {
       if (filterType !== 'all' && item.type !== filterType) return false
       if (filterStatus !== 'all' && item.status !== filterStatus) return false
       if (tokens.length) {
@@ -2010,22 +2038,46 @@ export default function Admin({ toast }) {
     out.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
     if (subSort === 'newest') out.reverse()
     return out
-  }, [feedback, filterType, filterStatus, subSearch, subSort])
+  }, [humanFeedback, filterType, filterStatus, subSearch, subSort])
 
   const typeCounts = useMemo(() => {
-    const counts = { all: feedback.length }
-    feedback.forEach(f => { counts[f.type] = (counts[f.type] || 0) + 1 })
+    const counts = { all: humanFeedback.length }
+    humanFeedback.forEach(f => { counts[f.type] = (counts[f.type] || 0) + 1 })
     return counts
-  }, [feedback])
+  }, [humanFeedback])
 
   const statusCounts = useMemo(() => {
-    const counts = { all: feedback.length }
-    feedback.forEach(f => { counts[f.status] = (counts[f.status] || 0) + 1 })
+    const counts = { all: humanFeedback.length }
+    humanFeedback.forEach(f => { counts[f.status] = (counts[f.status] || 0) + 1 })
     return counts
-  }, [feedback])
+  }, [humanFeedback])
+
+  // Generated: the same search and status filter, over the 'auto' rows.
+  const filteredGenerated = useMemo(() => {
+    const tokens = genSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    const out = autoFeedback.filter(item => {
+      if (genStatus !== 'all' && item.status !== genStatus) return false
+      if (tokens.length) {
+        const hay = [item.subject, item.message, item.adminNotes, item.status]
+          .filter(Boolean).join(' ').toLowerCase()
+        if (!tokens.every(t => hay.includes(t))) return false
+      }
+      return true
+    })
+    out.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+    if (genSort === 'newest') out.reverse()
+    return out
+  }, [autoFeedback, genStatus, genSearch, genSort])
+
+  const genStatusCounts = useMemo(() => {
+    const counts = { all: autoFeedback.length }
+    autoFeedback.forEach(f => { counts[f.status] = (counts[f.status] || 0) + 1 })
+    return counts
+  }, [autoFeedback])
 
   // The overview's feedback cards cover the chosen range only, by the day each
-  // report was filed. The Submissions tab and its badge still list everything.
+  // report was filed, crash reports included. The Submissions and Generated tabs
+  // still list everything of their kind.
   const rangeFeedback = useMemo(() => feedback.filter(f => inWindow(f.createdAt, range)), [feedback, range])
   const rangeFeatures = useMemo(() => rangeFeedback.filter(f => f.type === 'feature'), [rangeFeedback])
   const rangeOpenBugs = useMemo(() => rangeFeedback.filter(f => f.type === 'bug' && f.status !== 'done'), [rangeFeedback])
@@ -2230,7 +2282,7 @@ export default function Admin({ toast }) {
         aria-label="Admin sections"
         onKeyDown={onTabKeyDown}
       >
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button
             key={t.id}
             role="tab"
@@ -2590,7 +2642,7 @@ export default function Admin({ toast }) {
       {tab === 'submissions' && (
         <div className="adm-section">
           <div className="adm-section-h">
-            <div className="adm-section-title"><span className="adm-section-bar" />Submissions ({filteredFeedback.length}{filteredFeedback.length !== feedback.length ? ` of ${feedback.length}` : ''})</div>
+            <div className="adm-section-title"><span className="adm-section-bar" />Submissions ({filteredFeedback.length}{filteredFeedback.length !== humanFeedback.length ? ` of ${humanFeedback.length}` : ''})</div>
             <div className="adm-sub-summary">
               {/* The figure is mono, the word beside it is not: these three
                   read as one line and the split is what makes the counts
@@ -2633,7 +2685,7 @@ export default function Admin({ toast }) {
             </div>
           ) : (
             <div className="adm-cat-desc" style={{ marginBottom: 8 }}>
-              <span className="mono">{serverFeedbackCount}</span> from the server · <span className="mono">{Math.max(0, feedback.length - serverFeedbackCount)}</span> from this browser
+              <span className="mono">{serverFeedbackCount}</span> from the server · <span className="mono">{Math.max(0, feedback.length - serverFeedbackCount)}</span> from this browser{autoFeedback.length > 0 && <> · <span className="mono">{autoFeedback.length}</span> of them in Generated</>}
             </div>
           )}
 
@@ -2687,7 +2739,7 @@ export default function Admin({ toast }) {
           {filteredFeedback.length === 0 && (
             <div className="adm-card">
               <div className="adm-empty">
-                {feedback.length > 0
+                {humanFeedback.length > 0
                   ? 'No submissions match filters.'
                   : feedbackError
                     ? 'Nothing to show — the server read was refused, so this is not "no submissions".'
@@ -2697,6 +2749,99 @@ export default function Admin({ toast }) {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filteredFeedback.map(item => (
+              <SubmissionCard
+                key={item.id}
+                item={item}
+                canSeeEmail={canSeeReporterEmail(role)}
+                expanded={expandedId === item.id}
+                onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                onStatusChange={handleStatusChange}
+                onNotesChange={handleNotesChange}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════ GENERATED TAB ═══════
+          Reports nobody typed: crash reports, filed with source 'auto'. The
+          same card, the same status / notes / delete handlers as Submissions,
+          with a search, status filter and sort of its own. It has no type
+          chips (every row is a bug), so the whole toolbar is two items that
+          stay on one line each: the search, then a status row that scrolls
+          sideways before it would wrap. */}
+      {tab === 'generated' && (
+        <div className="adm-section">
+          <div className="adm-section-h">
+            <div className="adm-section-title"><span className="adm-section-bar" />Generated ({filteredGenerated.length}{filteredGenerated.length !== autoFeedback.length ? ` of ${autoFeedback.length}` : ''})</div>
+            <div className="adm-sub-summary">
+              <span style={{ color: 'var(--warn)' }}><span className="mono">{genStatusCounts.new || 0}</span> new</span>
+              <span style={{ color: 'var(--accent-text)' }}><span className="mono">{genStatusCounts['in-progress'] || 0}</span> in progress</span>
+              <span style={{ color: 'var(--ok)' }}><span className="mono">{genStatusCounts.done || 0}</span> done</span>
+            </div>
+          </div>
+          <div className="adm-cat-desc" style={{ marginBottom: 8 }}>
+            Reports filed as automatic: the site's own crash reports. Anyone can send that label, so read the content as unverified. They carry no reply address.
+          </div>
+
+          {feedbackError && (
+            <div className="adm-card" style={{ marginBottom: 8, borderLeft: '2px solid var(--err)' }}>
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>
+                  The server&apos;s copy could not be read
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{feedbackError}</div>
+              </div>
+            </div>
+          )}
+          {writeError && (
+            <div className="adm-card" style={{ marginBottom: 8, borderLeft: '2px solid var(--err)' }}>
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>
+                  The last change was refused
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{writeError}</div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+                  The row was put back the way the server has it. Nothing on screen is pretending to be saved.
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="adm-sub-toolbar adm-gen-toolbar">
+            <input type="search" className="adm-search" aria-label="Search generated reports" placeholder="Search subject, message…" value={genSearch} onChange={e => setGenSearch(e.target.value)} />
+            <div className="adm-gen-chips rail-overflow">
+              {['all', ...STATUSES].map(s => (
+                <button
+                  key={s}
+                  className={`adm-time-btn${genStatus === s ? ' active' : ''}`}
+                  onClick={() => setGenStatus(prev => (prev === s ? 'all' : s))}
+                  title={genStatus === s && s !== 'all' ? 'Click again to clear' : undefined}
+                  style={{ textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                >
+                  <FilterGlyph id={s} />
+                  {s === 'all' ? 'All' : STATUS_LABELS[s]}{genStatusCounts[s] ? ` · ${genStatusCounts[s]}` : ''}
+                </button>
+              ))}
+              <button className="adm-time-btn" onClick={() => setGenSort(s => (s === 'newest' ? 'oldest' : 'newest'))} title="Toggle sort order">
+                {genSort === 'newest' ? 'Newest ↓' : 'Oldest ↑'}
+              </button>
+            </div>
+          </div>
+          {filteredGenerated.length === 0 && (
+            <div className="adm-card">
+              <div className="adm-empty">
+                {autoFeedback.length > 0
+                  ? 'No generated reports match filters.'
+                  : feedbackError
+                    ? 'Nothing to show — the server read was refused, so this is not "no generated reports".'
+                    : 'No generated reports yet.'}
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {filteredGenerated.map(item => (
               <SubmissionCard
                 key={item.id}
                 item={item}
@@ -2774,7 +2919,10 @@ export default function Admin({ toast }) {
       )}
 
       {/* ═══════ STRIPE TAB ═══════ */}
-      {tab === 'stripe' && <StripeSetupPanel toast={toast} />}
+      {tab === 'stripe' && canManageBilling(role) && <StripeSetupPanel toast={toast} />}
+
+      {/* ═══════ SETTINGS TAB ═══════ */}
+      {tab === 'settings' && isAdminUser && <CommunityNotifySettings />}
       </div>
     </div>
   )

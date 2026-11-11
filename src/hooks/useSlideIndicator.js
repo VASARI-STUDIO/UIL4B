@@ -10,6 +10,8 @@ import { useLayoutEffect } from 'react'
 //
 //   --si-x / --si-y   the selected child's offset inside the container
 //   --si-w / --si-h   its size
+//   --si-n            its width as a bare number, for a bar that moves by scaleX
+//                     (an underline slides on transform alone, never on width)
 //   --si-r            its corner radius
 //
 // data-slide on the container is the state the CSS reads:
@@ -40,6 +42,7 @@ function measure(root, item) {
   s.setProperty('--si-y', `${on.offsetTop}px`)
   s.setProperty('--si-w', `${on.offsetWidth}px`)
   s.setProperty('--si-h', `${on.offsetHeight}px`)
+  s.setProperty('--si-n', String(on.offsetWidth))
   s.setProperty('--si-r', getComputedStyle(on).borderTopLeftRadius)
   return true
 }

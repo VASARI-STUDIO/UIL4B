@@ -33,14 +33,27 @@ export function pageName(title) {
 // /login in its sign-up form (`?signup=1`). Set at runtime only: the served
 // shell is the log-in page.
 export const LOGIN_SIGNUP_TITLE = 'UI L4B | Create your free account'
+// The sales page's own title; `/` and `/home` share it.
+export const HOME_TITLE = 'UI L4B: your UI and brand kit, from one app'
+
+// The sales page's share image: a 1200x630 JPEG rendered from the built page
+// by scripts/render-home-og.mjs. `path` is site-relative; both the prerendered
+// `/` shell and routeMeta.js prefix it with SITE_ORIGIN, because og:image must
+// be absolute.
+export const HOME_SHARE_IMAGE = Object.freeze({
+  path: '/og/home.jpg',
+  width: 1200,
+  height: 630,
+  alt: 'The UI L4B homepage: the headline "Your UI and brand kit, from one app." above the Export panel, showing a style guide ready to export.',
+})
 
 // Titles/descriptions for real destinations only. Legacy redirect-only paths
 // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
 // <Navigate> and inherit their target's metadata, so an entry here would only
 // describe a page that no longer exists (AUDIT-B2).
 export const PAGE_TITLES = {
-  '/': 'UI L4B | Design Toolkit',
-  '/home': 'UI L4B | Design Toolkit',
+  '/': HOME_TITLE,
+  '/home': HOME_TITLE,
   '/create/color': 'Color System Generator for UI Design | UI L4B',
   '/create/palette': 'Color Palette Generator with Live UI Preview | UI L4B',
   '/create/semantic-color': 'Semantic Color Generator for Design Tokens | UI L4B',
@@ -109,9 +122,11 @@ export const PAGE_TITLES = {
 // support them" — so if CSS should be mentioned here, that sentence is the
 // shape, and it is the owner's call.
 export const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion and video frames.'
+// The sales page's own description; `/` and `/home` share it.
+export const HOME_DESCRIPTION = 'Colours, type, icons and imagery in one app, exported as one file. Free to use, no account needed.'
 export const PAGE_DESCRIPTIONS = {
-  '/': DEFAULT_DESCRIPTION,
-  '/home': DEFAULT_DESCRIPTION,
+  '/': HOME_DESCRIPTION,
+  '/home': HOME_DESCRIPTION,
   // THE SAME DELETED CLAUSE AS DEFAULT_DESCRIPTION, LEFT BEHIND ON THE ONE
   // ROUTE THAT RENDERS A CREATE HOME. This ended "Export CSS, Tailwind, PNG and
   // SVG." Against src/config/exportFormats.js on 2026-09-15: `css` carries no

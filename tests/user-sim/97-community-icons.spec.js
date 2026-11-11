@@ -44,6 +44,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { COMMUNITY_SUBMIT_REASONS } from '../../src/utils/submitIntent.js'
+import { TOAST_ACTION_MIN_MS } from '../../src/utils/toastDuration.js'
 
 // A real icon, in the shape every pack in this app ships: a viewBox, a path,
 // and `currentColor` — which is why the preview has to paint the root.
@@ -288,6 +289,10 @@ test.describe('community icon submissions', () => {
 
     await queued.getByRole('button', { name: /^Withdraw$/i }).first().click()
     await expect(queued, 'the withdrawn submission must be gone from the list').toHaveCount(0)
-    expect(await inQueue(), 'the account still holds a submission the user was told was withdrawn').toBe(0)
+    // The delete waits out the Undo toast, so it lands a few seconds later.
+    await expect.poll(inQueue, {
+      message: 'the account still holds a submission the user was told was withdrawn',
+      timeout: TOAST_ACTION_MIN_MS + 6000,
+    }).toBe(0)
   })
 })

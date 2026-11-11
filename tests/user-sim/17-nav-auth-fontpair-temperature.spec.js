@@ -75,7 +75,9 @@ test.describe('nav auth opens over the page you are on', () => {
     watch(page, 'keyboard user on the palette library')
     await go(page, '/discover/palettes')
 
-    await page.getByRole('button', { name: 'Log in' }).click()
+    // The nav's button. The gallery's end gate also has a Log in, so the name alone
+    // matches two.
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Log in' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await page.keyboard.press('Escape')
@@ -88,7 +90,7 @@ test.describe('nav auth opens over the page you are on', () => {
     await go(page, '/login')
     // The route is a page of its own now: its h1 and form sit in main, and no
     // dialog is involved.
-    await expect(page.locator('main').getByRole('heading', { level: 1, name: 'Log in to UIL4B' })).toBeVisible()
+    await expect(page.locator('main').getByRole('heading', { level: 1, name: 'Log in to UI L4B' })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
     // A protected route still bounces a signed-out visitor here rather than
@@ -178,6 +180,11 @@ async function settleSticky(page, selector = '.fpr-config') {
     if (!el) return Number.POSITIVE_INFINITY
     const stickyTop = parseFloat(getComputedStyle(el).top)
     if (!Number.isFinite(stickyTop)) return Number.POSITIVE_INFINITY
+    // A grid no taller than the panel leaves the page nothing to scroll past it:
+    // the grid's end holds the panel above its offset, and the page is parked
+    // at its end.
+    const atEnd = window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 1
+    if (grid && atEnd && el.getBoundingClientRect().bottom <= grid.getBoundingClientRect().bottom + 1) return 0
     return Math.abs(el.getBoundingClientRect().top - stickyTop)
   }, selector), {
     timeout: 10000,
@@ -205,11 +212,17 @@ test.describe('Font Pair · the sticky config panel is bounded by the viewport',
 
       // Whatever no longer fits is scrolled, not clipped: the panel's last
       // control can be reached.
-      const last = page.locator('.fpr-config #fpr-text')
+      const last = page.locator('.fpr-config .fpr-card-apply').last()
       await last.scrollIntoViewIfNeeded()
       await expect(last).toBeInViewport()
-      // The hand-off itself rides the sticky tool toolbar, so it is on screen.
-      await expect(page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Build a type scale from this pair' })).toBeInViewport()
+      // The hand-off is a More entry, and the sticky tool toolbar that holds
+      // More is on screen.
+      const more = page.locator('[data-tool-toolbar]').getByRole('button', { name: 'More', exact: true })
+      await expect(more).toBeInViewport()
+      await more.click()
+      const handoff = page.getByRole('menuitem', { name: 'Build a type scale from this pair' })
+        .or(page.getByRole('button', { name: 'Build a type scale from this pair' }))
+      await expect(handoff.first()).toBeInViewport()
     })
   }
 

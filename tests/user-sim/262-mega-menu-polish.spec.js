@@ -8,7 +8,7 @@
 //     · "Open menu" is drawn 36 x 36 and its hit area is at least 44 x 44.
 //     · Nothing shows through the tab bar: its fill is solid with no backdrop
 //       filter, and the menu sheet ends where the bar begins.
-//     · With the sheet open only the page's own tab reads as selected, and
+//     · With the sheet open only the open section's tab reads as selected, and
 //       signed out on a tool page the You tab rests.
 //
 //   Desktop menus (768, 1440)
@@ -20,6 +20,15 @@
 //       the recent tools in storage, links a live gallery (never the retired
 //       prompt library), is a 44px target and opens a real page.
 //     · The phone sheet's Discover panel carries the same suggestion.
+//     · At 768 the Create menu's "3D Model Converter" name is whole beside its Beta
+//       badge: not clipped, and ending before the badge.
+//
+//   Phone sheet, scrolled (390 x 844)
+//     · At the end of its scroll, the Alt Text row and the sheet's last row are
+//       wholly above the tab bar.
+//     · The tab for the open section (Create, Discover) carries aria-current;
+//       Learn has no tab, so the route's tab stands; closed, the route's tab
+//       returns.
 //
 //   Brand kit card
 //     · A list box and the Create mega menu each hide the card while open, and it
@@ -29,6 +38,13 @@
 //   · Make `.pnav-tabs` background `rgba(var(--page-rgb),.94)`: "tab bar is solid" fails.
 //   · Delete `.pnav-mobile::after` in the max-width:767px block of global.css:
 //     "Open menu hit area" fails.
+//   · Put the 768 band back to `gap:10px;padding-inline:8px` for Create rows and
+//     `padding-inline:6px` on the badge (global.css, max-width:900px): "3D Model
+//     Converter is not truncated" fails.
+//   · Drop `sheetSection` from the `current` line in PhoneTabBar.jsx: "with the
+//     sheet open the tab for its section is current" fails.
+//   · Change `.pnav-sheet` `bottom` to `0` (global.css): "scrolled to its end,
+//     every sheet row clears the tab bar" and "the sheet ends above it" fail.
 //   · Change `.pnav-tool-mins` to `width:2ch;overflow:hidden`: "Learn read times"
 //     fails.
 //   · Remove a pair from GALLERY_FOR_TOOL in discoverRecommendation.js: the
@@ -147,13 +163,13 @@ for (const theme of THEMES) {
       await ctx.close()
     })
 
-    test('with the sheet open only the page\'s own tab reads as selected', async ({ browser }) => {
+    test('with the sheet open only the open section\'s tab reads as selected', async ({ browser }) => {
       const { ctx, page } = await openPage(browser, PHONE, theme, '/projects')
       expect(selectedLabels(await readTabs(page)), 'POSITIVE CONTROL: the page\'s tab is drawn').toEqual(['Dashboard'])
       await page.locator('.pnav-tab', { hasText: 'Create' }).tap()
       await expect(page.locator('.pnav-sheet')).toBeVisible()
       await page.waitForTimeout(450)
-      expect(selectedLabels(await readTabs(page))).toEqual(['Dashboard'])
+      expect(selectedLabels(await readTabs(page))).toEqual(['Create'])
       await ctx.close()
     })
 
@@ -162,6 +178,63 @@ for (const theme of THEMES) {
       const tabs = await readTabs(page)
       expect(selectedLabels(tabs)).toEqual(['Create'])
       expect(tabs.find((t) => t.label === 'You').weight).toBe(tabs.find((t) => t.label === 'Dashboard').weight)
+      await ctx.close()
+    })
+
+    test('scrolled to its end, every sheet row clears the tab bar', async ({ browser }) => {
+      const { ctx, page } = await openPage(browser, PHONE, theme, '/discover')
+      await page.locator('.pnav-tab', { hasText: 'Create' }).tap()
+      await expect(page.locator('.pnav-sheet')).toBeVisible()
+      await page.waitForTimeout(450)
+      const barTop = (await page.locator('.pnav-tabs').boundingBox()).y
+
+      // The deepest tool row, brought into view the way a person scrolls to it.
+      const altText = page.locator('.pnav-sheet .pnav-acc-link', { hasText: 'Alt Text' })
+      await altText.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(150)
+      const altBox = await altText.boundingBox()
+      expect(altBox.y + altBox.height, 'the Alt Text row is wholly above the bar').toBeLessThanOrEqual(barTop + 0.5)
+
+      // The very last row of the sheet, at the end of the scroll.
+      await page.locator('.pnav-sheet').evaluate((el) => { el.scrollTop = el.scrollHeight })
+      await page.waitForTimeout(150)
+      const end = await page.locator('.pnav-sheet').evaluate((el) => {
+        const rows = [...el.querySelectorAll('a, button')].filter((r) => r.getClientRects().length > 0)
+        const last = rows[rows.length - 1].getBoundingClientRect()
+        return { bottom: last.bottom, atEnd: Math.abs(el.scrollTop + el.clientHeight - el.scrollHeight) <= 1 }
+      })
+      expect(end.atEnd, 'POSITIVE CONTROL: the sheet is scrolled to its end').toBe(true)
+      expect(end.bottom, 'the last row is wholly above the bar').toBeLessThanOrEqual(barTop + 0.5)
+      await shot(page, `sheet-scrolled-to-end-390-${theme}`)
+      await ctx.close()
+    })
+
+    test('with the sheet open the tab for its section is current, and the route\'s tab returns on close', async ({ browser }) => {
+      const { ctx, page } = await openPage(browser, PHONE, theme, '/projects')
+      const tab = (name) => page.locator('.pnav-tab', { hasText: name })
+      await expect(tab('Dashboard'), 'POSITIVE CONTROL: the route\'s tab is current').toHaveAttribute('aria-current', 'page')
+
+      await tab('Create').tap()
+      await expect(page.locator('.pnav-sheet')).toBeVisible()
+      await expect(tab('Create')).toHaveAttribute('aria-current', 'page')
+      await expect(tab('Dashboard')).not.toHaveAttribute('aria-current', 'page')
+
+      await page.locator('.pnav-acc-trigger', { hasText: 'Discover' }).tap()
+      await expect(tab('Discover'), 'the current tab follows the section').toHaveAttribute('aria-current', 'page')
+      await expect(tab('Create')).not.toHaveAttribute('aria-current', 'page')
+
+      // Learn has no tab, so the route's own tab stands.
+      await page.locator('.pnav-acc-trigger', { hasText: 'Learn' }).tap()
+      await expect(tab('Dashboard')).toHaveAttribute('aria-current', 'page')
+      await expect(page.locator('.pnav-tab[aria-current="page"]')).toHaveCount(1)
+
+      await page.locator('.pnav-acc-trigger', { hasText: 'Create' }).tap()
+      await expect(tab('Create')).toHaveAttribute('aria-current', 'page')
+      await shot(page, `sheet-create-tab-current-390-${theme}`)
+      await page.getByRole('button', { name: 'Close menu' }).tap()
+      await expect(page.locator('.pnav-sheet')).toBeHidden()
+      await expect(tab('Dashboard'), 'closed, the route\'s tab is current again').toHaveAttribute('aria-current', 'page')
+      await expect(tab('Create')).not.toHaveAttribute('aria-current', 'page')
       await ctx.close()
     })
   })
@@ -184,6 +257,43 @@ for (const size of [TABLET, DESKTOP]) {
       expect(row.bar, `${row.id} has the current-page bar`).toBe(false)
       expect(row.current, `${row.id} is marked as the current page`).toBeNull()
     }
+    await ctx.close()
+  })
+}
+
+// ── Create at 768: the longest tool name is whole beside its badge ───────────
+for (const theme of THEMES) {
+  test(`3D Model Converter is not truncated beside its Beta badge, 768, ${theme}`, async ({ browser }) => {
+    const { ctx, page } = await openPage(browser, TABLET, theme, '/discover')
+    await openMenu(page, TABLET, 'Create')
+    const row = page.locator('#pnav-mega .pnav-tool[data-row-id="3d-converter"]')
+    await expect(row).toBeVisible()
+    const m = await row.evaluate((el) => {
+      const nm = el.querySelector('.pnav-tool-nm')
+      const badge = el.querySelector('.beta-badge')
+      const r = el.getBoundingClientRect()
+      const n = nm.getBoundingClientRect()
+      const b = badge.getBoundingClientRect()
+      // The glyphs' own width, whatever the box does: a Range over the text.
+      const range = document.createRange()
+      range.selectNodeContents(nm)
+      return {
+        text: nm.textContent,
+        scrollWidth: nm.scrollWidth,
+        clientWidth: nm.clientWidth,
+        textRight: range.getBoundingClientRect().right,
+        badgeLeft: b.left,
+        badgeRight: b.right,
+        rowRight: r.right,
+        nameHeight: n.height,
+      }
+    })
+    expect(m.text).toBe('3D Model Converter')
+    expect(m.scrollWidth, 'the name is not clipped (no ellipsis)').toBeLessThanOrEqual(m.clientWidth)
+    expect(m.textRight, 'the name ends before the badge begins').toBeLessThanOrEqual(m.badgeLeft)
+    expect(m.badgeRight, 'the badge stays inside its row').toBeLessThanOrEqual(m.rowRight)
+    expect(m.nameHeight, 'the name keeps its 20px line box').toBe(20)
+    await shot(page, `create-3d-converter-768-${theme}`)
     await ctx.close()
   })
 }
@@ -211,7 +321,7 @@ for (const size of [LAPTOP, DESKTOP]) {
         expect(r.cut, `"${r.text}" is clipped`).toBe(false)
       }
       for (const article of LEARN_ARTICLES) {
-        await expect(page.locator(`#pnav-mega a[href="/learn/${article.slug}"]`), `${article.slug} is listed more than once`).toHaveCount(1)
+        await expect(page.locator(`#pnav-mega a.pnav-tool[href="/learn/${article.slug}"]`), `${article.slug} is listed more than once`).toHaveCount(1)
       }
       await expect(page.locator('#pnav-mega .pnav-menu-foot-link')).toHaveText(/See all guides/)
       await shot(page, `learn-menu-${size.tag}-${theme}`)

@@ -114,6 +114,14 @@ const ONLY_ROUTES = (process.env.UPDATE_STYLE_ROUTES || '').split(',').map((r) =
 // Elements a redesigned route gained. They join the measure only while
 // regenerating; once they are in the fixture they are compared like any other.
 const ADDED_SELECTORS = {
+  // The front door's classes, re-derived from the rendered page after the redesign: the nav bar,
+  // the hero with its command bar and search, and the footer. Only what is mounted on arrival;
+  // the sections below load as the visitor nears them, so they are not frozen here.
+  '/': ['.sr-only', '.sp-footer-col', '.sp-footer-col-h', '.brand-logo', '.brand-logo--lockup', '.spnav', '.spnav-bar',
+    '.spnav-mark', '.spnav-word', '.brand-logo-wide', '.spnav-end', '.hh-hero', '.hh-glow', '.hh-copy', '.hh-h1', '.hh-h1-mark',
+    '.hh-sub', '.hh-cta', '.hh-go', '.hh-go-disc', '.hh-ghost', '.ui-pill-out', '.hh-search', '.sp-search', '.hcmd', '.hcmd-bar',
+    '.hcmd-prompt', '.hcmd-input', '.hcmd-kbd', '.sp-search-ghost', '.sp-search-rot', '.hh-fig', '.hh-slot', '.hh-loop',
+    '.lp-root', '.sp-footer', '.sp-footer--home', '.sp-footer-sky', '.sp-footer-horizon', '.sp-footer-core'],
   // The guide shell's contents (rail from 1080, disclosure below), the content
   // column and the end-of-guide rows. Each is painted at only one of the two
   // widths, so the other width simply carries fewer rows.
@@ -123,14 +131,43 @@ const ADDED_SELECTORS = {
   // Below 768px a Create tool's primary is in the dock fixed to the foot of the screen, not
   // the toolbar (`.tl-primary` is not rendered at 390 any more). The dock takes its place
   // in the measure at 390; it is not mounted at 1440.
+  // The dashboard's own classes replace the old page's `.uh-*` hooks. Those the signed-out example
+  // kit does not mount are skipped by the measure.
+  '/projects': ['.db', '.db-wrap', '.db-main', '.db-head', '.db-title', '.db-today', '.db-greetw', '.db-col', '.db-sheet',
+    '.db-kit', '.db-plate', '.db-part', '.db-lbl', '.db-meta', '.db-stop', '.db-dstops', '.db-tstop', '.db-hexes', '.db-hex',
+    '.db-ts', '.db-ratio', '.db-files', '.db-code', '.db-fm', '.db-fname', '.db-fsample', '.db-icons', '.db-go', '.db-ghost',
+    '.db-link', '.db-open', '.db-opent', '.db-textbtn', '.db-tl', '.db-ring', '.db-bt', '.db-shelf', '.db-plan', '.db-perks',
+    '.db-bar', '.db-end', '.db-status', '.db-sr', '.db-sch', '.db-circle', '.db-img', '.db-mono', '.db-group', '.db-minis',
+    '.db-mini', '.db-gt', '.db-more', '.db-find', '.db-input', '.db-tick', '.db-also', '.db-anchor'],
   '/create/palette': ['.tl-dock'],
   '/create/semantic-color': ['.tl-dock'],
   '/create/gradient': ['.tl-dock'],
   '/create/tint': ['.tl-dock'],
   '/create/contrast': ['.tl-dock'],
-  '/create/alt-text': ['.tl-dock'],
-  '/create/font-gallery': ['.fg-card-reveal', '.fg-card-pangram', '.fg-card-weights', '.fg-card-step', '.fg-card-meta',
-    '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link'],
+  '/create/alt-text': ['.tl-dock', '.alt-dropzone', '.ai-image-consent', '.alt-brief', '.alt-guide'],
+  // Font Gallery: the phone's single filter bar (`.fg-bar2`) and the desktop's second row of
+  // category pills, preview field and selects (`.fg-row2`), plus the grid and the title.
+  // `.fg-pair-link` is painted from the desktop width only.
+  '/create/font-gallery': ['.fg-card-meta',
+    '.fg-card-skeleton', '.fg-results', '.fg-count', '.fg-bar2', '.fg-search', '.fg-pair-link',
+    '.fg-row2', '.fg-cats', '.fg-preview-field', '.fg-preview-k', '.fg-view', '.fg-view-btn', '.tl-select', '.tl-select-k',
+    '.tl-select-v', '.tl-pills', '.tl-pill', '.tl-title', '.fg-grid', '.fg-more-btn'],
+  // Font Pair. On a phone the families and suggestions live in sheets that are not mounted until
+  // opened, so the phone carries the family rows (`.fpr-frow*`), the dock pills and the output
+  // column instead of the panel and the cards. On the desktop width the panel, family cards and
+  // suggestion rows are mounted. The stage head (title, presets), the Street specimen and the delivery block
+  // are painted at both widths.
+  '/create/font-pair': ['.fpr-fampair', '.fpr-frow', '.fpr-frow-t', '.fpr-frow-n', '.fpr-frow-w', '.fpr-frow-chev',
+    '.fpr-pill', '.fpr-pill-l', '.fpr-pill-n', '.fpr-presets', '.fpr-input--stage', '.fpr-street', '.fpr-street-photo',
+    '.fpr-plate', '.fpr-plate--cap', '.fpr-plate--tag', '.fpr-street-page', '.fpr-street-lead', '.fpr-street-h',
+    '.fpr-street-voice', '.fpr-street-p', '.fpr-specimen--street', '.fpr-chev', '.tl-code', '.tl-pills', '.tl-pill',
+    '.tl-body', '.tl-grid', '.tl-main', '.tl-toolbar',
+    '.fpr-sug-group', '.fpr-reason', '.fpr-card-cta', '.svt-trigger-label'],
+  // Type Scale. The phone carries the docked ratio chip, the sheet trigger and the Kerbside
+  // screen (`.tsk*`); the desktop carries the ladder, the Kerbside page and the half switch.
+  '/create/type-scale': ['.tl-dock', '.tsc-dock-ratio', '.tsc-dock-ratio-v', '.tsc-dock-save', '.svt-wrap', '.svt-trigger',
+    '.tsc-copy-primary', '.tsc-width-btn', '.tsc-view', '.tsc-kerb', '.tsk-hdr', '.tsk-ln', '.tsk-pt', '.tsk-tag', '.tsk-track',
+    '.tsk-route', '.tsk-rider', '.tsk-foot'],
   // /sitemap now wears the /tools shell and none of its old class names exist, so the
   // frozen list would keep only the few shell classes. These are the page's own hooks.
   '/sitemap': ['.spm-intro', '.spm-h1', '.spm-lede', '.spt-section', '.spt-h2', '.spt-sub', '.spt-group', '.spt-rail',
@@ -145,6 +182,26 @@ const ADDED_SELECTORS = {
     '.hlr-stage', '.hlr-ans', '.hlr-h2', '.hlr-lede', '.hlr-demo', '.hlr-seed', '.hlr-seed-pick', '.hlr-seed-hex', '.hlr-strip',
     '.hlr-stop', '.hlr-stop-sw', '.hlr-stop-n', '.hlr-read', '.hlr-leaves', '.hlr-btn', '.hlr-btn--ink', '.hlr-seg', '.hlr-ladder',
     '.hlr-note', '.hlr-search', '.hlr-icons', '.hlr-drop', '.hlr-store', '.hlr-more', '.hlr-allow', '.hlr-bar'],
+  // /plans is the pair of plan cards, the comparison and the closing call. These are the classes painted at
+  // either width, so the stacked comparison (under 1200) and the table (from 1200) each carry their own.
+  '/plans': [
+    '.sp-grain', '.pa-wrap', '.pa-head', '.pa-h1', '.pa-lead', '.pa-hpl', '.pa-pair', '.hpl-card', '.hpl-pro',
+    '.pa-pro', '.hpl-edge', '.pa-pro-grid', '.pa-pro-top', '.pa-proline', '.pa-planrow', '.hpl-plan', '.pl-switch',
+    '.pl-seg', '.pl-on', '.hpl-tagline', '.pa-price', '.pa-amt', '.pa-per', '.pa-slot', '.pa-fig', '.pa-covers',
+    '.pa-cover', '.pa-cover--book', '.pa-cover--deck', '.pa-cap', '.pa-act', '.pa-cta', '.hpl-btn', '.hpl-go',
+    '.pa-go', '.hpl-go-icon', '.pa-foot', '.hpl-prolist', '.hpl-row-t', '.hpl-row-s', '.hpl-more', '.hpl-free',
+    '.hpl-amount', '.hpl-note', '.pa-freenote', '.hpl-freelist', '.hpl-minus', '.hpl-freefoot', '.hpl-ghost',
+    '.ui-pill-out', '.pl-panel', '.pl-stack', '.pl-sh', '.pl-srow', '.pl-val', '.pl-val--free', '.pl-vl', '.pl-vv',
+    '.pl-n', '.pl-val--pro', '.pl-v', '.pl-ssame', '.pa-faq', '.pa-faq-grid', '.pa-h2', '.pl-item', '.pl-q', '.pl-pm',
+    '.pl-pmv', '.pl-endq', '.pa-more', '.pa-more-h', '.pa-more-p', '.hpl-link', '.pa-help', '.hm-close',
+    '.hm-close-in', '.hm-close-btns', '.hm-close-ghost', '.hm-close-cta', '.hm-close-icon', '.pl-bar', '.pl-bar-text',
+    '.pl-bar-top', '.pl-bar-pro', '.pl-bar-sub', '.pl-bar-go', '.sp-footer', '.sp-footer--home',
+    '.sp-footer--no-page', '.sp-footer-sky', '.sp-footer-horizon', '.sp-footer-core', '.sp-footer-inner',
+    '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-links', '.sp-footer-col', '.sp-footer-col-h',
+    '.sp-footer-col--legal', '.sp-footer-legal', '.sp-footer-copy', '.sp-footer-place', '.sp-footer-attrib',
+    '.sp-footer-attrib-icon', '.sp-footer-mark', '.pl-t', '.pl-ink', '.pl-headpro', '.pl-headlabel', '.pl-pill',
+    '.pl-gh', '.pl-ghin', '.pl-r', '.pl-l', '.pl-f', '.pl-p', '.pl-same',
+  ],
 }
 
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'))
@@ -252,8 +309,14 @@ const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) =>
    * the same run — 65,358 of 65,373 values agreed — which is what makes a single
    * differing value in them worth reading as a regression. */
   const LAYOUT_RESOLVED = new Set(['margin-left', 'margin-right', 'grid-template-columns'])
+  /* Chromium 158 (Playwright 1.65) serialises the computed `flex-start` and
+   * `flex-end` of align-items and justify-content as `flow-start` and
+   * `flow-end`. Same keyword, new spelling, and the baseline was frozen with the
+   * old one, so the new spelling is folded back rather than the baseline
+   * regenerated (which would fail on every older Chromium instead). */
+  const KEYWORD_ALIAS = { 'flow-start': 'flex-start', 'flow-end': 'flex-end' }
   const normalise = (prop, value) => (
-    LAYOUT_RESOLVED.has(prop) ? value.replace(/-?\d*\.?\d+px/g, '<len>') : value
+    LAYOUT_RESOLVED.has(prop) ? value.replace(/-?\d*\.?\d+px/g, '<len>') : (KEYWORD_ALIAS[value] || value)
   )
   const out = {}
   for (const s of selectors) {
@@ -349,6 +412,12 @@ async function openSettled(browser, route, width, selectors) {
     // full page (421 characters of chrome) and would be snapshotted as one.
     await go(page, route)
     await page.evaluate(() => document.fonts && document.fonts.ready).catch(() => {})
+    // `fonts.ready` resolves before the Type Scale and Font Pair pages have asked for their
+    // catalogue faces (it reads "loaded" ~270ms in, the request goes out ~240ms and lands ~800ms),
+    // so a snapshot taken on three equal reads can settle on the fallback face (15px/500) or on
+    // the loaded one (31.1px/800) depending only on how long the measure itself took. Waiting for
+    // the network to go quiet pins the loaded state.
+    await page.waitForLoadState('networkidle').catch(() => {})
     return await settledSnapshot(page, selectors)
   } finally {
     await context.close()

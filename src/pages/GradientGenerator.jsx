@@ -35,7 +35,17 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
+import GradientFx from '../components/tool/GradientFx'
+import PreviewSwitch from '../components/tool/PreviewSwitch'
+import { PREVIEW_STYLES, isPreviewStyle } from '../utils/gradientPreviewStyles'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
+import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
+import useCommunitySubmitGate from '../hooks/useCommunitySubmitGate'
+import { buildGradientPayload } from '../utils/gradientSubmissions'
+import { buildQueueRecord } from '../utils/communityQueue'
+import { publishToQueueOnce } from '../utils/communityQueueApi'
+import { isPostLimit } from '../utils/communityLimits'
+import { getOwnerHandle } from '../utils/constants'
 import { stashPendingSave, clearPendingSave, takePendingSave } from '../utils/pendingSave'
 // This page's own sheet. Every rule is scoped under `.grd`, the page root, so
 // nothing depends on import order.
@@ -54,6 +64,12 @@ import '../styles/pages/gradient.css'
 // a jump to any other colour tool. (Class prefix `grd-`.)
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
+
+// How long a community submission waits for the queue before it says so. Offline,
+// Firestore holds the write and never rejects.
+const SUBMIT_TIMEOUT_MS = 8000
+// A free-form document id for one submission (crypto.randomUUID where it exists).
+const newSubmissionId = () => (globalThis.crypto?.randomUUID?.() ?? `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`)
 
 // ── Random settings ──
 // What Random and Shuffle from palette may make. A group holds the values that
@@ -656,7 +672,10 @@ const PREVIEW_CONTEXTS = [
   { id: 'hero', label: 'Hero', as: ', shown as a hero' },
   { id: 'card', label: 'Card', as: ', shown as a card' },
   { id: 'button', label: 'Button', as: ', shown as a button' },
+  ...PREVIEW_STYLES,
 ]
+// The switch's choices: the four contexts, then the styles as a second group.
+const PREVIEW_OPTIONS = PREVIEW_CONTEXTS.map((c) => ({ id: c.id, label: c.label, lead: c.id === PREVIEW_STYLES[0].id }))
 
 // Where text sits on the area it is drawn over, as fractions of that area, read from the
 // laid-out page so the ink follows the real layout at any width. `measure(root)` returns
@@ -756,7 +775,7 @@ function PreviewSample({ id, paint, stops, type, angle }) {
 // correctly if it is ever mounted outside CreateTool; the activation naming
 // lives in src/config/activationExports.js, never here.
 export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
-  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects } = useProject()
+  const { design, setGradient, projects, saveProject, overwriteProject, canSaveProjects, projectCountPending } = useProject()
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   // Gradients an earlier visit queued in this browser: a signed-in person is
@@ -941,7 +960,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const css = gradientCssIn(type, angle, stops, space)
   // What the canvas paints: the chosen space where the browser can, else sRGB.
   const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops)
-  // Where the gradient is previewed (Fill, Hero, Card, Button), kept for the session.
+  // Where the gradient is previewed (a context or a style), kept for the session.
   const [previewAs, setPreviewAs] = useState(() => {
     try { const v = sessionStorage.getItem(PREVIEW_KEY); return PREVIEW_CONTEXTS.some((c) => c.id === v) ? v : 'fill' } catch { return 'fill' }
   })
@@ -978,6 +997,52 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // A gallery gradient is free to view + copy; reshaping it — adding/moving/
+  // recolouring stops, switching type or angle, flipping — is Pro. `editLocked`
+  // drives the visual cues; `guardEdit` intercepts every edit action, raises the
+  // Pro modal and returns false so the caller bails. Returns true (edit allowed)
+  // for Pro users and for any gradient not sourced from the gallery.
+  const editLocked = fromLibrary && !isPro
+  const guardEdit = useCallback(() => {
+    if (!fromLibrary || isPro) return true
+    openProModal({
+      gate: 'gradient-gallery-edit',
+      eyebrow: 'Pro gradient tools',
+      title: 'Editing gallery gradients is Pro',
+      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Press Reset, Random or Shuffle from palette to start an editable gradient of your own.',
+      features: [
+        'Add, move & recolour stops on any gallery gradient',
+        'Switch gradient type and fine-tune the angle',
+        'Flip and randomise straight from your own palette',
+        'Unlimited saved projects across every colour tool',
+      ],
+    })
+    return false
+  }, [fromLibrary, isPro, openProModal])
+
+  // Back: the last ten looks a roll, a preset or Reset replaced (utils/gradientHistory).
+  // `lookRef` holds the look on screen, so the push needs no stale closure.
+  const lookRef = useRef(null)
+  useLayoutEffect(() => { lookRef.current = { stops, type, angle, space } })
+  const historyRef = useRef([])
+  const [backCount, setBackCount] = useState(0)
+  const pushHistory = useCallback(() => {
+    historyRef.current = pushLook(historyRef.current, lookRef.current)
+    setBackCount(historyRef.current.length)
+  }, [])
+
+  const applyPreset = useCallback((p) => {
+    // A preset replaces the stops, so stop locks clear; the geometry locks are the
+    // person's settings and stay on (a locked angle keeps the one the preset set).
+    pushHistory()
+    setStops(clearStopLocks(normaliseStops(p.stops)))
+    setType(p.type)
+    setAngle(p.angle)
+    if (p.space) setSpace(p.space)
+    selectOnly(0)
+    setFromLibrary(false)
+  }, [selectOnly, pushHistory])
+
   // ── Hand-offs: gallery (?gs=…&gt=…&ga=…) and Discover (?preset=&tab=) ──
   useEffect(() => {
     const incoming = decodeGradientParams(searchParams)
@@ -1006,52 +1071,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // A gallery gradient is free to view + copy; reshaping it — adding/moving/
-  // recolouring stops, switching type or angle, flipping — is Pro. `editLocked`
-  // drives the visual cues; `guardEdit` intercepts every edit action, raises the
-  // Pro modal and returns false so the caller bails. Returns true (edit allowed)
-  // for Pro users and for any gradient not sourced from the gallery.
-  const editLocked = fromLibrary && !isPro
-  const guardEdit = useCallback(() => {
-    if (!fromLibrary || isPro) return true
-    openProModal({
-      gate: 'gradient-gallery-edit',
-      eyebrow: 'Pro gradient tools',
-      title: 'Editing gallery gradients is Pro',
-      subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Press Reset, Random or Shuffle from palette to start an editable gradient of your own.',
-      features: [
-        'Add, move & recolour stops on any gallery gradient',
-        'Switch gradient type and fine-tune the angle',
-        'Flip and randomise straight from your own palette',
-        'Unlimited saved projects across every colour tool',
-      ],
-    })
-    return false
-  }, [fromLibrary, isPro, openProModal])
-
-  // Back: the last ten looks a roll, a preset or Reset replaced (utils/gradientHistory).
-  // `lookRef` holds the look on screen, so the push needs no stale closure.
-  const lookRef = useRef(null)
-  lookRef.current = { stops, type, angle, space }
-  const historyRef = useRef([])
-  const [backCount, setBackCount] = useState(0)
-  const pushHistory = useCallback(() => {
-    historyRef.current = pushLook(historyRef.current, lookRef.current)
-    setBackCount(historyRef.current.length)
-  }, [])
-
-  const applyPreset = useCallback((p) => {
-    // A preset replaces the stops, so stop locks clear; the geometry locks are the
-    // person's settings and stay on (a locked angle keeps the one the preset set).
-    pushHistory()
-    setStops(clearStopLocks(normaliseStops(p.stops)))
-    setType(p.type)
-    setAngle(p.angle)
-    if (p.space) setSpace(p.space)
-    selectOnly(0)
-    setFromLibrary(false)
-  }, [selectOnly, pushHistory])
 
   const goBack = useCallback(() => {
     const { look, history } = popLook(historyRef.current)
@@ -1505,7 +1524,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setPendingSave(name)
   }
   useEffect(() => {
-    if (pendingSave == null || !canSaveProjects) return
+    if (pendingSave == null || !canSaveProjects || projectCountPending) return
     setPendingSave(null)
     // The save is being attempted, so a remount has nothing left to reopen.
     clearPendingSave()
@@ -1517,7 +1536,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       // The free cap's refusal stays under the field, with the way forward as a link.
       setSaveError(err?.message || 'Couldn’t save')
     }
-  }, [pendingSave, canSaveProjects, saveProject, closeSave, toast])
+  }, [pendingSave, canSaveProjects, projectCountPending, saveProject, closeSave, toast])
   const overwriteWith = (project) => {
     try {
       overwriteProject(project.id)
@@ -1525,6 +1544,93 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       toast?.('Updated: ' + project.name)
     } catch (err) {
       toast?.(err?.message || 'Couldn’t save', 'error')
+    }
+  }
+
+  // ── Submit to the community ──
+  // The one write is the account's review queue (communityQueueApi.publishToQueue,
+  // a pending document under the signer's uid). Nothing is kept in this browser:
+  // a submission that lives in one browser can never reach a reviewer. The form
+  // stays as it was when the write fails, and "submitted" is only ever shown once
+  // the queue has accepted it.
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [submitName, setSubmitName] = useState('')
+  const [submitErr, setSubmitErr] = useState('')
+  const [submitBusy, setSubmitBusy] = useState(false)
+  const [submitDone, setSubmitDone] = useState(false)
+  const submitOpenRef = useRef(false)
+  // The document id for the submission in flight; kept until it is accepted.
+  const submitAttemptRef = useRef(null)
+  useEffect(() => { submitOpenRef.current = submitOpen }, [submitOpen])
+  // Stable, because useModalDialog re-focuses the dialog whenever onClose changes.
+  const closeSubmit = useCallback(() => setSubmitOpen(false), [])
+  const openSubmitForm = useCallback(() => {
+    if (saveOpenRef.current) closeSave('item')
+    setSubmitErr('')
+    setSubmitDone(false)
+    setSubmitName(n => n.trim() || defaultSaveName)
+    setSubmitOpen(true)
+  }, [closeSave, defaultSaveName])
+  const submitGate = useCommunitySubmitGate({ surface: 'gradient', what: 'gradient', onOpen: openSubmitForm })
+
+  const submitToCommunity = async (author) => {
+    if (submitBusy) return
+    const name = submitName.trim()
+    if (!name) { setSubmitErr('Give the gradient a name first.'); return }
+    // Defence in depth: the form is only mounted for a signed-in person, but a
+    // sign-out mid-flow must not slip a submission through.
+    if (!user?.uid) { setSubmitOpen(false); return }
+    const payload = buildGradientPayload({ type, angle, stops, author })
+    const queued = payload && buildQueueRecord({ kind: 'gradient', name, user, authorName: author, payload })
+    if (!queued) { setSubmitErr('This gradient can’t be submitted. Check that every stop has a colour.'); return }
+    setSubmitErr('')
+    setSubmitBusy(true)
+    // Offline, Firestore queues the write and never rejects, so the wait is
+    // bounded. One document id per form, so a retry after a timeout cannot post
+    // a second copy if the first write lands late.
+    if (!submitAttemptRef.current) submitAttemptRef.current = newSubmissionId()
+    const id = submitAttemptRef.current
+    const write = publishToQueueOnce(queued, { id })
+    const succeeded = () => {
+      // An earlier write for this form already finished it.
+      if (submitAttemptRef.current !== id) return
+      submitAttemptRef.current = null
+      if (!mountedRef.current) return
+      // A fresh form reopens with the default name, not one already sent.
+      setSubmitName('')
+      setSubmitErr('')
+      if (submitOpenRef.current) setSubmitDone(true)
+      else toast?.('Gradient submitted for review')
+    }
+    try {
+      let timer
+      const outcome = await Promise.race([
+        write.then(() => 'sent'),
+        new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), SUBMIT_TIMEOUT_MS) }),
+      ])
+      clearTimeout(timer)
+      if (outcome === 'timeout') {
+        // The form stays as it was. If the write lands later it replaces this
+        // message with the confirmation instead of leaving a false failure.
+        write.then(succeeded, () => {})
+        if (!mountedRef.current) return
+        const offline = 'This is taking too long, so you may be offline. Your gradient is still here. Check your connection and try again.'
+        if (submitOpenRef.current) setSubmitErr(offline)
+        else toast?.(offline, 'error')
+        return
+      }
+      succeeded()
+    } catch (err) {
+      if (!mountedRef.current) return
+      const message = isPostLimit(err)
+        ? err.message
+        : err?.code === 'permission-denied'
+          ? 'The community wouldn’t accept that from this account. Sign in again and retry.'
+          : 'Couldn’t reach the review queue. Check your connection and try again.'
+      if (submitOpenRef.current) setSubmitErr(message)
+      else toast?.(message, 'error')
+    } finally {
+      if (mountedRef.current) setSubmitBusy(false)
     }
   }
 
@@ -1951,7 +2057,40 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               </SaveShareItem>
             </>
           )}
+          after={(
+            <>
+              <div className="plb-menu-sub">Community</div>
+              <SaveShareItem
+                icon="users"
+                onClick={submitGate.request}
+                disabled={authLoading}
+                busy={authLoading}
+                title={authLoading ? 'Checking your account…' : undefined}
+              >
+                Submit to the community…
+              </SaveShareItem>
+            </>
+          )}
         />
+      )}
+      {submitOpen && user?.uid && (
+        <CommunitySubmitDialog
+          noun="gradient"
+          ownerHandle={getOwnerHandle(user.email)}
+          name={submitName}
+          onNameChange={(v) => { setSubmitName(v); setSubmitErr('') }}
+          onSubmit={submitToCommunity}
+          onClose={closeSubmit}
+          error={submitErr}
+          busy={submitBusy}
+          done={submitDone ? {
+            message: 'Thanks. A reviewer checks it before it appears. Until then it is listed as pending under Your submissions in the Gradient Library, where you can also withdraw it.',
+            to: '/discover/gradients',
+            toLabel: 'See your submissions',
+          } : null}
+        >
+          <span className="plb-submit-sw" style={{ background: paintCss }} />
+        </CommunitySubmitDialog>
       )}
       <ToolGrid>
         <ToolMain>
@@ -1965,11 +2104,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="grd-stage" data-ctx={previewAs}>
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${PREVIEW_CONTEXTS.find((c) => c.id === previewAs)?.as || ''}`} />
             <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
-            <div className="grd-ctx" role="group" aria-label="Preview as">
-              {PREVIEW_CONTEXTS.map((c) => (
-                <button key={c.id} type="button" className={`grd-ctx-opt${previewAs === c.id ? ' is-on' : ''}`} aria-pressed={previewAs === c.id} onClick={() => choosePreview(c.id)}>{c.label}</button>
-              ))}
-            </div>
+            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={paintCss === css && space === 'oklch'} />}
+            <PreviewSwitch options={PREVIEW_OPTIONS} value={previewAs} onChange={choosePreview} label="Preview as" moreLabel="More previews" />
           </div>
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
@@ -2043,7 +2179,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     type="button"
                     role="tab"
                     aria-selected={effFmt === f.id}
-                    className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                    className={`tl-pill grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
                     onClick={() => { setFmt(f.id); clearTimeout(copiedTimer.current); setCopied(false) }}
                   >{f.label}</button>
                 ))}

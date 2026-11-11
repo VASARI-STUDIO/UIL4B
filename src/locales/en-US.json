@@ -30,10 +30,10 @@
     "colours": "Colors"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -279,6 +279,7 @@
     "title": "Icon Library",
     "eyebrow": "ICON LIBRARY",
     "heading": "Find, customize and copy any icon.",
+    "subtitleShort": "Recolor, restyle, then copy clean SVG.",
     "subtitle": "Recolor, resize and restyle any icon (adjust stroke, set color), then copy clean SVG or export in a click. Go Pro to save your custom icons.",
     "searchPlaceholder": "Search icons…",
     "allPacks": "All Packs",
@@ -292,9 +293,13 @@
     "noIcons": "Search for icons above",
     "loadingPacks": "Loading icon packs…"
   },
+  "iconGroups": {
+    "subtitleShort": "Themed icon sets in one consistent style."
+  },
   "emojiLibrary": {
     "eyebrow": "EMOJI LIBRARY",
     "heading": "Copy any emoji, in any skin tone.",
+    "subtitleShort": "Every emoji by category, one click to copy.",
     "subtitle": "Browse every emoji by category, switch skin tone for the whole set, and click to copy. Free, always."
   },
   "imageConverter": {
@@ -442,7 +447,7 @@
     }
   },
   "auth": {
-    "logInTitle": "Log in to UIL4B",
+    "logInTitle": "Log in to UI L4B",
     "logInContinue": "Log in to continue",
     "logInSub": "Your projects, palettes and kits are where you left them.",
     "createAccount": "Create your free account",
@@ -489,8 +494,8 @@
     "checking": "Checking whether you're logged in…",
     "wordmarkLabel": "UI L4B home",
     "wall": {
-      "title": "Made with UIL4B's own tools",
-      "note": "Each piece was exported from the UIL4B tool named under it.",
+      "title": "Made with UI L4B's own tools",
+      "note": "Each piece was exported from the UI L4B tool named under it.",
       "pause": "Pause",
       "play": "Play",
       "pauseLabel": "Pause the moving wall",
@@ -524,14 +529,17 @@
   },
   "feedback": {
     "title": "Feedback",
-    "subtitle": "Help us make UIL4B even better. Share your bugs, feature ideas, or general feedback.",
-    "featureRequest": "Feature Request",
-    "bugReport": "Bug Report",
+    "subtitle": "Help us make UI L4B even better. Share your bugs, feature ideas, or general feedback.",
+    "featureRequest": "Feature request",
+    "bugReport": "Bug report",
     "general": "General",
     "helpRequest": "Help request",
     "send": "Send",
     "offline": "You're offline. Your message is kept here, and you can send it when you reconnect.",
     "messagePlaceholder": "Tell us what you think…",
+    "helpTitle": "Contact support",
+    "helpSubtitle": "Stuck, or something isn't working? Tell us what you were trying to do and what happened. Add your email if you'd like a reply.",
+    "helpPlaceholder": "What were you trying to do, and what happened instead?",
     "submitFeedback": "Submit Feedback",
     "enterFeedback": "Please enter your feedback",
     "thankYou": "Thank you for your feedback!",
@@ -551,7 +559,7 @@
   },
   "community": {
     "title": "Community",
-    "subtitle": "Connect with other designers and developers using UIL4B.",
+    "subtitle": "Connect with other designers and developers using UI L4B.",
     "comingSoonDesc": "Share palettes, get feedback on your designs, and discover templates created by the community.",
     "github": "GitHub Repository",
     "githubDesc": "Browse source code, star the project, and contribute.",

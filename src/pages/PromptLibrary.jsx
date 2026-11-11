@@ -1,9 +1,8 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { COMMUNITY_PROMPT_ROWS } from '../data/communityPrompts'
 import { LIBRARY_RULES, isStub } from '../utils/libraryRules'
@@ -13,13 +12,16 @@ import { TAG_CATEGORIES } from '../data/promptCategories'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { getPrompts, setPromptsStore, getSavedIds, removeStoredPrompt, readPromptLibrary, toggleStoredCommunitySave, undoStoredUnsave, PROMPT_STORE_KEYS } from '../utils/promptStore'
 import { onAccountApplied } from '../utils/accountEvents'
+import { isFullView } from '../utils/libraryView'
 import { splitLockedLibrary, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import PromptCard from '../components/prompt/PromptCard'
 import PromptLockedCard from '../components/prompt/PromptLockedCard'
+import PromptGate from '../components/prompt/PromptGate'
 import PromptOverview from '../components/prompt/PromptOverview'
 import PromptFilters from '../components/prompt/PromptFilters'
+import PromptWindowButton from '../components/prompt/PromptWindowButton'
 import { categoryBySlug, categoryMembers, countLine } from '../components/prompt/promptGallery'
 import PromptModal from '../components/prompt/PromptModal'
 import AddPromptPanel from '../components/prompt/AddPromptPanel'
@@ -101,6 +103,11 @@ export default function PromptLibrary({ onCopy, toast }) {
   })()
   const listCat = hashSlug === ALL_SLUG ? null : categoryBySlug(hashSlug)
   const hashIsList = hashSlug === ALL_SLUG || listCat !== null
+  // `?view=full` is the full-screen view (App.jsx drops the nav and footer around
+  // it). The query rides along on every hash move below, or entering a list
+  // would quietly bring the nav back.
+  const fullView = isFullView(location.search)
+  const toHash = useCallback((hash) => ({ search: location.search, hash }), [location.search])
 
   const [savedTab, setTab] = useState(() => {
     if (hashIsList) return 'community'
@@ -204,7 +211,7 @@ export default function PromptLibrary({ onCopy, toast }) {
     setSearch('')
     setAccess('all')
     setCommunitySort('popular')
-    if (hashIsList) navigate({ hash: '' }, { replace: true })
+    if (hashIsList) navigate(toHash(''), { replace: true })
   }
 
   // Community submission gate. The panel is only ever mounted for a signed-in
@@ -392,15 +399,15 @@ export default function PromptLibrary({ onCopy, toast }) {
 
   const openList = useCallback((slug, { focusResults = true } = {}) => {
     entry.current = { fromOverview: true, focusResults }
-    navigate({ hash: `#${slug}` })
-  }, [navigate])
+    navigate(toHash(`#${slug}`))
+  }, [navigate, toHash])
   const chooseCategory = useCallback((slug) => {
-    navigate({ hash: `#${slug || ALL_SLUG}` }, { replace: true })
-  }, [navigate])
+    navigate(toHash(`#${slug || ALL_SLUG}`), { replace: true })
+  }, [navigate, toHash])
   const backToOverview = useCallback(() => {
     if (entry.current.fromOverview) navigate(-1)
-    else navigate({ hash: '' }, { replace: true })
-  }, [navigate])
+    else navigate(toHash(''), { replace: true })
+  }, [navigate, toHash])
 
   // Typing a search enters the list, as View more does. Only the first
   // keystroke navigates; after that the list is already the state.
@@ -423,8 +430,8 @@ export default function PromptLibrary({ onCopy, toast }) {
   const clearFilters = useCallback(() => {
     setSearch('')
     setAccess('all')
-    if (isCommunity && hashIsList) navigate({ hash: `#${ALL_SLUG}` }, { replace: true })
-  }, [isCommunity, hashIsList, navigate])
+    if (isCommunity && hashIsList) navigate(toHash(`#${ALL_SLUG}`), { replace: true })
+  }, [isCommunity, hashIsList, navigate, toHash])
 
   // Land the visitor where they were going. Entering a list from a button
   // puts the controls at the top and the heading under the screen reader's
@@ -491,6 +498,10 @@ export default function PromptLibrary({ onCopy, toast }) {
     : countLine([...listItems.open, ...listItems.locked], (p) => openIds.has(p.id), tier !== 'pro')
   const signupFree = useCallback(() => {
     requireLogin('browse more of the community prompts', { free: true, signup: true })
+  }, [requireLogin])
+  // The gate's "Log in" opens the log-in form, the same flow the icon library's gate uses.
+  const loginFree = useCallback(() => {
+    requireLogin('browse more of the community prompts')
   }, [requireLogin])
   const lockedKind = (p) => (tier === 'anonymous' && freeIds.has(p.id) ? 'account' : 'pro')
 
@@ -572,6 +583,7 @@ export default function PromptLibrary({ onCopy, toast }) {
           label: isCommunity ? 'Search community prompts' : 'Search your prompts',
         }}
         filters={filtersProp}
+        windowAction={<PromptWindowButton full={fullView} />}
       />
 
       {/* Add prompt panel (slide-down) — only for My Prompts */}
@@ -602,6 +614,7 @@ export default function PromptLibrary({ onCopy, toast }) {
           onViewMore={openList}
           onBrowseAll={() => openList(ALL_SLUG)}
           onSignup={signupFree}
+          onLogin={loginFree}
           onSubmit={openSubmitFromClose}
         />
       ) : (
@@ -697,36 +710,16 @@ export default function PromptLibrary({ onCopy, toast }) {
             </div>
           </section>
         ) : listItems.locked.length > 0 ? (
-          <section className="pl-close" aria-labelledby="pl-wall-h">
-            {(() => {
-              const total = listItems.locked.length
-              const viaAccount = tier === 'anonymous' ? listItems.locked.filter((p) => freeIds.has(p.id)).length : 0
-              const plural = (n) => `${n} more ${n === 1 ? 'prompt' : 'prompts'}`
-              return viaAccount > 0 ? (
-                <>
-                  <div className="pl-close-text">
-                    <h2 id="pl-wall-h">{`${plural(viaAccount)} open with a free account`}</h2>
-                    <p>{`A free account opens ${freeIds.size} of the ${communityRows.length} community prompts. Pro opens all ${communityRows.length}.`}</p>
-                  </div>
-                  <div className="pl-close-actions">
-                    <button type="button" className="btn btn-accent pl-ov-btn" onClick={signupFree}>Create your free account</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="pl-close-text">
-                    <h2 id="pl-wall-h">{`${plural(total)} open with Pro`}</h2>
-                    <p>Each opens as the full brief its author wrote, ready to copy.</p>
-                  </div>
-                  <div className="pl-close-actions">
-                    <Link className="btn btn-accent pl-ov-btn" to="/plans" onClick={() => { reportUpgradeGate('prompt-library-community-lock') }}>
-                      See what Pro includes
-                    </Link>
-                  </div>
-                </>
-              )
-            })()}
-          </section>
+          <PromptGate
+            id="pl-wall-h"
+            tier={tier}
+            shown={openCommunity.length}
+            total={communityRows.length}
+            viaAccount={tier === 'anonymous' ? listItems.locked.filter((p) => freeIds.has(p.id)).length : 0}
+            accountOpens={freeIds.size}
+            locked={listItems.locked}
+            onLogin={loginFree}
+          />
         ) : null
       )}
 

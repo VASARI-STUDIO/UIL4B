@@ -4,7 +4,7 @@ import PillNav from '../components/PillNav'
 import NavIcon from '../components/NavIcon'
 import { useReveal } from '../hooks/useReveal'
 import { useIsAdmin } from '../hooks/useIsAdmin'
-import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
+import { DISCOVER_GROUPS, DISCOVER_LIBRARIES, LEARN_ROADMAP } from '../data/toolTree'
 import LearnGuideIndex from '../components/LearnGuideIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
@@ -161,8 +161,8 @@ const PREVIEWS = {
 // after the grid. https://mobbin.com/sites/sections/0b61affd-faef-4b8c-b6fd-983b94de9a77
 
 // Count live and upcoming libraries from the same groups as the cards.
-const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
-const DISCOVER_SOON = DISCOVER_GROUPS.length - DISCOVER_LIVE
+const DISCOVER_LIVE = DISCOVER_LIBRARIES.length
+const DISCOVER_SOON = DISCOVER_GROUPS.filter((g) => g.soon).length
 
 const SURFACES = {
   // ── Discover ───────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ const SURFACES = {
   // the page, as bad copy. Adding
   // "Find" to a rejected line does not un-reject it. The lede under it
   // ("…the outside tools that earn a tab — most of them one click from the
-  // tool that uses them.") was agent copy built on "earn a tab", an idiom
+  // tool that uses them.") was copy built on "earn a tab", an idiom
   // that had spread to the nav promo, the library heroes and two grid
   // headings — a motif by repetition, not a UIL4B signature.
   //
@@ -191,7 +191,7 @@ const SURFACES = {
     hint: `${DISCOVER_LIVE} libraries open · ${DISCOVER_SOON} still being built`,
     // What everyone but an admin sees: unfinished libraries are not mentioned.
     liveHint: `${DISCOVER_LIVE} libraries open`,
-    gridTitle: 'Every library, and what is in it.',
+    gridTitle: 'Every library, and the community page.',
   },
   learn: {
     title: 'Learn',

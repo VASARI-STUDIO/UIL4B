@@ -30,10 +30,10 @@
     "colours": "색상"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "대시보드",
@@ -267,6 +267,7 @@
     "title": "아이콘 라이브러리",
     "eyebrow": "아이콘 라이브러리",
     "heading": "어떤 아이콘이든 찾고, 커스터마이즈하고, 복사하세요.",
+    "subtitleShort": "아이콘 색을 바꾸고 깔끔한 SVG를 복사하세요.",
     "subtitle": "20만 개 이상의 오픈소스 아이콘을 검색하세요 — Lucide, Tabler, Phosphor, Material 등. 어떤 아이콘이든 색상·크기·스타일을 바꾸고(획 조정, 색상 설정) 깔끔한 SVG를 복사하거나 클릭 한 번으로 내보내세요. 둘러보고 복사하는 것은 무료 — Pro로 업그레이드하면 커스텀 아이콘을 저장할 수 있습니다.",
     "searchPlaceholder": "아이콘 검색…",
     "allPacks": "모든 팩",
@@ -280,9 +281,13 @@
     "noIcons": "위에서 아이콘을 검색하세요",
     "loadingPacks": "아이콘 팩 로딩 중…"
   },
+  "iconGroups": {
+    "subtitleShort": "같은 스타일로 묶은 테마별 아이콘 세트."
+  },
   "emojiLibrary": {
     "eyebrow": "이모지 라이브러리",
     "heading": "어떤 이모지든, 어떤 피부톤으로든 복사하세요.",
+    "subtitleShort": "카테고리별 이모지를 클릭해서 복사하세요.",
     "subtitle": "카테고리별로 모든 이모지를 둘러보고, 전체 세트의 피부톤을 바꾸고, 클릭해서 복사하세요. 언제나 무료."
   },
   "imageConverter": {
@@ -429,7 +434,7 @@
     }
   },
   "auth": {
-    "logInTitle": "UIL4B에 로그인",
+    "logInTitle": "UI L4B에 로그인",
     "logInContinue": "계속하려면 로그인하세요",
     "createAccount": "무료 계정 만들기",
     "resetTitle": "비밀번호 재설정",
@@ -496,11 +501,14 @@
   },
   "feedback": {
     "title": "피드백",
-    "subtitle": "UIL4B 개선에 도움을 주세요. 버그, 기능 요청 또는 일반 피드백을 공유해 주세요.",
+    "subtitle": "UI L4B 개선에 도움을 주세요. 버그, 기능 요청 또는 일반 피드백을 공유해 주세요.",
     "featureRequest": "기능 요청",
     "bugReport": "버그 보고",
     "general": "일반",
     "messagePlaceholder": "의견을 알려주세요…",
+    "helpTitle": "고객 지원 문의",
+    "helpSubtitle": "막히는 부분이 있거나 제대로 작동하지 않나요? 무엇을 하려고 했는지, 어떤 일이 일어났는지 알려 주세요. 답변을 받고 싶으시면 이메일 주소를 함께 적어 주세요.",
+    "helpPlaceholder": "무엇을 하려고 했고, 대신 어떤 일이 일어났나요?",
     "submitFeedback": "피드백 제출",
     "enterFeedback": "피드백을 입력해 주세요",
     "thankYou": "피드백을 보내주셔서 감사합니다!",
@@ -509,7 +517,7 @@
   },
   "community": {
     "title": "커뮤니티",
-    "subtitle": "UIL4B을 사용하는 다른 디자이너 및 개발자와 소통하세요.",
+    "subtitle": "UI L4B을 사용하는 다른 디자이너 및 개발자와 소통하세요.",
     "comingSoonDesc": "팔레트를 공유하고, 디자인에 대한 피드백을 받고, 커뮤니티가 만든 템플릿을 발견하세요.",
     "github": "GitHub 저장소",
     "githubDesc": "소스 코드 탐색, 프로젝트 스타 표시 및 기여.",

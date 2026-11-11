@@ -11,7 +11,7 @@
 // are the states most likely to rot, and they are the ones under test.
 import { test, expect } from './base.js'
 import { chooseMenuOption, fillGalleryPreviewText, go, watch } from './helpers.js'
-import { settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './type-scale-view.js'
+import { hideTypeScaleCode, settleTypeScaleView, showTypeScaleCode, showTypeScalePage } from './type-scale-view.js'
 
 // The Font Gallery pop-up is one scroll of sections under h3 headings, not a set
 // of tabs. This scrolls to a section and checks it landed inside the scroll
@@ -65,8 +65,8 @@ test.describe('Type Scale Generator', () => {
     await go(page, '/create/type-scale')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Type Scale' })).toBeVisible()
-    // Default scale: 6 steps up + base + 2 down.
-    await expect(page.locator('.tsc-row')).toHaveCount(9)
+    // Default scale: 4 steps up + base + 1 down.
+    await expect(page.locator('.tsc-row')).toHaveCount(6)
 
     // The five-up `.tsc-status` figure strip is gone (#type-scale-ui-overhaul);
     // the two numbers it reported are the two live controls in `.tsc-scale-bar`
@@ -76,39 +76,39 @@ test.describe('Type Scale Generator', () => {
     // carries every option's label in its textContent, so `toContainText('1.25')`
     // on the bar would pass with any ratio selected. That is the assertion this
     // replaces and it is why it is not replaced in kind.
-    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('16px')
-    await expect(page.getByLabel('Scale ratio')).toHaveAttribute('value', '1.25')
-    await expect(page.locator('.tsc-scale-range')).toHaveText('9 steps, 10px to 61px')
+    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('15 px')
+    await expect(page.getByLabel('Scale ratio')).toHaveAttribute('value', '1.618')
+    await expect(page.locator('.tsc-scale-range')).toHaveText('6 steps, 9.27px to 102.8px')
 
-    // The ratio genuinely drives the maths: a bigger ratio must move the top step.
-    // 16 × 1.25^6 = 61.04 and 16 × 1.5^6 = 182.25, both snapped to the default
-    // nearest-0.5px rounding.
+    // The ratio genuinely drives the maths: a smaller ratio must move the top step.
+    // 15 × 1.618^4 = 102.8 and 15 × 1.5^4 = 75.94, both exact to two decimals,
+    // which is how the scale opens.
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
-    await expect(largest).toContainText('61px')
+    await expect(largest).toHaveText(/^102\.8 \//)
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(largest).toContainText('182.5px')
-    await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.25')
-    await expect(largest).toContainText('61px')
+    await expect(largest).toHaveText(/^75\.94 \//)
+    await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.618')
+    await expect(largest).toHaveText(/^102\.8 \//)
 
     // Rounding is an explicit decision, not a hidden .toFixed(). It is one of
     // the four controls that moved behind the "Fine tuning" disclosure, so
     // reaching it is now a step the test has to take, exactly as a user does.
     await page.getByRole('button', { name: 'Fine tuning' }).click()
-    // The ladder prints each size to one decimal, so the top step (61.04) reads
-    // 61px either way. The second step is the one that shows the difference:
-    // 16 × 1.25^5 = 48.83, which whole rounding makes 49 and "none" leaves at 48.8.
+    // The scale opens exact to two decimals. Whole pixels moves the top step
+    // (102.8 to 103) and the second (15 × 1.618^3 = 63.54 to 64); "none" returns both.
     const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'whole')
-    await expect(largest).toContainText('61px')
-    await expect(second).toContainText('49px')
+    await expect(largest).toHaveText(/^103 \//)
+    await expect(second).toHaveText(/^64 \//)
     await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
-    await expect(second).toContainText('48.8px')
+    await expect(largest).toHaveText(/^102\.8 \//)
+    await expect(second).toHaveText(/^63\.54 \//)
 
     // At 1440 the work column is wide enough to show the ladder and the page
     // side by side, so there is no audience switch to press: the page preview is
     // already there, and so are the steps the controls above just moved. (The
-    // Scale / Page / Code switch below the split is covered in the test after
-    // the keyboard one.)
+    // Scale / Page switch below the split is covered in the test after the
+    // keyboard one.)
     await showTypeScalePage(page)
     await expect(page.getByRole('tab')).toHaveCount(0)
     await expect(page.locator('.tsc-row').first()).toBeVisible()
@@ -118,7 +118,7 @@ test.describe('Type Scale Generator', () => {
     watch(page, 'front-end developer shipping type tokens')
     await go(page, '/create/type-scale')
 
-    // At 1440 the code is in the drawer opened from the docked bar.
+    // At 1440 the code is the drawer the docked Code button opens.
     expect(await showTypeScaleCode(page)).toBe('split')
 
     // The scale is now FLUID by default: two ladders (mobile and desktop)
@@ -126,31 +126,33 @@ test.describe('Type Scale Generator', () => {
     // single rem. The comment carries both ends, which is what keeps the export
     // readable by a human rather than an opaque expression.
     const code = page.locator('#tsc-export')
-    await expect(code).toContainText('--text-base: clamp(')
+    // The opening base is 15 on both ends, so the base step is one rem and the
+    // steps above it are the clamps.
+    await expect(code).toContainText('--text-3xl: clamp(')
+    await expect(code).toContainText('--text-base: 0.9375rem;')
     await expect(code).toContainText('vw,')                    // the fluid term
     await expect(code).toContainText('px → ')                  // mobile → desktop, in the comment
-    await expect(code).toContainText('--text-5xl:')
+    await expect(code).toContainText('--text-lg:')
     await expect(code).toContainText('--leading: 1.5;')
     await expect(code).toContainText('--font-heading:')
     await expect(page.getByRole('button', { name: /^Copy CSS$/ })).toBeVisible()
-    await expect(page.locator('.tsc-drawer-copy')).toBeVisible()
 
     await page.getByRole('button', { name: 'Tailwind v3' }).click()
     await expect(code).toContainText('fontSize: {')
-    await expect(code).toContainText("'base': ['clamp(")
+    await expect(code).toContainText("'3xl': ['clamp(")
 
     await page.getByRole('button', { name: 'SCSS' }).click()
-    await expect(code).toContainText('$text-base: clamp(')
+    await expect(code).toContainText('$text-3xl: clamp(')
 
     // Fixed mode is the other honest answer, for teams whose specs are stated
     // per breakpoint. Mobile-first: the base :root carries the SMALL ladder and
     // a single media query raises it, rather than desktop values being the
     // default and mobile an override.
     await page.getByRole('button', { name: 'CSS variables' }).click()
-    // The drawer is not modal: the panel beside it stays usable with the code
-    // open, so a change there is read straight from the drawer.
+    // The open drawer covers the foot of the page, where the panel's Fine tuning
+    // controls sit, so close it, change the mode, and open it again to read.
+    await hideTypeScaleCode(page)
     await page.getByRole('button', { name: 'Fine tuning' }).click()
-    await expect(page.locator('#tsc-code-drawer')).toBeVisible()
     await page.getByRole('button', { name: /Fixed · media query/ }).click()
     await showTypeScaleCode(page)
     await expect(code).not.toContainText('clamp(')
@@ -174,14 +176,19 @@ test.describe('Type Scale Generator', () => {
 
     const designer = page.getByRole('tab', { name: /Scale/i })
     await designer.focus()
-    // Three tabs now: Scale, Page, Code. One step right is Page; two is Code.
+    // Two tabs: Scale and Page (Code is a drawer from the docked bar). One step
+    // right is Page; the arrows wrap, so a second step is back on Scale.
+    await expect(page.getByRole('tab')).toHaveCount(2)
     await page.keyboard.press('ArrowRight')
     await expect(page.getByRole('tab', { name: 'Page' })).toBeFocused()
+    await expect(page.getByRole('tab', { name: 'Page' })).toHaveAttribute('aria-selected', 'true')
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('tab', { name: /Code/i })).toBeFocused()
-    await expect(page.locator('#tsc-export')).toBeVisible()
+    await expect(designer).toBeFocused()
     await page.keyboard.press('ArrowLeft')
-    await page.keyboard.press('ArrowLeft')
+    await expect(page.getByRole('tab', { name: 'Page' })).toBeFocused()
+    await page.keyboard.press('End')
+    await expect(page.getByRole('tab', { name: 'Page' })).toBeFocused()
+    await page.keyboard.press('Home')
     await expect(designer).toBeFocused()
   })
 
@@ -195,18 +202,18 @@ test.describe('Type Scale Generator', () => {
     await expect(panel).toHaveAttribute('data-view', 'scale')
     await expect(page.getByRole('tab', { name: 'Scale' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('.tsc-row').first()).toBeVisible()
-    await expect(page.locator('.tsc-article')).toHaveCount(0)
+    await expect(page.locator('.tsk')).toHaveCount(0)
 
     await page.getByRole('tab', { name: 'Page' }).click()
     await expect(panel).toHaveAttribute('data-view', 'page')
-    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsk')).toBeVisible()
     await expect(page.locator('.tsc-row')).toHaveCount(0)
 
     // The same page widened to 1440 drops the switch for the split.
     await page.setViewportSize({ width: 1440, height: 900 })
     await expect(panel).toHaveAttribute('data-view', 'split')
     await expect(page.locator('.tsc-view-switch')).toHaveCount(0)
-    await expect(page.locator('.tsc-article')).toBeVisible()
+    await expect(page.locator('.tsk')).toBeVisible()
     await expect(page.locator('.tsc-row').first()).toBeVisible()
   })
 
@@ -236,7 +243,7 @@ test.describe('Type Scale Generator', () => {
     await page.getByRole('button', { name: 'Fine tuning' }).click()
     await page.getByLabel('Number of steps above the base size').fill('9')
 
-    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('787320px')
+    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toHaveText(/^787320 \//)
     await expect(page.locator('.tsc-fit-note')).toContainText('Labels and exports retain the exact scale')
     const rendered = parseFloat(await page.locator('.tsc-row-text').first().evaluate(
       element => getComputedStyle(element).fontSize,
@@ -249,7 +256,7 @@ test.describe('Type Scale Generator', () => {
     // losslessly, which is what this test exists to prove, and the comment
     // still names it in pixels.
     await showTypeScaleCode(page)
-    await expect(page.locator('#tsc-export')).toContainText('787320px')
+    await expect(page.locator('#tsc-export')).toContainText('→ 787320px */')
     await expect(page.locator('#tsc-export')).toContainText('--text-8xl: clamp(')
   })
 })
@@ -282,31 +289,33 @@ test.describe('Font Pair', () => {
     await wand.click()
     await expect(page.locator('.fpr-pair span').last()).toHaveText(top)
     // …and the panel agrees: exactly one card reads "In use".
-    // The cards are counted by their own apply buttons: the Best match button
+    // The cards are counted by their own apply buttons: the Auto button
     // also says the face is in use once it has nothing left to do, and it is
     // not a card.
     await expect(page.locator('.fpr-card-apply', { hasText: 'In use' })).toHaveCount(1)
     await expect(wand).toBeDisabled()
-    await expect(wand).toContainText('Best match')
+    await expect(wand).toContainText('Auto')
   })
 
   test('a designer gets reasoned body suggestions and a live specimen', async ({ page }) => {
     watch(page, 'designer choosing a font pairing')
     await go(page, '/create/font-pair')
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Font Pair' })).toBeAttached()
     await expect(page.locator('.fpr-specimen')).toBeVisible()
-    await expect(page.getByRole('link', { name: /Browse the Font Gallery/ })).toHaveAttribute('href', '/create/font-gallery')
+    await expect(page.getByRole('link', { name: /^Font Gallery, heading / })).toHaveAttribute('href', '/create/font-gallery')
 
     const cards = page.locator('.fpr-card')
     await expect(cards).toHaveCount(6)
-    // Every suggestion states WHY it is here, in plain view (no disclosure).
-    const reasons = await cards.locator('.fpr-card-reason')
-      .evaluateAll((els) => els.map((e) => (e.textContent || '').trim()))
+    // Every suggestion states WHY it is here: the row is described by a reason
+    // that sits once above its group (238 pins that layout).
+    const reasons = await cards.evaluateAll((els) => els.map((li) => {
+      const why = document.getElementById(li.querySelector("button").getAttribute("aria-describedby") || "")
+      return (why?.textContent || "").trim()
+    }))
     expect(reasons).toHaveLength(6)
     for (const reason of reasons) expect(reason.length).toBeGreaterThan(20)
-    await expect(cards.first().locator('.fpr-card-reason')).toBeVisible()
-    await expect(page.locator('.fpr-card-why')).toHaveCount(0)
+    await expect(page.locator(".fpr-card-why")).toHaveCount(0)
 
     // Applying a pair marks it in use and swaps the body family everywhere.
     const first = cards.first()
@@ -410,7 +419,7 @@ test.describe('Font Gallery', () => {
     await expect(dialog.locator('.fgd-glyph').first()).toBeVisible()
   })
 
-  test('code, emoji, icon and symbol families never enter the gallery', async ({ page }) => {
+  test('emoji, icon, symbol and barcode families never enter the gallery; a real monospace family is a Mono entry', async ({ page }) => {
     watch(page, 'designer browsing a text-only type catalogue')
     await page.route('**/api/fonts', route => route.fulfill({ json: {
       fonts: [
@@ -423,9 +432,12 @@ test.describe('Font Gallery', () => {
     } }))
 
     await go(page, '/create/font-gallery')
+    // Lora and the monospace family are listed; the emoji, symbol and barcode sets are not.
+    await expect(page.locator('.fg-card')).toHaveCount(2)
+    await expect.poll(async () => (await page.locator('.fg-card-name').allTextContents()).map(name => name.trim()).sort()).toEqual(['JetBrains Mono', 'Lora'])
+    await page.getByRole('button', { name: 'Mono', exact: true }).click()
     await expect(page.locator('.fg-card')).toHaveCount(1)
-    await expect(page.locator('.fg-card-name')).toHaveText('Lora')
-    await expect(page.getByRole('button', { name: 'Mono', exact: true })).toHaveCount(0)
+    await expect(page.locator('.fg-card-name')).toHaveText('JetBrains Mono')
   })
 
   // Each typeface should show real-world examples, not the same UI examples for
@@ -845,20 +857,10 @@ test.describe('Font Gallery', () => {
     expect(shot.width, 'the band button fills the band').toBeGreaterThanOrEqual(rowBox.width - 2)
     expect(shot.height, 'the band button fills the band height').toBeGreaterThanOrEqual(rowBox.height - 2)
 
-    // THE WEIGHTS wait in the wake: one name per cut, each set in the cut it names.
-    const steps = page.locator('.fg-card-weights').first().locator('.fg-card-step')
-    await expect(steps).toHaveCount(5)
-    await expect(steps.first()).toHaveText('Thin')
-    await expect(steps.last()).toHaveText('Black')
-    const stepWeights = await steps.evaluateAll(
-      (nodes) => nodes.map((n) => `${n.textContent}:${getComputedStyle(n).fontWeight}`),
-    )
-    expect(stepWeights, 'each weight name is rendered at the weight it names')
-      .toEqual(['Thin:100', 'Light:300', 'Medium:500', 'Bold:700', 'Black:900'])
-    await expect(page.locator('.fg-card-weights').nth(1).locator('.fg-card-step')).toHaveCount(2)
-
-    // The pangram is the full running-text sample, and the meta line names the family's facts.
-    await expect(page.locator('.fg-card-pangram').first()).toHaveText('The quick brown fox jumps over the lazy dog')
+    // The band holds the name and one meta line: no pangram or weight ladder
+    // waits in it, and the meta line names the family's facts.
+    await expect(page.locator('.fg-card-name').first()).toHaveText('Lora')
+    await expect(page.locator('.fg-card-pangram, .fg-card-weights, .fg-card-reveal')).toHaveCount(0)
     await expect(page.locator('.fg-card-meta').first()).toHaveText('01 · Serif · 6 weights')
   })
 
@@ -971,47 +973,31 @@ test.describe('Font Gallery', () => {
     await expect(dialog.locator('.typ-notice')).toHaveCount(0)
   })
 
-  // THE PANGRAM IS THE PAYLOAD, AND THE TABLET BAND WAS EATING IT.
-  // 721-959px is the one band where the specimen line is set `nowrap` in a box
-  // too narrow to hold it. Measured across the 77 families the catalogue serves,
-  // at 834px: 48 of them clipped, from 4px to 113px, with the WIDEST faces
-  // losing the most - so the specimen was least complete for exactly the most
-  // distinctive families. It now wraps to a reserved two-line box, as the phone
-  // layout already did.
-  //
-  // Two assertions, because either alone can pass for the wrong reason. The
-  // reserved-height one holds whether or not a webfont ever paints, so it fails
-  // the moment the rule is removed; the clipping one is the thing the reader
-  // actually loses, and only means something because the line really is long.
-  test('the specimen line is not sliced in the tablet band', async ({ page }) => {
+  // The tablet band is the narrowest layout that still sets the meta line on one
+  // row beside the name. The line is `nowrap`, so it either fits whole or is cut at
+  // the band's edge; it must fit whole, and every band must hold the same height.
+  test('the meta line is whole in the tablet band', async ({ page }) => {
     watch(page, 'a designer judging typefaces on an iPad')
     await page.setViewportSize({ width: 834, height: 1112 })
     await go(page, '/create/font-gallery')
-    await expect(page.locator('.fg-card-pangram').first()).toBeVisible()
+    await expect(page.locator('.fg-card-meta').first()).toBeVisible()
     await page.evaluate(() => document.fonts.ready).catch(() => {})
 
     const report = await page.evaluate(() => {
-      const els = [...document.querySelectorAll('.fg-card-pangram')]
+      const cards = [...document.querySelectorAll('.fg-card')]
+      const metas = [...document.querySelectorAll('.fg-card-meta')]
       return {
-        count: els.length,
-        sample: els[0].textContent.trim(),
-        nowrap: getComputedStyle(els[0]).whiteSpace === 'nowrap',
-        // One reserved box for every row, and it holds two lines, not one.
-        heights: [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().height)))],
-        lineHeight: Math.round(parseFloat(getComputedStyle(els[0]).lineHeight)),
-        clipped: els
-          .map((e) => ({
-            family: getComputedStyle(e).fontFamily.split(',')[0].replace(/["']/g, ''),
-            lost: e.scrollWidth - e.clientWidth,
-          }))
-          .filter((e) => e.lost > 0),
+        count: metas.length,
+        sample: metas[0].textContent.trim(),
+        heights: [...new Set(cards.map((c) => Math.round(c.getBoundingClientRect().height)))],
+        clipped: metas.map((m) => ({ text: m.textContent, lost: m.scrollWidth - m.clientWidth })).filter((m) => m.lost > 0),
       }
     })
 
-    expect(report.count, 'the gallery should have specimens to measure').toBeGreaterThan(0)
-    expect(report.sample, 'the wake holds the whole pangram').toBe('The quick brown fox jumps over the lazy dog')
-    expect(report.heights, 'every row must reserve the same specimen box').toHaveLength(1)
-    expect(report.clipped, 'specimen lines sliced at the box edge').toEqual([])
+    expect(report.count, 'the gallery should have bands to measure').toBeGreaterThan(0)
+    expect(report.sample, 'the meta line holds rank, category and weights').toMatch(/^\d\d · .+ · \d+ weights?$/)
+    expect(report.heights, 'every band must be the same height').toHaveLength(1)
+    expect(report.clipped, 'meta lines cut at the band edge').toEqual([])
   })
 })
 
@@ -1033,13 +1019,15 @@ test.describe('typography hand-offs', () => {
     await expect(page.locator('.fpr-pair span').nth(0)).toHaveText('Merriweather')
     await expect(page.locator('.fpr-card')).not.toHaveCount(0)
 
-    await page.getByRole('button', { name: /Build a type scale from this pair/ }).click()
+    await page.getByRole('link', { name: /^Type Scale, scale / }).click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/type-scale')
     await expect(page.locator('.tsc-row').first()).toBeVisible()
-    const family = await page.locator('.tsc-row-text--heading').first().evaluate(
-      (el) => getComputedStyle(el).fontFamily,
-    )
-    expect(family).toContain('Merriweather')
+    // The family shows on first paint, while the catalogue is still loading, but
+    // the read is polled so a render after the route change cannot fail it.
+    await expect.poll(
+      () => page.locator('.tsc-row-text--heading').first().evaluate((el) => getComputedStyle(el).fontFamily),
+      { message: 'the heading rows are set in the family carried from Font Pair' },
+    ).toContain('Merriweather')
   })
 
   test('a direct visit to a destination inherits nothing from an earlier hand-off', async ({ page }) => {
@@ -1047,7 +1035,7 @@ test.describe('typography hand-offs', () => {
     await go(page, '/create/type-scale')
     // The slot is one-consumption and in-memory only: a fresh load has no draft,
     // so the tool opens on the saved kit rather than someone else's leftovers.
-    await expect(page.locator('.tsc-row')).toHaveCount(9)
+    await expect(page.locator('.tsc-row')).toHaveCount(6)
     await expect(page.locator('.toast.show')).toHaveCount(0)
   })
 })
@@ -1105,7 +1093,8 @@ test.describe('typography tools under a failing font catalogue', () => {
 
     // The scale is pure maths — it must keep responding with the network gone.
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('182.5px')
+    // 15 x 1.5^4 = 75.94 at the opening base of 15.
+    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toHaveText(/^75\.94 \//)
 
     await context.setOffline(false)
     await page.evaluate(() => window.dispatchEvent(new Event('online')))
@@ -1217,10 +1206,13 @@ test.describe('the font picker is browsable', () => {
     for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/fontpairs')
+      // From 768 the Browse button is on the heading card; on a phone it is in the
+      // heading family sheet, opened from the dock's Heading pill.
+      if (width < 768) await page.locator('.fpr-dock .fpr-pill').first().click()
       const trigger = page.getByRole('button', { name: 'Browse heading family' })
       await expect(trigger).toBeVisible()
       await trigger.click()
-      const dialog = page.getByRole('dialog')
+      const dialog = page.getByRole('dialog').filter({ has: page.getByLabel('Search font families') })
       await expect(dialog).toBeVisible()
       await expect(dialog.locator('.fbd-sample').first()).toBeVisible()
 
@@ -1374,31 +1366,42 @@ test('coarse-pointer typography controls expose 44px hit targets', async ({ brow
   const expectTarget = async (locator, label) => {
     const box = await locator.boundingBox()
     expect(box, `${label} should have a rendered box`).not.toBeNull()
-    expect(box.width, `${label} width`).toBeGreaterThanOrEqual(44)
-    expect(box.height, `${label} height`).toBeGreaterThanOrEqual(44)
+    // Layout can land a 44px box a few hundred-thousandths short (43.99997) when its
+    // position is fractional, so the size is read to the hundredth of a pixel.
+    const px = (n) => Math.round(n * 100) / 100
+    expect(px(box.width), `${label} width`).toBeGreaterThanOrEqual(44)
+    expect(px(box.height), `${label} height`).toBeGreaterThanOrEqual(44)
   }
 
   await go(page, '/create/font-gallery')
   await expect(page.locator('.fg-card').first()).toBeVisible()
   await expectTarget(page.locator('.fg-card-compare').first(), 'Font Gallery compare')
-  // On a phone the category filter lives in the toolbar's Filters sheet.
+  // The Filters sheet repeats the chip row's categories, each with its family count.
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  await expectTarget(sheet.getByRole('button', { name: 'All', exact: true }), 'Font Gallery filter')
+  await expectTarget(sheet.getByRole('button', { name: /^All \d/ }), 'Font Gallery filter')
   await page.keyboard.press('Escape')
   await expect(sheet).toBeHidden()
   // The phone tray stands on the tab bar once two fonts are picked.
   await page.locator('.fg-card-compare').nth(0).click()
   await page.locator('.fg-card-compare').nth(1).click()
-  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery compare')
+  // The tray's first button is Clear; Compare N follows once two are picked.
+  await expectTarget(page.locator('.fg-compare-tray .fg-more-btn').first(), 'Font Gallery tray Clear')
+  await expectTarget(page.locator('.fg-compare-tray .fg-dock-ink'), 'Font Gallery tray Compare')
 
   await go(page, '/create/font-pair')
-  await expect(page.locator('.fpr-card').first()).toBeVisible()
-  await expectTarget(page.locator('.fpr-card-apply').first(), 'Font Pair apply')
+  // On a phone the suggestion cards are in the Body family sheet the dock's Body pill opens.
+  await page.locator('.fpr-dock .fpr-pill').nth(1).click()
+  await expect(page.locator('.fpr-sheet .fpr-card').first()).toBeVisible()
+  await expectTarget(page.locator('.fpr-sheet .fpr-card-apply').first(), 'Font Pair apply')
 
   await go(page, '/create/type-scale')
-  await page.getByRole('tab', { name: 'Page' }).click()
+  // The phone has no view tabs: the width segment is the top of the one scroll.
+  await expect(page.getByRole('tab')).toHaveCount(0)
   await expect(page.locator('#tsc-width')).toBeVisible()
-  await expectTarget(page.locator('#tsc-width'), 'Type Scale width')
+  // The dock's scale trigger and Save are touch targets too.
+  await expectTarget(page.locator('.tl-dock .tsc-dock-ratio'), 'Type Scale dock trigger')
+  await expectTarget(page.locator('.tl-dock').getByRole('button', { name: 'Save to a project' }), 'Type Scale dock Save')
+  await expectTarget(page.locator('#tsc-width button[aria-pressed="true"]'), 'Type Scale width')
   await context.close()
 })

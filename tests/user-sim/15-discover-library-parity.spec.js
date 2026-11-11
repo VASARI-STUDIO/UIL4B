@@ -18,7 +18,6 @@ import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 // Palette Builder will LOAD, which is why both sets are still named here.
 const FREE_BRANDS = BRAND_PALETTES.filter((brand) => brand.free === true)
 const PAID_BRANDS = BRAND_PALETTES.filter((brand) => brand.free !== true)
-const TEASED = 3 // LOCKED_TEASE — placeholders shown before the wall
 
 // `eyebrow` is the results-row label each library shows WHILE BROWSING, and the
 // two are deliberately different now. Parity here is of STRUCTURE — same
@@ -318,16 +317,16 @@ test.describe('Discover libraries share one header', () => {
   test('the Gradient Library keeps its no-results recovery path', async ({ page }) => {
     watch(page, 'designer filtering the Gradient Library down to nothing')
     await go(page, '/discover/gradients')
-    await expect(page.locator('.grg-card').first()).toBeVisible()
+    await expect(page.locator('.grg-card:not(.geg-fade *)').first()).toBeVisible()
 
     await page.getByLabel('Search gradients').fill('zzzzz-no-such-gradient')
-    await expect(page.locator('.grg-card')).toHaveCount(0)
+    await expect(page.locator('.grg-card:not(.geg-fade *)')).toHaveCount(0)
     const empty = page.locator('.grg-empty')
     await expect(empty).toBeVisible()
     await expect(empty).toContainText('No gradients match')
 
     await empty.getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.locator('.grg-card').first()).toBeVisible()
+    await expect(page.locator('.grg-card:not(.geg-fade *)').first()).toBeVisible()
     await expect(page.locator('.drh-head p')).toContainText(/\d+ gradients/)
   })
 })
@@ -355,7 +354,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/discover/palettes')
 
-    const cards = page.locator('.pgal-card')
+    const cards = page.locator('.pgal-card:not(.geg-fade *)')
     await expect(cards).toHaveCount(LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
@@ -365,8 +364,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     for (const brand of PAID_BRANDS) {
       await expect(page.locator('.pgal-card', { hasText: brand.name })).toHaveCount(1)
     }
-    await expect(page.locator('.lockt-card')).toHaveCount(0)
-    await expect(page.locator('.lockt-cta')).toHaveCount(0)
+    await expect(page.locator('.geg')).toHaveCount(0)
 
     // Distinguishable: every brand card carries a visible Brand badge, and no
     // curated card does.
@@ -399,18 +397,18 @@ test.describe('the Palette Library carries the brand systems', () => {
     await go(page, '/discover/palettes')
 
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(0)
     // The design's heading for the Brand filter (App file, galHeading).
     await expect(page.locator('.drh-head h2')).toHaveText('Brand palettes')
     await expect(page.locator('.drh-head p')).toHaveText(`${BRAND_LIBRARY_PALETTES.length} palettes`)
 
     await page.getByRole('button', { name: 'Curated', exact: true }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'All palettes' }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(LIBRARY_PALETTES.length)
   })
 
   test('search reaches a brand by name, and no-results recovers', async ({ page }) => {
@@ -420,7 +418,7 @@ test.describe('the Palette Library carries the brand systems', () => {
 
     const search = page.getByPlaceholder('Search palettes')
     await search.fill('Netflix')
-    await expect(page.locator('.pgal-card')).toHaveCount(1)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(1)
     await expect(page.locator('.pgal-name')).toHaveText('Netflix')
     await expect(page.locator('.pgal-badge')).toBeVisible()
 
@@ -434,11 +432,11 @@ test.describe('the Palette Library carries the brand systems', () => {
     await expect(page.locator('.pgal-name')).toHaveText(spotify.name)
 
     await search.fill('zzzzz-not-a-palette')
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     const empty = page.locator('.pgl-empty')
     await expect(empty).toBeVisible()
     await empty.getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(LIBRARY_PALETTES.length)
   })
 
   test('a withheld brand system is withheld, not routed around', async ({ page }) => {
@@ -458,11 +456,11 @@ test.describe('the Palette Library carries the brand systems', () => {
     // An open palette still hands off straight to the builder with its colours,
     // so "no deep link" below is a statement about the withheld rows and not
     // about a page that has stopped linking anywhere.
-    const open = page.locator('.pgal-card').first()
+    const open = page.locator('.pgal-card:not(.geg-fade *)').first()
     await expect(open.getByRole('link', { name: /^Open / })).toHaveAttribute('href', /^\/create\/palette\?c=/)
 
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     await expect(page.locator('.pgal-use--pro')).toHaveCount(0)
 
     // No withheld brand has a card, a badge, a link or a hex anywhere — not the
@@ -481,21 +479,30 @@ test.describe('the Palette Library carries the brand systems', () => {
     const search = page.getByPlaceholder('Search palettes')
     const paid = PAID_BRANDS[0]
     await search.fill(paid.name)
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     await search.fill(paid.colors[0])
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     await expect(page.locator('.pgal-name', { hasText: paid.name })).toHaveCount(0)
     await search.fill('')
 
-    // What replaces them: placeholders and one wall into the canonical gate,
-    // naming the true remainder.
+    // What replaces them: the Pro end gate over faded neutral cards, naming the
+    // true remainder. The faded cards are stand-ins: no withheld brand's name
+    // or colour is in them.
     await page.getByRole('button', { name: 'All palettes' }).click()
-    await expect(page.locator('.lockt-card')).toHaveCount(TEASED)
+    const gate = page.locator('.geg[data-gate="pro"]')
+    await expect(gate).toHaveCount(1)
     // The remainder as a NUMBER: a substring check for "91" is satisfied by
     // "191" and by any other figure that happens to contain it.
     const remaining = LIBRARY_PALETTES.length - 10
-    expect((await page.locator('.lockt-cta-head').innerText()).match(/\d+/g).map(Number))
+    expect((await gate.locator('.geg-h').innerText()).match(/\d+/g).map(Number))
       .toContain(remaining)
+    const fade = gate.locator('.geg-fade')
+    expect(await fade.locator('.pgal-card').count(), 'the gate has no faded cards - the check below would be vacuous').toBeGreaterThan(0)
+    const fadedHtml = await fade.evaluate((el) => el.innerHTML)
+    for (const brand of [PAID_BRANDS[0], FREE_BRANDS[0]]) {
+      expect(fadedHtml, `${brand.name} is named in the faded cards`).not.toContain(brand.name)
+      for (const hex of brand.colors) expect(fadedHtml.toLowerCase(), `${brand.name}'s ${hex} is in the faded cards`).not.toContain(hex.toLowerCase())
+    }
   })
 })
 

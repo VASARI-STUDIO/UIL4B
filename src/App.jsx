@@ -20,6 +20,7 @@ import { openFirebaseGate } from './utils/firebaseAccess'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
+import { wantsFullView } from './utils/libraryView'
 import { LOGIN_SIGNUP_TITLE } from './data/routeMetaMap'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/routeMetaGated'
 import { LoginPromptProvider } from './contexts/LoginPromptContext'
@@ -170,10 +171,13 @@ function RequireAuth({ children }) {
 // lie about why they can't be here, and the route's existence is not something
 // they need told.
 //
+// `notFound` swaps that redirect for the not-found page at the same address, for
+// a route whose existence should not be hinted at or silently redirected away from.
+//
 // Presentation only — see isAdminEmail in utils/constants.js. Routes holding
 // real data verify server-side (/api/verify-admin), which the Admin dashboard
 // already does and which this does not replace.
-function RequireAdmin({ children }) {
+function RequireAdmin({ children, notFound = false }) {
   const { user, loading } = useAuth()
   useEffect(() => { openFirebaseGate() }, [])
   if (loading) {
@@ -183,7 +187,7 @@ function RequireAdmin({ children }) {
       </div>
     )
   }
-  if (!isAdminEmail(user?.email)) return <Navigate to="/" replace />
+  if (!isAdminEmail(user?.email)) return notFound ? <NotFound /> : <Navigate to="/" replace />
   return children
 }
 
@@ -216,6 +220,20 @@ function AppInner({ toast }) {
   // 35910539677). A layout effect, so the stamp moves in the same commit as
   // the page, on every branch — the shell, /create, /, and the surface pages.
   useLayoutEffect(() => { document.documentElement.dataset.route = location.pathname }, [location.pathname])
+  // The full-screen view of a library (`?view=full`, utils/libraryView.js): the
+  // page in the shell's <main> with no PillNav and no AppFooter, so it can fill
+  // a window of its own. Only for the people the route admits: a visitor it
+  // turns away gets the not-found page WITH the nav, not a dead end without
+  // one. While auth resolves the route shows a loader, so that waits as full.
+  // `data-view` lets the stylesheet drop the nav's height from the offsets that
+  // clear it (global.css, beside .app-shell).
+  const fullScreen = wantsFullView(location.pathname, location.search) && (authLoading || isAdminEmail(authUser?.email))
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    if (fullScreen) root.dataset.view = 'full'
+    else delete root.dataset.view
+    return () => { delete root.dataset.view }
+  }, [fullScreen])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -539,9 +557,9 @@ function AppInner({ toast }) {
 
   return (
     <div className="app-shell">
-      <PillNav />
+      {!fullScreen && <PillNav />}
 
-      <main className="app-page" id="main" tabIndex={-1} key={location.pathname}>
+      <main className={fullScreen ? 'app-page app-page--full' : 'app-page'} id="main" tabIndex={-1} key={location.pathname}>
         <RouteErrorBoundary resetKey={location.pathname}>
           <Suspense fallback={<RouteLoading />}>
             <Routes location={location}>
@@ -572,8 +590,8 @@ function AppInner({ toast }) {
                   no visible error, on the page whose whole product is the text
                   you came to copy. Same helper /seo is given below. */}
               {/* Parked: admins only until the library is opened up. Everyone
-                  else is sent to the homepage by RequireAdmin. */}
-              <Route path="/discover/prompts" element={<RequireAdmin><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
+                  else sees the not-found page, at this same address. */}
+              <Route path="/discover/prompts" element={<RequireAdmin notFound><PromptLibrary onCopy={copy} toast={toast} /></RequireAdmin>} />
               {/* Copy-ready button designs. `onCopy` is required: every copy
                   button on the page calls it. */}
               <Route path="/discover/buttons" element={<ButtonLibrary onCopy={copy} />} />
@@ -641,7 +659,7 @@ function AppInner({ toast }) {
         </RouteErrorBoundary>
       </main>
 
-      <AppFooter />
+      {!fullScreen && <AppFooter />}
       <GoogleOneTap />
     </div>
   )

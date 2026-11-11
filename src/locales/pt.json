@@ -30,10 +30,10 @@
     "colours": "Cores"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "Painel",
@@ -267,6 +267,7 @@
     "title": "Biblioteca de Ícones",
     "eyebrow": "BIBLIOTECA DE ÍCONES",
     "heading": "Encontre, personalize e copie qualquer ícone.",
+    "subtitleShort": "Mude a cor e copie um SVG limpo.",
     "subtitle": "Mude a cor, o tamanho e o estilo de qualquer ícone (ajuste o traço, defina a cor) e copie um SVG limpo ou exporte com um clique. Assine o Pro para salvar seus ícones personalizados.",
     "searchPlaceholder": "Buscar ícones…",
     "allPacks": "Todos os Pacotes",
@@ -280,9 +281,13 @@
     "noIcons": "Busque ícones acima",
     "loadingPacks": "Carregando pacotes de ícones…"
   },
+  "iconGroups": {
+    "subtitleShort": "Conjuntos de ícones com um só estilo."
+  },
   "emojiLibrary": {
     "eyebrow": "BIBLIOTECA DE EMOJIS",
     "heading": "Copie qualquer emoji, em qualquer tom de pele.",
+    "subtitleShort": "Emojis por categoria, um clique para copiar.",
     "subtitle": "Explore todos os emojis por categoria, mude o tom de pele de todo o conjunto e clique para copiar. Grátis, sempre."
   },
   "imageConverter": {
@@ -429,7 +434,7 @@
     }
   },
   "auth": {
-    "logInTitle": "Entre no UIL4B",
+    "logInTitle": "Entre no UI L4B",
     "logInContinue": "Entre para continuar",
     "createAccount": "Crie sua conta gratuita",
     "resetTitle": "Redefina sua senha",
@@ -496,11 +501,14 @@
   },
   "feedback": {
     "title": "Feedback",
-    "subtitle": "Ajude-nos a melhorar o UIL4B. Compartilhe bugs, solicitações de recursos ou feedback geral.",
+    "subtitle": "Ajude-nos a melhorar o UI L4B. Compartilhe bugs, solicitações de recursos ou feedback geral.",
     "featureRequest": "Solicitação de Recurso",
     "bugReport": "Relatório de Bug",
     "general": "Geral",
     "messagePlaceholder": "Conte-nos o que você acha…",
+    "helpTitle": "Falar com o suporte",
+    "helpSubtitle": "Ficou preso ou algo não está funcionando? Conte-nos o que você estava tentando fazer e o que aconteceu. Informe seu e-mail se quiser receber uma resposta.",
+    "helpPlaceholder": "O que você estava tentando fazer e o que aconteceu em vez disso?",
     "submitFeedback": "Enviar Feedback",
     "enterFeedback": "Por favor, insira seu feedback",
     "thankYou": "Obrigado pelo seu feedback!",
@@ -509,7 +517,7 @@
   },
   "community": {
     "title": "Comunidade",
-    "subtitle": "Conecte-se com outros designers e desenvolvedores que usam o UIL4B.",
+    "subtitle": "Conecte-se com outros designers e desenvolvedores que usam o UI L4B.",
     "comingSoonDesc": "Compartilhe paletas, obtenha feedback sobre seus designs e descubra templates criados pela comunidade.",
     "github": "Repositório GitHub",
     "githubDesc": "Navegar pelo código-fonte, favoritar o projeto e contribuir.",

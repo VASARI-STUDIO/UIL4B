@@ -23,6 +23,7 @@ import { infoToolGroup } from '../data/infoTools'
 // Where an image goes in an AI tool, and where the Terms say what the
 // providers may do with it. One copy of each, shared with the tool itself.
 import { AI_IMAGE_SENT, AI_TERMS_PATH } from '../config/aiImageConsent'
+import { crossRouteHashClick } from '../components/spectrum/salesLinks'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,
@@ -104,7 +105,7 @@ const SECTIONS = [
             the most personal input is the one sentence on this page that
             must not be approximately true. The rest of the paragraph is
             what the product is. */}
-        <p>UIL4B is a free, browser-based design toolkit.</p>
+        <p>UI L4B is a free, browser-based design toolkit.</p>
         <ul>
           {/* "only" is deleted from the second sentence. Since e2309608
               taking a FILE away — the export panel, the icon SVG, the
@@ -190,7 +191,7 @@ const SECTIONS = [
         <ToolLinks group={GROUP.ai} />
         {/* The one group that sends an image to a server, so the page that
             explains the tools says where it goes. */}
-        <p>{AI_IMAGE_SENT} <Link to={AI_TERMS_PATH}>How providers may use them</Link></p>
+        <p>{AI_IMAGE_SENT} <Link className="ic-hit" to={AI_TERMS_PATH} onClick={crossRouteHashClick(AI_TERMS_PATH)}>How providers may use them</Link></p>
       </>
     ),
   },
@@ -254,15 +255,12 @@ const SECTIONS = [
             "Settings → Support" is corrected to "Settings → Plan and billing",
             which is the label Settings.jsx gives that tab (`{ id: 'support',
             label: 'Plan and billing' }`) — a visitor looking for "Support" would
-            not find it. And "or cancel" is deleted from the second sentence
-            on the same evidence /plans used to delete "cancel any time": the
-            Stripe portal has no cancellation flow enabled until the
-            [stripe-retention-config] owner action is done (pipeline.js,
-            status 'blocked'), so the Cancel plan button opens a portal with
-            nothing to cancel in it. The guard test reads that row's status,
-            so finishing the dashboard work retires the check. */}
+            not find it. The second sentence says the visitor can cancel
+            there: the Stripe portal the Cancel plan button opens has
+            cancellation on, at the end of the paid period, so Pro stays
+            until then. */}
         <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
-        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>.</p>
+        <p>Compare Free and Pro on the <Link to="/plans">Plans</Link> page. Once you&rsquo;re on Pro, manage billing or cancel in <Link to="/settings" state={{ section: 'support' }}>Settings</Link>. Pro stays on until the end of the period you&rsquo;ve paid for.</p>
       </>
     ),
   },
@@ -270,12 +268,16 @@ const SECTIONS = [
     id: 'troubleshooting',
     title: 'Troubleshooting',
     body: (
+      <>
       <ul>
         <li><strong>An AI tool isn&rsquo;t responding?</strong> AI features need you to be signed in. If it keeps failing, the service may be briefly busy. Give it a moment and try again.</li>
         <li><strong>Something looks off?</strong> A hard refresh (<kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>) clears most glitches.</li>
         <li><strong>Working offline?</strong> Core tools run entirely in your browser and keep going; sign-in, sync and AI need a connection.</li>
         <li><strong>Lost something?</strong> Saved projects live in <Link to="/projects">Projects</Link>, and you can export a full backup any time from <Link to="/settings">Settings → Your data</Link>.</li>
       </ul>
+      {/* Ends the list with the way to a person, set to a help request. */}
+      <p className="ic-still-stuck">Still stuck? <Link to="/feedback?type=help">Contact support</Link></p>
+      </>
     ),
   },
   {
@@ -307,7 +309,7 @@ const SECTIONS = [
     title: 'Privacy and your data',
     body: (
       <>
-        <p>UIL4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
+        <p>UI L4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
       </>
     ),
   },
@@ -468,7 +470,7 @@ export default function InfoCentre() {
             has been deleted from the Font Gallery, Font Pair, the Type Scale,
             the Tint tool and /privacy. Hierarchy is a control, not
             a label. */}
-        <h1 className="ic-head-title">Everything you need to know about UIL4B</h1>
+        <h1 className="ic-head-title">Everything you need to know about UI L4B</h1>
         <p className="ic-head-sub">What each tool does, the keyboard shortcuts, and how your screen measures up, all on one page.</p>
       </header>
 

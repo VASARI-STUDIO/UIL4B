@@ -2,31 +2,21 @@ import { adminDb, adminAuth } from './_lib/firebase-admin.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
 import { mailFrom, REPLY_TO } from './_lib/mail.js'
+import { NOTIFY_TYPES, handleCommunityNotify } from './_lib/communityNotify.js'
 import { waitUntil } from '@vercel/functions'
 
-// THE BOOTSTRAP IS SHARED, NOT COPIED. This file used to carry its own
-// initializeApp(): a bare JSON.parse of FIREBASE_SERVICE_ACCOUNT_KEY inside a
-// catch that fell back to no credential, and a hard-coded projectId of 'uil4b'.
-// Both diverged from api/_lib/firebase-admin.js, which every other route uses,
-// and both were MEASURED before this was changed (2026-09-06 engineering
-// review, probe against the real module with a generated service account):
-//
-//   • A base64-encoded key — the form _lib documents as the SAFER one to store,
-//     because a raw paste mangles the PEM line breaks — failed JSON.parse here,
-//     fell into the catch, and this route booted on ApplicationDefaultCredential
-//     with no service account at all, while _lib read the same value fine.
-//   • The explicit projectId overrode the service account's own project_id, so
-//     with VITE_FIREBASE_PROJECT_ID unset in the function environment this
-//     route addressed project 'uil4b' while _lib addressed 'uil4b-357c5'.
-//
-// Either way the Firestore write failed, `stored` stayed false, and a bug
-// report reached anyone only if the optional Resend email happened to be
-// configured. One bootstrap, one set of encodings, one project id.
+// The Admin SDK is initialised by api/_lib/firebase-admin.js, shared with every
+// other route, so this file has one set of accepted key encodings (including
+// the base64 form) and takes its project id from the service account. A second
+// bootstrap here would fail the Firestore write, leave `stored` false, and let
+// a report reach anyone only through the optional Resend email.
 
 // 'report' is a content report from a community item (src/utils/contentReport.js).
 // A report is only ever read by a person: nothing here acts on it automatically.
 const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
-const VALID_SOURCES = ['feedback-form', 'inline', 'email']
+// 'auto' marks a report no person typed (a crash report, src/utils/errorReport.js),
+// so Admin can list it apart from what people wrote.
+const VALID_SOURCES = ['feedback-form', 'inline', 'email', 'auto']
 
 // The routing choices the feedback dialog offers, by the type they file under
 // ('feedback' in the dialog is stored as 'general'). A value outside the list for
@@ -103,7 +93,9 @@ export function validateSupportBody(body, now = new Date()) {
       ...(safeSeverity ? { severity: safeSeverity } : {}),
       subject: oneLine(subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
       message: message.trim().slice(0, MESSAGE_MAX),
-      email: (email || '').trim().slice(0, EMAIL_MAX),
+      // An automatic report has no one to reply to. The label is the caller's to send,
+      // so an address on it is dropped rather than shown as if the site had filed it.
+      email: safeSource === 'auto' ? '' : (email || '').trim().slice(0, EMAIL_MAX),
       source: safeSource,
       status: 'new',
       adminNotes: '',
@@ -249,6 +241,14 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
+  // The community-submission email and its admin settings share this route to
+  // stay inside the function budget. They carry a signed-in user's ID token,
+  // count against their own limits (not the support form's below) and never
+  // reach the support message contract.
+  if (NOTIFY_TYPES.includes(req.body?.type)) {
+    return handleCommunityNotify(req, res, { getDb, defer, ...(verifyToken ? { verifyToken } : {}) })
+  }
+
   // Resolved here rather than at module scope so a credential problem surfaces
   // as a logged failure on the request that hit it, not as an import-time
   // crash that takes the whole route down with an opaque FUNCTION_INVOCATION_FAILED.
@@ -351,7 +351,7 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
         // so this is neither logged as the cap nor announced to the owner.
         console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
       } else {
-        console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
+        console.warn('support: notification email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
         // The cap itself must not hide that messages are arriving unseen, so the
         // owner gets one notice an hour per allowance. It is exempt from the
         // caps and holds no user content.

@@ -6,17 +6,17 @@
 //   - a chip row that scrolls sideways either shows its last chip whole or
 //     carries the `.rail-overflow` edge fade, so a cut chip reads as "continues";
 //   - the selected "All" chip's count reads at 4.5:1 in dark and light;
-//   - a locked preview is blurred lightly enough to show bands but holds no
-//     content: no hex, no image, only the item's name, a Pro tag and a link to
-//     /plans.
+//   - the faded cards behind the Pro gate are blurred and hold no real value:
+//     only the grey stand-in ramp, no image, and the gate's link to /plans.
 //
 // MUTATIONS (each should turn the named test red):
 //   - drop `rail-overflow` from `.lbry-toolbar-quick` in LibraryToolbar.jsx:
 //     "the emoji chip row shows its last chip or an edge fade" fails;
 //   - set the selected count's colour back to `var(--bg-0)`: "the selected All
 //     count reads at 4.5:1" fails in both themes;
-//   - set `.lockt-stripes` back to `blur(16px)`: "a locked preview is lightly
-//     blurred" fails; remove the blur: it fails the other way;
+//   - remove the blur from `.geg-row[data-row="1"]` in GalleryEndGate.css, or put
+//     a real palette's colours into utils/gateStandins.js: "the faded cards are
+//     blurred and reveal no values" fails;
 //   - make `mainShowPack` in IconLibrary.jsx `gridShowsPack(icons)` again in group mode:
 //     "the cells carry no pack label" fails (a `.ic-pack` is back on every cell);
 //   - drop `grid-column:1/-1` from `.ig-pack-head`: "the heading spans the grid" fails;
@@ -136,37 +136,49 @@ for (const theme of ['light', 'dark']) {
   }
 }
 
-test.describe('Locked previews', () => {
+// What the free rung sees past its ten palettes: the Pro end gate over two rows of the
+// gallery's own cards, faded. The cards are stand-ins drawn from one fixed grey ramp, so
+// the blur is polish and not the gate: no Pro palette's value is on the page to blur.
+const STANDIN_RAMP = ['#e4e4e7', '#c9c9ce', '#a1a1aa', '#7b7b84', '#5b5b64', '#3f3f46', '#2a2a30']
+
+test.describe('Faded cards behind the Pro gate', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-  for (const theme of ['light', 'dark']) test(`a locked preview is blurred and reveals no values, ${theme}`, async ({ page }) => {
+  for (const theme of ['light', 'dark']) test(`the faded cards are blurred and reveal no values, ${theme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: theme })
-    // Signed out, the page shows 3 palettes and a sign-up call; the blurred cards stand in past the free rung's ten.
-    watch(page, 'a free visitor meeting the locked palettes')
+    watch(page, 'a free visitor meeting the end of the palettes')
     await signIn(page, { plan: 'free' })
     await go(page, '/discover/palettes')
-    await expect(page.locator('.pgal-card').nth(9)).toBeVisible()
-    const card = page.locator('.lockt-card--blur').first()
-    await card.scrollIntoViewIfNeeded()
-    await expect(card).toBeVisible()
-    const blur = await card.locator('.lockt-stripes').evaluate((el) => parseFloat((getComputedStyle(el).filter.match(/blur\(([\d.]+)px\)/) || [])[1]))
-    // Light enough to make out the row, heavy enough that nothing sharp is left.
-    expect(blur, 'blur radius in px').toBeGreaterThanOrEqual(4)
-    expect(blur, 'blur radius in px').toBeLessThanOrEqual(10)
-    const html = await card.evaluate((el) => el.outerHTML)
-    expect(html, 'no colour value in the locked card').not.toMatch(/#[0-9a-f]{3,8}\b/i)
-    // The one image is the row's own soft preview, made and rounded at build time
-    // (scripts/library/lockedThumbs.mjs, spec 279); anything else is a leak.
-    expect(html, 'a canvas or CSS image in the locked card').not.toMatch(/<canvas|url\(/i)
-    const imgs = await card.locator('img').evaluateAll((els) => els.map((i) => ({ path: new URL(i.src).pathname, alt: i.getAttribute('alt') })))
-    expect(imgs.length, 'more than the one preview image in the locked card').toBeLessThanOrEqual(1)
-    for (const img of imgs) {
-      expect(img.path, 'an image that is not the locked preview').toMatch(/^\/locked-previews\/palettes\/[a-z0-9-]+\.png$/)
-      expect(img.alt, 'the preview is decoration').toBe('')
-    }
-    const links = await card.locator('a').evaluateAll((as) => as.map((a) => a.getAttribute('href')))
-    expect(links, 'the only way out of a locked card is /plans').toEqual(['/plans'])
-    await page.screenshot({ path: `${SHOTS}/palettes-locked-390-${theme}.png` })
+    await expect(page.locator('.pgal-card:not(.geg-fade *)').nth(9)).toBeVisible()
+    const gate = page.locator('.geg[data-gate="pro"]')
+    await gate.scrollIntoViewIfNeeded()
+    await expect(gate).toBeVisible()
+    const fade = gate.locator('.geg-fade')
+    expect(await fade.locator('.pgal-card').count(), 'no faded cards - the checks below would be vacuous').toBeGreaterThanOrEqual(2)
+    // Row 1 is lightly blurred, row 2 more so: nothing sharp is left.
+    const blur = await fade.locator('.geg-row').evaluateAll((rows) => rows.map((r) => parseFloat((getComputedStyle(r).filter.match(/blur\(([\d.]+)px\)/) || [])[1])))
+    expect(blur.length, 'two faded rows').toBe(2)
+    expect(blur[0], 'first row blur radius in px').toBeGreaterThan(0)
+    expect(blur[1], 'second row blur radius in px').toBeGreaterThanOrEqual(4)
+    expect(blur[1], 'second row blur radius in px').toBeLessThanOrEqual(10)
+    const html = await fade.evaluate((el) => el.innerHTML)
+    // The only colours in the faded cards are the stand-in ramp's (a fixed list, written out here).
+    // (A colour set from script is serialised as rgb(), so both spellings are read.)
+    const hexes = [...new Set([
+      ...(html.match(/#[0-9a-f]{3,8}\b/gi) || []).map((h) => h.toLowerCase()),
+      ...[...html.matchAll(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/gi)].map((m) => `#${[m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`),
+    ])]
+    expect(hexes.length, 'no colour value in the faded cards - this check would be vacuous').toBeGreaterThan(0)
+    expect(hexes.filter((h) => !STANDIN_RAMP.includes(h)), 'a colour that is not a stand-in').toEqual([])
+    const linked = await fade.locator('a[href*="c="]').evaluateAll((as) => as.flatMap((a) => (new URL(a.href).searchParams.get('c') || '').split(',')))
+    expect(linked.filter((c) => !STANDIN_RAMP.includes(`#${c.toLowerCase()}`)), 'a link in the faded cards carries a real colour').toEqual([])
+    // No picture of the row: no image, canvas or CSS url().
+    expect(html, 'an image, canvas or CSS image in the faded cards').not.toMatch(/<img|<canvas|url\(/i)
+    // Inert and hidden, so no way out of the fade; the gate's own link is the way on.
+    await expect(fade).toHaveAttribute('aria-hidden', 'true')
+    await expect(fade).toHaveAttribute('inert', '')
+    await expect(gate.getByRole('link', { name: 'See what Pro includes' })).toHaveAttribute('href', '/plans')
+    await page.screenshot({ path: `${SHOTS}/palettes-gate-390-${theme}.png` })
   })
 })
 
@@ -180,17 +192,36 @@ const openFlagsGroup = async (page) => {
   const sheet = page.getByRole('dialog', { name: 'Filters' })
   const flags = page.getByRole('button', { name: 'Flags', exact: true })
   const groupMenu = page.getByRole('button', { name: /^Group\b/ })
-  // The toolbar steps through its layouts after first paint, so wait for some way in.
-  await expect(filters.or(groupMenu).or(flags).first()).toBeVisible({ timeout: 20_000 })
-  const inPanel = await filters.isVisible()
-  if (inPanel) await filters.click()
-  if (!await flags.isVisible()) await groupMenu.click()
-  await flags.click()
-  if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click()
-  else if (inPanel) await filters.click()
+  // The toolbar steps through its layouts (all controls inline, then a Group menu, then
+  // a Filters panel) in the first moments after paint, and on a slow runner the page
+  // can be caught between two of them: the control a one-off look found is gone by the
+  // time it is clicked (CI: "waiting for Group" until the 30 s timeout). So each way in
+  // is looked at and used inside one retried step, the way a person would click again
+  // on the layout in front of them. Once the Flags click has gone through, no later
+  // step may repeat it: a second click on the active group would switch it off.
+  const open = async (loc) => (await loc.isVisible()) && (await loc.getAttribute('aria-expanded')) === 'true'
+  let picked = false
+  await expect(async () => {
+    if (!picked) {
+      if (await filters.isVisible() && !await open(filters)) await filters.click({ timeout: 2000 })
+      if (!await flags.isVisible()) await groupMenu.click({ timeout: 2000 })
+      await flags.click({ timeout: 2000 })
+      picked = true
+    }
+    if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Done', exact: true }).click({ timeout: 2000 })
+    else if (await open(filters)) await filters.click({ timeout: 2000 })
+    expect(await sheet.isVisible() || await open(filters), 'the Filters panel is closed again').toBe(false)
+  }, { message: 'Flags chosen from whichever layout the toolbar settled on' }).toPass({ timeout: 25_000 })
   const listed = async () => Number(((await page.locator('#ig-result-count').textContent()) || '').replace(/\D/g, ''))
   await expect.poll(listed, { timeout: 20_000, message: 'the Flags group replaced the full listing' }).toBeLessThan(1000)
   await expect(page.locator('.ig .ig-pack-head').first()).toBeVisible({ timeout: 20_000 })
+  // The grid is headed per pack as soon as the group is chosen, while it may still hold the
+  // listing it replaces; wait until every heading on it is one of the Flags packs.
+  const flagNames = FLAG_PACKS.map((p) => ICON_PACK_CREDITS[p].name)
+  await expect.poll(
+    async () => (await page.locator('.ig').last().locator('.ig-pack-head .ig-pack-name').allTextContents()).map((n) => n.trim()).filter((n) => !flagNames.includes(n)),
+    { timeout: 20_000, message: 'only Flags packs are headed' },
+  ).toEqual([])
   return listed
 }
 

@@ -147,9 +147,14 @@ test.describe('390 · the picker on a phone', () => {
     expect(pop.top >= trigger.bottom, 'the trigger is clear above the sheet').toBe(true)
     expect(trigger.top, 'and it is still below the toolbar').toBeGreaterThanOrEqual(toolbar.bottom)
 
-    // Nothing scrolls inside it: the second preset row is whole.
-    const overflow = await picker.evaluate((el) => el.scrollHeight - el.clientHeight)
-    expect(overflow).toBeLessThanOrEqual(1)
+    // Where the sheet is shorter than its content (the project's palette and
+    // semantic presets add rows) it scrolls, and then it must say so: the fade at
+    // the bottom edge is drawn while content remains below, so a cut-off row never
+    // reads as the end of the list.
+    const { overflow, more } = await picker.evaluate((el) => ({
+      overflow: el.scrollHeight - el.clientHeight, more: el.hasAttribute('data-more'),
+    }))
+    if (overflow > 1) expect(more, 'a sheet with more below shows the fade').toBe(true)
   })
 
   test('every preset can be reached and hit', async ({ page }) => {

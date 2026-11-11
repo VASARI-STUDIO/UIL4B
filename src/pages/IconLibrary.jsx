@@ -10,26 +10,26 @@ import { useProModal, reportUpgradeGate } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { lockScroll } from '../utils/scrollLock'
 import useExportGate from '../hooks/useExportGate'
-import useModalDialog from '../hooks/useModalDialog'
+import { snapToTarget, stepFromKey } from '../utils/sliderKeys'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
-import SnapSlider from '../components/SnapSlider'
 import useMediaQuery from '../hooks/useMediaQuery'
 import SplitDownload from '../components/library/SplitDownload'
 import FooterGlyph from '../components/library/FooterGlyph'
 import {
-  downloadFileName, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
+  downloadFileName, effectiveFormat, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
 } from '../utils/iconDownload'
 import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
+import { FREE_SAVE_LIMITS } from '../config/plans'
 import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
 import { matchesRegular } from '../data/iconRegularRules'
 import { loadPackHead } from '../data/iconHeads'
 import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
-import { colourRowState, colourChoice, normaliseGround, groundContrastNote } from '../utils/iconColourRow'
+import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
 import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
 import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
 import { clearPreviewDraft, readPreviewDraft, stampPreviewDraft, writePreviewDraft } from '../utils/iconPreviewDraft'
@@ -48,10 +48,14 @@ import {
 } from '../utils/iconLineStyle'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
+import { cleanCustomIcons, customSymbolKey, customSymbolRef, registerCustomSymbols } from '../utils/customIcons'
 import { sanitiseSvgInline } from '../utils/svgSanitise'
 import {
   endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
 } from '../utils/iconEndBand'
+import {
+  SEARCH_TEASE_COPY, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
+} from '../utils/iconSearchTease'
 // The closing arrow shared with the homepage's closing band.
 import PhGlyph from '../components/spectrum/PhGlyph'
 import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
@@ -75,10 +79,14 @@ import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCr
 import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD_HEADER } from '../utils/iconifyFetch'
 import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
 import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
+import { iconSynonymFor } from '../data/iconSynonyms'
+import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
+import { isCountUnknownError } from '../utils/projectCount'
 import '../styles/deferred/library.css'
+import '../styles/pages/icon-editor.css'
 import '../styles/deferred/tool-shell.css'
 // The attribution line's own sheet. It is NOT in library.css, deliberately: a
 // licence condition should be editable — and reviewable — without opening a
@@ -86,6 +94,13 @@ import '../styles/deferred/tool-shell.css'
 // rule that takes a credit off the screen with it.
 
 const API_LIMIT = 999
+
+// What a search found in sets the viewer cannot open, remembered per
+// (tier, chip, weight, query) so retyping a query costs no second request.
+// Counts and pack labels only (see utils/iconSearchTease.js). Held for the
+// session and trimmed oldest-first so it cannot grow without end.
+const SEARCH_TEASE_CACHE = new Map()
+const SEARCH_TEASE_CACHE_MAX = 60
 
 // ONE HOST, BECAUSE THE OTHER TWO WERE NEVER A FALLBACK.
 // `api.simplesvg.com` and `api.unisvg.com` are Iconify's documented mirrors and
@@ -119,10 +134,14 @@ const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
 // the other styles. `packs` are real Iconify prefixes.
 const ICON_GROUPS = {
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
+  // Logo.dev stays out of this chip: it is not an Iconify set (no prefix to list or search, and the group browse path only speaks Iconify), its logos are hotlinked per query at our cost, and it carries a required credit. It is reached from the pack menu.
   brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
 }
 const GROUP_ORDER = ['coloured', 'brands', 'flags']
+// The chip row's reset: pressed when no group is chosen, and pressing it clears the group (see handleGroupToggle). 'all' is not a key of ICON_GROUPS, so it can never be mistaken for a group.
+const ALL_ICONS_ID = 'all'
+const ALL_ICONS_OPTION = { id: ALL_ICONS_ID, label: 'All icons' }
 // Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
 // ride in the default "All packs" listing and stay in the pack menu.
 const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
@@ -131,7 +150,7 @@ const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
 
 // The group tray's options were built HERE, at module scope, so that
@@ -264,15 +283,12 @@ const GROUND_OPTS = [
 
 // The picture the upgrade popup shows for a Pro preview: the icon drawn on the stage's ground.
 const PROOF_PX = 64
-const PROOF_GROUNDS = {
-  light: { background: '#DEDEE2' },
-  dark: { background: '#202024' },
-  checker: {
-    backgroundColor: '#EDEDF0',
-    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='16' height='16' fill='%23D9D9DE'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23D9D9DE'/%3E%3C/svg%3E\")",
-    backgroundSize: '32px 32px',
-  },
-}
+// The grounds come from the same table the editor paints and the contrast note measures.
+const proofGround = (ground, theme) => (ground === 'page' ? undefined : (
+  ground === 'checker'
+    ? { backgroundImage: `url("${checkerUri(theme, 8)}")`, backgroundSize: '16px 16px' }
+    : { background: groundHex(ground, theme) }
+))
 
 // Arrow keys inside a radiogroup: focus moves to the neighbour (wrapping) and, unless
 // it only opens a popup (marked data-opens-popup), selects it. Keys from anything inside a radio's popup
@@ -315,6 +331,9 @@ const CUSTOMISER_DEFAULTS = Object.freeze({
 //   Heroicons              outline, -solid                   — Fill
 //   Tabler                 outline, -filled (a subset)       — Fill
 //   Iconoir                outline, -solid  (a subset)       — Fill
+//   Fluent UI              -24-regular, -24-filled           — Fill
+//   Bootstrap Icons        outline, -fill   (a subset)       — Fill
+//   Pixelarticons          outline, -solid  (a subset)       — Fill
 //
 // Lucide draws one weight and so offers Regular only. A segment the current
 // scope cannot honour is DISABLED with the reason (which packs do draw it),
@@ -336,10 +355,13 @@ const WEIGHT_RULES = {
     heroicons: n => /-solid$/.test(n) && !/-(?:16|20)-solid$/.test(n),
     tabler: n => /-filled$/.test(n),
     iconoir: n => /-solid$/.test(n),
+    fluent: n => /-24-filled$/.test(n),
+    bi: n => /-fill$/.test(n),
+    pixelarticons: n => /-solid$/.test(n),
   },
   duo: { ph: n => /-duotone$/.test(n) },
 }
-const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
+const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir', fluent: 'Fluent UI', bi: 'Bootstrap Icons', pixelarticons: 'Pixelarticons' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
 // Collections use the pack's Regular artwork; other scopes honour the weight.
 // `tier` also drops the icons a pack keeps for Pro (Carbon's logo-*), so a name the
@@ -924,9 +946,43 @@ function probeDefaultPlate(ref, themePlate, done) {
 // a hairline on the plate's own edge (CSS) in place of the halo; transparent
 // marks stay unrounded and the halo follows the artwork's ink. A load the
 // browser refuses for CORS is shown plain: no sampling, so no halo or rounding.
+// Logo.dev serves these brands only on their own white app-icon square, which
+// reads as a white box on the dark page. On dark, the tile shows the brand's
+// transparent mark from SVG Logos (CC0) instead. Brands whose only mark is dark
+// (PayPal, Visa, Notion, Anthropic) keep the plate, because their mark would
+// vanish on the dark ground. Copy and download still give the Logo.dev file.
+// The marks arrive in ONE batched request for all of them, like every other
+// glyph; until it lands, or if it fails, the tile shows the Logo.dev plate.
+const DARK_LOGO_MARKS = Object.freeze({
+  'microsoft.com': 'microsoft-icon',
+  'meta.com': 'meta-icon',
+  'youtube.com': 'youtube-icon',
+  'shopify.com': 'shopify',
+  'salesforce.com': 'salesforce',
+  'airtable.com': 'airtable',
+})
+
+let darkMarksBatch = null
+const loadDarkMarks = () => {
+  darkMarksBatch ||= loadGlyphBatch('logos', Object.values(DARK_LOGO_MARKS)).then((ok) => {
+    if (!ok) darkMarksBatch = null
+    return ok
+  })
+  return darkMarksBatch
+}
+
 function LogoDevGlyph({ icon }) {
   const { theme } = useTheme()
   const key = `logodev:${icon.ref}:${theme}`
+  const darkMark = theme !== 'light' ? DARK_LOGO_MARKS[icon.ref] : null
+  const [, setMarkReady] = useState(0)
+  const markUri = darkMark ? glyphDataUri('logos', darkMark) : ''
+  useEffect(() => {
+    if (!darkMark || markUri) return undefined
+    let live = true
+    loadDarkMarks().then((ok) => { if (ok && live) setMarkReady((n) => n + 1) })
+    return () => { live = false }
+  }, [darkMark, markUri])
   const [measured, setMeasured] = useState(null)
   const [plainKey, setPlainKey] = useState(null)
   const plain = plainKey === key
@@ -945,6 +1001,20 @@ function LogoDevGlyph({ icon }) {
       }
     }
     setMeasured({ key, shape: glyphCache.get(key) })
+  }
+  if (markUri) {
+    return (
+      <span className="ig-chip" data-mark-source="svg-logos">
+        <img
+          src={markUri}
+          width="28"
+          height="28"
+          className="ig-logo"
+          loading="lazy"
+          alt={icon.name}
+        />
+      </span>
+    )
   }
   return (
     <span className={`ig-chip${halo ? ` ig-chip--${halo}` : ''}`}>
@@ -981,7 +1051,14 @@ function SpriteGlyph({ href, symKey, className }) {
 // its own markup lands.
 function cellGlyph(icon, src, onGlyphError, gone) {
   if (icon.custom) {
-    if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    // A saved icon is a symbol in the sprite like a pack glyph (customSymbolRef is
+    // '' when it could not go in, or was let go: then it is drawn as an image).
+    const ref = customSymbolRef(icon)
+    if (!icon.colored) {
+      return ref
+        ? <SpriteGlyph href={ref} symKey={customSymbolKey(icon)} className="ig-sym ig-inv" />
+        : <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    }
     return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) return <LogoDevGlyph icon={icon} />
@@ -1018,6 +1095,13 @@ function cellGlyph(icon, src, onGlyphError, gone) {
 // viewport: the same focusable element at its measured height, holding only its
 // name. It stays the same element so focus and find-in-page can still land on
 // it, and scrolling it back into view restores the glyph in place.
+// The identity a grid cell and the editor share (pack, name, saved or not), so the editor can find
+// the cell of the icon it has open when it closes.
+const iconCellKey = (icon) => `${icon.pack || ''}|${icon.name}|${icon.custom ? 'c' : ''}`
+const findIconCell = (icon) => (icon
+  ? Array.from(document.querySelectorAll('.ic[data-ic]')).find(el => el.dataset.ic === iconCellKey(icon) && el.isConnected) || null
+  : null)
+
 const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
   const pack = showPack || packInName ? packOf(icon) : null
   // The pack name shows under the icon name, and on hover-capable devices only
@@ -1030,6 +1114,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pac
   return (
     <div
       className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
+      data-ic={ghost ? undefined : iconCellKey(icon)}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
@@ -1257,10 +1342,8 @@ function recentPayload(icon) {
   return null
 }
 
-// A line-style tile draws the icon at 56px with a stroke of 3 in the 24-unit grid, thick
-// enough that the ends and corners show. The stroke is in pixels, as the customiser's is.
-const LINE_TILE_PX = 56
-const LINE_TILE_STROKE_PX = 3
+// A line-style tile draws the icon at 40px with the stroke the editor is set to, in each style.
+const LINE_TILE_PX = 40
 
 // One "Similar in this pack" tile. It stays invisible (but in layout, so the
 // 44px row never shifts) until its glyph has loaded, then fades in: an empty
@@ -1275,7 +1358,7 @@ function SimilarTile({ s, src, onPick, onReadyChange }) {
   return (
     <button
       type="button"
-      className="icust-similar-btn"
+      className="ied-sim"
       data-ready={ready ? 'true' : undefined}
       title={s.name}
       aria-label={`Open ${s.name}`}
@@ -1307,9 +1390,9 @@ function SimilarSection({ list, srcFor, onPick }) {
   }, [])
   const anyReady = list.some(s => readyIds[s.id])
   return (
-    <div className="icust-similar" data-ready={anyReady ? 'true' : undefined}>
-      <div className="icust-similar-label">Similar in this pack</div>
-      <div className="icust-similar-row">
+    <div className="ied-similar" data-ready={anyReady ? 'true' : undefined}>
+      <div className="ied-similar-label">Similar in this pack</div>
+      <div className="ied-similar-row">
         {list.map(s => (
           <SimilarTile key={s.id} s={s} src={srcFor(s)} onPick={onPick} onReadyChange={onReadyChange} />
         ))}
@@ -1321,29 +1404,111 @@ function SimilarSection({ list, srcFor, onPick }) {
 // What the stage says while its art is missing: Loading… for a screen reader only, or
 // that it could not load, with a way to ask again.
 function StageMsg({ failed, onRetry }) {
-  if (!failed) return <span className="icust-stage-msg" role="status"><span className="sr-only">Loading…</span></span>
+  if (!failed) return <span className="ied-stage-msg" role="status"><span className="sr-only">Loading…</span></span>
   return (
-    <span className="icust-stage-msg icust-stage-msg--failed">
+    <span className="ied-stage-msg ied-stage-msg--failed">
       <span role="status">Couldn’t load this icon.</span>
-      <button type="button" className="icust-stage-retry" onClick={onRetry}>Try again</button>
+      <button type="button" className="ied-stage-retry" onClick={onRetry}>Try again</button>
     </span>
   )
 }
 
 // One drawing in the size rail: the icon's own sanitised, serialised markup at an exact
 // pixel size (the cell's CSS sets the box). Set like the stage host, not by React.
-function SizeArt({ markup, className = 'icust-size-art' }) {
+function SizeArt({ markup, className = 'ied-size-art', style }) {
   const ref = useRef(null)
   useLayoutEffect(() => { if (ref.current) ref.current.innerHTML = markup || '' }, [markup])
-  return <span className={className} ref={ref} aria-hidden="true" />
+  return <span className={className} style={style} ref={ref} aria-hidden="true" />
 }
-const LineArt = ({ markup }) => <SizeArt markup={markup} className="icust-line-art" />
+const LineArt = ({ markup }) => <SizeArt markup={markup} className="ied-line-art" />
+
+// The stroke control: a native range over a drawn track and fill, ticks at the snap points,
+// and an always-visible number field. Pointer drags are pulled to the snaps (snapToTarget);
+// keys step exactly (stepFromKey), so a keyboard user can leave a snap. Double-click resets.
+// The thumb centre sits at 10px + (100% - 20px) * p, which is how the fill and ticks are placed.
+function IedStroke({ id, value, onChange }) {
+  const { min, max, step, snaps, inputMin, inputMax } = STROKE_PX
+  const pointerRef = useRef(false)
+  const [draft, setDraft] = useState(null)
+  const fmt = (v) => String(Number((+v).toFixed(2)))
+  const trackValue = Math.min(max, Math.max(min, value))
+  const at = (v) => `calc(10px + (100% - 20px) * ${(v - min) / (max - min)})`
+  const endPointer = () => { pointerRef.current = false }
+  const commitDraft = () => {
+    const n = parseFloat(draft)
+    setDraft(null)
+    if (Number.isNaN(n)) return
+    const next = Math.round(Math.min(inputMax, Math.max(inputMin, n)) * 100) / 100
+    if (next !== value) onChange(next)
+  }
+  return (
+    <>
+      <div className="ied-strokehead">
+        <label className="ied-lbl" htmlFor={`${id}-n`}>Stroke</label>
+        <span className="ied-numf">
+          <input
+            id={`${id}-n`}
+            className="ied-in"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Stroke width in pixels"
+            value={draft ?? fmt(value)}
+            onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, '').slice(0, 6))}
+            onFocus={(e) => e.currentTarget.select()}
+            onBlur={() => { if (draft !== null) commitDraft() }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitDraft()
+              else if (e.key === 'Escape' && draft !== null) { e.preventDefault(); e.stopPropagation(); setDraft(null) }
+            }}
+          />
+          <span className="px" aria-hidden="true">px</span>
+        </span>
+      </div>
+      <div className="ied-rgw">
+        <span className="ied-trk" aria-hidden="true" />
+        <span className="ied-fil" style={{ width: at(trackValue) }} aria-hidden="true" />
+        {snaps.map(s => (
+          <span key={s} className={`ied-tick${s <= trackValue ? ' on' : ''}`} style={{ left: at(s) }} aria-hidden="true" />
+        ))}
+        <input
+          id={id}
+          className="ied-rg"
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={trackValue}
+          aria-label="Stroke width"
+          aria-valuetext={`${fmt(value)} pixels`}
+          onPointerDown={() => { pointerRef.current = true }}
+          onPointerUp={endPointer}
+          onPointerCancel={endPointer}
+          onLostPointerCapture={endPointer}
+          onBlur={endPointer}
+          onChange={(e) => onChange(pointerRef.current ? snapToTarget(+e.target.value, { snaps, min, max, step }) : +e.target.value)}
+          onKeyDown={(e) => {
+            if (e.altKey || e.ctrlKey || e.metaKey) return
+            const next = stepFromKey(e.key, { value: trackValue, min, max, step })
+            if (next === null) return
+            e.preventDefault()
+            pointerRef.current = false
+            if (next !== trackValue) onChange(next)
+          }}
+          onDoubleClick={() => onChange(STROKE_PX.default)}
+          title={`Double-click to reset to ${fmt(STROKE_PX.default)}px`}
+        />
+      </div>
+    </>
+  )
+}
 
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
-function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
+function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef, onClose, onCopy, onPick }) {
   const { user } = useAuth()
   const { projects, saveProject, projectLimit } = useProject()
   const { openProModal } = useProModal()
@@ -1354,7 +1519,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // The stage follows the site theme: in light mode an un-tinted icon previews
   // dark-on-light, in dark mode white-on-dark — so what you see matches where
   // you'll paste it. An explicit colour choice always overrides this.
-  const themeInk = theme === 'light' ? '#18181B' : '#F4F4F5'
+  const themeInk = theme === 'light' ? '#18181B' : '#EFEEEA'
   const panelRef = useRef(null)
   const stageRef = useRef(null)
   const hostRef = useRef(null)
@@ -1386,7 +1551,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // and its field. Custom is "open" when it is chosen (or when the size is one the
   // rail has no cell for), and `lastCustom` keeps the last custom value for this open.
   const narrowRail = useMediaQuery(`(max-width: ${NARROW_RAIL_BELOW - 1}px)`)
-  const onSheet = useMediaQuery('(max-width: 640px)')
+  // The editor is a bottom sheet below this width (icon-editor.css), a two-column dialog above it.
+  const onSheet = useMediaQuery('(max-width: 899px)')
+  // The shortest, narrowest phone: Download is one button that opens the formats menu.
+  const footFolded = useMediaQuery('(max-width: 340px) and (max-height: 599px)')
   const inspectPx = onSheet ? INSPECT_PX_SHEET : INSPECT_PX
   const [customOpen, setCustomOpen] = useState(() => !isPresetSize(size))
   const [lastCustom, setLastCustom] = useState(() => (isPresetSize(size) ? null : size))
@@ -1426,7 +1594,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const groundGroupRef = useRef(null)
   const fixGround = (g) => {
     chooseGround(g)
-    requestAnimationFrame(() => groundGroupRef.current?.querySelector(`.icust-ground-sw--${g}`)?.focus())
+    requestAnimationFrame(() => groundGroupRef.current?.querySelector(`.ied-bgb[data-g="${g}"]`)?.focus())
   }
   const [copied, setCopied] = useState('')
   // The file format the Download button hands over; it follows the account.
@@ -1438,8 +1606,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Which project the current edit landed in — drives the "Saved to X" button
   // label. Seeded from a re-opened custom's stored projectId.
   const [savedProjectId, setSavedProjectId] = useState(() => (icon?.custom && icon.projectId) || null)
-  // Hovering a saved button re-arms it ("Save to another project").
-  const [saveHover, setSaveHover] = useState(false)
+  // The SVG code block under the controls is closed until opened.
+  const [codeOpen, setCodeOpen] = useState(false)
   // Inline new-project creation inside the picker: naming is REQUIRED before
   // an icon can be assigned to a fresh project.
   const [newProjOpen, setNewProjOpen] = useState(false)
@@ -1452,11 +1620,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const presets = {
       copies: {
         title: 'You’ve hit today’s free copy limit',
-        subtitle: `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day — the counter resets tomorrow. Go Pro for unlimited copies.`,
+        subtitle: `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day. The counter resets tomorrow. Go Pro for unlimited copies.`,
       },
       projects: {
         title: 'You’re at the free project limit',
-        subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects and icon saves.`,
+        subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : FREE_SAVE_LIMITS.projects} projects. Go Pro for unlimited projects and icon saves.`,
       },
     }
     // `gate` is DERIVED from the kind rather than written into each preset, so
@@ -1582,7 +1750,16 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }, [activeIcon, strokeFromMarkup])
   const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
   // A saved icon carries its own markup and nothing fetches it, so it never waits.
-  const { coloured: isColoredPack, row: colourRow } = colourRowState({ inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom })
+  // A one-colour brand logo is drawn in its own colour until a colour is chosen; choosing one
+  // recolours it as it would a mono icon, and "Original" (no colour) puts the art's paint back.
+  const { coloured: isColoredPack, row: colourRow, paint: brandPaint } = colourRowState({
+    inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom,
+    inkDarkMax: INK_DARK_MAX, colourChosen: !!color,
+  })
+  // Whether the icon's own art is in colour, whatever is chosen now. `isColoredPack` drops to
+  // false once a colour is chosen on a brand logo; the header line and the Similar tiles describe
+  // the icon, not the choice, so they follow this and stay put across Original / colour.
+  const ownColours = isColoredPack || colourRow === 'brand'
   const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
     ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
   [inColoredPack, isColoredPack, rawBaseSvgText])
@@ -1638,42 +1815,119 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Lock page scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
     const unlockScroll = lockScroll()
-    const opener = restoreRef.current
+    // What had focus when the editor first opened. Picking a Similar tile swaps this component for
+    // a new one whose own activeElement is a tile in the old dialog, so the page hands it down.
+    const opener = openerRef?.current?.el || restoreRef.current
     return () => {
       unlockScroll()
-      if (opener && typeof opener.focus === 'function') opener.focus()
+      // Swapped for another icon's editor (Similar): that one takes focus itself.
+      if (document.querySelector('.ied')) return
+      // Still the icon it opened on: back to whatever opened it. Swapped through Similar: the
+      // cell of the icon now open, else whatever opened the editor.
+      const openedOn = openerRef?.current?.key
+      const live = opener?.isConnected ? opener : null
+      const target = openedOn && openedOn === iconCellKey(icon || {}) ? (live || findIconCell(icon)) : (findIconCell(icon) || live)
+      if (target && typeof target.focus === 'function') target.focus()
     }
-  }, [])
+    // icon is fixed for this instance: a different icon remounts it (key).
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The save picker is a dialog of its own, stacked on this one. The shared hook
-  // gives it the focus move, the Tab trap, and an Escape that closes only the
-  // picker and hands focus back to the Save button that opened it.
+  // The save picker is a panel inside this dialog, over the inspector and foot. While it is open
+  // those two are visibility:hidden, so the Tab trap below skips them. Escape closes the picker
+  // first and the dialog on the next press.
   const closeSavePicker = () => { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') }
-  const pickerRef = useModalDialog(closeSavePicker, { enabled: savePickerOpen })
-  // Read by the panel's key handler below. A ref, because that effect must not
-  // re-run (and re-focus the panel) every time the picker opens or closes.
+  // Read by the key handler below. A ref, because that effect must not re-run (and re-focus
+  // the panel) every time the picker opens or closes.
   const savePickerOpenRef = useRef(false)
   useEffect(() => { savePickerOpenRef.current = savePickerOpen }, [savePickerOpen])
 
-  // Move focus into the panel, trap Tab, close on Escape (mirror ExportPanel).
+  // Opening moves focus to the back arrow. Closing hands it to the Save button, but only when
+  // nothing else has it: a click on another control keeps its own focus.
+  const pickerWasOpenRef = useRef(false)
   useEffect(() => {
-    panelRef.current?.focus()
+    if (savePickerOpen) {
+      pickerWasOpenRef.current = true
+      // preventScroll: the sheet is still sliding in, and a scroll to it would move the clipped dialog.
+      requestAnimationFrame(() => document.getElementById('ied-spb')?.focus({ preventScroll: true }))
+      return undefined
+    }
+    if (!pickerWasOpenRef.current) return undefined
+    pickerWasOpenRef.current = false
+    const frame = requestAnimationFrame(() => {
+      const held = document.activeElement
+      if (!held || held === document.body) document.getElementById('ied-save')?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [savePickerOpen])
+  // A press anywhere outside the picker and the Save button closes it. Capture phase: the dialog
+  // stops mousedown from bubbling, so a bubble listener never hears a press inside the dialog.
+  useEffect(() => {
+    if (!savePickerOpen) return undefined
+    const onDown = (e) => {
+      if (e.target.closest?.('.ied-spn, #ied-save')) return
+      setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('')
+    }
+    document.addEventListener('mousedown', onDown, true)
+    return () => document.removeEventListener('mousedown', onDown, true)
+  }, [savePickerOpen])
+
+  // Move focus into the dialog once, on mount.
+  useEffect(() => { panelRef.current?.focus() }, [])
+
+  // On the phone sheet, follow the on-screen keyboard through the visual viewport. --ied-vh is a
+  // hundredth of the visible height and --ied-kb how far the keyboard lifts the sheet (both
+  // used by icon-editor.css); data-kb folds the stage to a bar ("up") or drops it ("tight", under
+  // 400px visible) so the field being typed in and its button always have room.
+  useEffect(() => {
+    const vv = window.visualViewport
+    const root = panelRef.current
+    if (!vv || !root || !onSheet) return undefined
+    let base = Math.max(window.innerHeight, vv.height)
+    let width = window.innerWidth
+    const sync = () => {
+      if (window.innerWidth !== width) { width = window.innerWidth; base = Math.max(window.innerHeight, vv.height) }
+      if (vv.scale > 1.01) return
+      base = Math.max(base, window.innerHeight, vv.height)
+      const up = base - vv.height > 120
+      root.style.setProperty('--ied-vh', `${vv.height / 100}px`)
+      root.style.setProperty('--ied-kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`)
+      if (up) root.setAttribute('data-kb', vv.height < 400 ? 'tight' : 'up')
+      else root.removeAttribute('data-kb')
+    }
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+      root.style.removeProperty('--ied-vh')
+      root.style.removeProperty('--ied-kb')
+      root.removeAttribute('data-kb')
+    }
+  }, [onSheet])
+
+  // Trap Tab, close on Escape (mirror ExportPanel).
+  useEffect(() => {
     const onKey = (e) => {
-      // While the picker is open it owns Escape and Tab. This does not rely on
-      // which listener runs first.
-      if (savePickerOpenRef.current) return
-      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'Escape') {
+        if (savePickerOpenRef.current) { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') } else onClose()
+        return
+      }
       if (e.key !== 'Tab') return
       // Only what can take focus right now: a hidden Similar tile (visibility
       // hidden, or inside a collapsed block) is not a Tab stop.
       const f = Array.from(panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[inert]'))
       if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      // The dialog itself holds focus on open and after a press on a blank part of it, and focus
+      // can be outside it: both enter the loop from the end Tab was heading for.
+      const here = document.activeElement
+      const outside = !here || here === panelRef.current || !panelRef.current?.contains(here)
+      if (e.shiftKey && (here === first || outside)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && (here === last || outside)) { e.preventDefault(); first.focus() }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -1723,12 +1977,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const out = {}
     for (const s of LINE_STYLES) {
       out[s.id] = serializeCustomizedSvg(baseSvgText, {
-        size: LINE_TILE_PX, color: isColoredPack ? undefined : themeInk, stroke: LINE_TILE_STROKE_PX,
-        isStroke, absStroke: false, cap: s.cap, join: s.join, rotate, flipH, flipV,
+        size: LINE_TILE_PX, color: isColoredPack ? undefined : themeInk, stroke,
+        isStroke, absStroke, cap: s.cap, join: s.join, rotate, flipH, flipV,
       })
     }
     return out
-  }, [baseSvgText, themeInk, isColoredPack, isStroke, rotate, flipH, flipV])
+  }, [baseSvgText, themeInk, isColoredPack, isStroke, stroke, absStroke, rotate, flipH, flipV])
   const serializedOutput = useMemo(
     () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
     [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
@@ -1826,8 +2080,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // size and paints nothing.
   const waitSrc = activeIcon?.cdn && !activeIcon.custom && (isColoredPack || !color) ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
   const stageWait = waitSrc
-    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={inspectPx} height={inspectPx} alt="" aria-hidden="true" />
-    : <span className="icust-stage-img icust-stage-wait" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
+    ? <img className={`ied-stage-img ied-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={inspectPx} height={inspectPx} alt="" aria-hidden="true" />
+    : <span className="ied-stage-img ied-stage-wait" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1846,13 +2100,17 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const handleCopySvg = async () => {
     if (!baseSvgText || previewing) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
-    const ok = await writeClipboard(serializedOutput)
+    // Written here, with the textarea fallback for a browser without the Clipboard API, and
+    // the app's `onCopy` told it is written so it only raises the toast: one write per press.
+    // When this write fails, `onCopy` gets its own try, and says why if that fails too.
+    let ok = await writeClipboard(serializedOutput)
+    if (ok) onCopy?.(serializedOutput, { written: true })
+    else if (onCopy) ok = (await onCopy(serializedOutput)) === true
     if (!ok) return
     if (!isPro) bumpCopyCount()
     trackIconCopy(activeIcon?.pack || null, activeIcon?.name || 'icon')
     setCopied('svg')
     setTimeout(() => setCopied(''), 2000)
-    if (onCopy) onCopy(serializedOutput)
     addRecentIcon(recentPayload(activeIcon), 'copy')
   }
 
@@ -1932,7 +2190,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     addRecentIcon(recentPayload(activeIcon), 'edit')
     setSavedProjectId(projectId)
     setSavedState('saved')
-    setSaveHover(false)
   }
 
   // "New" in the picker: a 4th free project is the upgrade moment — close the
@@ -1952,8 +2209,10 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     try {
       const id = saveProject(name, { blank: true })
       handleSaveToProject(id)
-    } catch {
+    } catch (err) {
       setSavePickerOpen(false)
+      // Not the cap: the account's list is still loading or did not load, and nothing was created.
+      if (isCountUnknownError(err)) { setSavedState('error'); return }
       showProGate('projects')
     }
   }
@@ -1998,7 +2257,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     }) : ''
     const proof = svg ? (
       <>
-        <div className="ui-pro-proof-art" style={PROOF_GROUNDS[ground]}>
+        <div className="ui-pro-proof-art" style={proofGround(ground, theme)}>
           <img src={svgToDataUri(svg)} width={PROOF_PX} height={PROOF_PX} alt="" />
         </div>
         <p className="ui-pro-proof-cap">
@@ -2077,13 +2336,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // viewport reports it.
   const revealSizeField = useCallback(() => {
     const row = sizeRowRef.current
-    const body = panelRef.current?.querySelector('.icust-body')
-    if (!row || !body) return
-    const foot = body.querySelector(':scope > .icust-foot')
-    // The scroller is the left column on the two-column layout, the body below it.
+    const root = panelRef.current
+    if (!row || !root) return
+    const foot = root.querySelector('.ied-ft')
+    // The nearest ancestor that really scrolls. The stage column does not, so there may be none.
     let scroller = row.parentElement
-    while (scroller && scroller !== body && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
-    scroller = scroller || body
+    while (scroller && scroller !== root && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
+    if (!scroller || scroller === root) return
     const vv = window.visualViewport
     const floor = Math.min(foot ? foot.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
     const over = row.getBoundingClientRect().bottom - floor
@@ -2123,260 +2382,363 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     // savedState: re-check after each save so the note appears immediately.
   }, [activeIcon, projects, savedState]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The Save button's words for each width of the footer (the stylesheet shows
-  // one): the full label, a short one, and a glyph alone. The full label is
-  // always the accessible name.
+  // The Save button's words. The full label is always the accessible name; a saved button also
+  // carries `hv`, which the stylesheet swaps in on hover and focus where hover exists
+  // ("Save to another project"), so a tap never latches it.
   const saveLabel = savedState === 'saved'
-    ? (saveHover
-      ? { full: 'Save to another project', short: 'Save again', glyph: 'check' }
-      : { full: savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons', short: 'Saved', glyph: 'check' })
+    ? { full: savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons', hv: 'Save to another project', glyph: 'check' }
     : savedState === 'error' ? { full: 'Couldn’t save. Retry', short: 'Retry', glyph: 'alert' }
-      : activeIcon?.custom ? { full: 'Save as new', short: 'Save new', glyph: 'folder-plus' }
+      : activeIcon?.custom ? { full: 'Save as new', short: 'Save', glyph: 'folder-plus' }
         : { full: 'Save to project', short: 'Save', glyph: 'folder-plus' }
-  // Hover re-arms a saved button only where there is a hover; a tap would latch it.
-  const canHover = () => typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
   // "{Pack}, {weight}" under the name: the pack lives here on a touch screen, where the grid shows it on hover only.
   const packName = activeIcon
     ? (activeIcon.custom ? 'Custom icon' : activeIcon.pasted ? 'Pasted SVG' : (WEIGHT_PACK_NAMES[activeIcon.pack] || PACK_LABELS[activeIcon.pack] || GRID_ONLY_PACK_LABELS[activeIcon.pack] || activeIcon.pack || ''))
     : ''
-  const headSub = !activeIcon ? '' : [packName, isColoredPack ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
+  const headSub = !activeIcon ? '' : [packName, ownColours ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
   const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
 
-  // Above 800px the two columns scroll on their own, and the foot draws its top hairline only while one
-  // of them has more under it (icon-emoji-library.css). The attribute is set straight on the body, so
-  // reading it never renders; it is re-read when a column resizes or its content changes.
+  // The inspector scrolls on its own. The head draws its bottom hairline once it has scrolled, and the
+  // foot its top hairline while more lies under the fold (icon-editor.css). The attributes are set
+  // straight on the elements, so reading them never renders; they are re-read on scroll, when the
+  // inspector resizes, and when its content changes.
   useEffect(() => {
-    const body = panelRef.current?.querySelector('.icust-body')
-    const cols = body ? [...body.querySelectorAll(':scope > .icust-left, :scope > .icust-right')] : []
-    if (!body || cols.length === 0) return undefined
+    const root = panelRef.current
+    const scroller = root?.querySelector('#ied-scroll')
+    const head = root?.querySelector('.ied-hd')
+    const foot = root?.querySelector('.ied-ft')
+    if (!scroller || !head || !foot) return undefined
     let frame = 0
     const measure = () => {
       frame = 0
-      body.toggleAttribute('data-scrolls', cols.some(c => c.scrollHeight - c.clientHeight > 1 && /auto|scroll/.test(getComputedStyle(c).overflowY)))
+      head.toggleAttribute('data-on', scroller.scrollTop > 1)
+      foot.toggleAttribute('data-on', scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 1)
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
     measure()
+    scroller.addEventListener('scroll', schedule, { passive: true })
     const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
     const changed = new MutationObserver(schedule)
-    cols.forEach(c => {
-      resized?.observe(c)
-      changed.observe(c, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['open'] })
-    })
+    resized?.observe(scroller)
+    changed.observe(scroller, { childList: true, subtree: true, characterData: true })
     return () => {
       cancelAnimationFrame(frame)
+      scroller.removeEventListener('scroll', schedule)
       resized?.disconnect()
       changed.disconnect()
-      body.removeAttribute('data-scrolls')
+      head.removeAttribute('data-on')
+      foot.removeAttribute('data-on')
     }
   }, [activeIcon])
 
+  // The one preview line. Always mounted, so its first message is announced. With no preview it
+  // is out of sight and holds only the note that the settings are free again. It sits in the
+  // foot on a wide dialog and as a strip under the stage on the phone sheet.
+  const pvEl = activeIcon ? (
+    <div className={`ied-pv${previewing ? '' : ' ied-vh'}`}>
+      <p className="ied-note" id="ied-preview-line" role="status" aria-live="polite">
+        {preview
+          ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="ied-num">{p.code}</span>))
+          : leftPreview ? BACK_TO_FREE_NOTE : ''}
+      </p>
+      {previewing && <button type="button" className="ied-tn" onClick={backToFree}>Back to free settings</button>}
+    </div>
+  ) : null
+  // While the save sheet covers the editor on a phone, everything beneath it is inert.
+  const lockBase = savePickerOpen && onSheet
+
+  // The Custom size row. On the wide dialog it opens over the size strip; on the phone sheet it is
+  // the first thing in the inspector under the card (so the field and the pinned foot share the
+  // space the keyboard leaves), and the card keeps only the cells.
+  const fileName = downloadFileName(activeIcon?.name, effectiveFormat(dlFormat, size))
+  const customRowEl = (
+    <div className="ied-cus" ref={sizeRowRef}>
+      <div className="ied-cus-in">
+        <div className="ied-cus-row">
+          <label htmlFor="ied-size-input">Custom size</label>
+          <span className="ied-numf">
+            <input
+              id="ied-size-input"
+              ref={sizeInputRef}
+              className="ied-in"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              spellCheck={false}
+              value={sizeText}
+              aria-describedby={clampedTo ? 'ied-size-range ied-size-note' : 'ied-size-range'}
+              onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
+              onKeyDown={onSizeKey}
+              onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
+              onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
+            />
+            <span className="px" aria-hidden="true">px</span>
+          </span>
+          <span className="ied-val" id="ied-size-range">From <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span></span>
+        </div>
+        {clampedTo && (
+          <p className="ied-cus-clamp" id="ied-size-note" role="status">
+            Sizes go from <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="ied-num">{clampedTo}px</span>.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+  // The jump row (phone sheet): the way down to the settings below the fold, each button showing its
+  // current value. Stroke and Line style only exist for line icons.
+  const jumpTo = (sectionId, focusSel) => {
+    const scroller = document.getElementById('ied-scroll')
+    const target = document.getElementById(sectionId)
+    if (!scroller || !target) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    scroller.scrollTo({ top: scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 8, behavior: reduced ? 'auto' : 'smooth' })
+    target.querySelector(focusSel)?.focus({ preventScroll: true })
+  }
+  const jumps = [
+    ...(isStroke ? [
+      { id: 'stroke', label: 'Stroke', value: `${stroke}px`, section: 'ied-sec-stroke', focus: '#ied-stroke', aria: `Go to Stroke, ${stroke} pixels` },
+      { id: 'line', label: 'Line style', value: lineStyle?.name || 'Custom', section: 'ied-sec-line', focus: '.ied-tile[tabindex="0"], .ied-seg button', aria: `Go to Line style, ${lineStyle?.name || 'custom'}` },
+    ] : []),
+    { id: 'rotate', label: 'Rotate', value: `${rotate}°`, section: 'ied-sec-rotate', focus: '.ied-ib', aria: `Go to Rotate and flip, ${rotate ? `rotated ${rotate} degrees` : 'not rotated'}` },
+    { id: 'code', label: 'Code', value: `${codeBytes.toLocaleString('en-AU')} ${codeBytes === 1 ? 'byte' : 'bytes'}`, section: 'ied-sec-code', focus: '.ied-disc', aria: `Go to SVG code, ${codeBytes.toLocaleString('en-AU')} ${codeBytes === 1 ? 'byte' : 'bytes'}` },
+  ]
+
   return (
-    <div className="icust-overlay" onMouseDown={onClose}>
+    <div className="ied-overlay" style={groundVars(theme)} onMouseDown={onClose}>
       <div
-        className="icust-panel"
+        className={`ied${activeIcon ? '' : ' ied--paste'}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="icust-title"
+        aria-labelledby="ied-title"
         ref={panelRef}
         tabIndex={-1}
         data-lenis-prevent
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="icust-head">
-          <div className="icust-head-text">
-            <h2 className="icust-title" id="icust-title">{title}</h2>
-            {headSub && <p className="icust-sub">{headSub}</p>}
+        {/* On the phone this is a bottom sheet (icon-editor.css): the grabber is its handle. The
+            head comes first in the source so the tab order matches the sheet's top-to-bottom order;
+            the desktop grid places every part explicitly. */}
+        <div className="ied-gb" aria-hidden="true" />
+        <div className="ied-hd" inert={lockBase || undefined}>
+          <div className="ied-hd-text">
+            <h2 className="ied-title" id="ied-title">{title}</h2>
+            {headSub && <p className="ied-note">{headSub}</p>}
           </div>
-          {/* Reset changes the controls and shows only once something differs. It stays before
-              Close in the tab order. */}
-          {activeIcon && edited && (
-            <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset</button>
+          {/* The live icon, shown only while the keyboard has folded the card away (data-kb="tight"). */}
+          {onSheet && activeIcon && (railArt[24] || railArt[16]) && (
+            <span className="ied-hic" aria-hidden="true"><SizeArt markup={railArt[24] || railArt[16]} style={{ '--art': '24px' }} /></span>
           )}
-          <button type="button" className="icust-close" onClick={onClose} aria-label="Close customizer">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
+          <div className="ied-hd-act">
+            {/* Reset changes the controls and shows only once something differs. It stays before
+                Close in the tab order. */}
+            {activeIcon && edited && (
+              <button type="button" className="ied-tn" onClick={handleReset}>Reset</button>
+            )}
+            <button type="button" className="ied-x" onClick={onClose} aria-label="Close customiser">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div className="icust-body">
-        {!activeIcon ? (
-          <div className="icust-paste">
-            <p className="icust-paste-help">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
-            <textarea
-              className="icust-paste-input"
-              value={pasteText}
-              onChange={(e) => { setPasteText(e.target.value); setPasteErr(false) }}
-              placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; …>…</svg>"
-              aria-label="SVG markup"
-              spellCheck={false}
-            />
-            {pasteErr && <p className="icust-err">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
-            <div className="icust-foot">
-              <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>
-              <button type="button" className="lib-btn lib-btn--primary" onClick={applyPaste}>Add to stage</button>
+        {activeIcon && (
+          <div className="ied-stagecol" data-g={ground} inert={lockBase || undefined}>
+            {/* The file the Download button hands over (the card's top left; hidden on the short phone folds). */}
+            {(
+              <span className="ied-fchip" title={fileName}>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l4 4v14H7z M14 3v4h4" /></svg>
+                <span className="ied-nm"><span className="st">{fileName.slice(0, fileName.lastIndexOf('.'))}</span><span className="ex">{fileName.slice(fileName.lastIndexOf('.'))}</span></span>
+              </span>
+            )}
+            <div className="ied-grounds" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
+              {GROUND_OPTS.map(g => (
+                <button
+                  key={g.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={ground === g.id}
+                  aria-label={g.label}
+                  title={g.label}
+                  tabIndex={ground === g.id ? 0 : -1}
+                  className="ied-bgb"
+                  data-g={g.id}
+                  onClick={() => chooseGround(g.id)}
+                >
+                  <i className={`ied-gnd-${g.id}`} />
+                </button>
+              ))}
             </div>
-          </div>
-        ) : (
-          <>
-            <div className="icust-left">
-            <div className={`icust-stage icust-stage--${ground}${stageHalo ? ` icust-stage--${stageHalo}` : ''}`} ref={stageRef}>
-              {rendersInline ? (
-                <>
-                  <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && !loadErr && stageWait}
-                  {!baseSvgText && <StageMsg failed={loadErr} onRetry={retryLoad} />}
-                </>
-              ) : (
-                <>
-                  {shownSrc ? (
-                    <img
-                      className="icust-stage-img"
-                      src={shownSrc}
-                      width={inspectPx}
-                      height={inspectPx}
-                      alt={activeIcon.name}
-                      onLoad={brandKey ? onStageImgLoad : undefined}
-                      style={imageError ? { visibility: 'hidden' } : undefined}
-                    />
-                  ) : imageError ? (
-                    <span className="icust-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
-                  ) : stageWait}
-                  {(!shownSrc || imageError) && <StageMsg failed={imageError} onRetry={retryLoad} />}
-                </>
-              )}
-              <div className="icust-stage-foot">
-                <p className="icust-stage-cap">Drawn large to inspect. Exports at <span className="icust-mono">{size}px</span>.</p>
-                <div className="icust-ground" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
-                  {GROUND_OPTS.map(g => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={ground === g.id}
-                      aria-label={g.label}
-                      title={g.label}
-                      tabIndex={ground === g.id ? 0 : -1}
-                      className={`icust-ground-sw icust-ground-sw--${g.id}`}
-                      onClick={() => chooseGround(g.id)}
-                    />
-                  ))}
+
+            {/* A contrast note sits over the stage's top edge. The visually hidden live region
+                below is always in the DOM, so a note that arrives is announced in full. */}
+            {contrastNote && (
+              <div className="ied-contrast">
+                <p>Hard to see on this background.</p>
+                {contrastNote.suggest && (
+                  <button type="button" className="ied-tn" onClick={() => fixGround(contrastNote.suggest)}>
+                    Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="ied-vh" aria-live="polite">
+              {contrastNote && <p>{choiceName} is hard to see on this background.</p>}
+            </div>
+
+            <div className="ied-fig">
+              <div className="ied-fig-in">
+                <div className={`ied-ground ied-ground--${ground}${stageHalo ? ` ied-ground--${stageHalo}` : ''}`} ref={stageRef}>
+                  {rendersInline ? (
+                    <>
+                      <div ref={hostRef} className="ied-stage-host" aria-hidden="true" />
+                      {!baseSvgText && !loadErr && stageWait}
+                      {!baseSvgText && <StageMsg failed={loadErr} onRetry={retryLoad} />}
+                    </>
+                  ) : (
+                    <>
+                      {shownSrc ? (
+                        <img
+                          className="ied-stage-img"
+                          src={shownSrc}
+                          width={inspectPx}
+                          height={inspectPx}
+                          alt={activeIcon.name}
+                          onLoad={brandKey ? onStageImgLoad : undefined}
+                          style={imageError ? { visibility: 'hidden' } : undefined}
+                        />
+                      ) : imageError ? (
+                        <span className="ied-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
+                      ) : stageWait}
+                      {(!shownSrc || imageError) && <StageMsg failed={imageError} onRetry={retryLoad} />}
+                    </>
+                  )}
                 </div>
+                <p className="ied-note ied-cap">Drawn large to inspect. Exports at <span className="ied-num">{size}px</span>.</p>
               </div>
             </div>
-            {/* Always in the DOM so a note that arrives is announced. */}
-            <div className="icust-ground-note" aria-live="polite">
+
+            <div className="ied-sizes" ref={railRef}>
+              <div className="ied-sizes-head">
+                <p id="ied-size-label">Export size</p>
+                <span>shown at real pixels</span>
+              </div>
+              <div className="ied-sizes-rail" role="radiogroup" aria-labelledby="ied-size-label" onKeyDown={steerRadios}>
+                {railSizes.map(n => {
+                  const on = !customShown && size === n
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={`${n} pixels`}
+                      tabIndex={on ? 0 : -1}
+                      className="ied-cell-s"
+                      data-s={n}
+                      onClick={() => pickPreset(n)}
+                    >
+                      <span className="art"><SizeArt markup={railArt[n]} style={{ '--art': `${Math.min(n, 48)}px` }} /></span>
+                      <span className="num">{n}</span>
+                    </button>
+                  )
+                })}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={customShown}
+                  aria-label={`${customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}${isPro ? '' : ', Pro'}`}
+                  tabIndex={customShown ? 0 : -1}
+                  className="ied-cell-s ied-cell-s--custom"
+                  onClick={pickCustom}
+                >
+                  <span className="art"><span className="cu">Custom</span></span>
+                  {isPro
+                    ? <span className="num">{customShown && customValue != null ? customValue : ''}</span>
+                    : <span className="num ied-tag"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" /></svg>Pro</span>}
+                </button>
+              </div>
+              {customShown && !onSheet && customRowEl}
+            </div>
+          </div>
+        )}
+
+        {onSheet && pvEl}
+
+        <div className="ied-scroll" id="ied-scroll" data-hide={savePickerOpen ? 'true' : undefined} inert={savePickerOpen || undefined}>
+          {!activeIcon ? (
+            <div className="ied-paste">
+              <p className="ied-note">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
+              <textarea
+                className="ied-ta"
+                value={pasteText}
+                onChange={(e) => { setPasteText(e.target.value); setPasteErr(false) }}
+                placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; …>…</svg>"
+                aria-label="SVG markup"
+                spellCheck={false}
+              />
+              {pasteErr && <p className="ied-err" role="alert">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
+            </div>
+          ) : (
+            <div className="ied-secs">
+              {/* The phone sheet shows the contrast note here, at the head of the inspector,
+                  where the wide dialog draws it over the stage (hidden by the stylesheet). */}
               {contrastNote && (
-                <p>
-                  {choiceName} is hard to see on this background.
+                <div className="ied-ctrow">
+                  <p>Hard to see on this background.</p>
                   {contrastNote.suggest && (
-                    <button type="button" className="icust-ground-fix" onClick={() => fixGround(contrastNote.suggest)}>
+                    <button type="button" className="ied-tn" onClick={() => fixGround(contrastNote.suggest)}>
                       Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
                     </button>
                   )}
-                </p>
+                </div>
               )}
-            </div>
-
-              <div className="icust-size" ref={railRef}>
-                <div className="icust-size-head">
-                  <span className="icust-size-title" id="icust-size-label">Export size</span>
-                  <span className="icust-size-sub">shown at real pixels</span>
-                  {!isPro && <span className="icust-size-hint">Custom size is Pro</span>}
+              {onSheet && customShown && customRowEl}
+              {onSheet && (
+                <div className="ied-jump" role="group" aria-label="Jump to a setting">
+                  {jumps.map(j => (
+                    <button key={j.id} type="button" className="ied-jb" aria-label={j.aria} onClick={() => jumpTo(j.section, j.focus)}>
+                      <span className="l">{j.label}</span>
+                      <span className="r">
+                        <span className="ied-num">{j.value}</span>
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+                      </span>
+                    </button>
+                  ))}
                 </div>
-                <div className="icust-size-rail" role="radiogroup" aria-labelledby="icust-size-label" onKeyDown={steerRadios}>
-                  {railSizes.map(n => {
-                    const on = !customShown && size === n
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        aria-label={`${n} pixels`}
-                        tabIndex={on ? 0 : -1}
-                        className="icust-size-cell"
-                        data-s={n}
-                        onClick={() => pickPreset(n)}
-                      >
-                        <SizeArt markup={railArt[n]} />
-                        <span className="icust-size-num">{n}</span>
-                      </button>
-                    )
-                  })}
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={customShown}
-                    aria-label={customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}
-                    tabIndex={customShown ? 0 : -1}
-                    className="icust-size-cell icust-size-cell--custom"
-                    onClick={pickCustom}
-                  >
-                    <span className="icust-size-word">Custom</span>
-                    {customShown && customValue != null && <span className="icust-size-num">{customValue}</span>}
-                  </button>
+              )}
+              <div>
+                <div className="ied-lblrow">
+                  <label className="ied-lbl" id="ied-colour-label">Colour</label>
+                  {colourRow === 'original' ? (
+                    <span className="ied-val">Original colours</span>
+                  ) : colourRow === 'wait' ? (
+                    <span className="ied-val">&nbsp;</span>
+                  ) : (
+                    <span className="ied-val ied-hex">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : '\u00a0'}</span>
+                  )}
                 </div>
-                {customShown && (
-                  <div className="icust-size-custom" ref={sizeRowRef}>
-                    <label htmlFor="icust-size-input">Custom size</label>
-                    <span className="icust-size-field">
-                      <input
-                        id="icust-size-input"
-                        ref={sizeInputRef}
-                        className="icust-size-input"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        enterKeyHint="done"
-                        autoComplete="off"
-                        spellCheck={false}
-                        value={sizeText}
-                        aria-describedby={clampedTo ? 'icust-size-range icust-size-note' : 'icust-size-range'}
-                        onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
-                        onKeyDown={onSizeKey}
-                        onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
-                        onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
-                      />
-                      <span className="icust-size-px" aria-hidden="true">px</span>
-                    </span>
-                    <span className="icust-size-range" id="icust-size-range">From <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span></span>
-                    {clampedTo && (
-                      <p className="icust-size-note" id="icust-size-note" role="status">
-                        Sizes go from <span className="icust-mono">{CUSTOM_SIZE_MIN}</span> to <span className="icust-mono">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="icust-mono">{clampedTo}px</span>.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="icust-right">
-            <div className="icust-controls">
-              <div className={`icust-row${colourRow === 'wait' ? ' icust-row--wait' : ''}${colourRow === 'choose' ? ' icust-row--colour' : ''}`}>
-                <label id="icust-colour-label">Colour</label>
-                {colourRow === 'original' ? (
-                  <span className="icust-value">Original colours</span>
-                ) : colourRow === 'wait' ? (
-                  <span className="icust-value">&nbsp;</span>
-                ) : (
+                {colourRow !== 'original' && colourRow !== 'wait' && (
                   <>
-                    <span className="icust-colour-value">{choice === 'text' ? 'currentColor' : color.toUpperCase()}</span>
-                    {/* Four choices, exactly one selected. Text colour is the file's
-                        currentColor (no colour written); the rest write a hex. */}
-                    <div className="icust-chips" role="radiogroup" aria-labelledby="icust-colour-label" onKeyDown={steerRadios}>
+                    {/* Four choices, exactly one selected. Default is the file's currentColor (no
+                        colour written); the rest write a hex. A brand logo's first choice is Original:
+                        no colour written, the art's own paint kept. */}
+                    <div className="ied-chips" role="radiogroup" aria-labelledby="ied-colour-label" onKeyDown={steerRadios}>
                       <button
                         type="button"
                         role="radio"
                         aria-checked={choice === 'text'}
                         tabIndex={choice === 'text' ? 0 : -1}
-                        className="icust-chip"
+                        className="ied-chip"
                         onClick={() => { setColor(''); markDirty() }}
                       >
-                        <span className="icust-chip-sw icust-chip-sw--text" aria-hidden="true" />
-                        {isDuotone ? 'Original' : 'Text colour'}
+                        {brandPaint
+                          ? <span className="ied-sw" style={{ background: brandPaint }} aria-hidden="true" />
+                          : <span className="ied-sw ied-sw--text" aria-hidden="true" />}
+                        <span>{isDuotone || brandPaint ? 'Original' : 'Default'}</span>
                       </button>
                       {[['black', 'Black', '#000000'], ['white', 'White', '#ffffff']].map(([id, label, hex]) => (
                         <button
@@ -2385,31 +2747,34 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           role="radio"
                           aria-checked={choice === id}
                           tabIndex={choice === id ? 0 : -1}
-                          className="icust-chip"
+                          className="ied-chip"
                           onClick={() => { setColor(hex); markDirty() }}
                         >
-                          <span className="icust-chip-sw" style={{ background: hex }} aria-hidden="true" />
-                          {label}
+                          <span className="ied-sw" style={{ background: hex }} aria-hidden="true" />
+                          <span>{label}</span>
                         </button>
                       ))}
-                      {/* Portalled to <body>: the right column scrolls on its own above 800px, and an
-                          inline panel hung off the fourth chip would be cut off by it. */}
+                      {/* Portalled to <body>: the inspector scrolls on its own, and an inline panel hung
+                          off the fourth chip would be cut off by it. */}
                       <ColorPickerPop
                         portal
-                        value={color || themeInk}
+                        value={color || (brandPaint?.[0] === '#' ? brandPaint : themeInk)}
                         onChange={(v) => { setColor(v); markDirty() }}
-                        triggerClassName="icust-chip"
+                        triggerClassName="ied-chip"
+                        popClassName="ied-cpop"
                         triggerProps={{ role: 'radio', 'aria-checked': choice === 'custom', 'aria-expanded': undefined, 'aria-haspopup': undefined, 'data-opens-popup': '', tabIndex: choice === 'custom' ? 0 : -1 }}
                         triggerChildren={(
                           <>
-                            <span className={`icust-chip-sw${choice === 'custom' ? '' : ' icust-chip-sw--empty'}`} style={choice === 'custom' ? { background: color } : undefined} aria-hidden="true" />
-                            Custom
+                            <span className={`ied-sw${choice === 'custom' ? '' : ' ied-sw--empty'}`} style={choice === 'custom' ? { background: color } : undefined} aria-hidden="true" />
+                            <span>Custom</span>
                           </>
                         )}
                       />
                     </div>
-                    <p className="icust-colour-help">
-                      {choice === 'text'
+                    <p className="ied-note ied-colnote">
+                      {choice === 'text' && brandPaint
+                        ? 'The file keeps the logo\'s own colour. Pick another to recolour it.'
+                        : choice === 'text'
                         ? <>The file uses <code>currentColor</code>, so it follows the surrounding text.</>
                         : 'The file keeps this colour wherever you use it.'}
                     </p>
@@ -2418,58 +2783,43 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
               </div>
 
               {isStroke && (
-                <div className="icust-stroke">
-                  <div className="icust-row">
-                    <label htmlFor="icust-stroke">Stroke</label>
-                    {/* The `px` unit is half the fix: the slider now reports the
-                        width the exported file actually measures, at any size. */}
-                    <SnapSlider
-                      id="icust-stroke"
-                      min={STROKE_PX.min}
-                      max={STROKE_PX.max}
-                      step={STROKE_PX.step}
-                      value={stroke}
-                      defaultValue={STROKE_PX.default}
-                      snaps={STROKE_PX.snaps}
-                      unit="px"
-                      inputMin={STROKE_PX.inputMin}
-                      inputMax={STROKE_PX.inputMax}
-                      decimals={2}
-                      ariaLabel="Stroke width in pixels"
-                      onChange={(v) => { setStroke(v); writeStickyStroke(v, STROKE_REFERENCE_SIZE); markDirty() }}
-                    />
-                    {/* Relative: the stroke is a share of the icon and follows the Size and the PNG
-                        scale. Fixed: it keeps its pixels at every Size and PNG scale. */}
-                    <div className="icust-seg icust-mode" role="radiogroup" aria-label="Stroke scaling" aria-describedby="icust-stroke-note" onKeyDown={steerRadios}>
-                      {[['Relative', false], ['Fixed', true]].map(([name, abs]) => (
-                        <button
-                          key={name}
-                          type="button"
-                          role="radio"
-                          aria-checked={absStroke === abs}
-                          tabIndex={absStroke === abs ? 0 : -1}
-                          className={absStroke === abs ? 'active' : undefined}
-                          onClick={() => { setAbsStroke(abs); markDirty() }}
-                        >{name}</button>
-                      ))}
-                    </div>
+                <div id="ied-sec-stroke">
+                  {/* The `px` unit is half the fix: the control reports the width the exported
+                      file actually measures, at any size. */}
+                  <IedStroke
+                    id="ied-stroke"
+                    value={stroke}
+                    onChange={(v) => { setStroke(v); writeStickyStroke(v, STROKE_REFERENCE_SIZE); markDirty() }}
+                  />
+                  {/* Relative: the stroke is a share of the icon and follows the Size and the PNG
+                      scale. Fixed: it keeps its pixels at every Size and PNG scale. */}
+                  <div className="ied-seg" role="radiogroup" aria-label="Stroke scaling" aria-describedby="ied-stroke-note" onKeyDown={steerRadios}>
+                    {[['Relative', false], ['Fixed', true]].map(([name, abs]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        role="radio"
+                        aria-checked={absStroke === abs}
+                        tabIndex={absStroke === abs ? 0 : -1}
+                        onClick={() => { setAbsStroke(abs); markDirty() }}
+                      >{name}</button>
+                    ))}
                   </div>
-                  <p id="icust-stroke-note" className="icust-stroke-note">
+                  <p id="ied-stroke-note" className="ied-note">
                     {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
                   </p>
                 </div>
               )}
 
               {isStroke && (
-                <div className="icust-line">
-                  <div className="icust-line-head">
-                    <span className="icust-line-title" id="icust-line-label">Line style</span>
-                    {!isPro && <span className="icust-line-hint">Sharp and Crisp are Pro</span>}
+                <div id="ied-sec-line">
+                  <div className="ied-lblrow">
+                    <span className="ied-lbl" id="ied-line-label">Line style</span>
                   </div>
                   {/* Each tile draws the icon being edited in its own style. Pressing a Pro
                       tile previews it for a free viewer; the export block below is what holds
                       the file back. */}
-                  <div className="icust-line-tiles" role="radiogroup" aria-labelledby="icust-line-label" onKeyDown={steerRadios}>
+                  <div className="ied-tiles" role="radiogroup" aria-labelledby="ied-line-label" onKeyDown={steerRadios}>
                     {LINE_STYLES.map((s, i) => {
                       const on = lineStyle?.id === s.id
                       return (
@@ -2479,18 +2829,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                           role="radio"
                           aria-checked={on}
                           aria-label={s.pro && !isPro ? `${s.name}, Pro` : s.name}
-                          aria-describedby={`icust-line-note-${s.id}`}
+                          aria-describedby={`ied-line-note-${s.id}`}
                           tabIndex={on || (!lineStyle && i === 0) ? 0 : -1}
-                          className="icust-line-tile"
+                          className="ied-tile"
                           data-style={s.id}
                           onClick={() => pickLineStyle(s)}
                         >
                           <LineArt markup={lineArt[s.id]} />
-                          <span className="icust-line-name">
+                          <span className="nm">
                             {s.name}
-                            {s.pro && !isPro && <span className="icust-line-pro">Pro</span>}
+                            {s.pro && !isPro && <span className="ied-tag"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" /></svg>Pro</span>}
                           </span>
-                          <span className="icust-line-note" id={`icust-line-note-${s.id}`}>{s.note}</span>
+                          <span className="nm nt" id={`ied-line-note-${s.id}`}>{s.note}</span>
                         </button>
                       )
                     })}
@@ -2499,256 +2849,261 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                       draws leaves every tile unselected, so the rows stay open to show it. */}
                   <button
                     type="button"
-                    className="icust-line-toggle"
+                    className="ied-disc"
                     aria-expanded={splitShown}
-                    aria-controls="icust-line-split"
+                    aria-controls="ied-line-split"
                     aria-disabled={lineStyle ? undefined : true}
                     onClick={() => { if (lineStyle) setSplitOpen(o => !o) }}
                   >
                     <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
                     Set ends and corners separately
                   </button>
-                  <div className="icust-line-split" id="icust-line-split" hidden={!splitShown}>
-                    <div className="icust-row">
-                      <label id="icust-ends-label">Ends</label>
-                      <div className="icust-seg" role="radiogroup" aria-labelledby="icust-ends-label" onKeyDown={steerRadios}>
+                  <div className="ied-split" id="ied-line-split" hidden={!splitShown}>
+                    <div>
+                      <p className="ied-split-lbl" id="ied-ends-label">Ends</p>
+                      <div className="ied-seg" role="radiogroup" aria-labelledby="ied-ends-label" onKeyDown={steerRadios}>
                         {LINE_ENDS.map(o => (
-                          <button key={o.v} type="button" role="radio" aria-checked={cap === o.v} tabIndex={cap === o.v ? 0 : -1} className={cap === o.v ? 'active' : ''}
+                          <button key={o.v} type="button" role="radio" aria-checked={cap === o.v} tabIndex={cap === o.v ? 0 : -1}
                             onClick={() => { setSplitOpen(true); setCap(o.v); markDirty() }}>{o.name}</button>
                         ))}
                       </div>
                     </div>
-                    <div className="icust-row">
-                      <label id="icust-corners-label">Corners</label>
-                      <div className="icust-seg" role="radiogroup" aria-labelledby="icust-corners-label" onKeyDown={steerRadios}>
+                    <div>
+                      <p className="ied-split-lbl" id="ied-corners-label">Corners</p>
+                      <div className="ied-seg" role="radiogroup" aria-labelledby="ied-corners-label" onKeyDown={steerRadios}>
                         {LINE_CORNERS.map(o => (
-                          <button key={o.v} type="button" role="radio" aria-checked={join === o.v} tabIndex={join === o.v ? 0 : -1} className={join === o.v ? 'active' : ''}
+                          <button key={o.v} type="button" role="radio" aria-checked={join === o.v} tabIndex={join === o.v ? 0 : -1}
                             onClick={() => { setSplitOpen(true); setJoin(o.v); markDirty() }}>{o.name}</button>
                         ))}
                       </div>
                     </div>
-                    {!isPro && <p className="icust-line-split-note">Anything other than Round ends with Round corners is Pro.</p>}
+                    {!isPro && <p className="ied-note">Round ends with round corners are free. Any other mix is Pro.</p>}
                   </div>
                 </div>
               )}
 
-              <div className="icust-rot">
-                <div className="icust-rot-head">
-                  <span className="icust-rot-title" id="icust-rot-label">Rotate and flip</span>
-                  <span className="icust-mono icust-rot-val" aria-hidden="true">{rotate}°</span>
+              <div className="ied-rot" id="ied-sec-rotate">
+                <div className="ied-rot-l">
+                  <span className="ied-lbl" id="ied-rot-label">Rotate and flip</span>
+                  <span className="ied-num ied-val" aria-hidden="true">{rotate}°</span>
                   {/* Polite and always mounted, so each press of Rotate is announced. */}
-                  <span className="sr-only" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
+                  <span className="ied-vh" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
                 </div>
-                <div className="icust-rot-btns" role="group" aria-labelledby="icust-rot-label">
-                  <button type="button" className="icust-rot-btn" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
+                <div className="ied-rot-b" role="group" aria-labelledby="ied-rot-label">
+                  <button type="button" className="ied-ib" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8" /><path d="M4 4v4.5h4.5" /></svg>
                   </button>
-                  <button type="button" className="icust-rot-btn" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
+                  <button type="button" className="ied-ib" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /></svg>
                   </button>
-                  <span className="icust-rot-sep" aria-hidden="true" />
-                  <button type="button" className="icust-rot-btn" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18" strokeDasharray="2 3" /><path d="M9 7 3.5 17H9z" /><path d="M15 7l5.5 10H15z" /></svg>
+                  <button type="button" className="ied-ib ied-ib--gap" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7l5 5-5 5z M21 7l-5 5 5 5z M12 20v2 M12 14v2 M12 8v2 M12 2v2" /></svg>
                   </button>
-                  <button type="button" className="icust-rot-btn" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h18" strokeDasharray="2 3" /><path d="M7 9V3.5L17 9z" /><path d="M7 15v5.5L17 15z" /></svg>
+                  <button type="button" className="ied-ib" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 3l-5 5-5-5z M17 21l-5-5-5 5z M4 12H2 M10 12H8 M16 12h-2 M22 12h-2" /></svg>
                   </button>
                 </div>
               </div>
-            </div>
 
-            <details className="icust-code">
-              <summary className="icust-code-sum">
-                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="icust-code-caret"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
-                <span className="icust-code-name">SVG code</span>
-                <span className="icust-code-val"><span className="icust-mono">{size} × {size} · {codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
-              </summary>
-              <div className={`icust-code-box${previewing ? ' is-locked' : ''}`}>
+              <div id="ied-sec-code">
                 <button
                   type="button"
-                  className="icust-code-copy"
-                  onClick={handleCopyCode}
+                  className="ied-disc"
+                  aria-expanded={codeOpen}
+                  aria-controls="ied-code"
+                  onClick={() => setCodeOpen(o => !o)}
+                >
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                  SVG code
+                  <span className="ied-bytes ied-val"><span className="ied-num">{codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
+                </button>
+                {codeOpen && (
+                  <div className={`ied-code${previewing ? ' is-locked' : ''}`} id="ied-code">
+                    <div className="ied-code-hd">
+                      <span className="ied-val">{size} × {size}</span>
+                      <button
+                        type="button"
+                        className="ied-tn"
+                        onClick={handleCopyCode}
+                        disabled={!baseSvgText}
+                        aria-disabled={previewing || undefined}
+                        aria-describedby={previewing ? 'ied-preview-line' : undefined}
+                        aria-busy={!baseSvgText && !loadErr}
+                        aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
+                      >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
+                    </div>
+                    <pre tabIndex={0} role="region" aria-label="SVG code"><code>{serializedOutput}</code></pre>
+                  </div>
+                )}
+              </div>
+
+              {savedInProjects.length > 0 && (
+                <p className="ied-note">
+                  Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <b>{savedInProjects.join(', ')}</b>
+                </p>
+              )}
+
+              {similarList.length > 0 && (
+                <SimilarSection
+                  key={currentId}
+                  list={similarList}
+                  srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: ownColours ? undefined : themeInk })}
+                  onPick={onPick}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {activeIcon && savePickerOpen && (
+          <div className="ied-spn" id="ied-spn" role="group" aria-labelledby="ied-spt">
+            <div className="ied-spn-hd">
+              <button type="button" className="ied-x" id="ied-spb" aria-label="Back to the editor" onClick={closeSavePicker}>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+              </button>
+              <p id="ied-spt">Save to a project</p>
+            </div>
+            <p className="ied-note">
+              {Number.isFinite(saveLimit)
+                ? `Pick where this icon lives. The free plan saves up to ${saveLimit} icons per project.`
+                : 'Pick where this icon lives.'}
+            </p>
+            {projects.map((p) => {
+              const used = projectCounts[p.id] || 0
+              const full = !isPro && used >= saveLimit
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="ied-pj"
+                  aria-disabled={full || undefined}
+                  title={full ? `This project is at the free limit of ${saveLimit} icons.` : undefined}
+                  onClick={() => { if (!full) handleSaveToProject(p.id) }}
+                >
+                  <span>{p.name}</span>
+                  <span className="tg">
+                    {full && 'Full '}
+                    {Number.isFinite(saveLimit) ? `${used} of ${saveLimit} icons` : `${used} icons`}
+                  </span>
+                </button>
+              )
+            })}
+            {/* New-project path: naming is required, so the create button stays disabled until a
+                name is typed. A 4th free project routes to the upgrade gate instead (handleNewProject). */}
+            {newProjOpen ? (
+              <div className="ied-newp">
+                <label className="ied-small-label" htmlFor="ied-newp-name">Project name (required)</label>
+                <div className="ied-newp-row">
+                  <input
+                    id="ied-newp-name"
+                    className="ied-in"
+                    type="text"
+                    value={newProjName}
+                    onChange={(e) => setNewProjName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndSave() }}
+                    maxLength={60}
+                    autoFocus
+                  />
+                  <button type="button" className="ied-tn" disabled={!newProjName.trim()} onClick={handleCreateAndSave}>
+                    Create &amp; save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="ied-pj ied-newp" onClick={handleNewProject}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                <span>New project</span>
+                {!isPro && Number.isFinite(projectLimit) && (
+                  <span className="tg">{projects.length} of {projectLimit} projects</span>
+                )}
+              </button>
+            )}
+            <div className="ied-spa">
+              {!isPro && <Link className="ied-tn" to="/plans" target="_blank" rel="noopener">See Pro</Link>}
+              <button type="button" className="ied-tn" onClick={closeSavePicker}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="ied-ft" data-hide={savePickerOpen && activeIcon ? 'true' : undefined} inert={savePickerOpen && activeIcon ? true : undefined}>
+          {!activeIcon ? (
+            <div className="ied-foot-add">
+              <button type="button" className="ied-ghost" onClick={onClose}>Cancel</button>
+              <button type="button" className="ied-pri ied-pr" onClick={applyPaste}><span>Add to stage</span></button>
+            </div>
+          ) : (
+            <>
+              {!onSheet && pvEl}
+
+              {savedState === 'saved' && (
+                <p className="ied-fe-sv"><FooterGlyph name="check" />{saveLabel.full}</p>
+              )}
+              <div className="ied-foot-row" data-sv={savedState === 'saved' ? 'true' : undefined}>
+                <SplitDownload
+                  format={dlFormat}
+                  size={size}
+                  disabled={!baseSvgText}
+                  blocked={previewing}
+                  describedBy="ied-preview-line"
+                  loading={!baseSvgText && !loadErr}
+                  folded={footFolded}
+                  onPick={pickDownloadFormat}
+                  onDownload={handleDownload}
+                />
+                <button
+                  type="button"
+                  id="ied-save"
+                  className={`ied-tn ied-sv${savedState === 'saved' ? ' saved' : ''}`}
+                  onClick={handleSave}
                   disabled={!baseSvgText}
                   aria-disabled={previewing || undefined}
-                  aria-describedby={previewing ? 'icust-preview-line' : undefined}
+                  aria-describedby={previewing ? 'ied-preview-line' : undefined}
                   aria-busy={!baseSvgText && !loadErr}
-                  aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
-                >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
-                <code tabIndex={0} role="region" aria-label="SVG code">{serializedOutput}</code>
+                  aria-expanded={savePickerOpen}
+                  aria-controls="ied-spn"
+                  aria-label={saveLabel.full}
+                  title={saveLabel.full}
+                >
+                  <FooterGlyph name={saveLabel.glyph} />
+                  {saveLabel.short ? (
+                    <span className="nm"><span className="nm-l">{saveLabel.full}</span><span className="nm-s" aria-hidden="true">{saveLabel.short}</span></span>
+                  ) : (
+                    <span className="nm">{saveLabel.full}</span>
+                  )}
+                  {saveLabel.hv && <span className="hv">{saveLabel.hv}</span>}
+                </button>
               </div>
-            </details>
 
-            {savedInProjects.length > 0 && (
-              <p className="icust-savedin">
-                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
-              </p>
-            )}
-
-            {similarList.length > 0 && (
-              <SimilarSection
-                key={currentId}
-                list={similarList}
-                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                onPick={onPick}
-              />
-            )}
-            </div>
-
-            {/* The one preview line. Always mounted, so its first message is announced. With no
-                preview it is out of sight and holds only the note that the settings are free again.
-                It sits in the scrolling body, just above the pinned foot, so it can wrap to as many
-                lines as it needs without making the foot (and the scroll area) taller. */}
-            <div className={`icust-preview${previewing ? ' is-on' : ''}`}>
-              <p className="icust-preview-text" id="icust-preview-line" role="status" aria-live="polite">
-                {preview
-                  ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="icust-mono">{p.code}</span>))
-                  : leftPreview ? BACK_TO_FREE_NOTE : ''}
-              </p>
-              {previewing && <button type="button" className="icust-preview-back" onClick={backToFree}>Back to free settings</button>}
-            </div>
-
-            <div className="icust-foot icust-foot--tool">
-              <div className="icust-foot-row">
+              <div className="ied-foot-pill">
                 {/* One button, two jobs: Copy SVG, or Upgrade to Pro while a Pro setting is previewed.
-                    The same node either way, so focus and tab order never move. The hidden faces hold
-                    the widest label, so the foot never reflows when the words swap. */}
+                    The same node either way, so focus and tab order never move. */}
                 <button
                   ref={primaryRef}
                   type="button"
-                  className={`lib-btn icust-copy ${previewing ? 'lib-btn--upgrade' : 'lib-btn--primary'}`}
+                  className="ied-pri ied-pr"
                   onClick={previewing ? openUpgrade : handleCopySvg}
                   disabled={!baseSvgText}
                   aria-haspopup={previewing ? 'dialog' : undefined}
                   aria-busy={!baseSvgText && !loadErr}
                   aria-label={previewing ? 'Upgrade to Pro' : copied === 'svg' ? undefined : 'Copy SVG'}
                 >
-                  {/* Each face wraps its words in one span: as separate flex items, " SVG" and " to Pro" would lose their leading space. */}
-                  <span className="icust-primary-faces">
-                    <span className="icust-face">
-                      {previewing ? <span>Upgrade<span className="icust-tier-w"> to Pro</span></span>
-                        : copied === 'svg' ? 'Copied!' : <span>Copy<span className="icust-tier-w"> SVG</span></span>}
+                  <span>{previewing ? 'Upgrade to Pro' : copied === 'svg' ? 'Copied!' : 'Copy SVG'}</span>
+                  {previewing ? (
+                    <span className="ied-gochip" aria-hidden="true">
+                      <svg className="a" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+                      <svg className="b" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
                     </span>
-                    <span className="icust-face icust-face--sizer" aria-hidden="true"><span>Copy<span className="icust-tier-w"> SVG</span></span></span>
-                    <span className="icust-face icust-face--sizer" aria-hidden="true"><span>Upgrade<span className="icust-tier-w"> to Pro</span></span></span>
-                  </span>
-                </button>
-
-                <SplitDownload
-                  format={dlFormat}
-                  size={size}
-                  disabled={!baseSvgText}
-                  blocked={previewing}
-                  describedBy="icust-preview-line"
-                  loading={!baseSvgText && !loadErr}
-                  onPick={pickDownloadFormat}
-                  onDownload={handleDownload}
-                />
-
-                <button
-                  type="button"
-                  className="lib-btn icust-save"
-                  onClick={handleSave}
-                  disabled={!baseSvgText}
-                  aria-disabled={previewing || undefined}
-                  aria-describedby={previewing ? 'icust-preview-line' : undefined}
-                  aria-busy={!baseSvgText && !loadErr}
-                  aria-label={saveLabel.full}
-                  title={saveLabel.full}
-                  onMouseEnter={() => { if (canHover() && !previewing) setSaveHover(true) }}
-                  onMouseLeave={() => setSaveHover(false)}
-                  onFocus={() => { if (canHover() && !previewing) setSaveHover(true) }}
-                  onBlur={() => setSaveHover(false)}
-                >
-                  <span className="icust-save-w">{saveLabel.full}</span>
-                  <span className="icust-save-p">{saveLabel.short}</span>
-                  <FooterGlyph name={saveLabel.glyph} className="icust-save-g" />
-                </button>
-              </div>
-            </div>
-
-          </>
-        )}
-        </div>
-
-        {savePickerOpen && (
-          <div className="icust-gate-backdrop" onMouseDown={() => setSavePickerOpen(false)}>
-            <div
-              className="icust-gate"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="icust-pick-title"
-              tabIndex={-1}
-              ref={pickerRef}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <h3 className="icust-gate-title" id="icust-pick-title">Save to a project</h3>
-              <p className="icust-gate-copy">
-                {Number.isFinite(saveLimit)
-                  ? `Pick where this icon lives. The free plan saves up to ${saveLimit} icons per project.`
-                  : 'Pick where this icon lives.'}
-              </p>
-              {projects.length > 0 && (
-                <div className="icust-proj-list">
-                  {projects.map((p) => {
-                    const used = projectCounts[p.id] || 0
-                    const full = !isPro && used >= saveLimit
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className="icust-proj-btn"
-                        disabled={full}
-                        title={full ? `This project is at the free limit of ${saveLimit} icons.` : undefined}
-                        onClick={() => handleSaveToProject(p.id)}
-                      >
-                        <span className="icust-proj-name">{p.name}</span>
-                        <span className="icust-proj-count">
-                          {Number.isFinite(saveLimit) ? `${used}/${saveLimit}` : `${used} saved`}
-                          {full && <span className="pnav-pop-tag">Full</span>}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              {/* New-project path: naming is required — the create button stays
-                  disabled until a name is typed. A 4th free project routes to
-                  the upgrade gate instead (handleNewProject). */}
-              {newProjOpen ? (
-                <div className="icust-newproj">
-                  <input
-                    className="icust-newproj-input"
-                    type="text"
-                    value={newProjName}
-                    onChange={(e) => setNewProjName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndSave() }}
-                    placeholder="Project name (required)"
-                    aria-label="New project name"
-                    maxLength={60}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    className="lib-btn lib-btn--primary"
-                    disabled={!newProjName.trim()}
-                    onClick={handleCreateAndSave}
-                  >
-                    Create &amp; save
-                  </button>
-                </div>
-              ) : (
-                <button type="button" className="icust-proj-btn icust-proj-btn--new" onClick={handleNewProject}>
-                  <span className="icust-proj-name">+ New project</span>
-                  {!isPro && Number.isFinite(projectLimit) && (
-                    <span className="icust-proj-count">{projects.length}/{projectLimit}</span>
+                  ) : (
+                    <span className="ied-pchip" aria-hidden="true">
+                      <svg className={`ied-g${copied === 'svg' ? '' : ' on'}`} viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V7A2.5 2.5 0 0 0 13 4.5H7A2.5 2.5 0 0 0 4.5 7v6A2.5 2.5 0 0 0 7 15.5h1.5" /></svg>
+                      <svg className={`ied-g${copied === 'svg' ? ' on' : ''}`} viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+                    </span>
                   )}
                 </button>
-              )}
-              {!isPro && <Link className="icust-upgrade" to="/plans" target="_blank" rel="noopener">Upgrade for unlimited →</Link>}
-              <button type="button" className="icust-gate-dismiss" onClick={closeSavePicker}>Cancel</button>
-            </div>
-          </div>
-        )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -2882,7 +3237,7 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
 const PACK_MENU = [
   {
     label: 'Interface',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon']],
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon'], ['fluent', 'Fluent UI'], ['pixelarticons', 'Pixelarticons'], ['radix-icons', 'Radix Icons'], ['bi', 'Bootstrap Icons']],
   },
   {
     label: 'Brand logos',
@@ -3047,57 +3402,66 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
 
    NOT A FAILED LOAD, and not the refused state either. `.ig-notice` — "Couldn't
    reach the icon service" — is a plain row with a Try again button and means
-   the network said no. This is an accent band with a padlock and a plan word
+   the network said no. This is the gallery closing block (GalleryEndGate) naming the plan
    and means the product said no. The two never render together: a gated scope
    never asks for anything, so there is nothing for the service to refuse. */
-function IconGateWall({ heading, body, action, onAction, kind }) {
+// The wall's words for a SIGNED-OUT visitor on a Pro scope. Logging in is the way in, but it does
+// not open a Pro pack, so the copy says so before the button does. Kept here rather than in
+// data/iconPackTiers.js, which the entry chunk imports and which sits at the bulk-data budget.
+const GATE_COPY_PRO_ANON = {
+  heading: (label) => `${label} is a Pro pack`,
+  body: 'Log in to get started. Pro unlocks brand marks, flags and the coloured sets.',
+  action: 'Log in',
+  secondary: 'See Pro plans',
+}
+
+// A pack or group this viewer cannot open: the same closing block as the end of
+// the grid, over placeholder glyph rows. No icon of the locked pack is fetched
+// or drawn; the rows are neutral shapes.
+function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary }) {
   return (
-    <div className={`lockt-cta ig-gate ig-gate--${kind}`} data-gate={kind} role="status">
-      <div className="lockt-cta-copy">
-        <p className="lockt-cta-head">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="ig-gate-lock">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          {heading}
-        </p>
-        <p className="lockt-cta-body">{body}</p>
-      </div>
-      <button type="button" className="btn btn-accent lockt-cta-btn" onClick={onAction}>{action}</button>
-    </div>
+    <GalleryEndGate
+      kind={kind}
+      id="ig-gate-h"
+      className={`ig-gate ig-gate--${kind}`}
+      heading={heading}
+      body={body}
+      live="copy"
+      primary={{ label: action, onClick: onAction }}
+      secondary={secondary ? { label: secondary, to: '/plans', onClick: onSecondary } : undefined}
+      fade={<GateFadeCards shape="glyph" count={24} min={92} />}
+    />
   )
 }
 
 /* ── THE END OF THE GRID ─────────────────────────────────────────────────────
-   The closing block at the bottom of the results, centred: one display
-   sentence, one dim line, one filled pill and, where a second way on is true, a
-   text link. It is one surface with no card and no hairline. The text and both
-   controls are always on screen; nothing here depends on hover.
+   The closing block at the bottom of the results is the shared GalleryEndGate
+   (components/library): one display sentence, one dim line, one filled pill
+   and, where a second way on is true, a text link. This function only maps the
+   icon library's states onto it.
 
-   `kind` is 'anon' or 'free' (see endBandKind). `to` makes the primary control
-   a link to /plans; without it the primary control is a button that calls
-   `onAction`. `tease` is a slot above the copy: the signed-out band fills it
-   with IconEndTease, the free band leaves it empty. A blurred row for free
-   viewers would be passed here, as long as it holds no markup of a pack that
-   viewer may not load (see src/utils/lockedPreview.js). */
+   `kind` is 'anon' or 'free' (see endBandKind), or 'search' for the band a
+   search raises for matches above the viewer's tier (see searchTeaseBand); that
+   one speaks as a status, since it can stand in for the empty message. `to`
+   makes the primary control a link to /plans; without it the primary control is
+   a button that calls `onAction`. `tease` is the faded rows above the copy: the
+   signed-out band and the search band fill it with IconEndTease, the free band
+   leaves it empty. A blurred row for free viewers is passed here, as long as it
+   holds no markup of a pack that viewer may not load (see
+   src/utils/lockedPreview.js). */
 function IconEndBand({ kind, heading, body, names, action, onAction, to, secondary, tease }) {
   return (
-    <section className="ig-end" data-gate={kind} data-end={kind} aria-labelledby="ig-end-h">
-      {tease}
-      <div className="ig-end-band">
-        <div className="ig-end-copy">
-          <h2 id="ig-end-h" className="ig-end-h">{heading}</h2>
-          <p className="ig-end-p" role={kind === 'anon' ? 'status' : undefined}>{body}</p>
-          {names && <p className="ig-end-sets">{names}</p>}
-        </div>
-        <div className="ig-end-cta">
-          {to
-            ? <Link to={to} className="ig-end-pill" onClick={onAction}>{action}</Link>
-            : <button type="button" className="ig-end-pill" onClick={onAction}>{action}</button>}
-          {secondary && <Link to="/plans" className="ig-end-link">{secondary}</Link>}
-        </div>
-      </div>
-    </section>
+    <GalleryEndGate
+      kind={kind}
+      id="ig-end-h"
+      heading={heading}
+      body={body}
+      detail={names}
+      live={kind === 'search' ? 'copy' : kind === 'anon' ? 'body' : undefined}
+      primary={{ label: action, to, onClick: onAction }}
+      secondary={secondary ? { label: secondary, to: '/plans' } : undefined}
+      fade={tease || undefined}
+    />
   )
 }
 
@@ -3204,7 +3568,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      it never touches `loadError` or `cdnOk`, so the other packs and the next
      search carry on as normal. Cleared wherever a new listing starts. */
   const [animatedNotice, setAnimatedNotice] = useState(null)
-  const [activeCat] = useState('all')
   const [pack, setPack] = useState('')
   // The weight is read through a ref by the browse functions, so choosing one
   // can re-run the current scope in the same tick (see handleWeight).
@@ -3221,6 +3584,16 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const [gated, setGated] = useState(null)
   // How many icons of the open pack are held back for Pro: { pack, n }. Drives the quiet notice under the pack menu.
   const [proHeld, setProHeld] = useState({ pack: '', n: 0 })
+  /* What the search on screen matched in sets this viewer cannot open:
+     `{ free, paid, total, capped, labels, query }` (summariseLockedMatches plus
+     the query it answers), or null.
+     Counts and names only, never a glyph. Cleared as a new search starts and
+     set only for a viewer below Pro; the band that reads it is chosen by
+     searchTeaseBand further down. */
+  const [searchTease, setSearchTease] = useState(null)
+  // A count still on its way: the empty message waits for it rather than
+  // showing "No icons match" a moment before the band takes its place.
+  const [teasePending, setTeasePending] = useState(false)
   // An ephemeral draft handed over from the homepage icon preview. Read during
   // render and re-validated HERE before anything is applied, so a tampered,
   // stale or already-consumed record simply opens the normal editor state
@@ -3242,6 +3615,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     }
   })
   const [addMode, setAddMode] = useState(false)
+  // The element that had focus when the editor opened, and the icon it opened on. Kept across a
+  // swap to a Similar icon, so closing can still hand focus back (see IconCustomizer).
+  const editorOpenerRef = useRef(null)
+  const noteEditorOpener = (icon) => {
+    if (selected || addMode) return
+    editorOpenerRef.current = { el: document.activeElement, key: icon ? iconCellKey(icon) : null }
+  }
   const [recents, setRecents] = useState(() => getRecentIcons())
   const timer = useRef(null)
   const firstPageTimer = useRef(null)
@@ -3276,7 +3656,6 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const pc = pm[packFilter] || ''
     q = (q || '').toLowerCase()
     const filtered = capList(localIcons.filter(i =>
-      (activeCat === 'all' || i.c === activeCat) &&
       (!packFilter || i.p === pc) &&
       canSee(prefixOf[i.p] || i.p) &&
       (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
@@ -3293,7 +3672,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     // Reached when the icon SERVICE refused (a 429 was measured), not when the
     // browser is offline; the notice above the grid says what happened.
     setLoading(false)
-  }, [activeCat, canSee, capList])
+  }, [canSee, capList])
 
   /* ── WHEN THE CATALOGUE ANSWERS AND THE GLYPHS DO NOT ────────────────────
 
@@ -3331,7 +3710,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // parallel but append per-pack as each resolves (never Promise.all-block), and
   // keep pack order as lists arrive. Hold the skeleton until a page is ready
   // or all packs settle, with a timeout for slow packs.
-  const browseAll = useCallback((manualRetry = false) => {
+  const browseAll = useCallback(function browseAll(manualRetry = false) {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
@@ -3465,7 +3844,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // Logo.dev pack — a curated grid of popular brands. No network: the logos are
   // <img> URLs resolved lazily by the browser as cells scroll into view.
-  const browseLogos = useCallback(() => {
+  const browseLogos = useCallback(function browseLogos() {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
@@ -3499,7 +3878,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // Browse an entire icon set via the /collection endpoint.
   // Browse one pack, optionally narrowed by an active collection chip — pack
   // and chip are independent filters that compose (chip = style within pack).
-  const browsePack = useCallback((packFilter, groupKey = null, manualRetry = false) => {
+  const browsePack = useCallback(function browsePack(packFilter, groupKey = null, manualRetry = false) {
     groupKey = ICON_GROUPS[groupKey] ? groupKey : null
     setSource('pack'); setGroup(groupKey || null)
     // "All packs" first: the empty string is not a pack and must never be put
@@ -3549,7 +3928,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
-  const browseGroup = useCallback((groupKey, manualRetry = false) => {
+  const browseGroup = useCallback(function browseGroup(groupKey, manualRetry = false) {
     const g = ICON_GROUPS[groupKey]
     if (!g) { browseAll(); return }
     // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
@@ -3602,21 +3981,72 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // markup (`icon.svg`), so nothing here is fetched and nothing here belongs to
   // a pack we sell. `setGated(null)` is the line that guarantees it — reaching
   // My Icons always clears a wall rather than inheriting one.
-  const browseCustom = useCallback(() => {
+  const browseCustom = useCallback(function browseCustom() {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack(''); setGated(null)
     setQuery(''); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
-    const list = readCustomIcons()
+    // Cleaned on the way in: whatever is in storage is not trusted. The symbols go in
+    // before the list is set, so the first render of a cell already finds its `#id`.
+    const list = cleanCustomIcons(readCustomIcons())
+    registerCustomSymbols(list)
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
     setLoading(false)
   }, [])
 
-  const doSearch = useCallback((q, scope = {}, manualRetry = false) => {
+  /* ── THE MATCHES THIS VIEWER CANNOT OPEN YET ─────────────────────────────
+     Called once the viewer's own search has answered. A viewer below Pro gets
+     ONE more /search, scoped to the packs they may not browse, and only its
+     COUNT is used: the ids are reduced to a summary (counts and pack labels)
+     and dropped. Nothing here fetches a glyph for those packs, so the rule in
+     src/utils/lockedPreview.js (a locked thing's payload never reaches the
+     browser) holds; the band that reads the summary draws built-in glyphs only.
+
+     No request for Pro, for a single pack filter, or once the icon service has
+     failed. It is guarded by `reqId` like the search itself, so an answer for a
+     query the viewer has left never lands. A failed probe is silent: the
+     search stands as it is and no band is drawn. `mainIds` are the ids the
+     viewer's own search returned, for the Pro-only names of packs they CAN
+     browse (Carbon's logo-*) that the grid dropped. */
+  const probeLockedMatches = useCallback((q, packFilter, groupKey, mainIds, rid) => {
+    if (tier === 'paid' || packFilter || cdnOk.current === false) return
+    const weight = groupKey ? 'regular' : weightRef.current
+    const key = searchTeaseKey({ tier, group: groupKey, weight, query: q })
+    // The summary carries the query it answers, so the band never names a newer one.
+    const land = (summary) => setSearchTease(summary && { ...summary, query: q })
+    if (SEARCH_TEASE_CACHE.has(key)) { land(SEARCH_TEASE_CACHE.get(key)); return }
+    const probed = lockedSearchPacks({
+      packs: ALL_PACKS, tier, packFilter, groupPacks: groupKey ? ICON_GROUPS[groupKey].packs : null,
+    })
+    const finish = (probeIds) => {
+      const summary = summariseLockedMatches({
+        probeIds, probed, mainIds, tier, limit: API_LIMIT, labelOf: packLabel,
+        accept: (p, n) => matchesWeight(p, n, weight),
+      })
+      if (SEARCH_TEASE_CACHE.size >= SEARCH_TEASE_CACHE_MAX) SEARCH_TEASE_CACHE.delete(SEARCH_TEASE_CACHE.keys().next().value)
+      SEARCH_TEASE_CACHE.set(key, summary)
+      if (rid === reqId.current) { land(summary); setTeasePending(false) }
+    }
+    if (!probed.length) { finish([]); return }
+    setTeasePending(true)
+    const params = new URLSearchParams()
+    params.set('prefixes', probed.join(','))
+    params.set('query', q)
+    params.set('limit', String(API_LIMIT))
+    fetchWithFallback(`/search?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d?.icons)) finish(d.icons); else if (rid === reqId.current) setTeasePending(false) })
+      // A missing count is no band, never an error.
+      .catch(() => { if (rid === reqId.current) setTeasePending(false) })
+  }, [tier])
+
+  const doSearch = useCallback(function doSearch(q, scope = {}, manualRetry = false) {
     q = (q || '').trim()
     const { pack: packFilter = '', group: requestedGroup = null } = scope
     const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
+    setSearchTease(null)
+    setTeasePending(false)
     // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
     // Iconify registry — type "apple" signed out and the old code would have
     // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
@@ -3694,6 +4124,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       .then(d => {
         if (rid !== reqId.current) return
         cdnOk.current = true
+        probeLockedMatches(q, packFilter, groupKey, d.icons, rid)
         if (!d.icons || !d.icons.length) {
           renderLocal(q, packFilter)
           return
@@ -3728,7 +4159,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         setLoadError(true)
         renderLocal(q, packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, probeLockedMatches, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks])
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
@@ -3902,6 +4333,15 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     debounceSearch(next, { pack, group })
   }
 
+  // The "Search “house” instead" button of the empty state. Runs the other word
+  // at once, in the scope already chosen, with no debounce: it is a press, not
+  // typing.
+  const handleTrySynonym = (word) => {
+    clearTimeout(timer.current)
+    setQuery(word)
+    doSearch(word, { pack, group })
+  }
+
   const handleClearSearch = () => {
     setQuery('')
     clearTimeout(timer.current)
@@ -3972,15 +4412,19 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
 
   // Toggle a cross-pack collection chip. Keeps the active search text AND the
   // selected pack — the chip narrows style within whatever scope is set.
+  // "All icons" means what it says: it clears the group and the pack, keeping the search.
   const handleGroupToggle = (key) => {
     clearTimeout(timer.current)
     const q = query.trim()
+    const allIcons = key === ALL_ICONS_ID
+    // "All icons" with no group or pack chosen is already the view on screen: no refetch, no flicker.
+    if (allIcons && !group && (!pack || pack === 'custom')) return
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
     // Logo.dev is not an Iconify set and belongs to no collection, so with it
     // picked a chip would light and change nothing. Choosing a collection leaves
     // the pack for "All packs", whose scope the chip then narrows.
-    const scopePack = nextGroup && pack === 'logodev' ? '' : pack
+    const scopePack = allIcons ? '' : nextGroup && pack === 'logodev' ? '' : pack
     if (scopePack !== pack) setPack(scopePack)
     // Collections browse original artwork without replacing the stored weight.
     if (q.length >= 2) doSearch(query, { pack: scopePack, group: nextGroup })
@@ -3997,11 +4441,13 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
       onCopy?.(logodevUrl(icon.ref, 512))
       return
     }
+    noteEditorOpener(icon)
     setAddMode(false)
     setSelected(icon)
   }
 
   const handleAddIcon = () => {
+    noteEditorOpener(null)
     setSelected(null)
     setAddMode(true)
   }
@@ -4117,12 +4563,12 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      rule is the pack menu's: a group is marked only when EVERY pack in it is
      out of reach, and the word is the cheapest tier that opens one of them —
      the same answer `needFor` gives the wall. */
-  const groupOptions = useMemo(() => GROUP_ORDER.map((key) => {
+  const groupOptions = useMemo(() => [ALL_ICONS_OPTION, ...GROUP_ORDER.map((key) => {
     const { label, packs } = ICON_GROUPS[key]
     const locked = packs.every((p) => !canSeePack(p, tier))
     if (!locked) return { id: key, label }
     return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
-  }), [tier])
+  })], [tier])
 
   // Batch in the markup for whatever the grid is about to draw. Demand-driven:
   // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
@@ -4385,8 +4831,11 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   // entitled to; printing it over a gate would be the page blaming the
   // catalogue for a decision the product made. A gated scope has its own panel,
   // which says what it is and how to open it.
-  const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0 && !animatedNotice
+  const searchEmpty = !isMyIcons && !gated && !loading && !(teasePending && source === 'search') && icons.length === 0 && !animatedNotice
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
+  // A word the catalogues name differently ("home" for "house"): offered as a
+  // button on the empty state, so no second search runs unless it is pressed.
+  const synonym = searchEmpty ? iconSynonymFor(query) : ''
 
   /* ── THE WALLS AND THE END BAND, AND WHICH ONE IS ON SCREEN ───────────────
      `gated` replaces the grid: the viewer asked for a set they may not have, so
@@ -4400,7 +4849,27 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const endKind = endBandKind({
     tier, authLoading, planLoading: !planKnown, isMyIcons, gated, loading, resultCount: icons.length, hasMore,
   })
-  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
+  /* A SEARCH THAT MATCHES MORE THAN THE VIEWER MAY OPEN SAYS SO, IN PLACE.
+     `searchTease` counts the matches in sets above this viewer's tier. Where it
+     is shown follows the page rather than adding a state of its own: instead of
+     "No icons match" when the viewer's own sets hold nothing, under the grid once
+     the results have run out (a free viewer's band is swapped for this more
+     specific one), or inside the signed-out band that is already there. The
+     summary is only read while the search is what is on screen, and `searchEmpty`
+     is held back until auth and plan have settled, as endBandKind does, so a Pro
+     viewer never sees the empty-state swap for a beat. */
+  const teaseBand = searchTeaseBand({
+    summary: source === 'search' ? searchTease : null,
+    tier,
+    endKind,
+    searchEmpty: searchEmpty && !authLoading && planKnown,
+  })
+  const teaseNeed = searchTeaseNeed(searchTease)
+  const teaseWhere = searchTeaseWhere(searchTease)
+  // A signed-out visitor on a Pro scope gets a log-in wall that says it is Pro (the
+  // plans are the second link); a signed-in free viewer gets the Pro wall.
+  const anonOnPro = !!gated && gated.need !== 'free' && tier === 'anon'
+  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : anonOnPro ? GATE_COPY_PRO_ANON : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
   const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])
@@ -4458,10 +4927,14 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
      value differs, so the observer firing after the cut changes the grid's
      height (the same columns, more rows) re-renders nothing. The columns come
      from the grid's width, never from how many cells it holds, so the cut
-     cannot feed back into the count it was cut by. */
+     cannot feed back into the count it was cut by.
+
+     It is read for every tier, not only the capped one: a signed-in viewer's
+     search can also end in blurred rows (see searchTeaseBand), and an empty
+     grid still resolves its columns, so the rows line up there too. */
   const [gridCellH, setGridCellH] = useState(null)
   useLayoutEffect(() => {
-    if (!capped || gated || isMyIcons) return
+    if (gated || isMyIcons) return
     const grid = gridRef.current
     if (!grid) return
     const read = () => {
@@ -4475,20 +4948,25 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
     const observer = new ResizeObserver(read)
     observer.observe(grid)
     return () => observer.disconnect()
-  }, [capped, gated, isMyIcons])
+  }, [gated, isMyIcons])
   const teaseCols = gridCols
     || teaseColsFallback(typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches)
   // Built-in icons only, from packs this viewer may browse, and not repeating
   // anything already on screen. No network involved.
+  const wantsTease = endKind === 'anon' || teaseBand === 'empty' || teaseBand === 'end'
   const teaseCells = useMemo(() => {
-    if (endKind !== 'anon') return []
+    if (!wantsTease) return []
     return pickTeaseIcons({
       icons: window.icons || [],
       shownNames: icons.slice(0, visible).map((i) => i.name),
-      count: teaseCellCount(teaseCols),
+      // A search band draws no more stand-ins than the matches it counts, so
+      // "3 icons match" sits over three faded shapes, not two full rows.
+      count: teaseBand === 'empty' || teaseBand === 'end'
+        ? Math.min(teaseCellCount(teaseCols), searchTease?.total || 0)
+        : teaseCellCount(teaseCols),
       canSee,
     })
-  }, [endKind, icons, visible, teaseCols, canSee])
+  }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee])
 
   // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
   // viewport's top edge (inset by the band's own sticky offset) exactly when the
@@ -4903,7 +5381,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           <LibraryFilterGroup
             label="Filter by icon group"
             triggerLabel="Group"
-            value={group}
+            value={group || ALL_ICONS_ID}
             onChange={handleGroupToggle}
             options={groupOptions}
           />
@@ -5027,7 +5505,9 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 heading={gateCopy.heading(gated.label)}
                 body={gateCopy.body}
                 action={gateCopy.action}
-                onAction={() => openGate(gated.need)}
+                onAction={() => (anonOnPro ? requireLogin('open this icon pack') : openGate(gated.need))}
+                secondary={anonOnPro ? gateCopy.secondary : undefined}
+                onSecondary={() => reportUpgradeGate('icon-pack-tier')}
               />
             )}
 
@@ -5088,22 +5568,60 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 keystroke, not an error to interrupt for. No new sentence — the
                 two below are the ones already on screen. The icon is decorated
                 and now says so; the emoji copy of this block already did. */}
-            {searchEmpty && (
+            {/* Quiet while the count of matches in other sets is on its way, so
+                "No icons match" is never shown a moment before the band. */}
+            {teasePending && source === 'search' && !loading && icons.length === 0 && (
+              <p className="pl-empty" role="status">Checking the other sets…</p>
+            )}
+            {searchEmpty && teaseBand !== 'empty' && (
               <div className="pl-empty" role="status" aria-live="polite">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <p>{query.trim()
-                  ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
-                  : 'No icons to show — try another pack or search.'}</p>
+                {synonym ? (
+                  <>
+                    <p>{`No icons match “${query.trim()}”. Try “${synonym}”.`}</p>
+                    <button type="button" className="btn pl-empty-try" onClick={() => handleTrySynonym(synonym)}>
+                      {`Search “${synonym}” instead`}
+                    </button>
+                  </>
+                ) : (
+                  <p>{query.trim()
+                    ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
+                    : 'No icons to show — try another pack or search.'}</p>
+                )}
               </div>
             )}
 
+            {/* A search with matches in sets above this viewer's tier: the same
+                blurred rows and band the signed-out grid ends in, in place of the
+                empty message ('empty') or of the generic upgrade band ('end').
+                The signed-out band is not repeated; it carries the count itself,
+                below. The way in is Pro whenever any match needs it. */}
+            {(teaseBand === 'empty' || teaseBand === 'end') && (
+              <IconEndBand
+                kind="search"
+                heading={SEARCH_TEASE_COPY.heading(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, teaseBand === 'end')}
+                body={SEARCH_TEASE_COPY.body(searchTease.labels, teaseBand === 'empty')}
+                action={SEARCH_TEASE_COPY.action[teaseNeed]}
+                to={teaseNeed === 'paid' ? '/plans' : undefined}
+                onAction={() => (teaseNeed === 'paid' ? reportUpgradeGate('icon-search-pro') : openGate('free'))}
+                tease={teaseCells.length > 0 && (
+                  <IconEndTease
+                    cells={teaseCells}
+                    cols={teaseCols}
+                    cellH={gridCellH}
+                  />
+                )}
+              />
+            )}
             {endKind === 'anon' && (
               <IconEndBand
                 kind="anon"
                 heading={ICON_GATE_COPY.end.anon.heading(freeIconCount)}
-                body={ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)}
+                body={teaseBand === 'anon'
+                  ? `${ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)} ${SEARCH_TEASE_COPY.sentence(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, searchTease.labels)}`
+                  : ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)}
                 names={anonPackNames.join(', ')}
                 action={ICON_GATE_COPY.end.anon.action}
                 onAction={() => openGate('free')}
@@ -5117,7 +5635,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
                 )}
               />
             )}
-            {endKind === 'free' && (
+            {endKind === 'free' && teaseBand !== 'end' && (
               <IconEndBand
                 kind="free"
                 heading={ICON_GATE_COPY.end.free.heading}
@@ -5154,6 +5672,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
           addMode={addMode && !selected}
           isPro={isPro}
           saveLimit={customIconLimit}
+          openerRef={editorOpenerRef}
           onClose={handleCloseCustomizer}
           onCopy={onCopy}
           onPick={handleIconClick}

@@ -74,6 +74,7 @@ import {
   altTextCutoffReply,
   ALT_TEXT_CUTOFF_REFUND_CAP,
   ALT_TEXT_CUTOFF_ERRORS,
+  thinkingConfigFor,
 } from '../../api/_lib/altText.js'
 import { classifyGeminiFinish, emptyReplyError, MAX_TOKENS_EMPTY_MESSAGE } from '../../api/_lib/geminiFinish.js'
 import {
@@ -206,6 +207,11 @@ function loadAi({
     altTextOutcome: () => { throw new Error('not modelled here') },
     altTextCutoffReply: () => { throw new Error('not modelled here') },
     ALT_TEXT_CUTOFF_REFUND_CAP,
+    aiAccountRefusal: () => { throw new Error('not modelled here') },
+    aiSharedRefusal: () => { throw new Error('not modelled here') },
+    imagePayloadProblem: () => null,
+    // The real, pure thinking-config picker the Gemini calls use.
+    thinkingConfigFor,
     // api/_lib/geoBlock.js — the real, pure region gate.
     geminiRegionBlocked, REGION_BLOCKED_STATUS, REGION_BLOCKED_CODE, REGION_BLOCKED_ERROR,
     // api/_lib/emailGate.js — the real, pure email gate.
@@ -1126,6 +1132,12 @@ const REGION_STUBS = {
   MAX_PROMPT_CHARS: 500, MIN_PROMPT_CHARS: 3,
   parseStarterJson: () => ({ ok: true }),
   sanitizeBrandStarter: () => ({ ok: true, starter: { name: 'x' } }),
+  // The attempt limits (api/_lib/aiLimits.js) run before and after the quota
+  // reservation. Null is "not refused". They are tested for real, with the
+  // real counters, in ai-attempt-limits.test.js; this block is about the region
+  // gate, so a request that passes the gate must also get past them here.
+  aiAccountRefusal: async () => null,
+  aiSharedRefusal: async () => null,
   // The reservation is a Firestore write in the real runMeteredTask, so the
   // stub makes one: a test can then say "a refused request wrote nothing".
   runMeteredTask: async ({ meters, run }) => {

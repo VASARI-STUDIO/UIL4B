@@ -42,7 +42,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn, firebaseRequests } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { buildDesignSystemBook } from '../../src/utils/designSystemBook.js'
+import { mockThemeApi } from './export-theme-mock.js'
 import { chooseFormat, exportPanel, categoryRadio, primaryButton } from './export-rows.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
@@ -153,7 +153,7 @@ test.describe('a signed-in Pro account', () => {
     // This sentence is rendered from `subscription.status` on users/{uid},
     // read over a Firestore snapshot — so it is also the positive control for
     // the no-network test below: nothing else in the app could produce it.
-    await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
+    await expect(page.getByText(/You.re on UI L4B Pro/i)).toBeVisible()
     await expect(page.locator('#set-support .settings-row--fact', { hasText: 'Billing cycle' })).toContainText('Monthly')
   })
 
@@ -162,7 +162,7 @@ test.describe('a signed-in Pro account', () => {
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
     await page.getByRole('tab', { name: 'Plan and billing' }).click()
-    await expect(page.getByText(/You.re on UIL4B Pro/i)).toHaveCount(0)
+    await expect(page.getByText(/You.re on UI L4B Pro/i)).toHaveCount(0)
     // Something must be there, or the assertion above is about a blank page.
     await expect(page.getByRole('heading', { name: /Plan and billing/i }).first()).toBeVisible()
   })
@@ -192,7 +192,7 @@ test.describe('the export gate, driven', () => {
       'the Book category must carry its Pro badge for a free account',
     ).toBeVisible()
     await expect(categoryRadio(page, 'Book'), 'and its name says Pro').toHaveAccessibleName('Book, A4 pages, Pro')
-    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
 
     const action = page.getByRole('button', { name: /Unlock with Pro/i })
     await expect(action, 'the button must say what is about to happen').toBeVisible()
@@ -219,17 +219,12 @@ test.describe('the export gate, driven', () => {
 
     await expect(primaryButton(page), 'the plan has loaded and the button names the export').toHaveText('Export PDF')
     await expect(page.locator('.xd-pro'), 'Pro sees no Pro badges').toHaveCount(0)
-    await expect(page.locator('.xd-lock'), 'and no lock over the preview').toHaveCount(0)
+    await expect(page.locator('.xd-theme-lock'), 'and no lock over the preview').toHaveCount(0)
 
     // The book is built by the server (POST /api/ai?export=document); the preview
     // server has no /api, so the answer is stubbed with the real generator's
     // output. The server's own rules are in tests/unit/export-document.test.js.
-    const asked = []
-    await page.route('**/api/ai?export=document', async (route) => {
-      asked.push({ auth: route.request().headers().authorization, body: route.request().postDataJSON() })
-      const html = buildDesignSystemBook({ palette: { base: '#1F4B8E', colors: ['#1F4B8E', '#3FA9A0'] } }, { projectName: 'Stub' })
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, format: 'book', html }) })
-    })
+    const asked = await mockThemeApi(page)
 
     const [book] = await Promise.all([
       context.waitForEvent('page'),
@@ -240,13 +235,13 @@ test.describe('the export gate, driven', () => {
     // your design system book…") until the server answers, so its title alone proves
     // nothing, and the request may not have been made yet when the window appears.
     // The generated artefact is what shows the round trip finished.
-    await expect(book.locator('.cv-title')).toBeVisible()
+    await expect(book.locator('#printed-doc')).toBeVisible()
     // The print window takes the PDF's file name as its title, so Save as PDF
     // offers the same name the file list shows.
     await expect(book).toHaveTitle(/-book$/)
     expect(asked, 'the panel must ask the server once, with the account token and the format').toHaveLength(1)
     expect(asked[0].auth).toMatch(/^Bearer .+/)
-    expect(asked[0].body.format).toBe('book')
+    expect(asked[0].body).toEqual(expect.objectContaining({ row: 'book', format: 'pdf' }))
     await context.close()
   })
 })
@@ -258,15 +253,13 @@ test.describe('the front door', () => {
     // Sample every frame from the first one, so a sales page that appeared and
     // was replaced is caught. Polling after the fact would miss exactly the
     // flash this asserts against.
-    // `.home-hero` until the route swap. `/` renders src/pages/Spectrum.jsx
-    // now, whose hero is `.sp-hero` on a `.spectrum` page root — and this is
-    // the half of the pair that would have gone SILENTLY green: `.home-hero`
-    // never matching anything is indistinguishable from a sales page that
-    // never painted, which is exactly what the control below exists to catch.
+    // The sales page hero is section#top.hh-hero. A selector that matched
+    // nothing would look the same as a sales page that never painted, which
+    // is what the control below exists to catch.
     await page.addInitScript(() => {
       window.__salesPageSeen = false
       const tick = () => {
-        if (document.querySelector('.sp-hero')) window.__salesPageSeen = true
+        if (document.querySelector('section#top.hh-hero')) window.__salesPageSeen = true
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
@@ -298,7 +291,7 @@ test.describe('the front door', () => {
     // both halves of this pair pointed at `.home-hero`.
     watch(page, 'a stranger opening the site')
     await go(page, '/')
-    await expect(page.locator('.sp-hero'), 'the sales page must still be what a stranger gets')
+    await expect(page.locator('section#top.hh-hero'), 'the sales page must still be what a stranger gets')
       .toBeVisible()
   })
 })
@@ -363,7 +356,7 @@ test('a signed-in session makes no request to any Firebase host', async ({ page 
 
   await go(page, '/settings')
   await page.getByRole('tab', { name: 'Plan and billing' }).click()
-  await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
+  await expect(page.getByText(/You.re on UI L4B Pro/i)).toBeVisible()
 
   await go(page, '/projects')
   await expect(page.getByText('Seeded Project 1').first()).toBeVisible()
@@ -389,7 +382,7 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
   await signIn(page, { plan: 'pro' })
   await go(page, '/settings')
   await page.getByRole('tab', { name: 'Plan and billing' }).click()
-  await expect(page.getByText(/You.re on UIL4B Pro/i)).toBeVisible()
+  await expect(page.getByText(/You.re on UI L4B Pro/i)).toBeVisible()
 
   await page.getByRole('tab', { name: 'Account' }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
@@ -402,7 +395,7 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
     'the Account section only exists for a signed-in visitor, so it must go',
   ).toHaveCount(0)
   await expect(
-    page.getByText(/You.re on UIL4B Pro/i),
+    page.getByText(/You.re on UI L4B Pro/i),
     'and the Pro entitlement must go with the session that carried it',
   ).toHaveCount(0)
   await expect

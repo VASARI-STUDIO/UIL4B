@@ -8,9 +8,11 @@ import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { readCommunitySubmissions, sanitizeCommunitySubmission, writeCommunitySubmissions } from '../utils/communitySubmissions'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
-import { buildQueueRecord, mergeSubmissions } from '../utils/communityQueue'
+import { buildQueueRecord, mergeSubmissions, submissionStatusLabel } from '../utils/communityQueue'
 import { deleteSubmission, listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
 import { isPostLimit } from '../utils/communityLimits'
+import { handleProblem, readStoredHandle } from '../utils/communityHandle'
+import { TOAST_ACTION_MIN_MS } from '../utils/toastDuration'
 import {
   ICON_ACCEPT_ATTR, ICON_ACCEPT_LABEL, ICON_MAX_LABEL,
   appendIconSubmission, buildIconPayload, normaliseIconSvg,
@@ -83,7 +85,7 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
 
   return (
     <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design" tabIndex={-1} ref={submitDialogRef}>
+      <div className="ui-modal ui-modal--form" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit a design" tabIndex={-1} ref={submitDialogRef}>
         <div className="ui-modal-head">
           <h2 className="ui-modal-title">Submit a design</h2>
           <button className="ui-modal-x" onClick={onClose} aria-label="Close">
@@ -190,7 +192,7 @@ function IconSubmitModal({ onClose, onSubmit, authorName }) {
 
   return (
     <div className="ui-modal-overlay" onClick={onClose} role="presentation">
-      <div className="ui-modal ui-modal--wide" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit an icon" tabIndex={-1} ref={dialogRef}>
+      <div className="ui-modal ui-modal--wide ui-modal--form" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Submit an icon" tabIndex={-1} ref={dialogRef}>
         <div className="ui-modal-head">
           <h2 className="ui-modal-title">Submit an icon</h2>
           <button className="ui-modal-x" onClick={onClose} aria-label="Close">
@@ -296,9 +298,20 @@ const SUBMIT_SURFACE = 'community'
 const ICON_SUBMIT_SURFACE = 'community-icon'
 
 export default function Community({ toast }) {
-  const { user, userProfile, loading: authLoading } = useAuth()
+  const { user, profileName, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   const owner = getOwnerHandle(user?.email)
+  const ownerPublicHandle = owner?.publicHandle
+  // The name a queued record is credited to: the fixed public handle, else the
+  // community handle chosen on this device, else the name given on the profile.
+  // `user` carries only an email and uid, so buildQueueRecord cannot find one
+  // itself; the email is never used. A stored handle is checked again, because
+  // storage can be edited outside the dialog that validated it.
+  const queueAuthorName = useCallback(() => {
+    if (ownerPublicHandle) return ownerPublicHandle
+    const handle = readStoredHandle()
+    return handle && !handleProblem(handle) ? '@' + handle : profileName
+  }, [ownerPublicHandle, profileName])
   // A stable primitive, so the gate effects below don't re-run on every render
   // of AuthContext (which rebuilds the `user` object each time).
   const uid = user?.uid || null
@@ -322,7 +335,34 @@ export default function Community({ toast }) {
   const [iconOpen, setIconOpen] = useState(false)
   const [iconLocal, setIconLocal] = useState(readIconSubmissions)
   const [serverIcons, setServerIcons] = useState([])
-  const [iconBusyId, setIconBusyId] = useState(null)
+  // The ids of the designs and icons with a publish or a withdrawal in flight.
+  // The ids of the two kinds never collide.
+  const [busyIds, setBusyIds] = useState(() => new Set())
+  const setBusy = useCallback((id, on) => setBusyIds((prev) => {
+    if (prev.has(id) === on) return prev
+    const next = new Set(prev)
+    if (on) next.add(id)
+    else next.delete(id)
+    return next
+  }), [])
+  // Entries with a withdrawal waiting out its Undo window: hidden from every
+  // list at once, and deleted when the window closes (see `withdraw`).
+  const pendingWithdrawals = useRef(new Map())
+  const [hiddenIds, setHiddenIds] = useState(() => new Set())
+  const unhide = useCallback((id) => setHiddenIds((prev) => {
+    if (!prev.has(id)) return prev
+    const next = new Set(prev)
+    next.delete(id)
+    return next
+  }), [])
+
+  // Whether each list has been asked of the account yet. A local-only entry is
+  // "Not sent" only once the account has had its say; before that it may well
+  // be there already, and sending it again would queue it twice.
+  const [listsRead, setListsRead] = useState({ design: false, icon: false })
+  const markRead = useCallback((kind) => setListsRead(prev => (prev[kind] ? prev : { ...prev, [kind]: true })), [])
+  const designsRead = !uid || listsRead.design
+  const iconsRead = !uid || listsRead.icon
 
   useEffect(() => {
     try { localStorage.setItem(SAVES_KEY, JSON.stringify([...saves])) } catch { /* quota */ }
@@ -352,7 +392,10 @@ export default function Community({ toast }) {
         // the wire must not be handed a `javascript:` href just because the
         // document came back from Firestore instead of localStorage —
         // safeHttpUrl is the only thing that has ever guaranteed that.
-        setServerSubmissions(server.map(s => sanitizeCommunitySubmission({
+        // `docId` is the Firestore document a withdrawal deletes; `id` is the
+        // local id the merge pairs on. A withdrawn document is gone as far as
+        // its author is concerned.
+        setServerSubmissions(server.filter(s => s.status !== 'withdrawn').map(s => sanitizeCommunitySubmission({
           id: s.localId || s.id,
           name: s.name,
           status: s.status,
@@ -361,11 +404,13 @@ export default function Community({ toast }) {
           mine: true,
           c1: '#3B82F6', c2: '#8B5CF6',
           ...(s.payload || {}),
+          docId: s.id,
         })).filter(Boolean))
       })
       .catch(() => { /* the local list still stands; nothing is lost */ })
+      .finally(() => { if (!cancelled) markRead('design') })
     return () => { cancelled = true }
-  }, [uid])
+  }, [uid, markRead])
 
   // Server wins on conflict — it is the copy a reviewer acts on — and the local
   // entry it replaces is matched on `localId`. See utils/communityQueue.js.
@@ -384,7 +429,7 @@ export default function Community({ toast }) {
     listMySubmissions(uid, 'icon')
       .then((server) => {
         if (cancelled) return
-        setServerIcons(server.map(s => ({
+        setServerIcons(server.filter(s => s.status !== 'withdrawn').map(s => ({
           id: s.localId || s.id,
           docId: s.id,
           name: s.name,
@@ -395,8 +440,9 @@ export default function Community({ toast }) {
         })).filter(s => s.svg))
       })
       .catch(() => { /* the local list still stands; nothing is lost */ })
+      .finally(() => { if (!cancelled) markRead('icon') })
     return () => { cancelled = true }
-  }, [uid])
+  }, [uid, markRead])
 
   const myIcons = useMemo(
     () => mergeSubmissions(serverIcons, iconLocal),
@@ -420,7 +466,32 @@ export default function Community({ toast }) {
   // user's own save — exactly the "ranking by saves" behaviour, illustratively.
   const effectiveCount = useCallback((item) => item.saves + (saves.has(item.id) ? 1 : 0), [saves])
 
-  const all = useMemo(() => [...mine, ...COMMUNITY_DESIGNS], [mine])
+  // A design a reviewer turned down does not stay among the browsable cards: it
+  // is listed under "Your submissions" with its status, where its author can
+  // see what happened and withdraw it.
+  const rejectedDesigns = useMemo(
+    () => mine.filter(s => s.status === 'rejected' && !hiddenIds.has(s.id)),
+    [mine, hiddenIds],
+  )
+  const all = useMemo(
+    () => [...mine.filter(s => s.status !== 'rejected' && !hiddenIds.has(s.id)), ...COMMUNITY_DESIGNS],
+    [mine, hiddenIds],
+  )
+
+  // One list for everything in "Your submissions", newest first.
+  const queueRows = useMemo(() => [
+    ...myIcons.filter(s => !hiddenIds.has(s.id)).map(s => ({ ...s, kind: 'icon' })),
+    ...rejectedDesigns.map(s => ({ ...s, kind: 'design' })),
+  ].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))), [myIcons, rejectedDesigns, hiddenIds])
+
+  // What a card needs to say where one of the viewer's own designs stands.
+  const ownControls = (item) => ({
+    label: submissionStatusLabel({ status: item.status, synced: item.synced, sending: busyIds.has(item.id) }),
+    busy: busyIds.has(item.id),
+    ready: designsRead,
+    onRetry: item.synced ? undefined : () => retryDesign(item),
+    onWithdraw: () => withdraw('design', item),
+  })
 
   const visible = useMemo(() => {
     let list = filter === 'All' ? all : all.filter(i => i.category === filter)
@@ -433,15 +504,13 @@ export default function Community({ toast }) {
   // Local first — submitting works offline and the list updates without
   // waiting on a round trip — then the shared queue, which is what makes the
   // submission follow the account and reach a reviewer at all.
-  const handleSubmit = async (item) => {
-    // Defence in depth: the form is only mounted for a signed-in user, but a
-    // sign-out mid-flow must not slip a submission through.
-    if (!uid) { setSubmitOpen(false); return }
-    setSubmissions(prev => [item, ...prev])
-    setSubmitOpen(false)
-
+  //
+  // publishDesign returns the document id, which the fresh entry is recorded
+  // with so it reads as sent (and can be withdrawn) without a reload.
+  const publishDesign = useCallback(async (item) => {
     const queued = buildQueueRecord({
       kind: 'design',
+      authorName: queueAuthorName(),
       name: item.name,
       user,
       payload: {
@@ -453,20 +522,55 @@ export default function Community({ toast }) {
       // No signed-in user — the local copy stands, and the message says so
       // rather than claiming it reached a reviewer.
       toast?.('Saved to this browser. Sign in to submit it for review.')
-      return
+      return null
     }
     try {
-      await publishToQueue({ ...queued, localId: item.id })
-      toast?.('Design submitted for review')
+      return await publishToQueue({ ...queued, localId: item.id })
     } catch (err) {
       // Never claim it reached the queue when it did not. The local copy is
-      // kept, so nothing the user made is lost. A refusal by the post limits
-      // gets its own words, because trying again at once cannot work.
+      // kept, so nothing the user made is lost, and it is marked "Not sent". A
+      // refusal by the post limits gets its own words, because trying again at
+      // once cannot work.
       toast?.(isPostLimit(err)
         ? `${err.message} Your design is saved in this browser.`
         : 'Saved locally — we could not reach the review queue. Try again later.')
+      return null
+    }
+  }, [user, toast])
+
+  const recordDesignPublished = useCallback((item, docId) => {
+    const entry = sanitizeCommunitySubmission({ ...item, docId, status: 'pending' })
+    if (entry) setServerSubmissions(prev => [entry, ...prev.filter(s => s.id !== item.id)])
+    toast?.('Design submitted for review')
+  }, [toast])
+
+  const handleSubmit = async (draft) => {
+    // Defence in depth: the form is only mounted for a signed-in user, but a
+    // sign-out mid-flow must not slip a submission through.
+    if (!uid) { setSubmitOpen(false); return }
+    const item = { ...draft, createdAt: new Date().toISOString() }
+    setSubmissions(prev => [item, ...prev])
+    setSubmitOpen(false)
+    setBusy(item.id, true)
+    try {
+      const docId = await publishDesign(item)
+      if (docId) recordDesignPublished(item, docId)
+    } finally {
+      setBusy(item.id, false)
     }
   }
+
+  // A design that never reached the queue stays in this browser, marked "Not
+  // sent"; this sends it again, the way an icon's Retry does.
+  const retryDesign = useCallback(async (item) => {
+    setBusy(item.id, true)
+    try {
+      const docId = await publishDesign(item)
+      if (docId) recordDesignPublished(item, docId)
+    } finally {
+      setBusy(item.id, false)
+    }
+  }, [publishDesign, recordDesignPublished, setBusy])
 
   // ── Icons ────────────────────────────────────────────────────────────────
   //
@@ -489,7 +593,7 @@ export default function Community({ toast }) {
   // and there is now a test.
   const publishIcon = useCallback(async (item) => {
     const payload = buildIconPayload({ svg: item.svg, author: item.author })
-    const queued = payload && buildQueueRecord({ kind: 'icon', name: item.name, user, payload })
+    const queued = payload && buildQueueRecord({ kind: 'icon', name: item.name, user, authorName: queueAuthorName(), payload })
     if (!queued) {
       toast?.('Saved to this browser. Sign in to submit it for review.')
       return null
@@ -507,13 +611,25 @@ export default function Community({ toast }) {
         : 'Saved locally — we could not reach the review queue. Try again later.')
       return null
     }
-  }, [user, toast])
+  }, [user, toast, queueAuthorName])
 
   /** One place the freshly published entry is recorded, so both callers agree. */
   const recordPublished = useCallback((item, docId) => {
     setServerIcons(prev => [{ ...item, docId }, ...prev.filter(s => s.id !== item.id)])
     toast?.('Icon submitted for review')
   }, [toast])
+
+  // Sends one icon to the account and marks it busy meanwhile, so its tag reads
+  // "Sending…" rather than "Not sent". Submit and Retry are the same act.
+  const sendIcon = useCallback(async (item) => {
+    setBusy(item.id, true)
+    try {
+      const docId = await publishIcon(item)
+      if (docId) recordPublished(item, docId)
+    } finally {
+      setBusy(item.id, false)
+    }
+  }, [publishIcon, recordPublished, setBusy])
 
   const handleIconSubmit = useCallback(async (draft) => {
     if (!uid) { setIconOpen(false); return }
@@ -529,39 +645,70 @@ export default function Community({ toast }) {
     // the list updates without waiting on a round trip.
     setIconLocal(appendIconSubmission(item))
     setIconOpen(false)
-    const docId = await publishIcon(item)
-    if (docId) recordPublished(item, docId)
-  }, [uid, publishIcon, recordPublished])
+    await sendIcon(item)
+  }, [uid, sendIcon])
 
-  const retryIcon = useCallback(async (item) => {
-    setIconBusyId(item.id)
-    try {
-      const docId = await publishIcon(item)
-      if (docId) recordPublished(item, docId)
-    } finally {
-      setIconBusyId(null)
-    }
-  }, [publishIcon, recordPublished])
+  const retryIcon = sendIcon
 
   // The third of COMMUNITY_SUBMIT_REASONS — "You can withdraw anything you have
-  // submitted, at any time" — kept for real. The local copy goes either way; the
-  // account copy is deleted when there is one, and firestore.rules already allows
-  // an owner to delete their own submission.
-  const withdrawIcon = useCallback(async (item) => {
-    setIconBusyId(item.id)
+  // submitted, at any time" — kept for real, for designs and icons alike. The
+  // local copy goes either way; the account copy is deleted when there is one,
+  // and firestore.rules already allows an owner to delete their own submission.
+  //
+  // WITHDRAWING IS NOT INSTANT. The entry leaves the page at once and the
+  // toast offers Undo; the delete itself waits out the toast's own window, so
+  // Undo has nothing to recreate and the account is never asked to take back a
+  // document it has already lost. Leaving the page settles whatever is waiting.
+  const commitWithdrawal = useCallback(async (kind, item, undo) => {
+    pendingWithdrawals.current.delete(item.id)
+    // The Undo is spent: take its toast down so it cannot be pressed too late.
+    window.dispatchEvent(new CustomEvent('uil4b:toast-dismiss', { detail: { onAction: undo } }))
+    setBusy(item.id, true)
     try {
       if (item.docId) await deleteSubmission(item.docId)
-      setIconLocal(removeIconSubmission(item.id))
-      setServerIcons(prev => prev.filter(s => s.id !== item.id))
-      toast?.('Submission withdrawn')
+      if (kind === 'icon') {
+        setIconLocal(removeIconSubmission(item.id))
+        setServerIcons(prev => prev.filter(s => s.id !== item.id))
+      } else {
+        // Written straight to the store as well as to state: the state effect
+        // does not run once this page has been left.
+        writeCommunitySubmissions(readCommunitySubmissions().filter(s => s.id !== item.id))
+        setSubmissions(prev => prev.filter(s => s.id !== item.id))
+        setServerSubmissions(prev => prev.filter(s => s.id !== item.id))
+      }
     } catch {
       // The local copy is left alone: removing it while the account still holds
       // the submission would show the user a withdrawal that did not happen.
-      toast?.('Could not delete that.')
+      toast?.('Could not withdraw that. It is back in your list.', 'error')
     } finally {
-      setIconBusyId(null)
+      unhide(item.id)
+      setBusy(item.id, false)
     }
-  }, [toast])
+  }, [toast, setBusy, unhide])
+
+  const withdraw = useCallback((kind, item) => {
+    if (pendingWithdrawals.current.has(item.id)) return
+    setHiddenIds(prev => new Set(prev).add(item.id))
+    const entry = { timer: null }
+    const undo = () => {
+      if (pendingWithdrawals.current.get(item.id) !== entry) return
+      clearTimeout(entry.timer)
+      pendingWithdrawals.current.delete(item.id)
+      unhide(item.id)
+    }
+    entry.commit = () => {
+      clearTimeout(entry.timer)
+      if (pendingWithdrawals.current.get(item.id) === entry) commitWithdrawal(kind, item, undo)
+    }
+    entry.timer = setTimeout(entry.commit, TOAST_ACTION_MIN_MS)
+    pendingWithdrawals.current.set(item.id, entry)
+    toast?.('Submission withdrawn', 'success', { action: { label: 'Undo', onAction: undo } })
+  }, [toast, commitWithdrawal, unhide])
+
+  useEffect(() => {
+    const waiting = pendingWithdrawals.current
+    return () => { for (const entry of [...waiting.values()]) entry.commit() }
+  }, [])
 
   // Ask a signed-out user to sign in BEFORE the submission form exists — the
   // form is never mounted for them, so nobody fills one in and only then
@@ -702,7 +849,7 @@ export default function Community({ toast }) {
             is simply also announced. `type="button"` for the same class of
             reason: neither is inside a form today, and neither should become a
             submit if one ever wraps them. */}
-        <div className="ch-filters">
+        <div className="ch-filters rail-overflow">
           {COMMUNITY_CATEGORIES.map(c => (
             <button
               key={c}
@@ -742,7 +889,14 @@ export default function Community({ toast }) {
         {visible.length > 0 ? (
           <div className="ch-grid">
             {visible.map(item => (
-              <CommunityCard key={item.id} item={item} saved={saves.has(item.id)} count={effectiveCount(item)} onToggle={toggleSave} />
+              <CommunityCard
+                key={item.id}
+                item={item}
+                saved={saves.has(item.id)}
+                count={effectiveCount(item)}
+                onToggle={toggleSave}
+                own={item.mine ? ownControls(item) : undefined}
+              />
             ))}
           </div>
         ) : (
@@ -754,19 +908,22 @@ export default function Community({ toast }) {
         )}
       </section>
 
-      {/* YOUR ICON SUBMISSIONS — AND THEY ARE NOT IN THE GRID ABOVE.
+      {/* YOUR SUBMISSIONS — ICONS, AND DESIGNS A REVIEWER TURNED DOWN. NEITHER
+          IS IN THE GRID ABOVE.
           Kept out of it on purpose, the same call GradientGallery.jsx makes and
           for the same reason: they are not in any library, and rendering them
           among the browsable cards would imply they had been published. Nothing
           outside src/components/admin reads the approved queue, so an approved
           icon is shown to nobody but its author — and this section is the one
-          place it is shown, labelled as queued.
+          place it is shown, labelled with where it stands. A rejected design
+          joins it here for the mirror-image reason: it is no longer a card
+          worth browsing, but its author should still see what became of it.
 
           Every string here already existed. The heading and the status come from
           GradientGallery's own queue; the note is the submission form's own
           sentence, which is the accurate one for icons (they DO reach the
           account). */}
-      {myIcons.length > 0 && (
+      {queueRows.length > 0 && (
         <section aria-labelledby="ch-icons-heading">
           {/* THE THREE INLINE `style` OBJECTS HERE ARE GONE, and the row keeps
               both of the classes it already had. `.ch-toolbar` was doing double
@@ -782,13 +939,14 @@ export default function Community({ toast }) {
           </div>
           <p className="ui-modal-note ch-queue-note">Submissions are saved to your account and queued for review, so they follow you across devices.</p>
           <ul className="ch-queue-list">
-            {myIcons.map(s => (
+            {queueRows.map(s => (
               <li key={s.id} className="toggle-row ch-toolbar ch-queue-row">
-                <IconSubmissionPreview svg={s.svg} name={s.name} />
+                {s.kind === 'icon' && <IconSubmissionPreview svg={s.svg} name={s.name} />}
                 <span className="toggle-row-info">
                   <span className="toggle-row-label">{s.name}</span>
                   <span className="toggle-row-meta">
                     {s.author ? `${s.author} · ` : ''}
+                    {s.kind === 'design' && s.category ? `${s.category} · ` : ''}
                     <span className="mono">{new Date(s.createdAt).toLocaleDateString()}</span>
                   </span>
                 </span>
@@ -796,14 +954,16 @@ export default function Community({ toast }) {
                     does not hold is one cache clear from gone, and saying
                     "Pending review" over it would be claiming a reviewer can
                     see something no reviewer can reach. */}
-                <span className="ch-card-tag">{s.synced ? 'Pending review' : 'Not sent'}</span>
-                {!s.synced && (
+                <span className="ch-card-tag">
+                  {submissionStatusLabel({ status: s.status, synced: s.synced, sending: busyIds.has(s.id) })}
+                </span>
+                {s.kind === 'icon' && !s.synced && (
                   <button
                     type="button"
                     className="btn btn-s"
                     onClick={() => retryIcon(s)}
-                    disabled={iconBusyId === s.id}
-                    aria-busy={iconBusyId === s.id || undefined}
+                    disabled={busyIds.has(s.id) || !iconsRead}
+                    aria-busy={busyIds.has(s.id) || undefined}
                   >
                     Retry
                   </button>
@@ -811,9 +971,9 @@ export default function Community({ toast }) {
                 <button
                   type="button"
                   className="btn btn-s"
-                  onClick={() => withdrawIcon(s)}
-                  disabled={iconBusyId === s.id}
-                  aria-busy={iconBusyId === s.id || undefined}
+                  onClick={() => withdraw(s.kind, s)}
+                  disabled={busyIds.has(s.id)}
+                  aria-busy={busyIds.has(s.id) || undefined}
                 >
                   Withdraw
                 </button>
@@ -848,7 +1008,7 @@ export default function Community({ toast }) {
         <SubmitModal
           onClose={() => setSubmitOpen(false)}
           onSubmit={handleSubmit}
-          authorName={owner?.publicHandle || userProfile?.displayName || user?.displayName || ''}
+          authorName={queueAuthorName()}
           ownerId={owner ? PUBLIC_OWNER_ID : undefined}
         />
       )}
@@ -860,7 +1020,7 @@ export default function Community({ toast }) {
         <IconSubmitModal
           onClose={() => setIconOpen(false)}
           onSubmit={handleIconSubmit}
-          authorName={owner?.publicHandle || userProfile?.displayName || user?.displayName || ''}
+          authorName={queueAuthorName()}
         />
       )}
     </div>

@@ -33,9 +33,8 @@
 // svgporn.com, devicon.dev, skillicons.dev, flagicons.lipis.dev, flagpack.xyz
 // and openmoji.org are all free browsers run by the pack's own creator — and
 // all seven sit in 'paid', because free users do not get brands and
-// the flag and emoji sets are paid explicitly. That is a PRODUCT
-// decision rather than a browser-availability one, and each line says so in
-// those words so the next person to read it knows it was decided, not missed.
+// the flag and emoji sets are paid explicitly. Each line says so, so the
+// next reader knows it was a product decision, not a miss.
 //
 // ── The house rule this table serves ───────────────────────────────────────
 //
@@ -76,6 +75,10 @@ export const ICON_PACK_TIERS = {
   bxs:                { tier: 'free', why: 'boxicons.com — BoxIcons run it themselves, free. The solid-set equivalent of the five above.' },
   mingcute:           { tier: 'free', why: 'mingcute.com — MingCute Design run the icon browser themselves, free. Line and fill pairs on one grid.' },
   carbon:             { tier: 'free', why: 'carbondesignsystem.com/elements/icons/library — IBM run it themselves, free. Its logo-* brand marks are Pro (see PRO_ONLY_ICONS).' },
+  fluent:             { tier: 'free', why: 'Microsoft publish it free on GitHub. Only the 24px Regular and Filled glyphs are listed (REGULAR_RULES).' },
+  pixelarticons:      { tier: 'free', why: 'pixelarticons.com, free. The free set only, never the Pro glyphs.' },
+  'radix-icons':      { tier: 'free', why: 'The Radix team publish it free. Drawn on a 15px grid.' },
+  bi:                 { tier: 'free', why: 'icons.getbootstrap.com, free. Outline and fill pairs on a 16px grid.' },
 
   // ── paid · brands ────────────────────────────────────────────────────────
   // Read the `why` before moving one of these. The first four HAVE a free
@@ -185,15 +188,12 @@ export const ANIMATED_PACKS = Object.freeze(
  * "limit the amount of icons non logged in users can see". Sixty, and the
  * number is derived rather than picked:
  *
- *   - There are five `anon` packs, so 60 divides into exactly TWELVE PER PACK.
- *     The sample then shows all five sets instead of 60 consecutive Lucide
- *     icons, which is what a flat cap would give: IconLibrary paints pack by
- *     pack, so the first N of the merged list is one pack until N passes 250.
- *   - Twelve is enough to read a set's personality — stroke weight, corner
- *     radius, optical size — which is the only thing a sample has to do.
- *   - PAGE_SIZE is 120, so 60 fits on the first paint with no scroll and no
- *     second tranche: a signed-out visit costs five /collection requests and
- *     five batched glyph requests, full stop.
+ *   - Five `anon` packs, so TWELVE PER PACK. A flat cap would show 60 Lucide
+ *     icons, because IconLibrary paints pack by pack.
+ *   - Twelve shows a set's stroke, corners and optical size, which is all a
+ *     sample has to do.
+ *   - PAGE_SIZE is 120, so 60 fits the first paint: a signed-out visit costs
+ *     five /collection and five batched glyph requests.
  *
  * Change ANON_ICON_CAP and ANON_PER_PACK follows. */
 export const ANON_ICON_CAP = 60

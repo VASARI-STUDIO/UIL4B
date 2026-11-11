@@ -6,6 +6,7 @@ import useOnline from '../hooks/useOnline'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 import { requestIdFor, recoverFeedbackDraft, guardSupportUnload, pageFeedbackSend, SUPPORT_MESSAGE_MAX } from '../utils/supportRequest'
+import { feedbackCopyKeys } from '../utils/feedbackCopy'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -226,11 +227,15 @@ export default function Feedback({ toast }) {
     void send(bodyRef.current)
   }
 
+  // Heading, intro and placeholder follow the chosen type, so switching types
+  // in the form changes them both ways. A payment link keeps its own copy.
+  const copy = feedbackCopyKeys(type)
+
   return (
     <div className="sec fb-page">
       <div className="sec-h">
-        <h1>{paymentFailed ? PAYMENT_TITLE : t('feedback.title')}</h1>
-        <p>{paymentFailed ? PAYMENT_SUBTITLE : t('feedback.subtitle')}</p>
+        <h1>{paymentFailed ? PAYMENT_TITLE : t(copy.title)}</h1>
+        <p>{paymentFailed ? PAYMENT_SUBTITLE : t(copy.subtitle)}</p>
         {/* Billing lives in Settings, which needs an account, so only a
             signed-in visitor is sent there. */}
         {paymentFailed && accountEmail && (
@@ -362,7 +367,7 @@ export default function Feedback({ toast }) {
                 className="fb-textarea"
                 value={message}
                 onChange={e => { setMessage(e.target.value); if (error) setError('') }}
-                placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t('feedback.messagePlaceholder')}
+                placeholder={paymentFailed ? PAYMENT_PLACEHOLDER : t(copy.placeholder)}
                 maxLength={SUPPORT_MESSAGE_MAX}
                 aria-invalid={!!error}
                 aria-describedby={error ? 'fb-error' : undefined}

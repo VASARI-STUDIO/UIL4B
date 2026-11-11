@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -16,15 +16,37 @@ import {
   acceptStep,
   acceptedSteps,
   clearAcceptedSteps,
+  restoreAcceptedSteps,
   endGuide,
+  firstIncompleteStep,
   guideProgress,
   introSeen,
   isGuideActive,
   markIntroSeen,
   nextStep,
   savePatch,
+  startGuide,
+  stepArtefacts,
   touchGuide,
+  withDefaults,
 } from '../utils/brandKitGuide'
+import {
+  colourKey,
+  atRisk,
+  capLine,
+  chooserDecision,
+  classifyArrival,
+  continueCopy,
+  otherProjects,
+  sourceProject as findSourceProject,
+  startNewMeta,
+  whenText,
+  workingStatus,
+} from '../utils/brandKitChooser'
+import { SESSION_DONE, SESSION_ON, markSession, readEditedAt, readSession } from '../utils/kitSession'
+import { designsMatch } from '../utils/parkedDesign'
+import { hasPendingSave } from '../utils/pendingSave'
+import { partsPresent } from '../utils/userHome'
 
 // How long a press on the foot of the screen is swallowed after the X ends the
 // walkthrough. The bar unmounts under a finger or pointer that is still on the
@@ -112,10 +134,17 @@ const TICK_ICON = (
   <svg className="bkit-tick" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
 )
 
-export default function UIKitGuide({ step }) {
+// `linked`: the page is showing a shared palette (a ?c= link or the homepage
+// hand-off). That view is somebody else's palette, not this person's walkthrough,
+// so the bar stays away and the flow's idle clock is left alone.
+export default function UIKitGuide({ step, linked = false }) {
   const navigate = useNavigate()
+  const navType = useNavigationType()
   const location = useLocation()
-  const { design, updateDesign, saveProject, canSaveProjects } = useProject()
+  const {
+    design, updateDesign, saveProject, overwriteProject, projects, canSaveProjects, projectCountPending,
+    loadProject, resetDesign, remountTool, parked, projectLimit, atProjectLimit,
+  } = useProject()
   const { exportActions } = useExport() || {}
   const { planKnown } = useSubscription()
   const { requireLogin } = useLoginPrompt()
@@ -126,9 +155,42 @@ export default function UIKitGuide({ step }) {
   // A new blank project opens the panel again, seen before or not.
   const newProject = location.state?.newProject === NEW_PROJECT_STATE.newProject
   const firstStep = step === BRAND_KIT_STEPS[0].id
-  const [active, setActive] = useState(() => isGuideActive())
+  const [active, setActive] = useState(() => !linked && isGuideActive())
   // A tool of the flow is on screen: the flow was visited, so it is not left behind.
-  useEffect(() => { touchGuide() }, [])
+  useEffect(() => { if (!linked) touchGuide() }, [linked])
+
+  // ── The chooser: carry on with the last brand kit, open another, or start new ──
+  // Whether to ask is decided from storage, so it can be asked again for a press on
+  // the page the walkthrough starts on (no remount) as well as on arrival.
+  const readDecision = (arrival) => chooserDecision({
+    status: workingStatus(design, projects),
+    arrival,
+    onFirstStep: firstStep,
+    flagActive: isGuideActive(),
+    editedAt: readEditedAt(),
+    session: readSession(),
+    pendingSave: hasPendingSave(),
+  })
+  // How this page was reached, read once on mount; the navigation state that says
+  // so is cleared below so a reload cannot repeat it.
+  const [mountArrival] = useState(() => classifyArrival({ state: location.state, navType, key: location.key, linked }))
+  const [mountDecision] = useState(() => readDecision(mountArrival))
+  const [showChooser, setShowChooser] = useState(mountDecision.show)
+  const [chooserEditedAt, setChooserEditedAt] = useState(readEditedAt)
+  const [chooserOpenOther, setChooserOpenOther] = useState(false)
+  // Set when a project picked under Open another could not be opened.
+  const [chooserOpenError, setChooserOpenError] = useState('')
+  // An edit to a swatch while the chooser is open answers it as "carry on". Only
+  // the colours are compared, in one spelling: the board restates the same
+  // palette a moment after it mounts, and that is not an edit.
+  const paletteKey = colourKey(design)
+  const [chooserPalette, setChooserPalette] = useState(paletteKey)
+  // A kit that is not asked about on a press is the answer for this tab: the next
+  // arrival carries on without asking. Opening the page by address answers
+  // nothing, and a kit just finished stays unanswered until asked.
+  useEffect(() => {
+    if (mountArrival !== 'direct' && mountDecision.eligible && !mountDecision.show && readSession() !== SESSION_DONE) markSession(SESSION_ON)
+  }, [mountArrival, mountDecision])
   // The steps Next was pressed on. A new project arrives on step one with none.
   const [accepted, setAccepted] = useState(() => (newProject && firstStep ? [] : acceptedSteps()))
   useEffect(() => {
@@ -139,29 +201,46 @@ export default function UIKitGuide({ step }) {
   // retries, StrictMode's development double-invoke), so the "seen" flag must
   // not be burned by anything a discarded render can reach: the same split
   // utils/handoffSlot.js draws between peek and consume, for the same reason.
+  // One panel per arrival: when the chooser asks, the orientation copy waits.
   const [showIntro, setShowIntro] = useState(
-    () => isGuideActive() && (location.state?.openBrandKitCard || (firstStep && (newProject || !introSeen()))),
+    () => !mountDecision.show && !linked && isGuideActive() && (location.state?.openBrandKitCard || (firstStep && (newProject || !introSeen()))),
   )
   const [showName, setShowName] = useState(false)
+  // The edit check sits below the panels' state because it closes them.
+  if (showChooser && chooserPalette !== paletteKey) {
+    setChooserPalette(paletteKey)
+    setShowChooser(false)
+    setChooserOpenOther(false)
+    setShowIntro(false)
+  }
   // The orientation panel opens short, on arrival; "What's this?" opens it with
   // the list of all four steps.
   const [introFull, setIntroFull] = useState(false)
-  // Only one panel exists at a time: the orientation copy, or the naming step.
-  const panelOpen = showIntro || showName
+  // Only one panel exists at a time: the chooser, the orientation copy, or the
+  // naming step.
+  const panelOpen = showIntro || showName || showChooser
   // Each explicit start opens the panel, including starts on the current page.
   // Track the arrival so dismissing it stays effective until the next press.
   const [cardArrival, setCardArrival] = useState(location.key)
   if (cardArrival !== location.key) {
     setCardArrival(location.key)
     if (location.state?.openBrandKitCard) {
+      const asks = readDecision('brand-kit').show
+      // A shared palette's page view had the bar switched off; pressing the
+      // walkthrough's own button turns it on.
+      setActive(isGuideActive())
       setShowName(false)
       setIntroFull(false)
-      setShowIntro(true)
+      setChooserOpenOther(false)
+      setChooserEditedAt(readEditedAt())
+      setChooserPalette(paletteKey)
+      setShowChooser(asks)
+      setShowIntro(!asks)
     }
   }
   // Consume the request so reloading or revisiting this entry cannot reopen it.
   useEffect(() => {
-    if (!location.state?.openBrandKitCard) return
+    if (!location.state?.openBrandKitCard && !location.state?.brandKitArrival) return
     navigate(location.pathname + location.search + location.hash, { replace: true, state: null })
   }, [location, navigate])
   // A fresh start pressed on the page the flow begins on: the path it navigates
@@ -244,6 +323,80 @@ export default function UIKitGuide({ step }) {
     markIntroSeen()
   }, [])
 
+  // ── The chooser's answers ──────────────────────────────────────────────────
+  // Every answer settles the tab's question and closes the panel. Escape, the X
+  // and an edit to the board answer "carry on" without moving the person off the
+  // step they are on; the Continue row is the one that goes to the first gap.
+  const chooserId = useId()
+  const defaultRowRef = useRef(null)
+  const status = workingStatus(design, projects)
+  const settleChooser = useCallback(() => {
+    markSession(SESSION_ON)
+    setShowChooser(false)
+    setChooserOpenOther(false)
+    // The start event may have opened the orientation copy under the chooser.
+    setShowIntro(false)
+  }, [])
+  const dismissChooser = useCallback(() => {
+    startGuide()
+    settleChooser()
+  }, [settleChooser])
+  const continueKit = () => {
+    startGuide()
+    const target = firstIncompleteStep(design, { iconsTouched, accepted: acceptedSteps() })
+    settleChooser()
+    if (target && target.id !== step) navigate(target.path)
+  }
+  // The working design is put aside by resetDesign when it holds unsaved work.
+  const startNewKit = () => {
+    // Starting over clears the steps moved past; Undo brings them back with the kit.
+    const before = acceptedSteps()
+    resetDesign({ onRestore: () => setAccepted(restoreAcceptedSteps(before)) })
+    remountTool()
+    endGuide()
+    startGuide()
+    settleChooser()
+  }
+  const openKit = (project) => {
+    const target = firstIncompleteStep(project.design, { iconsTouched, accepted: [] }) || BRAND_KIT_STEPS[0]
+    // A project that is no longer there leaves the question open and says why.
+    if (loadProject(project.id) === null) {
+      setChooserOpenError(`Couldn't open ${project.name}. It may have been deleted on another device.`)
+      return
+    }
+    setChooserOpenError('')
+    remountTool()
+    startGuide()
+    clearAcceptedSteps()
+    settleChooser()
+    if (target.id !== step) navigate(target.path)
+  }
+
+  // A question closed by an edit, which settles nothing by itself, is noted here.
+  const wasAsking = useRef(showChooser)
+  useEffect(() => {
+    if (showChooser) { wasAsking.current = true; return }
+    if (wasAsking.current) { wasAsking.current = false; markSession(SESSION_ON) }
+  }, [showChooser])
+
+  // Focus starts on the default row; on close it goes back to the bar's trigger.
+  useEffect(() => {
+    if (!showChooser) return undefined
+    if (!hasOpenOverlays(document.body)) defaultRowRef.current?.focus()
+    const trigger = introTriggerRef.current
+    return () => { if (trigger && trigger.isConnected) trigger.focus() }
+  }, [showChooser])
+
+  // Up and Down walk the rows; Tab still walks every control in order.
+  const onChooserKeys = (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    const rows = [...e.currentTarget.querySelectorAll('[data-choose-row]')]
+    const at = rows.indexOf(document.activeElement)
+    if (at < 0) return
+    e.preventDefault()
+    rows[Math.min(rows.length - 1, Math.max(0, at + (e.key === 'ArrowDown' ? 1 : -1)))]?.focus()
+  }
+
   // The X ends the walkthrough in place: no navigation. The panel closes with it.
   const leftInPlaceRef = useRef(false)
   // Where the bar stood when the X was pressed, kept as an invisible cover for a
@@ -269,6 +422,11 @@ export default function UIKitGuide({ step }) {
     setActive(false)
     setShowIntro(false)
     setShowName(false)
+    // Leaving answers an open chooser as "carry on", and nothing of it stays on to
+    // be closed by a later edit or brought back by the next start.
+    setShowChooser(false)
+    setChooserOpenOther(false)
+    setChooserOpenError('')
   }, [])
 
   // The X unmounts with the bar, so focus would fall to <body>. It goes to the
@@ -291,6 +449,7 @@ export default function UIKitGuide({ step }) {
     if (step === 'color' && Array.isArray(live?.colors) && live.colors.length > 1) updateDesign({ palette: live })
   }, [exportActions, step, updateDesign])
   const goNext = useCallback(() => {
+    if (showChooser) settleChooser()
     commitStep()
     if (next) {
       navigate(next.path)
@@ -298,11 +457,12 @@ export default function UIKitGuide({ step }) {
     }
     setShowIntro(false)
     setShowName((v) => !v)
-  }, [commitStep, navigate, next])
+  }, [commitStep, navigate, next, settleChooser, showChooser])
   // A plain press on a LATER step's link commits this one first, like Next. A
   // step behind writes nothing, and a modified press (new tab) stays a plain link.
   const onStepPress = (e, target) => {
     const plain = e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+    if (showChooser) settleChooser()
     if (plain && current && target.index > current.index) commitStep()
   }
 
@@ -326,6 +486,7 @@ export default function UIKitGuide({ step }) {
       // `patch`: the parts moved past with Next, and the tints made from the colours.
       const id = saveProject(name, { identityName: name, patch: savePatch(design) })
       endGuide()
+      markSession(SESSION_DONE)
       setActive(false)
       navigate(`/projects/${id}/export`)
     } catch (err) {
@@ -335,9 +496,28 @@ export default function UIKitGuide({ step }) {
     }
   }, [design, navigate, saveProject, setBusy])
 
+  // A walkthrough that began on a saved project finishes by saving over it: no
+  // new project, no slot, no cap. Saving as a new project stays one press away.
+  const sourceProject = canSaveProjects && design?.source?.projectId
+    ? projects.find((p) => p.id === design.source.projectId) || null
+    : null
+  const saveOver = useCallback((name) => {
+    try {
+      overwriteProject(sourceProject.id, { identityName: name, patch: savePatch(design) })
+      endGuide()
+      markSession(SESSION_DONE)
+      setActive(false)
+      navigate(`/projects/${sourceProject.id}/export`)
+    } catch (err) {
+      setRefusal(err?.message || 'That project could not be saved.')
+      setBusy(false)
+    }
+  }, [design, navigate, overwriteProject, setBusy, sourceProject])
+
   const nameInputRef = useRef(null)
   const nameTitleRef = useRef(null)
-  const submitName = useCallback(async (e) => {
+  // `asNew` is the secondary button: a new project even when this one was opened from a saved project.
+  const submitName = useCallback(async (e, asNew = false) => {
     e.preventDefault()
     if (savingRef.current) return
     const name = draft.trim()
@@ -361,7 +541,8 @@ export default function UIKitGuide({ step }) {
     setOffline(false)
     setBusy(true)
     if (canSaveProjects) {
-      save(name)
+      if (sourceProject && !asNew) saveOver(name)
+      else save(name)
       return
     }
     pendingNameRef.current = name
@@ -370,17 +551,17 @@ export default function UIKitGuide({ step }) {
       pendingNameRef.current = null
       setBusy(false)
     }
-  }, [canSaveProjects, draft, requireLogin, save, setBusy, updateDesign])
+  }, [canSaveProjects, draft, requireLogin, save, saveOver, setBusy, sourceProject, updateDesign])
 
   // After a sign-in from the closing step, the save runs once the account's own
   // plan has arrived (not the free default held until it does), so the cap is
   // checked against the plan the person is actually on.
   useEffect(() => {
     const name = pendingNameRef.current
-    if (!name || !canSaveProjects || !planKnown) return
+    if (!name || !canSaveProjects || !planKnown || projectCountPending) return
     pendingNameRef.current = null
     save(name)
-  }, [canSaveProjects, planKnown, save])
+  }, [canSaveProjects, planKnown, projectCountPending, save])
 
   // Same focus contract as the orientation panel, and focus goes back to the
   // control that opened it on close. On a touch screen focus goes to the title
@@ -585,9 +766,111 @@ export default function UIKitGuide({ step }) {
   const goLabel = `${firstStep ? 'Start with' : 'Back to'} ${current.label.toLowerCase()}`
   const outlineNext = panelOpen && !phone
 
+  // The chooser's rows. The default row (Continue, or Start new after a saved
+  // kit) comes first and takes focus; Open another project follows Continue.
+  let chooser = null
+  if (showChooser) {
+    const home = findSourceProject(design, projects)
+    const when = whenText(chooserEditedAt)
+    const swatches = stepArtefacts(design).color.colors
+    const cont = continueCopy({ status, name: home?.name || '', done: built, when, signedIn: canSaveProjects })
+    const risky = atRisk(status)
+    // A different unsaved kit already waiting in Your workspace would be replaced.
+    const slotWhen = risky && parked && !designsMatch(parked.design, design) ? whenText(parked.parkedAt) : null
+    const fresh = startNewMeta({ status, name: home?.name || '', slotWhen })
+    const others = canSaveProjects ? otherProjects(projects, home?.id ?? design?.source?.projectId ?? null) : []
+    const startFirst = status === 'saved'
+    const continueItem = (
+      <li key="continue" className="bkit-choose-item">
+        <button type="button" className="bkit-choose-row" data-choose-row="continue" ref={startFirst ? null : defaultRowRef} onClick={continueKit}>
+          <span className="bkit-choose-text">
+            <span className="bkit-choose-label">{cont.label}</span>
+            <span className="bkit-choose-meta">{cont.meta}</span>
+          </span>
+          {swatches.length > 0 && (
+            <span className="bkit-choose-swatches" aria-hidden="true">
+              {swatches.map((c, i) => <span className="bkit-choose-swatch" key={`${c}-${i}`} style={{ background: c }} />)}
+            </span>
+          )}
+        </button>
+      </li>
+    )
+    const newItem = (
+      <li key="new" className="bkit-choose-item">
+        <button type="button" className="bkit-choose-row" data-choose-row="new" ref={startFirst ? defaultRowRef : null} onClick={startNewKit}>
+          <span className="bkit-choose-text">
+            <span className="bkit-choose-label">Start a new brand kit</span>
+            {fresh && <span className="bkit-choose-meta">{fresh}</span>}
+          </span>
+        </button>
+        {canSaveProjects && atProjectLimit && (
+          <p className="bkit-choose-cap">
+            {capLine(projectLimit)}{' '}
+            <Link to="/plans" className="bkit-choose-link">See Pro</Link>
+          </p>
+        )}
+      </li>
+    )
+    const otherItem = others.length > 0 ? (
+      <li key="other" className="bkit-choose-item">
+        <button
+          type="button"
+          className="bkit-choose-row"
+          data-choose-row="other"
+          aria-expanded={chooserOpenOther}
+          aria-controls={`${chooserId}-other`}
+          onClick={() => setChooserOpenOther((v) => !v)}
+        >
+          <span className="bkit-choose-text">
+            <span className="bkit-choose-label">Open another project</span>
+            <span className="bkit-choose-meta">{risky ? startNewMeta({ status, slotWhen }) : 'Carry on with one of your saved projects.'}</span>
+          </span>
+          <svg className="bkit-choose-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+        </button>
+        {chooserOpenOther && (
+          <ul className="bkit-choose-sub" id={`${chooserId}-other`}>
+            {chooserOpenError && <li><p className="bkit-name-error" role="alert">{chooserOpenError}</p></li>}
+            {others.map((p) => {
+              const parts = Object.values(partsPresent(withDefaults(p.design))).filter(Boolean).length
+              return (
+                <li key={p.id}>
+                  <button type="button" className="bkit-choose-row bkit-choose-row--project" data-choose-row="project" onClick={() => openKit(p)}>
+                    <span className="bkit-choose-text">
+                      <span className="bkit-choose-label">{p.name}</span>
+                      <span className="bkit-choose-meta">{parts} of 4 parts · edited {whenText(Date.parse(p.updatedAt || p.createdAt || ''))}</span>
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+            <li><Link to="/projects" className="bkit-choose-all">See all projects</Link></li>
+          </ul>
+        )}
+      </li>
+    ) : null
+    chooser = (
+      <BkitPanel
+        key="choose"
+        id={chooserId}
+        panelRef={cardRef}
+        style={dockStyle}
+        titleId={`${chooserId}-title`}
+        title={`Your brand kit from ${when}`}
+        modifier="bkit-card--choose"
+        onClose={dismissChooser}
+        onEscape={dismissChooser}
+      >
+        <ul className="bkit-choose" onKeyDown={onChooserKeys}>
+          {startFirst ? [newItem, continueItem, otherItem] : [continueItem, otherItem, newItem]}
+        </ul>
+      </BkitPanel>
+    )
+  }
+
   return (
     <>
-      {showIntro && !phone && (
+      {chooser}
+      {showIntro && !showChooser && !phone && (
         // No overlay element at all: the panel is docked directly, so there is
         // nothing between the visitor and the tool. (On a phone the steps panel
         // inside the bar stands in for it.)
@@ -668,8 +951,24 @@ export default function UIKitGuide({ step }) {
                 aria-invalid={nameError ? 'true' : undefined}
                 aria-describedby={nameError ? `${nameCardId}-err` : `${nameCardId}-note`}
               />
-              <button type="submit" className="btn btn-accent bkit-name-save" disabled={saving}>{saving ? 'Saving…' : 'Save project'}</button>
+              <button
+                type="submit"
+                className="btn btn-accent bkit-name-save"
+                disabled={saving}
+                aria-label={sourceProject && !saving ? `Save to ${sourceProject.name}` : undefined}
+              >
+                {saving
+                  ? 'Saving…'
+                  : sourceProject
+                    ? <>Save to <span className="bkit-name-save-to">{sourceProject.name}</span></>
+                    : 'Save project'}
+              </button>
             </div>
+            {sourceProject && (
+              <button type="button" className="btn bkit-name-alt" disabled={saving} onClick={(e) => submitName(e, true)}>
+                Save as a new project
+              </button>
+            )}
             <div className="bkit-name-msg">{nameMessage}</div>
           </form>
         </BkitPanel>
@@ -682,7 +981,7 @@ export default function UIKitGuide({ step }) {
                 bar's own region. Same non-modal contract as the popover: no
                 scrim, no focus trap, no aria-modal. It stays a .bkit-card so
                 utils/openOverlays.js treats it as the guide's own. */}
-            {showIntro && (
+            {showIntro && !showChooser && (
               <div
                 id={cardId}
                 className="bkit-card bkit-card--steps"

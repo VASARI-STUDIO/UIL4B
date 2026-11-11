@@ -280,8 +280,11 @@ test('the local copy is written FIRST, as it is for designs and palettes', () =>
   // Local-first is why submitting works offline and the list updates without
   // waiting on a round trip. Publishing before the local write would make a
   // dropped connection lose the submission outright.
-  const localAt = COMMUNITY.indexOf('setIconLocal(appendIconSubmission(item))')
-  const publishAt = COMMUNITY.indexOf('await publishIcon(item)')
+  // Read inside the submit handler: the publish itself lives in a helper the
+  // handler calls, so the order that matters is the handler's.
+  const handler = COMMUNITY.slice(COMMUNITY.indexOf('const handleIconSubmit'))
+  const localAt = handler.indexOf('setIconLocal(appendIconSubmission(item))')
+  const publishAt = handler.indexOf('await sendIcon(item)')
   assert.ok(localAt > -1, 'the icon flow keeps no local copy')
   assert.ok(publishAt > -1, 'the icon flow never publishes')
   assert.ok(localAt < publishAt, 'the icon flow publishes before it writes locally')
@@ -292,7 +295,7 @@ test('an unsent submission can still be sent — the hole the other three flows 
   // fails and then offer no route to the account at all, which re-enters the
   // exact bug the queue was built to end.
   assert.match(COMMUNITY, /retryIcon/, 'the retry is gone')
-  assert.match(COMMUNITY, /s\.synced \? 'Pending review' : 'Not sent'/,
+  assert.match(COMMUNITY, /submissionStatusLabel\(\{ status: s\.status, synced: s\.synced/,
     'the row no longer distinguishes what reached the account from what did not')
 })
 
@@ -346,8 +349,8 @@ const PATCH = 'docs/design/community-icon-rules.patch'
 test('the rules diff exists, still applies, and grants exactly what the client needs', () => {
   // firestore.rules pins `kind in ['gradient', 'design', 'palette']` and an
   // allowlist of payload keys that does not include `svg`, so an icon
-  // submission is REFUSED until this lands. The file is approval-gated (the
-  // auto-mode classifier refuses to stage it), so it ships as a diff somebody
+  // submission is REFUSED until this lands. The file is approval-gated (automated
+  // commits may not stage it), so it ships as a diff somebody
   // has to apply — the same shape as the four in scripts/gated-patches.mjs.
   //
   // Asserted as "either it is already in the file, or the diff that puts it

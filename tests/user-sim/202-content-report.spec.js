@@ -220,7 +220,9 @@ test.describe('the content-report form', () => {
     expect(sent.message).toContain(`Item id: ${design.id}`)
     expect(sent.message).toContain(`Item: ${design.name}`)
     expect(sent.message).toContain('/community')
-    expect(sent.message).toContain(`Link: ${design.url}`)
+    // The first card is a curated starter. Its url is only a platform's front page,
+    // so the card carries no link and the report names none.
+    expect(sent.message).not.toContain('Link:')
     expect(sent.message).toContain(DETAILS)
   })
 

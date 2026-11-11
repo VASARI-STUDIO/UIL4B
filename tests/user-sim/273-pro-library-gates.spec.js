@@ -64,7 +64,7 @@ async function pickCollection(page, label) {
 
 async function openBrandSignedOut(page) {
   await go(page, ROUTE)
-  await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+  await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
   await pickCollection(page, 'Brand')
   const block = gatedBlock(page)
   await expect(block, 'the Brand gate never appeared').toBeVisible()
@@ -78,11 +78,11 @@ for (const width of [390, 1440]) {
     test('makes one offer, Pro, and never mentions a free account', async ({ page }) => {
       watch(page, 'a signed-out visitor reading the Brand gate')
       const block = await openBrandSignedOut(page)
-      await expect(block.locator('.lockt-cta-head')).toHaveText(HEADING)
-      await expect(block.locator('.lockt-cta-body')).toHaveText(ANON_BODY)
+      await expect(block.locator('.geg-h')).toHaveText(HEADING)
+      await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
       expect(await block.innerText(), 'the gate talks about a free account that does not open Brand')
         .not.toMatch(/free account/i)
-      await expect(block.locator('a, button'), 'the gate offers more than one way forward').toHaveCount(1)
+      await expect(block.locator('a:not(.geg-fade *), button:not(.geg-fade *)'), 'the gate offers more than one way forward').toHaveCount(1)
       await expect(block.getByRole('button', { name: /free account/i })).toHaveCount(0)
       await page.screenshot() // viewport only, never fullPage
     })
@@ -126,7 +126,7 @@ test.describe('sticky section heading · 390px', () => {
     // Pro, because it lists the whole library: several sections, long enough to scroll.
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
-    await expect.poll(() => page.locator('.pgal-card').count(), { message: 'the whole library never listed' })
+    await expect.poll(() => page.locator('.pgal-card:not(.geg-fade *)').count(), { message: 'the whole library never listed' })
       .toBeGreaterThan(GALLERY_TIER_LIMITS.free)
     const heads = page.locator('.pgl-section-head')
     expect(await heads.count(), 'needs two sections to scroll one head into its stuck position').toBeGreaterThan(1)
@@ -170,9 +170,9 @@ test.describe('curated arm of the gate', () => {
   test('a signed-out Curated tap lists the open rows, so the curated gate is unreachable', async ({ page }) => {
     watch(page, 'a signed-out visitor tapping the Curated chip')
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await pickCollection(page, 'Curated')
-    await expect(page.locator('.pgal-card'), 'Curated lists the rows a visitor has').toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)'), 'Curated lists the rows a visitor has').toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await expect(page.getByText('Curated palettes need an account')).toHaveCount(0)
     await expect(gatedBlock(page)).toHaveCount(0)
   })

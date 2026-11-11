@@ -2,7 +2,7 @@
 // two library entrance animations (the icon glyph fade and the card rise).
 //
 // Groups covered (each at 1440 and 390 where the group is on screen at that
-// width): Type Scale (weights, fine-tuning join mode, output view), Aspect
+// width): Type Scale (preview width, the Scale / Page switch at 1024, the Code drawer's export format at 1440, the settings sheet tabs and fine-tuning join mode), Aspect
 // Ratio (preset list, "I know the"), Alt Text (length), Gradient (the random
 // filters), Palette Explore tabs, the File Converter's segmented choices, and
 // the library's tab switch.
@@ -30,6 +30,7 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
+import { showTypeScaleCode } from './type-scale-view.js'
 
 const SHOTS = '.claude/scratch/polish3'
 const WIDTHS = [1440, 390]
@@ -120,12 +121,29 @@ async function openFileConverterVideo(page) {
 // Every case opens its page, prepares the group and returns its locator.
 const CASES = [
   {
-    id: 'type-scale-weights', name: 'Type Scale: weights', widths: [1440],
-    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-weights').first() },
+    id: 'type-scale-width', name: 'Type Scale: preview width', widths: WIDTHS,
+    open: async (page) => { await go(page, '/create/type-scale'); return page.locator('#tsc-width') },
   },
   {
-    id: 'type-scale-view', name: 'Type Scale: output view', widths: [390],
+    id: 'type-scale-view', name: 'Type Scale: Scale and Page switch', widths: [1024],
     open: async (page) => { await go(page, '/create/type-scale'); return page.locator('.tsc-view-switch') },
+  },
+  {
+    id: 'type-scale-format', name: 'Type Scale: export format in the Code drawer', widths: [1440],
+    open: async (page) => {
+      await go(page, '/create/type-scale')
+      await showTypeScaleCode(page)
+      return page.locator('#tsc-code-drawer .tsc-fmt')
+    },
+  },
+  {
+    id: 'type-scale-sheet', name: 'Type Scale: sheet Settings and Code', widths: [390],
+    open: async (page) => {
+      // A phone has no page-level views: Code is a tab in the settings sheet.
+      await go(page, '/create/type-scale')
+      await page.locator('.tl-dock .tsc-dock-ratio').click()
+      return page.locator('.tsc-sheet-tabs')
+    },
   },
   {
     id: 'type-scale-join', name: 'Type Scale: how the scales join', widths: WIDTHS,
@@ -133,7 +151,7 @@ const CASES = [
       await go(page, '/create/type-scale')
       if (page.viewportSize().width < 700) {
         // Phones keep the settings in a sheet behind the docked bar's opener.
-        await page.getByRole('button', { name: /^Families, preview text/ }).click()
+        await page.locator('.tl-dock .tsc-dock-ratio').click()
       }
       await page.getByRole('button', { name: 'Fine tuning', exact: true }).click()
       return page.locator('.tsc-bp-mode')

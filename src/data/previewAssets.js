@@ -52,7 +52,7 @@ export const PREVIEW_ASSETS = {
     credit: {
       source: 'Generated',
       author: 'Generated with OpenAI image generation via Codex CLI',
-      licence: 'Generated image, made for UIL4B; no person depicted',
+      licence: 'Generated image, made for UI L4B; no person depicted',
       url: '',
       changes: 'Cropped to the card with its corners made transparent, brightened so the face reads as a neutral light grey (the chip keeps its own colour and the contactless grooves are deepened), resized to 640 and 1080 pixels wide, and a mask of the face made from it.',
     },
@@ -69,7 +69,7 @@ export const PREVIEW_ASSETS = {
     credit: {
       source: 'Generated',
       author: 'Generated with OpenAI image generation via Codex CLI',
-      licence: 'Generated image, made for UIL4B; no person depicted',
+      licence: 'Generated image, made for UI L4B; no person depicted',
       url: '',
       changes: 'Two small shapes on the upper deck and in the wheelhouse glass painted out, saturation lowered by a tenth, highlights held under 97 percent, and resized to 640 and 1080 pixels wide.',
     },
@@ -86,7 +86,7 @@ export const PREVIEW_ASSETS = {
     credit: {
       source: 'Generated',
       author: 'Generated with OpenAI image generation via Codex CLI',
-      licence: 'Generated image, made for UIL4B; no person depicted',
+      licence: 'Generated image, made for UI L4B; no person depicted',
       url: '',
       changes: 'The upright 4 by 5 crop of the same picture, with the same retouching and grade, resized to 480 and 752 pixels wide.',
     },
@@ -105,7 +105,7 @@ export const PREVIEW_ASSETS = {
     credit: {
       source: 'Generated',
       author: 'Generated with OpenAI image generation via Codex CLI',
-      licence: 'Generated image, made for UIL4B; no person depicted',
+      licence: 'Generated image, made for UI L4B; no person depicted',
       url: '',
       changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the shadow under the hem, the buttons and their holes left out of the mask.',
     },
@@ -124,7 +124,7 @@ export const PREVIEW_ASSETS = {
     credit: {
       source: 'Generated',
       author: 'Generated with OpenAI image generation via Codex CLI',
-      licence: 'Generated image, made for UIL4B; no person depicted',
+      licence: 'Generated image, made for UI L4B; no person depicted',
       url: '',
       changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the sweep, the shadow under the hem and the buttons left out of the mask.',
     },
@@ -143,7 +143,7 @@ export const PREVIEW_ASSETS = {
     credit: {
       source: 'Generated',
       author: 'Generated with OpenAI image generation via Codex CLI',
-      licence: 'Generated image, made for UIL4B; no person depicted',
+      licence: 'Generated image, made for UI L4B; no person depicted',
       url: '',
       changes: 'Cropped to 4:5 and resized to 640 and 1080 pixels wide; fabric toned to a neutral grey with its light lifted so a colour multiplied onto it reads close to itself; the buttons left out of the mask.',
     },

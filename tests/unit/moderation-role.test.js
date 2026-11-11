@@ -34,7 +34,7 @@ import vm from 'node:vm'
 import { fileTextThrough } from '../../scripts/gated-patches.mjs'
 
 import {
-  roleFromClaims, canReview, canAssignModerators, canSeeReporterEmail, accessNotice,
+  roleFromClaims, canReview, canAssignModerators, canSeeReporterEmail, canManageBilling, accessNotice,
   feedbackDecision, isFeedbackStatus, nextFeedbackStatus, pendingCounts,
   FEEDBACK_STATUSES, FEEDBACK_STATUS_LABELS, ROLES, MODERATOR_CLAIM, FOUNDER_CLAIM,
 } from '../../src/utils/moderation.js'
@@ -91,6 +91,13 @@ test('only the founder may appoint moderators', () => {
   assert.equal(canAssignModerators('founder'), true)
   assert.equal(canAssignModerators('moderator'), false)
   assert.equal(canAssignModerators('user'), false)
+})
+
+test('only the founder may open the Stripe price panel', () => {
+  // /api/setup-stripe refuses everyone else, so the tab would offer a Save that 403s.
+  assert.equal(canManageBilling('founder'), true)
+  assert.equal(canManageBilling('moderator'), false)
+  assert.equal(canManageBilling('user'), false)
 })
 
 test('a moderator may review but may not read the reporter\'s address', () => {
@@ -449,7 +456,7 @@ test('AuthContext stays untouched by the role', () => {
 // THE ROUTE THAT MINTS THE CLAIM
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// api/verify-admin.js is approval-gated AND refused by the auto-mode classifier,
+// api/verify-admin.js is approval-gated AND may not be staged by automated commits,
 // so the roster half of it lives as a committed, unapplied diff that
 // `npm run apply:gated` puts in (docs/design/moderator-verify-admin.patch).
 //

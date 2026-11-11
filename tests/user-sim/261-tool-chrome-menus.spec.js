@@ -108,7 +108,10 @@ for (const width of [1440, 390]) {
             h: el.offsetHeight,
             radius: getComputedStyle(el).borderTopLeftRadius,
           })))
-        expect(controls.length, 'a toolbar with several controls').toBeGreaterThan(2)
+        // Type Scale on a phone keeps Reset scale in More, so its row is Back and More;
+        // every other row here has a third control.
+        const rowMin = width < 700 && path === '/create/type-scale' ? 2 : 3
+        expect(controls.length, 'a toolbar with several controls').toBeGreaterThanOrEqual(rowMin)
         const heights = new Set(controls.map((c) => c.h))
         const radii = new Set(controls.map((c) => c.radius))
         expect([...heights], `one height on the row: ${JSON.stringify(controls)}`).toHaveLength(1)

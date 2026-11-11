@@ -188,6 +188,8 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
   const damage = []
   for (const [w, h] of TSC_WIDE) {
     const { ctx, page } = await open(browser, w, h, '/create/type-scale', '.tsc-row-text', { touch: w < 1000 })
+    // Heading rows draw at the base size until their face has loaded.
+    await page.waitForFunction(() => !document.querySelector('.tsc-row-text.is-loading'))
     const r = await page.evaluate(() => {
       const rows = [...document.querySelectorAll('.tsc-row-text')]
       const hidden = []
@@ -202,8 +204,8 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
       return { rows: rows.length, hidden }
     })
     await ctx.close()
-    expect(r.rows, `${w}x${h}: expected the 9 specimen rows`).toBe(9)
-    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 9 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
+    expect(r.rows, `${w}x${h}: expected the 6 specimen rows`).toBe(6)
+    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 6 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
@@ -1550,7 +1552,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // The rule is "name the pack only when the result set holds more than one",
   // and it needs a genuinely SINGLE-pack default grid to be falsifiable. Since
   // the pack tiers landed (src/data/iconPackTiers.js) that is a Pro viewer: one
-  // browses 250 names from each of 27 packs, so the first page of 120 cells is
+  // browses 250 names from each of 31 packs, so the first page of 120 cells is
   // all Lucide. A signed-out viewer gets the 60-icon sample — twelve from each
   // of five outlined packs — which genuinely mixes packs and therefore SHOULD
   // label every cell, so it satisfies the rule by the other branch and measures

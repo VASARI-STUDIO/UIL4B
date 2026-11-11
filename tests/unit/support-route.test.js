@@ -44,7 +44,7 @@ test('the client redirect keeps the incoming query beside from=support', () => {
   assert.equal(mergeRedirectQuery('/discover', ''), '/discover')
 })
 
-test('the feedback form opens on Help request for support arrivals, and on Feature Request otherwise', () => {
+test('the feedback form opens on Help request for support arrivals, and on Feature request otherwise', () => {
   const form = read('src/pages/Feedback.jsx')
   // `ref` is read like `reason`, for the preselect and for the payment marker.
   assert.match(form, /const reason = params\.get\('reason'\) \|\| params\.get\('ref'\) \|\| ''/)
@@ -53,7 +53,9 @@ test('the feedback form opens on Help request for support arrivals, and on Featu
   assert.match(form, /const PAYMENT_FAILED = new Set\(\['payment_failed', 'failed-payment'\]\)/)
   assert.match(form, /params\.get\('from'\) === 'support' \|\| reason \? 'help' : typeParam \|\| 'feature'/)
   // Payment mode: its own heading, and a billing link for signed-in visitors only.
-  assert.match(form, /paymentFailed \? PAYMENT_TITLE : t\('feedback\.title'\)/)
+  // `copy` is feedbackCopyKeys(type): the ordinary heading for a feedback type,
+  // the support heading for Help request (see feedback-copy.test.js).
+  assert.match(form, /paymentFailed \? PAYMENT_TITLE : t\(copy\.title\)/)
   assert.match(form, /paymentFailed && accountEmail && \(/)
   assert.match(form, /<Link className="btn btn-s" to="\/settings" state=\{\{ section: 'support' \}\}>\{PAYMENT_CARD_LINK\}<\/Link>/)
   assert.match(form, /<p className="fb-fix">/)

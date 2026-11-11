@@ -185,7 +185,6 @@
 
 .fbd-overlay .lbry-search:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-wash);
 }
 
 .fbd-overlay .lbry-search input { font-size: 14px; }

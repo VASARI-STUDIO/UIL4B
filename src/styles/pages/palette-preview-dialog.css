@@ -95,9 +95,18 @@
 .pvd-pane-l{font-size:13px;font-weight:600;color:var(--t0)}
 .pvd-pane-l span{margin-left:var(--s-2);font-weight:400;color:var(--t2);font-variant-numeric:tabular-nums}
 
-/* A locked scene is the real scene, blurred, with the unlock over it. */
+/* A locked scene is a stand-in drawn from the viewer's own colours (the Pro scene is never in the page), blurred, with the unlock over it. */
 .pvd-scene{position:relative;isolation:isolate;min-width:0}
 .pvd-scene.is-locked .pvd-scene-in{filter:blur(6px);pointer-events:none;user-select:none}
+.pvd-scene-stub{display:flex;flex-direction:column;gap:var(--s-4);min-height:100cqh;padding:var(--s-5);background:var(--pv-canvas)}
+.pvd-stage.is-compare .pvd-scene-stub{min-height:calc(100cqh - 32px)}
+.pvd-scene-stub>span{display:block;border-radius:var(--radius)}
+.pvd-stub-bar{height:40px;background:var(--pv-surface);border:1px solid var(--pv-border)}
+.pvd-stub-hero{flex:0 0 clamp(120px,32cqh,220px);background:var(--pv-primary)}
+.pvd-scene-stub>.pvd-stub-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4);flex:0 0 clamp(96px,22cqh,160px)}
+.pvd-stub-card{background:var(--pv-raised);border:1px solid var(--pv-border);border-radius:var(--radius)}
+.pvd-stub-line{height:12px;background:var(--pv-muted);opacity:.5}
+.pvd-stub-line--short{width:60%}
 /* While a scene's file loads: the scene's own canvas colour at the stage's size,
  * so the first frame is the right ground and not a hole. */
 .pvd-scene-wait{min-height:100cqh}

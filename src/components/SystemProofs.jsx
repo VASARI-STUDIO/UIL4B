@@ -52,6 +52,11 @@ const BOUNDARY_MIN = 3
 /** Light --t0. The ink both samples' own labels are set in, so the proof about
  *  contrast does not itself ship text below its floor. */
 const LIGHT_INK = '#0F0F10'
+/** Light --t1, --t2 and --border: the quieter inks and the hairline of the
+ *  contrast proof's fixed light ground (see ContrastProof). */
+const LIGHT_DIM = '#50504A'
+const LIGHT_FAINT = '#5F5F59'
+const LIGHT_LINE = '#DAD8CF'
 
 /**
  * Principle 1. The same blue, one step apart, each shown doing the job its
@@ -82,23 +87,34 @@ export function ContrastProof() {
   ]), [])
 
   return (
-    <figure className="prn-cx">
+    // ONE surface. The figure is the light ground the ratios are measured on
+    // (it was a tinted tile and an outlined pill inside a white card: a card in
+    // a card), and the two samples are specimens set straight on it. The inks
+    // and hairline are pinned to light's own so the measurement reads the same
+    // in either theme.
+    <figure
+      className="prn-cx"
+      style={{
+        background: LIGHT_GROUND,
+        '--cpg-ink': LIGHT_INK,
+        '--cpg-dim': LIGHT_DIM,
+        '--cpg-faint': LIGHT_FAINT,
+        '--cpg-line': LIGHT_LINE,
+      }}
+    >
       <ul className="prn-cx-rows">
         {rows.map((r) => {
           const floor = r.job === 'text' ? TEXT_MIN : BOUNDARY_MIN
           return (
             <li className="prn-cx-row" key={r.hex} data-job={r.job}>
               {r.job === 'text' ? (
-                <span
-                  className="prn-cx-sample"
-                  style={{ background: LIGHT_GROUND, color: r.hex }}
-                >
+                <span className="prn-cx-sample" style={{ color: r.hex }}>
                   Read this
                 </span>
               ) : (
                 <span
                   className="prn-cx-sample"
-                  style={{ background: LIGHT_GROUND, borderColor: r.hex, color: LIGHT_INK }}
+                  style={{ borderColor: r.hex, color: LIGHT_INK }}
                   data-boundary="true"
                 >
                   Not this

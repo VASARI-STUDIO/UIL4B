@@ -28,6 +28,7 @@ import {
   isGuideActive,
   markIntroSeen,
   nextStep,
+  restoreAcceptedSteps,
   startGuide,
   stepArtefacts,
   stepById,
@@ -331,4 +332,14 @@ test('a missing or malformed design is read as nothing built, never as a crash',
     assert.doesNotThrow(() => guideProgress(bad))
     assert.equal(guideProgress(bad).done, 0)
   }
+})
+
+test('steps put back after starting over come back in flow order, and only while the flow runs', () => {
+  const storage = fakeStorage()
+  assert.deepEqual(restoreAcceptedSteps(['color'], storage), [], 'no flow, nothing written')
+  startGuide(storage)
+  assert.deepEqual(restoreAcceptedSteps(['typescale', 'nope', 'color'], storage), ['color', 'typescale'])
+  assert.equal(storage.getItem('vs-uikit-guide'), '1:color,typescale')
+  assert.deepEqual(restoreAcceptedSteps(null, storage), [], 'nothing to restore clears them')
+  assert.equal(isGuideActive(storage), true)
 })

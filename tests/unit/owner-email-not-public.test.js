@@ -685,8 +685,13 @@ test('the AVIF files this site ships parse as containers and shed their pixels',
     const read = readableText(bytes)
     const rel = path.relative(REPO, file)
     assert.equal(read.container, 'heif', `${rel} did not parse as an AVIF container`)
-    assert.ok(Buffer.byteLength(read.text) < bytes.length / 2,
-      `${rel}: ${Buffer.byteLength(read.text)} of ${bytes.length} bytes were read — the pixel data is not being excluded`)
+    // Characters, not re-encoded bytes: the non-pixel remainder of a small photo
+    // derivative is mostly an embedded colour profile, binary that UTF-8 decoding
+    // turns into three-byte replacement characters, which would count it three
+    // times over. One character per byte read keeps this a measure of what was
+    // skipped. Pixels left in would put it near the whole file.
+    assert.ok(read.text.length < bytes.length / 2,
+      `${rel}: ${read.text.length} of ${bytes.length} bytes were read — the pixel data is not being excluded`)
   }
 })
 
@@ -816,7 +821,7 @@ const OWNER_RECORD = {
   name: 'Dylan Coleman',
   crown: '\u{1F451}',
   publicHandle: 'Dylan Coleman \u{1F451}',
-  title: 'UIL4B founder',
+  title: 'UI L4B founder',
   publicId: 'uil4b-founder',
 }
 

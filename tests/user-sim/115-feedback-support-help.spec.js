@@ -149,11 +149,11 @@ test.describe('the other ways into the feedback form', () => {
     await expect(page.getByLabel('Subject')).toHaveValue('')
   })
 
-  test('plain /feedback is unchanged: Feature Request, the ordinary heading, an optional email, no card link', async ({ page }) => {
+  test('plain /feedback is unchanged: Feature request, the ordinary heading, an optional email, no card link', async ({ page }) => {
     watch(page, 'a visitor opening the feedback form directly')
     await go(page, '/feedback')
 
-    await expect(page.getByRole('radio', { name: 'Feature Request' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('radio', { name: 'Feature request' })).toHaveAttribute('aria-checked', 'true')
     await expect(helpRadio(page)).toHaveAttribute('aria-checked', 'false')
     await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('Get help')
     await expect(page.getByLabel('Subject')).toHaveValue('')
@@ -169,7 +169,7 @@ test.describe('the other ways into the feedback form', () => {
     await signIn(page)
     await go(page, '/feedback')
 
-    await expect(page.getByRole('radio', { name: 'Feature Request' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByRole('radio', { name: 'Feature request' })).toHaveAttribute('aria-checked', 'true')
     await expect(page.getByRole('link', { name: 'Update your card' })).toHaveCount(0)
   })
 })

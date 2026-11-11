@@ -179,10 +179,10 @@ for (const width of WIDTHS) {
 
       test('the card actions sit inside the card as 44px icon buttons that keep their names', async ({ browser }) => {
         const { ctx, page } = await open(browser, width, theme, '/discover/palettes')
-        const cards = page.locator('.pgal-card:has(.pgal-act)')
-        // POSITIVE CONTROL: free palettes carry the five actions, so "inside the card" below is about real buttons.
+        const cards = page.locator('.pgal-card:has(.pgal-act):not(.geg-fade *)')
+        // POSITIVE CONTROL: free palettes carry the four actions, so "inside the card" below is about real buttons.
         expect(await cards.count()).toBeGreaterThan(0)
-        const NAMES = [/Palette Builder/, /project/i, /Gradient/, /CSS/, /hex codes/i]
+        const NAMES = [/project/i, /Gradient/, /CSS/, /hex codes/i]
 
         for (let i = 0; i < await cards.count(); i += 1) {
           const card = cards.nth(i)
@@ -204,7 +204,7 @@ for (const width of WIDTHS) {
             })
             return { left: c.left, right: c.right, rowScroll: row.scrollWidth - row.clientWidth, rowRight: rowRect.right, acts }
           })
-          expect(r.acts, 'five actions per free card').toHaveLength(5)
+          expect(r.acts, 'four actions per free card').toHaveLength(4)
           // MUTATION: delete the `@media(hover:none),(max-width:1000px)` block in palette-gallery.css
           // (labelled pills again, scrolling off the card edge) and the inside/scroll checks fail.
           expect(r.rowScroll, 'the action row does not scroll sideways').toBeLessThanOrEqual(1)

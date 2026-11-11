@@ -69,7 +69,8 @@ async function openPanel(browser, payload = configPayload) {
     })
   })
 
-  await signIn(page, { plan: 'pro', admin: true })
+  // The Stripe tab is the founder's, and the role is read from the token's claims.
+  await signIn(page, { plan: 'pro', admin: true, claims: { admin: true, email_verified: true } })
   await go(page, '/admin')
   // The panel lives behind the Stripe tab; /admin opens on Overview.
   await page.getByRole('tab', { name: 'Stripe', exact: true }).click()

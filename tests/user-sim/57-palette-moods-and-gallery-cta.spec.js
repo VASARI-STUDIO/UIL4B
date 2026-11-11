@@ -20,7 +20,7 @@
 // A typed count is a second copy of the data; #396's whole failure was a number
 // that had quietly stopped describing the view.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch, signIn } from './helpers.js'
+import { go, proLibraryArrived, restingScrollY, watch, signIn } from './helpers.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../../src/utils/paletteMood.js'
 import { splitLockedLibrary } from '../../src/utils/lockedPreview.js'
@@ -242,6 +242,10 @@ test.describe('the closing CTA on every gallery', () => {
       // ungated ones (resources, community) are unaffected either way.
       await signIn(page, { plan: 'pro' })
       await go(page, gallery.route)
+      await expect(page.locator(gallery.card).first()).toBeVisible()
+      // The free rows paint first; the full set and the Pro closing call to
+      // action land when the account answers.
+      await proLibraryArrived(page, `the ${gallery.route} library`)
 
       // POSITIVE CONTROL, and it is the whole reason this test is not trivial.
       // "The CTA sits below the last card" is true of a page that rendered no
@@ -313,7 +317,7 @@ test.describe('the end of a capped result offers more access to free, submission
     watch(page, 'a free account at the end of the palette library')
     await signIn(page, { plan: 'free' })
     await go(page, PALETTES)
-    await expect(page.locator('.lockt-cta')).toBeVisible()
+    await expect(page.locator('.geg[data-gate="pro"]')).toBeVisible()
     await expect(page.locator('.gcta')).toHaveCount(0)
     await expect(page.getByText('Create and submit your own')).toHaveCount(0)
   })
@@ -362,6 +366,9 @@ test('the closing CTA clears the feedback button at twenty widths', async ({ bro
       await signIn(page, { plan: 'pro' })
       await go(page, PALETTES)
       await expect(page.locator('.pgal-card').first()).toBeVisible()
+      // The closing call to action sits under the last card of the FULL set, so
+      // measure only once the Pro library has replaced the free rows.
+      await proLibraryArrived(page, `the palette library at ${width}px`)
 
       // The WORST alignment, not merely the end of the page. The feedback
       // button is fixed to the bottom-right corner of the VIEWPORT, so the

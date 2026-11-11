@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { reportUpgradeGate } from '../../contexts/ProModalContext'
 import { LIBRARY_RULES } from '../../utils/libraryRules'
 import { galleryLimit } from '../../utils/lockedPreview'
 import { hasPromptPreview, promptPosterSrc } from '../../data/promptPreviewAssets'
+import { promptStandinSrc } from '../../utils/lockedStandin'
 import { buildOverview, countLine } from './promptGallery'
 import PromptCard from './PromptCard'
 import PromptLockedCard, { LockMark } from './PromptLockedCard'
+import PromptGate from './PromptGate'
 
 // The gallery's default view: one section per category, each with its heading,
 // "N prompts · M open to you" and "View more", then a closing section that says
@@ -76,6 +76,7 @@ export default function PromptOverview({
   onViewMore,
   onBrowseAll,
   onSignup,
+  onLogin,
   onSubmit,
 }) {
   const openIds = useMemo(() => new Set(openRows.map((p) => p.id)), [openRows])
@@ -164,7 +165,7 @@ export default function PromptOverview({
                     return (
                       <div key={p.id} className={`pl-mosaic-tile${kind ? ' is-locked' : ''}`}>
                         {hasPromptPreview(p.id) ? (
-                          <img src={promptPosterSrc(p.id)} alt="" loading="lazy" decoding="async" width="960" height="600" />
+                          <img src={kind ? promptStandinSrc(p.id) : promptPosterSrc(p.id)} alt="" loading="lazy" decoding="async" width="960" height="600" />
                         ) : !kind && <span className="pl-mosaic-name">{p.title}</span>}
                         {kind && <LockMark kind={kind} />}
                       </div>
@@ -178,49 +179,39 @@ export default function PromptOverview({
         </div>
       )}
 
-      {proPending ? loadingStatus : (
+      {proPending ? loadingStatus : tier === 'pro' ? (
         <section className="pl-close" aria-labelledby="pl-close-h">
           <div className="pl-close-text">
-            {tier === 'pro' ? (
-              <>
-                <h2 id="pl-close-h">{`All ${total} community prompts are open to you.`}</h2>
-                <p>Submit one of your own. Every submission is reviewed before it appears in the library.</p>
-              </>
-            ) : tier === 'anonymous' ? (
-              <>
-                <h2 id="pl-close-h">{`Signed out, you can open ${openCount} of the ${total} community prompts.`}</h2>
-                <p>{`A free account opens ${freeSet.size}. Pro opens all ${total}.`}</p>
-              </>
-            ) : (
-              <>
-                <h2 id="pl-close-h">{`Free covers ${openCount} of the ${total} community prompts.`}</h2>
-                <p>{`Pro opens the other ${total - openCount}, each as the full brief its author wrote, ready to copy.`}</p>
-              </>
-            )}
+            <h2 id="pl-close-h">{`All ${total} community prompts are open to you.`}</h2>
+            <p>Submit one of your own. Every submission is reviewed before it appears in the library.</p>
           </div>
           <div className="pl-close-actions">
-            {tier === 'pro' ? (
-              <button type="button" className="btn btn-accent pl-ov-btn" onClick={() => onSubmit?.()}>
-                Create and submit your own
-              </button>
-            ) : tier === 'anonymous' ? (
-              <button type="button" className="btn btn-accent pl-ov-btn" onClick={() => onSignup?.()}>
-                Create your free account
-              </button>
-            ) : (
-              <Link
-                className="btn btn-accent pl-ov-btn"
-                to="/plans"
-                onClick={() => { reportUpgradeGate('prompt-library-community-lock') }}
-              >
-                See what Pro includes
-              </Link>
-            )}
+            <button type="button" className="btn btn-accent pl-ov-btn" onClick={() => onSubmit?.()}>
+              Create and submit your own
+            </button>
             <button type="button" id="pl-browse-all" className="btn pl-ov-btn" onClick={() => onBrowseAll()}>
               {`Browse all ${total} with filters`}
             </button>
           </div>
         </section>
+      ) : (
+        <>
+          <div className="pl-browse">
+            <button type="button" id="pl-browse-all" className="btn pl-ov-btn" onClick={() => onBrowseAll()}>
+              {`Browse all ${total} with filters`}
+            </button>
+          </div>
+          <PromptGate
+            id="pl-close-h"
+            tier={tier}
+            shown={openCount}
+            total={total}
+            viaAccount={tier === 'anonymous' ? rows.filter((p) => !openIds.has(p.id) && freeSet.has(p.id)).length : 0}
+            accountOpens={freeSet.size}
+            locked={rows.filter((p) => !openIds.has(p.id))}
+            onLogin={onLogin}
+          />
+        </>
       )}
     </div>
   )

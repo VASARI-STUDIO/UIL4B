@@ -30,7 +30,10 @@ const WIDTHS = [320, 360, 390, 480, 640, 768, 900, 1024, 1280, 1440, 1920]
 // width; and `overflow` is what the tool calls its overflow (default "More"; a function
 // of the width when the name changes with it). A tool with a `sheet` swaps the overflow
 // for a sheet below `sheet.below`: the controls that are off the row are looked for in
-// the sheet, opened from its `open` button.
+// the sheet, opened from its `open` button. `linksFrom` is the width from which the
+// links are offered at all (a phone's switcher carries them), and `bareMore(width)`
+// names a More that has no Send feedback entry: with every action reached it holds
+// only `ids` (and may be absent when `optional`).
 const TOOLS = [
   {
     route: '/create/palette',
@@ -64,34 +67,37 @@ const TOOLS = [
   // primary; /seo's three tools are tabs under the toolbar, so its row is the
   // back button and the name.
   { route: '/create/file-converter', title: 'File Converter', actions: ['Open the 3D Model Converter'] },
-  { route: '/create/alt-text', title: 'Alt Text Generator', actions: ['Add images'], primary: /^Generate/, phoneDock: true },
+  { route: '/create/alt-text', title: 'Alt Text Generator', actions: [], primary: /^Add images/, phoneDock: true },
   { route: '/create/auto-builder', title: 'Brand Starter', actions: [] },
   { route: '/create/3d-converter', title: '3D Model Converter', actions: ['For Blender', 'Open a file'] },
   { route: '/seo', title: 'Meta & SERP Inspector', actions: [], minChildren: 2 },
   {
     route: '/create/font-pair',
     actions: [
-      { row: 'Shuffle', menu: 'Shuffle the pair' },
       { row: 'Swap', menu: 'Swap heading and body' },
       { row: 'Undo', menu: 'Undo the last change' },
       'Build a type scale from this pair',
       'Copy font import',
     ],
-    // Below 1024 Shuffle is in the docked bar, and below 768 so is Copy CSS.
-    dockedBelow: 1024,
-    docked: ['Shuffle'],
     primaryFrom: 768,
+    // The phone's More leaves the gallery link out: the bar's switcher goes there.
     links: ['Browse the Font Gallery'],
+    linksFrom: 768,
     primary: /^Copy CSS/,
     title: 'Font Pair',
   },
   {
     route: '/create/type-scale',
-    // From 768 Save to a project sits right against Copy CSS at the end of the
-    // toolbar; under 768 both are in the docked bar.
-    actions: ['Reset scale', 'Find a pairing for these families', 'Copy font import'],
+    // Copy CSS ends the toolbar from 768 (Code and Save to a project are in the
+    // tool's own docked bar); under 768 the shell dock holds the scale trigger, Save
+    // and Copy CSS. The switcher's Pair link carries the pair, so there is no
+    // "Find a pairing" action, and the tool has no Send feedback entry.
+    actions: ['Reset scale', 'Copy font import'],
     primary: /^Copy CSS/,
     primaryDockedBelow: 768,
+    phoneDock: true,
+    // With every action on the row, More holds the project chip or is not there.
+    bareMore: () => ({ ids: ['ttb-chip'], optional: true }),
     title: 'Type Scale',
   },
   {
@@ -103,32 +109,42 @@ const TOOLS = [
     // 1440 and up); below that it is in the overflow ("More filters" at 1024 and up).
     fields: ['Preview text'],
     links: ['Build a font pair'],
-    // From 768 to 1023 search and "Build a font pair" sit on the page's own second row.
-    secondRow: '.fg-bar2',
-    // Under 1024 the page has a Filters sheet in place of an overflow menu. Whatever
+    // The phone has no onward link: its switcher goes to Font Pair.
+    linksFrom: 768,
+    // At 320 and 360 the row is Back and More; the switcher joins it from 390.
+    minChildren: 2,
+    // Below 1024 the page's own .fg-bar2 holds search and Filters; from 1024 a second toolbar (.fg-row2) holds the filters.
+    // A phone's category chips and Filters button sit in the page's own .fg-chiprow.
+    secondRow: '.fg-row2, .fg-bar2, .fg-chiprow',
+    // Under 1024 the page has a Filters sheet in place of the filter rows. Whatever
     // is off the row must be in the sheet, found by the role and name the sheet gives
-    // it (the sheet spells Sort out as pills and Specimen size as a slider called Size).
+    // it (the sheet spells Sort out as pills and Specimen size as a slider called Size,
+    // and each category pill carries its family count after the name).
     sheet: {
       below: 1024,
       open: 'Filters',
       reach: {
-        All: ['button', 'All'],
-        Serif: ['button', 'Serif'],
-        Display: ['button', 'Display'],
+        All: ['button', /^All \d/],
+        Serif: ['button', /^Serif \d/],
+        Display: ['button', /^Display \d/],
         'Sort families': ['group', 'Sort'],
         'Specimen size': ['slider', 'Size'],
         'Preview text': ['textbox', 'Preview text'],
       },
     },
     // What the tool calls whatever is left in its overflow at each width.
-    overflow: (width) => (width >= 1024 ? 'More filters' : 'More'),
+    overflow: () => 'More',
+    // The phone's More holds the Project row, the ground and the View, and no Send feedback.
+    bareMore: (width) => (width < 768 ? { ids: ['project', 'ttb-ground', 'view'], optional: false } : null),
+    // On a tablet the category pills and the ground switch also fold into More, beside Send feedback.
+    menuExtras: (width) => (width >= 768 && width < 1024 ? 2 : 0),
     title: 'Font Gallery',
   },
   { route: '/create/aspect-ratio', actions: ['Swap width and height'], primary: /^Copy size/, title: 'Aspect & Resolution', phoneDock: true },
 ]
 
 async function readRow(page) {
-  return page.locator('[data-tool-toolbar]').evaluate((bar) => {
+  return page.locator('[data-tool-toolbar]').first().evaluate((bar) => {
     const kids = [...bar.children].filter((el) => {
       const r = el.getBoundingClientRect()
       return r.width > 0 && r.height > 0 && getComputedStyle(el).position !== 'absolute'
@@ -154,7 +170,7 @@ for (const tool of TOOLS) {
         await page.setViewportSize({ width, height: 900 })
         await go(page, tool.route)
         await expect(page.getByRole('heading', { level: 1, name: tool.title })).toBeAttached()
-        const bar = page.locator('[data-tool-toolbar]')
+        const bar = page.locator('[data-tool-toolbar]').first()
         await expect(bar).toBeVisible()
         // Where an action can sit while it is still "on the row": the toolbar, or
         // the tool's own second row when it names one.
@@ -180,10 +196,10 @@ for (const tool of TOOLS) {
         // layout's own dock under 768 (`phoneDock`, a bar fixed to the foot of the
         // screen), or Type Scale's on a phone.
         if (tool.primary && width >= (tool.primaryFrom || 0)) {
-          const layoutDock = Boolean(tool.phoneDock) && width < 768
+          const layoutDock = (Boolean(tool.phoneDock) || tool.route === '/create/type-scale') && width < 768
           const docked = layoutDock || width < (tool.primaryDockedBelow || 0)
           await expect(docked
-            ? page.locator(layoutDock ? '[data-tl-dock]' : '.tsc-dock').getByRole('button', { name: tool.primary })
+            ? page.locator('[data-tl-dock]').getByRole('button', { name: tool.primary })
             : bar.getByRole('button', { name: tool.primary })).toBeVisible()
           if (docked) await expect(bar.getByRole('button', { name: tool.primary }), `${width}px: the primary is in the dock, not also on the row`).toHaveCount(0)
           if (!layoutDock) await expect(page.locator('[data-tl-dock]'), `${width}px: a dock for a primary that is on the row`).toHaveCount(0)
@@ -203,7 +219,7 @@ for (const tool of TOOLS) {
           if (!shown) missingActions.push(menuName(action))
         }
         const missingLinks = []
-        for (const name of tool.links || []) {
+        for (const name of width >= (tool.linksFrom || 0) ? (tool.links || []) : []) {
           const shown = await scope.getByRole('link', { name: startsWith(name) }).first().isVisible().catch(() => false)
           if (!shown) missingLinks.push(name)
         }
@@ -254,20 +270,39 @@ for (const tool of TOOLS) {
         // with "Send feedback". When every action fits on the row, that row is the
         // ONLY thing in it: anything else listed means the row is stuck in its
         // measuring pass (seen once on /create/tint).
-        if (!inOverflow.length && !overflowSelects.length && !overflowSliders.length && !overflowFields.length) {
+        const bare = tool.bareMore?.(width)
+        if (!inOverflow.length && !overflowSelects.length && !overflowSliders.length && !overflowFields.length && bare) {
+          // No action overflows and the tool has no feedback entry: More is absent (when
+          // the tool allows that) or holds only the named items.
+          const more = bar.getByRole('button', { name: overflowName, exact: true })
+          if (await more.count()) {
+            await more.click()
+            const panel = page.getByRole('dialog', { name: overflowName })
+            await expect(panel).toBeVisible()
+            const ids = await panel.locator('[data-tl-menu-item]').evaluateAll((els) => els.map((el) => el.dataset.tlMenuItem))
+            expect(ids.length, `${width}px: the ${overflowName} is empty`).toBeGreaterThan(0)
+            expect(bare.ids, `${width}px: the ${overflowName} holds ${ids.join(', ')}`).toEqual(expect.arrayContaining(ids))
+            await page.keyboard.press('Escape')
+            await expect(panel).toBeHidden()
+            await expect(more).toBeFocused()
+          } else {
+            expect(bare.optional, `${width}px: no ${overflowName} button`).toBe(true)
+          }
+        } else if (!inOverflow.length && !overflowSelects.length && !overflowSliders.length && !overflowFields.length) {
           const more = bar.getByRole('button', { name: overflowName, exact: true })
           await expect(more, `${width}px: the ${overflowName} button that holds Send feedback`).toBeVisible()
           await more.click()
           const panel = page.getByRole('dialog', { name: overflowName })
           await expect(panel).toBeVisible()
-          await expect(panel.locator('[data-tl-menu-item]'), `${width}px: the ${overflowName} holds more than Send feedback although every action fits`).toHaveCount(1)
+          await expect(panel.locator('[data-tl-menu-item]'), `${width}px: the ${overflowName} holds more than Send feedback although every action fits`).toHaveCount(1 + (tool.menuExtras?.(width) ?? 0))
           await expect(panel.locator('[data-tl-menu-item="feedback"]')).toBeVisible()
           await page.keyboard.press('Escape')
           await expect(panel).toBeHidden()
           await expect(more).toBeFocused()
         }
         if (inOverflow.length || overflowSelects.length || overflowSliders.length || overflowFields.length) {
-          const more = bar.getByRole('button', { name: overflowName, exact: true })
+          // A tool with a second toolbar folds what does not fit into that one's More.
+          const more = (tool.secondRow ? page.locator('[data-tool-toolbar]').last() : bar).getByRole('button', { name: overflowName, exact: true })
           await expect(more, `${width}px: ${[...inOverflow, ...overflowSelects, ...overflowSliders, ...overflowFields].join(', ')} are off the row and there is no ${overflowName}`).toBeVisible()
           await more.click()
           const panel = page.getByRole('dialog', { name: overflowName })

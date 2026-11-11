@@ -72,7 +72,7 @@ export const HELP_STARTS = Object.freeze([
     opensWith: 'the whole library',
     // What is free and what is capped is stated the same way /plans states it,
     // from the same constant, so the two surfaces cannot disagree.
-    body: `Search the whole library and copy the SVG signed out. Saving your own custom icons is the part that needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons}.`,
+    body: `Search the whole library and copy the SVG signed out. Saving your own custom icons is the part that needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
   }),
   Object.freeze({
     id: 'files',
@@ -99,7 +99,7 @@ export const HELP_ANSWERS = Object.freeze([
     q: 'Do I need an account?',
     // Using a tool is never metered; what the free plan caps is how much you
     // can SAVE. /plans makes the same distinction from the same constants.
-    a: `No. Every tool opens and runs signed out, and using one is never metered. An account lets you save and carry settings to another device. The free plan allows ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons.`,
+    a: `No. Every tool opens and runs signed out, and using one is never metered. An account lets you save and carry settings to another device. The free plan allows ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
   }),
   Object.freeze({
     id: 'cost',
@@ -179,7 +179,7 @@ export const HELP_JOBS = Object.freeze([
     label: 'Find an icon',
     start: startOf('icons'),
     heading: 'Search the whole library and copy the SVG, signed out.',
-    lede: `Saving your own custom icons needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons}.`,
+    lede: `Saving your own custom icons needs an account. The free plan allows ${FREE_SAVE_LIMITS.customIcons} icons per project.`,
     to: startOf('icons').to,
     cta: 'Open the Icon Library',
   }),

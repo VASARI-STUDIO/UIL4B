@@ -172,19 +172,20 @@
 }
 /* One line at every width: the chips scroll sideways instead of wrapping into
    rows. The block padding (and the matching negative margin) keeps the focus
-   ring inside the scroll box, which clips whatever lies outside it. */
+   ring inside the scroll box, which clips whatever lies outside it.
+   The scrolling itself, the edge fade that says there is more and the thin
+   scrollbar come from `.rail-overflow` (global.css), put on the row in the
+   markup. The fade only draws while the row overflows and has more to show on
+   that side, so it is off where all seven chips fit. */
 .ch-spectrum .ch-filters {
+  --rail-fade: 48px;
   display: flex;
   flex-wrap: nowrap;
   gap: 6px;
   min-width: 0;
   margin-block: -6px;
   padding-block: 6px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
 }
-.ch-spectrum .ch-filters::-webkit-scrollbar { display: none; }
 
 .ch-spectrum .ch-filter {
   display: inline-flex;
@@ -363,6 +364,40 @@
      the last 0.3 of a contrast ratio. */
   color: var(--cm-faint);
   white-space: nowrap;
+}
+
+/* The viewer's own card: where it stands, set apart from the credit line by a
+   hairline. The status reads in the full ink and a heavier weight than the
+   category beside it, because it is the one fact on the card that changes. */
+.ch-spectrum .ch-card-own {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cm-line);
+  min-width: 0;
+}
+.ch-spectrum .ch-card-status {
+  font-weight: 500;
+  color: var(--cm-ink);
+  white-space: normal;
+}
+/* Retry and Withdraw share one row and never wrap: each takes half of whatever
+   the card gives them, down to the 150px phone card. */
+.ch-spectrum .ch-card-own-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+}
+.ch-spectrum .ch-card-own-actions .btn {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  min-height: 34px;
+  padding-inline: 8px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
 }
 
 /* The button is the 44px hit area; the dark pill the eye sees is its ::before,
@@ -556,19 +591,15 @@
 }
 
 /* Phone and tablet: the chips take a row of their own and the sort switch sits
-   under them, each one line. The chips fade out at the right edge to show there
-   are more; the end padding lets the last chip scroll clear of the fade. */
+   under them, each one line. The end padding lets the last chip scroll clear of
+   the fade. */
 @media (max-width: 900px) {
   /* nowrap: deferred/account.css still gives `.ch-toolbar` `flex-wrap: wrap`, and
      a wrapping column sizes its line to the chips' full width (660px), which
      pushed the page sideways instead of letting the row scroll. */
   .ch-spectrum .ch-toolbar { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
   .ch-spectrum .ch-sort { align-self: flex-start; }
-  .ch-spectrum .ch-filters {
-    padding-inline-end: 28px;
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
-  }
+  .ch-spectrum .ch-filters { padding-inline-end: var(--rail-fade); }
 }
 
 @media (min-width: 561px) and (max-width: 900px) {
@@ -617,7 +648,9 @@
    heart is 44px at every pointer (see above). */
 @media (pointer: coarse) {
   .ch-spectrum .ch-filter,
-  .ch-spectrum .ch-sort-btn { min-height: 44px; }
+  .ch-spectrum .ch-sort-btn,
+  .ch-spectrum .ch-card-own-actions .btn,
+  .ch-spectrum .ch-queue-row .btn { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

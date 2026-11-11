@@ -19,8 +19,8 @@ import { go, watch } from './helpers.js'
 import { gridColumns } from './icon-grid-rows.js'
 
 const WIDTHS = [390, 768, 1440]
-// Packs a free account opens: the five signed-out sets plus the seven behind login.
-const FREE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
+// Packs a free account opens: the five signed-out sets plus the eleven behind login.
+const FREE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 
 /** What the heading should quote: every name in those snapshots, less Carbon's Pro-only logo-* marks. */
 function expectedFreeTotal() {
@@ -45,7 +45,7 @@ test.describe('the signed-out gate', () => {
     test(`${width}: the heading quotes the real total and two whole blurred rows sit above the band`, async ({ page }) => {
       watch(page, 'a designer who has not signed up yet, reaching the end of the icon grid')
       await openLibrary(page, width)
-      const gate = page.locator('.ig-end[data-gate="anon"]')
+      const gate = page.locator('.geg[data-gate="anon"]')
       await expect(gate).toBeVisible()
 
       const heading = (await gate.getByRole('heading', { level: 2 }).textContent()).trim()
@@ -53,7 +53,7 @@ test.describe('the signed-out gate', () => {
       expect(m, `the gate heading: "${heading}"`).not.toBeNull()
       const quoted = Number(m[1].replace(/,/g, ''))
       expect(quoted, 'the gate quotes the real total').toBeGreaterThanOrEqual(expectedFreeTotal())
-      await expect(gate.locator('.ig-end-p'), 'the sets count stays as secondary text').toContainText('across 12 sets')
+      await expect(gate.locator('.geg-p'), 'the sets count stays as secondary text').toContainText('across 16 sets')
 
       const cols = await gridColumns(page)
       const tease = page.locator('.ig-end-tease')
@@ -62,7 +62,7 @@ test.describe('the signed-out gate', () => {
       expect([...new Set(tops)].length, 'the cells sit on exactly two rows').toBe(2)
       const aboveBand = await page.evaluate(() => {
         const t = document.querySelector('.ig-end-tease').getBoundingClientRect()
-        const b = document.querySelector('.ig-end-band').getBoundingClientRect()
+        const b = document.querySelector('.geg-band').getBoundingClientRect()
         return b.top >= t.top && b.top < t.bottom + 1
       })
       expect(aboveBand, 'the band comes after the rows (it rises into their faded foot)').toBe(true)

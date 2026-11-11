@@ -14,8 +14,17 @@ import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 import { onAccountApplied } from '../utils/accountEvents'
 import { projectSnapshot } from '../utils/designPatch'
+import { PARKED_KEY, PARKED_SHELF_KEY, dropParked, parkIfAtRisk, putBack, readParked, readShelf, takeParked } from '../utils/parkedDesign'
+import { SESSION_AUTH, SESSION_DONE, SESSION_ON, markSession, readSession, stampEdited } from '../utils/kitSession'
+import { editKey } from '../utils/brandKitChooser'
+import { addSavedColour } from '../utils/savedColours'
+import { countUnknownError } from '../utils/projectCount'
 
 const ProjectContext = createContext()
+
+// What the toast says when unsaved work has been moved out of the way.
+const PUT_ASIDE = 'Started a new brand kit. Your last one is in Your workspace.'
+const PUT_ASIDE_OPENED = 'Your unsaved brand kit is in Your workspace.'
 
 const CURRENT_KEY = 'vs-current-design'
 const PROJECTS_KEY = 'vs-projects'
@@ -93,6 +102,19 @@ function newId() {
 // localStorage, and what to put on screen when either one fails.
 const PUSH_DEBOUNCE_MS = 1500
 
+// A network step of the account's pull (a read, or the migration) that has not answered by now takes the
+// failure path. The pull can take several steps, so the limit is per step. Until the pull answers, New
+// project waits on a device with no copy and saves wait on the count.
+const PULL_TIMEOUT_MS = 15000
+
+function withTimeout(promise, ms) {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Reading the account’s projects timed out')), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
 // The channel this provider reports into. See src/utils/syncStatus.js.
 const SYNC_CHANNEL = 'projects'
 
@@ -118,7 +140,7 @@ function conflictMessage(replaced, removed) {
 }
 
 export function ProjectProvider({ children }) {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { plan } = useSubscription()
   const userKey = user?.email?.toLowerCase() || null
 
@@ -145,11 +167,41 @@ export function ProjectProvider({ children }) {
   // device with no local copy of an account's projects has an empty list until
   // then, so "no such project" cannot be said before it (see projectsLoading).
   const [pulledUid, setPulledUid] = useState(null)
+  // The account whose list was READ, and merged into this device's copy. The count a cap
+  // is checked against is the account's only from then on (see projectCountKnown).
+  const [countedUid, setCountedUid] = useState(null)
+  // Signing out forgets both, so the same account signing back in starts unread again.
+  useEffect(() => {
+    if (!uid) { setPulledUid(null); setCountedUid(null) }
+  }, [uid])
+
+  // The working design as the last write left it. A replace (reset, open a
+  // project) sets it at once, so a second call in the same tick checks the
+  // design that is really there and not the previous render's.
+  const designRef = useRef(design)
 
   // Auto-persist current design
+  // "Last edited" is stamped when the design's work changes (see editKey), never
+  // on the first run: opening the app is not an edit, nor is the board restating it.
+  const persistedRef = useRef(null)
   useEffect(() => {
+    designRef.current = design
+    const text = editKey(design)
+    if (persistedRef.current !== null && persistedRef.current !== text) stampEdited()
+    persistedRef.current = text
     saveCurrent(design)
   }, [design])
+
+  // A sign-in or sign-out in this tab reopens the brand kit question. The first
+  // settled answer from the auth provider is the session being restored, not a
+  // change, so only a later change of account counts.
+  const settledAuthRef = useRef({ seen: false, key: null })
+  useEffect(() => {
+    if (authLoading) return
+    const settled = settledAuthRef.current
+    if (!settled.seen) { settledAuthRef.current = { seen: true, key: userKey }; return }
+    if (settled.key !== userKey) { settled.key = userKey; markSession(SESSION_AUTH) }
+  }, [authLoading, userKey])
 
   // The working design follows the account: when the
   // account's copy is written into storage — at sign-in on a second device, or
@@ -204,8 +256,78 @@ export function ProjectProvider({ children }) {
     updateDesign({ gradient: patch })
   }, [updateDesign])
 
+  // Take a parked design back as the working design, exactly as it was parked.
+  // A tool reads the design once, as it opens, so `restoredCount` goes up and
+  // the Create tool on screen opens again on it (see CreateTool).
+  // `onRestore(design)` is for a screen that needs to tidy up after that (the
+  // palette board drops the shared link's colours from the address).
+  const [restoredCount, setRestoredCount] = useState(0)
+  // Open the Create tool on screen again on the working design, as it is now.
+  const remountTool = useCallback(() => setRestoredCount((n) => n + 1), [])
+  // The slot that holds work put aside, mirrored here so a screen can show it.
+  const [parked, setParkedSlot] = useState(() => { try { return readParked(localStorage) } catch { return null } })
+  // How many more kits wait behind the one shown (see parkedDesign's shelf).
+  const [parkedMore, setParkedMore] = useState(() => { try { return readShelf(localStorage).length } catch { return 0 } })
+  const setParked = useCallback((slot) => {
+    setParkedSlot(slot)
+    try { setParkedMore(readShelf(localStorage).length) } catch { setParkedMore(0) }
+  }, [])
+  useEffect(() => onAccountApplied([PARKED_KEY, PARKED_SHELF_KEY], () => { try { setParked(readParked(localStorage)) } catch { setParked(null) } }), [setParked])
+  const restoreParked = useCallback((slot, onRestore) => {
+    let restored = null
+    try { restored = takeParked(slot, localStorage) } catch { /* storage blocked */ }
+    if (!restored) return
+    designRef.current = restored
+    setDesign(restored)
+    try { setParked(readParked(localStorage)) } catch { setParked(null) }
+    stampEdited()
+    onRestore?.(restored)
+    setRestoredCount((n) => n + 1)
+  }, [setParked])
+
+  // Before the working design is replaced: if it holds work nobody has saved,
+  // put it in the parking slot and say so, with a button that brings it back.
+  // `message` and `label` word the toast. Returns true when it was parked now.
+  // Parking never creates a project, so it never meets the project cap.
+  const parkWorkingDesign = useCallback(({ message = PUT_ASIDE, label = 'Undo', onRestore } = {}, list) => {
+    let parked = { slot: null, fresh: false }
+    try {
+      parked = parkIfAtRisk({
+        design: designRef.current,
+        projects: list || allProjects[userKey] || [],
+        storage: localStorage,
+      })
+    } catch { /* storage blocked: nothing can be parked, the replace goes ahead as before */ }
+    if (!parked.slot || !parked.fresh) {
+      // A write that failed part way may still have moved a kit; show storage as it is.
+      try { setParked(readParked(localStorage)) } catch { /* storage blocked */ }
+      return false
+    }
+    const { slot } = parked
+    setParked(slot)
+    window.dispatchEvent(new CustomEvent('uil4b:toast', {
+      detail: { message, type: 'info', action: { label, onAction: () => restoreParked(slot, onRestore) } },
+    }))
+    return true
+  }, [allProjects, userKey, restoreParked, setParked])
+
+  // True from sign-in until the account's projects have been read once. The
+  // list above may be missing projects that exist on the account until then.
+  const projectsLoading = !!uid && pulledUid !== uid
+  // Whether the number of projects on this device can be used for the cap. It can once the
+  // account's list was read, and for a device that already holds a copy of the account, whether
+  // the read is still running or failed (a returning session keeps saving against the cached
+  // count, and the merge that follows only ever blocks the NEXT new project, never removes one).
+  // A device with no copy has an empty list that says nothing about the account.
+  const hasDeviceCopy = (allProjects[userKey] || []).length > 0
+  const projectCountKnown = !uid || countedUid === uid || hasDeviceCopy
+  // No cached copy and the account has not answered yet: a new project has to wait.
+  const projectCountPending = projectsLoading && !projectCountKnown
+
   const saveProject = useCallback((name, opts = {}) => {
     if (!userKey) throw new Error('Sign in to save projects')
+    // A new project takes a slot, and the slots taken are the account's, not this device's.
+    if (!projectCountKnown) throw countUnknownError(projectsLoading)
     // Free-tier cap: block a NEW save once the allowance is reached. Never
     // touches existing projects (non-destructive) and never blocks sync merges.
     const current = allProjects[userKey] || []
@@ -213,7 +335,7 @@ export function ProjectProvider({ children }) {
       throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
     }
     const id = newId()
-    const base = opts.blank ? DEFAULT_DESIGN : design
+    const base = opts.blank ? DEFAULT_DESIGN : (opts.from || design)
     // `identityName` and `patch` fold a caller's same-event changes into the
     // saved copy (see utils/designPatch.js).
     const snapshot = projectSnapshot(base, opts)
@@ -236,9 +358,12 @@ export function ProjectProvider({ children }) {
     // `opts.blank` creates an empty shell, which is a container, not work.
     if (!opts.blank) {
       try { trackActivation('project', 'save') } catch { /* never break a save */ }
+      // The working design now IS this project: it carries the same changes the
+      // saved copy was given, and remembers where it came from.
+      if (!opts.from) setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
     }
     return id
-  }, [design, userKey, allProjects, projectLimit])
+  }, [design, userKey, allProjects, projectLimit, projectCountKnown, projectsLoading])
 
   /**
    * Copy a project, cap and all.
@@ -256,6 +381,7 @@ export function ProjectProvider({ children }) {
    */
   const duplicateProject = useCallback((id) => {
     if (!userKey) throw new Error('Sign in to save projects')
+    // No known-count check as in saveProject(): the source is in this list, so the list has been read.
     const current = allProjects[userKey] || []
     if (current.length >= projectLimit) {
       throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
@@ -267,6 +393,7 @@ export function ProjectProvider({ children }) {
       id: newId(),
       name: `${source.name} copy`,
       design: JSON.parse(JSON.stringify(source.design)),
+      ...(source.savedColors ? { savedColors: JSON.parse(JSON.stringify(source.savedColors)) } : null),
       createdAt: now,
       updatedAt: now,
     }
@@ -295,32 +422,74 @@ export function ProjectProvider({ children }) {
     })
   }, [userKey])
 
+  // Keep one colour on an existing project (see utils/savedColours.js). It adds
+  // to a project that is already there, so it never takes a project slot and
+  // does not meet the cap. A colour already on the project changes nothing.
+  // Returns { added, hex }.
+  const saveColourToProject = useCallback((id, hex, name) => {
+    if (!userKey) throw new Error('Sign in to save projects')
+    const project = (allProjects[userKey] || []).find((p) => p.id === id)
+    if (!project) throw new Error('That project no longer exists')
+    const at = new Date().toISOString()
+    const result = addSavedColour(project.savedColors, hex, { name, at })
+    if (!result.added) return { added: false, hex: result.hex }
+    setAllProjects(prev => {
+      const next = {
+        ...prev,
+        [userKey]: (prev[userKey] || []).map(p => p.id === id
+          // `colorsAt`, not `updatedAt`: a saved colour is not an edit to the design, so it must not
+          // outrank another device's design edit in the newest-wins merge (projectSync unions the
+          // colours by hex instead).
+          ? { ...p, savedColors: addSavedColour(p.savedColors, hex, { name, at }).list, colorsAt: at }
+          : p),
+      }
+      saveAllProjects(next)
+      return next
+    })
+    return { added: true, hex: result.hex }
+  }, [userKey, allProjects])
+
   const renameProject = useCallback((id, name) => {
     updateProject(id, { name: name.trim() })
   }, [updateProject])
 
-  const overwriteProject = useCallback((id) => {
+  // `opts` folds a caller's same-event changes into the saved copy, as saveProject does.
+  const overwriteProject = useCallback((id, opts = {}) => {
     if (!userKey) return
     setAllProjects(prev => {
       const list = prev[userKey] || []
       const next = list.map(p => p.id === id
-        ? { ...p, design: JSON.parse(JSON.stringify(design)), updatedAt: new Date().toISOString() }
+        ? { ...p, design: JSON.parse(JSON.stringify(projectSnapshot(design, opts))), updatedAt: new Date().toISOString() }
         : p
       )
       const updated = { ...prev, [userKey]: next }
       saveAllProjects(updated)
       return updated
     })
+    setDesign(prev => ({ ...projectSnapshot(prev, opts), source: { projectId: id } }))
   }, [design, userKey])
 
+  // Open a saved project as the working design. Unsaved work already on the
+  // board is parked first. Returns true when it was parked (so a caller with a
+  // toast of its own can leave it to this one), false when nothing was, and null
+  // when there is no such project to open (signed out, deleted, or not yet pulled
+  // to this device).
   const loadProject = useCallback((id) => {
-    if (!userKey) return
+    if (!userKey) return null
     const list = allProjects[userKey] || []
     const project = list.find(p => p.id === id)
-    if (project) {
-      setDesign({ ...DEFAULT_DESIGN, ...project.design })
-    }
-  }, [allProjects, userKey])
+    if (!project) return null
+    const parked = parkWorkingDesign({ message: `Opened ${project.name}. ${PUT_ASIDE_OPENED}` }, list)
+    const next = { ...DEFAULT_DESIGN, ...project.design, source: { projectId: id } }
+    designRef.current = next
+    setDesign(next)
+    // Opening a project answers the brand kit question, and counts as an edit
+    // now so the screen it opens on does not read the design as old. A kit just
+    // finished keeps its mark: its export page opens it, and the next press asks.
+    stampEdited()
+    if (readSession() !== SESSION_DONE) markSession(SESSION_ON)
+    return parked
+  }, [allProjects, userKey, parkWorkingDesign])
 
   /**
    * Delete, and RECORD THE DELETE.
@@ -352,9 +521,43 @@ export function ProjectProvider({ children }) {
     })
   }, [userKey])
 
-  const resetDesign = useCallback(() => {
+  const resetDesign = useCallback((toast) => {
+    parkWorkingDesign(toast)
+    designRef.current = DEFAULT_DESIGN
     setDesign(DEFAULT_DESIGN)
-  }, [])
+    stampEdited()
+    markSession(SESSION_ON)
+  }, [parkWorkingDesign])
+
+  // The parked brand kit, from Your workspace. Continue takes it back as the
+  // working design (the board's own work goes into the slot if it is at risk),
+  // Discard empties the slot and hands it back so the caller can offer Undo.
+  const continueParked = useCallback(() => {
+    const slot = readParked(localStorage)
+    if (!slot) return null
+    try { dropParked(localStorage) } catch { /* storage blocked */ }
+    try { parkIfAtRisk({ design: designRef.current, projects: allProjects[userKey] || [], storage: localStorage }) } catch { /* storage blocked */ }
+    try { setParked(readParked(localStorage)) } catch { setParked(null) }
+    designRef.current = slot.design
+    setDesign(slot.design)
+    stampEdited()
+    markSession(SESSION_ON)
+    remountTool()
+    return slot.design
+  }, [allProjects, userKey, remountTool, setParked])
+  // A kit waiting behind it moves into the slot. putBackParked (the Undo) puts
+  // the kit back beside anything parked since, never over it.
+  const discardParked = useCallback(() => {
+    const slot = readParked(localStorage)
+    try { dropParked(localStorage) } catch { /* storage blocked or full: shown as it is below */ }
+    try { setParked(readParked(localStorage)) } catch { setParked(null) }
+    return slot
+  }, [setParked])
+  const putBackParked = useCallback((slot) => {
+    if (!slot) return
+    try { putBack(slot, localStorage) } catch { /* storage blocked */ }
+    try { setParked(readParked(localStorage)) } catch { /* storage blocked */ }
+  }, [setParked])
 
   const archiveProject = useCallback((id) => {
     if (!userKey) return
@@ -432,7 +635,7 @@ export function ProjectProvider({ children }) {
     try {
       const fs = await loadFirestore()
       if (signal?.cancelled) return
-      const remote = await pullRemoteProjects(fs, uid)
+      const remote = await pullRemoteProjects(fs, uid, { step: (promise) => withTimeout(promise, PULL_TIMEOUT_MS) })
       if (signal?.cancelled) return
       storedRef.current = remote.stored instanceof Map ? remote.stored : new Map()
 
@@ -454,6 +657,7 @@ export function ProjectProvider({ children }) {
           return next
         })
       }
+      setCountedUid(uid)
       const nextTombstones = mergeTombstones(localTombstones, merged.tombstones)
       if (JSON.stringify(nextTombstones) !== JSON.stringify(localTombstones)) {
         setAllTombstones(prev => {
@@ -476,6 +680,7 @@ export function ProjectProvider({ children }) {
       }
       reportSyncOk(SYNC_CHANNEL)
     } catch (error) {
+      if (signal?.cancelled) return
       reportSyncFailure(SYNC_CHANNEL, syncFailureMessage(classifyError(error)), retry)
     } finally {
       if (!signal?.cancelled) {
@@ -565,9 +770,9 @@ export function ProjectProvider({ children }) {
     design,
     projects,
     canSaveProjects: !!userKey,
-    // True from sign-in until the account's projects have been read once. The
-    // list above may be missing projects that exist on the account until then.
-    projectsLoading: !!uid && pulledUid !== uid,
+    projectsLoading,
+    projectCountKnown,
+    projectCountPending,
     projectLimit,
     atProjectLimit: (allProjects[userKey] || []).length >= projectLimit,
     setPalette,
@@ -584,11 +789,20 @@ export function ProjectProvider({ children }) {
     // it. An icon write passes { touch: false } and stamps `iconAt` instead of `updatedAt`, so
     // choosing an icon never changes when a project was last edited.
     updateProject,
+    saveColourToProject,
     renameProject,
     loadProject,
     deleteProject,
     archiveProject,
     resetDesign,
+    parkWorkingDesign,
+    restoredCount,
+    remountTool,
+    parked,
+    parkedMore,
+    continueParked,
+    discardParked,
+    putBackParked,
   }
 
   return (

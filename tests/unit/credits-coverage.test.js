@@ -290,7 +290,7 @@ test('jszip’s dual licence is ELECTED on the page, not merely restated', () =>
   assert.ok(row, 'jszip is no longer a dependency — if it really went, delete this test with it')
   assert.match(row.licence, /MIT OR GPL/, `jszip now declares "${row.licence}"`)
   assert.match(CREDITS_PAGE, /jszip: '[^']*\bMIT\b[^']*'/,
-    'Credits.jsx no longer states which half of jszip’s dual licence UIL4B elects')
+    'Credits.jsx no longer states which half of jszip’s dual licence UI L4B elects')
   assert.match(CREDITS_PAGE, /jszip: '[^']*elects[^']*'/,
     'the jszip note no longer says the election is a choice we made')
 })
@@ -403,4 +403,33 @@ test('every colour system Nearest match compares against is credited, with its o
     'Credits.jsx no longer reads the colour systems from the registry the build uses')
   assert.match(read('src/data/nearest/index.js'), new RegExp(`id: "${registry.systems.at(-1).id}"`),
     'the shipped nearest-match index and the registry disagree')
+})
+
+test('every engine fetched from jsDelivr is credited, beside the file that pins it', () => {
+  // [package as it appears in the CDN URL, row name on /credits, file that pins it]
+  const engines = [
+    ['@ffmpeg/core@', 'FFmpeg (WebAssembly build)', 'src/utils/ffmpegEngine.js'],
+    ['occt-import-js@', 'occt-import-js', 'src/utils/cadEngine.js'],
+    ['web-ifc@', 'web-ifc', 'src/utils/ifcEngine.js'],
+    ['rhino3dm@', 'rhino3dm', 'src/utils/mesh/rhino.js'],
+    ['meshoptimizer@', 'meshoptimizer', 'src/utils/mesh/meshopt.js'],
+  ]
+  for (const [pkg, name, file] of engines) {
+    assert.ok(read(file).includes(`cdn.jsdelivr.net/npm/${pkg}`),
+      `${file} no longer fetches ${pkg} from jsDelivr, so its /credits row may be stale`)
+    const row = CREDITS_PAGE.match(new RegExp(`name: '${name.replace(/[()]/g, '\\$&')}'[^}]*`))
+    assert.ok(row, `Credits.jsx does not credit ${name}`)
+    assert.ok(row[0].includes(`checkedIn: '${file}'`), `the ${name} row no longer names ${file}`)
+  }
+  // The ffmpeg.wasm build is configured with --enable-gpl, so the MIT wrapper
+  // must not be the only licence the page shows for it.
+  assert.match(CREDITS_PAGE, /licenceName: 'GPL-2\.0-or-later'/, 'the FFmpeg binary is not credited as GPL')
+  assert.match(CREDITS_PAGE, /'@ffmpeg\/core': '[^']*GPL/, 'the @ffmpeg/core package row no longer points at the GPL binary')
+})
+
+test('Switzer, the one non-OFL face this site serves, is credited', () => {
+  assert.match(read('scripts/fetch-switzer.mjs'), /fontshare/i,
+    'fetch-switzer.mjs no longer fetches from Fontshare, so the Switzer credit may be stale')
+  assert.match(CREDITS_PAGE, /name: 'Switzer'[^}]*licenceUrl: 'https:\/\/www\.fontshare\.com\/licenses\/itf-ffl'/s,
+    'Credits.jsx no longer credits Switzer with its licence link')
 })

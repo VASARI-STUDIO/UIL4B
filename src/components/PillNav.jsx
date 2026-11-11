@@ -13,7 +13,10 @@ import usePopover from '../hooks/usePopover'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useExportDesign from '../hooks/useExportDesign'
 import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
-import { guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
+import { BRAND_KIT_STEPS, guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
+import { chooserDecision, workingStatus } from '../utils/brandKitChooser'
+import { SESSION_DONE, SESSION_ON, markSession, readEditedAt, readSession } from '../utils/kitSession'
+import { hasPendingSave } from '../utils/pendingSave'
 import { getRecentIcons } from '../utils/recentIcons'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -49,6 +52,7 @@ const CommandPalette = lazy(() => import('./CommandPalette'))
 const ExportDialog = lazy(() => import('./export/ExportDialog'))
 const DiscoverCounts = lazy(() => import('./nav/DiscoverCounts'))
 const DiscoverRecommended = lazy(() => import('./nav/DiscoverRecommended'))
+const LearnRecommended = lazy(() => import('./nav/LearnRecommended'))
 
 // THE APP HEADER — `UIL4B App.dc.html` lines 100-216, rebuilt to the file.
 //
@@ -293,7 +297,7 @@ function ExportPreview() {
         </div>
         <div className="pnav-prev-foot">
           <span>Colour</span>
-          <span>Made with UIL4B</span>
+          <span>Made with UI L4B</span>
         </div>
       </div>
     </div>
@@ -334,8 +338,28 @@ function AppHeader() {
   })
   const launchBrandKit = () => {
     closeAll()
+    // Coming back to a kit after a gap asks first (the chooser on step one), even
+    // when the walkthrough is already running and would resume.
+    const chooser = chooserDecision({
+      status: workingStatus(design, projects),
+      arrival: 'brand-kit',
+      flagActive: isGuideActive(),
+      editedAt: readEditedAt(),
+      session: readSession(),
+      pendingSave: hasPendingSave(),
+    })
+    // A kit that is not asked about this time is the answer for this tab.
+    if (chooser.eligible && !chooser.show && readSession() !== SESSION_DONE) markSession(SESSION_ON)
     startGuide()
-    navigate(brandKitEntry.path, { state: brandKitEntry.resume ? null : { openBrandKitCard: true } })
+    const toFirstStep = chooser.show || !brandKitEntry.resume
+    const target = chooser.show ? BRAND_KIT_STEPS[0].path : brandKitEntry.path
+    // Only the first step reads the arrival marker.
+    const arrives = target === BRAND_KIT_STEPS[0].path
+    navigate(target, {
+      state: toFirstStep || arrives
+        ? { ...(arrives ? { brandKitArrival: true } : null), ...(toFirstStep ? { openBrandKitCard: true } : null) }
+        : null,
+    })
   }
   const path = (location.pathname || '/').replace(/\/+$/, '') || '/'
   const isSalesPage = SALES_PATHS.has(path)
@@ -1022,6 +1046,11 @@ function AppHeader() {
                     <DiscoverRecommended path={path} onPick={closeAll} />
                   </Suspense>
                 )}
+                {section.id === 'learn' && (
+                  <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                    <LearnRecommended path={path} onPick={closeAll} />
+                  </Suspense>
+                )}
                 {section.id === 'create' ? (
                   <button type="button" className="pnav-acc-cta" onClick={launchBrandKit}>
                     {brandKitEntry.resume ? `Resume: ${brandKitEntry.step.label}` : promo.cta}
@@ -1109,6 +1138,7 @@ function AppHeader() {
       <PhoneTabBar
         signedIn={!!user}
         loading={accountPending}
+        sheetSection={sheet ? sheetSection : null}
         createOpen={sheet && sheetSection === 'create'}
         onCreate={() => openSheetAt('create')}
         accountOpen={sheet && sheetSection === 'account'}
@@ -1293,6 +1323,11 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             {t.mins && <span className="pnav-tool-mins">{t.mins}</span>}
                             {t.soon && <span className="soon-badge">Soon</span>}
                             {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
+                            {isHere(t) && (
+                              <span className="pnav-tool-here" aria-hidden="true">
+                                <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
+                              </span>
+                            )}
                           </Link>
                         </li>
                         )
@@ -1317,6 +1352,13 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                 </Suspense>
                 <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
                   <DiscoverRecommended path={path} onPick={onPick} />
+                </Suspense>
+              </div>
+            )}
+            {section.id === 'learn' && (
+              <div className="pnav-dside">
+                <Suspense fallback={<div className="pnav-reco pnav-reco--wait" />}>
+                  <LearnRecommended path={path} onPick={onPick} />
                 </Suspense>
               </div>
             )}

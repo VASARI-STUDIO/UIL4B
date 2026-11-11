@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { openFirebaseGate } from '../utils/firebaseAccess'
 import { Link } from 'react-router-dom'
 import { ToolLayout, ToolGrid, ToolMain, ToolPanel, ToolSection } from '../components/tool/ToolLayout'
 import { useAuth } from '../contexts/AuthContext'
@@ -21,6 +22,7 @@ import {
   MAX_PROMPT_CHARS,
   MIN_PROMPT_CHARS,
   allowanceSentence,
+  signedOutAllowanceSentence,
   exhaustedMessage,
   generationAllowance,
   generationsRemaining,
@@ -258,7 +260,7 @@ function ladder(base, ratio) {
  * behaviour. The default export below is what wires the real token getter, and
  * tests/unit/ai-generation-truth.test.js asserts that it does.
  */
-export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount, toast, aside = null, sample = null }) {
+export function BrandStarterWorkbench({ planId = 'free', signedOut = false, getToken, ensureAccount, toast, aside = null, sample = null }) {
   const online = useOnline()
   const [brief, setBrief] = useState('')
   const [status, setStatus] = useState('idle') // idle | working | done | error
@@ -407,7 +409,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
           dropzone rather than beside the button. */}
       <p className="bs-allowance" data-testid="brand-starter-allowance">
         <span className="bs-allowance-plan">{planId === 'pro' ? 'Pro' : 'Free'}</span>
-        <span className="bs-allowance-figure">{allowanceSentence(planId)}</span>
+        <span className="bs-allowance-figure">{signedOut ? signedOutAllowanceSentence() : allowanceSentence(planId)}</span>
         {server && (
           <span className="bs-allowance-left" data-testid="brand-starter-remaining">
             {remaining} left
@@ -668,11 +670,13 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount
  * Firebase ID token.
  */
 export default function BrandStarter({ toast }) {
+  // This tool needs an account, and the page already loads the SDK: let the session restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const { plan } = useSubscription()
   // Decides only whether the EXAMPLE is worth showing. A signed-in visitor gets
   // the workbench alone and does not need a sample of what they are about to
   // generate.
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   // The tool opens signed out: the brief is written without an account, and
   // one is asked for when Generate is pressed, because a generation is metered
@@ -697,6 +701,7 @@ export default function BrandStarter({ toast }) {
     >
       <BrandStarterWorkbench
         planId={plan?.id || 'free'}
+        signedOut={!user && !authLoading}
         getToken={() => firebaseAuth.currentUser?.getIdToken()}
         ensureAccount={ensureAccount}
         toast={toast}

@@ -11,8 +11,9 @@
 //   checkout_started     the embedded Stripe checkout asked for a session
 //   upgrade_gate_shown   any Pro gate opened (one event, a gate id)
 //
-// "first_" events fire once per browser (localStorage), so they count people,
-// not clicks.
+// "first_" events fire once per tab, remembered in memory only. Nothing is
+// written to the device for them, so they need no consent; the cost is that a
+// returning visitor in a new tab counts again.
 //
 // NO PII, BY CONSTRUCTION. Properties pass an allowlist of keys, every value
 // is a short string, number or boolean, and a string that looks like an email
@@ -71,18 +72,30 @@ export function sendEvent(name, props, { send = track } = {}) {
   }
 }
 
-function localStore() {
-  try { return window.localStorage } catch { return null }
+const sentThisTab = new Set()
+
+// Earlier builds kept a `uil4b-event-once:` marker per event in localStorage.
+// They are removed once per tab, so no browser keeps one.
+const OLD_MARKER = 'uil4b-event-once:'
+let oldMarkersCleared = false
+export function clearOldMarkers(storage = null) {
+  if (oldMarkersCleared && !storage) return
+  oldMarkersCleared = true
+  try {
+    const store = storage || window.localStorage
+    for (let i = store.length - 1; i >= 0; i--) {
+      const key = store.key(i)
+      if (key && key.startsWith(OLD_MARKER)) store.removeItem(key)
+    }
+  } catch {
+    // Storage blocked or absent: there is nothing to remove.
+  }
 }
 
-/** Once per browser. Returns whether it sent. */
-export function sendOnce(name, props, { storage = localStore(), send = track } = {}) {
-  const key = `uil4b-event-once:${name}`
-  try {
-    if (!storage || storage.getItem(key)) return false
-    storage.setItem(key, '1')
-  } catch {
-    return false
-  }
+/** Once per tab. Returns whether it sent. */
+export function sendOnce(name, props, { seen = sentThisTab, send = track } = {}) {
+  clearOldMarkers()
+  if (seen.has(name)) return false
+  seen.add(name)
   return sendEvent(name, props, { send })
 }

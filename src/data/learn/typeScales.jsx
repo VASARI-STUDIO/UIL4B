@@ -151,7 +151,7 @@ css       = clamp(minRem, interceptRem + slopeVw, maxRem)`}</Formula>
           100. <code>clamp()</code> pins the ends. That stops a 375px anchor from
           shrinking further on a 320px phone. A heading that runs from 24px at 375
           to 40px at 1440 comes out as{' '}
-          <code>clamp(1.5rem, 1.1479rem + 0.0939vw, 2.5rem)</code>. It resolves to
+          <code>clamp(1.5rem, 1.1479rem + 1.5023vw, 2.5rem)</code>. It resolves to
           29.9px at a 768px viewport.
         </p>
 
@@ -168,7 +168,7 @@ css       = clamp(minRem, interceptRem + slopeVw, maxRem)`}</Formula>
         <p>
           A preferred value made only of <code>vw</code> does not respond to the
           reader&rsquo;s default font size at all. An example is <code>4vw</code>,
-          in place of <code>1.1479rem + 0.0939vw</code>. Someone who has raised
+          in place of <code>1.1479rem + 1.5023vw</code>. Someone who has raised
           their default to 24px sees the same pixels as everyone else, because
           nothing in the expression is relative to the root size. Keep the
           intercept in <code>rem</code>. Then the whole line shifts when the root

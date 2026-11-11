@@ -1,3 +1,4 @@
+import { Fragment, useId } from 'react'
 import { Link } from 'react-router-dom'
 
 // THE LICENCE CREDITS FOR THE ICON SETS ON SCREEN, as the footer's notice row.
@@ -14,20 +15,27 @@ import { Link } from 'react-router-dom'
 // rows (the Emoji tab, the Groups index) there is nothing to credit and the row
 // is not drawn; /credits is still one of the footer's Legal links.
 export default function IconCredits({ rows, scope = 'page' }) {
+  const newTabId = useId()
   if (!rows || rows.length === 0) return null
   return (
     <div className="sp-footer-notice">
       <p className="sp-footer-notice-h">{scope === 'group' ? 'Icon sets in this group' : 'Icon sets on this page'}</p>
       <p className="sp-footer-notice-list">
         {rows.map((row, i) => (
-          <span key={row.prefix}>
-            <a href={row.url} target="_blank" rel="noopener noreferrer">{row.name}</a>
-            {` (${row.licenceName})`}
-            {i < rows.length - 1 ? ', ' : '. '}
-          </span>
+          <Fragment key={row.prefix}>
+            {/* One set and its licence never split; the space after it is the break. */}
+            <span className="sp-footer-notice-item">
+              <a href={row.url} target="_blank" rel="noopener noreferrer" aria-describedby={newTabId}>{row.name}</a>
+              {` (${row.licenceName})`}
+              {i < rows.length - 1 ? ',' : '.'}
+            </span>
+            {' '}
+          </Fragment>
         ))}
         <Link to="/credits">Every licence in full</Link>
       </p>
+      {/* Each set's link opens its own site in a new tab; said once, as the links' description. */}
+      <span id={newTabId} hidden>Opens in a new tab</span>
     </div>
   )
 }

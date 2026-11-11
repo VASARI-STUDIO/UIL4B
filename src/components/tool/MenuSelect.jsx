@@ -28,7 +28,10 @@ const proMark = mark => <span className="menu-select-mark">{mark === 'Pro' && <T
 // `placeholder` is the trigger's text while no row matches `value`: the control
 // then reads as a command ("Jump to section") rather than as a current choice,
 // and its spoken name is the label alone.
-export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote, placeholder }) {
+// `triggerLabel` is the trigger's visible text when the control is an action
+// that takes a value (Rewrite, with the current length ticked in the list):
+// the list still marks `value`, and the spoken name still ends with it.
+export default function MenuSelect({ label, value, options, children, onChange, ariaLabel, 'aria-label': ariaName, className = '', disabled, id, toolbar = false, footnote, placeholder, triggerLabel }) {
   const uid = useId()
   const triggerId = id || `select-${uid}`
   const listId = `${triggerId}-list`
@@ -49,14 +52,15 @@ export default function MenuSelect({ label, value, options, children, onChange, 
   const headRef = useRef(null)
   // Under 768px the list is a bottom sheet (global.css) and gets a header.
   const phone = useMediaQuery('(max-width: 767px)')
-  const { triggerRef, popRef } = usePopover(open, () => {
-    triggerRef.current?.focus({ preventScroll: true })
-    setOpen(false)
-  }, { autoFocus: false })
+  // usePopover calls this on an outside press or a Tab out. It needs the trigger
+  // ref the hook itself returns, so it reaches `close` through a ref set below.
+  const closeRef = useRef(null)
+  const { triggerRef, popRef } = usePopover(open, () => closeRef.current?.(), { autoFocus: false })
   const close = () => {
     triggerRef.current?.focus({ preventScroll: true })
     setOpen(false)
   }
+  useEffect(() => { closeRef.current = close })
   const show = () => {
     if (disabled) return
     setActive(selectedOptionIndex(value, rows))
@@ -194,7 +198,7 @@ export default function MenuSelect({ label, value, options, children, onChange, 
       }}>
       {toolbar && <span className="tl-select-k">{label}</span>}
       {toolbar && current?.triggerIcon}
-      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{toolbar && current?.short ? current.short : currentLabel}</span>
+      <span className={toolbar ? 'tl-select-v' : 'menu-select-text'}>{triggerLabel ?? (toolbar && current?.short ? current.short : currentLabel)}</span>
       <ToolIcon name="caret-up-down" size={13} className={toolbar ? 'tl-select-caret' : 'menu-select-caret'} />
     </button>
     {open && !disabled && createPortal(<>

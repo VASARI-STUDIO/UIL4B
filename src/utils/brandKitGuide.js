@@ -207,7 +207,7 @@ export function stepArtefacts(design) {
  * `partsPresent` reads, and a shallow spread would leave `{ palette: null }`
  * as null.
  */
-function withDefaults(design) {
+export function withDefaults(design) {
   const d = design && typeof design === 'object' ? design : {}
   const out = { ...DEFAULT_DESIGN, ...d }
   for (const key of ['palette', 'fonts', 'typeScale', 'tints']) {
@@ -380,6 +380,20 @@ export function acceptStep(id, storage) {
   const flag = readFlag(storage)
   if (!flag.active || !stepById(id) || flag.accepted.includes(id)) return flag.accepted
   const next = BRAND_KIT_STEPS.map((s) => s.id).filter((s) => s === id || flag.accepted.includes(s))
+  writeFlag(next, storage)
+  return next
+}
+
+/**
+ * Put back a set of steps moved past, in flow order, while the flow runs. Undo
+ * after starting a new kit uses it, so the kit it brings back has its ticks too.
+ * Unknown ids are dropped. Returns the steps now recorded.
+ */
+export function restoreAcceptedSteps(ids, storage) {
+  const flag = readFlag(storage)
+  if (!flag.active) return flag.accepted
+  const keep = new Set(Array.isArray(ids) ? ids : [])
+  const next = BRAND_KIT_STEPS.map((s) => s.id).filter((id) => keep.has(id))
   writeFlag(next, storage)
   return next
 }

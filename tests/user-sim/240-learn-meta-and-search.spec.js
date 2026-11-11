@@ -55,7 +55,7 @@ for (const vp of WIDTHS) {
     const page = await ctx.newPage()
     watch(page, 'a visitor who followed a dead link on a phone')
     await go(page, '/no-such-page-for-trail-check')
-    await expect(page.locator('.nf-more .trail-item')).toHaveCount(3)
+    await expect(page.locator('.nf-more .trail-item')).toHaveCount(4)
     // The separators are drawn by the stylesheet, so no dot is text in the row:
     // a dot typed between the links cannot be told apart from a link at a wrap.
     expect(await page.locator('.nf-more').innerText(), 'a separator dot is typed into the link row').not.toContain('·')

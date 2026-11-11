@@ -1,5 +1,6 @@
-import { useEffect, useId, useMemo } from 'react'
+import { useEffect, useId, useMemo, useRef } from 'react'
 import '../styles/deferred/font-uses.css'
+import useSlideIndicator from '../hooks/useSlideIndicator'
 import {
   CATEGORY_LABEL, CATEGORY_NOTE, DOSSIER_TABS, facesThinCatalogue, fontFacts, fontLicence, titleCase,
 } from '../utils/fontDossier'
@@ -128,6 +129,9 @@ import { fontStack, loadFont } from '../utils/googleFonts'
  * colliding, and so each panel can point back at its own tab.
  */
 export function FontDossierTabs({ value, onChange, idBase, label }) {
+  // The selected tab's underline slides between tabs (useSlideIndicator; type.css).
+  const stripRef = useRef(null)
+  useSlideIndicator(stripRef, value)
   const move = (event) => {
     const keys = { ArrowRight: 1, ArrowLeft: -1 }
     const step = keys[event.key]
@@ -140,7 +144,7 @@ export function FontDossierTabs({ value, onChange, idBase, label }) {
   }
 
   return (
-    <div className="fdx-tabs" role="tablist" aria-label={label}>
+    <div className="fdx-tabs" role="tablist" aria-label={label} ref={stripRef}>
       {DOSSIER_TABS.map(t => (
         <button
           key={t.id}

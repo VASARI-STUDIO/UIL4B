@@ -147,7 +147,7 @@ test('the four removed tabs (pipeline, board, design, pages) are gone, and stay 
   // The positive half: the tabs that stayed are the ones that had a source
   // capable of answering them, and Overview is still first because the route
   // opens on it.
-  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'community', 'prompts', 'stripe'],
+  assert.deepEqual(ids, ['overview', 'users', 'submissions', 'generated', 'community', 'prompts', 'stripe', 'settings'],
     'the tab set changed. Adding one is fine; this assertion exists so that it is a decision rather '
     + 'than a drift, and so Overview stays first, because the route opens on it.')
   // And each id must actually have a branch, or the tab is a dead button.
