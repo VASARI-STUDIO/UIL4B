@@ -66,7 +66,9 @@ export default function useSmoothScroll() {
     // how far it goes: a contents link to a heading 4000px down was still 60px short
     // of its landing line half a second after the click. 0.45s ends every jump inside
     // that half second, whatever the distance.
-    const lenis = new Lenis({ lerp: 0.1, smoothWheel: true, anchors: { duration: 0.45 }, allowNestedScroll: true })
+    // The wheel lerp is 0.2, twice Lenis's default: each tick settles in about a
+    // quarter of a second, a light ease rather than a long glide.
+    const lenis = new Lenis({ lerp: 0.2, smoothWheel: true, anchors: { duration: 0.45 }, allowNestedScroll: true })
     setLenis(lenis)
 
     // Lenis measures the page once and re-measures on a ResizeObserver that waits
