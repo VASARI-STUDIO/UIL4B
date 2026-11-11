@@ -21,6 +21,16 @@ const projectRows = (page) => group(page, 'Example projects').getByRole('button'
 
 const squash = (s) => s.replace(/\s+/g, ' ').trim()
 
+// The page attaches its first-input listener after the route commits, so a wheel sent before that is lost.
+// The wheel is sent until the stand-ins are gone.
+async function sectionsLoaded(page) {
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, 1)
+    return page.locator('[data-deferred-hold]').count()
+  }, { message: 'the below-fold sections never mounted', timeout: 20_000, intervals: [500] }).toBe(0)
+  await homeSectionsLoaded(page)
+}
+
 async function open(browser, { width = 1440, height = 900, touch = false, reducedMotion = 'no-preference', permissions = [], stubClipboard } = {}) {
   const ctx = await browser.newContext({
     viewport: { width, height },
@@ -34,7 +44,7 @@ async function open(browser, { width = 1440, height = 900, touch = false, reduce
   await go(page, '/')
   // The section loads after the first screen; the rest of the page's sections too,
   // and the ones above it change its place when they arrive.
-  await homeSectionsLoaded(page)
+  await sectionsLoaded(page)
   // Rest card 1 at its dock line, as a visitor scrolling down meets it, so cards 2 and 3 are not yet over its controls.
   await page.evaluate(() => {
     const first = document.querySelector('#exports .hx-card[data-card="0"]')
@@ -352,7 +362,7 @@ for (const [label, width, height, touch] of [['1440', 1440, 900, false], ['390',
       const page = await ctx.newPage()
       try {
         await go(page, '/')
-        await homeSectionsLoaded(page)
+        await sectionsLoaded(page)
         await dockAll(page)
         await page.waitForTimeout(300)
         // Red if the reduced-motion guards for .hx-card are dropped (the covered cards would be scaled and dimmed).
@@ -371,12 +381,16 @@ for (const [width, height] of [[768, 1024], [390, 844], [320, 640]]) {
     try {
       // Carry the last card to its own dock line: on a short phone the cards are taller than the screen, so
       // its travel over the one before is long and a fixed push past the section's start does not finish it.
-      await page.evaluate(() => {
+      // The aim is taken again on every read, because the section's height moves while its pictures arrive.
+      const carryToLastDock = () => page.evaluate(() => {
         const last = document.querySelector('#exports .hx-card[data-card="2"]')
         window.scrollTo(0, window.scrollY + last.getBoundingClientRect().top - parseFloat(getComputedStyle(last).top) + 40)
       })
       // Red if the narrow layout loses the trackers' sizes (cards dock together here, so the whole height is the travel).
-      await expect.poll(async () => (await page.evaluate(LOOKS)).map((l) => l.scale), { timeout: 5000 }).toEqual([0.96, 0.96, 1])
+      await expect.poll(async () => {
+        await carryToLastDock()
+        return (await page.evaluate(LOOKS)).map((l) => l.scale)
+      }, { timeout: 10_000 }).toEqual([0.96, 0.96, 1])
     } finally {
       await ctx.close()
     }
@@ -454,15 +468,22 @@ for (const [reducedMotion, runs] of [['reduce', false], ['no-preference', true]]
         const s = getComputedStyle(el)
         return { property: s.transitionProperty, duration: s.transitionDuration }
       }))
+      await page.evaluate(() => {
+        window.__swapRuns = 0
+        document.querySelector('#exports .hx-card[data-card="1"]').addEventListener('transitionrun', (e) => {
+          if (e.target.classList.contains('hx-obj')) window.__swapRuns += 1
+        })
+      })
       await docRows(page).nth(2).click()
-      const running = await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(
-        [...document.querySelectorAll('#exports .hx-card[data-card="1"] .hx-obj')]
-          .reduce((n, el) => n + el.getAnimations().length, 0)))))
+      await expect(docRows(page).nth(2)).toHaveAttribute('aria-pressed', 'true')
+      const swapRuns = () => page.evaluate(() => window.__swapRuns)
       if (runs) {
         // The same click does animate when motion is allowed, so the detector can see a swap.
         expect(styles.every((st) => st.property.includes('transform') && st.duration.split(',').some((v) => parseFloat(v) > 0.1))).toBe(true)
-        expect(running).toBeGreaterThan(0)
+        await expect.poll(swapRuns, { message: 'no .hx-obj transition ran after the row was picked' }).toBeGreaterThan(0)
       } else {
+        await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+        const running = await swapRuns()
         // Property none, not merely a near-zero duration: the site-wide backstop alone leaves a 1e-5s transition.
         expect(styles.map((st) => st.property)).toEqual(Array(styles.length).fill('none'))
         expect(running).toBe(0)
