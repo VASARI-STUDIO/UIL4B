@@ -169,6 +169,8 @@ const ALLOWED = {
     '.grd .grd-code-text': 'code',
     '.grd .grd-gen-hex': 'hex',
     '.grd .grd-hex': 'hex',
+    '.grd .grd-spec-hex': 'hex',
+    '.grd .grd-spec-hexes': 'hex',
     '.grd .grd-stop-hex': 'hex',
     '.grd-tintmenu-hex': 'hex',
   },
