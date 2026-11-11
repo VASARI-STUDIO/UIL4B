@@ -39,7 +39,11 @@ for (const [width, height, where] of [[1440, 900, 'top'], [390, 844, 'bottom']])
 
     // Switch to another category from inside the list. On a phone the chips are
     // behind the Filters button.
-    if (width <= 640) await page.getByRole('button', { name: /^Filters/ }).click()
+    if (width <= 640) {
+      const filters = page.getByRole('button', { name: /^Filters/ })
+      await filters.click()
+      await expect(filters, 'the Filters button did not open the chips').toHaveAttribute('aria-expanded', 'true')
+    }
     await page.getByRole('radio', { name: /^UI Components( \d+ prompts?)?$/ }).click()
     await expect(page.locator('#pl-results-h')).toHaveText('UI Components')
     expect(new URL(page.url()).hash).toBe('#ui-components')
@@ -108,6 +112,12 @@ for (const [width, height, where] of [[1440, 900, 'top'], [390, 800, 'bottom']])
 const TAB_KEY = 'vs-prompt-tab'
 const tabButton = (page, name) => page.locator('.pl-tab', { hasText: name })
 
+// The list hash is gone from the address and two frames have been drawn since, so a render that follows the change has landed.
+async function routerDroppedHash(page) {
+  await expect.poll(() => new URL(page.url()).hash, { message: 'the router never dropped the list hash' }).toBe('')
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
+}
+
 for (const [hash, label] of [['#all', 'Browse all'], ['#website', 'the Website list']]) {
   test(`My Prompts clicked from ${label} stays on My Prompts, and Community clicked from there returns to the overview`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
@@ -120,10 +130,9 @@ for (const [hash, label] of [['#all', 'Browse all'], ['#website', 'the Website l
 
     await tabButton(page, 'My Prompts').click()
     await expect(tabButton(page, 'My Prompts')).toHaveAttribute('aria-pressed', 'true')
-    expect(new URL(page.url()).hash, 'My Prompts has no list hash').toBe('')
-    // Give the router's later hash change time to arrive, then look again: the
-    // bug is a flip back to Community AFTER the first correct frame.
-    await page.waitForTimeout(400)
+    // The router drops the hash a beat later, and the bug is a flip back to
+    // Community AFTER the first correct frame: look again once the hash is gone.
+    await routerDroppedHash(page)
     await expect(tabButton(page, 'My Prompts'), 'the tab flipped back to Community').toHaveAttribute('aria-pressed', 'true')
     await expect(tabButton(page, 'Community')).toHaveAttribute('aria-pressed', 'false')
     await expect(page.locator('.pl-overview')).toHaveCount(0)
@@ -152,7 +161,7 @@ test('a shared list link opens Community without overwriting a saved My Prompts 
 
   // And My Prompts is still one click away from that list.
   await tabButton(page, 'My Prompts').click()
-  await page.waitForTimeout(400)
+  await routerDroppedHash(page)
   await expect(tabButton(page, 'My Prompts')).toHaveAttribute('aria-pressed', 'true')
   await context.close()
 })
