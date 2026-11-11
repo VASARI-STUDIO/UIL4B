@@ -50,5 +50,5 @@ test('the call to action promises a trial only when the cadence has one', () => 
 })
 
 test('the Free price is zero, formatted by the ladder', () => {
-  assert.equal(freePrice(), formatMoney(0, APPROVED_CURRENCY))
+  assert.equal(freePrice(), formatMoney(0, APPROVED_CURRENCY, { qualify: true }))
 })

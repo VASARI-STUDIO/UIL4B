@@ -59,8 +59,8 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
     await expect(group.getByRole('radio', { name: new RegExp(`^${label}`) })).toBeChecked()
     const head = page.locator('.hpl-pro')
     await expect(head.locator('.pa-amt'), `${label}: /plans does not show ${settings[label].amount}`)
-      // /plans qualifies the dollar for a US visitor ("US$4"); Settings prints "$4". The figure is the same.
-      .toHaveText(new RegExp(`^(US)?${settings[label].amount.replace(/[$.]/g, '\\$&')}$`))
+      // Settings and /plans print the same label, "US$4" for a USD price.
+      .toHaveText(settings[label].amount)
     const body = await head.innerText()
     // Every money figure and trial length in Settings' billed line is on /plans.
     for (const money of settings[label].billed.match(/\$\d[\d,.]*/g) || []) {
