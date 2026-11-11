@@ -379,3 +379,11 @@ html[data-theme="light"] .stg.stg .stg-scrim { background: rgba(18, 20, 24, .45)
 }
 .stg.stg .settings-card.sub-plans { padding: 0; }
 @media (max-width: 719px) { .stg.stg .theme-seg-btn { height: 40px; } }
+
+/* touch targets: 44px on a phone or a coarse pointer, same look */
+@media (max-width: 719px), (pointer: coarse) {
+  .stg.stg .settings-row--field > .btn, .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger) { min-width: 44px; }
+  .stg.stg .theme-seg-btn { height: 44px; }
+  .stg.stg .settings-edit-line > .btn, .stg.stg .settings-edit-actions > .btn { height: 44px; min-height: 44px; }
+  .stg.stg .settings-linkbtn { min-height: 44px; }
+}
