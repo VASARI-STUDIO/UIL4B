@@ -101,7 +101,7 @@ for (const [name, context] of [['390 phone', PHONE], ['1440 desktop', DESKTOP]])
     test('has a Contact support link near the top that opens the form on Help request', async ({ page }) => {
       watch(page, 'a visitor looking for a person on the Help centre')
       await go(page, '/help')
-      const link = page.locator('.hlp-hero').getByRole('link', { name: 'Contact support', exact: true })
+      const link = page.locator('.hlf').getByRole('link', { name: 'Contact support', exact: true })
       await expect(link).toHaveCount(1)
       await expect(link).toHaveAttribute('href', CONTACT_URL)
       await expect(link).toBeVisible()
