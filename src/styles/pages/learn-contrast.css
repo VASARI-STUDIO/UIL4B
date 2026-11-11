@@ -214,3 +214,38 @@ html[data-reduced-motion="true"] .lart .lcc-ch{transition-property:opacity!impor
   .lcc-vr li>.lcc-nd{grid-area:need}
   .lcc-vr li>.lcc-vd{grid-area:vd}
 }
+
+/* Phone: figure above its paragraphs in sections 2 to 4, the reading time
+   under the specimen, the contents as a filled pill. */
+@media(max-width:767px){
+  .lart .lcc-s2,.lart .lcc-s3,.lart .lcc-s4{display:flex;flex-direction:column}
+  .lart .lcc-s2 .lcc-txt,.lart .lcc-s3 .lcc-txt,.lart .lcc-s4 .lcc-txt{display:contents}
+  .lart .lcc-sec>.lcc-txt>h2{order:1}
+  .lart .lcc-s2 .lcc-rul,.lart .lcc-s3 .lcc-chw,.lart .lcc-s4 .lcc-fld{order:2;margin:var(--s-5) 0 0}
+  .lart .lcc-sec>.lcc-txt>p{order:3;margin:var(--s-5) 0 0}
+  .lart .lcc-sec>.lcc-txt>p+p{margin-top:var(--s-4)}
+  .lart .lcc-sec>.lcc-w{order:4}
+  .lart .lart-hero--spec{display:flex;flex-direction:column}
+  .lart .lart-hero--spec .lart-head{display:contents}
+  .lart .lart-hero--spec .lart-crumb{order:1}
+  .lart .lart-hero--spec h1{order:2}
+  .lart .lart-hero--spec .lart-dek{order:3}
+  .lart .lart-hero--spec .lcc-spec{order:4;margin-top:var(--s-5)}
+  .lart .lart-hero--spec .lart-meta{order:5;margin-top:var(--s-5)}
+  .lart .lart-toc-m{border:0;margin-bottom:0}
+  .lart .lart-toc-m summary{justify-content:space-between;padding:0 var(--s-4) 0 var(--s-5);border-radius:999px;background:var(--bg-3)}
+  .lart .lart-toc-m-name{font-size:15px;font-weight:500}
+  .lart .lart-toc-m-count{display:none}
+}
+@media(max-width:767px){
+  .lart .lart-hero--spec .lart-toc-nav{order:6;margin-top:var(--s-5)}
+  .lart .lcc-s1 .lart-table-wrap{margin:var(--s-6) 0 0}
+  .lart .lcc-s1 .lart-table-scroll{overflow:visible;border:0;border-radius:0}
+  .lart .lcc-s1 .lart-table--stack tbody tr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:var(--s-4);padding:var(--s-4) 0;border-bottom:0}
+  .lart .lcc-s1 .lart-table--stack tbody tr+tr{border-top:1px solid var(--border)}
+  .lart .lcc-s1 .lart-table--stack tbody th{grid-column:1/-1;grid-row:1;font-size:15px;line-height:20px;margin-bottom:var(--s-2)}
+  .lart .lcc-s1 .lart-table--stack tbody td{display:block;grid-column:auto;padding:0;text-align:left;font-size:32px;line-height:40px;font-weight:600;letter-spacing:-.04em;color:var(--t0)}
+  .lart .lcc-s1 .lart-table--stack tbody td::before{display:block;margin:0;font-size:13px;line-height:18px;font-weight:400;letter-spacing:0;color:var(--t1)}
+  .lart .lcc-s1 .lart-table--stack tbody td[data-label="Level"]{grid-column:1/-1;margin-top:var(--s-1);font-size:13px;line-height:18px;font-weight:400;letter-spacing:0;color:var(--t1)}
+  .lart .lcc-s1 .lart-table--stack tbody td[data-label="Level"]::before{display:inline;content:attr(data-label) " "}
+}

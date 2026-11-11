@@ -66,3 +66,6 @@ html[data-reduced-motion="true"] .rd-next-go{transition:none;transform:none!impo
   html:not([data-reduced-motion="false"]) .rd-next-circle svg{transition:none;transform:none!important}
 }
 html[data-reduced-motion="true"] .rd-next-circle svg{transition:none;transform:none!important}
+@media(max-width:767px){
+  .rd-end .ui-pill{width:auto;height:44px;min-height:44px;padding-inline:var(--s-5);font-size:15px}
+}
