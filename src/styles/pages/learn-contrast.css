@@ -141,8 +141,13 @@
 }
 @media(prefers-reduced-motion:reduce){
   .lcc-bar,.lcc-gh,.lcc-lend,.lcc-res,.lcc-steps li,.lcc-chval i{transition:none}
-  .lcc-ch{transition:opacity 300ms ease-out}
   .lcc-ch[data-seen="false"]{opacity:0}
+}
+/* The global clamp zeroes every duration with !important, so the section 3
+   fade is restored here at a higher specificity. */
+html[data-reduced-motion="true"] .lart .lcc-ch{transition-property:opacity!important;transition-duration:300ms!important;transition-delay:0s!important;transition-timing-function:ease-out!important}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lart .lcc-ch{transition-property:opacity!important;transition-duration:300ms!important;transition-delay:0s!important;transition-timing-function:ease-out!important}
 }
 
 /* ── Section 4: two fields ── */
