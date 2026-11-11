@@ -150,7 +150,7 @@ export function describeKey(key) {
 export function collectStorage(storage) {
   const out = {}
   if (!storage) return out
-  let length = 0
+  let length
   try { length = storage.length } catch { return out }
   for (let i = 0; i < length; i++) {
     let key
