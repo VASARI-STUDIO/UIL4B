@@ -60,7 +60,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 // gated screens nobody lands on cold. Listed so the completeness check below
 // sees the whole surface; every one of them is excluded as private anyway.
 const UNTITLED_APP_ROUTES = Object.freeze([
-  '/onboarding', '/checkout/return', '/style-guide',
+  '/onboarding', '/checkout/return', '/style-guide', '/reset-password',
 ])
 
 // The ONE Create category home that is a real page rather than a redirect now
