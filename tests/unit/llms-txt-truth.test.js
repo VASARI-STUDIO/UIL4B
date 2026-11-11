@@ -76,7 +76,7 @@ test('the generator is not vacuous: it lists real tools, real guides and real pa
 // ─────────────────────────────────────────────────────────────────────────────
 test('the summary opens on line(SURFACE_LINE.llmsSummary), verbatim', () => {
   const founder = line(SURFACE_LINE.llmsSummary)
-  assert.ok(COMMITTED.startsWith(`# UIL4B\n\n> ${founder} `),
+  assert.ok(COMMITTED.startsWith(`# UI L4B\n\n> ${founder} `),
     'llms.txt does not open on the founder line positioning.js assigns to it')
   // …and the pricing sentence is the ONE index.html's <noscript> prints, so a
   // crawler reading the two cannot be told two different numbers.
