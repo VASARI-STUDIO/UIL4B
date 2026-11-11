@@ -303,7 +303,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
   const doneInfo = done && typeof done === 'object' ? done : null
   const savedFile = doneInfo?.file || doneInfo?.filename || ''
 
-  let line = null
+  let line
   if (error) line = null
   else if (busy) line = BUSY_LABEL[stage] || 'Exporting…'
   else if (notice) line = <><strong>{notice.lead}</strong> {notice.detail}</>

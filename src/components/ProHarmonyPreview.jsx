@@ -36,7 +36,7 @@ export default function ProHarmonyPreview({ seed: explicitSeed }) {
   // that is what the palette tools produce — a four-swatch preview would be
   // showing a system the product does not build.
   const rows = useMemo(() => COLOUR_SYSTEMS.map((sys) => {
-    let colors = []
+    let colors
     try {
       colors = sys.tonal ? autoTonalFromSeed(seed) : generateHarmony(seed, sys.id)
     } catch {
