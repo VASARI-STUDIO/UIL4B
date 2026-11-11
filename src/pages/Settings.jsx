@@ -1401,7 +1401,7 @@ export default function Settings({ toast }) {
     <div className="sub-tier sub-tier-free">
       <div className="sub-tier-head">
         <div className="sub-tier-name">Free</div>
-        <div className="sub-tier-price"><span className="sub-tier-amount">{formatMoney(0, proPrice.currency)}</span><span className="sub-tier-per">forever</span></div>
+        <div className="sub-tier-price"><span className="sub-tier-amount">{formatMoney(0, proPrice.currency, { qualify: true })}</span><span className="sub-tier-per">forever</span></div>
       </div>
       <ul className="sub-tier-list">
         {FREE_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}

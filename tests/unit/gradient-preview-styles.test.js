@@ -6,16 +6,16 @@
 //   linearThrough dropping `in oklch`           -> "linearThrough blends in OKLCH only when asked"
 //   glowColours returning the first stop thrice -> "glowColours takes the heart, the middle and the end from the stops"
 //   styleVars('streak') using a fixed colour    -> "every style's variables carry the stops' colours"
-//   PREVIEW_STYLES losing an entry              -> "the six styles are named plainly and in order"
+//   PREVIEW_STYLES losing an entry              -> "the styles are named plainly and in order"
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { PREVIEW_STYLES, isPreviewStyle, stopList, linearThrough, glowColours, styleVars } from '../../src/utils/gradientPreviewStyles.js'
 
 const STOPS = [{ color: '#2b59ff', position: 100 }, { color: '#ff7a1a', position: 0 }, { color: '#ffffff', position: 50 }]
 
-test('the six styles are named plainly and in order', () => {
-  assert.deepEqual(PREVIEW_STYLES.map((s) => s.label), ['Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade'])
-  assert.equal(new Set(PREVIEW_STYLES.map((s) => s.id)).size, 6)
+test('the styles are named plainly and in order', () => {
+  assert.deepEqual(PREVIEW_STYLES.map((s) => s.label), ['Grain', 'Fluted glass', 'Glow ring', 'Streak', 'Soft glow', 'Fade', 'Poster', 'Spec card'])
+  assert.equal(new Set(PREVIEW_STYLES.map((s) => s.id)).size, 8)
   assert.ok(isPreviewStyle('fluted'))
   assert.ok(!isPreviewStyle('hero'))
 })

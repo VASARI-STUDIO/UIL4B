@@ -217,6 +217,24 @@ function createFakeAuth(d) {
     auth.notify()
     return auth.currentUser
   }
+  // A brand-new account, made by the sign-up form of a `lateSignIn` page: a different
+  // uid from the declared one, no name yet (the form passes none), made just now, and
+  // with no document of its own. The app writes that document itself, with the open
+  // onboarding record, so a spec reads what the app wrote rather than what was seeded.
+  auth.signUpNow = (email) => {
+    auth.currentUser = buildUser({
+      ...d,
+      uid: 'test-uid-new',
+      email: String(email || '').toLowerCase(),
+      displayName: '',
+      photoURL: '',
+      provider: 'password',
+      emailVerified: false,
+      creationTime: new Date().toUTCString(),
+    })
+    auth.notify()
+    return auth.currentUser
+  }
   // The same account signing out, or a different one signing in, under a page
   // that stays mounted (`over` replaces uid, email or name). Exposed so a spec
   // can change the account without a reload.

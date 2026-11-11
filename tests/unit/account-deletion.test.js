@@ -19,7 +19,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   isReauthFresh, customerOwnershipVerdict, mayProceedWithDeletion, liveSubscriptions,
-  REAUTH_WINDOW_MS,
+  feedbackEmailFor, REAUTH_WINDOW_MS,
 } from '../../api/_lib/accountDeletion.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -166,6 +166,29 @@ test('deletion reaches every store that holds personal data', () => {
   assert.ok(src.includes("collection('feedback')"), 'feedback carries the email they typed')
   assert.ok(src.includes('community-media/'), 'uploaded media is personal data too')
   assert.ok(src.includes("collection('daily-usage')"), 'AI usage counters are keyed by uid')
+})
+
+test('feedback is matched by email only when Firebase has verified that email', () => {
+  assert.equal(feedbackEmailFor({ email: 'a@example.com', email_verified: true }), 'a@example.com')
+  for (const decoded of [
+    { email: 'a@example.com', email_verified: false },
+    { email: 'a@example.com' },
+    { email: 'a@example.com', email_verified: 'true' },
+    { email: 'a@example.com', email_verified: 1 },
+    { email_verified: true },
+    { email: '', email_verified: true },
+    {},
+    null,
+    undefined,
+  ]) {
+    assert.equal(feedbackEmailFor(decoded), null, JSON.stringify(decoded))
+  }
+})
+
+test('the deletion route takes the feedback email from feedbackEmailFor, not straight off the token', () => {
+  const src = stripComments(read('api/delete-account.js'))
+  assert.match(src, /email = feedbackEmailFor\(decoded\)/)
+  assert.doesNotMatch(src, /decoded\.email\b/, 'the unverified token email is read again')
 })
 
 test('every collection whose rules key on authorUid is reached by the cascade', () => {

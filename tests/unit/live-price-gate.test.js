@@ -313,7 +313,7 @@ test('every buyable cadence resolves an amount, a per-month rate and a billing l
     assert.ok(BILLED_EVERY[o.id], `${o.id} has no billing wording`)
     assert.ok(o.billedNote.includes('cancel any time'))
   }
-  assert.equal(offerOf(offers, 'yearly').amountLabel, '$4')
+  assert.equal(offerOf(offers, 'yearly').amountLabel, 'US$4')
 })
 
 // ── 4. a currency failure never becomes another currency ─────────────────────

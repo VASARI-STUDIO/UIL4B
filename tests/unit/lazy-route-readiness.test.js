@@ -203,8 +203,8 @@ test('goRaw() has exactly the six callers that must read a page before its route
   // goRaw is the deliberate hole in the door. If it acquires other callers it
   // stops being a documented exception and becomes a second way in.
   const callers = SPECS.filter((f) => /\bgoRaw\s*\(/.test(readStripped(path.join('tests', 'user-sim', f))))
-  assert.deepEqual(callers, ['04-premium-home.spec.js', '128-soon-pages-hidden.spec.js', '224-error-recovery-cards.spec.js', '288-toddler-fixes-3.spec.js', '362-home-sections-slow-device.spec.js', '47-lazy-route-readiness.spec.js'],
-    'goRaw() skips the readiness wait on purpose, and only six specs may do that. Two open a soon URL, which redirects, so its route never arrives: 128-soon-pages-hidden and 288-toddler-fixes-3 (the note shown on arrival).\n'
+  assert.deepEqual(callers, ['04-premium-home.spec.js', '128-soon-pages-hidden.spec.js', '224-error-recovery-cards.spec.js', '288-toddler-fixes-3.spec.js', '351-legacy-redirects-and-history.spec.js', '362-home-sections-slow-device.spec.js', '47-lazy-route-readiness.spec.js'],
+    'goRaw() skips the readiness wait on purpose, and only seven specs may do that. Three open a URL that redirects, so its route never arrives: 128-soon-pages-hidden and 288-toddler-fixes-3 (a soon URL, and the note shown on arrival), and 351-legacy-redirects-and-history (a retired URL, read on the page it lands on).\n'
     + '47-lazy-route-readiness reads a route while its chunk is still in flight, and\n'
     + '224-error-recovery-cards reads the slow-loading line of a chunk that never arrives,\n'
     + 'and opens the 404 with a Referer header, which go() cannot pass, and\n'

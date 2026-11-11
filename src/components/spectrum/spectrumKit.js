@@ -209,6 +209,8 @@ export const RATIO_PRESETS = [['16:9', 1920, 1080], ['4:5', 1080, 1350], ['1:1',
 export const FRAME_COUNTS = [8, 12, 24]
 /** The design's photograph, re-encoded to WebP for the panel. */
 export const CONVERTER_SOURCE = '/spectrum/tasmanian-sunset.webp'
+/** The same photograph at 480, 960 and 1600 px wide, for a slot that is not the full panel (the /projects shelf, 168 x 160). */
+export const CONVERTER_SRCSET = '/spectrum/tasmanian-sunset-480.webp 480w, /spectrum/tasmanian-sunset-960.webp 960w, /spectrum/tasmanian-sunset.webp 1600w'
 
 export function formatBytes(n) {
   if (n == null) return '…'

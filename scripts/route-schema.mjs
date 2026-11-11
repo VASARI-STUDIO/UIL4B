@@ -84,6 +84,7 @@ import { LEARN_ARTICLES } from '../src/data/learnIndex.js'
 import { PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { CREATE_HOMES_THAT_RENDER } from './route-matrix.mjs'
 import { SITE_ORIGIN } from '../src/utils/routeMeta.js'
+import { cardFor, cardUrl } from './share-cards.mjs'
 
 const norm = (p) => {
   const s = String(p || '/').split('?')[0].split('#')[0].toLowerCase()
@@ -163,8 +164,9 @@ export function breadcrumbRoutes(routes, origin = SITE_ORIGIN) {
 // the organisation: the guides carry no byline, and a person's name here would
 // be invented. `dateModified` is the guide's review date; there is no
 // first-published date on record, so `datePublished` is left out rather than
-// guessed. FAQPage and HowTo stay out for the reason given above: the guides
-// have no question-and-answer or numbered-procedure content to mark up.
+// guessed. `image` is the guide's share card. FAQPage and HowTo stay out for
+// the reason given above: the guides have no question-and-answer or numbered-
+// procedure content to mark up.
 const PUBLISHER = Object.freeze({ '@type': 'Organization', name: 'UI L4B' })
 
 /** The Article block for a `/learn/<slug>` guide, or null for any other route. */
@@ -179,6 +181,7 @@ export function articleFor(pathname, origin) {
     headline: article.title,
     description: article.description,
     dateModified: article.updated,
+    image: cardUrl(origin, cardFor(route)),
     inLanguage: 'en',
     mainEntityOfPage: { '@type': 'WebPage', '@id': `${origin}${route}` },
     author: PUBLISHER,

@@ -30,6 +30,7 @@ import path from 'node:path'
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 import {
   DEFAULT_CARD,
+  HOME_CARD,
   SECTIONS,
   allCardFiles,
   cardFor,
@@ -351,7 +352,7 @@ test('the built shells carry the images and the breadcrumbs', {
   const routes = prerenderRoutes()
   for (const route of routes) {
     const html = read(`${DIST}${route}/index.html`)
-    const card = cardFor(route)
+    const card = route === '/home' ? HOME_CARD : cardFor(route)
     const src = cardUrl(ORIGIN, card)
     assert.equal(meta(html, 'property', 'og:image'), src,
       `${DIST}${route}/index.html does not point og:image at ${card.file}`)
