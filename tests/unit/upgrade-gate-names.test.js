@@ -152,9 +152,10 @@ test('every entry of a spread gate table names a gate', () => {
   assert.match(runner, /PRO_GATE\[f\?\.variantOf \|\| formatId\]\?\.gate/, 'the export engine no longer reports a gate from PRO_GATE')
   const table = runner.slice(runner.indexOf('const PRO_GATE = {'))
   const body = table.slice(0, table.indexOf('\n}\n') + 1)
-  const entries = [...body.matchAll(/^ {2}([a-z][\w]*):\s*\{/gm)].map(m => m[1])
+  // A key is bare (`book:`) or quoted when it has a hyphen (`'app-bundle':`).
+  const entries = [...body.matchAll(/^ {2}'?([a-z][\w-]*)'?:\s*\{/gm)].map(m => m[1])
   assert.ok(entries.length >= 2, `expected PRO_GATE entries, found ${entries.length}`)
-  const blocks = body.split(/^ {2}[a-z][\w]*:\s*\{/m).slice(1)
+  const blocks = body.split(/^ {2}'?[a-z][\w-]*'?:\s*\{/m).slice(1)
   entries.forEach((name, i) => {
     assert.match(blocks[i], /gate:\s*'[a-z0-9-]+'/, `PRO_GATE.${name} must name a gate`)
   })
@@ -174,6 +175,15 @@ test('the walls that share a title report as separate gates', () => {
   const contrastCalls = callArguments(pb, 'openProModal').filter(c => c.text.includes("'Check contrast, light and dark'"))
   assert.equal(contrastCalls.length, 1, 'expected one contrast wall')
   contrastCalls.forEach(c => assert.match(c.text, /gate: 'palette-contrast-view'/))
+})
+
+test('the gradient Use and Base colour wall reports as its own gate', () => {
+  // Free accounts see both rows locked and one press path opens one modal, so it
+  // must name itself rather than borrow another wall's counter.
+  const gg = read(path.join(SRC, 'pages', 'GradientGenerator.jsx'))
+  const calls = callArguments(gg, 'openProModal').filter(c => c.text.includes('Gradients made for where they go'))
+  assert.equal(calls.length, 1, 'expected one guided-gradient wall')
+  assert.match(calls[0].text, /gate: 'gradient-guided'/)
 })
 
 test('the icon and UI-system walls derive their id from the kind they were asked for', () => {

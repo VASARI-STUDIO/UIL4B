@@ -1,6 +1,13 @@
 {
   "fileConverter": {
-    "source": { "format": "WebP", "kb": 139.1 },
-    "output": { "format": "WebP", "quality": 70, "kb": 115.7 }
+    "source": {
+      "format": "PNG",
+      "kb": 1433.6
+    },
+    "output": {
+      "format": "WebP",
+      "quality": 80,
+      "kb": 134.8
+    }
   }
 }

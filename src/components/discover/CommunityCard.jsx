@@ -4,6 +4,8 @@
 // new CSS. The thumbnail is a generated gradient (no external fetch); the credit
 // link is a real nofollow new-tab anchor.
 import { safeHttpUrl } from '../../utils/urlSafety'
+import ReportButton from '../ReportButton'
+import { buildReportTarget } from '../../utils/contentReport'
 import { contrastRatio, inkOnGradient } from '../../utils/colors'
 
 // The monogram is 30px/700, which is LARGE TEXT under WCAG 1.4.3, so its floor
@@ -42,8 +44,18 @@ function HeartIcon({ filled }) {
   )
 }
 
-export default function CommunityCard({ item, saved, count, onToggle, offline = false }) {
-  const href = safeHttpUrl(item.url)
+// `own` is passed only for the viewer's own submission: `label` is the status
+// tag ("Pending review", "Approved", "Not approved", "Not sent"), `onWithdraw`
+// takes the submission back, and `onRetry` (present only while it has not
+// reached the review queue) sends it again. `busy` holds both while a send or a
+// withdrawal is in flight; `ready` false holds Retry until the account's own
+// list has been read. A curated card passes nothing and renders as before.
+export default function CommunityCard({ item, saved, count, onToggle, offline = false, own = null }) {
+  // A starter card is an example of the format, named for the kind of design
+  // it stands for. Its url is only the platform's front page, which is not the
+  // design the card names, so it gets no outbound link. A member's submission
+  // links to what they submitted.
+  const href = item.curated ? null : safeHttpUrl(item.url)
   const mono = monoInk(item.c1, item.c2)
   // THE STOPS AND THE INK ARE SET TOGETHER OR NOT AT ALL.
   //
@@ -99,7 +111,7 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
           {thumbContent}
         </a>
       ) : (
-        <div {...thumbProps} aria-label={`${item.name} preview — external link unavailable`}>
+        <div {...thumbProps} aria-label={item.curated ? `${item.name} example` : `${item.name} preview — external link unavailable`}>
           {thumbContent}
         </div>
       )}
@@ -111,8 +123,13 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
         title={saved ? 'Saved' : 'Save'}
       >
         <HeartIcon filled={saved} />
-        <span className="ch-heart-count">{count}</span>
+        {/* A zero says nothing a bare heart does not; show the figure once someone has saved it. */}
+        {count > 0 && <span className="ch-heart-count">{count}</span>}
       </button>
+      <ReportButton
+        className="ch-report"
+        target={buildReportTarget({ kind: 'design', id: item.id, name: item.name, link: href })}
+      />
       <div className="ch-card-body">
         <div className="ch-card-name">{item.name}</div>
         <div className="ch-card-meta">
@@ -125,6 +142,34 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
             : <UserName name={item.author} ownerId={item.ownerId} bold={!!item.ownerId} />}
           <span className="ch-card-tag">{item.category}</span>
         </div>
+        {own && (
+          <div className="ch-card-own">
+            <span className="ch-card-tag ch-card-status">{own.label}</span>
+            <div className="ch-card-own-actions">
+              {own.onRetry && (
+                <button
+                  type="button"
+                  className="btn btn-s"
+                  onClick={own.onRetry}
+                  disabled={own.busy || own.ready === false}
+                  aria-busy={own.busy || undefined}
+                  aria-label={`Retry sending ${item.name}`}
+                >
+                  Retry
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-s"
+                onClick={own.onWithdraw}
+                disabled={own.busy}
+                aria-label={`Withdraw ${item.name}`}
+              >
+                Withdraw
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </article>
   )

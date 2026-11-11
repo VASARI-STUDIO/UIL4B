@@ -25,10 +25,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { splitLockedLibrary, LOCKED_TEASE } from '../../src/utils/lockedPreview.js'
+import { splitLockedLibrary, LOCKED_TEASE, GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
+import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
-import { FREE_PROMPT_LIMIT } from '../../src/data/promptCategories.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css on
@@ -169,8 +169,12 @@ test('the builder brand list renders the split output, never the raw library', (
   const src = stripComments(read('src/pages/PaletteBuilder.jsx'))
   // The bug this pins: reverting to BRAND_PALETTES.map(...) in the brands panel
   // puts every paid brand's colours back into barRef and back into the DOM.
-  assert.ok(src.includes('openBrands.map('), 'the brands panel must map the split output')
-  assert.ok(!src.includes('BRAND_PALETTES.map('), 'the brands panel must not map the raw library')
+  // The panel searches the split output (`openBrands.filter(...)` -> shownBrands) and
+  // renders only that; locked brands render as static rows from `lockedBrands`.
+  assert.ok(/shownBrands\s*=\s*openBrands\.filter\(/.test(src), 'the brands panel must build its rows from the split output')
+  assert.ok(src.includes('shownBrands.map('), 'the brands panel must map the filtered split output')
+  assert.ok(/shownLocked\s*=\s*lockedBrands\.filter\(/.test(src), 'the locked brand rows must come from the stub list')
+  assert.ok(!src.includes('BRAND_PALETTES.map(') && !src.includes('brandRows.map('), 'the brands panel must not map the raw library')
 })
 
 test('the gallery filters and searches the split output, closing the hex oracle', () => {
@@ -190,10 +194,30 @@ test('every wall registers a real gate id rather than falling back to a title', 
   // silently splits its history in two — upgrade-activation-events names that
   // as outstanding work.
   const ids = []
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx']) {
+  // The prompt library names its gates two ways since the overview: a `gate`
+  // prop, and `reportUpgradeGate('<id>')` on the Pro links (the overview's
+  // closing section, the list's offer, and PromptLockedCard's default gate).
+  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/GradientGallery.jsx',
+    'src/pages/IconGroups.jsx', 'src/components/prompt/PromptGate.jsx', 'src/components/prompt/PromptLockedCard.jsx']) {
     const src = stripComments(read(file))
     for (const m of src.matchAll(/gate="([a-z0-9-]+)"/g)) ids.push(m[1])
+    for (const m of src.matchAll(/reportUpgradeGate\('([a-z0-9-]+)'\)/g)) ids.push(m[1])
+    for (const m of src.matchAll(/gate = '([a-z0-9-]+)'/g)) ids.push(m[1])
   }
+  // Every Pro control of the shared end gate reports a gate: no bare link to
+  // /plans. A Pro `primary` is `{ label, to: '/plans', onClick }`, and the
+  // onClick must register this gallery's gate id.
+  const GATE_USERS = {
+    'src/pages/PaletteGallery.jsx': 2, 'src/pages/GradientGallery.jsx': 1,
+    'src/pages/IconGroups.jsx': 2, 'src/components/prompt/PromptGate.jsx': 1,
+  }
+  for (const [file, expected] of Object.entries(GATE_USERS)) {
+    const src = stripComments(read(file))
+    const primaries = [...src.matchAll(/primary=\{\{[^}]*\}\}/g)].map((m) => m[0]).filter((l) => l.includes("to: '/plans'"))
+    assert.equal(primaries.length, expected, `${file}: the number of Pro gate links changed - this assertion would be vacuous`)
+    for (const link of primaries) assert.ok(/reportUpgradeGate\('[a-z0-9-]+'\)/.test(link), `${file} has a Pro link that registers no gate: ${link}`)
+  }
+  assert.ok(stripComments(read('src/components/prompt/PromptGate.jsx')).includes("reportUpgradeGate('prompt-library-community-lock')"))
   assert.ok(ids.includes('palette-library-brand-lock'), 'the Palette Library wall must name its gate')
   assert.ok(ids.includes('palette-builder-brand-lock'), 'the Palette Builder wall must name its gate')
   assert.ok(ids.includes('prompt-library-community-lock'), 'the Prompt Library wall must name its gate')
@@ -213,7 +237,8 @@ test('the wall copy invents no scarcity, urgency, testimonial or metric', () => 
     read('src/components/library/LockedTease.jsx')
     + read('src/pages/PaletteGallery.jsx')
     + read('src/pages/PaletteBuilder.jsx')
-    + read('src/pages/PromptLibrary.jsx'),
+    + read('src/pages/PromptLibrary.jsx')
+    + read('src/data/galleryGateCopy.js'),
   )
   // Positive control: if stripping ever removed the copy as well, every
   // assertion below would pass for the wrong reason.
@@ -233,10 +258,29 @@ test('the CTA number is derived from the data, never written as a literal', () =
   // A hard-coded "another 30 brand systems" goes stale the moment a row is
   // added to brandPalettes.js, and a wall that lies about its own size is the
   // cheapest possible way to lose trust.
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx']) {
-    const src = stripComments(read(file))
-    assert.ok(/Another \$\{locked/.test(src), `${file} must interpolate the remaining count into its heading`)
+  const builder = stripComments(read('src/pages/PaletteBuilder.jsx'))
+  assert.ok(/Another \$\{locked/.test(builder), 'src/pages/PaletteBuilder.jsx must interpolate the remaining count into its heading')
+  // The galleries' gates take their words from data/galleryGateCopy.js, whose
+  // builders print only the number they are handed (behaviour, checked here
+  // with a count no library holds). The pages must hand them live counts.
+  for (const name of ['palettes', 'gradients', 'iconGroups', 'prompts']) {
+    const heading = GALLERY_GATE_COPY[name].pro.heading(7311)
+    assert.ok(heading.includes('7,311'), `${name}: the Pro heading does not print the count it is given: ${heading}`)
   }
+  const PAGE_CALLS = {
+    'src/pages/PaletteGallery.jsx': [/copy\.pro\.heading\(lockedCount\)/, /copy\.anon\.heading\(opens\)/],
+    'src/pages/GradientGallery.jsx': [/copy\.pro\.heading\(lockedCount\)/, /copy\.anon\.heading\(opens\)/],
+    'src/components/prompt/PromptGate.jsx': [/copy\.pro\.heading\(more\)/, /copy\.anon\.heading\(accountOpens\)/],
+  }
+  for (const [file, patterns] of Object.entries(PAGE_CALLS)) {
+    const src = stripComments(read(file))
+    for (const pattern of patterns) assert.ok(pattern.test(src), `${file} must hand its live count to the gate copy: ${pattern}`)
+  }
+  const list = stripComments(read('src/pages/PromptLibrary.jsx'))
+  assert.ok(/total=\{communityRows\.length\}/.test(list), 'the list gate must count the library it holds')
+  assert.ok(/accountOpens=\{freeIds\.size\}/.test(list), 'the list gate must count what a free account opens')
+  const overview = stripComments(read('src/components/prompt/PromptOverview.jsx'))
+  assert.ok(/total=\{total\}/.test(overview) && /accountOpens=\{freeSet\.size\}/.test(overview), 'the overview gate must count from the data it holds')
 })
 
 test('a locked placeholder never animates, so it cannot read as a failed load', () => {
@@ -268,7 +312,7 @@ test('a locked placeholder never animates, so it cannot read as a failed load', 
 const FREE_PROMPTS = COMMUNITY_PROMPTS.filter((p) => p.free === true)
 const LOCKED_PROMPTS = COMMUNITY_PROMPTS.filter((p) => p.free !== true)
 
-// The twelve that were free in the DEFAULT view (sort 'popular' = saves
+// The ten a free account opens in the DEFAULT view (sort 'popular' = saves
 // descending) on 2026-09-04, the day the gate stopped counting positions.
 // They are pinned as a literal rather than recomputed from `saves`, for two
 // reasons: recomputing would make this test restate the implementation instead
@@ -276,9 +320,9 @@ const LOCKED_PROMPTS = COMMUNITY_PROMPTS.filter((p) => p.free !== true)
 // the coupling the fix removed.
 //
 // Changing this list widens or narrows the free tier, which is a PRICING
-// decision and founder-owned. The test is here so that change has to be made
+// decision and the owner's call. The test is here so that change has to be made
 // on purpose rather than as a side effect of editing a number in a data file.
-const PINNED_FREE = ['c-1', 'c-2', 'c-3', 'c-9', 'c-13', 'c-14', 'c-15', 'c-16', 'c-17', 'c-18', 'c-19', 'c-20']
+const PINNED_FREE = ['c-1', 'c-2', 'c-3', 'c-9', 'c-13', 'c-14', 'c-15', 'c-16', 'c-17', 'c-18']
 
 test('every community prompt declares its tier explicitly, and it is a boolean', () => {
   // A missing flag must read as LOCKED, and `free !== true` already does that.
@@ -290,14 +334,14 @@ test('every community prompt declares its tier explicitly, and it is a boolean',
   assert.ok(COMMUNITY_PROMPTS.length > 0, 'no community prompts at all — this suite would be vacuous')
 })
 
-test('the free tier is exactly the twelve prompts it was before the gate changed', () => {
+test('the free tier is exactly the ten prompts a free account opens', () => {
   assert.deepEqual(
     FREE_PROMPTS.map((p) => p.id).sort(),
     [...PINNED_FREE].sort(),
     'the free prompt set moved — that is a pricing change, not a refactor',
   )
-  assert.equal(FREE_PROMPTS.length, FREE_PROMPT_LIMIT,
-    `FREE_PROMPT_LIMIT says ${FREE_PROMPT_LIMIT} but ${FREE_PROMPTS.length} prompts carry free: true`)
+  assert.equal(FREE_PROMPTS.length, GALLERY_TIER_LIMITS.free,
+    `the free allowance is ${GALLERY_TIER_LIMITS.free} but ${FREE_PROMPTS.length} prompts carry free: true`)
   assert.ok(LOCKED_PROMPTS.length > 0, 'nothing is locked — there is no tier to sell')
 })
 
@@ -353,8 +397,14 @@ test('the prompt library gates on identity and never on a position', () => {
   // Search and grid must both read the split output. Filtering the full list
   // is the leak: the predicate reads p.text, so it answers "does a Pro prompt
   // contain this phrase" for anyone who types one.
-  assert.ok(src.includes('isCommunity ? browsableCommunity : prompts'),
+  // The list's open rows are the category's rows filtered through the split's
+  // open set BEFORE the search runs, and the search filters those open rows.
+  assert.ok(/let open = base\.filter\(\(p\) => openIds\.has\(p\.id\)\)/.test(src),
     'the grid source must be the split output, not the full community list')
+  assert.ok(/if \(q\) \{\s*open = open\.filter\(/.test(src),
+    'the search must run over the open rows, never over the full list')
+  assert.ok(/if \(isCommunity\) return listItems\.open/.test(src),
+    'the grid must be fed the open rows')
   assert.ok(!/isCommunity \? sortedCommunity : prompts/.test(src),
     'the full community list must not be the grid source')
 })
@@ -387,4 +437,22 @@ test('the teased grid continues the gallery instead of hugging it', () => {
     'the continuation grid must take its seam from --pl-gap, not a literal')
   assert.ok(/\.pl-gallery\{[^}]*--pl-gap:14px/.test(css),
     'the narrow band must retune --pl-gap so the seam follows the gap')
+})
+
+test('every prompt flagged free ships complete to the browser, and the two past the allowance are Pro-only', async () => {
+  const { COMMUNITY_PROMPT_ROWS } = await import('../../src/data/communityPrompts.js')
+  const byId = new Map(COMMUNITY_PROMPT_ROWS.map((row) => [row.id, row]))
+  for (const prompt of FREE_PROMPTS) {
+    const row = byId.get(prompt.id)
+    assert.ok(row?.title && row?.text, `free prompt ${prompt.id} is a stub in the browser's copy`)
+  }
+  // c-19 and c-20 were once flagged free beyond the allowance, which left two
+  // "free" prompts that no free account could open. They are Pro rows now: whole
+  // on the server (the Pro response), name-less stubs in the bundle.
+  for (const id of ['c-19', 'c-20']) {
+    const server = COMMUNITY_PROMPTS.find((p) => p.id === id)
+    assert.ok(server?.title && server?.text, `${id} must stay complete on the server`)
+    assert.equal(server.free, false, `${id} is past the free allowance and must not be flagged free`)
+    assert.equal(byId.get(id)?.text, undefined, `${id} text must not ship in the bundle`)
+  }
 })

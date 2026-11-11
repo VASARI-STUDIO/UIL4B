@@ -31,6 +31,7 @@ import { formatFileName } from '../../src/utils/exportFileName.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
+  .replace(/\r\n?/g, '\n') // a CRLF checkout (Windows autocrlf) must parse like an LF one
   .replace(/\/\*[\s\S]*?\*\//g, ' ')
   .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
   .replace(/^\s*\/\/.*$/gm, ' ')
@@ -66,8 +67,8 @@ const pageCount = (html) => (html.match(/<section class="sl[ "]/g) || []).length
 
 test('it has the furniture that makes it a brand book', () => {
   // Cover, numbered section openings, a running rail with a folio, a rationale
-  // beside every title, named swatches and alphabet grids. These are what the
-  // founder's references are made of, and losing any of them silently is the
+  // beside every title, named swatches and type spreads. These are what the
+  // reference brand books are made of, and losing any of them silently is the
   // regression worth catching.
   assert.match(DOC, /class="sl sl-cover"/, 'a cover')
   assert.match(DOC, /class="sl sl-open"/, 'section openings')
@@ -75,7 +76,7 @@ test('it has the furniture that makes it a brand book', () => {
   assert.match(DOC, /class="rail-folio"/, 'a printed page number')
   assert.match(DOC, /class="hd-notes"/, 'a rationale beside the page title')
   assert.match(DOC, /class="sw-name"/, 'swatches carrying a name, not only a hex')
-  assert.match(DOC, /class="alpha"/, 'the boxed alphabet grid')
+  assert.match(DOC, /class="tf-spec"/, 'a type spread with its sentence and glyph strip')
 })
 
 test('it is 16:9 and a plausible length', () => {
@@ -99,7 +100,7 @@ test('it is not the design system book at another paper size', () => {
   for (const marker of ['class="bd-chip"', 'class="mx"', 'class="pg pg-contents"']) {
     assert.ok(!DOC.includes(marker), `the guidelines have adopted the book's ${marker}`)
   }
-  for (const marker of ['class="alpha"', 'class="rail"', 'class="op-field"']) {
+  for (const marker of ['class="tf-spec"', 'class="rail"', 'class="op-field"']) {
     assert.ok(!BOOK.includes(marker), `the book has adopted the guidelines' ${marker}`)
   }
 })
@@ -270,7 +271,7 @@ test('the export table advertises it, and only because it is built', () => {
   assert.equal(entry.pro, true)
   assert.equal(entry.logo, true, 'the format no longer declares that it has logo pages')
   assert.ok(proOnlyFormats().some(f => f.id === 'guidelines'))
-  // "Multiple export variations" is the founder's ask. It is only true while
+  // "Multiple export variations" is a product claim. It is only true while
   // Pro offers more than one document.
   assert.ok(proOnlyFormats().length >= 2,
     'Pro is back to a single export document — "multiple export variations" is no longer true')
@@ -306,7 +307,7 @@ test('the paywall names the document the user clicked, not the other one', () =>
   const table = /export const PRO_GATE = \{([\s\S]*?)\r?\n\}/.exec(code)?.[1] || ''
   assert.ok(table, 'PRO_GATE is no longer a table the engine exports')
   for (const f of proOnlyFormats().filter(x => !x.variantOf)) {
-    assert.match(table, new RegExp(`\\n\\s{2}${f.id}: \\{`),
+    assert.match(table, new RegExp(`\\n\\s{2}'?${f.id}'?: \\{`),
       `PRO_GATE has no entry for the Pro format "${f.id}" — clicking it opens an undefined modal`)
   }
   // Distinct analytics ids, or the funnel cannot say which wall converted.
@@ -321,7 +322,7 @@ test('the logo field is offered beside the format that needs it, and nowhere els
   // The dialog's Details step is one branch per kind of document; the field sits in
   // the branches of the two brand documents (the book's monograph layout and the
   // slides both draw the logo) and in none of the others.
-  const details = /let details = null([\s\S]*?)\r?\n\s*return \(/.exec(code)?.[1] || ''
+  const details = /let details = null([\s\S]*?\r?\n {2}\})\r?\n/.exec(code)?.[1] || ''
   const branches = Object.fromEntries(
     [...details.matchAll(/cat\.preview === '(\w+)'\) \{([\s\S]*?)(?=\r?\n {2}\} else if|\r?\n {2}\}\s*$)/g)].map(m => [m[1], m[2]]))
   assert.deepEqual(Object.keys(branches).sort(), ['book', 'guide', 'guidelines', 'kit'],

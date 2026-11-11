@@ -48,14 +48,18 @@ export function Spec({ source, href, level, children }) {
  * a string, a number or a node. `numeric` lists the column indices to align
  * right and set in the mono face, because a column of ratios that is not
  * aligned cannot be compared down its own length.
+ *
+ * `stack` turns each row into a label-and-values block on a phone, for a table
+ * that would otherwise be wider than the screen. Every value cell carries its
+ * column's heading in `data-label` for that layout to print beside it.
  */
-export function DataTable({ head, rows, caption, numeric = [] }) {
+export function DataTable({ head, rows, caption, numeric = [], stack = false }) {
   const id = useId()
   const num = new Set(numeric)
   return (
     <figure className="lart-table-wrap">
       <div className="lart-table-scroll" tabIndex={0} role="group" aria-labelledby={`${id}-cap`}>
-        <table className="lart-table">
+        <table className={stack ? 'lart-table lart-table--fit lart-table--stack' : 'lart-table lart-table--fit'}>
           <thead>
             <tr>{head.map((h, i) => (
               <th key={i} scope="col" data-num={num.has(i) ? 'true' : undefined}>{h}</th>
@@ -67,7 +71,7 @@ export function DataTable({ head, rows, caption, numeric = [] }) {
                 {row.map((cell, c) => (
                   c === 0
                     ? <th key={c} scope="row">{cell}</th>
-                    : <td key={c} data-num={num.has(c) ? 'true' : undefined}>{cell}</td>
+                    : <td key={c} data-label={head[c]} data-num={num.has(c) ? 'true' : undefined}>{cell}</td>
                 ))}
               </tr>
             ))}

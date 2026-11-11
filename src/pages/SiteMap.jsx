@@ -37,7 +37,7 @@ const FLAT_SECTIONS = [
     label: 'Your account',
     desc: 'Where your work and account live.',
     links: [
-      { label: 'Home', route: '/home', note: 'The overview and starting point.' },
+      { label: 'Home', route: '/', note: 'The front page: what UI L4B does, and your own home once you sign in.' },
       { label: 'Projects', route: '/projects', note: 'Saved palettes, fonts and exports.' },
       { label: 'Settings', route: '/settings', note: 'Theme, appearance, account and data.' },
       { label: 'Plans & pricing', route: '/plans', note: 'Compare Free and Pro.' },
@@ -50,7 +50,7 @@ const FLAT_SECTIONS = [
     label: 'Help & community',
     desc: 'Learn the tools and get unstuck.',
     links: [
-      { label: 'Help & Getting Started', route: '/learn/help', note: 'What each tool opens with, and what the free plan covers.' },
+      { label: 'Help and getting started', route: '/learn/help', note: 'What each tool opens with, and what the free plan covers.' },
       { label: 'Design Principles', route: '/learn/principles', note: 'The rules the tools enforce, with the measurements beside them.' },
       { label: 'Information Centre', route: '/info', note: 'Every tool, shortcuts and a screen inspector.' },
       { label: 'SEO Inspector', route: '/seo', note: 'Live SERP preview and an instant SEO score.' },
@@ -168,10 +168,10 @@ export default function SiteMap() {
               <p className="spm-lede">
                 {isAdmin ? (
                   <>
-                    Every page in UIL4B, laid out end to end. Categories still in the workshop
+                    Every page in UI L4B, laid out end to end. Categories still in the workshop
                     keep a <SoonPill inline /> badge, so the map only ever promises what&rsquo;s actually live.
                   </>
-                ) : 'Every page in UIL4B, laid out end to end.'}{' '}
+                ) : 'Every page in UI L4B, laid out end to end.'}{' '}
                 Jump to <a href="#create">Create</a>, <a href="#browse">Discover &amp; Learn</a> or <a href="#account">Account &amp; more</a>.
               </p>
             </div>
@@ -229,8 +229,8 @@ export default function SiteMap() {
               hue="accent"
               label="Learn"
               desc={isAdmin
-                ? 'Reference guides on colour, type and accessibility, plus the topics still to be written.'
-                : 'Reference guides on colour, type and accessibility.'}
+                ? 'Reference guides on colour, type, accessibility and psychology, plus the topics still to be written.'
+                : 'Reference guides on colour, type, accessibility and psychology.'}
             />
             <ul className="spt-rows">
               {LEARN_ARTICLES.map((a) => (

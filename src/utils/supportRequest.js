@@ -49,14 +49,16 @@ export async function postSupport(body) {
   return (await supportAttempt(body)).ok
 }
 
-async function supportAttempt(body) {
+async function supportAttempt(body, idToken) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS)
   try {
     const serialized = JSON.stringify(body)
     const res = await fetch('/api/support', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: idToken
+        ? { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` }
+        : { 'Content-Type': 'application/json' },
       body: serialized,
       keepalive: new TextEncoder().encode(serialized).byteLength < 60 * 1024,
       signal: controller.signal,
@@ -72,14 +74,15 @@ async function supportAttempt(body) {
 /**
  * Retry transient failures once, keeping the exact message and request id.
  * `stale` (optional) says the sender's account has changed since the attempt
- * began; a stale send makes no retry.
+ * began; a stale send makes no retry. `idToken` (optional) is the sender's
+ * Firebase ID token, sent as a Bearer header for the server to verify.
  */
-export async function postSupportWithRetry(body, { retry = true, stale } = {}) {
-  let result = await supportAttempt(body)
+export async function postSupportWithRetry(body, { retry = true, stale, idToken } = {}) {
+  let result = await supportAttempt(body, idToken)
   if (retry && !stale?.() && !result.ok && (!result.status || result.status >= 500 || result.status === 408)) {
     await new Promise(resolve => setTimeout(resolve, 1500))
     if (stale?.()) return result
-    result = await supportAttempt(body)
+    result = await supportAttempt(body, idToken)
   }
   return result
 }

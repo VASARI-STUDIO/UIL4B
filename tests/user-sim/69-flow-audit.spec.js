@@ -1,6 +1,6 @@
 // THE FLOW AUDIT, 2026-09-09 — six journeys a real person takes, rendered.
 //
-// The founder's standing ask is that every flow "feels intentional" and that
+// The standing aim is that every flow "feels intentional" and that
 // the value is visible before anything is asked for. 57-signed-in-session and
 // the 58-flows files reach each surface; this file walks the SEAMS between
 // them — the moment a refusal, a gate, a modal or a confirmation answers the
@@ -59,6 +59,7 @@ import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { mockThemeApi } from './export-theme-mock.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
@@ -149,8 +150,8 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
 
       // A new account starts empty, with no seeded "Default Project";
       // 73-hero-headline-new-account holds the whole of it.
-      await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Start the walkthrough' })).toHaveCount(1)
+      await expect(page.getByText('Default Project')).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'Start your first brand kit' })).toHaveCount(1)
 
       // New project goes straight into the Palette Builder on a new, unsaved
       // project, named when it is saved.
@@ -165,7 +166,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       await expect(page.locator('.toast.show')).toContainText('Project saved')
 
       await go(page, '/projects')
-      await expect(page.locator('.proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
+      await expect(page.getByRole('region', { name: 'Brand v1, latest project' })).toHaveCount(1)
       await context.close()
     })
   }
@@ -185,7 +186,7 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
       watch(page, `a free account at the cap (${size[0]}px)`)
       const account = await signIn(page, { plan: 'free', projects: CAP })
       await go(page, '/projects')
-      await page.getByRole('button', { name: 'New project' }).click()
+      await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).click()
 
       const refusal = page.getByTestId('project-create-refusal')
       await expect(refusal).toBeVisible()
@@ -212,7 +213,8 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
     watch(page, 'a free account with a slot to spare')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/projects')
-    await page.getByRole('button', { name: 'New project' }).click()
+    // The title row's button: the other projects' list has a New project tile of its own while there is room.
+    await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).click()
     await expect(page).toHaveURL(/\/create\/palette$/)
     await expect(page.getByTestId('project-create-refusal')).toHaveCount(0)
     await context.close()
@@ -347,11 +349,13 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     // plan is selected — which is the cheapest per month, i.e. the headline.
     const chosen = ladder.find((pl) => pl.id === headline.id)
     if (chosen.trialDays > 0) {
-      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays}`)
+      // The free days end on day N and the charge lands the day after.
+      await expect(modal.locator('.ui-pro-steps')).toContainText(`Days 1 to ${chosen.trialDays}:`)
+      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays + 1}:`)
     }
     await expect(modal.locator('.ui-pro-steps')).toContainText(chosen.totalLabel)
 
-    // THE CTA NAMES THE TRIAL. The founder asked for it to be more obvious than
+    // THE CTA NAMES THE TRIAL. It must be more obvious than
     // a line of small print, and the button is the last thing read before the
     // decision. A cadence with no trial must NOT say it.
     const cta = modal.locator('.ui-pro-cta .btn').first()
@@ -382,7 +386,7 @@ test.describe('flow 2 — the checkout return page', () => {
       await go(page, '/checkout/return?session_id=cs_test_flow_audit')
 
       const card = page.locator('.checkout-return-card')
-      await expect(card.getByRole('heading')).toContainText(/on UIL4B Pro/i)
+      await expect(card.getByRole('heading')).toContainText(/on UI L4B Pro/i)
       // No "a confirmation has been sent to …": whether Stripe emails a
       // receipt is a dashboard setting nobody here can see, so the page no
       // longer claims one was sent (or names the address it went to).
@@ -491,7 +495,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
   const FREE_LIVE = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
   // Each free format and the file name it must download under.
   const FILE = {
-    kit: /ui-kit\.html$/,
+    kit: /-ui-kit-04-standards\.zip$/,
     html: /-style-guide\.html$/,
     md: /-style-guide\.md$/,
     png: /-style-guide\.png$/,
@@ -506,6 +510,8 @@ test.describe('flow 4 — each live free format downloads under its own name', (
   test('every free format produces a file named for the format', async ({ browser }) => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account exporting every format it is entitled to')
+    // The kit is built by the export route (a zip in the open theme); a stand-in answers it.
+    await mockThemeApi(page)
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, WORKED_BOARD)
     expect(FREE_LIVE.map((f) => f.id).sort()).toEqual(Object.keys(FILE).sort())
@@ -523,8 +529,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
       expect(download.suggestedFilename(), `${fmt.name} must download as its own format`)
         .toMatch(FILE[fmt.id])
       // The popup stays open after a finished export and says so in its status line
-      // (the kit's line can instead carry a font it could not embed: the font hosts
-      // are live network here), so a second file is one more click.
+      // so a second file is one more click.
       await expect(cta, `${fmt.name}: the button offers another go`).toHaveText('Export again')
       await expect(panel.locator('.xd-status'), `${fmt.name}: the dock says it downloaded`).toContainText(/downloaded/i)
       await page.keyboard.press('Escape')
@@ -541,7 +546,7 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await expect(exportPanel(page)).toBeVisible()
     await chooseFormat(page, 'guidelines')
-    await expect(page.locator('.xd-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
     await expect(categoryRadio(page, 'Slides'), 'and the rail names the document it locks').toHaveAccessibleName('Slides, 16:9, Pro')
     await expect(primaryButton(page)).toHaveText('Unlock with Pro')
     // The wall goes to /plans, and asks
@@ -603,6 +608,9 @@ test.describe('flow 5 — settings: name, theme and the delete confirmation', ()
       const go_ = page.getByRole('button', { name: /Permanently delete/i })
       await expect(go_, 'no password, no delete').toBeDisabled()
       await page.keyboard.type('hunter22')
+      // The password alone is not enough: the "I understand" box is the second step.
+      await expect(go_, 'a password without the box').toBeDisabled()
+      await page.getByLabel(/I understand/).check()
       await expect(go_).toBeEnabled()
       // The way back is as plain as the way through.
       await page.getByRole('button', { name: 'Cancel', exact: true }).click()

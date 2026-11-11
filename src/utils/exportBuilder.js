@@ -9,6 +9,7 @@ import { logoSvg, SYMBOL_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { tintLabelsFor } from './tintLabels.js'
 import { PALETTE_LABELS } from './paletteRoles.js'
 import { initialOf } from './initials.js'
+import { systemSentence, glyphStrip } from './exportTemplates/shared.js'
 
 export const EXPORT_DARK_INK = '#0F172A'
 export const EXPORT_LIGHT_INK = '#F8FAFC'
@@ -204,7 +205,8 @@ export function buildStyleGuideHTML({ design, stateShades, theme = 'light', proj
         <div class="sg-font-card">
           <div class="sg-font-label">Heading · ${headingFamily} ${headingWeight}</div>
           <p class="sg-font-sample" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:48px">The quick brown fox</p>
-          <p class="sg-font-sample-s" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:24px">ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789</p>
+          <p class="sg-font-sample-s" style="font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight};font-size:24px">${systemSentence({ heading: headingFamily, headingWeight, ratio: ts.ratio || 1.25 }, 'heading')}</p>
+          ${glyphStrip(`font-family:'${headingFamily}',sans-serif;font-weight:${headingWeight}`)}
         </div>
         <div class="sg-font-card">
           <div class="sg-font-label">Body · ${bodyFamily} ${bodyWeight}</div>
@@ -426,7 +428,7 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
       ${gradStops?.length >= 2 ? '<a href="#gradients"><span class="num">05</span> Gradient</a>' : ''}
       <a href="#tokens"><span class="num">06</span> Tokens</a>
     </nav>
-    <div class="sg-sidebar-footer">Generated with <a href="https://uil4b.com" target="_blank">UIL4B</a></div>
+    <div class="sg-sidebar-footer">Generated with <a href="https://uil4b.com" target="_blank">UI L4B</a></div>
   </aside>
   <main class="sg-main">
     <header class="sg-hero">
@@ -472,14 +474,14 @@ h1, h2, h3, h4 { font-family: '${headingFamily}', system-ui, sans-serif; font-we
     <footer class="sg-footer">
       <a class="sg-footer-brand" href="https://uil4b.com" target="_blank" rel="noopener">
         <span class="sg-footer-mark">${logoSvg({ kind: 'symbol', attrs: `height="12" width="${Math.round(12 * SYMBOL_WIDTH / LOGO_HEIGHT)}" aria-hidden="true"` })}</span>
-        Built with UIL4B · ${date}
+        Built with UI L4B · ${date}
       </a>
     </footer>
 ${watermark ? `    <div class="sg-watermark">
       <div class="sg-watermark-inner">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         <div>
-          <strong>Free Export: Made with UIL4B</strong>
+          <strong>Free Export: Made with UI L4B</strong>
           <div style="font-size:11px;margin-top:2px">Upgrade to Pro to remove this credit line and unlock the design system book</div>
         </div>
         <a href="https://uil4b.com/checkout?plan=yearly" target="_blank" rel="noopener" style="padding:6px 14px;border-radius:6px;background:${primary};color:${contrastText(primary)};font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">Upgrade</a>

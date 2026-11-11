@@ -58,10 +58,10 @@ test('Free carries the mark in every section and the print credit, and Pro carri
     const sections = count(TEMPLATE[layout], '@@WATERMARK@@')
     assert.ok(sections >= 4, `${layout}: the template marks its sections`)
     assert.equal(count(free, '<span class="section-watermark">Made with <a class="publisher-link"'), sections, `${layout}: one mark per section`)
-    assert.match(free, /@bottom-left \{ content:"Made with UIL4B \/ Free UI kit"/)
+    assert.match(free, /@bottom-left \{ content:"Made with UI L4B \/ Free UI kit"/)
     assert.match(free, /<aside class="site-links">/)
     const pro = render(layout, design(BASE, { identity: { name: 'Harbour' } }), 'pro')
-    for (const marker of ['class="section-watermark"', 'class="free-notice"', 'class="site-links"', 'class="publisher-link"', 'Made with UIL4B', 'uil4b.com']) {
+    for (const marker of ['class="section-watermark"', 'class="free-notice"', 'class="site-links"', 'class="publisher-link"', 'Made with UI L4B', 'uil4b.com']) {
       assert.ok(!pro.includes(marker), `${layout}: a Pro kit still carries ${marker}`)
     }
     assert.match(pro, /@page \{ @bottom-right/)
@@ -224,11 +224,12 @@ test('Showcase: the scale names its columns once in the head, not under every va
   assert.equal(count(rows, '<td class="vals">'), 6, 'a row for each of the six steps of the scale')
 })
 
-test('Showcase: the heading band sets the alphabet and figures at the Heading 2 step', () => {
+test('Showcase: the heading band sets a sentence about the system at the Heading 2 step, with the alphabet as a strip', () => {
   const html = render('showcase', design())
   const band = /<p class="sc-alpha" style="--size:([\d.]+)">([^<]*)<\/p>/.exec(html)
   assert.ok(band, 'the alphabet line is missing')
-  assert.equal(band[2], 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789')
+  assert.match(band[2], /sets the headings, each step [\d.]+ times the one below\.$/)
+  assert.ok(html.includes('class="glyph-strip"'), 'the character set is a strip')
   const h2 = /<code>([\d.]+) px \/ [\d.]+ \/ \d+<\/code><\/button><small class="var">--font-size-heading-2</.exec(html)[1]
   assert.equal(band[1], h2, 'the line is not at the Heading 2 size the scale lists')
   assert.ok(html.indexOf('class="sc-alpha"') < html.indexOf('id="colour"'), 'the line left the heading band')

@@ -20,18 +20,21 @@
 
 
 /* Alpha badge */
-.nav-alpha-badge{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent-text);margin-left:auto;flex-shrink:0}
+.nav-alpha-badge{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent-text);margin-left:auto;flex-shrink:0}
 
 /* Collapsible Categories */
 .sec-h-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
 .lib-loading{display:flex;min-height:280px;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--t2)}
 .lib-loading strong{font-size:var(--fs-body);color:var(--t0)}
+/* The library tab fallback holds the first screen, so the footer stays below the fold until the grid arrives. */
+.lib-loading--route{min-height:max(280px,calc(100svh - var(--chrome-h, 0px)))}
 .lib-loading span{font-size:var(--fs-caption)}
 
 /* Empty state */
 .pl-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 20px;text-align:center;color:var(--t2)}
 .pl-empty svg{opacity:.25}
 .pl-empty p{font-size:14px;margin:0}
+@media(pointer:coarse){.pl-empty-try{min-height:44px}}
 
 /* FOTD type held behind the reserved box until the real face is confirmed */
 @media(min-width:981px) and (max-height:900px){
@@ -51,7 +54,7 @@
   /* Touch targets — minimum 44px on mobile */
   .pt-t{min-height:44px;padding:10px 14px}}
 
-.sub-save{font-size:10px;font-weight:700;letter-spacing:.03em;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 15%,transparent);padding:2px 7px;border-radius:999px}
+.sub-save{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 15%,transparent);padding:2px 7px;border-radius:999px}
 .sub-tier-head{display:flex;flex-direction:column;gap:4px}
 .sub-tier-price{display:flex;align-items:baseline;gap:7px}
 .sub-tier-list .sub-check{margin-top:1px}
@@ -87,7 +90,7 @@
 /* Close button and label shared by the Compare dialog and the AI prompt page. */
 .fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fg-detail-close:hover{background:var(--bg-3);color:var(--t0)}
-.fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
+.fg-detail-label{display:block;margin-bottom:14px;font-family:var(--font);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--accent-text)}
 /* `.snapv-value` keeps its right edge. It is `text-align:right` on a fixed
    56px width so the digits line up under each other down the slider stack at
    phone widths, and a flex container IGNORES `text-align` for its items — so
@@ -111,15 +114,15 @@
 .aipg-ref-preview{display:flex;align-items:flex-start;gap:12px;margin-top:8px}
 .aipg-scanned{margin-top:12px;padding:12px;background:var(--bg-1);border-radius:var(--radius);border:1px solid var(--border)}
 .aipg-field{display:flex;flex-direction:column;gap:6px}
-.aipg-field label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.aipg-field label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .aipg-field textarea{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--t0);font-family:var(--font);font-size:14px;line-height:1.5;outline:none;resize:vertical;transition:border-color var(--t),box-shadow var(--t)}
 .aipg-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
 .aipg-options{display:flex;flex-wrap:wrap;gap:18px}
 .aipg-option-group{display:flex;flex-direction:column;gap:6px}
-.aipg-option-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.aipg-option-label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .aipg-chips{display:flex;flex-wrap:wrap;gap:6px}
 .aipg-submit-row{display:flex;align-items:center;gap:12px}
-.aipg-hint{font-size:11px;color:var(--t3);font-family:var(--mono)}
+.aipg-hint{font-size:var(--fs-caption);color:var(--t3);font-family:var(--font)}
 .aipg-error{font-size:13px;color:var(--err-strong);background:rgba(239,68,68,.08);padding:10px 14px;border-radius:var(--radius-s);border:1px solid rgba(239,68,68,.2)}
 .aipg-results{display:flex;flex-direction:column;gap:14px;margin-top:24px}
 .aipg-results-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -147,7 +150,7 @@
 .aipg-rulecat{border-top:1px solid var(--border);padding-top:12px}
 .aipg-rulecat-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;font-family:var(--font);padding:0;color:var(--t0)}
 .aipg-rulecat-arr{transition:transform var(--dur-2) var(--ease-standard);flex-shrink:0;color:var(--t2)}
-.aipg-rulecat-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t1)}
+.aipg-rulecat-label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t1)}
 .aipg-rulecat-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;background:var(--accent-fill);color:var(--accent-fg)}
 .aipg-rules{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 
@@ -168,26 +171,31 @@
 /* ─── Pro plan disabled state ─── */
 
 /* ─── Brand kit walkthrough ─── */
-/* A bar docked to the foot of the viewport on every step, and one panel that
-   opens from it: a bottom sheet joined to the bar on a phone, a popover above
-   the trigger from 768px. The panel has no scrim and no full-viewport layer, so
-   the tool behind it stays usable.
+/* A bar on every step, and one panel that opens from it. Below 1024px the bar is
+   docked to the foot of the viewport; from 1024px it is a glass pill floating
+   over it. The panels have no scrim and no full-viewport layer, so the tool
+   behind them stays usable.
 
    The bar is built from the viewport, not the host page's gutters, so it has one
    width and one x on all four tools. It never animates in: each tool mounts its
    own copy, so an entrance would replay on every Next. An in-flow spacer of the
-   bar's height (plus the tool's own bottom toolbar, where it has one) keeps the
+   bar's reserve (plus the tool's own bottom toolbar, where it has one) keeps the
    end of the tool clear of it.
 
    One height per width, on every step and in every state:
-     · under 768px   two 44px rows (steps, then Close / Help / Next), 112px
-     · 768 to 1023px one row, 56px
-     · 1024px up     one row, 56px
-   --bkit-h holds the safe-area inset on the tiers that sit on the screen edge,
-   so the bar and its spacer agree. */
-:root{--bkit-h:calc(112px + env(safe-area-inset-bottom))}
-@media(min-width:768px){:root{--bkit-h:calc(56px + env(safe-area-inset-bottom))}}
-@media(min-width:1024px){:root{--bkit-h:56px}}
+     · under 768px   60px. A progress strip along the top edge, a steps trigger
+                     (the step's name and "Step N of 4") and Next. The four steps,
+                     the help line and Close sit in a panel that opens upward
+                     from the trigger. The phone tab bar steps aside (below).
+     · 768 to 1023px 60px, one inline row: the four steps with their labels,
+                     What's this?, Leave and Next. Controls are 44px.
+     · 1024px up     a pill, one row, 50px, floating --bkit-float above the foot
+   --bkit-h is the bar's own height and holds the safe-area inset on the tiers
+   that sit on the screen edge, so the bar and its spacer agree. --bkit-reserve
+   is --bkit-h plus the gap above and below the pill (none below 1024px): what
+   anything stacked over the bar, and the end of the page, has to clear. */
+:root{--bkit-float:0px;--bkit-h:calc(60px + env(safe-area-inset-bottom));--bkit-reserve:calc(var(--bkit-h) + 2 * var(--bkit-float))}
+@media(min-width:1024px){:root{--bkit-float:16px;--bkit-h:50px}}
 
 .bkit-rail{
   --bkit-hair:color-mix(in srgb,var(--t0) 9%,transparent);
@@ -195,21 +203,47 @@
   --bkit-mark-line:color-mix(in srgb,var(--t0) 30%,transparent);
   --bkit-focus:var(--link,var(--accent-text));
   --bkit-ease:cubic-bezier(.23,1,.32,1);
-  position:fixed;inset-inline:0;bottom:var(--bkit-toolbar-h,0px);z-index:60;isolation:isolate;
+  position:fixed;inset-inline:0;bottom:calc(var(--bkit-toolbar-h,0px) + var(--bkit-float));z-index:60;isolation:isolate;
   container:bkit / inline-size;
   box-sizing:border-box;height:var(--bkit-h);margin:0;
-  /* 1px rule + 7px + 44px + 8px + 44px + 8px = 112px */
-  display:grid;grid-template-rows:44px 44px;row-gap:var(--s-2);
-  padding:7px max(var(--s-4),env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom)) max(var(--s-4),env(safe-area-inset-left,0px));
+  /* Phone: the steps trigger, then Next at the trailing end (never wider than 18rem).
+     1px rule + 8px + 44px + 7px = 60px, then the home-indicator inset. */
+  display:grid;grid-template-columns:minmax(112px,1fr) minmax(150px,18rem);column-gap:var(--s-2);align-items:center;
+  padding:8px max(var(--s-4),env(safe-area-inset-right,0px)) calc(7px + env(safe-area-inset-bottom)) max(var(--s-4),env(safe-area-inset-left,0px));
   background:var(--bg-0);border:0;border-top:1px solid var(--bkit-hair);
   font-family:var(--font);
 }
-.bkit-rail-space{display:block;flex:0 0 auto;height:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px))}
+.bkit-rail-space{display:block;flex:0 0 auto;height:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px))}
 
-/* The lead (title and count) is read out but not drawn until there is room. */
-.bkit-rail-head{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-.bkit-rail-eyebrow{font-size:var(--fs-caption);font-weight:540;line-height:1.2;color:var(--t0);white-space:nowrap}
-.bkit-rail-count{margin-inline-start:var(--s-2);font-size:var(--fs-caption);font-weight:400;line-height:1.2;color:var(--t2);white-space:nowrap;font-variant-numeric:tabular-nums}
+/* The lead (768px and up; a phone shows the count in its trigger). From 1024px it
+   sits in the row, title first. The count reserves the width of its longest
+   reading, so moving between steps never changes the bar's width. */
+.bkit-rail-head{display:flex;align-items:center;white-space:nowrap}
+.bkit-rail-eyebrow{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;font-size:var(--fs-caption);font-weight:540;line-height:1.2;color:var(--t0)}
+.bkit-rail-count{display:block;min-width:10ch;font-size:var(--fs-caption);font-weight:400;line-height:1.2;color:var(--t2);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ─── Phone: progress strip and steps trigger ─── */
+/* Four segments along the top edge. Decoration: the facts are in the trigger's
+   name and the panel's list. The current segment is taller (a shape cue, not
+   only a colour); a built one takes the accent. */
+.bkit-progress{position:absolute;top:0;inset-inline:max(var(--s-4),env(safe-area-inset-left,0px)) max(var(--s-4),env(safe-area-inset-right,0px));display:flex;align-items:flex-start;gap:var(--s-1);height:6px;pointer-events:none}
+.bkit-progress-seg{flex:1 1 0;height:4px;border-radius:2px;background:color-mix(in srgb,var(--t0) 14%,transparent)}
+.bkit-progress-seg.is-current{height:6px;background:var(--t0)}
+.bkit-progress-seg.is-done{background:var(--accent-fill)}
+
+/* The whole cell is the target. The text sits on the bar's 16px inset; the pill
+   that shows on press reaches 8px beyond it. */
+.bkit-rail-steps{box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--s-1);align-items:center;align-content:center;width:calc(100% + var(--s-2));min-width:0;height:44px;margin-inline-start:calc(-1 * var(--s-2));padding:0 var(--s-2);border:0;border-radius:var(--btn-radius);background:transparent;color:var(--t0);font-family:var(--font);text-align:start;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease)}
+.bkit-rail-steps-name,.bkit-rail-steps-count{grid-column:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bkit-rail-steps-name{font-size:15px;font-weight:600;line-height:18px;color:var(--t0)}
+.bkit-rail-steps-count{font-size:var(--fs-caption);font-weight:400;line-height:16px;color:var(--t2);font-variant-numeric:tabular-nums}
+.bkit-rail-steps svg{grid-column:2;grid-row:1 / span 2;display:block;color:var(--t1)}
+.bkit-rail-steps[aria-expanded="true"] svg{transform:rotate(180deg)}
+.bkit-rail-steps:active{background:var(--hvr)}
+.bkit-rail-steps:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
+@media(hover:hover){
+  .bkit-rail-steps:hover{background:var(--hvr)}
+}
 
 /* ─── Steps ─── */
 .bkit-steps{grid-row:1;list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:var(--s-2);min-width:0}
@@ -226,17 +260,16 @@
 .bkit-step-label::after{content:attr(data-label);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:540}
 .bkit-tick{display:block;flex:none;stroke-width:2.5}
 
-/* What a step produced: in the panel's list, and on the bar only where there
-   is room. */
+/* What a step produced: in the panel's list. The bar never draws it. */
 .bkit-step-swatches{display:flex;gap:3px}
 .bkit-step-swatch{display:block;width:12px;height:12px;border-radius:3px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 12%,transparent)}
 .bkit-step-value{font-size:var(--fs-caption);font-weight:400;line-height:1.5;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bkit-rail .bkit-step-swatches,.bkit-rail .bkit-step-value{display:none}
 
-/* The 18px mark in the panel's list: an outlined numeral ahead, an ink ring on
+/* The 20px mark in the panel's list: an outlined numeral ahead, an ink ring on
    the current step, a tick on an accent wash once built (built beats current).
    The numeral and the tick share one cell and cross-fade when a step is built. */
-.bkit-card-num,.bkit-step-mark{box-sizing:border-box;position:relative;display:grid;place-items:center;flex:none;width:18px;height:18px;border:1.5px solid var(--bkit-mark-line,color-mix(in srgb,var(--t0) 30%,transparent));border-radius:50%;background:transparent;color:var(--t2);font-family:var(--font);font-size:.75rem;font-weight:560;line-height:1;font-variant-numeric:tabular-nums;transition:background-color var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
+.bkit-card-num,.bkit-step-mark{box-sizing:border-box;position:relative;display:grid;place-items:center;flex:none;width:20px;height:20px;border:1.5px solid var(--bkit-mark-line,color-mix(in srgb,var(--t0) 30%,transparent));border-radius:50%;background:transparent;color:var(--t2);font-family:var(--font);font-size:var(--fs-caption);font-weight:560;line-height:1;font-variant-numeric:tabular-nums;transition:background-color var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
 .bkit-card-num > *,.bkit-step-mark > *{grid-area:1 / 1}
 .bkit-step-num{display:block;transition:opacity var(--dur-2) var(--ease-standard)}
 .bkit-card-num .bkit-tick,.bkit-step-mark .bkit-tick{opacity:0;transition:opacity var(--dur-2) var(--ease-standard)}
@@ -246,7 +279,7 @@
 .bkit-card-steps li.is-done .bkit-tick,.bkit-step.is-done .bkit-tick{opacity:1}
 
 /* ─── Actions ─── */
-.bkit-rail-actions{grid-row:2;display:grid;grid-template-columns:44px 44px minmax(0,1fr);column-gap:var(--s-2);align-items:center;min-width:0}
+.bkit-rail-actions{display:flex;align-items:center;min-width:0}
 .bkit-rail-help,.bkit-rail-close{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;height:44px;padding:0;border:1px solid var(--bkit-line);background:transparent;color:var(--t1);font-family:var(--font);font-size:var(--fs-caption);font-weight:400;line-height:1.2;white-space:nowrap;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease)}
 .bkit-rail-close{border-radius:50%}
 .bkit-rail .bkit-rail-help{border-radius:var(--btn-radius);border-color:var(--bkit-line);background:transparent;color:var(--t0)}
@@ -273,37 +306,56 @@
 
 /* ─── Phone, 767px and below ─── */
 @media(max-width:767px){
-  /* Row 1: a 3px segment over each label, a tick on built steps, no numeral.
-     The segment is decoration; the label weight, the tick and the
-     screen-reader text carry the state. */
-  .bkit-step{align-items:flex-start;height:44px;padding:19px 0 0}
-  .bkit-step::before{content:"";position:absolute;top:8px;inset-inline:0;height:3px;border-radius:2px;background:color-mix(in srgb,var(--t0) 14%,transparent);transition:background-color var(--dur-2) var(--ease-standard)}
-  .bkit-step.is-current::before{background:var(--t0)}
-  .bkit-step.is-done::before{background:var(--accent-fill)}
-  .bkit-step:active{background:var(--hvr)}
-  .bkit-step-mark{display:none}
-  .bkit-step.is-done .bkit-step-mark{display:flex;align-items:center;justify-content:flex-start;width:12px;height:16px;margin-inline-end:var(--s-1);border:0;background:transparent;color:var(--accent-text)}
-  .bkit-step-mark .bkit-step-num{display:none}
-  .bkit-step.is-done .bkit-step-mark .bkit-tick{opacity:1}
+  /* No arrow on the phone's Next: the label is the whole message. */
+  .bkit-rail .bkit-rail-next svg{display:none}
   /* Under the on-screen keyboard the bar steps aside and the sheet takes the foot. */
   .bkit-rail--kbd{visibility:hidden}
+  /* The name sheet has its own Close and its own Save, so the bar gives up its
+     Next while it is open: one X and one way forward on screen. */
+  .bkit-rail--name .bkit-rail-next{display:none}
 }
+/* The steps panel: opens upward from the bar's top edge, same ground and hairline,
+   rows split by hairlines. Non-modal, so no scrim. It is a .bkit-card so the
+   overlay rules (utils/openOverlays.js) treat it as the guide's own. */
+.bkit-rail .bkit-card--steps{position:absolute;inset-inline:0;bottom:100%;max-height:min(60dvh,440px);padding-block:0;background:var(--bg-0);border-inline:0;border-radius:0}
+.bkit-sheet-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-3);min-height:48px;padding-block:var(--s-3) var(--s-2);box-sizing:border-box}
+.bkit-sheet-title{margin:0;font-size:17px;font-weight:600;line-height:1.25;color:var(--t0)}
+.bkit-sheet-title:focus-visible{outline:none}
+.bkit-sheet-count{font-size:var(--fs-caption);color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bkit-sheet-help{margin:0 0 var(--s-2);font-size:14px;line-height:1.5;color:var(--t1)}
+.bkit-card--steps .bkit-card-steps{border-top:1px solid var(--border)}
+.bkit-card--steps .bkit-card-steps li{padding:0;align-items:stretch}
+.bkit-card--steps .bkit-card-steps a{display:flex;align-items:center;gap:var(--s-3);box-sizing:border-box;width:100%;min-height:56px;padding:var(--s-2) 0;color:inherit;text-decoration:none}
+.bkit-card--steps .bkit-card-steps a:active{background:var(--hvr)}
+.bkit-card--steps .bkit-card-steps a:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:-2px}
+.bkit-card--steps .bkit-card-num{margin-top:0}
+.bkit-rail .bkit-card--steps .bkit-step-swatches{display:flex}
+.bkit-rail .bkit-card--steps .bkit-step-value{display:block;white-space:normal}
+.bkit-sheet-close{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;box-sizing:border-box;width:100%;min-height:52px;padding:var(--s-2) 0;border:0;border-top:1px solid var(--border);background:transparent;color:var(--t0);font-family:var(--font);text-align:start;cursor:pointer}
+.bkit-sheet-close:active{background:var(--hvr)}
+.bkit-sheet-close:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:-2px}
+.bkit-sheet-close-label{font-size:15px;font-weight:540;line-height:1.3}
+.bkit-sheet-close-note{font-size:var(--fs-caption);font-weight:400;line-height:1.45;color:var(--t2)}
+/* After the X ends the walkthrough this covers the bar's footprint for a moment, so a second press lands on nothing. It sits above the phone tab bar (z-index 118), which returns into the same footprint. */
+.bkit-exit-shield{position:fixed;z-index:119;background:transparent}
 
-/* ─── 768px and up: one row ─── */
+/* ─── 768px and up: one row, still 60px ─── */
 @media(min-width:768px){
   .bkit-rail{
     display:flex;align-items:center;gap:var(--s-5);
-    /* 1px rule + 9px + 36px + 10px = 56px */
-    padding:9px max(var(--page-inline),env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom)) max(var(--page-inline),env(safe-area-inset-left,0px));
+    /* 1px rule + 8px + 44px + 7px = 60px */
+    padding:8px max(var(--page-inline),env(safe-area-inset-right,0px)) calc(7px + env(safe-area-inset-bottom)) max(var(--page-inline),env(safe-area-inset-left,0px));
   }
+  .bkit-rail-head{flex:none}
   .bkit-steps{display:flex;flex:0 1 auto;gap:var(--s-1)}
   .bkit-steps li{display:flex}
-  .bkit-step{align-items:center;gap:var(--s-2);height:40px;padding:0 10px;border-radius:var(--btn-radius)}
+  .bkit-step{align-items:center;gap:var(--s-2);height:44px;padding:0 10px;border-radius:var(--btn-radius)}
   .bkit-step-body{gap:var(--s-2)}
-  /* The current step's marker is a 2px line on the bar's top edge, over the rule. */
-  .bkit-step.is-current::before{content:"";position:absolute;top:-8px;inset-inline:10px;height:2px;border-radius:0 0 2px 2px;background:var(--accent-fill)}
+  /* The current step's marker is a 2px line directly under its label, inside the chip, so it cannot read as an underline of the page above the bar. */
+  .bkit-step.is-current::before{content:"";position:absolute;bottom:6px;inset-inline:10px;height:2px;border-radius:1px;background:var(--accent-fill)}
   .bkit-rail-actions{display:flex;align-items:center;gap:var(--s-2);margin-inline-start:auto;flex:none}
-  .bkit-rail-help,.bkit-rail-close{flex:none;width:40px;height:40px}
+  /* 44px like Next beside them, so the tap area is the drawn control and sits 8px clear of Next. */
+  .bkit-rail-help,.bkit-rail-close{flex:none;width:44px;height:44px}
   .bkit-rail-help-icon{width:16px;height:16px}
   .bkit-rail-close svg{width:14px;height:14px}
   .bkit-rail .bkit-rail-next{flex:none;width:auto;min-width:160px;height:44px;font-size:var(--fs-caption)}
@@ -315,29 +367,91 @@
 @media(min-width:768px) and (hover:hover){
   .bkit-step:hover{background:var(--hvr);color:var(--t0)}
 }
+/* Tablet: the lead is read out, not drawn (the four labels need the width), and
+   Next is as wide as its label, not a stretched pill. */
+@media(min-width:768px) and (max-width:1023px){
+  .bkit-rail-head{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .bkit-rail .bkit-rail-next{min-width:0;padding-inline:var(--s-4)}
+  /* Help is a bare "?" icon elsewhere; here there is room for the word beside it.
+     The name stays "Help: What's this?", so the drawn word is the start of it. */
+  .bkit-rail .bkit-rail-help{width:auto;gap:var(--s-2);padding-inline:var(--s-3)}
+  .bkit-rail-help-text{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+  .bkit-rail-help-rest{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+}
+/* ─── 1024px and up: the floating pill ───
+   The bar is a glass pill, 896x50, centred on the viewport and --bkit-float
+   above the foot (above the tool's own bottom toolbar where it has one, which
+   keeps the foot). It uses the app's glass recipe (.glass: --glass-border,
+   --glass-shadow, saturate and a blur) with the nav's 88% page tint and a 24px
+   blur, so the tool shows through it, and a solid fallback below.
+   Nothing inside it is a box. Only Next (the one accent fill, or an outline
+   while a panel is open) and the four step marks have a ground or an edge;
+   the step links, help and close are bare until hovered, and a hover changes
+   their colour, not their ground. The current step is the 2px accent underline.
+   One backdrop-filter surface means no ancestor of the bar may be a backdrop
+   root (filter, opacity under 1, mask, clip-path, backdrop-filter, mix-blend-
+   mode, or will-change on those); none is, so the bar stays a plain child of
+   the page and its blur reads what is behind it. The row never wraps or
+   scrolls at any desktop width, so overflow stays visible and the focus rings
+   sit outside the pill. */
 @media(min-width:1024px){
-  .bkit-rail{z-index:40}
-  .bkit-rail-help,.bkit-rail-close{width:36px;height:36px}
+  .bkit-rail{
+    --bkit-glass:color-mix(in srgb,var(--bg-0) 88%,transparent);
+    --bkit-dim:color-mix(in srgb,var(--t0) 62%,var(--bg-0));
+    z-index:40;
+    width:min(896px,100% - 2 * var(--bkit-float));
+    margin-block:0;margin-inline:auto;
+    padding-block:6px;padding-inline:20px 6px;
+    background:var(--bkit-glass);
+    -webkit-backdrop-filter:saturate(160%) blur(24px);backdrop-filter:saturate(160%) blur(24px);
+    border:1px solid var(--glass-border);border-radius:var(--radius-pill);
+    box-shadow:var(--glass-shadow),var(--ring);
+  }
+  [data-theme="light"] .bkit-rail{--bkit-dim:color-mix(in srgb,var(--t0) 80%,var(--bg-0))}
+
+  /* The lead sits in the row: the title
+     shows beside the count. */
+  .bkit-rail-head{position:static;align-items:baseline;flex:none;height:auto}
+  .bkit-rail-eyebrow{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+  .bkit-rail-count{margin-inline-start:var(--s-2);color:var(--bkit-dim)}
+
+  /* Steps are links with no ground in any state. The mark answers built or
+     not; the label and the underline, 3px above the link's foot, answer where
+     you are. */
+  .bkit-step{height:36px;background:transparent;color:var(--bkit-dim)}
+  .bkit-step-mark{color:var(--bkit-dim)}
+  .bkit-step.is-current::before{bottom:3px;background:var(--accent-fill)}
+
+  /* Help and close are bare 36px circles with a 44px hit area. The help label
+     stays in the DOM, visually hidden, so its accessible name is unchanged. */
+  .bkit-rail .bkit-rail-help,.bkit-rail .bkit-rail-close{width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:var(--t1)}
+  .bkit-rail-help::after,.bkit-rail-close::after{width:44px;height:44px}
+  .bkit-rail-help-icon{width:18px;height:18px}
+  .bkit-rail-close svg{width:16px;height:16px;stroke-width:2}
   .bkit-rail .bkit-rail-next{height:36px}
+}
+@media(min-width:1024px) and (hover:hover){
+  .bkit-step:hover{background:transparent;color:var(--t0)}
+}
+@media(min-width:1024px) and (hover:hover) and (pointer:fine){
+  .bkit-rail .bkit-rail-help:hover,.bkit-rail .bkit-rail-close:hover{background:var(--hvr);color:var(--t0)}
 }
 /* On a fine pointer the chromatic outline is the hover, so the border stays put. */
 @media(min-width:1024px) and (hover:hover){
-  .bkit-rail .bkit-rail-help:hover,.bkit-rail .bkit-rail-next.is-outline:hover{border-color:var(--bkit-line)}
+  .bkit-rail .bkit-rail-next.is-outline:hover{border-color:var(--bkit-line)}
 }
-
-/* ─── What the bar shows as it gets wider ───
-   Each query is the width of the bar's content box, in this order: the lead,
-   the help text, then what each built step produced. */
-@container bkit (min-width:984px){
-  .bkit-rail-head{position:static;display:flex;align-items:baseline;flex:none;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+/* Solid fallback: a person who asks for less transparency, or a browser with no
+   backdrop-filter, gets an opaque page-coloured pill. */
+@media(min-width:1024px) and (prefers-reduced-transparency:reduce){
+  .bkit-rail{background:var(--bg-1);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
-@container bkit (min-width:1040px){
-  .bkit-rail-help{width:auto;gap:var(--s-2);padding:0 14px}
-  .bkit-rail-help-text{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  @media(min-width:1024px){
+    .bkit-rail{background:var(--bg-1)}
+  }
 }
-@container bkit (min-width:1240px){
-  .bkit-rail .bkit-step.is-done .bkit-step-swatches{display:flex}
-  .bkit-rail .bkit-step.is-done .bkit-step-value{display:block;max-width:18ch}
+@media(min-width:1024px) and (forced-colors:active){
+  .bkit-rail{background:Canvas;border-color:CanvasText;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
 /* ─── The panel ───
@@ -368,7 +482,6 @@
 .bkit-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-3);margin-bottom:var(--s-3)}
 .bkit-card-headtext{min-width:0}
 .bkit-card-title{margin:0;font-size:17px;font-weight:600;line-height:1.25;letter-spacing:normal;color:var(--t0)}
-.bkit-card-count{margin:2px 0 0;font-size:var(--fs-caption);font-weight:400;line-height:1.4;color:var(--t2);font-variant-numeric:tabular-nums}
 .bkit-card-close{position:relative;flex:none;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;height:44px;margin:-6px -6px 0 0;padding:0;border:1px solid transparent;border-radius:var(--btn-radius);background:transparent;color:var(--t1);cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-1) var(--bkit-ease,cubic-bezier(.23,1,.32,1))}
 .bkit-card-close:active{transform:scale(.97)}
 .bkit-card-close:focus-visible{outline:2px solid var(--link);outline-offset:2px}
@@ -392,6 +505,8 @@
 .bkit-card-artefact .bkit-step-swatch{width:14px;height:14px}
 .bkit-card-artefact .bkit-step-value{display:block;white-space:normal}
 .bkit-card-go{width:100%;height:44px;margin-top:var(--s-4);padding:0 var(--s-4);justify-content:center;font-size:15px;font-weight:560}
+/* Straight after the one sentence the body's own margin is the gap. */
+.bkit-card-body + .bkit-card-go{margin-top:0}
 .bkit-card-go:focus-visible,.bkit-name-save:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 
 /* The closing step: a name field in the same panel. */
@@ -404,11 +519,55 @@
 .bkit-name-input[aria-invalid="true"]:focus-visible{border-color:var(--err-strong);box-shadow:0 0 0 3px color-mix(in srgb,var(--err-strong) 18%,transparent)}
 .bkit-name-save{width:100%;height:44px;padding:0 var(--s-4);justify-content:center;white-space:nowrap;font-size:15px;font-weight:560}
 .bkit-card-go:active,.bkit-name-save:not(:disabled):active{transform:scale(.97)}
+.bkit-name-save-to{display:inline-block;max-width:16ch;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.bkit-name-alt{width:100%;height:44px;padding:0 var(--s-4);justify-content:center;white-space:nowrap;font-size:15px;font-weight:560}
 /* The message line is always one line tall, so swapping the note for the error moves nothing. */
 .bkit-name-msg{display:flex;flex-direction:column;gap:var(--s-1);min-height:1.5em;font-size:var(--fs-caption)}
 .bkit-name-note,.bkit-name-error{margin:0;font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
 .bkit-name-error{font-weight:500;color:var(--err-strong)}
 .bkit-card--name .uh-save-refusal{margin:0}
+
+/* The chooser: carry on with the last brand kit, open another, or start new.
+   Rows split by hairlines inside the one panel, never boxed. Each row is a
+   whole-width button; the label never wraps, the meta line holds one line on a
+   phone and two from 768px, and the full text stays in the button's name. */
+.bkit-card--choose .bkit-card-head{margin-bottom:var(--s-1)}
+.bkit-choose,.bkit-choose-sub{list-style:none;margin:0;padding:0}
+.bkit-choose-item + .bkit-choose-item{border-top:1px solid var(--border)}
+.bkit-choose-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);box-sizing:border-box;width:100%;min-height:56px;margin:0;padding:var(--s-2) 0;border:0;background:transparent;color:inherit;font-family:var(--font);text-align:start;cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard)}
+.bkit-choose-row:active{background:var(--hvr)}
+.bkit-choose-row:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:-2px}
+.bkit-choose-text{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.bkit-choose-label{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:540;line-height:1.3;color:var(--t0)}
+.bkit-choose-meta{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;line-clamp:1;overflow:hidden;font-size:var(--fs-caption);font-weight:400;line-height:1.45;color:var(--t2)}
+.bkit-choose-swatches{display:flex;flex:none;gap:var(--s-1)}
+.bkit-choose-swatch{display:block;width:16px;height:16px;border-radius:3px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 12%,transparent)}
+.bkit-choose-chev{flex:none;color:var(--t2);transition:transform var(--dur-1) var(--ease-standard)}
+.bkit-choose-row[aria-expanded="true"] .bkit-choose-chev{transform:rotate(180deg)}
+/* Open another expands in place: its projects are rows under it, indented. */
+.bkit-choose-sub{padding-inline-start:var(--s-4)}
+.bkit-choose-sub li + li{border-top:1px solid var(--border)}
+.bkit-choose-row--project{min-height:52px}
+.bkit-choose-all,.bkit-choose-link{color:var(--link);font-weight:560;text-decoration:underline;text-underline-offset:3px;border-radius:2px}
+.bkit-choose-all{display:flex;align-items:center;box-sizing:border-box;min-height:44px;font-size:15px}
+.bkit-choose-all:focus-visible,.bkit-choose-link:focus-visible{outline:2px solid var(--bkit-focus);outline-offset:2px}
+/* The Free plan's allowance, under Start a new brand kit. Starting is never blocked. */
+.bkit-choose-cap{margin:0;padding:0 0 var(--s-3);font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
+@media(hover:hover){
+  .bkit-choose-row:hover{background:var(--hvr)}
+}
+@media(min-width:768px){
+  .bkit-choose-row{min-height:56px}
+  .bkit-choose-meta{-webkit-line-clamp:2;line-clamp:2}
+  .bkit-choose-all{min-height:32px}
+}
+@media(pointer:coarse){
+  .bkit-choose-row,.bkit-choose-row--project{min-height:56px}
+  .bkit-choose-all{min-height:44px}
+  .bkit-choose-link{display:inline-block;padding-block:12px;margin-block:-12px}
+}
+/* The expanding list scrolls inside the panel rather than moving the page. */
+.bkit-card.bkit-card--choose{max-height:min(70svh,560px,calc(var(--bkit-vvh,100dvh) - var(--nav-clear) - var(--bkit-h) - var(--bkit-toolbar-h,0px)))}
 
 /* From 768px the panel is a popover over the bar, its trailing edge on the
    trailing edge of the button that opened it. UIKitGuide measures that edge;
@@ -417,9 +576,9 @@
   .bkit-card{
     --bkit-pad:20px;--bkit-rise:8px;
     inset-inline:auto;right:var(--bkit-dock-end,var(--s-4));
-    bottom:var(--bkit-dock-bottom,calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + var(--s-2)));
+    bottom:var(--bkit-dock-bottom,calc(var(--bkit-h) + var(--bkit-float) + var(--bkit-toolbar-h,0px) + var(--s-2)));
     width:min(400px,100vw - 32px);padding:var(--bkit-pad);
-    max-height:calc(var(--bkit-vvh,100dvh) - var(--chrome-h) - var(--bkit-h) - var(--bkit-toolbar-h,0px) - 16px);
+    max-height:calc(var(--bkit-vvh,100dvh) - var(--chrome-h) - var(--bkit-reserve) - var(--bkit-toolbar-h,0px) - 16px);
     border-bottom:1px solid var(--border);border-radius:var(--radius-2xl);
     animation-duration:180ms;
   }
@@ -439,10 +598,6 @@
 @media(pointer:coarse){
   .bkit-name-input{font-size:16px}
 }
-/* The bar shows its lead at 984px of its own width, which a 1056px window gives even with a classic scrollbar; from there the lead carries the count. */
-@media(min-width:1056px){
-  .bkit-card-count{display:none}
-}
 
 /* While the walkthrough runs the phone tab bar steps aside and the bar takes
    the bottom edge. --tabbar-h goes to 0 so every row that reads it (page and
@@ -457,12 +612,12 @@
   html.bkit-on.has-tabbar{scroll-padding-bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 8px)}
 }
 /* A control reached by Tab scrolls clear of the fixed bar. */
-html.bkit-on{scroll-padding-block-end:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 8px)}
-html.bkit-on body .toast{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 12px + var(--toast-lift))}
-html.bkit-on body .global-feedback-btn{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 14px)}
-html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 20px)}
+html.bkit-on{scroll-padding-block-end:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 8px)}
+html.bkit-on body .toast{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 12px + var(--toast-lift))}
+html.bkit-on body .global-feedback-btn{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 14px)}
+html.bkit-on body .bill-banner{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 20px)}
 @media(max-width:520px){
-  html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,0px) + 74px)}
+  html.bkit-on body .bill-banner{bottom:calc(var(--bkit-reserve) + var(--bkit-toolbar-h,0px) + 74px)}
 }
 
 /* Forced colours: the system hairline, and Highlight for where you are. */
@@ -480,12 +635,14 @@ html.bkit-on body .bill-banner{bottom:calc(var(--bkit-h) + var(--bkit-toolbar-h,
    step's colour change is instant. */
 html[data-reduced-motion="true"] .bkit-card{--bkit-rise:0px}
 html[data-reduced-motion="true"] .bkit-card[data-overlay-hidden="true"]{transform:none}
+html[data-reduced-motion="true"] .bkit-choose-chev{transition:none}
 html[data-reduced-motion="true"] :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close,.bkit-card-close,.bkit-card-go,.bkit-name-save):active{transform:none}
 html[data-reduced-motion="true"] :is(.bkit-step,.bkit-step-mark,.bkit-card-num,.bkit-tick,.bkit-step-num),
 html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .bkit-card{--bkit-rise:0px}
   html:not([data-reduced-motion="false"]) .bkit-card[data-overlay-hidden="true"]{transform:none}
+  html:not([data-reduced-motion="false"]) .bkit-choose-chev{transition:none}
   html:not([data-reduced-motion="false"]) :is(.bkit-rail-help,.bkit-rail-next,.bkit-rail-close,.bkit-card-close,.bkit-card-go,.bkit-name-save):active{transform:none}
   html:not([data-reduced-motion="false"]) :is(.bkit-step,.bkit-step-mark,.bkit-card-num,.bkit-tick,.bkit-step-num),
   html:not([data-reduced-motion="false"]) .bkit-step::before{transition:none}
@@ -568,6 +725,28 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .ui-modal-err{font-size:12px;font-weight:500;color:var(--err-strong)}
 .ui-modal-actions--row{flex-direction:row;justify-content:flex-end}
 
+/* The Community submit dialogs (design, icon). Their labels, note and buttons
+   sat at 11.5-12px, too small to read on a phone, the close control was a 32px
+   target, and in landscape the dialog scrolled with Submit below the fold.
+   Scoped by .ui-modal--form so the other dialogs on this shell are untouched. */
+.ui-modal--form{--mf-x:22px;--mf-b:22px}
+.ui-modal--form .ui-field>span,
+.ui-modal--form .ui-modal-note,
+.ui-modal--form .ui-modal-err{font-size:13px}
+.ui-modal--form .btn{font-size:13px}
+/* The action row stays pinned to the bottom of the dialog's scroll area, so
+   Submit and Cancel are in reach however much of the form is scrolled. It runs
+   edge to edge over the body padding and takes a hairline, not a shadow. */
+.ui-modal--form .ui-modal-actions{position:sticky;bottom:0;z-index:1;margin:var(--s-4) calc(var(--mf-x) * -1) calc(var(--mf-b) * -1);padding:var(--s-3) var(--mf-x) var(--mf-b);background:var(--card);border-top:1px solid var(--border)}
+@media(max-width:640px),(pointer:coarse){
+  .ui-modal--form .ui-modal-x{width:44px;height:44px;margin:-6px -8px 0 0}
+  .ui-modal--form .btn{min-height:44px}
+}
+@media(max-height:460px){
+  .ui-modal--form{--mf-x:18px;--mf-b:16px}
+  .ui-modal--form .ui-modal-actions{margin-top:var(--s-3);padding-top:var(--s-2)}
+}
+
 /* --- User identity: name + owner crown + flair tag (UserName component) --- */
 .uname{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%}
 .uname-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -576,7 +755,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uname-owner:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .uname-crown{font-size:.85em;line-height:1;filter:saturate(1.1)}
 /* Owner tooltip — hidden until the name is hovered or keyboard-focused. */
-.uname-tip{position:absolute;bottom:calc(100% + 7px);left:0;z-index:60;padding:4px 9px;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-1);font-size:11px;font-weight:600;letter-spacing:.01em;white-space:nowrap;box-shadow:var(--shadow-m);opacity:0;transform:translateY(3px);pointer-events:none;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
+.uname-tip{position:absolute;bottom:calc(100% + 7px);left:0;z-index:60;padding:4px 9px;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-1);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;white-space:nowrap;box-shadow:var(--shadow-m);opacity:0;transform:translateY(3px);pointer-events:none;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
 .uname-tip::after{content:"";position:absolute;top:100%;left:14px;border:5px solid transparent;border-top-color:var(--t0)}
 
 .plb--ui-system{background:var(--bg-0)}
@@ -592,7 +771,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 
 .uis-command{position:sticky;top:var(--chrome-h);z-index:28;display:flex;align-items:center;gap:var(--s-4);padding:var(--s-3) var(--page-inline);background:color-mix(in srgb,var(--bg-0) 94%,transparent);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
 .uis-seed-control{display:flex;align-items:center;gap:var(--s-2);flex:0 0 auto}
-.uis-seed-control>label,.uis-neutral-control>span{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.uis-seed-control>label,.uis-neutral-control>span{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .uis-seed-picker{width:36px;height:36px;padding:3px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer}
 .uis-seed-picker::-webkit-color-swatch-wrapper{padding:0}
 .uis-seed-picker::-webkit-color-swatch{border:0;border-radius:var(--radius-xs)}
@@ -617,12 +796,12 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uis-section-head>div:first-child{min-width:0}
 .uis-section-head h2{font-size:clamp(20px,2.2vw,30px);line-height:1.12;letter-spacing:-.025em}
 .uis-section-head>p{max-width:58ch;font-size:12px;line-height:1.5;color:var(--t2)}
-.uis-kicker{margin-bottom:6px;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.uis-kicker{margin-bottom:6px;font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 
 .uis-matrix-wrap{width:100%;min-width:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .uis-matrix{min-width:0}
 .uis-matrix-head,.uis-matrix-row{display:grid;grid-template-columns:minmax(104px,.75fr) repeat(9,minmax(0,1fr))}
-.uis-matrix-head{min-height:34px;align-items:center;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-1);border-bottom:1px solid var(--border)}
+.uis-matrix-head{min-height:34px;align-items:center;font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2);background:var(--bg-1);border-bottom:1px solid var(--border)}
 .uis-matrix-head>span{text-align:center}
 .uis-matrix-head>span:first-child{padding-left:var(--s-3);text-align:left}
 .uis-matrix-row{min-height:88px;border-bottom:1px solid var(--border)}
@@ -636,7 +815,7 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uis-cell:hover{filter:saturate(1.06) brightness(1.03)}
 .uis-cell:focus-visible{z-index:2;outline:3px solid var(--uis-ink);outline-offset:-5px}
 .uis-cell[aria-selected="true"]{box-shadow:inset 0 -4px 0 var(--uis-ink)}
-.uis-cell-step{font-size:9px;font-weight:700;letter-spacing:.08em}
+.uis-cell-step{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal}
 .uis-cell-hex{margin-top:3px;font-family:var(--mono);font-size:10px;font-weight:650}
 .uis-cell-limit{position:absolute;top:7px;right:7px;display:grid;place-items:center;width:17px;height:17px;font-size:10px;font-weight:700;color:var(--uis-ink);border:1px solid currentColor;border-radius:50%}
 
@@ -647,11 +826,11 @@ html[data-reduced-motion="true"] .bkit-step::before{transition:none}
 .uis-detail-ident strong{font-family:var(--mono);font-size:14px}
 .uis-detail-chip{width:40px;height:40px;flex:0 0 auto;background:var(--uis-swatch);border:1px solid var(--border);border-radius:var(--radius-s)}
 .uis-detail-grid{display:grid;grid-template-columns:.8fr 1.25fr 1.2fr;gap:var(--s-5)}
-.uis-detail-label{margin-bottom:var(--s-2);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.uis-detail-label{margin-bottom:var(--s-2);font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .uis-evidence dl{display:grid;gap:5px}
 .uis-evidence dl>div{display:flex;justify-content:space-between;gap:var(--s-3);font-size:11px}
 .uis-evidence dt{color:var(--t2)}
-.uis-evidence dd{font-family:var(--mono);font-weight:650;color:var(--t0)}
+.uis-evidence dd{font-family:var(--font);font-weight:650;color:var(--t0); font-variant-numeric: tabular-nums; letter-spacing: 0;}
 .uis-pass-list{display:grid;grid-template-columns:1fr 1fr;gap:5px}
 .uis-pass{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:650}
 .uis-pass>span{display:grid;place-items:center;width:16px;height:16px;border:1px solid currentColor;border-radius:50%}
@@ -1060,7 +1239,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    under options that are not selected. Height and Y come from the active
    button's own box, so the padding is measured rather than hard-coded. */
 .lbry-filter-ind{position:absolute;top:0;left:0;width:var(--lbry-ind-w,0px);height:var(--lbry-ind-h,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius-pill);box-shadow:var(--shadow-xs);transform:translate(var(--lbry-ind-x,0px),var(--lbry-ind-y,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),height var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
-.lbry-filter-hint{align-self:center;padding:0 10px 0 4px;color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.lbry-filter-hint{align-self:center;padding:0 10px 0 4px;color:var(--t3);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;white-space:nowrap}
 @media(max-width:900px){.lbry-filter-hint{display:none}}
 /* And on ANY touch device, whatever its width. The 900px rule was standing in
    for "no modifier key", and an iPad in landscape is 1024px wide: MEASURED

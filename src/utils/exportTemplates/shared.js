@@ -256,6 +256,40 @@ export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many
 /** A contrast ratio as the books print it: always two decimals ("9.90", never "9.9"). */
 export const fmtRatio = (ratio) => Number(ratio).toFixed(2)
 
+/**
+ * The sentence a type specimen sets in its own face: facts about this system, so two
+ * projects with different fonts or scales never print the same words. Plain text; the
+ * caller escapes it. A fact the design does not carry (the kit has no ratio) is left out.
+ *
+ * @param {{ heading?: string, headingWeight?: number, body?: string, bodyWeight?: number, baseSize?: number, ratio?: number, lineHeight?: number }} d
+ * @param {'heading' | 'body'} role
+ */
+export function systemSentence(d, role) {
+  if (role === 'body') {
+    const size = d.baseSize ? ` at ${d.baseSize}px` : ''
+    const leading = d.lineHeight ? ` with ${d.lineHeight} leading` : ''
+    return `${d.body} ${d.bodyWeight} sets the text${size}${leading}.`
+  }
+  const steps = d.ratio ? `, each step ${d.ratio} times the one below` : ''
+  return `${d.heading} ${d.headingWeight} sets the headings${steps}.`
+}
+
+// The character set a specimen may still show, once it is small enough to be a reference
+// and not the specimen: set at GLYPH_STRIP_PT or smaller, in the face it describes.
+export const GLYPH_STRIP = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789'
+export const GLYPH_STRIP_PT = 8
+
+/**
+ * The glyph strip as a paragraph. `style` carries the face (family and weight); the size
+ * is fixed here so no layout can set the alphabet large.
+ *
+ * @param {string} style  CSS declarations for the face, without a trailing semicolon
+ */
+export function glyphStrip(style = '') {
+  const face = style ? `${style};` : ''
+  return `<p class="glyph-strip" style="${face}font-size:${GLYPH_STRIP_PT}pt;line-height:1.5;letter-spacing:.04em;margin:3mm 0 0;overflow-wrap:anywhere">${GLYPH_STRIP}</p>`
+}
+
 // The contrast matrix pages hold at most this many rows, and this many columns
 // (the palette plus paper and ink); a cell is 9.9 mm wide at 15 columns on a 172 mm measure.
 export const MATRIX_ROWS = 7

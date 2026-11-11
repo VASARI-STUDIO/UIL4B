@@ -116,7 +116,7 @@ async function open(browser, width, height, path, waitFor, { touch = true, as = 
   // Landed on the route it asked for, not on a redirect's destination. This is
   // the guard for the staleness above: without it a retired path in the table
   // keeps passing, silently, on whatever the 301 sends it to.
-  expect(new URL(page.url()).pathname.replace(/\/$/, '') || '/', `${path} did not answer for itself — it redirected to ${new URL(page.url()).pathname}`).toBe(path)
+  expect(new URL(page.url()).pathname.replace(/\/$/, '') || '/', `${path} did not answer for itself — it redirected to ${new URL(page.url()).pathname}`).toBe(path.split('#')[0])
   return { ctx, page }
 }
 
@@ -188,6 +188,8 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
   const damage = []
   for (const [w, h] of TSC_WIDE) {
     const { ctx, page } = await open(browser, w, h, '/create/type-scale', '.tsc-row-text', { touch: w < 1000 })
+    // Heading rows draw at the base size until their face has loaded.
+    await page.waitForFunction(() => !document.querySelector('.tsc-row-text.is-loading'))
     const r = await page.evaluate(() => {
       const rows = [...document.querySelectorAll('.tsc-row-text')]
       const hidden = []
@@ -202,8 +204,8 @@ test('S16 · no Type Scale specimen is cut above 768px either', async ({ browser
       return { rows: rows.length, hidden }
     })
     await ctx.close()
-    expect(r.rows, `${w}x${h}: expected the 9 specimen rows`).toBe(9)
-    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 9 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
+    expect(r.rows, `${w}x${h}: expected the 6 specimen rows`).toBe(6)
+    if (r.hidden.length) damage.push(`${w}x${h}: ${r.hidden.length} of 6 specimens cut — ${r.hidden.slice(0, 2).join(', ')}`)
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
@@ -341,10 +343,12 @@ const FILTER_TRAYS = [
   // groups step past the trigger form into the one Filters control — the
   // no-wrap S4 test above asserts that form.
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7, null, 0],
-  // The Prompt Library uses the shared toolbar. It mounts TWO trays
-  // — sort (2 options) and category (All + 5) — which is why the totals column
-  // exists rather than a per-row count.
-  ['/discover/prompts', '.lbry-filters', '.lbry-filter', 2, 8],
+  // /discover/prompts is not in this table any more. Its list state has its own
+  // toolbar (`.pl-toolbar`: category chips, then Sort and Access as segmented
+  // radios, behind a Filters button on a phone), not the shared Library tray, so
+  // these selectors would match nothing. The same questions — one line, nothing
+  // outside its box, nothing lost behind the collapse — are asked of it by the
+  // Prompt Library toolbar tests below, with its own selectors.
 ]
 
 // chipRowDamage() lived here: it measured trays that were ALLOWED to wrap,
@@ -367,7 +371,8 @@ const FILTER_TRAYS = [
 //   · and whatever left the row is still reachable: a phone has a Filters
 //     control whenever it has a group that is not on the quick row.
 // Font Gallery is on the shared tool toolbar now; 100-tool-toolbar-one-row holds it.
-const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons', '/discover/prompts']
+// /discover/prompts has its own toolbar and its own test, right after this one.
+const NO_WRAP_SURFACES = ['/discover/gradients', '/discover/palettes', '/create/emoji', '/create/icons']
 const NO_WRAP_WIDTHS = [320, 390, 1024, 1180, 1440]
 
 test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost', async ({ browser }) => {
@@ -385,7 +390,16 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
         const bar = [...document.querySelectorAll('.lbry-toolbar')].find(vis)
         if (!bar) return null
         const row = bar.querySelector(':scope > .lbry-toolbar-row')
-        const tops = [...row.children].filter(vis).map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))
+        // The Palette Library's phone toolbar (<= 640px) is two deliberate rows: the search field alone on
+        // the first, the collection switch, Filters and Create sharing the second. The rule is that the
+        // CONTROLS share a line, so the search is taken out of that count and checked to sit above them.
+        const twoRow = location.pathname === '/discover/palettes' && window.innerWidth <= 640
+        const centre = (e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)
+        const tops = [...row.children].filter(vis).filter((e) => !(twoRow && e.classList.contains('lbry-search'))).map(centre)
+        const quickEl = twoRow ? bar.querySelector(':scope > .lbry-toolbar-quick') : null
+        if (quickEl && vis(quickEl)) tops.push(centre(quickEl))
+        const searchEl = twoRow ? row.querySelector(':scope > .lbry-search') : null
+        const searchAbove = !twoRow || (!!searchEl && vis(searchEl) && tops.every((t) => t > searchEl.getBoundingClientRect().bottom - 1))
         const trays = [...bar.querySelectorAll('.lbry-filters')].filter(vis).map((t) => {
           const quick = !!t.closest('.lbry-toolbar-quick')
           const tb = t.getBoundingClientRect()
@@ -400,6 +414,7 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
         })
         return {
           rowLines: new Set(tops).size,
+          searchAbove,
           trays,
           filtersBtn: !!bar.querySelector('.lbry-filtersbtn'),
           stage: bar.dataset.stage,
@@ -409,6 +424,7 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
       await ctx.close()
       if (!r) { damage.push(`${path} @${w}px: no toolbar rendered`); continue }
       if (r.rowLines !== 1) damage.push(`${path} @${w}px: the toolbar row wraps onto ${r.rowLines} lines (stage ${r.stage})`)
+      if (!r.searchAbove) damage.push(`${path} @${w}px: the search field is not on its own row above the controls`)
       for (const t of r.trays) {
         if (!t.chips) damage.push(`${path} @${w}px: tray “${t.name}” is empty`)
         if (t.lines > 1) damage.push(`${path} @${w}px: tray “${t.name}” wraps onto ${t.lines} lines`)
@@ -416,6 +432,94 @@ test('S4 · no Library toolbar wraps, at any width, and nothing it hides is lost
       }
       if (r.overflowX > 1) damage.push(`${path} @${w}px: the page scrolls sideways by ${r.overflowX}px`)
       if (w < 641 && r.stage !== '2' && r.stage !== '3') damage.push(`${path} @${w}px: a phone toolbar at stage ${r.stage} — its groups should be behind Filters`)
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// THE PROMPT LIBRARY'S OWN TOOLBAR (`.pl-toolbar`), the same questions.
+//
+// It has two states. On the overview it is the search field alone. In the list
+// (`#all`) it adds Category chips, then Sort and Access as segmented radios; at
+// 640px and below those three groups sit behind a "Filters" button that opens
+// them inline. Asked of it at a phone, a tablet and two desktops:
+//
+//   · the toolbar's main row is ONE line (the search field and, on a phone,
+//     the Filters button share a top);
+//   · on a phone the groups are CLOSED until Filters is pressed, and pressing
+//     it makes every option reachable: nothing the collapse hides is lost;
+//   · the options on screen all sit inside the toolbar's box;
+//   · on a desktop the Category chips share one line, and Sort and Access share
+//     one;
+//   · the page never scrolls sideways.
+//
+// 11 options is the count the page renders today: All + 5 categories, Popular /
+// Newest, Any / Free / Pro. The number is asserted so a selector that matches
+// nothing cannot pass.
+const PROMPT_WIDTHS = [320, 390, 1024, 1440]
+const PROMPT_OPTIONS = 11
+
+async function promptToolbar(page) {
+  return page.evaluate(() => {
+    const vis = (e) => e && e.offsetParent !== null && e.getBoundingClientRect().width > 0
+    const bar = document.querySelector('.pl-toolbar')
+    const bb = bar.getBoundingClientRect()
+    const mainRow = [...bar.querySelectorAll('.pl-tb-search input[type="search"], .pl-filters-btn')].filter(vis)
+      .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))
+    const opts = [...bar.querySelectorAll('.pl-tb-body input[type="radio"]')].filter(vis)
+    const lines = (sel) => new Set([...bar.querySelectorAll(sel)].filter(vis).map((e) => Math.round(e.getBoundingClientRect().top))).size
+    return {
+      mainLines: new Set(mainRow).size,
+      filtersBtn: vis(bar.querySelector('.pl-filters-btn')),
+      expanded: bar.querySelector('.pl-filters-btn')?.getAttribute('aria-expanded') ?? null,
+      bodyShown: vis(bar.querySelector('.pl-tb-body')),
+      options: opts.length,
+      outside: opts.filter((o) => { const b = o.getBoundingClientRect(); return b.right > bb.right + 0.5 || b.left < bb.left - 0.5 }).length,
+      catLines: lines('.pl-tb-cat input[type="radio"]'),
+      sortAccessLines: lines('.pl-tb-sortacc input[type="radio"]'),
+      overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }
+  })
+}
+
+// parked: only an admin can open /discover/prompts, so these pages are opened signed in as one.
+test('S4 · the Prompt Library toolbar is one line at any width, and the Filters button loses nothing', async ({ browser }) => {
+  budget(PROMPT_WIDTHS.length * 2)
+  const damage = []
+  for (const w of PROMPT_WIDTHS) {
+    const phone = w <= 640
+    // The overview: the search field alone, one line, no groups yet.
+    {
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts', '.pl-toolbar', { touch: phone, as: { admin: true } })
+      const r = await promptToolbar(page)
+      await ctx.close()
+      if (r.mainLines !== 1) damage.push(`overview @${w}px: the toolbar row is ${r.mainLines} lines`)
+      if (r.options || r.filtersBtn) damage.push(`overview @${w}px: the overview shows filter controls (${r.options} options, Filters button ${r.filtersBtn})`)
+      if (r.overflowX > 1) damage.push(`overview @${w}px: the page scrolls sideways by ${r.overflowX}px`)
+    }
+    // The list: the three groups.
+    {
+      const { ctx, page } = await open(browser, w, 900, '/discover/prompts#all', '.pl-toolbar', { touch: phone, as: { admin: true } })
+      let r = await promptToolbar(page)
+      if (r.mainLines !== 1) damage.push(`list @${w}px: the toolbar row is ${r.mainLines} lines`)
+      if (phone) {
+        if (!r.filtersBtn) damage.push(`list @${w}px: a phone has no Filters button`)
+        if (r.expanded !== 'false') damage.push(`list @${w}px: Filters starts ${r.expanded === 'true' ? 'open' : 'without aria-expanded'}`)
+        if (r.bodyShown || r.options) damage.push(`list @${w}px: the groups are on screen before Filters is pressed (${r.options} options)`)
+        await page.locator('.pl-filters-btn').click()
+        r = await promptToolbar(page)
+        if (r.expanded !== 'true') damage.push(`list @${w}px: Filters did not report that it opened`)
+        if (r.options !== PROMPT_OPTIONS) damage.push(`list @${w}px: opening Filters shows ${r.options} of ${PROMPT_OPTIONS} options — something was lost behind the collapse`)
+        if (r.mainLines !== 1) damage.push(`list @${w}px: opening Filters broke the toolbar row onto ${r.mainLines} lines`)
+      } else {
+        if (r.filtersBtn) damage.push(`list @${w}px: a ${w}px screen shows a Filters button it does not need`)
+        if (r.options !== PROMPT_OPTIONS) damage.push(`list @${w}px: ${r.options} of ${PROMPT_OPTIONS} options are on screen`)
+        if (r.catLines !== 1) damage.push(`list @${w}px: the Category chips wrap onto ${r.catLines} lines`)
+        if (r.sortAccessLines !== 1) damage.push(`list @${w}px: Sort and Access are on ${r.sortAccessLines} lines`)
+      }
+      if (r.outside) damage.push(`list @${w}px: ${r.outside} option(s) outside the toolbar`)
+      if (r.overflowX > 1) damage.push(`list @${w}px: the page scrolls sideways by ${r.overflowX}px`)
+      await ctx.close()
     }
   }
   expect(damage, damage.join('\n')).toEqual([])
@@ -651,7 +755,7 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
   // On a touch screen the FAB is not drawn at all (feedback lives in the menus),
   // so the compact form is a mouse-and-short-window case.
   for (const [w, h] of FAB_SHORT) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/palettes', '.lbry-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     expect(f, `${w}x${h}: no feedback FAB`).not.toBeNull()
@@ -660,13 +764,13 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
     if (f.w < 24 || f.h < 24) damage.push(`${w}x${h}: compact FAB is ${f.w}x${f.h}, under the 24px floor`)
   }
   for (const [w, h] of FAB_ROOMY) {
-    const { ctx, page } = await open(browser, w, h, '/discover/prompts', '.lbry-toolbar', { touch: false })
+    const { ctx, page } = await open(browser, w, h, '/discover/palettes', '.lbry-toolbar', { touch: false })
     const f = await fabState(page)
     await ctx.close()
     if (f.compact) damage.push(`${w}x${h}: FAB dropped its label on a viewport with room for it`)
   }
   {
-    const { ctx, page } = await open(browser, 844, 390, '/discover/prompts', '.lbry-toolbar')
+    const { ctx, page } = await open(browser, 844, 390, '/discover/palettes', '.lbry-toolbar')
     const f = await fabState(page)
     await ctx.close()
     if (f && (f.w || f.h)) damage.push(`844x390 touch: the FAB is drawn (${f.w}x${f.h}) where the menus carry feedback`)
@@ -677,15 +781,16 @@ test('S5 · the feedback FAB compacts on a short viewport and keeps its label on
 const FAB_COVER = [
   // Waits on the toolbar, not a chip: in the 641–980 band the trays collapse
   // to triggers, so no `.lbry-filter` is rendered at some of these shapes.
-  ['/discover/prompts', '.lbry-toolbar', [...FAB_SHORT, [390, 844]]],
+  ['/discover/prompts', '.pl-toolbar', [...FAB_SHORT, [390, 844]]],
 ]
 
+// parked: only an admin can open /discover/prompts, so these pages are opened signed in as one.
 test('S5 / S10 · the FAB never permanently covers a control', async ({ browser }) => {
   budget(FAB_COVER.reduce((n, [, , shapes]) => n + shapes.length, 0))
   const damage = []
   for (const [path, waitFor, shapes] of FAB_COVER) {
     for (const [w, h] of shapes) {
-      const { ctx, page } = await open(browser, w, h, path, waitFor)
+      const { ctx, page } = await open(browser, w, h, path, waitFor, { as: { admin: true } })
       await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
       // Every rectangle below is read from a live layout, so the page has to
       // have stopped moving first. 500ms was a guess at how long that takes.
@@ -1447,7 +1552,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   // The rule is "name the pack only when the result set holds more than one",
   // and it needs a genuinely SINGLE-pack default grid to be falsifiable. Since
   // the pack tiers landed (src/data/iconPackTiers.js) that is a Pro viewer: one
-  // browses 250 names from each of 27 packs, so the first page of 120 cells is
+  // browses 250 names from each of 31 packs, so the first page of 120 cells is
   // all Lucide. A signed-out viewer gets the 60-icon sample — twelve from each
   // of five outlined packs — which genuinely mixes packs and therefore SHOULD
   // label every cell, so it satisfies the rule by the other branch and measures
@@ -1491,15 +1596,8 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   const single = await read()
   expect(single.cells, 'the Lucide grid should be populated').toBeGreaterThan(20)
 
-  // Brand logos genuinely mixes packs - logo.dev marks alongside glyph packs.
-  // It is a cross-pack collection, so the pack menu goes back to All first.
+  // All packs genuinely mixes packs, so every cell names its own.
   await chooseMenuOption(page, page.getByRole('button', { name: 'Icon pack' }), 'all')
-  // At this width the group is its one-line trigger (the toolbar never wraps),
-  // so the chip lives in the menu it opens.
-  const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
-  if (await trig.count()) await trig.click()
-  const chip = page.getByRole('button', { name: /Brand logos/i }).first()
-  await chip.click()
   await expect.poll(async () => (await read()).words.length, {
     message: 'a mixed-pack result set must still name each cell’s pack',
     timeout: 20000,
@@ -1513,5 +1611,22 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   expect(mixed.textTransform, 'quiet label: normal case').toBe('none')
   expect(mixed.whiteSpace, 'the pack label stays on one line').toBe('nowrap')
   expect(mixed.tracking, 'quiet label: no letter-spacing').toBe(0)
+
+  // A GROUP is the other mixed set, and it names its packs once each in a heading row instead.
+  // Brand logos holds logo.dev marks alongside glyph packs, so it is a cross-pack collection.
+  // At this width the group is its one-line trigger (the toolbar never wraps),
+  // so the chip lives in the menu it opens.
+  const trig = page.locator('.ig-toolbar .lbry-filtertrig', { hasText: 'Group' })
+  if (await trig.count()) await trig.click()
+  await page.getByRole('button', { name: /Brand logos/i }).first().click()
+  await expect.poll(() => page.locator('.ig .ig-pack-head').count(), {
+    message: 'a grouped mixed set opens each pack under a heading',
+    timeout: 20000,
+  }).toBeGreaterThan(1)
+  const grouped = await read()
+  expect(grouped.cells, 'the Brand logos group is populated').toBeGreaterThan(20)
+  expect(grouped.labels, 'no cell draws its own pack label under a heading row').toBe(0)
+  const unnamed = await page.locator('.ig .ic').evaluateAll((els) => els.filter((el) => !/^(Customise|Copy) .+, .+$/.test(el.getAttribute('aria-label') || '')).length)
+  expect(unnamed, 'every cell still names its pack to a screen reader').toBe(0)
   await ctx.close()
 })

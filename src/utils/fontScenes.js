@@ -6,10 +6,8 @@ import { ladderWeights } from './fontGallery.js'
 // WHICH SITUATIONS A FAMILY IS SHOWN IN, chosen from what the family actually
 // is.
 //
-// THE DEFECT THIS EXISTS TO FIX, stated as the founder stated it three times
-// (2026-08-08, 2026-08-15, 2026-09-04): "for the font examples i want real
-// world examples not the same UI examples for each one". He was exactly right.
-// The Examples tab held a module-level array of four fixed scenes — an article
+// THE DEFECT THIS EXISTS TO FIX: the font examples must be real-world examples,
+// not the same UI examples for each font. The Examples tab held a module-level array of four fixed scenes — an article
 // opening, interface chrome, a pricing table and a display line — rendered
 // identically for all 1,946 families, and `font.category` was not read once.
 // Pacifico got a data table. Libre Barcode 39 got a pricing table. Playfair
@@ -31,7 +29,7 @@ import { ladderWeights } from './fontGallery.js'
 // is category "Serif" with classifications ["Display"] — and so are Anton,
 // Bebas Neue, Archivo Black and DM Serif Display, all of which category calls
 // plain text faces. Branching on category alone would have handed every one of
-// them the long-form reading column that is the founder's actual complaint.
+// them the long-form reading column that is the actual defect.
 //
 // `stroke` recovers a distinction category ERASES: Slab Serif, which category
 // folds into Serif. And `classifications` is the only field that identifies the
@@ -276,8 +274,8 @@ export function sceneIdsFor(font) {
 /**
  * THE SCENES FOLLOW THE JOB, NOT ONLY THE FACE.
  *
- * Founder, 2026-09-14: "for the heading family examples popup show it more in
- * heading uses."
+ * The heading family's examples popup should show the font more in heading
+ * uses.
  *
  * `SETS` keys on what a family IS — sans, serif, mono — and for a sans that
  * means `['ui', 'datatable', 'form']`. Correct when you are choosing body copy,

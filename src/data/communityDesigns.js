@@ -34,7 +34,11 @@
 //   category  one of COMMUNITY_CATEGORIES (excluding 'All')
 //   c1, c2    gradient stops for the generated thumbnail (no external assets)
 //   saves     real saves only; seeds start at 0
-//   url       outbound link (rendered nofollow, new tab)
+//   url       the platform's front page. Kept as a record of where the
+//             topic comes from; CommunityCard does not link it for a curated
+//             card, because that page is not the design the card names. A
+//             member's submission carries its own url, and that one is linked
+//             (rendered nofollow, new tab)
 //   curated   true for these; absent on member submissions
 //   mine      (optional — local submissions only) flags an item the user authored
 //

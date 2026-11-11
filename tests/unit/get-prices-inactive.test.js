@@ -20,11 +20,12 @@ let clock = 1_800_000_000_000
 const monthlyPrice = (id, overrides = {}) => ({
   id,
   active: true,
-  product: { id: 'prod_1', active: true },
   currency: 'usd',
   unit_amount: 900,
   currency_options: {},
   recurring: { interval: 'month', interval_count: 1 },
+  // Expanded and active: a price on an archived product is not sellable.
+  product: { id: 'prod_pro', active: true },
   ...overrides,
 })
 const yearlyPrice = (id, overrides = {}) => monthlyPrice(id, {

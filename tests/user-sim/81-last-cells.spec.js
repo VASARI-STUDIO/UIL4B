@@ -9,7 +9,7 @@
 //   /feedback        purpose & content 6 → 9. A signed-out submission carried
 //                    `email: ""`, the form had nowhere to type one, and the
 //                    confirmation said "received and will be reviewed" either
-//                    way. The form's own "Help Request" type is the sharp end:
+//                    way. The form's own "Help request" type is the sharp end:
 //                    a question asked with no return address, answered with a
 //                    green tick. /api/support has always taken the field.
 //
@@ -36,7 +36,7 @@
 //                    long as it was open, and an <h2> sitting 8px above the
 //                    primary action — less space than any two form fields in
 //                    the same dialog get between them. The heading's WORDS are
-//                    untouched and stay founder-blocked; see the PR body.
+//                    untouched and stay approval-gated.
 import { test, expect } from './base.js'
 import { go, signIn, watch, openChosenDialog } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
@@ -329,6 +329,8 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   // down, which this also catches, on the dialog never opening.
   test('all six scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
+    // Pro, so every scene is mounted: a free account is shown a stand-in for the Pro scenes (Spending card, Architect portfolio), not the scene.
+    await signIn(page, { plan: 'pro' })
     await go(page, '/create/palette')
     await clickPaletteAction(page, 'Preview')
     await expect(page.locator('.pvs')).toHaveCount(1)
@@ -363,7 +365,9 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       }, VARS)
 
       expect(s.name, `${name}: the scene rendered with the wrong data-preview-scene`).toBe(name)
-      expect(s.role, `${name}: the scene is not exposed as one image`).toBe('img')
+      // The scenes with live controls (Ridgeline, Tenner, Slack Water and Orra) are groups of them; every other scene is one picture.
+      const live = name === 'Trail run app' || name === 'Spending card' || name === 'Editorial hero' || name === 'Product page'
+      expect(s.role, `${name}: the scene is not exposed as ${live ? 'a group of controls' : 'one image'}`).toBe(live ? 'group' : 'img')
       expect(s.label, `${name}: the scene lost its accessible name`).toBe(`${name} preview using your palette, light theme`)
       // pvVars moved with the components. If it had not, every one of these
       // would resolve to nothing and the scenes would paint unstyled.
@@ -459,9 +463,9 @@ test.describe('the login surfaces paint only what is true', () => {
       expect(m.gap, `${width}: the h2 sits ${m.gap}px above the primary action, against a ${m.fieldGap}px field rhythm`)
         .toBeGreaterThanOrEqual(m.fieldGap)
       // The words and the type are untouched — this cell is a SPACING fix and
-      // nothing else. `auth.welcomeBack` is founder-blocked.
+      // nothing else. `auth.welcomeBack` is approval-gated.
       expect(m.titleSize).toBe('22px')
-      await expect(page.locator('#ui-login-title')).toHaveText('Log in to UIL4B')
+      await expect(page.locator('#ui-login-title')).toHaveText('Log in to UI L4B')
 
       await ctx.close()
     })

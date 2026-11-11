@@ -108,7 +108,7 @@ const SYSTEM_ID_RE = /^[a-z][a-z0-9-]{0,23}$/
 // Ctrl/Cmd-click on the homepage's Continue link stages a draft in a tab that
 // then does not navigate, and without a ttl that draft waits for the life of
 // the tab and lands on whatever visit to /create/palette comes next — the
-// founder's intermittent "different swatch". The call site is guarded now, so
+// intermittent "different swatch". The call site is guarded now, so
 // this is the backstop rather than the fix: 30s is far longer than the route
 // change it has to survive (a lazy chunk on a cold cache is ~1s) and far
 // shorter than the gap that made the bug reportable.

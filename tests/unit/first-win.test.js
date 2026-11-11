@@ -62,6 +62,18 @@ test('every card carries the copy the screen needs', () => {
   }
 })
 
+test('the onboarding screen copy has no emoji and no em dash', () => {
+  const DASH = /—/
+  const EMOJI = /\p{Extended_Pictographic}/u
+  for (const win of FIRST_WINS) {
+    assert.doesNotMatch(win.blurb, DASH, `${win.id} blurb has an em dash`)
+    assert.doesNotMatch(win.blurb, EMOJI, `${win.id} blurb has an emoji`)
+  }
+  const jsx = stripComments(read('src/pages/Onboarding.jsx'))
+  assert.doesNotMatch(jsx, EMOJI, 'Onboarding.jsx renders an emoji')
+  assert.doesNotMatch(jsx, DASH, 'Onboarding.jsx has an em dash in its copy')
+})
+
 // ── Lookups refuse to guess ─────────────────────────────────────────────────
 
 test('a known id resolves to its card and route', () => {

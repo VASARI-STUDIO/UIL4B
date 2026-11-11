@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 
 // The dashboard's date and time, read from the VIEWER'S OWN MACHINE.
 //
-// Founder request, 2026-09-18: "in the dashboard page lets show a date and time
-// make it connect to their browser / computer."
+// It shows the date and time on the dashboard, taken from the browser/computer.
 //
 // ── Why it renders nothing on the first pass ────────────────────────────────
 //

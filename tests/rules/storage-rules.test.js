@@ -17,8 +17,7 @@
 // still render in <img>/<video> through the tokenised URL getDownloadURL
 // returned, which does not go through these rules.
 //
-// storage.rules is NOT on the founder-gated list in
-// docs/reference/human-validation-zones.md (firestore.rules and
+// storage.rules is NOT approval-gated (firestore.rules and
 // api/verify-admin.js are), so unlike the Firestore half of this change, this
 // fix is applied in the tree and these tests run against the real file.
 //
@@ -229,7 +228,7 @@ legacy('being a reviewer opens reads only, not writes into someone else\'s folde
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Gaps in coverage: delete, size boundary, metadata, deep paths (card a36c027015)
+// Gaps in coverage: delete, size boundary, metadata, deep paths
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Cases T15 to T18 of the rules audit. Each refusal sits beside a success on

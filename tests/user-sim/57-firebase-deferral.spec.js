@@ -1,27 +1,12 @@
-// The Firebase deferral, in the browser, on the DEFAULT (unflagged) build.
+// The Firebase access broker, in the browser, on the default (deferred) build.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// WHAT THIS CAN AND CANNOT PROVE, STATED FIRST
-// ─────────────────────────────────────────────────────────────────────────────
-// `VITE_DEFER_FIREBASE` is a BUILD flag — it changes which chunk the SDK lands
-// in, which rolldown decides before a browser is involved. `npm run test:users`
-// builds with `vite build --mode test` and no flag, so this suite cannot run the
-// deferred code path at all. Pretending otherwise by asserting something that
-// happens to be true in both builds is exactly the failure this repo has paid
-// for four times: a test beside a correct fix that exercises nothing.
-//
-// So this spec guards the half that IS live on every build — the seams the
-// deferral routes the app through, which now sit between App.jsx and Firebase on
-// the default path too. If a seam is broken, the flagged build is irrelevant
-// because the shipped one is already wrong.
-//
-// The deferred build's own behaviour is measured, not asserted, by
-// `scripts/firebase-deferral-trial.mjs` + `scripts/home-field-metrics.mjs`,
-// for the same reason #402 kept the timings out of this suite: they depend on
-// the machine, and a guard that fails at random is one people learn to ignore.
-// The STRUCTURE of the deferral — which is exact, and is what regresses
-// silently — is guarded by `tests/unit/firebase-deferral.test.js` and by the
-// build itself (`assertFirebaseIsDeferred` in vite.config.js).
+// This guards that the seams the deferral routes the app through boot and
+// render: a broken export in `src/utils/firebaseAccess` throws while the module
+// graph evaluates and paints nothing. What the deferral actually saves (no SDK
+// request for a cold signed-out visit, the SDK arriving when sign-in opens) is
+// asserted in `57-firebase-cold-visit.spec.js`; the import-graph structure is
+// guarded by `tests/unit/firebase-deferral.test.js` and by the build itself
+// (`assertFirebaseIsDeferred` in vite.config.js).
 import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
 
@@ -45,13 +30,10 @@ test('the homepage boots through the Firebase access broker and renders real con
   // broken export there throws while the module graph is still evaluating —
   // which paints nothing at all. A page that renders nothing paints fast and
   // passes every check that does not look at its text.
-  // `.home-hero-h1` until the route swap. `/` renders src/pages/Spectrum.jsx
-  // now and its headline is `.sp-hero-h1` (SpectrumWords splits it into
-  // `.sp-w` spans, so this reads the h1 and not one word of it). The control is
-  // doing exactly the same job: a broken export in firebaseAccess throws while
-  // the module graph is evaluating, which paints nothing, and a blank page
-  // passes every check below.
-  const hero = page.locator('.sp-hero-h1')
+  // The headline is the one `h1.hh-h1`. The control does one job: a broken export
+  // in firebaseAccess throws while the module graph is evaluating, which paints
+  // nothing, and a blank page passes every check below.
+  const hero = page.locator('section#top h1.hh-h1')
   await expect(hero).toBeVisible()
   const heroText = (await hero.innerText()).trim()
   expect(
@@ -65,7 +47,7 @@ test('the homepage boots through the Firebase access broker and renders real con
 test('the One Tap mount seam is live — the app still injects Google Identity Services', async ({ page }) => {
   // `src/components/oneTapMount.jsx` is the seam that lets a deferred build hold
   // One Tap back until the Firebase gate opens, WITHOUT editing the
-  // founder-gated `GoogleOneTap.jsx`. On the default build it must be a
+  // approval-gated `GoogleOneTap.jsx`. On the default build it must be a
   // transparent re-export, and the only way to see that from the browser is
   // that One Tap still does the one thing it does on a signed-out page: inject
   // the GIS script.
@@ -76,15 +58,26 @@ test('the One Tap mount seam is live — the app still injects Google Identity S
   // injecting one itself: a tag this spec added would prove nothing about the
   // seam. That is the opposite choice to `26-one-tap-stub.spec.js`, which is
   // guarding the stub rather than the mount and must not depend on auth.
+  //
+  // One Tap mounts only on the routes in src/components/oneTapRoutes.js, so the
+  // sign-in page is where it must load, and a tool page is where it must not.
   watch(page, 'a signed-out visitor whose browser should be offered One Tap')
-  await go(page, '/')
-  await expectRendered(page, 'the homepage')
+  await go(page, '/login')
 
   await expect(
     page.locator(GIS_SCRIPT),
-    'the app never injected the Google Identity Services script, so the One Tap mount seam did not render '
+    'the app never injected the Google Identity Services script on /login, so the One Tap mount seam did not render '
     + 'GoogleOneTap. Automatic sign-in is silently gone for every returning Google user.',
   ).toHaveCount(1, { timeout: 20000 })
+})
+
+test('One Tap stays off a page someone is only browsing', async ({ page }) => {
+  watch(page, 'a signed-out visitor using a tool, who has not asked to sign in')
+  await go(page, '/create/palette')
+  await expectRendered(page, 'the palette tool')
+  // Long enough for the mount to have injected the script if it were going to.
+  await page.waitForTimeout(3000)
+  await expect(page.locator(GIS_SCRIPT), 'One Tap loaded on a tool page').toHaveCount(0)
 })
 
 test('the account affordance resolves, so auth still reaches the chrome', async ({ page }) => {
@@ -97,12 +90,12 @@ test('the account affordance resolves, so auth still reaches the chrome', async 
   await expectRendered(page, 'the homepage')
 
   // THROUGH THE FRONT DOOR'S ONE WAY IN. The marketing chrome is the design
-  // exactly: a pill with no account block and a menu of four items. "Open the
+  // exactly: a flat bar with no account block. The hero's "Open the
   // toolkit" enters the app with no sign-up gate, so the sign-in affordance a
   // signed-out visitor meets is the app header's, one press from `/`. It is
   // still rendered from `user`, so it cannot show "Log in" until AuthContext
   // has resolved to signed out — which is the whole point of this test.
-  await page.locator('.spnav-cta').click()
+  await page.locator('#top .hh-go').click()
   await expect(page).toHaveURL(/\/projects$/)
 
   const signIn = page.getByRole('link', { name: /sign in|log ?in/i })

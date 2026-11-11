@@ -3,9 +3,9 @@
 //
 // Held here:
 //   · a 3,000-character name with no spaces wraps inside its column: the page
-//     has no sideways scroll and the header name neither overflows its own box
-//     nor runs under Sign out, at 390 and at 1440; the Display name row keeps its
-//     Edit button inside the card;
+//     has no sideways scroll and the header name does not overflow its own box,
+//     at 390 and at 1440; Sign out is in Sign-in and security, not the header;
+//     the Display name row keeps its Edit button inside the card;
 //   · five rapid presses of Update password make ONE call, the button and fields
 //     are disabled while it runs, and the page says "updated" once;
 //   · in the email edit flow Enter advances and submits, and a malformed
@@ -71,19 +71,16 @@ for (const width of [390, 1440]) {
       // spills past it when it cannot wrap), and the box stays inside the card.
       const spill = await name.evaluate((el) => el.scrollWidth - el.clientWidth)
       expect(spill, 'the header name runs past its own box').toBeLessThanOrEqual(1)
-      const card = await section.locator('.settings-card').boundingBox()
+      const card = await section.getByRole('group', { name: 'Public profile' }).boundingBox()
       const nameBox = await name.boundingBox()
       expect(nameBox.x + nameBox.width).toBeLessThanOrEqual(card.x + card.width + 0.5)
       // Two lines is the most the header gives it.
       expect(nameBox.height, 'the header name is taller than two lines').toBeLessThan(60)
 
-      // And it never shares space with Sign out.
-      const out = await header.getByRole('button', { name: 'Sign out' }).boundingBox()
-      const apart = nameBox.x + nameBox.width <= out.x + 0.5
-        || out.x + out.width <= nameBox.x + 0.5
-        || nameBox.y + nameBox.height <= out.y + 0.5
-        || out.y + out.height <= nameBox.y + 0.5
-      expect(apart, 'the name runs under Sign out').toBe(true)
+      // Sign out lives in Sign-in and security now, so the header holds no
+      // button that the name could run under.
+      await expect(header.getByRole('button', { name: 'Sign out' })).toHaveCount(0)
+      await expect(section.getByRole('group', { name: 'Sign-in and security' }).getByRole('button', { name: 'Sign out' })).toBeVisible()
 
       // The Display name row shows the whole value, wrapped, with Edit in the card.
       const row = section.locator('.settings-row').first()
@@ -91,7 +88,7 @@ for (const width of [390, 1440]) {
       expect(await value.evaluate((el) => el.textContent.length)).toBe(3000)
       const rowSpill = await value.evaluate((el) => el.scrollWidth - el.clientWidth)
       expect(rowSpill, 'the Display name value runs past its box').toBeLessThanOrEqual(1)
-      const edit = await row.getByRole('button', { name: 'Edit', exact: true }).boundingBox()
+      const edit = await row.getByRole('button', { name: 'Edit display name' }).boundingBox()
       expect(edit.x + edit.width).toBeLessThanOrEqual(card.x + card.width + 0.5)
       // Edit stays top-right beside the label, at every width: level with the
       // label row and to the right of the value, not dropped below it.
@@ -110,7 +107,7 @@ test.describe('settings, password change', () => {
   test('five rapid presses of Update password make one call, and the page says so once', async ({ page }) => {
     watch(page, 'a person hammering Update password')
     const section = await openAccount(page)
-    await section.getByRole('button', { name: 'Change', exact: true }).last().click()
+    await section.getByRole('button', { name: 'Change password' }).click()
     await section.getByLabel('Current password').fill('old-pass-1')
     await section.getByLabel('New password', { exact: true }).fill('new-pass-22')
     await section.getByLabel('Confirm new password').fill('new-pass-22')
@@ -140,7 +137,7 @@ test.describe('settings, errors and focus', () => {
   test('after a wrong current password the focus is on that field and the error is linked to it', async ({ page }) => {
     watch(page, 'a person who mistyped their current password')
     const section = await openAccount(page, { authFail: { updatePassword: 'auth/wrong-password' } })
-    await section.getByRole('button', { name: 'Change', exact: true }).last().click()
+    await section.getByRole('button', { name: 'Change password' }).click()
     const current = section.getByLabel('Current password')
     await current.fill('wrong-one')
     await section.getByLabel('New password', { exact: true }).fill('new-pass-22')
@@ -157,7 +154,7 @@ test.describe('settings, errors and focus', () => {
   test('clearing the display name says the start of the email shows instead', async ({ page }) => {
     watch(page, 'a person blanking their display name')
     const section = await openAccount(page)
-    await section.getByRole('button', { name: 'Edit', exact: true }).first().click()
+    await section.getByRole('button', { name: 'Edit display name' }).click()
     const field = section.getByPlaceholder('Enter your display name')
     await field.fill('')
     await field.press('Enter')
@@ -171,7 +168,7 @@ test.describe('settings, keys', () => {
   test('Enter in the email flow advances and submits, and a typo is turned away at Next', async ({ page }) => {
     watch(page, 'a keyboard user changing their email')
     const section = await openAccount(page)
-    await section.getByRole('button', { name: 'Edit', exact: true }).nth(1).click()
+    await section.getByRole('button', { name: 'Edit email address' }).click()
     const email = section.getByPlaceholder('Enter new email')
 
     await email.fill('not-an-email')
@@ -180,8 +177,8 @@ test.describe('settings, keys', () => {
     await expect(email, 'a typo got past Next').toBeVisible()
 
     await email.press('Escape')
-    await expect(section.getByRole('button', { name: 'Edit', exact: true }).nth(1), 'Escape did not return focus to Edit').toBeFocused()
-    await section.getByRole('button', { name: 'Edit', exact: true }).nth(1).click()
+    await expect(section.getByRole('button', { name: 'Edit email address' }), 'Escape did not return focus to Edit').toBeFocused()
+    await section.getByRole('button', { name: 'Edit email address' }).click()
     await email.fill('new.address@uil4b.test')
     await email.press('Enter')
     const password = section.getByPlaceholder('Enter your password to confirm')
@@ -231,7 +228,7 @@ test.describe('settings, website and avatar', () => {
     watch(page, 'a person pasting a script URL into their website')
     const section = await openAccount(page)
     const row = section.locator('.settings-row', { has: page.getByText('Website', { exact: true }) })
-    await row.getByRole('button', { name: 'Edit', exact: true }).click()
+    await row.getByRole('button', { name: 'Edit website' }).click()
     const field = row.getByPlaceholder('https://yoursite.com')
 
     await field.fill('javascript:alert(1)')

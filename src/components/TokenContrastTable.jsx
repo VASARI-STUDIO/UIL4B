@@ -77,7 +77,7 @@ export default function TokenContrastTable() {
   return (
     <figure className="lart-table-wrap">
       <div className="lart-table-scroll" tabIndex={0} role="group" aria-label="Measured contrast of this page's own text colours">
-        <table className="lart-table">
+        <table className="lart-table lart-table--stack">
           <thead>
             <tr>
               <th scope="col">Pair</th>
@@ -91,13 +91,13 @@ export default function TokenContrastTable() {
             {rows.map((r) => (
               <tr key={r.label}>
                 <th scope="row">{r.label}</th>
-                <td>
+                <td data-label="Colours">
                   <span className="lart-swatch" style={{ background: r.bg, color: r.fg }} aria-hidden="true">Ag</span>
-                  <span className="lart-hex">{r.fg.toUpperCase()} on {r.bg.toUpperCase()}</span>
+                  <span className="lart-pair"><span className="lart-hex">{r.fg.toUpperCase()}</span> on <span className="lart-hex">{r.bg.toUpperCase()}</span></span>
                 </td>
-                <td data-num="true">{r.ratio.toFixed(2)}:1</td>
-                <td>{verdict(r.ratio, 4.5)}</td>
-                <td>{verdict(r.ratio, 7)}</td>
+                <td data-label="Ratio" data-num="true">{r.ratio.toFixed(2)}:1</td>
+                <td data-label="AA">{verdict(r.ratio, 4.5)}</td>
+                <td data-label="AAA">{verdict(r.ratio, 7)}</td>
               </tr>
             ))}
           </tbody>

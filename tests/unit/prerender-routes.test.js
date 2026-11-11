@@ -173,7 +173,7 @@ test('THE COMPLETENESS ONE: every route the app can render is classified', () =>
 })
 
 test('no excluded category is empty, or the rule behind it has quietly died', () => {
-  // Each of these is a rule the founder asked for by name. If one stops
+  // Each of these is a rule that was set by name. If one stops
   // matching anything, either the app changed or the rule broke — and a rule
   // that silently matches nothing excludes nothing.
   const { excluded } = routeMatrix()
@@ -185,7 +185,7 @@ test('no excluded category is empty, or the rule behind it has quietly died', ()
 
 test('nothing behind RequireAuth or RequireAdmin is prerendered', () => {
   // Stated as paths rather than by re-deriving the rule, because this is the
-  // assertion the founder actually asked for and it must not be able to pass by
+  // assertion that matters and it must not be able to pass by
   // agreeing with a broken implementation of itself.
   const routes = prerenderRoutes()
   for (const gated of [
@@ -345,8 +345,8 @@ test('the category-home assumption is still true in the code it describes', () =
   // parallel list with better manners. This reads both source files.
   //
   // THE EXCEPTION IS GONE, 2026-09-18. `/create/color` was kept because App.jsx
-  // intercepted it above CreateTool and rendered ColorLanding; the founder
-  // deleted that landing when Spectrum became `/`, so the intercept went with
+  // intercepted it above CreateTool and rendered ColorLanding; that landing was
+  // deleted when Spectrum became `/`, so the intercept went with
   // it and CREATE_HOMES_THAT_RENDER is empty. Both halves are asserted below —
   // the empty list, and the absence of the intercept — because an empty list
   // that App.jsx quietly contradicts is the same defect in the other

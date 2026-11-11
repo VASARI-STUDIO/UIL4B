@@ -18,9 +18,8 @@ import '../styles/pages/font-picker.css'
 // defensible choice for keyboard and mobile support, but it has one fault it
 // cannot be argued out of — a <select> renders every option in the UI font, so
 // choosing a typeface meant recognising a NAME in a list. You could not see
-// what you were choosing. That is the whole of the founder's report that
-// selection "expects you to remember and type font names": it is not a
-// discoverability problem, it is structural.
+// what you were choosing. Picking a family meant remembering and typing font
+// names: it is not a discoverability problem, it is structural.
 //
 // So the specimen is the control. Each card renders its own family, at a size
 // you can judge, and clicking the card is the selection. Search and the

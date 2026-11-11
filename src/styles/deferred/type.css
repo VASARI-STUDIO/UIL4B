@@ -44,7 +44,7 @@
 .typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 0.72cqw),26px);line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
 .typ-picker-id{grid-column:1;grid-row:2;display:flex;align-items:baseline;gap:7px;min-width:0}
 .typ-picker-name{flex-shrink:0;max-width:60%;font-size:12px;font-weight:650;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.typ-picker-meta{font-family:var(--font);font-size:var(--fs-caption);color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .typ-picker-cue{grid-column:2;grid-row:1/span 2;align-self:center;flex-shrink:0;padding:6px 11px;font-size:11px;font-weight:700;color:var(--accent-text);background:var(--accent-wash);border-radius:var(--radius-pill)}
 /* Kept: Font Pair's "reload the catalogue" recovery button still uses it. */
 .typ-picker-clear{margin-top:6px;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
@@ -63,7 +63,7 @@
 /* Not sticky inside the dialog: the dialog's own body is the scroll container,
    and a sticky bar inside a scrolling flex child pins to the wrong box. */
 .fbd-toolbar{position:static;margin-bottom:12px}
-.fbd-count{margin:0 0 14px;font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--t2)}
+.fbd-count{margin:0 0 14px;font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;font-variant-numeric:tabular-nums;color:var(--t2)}
 .fbd-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-grid{--lbry-col-min:190px}
 .fbd-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -132,7 +132,7 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 .fbd-more{display:flex;justify-content:center;padding:18px 0 4px}
 .fbd-empty{margin-bottom:8px}
 
-/* ── The per-family detail view, and the two tabs the founder asked for ──────
+/* ── The per-family detail view, and its two tabs ──────
    Three fixed rows and ONE scroller: head, tabs, scrolling panel, pinned
    action. #305 found the Font Gallery's specimen dialog 1,763px tall in a 900px
    viewport with every action below the fold, and noted that adding tabs is
@@ -150,7 +150,7 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 /* The name is the specimen — it is set in the family it names, which is the
    same contract the tiles keep. */
 .fbd-detail-name{margin:0;min-width:0;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,700);font-size:clamp(21px,3.2vw,30px);line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
-.fdx-tabs{display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.fdx-tabs{position:relative;display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
 .fdx-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .fdx-tab:hover{color:var(--t0)}
 .fdx-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
@@ -158,6 +158,18 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 /* Sits ON the 1px border rather than above it, so the pair reads as one edge
    and not as a rule with a second rule stacked on it. */
 .fdx-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--t0);border-radius:2px 2px 0 0}
+/* The underline slides. useSlideIndicator measures the selected tab and the strip's
+   ::after is the bar: one pixel wide, stretched to the tab (less its 10px insets) by
+   scaleX, so it moves on transform alone. While [data-slide] is on the tab's own bar
+   is off; without it (server render, a hidden strip) the tab keeps its own. "placed"
+   draws the bar with no transition, "ready" animates its moves. */
+.fdx-tabs[data-slide]::after{content:"";position:absolute;left:0;top:0;width:1px;height:2px;background:var(--t0);transform-origin:0 0;transform:translate(calc(var(--si-x) + 10px),calc(var(--si-y) + var(--si-h) - 1px)) scaleX(calc(var(--si-n) - 20));pointer-events:none}
+.fdx-tabs[data-slide="ready"]::after{transition:transform var(--dur-2) var(--ease-entrance)}
+.fdx-tabs[data-slide] .fdx-tab--on::after{content:none}
+html[data-reduced-motion="true"] .fdx-tabs[data-slide]::after{transition:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .fdx-tabs[data-slide]::after{transition:none}}
+/* Forced colours paint the bar as Canvas, so the selected tab keeps a Highlight rule of its own. */
+@media(forced-colors:active){.fdx-tabs[data-slide]::after{content:none}.fdx-tabs[data-slide] .fdx-tab--on{border-bottom:2px solid Highlight}}
 .fbd-detail-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
 .fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:560;color:var(--accent-ink);background:var(--accent-fill);border:1px solid var(--accent-fill);border-radius:var(--btn-radius);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
@@ -167,7 +179,7 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 .fbd-cuts li{display:flex;flex-direction:column;gap:3px;padding-bottom:13px;border-bottom:1px solid var(--border)}
 .fbd-cuts li:last-child{border-bottom:0;padding-bottom:0}
 .fbd-cut-line{font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,400);font-size:clamp(15px,2.4vw,20px);line-height:1.32;color:var(--t0)}
-.fbd-cut-label{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
+.fbd-cut-label{font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none;color:var(--t2)}
 /* A definition list, not a card grid. Nine facts in nine equally-weighted
    rounded boxes is the "every idea in a card" failure — these are rows of a
    spec, they have a natural label/value shape, and dl says so semantically. */
@@ -177,7 +189,7 @@ html[data-reduced-motion="true"] .fbd-sample--pending::after{animation:none}
 .fdx-fact dd{grid-column:2;margin:0;padding:9px 0;font-size:13px;line-height:1.45;color:var(--t0);border-bottom:1px solid var(--border)}
 .fdx-fact:last-child dt,.fdx-fact:last-child dd{border-bottom:0}
 .fdx-note{margin-top:18px;padding:14px 16px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius)}
-.fdx-note h4{margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--t0)}
+.fdx-note h4{margin:0 0 6px;font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;color:var(--t0)}
 .fdx-note p{margin:0;font-size:13px;line-height:1.5;color:var(--t1)}
 .fdx-source{margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--t2)}
 .fdx-source--lead{margin:0 0 16px}
@@ -329,12 +341,12 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
 .fdx-ex-ladder{display:flex;flex-direction:column;gap:12px}
 .fdx-ex-rung{display:flex;align-items:baseline;justify-content:space-between;gap:16px;min-width:0}
 .fdx-ex-rungline{margin:0;min-width:0;font-size:clamp(19px,3.6vw,27px);line-height:1.2;overflow-wrap:anywhere}
-.fdx-ex-runglabel{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--t2)}
+.fdx-ex-runglabel{flex:none;font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;color:var(--t2)}
 
 /* ── The outbound search, worded as a search ──────────────────────────────── */
 .fdx-fiu-note{margin:18px 0 0;padding-top:14px;font-size:11.5px;line-height:1.55;color:var(--t2);border-top:1px solid var(--border)}
-/* Resting underline, not a hover one — founder direction 2026-09-02 rules out
-   hover-only affordances on touch, and the footer attribution link settled the
+/* Resting underline, not a hover one — hover-only affordances don't work
+   on touch, and the footer attribution link settled the
    same question the same way. 70% of currentColor rather than a fixed token,
    which is what measured clear of 1.4.11 there. */
 /* Radius at REST, not on :focus-visible — see the note on the global
@@ -347,7 +359,7 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
 /* ── The "In use" tab ────────────────────────────────────────────────────────
    Photographs of real work set in the family. It ships EMPTY for every family
    and will stay that way until an image arrives with its provenance attached —
-   see src/data/fontRealWorldUses for the rule and the founder's decision.
+   see src/data/fontRealWorldUses for the rule and the reason.
 
    THE EMPTY STATE HAS NO ILLUSTRATION, AND THAT IS THE DESIGN DECISION HERE.
    Jira's and Xero's empty states both draw one and both work, but neither of
@@ -389,7 +401,7 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
 .fdx-use-cap{display:flex;flex-direction:column;gap:3px;margin-top:10px}
 .fdx-use-title{font-size:12.5px;font-weight:600;color:var(--t0)}
 .fdx-use-credit{font-size:11.5px;color:var(--t1)}
-.fdx-use-licence{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t2)}
+.fdx-use-licence{font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;color:var(--t2)}
 .fdx-use-src{align-self:flex-start;margin-top:3px;font-size:11.5px}
 @media(max-width:560px){
   .fbd-dialog{max-height:calc(96vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));padding:16px}
@@ -420,27 +432,6 @@ html[data-reduced-motion="true"] .fdx-licence-link{transition:none}
    useful on small screens. These are the typography controls QA identified.
    Size only — the compare button's PLACEMENT is set once in the premium block
    below, which comes later in the cascade and would silently win anyway. */
-
-/* WRAPPED IN THE TABLET BAND TOO, FOR THE REASON THE PHONE BLOCK GIVES BELOW.
-   The slice defended on `.fg-card-pangram` above is the right call when the
-   line runs off the frame and the loss is a tail. Neither is true between 721
-   and 959px. MEASURED across the 77 families the catalogue serves, at 834px:
-   the box is 710px, the widest line wants 823px, and 48 of the 77 specimens
-   clip - Comfortaa by 113px, Sora 104, Montserrat 98, Poppins 91, Work Sans 89,
-   and the mildest survivors by 4. It is clean at 960 (836px of box) and above,
-   and clean at 720 and below where the phone block already wraps it, so this
-   band is the whole of the defect.
-   Two things make the slice wrong specifically here. `.fg-card-preview` holds
-   26px of right padding, so the cut lands 26px SHORT of the row edge rather
-   than bleeding past it - it reads as damage, not as continuation. And the loss
-   scales with the width of the face, so the specimen is least complete for
-   exactly the widest and most distinctive families, which inverts the job of
-   the page: the pangram is the sentence you read to judge a face.
-   So it takes the phone's answer at the desktop's 15px - two clamped lines, a
-   box reserved for exactly two at 24px each. It costs 24px a row and it keeps
-   the reserved-metrics contract, which is that rows agree WITH EACH OTHER: they
-   still all solve this from the same two numbers, so nothing moves as faces
-   stream in. */
 
 /* N1 (responsive-audit-2026-08): the family name is the content of a font
    gallery, and 7 of 48 were truncated at 320px — "Roboto Condensed" needing

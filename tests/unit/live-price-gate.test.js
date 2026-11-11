@@ -14,7 +14,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { read, stripComments } from './helpers/source-text.js'
 import {
-  BILLING_OPTIONS, BILLED_EVERY, priceState, resolveOffers,
+  BILLING_OPTIONS, BILLED_EVERY, PRICE_STATE_COPY, priceState, priceStateCopy, resolveOffers,
 } from '../../src/config/planFacts.js'
 import {
   cheapestPerMonth, livePlans, livePriceOf, resolvePlanLadder, savingsVsMonthly,
@@ -103,23 +103,25 @@ test('/plans takes its amounts and button state from resolveOffers', () => {
   assert.match(page, /resolveOffers\(\{ prices, currency, loaded: price\.loaded \}\)/)
   assert.doesNotMatch(page, /prices\?\.\[[^\]]+\]\?\.\[currency\]/, '/plans reads a raw price again')
   // The state is the shared priceState, and only `live` (canCheckout) sells.
-  assert.match(page, /const state = priceState\(\{ price, offers, selectedId: billing, retrying \}\)/)
+  assert.match(page, /const state = priceState\(\{ price, offers, selectedId: offer\.id, retrying \}\)/)
   assert.match(page, /const live = canCheckout\(state\)/)
   assert.doesNotMatch(page, /priceServiceDown/, '/plans keeps its own outage flag')
-  // The Pro button slot: the switch-cadence button and the Retry both come
-  // before the Link that starts a trial, and neither of them is a Link.
-  const switchTo = page.indexOf("} else if (state === 'cadence-missing') {")
+  // The Pro button slot: the switch-cadence button and the Retry sit outside
+  // the branch that links to checkout, and neither of them is a Link.
+  // Rendered links are checked by 114-pricing-fail-closed and plans-price-states.
+  const start = page.indexOf('let proCta = null')
+  const switchTo = page.indexOf("} else if (state === 'cadence-missing') {", start)
   const buy = page.indexOf('} else if (live) {', switchTo)
-  const retry = page.indexOf('} else {', buy)
-  const trial = page.indexOf('to={proTo}', switchTo)
-  assert.ok(switchTo > 0, 'one unpriced cadence no longer gets the switch-cadence button')
+  const retry = page.indexOf("} else if (state !== 'no-currency') {", buy)
+  const end = page.indexOf('const hasAction', retry)
+  assert.ok(start > 0 && switchTo > start, 'one unpriced cadence no longer gets the switch-cadence button')
   assert.ok(buy > switchTo, 'the buy branch no longer follows the switch-cadence branch')
-  assert.ok(retry > buy, 'the other states no longer end in one Retry button')
-  assert.ok(trial > buy && trial < retry, 'the link to checkout is outside the live branch')
-  assert.doesNotMatch(page.slice(switchTo, buy), /<Link/, 'the switch-cadence state offers a link to checkout')
-  assert.doesNotMatch(page.slice(retry, page.indexOf('const OUTAGE_STATES')), /<Link|to=\{proTo\}/, 'an unavailable state offers a link to checkout')
+  assert.ok(retry > buy && end > retry, 'the other states no longer end in one Retry button')
+  assert.doesNotMatch(page.slice(switchTo, buy), /<Link|to=\{proTo\}/, 'the switch-cadence state offers a link to checkout')
+  assert.match(page.slice(buy, retry), /to=\{proTo\}/, 'the live branch no longer links to checkout')
+  assert.doesNotMatch(page.slice(retry, end), /<Link|to=\{proTo\}/, 'an unavailable state offers a link to checkout')
   assert.match(page.slice(switchTo, buy), /chooseBilling\(otherOffer\.id\)/, 'the switch button no longer switches cadence')
-  assert.match(page.slice(retry, page.indexOf('const OUTAGE_STATES')), /\bretry\(\)/, 'the Retry button no longer asks for prices again')
+  assert.match(page.slice(retry, end), /\bretry\(\)/, 'the Retry button no longer asks for prices again')
 })
 
 test('Quarterly stays off sale', () => {
@@ -153,10 +155,11 @@ test('no saving unless the monthly price is live in the same currency', () => {
   assert.match(offerOf(both, 'yearly').savingLabel, /^Save \d+%$/)
 })
 
-test('the Yearly note names no monthly price at all', () => {
+test('the Yearly detail names a monthly price only from a live offer', () => {
   const page = stripComments(read('src/pages/Pricing.jsx'))
   assert.doesNotMatch(page, /monthlyForNote|sizedMonthly/, 'the note reads a monthly price again')
-  assert.match(page, /billedLine\(o\)/, 'the Yearly note no longer calls billedLine(o), so it is not built from the offer alone')
+  assert.match(page, /const noTrialOffer = offers\.find\(/, 'the Monthly line is not read from the resolved offers')
+  assert.match(page, /noTrialOffer\?\.total != null/, 'the Monthly line is no longer guarded by a live total')
 })
 
 test('the upgrade modal states no saving across two currencies', () => {
@@ -230,6 +233,35 @@ test('/checkout prints no rate until the chosen offer is available', () => {
   assert.match(note, /^const note = !proPrice\.loaded/, 'the note no longer waits for the prices to settle')
   assert.doesNotMatch(note, /chosenOption\?\.months/, 'the rate branch is guarded by months alone again — "A$0.00/mo" before the prices land')
   assert.ok(note.indexOf('!amount') < note.indexOf('chosenOption.months'), 'the rate branch comes before the available check')
+})
+
+test('/checkout and Settings print no cadence suffix and no trial band beside an unavailable price', () => {
+  const checkout = stripComments(read('src/pages/Checkout.jsx'))
+  // The slot's word comes from the shared copy; the suffix and the band need an amount.
+  assert.match(checkout, /\{amount \|\| priceCopy\.word\}/, 'Checkout does not print the shared word when there is no amount')
+  assert.match(checkout, /\{amount && <span className="checkout-plan-per">\{plan\.per\}<\/span>\}/, 'Checkout prints "per month" beside a price that is not there')
+  assert.match(checkout, /\{plan\.trial && amount && \(\s*<div className="checkout-trial">/, 'Checkout shows the trial band without a live amount')
+  const settings = stripComments(read('src/pages/Settings.jsx'))
+  assert.match(settings, /\{canCheckout\(priceStatus\) \? offer\.amountLabel : priceCopy\.word\}/, 'Settings does not print the shared word when the price is not live')
+  assert.match(settings, /\{canCheckout\(priceStatus\) && <span className="sub-tier-per">per month<\/span>\}/, 'Settings prints "per month" beside a price that is not live')
+})
+
+test('the three price surfaces keep none of the shared outage sentences as literals', () => {
+  // A probe currency and labels, so a sentence built from them splits into its fixed parts.
+  const probe = { currencyLabel: 'ZZZ', selectedLabel: 'SSS', otherLabel: 'OOO' }
+  const fixed = new Set()
+  for (const id of Object.keys(PRICE_STATE_COPY)) {
+    const copy = priceStateCopy(id, probe)
+    for (const text of [copy.line1, copy.line2, copy.button, copy.under]) {
+      if (!text) continue
+      for (const part of text.split(/ZZZ|SSS|OOO/)) if (part.trim().length >= 12) fixed.add(part)
+    }
+  }
+  assert.ok(fixed.size >= 6, 'the sentences were not collected from the copy table')
+  for (const file of ['src/pages/Pricing.jsx', 'src/pages/Checkout.jsx', 'src/pages/Settings.jsx']) {
+    const page = stripComments(read(file))
+    for (const part of fixed) assert.ok(!page.includes(part), `${file} types "${part}" instead of taking it from PRICE_STATE_COPY`)
+  }
 })
 
 test('/checkout and Settings take the outage from the shared priceState, with the Retry', () => {
@@ -348,14 +380,16 @@ test('Stripe\'s `param` decides whether a failure is about the currency; the mes
 test('/plans shows the unavailable state as one more note state, with the recovery action in the Pro button slot', () => {
   const page = stripComments(read('src/pages/Pricing.jsx'))
   assert.doesNotMatch(page, /unavailableState|unavailableLines/, 'a reserved unavailable block or its own outage lines are back')
-  // Every outage state is a note state whose words come from PRICE_STATE_COPY
-  // through priceStateCopy, in both layouts.
-  assert.match(page, /const OUTAGE_STATES = \['unreachable', 'no-currency', 'cadence-missing'\]/)
-  assert.match(page, /priceStateCopy\(id, stateCtx\)/, 'the outage notes do not take their words from priceStateCopy')
-  assert.match(page, /\.\.\.OUTAGE_STATES\.map\(\(id\) => \(\{ id, lines: \[outageCopy\[id\]\.line1, outageCopy\[id\]\.line2\]/, 'the ledger has no outage note states')
-  assert.match(page, /\.\.\.OUTAGE_STATES\.map\(\(id\) => \(\{ id, billed: outageCopy\[id\]\.line1/, 'the offer layout has no outage note states')
-  assert.match(page, /const activeNote = state === 'retrying' \? 'loading' : live \? offer\.id : state/)
-  assert.equal(page.split("id={outage && state.id === activeNote ? 'pricing-noprice' : undefined}").length - 1, 2, 'only the shown copy may carry the id')
+  // The words come from PRICE_STATE_COPY through priceStateCopy; one slot
+  // carries the single `pricing-noprice` id, and the buttons point at it.
+  assert.match(page, /const outage = state === 'unreachable' \|\| state === 'no-currency' \|\| state === 'cadence-missing'/)
+  assert.match(page, /priceStateCopy\(state, stateCtx\)/, 'the outage notes do not take their words from priceStateCopy')
+  assert.match(page, /detail1 = stateCopy\.line1/, 'the first outage line is not printed in the detail slot')
+  assert.match(page, /detail2 = stateCopy\.line2/, 'the second outage line is not printed in the detail slot')
+  assert.doesNotMatch(page, /\bid="pricing-noprice"/, 'the note id is set outside an outage')
+  assert.equal(page.split("id={outage ? 'pricing-noprice' : undefined}").length - 1, 1, 'the detail slot no longer carries the id in an outage')
+  assert.equal(page.split('aria-describedby="pricing-noprice"').length - 1, 1, 'the switch-cadence button no longer points at the note')
+  assert.equal(page.split("aria-describedby={outage ? 'pricing-noprice' : undefined}").length - 1, 1, 'the recovery button no longer points at the note')
 })
 
 test('/checkout announces a refusal and brings it into view', () => {

@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { readSeed, seedChip, paletteToolbar, openPaletteTools, clickPaletteAction } from './palette-helpers.js'
 import { hexToHct } from '../../src/utils/colors.js'
 
@@ -50,8 +50,8 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(pickerColour).toBe(firstColour)
 
     // This used to assert the seed SURVIVED a reload, which was true because
-    // `vs-palette-session-seed` pinned the first draw to the tab. The founder's
-    // 2026-09-03 request is that the page auto-loads a random palette, so an
+    // `vs-palette-session-seed` pinned the first draw to the tab. The page now
+    // auto-loads a random palette, so an
     // untouched board is now redrawn on arrival — and it must be, because the
     // board was also being persisted on mount, which meant "random on load"
     // held exactly once per device and never again.
@@ -326,7 +326,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
     const options = rail.getByRole('option')
     // Six previews, each a made-up product (Slack Water, Sundial, Orra Workroom,
-    // Ridgeline, Hale & Okoro, Tally). Four are open to a free account and two
+    // Ridgeline, Hale & Okoro, Tenner). Four are open to a free account and two
     // are marked Pro in the list. The Poster and Social previews raise this to
     // eight, with four Pro, when they are built.
     await expect(options).toHaveCount(6)
@@ -348,25 +348,45 @@ test.describe('Palette Builder recovery and tool continuity', () => {
       await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
     }
 
-    // A locked preview still shows its real scene, blurred and not reachable,
-    // behind a plain Unlock preview button.
+    // A locked preview is never mounted for a free viewer: the stage holds a blurred stand-in
+    // drawn from their colours, behind a plain Unlock preview button. None of the real scene's
+    // markup or copy is in the page to un-blur.
     const LOCKED = [
-      ['Spending card', 'Corner Grocer, Newtown'],
+      ['Spending card', 'Marrickville Fresh Market'],
       ['Architect portfolio', 'Gully House'],
     ]
     for (const [name, text] of LOCKED) {
       await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
-      const scene = page.locator(`[data-preview-scene="${name}"]`)
-      await expect(scene).toContainText(text)
       await expect(page.getByText(`${name} is a Pro preview`)).toBeVisible()
+      await expect(page.locator('.pvd-scene.is-locked .pvd-scene-stub')).toHaveCount(1)
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toHaveCount(0)
+      await expect(page.locator('.pvs')).toHaveCount(0)
+      await expect(page.getByText(text)).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(1)
       await expect(page.locator('.pvd-scene-in')).toHaveCSS('filter', 'blur(6px)')
       await expect(page.locator('.pvd-scene-in')).toHaveAttribute('inert', '')
     }
 
+    // Back on an open scene so the theme switch has a real scene to repaint.
+    await rail.getByRole('option', { name: /^Editorial hero/ }).click()
     await dialog.getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(dialog.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.pvs')).toHaveAttribute('data-mode', 'dark')
+  })
+
+  test('a Pro account gets the real Pro scenes, with no stand-in and no lock', async ({ page }) => {
+    watch(page, 'pro designer opening the Pro previews')
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/palette')
+    await clickPaletteAction(page, 'Preview')
+    const rail = page.getByRole('dialog', { name: 'Palette preview' }).getByRole('listbox', { name: 'Previews' })
+
+    for (const [name, text] of [['Spending card', 'Marrickville Fresh Market'], ['Architect portfolio', 'Gully House']]) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toContainText(text)
+      await expect(page.locator('.pvd-scene-stub')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+    }
   })
 
   test('contrast and HCT stay attached to each swatch with clear Pro explanations', async ({ page }) => {
@@ -406,22 +426,20 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   }
 
   // Every tool's toolbar opens on the design's drawn back
-  // button, which returns to the workspace (D:613). The Palette Builder is one
-  // press away in the Create menu; what is held here is that the tool still
+  // button, which returns to the tools index. What is held here is that the tool
   // offers an immediate way out, at the start of its toolbar.
   test('Tint offers an immediate route back, at the start of its toolbar', async ({ page }) => {
     watch(page, 'designer moving between colour tools')
     await go(page, '/create/tint')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to workspace' })
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 
-// Founder request, 2026-09-03: "the pallete page should auto load a random
-// pallete on the default free settings. reset should reset the settings to
-// default but randomise the colour."
+// The palette page auto-loads a random palette on the default free settings.
+// Reset restores the default settings but randomises the colour.
 //
 // The two rules with teeth — that the default settings are the FREE ones, and
 // that a shared link outranks the draw — are enumerated in

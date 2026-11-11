@@ -30,10 +30,10 @@
     "colours": "색상"
   },
   "brand": {
-    "name": "UIL4B",
+    "name": "UI L4B",
     "tagline": "Design Toolkit",
-    "full": "UIL4B",
-    "fullToolkit": "UIL4B"
+    "full": "UI L4B",
+    "fullToolkit": "UI L4B"
   },
   "nav": {
     "dashboard": "대시보드",
@@ -117,7 +117,7 @@
     },
     "iconLibrary": {
       "label": "아이콘 라이브러리",
-      "description": "Iconify API로 수천 개의 아이콘을 검색."
+      "description": "오픈소스 아이콘 팩을 검색하고 SVG 또는 JSX를 복사."
     },
     "altText": {
       "label": "Alt Text Generator",
@@ -126,10 +126,6 @@
     "docsDesign": {
       "label": "디자인 원칙",
       "description": "시각적 계층 구조, 균형, 디자인 심리학."
-    },
-    "promptLibrary": {
-      "label": "프롬프트 라이브러리",
-      "description": "AI 이미지 생성 프롬프트를 미리보기와 함께 저장."
     },
     "fontGallery": {
       "label": "폰트 갤러리",
@@ -271,6 +267,7 @@
     "title": "아이콘 라이브러리",
     "eyebrow": "아이콘 라이브러리",
     "heading": "어떤 아이콘이든 찾고, 커스터마이즈하고, 복사하세요.",
+    "subtitleShort": "아이콘 색을 바꾸고 깔끔한 SVG를 복사하세요.",
     "subtitle": "20만 개 이상의 오픈소스 아이콘을 검색하세요 — Lucide, Tabler, Phosphor, Material 등. 어떤 아이콘이든 색상·크기·스타일을 바꾸고(획 조정, 색상 설정) 깔끔한 SVG를 복사하거나 클릭 한 번으로 내보내세요. 둘러보고 복사하는 것은 무료 — Pro로 업그레이드하면 커스텀 아이콘을 저장할 수 있습니다.",
     "searchPlaceholder": "아이콘 검색…",
     "allPacks": "모든 팩",
@@ -284,9 +281,13 @@
     "noIcons": "위에서 아이콘을 검색하세요",
     "loadingPacks": "아이콘 팩 로딩 중…"
   },
+  "iconGroups": {
+    "subtitleShort": "같은 스타일로 묶은 테마별 아이콘 세트."
+  },
   "emojiLibrary": {
     "eyebrow": "이모지 라이브러리",
     "heading": "어떤 이모지든, 어떤 피부톤으로든 복사하세요.",
+    "subtitleShort": "카테고리별 이모지를 클릭해서 복사하세요.",
     "subtitle": "카테고리별로 모든 이모지를 둘러보고, 전체 세트의 피부톤을 바꾸고, 클릭해서 복사하세요. 언제나 무료."
   },
   "imageConverter": {
@@ -433,7 +434,7 @@
     }
   },
   "auth": {
-    "logInTitle": "UIL4B에 로그인",
+    "logInTitle": "UI L4B에 로그인",
     "logInContinue": "계속하려면 로그인하세요",
     "createAccount": "무료 계정 만들기",
     "resetTitle": "비밀번호 재설정",
@@ -500,11 +501,14 @@
   },
   "feedback": {
     "title": "피드백",
-    "subtitle": "UIL4B 개선에 도움을 주세요. 버그, 기능 요청 또는 일반 피드백을 공유해 주세요.",
+    "subtitle": "UI L4B 개선에 도움을 주세요. 버그, 기능 요청 또는 일반 피드백을 공유해 주세요.",
     "featureRequest": "기능 요청",
     "bugReport": "버그 보고",
     "general": "일반",
     "messagePlaceholder": "의견을 알려주세요…",
+    "helpTitle": "고객 지원 문의",
+    "helpSubtitle": "막히는 부분이 있거나 제대로 작동하지 않나요? 무엇을 하려고 했는지, 어떤 일이 일어났는지 알려 주세요. 답변을 받고 싶으시면 이메일 주소를 함께 적어 주세요.",
+    "helpPlaceholder": "무엇을 하려고 했고, 대신 어떤 일이 일어났나요?",
     "submitFeedback": "피드백 제출",
     "enterFeedback": "피드백을 입력해 주세요",
     "thankYou": "피드백을 보내주셔서 감사합니다!",
@@ -513,7 +517,7 @@
   },
   "community": {
     "title": "커뮤니티",
-    "subtitle": "UIL4B을 사용하는 다른 디자이너 및 개발자와 소통하세요.",
+    "subtitle": "UI L4B을 사용하는 다른 디자이너 및 개발자와 소통하세요.",
     "comingSoonDesc": "팔레트를 공유하고, 디자인에 대한 피드백을 받고, 커뮤니티가 만든 템플릿을 발견하세요.",
     "github": "GitHub 저장소",
     "githubDesc": "소스 코드 탐색, 프로젝트 스타 표시 및 기여.",
@@ -522,82 +526,5 @@
     "reportIssue": "문제 신고",
     "reportIssueDesc": "버그를 발견하셨나요? 알려주세요.",
     "visitLink": "방문"
-  },
-  "privacy": {
-    "title": "개인정보처리방침",
-    "lastUpdated": "최종 업데이트: 2026년 10월 27일",
-    "s1Title": "1. 본 방침에 관하여",
-    "s1Text": "UIL4B(\"당사\")은 호주 개인정보보호법 1988(Cth) 및 호주 개인정보보호원칙(APPs)에 따라 귀하의 개인정보를 보호하기 위해 최선을 다합니다. 본 방침은 당사가 귀하의 개인정보를 수집, 사용, 공개 및 보호하는 방법을 설명합니다.",
-    "s2Title": "2. 수집하는 정보 (APP 3)",
-    "s2Intro": "당사는 서비스에 합리적으로 필요한 정보만 수집합니다:",
-    "s2Items": [
-      "계정 정보: 이메일 주소, 표시 이름, 프로필 사진 (Google 로그인 사용 시)",
-      "사용 환경 설정: 테마 설정, 저장된 팔레트, 틴트 설정, 프롬프트",
-      "수집하지 않는 정보: 결제 카드 정보 (Stripe에서 처리), 위치 데이터, 기기 식별자, 추적 쿠키"
-    ],
-    "s3Title": "3. 정보 사용 방법 (APP 6)",
-    "s3Intro": "귀하의 정보는 다음 목적으로만 사용됩니다:",
-    "s3Items": [
-      "계정 및 툴킷 기능 제공 및 유지",
-      "여러 기기에서 디자인 설정 동기화",
-      "필수 서비스 알림 전송 (계정 보안, 정책 변경)",
-      "Provide AI features: the text and images you submit to AI tools are sent to the AI providers listed in section 6",
-      "귀하의 데이터를 제3자에게 판매하거나 광고에 사용하지 않습니다"
-    ],
-    "s4Title": "4. 데이터 저장 및 보안 (APP 8 & 11)",
-    "s4Text": "귀하의 데이터는 Google Cloud Firestore의 australia-southeast1(시드니) 리전에 저장됩니다. 인증은 Firebase Authentication으로 처리됩니다. 당사는 다음을 시행합니다:",
-    "s4Items": [
-      "저장 및 전송 시 암호화 (TLS 1.3)",
-      "접근 제어를 위한 Firestore 보안 규칙",
-      "Firebase 구성에 대한 정기 보안 감사",
-      "AI features send what you submit to providers that may process it outside Australia, as section 6 describes"
-    ],
-    "s5Title": "5. 귀하의 권리 (APP 12 & 13)",
-    "s5Intro": "귀하에게는 다음과 같은 권리가 있습니다:",
-    "s5Items": [
-      "설정을 통해 언제든지 개인정보에 접근",
-      "프로필 업데이트를 통한 개인정보 수정",
-      "설정 > 내 데이터 내보내기를 통해 모든 데이터를 JSON 파일로 내보내기",
-      "설정 > 계정 삭제를 통해 계정 및 모든 관련 데이터 삭제",
-      "로그아웃 및 계정 삭제를 통한 동의 철회"
-    ],
-    "s6Title": "6. 제3자 서비스",
-    "s6Items": [
-      "Firebase/Google Cloud — 인증 및 데이터베이스 (시드니 리전)",
-      "Google Fonts — 폰트 로딩 (개인 데이터 전송 없음)",
-      "Iconify — 아이콘 검색 API (개인 데이터 전송 없음)",
-      "Google Gemini — AI processing of the images and text you submit to AI tools",
-      "OpenRouter — passes the text you submit to AI tools to a third-party AI model host set not to retain or train on it",
-      "Stripe — 결제 처리 (PCI DSS 준수, 호주 법인)"
-    ],
-    "s7Title": "7. 연락처",
-    "s7Text": "개인정보 관련 문의, 데이터 접근 요청 또는 불만 사항은 아래로 연락해 주세요:",
-    "s7Complaint": "당사의 응답에 만족하지 못하시는 경우, 호주 정보위원회(OAIC)에 불만을 제기할 수 있습니다."
-  },
-  "terms": {
-    "title": "서비스 이용약관",
-    "lastUpdated": "최종 업데이트: 2026년 10월 27일",
-    "s1Title": "1. 동의",
-    "s1Text": "UIL4B Design Toolkit(\"본 서비스\")을 사용함으로써 귀하는 본 서비스 이용약관에 동의하게 됩니다. 본 서비스는 호주에 본사를 둔 UIL4B이 제공합니다. 본 약관은 호주 법률의 적용을 받습니다.",
-    "s2Title": "2. 계정",
-    "s2Text": "이메일/비밀번호 또는 Google 인증을 사용하여 계정을 만들 수 있습니다. 계정 자격 증명의 보안을 유지할 책임은 귀하에게 있습니다. 계정을 만들려면 16세 이상이어야 합니다.",
-    "s3Title": "3. 무료 및 Pro 요금제",
-    "s3Text": "본 서비스는 핵심 기능이 포함된 무료 요금제와 추가 도구가 포함된 Pro 요금제를 제공합니다. Pro 구독은 월간 또는 연간으로 청구됩니다. 언제든지 취소할 수 있으며, 결제 기간이 끝날 때까지 계속 이용할 수 있습니다. 환불은 호주 소비자법에 따라 개별 사안별로 처리됩니다.",
-    "s4Title": "4. 지적 재산권",
-    "s4Text": "본 서비스를 사용하여 만든 디자인, 팔레트, 그라데이션 및 기타 결과물은 귀하의 소유입니다. 본 서비스 자체(코드, 디자인 및 문서 포함)는 UIL4B이 소유하며 호주 저작권법에 의해 보호됩니다.",
-    "s5Title": "5. 허용되는 사용",
-    "s5Intro": "귀하는 다음을 하지 않을 것에 동의합니다:",
-    "s5Items": [
-      "불법적인 목적으로 본 서비스를 사용",
-      "다른 사용자의 계정에 무단 접근 시도",
-      "본 서비스를 역설계, 디컴파일 또는 디어셈블",
-      "자동화된 시스템으로 본 서비스에서 데이터를 스크래핑하거나 추출"
-    ],
-    "s6Title": "6. 책임의 제한",
-    "s6Text": "본 서비스는 호주 소비자법에서 요구하는 경우를 제외하고 어떠한 종류의 보증 없이 \"있는 그대로\" 제공됩니다. 법률이 허용하는 최대 범위 내에서 UIL4B은 본 서비스 사용으로 발생하는 간접적, 부수적 또는 결과적 손해에 대해 책임을 지지 않습니다.",
-    "s7Title": "7. 변경",
-    "s7Text": "당사는 수시로 본 약관을 업데이트할 수 있습니다. 중요한 변경 사항은 시행 최소 30일 전에 이메일 또는 앱 내 알림을 통해 공지됩니다.",
-    "s8Title": "8. 연락처",
-    "s8Text": "본 약관에 관한 문의사항이 있으시면 아래로 연락해 주세요:"
   }
 }

@@ -2,7 +2,7 @@
 <html lang="en-AU" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <title>UI L4B | Design Toolkit</title>
 <meta name="description" content="Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion and video frames.">
 <!-- Browser chrome tint (Safari's toolbar, Android Chrome's status bar).
@@ -86,7 +86,7 @@ body{background:inherit;color:inherit}
 svg{color:inherit}
 #root{min-height:100vh}
 .boot-shell{min-height:100vh;padding:18px clamp(18px,4vw,48px);font-family:Switzer,'Switzer Fallback',system-ui,sans-serif}
-.boot-status{position:fixed;left:50%;bottom:18px;z-index:1;transform:translateX(-50%);font-size:11px;font-weight:600;letter-spacing:.04em;color:rgba(71,85,105,.72)}
+.boot-status{position:fixed;left:50%;bottom:18px;z-index:1;transform:translateX(-50%);font-size:13px;font-weight:600;letter-spacing:normal;color:rgba(71,85,105,.72)}
 .boot-nav{display:flex;align-items:center;justify-content:space-between;max-width:1180px;height:52px;margin:0 auto;border:1px solid rgba(15,23,42,.1);border-radius:16px;padding:0 16px;background:rgba(255,255,255,.82)}
 .boot-mark{display:block;flex:none;height:15px;width:auto;aspect-ratio:1195.5/200}
 .boot-nav-lines,.boot-actions{display:flex;gap:10px}
@@ -123,26 +123,28 @@ html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[dat
    than from two that happen to agree. Measured identical at 360, 390, 480, 768,
    1024, 1280, 1440 and 1920. */
 .boot-shell-home{padding:0;font-family:inherit}
-/* The paint half of the gate below the theme script. The script REMOVES the
+/* The paint half of the gate below the theme script. The script removes the
    headline for a visitor who must not see it; this makes it impossible for that
    headline to have painted in the meantime, without depending on when the
-   script ran. Inert on the other shells, which carry no hero at all.
-
-   THIS SAID `.home-hero` AND MATCHED NOTHING. scripts/home-shell.mjs writes the
-   SPECTRUM hero into this shell now — `<header class="sp-hero">` with an
-   `h1.sp-hero-h1` — and there has been no `.home-hero` in the served document
-   since Home.jsx was deleted. So both halves of the gate went inert together:
-   this rule selected nothing, and the observer below never found a node to
-   remove. A returning signed-in visitor was served the sales headline, which is
-   the one thing the comment under the script says must not happen.
-
-   It failed SILENTLY, and that is the part worth remembering: the test that
-   binds this (57-signed-in-session) asserts the sales headline never appears,
-   and "`.home-hero` never appears" looks identical to "no sales page painted".
-   The guard went green by describing a page that no longer exists. */
-html:not([data-hero-prepainted]) #boot-shell .sp-hero{display:none}
+   script ran. The selector names the hero scripts/home-shell.mjs writes
+   (`section#top.hh-hero`). If the two drift apart, both halves of the gate go
+   inert together and a signed-in visitor is painted the sales headline before
+   the redirect. 47-lazy-route-readiness and 57-signed-in-session bind it.
+   Inert on the other shells, which carry no hero at all. */
+html:not([data-hero-prepainted]) #boot-shell .hh-hero{display:none}
 .boot-shell-home .boot-nav{position:fixed;top:0;left:0;right:0;z-index:1;max-width:none;height:var(--nav-h,60px);margin:0;border-width:0 0 1px;border-radius:0;padding:0 clamp(18px,4vw,48px)}
 .boot-shell-home .boot-below{padding:0 clamp(18px,4vw,48px)}
+/* THE PAGE VARIANT. scripts/prerender.mjs writes `.boot-shell-page` for every
+   route but `/`: the skeleton nav, then a real heading and intro where the
+   skeleton's title and subtitle boxes were. `.boot-prose` holds a Learn guide's
+   text for readers that do not run script; it is off-screen and outside the
+   accessibility tree because the guide's own stylesheet arrives with its route
+   chunk, and React replaces the whole shell on mount. */
+.boot-shell-page{font-family:inherit}
+.boot-page{max-width:720px;margin:0 auto;padding:clamp(48px,10vh,96px) 0 48px}
+.boot-h1{margin:0 0 16px;font-size:clamp(28px,6vw,44px);font-weight:700;line-height:1.1;letter-spacing:-.02em;text-wrap:balance}
+.boot-intro{margin:0;max-width:62ch;font-size:clamp(16px,2.4vw,18px);line-height:1.55;opacity:.8}
+.boot-prose{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
 @media(prefers-reduced-motion:reduce){.boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{animation:none}}
 html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="true"] .boot-action::after,html[data-reduced-motion="true"] .boot-copy::after,html[data-reduced-motion="true"] .boot-card::after{animation:none}
@@ -189,7 +191,7 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 // is an unthemed page rather than a light one. Same reasoning AppearanceContext
 // records for its own hardened read: a visitor who cannot persist a choice must
 // still get the resolved one.
-(function(){try{var r=document.documentElement;var q=function(s){return !!(window.matchMedia&&window.matchMedia(s).matches)};var g=function(k){try{return localStorage.getItem(k)}catch(e){return null}};var t=g('vs-t');if(t!=='dark'&&t!=='light'){t=q('(prefers-color-scheme: dark)')?'dark':'light'}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a={};try{a=JSON.parse(g('vs-appearance')||'{}')||{}}catch(e){}var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:q('(prefers-reduced-motion: reduce)');r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
+(function(){try{var r=document.documentElement;var q=function(s){return !!(window.matchMedia&&window.matchMedia(s).matches)};var g=function(k){try{return localStorage.getItem(k)}catch(e){return null}};var t=g('vs-t');if(t!=='dark'&&t!=='light'){t=q('(prefers-color-scheme: dark)')?'dark':'light'}var l=window.location,p=l?(l.pathname.replace(/\/+$/,'')||'/'):'';if((p==='/'||p==='/home')&&g('vs-session')!=='1')t='dark';r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a={};try{a=JSON.parse(g('vs-appearance')||'{}')||{}}catch(e){}var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:q('(prefers-reduced-motion: reduce)');r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
 </script>
 <script>
 // THE GATE ON THE PRE-PAINTED HEADLINE.
@@ -212,7 +214,7 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 //      than rootDestination(): not "where does this visitor go" but "might this
 //      document not end up being the sales page", answered conservatively.
 //      tests/user-sim/57-signed-in-session.spec.js samples every frame for
-//      `.home-hero` and requires it never appears — that contract predates this
+//      `section#top.hh-hero` and requires it never appears — that contract predates this
 //      and still binds.
 //
 //   2. ANY VISITOR WHO WAS HANDED THE WRONG SHELL. vercel.json rewrites each
@@ -235,7 +237,7 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 // EVERY STORAGE READ IN ITS OWN try/catch, for the reason the theme script
 // above records at length: localStorage THROWS on the accessor itself in some
 // privacy modes, and one shared catch would abandon the whole function.
-(function(){try{var r=document.documentElement;if(!r.hasAttribute('data-hero-prepainted'))return;var p=location.pathname.replace(/\/+$/,'')||'/';var s=false;try{s=localStorage.getItem('vs-session')==='1'}catch(e){}if((p==='/'||p==='/home')&&!s)return;r.removeAttribute('data-hero-prepainted');var mo=new MutationObserver(function(){var h=document.querySelector('#boot-shell .sp-hero');if(h){h.remove();mo.disconnect()}});mo.observe(r,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',function(){mo.disconnect()})}catch(e){}})();
+(function(){try{var r=document.documentElement;if(!r.hasAttribute('data-hero-prepainted'))return;var p=location.pathname.replace(/\/+$/,'')||'/';var s=false;try{s=localStorage.getItem('vs-session')==='1'}catch(e){}if((p==='/'||p==='/home')&&!s)return;r.removeAttribute('data-hero-prepainted');var mo=new MutationObserver(function(){var h=document.querySelector('#boot-shell .hh-hero');if(h){h.remove();mo.disconnect()}});mo.observe(r,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',function(){mo.disconnect()})}catch(e){}})();
 </script>
 </head>
 <body>

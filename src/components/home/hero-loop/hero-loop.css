@@ -1,0 +1,173 @@
+/* The hero loop panel (all sizes). Loaded with the loop module, never on the
+   hero's critical path. The arrow's lean (.mi-nx) comes from home-tokens.css;
+   this adds the downward variant and the demo cursor's hover and press. */
+
+.lp-next {
+  --mi-dx: 3px;
+  --mi-dy: 0px;
+}
+.mi-nx--d {
+  --mi-dx: 0px;
+  --mi-dy: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  :hover > .mi-nx--d { transform: translate(var(--mi-dx), var(--mi-dy)); }
+}
+:focus-visible > .mi-nx--d { transform: translate(var(--mi-dx), var(--mi-dy)); }
+:active > .mi-nx--d { transform: translate(calc(var(--mi-dx) * 1.67), calc(var(--mi-dy) * 1.67)); transition-duration: 100ms; }
+
+@keyframes blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.blink {
+  animation: blink 1060ms steps(1) infinite;
+}
+
+@keyframes shim {
+  from {
+    background-position: -300px 0;
+  }
+  to {
+    background-position: 300px 0;
+  }
+}
+
+.shim {
+  background: linear-gradient(90deg, rgba(239, 238, 234, .08) 0, rgba(239, 238, 234, .2) 50%, rgba(239, 238, 234, .08) 100%) 0 0 / 300px 100%;
+  animation: shim 1100ms linear infinite;
+}
+
+.lp-next, .lp-seg, .lp-pause {
+  transition: transform 120ms cubic-bezier(.23, 1, .32, 1), background-color 120ms cubic-bezier(.23, 1, .32, 1);
+}
+
+.lp-next:active, .lp-seg:active, .lp-pause:active {
+  transform: scale(.97);
+}
+
+.lp-next:focus-visible, .lp-seg:focus-visible, .lp-pause:focus-visible {
+  outline: 2px solid #EFEEEA;
+  outline-offset: calc(2px / var(--hm-zoom, 1));
+}
+
+/* Prefixed so these grounds win over .ui-pill-out's, which Next carries for the chroma ring. */
+.lp-root .lp-next {
+  -webkit-tap-highlight-color: transparent;
+  background-color: transparent;
+}
+
+@media (hover:hover) {
+  .lp-seg:hover .lp-seg-l {
+    color: rgba(239, 238, 234, .86);
+  }
+  .lp-pause:hover>span:first-child {
+    background: rgba(239, 238, 234, .08);
+  }
+  .lp-root .lp-next:hover {
+    background-color: rgba(239, 238, 234, .08);
+  }
+}
+
+/* The demo cursor's hover and press on Next. The hover waits for the cursor to arrive (--hd). */
+.lp-root .lp-next[data-sim="hover"] {
+  background-color: rgba(239, 238, 234, .08);
+  transition-delay: var(--hd, 0ms);
+}
+
+.lp-root .lp-next[data-sim="press"] {
+  background-color: rgba(239, 238, 234, .14);
+  transform: scale(.97);
+}
+
+[data-held] * {
+  animation-play-state: paused !important;
+}
+
+.lp-next[data-sim="hover"]>.mi-nx {
+  transform: translate(var(--mi-dx), var(--mi-dy));
+  transition-delay: var(--hd, 0ms);
+}
+
+.lp-next[data-sim="press"]>.mi-nx {
+  transform: translate(calc(var(--mi-dx) * 1.67), calc(var(--mi-dy) * 1.67));
+  transition-duration: 100ms;
+}
+
+.lp-cut .lp-scene * {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .lp-root * {
+    animation: none !important;
+    transition: opacity 200ms ease-out !important;
+  }
+}
+
+/* Phone strip buttons. Drawn 44px tall, tapped over 56px: the ::after reaches
+   12px below the button, under the strip's own edge, so a thumb that lands a
+   little low still hits it. */
+.lp-tap {
+  position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms cubic-bezier(.23, 1, .32, 1), background-color 120ms cubic-bezier(.23, 1, .32, 1);
+}
+
+.lp-tap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 56px;
+}
+
+.lp-tap:active {
+  transform: scale(.97);
+}
+
+.lp-tap:focus-visible {
+  outline: 2px solid #EFEEEA;
+  outline-offset: calc(-3px / var(--hm-zoom, 1));
+  border-radius: 10px;
+}
+
+.lp-tap-pause:focus-visible {
+  border-radius: 999px;
+}
+
+.lp-tap-ch {
+  background-color: transparent;
+}
+
+@media (hover:hover) {
+  .lp-tap-ch:hover {
+    background-color: rgba(239, 238, 234, .06);
+  }
+}
+
+/* The demo finger's tap on the next chapter. */
+.lp-tap-ch[data-sim="press"] {
+  background-color: rgba(239, 238, 234, .14);
+  transform: scale(.97);
+}
+
+/* The page zooms the panel to .8 under 350px; 13px keeps the labels above 10px. */
+@media (max-width: 349px) {
+  .lp-tap-ch {
+    font-size: 13px !important;
+  }
+}
+
+/* The browser's own paragraph wrapping (text-wrap: pretty) re-breaks the
+   panel's lines; the panel's copy breaks at the plain wrap the layout was drawn at. */
+.lp-root :where(p, h1, h2, h3, h4) {
+  text-wrap: wrap;
+}

@@ -1,10 +1,9 @@
 // /learn/principles — the rules the product holds to when it builds an interface
 // system, each one beside the screen that applies it.
 //
-// FOUNDER DIRECTION, verbatim (2026-08-20, group D of the surface batch):
-// "these are less documents are more designed like a sales page style of large
-// visual, main point, simple not overly verbose points underneath." And
-// 2026-09-06: "make sure to make user centric design choices."
+// This is less a document than a sales-page-style layout: a large visual, the
+// main point, and simple, not overly verbose points underneath, with
+// user-centric design choices throughout.
 //
 // ── The one decision this page turns on ────────────────────────────────────
 //
@@ -27,13 +26,13 @@
 // surface above the claim so the claim reads as a caption on evidence:
 // https://mobbin.com/sites/sections/ce305258-5218-49f8-8cf0-cc49059d10e4
 // The rows alternate side rather than tiling, and the first one is given the
-// full width — that is the "large visual" the direction asks for, and it stops
+// full width — that is the "large visual" the layout calls for, and it stops
 // the page becoming the five-equal-cards construction above.
 //
 // ── Voice ──────────────────────────────────────────────────────────────────
 //
-// Neutral and factual, no first person — the same register the founder chose
-// for the Learn guides on 2026-09-05, and for the same reason: this is the
+// Neutral and factual, no first person — the same register as the
+// Learn guides, and for the same reason: this is the
 // product stating a position, not a person arguing one.
 //
 // ── What is NOT here ───────────────────────────────────────────────────────
@@ -43,8 +42,10 @@
 // "slop", "under-authored", "operative not performative" — describes how to
 // judge a surface, not what the product believes about interfaces, and none of
 // it is quoted or paraphrased here.
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useReveal } from '../hooks/useReveal'
+import useShortCode from '../hooks/useShortCode'
 import { DESIGN_PRINCIPLES } from '../data/designPrinciples'
 import {
   ContrastProof,
@@ -82,17 +83,19 @@ const PROOFS = {
 
 export default function DesignPrinciples() {
   useReveal()
+  const rootRef = useRef(null)
+  useShortCode(rootRef)
 
   return (
-    <div className="sec cpg prn">
+    <div className="sec cpg prn" ref={rootRef}>
       <header className="prn-hero">
         <h1 className="prn-h1">
-          Every rule here is <mark className="home-mark">enforced</mark> by a screen.
+          Every rule here is enforced by a screen.
         </h1>
         <p className="prn-lede">
           Nothing on this page is only a statement. Each one names the tool that
           applies it, and the figures beside it were measured when the page
-          loaded — by the same functions that tool runs.
+          loaded. They come from the same functions that tool runs.
         </p>
         <div className="prn-hero-cta">
           {/* The Spectrum pill, replacing `.ui-pill ui-pill-ink ui-pill-lg`.

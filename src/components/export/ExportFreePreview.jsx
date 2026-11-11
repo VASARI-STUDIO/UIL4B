@@ -2,15 +2,16 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import useExportDesign from '../../hooks/useExportDesign'
 import { readExportTemplates, EXPORT_TEMPLATES } from '../../config/exportTemplates'
 import { templateThumb } from '../../utils/exportTemplateThumb'
-import { STYLE_GUIDE_SCALE, freePreviewKey, previewLines } from '../../utils/exportFreePreview'
+import { STYLE_GUIDE_SCALE, bundleTreeLines, freePreviewKey, previewLines } from '../../utils/exportFreePreview'
 import { buildCodeFile, codeFileName, isCodeFile } from '../../utils/codeFiles'
+import { formatFileName } from '../../utils/exportFileName'
 import '../../styles/pages/export-preview.css'
 
 // A real render of a free export, drawn from the person's own design: the UI kit's
 // template picture, the style guide sheet, or the first lines of the stylesheet or
 // token file. Never a mock-up.
 //
-//   kind       'kit' | 'guide' | 'code'
+//   kind       'kit' | 'guide' | 'code' | 'bundle' (the app-ready zip, as its folder tree)
 //   file       a Code file id (utils/codeFiles.js); only read when kind is 'code'
 //   project    the project's name as typed, for the file name over the code
 //   watermark  true while the account is free: the guide sheet carries the UIL4B
@@ -35,11 +36,13 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
   const projectName = design?.name || 'Design System'
   // The name the file will download under, which heads the code. The dialog passes the
   // open project's name; with none, it is the design's own.
-  const savedAs = kind === 'code' && isCodeFile(file) ? codeFileName(file, project ?? design?.name) : ''
+  const savedAs = kind === 'code' && isCodeFile(file)
+    ? codeFileName(file, project ?? design?.name)
+    : kind === 'bundle' ? formatFileName(project ?? design?.name, 'app-bundle') : ''
   const template = readExportTemplates(design).kit
   const key = useMemo(
-    () => freePreviewKey({ kind, file, watermark, projectName, design, template }),
-    [kind, file, watermark, projectName, design, template],
+    () => freePreviewKey({ kind, file, watermark, projectName, design, template, project }),
+    [kind, file, watermark, projectName, design, template, project],
   )
 
   const [state, setState] = useState({ key: '', shown: null, failed: false })
@@ -70,6 +73,11 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
             urlRef.current = url
             done({ src: url, width: Math.round(A4.width * STYLE_GUIDE_SCALE), height: Math.round(A4.height * STYLE_GUIDE_SCALE) })
           }))
+        .catch(fail)
+    } else if (kind === 'bundle') {
+      // The zip's folder tree, from the same entries the download is made from.
+      import('../../utils/appBundle')
+        .then(({ appBundleEntries }) => done({ lines: bundleTreeLines(appBundleEntries(design, { name: project }).map((e) => e.path)) }))
         .catch(fail)
     } else {
       buildCodeFile(file, design, { projectName, watermark })
@@ -143,10 +151,10 @@ export default function ExportFreePreview({ kind, file = 'css', watermark = true
   // The label is always present for code, so it never shifts the box.
   return (
     <div className="xfp" data-kind={kind}>
-      {kind === 'code' && (
+      {(kind === 'code' || kind === 'bundle') && (
         <p className="xfp-label" id={labelId}>
           <span className="xfp-file">{savedAs}</span>
-          <span className="xfp-cap">First lines</span>
+          <span className="xfp-cap">{kind === 'bundle' ? 'Inside' : 'First lines'}</span>
         </p>
       )}
       <div className="xfp-box" data-state={failed ? 'failed' : body ? 'ready' : 'loading'} aria-busy={!failed && !body}>

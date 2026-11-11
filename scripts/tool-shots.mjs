@@ -3,8 +3,9 @@
 //   npm run tools:shots                       build in test mode, then preview and measure
 //   npm run tools:shots -- --dist=dist-x      measure a build that already exists (no build)
 //
-// Opens /create/file-converter in Chromium, adds the sample photo, converts it to
-// WebP at 70% quality and reads the result line the tool prints ("139.1 KB → 115.7 KB").
+// Opens /create/file-converter in Chromium, adds the sample photo as a lossless PNG
+// (decoded from the WebP in the browser, so no second copy is committed), converts
+// it to WebP and reads the result line the tool prints ("2.41 MB → 120.3 KB").
 // Writes src/components/spectrum/toolMeasured.json, which ToolArt imports for the
 // saving and the bar lengths. Nothing reaches the network; the browser runs signed
 // out. Run by hand; not part of CI. The output is committed.
@@ -22,8 +23,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(root, 'src', 'components', 'spectrum', 'toolMeasured.json')
 const viteBin = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js')
 const SAMPLE_IMAGE = path.join(root, 'public', 'spectrum', 'tasmanian-sunset.webp')
-const QUALITY = 70
-const SOURCE_FORMAT = 'WebP' // the sample photo's own format
+const QUALITY = 80
+const SOURCE_FORMAT = 'PNG' // what the tool is given: the photo saved losslessly, as a PNG export would be
 const OUTPUT_FORMAT = 'WebP'
 
 const fail = (msg) => { throw new Error(msg) }
@@ -56,16 +57,24 @@ async function measure(browser, base) {
     await ctx.route((u) => !['127.0.0.1', 'localhost'].includes(u.hostname) && u.protocol.startsWith('http'), (r) => r.abort())
     const page = await ctx.newPage()
     await page.goto('/create/file-converter', { waitUntil: 'domcontentloaded' })
-    await page.locator('input[type=file]').first().setInputFiles(SAMPLE_IMAGE)
-    // The sample is already a WebP, so the default 90% re-encodes it larger. At 70% it is a real saving.
+    const webp = (await fs.readFile(SAMPLE_IMAGE)).toString('base64')
+    const png = await page.evaluate(async (b64) => {
+      const bmp = await createImageBitmap(await (await fetch(`data:image/webp;base64,${b64}`)).blob())
+      const c = Object.assign(document.createElement('canvas'), { width: bmp.width, height: bmp.height })
+      c.getContext('2d').drawImage(bmp, 0, 0)
+      const blob = await new Promise((r) => c.toBlob(r, 'image/png'))
+      return Array.from(new Uint8Array(await blob.arrayBuffer()))
+    }, webp)
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'tasmanian-sunset.png', mimeType: 'image/png', buffer: Buffer.from(png) })
     await page.locator('input[type=range]').first().fill(String(QUALITY))
     await page.getByRole('button', { name: /^Convert 1 image/ }).click()
     const line = page.locator('.fc-card .fc-meta', { hasText: '→' })
     await line.waitFor({ timeout: 30000 })
     const text = (await line.first().innerText()).replace(/\s+/g, ' ')
-    const m = /([\d.]+) KB → ([\d.]+) KB/.exec(text)
-    if (!m) fail(`the result line is not "<n> KB → <n> KB": ${text}`)
-    return { before: Number(m[1]), after: Number(m[2]) }
+    const m = /([\d.]+) (KB|MB) → ([\d.]+) (KB|MB)/.exec(text)
+    if (!m) fail(`the result line is not "<n> KB|MB → <n> KB|MB": ${text}`)
+    const kb = (n, unit) => Math.round(Number(n) * (unit === 'MB' ? 1024 : 1) * 10) / 10
+    return { before: kb(m[1], m[2]), after: kb(m[3], m[4]) }
   } finally {
     await ctx.close()
   }

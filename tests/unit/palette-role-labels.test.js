@@ -3,8 +3,8 @@
 // stop rows both read these names, and the style guide export reads the same role
 // list, so the three can never disagree.
 //
-// The expected names are hand-checked from the spec (handover/specs/
-// gradient-tool-overhaul-spec-2026-10-28.md §3.3), not worked out by the code.
+// The expected names are hand-checked from the gradient tool spec (§3.3), not
+// worked out by the code.
 //
 // MUTATION: make labelFor accept a hex that is merely close to a palette colour
 // (round to the nearest) -> the near-miss test goes red. Return a shade label for

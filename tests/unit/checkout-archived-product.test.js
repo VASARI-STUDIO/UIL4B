@@ -112,6 +112,8 @@ const startCheckout = async (interval = 'monthly', extra = {}) => {
   const res = fakeRes()
   await checkout({
     method: 'POST',
+    // The handler refuses a request with no client address (400), because the
+    // per-address rate limit has nothing to count it against.
     headers: { authorization: 'Bearer test-token', host: 'localhost', 'x-forwarded-for': '198.51.100.20' },
     body: { interval, ...extra },
   }, res)
@@ -268,7 +270,11 @@ test('a cached price Stripe now refuses answers 503, not 500, and is re-checked 
   assert.equal(next.statusCode, 503)
 })
 
-test('a refused price answers 503 on the first attempt, even when a currency was sent, and is not retried', async (t) => {
+const lockedCurrencyError = () => Stripe.errors.StripeError.generate({
+  type: 'invalid_request_error', param: 'currency', message: 'You cannot combine currencies on a single customer.',
+})
+
+test('a refused price with a currency answers 503 after one session attempt, never retried without the currency', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
   const { calls } = setup(t, {
     prices: { price_env: price('price_env') },
@@ -277,40 +283,40 @@ test('a refused price answers 503 on the first attempt, even when a currency was
   const res = await startCheckout('monthly', { currency: 'eur' })
 
   assert.equal(res.statusCode, 503)
-  assert.equal(res.body.error, 'The monthly price is temporarily unavailable. No payment session was created.')
-  assert.equal(calls.sessions.length, 1, 'a session is never retried without the currency the buyer was shown')
+  assert.equal(calls.sessions.length, 1, 'a refusal is final: there is no second attempt without the currency')
   assert.equal(calls.sessions[0].currency, 'eur')
 })
 
-test('a currency the customer is locked out of is refused with 409, not mistaken for an unsellable price', async (t) => {
+test('a currency the customer is locked out of answers 409, creates one attempt and is not mistaken for an unsellable price', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
   let locked = false
   const { calls } = setup(t, {
     prices: { price_env: price('price_env') },
     createSession: async (params) => {
-      if (locked && params.currency) {
-        throw Stripe.errors.StripeError.generate({
-          type: 'invalid_request_error', param: 'currency', message: 'You cannot combine currencies on a single customer.',
-        })
-      }
+      if (locked && params.currency) throw lockedCurrencyError()
       return { client_secret: 'cs_secret_1' }
     },
   })
+
   assert.equal((await startCheckout('monthly')).statusCode, 200)
+  assert.equal(calls.retrieve.length, 1)
 
   locked = true
-  const res = await startCheckout('monthly', { currency: 'eur' })
-  assert.equal(res.statusCode, 409)
-  assert.match(res.body.error, /can't be opened in EUR/)
-  assert.equal(calls.sessions.length, 2, 'one earlier success and the refused attempt, with no retry in another currency')
+  const refused = await startCheckout('monthly', { currency: 'eur' })
+  assert.equal(refused.statusCode, 409)
+  assert.match(refused.body.error, /EUR/)
+  assert.match(refused.body.error, /No payment session was created/)
+  assert.equal(refused.body.clientSecret, undefined, 'no session is handed back in another currency')
+  assert.equal(calls.sessions.length, 2, 'one earlier success, then a single refused attempt with no retry')
+  assert.equal(calls.sessions[1].currency, 'eur')
 
-  // The price itself is fine, so it stays cached.
+  // Not an unsellable price: the cached price is kept, so Stripe is not asked again.
   locked = false
   assert.equal((await startCheckout('monthly')).statusCode, 200)
   assert.equal(calls.retrieve.length, 1, 'the cached price was kept')
 })
 
-test('a price that turns inactive after being cached answers 503 with a reference id even when a currency was sent', async (t) => {
+test('an unsellable price asked for in a currency answers 503 with a reference id and drops the cached price', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
   let archived = false
   const prices = { price_env: price('price_env') }
@@ -330,7 +336,7 @@ test('a price that turns inactive after being cached answers 503 with a referenc
   assert.equal(refused.statusCode, 503)
   assert.equal(refused.body.error, 'The monthly price is temporarily unavailable. No payment session was created.')
   assert.match(refused.body.correlationId, /^[0-9a-z]+$/)
-  assert.equal(calls.sessions.length, 2, 'one earlier success, then the single refused attempt')
+  assert.equal(calls.sessions.length, 2, 'one earlier success, then a single refused attempt')
 
   // The entry is gone: the next request asks Stripe again and stops at the guard.
   prices.price_env = price('price_env', { product: archivedProduct })
@@ -339,12 +345,21 @@ test('a price that turns inactive after being cached answers 503 with a referenc
   assert.equal(calls.sessions.length, 2)
 })
 
-test('an error that mentions the price but not that it is inactive stays a 500 and keeps the cached price', async (t) => {
+test('an error that mentions the price or currency but not that it is inactive stays a 500 and keeps the cached price', async (t) => {
   process.env[PRICE_ENV_KEYS.monthly] = 'price_env'
+  // `body` is what the failing request sends. A currency error is only answered
+  // 409 when a currency was asked for; with none asked it is an ordinary failure.
   const errors = {
-    'a price param with no resource_missing code': { param: 'line_items[0][price]', message: 'The price currency does not match the customer.' },
+    'a price param with no resource_missing code': {
+      fields: { param: 'line_items[0][price]', message: 'The price currency does not match the customer.' },
+      body: { currency: 'eur' },
+    },
+    'a currency param when no currency was asked for': {
+      fields: { param: 'currency', message: 'You cannot combine currencies on a single customer.' },
+      body: {},
+    },
   }
-  for (const [name, fields] of Object.entries(errors)) {
+  for (const [name, { fields, body }] of Object.entries(errors)) {
     let broken = false
     const { calls } = setup(t, {
       prices: { price_env: price('price_env') },
@@ -356,9 +371,10 @@ test('an error that mentions the price but not that it is inactive stays a 500 a
 
     assert.equal((await startCheckout('monthly')).statusCode, 200, name)
     broken = true
-    const failed = await startCheckout('monthly')
+    const failed = await startCheckout('monthly', body)
     assert.equal(failed.statusCode, 500, name)
     assert.match(failed.body.error, /No payment was taken/, name)
+    assert.equal(calls.sessions.length, 2, `${name}: one attempt, no retry`)
 
     broken = false
     assert.equal((await startCheckout('monthly')).statusCode, 200, name)

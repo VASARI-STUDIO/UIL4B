@@ -46,7 +46,7 @@ import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
 import { deriveRoles, hexToOklch, mixHex, softInk } from './exportTemplates/roles.js'
 import { bookTokens } from './bookTokens.js'
-import { pairTally, plural, matrixBlocks } from './exportTemplates/shared.js'
+import { pairTally, plural, matrixBlocks, systemSentence, GLYPH_STRIP, GLYPH_STRIP_PT } from './exportTemplates/shared.js'
 
 // ── Geometry ────────────────────────────────────────────────────────────────
 
@@ -102,7 +102,7 @@ export function darkestColour(palette) {
 }
 
 /** The credit line, on the cover and the foot of every page when the free-tier mark is on. */
-export const CREDIT_LINE = 'Made with UIL4B · uil4b.com'
+export const CREDIT_LINE = 'Made with UI L4B · uil4b.com'
 
 const round = (n) => Math.round(n * 100) / 100
 const pad2 = (n) => String(n).padStart(2, '0')
@@ -442,7 +442,7 @@ const outline = (x, y, w, h, stroke, radius = 0) => ({ op: 'strokeRect', x, y, w
 const hair = (x1, y, x2, stroke, dash) => ({ op: 'line', x1, y1: y, x2, y2: y, stroke, ...(dash ? { dash } : {}) })
 
 // A label is sentence case in the body face at weight 500, a point above the size
-// it was drawn at as a tracked cap, with no letter spacing (Dylan's type rule).
+// it was drawn at as a tracked cap, with no letter spacing (the house type rule).
 const labelText = (t, x, y, fill, { px = 8, weight = 500, align, family } = {}, c) =>
   text(String(t), x, y, face(weight, px + 1, family || c.d.body), fill, align ? { align } : {})
 
@@ -876,11 +876,8 @@ function gradientOps(c, page) {
   return ops
 }
 
-const ALPHABET = [
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-  'abcdefghijklmnopqrstuvwxyz',
-  '0123456789 & ., : ; ! ? “ ” ( ) – — @ # % € £ $',
-]
+// The glyph strip is drawn at GLYPH_STRIP_PT, converted to layout px (96 px to the inch).
+const STRIP_PX = round(GLYPH_STRIP_PT * 4 / 3)
 
 function familiesOps(c, page) {
   const { d } = c
@@ -904,11 +901,14 @@ function familiesOps(c, page) {
     const size = sizes.find((s) => c.measure(family, face(weight, s, family)) <= CONTENT_W) || sizes[sizes.length - 1]
     const nameLine = fitLine(family, CONTENT_W, face(weight, size, family), c.measure)
     ops.push(text(nameLine, MARGIN, y + 36 + size * 0.86, face(weight, size, family), c.ink, spacing ? { letterSpacing: round(spacing * size) } : {}))
+    // A sentence about this system in the face, then the character set as a small strip.
     let sy = y + 36 + size * 0.86 + 40
-    for (const row of ALPHABET) {
-      const lines = wrapText(row, CONTENT_W, face(weight, 22, family), c.measure)
-      lines.forEach((line) => { ops.push(text(line, MARGIN, sy, face(weight, 22, family), c.ink)); sy += 32 })
-    }
+    const sentence = systemSentence(d, role === 'Headings' ? 'heading' : 'body')
+    wrapText(sentence, CONTENT_W, face(weight, 22, family), c.measure)
+      .forEach((line) => { ops.push(text(line, MARGIN, sy, face(weight, 22, family), c.ink)); sy += 32 })
+    sy += 4
+    wrapText(GLYPH_STRIP, CONTENT_W, face(weight, STRIP_PX, family), c.measure)
+      .forEach((line) => { ops.push(text(line, MARGIN, sy, face(weight, STRIP_PX, family), c.ink)); sy += STRIP_PX * 1.5 })
     y = sy + 24
   }
   return ops

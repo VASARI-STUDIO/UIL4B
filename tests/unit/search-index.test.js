@@ -156,7 +156,7 @@ test('the index invents no Create tool the tree does not have', () => {
   }
 })
 
-// ── Findability: the property the founder actually cares about ──────────────
+// ── Findability: the property that matters most ──────────────
 
 test('THE FOUNDER ONE: every live tool is found by typing its own name, and comes FIRST', () => {
   // Not "is somewhere in the results" — first, because HomeCommandBar navigates
@@ -173,7 +173,7 @@ test('THE FOUNDER ONE: every live tool is found by typing its own name, and come
 })
 
 test('the six queries from the bug report reach the tool, not the sales page', () => {
-  // Stated as literal queries on purpose. They are the founder report, and this
+  // Stated as literal queries on purpose. They are the reported failures, and this
   // assertion must not be able to pass by agreeing with a broken derivation of
   // itself. The EXPECTED side is still derived: each looks up where the tree
   // says that tool lives.
@@ -191,23 +191,13 @@ test('the six queries from the bug report reach the tool, not the sales page', (
     assert.ok(first, `"${query}" returns nothing`)
     assert.equal(first.path, routeOf(id), `"${query}" opens ${first.path}`)
   }
-  // The Colour category is still findable by its own name, and it now resolves
-  // to where a click actually lands. It used to be asserted as `/create/color`,
-  // "a page about colour"; that page was deleted on 2026-09-18 with the Spectrum
-  // swap, so the category row must offer the destination rather than the home
-  // that only bounces to it — the same rule toolIndex.js applies to the other
-  // four categories.
-  // AND THE COLOUR CATEGORY IS NO LONGER OFFERED AT ALL, which is the rule
-  // this file already holds for the other four and not a new exception.
-  //
-  // It used to be asserted the other way round — "/create/color is still
-  // legitimately findable as what it is, a page about colour. The bug was tool
-  // queries landing there, not its existence." That was true while the colour
-  // landing existed. The founder deleted it on 2026-09-18 with the Spectrum
-  // swap, so CREATE_HOMES_THAT_RENDER is empty, every Create category is
-  // `destination: false`, and queryCommandIndex drops all five — the same
-  // behaviour that stopped "alt text" landing a visitor on /create/ai-tools.
-  // The colour TOOLS are still found by name, which the test above asserts.
+  // The Colour category is not offered at all. /create/color no longer renders a
+  // page (Spectrum is `/`), so CREATE_HOMES_THAT_RENDER is empty, every Create
+  // category is `destination: false`, and queryCommandIndex drops all five. That
+  // is the rule this file already holds for the other four, not a new exception,
+  // and the same behaviour that stopped "alt text" landing a visitor on
+  // /create/ai-tools. The colour TOOLS are still found by name, which the test
+  // above asserts.
   for (const row of ask('colour studio').categories) {
     assert.notEqual(row.path, '/create/color',
       'search still offers /create/color, which now only redirects')

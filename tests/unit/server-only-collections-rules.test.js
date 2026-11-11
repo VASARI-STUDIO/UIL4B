@@ -15,7 +15,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { read, stripComments } from './helpers/source-text.js'
 
-const SERVER_ONLY = ['admin-audit', 'rate-limits', 'stripeEvents']
+const SERVER_ONLY = ['admin-audit', 'rate-limits', 'stripeEvents', 'admin-settings']
 
 /** Every path in a `match <path> {` line, in file order. */
 function matchPaths(rules) {

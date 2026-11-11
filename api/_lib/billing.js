@@ -254,10 +254,20 @@ export function subscriptionStatusGrantsAccess(sub) {
   return sub?.status === 'active' || sub?.status === 'trialing'
 }
 
+// What a healthy subscription write resets. `paymentFailedEventCreated` is the
+// Stripe event time (seconds) of the failure on record (flagPaymentFailed).
+const PAYMENT_RECOVERY_FIELDS = Object.freeze({
+  paymentFailed: false,
+  paymentFailedAt: null,
+  hostedInvoiceUrl: null,
+  failedInvoiceId: null,
+  paymentFailedEventCreated: null,
+})
+
 export function subscriptionDocFields(sub, now = Date.now()) {
   const healthy = subscriptionStatusGrantsAccess(sub)
   const recovery = healthy
-    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null, failedInvoiceId: null, paymentFailedEventCreated: null }
+    ? { ...PAYMENT_RECOVERY_FIELDS }
     : {}
   return {
     id: sub?.id,
@@ -352,18 +362,14 @@ export function subscriptionWriteDecision(stored, sub, eventCreated) {
     && eventCreated < stored.stripeEventCreated) {
     return { write: false, reason: 'older_than_stored_event' }
   }
-  // A healthy status clears the payment-failure flags (subscriptionDocFields),
-  // so a healthy delivery created BEFORE the failure on record is older news
-  // and must not clear it. The failure's own event time is kept in
-  // `paymentFailedEventCreated` (flagPaymentFailed) rather than in
-  // `stripeEventCreated`: stamping the shared field would also hold back an
-  // older cancellation or past_due delivery, which still has to land.
-  if (subscriptionStatusGrantsAccess(sub) && stored.paymentFailed === true
-    && Number.isFinite(eventCreated) && Number.isFinite(stored.paymentFailedEventCreated)
-    && eventCreated < stored.paymentFailedEventCreated) {
-    return { write: false, reason: 'older_than_payment_failure' }
-  }
   return { write: true, reason: 'current' }
+}
+
+// The payment failure on record was flagged by a later event than this delivery.
+function failureIsNewerThanEvent(stored, eventCreated) {
+  return stored?.paymentFailed === true
+    && Number.isFinite(stored.paymentFailedEventCreated)
+    && (!Number.isFinite(eventCreated) || eventCreated < stored.paymentFailedEventCreated)
 }
 
 /**
@@ -379,6 +385,10 @@ export function subscriptionWriteDecision(stored, sub, eventCreated) {
  * invoice comes from the event's snapshot, so for an old event it may not be
  * the subscription's latest one; the stamp still records money that has gone
  * back. A stamp only sets a revocation and never clears one.
+ *
+ * A healthy delivery created before the payment failure on record was flagged
+ * is a stale picture of the subscription: it still writes every other field,
+ * but not the recovery fields, so it cannot clear a newer failure.
  */
 export function writeSubscriptionForEvent(db, uid, sub, eventCreated, now = Date.now(), extra = null) {
   const ref = db.collection('users').doc(uid)
@@ -389,9 +399,13 @@ export function writeSubscriptionForEvent(db, uid, sub, eventCreated, now = Date
       if (extra) tx.set(ref, { subscription: { ...extra } }, { merge: true })
       return decision
     }
+    const fields = subscriptionDocFields(sub, now)
+    if ('paymentFailed' in fields && failureIsNewerThanEvent(stored, eventCreated)) {
+      for (const key of Object.keys(PAYMENT_RECOVERY_FIELDS)) delete fields[key]
+    }
     tx.set(ref, {
       subscription: {
-        ...subscriptionDocFields(sub, now),
+        ...fields,
         ...(extra || {}),
         ...(Number.isFinite(eventCreated) ? { stripeEventCreated: eventCreated } : {}),
       },

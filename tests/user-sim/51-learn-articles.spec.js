@@ -22,6 +22,7 @@
 import { test, expect } from './base.js'
 import { expectRendered, go, signIn, watch } from './helpers.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
+import { getArticleSources } from '../../src/data/learn/sources.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 
 // A guard against this whole file passing over an empty list.
@@ -44,19 +45,23 @@ test.describe('Learn articles', () => {
       await expect(card).toContainText(article.title)
       await expect(card).toContainText(article.topic)
     }
-    await expect(page.locator('.lidx-card')).toHaveCount(LEARN_ARTICLES.length)
+    // The guides, counted apart from the "Using UI L4B" group after them (Help and
+    // Design Principles are pages that help, not guides; 207-learn-hub.spec.js
+    // owns that group).
+    await expect(page.locator('.lidx-sections section:not(#learn-topic-using-uil4b) .lidx-card'))
+      .toHaveCount(LEARN_ARTICLES.length)
+    await expect(page.locator('#learn-topic-using-uil4b .lidx-card')).toHaveCount(2)
 
     // The hero no longer says the section is coming soon — it now says how many
     // guides there are, which is a fact rather than a promise.
     await expect(page.locator('.home-hero-hint')).not.toContainText(/coming soon/i)
     await expect(page.locator('.home-hero-hint')).toContainText(new RegExp(`${LEARN_ARTICLES.length}|One`, 'i'))
 
-    // And the topics that are NOT written still wear a Soon badge and go
-    // nowhere. This is the half that was called out as dishonest before: eight
-    // cards describing eight unbuilt guides. They stay, they just stay honest.
-    const soon = page.locator('.surface-card:not(.surface-card--link)')
+    // And the topics that are NOT written are plain rows that say Soon and go
+    // nowhere: no card, no link, no arrow (275-tool-small-fixes-5.spec.js holds the shape).
+    const soon = page.locator('.lidx-card--soon')
     await expect(soon).toHaveCount(LEARN_GROUPS.filter((g) => g.soon).length)
-    await expect(soon.locator('.soon-badge').first()).toBeVisible()
+    await expect(soon.locator('.lidx-time').first()).toHaveText('Soon')
   })
 
   for (const article of LEARN_ARTICLES) {
@@ -66,10 +71,14 @@ test.describe('Learn articles', () => {
       await expectRendered(page, `/learn/${article.slug}`)
 
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(article.title)
-      await expect(page.locator('.lart-topic')).toHaveText(article.topic)
+      await expect(page.locator('.lart-crumb a').last()).toHaveText(article.topic)
 
       // The contents list every section, and every anchor lands on a real one.
+      // Wide screens show the rail and phones show the disclosure; the list that
+      // is on screen is the one under test, so the rail is asserted visible
+      // first and a hidden copy can never satisfy these counts.
       const links = page.locator('.lart-toc a')
+      await expect(page.locator('nav.lart-toc')).toBeVisible()
       await expect(links).toHaveCount(article.sections.length)
       for (const section of article.sections) {
         const link = page.locator(`.lart-toc a[href="#${section.id}"]`)
@@ -80,9 +89,21 @@ test.describe('Learn articles', () => {
         ).toBeAttached()
       }
 
+      // On a phone the same sections sit behind the "On this page" row.
+      await page.setViewportSize({ width: 390, height: 844 })
+      await expect(page.locator('nav.lart-toc')).toBeHidden()
+      const phone = page.locator('details.lart-toc-m')
+      await phone.locator('summary').click()
+      await expect(phone.locator('a')).toHaveCount(article.sections.length)
+      for (const section of article.sections) {
+        await expect(phone.locator(`a[href="#${section.id}"]`), `no phone contents link for #${section.id}`)
+          .toHaveText(section.title)
+      }
+      await page.setViewportSize({ width: 1440, height: 900 })
+
       // Every source is a real outbound link, and the article ends at its tool.
       const sources = page.locator('.lart-sources a')
-      await expect(sources).toHaveCount(article.sources.length)
+      await expect(sources).toHaveCount(getArticleSources(article.slug).length)
       await expect(page.locator(`.lart-next a[href="${article.toolTo}"]`)).toBeVisible()
 
       // The head is the article's own, not the homepage's.
@@ -444,4 +465,39 @@ test.describe('Learn articles', () => {
       }
     }
   })
+})
+
+// The typeface-metrics table has five columns and sits in a 56ch article
+// column. At desktop widths every column is on screen: the table does not need
+// the wrapper's sideways scroll, so the last column (the matched size, the one
+// the text refers to) is never hidden behind it.
+//
+// MUTATION: remove `lart-table--fit` from TypeMetricsTable.jsx (or its rule in
+// learn-article.css) and the headings stop wrapping, the table grows wider than
+// the column, and this goes red at all three widths.
+test.describe('Learn articles · the typeface metrics table fits its column', () => {
+  for (const width of [1024, 1280, 1440]) {
+    test(`${width}px: all five columns are inside the wrapper, with no sideways scroll`, async ({ page }) => {
+      watch(page, `reader of the typeface metrics guide on a ${width}px screen`)
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/learn/typeface-metrics')
+      const wrap = page.locator('.lart-table-scroll[aria-label*="measured per em"]')
+      await expect(wrap, 'the metrics table rendered nothing').toBeVisible()
+      await wrap.scrollIntoViewIfNeeded()
+      const fit = await wrap.evaluate((el) => {
+        const box = el.getBoundingClientRect()
+        const heads = [...el.querySelectorAll('thead th')].map((th) => {
+          const r = th.getBoundingClientRect()
+          return { text: th.textContent.trim(), left: r.left, right: r.right }
+        })
+        return { scroll: el.scrollWidth, client: el.clientWidth, left: box.left, right: box.right, heads }
+      })
+      expect(fit.heads, 'the table lost a column').toHaveLength(5)
+      expect(fit.scroll, `${width}px: the table scrolls sideways (${fit.scroll} > ${fit.client})`).toBeLessThanOrEqual(fit.client + 1)
+      const last = fit.heads[fit.heads.length - 1]
+      expect(last.text).toMatch(/matched to/)
+      expect(last.right, `${width}px: the last column runs past the wrapper`).toBeLessThanOrEqual(fit.right + 1)
+      expect(last.left, `${width}px: the last column starts outside the wrapper`).toBeGreaterThanOrEqual(fit.left)
+    })
+  }
 })

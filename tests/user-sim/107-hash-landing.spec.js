@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, ready, watch } from './helpers.js'
+import { go, homeSectionsLoaded, ready, watch } from './helpers.js'
 
 async function navigateInRouter(page, to) {
   await page.evaluate((to) => {
@@ -40,8 +40,15 @@ for (const reducedMotion of ['reduce', 'no-preference']) {
     await go(page, '/learn/help#faq')
     await expectLanding(page, 'faq', '.pnav')
     const landingY = await page.evaluate(() => scrollY)
-    await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), landingY + 600)
-    await page.waitForFunction((top) => Math.abs(scrollY - top) <= 2, landingY + 600)
+    // Scroll on past the landing by up to 600px, but never past the end of a
+    // page shorter than that (the router page is about one screen tall at
+    // desktop widths). Half the room left keeps the target reachable, and the
+    // room check stops this passing without moving.
+    const room = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY)
+    expect(room, 'the page needs room to scroll past the landing').toBeGreaterThan(100)
+    const helpTarget = landingY + Math.min(600, Math.floor(room / 2))
+    await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), helpTarget)
+    await page.waitForFunction((top) => Math.abs(scrollY - top) <= 2, helpTarget)
     const helpY = await page.evaluate(() => scrollY)
 
     await navigateInRouter(page, '/learn/principles')
@@ -103,28 +110,109 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await go(page, '/learn/help')
       await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
-      expect(await page.locator('#faq').evaluate((target) => target.getBoundingClientRect().top))
-        .toBeGreaterThan(viewport.height)
-      await navigateInRouter(page, '/learn/help#faq')
-      await expect(page).toHaveURL(/\/learn\/help#faq$/)
-      await expectLanding(page, 'faq', '.pnav')
+      // #contact is the last job's answer. It is hidden until the hash opens it,
+      // and on a phone its row starts well below the first screen, so the router
+      // has to open it AND scroll to it.
+      await expect(page.locator('#contact')).toBeHidden()
+      if (viewport.width < 960) {
+        expect(await page.locator('#help-job-report').evaluate((row) => row.getBoundingClientRect().top))
+          .toBeGreaterThan(viewport.height)
+      }
+      await navigateInRouter(page, '/learn/help#contact')
+      await expect(page).toHaveURL(/\/learn\/help#contact$/)
+      await expect(page.locator('#contact')).toBeVisible()
+      await expectLanding(page, 'contact', '.pnav')
     })
   })
 }
 
-test('a fresh sales hash still lands below its nav', async ({ page }) => {
-  watch(page, 'a visitor opening the sales bench section')
-  await go(page, '/home#bench')
-  await expectLanding(page, 'bench', '.spnav')
+// The homepage's nav bar slides away on the way down, so its height is read off
+// the bar itself rather than from where it is sitting at the moment of landing.
+async function homeLanding(page, id) {
+  await expect(page.locator(`#${id} h2`)).toBeAttached({ timeout: 20000 })
+  await expect.poll(() => page.evaluate(() => scrollY), { timeout: 5000 }).toBeGreaterThan(0)
+  // Wait for the jump to stop moving before reading where it landed.
+  await expect.poll(async () => {
+    const first = await page.evaluate(() => scrollY)
+    await page.waitForTimeout(150)
+    return (await page.evaluate(() => scrollY)) === first
+  }).toBe(true)
+  return page.evaluate((id) => ({
+    top: document.getElementById(id).getBoundingClientRect().top,
+    bar: document.querySelector('.spnav-bar').getBoundingClientRect().height,
+  }), id)
+}
+
+test('a fresh sales hash lands its section below the nav bar', async ({ page }) => {
+  watch(page, 'a visitor opening a homepage section URL')
+  await go(page, '/#plans')
+  const { top, bar } = await homeLanding(page, 'plans')
+  expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
+})
+
+test('a fresh sales hash lands its section 104px from the top', async ({ page }) => {
+  watch(page, 'a visitor opening a homepage section URL')
+  await go(page, '/#plans')
+  const { top } = await homeLanding(page, 'plans')
+  expect(Math.abs(top - 104)).toBeLessThanOrEqual(8)
 })
 
 test('a section link from another route lands on the sales page', async ({ page }) => {
-  watch(page, 'a visitor following The bench from the footer on the mobile page')
+  watch(page, 'a visitor following Plans from the footer on the mobile page')
   await go(page, '/mobile')
-  await page.locator('.sp-footer a[href="/home#bench"]').first().click()
+  await page.locator('.sp-footer a[href="/home#plans"]').first().click()
   await ready(page, '/home')
-  await expectLanding(page, 'bench', '.spnav')
+  await expect(page).toHaveURL(/\/home#plans$/)
+  const { top, bar } = await homeLanding(page, 'plans')
+  expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
 })
+
+test('a footer section link from another route puts focus on the section heading', async ({ page }) => {
+  watch(page, 'a keyboard visitor following Plans from the footer on the mobile page')
+  await go(page, '/mobile')
+  await page.locator('.sp-footer a[href="/home#plans"]').first().click()
+  await ready(page, '/home')
+  await homeLanding(page, 'plans')
+  await expect(page.locator('#plans-h')).toBeFocused()
+})
+
+test('a section that arrives after the landing deadline still takes focus on its heading', async ({ page }) => {
+  watch(page, 'a keyboard visitor following Plans from the footer on a slow connection')
+  // Hold the Plans chunk past the 3s landing deadline, so the jump meets the loading stand-in first.
+  // Red if the landing focuses the stand-in and lets focus fall to the page when the real section replaces it.
+  let held = 0
+  await page.route(/\/assets\/HomePlans-[\w-]+\.js(\?.*)?$/, async (route) => {
+    held += 1
+    await new Promise((resolve) => setTimeout(resolve, 4500))
+    await route.continue()
+  })
+  await go(page, '/mobile')
+  await page.locator('.sp-footer a[href="/home#plans"]').first().click()
+  await ready(page, '/home')
+  await homeLanding(page, 'plans')
+  expect(held, 'the Plans chunk was never requested, so nothing was held').toBeGreaterThan(0)
+  await expect(page.locator('#plans-h')).toBeFocused()
+})
+
+test('an in-page section link lands below the nav bar and moves focus to the heading', async ({ page }) => {
+  watch(page, 'a visitor following Plans from the footer of the homepage')
+  await go(page, '/')
+  await homeSectionsLoaded(page)
+  await page.locator('.sp-footer a[href="#plans"]').click()
+  const { top, bar } = await homeLanding(page, 'plans')
+  expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
+  await expect(page.locator('#plans-h')).toBeFocused()
+})
+
+for (const [old, current] of [['bench', 'bookmarks'], ['specimens', 'exports'], ['index', 'proof']]) {
+  test(`the old #${old} link resolves to #${current}`, async ({ page }) => {
+    watch(page, 'a visitor following an old homepage link')
+    await go(page, `/home#${old}`)
+    await expect(page).toHaveURL(new RegExp(`/home#${current}$`))
+    const { top, bar } = await homeLanding(page, current)
+    expect(top, 'the section must start below the nav bar').toBeGreaterThanOrEqual(bar)
+  })
+}
 
 for (const [route, id] of [['/faq', 'faq'], ['/about', 'about']]) {
   test(`${route} redirects and lands on its help section`, async ({ page }) => {
@@ -133,3 +221,93 @@ for (const [route, id] of [['/faq', 'faq'], ['/about', 'about']]) {
     await expectLanding(page, id, '.pnav')
   })
 }
+
+// WCAG 2.2 SC 2.4.11 (Focus Not Obscured): tabbing down the sales page must never leave the
+// focused control behind the fixed nav bar. Nothing on the root scrolls it clear any more, so
+// this reads where focus really lands. Run read in the page: the focused control, the nav
+// bar's visible box, and what the browser paints at the control's centre. It reads after the
+// control and the bar have stopped moving: the skip link slides in and the bar slides out.
+const READ_FOCUS = async () => {
+  const el = document.activeElement
+  if (!el || el === document.body || el === document.documentElement) return null
+  const nav = document.querySelector('.spnav')
+  const frame = () => new Promise((resolve) => requestAnimationFrame(resolve))
+  const pos = () => `${el.getBoundingClientRect().top}|${nav.getBoundingClientRect().top}`
+  let last = pos()
+  for (let still = 0, i = 0; still < 3 && i < 60; i++) {
+    await frame()
+    const now = pos()
+    still = now === last ? still + 1 : 0
+    last = now
+  }
+  const r = el.getBoundingClientRect()
+  const n = nav.getBoundingClientRect()
+  const ns = getComputedStyle(nav)
+  const navShown = ns.visibility !== 'hidden' && Number(ns.opacity) > 0.01 && n.bottom > 0 && n.top < innerHeight
+  const cx = r.left + r.width / 2
+  const cy = r.top + r.height / 2
+  const hit = document.elementFromPoint(cx, cy)
+  const inNavBox = navShown && cx >= n.left && cx <= n.right && cy >= n.top && cy <= n.bottom
+  const painted = !!hit && (el.contains(hit) || hit.contains(el))
+  return {
+    first: !(window.__tabSeen ??= new WeakSet()).has(el) && !!window.__tabSeen.add(el),
+    name: `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.getAttribute('href') ? `[href="${el.getAttribute('href')}"]` : ''} "${(el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30)}"`,
+    top: Math.round(r.top), bottom: Math.round(r.bottom), navBottom: Math.round(n.bottom),
+    navShown, inFooter: !!el.closest('.sp-footer'), inNav: !!el.closest('.spnav'),
+    onScreen: r.bottom > 0 && r.top < innerHeight,
+    obscured: inNavBox && !painted,
+  }
+}
+
+for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+  for (const navPinned of [false, true]) {
+    test(`tabbing down the sales page never puts focus under the nav bar at ${viewport.width}px${navPinned ? ' with the bar showing' : ''}`, async ({ page }) => {
+      test.setTimeout(90000)
+      watch(page, 'a keyboard visitor tabbing through the homepage')
+      await page.setViewportSize(viewport)
+      // Reduced motion turns off the skip link's and the bar's slide, so each stop is read at rest
+      // and not part-way through a transition that happens to be crossing the control.
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await go(page, '/')
+      await homeSectionsLoaded(page)
+      // The bar slides away on the way down; a visitor who scrolls back up has it showing
+      // while they tab, which is the harder case, so pin it open for one of the two runs.
+      if (navPinned) await page.addStyleTag({ content: '.spnav,.spnav[data-nav-hidden="1"]{transform:none !important;opacity:1 !important;visibility:visible !important}' })
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+      await page.waitForFunction(() => scrollY === 0)
+
+      const stops = []
+      for (let i = 0; i < 600; i++) {
+        await page.keyboard.press('Tab')
+        const stop = await page.evaluate(READ_FOCUS)
+        // Focus leaving the document, or coming back round to a control already visited, ends the walk.
+        if (!stop || !stop.first) { if (stops.length) break; continue }
+        stops.push(stop)
+      }
+
+      // Without these the loop could pass by visiting a handful of controls at the top.
+      expect(stops.length, 'the Tab walk visited almost nothing').toBeGreaterThan(25)
+      expect(stops.some((s) => s.inFooter), 'the Tab walk never reached the footer').toBe(true)
+      expect(stops.some((s) => !s.inNav && s.navShown), 'the nav bar was never showing while a page control had focus').toBe(true)
+      expect(stops.filter((s) => !s.onScreen).map((s) => s.name), 'focus moved to a control that is off screen').toEqual([])
+      expect(stops.filter((s) => s.obscured).map((s) => `${s.name} top ${s.top}..${s.bottom}, nav bottom ${s.navBottom}`), 'focus landed under the nav bar').toEqual([])
+    })
+  }
+}
+
+test('the focus-under-the-nav check sees a control sitting behind the bar', async ({ page }) => {
+  watch(page, 'a check of the keyboard focus detector')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await go(page, '/')
+  await homeSectionsLoaded(page)
+  await page.addStyleTag({ content: '.spnav,.spnav[data-nav-hidden="1"]{transform:none !important;opacity:1 !important;visibility:visible !important}' })
+  // Park a page link at y=30 (inside the bar) and focus it without letting the browser scroll it clear.
+  const stop = await page.evaluate(() => {
+    const link = [...document.querySelectorAll('main a[href], #root a[href]')].find((a) => !a.closest('.spnav, .sp-footer, .skip-link') && a.className !== 'skip-link' && a.getBoundingClientRect().top > 120 && a.getBoundingClientRect().width > 0)
+    window.scrollTo({ top: scrollY + link.getBoundingClientRect().top + link.getBoundingClientRect().height / 2 - 30, behavior: 'instant' })
+    link.focus({ preventScroll: true })
+    return null
+  }).then(() => page.evaluate(READ_FOCUS))
+  expect(stop.obscured, `a control at ${stop.top}..${stop.bottom} behind a bar ending at ${stop.navBottom} was not flagged`).toBe(true)
+})

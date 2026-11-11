@@ -1,26 +1,34 @@
 import MenuSelect from '../components/tool/MenuSelect'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import FontPicker from '../components/FontPicker'
 import UIKitGuide from '../components/UIKitGuide'
-import { SaveTypeSystemPanel } from '../components/SaveTypeSystem'
+import SaveTypeSystem, { SaveTypeSystemPanel } from '../components/SaveTypeSystem'
 import { useSaveTypeSystemToolbar } from '../hooks/useSaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import {
-  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolIcon,
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolIcon, SlidePills,
 } from '../components/tool/ToolLayout'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
-import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont } from '../utils/googleFonts'
-import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
-import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
+import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, reloadFont, verifyFontLoaded } from '../utils/googleFonts'
+import { consumeScaleDraft, ownFont, ownTypeScale, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
+import { lockScroll } from '../utils/scrollLock'
+import { fitTypePreviewSize, typePreviewNeedsFitting, TYPE_PREVIEW_MAX_PX, TYPE_PREVIEW_MIN_PX } from '../utils/typeScalePreview'
 import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '../utils/fluidType'
 // The shared sheets for the font picker, the catalogue notice, the slider and
 // the loader, then the page's own sheet, scoped under `.tsc-page`.
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
 import '../styles/pages/type-scale.css'
+import '../styles/pages/type-scale-kerbside.css'
+import KerbsidePage from '../components/typescale/KerbsidePage'
+import { ladderNote, litLineCount, usedStepNames } from '../components/typescale/kerbsideSteps'
+import { useAppearance } from '../contexts/AppearanceContext'
+import GroundSegment from '../components/tool/GroundSegment'
+import FamilyRow from '../components/typescale/FamilyRow'
+import { typeToolsBarItems } from '../components/tool/TypeToolsBar'
+import { useAuth } from '../contexts/AuthContext'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed
@@ -83,11 +91,15 @@ const ROUNDING = [
 // desktop size, so the control implied a per-breakpoint scale the tool did not
 // have. Now the ladder resolves each step at this width, so what you see is
 // what the exported clamp() actually computes there.
+const WEIGHT_NAMES = { 100: 'Thin', 200: 'Extra light', 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Extra bold', 900: 'Black' }
+const weightLabel = w => (WEIGHT_NAMES[w] ? `${w} ${WEIGHT_NAMES[w]}` : String(w))
+
 const WIDTHS = [
-  { id: 'full', label: 'Desktop', px: FLUID_VIEWPORTS.max, vw: FLUID_VIEWPORTS.max },
-  { id: 'tablet', label: 'Tablet', px: 768, vw: 768 },
   { id: 'mobile', label: 'Mobile', px: 375, vw: FLUID_VIEWPORTS.min },
+  { id: 'tablet', label: 'Tablet', px: 768, vw: 768 },
+  { id: 'full', label: 'Desktop', px: FLUID_VIEWPORTS.max, vw: FLUID_VIEWPORTS.max },
 ]
+const DESKTOP = WIDTHS[2]
 
 
 // The width the preview opens on is the visitor's own device class, so a phone
@@ -108,6 +120,17 @@ const SPLIT_MIN = 1024
 // Below this the split is left: 16px of slack, wider than a scrollbar.
 const SPLIT_LEAVE = 1008
 
+// The strip of the phone screen the page is read in: under the sticky toolbar,
+// above the dock.
+function readingBand() {
+  const bar = document.querySelector('.tsc-page .tl-toolbar')
+  const dock = document.querySelector('.tsc-page .tl-dock')
+  return {
+    top: bar ? bar.getBoundingClientRect().bottom : 0,
+    bottom: dock ? dock.getBoundingClientRect().top : window.innerHeight,
+  }
+}
+
 function useMedia(query) {
   const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(query).matches : false)
   const [match, setMatch] = useState(get)
@@ -123,21 +146,21 @@ function useMedia(query) {
 }
 
 const DEFAULTS = {
-  base: 16,
+  base: 15,
   // The mobile anchor. Slightly smaller base, and the ratio is chosen separately
   // (see mobileRatioId) rather than shared — see the state comment for why one
   // ratio across both breakpoints cannot work.
   mobileBase: 15,
-  ratio: 1.25,
+  ratio: 1.618,
   custom: 1.333,
-  up: 6,
-  down: 2,
+  up: 4,
+  down: 1,
   lineHeight: 1.5,
   // Matches the project's own default (data/designDefaults.js, 0), so the first
   // load and Reset scale read the same letter spacing (K17).
   headingTrack: 0,
   bodyTrack: 0,
-  rounding: 'half',
+  rounding: 'none',
 }
 
 // The default specimen. It is the SAME string on every row, and that is a
@@ -146,10 +169,10 @@ const DEFAULTS = {
 // steps comparable at a glance. #327 examined this and kept it; this change
 // does not overturn it. What it adds is the ability to swap the string for
 // your own words — see `sample` — which is the part that was missing.
-const PANGRAM = 'The quick brown fox jumps over the lazy dog'
-// Under 768 the pangram wraps the top step to four lines and pushes the lower
-// steps out of view, so a phone gets a short default. Typed text is never cut.
-const PHONE_SPECIMEN = 'Scale it'
+const PANGRAM = 'There at 11:40.'
+// The field's hint. It is never the value, so the ladder keeps the default line.
+const PREVIEW_HINT = 'Bikes, not vans.'
+const PHONE_SPECIMEN = PANGRAM
 
 // (stepName lived here. It is now in utils/fluidType.js beside stepPx, because
 // the homepage workbench's Typography preview labels its steps with the same
@@ -159,6 +182,14 @@ const PHONE_SPECIMEN = 'Scale it'
 // (roundPx lived here. It is now `stepPx` in utils/fluidType.js, so the two
 // breakpoint ladders and their clamp() are all rounded by one function that the
 // unit suite can reach without a browser.)
+
+// A step above the base takes its size plus 8px as a line height, so a large step
+// doesn't carry the body's leading: never under 1.1, never over the line height
+// the user set, in steps of 0.05. The base and the steps below keep the user's value.
+function leadFor(exp, px, lineHeight, tight) {
+  if (exp <= 0 || !tight) return lineHeight
+  return Math.round(Math.min(lineHeight, Math.max(1.1, 1 + 8 / px)) * 20) / 20
+}
 
 // Trim a computed number to a readable literal — 1.5 not 1.5000, 0.875 not
 // 0.87500. Exports read like something a person typed.
@@ -182,8 +213,17 @@ function varsRef(vars) {
 // Google Fonts import URL stays on `onCopy`: those are lookups, not a finished
 // type scale. See src/config/activationExports.js.
 export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
-  const navigate = useNavigate()
-  const { design, setFonts, setTypeScale } = useProject()
+  const { design, projects, setFonts, setTypeScale } = useProject()
+  const { user } = useAuth()
+  // The step pressed in the ladder; the page lights each line that uses it.
+  const [litStep, setLitStep] = useState('')
+  // The step whose Copy label reads Copied, for a moment after it is pressed.
+  const [copiedStep, setCopiedStep] = useState('')
+  const copiedTimer = useRef(0)
+  // Steps above the base take a tighter line height than the body's.
+  const [tight, setTight] = useState(true)
+  // The ground the ladder is read on, Dark or Light.
+  const [ground, setGround] = useState('d')
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
 
   // A selection handed over from the Font Gallery or Font Pair. Read — never
@@ -192,17 +232,23 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // visit reads nothing and the tool opens on the saved kit instead.
   const carried = readScaleDraft()
 
-  const [base, setBase] = useState(() => carried?.scale?.base ?? design?.typeScale?.base ?? DEFAULTS.base)
+  // The project's own scale and families, or nothing. `design` falls back to the
+  // blank project's seed (Inter, 16px, 1.25) when nothing is saved, and that seed
+  // is not a choice: only a scale or pair that differs from it counts as the
+  // user's own and wins over the tool's defaults.
+  const savedScale = ownTypeScale(design)
+
+  const [base, setBase] = useState(() => carried?.scale?.base ?? savedScale?.base ?? DEFAULTS.base)
   const [ratioId, setRatioId] = useState(() => {
-    const r = carried?.scale?.ratio ?? design?.typeScale?.ratio ?? DEFAULTS.ratio
+    const r = carried?.scale?.ratio ?? savedScale?.ratio ?? DEFAULTS.ratio
     return RATIOS.find(o => o.value === r)?.id || 'custom'
   })
-  const [customRatio, setCustomRatio] = useState(() => carried?.scale?.ratio ?? design?.typeScale?.ratio ?? DEFAULTS.custom)
+  const [customRatio, setCustomRatio] = useState(() => carried?.scale?.ratio ?? savedScale?.ratio ?? DEFAULTS.custom)
   const [up, setUp] = useState(DEFAULTS.up)
   const [down, setDown] = useState(DEFAULTS.down)
-  const [lineHeight, setLineHeight] = useState(() => design?.typeScale?.lineHeight ?? DEFAULTS.lineHeight)
-  const [headingTrack, setHeadingTrack] = useState(() => design?.typeScale?.headingSpacing ?? DEFAULTS.headingTrack)
-  const [bodyTrack, setBodyTrack] = useState(() => design?.typeScale?.bodySpacing ?? DEFAULTS.bodyTrack)
+  const [lineHeight, setLineHeight] = useState(() => savedScale?.lineHeight ?? DEFAULTS.lineHeight)
+  const [headingTrack, setHeadingTrack] = useState(() => savedScale?.headingSpacing ?? DEFAULTS.headingTrack)
+  const [bodyTrack, setBodyTrack] = useState(() => savedScale?.bodySpacing ?? DEFAULTS.bodyTrack)
   const [rounding, setRounding] = useState(DEFAULTS.rounding)
   // The MOBILE end of the scale. `base`/`ratio` above are the desktop end.
   //
@@ -217,36 +263,45 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const [mobileRatioId, setMobileRatioId] = useState('1.2')
   const [mobileCustomRatio, setMobileCustomRatio] = useState(DEFAULTS.custom)
   // Fluid joins the two ends with clamp(); fixed emits per-breakpoint values in
-  // media queries. Fluid is the default because it is what the founder chose
-  // and what avoids a visible step on resize, but the choice is real — a team
+  // media queries. Fluid is the default because it
+  // avoids a visible step on resize, but the choice is real — a team
   // with strict per-breakpoint specs needs the other one.
   const [fluid, setFluid] = useState(true)
   const [width, setWidth] = useState(deviceWidth)
   const [view, setView] = useState('scale')
   const [sheetOpen, setSheetOpen] = useState(false)
+  // The sheet's two tabs: the settings, and the code for the scale.
+  const [sheetTab, setSheetTab] = useState('settings')
   const phone = useMedia('(max-width: 767px)')
   const ladderRef = useRef(null)
   const pageColRef = useRef(null)
-  const sheetRowRef = useRef(null)
+  const dockRatioRef = useRef(null)
+  // Whichever control opened the sheet, so closing it gives focus back there.
+  const sheetOpenerRef = useRef(null)
   const [colW, setColW] = useState(0)
   // The work column's own box, read from the column itself (not the viewport) so
   // the panel beside it is already counted. It decides between the split and
   // the Scale / Page / Code switch.
   const [workEl, setWorkEl] = useState(null)
   const [work, setWork] = useState({ left: 0, width: 0 })
-  // The split is entered at SPLIT_MIN and left only below SPLIT_LEAVE, held in a
-  // ref, so a scrollbar appearing or going away cannot flip the layout back and forth.
-  const splitRef = useRef(false)
-  if (work.width >= SPLIT_MIN) splitRef.current = true
-  else if (work.width < SPLIT_LEAVE) splitRef.current = false
-  const split = splitRef.current
-  // The Code drawer belongs to the split; below it Code is the third view.
+  // The split is entered at SPLIT_MIN and left only below SPLIT_LEAVE, held in
+  // state, so a scrollbar appearing or going away cannot flip the layout back and forth.
+  const [split, setSplit] = useState(false)
+  if (work.width >= SPLIT_MIN && !split) setSplit(true)
+  else if (work.width < SPLIT_LEAVE && split) setSplit(false)
+  // A phone is one scroll: the width, the page, then the ladder, with Code in the
+  // sheet. From 768 the Scale / Page / Code switch (or the split) takes over.
+  const stackedView = phone && !split
+  const { reducedMotion } = useAppearance() || {}
+  // Phone dock chip: whether the page is mostly out of the reading band, and
+  // which side of it the page lies on. `litSeen` marks the first lit step, the
+  // one press that brings the page into view by itself.
+  const [pageOff, setPageOff] = useState(false)
+  const [pageDir, setPageDir] = useState('up')
+  const [litSeen, setLitSeen] = useState(false)
+  // From 768 Code is a drawer over the foot of the page, opened from the docked bar.
   const [codeOpen, setCodeOpen] = useState(false)
-  const drawerOpen = split && codeOpen
-  // Leaving the split closes the drawer, so widening back doesn't reopen it.
-  if (!split && codeOpen) setCodeOpen(false)
   const codeBtnRef = useRef(null)
-  const drawerRef = useRef(null)
   const [format, setFormat] = useState('css')
   // THE WORDS IN THE PREVIEW. Empty means the pangram below.
   //
@@ -267,11 +322,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   // The two families the preview and the export use. Seeded from the hand-off,
   // then the saved kit — the tool never opens on a font the user didn't choose.
-  const seedHeading = carried?.heading || design?.fonts?.heading
-  const seedBody = carried?.body || design?.fonts?.body
-  const [headingName, setHeadingName] = useState(() => seedHeading?.family || 'Inter')
-  const [bodyName, setBodyName] = useState(() => seedBody?.family || 'Inter')
-  const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 700)
+  const seedHeading = carried?.heading || ownFont(design, 'heading')
+  const seedBody = carried?.body || ownFont(design, 'body')
+  const [headingName, setHeadingName] = useState(() => seedHeading?.family || 'Archivo')
+  const [bodyName, setBodyName] = useState(() => seedBody?.family || 'IBM Plex Sans')
+  const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 800)
   const [bodyW, setBodyW] = useState(() => seedBody?.weight || 400)
 
   // Commit the hand-off. Effects only run for a committed tree, so the slot
@@ -300,6 +355,28 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     if (bodyFont) loadFont(bodyFont.family, [bodyW])
   }, [bodyFont, bodyW])
 
+  // Whether the heading face is painting. The page and the heading rows show a
+  // loading line until the face is confirmed, and an error with Retry if it
+  // never arrives; `face` holds the verdict for one family and weight.
+  const faceKey = headingFont ? `${headingFont.family}|${headingW}` : ''
+  const [face, setFace] = useState({ key: '', status: '' })
+  const [faceTry, setFaceTry] = useState(0)
+  useEffect(() => {
+    if (!headingFont) return undefined
+    let live = true
+    verifyFontLoaded(headingFont.family, headingW).then(status => {
+      if (live) setFace({ key: faceKey, status })
+    })
+    return () => { live = false }
+  }, [headingFont, headingW, faceKey, faceTry])
+  const headingLoading = Boolean(headingFont) && face.key !== faceKey
+  const headingFailed = Boolean(headingFont) && face.key === faceKey && face.status === 'failed'
+  const retryFace = () => {
+    if (!headingFont) return
+    setFace({ key: '', status: '' })
+    reloadFont(headingFont.family).then(() => loadFont(headingFont.family, [headingW])).then(() => setFaceTry(n => n + 1))
+  }
+
   const ratio = ratioId === 'custom' ? customRatio : (RATIOS.find(o => o.id === ratioId)?.value || DEFAULTS.ratio)
 
   const mobileRatio = mobileRatioId === 'custom'
@@ -309,7 +386,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // The viewport width the preview REPRESENTS — the number the fluid maths is
   // evaluated at. Declared here rather than beside `activeWidth` further down
   // because `steps` depends on it.
-  const previewVw = (WIDTHS.find(w => w.id === width) || WIDTHS[0]).vw
+  const previewVw = (WIDTHS.find(w => w.id === width) || DESKTOP).vw
 
   // Every step now carries BOTH ends of the scale and the clamp that joins
   // them. `px` stays the desktop size so every existing consumer (the ladder
@@ -331,6 +408,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       const previewPx = fluid
         ? sizeAtViewport(mobilePx, px, previewVw)
         : (previewVw <= 768 ? mobilePx : px)
+      const lead = leadFor(exp, px, lineHeight, tight)
       out.push({
         exp,
         name: stepName(exp),
@@ -344,12 +422,14 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         role: isHeading ? 'heading' : 'body',
         weight: isHeading ? headingW : bodyW,
         track: isHeading ? headingTrack : bodyTrack,
-        lineHeight: +(previewPx * lineHeight).toFixed(1),
+        lead,
+        lineHeight: +(previewPx * lead).toFixed(1),
       })
     }
     return out
-  }, [base, ratio, mobileBase, mobileRatio, fluid, previewVw, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight])
-  const previewIsFitted = typePreviewNeedsFitting(steps)
+  }, [base, ratio, mobileBase, mobileRatio, fluid, previewVw, up, down, rounding, headingW, bodyW, headingTrack, bodyTrack, lineHeight, tight])
+  // The ladder draws each step at the previewed width, so that is the size to test.
+  const previewIsFitted = typePreviewNeedsFitting(steps.map(s => ({ px: s.previewPx })))
 
   // Persist from the handlers rather than an effect: an effect that writes on
   // every slider tick both fights the context's own debounce and trips the
@@ -392,7 +472,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
 
   const reset = () => {
     setBase(DEFAULTS.base)
-    setRatioId('1.25')
+    setRatioId(String(DEFAULTS.ratio))
     setCustomRatio(DEFAULTS.custom)
     setUp(DEFAULTS.up)
     setDown(DEFAULTS.down)
@@ -408,11 +488,16 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       headingSpacing: DEFAULTS.headingTrack,
       bodySpacing: DEFAULTS.bodyTrack,
     })
-    toast?.('Scale reset to a 16px major third')
+    setLitStep('')
+    setTight(true)
+    toast?.('Scale reset to a 15px golden ratio')
   }
 
-  const headingStack = headingFont ? fontStack(headingFont) : 'var(--font)'
-  const bodyStack = bodyFont ? fontStack(bodyFont) : 'var(--font)'
+  // While the catalogue is still loading the chosen family is already known by
+  // name, so the first paint names it instead of the site face.
+  const pendingStack = (name, seed) => (status === 'loading' ? fontStack({ family: name, category: seed?.category }) : 'var(--font)')
+  const headingStack = headingFont ? fontStack(headingFont) : pendingStack(headingName, seedHeading)
+  const bodyStack = bodyFont ? fontStack(bodyFont) : pendingStack(bodyName, seedBody)
 
   const importUrl = useMemo(() => {
     const families = []
@@ -447,6 +532,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ...lines,
       '',
       `  --leading: ${trim(lineHeight, 3)};`,
+      ...(tight ? steps.filter(s => s.exp > 0).map(s => `  --text-${s.name}--line-height: ${trim(s.lead, 3)};`) : []),
       `  --tracking-heading: ${trim(headingTrack, 3)}em;`,
       `  --tracking-body: ${trim(bodyTrack, 3)}em;`,
       headingFont ? `  --font-heading: ${headingStack};` : '',
@@ -457,7 +543,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ...desktopBlock,
     ]
     return out.filter(l => l !== '').join('\n')
-  }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack, headingW, bodyW, importUrl])
+  }, [steps, tight, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack, headingW, bodyW, importUrl])
 
   // Tailwind v4 reads its theme from CSS: each --text-<name> makes a text-<name>
   // utility, and --text-<name>--line-height sets its leading. The clamp is a valid value there.
@@ -465,13 +551,13 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     const out = ['@theme {']
     steps.forEach(s => {
       out.push(`  --text-${s.name}: ${fluid ? s.css : `${trim(s.rem)}rem`};`)
-      out.push(`  --text-${s.name}--line-height: ${trim(lineHeight, 3)};`)
+      out.push(`  --text-${s.name}--line-height: ${trim(s.lead, 3)};`)
     })
     if (headingFont) out.push(`  --font-heading: ${headingStack};`)
     if (bodyFont) out.push(`  --font-body: ${bodyStack};`)
     out.push('}')
     return out.join('\n')
-  }, [steps, fluid, lineHeight, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, fluid, headingFont, bodyFont, headingStack, bodyStack])
 
   // The v3 config. Tailwind v4 loads it only through @config in the stylesheet.
   const tailwindExport = useMemo(() => {
@@ -479,7 +565,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     // is valid and is how fluid type is done there, so the theme carries the
     // same behaviour the CSS export does rather than a desktop-only snapshot.
     const sizes = steps
-      .map(s => `        '${s.name}': ['${fluid ? s.css : `${trim(s.rem)}rem`}', { lineHeight: '${trim(lineHeight, 3)}' }],`)
+      .map(s => `        '${s.name}': ['${fluid ? s.css : `${trim(s.rem)}rem`}', { lineHeight: '${trim(s.lead, 3)}' }],`)
       .join('\n')
     return [
       'module.exports = {',
@@ -496,7 +582,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       '  },',
       '}',
     ].filter(l => l !== '').join('\n')
-  }, [steps, fluid, lineHeight, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, fluid, headingFont, bodyFont, headingStack, bodyStack])
 
   const scssExport = useMemo(() => {
     const lines = steps.map(s => (fluid
@@ -506,19 +592,23 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       ...lines,
       '',
       `$leading: ${trim(lineHeight, 3)};`,
+      ...(tight ? steps.filter(s => s.exp > 0).map(s => `$text-${s.name}-line-height: ${trim(s.lead, 3)};`) : []),
       `$tracking-heading: ${trim(headingTrack, 3)}em;`,
       `$tracking-body: ${trim(bodyTrack, 3)}em;`,
       headingFont ? `$font-heading: (${headingStack});` : '',
       bodyFont ? `$font-body: (${bodyStack});` : '',
     ].filter(l => l !== '').join('\n')
-  }, [steps, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
+  }, [steps, tight, fluid, lineHeight, headingTrack, bodyTrack, headingFont, bodyFont, headingStack, bodyStack])
 
   const currentExport = format === 'tailwind' ? tailwindExport : format === 'tailwind4' ? tailwind4Export : format === 'scss' ? scssExport : cssExport
-  // Both Copy buttons (the dock's and the Code drawer's) export through here.
+  // Copy CSS exports through here.
   const exportCode = () => onExport?.(currentExport)
 
-  const openInFontPair = () => {
-    const staged = setPairDraft({
+  // The switcher's Font Pair link opens Font Pair on these families: the pair is
+  // staged as the link is pressed, and the link's own navigation carries on.
+  const stagePair = (event) => {
+    if (!event.target.closest?.('a[href="/create/font-pair"]')) return
+    setPairDraft({
       heading: headingFont
         ? { family: headingFont.family, weight: headingW, category: headingFont.category }
         : null,
@@ -527,11 +617,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
         : null,
       scale: { base, ratio },
     })
-    if (!staged) { toast?.('Choose a family first — the pairing tool needs somewhere to start.'); return }
-    navigate('/create/font-pair')
   }
 
-  const VIEWS = [['scale', 'Scale'], ['page', 'Page'], ['code', 'Code']]
+  const VIEWS = [['scale', 'Scale'], ['page', 'Page']]
   const handleViewKeyDown = (event) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
@@ -547,11 +635,30 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // chosen width doesn't fit and lines wrap sooner.
   useEffect(() => {
     const el = pageColRef.current
-    if ((view !== 'page' && !split) || !el || typeof ResizeObserver === 'undefined') return undefined
+    const pageShown = split || phone || view === 'page'
+    if (!pageShown || !el || typeof ResizeObserver === 'undefined') return undefined
     const ro = new ResizeObserver(() => setColW(el.clientWidth))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [view, split])
+  }, [view, split, phone])
+
+  // The dock chip needs to know when the page has left the screen. The page
+  // counts as off once under half of it sits between the toolbar and the dock.
+  useEffect(() => {
+    const el = pageColRef.current?.querySelector('.tsc-kerb')
+    if (!stackedView || !el || typeof IntersectionObserver === 'undefined') return undefined
+    const band = readingBand()
+    const io = new IntersectionObserver(entries => {
+      const last = entries[entries.length - 1]
+      setPageOff(last.intersectionRatio < 0.5)
+      setPageDir(last.boundingClientRect.top > 0 ? 'down' : 'up')
+    }, {
+      threshold: [0, 0.25, 0.5, 0.75, 1],
+      rootMargin: `-${Math.round(band.top)}px 0px -${Math.round(window.innerHeight - band.bottom)}px 0px`,
+    })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [stackedView, status])
 
   // Measure the work column before it paints, then follow it as it resizes.
   useLayoutEffect(() => {
@@ -569,53 +676,43 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     return () => { ro.disconnect(); window.removeEventListener('resize', read) }
   }, [workEl])
 
-  // Closing returns focus to the Code pill that opened the drawer.
-  const closeCode = () => {
-    setCodeOpen(false)
-    codeBtnRef.current?.focus({ preventScroll: true })
+
+  // The settings sheet is non-modal. Opening it brings the sample screen up under
+  // the toolbar, so it stays in view above the sheet while the controls change it.
+  const openSheet = (opener) => {
+    sheetOpenerRef.current = opener
+    setSheetTab('settings')
+    setSheetOpen(true)
+    requestAnimationFrame(() => {
+      const card = pageColRef.current?.querySelector('.tsc-kerb') || ladderRef.current
+      card?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' })
+    })
   }
-  // The drawer takes focus when it opens and closes on Escape or a press outside
-  // it. It is non-modal: Tab leaves it, and a press in the settings panel beside
-  // it is left alone so the code can be watched as the controls change. The page
-  // behind is not scroll-locked: the drawer covers only the work column, and
-  // locking would drop the scrollbar and shift the ladder under it.
+  // The Code drawer closes on Escape (a popup inside the panel keeps its own Escape)
+  // and when the page narrows to a phone, where Code is a tab in the sheet.
   useEffect(() => {
-    if (!drawerOpen) return undefined
-    const drawer = drawerRef.current
-    drawer?.focus({ preventScroll: true })
-    // The panel, and the popups its controls open (a list, a typed value), count as inside.
-    const beside = '.tsc-config, [role="listbox"], .snapv-input'
+    if (!codeOpen) return undefined
     const onKey = event => {
       if (event.key !== 'Escape' || event.defaultPrevented) return
-      if (event.target instanceof Element && event.target.closest('[role="listbox"], .snapv-input')) return
+      if (event.target instanceof Element && event.target.closest('[aria-modal="true"], [role="listbox"], .snapv-input')) return
       setCodeOpen(false)
       codeBtnRef.current?.focus({ preventScroll: true })
     }
-    const onPress = event => {
-      const t = event.target
-      if (!(t instanceof Element) || drawer?.contains(t) || codeBtnRef.current?.contains(t) || t.closest(beside)) return
-      setCodeOpen(false)
-    }
     document.addEventListener('keydown', onKey)
-    document.addEventListener('pointerdown', onPress)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.removeEventListener('pointerdown', onPress)
-    }
-  }, [drawerOpen])
-
-  // The settings sheet is non-modal. Opening it brings the ladder up under the
-  // toolbar, so the steps stay in view above it.
-  const openSheet = () => {
-    setSheetOpen(true)
-    requestAnimationFrame(() => ladderRef.current?.scrollIntoView({ block: 'start' }))
-  }
+    return () => document.removeEventListener('keydown', onKey)
+  }, [codeOpen])
+  const drawerOpen = codeOpen && !phone
   // Closing hides the sheet, so focus goes back to the row that opened it
   // rather than falling to <body>.
   const closeSheet = () => {
     setSheetOpen(false)
-    sheetRowRef.current?.focus({ preventScroll: true })
+    sheetOpenerRef.current?.focus({ preventScroll: true })
   }
+  // On a phone the open sheet holds the page still: the sheet scrolls on its own.
+  useEffect(() => {
+    if (!sheetOpen || !phone) return undefined
+    return lockScroll()
+  }, [sheetOpen, phone])
   // Escape closes the open sheet. Escape that belongs to a popup inside it (a
   // list, the font dialog, the Base value field) is left to that popup.
   useEffect(() => {
@@ -624,7 +721,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
       if (event.key !== 'Escape' || event.defaultPrevented) return
       if (event.target instanceof Element && event.target.closest('[aria-modal="true"], [role="listbox"], .snapv-input')) return
       setSheetOpen(false)
-      sheetRowRef.current?.focus({ preventScroll: true })
+      sheetOpenerRef.current?.focus({ preventScroll: true })
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -633,54 +730,145 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const formatLabel = { css: 'CSS', tailwind: 'v3 config', tailwind4: 'v4 theme', scss: 'SCSS' }[format] || 'SCSS'
 
   // Keeping the scale in a project is the one step here that asks for an
-  // account; everything else on the page works signed out. The trigger sits in
-  // the docked bar at the foot of the page, so it stays on screen while the
-  // page scrolls.
-  const save = useSaveTypeSystemToolbar({
+  // account; everything else on the page works signed out. From 768 the trigger
+  // sits in the sticky toolbar, so it stays on screen while the page scrolls; on
+  // a phone it is the middle of the dock.
+  const saveOptions = {
     gate: 'type-save-type-scale',
     label: 'this type scale',
     summary: `${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}. Kept with the project’s palette and tokens.`,
     toast,
-  })
+  }
+  const { triggerRef: saveTriggerRef, popRef: savePopRef, ...save } = useSaveTypeSystemToolbar(saveOptions)
 
-  // The toolbar's actions exist in every state so the row keeps its shape
-  // while the catalogue loads.
+  // The open project's name, or empty for the sample (the chip then reads "Kerbside · Sample").
+  const projectName = ((projects || []).find(p => p.id === design?.source?.projectId)?.name || '').trim()
+  const bar = typeToolsBarItems({
+    current: 'scale',
+    heading: headingFont ? { family: headingFont.family, weight: headingW } : null,
+    body: bodyFont ? { family: bodyFont.family, weight: bodyW } : null,
+    scale: ratio,
+    headingStack,
+    bodyStack,
+    projectName,
+    ground,
+    onGround: setGround,
+  }).map(it => {
+    // The chip leaves the row first; in More it is the project row.
+    if (it.id === 'ttb-chip') {
+      return {
+        ...it,
+        menu: () => (
+          <p className="tl-menu-row tsc-menu-project">
+            <ToolIcon name="bicycle" size={16} />
+            <span>{projectName || 'Kerbside'}{!projectName && <span className="tsc-menu-sample"> &middot; Sample</span>}</span>
+          </p>
+        ),
+      }
+    }
+    // The switcher's Font Pair link carries these families across.
+    if (it.id === 'ttb-switcher') {
+      const draw = it.render
+      return { ...it, render: () => <span className="tsc-switch" onClickCapture={stagePair}>{draw()}</span> }
+    }
+    return it
+  })
+  const groundItem = bar.find(it => it.id === 'ttb-ground')
+  const resetItem = {
+    id: 'reset',
+    priority: 3,
+    render: () => (
+      <ToolButton icon="arrow-counter-clockwise" collapse className="tsc-reset" onClick={reset}>Reset scale</ToolButton>
+    ),
+    menu: { label: 'Reset scale', icon: 'arrow-counter-clockwise', onSelect: reset },
+  }
+  const importItem = {
+    id: 'import',
+    priority: 2,
+    render: () => (
+      <ToolButton className="tsc-copy-all" onClick={() => importUrl && onCopy?.(importUrl)} disabled={!importUrl}>Copy font import</ToolButton>
+    ),
+    menu: { label: 'Copy font import', icon: 'copy', onSelect: () => importUrl && onCopy?.(importUrl), disabled: !importUrl },
+  }
   const items = [
-    {
-      id: 'reset',
-      priority: 1,
-      render: () => (
-        <ToolButton icon="arrow-counter-clockwise" collapse className="tsc-reset" onClick={reset}>Reset scale</ToolButton>
-      ),
-      menu: { label: 'Reset scale', icon: 'arrow-counter-clockwise', onSelect: reset },
-    },
-    {
-      id: 'pair',
-      priority: 0,
-      render: () => (
-        <ToolButton icon="caret-right" className="tsc-handoff" onClick={openInFontPair} aria-label="Find a pairing for these families">
-          Find a pairing
-        </ToolButton>
-      ),
-      menu: { label: 'Find a pairing for these families', icon: 'caret-right', onSelect: openInFontPair },
-    },
-    { id: 'div', divider: true, align: 'end' },
-    {
-      id: 'import',
-      priority: 2,
-      render: () => (
-        <ToolButton className="tsc-copy-all" onClick={() => importUrl && onCopy?.(importUrl)} disabled={!importUrl}>Copy font import</ToolButton>
-      ),
-      menu: { label: 'Copy font import', icon: 'copy', onSelect: () => importUrl && onCopy?.(importUrl), disabled: !importUrl },
-    },
+    ...bar.filter(it => it !== groundItem),
+    // On a phone everything past the switcher is in More, in the board's order,
+    // and the ground is a section of the settings sheet.
+    ...(phone
+      ? [importItem, { ...resetItem, inline: false }]
+      : [resetItem, { id: 'div', divider: true, align: 'end' }, groundItem, importItem]),
   ]
   const primary = (
-    <ToolButton variant="accent" icon="copy" iconSize={14} className="tsc-copy-primary" onClick={exportCode}>
+    <ToolButton variant="accent" className="tsc-copy-primary" onClick={exportCode}>
       {`Copy ${formatLabel}`}
+      <span className="tsc-copy-disc" aria-hidden="true"><ToolIcon name="copy" size={16} /></span>
     </ToolButton>
   )
+  // The phone dock: the scale trigger that opens the settings sheet, then Save, then Copy.
+  const ratioRec = RATIOS.find(r => r.id === ratioId)
+  const ratioShort = ratioRec?.label?.replace(/ ratio$/i, '') || 'Custom'
+  const dockRatio = (
+    <button
+      type="button"
+      ref={dockRatioRef}
+      className="tsc-dock-ratio"
+      aria-haspopup="dialog"
+      aria-expanded={sheetOpen}
+      aria-controls="tsc-sheet"
+      aria-label={`${ratioRec?.label || 'Custom ratio'} ${ratio}. Scale, families and fine tuning`}
+      onClick={() => (sheetOpen ? closeSheet() : openSheet(dockRatioRef.current))}
+    >
+      <b>{ratioShort}</b>
+      <span className="tsc-dock-ratio-v">{ratio}</span>
+      <ToolIcon name="caret-down" size={14} />
+    </button>
+  )
+  // The dock chip: while a step is lit and the page is off screen, it says how
+  // many lines of the page the step sets, and a tap brings the page back.
+  const showPage = () => {
+    pageColRef.current?.querySelector('.tsc-kerb')?.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' })
+  }
+  const pageHidden = () => {
+    const el = pageColRef.current?.querySelector('.tsc-kerb')
+    if (!el) return false
+    const rect = el.getBoundingClientRect()
+    const band = readingBand()
+    return Math.min(rect.bottom, band.bottom) - Math.max(rect.top, band.top) < rect.height * 0.5
+  }
+  // Pressing a step lights it (a second press clears it). The first lit step the
+  // page uses brings an off-screen page into view; after that the chip does it.
+  const lightStep = (name) => {
+    const on = litStep !== name
+    setLitStep(on ? name : '')
+    if (!stackedView || !on) return
+    const first = !litSeen && litLineCount(steps, up, !!user, name) > 0 && pageHidden()
+    if (first) {
+      setLitSeen(true)
+      showPage()
+    } else if (pageOff && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+      // At the very end of the page the chip is about to cover the last lines; the page gains 40px of room below them.
+      requestAnimationFrame(() => window.scrollBy({ top: 40, behavior: reducedMotion ? 'auto' : 'smooth' }))
+    }
+  }
+  const litUses = litStep ? litLineCount(steps, up, !!user, litStep) : 0
+  const litPlural = `${litUses} ${litUses === 1 ? 'line' : 'lines'}`
+  const chipRoom = stackedView && !!litStep && !sheetOpen
+  const litChip = chipRoom && pageOff && (litUses > 0 ? (
+    <button
+      type="button"
+      className="tsc-chip"
+      aria-label={`${litStep} is lit on ${litPlural} of the sample screen. Scroll to it`}
+      onClick={showPage}
+    >
+      <span className="tsc-chip-n">{litStep}</span>
+      <span>lit on {litPlural}</span>
+      <span className="tsc-chip-ico" data-down={pageDir === 'down'}><ToolIcon name="arrow-up" size={16} /></span>
+    </button>
+  ) : (
+    <p className="tsc-chip tsc-chip--quiet" role="status"><span className="tsc-chip-n">{litStep}</span><span>is not used on the page</span></p>
+  ))
   const layout = (body) => (
-    <ToolLayout className="tsc-page" title="Type Scale" titleId="tsc-title" items={items} primary={phone ? undefined : primary}>
+    <ToolLayout className="tsc-page" data-chip={String(chipRoom)} back={false} title="Type Scale" titleId="tsc-title" showTitle={false} feedback={false} items={items} primary={phone ? <>{litChip}{dockRatio}<div className="tsc-dock-save"><SaveTypeSystem {...saveOptions} /></div>{primary}</> : primary}>
       {body}
     </ToolLayout>
   )
@@ -701,17 +889,41 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
     '--tsc-heading-ls': `${headingTrack}em`,
     '--tsc-body-ls': `${bodyTrack}em`,
   }
-  const activeWidth = WIDTHS.find(w => w.id === width) || WIDTHS[0]
+  const activeWidth = WIDTHS.find(w => w.id === width) || DESKTOP
+  const codeTab = stackedView && sheetTab === 'code'
+  const stepsLine = `${steps.length} step${steps.length === 1 ? '' : 's'}, ${steps[steps.length - 1].px}px to ${steps[0].px}px`
+  // The step pressed in the ladder, when the page never sets it.
+  const litUnused = litStep && !usedStepNames(steps, up, !!user).has(litStep)
+  // On a phone the screen keeps the phone's width whatever is chosen, so the note
+  // only speaks when another width is.
+  const widthNote = stackedView
+    ? (width !== 'mobile' ? `Sizes are shown as they fall at ${activeWidth.px}px wide. The screen keeps this phone’s width.` : '')
+    : `Sizes as on a ${activeWidth.px}px screen.${colW > 0 && colW < activeWidth.px - 1 ? ' Lines wrap sooner here.' : ''}`
   const ratioHint = RATIOS.find(r => r.id === ratioId)?.hint
+  // The chevrons walk the named ratios; each row of the list says what the top step would be.
+  const namedRatios = RATIOS.filter(r => r.value)
+  const ratioAt = namedRatios.findIndex(r => r.id === ratioId)
+  const ratioOptions = RATIOS.map(r => ({
+    value: r.id,
+    label: `${r.label}${r.value ? ` ${r.value}` : ''}`,
+    note: r.value ? `${trim(stepPx(base, r.value, up, rounding))}px top step` : undefined,
+  }))
 
-  const weightButtons = (font, value, onPick, label) => (
-    <div className="tsc-weights tl-pills" role="group" aria-label={label}>
+  // One menu per family. Only the weights the family has are listed.
+  const weightSelect = (font, value, onPick, label) => (
+    <div
+      id={label === 'Heading weight' ? 'tsc-hweight' : 'tsc-bweight'}
+      className="tsc-weights"
+      role="group"
+      aria-label={label}
+    >
       {font.variants.map(w => (
         <button
           key={w}
           type="button"
-          className={value === w ? 'tsc-weight tl-pill tl-pill--mono is-on' : 'tsc-weight tl-pill tl-pill--mono'}
-          aria-pressed={value === w}
+          className="tsc-wt"
+          aria-pressed={w === value}
+          aria-label={weightLabel(w)}
           onClick={() => onPick(w)}
         >
           {w}
@@ -723,84 +935,101 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   // The three pieces of the work column. The split shows the ladder and the
   // page together; below it the Scale / Page / Code switch shows one at a time.
   const ladderView = (
-    <div className="tsc-ladder" ref={ladderRef} data-ladder="">
+    <div className="tsc-ladder" ref={ladderRef} data-ladder="" data-ground={ground}>
       <h2 className="sr-only">Read the scale</h2>
+      {stackedView && <p className="tsc-steps-line" aria-live="polite">{stepsLine}</p>}
+      <p className="tsc-use" role="status">{stackedView ? ladderNote(steps, up, !!user, '') : ladderNote(steps, up, !!user, litStep)}</p>
       {previewIsFitted && (
         <p className="tsc-fit-note" role="status">
-          Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
+          {stackedView
+            ? `Preview sizes are fitted between ${TYPE_PREVIEW_MIN_PX}px and ${TYPE_PREVIEW_MAX_PX}px to keep the preview readable. The code keeps the true values.`
+            : `Preview sizes are fitted between ${TYPE_PREVIEW_MIN_PX}px and ${TYPE_PREVIEW_MAX_PX}px to keep the preview usable. Labels and exports retain the exact scale.`}
         </p>
       )}
-      {steps.map(s => (
-        <button
-          key={s.name}
-          type="button"
-          className="tsc-row"
-          data-step={s.name}
-          data-px={s.px}
-          onClick={() => {
-            onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
-            toast?.(`Copied --text-${s.name}`)
-          }}
-          aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
-        >
-          <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
-          <span
-            className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-            ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.px)}px` })}
+      {steps.map((s, i) => {
+        const heading = s.role === 'heading'
+        const loading = heading && headingLoading
+        const fitted = fitTypePreviewSize(s.previewPx)
+        // A step too large to hold the whole line shows its first word, sized to
+        // fit the row's own width.
+        const first = !loading && fitted >= 49
+        const text = first ? specimen.split(' ')[0] : specimen
+        // A phone prints the scale's own size, the one the code keeps; the
+        // preview beside it may be fitted or shown at the narrower width.
+        const num = stackedView ? `${trim(s.px, 2)}px` : `${trim(s.previewPx, 2)} / ${trim(s.lead, 3)}`
+        // The first heading row gives way to the error when the face failed.
+        if (heading && headingFailed && i === steps.findIndex(x => x.role === 'heading')) {
+          return (
+            <div key={s.name} className="tsc-row tsc-row--static" role="alert" data-step={s.name} data-px={s.px}>
+              <span className="tsc-row-l">
+                <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
+                <span className="tsc-row-num">{num}</span>
+              </span>
+              <span className="tsc-row-text tsc-row-err">
+                <span>{headingName} didn’t load.</span>
+                <button type="button" className="tsc-retry" onClick={retryFace}>Retry</button>
+              </span>
+            </div>
+          )
+        }
+        const cls = ['tsc-row-text', heading && 'tsc-row-text--heading', loading && 'is-loading', first && 'is-first'].filter(Boolean).join(' ')
+        return (
+          <button
+            key={s.name}
+            type="button"
+            className="tsc-row"
+            data-step={s.name}
+            data-px={s.px}
+            aria-pressed={litStep === s.name}
+            onClick={() => {
+              lightStep(s.name)
+              onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(s.lead, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)
+              toast?.(`Copied --text-${s.name}`)
+              setCopiedStep(s.name)
+              clearTimeout(copiedTimer.current)
+              copiedTimer.current = setTimeout(() => setCopiedStep(''), 1600)
+            }}
+            aria-label={`Copy the ${s.name} step and light it on the page. ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
           >
-            {specimen}
-          </span>
-          <span className="tsc-row-num">{s.px}px<span className="tsc-row-rem"> · {trim(+(s.px / 16).toFixed(4))}rem</span></span>
+            <span className="tsc-row-l">
+              <span className="tsc-row-name"><span className="tsc-row-prefix">--text-</span>{s.name}</span>
+              <span className="tsc-row-num">{num}</span>
+              <span className={copiedStep === s.name ? 'tsc-row-cp is-did' : 'tsc-row-cp'} aria-hidden="true"><span className="tsc-cp-a">Copy</span><span className="tsc-cp-b">Copied</span></span>
+            </span>
+            <span
+              className={cls}
+              ref={varsRef({ '--tsc-fs': `${fitted}px`, '--tsc-lead': trim(s.lead, 3) })}
+            >
+              {loading ? `Loading ${headingName}` : text}
+              {s.previewPx < 12 && !loading && <span className="tsc-row-cap">Under 12px: captions only</span>}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  // One width menu, shared by the Scale and Page views. In the split it sits in
+  // the Page half's bar; below the split it joins the Scale / Page / Code switch.
+  const widthSegment = (
+    <SlidePills id="tsc-width" className="tsc-width-seg tl-pills" role="group" aria-label="Preview width" value={width}>
+      {WIDTHS.map(w => (
+        <button
+          key={w.id}
+          type="button"
+          className={width === w.id ? 'tsc-width-btn tl-pill is-on' : 'tsc-width-btn tl-pill'}
+          aria-pressed={width === w.id}
+          onClick={() => setWidth(w.id)}
+        >
+          {w.label}<span className="tsc-width-px">{w.px}</span>
         </button>
       ))}
-    </div>
+    </SlidePills>
   )
 
-  const pageView = (
-    <div className="tsc-page-view">
-      <div className="tsc-page-bar">
-        <p className="tsc-page-label">Page set on this scale</p>
-        <MenuSelect
-          label="Preview width"
-          id="tsc-width"
-          className="tsc-select tsc-width-select"
-          value={width}
-          onChange={setWidth}
-        >
-          {WIDTHS.map(w => <option key={w.id} value={w.id}>{`${w.label} · ${w.px}px`}</option>)}
-        </MenuSelect>
-      </div>
-      {colW > 0 && colW < activeWidth.px - 1 && (
-        <p className="tsc-width-note" role="status">
-          Sizes as on a {activeWidth.px}px screen. Lines wrap sooner here.
-        </p>
-      )}
-      <div className="tsc-page-col" ref={pageColRef}>
-        <article className="tsc-article" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
-          <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.previewPx || steps[0].previewPx, { max: 72 })}px` })}>
-            {sample.trim() || 'A page set on this scale'}
-          </h3>
-          <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.previewPx || base, { max: 28 })}px` })}>
-            Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
-            hand-picked, so the rhythm holds when the page grows.
-          </p>
-          <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.previewPx || base, { max: 48 })}px` })}>
-            Where the jumps matter
-          </h4>
-          <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 0)?.previewPx || base, { max: 24 })}px` })}>
-            A ratio that looks elegant in isolation can flatten a page: if the step between
-            body copy and a subheading is too small, the hierarchy stops doing its job.
-          </p>
-          <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.previewPx || base, { max: 18 })}px` })}>
-            Captions and helper text live down here — check they are still comfortably legible.
-          </p>
-        </article>
-      </div>
-    </div>
-  )
-
+  // Declared before pageView, which shows them as the Code half at 1440.
   const formatPills = (
-    <div className="tsc-fmt tl-pills" role="group" aria-label="Export format">
+    <SlidePills className="tsc-fmt tl-pills" role="group" aria-label="Export format" value={format}>
       {[['css', 'CSS variables'], ['tailwind4', 'Tailwind v4'], ['tailwind', 'Tailwind v3'], ['scss', 'SCSS']].map(([id, label]) => (
         <button
           key={id}
@@ -812,137 +1041,225 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           {label}
         </button>
       ))}
-    </div>
+    </SlidePills>
   )
   const exportPre = (
     <pre id="tsc-export" className="tl-code tsc-export" tabIndex={0} aria-label={`Type scale as ${formatLabel}`}><code>{currentExport}</code></pre>
   )
+  // The Code view's own copy, named for the format it copies (the tool bar's says CSS).
+  const exportCopy = (
+    <ToolButton className="tsc-export-copy" onClick={exportCode}>
+      <ToolIcon name="copy" size={15} />
+      Copy as {{ css: 'CSS', tailwind: 'Tailwind v3', tailwind4: 'Tailwind v4', scss: 'SCSS' }[format] || 'CSS'}
+    </ToolButton>
+  )
+
+
+  const pageView = (
+    <div className="tsc-page-view">
+      {stackedView ? (
+        <h2 className="sr-only">{user ? 'A sample screen set on this scale' : 'Kerbside’s tracking screen, set on this scale'}</h2>
+      ) : !split && <div className="tsc-page-bar"><p className="tsc-page-label">Page set on this scale</p></div>}
+      <div className="tsc-page-col" ref={pageColRef}>
+        <div className="tsc-kerb" data-width={width} ref={varsRef({ ...previewVars, '--tsc-w': `${activeWidth.px}px` })}>
+          <KerbsidePage
+            steps={steps}
+            up={up}
+            mine={!!user}
+            text={sample.trim()}
+            lit={litStep}
+            headingName={headingName}
+            headingLoading={headingLoading}
+            headingFailed={headingFailed}
+            onRetry={retryFace}
+          />
+        </div>
+        {stackedView && !user && <p className="tsc-sample-line">Kerbside &middot; sample screen</p>}
+        {stackedView && litUnused && <p className="tsc-lit-note" role="status">Nothing on this page uses {litStep}.</p>}
+      </div>
+    </div>
+  )
+
+  // The Base and Ratio strip. From 768 it is the first section of the panel; on a phone it
+  // is the top of the settings sheet.
+  const scaleSection = (
+    <ToolSection className="tsc-sec-scale">
+      <div className="tsc-scale-bar" role="group" aria-label="The scale">
+        <div className="tsc-scale-term tsc-scale-term--base">
+          <label className="tsc-k" htmlFor="tsc-base">Base size</label>
+          <SnapSlider
+            id="tsc-base"
+            className="tsc-range"
+            min={10}
+            max={28}
+            value={base}
+            defaultValue={DEFAULTS.base}
+            snaps={[14, 16, 18, 20]}
+            unit=" px"
+            inputMin={8}
+            inputMax={40}
+            onChange={changeBase}
+            ariaLabel="Base font size in pixels"
+          />
+        </div>
+        <div className="tsc-scale-term tsc-scale-term--ratio">
+          <label className="tsc-k" htmlFor="tsc-ratio">Ratio</label>
+          <div className="tsc-ratio-row">
+            <button
+              type="button"
+              className="tsc-ratio-step"
+              aria-label="Previous ratio"
+              disabled={ratioAt <= 0}
+              onClick={() => changeRatioId(namedRatios[ratioAt - 1].id)}
+            >
+              <ToolIcon name="arrow-left" size={16} />
+            </button>
+            <MenuSelect label="Scale ratio"
+              id="tsc-ratio"
+              className="tsc-select tsc-scale-select"
+              value={ratioId}
+              options={ratioOptions}
+              triggerLabel={phone ? <span className="tsc-ratio-t"><b>{ratioShort}</b><span className="tsc-ratio-v">{ratio}</span></span> : undefined}
+              onChange={nextValue => changeRatioId(nextValue)}
+            />
+            <button
+              type="button"
+              className="tsc-ratio-step"
+              aria-label="Next ratio"
+              disabled={ratioAt < 0 || ratioAt >= namedRatios.length - 1}
+              onClick={() => changeRatioId(namedRatios[ratioAt + 1].id)}
+            >
+              <ToolIcon name="arrow-right" size={16} />
+            </button>
+          </div>
+        </div>
+        {ratioId === 'custom' && (
+          <div className="tsc-scale-term tsc-scale-custom">
+            <label className="tsc-k" htmlFor="tsc-custom">Custom ratio</label>
+            <SnapSlider
+              id="tsc-custom"
+              className="tsc-range"
+              min={1.05}
+              max={2}
+              step={0.001}
+              decimals={3}
+              value={customRatio}
+              defaultValue={DEFAULTS.custom}
+              snaps={[1.1, 1.125, 1.2, 1.25, 1.333, 1.5, 1.618, 2]}
+              snapRadius={0.012}
+              inputMin={1.01}
+              inputMax={3}
+              onChange={changeCustomRatio}
+              ariaLabel="Custom scale ratio"
+            />
+          </div>
+        )}
+      </div>
+      {(!phone || ratioHint) && (
+        <p className="tsc-scale-out" aria-live="polite">
+          {!phone && <span className="tsc-scale-range">{stepsLine}</span>}
+          {ratioHint && <span className="tsc-scale-hint">{ratioHint}</span>}
+        </p>
+      )}
+    </ToolSection>
+  )
 
   return layout(
     <>
-      <FontCatalogNotice
-        online={online}
-        degraded={degraded}
-        onRetry={retry}
-        retrying={retrying}
-        count={catalog.length}
-      />
-
       <ToolGrid className="tsc-grid">
         {/* The panel is first in the source, so reading order, Tab order and
             what's on screen agree below 1024: Base and Ratio, then the
             families, then the ladder. From 1024 the grid puts it in the right
-            column. Phone: the Base and Ratio strip above the ladder, and
-            everything else in a non-modal sheet. */}
+            column. Phone: all of it, and the Code tab, is in the non-modal
+            sheet the dock opens. */}
         <ToolPanel label="Type Scale controls" className="tsc-panel tsc-config">
-          <ToolSection className="tsc-sec-scale">
-            <div className="tsc-scale-bar" role="group" aria-label="The scale">
-              <div className="tsc-scale-term tsc-scale-term--base">
-                <label className="tsc-k" htmlFor="tsc-base">Base size</label>
-                <SnapSlider
-                  id="tsc-base"
-                  className="tsc-range"
-                  min={10}
-                  max={28}
-                  value={base}
-                  defaultValue={DEFAULTS.base}
-                  snaps={[14, 16, 18, 20]}
-                  unit="px"
-                  inputMin={8}
-                  inputMax={40}
-                  onChange={changeBase}
-                  ariaLabel="Base font size in pixels"
-                />
-              </div>
-              <div className="tsc-scale-term tsc-scale-term--ratio">
-                <label className="tsc-k" htmlFor="tsc-ratio">Ratio</label>
-                <MenuSelect label="Scale ratio"
-                  id="tsc-ratio"
-                  className="tsc-select tsc-scale-select"
-                  value={ratioId}
-                  onChange={nextValue => changeRatioId(nextValue)}
-                >
-                  {RATIOS.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.label}{r.value ? ` ${r.value}` : ''}
-                    </option>
-                  ))}
-                </MenuSelect>
-              </div>
-              {ratioId === 'custom' && (
-                <div className="tsc-scale-term tsc-scale-custom">
-                  <label className="tsc-k" htmlFor="tsc-custom">Custom ratio</label>
-                  <SnapSlider
-                    id="tsc-custom"
-                    className="tsc-range"
-                    min={1.05}
-                    max={2}
-                    step={0.001}
-                    decimals={3}
-                    value={customRatio}
-                    defaultValue={DEFAULTS.custom}
-                    snaps={[1.1, 1.125, 1.2, 1.25, 1.333, 1.5, 1.618, 2]}
-                    snapRadius={0.012}
-                    inputMin={1.01}
-                    inputMax={3}
-                    onChange={changeCustomRatio}
-                    ariaLabel="Custom scale ratio"
-                  />
-                </div>
-              )}
-            </div>
-            <p className="tsc-scale-out" aria-live="polite">
-              <span className="tsc-scale-range">
-                {steps.length} step{steps.length === 1 ? '' : 's'}, {steps[steps.length - 1].px}px to {steps[0].px}px
-              </span>
-              {ratioHint && <span className="tsc-scale-hint">{ratioHint}</span>}
-            </p>
-          </ToolSection>
+          {!phone && scaleSection}
 
-          <button
-            type="button"
-            ref={sheetRowRef}
-            className="tsc-sheet-row"
-            aria-expanded={sheetOpen}
-            aria-controls="tsc-sheet"
-            onClick={() => (sheetOpen ? closeSheet() : openSheet())}
-          >
-            Families, preview text and fine tuning
-            <ToolIcon name="caret-right" size={13} />
-          </button>
-
-          <div id="tsc-sheet" className="tsc-sheet" role="group" aria-label="Families, preview text and fine tuning" data-open={sheetOpen ? 'true' : 'false'}>
+          <div id="tsc-sheet" className="tsc-sheet" role="group" aria-label="Scale, families, preview text and fine tuning" data-open={sheetOpen ? 'true' : 'false'} data-tab={codeTab ? 'code' : 'settings'}>
             <div className="tsc-sheet-head">
-              <span className="tsc-sheet-title">Families, preview text and fine tuning</span>
+              <h2 className="sr-only">{codeTab ? 'Code' : 'Type settings'}</h2>
+              <SlidePills className="tsc-sheet-tabs tl-pills" role="group" aria-label="Sheet" value={sheetTab}>
+                {[['settings', 'Settings'], ['code', 'Code']].map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={sheetTab === id ? 'tsc-sheet-tab tl-pill is-on' : 'tsc-sheet-tab tl-pill'}
+                    aria-pressed={sheetTab === id}
+                    onClick={() => setSheetTab(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </SlidePills>
               <button type="button" className="tl-btn tl-btn--quiet tsc-sheet-done" onClick={closeSheet}>Done</button>
             </div>
-            <div className="tsc-sheet-body">
-              <ToolSection>
+            {/* A field that takes focus while the keyboard is up scrolls into the room above it. */}
+            <div className="tsc-sheet-body" onFocus={(e) => { if (e.target.matches?.('input, textarea')) e.target.scrollIntoView?.({ block: 'nearest' }) }}>
+              {codeTab && (
+                <div className="tsc-sheet-code">
+                  {formatPills}
+                  {exportPre}
+                </div>
+              )}
+              {/* Kept mounted behind the Code tab, so a field's state and the open
+                  fine-tuning group are still there when Settings comes back. */}
+              <div className="tsc-sheet-set" hidden={codeTab}>
+              {phone && scaleSection}
+              <ToolSection className="tsc-fonts">
+                <FontCatalogNotice
+                  online={online}
+                  degraded={degraded}
+                  onRetry={retry}
+                  retrying={retrying}
+                  count={catalog.length}
+                  compact
+                />
                 <div className="tsc-fams">
                   <div className="tsc-fams-grid">
                     <div className="tsc-fam">
-                      <FontPicker
-                        label="Heading family"
-                        fonts={catalog}
-                        value={headingFont}
-                        onChange={chooseHeading}
-                      />
-                      {headingFont && weightButtons(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
+                      {phone && headingFont ? (
+                        <FamilyRow idBase="tsc-hweight" label="Heading family" intent="heading" fonts={catalog} font={headingFont} weight={headingW} onPickFont={chooseHeading} onWeight={chooseHeadingWeight} />
+                      ) : (
+                        <>
+                          <FontPicker
+                            label="Heading family"
+                            fonts={catalog}
+                            value={headingFont}
+                            onChange={chooseHeading}
+                          />
+                          {headingFont && weightSelect(headingFont, headingW, chooseHeadingWeight, 'Heading weight')}
+                        </>
+                      )}
                     </div>
                     <div className="tsc-fam">
-                      <FontPicker
-                        label="Body family"
-                        fonts={catalog}
-                        value={bodyFont}
-                        onChange={chooseBody}
-                      />
-                      {bodyFont && weightButtons(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+                      {phone && bodyFont ? (
+                        <FamilyRow idBase="tsc-bweight" label="Body family" fonts={catalog} font={bodyFont} weight={bodyW} onPickFont={chooseBody} onWeight={chooseBodyWeight} />
+                      ) : (
+                        <>
+                          <FontPicker
+                            label="Body family"
+                            fonts={catalog}
+                            value={bodyFont}
+                            onChange={chooseBody}
+                          />
+                          {bodyFont && weightSelect(bodyFont, bodyW, chooseBodyWeight, 'Body weight')}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
               </ToolSection>
 
-              <ToolSection>
+              {phone && (
+                <ToolSection className="tsc-ground-sec">
+                  <span className="tsc-k">Specimen ground</span>
+                  <GroundSegment ground={ground} onGround={setGround} className="ttb-seg--full" />
+                </ToolSection>
+              )}
+
+          <ToolSection className="tsc-tuning-sec">
+            <div className="tsc-words-row">
+              <div className="tsc-words-field">
                 <label className="tsc-k" htmlFor="tsc-sample">Preview text</label>
                 <input
                   id="tsc-sample"
@@ -950,13 +1267,14 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   className="tsc-sample-input"
                   value={sample}
                   maxLength={60}
-                  placeholder={defaultSpecimen}
+                  placeholder={PREVIEW_HINT}
                   autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="sentences"
+                  enterKeyHint="done"
                   onChange={e => setSample(e.target.value)}
                 />
-              </ToolSection>
-
-          <ToolSection className="tsc-tuning-sec">
+              </div>
             {/* `hidden` rather than conditional rendering, so aria-controls
                 always names a node that exists. */}
             <button
@@ -969,6 +1287,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               {tuning ? 'Hide fine tuning' : 'Fine tuning'}
               <ToolIcon name="caret-right" size={13} className="tsc-tuning-caret" />
             </button>
+            </div>
             <div id="tsc-tuning" className="tsc-tuning" hidden={!tuning}>
               <fieldset className="tsc-bp">
                 <legend className="tl-sec-label">How far the scale runs</legend>
@@ -1057,7 +1376,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                     />
                   </div>
                 )}
-                <div className="tsc-bp-mode tl-pills tl-pills--block" role="group" aria-label="How the two scales are joined">
+                <SlidePills className="tsc-bp-mode tl-pills tl-pills--block" role="group" aria-label="How the two scales are joined" value={fluid}>
                   <button
                     type="button"
                     className={fluid ? 'tsc-mode-btn tl-pill is-on' : 'tsc-mode-btn tl-pill'}
@@ -1074,7 +1393,7 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                   >
                     Fixed &middot; media query
                   </button>
-                </div>
+                </SlidePills>
               </fieldset>
 
               <fieldset className="tsc-bp">
@@ -1095,6 +1414,11 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
                     ariaLabel="Line height multiplier"
                   />
                 </div>
+                <button type="button" className="tsc-tight" role="switch" aria-checked={tight} onClick={() => setTight(t => !t)}>
+                  <span>Tighter headings</span>
+                  <span className="tsc-tight-trk" aria-hidden="true"><i /></span>
+                </button>
+                <p className="tsc-hint">Steps above base use size plus 8px, between 1.1 and your line height.</p>
                 <div className="tsc-slider-row">
                   <label className="tsc-slider-k" htmlFor="tsc-htrack">Heading tracking</label>
                   <SnapSlider
@@ -1148,112 +1472,107 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
               </div>
             </div>
           </ToolSection>
+              </div>
             </div>
           </div>
         </ToolPanel>
 
         {/* The work column. It is a size container (see type-scale.css) and is
             measured as one: from SPLIT_MIN the ladder and the page sit side by
-            side and Code is a drawer from the docked bar; below it the
-            Scale / Page / Code switch shows one view at a time. */}
-        <ToolMain className="tsc-output" ref={setWorkEl}>
-          {!split && (
-            <div className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view">
-              {VIEWS.map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  id={`tsc-tab-${id}`}
-                  aria-selected={view === id}
-                  aria-controls="tsc-view-panel"
-                  tabIndex={view === id ? 0 : -1}
-                  className={view === id ? 'tsc-view-btn tl-pill is-on' : 'tsc-view-btn tl-pill'}
-                  onClick={() => setView(id)}
-                  onKeyDown={handleViewKeyDown}
-                >
-                  {label}
-                </button>
-              ))}
+            side and Code is a view beside the scale; below it the
+            Scale / Page / Code switch shows one view at a time. On a phone
+            there is no switch: the width, the page and the ladder are one
+            scroll, and Code is a tab in the sheet. */}
+        <ToolMain className="tsc-output" ref={setWorkEl} data-sheet={String(phone && sheetOpen)}>
+          {!stackedView && !split && (
+            <div className="tsc-view-bar">
+              <SlidePills className="tsc-view-switch tl-pills" role="tablist" aria-label="Output view" value={view}>
+                {VIEWS.map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    id={`tsc-tab-${id}`}
+                    aria-selected={view === id}
+                    aria-controls="tsc-view-panel"
+                    tabIndex={view === id ? 0 : -1}
+                    className={view === id ? 'tsc-view-btn tl-pill is-on' : 'tsc-view-btn tl-pill'}
+                    onClick={() => setView(id)}
+                    onKeyDown={handleViewKeyDown}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </SlidePills>
+            </div>
+          )}
+
+          {/* The page header: the width every size on the page is read at. */}
+          {(
+            <div className="tsc-width-bar">
+              <span className="tsc-width-k" id="tsc-width-k">Preview width</span>
+              {widthSegment}
+              {widthNote && <p className="tsc-width-note" role="status">{widthNote}</p>}
             </div>
           )}
 
           <div
             id="tsc-view-panel"
-            role={split ? undefined : 'tabpanel'}
-            aria-labelledby={split ? undefined : `tsc-tab-${view}`}
+            role={split || stackedView ? undefined : 'tabpanel'}
+            aria-labelledby={split || stackedView ? undefined : `tsc-tab-${view}`}
             className="tsc-view"
-            data-view={split ? 'split' : view}
+            data-view={split ? 'split' : stackedView ? 'stack' : view}
             data-width={width}
             ref={varsRef(previewVars)}
           >
-            {(split || view === 'scale') && ladderView}
-            {(split || view === 'page') && pageView}
-            {!split && view === 'code' && (
-              <div className="tsc-developer-view">
-                {formatPills}
-                {exportPre}
-              </div>
-            )}
+            {stackedView && <>{pageView}{ladderView}</>}
+            {!stackedView && (split || view === 'scale') && ladderView}
+            {!stackedView && (split || view === 'page') && pageView}
           </div>
         </ToolMain>
       </ToolGrid>
 
-      {/* The Code drawer, split only. It sits outside the work column (a size
-          container is the containing block for fixed children) and is placed
-          over it from the column's measured box. It stays mounted so the
-          Code pill's aria-controls always names a node. */}
-      {split && (
-        <div
-          id="tsc-code-drawer"
-          ref={el => { drawerRef.current = el; varsRef({ '--tsc-work-left': `${work.left}px`, '--tsc-work-w': `${work.width}px` })(el) }}
-          className="tsc-drawer"
-          role="dialog"
-          aria-modal="false"
-          aria-label="Code"
-          tabIndex={-1}
-          hidden={!drawerOpen}
-          data-lenis-prevent=""
-        >
-          <div className="tsc-drawer-head">
-            {formatPills}
-            <ToolButton icon="copy" className="tsc-drawer-copy" onClick={exportCode}>Copy</ToolButton>
-            <ToolButton variant="quiet" icon="x" className="tl-btn--square tsc-drawer-close" aria-label="Close code" onClick={closeCode} />
+      {/* From 768 the docked bar holds Code and Save to a project; Code opens a
+          drawer over the foot of the page. A phone has the dock and the sheet. */}
+      {!phone && (
+        <div className="tsc-dock" role="group" aria-label="Code and save" data-code={drawerOpen ? 'open' : 'closed'}>
+          <div id="tsc-code-drawer" className="tsc-drawer" role="dialog" aria-modal="false" aria-label="Code" hidden={!drawerOpen}>
+            <div className="tsc-drawer-head">
+              {formatPills}
+              {exportCopy}
+              <ToolButton variant="quiet" icon="x" className="tl-btn--square tsc-drawer-close" aria-label="Close code" onClick={() => { setCodeOpen(false); codeBtnRef.current?.focus({ preventScroll: true }) }} />
+            </div>
+            {exportPre}
           </div>
-          {exportPre}
+          <div className="tsc-dock-l">
+            <ToolButton
+              ref={codeBtnRef}
+              icon="code"
+              className="tsc-code-btn"
+              aria-expanded={drawerOpen}
+              aria-controls="tsc-code-drawer"
+              aria-haspopup="dialog"
+              onClick={() => setCodeOpen(open => !open)}
+            >
+              Code
+            </ToolButton>
+            <p className="tsc-dock-status" aria-live="polite">{user ? 'Keeps this scale with your project' : 'Kept in this browser. Log in to save it to a project.'}</p>
+          </div>
+          <div className="tsc-save-wrap">
+            <ToolButton
+              ref={saveTriggerRef}
+              icon="bookmark-simple"
+              className="tsc-save"
+              aria-expanded={save.open}
+              aria-haspopup="dialog"
+              onClick={save.trigger}
+            >
+              Save to a project
+            </ToolButton>
+            <SaveTypeSystemPanel open={save.open} panelRef={savePopRef} menuProps={save.menuProps} />
+          </div>
         </div>
       )}
-
-      {/* The docked bar. Wide split: Code and Save to a project. Tablet and a
-          narrower desktop: Save to a project. Phone: Save and Copy CSS, above
-          the tab bar. The save menu opens from it. */}
-      <div className="tsc-dock" role="group" aria-label={phone ? 'Save and copy' : split ? 'Code and save' : 'Save'}>
-        {split && (
-          <ToolButton
-            ref={codeBtnRef}
-            icon="code"
-            className="tsc-code-btn"
-            aria-expanded={drawerOpen}
-            aria-controls="tsc-code-drawer"
-            aria-haspopup="dialog"
-            onClick={() => (drawerOpen ? closeCode() : setCodeOpen(true))}
-          >
-            Code
-          </ToolButton>
-        )}
-        <ToolButton
-          ref={save.triggerRef}
-          icon="bookmark-simple"
-          className="tsc-save"
-          aria-expanded={save.open}
-          aria-haspopup="dialog"
-          onClick={save.trigger}
-        >
-          {phone ? 'Save' : 'Save to a project'}
-        </ToolButton>
-        <SaveTypeSystemPanel open={save.open} panelRef={save.popRef} menuProps={save.menuProps} />
-        {phone && primary}
-      </div>
 
       {/* Step 3 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="typescale" />

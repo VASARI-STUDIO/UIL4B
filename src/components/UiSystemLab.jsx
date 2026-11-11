@@ -135,7 +135,7 @@ function CommerceScene() {
 function DocsScene() {
   return (
     <div className="uis-docs-scene">
-      <header><strong>UIL4B Docs</strong><label>Search documentation <input placeholder="Search docs…" readOnly /></label><span>v2.7</span></header>
+      <header><strong>UI L4B Docs</strong><label>Search documentation <input placeholder="Search docs…" readOnly /></label><span>v2.7</span></header>
       <div>
         <nav><strong>Foundations</strong><a className="is-active">Getting started</a><a>Colour tokens</a><a>Typography</a><strong>Components</strong><a>Buttons</a><a>Forms</a></nav>
         <main>

@@ -34,13 +34,14 @@ import {
   paletteRole, kitScale, kitInk, kitPalette, kitSemantic, derivedNoteFor, interfaceRoles, makeOn,
 } from './systemRoles.js'
 import { DEFAULT_DESIGN } from '../data/designDefaults.js'
+import { SPACING, RADIUS } from '../data/uiKitFoundations.js'
 import { SITE_ORIGIN } from './routeMeta.js'
 import { SUBSET_RANGES } from './kitFonts.js'
 import { readIdentity, IDENTITY_NAME_MAX } from './kitIdentity.js'
 import { fileName } from './exportFileName.js'
 import { logoSvg, LOCKUP_WIDTH, LOGO_HEIGHT } from '../config/brandLogo.js'
 import { hexToOklch } from './exportTemplates/roles.js'
-import { MAX_SLOTS, fitTitle, clampTitle, plural } from './exportTemplates/shared.js'
+import { MAX_SLOTS, fitTitle, clampTitle, plural, systemSentence, glyphStrip } from './exportTemplates/shared.js'
 import { roleLabel } from './paletteRoles.js'
 import { manualParts } from './kitManual.js'
 import { showcaseParts } from './kitShowcase.js'
@@ -101,10 +102,8 @@ const TYPE_SAMPLES = Object.freeze({
   Body: 'Simple ideas, made to be part of your everyday.',
   Caption: 'The small things deserve care, too.',
 })
-// The design model holds no spacing or radius choices, so the kit documents
-// the template's starter foundations. The spacing ladder is also the app's own.
-const SPACING = Object.freeze([4, 8, 12, 16, 24, 32, 48, 64, 96])
-const RADIUS = Object.freeze({ control: 6, card: 16 })
+// The design model holds no spacing or radius choices, so the kit documents the
+// template's starter foundations (SPACING and RADIUS, from src/data/uiKitFoundations.js).
 const MOTION = Object.freeze({ fast: 180, ease: [0.16, 1, 0.3, 1] })
 
 // A swatch at least this light gets a hairline, so it holds its edge on the page.
@@ -222,6 +221,16 @@ export function kitSelections(design, { tier = 'free', logo = null, projectName 
     colourCount,
     semantic,
     fonts: { display, body },
+    // The facts the type specimens set as a sentence (systemSentence).
+    system: {
+      heading: display.name,
+      headingWeight: display.weight,
+      body: body.name,
+      bodyWeight: body.weight,
+      baseSize: book.baseSize,
+      ratio: book.ratio,
+      lineHeight: book.lineHeight,
+    },
     typeScale,
     spacing: [...SPACING],
     radius: { ...RADIUS },
@@ -548,6 +557,10 @@ export function renderUiKit(design, {
     return `<div class="contrast-pair"><span style="background:${bg};color:${fg}">Aa</span><div><strong>${esc(`Text on ${label.toLowerCase()}`)}</strong><small>${ratio.toFixed(2)}:1 · ${gradeOf(ratio)}</small></div></div>`
   }).join('')
 
+  // The "In use" specimen's wordmark is the primary where it reads on its ground at 4.5:1,
+  // else the ink that does: on the canvas, the text colour; on the accent, the accent's label ink.
+  const wordmark = (ground, fallback) => (contrast(slot.pine.hex, ground) >= 4.5 ? 'var(--color-pine)' : fallback)
+
   const coverText = (opts) => {
     const fit = fitTitle(sel.title, opts)
     return { size: fit.size, text: fit.clamp ? clampTitle(sel.title, fit.size, opts) : sel.title }
@@ -566,16 +579,16 @@ export function renderUiKit(design, {
   const coverNote = identityText || typeLine(sel.fonts.display, sel.fonts.body)
 
   const arrow = icon('arrow')
-  const siteLinks = free ? `<aside class="site-links"><div><h3>Keep building with UIL4B.</h3><p>Explore more tools, refine your selections, and build your next kit.</p></div><nav aria-label="UIL4B website links"><a href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer">Visit uil4b.com${arrow}</a><a href="${SITE_ORIGIN}/create/palette" target="_blank" rel="noopener noreferrer">Build a colour palette${arrow}</a><a href="${SITE_ORIGIN}/create/font-pair" target="_blank" rel="noopener noreferrer">Explore font pairings${arrow}</a></nav><small>Website links open in a new tab and require an internet connection.</small></aside>` : ''
+  const siteLinks = free ? `<aside class="site-links"><div><h3>Keep building with UI L4B.</h3><p>Explore more tools, refine your selections, and build your next kit.</p></div><nav aria-label="UIL4B website links"><a href="${SITE_ORIGIN}/" target="_blank" rel="noopener noreferrer">Visit uil4b.com${arrow}</a><a href="${SITE_ORIGIN}/create/palette" target="_blank" rel="noopener noreferrer">Build a colour palette${arrow}</a><a href="${SITE_ORIGIN}/create/font-pair" target="_blank" rel="noopener noreferrer">Explore font pairings${arrow}</a></nav><small>Website links open in a new tab and require an internet connection.</small></aside>` : ''
 
   const pageNumber = `@bottom-right { content:counter(page); font-family:${PRINT_META_FONT}; font-size:8pt; color:${PRINT_META_INK}; }`
-  const attributionMargin = free ? `@bottom-left { content:"Made with UIL4B / Free UI kit"; font-family:${PRINT_META_FONT}; font-size:8pt; color:${PRINT_META_INK}; } ` : ''
+  const attributionMargin = free ? `@bottom-left { content:"Made with UI L4B / Free UI kit"; font-family:${PRINT_META_FONT}; font-size:8pt; color:${PRINT_META_INK}; } ` : ''
 
   const data = {
     brand: { files: sel.files, tier },
     // The free credit line the CSS download opens with. Carried as data so a
     // Pro document holds no credit text at all.
-    cssCredit: free ? `/* Made with UIL4B · Free UI kit · ${SITE_ORIGIN}/ */\n` : '',
+    cssCredit: free ? `/* Made with UI L4B · Free UI kit · ${SITE_ORIGIN}/ */\n` : '',
     css: appCss,
     json: appJson,
     licenses,
@@ -621,6 +634,12 @@ export function renderUiKit(design, {
     FONT_BODY: esc(sel.fonts.body.name),
     WEIGHT_DISPLAY: String(sel.fonts.display.weight),
     WEIGHT_BODY: String(sel.fonts.body.weight),
+    SPECIMEN_DISPLAY: esc(systemSentence(sel.system, 'heading')),
+    SPECIMEN_BODY: esc(systemSentence(sel.system, 'body')),
+    STRIP_DISPLAY: glyphStrip('font-family:var(--font-display);font-weight:var(--weight-display)'),
+    STRIP_BODY: glyphStrip('font-family:var(--font-body);font-weight:var(--weight-body)'),
+    WORDMARK_NAV: wordmark(slot.chalk.hex, 'var(--color-ink)'),
+    WORDMARK_ART: wordmark(slot.citron.hex, 'var(--on-citron)'),
     FONT_EMBED_NOTE: esc(notes.embedNote),
     LICENSE_NOTE: esc(notes.licenseNote),
     PRINT_WATERMARK: `@page { ${attributionMargin}${pageNumber} }`,

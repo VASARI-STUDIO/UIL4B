@@ -82,8 +82,8 @@ for (const [width, ctx] of [
       await expect(page.locator('.ig-credit'), 'the strip under the grid is gone').toHaveCount(0)
       await expectNoClose(page, '/create/icons')
       // The one thing between the grid and the footer is the gate, which is the page's single call to action.
-      await expect(page.getByRole('main').locator('.ig-end'), 'the gate is page content, inside main').toHaveCount(1)
-      await expect(footer(page).locator('.ig-end'), 'the gate is not inside the footer').toHaveCount(0)
+      await expect(page.getByRole('main').locator('.geg'), 'the gate is page content, inside main').toHaveCount(1)
+      await expect(footer(page).locator('.geg'), 'the gate is not inside the footer').toHaveCount(0)
       await expect(footer(page).getByRole('link', { name: 'Open the toolkit' })).toBeVisible()
     })
 
@@ -91,8 +91,8 @@ for (const [width, ctx] of [
       watch(page, SIGNED_OUT)
       await open(page, '/create/icons')
       await expect(page.getByRole('main').getByRole('button', { name: 'Log in', exact: true }), 'one Log in button in main, and it is the gate’s').toHaveCount(1)
-      await expect(page.locator('.ig-end .ig-end-pill')).toHaveText('Log in')
-      await expect(page.locator('.ig-end'), 'the gate says the new heading').toContainText('Log in to open all 12 sets.')
+      await expect(page.locator('.geg .geg-pill')).toHaveText('Log in')
+      await expect(page.locator('.geg'), 'the gate says the new heading').toContainText('Log in to access')
     })
 
     test('/create/icons signed out: the licence row names each set with its licence and a link', async ({ page }) => {
@@ -168,7 +168,7 @@ for (const [width, ctx] of [
           const el = document.documentElement
           const view = el.clientWidth
           // Everything in the gate (when there is one) and the footer stays inside the window.
-          const wide = [...document.querySelectorAll('.ig-end, .ig-end *, footer, footer *')]
+          const wide = [...document.querySelectorAll('.geg, .geg *, footer, footer *')]
             .filter((n) => n.getClientRects().length)
             .map((n) => ({ n, r: n.getBoundingClientRect() }))
             .filter(({ r }) => r.right > view + 1 || r.left < -1)
@@ -190,11 +190,11 @@ test.describe('at 320', () => {
       watch(page, SIGNED_OUT)
       await go(page, route)
       await expect(footer(page)).toHaveCount(1)
-      if (route === '/create/icons') await expect(page.locator('.ig-end-h')).toBeVisible({ timeout: 20_000 })
+      if (route === '/create/icons') await expect(page.locator('.geg-h')).toBeVisible({ timeout: 20_000 })
       await page.locator('.sp-footer').scrollIntoViewIfNeeded()
       const m = await page.evaluate(() => {
         const el = document.documentElement
-        const h = document.querySelector('.ig-end-h')
+        const h = document.querySelector('.geg-h')
         const line = h ? parseFloat(getComputedStyle(h).lineHeight) : 0
         return { scrollWidth: el.scrollWidth, view: el.clientWidth, lines: h ? Math.round(h.getBoundingClientRect().height / line) : 0 }
       })
@@ -211,7 +211,7 @@ test.describe('keyboard', () => {
   test('Tab runs the gate’s Log in, then See the plans, then on into the footer', async ({ page }) => {
     watch(page, SIGNED_OUT)
     await open(page, '/create/icons')
-    await page.locator('.ig-end .ig-end-pill').focus()
+    await page.locator('.geg .geg-pill').focus()
     await page.keyboard.press('Tab')
     await expect(page.locator(':focus')).toHaveText('See the plans')
     // Anything focusable between the gate and the footer is page content that is not a call to action, so
@@ -234,6 +234,10 @@ const BODY = '<path fill="none" stroke="currentColor" stroke-width="2" d="M3 12h
 async function serveLucide(page) {
   const names = Array.from({ length: TOTAL }, (_, i) => NAME(i))
   const headers = { 'access-control-allow-origin': '*', [ICONIFY_STUB_HEADER]: '1' }
+  // The page reads a pack's list from the site's own copy first, so the synthetic list is served there.
+  // The /collection route below stays for the request a pack with no copy falls back to.
+  await page.route((u) => u.pathname === '/iconify/collections/lucide.json',
+    (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ prefix: 'lucide', total: TOTAL, title: 'lucide', uncategorized: names }) }))
   await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/collection' && u.searchParams.get('prefix') === 'lucide',
     (route) => route.fulfill({ status: 200, contentType: 'application/json', headers, body: JSON.stringify({ prefix: 'lucide', total: TOTAL, title: 'lucide', uncategorized: names }) }))
   await page.route((u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname === '/lucide.json' && u.search.includes('icons='),
@@ -317,5 +321,37 @@ test.describe('Show N more icons', () => {
     }
     await expect(page.locator('.ig-more'), 'the whole list is in; no button left').toHaveCount(0)
     await expect(page.getByRole('contentinfo')).toHaveCount(1)
+  })
+
+  // A browser queues one entry per frame for an observer and hands them over together, oldest first, when
+  // its main thread was busy: a slow phone, or a CI machine running four browsers. The grid's observer used
+  // to act on the first entry only, so a stale "not on screen" ahead of the current "on screen" left the
+  // sentinel in view with nothing loading, and nothing to move it on (an observer reports a change, and the
+  // sentinel was not going to change). This hands the grid's observer exactly that: a stale entry first.
+  // HOW TO SEE IT FAIL: IconLibrary.jsx reads `([e])` in the sentinel's IntersectionObserver again -> the grid stays at 120.
+  test('a stale "not on screen" entry ahead of the current one does not stop the grid loading its next page', async ({ page }) => {
+    watch(page, 'a Pro designer on a slow phone, scrolling the icon list')
+    await page.addInitScript(() => {
+      const Real = window.IntersectionObserver
+      window.IntersectionObserver = class extends Real {
+        constructor(callback, options) {
+          // Only the grid's sentinel observer (the one with the 600px margin); everything else is left alone.
+          if (!options || options.rootMargin !== '600px') { super(callback, options); return }
+          super((entries, observer) => {
+            const stale = entries.map((e) => ({ target: e.target, isIntersecting: false, intersectionRatio: 0, time: e.time - 1 }))
+            callback([...stale, ...entries], observer)
+          }, options)
+        }
+      }
+    })
+    await serveLucide(page)
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/icons')
+    await choosePack(page, 'lucide')
+    await expect(page.locator(`.ig .ic[aria-label="Customise ${NAME(0)}"]`)).toBeVisible({ timeout: 20_000 })
+    await expect.poll(async () => {
+      await page.evaluate(() => document.querySelector('.ig-sentinel, .ig-more')?.scrollIntoView({ block: 'end' }))
+      return page.locator('.ig .ic').count()
+    }, { timeout: 20_000, message: 'the grid never loaded a second page' }).toBeGreaterThan(120)
   })
 })

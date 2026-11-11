@@ -206,13 +206,16 @@ function recordAggregateOpen(id) {
   bumpAggregate(aggField(AGG_PREFIX.open, id), 1)
 }
 
-// Read the last `days` daily docs and sum them into a dashboard-friendly shape.
+// Read the newest `days` daily docs and sum them into a dashboard-friendly shape.
+// With `since` (a YYYY-MM-DD day id) only docs on or after that day are read, so
+// a quiet stretch with no documents cannot pull in days from before the window.
 // Returns a safe empty shape on any failure (offline, rules, no docs yet).
-export async function getAggregateAnalytics(days = 30) {
+export async function getAggregateAnalytics(days = 30, { since } = {}) {
   const empty = { totalViews: 0, byPath: [], byTool: [], byOpen: [], byIcon: [], byPack: [], funnel: [], iconCopies: 0, days: [] }
   try {
     const fs = await loadFirestore()
-    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(days))
+    const bounds = since ? [fs.where('day', '>=', since)] : []
+    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), ...bounds, fs.orderBy('day', 'desc'), fs.limit(days))
     const snap = await fs.getDocs(q)
     let totalViews = 0
     let iconCopies = 0
@@ -337,16 +340,24 @@ export function initAnalytics() {
 // path passes the id it also sends to the server, so one message is one local
 // record however many times it is sent, and the admin queue (which merges local
 // and server records by id) lists it once.
+//
+// The sender's address is never written here. This copy stays in the browser
+// for whoever uses it next, and the server already holds the address; the
+// readers of this store (the admin queue and the data export) do not need it
+// from here. Older entries lose any stored email on the next save.
 export function saveFeedback(entry) {
-  const feedback = load(FEEDBACK_KEY, [])
+  const stored = load(FEEDBACK_KEY, [])
+  const feedback = Array.isArray(stored) ? stored.filter(f => f && typeof f === 'object') : []
+  feedback.forEach(f => { delete f.email })
+  const { email: _email, ...kept } = entry || {}
   const now = new Date().toISOString()
-  const existing = entry?.id ? feedback.find(f => f.id === entry.id) : null
+  const existing = kept.id ? feedback.find(f => f.id === kept.id) : null
   if (existing) {
-    Object.assign(existing, entry, { updatedAt: now })
+    Object.assign(existing, kept, { updatedAt: now })
   } else {
     feedback.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      ...entry,
+      ...kept,
       status: 'new',
       adminNotes: '',
       createdAt: now,
@@ -417,8 +428,7 @@ export function trackFontCopy(fontFamily) {
 }
 
 // ── P-001: the two events that make the funnel answerable ───────────────────
-// Both are APPROVED in docs/PROPOSALS.md - local-only since 2026-09-16 and not
-// in this repository, per .gitignore. Until they existed there was no way
+// Until they existed there was no way
 // to answer "did this user build something?", "what did they do before
 // upgrading?" or "where do people stop?" — which is why nearly every other
 // proposal in that file is 'inferred' rather than 'measured'.
@@ -580,7 +590,7 @@ export function getDesignAnalytics() {
 }
 
 // ── Admin resets ─────────────────────────────────────────────
-// Founder-invoked from the Admin dashboard. Clearing this browser's blobs is
+// Invoked from the Admin dashboard. Clearing this browser's blobs is
 // instant; the Firestore aggregate is scrubbed field-by-field (merge writes
 // with deleteField) so tool counters survive a page-analytics reset.
 

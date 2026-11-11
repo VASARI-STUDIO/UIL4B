@@ -13,10 +13,11 @@ test('the notices name where the image goes', () => {
 })
 
 test('the Alt Text notice links to the Terms section that holds the statement', () => {
-  assert.equal(AI_TERMS_PATH, '/terms#terms-s4')
+  assert.equal(AI_TERMS_PATH, '/terms#terms-s8')
   const terms = stripComments(read('src/pages/Terms.jsx'))
-  assert.ok(terms.includes(`id: '${AI_TERMS_PATH.split('#')[1]}'`), 'the link points at a Terms section id that does not exist')
-  assert.match(terms, /more: 'terms\.s4AiText'/, 'the linked section no longer carries the AI statement')
+  assert.ok(terms.includes(`{ id: '${AI_TERMS_PATH.split('#')[1]}', heading: '8. AI features', render: Ai }`), 'the link does not point at the AI features section')
+  const ai = terms.slice(terms.indexOf('function Ai('), terms.indexOf('\n}', terms.indexOf('function Ai(')))
+  assert.match(ai, /may allow Google to use what it receives to improve its products/, 'the linked section no longer carries the AI statement')
 })
 
 test('both image tools render their notice, and before their dropzone', () => {
@@ -27,10 +28,12 @@ test('both image tools render their notice, and before their dropzone', () => {
     const src = stripComments(read(file))
     const at = src.indexOf(notice)
     assert.ok(at > -1, `${file} does not render its notice`)
-    assert.ok(at < src.indexOf(dropzone), `${file} shows the notice after the dropzone`)
+    // Alt Text puts the line under its dropzone, which points at it with aria-describedby.
+    if (file.includes('AltText')) assert.ok(src.includes('aria-describedby="alt-ai-consent"'), `${file} dropzone does not point at its notice`)
+    else assert.ok(at < src.indexOf(dropzone), `${file} shows the notice after the dropzone`)
   }
   const alt = stripComments(read('src/pages/AltTextGenerator.jsx'))
-  assert.match(alt, /<Link to=\{AI_TERMS_PATH\}>/, 'the Alt Text notice does not link to the Terms')
+  assert.match(alt, /<Link to=\{AI_TERMS_PATH\}[\s>]/, 'the Alt Text notice does not link to the Terms')
 })
 
 test('api/ai.js still sends images only to Gemini, which is what the notices say', () => {

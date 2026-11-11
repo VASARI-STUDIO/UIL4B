@@ -161,8 +161,9 @@ test('the Gradient Generator sets its angle with the wheel, behind the Pro guard
 
 test('the wheel and its number field keep a 44px floor on touch', () => {
   const css = read('src/styles/pages/gradient.css')
-  const coarse = css.slice(css.indexOf('@media (pointer: coarse)'))
-  assert.match(coarse, /\.grd \.grd-wheel \{ width: 7\d+px; height: 7\d+px; \}/)
+  // The sheet has several coarse-pointer blocks; read all of them, not just the first.
+  const coarse = css.split('@media (pointer: coarse)').slice(1).join('\n')
+  assert.match(coarse, /\.grd \.grd-wheel \{ width: 64px; height: 64px; \}/)
   assert.match(coarse, /\.grd \.grd-angle-input \{[^}]*height: 44px/)
 })
 

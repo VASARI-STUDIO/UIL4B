@@ -108,7 +108,7 @@
 .pl-textarea{min-height:100px;resize:vertical;font-size:13px;line-height:1.7}
 .pl-add-row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
 .pl-add-field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px}
-.pl-add-field label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.pl-add-field label{font-size:var(--fs-caption);font-weight:560;letter-spacing:normal;text-transform:none;color:var(--t2)}
 .pl-add-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 /* The locked tease continues the gallery, so its seam is the ROW GAP, not
    the 8px that separates the first grid from the toolbar. --pl-gap is read
@@ -188,7 +188,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .pl-card-tags{display:flex;gap:5px;flex-wrap:wrap}
 
 /* Card date inline */
-.pl-card-date-inline{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:8px}
+.pl-card-date-inline{font-family:var(--font);font-size:var(--fs-caption);color:var(--t3);margin-top:8px;font-variant-numeric:tabular-nums}
 /* Copy hint */
 .pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-mid);transition:opacity var(--dur-2) var(--ease-standard)}
 /* Prompt modal overlay */
@@ -239,14 +239,18 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    at a precomputed top. No content-visibility here — its paint containment was
    what clipped the scale(1.2) hover — off-screen work is avoided by simply not
    mounting those rows at all. */
-.emoji-virt{position:relative}
+.emoji-virt{position:relative;transition:opacity 120ms ease-out}
+/* The grid is still showing the previous list (EmojiGrid `stale`): dim it a
+   little so the short wait reads as working. Opacity only, no spinner, and the
+   status line stays at full strength. */
+.emoji-virt[aria-busy="true"]{opacity:.6}
 .emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
 .emoji-vhead h2{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
 .emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
 /* --t2, not --t3: at 10px on the --bg-3 chip --t3 measures 4.46:1 in light
    (#66665f on #e4e2da) at every width, under AA. --t2 takes it to 4.95:1;
    dark clears either way. Same reasoning as .arc-ratio-card-use. */
-.emoji-section-count{font-size:10px;font-weight:700;color:var(--t2);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+.emoji-section-count{font-size:var(--fs-caption);font-weight:560;color:var(--t2);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--font);font-variant-numeric:tabular-nums}
 /* Recovery action inside the search empty/error states (Try again · Search all
    categories). 40px tall — comfortably over the 24px WCAG 2.5.8 floor, and it
    matches .emoji-tone-btn so the two controls on this surface agree. */
@@ -273,117 +277,29 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* ─── Seg bar ─── */
 
 
-/* ══ Icon library — Customizer dialog (icust-), recents rail (ig-rail-), toolbar
-   add button (ig-addbtn), Custom-icons lock/empty (ig-custom-), fetch notice
-   (ig-notice), skeletons (ig-skel-), status/sentinel and CDN monochrome invert
-   (ig-inv). The Customizer is a structural sibling of the Export dialog and reuses
-   its a11y/motion; the Stage is a flat ground the ground switch chooses (Page, or
-   the fixed Light, Dark and Transparent below, literal hexes, not tokens). Live values
-   arrive on .icust-stage as --ig-size/--ig-stroke/--ig-color/--ig-transform and are
-   consumed by the inline SVG below via currentColor.
-   --ig-stroke is a viewBox USER-UNIT number, not a pixel one: CSS stroke-width
-   resolves in the SVG's own coordinate space, exactly like the stroke-width
-   attribute in the exported file. The Customizer's control is in pixels and JS
-   converts it once (src/utils/iconStroke.js, strokeAttrForPx) for both the Stage
-   and the export, so the preview cannot disagree with the download. The literal
-   2 below is the pre-paint fallback and equals the 2px default at size 24. ══ */
-/* Rises without scaling, so the Stage measures the same size all the way through the entrance. */
+/* ══ Icon library — the dialog frame (icust-: overlay, panel, head, title, sub,
+   close; the emoji detail dialog's), recents rail (ig-rail-), toolbar add button
+   (ig-addbtn), Custom-icons lock/empty (ig-custom-), fetch notice (ig-notice),
+   skeletons (ig-skel-), status/sentinel and CDN monochrome invert (ig-inv).
+   The icon editor's own rules are in pages/icon-editor.css (ied-). ══ */
+/* Rises without scaling, so the panel measures the same size all the way through the entrance. */
 @keyframes icust-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade var(--dur-1) var(--ease-entrance)}
-/* Panel clips to its rounded corners; the header is fixed and a single inner
-   .icust-body owns the scroll — so the scrollbar lives INSIDE the panel, never
-   in the scrim. Height caps to the padded overlay box so the overlay itself
-   never needs a second scrollbar. */
+/* Panel clips to its rounded corners; the header is fixed and the body inside
+   owns the scroll — so the scrollbar lives INSIDE the panel, never in the scrim.
+   Height caps to the padded overlay box so the overlay itself never needs a
+   second scrollbar. */
 .icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - max(16px,env(safe-area-inset-left,0px)) - max(16px,env(safe-area-inset-right,0px))));max-height:min(880px,calc(100dvh - max(6vh,48px,env(safe-area-inset-top,0px)) - max(32px,env(safe-area-inset-bottom,0px))));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:icust-rise var(--dur-2) var(--ease-entrance)}
-.icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
 .icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .icust-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .icust-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.icust-paste-help{font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
-.icust-paste-help code{font-family:var(--mono);font-size:.85em;padding:1px 5px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--t0)}
-.icust-paste-input{width:100%;min-height:160px;resize:vertical;padding:14px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);font-family:var(--mono);font-size:var(--fs-caption);line-height:1.6;color:var(--t0);outline:none;transition:border-color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
-.icust-paste-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
-.icust-paste-input::placeholder{color:var(--t3)}
-.icust-err{font-size:var(--fs-caption);color:var(--err-strong)}
-.icust-stage--light{background:#DEDEE2;box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
-.icust-stage--dark{background:#202024;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
-.icust-stage--checker{background-color:#EDEDF0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Crect width='16' height='16' fill='%23D9D9DE'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%23D9D9DE'/%3E%3C/svg%3E");background-size:32px 32px;box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
-.icust-stage-img{display:block;max-width:100%;height:auto}
-.icust-stage-msg{position:absolute;font-family:var(--font);font-size:var(--fs-caption);color:var(--t2)}
-.icust-stage--light .icust-stage-msg,.icust-stage--checker .icust-stage-msg{color:rgba(10,10,11,.5)}
-.icust-stage--dark .icust-stage-msg{color:rgba(244,244,245,.55)}
-/* A fact about the art, not a control: plain text in the row's control column, in
-   the label's tone. The block padding (3 track + 1 border + 6 button) gives it the
-   height the segmented track gave the row, so the row does not change size. */
-.icust-value{flex:1;display:flex;align-items:center;padding-block:10px;font-size:var(--fs-caption);color:var(--t1);white-space:nowrap}
-/* Whether the art has colours is unknown until its markup lands: the row keeps its
-   height and its "Colour" label, shows no control and cannot take focus, so no option
-   flashes and then goes. */
-.icust-row--wait>:not(label){visibility:hidden}
-/* Signed-out upgrade gate — a small alert dialog floated over the customizer
-   when a visitor taps a Pro-locked line-style control. (The overlay's
-   backdrop-filter makes it the containing block for this fixed backdrop.) */
-.icust-gate-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-.icust-gate{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:min(380px,100%);padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.icust-gate-title{margin:0;font-size:var(--fs-h5);font-weight:640;color:var(--t0)}
-.icust-gate-copy{margin:0;font-size:var(--fs-body-s);line-height:1.55;color:var(--t1)}
-.icust-gate-dismiss{align-self:center;margin-top:2px;padding:6px 12px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
-.icust-gate-dismiss:hover{color:var(--t0);background:var(--hvr)}
-/* Save-to-project picker (shares the gate dialog shell) */
-.icust-proj-list{display:flex;flex-direction:column;gap:6px;width:100%;max-height:240px;overflow-y:auto;margin-top:2px}
-.icust-proj-btn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:10px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t0);cursor:pointer;text-align:left;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
-.icust-proj-btn:hover:not(:disabled){border-color:var(--accent);background:var(--hvr)}
-.icust-proj-btn:disabled{opacity:.55;cursor:not-allowed}
-.icust-proj-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.icust-proj-count{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;font-size:var(--fs-caption);font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
-.icust-proj-btn--new{background:none;border-style:dashed;color:var(--t1);width:100%}
-.icust-proj-btn--new:hover{color:var(--t0)}
-/* Inline new-project creation: name first, then the icon is assigned */
-.icust-newproj{display:flex;gap:8px;width:100%;margin-top:2px}
-.icust-newproj-input{flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
-.icust-newproj-input:focus{outline:none;border-color:var(--accent)}
-.icust-newproj-input::placeholder{color:var(--t3)}
-/* Footer extras: saved-in note */
-.icust-savedin{margin:0;padding:10px 24px 20px;font-size:var(--fs-caption);color:var(--t2)}
-.icust-savedin strong{font-weight:600;color:var(--t1)}
-/* Code readout */
-.icust-code{margin:12px 24px 0}
-/* The code can be selected; a Copy button sits beside it. */
-.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all}
-.icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
-.icust-upgrade:hover{text-decoration:underline}
-
-/* Similar icons — same-pack siblings, a foot-of-popup retention nudge */
-.icust-similar{padding:16px 24px 24px;border-top:1px solid var(--border)}
-/* Until a tile has loaded (the section's data-ready) the block takes no space:
-   no heading, rule or padding over an empty row. The tiles stay mounted inside
-   so their glyphs still load. */
-.icust-similar:not([data-ready]){height:0;padding:0;border-top-width:0;overflow:hidden}
-.icust-similar-label{margin-bottom:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
-.icust-similar-row{display:flex;flex-wrap:wrap;gap:8px}
-.icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-.icust-similar-btn:hover{border-color:var(--bh);background:var(--hvr);transform:translateY(-1px)}
-.icust-similar-btn img{display:block;width:24px;height:24px}
-/* A tile is invisible, with no border or ground, until its glyph has loaded
-   (SimilarTile sets data-ready); a glyph that errors never gets there. It keeps
-   its 44px box so the row never shifts, and visibility:hidden keeps an unshown
-   tile out of the tab order. Opacity fades in; visibility flips at the start of
-   the transition, so the fade is seen. */
-.icust-similar-btn:not([data-ready]){visibility:hidden;opacity:0}
-.icust-similar-btn[data-ready]{visibility:visible;opacity:1;transition:opacity var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
-html[data-reduced-motion="true"] .icust-similar-btn[data-ready]{transition:none}
-html[data-reduced-motion="true"] .icust-similar-btn:hover{transform:none}
-@media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .icust-similar-btn[data-ready]{transition:none}
-  html:not([data-reduced-motion="false"]) .icust-similar-btn:hover{transform:none}
-}
 
 /* Recents rail */
 .ig-rail{margin:8px 0 28px}
-.ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
-.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--btn-radius);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--t2);margin-bottom:10px}
+.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--btn-radius);background:none;font-family:var(--font);font-size:var(--fs-caption);font-weight:600;letter-spacing:normal;text-transform:none;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .ig-rail-clear:hover{color:var(--accent-mid);border-color:var(--border);background:var(--bg-1)}
 .ig-rail-clear svg{width:11px;height:11px}
 /* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
@@ -394,22 +310,21 @@ html[data-reduced-motion="true"] .icust-similar-btn:hover{transform:none}
 .ig-rail-item svg{color:var(--t0);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 /* Waiting glyph slots keep their dimensions without painting a square. */
 .ig-glyph-wait,.ic img.ig-glyph-pending,.ig-chip.ig-chip--wait{background:none;box-shadow:none;animation:none}
-/* The stage's waiting slot: the grid's own glyph at stage size when there is one,
-   otherwise an empty box of the same size. Centred like the final art. */
-.icust-stage-wait{position:absolute;inset:0;margin:auto;flex-shrink:0;background:none;box-shadow:none;animation:none}
 .ig-glyph-wait{display:block;width:24px;height:24px;flex-shrink:0;border-radius:6px}
 /* Keep pending artwork hidden until it has decoded. */
 .ic img.ig-glyph-pending{border-radius:6px;filter:none}
-/* Loaded glyphs fade without moving. */
-.ic img,.ig-chip img{transition:opacity 160ms cubic-bezier(0.23,1,0.32,1)}
-.ic img.ig-glyph-in,.ig-chip--in img{opacity:1}
-.ic img.ig-glyph-pending{opacity:0;transition:none}
+/* Loaded glyphs fade in without moving: opacity only, from the hidden pending
+   state. A glyph already measured on an earlier mount never gets the class, so
+   it paints at once. */
+@keyframes ig-glyph-in{from{opacity:0}to{opacity:1}}
+.ic img.ig-glyph-in,.ig-chip--in img{opacity:1;animation:ig-glyph-in var(--dur-2) var(--ease-out) both}
+.ic img.ig-glyph-pending{opacity:0}
 /* The artwork stays hidden while the chip waits, so it never shows on a bare
    skeleton. */
 .ig-chip--wait img{opacity:0}
-html[data-reduced-motion="true"] :is(.ic img,.ig-chip img){transition:none}
+html[data-reduced-motion="true"] :is(.ic img.ig-glyph-in,.ig-chip--in img){animation:none}
 @media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ic img,.ig-chip img){transition:none}
+  html:not([data-reduced-motion="false"]) :is(.ic img.ig-glyph-in,.ig-chip--in img){animation:none}
 }
 .ig-rail-badge{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;border:2px solid var(--bg-0);color:#fff}
 .ig-rail-badge svg{width:9px;height:9px}
@@ -491,12 +406,11 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
    vanish with no box behind it. Dilate alpha by one CSS pixel, without blur,
    then paint the original artwork over the edge. This stays crisp at 1x. */
 .ig-edge-filters{position:absolute;width:0;height:0;pointer-events:none}
-.ig-chip--halo-light img,.icust-stage--halo-light :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-light)}
-.ig-chip--halo-dark img,.icust-stage--halo-dark :is(.icust-stage-img,.icust-stage-host svg){filter:url(#ig-edge-dark)}
+.ig-chip--halo-light img{filter:url(#ig-edge-light)}
+.ig-chip--halo-dark img{filter:url(#ig-edge-dark)}
 /* A glyph slot for a name the service has no icon for: same box, nothing in it. */
 .ig-glyph-gone{display:block;width:24px;height:24px;flex-shrink:0}
 /* Copy, save and download wait for the icon's markup. */
-.icust-foot .lib-btn:disabled,.icust-code-copy:disabled{opacity:.5;cursor:not-allowed}
 /* object-fit, because the request now asks the API for a HEIGHT rather than a
    box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
    4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
@@ -557,12 +471,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 @media(max-width:560px){
   .icust-overlay{padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(32px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
   .icust-panel{max-height:min(880px,calc(100dvh - max(24px,env(safe-area-inset-top,0px)) - max(32px,env(safe-area-inset-bottom,0px))))}
-  .icust-head{padding:20px 16px 12px}
-  .icust-paste{padding:8px 16px 20px}}
-
-@media(max-width:560px){
-  .icust-code{margin:12px 16px 0}
-  .icust-foot{padding:16px 16px 20px;flex-wrap:wrap}}
+  .icust-head{padding:20px 16px 12px}}
 
 /* Hero */
 .home-workspace-intro{position:relative;isolation:isolate}
@@ -612,7 +521,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
    the shared field metrics instead, which is what consistency has to mean for a
    control this size. */
 .lbry-select{flex:0 0 auto;min-width:0;max-width:220px;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t1);font-family:var(--font);font-size:11px;font-weight:650;cursor:pointer}
-.lbry-select:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.lbry-select:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
 @media(max-width:640px){.lbry-select{max-width:100%;width:100%}}
 
 /* `.pl-sort` is retired with `.pl-toolbar`: the Prompt Library's sort is
@@ -730,6 +639,28 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .lib-switch-btn.is-active{
   background:rgba(247,247,244,.14);border-color:rgba(247,247,244,.34);color:#F7F7F4;
 }
+/* The sliding selected tab. IconEmojiLibrary measures the selected tab
+   (useSlideIndicator) and sets --si-x/-y/-w/-h/-r on the tablist; its ::before
+   is the selected look (wash + hairline) and moves with a transform, so nothing
+   in the flow shifts. While [data-slide] is on, the selected tab paints only its
+   label and glyph; without it (server render, no script) the tab keeps its own
+   look. "placed" draws the pill with no transition, "ready" animates its moves. */
+.lib-surface .lib-switch{position:relative;isolation:isolate}
+.lib-surface .lib-switch[data-slide]::before{
+  content:"";position:absolute;left:0;top:0;z-index:-1;box-sizing:border-box;
+  width:var(--si-w);height:var(--si-h);
+  border:1px solid rgba(247,247,244,.34);border-radius:var(--si-r,var(--radius-pill));
+  background:rgba(247,247,244,.14);
+  transform:translate(var(--si-x),var(--si-y));pointer-events:none;
+}
+.lib-surface .lib-switch[data-slide="ready"]::before{
+  transition:transform .18s cubic-bezier(.23,1,.32,1),width .18s cubic-bezier(.23,1,.32,1),height .18s cubic-bezier(.23,1,.32,1);
+}
+.lib-surface .lib-switch[data-slide] .lib-switch-btn.is-active{background:transparent;border-color:transparent}
+@media(forced-colors:active){
+  .lib-surface .lib-switch[data-slide]::before{content:none}
+  .lib-surface .lib-switch[data-slide] .lib-switch-btn.is-active{border-color:Highlight}
+}
 .lib-surface .lib-switch-btn>svg{width:16px;height:16px;color:rgba(247,247,244,.7)}
 .lib-surface .lib-switch-btn.is-active>svg{color:var(--accent-hover)}
 .lib-surface .lib-switch-emoji{font-size:15px}
@@ -819,7 +750,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 }
 /* The count badge sits on an inverted chip when its option is on. */
 .lib-surface .lbry-filters .lbry-filter[data-active="true"] .lbry-filter-count{
-  background:color-mix(in srgb,var(--bg-0) 82%,transparent);color:var(--bg-0);
+  background:color-mix(in srgb,var(--bg-0) 82%,transparent);color:var(--t0);
 }
 /* The collapsed trigger is the same control in one line, so it takes the same
    resting affordance — this is the form the 641–980 band and every
@@ -834,7 +765,7 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 .lib-surface .lbry-filtertrig[data-active="true"]{
   color:var(--t0);border-color:var(--bh);background:var(--card);box-shadow:none;
 }
-.lib-surface .lbry-filtertrig-k{font-size:10px;letter-spacing:.06em}
+.lib-surface .lbry-filtertrig-k{font-size:var(--fs-caption);letter-spacing:normal}
 /* The menu keeps rows as rows: no chip border in a list. */
 .lib-surface .lbry-filtermenu .lbry-filter{
   border-color:transparent;border-radius:var(--radius-s);
@@ -876,7 +807,9 @@ html[data-reduced-motion="true"] .lib-surface .ig-mine{transition:none}
 html[data-reduced-motion="true"] .lib-surface .lbry-filters .lbry-filter:active,
 html[data-reduced-motion="true"] .lib-surface .lbry-filtertrig:active,
 html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:none}
+html[data-reduced-motion="true"] .lib-surface .lib-switch[data-slide]::before{transition:none !important}
 @media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface .lib-switch[data-slide]::before{transition:none !important}
   html:not([data-reduced-motion="false"]) .lib-surface .lbry-filters .lbry-filter:active,
   html:not([data-reduced-motion="false"]) .lib-surface .lbry-filtertrig:active,
   html:not([data-reduced-motion="false"]) .lib-surface .lib-switch-btn:active{transform:none}
@@ -979,7 +912,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .lbry-filtersbtn:hover{color:var(--t0);background:var(--hvr)}
 .lib-surface .lbry-filtersbtn[aria-expanded="true"],
 .lib-surface .lbry-filtersbtn[data-active="true"]{color:var(--t0);background:var(--card)}
-.lib-surface .lbry-filtersbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface .lbry-filtersbtn:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .lib-surface .lbry-filtersbtn-count{
   display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;
   border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);
@@ -1040,7 +973,7 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   background:var(--t0);color:var(--bg-1);
   font-family:var(--font);font-size:13px;font-weight:560;cursor:pointer;
 }
-.lbry-sheet-done:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lbry-sheet-done:focus-visible{outline:2px solid var(--link);outline-offset:2px}
 .lbry-sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:16px}
 
 /* Phone: the one chip row that stays on screen. It scrolls sideways and never
@@ -1089,6 +1022,16 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 }
 .lib-surface .lbry-card:hover .lbry-card-shot{transform:none;box-shadow:none}
 .lib-surface .lbry-card .lbry-card-shot{border-radius:0}
+/* A card that mounts rises 12px into place as it fades in. Transform and
+   opacity only; `backwards` fill, so the finished card carries no animation
+   state and hover and focus behave as before. Cards already on the page do not
+   replay it. */
+@keyframes plSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.lib-surface .lbry-card{animation:plSlideUp var(--dur-2) var(--ease-out) backwards}
+html[data-reduced-motion="true"] .lib-surface .lbry-card{animation:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface .lbry-card{animation:none}
+}
 /* THE FOOT IS TWO THINGS COMPETING FOR ONE LINE, AND THE NAME LOSES.
    `.lbry-card-tail` is `flex-shrink:0`, so it holds the same width at every
    card size — 141px of "Copy CSS" and "Open →" on the Gradient Library — while
@@ -1216,6 +1159,18 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 .lib-surface .ig .ic:focus-visible{background:var(--hvr);border-color:var(--border);outline:2px solid var(--accent);outline-offset:-2px}
 .lib-surface .ig .ic:active{background:var(--hvr);border-color:var(--border);transform:scale(.97)}
 .lib-surface .ig .ic.is-picked{background:var(--accent-wash);border-color:var(--accent-border)}
+/* A grouped grid opens each pack with a full-width heading row: the pack's name and its
+   icon count, in place of a label on every cell. Its height is fixed (the box includes
+   the hairline and the air above it), so the windowed grid, which swaps cells for
+   same-height ghosts, can never move a row because of a heading. */
+.lib-surface .ig .ig-pack-head{
+  grid-column:1/-1;box-sizing:border-box;height:40px;margin:0;padding:0 4px 8px;
+  display:flex;align-items:flex-end;gap:8px;min-width:0;
+  border-bottom:1px solid var(--border);
+  font-family:var(--font);font-size:var(--fs-caption);line-height:16px;letter-spacing:0;text-transform:none;
+}
+.lib-surface .ig .ig-pack-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--t0)}
+.lib-surface .ig .ig-pack-count{flex-shrink:0;font-weight:500;color:var(--t2);font-variant-numeric:tabular-nums}
 /* Reduced motion: no fade and no press scale. The house pair: the in-app choice, then
    the OS preference unless the visitor turned motion back on. */
 html[data-reduced-motion="true"] .lib-surface .ig .ic{transition:none}
@@ -1328,57 +1283,9 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
 .lib-surface .lib-btn svg{flex-shrink:0}
 @media(pointer:coarse){.lib-surface .lib-btn{min-height:44px}}
 
-/* ── The customiser's split Download button ───────────────────────────────
-   One hairline pill drawn by the wrapper, two buttons inside it. The main part
-   names the format it will download; the arrow part opens the format menu. At
-   rest both are transparent like the other secondary buttons, so Copy SVG stays
-   the one filled button in the row. Each part has its own hover, press and
-   focus; the divider is the arrow part's left edge.
-
-   The footer is a size container (icon-emoji-library.css), so the labels pick
-   their width tier from the footer's own width, not the viewport's. The
-   widest face of each tier (icon plus longest label) sits beside the visible
-   face as a hidden sizer, which is what stops the button changing width when the
-   format or the Size changes. */
-.icust-foot .dl-split{
-  position:relative;display:inline-flex;align-items:stretch;flex:1 1 auto;min-width:max-content;
-  min-height:40px;border-radius:var(--btn-radius);isolation:isolate;
-}
-/* The outline is an inset ring on a pseudo-element, not a border: a border would
-   take 1px off each part's height, and on touch each part must be a full 44px. */
-.icust-foot .dl-split::after{
-  content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
-  box-shadow:inset 0 0 0 1px var(--bh);transition:box-shadow var(--dur-1) var(--ease-standard);
-}
-.icust-foot .dl-main,.icust-foot .dl-more{
-  appearance:none;margin:0;border:0;background:transparent;color:var(--t0);
-  display:inline-flex;align-items:center;justify-content:center;
-  font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
-  cursor:pointer;transition:background-color var(--dur-1) var(--ease-standard);
-}
-/* The main part is a one-cell grid: the visible face and the hidden sizer share
-   cell 1/1, so the part's width is the sizer's and the face sits in its centre. */
-.icust-foot .dl-main{display:grid;place-items:center;flex:1 1 auto;padding:0 12px;border-radius:var(--btn-radius) 0 0 var(--btn-radius);font-variant-numeric:tabular-nums}
-.icust-foot .dl-more{flex:0 0 36px;width:36px;padding:0;border-left:1px solid var(--bh);border-radius:0 var(--btn-radius) var(--btn-radius) 0}
-@media(hover:hover){
-  .icust-foot .dl-split:hover::after{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 34%,transparent)}
-  .icust-foot .dl-main:hover:not(:disabled):not([aria-disabled="true"]),
-  .icust-foot .dl-more:hover:not(:disabled){background:var(--hvr)}
-}
-.icust-foot .dl-main:active:not(:disabled):not([aria-disabled="true"]),
-.icust-foot .dl-more:active:not(:disabled){background:color-mix(in srgb,var(--t0) 8%,transparent)}
-.icust-foot .dl-main:focus-visible,.icust-foot .dl-more:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.icust-foot .dl-more[aria-expanded="true"]{background:var(--hvr)}
-.icust-foot .dl-main:disabled,.icust-foot .dl-more:disabled{opacity:.5;cursor:not-allowed}
-.icust-foot .dl-main[aria-disabled="true"]{cursor:progress}
-/* Split Download while a Pro setting is previewed: both parts dimmed, still focusable, nothing on hover. */
-.icust-foot .dl-split[data-blocked="true"]::after,
-.icust-foot .dl-split[data-blocked="true"]:hover::after{box-shadow:inset 0 0 0 1px var(--border)}
-.icust-foot .dl-split[data-blocked="true"] .dl-main,
-.icust-foot .dl-split[data-blocked="true"] .dl-more{color:var(--t3);cursor:default}
-.icust-foot .dl-split[data-blocked="true"] .dl-more{border-left-color:var(--border)}
-.icust-foot .dl-split[data-blocked="true"] .dl-main:hover,
-.icust-foot .dl-split[data-blocked="true"] .dl-more:hover{background:transparent}
+/* ── The split Download button: the shared parts ───────────────────────────
+   The shape and layout are the editor's (.ied-ft .dl-split in pages/icon-editor.css);
+   what is here is the glyph swap and the hidden width sizers. */
 .dl-caret{flex:none;transition:transform var(--dur-1) var(--ease-standard)}
 .dl-more[aria-expanded="true"] .dl-caret{transform:rotate(180deg)}
 
@@ -1396,31 +1303,6 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
 .dl-main>.dl-sizer{visibility:hidden;pointer-events:none}
 .dl-main .dl-p{display:none}
 
-/* Width tiers, by the footer's own content width. Wide: full labels. Phone:
-   short labels. Narrow: Copy drops "SVG" (under 300px), then the Save button is
-   a glyph (under 280px). */
-.icust-foot .icust-save-p,.icust-foot .icust-save-g{display:none}
-.icust-foot .icust-save-w{min-width:0;max-width:220px;overflow:hidden;text-overflow:ellipsis}
-@container (max-width:439.98px){
-  .dl-main .dl-w{display:none}
-  .dl-main>.dl-sizer.dl-p{display:inline-flex}
-  .dl-main .dl-show.dl-p{display:block}
-  .icust-foot .icust-save-w{display:none}
-  .icust-foot .icust-save-p{display:inline}
-}
-/* Copy drops "SVG" under 300px of footer width (360 has 294, 320 has 254). Save
-   becomes a glyph only under 280px, so it keeps its word at 360 and goes
-   icon-only at 320. */
-@container (max-width:299.98px){
-  .icust-foot .dl-main{padding:0 10px}
-  .icust-foot .icust-tier-w{display:none}
-}
-@container (max-width:279.98px){
-  .icust-foot .icust-save-p{display:none}
-  .icust-foot .icust-save-g{display:block}
-  .iel-page .icust-foot .lib-btn.icust-save{flex:0 0 44px;width:44px;min-width:44px;padding:0}
-}
-.icust-foot .icust-save-g{width:16px;height:16px}
 
 /* The format menu. Portalled to <body>, so nothing here is scoped to the page.
    Positioned by placePopover (top and side) and pinned to the split's right
@@ -1429,7 +1311,7 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
 .pop.dl-menu[data-pop-fixed="true"]{
   position:fixed;inset:auto;left:auto;right:var(--dl-right,8px);bottom:auto;top:var(--select-top,0px);
   z-index:var(--select-layer,130);isolation:isolate;
-  min-width:max(200px,var(--dl-w,0px));width:max-content;max-width:calc(100vw - 16px);
+  min-width:max(200px,var(--dl-w,0px));width:max-content;max-width:calc(100vw - 32px);
   max-height:var(--pop-max-h,100dvh);
 }
 .dl-scrim{position:fixed;inset:0;z-index:calc(var(--select-layer,130) - 1);background:transparent}
@@ -1443,8 +1325,6 @@ html[data-reduced-motion="true"] .lib-surface .ig .ic:is(:hover,:focus-visible,.
 .dl-item[aria-disabled="true"]:hover{background:none}
 @media(pointer:coarse){
   .dl-item{min-height:44px}
-  .icust-foot .dl-split{min-height:44px}
-  .icust-foot .dl-more{flex-basis:44px;width:44px}
 }
 html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 @media(prefers-reduced-motion:reduce){
@@ -1469,7 +1349,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 
 /* Search focus was `--brand`. The ring is non-text, so the plain accent is
    right for it; the halo is the derived wash. */
-.lib-surface .lbry-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+.lib-surface .lbry-search:focus-within{border-color:var(--accent)}
 
 /* The empty state's one action. It was an `--accent-strong` fill; an empty
    result is the user's own filter talking back, not the product asking for
@@ -1506,7 +1386,7 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 
    THE TINTS ARE DECORATION, NOT DATA. The preview has no colours to paint
    (LockedTease.jsx), so four fixed tints stand in, the same on every card;
-   none of them is a hex anywhere in src/data. Blurred at 16px they read as
+   none of them is a hex anywhere in src/data. Blurred at 7px the bands still read as
    "a palette is here" and give nothing to an eyedropper that means anything.
 
    NO TRANSITION on any .lockt- rule — tests/unit/locked-library-tease pins
@@ -1519,21 +1399,32 @@ html[data-reduced-motion="true"] :is(.dl-caret,.dl-ico>svg){transition:none}
 }
 .lib-surface .lockt-card--blur .lockt-stripes{
   height:clamp(200px,34vw,260px);border:0;border-radius:0;
-  filter:blur(16px) saturate(1.1);transform:scale(1.15);
+  filter:blur(7px) saturate(1.15);transform:scale(1.08);
 }
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:#B7C4E6}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:#E6C7B7}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:#BFE0CF}
-.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:#D9A8D5}
-[data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.55}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="0"]{background:color-mix(in srgb,var(--hue-colour) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="1"]{background:color-mix(in srgb,var(--hue-imagery) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="2"]{background:color-mix(in srgb,var(--hue-icons) 58%,var(--card))}
+.lib-surface .lockt-card--blur .lockt-stripe[data-step="3"]{background:color-mix(in srgb,var(--hue-component) 58%,var(--card))}
+[data-theme="dark"] .lib-surface .lockt-card--blur .lockt-stripes{opacity:.8}
+/* A real preview (LockedTease.jsx, scripts/library/lockedThumbs.mjs): the
+   row's own soft image over the tints, at a lighter blur so its colours and
+   shape read through. The image is already blurred and rounded when it is
+   made; this only softens the upscale. */
+.lib-surface .lockt-card--thumb .lockt-stripes{position:relative;filter:blur(4px)}
+.lib-surface .lockt-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;image-rendering:pixelated}
+/* A frost over it, so it reads as behind glass and stays quieter than the open
+   cards beside it; heavier in dark, where the colours glow against the card. */
+.lib-surface .lockt-card--thumb .lockt-stripes::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--card) 40%,transparent)}
+[data-theme="dark"] .lib-surface .lockt-card--thumb .lockt-stripes::after{background:color-mix(in srgb,var(--card) 45%,transparent)}
 .lib-surface .lockt-card--blur .lockt-foot{position:relative;z-index:1;padding:16px 18px 18px;background:var(--card)}
 .lib-surface .lockt-card--blur .lockt-name{font-size:16px;font-weight:540;color:var(--t0)}
-.lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(6px)}
+.lib-surface .lockt-card--prompt.lockt-card--blur .lockt-lines{border:0;border-radius:0;filter:blur(4px)}
 .lib-surface .lockt-upgrade{
   position:absolute;left:50%;top:calc(50% - 30px);z-index:2;transform:translate(-50%,-50%);
   display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;
   border-radius:var(--radius-pill);background:var(--accent-fill);color:var(--accent-ink);
   font-family:var(--font);font-size:13px;font-weight:560;white-space:nowrap;text-decoration:none;
+  box-shadow:0 0 0 2px var(--card);
   opacity:0;
 }
 .lib-surface .lockt-upgrade .lockt-glyph{width:13px;height:13px}
@@ -1617,116 +1508,27 @@ html[data-reduced-motion="true"] .lib-surface.pgl-page .pgl-build-link:hover .pg
 
 
 
-/* ── The end of the icon grid ────────────────────────────────────────────────
-   The closing block under the results, centred: a display sentence, one dim
-   line, one ink pill and, where a second way on is true, a text link. It uses
-   the app's own tokens (ink is --t0, the page is --bg-0, the dim line is
-   --t1). No card, no box, no hairline.
-
-   Signed out, a row of blurred built-in icons continues the grid above it.
-   The row is decoration: the block's words and buttons are always on screen,
-   and the "Log in to see more" chip is an echo for a fine pointer only.
-   A mask fades the row into the block below it. */
-.ig-end{margin-top:0}
-
+/* ── The faded rows of the icon grid's end ───────────────────────────────────
+   The block itself (heading, words, pill, link, and the mask that dissolves
+   these rows into it) is the shared GalleryEndGate. What is here is only the
+   icon-shaped rows it is handed: two rows of blurred built-in icons that
+   continue the grid. They are decoration; the wrapper already removes focus and
+   pointer events. */
 .ig-end-tease{
   --ig-end-cols:8;
   position:relative;isolation:isolate;
   display:grid;grid-template-columns:repeat(var(--ig-end-cols),minmax(0,1fr));gap:10px;
-  margin-top:4px;
 }
 .ig-end-cell{
   position:relative;box-sizing:border-box;display:grid;place-items:start center;
   min-height:var(--ig-end-cell-h,92px);padding-top:16px;color:var(--t0);
 }
 .ig-end-cell>svg{width:24px;height:24px;filter:blur(3px)}
-.ig-end-chip svg{flex:0 0 auto;width:12px;height:12px}
 .ig-end-cell[data-row="0"]>svg{opacity:.72}
-.ig-end-cell[data-row="1"]>svg{opacity:.42}
+.ig-end-cell[data-row="1"]>svg{opacity:.5}
 @media(max-width:640px){
   .ig-end-tease{gap:2px}
   .ig-end-cell{min-height:var(--ig-end-cell-h,72px);padding-top:12px}
-}
-
-/* The chip. Absent on touch, where the band says the same thing in words. */
-.ig-end-chip{display:none}
-@media (hover:hover) and (pointer:fine){
-  .ig-end-cell{cursor:pointer}
-  .ig-end-chip{
-    position:absolute;left:50%;top:28px;z-index:1;transform:translate(-50%,-50%);
-    display:inline-flex;align-items:center;gap:6px;
-    padding:6px 10px;border-radius:var(--radius-pill);
-    background:var(--t0);color:var(--bg-0);
-    font:500 12px/1 var(--font);white-space:nowrap;
-    opacity:0;pointer-events:none;
-    transition:opacity 150ms cubic-bezier(.23,1,.32,1);
-  }
-  .ig-end-cell:hover .ig-end-chip{opacity:1}
-  /* Edge columns keep the chip inside the grid. */
-  .ig-end-cell[data-edge="first"] .ig-end-chip{left:0;transform:translateY(-50%)}
-  .ig-end-cell[data-edge="last"] .ig-end-chip{left:auto;right:0;transform:translateY(-50%)}
-}
-/* From 1200px the page gutter is wider than the chip's overhang, so the edge
-   chips can centre on their cell like the others. */
-@media (hover:hover) and (pointer:fine) and (min-width:1200px){
-  .ig-end-cell[data-edge] .ig-end-chip{left:50%;right:auto;transform:translate(-50%,-50%)}
-}
-
-/* The block: centred, one column. With a blurred row above it the heading is
-   pulled 24px up into the row's faded foot; without one (the free plan's block)
-   it sits 48px below the grid, so it never overlaps a result. */
-.ig-end-band{display:flex;flex-direction:column;align-items:center;gap:24px;max-width:34rem;margin:48px auto 0;padding:0;text-align:center;position:relative}
-.ig-end-tease+.ig-end-band{margin-top:-24px}
-.ig-end{margin-bottom:64px}
-@media(max-width:767px){.ig-end{margin-bottom:48px}}
-/* The grid dissolves into the block: the mask is transparency, not a painted colour. */
-.ig-end-tease{-webkit-mask-image:linear-gradient(to bottom,#000 0%,transparent 85%);mask-image:linear-gradient(to bottom,#000 0%,transparent 85%)}
-.ig-end-copy{min-width:0}
-.ig-end .ig-end-h{
-  margin:0;
-  font-family:var(--display);font-size:clamp(28px,2.2vw + 18px,40px);font-weight:560;line-height:1.1;letter-spacing:-.03em;
-  color:var(--t0);text-wrap:balance;
-}
-.ig-end .ig-end-p{margin:12px auto 0;max-width:46ch;font-size:16px;line-height:1.55;color:var(--t1);text-wrap:pretty}
-.ig-end .ig-end-sets{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--t2)}
-.ig-end-cta{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
-@media(max-width:767px){.ig-end-cta{flex-direction:column;align-items:stretch;gap:8px;align-self:stretch}.ig-end-pill{justify-content:center}.ig-end-link{justify-content:center}}
-
-.ig-end-pill,.ig-end-link{
-  box-sizing:border-box;display:inline-flex;align-items:center;min-height:48px;
-  border-radius:var(--radius-pill);
-  font-family:var(--font);font-size:15px;line-height:1.2;
-  white-space:nowrap;text-decoration:none;cursor:pointer;
-}
-.ig-end-pill{
-  padding:10px 22px;border:0;
-  background:var(--t0);color:var(--bg-0);font-weight:540;
-  transition:background-color var(--dur-1) ease,transform 140ms cubic-bezier(.23,1,.32,1);
-}
-.ig-end-pill:active{transform:scale(.97)}
-.ig-end-link{
-  padding:0 8px;border:0;background:transparent;color:var(--t1);font-size:14px;font-weight:560;
-  text-decoration:underline;text-underline-offset:3px;
-  transition:color var(--dur-1) ease;
-}
-@media (hover:hover) and (pointer:fine){
-  .ig-end-pill:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
-  .ig-end-link:hover{color:var(--t0)}
-}
-.ig-end-pill:focus-visible,.ig-end-link:focus-visible{outline:2px solid var(--link,var(--accent-text));outline-offset:3px}
-
-@media (forced-colors:active){
-  .ig-end-pill{border:1px solid ButtonText}
-}
-
-/* Reduced motion: the in-app choice wins in both directions, then the OS
-   setting. The chip appears and goes with no fade; the arrow does not rotate
-   and the press does not scale. */
-html[data-reduced-motion="true"] :is(.ig-end-pill,.ig-end-link,.ig-end-chip){transition:none}
-html[data-reduced-motion="true"] .ig-end-pill:is(:hover,:active){transform:none}
-@media(prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.ig-end-pill,.ig-end-link,.ig-end-chip){transition:none}
-  html:not([data-reduced-motion="false"]) .ig-end-pill:is(:hover,:active){transform:none}
 }
 
 /* Dark --inp matches the toolbar card, so library and font-browser search fields step up to --bg-3 to stay visible against it. */

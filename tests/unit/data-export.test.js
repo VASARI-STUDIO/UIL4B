@@ -162,10 +162,102 @@ test('a signed-out export says so rather than looking identical to a failed one'
 })
 
 test('the disclosure table is generated from the keys actually present', () => {
-  const out = buildExport({ local: { 'vs-accounts': [], 'vs-mystery': 1 }, session: {} })
+  const out = buildExport({ local: { 'vs-lang': 'en', 'vs-mystery': 1 }, session: {} })
   const keys = out.disclosure.map((d) => d.key)
-  assert.deepEqual(keys, ['vs-accounts', 'vs-mystery'])
+  assert.deepEqual(keys, ['vs-lang', 'vs-mystery'])
   assert.equal(out.about.browserKeys, 2)
+})
+
+test('other accounts\' details are withheld; only the signed-in profile-cache entry stays', () => {
+  const local = {
+    'vs-lang': 'en',
+    'vs-accounts': [{ uid: 'u1', email: 'a@b.c' }, { uid: 'u2', email: 'x@y.z' }],
+    'vs-profile-cache': { u1: { displayName: 'A' }, u2: { displayName: 'B' } },
+  }
+  const out = buildExport({ local, session: {}, account: { uid: 'u1' } })
+  assert.equal(out.browser.local['vs-accounts'], undefined)
+  assert.deepEqual(out.browser.local['vs-profile-cache'], { u1: { displayName: 'A' } })
+  assert.equal(out.browser.local['vs-lang'], 'en')
+  assert.deepEqual(out.about.withheldKeys, ['vs-accounts'])
+  assert.ok(!JSON.stringify(out).includes('x@y.z'))
+  // Signed out: no entry belongs to anyone, so the cache goes too.
+  const anon = buildExport({ local, session: {} })
+  assert.deepEqual(Object.keys(anon.browser.local), ['vs-lang'])
+  assert.deepEqual(anon.about.withheldKeys, ['vs-accounts', 'vs-profile-cache'])
+  // The inputs are not mutated, and clearing still sees every owned key.
+  assert.ok('vs-accounts' in local)
+})
+
+// A device that has held two accounts: the file for one must not carry the other.
+// Expected values are written out by hand, not derived from the function.
+const TWO_ACCOUNTS = () => ({
+  'vs-lang': 'en',
+  'vs-accounts': [
+    { uid: 'uid-mine', email: 'mine@example.test', displayName: 'Mina Mine' },
+    { uid: 'uid-other', email: 'other@example.test', displayName: 'Otto Other' },
+  ],
+  'vs-profile-cache': {
+    'uid-mine': { displayName: 'Mina Mine', bio: 'my bio' },
+    'uid-other': { displayName: 'Otto Other', bio: 'other bio' },
+  },
+})
+
+test('the export of one account carries no trace of the other account on the device', () => {
+  const out = buildExport({ local: TWO_ACCOUNTS(), session: {}, account: { uid: 'uid-mine', email: 'mine@example.test' } })
+  const text = JSON.stringify(out)
+  for (const leak of ['other@example.test', 'Otto Other', 'uid-other', 'other bio']) {
+    assert.ok(!text.includes(leak), `the file leaks "${leak}"`)
+  }
+})
+
+test('the signed-in account\'s own profile-cache entry survives, and nothing else of it', () => {
+  const out = buildExport({ local: TWO_ACCOUNTS(), session: {}, account: { uid: 'uid-mine' } })
+  assert.deepEqual(out.browser.local['vs-profile-cache'], { 'uid-mine': { displayName: 'Mina Mine', bio: 'my bio' } })
+  assert.equal(out.browser.local['vs-lang'], 'en')
+})
+
+test('the remembered-accounts list is withheld whole, even though it names the signed-in account too', () => {
+  const out = buildExport({ local: TWO_ACCOUNTS(), session: {}, account: { uid: 'uid-mine' } })
+  assert.ok(!('vs-accounts' in out.browser.local))
+  assert.deepEqual(out.about.withheldKeys, ['vs-accounts'])
+})
+
+test('signed out, both account keys are withheld and listed', () => {
+  const out = buildExport({ local: TWO_ACCOUNTS(), session: {} })
+  assert.deepEqual(Object.keys(out.browser.local), ['vs-lang'])
+  assert.deepEqual(out.about.withheldKeys, ['vs-accounts', 'vs-profile-cache'])
+  assert.ok(!JSON.stringify(out).includes('@example.test'))
+})
+
+test('a signed-in uid with no cache entry gets the cache key withheld, not an empty object', () => {
+  const out = buildExport({ local: TWO_ACCOUNTS(), session: {}, account: { uid: 'uid-nobody' } })
+  assert.ok(!('vs-profile-cache' in out.browser.local))
+  assert.deepEqual(out.about.withheldKeys, ['vs-accounts', 'vs-profile-cache'])
+})
+
+test('the same keys in session storage are filtered the same way', () => {
+  const out = buildExport({ local: {}, session: TWO_ACCOUNTS(), account: { uid: 'uid-mine' } })
+  assert.ok(!JSON.stringify(out).includes('other@example.test'))
+  assert.deepEqual(Object.keys(out.browser.session['vs-profile-cache']), ['uid-mine'])
+})
+
+test('nothing withheld means an empty list, and the caller\'s data is not mutated', () => {
+  const clean = buildExport({ local: { 'vs-lang': 'en' }, session: {} })
+  assert.deepEqual(clean.about.withheldKeys, [])
+  const local = TWO_ACCOUNTS()
+  buildExport({ local, session: {}, account: { uid: 'uid-mine' } })
+  assert.deepEqual(local, TWO_ACCOUNTS())
+})
+
+test('withholding from the file does not stop Clear local data from counting the profile cache', () => {
+  const store = fakeStorage({
+    'vs-lang': '"en"',
+    'vs-profile-cache': JSON.stringify(TWO_ACCOUNTS()['vs-profile-cache']),
+    'vs-accounts': JSON.stringify(TWO_ACCOUNTS()['vs-accounts']),
+  })
+  const clearing = keysToClear(store)
+  assert.ok(clearing.includes('vs-profile-cache'), 'the other account\'s cached profile must still be cleared')
+  assert.ok(clearing.includes('vs-lang'))
 })
 
 // ── Clearing ────────────────────────────────────────────────────────────────
@@ -192,6 +284,13 @@ test('Settings exports by enumeration and reads the server too', () => {
   assert.ok(src.includes('collectStorage(window.sessionStorage)'), 'sessionStorage must be enumerated')
   assert.ok(/sync', 'data'/.test(src), "users/{uid}/sync/data must be included — it holds the user's projects")
   assert.ok(src.includes('keysToClear'), 'clearing must enumerate too')
+})
+
+test('the export is built through buildExport, which is where the other accounts are withheld', () => {
+  // Source text cannot show behaviour (the tests above do that); it can only
+  // show that Settings did not route around the function that filters.
+  const src = read('src/pages/Settings.jsx')
+  assert.ok(/buildExport\(/.test(src), 'Settings must build the file with buildExport')
 })
 
 test('no page ships a second hand-written copy of the storage list', () => {

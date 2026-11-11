@@ -411,11 +411,11 @@ test.describe('feedback page opened from a link', () => {
   test('?from=support and any ?reason= preselect Help; no link defaults to a feature request', async ({ page }) => {
     const checked = () => form(page).locator('[role="radio"][aria-checked="true"]')
     await go(page, '/feedback?from=support')
-    await expect(checked()).toHaveText('Help Request')
+    await expect(checked()).toHaveText('Help request')
     await go(page, '/feedback?reason=anything_at_all')
-    await expect(checked()).toHaveText('Help Request')
+    await expect(checked()).toHaveText('Help request')
     await go(page, '/feedback')
-    await expect(checked()).not.toHaveText('Help Request')
+    await expect(checked()).not.toHaveText('Help request')
   })
 
   test('reason=payment_failed fills the subject and makes the email required', async ({ page }) => {
@@ -464,7 +464,7 @@ test.describe('feedback page opened from a link', () => {
     watch(page, 'a visitor retrying after a failed send')
     await standIn(page, () => ({ status: 502 }))
     await go(page, '/feedback')
-    await form(page).getByRole('radio', { name: 'Bug Report' }).click()
+    await form(page).getByRole('radio', { name: 'Bug report' }).click()
     await form(page).locator('#fb-subject').fill('Export is broken')
     await form(page).locator('#fb-email').fill('pat@example.com')
     await form(page).locator('#fb-message').fill(message)
@@ -477,7 +477,7 @@ test.describe('feedback page opened from a link', () => {
     await page.evaluate(() => { history.pushState({}, '', '/feedback?reason=payment_failed'); dispatchEvent(new PopStateEvent('popstate')) })
     await expect(form(page).getByLabel('Your message')).toHaveValue(message)
     await form(page).getByRole('button', { name: 'Edit message' }).click()
-    await expect(form(page).locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug Report')
+    await expect(form(page).locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug report')
     await expect(form(page).locator('#fb-subject')).toHaveValue('Export is broken')
     await expect(form(page).locator('#fb-email')).toHaveValue('pat@example.com')
     await expect(form(page).locator('#fb-message')).toHaveValue(message)

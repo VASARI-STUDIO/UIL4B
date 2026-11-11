@@ -3,9 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder, 2026-09-18: "people can submit icons to the community they just need
-// to be reviewed - all submissions of any sorts are tied to the account not
-// browser."
+// People can submit icons to the community; they only need to be reviewed. All
+// submissions of any sort are tied to the account, not the browser.
 //
 // The Community Hub already takes DESIGNS (a name and a link) and the queue
 // already carries gradients and palettes. An icon is different from all three
@@ -238,8 +237,8 @@ export function buildIconPayload({ svg, author } = {}) {
  *
  * THE ACCOUNT IS THE SOURCE OF TRUTH AND THIS IS NOT IT.
  *
- * The founder's requirement is that a submission is "tied to the account not
- * browser", and the thing that satisfies it is the Firestore document keyed by
+ * The requirement is that a submission is tied to the account, not the
+ * browser, and the thing that satisfies it is the Firestore document keyed by
  * authorUid — that is what survives a cache clear and follows the user to
  * another device. This store exists for the two seconds either side of that
  * write, and for the case where it fails:

@@ -35,7 +35,7 @@
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { answerIconify, headPackOfUrl, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
+import { answerIconify, headPackOfUrl, iconifyRequests, isLiveIconify, withholdSnapshots, ICONIFY_STUB_HEADER, REFUSED_VALUE, SNAPSHOT_PATH_RE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
 
@@ -54,6 +54,10 @@ async function refuseIconify(page) {
     (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests' }))
   await page.route((u) => u.hostname === 'api.simplesvg.com' || u.hostname === 'api.unisvg.com',
     (route) => route.fulfill({ status: 403, contentType: 'text/plain', headers, body: 'Forbidden' }))
+  // The site's own copy of each pack list is part of the catalogue too. Left
+  // answering, the page would draw a healthy grid over a refused service.
+  await page.route((u) => SNAPSHOT_PATH_RE.test(u.pathname),
+    (route) => route.fulfill({ status: 404, contentType: 'text/plain', headers, body: 'Not found' }))
 }
 
 /** Relative luminance of a computed colour: `rgb(r, g, b)` or `color(srgb r g b)`. */
@@ -89,7 +93,7 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   watch(page, 'designer opening the icon library')
   // SIGNED IN AS PRO, BECAUSE THE SUBJECT IS THE FIXTURE AND NOT THE PAYWALL.
   // /create/icons is tiered (src/data/iconPackTiers.js): a
-  // signed-out visitor browses five packs, not twenty-seven, so "one /collection
+  // signed-out visitor browses five packs, not thirty-one, so "one /collection
   // per pack the page browses on first paint" would be measuring the gate here
   // rather than the stub. Pro is the tier that browses everything, which is the
   // state this test has always been written against. The tiers are measured in
@@ -375,14 +379,19 @@ for (const theme of ['light', 'dark']) {
    packs that MUST have been fetched at that tier. */
 
 const OUTLINED = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
-const NEEDS_ACCOUNT = ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon']
+const NEEDS_ACCOUNT = ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
 const NEEDS_PRO = ['simple-icons', 'logos', 'devicon', 'skill-icons', 'twemoji', 'noto',
   'openmoji', 'fluent-emoji', 'circle-flags', 'flag', 'flagpack', 'cif', 'flat-color-icons',
   'vscode-icons', 'token-branded']
 
-/** The pack a request to api.iconify.design is about, or null for /search. */
+/** The pack a request to api.iconify.design (or the site's own copy of a pack list) is about, or null for /search. */
 function packInUrl(raw) {
   const url = new URL(raw)
+  // The pack list is read from this site now, so the gate is measured on that
+  // read as well as on the Iconify requests: a gated pack's list must not be
+  // fetched from anywhere.
+  const snapshot = url.pathname.match(SNAPSHOT_PATH_RE)
+  if (snapshot) return decodeURIComponent(snapshot[1])
   if (url.pathname === '/collection') return url.searchParams.get('prefix')
   const batch = url.pathname.match(/^\/([^/]+)\.json$/)
   if (batch) return batch[1]
@@ -397,11 +406,11 @@ function headPacksAsked(page) {
   return packs
 }
 
-/** Collect every Iconify and Logo.dev URL this page asks for. */
+/** Collect every Iconify and Logo.dev URL this page asks for, and every read of the site's own pack lists. */
 function iconifyUrlLog(page) {
   const urls = []
   page.on('request', (r) => {
-    if (/api\.iconify\.design|img\.logo\.dev/.test(r.url())) urls.push(r.url())
+    if (/api\.iconify\.design|img\.logo\.dev/.test(r.url()) || SNAPSHOT_PATH_RE.test(new URL(r.url()).pathname)) urls.push(r.url())
   })
   return urls
 }
@@ -444,8 +453,8 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
 
   // The cap is SAID, not only done — a count with no explanation is what makes
   // a limit feel punitive rather than deliberate.
-  await expect(page.locator('.ig-end[data-gate="anon"]')).toBeVisible()
-  await expect(page.locator('.ig-end[data-gate="anon"]')).toContainText(String(cells))
+  await expect(page.locator('.geg[data-gate="anon"]')).toBeVisible()
+  await expect(page.locator('.geg[data-gate="anon"]')).toContainText(String(cells))
   // And it is not the outage state: nothing refused anything here.
   await expect(page.locator('.ig-notice')).toHaveCount(0)
   await ctx.close()
@@ -481,7 +490,7 @@ test('signed in free: the account packs open, the brand, flag and emoji packs ar
   // group tray are the whole of it until the results run out; browsing every
   // pack never runs out, so neither the wall nor the end band is on screen.
   await expect(page.locator('.ig-gate')).toHaveCount(0)
-  await expect(page.locator('.ig-end')).toHaveCount(0)
+  await expect(page.locator('.geg')).toHaveCount(0)
   await ctx.close()
 })
 
@@ -554,7 +563,7 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   await expect(page.locator('button.ig-mine')).toHaveAttribute('aria-pressed', 'true')
   await page.waitForTimeout(1500)
   await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
-  await expect(page.locator('.ig-end'), 'My Icons carries no end band at any tier').toHaveCount(0)
+  await expect(page.locator('.geg'), 'My Icons carries no end band at any tier').toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Recently copied' })).toBeVisible()
 
@@ -624,7 +633,7 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
 
   const locked = (r) => r.chips.filter((c) => c.badge)
   // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
-  expect(anon.chips.length, 'the group tray rendered').toBe(4)
+  expect(anon.chips.length, 'the group tray rendered: All icons, Coloured, Brand logos and Flags, with no Emoji chip').toBe(4)
   expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
   for (const c of anon.chips) {
     expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
@@ -632,9 +641,9 @@ test('the group chips mark a locked group before it is clicked, at no cost in wi
   }
   expect(anon.chips.map((c) => c.name).filter((n) => /^My icons/i.test(n)), 'My icons is a toggle, not a group chip').toEqual([])
   expect(locked(anon).map((c) => c.name), 'signed out, every group is locked and asks for Pro').toEqual(
-    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro', 'Emoji · Pro'],
+    ['Coloured · Pro', 'Brand logos · Pro', 'Flags · Pro'],
   )
-  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same four stay locked').toEqual(locked(anon).map((c) => c.name))
+  expect(locked(free).map((c) => c.name), 'a free account opens no group, so the same three stay locked').toEqual(locked(anon).map((c) => c.name))
   expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
   expect(locked(pro), 'Pro sees no locks at all').toEqual([])
   // The width half only means something for the TRAY: it is what the toolbar's
@@ -652,9 +661,14 @@ test('reloading retains all five packs, and listing them never asks /collection'
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   try {
     const page = await ctx.newPage()
-    watch(page, 'visitor reloading cached icon collections')
+    // These three tests are about the live /collection path (its stored answers
+    // and its back-off), which a page that can read the site's own pack lists
+    // never takes. Withholding the lists puts the page on that path; the 404s
+    // are deliberate, so the persona is the one whose refusals are not reported.
+    watch(page, REFUSED)
+    await withholdSnapshots(page)
     await go(page, '/create/icons')
-    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
+    await expect(page.locator('.geg[data-gate="anon"] .geg-p')).toContainText('from 5 sets', { timeout: 20000 })
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     // The default listing names its packs from the committed heads, so there is nothing to ask /collection.
     expect(iconifyRequests(ctx).collection).toBe(0)
@@ -662,7 +676,7 @@ test('reloading retains all five packs, and listing them never asks /collection'
     expect(new Set(packs).size).toBe(5)
 
     await page.reload()
-    await expect(page.locator('.ig-end[data-gate="anon"] .ig-end-p')).toContainText('from 5 sets', { timeout: 20000 })
+    await expect(page.locator('.geg[data-gate="anon"] .geg-p')).toContainText('from 5 sets', { timeout: 20000 })
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible()
     expect(await page.locator('.ic .ic-pack').allTextContents()).toEqual(packs)
     expect(iconifyRequests(ctx).collection).toBe(0)
@@ -684,8 +698,9 @@ test('a pack listed once is not listed again after a reload', async ({ browser }
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20000 })
     await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Lucide', { timeout: 20000 })
-    // One pack's full listing is the one thing that still needs /collection.
-    expect(iconifyRequests(ctx).collection, 'opening a pack asks for its listing once').toBe(1)
+    // One pack's full listing is read from the site's own copy, once, and never asked of Iconify.
+    expect(iconifyRequests(ctx).snapshot, 'opening a pack reads its listing once').toBe(1)
+    expect(iconifyRequests(ctx).collection, 'a pack the site holds a list for is not asked of Iconify').toBe(0)
 
     await page.reload()
     await expect(page.locator('.ig .ic :is(img, svg.ig-sym)').first()).toBeVisible({ timeout: 20000 })
@@ -693,7 +708,8 @@ test('a pack listed once is not listed again after a reload', async ({ browser }
     await expect(page.locator('.ig .ic').first()).toBeVisible({ timeout: 20000 })
     await expect(page.locator('.ig-skel')).toHaveCount(0, { timeout: 20000 })
     await expect(page.getByRole('button', { name: 'Icon pack' })).toContainText('Lucide', { timeout: 20000 })
-    expect(iconifyRequests(ctx).collection, 'the saved listing answers after a reload').toBe(1)
+    expect(iconifyRequests(ctx).snapshot, 'the saved listing answers after a reload').toBe(1)
+    expect(iconifyRequests(ctx).collection, 'a reload still asks Iconify for no list').toBe(0)
     expect(iconifyRequests(ctx).escaped).toEqual([])
   } finally { await ctx.close() }
 })
@@ -711,6 +727,7 @@ test('an expired collection keeps its pack available when collection requests fa
       localStorage.setItem('uil4b:iconify:collection:lucide', JSON.stringify({ v: 1, at, data: { names, title, credit: null } }))
     }, { names, title: collection.title, at })
     let requests = 0
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests++
       return route.fulfill({ status: 429, contentType: 'text/plain', headers: { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }, body: 'Too Many Requests' })
@@ -743,6 +760,7 @@ test('Try again sends at most one collection request per pack on each click', as
     watch(page, 'visitor whose icon catalogue is refused')
     const requests = []
     let refusing = true
+    await withholdSnapshots(page)
     await page.route(url => url.hostname === 'api.iconify.design' && url.pathname === '/collection', route => {
       requests.push(new URL(route.request().url()).searchParams.get('prefix'))
       if (!refusing) return route.fallback()

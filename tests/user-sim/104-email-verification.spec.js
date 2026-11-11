@@ -86,7 +86,7 @@ test.describe('settings — email verification', () => {
     watch(page, 'a person whose address is already verified')
     await signIn(page, { plan: 'free' })
     const section = await openAccount(page)
-    await expect(section.getByText('Email address')).toBeVisible()
+    await expect(section.getByText('Email address', { exact: true })).toBeVisible()
     await expect(section.getByText('Not verified')).toHaveCount(0)
     await expect(section.getByRole('button', { name: 'Send verification link' })).toHaveCount(0)
   })

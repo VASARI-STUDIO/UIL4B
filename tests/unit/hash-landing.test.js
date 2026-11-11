@@ -9,7 +9,7 @@ function frames(t) {
   for (const [name, value] of Object.entries({
     requestAnimationFrame: (fn) => { pending.set(++next, fn); return next },
     cancelAnimationFrame: (id) => pending.delete(id),
-    document: { getElementById: () => null },
+    document: { getElementById: () => null, querySelector: () => null },
     window: { scrollY: 0, innerHeight: 900 },
     getComputedStyle: () => ({ scrollMarginTop: '88px', scrollPaddingTop: '0px' }),
   })) {
@@ -56,6 +56,19 @@ test('native landing is immediate and uses scrollIntoView for CSS margins', (t) 
   clock.tick()
   clock.tick()
   assert.deepEqual(calls, [{ block: 'start', behavior: 'instant' }])
+})
+
+test('leaves landing to the page while a homepage stand-in is present', (t) => {
+  const clock = frames(t)
+  document.querySelector = (selector) => {
+    assert.equal(selector, '[data-deferred-hold]')
+    return {}
+  }
+  document.getElementById = () => ({ scrollIntoView: () => assert.fail('must not scroll before the sections arrive') })
+  landOnHash('#plans', () => null)
+  clock.tick()
+  clock.tick()
+  assert.equal(clock.pending.size, 0)
 })
 
 test('missing targets stop retrying at two seconds', (t) => {

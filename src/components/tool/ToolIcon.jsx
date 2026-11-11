@@ -11,10 +11,14 @@
 const GLYPHS = {
   'arrow-left': (<><path d="M20.25 12H3.75" /><path d="m10.5 5.25-6.75 6.75 6.75 6.75" /></>),
   'arrow-square-out': (<><path d="M18.75 13.5v6a.75.75 0 0 1-.75.75H4.5a.75.75 0 0 1-.75-.75V6a.75.75 0 0 1 .75-.75h6" /><path d="M15 3.75h5.25V9" /><path d="m11.25 12.75 9-9" /></>),
+  'arrow-u-up-left': (<><path d="M9 14.25 3.75 9 9 3.75" /><path d="M3.75 9h10.5a6 6 0 0 1 0 12H9" /></>),
   'arrow-counter-clockwise': (<><path d="M7.5 9.75H3v-4.5" /><path d="M6.17 17.83a8.25 8.25 0 1 0 0-11.66L3 9.75" /></>),
   'arrow-clockwise': (<><path d="M16.5 9.75H21v-4.5" /><path d="M17.83 17.83a8.25 8.25 0 1 1 0-11.66L21 9.75" /></>),
   'arrows-down-up': (<><path d="m10.5 16.5-3 3-3-3" /><path d="M7.5 4.5v15" /><path d="m13.5 7.5 3-3 3 3" /><path d="M16.5 19.5v-15" /></>),
+  'arrow-up': (<><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></>),
+  'arrow-right': (<><path d="M3.75 12h16.5" /><path d="m13.5 5.25 6.75 6.75-6.75 6.75" /></>),
   'bookmark-simple': (<path d="M18 21 12 17.25 6 21V4.5a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 .75.75Z" />),
+  bicycle: (<><circle cx="18.5" cy="17.5" r="3.5" /><circle cx="5.5" cy="17.5" r="3.5" /><circle cx="15" cy="5" r="1" /><path d="M12 17.5V14l-3-3 4-3 2 3h2" /></>),
   'caret-down': (<path d="m19.5 8.25-7.5 7.5-7.5-7.5" />),
   'caret-right': (<path d="m9 4.5 7.5 7.5L9 19.5" />),
   'caret-up-down': (<><path d="m7.5 15.75 4.5 4.5 4.5-4.5" /><path d="m7.5 8.25 4.5-4.5 4.5 4.5" /></>),
@@ -46,6 +50,8 @@ const GLYPHS = {
   'circle-notch': (<path d="M16.5 4.2a9 9 0 1 1-9 0" />),
   // A thumbtack: the position a stop keeps. A tapered head and a needle, so it reads at 12px.
   'push-pin': (<><path d="M8.25 3.75h7.5l-.75 5.25 3 3.75H6l3-3.75-.75-5.25Z" /><path d="M12 12.75v7.5" /></>),
+  // A speech bubble with two lines of text: "Send feedback".
+  'chat-text': (<><path d="M3.75 12a8.25 8.25 0 1 1 3.4 6.67l-3.4 1.58 1.1-3.7A8.2 8.2 0 0 1 3.75 12Z" /><path d="M8.25 10.5h7.5" /><path d="M8.25 13.5h4.5" /></>),
 }
 
 

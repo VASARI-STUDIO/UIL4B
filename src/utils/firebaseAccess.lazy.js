@@ -27,16 +27,23 @@
 //   spinner must never be held back by a performance optimisation.
 //
 // THE GATE OPENS on the earliest of:
-//   · immediately, if `readSessionHint()` says this browser had a session —
-//     these are the people the deferral must not cost, and for them the only
-//     change is which wave the chunk is fetched in;
-//   · immediately, if any URGENT caller asks;
-//   · the largest-contentful-paint entry, plus a frame — the point after which
-//     the number this whole item is about has already been recorded;
-//   · a `requestIdleCallback`, or a 2500 ms backstop, whichever lands first.
-//     LCP never fires on a page nobody looks at (a background tab), and a
-//     session that resolves only when the tab is foregrounded would be a new
-//     bug, not an optimisation.
+//   · immediately, if `readSessionHint()` says this browser had a session and
+//     the auth bootstrap asks — these are the people the deferral must not
+//     cost, and for them the only change is which wave the chunk is fetched in;
+//   · immediately, if any URGENT caller asks (a sign-in form opening, a
+//     protected route, checkout, a Firestore read for a signed-in account);
+//   · for a PAGE THAT NEEDS FIREBASE TO SHOW ITS CONTENT WITHOUT A SIGN-IN
+//     (the roadmap votes, One Tap on /plans): the largest-contentful-paint
+//     entry plus a frame, a `requestIdleCallback` / 2500 ms backstop, or the
+//     first touch. Those callers arm that schedule through `whenFirestore()` or
+//     `whenFirebaseGate()`. LCP never fires on a page nobody looks at (a
+//     background tab), hence the backstop.
+//
+// THE AUTH BOOTSTRAP DOES NOT ARM THAT SCHEDULE. A visitor with no session hint
+// who never signs in, saves or opens a gated page downloads no Firebase at all:
+// `whenAuthSdk()` waits for the gate without scheduling it, and
+// `canSkipAuthWait()` lets AuthContext settle as signed out meanwhile — the
+// answer this browser's own hint already gives.
 //
 // `?firebase=eager` on the URL opens the gate at once. That is the runtime dial
 // for comparing a deferred build against itself without a rebuild; it cannot
@@ -67,8 +74,13 @@ let openGate = null
 const gate = new Promise((resolve) => { openGate = resolve })
 let gateArmed = false
 
+let gateOpened = false
+
 /** Open the gate now. Idempotent, and safe to call before the schedule is armed. */
-export function openFirebaseGate() { if (openGate) openGate() }
+export function openFirebaseGate() {
+  gateOpened = true
+  if (openGate) openGate()
+}
 
 function eagerRequested() {
   try {
@@ -76,13 +88,34 @@ function eagerRequested() {
   } catch { return false }
 }
 
+/**
+ * Open the gate for a browser that already had a session, or when the URL asks.
+ * Returns whether it did. This is the only thing the auth bootstrap does on its
+ * own: it never schedules a fetch for a visitor with no session.
+ */
+function openForReturningVisitor() {
+  if (typeof window === 'undefined' || eagerRequested() || readSessionHint()) {
+    openFirebaseGate()
+    return true
+  }
+  return false
+}
+
+/**
+ * True while nothing has asked for Firebase and this browser has no session to
+ * restore, so "auth is loading" has no answer worth waiting for. AuthContext
+ * settles as signed out on this; its listener still attaches the moment the
+ * gate opens, so a session the hint missed is restored then.
+ */
+export function canSkipAuthWait() {
+  if (gateOpened || typeof window === 'undefined' || eagerRequested()) return false
+  return !readSessionHint()
+}
+
 function armGate() {
   if (gateArmed) return
   gateArmed = true
-  if (typeof window === 'undefined') { openFirebaseGate(); return }
-
-  // A browser that already had a session, or an explicit request, pays nothing.
-  if (eagerRequested() || readSessionHint()) { openFirebaseGate(); return }
+  if (openForReturningVisitor()) return
 
   let done = false
   const fire = () => { if (done) return; done = true; openFirebaseGate() }
@@ -134,7 +167,7 @@ function importFirestore() {
           doc: sdk.doc, getDoc: sdk.getDoc, setDoc: sdk.setDoc, onSnapshot: sdk.onSnapshot,
           collection: sdk.collection, addDoc: sdk.addDoc, getDocs: sdk.getDocs,
           updateDoc: sdk.updateDoc, deleteDoc: sdk.deleteDoc,
-          query: sdk.query, orderBy: sdk.orderBy, limit: sdk.limit,
+          query: sdk.query, where: sdk.where, orderBy: sdk.orderBy, limit: sdk.limit,
           increment: sdk.increment, deleteField: sdk.deleteField,
           runTransaction: sdk.runTransaction, serverTimestamp: sdk.serverTimestamp,
         }
@@ -195,6 +228,8 @@ export function loadStorageSdk() { openFirebaseGate(); return importStorageSdk()
  */
 export function whenFirebaseGate() { armGate(); return gate }
 
-// PATIENT — waits for the gate, and arms the schedule the first time it is asked.
-export function whenAuthSdk() { armGate(); return gate.then(importAuthSdk) }
+// PATIENT — waits for the gate. The auth bootstrap opens it only for a browser
+// the hint says had a session; everyone else waits for an URGENT caller.
+export function whenAuthSdk() { openForReturningVisitor(); return gate.then(importAuthSdk) }
+// PATIENT, and the page needs the data: arms the LCP / idle / first-touch schedule.
 export function whenFirestore() { armGate(); return gate.then(importFirestore) }

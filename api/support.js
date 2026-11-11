@@ -1,35 +1,53 @@
-import { adminDb } from './_lib/firebase-admin.js'
+import { adminDb, adminAuth } from './_lib/firebase-admin.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
 import { mailFrom, REPLY_TO } from './_lib/mail.js'
+import { NOTIFY_TYPES, handleCommunityNotify } from './_lib/communityNotify.js'
 import { waitUntil } from '@vercel/functions'
 
-// THE BOOTSTRAP IS SHARED, NOT COPIED. This file used to carry its own
-// initializeApp(): a bare JSON.parse of FIREBASE_SERVICE_ACCOUNT_KEY inside a
-// catch that fell back to no credential, and a hard-coded projectId of 'uil4b'.
-// Both diverged from api/_lib/firebase-admin.js, which every other route uses,
-// and both were MEASURED before this was changed (2026-09-06 engineering
-// review, probe against the real module with a generated service account):
-//
-//   • A base64-encoded key — the form _lib documents as the SAFER one to store,
-//     because a raw paste mangles the PEM line breaks — failed JSON.parse here,
-//     fell into the catch, and this route booted on ApplicationDefaultCredential
-//     with no service account at all, while _lib read the same value fine.
-//   • The explicit projectId overrode the service account's own project_id, so
-//     with VITE_FIREBASE_PROJECT_ID unset in the function environment this
-//     route addressed project 'uil4b' while _lib addressed 'uil4b-357c5'.
-//
-// Either way the Firestore write failed, `stored` stayed false, and a bug
-// report reached anyone only if the optional Resend email happened to be
-// configured. One bootstrap, one set of encodings, one project id.
+// The Admin SDK is initialised by api/_lib/firebase-admin.js, shared with every
+// other route, so this file has one set of accepted key encodings (including
+// the base64 form) and takes its project id from the service account. A second
+// bootstrap here would fail the Firestore write, leave `stored` false, and let
+// a report reach anyone only through the optional Resend email.
 
-const VALID_TYPES = ['bug', 'feature', 'general', 'help']
-const VALID_SOURCES = ['feedback-form', 'inline', 'email']
+// 'report' is a content report from a community item (src/utils/contentReport.js).
+// A report is only ever read by a person: nothing here acts on it automatically.
+const VALID_TYPES = ['bug', 'feature', 'general', 'help', 'report']
+// 'auto' marks a report no person typed (a crash report, src/utils/errorReport.js),
+// so Admin can list it apart from what people wrote.
+const VALID_SOURCES = ['feedback-form', 'inline', 'email', 'auto']
+
+// The routing choices the feedback dialog offers, by the type they file under
+// ('feedback' in the dialog is stored as 'general'). A value outside the list for
+// its type is dropped, never stored or echoed. This restates
+// src/utils/feedbackRouting.js, which a unit test holds equal to it.
+export const ROUTING_ALLOWED = Object.freeze({
+  general: {
+    category: ['General', 'UI / Design', 'Performance', 'Pricing', 'Something else'],
+  },
+  bug: {
+    category: ['Colour Studio', 'Typography / Fonts', 'Icons', 'File Converter', 'AI Tools', 'Account / Login', 'Billing', 'Other'],
+    severity: ['Minor — cosmetic', 'Major — feature broken', "Blocking — can't use the app"],
+  },
+  feature: {
+    category: ['A brand-new tool', 'Improve an existing tool', 'Export / integration', 'Other'],
+  },
+  help: {
+    category: ['Getting started', 'Using a specific tool', 'Account', 'Billing', 'Other'],
+  },
+})
+
+const routingChoice = (type, field, value) =>
+  typeof value === 'string' && ROUTING_ALLOWED[type]?.[field]?.includes(value) ? value : ''
 
 export const MESSAGE_MAX = 5000
 export const SUBJECT_MAX = 200
 export const EMAIL_MAX = 254
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// The subject becomes an email subject line, so it is always a single line.
+const oneLine = (text) => text.replace(/[\r\n\u{2028}\u{2029}]+/gu, ' ')
 
 /**
  * Validate and shape one submission. Pure, so the rules are testable under
@@ -44,7 +62,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
  * 400, never an exception.
  */
 export function validateSupportBody(body, now = new Date()) {
-  const { type, subject, message, email, source } = body && typeof body === 'object' ? body : {}
+  const { type, subject, message, email, source, category, severity } = body && typeof body === 'object' ? body : {}
 
   if (typeof message !== 'string' || !message.trim()) {
     return { error: 'Message is required' }
@@ -65,19 +83,77 @@ export function validateSupportBody(body, now = new Date()) {
   const safeType = VALID_TYPES.includes(type) ? type : 'general'
   const safeSource = VALID_SOURCES.includes(source) ? source : 'feedback-form'
   const stamp = now.toISOString()
+  const safeCategory = routingChoice(safeType, 'category', category)
+  const safeSeverity = routingChoice(safeType, 'severity', severity)
 
   return {
     entry: {
       type: safeType,
-      subject: (subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
+      ...(safeCategory ? { category: safeCategory } : {}),
+      ...(safeSeverity ? { severity: safeSeverity } : {}),
+      subject: oneLine(subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
       message: message.trim().slice(0, MESSAGE_MAX),
-      email: (email || '').trim().slice(0, EMAIL_MAX),
+      // An automatic report has no one to reply to. The label is the caller's to send,
+      // so an address on it is dropped rather than shown as if the site had filed it.
+      email: safeSource === 'auto' ? '' : (email || '').trim().slice(0, EMAIL_MAX),
       source: safeSource,
       status: 'new',
       adminNotes: '',
       createdAt: stamp,
       updatedAt: stamp,
     },
+  }
+}
+
+// ── Who sent a content report ────────────────────────────────────────────────
+// The route needs no session, so a report's `Reporter:` header line is written
+// here and nowhere else. Any such line in the submitted message is removed, then
+// one line is added from the request's own Firebase ID token: "signed in" (and
+// the stored address becomes the token's verified one) or "signed out". The
+// admin queue reads this line to decide whether to label the address as typed
+// by the reporter (src/utils/contentReport.js, isUnverifiedReporter).
+
+// The characters a multiline regex treats as a line break, so a line is
+// removed here exactly when isUnverifiedReporter would have matched it.
+const LINE_BREAK = /\r\n|[\n\r\u2028\u2029]/
+const REPORTER_LINE = /^\s*Reporter:/i
+
+/**
+ * The verified address from the request's `Authorization: Bearer <ID token>`
+ * header, or null for anything else: no header, a token that fails
+ * verification, or an account whose email Firebase has not verified. Never
+ * throws; `verify` is injectable for tests.
+ */
+export async function verifiedReporterEmail(req, verify = (token) => adminAuth().verifyIdToken(token)) {
+  const header = req?.headers?.authorization
+  if (typeof header !== 'string' || !header.startsWith('Bearer ')) return null
+  try {
+    const decoded = await verify(header.slice(7))
+    return decoded?.email_verified === true && typeof decoded.email === 'string' && decoded.email ? decoded.email : null
+  } catch {
+    // Fail closed: the report is treated as signed out. The message is a fixed
+    // string so no token, header or claim reaches the logs.
+    console.warn('support: report token could not be verified')
+    return null
+  }
+}
+
+/**
+ * The entry for a `report`, with its Reporter line set from `verifiedEmail`
+ * (null means signed out). Other types are returned untouched. Only the header
+ * block is rewritten; the reporter's own text after "Details:" is left alone.
+ */
+export function stampReporter(entry, verifiedEmail) {
+  if (entry.type !== 'report') return entry
+  const at = entry.message.indexOf('\nDetails:')
+  const header = at === -1 ? entry.message : entry.message.slice(0, at)
+  const rest = at === -1 ? '' : entry.message.slice(at)
+  const lines = header.split(LINE_BREAK).filter((line) => !REPORTER_LINE.test(line))
+  lines.splice(Math.min(1, lines.length), 0, `Reporter: ${verifiedEmail ? 'signed in' : 'signed out'}`)
+  return {
+    ...entry,
+    message: (lines.join('\n') + rest).slice(0, MESSAGE_MAX),
+    email: verifiedEmail ? verifiedEmail.trim().slice(0, EMAIL_MAX) : entry.email,
   }
 }
 
@@ -94,15 +170,28 @@ export function validateSupportBody(body, now = new Date()) {
 const BURST = { limit: 3, windowMs: 60 * 1000 }
 const HOURLY = { limit: 15, windowMs: 60 * 60 * 1000 }
 
-// A site-wide ceiling on notification emails to the founder, on top of the
+// A site-wide ceiling on notification emails to the owner, on top of the
 // per-address limits above: many addresses together can still send a flood, and
 // every email spends Resend quota and sending reputation. Over the ceiling the
 // message is still stored and the sender still sees success, but no email goes.
 export const MAIL_CAP = Object.freeze({ bucket: 'support-mail-global', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
 
 // One "the cap was reached" email an hour, so a spent cap is visible to the
-// founder instead of silent. Counted separately and never against MAIL_CAP.
+// owner instead of silent. Counted separately and never against MAIL_CAP.
 export const MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
+
+// Content reports have their own email allowance and their own notice, so a
+// flood of bug or feedback messages cannot stop a report from being emailed,
+// and the reverse. A report is stored whether or not its allowance is spent.
+export const REPORT_MAIL_CAP = Object.freeze({ bucket: 'support-mail-report', key: 'all', limit: 30, windowMs: 60 * 60 * 1000 })
+export const REPORT_MAIL_CAP_NOTICE = Object.freeze({ bucket: 'support-mail-report-capnotice', key: 'all', limit: 1, windowMs: 60 * 60 * 1000 })
+
+/** The email allowance (and its notice) a submission of this type counts against. */
+export function mailCapFor(type) {
+  return type === 'report'
+    ? { cap: REPORT_MAIL_CAP, notice: REPORT_MAIL_CAP_NOTICE, label: 'report' }
+    : { cap: MAIL_CAP, notice: MAIL_CAP_NOTICE, label: 'support' }
+}
 
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -132,9 +221,9 @@ export default function handler(req, res) {
   return handleSupport(req, res)
 }
 
-// The handler body, with the database lookup and the after-response scheduler
-// injectable for tests.
-export async function handleSupport(req, res, { getDb = adminDb, defer = waitUntil } = {}) {
+// The handler body, with the database lookup, the after-response scheduler and
+// the ID-token check injectable for tests.
+export async function handleSupport(req, res, { getDb = adminDb, defer = waitUntil, verifyToken } = {}) {
   // `Access-Control-Allow-Origin: *` invited every page on the internet to POST
   // here from a visitor's browser. The allowlist is the same one the Stripe
   // flows use. Note what this does and does not buy: CORS is a browser
@@ -147,10 +236,18 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     res.setHeader('Vary', 'Origin')
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  // The community-submission email and its admin settings share this route to
+  // stay inside the function budget. They carry a signed-in user's ID token,
+  // count against their own limits (not the support form's below) and never
+  // reach the support message contract.
+  if (NOTIFY_TYPES.includes(req.body?.type)) {
+    return handleCommunityNotify(req, res, { getDb, defer, ...(verifyToken ? { verifyToken } : {}) })
+  }
 
   // Resolved here rather than at module scope so a credential problem surfaces
   // as a logged failure on the request that hit it, not as an import-time
@@ -172,16 +269,21 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
     }
   }
 
-  // The message contract: exactly these five fields, everything else dropped.
-  // tests/unit/report-context.test.js pins this line — the feedback modal folds
-  // its captured context into `message` precisely so the contract never grows.
+  // The message contract: exactly these fields, everything else dropped.
+  // tests/unit/report-context.test.js pins this line. `category` and `severity`
+  // are checked against ROUTING_ALLOWED; the rest is the message itself.
   // `requestId` is not message content; it is read on its own below.
-  const { type, subject, message, email, source } = req.body || {}
-  const validated = validateSupportBody({ type, subject, message, email, source })
+  const { type, subject, message, email, source, category, severity } = req.body || {}
+  const validated = validateSupportBody({ type, subject, message, email, source, category, severity })
   if (validated.error) {
     return res.status(400).json({ error: validated.error })
   }
-  const { entry } = validated
+  // Only a report's address is checked against the sign-in token; every other
+  // type carries whatever address the form sent, so the notification labels it.
+  const verifiedEmail = validated.entry.type === 'report' ? await verifiedReporterEmail(req, verifyToken) : null
+  const entry = validated.entry.type === 'report'
+    ? stampReporter(validated.entry, verifiedEmail)
+    : validated.entry
   const requestId = parseRequestId(req.body?.requestId)
 
   // Whether the record landed in the database. It decides how the response is
@@ -238,22 +340,23 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   // its only copy (see below), so that email is never held back.
   let mailAllowed = Boolean(resendKey && notifyEmail)
   let capNotice = null
+  const { cap, notice: noticeCap, label } = mailCapFor(entry.type)
   if (mailAllowed && stored) {
-    const verdict = await consume(db, MAIL_CAP)
+    const verdict = await consume(db, cap)
     if (!verdict.allowed) {
       mailAllowed = false
       if (verdict.contended) {
         // The counter could not be read or updated (an outage, contention, or a
         // missing salt in production): the allowance is not known to be spent,
-        // so this is neither logged as the cap nor announced to the founder.
+        // so this is neither logged as the cap nor announced to the owner.
         console.warn('support: founder email skipped, the cap counter could not be used', { retryAfter: verdict.retryAfter })
       } else {
-        console.warn('support: founder email skipped, site-wide hourly cap reached', { cap: MAIL_CAP.limit, retryAfter: verdict.retryAfter })
+        console.warn('support: notification email skipped, site-wide hourly cap reached', { cap: cap.limit, bucket: cap.bucket, retryAfter: verdict.retryAfter })
         // The cap itself must not hide that messages are arriving unseen, so the
-        // founder gets one notice an hour. It is exempt from MAIL_CAP and holds
-        // no user content.
-        const notice = await consume(db, MAIL_CAP_NOTICE)
-        if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail })
+        // owner gets one notice an hour per allowance. It is exempt from the
+        // caps and holds no user content.
+        const notice = await consume(db, noticeCap)
+        if (notice.allowed) capNotice = sendCapNotice({ resendKey, notifyEmail, cap, label })
       }
     }
   }
@@ -273,17 +376,19 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
           // Resend sandbox, because reply_to needs no verified domain.
           reply_to: REPLY_TO,
           to: [notifyEmail],
-          subject: `[UIL4B ${entry.type}] ${entry.subject}`,
+          subject: oneLine(`[UIL4B ${entry.type}] ${entry.subject}`),
           html: `
             <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
               <div style="background:#f8f8f6;border:1px solid #e5e5e0;border-radius:12px;padding:24px;margin-bottom:16px">
                 <div style="display:flex;gap:8px;margin-bottom:12px">
                   <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:4px;background:#eef;color:#55e">${escHtml(entry.type)}</span>
                   <span style="font-size:11px;color:#888">${escHtml(entry.source)}</span>
+                  ${entry.category ? `<span style="font-size:11px;color:#888">${escHtml(entry.category)}</span>` : ''}
+                  ${entry.severity ? `<span style="font-size:11px;color:#888">${escHtml(entry.severity)}</span>` : ''}
                 </div>
                 <h2 style="font-size:18px;font-weight:700;margin:0 0 8px">${escHtml(entry.subject)}</h2>
                 <p style="font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap">${escHtml(entry.message)}</p>
-                ${entry.email ? `<p style="font-size:12px;color:#666;margin-top:12px">From: <strong>${escHtml(entry.email)}</strong></p>` : ''}
+                ${entry.email ? `<p style="font-size:12px;color:#666;margin-top:12px">${verifiedEmail ? 'From' : 'From (unverified)'}: <strong>${escHtml(entry.email)}</strong></p>` : ''}
               </div>
               <p style="font-size:11px;color:#aaa;text-align:center">UIL4B Support · ${new Date().toISOString().slice(0, 16)}</p>
             </div>
@@ -317,9 +422,9 @@ export async function handleSupport(req, res, { getDb = adminDb, defer = waitUnt
   return res.status(200).json({ ok: true })
 }
 
-// The notice sent when MAIL_CAP is spent. It never carries anything a visitor
-// wrote. Resolves to whether Resend took it; never rejects.
-async function sendCapNotice({ resendKey, notifyEmail }) {
+// The notice sent when an email allowance is spent. It never carries anything a
+// visitor wrote. Resolves to whether Resend took it; never rejects.
+async function sendCapNotice({ resendKey, notifyEmail, cap = MAIL_CAP, label = 'support' }) {
   try {
     const sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -329,10 +434,10 @@ async function sendCapNotice({ resendKey, notifyEmail }) {
         from: mailFrom(),
         reply_to: REPLY_TO,
         to: [notifyEmail],
-        subject: '[UIL4B] Support email cap reached',
+        subject: `[UIL4B] ${label === 'report' ? 'Report' : 'Support'} email cap reached`,
         html: `
           <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${MAIL_CAP.limit} support notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
+            <p style="font-size:14px;line-height:1.6;color:#333">The hourly cap of ${cap.limit} ${label} notification emails was reached. Further messages this hour are held in the <code>feedback</code> collection and are not emailed.</p>
           </div>
         `,
       }),

@@ -41,7 +41,10 @@
  * The Contrast Checker marks by data-size (body, large, ui) the same way: a
  * hit is a size class chosen in its legend, a fail a test the pair misses. */
 .pvs :is([data-role],[data-size]){outline:2px dashed transparent;outline-offset:2px;transition:outline-color 150ms ease-out,opacity 150ms ease-out}
-.pvs [data-fail="on"]{outline:2px solid var(--pv-error)}
+/* A role under its floor is flagged on the legend chip at all times; in the scene its element is outlined only under the pointer or focus, so a brand colour never reads as an error at rest. */
+.pvs [data-fail="on"]:not([data-size]):is(:hover,:focus-visible,:focus-within){outline:2px solid var(--pv-error)}
+/* The Contrast Checker's parts are the test itself, so a failing one stays marked. */
+.pvs [data-size][data-fail="on"]{outline:2px solid var(--pv-error)}
 .pvs [data-hit="on"]{outline:2px dashed var(--pv-hit,var(--pv-text))}
 .pvs [data-hit="on"][data-role~="neutral"],
 .pvs [data-fail="on"][data-role~="neutral"]{outline-offset:-3px}
@@ -58,7 +61,7 @@
  * solid for a role under its floor. Hit comes last, as in the outline rules
  * above, so a hover on a failing role still shows the dashes. */
 .pvs svg :is([data-role],[data-size]){outline:none}
-.pvs svg [data-fail="on"]:not([data-size]){stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
+.pvs svg [data-fail="on"]:not([data-size]):is(:hover,:focus-visible){stroke:var(--pv-error);stroke-width:2;stroke-dasharray:none;vector-effect:non-scaling-stroke}
 .pvs svg [data-hit="on"]:not([data-size]){stroke:var(--pv-hit,var(--pv-text));stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 /* A Contrast Checker part is judged by its own colour, so its stroke and fill stay as drawn
  * and the mark is a crisp sleeve round it, made of four zero-blur shadows. */

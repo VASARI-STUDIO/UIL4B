@@ -34,7 +34,7 @@ import { expectRendered, go, watch } from './helpers.js'
 import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 import { AI_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
-import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, DISCOVER_LIBRARIES, createTools } from '../../src/data/toolTree.js'
 import { SECTIONS } from '../../scripts/share-cards.mjs'
 import { sectionEyebrow } from '../../scripts/og-cards.mjs'
 
@@ -60,10 +60,10 @@ test.describe('the homepage below the hero', () => {
    *     Soon badge left to guard on this page.
    *
    * ALSO REMOVED: "ends on the price panel — the closing CTA banner is gone".
-   * Spectrum DOES end on a closing CTA section (.sp-close, "Start your first
-   * kit today") after the pricing and FAQ. That is the design as drawn, so
-   * asserting the banner's absence would fail a page behaving as drawn; a
-   * test does not overrule the design to satisfy an old rule. */
+   * The homepage DOES end on a final call (#start, "Start your first project
+   * today.") after the plans section, so asserting a closing banner's absence
+   * would fail a page behaving as drawn. The last test of this block holds the
+   * final call to its own copy and to a single free way in instead. */
 
   test('the plans page describes Pro from the config that enforces it', async ({ page }) => {
     // Was: "Free covers the complete core toolkit with no trial clock. Pro
@@ -100,6 +100,33 @@ test.describe('the homepage below the hero', () => {
     await expect(page.locator('.sp-plan'), 'a plan card is back on the landing').toHaveCount(0)
   })
 
+  test('ends on the final call: its own headline and line, one free way in, none of the old band', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/')
+    await expectRendered(page, '/')
+
+    // The final call is the last thing in <main>; the footer follows it.
+    const close = page.locator('#main > section#start')
+    await expect(close, 'the final call is not the last section of the page').toHaveCount(1)
+    expect(await page.locator('#main > section').last().getAttribute('id')).toBe('start')
+    await expect(close.getByRole('heading', { level: 2 })).toHaveText('Start your first project today.')
+    await expect(close.locator('p')).toHaveText(
+      'Free to use, no account needed. Sign up when you want to export files or save projects and come back to them.',
+    )
+
+    // One way in, and it is free: the toolkit, no sign-up form in the way.
+    await expect(close.getByRole('link'), 'the final call offers more than one way in').toHaveCount(1)
+    await expect(close.getByRole('link', { name: 'Open the toolkit' })).toHaveAttribute('href', '/projects')
+    await expect(close.getByRole('button'), 'the final call opens a sign-up form').toHaveCount(0)
+
+    // The old closing band's classes, headline and buttons are gone.
+    await expect(page.locator('.sp-close, .sp-close-cta'), 'the old closing band is back').toHaveCount(0)
+    for (const old of ['Start your first kit today', 'Use for free']) {
+      await expect(close.getByText(old), `"${old}" is back in the final call`).toHaveCount(0)
+    }
+    await expect(close.getByRole('link', { name: 'See the plans' }), '"See the plans" is back in the final call').toHaveCount(0)
+  })
+
 })
 
 test.describe('the Discover landing', () => {
@@ -117,7 +144,7 @@ test.describe('the Discover landing', () => {
     await expect(hero.locator('.home-eyebrow'), 'the taxonomy eyebrow is back above the h1').toHaveCount(0)
     await expect(hero.locator('.home-hero-sub'), 'a lede is back under the h1').toHaveCount(0)
     // The derived status line and the way in survive.
-    const live = DISCOVER_GROUPS.filter((g) => !g.soon).length
+    const live = DISCOVER_LIBRARIES.length
     await expect(hero.locator('.home-hero-hint')).toContainText(`${live} libraries open`)
     // THE WAY IN MOVED OUT OF THE HERO, and that is the change rather than a
     // loss. The hero carried a "Browse palettes" CTA above an index whose first
@@ -131,7 +158,7 @@ test.describe('the Discover landing', () => {
 })
 
 test.describe('the Help centre', () => {
-  test('opens on the founder’s sentence and nothing after it', async ({ page }) => {
+  test('opens on the positioning line and nothing after it', async ({ page }) => {
     // Was: the positioning line followed by "No account, no setup, no blank
     // canvas. Sign in later if you want the same work on another device." —
     // a three-part reassurance in a class of line since retired, and a sentence the
@@ -146,28 +173,22 @@ test.describe('the Help centre', () => {
   })
 })
 
-// /plans has no closing SystemCTA band: it is the design's Pricing screen, which ends on the colour band and
-// the footer's handoff. What this block guarded — no payment reassurance in a
-// micro-line slot, and the numbers derived — is guarded where the design puts
-// the same kind of line: the Free card's note.
+// /plans: the Free card's note is the one reassurance line on the page, no
+// retired payment wording sits anywhere in the copy, and the lead's numbers are derived.
 test.describe('the Plans page reassurance lines', () => {
-  test('the Free card note is the design\'s sentence without the retired payment reassurances', async ({ page }) => {
-    // The design reads "Free because the tools cost us nothing to run. No trial
-    // clock, no card." Both trailing clauses are the retired "no card" class
-    // the product no longer makes; the sentence before them
-    // stays, and the slot keeps the design's two-line height.
+  test('the Free card note carries no retired payment reassurance', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page, '/plans')
 
-    const note = page.locator('.pr-head--free .pr-note')
-    await expect(note).toHaveText('Free because the tools cost us nothing to run.')
+    const note = page.locator('.hpl-free .pa-freenote')
+    await expect(note).toHaveText('You don’t need a card, and there’s no time limit.')
     const text = (await page.locator('.pricing main').innerText()).toLowerCase()
     for (const phrase of ['no trial clock', 'no card', 'ready today', 'upgrade when your workflow']) {
       expect(text, `/plans says "${phrase}" again`).not.toContain(phrase)
     }
     // The sub-line's colour-system count is derived, not typed.
-    await expect(page.locator('.pr-sub')).toContainText(`colour systems`)
+    await expect(page.locator('.pa-lead')).toContainText(`colour systems`)
     expect(COLOUR_SYSTEMS.length).toBeGreaterThan(2)
   })
 })
@@ -223,13 +244,13 @@ test.describe('the 404', () => {
 
     const tools = createTools()
     const groupLabel = Object.fromEntries(CREATE_GROUPS.map((g) => [g.id, g.label]))
-    const expected = ['palette', 'type-scale', 'icons'].map((id) => {
+    const expected = ['palette', 'font-pair', 'type-scale', 'icons'].map((id) => {
       const t = tools.find((x) => x.id === id)
       return { label: t.label, desc: groupLabel[t.group], href: t.route }
     })
     expected.push({
       label: 'Discover',
-      desc: `${DISCOVER_GROUPS.filter((g) => !g.soon).length} libraries open`,
+      desc: `${DISCOVER_LIBRARIES.length} libraries open`,
       href: '/discover',
     })
 
@@ -240,6 +261,8 @@ test.describe('the 404', () => {
       await expect(cards.nth(i).locator('.nf-card-desc')).toHaveText(expected[i].desc)
       await expect(cards.nth(i)).toHaveAttribute('href', expected[i].href)
     }
+    // Font Pair is one of the suggestions, and it opens the real tool.
+    await expect(page.locator('.nf-card[href="/create/font-pair"] .nf-card-label')).toHaveText('Font Pair')
     const text = (await page.locator('.nf-grid').textContent()).toLowerCase()
     expect(text).not.toContain('palette generator')
     expect(text).not.toContain('community palettes')

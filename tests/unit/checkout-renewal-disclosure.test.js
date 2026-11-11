@@ -11,21 +11,21 @@ import { renewalDisclosure, periodWords, quotableAmount } from '../../src/utils/
 test('yearly: trial, then the yearly amount until cancelled', () => {
   assert.equal(
     renewalDisclosure({ trialDays: 7, months: 12, amount: 'A$96' }),
-    '7-day free trial, then A$96 every year until you cancel. Cancel any time in Settings → Subscription.',
+    '7-day free trial, then A$96 every year until you cancel. Cancel any time in Settings → Plan and billing.',
   )
 })
 
 test('monthly (no trial): the monthly amount until cancelled', () => {
   assert.equal(
     renewalDisclosure({ trialDays: 0, months: 1, amount: '$7' }),
-    '$7 every month until you cancel. Cancel any time in Settings → Subscription.',
+    '$7 every month until you cancel. Cancel any time in Settings → Plan and billing.',
   )
 })
 
 test('a 3-month period reads "every 3 months"', () => {
   assert.equal(
     renewalDisclosure({ trialDays: 7, months: 3, amount: '$18' }),
-    '7-day free trial, then $18 every 3 months until you cancel. Cancel any time in Settings → Subscription.',
+    '7-day free trial, then $18 every 3 months until you cancel. Cancel any time in Settings → Plan and billing.',
   )
   assert.equal(periodWords(3), '3 months')
 })
@@ -36,16 +36,16 @@ test('no confirmed amount: a figure-free sentence that still says how often it r
     for (const [months, word] of [[1, 'month'], [3, '3 months'], [12, 'year']]) {
       assert.equal(
         renewalDisclosure({ trialDays: 7, months, amount }),
-        `7-day free trial, then renews every ${word} until you cancel. Cancel any time in Settings → Subscription.`,
+        `7-day free trial, then renews every ${word} until you cancel. Cancel any time in Settings → Plan and billing.`,
       )
     }
     assert.equal(
       renewalDisclosure({ trialDays: 0, months: 1, amount }),
-      'Renews every month until you cancel. Cancel any time in Settings → Subscription.',
+      'Renews every month until you cancel. Cancel any time in Settings → Plan and billing.',
     )
     assert.equal(
       renewalDisclosure({ trialDays: 0, months: 12, amount }),
-      'Renews every year until you cancel. Cancel any time in Settings → Subscription.',
+      'Renews every year until you cancel. Cancel any time in Settings → Plan and billing.',
     )
   }
   assert.equal(renewalDisclosure({ trialDays: 0, months: 0, amount: '$7' }), null, 'an unknown period must not print')
@@ -69,7 +69,7 @@ test('a mismatched currency reads as the figure-free sentence end to end', () =>
     amount: quotableAmount({ amount: 'A$96', live: true, displayCurrency: 'aud', sessionCurrency }),
   })
   assert.match(sentence('aud'), /then A\$96 every year/)
-  assert.equal(sentence('usd'), '7-day free trial, then renews every year until you cancel. Cancel any time in Settings → Subscription.')
+  assert.equal(sentence('usd'), '7-day free trial, then renews every year until you cancel. Cancel any time in Settings → Plan and billing.')
 })
 
 test('the trial length is an input, not typed into the sentence builder', () => {

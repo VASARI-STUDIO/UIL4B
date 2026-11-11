@@ -173,7 +173,7 @@
 }
 
 /* ── Where each test lands ──────────────────────────────────────────────── */
-.cc .cc-lg { display: grid; gap: 6px; }
+.cc .cc-lg { display: grid; gap: 2px; }
 .cc .cc-lg-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
 .cc .cc-lg-chip {
   display: grid;
@@ -195,7 +195,7 @@
 .cc .cc-lg-chip[aria-pressed="true"] { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
 .cc .cc-lg-chip.is-fail { border-color: var(--err); }
 .cc .cc-lg-name { font-size: 13px; font-weight: 500; line-height: 1.2; }
-.cc .cc-lg-need { font: 400 12px/1.15 var(--mono); color: var(--tl-dim); }
+.cc .cc-lg-need { font: 400 12px/1.15 var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-dim); }
 /* Under 560px the lede sits under the frame and wraps to two lines for the long
    wording and one for the short, so it reserves both. From 560px it is one line
    for every wording (measured at 560, 580, 600, 620, 640, 660 and 700px), so it
@@ -298,7 +298,7 @@
   color: var(--tl-ink);
 }
 .cc .cc-pair-meta { display: flex; align-items: baseline; gap: var(--s-2); min-width: 0; }
-.cc .cc-pair-ratio { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
+.cc .cc-pair-ratio { font-family: var(--font); font-size: 12px; color: var(--tl-dim); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .cc .cc-pair-mark { font-family: var(--font); font-size: 12px; font-weight: 500; white-space: nowrap; }
 @media (hover: hover) and (pointer: fine) {
   .cc .cc-pair:hover { border-color: var(--tl-line-on); }
@@ -362,7 +362,7 @@
   gap: var(--s-2);
 }
 .cc .cc-check-name { font-size: 13px; line-height: 1.35; color: var(--tl-soft); }
-.cc .cc-check-need { font-family: var(--mono); font-size: 12px; color: var(--tl-dim); font-variant-numeric: tabular-nums; text-align: right; }
+.cc .cc-check-need { font-family: var(--font); font-size: 12px; color: var(--tl-dim); font-variant-numeric: tabular-nums; letter-spacing: 0; text-align: right; }
 .cc .cc-check-mark { font-size: 12px; font-weight: 500; text-align: right; }
 /* The AA/AAA explainer: static copy, so its height never moves with the colours. */
 .cc .cc-note { display: grid; gap: 4px; margin-top: 2px; }
@@ -403,7 +403,7 @@
 .cc .cc-fix-desc { display: grid; gap: 2px; min-width: 0; }
 .cc .cc-fix-line { font-size: 13px; line-height: 1.35; color: var(--tl-ink); }
 .cc .cc-fix-line strong { font-weight: 600; font-variant-numeric: tabular-nums; }
-.cc .cc-fix-ratio { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.cc .cc-fix-ratio { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 
 /* The Text / Background target is two pills; from 901px a wide column would
    stretch each to half of it. */
@@ -451,7 +451,13 @@
 
 /* ── Phone: fields stacked label-left, Swap down the right edge ─────────── */
 @media (max-width: 559px) {
-  .cc .cc-views .tl-pill { min-height: 44px; }
+  /* The four view names share one row. Each pill takes an equal share and its
+     label never wraps; 6px sides leave slack for a wider face. If the row is
+     still too narrow (large text), it scrolls sideways instead of running past
+     the edge. */
+  .cc .cc-views { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: 3px; margin-block: -3px; }
+  .cc .cc-views::-webkit-scrollbar { display: none; }
+  .cc .cc-views .tl-pill { min-height: 44px; padding-inline: 6px; white-space: nowrap; }
   .cc .cc-pairbar {
     grid-template-columns: minmax(0, 1fr) 44px;
     grid-template-rows: auto auto;

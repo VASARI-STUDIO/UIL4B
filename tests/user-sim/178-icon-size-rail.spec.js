@@ -21,10 +21,10 @@
 //   commitSize never closes the row on a preset           -> "typing 24 in Custom selects the 24 cell ..."
 //   parseCustomSize stops clamping (utils/iconSize.js)    -> "2000 becomes 1024 and says why"
 //   drop the Escape branch in onSizeKey                   -> "Escape reverts an uncommitted edit ..."
-//   .icust-size-input font-size 14px / height 36px (css)  -> "on a phone the field is 16px text ..."
+//   .ied-in font-size 14px / height 36px (icon-editor.css)  -> "on a phone the field is 16px text ..."
 //   NARROW_RAIL_BELOW = 0 (utils/iconSize.js)             -> "at 320 the rail drops the 20 cell ..."
-//   .icust-stage-foot { display:contents } with .icust-ground and .icust-stage-cap absolute again
-//     (src/styles/pages/icon-emoji-library.css)           -> "at 320 the stage caption and the ground switch do not overlap ..."
+//   .ied-grounds and .ied-cap positioned over each other (icon-editor.css)
+//                                                          -> "at 320 the stage caption and the ground switch do not overlap ..."
 //   src restored byte for byte                            -> all of them pass again.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
@@ -51,16 +51,16 @@ async function openCustomiser(browser, { width = 1440, height = 900, touch = fal
   const cell = page.locator('.ig .ic').first()
   await expect(cell).toBeVisible({ timeout: 20_000 })
   await cell.click()
-  await expect(page.locator('.icust-stage')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-ground')).toBeVisible({ timeout: 20_000 })
   // The rail draws the icon's own markup, so wait for it rather than for the frame.
-  await expect(page.locator('.icust-size-cell[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.ied-cell-s[data-s="16"] svg')).toBeVisible({ timeout: 20_000 })
   return { ctx, page }
 }
 
 const radio = (page, name) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name })
 const customRadio = (page) => page.getByRole('radiogroup', { name: 'Export size' }).getByRole('radio', { name: /^Custom(,|$)/ })
 const sizeInput = (page) => page.getByRole('textbox', { name: 'Custom size' })
-const caption = (page) => page.locator('.icust-stage-cap')
+const caption = (page) => page.locator('.ied-cap')
 
 /** Press Copy SVG, then return the last thing written to the clipboard. */
 async function copiedSvg(page) {
@@ -80,7 +80,7 @@ test.describe('size rail (desktop)', () => {
     await expect(radio(page, '24 pixels')).toHaveAttribute('aria-checked', 'true')
     for (const n of [16, 20, 32, 48]) await expect(radio(page, `${n} pixels`), `${n} is not the default`).toHaveAttribute('aria-checked', 'false')
     await expect(customRadio(page)).toHaveAttribute('aria-checked', 'false')
-    await expect(page.locator('.icust-size-custom'), 'the custom row is closed on a fresh open').toHaveCount(0)
+    await expect(page.locator('.ied-cus'), 'the custom row is closed on a fresh open').toHaveCount(0)
     await expect(caption(page)).toHaveText('Drawn large to inspect. Exports at 24px.')
     expect(await copiedSvg(page), 'a fresh open exports at 24').toMatch(/<svg[^>]* width="24" height="24"/)
     await ctx.close()
@@ -89,12 +89,15 @@ test.describe('size rail (desktop)', () => {
   test('each preset cell draws its icon in a box of exactly its size', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser)
     for (const n of PRESETS) {
-      const box = await page.locator(`.icust-size-cell[data-s="${n}"] svg`).boundingBox()
-      expect(box.width, `${n} cell: drawing width`).toBeCloseTo(n, 2)
-      expect(box.height, `${n} cell: drawing height`).toBeCloseTo(n, 2)
-      await expect(radio(page, `${n} pixels`).locator('.icust-size-num')).toHaveText(String(n))
+      const drawing = page.locator(`.ied-cell-s[data-s="${n}"] svg`)
+      // The cell's drawing arrives with the icon; measure it once it is drawn.
+      await expect(drawing, `${n} cell: no drawing`).toBeVisible({ timeout: 15_000 })
+      // The CSS box, not getBoundingClientRect: the dialog opens with a scale animation.
+      await expect(drawing, `${n} cell: drawing width`).toHaveCSS('width', `${n}px`)
+      await expect(drawing, `${n} cell: drawing height`).toHaveCSS('height', `${n}px`)
+      await expect(radio(page, `${n} pixels`).locator('.num')).toHaveText(String(n))
     }
-    await expect(customRadio(page).locator('svg'), 'the Custom cell holds no drawing').toHaveCount(0)
+    await expect(customRadio(page).locator('.art svg'), 'the Custom cell holds no drawing (its Pro mark is not in the art)').toHaveCount(0)
     await ctx.close()
   })
 
@@ -116,11 +119,12 @@ test.describe('size rail (desktop)', () => {
     await sizeInput(page).press('Enter')
     await expect(customRadio(page)).toHaveAttribute('aria-checked', 'true')
     await expect(customRadio(page)).toHaveAccessibleName('Custom, 40 pixels')
-    await expect(customRadio(page).locator('.icust-size-num')).toHaveText('40')
+    await expect(customRadio(page).locator('.num')).toHaveText('40')
     await expect(caption(page)).toHaveText('Drawn large to inspect. Exports at 40px.')
     for (const n of PRESETS) await expect(radio(page, `${n} pixels`)).toHaveAttribute('aria-checked', 'false')
     expect(await copiedSvg(page)).toMatch(/<svg[^>]* width="40" height="40"/)
-    await expect(page.locator('.icust-code code')).toContainText('width="40" height="40"')
+    await page.locator('#ied-sec-code .ied-disc').click()
+    await expect(page.locator('#ied-code code')).toContainText('width="40" height="40"')
     await ctx.close()
   })
 
@@ -129,12 +133,12 @@ test.describe('size rail (desktop)', () => {
     await customRadio(page).click()
     await sizeInput(page).fill('40')
     await sizeInput(page).press('Enter')
-    await expect(page.locator('.icust-size-custom')).toBeVisible()
+    await expect(page.locator('.ied-cus')).toBeVisible()
     await sizeInput(page).fill('24')
     await sizeInput(page).press('Enter')
     await expect(radio(page, '24 pixels')).toHaveAttribute('aria-checked', 'true')
     await expect(customRadio(page)).toHaveAttribute('aria-checked', 'false')
-    await expect(page.locator('.icust-size-custom'), 'the custom row closes').toHaveCount(0)
+    await expect(page.locator('.ied-cus'), 'the custom row closes').toHaveCount(0)
     await expect(radio(page, '24 pixels'), 'Enter leaves the keyboard on the selected cell').toBeFocused()
     await expect(caption(page)).toHaveText('Drawn large to inspect. Exports at 24px.')
     expect(await copiedSvg(page)).toMatch(/<svg[^>]* width="24" height="24"/)
@@ -147,10 +151,10 @@ test.describe('size rail (desktop)', () => {
     await sizeInput(page).fill('2000')
     await sizeInput(page).press('Enter')
     await expect(sizeInput(page)).toHaveValue('1024')
-    const note = page.locator('.icust-size-note')
+    const note = page.locator('#ied-size-note')
     await expect(note).toHaveText('Sizes go from 8 to 1024px. Set to 1024px.')
-    await expect(sizeInput(page), 'the note is tied to the field').toHaveAttribute('aria-describedby', /icust-size-note/)
-    await expect(page.locator('.icust-size-range')).toHaveText('From 8 to 1024px')
+    await expect(sizeInput(page), 'the note is tied to the field').toHaveAttribute('aria-describedby', /ied-size-note/)
+    await expect(page.locator('#ied-size-range')).toHaveText('From 8 to 1024px')
     await expect(caption(page)).toHaveText('Drawn large to inspect. Exports at 1024px.')
     expect(await copiedSvg(page)).toMatch(/<svg[^>]* width="1024" height="1024"/)
     // The note is about the last commit; typing again clears it.
@@ -165,7 +169,7 @@ test.describe('size rail (desktop)', () => {
     await sizeInput(page).fill('3')
     await sizeInput(page).press('Enter')
     await expect(sizeInput(page)).toHaveValue('8')
-    await expect(page.locator('.icust-size-note')).toHaveText('Sizes go from 8 to 1024px. Set to 8px.')
+    await expect(page.locator('#ied-size-note')).toHaveText('Sizes go from 8 to 1024px. Set to 8px.')
     await sizeInput(page).fill('')
     await sizeInput(page).press('Enter')
     await expect(sizeInput(page), 'empty reverts to the committed size').toHaveValue('8')
@@ -183,11 +187,11 @@ test.describe('size rail (desktop)', () => {
     await sizeInput(page).press('Escape')
     await expect(sizeInput(page), 'the edit goes back to the committed size').toHaveValue('40')
     await expect(sizeInput(page), 'focus stays in the field').toBeFocused()
-    await expect(page.locator('.icust-stage'), 'the popup stays open').toBeVisible()
+    await expect(page.locator('.ied-ground'), 'the popup stays open').toBeVisible()
     await expect(caption(page)).toHaveText('Drawn large to inspect. Exports at 40px.')
     // With nothing uncommitted, Escape closes the popup as it does everywhere else.
     await sizeInput(page).press('Escape')
-    await expect(page.locator('.icust-stage')).toHaveCount(0)
+    await expect(page.locator('.ied-ground')).toHaveCount(0)
     await ctx.close()
   })
 
@@ -206,7 +210,7 @@ test.describe('size rail (desktop)', () => {
 
   test('at 1440 the rail is one row of six cells that fit', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser)
-    const rail = page.locator('.icust-size-rail')
+    const rail = page.locator('.ied-sizes-rail')
     await expect(rail.getByRole('radio')).toHaveCount(6)
     await expect(radio(page, '20 pixels')).toBeVisible()
     const m = await rail.evaluate((el) => {
@@ -238,12 +242,12 @@ test.describe('size rail (phone)', () => {
     await expect(input).toHaveCSS('font-size', '16px')
     const h = (await input.boundingBox()).height
     expect(h, 'the field is shorter than a finger').toBeGreaterThanOrEqual(44)
-    const cells = await page.locator('.icust-size-rail [role="radio"]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width))
+    const cells = await page.locator('.ied-sizes-rail [role="radio"]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width))
     for (const w of cells) expect(w, 'a touch cell narrower than 44px').toBeGreaterThanOrEqual(43.5)
     // The whole field is above the foot (stuck to the bottom of the sheet) once it settles.
     await expect.poll(async () => {
       const f = await input.boundingBox()
-      const foot = await page.locator('.icust-body > .icust-foot').boundingBox()
+      const foot = await page.locator('.ied-ft').boundingBox()
       return foot.y - (f.y + f.height)
     }, { message: 'the field is covered by the foot', timeout: 5_000 }).toBeGreaterThanOrEqual(0)
     const f = await input.boundingBox()
@@ -253,19 +257,20 @@ test.describe('size rail (phone)', () => {
 
   test('at 320 the rail drops the 20 cell, stays one row, and nothing overflows', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser, { width: 320, height: 640, touch: true })
-    const rail = page.locator('.icust-size-rail')
+    const rail = page.locator('.ied-sizes-rail')
     await expect(rail.getByRole('radio'), 'four presets and Custom').toHaveCount(5)
     await expect(radio(page, '20 pixels'), 'there is no 20 cell at 320').toHaveCount(0)
     for (const n of [16, 24, 32, 48]) await expect(radio(page, `${n} pixels`)).toBeVisible()
     const m = await rail.evaluate((el) => {
       const r = el.getBoundingClientRect()
       const cells = [...el.querySelectorAll('[role="radio"]')].map((c) => c.getBoundingClientRect())
-      const body = document.querySelector('.icust-body')
+      const body = document.getElementById('ied-scroll')
+      const dlg = document.querySelector('.ied')
       return {
         railFits: el.scrollWidth === el.clientWidth,
         inside: cells.every((c) => c.left >= r.left - 0.5 && c.right <= r.right + 0.5),
         oneRow: new Set(cells.map((c) => Math.round(c.top))).size === 1,
-        bodyFits: body.scrollWidth === body.clientWidth,
+        bodyFits: body.scrollWidth === body.clientWidth && dlg.scrollWidth === dlg.clientWidth,
         pageFits: document.documentElement.scrollWidth <= window.innerWidth,
       }
     })
@@ -277,13 +282,13 @@ test.describe('size rail (phone)', () => {
     await ctx.close()
   })
 
-  test('at 320 the stage caption and the ground switch do not overlap, and both sit inside the stage', async ({ browser }) => {
+  test('at 320 the stage caption and the ground switch do not overlap, and both sit inside the stage card', async ({ browser }) => {
     const { ctx, page } = await openCustomiser(browser, { width: 320, height: 640, touch: true })
-    const cap = page.locator('.icust-stage-cap')
-    const ground = page.locator('.icust-ground')
+    const cap = page.locator('.ied-cap')
+    const ground = page.locator('.ied-grounds')
     await expect(cap).toBeVisible()
     await expect(ground).toBeVisible()
-    const [c, g, s] = await Promise.all([cap.boundingBox(), ground.boundingBox(), page.locator('.icust-stage').boundingBox()])
+    const [c, g, s] = await Promise.all([cap.boundingBox(), ground.boundingBox(), page.locator('.ied-stagecol').boundingBox()])
     const apart = c.x + c.width <= g.x + 0.5 || g.x + g.width <= c.x + 0.5 || c.y + c.height <= g.y + 0.5 || g.y + g.height <= c.y + 0.5
     expect(apart, `caption ${JSON.stringify(c)} overlaps the ground switch ${JSON.stringify(g)}`).toBe(true)
     for (const [name, b] of [['caption', c], ['ground switch', g]]) {
@@ -294,12 +299,12 @@ test.describe('size rail (phone)', () => {
     await ctx.close()
   })
 
-  // The 20 cell goes where six touch cells (308px of rail) do not fit, and not a pixel sooner:
-  // measured before the fix, 360 held six cells in a rail 14px too narrow.
-  for (const [width, cells] of [[321, 5], [360, 5], [374, 5], [375, 6], [390, 6], [430, 6]]) {
+  // The 20 cell goes on the phone sheet (under 900px), which shows four presets and Custom,
+  // and comes back with the wide dialog.
+  for (const [width, cells] of [[321, 5], [360, 5], [390, 5], [430, 5], [899, 5], [900, 6], [960, 6], [1024, 6]]) {
     test(`on a ${width}px touch screen the rail holds ${cells} cells and does not overflow`, async ({ browser }) => {
       const { ctx, page } = await openCustomiser(browser, { width, height: 700, touch: true })
-      const rail = page.locator('.icust-size-rail')
+      const rail = page.locator('.ied-sizes-rail')
       await expect(rail.getByRole('radio')).toHaveCount(cells)
       const m = await rail.evaluate((el) => ({ sw: el.scrollWidth, cw: el.clientWidth }))
       expect(m.sw, `rail content is ${m.sw}px in a ${m.cw}px rail`).toBe(m.cw)

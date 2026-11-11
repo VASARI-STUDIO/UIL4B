@@ -36,7 +36,7 @@ const SAVED = Math.round((1 - KEPT) * 100)
 const TUCK = 0.02
 const INSET = 0.002
 const pct = (f) => `${(f * 100).toFixed(2)}%`
-const fmtKb = (kb) => `${kb.toFixed(1)} KB`
+const fmtKb = (kb) => (kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(1)} KB`)
 
 // Tint: the Tint tool's own nine-step ramp off the colour it opens with.
 const [, TINT_C, TINT_H] = hexToOklchRaw(BASES[0].color)

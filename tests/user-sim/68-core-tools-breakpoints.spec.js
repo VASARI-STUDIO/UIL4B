@@ -18,7 +18,6 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { openPaletteTools, clickPaletteAction } from './palette-helpers.js'
-import { settleTypeScaleView } from './type-scale-view.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -155,12 +154,15 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   // "ICK SEED COLOUR" and the first preset column was gone. The gradient
   // tool's stop picker had the same fault at the same width.
   //
-  // MUTATION: restore `left:50%;transform:translateX(-50%)` on
-  // `.pop[data-pop-align="clamp"]` in global.css — both routes report the
-  // panel 24px past the left edge.
-  // WHICH ROUTE STILL REPRODUCES THE CLAMP. The guarantee both routes carry is
-  // the last two assertions: the panel is on screen at 320. Only the gradient
-  // stop still forces the 'clamp' branch to get there.
+  // MUTATION (historic): restoring `left:50%;transform:translateX(-50%)` on
+  // `.pop[data-pop-align="clamp"]` in global.css moved both pickers 24px past the
+  // left edge. Neither route reaches 'clamp' now, so that mutation stays green here.
+  // WHICH ROUTE PROVES WHAT. The guarantee both routes carry is the last two
+  // assertions: the panel is on screen at 320. The gradient stop's picker is
+  // portalled (global.css, max-width 767px): a bottom sheet pinned left:0 right:0,
+  // so usePopover never aligns it and it carries no data-pop-align (null). It
+  // used to be an inline popover that forced the 'clamp' branch; nothing on
+  // these two routes forces that branch now.
   //
   // /create/palette's seed trigger used to sit 79px from the left, behind the
   // 15px `h1.plb-title` in the toolbar. That h1 moved into a heading area above
@@ -171,7 +173,7 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   // asserting 'clamp' there would be asserting that the trigger stays crowded.
   for (const [route, trigger, what, align] of [
     ['/create/palette', '.plb-seedpick .cpk-trigger', 'the seed colour', 'start'],
-    ['/create/gradient', '.grd-pick-swatch .cpk-trigger', 'a gradient stop', 'start'],
+    ['/create/gradient', '.grd-stop-swatch', 'a gradient stop', null],
   ]) {
     test(`${route} · the picker for ${what} at 320`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 320)
@@ -263,7 +265,7 @@ test.describe('/create/palette · Save / export, signed in on a desktop', () => 
   }
 })
 
-for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair', null]]) {
+for (const [route, tab] of [['/create/type-scale', null], ['/create/font-pair', null]]) {
   test(`${route} · at the free cap on a 390px phone the save menu is not cut off above the screen`, async ({ browser }) => {
     // `.svt-menu` opens UPWARD (bottom: calc(100% + 8px)) from a button that
     // sits mid-screen. At the cap the wall makes it 419px tall, and at 390 the
@@ -279,9 +281,9 @@ for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair'
     await go(page, route)
     if (tab) await page.getByRole('tab', { name: tab }).click()
     if (route === '/create/type-scale') {
-      // Type Scale keeps its save in the docked bar above the tab bar ("Save"
+      // Type Scale keeps its save in the dock (an icon
       // at 390); the menu it opens is the same bottom sheet.
-      await page.locator('.tsc-dock .tsc-save').click()
+      await page.locator('.tl-dock').getByRole('button', { name: 'Save to a project' }).click()
     } else {
       const trigger = page.getByRole('button', { name: 'Save to a project' })
       // The fault depends on where the button sits when it is pressed: the menu
@@ -311,28 +313,34 @@ for (const [route, tab] of [['/create/type-scale', 'Code'], ['/create/font-pair'
 // Words broken in half
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('/create/font-pair · the specimen heading keeps “Typography” whole at 320 and 360', async ({ browser }) => {
-  // `.fpr-h1` was clamp(42px, 6vw, 76px): "Typography" is 235px at 42px and the
-  // specimen column is 188px at 320 and 228px at 360, so overflow-wrap broke
-  // the longest word of a TYPE SPECIMEN across two lines. The floor now scales
-  // with the phone (10vw: 32px at 320, 36px at 360) and hands back to the old
-  // curve from 420px.
+test('/create/font-pair · a long word typed into the headline stays whole at 320 and 360', async ({ browser }) => {
+  // The sample headlines hold only short words, so the guard is a typed word:
+  // "Typography" is the longest word a specimen is likely to be asked to set.
+  // The Article headline (.fpr-h1) scales its size with the phone and the
+  // Street headline (.fpr-street-h) holds a fixed size; either breaks the word
+  // across two lines if its size outgrows the column.
   //
-  // MUTATION: restore `font-size:clamp(42px,6vw,76px)` — both widths report
-  // ["Typography"].
+  // MUTATION: raise `.fpr-h1` on a phone to `font-size:64px` — the Article
+  // case at 320 reports ["Typography"].
   test.setTimeout(60_000)
   const failures = []
   for (const width of [320, 360]) {
     const { ctx, page } = await at(browser, width)
     watch(page, `someone reading a font pairing on a ${width}px phone`)
     await go(page, '/create/font-pair')
-    const h = page.locator('.fpr-h1')
-    await expect(h).toContainText('Typography')
-    await h.scrollIntoViewIfNeeded()
-    await settle(page)
-    const split = await page.evaluate(splitWords, '.fpr-h1')
+    await page.locator('[data-tool-toolbar]').getByRole('button', { name: /More/ }).click()
+    await page.getByRole('textbox', { name: 'Preview text' }).fill('Typography')
+    await page.keyboard.press('Escape')
+    for (const [preset, selector] of [['Street', '.fpr-street-h'], ['Article', '.fpr-h1']]) {
+      await page.getByRole('button', { name: preset }).click()
+      const h = page.locator(selector)
+      await expect(h).toHaveText('Typography')
+      await h.scrollIntoViewIfNeeded()
+      await settle(page)
+      const split = await page.evaluate(splitWords, selector)
+      if (split.length) failures.push(`${width}px ${preset}: ${split.map((w) => `"${w}"`).join(', ')}`)
+    }
     await ctx.close()
-    if (split.length) failures.push(`${width}px: ${split.map((w) => `"${w}"`).join(', ')}`)
   }
   expect(failures, `words broken across lines:\n  ${failures.join('\n  ')}`).toEqual([])
 })
@@ -471,25 +479,27 @@ test('the colour picker’s hue slider is a 24px target on /create/contrast and 
   expect(failures, `hue sliders under 24px:\n  ${failures.join('\n  ')}`).toEqual([])
 })
 
-test('/create/palette · “Use →” on a community card in the Explore popup is a 24px target', async ({ browser }) => {
-  // The popup's cards are 110px tall, so the five stripes are ~20px each; they
-  // all do what "Use →" does, which makes the labelled control the one that
-  // has to clear the floor — and it measured 285x20 in the sweep.
+test('/create/palette · every row in the Explore panel is a 24px target', async ({ browser }) => {
+  // The popup, its cards and the "Use →" control went with the Suggest/Explore
+  // redesign: a community palette is now one pressable swatch row in a docked
+  // panel. The row itself is the control, so it is the thing that has to clear
+  // the 24px floor (it measured 285x20 as a "Use" arrow on the old cards).
   //
-  // MUTATION: drop `.plb-galpopup-body .pgal-use{min-height:24px…}` — every
-  // card fails at ~20px.
+  // MUTATION: set `.plb-sw-row` to `height: 20px` (or `min-height: 0` with the
+  // strip at 12px) — every row fails.
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a designer borrowing a community palette')
   await go(page, '/create/palette')
   await clickPaletteAction(page, 'Explore palettes and brands')
-  const use = page.locator('.plb-galpopup-body .pgal-use')
-  await expect(use.first()).toBeVisible()
-  await settled(page, '.plb-galpopup')
-  const boxes = await use.evaluateAll((els) => els.map((el) => +el.getBoundingClientRect().height.toFixed(1)))
+  const panel = page.getByRole('complementary', { name: 'Explore palettes and brands', exact: true })
+  const rows = panel.locator('button.plb-sw-row')
+  await expect(rows.nth(3)).toBeVisible()
+  await settled(page, '.plb-sx')
+  const boxes = await rows.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { h: +r.height.toFixed(1), w: +r.width.toFixed(1) } }))
   await ctx.close()
-  expect(boxes.length, 'the community tab rendered cards').toBeGreaterThan(3)
-  const short = boxes.filter((h) => h < 24)
-  expect(short, `${short.length} of ${boxes.length} "Use" controls under 24px: ${short.slice(0, 5).join(', ')}`).toEqual([])
+  expect(boxes.length, 'the community tab rendered rows').toBeGreaterThan(3)
+  const short = boxes.filter((b) => b.h < 24 || b.w < 24)
+  expect(short, `${short.length} of ${boxes.length} rows under 24px: ${short.slice(0, 5).map((b) => `${b.w}x${b.h}`).join(', ')}`).toEqual([])
 })
 
 // Not tested: '/create/tint · the endpoints checkbox row is a 24px
@@ -533,17 +543,15 @@ for (const theme of ['light', 'dark']) {
     // that tool fails in light at 3.11.
     test.setTimeout(90_000)
     const failures = []
-    for (const [route, sel, tab] of [
-      ['/create/type-scale', '.tsc-copy-primary', 'Code'],
-      ['/create/tint', '.tt .tl-primary .tl-btn', null],
-      ['/create/font-pair', '.fpr-copy-primary', null],
+    for (const [route, sel] of [
+      ['/create/type-scale', '.tsc-copy-primary'],
+      ['/create/tint', '.tt .tl-primary .tl-btn, .tt [data-tl-dock] .tl-btn'],
+      ['/create/font-pair', '.fpr-copy-primary'],
     ]) {
       const { ctx, page } = await at(browser, 1440, theme)
       watch(page, `a developer about to copy the CSS on a ${theme} screen`)
       await go(page, route)
-      // Type Scale's Copy sits in the docked bar; the Code tab exists only below
-      // the split, so it is pressed only when the page is showing the tabs.
-      if (tab && (await settleTypeScaleView(page)) === 'switch') await page.getByRole('tab', { name: tab }).click()
+      // Type Scale's Copy CSS ends its toolbar at 1440, so nothing is opened first.
       const btn = page.locator(sel)
       await btn.scrollIntoViewIfNeeded()
       await expect(btn).toBeVisible()

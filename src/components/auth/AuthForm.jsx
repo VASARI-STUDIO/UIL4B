@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useI18n } from '../../contexts/I18nContext'
 import useOnline from '../../hooks/useOnline'
+import { authNow, loadAuthSdk, openFirebaseGate } from '../../utils/firebaseAccess'
 import ReportProblemLink from '../ReportProblemLink'
-import { passwordProblem, cleanDisplayName, NAME_MAX, EMAIL_MAX } from '../../utils/signupInput'
+import { passwordProblem, EMAIL_MAX } from '../../utils/signupInput'
 import '../../styles/pages/auth.css'
 
 // The log-in / sign-up / reset / switch form, shared by the modal (and, later,
@@ -63,12 +64,24 @@ export default function AuthForm({
   headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange, showLoginSub = false, showReport = false,
 }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
+  // The form is on screen, so the next thing that happens may be a sign-in. Start
+  // the SDK now: the Google popup has to open inside the click that asked for it.
+  useEffect(() => { openFirebaseGate() }, [])
+  // The Google button is aria-disabled (still focusable, click ignored) until the
+  // auth SDK is in: signInWithPopup must run inside the click, and awaiting the
+  // download first can lose the browser's user activation. A failed load enables
+  // it so the click reports it.
+  const [sdkReady, setSdkReady] = useState(() => !!authNow())
+  useEffect(() => {
+    let live = true
+    loadAuthSdk().catch(() => {}).then(() => { if (live) setSdkReady(true) })
+    return () => { live = false }
+  }, [])
   const { t } = useI18n()
   const online = useOnline()
   const offline = online === false
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [busy, setBusy] = useState(null) // null | 'google' | 'submit'
   const [error, setError] = useState(null) // { key, tick }
@@ -117,7 +130,9 @@ export default function AuthForm({
       if (mode === 'reset') {
         await sendReset()
       } else if (mode === 'signup') {
-        const cred = await signup(email, password, cleanDisplayName(displayName))
+        // No name is asked for: the greeting and avatar fall back to the email,
+        // and the account can add a name later.
+        const cred = await signup(email, password, '')
         onSuccess(cred?.user)
         return
       } else {
@@ -148,7 +163,7 @@ export default function AuthForm({
   }
 
   const handleGoogle = async () => {
-    if (offline) return
+    if (offline || !sdkReady) return
     setError(null)
     setBusy('google')
     try {
@@ -235,7 +250,7 @@ export default function AuthForm({
             <>
               {isEntry && (
                 <>
-                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={blocked} aria-describedby={offline ? 'ui-login-offline' : undefined}>
+                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={blocked} aria-disabled={!sdkReady || undefined} aria-busy={!sdkReady || undefined} aria-describedby={offline ? 'ui-login-offline' : undefined}>
                     {busy === 'google' ? <Spinner /> : <span className="auth-google-mark"><GoogleIcon /></span>}
                     {busy === 'google' ? t('auth.googleLoading') : t('auth.continueWithGoogle')}
                   </button>
@@ -244,12 +259,6 @@ export default function AuthForm({
               )}
 
               <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
-                {mode === 'signup' && (
-                  <div className="auth-field">
-                    <label htmlFor="ui-login-name">{t('auth.name')}</label>
-                    <input id="ui-login-name" type="text" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} autoComplete="name" maxLength={NAME_MAX} disabled={disabled} />
-                  </div>
-                )}
                 {emailField}
                 {mode !== 'reset' && (
                   <div className="auth-field">

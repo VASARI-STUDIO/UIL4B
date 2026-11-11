@@ -33,25 +33,24 @@ import { go, watch } from './helpers.js'
 // route that carries no PillNav (it has its own command bar), so the nav's
 // search field is measured on the library pages, which all mount it.
 const SURFACES = [
-  ['/', ['.hcmd-bar', '.sp-seg', '.sp-seeds']],
+  ['/', ['.hcmd-bar']],
   ['/discover/palettes', ['.pnav-search-field', '.lbry-search', '.lbry-toolbar']],
   ['/discover/gradients', ['.lbry-search', '.lbry-toolbar']],
-  ['/discover/prompts', ['.lbry-search', '.lbry-toolbar']],
   ['/create/emoji', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/icons', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/font-gallery', ['.lbry-search']],
   ['/learn', ['.lbry-search']],
   ['/mobile', ['.spm-ic-search']],
   ['/create/contrast', ['.tl-pill']],
-  ['/plans', ['.pr-billing']],
+  ['/plans', ['.pl-switch']],
   ['/seo', ['.seo-seg']],
 ]
 
 // The bordered search fields: one hairline width and style.
-const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.spm-ic-search'])
+const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.pl-search input', '.spm-ic-search'])
 // The search bars proper: one height, one border colour, one fill. .hcmd-bar is
 // the hero input and is left out on purpose.
-const FAMILY = new Set(['.pnav-search-field', '.lbry-search', '.spm-ic-search'])
+const FAMILY = new Set(['.pnav-search-field', '.lbry-search', '.pl-search input', '.spm-ic-search'])
 const SEARCH_H = 44
 // A search that sits ON a tool toolbar (the Font Gallery's, at 1440) is one of the
 // toolbar's controls, so it takes the toolbar control height, not the page search's.
@@ -60,8 +59,6 @@ const CIRCLE = 36
 // The toolbar that may step down when it wraps.
 const WRAPS = '.lbry-toolbar'
 const WRAPPED_RADIUS = 26
-// The home bench's harmony segment once it is a 2 x 2 grid (see spectrum.css, .sp-harm at 480).
-const WRAPPED_SEG_RADIUS = 24
 // How long a surface may take to mount after its route has arrived.
 const APPEAR_MS = 15000
 
@@ -106,20 +103,17 @@ for (const width of [1440, 390]) {
     const familyColours = new Map()
     const familyFills = new Map()
 
-    for (const [route, selectors] of SURFACES) {
+    for (const [route, listed] of SURFACES) {
+      // The marketing bar's search is a pill from 768px and a round icon button below; the other is not drawn.
+      const selectors = route === '/' ? [...listed, width >= 768 ? '.spnav-search' : '.spnav-icon'] : listed
       await go(page, route)
       for (const selector of selectors) {
         await page.locator(selector).first().waitFor({ state: 'attached', timeout: APPEAR_MS }).catch(() => {})
         const found = await page.locator(selector).evaluateAll(measure, selector)
         if (!found.length) { missing.push(`${route} ${selector}`); continue }
         for (const f of found) {
-          // Two carve-outs, each a segment that has wrapped into rows: a library toolbar
-          // (26px) and the home bench's harmony segment, which is a 2 x 2 grid at 480
-          // and below (24px, 96px tall: two 44px rows). A one-row .sp-seg is still a
-          // full pill, so it is only excused when it is tall enough to be two rows.
-          const need = selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS
-            : selector === '.sp-seg' && f.height > 80 ? WRAPPED_SEG_RADIUS
-              : f.height / 2
+          // One carve-out: a library toolbar that has wrapped onto a second row steps down to a 26px pill-ended box.
+          const need = selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS : f.height / 2
           if (f.radius + 0.5 < need) off.push(`${route} ${selector}: radius ${f.radius}px on a ${f.height}px box (needs ${need}px)`)
           if (SEARCH.has(selector)) searchBorders.add(f.border)
           if (FAMILY.has(selector)) {

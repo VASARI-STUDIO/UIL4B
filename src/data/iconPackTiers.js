@@ -1,12 +1,11 @@
 // WHO SEES WHICH ICON PACK. One table, one line per pack.
 //
-// ── The founder's rule, in his words ────────────────────────────────────────
+// ── The rule ────────────────────────────────────────────────────────────────
 //
-// "the icon gallery i want to limit the amount of icons non logged in users can
-//  see free users dont get access to brands and maybe some of the other packs
-//  that dont have free public libraries built into them (some of the packs you
-//  can search and their creators have a similar tool; for that pack only, these
-//  ones probably need to stay visable to logged in free users."
+// Signed-out visitors see a limited number of icons. Free users do not get
+// brands, or other packs that have no free public library of their own (some
+// packs can be searched via a tool their creators run; those stay visible to
+// logged-in free users, for that pack only).
 //
 // So the line is: DOES THIS PACK'S OWN CREATOR RUN A FREE BROWSER FOR IT?
 // If they do, gating it here buys nothing — the visitor opens lucide.dev in the
@@ -29,14 +28,13 @@
 //
 // ── Why every line carries a `why` ─────────────────────────────────────────
 //
-// Because for several packs THE RULE AND THE FOUNDER'S CALL DISAGREE, and a
+// Because for several packs THE RULE AND THE PRODUCT CALL DISAGREE, and a
 // table that hid that would be a table nobody could audit. simpleicons.org,
 // svgporn.com, devicon.dev, skillicons.dev, flagicons.lipis.dev, flagpack.xyz
 // and openmoji.org are all free browsers run by the pack's own creator — and
-// all seven sit in 'paid', because "free users dont get access to brands" and
-// the flag and emoji sets were named paid explicitly. That is a PRODUCT
-// decision rather than a browser-availability one, and each line says so in
-// those words so the next person to read it knows it was decided, not missed.
+// all seven sit in 'paid', because free users do not get brands and
+// the flag and emoji sets are paid explicitly. Each line says so, so the
+// next reader knows it was a product decision, not a miss.
 //
 // ── The house rule this table serves ───────────────────────────────────────
 //
@@ -44,7 +42,7 @@
 // browser. Here that is stronger than not rendering — a pack the viewer cannot
 // see is never REQUESTED. No /collection, no batched /{prefix}.json?icons=, no
 // prefix in the /search scope. Fetch-then-hide would leak the payload and spend
-// the rate limit that IconLibrary.jsx was rescued from on 2026-09-18.
+// the rate limit that IconLibrary.jsx was rescued from.
 
 // The tiers, widest last. Exported so a caller can compare rather than
 // hard-code the ordering.
@@ -61,7 +59,7 @@ export const ICON_PACK_TIERS = {
   // ── anon · the signed-out sample ─────────────────────────────────────────
   // All five are outlined interface sets and all five have a free official
   // browser, so they would be 'free' on the rule alone. They are 'anon'
-  // because the founder wants a logged-out visitor to see the product work:
+  // because a logged-out visitor should see the product work:
   // this is the sample, capped by ANON_ICON_CAP below.
   lucide:             { tier: 'anon', why: 'lucide.dev/icons — Lucide run it themselves, free, no account. Outlined, so it is also the signed-out sample.' },
   tabler:             { tier: 'anon', why: 'tabler.io/icons — Tabler run it themselves, free, no account. Outlined.' },
@@ -77,33 +75,37 @@ export const ICON_PACK_TIERS = {
   bxs:                { tier: 'free', why: 'boxicons.com — BoxIcons run it themselves, free. The solid-set equivalent of the five above.' },
   mingcute:           { tier: 'free', why: 'mingcute.com — MingCute Design run the icon browser themselves, free. Line and fill pairs on one grid.' },
   carbon:             { tier: 'free', why: 'carbondesignsystem.com/elements/icons/library — IBM run it themselves, free. Its logo-* brand marks are Pro (see PRO_ONLY_ICONS).' },
+  fluent:             { tier: 'free', why: 'Microsoft publish it free on GitHub. Only the 24px Regular and Filled glyphs are listed (REGULAR_RULES).' },
+  pixelarticons:      { tier: 'free', why: 'pixelarticons.com, free. The free set only, never the Pro glyphs.' },
+  'radix-icons':      { tier: 'free', why: 'The Radix team publish it free. Drawn on a 15px grid.' },
+  bi:                 { tier: 'free', why: 'icons.getbootstrap.com, free. Outline and fill pairs on a 16px grid.' },
 
   // ── paid · brands ────────────────────────────────────────────────────────
   // Read the `why` before moving one of these. The first four HAVE a free
-  // official browser; they are paid because brand marks are the founder's
-  // named exclusion, which is a product decision, not an oversight.
-  'simple-icons':     { tier: 'paid', why: 'simpleicons.org IS free and official — so this is a PRODUCT decision, not a browser one: "free users dont get access to brands".' },
-  logos:              { tier: 'paid', why: 'svgporn.com is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
-  devicon:            { tier: 'paid', why: 'devicon.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
-  'skill-icons':      { tier: 'paid', why: 'skillicons.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
-  'vscode-icons':     { tier: 'paid', why: 'No browser at all — it ships as a VS Code extension and a GitHub repo. Brand and file-type marks.' },
-  'token-branded':    { tier: 'paid', why: 'No browser at all — a GitHub repo of crypto token marks. Brand marks.' },
-  logodev:            { tier: 'paid', why: 'img.logo.dev, a commercial API on our publishable token. Real company logos, and the one pack whose cost is ours.' },
+  // official browser; they are paid because brand marks are an
+  // explicit exclusion, which is a product decision, not an oversight.
+  'simple-icons':     { tier: 'paid', group: 'brand', why: 'simpleicons.org IS free and official — so this is a PRODUCT decision, not a browser one: "free users dont get access to brands".' },
+  logos:              { tier: 'paid', group: 'brand', why: 'svgporn.com is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
+  devicon:            { tier: 'paid', group: 'brand', why: 'devicon.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
+  'skill-icons':      { tier: 'paid', group: 'brand', why: 'skillicons.dev is the creator’s own free browser — same product decision as simple-icons: brand marks.' },
+  'vscode-icons':     { tier: 'paid', group: 'brand', why: 'No browser at all — it ships as a VS Code extension and a GitHub repo. Brand and file-type marks.' },
+  'token-branded':    { tier: 'paid', group: 'brand', why: 'No browser at all — a GitHub repo of crypto token marks. Brand marks.' },
+  logodev:            { tier: 'paid', group: 'brand', why: 'img.logo.dev, a commercial API on our publishable token. Real company logos, and the one pack whose cost is ours.' },
 
   // ── paid · coloured decorative ───────────────────────────────────────────
-  'flat-color-icons': { tier: 'paid', why: 'Icons8’s set: the SVGs live in a GitHub repo, not in a browser Icons8 run for this set, and it is decorative rather than an interface pack. JUDGEMENT CALL — change one word to disagree.' },
+  'flat-color-icons': { tier: 'paid', group: 'colour', why: 'Icons8’s set: the SVGs live in a GitHub repo, not in a browser Icons8 run for this set, and it is decorative rather than an interface pack. JUDGEMENT CALL — change one word to disagree.' },
 
   // ── paid · flags ─────────────────────────────────────────────────────────
-  'circle-flags':     { tier: 'paid', why: 'No browser — HatScripts/circle-flags is a GitHub repo. Named paid with the other flag sets.' },
-  flag:               { tier: 'paid', why: 'flagicons.lipis.dev is the creator’s own free browser — named paid by the founder with the other flag sets.' },
-  flagpack:           { tier: 'paid', why: 'flagpack.xyz is the creator’s own free browser — named paid by the founder with the other flag sets.' },
-  cif:                { tier: 'paid', why: 'No browser — currency-flags is a GitHub repo. Named paid with the other flag sets.' },
+  'circle-flags':     { tier: 'paid', group: 'flag', why: 'No browser — HatScripts/circle-flags is a GitHub repo. Named paid with the other flag sets.' },
+  flag:               { tier: 'paid', group: 'flag', why: 'flagicons.lipis.dev is the creator’s own free browser — named paid by the founder with the other flag sets.' },
+  flagpack:           { tier: 'paid', group: 'flag', why: 'flagpack.xyz is the creator’s own free browser — named paid by the founder with the other flag sets.' },
+  cif:                { tier: 'paid', group: 'flag', why: 'No browser — currency-flags is a GitHub repo. Named paid with the other flag sets.' },
 
   // ── paid · emoji ─────────────────────────────────────────────────────────
-  twemoji:            { tier: 'paid', why: 'No live browser since Twitter archived it; the maintained fork is a GitHub repo. Named paid with the other emoji sets.' },
-  'fluent-emoji':     { tier: 'paid', why: 'No browser — Microsoft ship it as a GitHub repo. Named paid with the other emoji sets.' },
-  noto:               { tier: 'paid', why: 'No icon browser — Google ship a font specimen and a GitHub repo. Named paid with the other emoji sets.' },
-  openmoji:           { tier: 'paid', why: 'openmoji.org is the creator’s own free browser — named paid by the founder with the other emoji sets.' },
+  twemoji:            { tier: 'paid', group: 'emoji', why: 'No live browser since Twitter archived it; the maintained fork is a GitHub repo. Named paid with the other emoji sets.' },
+  'fluent-emoji':     { tier: 'paid', group: 'emoji', why: 'No browser — Microsoft ship it as a GitHub repo. Named paid with the other emoji sets.' },
+  noto:               { tier: 'paid', group: 'emoji', why: 'No icon browser — Google ship a font specimen and a GitHub repo. Named paid with the other emoji sets.' },
+  openmoji:           { tier: 'paid', group: 'emoji', why: 'openmoji.org is the creator’s own free browser — named paid by the founder with the other emoji sets.' },
 
   // ── paid · animated ──────────────────────────────────────────────────────
   // Iconify's free animated sets (all MIT), Pro only. `animated: true` is the
@@ -112,9 +114,9 @@ export const ICON_PACK_TIERS = {
   // GET /api/ai?animatedIcons=<prefix>, which checks the plan on the server
   // (api/_lib/icons/animated.js keeps the matching allowlist, and
   // tests/unit/animated-icons-endpoint.test.js pins the two together).
-  'line-md':          { tier: 'paid', animated: true, why: 'Material Line Icons — animated line icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
-  'svg-spinners':     { tier: 'paid', animated: true, why: 'SVG Spinners — animated loaders, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
-  meteocons:          { tier: 'paid', animated: true, why: 'Meteocons — animated weather icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  'line-md':          { tier: 'paid', group: 'animated', animated: true, why: 'Material Line Icons — animated line icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  'svg-spinners':     { tier: 'paid', group: 'animated', animated: true, why: 'SVG Spinners — animated loaders, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
+  meteocons:          { tier: 'paid', group: 'animated', animated: true, why: 'Meteocons — animated weather icons, free on Iconify but Pro here: the animated sets are a Pro feature, served only through the server check.' },
 }
 
 /* ── PACKS THAT ARE NEVER SHOWN OR EXPORTED ─────────────────────────────────
@@ -141,7 +143,7 @@ export function isBlockedPack(prefix) {
 
 /* ── ICONS INSIDE AN OPEN PACK THAT ARE PRO ONLY ────────────────────────────
  *
- * Brand marks are Pro (the founder's rule), and Carbon carries 49 of them
+ * Brand marks are Pro (see the rule at the top), and Carbon carries 49 of them
  * inside an otherwise free pack, all named logo-*. A free or signed-out viewer
  * never lists, searches or fetches these; Pro sees them. One rule per pack. */
 export const PRO_ONLY_ICONS = Object.freeze({
@@ -186,15 +188,12 @@ export const ANIMATED_PACKS = Object.freeze(
  * "limit the amount of icons non logged in users can see". Sixty, and the
  * number is derived rather than picked:
  *
- *   - There are five `anon` packs, so 60 divides into exactly TWELVE PER PACK.
- *     The sample then shows all five sets instead of 60 consecutive Lucide
- *     icons, which is what a flat cap would give: IconLibrary paints pack by
- *     pack, so the first N of the merged list is one pack until N passes 250.
- *   - Twelve is enough to read a set's personality — stroke weight, corner
- *     radius, optical size — which is the only thing a sample has to do.
- *   - PAGE_SIZE is 120, so 60 fits on the first paint with no scroll and no
- *     second tranche: a signed-out visit costs five /collection requests and
- *     five batched glyph requests, full stop.
+ *   - Five `anon` packs, so TWELVE PER PACK. A flat cap would show 60 Lucide
+ *     icons, because IconLibrary paints pack by pack.
+ *   - Twelve shows a set's stroke, corners and optical size, which is all a
+ *     sample has to do.
+ *   - PAGE_SIZE is 120, so 60 fits the first paint: a signed-out visit costs
+ *     five /collection and five batched glyph requests.
  *
  * Change ANON_ICON_CAP and ANON_PER_PACK follows. */
 export const ANON_ICON_CAP = 60
@@ -267,14 +266,12 @@ export const ICON_GATE_COPY = {
   // results. Counts are passed in, never typed.
   end: {
     anon: {
-      // `sets` is every set a free account opens: the signed-out sample's sets plus the ones behind login.
-      heading: (sets) => `Log in to open all ${sets.toLocaleString()} ${sets === 1 ? 'set' : 'sets'}.`,
-      // `shown` is the icons on screen, `sets` the sets they come from, `n` the sets an account adds.
-      body: (shown, sets, n) => `You're seeing ${shown.toLocaleString()} ${shown === 1 ? 'icon' : 'icons'} from ${sets.toLocaleString()} ${sets === 1 ? 'set' : 'sets'}. A free account opens every icon in them, plus ${n.toLocaleString()} more ${n === 1 ? 'set' : 'sets'}. Copying needs no account.`,
+      // `icons` is every icon a free account opens (iconsOpenTo, from the pack lists), not the 60 on screen.
+      heading: (icons) => `Log in to access ${icons.toLocaleString('en-AU')} ${icons === 1 ? 'icon' : 'icons'}`,
+      // `shown` is the icons on screen, `sets` the sets they come from, `all` the sets a free account opens.
+      body: (shown, sets, all) => `You're seeing ${shown.toLocaleString()} ${shown === 1 ? 'icon' : 'icons'} from ${sets.toLocaleString()} ${sets === 1 ? 'set' : 'sets'}. A free account opens every icon across ${all.toLocaleString()} ${all === 1 ? 'set' : 'sets'}. Copying needs no account.`,
       action: 'Log in',
       secondary: 'See the plans',
-      // The hover chip on a blurred icon.
-      chip: 'Log in to see more',
     },
     free: {
       heading: 'Brand marks, flags and emoji are on Pro.',

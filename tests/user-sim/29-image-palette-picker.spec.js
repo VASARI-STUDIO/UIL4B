@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE FAULT
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder reported that the popup was "too small and not centred, so you
-// can't see where the sample markers are being placed on the image". The size
+// The popup was too small and not centred, so you couldn't see where the sample
+// markers are being placed on the image. The size
 // was real. Underneath it was a worse fault that the size was hiding:
 //
 // Every picker point is stored as a NORMALISED COORDINATE IN THE SOURCE IMAGE
@@ -85,7 +85,7 @@ function bandedPng() {
 
 const STAGE = '.plb-imgstage'
 const MARKER = '.plb-imgpoint'
-const DIALOG = 'Pull colours from an image'
+const DIALOG = 'From image'
 
 async function openPickerWithImage(page) {
   await go(page, '/create/palette')
@@ -220,8 +220,8 @@ test.describe('image to palette picker', () => {
 
   /* ── The loupe (eyedropper-needs-zoom) ───────────────────────────────────
    *
-   * Founder: "show me a large zoomed in view so i can [see] exactly what pixel
-   * im selecting". A 26px marker over a preview of a large photo covers a
+   * The picker needs a large zoomed-in view so you can see exactly what pixel is
+   * selected. A 26px marker over a preview of a large photo covers a
    * hundred source pixels, so the tool could not answer that.
    *
    * The assertion that matters is not that a loupe APPEARS — it is that the
@@ -275,29 +275,33 @@ test.describe('image to palette picker', () => {
   // and then had no gesture at all. The loupe has to reach them too.
   test('a keyboard user can nudge a marker and gets the same loupe', async ({ page }) => {
     await openPickerWithImage(page)
+    // After a load the dialog parks focus on marker 1 without arming the loupe, so no loupe yet.
+    await expect(page.locator(MARKER).first()).toBeFocused()
+    await expect(page.locator('.plb-loupe')).toHaveCount(0)
+    // The keyboard user arrives on the marker (Tab away and back): that focus event arms it.
+    await page.locator(MARKER).first().evaluate(el => el.blur())
     await page.locator(MARKER).first().focus()
     // Focus alone arms it — that is the only cue the arrow keys now do something.
     await expect(page.locator('.plb-loupe')).toHaveCount(1)
 
     const before = await page.locator(MARKER).first().getAttribute('data-hex')
     const beforeX = await page.locator(MARKER).first().evaluate(el => parseFloat(el.style.left))
-    // One press = one SOURCE pixel: 1/400 of a 400px-wide image = 0.25%.
+    // One press = 1% of the displayed image, whatever the photo's own size.
     await page.keyboard.press('ArrowRight')
     const afterX = await page.locator(MARKER).first().evaluate(el => parseFloat(el.style.left))
-    expect(afterX - beforeX, 'one arrow press should step exactly one source pixel').toBeCloseTo(0.25, 2)
+    expect(afterX - beforeX, 'one arrow press should step 1% of the displayed image').toBeCloseTo(1, 1)
 
-    // Shift steps ten, so crossing a 400px photo does not take 400 presses.
-    // From band 1 (12.5% ≈ x=50) ten Shift presses is 1000px — clamped to the
-    // right edge, which is band 4. Cross one band boundary instead: 5 presses
-    // of Shift from mid-band-1 lands at x=101, inside band 2.
-    for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight')
+    // Shift steps 5%. Five presses move a quarter of the image: one band of
+    // this four-band picture. Head for the middle so the edge cannot clamp it.
+    const dir = beforeX + 1 < 50 ? 'Shift+ArrowRight' : 'Shift+ArrowLeft'
+    for (let i = 0; i < 5; i++) await page.keyboard.press(dir)
     const after = await page.locator(MARKER).first().getAttribute('data-hex')
     expect(after, 'Shift+Arrow should cross into the next band').not.toBe(before)
 
     // The nudge is announced — the loupe is aria-hidden (a canvas of pixels is
     // not something to read out), so without this a screen-reader user moving a
     // marker gets silence.
-    await expect(page.locator('.plb-imgcard p[aria-live]')).toContainText(after.toUpperCase())
+    await expect(page.locator('.plb-imgcard p[aria-live]').filter({ hasText: /^Colour \d+ is on/ })).toContainText(after.toUpperCase())
   })
 
   // The picker moved out of the toolbar's dismiss layer (which closes anything

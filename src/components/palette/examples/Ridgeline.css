@@ -1,128 +1,162 @@
-/* Ridgeline (Ridgeline.jsx): a trail-run app painted with the palette.
+/* Ridgeline (Ridgeline.jsx): a trail-run app's activity page, painted with the palette.
  *
- * Colour comes only from --pv-* (set by the dialog) and the --rl-* inks and
- * edges the scene works out per palette. Layout is a container query on .pvs,
- * the scene root, so the queries can change .rl's own padding: wide (944px and
- * up) is two phones side by side, mid (656 to 943) is one phone with the
- * summary as plain content beside it (it takes whatever width is left, up to
- * 296px), narrow (under 656) drops the frame and stacks the two.
- * Type: 12 / 13 / 15 / 17 / 20 / 28px. Outfit is loaded here only; figures use
- * the global Geist Mono. */
-
+ * Colour comes only from --pv-* (set by the dialog) and the --rl-* inks, edges and fills the scene
+ * works out per palette. Layout is a container query on .pvs: wide 880px and up is a 60% map beside
+ * a 40% panel, mid 600 to 879 stacks them, narrow under 600 is a 5:4 map then the panel.
+ * Type: 12 / 13 / 15 / 20 / 28px, all Outfit (loaded here only; figures use tabular-nums). */
 @font-face{font-family:'PV Outfit';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/outfit-latin.woff2') format('woff2')}
 
-.rl{
-  container:ridge / inline-size;
-  isolation:isolate;
-  min-height:100%;
-  padding:var(--s-7) var(--s-6);
-  background:var(--pv-canvas);
-  color:var(--pv-text);
-  font-family:'PV Outfit','Switzer Fallback',system-ui,sans-serif;
-  font-size:15px;
-  line-height:1.5;
-  font-variant-numeric:tabular-nums;
-}
-.rl :where(h3,p,ul,dl,dd,dt){margin:0;padding:0;font:inherit}
+.rl{isolation:isolate;position:relative;display:flex;flex-direction:column;min-height:var(--stage-room,100cqh);background:var(--pv-canvas);color:var(--pv-text);font-family:'PV Outfit','Switzer Fallback',system-ui,sans-serif;font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
+.rl :where(h2,p,ul,dl,dd,dt,figure,figcaption){margin:0;padding:0;font:inherit}
 .rl :where(ul){list-style:none}
 .rl :where(*,*::before,*::after){box-sizing:border-box}
-.rl-mono,.rl-figs dd,.rl-pace,.rl-n,.rl-prof-hi,.rl-prof-lo,.rl-scale{font-family:'Geist Mono',ui-monospace,monospace}
+:where(.rl button){appearance:none;margin:0;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:left}
+.rl small{font-size:13px;font-weight:400;color:var(--pv-muted)}
 
-.rl-pair{display:flex;justify-content:center;align-items:flex-start;gap:var(--s-7)}
-/* The one shadow in the set, on the frame only. */
-.rl-phone{
-  position:relative;display:flex;flex-direction:column;flex:none;width:360px;height:740px;overflow:hidden;
-  background:var(--pv-canvas);border:1px solid var(--pv-border-strong);border-radius:44px;
-  box-shadow:0 1px 2px color-mix(in srgb,var(--pv-text) 8%,transparent),0 12px 32px color-mix(in srgb,var(--pv-text) 8%,transparent);
-}
-.rl-sum{margin-top:48px}
+/* ── Header ── */
+.rl-head{display:flex;align-items:center;gap:var(--s-5);flex:none;height:64px;padding:0 var(--s-5);border-bottom:1px solid var(--pv-border)}
+.rl-wordmark{font-size:20px;font-weight:600;letter-spacing:-.01em}
+.rl-nav{display:flex;gap:var(--s-5);margin-right:auto;font-size:15px;color:var(--pv-muted)}
+.rl-navi[aria-current]{color:var(--pv-text);font-weight:500}
+.rl-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s-2);min-height:44px;padding:0 var(--s-5);font-size:15px;font-weight:600;white-space:nowrap;border-radius:8px;border:1px solid transparent}
+.rl-btn--primary{color:var(--rl-primary-ink);background:var(--pv-primary);border-color:var(--rl-primary-edge)}
+.rl-btn--secondary{color:var(--rl-secondary-ink);background:var(--pv-secondary);border-color:var(--rl-secondary-edge)}
 
-/* ── Live: the map, then the sheet ── */
-.rl-map{position:relative;flex:0 0 60%;min-height:0}
-.rl-map svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.rl-ground{fill:var(--pv-subtle)}
-.rl-contour{fill:none;stroke:var(--rl-line);stroke-width:1;vector-effect:non-scaling-stroke}
-/* A canvas casing under the route keeps it apart from a ground close to its colour. */
-.rl-case{fill:none;stroke:var(--pv-canvas);stroke-width:9;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.rl-case--rest{stroke-linecap:butt;stroke-dasharray:9 7}
-.rl-route{fill:none;stroke:var(--pv-primary);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.rl-route--rest{stroke-linecap:butt;stroke-dasharray:9 7}
-.rl-start{fill:var(--pv-canvas);stroke:var(--pv-deep);stroke-width:3;vector-effect:non-scaling-stroke}
-.rl-here{fill:var(--pv-accent);stroke:var(--pv-canvas);stroke-width:2;vector-effect:non-scaling-stroke}
-.rl-chip,.rl-scale{
-  position:absolute;padding:2px var(--s-2);border-radius:999px;background:var(--pv-canvas);border:1px solid var(--pv-border);
-  font-size:12px;line-height:18px;color:var(--pv-text);
-}
-.rl-chip{top:var(--s-4);left:var(--s-4)}
-.rl-scale{bottom:var(--s-3);left:var(--s-4)}
+/* ── Body: map and panel ── */
+.rl-body{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);flex:1}
+.rl-mapcol{padding:var(--s-5);border-right:1px solid var(--pv-border);align-self:start}
+.rl-panel{display:flex;flex-direction:column;gap:var(--s-5);padding:var(--s-5);min-width:0}
 
-.rl-sheet{display:flex;flex:1;flex-direction:column;gap:var(--s-4);min-height:0;padding:var(--s-4) var(--s-5) var(--s-5);background:var(--pv-surface);border-top:1px solid var(--pv-border)}
-.rl-place{font-size:17px;font-weight:600;line-height:1.25}
-.rl-figs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-3)}
-.rl-figs dt{font-size:12px;color:var(--pv-muted)}
-.rl-figs dd{font-size:28px;font-weight:500;line-height:1.25;letter-spacing:-.02em;white-space:nowrap}
-.rl-figs small{margin-left:2px;font-size:12px;font-weight:400;letter-spacing:0;color:var(--pv-muted)}
+/* ── The map: four mask layers painted from the palette, the route over them ── */
+.rl-map{position:relative;overflow:hidden;aspect-ratio:1200 / 970;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:8px}
+.rl-layer{position:absolute;inset:0;-webkit-mask:var(--src) center / cover no-repeat;mask:var(--src) center / cover no-repeat}
+.rl-layer--park{background:color-mix(in srgb,var(--pv-success) 16%,var(--pv-surface))}
+.rl-layer--water{background:color-mix(in srgb,var(--pv-info) 40%,var(--pv-surface))}
+.rl-layer--roads{background:var(--pv-canvas)}
+.rl-layer--paths{background:var(--pv-border-strong)}
+.rl-map svg{position:absolute;inset:0;display:block;width:100%;height:100%}
+.rl-case{stroke:var(--pv-canvas)}
+.rl-halo{stroke:var(--pv-text)}
+.rl-route{stroke:var(--pv-primary)}
+.rl-rest{stroke:var(--pv-muted)}
+.rl-steep{stroke:var(--pv-accent)}
+.rl-tick{fill:var(--pv-canvas);stroke:var(--pv-text)}
+.rl-start{fill:var(--pv-canvas);stroke:var(--pv-deep)}
+.rl-finish{fill:var(--pv-deep)}
+.rl-dot{fill:var(--pv-text);stroke:var(--pv-canvas)}
+.rl-dot--here{fill:var(--pv-accent);stroke:var(--pv-canvas)}
+.rl-pl{position:absolute;left:0;top:0;padding:1px 6px;font-size:12px;line-height:18px;white-space:nowrap;color:var(--pv-muted);background:var(--pv-canvas);border:1px solid var(--pv-border);border-radius:4px}
+.rl-pl[data-kind="peak"],.rl-pl[data-kind="start"]{color:var(--pv-text);font-weight:500}
+.rl-credit{display:flex;flex-wrap:wrap;gap:0 var(--s-4);margin-top:var(--s-2);font-size:12px;color:var(--pv-muted)}
+.rl-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+
+/* ── Title, stats ── */
+.rl-title{display:flex;align-items:center;gap:var(--s-3)}
+.rl-avatar{display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:50%;font-size:15px;font-weight:600;color:var(--rl-subtle-ink);background:var(--pv-subtle);border:1px solid var(--rl-subtle-edge)}
+.rl-title-t{flex:1;min-width:0}
+.rl-h{font-size:28px;font-weight:600;line-height:1.15;letter-spacing:-.015em}
+.rl-when{font-size:13px;color:var(--pv-muted)}
+.rl-kudos{display:inline-flex;align-items:center;gap:var(--s-2);min-height:44px;padding:0 var(--s-4);font-size:13px;font-weight:500;border:1px solid var(--pv-border-strong);border-radius:8px}
+.rl-kudos svg{color:var(--pv-primary-ink)}
+.rl-kudos.is-on{font-weight:600}
+.rl-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4);padding:var(--s-4) 0;border-block:1px solid var(--pv-border)}
+.rl-stats dt,.rl-livefigs dt{font-size:12px;color:var(--pv-muted)}
+.rl-stats dd,.rl-livefigs dd{font-size:28px;font-weight:400;line-height:1.2;letter-spacing:-.01em}
+.rl-stats small,.rl-livefigs small{margin-left:var(--s-1)}
+
+/* ── Elevation chart ── */
+.rl-read{display:flex;flex-wrap:wrap;gap:0 var(--s-4);margin-bottom:var(--s-2);font-size:13px;color:var(--pv-muted)}
+.rl-read-km{font-size:15px;font-weight:600;color:var(--pv-text)}
+.rl-chart{position:relative;height:160px}
+.rl-chart svg{display:block;width:100%;height:100%}
+.rl-area{fill:var(--pv-subtle)}
+.rl-line,.rl-line-steep,.rl-line-case{fill:none;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.rl-line{stroke:var(--pv-secondary);stroke-width:1.5}
+.rl-line-case{stroke:var(--pv-canvas);stroke-width:11}
+.rl-line-steep{stroke:var(--pv-accent);stroke-width:6}
+.rl-cursor{position:absolute;top:0;bottom:0;width:1px;background:var(--pv-text);opacity:.5}
+.rl-pin{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--pv-text);border:2px solid var(--pv-canvas);transform:translate(-50%,-50%)}
+.rl-tag{position:absolute;padding:1px 6px;font-size:12px;line-height:18px;white-space:nowrap;color:var(--pv-muted);background:var(--pv-canvas);border:1px solid var(--pv-border);border-radius:4px;transform:translate(var(--tx),var(--ty))}
+.rl-tag--steep{color:var(--pv-text)}
+.rl-range{position:absolute;inset:0;width:100%;height:100%;margin:0;background:none;appearance:none;accent-color:var(--pv-text);color:var(--pv-text);opacity:0;cursor:ew-resize;touch-action:none}
+.rl-range:focus-visible{opacity:1;background:none}
+.rl-range::-webkit-slider-runnable-track{height:100%;background:transparent;border:0}
+.rl-range::-webkit-slider-thumb{appearance:none;width:2px;height:160px;border:0;border-radius:0;background:transparent;box-shadow:none;outline:0}
+.rl-range::-moz-range-track{height:100%;background:transparent;border:0}
+.rl-range::-moz-range-thumb{width:2px;height:160px;border:0;border-radius:0;background:transparent;box-shadow:none;outline:0}
+.rl-axis{position:relative;height:20px;margin-top:var(--s-1);font-size:12px;color:var(--pv-muted)}
+.rl-axis span{position:absolute;top:0;white-space:nowrap;transform:translateX(-50%)}
+.rl-axis span[data-edge="start"]{transform:none}
+.rl-axis span[data-edge="end"]{transform:translateX(-100%)}
+
+/* ── Splits / Segments ── */
+.rl-switch{display:flex;gap:var(--s-3);border-bottom:1px solid var(--pv-border)}
+.rl-sw{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 var(--s-2);font-size:15px;white-space:nowrap;color:var(--pv-muted)}
+.rl-sw:first-child{margin-left:calc(var(--s-2) * -1)}
+.rl-sw.is-on{color:var(--pv-text);font-weight:600}
+.rl-sw-ul{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--pv-secondary)}
+.rl-rowhead,.rl-row{display:grid;grid-template-columns:36px 64px minmax(0,1fr) 56px;align-items:center;gap:var(--s-2);width:100%}
+.rl-rowhead{padding:0 var(--s-3);font-size:12px;color:var(--pv-muted)}
+.rl-row{min-height:44px;padding:0 var(--s-3);border-top:1px solid var(--pv-border)}
+.rl-n{font-size:15px;color:var(--pv-muted)}
+.rl-pace{font-size:15px;font-weight:500}
+.rl-barcell{display:flex;align-items:center;gap:var(--s-2);min-width:0}
+.rl-bar{flex:1;height:8px;min-width:24px;border-radius:4px;background:var(--pv-border);overflow:hidden}
+.rl-bar i{display:block;height:100%;background:var(--pv-primary)}
+.rl-bar i[data-role="success"]{background:var(--pv-success)}
+.rl-fast{flex:none;font-size:12px;font-weight:600;color:var(--pv-success-ink)}
+.rl-el{font-size:13px;text-align:right;color:var(--pv-muted)}
+.rl-row.is-picked{background:var(--pv-subtle);box-shadow:inset 3px 0 0 var(--pv-primary)}
+.rl-row.is-picked :is(.rl-n,.rl-pace,.rl-el,.rl-fast,small,.rl-seg-n,.rl-seg-m,.rl-seg-t){color:var(--rl-subtle-ink)}
+.rl-row--seg{grid-template-columns:minmax(0,1fr) auto auto;padding-block:var(--s-2)}
+.rl-seg{display:flex;flex-direction:column;min-width:0}
+.rl-seg-n{font-size:15px;font-weight:500}
+.rl-seg-m{font-size:13px;color:var(--pv-muted)}
+.rl-seg-t{font-size:15px;font-weight:500}
+.rl-pr{padding:0 var(--s-2);font-size:12px;font-weight:700;line-height:20px;color:var(--rl-accent-ink);background:var(--pv-accent);border:1px solid var(--rl-accent-edge);border-radius:4px}
+
+/* ── Live tracking: a phone-width column in the middle ── */
+.rl-phone{display:flex;flex-direction:column;gap:var(--s-4);flex:1;width:100%;max-width:420px;margin:0 auto;padding:var(--s-4);border-inline:1px solid var(--pv-border)}
+.rl-status{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--pv-muted)}
+.rl-gps{font-weight:600;color:var(--pv-text)}
+.rl-phone .rl-map{aspect-ratio:1200 / 970}
+.rl-livefigs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-4)}
 .rl-btns{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-3);margin-top:auto}
-.rl-btn{display:grid;place-items:center;height:52px;border-radius:999px;font-size:17px;font-weight:600}
-.rl-btn--pause{background:var(--pv-secondary);color:var(--rl-pause-ink);border:1px solid var(--rl-pause-edge)}
-.rl-btn--finish{background:var(--pv-primary);color:var(--rl-finish-ink);border:1px solid var(--rl-finish-edge)}
+.rl-btns .rl-btn{min-height:56px;font-size:17px}
 
-/* ── Summary: figures, the profile, the splits, the tab bar ── */
-.rl-sum-in{display:flex;flex:1;flex-direction:column;gap:var(--s-3);min-height:0;padding:var(--s-7) var(--s-5) var(--s-3);background:var(--pv-surface)}
-.rl-h{font-size:28px;font-weight:600;line-height:1.25;letter-spacing:-.02em}
-.rl-line{font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;color:var(--pv-muted)}
-.rl-prof{position:relative;height:120px;margin:var(--s-2) 0;border-bottom:1px solid var(--pv-border)}
-.rl-prof svg{display:block;width:100%;height:100%;overflow:visible}
-.rl-prof-area{fill:color-mix(in srgb,var(--pv-secondary) 20%,var(--pv-surface))}
-.rl-prof-line{fill:none;stroke:var(--pv-secondary);stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.rl-prof-steep{fill:none;stroke:var(--pv-accent);stroke-width:4;stroke-linecap:round;vector-effect:non-scaling-stroke}
-.rl-prof-hi,.rl-prof-lo{position:absolute;font-size:12px;line-height:18px;color:var(--pv-text)}
-/* Centred over the peak, a few pixels clear of the line. */
-.rl-prof-hi{transform:translateX(-50%);margin-bottom:var(--s-2);white-space:nowrap}
-.rl-prof-lo{right:0;bottom:var(--s-1)}
-.rl-splits li{display:grid;grid-template-columns:28px 44px minmax(0,1fr) 52px;align-items:center;gap:var(--s-2);height:30px;font-size:13px}
-.rl-n,.rl-pace{color:var(--pv-muted)}
-/* The bar column is the same width on every row (the label has its own), so a bar's length is its speed. */
-.rl-pace{text-align:right}
-.rl-bar{display:block;height:10px}
-.rl-bar>i{display:block;height:100%;border-radius:999px;background:var(--pv-primary);border:1px solid var(--rl-bar-edge)}
-.rl-bar>i[data-role="success"]{background:var(--pv-success);border-color:transparent}
-.rl-fast{font-size:12px;font-weight:600;color:var(--pv-success-ink)}
-.rl-splits li.is-fast .rl-pace{color:var(--pv-text)}
-.rl-tabs{display:grid;grid-template-columns:repeat(4,1fr);padding:var(--s-1) 0 var(--s-3);background:var(--pv-surface);border-top:1px solid var(--pv-border)}
-.rl-tabs>span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:44px;font-size:12px;color:var(--pv-muted)}
-.rl-tabs>span.is-on{font-weight:600;color:var(--rl-tab-ink)}
-.rl-tabs>span.is-on svg{color:var(--pv-primary)}
+/* ── Soft interactivity: only a live scene has buttons, so every rule names one ── */
+.rl :is(button.rl-btn,button.rl-kudos,button.rl-sw,button.rl-row){cursor:pointer;transition:background-color 120ms ease-out,color 120ms ease-out,border-color 120ms ease-out}
+/* .rl is doubled because the app's own focus-ring rules match at the same specificity as a single .rl; the ring stays the scene's ink. */
+.rl.rl :is(button,input,a):focus-visible{outline:2px solid var(--pv-text);outline-offset:2px}
+@media (hover:hover){
+  .rl button.rl-btn--primary:hover{background:var(--rl-primary-hover)}
+  .rl button.rl-btn--secondary:hover{background:var(--rl-secondary-hover)}
+  .rl button.rl-kudos:hover{background:var(--pv-raised)}
+  .rl button.rl-sw:not(.is-on):hover{color:var(--pv-text)}
+  .rl button.rl-row:not(.is-picked):hover{background:var(--pv-raised)}
+}
+.rl button.rl-btn--primary:active{background:var(--rl-primary-press)}
+.rl button.rl-btn--secondary:active{background:var(--rl-secondary-press)}
 
-/* ── Mid: one framed phone, the summary as plain content beside it ── */
-@container pvs (max-width:943px){
-  .rl{padding:var(--s-6) var(--s-4)}
-  .rl-pair{gap:var(--s-5)}
-  .rl-sum{flex:0 1 296px;width:auto;min-width:0;height:auto;margin-top:0;border:0;border-radius:0;box-shadow:none;overflow:visible;background:transparent}
-  .rl-sum-in{padding:0;background:transparent}
-  .rl-tabs{display:none}
+/* ── Mid: map over the panel ── */
+@container pvs (max-width:879px){
+  .rl-body{grid-template-columns:minmax(0,1fr)}
+  .rl-mapcol{border-right:0;border-bottom:1px solid var(--pv-border)}
+  .rl-map{aspect-ratio:3 / 2}
 }
 
-/* ── Narrow: no frame, the live screen fills the stage and the summary follows ── */
-@container pvs (max-width:655px){
-  .rl{padding:0}
-  .rl-pair{flex-direction:column;align-items:stretch;gap:0}
-  .rl-phone,.rl-sum{width:100%;height:auto;margin:0;border:0;border-radius:0;box-shadow:none;overflow:visible}
-  .rl-map{flex:none;height:320px}
-  .rl-sheet{padding:var(--s-4)}
-  /* Three figures share the row; the size follows the width so "31:48" never meets "7:45". */
-  .rl-figs{gap:var(--s-2)}
-  .rl-figs dd{font-size:clamp(20px,7cqi,28px)}
-  .rl-sum-in{padding:var(--s-6) var(--s-4) var(--s-4);border-top:1px solid var(--pv-border)}
-  .rl-tabs{display:grid}
+/* ── Narrow ── */
+@container pvs (max-width:599px){
+  .rl-head{height:56px;gap:var(--s-3);padding:0 var(--s-4)}
+  .rl-nav{display:none}
+  .rl-record{margin-left:auto}
+  .rl-mapcol,.rl-panel{padding:var(--s-4)}
+  .rl-map{aspect-ratio:6 / 5}
+  .rl-pl[data-kind="road"],.rl-pl[data-kind="area"]{display:none}
+  .rl-h{font-size:24px}
 }
 
-/* ── Signature moment: the route is drawn to your position, then the dot lands ── */
-.rl-route:not(.rl-route--rest){animation:rl-draw 700ms cubic-bezier(.23,1,.32,1) both}
-.rl-here{animation:rl-fade 150ms ease-out 700ms both}
-@keyframes rl-draw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
-@keyframes rl-fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) :is(.rl-route,.rl-here){animation:none}
+  html:not([data-reduced-motion="false"]) .rl :is(button,input){transition:none}
 }
-html[data-reduced-motion="true"] :is(.rl-route,.rl-here){animation:none}
+html[data-reduced-motion="true"] .rl :is(button,input){transition:none}

@@ -46,7 +46,7 @@ import { contrast, grade, inkFor, typeLadder, luminance } from './styleGuideExpo
 import { readBook } from './bookModel.js'
 import { roleLabel, slotLandsBook, slotPlaced } from './paletteRoles.js'
 import { colorName } from './paletteNames.js'
-import { esc, orderSections, fitTitle, specimenScale, fmtRatio, matrixBlocks, pairTally, plural, MAX_SLOTS } from './exportTemplates/shared.js'
+import { esc, orderSections, fitTitle, specimenScale, fmtRatio, matrixBlocks, pairTally, plural, systemSentence, glyphStrip, MAX_SLOTS } from './exportTemplates/shared.js'
 import { deriveRoles, hexToOklch, isNeutral, mixHex } from './exportTemplates/roles.js'
 import { readLogo } from './brandLogo.js'
 import { BOOK_TEMPLATES } from './exportTemplates/book/index.js'
@@ -505,8 +505,9 @@ function gradientPage(d) {
 
 /**
  * The type families page — the specimen. The families are shown at display size
- * in their own faces with the full character set beneath, because the only way
- * to judge a typeface is to look at it set, not to read its name.
+ * in their own faces, with a sentence about this system set beneath and the
+ * character set as a small strip: the only way to judge a typeface is to look at
+ * it set, and a sentence of this system's own facts says more than an alphabet.
  */
 function familiesPage(d) {
   const spec = (role, family, weight, spacing) => `<div class="fm">
@@ -518,7 +519,8 @@ function familiesPage(d) {
       </dl>
     </div>
     <p class="fm-name" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight};letter-spacing:${spacing || 0}em">${esc(family)}</p>
-    <p class="fm-set" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ., : ; ! ? &ldquo; &rdquo; ( ) &ndash; &mdash; @ # % &euro; &pound; $</p>
+    <p class="fm-set" style="font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}">${esc(systemSentence(d, role === 'Headings' ? 'heading' : 'body'))}</p>
+    ${glyphStrip(`font-family:'${esc(family)}',system-ui,sans-serif;font-weight:${weight}`)}
   </div>`
   return `<div class="pg-body">
     <header class="pg-head">

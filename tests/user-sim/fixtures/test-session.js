@@ -20,8 +20,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * THE SEAM, AND WHY IT IS THIS ONE
  * ═══════════════════════════════════════════════════════════════════════════
- * `src/contexts/AuthContext.jsx` is founder-gated by
- * docs/reference/human-validation-zones.md and is NOT TOUCHED by any of this.
+ * `src/contexts/AuthContext.jsx` is approval-gated and is NOT TOUCHED by any
+ * of this.
  * It does not need to be. Every piece of session state in the app descends from
  * one line inside it:
  *
@@ -196,12 +196,13 @@ function createFakeAuth(d) {
       listeners.add(cb)
       // `signIn(page, { authDelay: ms })` holds the first answer back, so a spec
       // can look at the page while AuthContext is still (loading: true).
-      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser) }, Number(d.authDelay) || 0)
+      setTimeout(() => { if (listeners.has(cb)) cb(auth.currentUser); auth.answered = true }, Number(d.authDelay) || 0)
       return () => listeners.delete(cb)
     },
     notify() {
       for (const cb of [...listeners]) cb(auth.currentUser)
     },
+    answered: false,
     async signOut() {
       auth.currentUser = null
       auth.notify()
@@ -366,6 +367,20 @@ export function readDelayFor(path) {
   return ms
 }
 
+/* A WRITE THAT ANSWERS LATE. `signIn(page, { slowWrites: [{ path, ms }] })` holds
+ * every setDoc whose path contains `path` for `ms` before it resolves, the shape
+ * of a slow Firestore round trip seen from the app. The data lands in the store at
+ * once, as a write that has left the browser would; only the answer is late, so a
+ * spec can change the account while a save is still waiting. Nothing is slowed
+ * unless a spec asks. */
+export function writeDelayFor(path) {
+  let ms = 0
+  for (const entry of DECLARED?.slowWrites || []) {
+    if (entry?.path && String(path).includes(entry.path)) ms = Math.max(ms, Number(entry.ms) || 0)
+  }
+  return ms
+}
+
 /* A LISTENER THAT DOES NOT ANSWER UNTIL THE SPEC SAYS SO.
  * `signIn(page, { slowReads: [{ path, hold: true }] })` keeps every onSnapshot
  * whose path contains `path` silent: it fires no snapshot, first or later, until
@@ -385,6 +400,28 @@ function releaseHeldWatches() {
   const queued = [...heldFires]
   heldFires.clear()
   queued.forEach((fire) => fire())
+}
+
+/* A WRITE THAT NEVER SETTLES, LIKE ONE MADE OFFLINE.
+ * `signIn(page, { holdWrites: ['community-submissions'] })` makes every setDoc
+ * whose path contains one of those strings stay pending - neither resolved nor
+ * rejected, which is what Firestore does with a write it cannot send - until the
+ * page calls `window.__UIL4B_TEST_HOLD__.releaseWrites()`. Released, each held
+ * write lands in the store and resolves, as a queued write does on reconnect.
+ * `writeLog` records the path of every setDoc attempt, in order. */
+const HELD_WRITES = (DECLARED?.holdWrites || []).filter(Boolean)
+const heldWrites = []
+let writesReleased = false
+export const writeLog = []
+export function holdWrite(path, land) {
+  writeLog.push(String(path))
+  if (writesReleased || !HELD_WRITES.some((p) => String(path).includes(p))) return null
+  return new Promise((resolve) => { heldWrites.push(() => { land(); resolve() }) })
+}
+function releaseHeldWrites() {
+  writesReleased = true
+  const queued = heldWrites.splice(0)
+  queued.forEach((land) => land())
 }
 
 /* AN AUTH CALL THAT CAN BE TOLD TO REFUSE, for the same reason as `deny`.
@@ -433,6 +470,6 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
-  try { window.__UIL4B_TEST_HOLD__ = { release: releaseHeldWatches } } catch { /* no window */ }
-  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, calls: fakeAuth.calls, delays: fakeAuth.delays, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
+  try { window.__UIL4B_TEST_HOLD__ = { release: releaseHeldWatches, releaseWrites: releaseHeldWrites }; window.__UIL4B_TEST_WRITES__ = writeLog } catch { /* no window */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail, calls: fakeAuth.calls, delays: fakeAuth.delays, verifySends: fakeAuth.verifySends, get reloads() { return fakeAuth.reloads }, get answered() { return fakeAuth.answered }, get signedIn() { return !!fakeAuth.currentUser }, signInNow: fakeAuth.signInNow, signOutNow: fakeAuth.signOutNow, switchTo: fakeAuth.switchTo } } catch { /* no window */ }
 }
