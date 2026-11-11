@@ -1,0 +1,131 @@
+/* settings-v3.css: V3 part 2, direction B (boards SettingsB and SettingsBPhone).
+ * Imported after settings.css. Every rule sits under `.stg.stg`, one class above the older Spectrum rules,
+ * so those still supply each control's base. Tokens are the board's: dark by default, light on
+ * html[data-theme="light"]. Motion: opacity and colour over 120 to 150ms, press scale .97. */
+.stg.stg {
+  --ground: #060607; --surface: #0F1012; --raised: #131416; --raised-h: #1A1B1F; --on-ink: #0B0C0E; --ink: #EFEEEA; --ink-h: #F7F6F2; --ink-rgb: 239, 238, 234;
+  --sec: rgba(var(--ink-rgb), .68); --ter: rgba(var(--ink-rgb), .56); --hl08: rgba(var(--ink-rgb), .08); --hl14: rgba(var(--ink-rgb), .14); --hl16: rgba(var(--ink-rgb), .16);
+  --track-off: rgba(var(--ink-rgb), .22); --seg-ring: rgba(239, 238, 234, .28);
+  --err: #F2877E; --err-fg: #1B0B0A; --ok: #7FD1A0; --warn: #E8B75A;
+  --stg-ease: cubic-bezier(.23, 1, .32, 1);
+  color: var(--ink); font-family: 'Geist', 'Geist Fallback', system-ui, sans-serif; font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
+html[data-theme="light"] .stg.stg {
+  --ground: #F5F5F2; --surface: #FFFFFF; --raised: #ECEBE7; --raised-h: #E3E2DD; --on-ink: #F5F5F2; --ink: #121418; --ink-h: #000; --ink-rgb: 18, 20, 24;
+  --sec: rgba(18, 20, 24, .72); --ter: rgba(18, 20, 24, .62); --hl08: rgba(18, 20, 24, .1); --hl14: rgba(18, 20, 24, .16); --hl16: rgba(18, 20, 24, .2);
+  --track-off: rgba(18, 20, 24, .24); --seg-ring: rgba(18, 20, 24, .3); --err: #B3261E; --err-fg: #FFFFFF; --ok: #1B6B3F; --warn: #8A5A00;
+}
+.stg.stg :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* head: h1, status line, section bar */
+.stg.stg .stg-bar { display: block; min-height: 0; margin: 0; padding: 56px 0 0; border: 0; }
+.stg.stg .stg-title { font-family: inherit; font-size: clamp(40px, 4.45vw, 64px); line-height: 1; font-weight: 600; letter-spacing: -.04em; color: var(--ink); white-space: normal; }
+.stg.stg .stg-status { margin: 16px 0 0; font-size: 14px; line-height: 1.45; color: var(--sec); max-width: 62ch; }
+.stg.stg .stg-status a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(var(--ink-rgb), .35); }
+.stg.stg .stg-sk { display: inline-block; width: 72px; height: 12px; border-radius: 4px; background: var(--raised); vertical-align: -1px; }
+.stg.stg .settings-grid { display: block; margin-top: 40px; }
+.stg.stg .settings-nav { position: static; display: inline-flex; flex-direction: row; gap: 0; padding: 4px; border-radius: 999px; background: var(--raised); max-width: 100%; }
+.stg.stg .settings-nav-item { min-height: 36px; height: 36px; padding: 0 16px; gap: 0; border: 0; border-radius: 999px; font-family: inherit; font-size: 14px; line-height: 1; font-weight: 500; color: var(--sec); white-space: nowrap; transition: color 120ms ease, background-color 120ms ease; }
+.stg.stg .settings-nav-item svg { display: none; }
+.stg.stg .settings-nav-item.active { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--seg-ring); font-weight: 600; }
+@media (hover: hover) { .stg.stg .settings-nav-item:hover { background: transparent; color: var(--ink); } .stg.stg .settings-nav-item.active:hover { background: var(--surface); } }
+.stg.stg .settings-nav-item:active { transform: scale(.97); }
+.stg.stg .settings-content { display: block; max-width: none; margin-top: 48px; }
+
+/* section head and panels */
+.stg.stg .settings-section-h { margin: 0 0 32px; }
+.stg.stg .settings-section-h h2 { font-family: inherit; font-size: 32px; line-height: 1.1; font-weight: 600; letter-spacing: -.03em; color: var(--ink); outline: 0; margin: 0; }
+.stg.stg .settings-section-h p { margin: 16px 0 0; max-width: 52ch; font-size: 18px; line-height: 1.6; color: var(--sec); text-wrap: pretty; }
+.stg.stg .settings-section { max-width: 760px; }
+.stg.stg #set-support { max-width: none; }
+.stg.stg .settings-cards { display: flex; flex-direction: column; gap: 32px; }
+.stg.stg .settings-card { background: var(--surface); border: 0; border-radius: 16px; padding: 8px 24px; box-shadow: none; }
+.stg.stg .settings-card-h { display: block; padding: 16px 0 8px; border: 0; }
+.stg.stg .settings-card-h h3 { font-family: inherit; font-size: 20px; line-height: 1.3; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+.stg.stg .settings-card-h p { margin: 4px 0 0; font-size: 14px; line-height: 1.45; color: var(--sec); }
+.stg.stg .settings-card-body { padding: 0; }
+.stg.stg .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 16px 0; border: 0; box-shadow: inset 0 1px 0 var(--hl08); }
+.stg.stg .settings-row--open { flex-direction: column; align-items: stretch; }
+.stg.stg .settings-row-label { margin: 0; font-size: 14px; line-height: 1.45; font-weight: 500; color: var(--sec); }
+.stg.stg label.settings-row-label { display: block; margin-bottom: 8px; }
+.stg.stg .settings-row-value { margin-top: 2px; max-width: none; font-size: 16px; line-height: 1.5; color: var(--ink); }
+.stg.stg .settings-row-meta { margin-top: 4px; max-width: 62ch; font-size: 14px; line-height: 1.45; color: var(--sec); }
+.stg.stg .settings-row-empty { color: var(--ter); }
+.stg.stg .settings-row--fact { display: grid; grid-template-columns: 160px minmax(0, 1fr); }
+.stg.stg .settings-field-err, .stg.stg .danger-confirm-err { margin-top: 8px; font-size: 14px; line-height: 1.45; color: var(--err); }
+.stg.stg .settings-field-ok { margin-top: 8px; font-size: 14px; color: var(--ok); }
+.stg.stg .settings-profile { display: flex; align-items: center; gap: 16px; padding: 16px 0; border: 0; }
+.stg.stg .settings-profile-avatar { width: 72px; height: 72px; border: 0; background: var(--raised); color: var(--ink); font-size: 20px; font-weight: 600; }
+.stg.stg .settings-profile-name { font-family: inherit; font-size: 16px; font-weight: 600; color: var(--ink); }
+.stg.stg .settings-profile-email { font-size: 14px; color: var(--sec); }
+
+/* controls: 36px tonal pills, one ink pill per screen */
+.stg.stg .btn { height: 36px; min-height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--raised); color: var(--ink); font-family: inherit; font-size: 14px; line-height: 1; font-weight: 500; transition: background-color 150ms ease, transform 120ms var(--stg-ease); }
+@media (hover: hover) { .stg.stg .btn:hover { background: var(--raised-h); color: var(--ink); } .stg.stg .btn-accent:hover { background: var(--ink-h); } }
+.stg.stg .btn:active { transform: scale(.97); }
+.stg.stg .btn-accent { background: var(--ink); color: var(--on-ink); }
+.stg.stg .btn:disabled, .stg.stg .btn[aria-disabled="true"] { opacity: .48; cursor: not-allowed; transform: none; }
+.stg.stg .settings-row--field > .btn, .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger) { height: auto; min-height: 44px; padding: 12px 8px; margin-right: -8px; background: transparent; border-radius: 8px; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent; align-self: center; }
+@media (hover: hover) { .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger):hover { background: transparent; text-decoration-color: var(--ink); } }
+.stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger):focus-visible { text-decoration-color: var(--ink); }
+.stg.stg .settings-danger, .stg.stg .danger-zone-open { color: var(--err); background: var(--raised); border: 0; }
+.stg.stg .settings-danger-go, .stg.stg .danger-confirm-go { background: var(--err); color: var(--err-fg); border: 0; }
+.stg.stg input:not([type="file"]):not([type="checkbox"]):not([type="radio"]) { height: 44px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--raised); color: var(--ink); font-family: inherit; font-size: 16px; box-shadow: inset 0 0 0 1px transparent; transition: box-shadow 120ms ease; }
+.stg.stg textarea { min-height: 112px; padding: 12px 16px; border: 0; border-radius: 12px; background: var(--raised); color: var(--ink); font-family: inherit; font-size: 16px; }
+.stg.stg input:focus, .stg.stg textarea:focus { box-shadow: inset 0 0 0 1px var(--hl16); }
+.stg.stg input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--err); }
+.stg.stg .settings-sync-alert { background: var(--raised); border: 0; border-radius: 12px; color: var(--ink); }
+.stg.stg .settings-sync-alert svg { color: var(--warn); }
+
+/* flair, language, appearance */
+.stg.stg .settings-row-value .flair { background: transparent; border: 0; color: var(--ink); font-family: inherit; font-weight: 400; padding: 0; }
+.stg.stg .flairpick-chip { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--raised); color: var(--ink); font-family: inherit; font-size: 14px; font-weight: 500; }
+.stg.stg .flairpick-chip.is-on { box-shadow: inset 0 0 0 2px var(--ink); }
+.stg.stg .flairpick-chip.is-locked { background: transparent; box-shadow: inset 0 0 0 1px var(--hl14); color: rgba(var(--ink-rgb), .72); }
+.stg.stg .flairpick-preview { background: var(--raised); border: 0; border-radius: 12px; }
+.stg.stg .lang-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; padding: 16px 0; }
+.stg.stg .settings-card-body--grid { padding: 0; }
+.stg.stg .lang-tile { min-height: 56px; height: 56px; padding: 0 16px; border: 0; border-radius: 12px; background: transparent; box-shadow: none; }
+.stg.stg .lang-tile.active { background: var(--raised); box-shadow: none; }
+.stg.stg .lang-tile-label { font-size: 16px; color: var(--ink); }
+.stg.stg .lang-tile-code { font-size: 14px; color: var(--sec); }
+.stg.stg .toggle-row { padding: 16px 0; border: 0; box-shadow: inset 0 1px 0 var(--hl08); }
+.stg.stg .toggle-row:first-child { box-shadow: none; }
+.stg.stg .toggle-row-label { font-size: 16px; color: var(--ink); }
+.stg.stg .toggle-row-meta { font-size: 14px; color: var(--sec); }
+.stg.stg .toggle-switch { width: 44px; height: 24px; border-radius: 999px; background: var(--track-off); }
+.stg.stg .toggle-switch.on { background: var(--ink); }
+
+/* plan and billing: Pro first at 5/7, Free beside it; the field is the person's own project colour */
+.stg.stg .sub-plans { background: none; padding: 0; }
+.stg.stg .sub-billing-toggle { width: max-content; margin: 0 0 24px; padding: 4px; border: 0; border-radius: 999px; background: var(--raised); gap: 0; }
+.stg.stg .sub-billing-toggle button { height: 36px; min-height: 36px; padding: 0 16px; border: 0; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--sec); }
+.stg.stg .sub-billing-toggle button.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: inset 0 0 0 1px var(--seg-ring); }
+.stg.stg .sub-billing-toggle .sub-save { color: inherit; }
+.stg.stg .sub-tiers { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px; align-items: start; margin: 0; }
+.stg.stg .sub-tier-pro { order: -1; border: 0; }
+.stg.stg .sub-tier { background: var(--surface); border-radius: 16px; padding: 32px; }
+.stg.stg .sub-tier-free { padding: 32px 24px 24px; order: 1; }
+.stg.stg .sub-tier-name { font-size: 20px; line-height: 24px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+.stg.stg .sub-tier-amount { font-family: inherit; font-size: clamp(32px, 3.33vw, 48px); line-height: 1.02; font-weight: 600; letter-spacing: -.04em; }
+.stg.stg .sub-tier-free .sub-tier-amount, .stg.stg .sub-tier-amount.is-word { font-size: 20px; line-height: 1.3; letter-spacing: -.01em; }
+.stg.stg .sub-tier-per, .stg.stg .sub-tier-sub { font-size: 14px; color: var(--sec); }
+.stg.stg .sub-tier-list li { font-size: 16px; line-height: 1.5; color: var(--ink); }
+.stg.stg .sub-tier-free .sub-tier-list li { font-size: 14px; color: var(--sec); }
+.stg.stg .sub-check { color: var(--sec); }
+.stg.stg .sub-tier-btn { height: 52px; margin-top: 24px; padding: 0 28px; }
+.stg.stg .sub-tier-current { border: 0; color: var(--ter); }
+.stg.stg .sub-active { background: var(--surface); }
+.stg.stg .sub-active-btns { display: flex; gap: 8px; }
+.stg-field { height: 72px; margin: -32px -32px 12px; border-radius: 16px 16px 0 0; background: var(--raised); box-shadow: inset 0 0 0 1px var(--hl14); forced-color-adjust: none; }
+.stg-fcap { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; font-size: 13px; line-height: 1.4; }
+.stg-fcap .n { font-weight: 500; color: var(--sec); }
+.stg-fcap .h { font-family: 'Geist Mono', ui-monospace, monospace; color: var(--ter); }
+.stg-field--empty { display: flex; flex-direction: column; justify-content: center; gap: 4px; height: auto; min-height: 72px; padding: 20px 32px; margin-bottom: 24px; }
+.stg-field--empty p { font-size: 15px; line-height: 1.45; color: var(--sec); }
+.stg.stg .stg-credit { margin-top: 64px; padding: 0; border: 0; font-size: 14px; color: var(--ter); }
+.stg.stg .stg-credit a { color: var(--ter); }
+@media (forced-colors: active) { .stg-field { outline: 1px solid CanvasText; outline-offset: -1px; } }
+@media (max-width: 1343px) { .stg.stg .sub-tiers { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 899px) { .stg.stg .sub-tiers { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .stg.stg .btn:active, .stg.stg .settings-nav-item:active { transform: none; } }

@@ -30,6 +30,8 @@ import { formatMoney } from '../config/planLadder'
 import { LOCATIONS } from '../data/locations'
 import { FLAIRS, getFlair } from '../utils/constants'
 import UserName from '../components/UserName'
+import { useProject } from '../contexts/ProjectContext'
+import { activeColour } from '../utils/projectTints'
 import ThemeChoice from '../components/ThemeChoice'
 import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
 import { collectStorage, buildExport, keysToClear } from '../utils/dataExport'
@@ -46,6 +48,7 @@ import { db } from '../utils/firebase'
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/settings.css'
+import '../styles/pages/settings-v3.css'
 
 function Check() {
   return (
@@ -81,8 +84,8 @@ function portalErrorText(e) {
     const ref = e.correlationId || /\[ref ([^\]]+)\]/.exec(e.message || '')?.[1]
     return `Billing could not be opened because this billing account isn't linked to your login. Nothing about your plan has changed. Email support@uil4b.com and we'll link it.${ref ? ` Quote reference ${ref}.` : ''}`
   }
-  const detail = e?.message ? ` (${e.message})` : ''
-  return `Billing could not be opened, so nothing about your plan has changed${detail}. Please try again in a moment.`
+  console.warn('Billing portal failed to open', e)
+  return `Billing could not be opened, so nothing about your plan has changed. Please try again in a moment.`
 }
 
 // How long a profile save waits for the server before it is treated as held
@@ -866,6 +869,7 @@ export default function Settings({ toast }) {
   // shown before then: isPro is false for everyone while the plan is on its way.
   const planPending = authLoading || (!!user && (subLoading || !planKnown))
   const { t, lang, setLang, languages } = useI18n()
+  const { projects } = useProject() || {}
   // 'support' — the SECTION ID, not the label. This said 'subscription', which
   // matched no section: harmless while every panel rendered at once and `active`
   // only drove the nav highlight, so the page opened with nothing highlighted
@@ -1410,8 +1414,26 @@ export default function Settings({ toast }) {
       <p className="sub-tier-current">Your current plan</p>
     </div>
   )
+  // The plan card's one colour field: the newest project that is not archived and has a colour of its own
+  // (the default blue means none was chosen). Drawn only; never a control.
+  const leadProject = (Array.isArray(projects) ? projects : [])
+    .filter((p) => p && !p.archived)
+    .sort((a, b) => (Date.parse(b.updatedAt || b.createdAt) || 0) - (Date.parse(a.updatedAt || a.createdAt) || 0))
+    .find((p) => { const c = activeColour(p.design); return c && c.toLowerCase() !== '#0051ff' })
+  const leadColour = leadProject ? activeColour(leadProject.design) : ''
   const tierPro = (
     <div className="sub-tier sub-tier-pro">
+      {leadProject ? (
+        <>
+          <div className="stg-field" aria-hidden="true" style={{ background: leadColour }} />
+          <div className="stg-fcap"><span className="n">{leadProject.name || 'Untitled'} · your latest project</span><span className="h">{leadColour.toUpperCase()}</span></div>
+        </>
+      ) : (
+        <div className="stg-field stg-field--empty">
+          <p>Your brand colour shows here once you save a palette.</p>
+          <Link className="settings-linkbtn" to="/create/palette">Open in Palette Builder</Link>
+        </div>
+      )}
       <div className="sub-tier-head">
         <div className="sub-tier-name">Pro</div>
         <div className="sub-tier-price">
@@ -1462,6 +1484,20 @@ export default function Settings({ toast }) {
           </button>
         )}
         <h1 className="stg-title">Settings</h1>
+        {!(isPhone && phoneView === 'section') && (
+          <p className="stg-status">
+            {!user ? 'Signed out, everything UI L4B keeps is in this browser, and only here.' : (
+              <>
+                Signed in with {signInMethod}.{' '}
+                {planPending ? <span className="stg-sk" aria-hidden="true" />
+                  : isPro ? (noBillingNote || !proFacts.length ? 'On UI L4B Pro.'
+                    : proFacts.find(([l]) => l === 'Next payment') ? `On UI L4B Pro, renews ${proFacts.find(([l]) => l === 'Next payment')[1]}.`
+                      : `On UI L4B Pro. ${proFacts[0][1]}.`)
+                    : <>On Free. <Link to="/plans">See plans</Link></>}
+              </>
+            )}
+          </p>
+        )}
       </div>
 
       <div className="settings-grid">
