@@ -22,6 +22,8 @@ import FooterGlyph from '../components/library/FooterGlyph'
 import {
   downloadFileName, effectiveFormat, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
 } from '../utils/iconDownload'
+import useBuiltinIcons from '../hooks/useBuiltinIcons'
+import { builtinIcons, loadBuiltinIcons } from '../utils/iconsBuiltin'
 import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
@@ -3497,6 +3499,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const { isPro, plan, planKnown } = useSubscription()
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
+  // The built-in set (public/icons-data.js), empty until it has loaded.
+  const builtin = useBuiltinIcons()
   const navigate = useNavigate()
   // Back from /plans arrives as a POP; a fresh visit does not reopen a kept Pro preview.
   const navType = useNavigationType()
@@ -3639,8 +3643,16 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const lastTier = useRef(null)     // the tier the current listing was fetched at
 
   const renderLocal = useCallback((q, packFilter) => {
-    const localIcons = window.icons || []
-    const PACKS = window.PACKS || {}
+    // The built-in set loads on demand (utils/iconsBuiltin.js). If this is asked for
+    // before it has arrived, wait for it, and drop the answer if a newer browse started meanwhile.
+    const data = builtinIcons()
+    if (!data) {
+      const rid = reqId.current
+      loadBuiltinIcons().then(() => { if (rid === reqId.current && builtinIcons()) renderLocal(q, packFilter) })
+      return
+    }
+    const localIcons = data.icons
+    const PACKS = data.packs
     const pm = { tabler: 'T', lucide: 'L', iconoir: 'I', heroicons: 'H', 'simple-icons': 'S' }
     // THE BUILT-IN SET IS TIERED TOO, and it has to be read through the CODE
     // rather than through `PACKS`: window.PACKS maps 'L' to the display name
@@ -4509,8 +4521,8 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const visibleRecents = useMemo(
     () => recents
       .filter(r => !r.cdn || canSeeIcon(r.pack, r.name, tier))
-      .map(r => (r.cdn ? r : { ...r, filled: recentIsFilled(r, window.icons) })),
-    [recents, tier],
+      .map(r => (r.cdn ? r : { ...r, filled: recentIsFilled(r, builtin.icons) })),
+    [recents, tier, builtin],
   )
 
   /* The group tray, marked the same way the pack menu is. A chip whose every
@@ -4957,7 +4969,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const teaseCells = useMemo(() => {
     if (!wantsTease) return []
     return pickTeaseIcons({
-      icons: window.icons || [],
+      icons: builtin.icons,
       shownNames: icons.slice(0, visible).map((i) => i.name),
       // A search band draws no more stand-ins than the matches it counts, so
       // "3 icons match" sits over three faded shapes, not two full rows.
@@ -4966,7 +4978,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
         : teaseCellCount(teaseCols),
       canSee,
     })
-  }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee])
+  }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee, builtin])
 
   // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
   // viewport's top edge (inset by the band's own sticky offset) exactly when the

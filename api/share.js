@@ -151,18 +151,20 @@ export default function handler(req, res) {
     : 'https://uil4b.com'
   const appUrl = `${origin}/create/palette?c=${code}`
   const imgUrl = `${origin}/api/share?c=${code}&img=1`
-  const title = `${hexes.length}-colour palette — UIL4B`
+  const title = `${hexes.length}-colour palette — UI L4B`
   const desc = hexes.map(h => `#${h}`).join(' · ')
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('X-Robots-Tag', 'noindex')
   return res.status(200).send(`<!doctype html>
-<html lang="en">
+<html lang="en-AU">
 <head>
 <meta charset="utf-8">
 <title>${title}</title>
 <meta name="description" content="${desc}">
+<meta name="robots" content="noindex, follow">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="UIL4B">
+<meta property="og:site_name" content="UI L4B">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${desc}">
 <meta property="og:url" content="${appUrl}">
@@ -177,7 +179,7 @@ export default function handler(req, res) {
 <script>location.replace(${JSON.stringify(appUrl)})</script>
 </head>
 <body>
-<p>Opening this palette in <a href="${appUrl}">the UIL4B Palette Builder</a>…</p>
+<p>Opening this palette in <a href="${appUrl}">the UI L4B Palette Builder</a>…</p>
 </body>
 </html>`)
 }

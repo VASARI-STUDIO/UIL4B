@@ -395,6 +395,23 @@ const STUBBED_PRICES = {
   '/plans': { source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } },
 }
 
+/* THE HOME HERO'S FIGURE IS opacity 0 UNTIL ITS LOOP HAS DRAWN.
+ *
+ * `.hh-fig:not([data-ready])` is clear; HomeHero stamps `data-ready` once the loop has drawn
+ * (or its stand-in has stood in), and only then does the 300ms entrance run. Three equal
+ * reads of the unready 0 would settle the measure before the figure has entered, so wait for
+ * the stamp and then for the figure's own animations to finish. Routes without the figure
+ * return at once. */
+async function heroEntranceDone(page) {
+  if (!(await page.locator('.hh-fig').count())) return
+  await expect(page.locator('.hh-fig[data-ready]'), 'the home hero figure never became ready').toBeAttached({ timeout: 30_000 })
+  await page.waitForFunction(
+    () => document.querySelector('.hh-fig').getAnimations().every((a) => a.playState === 'finished'),
+    undefined,
+    { timeout: 10_000 },
+  )
+}
+
 async function openSettled(browser, route, width, selectors) {
   // A fresh context per width. Resizing an open page re-runs the media queries
   // but keeps whatever state the first width left behind, and this suite has
@@ -418,6 +435,7 @@ async function openSettled(browser, route, width, selectors) {
     // the loaded one (31.1px/800) depending only on how long the measure itself took. Waiting for
     // the network to go quiet pins the loaded state.
     await page.waitForLoadState('networkidle').catch(() => {})
+    await heroEntranceDone(page)
     return await settledSnapshot(page, selectors)
   } finally {
     await context.close()

@@ -35,7 +35,10 @@ async function requireAdmin(req) {
     // Require a Firebase-verified email — an unverified signup could
     // otherwise register the admin address and pass the allowlist check.
     if (!decoded.email_verified || !isAdminEmail(decoded.email)) {
-      return { error: 'Admin access required', status: 403 }
+      // 404, not 403: the same answer the other admin routes give (see
+      // requireAdmin in _lib/admin.js), so a caller who is not the
+      // administrator learns nothing about whether this route exists.
+      return { error: 'Not found', status: 404 }
     }
     return { decoded }
   } catch (err) {
@@ -410,15 +413,16 @@ export default async function handler(req, res) {
     // live prices are then a mix of old and new, and the row says which.
     const status = auditStatusFor(progress, false)
     await settleAudit(auditRef, status, { progress, error: safeErrorMessage(err) })
-    const message = err?.message || 'Setup failed'
+    // The caller gets a fixed message: Stripe's own text names object ids. The
+    // full error is in the log line above and, cleaned, in the audit row.
     if (status === 'partial') {
       const applied = Object.keys(progress).filter((k) => progress[k].created)
       return res.status(500).json({
         partial: true,
         applied,
-        error: `Only some prices were changed (${applied.join(', ')}) before this failed. Reload to see the live prices, then save again. ${message}`,
+        error: `Only some prices were changed (${applied.join(', ')}) before this failed. Reload to see the live prices, then save again. The details are in the server log and the audit record.`,
       })
     }
-    return res.status(500).json({ error: message })
+    return res.status(500).json({ error: 'Setup failed. The details are in the server log and the audit record.' })
   }
 }

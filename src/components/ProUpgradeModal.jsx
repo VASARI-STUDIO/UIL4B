@@ -5,6 +5,7 @@ import { usePrices, refreshPrices } from '../hooks/usePrices'
 import { detectCurrency } from '../utils/currency'
 import { PRO_POINTS } from '../config/planFacts'
 import {
+  formatMoney,
   resolvePlanLadder,
   livePlans,
   cheapestPerMonth,
@@ -112,6 +113,9 @@ const ICON_GATE_COPY = {
 // its own list — "Pro colour tools — HCT editing, light + dark contrast
 // repair" — which described a different Pro from the page it links to.
 const DEFAULT_FEATURES = PRO_POINTS
+
+// USD prints as "US$", as on /plans, never a bare "$" that could read as the visitor's own dollar.
+const money = (amount, plan) => formatMoney(amount, plan.currency, { qualify: true })
 
 export default function ProUpgradeModal({ opts = {}, onClose }) {
   const navigate = useNavigate()
@@ -286,12 +290,12 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                         {save > 0 && <span className="ui-pro-plan-save">Save {save}%</span>}
                       </span>
                       <span className="ui-pro-plan-rate">
-                        <span className="ui-pro-plan-amount">{plan.perMonthLabel}</span>
+                        <span className="ui-pro-plan-amount">{money(plan.perMonth, plan)}</span>
                         <span className="ui-pro-plan-per">/mo</span>
                       </span>
                     </span>
                     <span className="ui-pro-plan-total">
-                      {plan.totalLabel} {plan.cadence}
+                      {money(plan.total, plan)} {plan.cadence}
                       {/* The trial lives here and in the button, not in a chip. */}
                       {plan.trialDays > 0 && ` · ${plan.trialDays}-day free trial`}
                     </span>
@@ -310,11 +314,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                 <>
                   <li><strong>Days 1 to {choice.trialDays}:</strong> full Pro access. Nothing is charged.</li>
                   <li>
-                    <strong>Day {choice.trialDays + 1}:</strong> {choice.totalLabel} is charged, then {choice.cadence.replace('billed ', '')}.
+                    <strong>Day {choice.trialDays + 1}:</strong> {money(choice.total, choice)} is charged, then {choice.cadence.replace('billed ', '')}.
                   </li>
                 </>
               ) : (
-                <li><strong>Then:</strong> {choice.totalLabel} {choice.cadence}, starting today.</li>
+                <li><strong>Then:</strong> {money(choice.total, choice)} {choice.cadence}, starting today.</li>
               )}
             </ol>
           )}

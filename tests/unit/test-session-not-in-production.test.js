@@ -55,54 +55,16 @@ import path from 'node:path'
 import os from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
+import { FINGERPRINTS, walk, scan } from '../../scripts/check-no-test-session.mjs'
 
 const ROOT = process.cwd()
 const PLUGIN_NAME = 'uil4b-test-session-double'
 
-/* Fingerprints of the doubles that SURVIVE MINIFICATION, which is the only
- * kind worth scanning for. A comment is not evidence: the minifier deletes it,
- * so a scan for one reports clean whatever the bundle contains.
- *
- * Each of these is a string literal the runtime needs:
- *   · the window property signIn() writes and test-session.js reads
- *   · the Symbol.for() keys the two doubles dispatch on
- *   · the marker embedded in the doubles' own error messages
- * The list is asserted to be findable in the test build below, so a marker
- * that stops surviving is caught rather than silently weakening the scan. */
-const FINGERPRINTS = [
-  '__UIL4B_TEST_SESSION__',
-  'uil4b.testSession',
-  'UIL4B_SIGNED_IN_FIXTURE_ONLY',
-]
-
-/** Every file under a directory, recursively. */
-function walk(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, entry.name)
-    if (entry.isDirectory()) walk(p, out)
-    else out.push(p)
-  }
-  return out
-}
-
-/**
- * Which fingerprints appear anywhere in a build output, and in which files.
- *
- * Reads every emitted file as binary-safe latin1 rather than filtering by
- * extension: a leak into a source map, a manifest, an inlined asset or an HTML
- * shell is still a leak, and choosing which files to look at is how a scan
- * comes to miss the one that mattered.
- */
-function scan(dir) {
-  const hits = []
-  for (const file of walk(dir)) {
-    const text = fs.readFileSync(file, 'latin1')
-    for (const marker of FINGERPRINTS) {
-      if (text.includes(marker)) hits.push({ marker, file: path.relative(dir, file) })
-    }
-  }
-  return hits
-}
+/* The fingerprints and the scanner are the build step's own
+ * (scripts/check-no-test-session.mjs, the last step of `npm run build`), so this
+ * file and the build cannot drift apart. The list is asserted to be findable in
+ * the test build below, so a marker that stops surviving minification is caught
+ * rather than silently weakening the scan. */
 
 /* Vite's own entry, run on this node rather than through `npx`. Two reasons,
  * and the second is the one that matters: a shelled-out `npx` needs

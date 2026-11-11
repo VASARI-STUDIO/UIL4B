@@ -67,7 +67,7 @@ test('the steps and the default subtitle use colons and full stops', () => {
   assert.match(MODAL, /<strong>Today:<\/strong> create your account and confirm payment details\./)
   assert.match(MODAL, /<strong>Days 1 to \{choice\.trialDays\}:<\/strong> full Pro access\. Nothing is charged\./)
   // The charge lands the day after the last free day, so no day is both.
-  assert.match(MODAL, /<strong>Day \{choice\.trialDays \+ 1\}:<\/strong> \{choice\.totalLabel\} is charged, then /)
+  assert.match(MODAL, /<strong>Day \{choice\.trialDays \+ 1\}:<\/strong> \{money\(choice\.total, choice\)\} is charged, then /)
   assert.match(MODAL, /Keep every tool open and every export clean\. Free stays free\. Pro removes the limits\./)
 })
 

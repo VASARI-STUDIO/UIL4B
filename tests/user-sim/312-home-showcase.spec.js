@@ -576,6 +576,25 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 320, heig
       }))
       expect(overflow, 'nothing scrolls sideways').toEqual({ sheet: 0, doc: 0 })
 
+      for (let i = 1; i <= PAGES; i += 1) {
+        const meta = await page.evaluate(() => {
+          const t = document.querySelector('.hsv-title')
+          const b = document.querySelector('.hsv-brand')
+          const text = t.getBoundingClientRect().right - parseFloat(getComputedStyle(t).paddingRight)
+          return { brand: b.textContent, brandCut: b.scrollWidth > b.clientWidth, titleEnd: text, countStart: document.querySelector('.hsv-count').getBoundingClientRect().left }
+        })
+        expect(meta.brandCut, `page ${i}: the brand line "${meta.brand}" shows in full`).toBe(false)
+        expect(meta.titleEnd, `page ${i}: the title stops short of the count`).toBeLessThanOrEqual(meta.countStart)
+        if (i < PAGES) {
+          await dialog(page).getByRole('button', { name: 'Next page' }).tap()
+          await expect(count(page)).toHaveText(`${i + 1} of ${PAGES}`)
+        }
+      }
+      await dialog(page).getByRole('button', { name: 'Previous page' }).tap()
+      await expect(count(page)).toHaveText(`${PAGES - 1} of ${PAGES}`)
+      for (let i = PAGES - 1; i > 1; i -= 1) await dialog(page).getByRole('button', { name: 'Previous page' }).tap()
+      await expect(count(page)).toHaveText(`1 of ${PAGES}`)
+
       // The sheet has no scrim: a tap on its empty space leaves it open.
       await page.touchscreen.tap(width / 2, 120)
       await page.waitForTimeout(400)
@@ -764,12 +783,10 @@ test.describe('the viewer\'s motion', () => {
     expect(new Set(moving.delays).size, 'every tile starts on its own beat').toBe(TOTAL)
     expect(Math.max(...moving.delays), 'and the last starts under half a second in').toBeLessThan(0.5)
     await expect(root, 'then it is at rest').toHaveAttribute('data-hsc-reveal', 'done')
-    // The section and every tile end fully shown: nothing outside the showcase may hold it at opacity 0.
+    // Nothing outside the showcase may hold it at opacity 0.
     expect(await root.evaluate((el) => getComputedStyle(el).opacity), 'the showcase itself is shown').toBe('1')
-    const shown = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => getComputedStyle(li).opacity))
-    expect(shown, 'and every tile is shown').toEqual(Array(TOTAL).fill('1'))
     // "done" is set on a timer that can fire a frame before the last tile's transition ends on a
-    // loaded machine, so the tiles are read until they settle rather than once.
+    // loaded machine, so the tiles are read until every one is fully shown and still, rather than once.
     await expect.poll(async () => {
       const rest = await page.locator('#hsc-panel li').evaluateAll((lis) => lis.map((li) => ({ opacity: getComputedStyle(li).opacity, transform: getComputedStyle(li).transform, transition: getComputedStyle(li).transitionDuration })))
       return rest.every((r) => r.opacity === '1' && r.transform === 'none' && parseFloat(r.transition) === 0)

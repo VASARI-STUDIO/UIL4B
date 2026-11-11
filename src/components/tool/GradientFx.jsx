@@ -56,6 +56,11 @@ function Scene({ id }) {
       )
     case 'fade':
       return (<><div className="grd-fx-wash" /><div className="grd-fx-grain" /></>)
+    case 'poster':
+      return (<div className="grd-poster-frame"><div className="grd-fx-grain" /></div>)
+    case 'spec':
+      // The ground only: the card, its strip and its words are the text layer's (GradientText.jsx).
+      return null
     default:
       return null
   }

@@ -59,4 +59,4 @@ export function planPriceFacts(prices) {
 }
 
 /** The Free card's price. */
-export const freePrice = () => formatMoney(0, APPROVED_CURRENCY)
+export const freePrice = () => formatMoney(0, APPROVED_CURRENCY, { qualify: true })

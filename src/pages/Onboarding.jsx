@@ -6,6 +6,7 @@ import { FIRST_PALETTE_STATE } from '../utils/paletteCoach'
 import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
 import { onboardingDestination, knownProfile, localOnboardingFlag, SIGNED_IN_HOME } from '../utils/onboardingState'
 import { BrandLockup } from '../components/BrandLogo'
+import { isLocalPath } from '../utils/localPath'
 
 // Where a brand-new account lands when it does NOT pick a starting point.
 //
@@ -149,12 +150,14 @@ export default function Onboarding() {
   // drop the user's original destination (QA Q1). The call site stashes that
   // destination in sessionStorage; read + clear it here so a finishing user
   // resumes there instead of the generic /home. Returns null when nothing was
-  // stashed (the common, unprompted-onboarding case).
+  // stashed (the common, unprompted-onboarding case), or when what was stashed
+  // is not a path on this origin: the writer checks it, and it is checked again
+  // here because storage can hold anything by the time it is read.
   const takeResumeTarget = () => {
     try {
       const t = sessionStorage.getItem(RESUME_KEY)
       sessionStorage.removeItem(RESUME_KEY)
-      return t || null
+      return isLocalPath(t) ? t : null
     } catch { return null }
   }
 
