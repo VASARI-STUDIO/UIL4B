@@ -122,7 +122,7 @@ export default function ExportProPreview({ kind, template, design, projectName, 
             ? ready.pages.map((p, i) => (
               <img
                 key={p.id}
-                className="exp-thumb"
+                className="exp-thumb" data-pin-nopin="true"
                 src={p.url}
                 width={p.width}
                 height={p.height}

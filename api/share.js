@@ -163,6 +163,7 @@ export default function handler(req, res) {
 <title>${title}</title>
 <meta name="description" content="${desc}">
 <meta name="robots" content="noindex, follow">
+<meta name="pinterest" content="nopin">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="UI L4B">
 <meta property="og:title" content="${title}">

@@ -109,7 +109,7 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
             aria-hidden="true"
           >
             <img
-              className="pl-card-poster"
+              className="pl-card-poster" data-pin-nopin="true"
               src={promptPosterSrc(p.id)}
               alt=""
               loading="lazy"
@@ -119,7 +119,7 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
             />
             {playing && (
               <img
-                className="pl-card-anim"
+                className="pl-card-anim" data-pin-nopin="true"
                 src={promptAnimSrc(p.id)}
                 alt=""
                 decoding="async"

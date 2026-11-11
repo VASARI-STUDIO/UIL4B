@@ -165,7 +165,7 @@ export default function PromptOverview({
                     return (
                       <div key={p.id} className={`pl-mosaic-tile${kind ? ' is-locked' : ''}`}>
                         {hasPromptPreview(p.id) ? (
-                          <img src={kind ? promptStandinSrc(p.id) : promptPosterSrc(p.id)} alt="" loading="lazy" decoding="async" width="960" height="600" />
+                          <img src={kind ? promptStandinSrc(p.id) : promptPosterSrc(p.id)} data-pin-nopin="true" alt="" loading="lazy" decoding="async" width="960" height="600" />
                         ) : !kind && <span className="pl-mosaic-name">{p.title}</span>}
                         {kind && <LockMark kind={kind} />}
                       </div>
