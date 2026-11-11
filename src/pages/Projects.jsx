@@ -210,7 +210,7 @@ export default function Projects() {
               <OtherProjects others={others} room={!isPro && slots ? Math.max(0, slots.limit - slots.used) : 0} onNew={startNew} busy={checking} />
             )}
             <Shelf projects={projects} signedOut={signedOut} loading={resolving || loadingList} />
-            <PlanLine loading={resolving || loadingList || planLoading} signedOut={signedOut} isPro={isPro} />
+            <PlanLine loading={authLoading || loadingList || planLoading} signedOut={signedOut} isPro={isPro} />
             <div className="db-end" />
           </div>
         </div>
