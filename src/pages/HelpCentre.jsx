@@ -185,30 +185,32 @@ export default function HelpCentre() {
           {LIVE_TOOLS.length} tools open now
           {isAdmin && <> &middot; {SOON_TOOLS.length} still being built</>}
         </p>
-        {/* The way to a person. It opens the feedback form already set to a
-            help request, and sits up here so it does not depend on opening a
-            row below. */}
-        <p className="hlp-contact">
-          <span>Can&rsquo;t find what you need?</span>
-          <Link className="hlp-contact-link" to="/feedback?type=help">Contact support</Link>
-        </p>
       </header>
 
       <div className="hlf">
         <label className="hlf-label" htmlFor="hlf-q">Search help and guides</label>
-        <input
-          id="hlf-q"
-          className="hlf-input"
-          type="search"
-          autoComplete="off"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+        <div className="hlf-in">
+          <svg className="hlf-glass" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+          <input
+            id="hlf-q"
+            className="hlf-input"
+            type="search"
+            autoComplete="off"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        {/* The way to a person. It opens the feedback form already set to a
+            help request, and sits right under the search. */}
+        <p className="hlp-contact">
+          <span>Can&rsquo;t find what you need?</span>
+          <Link className="hlp-contact-link" to="/feedback?type=help">Contact support</Link>
+        </p>
       </div>
 
       {hits ? (
         <section className="hlr" id="faq" aria-labelledby="hlr-q">
-          <p className="hlr-q" id="hlr-q" role="status">
+          <p className="hlr-rc" id="hlr-q" role="status">
             {hits.jobHits.length + hits.guideHits.length > 0
               ? `${hits.jobHits.length + hits.guideHits.length} results for \u201c${q.trim()}\u201d`
               : `Nothing matches \u201c${q.trim()}\u201d. Try a tool name, or ask us.`}
@@ -245,7 +247,7 @@ export default function HelpCentre() {
         </section>
       ) : (
         <section className="hlr" id="faq" aria-labelledby="hlr-q">
-          <p className="hlr-q" id="hlr-q">What are you here to do?</p>
+          <h2 className="hlr-q" id="hlr-q">What are you here to do?</h2>
           <ul className="hlr-jobs" id="about" aria-labelledby="hlr-q">
             {jobs.map((job) => (
               <li key={job.id}>
@@ -258,7 +260,9 @@ export default function HelpCentre() {
                   onClick={() => press(job.id)}
                 >
                   <span>{job.label}</span>
-                  <span className="hlr-tick" aria-hidden="true"><SpectrumIcon name="arrow-right" size={18} /></span>
+                  <span className="hlr-chev" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                  </span>
                 </button>
                 <Panel job={job} open={active === job.id} />
               </li>
@@ -267,7 +271,7 @@ export default function HelpCentre() {
         </section>
       )}
 
-      <ReadingNext label="Learn why the tools work the way they do" slugs={['colour-contrast', 'type-scales', 'typeface-metrics']} />
+      <ReadingNext variant="help" label="Learn why the tools work the way they do" slugs={['colour-contrast', 'type-scales', 'typeface-metrics']} />
       <ReadingEnd />
     </div>
   )

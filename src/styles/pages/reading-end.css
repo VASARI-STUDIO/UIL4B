@@ -33,3 +33,31 @@
   html:not([data-reduced-motion="false"]) .rd-next-go{transition:none;transform:none!important}
 }
 html[data-reduced-motion="true"] .rd-next-go{transition:none;transform:none!important}
+
+/* Help's foot: guide rows alone, a circled arrow, no row to all the guides. */
+.rd-next[data-variant="help"]{margin-top:calc(var(--s-9) - var(--cpg-sec))}
+.rd-next[data-variant="help"] ul{margin-top:var(--s-5);border-bottom:1px solid var(--border)}
+.rd-next[data-variant="help"] .rd-next-row{align-items:center;padding:var(--s-5) 0}
+.rd-next[data-variant="help"] li:last-child .rd-next-row{border-bottom:0}
+.rd-next[data-variant="help"] .rd-next-label{margin-bottom:0;letter-spacing:0}
+.rd-next[data-variant="help"] .rd-next-title{font-family:var(--display);font-size:24px;letter-spacing:-.04em;line-height:1.1;text-wrap:balance}
+.rd-next[data-variant="help"] .rd-next-text{gap:var(--s-3)}
+.rd-next[data-variant="help"] .rd-next-dek{font-size:15px;line-height:1.55}
+.rd-next-circle{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--hl-fill,var(--bg-3));color:var(--t0);transition:background-color 150ms ease}
+.rd-next-circle svg{transition:transform 320ms cubic-bezier(.25,1,.5,1)}
+@media(hover:hover){
+  .rd-next-row:hover .rd-next-circle{background:color-mix(in srgb,var(--t0) 6%,transparent)}
+  .rd-next-row:hover .rd-next-circle svg{transform:rotate(45deg)}
+}
+.rd-next-row:focus-visible .rd-next-circle svg{transform:rotate(45deg)}
+@media(max-width:767px){
+  .rd-next[data-variant="help"] .rd-next-row{align-items:flex-start;padding:20px 0}
+  .rd-next[data-variant="help"] .rd-next-title{font-size:19px;letter-spacing:-.02em;line-height:1.25}
+  .rd-next[data-variant="help"] .rd-next-text{gap:var(--s-2)}
+  .rd-next[data-variant="help"]{margin-top:calc(72px - var(--cpg-sec))}
+  .rd-next[data-variant="help"] ul{margin-top:var(--s-2)}
+}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .rd-next-circle svg{transition:none;transform:none!important}
+}
+html[data-reduced-motion="true"] .rd-next-circle svg{transition:none;transform:none!important}
