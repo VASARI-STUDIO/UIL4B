@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { contrastRatio, hexToRgb, luminance } from '../utils/colors'
 import { blendWhite, ratioText } from '../utils/contrastFormat'
 import { CONTRAST_PICKS, parseHex, pickContrastHex, typeContrastHex, useContrastPick } from '../hooks/useContrastPick'
+import { prefersReducedMotion } from './spectrum/reducedMotion'
 import '../styles/pages/learn-contrast.css'
 
 // The figures of the colour contrast guide. Every ratio printed here comes from
@@ -143,7 +144,7 @@ const same = (a) => (a.every((v) => Math.abs(v - a[0]) < 1e-9) ? f4(a[0]) : a.ma
 export function ChannelBars() {
   const { hex } = useContrastPick()
   const ref = useRef(null)
-  const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced = prefersReducedMotion()
   const [stage, setStage] = useState(reduced ? 3 : 1)
   const [seen, setSeen] = useState(false)
   const [played, setPlayed] = useState(reduced)

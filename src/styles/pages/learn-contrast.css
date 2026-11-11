@@ -139,9 +139,11 @@
   .lcc-grid{grid-template-columns:88px 56px minmax(0,1fr);column-gap:var(--s-2)}
   .lcc-chlab span{font-size:13px}
 }
+html[data-reduced-motion="true"] .lcc-ch[data-seen="false"]{opacity:0}
+html[data-reduced-motion="true"] :is(.lcc-bar,.lcc-gh,.lcc-lend,.lcc-res,.lcc-steps li,.lcc-chval i){transition:none}
 @media(prefers-reduced-motion:reduce){
-  .lcc-bar,.lcc-gh,.lcc-lend,.lcc-res,.lcc-steps li,.lcc-chval i{transition:none}
-  .lcc-ch[data-seen="false"]{opacity:0}
+  html:not([data-reduced-motion="false"]) .lcc-ch[data-seen="false"]{opacity:0}
+  html:not([data-reduced-motion="false"]) :is(.lcc-bar,.lcc-gh,.lcc-lend,.lcc-res,.lcc-steps li,.lcc-chval i){transition:none}
 }
 /* The global clamp zeroes every duration with !important, so the section 3
    fade is restored here at a higher specificity. */
