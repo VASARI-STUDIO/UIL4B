@@ -17,7 +17,7 @@ import { GRAD_TYPE_WEIGHTS, rollGradient, parseMoodFilters, moodFor, moodWords, 
 import { pushRecent } from '../utils/gradientScore'
 import useShiftSelect from '../hooks/useShiftSelect'
 import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection'
-import { pushLook, popLook, canGoBack } from '../utils/gradientHistory'
+import { emptyHistory, recordLook, undoLook, redoLook, canUndo, canRedo, startsBurst, isTextEntry, historyShortcut } from '../utils/gradientHistory'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToOklch } from '../utils/colors'
 import { pickInk, INK_DARK, INK_LIGHT } from '../utils/gradientInk'
@@ -388,6 +388,9 @@ function ColourChip({ hex, label, on, unavailable = false, onPick }) {
 // colour and which colours are locked. Once any changes the sentence is stale and
 // the line goes back to saying what the next press will do.
 const paintKey = (idxs, list) => `${idxs.join(',')}|${list.map((st) => st.color).join('')}|${list.map((st) => (st.lockColour ? 1 : 0)).join('')}`
+
+// Whether a patch would leave the stop as it is (colours compare without regard to case).
+const samePatch = (stop, patch) => !stop || Object.keys(patch).every((k) => String(stop[k]).toLowerCase() === String(patch[k]).toLowerCase())
 
 // Hex text field with a local draft, so partially-typed values aren't wiped by
 // the controlled stop colour on every keystroke. It commits while typing once
@@ -995,16 +998,47 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     return false
   }, [fromLibrary, isPro, openProModal])
 
-  // Back: the last ten looks a roll, a preset or Reset replaced (utils/gradientHistory).
+  // Back and Redo: the looks a roll, a preset, Reset or an edit replaced (utils/gradientHistory).
   // `lookRef` holds the look on screen, so the push needs no stale closure.
   const lookRef = useRef(null)
   useLayoutEffect(() => { lookRef.current = { stops, type, angle, space } })
-  const historyRef = useRef([])
-  const [backCount, setBackCount] = useState(0)
-  const pushHistory = useCallback(() => {
-    historyRef.current = pushLook(historyRef.current, lookRef.current)
-    setBackCount(historyRef.current.length)
+  const historyRef = useRef(emptyHistory())
+  const [canBack, setCanBack] = useState(false)
+  const [canForward, setCanForward] = useState(false)
+  const syncHistory = useCallback(() => {
+    setCanBack(canUndo(historyRef.current))
+    setCanForward(canRedo(historyRef.current))
   }, [])
+  const pushHistory = useCallback(() => {
+    historyRef.current = recordLook(historyRef.current, lookRef.current)
+    syncHistory()
+  }, [syncHistory])
+
+  // One step per edit gesture. A discrete edit (a hex commit, add, remove, flip, type,
+  // interpolation, a chip) passes `false` and always takes a step. A run of edits under
+  // one key (a stop drag, the angle, a held arrow key, a colour picker drag) takes one
+  // step: it continues while the pointer is down or the edits follow each other quickly,
+  // and a new pointer press starts a new one.
+  const burstRef = useRef({ key: null, at: 0, held: false })
+  useEffect(() => {
+    const down = () => { burstRef.current.held = true; burstRef.current.key = null }
+    const up = () => { burstRef.current.held = false }
+    window.addEventListener('pointerdown', down, true)
+    window.addEventListener('pointerup', up, true)
+    window.addEventListener('pointercancel', up, true)
+    return () => {
+      window.removeEventListener('pointerdown', down, true)
+      window.removeEventListener('pointerup', up, true)
+      window.removeEventListener('pointercancel', up, true)
+    }
+  }, [])
+  const beginEdit = useCallback((key) => {
+    const burst = burstRef.current
+    const now = Date.now()
+    if (key === false || startsBurst(burst, key, now)) pushHistory()
+    burst.key = key === false ? null : key
+    burst.at = now
+  }, [pushHistory])
 
   const applyPreset = useCallback((p) => {
     // A preset replaces the stops, so stop locks clear; the geometry locks are the
@@ -1047,36 +1081,79 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const goBack = useCallback(() => {
-    const { look, history } = popLook(historyRef.current)
-    if (!look) return
-    historyRef.current = history
-    setBackCount(history.length)
+  const showLook = useCallback((look) => {
     setStops(look.stops.map((s) => ({ ...s })))
     setType(look.type)
     setAngle(look.angle)
     setSpace(look.space)
     selectOnly(0)
     setFromLibrary(false)
-    toast?.('Back to the previous gradient')
-  }, [selectOnly, toast])
+    burstRef.current.key = null
+  }, [selectOnly])
 
-  const updateStop = useCallback((idx, patch) => {
+  const goBack = useCallback(() => {
+    const { look, history } = undoLook(historyRef.current, lookRef.current)
+    historyRef.current = history
+    syncHistory()
+    if (!look) return
+    showLook(look)
+    toast?.('Back to the previous gradient')
+  }, [showLook, syncHistory, toast])
+
+  const goForward = useCallback(() => {
+    const { look, history } = redoLook(historyRef.current, lookRef.current)
+    historyRef.current = history
+    syncHistory()
+    if (!look) return
+    showLook(look)
+    toast?.('Change redone')
+  }, [showLook, syncHistory, toast])
+
+  // Ctrl or Cmd+Z goes back, Shift+Ctrl or Cmd+Z and Ctrl+Y redo. A text field keeps its
+  // own undo, and anything open in front of the page (a dialog or menu) is left alone.
+  const stepRef = useRef({ goBack, goForward })
+  useLayoutEffect(() => { stepRef.current = { goBack, goForward } })
+  useEffect(() => {
+    const onKey = (e) => {
+      const step = historyShortcut(e)
+      if (!step || e.defaultPrevented || isTextEntry(e.target)) return
+      if (e.target?.closest?.('[role="dialog"], [role="menu"]')) return
+      e.preventDefault()
+      if (step === 'undo') stepRef.current.goBack()
+      else stepRef.current.goForward()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // The edits below record the look they replace first (beginEdit). An edit that
+  // would change nothing records nothing.
+  // `key` is the burst key (default: what is edited and which stop), or false for an
+  // edit that always takes its own step.
+  const updateStop = useCallback((idx, patch, key) => {
     if (!guardEdit()) return
+    if (samePatch(lookRef.current?.stops[idx], patch)) return
+    beginEdit(key === undefined ? `${Object.keys(patch).join('+')}:${idx}` : key)
     setStops(prev => prev.map((s, i) => i === idx ? { ...s, ...patch } : s))
-  }, [guardEdit])
+  }, [guardEdit, beginEdit])
 
   // The same patch on several stops at once (the selection).
-  const updateStops = useCallback((idxs, patch) => {
+  const updateStops = useCallback((idxs, patch, key) => {
     if (!guardEdit()) return
+    if (idxs.every((i) => samePatch(lookRef.current?.stops[i], patch))) return
+    beginEdit(key === undefined ? `${Object.keys(patch).join('+')}:${idxs.join(',')}` : key)
     setStops(prev => prev.map((s, i) => idxs.includes(i) ? { ...s, ...patch } : s))
-  }, [guardEdit])
+  }, [guardEdit, beginEdit])
 
   // Move the selection together; it stops as a group at 0 and 100.
   const moveStops = useCallback((idxs, delta) => {
     if (!guardEdit()) return
+    const cur = lookRef.current?.stops || []
+    const moved = shiftGroup(cur, idxs, delta)
+    if (moved.every((s, i) => s.position === cur[i]?.position)) return
+    beginEdit(`position:${idxs.join(',')}`)
     setStops(prev => shiftGroup(prev, idxs, delta))
-  }, [guardEdit])
+  }, [guardEdit, beginEdit])
 
   // Toggling a stop's randomise-lock isn't reshaping the gradient — it's a
   // shuffle control, exactly like the ungated type / angle locks — so it
@@ -1107,11 +1184,12 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     // The rail draws in the space the canvas really uses, so the new stop is
     // sampled in that one and the gradient looks the same after the add.
     const railSpace = supportsOklchGradients ? space : 'srgb'
+    beginEdit(false)
     setStops(prev => [...prev, { color: newStopColour(prev, pct, railSpace), position: Math.round(pct) }])
     selectOnly(idx)
     focusStopRef.current = idx
     return idx
-  }, [stops.length, space, guardEdit, toast, selectOnly])
+  }, [stops.length, space, guardEdit, toast, selectOnly, beginEdit])
 
   const addStop = useCallback(() => {
     const sorted = [...stops].sort((a, b) => a.position - b.position)
@@ -1140,6 +1218,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       return
     }
     if (keepFocus) focusRemovedRowRef.current = true
+    beginEdit(false)
     setStops(prev => prev.length - remove.length >= MIN_STOPS ? prev.filter((_, i) => !remove.includes(i)) : prev)
     const shift = remove.filter((r) => r < activeStop).length
     const next = remove.includes(activeStop) ? Math.min(activeStop - shift, stops.length - remove.length - 1) : activeStop - shift
@@ -1151,12 +1230,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     setSelMode(false)
     if (blocked) say('A gradient needs at least two stops.')
     else if (remove.length > 1) say(`${remove.length} stops removed`)
-  }, [guardEdit, stops.length, activeStop, toast, say])
+  }, [guardEdit, stops.length, activeStop, toast, say, beginEdit])
 
   const flip = useCallback(() => {
     if (!guardEdit()) return
+    beginEdit(false)
     setStops(prev => prev.map(s => ({ ...s, position: 100 - s.position })))
-  }, [guardEdit])
+  }, [guardEdit, beginEdit])
 
   // The tints menu for a stop: opened by right-click on a stop (its row or its
   // handle), the menu key, or the Tints button. Applying a tint is a Pro tool; a
@@ -1183,7 +1263,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [selectOnly])
   const applyTint = useCallback((hex, label) => {
     if (!tintMenu) return
-    updateStop(tintMenu.idx, { color: hex })
+    updateStop(tintMenu.idx, { color: hex }, false)
     toast?.(`Tint ${label} applied to stop ${tintMenu.idx + 1}`)
   }, [tintMenu, updateStop, toast])
   const gateTints = useCallback(() => {
@@ -1309,7 +1389,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     const upper = hex.toUpperCase()
     const same = targets.every((i) => stops[i]?.color?.toUpperCase() === upper)
     const painted = same ? stops : stops.map((st, i) => (targets.includes(i) ? { ...st, color: hex } : st))
-    if (!same) setStops(painted)
+    if (!same) { beginEdit(false); setStops(painted) }
     const next = multi ? activeStop : nextPaintTarget(painted, activeStop)
     if (next !== activeStop) { setActiveStop(next); anchorRef.current = next }
     let text
@@ -1317,7 +1397,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     else if (same) text = `Stop ${activeStop + 1} is already ${name}.`
     else text = `Stop ${activeStop + 1} set to ${name}.${next !== activeStop ? ` Next: stop ${next + 1}.` : ''}`
     setPaintNote({ text, key: paintKey(multi ? targets : [next], painted), n: ++paintCount.current })
-  }, [guardEdit, targets, stops, multi, activeStop])
+  }, [guardEdit, targets, stops, multi, activeStop, beginEdit])
 
 
   // Reset clears every lock: the stops are replaced and the geometry locks go too.
@@ -1735,6 +1815,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
     const idx = addStopAt(pct)
     if (idx == null) return
+    // The add took the step; the drag that places the new stop belongs to it.
+    burstRef.current.key = `position:${idx}`
     beginStopDrag(idx)
   }, [addStopAt, beginStopDrag])
 
@@ -1950,13 +2032,28 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
               variant="square"
               icon="arrow-u-up-left"
               className="grd-back"
-              onClick={canGoBack(historyRef.current) ? goBack : undefined}
-              aria-disabled={backCount === 0 || undefined}
+              onClick={canBack ? goBack : undefined}
+              aria-disabled={!canBack || undefined}
               aria-label="Back to the previous gradient"
-              title={backCount === 0 ? 'Nothing to go back to yet' : 'Back to the previous gradient'}
+              title={canBack ? 'Back to the previous gradient' : 'Nothing to go back to yet'}
             />
           ),
-          menu: { label: 'Back', icon: 'arrow-u-up-left', ariaDisabled: backCount === 0, title: backCount === 0 ? 'Nothing to go back to yet' : 'Back to the previous gradient', onSelect: goBack },
+          menu: { label: 'Back', icon: 'arrow-u-up-left', ariaDisabled: !canBack, title: canBack ? 'Back to the previous gradient' : 'Nothing to go back to yet', onSelect: goBack },
+        },
+        {
+          id: 'redo', priority: 1, inline: !phoneBar,
+          render: () => (
+            <ToolButton
+              variant="square"
+              icon="arrow-u-up-right"
+              className="grd-redo"
+              onClick={canForward ? goForward : undefined}
+              aria-disabled={!canForward || undefined}
+              aria-label="Redo"
+              title={canForward ? 'Redo the change' : 'Nothing to redo yet'}
+            />
+          ),
+          menu: { label: 'Redo', icon: 'arrow-u-up-right', ariaDisabled: !canForward, title: canForward ? 'Redo the change' : 'Nothing to redo yet', onSelect: goForward },
         },
         {
           id: 'reset', priority: 1, inline: !phoneBar,
@@ -2365,7 +2462,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 <StopHexInput
                   color={selected.color}
                   label={multi ? `Hex for the ${picked.length} selected stops` : `Stop ${activeStop + 1} hex`}
-                  onCommit={(v) => updateStops(targets, { color: v })}
+                  onCommit={(v) => updateStops(targets, { color: v }, false)}
                 />
                 <button
                   type="button"
@@ -2417,7 +2514,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                 label="Gradient type"
                 options={GRAD_TYPES}
                 value={type}
-                onChange={(t) => { if (guardEdit()) setType(t) }}
+                onChange={(t) => { if (t !== type && guardEdit()) { beginEdit(false); setType(t) } }}
               />
               <LockBtn on={locks.type} onClick={() => toggleGeometryLock('type')} className="grd-geo-lock" label={keepLabel(locks.type, 'the type')} />
             </div>
@@ -2430,7 +2527,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   ariaLabel="Gradient angle"
                   numberLabel="Gradient angle in degrees"
                   value={angle}
-                  onChange={(v) => { if (guardEdit()) setAngle(v) }}
+                  onChange={(v) => { if (v !== angle && guardEdit()) { beginEdit('angle'); setAngle(v) } }}
                   locked={editLocked}
                   onLockedPress={guardEdit}
                 />
@@ -2442,7 +2539,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             <div className="grd-interp">
               <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
               <div className="grd-interp-ctl">
-                <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={setSpace} />
+                <ToolPills labelledBy="grd-interp-label" describedBy="grd-interp-hint" options={SPACES} value={space} onChange={(v) => { if (v !== space) { beginEdit(false); setSpace(v) } }} />
                 {RANDOM_DRAWS_SPACE && <LockBtn on={locks.interp} onClick={() => toggleGeometryLock('interp')} className="grd-geo-lock" label={keepLabel(locks.interp, 'the interpolation')} />}
               </div>
               {/* Both hints sit in one grid cell, the idle one hidden, so the
