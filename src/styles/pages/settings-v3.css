@@ -67,6 +67,7 @@ html[data-theme="light"] .stg.stg {
 .stg.stg .btn-accent { background: var(--ink); color: var(--on-ink); }
 .stg.stg .btn:disabled, .stg.stg .btn[aria-disabled="true"] { opacity: .48; cursor: not-allowed; transform: none; }
 .stg.stg .settings-row--field > .btn, .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger) { height: auto; min-height: 44px; padding: 12px 8px; margin-right: -8px; background: transparent; border-radius: var(--btn-radius); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: transparent; align-self: center; }
+.stg.stg .settings-row--field > .btn:not(.btn-accent):not(.settings-danger) { align-self: flex-start; margin-top: 0; }
 @media (hover: hover) { .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger):hover { background: transparent; text-decoration-color: var(--ink); } }
 .stg.stg .settings-row > .btn:not(.btn-accent):not(.settings-danger):focus-visible { text-decoration-color: var(--ink); }
 .stg.stg .settings-danger, .stg.stg .danger-zone-open { color: var(--err); background: var(--raised); border: 0; }
