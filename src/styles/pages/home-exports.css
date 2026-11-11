@@ -4,7 +4,7 @@
    Spacing: the section's padding is the only space above and below it, from
    --section-y, and the sides from --gutter-x (home-tokens.css).
 
-   The stack: from 1024px wide and 560px tall the cards are sticky and each docks
+   The stack: from 1024px wide and 688px tall the cards are sticky and each docks
    12px lower than the one before, so a covered card keeps its top edge showing
    and the edges count the pile. A covered card never changes: no scale, dim,
    shadow or filter. The window height sets the dock line (--hx-base), so the
@@ -101,10 +101,11 @@
   pointer-events: none;
 }
 /* The window height sets the first dock line so the last card ends inside the
-   screen: 664px is a 640px card and its two 12px edges. The gap is also the hold
-   before a card reaches the one it covers, and the tail is how long the whole
-   pile rests before it leaves. */
-@media (min-width: 1024px) and (min-height: 560px) {
+   screen: 664px is a 640px card and its two 12px edges, and the 688px query is
+   that plus the 24px floor of --hx-base. The gap is also the hold before a card
+   reaches the one it covers, and the tail is how long the whole pile rests
+   before it leaves. */
+@media (min-width: 1024px) and (min-height: 688px) {
   .hx {
     --hx-base: clamp(24px, calc((100svh - 664px) / 2), 84px);
     --hx-gap: 96px;

@@ -8,7 +8,7 @@ import { formatBytes } from '../spectrum/spectrumKit.js'
 // The cards stack only in a window at least this wide and tall (the media query in
 // home-exports.css says the same); anywhere smaller they scroll as a plain column.
 export const STACK_MIN_WIDTH = 1024
-export const STACK_MIN_HEIGHT = 560
+export const STACK_MIN_HEIGHT = 688
 
 export const stacks = (width, height) => width >= STACK_MIN_WIDTH && height >= STACK_MIN_HEIGHT
 

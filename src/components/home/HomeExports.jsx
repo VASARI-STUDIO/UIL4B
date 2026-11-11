@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EXPORT_THEMES_LIVE } from '../../config/exportFormats'
+import { getLenis } from '../../hooks/useSmoothScroll'
 import { exportCopy, exportRows, kerbsideRamp, projectsLimit } from './homeExportsData'
 import { HOME_EXPORT_IMAGES, homeExportSrc, homeExportSrcSet } from './homeExportsImages'
 import {
@@ -31,7 +32,8 @@ import '../../styles/pages/home-exports.css'
 
 // A card slides over the one before it with the page's own scroll (sticky, in
 // home-exports.css) and the covered card does not change. The script only marks a
-// covered card inert, so keyboard focus never lands behind the card over it.
+// covered card inert, so keyboard focus never lands behind the card over it, and
+// scrolls back when focus reaches a card that another card is still sliding over.
 
 // The faces the cards draw are fetched only once the section is within this
 // distance of the viewport.
@@ -276,6 +278,22 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
       })
       cover()
     }, { rootMargin: '0px 0px 100000px 0px' })
+    // Focus that lands in a card another card is sliding over (Shift+Tab from the card on top) would sit under it,
+    // so the page scrolls back until the later cards are below the focused card's bottom edge.
+    const uncover = (event) => {
+      if (!stacks(window.innerWidth, window.innerHeight)) return
+      const index = cards.findIndex((el) => el.contains(event.target))
+      if (index < 0) return
+      const bottom = cards[index].getBoundingClientRect().bottom
+      const overlap = cards.slice(index + 1).reduce((most, el) => Math.max(most, bottom - el.getBoundingClientRect().top), 0)
+      if (overlap <= 0) return
+      const y = Math.max(0, window.scrollY - Math.ceil(overlap))
+      const lenis = getLenis()
+      if (lenis) lenis.scrollTo(y, { immediate: true })
+      else window.scrollTo({ top: y, behavior: 'instant' })
+    }
+    const section = sectionRef.current
+    section?.addEventListener('focusin', uncover)
     trackRefs.current.forEach((track, index) => { if (track && index > 0) watcher?.observe(track) })
     dock()
     window.addEventListener('resize', dock)
@@ -285,6 +303,7 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
     return () => {
       mounted = false
       window.removeEventListener('resize', dock)
+      section?.removeEventListener('focusin', uncover)
       observer?.disconnect()
       watcher?.disconnect()
       cards.forEach((el) => { el.inert = false })

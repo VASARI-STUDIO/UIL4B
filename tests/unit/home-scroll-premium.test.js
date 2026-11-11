@@ -12,7 +12,7 @@
 //
 // MUTATIONS (each turns a test red):
 //   - add `transform: scale(...)`, `filter` or `box-shadow` to .hx-card, or an `::after` on it -> "the covered card stays as it was".
-//   - move `position: sticky` out of the 1024x560 media query -> "the stack sits behind a size query".
+//   - move `position: sticky` out of the 1024x688 media query -> "the stack sits behind a size query".
 //   - add `width` or `top` to a @keyframes in either sheet -> "keyframes move transform and opacity only".
 //   - add a gradient, will-change or `transition: all` to either sheet -> "no banned effect".
 import test from 'node:test'
@@ -27,7 +27,7 @@ const TRY_JSX = read('src/components/home/HomeTry.jsx')
 // The declarations of every top-level rule whose selector is exactly `selector`.
 const rule = (css, selector) => css.split('}').map((chunk) => chunk.split('{')).filter(([sel, body]) => body !== undefined && sel.trim() === selector).map(([, body]) => body).join(';')
 // The body of the stack's media query: from its opening line to the first closing brace in column 0.
-const STACK_QUERY = /@media \(min-width: 1024px\) and \(min-height: 560px\) \{([\s\S]*?)\r?\n\}/
+const STACK_QUERY = /@media \(min-width: 1024px\) and \(min-height: 688px\) \{([\s\S]*?)\r?\n\}/
 
 test('the stripper works, so the reads below can be trusted', () => {
   assert.ok(EXPORTS.includes('.hx-card'), 'home-exports.css was not read')
@@ -44,7 +44,7 @@ test('exports: the covered card stays as it was (no scale, dim, filter, shadow o
 })
 
 test('exports: the stack sits behind a size query, so a small or short window gets the plain column', () => {
-  assert.ok(!/position:\s*sticky/.test(EXPORTS.replace(STACK_QUERY, '')), 'sticky is applied outside the 1024x560 query')
+  assert.ok(!/position:\s*sticky/.test(EXPORTS.replace(STACK_QUERY, '')), 'sticky is applied outside the 1024x688 query')
   const stack = EXPORTS.match(STACK_QUERY)?.[1] ?? ''
   assert.match(stack, /--hx-base:\s*clamp\(24px, calc\(\(100svh - 664px\) \/ 2\), 84px\)/)
   assert.match(stack, /\.hx-card\[data-card="2"\] \{ top: calc\(var\(--hx-base\) \+ var\(--hx-edge\) \* 2\); \}/)

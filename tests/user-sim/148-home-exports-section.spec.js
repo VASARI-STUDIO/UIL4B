@@ -4,7 +4,7 @@
 // images, icons) and a format and copies the file; card 2 brings one of the
 // export files forward; card 3 picks one of three sample projects. The export
 // themes switch ships off, so card 2 shows the three exports the app makes today.
-// From 1024 wide and 560 tall the cards stack: each docks 12px lower than the one
+// From 1024 wide and 688 tall the cards stack: each docks 12px lower than the one
 // before and a covered card does not change. Anywhere smaller they are a plain column.
 //
 // Every test names, in a comment, the source change that turns it red.
@@ -352,6 +352,7 @@ const DOCKS = {
   '1440x900': [84, 96, 108],
   '1366x768': [52, 64, 76],
   '1280x720': [28, 40, 52],
+  '1280x690': [24, 36, 48],
   '1024x768': [52, 64, 76],
 }
 
@@ -501,11 +502,35 @@ test('a covered card is inert and a tab stop is never behind a card', async ({ b
   }
 })
 
-for (const [width, height, touch] of [[1023, 768, false], [768, 1024, false], [390, 844, true], [320, 640, true], [1440, 540, false]]) {
+test('Shift+Tab from card 3 while it slides over card 2 lands on a control that is not under card 3', async ({ browser }) => {
+  const { ctx, page } = await open(browser)
+  try {
+    // Red if the focusin handler in HomeExports.jsx is removed or stops scrolling back: the stops in card 2 would sit under
+    // card 3 (elementFromPoint finds card 3, or the page has not moved).
+    await expect.poll(async () => (await readAt(page, -300)).map((l) => l.inert), { timeout: 10_000 }).toEqual([true, false, false])
+    await projectRows(page).first().focus()
+    const stop = () => page.evaluate(() => {
+      const el = document.activeElement
+      const r = el.getBoundingClientRect()
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      return { card: el.closest('.hx-card')?.dataset.card ?? null, inert: !!el.closest('[inert]'), topmost: !!top && el.contains(top), onScreen: r.top >= 0 && r.bottom <= window.innerHeight }
+    })
+    expect(await stop()).toMatchObject({ card: '2', topmost: true })
+    for (let n = 0; n < 3; n++) {
+      await page.keyboard.press('Shift+Tab')
+      await page.waitForTimeout(150)
+      expect(await stop(), `Shift+Tab stop ${n + 1}`).toEqual({ card: '1', inert: false, topmost: true, onScreen: true })
+    }
+  } finally {
+    await ctx.close()
+  }
+})
+
+for (const [width, height, touch] of [[1023, 768, false], [768, 1024, false], [390, 844, true], [320, 640, true], [1440, 540, false], [1440, 560, false], [1366, 657, false], [1280, 600, false]]) {
   test(`at ${width}x${height} the cards are a plain column: nothing sticks and nothing is inert`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { width, height, touch })
     try {
-      // Red if the sticky rules leak outside the 1024x560 media query, or inert is set on a column.
+      // Red if the sticky rules leak outside the 1024x688 media query, or inert is set on a column.
       const first = await page.evaluate(LOOKS)
       for (const l of first) expect(l).toMatchObject({ ...STILL, position: 'static', inert: false })
       const moved = await page.evaluate(async () => {
