@@ -1,9 +1,11 @@
 // THE HOMEPAGE EXPORTS SECTION (#exports), AS A VISITOR MEETS IT.
 //
-// Three pinned cards (.hx-card): card 1 picks a piece (palette, type scale,
+// Three stacked cards (.hx-card): card 1 picks a piece (palette, type scale,
 // images, icons) and a format and copies the file; card 2 brings one of the
 // export files forward; card 3 picks one of three sample projects. The export
 // themes switch ships off, so card 2 shows the three exports the app makes today.
+// From 1024 wide and 688 tall the cards stack: each docks 12px lower than the one
+// before and a covered card does not change. Anywhere smaller they are a plain column.
 //
 // Every test names, in a comment, the source change that turns it red.
 import { test, expect } from './base.js'
@@ -55,7 +57,8 @@ async function open(browser, { width = 1440, height = 900, touch = false, reduce
   // Rest card 1 at its dock line, as a visitor scrolling down meets it, so cards 2 and 3 are not yet over its controls.
   await page.evaluate(() => {
     const first = document.querySelector('#exports .hx-card[data-card="0"]')
-    window.scrollTo(0, first.parentElement.getBoundingClientRect().top + window.scrollY - (window.innerWidth >= 1024 ? 84 : 72))
+    const sticky = getComputedStyle(first).position === 'sticky'
+    window.scrollTo(0, first.parentElement.getBoundingClientRect().top + window.scrollY - (sticky ? parseFloat(getComputedStyle(first).top) : 72))
   })
   return { ctx, page }
 }
@@ -293,72 +296,263 @@ for (const width of [390, 320]) {
   })
 }
 
-// ── docking at 1440 ────────────────────────────────────────────────────────────
+// ── the still pile ─────────────────────────────────────────────────────────────
 
-// What a card looks like now: its sticky top, its scale (the x scale of the transform matrix), the
-// opacity of its dimming layer, and the cast of its shadow. A card's own opacity stays 1 so no card shows through another.
+// What a card looks like now, read in one pass: its place, its size, and everything that would
+// change it as it is covered. A card's own opacity stays 1 so no card shows through another.
 const LOOKS = () => [...document.querySelectorAll('#exports .hx-card')].map((c) => {
   const s = getComputedStyle(c)
-  const m = s.transform === 'none' ? 1 : Number(s.transform.match(/matrix\(([^,]+),/)[1])
+  const r = c.getBoundingClientRect()
   return {
-    top: Math.round(c.getBoundingClientRect().top),
-    scale: Math.round(m * 1000) / 1000,
-    dim: Number(getComputedStyle(c, '::after').opacity),
-    shadow: s.boxShadow !== 'none',
+    top: Math.round(r.top),
+    width: Math.round(r.width),
+    height: Math.round(r.height),
+    position: s.position,
+    transform: s.transform,
     opacity: s.opacity,
     filter: s.filter,
-    animated: getComputedStyle(c).animationName,
+    shadow: s.boxShadow,
+    after: getComputedStyle(c, '::after').content,
+    animated: s.animationName,
+    inert: c.inert,
   }
 })
-const dockAll = (page, extra = 30) => page.evaluate((x) => {
-  const third = document.querySelector('#exports .hx-card[data-card="2"]')
-  window.scrollTo(0, third.parentElement.getBoundingClientRect().top + window.scrollY - (window.innerWidth >= 1024 ? 148 : 72) + x)
-}, extra)
+const STILL = { transform: 'none', opacity: '1', filter: 'none', shadow: 'none', after: 'none', animated: 'none' }
 
-test('at 1440 the cards dock at 84, 116 and 148, and a covered card scales to .96 and dims while the last stays whole', async ({ browser }) => {
+// Scroll so the third card is `extra` px past the moment the whole pile is docked. Aimed again on every read:
+// a late layout shift between two reads would otherwise leave the page elsewhere.
+const aimPile = (page, extra) => page.evaluate((x) => {
+  const third = document.querySelector('#exports .hx-card[data-card="2"]')
+  window.scrollTo(0, third.parentElement.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(third).top) || 0) + x)
+}, extra)
+const readAt = async (page, extra) => { await aimPile(page, extra); return page.evaluate(LOOKS) }
+
+// Every look a card takes from above the section to below it, at 50px steps.
+const sweep = (page, step = 50) => page.evaluate(async (by) => {
+  const sec = document.querySelector('#exports')
+  const from = sec.getBoundingClientRect().top + window.scrollY - 300
+  const to = from + sec.offsetHeight + 300
+  const seen = new Set()
+  for (let y = from; y < to; y += by) {
+    window.scrollTo(0, y)
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    for (const c of document.querySelectorAll('#exports .hx-card')) {
+      const s = getComputedStyle(c)
+      const r = c.getBoundingClientRect()
+      seen.add(JSON.stringify({ t: s.transform, o: s.opacity, f: s.filter, s: s.boxShadow, w: Math.round(r.width), h: Math.round(r.height) }))
+    }
+  }
+  return [...seen]
+}, step)
+
+
+
+
+const DOCKS = {
+  '1440x900': [84, 96, 108],
+  '1366x768': [52, 64, 76],
+  '1280x720': [28, 40, 52],
+  '1280x690': [24, 36, 48],
+  '1024x768': [52, 64, 76],
+}
+
+for (const [size, docks] of Object.entries(DOCKS)) {
+  test(`at ${size} the cards dock at ${docks.join(', ')} and the last card fits the screen`, async ({ browser }) => {
+    const [width, height] = size.split('x').map(Number)
+    const { ctx, page } = await open(browser, { width, height })
+    try {
+      // Red if --hx-base, the 12px step or the media query change (tops), or if the dock line stops following the
+      // window height (card 3 would run past the bottom of a short screen).
+      await expect.poll(async () => (await readAt(page, 120)).map((l) => l.top), { timeout: 10_000 }).toEqual(docks)
+      const fit = await page.evaluate(() => {
+        const last = document.querySelector('#exports .hx-card[data-card="2"]')
+        const r = last.getBoundingClientRect()
+        const buttons = [...last.querySelectorAll('button')].map((b) => b.getBoundingClientRect())
+        return { top: r.top, bottom: r.bottom, inside: buttons.every((b) => b.top >= 0 && b.bottom <= window.innerHeight), height: window.innerHeight }
+      })
+      expect(fit.top).toBeGreaterThanOrEqual(0)
+      expect(fit.bottom).toBeLessThanOrEqual(fit.height)
+      expect(fit.inside).toBe(true)
+    } finally {
+      await ctx.close()
+    }
+  })
+}
+
+for (const [width, height] of [[1440, 900], [1024, 768]]) {
+  test(`at ${width} no card scales, dims, filters or casts a shadow at any scroll position`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width, height })
+    try {
+      // Red if a transform, opacity, filter, box-shadow, animation or dimming layer comes back on .hx-card, or a card
+      // changes size as it is covered. Every position is read, so a single frame that differs makes a second look.
+      const looks = (await sweep(page)).map((l) => JSON.parse(l))
+      expect(looks).toEqual([{ t: 'none', o: '1', f: 'none', s: 'none', w: looks[0].w, h: 640 }])
+      const pile = await readAt(page, 120)
+      for (const l of pile) expect(l).toMatchObject({ ...STILL, height: 640 })
+    } finally {
+      await ctx.close()
+    }
+  })
+}
+
+test('at 1440 the top 12px of a covered card stays in view, holds no text, and the edges count the pile', async ({ browser }) => {
   const { ctx, page } = await open(browser)
   try {
-    // Scroll until the third card is past its dock line, so all three are stuck. Aimed again on every
-    // read, and every value is read in the same pass: a late layout shift or scroll between two reads
-    // would otherwise pass the tops and then find the page elsewhere with nothing scaled.
-    // Red if STACK_TOPS, the --stack-top tokens or dockTop change (tops), if the view timelines, the
-    // trackers' sizes (--hx-trav, --hx-dock) or the scale stop reaching a covered card (scale and dim),
-    // if a card loses its elevation, or gains a fade or filter (it would show through the one over it).
-    await expect.poll(async () => { await dockAll(page); return page.evaluate(LOOKS) }, { timeout: 10_000 }).toMatchObject([
-      { top: 84, scale: 0.96, dim: 0.45, shadow: true, opacity: '1', filter: 'none' },
-      { top: 116, scale: 0.96, dim: 0.45, shadow: true, opacity: '1', filter: 'none' },
-      { top: 148, scale: 1, dim: 0, shadow: true, opacity: '1', filter: 'none' },
-    ])
+    // Red if the dock step changes from 12px, a card is lifted above the one before it, or text moves into a card's top 12px.
+    // Read only once the pile has settled: docked at its lines AND the covered cards marked inert. The inert flags arrive a
+    // frame or more after the scroll (IntersectionObserver), and an inert card is skipped by elementsFromPoint, so reading
+    // before they land finds the cards, and reading after finds nothing: the read must not depend on which.
+    await expect.poll(async () => (await readAt(page, 120)).map((l) => `${l.top}:${l.inert}`), { timeout: 10_000 }).toEqual(['84:true', '96:true', '108:false'])
+    const edges = await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('#exports .hx-card')]
+      // The hit-test is about stacking order, so it is read with the inert flags lifted for this one synchronous pass
+      // (no observer callback can run inside it) and put back before it returns.
+      const was = cards.map((c) => c.inert)
+      for (const c of cards) c.inert = false
+      const cardAt = (x, y) => document.elementsFromPoint(x, y).find((el) => el.closest(".hx-card"))?.closest(".hx-card")?.dataset.card ?? null
+      const edges = cards.map((c, i) => {
+        const r = c.getBoundingClientRect()
+        const x = r.left + r.width / 2
+        const text = []
+        if (i < 2) {
+          const walker = document.createTreeWalker(c, NodeFilter.SHOW_TEXT)
+          for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            if (!n.textContent.trim()) continue
+            const range = document.createRange()
+            range.selectNodeContents(n)
+            for (const q of range.getClientRects()) if (q.width && q.top < r.top + 12 && q.bottom > r.top) text.push(n.textContent.trim().slice(0, 12))
+          }
+        }
+        return { top: r.top, seen: cardAt(x, r.top + 6), text }
+      })
+      cards.forEach((c, i) => { c.inert = was[i] })
+      return edges
+    })
+    expect(edges.map((e) => e.seen)).toEqual(['0', '1', '2'])
+    expect(edges[1].top - edges[0].top).toBe(12)
+    expect(edges[2].top - edges[1].top).toBe(12)
+    expect(edges.map((e) => e.text)).toEqual([[], [], []])
   } finally {
     await ctx.close()
   }
 })
 
-test('the cover follows the scroll: a quarter, half and three quarters of the way over, the card is that far scaled and dimmed', async ({ browser }) => {
+test('at 1440 the finished pile holds still for 240px of scroll, then closes up and leaves as one block', async ({ browser }) => {
   const { ctx, page } = await open(browser)
   try {
-    for (const f of [0.25, 0.5, 0.75]) {
-      // Card 2's top, this fraction of the way from card 1's bottom edge to its own dock line (116).
-      // Red if the exit range is changed to a step, a different length, or the scale stops following the position.
-      // Linear: scale 1 - .04 f, dim .45 f. The tolerance covers the card's own shrinking bottom edge.
-      // Aimed again on every read, for the same reason as the docking test.
+    const tops = async (extra) => (await readAt(page, extra)).map((l) => l.top)
+    // Red if .hx-tail drops under 240px, or the nests change so the cards no longer leave together.
+    for (const extra of [2, 120, 238]) await expect.poll(() => tops(extra), { message: `${extra}px into the hold`, timeout: 10_000 }).toEqual([84, 96, 108])
+    await expect.poll(async () => (await tops(280))[2] < 108, { message: 'card 3 never left after the hold' }).toBe(true)
+    await expect.poll(async () => { const t = await tops(300); return t[0] === t[1] && t[1] === t[2] && t[0] < 84 }, { message: 'the pile did not close up into one block' }).toBe(true)
+  } finally {
+    await ctx.close()
+  }
+})
+
+for (const [width, height, gap] of [[1440, 900, 48], [390, 844, 32]]) {
+  test(`at ${width} the footnote sits ${gap}px or more below the last card`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width, height, touch: width < 500 })
+    try {
+      // Red if .hx-foot loses its top margin, or a tail pushes the footnote against the card.
       await expect.poll(async () => {
-        await page.evaluate((frac) => {
-          const [a, b] = [...document.querySelectorAll('#exports .hx-card')]
-          const bottom = a.getBoundingClientRect().bottom
-          window.scrollTo(0, window.scrollY + b.getBoundingClientRect().top - (bottom + (116 - bottom) * frac))
-        }, f)
-        const first = (await page.evaluate(LOOKS))[0]
-        return Math.abs(first.scale - (1 - 0.04 * f)) < 0.004 && Math.abs(first.dim - 0.45 * f) < 0.04
-      }, { timeout: 5000, message: `card 1 at ${f} of the way over` }).toBe(true)
+        await page.evaluate(() => window.scrollTo(0, document.querySelector('#exports .hx-foot').getBoundingClientRect().top + window.scrollY - window.innerHeight + 80))
+        return page.evaluate(() => Math.round(document.querySelector('#exports .hx-foot').getBoundingClientRect().top - document.querySelector('#exports .hx-card[data-card="2"]').getBoundingClientRect().bottom))
+      }, { timeout: 10_000 }).toBeGreaterThanOrEqual(gap)
+    } finally {
+      await ctx.close()
+    }
+  })
+}
+
+test('a covered card is inert and a tab stop is never behind a card', async ({ browser }) => {
+  const { ctx, page } = await open(browser)
+  try {
+    // Red if the tracker observer stops marking covered cards (the inert flags would stay false), or marks a card early.
+    await expect.poll(async () => (await readAt(page, 120)).map((l) => l.inert), { timeout: 10_000 }).toEqual([true, true, false])
+    await expect.poll(async () => (await readAt(page, -300)).map((l) => l.inert), { timeout: 10_000 }).toEqual([true, false, false])
+    await page.locator('#exports-h').focus()
+    // The heading is above the pile, so focusing it scrolls up and the covered cards leave their inert state a frame later.
+    await expect.poll(() => page.evaluate(() => document.querySelector('#exports .hx-card').inert)).toBe(false)
+    const behind = () => page.evaluate(() => {
+      const el = document.activeElement
+      const card = el.closest?.('.hx-card')
+      if (!card) return null
+      const r = el.getBoundingClientRect()
+      const top = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).find((e) => e.closest('.hx-card'))
+      return { inertCard: card.inert, hidden: !top || !el.contains(top), onScreen: r.top >= 0 && r.bottom <= window.innerHeight }
+    })
+    // Tab forward: every stop is in a card that is not inert and is not hit-tested as covered.
+    const forward = []
+    for (let n = 0; n < 14; n++) {
+      await page.keyboard.press('Tab')
+      await page.waitForTimeout(150)
+      forward.push(await behind())
+    }
+    for (const stop of forward.filter(Boolean)) expect(stop).toEqual({ inertCard: false, hidden: false, onScreen: true })
+    // Shift+Tab back: a docked, covered card is skipped, so no stop is ever inside an inert card. (While the last card is
+    // still sliding in, the card before it is not yet inert and a stop can sit partly under it.)
+    for (let n = 0; n < 14; n++) {
+      await page.keyboard.press('Shift+Tab')
+      await page.waitForTimeout(150)
+      expect((await behind())?.inertCard ?? false).toBe(false)
     }
   } finally {
     await ctx.close()
   }
 })
 
-for (const [label, width, height, touch] of [['1440', 1440, 900, false], ['390', 390, 844, true], ['320', 320, 640, true]]) {
-  test(`at ${label} a visitor who asked for no motion gets the plain stack, by the OS and by the Settings`, async ({ browser }) => {
+test('Shift+Tab from card 3 while it slides over card 2 lands on a control that is not under card 3', async ({ browser }) => {
+  const { ctx, page } = await open(browser)
+  try {
+    // Red if the focusin handler in HomeExports.jsx is removed or stops scrolling back: the stops in card 2 would sit under
+    // card 3 (elementFromPoint finds card 3, or the page has not moved).
+    await expect.poll(async () => (await readAt(page, -300)).map((l) => l.inert), { timeout: 10_000 }).toEqual([true, false, false])
+    await projectRows(page).first().focus()
+    const stop = () => page.evaluate(() => {
+      const el = document.activeElement
+      const r = el.getBoundingClientRect()
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      return { card: el.closest('.hx-card')?.dataset.card ?? null, inert: !!el.closest('[inert]'), topmost: !!top && el.contains(top), onScreen: r.top >= 0 && r.bottom <= window.innerHeight }
+    })
+    expect(await stop()).toMatchObject({ card: '2', topmost: true })
+    for (let n = 0; n < 3; n++) {
+      await page.keyboard.press('Shift+Tab')
+      await page.waitForTimeout(150)
+      expect(await stop(), `Shift+Tab stop ${n + 1}`).toEqual({ card: '1', inert: false, topmost: true, onScreen: true })
+    }
+  } finally {
+    await ctx.close()
+  }
+})
+
+for (const [width, height, touch] of [[1023, 768, false], [768, 1024, false], [390, 844, true], [320, 640, true], [1440, 540, false], [1440, 560, false], [1366, 657, false], [1280, 600, false]]) {
+  test(`at ${width}x${height} the cards are a plain column: nothing sticks and nothing is inert`, async ({ browser }) => {
+    const { ctx, page } = await open(browser, { width, height, touch })
+    try {
+      // Red if the sticky rules leak outside the 1024x688 media query, or inert is set on a column.
+      const first = await page.evaluate(LOOKS)
+      for (const l of first) expect(l).toMatchObject({ ...STILL, position: 'static', inert: false })
+      const moved = await page.evaluate(async () => {
+        const cards = [...document.querySelectorAll('#exports .hx-card')]
+        const tops = () => cards.map((c) => c.getBoundingClientRect().top)
+        const start = cards[1].getBoundingClientRect().top + window.scrollY - 200
+        window.scrollTo(0, start)
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+        const a = tops()
+        window.scrollTo(0, start + 120)
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+        return tops().map((t, i) => Math.round(a[i] - t))
+      })
+      expect(moved).toEqual([120, 120, 120])
+    } finally {
+      await ctx.close()
+    }
+  })
+}
+
+for (const [label, width, height, touch, stacked] of [['1440', 1440, 900, false, true], ['390', 390, 844, true, false], ['320', 320, 640, true, false]]) {
+  test(`at ${label} a visitor who asked for no motion gets the same still cards, by the OS and by the Settings`, async ({ browser }) => {
     for (const how of ['os', 'settings']) {
       const ctx = await browser.newContext({
         viewport: { width, height },
@@ -372,36 +566,13 @@ for (const [label, width, height, touch] of [['1440', 1440, 900, false], ['390',
       try {
         await go(page, '/')
         await sectionsLoaded(page)
-        await dockAll(page)
-        await page.waitForTimeout(300)
-        // Red if the reduced-motion guards for .hx-card are dropped (the covered cards would be scaled and dimmed).
-        const looks = await page.evaluate(LOOKS)
-        for (const look of looks) expect(look, `${how} at ${width}`).toMatchObject({ scale: 1, dim: 0, animated: 'none', shadow: true })
+        // Red if the pile starts to need an animation or a script on the scroll (the cards would differ here).
+        if (stacked) await expect.poll(async () => (await readAt(page, 120)).map((l) => l.top), { message: how, timeout: 10_000 }).toEqual([84, 96, 108])
+        else await aimPile(page, 120)
+        for (const look of await page.evaluate(LOOKS)) expect(look, `${how} at ${width}`).toMatchObject({ ...STILL, position: stacked ? 'sticky' : 'static' })
       } finally {
         await ctx.close()
       }
-    }
-  })
-}
-
-for (const [width, height] of [[768, 1024], [390, 844], [320, 640]]) {
-  test(`at ${width} a covered card scales and dims too`, async ({ browser }) => {
-    const { ctx, page } = await open(browser, { width, height, touch: width < 500 })
-    try {
-      // Carry the last card to its own dock line: on a short phone the cards are taller than the screen, so
-      // its travel over the one before is long and a fixed push past the section's start does not finish it.
-      // The aim is taken again on every read, because the section's height moves while its pictures arrive.
-      const carryToLastDock = () => page.evaluate(() => {
-        const last = document.querySelector('#exports .hx-card[data-card="2"]')
-        window.scrollTo(0, window.scrollY + last.getBoundingClientRect().top - parseFloat(getComputedStyle(last).top) + 40)
-      })
-      // Red if the narrow layout loses the trackers' sizes (cards dock together here, so the whole height is the travel).
-      await expect.poll(async () => {
-        await carryToLastDock()
-        return (await page.evaluate(LOOKS)).map((l) => l.scale)
-      }, { timeout: 10_000 }).toEqual([0.96, 0.96, 1])
-    } finally {
-      await ctx.close()
     }
   })
 }

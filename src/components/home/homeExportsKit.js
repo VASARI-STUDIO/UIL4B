@@ -1,27 +1,25 @@
 // Card 1's content, Card 3's projects and the docking maths for the homepage exports
 // section. Plain functions, so a unit test can run them without a browser.
 
-import { STACK_TOPS } from './homeExportsData.js'
 import { formatBytes } from '../spectrum/spectrumKit.js'
 
 /* ── docking ──────────────────────────────────────────────────────────────── */
 
-// From this width the cards dock at the three tops; below it each card docks by
-// its bottom edge when it is taller than the screen.
-export const DOCK_FROM = 1024
+// The cards stack only in a window at least this wide and tall (the media query in
+// home-exports.css says the same); anywhere smaller they scroll as a plain column.
+export const STACK_MIN_WIDTH = 1024
+export const STACK_MIN_HEIGHT = 688
 
-/** The three tops, read from the --stack-top-0/1/2 tokens the CSS also reads. */
-export function readStackTops(read, fallback = STACK_TOPS) {
-  return fallback.map((top, i) => {
-    const n = parseFloat(read(`--stack-top-${i}`))
-    return Number.isFinite(n) ? n : top
-  })
-}
+export const stacks = (width, height) => width >= STACK_MIN_WIDTH && height >= STACK_MIN_HEIGHT
 
-/** Where card `index` docks, in px from the top of the screen. */
-export function dockTop({ index, tops, width, height, cardHeight }) {
-  if (width >= DOCK_FROM) return tops[index]
-  return Math.min(72, height - cardHeight - 12)
+/**
+ * Where a card docks, in px from the top of the screen: the `top` the stylesheet
+ * computed for it, so the trackers and the CSS agree. Null when the cards are a column.
+ */
+export function dockTop({ width, height, top }) {
+  if (!stacks(width, height)) return null
+  const n = parseFloat(top)
+  return Number.isFinite(n) ? n : null
 }
 
 /* ── card 1 ───────────────────────────────────────────────────────────────── */

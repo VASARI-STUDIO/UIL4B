@@ -1,7 +1,8 @@
-// THE SCROLL-LINKED DEPTH OF THE HOMEPAGE'S TWO PINNED SECTIONS: WHAT MUST STAY TRUE.
+// THE HOMEPAGE'S TWO PINNED SECTIONS: WHAT MUST STAY TRUE.
 //
-// Exports (home-exports.css): a card covered by the next scales to .96 and dims, driven by a
-// view timeline (no scroll listener), and a visitor who asked for no motion gets the plain stack.
+// Exports (home-exports.css): the stacked cards are a still pile. A covered card does not scale, dim,
+// filter or cast a shadow, nothing in the sheet animates a card, and the stack sits behind a media query
+// so a small or short window gets the plain column.
 // Try (home-try.css): the pinned column moves by transform only, and its progress line steps
 // with the active tool under reduced motion.
 //
@@ -10,8 +11,9 @@
 // animates a layout property, or a banned effect creeping in.
 //
 // MUTATIONS (each turns a test red):
-//   - delete the `animation: none` guards for .hx-card -> "reduced motion" tests.
-//   - add `width` or `top` to @keyframes hx-cover -> "keyframes move transform and opacity only".
+//   - add `transform: scale(...)`, `filter` or `box-shadow` to .hx-card, or an `::after` on it -> "the covered card stays as it was".
+//   - move `position: sticky` out of the 1024x688 media query -> "the stack sits behind a size query".
+//   - add `width` or `top` to a @keyframes in either sheet -> "keyframes move transform and opacity only".
 //   - add a gradient, will-change or `transition: all` to either sheet -> "no banned effect".
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -19,9 +21,13 @@ import { read, stripComments } from './helpers/source-text.js'
 
 const EXPORTS = stripComments(read('src/styles/pages/home-exports.css'))
 const TRY = stripComments(read('src/styles/pages/home-try.css'))
-const TOKENS = stripComments(read('src/styles/pages/home-tokens.css'))
 const EXPORTS_JSX = read('src/components/home/HomeExports.jsx')
 const TRY_JSX = read('src/components/home/HomeTry.jsx')
+
+// The declarations of every top-level rule whose selector is exactly `selector`.
+const rule = (css, selector) => css.split('}').map((chunk) => chunk.split('{')).filter(([sel, body]) => body !== undefined && sel.trim() === selector).map(([, body]) => body).join(';')
+// The body of the stack's media query: from its opening line to the first closing brace in column 0.
+const STACK_QUERY = /@media \(min-width: 1024px\) and \(min-height: 688px\) \{([\s\S]*?)\r?\n\}/
 
 test('the stripper works, so the reads below can be trusted', () => {
   assert.ok(EXPORTS.includes('.hx-card'), 'home-exports.css was not read')
@@ -29,33 +35,26 @@ test('the stripper works, so the reads below can be trusted', () => {
   assert.ok(!/\/\*/.test(EXPORTS), 'comments were not stripped')
 })
 
-test('exports: the covered card scales to .96 and dims, from a view timeline on the covering card', () => {
-  assert.match(EXPORTS, /@keyframes hx-cover\s*\{\s*to\s*\{\s*transform:\s*scale\(\.96\)/)
-  assert.match(EXPORTS, /@keyframes hx-dim\s*\{\s*to\s*\{\s*opacity:\s*\.\d+/)
-  assert.match(EXPORTS, /view-timeline-name:\s*--hx-t1/)
-  assert.match(EXPORTS, /view-timeline-name:\s*--hx-t2/)
-  assert.match(EXPORTS, /timeline-scope:\s*--hx-t1,\s*--hx-t2/)
-  assert.match(EXPORTS, /\.hx-card\[data-card="0"\][^{]*\{\s*animation-timeline:\s*--hx-t1/)
-  assert.match(EXPORTS, /animation-range:\s*exit/)
-  // The last card is never covered, so it has no timeline of its own to scale by.
-  assert.ok(!/data-card="2"[^{]*\{[^}]*animation-timeline/.test(EXPORTS))
+test('exports: the covered card stays as it was (no scale, dim, filter, shadow or animation)', () => {
+  const card = rule(EXPORTS, '.hx-card')
+  assert.ok(card.includes('border-radius'), 'the .hx-card rule was not found')
+  assert.ok(!/transform|filter|box-shadow|opacity|animation/.test(card), '.hx-card changes how a covered card looks')
+  assert.ok(!/\.hx-card[^{]*::(after|before)/.test(EXPORTS), 'a layer over the card is back')
+  assert.ok(!/@keyframes|animation-timeline|view-timeline|animation-name/.test(EXPORTS), 'the exports sheet animates something')
 })
 
-test('exports: the animation sits behind a support check, so an older browser keeps the plain stack', () => {
-  const at = EXPORTS.indexOf('@supports (animation-timeline: view())')
-  assert.ok(at > -1, 'the scroll-linked rules are not behind @supports')
-  assert.ok(EXPORTS.indexOf('animation-name: hx-cover') > at, 'hx-cover is applied outside the @supports block')
-})
-
-test('exports: reduced motion (the setting and the OS) switches the cover off', () => {
-  assert.match(EXPORTS, /:where\(html\[data-reduced-motion="true"\]\) \.hx \.hx-card,\s*:where\(html\[data-reduced-motion="true"\]\) \.hx \.hx-card::after \{ animation: none; \}/)
-  assert.match(EXPORTS, /:where\(html:not\(\[data-reduced-motion="false"\]\)\) \.hx \.hx-card,\s*:where\(html:not\(\[data-reduced-motion="false"\]\)\) \.hx \.hx-card::after \{ animation: none; \}/)
-  // The guards come after the rules they switch off, or an equal-specificity tie goes the wrong way.
-  assert.ok(EXPORTS.lastIndexOf('animation-name: hx-dim') < EXPORTS.indexOf(':where(html[data-reduced-motion="true"]) .hx .hx-card'))
+test('exports: the stack sits behind a size query, so a small or short window gets the plain column', () => {
+  assert.ok(!/position:\s*sticky/.test(EXPORTS.replace(STACK_QUERY, '')), 'sticky is applied outside the 1024x688 query')
+  const stack = EXPORTS.match(STACK_QUERY)?.[1] ?? ''
+  assert.match(stack, /--hx-base:\s*clamp\(24px, calc\(\(100svh - 664px\) \/ 2\), 84px\)/)
+  assert.match(stack, /\.hx-card\[data-card="2"\] \{ top: calc\(var\(--hx-base\) \+ var\(--hx-edge\) \* 2\); \}/)
+  assert.match(stack, /\.hx-tail \{ height: 240px; \}/)
+  assert.match(EXPORTS, /\.hx \{[^}]*--hx-edge:\s*12px/)
+  assert.match(rule(EXPORTS, '.hx-foot'), /margin:\s*48px 0 0/)
 })
 
 test('keyframes move transform and opacity only', () => {
-  for (const [name, css] of [['exports', EXPORTS]]) {
+  for (const [name, css] of [['exports', EXPORTS], ['try', TRY]]) {
     for (const k of css.matchAll(/@keyframes\s+([\w-]+)\s*\{([\s\S]*?\})\s*\}/g)) {
       const props = [...k[2].matchAll(/([\w-]+)\s*:/g)].map((m) => m[1])
       assert.ok(props.length > 0, `@keyframes ${k[1]} has no declarations the reader could see`)
@@ -76,14 +75,8 @@ test('no banned effect in either sheet: gradient, glow, transition: all, will-ch
   assert.match(EXPORTS, /\.hx-scrim\s*\{[^}]*linear-gradient\(to top, rgba\(0, 0, 0, \.86\) 0%, rgba\(0, 0, 0, \.76\) 68%, rgba\(0, 0, 0, 0\) 100%\)/, 'the one exports gradient is the wordmark band')
 })
 
-test('the elevation scale is defined once and the cards use it', () => {
-  for (const n of [1, 2, 3]) assert.match(TOKENS, new RegExp(`--hm-elev-${n}:`))
-  assert.match(EXPORTS, /box-shadow:\s*var\(--hm-elev-3\)/)
-})
-
-test('exports: the cover adds no scroll listener', () => {
+test('exports: the stack adds no scroll listener and writes no transform or opacity', () => {
   assert.ok(!/addEventListener\(\s*['"]scroll['"]/.test(EXPORTS_JSX), 'HomeExports.jsx listens to scroll')
-  // Nor does it write a transform or opacity from script: the scale and dim are the stylesheet's alone.
   assert.ok(!/style\.(transform|opacity)\s*=|setProperty\(\s*['"](transform|opacity)['"]/.test(EXPORTS_JSX), 'HomeExports.jsx sets transform or opacity from script')
 })
 
