@@ -1,65 +1,22 @@
-import { useEffect, useRef } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { CREATE_GROUPS, DISCOVER_LIBRARIES, createTools } from '../data/toolTree'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/reading.css'
-import '../styles/deferred/tool-shell.css'
-import '../styles/pages/trail.css'
+import { useEffect, useMemo, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
+import EdgeScreen, { EdgeBlock, EdgeOutline, EdgePath, EdgePill } from '../components/edge/EdgeScreen'
+import { projectRows, sectionSuggestions } from '../components/edge/edgeData'
+import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { ENTRY_PATH } from '../utils/entryPath'
 
 // A real 404, replacing `<Route path="*" element={<Navigate to="/" replace />} />`.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// WHY THE REDIRECT WAS WRONG (2026-08-11 site audit, P2 — see CHANGELOG.md)
-// ─────────────────────────────────────────────────────────────────────────────
-// `curl -o /dev/null -w "%{http_code}" /this-does-not-exist` returned **200**,
-// rendering the homepage with `robots: index,follow`. That is a soft 404, and
-// it is worse than it sounds:
+// The redirect was a soft 404: every typo and dead backlink returned a 200 with
+// the homepage on it, indexable, and the visitor was moved to `/` as if the link
+// had worked. A static SPA cannot send a 404 status, so this does the two things
+// it can: the served shell carries noindex (see scripts/prerender.mjs), and the
+// person is told what happened and where to go instead.
 //
-//   • Every typo, dead backlink and hallucinated URL became an indexable
-//     "page" whose content was the homepage — so the homepage's own content
-//     appeared at unlimited URLs.
-//   • The user was silently teleported to `/`, which reads as the link having
-//     worked. Nobody reports a broken link they were never shown.
-//
-// A static SPA cannot return a real 404 status from the client, so this does
-// the two things it CAN do: tell the crawler not to index it (the served shell
-// carries noindex, see scripts/prerender.mjs), and tell the person what
-// happened plus where to go instead.
-
-// WHERE TO GO INSTEAD — read from the tool tree, not typed (anti-slop audit,
-// 2026-09-09).
-//
-// The four cards used to be hand-written, and two of the four were wrong:
-// "Palette Generator" is not what the product calls /create/palette anywhere
-// else (the tree, the nav, the hero rail and /learn/help all say Palette / Palette
-// Builder), and "Community palettes, gradients and prompts" described Discover
-// with a word that is false — the palettes are curated and brand, and the
-// community half is the group still marked Soon. The one-line descriptions
-// were the seventh hand-kept copy of the tool inventory that
-// [handkept-tool-lists-remaining] exists to stop.
-//
-// So a card is a tool's own label over its group's label, and the Discover
-// card counts the libraries that actually open, the same derivation the
-// /discover hero uses. Nothing here can name a tool the tree does not have:
-// an unknown id throws at import, which fails the build.
-const TOOLS = createTools()
-const GROUP_LABEL = Object.fromEntries(CREATE_GROUPS.map((g) => [g.id, g.label]))
-const suggestTool = (id) => {
-  const tool = TOOLS.find((t) => t.id === id && !t.soon)
-  if (!tool) throw new Error(`NotFound suggests "${id}", which is not a live tool in CREATE_GROUPS`)
-  return { to: tool.route, label: tool.label, desc: GROUP_LABEL[tool.group] }
-}
-const DISCOVER_LIVE = DISCOVER_LIBRARIES.length
-const SUGGESTIONS = [
-  suggestTool('palette'),
-  suggestTool('font-pair'),
-  suggestTool('type-scale'),
-  suggestTool('icons'),
-  { to: '/discover', label: 'Discover', desc: `${DISCOVER_LIVE} libraries open` },
-]
+// Where to go is read from the tool tree, the Learn index and the account's own
+// projects (components/edge/edgeData.js), so it cannot name a page that does not
+// exist.
 
 // Whether the person got here by moving around the app rather than by loading
 // this address. A fresh load renders the path the tab first loaded;
@@ -86,13 +43,9 @@ function linkingPath(pathname) {
 export default function NotFound() {
   const { pathname } = useLocation()
   const headingRef = useRef(null)
-
-  // Arriving here from a link or a redirect leaves focus on a control that is
-  // no longer on screen, so move it to the heading. A fresh load keeps the
-  // browser's own focus handling.
-  useEffect(() => {
-    if (arrivedInApp(pathname)) headingRef.current?.focus()
-  }, [pathname])
+  const { user, loading: authLoading } = useAuth()
+  const { projects, canSaveProjects, projectsLoading } = useProject()
+  const signedIn = !!user
 
   // A known route can render this page too (an admin-only route seen by
   // everyone else), and the app's route title would then name that route. The
@@ -101,47 +54,62 @@ export default function NotFound() {
     document.title = 'UI L4B | Page not found'
   }, [pathname])
 
+  // The pills and the list depend on who is looking. Until that is known the
+  // page shows the words only, so nothing swaps under the pointer.
+  const ready = !authLoading && !(canSaveProjects && projectsLoading)
+
+  const mine = useMemo(() => (signedIn && canSaveProjects ? projectRows(projects) : []), [signedIn, canSaveProjects, projects])
+  const section = useMemo(() => sectionSuggestions(pathname), [pathname])
+
   // The report form opens as a bug report with the broken path filled in.
   const report = new URLSearchParams({ type: 'bug', page: pathname })
   const from = linkingPath(pathname)
   if (from) report.set('referrer', from)
+  const reportLink = { to: `/feedback?${report}`, label: 'Report a broken link' }
+  const helpLink = { to: '/learn/help', label: 'Help centre' }
+
+  const showProjects = signedIn && mine.length > 0 && !section.section
+  const trail = !ready ? [] : signedIn ? [{ to: '/', label: 'Back to the homepage' }, reportLink, helpLink] : [reportLink, helpLink]
+
+  const actions = !ready ? null : signedIn ? (
+    <>
+      <EdgePill to="/projects" go>Open your workspace</EdgePill>
+      <EdgeOutline to="/sitemap">See every page</EdgeOutline>
+    </>
+  ) : (
+    <>
+      <EdgePill to="/" go>Back to the homepage</EdgePill>
+      <EdgeOutline to="/sitemap">See every page</EdgeOutline>
+    </>
+  )
+
+  let below = null
+  if (ready) {
+    below = showProjects ? (
+      <EdgeBlock heading="Your recent projects" rows={mine} label="Your recent projects" />
+    ) : (
+      <EdgeBlock
+        heading={section.heading}
+        line={section.line || (signedIn ? 'Projects you save from a tool appear in your workspace.' : '')}
+        rows={section.rows}
+        label="Suggested pages"
+      />
+    )
+  }
 
   return (
-    <div className="sec nf">
-      <div className="sec-h">
-        {/* NO TAXONOMY EYEBROW. It is a common AI tell, and the same element
-            was deleted from the Font Gallery, Font Pair, the Type Scale and
-            the Tint tool. A 10px mono-caps label restating
-            the page's own section, directly above an h1 that names the page,
-            on a route the nav already has lit. Hierarchy is a control, not a
-            label. */}
-        <h1 ref={headingRef} tabIndex={-1}>That page doesn&rsquo;t exist</h1>
-        <p>
-          Nothing lives at <code className="nf-path">{pathname}</code>. It may have moved,
-          or the link may have been mistyped.
-        </p>
-      </div>
-
-      <nav className="nf-grid" aria-label="Suggested pages">
-        {SUGGESTIONS.map((s) => (
-          <NavLink key={s.to} to={s.to} className="nf-card">
-            <span className="nf-card-label">{s.label}</span>
-            <span className="nf-card-desc">{s.desc}</span>
-          </NavLink>
-        ))}
-      </nav>
-
-      <p className="nf-more trail">
-        <span className="trail-in">
-          <span className="trail-item"><NavLink to="/">Back to the homepage</NavLink></span>
-          <span className="trail-item"><NavLink to="/sitemap">See every page</NavLink></span>
-          {/* The audit found four surfaces pointing here as the way to report a
-              problem, so a dead link is exactly the moment to offer it again. */}
-          <span className="trail-item"><NavLink to={`/feedback?${report}`}>Report a broken link</NavLink></span>
-          {/* Someone who hit a dead link may be looking for help, not a page. */}
-          <span className="trail-item"><NavLink to="/learn/help">Help centre</NavLink></span>
-        </span>
-      </p>
-    </div>
+    <EdgeScreen
+      art="play"
+      lead="That page"
+      title="doesn’t exist"
+      headingRef={headingRef}
+      // A fresh load keeps the browser's own focus handling; arriving by a link
+      // or a redirect leaves focus on a control that is no longer on screen.
+      focusHeading={arrivedInApp(pathname)}
+      body={<>Nothing lives at <EdgePath path={pathname}>.</EdgePath> It may have moved, or the link may have been mistyped.</>}
+      actions={actions}
+      trail={trail}
+      below={below}
+    />
   )
 }

@@ -1,8 +1,9 @@
-import { Component, useEffect, useId, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { openProblemReport, reportError } from '../utils/errorReport'
+import { Component, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import { reportError } from '../utils/errorReport'
 import { isChunkLoadError } from '../utils/lazyRoute'
 import useOnline from '../hooks/useOnline'
+import EdgeScreen, { EdgeOutline, EdgePill } from './edge/EdgeScreen'
 
 // What a person sees when a page crashes, instead of a blank screen.
 //
@@ -10,98 +11,94 @@ import useOnline from '../hooks/useOnline'
 // `/home`, `/onboarding`, `/discover` and `/learn` return before that shell,
 // so they need this one to avoid a blank page with no way out.
 //
-// Three ways out, on both cards: Try again (a reload), Go to the home page,
-// and "Report this problem", which opens the ordinary feedback dialog already
-// filled in with the route and the error. The home link is there so a crash
-// that happens again after a reload still leads somewhere. The crash is ALSO
-// recorded automatically (utils/errorReport.js), because most people who hit
-// one will reload and leave rather than write anything.
+// The card says what failed, that saved projects are fine, and offers a reload,
+// a way to report it, and two quiet ways back (the homepage, the help centre).
+// The crash is ALSO recorded automatically (utils/errorReport.js), because most
+// people who hit one will reload and leave rather than write anything.
 //
-// The card's heading is an h1 and takes focus when the card mounts: the
-// control the person last used is gone, so without this a keyboard or screen
-// reader user is left on `body` with no sign anything changed. `outer` is set
-// by the boundary that wraps the whole app: routes that return before the
-// shell have no <main>, so the card brings its own, which is also where the
-// skip link lands.
+// The card's heading is an h1 and takes focus when the card mounts: the control
+// the person last used is gone, so without this a keyboard or screen reader user
+// is left on `body` with no sign anything changed. `outer` is set by the
+// boundary that wraps the whole app: routes that return before the shell have no
+// <main>, so the card brings its own, which is also where the skip link lands.
 //
 // `resetKey` is the pathname: navigating away clears the error without
-// remounting the children, so a crash on one tool does not follow the person
-// to the next page.
+// remounting the children, so a crash on one tool does not follow the person to
+// the next page.
 //
-// The `.error-boundary` / `.error-boundary-card` class names are unchanged
-// from the boundary this replaces: tests/user-sim/helpers.js tells a crashed
-// route from a rendered one by `.error-boundary`.
+// The `.error-boundary` / `.error-boundary-card` class names are unchanged from
+// the boundary this replaces: tests/user-sim/helpers.js tells a crashed route
+// from a rendered one by `.error-boundary`.
 //
-// A PAGE WHOSE CODE NEVER ARRIVED gets its own copy (`load`). Its file failed
-// to download and the one automatic reload (utils/lazyRoute.js) did not fix
-// it, so "this page stopped working" would be untrue: it says the page did
-// not load, and offers to try again. Offline it says the connection is the
-// problem and holds Try again until the browser is back online, because a
-// reload with no connection replaces the page with the browser's own error.
-// Go to the home page stays available offline: the home page is in the entry
-// bundle, so the client-side link works without a connection.
-function ErrorCard({ error, outer, load }) {
+// A PAGE WHOSE CODE NEVER ARRIVED gets its own copy (`load`). Its file failed to
+// download and the one automatic reload (utils/lazyRoute.js) did not fix it, so
+// "this page stopped working" would be untrue.
+//
+// OFFLINE (either kind) the card holds back everything that needs a connection:
+// the buttons and links go, the horizon turns grey and the status says it is
+// waiting. A reload with no connection replaces the page with the browser's own
+// error page. When the connection returns the status says so for a few seconds
+// and the pills come back. It never reloads by itself: the person may be reading.
+const BACK_ONLINE_MS = 4000
+
+const COPY = {
+  crash: {
+    title: 'This page stopped working',
+    body: 'Reloading usually fixes it.',
+    offline: 'You’re offline. Reconnect and you can reload.',
+  },
+  load: {
+    title: 'This page didn’t load',
+    body: 'Part of this page couldn’t be downloaded. Trying again usually fixes it.',
+    offline: 'You’re offline. Reconnect and you can try again.',
+  },
+}
+
+function ErrorCard({ outer, load }) {
   const online = useOnline()
   const { pathname } = useLocation()
-  const titleRef = useRef(null)
-  const leadId = useId()
   // Remember that the connection dropped, so that when it returns the card can
-  // say so. It never reloads by itself: the person may be reading.
+  // say so for a moment.
   const [wasOffline, setWasOffline] = useState(false)
+  const [backExpired, setBackExpired] = useState(false)
+  if (!online && !wasOffline) setWasOffline(true)
+  if (!online && backExpired) setBackExpired(false)
+
+  const offline = !online
+  const backOnline = online && wasOffline
 
   useEffect(() => {
-    titleRef.current?.focus()
-  }, [])
-  if (!online && !wasOffline) setWasOffline(true)
+    if (!backOnline) return undefined
+    const t = setTimeout(() => setBackExpired(true), BACK_ONLINE_MS)
+    return () => clearTimeout(t)
+  }, [backOnline])
 
-  const offline = load && !online
-  const backOnline = load && online && wasOffline
-
-  let title = 'This page stopped working'
-  let lead = (
-    <>
-      Part of this page failed while it was running. Trying again usually fixes it.
-      If it keeps happening, tell us and we&rsquo;ll look into it.
-    </>
-  )
-  if (load) {
-    title = 'This page didn’t load'
-    lead = offline
-      ? <>You&rsquo;re offline, so this page couldn&rsquo;t be downloaded. You can try again once you reconnect.</>
-      : <>Part of this page couldn&rsquo;t be downloaded. Trying again usually fixes it.</>
-  }
+  const copy = load ? COPY.load : COPY.crash
+  const status = offline ? 'Waiting for a connection' : backOnline && !backExpired ?'Back online' : ''
 
   const card = (
-    <div className={`error-boundary${load ? ' error-boundary--load' : ''}`} role="alert">
+    <div className={`error-boundary${load ? ' error-boundary--load' : ''}`}>
       <div className="error-boundary-card">
-        <h1 className="error-boundary-title" tabIndex={-1} ref={titleRef}>{title}</h1>
-        <p id={leadId} className="error-boundary-lead">{lead}</p>
-        {/* Always in the document, so a screen reader is already listening
-            when the text arrives. */}
-        <p className="error-boundary-status" role="status">
-          {backOnline ? 'You’re back online.' : ''}
-        </p>
-        <div className="error-boundary-actions">
-          <button
-            type="button"
-            className="btn btn-accent"
-            disabled={offline}
-            aria-describedby={offline ? leadId : undefined}
-            onClick={() => window.location.reload()}
-          >
-            Try again
-          </button>
-          {/* On the home page itself a client-side link would change nothing
-              and the crash would stay, so there it loads the document afresh. */}
-          <Link className="btn" to="/" reloadDocument={pathname === '/'}>Go to the home page</Link>
-        </div>
-        <button
-          type="button"
-          className="error-boundary-report"
-          onClick={() => openProblemReport(error, window.location.pathname)}
-        >
-          Report this problem
-        </button>
+        <EdgeScreen
+          art={offline ? 'drain' : 'calm'}
+          title={copy.title}
+          body={offline ? copy.offline : copy.body}
+          safe="Saved projects are fine. Changes you hadn’t saved may be lost."
+          status={status}
+          waiting={offline}
+          actions={offline ? null : (
+            <>
+              <EdgePill onClick={() => window.location.reload()}>Reload the page</EdgePill>
+              <EdgeOutline to="/feedback?type=bug">Report this</EdgeOutline>
+            </>
+          )}
+          trail={offline ? [] : [
+            // On the home page itself a client-side link would change nothing and
+            // the crash would stay, so there it loads the document afresh.
+            { to: '/', label: 'Back to the homepage', reload: pathname === '/' },
+            { to: '/learn/help', label: 'Help centre' },
+          ]}
+        />
       </div>
     </div>
   )
@@ -135,6 +132,6 @@ export default class RouteErrorBoundary extends Component {
   render() {
     const { error } = this.state
     if (!error) return this.props.children
-    return <ErrorCard error={error} outer={this.props.outer} load={isChunkLoadError(error)} />
+    return <ErrorCard outer={this.props.outer} load={isChunkLoadError(error)} />
   }
 }
