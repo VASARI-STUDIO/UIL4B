@@ -1,5 +1,5 @@
 import { Fragment, useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 // ── WHAT THIS PAGE IS ALLOWED TO READ FROM utils/analytics ────────────────
 // getAggregateAnalytics() is the only cross-user reader in that module: it sums
 // the `analytics-daily` documents every signed-in session writes, so what it
@@ -2218,13 +2218,18 @@ export default function Admin({ toast }) {
     )
   }
 
+  // A signed-in account without admin access is sent home without a word, as
+  // /style-guide does (RequireAdmin in App.jsx): the route's existence is not
+  // something to name to them.
+  if (!effectiveUnlocked && user) return <Navigate to="/" replace />
+
   if (!effectiveUnlocked) {
     return (
       <div className="sec">
         <div className="adm-lock">
           <div className="adm-lock-eyebrow">Admin Access</div>
           <h1>Developer Dashboard</h1>
-          <p>{user ? 'Your account does not have admin access.' : 'Sign in with an owner account.'}</p>
+          <p>Sign in with an owner account.</p>
         </div>
       </div>
     )
