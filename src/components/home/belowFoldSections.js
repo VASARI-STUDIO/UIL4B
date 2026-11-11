@@ -7,11 +7,20 @@
 // sit on an empty stand-in while a download runs. Mounting stays with
 // DeferredSection, which still waits for the stand-in to be near.
 
-export const loadBookmarks = () => import('./HomeBookmarks')
-export const loadTry = () => import('./HomeTry')
-export const loadExports = () => import('./HomeExports')
-export const loadShowcase = () => import('./HomeShowcase')
-export const loadPlans = () => import('./HomePlans')
+// One import() per section, shared by lazy(), the idle prefetch and DeferredSection, so every
+// caller waits on the same promise. A failed import is forgotten so a retry fetches again.
+const once = (load) => {
+  let pending
+  return () => {
+    if (!pending) pending = load().catch((error) => { pending = undefined; throw error })
+    return pending
+  }
+}
+export const loadBookmarks = once(() => import('./HomeBookmarks'))
+export const loadTry = once(() => import('./HomeTry'))
+export const loadExports = once(() => import('./HomeExports'))
+export const loadShowcase = once(() => import('./HomeShowcase'))
+export const loadPlans = once(() => import('./HomePlans'))
 
 // In the order a visitor reaches them.
 const LOADERS = [loadBookmarks, loadTry, loadExports, loadShowcase, loadPlans]

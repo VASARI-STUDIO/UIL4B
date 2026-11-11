@@ -398,17 +398,27 @@ const STUBBED_PRICES = {
 /* THE HOME HERO'S FIGURE IS opacity 0 UNTIL ITS LOOP HAS DRAWN.
  *
  * `.hh-fig:not([data-ready])` is clear; HomeHero stamps `data-ready` once the loop has drawn
- * (or its stand-in has stood in), and only then does the 300ms entrance run. Three equal
- * reads of the unready 0 would settle the measure before the figure has entered, so wait for
- * the stamp and then for the figure's own animations to finish. Routes without the figure
- * return at once. */
+ * (or its stand-in has stood in), and only then does the entrance run: 300ms of hh-panel-in, or
+ * 200ms of hh-panel-fade under reduced motion, both after an 80ms delay and both `fill: both`, so
+ * the figure still reads 0 through the delay. Three equal reads of that 0 would settle the measure
+ * before the figure has entered. Waiting for the stamp and for "every animation finished" is not
+ * enough on its own: `[].every()` is true, so a slow runner that has not listed the animation yet
+ * (or has not started its clock) passed straight through and the snapshot caught `opacity: 0`.
+ * So the wait is on the thing the snapshot measures: the figure's computed opacity has to be 1,
+ * which neither the delay nor a half-run entrance can fake. Both entrances end at 1, so the wait
+ * returns with or without reduced motion. Routes without the figure return at once. */
 async function heroEntranceDone(page) {
   if (!(await page.locator('.hh-fig').count())) return
   await expect(page.locator('.hh-fig[data-ready]'), 'the home hero figure never became ready').toBeAttached({ timeout: 30_000 })
   await page.waitForFunction(
-    () => document.querySelector('.hh-fig').getAnimations().every((a) => a.playState === 'finished'),
+    () => {
+      const fig = document.querySelector('.hh-fig')
+      return fig.hasAttribute('data-ready')
+        && getComputedStyle(fig).opacity === '1'
+        && fig.getAnimations().every((a) => a.playState === 'finished')
+    },
     undefined,
-    { timeout: 10_000 },
+    { timeout: 20_000 },
   )
 }
 

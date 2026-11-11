@@ -71,26 +71,26 @@ export default function Spectrum() {
         <HomeHero />
 
         {/* ── Bookmarks ───────────────────────────────────────────────────── */}
-        <DeferredSection ready={below} holdId="bookmarks" size="bookmarks"><HomeBookmarks /></DeferredSection>
+        <DeferredSection ready={below} holdId="bookmarks" size="bookmarks" load={loadBookmarks}><HomeBookmarks /></DeferredSection>
 
         {/* ── Try the tools (slot) ────────────────────────────────────────── */}
         <section id="try" aria-labelledby="try-h">
-          <DeferredSection ready={below} size="try"><HomeTry /></DeferredSection>
+          <DeferredSection ready={below} size="try" load={loadTry}><HomeTry /></DeferredSection>
         </section>
 
         {/* ── Exports: renders its own <section id="exports"> ─────────────── */}
-        <DeferredSection ready={below} holdId="exports" size="exports"><HomeExports /></DeferredSection>
+        <DeferredSection ready={below} holdId="exports" size="exports" load={loadExports}><HomeExports /></DeferredSection>
 
         {/* ── Examples (slot) ─────────────────────────────────────────────── */}
         <section id="examples" aria-labelledby="examples-h" data-slot="examples">
-          <DeferredSection ready={below} size="examples"><HomeShowcase /></DeferredSection>
+          <DeferredSection ready={below} size="examples" load={loadShowcase}><HomeShowcase /></DeferredSection>
         </section>
 
         {/* ── Proof ───────────────────────────────────────────────────────── */}
         <HomeProof />
 
         {/* ── Plans (slot) ────────────────────────────────────────────────── */}
-        <DeferredSection ready={below} holdId="plans" size="plans"><HomePlans /></DeferredSection>
+        <DeferredSection ready={below} holdId="plans" size="plans" load={loadPlans}><HomePlans /></DeferredSection>
 
         {/* ── Final call: last child of main. The light behind it is drawn on
             the footer's box, so this section paints nothing of its own. ───── */}
