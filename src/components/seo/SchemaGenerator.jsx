@@ -117,14 +117,14 @@ export default function SchemaGenerator({ onCopy, toast }) {
 
         {type === 'WebSite' && (
           <>
-            <Field label="Site name" value={f.name} onChange={set('name')} placeholder="UIL4B" />
+            <Field label="Site name" value={f.name} onChange={set('name')} placeholder="UI L4B" />
             <Field label="URL" value={f.url} onChange={set('url')} placeholder="https://uil4b.com" />
           </>
         )}
 
         {type === 'Organization' && (
           <>
-            <Field label="Organisation name" value={f.name} onChange={set('name')} placeholder="UIL4B" />
+            <Field label="Organisation name" value={f.name} onChange={set('name')} placeholder="UI L4B" />
             <Field label="URL" value={f.url} onChange={set('url')} placeholder="https://uil4b.com" />
             <Field label="Logo URL" value={f.logo} onChange={set('logo')} placeholder="https://uil4b.com/logo.png" />
           </>

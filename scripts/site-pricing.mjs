@@ -118,7 +118,7 @@ export function ladderOffers({ prices = null } = {}) {
     offers.push({
       '@type': 'Offer',
       name: `Pro — ${plan.label}`,
-      description: `UIL4B Pro, ${plan.cadence}.`,
+      description: `UI L4B Pro, ${plan.cadence}.`,
       price: String(plan.total),
       priceCurrency: plan.currency.toUpperCase(),
       url: `${ORIGIN}/plans`,
@@ -140,7 +140,7 @@ export function webApplicationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'UIL4B Design Toolkit',
+    name: 'UI L4B Design Toolkit',
     url: ORIGIN,
     applicationCategory: 'DesignApplication',
     operatingSystem: 'Web',
