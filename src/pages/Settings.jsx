@@ -130,6 +130,14 @@ const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navig
 
 function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength, inputMode, multiline = false }) {
   const [editing, setEditing] = useState(false)
+  const editRef = useRef(null)
+  const focusEditOwed = useRef(false)
+  useEffect(() => {
+    if (editing || !focusEditOwed.current) return
+    focusEditOwed.current = false
+    editRef.current?.focus()
+  }, [editing])
+  const closeEdit = () => { focusEditOwed.current = true; setEditing(false) }
   const [val, setVal] = useState(value || '')
   const [error, setError] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
@@ -173,7 +181,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
     setSaving(true)
     try {
       await onSave(val)
-      setEditing(false)
+      closeEdit()
       setError('')
     } catch (e) {
       setError(e.message || 'Failed to save')
@@ -197,7 +205,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
   const onFieldKey = (e) => {
     if (multiline) {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSave() }
-      else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
+      else if (e.key === 'Escape' && !savingRef.current) { closeEdit(); setError('') }
       return
     }
     if (options) {
@@ -207,7 +215,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
       if (e.key === 'Escape' && listOpen) return
     }
     if (e.key === 'Enter') { e.preventDefault(); handleSave() }
-    else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
+    else if (e.key === 'Escape' && !savingRef.current) { closeEdit(); setError('') }
   }
 
   if (!editing) {
@@ -218,7 +226,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
           <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
         </div>
         {/* The hidden suffix gives each Edit button its own name. */}
-        <button type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit<span className="sr-only"> {label.toLowerCase()}</span></button>
+        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit<span className="sr-only"> {label.toLowerCase()}</span></button>
       </div>
     )
   }
@@ -248,7 +256,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
         </div>
         <div className="settings-edit-actions">
           <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
-          <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
+          <button type="button" className="btn btn-s" onClick={() => { closeEdit(); setError('') }} disabled={saving}>Cancel</button>
         </div>
         {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
       </div>
@@ -301,7 +309,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
           )}
         </div>
         <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
-        <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
+        <button type="button" className="btn btn-s" onClick={() => { closeEdit(); setError('') }} disabled={saving}>Cancel</button>
       </div>
       {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
@@ -917,7 +925,7 @@ export default function Settings({ toast }) {
   // The tiers only stack at 640 (settings.css), so this is not `isPhone`:
   // between 641 and 720 they are still two columns and Free stays on the left.
   // The Language tiles turn into rows at the same line.
-  const tiersStacked = useMediaQuery('(max-width: 640px)')
+  const tiersStacked = useMediaQuery('(max-width: 899px)')
   const navigate = useNavigate()
   // Which view a phone shows lives in the history entry, not in component
   // state: opening a section is a push, so the browser's Back (and the phone's
@@ -1713,7 +1721,7 @@ export default function Settings({ toast }) {
                   ))}
                 </div>
 
-                {/* Where the tiers stack (640 and below) Pro comes first: the
+                {/* Where the tiers stack (899 and below) Pro comes first: the
                     cadence toggle then sits over the price it changes, and
                     "Upgrade to Pro" is on the first screen instead of two down.
                     DOM order, not CSS order, so keyboard and screen-reader
