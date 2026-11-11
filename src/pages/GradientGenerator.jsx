@@ -20,7 +20,8 @@ import { rangeOf, toggleIn, shiftGroup, removable } from '../utils/stopSelection
 import { emptyHistory, recordLook, undoLook, redoLook, canUndo, canRedo, startsBurst, isTextEntry, historyShortcut } from '../utils/gradientHistory'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { hexToOklch } from '../utils/colors'
-import { pickInk, INK_DARK, INK_LIGHT } from '../utils/gradientInk'
+import { INK_DARK, INK_LIGHT } from '../utils/gradientInk'
+import { boxWithin, inkFor, badgeText } from '../utils/gradientText'
 import { normaliseHex, newStopColour, presetMatches } from '../utils/gradientEdit'
 import { labelFor, paletteChips, activeShades } from '../utils/paletteRoles'
 import { allColoursLocked, nextPaintTarget } from '../utils/gradientPaint'
@@ -37,8 +38,10 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useExportGate from '../hooks/useExportGate'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import GradientFx from '../components/tool/GradientFx'
+import GradientText from '../components/tool/GradientText'
+import useMeasured from '../components/tool/useMeasured'
 import PreviewSwitch from '../components/tool/PreviewSwitch'
-import { PREVIEW_STYLES, isPreviewStyle } from '../utils/gradientPreviewStyles'
+import { PREVIEW_STYLES, isPreviewStyle, isTextStyle, specName } from '../utils/gradientPreviewStyles'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
 import useCommunitySubmitGate from '../hooks/useCommunitySubmitGate'
@@ -655,39 +658,8 @@ const PREVIEW_CONTEXTS = [
 // The switch's choices: the four contexts, then the styles as a second group.
 const PREVIEW_OPTIONS = PREVIEW_CONTEXTS.map((c) => ({ id: c.id, label: c.label, lead: c.id === PREVIEW_STYLES[0].id }))
 
-// Where text sits on the area it is drawn over, as fractions of that area, read from the
-// laid-out page so the ink follows the real layout at any width. `measure(root)` returns
-// the boxes (a plain object or array, compared by value); it must be a stable function.
-// Every element marked data-box is watched too, so a font arriving late re-measures.
-function useMeasured(measure) {
-  const ref = useRef(null)
-  const [value, setValue] = useState(null)
-  useLayoutEffect(() => {
-    const root = ref.current
-    if (!root) return undefined
-    const read = () => {
-      const next = measure(root)
-      setValue((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
-    }
-    read()
-    if (typeof ResizeObserver === 'undefined') return undefined
-    const watcher = new ResizeObserver(read)
-    watcher.observe(root)
-    root.querySelectorAll('[data-box]').forEach((el) => watcher.observe(el))
-    return () => watcher.disconnect()
-  }, [measure])
-  return [ref, value]
-}
-
-const round3 = (n) => Math.round(n * 1000) / 1000
-// `inner` as fractions of `outer`'s rectangle, with the outer's shape (width over height).
-function boxWithin(outer, inner) {
-  if (!outer.width || !outer.height) return null
-  return {
-    aspect: round3(outer.width / outer.height),
-    box: { x: round3((inner.left - outer.left) / outer.width), y: round3((inner.top - outer.top) / outer.height), w: round3(inner.width / outer.width), h: round3(inner.height / outer.height) },
-  }
-}
+// Where text sits on the area it is drawn over is read by useMeasured and boxWithin; the
+// ink and the badge come from utils/gradientText.js, shared with the Poster's text layer.
 // The hero's text block against the whole canvas.
 const measureHero = (view) => boxWithin(view.getBoundingClientRect(), view.querySelector('.grd-ctx-sample').getBoundingClientRect())
 // Each button's words against that button, which paints its own copy of the gradient.
@@ -696,10 +668,6 @@ const measureButtons = (view) => [...view.querySelectorAll('.grd-ctx-btn')].map(
   words.selectNodeContents(btn)
   return boxWithin(btn.getBoundingClientRect(), words.getBoundingClientRect())
 })
-
-// The ink for a measured box, or for the whole gradient until the box is known.
-const inkFor = (stops, type, angle, spot) => pickInk(stops, spot ? { type, angle, ...spot } : undefined)
-const badge = (ink) => `Text ${ink.ratio.toFixed(1)}:1${ink.low ? ' · low' : ''}`
 
 function PreviewHero({ stops, type, angle }) {
   const [ref, spot] = useMeasured(measureHero)
@@ -712,7 +680,7 @@ function PreviewHero({ stops, type, angle }) {
         <p className="grd-ctx-p">Week by week, length by length.</p>
         <span className="grd-ctx-cta" style={{ background: ink.css, color: flip }}>Book lessons</span>
       </div>
-      <span className={`grd-ctx-ratio${ink.low ? ' is-low' : ''}`} role="status">{badge(ink)}</span>
+      <span className={`grd-ctx-ratio${ink.low ? ' is-low' : ''}`} role="status">{badgeText(ink)}</span>
     </div>
   )
 }
@@ -724,7 +692,7 @@ function PreviewButtons({ paint, stops, type, angle }) {
     <div className="grd-ctx-view grd-ctx-ground grd-ctx-btns" aria-hidden="true" ref={ref}>
       {sizes.map((h, i) => {
         const ink = inkFor(stops, type, angle, spots?.[i])
-        return <span key={h} data-box className="grd-ctx-btn" title={badge(ink)} style={{ background: paint, color: ink.css, height: h }}>Save limits</span>
+        return <span key={h} data-box className="grd-ctx-btn" title={badgeText(ink)} style={{ background: paint, color: ink.css, height: h }}>Save limits</span>
       })}
     </div>
   )
@@ -938,6 +906,10 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const css = gradientCssIn(type, angle, stops, space)
   // What the canvas paints: the chosen space where the browser can, else sRGB.
   const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops)
+  // Whether the canvas blends in OKLCH, which the preview styles read colour in.
+  const fxOklch = paintCss === css && space === 'oklch'
+  // The name of the project this gradient was saved as, for the Spec card.
+  const savedName = (projects || []).find((p) => p.id === design?.source?.projectId)?.name
   // Where the gradient is previewed (a context or a style), kept for the session.
   const [previewAs, setPreviewAs] = useState(() => {
     try { const v = sessionStorage.getItem(PREVIEW_KEY); return PREVIEW_CONTEXTS.some((c) => c.id === v) ? v : 'fill' } catch { return 'fill' }
@@ -2166,7 +2138,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="grd-stage" data-ctx={previewAs}>
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${PREVIEW_CONTEXTS.find((c) => c.id === previewAs)?.as || ''}`} />
             <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
-            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={paintCss === css && space === 'oklch'} />}
+            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} />}
+            {isTextStyle(previewAs) && <GradientText id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
             <PreviewSwitch options={PREVIEW_OPTIONS} value={previewAs} onChange={choosePreview} label="Preview as" moreLabel="More previews" />
           </div>
 

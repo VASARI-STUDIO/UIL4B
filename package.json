@@ -9,7 +9,7 @@
     "dev": "vite",
     "fonts:fetch": "node scripts/fetch-switzer.mjs",
     "prebuild": "node scripts/fetch-switzer.mjs",
-    "build": "vite build && node scripts/prerender.mjs",
+    "build": "vite build && node scripts/prerender.mjs && node scripts/check-no-test-session.mjs",
     "lint": "eslint .",
     "themes:smoke": "node scripts/export-themes-smoke.mjs",
     "themes:check": "node scripts/export-themes-check.mjs",

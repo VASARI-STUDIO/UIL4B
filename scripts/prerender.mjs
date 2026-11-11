@@ -172,12 +172,17 @@ export function rewriteHead(html, { title, description, robots, canonical, card,
 
   // The <noscript> fallback was the homepage's own sales copy, repeated on
   // every URL. Replaced with something true for the page it is actually on;
-  // `keepNoscript` is for the one page that copy is true for.
-  if (!keepNoscript) {
+  // `keepNoscript` is for the one page that carries the pricing block: it keeps
+  // that block and takes its heading and intro from the same title and
+  // description as the head, so the two cannot describe different products.
+  if (keepNoscript) {
+    sub('noscript heading', /(<noscript>\s*<div[^>]*>\s*)<h1>[^<]*<\/h1>/,
+      (_, open) => `${open}<h1>${text(title)}</h1><p>${text(description)}</p>`)
+  } else {
     html = html.replace(
       /<noscript>[\s\S]*?<\/noscript>/,
       `<noscript><h1>${text(title)}</h1><p>${text(description)}</p>`
-      + `<p>UIL4B needs JavaScript enabled. <a href="${attr(ORIGIN)}/">Return to the homepage</a>.</p></noscript>`,
+      + `<p>UI L4B needs JavaScript enabled. <a href="${attr(ORIGIN)}/">Return to the homepage</a>.</p></noscript>`,
     )
   }
 
@@ -252,7 +257,7 @@ async function main() {
       description,
       robots: robotsFor(route),
       canonical: canonicalUrl(route),
-      card: cardFor(route),
+      card: route === '/home' ? HOME_CARD : cardFor(route),
       schema: breadcrumbJsonLd(route, ORIGIN) + articleJsonLd(route, ORIGIN),
     })
     misses.forEach(m => allMisses.add(m))

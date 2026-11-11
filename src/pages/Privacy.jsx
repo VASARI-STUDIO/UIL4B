@@ -47,7 +47,7 @@ function About() {
   return (
     <>
       <p className="lgl-p">
-        UIL4B (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is run by Dylan Coleman, a sole trader based in Brisbane, Queensland, Australia. We handle your personal information in line with the <em>Privacy Act 1988</em> (Cth) and the Australian Privacy Principles. This policy covers what we collect, why, where it goes (including overseas), how long we keep it, and how to reach us.
+        UI L4B (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is run by Dylan Coleman, a sole trader based in Brisbane, Queensland, Australia. We handle your personal information in line with the <em>Privacy Act 1988</em> (Cth) and the Australian Privacy Principles. This policy covers what we collect, why, where it goes (including overseas), how long we keep it, and how to reach us.
       </p>
       <p className="lgl-p">
         This policy is written in English. If a translated page shows a different version of any clause, the English version is the one that applies.
@@ -59,7 +59,7 @@ function About() {
 function Collect() {
   return (
     <>
-      <p className="lgl-p">We only collect what we need to run UIL4B.</p>
+      <p className="lgl-p">We only collect what we need to run UI L4B.</p>
       <p className="lgl-p">
         <strong>Without an account.</strong> Every tool except the four AI tools works signed out, and your work stays in your browser (see &quot;What we store on your device&quot;). The AI tools need an account, and section 3 says what they send. Some things still leave your device when you are signed out: Vercel&apos;s page-view analytics and named product events, Google&apos;s sign-in script, and automatic crash reports. Each is described below.
       </p>
@@ -87,7 +87,7 @@ function Collect() {
         <strong>Google&apos;s sign-in script.</strong> While you are signed out, every page loads Google&apos;s sign-in script so it can offer the One Tap prompt. Google therefore receives your IP address, browser details and its own cookies, even if you never click the prompt. What Google does with them is covered by Google&apos;s own privacy policy.
       </p>
       <p className="lgl-p">
-        <strong>Crash reports.</strong> If UIL4B hits an uncaught error, it can send us an automatic crash report, whether or not you are signed in. The report holds the page route (without any query string), the error message with email addresses removed, and the top lines of the error&apos;s stack trace (file names and line numbers). It does not hold your account details. We store it with feedback in our database (Google Firebase), receive it by email (Resend), and copy it to a spreadsheet (Google Sheets) if that is switched on. Sending it also creates the scrambled IP rate-limit record described above. A browser sends at most two a session, and the session storage remembers which ones it has sent.
+        <strong>Crash reports.</strong> If UI L4B hits an uncaught error, it can send us an automatic crash report, whether or not you are signed in. The report holds the page route (without any query string), the error message with email addresses removed, and the top lines of the error&apos;s stack trace (file names and line numbers). It does not hold your account details. We store it with feedback in our database (Google Firebase), receive it by email (Resend), and copy it to a spreadsheet (Google Sheets) if that is switched on. Sending it also creates the scrambled IP rate-limit record described above. A browser sends at most two a session, and the session storage remembers which ones it has sent.
       </p>
       <p className="lgl-p">
         <strong>We do not collect</strong> government identifiers, precise location, contacts or advertising IDs.
@@ -100,7 +100,7 @@ function Ai() {
   return (
     <>
       <p className="lgl-p">
-        Four features send content to an outside AI provider. Everything else in UIL4B runs in your browser. Google, OpenRouter and DeepInfra are United States companies.
+        Four features send content to an outside AI provider. Everything else in UI L4B runs in your browser. Google, OpenRouter and DeepInfra are United States companies.
       </p>
       <div className="lgl-table-wrap">
         <table className="lgl-table">
@@ -152,7 +152,7 @@ function StorageSection() {
   return (
     <>
       <p className="lgl-p">
-        UIL4B writes the following keys to your browser&apos;s localStorage. It also uses your browser&apos;s sessionStorage for short-lived items (for example the record of which crash reports this session has sent), and the sign-in library (Firebase Authentication) keeps your sign-in state in your browser&apos;s IndexedDB database. <strong>Signed out, all of the keys below stay on your device.</strong> When you are signed in, some of it (for example your saved projects and current design) is also copied to your account so it follows you between devices. You can inspect, export, or clear all of this from <Link className="lgl-a" to="/settings">Settings → Your data</Link>.
+        UI L4B writes the following keys to your browser&apos;s localStorage. It also uses your browser&apos;s sessionStorage for short-lived items (for example the record of which crash reports this session has sent), and the sign-in library (Firebase Authentication) keeps your sign-in state in your browser&apos;s IndexedDB database. <strong>Signed out, all of the keys below stay on your device.</strong> When you are signed in, some of it (for example your saved projects and current design) is also copied to your account so it follows you between devices. You can inspect, export, or clear all of this from <Link className="lgl-a" to="/settings">Settings → Your data</Link>.
       </p>
       <div className="lgl-table-wrap">
         <table className="storage-table">
@@ -187,7 +187,7 @@ function StorageSection() {
 function AggregateSection() {
   return (
     <p className="lgl-p">
-      When you are <strong>signed in</strong>, UIL4B records anonymous, aggregate usage counts in our Firestore database (Google Firebase; see &quot;Who we share it with, and where it goes&quot;) to understand which features are useful and where to invest. Specifically, we increment per-day tallies of which page paths are visited (for example <span className="storage-key">/create/color</span>) and how many times tools are used (for example a font copy or a colour pick). These are running totals shared across all users. They contain <strong>no message content, no prompt text, no colours or fonts you chose, and nothing that identifies you</strong>. We cannot tie a count back to an individual account. Signed-out visitors add nothing to these database counts; the separate Vercel analytics below still apply to them.
+      When you are <strong>signed in</strong>, UI L4B records anonymous, aggregate usage counts in our Firestore database (Google Firebase; see &quot;Who we share it with, and where it goes&quot;) to understand which features are useful and where to invest. Specifically, we increment per-day tallies of which page paths are visited (for example <span className="storage-key">/create/color</span>) and how many times tools are used (for example a font copy or a colour pick). These are running totals shared across all users. They contain <strong>no message content, no prompt text, no colours or fonts you chose, and nothing that identifies you</strong>. We cannot tie a count back to an individual account. Signed-out visitors add nothing to these database counts; the separate Vercel analytics below still apply to them.
     </p>
   )
 }
@@ -200,7 +200,7 @@ function VercelSection() {
   return (
     <>
       <p className="lgl-p">
-        UIL4B also runs Vercel Web Analytics for every visitor, signed in or not. It records each page view with the page URL, referrer, approximate location, device type, operating system and browser; it sets no cookies, ties nothing to your IP address, and tells visits apart by a hash of the request that Vercel discards after 24 hours.
+        UI L4B also runs Vercel Web Analytics for every visitor, signed in or not. It records each page view with the page URL, referrer, approximate location, device type, operating system and browser; it sets no cookies, ties nothing to your IP address, and tells visits apart by a hash of the request that Vercel discards after 24 hours.
       </p>
       <p className="lgl-p">
         We also send Vercel a few named product events, again for signed-out visitors too: <span className="storage-key">sign_up</span>, <span className="storage-key">checkout_started</span>, <span className="storage-key">upgrade_gate_shown</span>, <span className="storage-key">first_tool_used</span> and <span className="storage-key">first_copy_export</span>. An event can carry a tool name, a kind of result, a plan name or the name of the Pro prompt that opened. It never carries your name, email or account ID.
@@ -321,7 +321,7 @@ function Rights() {
 function Children() {
   return (
     <p className="lgl-p">
-      UIL4B is not meant for anyone under 18. If we learn that an account belongs to someone under 18, we will close it and delete its data.
+      UI L4B is not meant for anyone under 18. If we learn that an account belongs to someone under 18, we will close it and delete its data.
     </p>
   )
 }
@@ -335,7 +335,7 @@ function Europe() {
       <p className="lgl-p"><strong>Why we may use your information (legal bases).</strong></p>
       <ul className="lgl-list">
         <li><em>To provide the service you signed up for</em> (contract): your account, syncing your work, billing, and the AI features you ask for.</li>
-        <li><em>Our legitimate interests</em> (which we have weighed against yours): keeping UIL4B secure and preventing abuse (including the scrambled IP records), aggregate usage counts, privacy-friendly page-view analytics, and loading fonts and icons you ask to preview.</li>
+        <li><em>Our legitimate interests</em> (which we have weighed against yours): keeping UI L4B secure and preventing abuse (including the scrambled IP records), aggregate usage counts, privacy-friendly page-view analytics, and loading fonts and icons you ask to preview.</li>
         <li><em>Legal obligations</em>: keeping tax and payment records.</li>
         <li><em>Consent</em>: optional page details you choose to attach to feedback. You can withdraw consent at any time.</li>
       </ul>

@@ -331,6 +331,9 @@ export const DEFAULT_BILLING = (BILLING_OPTIONS.find((p) => p.best) || BILLING_O
 // The cadence wording lives in utils/billingCadence.js, the one source.
 export { BILLED_EVERY }
 
+// USD prints as "US$" in every offer label, as on /plans, so a bare "$" never reads as the visitor's own dollar.
+const QUALIFIED = Object.freeze({ qualify: true })
+
 /** Rounded once, the way planLadder rounds it: $48/12 is $4, never $3.99. */
 export const perMonth = (total, months) => Math.round((total / months) * 100) / 100
 
@@ -364,7 +367,7 @@ export function resolveOffers({ prices, currency = 'usd', loaded = true } = {}) 
     }
     const trial = o.trialDays ? `, ${o.trialDays}-day free trial` : ''
     const billedNote = !has ? null : o.months > 1
-      ? `Billed ${formatMoney(total, currency)} ${BILLED_EVERY[o.id]}${trial}, cancel any time. Keep every export you made.`
+      ? `Billed ${formatMoney(total, currency, QUALIFIED)} ${BILLED_EVERY[o.id]}${trial}, cancel any time. Keep every export you made.`
       : `Billed ${BILLED_EVERY[o.id]}${trial}, cancel any time. Keep every export you made.`
     return {
       id: o.id,
@@ -374,8 +377,8 @@ export function resolveOffers({ prices, currency = 'usd', loaded = true } = {}) 
       trialDays: o.trialDays || 0,
       available: has,
       total: has ? total : null,
-      amountLabel: has ? formatMoney(perMonth(total, o.months), currency) : null,
-      totalLabel: has ? formatMoney(total, currency) : null,
+      amountLabel: has ? formatMoney(perMonth(total, o.months), currency, QUALIFIED) : null,
+      totalLabel: has ? formatMoney(total, currency, QUALIFIED) : null,
       saving,
       savingLabel: saving > 0 ? `Save ${saving}%` : '',
       unavailableNote: loaded && !has ? `No ${currency.toUpperCase()} price for this billing period right now` : null,

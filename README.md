@@ -36,7 +36,8 @@ npm run preview    # serve the production build
 `npm run build` runs `vite build` followed by `scripts/prerender.mjs`, and
 prints `prerender: wrote N route shells + a noindex 404 shell` when it
 finishes. Several unit tests read the prerendered shells, so use it rather than
-a bare `vite build`.
+a bare `vite build`. The last step, `scripts/check-no-test-session.mjs`, fails
+the build if `dist/` contains the signed-in test session's doubles.
 
 ## Test
 

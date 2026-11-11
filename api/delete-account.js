@@ -47,7 +47,7 @@ import { getStripeServer } from './_lib/stripe.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins } from './_lib/origins.js'
 import {
-  isReauthFresh, customerOwnershipVerdict, mayProceedWithDeletion, liveSubscriptions,
+  isReauthFresh, customerOwnershipVerdict, mayProceedWithDeletion, liveSubscriptions, feedbackEmailFor,
 } from './_lib/accountDeletion.js'
 
 // Firestore rejects a batch over 500 writes.
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
     // with a token minted before that.
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7), true)
     uid = decoded.uid
-    email = decoded.email || null
+    email = feedbackEmailFor(decoded)
     authTimeMs = (decoded.auth_time || 0) * 1000
   } catch {
     return res.status(401).json({ error: 'Invalid auth token' })
@@ -222,7 +222,8 @@ export default async function handler(req, res) {
 
     // Feedback carries the address they typed. api/support.js stores no uid, so
     // the email is the only handle — which is also why this is skipped for an
-    // account without one rather than deleting by a null match.
+    // account without one, or whose email is not verified, rather than deleting
+    // by a null match or by an address the account may not own.
     deleted.feedback = email
       ? await deleteQueryInBatches(db, db.collection('feedback').where('email', '==', email))
       : 0

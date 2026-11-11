@@ -288,3 +288,34 @@ test('the audit row records the amount as it is sent to Stripe, not as it was ty
   assert.ok(stripe.writes.some(([op, lk, cents]) => op === 'prices.create' && lk === LOOKUP_KEYS.monthly && cents === 800))
   assert.deepEqual(auditRows(db)[0].prices[LOOKUP_KEYS.monthly].usd, { old: DEFAULT_PRICES.monthly.usd, new: 8, newCents: 800 })
 })
+
+/* ── Who may call the route, and what a failure tells the caller ─────────── */
+
+test('a signed-in user who is not the administrator gets 404, and nothing is written', async () => {
+  const { res, stripe, db } = await run({ token: { uid: 'u2', email: 'someone@else.example', email_verified: true, auth_time: nowSec() }, body: { prices: pricesWith(8) } })
+  assert.equal(res.statusCode, 404)
+  assert.deepEqual(res.body, { error: 'Not found' })
+  assert.deepEqual(stripe.writes, [])
+  assert.deepEqual(auditRows(db), [])
+})
+
+test('the administrator address with an unverified email is also a 404', async () => {
+  const { res } = await run({ token: { uid: 'x', email: ADMIN, email_verified: false, auth_time: nowSec() }, method: 'GET' })
+  assert.equal(res.statusCode, 404)
+})
+
+test('a 500 gives the caller fixed text, never the Stripe error message', async () => {
+  const secret = "No such price: 'price_1AbCdEfGhIjKl' (key sk_live_AbCdEfGhIjKlMnOp)"
+  const stripe = fakeStripe()
+  failOnLookup(stripe, 'create', 'monthly', secret)
+  const failed = await run({ token: adminToken(60), body: { prices: pricesWith(8) }, stripe })
+  assert.equal(failed.res.statusCode, 500)
+  assert.ok(!JSON.stringify(failed.res.body).includes('price_1AbCd'), `the 500 echoed the Stripe message: ${JSON.stringify(failed.res.body)}`)
+  assert.ok(!/No such price|sk_live/.test(JSON.stringify(failed.res.body)))
+
+  const partial = fakeStripe()
+  failOnLookup(partial, 'create', 'yearly', secret)
+  const half = await run({ token: adminToken(60), body: { prices: pricesWith(8) }, stripe: partial })
+  assert.equal(half.res.body.partial, true)
+  assert.ok(!/No such price|sk_live|price_1AbCd/.test(JSON.stringify(half.res.body)), 'a partial failure echoed the Stripe message')
+})
