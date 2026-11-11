@@ -82,7 +82,7 @@ test.describe('Firebase is fetched only for a visitor who needs it', () => {
     await page.waitForTimeout(IDLE_BACKSTOP_MS + 1000)
     expect(hits, 'a browser with no hint downloaded Firebase on a page that asked nothing of it').toEqual([])
     await go(page, '/login')
-    // LoginPage leaves only once it has a user, so arriving at /home is the session coming back.
-    await expect(page).toHaveURL(/\/home\/?$/)
+    // LoginPage leaves only once it has a user, so arriving in the workspace is the session coming back.
+    await expect(page).toHaveURL(/\/projects\/?$/)
   })
 })

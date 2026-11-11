@@ -226,6 +226,10 @@
       "licence": "Apache-2.0"
     },
     {
+      "name": "@firebase/crashlytics",
+      "licence": "Apache-2.0"
+    },
+    {
       "name": "@firebase/data-connect",
       "licence": "Apache-2.0"
     },

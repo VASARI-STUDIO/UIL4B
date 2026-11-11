@@ -661,7 +661,7 @@ function motionOf(page, selector) {
     // An animation moves a transform if any keyframes rule it names writes one.
     const names = cs.animationName.split(',').map((s) => s.trim()).filter((n) => n !== 'none')
     const animatesTransform = names.some((n) => [...document.styleSheets].some((sheet) => {
-      let rules = []
+      let rules
       try { rules = [...sheet.cssRules] } catch { return false }
       return rules.some((r) => r.type === CSSRule.KEYFRAMES_RULE && r.name === n && /transform/.test(r.cssText))
     }))

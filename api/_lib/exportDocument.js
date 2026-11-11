@@ -58,7 +58,7 @@ const fontCache = new Map()
 export function chromeFont(file) {
   if (typeof file !== 'string' || !FONT_FILE.test(file)) return null
   if (!fontCache.has(file)) {
-    let data = null
+    let data
     try { data = readFileSync(join(process.cwd(), 'public', 'fonts', file)).toString('base64') } catch { data = null }
     fontCache.set(file, data)
   }
@@ -187,7 +187,7 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
     if (isTokenRefusal(err)) {
       return res.status(401).json({ error: 'Invalid or expired session', code: 'auth_required' })
     }
-    let credential = null
+    let credential
     try { credential = credentialProblem?.() } catch { credential = 'unreadable' }
     if (credential) return res.status(500).json({ error: 'Could not check your session', code: 'auth_unavailable' })
     return res.status(503).json({ error: 'Could not check your session', code: 'auth_unavailable' })
@@ -238,7 +238,7 @@ export async function serveExportDocument(req, res, { verifyIdToken, readUser, c
     return res.status(400).json({ error: 'Unknown export template', code: 'unknown_template' })
   }
   const design = pickDesign(body.design)
-  let size = 0
+  let size
   try { size = JSON.stringify(design).length } catch { size = Infinity }
   if (size > MAX_DESIGN_CHARS) {
     return res.status(413).json({ error: 'That design is too large to export', code: 'design_too_large' })

@@ -95,13 +95,13 @@ const deliverEngine = sharedDownload(async (report, signal) => {
     ])
   } catch (err) {
     if (err?.name === 'IntegrityError') throw err
-    throw new Error(`the CAD engine could not be fetched (${err?.message || err})`)
+    throw new Error(`the CAD engine could not be fetched (${err?.message || err})`, { cause: err })
   }
   let w
   try {
     w = getWorker()
   } catch (err) {
-    throw new Error(`the CAD engine could not start in this browser (${err?.message || err})`)
+    throw new Error(`the CAD engine could not start in this browser (${err?.message || err})`, { cause: err })
   }
   w.postMessage({ type: 'engine', script, wasm }, [script, wasm])
   return w

@@ -1,4 +1,5 @@
-// The generator's Back history: the last ten looks, newest last.
+// The generator's Back history: the last HISTORY_DEPTH looks, newest last. The Redo and
+// edit-step rules for manual edits are in gradient-history-redo.test.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { HISTORY_DEPTH, snapshotLook, sameLook, pushLook, popLook, canGoBack } from '../../src/utils/gradientHistory.js'
@@ -8,7 +9,7 @@ const look = (n) => ({
   type: 'Linear', angle: 90 + n, space: 'oklch',
 })
 
-test('the depth is ten', () => assert.equal(HISTORY_DEPTH, 10))
+test('the depth is fifty', () => assert.equal(HISTORY_DEPTH, 50))
 
 test('push adds the newest last and pop returns it first', () => {
   let h = []
@@ -21,12 +22,13 @@ test('push adds the newest last and pop returns it first', () => {
   assert.equal(popLook(history).look.angle, 91)
 })
 
-test('only the last ten are kept, oldest dropped first', () => {
+test('only the last HISTORY_DEPTH are kept, oldest dropped first', () => {
   let h = []
-  for (let n = 1; n <= 15; n++) h = pushLook(h, look(n))
-  assert.equal(h.length, 10)
-  assert.equal(h[0].angle, 96)
-  assert.equal(h[9].angle, 105)
+  const total = HISTORY_DEPTH + 5
+  for (let n = 1; n <= total; n++) h = pushLook(h, look(n))
+  assert.equal(h.length, HISTORY_DEPTH)
+  assert.equal(h[0].angle, 90 + 6)
+  assert.equal(h[HISTORY_DEPTH - 1].angle, 90 + total)
 })
 
 test('an empty history has nowhere to go and pop leaves it alone', () => {
