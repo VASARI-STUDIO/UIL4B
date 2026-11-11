@@ -179,7 +179,11 @@ test.describe('the UI kit export', () => {
     // Reopened, the panel still holds what was typed. The popup stays open after a
     // download, so closing it is a step of its own; it gives its history entry back
     // asynchronously, and a reload that starts before that settles is cancelled by it.
-    await page.keyboard.press('Escape')
+    // Closed with its own button: after a download, focus is not always inside the
+    // popup, so an Escape could land on the page instead.
+    const close = panel.getByRole('button', { name: 'Close export' })
+    await expect(close).not.toHaveAttribute('aria-disabled', 'true')
+    await close.click()
     await expect(panel).toBeHidden()
     await overlaysSettled(page, 'the closed Export panel')
     await page.reload()
