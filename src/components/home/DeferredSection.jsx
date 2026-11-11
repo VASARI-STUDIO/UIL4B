@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useReducer, useRef, useState } from 'react'
 import ChunkBoundary from './ChunkBoundary'
 import './deferredSection.css'
 
@@ -34,7 +34,7 @@ function Hold({ holdId, size, holdRef, failed = false }) {
  *  deferredSection.css (bookmarks, try, exports, examples or plans). It mounts when `ready` or once its stand-in is
  *  near the viewport, with the stand-in before that and while its chunk
  *  (stylesheet included) downloads. */
-export default function DeferredSection({ ready, holdId, size, children }) {
+export default function DeferredSection({ ready, holdId, size, load, children }) {
   const holdRef = useRef(null)
   const [near, setNear] = useState(false)
   // Without IntersectionObserver nothing can say when a section is near, so load it.
@@ -49,6 +49,18 @@ export default function DeferredSection({ ready, holdId, size, children }) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [open])
+
+  // Once the chunk is in, re-render at the default lane so the boundary reads the resolved
+  // lazy. React retries a suspended boundary at a retry lane, which never expires, and the
+  // hero's typed phrase and loop commit default-lane updates often enough on a slow device
+  // to throw that retry away, leaving the stand-in up although the section has loaded.
+  const [, nudge] = useReducer((n) => n + 1, 0)
+  useEffect(() => {
+    if (!open || !load) return undefined
+    let live = true
+    load().then(() => { if (live) nudge() }, () => {})
+    return () => { live = false }
+  }, [open, load])
 
   const hold = <Hold holdId={holdId} size={size} holdRef={holdRef} />
   if (!open) return hold
