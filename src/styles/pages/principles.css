@@ -55,6 +55,10 @@
  * below, and none should be added.
  */
 
+/* The sign-up block sits one flex gap below its sibling, so its own margin is
+ * the board's gap less that. */
+.prn > .rd-end { margin-top: calc(var(--rd-gap) - var(--cpg-sec)); }
+
 /* ── The hero ── */
 
 .prn-hero { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-5); padding-top: var(--s-7); padding-bottom: clamp(72px, 8.4vw, 120px); width: 100%; min-width: 0; }
