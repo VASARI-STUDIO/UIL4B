@@ -604,11 +604,16 @@ export const HOME_LAZY_SECTIONS = ['bookmarks', 'try', 'exports', 'examples', 'p
  * wheel, touchstart, keydown or pointerdown. Until a section arrives its id sits
  * on an empty stand-in of about its final height, and a test that measures or
  * scrolls before then reads the stand-in. A wheel nudge opens every section at
- * once instead of waiting for the viewport to come near them, and each section
- * is waited for by its own heading, which only the real section renders.
+ * once instead of waiting for the viewport to come near them. The page attaches
+ * that listener after the route commits, so the wheel is sent on every poll until
+ * no stand-in is left; then each section is waited for by its own heading, which
+ * only the real section renders.
  */
 export async function homeSectionsLoaded(page) {
-  await page.mouse.wheel(0, 1)
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, 1)
+    return page.locator('[data-deferred-hold]').count()
+  }, { message: 'the below-fold sections never mounted', timeout: 20000, intervals: [500] }).toBe(0)
   for (const id of HOME_LAZY_SECTIONS) {
     await expect(page.locator(`#${id} h2`), `the ${id} section never loaded`).toBeAttached({ timeout: 20000 })
   }
