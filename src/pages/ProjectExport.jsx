@@ -1,6 +1,8 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import ProjectLinkGone from '../components/userhome/ProjectLinkGone'
+import { useWasSignedIn } from '../hooks/useWasSignedIn'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { DEFAULT_PRESET, presetFromGalleryPick, readLastPick, resolvePreset } from '../config/dialogExport'
@@ -29,6 +31,7 @@ function ProjectExport({ id }) {
   const { loading: authLoading, user } = useAuth()
   const { projects, canSaveProjects, projectsLoading, loadProject, renameProject } = useProject()
   const project = projects.find((p) => p.id === id)
+  const wasSignedIn = useWasSignedIn(canSaveProjects)
 
   // A pick made before a trip to checkout is applied when it is this project's and this account's. It
   // arrives from the checkout page's "Back to your export" link (router state), or from the stored copy.
@@ -62,7 +65,7 @@ function ProjectExport({ id }) {
   if (unknown && !gaveUp) {
     return <div className="pxg" role="status"><p className="pxg-lede">Opening your project…</p></div>
   }
-  if (!canSaveProjects || !project) return <Navigate to="/projects" replace />
+  if (!canSaveProjects || !project) return <ProjectLinkGone quiet={wasSignedIn && !canSaveProjects} />
 
   const name = project.name
 

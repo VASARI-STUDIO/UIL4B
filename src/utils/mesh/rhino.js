@@ -37,7 +37,7 @@ const verifiedLibs = sharedDownload(async (report, signal) => {
     ])
   } catch (err) {
     if (err?.name === 'IntegrityError') throw err
-    throw new Error(`the Rhino engine could not be fetched (${err?.message || err})`)
+    throw new Error(`the Rhino engine could not be fetched (${err?.message || err})`, { cause: err })
   }
 })
 

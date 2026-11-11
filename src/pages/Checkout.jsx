@@ -91,6 +91,7 @@ const SESSION_DEBOUNCE_MS = 400
 const EMBED_TIMEOUT_MS = 20000
 const EMBED_TIMEOUT_ERROR = 'The payment form is taking too long to load. Check your connection, then try again.'
 const STRIPE_LOAD_ERROR = 'The payment form couldn’t load. Check your connection, then try again.'
+const ALREADY_PRO_MESSAGE = 'You’re already on Pro, so there’s nothing to buy. Your plan is managed here.'
 
 function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
   const nodeRef = useRef(null)
@@ -348,9 +349,12 @@ export default function Checkout() {
   // A failed load is not cached; the form asks again and reports it.
   useEffect(() => { if (user) getStripe()?.catch(() => {}) }, [user])
 
-  // Already-Pro accounts have nothing to buy here.
+  // Already-Pro accounts have nothing to buy here: they go to Settings, and are told why.
+  // A buyer whose payment started on this page and has just gone through is not told "already".
   useEffect(() => {
-    if (!loading && user && isPro) navigate('/settings', { replace: true })
+    if (loading || !user || !isPro) return
+    if (!startedSent.current) window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message: ALREADY_PRO_MESSAGE, type: 'info' } }))
+    navigate('/settings', { replace: true })
   }, [user, loading, isPro, navigate])
 
   // Choosing a period needs no account; paying does. The popup opens over this

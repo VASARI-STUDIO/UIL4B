@@ -88,6 +88,7 @@ async function iconRulesText() {
       throw new Error(
         'docs/design/community-icon-rules.patch no longer applies to firestore.rules, '
         + `so the icon cases cannot be run. Regenerate the patch. ${error.message}`,
+        { cause: error },
       )
     }
     return await readFile(path.join(scratch, 'firestore.rules'), 'utf8')
@@ -150,7 +151,7 @@ async function refused(label, promise) {
   try {
     await assertFails(promise)
   } catch (error) {
-    throw new Error(`${label} should have been refused: ${error.message}`)
+    throw new Error(`${label} should have been refused: ${error.message}`, { cause: error })
   }
 }
 

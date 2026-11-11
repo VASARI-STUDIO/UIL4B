@@ -47,7 +47,7 @@ test('the tints menu locks for a free account and gates on press', () => {
 
 test('a tint is applied through updateStop, so the gallery edit guard still applies', () => {
   const src = read('src/pages/GradientGenerator.jsx')
-  assert.match(src, /updateStop\(tintMenu\.idx, \{ color: hex \}\)/)
+  assert.match(src, /updateStop\(tintMenu\.idx, \{ color: hex \}, false\)/)
 })
 
 test('the menu offers eleven tints, light to dark, each a valid six-digit hex', () => {

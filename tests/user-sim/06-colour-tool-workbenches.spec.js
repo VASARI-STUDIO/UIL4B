@@ -26,7 +26,7 @@ test.describe('Gradient Generator workbench resilience', () => {
     await expect(firstHex).toHaveValue(FIRST_STOP)
     await firstHex.fill('#NOTHEX')
     await expect(firstHex).toHaveAttribute('aria-invalid', 'true')
-    await expect(page.getByText('Use a 6-digit hex')).toBeVisible()
+    await expect(page.getByText('Use a hex like #2F6BFF')).toBeVisible()
     await firstHex.press('Enter')
     await expect(firstHex).toHaveValue(FIRST_STOP)
 

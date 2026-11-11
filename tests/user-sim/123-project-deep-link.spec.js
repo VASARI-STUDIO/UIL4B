@@ -65,15 +65,59 @@ for (const width of [390, 1440]) {
   })
 }
 
-test('an unknown project id still ends at the workspace once the account has answered', async ({ page }) => {
-  watch(page, 'a designer following a link to a project that does not exist')
-  await freshDevice(page)
-  await go(page, '/projects/not-a-project')
+// ── A LINK THAT CANNOT OPEN SAYS WHY ────────────────────────────────────────
+//
+// Signed in, the link ends at the workspace with one line that does not say
+// whether the project exists for someone else. Signed out, it goes to sign-in
+// and, once they are in, to the project. Signing out from the project page
+// itself is the visitor's own choice and goes to the workspace with nothing said.
+//
+// ── MUTATION ────────────────────────────────────────────────────────────────
+// In ProjectLinkGone.jsx return <Navigate to="/projects" replace /> for every
+// case (or drop the toast dispatch): the first two tests lose the line, the
+// signed-out ones stop at /projects.
+const GONE = /That project isn.t in your account\. It may have been deleted\./
+const toastLine = (page) => page.locator('.toast.show').filter({ hasText: GONE })
 
-  // Not bounced while the account is still being read.
-  await expect(page.locator('.uh-resolving')).toBeVisible()
-  await expect(page).toHaveURL(/\/projects\/not-a-project$/)
+for (const path of ['/projects/not-a-project', '/projects/not-a-project/export']) {
+  test(`an unknown project link ${path.endsWith('export') ? '(export) ' : ''}ends at the workspace and says why once the account has answered`, async ({ page }) => {
+    watch(page, 'a designer following a link to a project that does not exist')
+    await freshDevice(page)
+    await go(page, path)
 
-  await expect(page).toHaveURL(/\/projects$/, { timeout: HOLD_MS + 8000 })
-  await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' })).toBeVisible()
+    // Not bounced while the account is still being read.
+    await expect(page.getByText('Opening your project…')).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`${path}$`))
+
+    await expect(page).toHaveURL(/\/projects$/, { timeout: HOLD_MS + 8000 })
+    await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' })).toBeVisible()
+    await expect(toastLine(page), 'the link was dropped without a word').toBeVisible()
+  })
+}
+
+for (const suffix of ['', '/export']) {
+  test(`a signed-out project link${suffix ? ' (export)' : ''} goes to sign-in and back to the project once they are in`, async ({ page }) => {
+    watch(page, 'someone opening an emailed project link while signed out')
+    await signIn(page, { plan: 'free', lateSignIn: true, projects: [remoteProject('p1', 'Autumn Rebrand')] })
+    await go(page, `/projects/p1${suffix}`)
+
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/login')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
+    await expect(toastLine(page), 'a signed-out visitor was told the project is not in their account').toHaveCount(0)
+
+    await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe(`/projects/p1${suffix}`)
+    if (!suffix) await expect(page.getByRole('heading', { level: 1, name: 'Autumn Rebrand' })).toBeVisible()
+  })
+}
+
+test('signing out from a project page goes to the workspace, not to sign-in, and says nothing', async ({ page }) => {
+  watch(page, 'a designer signing out while a project is open')
+  await signIn(page, { plan: 'free', projects: [remoteProject('p1', 'Autumn Rebrand')] })
+  await go(page, '/projects/p1')
+  await expect(page.getByRole('heading', { level: 1, name: 'Autumn Rebrand' })).toBeVisible()
+
+  await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signOutNow())
+  await expect(page).toHaveURL(/\/projects$/)
+  await expect(toastLine(page), 'signing out was met with a project-not-found line').toHaveCount(0)
 })

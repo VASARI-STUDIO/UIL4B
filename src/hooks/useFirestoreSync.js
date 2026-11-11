@@ -178,14 +178,14 @@ export function useFirestoreSync(uid) {
         try { window.dispatchEvent(new CustomEvent('uil4b:toast', { detail: { message, type: 'info' } })) } catch { /* no window */ }
       }
       for (const item of result.setAside || []) {
-        let kept = null
+        let kept
         try { kept = parkIfAtRisk({ design: item.value, projects: [], storage: ls }) } catch { kept = null }
         if (kept?.slot) {
           announceApplied([PARKED_KEY, PARKED_SHELF_KEY])
           if (kept.fresh) say('Signed in. The brand kit your account had from another device is in Your workspace.')
           continue
         }
-        let draftKept = false
+        let draftKept
         try { draftKept = !!parkIfAtRisk({ design: before[item.key], projects: [], storage: ls }).slot } catch { draftKept = false }
         const back = applyToStorage(ls, meta, { [item.key]: item.value })
         meta.stamps[item.key] = item.stamp || meta.stamps[item.key]

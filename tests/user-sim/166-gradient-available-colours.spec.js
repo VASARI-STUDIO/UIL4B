@@ -298,7 +298,7 @@ test.describe('Palette row · pressing a chip', () => {
     await open(page)
     // POSITIVE CONTROL: the page is the locked one.
     await expect(hexOf(page, 1)).toHaveText(SEED_STOPS[0])
-    await expect(page.getByText('Gallery gradient — free to preview & copy')).toBeVisible()
+    await expect(page.getByText('Gallery gradient: free to preview and copy')).toBeVisible()
     await chip(page, 'Secondary 500').click()
     await expect(page.getByText('Editing gallery gradients is Pro')).toBeVisible()
     await expect(hexOf(page, 1), 'the free account did not get the edit').toHaveText(SEED_STOPS[0])
