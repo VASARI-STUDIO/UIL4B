@@ -225,3 +225,14 @@ html[data-theme="light"] .stg.stg .stg-scrim { background: rgba(18, 20, 24, .45)
 }
 @keyframes stg-sheet { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .stg.stg .stg-dlg, .stg.stg .stg-scrim { animation: stg-fade 120ms linear; } }
+
+/* phone: the section bar scrolls sideways; the older 720px list rules (clipped, bordered, 52px rows) no longer apply to it */
+@media (max-width: 720px) {
+  .stg.stg .settings-nav { display: flex; width: 100%; overflow-x: auto; overflow-y: hidden; border: 0; border-radius: 999px; background: var(--raised); scrollbar-width: none; overscroll-behavior-x: contain; }
+  .stg.stg .settings-nav::-webkit-scrollbar { display: none; }
+  .stg.stg .settings-nav-item { flex: none; min-height: 44px; height: 44px; padding: 0 16px; border: 0; border-bottom: 0; border-radius: 999px; font-size: 14px; color: var(--sec); }
+  .stg.stg .settings-nav-item.active { color: var(--ink); }
+  .stg.stg .settings-nav-item .stg-chev { display: none; }
+  .stg.stg .settings-section-h h2 { font-size: 28px; }
+  .stg.stg .settings-section-h p { font-size: 16px; }
+}
