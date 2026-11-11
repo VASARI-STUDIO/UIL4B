@@ -35,6 +35,8 @@
 @property --lart-measure{syntax:'<length>';inherits:true;initial-value:0px}
 
 .lart{--lart-measure:68ch;--lart-y:clamp(72px,8.4vw,120px);font-size:17px;max-width:1336px}
+@media(min-width:768px){.lart{--lart-y:104px}}
+@media(min-width:1200px){.lart{--lart-y:120px}}
 
 /* The meta style: the one voice for everything that is a label rather than a
    value. Mono is kept for literal values (code, formulas, hex, numeric cells). */
