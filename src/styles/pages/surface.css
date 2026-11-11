@@ -229,7 +229,8 @@
   .srf .lidx-ol li a { display: flex; align-items: center; min-height: 44px; }
   .srf .lidx-ol[data-open="false"] { display: none; }
   .srf .lidx-reset { height: 44px; }
-  .srf .lidx-title { padding: 0; }
+  .srf .lidx-title { padding-block: 11px; margin-block: -11px; }
+  .srf .lidx-ty .srf-td-l { padding-block: 12px; margin-block: 0 -8px; }
 }
 @media (max-width: 374px) {
   .srf .srf-row2 { grid-template-columns: 1fr; }
