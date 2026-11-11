@@ -7,8 +7,11 @@
 //                   /checkout on the SAME plan, and one who came from the export
 //                   gallery keeps `from=kit-gallery`. No error card in between.
 //   anything else   expired, an unpaid one-off, a 500, a dropped connection: the
-//                   page says it could not confirm, and offers both ways on
-//                   (Back to Plans, Back to settings), each of which works.
+//                   page says it could not confirm, and offers the ways on: Check again,
+//                   Back to Plans and a Settings link, each of which works. (Since the
+//                   #569 redesign "Back to settings" is a plain "Settings" link under the
+//                   buttons on this card; the "Back to Plans" + "Back to settings" pair now
+//                   lives on the no-session_id card, which has its own test below.)
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // CheckoutReturn.jsx, the `data.status === 'open'` branch:
@@ -16,7 +19,8 @@
 //     (the monthly test fails);
 //   · drop the `&from=kit-gallery` suffix (the gallery test fails);
 //   · make `open` fall through to setState('error') (every open test fails).
-// The error branch: render nothing for 'error', or point "Back to Plans" at /checkout.
+// The error branch: render nothing for 'error', or point "Back to Plans" at /checkout, or
+// point the Settings link anywhere but /settings.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -44,7 +48,8 @@ test.describe('a checkout that was never finished goes back to checkout', () => 
     await arrive(page, '/checkout/return?session_id=cs_test_open_m', 200, { status: 'open', interval: 'monthly' })
     await expect.poll(() => page.url().replace(/^https?:\/\/[^/]+/, '')).toBe('/checkout?plan=monthly')
     await expect(periodRadio(page, 'Monthly')).toBeChecked()
-    await expect(page.locator('.checkout-return-card'), 'no error card on the way back').toHaveCount(0)
+    await expect(page.locator('.checkout-return-card'), 'no invalid-selection card on the way back').toHaveCount(0)
+    await expect(page.locator('.co-return'), 'the return page is gone, not left on screen').toHaveCount(0)
   })
 
   test('open on the yearly plan returns to /checkout?plan=yearly with Yearly chosen', async ({ page }) => {
@@ -81,38 +86,49 @@ const FAILURES = [
   { name: 'a 404 for a session that does not exist', status: 404, body: { error: 'No such session' } },
 ]
 
-test.describe('a checkout that cannot be confirmed says so and offers both ways on', () => {
+test.describe('a checkout that cannot be confirmed says so and offers the ways on', () => {
   for (const failure of FAILURES) {
-    test(`${failure.name}: the error card with Back to Plans and Back to settings`, async ({ page }) => {
+    test(`${failure.name}: the could-not-confirm page with Check again, Back to Plans and Settings`, async ({ page }) => {
       await arrive(page, '/checkout/return?session_id=cs_test_fail', failure.status, failure.body)
-      const card = page.locator('.checkout-return-card')
-      await expect(card.getByRole('heading', { level: 1 })).toHaveText(/couldn.t confirm your checkout/i)
+      const card = page.locator('.co-return')
+      await expect(card.getByRole('heading', { level: 1 })).toHaveText(/couldn.t confirm this payment/i)
+      await expect(card.getByRole('button', { name: 'Check again' })).toBeVisible()
       await expect(card.getByRole('link', { name: 'Back to Plans' })).toHaveAttribute('href', '/plans')
-      await expect(card.getByRole('link', { name: 'Back to settings' })).toHaveAttribute('href', '/settings')
+      await expect(card.getByRole('link', { name: 'Settings', exact: true })).toHaveAttribute('href', '/settings')
+      await expect(card.locator('.co-ref-code'), 'the reference to quote to support is shown (last 8 characters only)').toHaveText('…est_fail')
       await expect(card.getByText(/You.re on UI L4B Pro|Payment received/), 'it does not claim a payment').toHaveCount(0)
       expect(pathOf(page), 'it stays here rather than bouncing').toBe('/checkout/return')
     })
   }
 
-  test('a dropped connection is the same error card', async ({ page }) => {
+  test('a dropped connection is the same could-not-confirm page', async ({ page }) => {
     watch(page, 'a buyer whose connection dropped on the way back')
     await signIn(page, { plan: 'free' })
     await page.route('**/api/checkout-status*', (route) => route.abort('connectionfailed'))
     await go(page, '/checkout/return?session_id=cs_test_drop')
-    const card = page.locator('.checkout-return-card')
-    await expect(card.getByRole('heading', { level: 1 })).toHaveText(/couldn.t confirm your checkout/i)
+    const card = page.locator('.co-return')
+    await expect(card.getByRole('heading', { level: 1 })).toHaveText(/couldn.t confirm this payment/i)
     await expect(card.getByRole('link', { name: 'Back to Plans' })).toBeVisible()
-    await expect(card.getByRole('link', { name: 'Back to settings' })).toBeVisible()
+    await expect(card.getByRole('link', { name: 'Settings', exact: true })).toBeVisible()
   })
 
-  test('Back to Plans opens /plans and Back to settings opens /settings', async ({ page }) => {
+  test('a return link with no session id says no payment is attached, and offers Back to Plans and Back to settings', async ({ page }) => {
+    await arrive(page, '/checkout/return', 200, { status: 'expired' })
+    const card = page.locator('.co-return')
+    await expect(card.getByRole('heading', { level: 1 })).toHaveText(/no payment attached/i)
+    await expect(card.getByRole('link', { name: 'Back to Plans' })).toHaveAttribute('href', '/plans')
+    await expect(card.getByRole('link', { name: 'Back to settings' })).toHaveAttribute('href', '/settings')
+    expect(pathOf(page), 'it stays here rather than bouncing').toBe('/checkout/return')
+  })
+
+  test('Back to Plans opens /plans and Settings opens /settings', async ({ page }) => {
     await arrive(page, '/checkout/return?session_id=cs_test_links', 200, { status: 'expired' })
-    const card = page.locator('.checkout-return-card')
+    const card = page.locator('.co-return')
     await card.getByRole('link', { name: 'Back to Plans' }).click()
     await expect.poll(() => pathOf(page)).toBe('/plans')
     await page.goBack()
     await expect.poll(() => pathOf(page)).toBe('/checkout/return')
-    await page.locator('.checkout-return-card').getByRole('link', { name: 'Back to settings' }).click()
+    await page.locator('.co-return').getByRole('link', { name: 'Settings', exact: true }).click()
     await expect.poll(() => pathOf(page)).toBe('/settings')
   })
 })
