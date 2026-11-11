@@ -268,12 +268,14 @@ export default function HomeExports({ live = EXPORT_THEMES_LIVE }) {
       })
       cover()
     }
+    // The root reaches far below the screen, so a tracker counts as intersecting everywhere under the top edge and
+    // the observer reports each crossing of that edge, even a jump from far below to far above in one scroll.
     const watcher = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         arrived[Number(entry.target.dataset.track)] = !entry.isIntersecting && entry.boundingClientRect.bottom <= 0
       })
       cover()
-    })
+    }, { rootMargin: '0px 0px 100000px 0px' })
     trackRefs.current.forEach((track, index) => { if (track && index > 0) watcher?.observe(track) })
     dock()
     window.addEventListener('resize', dock)
