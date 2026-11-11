@@ -1943,9 +1943,12 @@ export default function Settings({ toast }) {
                   <div className="settings-row-main">
                     <div className="settings-row-label">Export</div>
                     <div className="settings-row-meta">
-                      {user && !online && 'You’re offline, so this file has this browser’s copy only. '}
-                      A JSON copy of everything — every key in this browser
-                      {user ? ', plus your account’s copy from the server' : ''}
+                      {user && !online
+                        ? 'You’re offline, so this file has this browser’s copy only: every key in this browser. Reconnect to add your account’s copy.'
+                        : <>
+                          A JSON copy of everything — every key in this browser
+                          {user ? ', plus your account’s copy from the server' : ''}
+                        </>}
                     </div>
                     {exportGap && <div className="settings-field-err settings-export-gap" role="status">{exportGap}</div>}
                   </div>
@@ -1963,6 +1966,7 @@ export default function Settings({ toast }) {
                     </div>
                     {confirmClear && (
                       <div className="settings-row-meta settings-clear-warn" role="status">
+                        {`This clears ${localKeyCount} item${localKeyCount === 1 ? '' : 's'} from this browser. `}
                         {user ? 'Your account copy is not affected.' : 'This deletes them for good.'}
                       </div>
                     )}
