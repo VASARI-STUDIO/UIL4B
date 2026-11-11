@@ -9,7 +9,7 @@
 // 🤫 "still building" state, so they carry `soon: true` and show a "Soon" badge
 // in the nav. The first LIVE category is Icons & Emoji (`soon: false`) — its
 // tools mount for real inside the Create shell. Each tool ALSO carries its own
-// `soon` flag: when the founder builds a category they flip the group to
+// `soon` flag: when a category is built its group is flipped to
 // `soon: false`, and any still-unbuilt sub-tool then surfaces its own badge.
 // Category `hue` maps to a `--hue-*` token in global.css via `data-hue` (never
 // an inline colour).
@@ -121,8 +121,8 @@ export const CREATE_GROUPS = [
 // /create/imagery, /create/ai-tools and /create/icons-emoji are redirects, not
 // destinations; /create/components is `soon` and renders the workshop state.
 // /create/color used to be the one exception — App.jsx intercepted it above
-// CreateTool and rendered ColorLanding, the colour sales page. The founder
-// deleted that landing on 2026-09-18 when Spectrum became `/`, so the intercept
+// CreateTool and rendered ColorLanding, the colour sales page. That
+// landing was deleted when Spectrum became `/`, so the intercept
 // is gone and the colour home bounces to /create/palette like the other four.
 // It keeps its 301 as well, in src/data/legacyRoutes.js, because unlike the
 // other four it WAS a prerendered, indexed page.
@@ -195,6 +195,8 @@ export function createTools({ includeHidden = false } = {}) {
       // flag. A tool cannot be beta by virtue of its group -- a category is
       // not a maturity -- so this is the tool's own flag only.
       beta: !!t.beta,
+      // 'YYYY-MM-DD', set when a tool goes live; the roadmap lists it as Shipped for 90 days.
+      ...(t.shipped ? { shipped: t.shipped } : {}),
     })),
   )
 }
@@ -347,25 +349,25 @@ export const HOME_FAMILY_LABEL = Object.fromEntries(HOME_WORKBENCH_TABS.map((t) 
 //   render and is not a retired URL.
 const DISCOVER_SPEC = [
   { id: 'palette-library', icon: 'palette', label: 'Palette Library', desc: 'Curated colour systems ready to copy, save or open in the Palette Builder.', route: '/discover/palettes', soon: false },
-  { id: 'gradient-gallery', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
+  { id: 'gradient-gallery', icon: 'gradient-library', label: 'Gradient Library', desc: 'A curated set of production-ready CSS gradients — copy one, or open it in the generator.', route: '/discover/gradients', soon: false },
+  { id: 'button-library', icon: 'button-library', label: 'Button Library', desc: 'Ten button designs with every state built in — copy the HTML and CSS, or edit size, corners and colour with Pro.', route: '/discover/buttons', soon: false },
   { id: 'font-gallery', icon: 'type', label: 'Font Gallery', desc: 'Browse, compare and test the Google Fonts catalogue with full live specimens.', tool: 'font-gallery' },
   // Reachable from BOTH surfaces on purpose. The page is already a Discover
   // gallery in everything but its URL — #292 put it on the shared Library
   // browse components and #306 put it under DiscoverGalleryHero — so listing it
-  // here is the founder's “access icon library from the discover tab” without a
+  // here gives access to the icon library from the Discover tab without a
   // canonical move. Same shape as Font Gallery above: one entry, one live route,
   // no redirect table entry and no change to the prerendered route count. The
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
-  { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
-  // /community has been live since #472 and this row was still pointing at
-  // /discover — the surface the visitor is already standing on — with a Soon
-  // badge on it. The mega menu, the mobile sheet and the visual sitemap all
-  // render this one row, so the site said "Soon" for a page it was serving 200
-  // for in three places at once. Route and flag both corrected; the desc was
-  // already written for the live page and is untouched.
-  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: false },
-  { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
+  { id: 'icon-library', icon: 'icon-library', label: 'Icon Library', desc: 'Search icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
+  // A place to take part rather than a library to copy from, so it carries
+  // `library: false`: the counts and sentences that say "libraries" skip it
+  // (DISCOVER_LIBRARIES below). The id stays `inspiration` because the menu
+  // glyph and its hover moment are keyed on it.
+  { id: 'inspiration', label: 'Community', desc: 'Browse design inspiration, save your favourites and submit your own.', route: '/community', soon: false, library: false },
+  // The Prompt Library (/discover/prompts) is parked behind the admin gate, so
+  // no public list names it. Add its row back here when it opens up.
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
 
@@ -375,6 +377,9 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
   const tool = requireTool(id, 'DISCOVER_SPEC')
   return { ...rest, route: tool.route, soon: tool.soon }
 })
+
+/** The live Discover rows that are libraries: what a "libraries open" count means. */
+export const DISCOVER_LIBRARIES = DISCOVER_GROUPS.filter((row) => !row.soon && row.library !== false)
 
 // The live Learn articles. LEARN_GROUPS below is the TOPIC roadmap — areas the
 // section will cover — and an article is a page that exists. Keeping them apart
@@ -392,7 +397,7 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
 // rather than LEARN_GROUPS. Not tidiness: a delivered row and its guide carry
 // the SAME route, so rendering both puts two rows with one `data-route` into
 // the visual sitemap and two links to one page into the mega menu.
-import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from './learnIndex.js'
+import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, readingMinutes } from './learnIndex.js'
 
 export const LEARN_GROUPS = [
   // Reference pages share the Learn prefix with published guides.
@@ -403,7 +408,7 @@ export const LEARN_GROUPS = [
   { id: 'seo', label: 'SEO', desc: 'Small-business and specialist playbooks.', route: '/learn', soon: true },
   { id: 'marketing', label: 'Marketing', desc: 'Positioning, messaging and social.', route: '/learn', soon: true },
   { id: 'ai-assistants', label: 'AI Coding Assistants', desc: 'Ship faster with AI in the loop.', route: '/learn', soon: true },
-  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn/help', soon: false, accent: true },
+  { id: 'help', label: 'Help and getting started', desc: 'Everything to get productive fast.', route: '/learn/help', soon: false, accent: true },
 ]
 
 /**
@@ -465,15 +470,16 @@ export const LEARN_TOPIC_ROWS = LEARN_GROUPS.filter(
 // Which NavIcon glyph a tool row shows. Presentation only: an id missing here
 // falls back to the tool's own id, which is what NavIcon keys on anyway.
 const MENU_ICONS = {
+  palette: 'palette-strip',
   'font-gallery': 'type',
-  'type-scale': 'typography',
+  'type-scale': 'type-scale',
   'component-designer': 'component',
   'auto-builder': 'ai',
-  icons: 'icons',
+  icons: 'icon-library',
   emoji: 'emoji',
-  'file-converter': 'imagery',
+  'file-converter': 'file-converter',
   // No cube glyph in NavIcon yet; it shares the imagery mark with the converter.
-  '3d-converter': 'imagery',
+  '3d-converter': '3d-converter',
   'ai-prompt': 'ai',
   'landing-prompts': 'marketing',
 }
@@ -544,9 +550,28 @@ const CREATE_MENU = buildCreateMenu()
 
 // Discover / Learn have flat groups with no sub-tools; deal them into the same
 // { label, tools } column shape so the menu renderer is uniform. Each group maps
-// to one row: icon = the group id (NavIcon carries a glyph per id) and hue falls
-// back to accent (these surfaces carry no category hue), with the conversion-
-// adjacent Help row flagged `accent`.
+// to one row: icon = the group id (NavIcon carries a glyph per id), `desc` is the
+// group's own line (the menu's readout shows it on hover), and `hue` is the
+// category tile from MENU_ROW_HUE (anything unlisted is neutral).
+//
+// Which category a Discover library or a Learn guide belongs to is presentation,
+// so it is declared here, as the menu drawing has it. Inspiration, Design
+// Principles and Help are in no category and stay neutral.
+const MENU_ROW_HUE = {
+  'palette-library': 'colour',
+  'gradient-gallery': 'colour',
+  'button-library': 'neutral',
+  'font-gallery': 'type',
+  'icon-library': 'icons',
+  'learn-colour-contrast': 'colour',
+  'learn-type-scales': 'type',
+  'learn-typeface-metrics': 'type',
+  'learn-font-loading': 'type',
+  'learn-colour-spaces': 'colour',
+  'learn-theme-systems': 'colour',
+  'learn-brand-colour': 'colour',
+}
+
 function groupsToMenu(groups, spec) {
   const seen = new Set()
   const toRow = (g) => ({
@@ -554,7 +579,8 @@ function groupsToMenu(groups, spec) {
     label: g.label,
     route: g.route,
     icon: g.icon || g.id,
-    hue: g.accent ? 'accent' : undefined,
+    desc: g.desc,
+    hue: MENU_ROW_HUE[g.id] || 'neutral',
     soon: !!g.soon,
   })
   const cols = spec.map(({ label, ids }) => ({
@@ -574,22 +600,23 @@ function groupsToMenu(groups, spec) {
 }
 
 const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
-  { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library'] },
-  { label: 'Community', ids: ['inspiration', 'community-prompts'] },
+  { label: 'Browse', ids: ['palette-library', 'gradient-gallery', 'font-gallery', 'icon-library', 'button-library'] },
+  { label: 'Inspiration', ids: ['inspiration'] },
   { label: 'Your library', ids: ['collections'] },
 ])
 
 // Which NavIcon glyph a Learn article row shows. Presentation, so it lives here
 // beside MENU_ICONS rather than in learnIndex.js — that file has to stay
 // parseable by the Node build scripts and has no business knowing about icons.
-const LEARN_ARTICLE_ICONS = {
-  'colour-contrast': 'contrast',
-  'type-scales': 'typography',
-  'typeface-metrics': 'type',
+export const LEARN_ARTICLE_ICONS = {
+  'colour-contrast': 'guide-contrast',
+  'type-scales': 'guide-scale',
+  'typeface-metrics': 'guide-metrics',
   'font-loading': 'loading',
-  'colour-spaces': 'palette',
-  'theme-systems': 'themes',
-  'brand-colour': 'brand',
+  'colour-spaces': 'guide-colour-spaces',
+  'theme-systems': 'guide-theme',
+  'brand-colour': 'guide-brand',
+  'improving-value-proposition': 'marketing',
 }
 
 // The articles dealt into the menu's row shape. They are not folded into
@@ -598,9 +625,13 @@ const LEARN_ARTICLE_ICONS = {
 // fake group or every group a fake route.
 const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
   id: `learn-${a.slug}`,
-  label: a.navLabel,
+  // The page's own title, so the menu and the page never name a guide two ways.
+  label: a.title,
+  mins: `${readingMinutes(a.words)} min`,
   route: `/learn/${a.slug}`,
   icon: LEARN_ARTICLE_ICONS[a.slug] || 'principles',
+  desc: a.dek,
+  hue: MENU_ROW_HUE[`learn-${a.slug}`] || 'neutral',
   soon: false,
 }))
 
@@ -612,8 +643,8 @@ const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
 const LEARN_MENU = [
   [{ label: 'Guides', tools: LEARN_ARTICLE_ROWS }],
   ...groupsToMenu(LEARN_TOPIC_ROWS, [
-    { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
-    { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
+    { label: 'Foundations', ids: ['help', 'principles'] },
+    { label: 'Coming soon', ids: ['seo', 'marketing', 'ai-assistants'] },
   ]),
 ]
 
@@ -629,10 +660,10 @@ const LEARN_MENU = [
 // it's honest and on-brand, but it hasn't been through a copy pass. Flag for review.
 /** Live Discover libraries, menu order, with the category noun trimmed off. */
 function liveDiscoverGroups() {
-  return DISCOVER_GROUPS.filter((group) => !group.soon)
+  return DISCOVER_LIBRARIES
 }
 
-/** "Palettes, gradients, fonts, icons and prompts" — assembled, never typed. */
+/** "Palettes, gradients, fonts, icons and buttons" — assembled, never typed. */
 function discoverPromoTitle() {
   const names = liveDiscoverGroups()
     .map((group) => group.label.replace(/ (?:Library|Gallery|Resources)$/, ''))
@@ -650,7 +681,7 @@ function discoverPromoBlurb() {
 
 export const NAV_SECTIONS = [
   {
-    id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_MENU, viewAllHref: '/sitemap', width: 960,
+    id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_MENU, viewAllHref: '/tools', width: 960,
     promo: {
       eyebrow: 'Brand kit',
       title: 'Build your brand kit, step by step',
@@ -670,26 +701,24 @@ export const NAV_SECTIONS = [
       // DERIVED, BECAUSE THE TYPED VERSION WAS FALSE.
       //
       // It read 'Inspiration worth the tab' over 'Community UI systems, font
-      // pairings and prompts — curated, never scraped.' Inspiration and
-      // Collections are the two DISCOVER_GROUPS carrying `soon: true`, so the
-      // heading led on an unbuilt surface and the blurb opened by promising
+      // pairings and prompts — curated, never scraped.' The heading led on a
+      // surface that was not built and the blurb opened by promising
       // community UI systems that do not exist. "curated, never scraped" is
-      // also the "not an X" defensive negation the founder rejected by name on
+      // also the "not an X" defensive negation that was rejected on
       // the export heading and on /discover's own h1.
       //
       // Both are COUNTED off the groups the menu is already listing, which is
       // the fix the 404 suggestions and the /plans delta took before it: a
       // claim that is computed cannot go stale, and a library that ships later
       // appears here on the next build with nobody remembering to edit a
-      // sentence. Inspiration is simply not mentioned — it carries its own
-      // Soon badge in the column beside this card, which is where that fact
-      // belongs. Counted from DISCOVER_GROUPS only: importing the palette and
+      // sentence. Only the library rows are named (DISCOVER_LIBRARIES), so the
+      // Community row, which is not one, is left to its own row in the
+      // column beside this card. Counted from the groups only: importing the palette and
       // gradient arrays to print their lengths would pull 137 records into
       // every bundle that loads the nav, which is every page.
       //
-      // This is an inventory, not a voice. The sentence with a point of view
-      // is still the founder's to write — see the anti-slop audit row in
-      // pipeline.js, which lists the three nav promo lines as his.
+      // This is an inventory, not a voice. A sentence with a point of view
+      // is still the owner's to write.
       title: discoverPromoTitle(),
       blurb: discoverPromoBlurb(),
       href: '/discover',
@@ -776,6 +805,26 @@ export function resolveTool(pathname) {
   const tool = isHome ? null : group.tools.find((t) => toolOwns(t, path)) || null
   const name = tool ? tool.label : group.label
   return { group, tool, name, isHome }
+}
+
+// Whether a Create pathname renders the "still in the workshop" state. A tool
+// inside a Soon group is Soon whatever its own flag says. Non-Create paths are
+// never Soon (Discover and Learn rows that are Soon have no page of their own).
+export function isSoonPath(pathname) {
+  const { group, tool } = resolveTool(pathname)
+  return !!group && !!(group.soon || tool?.soon)
+}
+
+// Where a visitor who may not see a Soon page is sent instead, or null when the
+// path is not Soon. A Soon tool inside a live section goes to that section's
+// first live tool (the section landing is only a redirect to it); a Soon section
+// has no live page of its own, so it goes to the Create index.
+export function soonRedirect(pathname) {
+  if (!isSoonPath(pathname)) return null
+  const { group } = resolveTool(pathname)
+  if (group.soon) return '/create/palette'
+  const live = group.tools.find((t) => isListedTool(t) && !t.soon)
+  return live ? live.route : '/create/palette'
 }
 
 // Human label for a route, for document.title. Null when unknown.

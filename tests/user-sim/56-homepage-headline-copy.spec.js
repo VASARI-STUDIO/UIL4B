@@ -1,4 +1,4 @@
-// The homepage headlines the founder rejected BY NAME, and the one he kept.
+// The homepage headlines that were rejected BY NAME.
 //
 // ── Why this file exists ────────────────────────────────────────────────────
 //
@@ -6,24 +6,22 @@
 // and unmergeable — see [homepage-parked-prs-triage]) claimed one thing that
 // needed no design authority to be worth keeping: "the rejected headlines
 // cannot return". That test never landed, and in the year since, the workbench
-// heading alone has been through THREE versions, two of which the founder
-// rejected in his own words. Nothing in the repo stopped a fourth attempt from
-// landing on a sentence he had already thrown out.
+// heading alone has been through THREE versions, two of which were
+// rejected. Nothing in the repo stopped a fourth attempt from
+// landing on a sentence that had already been thrown out.
 //
 // So this is the half of #264 that carries no copy judgement at all. It does
 // not decide what any heading should say — three of the four slots below are
-// live copy decisions the founder still owns, and this file deliberately pins
-// none of them. It pins only what he has already ruled OUT, quoting him.
+// still-open copy decisions, and this file deliberately pins
+// none of them. It pins only what has already been ruled OUT.
 //
-// ── The four strings, and the founder quote that retired each ───────────────
+// ── The four strings, and the complaint that retired each ───────────────
 //
-// Each `line` below is reproduced inside the founder's own complaint, which is
-// why it is safe to make it a build rule: he did not paraphrase these, he
-// quoted them back. Sources are `docs/design/homepage-spec-2026-08.md` (the
-// complaints are verbatim; note that the REPLACEMENT copy in that file is
-// agent-authored "Option 1 — RECOMMENDED", not his) and the comment block
-// above `#hsteps-title` in `src/pages/Home.jsx`, which records the 2026-09-05
-// rejection that produced today's version.
+// Each `line` below is reproduced verbatim from the complaint that rejected it,
+// which is why it is safe to make it a build rule: these are not paraphrases.
+// Sources are the homepage design spec (the complaints are verbatim) and the
+// comment block above `#hsteps-title` in `src/pages/Home.jsx`, which records
+// the rejection that produced today's version.
 //
 // ── EVERY ABSENCE IS PAIRED WITH A PRESENCE ─────────────────────────────────
 //
@@ -37,7 +35,7 @@
 // sentences those headlines are not.
 
 import { test, expect } from './base.js'
-import { go, watch, expectRendered } from './helpers.js'
+import { go, homeSectionsLoaded, watch, expectRendered } from './helpers.js'
 
 // The heading slots the front door still has. A rejected line is only half the
 // rule — the other half is that the page still says SOMETHING in its headings,
@@ -47,16 +45,15 @@ import { go, watch, expectRendered } from './helpers.js'
 // THESE IDS MOVED WITH THE ROUTE SWAP, AND THE RULE DID NOT
 // ─────────────────────────────────────────────────────────────────────────────
 // The four sentences below were rejected for what they SAY, not for the element
-// they sat in, and the founder's ruling does not expire because a page was
-// rebuilt — a page he has not read is exactly where a retired sentence comes
+// they sat in, and the ruling does not expire because a page was
+// rebuilt — a page nobody has reviewed is exactly where a retired sentence comes
 // back. So the absence sweep is unchanged and still runs over the whole of
 // <main>; only the presence control had to be re-pointed.
 //
 // Home.jsx's `#hsteps-title` / `#htools-title` / `#hcomm-title` are gone with
 // the page. Their successors on Spectrum, where one exists:
-//   · #hsteps-title (the tools/workbench heading)  → #sp-bench-h, which renders
-//     `SURFACE_LINE.toolsSectionHeading` — the design's line for that section, and
-//     the slot both rejected workbench headings were aimed at.
+//   · #hsteps-title (the tools/workbench heading)  → #bm-h, the bookmarks
+//     section's heading — the slot both rejected workbench headings were aimed at.
 //   · #hcomm-title  (the community showcase)        → #sp-disc-h, the library
 //     section. "Systems worth stealing." was rejected in this slot.
 //   · #htools-title (the six-category strip)        → NOTHING. Spectrum has no
@@ -69,7 +66,7 @@ import { go, watch, expectRendered } from './helpers.js'
 //
 // The pricing and FAQ headings are on /plans (the Pricing screen), not the
 // landing, and the design's proof band has a heading.
-const SLOTS = ['sp-bench-h', 'sp-disc-h', 'sp-spec-h', 'sp-proof-h', 'sp-close-h']
+const SLOTS = ['bm-h', 'exports-h', 'proof-h', 'start-h']
 
 const REJECTED = [
   {
@@ -109,8 +106,8 @@ const REJECTED = [
 // below the fold and this file would call the page clean.
 //
 // The two rules want different subjects and that is correct. "Do not SELL with
-// this word" is about what is read, so it reads innerText. "The founder threw
-// this sentence out" is about what the page SAYS, full stop — reveal state,
+// this word" is about what is read, so it reads innerText. "This sentence was thrown
+// out" is about what the page SAYS, full stop — reveal state,
 // scroll position and viewport cannot make a retired headline acceptable — so
 // it reads the DOM.
 //
@@ -130,6 +127,8 @@ test.describe('homepage copy the founder has already ruled out', () => {
   test('no headline the founder rejected by name is back on the page', async ({ page }) => {
     watch(page, 'the founder re-reading his own homepage')
     await go(page, '/')
+    // The sections below the first screen carry their headings only once they have mounted.
+    await homeSectionsLoaded(page)
 
     // POSITIVE CONTROL 1 — the route rendered its own content and is not the
     // ErrorBoundary card. Without this, every absence below is free.
@@ -177,10 +176,9 @@ test.describe('homepage copy the founder has already ruled out', () => {
   // strip: the front door's "somewhere to begin" is now the bench (five tool
   // panels, each ending at the real tool) and the Discover grid (five real
   // library rows out of CURATED_LIBRARY_PALETTES / GALLERY_GRADIENTS). The
-  // sentence was never the founder's — it was an agent line from a parked PR —
-  // so there is nothing of his to carry forward, and re-pointing a copy pin at
-  // a heading he has not ruled on would invent an approval. Founder's call on
-  // the page, taken 2026-09-22 with the route swap.
+  // sentence was never an approved line — it came from a parked PR — so there is
+  // nothing approved to carry forward, and re-pointing a copy pin at a heading
+  // that has not been ruled on would invent an approval.
   //
   // WHERE THE SURVIVING HALF LIVES. Two pieces, both kept:
   //   · the CARDS half — that the section is not an empty band wearing a label
@@ -192,6 +190,9 @@ test.describe('homepage copy the founder has already ruled out', () => {
     watch(page, 'a screen-reader user listing the front door by landmark')
     await go(page, '/')
     await expectRendered(page, '/')
+    // The sections under the first screen sit on an empty, labelled stand-in until they load;
+    // their headings only exist once they have.
+    await homeSectionsLoaded(page)
 
     const sections = await page.locator('main#main section[aria-labelledby]').evaluateAll(
       (els) => els.map((el) => {

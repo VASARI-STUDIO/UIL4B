@@ -31,7 +31,7 @@ const user = { uid: 'u1', displayName: 'Dylan', email: 'd@example.com' }
 
 // ── The rules, as the moderator role leaves them ────────────────────────────
 //
-// firestore.rules is founder-gated, so `isReviewer()` is not in the file on
+// firestore.rules is approval-gated, so `isReviewer()` is not in the file on
 // disk until `npm run apply:gated` has been run. Asserting it against the file
 // would be red every day until then and green afterwards; asserting the
 // unpatched shape would be the reverse. Both are a test that measures the
@@ -79,11 +79,11 @@ test('only a reviewer may approve, and the owner may only withdraw', () => {
 //
 // Against the PLANNED rules, not the file — see the note at the top. These are
 // the properties the role must not cost, asserted where they can be asserted
-// today rather than on the day the founder runs the command.
+// today rather than on the day the owner runs the command.
 
 test('a reviewer is the founder OR a moderator, and nothing else', () => {
   // The predicate the whole role rests on. Both arms are asserted, because
-  // dropping either one is silent: without the admin arm the founder loses his
+  // dropping either one is silent: without the admin arm the admin loses their
   // own queue, and without the moderator arm the role is decoration.
   const fn = /function isReviewer\(\) \{[\s\S]*?\n {4}\}/.exec(reviewerRules)?.[0] || ''
   assert.ok(fn, 'isReviewer() is gone')
@@ -216,18 +216,25 @@ test('the admin custom claim is actually granted somewhere', () => {
   assert.match(src, /claimUpdated/, 'the client needs to know to refresh its token')
 })
 
-test('the submission flow never claims a review it did not queue', () => {
+test('the gradient tool has no browser-held submission path left', () => {
+  // Gradient submissions are account-connected. The tool must not write the
+  // old browser key or offer a submit form; the migration is the only thing
+  // that touches it, and only to move it to the account.
   const src = read('src/pages/GradientGenerator.jsx')
-  assert.match(src, /Sign in to submit it for review/, 'a signed-out save says what it is')
-  assert.match(src, /could not reach the review queue/, 'a failed publish says so')
-  assert.ok(/appendGradientSubmission\(record\)/.test(src),
-    'the local copy is kept regardless, so nothing the user made is lost')
+  assert.ok(!/appendGradientSubmission|SubmitGradientModal|submitForReview/.test(src),
+    'the browser-queue submit path is gone')
+  assert.ok(!/Submit for review/.test(src), 'and so is its toolbar item')
+  assert.match(src, /useGradientSubmissionMigration\(/, 'the old key is moved to the account on sign-in')
 })
 
-test('the gallery reads the account, not just this browser', () => {
+test('the gallery reads the account only, and withdraws from the account', () => {
   const src = read('src/pages/GradientGallery.jsx')
-  assert.match(src, /listMySubmissions\(user\.uid, 'gradient'\)/)
-  assert.match(src, /mergeSubmissions\(/)
+  assert.match(src, /listMySubmissions\(uid, 'gradient'\)/)
+  assert.match(src, /deleteSubmission\(s\.docId\)/)
+  assert.ok(!/mergeSubmissions\(/.test(src), 'no merge with a browser-held list')
+  assert.ok(src.includes("from this browser {legacyCount === 1 ? 'is' : 'are'} waiting."))
+  assert.ok(src.includes("Sign in to keep {legacyCount === 1 ? 'it' : 'them'} with your account."))
+  assert.match(src, /useGradientSubmissionMigration\(/)
 })
 
 // ── The other two kinds ─────────────────────────────────────────────────────
@@ -257,13 +264,16 @@ test('the local copy is still written FIRST, in both flows', () => {
   // Local-first is the whole reason submitting works offline and the list
   // updates without waiting on a round trip. Publishing before the local write
   // would make a dropped connection lose the submission outright.
-  for (const [file, local] of [
-    ['src/pages/PaletteBuilder.jsx', 'appendCommunitySubmission('],
-    ['src/pages/Community.jsx', 'setSubmissions(prev => [item, ...prev])'],
+  // Community.jsx sends from a helper its submit handler calls, so its order is
+  // read inside that handler.
+  for (const [file, from, local, publish] of [
+    ['src/pages/PaletteBuilder.jsx', '', 'appendCommunitySubmission(', 'await publishToQueue('],
+    ['src/pages/Community.jsx', 'const handleSubmit', 'setSubmissions(prev => [item, ...prev])', 'await publishDesign(item)'],
   ]) {
-    const src = read(file)
+    const whole = read(file)
+    const src = from ? whole.slice(whole.indexOf(from)) : whole
     const localAt = src.indexOf(local)
-    const publishAt = src.indexOf('await publishToQueue(')
+    const publishAt = src.indexOf(publish)
     assert.ok(localAt > -1, `${file} must still keep a local copy`)
     assert.ok(publishAt > -1, `${file} must publish to the queue`)
     assert.ok(localAt < publishAt, `${file} must write locally before publishing`)
@@ -300,4 +310,36 @@ test('a submission from the wire is sanitised like one from this browser', () =>
   // is not a way around it.
   const src = read('src/pages/Community.jsx')
   assert.match(src, /sanitizeCommunitySubmission\(\{/)
+})
+
+test('the migration publishes at a fixed document id and treats a refused repeat as already there', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  const body = src.slice(src.indexOf('export async function publishToQueueOnce'), src.indexOf('export async function listMySubmissions'))
+  assert.match(body, /doc\(db, QUEUE_COLLECTION, id\)/, 'a reference at the chosen id, not an auto id')
+  assert.match(body, /postWithLimits\(ref, record, 'submission'\)/, 'the write goes through the counted path at that reference')
+  assert.ok(!/addDoc/.test(body), 'a write at a chosen id, not addDoc')
+  // postWithLimits is where the write happens now. The same reference is the
+  // target on both sides of the flag, so the fixed id survives inside the batch.
+  const limited = src.slice(src.indexOf('export async function postWithLimits'), src.indexOf('export async function publishToQueue('))
+  assert.match(limited, /setDoc\(ref, record\)/, 'flag off: a plain write at the reference')
+  assert.match(limited, /batch\.set\(ref, \{ \.\.\.record, submittedAt: serverTimestamp\(\) \}\)/, 'flag on: the post stays at the reference inside the batch')
+  assert.match(body, /permission-denied/, 'the rules refuse a second write to an existing document')
+  assert.match(body, /await getDoc\(ref\)/, 'and the owner reading it back is what proves it is there')
+  assert.match(body, /snap\.exists\(\) && snap\.data\(\)\?\.authorUid === uid/, 'and only a document this author wrote counts (behaviour: publish-to-queue-once.test.js)')
+  assert.match(body, /created: false/)
+  assert.match(body, /throw err/, 'any other refusal still surfaces')
+})
+
+test('the rules let the owner only withdraw, so a repeat write at the same id cannot overwrite', () => {
+  const rules = read('firestore.rules')
+  const update = rules.slice(rules.indexOf('allow update: if isReviewer()'), rules.indexOf('allow delete: if isReviewer()'))
+  assert.match(update, /request\.resource\.data\.status == 'withdrawn'/)
+  assert.match(update, /hasOnly\(\['status'\]\)/)
+})
+
+test('the listing can ask for a bigger page than the 100 the gallery shows', () => {
+  const src = read('src/utils/communityQueueApi.js')
+  assert.match(src, /listMySubmissions\(uid, kind = null, max = 100\)/)
+  assert.match(src, /limit\(max\)/)
+  assert.match(read('src/hooks/useGradientSubmissionMigration.js'), /listMySubmissions\(uid, kind, LIST_MAX\)/)
 })

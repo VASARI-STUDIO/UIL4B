@@ -2,15 +2,13 @@
 //
 // Three properties, each of which has cost this repository something before:
 //
-//   1. THE FOUNDER'S NOTE STAYS REACHABLE, and stays opt-in. It is an open
-//      founder ask ("i also still want my little about message accessable in the
-//      footer") and the whole design of FounderNote.jsx is that it never opens
-//      itself. Spectrum ships its own footer, so the note has to be carried
-//      across rather than inherited.
+//   1. THE ABOUT NOTE STAYS REACHABLE, and stays opt-in. The whole design of
+//      FounderNote.jsx is that it never opens itself, and the footer is where
+//      it is reached. Spectrum ships its own footer, so the note has to be
+//      carried across rather than inherited.
 //   2. NOTHING IS DROPPED FROM THE FOOTER. Spectrum's footer replaces AppFooter
-//      on its route. "make sure to not remove any functionality of the app this
-//      is important" is the founder's stated top priority for this redesign, and
-//      a footer link is functionality.
+//      on its route, and a footer link is functionality: the redesign must not
+//      remove any functionality of the app.
 //   3. THE REDUCED-MOTION COMPANIONS AND THE VISIBLE RESTING STATE SURVIVE. A
 //      word reveal is a transform that hides text, and `useReveal`'s own comment
 //      records the last time a reveal with a hidden resting state shipped: /learn
@@ -20,8 +18,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
-import { EX_FILES, ICONS, IMG_MODES, MODEL_OUTPUTS, MODEL_PREVIEW, MODEL_SOURCE } from '../../src/components/spectrum/spectrumKit.js'
-import { OUTPUT_FORMATS } from '../../src/utils/meshFormats.js'
+import { EX_FILES, ICONS, IMG_MODES } from '../../src/components/spectrum/spectrumKit.js'
 import { PH_REGULAR } from '../../src/components/spectrum/phosphorRegular.js'
 import { PH_WEIGHTS } from '../../src/components/spectrum/phosphorWeights.js'
 import { CREATE_GROUPS, categoryDestination } from '../../src/data/toolTree.js'
@@ -36,35 +33,35 @@ const SPECTRUM_CSS_PATH = ['src/styles/deferred/spectrum.css', 'src/styles/pages
 if (!SPECTRUM_CSS_PATH) throw new Error('spectrum.css is in neither src/styles/deferred/ nor src/styles/pages/')
 
 const PAGE = stripComments(read('src/pages/Spectrum.jsx'))
+// The page with each mounted homepage section (`<HomeX />`) replaced by its own
+// source, so ids that a section renders itself are read in page order.
+const MOUNTED = PAGE.replace(/<(Home[A-Z]\w*)\b[^>]*\/>/g, (tag, name) => {
+  const file = `src/components/home/${name}.jsx`
+  return fs.existsSync(file) ? stripComments(read(file)) : tag
+})
 const FOOTER = stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
 const APP_FOOTER = stripComments(read('src/components/AppFooter.jsx'))
 const WORDS = stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
-const BENCH_SRC = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
-const CONVERTER_SRC = stripComments(read('src/components/spectrum/BenchConverter.jsx'))
-const EXPORTS_SRC = stripComments(read('src/components/spectrum/SpectrumExports.jsx'))
 // Comments stripped first — see the note in spectrum-truth.test.js. The header
 // of spectrum.css quotes the very strings these tests ban.
 const CSS = read(SPECTRUM_CSS_PATH).replace(/\/\*[\s\S]*?\*\//g, '')
 const SOURCES = {
   'src/pages/Spectrum.jsx': PAGE,
   'src/components/spectrum/SpectrumFooter.jsx': FOOTER,
-  'src/components/spectrum/SpectrumBench.jsx': BENCH_SRC,
   'src/components/spectrum/SpectrumWords.jsx': WORDS,
   'src/components/spectrum/SpectrumRamp.jsx': stripComments(read('src/components/spectrum/SpectrumRamp.jsx')),
   'src/components/spectrum/SpectrumIcon.jsx': stripComments(read('src/components/spectrum/SpectrumIcon.jsx')),
-  'src/components/spectrum/BenchConverter.jsx': CONVERTER_SRC,
-  'src/components/spectrum/SpectrumExports.jsx': EXPORTS_SRC,
   'src/components/spectrum/SpectrumSearch.jsx': stripComments(read('src/components/spectrum/SpectrumSearch.jsx')),
   'src/components/spectrum/PhIcon.jsx': stripComments(read('src/components/spectrum/PhIcon.jsx')),
   'src/components/spectrum/OpenPill.jsx': stripComments(read('src/components/spectrum/OpenPill.jsx')),
-  'src/components/spectrum/SpectrumProof.jsx': stripComments(read('src/components/spectrum/SpectrumProof.jsx')),
+  'src/components/home/HomeProof.jsx': stripComments(read('src/components/home/HomeProof.jsx')),
 }
 
 test('the stripper still works, so every source read below can be trusted', () => {
   assertStripperWorks(assert)
 })
 
-/* ── 1. the founder's note ─────────────────────────────────────────────────── */
+/* ── 1. the about note ─────────────────────────────────────────────────── */
 
 test('the Spectrum footer carries the founder\'s note', () => {
   assert.ok(FOOTER.includes("from '../FounderNote'"),
@@ -79,8 +76,8 @@ test('nothing on this page opens the founder\'s note by itself', () => {
   // The note is opt-in BY CONSTRUCTION — it owns its own `open` state and
   // exposes no way in from outside. This check is the guard against the
   // temptation that the front door creates: a timer, a scroll depth, a
-  // first-visit flag. Any of those would rebuild the welcome popup the founder
-  // was offered and turned down.
+  // first-visit flag. Any of those would rebuild a welcome popup, which this
+  // note deliberately is not.
   for (const [file, src] of Object.entries(SOURCES)) {
     assert.ok(!/FounderNote[^>]*\bopen\b/.test(src),
       `${file} passes an \`open\` prop to FounderNote. It has none, and adding one turns an `
@@ -164,13 +161,10 @@ test('the word reveal has a visible resting state', () => {
 test('the hero does not wait on a scroll observer to become visible', () => {
   // `[data-reveal]` starts at opacity:0 in global.css. On the fold that would
   // blank the largest paint of the prerendered shell until hydration.
-  assert.ok(!/className=\{heroLit \? 'sp-hero is-in' : 'sp-hero'\}[\s\S]{0,80}data-reveal/.test(PAGE),
-    'the hero carries data-reveal, which starts it at opacity:0')
-  const heroTag = /<header className=\{heroLit[^>]*>/.exec(PAGE)
-  assert.ok(heroTag, 'the hero header no longer toggles its own entrance class')
-  assert.ok(!heroTag[0].includes('data-reveal'), 'the hero header has grown a data-reveal attribute')
-  assert.ok(PAGE.includes('data-hero-prepainted'),
-    'Spectrum.jsx no longer checks data-hero-prepainted, so a prepainted headline will animate a second time')
+  const HERO = stripComments(read('src/components/home/HomeHero.jsx'))
+  assert.ok(PAGE.includes('<HomeHero />'), 'the landing no longer renders HomeHero')
+  assert.ok(/<section\s[^>]*id="top"/.test(HERO), 'the hero block is no longer the #top section')
+  assert.ok(!HERO.includes('data-reveal'), 'the hero block has grown a data-reveal attribute')
 })
 
 test('every moving thing has a reduced-motion companion, under both spellings', () => {
@@ -195,7 +189,7 @@ test('every moving thing has a reduced-motion companion, under both spellings', 
   const start = CSS.indexOf('html[data-reduced-motion="true"]')
   assert.ok(start > -1, 'spectrum.css has no reduced-motion block at all')
   const blocks = CSS.slice(start)
-  for (const cls of ['.sp-w', '.sp-ramp-bar', '.sp-stack-card', '.sp-panel', '.sp-pill-icon', '.sp-cta-icon', '.sp-disc-card', '.sp-disc-cta', '.sp-chip']) {
+  for (const cls of ['.sp-w', '.sp-ramp-bar', '.sp-pill-icon']) {
     assert.ok(blocks.includes(cls),
       `${cls} moves but is not named in spectrum.css's reduced-motion blocks`)
   }
@@ -237,6 +231,17 @@ test('every glyph the page asks for is one the page ships', () => {
   for (const [, src] of Object.entries(SOURCES)) {
     for (const m of src.matchAll(/PhIcon name="([^"]+)"/g)) asked.add(m[1])
   }
+  // The homepage sections and the try tools draw with PhIcon too: a literal name, or a
+  // conditional whose quoted branches are the names (`name={picked ? 'check' : 'plus'}`).
+  const homeFiles = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (
+    e.isDirectory() ? homeFiles(`${dir}/${e.name}`) : e.name.endsWith('.jsx') ? [`${dir}/${e.name}`] : []
+  ))
+  for (const file of homeFiles('src/components/home')) {
+    for (const m of stripComments(read(file)).matchAll(/PhIcon name=(?:"([^"]+)"|\{([^}]*)\})/g)) {
+      if (m[1]) asked.add(m[1])
+      else for (const q of m[2].matchAll(/'([^']+)'/g)) asked.add(q[1])
+    }
+  }
   // The tables the windows draw their icons from, checked the same way.
   for (const [, , icon] of IMG_MODES) if (icon) asked.add(icon)
   for (const [icon] of EX_FILES) asked.add(icon)
@@ -269,86 +274,6 @@ test('every glyph the page asks for is one the page ships', () => {
   assert.deepEqual(spMissing, [], `SpectrumIcon is asked for ${spMissing.join(', ')} and draws none of them`)
 })
 
-/* ── the bench is the design's four tool windows ─────────────────────────────────────── */
-
-test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
-  // The design's 4 bench tool windows, not the 5 category panels.
-  const names = [...BENCH_SRC.matchAll(/<Chrome\s+no="(\d\d)"\s+name="([^"]+)"/g)].map((m) => `${m[1]} ${m[2]}`)
-  assert.deepEqual(names, ['01 Palette builder', '02 Icon library', '03 Font Gallery', '04 File converter'])
-  const panels = [...BENCH_SRC.matchAll(/data-panel="(\d)"/g)].map((m) => m[1])
-  assert.deepEqual(panels, ['0', '1', '2', '3'], 'the bench no longer renders four [data-panel] windows')
-  assert.match(BENCH_SRC, /const RAIL = \['Palette builder', 'Icon library', 'Font gallery', 'File conversion'\]/,
-    'the rail no longer lists the design\'s four rows')
-  // AI Studio is not one of the design's windows.
-  assert.ok(!/AI Studio/.test(BENCH_SRC), 'the bench has an AI Studio window again')
-})
-
-test('the bench writes down no route', () => {
-  // Every window CTA reads its destination off the tool tree through route(),
-  // so a renamed tool fails the build rather than shipping a dead link.
-  for (const [file, src] of [['SpectrumBench.jsx', BENCH_SRC], ['BenchConverter.jsx', CONVERTER_SRC]]) {
-    assert.ok(!/to="\/create\//.test(src), `${file} carries a literal /create/ route`)
-    assert.ok(!/to="\/discover\//.test(src), `${file} carries a literal /discover/ route`)
-  }
-  const called = [...(BENCH_SRC + CONVERTER_SRC).matchAll(/route\('([a-z0-9-]+)'\)/g)].map((m) => m[1]).sort()
-  assert.deepEqual(called, ['3d-converter', 'file-converter', 'font-gallery', 'font-pair', 'gradient', 'icons', 'palette', 'ratio'],
-    'the four windows no longer open their eight destinations through route()')
-})
-
-test('the Compress panel describes compressing, not converting', () => {
-  // Only the names of the tools the panel links to, and the 3D tab's own
-  // preview (which is a conversion), may say "convert".
-  const copy = CONVERTER_SRC
-    .replace(/BenchConverter|CONVERTER_SOURCE/g, '')
-    .replace(/file-converter|3d-converter/g, '')
-    .replace(/Continue in the converter|Open File Converter|Open 3D Model Converter|>File Converter</g, '')
-    .replace(/A machined bracket turning, converted from/g, '')
-  const left = [...copy.matchAll(/[^\n]*convert[^\n]*/gi)].map((m) => m[0].trim())
-  assert.deepEqual(left, [], 'the Compress panel still says "convert"')
-  assert.match(CONVERTER_SRC, /ready to compress/, 'a chosen file is no longer called ready to compress')
-})
-
-test('the converter tabs are keyed by id, and every id opens its own pane', () => {
-  const ids = IMG_MODES.map(([id]) => id)
-  assert.deepEqual(ids, ['compress', 'model', 'frames', 'ratio'], 'the tabs are not Compress, 3D model, Video frames, Aspect ratio')
-  assert.equal(new Set(ids).size, ids.length, 'two converter tabs share an id')
-  assert.deepEqual(IMG_MODES.map(([, label]) => label), ['Compress', '3D model', 'Video frames', 'Aspect ratio'])
-  for (const [, label, , short] of IMG_MODES) {
-    if (short) assert.ok(label.toLowerCase().includes(short.toLowerCase()), `the short label "${short}" is not part of "${label}"`)
-  }
-  for (const id of ids) {
-    assert.match(CONVERTER_SRC, new RegExp(`paneClass\\('${id}'[^)]*\\)} \\{\\.\\.\\.paneProps\\('${id}'\\)\\}`),
-      `BenchConverter renders no pane for the "${id}" tab`)
-  }
-  assert.ok(!/mode === \d/.test(CONVERTER_SRC), 'BenchConverter branches on a tab index again')
-})
-
-test('the 3D tab offers only outputs the 3D Model Converter writes, and loads its preview on demand', () => {
-  assert.deepEqual(MODEL_OUTPUTS.map((f) => f.id), ['glb', 'obj', 'stl', 'usdz'])
-  for (const f of MODEL_OUTPUTS) assert.ok(OUTPUT_FORMATS.some((o) => o.id === f.id), `${f.id} is not in meshFormats.js`)
-  // "mm → m" is printed only for outputs whose format fixes metres.
-  assert.equal(MODEL_SOURCE.unit, 'mm')
-  for (const f of MODEL_OUTPUTS) assert.equal(f.metres, OUTPUT_FORMATS.find((o) => o.id === f.id).unit === 'm')
-  // The preview files exist, within budget, and are only named behind the
-  // flag the tab sets on first open.
-  assert.ok(fs.statSync(`public${MODEL_PREVIEW.loop}`).size <= 400 * 1024, 'the turntable loop is over 400 KB')
-  assert.ok(fs.statSync(`public${MODEL_PREVIEW.poster}`).size <= 40 * 1024, 'the turntable poster is over 40 KB')
-  assert.match(CONVERTER_SRC, /\{modelOpened\s*\?\s*<img/, 'the 3D preview image is no longer gated on the tab being opened')
-})
-
-test('the dashed file row and the image sub-info are gone; the saving has one home', () => {
-  for (const gone of ['sp-drop', 'sp-conv-dims']) {
-    assert.ok(!CONVERTER_SRC.includes(gone), `BenchConverter still renders .${gone}`)
-    assert.ok(!CSS.includes(`.${gone}`), `spectrum.css still styles .${gone}`)
-  }
-  assert.ok(!/1920 × 1080, 0:08/.test(CONVERTER_SRC), 'the video fixture meta is back')
-  assert.match(CONVERTER_SRC, /className="sp-saving" aria-live="polite"/)
-  assert.ok(!/sp-quality[\s\S]{0,200}<b>/.test(CONVERTER_SRC), 'the Quality row prints a figure again')
-  // The overlay is never hidden with visibility, so the input it pictures can always take focus.
-  const over = /\.sp-art-over \{[^}]*\}/.exec(CSS)?.[0] || ''
-  assert.ok(over && !/visibility|display:\s*none/.test(over), 'the stage overlay is hidden with visibility or display')
-})
-
 test('the split headline keeps one readable sentence for assistive tech', () => {
   assert.ok(WORDS.includes('className="sr-only"'),
     'SpectrumWords no longer carries the whole sentence in a visually-hidden span, so a screen '
@@ -357,36 +282,53 @@ test('the split headline keeps one readable sentence for assistive tech', () => 
     'the visible word split is no longer aria-hidden, so the headline is announced twice')
 })
 
-test('the landing is the design\'s six blocks in order, and pricing is not one of them', () => {
-  // In the design the plan comparison and FAQ live on the Pricing screen,
-  // which is /plans. The landing is hero, bench, exports (#specimens), the
-  // community library (#discover), the terms band (#index) and the handoff.
-  const ids = [...PAGE.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['bench', 'specimens', 'discover'],
-    'the landing sections are no longer bench, specimens, discover in that order')
-  // Then the design's proof band (#index, SpectrumProof.jsx), then the handoff.
-  const proofAt = PAGE.indexOf('<SpectrumProof />')
-  assert.ok(proofAt > PAGE.indexOf('id="discover"') && proofAt < PAGE.indexOf('className="sp-close"'),
-    'the proof band no longer sits between the library and "Start your first project today."')
-  assert.match(stripComments(read('src/components/spectrum/SpectrumProof.jsx')), /<section id="index"/,
-    'the proof band lost the #index anchor the footer links to')
+test('the landing frame: anchors in order, one banner, one main, one footer, no reveal, and pricing is not on it', () => {
+  // The plan comparison and FAQ live on /plans. The landing is the hero, then
+  // bookmarks, try, exports, examples, proof, plans and the final call. Each
+  // section's own content is asserted by the test for that section.
+  const ids = [...MOUNTED.matchAll(/<(?:section|div)\s+id="([a-z]+)"/g)].map((m) => m[1])
+  assert.deepEqual(ids, ['top', 'bookmarks', 'try', 'exports', 'examples', 'proof', 'plans', 'start'],
+    'the landing sections are no longer top, bookmarks, try, exports, examples, (proof), plans, start in that order')
+  // Every section below the hero names its heading, so each anchor lands on
+  // something a screen reader can announce. The hero holds the page's h1.
+  for (const m of MOUNTED.matchAll(/<section\s+id="([a-z]+)"([^>]*)>/g)) {
+    if (m[1] === 'top') continue
+    const labelled = /aria-labelledby="([^"]+)"/.exec(m[2])
+    assert.ok(labelled, `#${m[1]} has no aria-labelledby`)
+    assert.match(MOUNTED, new RegExp(`<h2[^>]*id="${labelled[1]}"[^>]*tabIndex=\\{-1\\}`), `#${m[1]} points at ${labelled[1]}, which is not a focusable h2`)
+  }
+  // The final call is its own component, mounted last in <main>; it owns #start.
+  const START = stripComments(read('src/components/home/HomeFinalCall.jsx'))
+  assert.match(START, /<section id="start"[^>]*aria-labelledby="start-h"/, 'the final call lost its #start section or its aria-labelledby')
+  assert.match(START, /<h2 id="start-h" tabIndex=\{-1\}>/, 'the final call heading no longer takes focus for an in-page jump')
+  // The proof bar (#proof, HomeProof.jsx) sits between examples and plans.
+  const proofAt = MOUNTED.indexOf('id="proof"')
+  assert.ok(proofAt > MOUNTED.indexOf('id="examples"') && proofAt < MOUNTED.indexOf('id="plans"'),
+    'the proof band no longer sits between the examples and the plans')
+  assert.match(stripComments(read('src/components/home/HomeProof.jsx')), /<section id="proof"/,
+    'the proof band lost the #proof anchor')
+  assert.ok(!PAGE.includes('id="discover"'), 'the homepage carries the Discover section again; the footer links to it instead')
+  // Landmarks: one banner (the nav), one main from the hero to the final call, one footer.
+  assert.equal([...PAGE.matchAll(/<header[\s>]/g)].length, 1, 'the page has more than one <header>')
+  assert.equal([...PAGE.matchAll(/<main\s/g)].length, 1)
+  assert.ok(PAGE.indexOf('<HomeFinalCall') > PAGE.indexOf('id="plans"') && PAGE.indexOf('<HomeFinalCall') < PAGE.indexOf('</main>'),
+    'the final call is not the last section of <main>')
+  // The homepage footer takes the closing look; the curtain reveal is not used on it.
+  assert.match(PAGE, /<SpectrumFooter[^>]*\bhome\b/, 'the homepage no longer asks for the home footer')
+  assert.ok(!/<SpectrumFooter[^>]*\breveal\b/.test(PAGE), 'the homepage footer turned the curtain reveal back on')
+  // The footer's PROJECT column links to the page's own sections, by anchor.
+  for (const hash of ['#bookmarks', '#try', '#exports', '#examples', '#plans']) {
+    assert.ok(FOOTER.includes(`'${hash}'`), `the footer no longer links ${hash}`)
+    assert.ok(MOUNTED.includes(`id="${hash.slice(1)}"`), `${hash} has no target on the page`)
+  }
+  for (const old of ['#bench', '#specimens', '#index']) assert.ok(!FOOTER.includes(old), `the footer still links ${old}`)
+  assert.ok(FOOTER.includes('/discover'), 'the footer no longer links Discover')
+  // No word reveal and no scroll-reveal trigger on the page's headings.
+  assert.ok(!PAGE.includes('data-sp-reveal') && !PAGE.includes('useSpectrumReveal'), 'the page uses the scroll reveal again')
+  assert.ok(!stripComments(read('src/components/home/HomeProof.jsx')).includes('requestAnimationFrame'), 'the proof figures count up again (the bar must print them as they are)')
   for (const gone of ['id="pricing"', 'id="faq"', '<table', 'sp-compare', 'sp-plans']) {
     assert.ok(!PAGE.includes(gone), `Spectrum.jsx carries ${gone} again — pricing belongs on /plans`)
   }
-  // THE STACK NESTS. A sticky card pins only inside its own containing block,
-  // so each card must sit in a wrapper that also holds the cards after it.
-  const nests = EXPORTS_SRC.split('<div className="sp-stack-nest">').length - 1
-  assert.equal(nests, 3, 'the exports stack no longer nests its three cards (A ⊃ B ⊃ C)')
-  const order = ['<Card index={0}', '<div className="sp-stack-nest">', '<Card index={1}', '<Card index={2}', 'sp-stack-pad--tail']
-  let at = EXPORTS_SRC.indexOf('<div className="sp-stack-nest">')
-  for (const needle of order) {
-    const next = EXPORTS_SRC.indexOf(needle, at)
-    assert.ok(next > -1, `the stack lost ${needle}, or it moved out of order`)
-    at = next
-  }
-  assert.match(EXPORTS_SRC, /const TOPS = \[84, 116, 148\]/, 'the cards no longer pin at 84 / 116 / 148')
-  assert.match(EXPORTS_SRC, /1 - docked \* 0\.045/, 'covered cards no longer shrink by .045 per card')
-  assert.match(EXPORTS_SRC, /1 - docked \* 0\.05/, 'covered cards no longer dim by .05 per card')
 })
 
 test('the page never removes an outline', () => {

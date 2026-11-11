@@ -23,7 +23,7 @@
 // and "the write was refused" is trivially true of a writer that never wrote. So
 // each of those assertions is paired with its opposite in the same test: the
 // same call, one input changed, must produce the other answer.
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import fs2 from 'node:fs'
 import {
@@ -196,6 +196,104 @@ test('projectListsEqual sees a changed updatedAt, not just a changed length', ()
   assert.equal(projectListsEqual(a, [project('a', T.early)]), true)
   assert.equal(projectListsEqual(a, [project('a', T.late)]), false)
   assert.equal(projectListsEqual(a, []), false)
+})
+
+/* An icon choice does not move updatedAt ("last edited" and the lead project read it), so it
+ * carries its own stamp, iconAt, and the sync has to compare that stamp too. */
+
+test('with the same updatedAt, the copy with the newer iconAt wins the merge', () => {
+  const local = [project('a', T.mid, { icon: 'bolt', iconAt: T.early })]
+  const remote = [project('a', T.mid, { icon: 'moon', iconAt: T.late })]
+  assert.equal(mergeProjects(local, remote).list[0].icon, 'moon', 'the later icon choice comes in from the account')
+  assert.equal(mergeProjects(remote, local).list[0].icon, 'moon', 'and it wins from either side')
+})
+
+test('with the same updatedAt, an icon chosen here is not overwritten by an older one', () => {
+  const local = [project('a', T.mid, { icon: 'moon', iconAt: T.late })]
+  const remote = [project('a', T.mid, { icon: 'bolt', iconAt: T.early })]
+  assert.equal(mergeProjects(local, remote).list[0].icon, 'moon')
+})
+
+test('an icon with a stamp beats a copy that never had one, at the same updatedAt', () => {
+  const merged = mergeProjects(
+    [project('a', T.mid)],
+    [project('a', T.mid, { icon: 'leaf', iconAt: T.early })],
+  )
+  assert.equal(merged.list[0].icon, 'leaf')
+})
+
+test('a differing updatedAt still decides the merge, whatever the iconAt says', () => {
+  // Remote edited the design later; local chose its icon later. The edit time is the rule, so remote wins whole.
+  const local = [project('a', T.early, { name: 'Old', icon: 'bolt', iconAt: T.late })]
+  const remote = [project('a', T.mid, { name: 'New', icon: 'moon', iconAt: T.early })]
+  const merged = mergeProjects(local, remote)
+  assert.equal(merged.list[0].name, 'New')
+  assert.equal(merged.list[0].icon, 'moon')
+  assert.deepEqual(merged.replaced.map((r) => r.id), ['a'])
+  // And the other way round: local is the later edit, so a later remote iconAt does not displace it.
+  const back = mergeProjects(
+    [project('a', T.mid, { name: 'New', icon: 'moon', iconAt: T.early })],
+    [project('a', T.early, { name: 'Old', icon: 'bolt', iconAt: T.late })],
+  )
+  assert.equal(back.list[0].name, 'New')
+  assert.equal(back.list[0].icon, 'moon')
+  assert.deepEqual(back.replaced, [])
+})
+
+test('records that predate iconAt merge exactly as they did', () => {
+  const equal = mergeProjects([project('a', T.mid, { name: 'Mine' })], [project('a', T.mid, { name: 'Theirs' })])
+  assert.equal(equal.list[0].name, 'Mine')
+  assert.deepEqual(equal.replaced, [])
+  const newer = mergeProjects([project('a', T.early, { name: 'Old' })], [project('a', T.late, { name: 'Fresh' })])
+  assert.equal(newer.list[0].name, 'Fresh')
+  assert.deepEqual(newer.replaced.map((r) => r.id), ['a'])
+})
+
+test('projectListsEqual sees a changed iconAt when updatedAt is the same', () => {
+  const a = [project('a', T.mid, { iconAt: T.early })]
+  assert.equal(projectListsEqual(a, [project('a', T.mid, { iconAt: T.early })]), true)
+  assert.equal(projectListsEqual(a, [project('a', T.mid, { iconAt: T.late })]), false)
+  assert.equal(projectListsEqual(a, [project('a', T.mid)]), false, 'a stamped icon differs from none')
+  assert.equal(projectListsEqual([project('a', T.mid)], [project('a', T.mid)]), true, 'two unstamped copies are equal')
+})
+
+test('a push sends a project whose only change is the icon, and then stops', async () => {
+  const { fs, docs, calls } = fakeFirestore({
+    [`${PER}/a`]: { project: project('a', T.mid), updatedAt: T.mid, deletedAt: null },
+  })
+  const pulled = await readRemoteProjects(fs, UID, { perProject: true })
+  const iconed = project('a', T.mid, { icon: 'moon', iconAt: T.late })
+
+  const first = await writeRemoteProjects(fs, UID, {
+    list: [iconed], stored: pulled.stored, perProject: true, now: 1,
+  })
+  assert.equal(first.written, 1, 'updatedAt is unchanged but the icon is new, so it is sent')
+  assert.equal(docs.get(`${PER}/a`).project.icon, 'moon')
+  assert.equal(first.stored.get('a').iconAt, T.late, 'and the map moves forward with the write')
+
+  const writes = calls.setDoc
+  const second = await writeRemoteProjects(fs, UID, {
+    list: [iconed], stored: first.stored, perProject: true, now: 2,
+  })
+  assert.equal(second.written, 0, 'nothing changed since, so nothing is sent')
+  assert.equal(calls.setDoc, writes + 1, 'only the index is rewritten')
+})
+
+test('a push of unchanged projects, icon stamped or not, writes nothing', async () => {
+  const { fs, calls } = fakeFirestore({
+    [`${PER}/a`]: { project: project('a', T.mid, { icon: 'moon', iconAt: T.late }), updatedAt: T.mid, deletedAt: null },
+    [`${PER}/b`]: { project: project('b', T.mid), updatedAt: T.mid, deletedAt: null },
+  })
+  const pulled = await readRemoteProjects(fs, UID, { perProject: true })
+  assert.equal(pulled.stored.get('a').iconAt, T.late, 'the stored map reads iconAt from the document')
+  assert.equal(pulled.stored.get('b').iconAt, null, 'and holds null for a document that never had one')
+  const writes = calls.setDoc
+  const result = await writeRemoteProjects(fs, UID, {
+    list: [project('a', T.mid, { icon: 'moon', iconAt: T.late }), project('b', T.mid)],
+    stored: pulled.stored, perProject: true, now: 1,
+  })
+  assert.equal(result.written, 0)
+  assert.equal(calls.setDoc, writes + 1, 'only the index is rewritten')
 })
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -572,6 +670,90 @@ test('the first pull of a v1 account moves it to one document per project', asyn
     'and the pull hands back what each document now holds')
 })
 
+/** A step bound like the provider's: the call's promise loses to a timer. */
+const STEP_LIMIT_MS = 15000
+function stepWithLimit(promise) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timed out')), STEP_LIMIT_MS)
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value) },
+      (error) => { clearTimeout(timer); reject(error) },
+    )
+  })
+}
+const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+test('a pull whose document read never answers fails at the 15 second step limit, and not before', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    const { fs } = fakeFirestore()
+    fs.getDoc = () => new Promise(() => {})
+    let outcome = 'pending'
+    pullRemoteProjects(fs, UID, { perProject: true, step: stepWithLimit })
+      .then(() => { outcome = 'resolved' }, (error) => { outcome = error.message })
+    mock.timers.tick(STEP_LIMIT_MS - 1)
+    await flush()
+    assert.equal(outcome, 'pending', 'the step gave up before 15 seconds')
+    mock.timers.tick(1)
+    await flush()
+    assert.equal(outcome, 'timed out', 'a document read that never answered did not fail the pull')
+  } finally {
+    mock.timers.reset()
+  }
+})
+
+test('a pull whose collection read never answers fails at the step limit', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    const { fs } = fakeFirestore({ [LEGACY]: { list: [project('a', T.mid)], v: 1 } })
+    fs.getDocs = () => new Promise(() => {})
+    let outcome = 'pending'
+    pullRemoteProjects(fs, UID, { perProject: true, step: stepWithLimit })
+      .then(() => { outcome = 'resolved' }, (error) => { outcome = error.message })
+    await flush()
+    mock.timers.tick(STEP_LIMIT_MS)
+    await flush()
+    assert.equal(outcome, 'timed out', 'a collection read that never answered did not fail the pull')
+  } finally {
+    mock.timers.reset()
+  }
+})
+
+test('each step has its own limit: a pull of several steps is not cut off by their total', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    const { fs } = fakeFirestore({ [LEGACY]: { list: [project('a', T.mid)], v: 1 } })
+    // Only the first document read and the first collection read are slow; the migration's own reads are not.
+    const slow = (inner) => {
+      let first = true
+      return async (...args) => {
+        if (first) {
+          first = false
+          await new Promise((resolve) => setTimeout(resolve, STEP_LIMIT_MS - 1000))
+        }
+        return inner(...args)
+      }
+    }
+    fs.getDoc = slow(fs.getDoc)
+    fs.getDocs = slow(fs.getDocs)
+    let steps = 0
+    let outcome = 'pending'
+    const bound = (promise) => { steps += 1; return stepWithLimit(promise) }
+    pullRemoteProjects(fs, UID, { perProject: true, now: 1000, step: bound })
+      .then((pulled) => { outcome = pulled }, (error) => { outcome = error.message })
+    for (let i = 0; i < 8 && outcome === 'pending'; i += 1) {
+      await flush()
+      mock.timers.tick(STEP_LIMIT_MS - 1000)
+    }
+    await flush()
+    assert.equal(typeof outcome, 'object', `the pull failed on the sum of its steps: ${outcome}`)
+    assert.deepEqual(outcome.list.map((p) => p.id), ['a'])
+    assert.equal(steps >= 3, true, 'the document read, the collection read and the migration were each bounded')
+  } finally {
+    mock.timers.reset()
+  }
+})
+
 test('a second pull of a migrated account migrates nothing', async () => {
   const { fs, calls } = fakeFirestore({ [LEGACY]: { list: [project('a', T.mid)], v: 1 } })
   await pullRemoteProjects(fs, UID, { perProject: true, now: 1000 })
@@ -728,4 +910,31 @@ test('a remote document with no timestamp cannot overwrite a device that has one
   assert.equal(shouldApplyRemote(null, 5000).apply, false)
   // …but on a device with no clock, it is still the only copy there is.
   assert.equal(shouldApplyRemote(undefined, 0).apply, true)
+})
+
+/* A saved single colour does not move updatedAt either (it is not a design edit), so it carries
+ * colorsAt, and the merge keeps every device's colours whichever copy wins. */
+
+test('saved colours from both copies are kept, each hex once, and the later colorsAt is kept', () => {
+  const c = (hex, at) => ({ hex, at })
+  const local = [project('a', T.mid, { savedColors: [c('#E4572E', T.early), c('#17BEBB', T.early)], colorsAt: T.early })]
+  const remote = [project('a', T.late, { design: { palette: { colors: ['#fff'] } }, savedColors: [c('#17bebb', T.mid), c('#FFC914', T.mid)], colorsAt: T.mid })]
+  const merged = mergeProjects(local, remote).list[0]
+  assert.deepEqual(merged.design, remote[0].design, 'the newer design edit still wins')
+  assert.deepEqual(merged.savedColors.map((s) => s.hex.toUpperCase()), ['#E4572E', '#17BEBB', '#FFC914'])
+  assert.equal(merged.colorsAt, T.mid)
+})
+
+test('a colour saved on a stale copy does not outrank a newer design edit', () => {
+  const stale = [project('a', T.early, { savedColors: [{ hex: '#E4572E', at: T.late }], colorsAt: T.late })]
+  const edited = [project('a', T.mid, { design: { palette: { colors: ['#123456'] } } })]
+  const merged = mergeProjects(stale, edited).list[0]
+  assert.deepEqual(merged.design, edited[0].design)
+  assert.deepEqual(merged.savedColors.map((s) => s.hex), ['#E4572E'], 'and the colour survives')
+})
+
+test('lists that differ only in saved colours are not equal, so the merge is saved', () => {
+  const a = [project('a', T.mid)]
+  const b = [project('a', T.mid, { savedColors: [{ hex: '#E4572E', at: T.late }], colorsAt: T.late })]
+  assert.equal(projectListsEqual(a, b), false)
 })

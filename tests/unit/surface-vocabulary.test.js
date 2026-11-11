@@ -9,7 +9,7 @@
 //
 // WHAT THIS DELIBERATELY DOES NOT BAN:
 //   • WorkspaceContext and the home-workspace-* CSS classes — internal names.
-//   • The names of PREVIEW SCENES ("Product Workspace", "Project workspace").
+//   • The name of a PREVIEW SCENE ("Product Workspace", in UiSystemLab).
 //     Those label a fictional app rendered inside a colour preview to show the
 //     palette in use. They are not our surface, and renaming them would make
 //     the demo describe UIL4B instead of the imaginary product it is showing.
@@ -52,7 +52,7 @@ const PUBLIC_COPY = [
 ]
 
 // A JSX text node or a quoted string, minus the exempt cases above.
-const ALLOWED = /WorkspaceContext|home-workspace|plb-pv-workspace|Product Workspace|Project workspace|id: 'workspace'|#workspace/
+const ALLOWED = /WorkspaceContext|home-workspace|Product Workspace|id: 'workspace'|#workspace/
 
 const stripComments = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, '')

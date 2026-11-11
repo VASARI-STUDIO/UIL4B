@@ -56,7 +56,8 @@ test('the stripper still works, so every source read below can be trusted', () =
 // is deliberately absent: the icon library really does hand over SVG, so "SVG"
 // after "export" is not always the asset bundle. That case is pinned by name
 // on the two surfaces that made it, below.
-const FORMAT_WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON' }
+// Tailwind, CSS and JSON are all built now; the asset bundle is the one still unbuilt, named by its own phrase.
+const FORMAT_WORD = { css: 'CSS', tailwind: 'Tailwind', json: 'JSON', assets: 'asset bundle' }
 
 // "export" then, inside the same sentence, the format. "Copy CSS" is not
 // caught, on purpose: the tools have per-tool Copy buttons and index.html
@@ -154,7 +155,7 @@ test('/info reads its guide list from the registry rather than typing it', () =>
 
 test('/info links to no retired URL and to nothing without a title', () => {
   const retired = new Set(LEGACY_REDIRECTS.map(([from]) => from))
-  const links = [...INFO.matchAll(/to="(\/[^"]*)"/g)].map((m) => m[1].split('#')[0])
+  const links = [...INFO.matchAll(/to="(\/[^"]*)"/g)].map((m) => m[1].split('#')[0].split('?')[0])
   // POSITIVE CONTROL: the page links out to Settings and Projects at least.
   assert.ok(links.length >= 3, `only ${links.length} literal links found on /info — the extractor is broken`)
   for (const route of links) {
@@ -247,10 +248,10 @@ test('the /info Preview link goes to the tool that has a Preview control', () =>
   // instead: /create/contrast is the other colour surface with a swatch and no
   // Preview control of its own.
   const contrast = stripComments(read('src/pages/ContrastChecker.jsx'))
-  // The control is the Tools overflow's "Preview on a UI" row since the drawn
+  // The control is the Preview button on the toolbar row (a row in Extra tools if it ever leaves) since the drawn
   // toolbar.
-  assert.ok(builder.includes("label: 'Preview on a UI'"), 'PaletteBuilder.jsx has lost its Preview control')
-  assert.ok(!contrast.includes('Preview on a UI') && !contrast.includes('aria-label="Preview"'),
+  assert.ok(builder.includes("label: 'Preview', icon: 'eye'"), 'PaletteBuilder.jsx has lost its Preview control')
+  assert.ok(!contrast.includes("label: 'Preview'") &&!contrast.includes('aria-label="Preview"'),
     'ContrastChecker.jsx now has a Preview control too, so the link target is ambiguous; revisit this test')
 
   const link = INFO.match(/<Link to=(\{[^}]+\}|"[^"]+")>Preview<\/Link>/)
@@ -263,12 +264,12 @@ test('the /info Preview link goes to the tool that has a Preview control', () =>
 /* ── the export gate: sign-in is no longer "only" for saving ───────────────── */
 
 test('/info stops calling sign-in optional while taking a file away needs an account', () => {
-  const panel = stripComments(read('src/components/ExportPanel.jsx'))
-  // Condition and positive control in one: the gate exists and the panel
-  // uses it (e2309608). Remove the gate and the old wording is true again,
+  const runner = stripComments(read('src/hooks/useExportRunner.js'))
+  // Condition and positive control in one: the gate exists and the export
+  // engine uses it (e2309608). Remove the gate and the old wording is true again,
   // and this check should go with it.
-  assert.ok(panel.includes('useExportGate'),
-    'ExportPanel.jsx no longer uses useExportGate — file exports are ungated again, so retire this test')
+  assert.ok(runner.includes('useExportGate') && /await requireExportAccount\(/.test(runner),
+    'useExportRunner.js no longer uses useExportGate — file exports are ungated again, so retire this test')
   for (const phrase of ['only if you want saved projects', 'is optional']) {
     assert.ok(!INFO.includes(phrase),
       `/info says sign-in "${phrase}" again, and taking a file away — the export panel, the icon `
@@ -280,7 +281,7 @@ test('/info stops calling sign-in optional while taking a file away needs an acc
 
 test('/sitemap does not promise a Soon group in its Create lede or type a Discover blurb', () => {
   const map = stripComments(read('src/pages/SiteMap.jsx'))
-  const lede = map.match(/<h2 id="smap-create">Create<\/h2>\s*(?:\{\}\s*)?<p>([^<]+)<\/p>/)
+  const lede = map.match(/<h2 className="spt-h2" id="smap-create">Create<\/h2>\s*(?:\{\}\s*)?<p className="spt-sub">([^<]+)<\/p>/)
   assert.ok(lede && /colour/.test(lede[1]), 'the Create lede on /sitemap is gone or has changed shape')
   if (CREATE_GROUPS.some((g) => g.id === 'component' && g.soon)) {
     assert.ok(!/\bcomponents\b/i.test(lede[1]),
@@ -300,7 +301,7 @@ test('/sitemap does not promise a Soon group in its Create lede or type a Discov
   const discover = map.slice(start, end)
   assert.ok(discover.includes('note={g.desc}'), "the Discover column no longer renders each group's desc from the registry")
   if (DISCOVER_GROUPS.some((g) => g.soon)) {
-    const typed = discover.match(/<p className="smap-cat-desc">[^{<][^<]*/)
+    const typed = discover.match(/<p className="spt-gdesc">[^{<][^<]*/)
     assert.equal(typed, null,
       `/sitemap types a Discover description again (${typed?.[0]}) while a Discover group is still Soon; `
       + "the rows beneath already carry each group's own desc from toolTree.js")

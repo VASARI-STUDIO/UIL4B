@@ -1,56 +1,111 @@
 import MenuSelect from '../components/tool/MenuSelect'
 import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo, memo, Fragment } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { flushSync } from 'react-dom'
+import { Link, useNavigate, useNavigationType } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useProject } from '../contexts/ProjectContext'
 import { useProModal, reportUpgradeGate } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
-import { getLenis } from '../hooks/useSmoothScroll'
+import { lockScroll } from '../utils/scrollLock'
 import useExportGate from '../hooks/useExportGate'
+import { snapToTarget, stepFromKey } from '../utils/sliderKeys'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
-import SnapSlider from '../components/SnapSlider'
-import { addRecentIcon, getRecentIcons, clearRecentIcons } from '../utils/recentIcons'
-import { openInNewTab } from '../utils/newTab'
-import { createCollectionLoader } from '../utils/iconifyCollectionCache'
-import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
+import useMediaQuery from '../hooks/useMediaQuery'
+import SplitDownload from '../components/library/SplitDownload'
+import FooterGlyph from '../components/library/FooterGlyph'
 import {
-  STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
-  stickyStrokePx, strokeAttrForPx, viewBoxOf,
+  downloadFileName, effectiveFormat, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
+} from '../utils/iconDownload'
+import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
+import { openInNewTab } from '../utils/newTab'
+import { FREE_SAVE_LIMITS } from '../config/plans'
+import { collectionToNames, createCollectionLoader, createLimiter } from '../utils/iconifyCollectionCache'
+import { matchesRegular } from '../data/iconRegularRules'
+import { loadPackHead } from '../data/iconHeads'
+import { isMulticolourSvg, isNearBlackMono, monochromeSvg } from '../utils/iconPaint'
+import { colourRowState, colourChoice, normaliseGround, groundContrastNote, groundHex, groundVars, checkerUri } from '../utils/iconColourRow'
+import { concatenatePackLists, orderIconsByPack } from '../utils/iconPackOrder'
+import { consumeIconDraft, readIconDraft, validateIconDraft } from '../utils/iconHandoff'
+import { clearPreviewDraft, readPreviewDraft, stampPreviewDraft, writePreviewDraft } from '../utils/iconPreviewDraft'
+import { BACK_TO_FREE_NOTE, proPreview } from '../utils/iconProPreview'
+import {
+  STROKE_PX, STROKE_REFERENCE_SIZE, STROKE_UNIT_REF, canPinWithVectorEffect, customIconStroke, draftStrokePx,
+  markupHasStroke, parseViewBoxRect, stickyStrokePx, stickyStrokeToken, strokeAttrForPx, strokeScaleCaption,
+  transformScale, viewBoxOf, zoomedStroke,
 } from '../utils/iconStroke'
+import {
+  CUSTOM_SIZE_MAX, CUSTOM_SIZE_MIN, DEFAULT_EXPORT_SIZE, ICON_SIZE_PRESETS, INSPECT_PX, INSPECT_PX_SHEET,
+  NARROW_RAIL_BELOW, isPresetSize, isProSetting, parseCustomSize, railPresets,
+} from '../utils/iconSize'
+import {
+  DEFAULT_LINE_CAP, DEFAULT_LINE_JOIN, LINE_CORNERS, LINE_ENDS, LINE_STYLES, lineStyleOf,
+} from '../utils/iconLineStyle'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
+import { registerSymbolsSliced, symbolRef, touchSymbol } from '../utils/iconSprite'
+import { cleanCustomIcons, customSymbolKey, customSymbolRef, registerCustomSymbols } from '../utils/customIcons'
+import { sanitiseSvgInline } from '../utils/svgSanitise'
+import {
+  endBandKind, iconsOpenTo, packsProAdds, pickTeaseIcons, teaseCellCount, teaseCellPlace, teaseColsFallback,
+} from '../utils/iconEndBand'
+import {
+  SEARCH_TEASE_COPY, lockedSearchPacks, searchTeaseBand, searchTeaseKey, searchTeaseNeed, searchTeaseWhere, summariseLockedMatches,
+} from '../utils/iconSearchTease'
+// The closing arrow shared with the homepage's closing band.
+import PhGlyph from '../components/spectrum/PhGlyph'
+import { PH_ARROW_UP_RIGHT } from '../components/spectrum/phosphorNav'
 // WHO SEES WHICH PACK. One editable table, no pack name in this file's logic —
-// see src/data/iconPackTiers.js for the founder's rule and for how to move a
+// see src/data/iconPackTiers.js for the rule and for how to move a
 // pack between tiers with a one-word edit.
 import {
-  ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
+  ANIMATED_PACKS, ICON_GATE_COPY, anonPerPack, canSeeIcon, canSeePack, isAnimatedPack, isBlockedPack, proOnlyIconCount, tierOf, viewerTier, visibleIconNames, visiblePacks,
 } from '../data/iconPackTiers'
+import { ANON_ICON_CEILING, anonCapForCols, anonListMax, capAnonList } from '../data/iconGridRows'
+// THE ANIMATED SETS NEVER TOUCH api.iconify.design FROM THE BROWSER. Their listing
+// and glyphs come only from this client, which calls the server's Pro check.
+import { ANIMATED_BATCH, animatedIcons, classifyAnimatedFailure, isAnimatedName, isPackScopedFailure } from '../utils/animatedIcons'
+import {
+  applyGlyphData, glyphKey, purgeAnimatedCaches, setAnimatedTier, staleAnimatedAnswer, animatedTierIsPaid,
+} from '../utils/animatedIconCache'
 // WHAT IS OWED TO THE PEOPLE WHO DREW THEM. Four of the sets below are Creative
 // Commons Attribution sets and two of those are free-tier, so the credit under
 // this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
-import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
+import { ICON_PACK_CREDITS, creditRows, iconifyCredit } from '../data/iconPackCredits'
+import { iconifyFetch, clearIconifyCooldown, iconifyCooldownUntil, fitsUrl, HELD_HEADER } from '../utils/iconifyFetch'
+import { glyphChunkPlan } from '../utils/iconGroupGlyphs'
+import { fetchCollectionSnapshot } from '../utils/iconCollectionSnapshot'
+import { iconSynonymFor } from '../data/iconSynonyms'
+import GalleryEndGate, { GateFadeCards } from '../components/library/GalleryEndGate'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
+import { isCountUnknownError } from '../utils/projectCount'
 import '../styles/deferred/library.css'
+import '../styles/pages/icon-editor.css'
 import '../styles/deferred/tool-shell.css'
 // The attribution line's own sheet. It is NOT in library.css, deliberately: a
 // licence condition should be editable — and reviewable — without opening a
 // 900-line shared stylesheet, and a rule that disappears by accident here is a
 // rule that takes a credit off the screen with it.
-import '../styles/pages/icon-attribution.css'
 
 const API_LIMIT = 999
+
+// What a search found in sets the viewer cannot open, remembered per
+// (tier, chip, weight, query) so retyping a query costs no second request.
+// Counts and pack labels only (see utils/iconSearchTease.js). Held for the
+// session and trimmed oldest-first so it cannot grow without end.
+const SEARCH_TEASE_CACHE = new Map()
+const SEARCH_TEASE_CACHE_MAX = 60
 
 // ONE HOST, BECAUSE THE OTHER TWO WERE NEVER A FALLBACK.
 // `api.simplesvg.com` and `api.unisvg.com` are Iconify's documented mirrors and
 // sat here as the retry path for exactly the outage this file keeps hitting.
-// MEASURED 2026-09-18, both from this machine and unauthenticated:
+// MEASURED, both from one machine and unauthenticated:
 //   api.iconify.design  /collection?prefix=lucide -> 200
 //   api.simplesvg.com   /collection?prefix=lucide -> 403
 //   api.unisvg.com      /collection?prefix=lucide -> 403
@@ -68,6 +123,7 @@ const COLORED_PACKS = new Set([
   'logos', 'flat-color-icons', 'fxemoji', 'noto', 'noto-v1', 'twemoji', 'emojione',
   'emojione-v1', 'openmoji', 'fluent-emoji', 'fluent-emoji-flat', 'circle-flags',
   'flag', 'flagpack', 'cif', 'skill-icons', 'devicon', 'vscode-icons', 'token-branded',
+  'meteocons',
 ])
 // Theme-adaptive tint for the GRID/rail only (inverts monochrome art in dark mode).
 // The customizer Stage does NOT use this — it fixes contrast via a luminance swap.
@@ -78,18 +134,24 @@ const invClass = (pack) => (COLORED_PACKS.has(pack) ? '' : 'ig-inv')
 // the other styles. `packs` are real Iconify prefixes.
 const ICON_GROUPS = {
   coloured: { label: 'Coloured', packs: ['logos', 'flat-color-icons', 'devicon', 'skill-icons', 'vscode-icons', 'token-branded'] },
+  // Logo.dev stays out of this chip: it is not an Iconify set (no prefix to list or search, and the group browse path only speaks Iconify), its logos are hotlinked per query at our cost, and it carries a required credit. It is reached from the pack menu.
   brands: { label: 'Brand logos', packs: ['simple-icons', 'logos', 'devicon', 'skill-icons'] },
   flags: { label: 'Flags', packs: ['circle-flags', 'flag', 'flagpack', 'cif'] },
-  emoji: { label: 'Emoji', packs: ['twemoji', 'fluent-emoji', 'noto', 'openmoji'] },
 }
-const GROUP_ORDER = ['coloured', 'brands', 'flags', 'emoji']
+const GROUP_ORDER = ['coloured', 'brands', 'flags']
+// The chip row's reset: pressed when no group is chosen, and pressing it clears the group (see handleGroupToggle). 'all' is not a key of ICON_GROUPS, so it can never be mistaken for a group.
+const ALL_ICONS_ID = 'all'
+const ALL_ICONS_OPTION = { id: ALL_ICONS_ID, label: 'All icons' }
+// Emoji is not a category chip here (the Emoji tab owns emoji), but the sets still
+// ride in the default "All packs" listing and stay in the pack menu.
+const EMOJI_PACKS = ['twemoji', 'fluent-emoji', 'noto', 'openmoji']
 // Cap each pack's contribution so a 5-pack aggregate stays snappy (the grid is
 // windowed anyway — nobody scrolls past a few thousand).
 const PER_PACK_CAP = 1500
 
 // Every pack across every group, de-duped — the default "All packs" aggregate.
-const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs']
-const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs)])]
+const INTERFACE_PACKS = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph', 'mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs', 'mingcute', 'carbon', 'fluent', 'pixelarticons', 'radix-icons', 'bi']
+const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs), ...EMOJI_PACKS])]
 
 // The group tray's options were built HERE, at module scope, so that
 // LibraryFilterGroup was not handed a new array identity on every keystroke —
@@ -107,7 +169,7 @@ const ALL_PACKS = [...new Set([...INTERFACE_PACKS, ...GROUP_ORDER.flatMap(k => I
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
 // Packs whose default style is genuinely stroke-based (the stroke slider applies).
-const STROKE_PACKS = new Set(['lucide', 'tabler', 'iconoir', 'heroicons', 'ph'])
+const STROKE_PACKS = new Set(['lucide', 'tabler', 'iconoir', 'heroicons'])
 // Pro-gated store of user-customised icons. NEVER read/written for non-Pro.
 const CUSTOM_KEY = 'vs-custom-icons'
 
@@ -190,7 +252,8 @@ function bumpCopyCount() {
 // what every returning user's stored digit meant. The old key is read exactly
 // once, converted at the size the editor has always opened at (see
 // `stickyStrokePx`), and then left alone — the first slider move writes the
-// pixel key, which wins from then on.
+// pixel key, which wins from then on. It is written in viewBox units ("2u") because
+// a bare pixel number from before the editor opened at 24 means half that weight here.
 const STROKE_KEY = 'vs-icon-stroke-px'
 const LEGACY_STROKE_KEY = 'vs-icon-stroke'
 function readStickyStroke() {
@@ -198,21 +261,64 @@ function readStickyStroke() {
     return stickyStrokePx(localStorage.getItem(STROKE_KEY), localStorage.getItem(LEGACY_STROKE_KEY))
   } catch { return STROKE_PX.default }
 }
-function writeStickyStroke(v) {
-  try { localStorage.setItem(STROKE_KEY, String(v)) } catch { /* private mode / quota — non-fatal */ }
+function writeStickyStroke(v, size) {
+  try { localStorage.setItem(STROKE_KEY, stickyStrokeToken(v, size)) } catch { /* private mode / quota — non-fatal */ }
 }
 
-// Each pack's Regular weight excludes its alternate glyph variants.
-const REGULAR_RULES = {
-  ph: n => !/-(?:thin|light|bold|fill|duotone)$/.test(n),
-  heroicons: n => !/-solid$/.test(n),
-  iconoir: n => !/-solid$/.test(n),
-  tabler: n => !/-filled$/.test(n),
-  mdi: n => !/-outline$/.test(n),
-  'material-symbols': n => !/-(?:outline(?:-(?:rounded|sharp))?|rounded|sharp)$/.test(n),
-  solar: n => /-bold(?:-duotone)?$/.test(n),
+// The preview ground is a viewing choice, not part of the icon: it is remembered
+// per browser like the stroke, never exported and never saved with a custom.
+const GROUND_KEY = 'vs-icon-ground'
+function readGround() {
+  try { return normaliseGround(localStorage.getItem(GROUND_KEY)) } catch { return normaliseGround() }
 }
-const matchesRegular = (pack, name) => REGULAR_RULES[pack]?.(name) ?? true
+function writeGround(v) {
+  try { localStorage.setItem(GROUND_KEY, v) } catch { /* private mode / quota: non-fatal */ }
+}
+const GROUND_OPTS = [
+  { id: 'page', label: 'Page' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'checker', label: 'Transparent' },
+]
+
+// The picture the upgrade popup shows for a Pro preview: the icon drawn on the stage's ground.
+const PROOF_PX = 64
+// The grounds come from the same table the editor paints and the contrast note measures.
+const proofGround = (ground, theme) => (ground === 'page' ? undefined : (
+  ground === 'checker'
+    ? { backgroundImage: `url("${checkerUri(theme, 8)}")`, backgroundSize: '16px 16px' }
+    : { background: groundHex(ground, theme) }
+))
+
+// Arrow keys inside a radiogroup: focus moves to the neighbour (wrapping) and, unless
+// it only opens a popup (marked data-opens-popup), selects it. Keys from anything inside a radio's popup
+// (a colour pad, a hex field) are left alone: only a focused radio steers.
+function steerRadios(e) {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
+  if (!step || e.target.getAttribute('role') !== 'radio') return
+  const radios = Array.from(e.currentTarget.querySelectorAll('[role="radio"]'))
+  const at = radios.indexOf(e.target)
+  if (at < 0) return
+  e.preventDefault()
+  const next = radios[(at + step + radios.length) % radios.length]
+  next.focus()
+  if (!next.hasAttribute('data-opens-popup')) next.click()
+}
+
+// The customiser's opening values. One table feeds the first-open seeds, what
+// Reset restores, and the test for "does anything differ" (which shows Reset),
+// so they can never disagree. The stroke is in pixels (see iconStroke.js).
+const CUSTOMISER_DEFAULTS = Object.freeze({
+  size: DEFAULT_EXPORT_SIZE,
+  color: '',
+  stroke: STROKE_PX.default,
+  absStroke: false,
+  cap: 'round',
+  join: 'round',
+  rotate: 0,
+  flipH: false,
+  flipV: false,
+})
 
 // ── Weights: Regular / Bold / Fill / Duo ─────────────────────────────────────
 // the Regular/Bold/Fill/Duo tabs
@@ -225,6 +331,9 @@ const matchesRegular = (pack, name) => REGULAR_RULES[pack]?.(name) ?? true
 //   Heroicons              outline, -solid                   — Fill
 //   Tabler                 outline, -filled (a subset)       — Fill
 //   Iconoir                outline, -solid  (a subset)       — Fill
+//   Fluent UI              -24-regular, -24-filled           — Fill
+//   Bootstrap Icons        outline, -fill   (a subset)       — Fill
+//   Pixelarticons          outline, -solid  (a subset)       — Fill
 //
 // Lucide draws one weight and so offers Regular only. A segment the current
 // scope cannot honour is DISABLED with the reason (which packs do draw it),
@@ -246,22 +355,30 @@ const WEIGHT_RULES = {
     heroicons: n => /-solid$/.test(n) && !/-(?:16|20)-solid$/.test(n),
     tabler: n => /-filled$/.test(n),
     iconoir: n => /-solid$/.test(n),
+    fluent: n => /-24-filled$/.test(n),
+    bi: n => /-fill$/.test(n),
+    pixelarticons: n => /-solid$/.test(n),
   },
   duo: { ph: n => /-duotone$/.test(n) },
 }
-const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir' }
+const WEIGHT_PACK_NAMES = { ph: 'Phosphor', heroicons: 'Heroicons', tabler: 'Tabler', iconoir: 'Iconoir', fluent: 'Fluent UI', bi: 'Bootstrap Icons', pixelarticons: 'Pixelarticons' }
 const weightPacks = (weight) => Object.keys(WEIGHT_RULES[weight] || {})
 // Collections use the pack's Regular artwork; other scopes honour the weight.
-const keepWeight = (pack, names, weight, groupKey = null) => {
-  if (groupKey || weight === 'regular') return names.filter(name => matchesRegular(pack, name))
+// `tier` also drops the icons a pack keeps for Pro (Carbon's logo-*), so a name the
+// viewer may not have never becomes a cell, a glyph request or a search hit.
+const keepWeight = (pack, names, weight, groupKey = null, tier) => {
+  const open = visibleIconNames(pack, names, tier)
+  if (groupKey || weight === 'regular') return open.filter(name => matchesRegular(pack, name))
   const rule = WEIGHT_RULES[weight]?.[pack]
-  return rule ? names.filter(rule) : []
+  return rule ? open.filter(rule) : []
 }
 const matchesWeight = (pack, name, weight) => (
   weight === 'regular' ? matchesRegular(pack, name) : !!WEIGHT_RULES[weight]?.[pack]?.(name)
 )
 
 function buildSvgUrl(host, pack, name, params = {}) {
+  // An animated set has no direct URL, ever: it loads through the server's Pro check.
+  if (isAnimatedPack(pack)) return ''
   let url = `${host}/${pack}/${name}.svg`
   const parts = []
   if (params.size) { parts.push(`width=${params.size}`, `height=${params.size}`) }
@@ -275,13 +392,17 @@ function buildSvgUrl(host, pack, name, params = {}) {
 }
 
 async function fetchWithFallback(path, timeout = 4000) {
+  let retryAfter = null
   for (const host of API_HOSTS) {
     try {
-      const r = await fetch(`${host}${path}`, { signal: AbortSignal.timeout(timeout) })
+      const r = await iconifyFetch(`${host}${path}`, { timeout })
       if (r.ok) return r
+      // A 429 says how long to wait, when the browser is allowed to read the header
+      // (a refusal sent without CORS headers reaches us as a network error instead).
+      if (r.status === 429) retryAfter = Number(r.headers.get('retry-after')) || retryAfter
     } catch { /* try next host */ }
   }
-  throw new Error('All API hosts failed')
+  throw Object.assign(new Error('All API hosts failed'), { retryAfter })
 }
 
 // Base SVG markup cache. Only the parameterless variant is cached — it's the
@@ -291,18 +412,32 @@ async function fetchWithFallback(path, timeout = 4000) {
 // customizer can seed its stage on first paint with no "Loading…" flash.
 const svgTextCache = new Map()
 const svgTextReady = new Map()
-const svgKey = (pack, name) => `${pack}:${name}`
+const svgKey = glyphKey
 
 function fetchSvgText(pack, name, params = {}) {
+  // The block-list in iconPackTiers.js covers every path that takes an icon's markup.
+  if (isBlockedPack(pack)) return Promise.reject(new Error('This icon set is not offered'))
   const cacheable = !params || Object.keys(params).length === 0
   const key = svgKey(pack, name)
   if (cacheable && svgTextCache.has(key)) return svgTextCache.get(key)
   const p = (async () => {
+    // Animated sets: the server route, then the same standalone markup the grid builds.
+    if (isAnimatedPack(pack)) {
+      if (!(await loadGlyphBatch(pack, [name]))) throw new Error('Failed to fetch icon SVG')
+      const text = glyphSvgText(pack, name)
+      if (!text) throw new Error('Failed to fetch icon SVG')
+      return text
+    }
     for (const host of API_HOSTS) {
       try {
         const url = buildSvgUrl(host, pack, name, params)
-        const r = await fetch(url, { signal: AbortSignal.timeout(3000) })
-        if (r.ok) return await r.text()
+        const r = await iconifyFetch(url, { timeout: 3000, persist: cacheable })
+        if (r.ok) {
+          const text = await r.text()
+          // A 200 that is not SVG (a portal page, a cut-off body) is a failure, so
+          // it is not kept below and the next ask goes back to the network.
+          if (fitsUrl(url, r.headers.get('content-type'), text)) return text
+        }
       } catch { /* try next host */ }
     }
     throw new Error('Failed to fetch icon SVG')
@@ -315,10 +450,17 @@ function fetchSvgText(pack, name, params = {}) {
   return p
 }
 
+// Forget the markup held for an icon, so the next ask for it goes out again.
+function evictSvgText(pack, name) {
+  const key = svgKey(pack, name)
+  svgTextCache.delete(key)
+  svgTextReady.delete(key)
+}
+
 // Fire-and-forget warm-up on grid hover/focus, so by the time the click lands
 // the customizer's base markup is usually already resolved.
 const prefetchIconSvg = (icon) => {
-  if (icon?.cdn && !icon.custom && !icon.logo) fetchSvgText(icon.pack, icon.name).catch(() => {})
+  if (icon?.cdn && !icon.custom && !icon.logo && !isAnimatedPack(icon.pack)) fetchSvgText(icon.pack, icon.name).catch(() => {})
 }
 
 /* ── THE GRID ASKS FOR ONE FILE PER PACK, NOT ONE PER ICON ───────────────────
@@ -329,7 +471,7 @@ const prefetchIconSvg = (icon) => {
    one host, on top of the 25 `/collection` requests `browseAll` already sends —
    ~145 requests to api.iconify.design from one IP, per load, before the visitor
    has scrolled once. Cloudflare answers that with error 1015 (rate limited by
-   IP), which is precisely the 2026-09-15 breakage recorded at `noteGlyphFailure`
+   IP), which is precisely the breakage recorded at `noteGlyphFailure`
    below: the catalogue answered 200, every glyph came back 429, and because the
    API serves a rate-limited glyph as text/plain while the browser asked for an
    image, ORB blocked it and the <img> just failed. The page believed it was
@@ -337,19 +479,19 @@ const prefetchIconSvg = (icon) => {
 
    THE FIX. The Iconify API serves many icons in ONE request:
    `/{prefix}.json?icons=a,b,c` returns `{ icons: { a: {body}, … }, aliases, … }`.
-   MEASURED 2026-09-18: 60 lucide icons in a single response, HTTP 200, 14,977
+   MEASURED: 60 lucide icons in a single response, HTTP 200, 14,977
    bytes. So a 120-cell page costs one request per PACK PRESENT (≈25 on the
    mixed "All packs" view, far fewer on a single pack or a group) instead of 120
    — and scrolling to the next page is usually free, because a pack's tranche is
    fetched generously and cached for the session.
 
    WHY THE MARKUP IS STILL AN <img>, NOT INLINE SVG. The obvious way to use the
-   body is `dangerouslySetInnerHTML`. This repo does not contain a single use of
-   it — `grep -rn dangerouslySetInnerHTML src` returns nothing, which is a large
-   part of why the 2026-09-16 security review found no XSS — and third-party
-   markup is the worst possible place to introduce the first one. Composing the
-   body into a `data:image/svg+xml` URI keeps the exact same <img> element, the
-   same `ig-inv` tint, the same `loading="lazy"`, and the same canvas sampling in
+   body is `dangerouslySetInnerHTML`. The only use in src is PhIcon, which
+   injects the app's own bundled path data; third-party markup fetched at
+   runtime is the worst possible thing to inject the same way. (The customiser
+   stage is separate: it parses one SVG, sanitised on fetch or paste, into the
+   DOM to edit it.) Composing the body into a `data:image/svg+xml` URI keeps
+   the exact same <img> element, the same `ig-inv` tint, the same `loading="lazy"`, and the same canvas sampling in
    BrandGlyph (a data: URI does not taint a canvas, so that path stops needing
    CORS at all) — while SVG inside an <img> is a non-scripting context by spec,
    so a hostile body cannot run anything. Same pixels, no new attack surface.
@@ -369,9 +511,10 @@ const GLYPH_BOX = new Map()
 // that re-renders the same cells never re-asks for them.
 const GLYPH_ASKED = new Map()
 
-// One request carries this many names. 60 measured at ~15KB; 100 keeps the URL
-// well inside every proxy's limit and still lands under 30KB for a stroke pack.
-const GLYPH_BATCH = 100
+// One request carries up to GLYPH_CHUNK names (src/utils/iconGroupGlyphs.js).
+// 60 measured at ~15KB; 100 keeps the URL well inside every proxy's limit and
+// still lands under 30KB for a stroke pack. Which names share a request is
+// fixed by position in the pack's listing, so a reload asks for the same URLs.
 
 const askedFor = (pack) => {
   let s = GLYPH_ASKED.get(pack)
@@ -393,53 +536,47 @@ const GLYPH_RETRY_MS = 3000
 const GLYPH_FAILS = new Map() // 'pack:name' → failed attempts so far
 const GLYPH_RETRY_AFTER = new Map() // pack → earliest time it may be asked again
 
+// The glyph stores the animated-icon cache module writes into and purges.
+const GLYPH_STORES = { body: GLYPH_BODY, box: GLYPH_BOX, missing: GLYPH_MISSING }
+
 /**
  * Fetch one pack's worth of glyph bodies in a single request and fill the
- * caches. Resolves true when the request was answered, false when the service
- * refused it — the caller turns a false into the page's existing refused state
- * rather than into 120 silently broken images.
+ * caches. Resolves { ok: true } when the request was answered, and
+ * { ok: false, kind } when it was not — the caller turns a failure into the
+ * page's existing refused state rather than into 120 silently broken images.
+ * `kind` says why (see classifyAnimatedFailure): only an animated set can fail
+ * for a reason other than 'transient'. When a back-off was running and nothing
+ * was sent, `kind` is 'held' and `heldUntil` says when it ends: the name was not
+ * tried, so it is not a failure and must not use up a retry.
  */
-async function loadGlyphBatch(pack, names) {
-  if (!names.length) return true
-  const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
+async function loadGlyphBatchOutcome(pack, names) {
+  if (!names.length) return { ok: true }
   let data
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
-    // as a broken image nobody can see.
-    if (!r.ok) return false
-    data = await r.json()
-  } catch {
-    return false
-  }
-  const defW = data.width || 24
-  const defH = data.height || 24
-  const bodyOf = (n) => {
-    // A requested name can be an alias; the parent carries the markup. Iconify
-    // allows an alias chain, so walk it with a hop cap rather than trusting it
-    // to be one deep. An alias such as `lucide:home` (of `house`) would
-    // otherwise be recorded as missing.
-    let cur = n
-    for (let hop = 0; hop < 8; hop++) {
-      if (data.icons && data.icons[cur]) return { icon: data.icons[cur], key: cur }
-      const alias = data.aliases && data.aliases[cur]
-      if (!alias || !alias.parent) return null
-      cur = alias.parent
+    if (isAnimatedPack(pack)) {
+      // The server route checks the plan; a 401/403 throws and is classified below.
+      data = await animatedIcons.glyphs(pack, names)
+    } else {
+      const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
+      const r = await iconifyFetch(url, { timeout: 8000 })
+      if (r.headers.get(HELD_HEADER)) return { ok: false, kind: 'held', heldUntil: iconifyCooldownUntil(url) }
+      // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
+      // as a broken image nobody can see.
+      if (!r.ok) return { ok: false, kind: 'transient' }
+      data = await r.json()
     }
-    return null
+  } catch (err) {
+    return { ok: false, kind: isAnimatedPack(pack) ? classifyAnimatedFailure(err) : 'transient' }
   }
-  for (const n of names) {
-    const found = bodyOf(n)
-    const key = svgKey(pack, n)
-    if (!found || typeof found.icon.body !== 'string') { GLYPH_MISSING.add(key); continue }
-    GLYPH_MISSING.delete(key)
-    GLYPH_BODY.set(key, found.icon.body)
-    const w = found.icon.width || defW
-    const h = found.icon.height || defH
-    if (w !== 24 || h !== 24) GLYPH_BOX.set(key, { w, h })
-  }
-  return true
+  // An animated answer that lands after the viewer left Pro is dropped, not stored.
+  if (!applyGlyphData(pack, names, data, GLYPH_STORES)) return { ok: false, kind: classifyAnimatedFailure(staleAnimatedAnswer()) }
+  // Put the batch in the sprite before the answer is reported, so the cells that
+  // paint on the tick that follows find their symbols already there.
+  // A sprite failure must not hold the batch: its icons fall back to their data URIs.
+  try { await registerGlyphSymbols(pack, names) } catch { /* drawn as images instead */ }
+  return { ok: true }
 }
+const loadGlyphBatch = async (pack, names) => (await loadGlyphBatchOutcome(pack, names)).ok
 
 /**
  * The <img> src for a batched glyph, or '' when its body has not arrived. The
@@ -475,6 +612,32 @@ function glyphDataUri(pack, name) {
     GLYPH_URI.delete(GLYPH_URI.keys().next().value)
   }
   return uri
+}
+
+// ── Inline sprite for monochrome packs ───────────────────────────────────────
+// A monochrome pack icon is drawn as `<svg><use href="#id"/></svg>` from the one
+// hidden sprite (utils/iconSprite.js) instead of as an <img> data: URI, which cost
+// the browser one SVG document per icon. Coloured packs keep their <img>: the
+// brand chip samples the decoded image for its contrast halo and aspect ratio,
+// which a <use> has no pixels to give. Animated packs keep it too, because the
+// sanitiser drops their <animate> elements.
+const inSprite = (pack) => !COLORED_PACKS.has(pack) && !isAnimatedPack(pack)
+// Sanitising a cold batch of 100 icons is one 28 ms task at 4x CPU (measured, median
+// of 5), so it goes in runs of SPRITE_SLICE with a yield between them: the longest
+// run is then about 15 ms.
+const SPRITE_SLICE = 25
+async function registerGlyphSymbols(pack, names) {
+  if (!inSprite(pack)) return
+  await registerSymbolsSliced(names.map((name) => ({ key: svgKey(pack, name), text: glyphSvgText(pack, name) })), SPRITE_SLICE)
+}
+/**
+ * `#id` of the icon's symbol, '' when it is not in the sprite (use the data: URI).
+ * Read-only: every body arrives through loadGlyphBatchOutcome, which registers
+ * its batch, so a render never writes to the page. An icon the sprite has since
+ * let go of (see SPRITE_MAX) is drawn from its data: URI instead.
+ */
+function glyphSymbolRef(pack, name) {
+  return inSprite(pack) ? symbolRef(svgKey(pack, name)) : ''
 }
 
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
@@ -596,6 +759,25 @@ const haloFor = (ink, theme, pack) => {
   return ink === 'dark' && theme !== 'light' ? 'halo-light' : ink === 'light' && theme === 'light' ? 'halo-dark' : ''
 }
 
+// Single-colour near-black pack art (GitHub, Apple, Vercel, X) is drawn in the page's
+// own ink in the grid, like a mono icon, instead of keeping its black behind a ring: the
+// same brand then reads solid in the Iconify and Logo.dev grids. Only the display
+// changes; the markup, copy and download keep the art's own colours. Mixed wordmarks
+// (more than one paint) are not this and keep their ring. The answer for a name never
+// changes once its body has arrived, so it is worked out once.
+const SOLID_INK = new Map() // 'pack:name' → true when the art is one near-black colour
+function readsAsThemeInk(pack, name) {
+  if (FLAG_PACKS.has(pack)) return false
+  const key = svgKey(pack, name)
+  const known = SOLID_INK.get(key)
+  if (known !== undefined) return known
+  const text = glyphSvgText(pack, name)
+  if (!text) return false
+  const solid = isNearBlackMono(text, INK_DARK_MAX)
+  SOLID_INK.set(key, solid)
+  return solid
+}
+
 // Ink tone already known for an icon in the customiser or My Icons: the grid's
 // measurement of the same pack glyph, else one taken from the saved markup.
 const SAVED_INK = new Map() // saved-icon key → 'dark' | 'light' | 'mid'
@@ -635,7 +817,8 @@ function BrandGlyph({ pack, name, src, gone = false }) {
   }
   const onError = () => setLoad({ key, phase: 'fail' })
   const wide = shape.ar > WIDE_INK
-  const halo = haloFor(shape.ink, theme, pack)
+  const solidInk = !!src && readsAsThemeInk(pack, name)
+  const halo = solidInk ? '' : haloFor(shape.ink, theme, pack)
   const waiting = !gone && (!src || phase === 'wait')
   return (
     <span
@@ -645,7 +828,7 @@ function BrandGlyph({ pack, name, src, gone = false }) {
       {src && (
         <img
           src={src}
-          className={phase === 'wait' ? 'ig-glyph-pending' : phase === 'in' ? 'ig-glyph-in' : ''}
+          className={[phase === 'wait' ? 'ig-glyph-pending' : phase === 'in' ? 'ig-glyph-in' : '', solidInk ? 'ig-inv' : ''].filter(Boolean).join(' ')}
           loading="lazy"
           alt={name}
           onLoad={onLoad}
@@ -702,6 +885,13 @@ const gridShowsPack = (list) => {
   return false
 }
 
+// What a cell is called to assistive tech: the action, the icon, and the pack
+// when the grid mixes packs (the visible label only appears on hover).
+const cellLabel = (icon, packName) => {
+  const base = icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`
+  return packName ? `${base}, ${packName}` : base
+}
+
 // Hover warm-up waits for the pointer to rest. Scrolling drags every cell it
 // passes under the pointer through mouseenter, so warming on enter queued one
 // markup request per cell crossed. One shared timer means only the cell the
@@ -756,9 +946,43 @@ function probeDefaultPlate(ref, themePlate, done) {
 // a hairline on the plate's own edge (CSS) in place of the halo; transparent
 // marks stay unrounded and the halo follows the artwork's ink. A load the
 // browser refuses for CORS is shown plain: no sampling, so no halo or rounding.
+// Logo.dev serves these brands only on their own white app-icon square, which
+// reads as a white box on the dark page. On dark, the tile shows the brand's
+// transparent mark from SVG Logos (CC0) instead. Brands whose only mark is dark
+// (PayPal, Visa, Notion, Anthropic) keep the plate, because their mark would
+// vanish on the dark ground. Copy and download still give the Logo.dev file.
+// The marks arrive in ONE batched request for all of them, like every other
+// glyph; until it lands, or if it fails, the tile shows the Logo.dev plate.
+const DARK_LOGO_MARKS = Object.freeze({
+  'microsoft.com': 'microsoft-icon',
+  'meta.com': 'meta-icon',
+  'youtube.com': 'youtube-icon',
+  'shopify.com': 'shopify',
+  'salesforce.com': 'salesforce',
+  'airtable.com': 'airtable',
+})
+
+let darkMarksBatch = null
+const loadDarkMarks = () => {
+  darkMarksBatch ||= loadGlyphBatch('logos', Object.values(DARK_LOGO_MARKS)).then((ok) => {
+    if (!ok) darkMarksBatch = null
+    return ok
+  })
+  return darkMarksBatch
+}
+
 function LogoDevGlyph({ icon }) {
   const { theme } = useTheme()
   const key = `logodev:${icon.ref}:${theme}`
+  const darkMark = theme !== 'light' ? DARK_LOGO_MARKS[icon.ref] : null
+  const [, setMarkReady] = useState(0)
+  const markUri = darkMark ? glyphDataUri('logos', darkMark) : ''
+  useEffect(() => {
+    if (!darkMark || markUri) return undefined
+    let live = true
+    loadDarkMarks().then((ok) => { if (ok && live) setMarkReady((n) => n + 1) })
+    return () => { live = false }
+  }, [darkMark, markUri])
   const [measured, setMeasured] = useState(null)
   const [plainKey, setPlainKey] = useState(null)
   const plain = plainKey === key
@@ -778,6 +1002,20 @@ function LogoDevGlyph({ icon }) {
     }
     setMeasured({ key, shape: glyphCache.get(key) })
   }
+  if (markUri) {
+    return (
+      <span className="ig-chip" data-mark-source="svg-logos">
+        <img
+          src={markUri}
+          width="28"
+          height="28"
+          className="ig-logo"
+          loading="lazy"
+          alt={icon.name}
+        />
+      </span>
+    )
+  }
   return (
     <span className={`ig-chip${halo ? ` ig-chip--${halo}` : ''}`}>
       <img
@@ -796,12 +1034,31 @@ function LogoDevGlyph({ icon }) {
   )
 }
 
+// A sprite cell. The effect is the one place a drawn icon is marked as recently
+// used: it runs when the cell mounts (a page revealed, a ghost restored), not on
+// every render of the grid.
+function SpriteGlyph({ href, symKey, className }) {
+  useEffect(() => { touchSymbol(symKey) }, [symKey])
+  return (
+    <svg width="24" height="24" className={className} aria-hidden="true" focusable="false">
+      <use href={href} />
+    </svg>
+  )
+}
+
 // One glyph renderer for custom (saved), logo, CDN and embedded icons.
 // `src` is the batched CDN data URI, passed in so a cell re-renders only when
 // its own markup lands.
 function cellGlyph(icon, src, onGlyphError, gone) {
   if (icon.custom) {
-    if (!icon.colored) return <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    // A saved icon is a symbol in the sprite like a pack glyph (customSymbolRef is
+    // '' when it could not go in, or was let go: then it is drawn as an image).
+    const ref = customSymbolRef(icon)
+    if (!icon.colored) {
+      return ref
+        ? <SpriteGlyph href={ref} symKey={customSymbolKey(icon)} className="ig-sym ig-inv" />
+        : <img src={svgToDataUri(icon.svg)} width="24" height="24" className="ig-inv" loading="lazy" alt={icon.name} />
+    }
     return <SavedPackGlyph icon={icon} />
   }
   if (icon.logo) return <LogoDevGlyph icon={icon} />
@@ -814,6 +1071,12 @@ function cellGlyph(icon, src, onGlyphError, gone) {
     // already handled where it can be read. A name the service has no icon for
     // is an empty slot, not a skeleton.
     if (!src) return <span className={gone ? 'ig-glyph-gone' : 'ig-glyph-wait'} aria-hidden="true" />
+    // A `#id` is a symbol in the sprite: it exists as soon as the body does, so
+    // there is no load to wait for and no state to hold. The cell's own
+    // aria-label names it, as it did the <img> alt.
+    if (src.charCodeAt(0) === 35) {
+      return <SpriteGlyph href={src} symKey={svgKey(icon.pack, icon.name)} className={`ig-sym ${invClass(icon.pack)}`.trim()} />
+    }
     return <MonoGlyph src={src} className={invClass(icon.pack)} alt={icon.name} onError={onGlyphError} />
   }
   return (
@@ -832,15 +1095,30 @@ function cellGlyph(icon, src, onGlyphError, gone) {
 // viewport: the same focusable element at its measured height, holding only its
 // name. It stays the same element so focus and find-in-page can still land on
 // it, and scrolling it back into view restores the glyph in place.
-const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
-  const pack = showPack ? packOf(icon) : null
+// The identity a grid cell and the editor share (pack, name, saved or not), so the editor can find
+// the cell of the icon it has open when it closes.
+const iconCellKey = (icon) => `${icon.pack || ''}|${icon.name}|${icon.custom ? 'c' : ''}`
+const findIconCell = (icon) => (icon
+  ? Array.from(document.querySelectorAll('.ic[data-ic]')).find(el => el.dataset.ic === iconCellKey(icon) && el.isConnected) || null
+  : null)
+
+const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, packInName = false, picked, ghost = 0, onPick, onWarm, onGlyphError }) {
+  const pack = showPack || packInName ? packOf(icon) : null
+  // The pack name shows under the icon name, and on hover-capable devices only
+  // with it (see `.ic-pack`), so the accessible name carries it for everyone who
+  // cannot hover. `packInName` keeps it in the accessible name alone: a grouped
+  // grid names each pack in a heading row, so the cell draws no label, but a
+  // focused cell still has to say which pack it is from.
+  const packName = pack ? (icon.logo ? 'Logo.dev' : gridPackLabel(pack)) : null
+  const drawnPack = showPack ? packName : null
   return (
     <div
-      className={picked ? 'ic is-picked' : 'ic'}
+      className={['ic', picked && 'is-picked', drawnPack && 'has-pack'].filter(Boolean).join(' ')}
+      data-ic={ghost ? undefined : iconCellKey(icon)}
       style={ghost ? { height: ghost } : undefined}
       role="button"
       tabIndex={0}
-      aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
+      aria-label={cellLabel(icon, packName)}
       onClick={() => onPick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(icon) } }}
       onMouseEnter={() => onWarm(icon, false)}
@@ -849,7 +1127,7 @@ const IconCell = memo(function IconCell({ icon, src, gone = false, showPack, pic
     >
       {!ghost && <Fragment key="g">{cellGlyph(icon, src, onGlyphError, gone)}</Fragment>}
       <span key="n" className="ic-name">{icon.name}</span>
-      {!ghost && pack && <span key="p" className="ic-pack">{pack}</span>}
+      {!ghost && drawnPack && <span key="p" className="ic-pack" aria-hidden="true">{drawnPack}</span>}
     </div>
   )
 })
@@ -866,15 +1144,6 @@ const WINDOW_OVERSCAN_PX = 800
 const GHOST_STEP = 24
 
 // ── Pure helpers (module scope — reused by the customizer + browse fns) ───────
-
-// Round-robin merge so the grid mixes packs (outlined+solid+coloured+…) instead
-// of dumping one pack fully before the next.
-function interleavePacks(lists) {
-  const maxLen = lists.reduce((m, l) => Math.max(m, l.length), 0)
-  const merged = []
-  for (let i = 0; i < maxLen; i++) for (const l of lists) if (i < l.length) merged.push(l[i])
-  return merged
-}
 
 // Pro-gated custom store. Callers MUST check isPro before invoking these for a
 // non-Pro user — the store is never touched for non-Pro (anti-tamper).
@@ -905,7 +1174,7 @@ function nextCustomName(base, existing) {
 }
 
 // WCAG relative luminance of a hex colour (0 = black, 1 = white). Drives the
-// contrast-aware Stage swap so a black icon never disappears on #0E0E11.
+// contrast-aware Stage swap so a black icon never disappears on the Dark ground.
 function relativeLuminance(hex) {
   const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex || '')
   if (!m) return 1
@@ -918,28 +1187,15 @@ function relativeLuminance(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-// Sanitise arbitrary SVG markup (fetched OR pasted) before it ever touches the
-// DOM: parse, drop <script>, strip on* handlers and javascript: hrefs. Returns
-// the cleaned <svg> string, or null if it isn't valid SVG.
+// Clean arbitrary SVG markup (fetched, saved OR pasted) before it ever touches the
+// DOM, with the allow-list sanitiser: only listed elements and attributes survive,
+// and a reference must name something inside the file. Returns the cleaned <svg>
+// string, or null if it isn't valid SVG (or is over the sanitiser's size caps).
 function sanitizeSvgMarkup(text) {
   if (!text || typeof text !== 'string') return null
   try {
-    const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
-    if (doc.querySelector('parsererror')) return null
-    const svg = doc.querySelector('svg')
-    if (!svg) return null
-    svg.querySelectorAll('script').forEach(n => n.remove())
-    const walk = (el) => {
-      for (const a of [...el.attributes]) {
-        const name = a.name.toLowerCase()
-        const val = (a.value || '').trim().toLowerCase()
-        if (name.startsWith('on')) el.removeAttribute(a.name)
-        else if ((name === 'href' || name === 'xlink:href') && val.startsWith('javascript:')) el.removeAttribute(a.name)
-      }
-      for (const child of [...el.children]) walk(child)
-    }
-    walk(svg)
-    return svg.outerHTML
+    const clean = sanitiseSvgInline(text)
+    return clean ? clean.svg : null
   } catch { return null }
 }
 
@@ -954,8 +1210,7 @@ function embeddedSvgMarkup(icon) {
 // Heuristic: does this markup describe a stroke-based icon (so we show the
 // stroke control)? fill:none + a real stroke colour.
 function detectPastedStroke(svg) {
-  if (!svg) return false
-  return /fill\s*=\s*["']none["']/i.test(svg) && /stroke\s*=\s*["'](?!none)[^"']+["']/i.test(svg)
+  return markupHasStroke(svg)
 }
 
 // Re-neutralise a saved custom's baked root colour back to currentColor so the
@@ -980,11 +1235,25 @@ function transformAttr(rotate, flipH, flipV, cx, cy) {
 }
 
 // Bake the live customiser values into REAL SVG attributes so copied/saved/
-// downloaded markup matches the Stage exactly (this is the Lucide copy-reset
-// #2794 workaround — never fall back to defaults).
+// downloaded markup matches the Stage exactly (a workaround for Lucide's copy
+// resetting to default attributes — never fall back to defaults).
+const SHAPE_TAGS = new Set(['path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon'])
+
+// A chosen colour has to reach children that carry a colour of their own. Single-colour
+// artwork has its explicit fills and strokes mapped to currentColor (`none` stays); artwork
+// with several colours or a gradient keeps them, since one colour cannot stand for all.
+let tintMemo = { src: '', out: '' }
+function tintedMarkup(rawSvg) {
+  if (tintMemo.src === rawSvg) return tintMemo.out
+  const out = isMulticolourSvg(rawSvg) ? rawSvg : monochromeSvg(rawSvg)
+  tintMemo = { src: rawSvg, out }
+  return out
+}
+
 function serializeCustomizedSvg(rawSvg, opts = {}) {
   if (!rawSvg) return ''
   const { size = 48, color, stroke, isStroke, absStroke, cap, join, rotate = 0, flipH = false, flipV = false } = opts
+  if (color) rawSvg = tintedMarkup(rawSvg)
   let doc
   try { doc = new DOMParser().parseFromString(rawSvg, 'image/svg+xml') } catch { return rawSvg }
   const svg = doc.querySelector('svg')
@@ -1015,18 +1284,26 @@ function serializeCustomizedSvg(rawSvg, opts = {}) {
   // (CSS `svg, svg *`). Mirror that here so icons whose child shapes carry their
   // own stroke attributes export with the edits applied, not the originals.
   if (isStroke) {
-    const strokeAttr = strokeAttrForPx({ px: stroke, size, viewBox: box, absolute: absStroke })
     const shapes = [svg, ...svg.querySelectorAll('*')]
-    for (const el of shapes) {
+    // An element inside a scaled group is drawn at that scale, so its width is divided by it.
+    const insideOf = (el) => {
+      let k = 1
+      for (let n = el; n && n !== svg.parentNode; n = n.parentNode) k *= transformScale(n.getAttribute?.('transform'))
+      return k
+    }
+    const scaled = shapes.map(insideOf)
+    const pin = absStroke && canPinWithVectorEffect({ size, viewBox: box, scaledGroups: scaled.some(k => k !== 1) })
+    shapes.forEach((el, i) => {
+      const strokeAttr = strokeAttrForPx({ px: stroke, size, viewBox: box, absolute: absStroke, inside: scaled[i] })
       if (strokeAttr != null) el.setAttribute('stroke-width', String(strokeAttr))
-      if (absStroke) el.setAttribute('vector-effect', 'non-scaling-stroke')
+      if (pin && SHAPE_TAGS.has(el.localName)) el.setAttribute('vector-effect', 'non-scaling-stroke')
       if (cap) el.setAttribute('stroke-linecap', cap)
       if (join) el.setAttribute('stroke-linejoin', join)
-    }
+    })
   }
-  const vb = (svg.getAttribute('viewBox') || '0 0 24 24').split(/\s+/).map(Number)
-  const cx = (vb[0] || 0) + (vb[2] || 24) / 2
-  const cy = (vb[1] || 0) + (vb[3] || 24) / 2
+  const vb = parseViewBoxRect(svg.getAttribute('viewBox'))
+  const cx = vb.x + vb.w / 2
+  const cy = vb.y + vb.h / 2
   const tf = transformAttr(rotate, flipH, flipV, cx, cy)
   if (tf) {
     const g = doc.createElementNS('http://www.w3.org/2000/svg', 'g')
@@ -1065,19 +1342,8 @@ function recentPayload(icon) {
   return null
 }
 
-// Pro-gated line-style options. Each button previews its OWN effect: a thick
-// stub whose ends / corner render in the exact cap or join it sets, so the
-// choice is visual, not a word.
-const CAP_OPTS = [
-  { v: 'round', label: 'Round ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="round" /></svg> },
-  { v: 'butt', label: 'Flat ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="butt" /></svg> },
-  { v: 'square', label: 'Square ends', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true"><line x1="7" y1="12" x2="17" y2="12" strokeLinecap="square" /></svg> },
-]
-const JOIN_OPTS = [
-  { v: 'round', label: 'Round corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="round" /></svg> },
-  { v: 'miter', label: 'Sharp corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="miter" /></svg> },
-  { v: 'bevel', label: 'Bevel corners', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" aria-hidden="true"><path d="M6 18 L12 7 L18 18" strokeLinejoin="bevel" /></svg> },
-]
+// A line-style tile draws the icon at 40px with the stroke the editor is set to, in each style.
+const LINE_TILE_PX = 40
 
 // One "Similar in this pack" tile. It stays invisible (but in layout, so the
 // 44px row never shifts) until its glyph has loaded, then fades in: an empty
@@ -1092,7 +1358,7 @@ function SimilarTile({ s, src, onPick, onReadyChange }) {
   return (
     <button
       type="button"
-      className="icust-similar-btn"
+      className="ied-sim"
       data-ready={ready ? 'true' : undefined}
       title={s.name}
       aria-label={`Open ${s.name}`}
@@ -1124,9 +1390,9 @@ function SimilarSection({ list, srcFor, onPick }) {
   }, [])
   const anyReady = list.some(s => readyIds[s.id])
   return (
-    <div className="icust-similar" data-ready={anyReady ? 'true' : undefined}>
-      <div className="icust-similar-label">Similar in this pack</div>
-      <div className="icust-similar-row">
+    <div className="ied-similar" data-ready={anyReady ? 'true' : undefined}>
+      <div className="ied-similar-label">Similar in this pack</div>
+      <div className="ied-similar-row">
         {list.map(s => (
           <SimilarTile key={s.id} s={s} src={srcFor(s)} onPick={onPick} onReadyChange={onReadyChange} />
         ))}
@@ -1135,11 +1401,114 @@ function SimilarSection({ list, srcFor, onPick }) {
   )
 }
 
+// What the stage says while its art is missing: Loading… for a screen reader only, or
+// that it could not load, with a way to ask again.
+function StageMsg({ failed, onRetry }) {
+  if (!failed) return <span className="ied-stage-msg" role="status"><span className="sr-only">Loading…</span></span>
+  return (
+    <span className="ied-stage-msg ied-stage-msg--failed">
+      <span role="status">Couldn’t load this icon.</span>
+      <button type="button" className="ied-stage-retry" onClick={onRetry}>Try again</button>
+    </span>
+  )
+}
+
+// One drawing in the size rail: the icon's own sanitised, serialised markup at an exact
+// pixel size (the cell's CSS sets the box). Set like the stage host, not by React.
+function SizeArt({ markup, className = 'ied-size-art', style }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => { if (ref.current) ref.current.innerHTML = markup || '' }, [markup])
+  return <span className={className} style={style} ref={ref} aria-hidden="true" />
+}
+const LineArt = ({ markup }) => <SizeArt markup={markup} className="ied-line-art" />
+
+// The stroke control: a native range over a drawn track and fill, ticks at the snap points,
+// and an always-visible number field. Pointer drags are pulled to the snaps (snapToTarget);
+// keys step exactly (stepFromKey), so a keyboard user can leave a snap. Double-click resets.
+// The thumb centre sits at 10px + (100% - 20px) * p, which is how the fill and ticks are placed.
+function IedStroke({ id, value, onChange }) {
+  const { min, max, step, snaps, inputMin, inputMax } = STROKE_PX
+  const pointerRef = useRef(false)
+  const [draft, setDraft] = useState(null)
+  const fmt = (v) => String(Number((+v).toFixed(2)))
+  const trackValue = Math.min(max, Math.max(min, value))
+  const at = (v) => `calc(10px + (100% - 20px) * ${(v - min) / (max - min)})`
+  const endPointer = () => { pointerRef.current = false }
+  const commitDraft = () => {
+    const n = parseFloat(draft)
+    setDraft(null)
+    if (Number.isNaN(n)) return
+    const next = Math.round(Math.min(inputMax, Math.max(inputMin, n)) * 100) / 100
+    if (next !== value) onChange(next)
+  }
+  return (
+    <>
+      <div className="ied-strokehead">
+        <label className="ied-lbl" htmlFor={`${id}-n`}>Stroke</label>
+        <span className="ied-numf">
+          <input
+            id={`${id}-n`}
+            className="ied-in"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Stroke width in pixels"
+            value={draft ?? fmt(value)}
+            onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, '').slice(0, 6))}
+            onFocus={(e) => e.currentTarget.select()}
+            onBlur={() => { if (draft !== null) commitDraft() }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitDraft()
+              else if (e.key === 'Escape' && draft !== null) { e.preventDefault(); e.stopPropagation(); setDraft(null) }
+            }}
+          />
+          <span className="px" aria-hidden="true">px</span>
+        </span>
+      </div>
+      <div className="ied-rgw">
+        <span className="ied-trk" aria-hidden="true" />
+        <span className="ied-fil" style={{ width: at(trackValue) }} aria-hidden="true" />
+        {snaps.map(s => (
+          <span key={s} className={`ied-tick${s <= trackValue ? ' on' : ''}`} style={{ left: at(s) }} aria-hidden="true" />
+        ))}
+        <input
+          id={id}
+          className="ied-rg"
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={trackValue}
+          aria-label="Stroke width"
+          aria-valuetext={`${fmt(value)} pixels`}
+          onPointerDown={() => { pointerRef.current = true }}
+          onPointerUp={endPointer}
+          onPointerCancel={endPointer}
+          onLostPointerCapture={endPointer}
+          onBlur={endPointer}
+          onChange={(e) => onChange(pointerRef.current ? snapToTarget(+e.target.value, { snaps, min, max, step }) : +e.target.value)}
+          onKeyDown={(e) => {
+            if (e.altKey || e.ctrlKey || e.metaKey) return
+            const next = stepFromKey(e.key, { value: trackValue, min, max, step })
+            if (next === null) return
+            e.preventDefault()
+            pointerRef.current = false
+            if (next !== trackValue) onChange(next)
+          }}
+          onDoubleClick={() => onChange(STROKE_PX.default)}
+          title={`Double-click to reset to ${fmt(STROKE_PX.default)}px`}
+        />
+      </div>
+    </>
+  )
+}
+
 // ── Icon customizer ──────────────────────────────────────────────────────────
 // Replaces the old IconDetail. A structural sibling of ExportPanel: a dark
 // spotlight "Stage" with live --ig-* preview, sanitised inline SVG, copy
 // serialisation, and a Pro-gated Save. Adopts ExportPanel's a11y verbatim.
-function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, onCopy, onPick }) {
+function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef, onClose, onCopy, onPick }) {
   const { user } = useAuth()
   const { projects, saveProject, projectLimit } = useProject()
   const { openProModal } = useProModal()
@@ -1150,7 +1519,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // The stage follows the site theme: in light mode an un-tinted icon previews
   // dark-on-light, in dark mode white-on-dark — so what you see matches where
   // you'll paste it. An explicit colour choice always overrides this.
-  const themeInk = theme === 'light' ? '#18181B' : '#F4F4F5'
+  const themeInk = theme === 'light' ? '#18181B' : '#EFEEEA'
   const panelRef = useRef(null)
   const stageRef = useRef(null)
   const hostRef = useRef(null)
@@ -1169,25 +1538,67 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Seed controls from a re-opened custom's saved values, then from a validated
   // homepage draft (`draftSize` / `draftStroke` — bounded values, nothing else),
   // then from the defaults.
-  const [size, setSize] = useState(() => (icon?.custom && icon.size) || icon?.draftSize || 48)
-  const [color, setColor] = useState(() => (icon?.custom && icon.color) || '')
+  // A Pro preview kept across a visit to /plans seeds every setting, when it is for this icon.
+  const [kept] = useState(() => {
+    const d = readPreviewDraft()
+    const id = icon && !icon.custom ? (icon.id || `${icon.pack}:${icon.name}`) : null
+    return d && id && d.icon.id === id ? d.settings : null
+  })
+  // Restored once. A reload after the return trip finds the slot empty, not the preview again.
+  useEffect(() => { if (kept) clearPreviewDraft() }, [kept])
+  const [size, setSize] = useState(() => (icon?.custom && icon.size) || kept?.size || icon?.draftSize || CUSTOMISER_DEFAULTS.size)
+  // The size rail. `size` is the committed export size; the rest is the Custom radio
+  // and its field. Custom is "open" when it is chosen (or when the size is one the
+  // rail has no cell for), and `lastCustom` keeps the last custom value for this open.
+  const narrowRail = useMediaQuery(`(max-width: ${NARROW_RAIL_BELOW - 1}px)`)
+  // The editor is a bottom sheet below this width (icon-editor.css), a two-column dialog above it.
+  const onSheet = useMediaQuery('(max-width: 899px)')
+  // The shortest, narrowest phone: Download is one button that opens the formats menu.
+  const footFolded = useMediaQuery('(max-width: 340px) and (max-height: 599px)')
+  const inspectPx = onSheet ? INSPECT_PX_SHEET : INSPECT_PX
+  const [customOpen, setCustomOpen] = useState(() => !isPresetSize(size))
+  const [lastCustom, setLastCustom] = useState(() => (isPresetSize(size) ? null : size))
+  const [sizeText, setSizeText] = useState(() => String(size))
+  const [clampedTo, setClampedTo] = useState(null)
+  const railRef = useRef(null)
+  const primaryRef = useRef(null)
+  const sizeInputRef = useRef(null)
+  const sizeRowRef = useRef(null)
+  const [color, setColor] = useState(() => (icon?.custom && icon.color) || kept?.color || CUSTOMISER_DEFAULTS.color)
   // A saved custom keeps its own stroke; anything else opens at the sticky width.
   // Both arrive in whatever unit their era used, so both go through the pixel
   // conversion: a pre-fix record stored viewBox units next to its own size, and
   // the homepage draft is a user-unit number for a 24-grid glyph. Converting at
   // the boundary means a saved icon re-opens at the weight it was saved at.
   const [stroke, setStroke] = useState(() => (
-    (icon?.custom ? customIconStrokePx(icon) : null)
-    ?? draftStrokePx(icon?.draftStroke, icon?.draftSize)
+    (icon?.custom ? customIconStroke(icon)?.px : null)
+    ?? kept?.stroke
+    ?? draftStrokePx(icon?.draftStroke)
     ?? readStickyStroke()
   ))
-  const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke))
-  const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || 'round')
-  const [join, setJoin] = useState(() => (icon?.custom && icon.join) || 'round')
-  const [rotate, setRotate] = useState(0)
-  const [flipH, setFlipH] = useState(false)
-  const [flipV, setFlipV] = useState(false)
+  const [absStroke, setAbsStroke] = useState(() => !!(icon?.custom && icon.absStroke) || !!kept?.absStroke)
+  const [cap, setCap] = useState(() => (icon?.custom && icon.cap) || kept?.cap || CUSTOMISER_DEFAULTS.cap)
+  const [join, setJoin] = useState(() => (icon?.custom && icon.join) || kept?.join || CUSTOMISER_DEFAULTS.join)
+  // The "set ends and corners separately" rows. Open when someone opens them, and held open
+  // while the pair matches no tile (see `splitShown`).
+  const [splitOpen, setSplitOpen] = useState(() => !lineStyleOf(cap, join))
+  const [rotate, setRotate] = useState(kept?.rotate ?? CUSTOMISER_DEFAULTS.rotate)
+  const [flipH, setFlipH] = useState(kept?.flipH ?? CUSTOMISER_DEFAULTS.flipH)
+  const [flipV, setFlipV] = useState(kept?.flipV ?? CUSTOMISER_DEFAULTS.flipV)
+  // What the stage is drawn on. Only the ground switch changes it: not the colour,
+  // not the pack, not the theme (the Page ground follows the theme by itself).
+  const [ground, setGround] = useState(readGround)
+  const chooseGround = (g) => { setGround(g); writeGround(g) }
+  // The note's button unmounts once the contrast clears, so focus moves to the
+  // swatch it just checked rather than falling to the page.
+  const groundGroupRef = useRef(null)
+  const fixGround = (g) => {
+    chooseGround(g)
+    requestAnimationFrame(() => groundGroupRef.current?.querySelector(`.ied-bgb[data-g="${g}"]`)?.focus())
+  }
   const [copied, setCopied] = useState('')
+  // The file format the Download button hands over; it follows the account.
+  const [dlFormat, setDlFormat] = useState(() => readDownloadFormat())
   const [savedState, setSavedState] = useState(() => (icon?.custom ? 'saved' : 'idle'))
   // Save-to-project picker: saving is a two-step flow — choose a project, then
   // write — so the free per-PROJECT icon cap can be enforced at pick time.
@@ -1195,29 +1606,25 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // Which project the current edit landed in — drives the "Saved to X" button
   // label. Seeded from a re-opened custom's stored projectId.
   const [savedProjectId, setSavedProjectId] = useState(() => (icon?.custom && icon.projectId) || null)
-  // Hovering a saved button re-arms it ("Save to another project").
-  const [saveHover, setSaveHover] = useState(false)
+  // The SVG code block under the controls is closed until opened.
+  const [codeOpen, setCodeOpen] = useState(false)
   // Inline new-project creation inside the picker: naming is REQUIRED before
   // an icon can be assigned to a fresh project.
   const [newProjOpen, setNewProjOpen] = useState(false)
   const [newProjName, setNewProjName] = useState('')
 
-  // Pro asks (daily copy cap, project cap, line styles) all open the canonical
+  // Pro asks (daily copy cap, project cap) all open the canonical
   // Wave-1 Pro modal — one upgrade surface, no per-page variants. The edit in
   // progress here stays untouched behind the overlay, so nothing is lost.
   const showProGate = (kind) => {
     const presets = {
       copies: {
         title: 'You’ve hit today’s free copy limit',
-        subtitle: `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day — the counter resets tomorrow. Go Pro for unlimited copies.`,
+        subtitle: `The free plan includes ${FREE_COPIES_PER_DAY} icon copies per day. The counter resets tomorrow. Go Pro for unlimited copies.`,
       },
       projects: {
         title: 'You’re at the free project limit',
-        subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : 3} projects. Go Pro for unlimited projects and icon saves.`,
-      },
-      line: {
-        title: 'Upgrade to Pro to use this feature',
-        subtitle: 'Line styles let you fine-tune stroke ends and corners — and Pro unlocks every other colour and icon tool too.',
+        subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : FREE_SAVE_LIMITS.projects} projects. Go Pro for unlimited projects and icon saves.`,
       },
     }
     // `gate` is DERIVED from the kind rather than written into each preset, so
@@ -1246,20 +1653,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     return counts
   }, [savePickerOpen])
 
-  const isColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
-  const isStroke = useMemo(() => {
-    if (!activeIcon) return false
-    if (activeIcon.custom) return !!activeIcon.isStroke
-    if (activeIcon.svg) return detectPastedStroke(activeIcon.svg)
-    if (activeIcon.cdn) return STROKE_PACKS.has(activeIcon.pack) && matchesRegular(activeIcon.pack, activeIcon.name)
-    return !activeIcon.filled
-  }, [activeIcon])
-  const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
+  const inColoredPack = !!(activeIcon?.cdn && COLORED_PACKS.has(activeIcon.pack))
 
   // Synchronous base markup for non-CDN sources (memoised — no setState churn).
   const localBase = useMemo(() => {
     if (!activeIcon) return null
-    if (activeIcon.custom && activeIcon.svg) return normalizeCustomBase(activeIcon.svg)
+    // A saved icon is cleaned again on open: it was only checked when it was pasted.
+    if (activeIcon.custom && activeIcon.svg) return normalizeCustomBase(sanitizeSvgMarkup(activeIcon.svg))
     if (activeIcon.svg) return sanitizeSvgMarkup(activeIcon.svg)
     if (!activeIcon.cdn) return embeddedSvgMarkup(activeIcon)
     return null
@@ -1268,6 +1668,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // CDN base fetched once per icon, keyed by identity so a stale response from a
   // previous icon can never paint. All setState here is async (never in-render).
   const [fetched, setFetched] = useState({ id: null, svg: null, err: false })
+  // Bumped by "Try again" on the stage, so the fetch (and the image probe below) run again.
+  const [loadTry, setLoadTry] = useState(0)
   useEffect(() => {
     if (!activeIcon || !activeIcon.cdn || activeIcon.custom) return
     const id = activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`
@@ -1276,11 +1678,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       .then(txt => {
         if (cancelled) return
         const clean = sanitizeSvgMarkup(txt)
+        // Markup the sanitiser rejects must not stay in the session cache, or
+        // opening the icon again (or Try again) would be handed the same text.
+        if (!clean) evictSvgText(activeIcon.pack, activeIcon.name)
         setFetched(clean ? { id, svg: clean, err: false } : { id, svg: null, err: true })
       })
       .catch(() => { if (!cancelled) setFetched({ id, svg: null, err: true }) })
     return () => { cancelled = true }
-  }, [activeIcon])
+  }, [activeIcon, loadTry])
 
   // Similar icons — same pack, same name-root (e.g. arrow-left surfaces
   // arrow-right / arrow-up). A foot-of-popup retention nudge: keep users building
@@ -1291,6 +1696,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const [similar, setSimilar] = useState({ id: null, list: [] })
   useEffect(() => {
     if (!activeIcon?.cdn || activeIcon.custom || activeIcon.pasted) return
+    // The tiles are <img> URLs on the Iconify host, which an animated set never uses.
+    if (isAnimatedPack(activeIcon.pack)) return
     const { pack, name } = activeIcon
     if (!pack || !name) return
     const id = activeIcon.id || `${pack}:${name}`
@@ -1303,14 +1710,14 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         setSimilar({
           id,
           list: names
-            .filter(n => n !== name && n.split(/[-_]/)[0] === root)
+            .filter(n => n !== name && n.split(/[-_]/)[0] === root && canSeeIcon(pack, n, isPro ? 'paid' : 'free'))
             .slice(0, 6)
             .map(n => ({ id: `${pack}:${n}`, pack, name: n, cdn: true })),
         })
       })
       .catch(() => { /* non-fatal — just hide the row */ })
     return () => { cancelled = true }
-  }, [activeIcon])
+  }, [activeIcon, isPro])
 
   const currentId = activeIcon ? (activeIcon.id || `${activeIcon.pack}:${activeIcon.name}`) : null
   const similarList = similar.id === currentId ? similar.list : []
@@ -1325,15 +1732,56 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     const raw = svgTextReady.get(svgKey(activeIcon.pack, activeIcon.name)) || glyphSvgText(activeIcon.pack, activeIcon.name)
     return raw ? sanitizeSvgMarkup(raw) : null
   }, [activeIcon])
-  const baseSvgText = localBase || fetchedBase || cachedCdnBase
+  const rawBaseSvgText = localBase || fetchedBase || cachedCdnBase
+  // Whether the artwork itself draws with a stroke, decided once per loaded SVG.
+  const strokeFromMarkup = useMemo(() => (rawBaseSvgText ? markupHasStroke(rawBaseSvgText) : null), [rawBaseSvgText])
+  const isStroke = useMemo(() => {
+    if (!activeIcon) return false
+    if (activeIcon.custom) return !!activeIcon.isStroke
+    if (activeIcon.svg) return detectPastedStroke(activeIcon.svg)
+    if (activeIcon.cdn) {
+      // Coloured packs keep their own colours. For the rest the artwork decides, once per
+      // loaded SVG; until it arrives the pack list is the first guess.
+      if (COLORED_PACKS.has(activeIcon.pack)) return false
+      if (strokeFromMarkup !== null) return strokeFromMarkup
+      return STROKE_PACKS.has(activeIcon.pack) && matchesRegular(activeIcon.pack, activeIcon.name)
+    }
+    return !activeIcon.filled
+  }, [activeIcon, strokeFromMarkup])
+  const rendersInline = !!activeIcon && (!!activeIcon.svg || (activeIcon.cdn ? isStroke : true))
+  // A saved icon carries its own markup and nothing fetches it, so it never waits.
+  // A one-colour brand logo is drawn in its own colour until a colour is chosen; choosing one
+  // recolours it as it would a mono icon, and "Original" (no colour) puts the art's paint back.
+  const { coloured: isColoredPack, row: colourRow, paint: brandPaint } = colourRowState({
+    inColouredPack: inColoredPack, svg: rawBaseSvgText, failed: loadErr || !!activeIcon?.custom,
+    inkDarkMax: INK_DARK_MAX, colourChosen: !!color,
+  })
+  // Whether the icon's own art is in colour, whatever is chosen now. `isColoredPack` drops to
+  // false once a colour is chosen on a brand logo; the header line and the Similar tiles describe
+  // the icon, not the choice, so they follow this and stay put across Original / colour.
+  const ownColours = isColoredPack || colourRow === 'brand'
+  const baseSvgText = useMemo(() => inColoredPack && !isColoredPack && rawBaseSvgText
+    ? monochromeSvg(rawBaseSvgText) : rawBaseSvgText,
+  [inColoredPack, isColoredPack, rawBaseSvgText])
 
   // Inject the neutral base inline on the Stage; CSS vars drive its appearance.
   // A layout effect, so the art lands in the same frame the waiting glyph leaves.
   useLayoutEffect(() => {
     const host = hostRef.current
     if (!host) return
-    host.innerHTML = rendersInline && baseSvgText ? baseSvgText : ''
-  }, [rendersInline, baseSvgText])
+    const markup = rendersInline && baseSvgText ? (color && !isColoredPack ? tintedMarkup(baseSvgText) : baseSvgText) : ''
+    host.innerHTML = markup
+    // A stroke inside a scaled group is drawn at that scale; --ig-k hands the stylesheet the
+    // factor to divide by, as the exported file does.
+    if (/\btransform\s*=/.test(markup)) {
+      const root = host.querySelector('svg')
+      for (const el of root ? root.querySelectorAll('*') : []) {
+        let k = 1
+        for (let n = el; n && n !== root; n = n.parentNode) k *= transformScale(n.getAttribute('transform'))
+        if (k !== 1) el.style.setProperty('--ig-k', String(k))
+      }
+    }
+  }, [rendersInline, baseSvgText, color, isColoredPack])
 
   // Live preview via the ONLY permitted inline-style channel: setProperty.
   //
@@ -1347,10 +1795,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   useLayoutEffect(() => {
     const stage = stageRef.current
     if (!stage) return
+    // The stage always draws at the inspection size, so the stroke is scaled to it:
+    // the drawing keeps the proportions of the file exported at `size`.
     const strokeAttr = strokeAttrForPx({
-      px: stroke, size, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
+      px: zoomedStroke({ px: stroke, absolute: absStroke, drawSize: inspectPx, exportSize: size }), size: inspectPx, viewBox: viewBoxOf(baseSvgText), absolute: absStroke,
     })
-    stage.style.setProperty('--ig-size', `${size}px`)
+    stage.style.setProperty('--ig-size', `${inspectPx}px`)
     stage.style.setProperty('--ig-stroke', String(strokeAttr ?? STROKE_PX.default))
     stage.style.setProperty('--ig-color', color || themeInk)
     stage.style.setProperty('--ig-cap', cap)
@@ -1360,42 +1810,179 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (flipH) tf.push('scaleX(-1)')
     if (flipV) tf.push('scaleY(-1)')
     stage.style.setProperty('--ig-transform', tf.length ? tf.join(' ') : 'none')
-  }, [size, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText])
+  }, [size, inspectPx, stroke, color, cap, join, rotate, flipH, flipV, themeInk, absStroke, baseSvgText])
 
-  // Lock body scroll + restore focus to the opener on unmount (mirror ExportPanel).
+  // Lock page scroll + restore focus to the opener on unmount (mirror ExportPanel).
   useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    getLenis()?.stop()
-    const opener = restoreRef.current
+    const unlockScroll = lockScroll()
+    // What had focus when the editor first opened. Picking a Similar tile swaps this component for
+    // a new one whose own activeElement is a tile in the old dialog, so the page hands it down.
+    const opener = openerRef?.current?.el || restoreRef.current
     return () => {
-      document.body.style.overflow = prev
-      getLenis()?.start()
-      if (opener && typeof opener.focus === 'function') opener.focus()
+      unlockScroll()
+      // Swapped for another icon's editor (Similar): that one takes focus itself.
+      if (document.querySelector('.ied')) return
+      // Still the icon it opened on: back to whatever opened it. Swapped through Similar: the
+      // cell of the icon now open, else whatever opened the editor.
+      const openedOn = openerRef?.current?.key
+      const live = opener?.isConnected ? opener : null
+      const target = openedOn && openedOn === iconCellKey(icon || {}) ? (live || findIconCell(icon)) : (findIconCell(icon) || live)
+      if (target && typeof target.focus === 'function') target.focus()
     }
-  }, [])
+    // icon is fixed for this instance: a different icon remounts it (key).
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Move focus into the panel, trap Tab, close on Escape (mirror ExportPanel).
+  // The save picker is a panel inside this dialog, over the inspector and foot. While it is open
+  // those two are visibility:hidden, so the Tab trap below skips them. Escape closes the picker
+  // first and the dialog on the next press.
+  const closeSavePicker = () => { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') }
+  // Read by the key handler below. A ref, because that effect must not re-run (and re-focus
+  // the panel) every time the picker opens or closes.
+  const savePickerOpenRef = useRef(false)
+  useEffect(() => { savePickerOpenRef.current = savePickerOpen }, [savePickerOpen])
+
+  // Opening moves focus to the back arrow. Closing hands it to the Save button, but only when
+  // nothing else has it: a click on another control keeps its own focus.
+  const pickerWasOpenRef = useRef(false)
   useEffect(() => {
-    panelRef.current?.focus()
+    if (savePickerOpen) {
+      pickerWasOpenRef.current = true
+      // preventScroll: the sheet is still sliding in, and a scroll to it would move the clipped dialog.
+      requestAnimationFrame(() => document.getElementById('ied-spb')?.focus({ preventScroll: true }))
+      return undefined
+    }
+    if (!pickerWasOpenRef.current) return undefined
+    pickerWasOpenRef.current = false
+    const frame = requestAnimationFrame(() => {
+      const held = document.activeElement
+      if (!held || held === document.body) document.getElementById('ied-save')?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [savePickerOpen])
+  // A press anywhere outside the picker and the Save button closes it. Capture phase: the dialog
+  // stops mousedown from bubbling, so a bubble listener never hears a press inside the dialog.
+  useEffect(() => {
+    if (!savePickerOpen) return undefined
+    const onDown = (e) => {
+      if (e.target.closest?.('.ied-spn, #ied-save')) return
+      setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('')
+    }
+    document.addEventListener('mousedown', onDown, true)
+    return () => document.removeEventListener('mousedown', onDown, true)
+  }, [savePickerOpen])
+
+  // Move focus into the dialog once, on mount.
+  useEffect(() => { panelRef.current?.focus() }, [])
+
+  // On the phone sheet, follow the on-screen keyboard through the visual viewport. --ied-vh is a
+  // hundredth of the visible height and --ied-kb how far the keyboard lifts the sheet (both
+  // used by icon-editor.css); data-kb folds the stage to a bar ("up") or drops it ("tight", under
+  // 400px visible) so the field being typed in and its button always have room.
+  useEffect(() => {
+    const vv = window.visualViewport
+    const root = panelRef.current
+    if (!vv || !root || !onSheet) return undefined
+    let base = Math.max(window.innerHeight, vv.height)
+    let width = window.innerWidth
+    const sync = () => {
+      if (window.innerWidth !== width) { width = window.innerWidth; base = Math.max(window.innerHeight, vv.height) }
+      if (vv.scale > 1.01) return
+      base = Math.max(base, window.innerHeight, vv.height)
+      const up = base - vv.height > 120
+      root.style.setProperty('--ied-vh', `${vv.height / 100}px`)
+      root.style.setProperty('--ied-kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`)
+      if (up) root.setAttribute('data-kb', vv.height < 400 ? 'tight' : 'up')
+      else root.removeAttribute('data-kb')
+    }
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+      root.style.removeProperty('--ied-vh')
+      root.style.removeProperty('--ied-kb')
+      root.removeAttribute('data-kb')
+    }
+  }, [onSheet])
+
+  // Trap Tab, close on Escape (mirror ExportPanel).
+  useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'Escape') {
+        if (savePickerOpenRef.current) { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') } else onClose()
+        return
+      }
       if (e.key !== 'Tab') return
       // Only what can take focus right now: a hidden Similar tile (visibility
       // hidden, or inside a collapsed block) is not a Tab stop.
       const f = Array.from(panelRef.current?.querySelectorAll(
         'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+      ) || []).filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden' && !el.closest('[inert]'))
       if (f.length === 0) return
       const first = f[0]
       const last = f[f.length - 1]
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      // The dialog itself holds focus on open and after a press on a blank part of it, and focus
+      // can be outside it: both enter the loop from the end Tab was heading for.
+      const here = document.activeElement
+      const outside = !here || here === panelRef.current || !panelRef.current?.contains(here)
+      if (e.shiftKey && (here === first || outside)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && (here === last || outside)) { e.preventDefault(); first.focus() }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const strokeCaption = strokeScaleCaption({ size, stroke, absolute: absStroke })
+  // A viewer who is not Pro can preview a custom size or a Pro line style but not take it away.
+  // While one is on screen, Copy SVG becomes the Upgrade button and Download, Save and the
+  // code's Copy dim with aria-disabled (they stay in the tab order and do nothing).
+  const previewing = isProSetting({ size, isPro, cap, join })
+  const preview = previewing ? proPreview({ isPro, size, cap, join }) : null
+  // The size "Back to free settings" returns to: the last preset used this open (24 if none).
+  const [lastPreset, setLastPreset] = useState(() => (isPresetSize(size) ? size : DEFAULT_EXPORT_SIZE))
+  if (isPresetSize(size) && size !== lastPreset) setLastPreset(size)
+  // The preview line is a live region that is always mounted. Leaving a preview says so once,
+  // out of sight, then the note clears. Derived during render, so no effect sets state.
+  const [wasPreviewing, setWasPreviewing] = useState(previewing)
+  const [leftPreview, setLeftPreview] = useState(false)
+  if (previewing !== wasPreviewing) { setWasPreviewing(previewing); setLeftPreview(!previewing) }
+  useEffect(() => {
+    if (!leftPreview) return undefined
+    const t = setTimeout(() => setLeftPreview(false), 5000)
+    return () => clearTimeout(t)
+  }, [leftPreview])
+  // A preview seen is not a gate hit (openProModal counts the hit itself): once per open.
+  const previewSeen = useRef(false)
+  useEffect(() => {
+    if (previewing && !previewSeen.current) { previewSeen.current = true; reportUpgradeGate('icon-pro-preview-seen') }
+  }, [previewing])
+  const lineStyle = lineStyleOf(cap, join)
+  const splitShown = splitOpen || !lineStyle
+  const pickLineStyle = (s) => { setCap(s.cap); setJoin(s.join); markDirty() }
+  // The rail's five drawings: the icon exported at each preset with the settings now on screen.
+  const railArt = useMemo(() => {
+    if (!baseSvgText) return {}
+    const out = {}
+    for (const n of ICON_SIZE_PRESETS) {
+      out[n] = serializeCustomizedSvg(baseSvgText, {
+        size: n, color: isColoredPack ? undefined : (color || themeInk), stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+      })
+    }
+    return out
+  }, [baseSvgText, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
+  // The line-style tiles' three drawings: the same icon, each in one style.
+  const lineArt = useMemo(() => {
+    if (!baseSvgText || !isStroke) return {}
+    const out = {}
+    for (const s of LINE_STYLES) {
+      out[s.id] = serializeCustomizedSvg(baseSvgText, {
+        size: LINE_TILE_PX, color: isColoredPack ? undefined : themeInk, stroke,
+        isStroke, absStroke, cap: s.cap, join: s.join, rotate, flipH, flipV,
+      })
+    }
+    return out
+  }, [baseSvgText, themeInk, isColoredPack, isStroke, stroke, absStroke, rotate, flipH, flipV])
   const serializedOutput = useMemo(
     () => serializeCustomizedSvg(baseSvgText, { size, color: (!isColoredPack && color) || undefined, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV }),
     [baseSvgText, size, color, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV],
@@ -1403,20 +1990,20 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
 
   const stageImgUrl = useMemo(() => {
     if (!activeIcon?.cdn) return ''
-    const p = { size }
+    const p = { size: inspectPx }
     const imgColor = isColoredPack ? '' : (color || themeInk)
     if (imgColor) p.color = imgColor
     if (rotate) p.rotate = rotate
     if (flipH) p.flipH = true
     if (flipV) p.flipV = true
     return buildSvgUrl(API_HOSTS[0], activeIcon.pack, activeIcon.name, p)
-  }, [activeIcon, size, color, isColoredPack, themeInk, rotate, flipH, flipV])
+  }, [activeIcon, inspectPx, color, isColoredPack, themeInk, rotate, flipH, flipV])
 
   // Reuse the grid's cached markup, resolving currentColor for standalone images.
   const previewSvg = useMemo(() => serializeCustomizedSvg(baseSvgText, {
-    size, color: isColoredPack ? undefined : (color || themeInk),
-    stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
-  }), [baseSvgText, size, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
+    size: inspectPx, color: isColoredPack ? undefined : (color || themeInk),
+    stroke: zoomedStroke({ px: stroke, absolute: absStroke, drawSize: inspectPx, exportSize: size }), isStroke, absStroke, cap, join, rotate, flipH, flipV,
+  }), [baseSvgText, size, inspectPx, color, themeInk, isColoredPack, stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV])
   const previewSrc = useMemo(() => (previewSvg ? svgToDataUri(previewSvg) : stageImgUrl), [previewSvg, stageImgUrl])
   // The frame on screen is the last one that decoded for THIS icon. A new size,
   // rotation or colour decodes off-screen and swaps in, so the picture never
@@ -1430,9 +2017,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     probe.onerror = () => { if (live) setFrame(f => ({ id: currentId, src: f.id === currentId ? f.src : '', failed: true })) }
     probe.src = previewSrc
     return () => { live = false; probe.onload = null; probe.onerror = null }
-  }, [previewSrc, currentId])
+  }, [previewSrc, currentId, loadTry])
   const shownSrc = (frame.id === currentId && frame.src) || (previewSvg ? previewSrc : '')
   const imageError = frame.id === currentId && frame.failed
+  // "Try again" on a failed stage: drop what is held for this icon (an answer that
+  // was not valid SVG included), lift any cool-down, and ask once more.
+  const retryLoad = () => {
+    if (activeIcon?.cdn && !activeIcon.custom) evictSvgText(activeIcon.pack, activeIcon.name)
+    clearIconifyCooldown()
+    setFetched({ id: null, svg: null, err: false })
+    setFrame(f => (f.id === currentId ? { ...f, failed: false } : f))
+    setLoadTry(n => n + 1)
+  }
   // Duotone artwork (Phosphor, Solar `-bold-duotone`, and any other `-duotone`
   // name) keeps its own two-tone treatment when no colour is picked.
   const isDuotone = /-duotone$/.test((activeIcon?.custom ? activeIcon.base : activeIcon?.name) || '')
@@ -1469,21 +2065,23 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     if (!glyphCache.has(brandKey)) glyphCache.set(brandKey, sampleGlyph(e.currentTarget))
     setBrandInk(glyphCache.get(brandKey).ink)
   }
-  const stageHalo = isColoredPack ? haloFor(brandInk, theme, activeIcon?.pack) : ''
-  const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
-  const stageIsLight = !isColoredPack && relativeLuminance(effectiveColor) < 0.35
-  // An un-tinted icon is drawn in the theme's own ink, so its stage is the theme's
-  // own page ground. A coloured pack always uses it; a chosen mono colour keeps
-  // the contrast ground.
-  const onThemeGround = isColoredPack || !color
+  // The halo keeps art that matches its ground readable, so it follows the ground
+  // the stage is on (Page is the theme's own), not the theme alone.
+  const stageHalo = isColoredPack ? haloFor(brandInk, ground === 'page' ? theme : ground === 'dark' ? 'dark' : 'light', activeIcon?.pack) : ''
+  // Low contrast is a note, never a switch: the person decides. Coloured art keeps
+  // its own colours, so there is nothing to measure.
+  const contrastNote = isColoredPack ? null : groundContrastNote({ ink: color || themeInk, ground, theme })
+  const choice = colourChoice(color)
+  const choiceName = { text: isDuotone ? 'Original' : 'Text colour', black: 'Black', white: 'White', custom: (color || '').toUpperCase() }[choice]
   // Until the stage has its own art, show the glyph the grid drew for this icon
-  // (same data: URI, so nothing new is fetched) in the stage's box. It is only
-  // used on the theme ground, where the grid's tint matches. With no grid glyph
-  // (or a chosen colour) the slot stays the same size and paints nothing.
-  const waitSrc = activeIcon?.cdn && !activeIcon.custom && onThemeGround ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
+  // (same data: URI, so nothing new is fetched) in the stage's box. The grid's tint
+  // is the theme ink, so it only matches while the icon is drawn in that ink (no
+  // colour chosen). With no grid glyph (or a chosen colour) the slot stays the same
+  // size and paints nothing.
+  const waitSrc = activeIcon?.cdn && !activeIcon.custom && (isColoredPack || !color) ? glyphDataUri(activeIcon.pack, activeIcon.name) : ''
   const stageWait = waitSrc
-    ? <img className={`icust-stage-img icust-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={size} height={size} alt="" aria-hidden="true" />
-    : <span className="icust-stage-img icust-stage-wait" style={{ width: size, height: size }} aria-hidden="true" />
+    ? <img className={`ied-stage-img ied-stage-wait ${invClass(activeIcon.pack)}`} src={waitSrc} width={inspectPx} height={inspectPx} alt="" aria-hidden="true" />
+    : <span className="ied-stage-img ied-stage-wait" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
 
   const markDirty = () => setSavedState(s => (s === 'saved' ? 'idle' : s))
 
@@ -1500,20 +2098,24 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // an <img> that paints before that markup arrives, so these wait for it (their
   // buttons are disabled meanwhile) rather than send an empty string.
   const handleCopySvg = async () => {
-    if (!baseSvgText) return
+    if (!baseSvgText || previewing) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
-    const ok = await writeClipboard(serializedOutput)
+    // Written here, with the textarea fallback for a browser without the Clipboard API, and
+    // the app's `onCopy` told it is written so it only raises the toast: one write per press.
+    // When this write fails, `onCopy` gets its own try, and says why if that fails too.
+    let ok = await writeClipboard(serializedOutput)
+    if (ok) onCopy?.(serializedOutput, { written: true })
+    else if (onCopy) ok = (await onCopy(serializedOutput)) === true
     if (!ok) return
     if (!isPro) bumpCopyCount()
     trackIconCopy(activeIcon?.pack || null, activeIcon?.name || 'icon')
     setCopied('svg')
     setTimeout(() => setCopied(''), 2000)
-    if (onCopy) onCopy(serializedOutput)
     addRecentIcon(recentPayload(activeIcon), 'copy')
   }
 
   const handleCopyCode = async () => {
-    if (!baseSvgText) return
+    if (!baseSvgText || previewing) return
     if (!isPro && readCopyCount() >= FREE_COPIES_PER_DAY) { showProGate('copies'); return }
     const ok = await writeClipboard(serializedOutput)
     if (!ok) return
@@ -1524,28 +2126,37 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   }
 
   // Copying the SVG stays free; taking the FILE needs a free account.
-  // Founder decision 2026-09-15 — see src/hooks/useExportGate.js.
-  const handleDownload = async () => {
-    if (!serializedOutput) return
-    if (!(await requireExportAccount('download this icon'))) return
+  // See src/hooks/useExportGate.js.
+  // Every format goes through the same gate. `format` is a described format from
+  // utils/iconDownload.js; the result tells the button what to show.
+  const handleDownload = async (format) => {
+    if (!serializedOutput || previewing) return { status: 'none' }
+    if (!(await requireExportAccount('download this icon'))) return { status: 'cancelled' }
+    const file = downloadFileName(activeIcon?.name, format)
     try {
-      const blob = new Blob([serializedOutput], { type: 'image/svg+xml' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${(activeIcon?.name || 'icon').replace(/[^\w.-]+/g, '-')}.svg`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch { /* ignore */ }
+      if (format.kind === 'svg') {
+        saveBlobAs(new Blob([serializedOutput], { type: 'image/svg+xml' }), file)
+      } else {
+        // The PNG is the icon drawn at `px`, so it is serialised at that size: a
+        // Relative stroke keeps its share of the icon at every scale, a Fixed one keeps
+        // its pixels. A plain icon takes the ink the stage shows because a PNG has no
+        // `currentColor` to inherit.
+        const svg = serializeCustomizedSvg(baseSvgText, {
+          size: format.px, color: isColoredPack ? undefined : (color || themeInk),
+          stroke, isStroke, absStroke, cap, join, rotate, flipH, flipV,
+        })
+        saveBlobAs(await svgToPngBlob(svg), file)
+      }
+      return { status: 'done', file }
+    } catch { return { status: 'failed' } }
   }
+  const pickDownloadFormat = (id) => { setDlFormat(id); writeDownloadFormat(id) }
 
   // Saving is a two-step flow: pick a project, then write. Signed-out users are
   // gated to login first — projects are account-scoped, so the per-project save
   // cap can't be enforced without one.
   const handleSave = () => {
-    if (!activeIcon || !baseSvgText) return
+    if (!activeIcon || !baseSvgText || previewing) return
     if (!user) { promptSaveLogin(); return }
     setSavePickerOpen(true)
   }
@@ -1554,7 +2165,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // over-cap non-Pro save routes to checkout with no record built and the
   // Custom store never written.
   const handleSaveToProject = (projectId) => {
-    if (!activeIcon || !baseSvgText) return
+    if (!activeIcon || !baseSvgText || previewing) return
     const existing = readCustomIcons()
     const used = existing.filter(r => r.projectId === projectId).length
     if (!isPro && used >= saveLimit) { setSavePickerOpen(false); openInNewTab('/plans'); return }
@@ -1570,7 +2181,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
       // Stamp the unit. Records without it predate the pixel fix and stored
       // `stroke` in viewBox units; `customIconStrokePx` converts those on read,
       // and this marker is what stops a converted value being converted twice.
-      strokeUnit: STROKE_UNIT_PX,
+      strokeUnit: STROKE_UNIT_REF,
     }
     setSavePickerOpen(false)
     setNewProjOpen(false)
@@ -1579,7 +2190,6 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     addRecentIcon(recentPayload(activeIcon), 'edit')
     setSavedProjectId(projectId)
     setSavedState('saved')
-    setSaveHover(false)
   }
 
   // "New" in the picker: a 4th free project is the upgrade moment — close the
@@ -1599,26 +2209,158 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     try {
       const id = saveProject(name, { blank: true })
       handleSaveToProject(id)
-    } catch {
+    } catch (err) {
       setSavePickerOpen(false)
+      // Not the cap: the account's list is still loading or did not load, and nothing was created.
+      if (isCountUnknownError(err)) { setSavedState('error'); return }
       showProGate('projects')
     }
   }
 
   // Reset every control to its opening default (a fresh, un-edited icon).
   const handleReset = () => {
-    setSize(48)
-    setColor('')
-    setStroke(2)
-    writeStickyStroke(2)
-    setAbsStroke(false)
-    setCap('round')
-    setJoin('round')
-    setRotate(0)
-    setFlipH(false)
-    setFlipV(false)
+    const d = CUSTOMISER_DEFAULTS
+    setSize(d.size)
+    setCustomOpen(false)
+    setLastCustom(null)
+    setSizeText(String(d.size))
+    setClampedTo(null)
+    setColor(d.color)
+    setStroke(d.stroke)
+    writeStickyStroke(d.stroke, STROKE_REFERENCE_SIZE)
+    setAbsStroke(d.absStroke)
+    setCap(d.cap)
+    setJoin(d.join)
+    setSplitOpen(false)
+    setRotate(d.rotate)
+    setFlipH(d.flipH)
+    setFlipV(d.flipV)
     markDirty()
+    // The button hides once nothing differs, so focus goes to the first control.
+    requestAnimationFrame(() => railRef.current?.querySelector('[role="radio"][aria-checked="true"]')?.focus())
   }
+
+  // The Upgrade button. Safari does not focus a button on click, so focus it first: the popup
+  // hands focus back to whatever opened it. The settings are kept for a visit to /plans.
+  const openUpgrade = (e) => {
+    if (!preview) return
+    e.currentTarget.focus()
+    const plain = activeIcon?.cdn && !activeIcon.custom && !activeIcon.pasted
+    writePreviewDraft(
+      plain ? { pack: activeIcon.pack, name: activeIcon.name } : null,
+      { size, stroke, cap, join, rotate, color, absStroke, flipH, flipV },
+    )
+    // The viewer's own icon in the previewed style and size, on the stage's ground.
+    const svg = baseSvgText ? serializeCustomizedSvg(baseSvgText, {
+      size: PROOF_PX, color: isColoredPack ? undefined : (color || themeInk),
+      stroke: zoomedStroke({ px: stroke, absolute: absStroke, drawSize: PROOF_PX, exportSize: size }), isStroke, absStroke, cap, join, rotate, flipH, flipV,
+    }) : ''
+    const proof = svg ? (
+      <>
+        <div className="ui-pro-proof-art" style={proofGround(ground, theme)}>
+          <img src={svgToDataUri(svg)} width={PROOF_PX} height={PROOF_PX} alt="" />
+        </div>
+        <p className="ui-pro-proof-cap">
+          {preview.caption.map((p, i) => (typeof p === 'string' ? p : <code key={i}>{p.code}</code>))}
+        </p>
+      </>
+    ) : undefined
+    // Leaving for /plans stamps the kept preview, which is what lets Back bring it back.
+    openProModal({ gate: preview.gate, proof, onLeave: () => stampPreviewDraft() })
+  }
+
+  // Put back every Pro setting: Round ends and corners, and the last preset size. Everything else stays.
+  const backToFree = () => {
+    setCap(DEFAULT_LINE_CAP); setJoin(DEFAULT_LINE_JOIN); setSplitOpen(false)
+    setSize(lastPreset); setCustomOpen(false); setSizeText(String(lastPreset)); setClampedTo(null)
+    markDirty()
+    // The line, with this button, is about to go; Copy SVG is the same node as the Upgrade button.
+    requestAnimationFrame(() => primaryRef.current?.focus())
+  }
+  const checkedSizeRadio = () => railRef.current?.querySelector('[role="radio"][aria-checked="true"]')
+
+  // ── The size rail ──
+  const railSizes = railPresets(narrowRail)
+  // Custom is chosen, or the size is one the rail has no cell for (20 on a narrow row).
+  const customShown = customOpen || !railSizes.includes(size)
+  const customValue = !railSizes.includes(size) ? size : lastCustom
+  const pickPreset = (n) => {
+    setSize(n); setCustomOpen(false); setSizeText(String(n)); setClampedTo(null); markDirty()
+  }
+  // A pointer press on Custom goes straight into the field (flushSync, so the field
+  // exists while the press is still the user gesture and a phone raises its keyboard).
+  // A keyboard press or an arrow key leaves focus on the radio; Tab goes in.
+  const pickCustom = (e) => {
+    const pointer = e.detail > 0
+    if (!customShown) {
+      const next = lastCustom ?? size
+      const open = () => { setCustomOpen(true); setSize(next); setSizeText(String(next)); setClampedTo(null); markDirty() }
+      if (pointer) flushSync(open); else open()
+    }
+    if (pointer) { sizeInputRef.current?.focus(); sizeInputRef.current?.select() }
+  }
+  const commitSize = (text, fromEnter) => {
+    const parsed = parseCustomSize(text)
+    if (!parsed) { setSizeText(String(size)); setClampedTo(null); return }
+    const { value, clamped } = parsed
+    setClampedTo(clamped ? value : null)
+    setSizeText(String(value))
+    setSize(value)
+    markDirty()
+    if (railSizes.includes(value)) {
+      setCustomOpen(false)
+      // The field is going away; Enter keeps the keyboard where the person is.
+      if (fromEnter) requestAnimationFrame(() => checkedSizeRadio()?.focus())
+    } else {
+      setCustomOpen(true)
+      setLastCustom(value)
+    }
+  }
+  const stepSize = (dir, big) => {
+    const base = parseCustomSize(sizeText)?.typed ?? size
+    const next = Math.min(CUSTOM_SIZE_MAX, Math.max(CUSTOM_SIZE_MIN, base + dir * (big ? 10 : 1)))
+    setSize(next); setSizeText(String(next)); setClampedTo(null); markDirty()
+    if (!isPresetSize(next)) setLastCustom(next)
+  }
+  const onSizeKey = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitSize(sizeText, true) }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); stepSize(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey) }
+    else if (e.key === 'Escape' && sizeText !== String(size)) {
+      // An uncommitted edit goes back; the popup stays open. With nothing to revert,
+      // Escape is left alone and closes the popup as everywhere else.
+      e.preventDefault(); e.stopPropagation()
+      setSizeText(String(size)); setClampedTo(null)
+    }
+  }
+  // Keep the field clear of the pinned foot, and of the keyboard where the visual
+  // viewport reports it.
+  const revealSizeField = useCallback(() => {
+    const row = sizeRowRef.current
+    const root = panelRef.current
+    if (!row || !root) return
+    const foot = root.querySelector('.ied-ft')
+    // The nearest ancestor that really scrolls. The stage column does not, so there may be none.
+    let scroller = row.parentElement
+    while (scroller && scroller !== root && !(scroller.scrollHeight > scroller.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement
+    if (!scroller || scroller === root) return
+    const vv = window.visualViewport
+    const floor = Math.min(foot ? foot.getBoundingClientRect().top : Infinity, vv ? vv.offsetTop + vv.height : Infinity) - 16
+    const over = row.getBoundingClientRect().bottom - floor
+    if (over > 0) scroller.scrollTop += over
+  }, [])
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv || !customShown) return undefined
+    const onResize = () => { if (document.activeElement === sizeInputRef.current) revealSizeField() }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [customShown, revealSizeField])
+  // True while any control differs from what handleReset sets.
+  const edited = size !== CUSTOMISER_DEFAULTS.size || color !== CUSTOMISER_DEFAULTS.color
+    || stroke !== CUSTOMISER_DEFAULTS.stroke || absStroke !== CUSTOMISER_DEFAULTS.absStroke
+    || cap !== CUSTOMISER_DEFAULTS.cap || join !== CUSTOMISER_DEFAULTS.join
+    || rotate !== CUSTOMISER_DEFAULTS.rotate || flipH !== CUSTOMISER_DEFAULTS.flipH
+    || flipV !== CUSTOMISER_DEFAULTS.flipV
 
   const savedProjectName = useMemo(() => {
     if (!savedProjectId) return null
@@ -1640,358 +2382,731 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     // savedState: re-check after each save so the note appears immediately.
   }, [activeIcon, projects, savedState]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The Save button's words. The full label is always the accessible name; a saved button also
+  // carries `hv`, which the stylesheet swaps in on hover and focus where hover exists
+  // ("Save to another project"), so a tap never latches it.
   const saveLabel = savedState === 'saved'
-    ? (saveHover ? 'Save to another project' : (savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons'))
-    : savedState === 'error' ? 'Couldn’t save — retry'
-      : activeIcon?.custom ? 'Save as new' : 'Save to project'
+    ? { full: savedProjectName ? `Saved to ${savedProjectName}` : 'Saved to Custom Icons', hv: 'Save to another project', glyph: 'check' }
+    : savedState === 'error' ? { full: 'Couldn’t save. Retry', short: 'Retry', glyph: 'alert' }
+      : activeIcon?.custom ? { full: 'Save as new', short: 'Save', glyph: 'folder-plus' }
+        : { full: 'Save to project', short: 'Save', glyph: 'folder-plus' }
 
   const title = addMode && !activeIcon ? 'Add a custom icon.' : (activeIcon?.name || 'Customise')
+  // "{Pack}, {weight}" under the name: the pack lives here on a touch screen, where the grid shows it on hover only.
+  const packName = activeIcon
+    ? (activeIcon.custom ? 'Custom icon' : activeIcon.pasted ? 'Pasted SVG' : (WEIGHT_PACK_NAMES[activeIcon.pack] || PACK_LABELS[activeIcon.pack] || GRID_ONLY_PACK_LABELS[activeIcon.pack] || activeIcon.pack || ''))
+    : ''
+  const headSub = !activeIcon ? '' : [packName, ownColours ? '' : (isStroke ? 'outline' : 'solid')].filter(Boolean).join(', ')
+  const codeBytes = useMemo(() => (serializedOutput ? new TextEncoder().encode(serializedOutput).length : 0), [serializedOutput])
+
+  // The inspector scrolls on its own. The head draws its bottom hairline once it has scrolled, and the
+  // foot its top hairline while more lies under the fold (icon-editor.css). The attributes are set
+  // straight on the elements, so reading them never renders; they are re-read on scroll, when the
+  // inspector resizes, and when its content changes.
+  useEffect(() => {
+    const root = panelRef.current
+    const scroller = root?.querySelector('#ied-scroll')
+    const head = root?.querySelector('.ied-hd')
+    const foot = root?.querySelector('.ied-ft')
+    if (!scroller || !head || !foot) return undefined
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      head.toggleAttribute('data-on', scroller.scrollTop > 1)
+      foot.toggleAttribute('data-on', scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 1)
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
+    measure()
+    scroller.addEventListener('scroll', schedule, { passive: true })
+    const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
+    const changed = new MutationObserver(schedule)
+    resized?.observe(scroller)
+    changed.observe(scroller, { childList: true, subtree: true, characterData: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      scroller.removeEventListener('scroll', schedule)
+      resized?.disconnect()
+      changed.disconnect()
+      head.removeAttribute('data-on')
+      foot.removeAttribute('data-on')
+    }
+  }, [activeIcon])
+
+  // The one preview line. Always mounted, so its first message is announced. With no preview it
+  // is out of sight and holds only the note that the settings are free again. It sits in the
+  // foot on a wide dialog and as a strip under the stage on the phone sheet.
+  const pvEl = activeIcon ? (
+    <div className={`ied-pv${previewing ? '' : ' ied-vh'}`}>
+      <p className="ied-note" id="ied-preview-line" role="status" aria-live="polite">
+        {preview
+          ? preview.parts.map((p, i) => (typeof p === 'string' ? p : <span key={i} className="ied-num">{p.code}</span>))
+          : leftPreview ? BACK_TO_FREE_NOTE : ''}
+      </p>
+      {previewing && <button type="button" className="ied-tn" onClick={backToFree}>Back to free settings</button>}
+    </div>
+  ) : null
+  // While the save sheet covers the editor on a phone, everything beneath it is inert.
+  const lockBase = savePickerOpen && onSheet
+
+  // The Custom size row. On the wide dialog it opens over the size strip; on the phone sheet it is
+  // the first thing in the inspector under the card (so the field and the pinned foot share the
+  // space the keyboard leaves), and the card keeps only the cells.
+  const fileName = downloadFileName(activeIcon?.name, effectiveFormat(dlFormat, size))
+  const customRowEl = (
+    <div className="ied-cus" ref={sizeRowRef}>
+      <div className="ied-cus-in">
+        <div className="ied-cus-row">
+          <label htmlFor="ied-size-input">Custom size</label>
+          <span className="ied-numf">
+            <input
+              id="ied-size-input"
+              ref={sizeInputRef}
+              className="ied-in"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              enterKeyHint="done"
+              autoComplete="off"
+              spellCheck={false}
+              value={sizeText}
+              aria-describedby={clampedTo ? 'ied-size-range ied-size-note' : 'ied-size-range'}
+              onChange={(e) => { setSizeText(e.target.value.replace(/\D/g, '').slice(0, 5)); setClampedTo(null) }}
+              onKeyDown={onSizeKey}
+              onFocus={(e) => { e.currentTarget.select(); requestAnimationFrame(revealSizeField) }}
+              onBlur={() => { if (sizeText !== String(size)) commitSize(sizeText, false) }}
+            />
+            <span className="px" aria-hidden="true">px</span>
+          </span>
+          <span className="ied-val" id="ied-size-range">From <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span></span>
+        </div>
+        {clampedTo && (
+          <p className="ied-cus-clamp" id="ied-size-note" role="status">
+            Sizes go from <span className="ied-num">{CUSTOM_SIZE_MIN}</span> to <span className="ied-num">{CUSTOM_SIZE_MAX}px</span>. Set to <span className="ied-num">{clampedTo}px</span>.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+  // The jump row (phone sheet): the way down to the settings below the fold, each button showing its
+  // current value. Stroke and Line style only exist for line icons.
+  const jumpTo = (sectionId, focusSel) => {
+    const scroller = document.getElementById('ied-scroll')
+    const target = document.getElementById(sectionId)
+    if (!scroller || !target) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    scroller.scrollTo({ top: scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 8, behavior: reduced ? 'auto' : 'smooth' })
+    target.querySelector(focusSel)?.focus({ preventScroll: true })
+  }
+  const jumps = [
+    ...(isStroke ? [
+      { id: 'stroke', label: 'Stroke', value: `${stroke}px`, section: 'ied-sec-stroke', focus: '#ied-stroke', aria: `Go to Stroke, ${stroke} pixels` },
+      { id: 'line', label: 'Line style', value: lineStyle?.name || 'Custom', section: 'ied-sec-line', focus: '.ied-tile[tabindex="0"], .ied-seg button', aria: `Go to Line style, ${lineStyle?.name || 'custom'}` },
+    ] : []),
+    { id: 'rotate', label: 'Rotate', value: `${rotate}°`, section: 'ied-sec-rotate', focus: '.ied-ib', aria: `Go to Rotate and flip, ${rotate ? `rotated ${rotate} degrees` : 'not rotated'}` },
+    { id: 'code', label: 'Code', value: `${codeBytes.toLocaleString('en-AU')} ${codeBytes === 1 ? 'byte' : 'bytes'}`, section: 'ied-sec-code', focus: '.ied-disc', aria: `Go to SVG code, ${codeBytes.toLocaleString('en-AU')} ${codeBytes === 1 ? 'byte' : 'bytes'}` },
+  ]
 
   return (
-    <div className="icust-overlay" onMouseDown={onClose}>
+    <div className="ied-overlay" style={groundVars(theme)} onMouseDown={onClose}>
       <div
-        className="icust-panel"
+        className={`ied${activeIcon ? '' : ' ied--paste'}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="icust-title"
+        aria-labelledby="ied-title"
         ref={panelRef}
         tabIndex={-1}
         data-lenis-prevent
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="icust-head">
-          <div className="icust-head-text">
-            <span className="icust-eyebrow">{addMode && !activeIcon ? 'Add icon' : 'Customise'}</span>
-            <h2 className="icust-title" id="icust-title">{title}</h2>
+        {/* On the phone this is a bottom sheet (icon-editor.css): the grabber is its handle. The
+            head comes first in the source so the tab order matches the sheet's top-to-bottom order;
+            the desktop grid places every part explicitly. */}
+        <div className="ied-gb" aria-hidden="true" />
+        <div className="ied-hd" inert={lockBase || undefined}>
+          <div className="ied-hd-text">
+            <h2 className="ied-title" id="ied-title">{title}</h2>
+            {headSub && <p className="ied-note">{headSub}</p>}
           </div>
-          <button type="button" className="icust-close" onClick={onClose} aria-label="Close customizer">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </button>
+          {/* The live icon, shown only while the keyboard has folded the card away (data-kb="tight"). */}
+          {onSheet && activeIcon && (railArt[24] || railArt[16]) && (
+            <span className="ied-hic" aria-hidden="true"><SizeArt markup={railArt[24] || railArt[16]} style={{ '--art': '24px' }} /></span>
+          )}
+          <div className="ied-hd-act">
+            {/* Reset changes the controls and shows only once something differs. It stays before
+                Close in the tab order. */}
+            {activeIcon && edited && (
+              <button type="button" className="ied-tn" onClick={handleReset}>Reset</button>
+            )}
+            <button type="button" className="ied-x" onClick={onClose} aria-label="Close customiser">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div className="icust-body">
-        {!activeIcon ? (
-          <div className="icust-paste">
-            <p className="icust-paste-help">Paste SVG markup or the full <code>&lt;svg&gt;…&lt;/svg&gt;</code>. Tune it on the stage, then copy — or save it to Custom Icons with Pro.</p>
-            <textarea
-              className="icust-paste-input"
-              value={pasteText}
-              onChange={(e) => { setPasteText(e.target.value); setPasteErr(false) }}
-              placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; …>…</svg>"
-              aria-label="SVG markup"
-              spellCheck={false}
-            />
-            {pasteErr && <p className="icust-err">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
-            <div className="icust-foot">
-              <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>
-              <button type="button" className="lib-btn lib-btn--primary" onClick={applyPaste}>Add to stage</button>
+        {activeIcon && (
+          <div className="ied-stagecol" data-g={ground} inert={lockBase || undefined}>
+            {/* The file the Download button hands over (the card's top left; hidden on the short phone folds). */}
+            {(
+              <span className="ied-fchip" title={fileName}>
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l4 4v14H7z M14 3v4h4" /></svg>
+                <span className="ied-nm"><span className="st">{fileName.slice(0, fileName.lastIndexOf('.'))}</span><span className="ex">{fileName.slice(fileName.lastIndexOf('.'))}</span></span>
+              </span>
+            )}
+            <div className="ied-grounds" ref={groundGroupRef} role="radiogroup" aria-label="Background" onKeyDown={steerRadios}>
+              {GROUND_OPTS.map(g => (
+                <button
+                  key={g.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={ground === g.id}
+                  aria-label={g.label}
+                  title={g.label}
+                  tabIndex={ground === g.id ? 0 : -1}
+                  className="ied-bgb"
+                  data-g={g.id}
+                  onClick={() => chooseGround(g.id)}
+                >
+                  <i className={`ied-gnd-${g.id}`} />
+                </button>
+              ))}
+            </div>
+
+            {/* A contrast note sits over the stage's top edge. The visually hidden live region
+                below is always in the DOM, so a note that arrives is announced in full. */}
+            {contrastNote && (
+              <div className="ied-contrast">
+                <p>Hard to see on this background.</p>
+                {contrastNote.suggest && (
+                  <button type="button" className="ied-tn" onClick={() => fixGround(contrastNote.suggest)}>
+                    Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="ied-vh" aria-live="polite">
+              {contrastNote && <p>{choiceName} is hard to see on this background.</p>}
+            </div>
+
+            <div className="ied-fig">
+              <div className="ied-fig-in">
+                <div className={`ied-ground ied-ground--${ground}${stageHalo ? ` ied-ground--${stageHalo}` : ''}`} ref={stageRef}>
+                  {rendersInline ? (
+                    <>
+                      <div ref={hostRef} className="ied-stage-host" aria-hidden="true" />
+                      {!baseSvgText && !loadErr && stageWait}
+                      {!baseSvgText && <StageMsg failed={loadErr} onRetry={retryLoad} />}
+                    </>
+                  ) : (
+                    <>
+                      {shownSrc ? (
+                        <img
+                          className="ied-stage-img"
+                          src={shownSrc}
+                          width={inspectPx}
+                          height={inspectPx}
+                          alt={activeIcon.name}
+                          onLoad={brandKey ? onStageImgLoad : undefined}
+                          style={imageError ? { visibility: 'hidden' } : undefined}
+                        />
+                      ) : imageError ? (
+                        <span className="ied-stage-img" style={{ width: inspectPx, height: inspectPx }} aria-hidden="true" />
+                      ) : stageWait}
+                      {(!shownSrc || imageError) && <StageMsg failed={imageError} onRetry={retryLoad} />}
+                    </>
+                  )}
+                </div>
+                <p className="ied-note ied-cap">Drawn large to inspect. Exports at <span className="ied-num">{size}px</span>.</p>
+              </div>
+            </div>
+
+            <div className="ied-sizes" ref={railRef}>
+              <div className="ied-sizes-head">
+                <p id="ied-size-label">Export size</p>
+                <span>shown at real pixels</span>
+              </div>
+              <div className="ied-sizes-rail" role="radiogroup" aria-labelledby="ied-size-label" onKeyDown={steerRadios}>
+                {railSizes.map(n => {
+                  const on = !customShown && size === n
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={`${n} pixels`}
+                      tabIndex={on ? 0 : -1}
+                      className="ied-cell-s"
+                      data-s={n}
+                      onClick={() => pickPreset(n)}
+                    >
+                      <span className="art"><SizeArt markup={railArt[n]} style={{ '--art': `${Math.min(n, 48)}px` }} /></span>
+                      <span className="num">{n}</span>
+                    </button>
+                  )
+                })}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={customShown}
+                  aria-label={`${customShown && customValue != null ? `Custom, ${customValue} pixels` : 'Custom'}${isPro ? '' : ', Pro'}`}
+                  tabIndex={customShown ? 0 : -1}
+                  className="ied-cell-s ied-cell-s--custom"
+                  onClick={pickCustom}
+                >
+                  <span className="art"><span className="cu">Custom</span></span>
+                  {isPro
+                    ? <span className="num">{customShown && customValue != null ? customValue : ''}</span>
+                    : <span className="num ied-tag"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" /></svg>Pro</span>}
+                </button>
+              </div>
+              {customShown && !onSheet && customRowEl}
             </div>
           </div>
-        ) : (
-          <>
-            <div className={`icust-stage${stageIsLight ? ' icust-stage--light' : ''}${onThemeGround ? ' icust-stage--theme' : ''}${stageHalo ? ` icust-stage--${stageHalo}` : ''}${absStroke ? ' is-abs' : ''}`} ref={stageRef}>
-              {rendersInline ? (
-                <>
-                  <div ref={hostRef} className="icust-stage-host" aria-hidden="true" />
-                  {!baseSvgText && !loadErr && stageWait}
-                  {!baseSvgText && <span className="icust-stage-msg" role="status">{loadErr ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
-                </>
-              ) : (
-                <>
-                  {shownSrc ? (
-                    <img
-                      className="icust-stage-img"
-                      src={shownSrc}
-                      width={size}
-                      height={size}
-                      alt={activeIcon.name}
-                      onLoad={brandKey ? onStageImgLoad : undefined}
-                      style={imageError ? { visibility: 'hidden' } : undefined}
-                    />
-                  ) : imageError ? (
-                    <span className="icust-stage-img" style={{ width: size, height: size }} aria-hidden="true" />
-                  ) : stageWait}
-                  {(!shownSrc || imageError) && <span className="icust-stage-msg" role="status">{imageError ? 'Couldn’t load this icon.' : <span className="sr-only">Loading…</span>}</span>}
-                </>
+        )}
+
+        {onSheet && pvEl}
+
+        <div className="ied-scroll" id="ied-scroll" data-hide={savePickerOpen ? 'true' : undefined} inert={savePickerOpen || undefined}>
+          {!activeIcon ? (
+            <div className="ied-paste">
+              <p className="ied-note">Paste the full <code>&lt;svg&gt;…&lt;/svg&gt;</code> markup. Tune it here, then copy it, or save it to Custom Icons with Pro.</p>
+              <textarea
+                className="ied-ta"
+                value={pasteText}
+                onChange={(e) => { setPasteText(e.target.value); setPasteErr(false) }}
+                placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; …>…</svg>"
+                aria-label="SVG markup"
+                spellCheck={false}
+              />
+              {pasteErr && <p className="ied-err" role="alert">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
+            </div>
+          ) : (
+            <div className="ied-secs">
+              {/* The phone sheet shows the contrast note here, at the head of the inspector,
+                  where the wide dialog draws it over the stage (hidden by the stylesheet). */}
+              {contrastNote && (
+                <div className="ied-ctrow">
+                  <p>Hard to see on this background.</p>
+                  {contrastNote.suggest && (
+                    <button type="button" className="ied-tn" onClick={() => fixGround(contrastNote.suggest)}>
+                      Show on {contrastNote.suggest === 'light' ? 'Light' : 'Dark'}
+                    </button>
+                  )}
+                </div>
               )}
-            </div>
-
-            <div className="icust-meta">
-              <span className="icust-tag">{activeIcon.custom ? 'Custom' : activeIcon.pasted ? 'Pasted' : (activeIcon.pack || 'embedded')}</span>
-              <span className="icust-tag">{activeIcon.name}</span>
-              {activeIcon.cdn && !activeIcon.custom && <span className="icust-tag">CDN</span>}
-            </div>
-
-            <div className="icust-controls">
-              <div className="icust-row">
-                <label htmlFor="icust-size">Size</label>
-                <SnapSlider
-                  id="icust-size"
-                  min={12}
-                  max={128}
-                  value={size}
-                  defaultValue={48}
-                  snaps={[12, 16, 24, 32, 48, 64, 96, 128]}
-                  unit="px"
-                  inputMax={1024}
-                  ariaLabel="Icon size"
-                  onChange={(v) => { setSize(v); markDirty() }}
-                />
-              </div>
-
-              <div className="icust-row">
-                <label>Colour</label>
-                {isColoredPack ? (
+              {onSheet && customShown && customRowEl}
+              {onSheet && (
+                <div className="ied-jump" role="group" aria-label="Jump to a setting">
+                  {jumps.map(j => (
+                    <button key={j.id} type="button" className="ied-jb" aria-label={j.aria} onClick={() => jumpTo(j.section, j.focus)}>
+                      <span className="l">{j.label}</span>
+                      <span className="r">
+                        <span className="ied-num">{j.value}</span>
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div>
+                <div className="ied-lblrow">
+                  <label className="ied-lbl" id="ied-colour-label">Colour</label>
+                  {colourRow === 'original' ? (
+                    <span className="ied-val">Original colours</span>
+                  ) : colourRow === 'wait' ? (
+                    <span className="ied-val">&nbsp;</span>
+                  ) : (
+                    <span className="ied-val ied-hex">{choice !== 'text' ? color.toUpperCase() : brandPaint ? String(brandPaint).toUpperCase() : '\u00a0'}</span>
+                  )}
+                </div>
+                {colourRow !== 'original' && colourRow !== 'wait' && (
                   <>
-                    <div className="icust-seg">
-                      <span className="icust-seg-static active">Default</span>
+                    {/* Four choices, exactly one selected. Default is the file's currentColor (no
+                        colour written); the rest write a hex. A brand logo's first choice is Original:
+                        no colour written, the art's own paint kept. */}
+                    <div className="ied-chips" role="radiogroup" aria-labelledby="ied-colour-label" onKeyDown={steerRadios}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={choice === 'text'}
+                        tabIndex={choice === 'text' ? 0 : -1}
+                        className="ied-chip"
+                        onClick={() => { setColor(''); markDirty() }}
+                      >
+                        {brandPaint
+                          ? <span className="ied-sw" style={{ background: brandPaint }} aria-hidden="true" />
+                          : <span className="ied-sw ied-sw--text" aria-hidden="true" />}
+                        <span>{isDuotone || brandPaint ? 'Original' : 'Default'}</span>
+                      </button>
+                      {[['black', 'Black', '#000000'], ['white', 'White', '#ffffff']].map(([id, label, hex]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="radio"
+                          aria-checked={choice === id}
+                          tabIndex={choice === id ? 0 : -1}
+                          className="ied-chip"
+                          onClick={() => { setColor(hex); markDirty() }}
+                        >
+                          <span className="ied-sw" style={{ background: hex }} aria-hidden="true" />
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                      {/* Portalled to <body>: the inspector scrolls on its own, and an inline panel hung
+                          off the fourth chip would be cut off by it. */}
+                      <ColorPickerPop
+                        portal
+                        value={color || (brandPaint?.[0] === '#' ? brandPaint : themeInk)}
+                        onChange={(v) => { setColor(v); markDirty() }}
+                        triggerClassName="ied-chip"
+                        popClassName="ied-cpop"
+                        triggerProps={{ role: 'radio', 'aria-checked': choice === 'custom', 'aria-expanded': undefined, 'aria-haspopup': undefined, 'data-opens-popup': '', tabIndex: choice === 'custom' ? 0 : -1 }}
+                        triggerChildren={(
+                          <>
+                            <span className={`ied-sw${choice === 'custom' ? '' : ' ied-sw--empty'}`} style={choice === 'custom' ? { background: color } : undefined} aria-hidden="true" />
+                            <span>Custom</span>
+                          </>
+                        )}
+                      />
                     </div>
-                    <span className="icust-note icust-original">Original colours</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="icust-seg">
-                      {isDuotone && <button type="button" className={!color ? 'active' : ''} onClick={() => { setColor(''); markDirty() }}>Default</button>}
-                      <button type="button" className={color === '#000000' ? 'active' : ''} onClick={() => { setColor('#000000'); markDirty() }}>Black</button>
-                      <button type="button" className={color === '#ffffff' ? 'active' : ''} onClick={() => { setColor('#ffffff'); markDirty() }}>White</button>
-                    </div>
-                    <ColorPickerPop value={color || themeInk} onChange={(v) => { setColor(v); markDirty() }} />
+                    <p className="ied-note ied-colnote">
+                      {choice === 'text' && brandPaint
+                        ? 'The file keeps the logo\'s own colour. Pick another to recolour it.'
+                        : choice === 'text'
+                        ? <>The file uses <code>currentColor</code>, so it follows the surrounding text.</>
+                        : 'The file keeps this colour wherever you use it.'}
+                    </p>
                   </>
                 )}
               </div>
 
               {isStroke && (
-                <div className="icust-row">
-                  <label htmlFor="icust-stroke">Stroke</label>
-                  {/* The `px` unit is half the fix: the slider now reports the
-                      width the exported file actually measures, at any size. */}
-                  <SnapSlider
-                    id="icust-stroke"
-                    min={STROKE_PX.min}
-                    max={STROKE_PX.max}
-                    step={STROKE_PX.step}
+                <div id="ied-sec-stroke">
+                  {/* The `px` unit is half the fix: the control reports the width the exported
+                      file actually measures, at any size. */}
+                  <IedStroke
+                    id="ied-stroke"
                     value={stroke}
-                    defaultValue={STROKE_PX.default}
-                    snaps={STROKE_PX.snaps}
-                    unit="px"
-                    inputMin={STROKE_PX.inputMin}
-                    inputMax={STROKE_PX.inputMax}
-                    decimals={2}
-                    ariaLabel="Stroke width in pixels"
-                    onChange={(v) => { setStroke(v); writeStickyStroke(v); markDirty() }}
+                    onChange={(v) => { setStroke(v); writeStickyStroke(v, STROKE_REFERENCE_SIZE); markDirty() }}
                   />
-                  {/* Both modes now measure the same pixels AT THIS SIZE; they
-                      differ only once someone rescales the exported file. Off:
-                      the stroke scales with the artwork, the way an icon should.
-                      On (non-scaling-stroke): it holds this pixel width at every
-                      size it is ever drawn at. "Absolute" never said that. */}
-                  <button
-                    type="button"
-                    className={`icust-abs${absStroke ? ' active' : ''}`}
-                    aria-pressed={absStroke}
-                    aria-label={`Fixed stroke width — hold ${stroke}px even when the SVG is resized`}
-                    title={`Hold this stroke at ${stroke}px even if the SVG is resized later. Off: the stroke scales with the icon.`}
-                    onClick={() => { setAbsStroke(a => !a); markDirty() }}
-                  >Fixed</button>
+                  {/* Relative: the stroke is a share of the icon and follows the Size and the PNG
+                      scale. Fixed: it keeps its pixels at every Size and PNG scale. */}
+                  <div className="ied-seg" role="radiogroup" aria-label="Stroke scaling" aria-describedby="ied-stroke-note" onKeyDown={steerRadios}>
+                    {[['Relative', false], ['Fixed', true]].map(([name, abs]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        role="radio"
+                        aria-checked={absStroke === abs}
+                        tabIndex={absStroke === abs ? 0 : -1}
+                        onClick={() => { setAbsStroke(abs); markDirty() }}
+                      >{name}</button>
+                    ))}
+                  </div>
+                  <p id="ied-stroke-note" className="ied-note">
+                    {strokeCaption.prefix}<b>{strokeCaption.effect}</b>{strokeCaption.suffix}
+                  </p>
                 </div>
               )}
 
               {isStroke && (
-                <div
-                  className={`icust-pro${isPro ? '' : ' is-locked'}`}
-                  onClick={!isPro ? () => showProGate('line') : undefined}
-                >
-                  <div className="icust-pro-head">
-                    <span>Line style</span>
-                    {!isPro && <span className="pnav-pop-tag">Pro</span>}
+                <div id="ied-sec-line">
+                  <div className="ied-lblrow">
+                    <span className="ied-lbl" id="ied-line-label">Line style</span>
                   </div>
-                  <div className="icust-row">
-                    <label>Ends</label>
-                    <div className="icust-seg icust-seg--icon">
-                      {CAP_OPTS.map(o => (
-                        <button key={o.v} type="button" className={cap === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={cap === o.v}
-                          onClick={() => { if (!isPro) return; setCap(o.v); markDirty() }}>
-                          {o.icon}
+                  {/* Each tile draws the icon being edited in its own style. Pressing a Pro
+                      tile previews it for a free viewer; the export block below is what holds
+                      the file back. */}
+                  <div className="ied-tiles" role="radiogroup" aria-labelledby="ied-line-label" onKeyDown={steerRadios}>
+                    {LINE_STYLES.map((s, i) => {
+                      const on = lineStyle?.id === s.id
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          aria-label={s.pro && !isPro ? `${s.name}, Pro` : s.name}
+                          aria-describedby={`ied-line-note-${s.id}`}
+                          tabIndex={on || (!lineStyle && i === 0) ? 0 : -1}
+                          className="ied-tile"
+                          data-style={s.id}
+                          onClick={() => pickLineStyle(s)}
+                        >
+                          <LineArt markup={lineArt[s.id]} />
+                          <span className="nm">
+                            {s.name}
+                            {s.pro && !isPro && <span className="ied-tag"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" /></svg>Pro</span>}
+                          </span>
+                          <span className="nm nt" id={`ied-line-note-${s.id}`}>{s.note}</span>
                         </button>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
-                  <div className="icust-row">
-                    <label>Corners</label>
-                    <div className="icust-seg icust-seg--icon">
-                      {JOIN_OPTS.map(o => (
-                        <button key={o.v} type="button" className={join === o.v ? 'active' : ''} title={o.label} aria-label={o.label} aria-pressed={join === o.v}
-                          onClick={() => { if (!isPro) return; setJoin(o.v); markDirty() }}>
-                          {o.icon}
-                        </button>
-                      ))}
+                  {/* The tiles pair an end with a corner. This sets them apart; a pair no tile
+                      draws leaves every tile unselected, so the rows stay open to show it. */}
+                  <button
+                    type="button"
+                    className="ied-disc"
+                    aria-expanded={splitShown}
+                    aria-controls="ied-line-split"
+                    aria-disabled={lineStyle ? undefined : true}
+                    onClick={() => { if (lineStyle) setSplitOpen(o => !o) }}
+                  >
+                    <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                    Set ends and corners separately
+                  </button>
+                  <div className="ied-split" id="ied-line-split" hidden={!splitShown}>
+                    <div>
+                      <p className="ied-split-lbl" id="ied-ends-label">Ends</p>
+                      <div className="ied-seg" role="radiogroup" aria-labelledby="ied-ends-label" onKeyDown={steerRadios}>
+                        {LINE_ENDS.map(o => (
+                          <button key={o.v} type="button" role="radio" aria-checked={cap === o.v} tabIndex={cap === o.v ? 0 : -1}
+                            onClick={() => { setSplitOpen(true); setCap(o.v); markDirty() }}>{o.name}</button>
+                        ))}
+                      </div>
                     </div>
+                    <div>
+                      <p className="ied-split-lbl" id="ied-corners-label">Corners</p>
+                      <div className="ied-seg" role="radiogroup" aria-labelledby="ied-corners-label" onKeyDown={steerRadios}>
+                        {LINE_CORNERS.map(o => (
+                          <button key={o.v} type="button" role="radio" aria-checked={join === o.v} tabIndex={join === o.v ? 0 : -1}
+                            onClick={() => { setSplitOpen(true); setJoin(o.v); markDirty() }}>{o.name}</button>
+                        ))}
+                      </div>
+                    </div>
+                    {!isPro && <p className="ied-note">Round ends with round corners are free. Any other mix is Pro.</p>}
                   </div>
                 </div>
               )}
 
-              <div className="icust-row">
-                <label>Rotate</label>
-                <div className="icust-seg">
-                  {[0, 90, 180, 270].map(deg => (
-                    <button key={deg} type="button" className={rotate === deg ? 'active' : ''} onClick={() => { setRotate(deg); markDirty() }}>{deg}°</button>
-                  ))}
+              <div className="ied-rot" id="ied-sec-rotate">
+                <div className="ied-rot-l">
+                  <span className="ied-lbl" id="ied-rot-label">Rotate and flip</span>
+                  <span className="ied-num ied-val" aria-hidden="true">{rotate}°</span>
+                  {/* Polite and always mounted, so each press of Rotate is announced. */}
+                  <span className="ied-vh" role="status">{rotate ? `Rotated ${rotate} degrees` : 'Not rotated'}</span>
+                </div>
+                <div className="ied-rot-b" role="group" aria-labelledby="ied-rot-label">
+                  <button type="button" className="ied-ib" aria-label="Rotate left" title="Rotate left" onClick={() => { setRotate(r => (r + 270) % 360); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8" /><path d="M4 4v4.5h4.5" /></svg>
+                  </button>
+                  <button type="button" className="ied-ib" aria-label="Rotate right" title="Rotate right" onClick={() => { setRotate(r => (r + 90) % 360); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.5-5.8" /><path d="M20 4v4.5h-4.5" /></svg>
+                  </button>
+                  <button type="button" className="ied-ib ied-ib--gap" aria-label="Flip horizontally" title="Flip horizontally" aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7l5 5-5 5z M21 7l-5 5 5 5z M12 20v2 M12 14v2 M12 8v2 M12 2v2" /></svg>
+                  </button>
+                  <button type="button" className="ied-ib" aria-label="Flip vertically" title="Flip vertically" aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 3l-5 5-5-5z M17 21l-5-5-5 5z M4 12H2 M10 12H8 M16 12h-2 M22 12h-2" /></svg>
+                  </button>
                 </div>
               </div>
 
-              <div className="icust-row">
-                <label>Flip</label>
-                <div className="icust-seg">
-                  <button type="button" className={flipH ? 'active' : ''} aria-pressed={flipH} onClick={() => { setFlipH(f => !f); markDirty() }}>Horizontal</button>
-                  <button type="button" className={flipV ? 'active' : ''} aria-pressed={flipV} onClick={() => { setFlipV(f => !f); markDirty() }}>Vertical</button>
-                </div>
+              <div id="ied-sec-code">
+                <button
+                  type="button"
+                  className="ied-disc"
+                  aria-expanded={codeOpen}
+                  aria-controls="ied-code"
+                  onClick={() => setCodeOpen(o => !o)}
+                >
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+                  SVG code
+                  <span className="ied-bytes ied-val"><span className="ied-num">{codeBytes.toLocaleString('en-AU')}</span> {codeBytes === 1 ? 'byte' : 'bytes'}</span>
+                </button>
+                {codeOpen && (
+                  <div className={`ied-code${previewing ? ' is-locked' : ''}`} id="ied-code">
+                    <div className="ied-code-hd">
+                      <span className="ied-val">{size} × {size}</span>
+                      <button
+                        type="button"
+                        className="ied-tn"
+                        onClick={handleCopyCode}
+                        disabled={!baseSvgText}
+                        aria-disabled={previewing || undefined}
+                        aria-describedby={previewing ? 'ied-preview-line' : undefined}
+                        aria-busy={!baseSvgText && !loadErr}
+                        aria-label={copied === 'code' ? undefined : 'Copy SVG code'}
+                      >{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Copy'}</button>
+                    </div>
+                    <pre tabIndex={0} role="region" aria-label="SVG code"><code>{serializedOutput}</code></pre>
+                  </div>
+                )}
               </div>
+
+              {savedInProjects.length > 0 && (
+                <p className="ied-note">
+                  Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <b>{savedInProjects.join(', ')}</b>
+                </p>
+              )}
+
+              {similarList.length > 0 && (
+                <SimilarSection
+                  key={currentId}
+                  list={similarList}
+                  srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: ownColours ? undefined : themeInk })}
+                  onPick={onPick}
+                />
+              )}
             </div>
-
-            <div className="icust-code">
-              <div className="icust-code-label">SVG</div>
-              <button type="button" className="icust-code-box" onClick={handleCopyCode} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
-                <span className="icust-code-hint">{!baseSvgText ? (loadErr ? 'Unavailable' : 'Loading…') : copied === 'code' ? 'Copied!' : 'Click to copy'}</span>
-                <code>{serializedOutput}</code>
-              </button>
-            </div>
-
-            <div className="icust-foot">
-              <button type="button" className="lib-btn lib-btn--primary" onClick={handleCopySvg} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>
-                {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
-              </button>
-
-              <button
-                type="button"
-                className="lib-btn"
-                onClick={handleSave}
-                disabled={!baseSvgText}
-                aria-busy={!baseSvgText && !loadErr}
-                onMouseEnter={() => setSaveHover(true)}
-                onMouseLeave={() => setSaveHover(false)}
-                onFocus={() => setSaveHover(true)}
-                onBlur={() => setSaveHover(false)}
-              >
-                {saveLabel}
-              </button>
-
-              <button type="button" className="lib-btn" onClick={handleDownload} disabled={!baseSvgText} aria-busy={!baseSvgText && !loadErr}>Download</button>
-
-              <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset to default</button>
-            </div>
-
-            {savedInProjects.length > 0 && (
-              <p className="icust-savedin">
-                Saved in {savedInProjects.length === 1 ? 'project' : 'projects'}: <strong>{savedInProjects.join(', ')}</strong>
-              </p>
-            )}
-
-            {similarList.length > 0 && (
-              <SimilarSection
-                key={currentId}
-                list={similarList}
-                srcFor={s => buildSvgUrl(API_HOSTS[0], s.pack, s.name, { size: 24, color: isColoredPack ? undefined : themeInk })}
-                onPick={onPick}
-              />
-            )}
-          </>
-        )}
+          )}
         </div>
 
-        {savePickerOpen && (
-          <div className="icust-gate-backdrop" onMouseDown={() => setSavePickerOpen(false)}>
-            <div
-              className="icust-gate"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="icust-pick-title"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <h3 className="icust-gate-title" id="icust-pick-title">Save to a project</h3>
-              <p className="icust-gate-copy">
-                {Number.isFinite(saveLimit)
-                  ? `Pick where this icon lives — the free plan saves up to ${saveLimit} icons per project.`
-                  : 'Pick where this icon lives.'}
-              </p>
-              {projects.length > 0 && (
-                <div className="icust-proj-list">
-                  {projects.map((p) => {
-                    const used = projectCounts[p.id] || 0
-                    const full = !isPro && used >= saveLimit
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className="icust-proj-btn"
-                        disabled={full}
-                        title={full ? `This project is at the free limit of ${saveLimit} icons.` : undefined}
-                        onClick={() => handleSaveToProject(p.id)}
-                      >
-                        <span className="icust-proj-name">{p.name}</span>
-                        <span className="icust-proj-count">
-                          {Number.isFinite(saveLimit) ? `${used}/${saveLimit}` : `${used} saved`}
-                          {full && <span className="pnav-pop-tag">Full</span>}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              {/* New-project path: naming is required — the create button stays
-                  disabled until a name is typed. A 4th free project routes to
-                  the upgrade gate instead (handleNewProject). */}
-              {newProjOpen ? (
-                <div className="icust-newproj">
+        {activeIcon && savePickerOpen && (
+          <div className="ied-spn" id="ied-spn" role="group" aria-labelledby="ied-spt">
+            <div className="ied-spn-hd">
+              <button type="button" className="ied-x" id="ied-spb" aria-label="Back to the editor" onClick={closeSavePicker}>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+              </button>
+              <p id="ied-spt">Save to a project</p>
+            </div>
+            <p className="ied-note">
+              {Number.isFinite(saveLimit)
+                ? `Pick where this icon lives. The free plan saves up to ${saveLimit} icons per project.`
+                : 'Pick where this icon lives.'}
+            </p>
+            {projects.map((p) => {
+              const used = projectCounts[p.id] || 0
+              const full = !isPro && used >= saveLimit
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="ied-pj"
+                  aria-disabled={full || undefined}
+                  title={full ? `This project is at the free limit of ${saveLimit} icons.` : undefined}
+                  onClick={() => { if (!full) handleSaveToProject(p.id) }}
+                >
+                  <span>{p.name}</span>
+                  <span className="tg">
+                    {full && 'Full '}
+                    {Number.isFinite(saveLimit) ? `${used} of ${saveLimit} icons` : `${used} icons`}
+                  </span>
+                </button>
+              )
+            })}
+            {/* New-project path: naming is required, so the create button stays disabled until a
+                name is typed. A 4th free project routes to the upgrade gate instead (handleNewProject). */}
+            {newProjOpen ? (
+              <div className="ied-newp">
+                <label className="ied-small-label" htmlFor="ied-newp-name">Project name (required)</label>
+                <div className="ied-newp-row">
                   <input
-                    className="icust-newproj-input"
+                    id="ied-newp-name"
+                    className="ied-in"
                     type="text"
                     value={newProjName}
                     onChange={(e) => setNewProjName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndSave() }}
-                    placeholder="Project name (required)"
-                    aria-label="New project name"
                     maxLength={60}
                     autoFocus
                   />
-                  <button
-                    type="button"
-                    className="lib-btn lib-btn--primary"
-                    disabled={!newProjName.trim()}
-                    onClick={handleCreateAndSave}
-                  >
+                  <button type="button" className="ied-tn" disabled={!newProjName.trim()} onClick={handleCreateAndSave}>
                     Create &amp; save
                   </button>
                 </div>
-              ) : (
-                <button type="button" className="icust-proj-btn icust-proj-btn--new" onClick={handleNewProject}>
-                  <span className="icust-proj-name">+ New project</span>
-                  {!isPro && Number.isFinite(projectLimit) && (
-                    <span className="icust-proj-count">{projects.length}/{projectLimit}</span>
-                  )}
-                </button>
-              )}
-              {!isPro && <Link className="icust-upgrade" to="/plans" target="_blank" rel="noopener">Upgrade for unlimited →</Link>}
-              <button type="button" className="icust-gate-dismiss" onClick={() => { setSavePickerOpen(false); setNewProjOpen(false); setNewProjName('') }}>Cancel</button>
+              </div>
+            ) : (
+              <button type="button" className="ied-pj ied-newp" onClick={handleNewProject}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                <span>New project</span>
+                {!isPro && Number.isFinite(projectLimit) && (
+                  <span className="tg">{projects.length} of {projectLimit} projects</span>
+                )}
+              </button>
+            )}
+            <div className="ied-spa">
+              {!isPro && <Link className="ied-tn" to="/plans" target="_blank" rel="noopener">See Pro</Link>}
+              <button type="button" className="ied-tn" onClick={closeSavePicker}>Cancel</button>
             </div>
           </div>
         )}
+
+        <div className="ied-ft" data-hide={savePickerOpen && activeIcon ? 'true' : undefined} inert={savePickerOpen && activeIcon ? true : undefined}>
+          {!activeIcon ? (
+            <div className="ied-foot-add">
+              <button type="button" className="ied-ghost" onClick={onClose}>Cancel</button>
+              <button type="button" className="ied-pri ied-pr" onClick={applyPaste}><span>Add to stage</span></button>
+            </div>
+          ) : (
+            <>
+              {!onSheet && pvEl}
+
+              {savedState === 'saved' && (
+                <p className="ied-fe-sv"><FooterGlyph name="check" />{saveLabel.full}</p>
+              )}
+              <div className="ied-foot-row" data-sv={savedState === 'saved' ? 'true' : undefined}>
+                <SplitDownload
+                  format={dlFormat}
+                  size={size}
+                  disabled={!baseSvgText}
+                  blocked={previewing}
+                  describedBy="ied-preview-line"
+                  loading={!baseSvgText && !loadErr}
+                  folded={footFolded}
+                  onPick={pickDownloadFormat}
+                  onDownload={handleDownload}
+                />
+                <button
+                  type="button"
+                  id="ied-save"
+                  className={`ied-tn ied-sv${savedState === 'saved' ? ' saved' : ''}`}
+                  onClick={handleSave}
+                  disabled={!baseSvgText}
+                  aria-disabled={previewing || undefined}
+                  aria-describedby={previewing ? 'ied-preview-line' : undefined}
+                  aria-busy={!baseSvgText && !loadErr}
+                  aria-expanded={savePickerOpen}
+                  aria-controls="ied-spn"
+                  aria-label={saveLabel.full}
+                  title={saveLabel.full}
+                >
+                  <FooterGlyph name={saveLabel.glyph} />
+                  {saveLabel.short ? (
+                    <span className="nm"><span className="nm-l">{saveLabel.full}</span><span className="nm-s" aria-hidden="true">{saveLabel.short}</span></span>
+                  ) : (
+                    <span className="nm">{saveLabel.full}</span>
+                  )}
+                  {saveLabel.hv && <span className="hv">{saveLabel.hv}</span>}
+                </button>
+              </div>
+
+              <div className="ied-foot-pill">
+                {/* One button, two jobs: Copy SVG, or Upgrade to Pro while a Pro setting is previewed.
+                    The same node either way, so focus and tab order never move. */}
+                <button
+                  ref={primaryRef}
+                  type="button"
+                  className="ied-pri ied-pr"
+                  onClick={previewing ? openUpgrade : handleCopySvg}
+                  disabled={!baseSvgText}
+                  aria-haspopup={previewing ? 'dialog' : undefined}
+                  aria-busy={!baseSvgText && !loadErr}
+                  aria-label={previewing ? 'Upgrade to Pro' : copied === 'svg' ? undefined : 'Copy SVG'}
+                >
+                  <span>{previewing ? 'Upgrade to Pro' : copied === 'svg' ? 'Copied!' : 'Copy SVG'}</span>
+                  {previewing ? (
+                    <span className="ied-gochip" aria-hidden="true">
+                      <svg className="a" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+                      <svg className="b" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+                    </span>
+                  ) : (
+                    <span className="ied-pchip" aria-hidden="true">
+                      <svg className={`ied-g${copied === 'svg' ? '' : ' on'}`} viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V7A2.5 2.5 0 0 0 13 4.5H7A2.5 2.5 0 0 0 4.5 7v6A2.5 2.5 0 0 0 7 15.5h1.5" /></svg>
+                      <svg className={`ied-g${copied === 'svg' ? ' on' : ''}`} viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+                    </span>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
-}
-
-// Flatten a /collection response into a flat, de-duplicated list of icon names.
-// Combines categorised + uncategorised icons; aliases/hidden are skipped so the
-// grid only shows canonical, renderable icons.
-function collectionToNames(d) {
-  const seen = new Set()
-  const names = []
-  const push = (n) => { if (n && !seen.has(n)) { seen.add(n); names.push(n) } }
-  if (Array.isArray(d.uncategorized)) d.uncategorized.forEach(push)
-  if (d.categories) Object.values(d.categories).forEach(arr => Array.isArray(arr) && arr.forEach(push))
-  return names
 }
 
 // ── Collection cache ──────────────────────────────────────────────────────────
@@ -1999,20 +3114,101 @@ function collectionToNames(d) {
 // Each caller applies its own style filter to the unfiltered names.
 const COLLECTION_CACHE = new Map()
 
+// Browse functions take false (plain), true (Try again) or 'chip' (a pack or group chip click).
+// Only 'chip' carries the retry floor; Try again requests at once.
+const retryOptions = (retry) => ({ manualRetry: !!retry, chipRetry: retry === 'chip' })
+
+// /collection is the one endpoint the API rate-limits hard (about six requests in a
+// few seconds is refused for an hour, every prefix at once), so at most two are in
+// flight and the default "All packs" listing never uses it: see src/data/iconHeads.js.
+const collectionGate = createLimiter(2)
 // info=1 includes registry attribution in the same catalogue request.
-const getCollectionNames = createCollectionLoader({
+// The answer comes from the same-origin snapshot first (public/iconify/collections/,
+// recorded by scripts/snapshot-icon-collections.mjs), so a first visit with an
+// empty cache asks Iconify for no pack lists. A pack with no snapshot falls
+// through to the live request, with iconifyFetch's cache and back-off.
+// When the request fails and nothing is stored, the committed head of the pack
+// stands in (marked `sample`, never cached) so the pack still shows live glyphs.
+const getPublicCollectionNames = createCollectionLoader({
   cache: COLLECTION_CACHE,
-  fetchEntry: async (pack) => {
-    const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
-    const d = await r.json()
+  fetchEntry: async (pack, { refused } = {}) => {
+    let d = await fetchCollectionSnapshot(pack)
+    if (!d) {
+      d = await collectionGate(async () => {
+        const stop = refused?.()
+        if (stop) throw stop
+        const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
+        return r.json()
+      })
+    }
     return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
   },
+  lastResort: async (pack) => {
+    const head = await loadPackHead(pack)
+    return { names: head.names, title: head.title, credit: null, sample: true }
+  },
+})
+// The animated sets' listing comes from the server's Pro check, and is kept in
+// memory only: a Pro-only catalogue is never written to localStorage, where the
+// next account on this browser could read it.
+const getAnimatedCollectionNames = createCollectionLoader({
+  cache: COLLECTION_CACHE,
+  storage: () => null,
+  // A session or plan problem is the viewer's to fix, and an answer dropped as
+  // stale is not a failure of the service: neither starts the retry cooldown.
+  cooldownExempt: (error) => isPackScopedFailure(classifyAnimatedFailure(error)),
+  fetchEntry: async (pack) => {
+    const d = await animatedIcons.collection(pack)
+    // An answer that lands after the viewer left Pro is dropped, not cached.
+    if (!animatedTierIsPaid()) throw staleAnimatedAnswer()
+    return { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
+  },
+})
+const getCollectionNames = (pack, options) => (
+  isAnimatedPack(pack) ? getAnimatedCollectionNames(pack, options) : getPublicCollectionNames(pack, options)
+)
+// failed(pack) asks the loader that owns the pack whether its last request failed.
+getCollectionNames.failed = (pack) => (
+  isAnimatedPack(pack) ? getAnimatedCollectionNames : getPublicCollectionNames
+).failed(pack)
+
+// The names the default "All packs" listing starts from for one pack. Regular weight
+// (the default) never asks /collection: the catalogue this session already holds if
+// there is one, else the pack's committed head, which is what keeps a visit from
+// spending the API's /collection allowance on twenty-five packs at once. Another
+// weight needs names the head leaves out, and only the packs that draw it, so only
+// those are requested. `degraded` marks names standing in for a refresh that failed.
+function defaultPackNames(pack, weight, manualRetry) {
+  if (weight === 'regular') {
+    const live = COLLECTION_CACHE.get(pack)
+    if (live) return Promise.resolve({ names: live.names })
+    return loadPackHead(pack).then(({ names }) => ({ names }))
+  }
+  if (!WEIGHT_RULES[weight]?.[pack]) return Promise.resolve({ names: [] })
+  return getCollectionNames(pack, { ...retryOptions(manualRetry), allowSample: false })
+    .then(({ names }) => ({ names, degraded: getCollectionNames.failed(pack) }))
+}
+
+/** Forget everything fetched for the animated sets (the viewer is no longer Pro). */
+const forgetAnimatedSets = () => purgeAnimatedCaches({
+  byPack: [COLLECTION_CACHE, GLYPH_ASKED, GLYPH_RETRY_AFTER],
+  keyed: [GLYPH_BODY, GLYPH_BOX, GLYPH_URI, GLYPH_FAILS, GLYPH_MISSING, svgTextCache, svgTextReady, glyphCache],
 })
 
 /** The licence the registry answered for this pack, or null if it never has. */
 const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
 
 const PAGE_SIZE = 120
+// The first page plus three automatic ones; past this the grid waits for a press.
+const AUTO_REVEAL_LIMIT = PAGE_SIZE * 4
+// Cells mounted per frame when a page is revealed (PAGE_SIZE / 3).
+const REVEAL_CHUNK = 40
+
+const SOFT_NOTICE_COPY = {
+  partial: 'Some icon sets couldn’t load.',
+  stale: 'Couldn’t refresh this set — showing the copy saved on this device.',
+  sample: 'Couldn’t load the whole set — showing its first icons.',
+}
 
 function firstPageReady(count, settled, total, pageSize, timedOut = false) {
   return (timedOut && count > 0) || count >= pageSize || settled >= total
@@ -2041,7 +3237,7 @@ function firstPageReady(count, settled, total, pageSize, timedOut = false) {
 const PACK_MENU = [
   {
     label: 'Interface',
-    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor'], ['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons'], ['mingcute', 'MingCute'], ['carbon', 'Carbon'], ['fluent', 'Fluent UI'], ['pixelarticons', 'Pixelarticons'], ['radix-icons', 'Radix Icons'], ['bi', 'Bootstrap Icons']],
   },
   {
     label: 'Brand logos',
@@ -2055,13 +3251,29 @@ const PACK_MENU = [
     label: 'Flat & emoji',
     packs: [['flat-color-icons', 'Flat Color Icons'], ['twemoji', 'Twemoji'], ['noto', 'Noto Emoji'], ['fluent-emoji', 'Fluent Emoji'], ['openmoji', 'OpenMoji']],
   },
+  {
+    label: 'Animated',
+    packs: [['line-md', 'Line MD (animated)'], ['svg-spinners', 'SVG Spinners (animated)'], ['meteocons', 'Meteocons (animated)']],
+  },
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
+const GRID_ONLY_PACK_LABELS = { 'vscode-icons': 'VSCode Icons', 'token-branded': 'Web3 Icons' }
+const gridPackLabel = (p) => GRID_ONLY_PACK_LABELS[p] || PACK_LABELS[p] || ''
 const packLabel = (p) => PACK_LABELS[p] || p
 
-/* ── THE CREDIT UNDER THE GRID ───────────────────────────────────────────────
+/* ── THE CREDIT FOR THE GRID ─────────────────────────────────────────────────
 
-   WHAT THIS REPLACES. Until 2026-09-23 the whole product carried one
+   WHERE IT RENDERS. This page reports the packs on screen (creditRows, below the
+   grid's state) to the footer through `onCredits`, and the footer draws the
+   notice (components/library/IconCredits.jsx). A pack with no row in
+   iconPackCredits.js is one a Pro search reached outside the twenty-five this
+   product curates; creditRows credits it by its prefix, linked to the Iconify
+   set page, which states that set's licence. Firing a /collection for it would
+   be more precise and would also put an unbounded number of extra requests
+   behind a keystroke, on the one surface in this app with a measured history of
+   being rate-limited.
+
+   WHAT THIS REPLACES. The whole product used to carry one
    attribution string: the `<p className="ig-attrib">` further down, rendered
    only when `pack === 'logodev'`. Every other set on this screen was uncredited,
    and the one credit that existed vanished the moment the visitor changed packs.
@@ -2107,72 +3319,43 @@ function packsOnScreen(...lists) {
   return out
 }
 
-/**
- * The persistent licence line.
- *
- * A pack with no row in iconPackCredits.js is one a Pro search reached outside
- * the twenty-five this product curates — the /search endpoint answers from the
- * whole registry when it is left unscoped, which is what a Pro search has always
- * done. It is credited by its prefix, linked to the Iconify set page, which
- * states that set's licence. Firing a /collection for it would be more precise
- * and would also put an unbounded number of extra requests behind a keystroke,
- * on the one surface in this app with a measured history of being rate-limited.
- */
 // The weight segment — Regular / Bold / Fill / Duo, the control the design's phone mock
 // draws under the search (Spectrum "On mobile"). A pill track with the chosen
 // segment lifted onto the card ground, as drawn. A segment the current scope
 // cannot honour is `aria-disabled` rather than `disabled`, so a keyboard user
 // can still reach it and hear WHY (the reason is in its accessible name and
-// its tooltip) instead of meeting a gap in the tab order.
+// its tooltip) instead of meeting a gap in the tab order. When no weight can
+// act, the track drops its ground and states the single-style reason as plain
+// text in the first segment's place, so it does not read as a control.
 function IconWeightSeg({ value, stateOf, onChange }) {
+  const states = ICON_WEIGHTS.map((w) => ({ ...w, ...stateOf(w.id) }))
+  const singleStyle = states.every((w) => !w.ok)
+  const reason = states[0].why
   return (
-    <div className="ig-weight" role="group" aria-label="Icon weight">
-      {ICON_WEIGHTS.map((w) => {
-        const st = stateOf(w.id)
-        return (
-          <button
-            key={w.id}
-            type="button"
-            className="ig-weight-btn"
-            aria-pressed={value === w.id}
-            aria-disabled={!st.ok || undefined}
-            aria-label={st.ok ? w.label : `${w.label} — ${st.why}`}
-            title={st.why || undefined}
-            onClick={() => { if (st.ok) onChange(w.id) }}
-          >
-            {w.label}
-          </button>
-        )
-      })}
+    <div className={singleStyle ? 'ig-weight ig-weight--single' : 'ig-weight'} role="group" aria-label="Icon weight">
+      {/* Always mounted, so a screen reader hears the reason when a group change
+          brings it in; empty and click-through while the buttons are showing. */}
+      <span className="ig-weight-status" role="status" title={singleStyle ? reason : undefined}>{singleStyle ? reason : ''}</span>
+      {singleStyle ? (
+        // Noninteractive labels preserve the four-button track's intrinsic width.
+        <span className="ig-weight-measure" aria-hidden="true">
+          {ICON_WEIGHTS.map((w) => <span key={w.id}>{w.label}</span>)}
+        </span>
+      ) : states.map((w) => (
+        <button
+          key={w.id}
+          type="button"
+          className="ig-weight-btn"
+          aria-pressed={w.ok && value === w.id}
+          aria-disabled={!w.ok || undefined}
+          aria-label={w.ok ? w.label : `${w.label} — ${w.why}`}
+          title={w.why || undefined}
+          onClick={() => { if (w.ok) onChange(w.id) }}
+        >
+          {w.label}
+        </button>
+      ))}
     </div>
-  )
-}
-
-function IconPackCredit({ packs }) {
-  const rows = packs.map((prefix) => packCredit(prefix, liveCredit(prefix)) || {
-    prefix,
-    name: prefix,
-    url: `https://icon-sets.iconify.design/${prefix}/`,
-    licenceName: 'licence on Iconify',
-  })
-  return (
-    <aside className="ig-credit" aria-label="Icon set licences">
-      {rows.length > 0 && (
-        <p className="ig-credit-packs">
-          {rows.map((row, i) => (
-            <span className="ig-credit-pack" key={row.prefix}>
-              {i > 0 && <span className="ig-credit-sep" aria-hidden="true"> · </span>}
-              <a href={row.url} target="_blank" rel="noopener noreferrer">{row.name}</a>
-              {' '}
-              <span className="ig-credit-lic">{row.licenceName}</span>
-            </span>
-          ))}
-        </p>
-      )}
-      <p className="ig-credit-more">
-        <Link to="/credits">Every set, its author and its licence in full</Link>
-      </p>
-    </aside>
   )
 }
 
@@ -2194,66 +3377,136 @@ const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefi
 
    References, and what each decided:
 
-   Discord Shop (mobbin.com/screens/97aac9b3-d4a7-474a-8724-032fe870507a) is the
-     capped grid exactly: three real rows, then one line and one button. Nothing
-     is blurred and nothing is faked — what you can see, you can use. That is
-     why the signed-out grid holds 60 REAL, fully working icons rather than 60
-     teasers, and why the wall sits after them rather than over them.
+   The capped grid is real rows first, then one line and one button. Every icon
+     inside the cap is real and fully working, so the signed-out grid holds 60
+     usable icons rather than 60 teasers, and the band sits after them rather
+     than over them. The only blur is on the extra rows IconEndBand draws past
+     the cap (see IconEndTease): those are decoration, not results.
 
-   Jasper (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd) puts the
-     plan word on the FILTER as well as on the card — its left-hand category
-     list carries a "Business" badge next to the category itself. That is
-     `lockMark` above: the pack menu and the group chips say which tier a set
+   A common pattern puts the plan word on the FILTER as well as on the card —
+     a left-hand category list carries a "Business" badge next to the category
+     itself. That is `lockMark` above: the pack menu and the group chips say which tier a set
      needs BEFORE it is chosen, so nothing is a dead end you discover by
      clicking.
 
-   Pinterest (mobbin.com/screens/4bf2a5e2-acb3-49ea-bf63-e711ba6377bc) is the
-     signed-out cap, and also the counter-example: its real grid sits behind a
-     "Log in to see more" dialog raised the moment you scroll. This wall raises
+   Some sites cap the signed-out grid, with a counter-example: the real grid
+     sits behind a "Log in to see more" dialog raised the moment you scroll.
+     This wall raises
      nothing on its own — the account dialog opens when the button is PRESSED,
      never on arrival or on scroll.
 
-   Descript (mobbin.com/screens/a20d8888-d4cb-47af-a0e1-9dde567f13e7) is the
-     other counter-example: a permanent "You're on a Free plan" strip across the
-     top of the app. There is no persistent banner here. A signed-in free
-     viewer sees markers on the controls and nothing else until they reach for
-     a locked set.
+   There is no persistent plan banner. A signed-in free viewer sees markers on
+     the controls, and the upgrade band only at the true end of their results
+     (a search, a pack or a group), never as a standing strip or during an
+     endless scroll. See endBandKind in utils/iconEndBand.js.
 
    NOT A FAILED LOAD, and not the refused state either. `.ig-notice` — "Couldn't
    reach the icon service" — is a plain row with a Try again button and means
-   the network said no. This is an accent band with a padlock and a plan word
+   the network said no. This is the gallery closing block (GalleryEndGate) naming the plan
    and means the product said no. The two never render together: a gated scope
    never asks for anything, so there is nothing for the service to refuse. */
-function IconGateWall({ heading, body, action, onAction, kind }) {
+// The wall's words for a SIGNED-OUT visitor on a Pro scope. Logging in is the way in, but it does
+// not open a Pro pack, so the copy says so before the button does. Kept here rather than in
+// data/iconPackTiers.js, which the entry chunk imports and which sits at the bulk-data budget.
+const GATE_COPY_PRO_ANON = {
+  heading: (label) => `${label} is a Pro pack`,
+  body: 'Log in to get started. Pro unlocks brand marks, flags and the coloured sets.',
+  action: 'Log in',
+  secondary: 'See Pro plans',
+}
+
+// A pack or group this viewer cannot open: the same closing block as the end of
+// the grid, over placeholder glyph rows. No icon of the locked pack is fetched
+// or drawn; the rows are neutral shapes.
+function IconGateWall({ heading, body, action, onAction, kind, secondary, onSecondary }) {
   return (
-    <div className={`lockt-cta ig-gate ig-gate--${kind}`} data-gate={kind} role="status">
-      <div className="lockt-cta-copy">
-        <p className="lockt-cta-head">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="ig-gate-lock">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          {heading}
-        </p>
-        <p className="lockt-cta-body">{body}</p>
-      </div>
-      <button type="button" className="btn btn-accent lockt-cta-btn" onClick={onAction}>{action}</button>
+    <GalleryEndGate
+      kind={kind}
+      id="ig-gate-h"
+      className={`ig-gate ig-gate--${kind}`}
+      heading={heading}
+      body={body}
+      live="copy"
+      primary={{ label: action, onClick: onAction }}
+      secondary={secondary ? { label: secondary, to: '/plans', onClick: onSecondary } : undefined}
+      fade={<GateFadeCards shape="glyph" count={24} min={92} />}
+    />
+  )
+}
+
+/* ── THE END OF THE GRID ─────────────────────────────────────────────────────
+   The closing block at the bottom of the results is the shared GalleryEndGate
+   (components/library): one display sentence, one dim line, one filled pill
+   and, where a second way on is true, a text link. This function only maps the
+   icon library's states onto it.
+
+   `kind` is 'anon' or 'free' (see endBandKind), or 'search' for the band a
+   search raises for matches above the viewer's tier (see searchTeaseBand); that
+   one speaks as a status, since it can stand in for the empty message. `to`
+   makes the primary control a link to /plans; without it the primary control is
+   a button that calls `onAction`. `tease` is the faded rows above the copy: the
+   signed-out band and the search band fill it with IconEndTease, the free band
+   leaves it empty. A blurred row for free viewers is passed here, as long as it
+   holds no markup of a pack that viewer may not load (see
+   src/utils/lockedPreview.js). */
+function IconEndBand({ kind, heading, body, names, action, onAction, to, secondary, tease }) {
+  return (
+    <GalleryEndGate
+      kind={kind}
+      id="ig-end-h"
+      heading={heading}
+      body={body}
+      detail={names}
+      live={kind === 'search' ? 'copy' : kind === 'anon' ? 'body' : undefined}
+      primary={{ label: action, to, onClick: onAction }}
+      secondary={secondary ? { label: secondary, to: '/plans' } : undefined}
+      fade={tease || undefined}
+    />
+  )
+}
+
+/* Two rows of blurred icons that continue the grid past the cap. They use a
+   grid of their own (the live grid's column count, passed in) rather than the
+   `.ig` class, so anything that looks up the results grid still finds exactly
+   one. The glyphs are
+   path strings already compiled into the bundle and belong to packs a signed-out
+   viewer may browse (see pickTeaseIcons), so this makes no request and holds
+   nothing gated. The cells carry no name, no pack and no title, are not
+   focusable, take no pointer events and are hidden from assistive tech: the
+   band below says the same thing in words and holds the one way in. */
+function IconEndTease({ cells, cols, cellH }) {
+  return (
+    <div className="ig-end-tease" aria-hidden="true"
+      style={{ '--ig-end-cols': cols, ...(cellH ? { '--ig-end-cell-h': `${cellH}px` } : null) }}>
+      {cells.map((cell, i) => {
+        const { row } = teaseCellPlace(i, cols)
+        return (
+          <span key={cell.key} className="ig-end-cell" data-row={row}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+              strokeLinecap="round" strokeLinejoin="round" focusable="false">
+              <path d={cell.d} />
+            </svg>
+          </span>
+        )
+      })}
     </div>
   )
 }
 
-export default function IconLibrary({ onCopy, onCatalogue }) {
-  const { isPro, plan } = useSubscription()
+export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
+  const { isPro, plan, planKnown } = useSubscription()
   const { user, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
   const navigate = useNavigate()
+  // Back from /plans arrives as a POP; a fresh visit does not reopen a kept Pro preview.
+  const navType = useNavigationType()
 
   /* ── WHAT THIS VIEWER MAY ASK FOR ────────────────────────────────────────
      Derived once, here, and every fetch path below is scoped by it. The check
      sits BEFORE the request rather than on the rendered cell, which is the
      discipline src/utils/lockedPreview.js exists to enforce: a locked thing's
      payload never reaches the browser. Fetch-then-hide would leak the markup
-     AND spend the rate limit this page was rescued from on 2026-09-18.
+     AND spend the rate limit the batched fetch exists to avoid.
 
      TWO RESOLUTIONS, AND ONLY ONE IS WORTH WAITING FOR.
 
@@ -2274,40 +3527,47 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const tier = viewerTier({ user, isPro, resolving: authLoading })
   const allowedPacks = useMemo(() => visiblePacks(ALL_PACKS, tier), [tier])
   const canSee = useCallback((p) => canSeePack(p, tier), [tier])
-  // The signed-out cap. 60 icons, spread evenly so all five outlined packs are
-  // represented — see ANON_ICON_CAP for why it is not a flat slice.
+  // The signed-out cap: 60 icons rounded up to whole grid rows, spread evenly so
+  // all five outlined packs are represented — see ANON_ICON_CAP for why it is
+  // not a flat slice. The number depends on the measured column count, which
+  // changes with the window, so the lists are fetched and held at the widest the
+  // cap can be (ANON_ICON_CEILING) and the grid trims them to whole rows at
+  // render (`icons` below). A resize then re-trims what is already held, and
+  // refetches nothing.
   const capped = tier === 'anon'
-  const perPackCap = capped ? anonPerPack(ALL_PACKS) : ALL_INITIAL_PER_PACK
-  const capList = useCallback((list) => (capped ? list.slice(0, ANON_ICON_CAP) : list), [capped])
+  const perPackCap = capped ? anonPerPack(ALL_PACKS, ANON_ICON_CEILING) : ALL_INITIAL_PER_PACK
+  const capList = useCallback((list) => (capped ? list.slice(0, anonListMax(ALL_PACKS)) : list), [capped])
+  // The grid's column count, read off the live grid (see the measuring effect
+  // further down); null until it has been laid out.
+  const [gridCols, setGridCols] = useState(null)
+  const anonCap = anonCapForCols(gridCols)
 
-  /* ── "ALL PACKS" IS A CLAIM, AND FOR A GATED VIEWER IT IS FALSE ──────────
-     MEASURED signed out at 1440 before this existed, the status line read
-     "Showing 60 of 60 · All packs · 60 icons · 5 sets" — forty pixels above a
-     wall saying the grid holds the first 60 icons of the outlined packs. Two
-     sentences on one screen disagreeing about what the library is, and the one
-     in the smaller type was the true one.
-
-     The label is DROPPED rather than reworded. "Showing X of Y" immediately
-     before it already carries both counts, so a viewer loses no information —
-     and no new sentence is invented to describe a scope the product has never
-     had a word for. Whoever really can browse every pack still gets the line
-     they have always had, unchanged.
-
-     Derived from the pack counts, not from the tier: move a pack in the table
-     and this follows, with no second place to remember. */
-  const seesEverything = allowedPacks.length === ALL_PACKS.length
-  const scopeLine = useCallback((count, sets) => (
-    seesEverything ? `All packs · ${count.toLocaleString()} icons · ${sets} sets` : `${sets} sets`
-  ), [seesEverything])
   // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
   const customIconLimit = plan?.limits?.['custom-icons'] ?? Infinity
   const [query, setQuery] = useState('')
-  const [icons, setIcons] = useState([])      // full result set (browse or search)
+  const [fetchedIcons, setIcons] = useState([])      // full result set (browse or search)
+  // What the grid shows. Signed out, the fetched set trimmed to whole rows of the
+  // measured columns; everyone else sees it all. Memoised so the list keeps its
+  // identity until the set or the column count changes.
+  const icons = useMemo(
+    () => (capped ? capAnonList(fetchedIcons, anonCap) : fetchedIcons),
+    [capped, fetchedIcons, anonCap],
+  )
   const [visible, setVisible] = useState(PAGE_SIZE)
-  const [mode, setMode] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
-  const [activeCat] = useState('all')
+  /* The catalogue is on screen but not all of it, and the notice says which:
+     'partial' (some packs of a listing did not load), 'stale' (the saved copy of
+     this pack stands in for a refresh that failed) or 'sample' (only the first
+     names of this pack could be had). Quieter than `loadError`, which means
+     nothing live or saved could be shown at all and the built-in set replaced it. */
+  const [softNotice, setSoftNotice] = useState(null)
+  /* Why an animated set cannot be shown, when the reason is the viewer's session
+     or plan rather than the icon service: 'auth' (sign in again) or 'forbidden'
+     (the plan does not include the set). Scoped to the animated pack on screen:
+     it never touches `loadError` or `cdnOk`, so the other packs and the next
+     search carry on as normal. Cleared wherever a new listing starts. */
+  const [animatedNotice, setAnimatedNotice] = useState(null)
   const [pack, setPack] = useState('')
   // The weight is read through a ref by the browse functions, so choosing one
   // can re-run the current scope in the same tick (see handleWeight).
@@ -2322,6 +3582,18 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      "you cannot have this" and "the service refused" two distinguishable
      states. Null whenever the current scope is one the viewer may browse. */
   const [gated, setGated] = useState(null)
+  // How many icons of the open pack are held back for Pro: { pack, n }. Drives the quiet notice under the pack menu.
+  const [proHeld, setProHeld] = useState({ pack: '', n: 0 })
+  /* What the search on screen matched in sets this viewer cannot open:
+     `{ free, paid, total, capped, labels, query }` (summariseLockedMatches plus
+     the query it answers), or null.
+     Counts and names only, never a glyph. Cleared as a new search starts and
+     set only for a viewer below Pro; the band that reads it is chosen by
+     searchTeaseBand further down. */
+  const [searchTease, setSearchTease] = useState(null)
+  // A count still on its way: the empty message waits for it rather than
+  // showing "No icons match" a moment before the band takes its place.
+  const [teasePending, setTeasePending] = useState(false)
   // An ephemeral draft handed over from the homepage icon preview. Read during
   // render and re-validated HERE before anything is applied, so a tampered,
   // stale or already-consumed record simply opens the normal editor state
@@ -2331,7 +3603,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // so a reload or a second visit inherits nothing.
   const [selected, setSelected] = useState(() => {
     const draft = validateIconDraft(readIconDraft())
-    if (!draft) return null
+    // No homepage draft: a Pro preview the viewer left for /plans reopens when they come back.
+    if (!draft) return navType === 'POP' ? (readPreviewDraft()?.icon || null) : null
     return {
       id: `${draft.pack}:${draft.name}`,
       pack: draft.pack,
@@ -2342,6 +3615,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     }
   })
   const [addMode, setAddMode] = useState(false)
+  // The element that had focus when the editor opened, and the icon it opened on. Kept across a
+  // swap to a Similar icon, so closing can still hand focus back (see IconCustomizer).
+  const editorOpenerRef = useRef(null)
+  const noteEditorOpener = (icon) => {
+    if (selected || addMode) return
+    editorOpenerRef.current = { el: document.activeElement, key: icon ? iconCellKey(icon) : null }
+  }
   const [recents, setRecents] = useState(() => getRecentIcons())
   const timer = useRef(null)
   const firstPageTimer = useRef(null)
@@ -2376,7 +3656,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const pc = pm[packFilter] || ''
     q = (q || '').toLowerCase()
     const filtered = capList(localIcons.filter(i =>
-      (activeCat === 'all' || i.c === activeCat) &&
       (!packFilter || i.p === pc) &&
       canSee(prefixOf[i.p] || i.p) &&
       (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
@@ -2386,26 +3665,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       name: i.n,
       pack: PACKS[i.p] || i.p,
       d: i.d,
-      filled: i.p === 'S',
+      filled: i.p === SOLID_BUILTIN_PACK,
       cdn: false
     })))
     setVisible(PAGE_SIZE)
-    // "Built-in icons", not "Offline": this branch is reached when the icon
-    // SERVICE refused (a 429 rate limit was measured on 2026-09-08), and the
-    // browser is online the whole time. The notice above the grid says what
-    // happened; this line says what is being shown.
-    setMode(cdnOk.current === false ? 'Built-in icons' : 'Embedded')
+    // Reached when the icon SERVICE refused (a 429 was measured), not when the
+    // browser is offline; the notice above the grid says what happened.
     setLoading(false)
-  }, [activeCat, canSee, capList])
+  }, [canSee, capList])
 
   /* ── WHEN THE CATALOGUE ANSWERS AND THE GLYPHS DO NOT ────────────────────
 
-     The 2026-09-08 outage work built a real refused-state — "Couldn't reach
+     The outage work built a real refused-state — "Couldn't reach
      the icon service — showing built-in icons", a Try again button, and the
      built-in set underneath — and keyed it on the CATALOGUE requests failing.
 
-     Measured 2026-09-15, the founder reported the library broken and it was
-     failing a way that state cannot see: all 24 /collection requests returned
+     The library was also failing a way that state cannot see: all 24 /collection requests returned
      200 while every individual glyph .svg came back 429 from Cloudflare
      (error 1015, rate limited by IP). The API answers a rate-limited glyph
      with text/plain, the browser had asked for an image, so ORB blocks it and
@@ -2435,15 +3710,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // parallel but append per-pack as each resolves (never Promise.all-block), and
   // keep pack order as lists arrive. Hold the skeleton until a page is ready
   // or all packs settle, with a timeout for slow packs.
-  const browseAll = useCallback((manualRetry = false) => {
+  const browseAll = useCallback(function browseAll(manualRetry = false) {
     const rid = ++reqId.current
     retryRef.current = () => browseAll(true)
     setSource('all'); setGroup(null); setPack(''); setGated(null)
-    setLoadError(false)
-    setVisible(PAGE_SIZE); setMode('')
-    // ALLOWED, NOT ALL. This is the line that decides how many third-party
-    // requests a visit costs: a signed-out visit asks five hosts for a
-    // catalogue instead of twenty-five, and never names a gated pack in a URL.
+    setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
+    setVisible(PAGE_SIZE)
+    // ALLOWED, NOT ALL. This is the line that decides how many packs a visit
+    // lists: a signed-out visit lists five instead of twenty-five, and never
+    // names a gated pack in a URL.
     const lists = allowedPacks.map(() => [])
 
     // Warm-cache fast path: if every pack is already cached (e.g. returning to
@@ -2452,12 +3727,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (allowedPacks.every(p => COLLECTION_CACHE.has(p))) {
       cdnOk.current = true
       allowedPacks.forEach((p, idx) => {
-        const names = keepWeight(p, COLLECTION_CACHE.get(p).names, weightRef.current).slice(0, perPackCap)
+        const names = keepWeight(p, COLLECTION_CACHE.get(p).names, weightRef.current, null, tier).slice(0, perPackCap)
         lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
       })
       const merged = capList(lists.flat())
       setIcons(merged)
-      setMode(scopeLine(merged.length, allowedPacks.length))
       setLoading(false)
       return
     }
@@ -2469,7 +3743,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     let holding = true
     const pageSize = Math.min(PAGE_SIZE, perPackCap * allowedPacks.length)
     const reveal = (timedOut = false) => {
-      if (rid !== reqId.current) return
+      // Once a page is out, a late call (the 2.5 s timer arms after a render, so
+      // it can fire once every pack has settled) must not set the empty `lists`
+      // over what is on screen, the built-in set included.
+      if (rid !== reqId.current || !holding) return
       const count = lists.reduce((sum, list) => sum + list.length, 0)
       if (firstPageReady(count, settled, allowedPacks.length, pageSize, timedOut)) {
         clearTimeout(firstPageTimer.current)
@@ -2479,13 +3756,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       }
     }
     setFirstPageTimeout(() => () => reveal(true))
+    let degraded = 0
     allowedPacks.forEach((p, idx) => {
-      getCollectionNames(p, { manualRetry })
-        .then(({ names: raw }) => {
+      defaultPackNames(p, weightRef.current, manualRetry)
+        .then(({ names: raw, degraded: wasDegraded }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
           okCount++
-          const names = keepWeight(p, raw, weightRef.current).slice(0, perPackCap)
+          if (wasDegraded) degraded++
+          const names = keepWeight(p, raw, weightRef.current, null, tier).slice(0, perPackCap)
           lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
           // Default sort = pack-by-pack: lists stays in allowedPacks order and
           // each pack's icons are contiguous, so flat() groups every pack
@@ -2500,20 +3779,20 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           const merged = capList(lists.flat())
           // Keep the reserved skeleton intact until reveal exposes the first page.
           if (!holding) setIcons(merged)
-          const sets = lists.filter(l => l.length).length
-          setMode(scopeLine(merged.length, sets))
         })
-        .catch(() => { /* this pack failed — others may still resolve */ })
+        .catch(() => { degraded++ /* this pack failed — others may still resolve */ })
         .finally(() => {
           if (rid !== reqId.current) return
           settled++
           reveal()
           if (settled === allowedPacks.length) {
+            // Nothing at all to show is the only case that swaps in the built-in set.
             if (okCount === 0) { cdnOk.current = false; setLoadError(true); renderLocal('', '') }
+            else if (degraded > 0) setSoftNotice('partial')
           }
         })
     })
-  }, [renderLocal, allowedPacks, perPackCap, capList, scopeLine])
+  }, [renderLocal, allowedPacks, perPackCap, capList, tier])
 
   /* ── REFUSING A SCOPE COSTS NOTHING ──────────────────────────────────────
      The whole point of the gate: the browse functions call this INSTEAD of
@@ -2536,8 +3815,24 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     reqId.current++
     retryRef.current = null
     setGated({ label, need })
-    setIcons([]); setVisible(PAGE_SIZE); setMode('')
-    setLoading(false); setLoadError(false)
+    setIcons([]); setVisible(PAGE_SIZE)
+    setLoading(false); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
+  }, [])
+
+  /* A FAILED ANIMATED LISTING, WHEN THE CAUSE IS THE SESSION OR THE PLAN. The
+     grid stays empty and the notice says which, without touching `loadError`
+     or `cdnOk`: the icon service is fine, and the next search in any other pack
+     must still go to it. Returns false for any other cause so the caller can
+     show its usual unreachable state. A stale answer (the viewer left Pro while
+     it was in flight) is dropped without a notice; the tier change is already
+     re-running the browse. */
+  const failAnimatedScope = useCallback((error) => {
+    const kind = classifyAnimatedFailure(error)
+    if (!isPackScopedFailure(kind)) return false
+    setIcons([]); setVisible(PAGE_SIZE)
+    setLoading(false)
+    if (kind !== 'stale') setAnimatedNotice(kind)
+    return true
   }, [])
 
   // The narrowest tier that would open at least one of these packs. A group
@@ -2549,14 +3844,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Logo.dev pack — a curated grid of popular brands. No network: the logos are
   // <img> URLs resolved lazily by the browser as cells scroll into view.
-  const browseLogos = useCallback(() => {
+  const browseLogos = useCallback(function browseLogos() {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
-    setLoadError(false)
+    setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
     setVisible(PAGE_SIZE)
-    setMode(`Brand logos · ${LOGODEV_BRANDS.length} popular brands`)
     setLoading(false)
   }, [])
 
@@ -2566,7 +3860,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const searchLogos = useCallback((q) => {
     reqId.current++
     setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
-    setLoadError(false)
+    setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
     const term = (q || '').trim()
     if (term.length < 2) { browseLogos(); return }
     const lower = term.toLowerCase()
@@ -2578,14 +3872,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     }
     setIcons(results)
     setVisible(PAGE_SIZE)
-    setMode(`Brand logos · ${results.length} for “${term}”`)
     setLoading(false)
   }, [browseLogos])
 
   // Browse an entire icon set via the /collection endpoint.
   // Browse one pack, optionally narrowed by an active collection chip — pack
   // and chip are independent filters that compose (chip = style within pack).
-  const browsePack = useCallback((packFilter, groupKey = null, manualRetry = false) => {
+  const browsePack = useCallback(function browsePack(packFilter, groupKey = null, manualRetry = false) {
     groupKey = ICON_GROUPS[groupKey] ? groupKey : null
     setSource('pack'); setGroup(groupKey || null)
     // "All packs" first: the empty string is not a pack and must never be put
@@ -2599,42 +3892,49 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (packFilter === 'logodev') { browseLogos(); return }
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter, groupKey, true)
-    setLoading(true); setLoadError(false); glyphFails.current = 0
-    getCollectionNames(packFilter, { manualRetry })
-      .then(({ names: raw, title }) => {
+    setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
+    // The pack's head may stand in for a failed request only when it holds what is
+    // being asked for: it is Regular-weight names, so not for another weight.
+    const allowSample = weightRef.current === 'regular' || !!groupKey
+    getCollectionNames(packFilter, { ...retryOptions(manualRetry), allowSample })
+      .then(({ names: raw, sample }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
-        const names = capList(keepWeight(packFilter, raw, weightRef.current, groupKey))
+        // A saved or partial list is still shown when its refresh failed; the notice and Try again stay up.
+        if (getCollectionNames.failed(packFilter)) setSoftNotice(sample ? 'sample' : 'stale')
+        setProHeld({ pack: packFilter, n: tier === 'paid' ? 0 : proOnlyIconCount(packFilter, raw) })
+        const names = capList(keepWeight(packFilter, raw, weightRef.current, groupKey, tier))
         // A weight this pack does not draw is an empty answer, not a failure:
         // the built-in fallback would show Regular glyphs under a Bold label.
         if (!names.length && weightRef.current !== 'regular' && !groupKey) {
           setIcons([]); setVisible(PAGE_SIZE); setLoading(false)
-          setMode(`${title} · no ${weightRef.current} weight`)
           return
         }
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
-        setMode(`${title}${groupKey ? ` · ${ICON_GROUPS[groupKey].label}` : ''} · ${names.length.toLocaleString()} icons`)
         setLoading(false)
       })
-      .catch(() => {
+      .catch((error) => {
         if (rid !== reqId.current) return
-        cdnOk.current = false
+        if (isAnimatedPack(packFilter) && failAnimatedScope(error)) return
+        // An animated set failing for any other reason is still a failure of
+        // this scope alone: it must not switch the other packs to the fallback.
+        if (!isAnimatedPack(packFilter)) cdnOk.current = false
         setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope])
+  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope, failAnimatedScope, tier])
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
-  const browseGroup = useCallback((groupKey, manualRetry = false) => {
+  const browseGroup = useCallback(function browseGroup(groupKey, manualRetry = false) {
     const g = ICON_GROUPS[groupKey]
     if (!g) { browseAll(); return }
     // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
     // and a free viewer may have none of them, so the chip is a wall; a mixed
     // group would fetch only the members the viewer is entitled to and say so
-    // in its own "· N packs" count. There is no mixed group today — the founder's
+    // in its own "· N packs" count. There is no mixed group today — the tier
     // line happens to fall on group boundaries — but the arithmetic is written
     // for the table rather than for today's contents, so moving one pack in
     // iconPackTiers.js cannot silently produce a group that fetches what it
@@ -2644,23 +3944,25 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => browseGroup(groupKey, true)
     setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
-    setLoading(true); setLoadError(false); glyphFails.current = 0
+    setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
     Promise.all(packs.map(p =>
-      getCollectionNames(p, { manualRetry })
-        .then(({ names }) => ({ names: keepWeight(p, names, 'regular').slice(0, PER_PACK_CAP), pack: p, ok: true }))
+      getCollectionNames(p, retryOptions(manualRetry))
+        .then(({ names }) => ({ names: keepWeight(p, names, 'regular', null, tier).sort().slice(0, PER_PACK_CAP), pack: p, ok: !getCollectionNames.failed(p) }))
         .catch(() => ({ names: [], pack: p, ok: false }))
     ))
       .then(results => {
         if (rid !== reqId.current) return
-        if (!results.some(r => r.ok)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
+        // The built-in set replaces the grid only when no pack gave anything to show.
+        if (!results.some(r => r.ok || r.names.length)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
         cdnOk.current = true
+        if (results.some(r => !r.ok)) setSoftNotice('partial')
         const lists = results.map(r => r.names.map(n => ({ id: `${r.pack}:${n}`, pack: r.pack, name: n, cdn: true })))
-        const merged = capList(interleavePacks(lists))
+        // Share the anonymous allowance per pack; a final slice could hide later packs.
+        const groupCap = capped ? Math.ceil(ANON_ICON_CEILING / packs.length) : PER_PACK_CAP
+        const merged = concatenatePackLists(lists, groupCap)
         if (!merged.length) { renderLocal('', ''); return }
         setIcons(merged)
         setVisible(PAGE_SIZE)
-        const hits = results.filter(r => r.names.length).length
-        setMode(`${g.label} · ${merged.length.toLocaleString()} icons · ${hits} packs`)
         setLoading(false)
       })
       .catch(() => {
@@ -2669,7 +3971,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal, canSee, capList, needFor, refuseScope, browseAll])
+  }, [renderLocal, canSee, capped, needFor, refuseScope, browseAll, tier])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
@@ -2679,22 +3981,72 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // markup (`icon.svg`), so nothing here is fetched and nothing here belongs to
   // a pack we sell. `setGated(null)` is the line that guarantees it — reaching
   // My Icons always clears a wall rather than inheriting one.
-  const browseCustom = useCallback(() => {
+  const browseCustom = useCallback(function browseCustom() {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
     setSource('custom'); setGroup(null); setPack(''); setGated(null)
-    setQuery(''); setLoadError(false)
-    const list = readCustomIcons()
+    setQuery(''); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null)
+    // Cleaned on the way in: whatever is in storage is not trusted. The symbols go in
+    // before the list is set, so the first render of a cell already finds its `#id`.
+    const list = cleanCustomIcons(readCustomIcons())
+    registerCustomSymbols(list)
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
     setVisible(PAGE_SIZE)
-    setMode(`Custom Icons · ${list.length.toLocaleString()} saved`)
     setLoading(false)
   }, [])
 
-  const doSearch = useCallback((q, scope = {}) => {
+  /* ── THE MATCHES THIS VIEWER CANNOT OPEN YET ─────────────────────────────
+     Called once the viewer's own search has answered. A viewer below Pro gets
+     ONE more /search, scoped to the packs they may not browse, and only its
+     COUNT is used: the ids are reduced to a summary (counts and pack labels)
+     and dropped. Nothing here fetches a glyph for those packs, so the rule in
+     src/utils/lockedPreview.js (a locked thing's payload never reaches the
+     browser) holds; the band that reads the summary draws built-in glyphs only.
+
+     No request for Pro, for a single pack filter, or once the icon service has
+     failed. It is guarded by `reqId` like the search itself, so an answer for a
+     query the viewer has left never lands. A failed probe is silent: the
+     search stands as it is and no band is drawn. `mainIds` are the ids the
+     viewer's own search returned, for the Pro-only names of packs they CAN
+     browse (Carbon's logo-*) that the grid dropped. */
+  const probeLockedMatches = useCallback((q, packFilter, groupKey, mainIds, rid) => {
+    if (tier === 'paid' || packFilter || cdnOk.current === false) return
+    const weight = groupKey ? 'regular' : weightRef.current
+    const key = searchTeaseKey({ tier, group: groupKey, weight, query: q })
+    // The summary carries the query it answers, so the band never names a newer one.
+    const land = (summary) => setSearchTease(summary && { ...summary, query: q })
+    if (SEARCH_TEASE_CACHE.has(key)) { land(SEARCH_TEASE_CACHE.get(key)); return }
+    const probed = lockedSearchPacks({
+      packs: ALL_PACKS, tier, packFilter, groupPacks: groupKey ? ICON_GROUPS[groupKey].packs : null,
+    })
+    const finish = (probeIds) => {
+      const summary = summariseLockedMatches({
+        probeIds, probed, mainIds, tier, limit: API_LIMIT, labelOf: packLabel,
+        accept: (p, n) => matchesWeight(p, n, weight),
+      })
+      if (SEARCH_TEASE_CACHE.size >= SEARCH_TEASE_CACHE_MAX) SEARCH_TEASE_CACHE.delete(SEARCH_TEASE_CACHE.keys().next().value)
+      SEARCH_TEASE_CACHE.set(key, summary)
+      if (rid === reqId.current) { land(summary); setTeasePending(false) }
+    }
+    if (!probed.length) { finish([]); return }
+    setTeasePending(true)
+    const params = new URLSearchParams()
+    params.set('prefixes', probed.join(','))
+    params.set('query', q)
+    params.set('limit', String(API_LIMIT))
+    fetchWithFallback(`/search?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d?.icons)) finish(d.icons); else if (rid === reqId.current) setTeasePending(false) })
+      // A missing count is no band, never an error.
+      .catch(() => { if (rid === reqId.current) setTeasePending(false) })
+  }, [tier])
+
+  const doSearch = useCallback(function doSearch(q, scope = {}, manualRetry = false) {
     q = (q || '').trim()
     const { pack: packFilter = '', group: requestedGroup = null } = scope
     const groupKey = ICON_GROUPS[requestedGroup] ? requestedGroup : null
+    setSearchTease(null)
+    setTeasePending(false)
     // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
     // Iconify registry — type "apple" signed out and the old code would have
     // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
@@ -2712,14 +4064,47 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       else browseAll()
       return
     }
-    if (cdnOk.current === false) {
+    // An animated set is searched in the names the server listed for it, never by
+    // asking the Iconify /search endpoint, which would put its prefix in a browser request.
+    if (isAnimatedPack(packFilter)) {
+      const rid = ++reqId.current
+      retryRef.current = () => doSearch(q, scope)
+      setSource('search')
+      setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
+      // The names are hyphenated, so "arrow up" has to match arrow-up.
+      const needle = q.toLowerCase().replace(/\s+/g, '-')
+      getCollectionNames(packFilter)
+        .then(({ names }) => {
+          if (rid !== reqId.current) return
+          cdnOk.current = true
+          const items = capList(names
+            .filter(n => n.includes(needle) && matchesWeight(packFilter, n, weightRef.current))
+            .map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
+          if (!items.length) { renderLocal(q, packFilter); return }
+          setIcons(items)
+          setVisible(PAGE_SIZE)
+          setLoading(false)
+        })
+        .catch((error) => {
+          if (rid !== reqId.current) return
+          if (failAnimatedScope(error)) return
+          // Not the session or plan: the same unreachable state as before, but an
+          // animated set failing must not switch every other pack to the fallback.
+          setLoadError(true)
+          renderLocal(q, packFilter)
+        })
+      return
+    }
+    // After a failed request typing answers from the built-in set without asking
+    // again, but Try again is the visitor asking on purpose, so it always goes out.
+    if (cdnOk.current === false && !manualRetry) {
       renderLocal(q, packFilter)
       return
     }
     const rid = ++reqId.current
-    retryRef.current = () => doSearch(q, scope)
+    retryRef.current = () => doSearch(q, scope, true)
     setSource('search')
-    setLoading(true); setLoadError(false); glyphFails.current = 0
+    setLoading(true); setLoadError(false); setSoftNotice(null); setAnimatedNotice(null); glyphFails.current = 0
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
     // the collection of results; chip alone fans out to the
     // whole collection's packs.
@@ -2739,6 +4124,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       .then(d => {
         if (rid !== reqId.current) return
         cdnOk.current = true
+        probeLockedMatches(q, packFilter, groupKey, d.icons, rid)
         if (!d.icons || !d.icons.length) {
           renderLocal(q, packFilter)
           return
@@ -2750,16 +4136,21 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // the filter is applied to what ARRIVED rather than to what was asked
         // for. Same reasoning as the SANITISE_KEYS whitelist in lockedPreview.js:
         // the gate is the filter, the request is only a convenience.
-        const items = capList(d.icons
+        const matches = d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
           .filter(ic => canSee(ic.pack))
-          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current)))
+          // A pack's Pro-only icons (Carbon's logo-*) are left out for everyone below Pro.
+          .filter(ic => canSeeIcon(ic.pack, ic.name, tier))
+          // An unscoped Pro search can name an animated set. Its glyphs only load
+          // through the server's Pro check, so a direct hit is left out of this list.
+          .filter(ic => !isAnimatedPack(ic.pack))
+          .filter(ic => matchesWeight(ic.pack, ic.name, groupKey ? 'regular' : weightRef.current))
+        const items = groupKey
+          ? orderIconsByPack(capList(matches), ICON_GROUPS[groupKey].packs)
+          : capList(matches)
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
-        const scopeLabel = [packFilter, groupKey ? ICON_GROUPS[groupKey].label : ''].filter(Boolean).join(' · ')
-          || (seesEverything ? 'All packs' : `${allowedPacks.length} sets`)
-        setMode(`${items.length.toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
       .catch(() => {
@@ -2768,20 +4159,44 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal(q, packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, tier, allowedPacks, seesEverything])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, probeLockedMatches, canSee, capList, needFor, refuseScope, failAnimatedScope, tier, allowedPacks])
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
 
   // Tell the masthead whether the grid under it is the CATALOGUE or the
   // built-in fallback. IconEmojiLibrary's status pill used to read
-  // navigator.onLine alone, so with every Iconify host refusing (429/403 —
-  // the 2026-09-08 outage) it said "Live library connected" in green directly
+  // navigator.onLine alone, so with every Iconify host refusing (429/403)
+  // it said "Live library connected" in green directly
   // above the notice saying the icon service could not be reached. `loadError`
   // is the same flag that renders that notice, so the pill and the notice can
   // never disagree again. Reported through a callback rather than lifted,
   // because the fetch lifecycle (reqId, cdnOk, the retry ref) lives here.
   useEffect(() => { onCatalogue?.(loadError ? 'fallback' : 'live') }, [loadError, onCatalogue])
+
+  // The licence rows for every set on screen, reported up to the footer's notice.
+  // UNCONDITIONAL, on purpose: the saved and recently-copied grids under My
+  // Icons are the same third-party glyphs under another heading, the Recent rail
+  // sits above every state including the gated one, and the offline grid is
+  // Lucide, Tabler, Iconoir, Heroicons and Simple Icons. There is no state of
+  // this page that shows somebody else's work and owes nothing, so no condition
+  // gates this report. It runs after every render because a set's licence can
+  // arrive from the registry after its icons are on screen; the signature check
+  // keeps the parent from re-rendering unless a row actually changed.
+  const creditSig = useRef('')
+  useEffect(() => {
+    if (!onCredits) return
+    const rows = creditRows(packsOnScreen(icons, recents), liveCredit)
+    const sig = JSON.stringify(rows)
+    if (sig === creditSig.current) return
+    creditSig.current = sig
+    onCredits(rows)
+  })
+
+  // The animated-icon cache drops any answer that lands while the viewer is not
+  // on Pro, so it has to hear the tier before the browse effects below ask for
+  // anything. Effects run in the order written: this one stays above them.
+  useEffect(() => { setAnimatedTier(tier) }, [tier])
 
   // Initial load: every pack this viewer may browse, so the grid shows the
   // breadth they actually have on first paint.
@@ -2819,6 +4234,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   useEffect(() => {
     if (!didInit.current || lastTier.current === tier) return
     lastTier.current = tier
+    // Leaving Pro (sign-out, a lapsed plan) drops the animated sets' listing and glyphs.
+    if (tier !== 'paid') forgetAnimatedSets()
+    // An icon opened under the old tier closes if the new one cannot see it.
+    if (selected?.cdn && !canSeeIcon(selected.pack, selected.name, tier)) setSelected(null)
     if (source === 'custom') browseCustom()
     else if (query.trim().length >= 2) doSearch(query, { pack, group })
     else if (pack) browsePack(pack, group)
@@ -2833,15 +4252,65 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // Infinite scroll — reveal another page as the sentinel comes into view. The
   // `visible` dep makes the observer reconnect after each reveal so it keeps
   // draining while the sentinel stays inside the rootMargin (fixes the stall).
+  //
+  // A page is revealed REVEAL_CHUNK cells per frame, not all 120 in one commit:
+  // mounting a whole page at once was one 65-95 ms task on a phone. The chain of
+  // frames lives in a ref because each chunk changes `visible`, which re-runs the
+  // effect below; its cleanup must not cancel the chain it is part of.
+  //
+  // `icons` itself is a dependency, not just its length: a replaced listing of
+  // the same length ends the chain (the effect after this one) and must also
+  // start a fresh observer. An observer only reports when the sentinel's
+  // visibility changes, but a new one always reports once on observe(), so the
+  // reveal restarts from the current `visible` instead of waiting for a scroll.
+  //
+  // THE SCROLL STOPS LOADING BY ITSELF after three automatic pages
+  // (AUTO_REVEAL_LIMIT). From there the sentinel is a "Show more icons" button,
+  // so the close and footer under the grid can be reached by scrolling, by
+  // keyboard and by landmark; one press reveals the next page the same way.
+  //
+  // `visible` and `icons.length` are read through refs, not the closure. An
+  // observer callback can already be queued when the last chunk lands, and it
+  // still holds the revealPage built for the render before it (visible 440): it
+  // would start one more page from there and overshoot the limit to 560. The
+  // refs always hold the latest count, so that late callback sees 480 and stops.
+  // They are written in render so a stale passive effect can never move them back.
+  const revealRef = useRef(0)
+  const visibleRef = useRef(visible)
+  const totalRef = useRef(icons.length)
+  visibleRef.current = visible
+  totalRef.current = icons.length
+  // Only the button passes `manual`; the observer stops at AUTO_REVEAL_LIMIT.
+  const revealPage = useCallback((manual) => {
+    if (revealRef.current) return
+    const from = visibleRef.current
+    if (manual !== true && from >= AUTO_REVEAL_LIMIT) return
+    const target = Math.min(from + PAGE_SIZE, totalRef.current)
+    if (target <= from) return
+    let upTo = from
+    const step = () => {
+      revealRef.current = 0
+      upTo = Math.min(upTo + REVEAL_CHUNK, target)
+      visibleRef.current = upTo
+      setVisible(upTo)
+      if (upTo < target) revealRef.current = requestAnimationFrame(step)
+    }
+    step()
+  }, [])
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) setVisible(v => Math.min(v + PAGE_SIZE, icons.length))
+    // The LAST entry is the sentinel's state now. A browser queues one entry per frame and hands them over
+    // together, oldest first, when the main thread was busy; acting on the first would take a stale "not on
+    // screen" for the answer and leave the sentinel in view with nothing to move it on.
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[entries.length - 1]?.isIntersecting) revealPage()
     }, { rootMargin: '600px' })
     obs.observe(el)
     return () => obs.disconnect()
-  }, [icons.length, visible])
+  }, [icons, visible, revealPage])
+  // A new listing (or leaving the page) ends any page still being revealed.
+  useEffect(() => () => { cancelAnimationFrame(revealRef.current); revealRef.current = 0 }, [icons])
 
   const debounceSearch = useCallback((q, scope) => {
     clearTimeout(timer.current)
@@ -2864,6 +4333,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     debounceSearch(next, { pack, group })
   }
 
+  // The "Search “house” instead" button of the empty state. Runs the other word
+  // at once, in the scope already chosen, with no debounce: it is a press, not
+  // typing.
+  const handleTrySynonym = (word) => {
+    clearTimeout(timer.current)
+    setQuery(word)
+    doSearch(word, { pack, group })
+  }
+
   const handleClearSearch = () => {
     setQuery('')
     clearTimeout(timer.current)
@@ -2873,12 +4351,21 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     else browseAll()
   }
 
+  // My icons is one toggle. Pressing it opens the local store; pressing it again
+  // returns to All packs (weight kept, query and group cleared) rather than to
+  // wherever the visitor was before.
+  const handleMineToggle = () => {
+    clearTimeout(timer.current)
+    setQuery('')
+    if (source === 'custom') browseAll('chip')
+    else browseCustom()
+  }
+
   // Search text, pack and collection chip are three independent filters that
   // compose — changing one never clears the others (My Icons excepted: it's a
   // local store, not a CDN scope).
   const handlePackChange = (p) => {
     clearTimeout(timer.current)
-    if (p === 'custom') { setQuery(''); browseCustom(); return }
     const nextPack = p === 'all' ? '' : p
     setPack(nextPack)
     // A pack that does not draw the chosen weight puts it back to Regular, so
@@ -2889,18 +4376,24 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       setWeight('regular')
     }
     if (query.trim().length >= 2) doSearch(query, { pack: nextPack, group })
-    else if (nextPack) browsePack(nextPack, group)
-    else if (group) browseGroup(group)
-    else browseAll()
+    else if (nextPack) browsePack(nextPack, group, 'chip')
+    else if (group) browseGroup(group, 'chip')
+    else browseAll('chip')
   }
 
   // Which weights the current scope can honour, and why not when it cannot.
   // "All packs" can show a weight when any pack the viewer may browse draws
-  // it; a single pack only when that pack does.
+  // it; a pack or group only when a pack within that scope does.
   const weightState = (w) => {
+    const collection = ICON_GROUPS[group]
+    const scope = collection
+      ? collection.packs.filter((p) => allowedPacks.includes(p) && (!pack || p === pack))
+      : pack && pack !== 'custom' ? [pack] : allowedPacks
+    if (collection && !scope.some((p) => Object.values(WEIGHT_RULES).some((rules) => p in rules))) {
+      return { ok: false, why: 'These icons come in one style' }
+    }
     if (w === 'regular') return { ok: true }
     const drawn = weightPacks(w)
-    const scope = pack && pack !== 'custom' ? [pack] : allowedPacks
     const ok = scope.some((p) => drawn.includes(p))
     const who = drawn.map((p) => WEIGHT_PACK_NAMES[p]).join(', ')
     return { ok, why: ok ? (pack ? '' : `Drawn by ${who}`) : `${ICON_WEIGHTS.find((x) => x.id === w).label} is drawn by ${who} only` }
@@ -2919,17 +4412,25 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // Toggle a cross-pack collection chip. Keeps the active search text AND the
   // selected pack — the chip narrows style within whatever scope is set.
+  // "All icons" means what it says: it clears the group and the pack, keeping the search.
   const handleGroupToggle = (key) => {
     clearTimeout(timer.current)
     const q = query.trim()
+    const allIcons = key === ALL_ICONS_ID
+    // "All icons" with no group or pack chosen is already the view on screen: no refetch, no flicker.
+    if (allIcons && !group && (!pack || pack === 'custom')) return
     const nextGroup = group === key || !ICON_GROUPS[key] ? null : key
     setGroup(nextGroup)
-    // Collections browse their original artwork at Regular weight.
-    if (nextGroup) { weightRef.current = 'regular'; setWeight('regular') }
-    if (q.length >= 2) doSearch(query, { pack, group: nextGroup })
-    else if (pack) browsePack(pack, nextGroup)
-    else if (nextGroup) browseGroup(nextGroup)
-    else browseAll()
+    // Logo.dev is not an Iconify set and belongs to no collection, so with it
+    // picked a chip would light and change nothing. Choosing a collection leaves
+    // the pack for "All packs", whose scope the chip then narrows.
+    const scopePack = allIcons ? '' : nextGroup && pack === 'logodev' ? '' : pack
+    if (scopePack !== pack) setPack(scopePack)
+    // Collections browse original artwork without replacing the stored weight.
+    if (q.length >= 2) doSearch(query, { pack: scopePack, group: nextGroup })
+    else if (scopePack) browsePack(scopePack, nextGroup, 'chip')
+    else if (nextGroup) browseGroup(nextGroup, 'chip')
+    else browseAll('chip')
   }
 
   const handleIconClick = (icon) => {
@@ -2940,16 +4441,20 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       onCopy?.(logodevUrl(icon.ref, 512))
       return
     }
+    noteEditorOpener(icon)
     setAddMode(false)
     setSelected(icon)
   }
 
   const handleAddIcon = () => {
+    noteEditorOpener(null)
     setSelected(null)
     setAddMode(true)
   }
 
   const handleCloseCustomizer = useCallback(() => {
+    // Closing the popup drops a Pro preview kept for /plans.
+    clearPreviewDraft()
     setSelected(null)
     setAddMode(false)
     setRecents(getRecentIcons())
@@ -2961,7 +4466,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const handleClearCustom = useCallback(() => {
     writeCustomIcons([])
     setIcons([])
-    setMode('Custom Icons · 0 saved')
   }, [])
 
   const handleClearRecents = useCallback(() => {
@@ -2971,11 +4475,19 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
 
   // The dropdown reflects the PACK filter only — an active chip leaves it on
   // "All packs" so the two filters read as independent.
-  const selectValue = source === 'custom' ? 'custom' : (pack || 'all')
+  const selectValue = pack || 'all'
 
   const shown = icons.slice(0, visible)
   const hasMore = visible < icons.length
   const isMyIcons = source === 'custom'
+  // Add icon lives on the My icons view, where the icons it makes are kept:
+  // beside the Saved heading and under the empty state.
+  const addIconButton = (
+    <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+      <span className="ig-addbtn-label">Add icon</span>
+    </button>
+  )
 
   /* ── MY ICONS IS NOT GATED. THE RECENT RAIL IS A DIFFERENT THING. ────────
      The SAVED half of My Icons carries each icon's own markup in the record
@@ -2992,29 +4504,31 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      file has twice been fixed for — so the reference is dropped instead.
      Nothing of the visitor's is destroyed: recentIcons.js still holds it, and
      it reappears the moment the tier does. */
+  // A built-in entry's fill is re-read from the built-in set (not the flag saved
+  // with it), so an outline-only glyph is never drawn as a solid wedge.
   const visibleRecents = useMemo(
-    () => recents.filter(r => !r.cdn || canSee(r.pack)),
-    [recents, canSee],
+    () => recents
+      .filter(r => !r.cdn || canSeeIcon(r.pack, r.name, tier))
+      .map(r => (r.cdn ? r : { ...r, filled: recentIsFilled(r, window.icons) })),
+    [recents, tier],
   )
 
   /* The group tray, marked the same way the pack menu is. A chip whose every
      pack is locked says which tier opens it; a chip the viewer can browse says
      nothing, because a badge on everything is a badge that says nothing.
-     "My Icons" never carries one — it is not a catalogue group and it is not
-     gated.
+     My icons is not in the tray at all: it is a toggle beside the pack menu.
 
      MEMOISED ON THE TIER, which is what the module-level GROUP_OPTIONS existed
      to guarantee: LibraryFilterGroup measures its sliding indicator off the
      active button and re-runs that measurement whenever the options array
      changes identity. Per-tier is a handful of times in a session. Per-render
      would be every keystroke, and the indicator would never settle. */
-  /* UNTIL 2026-09-23 THE GROUP TRAY CARRIED NO TIER MARKER, AND THAT WAS
+  /* THE GROUP TRAY USED TO CARRY NO TIER MARKER, AND THAT WAS
      MEASURED RATHER THAN PREFERRED — it was the one place this gate could not
      be shown without charging the gated viewer for it. (The history below is
      kept because it is WHY the marker that replaced it takes no width.)
 
-     Jasper's library (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd)
-     badges the CATEGORY as well as the card, which is the right instinct, and
+     Other libraries badge the CATEGORY as well as the card, which is the right instinct, and
      its categories are a vertical list with room to spare. This tray is a
      horizontal row inside a 68px toolbar. MEASURED at 1280, signed out:
        · " · Log in" / " · Pro" appended to five of the seven labels added 186px
@@ -3040,7 +4554,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      active button and re-runs that measurement whenever the options array
      changes identity. Per tier is a handful of times in a session; per render
      would be every keystroke, and the indicator would never settle. */
-  /* 2026-09-23 — THE ROW HAS SLACK NOW, AND THE MARKER IS BACK. The Spectrum
+  /* THE ROW HAS SLACK NOW, AND THE MARKER IS BACK. The Spectrum
      toolbar gives the filters a full-width row of their own, and the marker
      is a padlock badge positioned on the chip's corner rather than a word laid
      out inside it (see `lock` in LibraryFilterGroup), so it costs the tray no
@@ -3049,15 +4563,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      rule is the pack menu's: a group is marked only when EVERY pack in it is
      out of reach, and the word is the cheapest tier that opens one of them —
      the same answer `needFor` gives the wall. */
-  const groupOptions = useMemo(() => [
-    { id: 'custom', label: 'My Icons' },
-    ...GROUP_ORDER.map((key) => {
-      const { label, packs } = ICON_GROUPS[key]
-      const locked = packs.every((p) => !canSeePack(p, tier))
-      if (!locked) return { id: key, label }
-      return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
-    }),
-  ], [tier])
+  const groupOptions = useMemo(() => [ALL_ICONS_OPTION, ...GROUP_ORDER.map((key) => {
+    const { label, packs } = ICON_GROUPS[key]
+    const locked = packs.every((p) => !canSeePack(p, tier))
+    if (!locked) return { id: key, label }
+    return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
+  })], [tier])
 
   // Batch in the markup for whatever the grid is about to draw. Demand-driven:
   // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
@@ -3091,9 +4602,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // `setGlyphTick` was skipped by a guard that thought the page had gone.
   const mountedRef = useRef(true)
   const retryTimerRef = useRef(0)
+  // The wake-up for batches held back by a running back-off; separate from the
+  // failed-batch timer so neither pushes the other later.
+  const heldTimerRef = useRef(0)
   useEffect(() => {
     mountedRef.current = true
-    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current) }
+    return () => { mountedRef.current = false; clearTimeout(retryTimerRef.current); clearTimeout(heldTimerRef.current) }
   }, [])
   // `icons` and `visible`, NOT `shown`. `shown` is a fresh array on every render,
   // so depending on it re-runs this body for every unrelated state change in the
@@ -3111,7 +4625,21 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     // wasted requests for names nobody was looking at any more. One frame's
     // worth of settling is under the network round trip that follows it.
     const t = setTimeout(() => {
-      const wanted = new Map()
+      // Each pack's full listing, in order: the tranches are cut from this, by
+      // position, so an icon always belongs to the same request (see
+      // glyphChunkPlan). Only icons the viewer may see are listed.
+      const lists = new Map()
+      const listed = new Set()
+      for (const icon of icons) {
+        if (!icon.cdn || icon.custom || icon.logo || isAnimatedPack(icon.pack)) continue
+        if (!canSee(icon.pack) || !canSeeIcon(icon.pack, icon.name, tier)) continue
+        const key = svgKey(icon.pack, icon.name)
+        if (listed.has(key)) continue
+        listed.add(key)
+        if (!lists.has(icon.pack)) lists.set(icon.pack, [])
+        lists.get(icon.pack).push(icon.name)
+      }
+      const refs = []
       // The Recent rail is drawn from a separate list that is never part of
       // `icons`, so it has to be named here or its glyphs would wait forever.
       // One page AHEAD of what is drawn, so the markup for the next page is
@@ -3129,27 +4657,40 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // localStorage, which survives signing out — so a viewer who was Pro
         // yesterday has simple-icons names in there today, and without this
         // line the rail would fetch them.
-        if (!canSee(icon.pack)) continue
+        if (!canSee(icon.pack) || !canSeeIcon(icon.pack, icon.name, tier)) continue
+        // Only a cell that still needs its markup sends a request. The request
+        // that covers it is the whole chunk, though, not just this cell.
         const key = svgKey(icon.pack, icon.name)
+        // A name the server would refuse is never sent: one such name fails its whole batch.
+        if (isAnimatedPack(icon.pack) && !isAnimatedName(icon.name)) { GLYPH_MISSING.add(key); continue }
         if (GLYPH_BODY.has(key)) continue
         // A pack that just failed waits out its cool-down; a name that has
         // failed GLYPH_RETRY_MAX + 1 times is left alone for the session.
         if (Date.now() < (GLYPH_RETRY_AFTER.get(icon.pack) || 0)) continue
         if ((GLYPH_FAILS.get(key) || 0) > GLYPH_RETRY_MAX) continue
-        const asked = askedFor(icon.pack)
-        if (asked.has(icon.name)) continue
-        asked.add(icon.name)
-        if (!wanted.has(icon.pack)) wanted.set(icon.pack, [])
-        wanted.get(icon.pack).push(icon.name)
+        if (askedFor(icon.pack).has(icon.name)) continue
+        refs.push({ pack: icon.pack, name: icon.name })
       }
-      if (!wanted.size) return
-      const jobs = []
-      for (const [pack, names] of wanted) {
-        for (let i = 0; i < names.length; i += GLYPH_BATCH) {
-          const slice = names.slice(i, i + GLYPH_BATCH)
-          jobs.push({ pack, names: slice, done: loadGlyphBatch(pack, slice) })
-        }
+      // The animated sets are asked in their own batch size, straight from the
+      // cells that need them: the server route is not cached like the public host.
+      const wanted = []
+      const plainRefs = []
+      const animatedNames = new Map()
+      for (const ref of refs) {
+        if (!isAnimatedPack(ref.pack)) { plainRefs.push(ref); continue }
+        if (!animatedNames.has(ref.pack)) animatedNames.set(ref.pack, [])
+        animatedNames.get(ref.pack).push(ref.name)
       }
+      for (const chunk of glyphChunkPlan(lists, plainRefs)) wanted.push(chunk)
+      for (const [pack, names] of animatedNames) {
+        for (let i = 0; i < names.length; i += ANIMATED_BATCH) wanted.push({ pack, names: names.slice(i, i + ANIMATED_BATCH) })
+      }
+      if (!wanted.length) return
+      for (const { pack, names } of wanted) {
+        const asked = askedFor(pack)
+        for (const n of names) asked.add(n)
+      }
+      const jobs = wanted.map((chunk) => ({ pack: chunk.pack, names: chunk.names, done: loadGlyphBatchOutcome(chunk.pack, chunk.names) }))
       Promise.all(jobs.map(j => j.done)).then((results) => {
         if (!mountedRef.current) return
         setGlyphTick(n => n + 1)
@@ -3159,13 +4700,38 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         // A RETRY run that fails is a partial failure too, however many jobs it
         // held: one flag pack timing out twice must not swap the whole grid for
         // the built-in set, so only a first-time total refusal raises the notice.
-        const allRefused = results.length > 0 && results.every(ok => ok === false)
+        // A batch held back by a running back-off was never sent, so it counts as
+        // refused for the notice but not as a failed try.
+        const isHeld = (r) => r.kind === 'held'
+        const allRefused = results.length > 0 && results.every(r => !r.ok)
         const isRetryRun = jobs.every(j => j.names.some(n => GLYPH_FAILS.has(svgKey(j.pack, n))))
-        const refusing = allRefused && !isRetryRun
-        if (results.some(ok => ok === false) && !refusing) {
+        // An animated set failing says nothing about the icon service the other
+        // packs use, so a refusal made up only of animated batches never counts
+        // as the service refusing (and never sets cdnOk).
+        const animatedOnly = jobs.every(j => isAnimatedPack(j.pack))
+        const refusing = allRefused && !isRetryRun && !animatedOnly
+        // A failure that belongs to the viewer's session or plan is neither a
+        // retry candidate (waiting will not fix it) nor an outage.
+        const scoped = (i) => !results[i].ok && isPackScopedFailure(results[i].kind)
+        // Names that were never answered must not stay marked as asked, or a
+        // later pass (the retry button, a scroll) would find nothing to request.
+        const forgetAsked = (job) => { const asked = askedFor(job.pack); for (const n of job.names) asked.delete(n) }
+        const animatedOutage = animatedOnly && allRefused && !isRetryRun && results.every(r => r.kind === 'transient')
+        if (results.some(r => !r.ok) && !refusing && !animatedOutage) {
           let retry = false
+          let heldFor = 0
           jobs.forEach((job, i) => {
-            if (results[i] !== false) return
+            if (results[i].ok) return
+            if (scoped(i)) { forgetAsked(job); return }
+            if (isHeld(results[i])) {
+              // Ask again when the back-off ends, with no failure recorded:
+              // GLYPH_FAILS only counts requests Iconify actually answered badly.
+              forgetAsked(job)
+              const end = results[i].heldUntil || Date.now() + GLYPH_RETRY_MS
+              GLYPH_RETRY_AFTER.set(job.pack, end)
+              heldFor = Math.max(heldFor, end - Date.now())
+              return
+            }
             const asked = askedFor(job.pack)
             for (const n of job.names) {
               asked.delete(n)
@@ -3181,11 +4747,21 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             clearTimeout(retryTimerRef.current)
             retryTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, GLYPH_RETRY_MS + 50)
           }
+          if (heldFor > 0) {
+            clearTimeout(heldTimerRef.current)
+            heldTimerRef.current = setTimeout(() => { if (mountedRef.current) setRetryTick(n => n + 1) }, heldFor + 50)
+          }
+          // 'forbidden' wins over 'auth': it is the one a retry cannot fix.
+          const kinds = results.filter((r, i) => scoped(i) && r.kind !== 'stale').map(r => r.kind)
+          if (kinds.length) setAnimatedNotice(kinds.includes('forbidden') ? 'forbidden' : 'auth')
+        }
+        if (animatedOutage) {
+          jobs.forEach(forgetAsked)
+          setLoadError(true)
+          renderLocal('', jobs[0].pack)
         }
         if (refusing) {
-          // Names that were never answered must not stay marked as asked, or
-          // the retry button would find nothing left to request.
-          for (const [pack, names] of wanted) {
+          for (const { pack, names } of wanted) {
             const asked = askedFor(pack)
             for (const n of names) asked.delete(n)
           }
@@ -3196,14 +4772,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       })
     }, 120)
     return () => clearTimeout(t)
-  }, [icons, visible, recents, renderLocal, canSee, retryTick])
+  }, [icons, visible, recents, renderLocal, canSee, tier, retryTick])
 
   // The one read of `glyphTick`. The caches above are module-level Maps, so a
   // tranche landing changes nothing React can see; tying this callback's
   // identity to the counter is what lets a cell that first rendered blank
   // repaint with its markup.
   const glyphSrc = useCallback(
-    (pack, name) => glyphDataUri(pack, name),
+    (pack, name) => glyphSymbolRef(pack, name) || glyphDataUri(pack, name),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [glyphTick]
   )
@@ -3218,7 +4794,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // the word matches none of them the grid empties on the SEARCH's account, not
   // the service's.
   //
-  // MEASURED 2026-09-13 at 1280 and 390, light, with the icon service
+  // MEASURED at 1280 and 390, light, with the icon service
   // unreachable: `.ig` held 120 cells, typing "zzzqqqxyz" took it to 0, the
   // grid became `display:none`, and the ONLY live region left on the page was
   // the stale "Couldn't reach the icon service" notice. No empty state, no
@@ -3229,7 +4805,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // query the block below explains which of the two things went wrong, in the
   // sentence it already carries.
   //
-  // 2026-09-15: THE SAME SILENCE WAS STILL THERE FOR THE PACK AND COLLECTION
+  // THE SAME SILENCE WAS ALSO THERE FOR THE PACK AND COLLECTION
   // FILTERS, which is the half the fix above did not reach.
   //
   // The fallback set is 259 built-in icons and it does not cover every pack the
@@ -3249,33 +4825,60 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // search." for the query-less case, which is exactly true here and blames
   // nobody. The outage notice stays above it and still explains the cause.
   //
-  // 2026-09-18: AND NOT WHEN THE GRID IS EMPTY BECAUSE THE VIEWER MAY NOT HAVE
+  // AND NOT WHEN THE GRID IS EMPTY BECAUSE THE VIEWER MAY NOT HAVE
   // IT. "No icons to show — try another pack or search" is true of a pack that
   // holds nothing and false of one that holds thousands the visitor is not
   // entitled to; printing it over a gate would be the page blaming the
   // catalogue for a decision the product made. A gated scope has its own panel,
   // which says what it is and how to open it.
-  const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0
+  const searchEmpty = !isMyIcons && !gated && !loading && !(teasePending && source === 'search') && icons.length === 0 && !animatedNotice
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
+  // A word the catalogues name differently ("home" for "house"): offered as a
+  // button on the empty state, so no second search runs unless it is pressed.
+  const synonym = searchEmpty ? iconSynonymFor(query) : ''
 
-  /* ── THE THREE WALLS, AND WHICH ONE IS ON SCREEN ─────────────────────────
+  /* ── THE WALLS AND THE END BAND, AND WHICH ONE IS ON SCREEN ───────────────
      `gated` replaces the grid: the viewer asked for a set they may not have, so
      there is nothing to show and one thing to say.
-     `capWall` sits UNDER the grid: the viewer has everything they asked for,
-     there is simply less of it, and the sentence says why. Savee's placement
-     (cited in components/library/LockedTease.jsx) — what you have, then how to
-     get more — and Discord Shop's shape: real content, then one line, one
-     button.
-     A signed-in free viewer gets NEITHER until they reach for something. No
-     standing banner; see the Descript note on IconGateWall. */
-  const capWall = tier === 'anon' && !isMyIcons && !gated && !loading && icons.length > 0
-  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
+     `endKind` picks the band that sits UNDER the grid: the viewer has everything
+     they asked for, there is simply less of it, and the band says why. Signed
+     out, it is the cap explanation plus a way in. Signed in on the free plan,
+     it is an upgrade band shown only once the results have run out. Pro gets no
+     band, and a gated scope never gets one (the wall is the whole answer). The
+     rules live in endBandKind so they can be tested without rendering. */
+  const endKind = endBandKind({
+    tier, authLoading, planLoading: !planKnown, isMyIcons, gated, loading, resultCount: icons.length, hasMore,
+  })
+  /* A SEARCH THAT MATCHES MORE THAN THE VIEWER MAY OPEN SAYS SO, IN PLACE.
+     `searchTease` counts the matches in sets above this viewer's tier. Where it
+     is shown follows the page rather than adding a state of its own: instead of
+     "No icons match" when the viewer's own sets hold nothing, under the grid once
+     the results have run out (a free viewer's band is swapped for this more
+     specific one), or inside the signed-out band that is already there. The
+     summary is only read while the search is what is on screen, and `searchEmpty`
+     is held back until auth and plan have settled, as endBandKind does, so a Pro
+     viewer never sees the empty-state swap for a beat. */
+  const teaseBand = searchTeaseBand({
+    summary: source === 'search' ? searchTease : null,
+    tier,
+    endKind,
+    searchEmpty: searchEmpty && !authLoading && planKnown,
+  })
+  const teaseNeed = searchTeaseNeed(searchTease)
+  const teaseWhere = searchTeaseWhere(searchTease)
+  // A signed-out visitor on a Pro scope gets a log-in wall that says it is Pro (the
+  // plans are the second link); a signed-in free viewer gets the Pro wall.
+  const anonOnPro = !!gated && gated.need !== 'free' && tier === 'anon'
+  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : anonOnPro ? GATE_COPY_PRO_ANON : ICON_GATE_COPY.lockedPro) : null
   // How many packs sit on the other side of the account boundary. Read off the
   // table rather than typed, so moving a pack moves the number.
-  const packsBehindLogin = useMemo(
-    () => visiblePacks(ALL_PACKS, 'free').length - visiblePacks(ALL_PACKS, 'anon').length,
-    [],
-  )
+  const freeSetCount = useMemo(() => visiblePacks(ALL_PACKS, 'free').length, [])
+  // Every icon a free account opens, for the signed-out heading. From the pack lists, not typed.
+  const freeIconCount = useMemo(() => iconsOpenTo(ALL_PACKS, 'free'), [])
+  // How many packs Pro adds over a free account, derived the same way.
+  const packsProAddsCount = useMemo(() => packsProAdds(ALL_PACKS), [])
+  // The signed-out sample's sets, named under the gate so "outline sets" points at something real.
+  const anonPackNames = useMemo(() => ALL_PACKS.filter((p) => tierOf(p) === 'anon').map(packLabel), [])
   const openGate = useCallback((need) => {
     // The reason string follows the convention every gate in this app uses — a
     // short lowercase verb phrase naming the action, which LoginPopup renders
@@ -3312,18 +4915,115 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // whenever the list itself is replaced (a new pack, group or query), since
   // positions then mean different icons.
   const gridRef = useRef(null)
+
+  /* The signed-out grid is cut to whole rows, and the blurred rows under it
+     must line up with its columns, so the column count is read from the live
+     grid's resolved template and kept current as the page resizes (`gridCols`,
+     declared with the cap). The height of a real cell is read the same way so
+     the blurred rows sit on the grid's row pitch.
+     Measured in a layout effect so the first paint already has the right row
+     length: skeleton and loaded grid are both cut to the same whole rows, and
+     nothing jumps when the numbers arrive. The state is only set when the
+     value differs, so the observer firing after the cut changes the grid's
+     height (the same columns, more rows) re-renders nothing. The columns come
+     from the grid's width, never from how many cells it holds, so the cut
+     cannot feed back into the count it was cut by.
+
+     It is read for every tier, not only the capped one: a signed-in viewer's
+     search can also end in blurred rows (see searchTeaseBand), and an empty
+     grid still resolves its columns, so the rows line up there too. */
+  const [gridCellH, setGridCellH] = useState(null)
+  useLayoutEffect(() => {
+    if (gated || isMyIcons) return
+    const grid = gridRef.current
+    if (!grid) return
+    const read = () => {
+      const n = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length
+      if (n > 0) setGridCols(n)
+      const h = grid.querySelector('.ic')?.getBoundingClientRect().height
+      if (h > 0) setGridCellH(Math.round(h * 100) / 100)
+    }
+    read()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(read)
+    observer.observe(grid)
+    return () => observer.disconnect()
+  }, [gated, isMyIcons])
+  const teaseCols = gridCols
+    || teaseColsFallback(typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches)
+  // Built-in icons only, from packs this viewer may browse, and not repeating
+  // anything already on screen. No network involved.
+  const wantsTease = endKind === 'anon' || teaseBand === 'empty' || teaseBand === 'end'
+  const teaseCells = useMemo(() => {
+    if (!wantsTease) return []
+    return pickTeaseIcons({
+      icons: window.icons || [],
+      shownNames: icons.slice(0, visible).map((i) => i.name),
+      // A search band draws no more stand-ins than the matches it counts, so
+      // "3 icons match" sits over three faded shapes, not two full rows.
+      count: teaseBand === 'empty' || teaseBand === 'end'
+        ? Math.min(teaseCellCount(teaseCols), searchTease?.total || 0)
+        : teaseCellCount(teaseCols),
+      canSee,
+    })
+  }, [wantsTease, teaseBand, searchTease, icons, visible, teaseCols, canSee])
+
+  // The toolbar band sticks under the nav. A 1px sentinel above it leaves the
+  // viewport's top edge (inset by the band's own sticky offset) exactly when the
+  // band starts to stick, and that sets data-stuck. The band's height goes to a
+  // custom property on its parent so a focused cell scrolls clear of it.
+  // The toolbar count. While a new search or pack loads it keeps the last figure,
+  // so the search field and chips do not jump sideways on every keystroke.
+  const shownCount = !capped && !isMyIcons && !gated && icons.length > 0
+    ? `${icons.length.toLocaleString('en-AU')} ${icons.length === 1 ? 'icon' : 'icons'}`
+    : undefined
+  const lastCountRef = useRef(undefined)
+  if (!loading) lastCountRef.current = shownCount
+  const toolbarCount = loading ? lastCountRef.current : shownCount
+  const bandRef = useRef(null)
+  const bandSentinelRef = useRef(null)
+  useEffect(() => {
+    const band = bandRef.current
+    const sentinel = bandSentinelRef.current
+    if (!band || !sentinel || typeof IntersectionObserver === 'undefined') return undefined
+    // The sticky offset only exists from 641px (and follows the nav's height), so the
+    // observer is rebuilt with the band's current top whenever the window resizes.
+    let io = null
+    let topNow = null
+    const watch = () => {
+      const top = Math.ceil(parseFloat(getComputedStyle(band).top) || 0)
+      if (top === topNow) return
+      topNow = top
+      io?.disconnect()
+      io = new IntersectionObserver(([entry]) => { band.dataset.stuck = entry.isIntersecting ? 'false' : 'true' }, { rootMargin: `-${top}px 0px 0px 0px` })
+      io.observe(sentinel)
+    }
+    watch()
+    let frame = 0
+    const onResize = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(watch) }
+    window.addEventListener('resize', onResize)
+    const host = band.parentElement
+    const size = () => host.style.setProperty('--ig-band-h', `${band.offsetHeight}px`)
+    size()
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(size)
+    ro?.observe(band)
+    return () => { io?.disconnect(); ro?.disconnect(); window.removeEventListener('resize', onResize); cancelAnimationFrame(frame) }
+  }, [])
+
   const [waitingStatus, setWaitingStatus] = useState(false)
   useEffect(() => {
     const grid = gridRef.current
     if (!grid) return
     let timer = null
-    const scan = () => {
-      const waiting = [...grid.querySelectorAll('.ig-skel,.ig-glyph-wait,.ig-glyph-pending,.ig-chip--wait')]
-        .some(el => {
-          const rect = el.getBoundingClientRect()
-          return rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth
-        })
-      if (!waiting) {
+    let raf = 0
+    // Which waiting elements are on screen is the IntersectionObserver's job: it
+    // reports after layout, so nothing here reads geometry (a rect read inside the
+    // mutation callback forced a layout of the cells React had just mounted, and
+    // the scroll listener forced one per scroll event).
+    const onscreen = new Set()
+    const settle = () => {
+      for (const el of onscreen) if (!el.isConnected) onscreen.delete(el)
+      if (!onscreen.size) {
         clearTimeout(timer)
         timer = null
         setWaitingStatus(false)
@@ -3331,17 +5031,32 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         timer = setTimeout(() => setWaitingStatus(true), 600)
       }
     }
-    const observer = new MutationObserver(scan)
+    const io = new IntersectionObserver((entries) => {
+      for (const { target, isIntersecting } of entries) {
+        if (isIntersecting && target.isConnected) onscreen.add(target)
+        else onscreen.delete(target)
+      }
+      settle()
+    })
+    const watched = new Set()
+    // Cheap: selector matching only, no style or layout. At most once a frame.
+    const scan = () => {
+      raf = 0
+      const now = new Set(grid.querySelectorAll('.ig-skel,.ig-glyph-wait,.ig-glyph-pending,.ig-chip--wait'))
+      for (const el of now) if (!watched.has(el)) { watched.add(el); io.observe(el) }
+      for (const el of watched) if (!now.has(el)) { watched.delete(el); io.unobserve(el); onscreen.delete(el) }
+      settle()
+    }
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(scan) }
+    const observer = new MutationObserver(schedule)
     observer.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
-    window.addEventListener('scroll', scan, { passive: true })
-    window.addEventListener('resize', scan)
     scan()
     return () => {
       observer.disconnect()
+      io.disconnect()
+      if (raf) cancelAnimationFrame(raf)
       clearTimeout(timer)
       setWaitingStatus(false)
-      window.removeEventListener('scroll', scan)
-      window.removeEventListener('resize', scan)
     }
   }, [gated, source])
   const [win, setWin] = useState({ list: icons, upTo: 0, h: [], keep: -1 })
@@ -3351,16 +5066,31 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const grid = gridRef.current
     if (!windowed || !grid || win.list !== icons) return
     let raf = 0
-    let width = grid.clientWidth
+    // The width comes from a ResizeObserver, which reports after layout; reading
+    // `clientWidth` here instead forced a layout on every update that followed a
+    // commit.
+    let width = -1
+    let widthChanged = false
+    let seen = -1
     const update = () => {
       raf = 0
       // A new width reflows every row, so every stored height is stale.
-      if (grid.clientWidth !== width) {
-        width = grid.clientWidth
+      if (widthChanged) {
+        widthChanged = false
         if (win.upTo) setWin({ list: icons, upTo: 0, h: [], keep: -1 })
         return
       }
-      const kids = grid.children
+      // Cells only: a grouped grid also holds full-width pack heading rows, and
+      // every index below (ghost step, stored heights, the kept cell) is a cell index.
+      const kids = grid.querySelectorAll(':scope > .ic')
+      // Cells were added (or swapped for ghosts) since the last read, so the page
+      // has layout pending. Reading a rect now would force it inside this
+      // callback; the frame lays it out anyway, and the next frame reads clean.
+      if (kids.length !== seen) {
+        seen = kids.length
+        raf = requestAnimationFrame(update)
+        return
+      }
       // First cell whose bottom is still inside the overscan above the viewport.
       let lo = 0
       let hi = kids.length
@@ -3374,7 +5104,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       // focus would fall to <body>. (Capping `upTo` at the focused cell instead
       // left the whole grid whole once cell 0 had been clicked.)
       const focused = grid.contains(document.activeElement)
-        ? Array.prototype.indexOf.call(kids, document.activeElement.closest('.ig > *'))
+        ? Array.prototype.indexOf.call(kids, document.activeElement.closest('.ig > .ic'))
         : -1
       const keep = focused >= 0 && focused < upTo ? focused : -1
       if (upTo === win.upTo && keep === win.keep) return
@@ -3385,6 +5115,12 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       setWin({ list: icons, upTo, h, keep })
     }
     const schedule = () => { if (!raf) raf = requestAnimationFrame(update) }
+    const sizeWatch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width
+      if (width >= 0 && w !== width) { widthChanged = true; schedule() }
+      width = w
+    })
+    sizeWatch?.observe(grid)
     schedule()
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('resize', schedule)
@@ -3392,6 +5128,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     grid.addEventListener('focusin', schedule)
     grid.addEventListener('focusout', schedule)
     return () => {
+      sizeWatch?.disconnect()
       if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)
@@ -3400,40 +5137,77 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     }
   }, [windowed, win, icons])
 
+  // A GROUPED GRID STATES EACH PACK ONCE, in a full-width heading row, and its cells
+  // draw no pack label (the label vanished at 980px and below, which left phones and
+  // tablets with no sign of where one pack ends and the next begins).
+  const groupHeads = source === 'group'
+  // Icons per pack across the whole result, not just the revealed page, so a
+  // heading's count never changes as more of the list scrolls in.
+  const packCounts = useMemo(() => {
+    if (!groupHeads) return null
+    const counts = new Map()
+    for (const icon of icons) {
+      const p = packOf(icon)
+      if (p) counts.set(p, (counts.get(p) || 0) + 1)
+    }
+    return counts
+  }, [groupHeads, icons])
+  // The heading is a sibling of the cells with a fixed CSS height (`.ig-pack-head`),
+  // so it never moves the cells after it. Cell indexes (and so `ghosts`) count cells only.
+  const renderGroupedGrid = (list, ghosts, counts) => {
+    const out = []
+    let prev = null
+    list.forEach((icon, idx) => {
+      const p = packOf(icon)
+      if (p && p !== prev) {
+        const n = counts.get(p) || 0
+        out.push(
+          <h3 key={`head:${p}:${idx}`} className="ig-pack-head">
+            <span className="ig-pack-name">{creditRows([p], liveCredit)[0].name}</span>{' '}
+            <span className="ig-pack-count">{`${n.toLocaleString('en-AU')} ${n === 1 ? 'icon' : 'icons'}`}</span>
+          </h3>,
+        )
+      }
+      if (p) prev = p
+      const ghost = ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0
+      out.push(renderCell(icon, idx, false, ghost))
+    })
+    return out
+  }
+
   // THE PACK LABEL ONLY EARNS ITS LINE WHEN IT DISCRIMINATES.
-  // #298 dropped it below 980px; above 980px it was still drawn under EVERY
+  // It is already dropped below 980px; above 980px it was still drawn under EVERY
   // cell - 120 of them on first paint, all reading "lucide" - while the line
   // that does tell icons apart, the icon's own name, was being truncated to
   // make room for it ("align-horizontal-…", "align-vertical-distribute-…").
   // A value identical across the whole grid discriminates nothing.
-  // Mobbin, platform web, and no reference labels the pack on the cell:
-  // Skiff (screens/85ca7e92-1c51-401d-92ed-6942e6beaf47) and Craft
-  // (screens/992cc0ba-f9d6-41e2-98d6-c624907d6593) give their pickers bare
-  // glyphs; Notion (screens/899cb181-5770-47d2-92c8-332ca9d9a733) heads the
-  // collection once; and Magnific, which has this exact job at this exact
-  // scale (screens/c215558c-23c8-415a-8b3d-917004d27adb), states "Special
-  // Lineal by Freepik · 288.1k icons in this collection" ONCE above the grid
-  // and labels not one cell. That is the same answer the CSS note reached:
-  // pack identity belongs to the GROUP.
-  // So it is kept for the case #298 reserved it for and no other - a result
+  // Comparable web pickers do not label the pack on the cell: some give bare
+  // glyphs, some head the collection once, and one states "Special Lineal by
+  // Freepik · 288.1k icons in this collection" ONCE above the grid and labels
+  // not one cell. That is the same answer the CSS note reached: pack identity
+  // belongs to the GROUP.
+  // So it is kept for the case the narrow-screen rule reserved it for and no other - a result
   // set that actually holds more than one pack, which is where the word tells
   // you something. Which pack is being browsed is already stated by the pack
   // filter in the toolbar above.
   // `ghosts` is the main grid's windowing state; cells before `ghosts.upTo`
   // render in their ghost form at their measured height.
-  const renderGrid = (list, ghosts = null) => {
-    const showPack = gridShowsPack(list)
+  // Use the full result so revealing another pack never changes cell heights.
+  const mainShowPack = useMemo(() => gridShowsPack(icons), [icons])
+  const recentsShowPack = useMemo(() => gridShowsPack(visibleRecents), [visibleRecents])
+  const renderGrid = (list, showPack = mainShowPack, ghosts = null) => {
     const ghostAt = (idx) => (ghosts && idx < ghosts.upTo && idx !== ghosts.keep ? ghosts.h[idx] : 0)
     return list.map((icon, idx) => renderCell(icon, idx, showPack, ghostAt(idx)))
   }
 
   // Reserve the first page's count and pack layout before catalogue names arrive.
-  const firstPageSize = capped ? Math.min(PAGE_SIZE, ANON_ICON_CAP) : PAGE_SIZE
+  const firstPageSize = capped ? Math.min(PAGE_SIZE, anonCap) : PAGE_SIZE
   const pendingPacks = pack ? [pack] : group ? ICON_GROUPS[group].packs.filter(canSee) : allowedPacks
   const skeletonIcons = Array.from({ length: firstPageSize }, (_, idx) => ({
     pack: pendingPacks[(source === 'group' || source === 'search' ? idx : Math.floor(idx / perPackCap)) % pendingPacks.length],
   }))
-  const skeletonShowPack = gridShowsPack(skeletonIcons)
+  // The pack name is a hover label over the cell's corner and takes no height,
+  // so a skeleton cell is the same height as a loaded one whatever the scope.
 
   // `is-picked` is the design's selected tile (accent wash over an accent
   // hairline): the one whose customizer is open. Matched on pack + name, the
@@ -3451,9 +5225,11 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       // new pack or query), so a position prefix costs no reconciliation.
       key={`${idx}:${icon.id || icon.key || icon.name || ''}`}
       icon={icon}
-      src={icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
+      // A ghost draws no glyph, so it asks for no source.
+      src={!ghost && icon.cdn && !icon.custom && !icon.logo ? glyphSrc(icon.pack, icon.name) : ''}
       gone={!!icon.cdn && !icon.custom && !icon.logo && GLYPH_MISSING.has(svgKey(icon.pack, icon.name))}
       showPack={showPack}
+      packInName={groupHeads}
       picked={isPicked(icon)}
       ghost={ghost}
       onPick={onPick}
@@ -3491,8 +5267,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           Unreachable, and not inert: the block kept a second copy of the h1 and
           subtitle that the wrapper owns, which is a drift bug waiting for the
           next copy change, and the eyebrow was `sec-h-eyebrow` — the exact
-          element the founder marked "AI" and #382 deleted from every tool
-          masthead it reached. A retired motif that cannot be rendered still
+          element since deleted from every tool masthead it reached. A retired motif that cannot be rendered still
           reads as live code to the next person to open the file. */}
 
       {visibleRecents.length > 0 && !isMyIcons && (
@@ -3526,8 +5301,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                   // a rail waiting one tick for its tranche would have counted
                   // itself past the eight-failure threshold and thrown the whole
                   // library into its refused state.
-                  glyphSrc(r.pack, r.name) ? (
-                    <img src={glyphSrc(r.pack, r.name)} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
+                  glyphDataUri(r.pack, r.name) ? (
+                    <img src={glyphDataUri(r.pack, r.name)} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
                   ) : (
                     <span className="ig-glyph-wait" aria-hidden="true" />
                   )
@@ -3552,59 +5327,68 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed
             from the Prompt Library) and outlined `.pl-chip` pills — while the
             Palette and Gradient libraries had already converged on
-            src/components/library/. Founder request: make this and the Emoji
+            src/components/library/. The aim: make this and the Emoji
             Library match the galleries.
 
             THE PACK SELECT STAYS A SELECT. Twenty-six packs in six optgroups is
             not a pill tray, and forcing it into one to look consistent would
-            trade a working control for a matching one. It sits in the toolbar's
-            filter row beside the group tray and takes the shared field metrics,
-            which is what "consistent" has to mean for a control this size. */}
+            trade a working control for a matching one. It sits at the right end
+            of the toolbar row, apart from the filters, and takes the shared
+            field metrics, which is what "consistent" has to mean for a control
+            this size. */}
+        <div className="ig-band-sentinel" ref={bandSentinelRef} aria-hidden="true" />
+        <div className="ig-band" ref={bandRef}>
         <LibraryToolbar
           className="ig-toolbar"
           quick={0}
-          activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' ? 1 : 0)}
+          activeFilters={(selectValue !== 'all' ? 1 : 0) + (group ? 1 : 0) + (weight !== 'regular' && weightState(weight).ok ? 1 : 0)}
           search={{
             value: query,
             onChange: handleQueryChange,
             placeholder: 'Search icons…',
             label: 'Search icons',
           }}
+          /* The pack menu is a scope, not a filter, so it sits at the right end
+             of the row (and in the Filters sheet on a phone). */
           action={(
-            <button type="button" className="ig-addbtn" onClick={handleAddIcon}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              <span className="ig-addbtn-label">Add icon</span>
+            /* Locked packs stay selectable so choosing one can show the access gate. */
+            <MenuSelect className="lbry-select" value={selectValue} onChange={handlePackChange} ariaLabel="Icon pack"
+              options={[
+                { value: 'all', label: 'All packs' },
+                ...PACK_MENU.map(g => {
+                  const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
+                  const uniform = marks.length === 1
+                  return {
+                    group: g.label,
+                    mark: uniform ? marks[0] : '',
+                    options: g.packs.map(([value, label]) => ({ value, label, mark: uniform ? '' : lockMark(value, tier) })),
+                  }
+                }),
+              ]}
+            />
+          )}
+          pinned={(
+            <button type="button" className="ig-mine" aria-pressed={isMyIcons} title="My icons" onClick={handleMineToggle}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={isMyIcons ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+              <span className="ig-mine-label">My icons</span>
             </button>
           )}
         >
           {/* FIRST, so a phone keeps it on screen under the search (the
               toolbar's quick row) exactly where the design's phone mock draws it; the
-              pack menu and the collection chips go to the Filters sheet. */}
+              collection chips go to the Filters sheet. */}
           <IconWeightSeg value={weight} stateOf={weightState} onChange={handleWeight} />
-          {/* Locked packs stay selectable so choosing one can show the access gate. */}
-          <MenuSelect className="lbry-select" value={selectValue} onChange={handlePackChange} ariaLabel="Icon pack"
-            options={[
-              { value: 'all', label: 'All packs' },
-              { group: 'Yours', options: [{ value: 'custom', label: 'My Icons' }] },
-              ...PACK_MENU.map(g => {
-                const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
-                const uniform = marks.length === 1
-                return {
-                  group: g.label,
-                  mark: uniform ? marks[0] : '',
-                  options: g.packs.map(([value, label]) => ({ value, label, mark: uniform ? '' : lockMark(value, tier) })),
-                }
-              }),
-            ]}
-          />
           <LibraryFilterGroup
             label="Filter by icon group"
             triggerLabel="Group"
-            value={source === 'custom' ? 'custom' : group}
-            onChange={(id) => (id === 'custom' ? browseCustom() : handleGroupToggle(id))}
+            value={group || ALL_ICONS_ID}
+            onChange={handleGroupToggle}
             options={groupOptions}
           />
         </LibraryToolbar>
+        {/* The result count is announced, not drawn: the row has no room for it. */}
+        <p id="ig-result-count" className="sr-only" role="status">{toolbarCount || ''}</p>
+        </div>
 
         {isMyIcons ? (
           // ── My Icons: two distinct collections, each independently clearable ──
@@ -3614,17 +5398,23 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             <section className="ig-mysec">
               <div className="ig-mysec-head">
                 <h3 className="ig-mysec-title">Saved</h3>
-                {icons.length > 0 && (
-                  <button type="button" className="ig-rail-clear" onClick={handleClearCustom} title="Clear all saved icons">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    Clear all
-                  </button>
-                )}
+                <div className="ig-mysec-actions">
+                  {addIconButton}
+                  {icons.length > 0 && (
+                    <button type="button" className="ig-rail-clear" onClick={handleClearCustom} title="Clear all saved icons">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      Clear all
+                    </button>
+                  )}
+                </div>
               </div>
               {icons.length > 0 ? (
                 <div className="ig">{renderGrid(shown)}</div>
               ) : (
-                <div className="ig-custom-empty">No saved icons yet — open any icon, adjust it on the stage, and hit Save to keep it here.</div>
+                <div className="ig-custom-empty">
+                  <p>No saved icons yet. Open any icon, adjust it, then press Save to keep it here.</p>
+                  {addIconButton}
+                </div>
               )}
               {!isPro && (
                 <p className="ig-custom-hint">
@@ -3645,7 +5435,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 )}
               </div>
               {visibleRecents.length > 0 ? (
-                <div className="ig">{renderGrid(visibleRecents)}</div>
+                <div className="ig">{renderGrid(visibleRecents, recentsShowPack)}</div>
               ) : (
                 <div className="ig-custom-empty">Icons you copy show up here for quick reuse.</div>
               )}
@@ -3657,7 +5447,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // role="status": the sentence is the only thing telling a
               // screen-reader user that the grid under it is the built-in set
               // rather than the catalogue they searched. Rendered with every
-              // Iconify host refused (429/403) on 2026-09-08 the state was
+              // Iconify host refused (429/403) the state was
               // otherwise complete — the sentence, Try again and the built-in
               // grid — but nothing announced it.
               //
@@ -3666,12 +5456,46 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // have refused it; carrying a stale "couldn't reach the icon
               // service" over a Pro wall would tell the visitor the network
               // broke when the product simply said no — and would hand the Try
-              // again button a retry for a pack they may not have. This is the
-              // same class of error as #435, where the masthead pill said "Live
-              // library connected" directly above this notice.
+              // again button a retry for a pack they may not have. It is the
+              // same class of error as a masthead pill saying "Live library
+              // connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
-                <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
+              </div>
+            )}
+
+            {/* PART OF THE CATALOGUE, NOT NONE OF IT. The grid below is live (or the
+                copy saved on this device); the line says what is missing, once and
+                quietly, instead of the grid just being shorter. Never beside the
+                loud notice above: that one means the built-in set replaced the grid. */}
+            {softNotice && !loadError && !gated && (
+              <div className="ig-notice ig-notice-quiet" role="status">
+                <span>{SOFT_NOTICE_COPY[softNotice]}</span>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => { clearIconifyCooldown(); retryRef.current?.() }}>Try again</button>
+              </div>
+            )}
+
+            {/* AN ANIMATED SET THE SESSION OR PLAN CANNOT OPEN. Its own notice, apart
+                from the one above: the icon service is fine, so nothing here
+                claims otherwise, shows the built-in set, or affects other packs.
+                Only while that pack is the one on screen. */}
+            {animatedNotice && isAnimatedPack(pack) && !gated && (
+              <div className="ig-notice" role="status">
+                <span>{animatedNotice === 'forbidden'
+                  ? 'Animated icons need an active Pro plan.'
+                  : 'Sign in again to load animated icons.'}</span>
+                {animatedNotice === 'forbidden'
+                  ? <button type="button" className="lib-btn ig-notice-btn" onClick={() => openGate('paid')}>{ICON_GATE_COPY.lockedPro.action}</button>
+                  : <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>}
+              </div>
+            )}
+
+            {/* CARBON'S BRAND MARKS ARE PRO. They are left out of the list, so this says so once instead of the pack just looking shorter. */}
+            {proHeld.n > 0 && proHeld.pack === pack && source === 'pack' && !gated && !loading && (
+              <div className="ig-notice ig-notice-quiet" role="status">
+                <span>{`${proHeld.n} ${packLabel(pack)} brand logos are on Pro.`}</span>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => openGate('paid')}>{ICON_GATE_COPY.lockedPro.action}</button>
               </div>
             )}
 
@@ -3681,7 +5505,9 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 heading={gateCopy.heading(gated.label)}
                 body={gateCopy.body}
                 action={gateCopy.action}
-                onAction={() => openGate(gated.need)}
+                onAction={() => (anonOnPro ? requireLogin('open this icon pack') : openGate(gated.need))}
+                secondary={anonOnPro ? gateCopy.secondary : undefined}
+                onSecondary={() => reportUpgradeGate('icon-pack-tier')}
               />
             )}
 
@@ -3695,19 +5521,28 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                   ? skeletonIcons.map((icon, i) => (
                     <div key={`skel-${i}`} className="ic ig-skel" aria-hidden="true">
                       <div className={!COLORED_PACKS.has(icon.pack) ? 'ig-skel-slot ig-skel-slot--mono' : 'ig-skel-slot'} />
-                      <div className={skeletonShowPack ? 'ig-skel-labels' : 'ig-skel-labels ig-skel-labels--single'}>
+                      <div className="ig-skel-labels">
                         <div className="sk ig-skel-label" />
-                        {skeletonShowPack && <div className="sk ig-skel-pack" />}
                       </div>
                     </div>
                   ))
-                  : renderGrid(shown, windowed && win.list === icons ? win : null)}
+                  : (packCounts
+                    ? renderGroupedGrid(shown, windowed && win.list === icons ? win : null, packCounts)
+                    : renderGrid(shown, mainShowPack, windowed && win.list === icons ? win : null))}
               </div>
             )}
 
             {waitingStatus && !gated && <p className="ig-status" aria-live="polite">Loading icons…</p>}
 
-            {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
+            {hasMore && (visible < AUTO_REVEAL_LIMIT
+              ? <div ref={sentinelRef} className="ig-sentinel" />
+              : (
+                <div className="ig-more">
+                  <button type="button" className="lib-btn" onClick={() => revealPage(true)}>
+                    {`Show ${Math.min(PAGE_SIZE, icons.length - visible).toLocaleString()} more icons`}
+                  </button>
+                </div>
+              ))}
 
             {loading && icons.length > 0 && (
               <p className="ig-status">Loading more…</p>
@@ -3716,7 +5551,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             {/* THE GRID EMPTYING IS A STATUS MESSAGE, and it was silent.
                 Type a query that matches nothing and the grid drops from 120
                 cells to 0; this block appears, saying so and saying how to get
-                back. Nothing announced it — measured 2026-09-11 at 1280/light
+                back. Nothing announced it — measured at 1280/light
                 and 390/dark, where the only live region on the page was the
                 app toast, empty. So a screen-reader user searching for a word
                 the catalogue does not carry heard nothing at all and had no
@@ -3733,35 +5568,81 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 keystroke, not an error to interrupt for. No new sentence — the
                 two below are the ones already on screen. The icon is decorated
                 and now says so; the emoji copy of this block already did. */}
-            {searchEmpty && (
+            {/* Quiet while the count of matches in other sets is on its way, so
+                "No icons match" is never shown a moment before the band. */}
+            {teasePending && source === 'search' && !loading && icons.length === 0 && (
+              <p className="pl-empty" role="status">Checking the other sets…</p>
+            )}
+            {searchEmpty && teaseBand !== 'empty' && (
               <div className="pl-empty" role="status" aria-live="polite">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <p>{query.trim()
-                  ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
-                  : 'No icons to show — try another pack or search.'}</p>
+                {synonym ? (
+                  <>
+                    <p>{`No icons match “${query.trim()}”. Try “${synonym}”.`}</p>
+                    <button type="button" className="btn pl-empty-try" onClick={() => handleTrySynonym(synonym)}>
+                      {`Search “${synonym}” instead`}
+                    </button>
+                  </>
+                ) : (
+                  <p>{query.trim()
+                    ? `No icons match “${query.trim()}”. Try another word, or clear the search to browse everything.`
+                    : 'No icons to show — try another pack or search.'}</p>
+                )}
               </div>
             )}
 
-            {!loading && icons.length > 0 && (
-              <p className="ig-status">
-                Showing {shown.length.toLocaleString()} of {icons.length.toLocaleString()} · {mode}
-              </p>
+            {/* A search with matches in sets above this viewer's tier: the same
+                blurred rows and band the signed-out grid ends in, in place of the
+                empty message ('empty') or of the generic upgrade band ('end').
+                The signed-out band is not repeated; it carries the count itself,
+                below. The way in is Pro whenever any match needs it. */}
+            {(teaseBand === 'empty' || teaseBand === 'end') && (
+              <IconEndBand
+                kind="search"
+                heading={SEARCH_TEASE_COPY.heading(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, teaseBand === 'end')}
+                body={SEARCH_TEASE_COPY.body(searchTease.labels, teaseBand === 'empty')}
+                action={SEARCH_TEASE_COPY.action[teaseNeed]}
+                to={teaseNeed === 'paid' ? '/plans' : undefined}
+                onAction={() => (teaseNeed === 'paid' ? reportUpgradeGate('icon-search-pro') : openGate('free'))}
+                tease={teaseCells.length > 0 && (
+                  <IconEndTease
+                    cells={teaseCells}
+                    cols={teaseCols}
+                    cellH={gridCellH}
+                  />
+                )}
+              />
             )}
-
-            {/* THE SIGNED-OUT CAP, SAID OUT LOUD. The status line above counts
-                what is on screen; it cannot say that the number is a rule
-                rather than the size of the library, and a count with no
-                explanation is the thing that makes a cap feel punitive. This
-                sentence states the rule and the button is the way past it. */}
-            {capWall && (
-              <IconGateWall
+            {endKind === 'anon' && (
+              <IconEndBand
                 kind="anon"
-                heading={ICON_GATE_COPY.anon.heading(packsBehindLogin)}
-                body={ICON_GATE_COPY.anon.body(ANON_ICON_CAP)}
-                action={ICON_GATE_COPY.anon.action}
+                heading={ICON_GATE_COPY.end.anon.heading(freeIconCount)}
+                body={teaseBand === 'anon'
+                  ? `${ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)} ${SEARCH_TEASE_COPY.sentence(searchTease.total, searchTease.capped, searchTease.query, teaseWhere, searchTease.labels)}`
+                  : ICON_GATE_COPY.end.anon.body(icons.length, anonPackNames.length, freeSetCount)}
+                names={anonPackNames.join(', ')}
+                action={ICON_GATE_COPY.end.anon.action}
                 onAction={() => openGate('free')}
+                secondary={ICON_GATE_COPY.end.anon.secondary}
+                tease={teaseCells.length > 0 && (
+                  <IconEndTease
+                    cells={teaseCells}
+                    cols={teaseCols}
+                    cellH={gridCellH}
+                  />
+                )}
+              />
+            )}
+            {endKind === 'free' && teaseBand !== 'end' && (
+              <IconEndBand
+                kind="free"
+                heading={ICON_GATE_COPY.end.free.heading}
+                body={ICON_GATE_COPY.end.free.body(packsProAddsCount, FREE_COPIES_PER_DAY)}
+                action={ICON_GATE_COPY.end.free.action}
+                to="/plans"
+                onAction={() => reportUpgradeGate('icon-library-end')}
               />
             )}
 
@@ -3782,14 +5663,6 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           </>
         )}
       </div>
-      {/* OUTSIDE THE `isMyIcons` BRANCH, AND OUTSIDE EVERY OTHER CONDITION ON
-          this surface. The saved and recently-copied grids under My Icons are
-          the same third-party glyphs under another heading, the Recent rail
-          sits above every state including the gated one, and the offline grid
-          is Lucide, Tabler, Iconoir, Heroicons and Simple Icons. There is no
-          state of this page that shows somebody else's work and owes nothing,
-          so there is no condition here. */}
-      <IconPackCredit packs={packsOnScreen(icons, recents)} />
       <UIKitGuide step="icons" />
 
       {(selected || addMode) && (
@@ -3799,6 +5672,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           addMode={addMode && !selected}
           isPro={isPro}
           saveLimit={customIconLimit}
+          openerRef={editorOpenerRef}
           onClose={handleCloseCustomizer}
           onCopy={onCopy}
           onPick={handleIconClick}

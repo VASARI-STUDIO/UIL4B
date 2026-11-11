@@ -44,7 +44,7 @@ export default function OfflineBanner() {
       <CloudOffIcon />
       <p className="offline-banner-text">
         <strong>You’re offline.</strong>{' '}
-        Colour, typography and export tools keep working — they run in your browser.
+        Colour, typography and export tools keep working, because they run in your browser.
         The AI tools, the font catalogue and Discover need a connection and will
         pick up on their own once it’s back.
       </p>

@@ -1,4 +1,4 @@
-import { contrastRatio, hexToHct, hexToHsl, hctToHex, hslToHex } from './colors'
+import { contrastRatio, hexToHct, hexToHsl, hctToHex, hslToHex } from './colors.js'
 
 // Palette-variation engine for the Palette Builder. Generates named HCT
 // transforms of the current palette and ranks them with scorePalette so the
@@ -25,10 +25,24 @@ function safeHex(h, c, t, fallback) {
 const wrap360 = h => ((h % 360) + 360) % 360
 const clampTone = t => Math.min(98, Math.max(3, t))
 
-// Pull a hue toward a pole (30° = warm amber, 210° = cool azure) by amount 0-1.
-function pullHue(h, pole, amount) {
-  const diff = ((pole - h + 540) % 360) - 180
-  return wrap360(h + diff * amount)
+// Temperature shift: nudge a hue toward a pole (30° = warm amber, 210° = cool
+// azure) the short way round, by a BOUNDED amount. The old pull took 22% of the
+// distance, so a teal 165° from the warm pole moved 36° and landed in green, and
+// a blue went on to periwinkle and violet. Now the step is 30% of the distance,
+// capped at NUDGE_MAX_DEG, so a colour stays in its own family (teal stays teal,
+// just warmer) and a hue already near the pole barely moves. Within
+// NUDGE_TAPER_DEG of the opposite pole the step fades to nothing, because the
+// "short way" flips there and a hard flip would send neighbours opposite ways.
+// HCT hue, so the degrees are perceptual, not HSL's.
+export const NUDGE_MAX_DEG = 12
+const NUDGE_RATE = 0.3
+const NUDGE_TAPER_DEG = 20
+export function nudgeHue(h, pole) {
+  const diff = ((pole - h + 540) % 360) - 180 // signed short way to the pole, -180..180
+  const dist = Math.abs(diff)
+  const taper = dist > 180 - NUDGE_TAPER_DEG ? (180 - dist) / NUDGE_TAPER_DEG : 1
+  const step = Math.min(NUDGE_MAX_DEG, dist * NUDGE_RATE) * taper
+  return wrap360(h + Math.sign(diff) * step)
 }
 
 // ── scorePalette ─────────────────────────────────────────────────────────────
@@ -89,22 +103,27 @@ function mapPalette(hexes, fn) {
 }
 
 // Named variation recipes — each is a *system-level* shift, not a per-swatch
-// tweak, so the palette keeps its internal relationships.
+// tweak, so the palette keeps its internal relationships. `group` is what the
+// recipe changes; `slot` is its fixed place in the panel, so the order is the
+// same for every palette.
 const RECIPES = [
-  { id: 'warmer', label: 'Warmer', desc: 'Hues pulled toward amber', fn: ([h, c, t]) => [pullHue(h, 30, 0.22), c * 1.02, t] },
-  { id: 'cooler', label: 'Cooler', desc: 'Hues pulled toward azure', fn: ([h, c, t]) => [pullHue(h, 210, 0.22), c * 1.02, t] },
-  { id: 'softer', label: 'Softer', desc: 'Chroma eased, tones lifted', fn: ([h, c, t]) => [h, c * 0.62, t + (92 - t) * 0.25] },
-  { id: 'vivid', label: 'More vivid', desc: 'Chroma pushed up', fn: ([h, c, t]) => [h, c * 1.45 + 6, t] },
-  { id: 'deeper', label: 'Deeper', desc: 'Tones pulled down, richer', fn: ([h, c, t]) => [h, c * 1.08, t - t * 0.28] },
-  { id: 'luminous', label: 'Luminous', desc: 'Tones lifted, airy', fn: ([h, c, t]) => [h, c * 0.9, t + (96 - t) * 0.35] },
-  { id: 'muted', label: 'Muted', desc: 'Editorial low-chroma read', fn: ([h, c, t]) => [h, Math.min(c * 0.45, 18), t] },
-  { id: 'contrast', label: 'High contrast', desc: 'Tones spread from the middle', fn: ([h, c, t]) => [h, c, t + (t - 50) * 0.55] },
-  { id: 'shift-l', label: 'Alternative A', desc: 'Whole system rotated −20°', fn: ([h, c, t]) => [h - 20, c, t] },
-  { id: 'shift-r', label: 'Alternative B', desc: 'Whole system rotated +20°', fn: ([h, c, t]) => [h + 20, c, t] },
+  { id: 'warmer', group: 'Temperature', slot: 0, label: 'Warmer', desc: 'Hues pulled toward amber', fn: ([h, c, t]) => [nudgeHue(h, 30), c * 1.02, t] },
+  { id: 'cooler', group: 'Temperature', slot: 1, label: 'Cooler', desc: 'Hues pulled toward azure', fn: ([h, c, t]) => [nudgeHue(h, 210), c * 1.02, t] },
+  { id: 'softer', group: 'Strength', slot: 3, label: 'Softer', desc: 'Chroma eased, tones lifted', fn: ([h, c, t]) => [h, c * 0.62, t + (92 - t) * 0.25] },
+  { id: 'vivid', group: 'Strength', slot: 2, label: 'More vivid', desc: 'Chroma pushed up', fn: ([h, c, t]) => [h, c * 1.45 + 6, t] },
+  { id: 'deeper', group: 'Light and dark', slot: 5, label: 'Deeper', desc: 'Tones pulled down, richer', fn: ([h, c, t]) => [h, c * 1.08, t - t * 0.28] },
+  { id: 'luminous', group: 'Light and dark', slot: 6, label: 'Luminous', desc: 'Tones lifted, airy', fn: ([h, c, t]) => [h, c * 0.9, t + (96 - t) * 0.35] },
+  { id: 'muted', group: 'Strength', slot: 4, label: 'Muted', desc: 'Low chroma, editorial', fn: ([h, c, t]) => [h, Math.min(c * 0.45, 18), t] },
+  { id: 'contrast', group: 'Light and dark', slot: 7, label: 'High contrast', desc: 'Tones spread from the middle', fn: ([h, c, t]) => [h, c, t + (t - 50) * 0.55] },
+  { id: 'shift-l', group: 'Hue', slot: 8, label: 'Hue \u221220\u00b0', desc: 'Every colour turned 20\u00b0 on the wheel', fn: ([h, c, t]) => [h - 20, c, t] },
+  { id: 'shift-r', group: 'Hue', slot: 9, label: 'Hue +20\u00b0', desc: 'Every colour turned 20\u00b0 the other way', fn: ([h, c, t]) => [h + 20, c, t] },
 ]
 
-// paletteVariations(hexes) → [{id,label,desc,colors,score}] sorted best-first.
-// The caller gates: first FREE_VARIATIONS entries are free, the rest are Pro.
+// paletteVariations(hexes) → [{id,label,desc,group,colors,score,rank}] in the
+// panel's fixed order (by group, then recipe), never by score. `rank` is the
+// recipe's place in RECIPES after no-ops are dropped: it breaks score ties the
+// way the old best-first sort did, so the free three do not change.
+// The caller gates with freeVariationIds, not with array position.
 export const FREE_VARIATIONS = 3
 
 export function paletteVariations(hexes) {
@@ -117,7 +136,13 @@ export function paletteVariations(hexes) {
     const key = colors.join(',')
     if (seen.has(key)) continue // transform was a no-op on this palette
     seen.add(key)
-    out.push({ id: r.id, label: r.label, desc: r.desc, colors, score: scorePalette(colors) })
+    out.push({ id: r.id, label: r.label, desc: r.desc, group: r.group, slot: r.slot, colors, score: scorePalette(colors), rank: out.length })
   }
-  return out.sort((a, b) => b.score - a.score)
+  return out.sort((a, b) => a.slot - b.slot)
+}
+
+// The ids of the `n` highest-scoring variations: the free ones. Worked out from
+// score, shown in their groups.
+export function freeVariationIds(list, n = FREE_VARIATIONS) {
+  return new Set([...list].sort((a, b) => (b.score - a.score) || (a.rank - b.rank)).slice(0, n).map(v => v.id))
 }

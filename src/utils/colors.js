@@ -85,14 +85,16 @@ export function hexToOklch(hex) {
   const lr = lin(r), lg = lin(g), lb = lin(b)
   const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb)
   const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb)
-  const s = Math.cbrt(0.0883024619 * lr + 0.2164557872 * lg + 0.6652917509 * lb)
+  const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb)
   const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s
   const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
   const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
   const C = Math.sqrt(a * a + bb * bb)
   let H = Math.atan2(bb, a) * 180 / Math.PI
   if (H < 0) H += 360
-  return [+(L * 100).toFixed(1), +C.toFixed(3), +H.toFixed(1)]
+  // A grey's hue is rounding noise; CSS prints a powerless hue as 0.
+  const Cr = +C.toFixed(3)
+  return [+(L * 100).toFixed(1), Cr, Cr === 0 ? 0 : +H.toFixed(1)]
 }
 
 // Approximate human-readable colour name from HSL — hue family plus
@@ -164,6 +166,23 @@ export function textColorForBg(hex) {
 
 function soften(s, factor) { return Math.max(10, Math.round(s * factor)) }
 function lShift(l, delta) { return Math.max(5, Math.min(95, l + delta)) }
+
+// Where each system puts its full-strength colours, in degrees of hue from the
+// seed (positive is the direction hue increases round the wheel). The wheel icons
+// in the System menu draw from this. generateHarmony keeps its offsets inline
+// beside each system's tonal steps, so tests/unit/harmony-wheel.test.js holds the
+// two together. `auto` is the tonal engine's sibling hue (HCT, +30); the
+// monochromatic system never leaves the seed's hue.
+export const HARMONY_OFFSETS = {
+  auto: [0, 30],
+  monochromatic: [0],
+  analogous: [0, -30, 30],
+  complement: [0, 180],
+  triadic: [0, 120, 240],
+  split: [0, 150, 210],
+  tetradic: [0, 90, 180, 270],
+  custom: [0, 60, 180],
+}
 
 export function generateHarmony(hex, type) {
   const [h, s, l] = hexToHsl(hex)
@@ -477,8 +496,7 @@ export function hctToHex(hue, chroma, tone) {
   return solveToHex(hue, Math.max(0, chroma), clampDouble(0, 100, tone))
 }
 
-// HCT of a hex: tone from L*, hue + chroma from CAM16. Used by tonalRamp so the
-// ramp tracks the swatch's own hue/chroma.
+// HCT of a hex: tone from L*, hue + chroma from CAM16.
 export function hexToHct(hex) {
   const [r, g, b] = hexToRgb(hex)
   const lr = linearized(r), lg = linearized(g), lb = linearized(b)
@@ -515,17 +533,6 @@ export function hexToHct(hex) {
   const alpha = Math.pow(t, 0.9) * Math.pow(1.64 - Math.pow(0.29, VC.n), 0.73)
   const chroma = alpha * Math.sqrt(jScale / 100)
   return [hue, chroma, lstarFromY(yy)]
-}
-
-// 5-step tonal ramp of a hex at the given tones, preserving its hue/chroma.
-export function tonalRamp(hex, tones = [30, 45, 60, 75, 90]) {
-  let h, c
-  try { const hct = hexToHct(hex); h = hct[0]; c = hct[1] }
-  catch { const [hh, ss] = hexToHsl(hex); h = hh; c = ss * 0.6 }
-  return tones.map(t => {
-    try { return hctToHex(h, c, t) }
-    catch { return hslToHex(h, Math.min(100, c), t) }
-  })
 }
 
 // Default "Auto" tonal palette: 5 swatches mapped to the five ROLES off a
@@ -973,11 +980,18 @@ export function nearestPassingLightness(move, against, targetRatio) {
   return best
 }
 
-// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices,
-// applied in linear sRGB. Source: the canonical published severity table
-// (DaltonLens / colorspace R `simulate_cvd`). Achromatopsia is handled
-// separately via Rec.709 luma. Rows are row-major [r;g;b].
+// Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices (and
+// deuteranomaly at 0.6), applied in linear sRGB. Source: the authors' Table 1 of
+// pre-computed matrices (inf.ufrgs.br/~oliveira/pubs_files/CVD_Simulation), the
+// same table DaltonLens / colorspace R `simulate_cvd` carry. Achromatopsia is
+// handled separately via Rec.709 luma. Rows are row-major [r;g;b].
 const MACHADO_2009 = {
+  // Anomalous trichromacy: the deuteranomaly column at severity 0.6.
+  deuteranomaly: [
+    0.498864, 0.674741, -0.173604,
+    0.205199, 0.754872, 0.039929,
+    -0.011131, 0.030969, 0.980162,
+  ],
   protanopia: [
     0.152286, 1.052583, -0.204868,
     0.114503, 0.786281, 0.099216,
@@ -996,7 +1010,7 @@ const MACHADO_2009 = {
 }
 
 // simCvd(hex, type) — simulate colour-vision deficiency in linear sRGB.
-// type: 'normal' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia'.
+// type: 'normal' | 'protanopia' | 'deuteranopia' | 'deuteranomaly' | 'tritanopia' | 'achromatopsia'.
 // Never throws; returns the input hex unchanged on bad/unknown input.
 export function simCvd(hex, type) {
   try {
@@ -1210,7 +1224,7 @@ export function derivePreviewRoles(allColors, opts = {}) {
 // The worst contrast an ink achieves over a set of grounds. Every guarantee
 // below is stated in these terms, because a role that clears one ground and
 // fails another is exactly the defect [preview-muted-on-surface] recorded.
-function pvWorstOn(ink, grounds) {
+export function pvWorstOn(ink, grounds) {
   let worst = Infinity
   for (const g of grounds) {
     const r = contrastRatio(ink, g)
@@ -1274,7 +1288,7 @@ function pvSurface(bg, opposite, step, target = 4.5) {
  * whole ink budget is spent on clearing bg — and the answer converges on `text`
  * itself, which is the honest result rather than an illegible one.
  */
-function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
+export function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
   const clears = (t) => pvWorstOn(mixHex(text, bg, t), grounds) >= target
   if (clears(maxMix)) return mixHex(text, bg, maxMix)
   let lo = 0            // t = 0 is `text`, already guaranteed by the caller
@@ -1321,7 +1335,7 @@ function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
  * previews already use, and the movement where it happens is at most ten
  * levels per channel.
  */
-function inkOnSolid(bg, target = 4.5) {
+export function inkOnSolid(bg, target = 4.5) {
   return inkOnGrounds([bg], target)
 }
 
@@ -1366,7 +1380,7 @@ const PV_INK_STEPS = 256
  * the KPI number is 16px/700, which is NOT large text (AA-large starts at
  * 18.66px bold) — so the default is 4.5.
  */
-function pvInkFromFill(seed, grounds, target = 4.5) {
+export function pvInkFromFill(seed, grounds, target = 4.5) {
   // Already legible on every ground: the palette's own colour is the answer
   // and nothing moves. This is the common case on a well-separated palette.
   if (pvWorstOn(seed, grounds) >= target) return seed
@@ -1391,7 +1405,7 @@ function pvInkFromFill(seed, grounds, target = 4.5) {
 // The same walk over a SET of grounds. With one ground this is byte-identical
 // to what inkOnSolid did before [preview-muted-on-surface] widened it, which
 // is why onPrimary's measured guarantee is unchanged by that widening.
-function inkOnGrounds(grounds, target = 4.5) {
+export function inkOnGrounds(grounds, target = 4.5) {
   const poles = [[PV_NEAR_BLACK, '#000000'], [PV_NEAR_WHITE, '#FFFFFF']]
   let near = poles[0][0]
   for (const [p] of poles) if (pvWorstOn(p, grounds) > pvWorstOn(near, grounds)) near = p

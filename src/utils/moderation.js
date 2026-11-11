@@ -3,9 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder's moderation decision (recorded on the [community-backend]
-// pipeline row) is that NOTHING PUBLISHES UNTIL IT IS APPROVED, chosen on
-// liability grounds because he is a solo developer. That decision is only
+// The moderation rule is that NOTHING PUBLISHES UNTIL IT IS APPROVED, chosen on
+// liability grounds because the site is run by a solo developer. That rule is only
 // affordable if approving is not a one-person job, which is what a moderator
 // role is for.
 //
@@ -43,9 +42,8 @@ export const FOUNDER_CLAIM = 'admin'
  * The claim a moderator carries.
  *
  * NOT GRANTED BY ANYTHING YET, and not yet honoured by firestore.rules. Both of
- * those changes land in founder-gated files (api/verify-admin.js and
- * firestore.rules, per docs/reference/human-validation-zones.md), so they are
- * proposed rather than taken. `roleFromClaims` understands the claim today so
+ * those changes land in owner-gated files (api/verify-admin.js and
+ * firestore.rules), so they are proposed rather than taken. `roleFromClaims` understands the claim today so
  * that the day it is granted, every surface already reads it correctly and
  * nothing else has to change.
  */
@@ -96,10 +94,20 @@ export function canReview(role) {
  * Founder only, and this is the single most important line in the file. A
  * moderator who can appoint moderators is not a role, it is a self-replicating
  * grant: one careless or compromised moderator account becomes every moderator
- * account, and the founder's liability decision — the whole reason the approval
- * queue exists — stops being his to make.
+ * account, and the owner's liability decision — the whole reason the approval
+ * queue exists — stops being the owner's to make.
  */
 export function canAssignModerators(role) {
+  return role === 'founder'
+}
+
+/**
+ * May this role open the Stripe price panel?
+ *
+ * Founder only. /api/setup-stripe answers anyone else with a 403, so showing a
+ * moderator the panel would only offer a Save button that cannot work.
+ */
+export function canManageBilling(role) {
   return role === 'founder'
 }
 

@@ -8,16 +8,16 @@
 // `free` is the FREE TIER, and it is an IDENTITY rather than a position.
 //
 // It used to be a position: PromptLibrary rendered the filtered list and locked
-// everything at index >= FREE_PROMPT_LIMIT. So "free" meant the first twelve of
-// whatever you were currently looking at, and both the search box and the sort
-// control changed what that was — search a term only a locked prompt contains
-// and it arrives at index 0, unlocked. All twenty were reachable that way.
+// everything past a fixed index. So "free" meant the first rows of whatever you
+// were currently looking at, and both the search box and the sort control changed
+// what that was. Search a term only a locked prompt contains and it arrives at
+// index 0, unlocked. All twenty were reachable that way.
 //
-// The twelve flagged here are exactly the twelve a signed-out visitor saw for
-// free in the DEFAULT view (sort 'popular' = saves descending) before the fix,
-// so freezing them changes nothing about WHICH prompts are free. It only makes
-// the answer stop depending on the query. Pricing was not touched; a gate that
-// counted positions was replaced by one that counts identities.
+// The ten flagged here are exactly the free account's allowance
+// (GALLERY_TIER_LIMITS.free in src/utils/lockedPreview.js), and a test fails if
+// the count of flagged prompts and that allowance ever differ. Pricing was not
+// touched; a gate that counted positions was replaced by one that counts
+// identities.
 //
 // A new prompt added without `free: true` is LOCKED. That is deliberate and
 // fail-closed: forgetting the flag costs a sale, forgetting its opposite gives
@@ -25,10 +25,17 @@
 //
 // `saves` is display data and no longer decides entitlement. Editing a saves
 // count re-orders the gallery; it can no longer move a prompt across the gate.
+//
+// `category` is the prompt's ONE main category (a slug from
+// src/data/promptCategories.js). The gallery overview shows each prompt once,
+// under it. Lists, chips and counts still match on every tag, so a prompt can
+// be listed under several categories but is placed on the overview once. It is
+// a public fact like the tags, so stubs carry it too.
 export const COMMUNITY_PROMPTS = [
   {
     id: 'c-1',
     free: true,
+    category: 'website',
     title: 'Plumbing business website',
     text: `Design a one-page site for FlowFix Plumbing & Gas, licensed plumbers and gasfitters in Newcastle and Lake Macquarie, NSW (licence 312487C, since 2009). Invent the specifics and commit to them: a depot address, a (02) 5550 number, real starting prices, opening hours, a named team. The idea: the price comes before the spanner, so the hero lets people point at their problem and see what it costs.
 
@@ -38,9 +45,9 @@ Palette and type
 
 Sections
 1. A navy strip: "Burst pipe or no hot water? We answer the phone 24/7" and the number. Nav: a pipe-elbow mark, Prices, About, Service area, Contact, "Book online" and a copper call pill.
-2. Hero: area and licence line, "Plumbing, priced before we pick up a spanner.", a lede with one operational fact (average arrival 47 minutes last month), "Call" and "See every price", and three ticks (no call-out fee weekdays, fixed price before we start, 12-month guarantee).
+2. Hero: area and licence line, "Plumbing, priced before we pick up a spanner.", a lede on how the pricing works, "Call" and "See every price", and three ticks (no call-out fee weekdays, fixed price before we start, 12-month guarantee).
    Beside it, a card holding an SVG section through a two-storey house: rooms labelled in mono, bath, toilet, basin, kitchen bench, gas cooktop, a 250 L hot water system, water and gas meters, and the pipework drawn in its code colours with a legend. A leak drips inside the wall void. Six numbered hotspots (burst pipe, blocked drain, hot water, gas cooktop, hidden leak, bathroom renovation) are buttons with aria-pressed and arrow-key support. Choosing one updates the panel beside it (aria-live): category, name, "from" price, what we actually do, usual duration, the after-hours surcharge and "Book this job".
-3. Facts band: since 2009, jobs completed, licence number, public liability cover. Facts the business can state about itself, never a rating or a review count.
+3. Facts band: since 2009, licence number, public liability cover. Facts the business can state about itself, never a rating or a review count.
 4. Prices: a typographic rate card, not cards: number, service, one line of what happens, usual time, "from" price. Build it from the same data as the hotspots so the two can never disagree. A note on GST, after-hours and parts.
 5. About: the founder's story with dates, the team of six with roles, and a drawn service-area map (coastline, Lake Macquarie, suburbs, the depot, a dashed 40-minute ring) plus the suburbs as text.
 6. Contact: the number set large, hours as a list, and a form with visible labels (name, phone, email, suburb, what's happening), inline validation, and an inline confirmation saying it is a demonstration and nothing was sent.
@@ -55,11 +62,12 @@ Motion: on load the pipes draw in by stroke-dashoffset (waste, then cold, hot an
   {
     id: 'c-2',
     free: true,
+    category: 'website',
     title: 'Restaurant website with menu',
     text: `Build a one-page, scroll-driven site for Osteria Luna, a forty-seat Italian restaurant at 114 Gertrude Street, Fitzroy, Melbourne. Invent the rest and commit to it: a chef with a dated history, a co-owner who runs the floor, opening hours with Monday closed, and a spring menu of four dishes per course with prices in AUD. The idea: the site is one night at the restaurant, and the moon keeps time.
 
 Palette and type
-- Olive-black night #11140F (raised surfaces #161A13 and #1D2219), moonlight bone #E3E6DA for text (#B8BDAD secondary), and one accent, tomato #EE5033, for the button, the rail underline and focus rings. Hairlines are bone at 13% alpha.
+- Olive-black night #11140F (raised surfaces #161A13 and #1D2219), moonlight bone #E3E6DA for text (#B8BDAD secondary), and one accent, tomato #EE5033, for the button (with night-coloured text), the rail underline and focus rings. Hairlines are bone at 13% alpha.
 - Cormorant Garamond (light and italic) for display, Hanken Grotesk for body and UI. Set the name huge: "Osteria" at about 8vw and "Luna" in italic at about 19vw, line-height 0.8.
 
 Sections
@@ -84,10 +92,11 @@ Under prefers-reduced-motion nothing pins or travels sideways, the moon stays in
   {
     id: 'c-3',
     free: true,
+    category: 'ui-components',
     title: 'Dark mode analytics dashboard',
     text: `Design a dark analytics dashboard for Keel, an analytics product, measuring one named business: Fernway Supply Co., an outdoor-gear Shopify store selling in Australia and New Zealand. Every label follows from that.
 
-Layout: a slim sidebar with drawn icons and real section names; a header with the store, the date range (18 Aug to 14 Sep 2026 against the previous 28 days) and a live marker; four KPI tabs (net revenue, orders, sessions, conversion rate) that switch the main chart; a live activity feed; a revenue-by-channel table; a checkout funnel.
+Layout: a slim sidebar with drawn icons and real section names; a header with the store, the date range (18 Aug to 14 Sep 2026 against the previous 28 days) and a sample-data marker; four KPI tabs (net revenue, orders, sessions, conversion rate) that switch the main chart; a live activity feed; a revenue-by-channel table; a checkout funnel.
 
 The data is the design:
 - Every KPI shows the previous period and a delta, and conversion moves the wrong way, in coral, with its cause annotated on the chart.
@@ -108,6 +117,7 @@ Under prefers-reduced-motion nothing moves: the chart is drawn, the feed is full
   {
     id: 'c-4',
     free: false,
+    category: 'branding',
     title: 'Freelancer portfolio',
     text: `Build a scroll-driven portfolio for Ruth Amankwah, an independent brand and type designer with a studio in Príncipe Real, Lisbon. She has been independent since 2018 and takes about six projects a year. The work is the page: eight projects for named clients, each drawn as the actual artefact in CSS and inline SVG, never a photograph or a grey placeholder.
 
@@ -116,7 +126,7 @@ Palette and type
 - Familjen Grotesk (600, tracking about -0.058em at display sizes) for everything, JetBrains Mono for labels. Each artefact uses its own face, which is the point of a type designer's portfolio: Gloock, Bodoni Moda, Unbounded, Young Serif, Big Shoulders Display, Anton.
 
 Sections
-1. Hero: an availability pill ("Booking from November. Two identity slots left this year."), then the statement "I design brands / that people / remember." at about 10vw on three lines, the second indented, with a lime marker behind "remember.". As the hero scrolls away the three lines drift apart sideways at different rates. A hairline, a one-line description of who she works for, and "41 projects since 2014 / scroll for eight of them" in mono.
+1. Hero: an availability pill ("Booking from November."), then the statement "I design brands / that people / remember." at about 10vw on three lines, the second indented, with a lime marker behind "remember.". As the hero scrolls away the three lines drift apart sideways at different rates. A hairline, a one-line description of who she works for, and "41 projects since 2014 / scroll for eight of them" in mono.
 2. Selected work, a horizontal chapter on a black ground: pin it (position: sticky inside a section whose height equals the track's overflow width plus one viewport) and translate the track as the reader scrolls down. A counter ("03 / 08") and a lime progress bar track it; inside each frame the artwork drifts slightly against its card. The eight: Lume Oat Co. oat-drink carton (2026), Teatro da Encosta season poster (2026), Kiosk Quarterly magazine cover (2025), Norte Cycling Club logotype with a north arrow in the o (2025), Salt & Iron shortbread tin from above (2024), a Lisbon metro exit sign (2024), a Casa da Ribeira live fado LP sleeve with the record sliding out (2023), and a Casa Azulejo tile system (2022). Each caption: number, client, discipline and year.
 3. About: pinned beside an identity card (studio, independent since, before, languages, tools, projects a year). The bio is split into words that light from 16% to full opacity as the reader scrolls.
 4. Index: all eight as rows (number, client, what they do, discipline, year). A lime fill rises behind the row on hover or focus, and a small copy of the artefact follows the pointer.
@@ -137,6 +147,7 @@ No testimonials, client logos, awards or invented quotes. The copy says what she
   {
     id: 'c-5',
     free: false,
+    category: 'website',
     title: 'Fitness trainer landing page',
     text: `Design a landing page for Dev Aranda, a one-to-one strength coach in Brunswick East, Melbourne, who takes fourteen clients at a time. Goal: book a free 45-minute consult. The page should sound like one person, and its big idea is honesty about the plan: the hero shows the twelve weeks on a barbell.
 
@@ -146,13 +157,13 @@ Palette and type
 
 Sections
 1. Nav: a small barbell mark, "Dev Aranda / Strength · Brunswick East", The 12 weeks, Programmes, The coach, FAQ, and a red "Book a free consult" pill.
-2. Hero: "Stronger in twelve weeks. Here's the plan." with the second sentence in the dim chalk; a lede that says exactly what the consult involves (movement screen, a conversation, a first go on the bar, no sales pitch); two buttons; and a true capacity fact drawn as fourteen small bars, two of them empty: "12 of 14 client places taken".
+2. Hero: "Stronger in twelve weeks. Here's the plan." with the second sentence in the dim chalk; a lede that says exactly what the consult involves (movement screen, a conversation, a first go on the bar, no sales pitch); and two buttons.
    Beside it, the plan on a bar: an SVG barbell (shaft, sleeves, collars) whose plates are loaded per side from the standard set for the planned working weight, a huge number ("100 kg squat"), the week and phase, and a range slider for weeks 1 to 12 with aria-valuetext, a filled track and phase ticks underneath (Foundation, Build, Peak, Test). The example lifter tests at 70 kg; weeks 4 and 8 are deliberately lighter. A note says it is the plan for an example lifter, not a promise.
 3. What the twelve weeks look like: four phases with week ranges and what changes in each, then "What we measure" as a table (top sets, bar speed, sleep and soreness, optional bodyweight, optional waist) with how often and why.
 4. Programmes: three columns separated by hairlines, not cards: strength for fat loss ($95 a week), the full block ($135, "where I suggest most people start"), and sport ($165). Sessions per week, what is included, and a note that there is no joining fee or lock-in after the first block.
 5. The coach: a short manifesto line, years coaching, certifications by name with years, specialities, and a line in a red-ruled box about who he is not the right coach for.
 6. FAQ with native details and summary: all-in cost, coming back after years off, missed sessions, what is and is not guaranteed.
-7. Book: the true capacity fact and the next opening date, and a form with visible labels (name, mobile, email, preferred time as chips), inline validation, and an inline confirmation that says it is a demonstration and nothing was sent.
+7. Book: the next opening date, and a form with visible labels (name, mobile, email, preferred time as chips), inline validation, and an inline confirmation that says it is a demonstration and nothing was sent.
 
 Motion: on load the plan plays once, week 1 to 12 at about three weeks a second, plates sliding on and off the sleeves, and then the slider is the reader's; touching it stops the playback. Under prefers-reduced-motion it starts at week 12 with no sliding. No photographs, testimonials, before-and-after pictures, star ratings, countdown timers or invented client counts.`,
     tags: 'fitness, landing, trainer, conversion',
@@ -163,17 +174,18 @@ Motion: on load the plan plays once, week 1 to 12 at about three weeks a second,
   {
     id: 'c-6',
     free: false,
+    category: 'ui-components',
     title: 'SaaS pricing page',
     text: `Build the pricing page for Cronwright, which pages you when a scheduled job runs late, exits non-zero or stops checking in. The unit of pricing is the monitored job, never alerts or runs, and the page is built around it: the reader says how many jobs they run and the page shows what each plan would cost them.
 
 Palette and type
-- Warm off-white #F6F6F2, cards #FDFDFB, ink #111214 with #4D5058 secondary, hairlines at 12% ink. One signal green #12804A for "fits your jobs", the trial button and ticks, and an amber #C98A06 note for going over. No gradients.
+- Warm off-white #F6F6F2, cards #FDFDFB, ink #111214 with #4D5058 secondary, hairlines at 12% ink. One signal green #12804A for "fits your jobs", the trial button and ticks, and an amber #8A5A00 note for going over. No gradients.
 - Bricolage Grotesque 700 with tight tracking for headings and big numbers, Instrument Sans for the interface, JetBrains Mono for axis labels and small print.
 
 Page
 1. Nav with the product links (Pricing marked aria-current), Sign in, and "Start free".
 2. Heading "Pay for the jobs you watch. Nothing else." with the second sentence in grey, and one paragraph that names the unit.
-3. The calculator, one bordered panel in two halves. Left: "How many jobs do you run?", a huge live number, a logarithmic range slider from 1 to 5,000 (aria-valuetext), a 1 / 10 / 100 / 1,000 / 5,000 scale, three example chips (a side project 4, a product team 120, a data platform 3,500) that ease the slider there, and a live verdict ("Pro, $45 a month. 50 jobs included, then 70 more at $0.30 each."). Right: an SVG chart of monthly cost against jobs on a log axis: Free as a short green segment to five jobs, Pro as a solid line, Enterprise dashed, a dotted cursor and a dot on the cheapest plan, and a price tag beside it.
+3. The calculator, one bordered panel in two halves. Left: "How many jobs do you run?", a huge live number, a logarithmic range slider from 1 to 5,000 (aria-valuetext), a 1 / 10 / 100 / 1,000 / 5,000 scale, three example chips (a side project 4, a product team 120, a data platform 4,000) that ease the slider there, and a live verdict ("Pro, $45 a month. 50 jobs included, then 70 more at $0.30 each."). Right: an SVG chart of monthly cost against jobs on a log axis: Free as a short green segment to five jobs, Pro as a solid line, Enterprise dashed, a dotted cursor and a dot on the cheapest plan, and a price tag beside it.
 4. Plans with a monthly/yearly toggle (a sliding pill; yearly is "2 months free"). Free $0 for 5 jobs and 1 seat; Pro $24 a month ($20 billed yearly) with 50 jobs, then $0.30 per job, 10 seats; Enterprise from $900 a month with 2,500 jobs, then $0.18, unlimited seats, SSO and an uptime credit. Each lists five or six features, led by "Everything in <previous>, plus", with ticks and crosses that screen readers hear as included or not. Instead of a fixed "Most popular" badge, a "Fits your jobs" badge and a green wash move to whichever plan is cheapest for the number in the calculator. Toggling the period rolls the prices and rewrites each "billed as" line.
 5. An amber note: going over never stops monitoring; extra jobs are billed per day; emails at 80% and 100%; on Free a sixth job is created paused.
 6. "Compare every limit": a table with row headers for included jobs, the extra-job price, seats, shortest check interval, history, alert channels, SSO and audit log, and support. It scrolls sideways inside its own region on small screens.
@@ -189,6 +201,7 @@ Motion: on load the slider travels once from one job to 120; prices roll over 50
   {
     id: 'c-7',
     free: false,
+    category: 'website',
     title: 'Real estate property listing',
     text: `Design the listing page for 14 Rosella Street, Coburg (Melbourne), sold by Northline Property: a 1926 Californian bungalow on 562 m² with a 2019 rear extension, price guide $1,380,000 to $1,480,000, auction Saturday 4 October at 11 am. The idea: instead of photographs, the listing is an architect's drawing set, and the drawings are good enough to make a decision from.
 
@@ -221,6 +234,7 @@ No photographs, stock illustrations, invented reviews or "just listed" urgency. 
   {
     id: 'c-8',
     free: false,
+    category: 'branding',
     title: 'Coffee shop brand identity',
     text: `Design a one-page brand manual sheet for Grounded, a neighbourhood roastery at 148 Rose Street, Fitzroy. It reads like edition 2 of a real brand manual, not a website.
 
@@ -245,6 +259,7 @@ Under prefers-reduced-motion everything is drawn and in place: no draw-on, no lo
   {
     id: 'c-9',
     free: true,
+    category: 'branding',
     title: 'E-commerce product page',
     text: `Design a product page for the Filey Gansey from Cammish & Daughter, a small knitwear maker in Filey, North Yorkshire. The gansey is a fisherman's jumper hand-knitted to order in 5-ply worsted: £285, plus £20 to have your initials knitted into the hem, which is the signature feature of the page.
 
@@ -266,10 +281,9 @@ Below
 - The knitter: "Knitted by Margaret Cammish, and four others in Filey", what the patterns mean, and her signature line.
 - Real tabs (arrow keys, Home and End, aria-selected, one panel at a time): Details; Size & fit with a measurement table per size and a fit note; Delivery & returns (made-to-order with initials is not returnable, but will be re-knitted once free); Care & repair (free darning for five years).
 - "Worn with it": a watch cap, sea-boot socks and a canvas smock, drawn, with colourway and price.
-- "Recently viewed": a scroll-snap rail of pattern swatches for other ganseys.
 
 No reviews, ratings, sale prices or urgency. Every control has a visible label, a hover state and a focus ring, and under prefers-reduced-motion the views switch instantly and the initials appear without knitting in.`,
-    tags: 'ecommerce, product, fashion, premium',
+    tags: 'ecommerce, product, fashion, knitwear',
     img: '',
     author: 'UIL4B Team',
     saves: 176,
@@ -277,11 +291,12 @@ No reviews, ratings, sale prices or urgency. Every control has a visible label, 
   {
     id: 'c-10',
     free: false,
+    category: 'ui-components',
     title: 'Mobile app onboarding flow',
     text: `Design the four-screen first run of Swell, a surf forecast app for the east coast of Australia (buoy, wind and tide for 340 breaks between Noosa and Bermagui, read as one line), and present it as a case study: a clickable prototype first, then the whole flow, then the notes.
 
 Palette and type
-- Case-study canvas in sand #F3EDE2 with ink #0E2A30, #4B6166 secondary and 14% hairlines; a coral #E85D3F marker for the current step.
+- Case-study canvas in sand #F3EDE2 with ink #0E2A30, #4B6166 secondary and 14% hairlines; a coral #C8462B marker for the current step.
 - The app: deep sea #0E3A44 for the welcome screen and primary buttons, foam #E1F0EC for soft fills, off-white #FBF8F2 screens, coral for the "Worth it" tag. Sora throughout (700 with tight tracking for headlines), Geist Mono for labels.
 
 The prototype (first screen of the page)
@@ -307,6 +322,7 @@ Under prefers-reduced-motion there is no autoplay, and the push becomes a 200 ms
   {
     id: 'c-11',
     free: false,
+    category: 'website',
     title: 'Construction company website',
     text: `Design a scroll-driven website for Apex Build Co., a Victorian commercial builder since 2001. Invent the company and keep every detail consistent: ABN, builder registration, head office, site hours, final contract sums. Industrial and exact, like a site sign.
 
@@ -332,6 +348,7 @@ Under prefers-reduced-motion the crane is still, nothing pins, the tower shows i
   {
     id: 'c-12',
     free: false,
+    category: 'branding',
     title: 'Blog article layout',
     text: `Design and write a long-form article for Ligature, a quarterly on typography: "The measure is the decision you make first" by Nadia Ferris, type director, about 1,100 words in six sections (what the measure is, where 45 to 75 comes from, setting it in CSS, leading moves with it, what breaks on a phone, a checklist). Real prose, real sources, no lorem. The page should practise what the article argues, and let the reader test the argument.
 
@@ -356,6 +373,7 @@ Under prefers-reduced-motion the lab changes without transitions. Nothing on the
   {
     id: 'c-13',
     free: true,
+    category: '3d-motion',
     title: '3D hero — floating product reveal',
     text: `Build a scroll-driven 3D product hero for the Stilte TT-2, a belt-drive turntable made in Eindhoven and sold for €1,190. The product is a real three.js model, not a picture, and scrolling plays one small story: the camera orbits a quarter turn while the tonearm lifts, swings across and lowers onto the record.
 
@@ -392,6 +410,7 @@ Under prefers-reduced-motion the section is not pinned, the deck is still in a t
   {
     id: 'c-14',
     free: true,
+    category: '3d-motion',
     title: '3D hero — morphing blob background',
     text: `Build a hero for No. 7 Fig Smoke, an eau de parfum by Hollis & Vane, a small perfumer in Frome, Somerset. The centrepiece is a large morphing form rendered in WebGL, and it is not decoration: it is the fragrance. Its colour, surface and pace change as the scent moves from top notes to heart to base.
 
@@ -423,6 +442,7 @@ Under prefers-reduced-motion render one composed frame of the heart note, keep t
   {
     id: 'c-15',
     free: true,
+    category: '3d-motion',
     title: '3D hero — scroll-driven text extrusion',
     text: `Build a scroll-driven 3D wordmark for Halliday Wood Type, a small foundry that digitised a 19th-century wood-type gothic (Halliday Gothic No. 3, cut by Halliday & Sons of Ipswich in 1874, rebuilt from 212 surviving sorts). The word HALLIDAY extrudes into physical letterpress sorts: inked black faces on maple blocks. Scrolling lifts the type, tips the camera over the press bed, then scatters the sorts as if they were being distributed back into the case, and the page lands on the type specimen.
 
@@ -448,6 +468,7 @@ Under prefers-reduced-motion nothing pins or scatters: freeze at p = 0.42, the d
   {
     id: 'c-16',
     free: true,
+    category: '3d-motion',
     title: '3D hero — interactive particle wave',
     text: `Create a hero for Tidewatch, a data service that publishes forty-three years of sea surface temperature (September 1982 to now) as NetCDF, Zarr or JSON. The hero is a real-time WebGL field of points that reads as a sea surface, with the copy set on it.
 
@@ -473,6 +494,7 @@ Under prefers-reduced-motion render exactly one composed frame with a ring mid-f
   {
     id: 'c-17',
     free: true,
+    category: 'css-visual',
     title: '3D hero — glass card carousel',
     text: `Design the hero for "Light Before Film", an exhibition of 212 hand-painted magic lantern slides (1850 to 1920) at a museum of optics in Bath. The centrepiece is a 3D carousel of six glass slides on a slowly turning ring, and the glass is literal: painted scenes behind glass in card mounts, lit as if by a projector.
 
@@ -503,6 +525,7 @@ Under prefers-reduced-motion there is no auto-turn, no easing and no chromatrope
   {
     id: 'c-18',
     free: true,
+    category: 'ui-components',
     title: 'Lottie animation — loading states',
     text: `Design a set of five looping micro-animations for loading states, and present them as the "Loading states" page of a design system's motion docs: a specimen sheet a developer could build from, with a transport bar that lets you stop time and scrub through every loader frame by frame.
 
@@ -545,7 +568,8 @@ The rule that decides whether this set is any good: author every specimen at its
   },
   {
     id: 'c-19',
-    free: true,
+    free: false,
+    category: '3d-motion',
     title: 'Scroll-triggered section transitions',
     text: `Build a scroll-driven long read, "How a frame gets made", for Aldermoor Cycles, a one-person steel frame builder on Kelham Island, Sheffield. The page is scrollytelling: a drawing of the bike sticks beside the text and builds itself chapter by chapter as the reader scrolls, and each chapter's text arrives with a different transition, labelled with its name in a small mono chip so the page doubles as documentation for the set.
 
@@ -577,7 +601,8 @@ Phones: the drawing sticks to the top of the screen above the chapters, which sc
   },
   {
     id: 'c-20',
-    free: true,
+    free: false,
+    category: 'css-visual',
     title: 'CSS-only image hover gallery',
     text: `Build the work index for Offcut Press, a two-drum risograph studio in Footscray: "Selected prints, 2024–26", six prints in an asymmetric 12-column gallery, where each print answers the pointer and the Tab key with a different hover effect. No JavaScript at all, and no image files: every print is inline SVG in flat riso inks.
 

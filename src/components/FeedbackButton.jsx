@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import FeedbackModal from './FeedbackModal'
 import FeedbackContextMenu from './FeedbackContextMenu'
+import ContentReportDialog from './ContentReportDialog'
 import { chromelessRoutes } from '../data/toolTree'
+import { TOOL_VOTES_ON } from '../data/toolVotes'
 import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
 
 // Persistent, low-profile way to reach the feedback form from anywhere in the app.
@@ -48,8 +50,22 @@ const NO_BUTTON = new Set([
   // with the footer attribution.
   // '/plans' and '/mobile' are Spectrum screens now, with the marketing nav and
   // footer like '/', so they take no fixed button either.
-  '/', '/home', '/plans', '/mobile', '/welcome', '/onboarding', '/feedback',
+  '/', '/home', '/plans', '/mobile', '/tools', '/sitemap', '/welcome', '/onboarding', '/feedback',
+  // The roadmap page is a Spectrum screen with its own footer; it exists only while voting is on.
+  ...(TOOL_VOTES_ON ? ['/roadmap'] : []),
 ])
+
+// ROUTES WHERE THE BUTTON STAYS BUT STEPS ASIDE ON A SMALL SCREEN.
+//
+// The sign-in and payment forms fill a phone's width, and the fixed bubble sat
+// over their fields and submit button at 320x640 and 390x640. They keep the
+// button on a roomy screen (a visitor with a sign-in problem can still report
+// it); on a small one global.css hides it and a quiet "Report a problem" link
+// (ReportProblemLink) in the form itself opens this same dialog. The right-click
+// menu is no substitute there: a touch-only phone does not offer it.
+// A pattern, not a second literal list: the test beside NO_BUTTON reads every
+// quoted path in this file as a route the button is absent from.
+const FORM_ROUTE = /^\/(?:login|checkout)$/
 
 export default function FeedbackButton() {
   const location = useLocation()
@@ -79,17 +95,16 @@ export default function FeedbackButton() {
   // Normalised the same way App.jsx normalises before its chromeless check, so
   // a trailing slash or a capital cannot leak a chromeless route past this and
   // paint a button on a Create tool.
-  const showButton = useMemo(
-    () => !NO_BUTTON.has(location.pathname.toLowerCase().replace(/\/+$/, '') || '/'),
-    [location.pathname],
-  )
+  const path = location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
+  const showButton = useMemo(() => !NO_BUTTON.has(path), [path])
+  const onForm = FORM_ROUTE.test(path)
 
   return (
     <>
       {showButton && (
         <button
           type="button"
-          className="global-feedback-btn"
+          className={'global-feedback-btn' + (onForm ? ' global-feedback-btn--form' : '')}
           onClick={openFromButton}
           title="Share feedback — or right-click anywhere to report what is under your pointer"
           aria-label="Share feedback"
@@ -110,6 +125,8 @@ export default function FeedbackButton() {
           reaches the browser's own menu, where Paste lives. */}
       <FeedbackContextMenu onReport={openFromMenu} suppressed={open} />
       <FeedbackModal open={open} onClose={close} seed={seed} />
+      {/* The content-report form, opened by any Report control on a community item. */}
+      <ContentReportDialog />
     </>
   )
 }

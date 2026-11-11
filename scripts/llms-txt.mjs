@@ -19,7 +19,7 @@
 //
 // ── Everything below is read from the module that owns it ───────────────────
 //
-//   the value claim     src/data/positioning.js — the founder's own sentence,
+//   the value claim     src/data/positioning.js — the product's own sentence,
 //                       by the id SURFACE_LINE assigns to this surface
 //   the price + limits  scripts/site-pricing.mjs, which is what index.html's
 //                       <noscript> already prints — one sentence, two surfaces
@@ -50,7 +50,8 @@ import { freeFormats, proOnlyFormats, unbuiltFormats } from '../src/config/expor
 import { cheapestPerMonth, formatMoney, resolvePlanLadder } from '../src/config/planLadder.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../src/data/toolTree.js'
 import { LEARN_ARTICLES } from '../src/data/learnIndex.js'
-import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
+import { pageName } from '../src/data/routeMetaMap.js'
+import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaGated.js'
 import { TOOL_ENTRIES } from '../src/data/toolIndex.js'
 import { canonicalUrl } from '../src/utils/routeMeta.js'
 import { CURRENCY_CODE, pricingSentence } from './site-pricing.mjs'
@@ -58,14 +59,13 @@ import { prerenderRoutes } from './route-matrix.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// "UI L4B | Palette Generator" → "Palette Generator". The title table is the
+// The title without the site name (pageName). The title table is the
 // one place every public route already has a human name; the tool tree's
 // labels are nav-length ("Palette", "Tint") and read as fragments in a list.
-const TITLE_PREFIX = /^UI L4B \| /
 const nameOf = (route) => {
   const title = PAGE_TITLES[route]
   if (!title) throw new Error(`llms-txt: ${route} has no title in routeMetaMap.js`)
-  return title.replace(TITLE_PREFIX, '')
+  return pageName(title)
 }
 const descriptionOf = (route) => {
   const desc = PAGE_DESCRIPTIONS[route]
@@ -102,12 +102,20 @@ export function llmsRoutes() {
   // same kind of question they do — what this product is bound by — and because
   // a machine summarising the product should be able to see which third-party
   // work it is built on without inferring it from the tool list.
-  const more = ['/plans', '/mobile', '/learn/help', '/learn/principles', '/sitemap', '/privacy', '/terms', '/credits']
+  const more = ['/plans', '/mobile', '/tools', '/learn/help', '/learn/principles', '/sitemap', '/privacy', '/terms', '/credits']
     .map((r) => mustBePrerendered(r, 'the More section'))
   const moreRoutes = new Set(more)
 
   const live = createTools().filter((t) => !t.soon)
   const liveRoutes = new Set(live.map((t) => t.route))
+
+  // Discover rows that are live and are not a Create tool wearing a second
+  // hat (Font Gallery and Icon Library are Create routes, listed above).
+  const browse = DISCOVER_GROUPS
+    .filter((g) => !g.soon && !liveRoutes.has(g.route) && g.route !== '/discover')
+    .map((g) => mustBePrerendered(g.route, 'the Browse section'))
+  const browseRoutes = new Set(browse)
+
   // The Create tools that mount, in tree order.
   const tools = live.map((t) => ({
     route: mustBePrerendered(t.route, 'the Tools section'),
@@ -115,11 +123,11 @@ export function llmsRoutes() {
   }))
   // Surfaces the search index declares outside the Create tree, kept only when
   // they render as a page of their own rather than resolving to a Discover or
-  // Learn destination those sections already list, or to a page the More
-  // section lists. Today that is /seo.
+  // Learn destination those sections already list, or to a page the More or
+  // Browse section lists. Today that is /seo.
   for (const entry of TOOL_ENTRIES) {
     const route = entry.path
-    if (liveRoutes.has(route) || moreRoutes.has(route) || /^\/(discover|learn)(\/|$)/.test(route)) continue
+    if (liveRoutes.has(route) || moreRoutes.has(route) || browseRoutes.has(route) || /^\/(discover|learn)(\/|$)/.test(route)) continue
     if (!prerendered.has(route)) continue
     if (tools.some((t) => t.route === route)) continue
     tools.push({ route, beta: false })
@@ -127,18 +135,9 @@ export function llmsRoutes() {
 
   const learn = LEARN_ARTICLES.map((a) => mustBePrerendered(`/learn/${a.slug}`, 'the Learn section'))
 
-  // Discover rows that are live and are not a Create tool wearing a second
-  // hat (Font Gallery and Icon Library are Create routes, listed above).
-  const browse = DISCOVER_GROUPS
-    .filter((g) => !g.soon && !liveRoutes.has(g.route) && g.route !== '/discover')
-    .map((g) => mustBePrerendered(g.route, 'the Browse section'))
-
-  // Still in the workshop: every tool the tree marks Soon, group Soon included.
-  const soon = CREATE_GROUPS.flatMap((g) => (
-    g.tools.filter((t) => !t.hidden && (g.soon || t.soon))
-  )).map((t) => ({ label: t.label, route: t.route }))
-
-  return { tools, learn, browse, more, soon }
+  // Tools still in the workshop are not listed anywhere in this file: a page
+  // the site hides from visitors is not advertised to a crawler either.
+  return { tools, learn, browse, more }
 }
 
 /**
@@ -160,7 +159,7 @@ export function llmsClaims() {
   return {
     summary: `${line(SURFACE_LINE.llmsSummary)} ${pricingSentence()}`,
     freePlan: `Free: ${AI_LIMITS.free.daily} AI generations a day and ${AI_LIMITS.free.monthly} a month; `
-      + `${kit.length ? `${listNames(kit)} export, and ` : ''}style guide export in ${listNames(free)}, with a "Made with UIL4B" footer line.`,
+      + `${kit.length ? `${listNames(kit)} export, and ` : ''}style guide export in ${listNames(free)}, with a "Made with UI L4B" footer line.`,
     proPlan: `Pro, ${proPrice}: ${AI_LIMITS.pro.daily} AI generations a day and ${AI_LIMITS.pro.monthly} a month; `
       + `adds ${listNames(pro)}; removes the footer line. Same AI model as Free.`,
     notBuilt: `Not built, on any plan, and not for sale: ${listNames(unbuilt)}.`,
@@ -169,7 +168,7 @@ export function llmsClaims() {
 
 /** The whole file, LF line endings. */
 export function buildLlmsTxt() {
-  const { tools, learn, browse, more, soon } = llmsRoutes()
+  const { tools, learn, browse, more } = llmsRoutes()
   const claims = llmsClaims()
   const row = (route, suffix = '') => `- [${nameOf(route)}${suffix}](${canonicalUrl(route)}): ${descriptionOf(route)}`
 
@@ -199,11 +198,6 @@ export function buildLlmsTxt() {
     '## More',
     ...more.map((r) => row(r)),
     '',
-    '## Optional',
-    'Not yet built. These routes resolve to an honest "still in the workshop" state rather than a working tool, and should not be described as available:',
-    '',
-    ...soon.map((t) => `- ${t.label} (${t.route})`),
-    '',
   ].join('\n')
 }
 
@@ -211,9 +205,9 @@ export function buildLlmsTxt() {
 if (process.argv[1]?.endsWith('llms-txt.mjs')) {
   const text = buildLlmsTxt()
   await writeFile(path.join(root, 'public', 'llms.txt'), text, 'utf8')
-  const { tools, learn, browse, soon } = llmsRoutes()
+  const { tools, learn, browse } = llmsRoutes()
   console.log(
     `sync:llms — wrote public/llms.txt: ${tools.length} tools, ${learn.length} guides, `
-    + `${browse.length} browse pages, ${soon.length} still in the workshop`,
+    + `${browse.length} browse pages`,
   )
 }

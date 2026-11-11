@@ -2,7 +2,7 @@
 // These flows deliberately use invalid values, repeated actions, keyboard-only
 // adjustments, and narrow screens so the workbenches fail safely under pressure.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 import { normalizeClipboardText } from '../../src/hooks/useClipboard.js'
 
 test.describe('Gradient Generator workbench resilience', () => {
@@ -11,21 +11,24 @@ test.describe('Gradient Generator workbench resilience', () => {
     await go(page, '/create/gradient')
 
     // The tool opens on its toolbar label, and its controls are one
-    // named side panel (the drawn STOPS / SELECTED STOP / GEOMETRY card).
+    // named side panel (the drawn RANDOM / STOPS / STOP N / SHAPE card).
     await expect(page.getByRole('heading', { level: 1, name: 'Gradient' })).toBeVisible()
     const panel = page.getByRole('complementary', { name: 'Gradient controls' })
     await expect(panel).toBeVisible()
-    for (const name of ['Stops', 'Selected stop', 'Geometry']) {
+    // The selected stop's section is named for it ("Stop 1"); Geometry is now Shape.
+    for (const name of ['Random', 'Stops', 'Stop 1', 'Shape']) {
       await expect(panel.getByRole('group', { name, exact: true })).toBeVisible()
     }
 
+    // The first-visit gradient is the first curated preset, Indigo Night.
+    const FIRST_STOP = '#0A0F2C'
     const firstHex = page.getByRole('textbox', { name: 'Stop 1 hex' })
-    await expect(firstHex).toHaveValue('#7C3AED')
+    await expect(firstHex).toHaveValue(FIRST_STOP)
     await firstHex.fill('#NOTHEX')
     await expect(firstHex).toHaveAttribute('aria-invalid', 'true')
     await expect(page.getByText('Use a 6-digit hex')).toBeVisible()
     await firstHex.press('Enter')
-    await expect(firstHex).toHaveValue('#7C3AED')
+    await expect(firstHex).toHaveValue(FIRST_STOP)
 
     const position = page.getByRole('slider', { name: 'Stop position' })
     await expect(position).toHaveValue('0')
@@ -46,9 +49,9 @@ test.describe('Gradient Generator workbench resilience', () => {
     await go(page, '/create/gradient')
 
     await page.getByRole('textbox', { name: 'Stop 1 hex' }).fill('#123456')
-    const firstLock = page.getByRole('button', { name: /Lock stop 1 colour/ })
+    const firstLock = page.getByRole('group', { name: 'Stop list' }).getByRole('button', { name: /Keep stop 1's colour/ })
     await firstLock.click()
-    await expect(page.getByRole('button', { name: /Stop 1 locked/ })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('group', { name: 'Stop list' }).getByRole('button', { name: /Stop 1's colour is kept/ })).toHaveAttribute('aria-pressed', 'true')
 
     const random = page.getByRole('button', { name: /^Random$/ })
     await random.click()
@@ -59,11 +62,19 @@ test.describe('Gradient Generator workbench resilience', () => {
     await expect(page.getByRole('textbox', { name: 'Stop 1 hex' })).toHaveValue('#123456')
 
     const add = page.getByRole('button', { name: 'Add a stop' })
-    while (await add.isVisible()) await add.click()
+    while (await page.locator('.grd-stop').count() < 12) await add.click()
     await expect(page.locator('.grd-stop')).toHaveCount(12)
-    // At the ceiling the drawn "Add a stop" row is gone, as the design hides it
-    // (addStopDisplay) — there is nothing to press that would do nothing.
-    await expect(add).toHaveCount(0)
+    // At the ceiling the button stays drawn, so the panel does not change
+    // height; it is aria-disabled and its title says why. (Its accessible name
+    // stays "Add a stop": the aria-label wins over the title.)
+    await expect(add).toHaveCount(1)
+    await expect(add).toHaveAttribute('aria-disabled', 'true')
+    await expect(add).toHaveAttribute('title', '12 stops is the most')
+    await expect(add).toBeDisabled()
+    // Pressing it still does not add a 13th stop. force: Playwright treats an
+    // aria-disabled button as not actionable, and a real press is the point.
+    await add.click({ force: true })
+    await expect(page.locator('.grd-stop')).toHaveCount(12)
   })
 
   test('clipboard denial is recoverable and the mobile canvas stays contained', async ({ page }) => {
@@ -120,8 +131,10 @@ test.describe('Gradient Generator workbench resilience', () => {
     const start = page.getByRole('region', { name: 'Start from a preset' })
     await expect(start).toBeVisible()
     await expect(start.locator('.grd-preset').first()).toBeVisible()
-    expect(await start.locator('.grd-preset').count()).toBeGreaterThanOrEqual(16)
-    await expect(start.getByRole('link', { name: /Gradient Library/ })).toBeVisible()
+    // Twelve curated presets (the unit test holds the set at exactly 12); no saved palette here.
+    await expect(start.locator('.grd-preset')).toHaveCount(12)
+    // The way into the library is the Explore panel below, not a second link up here.
+    await expect(start.getByRole('link', { name: /Gradient Library/ })).toHaveCount(0)
 
     const numbered = await page.locator('.grd').evaluate((root) =>
       [...root.querySelectorAll('*')].filter((el) => el.children.length === 0 && /^0\d\s*·/.test(el.textContent.trim())).length)
@@ -158,16 +171,33 @@ test.describe('Semantic Colour system workflow', () => {
     expect(await alias()).not.toBe(at500)
     await expect(page.locator('[data-role="success"] .stc-cell.is-base')).toHaveAttribute('aria-label', /^Copy 600, /)
 
-    // Custom: a hue slider, and a pasted hex rotated into the role's arc.
-    await chooseMenuOption(page, page.getByRole('button', { name: 'Success preset' }), 'custom')
+    // Custom: the last chip in the role's row. It brings a hue slider and a
+    // pasted hex that is rotated into the role's arc.
+    const successRow = page.locator('[data-role="success"]')
+    const customChip = successRow.getByRole('group', { name: 'Success preset' }).getByRole('button', { name: 'Custom' })
+    await expect(customChip).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByRole('slider', { name: 'success custom hue' })).toHaveCount(0)
+    await customChip.click()
+    await expect(customChip).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByRole('slider', { name: 'success custom hue' })).toBeVisible()
     const successHex = page.getByRole('textbox', { name: 'Import a hex colour for success' })
+    // A bad hex is explained under the field, in the row, and linked to it.
+    const hexErr = successRow.locator('.stc-hue-err')
+    await expect(hexErr).toBeHidden()
     await successHex.fill('bad')
     await successHex.press('Enter')
-    await expect(page.getByText(/Enter a six-digit hex colour/)).toBeVisible()
+    await expect(hexErr).toBeVisible()
+    await expect(hexErr).toHaveText('Enter a six-digit hex colour, for example #16A34A')
+    await expect(successHex).toHaveAttribute('aria-invalid', 'true')
+    await expect(successHex).toHaveAttribute('aria-describedby', await hexErr.getAttribute('id'))
+    // The explanation goes away on the next keystroke.
+    await successHex.pressSequentially('x')
+    await expect(hexErr).toBeHidden()
+    await expect(successHex).not.toHaveAttribute('aria-invalid', 'true')
     await successHex.fill('#16A34A')
     await successHex.press('Enter')
     await expect(successHex).toHaveValue('')
+    await expect(hexErr).toBeHidden()
 
     await page.screenshot({ path: test.info().outputPath('semantic-colours-desktop.png'), fullPage: true })
   })
@@ -188,7 +218,7 @@ test.describe('Semantic Colour system workflow', () => {
     // Four family rows, and the depiction shows Information as "underway".
     await expect(page.locator('.stc-fam')).toHaveCount(4)
     await expect(page.locator('.stc-fam-name')).toHaveText(['✓Success', '!Warning', '×Error', 'iInformation'])
-    await expect(page.locator('.stc-alert--info').filter({ hasText: 'Publishing design system' })).toHaveCount(1)
+    await expect(page.locator('.stc-sc--info').filter({ hasText: 'Publishing design system' })).toHaveCount(1)
     const body = await page.evaluate(() => document.querySelector('main').innerText)
     expect(body, 'pending is still on the page').not.toMatch(/pending/i)
 
@@ -198,8 +228,9 @@ test.describe('Semantic Colour system workflow', () => {
     expect(blue).toContain('--color-info-500: #3b82f6')
 
     // Purple, and the cached shades other exports read.
-    await page.getByRole('button', { name: 'Purple', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Purple', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('button', { name: 'Purple family' }).click()
+    await expect(page.getByRole('button', { name: 'Purple family' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Blue family' })).toHaveAttribute('aria-pressed', 'false')
     await page.getByRole('button', { name: 'Copy tokens' }).click()
     const purple = await page.evaluate(() => navigator.clipboard.readText())
     expect(purple).toContain('--color-info-500: #8b5cf6')
@@ -225,16 +256,19 @@ test.describe('Semantic Colour system workflow', () => {
       .not.toHaveProperty('pending')
   })
 
-  // The preset trigger announces its current value.
+  // Each role's presets are chips in a named group, and exactly one says it is on.
   test('each role says which preset is on, and it follows a change', async ({ page }) => {
     watch(page, 'a designer on a screen reader choosing a success green')
     await go(page, '/create/semantic-color')
-    const success = page.getByRole('button', { name: 'Success preset' })
-    await expect(success).toHaveAttribute('value', '1')
-    await expect(success).toHaveAccessibleName(/Success preset: Green/)
-    await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Green')
-    await chooseMenuOption(page, success, { label: 'Teal' })
-    await expect(page.locator('[data-role="success"] .tl-select-v')).toHaveText('Teal')
+    const success = page.locator('[data-role="success"]').getByRole('group', { name: 'Success preset' })
+    const chips = success.getByRole('button')
+    await expect(chips).toHaveText(['Emerald', 'Green', 'Teal', 'Apple', 'Material', 'Tailwind', 'Custom'])
+    await expect(success.getByRole('button', { name: 'Green' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(success.locator('[aria-pressed="true"]')).toHaveCount(1)
+    await success.getByRole('button', { name: 'Teal' }).click()
+    await expect(success.getByRole('button', { name: 'Teal' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(success.getByRole('button', { name: 'Green' })).toHaveAttribute('aria-pressed', 'false')
+    await expect(success.locator('[aria-pressed="true"]')).toHaveCount(1)
     // The bundle no longer matches, so no bundle claims the selection.
     await expect(page.locator('.stc-bundles [aria-checked="true"]')).toHaveCount(0)
   })
@@ -253,46 +287,35 @@ test.describe('Semantic Colour system workflow', () => {
 })
 
 // ── The Contrast Checker has to pass its own test ────────────────────────────
-// Found during the 2026-09-03 five-surface review, and it is the worst place in
-// the product for this defect to live. Measured on the white card in light
-// theme, against the 4.5:1 that this page exists to enforce:
-//
-//     .cc-ratio-verdict.cc-mixed  "Passes some checks"  2.94:1   <- the verdict
-//     .cc-check-mark  (pass glyph)                      2.70:1
-//     .cc-check-mark  (fail glyph)                      3.43:1
-//
-// All three were hard-coded hexes rather than the project's --ok/--warn/--err,
-// so they never responded to the theme either - and the fail red measured
-// 3.97:1 on the dark card, failing there too. BOTH THEMES are asserted here for
-// that reason: fixing only the one you happened to screenshot is how this
-// returns.
+// It is the worst place in the product for a contrast defect to live. The
+// verdict and test marks once painted hard-coded hexes that measured 2.7:1 to
+// 3.4:1 on the white card in light theme, and the fail red failed on the dark
+// card too. BOTH THEMES are asserted for that reason: fixing only the one you
+// happened to screenshot is how this returns.
 //
 // The check is computed the way the page itself computes it (WCAG relative
 // luminance), against the nearest opaque ancestor background, so it measures
 // what is painted rather than what the stylesheet says.
 //
-// `.cc-field-badge`, `.cc-check-foot` and `.cc-level-opt` joined with the LEFT
-// panel overhaul, and `.cc-check-name` finally started matching something. That
-// selector has been in this list since the sweep was written and no element has
-// ever carried it — the class was `.cc-check-label` — so the check text on the
-// page that enforces contrast was the one thing this sweep never measured. The
-// OR-list is what hid it: five other selectors kept the positive control above
-// its floor, so the count could never fall to zero and give it away. The lesson
-// is on the count itself — a floor over a UNION cannot prove each member
-// contributed.
+// REST_TEXT is every piece of the checker's own text that sits on the page's
+// card. The specimen and the swatches are left out on purpose: they are
+// painted in the user's pair, and legibility there is the thing being tested,
+// not a property of the page. Each selector must match on its own (the check
+// below counts them one by one), because a floor over a UNION cannot prove each
+// member contributed: a selector left over from a rename kept the count above
+// its floor for months while measuring nothing.
 //
-// `.cc-verdict` and `.cc-lede` joined the set with the preview overhaul
-// [contrast-checker-overhaul]. The chips are the interesting addition: they are
-// the only text on the page that SITS on the user's chosen background, and a
-// chip that painted with the pair would go unreadable at exactly the ratios
-// this page exists to warn about.
-//
-// THIS TEST ALONE DOES NOT HOLD THEM TO THAT, and the distinction was found by
-// mutation rather than by reasoning. Repointing .cc-verdict at var(--cc-bg)
-// still PASSES here, because the page loads at #6B7280 on #FFFFFF — 4.83:1,
-// which clears AA. Measuring the default pair can only ever prove the chip is
-// legible when the pair is already fine. The failing-pair test below is the one
-// that catches it; this one covers the page's resting state.
+// THIS TEST ALONE DOES NOT HOLD THE VERDICTS TO THE RULE. The page loads at
+// #6B7280 on #FFFFFF, 4.83:1, which clears AA, so a verdict painted in the pair
+// would still pass here. The failing-pair test below is the one that catches it.
+const REST_TEXT = [
+  '.cc-ratio-num', '.cc-ratio-unit', '.cc-ratio-verdict', '.cc-ratio-note',
+  '.cc-check-name', '.cc-check-need', '.cc-check-mark', '.cc-explain', '.cc-note-link',
+  '.cc-lede', '.cc-field-k', '.cc-fixes-live .cc-fix-line', '.cc-fixes-live .cc-fix-ratio',
+  '.cc-pair-label', '.cc-pair-ratio', '.cc-pair-mark',
+  '.cc-swatch-name', '.cc-pair-group-title', '.cc-pair-group-note',
+]
+
 test.describe('The Contrast Checker meets the standard it enforces', () => {
   for (const theme of ['light', 'dark']) {
     test(`its own verdict and check text passes AA in ${theme} theme`, async ({ browser }) => {
@@ -325,7 +348,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       await go(page, '/create/contrast')
       await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
 
-      const failures = await page.evaluate(() => {
+      const failures = await page.evaluate((sel) => {
         const lum = ([r, g, b]) => {
           const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
           return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
@@ -357,7 +380,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           return [255, 255, 255]
         }
         const out = []
-        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-check-foot, .cc-fix-desc, .cc-verdict, .cc-lede, .cc-field-badge, .cc-level-opt')) {
+        for (const el of document.querySelectorAll(sel)) {
           const cs = getComputedStyle(el)
           const bg = bgOf(el)
           const raw = parse(cs.color)
@@ -373,16 +396,17 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           }
         }
         return out
-      })
+      }, REST_TEXT.join(', '))
 
       // The sample must not be able to collapse to nothing: an empty `failures`
       // means either that everything passed or that the walk matched no
-      // elements at all, and those are not the same result.
-      const measured = await page.locator(
-        '.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-check-foot, .cc-fix-desc, .cc-verdict, .cc-lede, .cc-field-badge, .cc-level-opt').count()
+      // elements at all, and those are not the same result. A floor over the
+      // UNION cannot prove each member contributed, so every selector is
+      // counted on its own.
+      const unmatched = []
+      for (const sel of REST_TEXT) if ((await page.locator(sel).count()) === 0) unmatched.push(sel)
       await ctx.close()
-      expect(measured, `no contrast-checker text was found to measure in ${theme}`)
-        .toBeGreaterThan(8)
+      expect(unmatched, `these selectors matched nothing in ${theme}, so they were never measured`).toEqual([])
       expect(failures, `the contrast checker's own UI must meet AA in ${theme}:\n${failures.join('\n')}`).toEqual([])
     })
   }
@@ -395,9 +419,9 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
   // would pass anyway, so only a broken pair separates "uses page tokens" from
   // "got lucky".
   //
-  // MUTATION: in contrast.css drop the light-theme 50% mix on --cc-bad (paint
-  // the raw #F0A58C on the white card) — the light run goes red on every
-  // "Fail" mark at ~2:1.
+  // MUTATION: in contrast.css paint .cc-tone--err with var(--err) instead of
+  // var(--err-strong). The base token is the 3:1 icon floor, so the light run
+  // goes red on the ratio numeral and every "Fail" mark.
   for (const theme of ['light', 'dark']) {
     test(`its verdicts stay legible when the pair itself fails (${theme})`, async ({ browser }) => {
       const ctx = await browser.newContext({ colorScheme: theme })
@@ -410,7 +434,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
       await page.fill('#cc-fg', '#F2F4F6')
       await page.fill('#cc-bg', '#FFFFFF')
-      await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails')
+      await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails every WCAG check.')
 
       const report = await page.evaluate(() => {
         const lum = ([r, g, b]) => {
@@ -428,7 +452,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           }
           return [255, 255, 255]
         }
-        const els = [...document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-pair-mark')]
+        const els = [...document.querySelectorAll('.cc-ratio-num, .cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-pair-mark, .cc-fix-line, .cc-fix-ratio')]
         const bad = []
         for (const el of els) {
           const raw = parse(getComputedStyle(el).color)
@@ -462,12 +486,14 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await page.fill('#cc-fg', '#000099')
     await page.fill('#cc-bg', '#009900')
 
-    await expect(page.locator('.cc-ratio-num')).toHaveText('3.81:1')
+    // 3.8059:1 shown floored, never rounded up to 3.81.
+    await expect(page.locator('.cc-ratio-num')).toHaveText('3.80:1')
 
-    const fixes = page.locator('.cc-fix')
+    const fixes = page.locator('.cc-fixes-live .cc-fix')
     await expect(fixes).toHaveCount(2)
 
-    const offered = await page.locator('.cc-fix-chip').allTextContents()
+    // The hex each row names (the chip itself only reads "Aa", painted in the fixed pair).
+    const offered = await page.locator('.cc-fixes-live .cc-fix-line strong').allTextContents()
     const check = await page.evaluate((hexes) => {
       const lum = ([r, g, b]) => {
         const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
@@ -485,6 +511,17 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     expect(check.blueOnBgFix, `the offered background fix ${offered[1]} does not reach 4.5:1 under #000099`).toBeGreaterThanOrEqual(4.5)
     const [r, g, b] = [1, 3, 5].map(i => parseInt(offered[0].slice(i, i + 2), 16))
     expect(b, `the text fix ${offered[0]} stopped being blue`).toBeGreaterThan(Math.max(r, g))
+
+    // Each row's "Aa" chip is painted in the pair the row promises: the new
+    // text on the current background, or the current text on the new background.
+    const painted = await page.locator('.cc-fixes-live .cc-fix-chip').evaluateAll((els) => {
+      const hex = (c) => '#' + (c.match(/\d+/g) || []).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('').toUpperCase()
+      return els.map((el) => { const cs = getComputedStyle(el); return { fg: hex(cs.color), bg: hex(cs.backgroundColor) } })
+    })
+    expect(painted).toEqual([
+      { fg: offered[0].toUpperCase(), bg: '#009900' },
+      { fg: '#000099', bg: offered[1].toUpperCase() },
+    ])
   })
 
   // Applying a fix must actually resolve the failure it was offered for. The
@@ -495,14 +532,16 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await go(page, '/create/contrast')
     await page.fill('#cc-fg', '#000099')
     await page.fill('#cc-bg', '#009900')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AA (4.5:1)')
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
+    const fixes = page.locator('.cc-fixes-sec')
+    await expect(fixes).toContainText('To reach AA (4.5:1)')
 
-    await page.locator('.cc-fix').first().getByRole('button', { name: 'Apply' }).click()
+    await page.locator('.cc-fixes-live .cc-fix').first().getByRole('button', { name: /^Use / }).click()
 
     await expect(page.locator('.cc-check').first()).toHaveClass(/cc-check--pass/)
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Passes AA/)
-    await expect(page.getByRole('group', { name: 'Make it pass' })).not.toContainText('AA (4.5:1)')
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Passes AA for all text\./)
+    await expect(fixes).not.toContainText('To reach AA (4.5:1)')
+    await expect(fixes).toContainText('To reach AAA (7:1)')
   })
 
   // The fixes aim at the NEXT level the pair misses (AA, then AAA), not at a
@@ -517,17 +556,20 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await go(page, '/create/contrast')
     await page.fill('#cc-fg', '#808080')
     await page.fill('#cc-bg', '#7F7F7F')
-    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(2)
     await expect(page.locator('.cc-unfixable')).toHaveCount(0)
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AA (4.5:1)')
+    const section = page.locator('.cc-fixes-sec')
+    await expect(section).toContainText('To reach AA (4.5:1)')
 
-    // Past AA, the section aims at AAA; past AAA, it is gone.
+    // Past AA, the section aims at AAA; past AAA, it says there is nothing to
+    // change (the section stays, with no fix rows in it).
     await page.fill('#cc-fg', '#000000')
     await page.fill('#cc-bg', '#767676')
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toContainText('AAA (7:1)')
-    await expect(page.locator('.cc-fix').first()).toBeVisible()
+    await expect(section).toContainText('To reach AAA (7:1)')
+    await expect(page.locator('.cc-fixes-live .cc-fix').first()).toBeVisible()
     await page.fill('#cc-bg', '#FFFFFF')
-    await expect(page.getByRole('group', { name: 'Make it pass' })).toHaveCount(0)
+    await expect(section).toContainText('Passes every WCAG 2.2 check. Nothing to change.')
+    await expect(page.locator('.cc-fixes-live .cc-fix')).toHaveCount(0)
   })
 
   // The five tests as drawn (D:1903-1906): both levels at once, each row naming
@@ -538,31 +580,32 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
     const rows = page.locator('.cc-check')
     await expect(rows).toHaveCount(5)
+    // The level is part of the name, and the ratio each test needs is on the row.
     await expect(page.locator('.cc-check-name')).toHaveText([
-      'Body text, 16px', 'Body text, enhanced', 'Large text, 24px', 'Large text, enhanced', 'UI borders and icons',
+      'Normal text, AA', 'Normal text, AAA', 'Large text, AA', 'Large text, AAA', 'UI components and graphics, AA',
     ])
-    await expect(page.locator('.cc-check-level')).toHaveText(['AA', 'AAA', 'AA', 'AAA', 'AA'])
+    await expect(page.locator('.cc-check-need')).toHaveText(['4.5:1', '7:1', '3:1', '4.5:1', '3:1'])
 
     // #6B7280 on #FFFFFF is 4.83:1 — AA passes, AAA body fails.
-    const marks = () => page.locator('.cc-check-mark').evaluateAll((els) => els.map((e) => e.childNodes[0].textContent))
-    expect(await marks()).toEqual(['Pass', 'Fail', 'Pass', 'Pass', 'Pass'])
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AA')
+    const marks = page.locator('.cc-check-mark')
+    await expect(marks).toHaveText(['Pass', 'Fail', 'Pass', 'Pass', 'Pass'])
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AA for all text.')
 
     await page.fill('#cc-fg', '#BBBBBB')
-    expect(await marks()).toEqual(['Fail', 'Fail', 'Fail', 'Fail', 'Fail'])
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails')
+    await expect(marks).toHaveText(['Fail', 'Fail', 'Fail', 'Fail', 'Fail'])
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Fails every WCAG check.')
     await page.fill('#cc-fg', '#000000')
-    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AAA')
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Passes AAA for all text.')
   })
 
-  // TRUTH: "Common pairs in this kit" and the swatches are the person's own
+  // TRUTH: "Pairs to check in your palette" and the swatches are the person's own
   // palette (the design's are invented brand values). Seed a palette and both
   // follow it; a pair applies both sides.
   //
   // MUTATION: make kitFrom() in ContrastChecker.jsx ignore palette.colors —
   // the swatch assertion goes red on the first seeded hex.
-  test('the common pairs and swatches come from the person’s own palette', async ({ page }) => {
-    watch(page, 'a designer checking their own kit')
+  test('the pairs to check and the swatches come from the person’s own palette', async ({ page }) => {
+    watch(page, 'a designer checking their own palette')
     const PALETTE = ['#1D3557', '#E63946', '#F1FAEE', '#A8DADC', '#457B9D']
     await page.addInitScript((colors) => {
       try {
@@ -573,10 +616,10 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
 
     const swatches = await page.locator('.cc-swatch').evaluateAll((els) => els.map((e) => (e.getAttribute('aria-label').match(/#[0-9A-F]{6}/i) || [''])[0].toUpperCase()))
-    for (const hex of PALETTE) expect(swatches, `the kit swatches are missing the palette's ${hex}`).toContain(hex)
+    for (const hex of PALETTE) expect(swatches, `the strip swatches are missing the palette's ${hex}`).toContain(hex)
 
     const pairs = page.locator('.cc-pair')
-    expect(await pairs.count(), 'the kit offered no pairs').toBeGreaterThan(2)
+    expect(await pairs.count(), 'the palette offered no pairs').toBeGreaterThan(2)
     // Named by the palette's roles, never the design's "Brand on ink".
     await expect(pairs.first()).toContainText(/Primary|Secondary|Accent|Subtle|Deep/)
     await expect(page.locator('.cc-pairs')).not.toContainText('Brand on ink')
@@ -588,19 +631,19 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
     expect(PALETTE).toContain(bg)
   })
 
-  // The drawn grid: the specimen (1fr) is far wider than the 336px card.
+  // The drawn grid: the preview frame (1fr) is far wider than the 336px card.
   test('the preview is given more width than the controls', async ({ page }) => {
     watch(page, 'a designer on a wide screen')
     await go(page, '/create/contrast')
-    await expect(page.locator('.cc-preview')).toBeVisible()
-    const preview = await page.locator('.cc-preview').evaluate((e) => Math.round(e.getBoundingClientRect().width))
+    await expect(page.locator('.cc-frame')).toBeVisible()
+    const preview = await page.locator('.cc-frame').evaluate((e) => Math.round(e.getBoundingClientRect().width))
     const controls = await page.locator('.cc-panel').evaluate((e) => Math.round(e.getBoundingClientRect().width))
     expect(controls, 'the side card is the drawn 336px').toBe(336)
     expect(preview, `preview ${preview}px is not wider than controls ${controls}px`).toBeGreaterThan(controls)
   })
 })
 
-// The design's GEOMETRY "Interpolation: OKLCH | sRGB" control (D:692-699),
+// The design's GEOMETRY "Interpolation" control (D:692-699), labelled Perceived (OKLCH) | Standard (sRGB),
 // implemented for real: the choice reaches the copied CSS, the painted canvas
 // and the SVG export (SVG cannot say `in oklch`, so it is sampled instead).
 //
@@ -611,8 +654,8 @@ test.describe('Gradient interpolation space', () => {
     watch(page, 'front-end developer choosing an interpolation space')
     await go(page, '/create/gradient')
     const code = page.locator('.grd-code-text code')
-    const oklch = page.getByRole('button', { name: 'OKLCH', exact: true })
-    const srgb = page.getByRole('button', { name: 'sRGB', exact: true })
+    const oklch = page.getByRole('button', { name: 'Perceived (OKLCH)', exact: true })
+    const srgb = page.getByRole('button', { name: 'Standard (sRGB)', exact: true })
 
     await oklch.click()
     await expect(oklch).toHaveAttribute('aria-pressed', 'true')
@@ -631,5 +674,31 @@ test.describe('Gradient interpolation space', () => {
     await expect(srgb).toHaveAttribute('aria-pressed', 'true')
     await expect(code).not.toContainText('in oklch')
     await expect(code).toContainText('gradient(')
+  })
+
+  // The pills say Perceived / Standard and keep the real space name on demand:
+  // in the button's accessible name, its hover text, and a visible line (for
+  // touch and keyboard) that follows the chosen option.
+  //
+  // MUTATION: put 'OKLCH' / 'sRGB' back as the SPACES labels in
+  // GradientGenerator.jsx (or drop `real` from the hint) — this goes red.
+  test('the pills read Perceived and Standard, and the real space name is one step away', async ({ page }) => {
+    watch(page, 'designer reading the interpolation control')
+    await go(page, '/create/gradient')
+    const group = page.getByRole('group', { name: 'Interpolation' })
+    await expect(group.getByRole('button')).toHaveText(['Perceived', 'Standard'])
+    await expect(group.getByRole('button', { name: 'Perceived (OKLCH)' })).toHaveAttribute('title', /OKLCH/)
+    await expect(group.getByRole('button', { name: 'Standard (sRGB)' })).toHaveAttribute('title', /sRGB/)
+
+    const hint = page.locator('#grd-interp-hint')
+    await expect(group).toHaveAttribute('aria-describedby', 'grd-interp-hint')
+    await group.getByRole('button', { name: 'Perceived (OKLCH)' }).click()
+    await expect(hint).toBeVisible()
+    await expect(hint).toContainText('OKLCH')
+    await group.getByRole('button', { name: 'Standard (sRGB)' }).click()
+    await expect(hint).toContainText('sRGB')
+    await expect(hint).not.toContainText('OKLCH')
+    // sRGB here is the gamma-encoded default, so it must not claim to be linear.
+    await expect(group).not.toContainText(/linear/i)
   })
 })

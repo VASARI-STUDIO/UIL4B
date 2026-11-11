@@ -56,6 +56,9 @@ async function seedSignedIn(page, baseURL) {
   await page.route('**://identitytoolkit.googleapis.com/**', (r) => r.abort())
   await page.goto(baseURL + '/robots.txt')
   const result = await page.evaluate(async (apiKey) => {
+    // A returning browser carries the first-paint session hint; without it the
+    // app does not fetch the auth SDK on a cold load and never reads the record.
+    localStorage.setItem('vs-session', '1')
     const user = {
       uid: 'usersim-first-win',
       email: 'first.win@example.com',
@@ -175,6 +178,34 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     })
   }
 
+  // Someone who signed up by clicking a Pro button came to pay. The plans page
+  // stashes the checkout before the login popup opens; picking a start must not
+  // throw that away. Any other stashed page still gives way to the pick.
+  test('picking a start after clicking Pro goes on to that checkout, and the pick is still recorded', async ({ page, baseURL }) => {
+    watch(page, 'a new account that signed up from a Pro button')
+    await openFirstWin(page, baseURL)
+    await page.evaluate(() => sessionStorage.setItem('vs-resume-after-onboarding', '/checkout?plan=monthly'))
+
+    await page.locator('[data-first-win="palette"]').click()
+
+    await expect.poll(() => new URL(page.url()).pathname + new URL(page.url()).search, { timeout: 10000 })
+      .toBe('/checkout?plan=monthly')
+    expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding'))).toBeNull()
+    expect(await page.evaluate(() => localStorage.getItem('vs-onboarded'))).toBe('1')
+    expect(await page.evaluate(() => localStorage.getItem('vs-first-win-started'))).toMatch(/^\d+$/)
+  })
+
+  test('picking a start drops any stashed page that is not a checkout', async ({ page, baseURL }) => {
+    watch(page, 'a new account that signed up from a tool page')
+    await openFirstWin(page, baseURL)
+    await page.evaluate(() => sessionStorage.setItem('vs-resume-after-onboarding', '/create/gradient'))
+
+    await page.locator('[data-first-win="palette"]').click()
+
+    await expect.poll(() => new URL(page.url()).pathname, { timeout: 10000 }).toBe('/create/palette')
+    expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding'))).toBeNull()
+  })
+
   test('declining still finishes onboarding and lands on the teaching empty state', async ({ page, baseURL }) => {
     // The decline path is the one that used to write localStorage only, so the
     // account never learned onboarding had happened and it returned forever on
@@ -187,6 +218,24 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 10000 }).toBe('/projects')
     expect(await page.evaluate(() => localStorage.getItem('vs-onboarded'))).toBe('1')
     expect(await page.evaluate(() => localStorage.getItem('vs-first-win-started'))).toMatch(/^\d+$/)
+  })
+
+  test('at 390px "Not now" is a 44px target and the card has no outer panel', async ({ page, baseURL }) => {
+    watch(page, 'a new account on a phone declining the first win')
+    await page.setViewportSize({ width: 390, height: 844 })
+    await openFirstWin(page, baseURL)
+
+    const box = await page.getByRole('button', { name: /Not now/ }).boundingBox()
+    expect(box.height, '"Not now" is shorter than 44px on a phone').toBeGreaterThanOrEqual(44)
+    const card = await page.locator('.onb-card').evaluate((el) => {
+      const s = getComputedStyle(el)
+      return { border: s.borderTopWidth, left: s.paddingLeft, right: s.paddingRight }
+    })
+    expect(card.border, 'the onboarding card still has a border on a phone').toBe('0px')
+    // The card is width 100% and border-box, so its own width can't show the
+    // padding; the padding itself does (36px on a wider screen).
+    expect(card.left, 'the onboarding card still pads its left edge on a phone').toBe('0px')
+    expect(card.right, 'the onboarding card still pads its right edge on a phone').toBe('0px')
   })
 
   test('the three unread survey questions are gone from the flow', async ({ page, baseURL }) => {

@@ -1,6 +1,6 @@
 // THE FLOW AUDIT, 2026-09-09 — six journeys a real person takes, rendered.
 //
-// The founder's standing ask is that every flow "feels intentional" and that
+// The standing aim is that every flow "feels intentional" and that
 // the value is visible before anything is asked for. 57-signed-in-session and
 // the 58-flows files reach each surface; this file walks the SEAMS between
 // them — the moment a refusal, a gate, a modal or a confirmation answers the
@@ -52,6 +52,7 @@
 //
 // Everything numeric is imported from the config that enforces it; nothing
 // here types a price, a cap or a route.
+import { chooseFormat, exportPanel, primaryButton, actionLabel, categoryRadio } from './export-rows.js'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
@@ -61,6 +62,7 @@ import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { BILLED_EVERY } from '../../src/config/planFacts.js'
 import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
+import { mockThemeApi } from './export-theme-mock.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
@@ -120,7 +122,7 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
       await expect(dialog).toBeVisible()
       // Says WHAT was interrupted and WHAT HAPPENS NEXT, in that order.
       await expect(dialog).toContainText(/about to save this palette/i)
-      await expect(dialog).toContainText(/hands you straight back to it/i)
+      await expect(dialog).toContainText(/you'll come back to this page/i)
       // The fast path has focus the moment it opens.
       expect(await focused(page), 'focus must land on the one-click path').toMatch(/Continue with Google/)
 
@@ -151,8 +153,8 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
 
       // A new account starts empty, with no seeded "Default Project";
       // 73-hero-headline-new-account holds the whole of it.
-      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Default Project' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Start a project' })).toHaveCount(1)
+      await expect(page.getByText('Default Project')).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'Start your first brand kit' })).toHaveCount(1)
 
       // New project goes straight into the Palette Builder on a new, unsaved
       // project, named when it is saved.
@@ -167,7 +169,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       await expect(page.locator('.toast.show')).toContainText('Project saved')
 
       await go(page, '/projects')
-      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
+      await expect(page.getByRole('region', { name: 'Brand v1, latest project' })).toHaveCount(1)
       await context.close()
     })
   }
@@ -187,12 +189,12 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
       watch(page, `a free account at the cap (${size[0]}px)`)
       const account = await signIn(page, { plan: 'free', projects: CAP })
       await go(page, '/projects')
-      await page.getByRole('button', { name: 'New project' }).click()
+      await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).click()
 
       const refusal = page.getByTestId('project-create-refusal')
       await expect(refusal).toBeVisible()
       await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
-      await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+      await expect(refusal.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
       // Not a success. The tick must not be drawn over a refusal.
       await expect(page.locator('.toast-success.show')).toHaveCount(0)
       // And it STAYS. The toast this replaced was gone in 1.8 seconds.
@@ -214,7 +216,8 @@ test.describe('flow 2 — the cap refuses in place, not in a vanishing toast', (
     watch(page, 'a free account with a slot to spare')
     await signIn(page, { plan: 'free', projects: CAP - 1 })
     await go(page, '/projects')
-    await page.getByRole('button', { name: 'New project' }).click()
+    // The title row's button: the other projects' list has a New project tile of its own while there is room.
+    await page.locator('.db-newwrap').getByRole('button', { name: 'New project' }).click()
     await expect(page).toHaveURL(/\/create\/palette$/)
     await expect(page.getByTestId('project-create-refusal')).toHaveCount(0)
     await context.close()
@@ -349,11 +352,13 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     // plan is selected — which is the cheapest per month, i.e. the headline.
     const chosen = ladder.find((pl) => pl.id === headline.id)
     if (chosen.trialDays > 0) {
-      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays}`)
+      // The free days end on day N and the charge lands the day after.
+      await expect(modal.locator('.ui-pro-steps')).toContainText(`Days 1 to ${chosen.trialDays}:`)
+      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays + 1}:`)
     }
     await expect(modal.locator('.ui-pro-steps')).toContainText(chosen.totalLabel)
 
-    // THE CTA NAMES THE TRIAL. The founder asked for it to be more obvious than
+    // THE CTA NAMES THE TRIAL. It must be more obvious than
     // a line of small print, and the button is the last thing read before the
     // decision. A cadence with no trial must NOT say it.
     const cta = modal.locator('.ui-pro-cta .btn').first()
@@ -385,7 +390,7 @@ test.describe('flow 2 — the checkout return page', () => {
 
       // The return page is a centred column (`.co-return`).
       const view = page.locator('.co-return')
-      await expect(view.getByRole('heading', { level: 1 })).toContainText(/on UIL4B Pro/i)
+      await expect(view.getByRole('heading', { level: 1 })).toContainText(/on UI L4B Pro/i)
       // No "a confirmation has been sent to …": whether Stripe emails a
       // receipt is a dashboard setting nobody here can see, so the page no
       // longer claims one was sent.
@@ -398,7 +403,7 @@ test.describe('flow 2 — the checkout return page', () => {
       await expect(ledger).toContainText(String(AI_LIMITS.pro.daily))
       await expect(ledger).toContainText(String(COLOUR_SYSTEMS.length))
       // The Exports row is short (the extra export names follow it); the details label reads "Plan" once Pro is active.
-      await expect(ledger).toContainText('No “Made with UIL4B” line. Use Export in the top bar.')
+      await expect(ledger).toContainText('No “Made with UI L4B” line. Use Export in the top bar.')
       await expect(view.locator('.co-details dt', { hasText: /^Plan$/ })).toHaveCount(1)
       await expect(ledger.getByRole('link', { name: /Alt Text/ })).toHaveAttribute('href', '/create/alt-text')
       // The details list names the account and the plan. The payment
@@ -423,7 +428,7 @@ test.describe('flow 2 — the checkout return page', () => {
     const view = page.locator('.co-return')
     await expect(view.getByRole('heading', { level: 1 })).toHaveText('Payment received.')
     await expect(view).toContainText(/still being attached/i)
-    await expect(view, 'must not claim an active subscription it cannot see').not.toContainText(/subscription is active|on UIL4B Pro/i)
+    await expect(view, 'must not claim an active subscription it cannot see').not.toContainText(/subscription is active|on UI L4B Pro/i)
     // Settling shows what is arriving as plain rows, not links, and offers a re-check.
     await expect(view.locator('.co-ledger a')).toHaveCount(0)
     await expect(view.getByRole('button', { name: 'Check again' })).toBeVisible()
@@ -533,40 +538,44 @@ test.describe('flow 4 — each live free format downloads under its own name', (
   const FREE_LIVE = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
   // Each free format and the file name it must download under.
   const FILE = {
-    kit: /ui-kit\.html$/,
+    kit: /-ui-kit-04-standards\.zip$/,
     html: /-style-guide\.html$/,
     md: /-style-guide\.md$/,
     png: /-style-guide\.png$/,
     jpeg: /-style-guide\.jpg$/,
     css: /\.tokens\.css$/,
     json: /\.tokens\.json$/,
+    tailwind: /-tailwind\.css$/,
+    contrast: /-contrast-pairs\.csv$/,
+    'contrast-json': /-contrast-pairs\.json$/,
   }
 
   test('every free format produces a file named for the format', async ({ browser }) => {
     const { context, page } = await open(browser, WIDTHS[1])
     watch(page, 'a free account exporting every format it is entitled to')
+    // The kit is built by the export route (a zip in the open theme); a stand-in answers it.
+    await mockThemeApi(page)
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, WORKED_BOARD)
     expect(FREE_LIVE.map((f) => f.id).sort()).toEqual(Object.keys(FILE).sort())
 
     for (const fmt of FREE_LIVE) {
       await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-      const panel = page.getByRole('dialog', { name: /Export your design system/i })
+      const panel = exportPanel(page)
       await expect(panel).toBeVisible()
-      await page.getByRole('radio', { name: new RegExp(fmt.name.replace(/[()]/g, '\\$&'), 'i') }).click()
-      const cta = panel.locator('.exp-foot button').last()
+      await chooseFormat(page, fmt.id)
+      const cta = primaryButton(page)
       // The label says what will happen, not what it costs.
-      await expect(cta).toContainText(/^Export /)
+      await expect(cta).toHaveText(actionLabel(fmt.id))
       await expect(cta).not.toContainText(/Pro|Soon/)
       const [download] = await Promise.all([page.waitForEvent('download'), cta.click()])
       expect(download.suggestedFilename(), `${fmt.name} must download as its own format`)
         .toMatch(FILE[fmt.id])
-      // The kit stays open only to report a font it could not embed (the font
-      // hosts are live network here); that notice follows a finished export.
-      if (fmt.id === 'kit' && await panel.getByRole('status').count()) {
-        await panel.getByRole('button', { name: 'Close', exact: true }).click()
-      }
-      // The panel closes after a successful export; the page is still the tool.
+      // The popup stays open after a finished export and says so in its status line
+      // so a second file is one more click.
+      await expect(cta, `${fmt.name}: the button offers another go`).toHaveText('Export again')
+      await expect(panel.locator('.xd-status'), `${fmt.name}: the dock says it downloaded`).toContainText(/downloaded/i)
+      await page.keyboard.press('Escape')
       await expect(panel).toHaveCount(0)
     }
     await context.close()
@@ -578,8 +587,11 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-    await page.getByRole('radio', { name: /Brand guidelines/i }).click()
-    await expect(page.locator('.exp-foot button').last()).toHaveText('Unlock with Pro')
+    await expect(exportPanel(page)).toBeVisible()
+    await chooseFormat(page, 'guidelines')
+    await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
+    await expect(categoryRadio(page, 'Slides'), 'and the rail names the document it locks').toHaveAccessibleName('Slides, 16:9, Pro')
+    await expect(primaryButton(page)).toHaveText('Unlock with Pro')
     // The wall goes to /plans, and asks
     // for nothing on the way.
     await page.getByRole('button', { name: /Unlock with Pro/i }).click()
@@ -639,6 +651,9 @@ test.describe('flow 5 — settings: name, theme and the delete confirmation', ()
       const go_ = page.getByRole('button', { name: /Permanently delete/i })
       await expect(go_, 'no password, no delete').toBeDisabled()
       await page.keyboard.type('hunter22')
+      // The password alone is not enough: the "I understand" box is the second step.
+      await expect(go_, 'a password without the box').toBeDisabled()
+      await page.getByLabel(/I understand/).check()
       await expect(go_).toBeEnabled()
       // The way back is as plain as the way through.
       await page.getByRole('button', { name: 'Cancel', exact: true }).click()

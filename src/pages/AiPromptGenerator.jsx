@@ -1,13 +1,20 @@
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
+import { openFirebaseGate } from '../utils/firebaseAccess'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { AI_LIMITS } from '../config/plans'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
-import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
+import { AI_IMAGE_CONSENT, AI_REGION_SCAN_NOTE } from '../config/aiImageConsent'
+import useAiRegion from '../hooks/useAiRegion'
+import { isRegionRefusal } from '../utils/aiRegion'
 import { auth as firebaseAuth } from '../utils/firebase'
 import AuthGate from '../components/AuthGate'
-import { describeProvider, providerBadgeStyle } from '../utils/aiProvider'
+import VerifyEmailPrompt from '../components/VerifyEmailPrompt'
+import AiLabel from '../components/AiLabel'
+import { isEmailUnverifiedReply } from '../utils/aiEmailGate'
+import { describeProvider } from '../utils/aiProvider'
+import ProviderBadge from '../components/ProviderBadge'
 import { RULE_CATEGORIES, PRESETS, buildPromptJson, buildPromptText } from '../data/promptRules'
 
 const TOOL_ID = 'prompts-ai'
@@ -31,6 +38,8 @@ const STYLES = [
 ]
 
 export default function AiPromptGenerator({ toast }) {
+  // This tool needs an account, and the page already loads the SDK: let the session restore.
+  useEffect(() => { openFirebaseGate() }, [])
   const [mode, setMode] = useState('builder') // 'builder' | 'brief'
   const [description, setDescription] = useState('')
   const [platform, setPlatform] = useState('general')
@@ -38,6 +47,9 @@ export default function AiPromptGenerator({ toast }) {
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  // Which request /api/ai refused for an unverified email: 'scan' or 'generate'
+  // (null when none). It picks the action to repeat once the address is verified.
+  const [verifyFor, setVerifyFor] = useState(null)
   const textareaRef = useRef(null)
   const { plan, isPro } = useSubscription()
   const dailyLimit = plan?.limits?.[TOOL_ID] ?? AI_LIMITS.free.daily
@@ -45,6 +57,11 @@ export default function AiPromptGenerator({ toast }) {
   // nothing ever consumed — so the meter reflects the account, not this
   // browser, and the monthly ceiling is visible before it bites.
   const quota = useAiQuota(TOOL_ID)
+  // In the UK, Switzerland and the EEA the photo scan is off (Google's Gemini
+  // terms); the text prompt tools keep working.
+  const region = useAiRegion()
+  // Stable across renders, unlike the `region` object, so callbacks can depend on it.
+  const { markBlocked } = region
 
   // JSON builder state
   const [subject, setSubject] = useState('')
@@ -74,6 +91,7 @@ export default function AiPromptGenerator({ toast }) {
     if (!refImage) return
     setScanning(true)
     setScannedRules([])
+    setVerifyFor(null)
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Sign in to scan photos')
@@ -90,6 +108,11 @@ export default function AiPromptGenerator({ toast }) {
         body: JSON.stringify({ task: 'scan-photo', image: base64, mimeType: refImage.type }),
       })
       const data = await r.json().catch(() => ({}))
+      if (isRegionRefusal(r.status, data)) markBlocked()
+      if (isEmailUnverifiedReply(r.status, data)) {
+        setVerifyFor('scan')
+        return
+      }
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       const rules = data.rules || []
       setScannedRules(rules)
@@ -100,7 +123,7 @@ export default function AiPromptGenerator({ toast }) {
     } finally {
       setScanning(false)
     }
-  }, [refImage, toast])
+  }, [refImage, toast, markBlocked])
 
   const applyScannedRules = useCallback(() => {
     const allRuleIds = RULE_CATEGORIES.flatMap(c => c.rules.map(r => r.id))
@@ -151,6 +174,7 @@ export default function AiPromptGenerator({ toast }) {
     }
     setBusy(true)
     setError(null)
+    setVerifyFor(null)
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
       if (!token) throw new Error('Sign in to use AI features')
@@ -169,8 +193,13 @@ export default function AiPromptGenerator({ toast }) {
         }),
       })
       const data = await r.json().catch(() => ({}))
+      if (isEmailUnverifiedReply(r.status, data)) {
+        setVerifyFor('generate')
+        return
+      }
       // Authoritative counts ride on every response, 429s included.
       quota.absorb(data)
+      if (isRegionRefusal(r.status, data)) region.markBlocked()
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`)
       recordUsage(TOOL_ID)
 
@@ -203,14 +232,21 @@ export default function AiPromptGenerator({ toast }) {
     }
   }
 
+  // The address is verified and the token is fresh: repeat what was refused.
+  const retryAfterVerify = () => {
+    const what = verifyFor
+    setVerifyFor(null)
+    if (what === 'scan') scanPhoto()
+    else if (what === 'generate') generate()
+  }
+
   const removeResult = (id) => setResults(prev => prev.filter(r => r.id !== id))
   const platformLabel = (id) => PLATFORMS.find(p => p.id === id)?.label || id
 
   return (
     <div className="sec">
       <div className="sec-h">
-        {/* THE EYEBROW IS GONE, THE ALPHA BADGE IS NOT. Founder, 2026-09-14,
-            continuing #382/#386: the 10px mono-caps "AI Tools" restated the
+        {/* THE EYEBROW IS GONE, THE ALPHA BADGE IS NOT. The 10px mono-caps "AI Tools" restated the
             section directly above an h1 reading "AI Image Prompt Generator",
             on a route the nav already has lit. But the badge riding inside it
             is the opposite of decoration — it is the only thing on the page
@@ -225,6 +261,7 @@ export default function AiPromptGenerator({ toast }) {
 
       <AuthGate featureLabel="generate AI image prompts">
         <QuotaMeter quota={quota} className="quota--tool" />
+        {verifyFor && <VerifyEmailPrompt onVerified={retryAfterVerify} />}
         {/* Mode toggle */}
         <div className="aipg-mode-toggle">
           <button type="button" className={`aipg-mode-btn${mode === 'builder' ? ' active' : ''}`} onClick={() => setMode('builder')}>
@@ -248,6 +285,10 @@ export default function AiPromptGenerator({ toast }) {
                       SCAN_SYSTEM_PROMPT). Said before upload, visibly.
                       This page has no route today; the notice is here so it
                       is true the day it gets one. */}
+                  {region.blocked ? (
+                  <p className="aipg-region-note" role="status" data-testid="ai-region-blocked" style={{ margin: '4px 0 0', fontSize: 12, lineHeight: 1.5, color: 'var(--t2)' }}>{AI_REGION_SCAN_NOTE}</p>
+                  ) : (
+                  <>
                   <p className="ai-image-consent" style={{ margin: '4px 0 8px', fontSize: 12, lineHeight: 1.5, color: 'var(--t2)' }}>{AI_IMAGE_CONSENT}</p>
                   {!refPreview ? (
                     <div
@@ -289,11 +330,13 @@ export default function AiPromptGenerator({ toast }) {
                           <label key={rule.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 'var(--radius-s)', background: scanChecked.has(rule.id) ? 'var(--accent-bg)' : 'var(--bg-1)', border: '1px solid ' + (scanChecked.has(rule.id) ? 'var(--accent)' : 'var(--border)'), cursor: 'pointer', transition: 'all .15s' }}>
                             <input type="checkbox" checked={scanChecked.has(rule.id)} onChange={() => setScanChecked(prev => { const n = new Set(prev); n.has(rule.id) ? n.delete(rule.id) : n.add(rule.id); return n })} style={{ accentColor: 'var(--accent)' }} />
                             <span style={{ flex: 1, fontSize: 12, fontWeight: 500, color: 'var(--t0)' }}>{rule.label}</span>
-                            <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: rule.confidence === 'high' ? 'rgba(16,185,129,.1)' : rule.confidence === 'medium' ? 'rgba(245,158,11,.1)' : 'rgba(156,163,175,.1)', color: rule.confidence === 'high' ? 'var(--ok)' : rule.confidence === 'medium' ? 'var(--warn)' : 'var(--t2)', textTransform: 'uppercase', letterSpacing: '.04em' }}>{rule.confidence}</span>
+                            <span style={{ fontSize: 13, fontWeight: 560, padding: '2px 6px', borderRadius: 4, background: rule.confidence === 'high' ? 'rgba(16,185,129,.1)' : rule.confidence === 'medium' ? 'rgba(245,158,11,.1)' : 'rgba(156,163,175,.1)', color: rule.confidence === 'high' ? 'var(--ok)' : rule.confidence === 'medium' ? 'var(--warn)' : 'var(--t2)', textTransform: 'capitalize' }}>{rule.confidence}</span>
                           </label>
                         ))}
                       </div>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
 
@@ -465,23 +508,11 @@ export default function AiPromptGenerator({ toast }) {
           {results.map(r => (
             <div key={r.id} className="aipg-result card">
               <div className="aipg-result-meta">
+                <AiLabel what="prompt" />
                 <span className="pl-tag">{platformLabel(r.platform)}</span>
                 {r.style && <span className="pl-tag">{r.style}</span>}
                 {r.json && <span className="pl-tag">JSON</span>}
-                {(() => {
-                  const p = describeProvider(r.provider)
-                  if (!p) return null
-                  return (
-                    <span
-                      data-testid="ai-provider-badge"
-                      data-provider={p.id}
-                      style={providerBadgeStyle(p)}
-                      title={p.title}
-                    >
-                      {p.label}
-                    </span>
-                  )
-                })()}
+                <ProviderBadge provider={describeProvider(r.provider)} />
                 <span className="aipg-result-brief" title={r.description}>
                   {r.description.length > 60 ? r.description.slice(0, 60) + '…' : r.description}
                 </span>

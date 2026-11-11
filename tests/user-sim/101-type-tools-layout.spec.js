@@ -16,7 +16,10 @@
 //
 // MUTATION: move the output after the panel in the JSX (or give the panel
 // `order: -1` below 900px) and the 390 cases fail on the fold check; drop
-// ToolLayout for a plain <div> and every case fails on the toolbar.
+// ToolLayout for a plain <div> and every case fails on the toolbar. (Type Scale
+// is the exception by design: its panel leads below 1024, so its output is the
+// first ladder row under the Base and Ratio strip at 390 and under the panel
+// card at 768.)
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -30,11 +33,22 @@ const TOOLS = [
     route: '/create/font-pair',
     title: 'Font Pair',
     output: '.fpr-page .fpr-specimen',
+    // A phone opens on the specimen (it is the first thing in the DOM), so the
+    // default rule applies: the output starts on the first screen. At 768 the
+    // two family cards and the preview text lead (the panel sits above the
+    // specimen until 1024), so the first screen must hold the cards themselves.
+    outputAt: { 768: '.fpr-page .fpr-fams' },
   },
   {
     route: '/create/type-scale',
     title: 'Type Scale',
     output: '.tsc-page .tsc-row',
+    // At 768 the panel card leads and is about a screen tall, so the first ladder
+    // row starts below the fold by design (fonts build spec, section 3). What
+    // must be on the first screen there is the work itself: Base and Ratio.
+    // On a phone the work is the Kerbside screen, under the width segment; the
+    // ladder follows it and starts below the fold.
+    outputAt: { 390: '.tsc-page .tsk', 768: '.tsc-page .tsc-sec-scale' },
   },
   {
     route: '/create/font-gallery',
@@ -66,7 +80,8 @@ for (const tool of TOOLS) {
             await go(page, tool.route)
             await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 
-            const bar = page.locator('[data-tool-toolbar]')
+            // The first toolbar carries the h1; Font Gallery has a second one for its filters.
+            const bar = page.locator('[data-tool-toolbar]').first()
             await expect(bar).toBeVisible()
             await expect(bar.getByRole('heading', { level: 1, name: tool.title })).toBeAttached()
             await expect(bar).not.toHaveClass(/is-measuring/)
@@ -88,11 +103,22 @@ for (const tool of TOOLS) {
             expect(row.height, 'the toolbar is taller than one row').toBeLessThan(72)
             expect(row.right, 'the toolbar runs past the screen').toBeLessThanOrEqual(row.vw)
 
-            const out = page.locator(tool.output).first()
+            const phoneRule = width < 768 ? tool.phone : null
+            const out = page.locator((tool.outputAt && tool.outputAt[width]) || tool.output).first()
             await expect(out, 'the output did not render').toBeVisible()
-            const top = await out.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
             const fold = await page.evaluate(() => window.innerHeight)
-            expect(top, `the output starts at y=${Math.round(top)}, below the ${fold}px fold`).toBeLessThan(fold - 60)
+            if (phoneRule) {
+              const first = page.locator(phoneRule.first).first()
+              await expect(first, 'the first control did not render').toBeVisible()
+              const firstTop = await first.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
+              expect(firstTop, `the first control starts at y=${Math.round(firstTop)}, below the ${fold}px fold`).toBeLessThan(fold - 60)
+              const outTop = await out.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
+              expect(outTop, `the output starts at y=${Math.round(outTop)}, past screen ${phoneRule.outputWithin}`).toBeLessThan(fold * phoneRule.outputWithin)
+              expect(outTop, 'the output should follow the controls on a phone').toBeGreaterThan(firstTop)
+            } else {
+              const top = await out.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)
+              expect(top, `the output starts at y=${Math.round(top)}, below the ${fold}px fold`).toBeLessThan(fold - 60)
+            }
 
             const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
             expect(overflow, 'the page scrolls sideways').toBeLessThanOrEqual(1)
@@ -133,22 +159,26 @@ test('/create/aspect-ratio · the number fields do not zoom a touch phone', asyn
   }
 })
 
-test('/create/aspect-ratio · Swap run from the phone sheet swaps the ratio', async ({ page }) => {
+test('/create/aspect-ratio · Swap run on the narrowest phone swaps the ratio', async ({ page }) => {
   watch(page, 'someone flipping a size to portrait on a phone')
-  // At 390 every action fits on the row; the narrowest phone sends Swap to the sheet.
+  // With Copy size in the dock the row holds only the icon-only Swap, so it
+  // stays inline even at 320 and there is no sheet. (The phone-sheet route is
+  // covered by 100-tool-toolbar-one-row: Gradient Reset and Palette Reset, where
+  // items still overflow.) Swap must be a real, clickable button on the row,
+  // not left behind a sheet that no longer exists or covered by the dock.
   await page.setViewportSize({ width: 320, height: 640 })
   await go(page, '/create/aspect-ratio')
   const w = page.getByRole('spinbutton', { name: 'Ratio width' })
   const h = page.getByRole('spinbutton', { name: 'Ratio height' })
   await expect(w).toHaveValue('1920')
   await expect(h).toHaveValue('1080')
-  await page.getByRole('button', { name: 'More', exact: true }).click()
-  const sheet = page.getByRole('dialog', { name: 'More' })
-  await sheet.getByRole('button', { name: 'Swap width and height' }).click()
-  await expect(sheet).toBeHidden()
+  const swap = page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Swap width and height' })
+  await expect(swap).toBeVisible()
+  await swap.click()
   await expect(w).toHaveValue('1080')
   await expect(h).toHaveValue('1920')
   await expect(page.locator('.arc-page .rc-vis-tag')).toHaveText('Portrait')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('/create/font-gallery · a category chosen in the phone sheet filters the list', async ({ page }) => {
@@ -157,14 +187,14 @@ test('/create/font-gallery · a category chosen in the phone sheet filters the l
   await go(page, '/create/font-gallery')
   await expect(page.locator('.fg-card').first()).toBeVisible()
   const count = page.locator('.fg-count')
-  await expect(count).not.toContainText(' in ')
+  await expect(count).not.toContainText('serif')
   await page.getByRole('button', { name: 'Filters', exact: true }).click()
   const sheet = page.getByRole('dialog', { name: 'Filters' })
-  const serif = sheet.getByRole('button', { name: 'Serif', exact: true })
+  const serif = sheet.getByRole('button', { name: /^Serif \d/ })
   await serif.click()
   await expect(serif).toHaveAttribute('aria-pressed', 'true')
   await page.keyboard.press('Escape')
   await expect(sheet).toBeHidden()
-  await expect(count).toContainText('in Serif')
+  await expect(count).toContainText('serif families')
   await expect(page.locator('.fg-card').first()).toBeVisible()
 })

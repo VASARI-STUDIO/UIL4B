@@ -113,7 +113,7 @@ test('a malformed or absent project never throws', () => {
 /* ── the sentence on the card ───────────────────────────────────── */
 
 test('THE FOUNDER’S SENTENCE: colours but no type scale says so, in words', () => {
-  // “progress, so a project with colours but no type scale says so”. This is the
+  // A project with colours but no type scale says so. This is the
   // string that requirement becomes, and it was the one thing in this feature
   // that mutation testing found uncovered: breaking partsLabel so it always
   // returned ‘All four parts’ left the entire unit suite green.
@@ -348,10 +348,10 @@ test('the destination is whatever onboarding says, so a new account is not skipp
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
 test('/home reaches the sales page without consulting auth at all', () => {
-  // The founder's exception: "unless they click they home button or navigate to
-  // specifly /home". The guarantee is structural — App.jsx answers /home in an
-  // early return ABOVE the root decision, so there is no code path on which a
-  // signed-in visitor at /home is redirected anywhere.
+  // A signed-in visitor can always reach the sales page by clicking the home
+  // button or going to /home. The guarantee is structural — App.jsx answers
+  // /home in an early return ABOVE the root decision, so there is no code path
+  // on which a signed-in visitor at /home is redirected anywhere.
   const src = read('src/App.jsx')
   const homeBranch = src.indexOf("location.pathname === '/home'")
   const rootBranch = src.indexOf("location.pathname === '/'")

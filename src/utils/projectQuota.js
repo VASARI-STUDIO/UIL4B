@@ -1,9 +1,9 @@
 // When to tell a free user where they stand against the project cap.
 //
 // This is the "when do we warn" decision on its own, away from any DOM, because
-// it is a judgement call and not a rendering detail. The founder's constraint on
+// it is a judgement call and not a rendering detail. One constraint on
 // this surface is that a counter which nags is worse than no counter, and the
-// audit's constraint is that a cap the user meets with no warning reads as the
+// other is that a cap the user meets with no warning reads as the
 // product being broken rather than as the product being paid. Those pull in
 // opposite directions, and the resolution is a THRESHOLD rather than a boolean:
 // stay quiet while the allowance is genuinely comfortable, speak once it is not.

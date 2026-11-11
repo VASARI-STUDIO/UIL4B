@@ -18,7 +18,6 @@ import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 // Palette Builder will LOAD, which is why both sets are still named here.
 const FREE_BRANDS = BRAND_PALETTES.filter((brand) => brand.free === true)
 const PAID_BRANDS = BRAND_PALETTES.filter((brand) => brand.free !== true)
-const TEASED = 3 // LOCKED_TEASE — placeholders shown before the wall
 
 // `eyebrow` is the results-row label each library shows WHILE BROWSING, and the
 // two are deliberately different now. Parity here is of STRUCTURE — same
@@ -48,20 +47,20 @@ test.describe('Discover libraries share one header', () => {
       const hero = page.locator('.dgh-hero')
       await expect(hero).toBeVisible()
       await expect(hero.getByRole('heading', { level: 1, name: library.title })).toBeVisible()
-      // THE DESCRIPTION IS ASSERTED GONE, NOT PRESENT (founder decision,
-      // 2026-09-13), and that is a reversal of what this line said. It used to
+      // THE DESCRIPTION IS ASSERTED GONE, NOT PRESENT, and that is a reversal of
+      // what this line said. It used to
       // read "Title + description are what make the two pages read as one
       // surface" and assert the paragraph was not empty. The paragraph is
       // exactly what stopped being shared: BOTH libraries ran one template
       // sentence, "...with a point of view ... make it yours.", and the parity
-      // it produced was the parity of a filled-in blank. The founder deleted
-      // both. What makes the two pages one surface is the shared component and
+      // it produced was the parity of a filled-in blank. Both have been
+      // deleted. What makes the two pages one surface is the shared component and
       // its rendered surface, which the two tests below this one measure
       // directly; a slot that is empty on both is still parity, and this
       // asserts the template cannot come back rather than asserting the slot.
       await expect(hero.locator('p')).toHaveCount(library.blurb ? 1 : 0)
-      // REGRESSION GUARD (#surface-headers-read-as-ai). The founder marked both
-      // of these "AI" on the Font Gallery masthead: a taxonomy eyebrow above an
+      // REGRESSION GUARD (#surface-headers-read-as-ai). Both
+      // of these read as AI on the Font Gallery masthead: a taxonomy eyebrow above an
       // h1 that already says it, and a display numeral counting the catalogue.
       // They are asserted GONE rather than merely un-asserted, so a future hero
       // edit cannot quietly reinstate them.
@@ -157,7 +156,7 @@ test.describe('Discover libraries share one header', () => {
       // compared separately below. It used to be read as
       // `getComputedStyle(el.querySelector('p'))` unconditionally, which throws
       // outright on a masthead with no description - and two of these four have
-      // none since the founder deleted the shared template sentence. Folding a
+      // none since the shared template sentence was removed. Folding a
       // null into the shape object instead would have been worse than throwing:
       // `{ pSize: null }` and `{ pSize: '19px' }` are unequal, so the parity
       // assertion would have started failing for a difference in CONTENT while
@@ -318,16 +317,16 @@ test.describe('Discover libraries share one header', () => {
   test('the Gradient Library keeps its no-results recovery path', async ({ page }) => {
     watch(page, 'designer filtering the Gradient Library down to nothing')
     await go(page, '/discover/gradients')
-    await expect(page.locator('.grg-card').first()).toBeVisible()
+    await expect(page.locator('.grg-card:not(.geg-fade *)').first()).toBeVisible()
 
     await page.getByLabel('Search gradients').fill('zzzzz-no-such-gradient')
-    await expect(page.locator('.grg-card')).toHaveCount(0)
+    await expect(page.locator('.grg-card:not(.geg-fade *)')).toHaveCount(0)
     const empty = page.locator('.grg-empty')
     await expect(empty).toBeVisible()
     await expect(empty).toContainText('No gradients match')
 
     await empty.getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.locator('.grg-card').first()).toBeVisible()
+    await expect(page.locator('.grg-card:not(.geg-fade *)').first()).toBeVisible()
     await expect(page.locator('.drh-head p')).toContainText(/\d+ gradients/)
   })
 })
@@ -338,7 +337,7 @@ test.describe('Discover libraries share one header', () => {
 test.describe('the Palette Library carries the brand systems', () => {
   // ── WHICH VIEWER SEES A BRAND SYSTEM, SINCE THE TIER CAP ──────
   //
-  // The founder's rungs are 3 / 10 / everything, counted down the library in
+  // The tier rungs are 3 / 10 / everything, counted down the library in
   // its own order, and the brand systems sit after the 64 curated palettes. So
   // below the top rung no brand card renders AT ALL — not even a `free: true`
   // one. The flag still decides what the Palette Builder will LOAD (44 covers
@@ -355,7 +354,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/discover/palettes')
 
-    const cards = page.locator('.pgal-card')
+    const cards = page.locator('.pgal-card:not(.geg-fade *)')
     await expect(cards).toHaveCount(LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
@@ -365,8 +364,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     for (const brand of PAID_BRANDS) {
       await expect(page.locator('.pgal-card', { hasText: brand.name })).toHaveCount(1)
     }
-    await expect(page.locator('.lockt-card')).toHaveCount(0)
-    await expect(page.locator('.lockt-cta')).toHaveCount(0)
+    await expect(page.locator('.geg')).toHaveCount(0)
 
     // Distinguishable: every brand card carries a visible Brand badge, and no
     // curated card does.
@@ -399,18 +397,18 @@ test.describe('the Palette Library carries the brand systems', () => {
     await go(page, '/discover/palettes')
 
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(0)
     // The design's heading for the Brand filter (App file, galHeading).
     await expect(page.locator('.drh-head h2')).toHaveText('Brand palettes')
     await expect(page.locator('.drh-head p')).toHaveText(`${BRAND_LIBRARY_PALETTES.length} palettes`)
 
     await page.getByRole('button', { name: 'Curated', exact: true }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'All palettes' }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(LIBRARY_PALETTES.length)
   })
 
   test('search reaches a brand by name, and no-results recovers', async ({ page }) => {
@@ -418,9 +416,9 @@ test.describe('the Palette Library carries the brand systems', () => {
     await signIn(page, { plan: 'pro' })
     await go(page, '/discover/palettes')
 
-    const search = page.getByPlaceholder('Search by name, hex, colour or mood…')
+    const search = page.getByPlaceholder('Search palettes')
     await search.fill('Netflix')
-    await expect(page.locator('.pgal-card')).toHaveCount(1)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(1)
     await expect(page.locator('.pgal-name')).toHaveText('Netflix')
     await expect(page.locator('.pgal-badge')).toBeVisible()
 
@@ -434,11 +432,11 @@ test.describe('the Palette Library carries the brand systems', () => {
     await expect(page.locator('.pgal-name')).toHaveText(spotify.name)
 
     await search.fill('zzzzz-not-a-palette')
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     const empty = page.locator('.pgl-empty')
     await expect(empty).toBeVisible()
     await empty.getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(LIBRARY_PALETTES.length)
   })
 
   test('a withheld brand system is withheld, not routed around', async ({ page }) => {
@@ -458,11 +456,11 @@ test.describe('the Palette Library carries the brand systems', () => {
     // An open palette still hands off straight to the builder with its colours,
     // so "no deep link" below is a statement about the withheld rows and not
     // about a page that has stopped linking anywhere.
-    const open = page.locator('.pgal-card').first()
+    const open = page.locator('.pgal-card:not(.geg-fade *)').first()
     await expect(open.getByRole('link', { name: /^Open / })).toHaveAttribute('href', /^\/create\/palette\?c=/)
 
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     await expect(page.locator('.pgal-use--pro')).toHaveCount(0)
 
     // No withheld brand has a card, a badge, a link or a hex anywhere — not the
@@ -478,29 +476,38 @@ test.describe('the Palette Library carries the brand systems', () => {
     // nor its hex may return anything. The haystack indexes every palette's hex
     // values, so filtering the FULL library would let a visitor CONFIRM a
     // locked brand's colours by typing them — a disclosure dressed as a search.
-    const search = page.getByPlaceholder('Search by name, hex, colour or mood…')
+    const search = page.getByPlaceholder('Search palettes')
     const paid = PAID_BRANDS[0]
     await search.fill(paid.name)
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     await search.fill(paid.colors[0])
-    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(0)
     await expect(page.locator('.pgal-name', { hasText: paid.name })).toHaveCount(0)
     await search.fill('')
 
-    // What replaces them: placeholders and one wall into the canonical gate,
-    // naming the true remainder.
+    // What replaces them: the Pro end gate over faded neutral cards, naming the
+    // true remainder. The faded cards are stand-ins: no withheld brand's name
+    // or colour is in them.
     await page.getByRole('button', { name: 'All palettes' }).click()
-    await expect(page.locator('.lockt-card')).toHaveCount(TEASED)
+    const gate = page.locator('.geg[data-gate="pro"]')
+    await expect(gate).toHaveCount(1)
     // The remainder as a NUMBER: a substring check for "91" is satisfied by
     // "191" and by any other figure that happens to contain it.
     const remaining = LIBRARY_PALETTES.length - 10
-    expect((await page.locator('.lockt-cta-head').innerText()).match(/\d+/g).map(Number))
+    expect((await gate.locator('.geg-h').innerText()).match(/\d+/g).map(Number))
       .toContain(remaining)
+    const fade = gate.locator('.geg-fade')
+    expect(await fade.locator('.pgal-card').count(), 'the gate has no faded cards - the check below would be vacuous').toBeGreaterThan(0)
+    const fadedHtml = await fade.evaluate((el) => el.innerHTML)
+    for (const brand of [PAID_BRANDS[0], FREE_BRANDS[0]]) {
+      expect(fadedHtml, `${brand.name} is named in the faded cards`).not.toContain(brand.name)
+      for (const hex of brand.colors) expect(fadedHtml.toLowerCase(), `${brand.name}'s ${hex} is in the faded cards`).not.toContain(hex.toLowerCase())
+    }
   })
 })
 
-// Founder request, 2026-09-03: "i sohuld also be able to access icon library
-// from the discober tab". The library itself did not move — it is still
+// The icon library is reachable from the Discover tab. The library itself did
+// not move — it is still
 // /create/icons, and #292/#306 had already dressed it in the shared Discover
 // browse language — so what is pinned here is the REACH: a visitor who is on
 // Discover, on a phone or a desktop, can get to it without going via Create.
@@ -511,8 +518,7 @@ test.describe('the Icon Library is reachable from Discover', () => {
 
     const card = page.locator('.surface-card', { hasText: 'Icon Library' }).first()
     await expect(card).toBeVisible()
-    // Live, not staged: a "Soon" badge here would be the same dead end the
-    // founder was reporting.
+    // Live, not staged: a "Soon" badge here would be a dead end.
     await expect(card.locator('.soon-badge')).toHaveCount(0)
     await expect(card).toHaveAttribute('href', '/create/icons')
 
@@ -535,7 +541,7 @@ test.describe('the Icon Library is reachable from Discover', () => {
     await go(page, '/discover')
 
     // Desktop: the Discover pill opens the mega-menu. Clicking, not hovering —
-    // the founder's 2026-09-02 direction is no hover-dependent affordances.
+    // affordances must not depend on hover.
     await page.getByRole('button', { name: 'Discover', exact: true }).first().click()
     const desktopRow = page.locator('a[href="/create/icons"]', { hasText: 'Icon Library' }).first()
     await expect(desktopRow).toBeVisible()

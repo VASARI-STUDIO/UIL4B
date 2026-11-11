@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LibraryCard from '../library/LibraryCard'
 import LibraryGrid from '../library/LibraryGrid'
 import { paletteBuilderUrl } from '../../data/paletteGallery'
 import { setGradientDraft, resetGradientDraft } from '../../utils/colorHandoff'
 import { useProject } from '../../contexts/ProjectContext'
+import { useLoginPrompt } from '../../contexts/LoginPromptContext'
 
 // Colorhunt-style palette gallery — shared by the Discover palettes view and
 // the Palette Builder's colour-gallery popup. The rows come from the page that
@@ -40,17 +41,6 @@ function EyeGlyph() {
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
       <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-}
-
-function BuilderGlyph() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="13" r="2.5" />
-      <circle cx="8.5" cy="7.5" r="2.5" /><circle cx="6.5" cy="14" r="2.5" />
-      <path d="M12 22a10 10 0 1 1 0-20 8 8 0 0 1 0 16h-1.5a1.5 1.5 0 0 0 0 3 1.5 1.5 0 0 1 0 1z" />
     </svg>
   )
 }
@@ -97,7 +87,7 @@ function HexGlyph() {
 function paletteCss(palette) {
   const slug = palette.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'palette'
   const lines = palette.colors.map((hex, i) => `  --${slug}-${(i + 1) * 100}: ${hex.toUpperCase()};`)
-  return `/* ${palette.name} — UIL4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
+  return `/* ${palette.name} — UI L4B Palette Library */\n:root {\n${lines.join('\n')}\n}\n`
 }
 
 function CheckGlyph() {
@@ -118,17 +108,21 @@ function CheckGlyph() {
 export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = [], labelledBy, metaOf, hexChips = false }) {
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
-  const { setPalette, canSaveProjects } = useProject()
+  const { saveProject, canSaveProjects, projectCountPending } = useProject()
+  const { requireLogin } = useLoginPrompt()
 
-  const toggleLike = useCallback((id) => {
-    setLikes(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      try { localStorage.setItem(LIKES_KEY, JSON.stringify([...next])) } catch { /* quota / disabled */ }
-      return next
-    })
-  }, [])
+  // Likes belong to an account: signed out, a press asks to sign in first and
+  // the like lands once it succeeds. The stored set is read again after the
+  // wait, because signing in may have merged the account's likes into it, and
+  // written before the state, because a popup grid can close during sign-in.
+  const toggleLike = useCallback(async (id) => {
+    if (!await requireLogin('like palettes', { free: true, signup: true })) return
+    const next = loadLikes()
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    try { localStorage.setItem(LIKES_KEY, JSON.stringify([...next])) } catch { /* quota / disabled */ }
+    setLikes(next)
+  }, [requireLogin])
 
   const copyHex = useCallback((hex) => {
     navigator.clipboard.writeText(hex).then(() => {
@@ -161,20 +155,45 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
     }
   }, [navigate, toast])
 
-  // Write into the shared design the way the Palette Builder does, then send
-  // the user to Projects to name and keep it. Deliberately NOT a silent save:
-  // saveProject needs a name, and inventing one on the user's behalf is how a
-  // projects list fills up with things nobody chose.
-  const saveToProject = useCallback((palette) => {
-    if (!canSaveProjects) {
-      toast?.('Sign in to save palettes to a project')
-      navigate('/login')
+  // Save the palette as a new project, named after it, without leaving the
+  // gallery (so the search and scroll position survive). The palette goes in
+  // as a patch to the saved copy only: the working design is left alone. The
+  // toast offers a link to open the new project. A full free plan, or any other
+  // refusal from saveProject, shows as the message saveProject already words.
+  const saveNow = useCallback((palette) => {
+    try {
+      const id = saveProject(palette.name, {
+        patch: { palette: { colors: palette.colors, baseColors: palette.colors, base: palette.colors[0] } },
+      })
+      toast?.(`Saved ${palette.name} to a new project`, 'success', {
+        action: { label: 'Open', onAction: () => navigate(`/projects/${id}`) },
+      })
+    } catch (err) {
+      toast?.(err?.message || 'Couldn’t save the palette — try again', 'error')
+    }
+  }, [saveProject, navigate, toast])
+
+  // Signed out, ask to sign in with the same popup Like uses. The save runs
+  // once the account is live: saveNow above still holds the signed-out project
+  // store at that point, so the palette waits in a ref and the effect saves it
+  // on the render where saving is allowed.
+  const pendingSaveRef = useRef(null)
+  useEffect(() => {
+    if (!canSaveProjects || projectCountPending || !pendingSaveRef.current) return
+    const palette = pendingSaveRef.current
+    pendingSaveRef.current = null
+    saveNow(palette)
+  }, [canSaveProjects, projectCountPending, saveNow])
+
+  const saveToProject = useCallback(async (palette) => {
+    if (canSaveProjects) {
+      saveNow(palette)
       return
     }
-    setPalette({ colors: palette.colors, baseColors: palette.colors, base: palette.colors[0] })
-    toast?.(`${palette.name} loaded — name it to save`)
-    navigate('/projects')
-  }, [canSaveProjects, navigate, setPalette, toast])
+    pendingSaveRef.current = palette
+    const user = await requireLogin('save palettes to a project', { free: true, signup: true })
+    if (!user) pendingSaveRef.current = null
+  }, [canSaveProjects, saveNow, requireLogin])
 
   return (
     <LibraryGrid className="pgal-grid" labelledBy={labelledBy}>
@@ -245,16 +264,12 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
           // reader never meets a control that appears only under a mouse. Pro
           // brand systems are excluded — the builder owns that gate, and
           // handing the colours over here would route around it.
+          //
+          // No "open in the builder" action here: the "Open" link in the foot is
+          // that link and is always visible, so a second one would be an extra
+          // tab stop to the same place.
           actions={!onPick && !p.pro ? (
             <>
-              <Link
-                className="pgal-act"
-                to={paletteBuilderUrl(p.colors)}
-                title="Open in the Palette Builder"
-                aria-label={`Open ${p.name} in the Palette Builder`}
-              >
-                <BuilderGlyph /><span>Builder</span>
-              </Link>
               <button
                 type="button"
                 className="pgal-act"

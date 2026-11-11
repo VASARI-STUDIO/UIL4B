@@ -64,14 +64,23 @@
 // forced into a category it does not belong to.
 import { CREATE_GROUPS } from '../src/data/toolTree.js'
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, TOPICS } from '../src/data/learnIndex.js'
+import { HOME_SHARE_IMAGE } from '../src/data/routeMetaMap.js'
 
 export const CARD_DIR = '/previews'
 
-/** The card every route falls back to — and the RIGHT card for the homepage. */
+/**
+ * The card every route falls back to — and the RIGHT card for the homepage.
+ *
+ * It is the brand kit's own Open Graph card (the logo on ivory), committed as
+ * exported rather than drawn by og-cards.mjs. `twitterFile` is the kit's X
+ * card, the 2:1 crop X shows, used as twitter:image wherever this card is the
+ * og:image. The section cards below are 1200x630 for both.
+ */
 export const DEFAULT_CARD = Object.freeze({
   id: 'og-image',
   file: 'og-image.png',
-  alt: 'UI L4B Design Toolkit — colour, icon, emoji and imagery tools',
+  twitterFile: 'x-card.png',
+  alt: 'UI L4B logo on ivory',
 })
 
 /**
@@ -143,11 +152,11 @@ export const SECTIONS = Object.freeze([
   Object.freeze({
     id: 'discover',
     label: 'Discover',
-    blurb: 'Curated palettes, gradients and prompts',
+    blurb: 'Curated palettes and gradients',
     hue: 'component',
     group: null,
-    tools: Object.freeze(['Palette Library', 'Gradient Library', 'Prompt Library']),
-    routes: Object.freeze(['/discover', '/discover/palettes', '/discover/gradients', '/discover/prompts']),
+    tools: Object.freeze(['Palette Library', 'Gradient Library']),
+    routes: Object.freeze(['/discover', '/discover/palettes', '/discover/gradients']),
   }),
   Object.freeze({
     id: 'plans',
@@ -210,8 +219,26 @@ export function cardFor(pathname) {
   }
 }
 
+/**
+ * The sales page's card, for `/` only. It is not one of the section cards: it is
+ * a JPEG rendered from the page itself (scripts/render-home-og.mjs), it lives
+ * outside CARD_DIR, and it is deliberately absent from cardFor() and
+ * allCardFiles(), which describe the generated PNG set. `path` is what moves it
+ * out of CARD_DIR. It is also what X shows, so it has no `twitterFile`.
+ */
+export const HOME_CARD = Object.freeze({
+  id: 'home',
+  path: HOME_SHARE_IMAGE.path,
+  alt: HOME_SHARE_IMAGE.alt,
+})
+
 /** Absolute URL for a card, which is what og:image requires. */
-export const cardUrl = (origin, card) => `${origin}${CARD_DIR}/${card.file}`
+export const cardUrl = (origin, card) => `${origin}${card.path ?? `${CARD_DIR}/${card.file}`}`
+
+/** The twitter:image for a card: its X-specific file if it has one. */
+export const twitterCardUrl = (origin, card) => (card.twitterFile
+  ? `${origin}${CARD_DIR}/${card.twitterFile}`
+  : cardUrl(origin, card))
 
 /** Every card file the site references, for the "does it exist" test. */
 export function allCardFiles() {

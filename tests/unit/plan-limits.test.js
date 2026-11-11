@@ -94,7 +94,7 @@ test('no surface anywhere still ships the retired 1,000-per-day promise', () => 
 })
 
 test('the one-off tier is no longer offered for sale', () => {
-  // The founder pulled it: a third billing tab whose checkout stayed disabled
+  // That tab was pulled: a third billing tab whose checkout stayed disabled
   // pending a live Stripe price. Existing entitlements are still honoured by
   // planForUser — this only asserts it stopped being ADVERTISED.
   const plans = stripComments(read('src/pages/Pricing.jsx'))

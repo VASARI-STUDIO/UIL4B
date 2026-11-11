@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  filterGalleryTypefaces, filterPickableTypefaces, formatSubsets, isGalleryTypeface,
-  isPickableTypeface, ladderWeights, weightName,
+  FONT_CATEGORIES, GALLERY_CATEGORIES, categoryLabel, filterGalleryListTypefaces, filterGalleryTypefaces,
+  filterPickableTypefaces, formatSubsets, isGalleryTypeface, isPickableTypeface, ladderWeights, weightName,
 } from '../../src/utils/fontGallery.js'
 
 const font = (family, category = 'sans-serif', subsets = ['latin']) => ({
@@ -78,6 +78,42 @@ test('the picker keeps the ordinary text families and tolerates bad entries', ()
 })
 
 /* ── The full-width specimen row's own data (font-gallery-one-per-row) ────── */
+
+test('the gallery list keeps monospace families that can render a specimen and drops the ones that cannot', () => {
+  const kept = [
+    font('JetBrains Mono', 'monospace'),
+    font('Roboto Mono', 'monospace'),
+    font('Space Mono', 'monospace'),
+  ]
+  const dropped = [
+    font('Noto Sans Mono Symbols', 'monospace', ['symbols']),
+    font('Libre Barcode 128 Mono', 'monospace'),
+    font('Noto Emoji Mono', 'monospace'),
+    font('Noto Music', 'monospace', ['music']),
+  ]
+  const text = [font('Inter'), font('Lora', 'serif'), font('Caveat', 'handwriting')]
+
+  assert.deepEqual(
+    filterGalleryListTypefaces([...text, ...kept, ...dropped]).map(f => f.family),
+    [...text, ...kept].map(f => f.family),
+  )
+  // The curated filter still drops mono, so the list is where Mono comes back.
+  assert.deepEqual(filterGalleryTypefaces(kept), [])
+  assert.deepEqual(filterGalleryListTypefaces(kept), kept)
+  // Icon and emoji families outside the monospace category stay out too.
+  assert.deepEqual(filterGalleryListTypefaces([font('Material Icons'), font('Noto Color Emoji')]), [])
+  assert.deepEqual(filterGalleryListTypefaces(null), [])
+})
+
+test('category labels come from one map in sentence case, with Mono as the short chip', () => {
+  assert.deepEqual(
+    GALLERY_CATEGORIES.map(c => c.label),
+    ['All', 'Sans serif', 'Serif', 'Display', 'Script', 'Mono'],
+  )
+  assert.equal(categoryLabel('monospace'), 'Monospace')
+  assert.equal(categoryLabel('sans-serif'), 'Sans serif')
+  assert.ok(FONT_CATEGORIES.every(c => GALLERY_CATEGORIES.some(g => g.id === c.id && g.label === c.label)))
+})
 
 test('the weight ladder keeps both ends and samples the middle evenly', () => {
   // Nine weights is the widest a Google family goes, and it is the case the
@@ -177,7 +213,10 @@ const pickerChipIds = () => {
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
   const block = code.match(/const CATS\s*=\s*\[([\s\S]*?)\n\]/)
   assert.ok(block, 'CATS array not found in FontBrowseDialog source')
-  return [...block[1].matchAll(/id:\s*'([^']+)'/g)].map(m => m[1])
+  // The Gallery's own set is spread in from FONT_CATEGORIES; the dialog's extra
+  // entries are written out beside it.
+  const shared = /\.\.\.FONT_CATEGORIES/.test(block[1]) ? FONT_CATEGORIES.map(c => c.id) : []
+  return [...shared, ...[...block[1].matchAll(/id:\s*'([^']+)'/g)].map(m => m[1])]
 }
 
 test('every category the picker can serve has a chip that reaches it', () => {

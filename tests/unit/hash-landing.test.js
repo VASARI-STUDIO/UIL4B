@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { landOnHash } from '../../src/utils/hashLanding.js'
+import { landOnHash, refreshScrollLimit } from '../../src/utils/hashLanding.js'
 
 function frames(t) {
   let time = 0
@@ -9,7 +9,7 @@ function frames(t) {
   for (const [name, value] of Object.entries({
     requestAnimationFrame: (fn) => { pending.set(++next, fn); return next },
     cancelAnimationFrame: (id) => pending.delete(id),
-    document: { getElementById: () => null },
+    document: { getElementById: () => null, querySelector: () => null },
     window: { scrollY: 0, innerHeight: 900 },
     getComputedStyle: () => ({ scrollMarginTop: '88px', scrollPaddingTop: '0px' }),
   })) {
@@ -56,6 +56,19 @@ test('native landing is immediate and uses scrollIntoView for CSS margins', (t) 
   clock.tick()
   clock.tick()
   assert.deepEqual(calls, [{ block: 'start', behavior: 'instant' }])
+})
+
+test('leaves landing to the page while a homepage stand-in is present', (t) => {
+  const clock = frames(t)
+  document.querySelector = (selector) => {
+    assert.equal(selector, '[data-deferred-hold]')
+    return {}
+  }
+  document.getElementById = () => ({ scrollIntoView: () => assert.fail('must not scroll before the sections arrive') })
+  landOnHash('#plans', () => null)
+  clock.tick()
+  clock.tick()
+  assert.equal(clock.pending.size, 0)
 })
 
 test('missing targets stop retrying at two seconds', (t) => {
@@ -144,4 +157,11 @@ test('empty hashes schedule nothing and malformed encoding does not throw', (t) 
   clock.tick()
   cancel()
   assert.equal(clock.pending.size, 0)
+})
+
+test('refreshScrollLimit re-measures Lenis and tolerates no scroller', () => {
+  let resizes = 0
+  refreshScrollLimit(() => ({ resize: () => { resizes++ } }))
+  assert.equal(resizes, 1)
+  assert.doesNotThrow(() => refreshScrollLimit(() => null))
 })

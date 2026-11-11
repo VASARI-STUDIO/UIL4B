@@ -28,6 +28,7 @@
 // "presentation only, it never writes a route down" is a claim, and an
 // unchecked claim is just a parallel list with better manners.
 import test from 'node:test'
+import { spawnSync } from 'node:child_process'
 import assert from 'node:assert/strict'
 import {
   CREATE_GROUPS,
@@ -179,11 +180,6 @@ test('the Discover spec writes no /create/ route down', () => {
 
 // ── Links into the Create tree from outside it ──────────────────────────────
 
-/** Every absolute path this .jsx file writes down, comments stripped. */
-function pathLiterals(file) {
-  const src = stripComments(read(file))
-  return [...new Set([...src.matchAll(/(['"])(\/[a-z0-9\-/]*)\1/g)].map((m) => m[2]))]
-}
 
 test('categoryDestination restates CreateTool own rule, and never returns a bounce', () => {
   // The rule lives in CreateTool.jsx as a redirect branch inside a .jsx module
@@ -216,6 +212,27 @@ test('categoryDestination restates CreateTool own rule, and never returns a boun
   assert.throws(() => categoryDestination('not-a-group'), /not a Create group/)
 })
 
+// A footer row spread in as `...(TOOL_VOTES_ON ? [ ... ] : [])` exists only while
+// the roadmap-voting flag is on. The gated rows are split from the always-there
+// ones so the always-there ones keep every check they had.
+const GATE = /\.\.\.\(TOOL_VOTES_ON\s*\?\s*\[([\s\S]*?)\]\s*:\s*\[\]\)/g
+function footerPaths(file) {
+  const src = stripComments(read(file))
+  const literals = (text) => [...new Set([...text.matchAll(/(['"])(\/[a-z0-9\-/]*)\1/g)].map((m) => m[2]))]
+  const gated = literals([...src.matchAll(GATE)].map((m) => m[1]).join('\n'))
+  return { always: literals(src.replace(GATE, '')), gated, src }
+}
+/** What the app shell can render (routeMetaGated adds the flagged pages), with the flag forced on or off; it is read when the module loads. */
+function renderableWithFlag(on) {
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    const { createRoutes } = await import('./src/data/toolTree.js')
+    const { PAGE_TITLES } = await import('./src/data/routeMetaGated.js')
+    process.stdout.write(JSON.stringify([...createRoutes(), ...Object.keys(PAGE_TITLES)]))`],
+  { cwd: process.cwd(), env: { ...process.env, VITE_FORCE_TOOL_VOTES: on ? '1' : '0' }, encoding: 'utf8' })
+  assert.equal(run.status, 0, run.stderr)
+  return new Set(JSON.parse(run.stdout))
+}
+
 test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301', () => {
   // The defect: "Imagery" pointed at /create/imagery, a category home with no
   // screen of its own, so the click was spent arriving at /create/file-converter
@@ -223,7 +240,7 @@ test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301',
   const dead = retired()
   const bounces = bouncingHomes()
   const known = renderable()
-  const paths = pathLiterals('src/components/AppFooter.jsx')
+  const { always: paths } = footerPaths('src/components/AppFooter.jsx')
   assert.ok(paths.length >= 8, `only ${paths.length} paths read out of AppFooter.jsx`)
   for (const to of paths) {
     assert.ok(!bounces.includes(to), `the footer links ${to}, a category home that only redirects`)
@@ -232,18 +249,34 @@ test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301',
   }
 })
 
+test('a footer link behind the roadmap flag is a real page when the flag is on, and an unknown route when it is off', () => {
+  const dead = retired()
+  const bounces = bouncingHomes()
+  const on = renderableWithFlag(true)
+  const off = renderableWithFlag(false)
+  for (const file of ['src/components/AppFooter.jsx', 'src/components/spectrum/SpectrumFooter.jsx']) {
+    const { gated, src } = footerPaths(file)
+    assert.ok(gated.includes('/roadmap'), `${file} lost its flagged Roadmap link, so this check would pass vacuously`)
+    assert.match(src, /import \{ TOOL_VOTES_ON \} from/, `${file} gates a link on a flag it does not import`)
+    for (const to of gated) {
+      assert.ok(!bounces.includes(to) && !dead.has(to), `${file} links ${to}, which bounces or is retired`)
+      assert.ok(on.has(to), `${file} links ${to} with the flag on, and the app cannot render it`)
+      assert.ok(!off.has(to), `${to} renders with the flag off, so the gate on the footer link guards nothing`)
+    }
+  }
+})
+
 test('the footer names Create groups rather than typing their URLs', () => {
   // The subtractive half. Three of the four rows happened to be right by hand;
   // the guard is that they are no longer written by hand at all, so the next
   // one cannot be wrong.
   //
-  // THE LAST TYPED URL WENT ON 2026-09-18. `/create/color` survived here as the
-  // "Start with colour" CTA on the argument that it was a real page, and a hero
-  // button naming its own destination is not a category list guessing at four
-  // of them. The founder deleted that page with the Spectrum swap, so the URL
-  // became a bounce and a 301 and the CTA now asks the tree like every other
-  // row. The expected list is empty, which is the strongest form of this
-  // assertion: the file may not type a /create/ route at all.
+  // NO TYPED /create/ URL REMAINS. `/create/color` used to be typed here as the
+  // "Start with colour" CTA, on the argument that it was a real page. That page
+  // is gone (Spectrum is `/`), so the URL is a bounce and a 301, and the CTA now
+  // asks the tree like every other row. The expected list is empty, which is the
+  // strongest form of this assertion: the file may not type a /create/ route at
+  // all.
   const src = stripComments(read('src/components/AppFooter.jsx'))
   const createPaths = [...src.matchAll(/(['"])(\/create\/[a-z0-9-]+)\1/g)].map((m) => m[2])
   assert.deepEqual([...new Set(createPaths)], [],
@@ -257,8 +290,8 @@ test('the footer names Create groups rather than typing their URLs', () => {
 //
 // Three tests stood here and they are deleted, not re-pointed, because their
 // subject is deleted: src/pages/Home.jsx rendered a `.htool-head` category grid
-// and a five-row STEPS rail, and the founder replaced the whole page with
-// src/pages/Spectrum.jsx on 2026-09-18.
+// and a five-row STEPS rail, and the whole page was replaced by
+// src/pages/Spectrum.jsx.
 //
 // What they guarded is guarded elsewhere, which is why this is a deletion and
 // not a gap:
@@ -300,7 +333,7 @@ test('SiteMap lists visible tools through the shared data helper', () => {
   assert.ok(tools.some((t) => t.id === 'ai-prompt'), 'visible Soon tools remain listed')
   assert.ok(!tools.some((t) => t.hidden), 'SiteMap must omit hidden tools')
   const source = stripComments(read('src/pages/SiteMap.jsx'))
-  assert.match(source, /\{listedTools\(group\)\.map\(/,
+  assert.match(source, /listedTools\(group\)/,
     'SiteMap must render the filtered list from listedTools')
 })
 
@@ -311,17 +344,17 @@ test('Spectrum bench omits hidden live tools', async () => {
   assert.ok(!tools.some((t) => t.hidden), 'Spectrum bench must omit hidden tools')
 })
 
-test('llms tool lists omit hidden tools, including hidden Soon tools', async () => {
+test('llms tool lists omit hidden tools and every Soon tool', async () => {
   const { llmsRoutes } = await import('../../scripts/llms-txt.mjs')
   const group = CREATE_GROUPS.find((g) => g.id === 'ai')
   const fixture = { id: 'hidden-soon', label: 'Hidden Soon', route: '/create/hidden-soon', hidden: true, soon: true }
   group.tools.push(fixture)
   try {
-    const { tools, soon } = llmsRoutes()
-    assert.ok(tools.some((t) => t.route === '/create/alt-text'), 'live tools remain listed')
-    assert.ok(soon.some((t) => t.route === '/create/ai-prompt'), 'visible Soon tools remain listed')
-    assert.ok(!tools.some((t) => t.route === '/create/auto-builder'), 'llms live tools must omit Brand Starter')
-    assert.ok(!soon.some((t) => t.route === fixture.route), 'llms Soon tools must omit hidden tools')
+    const routes = llmsRoutes()
+    assert.ok(routes.tools.some((t) => t.route === '/create/alt-text'), 'live tools remain listed')
+    assert.ok(!routes.tools.some((t) => t.route === '/create/auto-builder'), 'llms live tools must omit Brand Starter')
+    assert.equal(routes.soon, undefined, 'llms lists no Soon tools at all')
+    assert.ok(!routes.tools.some((t) => t.route === '/create/ai-prompt' || t.route === fixture.route), 'llms tools must omit Soon tools')
   } finally {
     group.tools.splice(group.tools.indexOf(fixture), 1)
   }

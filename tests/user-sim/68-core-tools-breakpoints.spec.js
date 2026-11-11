@@ -17,7 +17,7 @@
 // Tap is stubbed on the browser fixture.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { openPaletteTools } from './palette-helpers.js'
+import { openPaletteTools, clickPaletteAction } from './palette-helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -154,12 +154,15 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   // "ICK SEED COLOUR" and the first preset column was gone. The gradient
   // tool's stop picker had the same fault at the same width.
   //
-  // MUTATION: restore `left:50%;transform:translateX(-50%)` on
-  // `.pop[data-pop-align="clamp"]` in global.css — both routes report the
-  // panel 24px past the left edge.
-  // WHICH ROUTE STILL REPRODUCES THE CLAMP. The guarantee both routes carry is
-  // the last two assertions: the panel is on screen at 320. Only the gradient
-  // stop still forces the 'clamp' branch to get there.
+  // MUTATION (historic): restoring `left:50%;transform:translateX(-50%)` on
+  // `.pop[data-pop-align="clamp"]` in global.css moved both pickers 24px past the
+  // left edge. Neither route reaches 'clamp' now, so that mutation stays green here.
+  // WHICH ROUTE PROVES WHAT. The guarantee both routes carry is the last two
+  // assertions: the panel is on screen at 320. The gradient stop's picker is
+  // portalled (global.css, max-width 767px): a bottom sheet pinned left:0 right:0,
+  // so usePopover never aligns it and it carries no data-pop-align (null). It
+  // used to be an inline popover that forced the 'clamp' branch; nothing on
+  // these two routes forces that branch now.
   //
   // /create/palette's seed trigger used to sit 79px from the left, behind the
   // 15px `h1.plb-title` in the toolbar. That h1 moved into a heading area above
@@ -170,7 +173,7 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   // asserting 'clamp' there would be asserting that the trigger stays crowded.
   for (const [route, trigger, what, align] of [
     ['/create/palette', '.plb-seedpick .cpk-trigger', 'the seed colour', 'start'],
-    ['/create/gradient', '.grd-pick-swatch .cpk-trigger', 'a gradient stop', 'start'],
+    ['/create/gradient', '.grd-stop-swatch', 'a gradient stop', null],
   ]) {
     test(`${route} · the picker for ${what} at 320`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 320)
@@ -262,7 +265,7 @@ test.describe('/create/palette · Save / export, signed in on a desktop', () => 
   }
 })
 
-for (const [route, tab] of [['/create/type-scale', 'Developer handoff'], ['/create/font-pair', null]]) {
+for (const [route, tab] of [['/create/type-scale', null], ['/create/font-pair', null]]) {
   test(`${route} · at the free cap on a 390px phone the save menu is not cut off above the screen`, async ({ browser }) => {
     // `.svt-menu` opens UPWARD (bottom: calc(100% + 8px)) from a button that
     // sits mid-screen. At the cap the wall makes it 419px tall, and at 390 the
@@ -277,14 +280,20 @@ for (const [route, tab] of [['/create/type-scale', 'Developer handoff'], ['/crea
     await signIn(page, { plan: 'free', projects: 3 })
     await go(page, route)
     if (tab) await page.getByRole('tab', { name: tab }).click()
-    const trigger = page.getByRole('button', { name: 'Save to a project' })
-    // The fault depends on where the button sits when it is pressed: the menu
-    // opens upward, so a button 100px under the nav has no room above it.
-    // Pin that position rather than inherit whatever scrollIntoView chose —
-    // with the button mid-screen the old menu happened to fit on Type Scale
-    // and the test proved nothing.
-    await trigger.evaluate((el) => { el.scrollIntoView({ block: 'start', behavior: 'instant' }); window.scrollBy(0, -100) })
-    await trigger.click()
+    if (route === '/create/type-scale') {
+      // Type Scale keeps its save in the dock (an icon
+      // at 390); the menu it opens is the same bottom sheet.
+      await page.locator('.tl-dock').getByRole('button', { name: 'Save to a project' }).click()
+    } else {
+      const trigger = page.getByRole('button', { name: 'Save to a project' })
+      // The fault depends on where the button sits when it is pressed: the menu
+      // opens upward, so a button 100px under the nav has no room above it.
+      // Pin that position rather than inherit whatever scrollIntoView chose —
+      // with the button mid-screen the old menu happened to fit on Type Scale
+      // and the test proved nothing.
+      await trigger.evaluate((el) => { el.scrollIntoView({ block: 'start', behavior: 'instant' }); window.scrollBy(0, -100) })
+      await trigger.click()
+    }
     const menu = page.locator('.svt-menu')
     await expect(menu).toBeVisible()
     await expect(page.getByTestId('type-save-wall'), 'this is the at-cap menu, with the wall').toBeVisible()
@@ -304,64 +313,109 @@ for (const [route, tab] of [['/create/type-scale', 'Developer handoff'], ['/crea
 // Words broken in half
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('/create/font-pair · the specimen heading keeps “Typography” whole at 320 and 360', async ({ browser }) => {
-  // `.fpr-h1` was clamp(42px, 6vw, 76px): "Typography" is 235px at 42px and the
-  // specimen column is 188px at 320 and 228px at 360, so overflow-wrap broke
-  // the longest word of a TYPE SPECIMEN across two lines. The floor now scales
-  // with the phone (10vw: 32px at 320, 36px at 360) and hands back to the old
-  // curve from 420px.
+test('/create/font-pair · a long word typed into the headline stays whole at 320 and 360', async ({ browser }) => {
+  // The sample headlines hold only short words, so the guard is a typed word:
+  // "Typography" is the longest word a specimen is likely to be asked to set.
+  // The Article headline (.fpr-h1) scales its size with the phone and the
+  // Street headline (.fpr-street-h) holds a fixed size; either breaks the word
+  // across two lines if its size outgrows the column.
   //
-  // MUTATION: restore `font-size:clamp(42px,6vw,76px)` — both widths report
-  // ["Typography"].
+  // MUTATION: raise `.fpr-h1` on a phone to `font-size:64px` — the Article
+  // case at 320 reports ["Typography"].
   test.setTimeout(60_000)
   const failures = []
   for (const width of [320, 360]) {
     const { ctx, page } = await at(browser, width)
     watch(page, `someone reading a font pairing on a ${width}px phone`)
     await go(page, '/create/font-pair')
-    const h = page.locator('.fpr-h1')
-    await expect(h).toContainText('Typography')
-    await h.scrollIntoViewIfNeeded()
-    await settle(page)
-    const split = await page.evaluate(splitWords, '.fpr-h1')
+    await page.locator('[data-tool-toolbar]').getByRole('button', { name: /More/ }).click()
+    await page.getByRole('textbox', { name: 'Preview text' }).fill('Typography')
+    await page.keyboard.press('Escape')
+    for (const [preset, selector] of [['Street', '.fpr-street-h'], ['Article', '.fpr-h1']]) {
+      await page.getByRole('button', { name: preset }).click()
+      const h = page.locator(selector)
+      await expect(h).toHaveText('Typography')
+      await h.scrollIntoViewIfNeeded()
+      await settle(page)
+      const split = await page.evaluate(splitWords, selector)
+      if (split.length) failures.push(`${width}px ${preset}: ${split.map((w) => `"${w}"`).join(', ')}`)
+    }
     await ctx.close()
-    if (split.length) failures.push(`${width}px: ${split.map((w) => `"${w}"`).join(', ')}`)
   }
   expect(failures, `words broken across lines:\n  ${failures.join('\n  ')}`).toEqual([])
 })
 
-test('/create/gradient · the CSS output never splits a hex value across two lines', async ({ browser }) => {
+test('/create/gradient · the CSS output wraps inside its well, with no sideways scroll, and never splits a hex value across two lines', async ({ browser }) => {
   // `.ggn-css code{word-break:break-all}` once wrapped "#7C3AED" as "#7" /
-  // "C3AED" — one colour reading as two. The design's drawn code well
-  // (D:638-640) is `white-space:pre` in an `overflow-x:auto` box: the
-  // declaration stays on ONE line and scrolls, so no token can be split.
+  // "C3AED" — one colour reading as two. The well now holds the CSS in a fixed
+  // 152px box with `white-space:pre-wrap; overflow-wrap:anywhere`: a long
+  // declaration (twelve stops is one very long line) wraps at its spaces and
+  // scrolls UP AND DOWN inside the box, never sideways. Wrapping at spaces
+  // means a "#RRGGBB" token moves to the next line whole; `anywhere` only
+  // breaks a token that is wider than the whole line, which a hex is not.
   //
-  // MUTATION: set `white-space:normal; word-break:break-all` on
-  // .grd-code-text — the line count goes above 1 and hex tokens split.
-  test.setTimeout(60_000)
+  // So the contract measured here, at 390 (narrowest phone) and 1097, with a
+  // twelve-stop gradient: the well does not scroll sideways, the CSS really
+  // does wrap (positive control, or "no split" is trivially true), and each
+  // hex token, measured on its own with a Range, sits on a single line.
+  //
+  // MUTATION: set `word-break:break-all` on .grd-code-text — hex tokens split
+  // and this goes red naming them. Put `white-space:pre; overflow-x:auto`
+  // back — the well scrolls sideways and the wrap control goes red.
+  test.setTimeout(90_000)
   const failures = []
   for (const width of [390, 1097]) {
     const { ctx, page } = await at(browser, width)
     watch(page, `a developer reading the gradient's CSS at ${width}px`)
     await go(page, '/create/gradient')
+    const panel = page.getByRole('complementary', { name: 'Gradient controls' })
+    const add = panel.getByRole('button', { name: /^Add a stop$/ })
+    // Grow the ramp to twelve stops so the declaration is as long as it gets.
+    while ((await page.locator('.grd-stop').count()) < 12) {
+      const before = await page.locator('.grd-stop').count()
+      await add.click()
+      await expect(page.locator('.grd-stop')).toHaveCount(before + 1)
+    }
     const code = page.locator('.grd-code-text code')
     await expect(code).toContainText('gradient(')
     await code.scrollIntoViewIfNeeded()
     await settle(page)
-    const split = await page.evaluate(splitWords, '.grd-code-text code')
-    const m = await page.locator('.grd-code-text').evaluate((el) => ({
-      lines: Math.round(el.querySelector('code').getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
-      scrolls: el.scrollWidth > el.clientWidth,
-      overflowX: getComputedStyle(el).overflowX,
-    }))
+    const m = await page.locator('.grd-code-text').evaluate((el) => {
+      const cs = getComputedStyle(el)
+      const codeEl = el.querySelector('code')
+      const lineH = parseFloat(cs.lineHeight)
+      // Every "#RRGGBB" (and 3 or 8 digit) token, measured on its own: how many
+      // distinct line tops do its glyph boxes sit on?
+      const hexes = []
+      const walker = document.createTreeWalker(codeEl, NodeFilter.SHOW_TEXT)
+      let node
+      while ((node = walker.nextNode())) {
+        const re = /#[0-9A-Fa-f]{3,8}\b/g
+        let t
+        while ((t = re.exec(node.nodeValue))) {
+          const r = document.createRange()
+          r.setStart(node, t.index); r.setEnd(node, t.index + t[0].length)
+          const tops = new Set([...r.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top)))
+          hexes.push({ text: t[0], lines: tops.size })
+        }
+      }
+      return {
+        whiteSpace: cs.whiteSpace,
+        sidewaysScroll: el.scrollWidth > el.clientWidth + 1,
+        lines: Math.round(codeEl.getBoundingClientRect().height / lineH),
+        hexes,
+      }
+    })
     await ctx.close()
-    // POSITIVE CONTROL: at 390 the declaration is longer than its box, so the
-    // no-wrap is really being exercised rather than trivially true.
-    if (width === 390) expect(m.scrolls, 'the declaration is longer than the well at 390').toBe(true)
-    expect(m.overflowX, 'the well scrolls sideways instead of wrapping').toBe('auto')
-    if (m.lines > 1) failures.push(`${width}px: the declaration wraps onto ${m.lines} lines`)
-    const hex = split.filter((w) => /#[0-9A-Fa-f]{3,8}/.test(w))
-    if (hex.length) failures.push(`${width}px: ${hex.join(', ')}`)
+    // POSITIVE CONTROLS: twelve stops put twelve colours in the declaration,
+    // and that declaration is too long for one line, so the wrap is real.
+    expect(m.hexes.length, `${width}px: hex tokens measured`).toBeGreaterThanOrEqual(12)
+    expect(m.lines, `${width}px: the declaration is longer than one line of the well, so wrapping is exercised`).toBeGreaterThan(1)
+    // THE CONTRACT.
+    expect(m.whiteSpace, `${width}px: the CSS wraps rather than running on`).toBe('pre-wrap')
+    expect(m.sidewaysScroll, `${width}px: the well scrolls sideways`).toBe(false)
+    const split = m.hexes.filter((h) => h.lines > 1).map((h) => h.text)
+    if (split.length) failures.push(`${width}px: ${split.join(', ')}`)
   }
   expect(failures, `hex values broken across lines:\n  ${failures.join('\n  ')}`).toEqual([])
 })
@@ -425,25 +479,27 @@ test('the colour picker’s hue slider is a 24px target on /create/contrast and 
   expect(failures, `hue sliders under 24px:\n  ${failures.join('\n  ')}`).toEqual([])
 })
 
-test('/create/palette · “Use →” on a community card in the Explore popup is a 24px target', async ({ browser }) => {
-  // The popup's cards are 110px tall, so the five stripes are ~20px each; they
-  // all do what "Use →" does, which makes the labelled control the one that
-  // has to clear the floor — and it measured 285x20 in the sweep.
+test('/create/palette · every row in the Explore panel is a 24px target', async ({ browser }) => {
+  // The popup, its cards and the "Use →" control went with the Suggest/Explore
+  // redesign: a community palette is now one pressable swatch row in a docked
+  // panel. The row itself is the control, so it is the thing that has to clear
+  // the 24px floor (it measured 285x20 as a "Use" arrow on the old cards).
   //
-  // MUTATION: drop `.plb-galpopup-body .pgal-use{min-height:24px…}` — every
-  // card fails at ~20px.
+  // MUTATION: set `.plb-sw-row` to `height: 20px` (or `min-height: 0` with the
+  // strip at 12px) — every row fails.
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a designer borrowing a community palette')
   await go(page, '/create/palette')
-  await (await openPaletteTools(page)).getByRole('button', { name: 'Explore palettes' }).click()
-  const use = page.locator('.plb-galpopup-body .pgal-use')
-  await expect(use.first()).toBeVisible()
-  await settled(page, '.plb-galpopup')
-  const boxes = await use.evaluateAll((els) => els.map((el) => +el.getBoundingClientRect().height.toFixed(1)))
+  await clickPaletteAction(page, 'Explore palettes and brands')
+  const panel = page.getByRole('complementary', { name: 'Explore palettes and brands', exact: true })
+  const rows = panel.locator('button.plb-sw-row')
+  await expect(rows.nth(3)).toBeVisible()
+  await settled(page, '.plb-sx')
+  const boxes = await rows.evaluateAll((els) => els.map((el) => { const r = el.getBoundingClientRect(); return { h: +r.height.toFixed(1), w: +r.width.toFixed(1) } }))
   await ctx.close()
-  expect(boxes.length, 'the community tab rendered cards').toBeGreaterThan(3)
-  const short = boxes.filter((h) => h < 24)
-  expect(short, `${short.length} of ${boxes.length} "Use" controls under 24px: ${short.slice(0, 5).join(', ')}`).toEqual([])
+  expect(boxes.length, 'the community tab rendered rows').toBeGreaterThan(3)
+  const short = boxes.filter((b) => b.h < 24 || b.w < 24)
+  expect(short, `${short.length} of ${boxes.length} rows under 24px: ${short.slice(0, 5).map((b) => `${b.w}x${b.h}`).join(', ')}`).toEqual([])
 })
 
 // Not tested: '/create/tint · the endpoints checkbox row is a 24px
@@ -487,15 +543,15 @@ for (const theme of ['light', 'dark']) {
     // that tool fails in light at 3.11.
     test.setTimeout(90_000)
     const failures = []
-    for (const [route, sel, tab] of [
-      ['/create/type-scale', '.tsc-copy-primary', 'Developer handoff'],
-      ['/create/tint', '.tt .tl-primary .tl-btn', null],
-      ['/create/font-pair', '.fpr-copy-primary', null],
+    for (const [route, sel] of [
+      ['/create/type-scale', '.tsc-copy-primary'],
+      ['/create/tint', '.tt .tl-primary .tl-btn, .tt [data-tl-dock] .tl-btn'],
+      ['/create/font-pair', '.fpr-copy-primary'],
     ]) {
       const { ctx, page } = await at(browser, 1440, theme)
       watch(page, `a developer about to copy the CSS on a ${theme} screen`)
       await go(page, route)
-      if (tab) await page.getByRole('tab', { name: tab }).click()
+      // Type Scale's Copy CSS ends its toolbar at 1440, so nothing is opened first.
       const btn = page.locator(sel)
       await btn.scrollIntoViewIfNeeded()
       await expect(btn).toBeVisible()
@@ -508,7 +564,7 @@ for (const theme of ['light', 'dark']) {
   })
 }
 
-test('/create/gradient · the inspector’s Copy link does not fade to 3.6:1 on hover', async ({ browser }) => {
+test('/create/gradient · the code well’s Copy button does not fade on hover', async ({ browser }) => {
   // `.ggn-copy:hover{opacity:.75}` took the 11.5px link from 5.8:1 to 3.64:1
   // (light) and 3.71:1 (dark) exactly when it is being read. Hover is an
   // underline now.
@@ -517,11 +573,52 @@ test('/create/gradient · the inspector’s Copy link does not fade to 3.6:1 on 
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a developer copying the gradient CSS')
   await go(page, '/create/gradient')
-  const copy = page.locator('.grd .tl-primary .tl-btn').first()
+  const copy = page.locator('.grd-copy').first()
   await copy.scrollIntoViewIfNeeded()
-  await hoverSettled(page, copy, '.grd .tl-primary .tl-btn')
-  const m = await page.evaluate(contrastOf, '.grd .tl-primary .tl-btn')
+  await hoverSettled(page, copy, '.grd-copy')
+  const m = await page.evaluate(contrastOf, '.grd-copy')
   await ctx.close()
   expect(m.text).toMatch(/copy/i)
   expect(m.ratio, `hovered Copy: rgb(${m.ink}) on rgb(${m.bg})`).toBeGreaterThanOrEqual(4.5)
+})
+
+test('/create/gradient · the preset grid, Explore panel and angle wheel stay inside the page at every width', async ({ browser }) => {
+  // The preset section is a wrapping grid and the Explore panel two columns that
+  // stack under 768px; the wheel row (dial, number field, lock) must share a
+  // 320px column. None may push the page sideways or sit past its own box.
+  //
+  // MUTATION: give .grd-explore-taste `grid-template-columns: repeat(3, 200px)`
+  // or .grd-preset-grid `grid-template-columns: repeat(6, 200px)` — the narrow
+  // widths report the section wider than the page.
+  test.setTimeout(90_000)
+  const failures = []
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    const { ctx, page } = await at(browser, width)
+    watch(page, `a designer on /create/gradient at ${width}px`)
+    await go(page, '/create/gradient')
+    await expect(page.locator('.grd-preset-grid')).toBeVisible()
+    await settle(page)
+    const m = await page.evaluate(() => {
+      const vw = document.documentElement.clientWidth
+      const past = (sel) => [...document.querySelectorAll(sel)]
+        .map((el) => ({ sel, right: Math.round(el.getBoundingClientRect().right), left: Math.round(el.getBoundingClientRect().left) }))
+        .filter((b) => b.right > vw + 1 || b.left < -1)
+      return {
+        vw,
+        scroll: document.documentElement.scrollWidth,
+        tiles: document.querySelectorAll('.grd-preset').length,
+        explore: document.querySelectorAll('.grd-explore').length,
+        wheel: document.querySelectorAll('.grd-wheel').length,
+        gridScrolls: (() => { const g = document.querySelector('.grd-preset-grid'); return g.scrollWidth - g.clientWidth })(),
+        outside: [...past('.grd-preset'), ...past('.grd-explore'), ...past('.grd-explore-chip'), ...past('.grd-wheel'), ...past('.grd-angle-input')],
+      }
+    })
+    await ctx.close()
+    // POSITIVE CONTROL: the pieces were really measured.
+    if (m.tiles < 8 || m.explore !== 1 || m.wheel !== 1) failures.push(`${width}px: measured ${m.tiles} presets, ${m.explore} explore panel(s), ${m.wheel} wheel(s)`)
+    if (m.scroll > m.vw) failures.push(`${width}px: the page scrolls sideways (${m.scroll} > ${m.vw})`)
+    if (m.gridScrolls > 0) failures.push(`${width}px: the preset grid scrolls by ${m.gridScrolls}px`)
+    for (const o of m.outside) failures.push(`${width}px: ${o.sel} spans ${o.left}-${o.right} of ${m.vw}`)
+  }
+  expect(failures, `gradient page overflow:\n  ${failures.join('\n  ')}`).toEqual([])
 })

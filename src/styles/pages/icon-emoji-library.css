@@ -16,16 +16,6 @@
    page in light, 8.9:1 on the dark page. */
 
 
-/* ── The app button, in this dialog ────────────────────────────────────────
-   The eight `.ui-pill` buttons IconLibrary carried (the customizer foot, the
-   paste foot, the new-project row and the refused-service notice) are the
-   shared `.lib-btn` now — see deferred/library.css for the shape and the
-   Mobbin references. What is local is only how the customizer's foot shares
-   its row: that sizing used to hang off `.icust-foot .ui-pill` in global.css
-   and is restated for the new class, or the four buttons would lose their
-   share of the line. */
-.iel-page .icust-foot .lib-btn{flex:1 1 auto;min-width:max-content}
-.iel-page .icust-paste .icust-foot .lib-btn{flex:0 1 auto}
 /* Try again sits on the notice's warn-tinted band, so it carries a card
    ground of its own — a transparent button there would read as part of the
    sentence. 40px floor: 66-icon-library-offline-fixture holds it on a phone. */
@@ -33,87 +23,38 @@
 .iel-page .ig-notice .ig-notice-btn:hover{background:color-mix(in srgb,var(--t0) 5%,var(--card))}
 
 
-/* ── The customizer dialog ─────────────────────────────────────────────────
+/* ── The dialog frame (the emoji detail dialog's) ──────────────────────────
    The panel takes the app's 18px panel radius over a hairline. The scrim
    loses its blur: a 6px backdrop blur was the one "premium" effect on the
    surface, it reads as decoration, and the dim alone
-   already separates the dialog from the page. (The gate backdrop inside the
-   panel is `position:fixed` and the overlay is itself fixed at inset 0, so
-   dropping the filter does not move the box the gate fills.) */
+   already separates the dialog from the page. */
 .iel-page .icust-overlay{-webkit-backdrop-filter:none;backdrop-filter:none}
 .iel-page .icust-panel{background:var(--card);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l)}
 .iel-page .icust-head{padding:22px 24px 12px}
-/* The eyebrow was accent-coloured mono caps. It is a kind label, not the next
-   action, so it goes quiet; the title carries the hierarchy. */
-.iel-page .icust-eyebrow{
-  font-family:var(--font);font-size:12.5px;font-weight:560;
-  letter-spacing:0;text-transform:none;color:var(--t2);
-}
-.iel-page .icust-title{font-size:20px;font-weight:600;letter-spacing:-.02em}
+.iel-page .icust-title{font-size:var(--fs-h4);font-weight:600;letter-spacing:-.02em;line-height:1.2;overflow-wrap:anywhere}
 .iel-page .icust-close{
   width:40px;height:40px;border-radius:var(--btn-radius);
   border-color:var(--border);background:transparent;
 }
 @media(pointer:coarse){.iel-page .icust-close{width:44px;height:44px}}
 .iel-page .icust-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-/* Metadata tags are values (pack, name, source), so they stay mono — but as
-   6px rectangles, not pills: nothing here toggles. */
-.iel-page .icust-tag{border-radius:var(--radius-xs)}
-/* Control labels: sentence case in the UI face. Mono caps at 10px was the
-   same voice as the values beside them; the design sets labels in Geist and
-   keeps mono for what a user copies. */
-.iel-page .icust-row>label,
-.iel-page .icust-pro-head,
-.iel-page .icust-code-label,
-.iel-page .icust-similar-label{
-  font-family:var(--font);font-size:12.5px;font-weight:560;
-  letter-spacing:0;text-transform:none;color:var(--t2);
-}
-/* The segmented controls: the design's selected segment is a 9% ink wash, not
-   a lifted white chip — which in dark was `--bg-0` on `--bg-2`, the page
-   colour showing through a hole. One recipe, both themes. */
-.iel-page .icust-seg{border-radius:var(--radius-s);background:color-mix(in srgb,var(--t0) 4%,transparent)}
-.iel-page .icust-seg button{
-  border-radius:var(--radius-xs);
-  font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0;
-}
-.iel-page .icust-seg button.active{background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}
-.iel-page .icust-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.iel-page .icust-seg-static{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0;background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}
-/* "Fixed" stroke is a toggle, so its on-state is the same wash — not an
-   accent fill with accent text, which claimed it was the next action. */
-.iel-page .icust-abs{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
-.iel-page .icust-abs.active{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--bh);color:var(--t0)}
-.iel-page .icust-pro{border-radius:var(--radius);background:transparent}
-/* The Pro word on the line-style box. It rides the nav's `.pnav-pop-tag`
-   class, which is a 999px accent pill painted in `--accent-strong`. Here it
-   is a quiet 6px tag in the derived accent. */
+/* The nav's `.pnav-pop-tag` is a 999px accent pill painted in `--accent-strong`.
+   On this page it is a quiet 6px tag in the derived accent. */
 .iel-page .pnav-pop-tag{
   color:var(--accent-mid);border-color:var(--accent-border);border-radius:var(--radius-xs);
 }
-.iel-page .icust-code-box:hover .icust-code-hint{color:var(--t0)}
-.iel-page .icust-upgrade{color:var(--accent-mid)}
-/* The similar-icon tiles lift on hover. Decorative motion on a row of
-   targets; the border and ground already say "this one". */
-.iel-page .icust-similar-btn:hover{transform:none}
-.iel-page .icust-proj-btn{border-radius:var(--radius)}
-.iel-page .icust-newproj-input{border-radius:var(--radius)}
-.iel-page .icust-gate{border-radius:var(--radius-2xl);background:var(--card)}
-.iel-page .icust-gate-dismiss{border-radius:var(--btn-radius);min-height:36px}
-.iel-page .icust-gate-backdrop{background:var(--scrim)}
-
-
 /* Design (icons page, line 313): the grid sits 14px under the panel — there
    is no result head between them to need the galleries' larger seam. The
    emoji tab keeps the shared seam: its first row is a category heading. */
-.iel-page .lbry-toolbar.ig-toolbar{margin-bottom:14px}
+.iel-page .lbry-toolbar.ig-toolbar{margin-bottom:0}
 
 /* ── The icon page around the grid ─────────────────────────────────────────
    Accent text on this page was the "Add icon" hover, the Clear-all hover, the
    "Go Pro for unlimited" link and the attribution link — all `--accent-strong`.
    Hover states are ink (a hover is not a claim); the two links keep the
    accent, in the derived member. */
-.iel-page .ig-addbtn{min-height:44px;height:auto;border-color:var(--bh);background:transparent}
+.iel-page .ig-addbtn{height:40px;border-color:var(--bh);background:transparent}
+@media(pointer:coarse){.iel-page .ig-addbtn{height:44px}}
 .iel-page .ig-addbtn:hover{border-color:color-mix(in srgb,var(--t0) 34%,transparent);background:var(--hvr);color:var(--t0)}
 .iel-page .ig-addbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .iel-page .ig-rail-clear:hover{color:var(--t0);border-color:var(--border);background:var(--hvr)}
@@ -125,7 +66,6 @@
 .iel-page .ig-mysec-title{font-family:var(--font);font-weight:600;letter-spacing:-.015em}
 /* The wall's padlock. It was an inline style (vertical-align and a 6px end
    margin) — a fixed design value, so it lives here. */
-.iel-page .ig-gate-lock{vertical-align:-1px;margin-inline-end:6px}
 
 
 /* ── The emoji body ────────────────────────────────────────────────────────
@@ -137,16 +77,141 @@
    take the grid from 25 columns to 12 at 1280 and multiply the scroll by four.
    So the grid stays; what changes is its STATE language, onto the design's
    picked cell (accent wash over an accent hairline). */
-.iel-page .emoji-cell.copied{background:var(--accent-wash);border-color:var(--accent-border)}
-.iel-page .emoji-cell.copied::after{color:var(--accent-mid)}
 .iel-page .emoji-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .iel-page .emoji-tone-btn{border-color:var(--bh);background:transparent;min-height:44px;height:auto}
 .iel-page .emoji-tone-btn.open{border-color:var(--bh);background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
 .iel-page .emoji-tone-pop{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-m)}
 .iel-page .emoji-skin-btn.active{border-color:var(--accent-border);background:var(--accent-wash);box-shadow:0 0 0 1px var(--accent)}
+/* A cell paints its glyph from a bitmap EmojiGrid drew once, because painting
+   the colour emoji text again on every commit and every scroll tile is what
+   made this page slow. The real character stays in the cell (the label, the
+   title and the copy all read it) and is hidden only while the bitmap shows.
+   On hover the cell scales up, and the live text redraws crisply at that size
+   where the bitmap would be stretched, so the hovered cell goes back to text. */
+.iel-page .emoji-bitmap{display:block;flex:none;width:36px;background-repeat:no-repeat;pointer-events:none}
+.iel-page .emoji-cell.has-bitmap .emoji-char{display:none}
+.iel-page .emoji-cell.has-bitmap:hover .emoji-char{display:block}
+.iel-page .emoji-cell.has-bitmap:hover .emoji-bitmap{display:none}
+/* While its bitmap is still being drawn a cell shows a faint rounded square,
+   not the live text: laying out colour emoji text is the cost (about 7ms a cell
+   at 4x CPU), and a search result or a fast scroll mounts dozens at once. No
+   fade or shimmer, the bitmap simply replaces it. A glyph the atlas leaves as
+   text (a flag on Windows) has no `.pending` and keeps its text. */
+.iel-page .emoji-cell.pending .emoji-char{display:none}
+.iel-page .emoji-cell.pending::before{content:'';flex:none;width:20px;height:20px;border-radius:var(--radius-xs);background:var(--hvr)}
 /* The count stays a filled chip — 71-media-tools-breakpoints measures it as
    ink on its OWN ground — but as a 6px rectangle, not a pill. */
 .iel-page .emoji-section-count{border-radius:var(--radius-xs)}
+
+
+/* ── The emoji detail dialog ───────────────────────────────────────────────
+   The frame is the shared dialog's (.icust-overlay / -panel / -head / -title /
+   -sub / -close), so it is a dialog on desktop and a bottom sheet at 640px
+   and under. The body is its own, one column.
+
+   One surface, no cards: the glyph sits straight on the panel and the four
+   values are rows divided by hairlines. Each row is a flex line that never
+   wraps: the value shrinks and breaks inside its own box, and the Copy button
+   keeps its 44px and its place at the right. Labels are the UI face; only the
+   literal values (code points, entity) are mono.
+   Mobile first: the narrow layout is the base and 641px adds room. */
+.iel-page .emd-body{
+  display:flex;flex-direction:column;gap:16px;flex:1 1 auto;min-height:0;
+  padding:4px 16px max(16px,env(safe-area-inset-bottom,0px));
+  overflow-y:auto;overscroll-behavior:contain;
+}
+.iel-page .emd-hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0 0}
+.iel-page .emd-glyph{
+  font-size:96px;line-height:1.15;text-align:center;
+  /* A family or a long flag sequence must not push the panel wider than itself. */
+  max-width:100%;overflow-wrap:anywhere;
+}
+/* .lib-btn: the deferred library sheet sets min-height:40px at (0,2,0) and loads after this file. */
+.iel-page .lib-btn.emd-copy{flex:none;min-height:44px;min-width:88px}
+.iel-page .lib-btn.emd-copy--main{min-width:136px}
+
+.iel-page .emd-tones{display:flex;justify-content:center;gap:4px}
+.iel-page .emd-tone{
+  flex:1 1 44px;min-width:44px;max-width:56px;height:44px;padding:0;
+  display:grid;place-items:center;font-size:24px;line-height:1;
+  border:1px solid var(--border);border-radius:var(--btn-radius);background:transparent;cursor:pointer;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
+}
+@media(hover:hover){.iel-page .emd-tone:hover{background:var(--hvr);border-color:var(--bh)}}
+.iel-page .emd-tone[aria-pressed="true"]{border-color:var(--accent-border);background:var(--accent-wash);box-shadow:0 0 0 1px var(--accent)}
+.iel-page .emd-tone:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.iel-page .emd-rows{margin:0;padding:0;list-style:none}
+.iel-page .emd-row{
+  display:flex;flex-wrap:nowrap;align-items:center;gap:12px;
+  min-height:60px;padding:8px 0;border-top:1px solid var(--border);
+}
+.iel-page .emd-text{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0}
+.iel-page .emd-label{font-family:var(--font);font-size:13px;font-weight:560;line-height:1.4;color:var(--t2)}
+.iel-page .emd-value{
+  font-family:var(--mono);font-size:14px;line-height:1.4;color:var(--t0);
+  overflow-wrap:anywhere;-webkit-user-select:text;user-select:text;
+}
+.iel-page .emd-value.is-plain,.iel-page .emd-value.is-empty{font-family:var(--font)}
+.iel-page .emd-value.is-empty{color:var(--t2)}
+
+/* ── The Styles row ────────────────────────────────────────────────────────
+   The emoji drawn by this device and by the Pro art sets, on one line that never
+   wraps: when it is wider than the dialog it scrolls sideways, so a phone loses
+   nothing. Every tile has the same box whether it is loading, drawn or locked,
+   so the dialog does not move as answers arrive. No card around the row: each
+   tile is only its swatch and a label, and the row sits straight on the panel.
+   The swatch ground is one light neutral in both themes, because OpenMoji draws
+   black outlines that vanish on a dark ground. */
+.iel-page .emd-styles{--emd-art-ground:#F2F1EC;display:flex;flex-direction:column;gap:8px}
+.iel-page .emd-styles-h{margin:0;font-family:var(--font);font-size:13px;font-weight:560;line-height:1.4;color:var(--t2)}
+.iel-page .emd-styles-row{
+  display:flex;flex-wrap:nowrap;gap:8px;margin:0;padding:0 0 4px;list-style:none;
+  overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;
+}
+.iel-page .emd-styles-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Five equal columns, so every set fits the dialog without a sideways scroll. */
+.iel-page .emd-style{flex:1 1 0;min-width:56px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.iel-page .emd-style-art{
+  width:100%;max-width:72px;aspect-ratio:1;display:grid;place-items:center;
+  border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--emd-art-ground);
+}
+.iel-page .emd-style-art.is-loading{background:var(--bg-3);border-color:transparent}
+.iel-page .emd-style-glyph{font-size:40px;line-height:1;color:#0F0F10}
+.iel-page .emd-style-img{display:block;width:48px;height:48px;object-fit:contain}
+.iel-page .emd-style-label{font-family:var(--font);font-size:12px;font-weight:560;line-height:1.3;color:var(--t2);text-align:center}
+
+.iel-page .emd-style--lock{flex:0 1 auto;width:auto;min-width:216px;align-items:stretch}
+.iel-page .emd-lock{
+  flex:1 1 auto;box-sizing:border-box;min-height:44px;padding:0 16px;
+  display:flex;align-items:center;gap:12px;
+  border:1px solid var(--border);border-radius:var(--btn-radius);
+  color:var(--t0);text-decoration:none;
+  transition:background-color 150ms var(--ease-out),border-color 150ms var(--ease-out);
+}
+@media(hover:hover){.iel-page .emd-lock:hover{background:var(--hvr);border-color:var(--bh)}}
+.iel-page .emd-lock:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .emd-lock svg{flex:none;color:var(--t2)}
+.iel-page .emd-lock-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.iel-page .emd-lock-head{font-family:var(--font);font-size:14px;font-weight:600;line-height:1.4}
+.iel-page .emd-lock-sub{font-family:var(--font);font-size:12px;line-height:1.4;color:var(--t2)}
+
+.iel-page .emd-styles-note,.iel-page .emd-styles-credit{margin:0;font-family:var(--font);font-size:12px;line-height:1.5;color:var(--t2)}
+.iel-page .emd-styles-credit a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+
+@media(min-width:641px){
+  /* Two classes plus .icust-panel: the frame's own width rules (760px, 560px) come later in this file at
+     the same specificity and would otherwise win, making this a 760px dialog. */
+  .iel-page .icust-panel.emd-panel{width:min(440px,calc(100vw - 32px))}
+  .iel-page .emd-body{padding-inline:24px}
+  .iel-page .emd-tones{gap:8px}
+}
+
+@media(max-width:640px){
+  /* On a phone the emoji dialog is a bottom sheet: full width, flush to the bottom edge, square at the foot. */
+  .iel-page .icust-overlay.emd-overlay{align-items:flex-end;padding:max(24px,env(safe-area-inset-top,0px)) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+  .iel-page .icust-panel.emd-panel{width:100%;max-height:calc(100dvh - max(24px,env(safe-area-inset-top,0px)));border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-width:1px 0 0}
+}
 
 
 /* ── The weight segment: Regular / Bold / Fill / Duo ───────────────────────
@@ -157,10 +222,11 @@
    labels and never shrink below the label's width. On a wider screen the track
    sits in the toolbar row with the pack menu. */
 .iel-page .ig-weight{
-  display:flex;flex:0 0 auto;gap:2px;padding:3px;
+  position:relative;display:flex;flex:0 0 auto;gap:2px;padding:2px;border:1px solid var(--border);
   border-radius:var(--radius-pill);background:color-mix(in srgb,var(--t0) 6%,transparent);
 }
-.iel-page .ig-weight-btn{
+.iel-page .ig-weight-btn,
+.iel-page .ig-weight-measure>span{
   flex:1 1 auto;min-width:0;min-height:36px;padding:0 14px;text-align:center;
   border:0;border-radius:var(--radius-pill);background:transparent;
   color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:560;white-space:nowrap;cursor:pointer;
@@ -168,51 +234,22 @@
 .iel-page .ig-weight-btn:hover{color:var(--t0)}
 .iel-page .ig-weight-btn[aria-pressed="true"]{background:var(--card);color:var(--t0);box-shadow:0 1px 2px rgba(10,10,18,.08)}
 [data-theme="dark"] .iel-page .ig-weight-btn[aria-pressed="true"]{background:var(--bg-3)}
-.iel-page .ig-weight-btn[aria-disabled="true"]{color:var(--t3);cursor:not-allowed;text-decoration:line-through;text-decoration-thickness:1px}
+.iel-page .ig-weight-btn[aria-disabled="true"]{color:var(--t3);cursor:not-allowed}
+.iel-page .ig-weight-measure{display:flex;gap:2px;visibility:hidden}
+.iel-page .ig-weight--single{background:transparent;border-color:transparent}
+.iel-page .ig-weight-status{
+  position:absolute;inset:0;pointer-events:none;min-width:0;min-height:36px;padding:0 14px;align-content:center;text-align:left;
+  color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:400;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
 .iel-page .ig-weight-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-@media(pointer:coarse){.iel-page .ig-weight-btn{min-height:44px}}
+@media(pointer:coarse){
+  .iel-page .ig-weight-btn,.iel-page .ig-weight-measure>span,.iel-page .ig-weight-status{min-height:44px}
+}
 .iel-page .lbry-toolbar-quick>.ig-weight{width:100%}
 .iel-page .lbry-panel-groups>.ig-weight{width:100%}
 .iel-page .lbry-toolbar-quick>.ig-weight .ig-weight-btn,
 .iel-page .lbry-panel-groups>.ig-weight .ig-weight-btn{flex:1 1 0;min-width:max-content}
-
-/* The customizer's stage, while the icon is in the theme's default ink: the
-   page's own ground (flat, over a hairline), so the preview reads as the page
-   will. A picked colour keeps the light or dark contrast ground. */
-.iel-page .icust-stage--theme{background:var(--bg-0);box-shadow:inset 0 0 0 1px var(--border)}
-.iel-page .icust-stage--theme .icust-stage-msg{color:var(--t2)}
-
-/* On a phone "Add icon" keeps its glyph and gives its word's width to the
-   search field, which is what the row is for (the design's mock gives the search the
-   whole line). The word stays the accessible name. */
-@media(max-width:640px){
-  /* Rooted at the toolbar's action slot as well: the shared toolbar sheet sizes
-     that slot's child to its content (width:auto), which left this button a
-     16px glyph in an 18px sliver. */
-  .iel-page .ig-addbtn,
-  .iel-page .lbry-toolbar-action>.ig-addbtn{width:44px;min-width:44px;padding:0;justify-content:center}
-  .iel-page .ig-addbtn-label{
-    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
-    clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
-  }
-}
-
-
-/* ── The customizer on a phone: the actions stay on screen ─────────────────
-   Unpinned, "Copy SVG" sat about 500px down inside the panel, under
-   the stage, the controls and the code box. The foot is now STICKY at the
-   bottom of the panel's own scroller: it rides the bottom edge while the
-   controls scroll under it, and settles into place when you reach it. One
-   hairline over the card ground, no second box. */
-.iel-page .icust-body>.icust-foot{
-  position:sticky;bottom:0;z-index:3;
-  background:var(--card);
-  box-shadow:0 -1px 0 var(--border);
-}
-/* The Pro line-style group was a bordered box inside the panel — a panel in
-   a panel, which the system does not allow. It is a section of the one surface now,
-   set apart by a hairline and space. */
-.iel-page .icust-pro{border:0;border-top:1px solid var(--border);border-radius:0;padding:14px 0 0;background:transparent}
 
 
 /* ── The masthead tablist ─────────────────────────────────────────────────
@@ -229,4 +266,102 @@
   .iel-page.lib-surface .lib-switch-btn>.lib-switch-emoji{display:none}
 }
 
-.iel-page .icust-original{white-space:nowrap}
+
+/* ── The dialog head, widths and phone sheet ───────────────────────────────
+   Head: the name, then a one-line sub in the UI face, with Close at the right.
+   Above 800px the panel is 760px wide, to 800px 560px, to 640px a bottom sheet;
+   the emoji dialog restates its own width above (.emd-panel). */
+.iel-page .icust-head{align-items:center;gap:8px;padding:18px 24px 8px}
+.iel-page .icust-head-text{flex:1 1 auto;gap:2px}
+.iel-page .icust-sub{margin:0;font-family:var(--font);font-size:13px;line-height:1.4;color:var(--t2)}
+
+@media(min-width:801px){
+  .iel-page .icust-panel{width:min(760px,calc(100vw - 32px));max-height:min(760px,calc(100dvh - 64px - env(safe-area-inset-top,0px)))}
+}
+@media(max-width:800px){
+  .iel-page .icust-panel{width:min(560px,calc(100vw - 32px))}
+}
+
+/* The phone sheet: the dialog rises from the bottom edge. */
+@media(max-width:640px){
+  .iel-page .icust-overlay{align-items:flex-end;padding:max(24px,env(safe-area-inset-top,0px)) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+  .iel-page .icust-panel{width:100%;max-height:calc(100dvh - max(24px,env(safe-area-inset-top,0px)));border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-width:1px 0 0}
+  .iel-page .icust-head{padding:16px 16px 8px}
+}
+
+/* Reduced motion: the dialog's entrance does not animate. */
+html[data-reduced-motion="true"] .iel-page .icust-panel{animation:none;transition:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .iel-page .icust-panel{animation:none;transition:none}
+}
+
+/* The toolbar band. From 641px it sticks flush under the nav (top is the nav's
+   bottom edge, no gap) on the page ground, so nothing paints above or around it
+   while the grid scrolls. Stuck, the card's shadow goes and a hairline closes the
+   band. A focused cell scrolls clear of the band by its measured height
+   (--ig-band-h, set where the band is mounted). Phones keep the toolbar in flow. */
+.iel-page .ig-band{margin-bottom:14px}
+.iel-page .ig-band-sentinel{height:1px;margin-bottom:-1px;pointer-events:none}
+/* Short landscape phones keep it in flow too: the nav and a two-row band would take half the screen. */
+@media(min-width:641px) and (min-height:560px){
+  .iel-page .ig-band{position:sticky;top:var(--chrome-h);z-index:45;padding:8px 0 12px;background:var(--bg-0);border-bottom:1px solid transparent;margin-bottom:2px}
+  .iel-page .ig-band .lbry-toolbar.ig-toolbar{position:relative;top:auto}
+  .iel-page .ig-band[data-stuck="true"]{border-bottom-color:var(--border)}
+  .iel-page .ig-band[data-stuck="true"] .lbry-toolbar.ig-toolbar{box-shadow:none}
+  .iel-page .ig .ic{scroll-margin-top:calc(var(--chrome-h) + var(--ig-band-h,96px) + 8px)}
+}
+
+
+/* The press-to-continue button that replaces the automatic load past three pages. */
+.iel-page .ig-more{display:flex;justify-content:center;padding:var(--s-5) 0 var(--s-2)}
+
+/* "Send feedback" in the masthead's status line: a quiet text button, because
+   these routes have no floating Feedback button and no More menu. The ground is
+   the fixed dark hero, so the ink is a light neutral (5.9:1, above the 4.5:1
+   the 11px text needs). */
+.iel-page .lib-feedback{
+  appearance:none;display:inline-flex;align-items:center;min-height:24px;padding:0;
+  border:0;background:none;font:inherit;color:rgba(247,247,244,.66);
+  text-decoration:underline;text-underline-offset:3px;cursor:pointer;
+}
+@media(hover:hover){.iel-page .lib-feedback:hover{color:#F7F7F4}}
+.iel-page .lib-feedback:focus-visible{outline:2px solid #F7F7F4;outline-offset:3px}
+@media(pointer:coarse){.iel-page .lib-feedback{min-height:44px;padding-inline:8px;margin-inline:-8px}}
+
+
+/* ── The masthead on a phone ──────────────────────────────────────────────
+   Under 768px the tabs and the status share one row's worth of height with the
+   title instead of adding a row of their own, so the first icons sit higher:
+   - the connection pill moves to the right end of the title row, as a dot and
+     one short word (the aria-hidden .lib-net-short; the pill's own full text
+     stays in the DOM for assistive tech and is only drawn at zero size);
+   - the ← → hint goes, since a phone has no arrow keys;
+   - "Send feedback" becomes a compact "Feedback" at the end of the tabs row. It
+     keeps its 44px height there, which costs nothing beside 44px tabs. */
+.iel-page .lib-net-wrap{display:contents}
+.iel-page .lib-net-short{display:none}
+@media(max-width:767px){
+  .iel-page.lib-surface .dgh-hero{--hero-pad-y:20px;padding-block:var(--hero-pad-y)}
+  .iel-page.lib-surface .dgh-hero--controls{gap:12px}
+  /* Static, so the pill below positions against the hero (which is relative)
+     and can sit on the title row; the controls stay above the glow. */
+  .iel-page.lib-surface .dgh-aside{position:static;flex-direction:row;align-items:center;gap:8px}
+  .iel-page.lib-surface .lib-switch{flex:0 1 auto;min-width:0}
+  .iel-page .lib-head-status{display:contents}
+  .iel-page .lib-keyhint{display:none}
+  .iel-page .lib-net-wrap{
+    position:absolute;z-index:1;top:var(--hero-pad-y);right:clamp(18px,3vw,40px);
+    display:inline-flex;align-items:center;gap:7px;height:calc(clamp(28px,4.2vw,52px)*.96);
+  }
+  .iel-page .lib-net{gap:0;font-size:0}
+  .iel-page .lib-net-short{display:inline}
+  .iel-page .lib-feedback{
+    position:relative;flex:none;margin:0 -8px 0 auto;min-height:44px;padding-inline:8px;
+    text-transform:capitalize;
+  }
+  .iel-page .lib-feedback-pre{display:none}
+}
+@media(max-width:430px){
+  .iel-page.lib-surface .lib-switch-btn>svg,
+  .iel-page.lib-surface .lib-switch-btn>.lib-switch-emoji{display:none}
+}

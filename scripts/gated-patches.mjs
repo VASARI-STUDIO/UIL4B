@@ -1,23 +1,22 @@
-// THE FOUR FOUNDER-GATED CHANGES, IN ONE REGISTRY.
+// THE APPROVAL-GATED CHANGES, IN ONE REGISTRY.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // WHY THIS EXISTS
 // ═══════════════════════════════════════════════════════════════════════════
-// Four reviewed, tested changes cannot be committed from an agent branch.
+// Reviewed, tested changes cannot be committed from an agent branch.
 // `firestore.rules`, `api/verify-admin.js` and `src/contexts/AuthContext.jsx`
-// are refused by the Claude Code auto-mode classifier — a guardrail inside the
-// tool, separate from and stricter than docs/reference/human-validation-zones.md,
-// which refuses AFTER the founder has said yes. So each change ships as a diff
+// may not be staged by an automated commit, even after the owner has said yes
+// (stricter than docs/reference/human-validation-zones.md). So each change ships as a diff
 // that is committed, tested and unapplied, and somebody has to type it in.
 //
-// Five hand-applied diffs across three files is five chances to paste one into
-// the wrong place. This module is the single description of all four — what
+// Hand-applied diffs across several files are as many chances to paste one into
+// the wrong place. This module is the single description of all of them — what
 // each one is, how to tell whether it is already in, how to put it in, and what
 // it grants in a sentence a non-engineer can act on. Two things read it:
 //
 //   · scripts/apply-gated-patches.mjs  (`npm run apply:gated`) — the one
-//     command the founder runs.
-//   · tests/unit/gated-patch-applier.test.js — which fails if any of the four
+//     command the owner runs.
+//   · tests/unit/gated-patch-applier.test.js — which fails if any of them
 //     goes stale against its target, or if the applier stops covering one.
 //
 // ═══════════════════════════════════════════════════════════════════════════
@@ -32,7 +31,7 @@
 //
 // 2. THE TARGET FILES ARE NEVER WRITTEN UNTIL EVERY PATCH HAS APPLIED. Each
 //    patch lands in a scratch directory inside the repository, in order, and
-//    the results are copied over the originals only once all four have
+//    the results are copied over the originals only once every one has
 //    succeeded. A run that fails halfway leaves the tree exactly as it found
 //    it — which matters most for `firestore.rules`, where a half-applied file
 //    does not compile and locks every client out of its own data.
@@ -40,8 +39,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // THE ORDER IS LOAD-BEARING, AND IT IS NOT THE READING ORDER
 // ═══════════════════════════════════════════════════════════════════════════
-// Three of the four edit `firestore.rules`, and two of them are unified diffs
-// carrying three lines of context. Applying them in the wrong order breaks that
+// Several of them edit `firestore.rules`, and most are unified diffs carrying
+// three lines of context. Applying them in the wrong order breaks that
 // context and `git apply` refuses:
 //
 //   · per-project sync inserts inside `match /users/{userId}`, and its trailing
@@ -53,6 +52,9 @@
 //     feedback bounds insert forty lines between the two. So the moderator role
 //     before the feedback bounds — which is also the order #418 verified
 //     against #390's working copy on the emulator.
+//   · the tool votes append after the end of `match /analytics-daily/{day}`,
+//     and the feedback bounds and the analytics counters both rewrite text
+//     inside that block, so the tool votes go LAST.
 //
 // The moderator role's SECOND part is the only one that edits a file no other
 // patch touches (api/verify-admin.js), so it is order-independent — but it is
@@ -60,7 +62,7 @@
 // that understands a moderator and a route that never mints one is precisely
 // the half-shipped state this row spent weeks in.
 //
-// The founder never sees this ordering problem, which is the point of the
+// The owner never sees this ordering problem, which is the point of the
 // command existing.
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -97,8 +99,8 @@ export const RULE_MATCHER =
 
 /**
  * `git apply` rather than a hand-rolled splice, for the reason
- * scripts/firebase-deferral-trial.mjs gives: a patch verified by a bespoke
- * applier is a patch verified against something other than what the founder
+ * the Firebase deferral trial once gave: a patch verified by a bespoke
+ * applier is a patch verified against something other than what the owner
  * will run. `--directory` makes every byte git writes land inside the scratch
  * directory, so the gated originals are read and never written.
  *
@@ -120,12 +122,25 @@ async function gitApplyInto(patchAbs, ws, { check = false } = {}) {
   await execFileAsync('git', args, { cwd: ROOT })
 }
 
-/* ── The four ───────────────────────────────────────────────────────────── */
+/* ── The registry ───────────────────────────────────────────────────────────── */
 
 const PER_PROJECT_PATCH = 'docs/design/per-project-sync-rules.patch'
 const MODERATOR_PATCH = 'docs/design/moderator-role-rules.patch'
 const MODERATOR_ROUTE_PATCH = 'docs/design/moderator-verify-admin.patch'
-const FIREBASE_PATCH = 'docs/design/firebase-deferral-gated.patch'
+const ICON_PATCH = 'docs/design/community-icon-rules.patch'
+const ANALYTICS_PATCH = 'docs/design/analytics-counters-rules.patch'
+const PROFILE_PATCH = 'docs/design/profile-types-rules.patch'
+const PROFILE_ROUTE_PATCH = 'docs/design/profile-text-verify-admin.patch'
+const PAYLOAD_PATCH = 'docs/design/submission-payload-rules.patch'
+const UPLOAD_PATCH = 'docs/design/upload-limits-rules.patch'
+const QUEUE_PATCH = 'docs/design/queue-limits-rules.patch'
+const LIMITS_FILE = 'src/utils/communityLimits.js'
+const LIMITS_OFF = 'export const COMMUNITY_LIMITS_ENABLED = false'
+const LIMITS_ON = 'export const COMMUNITY_LIMITS_ENABLED = true'
+const VOTES_PATCH = 'docs/design/tool-votes-rules.patch'
+const VOTES_FILE = 'src/data/toolVotes.js'
+const VOTES_OFF = 'export const TOOL_VOTES_ENABLED = false'
+const VOTES_ON = 'export const TOOL_VOTES_ENABLED = true'
 
 /** The flag the client half of per-project sync is held behind. */
 const FLAG_OFF = 'export const PER_PROJECT_SYNC_ENABLED = false'
@@ -134,7 +149,7 @@ const FLAG_ON = 'export const PER_PROJECT_SYNC_ENABLED = true'
 /**
  * The feedback bounds are NOT a `.patch` file: they were written as anchored
  * find/replace pairs so tests/rules/firestore-rules-pending.test.js could run
- * the emulator against the result before the founder ever saw it. Reusing that
+ * the emulator against the result before the owner ever saw it. Reusing that
  * exact module is the whole reason to import from tests/ — a second copy of
  * these anchors would be a second thing to keep in step, and the copy the
  * emulator ran is the one that matters.
@@ -157,7 +172,7 @@ function applyPendingAnchors(text) {
 }
 
 /**
- * The registry. `parts` exist because two of the four are a pair that must land
+ * The registry. `parts` exist because some of them are a pair that must land
  * together or not at all — a rule with no client behind it, or a client with no
  * rule, is the exact silent failure these changes abolish. Splitting them means
  * a half-applied change can be COMPLETED rather than refused.
@@ -233,7 +248,7 @@ export const GATED_PATCHES = [
         file: 'api/verify-admin.js',
         // Asked of the RESULT, not of whether the patch still applies: the two
         // calls that make the role real are the reconciliation (which mints and
-        // un-mints the claim from the roster) and the founder-only assignment.
+        // un-mints the claim from the roster) and the owner-only assignment.
         detect: (text) => /reconcileModeratorClaim\(decoded\)/.test(lf(text))
           && /req\.body\?\.moderatorAction/.test(lf(text)),
         apply: async (ctx) => { await gitApplyInto(abs(MODERATOR_ROUTE_PATCH), ctx) },
@@ -265,28 +280,185 @@ export const GATED_PATCHES = [
     ],
   },
   {
-    id: 'firebase-deferral',
-    title: 'Firebase deferral',
-    source: 'docs/design/firebase-deferral-gated.patch (PR #427)',
+    id: 'community-icon',
+    title: 'Icon submissions accepted',
+    source: 'docs/design/community-icon-rules.patch',
     grants:
-      'the 116 KB Firebase SDK stops being fetched before the homepage can paint — '
-      + 'measured at FCP −360 ms, LCP −624 ms, first-wave bytes −21.8%',
-    files: ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx'],
+      'a signed-in member can submit an icon to the community review queue, which the '
+      + 'rules refuse today (every icon submit fails with a "could not reach the review '
+      + 'queue" message); the markup is capped at 8192 characters',
+    files: ['firestore.rules'],
     parts: [
       {
-        name: 'both contexts routed through the access broker',
-        file: 'src/contexts/AuthContext.jsx',
-        detect: (text) => lf(text).includes(
-          "import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'",
-        ),
-        apply: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx) },
-        check: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx, { check: true }) },
+        name: 'icon kind and svg payload key',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes("'palette', 'icon']"),
+        apply: async (ctx) => { await gitApplyInto(abs(ICON_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(ICON_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'analytics-counters',
+    title: 'Analytics counters and grand totals protected',
+    source: 'docs/design/analytics-counters-rules.patch',
+    grants:
+      'a signed-in account can no longer delete counters or lower the two grand totals '
+      + '(views and icon copies); it can still change an individual page, tool or icon '
+      + 'counter. Only your admin sign-in can delete counters or lower the totals, which is what '
+      + 'the reset button uses',
+    files: ['firestore.rules'],
+    parts: [
+      {
+        name: 'counters only grow for non-admins',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function countersOnlyGrow()'),
+        apply: async (ctx) => { await gitApplyInto(abs(ANALYTICS_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(ANALYTICS_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'profile-types',
+    title: 'Profile fields type-checked',
+    source: 'docs/design/profile-types-rules.patch + docs/design/profile-text-verify-admin.patch',
+    grants:
+      'a profile can only hold text of a sane length in name, email, photo, location, '
+      + 'website, bio, company and flair (and numbers and short text in the onboarding '
+      + 'record), and the Admin users list turns those fields into capped text, so one '
+      + 'bad value can no longer crash your Admin page',
+    files: ['firestore.rules', 'api/verify-admin.js'],
+    parts: [
+      {
+        name: 'type and length checks on users/{uid}',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function profileTypesOk()'),
+        apply: async (ctx) => { await gitApplyInto(abs(PROFILE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(PROFILE_PATCH), ctx, { check: true }) },
+      },
+      {
+        name: 'the users list coerces profile fields to capped text',
+        file: 'api/verify-admin.js',
+        detect: (text) => lf(text).includes('function profileText(value, max)'),
+        apply: async (ctx) => { await gitApplyInto(abs(PROFILE_ROUTE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(PROFILE_ROUTE_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'submission-payload',
+    title: 'Submission payload bounded',
+    source: 'docs/design/submission-payload-rules.patch',
+    grants:
+      'a community submission that has an angle must give it as a number, any gradient '
+      + 'stops must be colour and position pairs, and any palette colours must be short '
+      + 'text, so one submission can no longer be a megabyte inside the list-length limits',
+    files: ['firestore.rules'],
+    parts: [
+      {
+        name: 'angle type and list element caps',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function payloadElementsOk()'),
+        apply: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(PAYLOAD_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'upload-limits',
+    title: 'Media uploads limited',
+    source: 'docs/design/upload-limits-rules.patch',
+    grants:
+      'only a signed-in account with a verified email can upload community media, each file '
+      + 'up to 10 MiB, under ten fixed names per type (webp, png, jpg, gif, mp4, webm) so an '
+      + 'account holds at most 60 files, and an account can delete its own files but not '
+      + 'overwrite one. Reviewers can still read every file. SVG and QuickTime uploads are no '
+      + 'longer accepted',
+    files: ['storage.rules'],
+    parts: [
+      {
+        name: 'verified, 10 MiB, fixed slot names, owner delete',
+        file: 'storage.rules',
+        detect: (text) => lf(text).includes('function slotAndType(name, mime)'),
+        apply: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(UPLOAD_PATCH), ctx, { check: true }) },
+      },
+    ],
+  },
+  {
+    id: 'queue-limits',
+    title: 'Community posts limited',
+    source: 'docs/design/queue-limits-rules.patch + src/utils/communityLimits.js',
+    grants:
+      'only an account with a verified email can send a prompt or a submission to the review '
+      + 'queue, at most one every 30 seconds and ten of each kind per 24 hours, and the queue '
+      + 'is ordered on the time the server received each one, which the sender cannot choose',
+    files: ['firestore.rules', 'src/utils/communityLimits.js'],
+    before:
+      '1) deploy the new indexes: firebase deploy --only firestore:indexes, and wait for them to '
+      + 'finish building. 2) run node --env-file=.env.local scripts/backfill-submitted-at.mjs, check '
+      + 'the list, then run it again with --write --all-statuses, so items already queued keep '
+      + 'their place once the queue is ordered on submittedAt. 3) then apply this, and deploy the '
+      + 'rules first and the site second. 4) after the patch is live, run node --env-file=.env.local '
+      + 'scripts/backfill-submitted-at.mjs --write --all-statuses again: anything posted between '
+      + 'step 2 and the deploy has no submittedAt, and the run is safe to repeat',
+    parts: [
+      {
+        name: 'verified, counted, server-stamped posts',
+        file: 'firestore.rules',
+        detect: (text) => lf(text).includes('function postLimitsOk(kind, id)'),
+        apply: async (ctx) => { await gitApplyInto(abs(QUEUE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(QUEUE_PATCH), ctx, { check: true }) },
+      },
+      {
+        // The client writes a counter and a server stamp that the old rules
+        // refuse, so it stays off until the rules are in, as per-project sync does.
+        name: 'the client flag',
+        file: LIMITS_FILE,
+        detect: (text) => lf(text).includes(LIMITS_ON),
+        apply: async (ctx) => {
+          const text = await ctx.read(LIMITS_FILE)
+          if (!lf(text).includes(LIMITS_OFF)) throw new Error(`${LIMITS_OFF} is no longer in ${LIMITS_FILE}`)
+          await ctx.write(LIMITS_FILE, lf(text).replace(LIMITS_OFF, LIMITS_ON))
+        },
+      },
+    ],
+  },
+  {
+    id: 'tool-votes',
+    title: 'Roadmap voting',
+    source: 'docs/design/tool-votes-rules.patch + src/data/toolVotes.js',
+    grants:
+      'a signed-in account can vote once for each tool that is still being built and take that '
+      + 'vote back, and the public count moves by exactly one, only together with that '
+      + 'account\'s own vote; nobody can set or delete a count, and only your admin sign-in '
+      + 'can close voting on a tool',
+    files: ['firestore.rules', VOTES_FILE],
+    parts: [
+      {
+        name: 'the rule',
+        file: 'firestore.rules',
+        detect: (text) => /match \/toolVotes\/\{toolId\}/.test(lf(text)),
+        apply: async (ctx) => { await gitApplyInto(abs(VOTES_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(VOTES_PATCH), ctx, { check: true }) },
+      },
+      {
+        // The roadmap page is left out of the site while this is false: every
+        // vote it took would be refused by the old rules.
+        name: 'the client flag',
+        file: VOTES_FILE,
+        detect: (text) => lf(text).includes(VOTES_ON),
+        apply: async (ctx) => {
+          const text = await ctx.read(VOTES_FILE)
+          if (!lf(text).includes(VOTES_OFF)) throw new Error(`${VOTES_OFF} is no longer in ${VOTES_FILE}`)
+          await ctx.write(VOTES_FILE, lf(text).replace(VOTES_OFF, VOTES_ON))
+        },
       },
     ],
   },
 ]
 
-/** Every file any of the four touches, de-duplicated, in a stable order. */
+/** Every file any entry touches, de-duplicated, in a stable order. */
 export const TARGET_FILES = [...new Set(GATED_PATCHES.flatMap((p) => p.files))].sort()
 
 /* ── The workspace ──────────────────────────────────────────────────────── */
@@ -331,12 +503,12 @@ export async function openWorkspace(seed) {
 }
 
 /**
- * What each of the four would do to the current tree, without doing any of it.
+ * What each entry would do to the current tree, without doing any of it.
  *
  * @param {object} [opts]
  * @param {(file: string) => string} [opts.seed] file contents to start from,
  *   instead of what is on disk. Used by the tests to plan against HEAD.
- * @param {number} [opts.upTo] apply only the first N of the four. The dirty-tree
+ * @param {number} [opts.upTo] apply only the first N entries. The dirty-tree
  *   check uses it to ask "is this tree HEAD plus a prefix of what I do?".
  * @returns {Promise<{ steps: object[], after: Map<string,string>, before: Map<string,string> }>}
  */
@@ -410,8 +582,8 @@ export async function planGatedPatches(opts = {}) {
  * One target file as it stands with everything up to and INCLUDING the named
  * patch applied — in memory, never on disk.
  *
- * The emulator suite needs this: firestore.rules is founder-gated, so the rules
- * a moderator test is about do not exist in the tree until the founder runs the
+ * The emulator suite needs this: firestore.rules is approval-gated, so the rules
+ * a moderator test is about do not exist in the tree until the owner runs the
  * command, and a test that only passed afterwards would prove nothing today and
  * break tomorrow. Running against the planned text makes the SAME assertions
  * hold on both sides of `npm run apply:gated`, because a patch that is already
@@ -420,7 +592,7 @@ export async function planGatedPatches(opts = {}) {
  * Through the registry rather than around it, for the reason the registry
  * exists: the order is load-bearing, two of the rules patches are unified diffs
  * whose context the others move, and a helper that applied one of them alone
- * would be verifying something other than what the founder will run.
+ * would be verifying something other than what the owner will run.
  *
  * LF, unconditionally. The emulator does not care and every caller compares.
  */
@@ -442,7 +614,7 @@ export async function fileTextThrough(id, file = 'firestore.rules') {
 
 /**
  * A unified diff of one file's before/after, headed with the repository-relative
- * path rather than the scratch one, so the founder reads a path that exists.
+ * path rather than the scratch one, so the reader sees a path that exists.
  */
 export async function diffOf(file, beforeText, afterText) {
   if (beforeText === afterText) return ''
@@ -472,7 +644,7 @@ export async function diffOf(file, beforeText, afterText) {
 /* ── State, for the tests and for the dirty-tree check ───────────────────── */
 
 /**
- * Where each of the four stands against a given set of file contents.
+ * Where each entry stands against a given set of file contents.
  *
  * 'applied'  — the target already carries what the patch grants
  * 'pending'  — the patch is not in, and applies cleanly
@@ -498,7 +670,7 @@ export async function patchStates(opts = {}) {
   return out
 }
 
-/** The undo the founder is handed the moment anything goes wrong. */
+/** The undo handed over the moment anything goes wrong. */
 export function undoCommand(files = TARGET_FILES) {
   return `git checkout -- ${files.join(' ')}`
 }

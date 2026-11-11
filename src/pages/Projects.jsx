@@ -1,103 +1,108 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
-import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { readSessionHint } from '../utils/sessionHint'
 import { NEW_PROJECT_STATE, guideEntry, startGuide } from '../utils/brandKitGuide'
 import { getUsageCount } from '../utils/usageTracker'
-import LocalClock from '../components/LocalClock'
-import SaveRefusal from '../components/SaveRefusal'
-import Glyph from '../components/userhome/Glyph'
-import PlanStrip from '../components/userhome/PlanStrip'
-import StartSomething from '../components/userhome/StartSomething'
-import ProjectTile from '../components/userhome/ProjectTile'
-import DiscoverPicks from '../components/userhome/DiscoverPicks'
-import ProPanel from '../components/userhome/ProPanel'
-import RecentExports from '../components/userhome/RecentExports'
+import { getSyncState, subscribeSync } from '../utils/syncStatus'
+import { mostRecentProject } from '../utils/userHome'
+import { COUNT_FAILED_NEW_MESSAGE } from '../utils/projectCount'
+import { useServerAiUsage } from '../hooks/useServerAiUsage'
 import useProjectIcons from '../hooks/useProjectIcons'
+import { prefersReducedMotion } from '../components/spectrum/reducedMotion'
 import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/account.css'
-import '../styles/deferred/tool-shell.css'
-import '../styles/pages/projects.css'
+import KitSheet, { FailedSheet, GoArrow, LoadingSheet } from '../components/dashboard/KitSheet'
+import { StatusRow, TodayLine } from '../components/dashboard/StatusRow'
+import ParkedLine from '../components/dashboard/ParkedLine'
+import { OtherProjects, OtherProjectsSkeleton } from '../components/dashboard/OtherProjects'
+import Shelf from '../components/dashboard/Shelf'
+import PlanLine from '../components/dashboard/PlanLine'
+import { exampleKit, kitFromProject } from '../components/dashboard/kit'
+import '../styles/pages/dashboard.css'
 
 // ── YOUR WORKSPACE ──────────────────────────────────────────────────────────
 //
-// /projects is the "Your workspace" screen (UIL4B App.dc.html, `projects`).
-// No masthead, no Save Current / New Project pair, no search-and-sort bar,
-// ruled rows, tip band or rotating starters: none of that is on the design's
-// screen, so none of it is here.
+// /projects: a status line (greeting or the offline note), the title with New project, one line for today
+// (date, allowances), then the kit sheet. The sheet draws the newest project's four parts, each linking to
+// the tool that made it, with the next step in the sheet's head. Components are in components/dashboard/.
 //
-// What is here, in the design's order: the title and ONE accent "New project"; the plan
-// strip; "Start something"; "Recent projects"; "New in Discover"; the Pro panel.
-// Every value in it is read off the account, the plan config or the libraries
-// (see components/userhome/workspace.js for each one and what it replaced).
+// The sheet has one home for each state:
+//   lead         the newest project that is not archived
+//   example      Kerbside, a sample brand, for a visitor who is signed out and for an account with no project
+//   loading      the account's list has not answered yet (the session hint says there is an account)
+//   failed       the list did not load; the offline note shows in the status line as well
 //
-// Managing one project — rename, duplicate, archive, delete, overwrite — moved
-// to that project's own page, /projects/:id (ProjectDetail.jsx), which is where
-// the design's screen puts a project's controls.
+// Managing one project (rename, duplicate, archive, delete, overwrite, its icon) lives on that project's
+// own page, /projects/:id (ProjectDetail.jsx).
 
-// THE "COMMUNITY" TAB IS GONE, AND IT WAS THE SAME FABRICATION THIS REPOSITORY
-// ALREADY DELETED ONCE.
-//
-// It rendered four hard-coded design systems — "Sunset Brand by Maya R.",
-// "Fintech Blue by Devon K.", "Forest Co. by Sam T.", "Mono Minimal by
-// Alex P." — under the sentence "Explore design systems shared by the
-// community." Not one of those four people exists, not one of those systems was
-// shared by anybody, and nothing on the card said so.
-//
-// "Maya R." is the SAME invented designer the 2026-08-11 site audit deleted from
-// the real Community surface. Read the header of src/data/communityDesigns.js:
-// twelve invented designs by invented people, "Aurora Analytics by Maya R., 342
-// saves", rendered by the same card as real submissions with nothing marking
-// them apart. That audit's conclusion — a save count is a claim about what other
-// people did, and shipping fabricated ones to real users is not fixable later —
-// is held by tests/unit/community-seed.test.js, which asserts no seeded item is
-// credited to a person.
-//
-// That test reads COMMUNITY_DESIGNS. It never read this file, so the same four
-// invented designers went on shipping here for another month, on the page where
-// a person's OWN work lives, one tab away from it. The guard now covers both
-// (see tests/unit/community-seed.test.js, "no surface invents a designer").
-//
-// Nothing replaces it. /community is a real route with real curated links
-// credited to the platform they open; this page is for the projects you made.
+// A project's icon lives ON the project (`project.icon`). useProjectIcons is still called here, for its
+// migration alone: it moves an icon an older version kept in this browser onto its project.
 
-// A project's icon lives ON the project (`project.icon`) and syncs with it.
-// useProjectIcons moves any icon an older version kept in this browser onto
-// its project the first time both are known.
+const subscribeOnline = (fn) => {
+  window.addEventListener('online', fn)
+  window.addEventListener('offline', fn)
+  return () => { window.removeEventListener('online', fn); window.removeEventListener('offline', fn) }
+}
+const readOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
 
 export default function Projects() {
   const navigate = useNavigate()
-  const { loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { plan, isPro, loading: planLoading } = useSubscription()
-  const { openLogin } = useLoginPrompt()
-  const { projects, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
-  const { pickIcon } = useProjectIcons()
+  const { projects, projectsLoading, projectCountKnown, projectCountPending, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
+  useProjectIcons()
+  const online = useSyncExternalStore(subscribeOnline, readOnline, () => true)
+  const sync = useSyncExternalStore(subscribeSync, getSyncState, getSyncState)
 
-  // ── THREE STATES, NOT TWO ────────────────────────────────────────
-  //
-  // This page is the front door for signed-in visitors, so "we do not know yet"
-  // is its own state. Treating it as signed-out (which is what `canSaveProjects`
-  // alone says while Firebase resolves) would show a returning user the sign-in
-  // panel for the ~1s the auth round trip takes, and then swap it for their
-  // projects. `resolving` reads the same synchronous hint the router used, so
-  // the two agree by construction.
+  // Three states, not two: "we do not know yet" is its own. Treating it as signed out (which is what
+  // `canSaveProjects` alone says while Firebase resolves) would show a returning user the example kit for the
+  // second the auth round trip takes. `resolving` reads the same synchronous hint the router used.
   const [hintedSession] = useState(readSessionHint)
   const resolving = authLoading && hintedSession
   const signedOut = !canSaveProjects && !resolving
 
-  const [capRefusal, setCapRefusal] = useState('')
+  // The cap is the account's, so a new project waits for the account's own count: `checking` while the
+  // list is on its way, `unchecked` once it failed on a device that holds no copy of the account.
+  const checking = !signedOut && !resolving && projectCountPending
+  const unchecked = !signedOut && !resolving && !projectsLoading && !projectCountKnown
 
-  // A new blank project: the cap refusal first, then the default design and the
-  // walkthrough's first step, with its orientation card open.
+  const [capRefusal, setCapRefusal] = useState('')
+  const capBtnRef = useRef(null)
+  const capLinkRef = useRef(null)
+
+  // The cap refusal is a popover by New project: it closes on Escape and on a press elsewhere.
+  useEffect(() => {
+    if (!capRefusal) return undefined
+    capLinkRef.current?.focus({ preventScroll: true })
+    const onKey = (e) => { if (e.key === 'Escape') { setCapRefusal(''); capBtnRef.current?.focus() } }
+    const onDown = (e) => { if (!e.target.closest?.('.db-newwrap')) setCapRefusal('') }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onDown) }
+  }, [capRefusal])
+
+  // The "could not check" message goes once the list has loaded.
+  useEffect(() => {
+    if (!unchecked && capRefusal === COUNT_FAILED_NEW_MESSAGE) setCapRefusal('')
+  }, [unchecked, capRefusal])
+
+  // The refusal can open below the fold on a short window; `nearest` moves the page only as far as it takes.
+  const showCap = useCallback((el) => {
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [])
+
+  // A new blank project: the cap refusal first, then the default design and the walkthrough's first step,
+  // with its orientation card open.
   const startNew = () => {
+    if (checking) return
+    if (unchecked) {
+      setCapRefusal(COUNT_FAILED_NEW_MESSAGE)
+      return
+    }
     if (canSaveProjects && atProjectLimit) {
-      setCapRefusal(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
+      setCapRefusal(`The Free plan saves up to ${projectLimit} projects. Pro saves as many as you like.`)
       return
     }
     setCapRefusal('')
@@ -106,87 +111,117 @@ export default function Projects() {
     navigate(guideEntry(null).path, { state: NEW_PROJECT_STATE })
   }
 
-  const recent = [...projects].sort(byRecent)
-  const ai = aiUsageToday(getUsageCount, plan)
+  const sorted = [...projects].sort(byRecent)
+  const lead = mostRecentProject(sorted)
+  // The rest, newest first, with archived ones last.
+  const rest = sorted.filter((p) => p !== lead)
+  const others = [...rest.filter((p) => !p.archived), ...rest.filter((p) => p.archived)]
+  // The account's own count from the server, once it answers; until then this browser's count.
+  const serverAi = useServerAiUsage(canSaveProjects ? user?.uid : null, plan?.id)
+  const ai = aiUsageToday(getUsageCount, plan, serverAi)
   const slots = projectSlots(projects.length, projectLimit)
 
+  const hasProjects = projects.length > 0
+  const loadingList = !signedOut && !resolving && projectsLoading && !hasProjects
+  const syncError = sync.errors.find((e) => e.channel === 'projects')
+  // Failed holds until the account's list has been read: a read that failed leaves the count unchecked even
+  // after the sync error clears, and that is not an account with no projects.
+  const loadFailed = !signedOut && !resolving && !hasProjects && !projectsLoading && (!online || !!syncError || unchecked)
+  const offline = !online && !signedOut
+  const atCap = !!slots && !isPro && slots.used >= slots.limit
+
+  const meters = !signedOut && !resolving && !planLoading && !loadFailed && !loadingList
+    ? { isPro, ai, slots }
+    : null
+
+  const leadKit = lead ? kitFromProject(lead) : null
+  const retryList = () => (syncError?.retry ? syncError.retry() : window.location.reload())
+  let sheet
+  if (resolving || loadingList || (checking && !lead)) sheet = <LoadingSheet />
+  else if (loadFailed) sheet = <FailedSheet onRetry={retryList} />
+  else if (signedOut) sheet = <KitSheet kit={exampleKit('out')} />
+  else if (!lead) {
+    // No project yet (or every project is archived): the example, with New project as its one next step.
+    const kit = exampleKit('empty')
+    sheet = <KitSheet kit={{ ...kit, pill: { text: 'New project' } }} onPill={startNew} />
+  } else sheet = <KitSheet kit={leadKit} openHref={`/projects/${encodeURIComponent(lead.id)}`} />
+
+  // New project: top right of the title row. Ink when signed out, outlined once there is work (and while the
+  // list loads or fails to), and absent when the sheet's own pill is the same action (no project yet).
+  const showNew = !resolving && (signedOut || lead || loadingList || loadFailed)
+  // The refusal's dialog is drawn here whichever New project was pressed (this one, the sheet's pill, the
+  // docked bar or the Other projects tile), so the wrap stays while a refusal is open even with no button.
+  const newProject = (showNew || capRefusal) && (
+    <div className={`db-newwrap${signedOut ? ' out' : ''}`}>
+      {!showNew ? null : signedOut ? (
+        <button type="button" className="db-go" onClick={startNew}>New project<GoArrow /></button>
+      ) : (
+        <button
+          type="button"
+          className="db-ghost db-ring"
+          ref={capBtnRef}
+          onClick={() => (capRefusal ? setCapRefusal('') : startNew())}
+          aria-haspopup={atCap || unchecked ? 'dialog' : undefined}
+          aria-expanded={atCap || unchecked ? !!capRefusal : undefined}
+          disabled={checking}
+          aria-busy={checking || undefined}
+        >
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          <span className="db-bt">New project</span>
+        </button>
+      )}
+      {capRefusal && (
+        <div className="db-pop cap" ref={showCap} role="dialog" aria-labelledby="db-cap-t" data-testid="project-create-refusal">
+          <p id="db-cap-t">{capRefusal}</p>
+          {capRefusal === COUNT_FAILED_NEW_MESSAGE
+            ? <button type="button" className="db-textbtn" ref={capLinkRef} onClick={retryList}>Try again</button>
+            : <Link to="/plans" className="db-tl" ref={capLinkRef}>See plans</Link>}
+        </div>
+      )}
+    </div>
+  )
+
+  // Below 1200 the sheet's own pill moves to a docked bar at the foot of the page (the CSS hides the pill in the
+  // sheet's head there). The bar is the next step, or New project for the example kit.
+  const lead4 = !resolving && !loadingList && !loadFailed
+  let bar = null
+  if (lead4 && !signedOut && lead) {
+    const pill = leadKit.pill
+    bar = { text: pill.text, href: pill.href }
+  } else if (lead4 && !checking) {
+    bar = { text: 'New project', onClick: startNew }
+  }
+
   return (
-    <div className="uh">
-      <div className="uh-main">
-        {/* The viewer's own date and time, from their machine. LocalClock renders nothing until the
-            browser has answered, so no prerendered shell carries a date. */}
-        <LocalClock className="uh-clock" />
-        <div className="uh-title">
-          <h1 className="uh-h1">Your workspace</h1>
-          <button type="button" className="uh-new" onClick={startNew}>
-            <Glyph name="plus" size={14} />
-            <span>New project</span>
-          </button>
+    <div className="db">
+      <div className="db-wrap">
+        <div className="db-in">
+          <div className="db-main">
+            <StatusRow resolving={resolving} signedOut={signedOut} offline={offline} />
+            <div className="db-title">
+              <h1>Your workspace</h1>
+              {newProject}
+            </div>
+            <TodayLine meters={meters} offline={offline} atCap={atCap} />
+            <ParkedLine />
+            {sheet}
+            {loadingList && <OtherProjectsSkeleton />}
+            {!signedOut && !resolving && !loadFailed && !loadingList && (
+              <OtherProjects others={others} room={!isPro && slots ? Math.max(0, slots.limit - slots.used) : 0} onNew={startNew} busy={checking} />
+            )}
+            <Shelf projects={projects} signedOut={signedOut} loading={resolving || loadingList} />
+            <PlanLine loading={resolving || loadingList || planLoading} signedOut={signedOut} isPro={isPro} />
+            <div className="db-end" />
+          </div>
         </div>
-        {capRefusal && <SaveRefusal message={capRefusal} testId="project-create-refusal" />}
-
-        {/* The plan strip is for an account. A visitor who has never signed in
-            has no plan to be told about (20-billing-banner.spec.js). */}
-        {!signedOut && !resolving && !planLoading && (
-          <PlanStrip planLabel={plan?.label || 'Free'} ai={ai} slots={slots} />
-        )}
-
-        <StartSomething />
-
-        <div className="uh-recent-head">
-          <h2 className="uh-sec-h">Recent projects</h2>
-        </div>
-
-        {resolving ? (
-          /* WE DO NOT KNOW YET. The session hint says there is an account, so
-             the list is unknown, not empty — "No projects yet" here would tell a
-             returning user their work was gone for the second auth takes. */
-          <div className="uh-resolving" role="status">
-            <div className="fg-loader" />
-            <p>Opening your projects…</p>
-          </div>
-        ) : signedOut ? (
-          /* The design's empty card, carrying the sign-in the page needs. The sentence is
-             the one this page has always given a stranger. */
-          <div className="uh-empty uh-signin">
-            <h3 className="uh-empty-title">Sign in to keep what you build</h3>
-            <p className="uh-empty-text">
-              Every tool works without an account. Signing in is what makes a palette,
-              a pairing and a scale survive the tab — saved together as a project you can
-              reopen on any device.
-            </p>
-            <button type="button" className="uh-empty-cta" onClick={() => openLogin()}>
-              <span>Sign in</span>
-            </button>
-          </div>
-        ) : recent.length === 0 ? (
-          /* The design's empty state. Its second sentence — "Nothing leaves the browser
-             until you export it." — is deleted: a signed-in account's projects
-             sync to it (ProjectContext pushes them), so it is not true. */
-          <div className="uh-empty">
-            <h3 className="uh-empty-title">No projects yet</h3>
-            <p className="uh-empty-text">Start with a colour and the rest of the project follows.</p>
-            <button type="button" className="uh-empty-cta" onClick={startNew}>
-              <Glyph name="plus" size={14} />
-              <span>Start a project</span>
-            </button>
-          </div>
-        ) : (
-          <div className="uh-grid">
-            {recent.map((p) => (
-              <ProjectTile key={p.id} project={p} onPickIcon={pickIcon} />
-            ))}
-          </div>
-        )}
-
-        <RecentExports />
-
-        <DiscoverPicks />
-
-        {/* Nothing to sell a Pro account — and nothing drawn until the plan is
-            known, so a Pro account never sees it flash in and out. */}
-        {!isPro && (signedOut || !planLoading) && <ProPanel />}
       </div>
+      {bar && (
+        <div className="db-bar">
+          {bar.href
+            ? <Link className="db-go" to={bar.href}>{bar.text}<GoArrow /></Link>
+            : <button type="button" className="db-go" onClick={bar.onClick}>{bar.text}<GoArrow /></button>}
+        </div>
+      )}
     </div>
   )
 }

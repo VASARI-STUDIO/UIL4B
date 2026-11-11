@@ -42,13 +42,16 @@ test('there are three starting points and they are distinct', () => {
 })
 
 test('the three are the three the sign-up dialog promised', () => {
-  // LoginPopup promises "Your palettes, type scales and gradients, kept." A
-  // starting point the promise does not name would be a fourth subject change,
-  // which is the thing the pricing step was removed for.
+  // The sign-up form (auth.signUpSub, rendered by auth/AuthForm) promises
+  // "Save palettes, type scales and gradients as projects". A starting point the
+  // promise does not name would be a fourth subject change, which is the thing
+  // the pricing step was removed for.
   assert.deepEqual(FIRST_WINS.map(w => w.id).sort(), ['gradient', 'palette', 'type-scale'])
-  const popup = read('src/components/LoginPopup.jsx')
-  assert.match(popup, /palettes, type scales and gradients/,
+  const promise = JSON.parse(read('src/locales/en.json')).auth.signUpSub
+  assert.match(promise, /palettes, type scales and gradients/,
     'the sign-up promise changed — the first wins must change with it')
+  assert.match(read('src/components/auth/AuthForm.jsx'), /t\('auth\.signUpSub'\)/,
+    'the sign-up form no longer renders the promise this test reads')
 })
 
 test('every card carries the copy the screen needs', () => {
@@ -57,6 +60,18 @@ test('every card carries the copy the screen needs', () => {
     assert.ok(win.blurb && win.blurb.length > 10, `${win.id} has no blurb`)
     assert.ok(win.activation, `${win.id} names no activation event`)
   }
+})
+
+test('the onboarding screen copy has no emoji and no em dash', () => {
+  const DASH = /—/
+  const EMOJI = /\p{Extended_Pictographic}/u
+  for (const win of FIRST_WINS) {
+    assert.doesNotMatch(win.blurb, DASH, `${win.id} blurb has an em dash`)
+    assert.doesNotMatch(win.blurb, EMOJI, `${win.id} blurb has an emoji`)
+  }
+  const jsx = stripComments(read('src/pages/Onboarding.jsx'))
+  assert.doesNotMatch(jsx, EMOJI, 'Onboarding.jsx renders an emoji')
+  assert.doesNotMatch(jsx, DASH, 'Onboarding.jsx has an em dash in its copy')
 })
 
 // ── Lookups refuse to guess ─────────────────────────────────────────────────

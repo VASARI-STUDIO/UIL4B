@@ -1,7 +1,7 @@
 // COPYING IS FREE FOREVER. TAKING A FILE AWAY NEEDS AN ACCOUNT.
 //
-// Founder decision, 2026-09-15: "make users have to make an account to use alot
-// of the extra feature". The line was chosen from a measurement rather than a
+// Many of the extra features need an account. The line was chosen from a
+// measurement rather than a
 // guess — signed out, pressing each of the fourteen /create tools' own
 // take-away control, only TWO asked for an account: /create/palette
 // ("Save / export") and /create/type-scale ("Save to a project"). Saving, the
@@ -134,6 +134,10 @@ test.describe('a file needs a free account', () => {
     // called Export.
     const panel = page.locator('[role="dialog"]').filter({ hasText: /export/i }).first()
     await expect(panel, 'the export panel never opened').toBeVisible({ timeout: 15000 })
+    // The popup opens on the free UI kit; the style guide is another free file a
+    // visitor can build, so that one has to ask for an account too.
+    await panel.getByRole('radio', { name: /^Brand book/ }).click()
+    await panel.getByRole('radio', { name: /^Style guide/ }).click()
     const run = panel.getByRole('button', { name: /^export/i }).last()
     await expect(run, 'the export panel never rendered its own export action')
       .toBeVisible({ timeout: 15000 })
@@ -144,22 +148,12 @@ test.describe('a file needs a free account', () => {
       .toBeVisible({ timeout: 10000 })
     expect(await downloadsSeen(page), 'a file was produced anyway').toBe(0)
 
-    // AND IT OPENS ON THE CREATE-ACCOUNT FORM, not "Log in to continue".
-    //
-    // This gate fires ONLY for somebody the product has no account for — a
-    // signed-in visitor never reaches it. Greeting all of them with a sign-in
-    // form is the defect LoginPromptContext already records and fixed on the
-    // four highest-traffic paths: a control that asks for a new free account
-    // and answers "Welcome Back" tells the visitor they already have one.
-    await expect(page.locator('#ui-login-title'),
-      'the export gate opened on the sign-in form. Everyone who reaches it has no '
-      + 'account — that is why it fired — so it must open on create-account. Pass '
-      + '`signup: true` in useExportGate.js.')
-      .toHaveText(/create your free account/i)
-
-    // It must also say WHICH action was interrupted, or the wall is unexplained.
-    await expect(page.getByText(/you were about to export/i),
-      'the dialog does not name the action the visitor was taking').toBeVisible()
+    // THE SIGN-IN IS INSIDE THE EXPORT DIALOG, not a second modal over it, and the
+    // dock says why: a file is free, with an account. Create-account is one link away.
+    await expect(panel.locator('.xd-signin #ui-login-title'),
+      'the sign-in did not open inside the export dialog').toBeVisible()
+    await expect(page.locator('.ui-modal-overlay'), 'a second modal opened over the dialog').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: /create one/i })).toBeVisible()
   })
 
   test('the icon download asks, after an icon has been chosen', async ({ page }) => {
@@ -178,7 +172,7 @@ test.describe('a file needs a free account', () => {
     // — a picture of a download arrow — instead of the customizer's Download
     // button, clicks it, and then reports that nothing was gated. That is
     // exactly how the first pass at this test failed.
-    const download = page.getByRole('button', { name: 'Download', exact: true })
+    const download = page.getByRole('button', { name: 'Download SVG', exact: true })
     // POSITIVE CONTROL: without a reachable download control this test is
     // asserting nothing, and that is what a closed customizer looks like.
     await expect(download, 'no Download control appeared after choosing an icon')
@@ -264,12 +258,14 @@ test.describe('copying stays free, and that is half the decision', () => {
   // "Copy CSS" (D:617). The name is per route rather than one regex: a
   // loose /copy/i would also match Tint's "Copy row", which copies a single step
   // and would let this pass while saying nothing about the CSS.
-  for (const [route, label] of [['/create/tint', 'Copy variables'], ['/create/gradient', 'Copy CSS']]) {
+  for (const [route, label, role, menu] of [['/create/tint', 'Copy CSS', 'menuitem', '.tl-export-btn'], ['/create/gradient', 'Copy CSS', 'button', null]]) {
     test(`${route} copies without asking for anything`, async ({ page }) => {
       watch(page, PERSONA)
       await go(page, route)
 
-      const copy = page.getByRole('button', { name: label, exact: true }).first()
+      // Tint's Copy CSS is a row in its Export menu, which opens for anybody.
+      if (menu) await page.locator(menu).click()
+      const copy = page.getByRole(role, { name: label, exact: true }).first()
       // POSITIVE CONTROL: a route with no copy control cannot demonstrate that
       // copying is free. Waiting on the control itself is also the readiness
       // signal — it exists only once the tool has rendered its output.

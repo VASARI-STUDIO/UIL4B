@@ -52,6 +52,7 @@
 import {
   CREATE_GROUPS,
   CREATE_HOMES_THAT_RENDER,
+  DISCOVER_GROUPS,
   LEARN_GROUPS,
   createTools,
 } from './toolTree.js'
@@ -91,6 +92,7 @@ function treeRoute(rows, id) {
 const ROUTE_PRINCIPLES = treeRoute(LEARN_GROUPS, 'principles')
 const ROUTE_THEMES = treeRoute(LEARN_GROUPS, 'themes')
 const ROUTE_BRAND_COLOUR = treeRoute(LEARN_GROUPS, 'brand')
+const ROUTE_COMMUNITY = treeRoute(DISCOVER_GROUPS, 'inspiration')
 
 // ── Categories ──────────────────────────────────────────────────────────────
 //
@@ -216,12 +218,12 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['gradient', 'gradients', 'linear', 'radial', 'conic', 'mesh', 'css', 'background', 'fade', 'blend'],
   },
   contrast: {
-    description: 'Free WCAG checker — test any two colours for AA and AAA.',
+    description: 'A WCAG checker: test any two colours for AA and AAA.',
     keywords: ['contrast', 'contrast checker', 'checker', 'wcag', 'aa', 'aaa', 'accessibility', 'a11y', 'ratio', 'legibility', 'readable'],
   },
   icons: {
     description: 'Search icons from the open-source packs, then copy SVG or JSX.',
-    keywords: ['icon', 'icons', 'icon library', 'svg', 'jsx', 'symbol', 'glyph', 'iconify', 'pictogram'],
+    keywords: ['icon', 'icons', 'icon library', 'svg', 'jsx', 'symbol', 'glyph', 'iconify', 'pictogram', 'export', 'download'],
   },
   emoji: {
     description: 'Browse and copy every emoji, organised by category.',
@@ -248,7 +250,7 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['box', 'shadow', 'shadows', 'box shadow', 'css', 'elevation', 'layer', 'drop shadow', 'neumorphic'],
   },
   'file-converter': {
-    description: 'Convert and compress images and video — WebP, MP4, GIF, frames and more.',
+    description: 'Convert and compress images and video: WebP, MP4, GIF, frames and more.',
     keywords: ['convert', 'converter', 'file converter', 'file', 'image', 'imagery', 'media', 'compress', 'resize', 'webp', 'gif', 'mp4', 'video', 'frames', 'extract', 'png', 'jpeg', 'avif', 'ezgif'],
   },
   ratio: {
@@ -311,10 +313,10 @@ const CREATE_TOOL_ENTRIES = createTools().map((tool) => {
 // The three Learn guides carry no category and so no pill: Documentation is not
 // a page, and a pill naming it labels the row with something that is not there.
 const STATIC_TOOL_DEFS = [
-  { id: 'prompts', label: 'Prompt Library', path: '/prompts', category: 'documentation', description: 'AI image generation prompts with output previews.', keywords: ['prompt', 'prompts', 'ai', 'midjourney', 'dalle', 'stable diffusion', 'library'] },
-  { id: 'docs-design', label: 'Design Principles', path: ROUTE_PRINCIPLES, subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
-  { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
-  { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
+  { id: 'docs-design', label: 'Design Principles', path: ROUTE_PRINCIPLES, guide: true, subcategory: 'Design & Brand', description: 'Visual hierarchy, balance, and design psychology.', keywords: ['design', 'principles', 'theory', 'documentation'] },
+  { id: 'docs-themes', label: 'UI Design Themes', path: ROUTE_THEMES, guide: true, subcategory: 'Design & Brand', description: 'Reference guide to major UI design trends with visual examples.', keywords: ['themes', 'trends', 'brutalism', 'glassmorphism', 'bento', 'luxury', 'design', 'style'] },
+  { id: 'docs-brand', label: 'Brand Colour Guide', path: ROUTE_BRAND_COLOUR, guide: true, subcategory: 'Design & Brand', description: 'How to choose, build, and maintain a brand colour palette.', keywords: ['brand', 'colour', 'color', 'palette', '60-30-10', 'psychology', 'accessibility', 'guide'] },
+  { id: 'community', label: 'Community', path: ROUTE_COMMUNITY, description: 'Browse design inspiration, save your favourites and submit your own.', keywords: ['community', 'inspiration', 'submit', 'submit a design', 'submission', 'share', 'showcase', 'designs'] },
   { id: 'seo', label: 'SEO Specialist', path: '/seo', category: 'documentation', subcategory: 'Marketing & SEO', description: 'Live SERP + social preview, scored checklist, copy-ready meta tags, and a JSON-LD structured-data generator.', keywords: ['seo', 'meta', 'serp', 'title', 'description', 'snippet', 'preview', 'open graph', 'social', 'score', 'inspector', 'specialist', 'schema', 'json-ld', 'structured data'] },
 ]
 
@@ -341,7 +343,6 @@ export const TOOL_I18N_MAP = {
   'font-pair': 'tools.fontPairs',
   'type-scale': 'tools.typeScale',
   'alt-text': 'tools.altText',
-  prompts: 'tools.promptLibrary',
   'docs-design': 'tools.docsDesign',
 }
 
@@ -425,11 +426,46 @@ export function groupBySubcategory(tools) {
 // "search" starts offering tools the product does not have, or hiding ones it
 // does. Callers pass an already-localised index so the predicate never has to
 // know about i18n.
+const GENERIC_QUERY_WORDS = new Set([
+  'generator', 'builder', 'maker', 'tool', 'tools', 'finder', 'creator',
+  'free', 'online', 'the', 'a', 'an', 'for', 'to', 'and', 'of',
+])
+
+function singularToken(word) {
+  return word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
+    ? word.slice(0, -1) : word
+}
+
+function searchTokens(text) {
+  return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(singularToken)
+}
+
+function tokenMatchRank(item, q) {
+  // Split the query on every non-letter, the way the index is split, so
+  // "tint, generator", "tint generator." and "alt-text generator" read as the
+  // words they are. A single plain word is already handled by the substring
+  // checks in matchRank and matchesQuery; one with punctuation on it is not.
+  const trimmed = q.trim().toLowerCase()
+  const words = trimmed.split(/[^a-z0-9]+/).filter(Boolean)
+  if (words.length === 0 || (words.length < 2 && words[0] === trimmed)) return 5
+  const significant = words.filter(word => !GENERIC_QUERY_WORDS.has(word))
+  const terms = (significant.length ? significant : words).map(singularToken)
+  const allMatch = (tokens) => terms.every(word => tokens.some(token => (
+    word.length <= 2 ? token === word : token.startsWith(word)
+  )))
+  const labelTokens = searchTokens(item.label)
+  if (allMatch(labelTokens)) return 1
+  const keywordTokens = [...labelTokens, ...searchTokens((item.keywords || []).join(' '))]
+  if (allMatch(keywordTokens)) return 3
+  if (allMatch([...keywordTokens, ...searchTokens(item.description || '')])) return 4
+  return 5
+}
+
 export function matchesQuery(item, q) {
   if (item.label.toLowerCase().includes(q)) return true
   if (item.description && item.description.toLowerCase().includes(q)) return true
   if (item.keywords && item.keywords.some(k => k.includes(q))) return true
-  return false
+  return tokenMatchRank(item, q) < 5
 }
 
 // ── How well a row matches ──────────────────────────────────────────────────
@@ -448,7 +484,7 @@ export function matchRank(item, q) {
   if (keywords.some(k => k === q)) return 2
   if (keywords.some(k => k.includes(q))) return 3
   if (item.description && item.description.toLowerCase().includes(q)) return 4
-  return 5
+  return tokenMatchRank(item, q)
 }
 
 // Stable within a rank: the index tie-break is explicit rather than relying on
@@ -471,7 +507,7 @@ export function offerableCategories(categories) {
 }
 
 export function queryCommandIndex(query, { tools = [], categories = [], actions = [] }) {
-  const q = query.trim().toLowerCase()
+  const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
   if (!q) return { query: '', tools: [], categories: [], actions: [], total: 0 }
   const hitTools = rankedMatches(tools, q)
   // A category row is only offered when it is somewhere you can be SENT. The
@@ -493,10 +529,10 @@ export function queryCommandIndex(query, { tools = [], categories = [], actions 
 // The homepage hero bar types these one character at a time, and the PillNav
 // search field types the same list into a <span> (its field is a button, so it
 // has no placeholder attribute to drive). They stand in for the "Try …" chips
-// the founder removed on 2026-09-03: they are the only thing left telling a
+// that were removed: they are the only thing left telling a
 // visitor what is in the box. That makes correctness the whole point, which is
 // why they are SELECTED FROM THE REGISTRY rather than written down — PillNav
-// kept its own array until 2026-09-03 and it had already gone wrong, advertising
+// used to keep its own array and it had already gone wrong, advertising
 // "palette builder" and "contrast checker", both of which returned "No results",
 // and "gradients", which landed on the colour sales page.
 //

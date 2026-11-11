@@ -1,0 +1,364 @@
+/* /tools: tool preview cards and the grouped list. Rides on spectrum.css's
+   --sp-* tokens and spectrum-mobile.css's hero, both already in the graph. */
+
+.spt .spt-section { max-width: var(--sp-shell); margin: 0 auto; padding: clamp(40px, 6vw, 88px) var(--sp-gutter) 0; }
+.spt .spt-h2 { margin: 0 0 32px; font-family: var(--display); font-weight: 560; font-size: clamp(28px, 4vw, 48px); line-height: 1.05; letter-spacing: -.03em; }
+.spt .spt-cards { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; }
+/* Paired cards share a height: the preview takes the spare room, so the buttons line up. */
+.spt .spt-card { grid-column: span 6; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr auto auto auto; gap: 12px; padding: 20px; border: 1px solid var(--sp-line); border-radius: 20px; min-width: 0; }
+.spt .spt-card:nth-child(4n + 1), .spt .spt-card:nth-child(4n + 4) { grid-column: span 7; }
+.spt .spt-card:nth-child(4n + 2), .spt .spt-card:nth-child(4n + 3) { grid-column: span 5; }
+.spt .spt-card h3 { margin: 4px 0 0; font-size: 22px; font-weight: 600; color: var(--sp-ink); }
+.spt .spt-card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--sp-dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* A drawn card reserves two lines of description, so paired plates end on the same line. */
+.spt .spt-card:has(.spt-preview--art) p { min-height: 3em; }
+.spt .spt-card .sp-pill { justify-self: start; min-height: 44px; margin-top: 4px; }
+/* A demo preview is a stage with a minimum height. It grows to hold its demo, so nothing in it is clipped. */
+.spt .spt-preview { display: grid; align-content: center; min-height: 300px; border-radius: 12px; background: var(--sp-wash); padding: 16px; }
+.spt .spt-demo { display: grid; gap: 12px; align-content: start; min-width: 0; }
+
+.spt .spt-seeds { display: flex; flex-wrap: wrap; gap: 8px; }
+.spt .spt-seed, .spt .spt-swatch { min-width: 44px; min-height: 44px; border: 0; border-radius: 999px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--sp-line-strong); }
+.spt .spt-seed[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sp-page), 0 0 0 3.5px var(--sp-ink); }
+.spt .spt-ramp { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; border-radius: 8px; overflow: hidden; }
+.spt .spt-ramp li { display: grid; place-items: end start; min-height: 84px; padding: 6px; font-size: 10px; font-variant-numeric: tabular-nums; transition: background-color .15s ease; }
+.spt .spt-ramp li span { writing-mode: vertical-rl; transform: rotate(180deg); }
+
+.spt .spt-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.spt .spt-swatch { border-radius: 12px; min-height: 72px; }
+.spt .spt-result { margin: 0; display: flex; align-items: baseline; gap: 12px; font-variant-numeric: tabular-nums; }
+.spt .spt-result b { font-size: clamp(40px, 6vw, 64px); line-height: 1; font-weight: 600; }
+.spt .spt-result span { font-size: 18px; font-weight: 600; }
+.spt .spt-result[data-pass="yes"] { color: var(--ok-strong); }
+.spt .spt-result[data-pass="no"] { color: var(--err-strong); }
+
+.spt .spt-field input { width: 100%; min-height: 44px; padding: 0 14px; border: 1px solid var(--sp-line-strong); border-radius: 12px; background: var(--sp-page); color: var(--sp-ink); font: inherit; font-size: 16px; }
+.spt .spt-fonts, .spt .spt-scale, .spt .spt-rows { margin: 0; padding: 0; list-style: none; }
+.spt .spt-fonts li { display: grid; gap: 2px; padding: 8px 0; border-top: 1px solid var(--sp-line); }
+.spt .spt-fonts li > span:last-child { font-size: 28px; line-height: 1.1; overflow-wrap: anywhere; }
+.spt .spt-font-name { font-size: 13px; color: var(--sp-dim); }
+
+.spt .spt-seg { display: flex; gap: 8px; }
+.spt .spt-seg button { flex: 1 1 0; min-width: 0; max-width: 112px; min-height: 44px; padding: 0 16px; border: 1px solid var(--sp-line-strong); border-radius: 999px; background: transparent; color: var(--sp-ink); font: inherit; font-size: 14px; cursor: pointer; }
+.spt .spt-seg button[aria-pressed="true"] { background: var(--sp-ink); color: var(--sp-page); border-color: var(--sp-ink); }
+.spt .spt-scale li { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0 12px; padding: 4px 0; border-top: 1px solid var(--sp-line); line-height: 1.1; }
+.spt .spt-num { flex: none; font-size: 13px; color: var(--sp-dim); font-variant-numeric: tabular-nums; }
+
+/* Each group is a label rail and one list, so no row is ever alone in a column. The
+   list reaches 12px past the rail so the hover wash has room around the content. */
+.spt .spt-group { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: 48px; margin-top: 48px; }
+.spt .spt-group h3 { display: flex; align-items: center; gap: 10px; margin: 0; padding-top: 12px; font-size: 24px; font-weight: 600; }
+/* The group's hue tile: the menu's glyph and 1.6 stroke at 24px. */
+.spt .spt-gtile { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: color-mix(in oklab, var(--hue) 22%, var(--sp-wash)); color: var(--hue-strong); }
+.spt .spt-gtile svg { width: 14px; height: 14px; }
+.spt .spt-rows { margin-inline: -12px; }
+.spt .spt-row { display: grid; grid-template-columns: 176px minmax(0, 1fr) auto; align-items: center; gap: 20px; min-height: 88px; padding: 12px; border-top: 1px solid var(--sp-line); color: var(--sp-ink); text-decoration: none; }
+@media (hover: hover) {
+  .spt .spt-row:hover { color: var(--sp-ink); text-decoration: none; background: var(--sp-wash); }
+}
+.spt .spt-thumb { display: block; }
+.spt .spt-row-text { display: grid; gap: 4px; min-width: 0; }
+.spt .spt-row-text b { font-size: 18px; font-weight: 600; }
+.spt .spt-row-text span { font-size: 15px; line-height: 1.4; color: var(--sp-dim); }
+.spt .spt-row-go { display: grid; place-items: center; width: 24px; height: 24px; font-size: 16px; }
+.spt .spt-more { margin: 40px 0 0; font-size: 14px; color: var(--sp-dim); }
+.spt .spt-more + .spt-more { margin-top: 8px; }
+.spt .spt-more a { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
+/* The links in the "In beta" sentence stay the size of their words. To a finger
+   each is 44px tall: an invisible strip centred on the link. Only the tool
+   names are links, with plain text between them, so the strips never meet. */
+@media (pointer: coarse), (max-width: 767px) {
+  .spt .spt-more a { position: relative; }
+  .spt .spt-more a::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
+.spt .sp-close { padding-top: clamp(72px, 10vw, 140px); }
+
+@media (max-width: 860px) {
+  .spt .spt-card, .spt .spt-card:nth-child(n) { grid-column: span 6; }
+  /* Six 44px seeds do not fit one row of a half-width card, so they sit three by two. */
+  .spt .spt-seeds { display: grid; grid-template-columns: repeat(3, 44px); }
+  .spt .spt-group { grid-template-columns: minmax(0, 1fr); }
+  .spt .spt-group h3 { padding: 0 0 8px; }
+}
+@media (min-width: 761px) and (max-width: 860px) {
+  .spt .spt-fonts li > span:last-child { font-size: clamp(20px, 3vw, 28px); }
+}
+@media (max-width: 760px) {
+  .spt .spt-card, .spt .spt-card:nth-child(n) { grid-column: 1 / -1; }
+  /* Phone: the demo is as tall as it needs to be; the minimum height would only pad it. */
+  .spt .spt-preview:not(.spt-preview--art) { min-height: 0; }
+  .spt .spt-fonts li > span:last-child { font-size: 24px; }
+  .spt .spt-row { grid-template-columns: 112px minmax(0, 1fr) auto; gap: 14px; }
+  .spt .spt-seg button { max-width: none; }
+  .spt .spt-section--last { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
+html[data-reduced-motion="true"] .spt .spt-ramp li { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .spt .spt-ramp li { transition: none; }
+}
+
+/* Drawn plates (ToolArt). One artefact per plate, in the tool's category colour:
+   --hue paints fills, --hue-strong carries anything that must read, and --fill is
+   whichever of the two holds a meaning-bearing shape on the current theme. Sizes
+   and literal values inside a plate are fixed px, so no text falls under 12px. */
+.spt .spt-preview--art { display: block; min-height: 0; padding: 0; background: none; }
+.spt .spt-art { --plate: var(--sp-wash); --fill: var(--hue); position: relative; isolation: isolate; overflow: hidden; border-radius: 12px; background: var(--plate); outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; container-name: spt-plate; font-family: var(--font); }
+[data-theme="light"] .spt .spt-art { --fill: var(--hue-strong); }
+html[data-theme="dark"] .spt .spt-art { outline-color: oklch(1 0 0 / .1); }
+/* Paired card plates fill their row: height 100% resolves once the grid row is sized, and
+   the 16:10 ratio sizes the row until then. The Icon plate keeps room for its grid and pick. */
+.spt .spt-art--card { width: 100%; height: 100%; aspect-ratio: 16 / 10; max-height: 360px; padding: 20px; container-type: size; }
+.spt .spt-art--card[data-art="icons"] { min-height: 240px; }
+.spt .spt-art--thumb { --plate: var(--sp-wash-2); aspect-ratio: 16 / 10; border-radius: 10px; container-type: inline-size; }
+.spt .spt-art--thumb > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.spt .spt-art svg * { vector-effect: non-scaling-stroke; }
+.spt .spt-ln { fill: none; stroke: var(--sp-dim); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.spt .spt-ln .spt-hs { stroke: var(--hue-strong); }
+.spt .spt-mix { fill: color-mix(in oklab, var(--hue) 22%, var(--plate)); stroke: none; }
+.spt .spt-fill { fill: var(--fill); }
+.spt .spt-sun { fill: var(--hue-strong); }
+.spt .spt-lab { font: 500 13px/1.25 var(--font); color: var(--sp-dim); white-space: nowrap; }
+.spt .spt-ink { color: var(--sp-ink); }
+.spt .spt-art .v { font-family: var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.spt .spt-art .spt-alt-l, .spt .spt-art .spt-alt-s { font-family: var(--mono); }
+.spt .spt-big { font: 600 56px/1 var(--display); letter-spacing: -.03em; color: var(--hue-strong); font-variant-numeric: tabular-nums; }
+
+/* Icon Library: the grid and the pick are one cluster, centred, so there is no hole
+   between them. A flow layout, so no label can leave the plate. */
+.spt .spt-ic { display: flex; justify-content: center; align-items: center; gap: 48px; height: 100%; }
+.spt .spt-ic-grid { display: block; flex: 0 1 320px; min-width: 0; height: auto; max-height: 100%; }
+.spt .spt-ic-pick { display: grid; justify-items: start; gap: 12px; }
+.spt .spt-pick { width: 96px; height: 96px; display: block; fill: none; stroke: var(--hue-strong); stroke-linecap: round; stroke-linejoin: round; }
+.spt .spt-meta { display: grid; gap: 4px; }
+.spt .spt-swap { display: grid; }
+.spt .spt-swap > * { grid-area: 1 / 1; }
+.spt .spt-i2, .spt .spt-l2 { opacity: 0; }
+/* Narrow plates stack the pick under the grid. The grid takes the plate's width up to
+   its own 218-unit size, so its icons draw at their real 24px. */
+@container spt-plate (max-width: 460px) {
+  .spt .spt-ic { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; justify-content: stretch; gap: 12px; }
+  .spt .spt-ic-grid { width: min(100%, 218px); height: 100%; max-height: none; justify-self: center; }
+  .spt .spt-ic-pick { grid-auto-flow: column; align-items: center; justify-content: center; }
+  .spt .spt-pick { width: 40px; height: 40px; }
+}
+
+/* File Converter: labels sit above their bars, never on them. Content stacks from the
+   top in a short plate and sits centred in a tall one; auto margins centre it only
+   while there is room to spare, so it can never spill past the plate. The bars are
+   svg rects sized from the measured run. */
+.spt .spt-fc { display: flex; flex-direction: column; gap: 16px; height: 100%; min-height: 0; }
+@container spt-plate (min-height: 260px) {
+  .spt .spt-fc > :first-child { margin-top: auto; }
+  .spt .spt-fc > :last-child { margin-bottom: auto; }
+}
+.spt .spt-fc-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.spt .spt-fc-bars { display: grid; gap: 12px; }
+.spt .spt-fc-lab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin-bottom: 6px; }
+.spt .spt-fc-svg { display: block; width: 100%; height: 16px; }
+.spt .spt-bar1 { fill: var(--sp-dim); }
+.spt .spt-bar2, .spt .spt-cut { fill: var(--fill); }
+/* The removed part only: dashed, open on its left (tucked under the kept bar), so it
+   reads as what was taken away. */
+.spt .spt-ghost { stroke: var(--sp-dim); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; }
+.spt .spt-fc-svg pattern path { stroke: var(--sp-dim); stroke-width: 1; opacity: .35; }
+/* The cut covers the removed part in the bar's colour and shrinks away on hover, so
+   the full-width bar reads as cut down to what was kept. Hidden at rest. */
+.spt .spt-cut { opacity: 0; transform-box: fill-box; transform-origin: 0 50%; }
+@container spt-plate (max-height: 230px) { .spt .spt-big { font-size: 44px; } }
+@container spt-plate (max-width: 330px) { .spt .spt-big { font-size: 40px; } }
+
+/* Row thumbs: drawings on a 160 x 100 canvas, scaled with the thumb. */
+.spt .spt-role--ok { fill: var(--ok); }
+.spt .spt-role--warn { fill: var(--warn); }
+.spt .spt-role--err { fill: var(--err); }
+.spt .spt-role--accent { fill: var(--accent); }
+.spt .spt-step { stroke: var(--sp-line-strong); stroke-width: 1; }
+.spt .spt-base { stroke: var(--sp-ink); stroke-width: 1.5; }
+.spt .spt-gbar { stroke: var(--sp-line-strong); stroke-width: 1; }
+.spt .spt-gstop { stroke: var(--sp-ink); stroke-width: 1.5; }
+.spt .spt-rule { stroke: var(--fill); stroke-width: 1.5; fill: none; }
+.spt .spt-ft-a { font: 600 44px var(--display); letter-spacing: -1.3px; fill: var(--sp-ink); }
+.spt .spt-ft-b { font: 400 28px Georgia, 'Times New Roman', serif; fill: var(--sp-dim); }
+.spt .spt-emo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 32px; line-height: 1; }
+.spt .spt-fr { fill: none; }
+.spt .spt-fr-pick { fill: color-mix(in oklab, var(--hue) 22%, var(--plate)); stroke: var(--hue-strong); stroke-width: 1.5; }
+.spt .spt-art--thumb > .spt-lab { position: absolute; left: 0; right: 0; bottom: 7%; text-align: center; font-size: 12px; }
+/* The 16:9 frame spans x 30-128 and starts at y 31 of the 160 x 100 canvas, so its top-right
+   corner is 80% across and 31% down; the label sits 4% and 5% inside it, clear of every
+   stroke. It follows the caption rule above at the same weight, so it overrides that
+   rule's left, right, bottom and centring. */
+.spt .spt-art--thumb > .spt-fr-lab { left: auto; right: 24%; top: 36%; bottom: auto; text-align: right; color: var(--hue-strong); }
+.spt .spt-alt-s { display: none; }
+@container spt-plate (max-width: 150px) {
+  .spt .spt-fr-lab, .spt .spt-alt-l { display: none; }
+  .spt .spt-alt-s { display: block; }
+  .spt .spt-emo { font-size: 20px; gap: 6px; }
+}
+
+/* Hover moments: fine pointers only, on the card's hover or keyboard focus, and only
+   transform and opacity move. The icon swaps to its heavier stroke; the converted bar
+   runs from full width to its kept fraction, then the removed part shows as an outline. */
+@media (hover: hover) and (pointer: fine) {
+  .spt .spt-i1, .spt .spt-i2, .spt .spt-l1, .spt .spt-l2 { transition: opacity 300ms var(--sp-ease); }
+  .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-i2, .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-l2 { opacity: 1; }
+  .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-i1, .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-l1 { opacity: 0; }
+  .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-cut { animation: spt-keep 280ms var(--sp-ease) both; }
+  .spt .spt-ghost { transition: opacity 180ms var(--sp-ease); }
+  .spt .spt-card:is(:hover, :has(:focus-visible)) .spt-ghost { opacity: 1; transition-delay: 200ms; }
+}
+@keyframes spt-keep { from { opacity: 1; transform: none; } to { opacity: 1; transform: scaleX(0); } }
+html[data-reduced-motion="true"] .spt .spt-card .spt-i2, html[data-reduced-motion="true"] .spt .spt-card .spt-l2 { display: none; }
+html[data-reduced-motion="true"] .spt .spt-card .spt-i1, html[data-reduced-motion="true"] .spt .spt-card .spt-l1 { opacity: 1; transition: none; }
+html[data-reduced-motion="true"] .spt .spt-card .spt-cut { animation: none; }
+html[data-reduced-motion="true"] .spt .spt-card .spt-ghost { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .spt .spt-card .spt-i2, html:not([data-reduced-motion="false"]) .spt .spt-card .spt-l2 { display: none; }
+  html:not([data-reduced-motion="false"]) .spt .spt-card .spt-i1, html:not([data-reduced-motion="false"]) .spt .spt-card .spt-l1 { opacity: 1; transition: none; }
+  html:not([data-reduced-motion="false"]) .spt .spt-card .spt-cut { animation: none; }
+  html:not([data-reduced-motion="false"]) .spt .spt-card .spt-ghost { transition: none; }
+}
+
+/* Row thumbs the site map adds: Palette, Contrast, Font Gallery, Type Scale, 3D, the
+   File Converter bars and the workshop tile. Same 160 x 100 canvas as the thumbs above. */
+.spt .spt-ct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.spt .spt-ct-b { display: grid; place-items: center; width: 36%; aspect-ratio: 1; border-radius: 8px; background: var(--ct-bg); color: var(--ct-fg); box-shadow: inset 0 0 0 1px var(--sp-line-strong); font: 600 22px/1 var(--display); }
+.spt .spt-ct-r { display: grid; gap: 4px; }
+.spt .spt-ct-n { font: 600 20px/1 var(--display); letter-spacing: -.02em; color: var(--hue-strong); font-variant-numeric: tabular-nums; }
+.spt .spt-fg-t { font: 600 34px var(--display); letter-spacing: -1px; fill: var(--sp-ink); }
+.spt .spt-ts { position: absolute; inset: 0; display: flex; align-items: baseline; justify-content: center; gap: 6px; padding-top: 28%; font: 600 16px/1 var(--display); color: var(--sp-dim); }
+.spt .spt-ts > span { font-size: calc(var(--ts-px) * 1px); }
+.spt .spt-ts > .spt-ts-top { color: var(--hue-strong); }
+.spt .spt-solid { fill: color-mix(in oklab, var(--hue) 22%, var(--plate)); stroke: var(--hue-strong); stroke-width: 1.5; stroke-linejoin: round; }
+.spt .spt-fct { position: absolute; inset: 12%; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.spt .spt-fct-n { font: 600 20px/1 var(--display); letter-spacing: -.02em; color: var(--hue-strong); font-variant-numeric: tabular-nums; }
+.spt .spt-fct-svg { display: block; width: 100%; height: 22px; }
+.spt .spt-art--thumb > .spt-tile { position: absolute; inset: 0; margin: auto; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: color-mix(in oklab, var(--hue) 22%, var(--plate)); color: var(--hue-strong); }
+.spt .spt-tile svg { width: 18px; height: 18px; }
+@container spt-plate (max-width: 150px) {
+  .spt .spt-ct { gap: 8px; }
+  .spt .spt-ct-b { font-size: 15px; border-radius: 6px; }
+  .spt .spt-ct-n { font-size: 14px; }
+  .spt .spt-ct-r .spt-lab { display: none; }
+  .spt .spt-ts { gap: 4px; }
+  .spt .spt-ts > span { font-size: calc(var(--ts-px) * .75px); }
+  .spt .spt-fct { gap: 6px; }
+  .spt .spt-fct-n { font-size: 16px; }
+}
+
+/* Roadmap voting: the /tools foot group and the /roadmap page. Sans only; the
+   group is .spt-group, so the rail, gap and stacking breakpoint are inherited. */
+.spt { --vote-line: rgba(var(--sp-ink-rgb), .38); --vote-line-hover: rgba(var(--sp-ink-rgb), .6); --vote-w: 96px; }
+[data-theme="light"] .spt { --vote-line: rgba(var(--sp-ink-rgb), .48); --vote-line-hover: rgba(var(--sp-ink-rgb), .7); }
+.spt .spt-group--vote > header h2, .spt .spt-group--vote > header h3 { margin: 0; padding-top: 12px; font-size: 24px; font-weight: 600; line-height: 1.2; }
+.spt .spt-group--vote > header p { margin: 12px 0 0; max-width: 30ch; font-size: 14px; line-height: 1.5; color: var(--sp-dim); }
+.spt .spt-group--vote > header a { display: inline-block; margin-top: 12px; padding-block: 4px; font-size: 14px; }
+.spt .spt-group--first { margin-top: 0; }
+.spt .vl { margin: 0 -12px; padding: 0; list-style: none; }
+.spt .vr { display: grid; grid-template-columns: minmax(0, 1fr) 168px auto; column-gap: 32px; align-items: center; min-height: 64px; padding: 12px; border-top: 1px solid var(--sp-line); }
+.spt .vl > .vr:last-child { border-bottom: 1px solid var(--sp-line); }
+.spt-road .vr { min-height: 104px; padding: 20px 12px; }
+.spt .vr-name { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.3; }
+.spt .vr-name a { padding-block: 4px; color: inherit; text-decoration: none; }
+.spt .vr-name .nw { white-space: nowrap; }
+.spt .vr-name a svg { display: inline-block; width: 14px; height: 14px; margin-left: 6px; vertical-align: -1px; color: var(--sp-dim); }
+.spt .vr-desc { margin: 4px 0 0; max-width: 60ch; font-size: 15px; line-height: 1.45; color: var(--sp-dim); }
+.spt .vr-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--sp-ink); }
+.spt .vr-status:empty { margin: 0; }
+.spt .vr-status.is-err, .spt .vl-more.is-err { color: var(--err-strong); }
+.spt .vr-status button, .spt .vl-more button { appearance: none; margin: 0; padding: 4px 0; border: 0; border-radius: 4px; background: none; color: var(--sp-link); font: inherit; font-weight: 540; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.spt .vr-status button:active, .spt .vl-more button:active { transform: none; }
+
+/* Stage track: three steps, the current one filled. */
+.spt .stage { display: grid; gap: 6px; justify-items: start; }
+.spt .track { display: flex; gap: 3px; }
+.spt .track i { display: block; width: 20px; height: 4px; border-radius: 2px; background: var(--sp-line-strong); }
+.spt .track i.on { background: var(--sp-ink); }
+.spt .stage span { font-size: 13px; line-height: 1; color: var(--sp-dim); }
+
+.spt .votes { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
+.spt .count { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
+/* min-width in ch of the number's own font, so three digits fit at 18px and at 28px without moving the row. */
+.spt .count b { display: block; min-width: 3ch; font-family: var(--display); font-weight: 560; font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums; }
+.spt-road .count b { font-size: 28px; }
+.spt .count small { display: block; margin-top: 4px; font-size: 12px; line-height: 1; color: var(--sp-dim); }
+.spt .count .sk { display: inline-block; width: 3ch; height: 18px; border-radius: 4px; background: var(--sp-wash-2); vertical-align: top; }
+.spt .count.dash b { color: var(--sp-dim); }
+.spt .count b.is-bump { animation: vr-count-in 150ms var(--sp-ease) both; }
+@keyframes vr-count-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* The Vote button: .sp-ghost's pill with its own 3:1 outline. [type="button"]
+   lifts it above the shared .spectrum button transition. The focus ring is the
+   shared one (.spectrum :focus-visible); the radius sits here, at rest. */
+.spt .vote[type="button"] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: var(--vote-w); height: 40px; padding: 0 16px 0 12px; border: 1px solid var(--vote-line); border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), .86); font: 540 14px/1 var(--font); cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms var(--sp-ease); }
+.spt .vote svg { width: 16px; height: 16px; flex: none; }
+.spt .vote[type="button"]:active { transform: scale(.97); }
+.spt .vote[type="button"][data-voted="true"] { background: var(--accent-fill); border-color: transparent; color: var(--accent-ink); }
+.spt .vote[type="button"][aria-disabled="true"] { border-color: var(--sp-line); background: transparent; color: rgba(var(--sp-ink-rgb), .4); cursor: not-allowed; }
+.spt .vote[type="button"][aria-disabled="true"]:active { transform: none; }
+.spt .vote[type="button"][aria-busy="true"] { cursor: progress; }
+@media (hover: hover) {
+  .spt .vr-name a:hover { text-decoration: underline; }
+  .spt .vote[type="button"]:not([aria-disabled="true"]):hover { background: rgba(var(--sp-ink-rgb), .055); border-color: var(--vote-line-hover); }
+  .spt .vote[type="button"][data-voted="true"]:not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--accent-fill) 88%, #000); border-color: transparent; }
+}
+/* Shipped rows have no button; this keeps their count in the open rows' column. */
+.spt .vote-slot { flex: none; width: var(--vote-w); }
+
+/* Lines under a list. Each action is glued to the word before it (.nw), and the
+   idea line breaks between its two sentences, so no word is left alone. */
+.spt .vl-more { max-width: 62ch; margin: 24px 0 0; font-size: 14px; line-height: 1.5; color: var(--sp-dim); text-wrap: pretty; }
+.spt .vl-more + .vl-more { margin-top: 8px; }
+/* The load-error line is a live region that is always in the page. Empty, it takes no
+   room and hands its 24px lead-in to the line after it. */
+.spt .vl-more:empty { margin: 0; }
+.spt .vl-more:empty + .vl-more { margin-top: 24px; }
+.spt .vl-more button[aria-disabled="true"] { color: var(--sp-dim); cursor: progress; text-decoration: none; }
+.spt .vl-more.lead { margin-top: 0; }
+.spt .vl-more .nw { white-space: nowrap; }
+.spt .vl-more .sent { display: inline-block; }
+.spt .vl-more a { padding-block: 4px; color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* /roadmap head and "How voting works". */
+.spt .rm-hero { max-width: var(--sp-shell); margin: 0 auto; padding: clamp(48px, 8vw, 120px) var(--sp-gutter) 0; }
+.spt .rm-h1 { margin: 0; max-width: 18ch; font-family: var(--display); font-weight: 560; font-size: clamp(34px, 5vw, 64px); line-height: 1; letter-spacing: -.026em; text-wrap: balance; }
+.spt .rm-lede { max-width: 54ch; margin: 20px 0 0; font-size: 16px; line-height: 1.6; color: var(--sp-dim); text-wrap: pretty; }
+.spt .rm-meta { margin: 16px 0 0; font-size: 14px; color: var(--sp-dim); font-variant-numeric: tabular-nums; }
+.spt .rm-meta b { color: var(--sp-ink); font-weight: 600; }
+.spt .rm-dl { margin: 0; padding: 0; }
+.spt .rm-dl > div { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 8px 32px; padding: 16px 0; border-top: 1px solid var(--sp-line); }
+.spt .rm-dl > div:last-child { border-bottom: 1px solid var(--sp-line); }
+.spt .rm-dl dt { font-size: 15px; font-weight: 600; }
+.spt .rm-dl dd { max-width: 62ch; margin: 0; font-size: 15px; line-height: 1.5; color: var(--sp-dim); }
+
+@media (max-width: 860px) {
+  .spt .spt-group--vote > header { padding-bottom: 16px; }
+  .spt .spt-group--vote > header h2, .spt .spt-group--vote > header h3 { padding: 0 0 8px; }
+  .spt .spt-group--vote > header p { max-width: 52ch; margin-top: 0; }
+}
+@media (max-width: 760px) {
+  .spt { --vote-w: 92px; }
+  .spt .vr, .spt-road .vr { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "text votes" "stage votes"; gap: 8px 16px; padding: 14px 12px; }
+  .spt .vr-text { grid-area: text; }
+  .spt .stage { grid-area: stage; display: flex; align-items: center; gap: 8px; }
+  .spt .votes { grid-area: votes; align-self: center; }
+  .spt-road .vr { grid-template-areas: "text text" "stage votes"; row-gap: 12px; }
+  .spt .vote[type="button"] { height: 44px; }
+  .spt .rm-dl > div { grid-template-columns: 1fr; }
+  .spt-road .count b { font-size: 22px; }
+}
+@media (max-width: 340px) { .spt .count small { display: none; } }
+html[data-reduced-motion="true"] .spt .vote[type="button"] { transition: none; }
+html[data-reduced-motion="true"] .spt .vote[type="button"]:active { transform: none; }
+html[data-reduced-motion="true"] .spt .count b.is-bump { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .spt .vote[type="button"] { transition: none; }
+  html:not([data-reduced-motion="false"]) .spt .vote[type="button"]:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .spt .count b.is-bump { animation: none; }
+}

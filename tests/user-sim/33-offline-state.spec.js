@@ -123,8 +123,8 @@ test.describe('offline state', () => {
   //
   // The banner was fixed at `calc(var(--nav-h) + 10px)`. `.plb-toolbar` is
   // sticky at the nav height. Those are the same 60-odd pixels, so on the
-  // Palette Builder the banner sat on the toolbar — reported by the founder
-  // on 2026-09-14, and true of every sticky toolbar on the site, because they
+  // Palette Builder the banner sat on the toolbar, and that is true of every
+  // sticky toolbar on the site, because they
   // all derive from the same nav height.
   //
   // MUTATION: set `--notice-h:0px` on :root after mount (or give .notice-stack

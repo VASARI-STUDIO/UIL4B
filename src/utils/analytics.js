@@ -173,10 +173,26 @@ function flushAggregate() {
   } catch { /* offline / rules / SDK error — fall back to localStorage only */ }
 }
 
-// Record a page view into the daily aggregate doc (total + per-path counter).
+// Routes in src/App.jsx with a :param segment, as [pattern, template]. The page
+// counter is per route, not per URL: every project id would otherwise add a
+// field to the day document. /learn/help and /learn/principles are their own
+// routes and keep their own counters.
+const DYNAMIC_ROUTES = Object.freeze([
+  [/^\/projects\/[^/]+$/, '/projects/:id'],
+  [/^\/learn\/(?!help$|principles$)[^/]+$/, '/learn/:slug'],
+])
+
+/** The route template for a pathname: `/projects/abc` becomes `/projects/:id`. */
+export function routeTemplate(path) {
+  const clean = String(path ?? '').split('?')[0].split('#')[0].replace(/\/+$/, '') || '/'
+  for (const [pattern, template] of DYNAMIC_ROUTES) if (pattern.test(clean)) return template
+  return path
+}
+
+// Record a page view into the daily aggregate doc (total + per-route counter).
 function recordAggregateView(path) {
   bumpAggregate('views', 1)
-  bumpAggregate(aggField(AGG_PREFIX.view, path), 1)
+  bumpAggregate(aggField(AGG_PREFIX.view, routeTemplate(path)), 1)
 }
 
 // Record a tool action into the daily aggregate doc (per-tool counter). A `__`
@@ -190,13 +206,16 @@ function recordAggregateOpen(id) {
   bumpAggregate(aggField(AGG_PREFIX.open, id), 1)
 }
 
-// Read the last `days` daily docs and sum them into a dashboard-friendly shape.
+// Read the newest `days` daily docs and sum them into a dashboard-friendly shape.
+// With `since` (a YYYY-MM-DD day id) only docs on or after that day are read, so
+// a quiet stretch with no documents cannot pull in days from before the window.
 // Returns a safe empty shape on any failure (offline, rules, no docs yet).
-export async function getAggregateAnalytics(days = 30) {
+export async function getAggregateAnalytics(days = 30, { since } = {}) {
   const empty = { totalViews: 0, byPath: [], byTool: [], byOpen: [], byIcon: [], byPack: [], funnel: [], iconCopies: 0, days: [] }
   try {
     const fs = await loadFirestore()
-    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(days))
+    const bounds = since ? [fs.where('day', '>=', since)] : []
+    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), ...bounds, fs.orderBy('day', 'desc'), fs.limit(days))
     const snap = await fs.getDocs(q)
     let totalViews = 0
     let iconCopies = 0
@@ -321,16 +340,24 @@ export function initAnalytics() {
 // path passes the id it also sends to the server, so one message is one local
 // record however many times it is sent, and the admin queue (which merges local
 // and server records by id) lists it once.
+//
+// The sender's address is never written here. This copy stays in the browser
+// for whoever uses it next, and the server already holds the address; the
+// readers of this store (the admin queue and the data export) do not need it
+// from here. Older entries lose any stored email on the next save.
 export function saveFeedback(entry) {
-  const feedback = load(FEEDBACK_KEY, [])
+  const stored = load(FEEDBACK_KEY, [])
+  const feedback = Array.isArray(stored) ? stored.filter(f => f && typeof f === 'object') : []
+  feedback.forEach(f => { delete f.email })
+  const { email: _email, ...kept } = entry || {}
   const now = new Date().toISOString()
-  const existing = entry?.id ? feedback.find(f => f.id === entry.id) : null
+  const existing = kept.id ? feedback.find(f => f.id === kept.id) : null
   if (existing) {
-    Object.assign(existing, entry, { updatedAt: now })
+    Object.assign(existing, kept, { updatedAt: now })
   } else {
     feedback.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      ...entry,
+      ...kept,
       status: 'new',
       adminNotes: '',
       createdAt: now,
@@ -401,8 +428,7 @@ export function trackFontCopy(fontFamily) {
 }
 
 // ── P-001: the two events that make the funnel answerable ───────────────────
-// Both are APPROVED in docs/PROPOSALS.md - local-only since 2026-09-16 and not
-// in this repository, per .gitignore. Until they existed there was no way
+// Until they existed there was no way
 // to answer "did this user build something?", "what did they do before
 // upgrading?" or "where do people stop?" — which is why nearly every other
 // proposal in that file is 'inferred' rather than 'measured'.
@@ -523,6 +549,26 @@ export function trackToolOpen(toolId) {
   recordAggregateOpen(toolId)
 }
 
+// A day document holds at most 500 fields (firestore.rules), and every distinct
+// icon copied adds one. A device therefore names at most this many distinct
+// icons per day; a copy past that still counts in `icon-copies` and in its pack
+// tally, which stays bounded by the number of packs. The list is kept in
+// localStorage, per day, so a reload does not reset it. It reduces how fast
+// honest traffic fills the document (about 60 devices still would); a hostile
+// client ignores it, which the rules cannot close.
+const ICON_NAMES_PER_DEVICE_DAY = 8
+const ICON_NAMES_KEY = 'vs-icon-names'
+
+function mayNameIcon(iconKey) {
+  const day = todayStr()
+  const stored = load(ICON_NAMES_KEY, {})
+  const names = stored.day === day && Array.isArray(stored.names) ? stored.names : []
+  if (names.includes(iconKey)) return true
+  if (names.length >= ICON_NAMES_PER_DEVICE_DAY) return false
+  save(ICON_NAMES_KEY, { day, names: [...names, iconKey] })
+  return true
+}
+
 // Icon copies — most-copied icons and packs. Locally in the design-analytics
 // blob; cross-user via per-icon / per-pack fields on the daily aggregate doc.
 export function trackIconCopy(pack, name) {
@@ -535,8 +581,8 @@ export function trackIconCopy(pack, name) {
   if (pack) data.packCopies[pack] = (data.packCopies[pack] || 0) + 1
   saveDesignAnalytics(data)
   bumpAggregate('icon-copies', 1)
-  bumpAggregate(aggField(AGG_PREFIX.icon, iconKey), 1)
-  if (pack) bumpAggregate(aggField(AGG_PREFIX.pack, pack), 1)
+  if (mayNameIcon(iconKey)) bumpAggregate(aggField(AGG_PREFIX.icon, iconKey), 1)
+  if (pack) bumpAggregate(aggField(AGG_PREFIX.pack, String(pack).slice(0, 40)), 1)
 }
 
 export function getDesignAnalytics() {
@@ -544,7 +590,7 @@ export function getDesignAnalytics() {
 }
 
 // ── Admin resets ─────────────────────────────────────────────
-// Founder-invoked from the Admin dashboard. Clearing this browser's blobs is
+// Invoked from the Admin dashboard. Clearing this browser's blobs is
 // instant; the Firestore aggregate is scrubbed field-by-field (merge writes
 // with deleteField) so tool counters survive a page-analytics reset.
 

@@ -28,7 +28,7 @@
 // ── WHAT CHANGED, AND WHY ───────────────────────────────────────────────────
 //
 // The hook's own contract used to be asserted by REGEX over useModalDialog.js:
-// a match for `document.body.style.overflow = 'hidden'`, one for `e.key ===
+// a match for the scroll lock assignment, one for `e.key ===
 // 'Escape'`, one for `e.key !== 'Tab'`, and — for the focus restore — a
 // twenty-line static tracer that followed the identifier holding
 // `document.activeElement` through assignments and `.push()` calls to see
@@ -61,6 +61,7 @@ import { stripJs } from '../helpers/strip-comments.js'
 
 const SRC = path.join(process.cwd(), 'src')
 const HOOK_PATH = 'src/hooks/useModalDialog.js'
+const LOCK_PATH = 'src/utils/scrollLock.js'
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -78,6 +79,14 @@ function walk(dir) {
 // Rewriting working code to satisfy a test is how a test starts causing bugs,
 // so both routes count. A local trap is recognised by it intercepting Tab.
 const TRAPS_FOCUS = /useModalDialog|key !== 'Tab'|key === 'Tab'/
+
+// A sheet inside a dialog that already traps focus (the Orra bag sheet in a
+// preview scene) cannot use the hook again: a second hook would lock the scroll
+// twice, steal focus from the dialog and add a second Escape handler. It keeps
+// focus in by making the page behind it `inert`, which removes that page from
+// Tab order and from the pointer. The test is a JSX `inert={...}` attribute with
+// a real expression, read from comment-stripped source.
+const INERT_BEHIND = /\binert=\{(?!\s*(?:false|undefined|null)\s*\})[^}]+\}/
 
 // `[aria-modal="true"]` also appears inside querySelector strings — PaletteBuilder
 // uses one to suppress its spacebar shortcut while any dialog is open. That is a
@@ -156,6 +165,19 @@ class El {
   }
 
   querySelectorAll(selector) {
+    // The Escape path asks for open menu triggers inside the dialog: elements
+    // carrying aria-haspopup with aria-expanded="true", in tree order.
+    if (selector === '[aria-haspopup][aria-expanded="true"]') {
+      const open = []
+      const walk = (n) => {
+        for (const c of n.children) {
+          if (c.hasAttribute('aria-haspopup') && c.getAttribute('aria-expanded') === 'true') open.push(c)
+          walk(c)
+        }
+      }
+      walk(this)
+      return open
+    }
     // The hook passes one long selector listing focusable tags. Rather than
     // implement CSS, honour the contract it depends on: candidate elements
     // that are focusable and not disabled, in tree order.
@@ -207,9 +229,13 @@ function makeDom() {
   const body = new El(dom, 'body')
   body.isConnected = true
   body.style = { overflow: '' }
+  // The scroll lock lives on <html>: the root's overflow-x: clip stops a body
+  // overflow reaching the viewport. Both lock properties are read back here.
+  const documentElement = { style: { overflow: '', scrollbarGutter: '' } }
 
   dom.document = {
     body,
+    documentElement,
     activeElement: body,
     addEventListener: (type, fn, capture) => dom.listeners.push({ type, fn, capture }),
     removeEventListener: (type, fn) => {
@@ -241,6 +267,7 @@ function makeDom() {
 // The repository's answer is the vm harness in
 // reduced-motion-resolution.test.js, and this uses the same one.
 const hookSource = fs.readFileSync(path.join(process.cwd(), HOOK_PATH), 'utf8')
+const lockSource = fs.readFileSync(path.join(process.cwd(), LOCK_PATH), 'utf8')
 
 const loadHook = (dom) => {
   let out = hookSource
@@ -254,31 +281,50 @@ const loadHook = (dom) => {
   }
 
   rewrite(/import \{ useEffect, useRef \} from 'react'/, '', 'the react import')
-  rewrite(/import \{ getLenis \} from '\.\/useSmoothScroll\.js'/, '', 'the useSmoothScroll import')
+  rewrite(/import \{ lockScroll \} from '\.\.\/utils\/scrollLock\.js'/, '', 'the scrollLock import')
   rewrite(/import \{ markScrollContainers \} from '\.\.\/utils\/scrollContainment\.js'/, '',
     'the scrollContainment import')
   rewrite(/^export default function useModalDialog/m, 'function useModalDialog',
     'the hook export')
 
+  // The shared lock the hook calls is run from its real source too, with only
+  // its Lenis import stubbed, so the hook and the lock are tested together.
+  assert.match(lockSource, /import \{ getLenis \} from '\.\.\/hooks\/useSmoothScroll\.js'/,
+    `${LOCK_PATH} no longer imports getLenis the way this harness stubs it`)
+  assert.match(lockSource, /^export function lockScroll/m, `${LOCK_PATH} no longer exports lockScroll`)
+  out = lockSource
+    .replace(/import \{ getLenis \} from '\.\.\/hooks\/useSmoothScroll\.js'/, '')
+    .replace(/^export function lockScroll/m, 'function lockScroll') + '\n' + out
+
   assert.ok(!/^\s*import\s/m.test(out),
     `${HOOK_PATH} has gained a static import this harness does not stub:\n  `
     + (out.match(/^\s*import\s.*$/m) || [''])[0].trim())
 
-  // A React small enough to drive one hook: a stable ref, and an effect that
-  // runs immediately and hands back its cleanup.
-  let cleanup = null
-  const refs = []
-  let refCursor = 0
+  // A React small enough to drive the hook: stable refs, and effects that run
+  // immediately, hand back a cleanup, and are skipped on a later render whose
+  // dependency list is unchanged (compared with Object.is, as React does). An
+  // effect with NO dependency list runs on every render. Several components
+  // can be mounted at once, each with its own refs and effects, sharing the one
+  // loaded copy of the hook — and with it the hook's module-level state.
+  let inst = null
+  const newInstance = () => ({ refs: [], refCursor: 0, effects: [], effectCursor: 0 })
   const sandbox = {
     console,
     document: dom.document,
     assert,
     useRef: (init) => {
-      const i = refCursor++
-      if (refs.length <= i) refs[i] = { current: init }
-      return refs[i]
+      const i = inst.refCursor++
+      if (inst.refs.length <= i) inst.refs[i] = { current: init }
+      return inst.refs[i]
     },
-    useEffect: (fn) => { cleanup = fn() },
+    useEffect: (fn, deps) => {
+      const slot = inst.effects[inst.effectCursor++] ||= { deps: null, cleanup: null }
+      if (deps && slot.deps && deps.length === slot.deps.length
+        && deps.every((d, k) => Object.is(d, slot.deps[k]))) return
+      slot.cleanup?.()
+      slot.cleanup = fn() || null
+      slot.deps = deps || null
+    },
     getLenis: () => (dom.lenisPresent ? dom.lenis : null),
     markScrollContainers: () => { dom.marked += 1; return () => { dom.unmarked += 1 } },
     requestAnimationFrame: (fn) => { const id = ++dom.frameSeq; dom.frames.push({ id, fn }); return id },
@@ -296,19 +342,31 @@ const loadHook = (dom) => {
    *  doing that consumes index 0 and hands the hook a second, empty ref, which
    *  is a null `node` and a hook that silently does almost nothing. */
   return (onClose, options, node) => {
-    refCursor = 0
-    refs.length = 0
-    refs[0] = { current: node }
-    useModalDialog(onClose, options)
-    const close = () => { const c = cleanup; cleanup = null; return c?.() }
-    /** The effect re-running on the SAME component: React runs the old
-     *  cleanup, then the effect body again, with the refs it already holds. */
+    const me = newInstance()
+    me.refs[0] = { current: node }
     // The hook is called outside React on purpose — this whole harness is
     // that — and the rule keys on the function's NAME, which is why the
     // anonymous mount above never tripped it.
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const rerun = () => { close(); refCursor = 0; useModalDialog(onClose, options) }
-    return { ref: refs[0], close, rerun }
+    const render = (c, o) => {
+      inst = me
+      me.refCursor = 0
+      me.effectCursor = 0
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      useModalDialog(c, o)
+    }
+    render(onClose, options)
+    /** Unmount: every effect's cleanup runs, and the slots are emptied. */
+    const close = () => {
+      for (const slot of me.effects) { const c = slot.cleanup; slot.cleanup = null; slot.deps = null; c?.() }
+    }
+    /** A later render of the SAME component with new arguments, the way a
+     *  parent re-rendering hands the hook a fresh inline `onClose`. Effects
+     *  whose dependencies are unchanged do not run again. */
+    const rerender = (c, o = options) => render(c, o)
+    /** The main effect forced to re-run on the SAME component: React runs the
+     *  old cleanup, then the effect body again, with the refs it already holds. */
+    const rerun = () => { close(); render(onClose, options) }
+    return { ref: me.refs[0], close, rerun, rerender }
   }
 }
 
@@ -339,7 +397,7 @@ function scene({ initialFocus = null, enabled = true, lenis = true } = {}) {
   const mount = loadHook(dom)
   const handle = mount(() => closes.push(1), { enabled, initialFocus }, dialog)
 
-  return { dom, menu, opener, dialog, first, middle, last, closes, ...handle }
+  return { dom, menu, opener, dialog, first, middle, last, closes, mount, ...handle }
 }
 
 // ── The file-wide sweeps, which stay source scans ───────────────────────────
@@ -350,6 +408,7 @@ test('every dialog that claims aria-modal actually traps focus', () => {
     const src = fs.readFileSync(file, 'utf8')
     if (!DECLARES_MODAL.test(src)) continue
     if (TRAPS_FOCUS.test(src)) continue
+    if (INERT_BEHIND.test(stripJs(src))) continue
     offenders.push(path.relative(process.cwd(), file))
   }
   assert.deepEqual(offenders, [],
@@ -392,23 +451,47 @@ test('initialFocus moves the landing point to that one control', () => {
 
 test('the background scroll is locked on open and released on close', () => {
   const s = scene()
-  assert.equal(s.dom.document.body.style.overflow, 'hidden', 'the body lock was not applied')
+  const root = s.dom.document.documentElement.style
+  assert.equal(root.overflow, 'hidden', 'the root scroll lock was not applied')
+  assert.equal(s.dom.document.body.style.overflow, '',
+    'the lock went on <body>: with overflow-x: clip on the root that makes body its own scroll box and a sticky footer drops')
   assert.equal(s.dom.lenis.stopped, 1, 'Lenis was not stopped — the page behind can still scroll')
   assert.equal(s.dom.marked, 1, 'the dialog was not marked scrollable while Lenis is stopped')
 
   s.close()
-  assert.equal(s.dom.document.body.style.overflow, '', 'the body lock was not released')
+  assert.equal(root.overflow, '', 'the root scroll lock was not released')
+  assert.equal(s.dom.document.body.style.overflow, '', 'closing left a body overflow behind')
   assert.equal(s.dom.lenis.started, 1, 'Lenis was never restarted — the page is frozen for good')
   assert.equal(s.dom.unmarked, 1, 'the scroll-container marks were not cleaned up')
 })
 
-test('with Lenis absent the body lock still holds, and closing does not throw', () => {
+test('with Lenis absent the root lock still holds, and closing does not throw', () => {
   // Reduced motion never instantiates Lenis, so getLenis() returns null and the
-  // browser is doing the scrolling again — the case the body lock does hold.
+  // browser is doing the scrolling again — the case the root lock does hold.
   const s = scene({ lenis: false })
-  assert.equal(s.dom.document.body.style.overflow, 'hidden')
+  assert.equal(s.dom.document.documentElement.style.overflow, 'hidden')
   s.close()
-  assert.equal(s.dom.document.body.style.overflow, '')
+  assert.equal(s.dom.document.documentElement.style.overflow, '')
+})
+
+test('Escape is left to a menu open inside the dialog, so only the menu closes', () => {
+  const s = scene()
+  s.first.setAttribute('aria-haspopup', 'true')
+  s.first.setAttribute('aria-expanded', 'true')
+  const event = s.dom.press('Escape')
+  assert.equal(s.closes.length, 0, 'the dialog closed while a menu inside it was open')
+  assert.ok(!event.propagationStopped, 'the dialog swallowed the Escape the open menu needs')
+})
+
+test('a hidden trigger left marked open does not stop Escape closing the dialog', () => {
+  const s = scene()
+  const stale = s.dom.el('button', { visible: false })
+  s.dialog.appendChild(stale)
+  stale.setAttribute('aria-haspopup', 'true')
+  stale.setAttribute('aria-expanded', 'true')
+  const event = s.dom.press('Escape')
+  assert.equal(s.closes.length, 1, 'a stale attribute on a hidden trigger blocked Escape')
+  assert.ok(event.propagationStopped)
 })
 
 test('Escape closes, and does not collapse the surface that opened it', () => {
@@ -488,8 +571,8 @@ test('the restore waits a frame, so the key that closed the dialog cannot land o
 })
 
 test('a dialog whose effect re-runs before the frame keeps its original opener', () => {
-  // A caller that passes a fresh onClose each render re-runs the effect: old
-  // cleanup, then the body again. activeElement at that moment is the dialog
+  // The main effect re-running (`enabled` flipping off and on inside a frame):
+  // old cleanup, then the body again. activeElement at that moment is the dialog
   // itself, so a naive capture would make the dialog its own opener and the
   // queued restore would fire underneath a dialog that is still open.
   const s = scene()
@@ -500,6 +583,78 @@ test('a dialog whose effect re-runs before the frame keeps its original opener',
   s.dom.frame()
   assert.equal(s.dom.document.activeElement, s.opener,
     'the re-run lost the real opener — the dialog recorded itself as the thing to return to')
+})
+
+// THE DEFECT: the main effect used to depend on [onClose, enabled, initialFocus],
+// so a parent re-render that handed over an inline arrow re-ran it, and the
+// re-run's .focus() pulled focus out of the field being typed in.
+test('a parent re-render with a fresh onClose does not re-run the effect or take focus back', () => {
+  const s = scene({ initialFocus: '.hue' })
+  s.last.focus()            // the user moves on and is typing in a later control
+  assert.equal(s.dom.document.activeElement, s.last)
+  const focusCalls = s.dialog.focusCount + s.middle.focusCount
+
+  const second = []
+  s.rerender(() => second.push(1), { initialFocus: '.hue' })
+  s.rerender(() => second.push(1), { initialFocus: '.other' })
+
+  assert.equal(s.dom.document.activeElement, s.last,
+    'a re-render moved focus away from the control being used')
+  assert.equal(s.dialog.focusCount + s.middle.focusCount, focusCalls,
+    'the initial focus ran again on a re-render')
+  assert.equal(s.dom.listeners.filter(l => l.type === 'keydown').length, 1,
+    'the key listener was torn down and re-added')
+  assert.equal(s.dom.marked, 1, 'the scroll containers were re-marked on a re-render')
+  assert.equal(s.dom.lenis.stopped, 1, 'the scroll lock was re-taken on a re-render')
+  assert.equal(s.dom.frames.length, 0, 'a re-render queued a focus restore')
+})
+
+test('Escape calls the onClose from the latest render, not the one the dialog opened with', () => {
+  const s = scene()
+  const latest = []
+  s.rerender(() => latest.push(1))
+  s.dom.press('Escape')
+  assert.equal(latest.length, 1, 'Escape ran a stale onClose')
+  assert.equal(s.closes.length, 0, 'the onClose from the first render was called')
+})
+
+// Two dialogs listen on `document` in the capture phase, and stopPropagation
+// does not stop the second of them. Without a stack, one Escape closed both.
+test('with a dialog open over another, Escape closes only the top one', () => {
+  const s = scene()
+  const upper = s.dom.el('div', { focusable: false })
+  upper.tabIndex = -1
+  upper._focusable = true
+  s.dom.document.body.appendChild(upper)
+  const upperCloses = []
+  const upperHandle = s.mount(() => upperCloses.push(1), {}, upper)
+  assert.equal(s.dom.document.activeElement, upper)
+
+  const event = s.dom.press('Escape')
+  assert.equal(upperCloses.length, 1, 'the top dialog did not close')
+  assert.equal(s.closes.length, 0, 'the dialog underneath closed on the same Escape')
+  assert.ok(event.propagationStopped)
+
+  upperHandle.close()
+  s.dom.press('Escape')
+  assert.equal(s.closes.length, 1, 'once the top dialog is gone, Escape reaches the one beneath')
+})
+
+test('with a dialog open over another, Tab is trapped by the top one only', () => {
+  const s = scene()
+  const upper = s.dom.el('div', { focusable: false })
+  upper.tabIndex = -1
+  upper._focusable = true
+  const only = s.dom.el('button')
+  s.dom.document.body.appendChild(upper)
+  upper.appendChild(only)
+  s.mount(() => {}, {}, upper)
+  only.focus()
+  // The lower dialog's last control holds no focus, but a stale listener would
+  // still run its own wrap logic. Put focus on it to prove it is ignored.
+  s.last.focus()
+  const event = s.dom.press('Tab')
+  assert.ok(!event.defaultPrevented, 'the dialog underneath wrapped Tab while another was on top')
 })
 
 test('the deferred restore yields to focus that moved somewhere live in the meantime', () => {
@@ -561,8 +716,10 @@ test('enabled:false does nothing at all, so a closed dialog cannot lock the page
   // Several modals stay mounted and toggle on an `open` prop. Without this
   // guard the scroll lock applies to a closed dialog and never comes off.
   const s = scene({ enabled: false })
-  assert.equal(s.dom.document.body.style.overflow, '',
+  assert.equal(s.dom.document.documentElement.style.overflow, '',
     'a disabled dialog locked the background scroll')
+  assert.equal(s.dom.document.body.style.overflow, '',
+    'a disabled dialog locked the body')
   assert.equal(s.dom.listeners.length, 0, 'a disabled dialog installed a key handler')
   assert.equal(s.dom.document.activeElement, s.opener, 'a disabled dialog stole focus')
   assert.equal(s.dom.lenis.stopped, 0, 'a disabled dialog stopped Lenis')
@@ -603,3 +760,17 @@ test('the upgrade dialog offers an explicit way to decline', () => {
     + 'declining has to be exactly as easy as accepting, which means a real button with a '
     + 'real label sitting next to the one that says yes.')
 })
+
+// The icon editor's Escape handler is a plain document listener. The save picker is a panel inside
+// the dialog (not a second dialog with its own hook), so Escape has to close that panel first and the
+// dialog only when no panel is open. The order is run for real in user-sim spec 215; this pins the
+// branch and that Tab skips what is inert behind the panel.
+test('the icon editor closes its save panel on Escape before it closes the dialog', () => {
+  const src = stripJs(fs.readFileSync(path.join(SRC, 'pages/IconLibrary.jsx'), 'utf8'))
+  assert.doesNotMatch(src, /useModalDialog\(closeSavePicker/, 'the save panel went back to being a second modal')
+  const branch = src.match(/if \(e\.key === 'Escape'\) \{\s*if \(savePickerOpenRef\.current\) \{([^}]*)\} else onClose\(\)\s*return\s*\}/)
+  assert.ok(branch, 'Escape no longer branches on the open save panel before it closes the dialog')
+  assert.match(branch[1], /setSavePickerOpen\(false\)/, 'Escape with the panel open does not close the panel')
+  assert.match(src, /!el\.closest\('\[inert\]'\)/, 'the Tab trap no longer skips the inert dialog behind the panel')
+})
+

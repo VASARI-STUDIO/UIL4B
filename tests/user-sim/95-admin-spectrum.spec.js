@@ -13,7 +13,7 @@
 // state in a sentence, measured from the rendered page rather than read off the
 // stylesheet:
 //
-//   1. Values are set in Geist Mono with tabular figures; prose is not.
+//   1. Figures are the UI face with tabular figures; only ids and masked values stay Geist Mono.
 //   2. The accent is derived, not typed — moving `--accent` moves the whole
 //      surface. This is the premium theme-template mechanism, so it is the one
 //      with real product consequences.
@@ -138,6 +138,11 @@ async function stubVerifyAdmin(page) {
 /** Sign in as the founder, seed the local reports, and land on the dashboard. */
 async function openDashboard(page, { theme = 'light' } = {}) {
   watch(page, 'founder')
+  // The Overview now reads a date range that ends today (30 days unless ?range= says
+  // otherwise), and the seeded daily documents end on 2026-09-18. Pin "today" the day
+  // after, or the real clock walks them out of the window and the tab shows its empty
+  // state with no figures to measure.
+  await page.clock.setFixedTime(new Date(2026, 8, 19, 12, 0, 0))
   await signIn(page, {
     admin: true,
     claims: { admin: true, email_verified: true },
@@ -179,26 +184,26 @@ const familyOf = (page, selector) => page.locator(selector).first().evaluate(
 )
 
 test.describe('the values are set in the product\'s own face', () => {
-  // The single strongest signal that a surface belongs to this product, and
-  // the thing the design source does most consistently: a figure a person
-  // reads or copies is Geist Mono, and the sentence around it is Geist.
-  test('every figure a person reads is Geist Mono with tabular figures', async ({ page }) => {
-    // MUTATION: delete the `.adm-stat-value, .adm-user-view-n, …` mono rule from
-    // deferred/admin.css — the stat figures, the four count tiles and the
-    // Joined/Last seen columns all fall back to Geist and this goes red.
+  // The mono voice is retired from figures (mono-retire, 2026-10-29): a count,
+  // a bar value or a date sets in the UI face with tabular figures. Geist Mono
+  // is kept for text copied as code, such as the masked address below.
+  test('every figure a person reads is the UI face with tabular figures; the masked address stays mono', async ({ page }) => {
+    // MUTATION: put `font-family: var(--mono)` back on `.adm-stat-value,
+    // .adm-user-view-n, …` in deferred/admin.css and this goes red.
     await openDashboard(page)
 
     // Overview: the four headline figures.
     await expect(page.locator('.adm-stat-value').first()).toBeVisible()
-    expect(await familyOf(page, '.adm-stat-value')).toContain('geist mono')
+    expect(await familyOf(page, '.adm-stat-value')).not.toContain('geist mono')
 
     await openTab(page, 'users')
     await expect(page.getByText('All accounts · server data')).toBeVisible()
 
-    // The count tiles, the dates, the masked address and the plan chip.
-    for (const sel of ['.adm-user-view-n', '.adm-users-table td[data-label="Joined"]', '.adm-mask-text', '.adm-plan']) {
-      expect(await familyOf(page, sel), `${sel} is not in the mono face`).toContain('geist mono')
+    // The count tiles and the dates are figures: the UI face. The masked address is copied as an ID: mono. The plan chip is a word a person reads: the body face, below.
+    for (const sel of ['.adm-user-view-n', '.adm-users-table td[data-label="Joined"]']) {
+      expect(await familyOf(page, sel), `${sel} is still in the mono face`).not.toContain('geist mono')
     }
+    expect(await familyOf(page, '.adm-mask-text'), '.adm-mask-text is not in the mono face').toContain('geist mono')
 
     // Tabular figures, so a column of counts lines up down the column. This is
     // the half that a plain `font-family` swap would miss.
@@ -210,7 +215,7 @@ test.describe('the values are set in the product\'s own face', () => {
     // test above is satisfied by setting the whole page in Geist Mono, which
     // would destroy the contrast it exists to create.
     const prose = await familyOf(page, '.adm-detail-foot, .adm-roster-line')
-    expect(prose).toContain('geist')
+    expect(prose).toContain('switzer')
     expect(prose).not.toContain('geist mono')
   })
 
@@ -431,10 +436,10 @@ test.describe('the surface still does everything it did', () => {
     await expect(detail.locator('.adm-detail-foot')).toContainText(/not done from here/i)
   })
 
-  test('the plan chips still say the honest thing, in the mono face', async ({ page }) => {
+  test('the plan chips still say the honest thing, in the body face', async ({ page }) => {
     // #484 found a real defect: every Stripe status that was not
     // active/trialing collapsed into the word "Free", so a past-due subscriber
-    // read as somebody who had never paid. The restyle changes the chip's FACE
+    // read as somebody who had never paid. The restyle changes the chip's face
     // and radius and must not soften one word of what it says.
     // MUTATION: restore `status === 'active' || status === 'trialing' ? 'pro' : 'free'`.
     await openDashboard(page)
@@ -448,7 +453,7 @@ test.describe('the surface still does everything it did', () => {
     await expect(chip('Pia Pro')).toHaveText('Pro')
     await expect(chip('Gus Gone')).toHaveText('Cancelled')
     await expect(chip('Freya Free')).toHaveText('Free')
-    expect(await familyOf(page, '.adm-plan')).toContain('geist mono')
+    expect(await familyOf(page, '.adm-plan'), 'a plan chip is words, so the body face').not.toContain('geist mono')
   })
 })
 

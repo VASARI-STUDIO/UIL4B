@@ -1,10 +1,11 @@
 // Crash reports: what a runtime error becomes on its way to the admin
 // feedback queue.
 //
-// THE SAME PLACE AS EVERY OTHER REPORT. A crash is posted to /api/support as a
-// `bug` with `source: 'inline'`, exactly the payload shape the feedback modal
-// sends, so it lands in Admin → Submissions next to what people wrote. There
-// is no new serverless function (all 12 slots are used) and no new store.
+// THE SAME STORE AS EVERY OTHER REPORT. A crash is posted to /api/support as a
+// `bug` with `source: 'auto'`, the payload shape the feedback modal sends, so
+// it lands in the same `feedback` collection. Admin → Generated lists it apart
+// from Admin → Submissions, which is what people wrote. There is no new
+// serverless function (all 12 slots are used) and no new store.
 //
 // NO PII. The report carries the error's message, the route WITHOUT its query
 // string or hash, and the top of the stack reduced to file names. Nothing from
@@ -127,7 +128,7 @@ export function createErrorReporter({ send, storage, now = () => Date.now(), rel
       // every error, so the safe answer is not to send.
       return false
     }
-    send({ type: 'bug', subject, message, email: '', source: 'inline' })
+    send({ type: 'bug', subject, message, email: '', source: 'auto' })
     return true
   }
 }
@@ -201,4 +202,14 @@ export function openProblemReport(error, pathname) {
   })
   const unhandled = window.dispatchEvent(event)
   if (unhandled) window.location.assign('/feedback')
+}
+
+/**
+ * Ask for the feedback dialog on the current page; FeedbackButton fills in the
+ * route and tool name itself. Returns true when nothing answered (no dialog is
+ * mounted), so the caller can send the visitor to the /feedback page instead.
+ */
+export function requestFeedbackDialog() {
+  const event = new CustomEvent(REPORT_PROBLEM_EVENT, { cancelable: true, detail: { typeId: 'feedback' } })
+  return window.dispatchEvent(event)
 }

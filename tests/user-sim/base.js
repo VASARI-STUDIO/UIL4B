@@ -39,6 +39,9 @@ import { REPORT_DIR } from './helpers.js'
 // separate module so this one keeps the properties tests/unit/one-tap-stub.test.js
 // pins (an empty JavaScript body, no abort anywhere in here).
 import { stubIconify } from './iconify-stub.js'
+// Answers the static font catalogue with a 404 so the specs keep exercising
+// /api/fonts and the bundled list. See that file.
+import { stubFontCatalogueStatic } from './font-catalogue-stub.js'
 
 export { expect }
 
@@ -414,7 +417,7 @@ export const test = base.extend({
   browser: [async ({ browser }, use) => {
     if (!browser[PATCHED]) {
       const newContext = browser.newContext.bind(browser)
-      browser.newContext = async (...args) => watchBuildAssets(await stubIconify(await stubOneTap(await newContext(...args))))
+      browser.newContext = async (...args) => watchBuildAssets(await stubFontCatalogueStatic(await stubIconify(await stubOneTap(await newContext(...args)))))
       browser[PATCHED] = true
     }
     await use(browser)

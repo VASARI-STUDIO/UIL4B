@@ -64,7 +64,7 @@ test.describe('the checkout return page only reports Pro when this checkout is c
 
     await expect(heading(page)).toHaveText('Payment received.')
     await expect(view(page)).not.toContainText(/Pro is yours/i)
-    await expect(view(page)).not.toContainText(/on UIL4B Pro/i)
+    await expect(view(page)).not.toContainText(/on UI L4B Pro/i)
     await expect(view(page).locator('.co-details dt', { hasText: /^Paid for$/ })).toHaveCount(1)
     await expect(view(page).getByRole('link', { name: 'Start building' })).toHaveCount(0)
   })
@@ -76,7 +76,7 @@ test.describe('the checkout return page only reports Pro when this checkout is c
     await go(page, '/checkout/return?session_id=cs_test_sub_pending')
 
     await expect(heading(page)).toHaveText('Payment received.')
-    await expect(view(page)).not.toContainText(/on UIL4B Pro/i)
+    await expect(view(page)).not.toContainText(/on UI L4B Pro/i)
     await expect(view(page).getByRole('button', { name: 'Check again' })).toBeVisible()
   })
 
@@ -91,7 +91,7 @@ test.describe('the checkout return page only reports Pro when this checkout is c
       await answerStatus(page, [answer])
       await go(page, '/checkout/return?session_id=cs_test_wrong_flag')
       await expect(heading(page)).toHaveText('Payment received.')
-      await expect(view(page)).not.toContainText(/on UIL4B Pro/i)
+      await expect(view(page)).not.toContainText(/on UI L4B Pro/i)
     })
   }
 
@@ -101,7 +101,7 @@ test.describe('the checkout return page only reports Pro when this checkout is c
     await answerStatus(page, [ONE_OFF_CONFIRMED])
     await go(page, '/checkout/return?session_id=cs_test_one_off_done')
 
-    await expect(heading(page)).toHaveText('You’re on UIL4B Pro.')
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
     await expect(view(page).locator('.co-sub')).toContainText('Pro is yours with no renewal.')
     await expect(view(page).locator('.co-details dd', { hasText: 'Pro, one-off purchase' })).toHaveCount(1)
   })
@@ -118,7 +118,7 @@ test.describe('the date row says when access ends if the subscription is set to 
     await answerStatus(page, [SUBSCRIPTION_CONFIRMED])
     await go(page, '/checkout/return?session_id=cs_test_cancelling')
 
-    await expect(heading(page)).toHaveText('You’re on UIL4B Pro.')
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
     const details = view(page).locator('.co-details')
     const row = details.locator('.co-detail', { has: page.locator('dt', { hasText: /^Access until$/ }) })
     await expect(row).toHaveCount(1)
@@ -133,7 +133,7 @@ test.describe('the date row says when access ends if the subscription is set to 
     await answerStatus(page, [SUBSCRIPTION_CONFIRMED])
     await go(page, '/checkout/return?session_id=cs_test_renewing')
 
-    await expect(heading(page)).toHaveText('You’re on UIL4B Pro.')
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
     const details = view(page).locator('.co-details')
     const row = details.locator('.co-detail', { has: page.locator('dt', { hasText: /^Renews$/ }) })
     await expect(row.locator('dd')).toContainText('2031')
@@ -169,7 +169,7 @@ test.describe('a settling payment keeps asking, then stops', () => {
 
     await page.clock.fastForward(RETRY_MS)
     await expect.poll(status.requests).toBe(3)
-    await expect(heading(page)).toHaveText('You’re on UIL4B Pro.')
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
 
     // Confirmed: a long wait asks nothing further.
     await page.clock.fastForward('02:00')

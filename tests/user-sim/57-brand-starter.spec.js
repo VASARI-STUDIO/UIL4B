@@ -14,7 +14,7 @@
 //
 // Every limit and label below is IMPORTED from src/config/aiGeneration.js
 // rather than typed. A spec that hard-codes "1" would keep passing after the
-// founder changes the allowance, and would then be asserting the old product.
+// allowance changes, and would then be asserting the old product.
 //
 // THE STUB IS AT THE NETWORK, NOT IN THE COMPONENT. page.route intercepts
 // /api/ai, so the request body, the headers, the response handling, the meter
@@ -71,7 +71,7 @@ const STARTER = Object.freeze({
  * exactly what api/ai.js does by placing the usage increment after the runner's
  * early return.
  */
-async function stubAi(page, { limit = FREE_TOTAL_GENERATIONS, plan = 'free', startUsed = 0, failFirst = false } = {}) {
+async function stubAi(page, { limit = FREE_TOTAL_GENERATIONS, plan = 'free', startUsed = 0, failFirst = false, provider = 'openrouter' } = {}) {
   const state = { used: startUsed, calls: [], failuresLeft: failFirst ? 1 : 0 }
   const period = plan === 'pro' ? 'month' : 'lifetime'
 
@@ -117,7 +117,7 @@ async function stubAi(page, { limit = FREE_TOTAL_GENERATIONS, plan = 'free', sta
       contentType: 'application/json',
       body: JSON.stringify({
         starter: STARTER,
-        provider: 'openrouter',
+        provider,
         plan,
         beta: true,
         generation: { used: state.used, limit, remaining: limit - state.used, period },
@@ -446,8 +446,10 @@ test.describe('the pricing page and the server agree', () => {
     watch(page, 'a visitor viewing the listed tools on plans')
     await go(page, '/plans')
     await expectRendered(page, 'the plans page')
-    const row = page.locator('.pr-compare-row', { has: page.locator('th', { hasText: 'Brand Starter' }) })
+    const row = page.locator('tr', { has: page.getByRole('rowheader', { name: 'Brand Starter' }) })
     await expect(row).toHaveCount(0)
+    // POSITIVE CONTROL: the comparison table is on the page, so no match means "omitted", not "not rendered".
+    await expect(page.getByRole('rowheader', { name: 'AI generations' }), 'the comparison table did not render').toHaveCount(1)
   })
 
   test('the tool is absent from the AI Studio menu', async ({ page }) => {
@@ -480,3 +482,50 @@ test.describe('the pricing page and the server agree', () => {
     await expect(page.locator('.bs-sample')).toBeVisible()
   })
 })
+
+// The provider badge's meaning used to sit in a hover tooltip, out of reach on
+// a touch screen and from the keyboard. The fallback label is the wider one,
+// so it is the case that would run off a phone screen first.
+for (const [width, provider, says] of [[390, 'gemini', 'backup AI provider'], [390, 'openrouter', 'main AI provider'], [1440, 'openrouter', 'main AI provider']]) {
+  test(`${width}px, ${provider}: the provider badge is 11px and says what it means when pressed`, async ({ page }) => {
+    watch(page, 'a designer asking what the provider name on the result means')
+    await page.setViewportSize({ width, height: 900 })
+    await stubAi(page, { provider })
+    await openFixture(page)
+    await writeBrief(page)
+    await generate(page).click()
+
+    const badge = page.getByTestId('brand-starter-result').getByTestId('ai-provider-badge')
+    await expect(badge).toBeVisible()
+    expect(await badge.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(11)
+    await expect(badge).toHaveAttribute('aria-expanded', 'false')
+
+    await badge.focus()
+    await page.keyboard.press('Enter')
+    await expect(badge).toHaveAttribute('aria-expanded', 'true')
+    const note = page.getByTestId('ai-provider-note')
+    await expect(note).toBeVisible()
+    await expect(note).toContainText(says)
+    await expect(note, 'the note shows the admin diagnosis').not.toContainText(/key|healthy state/i)
+    const box = await note.boundingBox()
+    expect(box.x, 'the note runs off the left edge').toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width, 'the note runs off the right edge').toBeLessThanOrEqual(width)
+    expect(box.y, 'the note is not on its own line under the badge').toBeGreaterThan((await badge.boundingBox()).y)
+
+    await page.keyboard.press('Escape')
+    await expect(note).toHaveCount(0)
+    await expect(badge).toBeFocused()
+
+    await badge.click()
+    await expect(note).toBeVisible()
+    await page.locator('.bs-result-name').click()
+    await expect(note).toHaveCount(0)
+
+    // Tab moving on closes it too.
+    await badge.focus()
+    await page.keyboard.press('Enter')
+    await expect(note).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(note).toHaveCount(0)
+  })
+}

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams, NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
 import { COLOUR_SYSTEMS, FREE_COLOUR_SYSTEMS } from '../config/colourSystems'
 import { BILLED_EVERY, PRO_EXPORT_NAMES } from '../config/planFacts'
+import { clearPick, readPick } from '../utils/kitGalleryPick'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -55,7 +57,7 @@ function ledgerRows() {
       label: 'Exports',
       from: 'Marked',
       to: 'Unmarked',
-      note: 'No “Made with UIL4B” line. Use Export in the top bar.',
+      note: 'No “Made with UI L4B” line. Use Export in the top bar.',
       more: ` Also the ${PRO_EXPORT_NAMES}.`,
       stack: true,
     },
@@ -124,7 +126,14 @@ export default function CheckoutReturn() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { getCheckoutStatus, subscription } = useSubscription()
+  const { projects } = useProject()
 
+  // Set by the export gallery just before checkout; read once, here, and cleared once the payment is
+  // confirmed. It is only a way back for the account that made it, into a project that still exists.
+  const [storedPick] = useState(() => readPick())
+  const galleryPick = storedPick && user && storedPick.uid === user.uid && projects.some((p) => p.id === storedPick.projectId)
+    ? storedPick
+    : null
   const sessionId = params.get('session_id')
   // Missing session id is an error state from the start — no effect needed.
   const [state, setState] = useState(sessionId ? 'loading' : 'error') // loading | success | error
@@ -151,6 +160,7 @@ export default function CheckoutReturn() {
               setState('error')
               return
             }
+            clearPick()
             setCheckoutMode(data.mode || 'subscription')
             setBillingInterval(data.interval || null)
             // Only the server's answer for this checkout's own kind counts: a
@@ -168,7 +178,9 @@ export default function CheckoutReturn() {
             }
           } else if (data.status === 'open') {
             // Payment not finished — send them back to retry.
-            navigate(`/checkout?plan=${data.interval || 'yearly'}`, { replace: true })
+            // A buyer who came from the export gallery keeps the label that says so.
+            const fromGallery = params.get('from') === 'kit-gallery' || storedPick
+            navigate(`/checkout?plan=${data.interval || 'yearly'}${fromGallery ? '&from=kit-gallery' : ''}`, { replace: true })
           } else {
             setState('error')
           }
@@ -177,7 +189,7 @@ export default function CheckoutReturn() {
     }
     check(0)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [user, sessionId, getCheckoutStatus, navigate])
+  }, [user, sessionId, getCheckoutStatus, navigate, params, storedPick])
 
   // A settling payment turns into an active one when a later checkout-status
   // response confirms it. The live account is never enough on its own: it can
@@ -202,8 +214,8 @@ export default function CheckoutReturn() {
 
   const COPY = {
     loading: { h: 'Confirming your payment…', sub: 'Checking with Stripe. This page updates by itself.' },
-    active: { h: 'You’re on UIL4B Pro.', sub: oneOff ? 'Pro is yours with no renewal. Here’s what changed.' : 'Here’s what changed on your account.' },
-    trial: { h: 'You’re on UIL4B Pro.', sub: `Free until ${dateText}. You won’t be charged before then. Here’s what changed.` },
+    active: { h: 'You’re on UI L4B Pro.', sub: oneOff ? 'Pro is yours with no renewal. Here’s what changed.' : 'Here’s what changed on your account.' },
+    trial: { h: 'You’re on UI L4B Pro.', sub: `Free until ${dateText}. You won’t be charged before then. Here’s what changed.` },
     settling: { h: 'Payment received.', sub: `Pro is still being attached to ${email || 'your account'}. This page updates by itself when it lands, and you can leave it: Pro will still arrive.` },
     failed: { h: 'We couldn’t confirm this payment.', sub: `If you paid, nothing is lost: Pro attaches to the account you paid with. Check again in a minute, or email us the reference below.${email ? ` You’re signed in as ${email}.` : ''} Paid with another account? Sign in with that one.` },
     nosession: { h: 'This link has no payment attached.', sub: 'Nothing was charged from this page. Pick a plan to start again.' },
@@ -230,6 +242,10 @@ export default function CheckoutReturn() {
 
   const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Checkout …${last8}`)}&body=${encodeURIComponent(`Reference: ${sessionId || ''}`)}`
   const settingsState = { section: 'support' }
+  // A buyer who came from the export gallery goes back to the pick they made.
+  const backToExport = galleryPick && (
+    <NavLink to={`/projects/${encodeURIComponent(galleryPick.projectId)}/export`} state={{ kitPick: { design: galleryPick.design, format: galleryPick.format } }} className="btn btn-accent">Back to your export</NavLink>
+  )
 
   return (
     <div className="sec checkout-page">
@@ -273,13 +289,15 @@ export default function CheckoutReturn() {
                   anonymous sales page. So the moment of highest goodwill, right
                   after someone paid, ended on the page trying to acquire them,
                   being told about the free tier they had just moved off. */}
-              <NavLink to="/projects" className="btn btn-accent">Start building</NavLink>
+              {backToExport}
+              <NavLink to="/projects" className={galleryPick ? 'btn' : 'btn btn-accent'}>Start building</NavLink>
               <NavLink to="/settings" state={settingsState} className="btn">{oneOff ? 'View account details' : 'Manage subscription'}</NavLink>
             </>
           )}
           {view === 'settling' && (
             <>
-              <button type="button" className="btn btn-accent" onClick={() => window.location.reload()}>Check again</button>
+              {backToExport}
+              <button type="button" className={galleryPick ? 'btn' : 'btn btn-accent'} onClick={() => window.location.reload()}>Check again</button>
               <NavLink to="/settings" state={settingsState} className="btn">Manage subscription</NavLink>
             </>
           )}

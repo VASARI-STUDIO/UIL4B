@@ -5,21 +5,23 @@
 //      brand guides), and a row with no page behind it is not offered —
 //      including in the list shown before anything is typed.
 //   2. The Palette toolbar stays on one line across screen widths.
-//   3. Gradient "From palette" with fewer than two palette colours says so on
-//      the page, with a link to the Palette Builder; the note is scrolled into
-//      view and takes focus, and dismissing it returns focus to what opened it.
+//   3. Gradient Colours: Palette with fewer than two palette colours says so: the
+//      Palette choice stays focusable but inert (aria-disabled), its description
+//      and the toast a press raises give the reason, the palette row falls back to
+//      the starter colours with a "Make a palette" link, and Random still works.
+//      From two colours up Palette is chosen, Random draws only from the palette,
+//      and the Pick... choice is offered.
 //   4. The workspace is one target and one label everywhere it is offered: the
 //      header icon, the account popover and the phone menu sheet.
 //   5. A search row for a Learn guide carries no Documentation pill.
 //
 // MUTATION: point `docs-design` at '/docs-design' in toolIndex.js, or drop
 // `offerableCategories` from the empty-query list in CommandPalette.jsx, or
-// let the Palette toolbar wrap, or make
-// `fromPalette` in GradientGenerator.jsx return without `setPaletteMissing(true)`,
-// or point the header bookmark Link, the popover row or the sheet row in
-// PillNav.jsx back at '/discover/palettes', or give a Learn guide row in
-// toolIndex.js a category again, or drop the scroll/focus effect or the focus
-// return from the From palette note: the matching test below goes red.
+// let the Palette toolbar wrap, or point the header bookmark Link, the popover row or
+// the sheet row in PillNav.jsx back at '/discover/palettes', or give a Learn
+// guide row in toolIndex.js a category again, or (Gradient) drop `unavailable: palettePoor`
+// from the Palette source option, drop its `reason`, or set `sparse` to `chips.length < 1`,
+// or name the no-colour link something else: the matching test goes red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -220,38 +222,16 @@ test.describe('Palette Builder toolbar fits on one line', () => {
   }
 })
 
-// ── From palette ─────────────────────────────────────────────────────────────
+// ── Random from the palette (Colours: Palette) ───────────────────────────────
 
-const activeLabel = (page) => page.evaluate(() => {
-  const el = document.activeElement
-  return el ? (el.getAttribute('aria-label') || el.textContent || el.tagName).trim() : ''
-})
-
-// Phone: open More, wait for the sheet to come to rest, press From palette.
-async function fromPaletteViaMore(page) {
-  await page.locator('[data-tool-toolbar]').getByRole('button', { name: 'More', exact: true }).click()
-  const sheet = page.getByRole('dialog', { name: 'More' })
-  await expect(sheet).toBeVisible()
-  const fromPalette = sheet.getByRole('button', { name: /^From palette/ })
-  // The sheet slides up; wait until its row has come to rest on screen. On
-  // screen is not at rest: the row's bottom edge passes 844 while it is still
-  // about 80px below its resting place, which is a whole row, so a press
-  // aimed at it lands on the row beneath once the slide finishes. The click
-  // is forced (the row is aria-disabled, which a normal click refuses), and a
-  // forced click does not wait for the target to stop. So wait for every
-  // animation that ends to have ended.
-  await expect.poll(async () => {
-    const b = await fromPalette.boundingBox()
-    return b ? Math.round(b.y + b.height) : 99999
-  }).toBeLessThanOrEqual(844)
-  await expect.poll(
-    () => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running' && a.effect.getComputedTiming().iterations !== Infinity).length),
-    { message: 'the More sheet is still sliding up' },
-  ).toBe(0)
-  await fromPalette.click({ force: true })
-  await expect(sheet).toBeHidden()
-  return page.locator('.grd .grd-note--palette')
-}
+const NEEDS = 'Needs a palette with two or more colours'
+const randomPanel = (page) => page.getByRole('complementary', { name: 'Gradient controls' })
+const coloursRow = (page) => randomPanel(page).getByRole('radiogroup', { name: 'Colours' })
+const paletteChoice = (page) => coloursRow(page).getByRole('radio', { name: 'Palette', exact: true })
+const anyChoice = (page) => coloursRow(page).getByRole('radio', { name: 'Any', exact: true })
+const makePaletteLink = (page) => page.locator('.grd .grd-paint').getByRole('link', { name: 'Make a palette' })
+const stopHexes = (page) => page.getByRole('button', { name: /^Select stop \d+, #/ })
+  .evaluateAll((els) => els.map((e) => /#[0-9A-F]{6}/i.exec(e.getAttribute('aria-label'))[0].toUpperCase()))
 
 const withPaletteOf = (page, colors) => page.addInitScript((list) => {
   localStorage.setItem('vs-current-design', JSON.stringify({
@@ -259,111 +239,87 @@ const withPaletteOf = (page, colors) => page.addInitScript((list) => {
   }))
 }, colors)
 
-test.describe('Gradient · From palette without a usable palette says so', () => {
-  test.beforeEach(async ({ page }) => { watch(page, 'someone pressing From palette before making a palette') })
+test.describe('Gradient · Colours: Palette without a usable palette says so', () => {
+  test.beforeEach(async ({ page }) => { watch(page, 'someone choosing Colours: Palette before making a palette') })
 
-  test('a fresh visit: the note is visible, takes focus, links to the Palette Builder, and dismisses back to the button', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/create/gradient')
-    const main = page.locator('.grd')
-    const note = main.locator('.grd-note--palette')
-    await expect(note, 'the note is not there before anything is pressed').toHaveCount(0)
-    // The live region is mounted and empty before anything happens: one that
-    // appears already full is often not announced.
-    const live = main.locator('.grd-live')
-    await expect(live).toHaveAttribute('role', 'status')
-    await expect(live).toBeEmpty()
-
-    // aria-disabled is how the button looks unavailable while staying
-    // pressable, so Playwright's own "enabled" check is skipped on purpose.
-    const button = main.locator('[data-tool-toolbar]').getByRole('button', { name: /^From palette/ })
-    await button.click({ force: true })
-    await expect(note).toBeVisible()
-    await expect(live.locator('.grd-note--palette'), 'the note is inside the live region').toHaveCount(1)
-    // A fresh visit already holds the one seed colour, which is not a gradient.
-    await expect(note).toContainText('Needs a palette with two or more colours.')
-    await expect(note.getByRole('link')).toHaveAttribute('href', '/create/palette')
-    await expect(note, 'focus did not move to the note').toBeFocused()
-
-    await note.getByRole('button', { name: 'Dismiss' }).click()
-    await expect(note).toHaveCount(0)
-    await expect(live).toBeEmpty()
-    await expect(button, 'focus was lost when the note went away').toBeFocused()
-
-    await button.click({ force: true })
-    await note.getByRole('link').click()
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
-  })
-
-  test('with no colours at all the note says there is no palette yet', async ({ page }) => {
-    await withPaletteOf(page, [])
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/create/gradient')
-    await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click({ force: true })
-    const note = page.locator('.grd .grd-note--palette')
-    await expect(note).toBeVisible()
-    await expect(note).toContainText('No palette yet.')
-    await expect(note.getByRole('link', { name: 'Make one in Palette Builder' })).toHaveAttribute('href', '/create/palette')
-  })
-
-  test('with one colour the note says what is needed, not that there is no palette', async ({ page }) => {
-    await withPaletteOf(page, ['#0051FF'])
-    await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/create/gradient')
-    await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click({ force: true })
-    const note = page.locator('.grd .grd-note--palette')
-    await expect(note).toBeVisible()
-    await expect(note).toContainText('Needs a palette with two or more colours.')
-    await expect(note, 'a one-colour palette is not "no palette"').not.toContainText('No palette yet.')
-    await expect(note.getByRole('link', { name: 'Add colours in Palette Builder' })).toHaveAttribute('href', '/create/palette')
-  })
-
-  for (const width of [320, 390]) {
-    test(`from the phone More sheet at ${width}px the note shows, stays inside the screen and dismisses back to More`, async ({ page }) => {
-      await page.setViewportSize({ width, height: 844 })
+  // A fresh visit holds one seed colour, which is not a gradient; no colour at all is the other edge.
+  for (const [what, colors] of [['a fresh visit (the one seed colour)', null], ['no colours at all', []], ['one colour', ['#0051FF']]]) {
+    test(`${what}: Palette is offered but inert, says why, and Random still works`, async ({ page }) => {
+      if (colors) await withPaletteOf(page, colors)
+      await page.setViewportSize({ width: 1440, height: 900 })
       await go(page, '/create/gradient')
-      const note = await fromPaletteViaMore(page)
-      await expect(note).toBeVisible()
-      await expect(note, 'focus did not move to the note').toBeFocused()
-      const box = await note.boundingBox()
-      expect(box.x, 'the note starts inside the screen').toBeGreaterThanOrEqual(0)
-      expect(box.x + box.width, `the note runs past the ${width}px screen`).toBeLessThanOrEqual(width)
-      const link = await note.getByRole('link').boundingBox()
-      expect(link.x + link.width, 'the link runs past the screen').toBeLessThanOrEqual(width)
-      const dismiss = await note.getByRole('button', { name: 'Dismiss' }).boundingBox()
-      expect(dismiss.x + dismiss.width, 'the dismiss control runs past the screen').toBeLessThanOrEqual(width)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth), 'the page scrolls sideways').toBeLessThanOrEqual(width)
+      const palette = paletteChoice(page)
+      await expect(palette).toBeVisible()
+      // aria-disabled keeps the choice focusable and pressable, so the reason is read and the press can explain itself.
+      await expect(palette).toHaveAttribute('aria-disabled', 'true')
+      await expect(palette, 'the reason is its accessible description').toHaveAccessibleDescription(NEEDS)
+      await expect(palette).toHaveAttribute('aria-checked', 'false')
+      await expect(anyChoice(page)).toHaveAttribute('aria-checked', 'true')
+      await palette.click({ force: true })
+      await expect(page.locator('.toast.show'), 'the press says why').toContainText(NEEDS)
+      await expect(palette, 'a press on an inert choice does not select it').toHaveAttribute('aria-checked', 'false')
+      await expect(anyChoice(page)).toHaveAttribute('aria-checked', 'true')
 
-      await note.getByRole('button', { name: 'Dismiss' }).click()
-      await expect(note).toHaveCount(0)
-      expect(await activeLabel(page), 'focus was lost when the note went away').toBe('More')
+      // The palette row falls back to the starter colours and offers the way to make a palette.
+      await expect(page.getByRole('button', { name: 'Colour source' })).toContainText('Starter colours')
+      const link = makePaletteLink(page)
+      await expect(link).toHaveAttribute('href', '/create/palette')
+      // POSITIVE CONTROL: the row is not an empty box. The starter colours fill it, nine slots at most.
+      const slots = await page.getByRole('group', { name: 'Palette colours' }).locator('> *').count()
+      expect(slots).toBeGreaterThanOrEqual(2)
+      expect(slots, 'the row holds nine slots at most').toBeLessThanOrEqual(9)
+
+      // Random is not blocked: it still builds a gradient from fresh colours.
+      const code = page.locator('.grd-code-text code')
+      const before = await code.textContent()
+      await page.locator('[data-tool-toolbar]').getByRole('button', { name: 'Random', exact: true }).click()
+      await expect.poll(() => code.textContent()).not.toBe(before)
+
+      await link.click()
+      await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
     })
   }
 
-  test('on a phone scrolled down the note is scrolled into view, clear of the sticky toolbar', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/create/gradient')
-    await page.evaluate(() => window.scrollTo(0, 700))
-    // POSITIVE CONTROL: the page really is scrolled, so the note's own place
-    // (above the canvas) is above the fold.
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300)
-    const note = await fromPaletteViaMore(page)
-    await expect(note).toBeVisible()
-    await expect(note).toBeFocused()
-    await expect.poll(async () => {
-      const [n, bar] = await Promise.all([note.boundingBox(), page.locator('[data-tool-toolbar]').boundingBox()])
-      return n.y >= bar.y + bar.height - 1 && n.y + n.height <= 844
-    }, 'the note is off screen or under the toolbar').toBe(true)
-  })
+  for (const width of [320, 390]) {
+    test(`at ${width}px the Colours row and the reason fit the screen, no More sheet needed`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 })
+      await go(page, '/create/gradient')
+      const row = coloursRow(page)
+      await expect(row).toBeVisible()
+      for (const choice of await row.getByRole('radio').all()) {
+        const box = await choice.boundingBox()
+        expect(box.x, 'a Colours choice starts inside the screen').toBeGreaterThanOrEqual(0)
+        expect(box.x + box.width, `a Colours choice runs past the ${width}px screen`).toBeLessThanOrEqual(width)
+      }
+      await paletteChoice(page).click({ force: true })
+      await expect(page.locator('.toast.show')).toContainText(NEEDS)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), 'the page scrolls sideways').toBeLessThanOrEqual(width)
+    })
+  }
 
-  test('with a palette of two colours it builds a gradient and shows no note', async ({ page }) => {
-    await withPaletteOf(page, ['#0051FF', '#FF5A1F', '#12B76A'])
+  test('with a palette of three colours Palette is chosen, Random builds from those colours, and the starters go', async ({ page }) => {
+    const PALETTE = ['#0051FF', '#FF5A1F', '#12B76A']
+    await withPaletteOf(page, PALETTE)
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/gradient')
-    await page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: /^From palette/ }).click()
-    // POSITIVE CONTROL: the press did something (a gradient was built).
+    const palette = paletteChoice(page)
+    await expect(palette).not.toHaveAttribute('aria-disabled', /.*/)
+    await palette.click()
+    await expect(palette).toHaveAttribute('aria-checked', 'true')
+    // The toolbar's Random wears the narrowed dot: Colours is no longer Any.
+    const random = page.locator('.grd [data-tool-toolbar]').getByRole('button', { name: 'Random', exact: true })
+    await expect(random).toHaveClass(/is-narrowed/)
+    await random.click()
+    // POSITIVE CONTROL: the press did something, and said where it drew from.
     await expect(page.locator('.toast.show')).toContainText('from your palette')
-    await expect(page.locator('.grd .grd-note--palette')).toHaveCount(0)
+    await expect(page.locator('.toast.show')).not.toContainText(NEEDS)
+    // Every stop is one of the three palette colours (a fresh roll would almost never land on them).
+    for (const hex of await stopHexes(page)) expect(PALETTE, `stop ${hex} is a palette colour`).toContain(hex)
+    // POSITIVE CONTROL: the three chips are there, so "no note" is not "no row".
+    await expect(page.getByRole('group', { name: 'Palette colours' }).getByRole('button')).toHaveCount(3)
+    await expect(makePaletteLink(page)).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Colour source' })).toContainText('Current palette')
+    // A palette has colours to pick from.
+    await expect(coloursRow(page).getByRole('radio', { name: 'Pick…', exact: true })).toBeVisible()
   })
 })

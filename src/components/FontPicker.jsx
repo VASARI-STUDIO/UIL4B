@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import FontBrowseDialog from './FontBrowseDialog'
 import { fontStack, headingWeight } from '../utils/googleFonts'
-import { specimenSizeCqw } from '../utils/fontGallery'
+import { categoryLabel, specimenSizeCqw, weightCount } from '../utils/fontGallery'
 // The picker's and the browse dialog's own sheet. Rooted at .typ-picker and
 // .fbd-overlay, so its place in the chunk's CSS order does not matter.
 import '../styles/pages/font-picker.css'
@@ -17,8 +17,8 @@ import '../styles/pages/font-picker.css'
 // list of names. You could not see a single one of the things you were
 // choosing between, in a tool whose entire subject is how type looks.
 //
-// That is the founder's report — selection "expects the user to remember and
-// type font names" — and it is structural, not a discoverability problem.
+// Selection expected the user to remember and type font names, and that is
+// structural, not a discoverability problem.
 //
 // So the control is now the specimen. The trigger shows the CURRENT family
 // rendered in itself, and opens a browsable dialog of specimen cards
@@ -84,7 +84,7 @@ export default function FontPicker({
           </span>
           {current && (
             <span className="typ-picker-meta">
-              {current.category} · {current.variants.length} weight{current.variants.length === 1 ? '' : 's'}
+              {categoryLabel(current.category)} · {weightCount(current.variants.length)}
             </span>
           )}
         </span>

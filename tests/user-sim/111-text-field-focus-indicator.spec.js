@@ -8,7 +8,7 @@
 // away from it (a few of these fields change border on hover), and the focused
 // style is polled because border-color carries a transition.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, openChosenDialog } from './helpers.js'
 
 const THEMES = ['light', 'dark']
 
@@ -93,11 +93,19 @@ for (const scheme of THEMES) {
     })
 
     test('the sign-in dialog email field', async ({ page }) => {
-      await go(page, '/login')
+      await openChosenDialog(page, 'Log in')
       const dialog = page.getByRole('dialog')
       await expect(dialog).toBeVisible()
       expectOneIndicator('sign-in email', await focusedLook(page, dialog.getByLabel('Email')))
       expectOneIndicator('sign-in password', await focusedLook(page, dialog.getByLabel('Password')))
+    })
+
+    test('the /login page email field', async ({ page }) => {
+      await go(page, '/login')
+      const form = page.locator('main .auth-page-form')
+      await expect(form.getByLabel('Email')).toBeVisible()
+      expectOneIndicator('login page email', await focusedLook(page, form.getByLabel('Email')))
+      expectOneIndicator('login page password', await focusedLook(page, form.getByLabel('Password')))
     })
 
     test('the SEO inspector fields', async ({ page }) => {
@@ -122,24 +130,46 @@ for (const scheme of THEMES) {
       expectOneIndicator('picker hex', await focusedLook(page, page.locator('.cpk-hex')))
     })
 
-    test('the Home search fields leave the underline on the wrapper and the halo off the input', async ({ page }) => {
+    test('the gradient angle field', async ({ page }) => {
+      await go(page, '/create/gradient')
+      const angle = page.getByRole('spinbutton', { name: 'Gradient angle in degrees' })
+      await expect(angle).toBeVisible()
+      expectOneIndicator('gradient angle', await focusedLook(page, angle))
+    })
+
+    test('the gradient stop hex field', async ({ page }) => {
+      await go(page, '/create/gradient')
+      const hex = page.getByRole('textbox', { name: 'Stop 1 hex' })
+      await expect(hex).toBeVisible()
+      expectOneIndicator('gradient stop hex', await focusedLook(page, hex))
+    })
+
+    test('the Home hero search draws its ring on the bar and keeps the halo and outline off the input', async ({ page }) => {
       await go(page, '/')
       await globalSheetLast(page)
-      for (const placeholder of ['Search the set', 'Search families']) {
-        const input = page.getByPlaceholder(placeholder)
-        const wrapper = page.locator('label.sp-find', { has: input })
-        await input.scrollIntoViewIfNeeded()
-        await parkPointer(page)
-        const restShadow = await wrapper.evaluate((el) => getComputedStyle(el).boxShadow)
-        await input.click()
-        await parkPointer(page)
-        await expect(input).toBeFocused()
-        await expect.poll(() => wrapper.evaluate((el) => getComputedStyle(el).boxShadow), {
-          message: `${placeholder}: the wrapper underline never appeared`,
-        }).not.toBe(restShadow)
-        expect((await look(input)).boxShadow, `${placeholder}: the input paints its own halo`).toBe('none')
-        expect(await wrapper.evaluate((el) => getComputedStyle(el).boxShadow), `${placeholder}: the wrapper lost its underline`).toMatch(/inset/)
-      }
+      const input = page.locator('.hh-search input.hcmd-input')
+      const bar = page.locator('.hh-search .hcmd-bar')
+      await expect(input).toBeVisible()
+      const ring = () => bar.evaluate((el) => {
+        const c = getComputedStyle(el)
+        return { style: c.outlineStyle, width: parseFloat(c.outlineWidth), color: c.outlineColor, shadow: c.boxShadow }
+      })
+      await input.scrollIntoViewIfNeeded()
+      await parkPointer(page)
+      const rest = await ring()
+      expect(rest.style, 'POSITIVE CONTROL: the bar has no ring before the field is focused').toBe('none')
+      await input.click()
+      await parkPointer(page)
+      await expect(input).toBeFocused()
+      expect((await look(input)).focusVisible, 'the field is not matching :focus-visible, so the check proves nothing').toBe(true)
+      await expect.poll(async () => (await ring()).style, { message: 'the bar ring never appeared' }).toBe('solid')
+      const focused = await ring()
+      expect(focused.width, 'the bar ring has no width').toBeGreaterThan(0)
+      expect(focused.color, 'the bar ring is transparent').not.toMatch(/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)|transparent/)
+      expect(focused.shadow, 'a halo is stacked on the bar ring').not.toMatch(/(^|\s)0px 0px 0px /)
+      const inner = await look(input)
+      expect(inner.boxShadow, 'the input paints its own halo').toBe('none')
+      expect(inner.outlineStyle, 'the input paints its own outline inside the bar ring').toBe('none')
     })
   })
 }

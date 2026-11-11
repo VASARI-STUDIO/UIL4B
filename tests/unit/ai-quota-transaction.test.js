@@ -297,8 +297,8 @@ test('the runner never runs once the meter has refused', async () => {
 })
 
 test('a runner that answered for itself gets the unit REFUNDED', async () => {
-  // The founder's rule: "a failed request must not consume a free user's single
-  // use." Reserving before the provider call is what closes the race; the refund
+  // A failed request must not consume a free user's single use. Reserving
+  // before the provider call is what closes the race; the refund
   // is what keeps that rule true afterwards.
   const store = makeStore()
   const r = await runMeteredTask({

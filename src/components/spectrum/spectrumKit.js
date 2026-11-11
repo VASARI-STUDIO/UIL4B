@@ -7,6 +7,7 @@
 // value is changed and the reason is written beside it.
 
 import { INPUT_FORMATS, OUTPUT_FORMATS } from '../../utils/meshFormats.js'
+import { PH_REGULAR } from './phosphorRegular.js'
 
 /* ── colour maths (the design's own functions) ─────────────────────────────── */
 
@@ -73,14 +74,36 @@ export const FORMATS = ['HEX', 'OKLCH', 'CSS VAR']
 
 export const slugOf = (base) => base.label.toLowerCase().replace(/[^a-z]/g, '')
 
-/** The nine-step ramp off a seed, as the design builds it. */
+/** The nine-step ramp off a seed, as the design builds it. Each step is graded
+ *  against the ink that reads on it (`inkOn`), so the verdict says what the
+ *  swatch's own "Aa" scores: AAA from 7:1, AA from 4.5:1, otherwise Fails. */
 export function rampOf(base) {
   return LIGHTS.map((L, i) => {
     const c = base.c * (1 - Math.abs(i - 4) / 9)
     const hex = oklchToHex(L, c, base.h)
-    return { step: STEP_LABELS[i], L, c, hex, aa: ratio(hex, '#0B0C0E') >= 4.5 ? 'AA' : 'LOW' }
+    const ink = inkOn(hex)
+    // Graded on the one-decimal figure the row prints, so a label never contradicts its number.
+    const cr = Math.round(ratio(hex, ink) * 10) / 10
+    return { step: STEP_LABELS[i], L, c, hex, ink, cr, aa: cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : 'Fails' }
   })
 }
+
+/** AAA from 7:1, AA from 4.5:1, otherwise Fails. */
+export const verdictOf = (cr) => (cr >= 7 ? 'AAA' : cr >= 4.5 ? 'AA' : 'Fails')
+
+/** The ramp steps the Contrast demo opens on (foreground, background); the site map's
+ *  Contrast thumb draws the same pair. */
+export const CONTRAST_START = [1, 7]
+
+/** The Type Scale demo: the ratios it offers, the one it opens on, and its base size in px.
+ *  The site map's Type Scale thumb draws the same scale. */
+export const SCALE_RATIOS = [1.2, 1.25, 1.333]
+export const SCALE_RATIO_START = 1
+export const SCALE_BASE_PX = 16
+
+/** The site's display face, named in its own type on the Font Gallery thumb. It names the
+ *  `--display` face in global.css, which has no script-side source. */
+export const DISPLAY_FACE = 'Switzer'
 
 /** The five named roles: seed + harmony decide the hues, and each role carries
  *  its contrast partner. */
@@ -105,7 +128,7 @@ export function rolesOf(base, harmony, fmt) {
       ? `oklch(${spec.L.toFixed(2)} ${spec.c.toFixed(3)} ${Math.round(spec.h)})`
       : fmt === 2 ? `--${slug}-${name.toLowerCase()}` : hex
     const cr = name === 'Surface' ? ratio(hex, inkHex) : name === 'Ink' ? ratio(hex, surfHex) : ratio(hex, inkOn(hex))
-    return { name, use, hex, value, ink: inkOn(hex), span: span || 'auto', aa: `${cr >= 4.5 ? 'AA' : 'LOW'} ${cr.toFixed(1)}` }
+    return { name, use, hex, value, ink: inkOn(hex), span: span || 'auto', aa: `${cr >= 4.5 ? 'AA' : 'Fails'} ${cr.toFixed(1)}` }
   })
 }
 
@@ -122,17 +145,18 @@ export const ICONS = [
   ['download-simple', 'Download'], ['copy', 'Copy'], ['check-square', 'Contrast pass'],
 ]
 export const GLYPHS = ICONS.slice(0, 12)
-export const ICON_FORMATS = ['SVG', 'JSX', 'SPRITE']
+export const ICON_FORMATS = ['SVG', 'JSX', 'Sprite']
 export const ICON_WEIGHTS = [['Thin', 'thin'], ['Light', 'light'], ['Regular', 'regular'], ['Bold', 'bold'], ['Fill', 'fill']]
 export const ICON_SIZES = [16, 20, 24, 32]
 
 /** What "Copy SVG" puts on the clipboard. SVG is a complete, standalone file;
- *  JSX is the Phosphor React call the design shows; SPRITE is a real <symbol>
+ *  JSX is the Phosphor React call the design shows; Sprite is a real <symbol>
  *  plus the <use> that draws it. */
+export const pascalOf = (slug) => slug.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join('')
+
 export function iconSnippet({ slug, weight, size, fmt, body }) {
   if (fmt === 1) {
-    const pascal = slug.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join('')
-    return `<${pascal} size={${size}} weight="${weight}" />`
+    return `<${pascalOf(slug)} size={${size}} weight="${weight}" />`
   }
   if (fmt === 2) {
     const id = `ph-${slug}-${weight}`
@@ -154,7 +178,7 @@ export const FONTS = [
   ['Instrument Sans', "'Instrument Sans','Geist',sans-serif", 'SANS', '8 styles', 'Variable: width, weight, italic', 'Literata', "'Literata',serif"],
 ].map(([name, family, cat, styles, axes, pair, pairFamily]) => ({ name, family, cat, styles, axes, pair, pairFamily }))
 export const FONT_CATS = ['All', 'Sans', 'Serif', 'Mono', 'Display']
-export const FONT_SAMPLE = 'The quick brown fox jumps over the lazy dog. 0123456789 £$€ &@?!'
+export const FONT_SAMPLE = 'The quick brown fox jumps over the lazy dog. 0123456789 $€ &@?!'
 
 /* ── the converter panel ───────────────────────────────────────────────────── */
 
@@ -196,7 +220,7 @@ export function formatBytes(n) {
 export const EX_PIECES = ['Palette', 'Type scale', 'Compressed files', 'Icons']
 // The design's four sample files and its measured before/after sizes (KB).
 export const EX_FILES = [
-  ['image', 'hero-plateau.png', 4944, 263],
+  ['image', 'hero-cover.png', 4944, 263],
   ['image', 'card-ridge.png', 1820, 108],
   ['file-image', 'logo-mark.png', 74, 11],
   ['film-strip', 'loop-cover.png', 2410, 171],
@@ -218,24 +242,79 @@ export const PROJECTS = [
   ['Ferrule, brand refresh', 'Opened last week', 'Colour, icons, imagery'],
 ]
 
-const exRowsOf = (piece, ramp) => {
-  if (piece === 0) return ramp.map((r) => [`color-${r.step}`, r.hex])
-  if (piece === 1) return TYPE_STEPS.map((t) => [`text-${t[0]}`, t[1]])
-  if (piece === 2) return EX_FILES.map((f) => [f[1].replace(/\.png$/, ''), `${f[3]}kb`])
-  return GLYPHS.map((g) => [`icon-${g[1].toLowerCase().replace(/ /g, '-')}`, g[0]])
+
+// The exported UI kit's five colour roles, in the kit's own order, with the text
+// the kit prints under each. A copy of SLOT_COPY / SLOT_ORDER in
+// utils/uiKitExport.js, kept here because importing that module would pull the
+// colour and token code into the home chunk; tests/unit/spectrum-kit-roles.test.js
+// fails if the two differ. `at` is the ramp step the picture fills the role with.
+export const KIT_ROLES = [
+  { id: 'citron', role: 'Signature accent', at: 4 },
+  { id: 'pine', role: 'Primary brand', at: 7 },
+  { id: 'lilac', role: 'Supporting colour', at: 2 },
+  { id: 'chalk', role: 'Canvas', at: 0 },
+  { id: 'ink', role: 'Text and detail', at: 8 },
+]
+
+/** The sample files' total after compression, in KB (the file bar's size). */
+export const EX_FILES_AFTER_KB = EX_FILES.reduce((sum, f) => sum + f[3], 0)
+
+/** What each type-scale row prints: the step's name, and its size in px. */
+export const TYPE_LABELS = { display: 'Display', h1: 'Heading 1', h2: 'Heading 2', h3: 'Heading 3', body: 'Body', small: 'Small' }
+export const remPx = (value) => Math.round(parseFloat(value) * 16)
+
+const exRowsOf = (piece, ramp) => (
+  piece === 0
+    ? ramp.map((r) => [`color-${r.step}`, r.hex])
+    : TYPE_STEPS.map((t) => [`text-${t[0]}`, t[1]])
+)
+
+/** The Phosphor name of the file bar's glyph. Only names phosphorRegular.js
+ *  ships: it has no file-svg or file-code, so code files take `code` and SVG
+ *  files `file-image`. */
+export function exFileIcon(piece, fmt) {
+  if (piece === 0) return ['file-css', 'code', 'brackets-curly'][fmt]
+  if (piece === 1) return 'text-aa'
+  if (piece === 2) return 'file-zip'
+  return ['file-image', 'code', 'file-image'][fmt]
 }
 
-/** The file card 1 copies: the design's CSS / Tailwind / JSON text for the
- *  chosen piece, and the name and size it would carry. */
+/** The twelve icons as the three files the Icons piece copies. Every body is the
+ *  real Phosphor path from phosphorRegular.js, the same data the Icon library
+ *  window copies from. */
+function iconFileText(fmt) {
+  const parts = GLYPHS.map(([slug]) => ({ slug, weight: 'regular', size: 24, body: PH_REGULAR[slug] }))
+  if (fmt === 0) return parts.map((p) => iconSnippet({ ...p, fmt: 0 })).join('\n')
+  if (fmt === 1) {
+    const names = GLYPHS.map(([slug]) => pascalOf(slug))
+    return `import { ${names.join(', ')} } from '@phosphor-icons/react'\n\n${parts.map((p) => iconSnippet({ ...p, fmt: 1 })).join('\n')}`
+  }
+  const symbols = parts.map((p) => `<symbol id="ph-${p.slug}-regular" viewBox="0 0 256 256" fill="currentColor">${p.body}</symbol>`)
+  return `<svg xmlns="http://www.w3.org/2000/svg" style="display:none">\n${symbols.join('\n')}\n</svg>`
+}
+
+const ICON_FILE_NAMES = ['icons.svg', 'Icons.jsx', 'icons-sprite.svg']
+
+/** The file the card shows and "Copy file" copies for a piece. Palette and Type
+ *  scale are CSS / Tailwind / JSON of real values; Icons is real SVG, JSX or a
+ *  sprite. Compressed files has nothing to copy (its text is empty and the card
+ *  links to the File Converter instead); its size is the sum of the example
+ *  "after" sizes. */
 export function exFileOf(piece, fmt, base) {
+  if (piece === 2) {
+    return { text: '', name: 'compressed-images.zip', kb: formatBytes(EX_FILES_AFTER_KB * 1024) }
+  }
+  if (piece === 3) {
+    const text = iconFileText(fmt)
+    return { text, name: ICON_FILE_NAMES[fmt], kb: `${(text.length / 1024).toFixed(1)} KB` }
+  }
   const rows = exRowsOf(piece, rampOf(base))
   const widest = rows.reduce((w, r) => Math.max(w, r[0].length), 0)
   const text = fmt === 0
     ? `:root {\n${rows.map((r) => `  --${r[0]}:${' '.repeat(widest - r[0].length + 2)}${r[1]};`).join('\n')}\n}`
     : fmt === 1
       ? `module.exports = {\n  theme: {\n${rows.map((r) => `    "${r[0]}": "${r[1]}",`).join('\n')}\n  }\n}`
-      : `{\n${rows.map((r) => `  "${r[0]}": { "$value": "${r[1]}" },`).join('\n')}\n}`
-  const slug = slugOf(base)
-  const name = piece === 2 ? `${slug}-assets.zip` : piece === 3 ? `${slug}-icons.zip` : `${slug}-${['palette', 'type'][piece]}${EX_FMTS[fmt][1]}`
+      : `{\n${rows.map((r) => `  "${r[0]}": { "$value": "${r[1]}" }`).join(',\n')}\n}`
+  const name = `${slugOf(base)}-${['palette', 'type'][piece]}${EX_FMTS[fmt][1]}`
   return { text, name, kb: `${(text.length / 1024).toFixed(1)} KB` }
 }

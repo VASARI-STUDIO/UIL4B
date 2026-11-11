@@ -11,7 +11,7 @@
 // That distinction is the whole bug. The old panel looked completely healthy —
 // it loaded, it showed the right currencies, it took edits — and failed only
 // at the last step, on the server, naming an interval the screen never
-// mentioned. The founder is about to press this button against LIVE Stripe
+// mentioned. The owner is about to press this button against LIVE Stripe
 // with a real card ladder behind it. "The source no longer contains a literal"
 // is not the assurance that deserves; "the click produces this exact body" is.
 //
@@ -69,7 +69,8 @@ async function openPanel(browser, payload = configPayload) {
     })
   })
 
-  await signIn(page, { plan: 'pro', admin: true })
+  // The Stripe tab is the founder's, and the role is read from the token's claims.
+  await signIn(page, { plan: 'pro', admin: true, claims: { admin: true, email_verified: true } })
   await go(page, '/admin')
   // The panel lives behind the Stripe tab; /admin opens on Overview.
   await page.getByRole('tab', { name: 'Stripe', exact: true }).click()

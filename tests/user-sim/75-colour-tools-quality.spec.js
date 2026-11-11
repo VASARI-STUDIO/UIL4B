@@ -140,51 +140,53 @@ const UNDERSIZED = ([root, minimum]) => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// /create/semantic-color — the live-UI-proof scenes
+// /create/semantic-color — the "colours at work" panel
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// The preview renders one real component per semantic role — a switch, a text
-// field, an alert with a solid button, an info note with a link-button, an
-// activity row — and renders the whole set TWICE, once on a light panel and
-// once on a dark one. Nothing in it does anything.
+// The panel renders one real-looking component per semantic role — a switch, a
+// text field, a note with a solid button, an info note with a link, an activity
+// row — once, on its own ground, which its Light / Dark switch flips. Nothing in
+// it does anything.
 //
-// Before this change they were real <input> and <button> elements carrying only
+// Before, they were real <input> and <button> elements carrying only
 // `tabIndex={-1}`, which takes a control out of the TAB ORDER and leaves it in
 // the accessibility tree. A screen reader user met "Project slug, edit text,
 // aurora-design-system", "Use anyway, button", "Update card, button" and "Learn
-// more, button" — eight operable-sounding controls that go nowhere — and then
-// met the identical eight again in the dark copy.
+// more, button" — operable-sounding controls that go nowhere.
 //
-// MUTATION: remove `inert` from `.stc-scene-list` in src/pages/ColorStudio.jsx
-// and both tests below go red — the first on the two readonly inputs it should
-// not see, the second on the sizes. (It was eight controls until 2026-09-14,
-// when the three <button> depictions became <span>s; see the note on the
-// positive control below.)
+// MUTATION: remove `inert` from `.stc-work-body` in src/pages/ColorStudio.jsx
+// and the panel test below goes red on its inert assertion. (The depictions are
+// all <span>s, so the control count stays 0 and the target-size sweep below
+// cannot see this fault: the inert attribute is the only thing that pins it.)
 test('the semantic-colour preview is a depiction, not controls that do nothing', async ({ browser }) => {
-  // The preview is the design's drawn "THE COLOURS AT WORK" card
-  // (D:883-907) — the design's buttons, alerts and field, drawn as spans inside an
-  // inert body. The contract is unchanged: the picture of an interface offers
+  // The preview is a picture of an interface — switch, field, button, links —
+  // drawn as spans inside an inert body. The contract is unchanged: it offers
   // nothing to press and nothing to a screen reader's control list.
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'someone reading this page with a screen reader')
   await go(page, '/create/semantic-color')
   await settled(page)
 
-  // POSITIVE CONTROL: the depiction rendered, with every role in it — the
-  // brand button, success, warning, two Information rows (Information carries
-  // the retired "pending" meaning) and the error field.
+  // POSITIVE CONTROL: the depiction rendered, with every role in it — a
+  // success switch, a warning on a field, the declined-payment row with its
+  // button, and two Information rows (Information carries the retired
+  // "pending" meaning).
   const body = page.locator('.stc-work-body')
   await expect(body).toBeVisible()
-  await expect(body.locator('.stc-btn--primary')).toHaveText('Save changes')
-  await expect(body.locator('.stc-alert--success')).toHaveCount(1)
-  await expect(body.locator('.stc-alert--warning')).toHaveCount(1)
-  await expect(body.locator('.stc-alert--info')).toHaveCount(2)
-  await expect(body.locator('.stc-field-input')).toHaveText('Untitled')
+  await expect(body.locator('.stc-sc--success')).toHaveCount(1)
+  await expect(body.locator('.stc-sc--warning .stc-sc-input')).toHaveText('aurora-design-system')
+  await expect(body.locator('.stc-sc--error .stc-sc-solid')).toHaveText('Update card')
+  await expect(body.locator('.stc-sc--info')).toHaveCount(2)
 
-  // THE ASSERTION: nothing in it is a control, and the whole of it is inert.
-  const drawn = await body.evaluate((el) => el.querySelectorAll('button, input, select, a[href], [role=button]').length)
-  expect(drawn, 'a control was drawn into the depiction').toBe(0)
-  expect(await body.evaluate((el) => el.hasAttribute('inert')), 'the depiction is not inert').toBe(true)
+  // THE ASSERTION: nothing in it is a control, and the whole of it is inert, in
+  // BOTH of the panel's themes (the switch repaints the same nodes).
+  for (const theme of ['Light', 'Dark']) {
+    await page.getByRole('group', { name: 'Preview theme' }).getByRole('button', { name: theme, exact: true }).click()
+    await expect(page.locator('.stc-work')).toHaveAttribute('data-theme', theme.toLowerCase())
+    const drawn = await body.evaluate((el) => el.querySelectorAll('button, input, select, a[href], [role=button]').length)
+    expect(drawn, `a control was drawn into the ${theme} depiction`).toBe(0)
+    expect(await body.evaluate((el) => el.hasAttribute('inert')), `the ${theme} depiction is not inert`).toBe(true)
+  }
 
   await ctx.close()
 })

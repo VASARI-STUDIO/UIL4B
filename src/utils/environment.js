@@ -10,7 +10,7 @@
 // per-day counters into `analytics-daily/{YYYY-MM-DD}`. So the admin dashboard's
 // totals mixed real users with:
 //
-//   • the founder developing on localhost,
+//   • local development on localhost,
 //   • every preview deploy opened to review a PR,
 //   • the acceptance suite, which walks ~30 routes on every single CI run.
 //

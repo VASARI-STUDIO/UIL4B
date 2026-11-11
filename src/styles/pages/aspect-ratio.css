@@ -28,10 +28,10 @@
 }
 .arc-page .rc-vis-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 20px; }
 .arc-page .rc-vis-tag {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  letter-spacing: normal;
+  text-transform: none;
   color: var(--tl-faint);
 }
 .arc-page .rc-vis-stage {
@@ -51,14 +51,24 @@
   width: var(--arc-w, 0);
   height: var(--arc-h, 0);
   max-width: 100%;
-  border: 1.5px solid var(--accent);
-  border-radius: 6px;
-  background: var(--accent-wash);
 }
-.arc-page .rc-vis-diag { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.arc-page .rc-vis-diag line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 4; opacity: .45; }
-.arc-page .rc-vis-ratio { position: relative; font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--accent-text); }
-.arc-page .rc-vis-dims { position: relative; font-family: var(--mono); font-size: 10.5px; color: var(--accent-text); }
+/* The shape, drawn at the box's real size so the stroke and corners are exact
+   at rest. A new ratio eases by FLIP (RatioCalculator starts it scaled to the
+   old shape) on transform alone; width and height are never animated. */
+.arc-page .rc-vis-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  transition: transform var(--dur-3) var(--ease-entrance);
+}
+.arc-page .rc-vis-frame rect { fill: var(--accent-wash); stroke: var(--accent); stroke-width: 1.5; }
+.arc-page .rc-vis-frame line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 4 4; opacity: .45; }
+.arc-page .rc-vis-ratio { position: relative; font-family: var(--font); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--accent-text); }
+.arc-page .rc-vis-dims { position: relative; font-family: var(--font); font-size: 10.5px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--accent-text); }
 .arc-page .rc-vis-empty { font-size: 13px; color: var(--tl-dim); }
 
 /* The result: two copyable dimensions, then one hairline table of values. */
@@ -76,12 +86,12 @@
   font-family: var(--font);
   font-size: clamp(30px, 3.4vw, 40px);
   font-weight: 600;
-  letter-spacing: -.035em;
+  letter-spacing: -.015em;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: color .16s ease;
 }
-.arc-page .rc-dim small { font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: .06em; color: var(--tl-dim); }
+.arc-page .rc-dim small { font-family: var(--font); font-size: var(--fs-caption); font-weight: 400; letter-spacing: normal; color: var(--tl-dim); }
 .arc-page .rc-times { font-size: 20px; color: var(--tl-faint); }
 
 .arc-page .arc-stats {
@@ -111,15 +121,15 @@
   cursor: pointer;
   transition: background-color .16s ease;
 }
-.arc-page .arc-stat-k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--tl-faint); }
-.arc-page .arc-stat-v { font-family: var(--mono); font-size: 14px; color: var(--tl-ink); }
+.arc-page .arc-stat-k { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
+.arc-page .arc-stat-v { font-family: var(--font); font-size: 14px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-ink); }
 .arc-page .arc-stat--snap {
   background: color-mix(in srgb, var(--accent) 6%, var(--tl-card));
   box-shadow: 1px 0 0 var(--tl-hair), 0 1px 0 var(--tl-hair), inset 0 0 0 1px var(--accent-border);
 }
 .arc-page .arc-stat--snap .arc-stat-v,
 .arc-page .arc-stat-sub { color: var(--accent-text); }
-.arc-page .arc-stat-sub { font-family: var(--mono); font-size: 10px; }
+.arc-page .arc-stat-sub { font-family: var(--font); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; }
 
 @media (hover: hover) and (pointer: fine) {
   .arc-page .rc-dim:hover { color: var(--tl-link); }
@@ -208,7 +218,7 @@
 .arc-page .arc-opt-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .arc-page .arc-opt-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .arc-page .arc-opt-name { font-size: 13px; font-weight: 540; color: var(--tl-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.arc-page .arc-opt-meta { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arc-page .arc-opt-meta { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 @media (hover: hover) and (pointer: fine) {
   .arc-page .arc-select-btn:hover { background: var(--tl-wash-2); }
   .arc-page .arc-opt:hover { background: var(--tl-wash-2); }
@@ -242,7 +252,7 @@
 }
 .arc-page .arc-ratio-card.on { border-color: var(--tl-line-on); background: var(--tl-wash-on); }
 .arc-page .arc-ratio-card.on .arc-thumb-box { border-color: var(--tl-ink); }
-.arc-page .arc-ratio-card-name { font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+.arc-page .arc-ratio-card-name { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-ink); }
 .arc-page .arc-ratio-card-use { font-size: 10.5px; line-height: 1.3; text-align: center; color: var(--tl-dim); }
 @media (hover: hover) and (pointer: fine) {
   .arc-page .arc-ratio-card:not(.on):hover { background: var(--tl-wash-2); }
@@ -258,20 +268,23 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--t0) 4.5%, transparent);
   color: var(--tl-ink);
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 .arc-page input[type="number"]:focus { border-color: var(--tl-line-on); }
+/* The tool's outline is the one focus ring; drop the global input halo under it. */
+.arc-page input[type="number"]:focus-visible { box-shadow: none; }
 .arc-page .rc-ratio-row { display: flex; align-items: center; gap: 8px; }
 .arc-page .rc-ratio-row input { flex: 0 1 96px; }
-.arc-page .rc-colon { color: var(--tl-faint); font-family: var(--mono); font-size: 13px; }
-.arc-page .rc-simplified { margin-left: auto; font-family: var(--mono); font-size: 12.5px; color: var(--tl-ink); white-space: nowrap; }
+.arc-page .rc-colon { color: var(--tl-faint); font-family: var(--font); font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.arc-page .rc-simplified { margin-left: auto; font-family: var(--font); font-size: 12.5px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--tl-ink); white-space: nowrap; }
 .arc-page .rc-simplified small { font-size: 11px; color: var(--tl-dim); }
 .arc-page .rc-known { display: grid; gap: 8px; }
 .arc-page .arc-ppi-row { display: flex; align-items: center; gap: 8px; }
 .arc-page .arc-ppi-field { display: inline-flex; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; }
-.arc-page .arc-ppi-field span { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); }
+.arc-page .arc-ppi-field span { font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); }
 .arc-page .arc-ppi-or { font-size: 12px; color: var(--tl-dim); white-space: nowrap; }
 
 /* ── Press feedback ─────────────────────────────────────────────────────── */
@@ -279,6 +292,12 @@
 :where(html[data-reduced-motion="true"]) .arc-page .arc-ratio-card:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .arc-page .arc-ratio-card:active { transform: none; }
+}
+
+/* ── Shape preview ──────────────────────────────────────────────────────── */
+:where(html[data-reduced-motion="true"]) .arc-page .rc-vis-frame { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .arc-page .rc-vis-frame { transition: none; }
 }
 
 /* ── Focus ──────────────────────────────────────────────────────────────── */
@@ -304,4 +323,5 @@
 }
 @media (forced-colors: active) {
   .arc-page .arc-ratio-card.on { border: 2px solid Highlight; }
+  .arc-page .rc-vis-frame rect { fill: none; stroke: CanvasText; }
 }

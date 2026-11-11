@@ -1,9 +1,9 @@
-// The Palette Builder toolbar, measured across the widths the founder reported.
+// The Palette Builder toolbar, measured across the widths reported.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE FAULT
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder, 2026-09-05, two screenshots.
+// Two reported screenshots.
 //   DESKTOP: the toolbar "is a run of icon-only buttons of uneven weight and
 //   spacing sitting beside two labelled buttons and a select, and it reads as
 //   unresolved rather than designed."
@@ -101,9 +101,30 @@ test.describe('palette toolbar fits the row it is given', () => {
     const panel = page.getByRole('dialog', { name: 'Extra tools' })
     await expect(panel).toBeVisible()
     // Always in Extra tools, at every width.
-    for (const name of ['Explore palettes', 'Preview on a UI', 'Open in Gradient', 'History', 'Reset palette']) {
+    for (const name of ['Open in Gradient', 'History', 'Reset palette']) {
       await expect(panel.getByRole('button', { name, exact: true })).toBeVisible()
     }
+    // Toolbar priorities: Undo, Randomise and Suggest 5; Seed and Redo 4; Preview and
+    // From image 3; Explore and Back 2; System 1; Vision 0. Under 768 Preview is an
+    // Extra tools row only. Which of the rest have left depends on the room: Create
+    // tool primaries sit in the phone dock below 768, so the row has the whole
+    // width and Explore (2) and Back to all tools (2) fit at 662 (measured), where
+    // before the dock Explore was in Extra tools. So this does not pin which side
+    // each is on; it pins that every movable control is in exactly ONE place, the
+    // row or Extra tools, never lost and never doubled.
+    await expect(page.locator(BAR).getByRole('button', { name: 'Preview', exact: true }), 'Preview is not on the row at 662px').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: 'Preview', exact: true }), 'Preview is in Extra tools').toBeVisible()
+    const where = {}
+    for (const [key, role, name] of [
+      ['Explore', 'button', 'Explore palettes and brands'],
+      ['Back to all tools', 'link', 'Back to all tools'],
+    ]) {
+      const onRow = await page.locator(BAR).getByRole(role, { name, exact: true }).count()
+      const inPanel = await panel.getByRole('button', { name, exact: true }).count()
+      where[key] = onRow ? 'row' : 'Extra tools'
+      expect(onRow + inPanel, `${key} is on the row (${onRow}) or in Extra tools (${inPanel}), exactly once`).toBe(1)
+    }
+    test.info().annotations.push({ type: 'placement at 662px', description: JSON.stringify(where) })
     // And at 662 the row has handed over its lowest-priority controls too: the
     // System and Vision selects (priority 0) are here, not on the row.
     const bar = page.locator(BAR)
@@ -114,6 +135,49 @@ test.describe('palette toolbar fits the row it is given', () => {
     // What is in Extra tools does something: Open in Gradient hands the palette on.
     await panel.getByRole('button', { name: 'Open in Gradient', exact: true }).click()
     await expect(page).toHaveURL(/\/create\/gradient/)
+  })
+
+  test('Explore and Preview are on the row where it has room, and in Extra tools where it has not', async ({ page }) => {
+    // Explore (2) and Preview (3) are among the first to leave, so Undo, Redo,
+    // Randomise and Suggest stay. Measured: Preview joins the row from about
+    // 1050px and Explore from about 1240px. At 768 and 1024 both live in Extra
+    // tools (Explore opens from there). At 1280 and 1440 both are buttons on the
+    // row and Extra tools no longer lists them.
+    const bar = page.locator(BAR)
+    const onRow = (name) => bar.getByRole('button', { name, exact: true })
+    const panel = page.getByRole('dialog', { name: 'Extra tools' })
+    const names = ['Explore palettes and brands', 'Preview']
+    await go(page, '/create/palette')
+
+    for (const width of [768, 1024]) {
+      await page.setViewportSize({ width, height: 900 })
+      await settle(page)
+      await expect(onRow('Explore palettes and brands'), `${width}px: Explore left the row`).toHaveCount(0)
+      // What does not leave first is still there.
+      for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) await expect(onRow(name), `${width}px: ${name} stays on the row`).toBeVisible()
+      await expect(onRow('Preview'), `${width}px: Preview left the row`).toHaveCount(0)
+      await bar.getByRole('button', { name: 'Extra tools' }).click()
+      await expect(panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }), `${width}px: Explore is in Extra tools`).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Preview', exact: true }), `${width}px: Preview is in Extra tools`).toBeVisible()
+      if (width === 768) {
+        await panel.getByRole('button', { name: 'Explore palettes and brands', exact: true }).click()
+        await expect(page.getByRole('dialog', { name: 'Explore palettes and brands' })).toBeVisible()
+      }
+      await page.keyboard.press('Escape')
+    }
+
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await settle(page)
+      for (const name of names) await expect(onRow(name), `${width}px: ${name} is a button on the row`).toBeVisible()
+      for (const name of ['Undo', 'Redo', 'Randomise', 'Suggest variations']) await expect(onRow(name), `${width}px: ${name} stays on the row`).toBeVisible()
+      await bar.getByRole('button', { name: 'Extra tools' }).click()
+      for (const name of names) await expect(panel.getByRole('button', { name, exact: true }), `${width}px: ${name} is not doubled in Extra tools`).toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(panel).toHaveCount(0)
+    }
+    await onRow('Preview').click()
+    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
   })
 
   test('one row on every laptop and tablet width, nothing clipped', async ({ page }) => {

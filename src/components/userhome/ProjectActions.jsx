@@ -8,7 +8,7 @@ import { SYSTEM_PARTS } from '../../utils/userHome'
 // ── WHY A MENU AND NOT A ROW OF BUTTONS ────────────────────────────────
 //
 // The card used to carry Load, Overwrite, Rename, Archive and Delete as five
-// equally weighted pills in a wrapping row. The founder asked for MORE actions
+// equally weighted pills in a wrapping row. The card needed MORE actions
 // (duplicate, export, open straight into a tool), and adding three more pills to
 // that row would have produced the anti-slop bar's exact complaint: “pills used
 // for navigation, metadata, actions and decoration until roles become

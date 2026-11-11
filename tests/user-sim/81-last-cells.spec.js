@@ -9,7 +9,7 @@
 //   /feedback        purpose & content 6 → 9. A signed-out submission carried
 //                    `email: ""`, the form had nowhere to type one, and the
 //                    confirmation said "received and will be reviewed" either
-//                    way. The form's own "Help Request" type is the sharp end:
+//                    way. The form's own "Help request" type is the sharp end:
 //                    a question asked with no return address, answered with a
 //                    green tick. /api/support has always taken the field.
 //
@@ -28,7 +28,7 @@
 //                    64-computed-style-snapshot.spec.js passing on
 //                    /create/palette against a baseline that was not
 //                    regenerated for the move. What is here is the assertion
-//                    that the page still paints all eighteen scenes THROUGH the
+//                    that the page still paints all six scenes THROUGH the
 //                    module it now imports them from.
 //
 //   /login           dimensions 3 and 4, 7 → 8. Two non-copy causes, both
@@ -36,10 +36,10 @@
 //                    long as it was open, and an <h2> sitting 8px above the
 //                    primary action — less space than any two form fields in
 //                    the same dialog get between them. The heading's WORDS are
-//                    untouched and stay founder-blocked; see the PR body.
+//                    untouched and stay approval-gated.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
-import { openPaletteTools } from './palette-helpers.js'
+import { go, signIn, watch, openChosenDialog } from './helpers.js'
+import { clickPaletteAction } from './palette-helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -323,78 +323,95 @@ test.describe('the gradient stop hex reads as a field', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the lifted preview module is what /create/palette paints', () => {
-  // MUTATION: delete any one entry from `PREVIEW_SCENES.ui` in
-  // src/data/palettePreviewScenes.js. This goes red on the count for that tab.
-  // Deleting the `import { PREVIEW_SCENES }` line instead takes the whole route
-  // down, which this also catches — on the modal never opening.
-  test('all eighteen scenes render, each with the full --pv-* role set', async ({ page }) => {
+  // MUTATION: delete any one entry from `PREVIEW_SCENES` in
+  // src/data/palettePreviewScenes.js. This goes red on the count of options.
+  // Deleting the import of the preview component instead takes the whole route
+  // down, which this also catches, on the dialog never opening.
+  test('all six scenes render, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
+    // Pro, so every scene is mounted: a free account is shown a stand-in for the Pro scenes (Spending card, Architect portfolio), not the scene.
+    await signIn(page, { plan: 'pro' })
     await go(page, '/create/palette')
-    await (await openPaletteTools(page)).getByRole('button', { name: 'Preview on a UI' }).click()
-    await expect(page.locator('.plb-pv').first()).toBeVisible()
+    await clickPaletteAction(page, 'Preview')
+    await expect(page.locator('.pvs')).toHaveCount(1)
 
-    const ROLES = ['--pv-bg', '--pv-surface', '--pv-primary', '--pv-onprimary', '--pv-accent',
-      '--pv-text', '--pv-muted', '--pv-border', '--pv-pborder', '--pv-accent-ink', '--pv-primary-ink']
+    const VARS = ['--pv-canvas', '--pv-surface', '--pv-raised', '--pv-border', '--pv-border-strong',
+      '--pv-text', '--pv-muted', '--pv-disabled', '--pv-primary', '--pv-secondary', '--pv-accent',
+      '--pv-subtle', '--pv-deep', '--pv-on-primary', '--pv-primary-ink', '--pv-accent-ink',
+      '--pv-pborder', '--pv-success', '--pv-success-ink', '--pv-success-tint', '--pv-warning',
+      '--pv-warning-ink', '--pv-error', '--pv-error-ink', '--pv-info', '--pv-info-ink']
+    const NAMES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
+
+    const rail = page.getByRole('listbox', { name: 'Previews' })
+    await expect(rail.getByRole('option')).toHaveCount(NAMES.length)
 
     const seen = new Set()
-    for (const tab of ['UI', 'Brand', 'Graphic Design']) {
-      await page.getByRole('tab', { name: tab }).click()
-      await expect(page.getByRole('tab', { name: tab })).toHaveAttribute('aria-selected', 'true')
+    for (const name of NAMES) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(rail.getByRole('option', { name: new RegExp(`^${name}`) })).toHaveAttribute('aria-selected', 'true')
+      // One scene at a time, and it is the one picked.
+      await expect(page.locator('.pvs')).toHaveCount(1)
+      await expect(page.locator(`.pvs[data-preview-scene="${name}"]`)).toBeVisible()
 
-      const scenes = await page.evaluate((roles) => [...document.querySelectorAll('.plb-preview-grid .plb-pv')].map((el) => {
+      const s = await page.evaluate((vars) => {
+        const el = document.querySelector('.pvs')
         const cs = getComputedStyle(el)
         return {
           name: el.dataset.previewScene,
           label: el.getAttribute('aria-label'),
-          missing: roles.filter((r) => !cs.getPropertyValue(r).trim()),
+          role: el.getAttribute('role'),
+          missing: vars.filter((v) => !cs.getPropertyValue(v).trim()),
         }
-      }), ROLES)
+      }, VARS)
 
-      expect(scenes.length, `${tab} does not render six scenes`).toBe(6)
-      for (const s of scenes) {
-        expect(s.name, `${tab}: a scene rendered with no data-preview-scene`).toBeTruthy()
-        expect(s.label, `${tab}/${s.name}: the scene lost its accessible name`).toBe(`${s.name} palette preview`)
-        // `pvRef` moved with the components. If it had not, every one of these
-        // would resolve to nothing and the scenes would paint unstyled.
-        expect(s.missing, `${tab}/${s.name}: pvRef did not write ${s.missing.join(', ')}`).toEqual([])
-        seen.add(`${tab}/${s.name}`)
-      }
+      expect(s.name, `${name}: the scene rendered with the wrong data-preview-scene`).toBe(name)
+      // The scenes with live controls (Ridgeline, Tenner, Slack Water and Orra) are groups of them; every other scene is one picture.
+      const live = name === 'Trail run app' || name === 'Spending card' || name === 'Editorial hero' || name === 'Product page'
+      expect(s.role, `${name}: the scene is not exposed as ${live ? 'a group of controls' : 'one image'}`).toBe(live ? 'group' : 'img')
+      expect(s.label, `${name}: the scene lost its accessible name`).toBe(`${name} preview using your palette, light theme`)
+      // pvVars moved with the components. If it had not, every one of these
+      // would resolve to nothing and the scenes would paint unstyled.
+      expect(s.missing, `${name}: pvVars did not write ${s.missing.join(', ')}`).toEqual([])
+      seen.add(s.name)
     }
-    expect(seen.size, 'eighteen distinct scenes did not render').toBe(18)
+    expect(seen.size, 'six distinct scenes did not render').toBe(NAMES.length)
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// /login — nothing turns behind the dialog, and the title has its own space
+// /login — nothing turns on the page, and the dialog's title has its own space
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('the login route paints only what is true', () => {
-  // MUTATION: in src/App.jsx delete the line
-  //   if (!loading) return null
-  // from LoginRoute. Every cell below goes red on the loader.
+test.describe('the login surfaces paint only what is true', () => {
+  // MUTATION: in src/pages/LoginPage.jsx add
+  //   <div className="fg-loader" />
+  // after the <AuthForm ... /> element. Every cell below goes red on the loader.
   for (const width of WIDTHS) {
     for (const theme of ['light', 'dark']) {
-      test(`no loading indicator behind the dialog at ${width} in ${theme}`, async ({ browser }) => {
+      test(`no loading indicator on the page at ${width} in ${theme}`, async ({ browser }) => {
         const { ctx, page } = await at(browser, width, theme)
         watch(page, `visitor arriving on /login at ${width} ${theme}`)
         await go(page, '/login')
-        await expect(page.locator('.ui-login')).toBeVisible()
+        await expect(page.locator('main .auth-page-form .auth-google-btn')).toBeVisible()
         await settled(page)
 
-        const behind = await page.evaluate(() => {
+        const seen = await page.evaluate(() => {
           const main = document.querySelector('#main, main')
           return {
             loaders: document.querySelectorAll('.fg-loader').length,
-            mainText: (main?.innerText || '').trim(),
-            // The dialog is what the route's content actually is, and
-            // renderState() in helpers.js counts it. Asserted so "main is
-            // empty" can never be read as "the page rendered nothing".
-            dialog: (document.querySelector('[role="dialog"]')?.innerText || '').length,
+            checking: document.querySelectorAll('.auth-checking').length,
+            mainText: (main?.innerText || '').trim().length,
+            dialogs: document.querySelectorAll('[role="dialog"]').length,
           }
         })
-        expect(behind.loaders, `${width}/${theme}: a spinner is still turning behind the dialog`).toBe(0)
-        expect(behind.mainText, `${width}/${theme}: main is not empty`).toBe('')
-        expect(behind.dialog, `${width}/${theme}: the dialog rendered nothing`).toBeGreaterThan(40)
+        expect(seen.loaders, `${width}/${theme}: a spinner is still turning on the page`).toBe(0)
+        // The one line that stands in for the form while auth resolves is gone
+        // once it has resolved.
+        expect(seen.checking, `${width}/${theme}: the checking line outlived the auth check`).toBe(0)
+        // The page is the route's content, and renderState() counts main. Asserted
+        // so a blank main can never be read as a rendered page.
+        expect(seen.mainText, `${width}/${theme}: main rendered next to nothing`).toBeGreaterThan(40)
+        expect(seen.dialogs, `${width}/${theme}: the page opened a dialog`).toBe(0)
 
         await ctx.close()
       })
@@ -403,35 +420,35 @@ test.describe('the login route paints only what is true', () => {
 
   // The same assertion for a visitor who has asked for less motion. It is not a
   // duplicate: `html[data-reduced-motion="true"] .fg-loader{animation:none}`
-  // already stopped the spinning for this person, which made a permanent,
-  // MOTIONLESS grey ring the thing behind their dialog — the defect without the
-  // one cue that it was a loader.
+  // already stopped the spinning for this person, which would make a permanent,
+  // MOTIONLESS grey ring the thing on their page: the defect without the one
+  // cue that it was a loader.
   for (const width of [390, 1440]) {
-    test(`nothing turns behind the dialog at ${width} with reduced motion`, async ({ browser }) => {
+    test(`nothing turns on the page at ${width} with reduced motion`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width, 'light', { reduced: true })
       watch(page, `visitor who asked for less motion, on /login at ${width}`)
       await go(page, '/login')
-      await expect(page.locator('.ui-login')).toBeVisible()
+      await expect(page.locator('main .auth-page-form .auth-google-btn')).toBeVisible()
       await settled(page)
-      expect(await page.locator('.fg-loader').count(), 'a ring is still painted behind the dialog').toBe(0)
+      expect(await page.locator('.fg-loader').count(), 'a ring is still painted on the page').toBe(0)
       await ctx.close()
     })
   }
 
-  // MUTATION: in src/styles/global.css change
-  //   .ui-login .ui-modal-body{padding-top:18px}
-  // back to `padding-top:8px`. Every width below goes red.
+  // MUTATION: in src/styles/pages/auth.css change
+  //   .auth-body{margin-top:24px}
+  // to margin-top:8px. Every width below goes red.
   for (const width of WIDTHS) {
     test(`the dialog title has more space beneath it than its fields do at ${width}`, async ({ browser }) => {
       const { ctx, page } = await at(browser, width)
       watch(page, `visitor reading the login dialog at ${width}`)
-      await go(page, '/login')
+      await openChosenDialog(page, 'Log in')
       await expect(page.locator('.ui-login')).toBeVisible()
       await settled(page)
 
       const m = await page.evaluate(() => {
         const title = document.querySelector('#ui-login-title')
-        const first = document.querySelector('.ui-modal-body .auth-google-btn')
+        const first = document.querySelector('.ui-login .auth-google-btn')
         const form = document.querySelector('.auth-form')
         return {
           gap: +(first.getBoundingClientRect().top - title.getBoundingClientRect().bottom).toFixed(1),
@@ -446,63 +463,81 @@ test.describe('the login route paints only what is true', () => {
       expect(m.gap, `${width}: the h2 sits ${m.gap}px above the primary action, against a ${m.fieldGap}px field rhythm`)
         .toBeGreaterThanOrEqual(m.fieldGap)
       // The words and the type are untouched — this cell is a SPACING fix and
-      // nothing else. `auth.welcomeBack` is founder-blocked.
-      expect(m.titleSize).toBe('19px')
-      await expect(page.locator('#ui-login-title')).toHaveText('Welcome Back')
+      // nothing else. `auth.welcomeBack` is approval-gated.
+      expect(m.titleSize).toBe('22px')
+      await expect(page.locator('#ui-login-title')).toHaveText('Log in to UI L4B')
 
       await ctx.close()
     })
   }
 
-  // The short-viewport exemption, which is the half a naive spacing change
-  // would have broken. `@media(max-height:460px)` exists because at 844x390
-  // this dialog hid 133px below the fold, including the submit button; the
-  // 18px above is deliberately NOT spent there.
+  // The short-viewport rules, which are the half a naive spacing change would
+  // have broken. `@media(max-height:460px)` in src/styles/pages/auth.css exists
+  // because a landscape phone has ~370px for a dialog that wants ~540: without
+  // it the mode links and the legal line sit well below the fold. The dialog
+  // cannot be made to fit at this height without dropping a sign-in method (an
+  // auth change), so the contract is: tighter rhythm, the submit button whole,
+  // and the sign-up / forgot-password row at least peeking, so a scrolling
+  // dialog still says there is more.
   //
-  // MUTATION: delete the `@media(max-height:460px){.ui-login .ui-modal-body
-  // {padding-top:8px}}` block that follows the 18px rule. The gap becomes 18
-  // and this goes red — as does the budget assertion, by 12px.
-  test('a landscape phone keeps the tighter rhythm and the submit button', async ({ browser }) => {
+  // MUTATION: delete the `@media(max-height:460px){...}` block in auth.css.
+  // The title gap becomes 24, the pane padding 32 and the cost assertion goes
+  // red; the submit button is then also sliced by the dialog edge.
+  test('a landscape phone keeps the tighter rhythm, the submit button and the mode links', async ({ browser }) => {
     const ctx = await browser.newContext({
       viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IOS_UA,
     })
     const page = await ctx.newPage()
     watch(page, 'visitor signing in on a landscape phone')
-    await go(page, '/login')
+    await openChosenDialog(page, 'Log in')
     await expect(page.locator('.ui-login')).toBeVisible()
     await settled(page)
 
     // Measured twice on the same rendered dialog: as the stylesheet leaves it,
-    // and again with the 18px forced back on. The difference is what the
-    // exemption is WORTH here, which is a stronger thing to assert than any
-    // absolute pixel count — the dialog's content has changed several times
-    // since the height query was written and will change again.
+    // and again with the tall-viewport title gap forced back on. The difference
+    // is what the short-viewport rule is WORTH here, which is a stronger thing
+    // to assert than any absolute pixel count: the dialog's content has changed
+    // several times and will change again.
     const m = await page.evaluate(() => {
-      const dialog = document.querySelector('.ui-login')
-      const body = document.querySelector('.ui-login .ui-modal-body')
+      // At 768 and up the chosen variant is a clipped two-pane dialog and the
+      // form pane is what scrolls, so that is the box measured then.
+      const dialog = document.querySelector('.ui-login--strip .ui-login-pane') || document.querySelector('.ui-login')
+      const body = document.querySelector('.ui-login .auth-body')
+      const pane = document.querySelector('.ui-login .ui-login-pane')
       const title = document.querySelector('#ui-login-title')
-      const first = document.querySelector('.ui-modal-body .auth-google-btn')
+      const first = document.querySelector('.ui-login .auth-google-btn')
+      const submit = document.querySelector('.ui-login .auth-submit')
+      const links = document.querySelector('.ui-login .auth-links')
+      const dr = dialog.getBoundingClientRect()
       const hidden = () => dialog.scrollHeight - dialog.clientHeight
       const exempt = {
-        padTop: getComputedStyle(body).paddingTop,
+        padTop: getComputedStyle(pane).paddingTop,
         gap: +(first.getBoundingClientRect().top - title.getBoundingClientRect().bottom).toFixed(1),
         hidden: hidden(),
         scrolls: dialog.scrollHeight > dialog.clientHeight,
+        submitSliced: Math.round(submit.getBoundingClientRect().bottom - dr.bottom) > 0,
+        linksPeek: Math.round(dr.bottom - links.getBoundingClientRect().top),
+        notNowShown: !!document.querySelector('.ui-login .auth-notnow')?.getClientRects().length,
       }
-      body.style.paddingTop = '18px'
+      body.style.marginTop = '24px'
       void dialog.offsetHeight
       const cost = hidden() - exempt.hidden
-      body.style.paddingTop = ''
+      body.style.marginTop = ''
       return { ...exempt, cost }
     })
-    expect(m.padTop, 'the landscape exemption stopped applying').toBe('8px')
-    expect(m.gap, 'the title is taking the tall-viewport gap on a landscape phone').toBeLessThan(12)
-    // The whole 10px, not some of it — anything less means the two rules are
+    expect(m.padTop, 'the landscape rule stopped applying to the dialog padding').toBe('12px')
+    expect(m.gap, 'the title is taking the tall-viewport gap on a landscape phone').toBeLessThan(16)
+    // The whole 12px, not some of it: anything less means two rules are
     // fighting rather than the later one winning outright.
-    expect(m.cost, 'spending the title gap here would cost nothing, so the exemption is dead code').toBe(10)
-    // And what IS below the fold stays reachable: .ui-modal scrolls, with the
+    expect(m.cost, 'spending the title gap here would cost nothing, so the rule is dead code').toBe(12)
+    expect(m.submitSliced, 'the submit button is cut by the dialog edge').toBe(false)
+    expect(m.linksPeek, 'the sign-up / forgot-password row is entirely below the fold').toBeGreaterThan(0)
+    // What IS below the fold stays reachable: .ui-modal scrolls, with the
     // pure-CSS scroll shadow that tells the reader there is more.
     expect(m.scrolls, 'the dialog does not scroll, so anything below the fold is lost').toBe(true)
+    // "Not now" is the one control that gives way, and only here: Close is in
+    // the corner and Escape works. Pinned so it cannot go missing elsewhere.
+    expect(m.notNowShown, '"Not now" should give way on a landscape phone').toBe(false)
 
     await ctx.close()
   })

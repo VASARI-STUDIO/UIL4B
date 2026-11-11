@@ -37,12 +37,14 @@
 //
 // ── MUTATION ───────────────────────────────────────────────────────────────
 //
-// Two call sites, broken one at a time in src/components/ExportPanel.jsx:
+// Two call sites, broken one at a time:
 //
-//   `activeFormat?.live ? (…) : (…Export — Soon…)`  →  forced to `true ? …`
-//        fails "every unbuilt format … refuses in words"; the control passes.
-//   `buildStyleGuideHtml(design, { watermark: !isPro })` → `watermark: false`
+//   src/config/dialogExport.js: a category listing an unbuilt format's id (or a rail row
+//        rendered for it)  →  fails "every unbuilt format … has no row and no button";
+//        the control passes.
+//   src/hooks/useExportRunner.js: `watermark: !proNow` on the style guide → `watermark: false`
 //        fails the watermark test on its FREE half only; everything else passes.
+import { chooseFormat, exportPanel, primaryButton } from './export-rows.js'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
@@ -55,7 +57,7 @@ const FREE_BUILT = EXPORT_FORMATS.filter((f) => f.live && !f.pro)
 
 async function openPanel(page) {
   await page.getByRole('button', { name: 'Export', exact: true }).first().click()
-  await expect(page.getByRole('dialog', { name: /Export your design system/i })).toBeVisible()
+  await expect(exportPanel(page)).toBeVisible()
 }
 
 /** The bytes the browser actually handed the user. */
@@ -71,34 +73,34 @@ async function exportStyleGuide(page, plan) {
   await signIn(page, { plan })
   await go(page, WORKED_BOARD)
   await openPanel(page)
-  await page.getByRole('radio', { name: /Style guide \(HTML\)/i }).click()
+  await chooseFormat(page, 'html')
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Export HTML', exact: true }).click(),
+    primaryButton(page).click(),
   ])
   return readDownload(download)
 }
 
 test.describe('the export panel, as a free account', () => {
-  test('every unbuilt format is badged, and refuses in words when chosen', async ({ page }) => {
-    watch(page, 'a designer picking an export format that is not built yet')
+  test('every unbuilt format is named in one quiet line, and has no row and no button', async ({ page }) => {
+    // MUTATION: render a row for every EXPORT_FORMATS entry (not only the built
+    // groups) or restore the disabled "Export — Soon" button, and this fails.
+    watch(page, 'a designer looking for an export format that is not built yet')
     await signIn(page, { plan: 'free' })
     await go(page, WORKED_BOARD)
     await openPanel(page)
 
     expect(UNBUILT.length, 'this test is vacuous if nothing is unbuilt').toBeGreaterThan(0)
+    const panel = exportPanel(page)
 
     for (const fmt of UNBUILT) {
-      const row = page.getByRole('radio', { name: new RegExp(fmt.name, 'i') })
-      await expect(row.locator('.exp-fmt-soon'),
-        `${fmt.name} must carry a Soon badge before it is chosen`).toBeVisible()
-
-      await row.click()
-      const action = page.getByRole('button', { name: /^Export — Soon$/ })
-      await expect(action, `${fmt.name} must not offer a working button`).toBeVisible()
-      await expect(action, `${fmt.name}'s button must be disabled, not merely relabelled`)
-        .toBeDisabled()
+      await expect(panel.getByRole('radio', { name: new RegExp(fmt.name, 'i') }),
+        `${fmt.name} is not built, so it must not be a row`).toHaveCount(0)
+      await expect(panel.locator('.xd-coming'),
+        `${fmt.name} must be named in the "on the way" line`).toContainText(fmt.coming.replace(/^an? /, ''), { ignoreCase: true })
     }
+    await expect(panel.getByRole('button', { name: /Soon/ })).toHaveCount(0)
+    await expect(panel.getByRole('button', { name: /Asset bundle/i }), 'and no button of any kind for them').toHaveCount(0)
   })
 
   test('a built free format hands over a real file — the control', async ({ page }) => {
@@ -120,7 +122,7 @@ test.describe('the watermark is the thing Pro actually removes', () => {
     watch(page, 'a free account reading the footer of its own export')
     const free = await exportStyleGuide(page, 'free')
     expect(free, 'the free export must carry the line Pro pays to remove')
-      .toMatch(/Made with UIL4B/i)
+      .toMatch(/Made with UI L4B/i)
   })
 
   test('and a Pro export does not — the other half of the same claim', async ({ page }) => {
@@ -129,6 +131,6 @@ test.describe('the watermark is the thing Pro actually removes', () => {
     // The control for the absence: the same document, really built.
     expect(pro.length, 'the Pro export must be a real document').toBeGreaterThan(500)
     expect(pro, 'and Pro must actually get what /plans sells')
-      .not.toMatch(/Made with UIL4B/i)
+      .not.toMatch(/Made with UI L4B/i)
   })
 })

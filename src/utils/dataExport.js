@@ -59,6 +59,7 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-recent-icons': { purpose: 'Recently viewed icons', pii: 'no' },
   'vs-icon-stroke': { purpose: 'Icon stroke-width preference (pre-2.8 viewBox units)', pii: 'no' },
   'vs-icon-stroke-px': { purpose: 'Icon stroke-width preference, in pixels', pii: 'no' },
+  'vs-icon-download-format': { purpose: 'Icon download format (SVG or PNG scale)', pii: 'no' },
   'vs-icon-copy-day': { purpose: 'Daily icon copy counter', pii: 'no' },
   'vs-prompts': { purpose: 'Your AI prompt library', pii: 'local' },
   'vs-saved-prompt-ids': { purpose: 'Community prompts you saved', pii: 'no' },
@@ -70,7 +71,9 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-palette-likes': { purpose: 'Palettes you liked', pii: 'no' },
   'vs-palette-session-seed': { purpose: 'Palette shuffle seed for this session', pii: 'no' },
   'vs-gradient-likes': { purpose: 'Gradients you liked', pii: 'no' },
-  'vs-gradient-submissions': { purpose: 'Gradients submitted from this browser', pii: 'local' },
+  'vs-gradient-submissions': { purpose: 'Gradients an earlier visit left in this browser, waiting to be kept with an account', pii: 'local' },
+  'vs-gradient-keep-dismissed': { purpose: 'Whether you answered "Not mine" to keeping this browser’s gradients, this tab session', pii: 'no' },
+  'vs-pending-save': { purpose: 'A project name held while you sign up, so Save can reopen afterwards (this tab only)', pii: 'local' },
   'vs-state-shades': { purpose: 'Cached state colour shades', pii: 'no' },
   'vs-gf-catalog': { purpose: 'Cached Google Fonts catalogue', pii: 'no' },
   'vs-preview-device': { purpose: 'Preview device preference', pii: 'no' },
@@ -82,6 +85,8 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-accounts': { purpose: 'Email, name and photo for accounts used on this device (up to five)', pii: 'yes' },
   'vs-google-returning': { purpose: 'Whether you have signed in with Google before', pii: 'no' },
   'vs-onboarded': { purpose: 'Whether you completed onboarding', pii: 'no' },
+  'vs-previous-design': { purpose: 'Unsaved work put aside so Undo can bring it back; cleared at sign-out', pii: 'local' },
+  'vs-previous-designs': { purpose: 'Older unsaved work waiting behind the one put aside; cleared at sign-out', pii: 'local' },
   'vs-resume-after-onboarding': { purpose: 'Where to send you after onboarding', pii: 'no' },
   'vs-sessions': { purpose: 'Local session history used for your own usage stats', pii: 'local' },
   'vs-analytics': { purpose: 'Local, in-browser usage counters', pii: 'local' },
@@ -89,6 +94,9 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-feedback': { purpose: 'Feedback drafts written in this browser', pii: 'local' },
   'vs-usage': { purpose: 'AI generations used, per tool per day', pii: 'no' },
   'vs-uikit-guide': { purpose: 'Whether you are part-way through the brand kit walkthrough', pii: 'no' },
+  'vs-current-design-at': { purpose: 'When your working design last changed, so the brand kit asks whether to carry on after a long gap', pii: 'no' },
+  'vs-kit-session': { purpose: 'Whether the brand kit question was already answered in this tab', pii: 'no' },
+  'vs-uikit-guide-at': { purpose: 'When you last used a step of the brand kit walkthrough, so an old one stops showing', pii: 'no' },
   // `vs-uib-intro-dismissed` was here. Its only writer was src/pages/UIBuilder.jsx,
   // deleted in the 2026-09-06 dead-source sweep (no importer, no route, absent
   // from every sourcemap in a production build). A purpose entry for a key
@@ -99,8 +107,11 @@ export const KEY_PURPOSES = Object.freeze({
   // stemOf() would fall through to the undescribed path only if a browser still
   // held the value, and the export's `vs-mystery` case already covers that.
   'vs-info-intro': { purpose: 'Info page intro dismissal state', pii: 'no' },
+  'vs-palette-coach': { purpose: 'Whether you have dismissed the first-palette tips on the Palette Builder, synced to your account', pii: 'no' },
   'vs-admin-unlocked': { purpose: 'Admin panel access flag', pii: 'no' },
   'vs-chunk-reload': { purpose: 'Guard against a reload loop after a deploy', pii: 'no' },
+  'vs-gradient-shuffle-filters': { purpose: 'Gradient Shuffle settings for this tab session', pii: 'no' },
+  'vs-gradient-locks': { purpose: 'Gradient type and angle locks for this tab session', pii: 'no' },
   'vs-billing-dismissed': { purpose: 'Billing notices dismissed this session', pii: 'no' },
   'vs-recent-exports': { purpose: 'Files you exported recently (name, type, size, tool, time), synced to your account', pii: 'local' },
   'vs-sync-meta': { purpose: 'Which account this browser’s copy belongs to, and when each setting last changed', pii: 'no' },
@@ -130,7 +141,7 @@ export function describeKey(key) {
   if (stem) return { key, ...KEY_PURPOSES[stem] }
   // Honest fallback. An undescribed key is a documentation gap, not a reason to
   // hide it from the person whose data it is.
-  return { key, purpose: 'Not yet described — included in full in your export', pii: 'unknown' }
+  return { key, purpose: 'Not yet described, but included in full in your export', pii: 'unknown' }
 }
 
 // Pull every owned key out of a Storage-like object. Values are parsed when
@@ -162,20 +173,50 @@ export function keysToClear(storage) {
   return Object.keys(collectStorage(storage)).filter((k) => !CLEAR_EXCEPTIONS.includes(k))
 }
 
+// Browser keys that hold OTHER accounts' details are not part of this
+// account's file. `vs-accounts` is the device's list of remembered accounts
+// (email, name, photo for each, including this one, whose details are already
+// in `account`). `vs-profile-cache` is the profile cache keyed by uid, so only
+// the entry for the signed-in uid is kept; signed out, there is no account to
+// keep an entry for. Clearing and counting still use collectStorage, which sees
+// every owned key.
+export const OTHER_ACCOUNT_KEYS = Object.freeze(['vs-accounts', 'vs-profile-cache'])
+
+export function withoutOtherAccounts(store, uid) {
+  const out = { ...store }
+  const withheld = []
+  for (const key of OTHER_ACCOUNT_KEYS) {
+    if (!(key in out)) continue
+    const mine = key === 'vs-profile-cache' && uid && out[key] && typeof out[key] === 'object'
+      ? out[key][uid]
+      : undefined
+    if (mine !== undefined) out[key] = { [uid]: mine }
+    else { delete out[key]; withheld.push(key) }
+  }
+  return { store: out, withheld }
+}
+
 // The finished export object.
 //
 // `firestore` and `account` are null for a signed-out user, and the file says
 // so explicitly rather than omitting the section — "no server data" and "we
 // didn't look" must not be indistinguishable in something someone may rely on.
-export function buildExport({ local = {}, session = {}, firestore = null, account = null, now = new Date() } = {}) {
+// Keys left out because they hold other accounts' details are listed in
+// `about.withheldKeys`, for the same reason.
+export function buildExport({ local: rawLocal = {}, session: rawSession = {}, firestore = null, account = null, now = new Date() } = {}) {
+  const uid = account?.uid || null
+  const { store: local, withheld: withheldLocal } = withoutOtherAccounts(rawLocal, uid)
+  const { store: session, withheld: withheldSession } = withoutOtherAccounts(rawSession, uid)
+  const withheldKeys = [...new Set([...withheldLocal, ...withheldSession])].sort()
   const keys = [...new Set([...Object.keys(local), ...Object.keys(session)])].sort()
   return {
     exportedAt: now.toISOString(),
     format: 'uil4b-data-export/2',
     about: {
-      description: 'Everything UIL4B holds about you, from this browser and from our server.',
+      description: 'Everything UI L4B holds about you, from this browser and from our server.',
       browserKeys: keys.length,
       includesServerData: !!firestore || !!account,
+      withheldKeys,
     },
     // The what-and-why table, generated from the keys actually present rather
     // than from a list someone has to remember to update.

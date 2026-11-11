@@ -51,7 +51,7 @@ test.describe('checkout states a price it cannot confirm', () => {
       const amount = page.locator('.checkout-plan-amount')
       const note = page.locator('.checkout-plan-note')
       await expect(amount).toHaveText('Unavailable')
-      await expect(note).toHaveText('Live pricing is unreachable · no price can be shown right now')
+      await expect(note).toHaveText('Stripe didn’t answer, so no checkout can start.')
 
       // The exact string the defect produced, asserted as absent by name so a
       // regression is unmistakable rather than merely "not Unavailable".
@@ -122,7 +122,7 @@ test.describe('every account surface starts at heading 1', () => {
     await go(page, '/checkout/return?session_id=cs_test_paid')
     const h1 = page.locator('main h1')
     await expect(h1).toHaveCount(1)
-    await expect(h1).toContainText('You’re on UIL4B Pro.')
+    await expect(h1).toContainText('You’re on UI L4B Pro.')
     // It is styled by the page's own `.checkout-page .co-title`
     // (clamp(30px, 3.6vw, 44px)) and NOT
     // by whatever an unscoped h1 rule would give a bare <h1> (the .sec-h
@@ -158,7 +158,7 @@ test.describe('projects states only quotas the product enforces', () => {
   // #452 DELETED THE FOLDER SENTENCE AND KEPT THE FOLDERS. These two tests
   // pinned that halfway state: no invented allowance, but five chips of a fixed
   // taxonomy still on screen, and a Pro account seeing the same five "which is
-  // the point". The founder's call on 2026-09-13 finished it — folders are not
+  // the point". The decision since finished it — folders are not
   // an entitlement and the mechanism is gone — so the pin is inverted rather
   // than deleted, which is how 69-flow-audit's seeded-project assertion was
   // handled when that decision landed. What both tests were really protecting,
@@ -174,13 +174,13 @@ test.describe('projects states only quotas the product enforces', () => {
       watch(page, `a ${plan} user looking for the folders that used to be here`)
       await signIn(page, { plan, projects: 2 })
       await go(page, '/projects')
-      await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
+      await expect(page.getByRole('link', { name: /^Open project/ }), 'the latest project is its sheet').toHaveCount(1)
+      await expect(page.locator('a.db-mini'), 'the other one is a mini').toHaveCount(1)
 
       await expect(page.locator('.proj-folders'), 'the chip row is gone').toHaveCount(0)
       await expect(page.locator('.proj-folder-chip'), 'no chip survives').toHaveCount(0)
-      await expect(page.locator('.uh-card-folder'), 'no per-card filer').toHaveCount(0)
       // The word itself, anywhere a reader could see it on this surface.
-      await expect(page.locator('.uh'), 'the surface still says "folder"')
+      await expect(page.locator('.db'), 'the surface still says "folder"')
         .not.toContainText(/folder/i)
     })
   }
@@ -203,21 +203,21 @@ test.describe('projects states only quotas the product enforces', () => {
     // Removing the false quota must not have taken the true one with it.
     const quota = page.locator('[data-testid="project-quota-note"]')
     await expect(quota).toBeVisible()
-    // The workspace's plan strip: "Project slots  3 of 3".
-    await expect(quota).toContainText('Project slots')
+    // The workspace's plan strip: "Projects  3 of 3".
+    await expect(quota).toContainText('Projects')
     await expect(quota).toContainText('3 of 3')
   })
 })
 
 test.describe('the admin overview states nothing it read from this browser', () => {
   // ── THE BADGE THIS DESCRIBE USED TO MEASURE IS GONE, AND SO IS ITS SUBJECT ─
-  // Until 2026-09-16 this measured the contrast of a "This device only" badge
+  // This used to measure the contrast of a "This device only" badge
   // over four headline figures — Page Views, Sessions, Bounce Rate, Avg
   // Duration — that were this browser's localStorage. The badge was correct
-  // and the figures were the defect: the largest numbers on the founder's
-  // dashboard described his own browsing, and a caption does not change what
-  // a four-figure "Page views" reads as. His instruction was to take "data
-  // from my specific browser window" off the dashboard, so the band went,
+  // and the figures were the defect: the largest numbers on the admin
+  // dashboard described one browser's own browsing, and a caption does not change what
+  // a four-figure "Page views" reads as. Data from a single browser window does
+  // not belong on the dashboard, so the band went,
   // with the Pages and Design tabs that read the same two blobs.
   //
   // What replaces the contrast check is the stronger claim it was standing

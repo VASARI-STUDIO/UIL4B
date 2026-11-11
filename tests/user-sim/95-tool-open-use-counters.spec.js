@@ -18,7 +18,8 @@ test('opening a tool counts one open and no use; the first press counts one use'
   await expect.poll(async () => (await counts(page)).opens.gradient).toBe(1)
   expect((await counts(page)).used.gradient, 'arriving is not using').toBeUndefined()
 
-  const copy = page.locator('[data-tool-toolbar] .tl-primary button')
+  // The toolbar's primary from 768px, the dock's button below it.
+  const copy = page.locator('[data-tool-toolbar] .tl-primary button, [data-tl-dock] button')
   await expect(copy).toBeVisible()
   await copy.click()
   await expect.poll(async () => (await counts(page)).used.gradient).toBe(1)
@@ -35,4 +36,19 @@ test('opening the same tool again is a second open', async ({ page }) => {
   await expect.poll(async () => (await counts(page)).opens.gradient).toBe(1)
   await go(page, '/create/gradient')
   await expect.poll(async () => (await counts(page)).opens.gradient).toBe(2)
+})
+
+test('on a phone the first press of the dock button counts one use', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+  const page = await ctx.newPage()
+  await ctx.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await go(page, '/create/gradient')
+  await expect.poll(async () => (await counts(page)).opens.gradient).toBe(1)
+  expect((await counts(page)).used.gradient, 'arriving is not using').toBeUndefined()
+
+  const dockButton = page.locator('[data-tl-dock] button')
+  await expect(dockButton, 'the primary is in the dock on a phone').toBeVisible()
+  await dockButton.tap()
+  await expect.poll(async () => (await counts(page)).used.gradient).toBe(1)
+  await ctx.close()
 })

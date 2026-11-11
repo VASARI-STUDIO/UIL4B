@@ -36,8 +36,7 @@
 // them; the test enforces it, so retarget the old entry rather than adding a
 // hop.
 
-// The 2026-08-20 founder decision: "all the urls for the create tools should be
-// /create/pagetitle not /color/ or other."
+// All Create tool URLs are /create/<pagetitle>, not /color/ or similar.
 //
 // `<pagetitle>` is the tool's own id from CREATE_GROUPS where that id already
 // stands alone as a name, and the existing final segment for the category
@@ -54,8 +53,8 @@
 //
 // Run-together words are hyphenated on the way through (`fontgallery` →
 // `font-gallery`, `typescale` → `type-scale`): the redirect is being issued
-// regardless, so this is the free moment to fix them, and it is what the
-// founder decision asked for.
+// regardless, so this is the free moment to fix them, and it matches the
+// /create/<pagetitle> convention.
 export const CREATE_ROUTE_MIGRATION = Object.freeze([
   // Colour
   ['/color', '/create/palette'],
@@ -98,9 +97,9 @@ export const CREATE_ROUTE_MIGRATION = Object.freeze([
 // the old path would have built `/palette` → `/color/palette` → `/create/palette`,
 // a two-hop chain, on the day this landed.
 //
-// RETARGETED AGAIN, 2026-09-18, for the same reason: `/color/ui`, `/color-studio`
-// and `/export` all pointed at `/create/color`, and the founder deleted the
-// colour landing when Spectrum became `/`. `/create/color` is now a redirect
+// RETARGETED AGAIN for the same reason: `/color/ui`, `/color-studio`
+// and `/export` all pointed at `/create/color`, and the colour landing was
+// deleted when Spectrum became `/`. `/create/color` is now a redirect
 // source itself, so leaving them would have rebuilt exactly the chain this
 // comment warns about — and the first hop would have landed on a URL the edge
 // answers with the noindex 404 shell. `/color` in the block above moved with
@@ -137,8 +136,13 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/help', '/learn/help'],
   // Not a retired page: /support never existed. It is a support link set outside
   // the repo (failed-payment emails), so it needs to land on the contact page.
-  // Vercel keeps the query string on a redirect, so a ?-tagged link survives.
-  ['/support', '/feedback'],
+  // `from=support` tells the form the visitor came for help; any query on the
+  // incoming link (reason, ref) is merged in, at the edge and by
+  // `mergeRedirectQuery` in the client router.
+  ['/support', '/feedback?from=support'],
+  // Another name people guess for the same place. `type=help` opens the form on
+  // Help request with the support copy.
+  ['/contact', '/feedback?type=help'],
   ['/resources', '/discover'],
   ['/discover/resources', '/discover'],
   ['/prompts', '/discover/prompts'],
@@ -163,8 +167,8 @@ export const RETIRED_ROUTES = Object.freeze([
 // argument that the colour landing was "the only Create category with a LANDING
 // rather than a redirect to its first tool (the other four homes bounce), so it
 // is the only page in the surface that introduces it instead of dropping the
-// visitor straight into a workbench". That argument died with the page: the
-// founder's 2026-09-18 decision deleted ColorLanding when Spectrum became `/`,
+// visitor straight into a workbench". That argument died with the page:
+// ColorLanding was deleted when Spectrum became `/`,
 // so all five category homes bounce now and there is nothing to introduce the
 // surface with. Leaving `/create` aimed at `/create/color` would have been a
 // 301 into a 301.
@@ -220,3 +224,26 @@ export const EARLY_RETURN_REDIRECTS = Object.freeze(['/welcome', '/color/ui'])
 export const CLIENT_REDIRECT_ROUTES = Object.freeze(
   LEGACY_REDIRECTS.filter(([from]) => !EARLY_RETURN_REDIRECTS.includes(from)),
 )
+
+/**
+ * The client router's version of what the edge does for a redirect with a
+ * query: the destination's own parameters plus whatever the visitor arrived
+ * with. A parameter the destination names keeps the destination's value; a
+ * `#fragment` on the destination is kept.
+ */
+export function mergeRedirectQuery(destination, incomingSearch = '') {
+  const hashAt = destination.indexOf('#')
+  const hash = hashAt === -1 ? '' : destination.slice(hashAt)
+  const noHash = hashAt === -1 ? destination : destination.slice(0, hashAt)
+  const queryAt = noHash.indexOf('?')
+  const pathname = queryAt === -1 ? noHash : noHash.slice(0, queryAt)
+  const merged = new URLSearchParams(queryAt === -1 ? '' : noHash.slice(queryAt + 1))
+  // Snapshot the destination's own keys first: checking the growing result
+  // would drop every repeat of an incoming key (?ref=a&ref=b keeping only a).
+  const ownKeys = new Set(merged.keys())
+  for (const [key, value] of new URLSearchParams(incomingSearch)) {
+    if (!ownKeys.has(key)) merged.append(key, value)
+  }
+  const query = merged.toString()
+  return `${pathname}${query ? `?${query}` : ''}${hash}`
+}

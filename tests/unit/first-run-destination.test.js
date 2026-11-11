@@ -40,13 +40,14 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // no longer describes the flow, and asserting one would just be pinning an
   // arithmetic fact. What B4 actually cared about is asserted instead, and more
   // strictly than before: EVERY navigate() in this file must be accounted for —
-  // the constant, a resume target the user themselves chose, or a first-win
-  // route. Anything else is a new exit that has not been thought about.
+  // the constant, a resume target the user themselves chose, a first-win
+  // route, or a stashed checkout in place of that route (someone who signed up
+  // from a Pro button). Anything else is a new exit that has not been thought about.
   // One level of nesting, so `navigate(takeResumeTarget() || X)` is captured
   // whole rather than truncated at the inner bracket.
   const navigations = src.match(/navigate\((?:[^()]|\([^()]*\))*\)/g) || []
   assert.ok(navigations.length > 0, 'onboarding must still leave somewhere')
-  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$/
+  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$|^navigate\(resume\)$|^navigate\(win\.route, win\.id === 'palette' \? \{ state: FIRST_PALETTE_STATE \} : undefined\)$/
   for (const nav of navigations) {
     assert.match(nav, allowed,
       `${nav} is an onboarding exit that does not go to the first-run destination or a chosen first win`)
@@ -56,7 +57,9 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // owns that guarantee and tests/unit/first-win.test.js checks it against
   // liveToolRoutes(); this asserts the page still takes them from there rather
   // than spelling a path of its own.
-  assert.match(src, /navigate\(win\.route\)/)
+  assert.match(src, /navigate\(win\.route[,)]/)
+  // A bare navigate(resume) is only ever the stashed checkout, never any other stashed page.
+  assert.match(src, /if \(isCheckoutTarget\(resume\)\) \{ navigate\(resume\); return \}/)
   assert.match(src, /FIRST_WINS\.map/)
 
   assert.ok(!/navigate\('\/home'\)/.test(src),
@@ -125,15 +128,17 @@ test('the projects empty state still teaches, since it is now the first thing se
   // page it replaced.
   //
   // On the design's workspace screen the empty card says
-  // "No projects yet", "Start with a colour and the rest of the project follows."
   // and offers "Start a project"; the tool it names is one tap away in the
   // "Start something" grid on the same page, the Palette Builder leading it.
   const src = read('src/pages/Projects.jsx')
-  assert.match(src, /No projects yet/)
-  assert.match(src, /Start with a colour and the rest of the project follows\./)
-  assert.match(src, /Start a project/)
-  assert.match(src, /<StartSomething \/>/, 'the workspace no longer mounts the tool grid')
-  const start = read('src/components/userhome/StartSomething.jsx')
-  assert.match(start, /to=\{toolRoute\('palette'\)\}/,
+  // The empty account gets the example kit titled "Start your first brand kit", whose pill runs startNew()
+  // (a function that takes no argument, so a click event is never passed in as one).
+  assert.match(src, /exampleKit\('empty'\)/)
+  assert.match(src, /onPill=\{startNew\}/, 'the empty sheet\'s pill no longer starts a project')
+  assert.match(src, /<Shelf /, 'the workspace no longer mounts the tools shelf')
+  const kit = read('src/components/dashboard/kit.js')
+  assert.match(kit, /title: 'Start your first brand kit'/)
+  // Each of the four parts links to the tool that makes it, the Palette Builder first.
+  assert.match(kit, /id: 'palette'[^\n]*tool: tool\.palette[^\n]*linkLabel: 'Open in Palette Builder'/,
     'the empty workspace should still lead with the tool that produces a project')
 })

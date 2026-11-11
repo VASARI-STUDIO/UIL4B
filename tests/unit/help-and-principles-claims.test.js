@@ -19,7 +19,7 @@ import { assertStripperWorks, read, stripComments } from './helpers/source-text.
 import { HELP_ANSWERS, HELP_ROUTES, HELP_STARTS, LIVE_TOOLS, SOON_TOOLS, STARTS_WITH_CONTENT } from '../../src/data/helpStart.js'
 import { DESIGN_PRINCIPLES, PRINCIPLE_ROUTES } from '../../src/data/designPrinciples.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
-import { EXPORT_FORMATS, freeFormats, proOnlyFormats, unbuiltFormats } from '../../src/config/exportFormats.js'
+import { documentFormats, freeFormats, proOnlyFormats, unbuiltFormats } from '../../src/config/exportFormats.js'
 import { CREATE_GROUPS, isListedTool } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
@@ -148,7 +148,7 @@ test('no surface copy names a tool that was retired', () => {
   }
 })
 
-/* ── the register the founder chose ──────────────────────────────────────── */
+/* ── the register ────────────────────────────────────────────────────────── */
 
 test('neither surface writes in the first person or in marketing register', () => {
   // The same rule the Learn guides are held to: neutral and factual, not a
@@ -301,7 +301,7 @@ test('the files the strip names are files the export panel can build', () => {
   // caption's "all N formats" is wrong.
   assert.equal(
     free.length + proOnlyFormats().length + unbuiltFormats().length,
-    EXPORT_FORMATS.length,
+    documentFormats().length,
     'the export proof drops or double-counts a format',
   )
 })
@@ -326,7 +326,7 @@ test('global.css defines the classes both pages render', () => {
     (CSS.match(/\{/g) || []).length, (CSS.match(/\}/g) || []).length,
     'global.css braces are unbalanced',
   )
-  for (const cls of ['.hlp-run', '.hlp-starts', '.hlp-answers', '.prn-list', '.prn-item', '.prn-cx-rows', '.prn-th-grid', '.prn-ty-rows', '.prn-ex-cols', '.prn-sn-figures']) {
+  for (const cls of ['.hlr-jobs', '.hlr-stage', '.hlr-strip', '.prn-list', '.prn-item', '.prn-cx-rows', '.prn-th-grid', '.prn-ty-rows', '.prn-ex-cols', '.prn-sn-figures']) {
     assert.ok(CSS.includes(`${cls}{`) || CSS.includes(`${cls},`) || CSS.includes(`${cls} `),
       `${cls} is rendered but has no rule`)
   }

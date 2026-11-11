@@ -47,9 +47,14 @@ const btn = (v) => `${SEG} [data-theme-choice="${v}"]`
 // `.theme-seg` in its panel, and at 390 the meatball hidden with the sheet's
 // `.pnav-sheet-theme .theme-seg` behind [aria-label="Open menu"].
 //
-// The front door's OWN copy of the control is not dropped — it is pinned by
-// 'the front door carries the control too' at the foot of this file.
+// The marketing bar on the sales pages carries no theme control at all, so the
+// front door is not one of the places this file drives; 96-spectrum-nav pins
+// that the bar has none.
 const NAV_ROUTE = '/discover'
+
+// A route that follows the visitor's choice. `/` and `/home` do not: they are
+// dark in both colour schemes, so a "follows the device" check cannot run there.
+const SCHEME_ROUTE = '/tools'
 
 const themeOf = (page) => page.evaluate(() => document.documentElement.getAttribute('data-theme'))
 const storedOf = (page) => page.evaluate(() => {
@@ -107,8 +112,25 @@ test.describe('the dark theme is reachable', () => {
   test('a visitor on a light device still gets light', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
-    await go(page, '/')
+    await go(page, SCHEME_ROUTE)
     expect(await themeOf(page)).toBe('light')
+    await ctx.close()
+  })
+
+  test('the homepage is dark on a light device, and stays dark once hydrated', async ({ browser }) => {
+    // `/` and `/home` are dark in both colour schemes: the boot script writes
+    // dark for them and the mounted page holds it there. A light device with
+    // nothing stored is the case that tells the two apart.
+    const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
+    const page = await ctx.newPage()
+    await go(page, '/')
+    expect(await themeOf(page), 'a light device was served the light theme on the homepage').toBe('dark')
+    await page.waitForTimeout(1200)
+    expect(await themeOf(page), 'hydration moved the homepage off dark').toBe('dark')
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(6, 6, 7)')
+    // Holding the homepage dark must not be stored as the visitor's own choice,
+    // or every other route would stay dark after they leave.
+    expect([null, 'system'], 'the homepage wrote an explicit theme choice').toContain(await storedOf(page))
     await ctx.close()
   })
 
@@ -194,7 +216,9 @@ await ready(page)
 
     const panel = page.locator('#set-accessibility')
     await expect(panel.locator(SEG)).toBeVisible()
-    await expect(panel.locator('[aria-label="Toggle reduced motion"]')).toBeVisible()
+    // A switch named by the words beside it (it was a pressed button whose
+    // aria-label said "Toggle reduced motion").
+    await expect(panel.getByRole('switch', { name: 'Reduced motion' })).toBeVisible()
 
     await panel.locator(btn('dark')).click()
     await expect.poll(() => themeOf(page), { message: '/settings could not switch the theme' }).toBe('dark')
@@ -216,15 +240,22 @@ await ready(page)
     }
   })
 
-  for (const [scheme, expected, bg] of [['dark', 'dark', 'rgb(6, 6, 7)'], ['light', 'light', 'rgb(245, 245, 242)']]) { // #F5F5F2, the App file's light page
-    test(`on a ${scheme} device the FIRST painted frame is already ${expected}`, async ({ browser }) => {
+  const DARK_BG = 'rgb(6, 6, 7)'
+  const LIGHT_BG = 'rgb(245, 245, 242)' // #F5F5F2, the App file's light page
+  for (const [scheme, route, expected, bg] of [
+    ['dark', SCHEME_ROUTE, 'dark', DARK_BG],
+    ['light', SCHEME_ROUTE, 'light', LIGHT_BG],
+    ['dark', '/', 'dark', DARK_BG],
+    ['light', '/', 'dark', DARK_BG], // the homepage ignores the device scheme
+  ]) {
+    test(`on a ${scheme} device the FIRST painted frame of ${route} is already ${expected}`, async ({ browser }) => {
       // The whole reason the theme is resolved in a synchronous boot script
       // rather than left to React. If the boot script and ThemeContext ever
       // disagree, this is where it shows up as a visible colour change.
       const ctx = await browser.newContext({ colorScheme: scheme, viewport: { width: 1280, height: 900 } })
       await ctx.addInitScript(PRE_PAINT_PROBE)
       const page = await ctx.newPage()
-      await go(page, '/')
+      await go(page, route)
       // Long enough for hydration to have had every chance to disagree.
       await page.waitForTimeout(1200)
 
@@ -259,39 +290,6 @@ await ready(page)
       try { return Object.keys(localStorage) } catch { return ['THREW'] }
     })
     expect(keys, `localStorage holds ${JSON.stringify(keys)}`).not.toContain('vs-t-lightreset')
-    await ctx.close()
-  })
-
-  // THE FRONT DOOR'S OWN COPY, and it is here so re-pointing the four tests
-  // above onto /discover does not quietly drop the page every visitor lands on.
-  //
-  // `/` is SpectrumNav, the design's marketing pill, and its menu is the
-  // design's four items and nothing else — the
-  // three-way segment is no longer in it. The control on the front door is the
-  // one the design draws: the theme cycle on the pill (line 230), light → dark
-  // → system → light. What this file exists to say — a visitor can reach the
-  // dark theme from where they are, and it sticks — is said about that.
-  test('the front door carries the control too, as the pill\'s theme cycle', async ({ browser }) => {
-    const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
-    const page = await ctx.newPage()
-    await go(page, '/')
-    expect(await themeOf(page)).toBe('light')
-
-    // Not the segment: that lives in the app's popover, sheet and /settings.
-    expect(await visibleSegments(page), 'the segmented control is not part of the marketing pill').toBe(0)
-
-    // From System (the fresh-profile default), the cycle's next stop is Light,
-    // then Dark. Its label is the design's, "Theme: auto. Switch to light.".
-    const cycle = page.locator('.spnav-bar .spnav-icon[aria-label^="Theme:"]')
-    await expect(cycle).toBeVisible()
-    for (let i = 0; i < 3 && (await themeOf(page)) !== 'dark'; i++) await cycle.click()
-    await expect.poll(() => themeOf(page), { message: 'the front door could not switch the theme' }).toBe('dark')
-
-    // Persistence, for the same reason as every other case here: a fabricated
-    // write looks identical until the next visit.
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await ready(page)
-    expect(await themeOf(page), 'the chosen theme did not survive a reload').toBe('dark')
     await ctx.close()
   })
 })

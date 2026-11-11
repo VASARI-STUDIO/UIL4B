@@ -1,4 +1,11 @@
-/** Land after the route's scroll reset, allowing lazy content up to two seconds. */
+/** Re-measure the page for Lenis so its scroll limit matches the layout that just mounted. */
+export function refreshScrollLimit(getScroller) {
+  getScroller()?.resize()
+}
+
+/** Land after the route's scroll reset, allowing lazy content up to two seconds.
+ *  Does nothing while the homepage's stand-ins are on the page: their sections
+ *  push the target down as they arrive, so usePageAnchors lands the hash once. */
 export function landOnHash(hash, getScroller, onlyIfNeeded = false) {
   if (!hash) return () => {}
   let id
@@ -7,6 +14,7 @@ export function landOnHash(hash, getScroller, onlyIfNeeded = false) {
   const deadline = performance.now() + 2000
   let raf
   const land = () => {
+    if (document.querySelector('[data-deferred-hold]')) return
     const el = document.getElementById(id)
     if (el) {
       const lenis = getScroller()

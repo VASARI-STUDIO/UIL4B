@@ -17,8 +17,7 @@
    ── THE ACCENT IS NEVER A HEX HERE ──────────────────────────────────────────
    Every accent surface reads --accent or its derived family, so a theme
    template that moves --accent moves this page. The fixed colours that remain
-   are neutrals, the window dots, and the paper of the exported UI kit drawn in
-   the second exports card (a picture of a document, not a product colour).   */
+   are neutrals.   */
 
 .spectrum {
   --sp-page: var(--bg-0);
@@ -29,7 +28,7 @@
   --sp-shade-rgb: 0, 0, 0;
   --sp-shade-a: 1;
   --sp-dim-a: .62;
-  --sp-faint-a: .55;
+  --sp-faint-a: .62;
   --sp-ink-hover: #D5D4CE;
 
   /* Derived, and the names the footer (SpectrumFooter.jsx) reads. */
@@ -43,11 +42,22 @@
   --sp-wash-2: rgba(var(--sp-ink-rgb), .06);
   --sp-link: var(--link, var(--accent-text));
 
-  --sp-gutter: clamp(20px, 4vw, 52px);
+  /* Every section's side gutter clears a landscape notch, like --page-inline. */
+  --sp-gutter: max(clamp(20px, 4vw, 52px), env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
   --sp-shell: 1400px;
   --sp-sec: clamp(80px, 11vw, 152px);
   --sp-ease: cubic-bezier(.23, 1, .32, 1);
   --sp-ease-out: cubic-bezier(.16, 1, .3, 1);
+  /* The page's motion values, each with one source. An enter rises --sp-rise
+     and fades over --sp-t-in; a leave is the shorter --sp-t-out; a small
+     switch is --sp-t-ui. --sp-t-sig is the one signature (a band bar being set)
+     and --sp-t-sig-s its phone length. */
+  --sp-t-in: 240ms;
+  --sp-t-out: 150ms;
+  --sp-t-ui: var(--dur-2);
+  --sp-t-sig: var(--dur-5);
+  --sp-t-sig-s: var(--dur-4);
+  --sp-rise: 8px;
 
   position: relative;
   background: var(--sp-page);
@@ -59,8 +69,7 @@
   -webkit-font-smoothing: antialiased;
   text-wrap: pretty;
   /* `clip`, not `hidden`: `hidden` on an ancestor turns every descendant
-     `position:sticky` into a no-op, and this page has two sticky systems (the
-     bench rail and the exports stack). */
+     `position:sticky` into a no-op, and the homepage sections pin with sticky. */
   overflow-x: clip;
 }
 [data-theme="light"] .spectrum {
@@ -93,8 +102,8 @@
 .spectrum [id] { scroll-margin-top: 104px; }
 .spectrum ::selection { background: var(--accent); color: var(--accent-ink); }
 .spectrum :is(button, input) { font-variant-numeric: tabular-nums; }
-.spectrum button:not(.sp-cta):not(.sp-pill):not(.hcmd-kbd) { transition: transform .14s var(--sp-ease), background .16s ease, color .16s ease, border-color .16s ease; }
-.spectrum button:not(.sp-cta):not(.sp-pill):active { transform: scale(.97); }
+.spectrum button:not(.sp-pill):not(.hcmd-kbd):not(.hsc-tab):not(.hsc-open) { transition: transform .14s var(--sp-ease), background .16s ease, color .16s ease, border-color .16s ease; }
+.spectrum button:not(.sp-pill):not(.hsc-tab):not(.hsc-open):active { transform: scale(.97); }
 
 /* The film grain: the design's own layer, fixed at 5%, under the nav. */
 .sp-grain {
@@ -112,21 +121,6 @@
 @supports selector(:has(*)) {
   .spectrum:has(> .sp-footer[data-curtain]) > main { background: var(--sp-page); }
 }
-
-.sp-shell { max-width: var(--sp-shell); margin-inline: auto; padding-inline: var(--sp-gutter); }
-.sp-section { max-width: var(--sp-shell); margin: 0 auto; padding: var(--sp-sec) var(--sp-gutter) 0; }
-
-/* The design's shared section heading (bench, discover). */
-.sp-h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: clamp(34px, 5vw, 68px);
-  line-height: .98;
-  letter-spacing: -.035em;
-  max-width: min(24ch, 100%);
-}
-.sp-lede { margin: 18px 0 0; max-width: min(52ch, 100%); font-size: 16px; line-height: 1.6; color: var(--sp-dim); }
 
 /* ── the word reveal ──────────────────────────────────────────────────────────
    RESTING STATE IS VISIBLE. `.sp-w` carries no transform; the movement is a
@@ -153,6 +147,16 @@
 .is-in .sp-w {
   animation: sp-word-up 1s var(--sp-ease-out) both;
   animation-delay: calc(var(--sp-wi, 0) * var(--fl-stagger));
+}
+/* A section heading is read as you arrive at it, so its rise is shorter than the
+   hero's and its stagger is capped (the longest heading ends in 840ms). It does
+   not run at 1000px and below, where a reveal only makes a reader wait. */
+.sp-close .is-in .sp-w {
+  animation-duration: var(--sp-t-sig);
+  animation-delay: calc(min(var(--sp-wi, 0), 8) * 40ms);
+}
+@media (max-width: 1000px) {
+  .spectrum :is(.sp-section, .sp-close) .is-in .sp-w { animation: none; }
 }
 
 /* ── the pill buttons ─────────────────────────────────────────────────────────
@@ -187,13 +191,11 @@
   border-radius: 999px;
   background: rgba(var(--sp-page-rgb), .1);
   font-size: 12px;
-  transition: transform .16s var(--sp-ease);
+  transition: transform 320ms cubic-bezier(.25,1,.5,1);
 }
 @media (hover: hover) and (pointer: fine) {
-  .sp-pill:hover .sp-pill-icon, .sp-disc-cta:hover .sp-pill-icon { transform: rotate(45deg); }
+  .sp-pill:hover .sp-pill-icon { transform: rotate(45deg); }
 }
-.sp-pill--hero { gap: 11px; padding: 8px 9px 8px 20px; font-size: 15px; }
-.sp-pill--hero .sp-pill-icon { width: 28px; height: 28px; font-size: 13px; }
 .sp-pill--close { gap: 11px; padding: 12px 13px 12px 24px; font-size: 15.5px; }
 .sp-pill--close .sp-pill-icon { width: 30px; height: 30px; font-size: 13px; }
 
@@ -214,8 +216,6 @@
 @media (hover: hover) and (pointer: fine) {
   .sp-ghost:hover { background: rgba(var(--sp-ink-rgb), .055); border-color: rgba(var(--sp-ink-rgb), .24); color: rgba(var(--sp-ink-rgb), .86); text-decoration: none; }
 }
-.sp-ghost--hero { gap: 9px; padding: 8px 20px; border-color: rgba(var(--sp-ink-rgb), .16); color: var(--sp-ink); font-size: 15px; font-weight: 500; }
-.sp-ghost--hero:hover { background: rgba(var(--sp-ink-rgb), .05); border-color: rgba(var(--sp-ink-rgb), .3); color: var(--sp-ink); }
 .sp-ghost--close { padding: 14px 22px; border-color: rgba(var(--sp-ink-rgb), .14); color: rgba(var(--sp-ink-rgb), .88); font-size: 15px; }
 
 /* One Phosphor glyph: 1em square, so `font-size` sizes it as the design's
@@ -225,7 +225,6 @@
 /* ── the spectrum band ────────────────────────────────────────────────────── */
 
 .sp-ramp { position: relative; display: flex; flex-direction: column; width: 100%; }
-.sp-ramp--hero { margin-top: clamp(48px, 6vw, 84px); }
 
 .sp-ramp-bars {
   display: flex;
@@ -234,21 +233,37 @@
   gap: 2px;
   height: clamp(120px, 15vw, 200px);
 }
-.sp-ramp--hero .sp-ramp-bars { height: clamp(140px, 18vw, 232px); padding: 0 2px; }
 
+@property --sp-lift { syntax: '<number>'; inherits: false; initial-value: 1; }
 .sp-ramp-bar {
   flex: 1 1 0;
   min-width: 0;
   height: var(--sp-bar-h, 60%);
-  transform-origin: bottom;
-  background: hsl(calc(var(--sp-h, 8deg) + var(--sp-spin, 0deg)) var(--sp-s, 58%) var(--sp-l, 56%));
-  transition: transform .24s var(--sp-ease), filter .2s ease;
+  --sp-c: hsl(calc(var(--sp-h, 8deg) + var(--sp-spin, 0deg)) var(--sp-s, 58%) var(--sp-l, 56%));
+  background: var(--sp-c);
+  transition: height var(--dur-2) var(--sp-ease), filter var(--dur-2) var(--sp-ease);
 }
 /* The design lays the bars out in whole pixels (floor of the share, spread
    with space-between). SpectrumRamp writes that width once per resize. */
 .sp-ramp[style*="--sp-bar-w"] .sp-ramp-bar { flex: 0 0 auto; width: var(--sp-bar-w, auto); }
+/* A hovered bar grows by its HEIGHT and lifts by brightness(1.08), written as
+   the same per-channel multiply on its colour (--sp-lift), so it stays in
+   ordinary paint. A transform, a `filter` or an animated colour each give the
+   bar its own compositor layer or render surface while it runs, and that layer
+   snaps the bar's edges to the device-pixel grid differently from the paint
+   around it: the bar's edge and the gap beside it then jump a pixel mid-hover.
+   The strip has a fixed height and the bars sit on its floor (align-items:
+   flex-end), so a taller bar grows upward and moves nothing else. `filter`
+   stays as the fallback where relative colours are missing. */
 @media (hover: hover) and (pointer: fine) {
-  .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar:hover { transform: scale3d(1, 1.07, 1); filter: brightness(1.08); }
+  .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar:hover { height: calc(var(--sp-bar-h, 60%) * 1.07); filter: brightness(1.08); }
+  @supports (color: rgb(from red r g b)) {
+    .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar {
+      background: rgb(from var(--sp-c) calc(r * var(--sp-lift)) calc(g * var(--sp-lift)) calc(b * var(--sp-lift)));
+      transition: height var(--dur-2) var(--sp-ease), --sp-lift var(--dur-2) var(--sp-ease);
+    }
+    .sp-ramp-bars:not(.sp-ramp-bars--mirror) .sp-ramp-bar:hover { --sp-lift: 1.08; filter: none; }
+  }
 }
 
 .sp-ramp-mirror {
@@ -268,29 +283,22 @@
     rgba(var(--sp-page-rgb), 1) 100%);
 }
 
-/* ── hero ─────────────────────────────────────────────────────────────────── */
-
-/* The design's nav spacer (clamp(14px,2vw,26px) + 50px) plus the section's own
-   clamp(34px,5vw,72px). */
-.sp-hero { padding-top: calc(clamp(14px, 2vw, 26px) + 50px + clamp(34px, 5vw, 72px)); text-align: center; }
-.sp-hero-h1 {
-  margin: 0 auto;
-  max-width: min(26ch, 100%);
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(40px, 6.6vw, 98px);
-  line-height: .96;
-  letter-spacing: -.045em;
+@keyframes sp-bar-set {
+  from { transform: scaleY(.12); }
 }
-.sp-hero-sub {
-  margin: 28px auto 0;
-  max-width: min(62ch, 100%);
-  font-size: clamp(16.5px, 1.5vw, 19px);
-  line-height: 1.6;
-  color: var(--sp-dim);
+.sp-ramp--arrive .sp-ramp-bar {
+  transform-origin: 50% 100%;
+  animation: sp-bar-set var(--sp-t-sig) var(--sp-ease-out) backwards;
+  animation-delay: calc(var(--sp-arrive-at, 0ms) + var(--sp-i, 0) * 14ms);
 }
-.sp-hero-bar { position: relative; margin: clamp(30px, 4vw, 44px) auto 0; max-width: 660px; text-align: left; }
-.sp-hero-cta { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin-top: 18px; }
+/* The reflection grows down from the same baseline, in step. */
+.sp-ramp--arrive .sp-ramp-bars--mirror .sp-ramp-bar { transform-origin: 50% 0%; }
+@media (max-width: 1000px) {
+  .sp-ramp--arrive .sp-ramp-bar {
+    animation-duration: var(--sp-t-sig-s);
+    animation-delay: calc(var(--sp-arrive-at, 0ms) + var(--sp-i, 0) * 10ms);
+  }
+}
 
 /* THE SEARCH BAR — HomeCommandBar, wrapped. Its behaviour (the tool index,
    keyboard, results) is untouched; this restyles it into the design's pill:
@@ -323,7 +331,7 @@
   background: rgba(var(--sp-ink-rgb), .07);
   min-height: 25px;
 }
-.sp-search .hcmd-kbd kbd { font-family: var(--mono); font-size: 10px; font-weight: 400; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
+.sp-search .hcmd-kbd kbd { font-family: var(--mono); font-size: 10px; font-weight: 400; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
 .sp-search-ghost {
   position: absolute;
   left: 46px;
@@ -350,784 +358,43 @@
   .sp-search .hcmd-bar { grid-template-columns: auto minmax(0, 1fr) auto; padding-right: 24px; }
   .sp-search .hcmd-kbd { display: inline-flex; }
 }
-
-/* ── the bench ────────────────────────────────────────────────────────────── */
-
-.sp-bench-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
-  gap: clamp(28px, 4vw, 72px);
-  align-items: start;
+/* A touch screen has no ⌘K. */
+@media (hover: none) and (pointer: coarse) {
+  .sp-search .hcmd-kbd { display: none; }
 }
-.sp-bench-col { position: sticky; top: clamp(96px, 12vh, 128px); min-width: 0; }
-.sp-bench-col .sp-h2 { margin-top: 18px; }
-.sp-bench-lede { margin: 20px 0 0; max-width: min(52ch, 100%); font-size: 16px; line-height: 1.62; color: var(--sp-dim); }
-.sp-rail { display: grid; gap: 1px; list-style: none; margin: clamp(26px, 3vw, 40px) 0 0; padding: 0; }
-.sp-rail-row {
-  width: 100%;
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  padding: 14px 16px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
-  font-family: var(--font);
-  font-size: 15.5px;
-  text-align: left;
-  cursor: pointer;
-}
-.spectrum .sp-rail-row { transition: none; }
-.sp-rail-row.is-on { background: rgba(var(--sp-ink-rgb), .07); color: var(--sp-ink); }
-.sp-rail-no { font-size: 10px; letter-spacing: .1em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-rail-row.is-on .sp-rail-no, .sp-rail-row.is-on .sp-rail-mark { color: var(--accent-text); }
-.sp-rail-label { flex: 1; min-width: 0; }
-.sp-rail-mark { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-
-.sp-steps { display: grid; gap: 0; min-width: 0; }
-.sp-step { min-width: 0; min-height: 100dvh; display: flex; align-items: center; scroll-snap-align: center; }
-
-.sp-panel {
-  position: relative;
-  overflow: hidden;
-  min-width: 0;
-  width: 100%;
-  height: 700px;
-  border-radius: 20px;
-  background: var(--sp-card);
-  border: 1px solid rgba(var(--sp-ink-rgb), .12);
-  box-shadow:
-    inset 0 1px 0 rgba(var(--sp-ink-rgb), .06),
-    0 2px 4px -2px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .45)),
-    0 18px 36px -20px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .7)),
-    0 44px 80px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
-  transform-origin: 50% 50%;
-}
-.sp-panel-in { height: 100%; display: flex; flex-direction: column; }
-.sp-panel-bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 46px;
-  padding: 0 clamp(12px, 1.6vw, 16px);
-  background: linear-gradient(180deg, rgba(var(--sp-ink-rgb), .065), rgba(var(--sp-ink-rgb), .03));
-  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
-  box-shadow: inset 0 1px 0 rgba(var(--sp-ink-rgb), .07);
-}
-.sp-panel-title { display: flex; align-items: center; gap: 13px; min-width: 0; }
-.sp-panel-lights { display: flex; gap: 6px; flex: 0 0 auto; }
-.sp-panel-lights i { width: 11px; height: 11px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
-.sp-panel-lights i:nth-child(1) { background: #ED6A5E; }
-.sp-panel-lights i:nth-child(2) { background: #F4BF4F; }
-.sp-panel-lights i:nth-child(3) { background: #61C554; }
-.sp-panel-rule { width: 1px; height: 15px; background: rgba(var(--sp-ink-rgb), .14); flex: 0 0 auto; }
-.sp-panel-no { font-size: 10px; letter-spacing: .14em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-panel-name { font-size: 14px; font-weight: 540; color: var(--sp-ink); white-space: nowrap; }
-.sp-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.sp-panel-body--pad { gap: 12px; padding: clamp(15px, 2vw, 22px); overflow: auto; }
-.sp-panel .sp-panel-body * { scrollbar-width: thin; scrollbar-color: rgba(var(--sp-ink-rgb), .18) transparent; }
-.sp-panel-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.sp-panel-foot > span { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* The underline tab: every text tab in the four windows. */
-.sp-utab {
-  padding: 8px 0;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: rgba(var(--sp-ink-rgb), var(--sp-faint-a));
-  font-family: var(--font);
-  font-size: 10.5px;
-  letter-spacing: .1em;
-  white-space: nowrap;
-  cursor: pointer;
-  /* 25px floors, not the design's text-width boxes: WCAG 2.2's 24px target
-     minimum, with a pixel spare for the bench windows' depth scale (.978). */
-  min-width: 25px;
-  min-height: 25px;
-}
-.spectrum .sp-utab { transition: color .18s ease; }
-.sp-utab[aria-pressed="true"] { border-bottom-color: var(--sp-ink); color: var(--sp-ink); }
-.sp-label { font-size: 9.5px; letter-spacing: .16em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
-
-/* 01 · Palette builder */
-.sp-shuffle { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); background: var(--sp-card); color: rgba(var(--sp-ink-rgb), .84); font-family: var(--font); font-size: 12.5px; cursor: pointer; }
-.sp-shuffle .sp-ph { font-size: 14px; }
-@media (hover: hover) and (pointer: fine) { .sp-shuffle:hover { background: rgba(var(--sp-ink-rgb), .06); } }
-.sp-pal-strip {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: clamp(10px, 1.6vw, 18px);
-  flex-wrap: wrap;
-  margin: calc(clamp(15px, 2vw, 22px) * -1) calc(clamp(15px, 2vw, 22px) * -1) 0;
-  padding: 10px clamp(14px, 1.8vw, 20px);
-  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
-}
-.sp-pal-seedwrap { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; }
-.sp-seeds { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); }
-.sp-seed { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 8px; display: grid; place-items: center; cursor: pointer; font-size: 11px; }
-.sp-seed-name { display: grid; gap: 1px; min-width: 0; }
-.sp-seed-name b { font-size: 13px; font-weight: 560; color: var(--sp-ink); white-space: nowrap; }
-.sp-seed-name small { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
-.sp-seg { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .06); border: 1px solid rgba(var(--sp-ink-rgb), .08); overflow-x: auto; scrollbar-width: none; min-width: 0; max-width: 100%; }
-.sp-seg button { padding: 7px 13px; border: 0; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; font-weight: 440; cursor: pointer; white-space: nowrap; }
-.sp-seg button[aria-pressed="true"] { background: var(--sp-card); color: var(--sp-ink); font-weight: 560; }
-.sp-roles { flex: 1; min-height: 210px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border-radius: 12px; overflow: hidden; background: rgba(var(--sp-ink-rgb), .1); }
-.sp-role {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 76px;
-  padding: 13px 15px;
-  border: 0;
-  border-radius: 0;
-  box-shadow: inset 0 0 0 1px rgba(var(--sp-ink-rgb), .06);
-  cursor: pointer;
-  text-align: left;
-}
-.spectrum .sp-role { transition: filter .18s ease; }
-@media (hover: hover) and (pointer: fine) { .sp-role:hover { filter: brightness(1.08); } }
-.spectrum .sp-role:active { transform: scale(.986); }
-.sp-role-name { font-size: 9.5px; letter-spacing: .18em; opacity: .85; }
-.sp-role-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; }
-.sp-role-val { font-size: 13px; letter-spacing: .02em; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-role-aa { font-size: 9.5px; letter-spacing: .14em; opacity: .85; }
-.sp-prev { flex: none; border-radius: 12px; padding: 15px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.sp-prev-say { display: grid; gap: 3px; min-width: 0; }
-.sp-prev-say small { font-size: 9px; letter-spacing: .18em; opacity: .7; }
-.sp-prev-say b { font-size: 15px; font-weight: 560; }
-.sp-prev-btn { display: inline-flex; align-items: center; padding: 9px 17px; border-radius: 999px; font-size: 13px; font-weight: 540; }
-.sp-copyas { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
-.sp-copyas > div { display: flex; flex-wrap: wrap; gap: 16px; }
-
-/* 02 · Icon library */
-.sp-ico-strip { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); flex-wrap: wrap; padding: 0 clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); }
-.sp-find { flex: 1 1 180px; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 12px 0; }
-.sp-find .sp-ph { font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-find input { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 14px; box-shadow: none; }
-.sp-find input::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
-.sp-find:focus-within { box-shadow: inset 0 -2px 0 var(--sp-link); }
-.sp-find input:focus { box-shadow: none; }
-.sp-find input:focus-visible { outline-color: transparent; }
-.sp-tabs-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.sp-tabs-row .sp-utab { padding: 13px 0; font-size: 12.5px; letter-spacing: 0; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-tabs-row .sp-utab[aria-pressed="true"] { color: var(--sp-ink); font-weight: 560; }
-.sp-icogrid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); grid-auto-rows: minmax(76px, 1fr); align-content: stretch; gap: 8px; padding: 14px clamp(14px, 1.8vw, 20px); }
-.sp-ico { display: grid; place-items: center; min-height: 0; padding: 8px; border: 1px solid rgba(var(--sp-ink-rgb), .1); border-radius: 12px; background: transparent; color: rgba(var(--sp-ink-rgb), .74); cursor: pointer; }
-.spectrum .sp-ico { transition: background .16s ease; }
-@media (hover: hover) and (pointer: fine) { .sp-ico:not([aria-pressed="true"]):hover { background: rgba(var(--sp-ink-rgb), .06); } }
-.sp-ico[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.sp-ico-detail { flex: 0 0 auto; display: flex; align-items: center; gap: clamp(14px, 2vw, 22px); padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
-.sp-ico-big { flex: 0 0 auto; width: 96px; height: 96px; display: grid; place-items: center; border-radius: 16px; background: rgba(var(--sp-ink-rgb), .05); border: 1px solid rgba(var(--sp-ink-rgb), .09); font-size: 52px; color: var(--sp-ink); }
-.sp-ico-meta { flex: 1; min-width: 0; display: grid; gap: 12px; }
-.sp-ico-meta b { font-size: 15px; font-weight: 540; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ico-opts { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; }
-.sp-ico-opts .sp-utab { padding: 4px 0; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-ico-opts .sp-utab[aria-pressed="true"] { color: var(--sp-ink); }
-.sp-ico-opts .sp-panel-rule { height: 14px; }
-.sp-ico-foot { flex: none; display: flex; align-items: center; gap: clamp(14px, 2vw, 26px); flex-wrap: wrap; padding: 14px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
-.sp-ico-foot > i { flex: 1 1 40px; min-width: 0; }
-.sp-copybtn { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; height: 41px; padding: 0 10px 0 16px; color: rgba(var(--sp-ink-rgb), .88); }
-.sp-copybtn .sp-pill-icon { background: rgba(var(--sp-ink-rgb), .08); }
-
-/* 03 · Font gallery */
-.sp-font-strip { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 24px); flex-wrap: wrap; padding: 10px clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); }
-.sp-font-strip .sp-find { flex: 1 1 200px; padding: 9px 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .14); }
-.sp-font-cats { display: flex; gap: 16px; flex: 0 0 auto; }
-.sp-font-cats .sp-utab { padding: 9px 0; font-size: 13px; letter-spacing: 0; }
-.sp-font-cats .sp-utab[aria-pressed="true"] { font-weight: 560; }
-.sp-font-ctl { flex: none; display: flex; align-items: center; gap: clamp(12px, 2vw, 22px); flex-wrap: wrap; padding: 9px clamp(14px, 1.8vw, 20px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1); background: rgba(var(--sp-ink-rgb), .022); }
-.sp-font-ctl label { display: flex; align-items: center; gap: 11px; }
-.sp-font-ctl label:first-child { flex: 1 1 200px; min-width: 0; }
-.sp-font-ctl label:last-child { flex: 0 1 200px; min-width: 150px; }
-.sp-font-ctl input[type="text"] { flex: 1; min-width: 0; border: 0; padding: 0; border-radius: 0; background: transparent; color: var(--sp-ink); font-family: inherit; font-size: 13.5px; box-shadow: none; }
-.sp-font-ctl input[type="text"]::placeholder { color: rgba(var(--sp-ink-rgb), .5); }
-.sp-font-ctl output { font-size: 11px; color: var(--sp-ink); white-space: nowrap; min-width: 38px; text-align: right; }
-.sp-fontlist { flex: 1; min-height: 0; overflow: auto; }
-.sp-fontrow { width: 100%; display: grid; gap: 12px; padding: clamp(16px, 2vw, 22px) clamp(14px, 1.8vw, 20px); border: 0; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08); background: transparent; cursor: pointer; text-align: left; color: var(--sp-ink); }
-.spectrum .sp-fontrow { transition: background .18s ease; }
-.spectrum .sp-fontrow:active { transform: none; }
-@media (hover: hover) and (pointer: fine) { .sp-fontrow:hover { background: rgba(var(--sp-ink-rgb), .04); } }
-.sp-fontrow-top { display: flex; align-items: flex-start; gap: 14px; min-width: 0; }
-.sp-fontrow-no { font-size: 10px; letter-spacing: .1em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); padding-top: .5em; flex: 0 0 auto; }
-.sp-fontrow-main { flex: 1; min-width: 0; display: grid; gap: 10px; }
-.sp-fontrow-name { line-height: 1.24; padding-bottom: .06em; letter-spacing: -.02em; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-fontrow-sample { font-size: 15px; line-height: 1.45; color: rgba(var(--sp-ink-rgb), .82); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-fontrow-w { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; font-size: 18px; }
-.sp-fontrow-w span:first-child { font-weight: 400; color: rgba(var(--sp-ink-rgb), .78); }
-.sp-fontrow-w span:last-child { font-weight: 600; color: var(--sp-ink); }
-.sp-fontrow-add { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .14); display: grid; place-items: center; font-size: 12px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-fontrow[aria-pressed="true"] .sp-fontrow-add { border-color: var(--sp-ink); background: var(--sp-ink); color: var(--sp-page); }
-.sp-fontrow-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 10px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-font-foot { flex: none; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px clamp(14px, 1.8vw, 20px); border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
-.sp-font-pair { display: flex; align-items: baseline; gap: 9px; min-width: 0; flex: 1 1 180px; }
-.sp-font-pair small { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
-.sp-font-pair b { font-weight: 400; font-size: 18px; line-height: 1.2; color: var(--sp-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-font-foot > span:last-child { display: flex; gap: 8px; flex: 0 0 auto; }
-
-/* The range slider, as the design draws it inside a panel. */
-.sp-panel input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; width: 100%; height: 16px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; accent-color: var(--accent); }
-.sp-panel input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .2); }
-.sp-panel input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; margin-top: -6px; width: 16px; height: 16px; border-radius: 999px; background: var(--sp-page); border: 2px solid var(--sp-ink); box-shadow: 0 1px 3px rgba(var(--sp-shade-rgb), .35); cursor: pointer; }
-.sp-panel input[type="range"]::-moz-range-track { height: 4px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .2); }
-.sp-panel input[type="range"]::-moz-range-progress { height: 4px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .55); }
-.sp-panel input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 999px; background: var(--sp-page); border: 2px solid var(--sp-ink); cursor: pointer; }
-
-/* 04 · File converter
-   The panel body is a size container, so the tab row follows the panel's own
-   width (the bench's two-column band narrows it at desktop widths too). */
-.sp-cv { container: sp-cv / inline-size; }
-.sp-modes {
-  flex: none;
-  display: flex;
-  gap: 0;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  margin: calc(clamp(15px, 2vw, 22px) * -1) calc(clamp(15px, 2vw, 22px) * -1) 0;
-  padding: 0 clamp(14px, 1.8vw, 20px);
-  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .1);
-}
-.sp-modes .sp-utab { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 0; margin-right: 18px; flex: 0 0 auto; font-size: 13px; letter-spacing: 0; }
-.sp-modes .sp-utab[aria-selected="true"] { border-bottom-color: var(--sp-ink); color: var(--sp-ink); font-weight: 560; }
-.sp-modes .sp-ph { font-size: 14px; }
-/* The row clips its overflow and each tab fills its height, so the ring is
-   drawn inside the tab rather than outside it. */
-.spectrum .sp-modes .sp-utab:focus-visible { outline-offset: -2px; }
-.sp-mode-short { display: none; }
-/* Too narrow for four full labels: four equal columns, short text labels. */
-@container sp-cv (max-width: 479px) {
-  .sp-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
-  .sp-modes .sp-utab { min-width: 0; min-height: 48px; margin-right: 0; padding: 0 2px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
-  .sp-modes .sp-utab[aria-selected="true"] { font-weight: 600; }
-  .sp-modes .sp-utab > .sp-ph, .sp-modes .sp-utab > span[aria-hidden="true"]:empty, .sp-mode-long { display: none; }
-  .sp-mode-short { display: inline; }
-}
-
-.sp-cv-panes { flex: 1; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
-.sp-cv-pane { grid-area: 1 / 1; min-height: 0; visibility: hidden; }
-.sp-cv-pane.is-on { visibility: visible; }
-.sp-conv, .sp-model { display: flex; flex-direction: column; gap: 12px; }
-
-/* The stage is the file control: the image takes the drop, and its overlay is
-   a picture of the hidden input it labels. */
-.sp-art { cursor: pointer; isolation: isolate; }
-.sp-art input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.sp-art-over {
-  position: absolute; inset: auto 10px 10px 10px; z-index: 1;
-  display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 14px; border-radius: 999px;
-  background: rgba(var(--shade-rgb), .72); color: var(--accent-paper);
-  opacity: 0; transform: translateY(4px); pointer-events: none;
-  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
-}
-.sp-art-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-art-btn { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--accent-paper); color: var(--accent-deep); font-size: 12px; white-space: nowrap; }
-.sp-art-btn .sp-ph { font-size: 13px; }
-@media (hover: hover) and (pointer: fine) {
-  .sp-art:hover .sp-art-over { opacity: 1; transform: none; }
-}
-.sp-art:focus-within .sp-art-over, .sp-art.is-drag .sp-art-over { opacity: 1; transform: none; }
-.sp-art:has(input:focus-visible) { outline: 2px solid var(--sp-link); outline-offset: 2px; }
-.sp-art.is-drag { outline: 2px dashed var(--accent); outline-offset: 2px; }
-/* No fine hover pointer (phones, tablets): the button stays on the image as a
-   44px pill in the bottom corner, and only the pill opens the picker, so a
-   scroll that ends on the photo never does. */
-@media not ((hover: hover) and (pointer: fine)) {
-  .sp-art { pointer-events: none; }
-  .sp-art-over { inset: auto 10px 10px auto; padding: 0; background: none; opacity: 1; transform: none; }
-  .sp-art-name { display: none; }
-  .sp-art-btn {
-    pointer-events: auto; min-height: 44px; padding: 0 16px; font-size: 13px; font-weight: 560;
-    background: rgba(var(--shade-rgb), .72); color: var(--accent-paper);
-    border: 1px solid color-mix(in srgb, var(--accent-paper) 18%, transparent);
-  }
-}
-
-.sp-conv-art { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); background: var(--sp-page); }
-.sp-conv-art img, .sp-conv-art > span[role="img"] { display: block; width: 100%; height: 100%; object-fit: cover; background-size: cover; background-position: center; }
-
-/* The saving: the one percentage, and the panel's focal figure. */
-.sp-saving { display: flex; align-items: baseline; gap: 8px; margin: 0; min-height: 1em; font-size: 2.25rem; line-height: 1; }
-/* 2.05em holds "92%" at any size, so the word beside it does not move when the
-   first measurement lands. */
-.sp-saving-num { min-width: 2.05em; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--accent-text); }
-.sp-saving-num.is-plain, .sp-saving-num.is-noloss { color: var(--sp-ink); }
-.sp-saving-num.is-wait { color: var(--sp-faint); }
-.sp-saving-word { font-size: .9375rem; font-weight: 500; letter-spacing: 0; color: var(--sp-ink); }
-/* The figure and its words stay on one line, so the line's height never depends on
-   the format; the words are what gives way (ellipsis) in a narrow panel. */
-.sp-saving-num { flex: none; white-space: nowrap; }
-.sp-saving-num + .sp-saving-word { min-width: 0; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* minmax(0, 1fr) + min-width:0 stop a long picked filename widening the grid: the
-   row's min-content would otherwise be the full name, so it overflowed, not ellipsised. */
-.sp-bars { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; min-width: 0; }
-.sp-bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
-.sp-bar-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.sp-bar-row small { flex: none; font-size: 10px; letter-spacing: .12em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 11.5px; color: var(--sp-dim); }
-/* The value fills the rest of the row, right-aligned: "name," then the size. The
-   size sits in a grid cell sized by a hidden full-width pad ("0000 KB"), with the
-   real figure right-aligned over it, so the name's start never moves when the
-   measured size arrives. Only the name gives way (ellipsis) in a narrow row. */
-.sp-bar-row > span { flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: baseline; column-gap: .3em; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.sp-bar-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-bar-size { flex: none; display: grid; justify-items: end; }
-.sp-bar-size > span { grid-area: 1 / 1; }
-.sp-bar-pad { visibility: hidden; }
-.sp-bar-track { height: 10px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
-.sp-bar-fill { display: block; height: 100%; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .42); }
-.sp-bar-fill--out { background: var(--accent); transition: width .3s var(--sp-ease); }
-.sp-bar-fill--out.is-plain { background: rgba(var(--sp-ink-rgb), .42); }
-.sp-fmtrow { display: flex; flex-wrap: nowrap; gap: 18px; padding-top: 2px; }
-.sp-fmtrow .sp-utab { padding: 5px 0; }
-.sp-quality { display: grid; gap: 8px; }
-.sp-quality > span { font-size: 12.5px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-
-/* The 3D tab: the same skeleton as Compress, so the footer never moves. */
-.sp-model-stage { flex: 1; min-height: 130px; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--sp-hair); background: var(--sp-page); }
-.sp-model-stage img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.sp-model-conv { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.sp-model-chip { flex: none; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--sp-line-strong); color: var(--sp-dim); font-size: 10.5px; letter-spacing: .1em; }
-.sp-model-chip.is-out { border-color: var(--accent-border); color: var(--accent-text); }
-.sp-model-wire { flex: 1; max-width: 120px; min-width: 24px; display: flex; align-items: center; justify-content: flex-end; height: 1px; background: var(--sp-line-strong); color: var(--sp-dim); }
-.sp-model-wire .sp-ph { font-size: 13px; margin-right: -2px; }
-.sp-model-unit { font-size: 11px; color: var(--sp-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.sp-model-say { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--sp-dim); }
-/* Wide enough to hold a mouse: the from → to row is the tab's answer, so it is
-   drawn larger than a caption. */
-@media (min-width: 761px) {
-  .sp-model-chip { padding: 8px 16px; font-size: .9375rem; font-weight: 600; letter-spacing: .06em; line-height: 1.2; }
-  .sp-model-wire { max-width: 160px; }
-  .sp-model-wire .sp-ph { font-size: 16px; }
-  .sp-model-unit { font-size: .9375rem; font-weight: 500; color: var(--sp-ink); }
-}
-
-.sp-ratio { display: grid; align-content: start; gap: 12px; }
-.sp-ratio-stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); background: var(--sp-page); display: grid; place-items: center; padding: 10px; }
-.sp-ratio-stage img { display: block; width: 100%; max-width: 100%; max-height: 150px; border-radius: 8px; object-fit: cover; }
-.sp-ratio-size { position: absolute; right: 10px; bottom: 9px; font-size: 9.5px; letter-spacing: .1em; padding: 4px 8px; border-radius: 8px; background: rgba(var(--sp-page-rgb), .72); color: var(--sp-ink); }
-.sp-ratio-half { font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-frames { display: grid; align-content: start; gap: 12px; }
-.sp-strip { position: relative; display: flex; gap: 2px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(var(--sp-ink-rgb), .09); }
-.sp-strip > span:not(.sp-art-over) { position: relative; flex: 1; min-width: 0; height: 152px; overflow: hidden; display: block; }
-.sp-strip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.sp-strip small { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%); font-size: 8px; color: var(--sp-page); background: rgba(241, 244, 255, .92); border-radius: 8px; padding: 2px 4px; }
-.sp-frames-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.sp-frames-row > div { display: flex; flex-wrap: wrap; gap: 6px; }
-.sp-frames-row .sp-utab { padding: 5px 0; margin-right: 18px; }
-.sp-frames-row > small { font-size: 10px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-conv-foot { margin-top: auto; flex: none; display: flex; gap: 8px; flex-wrap: wrap; }
-
-.sp-quality input[type="range"]:disabled { opacity: .4; }
-
-/* Phones and small tablets: the panel grows to its tallest pane instead of
-   scrolling inside a fixed height. Compress sets that height; the other panes
-   stretch to it, and their stage takes the spare room. */
-@media (max-width: 760px) {
-  .sp-panel:has(.sp-cv) { height: auto; }
-  .sp-cv { overflow: visible; }
-  .sp-cv-panes { flex: none; grid-template-rows: auto; }
-  .sp-conv-art { flex: none; min-height: 0; aspect-ratio: 16 / 9; }
-  .sp-model { flex: 1 1 auto; }
-  .sp-model-stage { aspect-ratio: auto; flex: 1 1 auto; min-height: 179px; }
-  .sp-model-stage img { position: absolute; inset: 0; }
-  .sp-frames, .sp-ratio { display: flex; flex-direction: column; }
-  .sp-strip, .sp-ratio-stage { flex: 1 1 auto; }
-  .sp-ratio-stage { min-height: 140px; }
-  .sp-strip > span:not(.sp-art-over) { height: auto; min-height: 152px; }
-  .sp-saving { min-height: 40px; font-size: clamp(36px, 10vw, 40px); }
-  .sp-saving-num.is-noloss { font-size: 28px; }
-  .sp-cv .sp-fmtrow { gap: 20px; }
-  .sp-model-chip, .sp-model-unit { font-size: 12px; }
-  .sp-conv-foot { flex-direction: column; }
-  .sp-conv-foot .sp-pill { justify-content: space-between; }
-  .sp-conv-foot .sp-ghost { justify-content: center; }
-}
-
-/* A step down on the narrowest phones, so "934% larger than the original" and
-   "No loss  PNG keeps every pixel" each fit the 248px panel on one line. */
-@media (max-width: 360px) {
-  .sp-saving { font-size: 30px; }
-  .sp-saving-num.is-noloss { font-size: 24px; }
-  .sp-saving-num + .sp-saving-word { font-size: 13px; }
-}
-
-/* Touch metrics follow the pointer as well as the width, so a tablet gets the
-   same 44px targets and 12px text floor as a phone. */
-@media (max-width: 760px), (pointer: coarse) {
-  .sp-modes .sp-utab { min-height: 48px; }
-  .sp-bar-row small { font-size: 12px; letter-spacing: .08em; }
-  .sp-bar-row span, .sp-bar:last-child .sp-bar-row span { font-size: 13px; }
-  .sp-cv .sp-fmtrow .sp-utab, .sp-frames-row .sp-utab { padding: 12px 0; min-height: 44px; font-size: 13px; }
-  .sp-quality > span, .sp-model-say { font-size: 13px; }
-  .sp-quality input[type="range"] { height: 44px; touch-action: manipulation; }
-  .sp-quality input[type="range"]::-webkit-slider-thumb { margin-top: -10px; width: 24px; height: 24px; }
-  .sp-quality input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; }
-  .sp-ratio-size, .sp-ratio-half, .sp-frames-row > small, .sp-strip small { font-size: 12px; }
-  .sp-strip small { bottom: auto; top: 7px; }
-  .sp-conv-foot .sp-pill { min-height: 48px; }
-  .sp-conv-foot .sp-ghost { min-height: 44px; }
-}
-
-/* ── discover ─────────────────────────────────────────────────────────────── */
-
-.sp-disc-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: clamp(20px, 3vw, 40px); }
-.sp-disc-head > div:first-child { max-width: min(60ch, 100%); min-width: 0; }
-.sp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.sp-chip {
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--sp-ink-rgb), .12);
-  background: transparent;
-  color: rgba(var(--sp-ink-rgb), var(--sp-dim-a));
-  font-family: var(--font);
-  font-size: 14px;
-  cursor: pointer;
-}
-.spectrum .sp-chip:active { transform: scale(.96); }
-.sp-chip[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
-
-.sp-disc-grid { margin-top: clamp(26px, 3.4vw, 44px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-@media (max-width: 900px) { .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .sp-disc-grid { grid-template-columns: minmax(0, 1fr); } }
-.sp-disc-card {
-  display: block;
-  padding: 0;
-  border-radius: 18px;
-  background: rgba(var(--sp-ink-rgb), .035);
-  border: 1px solid rgba(var(--sp-ink-rgb), .09);
-  color: var(--sp-ink);
-  overflow: hidden;
-  text-decoration: none;
-  transition: border-color .2s ease, background .2s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .sp-disc-card:hover { border-color: rgba(var(--sp-ink-rgb), .26); background: rgba(var(--sp-ink-rgb), .06); color: var(--sp-ink); text-decoration: none; }
-}
-.sp-disc-art { display: flex; height: 132px; overflow: hidden; }
-.sp-disc-art > span { flex: 1; min-width: 0; }
-.sp-disc-art--icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); place-items: center; background: var(--sp-page); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .08); color: var(--sp-ink); font-size: 26px; }
-.sp-disc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 13px 14px 14px; }
-.sp-disc-name { font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-disc-meta { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
-.sp-disc-cta {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 18px;
-  min-height: 176px;
-  padding: 18px;
-  border-radius: 18px;
-  background: var(--sp-ink);
-  border: 1px solid var(--sp-ink);
-  color: var(--sp-page);
-  overflow: hidden;
-  text-decoration: none;
-  transition: background .26s ease, border-color .26s ease, color .26s ease, transform .16s var(--sp-ease);
-}
-.sp-disc-cta:active { transform: scale(.978); }
-.sp-disc-cta::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(120% 90% at 12% 118%, color-mix(in srgb, var(--accent) 85%, transparent), color-mix(in srgb, var(--accent) 0%, transparent) 62%);
-  opacity: 0;
-  transform: scale(.9);
-  transition: opacity .34s ease, transform .5s var(--sp-ease);
-}
-.sp-disc-cta > * { position: relative; z-index: 1; }
-@media (hover: hover) and (pointer: fine) {
-  .sp-disc-cta:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); text-decoration: none; }
-  .sp-disc-cta:hover::after { opacity: 1; transform: scale(1); }
-}
-.sp-disc-cta-say { font-family: var(--display); font-weight: 560; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.04; letter-spacing: -.02em; max-width: min(14ch, 100%); }
-.sp-disc-cta-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.sp-disc-cta-count { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; opacity: .72; }
-.sp-disc-cta .sp-pill-icon { width: 38px; height: 38px; background: rgba(var(--sp-page-rgb), .14); font-size: 16px; }
-.sp-disc-foot { margin-top: clamp(22px, 2.6vw, 32px); padding-top: 22px; border-top: 1px solid rgba(var(--sp-ink-rgb), .1); }
-.sp-disc-foot p { margin: 0; max-width: min(52ch, 100%); font-size: 14.5px; line-height: 1.55; color: var(--sp-dim); }
-
-/* ── studio quality exports: the stack ────────────────────────────────────────
-   NESTED, as the design nests it. Card 0 sticks at 84px inside a wrapper that
-   also holds cards 1 and 2; card 1 sticks at 116px inside a wrapper holding
-   card 2; card 2 at 148px with the 26dvh tail. A sticky box only pins within
-   its own containing block, so siblings in separate slots never pin at all. */
-.sp-spec-head { max-width: min(60ch, 100%); margin: 0 auto; text-align: center; }
-.sp-spec-head h2 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(36px, 5.4vw, 74px); line-height: .98; letter-spacing: -.035em; }
-.sp-spec-head p { margin: 18px auto 0; max-width: min(52ch, 100%); font-size: 16px; line-height: 1.6; color: var(--sp-dim); }
-.sp-stack { margin-top: clamp(32px, 4.4vw, 56px); position: relative; }
-.sp-stack-nest { position: relative; }
-.sp-stack-card {
-  position: sticky;
-  top: var(--sp-stack-top, 84px);
-  border-radius: 24px;
-  background: var(--sp-card);
-  border: 1px solid rgba(var(--sp-ink-rgb), .11);
-  box-shadow:
-    0 2px 4px -2px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .5)),
-    0 14px 28px -14px rgba(var(--sp-shade-rgb), calc(var(--sp-shade-a) * .7)),
-    0 54px 100px -44px rgba(var(--sp-shade-rgb), var(--sp-shade-a));
-  transform-origin: 50% 0%;
-  transition: transform .4s var(--sp-ease), filter .4s ease;
-}
-.sp-stack-grid {
-  padding: clamp(22px, 3vw, 44px);
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: clamp(22px, 3vw, 48px);
-  align-items: stretch;
-  min-height: clamp(548px, 66dvh, 720px);
-}
-.sp-stack-pad { height: min(14dvh, 140px); }
-.sp-stack-pad--tail { height: min(26dvh, 260px); }
-.sp-stack-say { align-self: center; min-width: 0; }
-.sp-stack-say h3 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(26px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -.03em; }
-.sp-stack-say > p { margin: 16px 0 0; max-width: min(46ch, 100%); font-size: 15.5px; line-height: 1.62; color: var(--sp-dim); }
-.sp-stack-say > p.sp-stack-wide { max-width: min(48ch, 100%); }
-.sp-stack-say > p.sp-stack-note { margin-top: 20px; font-size: 13.5px; line-height: normal; }
-.sp-kitchips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 22px; }
-.sp-kitchips span { font-family: var(--mono); font-size: 10.5px; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(var(--sp-ink-rgb), .13); color: rgba(var(--sp-ink-rgb), .78); }
-.sp-kitchips span.is-on { border-color: color-mix(in srgb, var(--accent) 24%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent-bright); }
-
-/* card 1: one piece */
-.sp-ex { min-width: 0; border-radius: 18px; background: var(--sp-page); border: 1px solid rgba(var(--sp-ink-rgb), .12); overflow: hidden; display: flex; flex-direction: column; }
-.sp-ex-pieces { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 11px clamp(12px, 1.4vw, 16px); border-bottom: 1px solid rgba(var(--sp-ink-rgb), .09); }
-.sp-ex-piece { padding: 7px 13px; border: 1px solid rgba(var(--sp-ink-rgb), .13); border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--font); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
-.sp-ex-piece[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
-.spectrum .sp-ex-piece:active, .spectrum .sp-ex-fmt:active { transform: scale(.96); }
-.sp-ex-body { flex: 1 1 0; min-height: 0; padding: clamp(14px, 1.6vw, 20px); overflow: auto; }
-.sp-ex-rows { display: grid; gap: 6px; }
-.sp-ex-rows > span { display: flex; align-items: center; gap: 12px; }
-.sp-ex-sw { width: 52px; height: 26px; border-radius: 7px; flex: 0 0 auto; }
-.sp-ex-step { width: 34px; flex: 0 0 auto; font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-ex-hex { flex: 1; min-width: 0; font-size: 12.5px; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ex-aa { flex: 0 0 auto; font-size: 10px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-ex-aa.is-pass { color: var(--accent-text); }
-.sp-ex-type { display: grid; gap: 12px; }
-.sp-ex-type > span { display: flex; align-items: baseline; gap: 14px; min-width: 0; padding-bottom: 10px; border-bottom: 1px solid rgba(var(--sp-ink-rgb), .07); }
-.sp-ex-type small { width: 58px; flex: 0 0 auto; font-size: 10.5px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-ex-type b { flex: 1; min-width: 0; font-weight: 400; line-height: 1.1; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ex-type i { flex: 0 0 auto; font-style: normal; font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-ex-files { display: grid; gap: 13px; }
-.sp-ex-file { display: grid; gap: 7px; }
-.sp-ex-file > span:first-child { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.sp-ex-file .sp-ph { font-size: 14px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-ex-file .sp-ph.sp-ex-arrow { font-size: 10px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-ex-file b { flex: 1; min-width: 0; font-weight: 400; font-size: 12.5px; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ex-file small { flex: 0 0 auto; font-size: 11px; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); }
-.sp-ex-file strong { flex: 0 0 auto; font-size: 11.5px; font-weight: 540; color: var(--sp-ink); }
-.sp-ex-track { display: block; height: 7px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .1); overflow: hidden; }
-.sp-ex-track > span { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
-.sp-ex-icons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(74px, 100%), 1fr)); gap: 1px; background: rgba(var(--sp-ink-rgb), .09); border-radius: 12px; overflow: hidden; }
-.sp-ex-icons > span { display: grid; gap: 7px; place-items: center; padding: 13px 6px; background: var(--sp-page); }
-.sp-ex-icons .sp-ph { font-size: 20px; color: var(--sp-ink); }
-.sp-ex-icons small { font-size: 9px; letter-spacing: .06em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.sp-ex-filebar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
-.sp-ex-filebar > .sp-ph { font-size: 15px; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); }
-.sp-ex-filebar b { flex: 1; min-width: 0; font-family: var(--mono); font-weight: 400; font-size: 11.5px; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-ex-filebar small { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: rgba(var(--sp-ink-rgb), var(--sp-faint-a)); white-space: nowrap; }
-.sp-ex-actions { flex: none; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(var(--sp-ink-rgb), .09); }
-.sp-ex-fmts { display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(var(--sp-ink-rgb), .05); }
-.sp-ex-fmt { padding: 6px 12px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: rgba(var(--sp-ink-rgb), var(--sp-dim-a)); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; cursor: pointer; }
-.sp-ex-fmt[aria-pressed="true"] { background: rgba(var(--sp-ink-rgb), .1); border-color: rgba(var(--sp-ink-rgb), .2); color: var(--sp-ink); }
-.sp-ex-copy { margin-left: auto; gap: 9px; padding: 9px 16px; }
-.sp-ex-copy .sp-ph { font-size: 13px; }
-
-/* card 2: the UI kit document. The paper and its inks are the exported
-   kit's own colours, fixed in both themes because it is a picture of a file. */
-/* ONE SURFACE, never a panel inside a panel, so the design's tray is not
-   drawn here: the document sits directly on the card. The tray's 6px
-   frame and wash are gone; a hairline and a soft drop keep the paper's weight. */
-.sp-kit { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.sp-kit-paper { flex: 1 1 0; min-height: 0; border-radius: 18px; box-shadow: 0 0 0 1px rgba(var(--sp-ink-rgb), .09), 0 18px 40px -28px rgba(var(--sp-shade-rgb), var(--sp-shade-a)); background: #F7F6F1; overflow: hidden; display: flex; flex-direction: column; color: #18221E; }
-.sp-kit-tabs { flex: none; display: flex; align-items: center; gap: clamp(12px, 1.6vw, 20px); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 0 clamp(12px, 1.4vw, 16px); border-bottom: 1px solid rgba(20, 24, 20, .12); }
-.sp-kit-tab { padding: 12px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #5C6B63; font-family: var(--font); font-size: 12px; cursor: pointer; white-space: nowrap; }
-.spectrum .sp-kit-tab { transition: color .18s ease; }
-.sp-kit-tab[aria-pressed="true"] { border-bottom-color: #18221E; color: #18221E; }
-.sp-kit-ed { margin-left: auto; font-size: 11px; color: #3A4A42; white-space: nowrap; }
-.sp-kit-body { flex: 1 1 0; min-height: 0; padding: clamp(14px, 1.6vw, 20px); overflow: auto; }
-.sp-kit-h { font-weight: 600; font-size: clamp(17px, 1.9vw, 23px); line-height: 1.1; letter-spacing: -.02em; }
-.sp-kit-colour { display: grid; gap: 11px; }
-.sp-kit-sws { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
-.sp-kit-sw { display: grid; gap: 6px; min-width: 0; }
-.sp-kit-sw > span { display: flex; flex-direction: column; justify-content: space-between; height: 104px; padding: 8px; border: 1px solid rgba(20, 24, 20, .08); }
-.sp-kit-sw b { font-size: 11px; font-weight: 600; }
-.sp-kit-sw code { font-family: var(--mono); font-size: 8.5px; }
-.sp-kit-sw small { font-size: 9.5px; line-height: 1.3; color: #3A4A42; overflow: hidden; }
-.sp-kit-type { display: grid; gap: 12px; }
-.sp-kit-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.sp-kit-pair > span { display: grid; gap: 10px; padding: 14px; min-width: 0; }
-.sp-kit-pair > span:first-child { background: #203C35; }
-.sp-kit-pair > span:last-child { background: #DBD0EB; }
-.sp-kit-pair small { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 9.5px; }
-.sp-kit-pair > span:first-child small { color: rgba(247, 246, 241, .78); }
-.sp-kit-pair > span:last-child small { color: #3A3050; }
-.sp-kit-aa { font-weight: 600; font-size: 40px; line-height: 1; color: #F7F6F1; }
-.sp-kit-body-face { font-size: 14px; line-height: 1.35; color: #221B33; }
-.sp-kit-step { display: flex; align-items: baseline; gap: 12px; min-width: 0; padding-bottom: 7px; border-bottom: 1px solid rgba(20, 24, 20, .09); }
-.sp-kit-step small { width: 54px; flex: 0 0 auto; font-size: 10px; color: #3A4A42; }
-.sp-kit-step b { flex: 1; min-width: 0; font-weight: 600; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-kit-step code { flex: 0 0 auto; font-family: var(--mono); font-size: 9.5px; color: #3A4A42; }
-.sp-kit-found { display: grid; gap: 13px; }
-.sp-kit-found > span { display: grid; gap: 6px; }
-.sp-kit-found small { font-size: 11px; color: #3A4A42; }
-.sp-kit-space { display: flex; align-items: flex-end; gap: 8px; height: 56px; }
-.sp-kit-space > span { display: grid; gap: 4px; justify-items: center; }
-.sp-kit-space i { width: 22px; background: #203C35; }
-.sp-kit-space code { font-family: var(--mono); font-size: 8px; color: #3A4A42; }
-.sp-kit-cols { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
-.sp-kit-cols i { height: 38px; background: #E4E8DE; }
-.sp-kit-files { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 0; background: #203C35; padding: 16px; color: #F7F6F1; }
-.sp-kit-files > span:first-child { display: grid; gap: 9px; align-content: start; min-width: 0; padding-right: 14px; }
-.sp-kit-files > span:first-child .sp-kit-h { line-height: 1.08; }
-.sp-kit-files > span:first-child small { font-size: 11.5px; line-height: 1.5; color: rgba(247, 246, 241, .8); }
-.sp-kit-files ul { display: grid; gap: 0; min-width: 0; list-style: none; margin: 0; padding: 0; }
-.sp-kit-files li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid rgba(247, 246, 241, .22); }
-.sp-kit-files li > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.sp-kit-files li b { font-size: 12px; font-weight: 540; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-kit-files li small { font-size: 9.5px; color: rgba(247, 246, 241, .7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-kit-files .sp-ph { font-size: 13px; }
-.sp-kit-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px clamp(12px, 1.4vw, 16px); border-top: 1px solid rgba(20, 24, 20, .12); font-size: 10px; color: #3A4A42; }
-
-/* card 3: the projects */
-.sp-projects { display: grid; gap: 9px; align-self: center; align-content: center; list-style: none; margin: 0; padding: 0; }
-.sp-projects li { display: flex; align-items: center; gap: 13px; padding: 14px; border-radius: 12px; background: rgba(var(--sp-ink-rgb), .035); border: 1px solid rgba(var(--sp-ink-rgb), .09); }
-.sp-projects-ico { width: 34px; height: 34px; border-radius: 12px; background: rgba(var(--sp-ink-rgb), .06); display: grid; place-items: center; color: var(--accent-mid); flex: 0 0 auto; font-size: 16px; }
-.sp-projects li > span:nth-child(2) { flex: 1; min-width: 0; display: grid; gap: 4px; }
-.sp-projects b { font-size: 14px; font-weight: 400; color: var(--sp-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-projects small { font-size: 12px; line-height: 1.35; color: var(--sp-dim); }
-
-@media (max-width: 900px) {
-  .sp-stack-card { position: static; top: auto; transform: none !important; filter: none !important; }
-  .sp-stack-grid { min-height: 0; padding: clamp(20px, 4vw, 28px); }
-  .sp-stack-pad, .sp-stack-pad--tail { height: clamp(16px, 3vw, 28px); }
-  /* DEVIATION, and a deliberate one (mobile first). The design's two
-     panels size their bodies `flex: 1 1 0` against the card's min-height; with
-     that min-height released below 900px the bodies collapse to nothing — the
-     design's own render at 390 shows card 1 as one clipped row and card 2 as a bare
-     strip. These floors give the panels back their contents at phone width;
-     nothing changes above 900px. */
-  .sp-ex { min-height: 545px; }
-  .sp-kit { min-height: 380px; }
-}
-
-/* ── "Don't just take it from us" (#index) ────────────────────────────────────
-   The design's proof band as drawn: heading, four figures between two ink rules, 4 → 2
-   columns at 860px → 1 at 460px. */
-.sp-proof { padding-top: clamp(140px, 17vw, 248px); }
-.sp-proof-head { max-width: min(40ch, 100%); margin: 0 auto; text-align: center; }
-.sp-proof-head h2 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(32px, 4.8vw, 64px); line-height: 1.02; letter-spacing: -.035em; }
-.sp-proof-row {
-  margin-top: clamp(40px, 5vw, 72px);
-  padding: clamp(30px, 4vw, 48px) 0;
-  border-top: 1px solid rgba(var(--sp-ink-rgb), .13);
-  border-bottom: 1px solid rgba(var(--sp-ink-rgb), .13);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(26px, 4vw, 48px);
-}
-@media (max-width: 860px) { .sp-proof-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 460px) { .sp-proof-row { grid-template-columns: minmax(0, 1fr); } }
-.sp-proof-row > div { min-width: 0; text-align: center; display: grid; gap: 10px; }
-.sp-proof-n { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: -.04em; color: var(--sp-ink); font-variant-numeric: tabular-nums; }
-.sp-proof-l { font-size: 13.5px; line-height: 1.45; color: var(--sp-dim); max-width: min(22ch, 100%); margin: 0 auto; }
 
 /* ── the handoff ──────────────────────────────────────────────────────────── */
 
 .sp-close { max-width: var(--sp-shell); margin: 0 auto; padding: clamp(120px, 15vw, 220px) var(--sp-gutter) clamp(48px, 6vw, 88px); text-align: center; }
-.sp-close h2 { margin: 0 auto; max-width: min(26ch, 100%); font-family: var(--display); font-weight: 560; font-size: clamp(32px, 5vw, 68px); line-height: 1; letter-spacing: -.04em; }
+.sp-close h2 { margin: 0 auto; max-width: min(26ch, 100%); font-family: var(--display); font-weight: 560; font-size: clamp(32px, 5vw, 68px); line-height: 1; letter-spacing: -.02em; }
 .sp-close p { margin: 22px auto 0; max-width: min(46ch, 100%); font-size: clamp(16px, 1.5vw, 18px); line-height: 1.6; color: var(--sp-dim); }
 .sp-close-cta { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 32px; }
-
-/* ── responsive ───────────────────────────────────────────────────────────── */
-
-@media (max-width: 1000px) {
-  .sp-bench-grid { grid-template-columns: minmax(0, 1fr); gap: clamp(22px, 4vw, 34px); }
-  .sp-bench-col { position: static; top: auto; }
-  .sp-step { min-height: 0; padding: 0; }
-  .sp-step + .sp-step { margin-top: clamp(18px, 3vw, 28px); }
-}
-@media (max-width: 760px) {
-  .sp-panel { height: min(78dvh, 620px); border-radius: 16px; }
+/* On a phone the gaps between sections step down a notch (8px scale), so the
+   page is a few screens shorter without touching any content. */
+@media (max-width: 560px) {
+  .sp-close { padding-top: 72px; }
 }
 
-/* ── the Font Gallery panel's six families ────────────────────────────────
+/* ── the font tool's six families ──────────────────────────────────────────
    Self-hosted latin subsets under /fonts (OFL; licences beside them), so the
-   bench makes no Google Fonts request. A face downloads only when the panel
+   page makes no Google Fonts request. A face downloads only when the tool
    paints text in it. */
-@font-face{font-family:'Schibsted Grotesk';font-style:normal;font-weight:400 900;font-display:swap;src:url('/fonts/schibsted-grotesk-latin.woff2') format('woff2')}
-@font-face{font-family:'Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
-@font-face{font-family:'Martian Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('/fonts/martian-mono-latin.woff2') format('woff2')}
-@font-face{font-family:'Big Shoulders Display';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/big-shoulders-display-latin.woff2') format('woff2')}
-@font-face{font-family:'Hanken Grotesk';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/hanken-grotesk-latin.woff2') format('woff2')}
-@font-face{font-family:'Instrument Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('/fonts/instrument-sans-latin.woff2') format('woff2')}
-
-
-/* ── the footer's CTA family (SpectrumFooter.jsx) ─────────────────────────────
-   Kept verbatim for the footer; the landing's own buttons are .sp-pill. */
-.sp-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 9px 8px 20px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  font-family: var(--font);
-  font-size: 15px;
-  font-weight: 540;
-  line-height: 1.2;
-  /* ≥24px target at every size, before padding — the repo's a11y sweeps check
-     this and the design's own 8px vertical padding is short on its own. */
-  min-height: 44px;
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: transform var(--dur-1) var(--sp-ease), background var(--dur-1) ease,
-              color var(--dur-1) ease, border-color var(--dur-1) ease;
-}
-.sp-cta:hover { text-decoration: none; }
-.sp-cta:active { transform: scale(.978); }
-
-.sp-cta--ink { background: var(--sp-ink); color: var(--sp-page); border-color: var(--sp-ink); }
-.sp-cta--ink:hover { background: color-mix(in srgb, var(--t0) 86%, var(--bg-0)); color: var(--sp-page); }
-
-
-
-.sp-cta-icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, currentColor 14%, transparent);
-  transition: transform var(--dur-1) var(--sp-ease);
-}
-@media (hover: hover) and (pointer: fine) {
-  .sp-cta:hover .sp-cta-icon { transform: rotate(45deg); }
-}
-
-
+@font-face {font-family:'Schibsted Grotesk';font-style:normal;font-weight:400 900;font-display:swap;src:url('/fonts/schibsted-grotesk-latin.woff2') format('woff2')}
+@font-face {font-family:'Literata';font-style:normal;font-weight:200 900;font-display:swap;src:url('/fonts/literata-latin.woff2') format('woff2')}
+@font-face {font-family:'Martian Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('/fonts/martian-mono-latin.woff2') format('woff2')}
+@font-face {font-family:'Big Shoulders Display';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/big-shoulders-display-latin.woff2') format('woff2')}
+@font-face {font-family:'Hanken Grotesk';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/hanken-grotesk-latin.woff2') format('woff2')}
+@font-face {font-family:'Instrument Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('/fonts/instrument-sans-latin.woff2') format('woff2')}
 
 /* ── touch targets ────────────────────────────────────────────────────────────
-   The design's controls are drawn small (a 24px seed, a 10.5px underline tab). On a
-   coarse pointer each gets an invisible 44px hit area centred on it, so the
-   drawn size is the design's and the target is WCAG's. Nothing moves visually. */
+   The design's pill buttons are drawn small. On a coarse pointer each gets an
+   invisible 44px hit area centred on it, so the drawn size is the design's and
+   the target is WCAG's. Nothing moves visually. */
 @media (pointer: coarse) {
-  .sp-seed, .sp-utab, .sp-ghost, .sp-ex-fmt, .sp-ex-piece, .sp-shuffle,
-  .sp-kit-tab, .sp-seg button, .sp-chip, .sp-pill, .sp-rail-row { position: relative; }
-  .sp-seed::after, .sp-utab::after, .sp-ghost::after, .sp-shuffle::after,
-  .sp-ex-fmt::after, .sp-ex-piece::after, .sp-kit-tab::after, .sp-seg button::after,
-  .sp-chip::after, .sp-pill::after {
+  .sp-ghost,
+  .sp-pill { position: relative; }
+  .sp-ghost::after,
+  .sp-pill::after {
     content: "";
     position: absolute;
     left: 50%;
@@ -1136,17 +403,6 @@
     height: max(100%, 44px);
     transform: translate(-50%, -50%);
   }
-  /* The seeds sit 3px apart, so a 44px-wide area would reach over the next
-     chip and a later sibling paints on top: a tap beside a chip's centre
-     picks its neighbour. Each area reaches only halfway into the gap on
-     either side, and keeps the full 44px height. */
-  .sp-seeds .sp-seed::after { width: calc(100% + 3px); }
-}
-
-/* Data-bearing marks stay at 11px or larger on a phone: the AA verdicts are
-   facts a reader acts on. The design's decorative mono labels keep their size. */
-@media (max-width: 760px) {
-  .sp-role-aa, .sp-ex-aa { font-size: 11px; }
 }
 
 /* ── focus ────────────────────────────────────────────────────────────────────
@@ -1159,38 +415,32 @@
   outline-color: var(--sp-link);
   outline-offset: 3px;
 }
-.spectrum .sp-panel button:focus-visible { outline-offset: 2px; }
 .spectrum .sp-search input.hcmd-input:focus-visible { outline-color: transparent; }
 
 /* ── REDUCED MOTION ───────────────────────────────────────────────────────────
-   Every moving thing on this page, turned off in one place, under BOTH
+   Every moving thing on this sheet, turned off in one place, under BOTH
    spellings the app uses: the Settings choice (`html[data-reduced-motion]`,
    which wins in both directions) and the OS preference (only when no choice
    has been made) — the precedence global.css encodes and reducedMotion.js
    mirrors. `animation:none` on `.sp-w` leaves every word where it belongs,
-   because its resting state is its final state. The stack's scale and the
-   bench windows' depth are written by JS, which skips them under reduced
-   motion; these rules stop any transition that would animate them.
+   because its resting state is its final state.
    tests/unit/spectrum-structure.test.js fails the build if either block goes. */
 :where(html[data-reduced-motion="true"]) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
-:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html[data-reduced-motion="true"]) .spectrum .sp-disc-cta::after { transition: none !important; }
-:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar, .sp-pill, .sp-pill-icon, button) { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-pill:active, button:active) { transform: none !important; }
+:where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
+:where(html[data-reduced-motion="true"]) .spectrum .sp-ramp--arrive .sp-ramp-bar { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-w, .is-in .sp-w) { animation: none !important; transform: none !important; }
-  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-stack-card, .sp-panel, .sp-pill, .sp-pill-icon, .sp-cta, .sp-cta-icon, .sp-chip, .sp-disc-card, .sp-disc-cta, .sp-bar-fill--out, .sp-art-over, button), :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-cta::after { transition: none !important; }
-  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-cta:hover .sp-cta-icon, .sp-pill:active, .sp-cta:active, .sp-chip:active, .sp-disc-cta:active, button:active) { transform: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar, .sp-pill, .sp-pill-icon, button) { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum :is(.sp-ramp-bar:hover, .sp-pill:hover .sp-pill-icon, .sp-pill:active, button:active) { transform: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar:hover { height: var(--sp-bar-h, 60%) !important; }
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp--arrive .sp-ramp-bar { animation: none !important; }
 }
 
 /* ── FORCED COLOURS ──────────────────────────────────────────────────────────
    Selected states carried by a wash alone vanish in Windows High Contrast, so
    each gets a border the OS is obliged to paint. */
 @media (forced-colors: active) {
-  .spectrum .sp-chip[aria-pressed="true"],
-  .spectrum .sp-seg button[aria-pressed="true"],
-  .spectrum .sp-ex-piece[aria-pressed="true"],
-  .spectrum .sp-ex-fmt[aria-pressed="true"],
-  .spectrum .sp-ico[aria-pressed="true"],
-  .spectrum .sp-rail-row.is-on { border: 2px solid Highlight; }
-  .spectrum .sp-seed[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: 2px; }
-  .spectrum .sp-ramp, .spectrum .sp-roles, .spectrum .sp-kit-paper { forced-color-adjust: none; }
+  .spectrum .sp-ramp { forced-color-adjust: none; }
 }

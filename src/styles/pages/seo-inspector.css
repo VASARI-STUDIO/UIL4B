@@ -125,7 +125,7 @@
 
 .seo-page .seo-field-label { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 560; color: var(--t1); }
 
-.seo-page .seo-field-label em { font-family: var(--mono); font-size: 10.5px; font-style: normal; font-weight: 500; color: var(--t2); }
+.seo-page .seo-field-label em { font-family: var(--font); font-size: var(--fs-caption); font-style: normal; font-weight: 500; color: var(--t2); font-variant-numeric: tabular-nums; }
 
 .seo-page .seo-field input,
 .seo-page .seo-field textarea,
@@ -163,27 +163,29 @@
 
 .seo-page .seo-score-band { font-size: 14px; font-weight: 600; color: var(--seo-tone-ink); }
 
-.seo-page .seo-score-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--t3); }
+.seo-page .seo-score-lbl { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--t3); }
 
 .seo-page .seo-score-bar { grid-column: 1 / -1; height: 5px; margin-top: 8px; overflow: hidden; background: var(--bg-3); border-radius: var(--radius-pill); }
 
 .seo-page .seo-score-bar-fill { height: 100%; background: var(--seo-tone); border-radius: var(--radius-pill); transition: width var(--dur-3) var(--ease-standard), background var(--dur-3) var(--ease-standard); }
 
-.seo-page .seo-preview { overflow: hidden; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: none; }
+/* The previews are headed sections on the page, divided by a hairline: no panel
+   around them. The score above is the one card in this column, and the social
+   card's own frame is the only other bordered thing. */
+.seo-page .seo-preview { padding-top: 12px; border-top: 1px solid var(--border); }
 
 .seo-page .seo-preview-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px 10px 16px;
-  font-family: var(--mono);
-  font-size: 10px;
+  margin-bottom: 12px;
+  font-family: var(--font);
+  font-size: var(--fs-caption);
   font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--t3);
-  border-bottom: 1px solid var(--border);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--t2);
 }
 
 .seo-page .seo-seg { display: flex; gap: 2px; padding: 2px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-pill); }
@@ -212,7 +214,7 @@
 
 .seo-page .seo-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.seo-page .seo-serp { padding: 16px; }
+.seo-page .seo-serp { padding: 0; }
 
 .seo-page .seo-serp.is-mobile { max-width: 360px; }
 
@@ -233,17 +235,19 @@
 
 .seo-page .seo-serp-desc { font-size: 13px; line-height: 1.5; color: var(--t1); }
 
-.seo-page .seo-social { padding: 16px; }
+/* The share image and its caption are one framed unit: the frame is the only
+   border here, the caption is a fill inside it. */
+.seo-page .seo-social { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); }
 
 /* Unchanged: a stand-in for the page's own share image. Its ink is measured
    pixel by pixel in tests/user-sim/48-text-over-gradients.spec.js. */
-.seo-page .seo-social-img { display: flex; align-items: center; justify-content: center; height: 150px; background: linear-gradient(135deg, #0B5ED7, color-mix(in srgb, #0B5ED7 40%, #8B5CF6)); border-radius: var(--radius-s) var(--radius-s) 0 0; }
+.seo-page .seo-social-img { display: flex; align-items: center; justify-content: center; height: 150px; background: linear-gradient(135deg, #0B5ED7, color-mix(in srgb, #0B5ED7 40%, #8B5CF6)); }
 
-.seo-page .seo-social-img span { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; color: #FFFFFF; }
+.seo-page .seo-social-img span { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: #FFFFFF; }
 
-.seo-page .seo-social-body { padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-s) var(--radius-s); }
+.seo-page .seo-social-body { padding: 12px 14px; background: var(--bg-2); }
 
-.seo-page .seo-social-domain { margin-bottom: 4px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--t2); }
+.seo-page .seo-social-domain { margin-bottom: 4px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--t2); }
 
 .seo-page .seo-social-title { margin-bottom: 3px; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--t0); }
 
@@ -252,9 +256,9 @@
 /* ── Checklist and code panels ────────────────────────────────────────────── */
 
 .seo-page .seo-checklist,
-.seo-page .seo-tags { padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-2xl); box-shadow: none; }
+.seo-page .seo-tags { padding: 20px 0 0; border-top: 1px solid var(--border); }
 
-.seo-page .seo-tags { margin-top: 16px; }
+.seo-page .seo-tags { margin-top: 24px; }
 
 .seo-page .seo-tags--flush { margin: 0; }
 
@@ -289,9 +293,10 @@
 
 .seo-page .seo-tags-note { margin: 8px 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
 
-.seo-page .seo-tags-note code { padding: 1px 5px; font-family: var(--mono); font-size: 11px; color: var(--t1); background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius-xs); }
+.seo-page .seo-tags-note code { padding: 1px 5px; font-family: var(--mono); font-size: 12px; color: var(--t1); background: var(--bg-3); border-radius: var(--radius-xs); }
 
-.seo-page .seo-tags-code { margin: 0; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--t1); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); }
+/* A filled block, not a bordered one: the code sits straight on the page. --bg-3, because --bg-2 is the page colour to within a shade in light mode and the block vanished. */
+.seo-page .seo-tags-code { margin: 0; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--t1); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-3); border: 0; border-radius: var(--radius); }
 
 .seo-page .seo-faqs { display: flex; flex-direction: column; gap: 14px; }
 
@@ -314,13 +319,18 @@
 
 .seo-page .seo-ca-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 
+/* The previews column is about 365px wide at tablet width: four tiles squeezed "Read time" onto three lines beside a wide "Words/sentence". Two by two there. */
+@media (min-width: 561px) and (max-width: 900px) {
+  .seo-page .seo-ca-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
 .seo-page .seo-ca-stat { padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
 
 .seo-page .seo-ca-num { font-size: 20px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--t0); }
 
-.seo-page .seo-ca-num span { font-size: 11px; font-weight: 500; color: var(--t2); }
+.seo-page .seo-ca-num span { font-size: 12px; font-weight: 500; color: var(--t2); }
 
-.seo-page .seo-ca-lbl { margin-top: 7px; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--t3); }
+.seo-page .seo-ca-lbl { margin-top: 7px; font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--t3); }
 
 .seo-page .seo-ca-ease { display: flex; align-items: center; gap: 18px; }
 
@@ -340,22 +350,60 @@
 
 .seo-page .seo-ca-kw-word { overflow: hidden; font-size: 12.5px; font-weight: 560; color: var(--t0); text-overflow: ellipsis; white-space: nowrap; }
 
-.seo-page .seo-ca-kw-meta { flex-shrink: 0; font-family: var(--mono); font-size: 10.5px; color: var(--t2); }
+.seo-page .seo-ca-kw-meta { flex-shrink: 0; font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
 
 .seo-page .seo-ca-phrases { display: flex; flex-wrap: wrap; gap: 7px; }
 
 .seo-page .seo-ca-phrase { padding: 4px 10px; font-size: 12px; color: var(--t1); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-s); }
 
-.seo-page .seo-ca-phrase em { margin-left: 3px; font-family: var(--mono); font-size: 10.5px; font-style: normal; color: var(--t2); }
+.seo-page .seo-ca-phrase em { margin-left: 3px; font-family: var(--font); font-size: var(--fs-caption); font-style: normal; color: var(--t2); font-variant-numeric: tabular-nums; }
 
 /* ── Widths, touch ────────────────────────────────────────────────────────── */
 
+/* One column: the score leads, then the fields, then the previews. The preview
+   column is dissolved into the grid so its score can be ordered ahead of the
+   fields while the two previews stay behind them. */
 @media (max-width: 760px) {
-  .seo-page .seo-grid { grid-template-columns: 1fr; }
+  .seo-page .seo-grid { display: flex; flex-direction: column; align-items: stretch; gap: 20px; }
+  .seo-page .seo-preview-col { display: contents; }
+  .seo-page .seo-score { order: -1; min-height: 88px; padding: 14px 16px; }
+  .seo-page .seo-preview { order: 1; }
+  .seo-page .seo-about { margin-bottom: 16px; font-size: 14px; }
+  .seo-page .seo-field-label { font-size: 14px; }
+  .seo-page .seo-btn { font-size: 14px; }
+  .seo-page .seo-seg button { font-size: 13px; }
+  .seo-page .seo-serp-desc,
+  .seo-page .seo-social-desc,
+  .seo-page .seo-check-detail,
+  .seo-page .seo-tags-note { font-size: 14px; }
+  .seo-page .seo-check-label { font-size: 14px; }
+  .seo-page .seo-social-title { font-size: 15px; }
 }
 
 @media (max-width: 560px) {
-  .seo-page .seo-tab { padding: 0 12px; }
+  /* The three tools are a three-segment switch under the toolbar, 44px tall,
+     each segment a third of the width. */
+  .seo-page .seo-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    padding: 3px;
+    overflow: visible;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+  }
+  .seo-page .seo-tab {
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 4px;
+    font-size: 13px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+    border-color: transparent;
+  }
+  .seo-page .seo-tab.is-active { background: var(--card); border-color: var(--border); }
   .seo-page .seo-ca-stats { grid-template-columns: repeat(2, 1fr); }
   .seo-page .seo-ca-kw-grid { grid-template-columns: 1fr; }
 }

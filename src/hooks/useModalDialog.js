@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { getLenis } from './useSmoothScroll.js'
+import { lockScroll } from '../utils/scrollLock.js'
 import { markScrollContainers } from '../utils/scrollContainment.js'
 
 // The keyboard contract every modal surface in the app owes its user: a focus
@@ -24,11 +24,34 @@ import { markScrollContainers } from '../utils/scrollContainment.js'
 // it only where the dialog's whole purpose is one field — the shade editor
 // opens onto a hue input, and landing anywhere else would cost a keyboard user
 // a tab every time they opened it.
+
+// The dialogs open right now, oldest first. Every one of them listens for keys
+// on `document` in the capture phase, and stopPropagation does not stop a
+// second listener on the SAME node, so a dialog opened over another (the
+// sign-in popup over the upgrade modal, say) used to share each Escape with the
+// one beneath it and close both. Only the top entry answers Escape and Tab.
+const openDialogs = []
+
 export default function useModalDialog(onClose, { enabled = true, initialFocus = null } = {}) {
   const ref = useRef(null)
   // The restore this hook still owes from its last cleanup — see the end of
   // the effect. Held on a ref so an effect re-run can take it over.
   const pendingRestore = useRef(null)
+
+  // THE MAIN EFFECT DEPENDS ON `enabled` ALONE. It used to list onClose and
+  // initialFocus too, so a caller passing an inline arrow re-ran the whole
+  // effect on every parent render (a toast, a timer tick) and the re-run's
+  // `.focus()` pulled focus out of the field being typed in, then re-took the
+  // scroll lock and re-captured the opener. The values the effect only READS
+  // when something happens (Escape, the first focus) live on refs instead,
+  // synced after every render. This effect is declared first, so the refs are
+  // current before the main effect runs and before any key arrives.
+  const onCloseRef = useRef(onClose)
+  const initialFocusRef = useRef(initialFocus)
+  useEffect(() => {
+    onCloseRef.current = onClose
+    initialFocusRef.current = initialFocus
+  })
 
   useEffect(() => {
     if (!enabled) return undefined
@@ -45,8 +68,8 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // the nearest thing that still exists.
     let openerChain
     if (pendingRestore.current) {
-      // The effect re-ran before the previous cleanup's frame fired — a caller
-      // handed us a fresh onClose, say. activeElement is still inside THIS
+      // The effect re-ran before the previous cleanup's frame fired — `enabled`
+      // flipped off and on again within a frame, say. activeElement is still inside THIS
       // dialog, so capturing it now would record the dialog as its own
       // opener. Take over the chain that cleanup was about to restore to, and
       // cancel its frame so it cannot fire under a dialog that is still open.
@@ -76,9 +99,9 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // at all. ExportPanel and IconLibrary had both worked this out and written
     // it by hand; it belongs here, where every dialog gets it.
     //
-    // The body lock STAYS, and is not redundant: with reduced motion on, Lenis
+    // The overflow lock STAYS, and is not redundant: with reduced motion on, Lenis
     // is never instantiated, `getLenis()` returns null and the browser is doing
-    // the scrolling again — which is exactly the case the body lock does hold.
+    // the scrolling again — which is exactly the case the overflow lock does hold.
     // The two cover each other's gap.
     //
     // Marking the dialog and its scroll containers `data-lenis-prevent` is what
@@ -87,21 +110,40 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     // gesture reaches the browser and the dialog scrolls natively. Without it a
     // stopped Lenis would freeze the dialog's body along with the page — the bug
     // wearing its opposite coat.
-    document.body.style.overflow = 'hidden'
-    getLenis()?.stop()
+    //
+    // lockScroll() puts the lock on <html> (see utils/scrollLock.js for why not
+    // <body>) and stops Lenis. It is counted, so a dialog opened over another
+    // surface leaves the outer lock in place until the last one closes.
+    const unlockScroll = lockScroll({ hold: true })
     const unmark = markScrollContainers(node)
 
     const focusables = () => Array.from(
       node?.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') || [],
     ).filter(el => el.offsetParent !== null || el === document.activeElement)
 
-    const target = initialFocus ? node?.querySelector(initialFocus) : null
-    ;(target || node)?.focus()
+    // Read once per open: the landing spot is decided when the dialog opens.
+    // preventScroll on every focus() here and in the restore below: moving
+    // focus must never scroll the page the dialog sits over.
+    const initial = initialFocusRef.current
+    const target = initial ? node?.querySelector(initial) : null
+    ;(target || node)?.focus({ preventScroll: true })
+
+    const entry = {}
+    openDialogs.push(entry)
 
     const onKey = (e) => {
+      if (openDialogs[openDialogs.length - 1] !== entry) return
       // stopPropagation so a dialog opened from inside another surface closes
       // only itself rather than collapsing the whole stack.
-      if (e.key === 'Escape') { e.stopPropagation(); onClose(); return }
+      if (e.key === 'Escape') {
+        // A menu open inside the dialog takes this Escape: its own listener runs
+        // after this one and closes just the menu, so the dialog stays.
+        // Only a trigger on screen counts, so a stale attribute on a hidden one
+        // can never leave the dialog without Escape.
+        const menuOpen = Array.from(node?.querySelectorAll('[aria-haspopup][aria-expanded="true"]') || []).some(el => el.offsetParent !== null)
+        if (menuOpen) return
+        e.stopPropagation(); onCloseRef.current(); return
+      }
       if (e.key !== 'Tab') return
       const list = focusables()
       if (!list.length) { e.preventDefault(); node?.focus(); return }
@@ -115,8 +157,8 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     document.addEventListener('keydown', onKey, true)
     return () => {
       document.removeEventListener('keydown', onKey, true)
-      document.body.style.overflow = ''
-      getLenis()?.start()
+      openDialogs.splice(openDialogs.indexOf(entry), 1)
+      unlockScroll()
       unmark()
       // THE RESTORE WAITS ONE FRAME. It used to run right here, synchronously,
       // and the flow audit (#436) caught what that does, with a trace:
@@ -157,11 +199,11 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
         if (restore.tabIndex < 0 && !restore.hasAttribute('tabindex')) {
           restore.setAttribute('tabindex', '-1')
         }
-        restore.focus()
+        restore.focus({ preventScroll: true })
       })
       pendingRestore.current = { frame, chain }
     }
-  }, [onClose, enabled, initialFocus])
+  }, [enabled])
 
   return ref
 }

@@ -3,9 +3,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE FAULT
 // ─────────────────────────────────────────────────────────────────────────────
-// Founder, 2026-09-05, marked screenshot at 662px: the search circle, the
-// avatar and the hamburger "are misaligned". He confirmed the complaint is
-// ALIGNMENT — not crowding, not the avatar failing to render.
+// At 662px the search circle, the avatar and the hamburger read as misaligned.
+// The problem is ALIGNMENT — not crowding, not the avatar failing to render.
 //
 // A box measurement says there is nothing wrong, and that is why this went
 // unfixed. All three controls are 40x40 in one `align-items:center` flex row,
@@ -34,7 +33,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THIS MEASURES /discover AND NOT `/` ANY MORE
 // ─────────────────────────────────────────────────────────────────────────────
-// The founder's screenshot was taken on the homepage, but the subject of the
+// The problem was first seen on the homepage, but the subject of the
 // complaint was never the homepage — it was the APP HEADER's right-hand
 // cluster, which is one component rendered identically on every route that
 // mounts it. The route swap gave `/` the marketing pill instead
@@ -64,7 +63,7 @@ import { go, watch } from './helpers.js'
 // bar; this one is the cheapest to paint.
 const BAR_ROUTE = '/discover'
 
-// 662 is the founder's own capture. The rest bracket it: 480 and 390 are the
+// 662 is the width where it was first seen. The rest bracket it: 480 and 390 are the
 // phone band, 700 and 768 the rest of the band where the compact bar shows.
 // 767, not 768: from 768 the header is the App file's desktop row,
 // with no menu button to measure.

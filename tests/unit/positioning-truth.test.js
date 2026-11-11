@@ -68,14 +68,19 @@ test('an unknown line id throws rather than rendering nothing', () => {
 
 // ── The hero headline records where it came from ────────────────────────────
 //
-// The headline is either a whole sentence taken from a design, in which case
-// it names that design in `source`, or a SPLICE of positioning lines, in which
-// case every fragment must be a verbatim run of a line it names in `cutFrom`.
+// The headline is either written whole, with no `cutFrom`, or a SPLICE of
+// positioning lines, in which case every fragment must be a verbatim run of a
+// line it names in `cutFrom`.
 
-test('the hero headline is either a whole design sentence or a checkable splice', () => {
+test('the hero headline is either written whole or a checkable splice', () => {
   if (HERO_HEADLINE.cutFrom.length === 0) {
-    assert.match(HERO_HEADLINE.source || '', /Spectrum\.dc\.html/,
-      'the headline is not a splice, so it must name the design it was taken from')
+    // Written whole: assert its shape. A lead and a marked run, closed by a
+    // full stop, make up the sentence.
+    assert.ok(HERO_HEADLINE.lead.trim().length > 0 && HERO_HEADLINE.mark.trim().length > 0,
+      'a whole headline needs a lead and a marked run')
+    assert.equal(HERO_HEADLINE.tail, '.')
+    assert.equal(heroHeadlineText(), `${HERO_HEADLINE.lead} ${HERO_HEADLINE.mark}${HERO_HEADLINE.tail}`)
+    assert.ok(!('source' in HERO_HEADLINE), 'the headline carries a source field nothing reads')
     return
   }
   const sources = HERO_HEADLINE.cutFrom.map((id) => line(id).toLowerCase())
@@ -103,10 +108,10 @@ test('the headline splice check can fail', () => {
 //
 // What was approved is a STRING, not a recipe — so the string is pinned here, a
 // second time. Changing the headline is then a deliberate two-file edit.
-const APPROVED_HEADLINE = 'Build and export UI and brand kits from one place.'
+const APPROVED_HEADLINE = 'Your UI and brand kit, from one app.'
 const APPROVED_PARTS = Object.freeze({
-  lead: 'Build and export UI and brand kits from',
-  mark: 'one place',
+  lead: 'Your UI and brand kit, from',
+  mark: 'one app',
   tail: '.',
 })
 
@@ -129,7 +134,7 @@ test('the hero headline is the exact approved sentence', () => {
 
 test('the headline pin can fail', () => {
   assert.notEqual(
-    APPROVED_HEADLINE, `${APPROVED_PARTS.lead} in one place${APPROVED_PARTS.tail}`,
+    APPROVED_HEADLINE, `${APPROVED_PARTS.lead} one tool${APPROVED_PARTS.tail}`,
     'the pin would accept a reworded headline — it proves nothing',
   )
 })
@@ -146,13 +151,16 @@ test('the homepage renders its headline and sub from the module, not from typed 
   // scripts/home-shell.mjs both read — the same "render from the module,
   // never type it" rule. The share card reads HERO_HEADLINE directly.
   const hero = read('src/components/spectrum/spectrumHero.js')
-  assert.match(home, /SPECTRUM_HERO\.text/, 'the hero h1 no longer renders SPECTRUM_HERO.text')
-  assert.match(home, /SPECTRUM_HERO\.mark/, 'the hero h1 no longer renders the highlighted run SPECTRUM_HERO.mark')
-  assert.match(home, /\{SPECTRUM_HERO_SUB\}/, 'the hero sub-line no longer renders SPECTRUM_HERO_SUB')
+  const heroComponent = read('src/components/home/HomeHero.jsx')
+  assert.match(home, /<HomeHero/, 'the page no longer mounts the hero component')
+  assert.match(heroComponent, /SPECTRUM_HERO\.lead/, 'the hero h1 no longer renders SPECTRUM_HERO.lead')
+  assert.match(heroComponent, /SPECTRUM_HERO\.mark/, 'the hero h1 no longer renders the highlighted run SPECTRUM_HERO.mark')
+  assert.match(heroComponent, /\{SPECTRUM_HERO_SUB\}/, 'the hero sub-line no longer renders SPECTRUM_HERO_SUB')
   assert.match(hero, /from '\.\.\/\.\.\/data\/positioning\.js'/,
     'spectrumHero.js no longer reads the headline from positioning.js')
-  for (const sentence of [/Build and export UI and brand kits/, /Pick your colours, type, icons and imagery/]) {
-    assert.ok(!sentence.test(home), `Spectrum.jsx types ${sentence} instead of reading spectrumHero.js`)
+  for (const sentence of [HERO_HEADLINE.lead, HERO_HEADLINE.mark, 'Colours, type, icons and imagery']) {
+    assert.ok(!home.includes(sentence) && !heroComponent.includes(sentence),
+      `the page or hero types "${sentence}" instead of reading spectrumHero.js`)
   }
 
   // …and must NOT also carry the sentences as literals. A page that renders
@@ -220,24 +228,11 @@ test('every SURFACE_LINE mapping has a surface that actually reads it', () => {
   }
 })
 
-test('the share card says what the hero says', () => {
-  // The card is generated from the same module the hero renders from, so the
-  // check is that the GENERATED artefact agrees — cards.json is committed, and
-  // a stale one means somebody changed the headline without running og:cards.
+test('the homepage share card does not quote the hero', () => {
+  // The default card is now the brand kit's static logo card, so it cannot go
+  // stale against the headline. cards.json must not record a hero again.
   const cards = JSON.parse(read('public/previews/cards.json'))
-  const cardHeadline = cards.hero.headline.map((r) => r.text).join('').trim()
-  assert.equal(
-    cardHeadline, heroHeadlineText(),
-    'public/previews/cards.json disagrees with the hero headline. Run `npm run og:cards`.',
-  )
-  assert.equal(
-    cards.hero.sub, SPECTRUM_HERO_SUB,
-    'the share card sub disagrees with the hero sub-line. Run `npm run og:cards`.',
-  )
-  assert.equal(
-    cards.hero.kicker, null,
-    'the share card has an eyebrow again — the "UI system toolkit" tagline is retired.',
-  )
+  assert.equal(cards.hero, undefined, 'cards.json records a homepage hero the generator no longer draws')
 })
 
 test('the hero keeps exactly one highlighted run', () => {

@@ -65,7 +65,7 @@ test('FeedbackButton is mounted OUTSIDE AppInner, so the menu survives the early
   // This is the assertion that actually guards the bug. AppInner returns early
   // for /home, /onboarding, / and every chromeless route; anything mounted
   // inside its shell is absent from all of them.
-  const inner = APP.indexOf('function AppInner()')
+  const inner = APP.indexOf('function AppInner(')
   const outer = APP.indexOf('export default function App()')
   assert.ok(inner !== -1 && outer !== -1 && inner < outer, 'App.jsx has the shape this test assumes')
 
@@ -102,7 +102,16 @@ test('the floating button hides on exactly the routes the mount newly reaches', 
   const literals = new Set(
     [...BUTTON.matchAll(/'(\/[a-z-]*)'/g)].map((m) => m[1]),
   )
+  // /login early-returns too, but it is the one route that keeps the button it
+  // always had: it was a shell route under the outer mount, and the page leaves
+  // the wall's pause button clear of the bottom-right corner for it. Listing it
+  // would take the button away from a visitor who needs to report a sign-in
+  // problem.
+  const KEEPS_BUTTON = new Set(['/login'])
+  assert.ok(named.has('/login'), 'App.jsx early-returns on /login (the exemption below is still needed)')
+  assert.ok(!literals.has('/login'), 'NO_BUTTON must not list /login: the page keeps the feedback button')
   for (const route of named) {
+    if (KEEPS_BUTTON.has(route)) continue
     assert.ok(
       literals.has(route),
       `App.jsx early-returns on ${route}, so FeedbackButton must list it in NO_BUTTON`,

@@ -1,7 +1,7 @@
 // The Type Scale overhaul, in a browser.
 //
-// #type-scale-ui-overhaul. The founder: "the type scale UI needs a overhaul it
-// looks AI generated. design the tool with a user centric design".
+// #type-scale-ui-overhaul. The type scale UI looked AI generated and needed a
+// user-centric redesign.
 //
 // Every assertion here is a thing that was true of the page BEFORE the change
 // and must stay false, or a wiring that the change introduced and that a green
@@ -17,6 +17,7 @@
 
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
+import { settleTypeScaleView, showTypeScaleLadder, showTypeScalePage } from './type-scale-view.js'
 
 // The visible one. Type Scale keeps a second, hidden ladder in no case, but the
 // rail and the ladder both carry `.seg-label` and `.tsc-select`, and a
@@ -29,7 +30,7 @@ test.describe('Type Scale · the overhaul', () => {
     watch(page, 'the founder re-reading the page he marked AI')
     await go(page, '/create/type-scale')
 
-    // 1. THE TAXONOMY EYEBROW. Marked "AI" by the founder on the Font Gallery
+    // 1. THE TAXONOMY EYEBROW. Marked as an AI tell on the Font Gallery
     //    and deleted from every tool masthead #382 reached. It did not reach
     //    this page, so "Create / Typography" was still here.
     await expect(page.locator('.tsc-page .sec-h-eyebrow')).toHaveCount(0)
@@ -47,6 +48,7 @@ test.describe('Type Scale · the overhaul', () => {
     // 4. THE DISPLAY h1. On a page about type, the largest type on it was the
     //    one string the visitor cannot change. The ladder is the loudest thing
     //    here now, so the title must be smaller than the top step it sits over.
+    await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
     const h1 = await page.locator('[data-tool-toolbar] h1').evaluate(
       el => parseFloat(getComputedStyle(el).fontSize),
     )
@@ -63,43 +65,56 @@ test.describe('Type Scale · the overhaul', () => {
 
   test('the scale bar is the two numbers, and they drive the ladder', async ({ page }) => {
     watch(page, 'designer choosing a base and a ratio')
+
+    // The controls that make the scale are adjacent to the ladder they drive at
+    // every width. Stacked, the bar is above the ladder. In the 1440 split the
+    // panel is the column beside the ladder, so the bar cannot be above it: it
+    // has to start level with it instead, not below it or after it.
+    for (const [w, h] of [[1440, 900], [1200, 900], [768, 1024]]) {
+      await page.setViewportSize({ width: w, height: h })
+      await go(page, '/create/type-scale')
+      const layout = await settleTypeScaleView(page)
+      const bar = await page.locator('.tsc-scale-bar').evaluate(el => { const r = el.getBoundingClientRect(); return { top: r.top, left: r.left } })
+      const ladder = await page.locator('.tsc-ladder').evaluate(el => { const r = el.getBoundingClientRect(); return { top: r.top, right: r.right } })
+      if (layout === 'split') {
+        expect(w, 'only the 1440 window is split').toBe(1440)
+        expect(bar.left, `${w}px: the split puts the bar beside the ladder`).toBeGreaterThanOrEqual(ladder.right - 1)
+        expect(bar.top, `${w}px: beside the ladder, the scale bar starts level with it`).toBeLessThanOrEqual(ladder.top + 40)
+      } else {
+        expect(bar.top, `${w}px: the scale bar leads the ladder`).toBeLessThan(ladder.top)
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/type-scale')
 
-    // The bar sits ABOVE the grid, so the controls that make the scale are
-    // adjacent to the ladder they drive at every width — which is what the
-    // 1344px column reorder used to buy for the rail, and no longer has to.
-    const barTop = await page.locator('.tsc-scale-bar').evaluate(el => el.getBoundingClientRect().top)
-    const ladderTop = await page.locator('.tsc-ladder').evaluate(el => el.getBoundingClientRect().top)
-    expect(barTop, 'the scale bar leads the ladder').toBeLessThan(ladderTop)
-
     // WIRING. The ratio is a control in the bar; the range beside it and the
-    // top row of the ladder are both computed from it. At the default
-    // nearest-0.5px rounding: 16 x 1.25^6 = 61.04 -> 61 and 16 / 1.25^2 = 10.24
-    // -> 10; 16 x 1.5^6 = 182.25 -> 182.5 and 16 / 1.5^2 = 7.11 -> 7; then
-    // 20 x 1.5^6 = 227.81 -> 228.
+    // top row of the ladder are both computed from it. The scale opens on base 15,
+    // golden ratio 1.618, four steps up and one down, to two decimals:
+    // 15 x 1.618^4 = 102.8 and 15 / 1.618 = 9.27; then 15 x 1.5^4 = 75.94 and
+    // 15 / 1.5 = 10; then 20 x 1.5^4 = 101.25.
     const range = page.locator('.tsc-scale-range')
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
-    await expect(range).toHaveText('10px – 61px')
-    await expect(largest).toContainText('61px')
+    await expect(range).toHaveText('6 steps, 9.27px to 102.8px')
+    await expect(largest).toHaveText(/^102\.8 \//)
 
     await chooseMenuOption(page, page.getByLabel('Scale ratio'), '1.5')
-    await expect(range).toHaveText('7px – 182.5px')
-    await expect(largest).toContainText('182.5px')
+    await expect(range).toHaveText('6 steps, 10px to 75.94px')
+    await expect(largest).toHaveText(/^75\.94 \//)
 
     // And the base, from its own control in the same bar.
     await page.locator('#tsc-base + .snapv-value').click()
     await page.getByRole('spinbutton', { name: /Base font size/ }).fill('20')
     await page.getByRole('spinbutton', { name: /Base font size/ }).press('Enter')
-    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('20px')
-    await expect(largest).toContainText('228px')
+    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('20 px')
+    await expect(largest).toHaveText(/^101\.25 \//)
   })
 
-  test('the ladder comes before the rail, at every width', async ({ page }) => {
+  test('the panel is a card above the ladder when stacked, and the ladder is the left column beside it', async ({ page }) => {
     watch(page, 'designer on a laptop and on a phone')
 
-    // The rail used to lead in the DOM. Below 1344px this page is a single
-    // column, so that put ~330px of families and a closed disclosure between
-    // the scale bar and the thing it describes on most screens.
+    // Below 1024 the panel (Base, Ratio, families) leads, in the source as well
+    // as on screen: 187-type-scale-ladder checks the source order. From 1024 the
+    // ladder takes the wide left column and the panel the right.
     for (const [w, h] of [[1440, 900], [1200, 900], [768, 1024], [390, 844]]) {
       await page.setViewportSize({ width: w, height: h })
       await go(page, '/create/type-scale')
@@ -112,40 +127,61 @@ test.describe('Type Scale · the overhaul', () => {
         // Two columns: the ladder takes the wide left column.
         expect(order.outLeft, `${w}px: the ladder is the left column`).toBeLessThan(order.cfgLeft)
       } else {
-        expect(order.outTop, `${w}px: the ladder is above the rail`).toBeLessThan(order.cfgTop)
+        expect(order.cfgTop, `${w}px: the panel (Base, Ratio, families) is a card above the ladder when stacked`).toBeLessThan(order.outTop)
       }
     }
   })
 
-  test('preview text replaces the specimen in the ladder and in the page preview', async ({ page }) => {
-    watch(page, 'designer checking the scale against their own words')
-    await go(page, '/create/type-scale')
+  // At 1440 the ladder and the page are side by side; at 1024 Page is a view of
+  // its own behind the switch. The control has to drive both previews either way.
+  for (const [w, h] of [[1440, 900], [1024, 800]]) {
+    test(`preview text replaces the specimen in the ladder and in the page preview at ${w}`, async ({ page }) => {
+      watch(page, 'designer checking the scale against their own words')
+      await page.setViewportSize({ width: w, height: h })
+      await go(page, '/create/type-scale')
 
-    // The homepage Typography panel and Font Pair have both had this control
-    // all along. The tool whose only job is judging sizes did not.
-    const rows = page.locator('.tsc-row-text')
-    await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
-    await expect(page.locator('.tsc-article-h1')).toHaveText('A page set on this scale')
+      // The homepage Typography panel and Font Pair have both had this control
+      // all along. The tool whose only job is judging sizes did not.
+      // The heading rows read "Loading <family>" until the face is in.
+      const rows = page.locator('.tsc-row-text')
+      await expect(page.locator('.tsc-row-text.is-loading')).toHaveCount(0)
+      // The two steps drawn at 49px or more show only the first word of the line;
+      // the other four hold the whole of it.
+      const FIRST_WORD_ROWS = 2
+      await expect(rows.first()).toHaveText('There')
+      // The smallest step also prints its "Under 12px" note inside the row.
+      await expect(rows.last()).toHaveText(/^There at 11:40\./)
+      await showTypeScalePage(page)
+      await expect(page.locator('.tsk-hdr .tsk-h').first()).toHaveText('There at')
+      await showTypeScaleLadder(page)
 
-    await page.getByLabel('Preview text').fill('Checkout · 3 items')
+      // Exact: the 390 settings sheet's name also contains "preview text".
+      await page.getByLabel('Preview text', { exact: true }).fill('Checkout · 3 items')
 
-    // WIRING, and the point of the control: EVERY step takes the words, so the
-    // question "is this size usable for this string" can be asked at all nine.
-    const count = await rows.count()
-    for (let i = 0; i < count; i++) {
-      await expect(rows.nth(i)).toHaveText('Checkout · 3 items')
-    }
-    // One string, both previews.
-    await expect(page.locator('.tsc-article-h1')).toHaveText('Checkout · 3 items')
+      // WIRING, and the point of the control: EVERY step takes the words, so the
+      // question "is this size usable for this string" can be asked at all six.
+      const count = await rows.count()
+      expect(count).toBe(6)
+      for (let i = 0; i < count; i++) {
+        await expect(rows.nth(i)).toHaveText(i < FIRST_WORD_ROWS ? 'Checkout' : /^Checkout · 3 items/)
+      }
+      // One string, both previews.
+      await showTypeScalePage(page)
+      await expect(page.locator('.tsk-hdr .tsk-h').first()).toHaveText('Checkout · 3 items')
+      await showTypeScaleLadder(page)
 
-    // Emptying it falls back to the pangram rather than to nothing.
-    await page.getByLabel('Preview text').fill('')
-    await expect(rows.first()).toHaveText('The quick brown fox jumps over the lazy dog')
-  })
+      // Emptying it falls back to the default line rather than to nothing.
+      await page.getByLabel('Preview text', { exact: true }).fill('')
+      await expect(rows.first()).toHaveText('There')
+      await expect(rows.last()).toHaveText(/^There at 11:40\./)
+    })
+  }
 
   test('fine tuning is closed on arrival and every control is still reachable', async ({ page }) => {
     watch(page, 'designer who needs letter spacing')
     await go(page, '/create/type-scale')
+    // At 1440 the Scale / Page switch is gone, so any tab here is a stray.
+    expect(await settleTypeScaleView(page)).toBe('split')
 
     const toggle = page.getByRole('button', { name: 'Fine tuning' })
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -153,7 +189,7 @@ test.describe('Type Scale · the overhaul', () => {
     // Closed means closed: nothing inside is reachable, and in particular the
     // fluid/fixed pair must not answer to the preview width switch's class.
     await expect(visible(page, '.tsc-mode-btn')).toHaveCount(0)
-    await expect(visible(page, '.tsc-width-btn')).toHaveCount(3)
+    await expect(page.getByRole('tab')).toHaveCount(0)
     await expect(page.locator('#tsc-round')).toBeHidden()
 
     await toggle.click()
@@ -165,9 +201,15 @@ test.describe('Type Scale · the overhaul', () => {
       await expect(page.locator(`#${id}`), `${id} survives the disclosure`).toBeVisible()
     }
     await expect(visible(page, '.tsc-mode-btn')).toHaveCount(2)
+    // Opening the disclosure adds buttons, never tabs.
+    await expect(page.getByRole('tab')).toHaveCount(0)
 
-    // And it still drives the maths from in there.
-    await chooseMenuOption(page, page.getByLabel('Rounding'), 'none')
-    await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('61.04px')
+    // And it still drives the maths from in there. The scale opens exact to two
+    // decimals; the second step shows the rounding: 15 x 1.618^3 = 63.54 exact
+    // and 64 on whole pixels.
+    const second = page.locator('.tsc-row').nth(1).locator('.tsc-row-num')
+    await expect(second).toHaveText(/^63\.54 \//)
+    await chooseMenuOption(page, page.getByLabel('Rounding'), 'whole')
+    await expect(second).toHaveText(/^64 \//)
   })
 })

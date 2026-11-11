@@ -1,7 +1,7 @@
 // Explicit .js: this module is imported directly by tests/unit/font-dossier
 // under `node --test`, and node's ESM resolver does not guess extensions the
 // way Vite's does. Vite is happy with the extension either way.
-import { formatSubsets, weightName } from './fontGallery.js'
+import { categoryLabel, formatSubsets, weightName } from './fontGallery.js'
 
 // The facts a font popup can honestly state about a family, and the vocabulary
 // for saying them. Split out of FontDossier.jsx because these are not
@@ -16,19 +16,17 @@ import { formatSubsets, weightName } from './fontGallery.js'
 // family name, nothing is hand-authored per family, and nothing is defaulted to
 // a plausible-looking value.
 
-// TWO EXAMPLE TABS, and the split between them is the founder's own sentence
-// (2026-09-05): "1 tab showing Usage examples using some made mockup use cases,
-// but ... a tab showing real world use applications for each font and an image
-// to show it".
+// TWO EXAMPLE TABS: one showing usage examples built from made-up mockup use
+// cases, and one showing real-world applications of each font with an image.
 //
 //   examples  MOCKUPS. Situations this page draws itself, chosen from what kind
 //             of face the family is. Invented by construction and labelled as
 //             such at the top of the panel. Nothing in it is a claim about
 //             anybody's brand.
-//   inuse     PHOTOGRAPHS of real work. Ships EMPTY — see data/fontRealWorldUses
-//             for why, and for what an entry has to carry before it may be
-//             drawn. [fonts-in-use-surface] stays blocked; this is the slot it
-//             will fill, not a claim that it has been filled.
+//   inuse     LINKS to documented real-world uses, from data/fontRealWorldUses.
+//             Each entry points at the page that documents it; a family with
+//             no entry shows an empty state about our list, not about the
+//             typeface.
 //
 // "In use" rather than "Real world": it is the vocabulary fontsinuse.com itself
 // uses, and the panel links there. The two labels have to be legible as
@@ -74,12 +72,13 @@ const AXIS_NAMES = {
   FILL: 'Fill',
 }
 
+// Spelled by the shared helper, so About reads the same as the pop-up's hero meta.
 export const CATEGORY_LABEL = {
-  'sans-serif': 'Sans-serif',
-  serif: 'Serif',
-  display: 'Display',
-  handwriting: 'Handwriting',
-  monospace: 'Monospace',
+  'sans-serif': categoryLabel('sans-serif'),
+  serif: categoryLabel('serif'),
+  display: categoryLabel('display'),
+  handwriting: categoryLabel('handwriting'),
+  monospace: categoryLabel('monospace'),
 }
 
 export function titleCase(value) {
@@ -104,7 +103,9 @@ export function yearOf(iso) {
   return match ? match[1] : ''
 }
 
-/** The facts the loaded catalogue actually holds for a family, in reading order. */
+/**
+ * The facts the loaded catalogue actually holds for a family, in reading order.
+ */
 export function fontFacts(font) {
   if (!font) return []
   const rows = []
@@ -151,13 +152,78 @@ export function fontFacts(font) {
   const scripts = formatSubsets(font.subsets)
   if (scripts.length) rows.push({ k: 'Scripts', v: scripts.join(', ') })
 
-  if (font.openSource === true) rows.push({ k: 'Licence', v: 'Open source' })
-
+  // The licence is not a row: it has its own block at the end of the About
+  // panel (see fontLicence below), so it is named once.
   if (Number.isFinite(font.popularity)) {
     rows.push({ k: 'Popularity', v: `#${(font.popularity + 1).toLocaleString()} by use on Google Fonts` })
   }
 
   return rows
+}
+
+// The licences a family can be published under, keyed by SPDX id. `summary` is
+// one plain sentence on what the licence allows, shown under the heading.
+export const LICENCES = {
+  'OFL-1.1': {
+    heading: 'SIL Open Font License 1.1',
+    summary: 'Free to use in personal and commercial work, including apps and logos. You can\u2019t sell the font files on their own.',
+    href: 'https://openfontlicense.org',
+  },
+  'Apache-2.0': {
+    heading: 'Apache License 2.0',
+    summary: 'Free to use in personal and commercial work. Keep the licence notice if you share the font files.',
+    href: 'https://www.apache.org/licenses/LICENSE-2.0',
+  },
+  'UFL-1.0': {
+    heading: 'Ubuntu Font Licence 1.0',
+    summary: 'Free to use in personal and commercial work. A changed version can\u2019t use the Ubuntu name.',
+    href: 'https://ubuntu.com/legal/font-licence',
+  },
+}
+
+export const LICENCE_LINK_LABEL = 'Read the licence \u2197'
+
+// Shown when a family is not in the table: it points at the one place that does
+// know, and never asserts a licence.
+const LICENCE_UNKNOWN = {
+  heading: 'Licence on Google Fonts',
+  summary: 'Check the licence on Google Fonts before you ship.',
+}
+
+/**
+ * The table key for a family name: lowercase letters and digits only, which is
+ * how the google/fonts repository names a family's folder ("Open Sans" is
+ * "opensans"). scripts/build-font-licences.mjs writes the table under these.
+ */
+export function licenceKey(family) {
+  return String(family || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function googleFontsPage(family) {
+  return `https://fonts.google.com/specimen/${encodeURIComponent(family).replace(/%20/g, '+')}`
+}
+
+/**
+ * What the pop-up shows for a family's licence:
+ * { id, heading, summary, href, linkLabel }, where `id` is the SPDX id or null.
+ * Returns null when there is no family or the table has not loaded, so a slow
+ * table reads as silence and not as "unknown". A family missing from a loaded
+ * table, or mapped to an id this module has no text for, gets the Google Fonts
+ * fallback.
+ */
+export function fontLicence(font, table) {
+  if (!font?.family || !table || typeof table !== 'object') return null
+  const key = licenceKey(font.family)
+  const id = Object.hasOwn(table, key) ? table[key] : null
+  if (typeof id === 'string' && Object.hasOwn(LICENCES, id)) {
+    return { id, ...LICENCES[id], linkLabel: LICENCE_LINK_LABEL }
+  }
+  return {
+    id: null,
+    ...LICENCE_UNKNOWN,
+    href: googleFontsPage(font.family),
+    linkLabel: LICENCE_LINK_LABEL,
+  }
 }
 
 /** True when the loaded catalogue carries none of the enriched About fields. */

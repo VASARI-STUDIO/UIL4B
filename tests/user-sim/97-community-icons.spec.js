@@ -1,8 +1,7 @@
 // SUBMITTING AN ICON TO THE COMMUNITY — rendered, not inferred.
 //
-// Founder, 2026-09-18: "people can submit icons to the community they just need
-// to be reviewed - all submissions of any sorts are tied to the account not
-// browser."
+// People can submit icons to the community; they just need to be reviewed. All
+// submissions of any sort are tied to the account, not the browser.
 //
 // tests/unit/community-icon-submission.test.js proves the RULES about what may
 // be submitted. It cannot prove any of the following, because all four are
@@ -18,7 +17,7 @@
 //      cards would be the page implying a publication that has not happened.
 //   4. THE ACCOUNT HOLDS IT. Submitted in one session, still there after the
 //      browser's own storage is wiped and the page reloaded — which is the
-//      founder's requirement stated as something a test can watch.
+//      requirement stated as something a test can watch.
 //
 // ── MUTATION — all five applied, seen red, and restored byte-exact ─────────
 //
@@ -45,6 +44,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { COMMUNITY_SUBMIT_REASONS } from '../../src/utils/submitIntent.js'
+import { TOAST_ACTION_MIN_MS } from '../../src/utils/toastDuration.js'
 
 // A real icon, in the shape every pack in this app ships: a viewBox, a path,
 // and `currentColor` — which is why the preview has to paint the root.
@@ -191,7 +191,7 @@ test.describe('community icon submissions', () => {
   })
 
   test('a submission this browser has never seen is shown, because the ACCOUNT holds it', async ({ page }) => {
-    // The founder's requirement, stated as something a test can watch. The
+    // The requirement, stated as something a test can watch. The
     // strongest form of "tied to the account, not the browser" is a submission
     // made somewhere else entirely: this browser has no record of it, and the
     // page shows it anyway.
@@ -217,10 +217,10 @@ test.describe('community icon submissions', () => {
           payload: { svg: ICON, author: 'Freya Free' },
           createdAt: '2026-09-18T09:00:00.000Z',
         },
-        // Somebody else's, in the same collection. The queue is readable by
-        // every signed-in user by design (firestore.rules `allow read: if
-        // isSignedIn()`), so "only mine" is a property of the QUERY and has to
-        // be asserted rather than assumed.
+        // Somebody else's, in the same collection. The suite's Firestore
+        // double does not enforce firestore.rules (which now refuse a read of
+        // another user's pending item), so "only mine" is a property of the
+        // QUERY and has to be asserted rather than assumed.
         'community-submissions/not-yours': {
           kind: 'icon',
           name: 'Belongs to someone else',
@@ -289,6 +289,10 @@ test.describe('community icon submissions', () => {
 
     await queued.getByRole('button', { name: /^Withdraw$/i }).first().click()
     await expect(queued, 'the withdrawn submission must be gone from the list').toHaveCount(0)
-    expect(await inQueue(), 'the account still holds a submission the user was told was withdrawn').toBe(0)
+    // The delete waits out the Undo toast, so it lands a few seconds later.
+    await expect.poll(inQueue, {
+      message: 'the account still holds a submission the user was told was withdrawn',
+      timeout: TOAST_ACTION_MIN_MS + 6000,
+    }).toBe(0)
   })
 })

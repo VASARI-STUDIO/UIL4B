@@ -31,8 +31,11 @@ import {
   TOPICS,
   findArticle,
   nextArticle,
+  nextInTopic,
   readingMinutes,
+  topicAnchorId,
 } from '../../src/data/learnIndex.js'
+import { LEARN_SOURCES, getArticleSources } from '../../src/data/learn/sources.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { LEARN_DELIVERED, LEARN_GROUPS, LEARN_ROADMAP, LEARN_TOPIC_ROWS } from '../../src/data/toolTree.js'
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
@@ -92,7 +95,7 @@ test('every article is a complete record', () => {
     assert.match(a.updated, /^\d{4}-\d{2}-\d{2}$/, `${a.slug} has an unusable updated date`)
     assert.ok(Number.isInteger(a.words) && a.words > 200, `${a.slug} has an implausible word count`)
     assert.ok(Array.isArray(a.sections) && a.sections.length >= 3, `${a.slug} has too few sections`)
-    assert.ok(Array.isArray(a.sources) && a.sources.length >= 1, `${a.slug} cites nothing`)
+    assert.ok(getArticleSources(a.slug).length >= 1, `${a.slug} cites nothing`)
     // navLabel is what the nav column shows, where the row is about 180px wide.
     assert.ok(a.navLabel.length <= 24, `${a.slug}'s navLabel is too long for a nav row`)
   }
@@ -151,13 +154,46 @@ test('the measured word count on disk is the one the reading estimate uses', () 
 
 test('every source is a real, attributable link', () => {
   for (const a of LEARN_ARTICLES) {
-    for (const s of a.sources) {
+    const sources = getArticleSources(a.slug)
+    for (const s of sources) {
       assert.ok(s.label && s.label.length > 8, `${a.slug} has a source with no usable label`)
       assert.match(s.href, /^https?:\/\/\S+$/, `${a.slug} has a source with an unusable href: ${s.href}`)
     }
-    const hrefs = a.sources.map((s) => s.href)
+    const hrefs = sources.map((s) => s.href)
     assert.equal(new Set(hrefs).size, hrefs.length, `${a.slug} lists the same source twice`)
   }
+})
+
+test('source lists are keyed to the registry and stay off the article records', () => {
+  // The records are in the entry chunk (routeMetaMap, toolTree and menuModel all
+  // import them); the lists are the bulk of an article and are read only by the
+  // lazy article page. A `sources` field creeping back onto a record would put
+  // them in every visitor's first download again.
+  assert.deepEqual(
+    Object.keys(LEARN_SOURCES).sort(),
+    LEARN_ARTICLES.map((a) => a.slug).sort(),
+    'src/data/learn/sources.js and the registry must list exactly the same slugs',
+  )
+  for (const a of LEARN_ARTICLES) {
+    assert.ok(!('sources' in a), `${a.slug} carries its sources on the registry record`)
+  }
+  assert.deepEqual(getArticleSources('no-such-article'), [], 'an unknown slug has no sources')
+})
+
+test('only the lazy article page imports the source lists', () => {
+  // Not "reachable from the entry chunk" (home-asset-budget walks that for the
+  // large top-level data files); this pins the one importer, so a second one
+  // has to be a deliberate edit to this list.
+  const importers = fs.readdirSync(path.join(process.cwd(), 'src'), { recursive: true })
+    .map((f) => f.split(path.sep).join('/'))
+    .filter((f) => /\.jsx?$/.test(f))
+    .filter((f) => /from\s*['"][^'"]*learn\/sources(?:\.js)?['"]/.test(read(`src/${f}`)))
+  assert.deepEqual(importers, ['pages/LearnArticle.jsx'])
+  assert.match(
+    read('src/App.jsx'),
+    /const LearnArticle = lazy\(\(\) => import\('\.\/pages\/LearnArticle'\)\)/,
+    'LearnArticle is no longer a lazy route, so the source lists are back in the entry chunk',
+  )
 })
 
 test('every article route carries its own metadata and gets a shell', () => {
@@ -206,7 +242,7 @@ test('a roadmap row that has stopped saying Soon points at a guide that renders'
   // Design Principles and Help & Getting Started wore Soon badges in the mega
   // menu, the mobile sheet and the visual sitemap while /principles and /help
   // both answered 200 — and /sitemap already listed both as live rows of its
-  // own, so it contradicted itself twice on one page. Founder's call: point
+  // own, so it contradicted itself twice on one page. The fix: point
   // them at the live pages. What the guard is actually FOR — no row advertising
   // a topic as done with nothing behind it — is unchanged and enforced below;
   // only the definition of "something behind it" widened from a published guide
@@ -285,6 +321,46 @@ test('read-next walks every article and returns to the first', () => {
   }
   assert.equal(at.slug, LEARN_ARTICLES[0].slug, 'nextArticle() does not wrap back to the first')
   assert.equal(seen.size, LEARN_ARTICLES.length)
+})
+
+test('next-in-topic stays inside the topic, wraps, and falls back when the topic has one guide', () => {
+  for (const a of LEARN_ARTICLES) {
+    const same = LEARN_ARTICLES.filter((b) => b.topic === a.topic)
+    const next = nextInTopic(a.slug)
+    if (same.length < 2) {
+      assert.equal(next?.slug, nextArticle(a.slug)?.slug,
+        `${a.slug} is alone in ${a.topic}, so next-in-topic should be the registry's next article`)
+      continue
+    }
+    assert.equal(next.topic, a.topic, `${a.slug}: next-in-topic left the topic`)
+    assert.notEqual(next.slug, a.slug)
+    // Walking it returns to the start after visiting the whole topic once.
+    const seen = new Set()
+    let at = a
+    for (let i = 0; i < same.length; i++) {
+      assert.ok(!seen.has(at.slug), `${a.topic}: revisited ${at.slug} before covering the topic`)
+      seen.add(at.slug)
+      at = nextInTopic(at.slug)
+    }
+    assert.equal(at.slug, a.slug)
+    assert.equal(seen.size, same.length)
+  }
+  // Registry order, not alphabetical: the last typography guide wraps to the first.
+  assert.equal(nextInTopic('type-scales').slug, 'typeface-metrics')
+  assert.equal(nextInTopic('font-loading').slug, 'type-scales')
+  assert.equal(nextInTopic('nonsense'), undefined)
+})
+
+test('a topic breadcrumb targets the id the Learn index gives that topic group', () => {
+  const index = read(path.join('src', 'components', 'LearnGuideIndex.jsx'))
+  assert.ok(
+    index.includes("const topicId = (topic) => `learn-topic-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`"),
+    'LearnGuideIndex.jsx builds topic ids differently from topicAnchorId() in learnIndex.js',
+  )
+  for (const topic of TOPICS) {
+    assert.match(topicAnchorId(topic), /^learn-topic-[a-z0-9-]+$/)
+  }
+  assert.equal(topicAnchorId('Colour'), 'learn-topic-colour')
 })
 
 test('an unknown slug resolves to nothing rather than to the first article', () => {

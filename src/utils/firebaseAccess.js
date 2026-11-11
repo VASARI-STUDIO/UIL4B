@@ -34,7 +34,7 @@ import { auth, db, storage, googleProvider, GOOGLE_CLIENT_ID } from './firebase'
 import {
   doc, getDoc, setDoc, onSnapshot,
   collection, addDoc, getDocs, updateDoc, deleteDoc,
-  query, orderBy, limit, increment, deleteField,
+  query, where, orderBy, limit, increment, deleteField, runTransaction, serverTimestamp,
 } from 'firebase/firestore'
 import {
   signInWithPopup, signInWithCredential, signInWithEmailAndPassword,
@@ -52,7 +52,7 @@ const firebaseNs = { auth, db, storage, googleProvider, GOOGLE_CLIENT_ID }
 const firestoreNs = {
   db, doc, getDoc, setDoc, onSnapshot,
   collection, addDoc, getDocs, updateDoc, deleteDoc,
-  query, orderBy, limit, increment, deleteField,
+  query, where, orderBy, limit, increment, deleteField, runTransaction, serverTimestamp,
 }
 const authNs = {
   auth, googleProvider,
@@ -82,3 +82,7 @@ export function whenFirestore() { return Promise.resolve(firestoreNs) }
 // No gate to open when nothing is deferred.
 export function openFirebaseGate() {}
 export function whenFirebaseGate() { return Promise.resolve() }
+
+// Nothing is deferred here, so the SDK is always already answering and there is
+// never a wait that could be skipped.
+export function canSkipAuthWait() { return false }

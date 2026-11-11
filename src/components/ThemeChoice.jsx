@@ -1,4 +1,5 @@
 import { useTheme } from '../contexts/ThemeContext'
+import { PH_CIRCLE_HALF, PH_MOON, PH_SUN } from './spectrum/phosphorNav'
 
 // The one theme control, rendered in three places: the nav popover (signed in
 // and signed out), the mobile sheet, and /settings › Accessibility.
@@ -19,33 +20,20 @@ import { useTheme } from '../contexts/ThemeContext'
 // disclosure, not a menu (see 28-account-menu-keyboard.spec.js). Roving tabindex
 // would fight the popover's own arrow-key movement.
 
-function SunIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
+// The same Phosphor sun, moon and circle-half as the theme cycle button, so
+// System looks the same wherever it is offered.
+function phosphor(d) {
+  return function PhosphorIcon() {
+    return (
+      <svg viewBox="0 0 256 256" width="15" height="15" fill="currentColor" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    )
+  }
 }
-
-function MoonIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
-      <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-// "System" is a display, not a time of day — a monitor reads as "whatever your
-// device says", where a half-sun/half-moon would read as a third colour scheme.
-function SystemIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M9 20h6M12 16v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
+const SunIcon = phosphor(PH_SUN)
+const MoonIcon = phosphor(PH_MOON)
+const SystemIcon = phosphor(PH_CIRCLE_HALF)
 
 // Not destructured in the map below: `no-unused-vars` here is configured with
 // varsIgnorePattern '^[A-Z_]', which exempts top-level component consts but not

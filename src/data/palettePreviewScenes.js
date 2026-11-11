@@ -1,42 +1,42 @@
-// The eighteen preview scenes the Palette Builder paints a palette onto —
-// six product screens, six brand pages and six graphic pieces.
+// The previews the Palette Builder paints a palette onto.
 //
-// LIFTED OUT OF src/pages/PaletteBuilder.jsx ON 2026-09-11, UNCHANGED. It is
-// content, not behaviour: every entry is a name and three strings, nothing
-// here imports React, and the components that read it live in
-// src/components/palette/PalettePreview.jsx. Keeping the two apart is also
-// what keeps that file clear of `react-refresh/only-export-components` — a
-// module exporting both a component and a constant earns that warning, and
-// the lint ceiling has no room in it.
+// Every scene is an example: its own made-up product, built around one drawn
+// artefact that is painted with the palette, and a lazy chunk under
+// src/components/palette/examples/. Nothing here names a real person, a real
+// place's Country or this site, and nothing claims proof;
+// tests/unit/palette-preview-copy.test.js holds that line.
+//
+// This is content, not behaviour: no React, no hooks. The components that read
+// it live in src/components/palette/PalettePreview.jsx.
 
-// ── The three preview scenes. Each maps the palette (via derivePreviewRoles →
-// --pv-* custom props) onto a distinct, high-fidelity mock of a real design
-// context, so "will this actually ship?" gets answered for UI, brand and
-// graphic work — not just a dashboard. ──
+// A group with no scene in it is left out, so the list never shows an empty
+// heading. The graphic group joins when its first scene does.
+export const PREVIEW_GROUPS = [
+  { id: 'product', label: 'Product' },
+  { id: 'marketing', label: 'Marketing' },
+]
 
-export const PREVIEW_SCENES = {
-  ui: [
-    { name: 'Analytics dashboard', head: 'Weekly overview', sub: 'Live product metrics and a primary action' },
-    { name: 'Commerce checkout', head: 'Review your order', sub: 'Summary, totals and payment hierarchy' },
-    { name: 'Project workspace', head: 'Launch checklist', sub: 'Tasks, progress and team activity' },
-    { name: 'Account settings', head: 'Profile settings', sub: 'Forms, helper copy and saved state' },
-    { name: 'Support inbox', head: 'Customer inbox', sub: 'Conversation list and response actions' },
-    { name: 'Finance overview', head: 'Account balance', sub: 'Transactions, status and transfer action' },
-  ],
-  brand: [
-    { name: 'Product launch', kicker: 'Introducing', head: 'Design that\nfeels inevitable', sub: 'A focused product launch with primary and secondary actions.' },
-    { name: 'Architecture studio', kicker: 'Selected practice', head: 'Built for\nlasting use', sub: 'An editorial studio page with confident colour restraint.' },
-    { name: 'Creative portfolio', kicker: 'New collection', head: 'Work with\na clear point', sub: 'A portfolio introduction supported by a compact project index.' },
-    { name: 'Conference', kicker: 'Brisbane · October', head: 'Systems in\npractice', sub: 'An event page balancing schedule, venue and registration.' },
-    { name: 'Independent journal', kicker: 'Issue sixteen', head: 'Ideas worth\nkeeping', sub: 'An editorial cover with a clear reading path and subscription action.' },
-    { name: 'Hospitality', kicker: 'Open this season', head: 'Stay close\nto the coast', sub: 'A destination page using the palette for calm orientation.' },
-  ],
-  graphic: [
-    { name: 'Editorial poster', kicker: 'Vol. 04 — Colour', head: 'FORM\n& HUE', sub: 'Type, shape and colour working as one composed system.' },
-    { name: 'Album cover', kicker: 'Recorded live', head: 'NIGHT\nSIGNAL', sub: 'A compact cover system with a legible release hierarchy.' },
-    { name: 'Campaign', kicker: 'City series 02', head: 'MOVE\nWITH IT', sub: 'A public campaign balancing impact with readable details.' },
-    { name: 'Packaging', kicker: 'Batch No. 18', head: 'FIELD\nNOTES', sub: 'A packaging face with product, variant and provenance cues.' },
-    { name: 'Magazine cover', kicker: 'Spring edition', head: 'NEW\nGROUND', sub: 'A cover composition built for title, feature and issue data.' },
-    { name: 'Social launch', kicker: 'Available Friday', head: 'MAKE\nSPACE', sub: 'A campaign tile that preserves the message at small sizes.' },
-  ],
+// `free` is the whole Pro gate: a preview without it is blurred behind
+// "Unlock preview" for an account that is not Pro. `example` marks the lazy
+// chunks. The list is in group order, because the arrow keys walk it.
+export const PREVIEW_SCENES = [
+  { id: 'energy', name: 'Energy dashboard', group: 'product', free: true, example: true },
+  { id: 'trail', name: 'Trail run app', group: 'product', free: true, example: true },
+  { id: 'card', name: 'Spending card', group: 'product', free: false, example: true },
+  { id: 'editorial', name: 'Editorial hero', group: 'marketing', free: true, example: true },
+  { id: 'product', name: 'Product page', group: 'marketing', free: true, example: true },
+  { id: 'studio', name: 'Architect portfolio', group: 'marketing', free: false, example: true },
+]
+
+export const DEFAULT_SCENE = 'editorial'
+
+const sceneIs = (id) => (s) => s.id === id
+export const sceneById = (id) => PREVIEW_SCENES.find(sceneIs(id)) || PREVIEW_SCENES.find(sceneIs(DEFAULT_SCENE))
+
+// The scene the viewer opens on: the last one viewed, unless it is a Pro
+// preview and the plan is not known to be Pro (still loading counts as not
+// Pro), so a free account never opens onto a blurred scene.
+export const openingScene = (lastId, canSeePro) => {
+  const last = PREVIEW_SCENES.find(sceneIs(lastId))
+  return last && (last.free || canSeePro) ? last.id : DEFAULT_SCENE
 }

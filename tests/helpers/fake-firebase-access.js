@@ -6,8 +6,8 @@
 //   - setDoc(ref, data, { merge: true }) merges top-level fields; an
 //     increment() adds to the stored number and a deleteField() removes it;
 //   - a field name matching __x__ is refused, as Firestore refuses it;
-//   - getDocs(query(..., orderBy('day', 'desc'), limit(n))) returns the newest
-//     n documents first.
+//   - getDocs(query(..., [where('day', '>=', d),] orderBy('day', 'desc'),
+//     limit(n))) returns the newest n documents from day d on, newest first.
 
 /** path ("analytics-daily/2026-09-18") → { field: value } */
 export const store = new Map()
@@ -27,6 +27,7 @@ const firestore = {
   db,
   doc: (_db, coll, id) => ({ path: `${coll}/${id}`, coll, id }),
   collection: (_db, coll) => ({ coll }),
+  where: (field, op, value) => ({ where: { field, op, value } }),
   orderBy: (field, dir) => ({ field, dir }),
   limit: (n) => ({ n }),
   query: (coll, ...parts) => ({ coll, parts }),
@@ -47,6 +48,12 @@ const firestore = {
     let docs = [...store.entries()]
       .filter(([p]) => p.startsWith(prefix))
       .map(([p, data]) => ({ id: p.slice(prefix.length), data: () => ({ ...data }) }))
+    // Only `>=` is modelled, on a field holding a string: it is the one bound
+    // the reader sets.
+    for (const { where } of q.parts.filter(p => p.where)) {
+      if (where.op !== '>=') throw new Error(`unmodelled where operator: ${where.op}`)
+      docs = docs.filter(d => d.data()[where.field] >= where.value)
+    }
     const order = q.parts.find(p => p.field)
     if (order) {
       const dir = order.dir === 'desc' ? -1 : 1

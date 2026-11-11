@@ -1,9 +1,8 @@
-// THE TWO DECISIONS THE FOUNDER MADE ON 2026-09-10, RENDERED.
+// THE TWO HEADLINE DECISIONS, RENDERED.
 //
-// Both had been sitting open in docs/RELEASE-READINESS.md § 2 with an agent's
-// measurement under them and no answer. He answered both on the same day, and
-// this file is the record that the answers are what actually ships — not what a
-// comment or a changelog line says ships.
+// Both had been open, with a measurement under them and no answer. Both are now
+// decided, and this file is the record that the answers are what actually ships
+// — not what a comment or a changelog line says ships.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · THE HERO HEADLINE IS APPROVED
@@ -39,7 +38,7 @@
 //   · it spent one of the three free save slots, so a new free account had two;
 //   · it made `/projects`'s "No projects yet · Create your first project" panel
 //     unreachable while signed in — dead code that two other things (Onboarding's
-//     "Not now — take me to my projects", and first-run-destination.test.js's
+//     "Not now, take me to my projects", and first-run-destination.test.js's
 //     "the projects empty state still teaches") described as the landing.
 //
 // His call: stop seeding it. New accounts start empty, see the real empty
@@ -77,7 +76,7 @@
 // Every mutated file was restored from git and re-hashed (SHA-256); the tally
 // and the restores are in the PR body.
 import { test, expect } from './base.js'
-import { go, watch, signIn, expectRendered } from './helpers.js'
+import { go, watch, signIn, expectRendered, openProjectFromDashboard } from './helpers.js'
 import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -88,6 +87,9 @@ const DESK = [1280, 800]
 const WIDTHS = [PHONE, DESK]
 const THEMES = ['light', 'dark']
 
+/** The kit sheet of the account's latest project, found by its name. */
+const sheetOf = (page, name) => page.getByRole('region', { name: `${name}, latest project` })
+
 /** Name and keep the working design from the Palette Builder's Save or share
  *  menu — where a project is saved since New project goes straight into the
  *  builder. */
@@ -97,49 +99,22 @@ async function saveFromBuilder(page, name) {
   await page.keyboard.press('Enter')
 }
 
-// THE SENTENCE HE APPROVED, TYPED OUT. Not imported — that is the whole point.
-// An assertion that the page renders `heroHeadlineText()` is satisfied by any
-// headline the module happens to hold; this one is satisfied only by his.
-// The front door uses the Spectrum design's headline. Still typed out, for
-// the same reason: only the design's sentence satisfies this, not whatever the
-// module happens to hold. The accent run reveals as ONE word, as drawn.
-const APPROVED = 'Build and export UI and brand kits from one place.'
-const APPROVED_MARK = 'one place'
-const APPROVED_UNITS = APPROVED.split(' ').length - (APPROVED_MARK.split(' ').length - 1)
+// THE APPROVED SENTENCE, TYPED OUT. Not imported: an assertion that the page
+// renders `heroHeadlineText()` is satisfied by any headline the module happens
+// to hold; this one is satisfied only by the approved wording.
+const APPROVED = 'Your UI and brand kit, from one app.'
+const APPROVED_MARK = 'one app'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HOW THE SENTENCE IS READ OFF SPECTRUM, AND WHY IT IS NOT `h1.innerText()`
-// ─────────────────────────────────────────────────────────────────────────────
-// Home.jsx painted the headline as two `.home-hero-line-in` spans and the h1's
-// innerText WAS the sentence. `<SpectrumWords>` paints it twice on purpose: a
-// `.sr-only` span carrying the whole sentence once for a screen reader, and an
-// `aria-hidden` visual split of one `.sp-w` per word inside a `.sp-wm` clipping
-// mask, because there is no CSS that can clip and offset individual words of a
-// text node. So `h1.innerText()` now returns the approved sentence CONCATENATED
-// WITH ITSELF — measured, and it is exactly what this test failed on after the
-// route swap.
-//
-// Reading the words is therefore the right subject and the stronger one: the
-// visual split is what a sighted visitor reads, and joining `.sp-w` proves the
-// split itself is intact — a lost space, a dropped word or a word rendered out
-// of order all fail here, and none of them would move `innerText`. The sr-only
-// copy is asserted separately below, because a screen-reader user and a sighted
-// one must be given the SAME sentence and nothing before this checked that.
-//
-// SCOPED TO `.sp-hero-h1`, always. `<SpectrumWords>` paints the section
-// headings too; an unscoped `.sp-w` matches 47 elements on this page.
-const HERO_WORDS = '.sp-hero-h1 .sp-words-visual .sp-w'
-const HERO_MARKED = '.sp-hero-h1 .sp-words-visual .sp-w--mark'
+// The hero headline is plain text in one h1, with the marked run in a single
+// span. It is scoped to `.hh-h1`, always: the page has other headings.
+// `textContent`, not `innerText`: innerText applies `text-transform`, so a
+// stylesheet that uppercased the hero would turn an equality against the
+// sentence into a failure about CSS rather than about copy.
+const HERO_H1 = 'main section#top h1.hh-h1'
+const HERO_MARKED = `${HERO_H1} .hh-h1-mark`
+const sentence = (s) => (s || '').replace(/\s+/g, ' ').trim()
 
-// `textContent`, not `innerText`, and that is not tidiness: innerText applies
-// `text-transform`, so a stylesheet that uppercased the hero would turn an
-// equality against the design's sentence into a failure about CSS rather than about
-// copy — and the claim here is what the page SAYS.
-const joinWords = async (locator) =>
-  (await locator.evaluateAll((els) => els.map((el) => (el.textContent || '').trim())))
-    .filter(Boolean).join(' ')
-
-/** A context at one width, in one theme — the shape 72-flow-followups uses. */
+/** A context at one width, in one theme. */
 async function open(browser, [w, h], theme = 'light') {
   const context = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: theme })
   await context.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* private mode */ } }, theme)
@@ -150,69 +125,41 @@ async function open(browser, [w, h], theme = 'light') {
 // ─────────────────────────────────────────────────────────────────────────────
 // 1 · THE APPROVED HEADLINE, ON THE PAGE
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('the hero headline the founder approved on 2026-09-10 is the one that ships', () => {
+test.describe('the approved hero headline is the one that ships', () => {
   for (const size of WIDTHS) {
-    test(`${size[0]}px: the h1 is his sentence, word for word, with his run highlighted`, async ({ browser }) => {
+    test(`${size[0]}px: the h1 is the approved sentence, word for word, with its run highlighted`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a first-time visitor reading the first sentence on the site (${size[0]}px)`)
       await go(page, '/')
       // The homepage has to have PAINTED before an absence or an equality on it
-      // means anything — a boot shell and an ErrorBoundary card both carry an
+      // means anything: a boot shell and an ErrorBoundary card both carry an
       // <h1> of their own.
       await expectRendered(page, '/')
 
-      const h1 = page.locator('main h1.sp-hero-h1')
+      const h1 = page.locator(HERO_H1)
       await expect(h1).toBeVisible()
+      await expect(page.locator('main h1'), 'the page must carry exactly one h1').toHaveCount(1)
 
-      const words = page.locator(HERO_WORDS)
-      // POSITIVE CONTROL for the join below: a headline that rendered no words
-      // would join to '' and every equality here would be reporting on nothing.
-      await expect(words, 'the hero headline painted no words at all')
-        .toHaveCount(APPROVED_UNITS)
-      const text = await joinWords(words)
-
+      const text = sentence(await h1.evaluate((el) => el.textContent))
       expect(text,
-        'the hero headline is not the sentence the founder approved on 2026-09-10. It is '
-        + 'assembled only from words he wrote and he read it before saying ship it — do not '
-        + 'reword it, in the page or in src/data/positioning.js, without asking him again.',
+        'the hero headline is not the approved sentence. Do not reword it, in the page or in '
+        + 'src/data/positioning.js, without getting the new wording approved.',
       ).toBe(APPROVED)
 
       // …and it agrees with the module, so the page is still DERIVING it rather
       // than having grown a typed copy that happens to match today.
       expect(text, 'the hero no longer renders src/components/spectrum/spectrumHero.js').toBe(SPECTRUM_HERO.text)
 
-      // THE SCREEN READER IS GIVEN THE SAME SENTENCE. `<SpectrumWords>` carries
-      // it once in a `.sr-only` span precisely because the visual split would
-      // otherwise be announced one word per line; if that copy ever drifts from
-      // the words beside it, two readers meet two different headlines and only
-      // one of them is the one he approved.
-      const spoken = await h1.locator('.sr-only').evaluate((el) => el.textContent || '')
-      expect(spoken.replace(/\s+/g, ' ').trim(),
-        'the headline a screen reader is given is not the one on screen',
-      ).toBe(APPROVED)
+      // No per-word wrappers: one text node run, one marked span.
+      await expect(h1.locator('.sp-w, [data-sp-w], .sr-only')).toHaveCount(0)
 
-      // THE HIGHLIGHT IS PART OF WHAT HE APPROVED. Moving a word across the
-      // lead/mark boundary leaves the sentence identical and changes what the
-      // page paints and what the share card paints.
-      //
-      // ONE RUN, NOT ONE ELEMENT. Home.jsx wrapped the run in a single <mark>;
-      // SpectrumWords marks it a word at a time, so the design-language budget
-      // of one --hi run per viewport is now a statement about CONTIGUITY rather
-      // than about node count. Asserted as both: the marked words join to his
-      // phrase, and they are consecutive in the headline — a second highlighted
-      // run elsewhere in the sentence would satisfy neither.
+      // THE HIGHLIGHT IS PART OF THE APPROVED HEADLINE. Moving a word across
+      // the lead/mark boundary leaves the sentence identical and changes what
+      // the page paints and what the share card paints. The full stop stays
+      // outside the run.
       const marked = page.locator(HERO_MARKED)
       await expect(marked, 'the hero highlights no run at all').toHaveCount(1)
-      // Trailing punctuation belongs to the sentence, not to the run: the mark
-      // ends the headline, so its last word renders as "location." while the
-      // run he approved is "…location". SpectrumWords matches it the same way.
-      expect((await joinWords(marked)).replace(/[.,;:!?]+$/, '')).toBe(APPROVED_MARK)
-      const contiguous = await page.locator('.sp-hero-h1 .sp-words-visual').evaluate((el) => {
-        const all = [...el.querySelectorAll('.sp-w')]
-        const hit = all.map((w, i) => (w.classList.contains('sp-w--mark') ? i : -1)).filter((i) => i > -1)
-        return hit.length > 0 && hit[hit.length - 1] - hit[0] === hit.length - 1
-      })
-      expect(contiguous, 'the highlighted words are not one contiguous run').toBe(true)
+      expect(sentence(await marked.evaluate((el) => el.textContent))).toBe(APPROVED_MARK)
       expect(SPECTRUM_HERO.mark).toBe(APPROVED_MARK)
 
       await context.close()
@@ -254,32 +201,29 @@ test.describe('a new account starts empty', () => {
         await go(page, '/projects')
         await expectRendered(page, '/projects')
 
-        // Nothing was seeded: no card at all, and specifically not the one that
-        // used to be there.
-        await expect(page.locator('.uh-grid .proj-card')).toHaveCount(0)
-        await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
+        // Nothing was seeded: no project of any kind, and specifically not the one that
+        // used to be there. (A project is something with an Open project link or a mini.)
+        await expect(page.getByRole('link', { name: /^Open project/ })).toHaveCount(0)
+        await expect(page.locator('.db-mini')).toHaveCount(0)
+        await expect(page.getByText('Default Project')).toHaveCount(0)
 
-        // The panel that had never been on a screen.
-        //
-        // Selected on `.uh-empty`, the panel's own class, rather than on the
-        // shared `.card`. It was a card until the Spectrum pass (carried over
-        // from #481) — a centred, filled, rounded container with a circular
-        // tinted icon badge, the stock first-run screen. `.card` was never
-        // what this test was about: everything below reads the panel's words,
-        // its two links and its control, and all of those are unchanged.
-        const empty = page.locator('.uh .uh-empty').filter({ hasText: 'No projects yet' })
+        // The example kit sits in the lead slot where the newest project would be, under its own
+        // heading. The page does not tell an account with no projects that it has none; it shows
+        // what a kit is and names the one action.
+        const empty = page.getByRole('region', { name: 'Start your first brand kit' })
         await expect(empty).toBeVisible()
+        await expect(empty.getByRole('heading', { name: 'Start your first brand kit' })).toBeVisible()
 
-        // IT SAYS WHAT TO DO NEXT, in the design's words: start with a colour. The
-        // tool it names is the lead tile of "Start something" on the same page.
-        await expect(empty).toContainText('Start with a colour and the rest of the project follows.')
-        await expect(page.locator('.uh-lead')).toHaveAttribute('href', '/create/palette')
+        // IT SAYS WHAT TO DO NEXT: the example is labelled as one, and its first part opens
+        // the Palette Builder.
+        await expect(empty).toContainText('This one is an example: Kerbside, a sample bike courier.')
+        await expect(empty.getByRole('link', { name: 'Open in Palette Builder' })).toHaveAttribute('href', '/create/palette')
 
-        // THE FIRST SCREEN STILL CARRIES A WAY TO MAKE ONE. The design's layout puts
-        // "Start something" above the recent projects, so on a phone this card
-        // is below the fold — which is why the fold is asserted on the title
-        // row's New project (which does the same thing), measured before any scroll.
-        const first = await page.getByRole('button', { name: 'New project' }).evaluate((el) => {
+        // THE FIRST SCREEN STILL CARRIES A WAY TO MAKE ONE. The sheet's own New project (a docked bar
+        // below 1200), measured before any scroll.
+        const newBtn = page.getByRole('button', { name: 'New project' })
+        await expect(newBtn, 'exactly one New project is on the page').toHaveCount(1)
+        const first = await newBtn.evaluate((el) => {
           const r = el.getBoundingClientRect()
           const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
           return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: window.innerHeight, scrolled: window.scrollY, hit: at === el || el.contains(at) }
@@ -288,9 +232,9 @@ test.describe('a new account starts empty', () => {
         expect(first.bottom, `New project runs y=${first.top}..${first.bottom} in a ${first.vh}px viewport`).toBeLessThanOrEqual(first.vh)
         expect(first.hit, 'something paints over New project').toBe(true)
 
-        // The card's own control: big enough to hit, and hit-testable once it
+        // The control: big enough to hit, and hit-testable once it
         // is on screen (elementFromPoint is viewport-relative, so scroll first).
-        const cta = empty.getByRole('button', { name: 'Start a project' })
+        const cta = newBtn
         await cta.scrollIntoViewIfNeeded()
         await expect(cta).toBeVisible()
         const box = await cta.boundingBox()
@@ -302,8 +246,7 @@ test.describe('a new account starts empty', () => {
         })
         expect(hit, 'something paints over the empty state’s button').toBe(true)
 
-        // …and it does the thing it says: straight into the Palette Builder,
-        // as the design file wires it.
+        // …and it does the thing it says: straight into the Palette Builder.
         await cta.click()
         await expect(page).toHaveURL(/\/create\/palette$/)
 
@@ -331,14 +274,12 @@ test.describe('a new account starts empty', () => {
 
     expect(outline.length, 'the page rendered no headings at all').toBeGreaterThan(1)
     expect(outline[0].level, 'the page must open on its h1').toBe(1)
-    const at = outline.findIndex((h) => h.text === 'No projects yet')
+    const at = outline.findIndex((h) => h.text === 'Start your first brand kit')
     const heading = outline[at]
-    expect(heading, 'the empty state’s heading is not in the outline').toBeTruthy()
-    // The design's screen sets it as an h3 under the "Recent projects" h2 — one level
-    // under the section it belongs to (it was an h2 directly under the h1 on
-    // the old page, which had no sections).
-    expect(heading.level, 'the empty state’s heading must be one level under its section').toBe(3)
-    expect(outline[at - 1], 'and the section above it must be Recent projects').toEqual({ level: 2, text: 'Recent projects' })
+    expect(heading, 'the example kit’s heading is not in the outline').toBeTruthy()
+    // The sheet is the page's lead section, so its heading is an h2 directly under the h1.
+    expect(heading.level, 'the sheet’s heading must be an h2, one level under the page title').toBe(2)
+    expect(outline[at - 1], 'and what comes before it must be the page title').toEqual({ level: 1, text: 'Your workspace' })
 
     // No level may jump by more than one from the one before it.
     for (let i = 1; i < outline.length; i += 1) {
@@ -348,26 +289,24 @@ test.describe('a new account starts empty', () => {
       ).toBeLessThanOrEqual(1)
     }
 
-    // THE PANEL ANNOUNCES ITS WORDS AND NOTHING ELSE.
+    // THE SHEET ANNOUNCES ITS WORDS AND NOTHING ELSE.
     //
-    // This read the folder mark's aria-hidden and asserted 'true' — which
-    // pinned the mark itself: delete the glyph and the expression is
-    // undefined, so the test went red for the decoration being GONE rather
-    // than for it being announced. The mark was deleted with the card (#481,
-    // ported onto Spectrum), so the assertion is the property it was always
-    // after, in a form that survives either answer: every graphic in this
-    // panel is hidden, however many there are. The panel itself must be found,
-    // so a selector that stops matching cannot report it clean by reading
-    // nothing.
+    // The property is that every graphic in the sheet is hidden from assistive technology except
+    // the one that says something, however many there are. The sheet itself must be found, so a
+    // selector that stops matching cannot report it clean by reading nothing.
     const marks = await page.evaluate(() => {
-      const panel = [...document.querySelectorAll('.uh .uh-empty')]
-        .find((el) => el.textContent.includes('No projects yet'))
+      const panel = document.querySelector('.db-sheet')
       if (!panel) return null
+      // The palette plate is the one graphic that says something (a single labelled image of the
+      // palette, its swatches plain spans); every other graphic stays hidden.
       const graphics = [...panel.querySelectorAll('svg, img, [role="img"]')]
-      return { found: graphics.length, announced: graphics.filter((g) => g.getAttribute('aria-hidden') !== 'true').length }
+      const announced = graphics.filter((g) => !g.closest('[aria-hidden="true"]'))
+      return { found: graphics.length, announced: announced.length, labelled: announced.filter((g) => g.matches('.db-plate.pal[role="img"]') && g.getAttribute('aria-label')).length }
     })
-    expect(marks, 'the empty state panel itself is not on the page').not.toBeNull()
-    expect(marks.announced, `${marks.announced} of the empty state’s ${marks.found} graphic(s) are announced`).toBe(0)
+    expect(marks, 'the example kit sheet itself is not on the page').not.toBeNull()
+    expect(marks.found, 'the probe found no graphics to judge').toBeGreaterThan(3)
+    expect(marks.announced - marks.labelled, `${marks.announced - marks.labelled} of the sheet’s ${marks.found} graphic(s) are announced without being the palette`).toBe(0)
+    expect(marks.labelled, 'the palette is one labelled image').toBe(1)
 
     await context.close()
   })
@@ -379,23 +318,22 @@ test.describe('a new account starts empty', () => {
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    const cta = page.getByRole('button', { name: 'Start a project' })
+    const cta = page.getByRole('button', { name: 'New project' })
     await expect(cta).toBeVisible()
 
     // TAB FROM THE TOP OF THE DOCUMENT rather than calling .focus(): the
     // question is whether a keyboard user can GET there, and .focus() answers a
-    // different question entirely. 60 is a ceiling, not an expectation — the
-    // control sits eighth among the page's own tabbables.
+    // different question entirely. 60 is a ceiling, not an expectation.
     await page.evaluate(() => document.body.focus())
     let reached = false
     for (let i = 0; i < 60 && !reached; i += 1) {
       await page.keyboard.press('Tab')
       reached = await page.evaluate(() => {
         const el = document.activeElement
-        return !!el && el.tagName === 'BUTTON' && el.innerText.trim() === 'Start a project'
+        return !!el && el.tagName === 'BUTTON' && el.innerText.trim() === 'New project'
       })
     }
-    expect(reached, 'the empty state’s only control cannot be reached by Tab').toBe(true)
+    expect(reached, 'the empty state’s New project cannot be reached by Tab').toBe(true)
 
     // It has a visible focus ring rather than only a focus state the browser
     // knows about.
@@ -415,12 +353,13 @@ test.describe('a new account starts empty', () => {
 
     // And through: the first project of this account's life, named as it is
     // kept.
+    // (New project opens the builder without the coach, so the save toast is the plain one.)
     await saveFromBuilder(page, 'Brand v1')
     await expect(page.locator('.toast.show')).toContainText('Project saved')
     await go(page, '/projects')
-    await expect(page.locator('.uh-grid .proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
-    // The empty state is gone now that it is not true any more.
-    await expect(page.locator('.uh .uh-empty').filter({ hasText: 'No projects yet' })).toHaveCount(0)
+    await expect(sheetOf(page, 'Brand v1')).toHaveCount(1)
+    // The example is gone now that it is not true any more.
+    await expect(page.getByRole('region', { name: 'Start your first brand kit' })).toHaveCount(0)
 
     await context.close()
   })
@@ -428,7 +367,7 @@ test.describe('a new account starts empty', () => {
   test('a new account is counted as having used none of its slots', async ({ browser }) => {
     // WHAT THE SEED USED TO MAKE THIS PAGE SAY: one slot spent on a project
     // nobody had made. The design's workspace screen meters the
-    // slots from the first visit ("Project slots  n of 3" in the plan strip —
+    // slots from the first visit ("Projects  n of 3" in the Today panel —
     // the design, which retires the old page's "no countdown until it is worth
     // knowing" rule), so the property is now read straight off the meter: a
     // new account is at 0, and one project later it is at 1, counted off the
@@ -442,7 +381,8 @@ test.describe('a new account starts empty', () => {
     const slots = page.locator('[data-testid="project-quota-note"]')
     await expect(slots).toContainText(`0 of ${CAP}`)
 
-    await page.getByRole('button', { name: 'Start a project' }).click()
+    // New project opens the builder without the coach, so the save toast is the plain one.
+    await page.getByRole('button', { name: 'New project' }).click()
     await expect(page).toHaveURL(/\/create\/palette$/)
     await saveFromBuilder(page, 'Brand v1')
     await expect(page.locator('.toast.show')).toContainText('Project saved')
@@ -473,7 +413,7 @@ test.describe('an account that already has a Default Project keeps it', () => {
         body: { family: 'Manrope', weight: 400, category: 'sans-serif' },
       },
       typeScale: { ...DEFAULT_DESIGN.typeScale, base: 17, ratio: 1.333 },
-      tints: { ...DEFAULT_DESIGN.tints, scale: [1, 2, 3, 4, 5, 6] },
+      tints: { ...DEFAULT_DESIGN.tints, scale: ['#F3E8FD', '#D9B8F7', '#B97AEF', '#8A2BE2', '#5E1A9E', '#330E57'] },
     },
     createdAt: '2026-03-04T09:00:00.000Z',
     updatedAt: '2026-09-01T09:00:00.000Z',
@@ -487,18 +427,19 @@ test.describe('an account that already has a Default Project keeps it', () => {
       await go(page, '/projects')
       await expectRendered(page, '/projects')
 
-      const card = page.locator('.proj-card').filter({ hasText: 'Default Project' })
+      const card = sheetOf(page, 'Default Project')
       await expect(card, 'an existing account lost its Default Project').toHaveCount(1)
 
-      // The card reads it as complete…
-      await expect(card.locator('.uh-card-line')).toContainText('4 of 4 parts')
-      // The empty state must NOT be on this page: it is not true here.
-      await expect(page.locator('.uh .uh-empty').filter({ hasText: 'No projects yet' })).toHaveCount(0)
+      // The sheet reads it as complete: all four parts set, each part ticked…
+      await expect(card.locator('.db-meta')).toContainText('4 of 4 parts set')
+      await expect(card.locator('.db-tick')).toHaveCount(4)
+      // The example kit must NOT be on this page: it is not true here.
+      await expect(page.getByRole('region', { name: 'Start your first brand kit' })).toHaveCount(0)
 
       // NOT JUST PRESENT — INTACT. The project's own page reads every part off
       // the saved design (the slots on /projects/:id carry these values), so this is the
       // whole record checked through the product's own reading of it.
-      await card.locator('.uh-card-name').click()
+      await openProjectFromDashboard(page, 'Default Project')
       const detail = (label) => page.locator('.pjd-slot', { has: page.locator('.pjd-slot-label', { hasText: new RegExp(`^${label}$`) }) }).locator('.pjd-slot-detail')
       await expect(detail('Colour')).toHaveText('5 colours')
       await expect(detail('Type')).toContainText('Fraunces')
@@ -520,11 +461,11 @@ test.describe('an account that already has a Default Project keeps it', () => {
     const account = await signIn(page, { plan: 'free', projects: [worked()] })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
-    await expect(page.locator('.proj-card').filter({ hasText: 'Default Project' })).toHaveCount(1)
+    await expect(sheetOf(page, 'Default Project')).toHaveCount(1)
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expectRendered(page, '/projects')
-    await expect(page.locator('.proj-card').filter({ hasText: 'Default Project' })).toHaveCount(1)
+    await expect(sheetOf(page, 'Default Project')).toHaveCount(1)
 
     // And in the store, under this account's own key, still exactly one record
     // and still the one that was there. (The fixture seeds localStorage once
@@ -553,7 +494,7 @@ test.describe(`a new account gets all ${CAP} free slots`, () => {
       await signIn(page, { plan: 'free', projects: 0 })
       await go(page, '/projects')
       await expectRendered(page, '/projects')
-      await expect(page.getByRole('button', { name: 'Start a project' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'New project' })).toBeVisible()
 
       // ALL THREE, not two. This is the arithmetic the seed was costing: with
       // it, the third of these was the fourth save and was refused. Saved the
@@ -581,12 +522,12 @@ test.describe(`a new account gets all ${CAP} free slots`, () => {
       // opening a project that could never be saved.
       await go(page, '/projects')
       await expect(page.locator('[data-testid="project-quota-note"]')).toContainText(`${CAP} of ${CAP}`)
-      await expect(page.locator('.uh-grid .proj-card')).toHaveCount(CAP)
+      await expect(page.locator('.db-sheet, .db-mini')).toHaveCount(CAP)
       await page.getByRole('button', { name: 'New project' }).click()
       const refusal = page.locator('[data-testid="project-create-refusal"]')
       await expect(refusal).toBeVisible()
       await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
-      await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+      await expect(refusal.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', '/plans')
 
       await context.close()
     })

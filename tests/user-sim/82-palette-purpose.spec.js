@@ -47,7 +47,7 @@
 // silently stopped resolving names would make every other test in this file
 // pass on an empty result.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, homeSectionsLoaded } from './helpers.js'
 
 /** Every named node in Chrome's accessibility tree, with its computed role. */
 async function axNodes(page) {
@@ -198,7 +198,9 @@ test.describe('the palette board is a named set, not a list of landmarks', () =>
   // the only landmark coverage the homepage has in this file.
   test('the front door answers "what is this page made of" in its landmarks', async ({ page }) => {
     await go(page, '/')
-    await expect(page.locator('.sp-hero-h1')).toBeVisible()
+    await expect(page.locator('section#top h1.hh-h1')).toBeVisible()
+    // The sections below the hero mount as the visitor nears them; a reader sees them all.
+    await homeSectionsLoaded(page)
 
     const nodes = await axNodes(page)
     // Nothing on this page is named by a raw hex value, and nothing that is
@@ -232,8 +234,8 @@ test('the five sibling colour tools still name their regions by their own headin
   // the drawn screen has a titled section. Entries are `role:name`.
   const expected = {
     '/create/tint': ['complementary:Tint controls'],
-    '/create/gradient': ['region:Start from a preset', 'complementary:Gradient controls'],
-    '/create/semantic-color': ['region:The colours at work', 'region:Seed and base step'],
+    '/create/gradient': ['region:Start from a preset', 'region:Explore the library', 'complementary:Gradient controls'],
+    '/create/semantic-color': ['region:Ramps', 'region:See each role do its job', 'region:Token names you can predict'],
   }
   for (const [route, names] of Object.entries(expected)) {
     await go(page, route)

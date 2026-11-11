@@ -45,11 +45,11 @@ import { LIBRARY_TOTALS } from '../../data/libraryTotals.js'
 //   Offered billing cadences             Monthly and Yearly, derived from
 //                                         planLadder.js. Quarterly is absent
 //                                         from the offered ladder.
-//   "Cancel Pro any time" · "Cancel? From  The Stripe Customer Portal has no
-//   the dashboard, in two clicks"          cancellation flow enabled
-//                                         ([stripe-retention-config]); /plans
-//                                         deleted this claim by name and
-//                                         surface-claims-truth.test.js bans it.
+//   "Cancel Pro any time" · "Cancel? From  Cancelling works from the Stripe
+//   the dashboard, in two clicks"          portal, at the end of the paid
+//                                         period. "In two clicks" is not a
+//                                         path anyone has counted, so it stays
+//                                         out (spectrum-truth.test.js).
 //   "138 kits exported · 27 designers ·   Fabricated. Removed entirely; nothing
 //   4 studios · 9,176 palettes"            replaces it. See PROOF below.
 //   "Copy as CSS, JSON, Tailwind or        CSS, JSON and Tailwind are `Soon` in
@@ -170,18 +170,17 @@ const shortName = (f) => {
   const inParens = /\(([^)]+)\)\s*$/.exec(f.name)
   return inParens ? inParens[1] : f.name
 }
-export const listNames = (formats) => {
-  const names = formats.map(shortName)
-  if (names.length < 2) return names.join('')
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-}
+const joinAnd = (items) => (items.length < 2
+  ? items.join('')
+  : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
+export const listNames = (formats) => joinAnd(formats.map(shortName))
 
 export const EXPORTS = {
   free: FREE_EXPORTS,
   pro: PRO_EXPORTS,
   unbuilt: UNBUILT_EXPORTS,
   freeNames: listNames(FREE_EXPORTS),
-  proNames: PRO_EXPORTS.map((f) => f.name).join(' and '),
+  proNames: joinAnd(PRO_EXPORTS.map((f) => f.name)),
   unbuiltNames: listNames(UNBUILT_EXPORTS),
 }
 
@@ -198,7 +197,7 @@ export const FREE_POINTS = [
   `All ${numberWord(TOOL_COUNT)} tools, without an account`,
   `${AI_LIMITS.free.daily} AI generations a day, ${AI_LIMITS.free.monthly} a month`,
   `Style guide exports in ${EXPORTS.freeNames}`,
-  `${FREE_SAVE_LIMITS.projects} saved projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`,
+  `${FREE_SAVE_LIMITS.projects} saved projects, with ${FREE_SAVE_LIMITS.customIcons} icons in each`,
   `${SYSTEMS_FREE.length} colour systems (${SYSTEMS_FREE.map((s) => s.label).join(' and ')})`,
 ]
 
@@ -208,14 +207,14 @@ export const FREE_POINTS = [
  *  https://mobbin.com/sites/sections/23755ec5-0281-446a-b5b5-9433d63397c4
  *  On a page whose failure mode has twice been an overstated free tier, the
  *  exclusion is the more useful half. */
-export const FREE_EXCLUSION = 'A small “Made with UIL4B” line on exported files'
+export { FREE_EXCLUSION } from '../../config/planFacts.js'
 
 export const PRO_POINTS = [
   `${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month`,
   `All ${SYSTEMS_TOTAL} colour systems, plus HCT editing`,
   EXPORTS.proNames,
   'Unlimited saved projects and custom icons',
-  'Style guides with no “Made with UIL4B” line',
+  'Style guides with no “Made with UI L4B” line',
 ]
 
 export const COMPARE = [
@@ -224,15 +223,15 @@ export const COMPARE = [
   { group: 'AI AND CONTROLS', label: 'AI generations', free: `${AI_LIMITS.free.daily} a day, ${AI_LIMITS.free.monthly} a month`, pro: `${AI_LIMITS.pro.daily} a day, ${AI_LIMITS.pro.monthly} a month` },
   { label: 'Colour systems', free: `${SYSTEMS_FREE.length} of ${SYSTEMS_TOTAL}`, pro: `All ${SYSTEMS_TOTAL}, plus HCT editing` },
   { group: 'YOUR WORK', label: 'Saved projects', free: String(FREE_SAVE_LIMITS.projects), pro: 'Unlimited' },
-  { label: 'Custom icons', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
+  { label: 'Icons per project', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
   { label: 'Style guide exports', free: EXPORTS.freeNames, pro: `${EXPORTS.freeNames}, plus ${EXPORTS.proNames}` },
-  { label: 'Export mark', free: '“Made with UIL4B” line', pro: 'Removed' },
+  { label: 'Export mark', free: '“Made with UI L4B” line', pro: 'Removed' },
 ]
 
 /* ── The reassurance row ──────────────────────────────────────────────────── */
 
-// The design's three assurances, minus the two that may not ship: a
-// cancellation claim (the Stripe portal has no cancellation flow) and a
+// The design's three assurances, minus two: the cancellation chip (bringing it
+// back is a homepage design call, not a fact fix) and a
 // payment-reassurance tagline (tests/user-sim/62-retired-taglines.spec.js
 // sweeps every prerendered route for it). The remaining two are true.
 export const ASSURANCES = [
@@ -303,8 +302,8 @@ export const PROOF = [
 /* ── FAQ ──────────────────────────────────────────────────────────────────────
  *
  * The design ships four. Three are kept — the answers hold — and the fourth ("Can I cancel? From the dashboard, in two
- * clicks, no email required.") is replaced, because it is false twice over: the
- * portal has no cancellation flow, and there is no two-click path to one.
+ * clicks, no email required.") is replaced, because nobody has counted a
+ * two-click path to cancel; the portal cancels at the end of the paid period.
  *
  * Where an answer states a figure, the figure is interpolated rather than typed,
  * and where /plans already answers the same question its answer is used rather
@@ -314,7 +313,7 @@ export const PROOF = [
 export const FAQS = [
   {
     q: 'What counts as one generation?',
-    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered — they run in your browser and cost us nothing.',
+    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser.',
   },
   {
     q: 'Is the Pro model different?',
@@ -326,6 +325,6 @@ export const FAQS = [
   },
   {
     q: 'Which export formats can I actually get?',
-    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are listed in the export panel as Soon: they are not built, so nobody has them and Pro does not sell them.`,
+    a: `${EXPORTS.free.length} on Free — ${EXPORTS.freeNames} — each carrying a small “Made with UI L4B” line in the footer. Pro removes that line and adds ${EXPORTS.proNames}. ${EXPORTS.unbuilt.length === 1 ? `One more format (${EXPORTS.unbuiltNames}) is` : `${EXPORTS.unbuilt.length} more formats (${EXPORTS.unbuiltNames}) are`} listed in the export panel as Soon: not built, so nobody has it and Pro does not sell it.`,
   },
 ]

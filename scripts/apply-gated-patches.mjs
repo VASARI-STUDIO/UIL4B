@@ -1,22 +1,22 @@
-// APPLY THE FOUR FOUNDER-GATED CHANGES, THEN PROVE THEM.
+// APPLY THE APPROVAL-GATED CHANGES, THEN PROVE THEM.
 //
 //   npm run apply:gated              # says what it will do, then asks
 //   npm run apply:gated -- --yes     # says what it will do, then does it
-//   npm run apply:gated -- --dry-run # prints the four hunks, touches nothing
+//   npm run apply:gated -- --dry-run # prints the hunks, touches nothing
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // WHAT THIS IS FOR
 // ═══════════════════════════════════════════════════════════════════════════
-// Four changes are written, reviewed and tested, and none of them is in the
-// tree. Every one touches a file the Claude Code auto-mode classifier refuses
-// to stage, so an agent can produce the diff and cannot apply it. Until today
-// the founder's instructions were "open pull request #390, find the heading
-// FOUNDER APPROVAL NEEDED, paste the diff into firestore.rules", four times,
-// into two files, in an order nobody had written down.
+// The changes are written, reviewed and tested, and none of them is in the
+// tree. Every one touches a file that automated commits may not stage, so
+// the diff can be written and tested but not applied. Before this
+// command, each change was pasted by hand into firestore.rules (or the other
+// gated file), once per change, into two files, in an order nobody had written
+// down.
 //
 // This is that, as one command, with the ordering handled, each patch applied
-// only if it is not already in, nothing written until all four have succeeded,
-// and the three suites run afterwards so the founder finds out here rather than
+// only if it is not already in, nothing written until every one has succeeded,
+// and the three suites run afterwards so the owner finds out here rather than
 // in production.
 //
 // IT COMMITS NOTHING AND PUSHES NOTHING. It leaves a working tree ready to
@@ -61,9 +61,9 @@ const heading = (text) => { out(); rule(); out(text); rule() }
 /* ── 1 · Say what it will do ────────────────────────────────────────────── */
 
 function describe() {
-  heading('npm run apply:gated — four approved changes, applied in one go')
+  heading('npm run apply:gated — approved changes, applied in one go')
   out()
-  out('These four are written, reviewed and tested, and none of them is in your')
+  out('These are written, reviewed and tested, and none of them is in your')
   out('tree yet, because the tool that wrote them is not allowed to save these')
   out('files. This command saves them for you.')
   out()
@@ -72,6 +72,7 @@ function describe() {
     out(`     ${patch.grants}.`)
     out(`     files: ${patch.files.join(', ')}`)
     out(`     from:  ${patch.source}`)
+    if (patch.before) out(`     FIRST: ${patch.before}.`)
     if (patch.notCovered) out(`     NOTE:  ${patch.notCovered}`)
     out()
   }
@@ -95,7 +96,7 @@ const git = (args, opts = {}) =>
  * — which is fine, and is what makes running it twice safe — or somebody's
  * uncommitted work, which this must never overwrite.
  *
- * The two are told apart rather than guessed at. This command applies the four
+ * The two are told apart rather than guessed at. This command applies them
  * IN A FIXED ORDER and writes nothing until all of them succeed, so any tree it
  * produced is the committed one plus a PREFIX of that order. Each prefix is
  * replayed from the committed files and compared byte for byte; if one matches,
@@ -203,7 +204,7 @@ function runStep(label, command, args, { env = {}, mustPrint = null } = {}) {
   // ONE STRING, not a command plus an args array. `npm` on Windows is a `.cmd`
   // shim, which Node refuses to spawn without a shell — and passing an args
   // ARRAY alongside `shell: true` prints Node's DEP0190 warning about
-  // concatenation in the middle of the output the founder is meant to be
+  // concatenation in the middle of the output the person running this is meant to be
   // reading. Every argument below is a literal written here, so there is
   // nothing to escape.
   const res = spawnSync([command, ...args].join(' '), {
@@ -262,10 +263,6 @@ function summarise(steps, verifications, { dryRun = false } = {}) {
   out('  WHAT IS NOW TRUE THAT WAS NOT BEFORE')
   const truths = []
   const done = new Set([...landed, ...already].map((s) => s.id))
-  if (done.has('firebase-deferral')) {
-    truths.push('the homepage paints sooner — 360 ms to first paint and 624 ms to the '
-      + 'main heading, with 21.8% fewer bytes in the first request')
-  }
   if (done.has('feedback-bounds')) {
     truths.push('a stranger can no longer write anything into your feedback queue, and '
       + 'no signed-in account can write a document bigger or stranger than the app sends')
@@ -284,15 +281,20 @@ function summarise(steps, verifications, { dryRun = false } = {}) {
   out('  Nothing has been committed. Look at the changes with:')
   out(`     git diff -- ${TARGET_FILES.join(' ')}`)
   out('  Keep them:')
-  out(`     git add ${TARGET_FILES.join(' ')} && git commit -m "Apply the four gated changes"`)
+  out(`     git add ${TARGET_FILES.join(' ')} && git commit -m "Apply the gated changes"`)
   out('  Or throw them away:')
   out(`     ${undoCommand()}`)
   out()
-  out('  Two more steps nobody but you can do. Publish the rules from the Firebase')
-  out('  console, or `firebase deploy --only firestore:rules` — until then the new')
-  out('  rules are in your repository and not in front of your users. And commit')
-  out('  and deploy the site, because api/verify-admin.js is a serverless function:')
-  out('  the moderator role cannot be granted from a file that is only on your disk.')
+  out('  Two more steps nobody but you can do, in this order:')
+  out('   1. RULES FIRST. Publish them from the Firebase console, or run')
+  out('      `firebase deploy --only firestore:rules,storage` — until then the new')
+  out('      rules are in your repository and not in front of your users.')
+  out('   2. THEN THE SITE. Commit and deploy it, because api/verify-admin.js is a')
+  out('      serverless function: the moderator role cannot be granted from a file')
+  out('      that is only on your disk, and the community post limits only switch on')
+  out('      in the client once the site is deployed.')
+  out('  In the gap between the two, posts to the review queue are refused and')
+  out('  uploads fall back to inline images, so deploy the site straight after.')
   out()
 }
 
@@ -337,7 +339,7 @@ async function main() {
 
   if (plan.failed) {
     const bad = plan.steps.find((s) => s.status === 'failed')
-    heading('STOPPED — one of the four no longer fits the file it was written for')
+    heading('STOPPED — one of them no longer fits the file it was written for')
     out()
     out(`"${bad.patch.title}" could not be applied to ${bad.patch.files.join(', ')}.`)
     out(`Nothing has been changed. ${bad.error.message}`)
@@ -352,7 +354,7 @@ async function main() {
 
   const willChange = TARGET_FILES.filter((f) => plan.before.get(f) !== plan.after.get(f))
   if (!willChange.length) {
-    out('All four are already in your tree. Nothing to apply.')
+    out('All of them are already in your tree. Nothing to apply.')
     out('The checks below still run, so you know the tree is sound.')
     out()
   } else if (!YES) {

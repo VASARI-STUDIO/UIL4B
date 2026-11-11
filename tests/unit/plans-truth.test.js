@@ -39,6 +39,7 @@ import {
   proOnlyFormats,
   unbuiltFormats,
 } from '../../src/config/exportFormats.js'
+import { EXPORT_TYPES } from '../../src/config/dialogExport.js'
 import * as PLAN_CONFIG from '../../src/config/plans.js'
 const { FREE_SAVE_LIMITS } = PLAN_CONFIG
 
@@ -55,7 +56,7 @@ const PLANS_AND_FACTS = `${PLANS}
 ${PLAN_FACTS_SRC}`
 const MODAL = read('src/components/ProUpgradeModal.jsx')
 const SETTINGS = read('src/pages/Settings.jsx')
-const PANEL = read('src/components/ExportPanel.jsx')
+const RUNNER = read('src/hooks/useExportRunner.js')
 // The one module every paid surface's benefit lines come from. It is itself a paid surface.
 const PLAN_FACTS = read('src/config/planFacts.js')
 
@@ -117,6 +118,8 @@ function sellingRegions(src) {
   for (const m of code.matchAll(/const PRO_[A-Z_]+ = \[([\s\S]*?)\]/g)) regions.push(m[1])
   // The frozen lists in config/planFacts.js.
   for (const m of code.matchAll(/const (?:PRO|FREE)_[A-Z_]+ = Object\.freeze\(\[([\s\S]*?)\]\)/g)) regions.push(m[1])
+  // The comparison table's rows, which proValue(live) builds for either themes switch.
+  for (const m of code.matchAll(/const proValue = \([^)]*\) => Object\.freeze\(\[([\s\S]*?)\]\)\r?\nexport const PRO_VALUE/g)) regions.push(m[1])
   // A surface that takes its lines from planFacts sells what planFacts says, so
   // its regions are planFacts' regions — read, not assumed.
   if (src !== PLAN_FACTS && /from '\.\.\/config\/planFacts'/.test(src)) regions.push(...sellingRegions(PLAN_FACTS))
@@ -146,7 +149,7 @@ test('the selling regions this test scopes to actually exist', () => {
   // arbitrary list. At least one region has to name a real format.
   const known = EXPORT_FORMATS.map((f) => f.name)
   const plansRegions = sellingRegions(PLANS).join('')
-  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS|PRO_EXPORT_NAMES|FREE_EXPORT_NAMES/.test(plansRegions),
+  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS|PRO_EXPORT_NAMES|FREE_EXPORT_NAMES|proDocumentsLine|STYLE_GUIDE_EXPORT_NAMES/.test(plansRegions),
     'no export claim is visible inside the parsed benefit lists — the format guard is reading the wrong region')
 })
 
@@ -198,10 +201,14 @@ test('the specific claim that shipped — "design JSON" — is gone from every p
 test('Pricing.jsx derives its figures instead of typing them', () => {
   // The page's own rule, enforced. Each of these must be IMPORTED, because each
   // one has a module that also drives the behaviour it describes.
-  for (const symbol of ['AI_LIMITS', 'FREE_SAVE_LIMITS', 'COLOUR_SYSTEMS', 'LIBRARY_TOTALS']) {
+  for (const symbol of ['AI_LIMITS', 'FREE_SAVE_LIMITS', 'COLOUR_SYSTEMS']) {
     assert.match(PLANS, new RegExp(`import[^\\n]*\\b${symbol}\\b`),
       `Pricing.jsx no longer imports ${symbol} — a typed figure has replaced a derived one`)
   }
+  // The comparison rows live in planFacts' PRO_VALUE, so the library totals are read there.
+  assert.match(PLAN_FACTS_SRC, /import \{ LIBRARY_TOTALS \} from '\.\.\/data\/libraryTotals\.js'/,
+    'planFacts.js no longer imports the generated library totals')
+  assert.match(PLANS, /\bPRO_VALUE\b/, 'the comparison no longer reads PRO_VALUE')
   assert.match(PLANS, /from '\.\.\/config\/exportFormats'/,
     'Pricing.jsx no longer reads the export table, so its export claims are prose again')
 
@@ -217,23 +224,32 @@ test('Pricing.jsx derives its figures instead of typing them', () => {
   // someone hard-codes "7 of 37" and the arrays change, the page lies silently.
   assert.ok(!/\b7 of 37\b/.test(code), 'Pricing.jsx hard-codes the brand palette split')
   assert.ok(!/\b2 of 8\b/.test(code), 'Pricing.jsx hard-codes the colour system split')
-  assert.match(code, /BRANDS_TOTAL = LIBRARY_TOTALS\.brandPalettes/, 'the brand total is not derived from the generated totals')
+  assert.match(stripComments(PLAN_FACTS_SRC), /LIBRARY_TOTALS\.brandPalettes/, 'the brand total is not derived from the generated totals')
   assert.match(code, /SYSTEMS_TOTAL|COLOUR_SYSTEMS\.length/, 'the colour system total is not derived')
 })
 
-test('the export panel and the pricing page read ONE table', () => {
-  // The whole arrangement collapses if ExportPanel re-declares its own list —
+test('the export dialog and the pricing page read ONE table', () => {
+  // The whole arrangement collapses if the export engine re-declares its own list —
   // the page would then be derived from an array nobody renders. This is the
   // wiring, and it is asserted at the call site rather than on the helper.
-  assert.match(PANEL, /import \{ EXPORT_FORMATS \} from '\.\.\/config\/exportFormats'/,
-    'ExportPanel no longer imports the shared table')
-  assert.match(PANEL, /const FORMATS = EXPORT_FORMATS/,
-    'ExportPanel has re-declared its own format list; the pricing page is now derived from a dead array')
+  assert.match(RUNNER, /import \{[^}]*\bEXPORT_FORMATS\b[^}]*\} from '\.\.\/config\/exportFormats'/,
+    'useExportRunner no longer imports the shared table')
+  assert.ok(!/const (FORMATS|EXPORT_FORMATS) = /.test(RUNNER),
+    'useExportRunner has re-declared its own format list; the pricing page is now derived from a dead array')
 
-  // …and the panel must still gate on the same flag it badges with.
-  const code = stripComments(PANEL)
-  assert.match(code, /FORMATS\.find\(f => f\.id === format\)\?\.pro && !isPro/,
+  // …and the engine must still gate on the same flag the dialog badges with.
+  const code = stripComments(RUNNER)
+  assert.match(code, /const fmt = EXPORT_FORMATS\.find\(\(f\) => f\.id === format\)/,
     'the export entitlement gate no longer reads the shared table')
+  assert.match(code, /Boolean\(fmt\.pro\)/, 'the export entitlement gate no longer reads the shared table')
+  assert.match(code, /needsPro && !isPro/, 'the export entitlement gate no longer reads the shared table')
+
+  // The dialog's rows (src/config/dialogExport.js) only group ids; every one must be a
+  // format of the shared table, or the dialog offers a file the table has never heard of.
+  const known = new Set(EXPORT_FORMATS.map(f => f.id))
+  for (const t of EXPORT_TYPES) for (const c of t.categories) for (const id of c.files) {
+    assert.ok(known.has(id), `the dialog offers "${id}", which is not in the shared format table`)
+  }
 })
 
 test('Pro is only sold on export benefits that exist', () => {
@@ -241,7 +257,7 @@ test('Pro is only sold on export benefits that exist', () => {
   // back it. If proOnlyFormats() ever empties, the Pro card must lose the line
   // rather than keep an empty promise — so the assertion is on the pairing, not
   // on the sentence.
-  const claimsExportBenefit = /no “Made with UIL4B” line|watermark-free|credit line/i.test(stripComments(PLANS))
+  const claimsExportBenefit = /no “Made with UI ?L4B” line|watermark-free|credit line/i.test(stripComments(PLANS))
   if (claimsExportBenefit) {
     assert.ok(freeFormats().length > 0,
       'Pro claims a cleaner version of an export that no free user can produce')
@@ -306,13 +322,13 @@ test('/plans derives the numbers inside the sub-line', () => {
   // "six times" is true of the daily ceiling and false of the monthly one
   // (300 against 40).
   const code = stripComments(PLANS)
-  const sub = /const HERO_SUB = `([^`]*)`/.exec(code)
+  const sub = /const HERO_LEAD =\s*`([^`]*)`/.exec(code)
   assert.ok(sub, 'the sub-line constant was not found')
   assert.match(sub[1], /AI from \$\{AI\.free\.daily\} to \$\{AI\.pro\.daily\} generations a day/,
     'the AI ends of the sub-line are typed rather than read from AI_LIMITS')
-  assert.match(sub[1], /\$\{numberWord\(SYSTEMS_TOTAL\)\} colour systems/, 'the colour-system count in the sub-line is typed')
+  assert.match(sub[1], /\$\{numberWord\(COLOUR_SYSTEMS\.length\)\} colour systems/, 'the colour-system count in the sub-line is typed')
   assert.ok(!/\btimes\b/.test(sub[1]), 'the sub-line claims a multiple, which the monthly ceiling does not bear out')
-  assert.ok(!/\d/.test(sub[1].replace(/\$\{[^}]*\}/g, '').replace(/UIL4B/g, '')), 'the sub-line types a digit the config owns')
+  assert.ok(!/\d/.test(sub[1].replace(/\$\{[^}]*\}/g, '').replace(/UI ?L4B/g, '')), 'the sub-line types a digit the config owns')
   assert.ok(!/\bsix times\b|\beight colour systems\b/.test(code), 'the page types a number the config owns')
   assert.match(code, /const AI = AI_LIMITS\b/, 'the sub-line no longer reads AI_LIMITS')
   // The numbers the line prints are the numbers the AI gate enforces, and they
@@ -336,3 +352,156 @@ test('/plans offers only the cadences checkout accepts, from the one ladder', ()
   assert.ok(!/\$(?:[1-9]|0\.)/.test(code.replace(/\$\{/g, '')), 'Pricing.jsx types a Pro dollar amount')
 })
 
+
+test('Tailwind and the contrast pairs files are built and free, so they are not Pro claims and not on the way', () => {
+  for (const id of ['tailwind', 'contrast', 'contrast-json']) {
+    const f = EXPORT_FORMATS.find((x) => x.id === id)
+    assert.equal(f?.live, true, `${id} is live`)
+    assert.notEqual(f.pro, true, `${id} is free`)
+    assert.ok(freeFormats().some((x) => x.id === id), `${id} is in the free list /plans derives`)
+    assert.ok(!unbuiltFormats().some((x) => x.id === id), `${id} is not named as on the way`)
+  }
+  assert.deepEqual(unbuiltFormats().map((f) => f.id), ['assets'], 'only the asset bundle is still unbuilt')
+})
+
+
+// ── PRO_VALUE: every row is quoted from the module that enforces it ─────────────
+import { PRO_VALUE, PRO_POINTS, PAID_PACK_GROUPS } from '../../src/config/planFacts.js'
+import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
+import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
+import { LIBRARY_RULES } from '../../src/utils/libraryRules.js'
+import { ICON_PACK_TIERS } from '../../src/data/iconPackTiers.js'
+import { ICON_SIZE_PRESETS, CUSTOM_SIZE_MIN, CUSTOM_SIZE_MAX } from '../../src/utils/iconSize.js'
+import { LINE_STYLES } from '../../src/utils/iconLineStyle.js'
+import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
+import { buildCodeFile, CODE_FILES } from '../../src/utils/codeFiles.js'
+import { COMMUNITY_PROMPT_ROWS } from '../../src/data/communityPrompts.js'
+import { LIBRARY_PALETTE_ROWS } from '../../src/data/paletteLibrary.js'
+import { LIBRARY_GRADIENT_ROWS } from '../../src/data/gradientLibrary.js'
+
+const valueRow = (label) => PRO_VALUE.flatMap((g) => g.rows).find((r) => r.label === label)
+
+test('PRO_VALUE rows quote the limits the product enforces', () => {
+  const { AI_LIMITS } = PLAN_CONFIG
+  assert.equal(valueRow('AI generations').free, `${AI_LIMITS.free.daily} a day, ${AI_LIMITS.free.monthly} a month`)
+  assert.equal(valueRow('AI generations').pro, `${AI_LIMITS.pro.daily} a day, ${AI_LIMITS.pro.monthly} a month`)
+  assert.equal(valueRow('Colour systems').free, `${COLOUR_SYSTEMS.filter((s) => s.free).length} of ${COLOUR_SYSTEMS.length}`)
+  assert.equal(valueRow('Brand palettes').free, `${LIBRARY_TOTALS.freeBrandPalettes} of ${LIBRARY_TOTALS.brandPalettes}`)
+  assert.equal(valueRow('Icon export size').free, `${ICON_SIZE_PRESETS.slice(0, -1).join(', ')} and ${ICON_SIZE_PRESETS.at(-1)}px`)
+  assert.equal(valueRow('Icon export size').pro, `Any size from ${CUSTOM_SIZE_MIN} to ${CUSTOM_SIZE_MAX}px`)
+  assert.equal(valueRow('Saved projects').free, String(FREE_SAVE_LIMITS.projects))
+  assert.equal(valueRow('Icon line styles').pro, `Plus ${LINE_STYLES.filter((s) => s.pro).map((s) => s.name).join(' and ')}`)
+  const libs = valueRow('Palette, gradient and prompt libraries')
+  assert.match(libs.free, new RegExp(`First ${GALLERY_TIER_LIMITS.free} of each, ${GALLERY_TIER_LIMITS.anonymous} when signed out`))
+  assert.match(libs.pro, new RegExp(`${LIBRARY_TOTALS.palettes} palettes, ${LIBRARY_TOTALS.gradients} gradients and ${LIBRARY_TOTALS.prompts} prompts`))
+})
+
+test('"first N of each" is true: every library has at least N rows a Free account may open', () => {
+  const cap = GALLERY_TIER_LIMITS.free
+  const open = (rows, isOpen) => rows.filter(isOpen).length
+  assert.ok(open(LIBRARY_PALETTE_ROWS, LIBRARY_RULES.palettes.isOpen) >= cap, 'fewer open palettes than the Free cap')
+  assert.ok(open(LIBRARY_GRADIENT_ROWS, LIBRARY_RULES.gradients.isOpen) >= cap, 'fewer open gradients than the Free cap')
+  assert.ok(open(COMMUNITY_PROMPT_ROWS, LIBRARY_RULES.prompts.isOpen) >= cap, 'fewer free prompts than the Free cap')
+  assert.ok(GALLERY_TIER_LIMITS.anonymous < cap && cap < LIBRARY_TOTALS.prompts, 'the tier caps no longer widen up to Pro')
+})
+
+test('every paid icon pack has a group the plan lines name', () => {
+  const paid = Object.entries(ICON_PACK_TIERS).filter(([, t]) => t.tier === 'paid')
+  assert.ok(paid.length > 0)
+  for (const [prefix, t] of paid) assert.ok(PAID_PACK_GROUPS.includes(t.group), `${prefix} has no paid-pack group`)
+  const line = PRO_POINTS.find((l) => /icons, in any size and line style/.test(l))
+  assert.ok(line, 'the icon tick is gone')
+  for (const g of PAID_PACK_GROUPS) assert.ok(paid.some(([, t]) => t.group === g), `no paid pack in the "${g}" group`)
+})
+
+test('the "Made with UI L4B" line is claimed only for the free files that carry one', async () => {
+  const design = { palette: { colors: ['#1F4B8E', '#F4F1EA', '#1B2433'] } }
+  for (const id of Object.keys(CODE_FILES)) {
+    const f = EXPORT_FORMATS.find((x) => x.id === id)
+    const text = await buildCodeFile(id, design, { projectName: 'Lumen', watermark: true })
+    assert.equal(text.includes('Made with UI L4B'), f.credit !== false, `${id}: exportFormats.js says ${f.credit !== false ? 'credited' : 'no credit'}, the file disagrees`)
+  }
+})
+
+// ── Export themes: no plan line sells them until they export ─────────────────
+import { EXPORT_THEMES_LIVE, EXPORT_THEME_EXPORTS, EXPORT_THEMES, freeThemes, themeExports } from '../../src/config/exportFormats.js'
+import { FREE_POINTS, FREE_LINES, PRO_ROWS, PLANS_LEAD, THEME_FACTS } from '../../src/config/planFacts.js'
+
+test('while the themes are off, no plan line mentions them; the Pro export lines are the panel\'s own', () => {
+  const lines = [...FREE_POINTS, ...PRO_POINTS, ...FREE_LINES, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub]), PLANS_LEAD].join(' | ')
+  if (EXPORT_THEMES_LIVE) {
+    assert.match(lines, /export themes/, 'the themes are on but no plan line names them')
+    return
+  }
+  for (const word of [/export themes?/i, /Presentation, Ticket/, /brand book/i, /Standards and Specification/]) {
+    assert.ok(!word.test(lines), `a plan line sells the export themes before they export: ${word}`)
+  }
+  for (const f of proOnlyFormats().filter((x) => x.group === 'book' || x.group === 'guidelines')) {
+    assert.ok(PRO_POINTS.at(-1).includes(f.name), `Pro no longer names ${f.name}`)
+  }
+})
+
+test('what the theme lines promise is what the theme data gates', () => {
+  // "UI kit free in N themes" and "Guidelines, brand book and kit" are Pro everywhere.
+  assert.equal(freeThemes().length, THEME_FACTS.freeCount)
+  for (const t of EXPORT_THEMES) {
+    const exportsOf = themeExports(t.id)
+    assert.equal(exportsOf.find((e) => e.id === 'ui-kit').pro, t.tier !== 'free', `${t.id}: the UI kit gate disagrees with the tier`)
+    for (const e of exportsOf.filter((x) => x.id !== 'ui-kit')) assert.equal(e.pro, true, `${t.id}/${e.id} is not Pro`)
+  }
+  assert.equal(EXPORT_THEME_EXPORTS.filter((e) => !e.proOnly).length, 1, 'more than the UI kit can be free')
+})
+
+test('the themes are not sold as formats: no theme export is a Pro format in the table', () => {
+  const formatNames = new Set(EXPORT_FORMATS.map((f) => f.name))
+  for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly)) assert.ok(!formatNames.has(e.name), `${e.name} is in the format table without being built`)
+})
+
+
+// ── The comparison table tells the truth about the UI kit and the themes ─────
+import { proValue, sameExportNames } from '../../src/config/planFacts.js'
+import { documentFormats } from '../../src/config/exportFormats.js'
+
+const exportsGroup = (live) => proValue(live).find((g) => g.group === 'Exports').rows
+
+test('with the themes live, the Exports group has a themes row: Free previews all and exports the UI kit in its free themes, Pro gets every theme', () => {
+  const row = exportsGroup(true).find((r) => r.label === 'Export themes')
+  assert.ok(row, 'the comparison table has no export-themes row')
+  assert.ok(row.free.startsWith(`Preview all ${EXPORT_THEMES.length}`), row.free)
+  assert.ok(row.free.includes(`UI kit exports in ${freeThemes().length}`), row.free)
+  for (const t of freeThemes()) assert.ok(row.free.includes(t.name), `${t.name} is a free theme the row leaves out`)
+  assert.ok(row.pro.startsWith(`All ${EXPORT_THEMES.length}`), row.pro)
+  // The row prints numerals, never number words.
+  assert.ok(!/\b(two|ten|eight)\b/i.test(`${row.free} ${row.pro}`), 'a theme count is spelled as a word')
+})
+
+test('with the themes off, the table has no themes row and still lists every Pro format the dialog offers', () => {
+  const rows = exportsGroup(false)
+  assert.ok(!rows.some((r) => /theme/i.test(r.label)), 'a themes row shows before the themes export')
+  for (const live of [true, false]) {
+    for (const f of documentFormats().filter((x) => x.live && x.pro)) {
+      assert.ok(exportsGroup(live).some((r) => r.label === f.name && r.free === null && r.pro === 'Included'), `${f.name} is a Pro format the dialog still offers, missing with live=${live}`)
+    }
+  }
+})
+
+test('"Same on both plans" does not name the UI kit while it differs by plan', () => {
+  assert.ok(!/\bUI kit\b/.test(sameExportNames(true)), 'the UI kit is listed as the same on both plans')
+  assert.ok(/\bUI kit\b/.test(sameExportNames(false)), 'with the themes off the UI kit is the same on both plans')
+  assert.match(PLANS, /sameExportNames\(\)/, 'Pricing.jsx no longer reads the same-on-both names from planFacts')
+})
+// ── The homepage plans section sells only what the plan lists say ────────────
+test('the homepage plans section reads its lines from planFacts and its amounts from plansPrices', () => {
+  const lists = stripComments(read('src/components/home/PlanLists.jsx'))
+  const section = stripComments(read('src/components/home/HomePlans.jsx'))
+  assert.match(lists, /from '\.\.\/\.\.\/config\/planFacts'/)
+  assert.match(lists, /\bfreeLines\b/)
+  assert.match(lists, /\bproRows\b/)
+  assert.match(lists, /\bFREE_EXCLUSION_FULL\b/)
+  assert.match(section, /\bplansLead\b/)
+  assert.match(section, /\bplanPriceFacts\b/)
+  assert.match(section, /usePrices\(\{ enabled: near \}\)/, 'the prices are not held back until the section is near')
+  // The figure of two Pro pages is true only once the themes export.
+  assert.match(section, /\{live && <PlanFigure \/>\}/, 'the figure shows without the themes switch')
+  assert.match(section, /themeById/, 'the figure\'s alt text is not read from the theme data')
+})

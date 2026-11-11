@@ -1,11 +1,11 @@
 // WHAT IS ACTUALLY IN A PROJECT — the reading behind the User Home.
 //
 // ────────────────────────────────────────────────────────────────────────
-// THE FOUNDER'S ASK, 2026-09-05
+// WHAT IT IS FOR
 // ────────────────────────────────────────────────────────────────────────
-// “see what is actually in each project at a glance (palette, fonts, scale)
-// rather than a name” and “progress, so a project with colours but no type scale
-// says so”. Both of those are one question — which of the four things a design
+// Show what is actually in each project at a glance (palette, fonts, scale)
+// rather than a name, and show progress, so a project with colours but no type
+// scale says so. Both of those are one question — which of the four things a design
 // system is made of does this project actually have? — so they are one function.
 //
 // ────────────────────────────────────────────────────────────────────────
@@ -93,7 +93,18 @@ export function partsPresent(design, defaults = DEFAULT_DESIGN) {
 
   const tints = Array.isArray(d.tints?.scale) && d.tints.scale.length > 0
 
-  return { palette, 'type-scale': typeScale, fonts, tints }
+  // A part kept as it was is a choice too: the Brand kit walkthrough records
+  // the parts the person moved past with Next (`design.chosen`), because a
+  // palette, face pair or type scale left on its defaults cannot be told apart
+  // from "never opened" by comparing values alone. Only a literal `true` counts.
+  const chosen = d.chosen && typeof d.chosen === 'object' ? d.chosen : {}
+
+  return {
+    palette: palette || chosen.palette === true,
+    'type-scale': typeScale || chosen['type-scale'] === true,
+    fonts: fonts || chosen.fonts === true,
+    tints: tints || chosen.tints === true,
+  }
 }
 
 /**
@@ -102,7 +113,7 @@ export function partsPresent(design, defaults = DEFAULT_DESIGN) {
  *
  * `parts` is always all four, in SYSTEM_PARTS order, each with `done` — so the
  * card can render the complete row of four and show which one is missing, which
- * is the founder's “a project with colours but no type scale should say so”.
+ * is how “a project with colours but no type scale” gets to say so.
  */
 export function projectDigest(project, defaults = DEFAULT_DESIGN) {
   const design = project?.design || {}
@@ -245,8 +256,8 @@ export function paletteBands(colors) {
 }
 
 /**
- * “A project with colours but no type scale should say so” — the founder's own
- * example, said in words.
+ * “A project with colours but no type scale should say so” — the example,
+ * said in words.
  *
  * A percentage would have been easier and worse. Airtable's project gallery
  * (mobbin.com/screens/0e9a986f-01cd-4332-ac89-ba5c36853ae3) prints “Progress

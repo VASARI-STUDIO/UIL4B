@@ -298,5 +298,77 @@
     "height": 72,
     "category": "Emoji",
     "palette": true
+  },
+  "mingcute": {
+    "name": "MingCute Icon",
+    "total": 20,
+    "samples": [
+      "home-1-line",
+      "arrow-right-line",
+      "search-line"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "carbon": {
+    "name": "Carbon",
+    "total": 20,
+    "samples": [
+      "home",
+      "settings",
+      "user"
+    ],
+    "height": 32,
+    "category": "UI 16px / 32px",
+    "palette": false
+  },
+  "fluent": {
+    "name": "Fluent UI System Icons",
+    "total": 20,
+    "samples": [
+      "home-24-regular",
+      "search-24-regular",
+      "settings-24-regular"
+    ],
+    "height": 24,
+    "category": "UI Other / Mixed Grid",
+    "palette": false
+  },
+  "pixelarticons": {
+    "name": "Pixelarticons",
+    "total": 20,
+    "samples": [
+      "home",
+      "heart",
+      "search"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "radix-icons": {
+    "name": "Radix Icons",
+    "total": 20,
+    "samples": [
+      "home",
+      "magnifying-glass",
+      "person"
+    ],
+    "height": 15,
+    "category": "UI Other / Mixed Grid",
+    "palette": false
+  },
+  "bi": {
+    "name": "Bootstrap Icons",
+    "total": 20,
+    "samples": [
+      "house",
+      "search",
+      "person"
+    ],
+    "height": 16,
+    "category": "UI 16px / 32px",
+    "palette": false
   }
 }

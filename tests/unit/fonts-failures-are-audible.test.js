@@ -65,9 +65,17 @@ function fakeRes() {
 
 const GET = { method: 'GET' }
 
+// The handler keeps a catalogue it fetched for an hour. Each run below is a
+// fresh upstream situation, so each one starts two hours after the last.
+const TWO_HOURS = 2 * 60 * 60 * 1000
+let clock = 1_900_000_000_000
+
 /** Run the handler with `fetch` replaced, and return what it said and logged. */
 async function run(fetchImpl, { key } = {}) {
   const realFetch = global.fetch
+  const realNow = Date.now
+  clock += TWO_HOURS
+  Date.now = () => clock
   const realKey = process.env.GOOGLE_FONTS_API_KEY
   const realViteKey = process.env.VITE_GOOGLE_FONTS_API_KEY
   global.fetch = fetchImpl
@@ -81,6 +89,7 @@ async function run(fetchImpl, { key } = {}) {
     return { res: res.out, lines, log: lines.join('\n') }
   } finally {
     global.fetch = realFetch
+    Date.now = realNow
     if (realKey === undefined) delete process.env.GOOGLE_FONTS_API_KEY; else process.env.GOOGLE_FONTS_API_KEY = realKey
     if (realViteKey === undefined) delete process.env.VITE_GOOGLE_FONTS_API_KEY; else process.env.VITE_GOOGLE_FONTS_API_KEY = realViteKey
   }

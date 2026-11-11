@@ -1,12 +1,12 @@
-// APPLY THE FOUNDER-GATED RULES PATCH TO A COPY, AND NEVER TO THE ORIGINAL.
+// APPLY THE APPROVAL-GATED RULES PATCH TO A COPY, AND NEVER TO THE ORIGINAL.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // WHY THIS EXISTS
 // ═══════════════════════════════════════════════════════════════════════════
-// `firestore.rules` is founder-gated (docs/reference/human-validation-zones.md).
+// `firestore.rules` is approval-gated (docs/reference/human-validation-zones.md).
 // The per-project sync shape needs one rule added to it, and that rule cannot be
-// staged from an agent branch — the auto-mode classifier refuses the file
-// whether or not a permission has been granted. #390 hit the same wall.
+// staged from an automated branch, whether or not a permission has been
+// granted. #390 hit the same wall.
 //
 // So the rule lives as a committed, UNAPPLIED diff
 // (docs/design/per-project-sync-rules.patch), and everything that has to reason
@@ -24,14 +24,14 @@
 // THE GATED FILE IS READ AND NEVER WRITTEN. Not even briefly, not even with a
 // restore afterwards — the first draft of this did apply-read-reverse against
 // the working tree, and a process killed between the second and third step
-// would have left a founder-gated file modified on an agent's branch. Instead
+// would have left an approval-gated file modified on an agent's branch. Instead
 // the file is COPIED into a scratch directory whose name appears in the diff's
 // target path via `git apply --directory`, so every byte git writes lands
 // inside that directory.
 //
 // `git apply` rather than a hand-rolled splice, for the reason the
 // firebase-deferral trial gives: a patch verified by a bespoke applier is a
-// patch verified against something other than what the founder will run.
+// patch verified against something other than what the owner will run.
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtemp, readFile, writeFile, rm, mkdir } from 'node:fs/promises'
@@ -51,14 +51,14 @@ export const PATCH_PATH = path.join(ROOT, 'docs/design/per-project-sync-rules.pa
  * It now LIVES in scripts/gated-patches.mjs, which is the single registry the
  * applier and its guard test both read, and is re-exported here so every
  * existing caller keeps working. One definition, because two would drift and
- * the day they drifted is the day the founder applied the wrong thing.
+ * the day they drifted is the day the owner applied the wrong thing.
  */
 export { RULE_MATCHER }
 
 /**
  * firestore.rules with the patch applied, as a string.
  *
- * ALREADY APPLIED IS NOT A FAILURE. Once the founder has run
+ * ALREADY APPLIED IS NOT A FAILURE. Once the owner has run
  * `npm run apply:gated`, the rule is in the file and `git apply` refuses — so a
  * helper that only knew how to apply would turn the successful day into a red
  * suite. When the rule is already there the file is returned as it stands, with

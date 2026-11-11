@@ -9,4 +9,20 @@ Disallow: /dashboard
 Disallow: /projects
 Disallow: /style-guide
 
+# AI crawlers. Search and answer bots (OAI-SearchBot, ChatGPT-User,
+# Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User) follow the
+# group above, so the site can be cited in answers. Crawlers that only gather
+# training data are refused. A crawler obeys only the most specific group that
+# names it, so these lines never loosen the private routes above.
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bytespider
+User-agent: meta-externalagent
+User-agent: cohere-training-data-crawler
+Disallow: /
+
 Sitemap: https://uil4b.com/sitemap.xml

@@ -17,9 +17,14 @@
 // document is unit-testable as a string.
 
 import { SITE_ORIGIN } from './routeMeta.js'
+import { fmtRatio, specimenScale } from './exportTemplates/shared.js'
+
+// What the type table has to fit on the A4 sheet, in mm: the height under its head, the
+// width of the specimen column, a row's padding and its row text.
+const SPECIMEN_FIT = Object.freeze({ roomMm: 165, widthMm: 80, padMm: 5.1, textMm: 5.5, lineHeight: 1.15 })
 
 /** WCAG relative luminance for an #rrggbb string. */
-function luminance(hex) {
+export function luminance(hex) {
   const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
     .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
@@ -55,6 +60,28 @@ const esc = (s) => String(s ?? '')
 const isHex = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)
 
 /**
+ * A font weight the documents may print: an integer from 100 to 900 in steps of
+ * 100, as a number, or null. Weights are written raw into style attributes, <dd>
+ * cells and <style> blocks, so anything else (a string carrying markup, 650, NaN)
+ * is refused here rather than escaped at every use.
+ */
+export function safeWeight(w) {
+  const n = Number(w)
+  return Number.isInteger(n) && n >= 100 && n <= 900 && n % 100 === 0 ? n : null
+}
+
+/**
+ * A font family name the documents may print: letters, digits, space, hyphen,
+ * underscore and period, up to 80 characters; otherwise null. esc() leaves ' alone,
+ * so a family containing one could break out of the quoted CSS value it sits in.
+ */
+export function safeFamily(f) {
+  if (typeof f !== 'string') return null
+  const t = f.trim()
+  return /^[A-Za-z0-9 _.-]{1,80}$/.test(t) ? t : null
+}
+
+/**
  * Normalise whatever the design context holds into exactly what the document
  * needs. Saved designs come from many tool versions, so every field is treated
  * as untrusted: a half-written palette produces a shorter guide, never a broken
@@ -64,16 +91,16 @@ export function readDesign(design) {
   const palette = (design?.palette?.colors || [])
     .filter(isHex).map(c => c.toUpperCase())
   const base = isHex(design?.palette?.base) ? design.palette.base.toUpperCase() : palette[0] || null
-  const heading = design?.fonts?.heading?.family || 'Inter'
-  const body = design?.fonts?.body?.family || 'Inter'
+  const heading = safeFamily(design?.fonts?.heading?.family) || 'Inter'
+  const body = safeFamily(design?.fonts?.body?.family) || 'Inter'
   const ts = design?.typeScale || {}
   return {
     palette,
     base,
     heading,
-    headingWeight: Number(ts.headingWeight) || design?.fonts?.heading?.weight || 700,
+    headingWeight: safeWeight(ts.headingWeight) ?? safeWeight(design?.fonts?.heading?.weight) ?? 700,
     body,
-    bodyWeight: design?.fonts?.body?.weight || 400,
+    bodyWeight: safeWeight(design?.fonts?.body?.weight) ?? 400,
     baseSize: Number(ts.base) > 0 ? Number(ts.base) : 16,
     ratio: Number(ts.ratio) > 1 ? Number(ts.ratio) : 1.25,
     lineHeight: Number(ts.lineHeight) > 0 ? Number(ts.lineHeight) : 1.5,
@@ -120,21 +147,23 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
       </div>
       <figcaption>
         <b>${hex}</b>
-        <span>${label} text · ${ratio}:1 · ${grade(ratio)}</span>
+        <span>${label} text · ${fmtRatio(ratio)}:1 · ${grade(ratio)}</span>
       </figcaption>
     </figure>`
   }
 
+  // One factor for every step: true size when the ladder fits the page, else the same share of it for all.
+  const { k: specK, label: specLabel } = specimenScale(ladder.map((s) => ({ name: 'Ag', px: s.px })), SPECIMEN_FIT)
   const typeRow = (s) => `<tr>
     <th scope="row">${esc(s.name)}</th>
     <td class="num">${s.px}px</td>
     <td class="num">${(s.px / 16).toFixed(3).replace(/\.?0+$/, '')}rem</td>
-    <td class="spec" style="font-size:${Math.min(s.px, 56)}px;font-family:'${esc(s.exp >= 1 ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${s.exp >= 1 ? d.headingWeight : d.bodyWeight};line-height:1.15">Ag</td>
+    <td class="spec" style="font-size:${Math.round(s.px * specK * 100) / 100}px;font-family:'${esc(s.exp >= 1 ? d.heading : d.body)}',system-ui,sans-serif;font-weight:${s.exp >= 1 ? d.headingWeight : d.bodyWeight};line-height:1.15">Ag</td>
   </tr>`
 
   const pairs = d.palette.slice(0, 4).map(hex => {
     const r = contrast(hex, '#FFFFFF')
-    return `<tr><th scope="row"><span class="dot" style="background:${hex}"></span>${hex} on white</th><td class="num">${r}:1</td><td>${grade(r)}</td></tr>`
+    return `<tr><th scope="row"><span class="dot" style="background:${hex}"></span>${hex} on white</th><td class="num">${fmtRatio(r)}:1</td><td>${grade(r)}</td></tr>`
   }).join('')
 
   return `<!doctype html>
@@ -142,7 +171,7 @@ export function buildStyleGuideHtml(design, { projectName = 'Design System', wat
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(projectName)} — Style Guide</title>
+<title>${esc(projectName)} | Style Guide</title>
 ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?${fontParam}&display=swap" rel="stylesheet">` : ''}
 <style>
   :root{--ink:#101014;--mut:#5F5F69;--line:#E4E4E8;--page:#fff;--accent:${d.base || '#101014'}}
@@ -193,49 +222,49 @@ ${fontParam ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link 
   <p class="eyebrow">Design System</p>
   <h1>${esc(projectName)}</h1>
   <div class="rule"></div>
-  <p class="lede">The colour, typography and contrast decisions behind this interface — written down so they can be applied consistently, and checked.</p>
+  <p class="lede">The colour, typography and contrast decisions behind this interface, written down so they can be applied consistently, and checked.</p>
   <dl>
-    <dt>Primary</dt><dd>${d.base || '—'}</dd>
+    <dt>Primary</dt><dd>${d.base || 'None'}</dd>
     <dt>Colours</dt><dd>${d.palette.length}</dd>
     <dt>Headings</dt><dd>${esc(d.heading)}</dd>
     <dt>Body</dt><dd>${esc(d.body)}</dd>
     <dt>Scale</dt><dd>${d.baseSize}px · ${d.ratio}</dd>
     <dt>Generated</dt><dd>${date.toISOString().slice(0, 10)}</dd>
   </dl>
-  <div class="foot"><span>${esc(projectName)} — Style Guide</span><span>${watermark ? 'Made with UIL4B' : ''}</span></div>
+  <div class="foot"><span>${esc(projectName)} | Style Guide</span><span>${watermark ? 'Made with UI L4B' : ''}</span></div>
 </section>
 
 <section class="page">
-  <p class="eyebrow">01 — Colour</p>
+  <p class="eyebrow">01 · Colour</p>
   <h2>The palette</h2>
-  <p class="lede">Every colour is shown with the text colour that reads on it and the measured contrast ratio, so a choice made here is already checked.</p>
-  ${d.palette.length ? `<div class="sw-grid">${d.palette.map(swatch).join('')}</div>` : '<p class="note">No colours saved yet — build a palette and export again.</p>'}
-  <div class="note"><strong>How to read this.</strong> Ratios are measured against WCAG 2.2 §1.4.3. AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. A swatch marked Fail is a fill, not a text colour.</div>
-  <div class="foot"><span>Colour</span><span>${watermark ? 'Made with UIL4B' : '2'}</span></div>
+  <p class="lede">Each colour with the text colour that reads on it and its contrast ratio.</p>
+  ${d.palette.length ? `<div class="sw-grid">${d.palette.map(swatch).join('')}</div>` : '<p class="note">No colours saved yet. Build a palette and export again.</p>'}
+  <div class="note"><strong>How to read this.</strong> Ratios follow WCAG 2.2 1.4.3. AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1. A swatch marked Fail is a fill, not a text colour.</div>
+  <div class="foot"><span>Colour</span><span>${watermark ? 'Made with UI L4B' : '2'}</span></div>
 </section>
 
 <section class="page">
-  <p class="eyebrow">02 — Typography</p>
+  <p class="eyebrow">02 · Typography</p>
   <h2>The scale</h2>
   <p class="lede">A ${d.ratio} ratio from a ${d.baseSize}px base. Headings set in ${esc(d.heading)}, body in ${esc(d.body)}.</p>
   <table>
-    <thead><tr><th>Step</th><th>Size</th><th>rem</th><th style="text-align:right">Specimen</th></tr></thead>
+    <thead><tr><th>Step</th><th>Size</th><th>rem</th><th style="text-align:right">${specLabel}</th></tr></thead>
     <tbody>${ladder.map(typeRow).join('')}</tbody>
   </table>
-  <div class="note"><strong>Line height</strong> ${d.lineHeight} on body copy. Headings tighten to 1.1, which is what keeps a multi-line heading from reading as separate lines.</div>
-  <div class="foot"><span>Typography</span><span>${watermark ? 'Made with UIL4B' : '3'}</span></div>
+  <div class="note"><strong>Line height</strong> ${d.lineHeight} on body copy. Headings 1.1.</div>
+  <div class="foot"><span>Typography</span><span>${watermark ? 'Made with UI L4B' : '3'}</span></div>
 </section>
 
 <section class="page">
-  <p class="eyebrow">03 — Evidence</p>
+  <p class="eyebrow">03 · Evidence</p>
   <h2>Contrast</h2>
-  <p class="lede">The measurements behind the palette, so an accessibility question has an answer rather than an opinion.</p>
+  <p class="lede">Contrast of the first four palette colours on white.</p>
   <table>
     <thead><tr><th>Pair</th><th>Ratio</th><th>Grade</th></tr></thead>
     <tbody>${pairs || '<tr><td colspan="3">No colours saved yet.</td></tr>'}</tbody>
   </table>
-  <div class="note">Measured with the WCAG 2.2 relative-luminance formula. These figures are reproducible: the same two hex values always give the same ratio.</div>
-  <div class="foot"><span>Evidence</span><span>${watermark ? 'Made with UIL4B — uil4b.com' : '4'}</span></div>
+  <div class="note">Ratios use the WCAG 2.2 relative-luminance formula.</div>
+  <div class="foot"><span>Evidence</span><span>${watermark ? 'Made with UI L4B | uil4b.com' : '4'}</span></div>
 </section>
 
 </body>
@@ -252,35 +281,35 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
   const d = readDesign(design)
   const ladder = typeLadder(d)
   const lines = [
-    `# ${projectName} — Style Guide`,
+    `# ${projectName}: Style Guide`,
     '',
     `Generated ${date.toISOString().slice(0, 10)}`,
     '',
     '| | |',
     '|---|---|',
-    `| Primary | ${d.base || '—'} |`,
+    `| Primary | ${d.base || 'None'} |`,
     `| Colours | ${d.palette.length} |`,
     `| Headings | ${d.heading} |`,
     `| Body | ${d.body} |`,
     `| Scale | ${d.baseSize}px · ${d.ratio} |`,
     '',
-    '## 01 — Colour',
+    '## 01 · Colour',
     '',
-    'Each colour with the text colour that reads on it and the measured contrast ratio.',
+    'Each colour with the text colour that reads on it and its contrast ratio.',
     '',
     '| Colour | Hex | Text | Ratio | Grade |',
     '|---|---|---|---|---|',
   ]
   d.palette.forEach((hex, i) => {
     const { ratio, label } = inkFor(hex)
-    lines.push(`| ${i === 0 ? 'Primary' : `Colour ${i + 1}`} | \`${hex}\` | ${label} | ${ratio}:1 | ${grade(ratio)} |`)
+    lines.push(`| ${i === 0 ? 'Primary' : `Colour ${i + 1}`} | \`${hex}\` | ${label} | ${fmtRatio(ratio)}:1 | ${grade(ratio)} |`)
   })
-  if (!d.palette.length) lines.push('| — | — | — | — | — |')
+  if (!d.palette.length) lines.push('| None | | | | |')
   lines.push(
     '',
-    '> Ratios follow WCAG 2.2 §1.4.3 — AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1.',
+    '> Ratios follow WCAG 2.2 1.4.3. AA needs 4.5:1 for normal text and 3:1 for large; AAA needs 7:1.',
     '',
-    '## 02 — Typography',
+    '## 02 · Typography',
     '',
     `A ${d.ratio} ratio from a ${d.baseSize}px base. Headings in ${d.heading}, body in ${d.body}.`,
     '',
@@ -288,17 +317,17 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
     '|---|---|---|',
     ...ladder.map(s => `| ${s.name} | ${s.px}px | ${(s.px / 16).toFixed(3).replace(/\.?0+$/, '')}rem |`),
     '',
-    `Line height ${d.lineHeight} on body copy; headings tighten to 1.1.`,
+    `Line height ${d.lineHeight} on body copy. Headings 1.1.`,
     '',
-    '## 03 — Evidence',
+    '## 03 · Evidence',
     '',
     '| Pair | Ratio | Grade |',
     '|---|---|---|',
     ...d.palette.slice(0, 4).map(hex => {
       const r = contrast(hex, '#FFFFFF')
-      return `| \`${hex}\` on white | ${r}:1 | ${grade(r)} |`
+      return `| \`${hex}\` on white | ${fmtRatio(r)}:1 | ${grade(r)} |`
     }),
   )
-  if (watermark) lines.push('', '---', '', `Made with [UIL4B](${SITE_ORIGIN})`)
+  if (watermark) lines.push('', '---', '', `Made with [UI L4B](${SITE_ORIGIN})`)
   return `${lines.join('\n')}\n`
 }

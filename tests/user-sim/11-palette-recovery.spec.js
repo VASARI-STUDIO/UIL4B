@@ -1,6 +1,6 @@
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
-import { readSeed, seedChip, paletteToolbar, openPaletteTools } from './palette-helpers.js'
+import { go, signIn, watch } from './helpers.js'
+import { readSeed, seedChip, paletteToolbar, openPaletteTools, clickPaletteAction } from './palette-helpers.js'
 import { hexToHct } from '../../src/utils/colors.js'
 
 /** The Palette Builder writes the board into the saved project on a ~200ms
@@ -50,8 +50,8 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(pickerColour).toBe(firstColour)
 
     // This used to assert the seed SURVIVED a reload, which was true because
-    // `vs-palette-session-seed` pinned the first draw to the tab. The founder's
-    // 2026-09-03 request is that the page auto-loads a random palette, so an
+    // `vs-palette-session-seed` pinned the first draw to the tab. The page now
+    // auto-loads a random palette, so an
     // untouched board is now redrawn on arrival — and it must be, because the
     // board was also being persisted on mount, which meant "random on load"
     // held exactly once per device and never again.
@@ -236,31 +236,66 @@ test.describe('Palette Builder recovery and tool continuity', () => {
 
   test('Space activates interactive Palette controls without invoking the global randomise shortcut', async ({ page }) => {
     watch(page, 'keyboard designer using controls, popovers and modals')
-    await go(page, '/create/palette')
-    await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
-    const before = await page.locator('.plb-col .plb-hex').allTextContents()
+    // Preview is a button on the toolbar row at every width: 1440px, and 390px
+    // where the Extra tools overflow is a phone sheet. It is pressed with Space,
+    // and that may not reach the page's randomise. At 768px the Extra tools
+    // trigger is pressed with Space too (the overflow's own rows).
+    const swatchHexes = page.locator('.plb-col .plb-hex')
+    const liveMessage = page.locator('.plb > .tl-body > p[aria-live="polite"]')
+    for (const { where, width } of [{ where: 'row', width: 1440 }, { where: 'overflow', width: 390 }]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/create/palette')
+      await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
+      await expect(swatchHexes).toHaveText(Array(5).fill(/^#[0-9A-F]{6}$/))
+      // Randomise announces 'Palette randomised' even if it draws the same
+      // colours again, so the message catches what the hex values could miss.
+      await expect(liveMessage).toHaveText('')
+      const before = await swatchHexes.allTextContents()
+      const expectUnchangedPalette = async () => {
+        await expect(swatchHexes).toHaveText(before)
+        await expect(liveMessage).toHaveText('')
+      }
 
-    // Preview lives in the Extra tools overflow; both the trigger and the row are
-    // pressed with Space, and neither may reach the page's randomise.
-    const tools = paletteToolbar(page).getByRole('button', { name: 'Extra tools' })
-    await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
-    await tools.focus()
-    await page.keyboard.press('Space')
-    const row = page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview on a UI' })
-    await expect(row).toBeVisible()
-    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
-    await row.focus()
-    await page.keyboard.press('Space')
-    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
-    await page.getByRole('button', { name: 'Dark', exact: true }).focus()
-    await page.keyboard.press('Space')
-    await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    const close = page.getByRole('button', { name: 'Close preview' })
-    await close.focus()
-    await page.keyboard.press('Space')
-    await expect(page.getByRole('dialog', { name: 'Palette preview' })).toHaveCount(0)
+      // On a laptop Preview is a button on the row; on a phone it is an Extra tools row.
+      const onRow = paletteToolbar(page).getByRole('button', { name: 'Preview', exact: true })
+      let preview = onRow
+      if (where === 'row') await expect(preview, `${width}px: Preview is a button on the row`).toBeVisible()
+      else await expect(onRow, `${width}px: Preview is not on the row`).toHaveCount(0)
+      if (where === 'overflow') {
+        // Space on the Extra tools trigger opens its panel and leaves the palette alone.
+        const tools = paletteToolbar(page).getByRole('button', { name: 'Extra tools' })
+        await tools.focus()
+        await expect(tools).toBeFocused()
+        await page.keyboard.press('Space')
+        await expect(tools).toHaveAttribute('aria-expanded', 'true')
+        await expect(page.getByRole('dialog', { name: 'Extra tools' }).locator(':focus')).toHaveCount(1)
+        await page.keyboard.press('Escape')
+        await expect(tools).toHaveAttribute('aria-expanded', 'false')
+        // Open the panel again by keyboard and use Preview from there.
+        await page.keyboard.press('Space')
+        preview = page.getByRole('dialog', { name: 'Extra tools' }).getByRole('button', { name: 'Preview', exact: true })
+      }
+      await expectUnchangedPalette()
+      await preview.focus()
+      await expect(preview).toBeFocused()
+      await page.keyboard.press('Space')
+      const previewDialog = page.getByRole('dialog', { name: 'Palette preview' })
+      await expect(previewDialog).toBeVisible()
+      await expectUnchangedPalette()
+      const dark = previewDialog.getByRole('button', { name: 'Dark', exact: true })
+      await dark.focus()
+      await expect(dark).toBeFocused()
+      await page.keyboard.press('Space')
+      await expect(dark).toHaveAttribute('aria-pressed', 'true')
+      await expectUnchangedPalette()
+      const close = page.getByRole('button', { name: 'Close preview' })
+      await close.focus()
+      await expect(close).toBeFocused()
+      await page.keyboard.press('Space')
+      await expect(previewDialog).toHaveCount(0)
 
-    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+      await expectUnchangedPalette()
+    }
   })
 
   test('swap direction, right-click insertion and preview gating are explicit', async ({ page }) => {
@@ -286,26 +321,72 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(insertMenu.getByRole('menuitem')).toHaveCount(4)
 
     await page.keyboard.press('Escape')
-    await (await openPaletteTools(page)).getByRole('button', { name: 'Preview on a UI' }).click()
-    await expect(page.locator('.plb-preview-item')).toHaveCount(6)
-    await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
-    await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(3)
-    await expect(page.locator('[data-preview-scene="Commerce checkout"]')).toContainText('Order summary')
-    await expect(page.locator('[data-preview-scene="Account settings"]')).toContainText('Email address')
-    await expect(page.locator('[data-preview-scene="Support inbox"]')).toContainText('Unable to export tokens')
-    await expect(page.locator('[data-preview-scene="Finance overview"]')).toContainText('Recent transactions')
-    await page.getByRole('tab', { name: 'Brand' }).click()
-    await expect(page.locator('.plb-preview-item')).toHaveCount(6)
-    await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
-    await expect(page.locator('[data-preview-scene="Architecture studio"]')).toContainText('Courtyard House')
-    await expect(page.locator('[data-preview-scene="Conference"]')).toContainText('Opening keynote')
-    await expect(page.locator('[data-preview-scene="Hospitality"]')).toContainText('Check rooms')
-    await page.getByRole('tab', { name: 'Graphic Design' }).click()
-    await expect(page.locator('[data-preview-scene="Album cover"]')).toContainText('Signal One')
-    await expect(page.locator('[data-preview-scene="Packaging"]')).toContainText('ORIGIN')
-    await expect(page.locator('[data-preview-scene="Magazine cover"]')).toContainText('Brisbane')
-    await page.getByRole('button', { name: 'Dark', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await clickPaletteAction(page, 'Preview')
+    const dialog = page.getByRole('dialog', { name: 'Palette preview' })
+    const rail = dialog.getByRole('listbox', { name: 'Previews' })
+    const options = rail.getByRole('option')
+    // Six previews, each a made-up product (Slack Water, Sundial, Orra Workroom,
+    // Ridgeline, Hale & Okoro, Tenner). Four are open to a free account and two
+    // are marked Pro in the list. The Poster and Social previews raise this to
+    // eight, with four Pro, when they are built.
+    await expect(options).toHaveCount(6)
+    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(2)
+    // The preview opens on the editorial example, which is its own lazy chunk.
+    await expect(rail.getByRole('option', { name: /^Editorial hero/ })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('[data-preview-scene="Editorial hero"]')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+
+    const FREE = [
+      ['Energy dashboard', 'Inverter 2 offline since 06:12.'],
+      ['Trail run app', 'Saturday run'],
+      ['Product page', 'The Field Overshirt'],
+    ]
+    for (const [name, text] of FREE) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(rail.getByRole('option', { name: new RegExp(`^${name}`) })).toHaveAttribute('aria-selected', 'true')
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toContainText(text)
+      await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+    }
+
+    // A locked preview is never mounted for a free viewer: the stage holds a blurred stand-in
+    // drawn from their colours, behind a plain Unlock preview button. None of the real scene's
+    // markup or copy is in the page to un-blur.
+    const LOCKED = [
+      ['Spending card', 'Marrickville Fresh Market'],
+      ['Architect portfolio', 'Gully House'],
+    ]
+    for (const [name, text] of LOCKED) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(page.getByText(`${name} is a Pro preview`)).toBeVisible()
+      await expect(page.locator('.pvd-scene.is-locked .pvd-scene-stub')).toHaveCount(1)
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toHaveCount(0)
+      await expect(page.locator('.pvs')).toHaveCount(0)
+      await expect(page.getByText(text)).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(1)
+      await expect(page.locator('.pvd-scene-in')).toHaveCSS('filter', 'blur(6px)')
+      await expect(page.locator('.pvd-scene-in')).toHaveAttribute('inert', '')
+    }
+
+    // Back on an open scene so the theme switch has a real scene to repaint.
+    await rail.getByRole('option', { name: /^Editorial hero/ }).click()
+    await dialog.getByRole('button', { name: 'Dark', exact: true }).click()
+    await expect(dialog.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.pvs')).toHaveAttribute('data-mode', 'dark')
+  })
+
+  test('a Pro account gets the real Pro scenes, with no stand-in and no lock', async ({ page }) => {
+    watch(page, 'pro designer opening the Pro previews')
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/create/palette')
+    await clickPaletteAction(page, 'Preview')
+    const rail = page.getByRole('dialog', { name: 'Palette preview' }).getByRole('listbox', { name: 'Previews' })
+
+    for (const [name, text] of [['Spending card', 'Marrickville Fresh Market'], ['Architect portfolio', 'Gully House']]) {
+      await rail.getByRole('option', { name: new RegExp(`^${name}`) }).click()
+      await expect(page.locator(`[data-preview-scene="${name}"]`)).toContainText(text)
+      await expect(page.locator('.pvd-scene-stub')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(0)
+    }
   })
 
   test('contrast and HCT stay attached to each swatch with clear Pro explanations', async ({ page }) => {
@@ -345,22 +426,20 @@ test.describe('Palette Builder recovery and tool continuity', () => {
   }
 
   // Every tool's toolbar opens on the design's drawn back
-  // button, which returns to the workspace (D:613). The Palette Builder is one
-  // press away in the Create menu; what is held here is that the tool still
+  // button, which returns to the tools index. What is held here is that the tool
   // offers an immediate way out, at the start of its toolbar.
   test('Tint offers an immediate route back, at the start of its toolbar', async ({ page }) => {
     watch(page, 'designer moving between colour tools')
     await go(page, '/create/tint')
-    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to workspace' })
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to all tools' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/projects$/)
+    await expect(page).toHaveURL(/\/tools$/)
   })
 })
 
-// Founder request, 2026-09-03: "the pallete page should auto load a random
-// pallete on the default free settings. reset should reset the settings to
-// default but randomise the colour."
+// The palette page auto-loads a random palette on the default free settings.
+// Reset restores the default settings but randomises the colour.
 //
 // The two rules with teeth — that the default settings are the FREE ones, and
 // that a shared link outranks the draw — are enumerated in

@@ -1,22 +1,24 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useId, useMemo, useRef } from 'react'
+import '../styles/deferred/font-uses.css'
+import useSlideIndicator from '../hooks/useSlideIndicator'
 import {
-  CATEGORY_LABEL, CATEGORY_NOTE, DOSSIER_TABS, facesThinCatalogue, fontFacts, titleCase,
+  CATEGORY_LABEL, CATEGORY_NOTE, DOSSIER_TABS, facesThinCatalogue, fontFacts, fontLicence, titleCase,
 } from '../utils/fontDossier'
 import {
   fontsInUseSearchUrl, ladderFor, sceneWeights, scenesFor,
 } from '../utils/fontScenes'
 import { usesFor } from '../data/fontRealWorldUses'
+import { useFontLicences } from '../hooks/useFontLicences'
+import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
 import { weightName } from '../utils/fontGallery'
 import { fontStack, loadFont } from '../utils/googleFonts'
 
-// The ABOUT and EXAMPLES panels — the founder's request, three times stated:
-// "a tab that shows real world examples of the font this will help users
-// understand font use cases" and "lets also include an about tab".
+// The ABOUT and EXAMPLES panels: a tab of real-world examples of the font, to
+// help users understand its use cases, and an about tab.
 //
 // ONE component, used by BOTH font popups (FontBrowseDialog, which FontPicker
 // opens for Font Pair and Type Scale, and the Font Gallery's specimen dialog).
-// The backlog asked explicitly whether they should share one rather than
-// diverge again; they should. A typeface's facts do not change with which
+// They should share one rather than diverge again. A typeface's facts do not change with which
 // dialog you opened it from, and the two dialogs have already drifted once.
 //
 // ── WHERE THE CONTENT COMES FROM, AND WHY IT IS HONEST ──────────────────────
@@ -52,9 +54,8 @@ import { fontStack, loadFont } from '../utils/googleFonts'
 //
 // The first version of this panel held a module-level array of FOUR FIXED
 // SCENES and rendered them identically for all 1,946 families — `font.category`
-// was not read once. The founder reported it three times (2026-08-08,
-// 2026-08-15, 2026-09-04): "for the font examples i want real world examples
-// not the same UI examples for each one".
+// was not read once. The examples need to be real-world ones that fit each
+// family, not the same UI examples for every font.
 //
 // src/utils/fontScenes.js now picks the scenes from what the family IS, using
 // two catalogue fields /api/fonts previously discarded (`classifications` and
@@ -128,6 +129,9 @@ import { fontStack, loadFont } from '../utils/googleFonts'
  * colliding, and so each panel can point back at its own tab.
  */
 export function FontDossierTabs({ value, onChange, idBase, label }) {
+  // The selected tab's underline slides between tabs (useSlideIndicator; type.css).
+  const stripRef = useRef(null)
+  useSlideIndicator(stripRef, value)
   const move = (event) => {
     const keys = { ArrowRight: 1, ArrowLeft: -1 }
     const step = keys[event.key]
@@ -140,7 +144,7 @@ export function FontDossierTabs({ value, onChange, idBase, label }) {
   }
 
   return (
-    <div className="fdx-tabs" role="tablist" aria-label={label}>
+    <div className="fdx-tabs" role="tablist" aria-label={label} ref={stripRef}>
       {DOSSIER_TABS.map(t => (
         <button
           key={t.id}
@@ -161,7 +165,42 @@ export function FontDossierTabs({ value, onChange, idBase, label }) {
   )
 }
 
-export function FontAboutPanel({ font, id, labelledBy }) {
+// Props for a panel's root: a tabpanel wired to its tab, or (inline) nothing.
+function panelProps(inline, id, labelledBy) {
+  if (inline) return { id }
+  return { id, role: 'tabpanel', 'aria-labelledby': labelledBy, tabIndex: 0 }
+}
+
+// The licence block that ends the About panel: the licence's full name, one
+// line on what it allows, and a full-width row to the licence text. Nothing is
+// drawn until the licence table has loaded, so a slow table reads as silence
+// and never as "unknown"; once it has, a family missing from it gets the
+// Google Fonts fallback instead of a claim.
+function FontLicenceBlock({ font }) {
+  const licences = useFontLicences()
+  const headingId = useId()
+  const licence = fontLicence(font, licences)
+  if (!licence) return null
+
+  return (
+    <section className="fdx-licence" aria-labelledby={headingId}>
+      <h4 id={headingId}>{licence.heading}</h4>
+      <p>{licence.summary}</p>
+      <a className="fdx-licence-link" href={licence.href} target="_blank" rel="noopener noreferrer">
+        <span>
+          {licence.linkLabel.replace(/\s*↗$/, '')}
+          <span aria-hidden="true"> ↗</span>
+          <span className="sr-only"> (opens in a new tab)</span>
+        </span>
+      </a>
+    </section>
+  )
+}
+
+// `inline` is the Font Gallery pop-up, where the four tabs became sections of
+// one scroll: the panel is then plain content under a real heading, not a
+// tabpanel with a tab to answer to.
+export function FontAboutPanel({ font, id, labelledBy, inline = false }) {
   const rows = useMemo(() => fontFacts(font), [font])
   if (!font) return null
 
@@ -173,7 +212,7 @@ export function FontAboutPanel({ font, id, labelledBy }) {
   const thin = facesThinCatalogue(font)
 
   return (
-    <div className="fdx-panel" id={id} role="tabpanel" aria-labelledby={labelledBy} tabIndex={0}>
+    <div className="fdx-panel" {...panelProps(inline, id, labelledBy)}>
       <dl className="fdx-facts">
         {rows.map(row => (
           <div className="fdx-fact" key={row.k}>
@@ -195,6 +234,8 @@ export function FontAboutPanel({ font, id, labelledBy }) {
           ? 'The catalogue currently loaded is the short bundled list, which carries no designer or date. Reload the full catalogue to see them.'
           : 'Every fact above comes from this family’s entry in the Google Fonts catalogue.'}
       </p>
+
+      <FontLicenceBlock font={font} />
     </div>
   )
 }
@@ -524,7 +565,7 @@ function SceneBody({ id, font }) {
 // `intent` is the SLOT this dossier was opened for — 'heading' or nothing.
 // It only reorders the scenes (see scenesFor); every other caller omits it and
 // gets exactly the panel it had.
-export function FontExamplesPanel({ font, id, labelledBy, intent }) {
+export function FontExamplesPanel({ font, id, labelledBy, intent, inline = false }) {
   const scenes = useMemo(() => scenesFor(font, intent), [font, intent])
   const w = useMemo(() => sceneWeights(font), [font])
 
@@ -554,7 +595,7 @@ export function FontExamplesPanel({ font, id, labelledBy, intent }) {
   const search = fontsInUseSearchUrl(font.family)
 
   return (
-    <div className="fdx-panel" id={id} role="tabpanel" aria-labelledby={labelledBy} tabIndex={0}>
+    <div className="fdx-panel" {...panelProps(inline, id, labelledBy)}>
       {/* Said once, plainly, at the top. These are drawn by this page to show
           the family working; they are not photographs of anybody's product, and
           the tab must not be read as claiming a brand uses this face. */}
@@ -610,110 +651,116 @@ export function FontExamplesPanel({ font, id, labelledBy, intent }) {
   )
 }
 
+// Opens the app's feedback dialog about this family's list. The link still goes
+// to /feedback when nothing answers the event, so it works without the dialog.
+function reportUse(event, family) {
+  const report = new CustomEvent(REPORT_PROBLEM_EVENT, {
+    cancelable: true,
+    detail: {
+      typeId: 'feedback',
+      subject: `Fonts in use: ${family}`,
+      message: 'Which entry is wrong or unwanted, and why?\n\n',
+    },
+  })
+  if (!window.dispatchEvent(report)) event.preventDefault()
+}
+
 // ── THE "IN USE" TAB ────────────────────────────────────────────────────────
 //
-// Photographs of real work set in the family. It ships with NO IMAGES, for
-// every family, and that is the founder's own call rather than an unfinished
-// job: "i can collect images myself later if you cant do it". What is built is
-// the tab, the layout and the per-family slot; what is not built is a single
-// invented example or placeholder photograph.
+// Documented real-world uses of the family, each shown as a link to the page
+// that documents it (a Fonts In Use entry, or the brand's own typography page).
+// No third-party images are hosted or drawn here. data/fontRealWorldUses holds
+// the entries and refuses one that cannot name its documenting page; an entry
+// that carries an image is drawn with the image only when its alt text, author
+// and licence come with it.
 //
-// THE SENTENCE THIS PANEL MUST NOT SAY. An empty tab called "In use" is one
-// careless line away from telling a reader that nobody uses this typeface —
-// which for a real face drawn by a real person is a false and damaging claim,
-// and the exact class of error the About tab was built to avoid. So the empty
-// state is about US, not about the family: we have not cleared an image for it.
-// The distinction is stated outright rather than implied, because a reader who
-// gets it wrong gets it wrong about somebody's work.
+// WHAT THE EMPTY STATE MUST NOT SAY. A family with no entries is one careless
+// line from reading as "nobody uses this typeface", which would be a false claim
+// about someone's work. So the empty state is about OUR LIST: we have not added
+// an entry for it. That is stated outright rather than implied.
 //
-// WHY IT IS EMPTY AND NOT MERELY UNFINISHED. [fonts-in-use-surface] is blocked
-// on imagery rights — who owns the pictures, under what licence they may be
-// shown, who curates them, what provenance is displayed — and that is a founder
-// and licensing question, not a build task. data/fontRealWorldUses refuses to
-// hand over an entry that cannot name its source, its credit and its licence,
-// so the first image to appear here will arrive with its provenance attached or
-// not at all.
-//
-// Mobbin drove the empty state, and specifically drove it AWAY from an
-// illustration:
-//   XERO's "No filed sales tax reports" — mobbin.com/screens/84b0c0bb-d346-41ee-995f-15112dfe85ec
-//     names what is absent and then explains THE CONDITION UNDER WHICH IT WOULD
-//     APPEAR ("once a report has been marked as filed..."). That is what makes
-//     an empty panel read as deliberate instead of broken: not a nicer noun, a
-//     mechanism.
-//   LYSSNA's "No sessions yet" — mobbin.com/screens/04281c5d-4340-450c-a46b-601993d9b6db
-//     is the same shape at the smaller size used here, and ends on a single
-//     outbound link rather than a button that does nothing.
-//   JIRA's and Xero's decorative illustrations were deliberately NOT copied. A
-//   grey box with a picture icon in it, sitting in a panel whose whole subject
-//   is a missing picture, is indistinguishable from an image that failed to
-//   load — the exact failure PRODUCT.md names.
-export function FontInUsePanel({ font, id, labelledBy }) {
+// Links open in a new tab and say so in their accessible name. The whole row is
+// the link, so the touch target is the row and not just the title text.
+export function FontInUsePanel({ font, id, labelledBy, inline = false }) {
   const uses = useMemo(() => usesFor(font?.family), [font])
   if (!font) return null
 
   const search = fontsInUseSearchUrl(font.family)
+  // The same copy speaks of a tab in the browser dialog and of a section in the
+  // Gallery pop-up, where Examples sits above this rather than beside it.
+  const here = inline ? 'This section' : 'This tab'
+  const examples = inline ? 'The Examples section above' : 'The Examples tab beside this one'
 
   return (
-    <div className="fdx-panel" id={id} role="tabpanel" aria-labelledby={labelledBy} tabIndex={0}>
+    <div className="fdx-panel" {...panelProps(inline, id, labelledBy)}>
       {uses.length > 0 ? (
         <>
           <p className="fdx-source fdx-source--lead">
-            {uses.length} {uses.length === 1 ? 'photograph' : 'photographs'} of work set in{' '}
-            {font.family}. Each one is credited to whoever made it and shown under the permission
-            named beneath it.
+            {uses.length} documented {uses.length === 1 ? 'use' : 'uses'} of {font.family}. Each
+            one links to the page that documents it.
           </p>
           <ul className="fdx-uses">
             {uses.map(use => (
-              <li className="fdx-use" key={use.image}>
-                <figure>
-                  {/* loading="lazy" because the tab may hold several full-width
-                      photographs and it is not the first tab anyone opens. */}
-                  <img className="fdx-use-img" src={use.image} alt={use.alt} loading="lazy" />
-                  <figcaption className="fdx-use-cap">
-                    <span className="fdx-use-title">{use.title}</span>
-                    <span className="fdx-use-credit">{use.credit}</span>
-                    {/* The provenance is part of the picture, not a footnote:
-                        the licence is the reason the image is allowed to be
-                        here, so it is printed beside it rather than pooled at
-                        the bottom of the panel where it stops attaching to
-                        anything. */}
-                    <span className="fdx-use-licence">{use.licence}</span>
-                    <a
-                      className="fdx-fiu fdx-use-src"
-                      href={use.source}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                    >
-                      Source<span aria-hidden="true"> ↗</span>
-                      <span className="sr-only"> (opens in a new tab)</span>
-                    </a>
-                  </figcaption>
-                </figure>
+              <li className="fdx-use" key={use.url}>
+                <a
+                  className="fdx-use-link"
+                  href={use.url}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <span className="fdx-use-title">
+                    {use.title}
+                    {use.year ? <span className="fdx-use-year"> {use.year}</span> : null}
+                    <span aria-hidden="true"> ↗</span>
+                  </span>
+                  <span className="fdx-use-where">{use.where}</span>
+                  <span className="fdx-use-credit">Source: {use.credit}</span>
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+                {/* A picture is drawn only with all of its provenance: the
+                    data module refuses an image without alt text, author and
+                    licence, so none of these can be missing here. */}
+                {use.image ? (
+                  <figure className="fdx-use-fig">
+                    <img className="fdx-use-img" src={use.image} alt={use.alt} loading="lazy" />
+                    <figcaption className="fdx-use-figcap">
+                      {use.author} · {use.licence}
+                    </figcaption>
+                  </figure>
+                ) : null}
               </li>
             ))}
           </ul>
+          <p className="fdx-uses-note">
+            Uses are listed from Fonts In Use and from brands’ own typography pages. We link to
+            them and host none of their images.{' '}
+            <a
+              className="fdx-uses-report"
+              href="/feedback"
+              onClick={event => reportUse(event, font.family)}
+            >
+              Report a wrong or unwanted entry
+            </a>
+          </p>
         </>
       ) : (
         <div className="fdx-empty">
           {/* THE HEADING IS ABOUT THE LIBRARY, NOT THE TYPEFACE. "No uses of
               {family}" would be a claim about how the world uses somebody's
               work, made from a table this product has never filled in. */}
-          <h4 className="fdx-empty-head">No cleared photographs of {font.family} yet</h4>
+          <h4 className="fdx-empty-head">We have not added any documented uses of {font.family} yet</h4>
           <p className="fdx-empty-body">
-            This tab shows photographs of real work — printed matter, signage, packaging — set in
-            this family, each credited to whoever made it and shown under a named permission. A
-            photograph only appears here once we hold that permission, and none has been cleared
-            for {font.family} so far.
+            {here} links to documented real-world uses of this family — brands and projects —
+            each credited to the page that documents it. We have not added one for {font.family} so far.
           </p>
           <p className="fdx-empty-body">
             {/* Said plainly, because the alternative is that a reader concludes
                 it from an empty panel and is wrong. */}
-            That is a gap in what we have licensed, not a statement about the typeface. Plenty of
-            families with nothing on this tab are in wide use.
+            That is a gap in our list, not a statement about the typeface. Plenty of
+            families with nothing {here === 'This section' ? 'in this section' : 'on this tab'} are in wide use.
           </p>
           <p className="fdx-empty-body fdx-empty-body--last">
-            The Examples tab beside this one is the other half of the question, and it is full: it
+            {examples} is the other half of the question, and it is full: it
             sets {font.family} in situations this page draws itself, chosen from what kind of face
             it is.
           </p>

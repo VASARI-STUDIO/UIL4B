@@ -16,7 +16,7 @@
 // This file is NOT a security guard and must not be mistaken for one. Moving
 // bytes to a lazy chunk does not make them secret; a static asset is served to
 // anybody who asks. The secrecy question is
-// [locked-library-values-still-in-bundle] and is a founder call about a
+// a separate product call about a
 // serverless route. What is asserted here is that the card stays truthful and
 // that the eager page stays light.
 import { test } from 'node:test'

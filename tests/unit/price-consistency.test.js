@@ -1,6 +1,5 @@
-// One ladder, quoted identically everywhere. The founder's requirement, from
-// the 2026-08-20 batch, was "make sure anywhere you show pricing you show the
-// same pricing."
+// One ladder, quoted identically everywhere. The requirement is that
+// anywhere pricing is shown, it is the same pricing.
 //
 // Half of that is already guarded. tests/unit/price-ladder.test.js ties
 // src/config/planLadder.js to api/_lib/pricing.js, so the client fallback and
@@ -91,24 +90,16 @@ const SCANNED = /\.(?:jsx?|css|json)$/
 // stripper has no way to tell the difference, so they were being scanned.
 //
 // They are not shown to anyone. tests/unit/admin-chunk-carries-no-backlog.test.js
-// proves they reach no client chunk at all; the founder reads them through
+// proves they reach no client chunk at all; they are read through
 // GET /api/ai?backlog=1 behind requireAdmin(). A price in a note is a record of
 // what something cost, not an offer. tests/unit/no-orphan-routes.test.js
 // excludes the same two files for the same reason, in its words: "a route is
 // not reachable because we wrote about it."
 //
-// MEASURED 2026-09-16, and this is why it matters rather than being tidy.
-// Across src/, 28 price-shaped strings; 7 of them were in ONE pipeline.js row
-// ($48, $48.00, $4.00 — a note about a yearly total), and all 7 survived the
-// allowlist and were counted as CHECKED. The "checked >= 6" floor at the foot
-// of this file — the assertion whose whole job is to prove the guard still has
-// teeth — was therefore being held up by a backlog note. The two prices this
-// guard actually compares against the ladder on a rendered surface are in
-// Plans.jsx and Settings.jsx, and there are two of them.
-//
-// That came to light because the boards left the repository on 2026-09-16 (the
-// founder's decision; .gitignore carries it), so CI runs without them and the
-// floor failed. The floor was wrong before they left, and is honest now.
+// It matters for more than tidiness: a price in a board note would count as
+// CHECKED and prop up the "checked >=" floor at the foot of this file, whose job
+// is to prove the guard still has teeth. Only a few literal amounts remain on
+// rendered surfaces; the floor's own comment names them.
 const NOT_A_SURFACE = new Set([
   path.join(SRC, 'data', 'pipeline.js'),
   path.join(SRC, 'data', 'moduleBoard.js'),
@@ -159,7 +150,7 @@ const WINDOW = 400
 // next closing marker — 819 lines, and a price with them, when this guard was
 // written. Nothing goes red; the scan simply stops being able to see.
 //
-// PROVEN EQUIVALENT before the copy was removed, on 2026-09-10: the private
+// PROVEN EQUIVALENT before the copy was removed: the private
 // implementation and the shared one produced byte-identical output on all 635
 // .js/.jsx/.css/.json files in src/, api/ and tests/, in BOTH lineComments
 // modes — 1,270 comparisons, 0 differences. The canary below now exercises the
@@ -168,7 +159,8 @@ const WINDOW = 400
 
 // ── What is genuinely not a plan price ──────────────────────────────────────
 //
-// Every entry names a FILE and a CONTEXT. Never an amount on its own: three of
+// Every entry names a FILE and a CONTEXT (the one pattern entry names a family of
+// scene data files). Never an amount on its own: three of
 // the fake amounts below ($18, $84 in one summary, $8 in another) sit in the
 // same numeric neighbourhood as the ladder, and $18 IS the quarterly tier. An
 // amount-keyed allowlist would blind the guard to the tier it was written for.
@@ -178,32 +170,25 @@ const WINDOW = 400
 // what we charge."
 const NOT_A_PLAN_PRICE = [
   {
+    file: 'src/utils/communityHandle.js',
+    context: /\.replace\(\/\[\$5\]\/g, 's'\)|collapse repeated-character padding/,
+    why: 'Regex syntax in the community-handle lookalike filter: "[$5]" is a character class '
+      + '(dollar sign or 5, mapped to "s") and "$1" is the capture-group reference in a '
+      + 'String.replace template. Neither is an amount.',
+  },
+  {
+    file: 'src/components/contrast/views/Landing.data.js',
+    context: /Sole trader|Officeworks/,
+    why: 'Copy for Tidewell, the invented bookkeeping product the Landing pair view '
+      + 'is drawn from: its "Sole trader" plan price and a sample Officeworks '
+      + 'receipt. They are the invented product\'s own figures, not tiers of UIL4B.',
+  },
+  {
     file: 'src/components/UiSystemLab.jsx',
     context: /uis-checkout-grid|Order summary|Canvas field bag|Studio notebook|Standard delivery/,
     why: 'CommerceScene renders a fake checkout so the generated UI system can be '
       + 'seen on a realistic surface. The order totals are set dressing for a bag '
       + 'and a notebook, not tiers of UIL4B.',
-  },
-  {
-    // Was src/pages/PaletteBuilder.jsx until 2026-09-11, when the preview block
-    // moved to its own module. The entry follows the code rather than being
-    // widened to cover both files — "no allowlist entry outlives the thing it
-    // excuses" below is what forced the choice, and it is the right one: an
-    // allowlist naming a file that no longer renders fake money is an excuse
-    // with nothing behind it.
-    file: 'src/components/palette/PalettePreview.jsx',
-    context: /plb-pv-checkout|plb-pv-finance|Order summary|Canvas field bag|Studio notebook|Available balance|Recent transactions/,
-    why: 'The palette preview scenes — "Commerce checkout" and "Finance overview" — '
-      + 'are mock-ups a palette is judged against. Same fake order as UiSystemLab, '
-      + 'plus an invented account balance.',
-  },
-  {
-    file: 'src/components/spectrum/SpectrumBench.jsx',
-    context: /SURFACE AND INK|Total £48\.00|Pay now/,
-    why: 'The front door\'s Palette builder window, from the Spectrum design: '
-      + 'a "Surface and ink" preview that paints the chosen surface and primary on a '
-      + 'sample checkout ("Total £48.00", "Pay now"). Set dressing a palette is judged '
-      + 'against, in pounds, and not a tier of UIL4B.',
   },
   {
     file: 'src/data/communityPrompts.js',
@@ -216,10 +201,52 @@ const NOT_A_PLAN_PRICE = [
       + 'They are in the prompt text a user copies, not tiers of UIL4B.',
   },
   {
+    // The one entry keyed on a file PATTERN rather than a path, because the folder
+    // is a family: every preview scene keeps its invented shop's copy in a
+    // `<Scene>.data.js` beside it. The pattern is narrow on purpose: scene data
+    // files only, not the scenes' .jsx or any other file under palette/.
+    file: /^src\/components\/palette\/examples\/[A-Za-z]+\.data\.js$/,
+    context: /[\s\S]/,
+    why: 'Preview scenes draw invented shops and products (the Orra Workroom shop: "or 4 '
+      + 'payments of $60", "free over $150", "express is $14"). Those are set '
+      + 'dressing inside a picture of a palette, not tiers of UIL4B.',
+  },
+  {
+    file: 'src/components/typescale/KerbsidePage.jsx',
+    context: /OWN_DELIVERIES|Carrots|Leeks|Silverbeet/,
+    why: 'Kerbside is the invented Melbourne bike courier the Type Scale board draws its '
+      + 'sample page for: the greengrocer deliveries on its screen carry the courier\'s '
+      + 'own prices, not tiers of UIL4B.',
+  },
+  {
+    file: 'src/pages/FontMatcher.jsx',
+    context: /KS_STATS/,
+    why: 'The Kerbside sample page on the Font Pair board shows a delivery receipt '
+      + '(KS_STATS, "Paid") for the invented courier. It is set dressing, not a tier of UIL4B.',
+  },
+  {
     file: 'src/pages/PaletteBuilder.jsx',
     context: /\.replace\(/,
     why: 'Not money at all: normaliseForFilter uses the character class /[$5]/ and '
       + 'the backreference "$1". A dollar sign in regex syntax is punctuation.',
+  },
+  {
+    file: 'src/data/learn/valueProposition.jsx',
+    // Excused only while the surrounding text says nothing about our own plans:
+    // a sentence that quoted a UIL4B tier would still be checked against the ladder.
+    context: /^(?![\s\S]*(?:UIL4B (?:Pro|plans?)|\/plans\b))/,
+    why: 'The value-proposition guide reports other parties\' figures: penalties and '
+      + 'settlements in consumer-law cases (A$15m, US$1bn), the maximum fine for fake '
+      + 'reviews, and the prices in a published buyer-and-seller experiment. They are '
+      + 'cited research and enforcement amounts, not tiers of UIL4B.',
+  },
+  {
+    file: 'src/data/learn/sources.js',
+    context: /J\.C\. Penney|Emma Sleep|Service Seeking|settlement against Amazon/,
+    why: 'Four source labels in the value-proposition guide name the amount a retailer '
+      + 'lost (US$1 billion), a penalty a court ordered (A$15m), a fine for fake reviews '
+      + 'and a settlement (US$2.5 billion). They are headline figures from the cited '
+      + 'pages, not tiers of UIL4B.',
   },
   {
     file: 'src/pages/IconLibrary.jsx',
@@ -227,7 +254,7 @@ const NOT_A_PLAN_PRICE = [
     why: 'Not money at all: normalizeCustomBase substitutes with the backreference '
       + '"$1" when rewriting an SVG stroke and fill.',
   },
-  // FOUR MORE ENTRIES CAME OFF for the same reason, on 2026-09-06:
+  // FOUR MORE ENTRIES CAME OFF for the same reason:
   // src/pages/DocsDesign.jsx, DocsMarketing.jsx, DocsSocial.jsx and
   // DocsThemes.jsx. They were unrouted, unimported draft Learn pages — absent
   // from every sourcemap in a production build — and the dead-source sweep
@@ -280,35 +307,48 @@ function normalise(text) {
   return formatMoney(amount, currency)
 }
 
+// The per-file half of the scan, split out so the positive control below can
+// run the identical code over an in-memory string instead of a file on disk.
+function scanSource(file, raw) {
+  const occurrences = []
+  // CSS has no line comments; JSON has no comments at all, but running the
+  // same string-aware pass over it is harmless and keeps one code path.
+  const code = stripComments(raw, { lineComments: /\.jsx?$/.test(file) })
+  const lines = raw.split('\n')
+  for (const match of code.matchAll(PRICE)) {
+    const line = code.slice(0, match.index).split('\n').length
+    occurrences.push({
+      file: rel(file),
+      line,
+      text: match[0],
+      source: (lines[line - 1] || '').trim(),
+      window: code.slice(
+        Math.max(0, match.index - WINDOW),
+        match.index + match[0].length + WINDOW,
+      ),
+    })
+  }
+  return occurrences
+}
+
 function scan() {
   const files = walk(SRC)
-  const occurrences = []
-
-  for (const file of files) {
-    const raw = fs.readFileSync(file, 'utf8')
-    // CSS has no line comments; JSON has no comments at all, but running the
-    // same string-aware pass over it is harmless and keeps one code path.
-    const code = stripComments(raw, { lineComments: /\.jsx?$/.test(file) })
-    const lines = raw.split('\n')
-    for (const match of code.matchAll(PRICE)) {
-      const line = code.slice(0, match.index).split('\n').length
-      occurrences.push({
-        file: rel(file),
-        line,
-        text: match[0],
-        source: (lines[line - 1] || '').trim(),
-        window: code.slice(
-          Math.max(0, match.index - WINDOW),
-          match.index + match[0].length + WINDOW,
-        ),
-      })
-    }
-  }
+  const occurrences = files.flatMap((file) => scanSource(file, fs.readFileSync(file, 'utf8')))
   return { files, occurrences }
 }
 
 function excusedBy(hit) {
-  return NOT_A_PLAN_PRICE.find((entry) => entry.file === hit.file && entry.context.test(hit.window))
+  return NOT_A_PLAN_PRICE.find((entry) => (
+    (entry.file instanceof RegExp ? entry.file.test(hit.file) : entry.file === hit.file)
+    && entry.context.test(hit.window)
+  ))
+}
+
+// The verdict on one hit: not excused, and not an amount the ladder produces.
+function disagreesWithLadder(hit, allowed) {
+  if (excusedBy(hit)) return false
+  const label = normalise(hit.text)
+  return !(label && allowed.has(label))
 }
 
 const report = (hit) => {
@@ -320,11 +360,7 @@ const report = (hit) => {
 test('every price shown in src agrees with src/config/planLadder.js', () => {
   const allowed = allowedLabels()
   const { occurrences } = scan()
-  const offenders = occurrences.filter((hit) => {
-    if (excusedBy(hit)) return false
-    const label = normalise(hit.text)
-    return !(label && allowed.has(label))
-  })
+  const offenders = occurrences.filter((hit) => disagreesWithLadder(hit, allowed))
 
   assert.ok(offenders.length === 0,
     `${offenders.length} price${offenders.length === 1 ? '' : 's'} on screen `
@@ -345,7 +381,7 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   const { files, occurrences } = scan()
   assert.ok(files.length >= 150,
     `expected to walk the whole of src/, found only ${files.length} files`)
-  // 30 → 20 on 2026-09-06, and the reason matters more than the number. The
+  // 30 → 20, and the reason matters more than the number. The
   // dead-source sweep deleted four unrouted Learn drafts whose mock-ups held 22
   // fake amounts, so the RAW population fell 51 → 29 and the old floor failed on
   // a tree that had lost no coverage at all. Measured either side, with the same
@@ -355,41 +391,40 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   // money in files nothing could render. The floor below is re-set against 29
   // with headroom, and `checked >= 6` underneath is untouched.
   //
-  // 20 → 18 on 2026-09-16, when the two internal boards stopped being scanned
+  // 20 → 18, when the two internal boards stopped being scanned
   // (see NOT_A_SURFACE at the top for why they never should have been). They
   // held 7 of the 28 hits, so the raw population is 21 and the old floor of 20
   // would have been one hit from failing on a tree that lost no coverage.
   assert.ok(occurrences.length >= 18,
     `expected src/ to be full of price-shaped strings, found only ${occurrences.length}`)
 
-  // The stronger half of the bound: prices that were actually COMPARED, rather
-  // than waved through by the allowlist. If this drops, either the app stopped
-  // quoting prices in code or NOT_A_PLAN_PRICE has grown wide enough to swallow
-  // the thing it was meant to leave exposed.
+  // The other half of the bound is a positive control, not a count. The raw
+  // floor above only proves the scanner finds price-shaped text; it says
+  // nothing about whether the verdict still flags a wrong one. Surfaces render
+  // the ladder through its own arithmetic and type no amount by hand, so the
+  // population that survives the allowlist can legitimately be empty and a
+  // minimum on it would be the wrong thing to require.
   //
-  // 6 → 2 on 2026-09-16, AND THIS IS THE FLOOR BEING CORRECTED RATHER THAN
-  // LOWERED. All 7 board hits were CHECKED — they are real ladder amounts
-  // quoted inside one backlog note — so "six prices are still being compared"
-  // was, for as long as it has existed, five prose mentions and one or two
-  // surfaces. What the guard compares today is Plans.jsx and Settings.jsx: two
-  // literal amounts, because every other surface now renders the ladder through
-  // its own arithmetic instead of typing the number, which is the outcome this
-  // whole file was arguing for.
-  //
-  // So two is the truth, and a floor that says two is worth more than a floor
-  // of six that a note can satisfy. RAISE IT the day a surface starts quoting
-  // an amount literally again; do not let it fall below two without asking
-  // whether anything is being compared at all.
-  //
-  // The floor is 1 because /plans renders its "$0" through
-  // formatMoney(0, currency), so Pricing.jsx quotes no amount by hand and the
-  // one literal left is Settings' "$0". A floor of 1 still fails if nothing is
-  // compared at all; the day Settings stops typing it too, this becomes a
-  // question about whether the scan has a job left.
-  const checked = occurrences.filter((hit) => !excusedBy(hit))
-  assert.ok(checked.length >= 1,
-    `only ${checked.length} price-shaped strings survived the allowlist to be checked `
-    + 'against the ladder — the guard is close to guarding nothing')
+  // Instead, run the same scanSource() and disagreesWithLadder() the guard uses
+  // over an in-memory fixture. Three amounts no tier can produce ($9, $13, $70)
+  // must be flagged, one the ladder does produce ($7, the monthly tier) must
+  // not, and a price quoted only in a comment must not be read at all. If the
+  // PRICE pattern, the stripper or the verdict goes blind, the sweep over src/
+  // would still pass on an empty result; this assertion fails.
+  const allowed = allowedLabels()
+  const fixture = [
+    'export const A = () => <p>Just $9 a month</p>',
+    "export const B = { total: '$13 billed quarterly' }",
+    'export const C = () => <p>From $70 a year</p>',
+    'export const D = () => <p>$7 billed monthly</p>',
+    '// a comment that quotes $99 is not on screen',
+  ].join('\n')
+  const hits = scanSource('src/pages/FixtureSurface.jsx', fixture)
+  assert.deepEqual(hits.map((hit) => hit.text), ['$9', '$13', '$70', '$7'],
+    'the scanner should read every typed amount in the fixture and skip the comment')
+  const flagged = hits.filter((hit) => disagreesWithLadder(hit, allowed)).map((hit) => hit.text)
+  assert.deepEqual(flagged, ['$9', '$13', '$70'],
+    'the verdict should flag exactly the amounts the ladder cannot produce')
 })
 
 test('the allowed set is derived from the ladder and is not empty', () => {
@@ -478,4 +513,32 @@ test('no allowlist entry outlives the thing it excuses', () => {
   assert.deepEqual(dead.map((entry) => `${entry.file} ${entry.context}`), [],
     'these NOT_A_PLAN_PRICE entries no longer excuse anything. Delete them — an '
     + 'allowlist entry with nothing behind it is a hole waiting for a future price.')
+})
+
+// ── The plan lists carry no money ────────────────────────────────────────────
+import { FREE_LINES, PRO_ROWS, PLANS_LEAD, FREE_POINTS as FACT_FREE, PRO_POINTS as FACT_PRO } from '../../src/config/planFacts.js'
+
+test('the plan lists and rows hold no price: amounts come from the ladder at render time', () => {
+  const all = [...FACT_FREE, ...FACT_PRO, ...FREE_LINES, PLANS_LEAD, ...PRO_ROWS.flatMap((r) => [r.title, r.sub, r.phoneSub])]
+  for (const line of all) assert.ok(!/[$€£]\s?\d|\b\d+(\.\d+)?\s?(USD|AUD|dollars)\b|\d+%/i.test(line), `a plan line types a price or a saving: ${line}`)
+})
+
+// ── The homepage components carry no money ───────────────────────────────────
+// src/components/home prints the plans section. Its amounts come from
+// plansPrices.js at render time, so no file there may type one.
+test('src/components/home types no price, saving or count', () => {
+  const dir = path.join(SRC, 'components', 'home')
+  const files = walk(dir).filter((f) => /\.jsx?$/.test(f))
+  assert.ok(files.length >= 4, `expected the home components, found ${files.length} files`)
+  for (const file of files) {
+    const code = stripComments(fs.readFileSync(file, 'utf8'), { lineComments: true })
+    assert.ok(!PRICE.test(code) && !/US\$/.test(code), `${rel(file)} types a price`)
+    PRICE.lastIndex = 0
+    // Savings and count words are product facts only in the plans files; elsewhere
+    // a percentage is a style value and a count word is sample-brand copy.
+    if (!/plan/i.test(path.basename(file))) continue
+    assert.ok(!/\d\s?%/.test(code.replace(/(?:hsla?|oklch|rgba?)\([^)]*\)/g, '')), `${rel(file)} types a percentage`)
+    assert.ok(!/\b(?:eight|ten|two|four|six|thirteen)\b/i.test(code), `${rel(file)} types a count word`)
+    assert.ok(!/['">]\s*\d+\s+(?:export |Pro |free )?(?:themes|tools|features|days|projects)\b/i.test(code), `${rel(file)} types a count`)
+  }
 })

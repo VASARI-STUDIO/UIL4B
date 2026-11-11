@@ -1,177 +1,150 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import PillNav from '../components/PillNav'
-import SpectrumRamp from '../components/spectrum/SpectrumRamp'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
+import HomeFinalCall from '../components/home/HomeFinalCall'
+import { FreeList, ProList } from '../components/home/PlanLists'
+import { PLAN_ICON_PATHS, bandHue } from '../components/home/planListArt'
+import { GoArrow, PlanFigure } from '../components/plans/PlanParts'
 import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
-import { refreshPrices, usePrices, useProPrice } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
-import { APPROVED_CURRENCY, formatMoney } from '../config/planLadder'
+import { usePriceRetry, usePrices, useProPrice } from '../hooks/usePrices'
+import { digitRuns } from '../utils/digitRuns'
+import { formatMoney } from '../config/planLadder'
 import { COLOUR_SYSTEMS } from '../config/colourSystems'
-import { LIBRARY_TOTALS } from '../data/libraryTotals'
-import { freeFormats, proOnlyFormats } from '../config/exportFormats'
+import { EXPORT_THEMES_LIVE, comingLine } from '../config/exportFormats'
 import { TOOL_COUNT, numberWord } from '../components/spectrum/spectrumFacts'
 // The offers, cadences and billed lines live in one module that every surface
 // describing Free and Pro reads: Settings, Checkout and the upgrade modal too.
 import {
-  BILLED_EVERY, BILLING_OPTIONS, DEFAULT_BILLING, FREE_EXCLUSION, FREE_EXPORT_NAMES, PRO_EXPORT_NAMES, PRO_POINTS,
-  perMonth, resolveOffers,
+  BILLED_EVERY, BILLING_OPTIONS, DEFAULT_BILLING, MADE_WITH_LINE, sameExportNames, PRO_ROWS, PRO_VALUE,
+  canCheckout, perMonth, priceState, priceStateCopy, resolveOffers, subscriptionCadence,
 } from '../config/planFacts'
-// The page's own sheet, every selector under `.pricing`. Imported here so it
-// rides this lazy route's chunk. The Spectrum ground, the colour band and the
-// footer are styled by spectrum.css, which `/` already loads in the entry.
+// The pair of cards reuses the homepage's sheet; the page's own sheet follows it,
+// every selector under `.pricing`. Imported here so it rides this lazy route's
+// chunk. The Spectrum ground and the footer are styled by spectrum.css, which `/`
+// already loads in the entry.
+import '../styles/pages/home-tokens.css'
+import '../styles/pages/home-plans.css'
 import '../styles/pages/pricing.css'
 
 // ═════════════════════════════════════════════════════════════════════════════
-// PRICING — /plans. Two layouts over one set of facts.
+// PRICING — /plans.
 //
-// From 1024px up it is the plan ledger: Free and Pro are two columns of one
-// comparison. The price, the billing switch and every difference sit in one
-// table, and the one accent on the page is the Pro button.
-// Reading order: headline, the ledger (billing, plan heads, the rows where the
-// plans differ, one line for what is the same), the questions, the colour band,
-// the footer.
-//
-// Below 1024px it is the offer first: headline, the billing switch, the Pro
-// card (price, billed line, trial line, button, what Pro adds), the Free row,
-// the three-column comparison, the questions as an accordion and a closing band
-// whose Pro button goes straight to checkout. A plan bar docks to the bottom
-// while the Pro button is off screen.
+// Reading order: headline and lead, the pair (Free, and Pro with its billing
+// switch, price, terms and button), the comparison table (its head sticks and
+// carries the Pro price and button once the pair's button has scrolled away),
+// the questions, the closing call and the footer.
 //
 // ── NOTHING ON THIS PAGE IS A TYPED NUMBER ──────────────────────────────────
 // Every figure is imported from the module that also DRIVES it, so the page
 // cannot drift from the product without a test going red.
 //   AI_LIMITS / FREE_SAVE_LIMITS → src/config/plans.js (api/_lib/plans.js mirror)
 //   COLOUR_SYSTEMS               → what the palette engine gates on
-//   LIBRARY_TOTALS               → the generated library sizes (src/data/libraryTotals.js)
+//   PRO_VALUE                     → src/config/planFacts.js, which quotes the library, icon and export gates
 //   export formats               → src/config/exportFormats.js, which renders the buttons
 //   offers, trials, savings      → src/config/planFacts.js over the one ladder
 //   prices                       → /api/get-prices via usePrices(); nothing typed
 // ═════════════════════════════════════════════════════════════════════════════
 
 const AI = AI_LIMITS
-const SYSTEMS_TOTAL = COLOUR_SYSTEMS.length
-const SYSTEMS_FREE = COLOUR_SYSTEMS.filter((s) => s.free)
-const BRANDS_TOTAL = LIBRARY_TOTALS.brandPalettes
-const BRANDS_FREE = LIBRARY_TOTALS.freeBrandPalettes
+const NBSP = ' '
 
-const FREE_EXPORTS = freeFormats()
-const PRO_EXPORTS = proOnlyFormats()
+// The number and its noun stay on one line at any width ("1 / coffee" never splits).
+const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'.replace('1 coffee', `1${NBSP}coffee`)
 
-// The page headline, on both billing states. One constant, so Monthly and
-// Yearly cannot end up with different wording.
-const HEADLINE = 'Improve your design systems for less than 1 coffee per month.'
-
-// The ceilings side by side. "Six times" would be true of the daily limit and
-// false of the monthly one (300 against 40), so the sub-line quotes both ends
-// of the daily limit instead of a multiple.
-const HERO_SUB = `Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(SYSTEMS_TOTAL)} colour systems, and gives you unlimited projects and exports without the UIL4B mark.`
+const HERO_LEAD =`Pro lifts AI from ${AI.free.daily} to ${AI.pro.daily} generations a day, opens all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, gives you unlimited projects, and removes the ${MADE_WITH_LINE} from your exports.`
 
 const CANCEL_LINE = 'Cancel Pro any time. Keep every export you made.'
-const FREE_LINE = 'Everything on Free keeps working.'
-const OFFER_BY_ID = Object.fromEntries(BILLING_OPTIONS.map((o) => [o.id, o]))
+const STRIPE_LINE = 'Secure checkout by Stripe.'
 
-// Where the docked plan bar takes over from the sticky top bar: below this the
-// Pro column is too narrow to hold a price and a button.
-const DOCK_QUERY = '(max-width: 1359px)'
-// The ledger needs three columns; below this width the page uses the offer-first
-// layout, which is a different tree rather than the same one restyled.
-const LEDGER_QUERY = '(min-width: 1024px)'
-// The nav's height, and the room the docked bar needs above the closing band.
-const BAR_CLEAR_PX = 64
-const BAR_END_PX = 80
+const SAME_ON_BOTH = `All ${numberWord(TOOL_COUNT)} tools. Style guide exports in ${sameExportNames()}, as often as you like. The same AI model. Files stay in your browser. ${comingLine()}`.trim()
 
-// The comparison. Only rows where the plans differ; whatever matches is the
-// single "Same on both plans" row below.
-const COMPARE = [
-  { group: 'AI', rows: [
-    { label: 'AI generations', free: `${AI.free.daily} a day, ${AI.free.monthly} a month`, pro: `${AI.pro.daily} a day, ${AI.pro.monthly} a month` },
-  ] },
-  { group: 'Colour', rows: [
-    { label: 'Colour systems', free: `${SYSTEMS_FREE.length} of ${SYSTEMS_TOTAL}`, pro: `All ${SYSTEMS_TOTAL}, plus HCT editing` },
-    { label: 'Brand palettes', free: `${BRANDS_FREE} of ${BRANDS_TOTAL}`, pro: `All ${BRANDS_TOTAL}` },
-  ] },
-  { group: 'Your work', rows: [
-    { label: 'Saved projects', free: String(FREE_SAVE_LIMITS.projects), pro: 'Unlimited' },
-    { label: 'Custom icons', free: String(FREE_SAVE_LIMITS.customIcons), pro: 'Unlimited' },
-  ] },
-  { group: 'Exports', rows: [
-    ...PRO_EXPORTS.map((f) => ({ label: f.name, free: null, pro: 'Included' })),
-    { label: '“Made with UIL4B” line on exports', free: 'Small line in the footer', pro: 'Removed' },
-  ] },
-]
+// The offer with a free trial and the one without, from the ladder.
+const TRIAL_OFFER = BILLING_OPTIONS.find((o) => o.trialDays)
+const PLAIN_OFFER = BILLING_OPTIONS.find((o) => !o.trialDays)
 
-const SAME_ON_BOTH = `All ${numberWord(TOOL_COUNT)} tools. Style guide exports in ${FREE_EXPORT_NAMES}, as often as you like. The same AI model. Files stay in your browser.`
-
+// The questions, in the order a buyer asks them.
 const FAQS = [
   {
-    q: 'What counts as one generation?',
-    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser and cost us nothing.',
+    q: 'When am I charged?',
+    a: `${TRIAL_OFFER.label} starts with a ${TRIAL_OFFER.trialDays}-day free trial, so nothing is charged today; the first payment is taken when the trial ends. ${PLAIN_OFFER.label} has no trial, so the first payment is taken today. Pro then renews each month or year until you cancel.`,
   },
   {
-    q: 'Is the Pro model different?',
-    a: 'No. Both plans run the same model. Pro raises the daily and monthly ceiling, nothing else about the output changes.',
+    q: 'How do I cancel?',
+    a: 'Open Settings, then Subscription, and choose Cancel plan. Stripe’s billing page opens to confirm it. Pro stays on until the end of the period you’ve paid for, and Settings shows the date it ends.',
+  },
+  {
+    q: 'Can I get a refund?',
+    a: 'Cancelling stops the next payment. It doesn’t refund the period you’re in, and you keep Pro until that period ends. Cancel during the free trial and you’re never charged. If you think a charge is wrong, ask support.',
+  },
+  {
+    q: 'Do prices include tax?',
+    a: 'Checkout shows the exact amount before you pay, and that’s what you’re charged. For a tax invoice, ask support.',
+  },
+  {
+    q: 'What happens to my work if Pro ends?',
+    a: `Every file you exported is yours: it’s on your computer. Your account stays, and Free’s limits apply from then on: ${FREE_SAVE_LIMITS.projects} saved projects with ${FREE_SAVE_LIMITS.customIcons} icons in each, ${AI.free.daily} AI generations a day, and the “Made with UI L4B” line on new exports.`,
   },
   {
     q: 'Do my files get uploaded?',
     a: 'Most image and video work runs in the browser. The AI features are the exception: the Alt Text Generator and the photo scan in the AI Image Prompt Generator send your image to an AI provider, and prompt writing sends your text.',
   },
   {
-    q: 'Which export formats can I actually get?',
-    a: `${FREE_EXPORTS.length} on Free, ${FREE_EXPORT_NAMES}, each carrying a small “Made with UIL4B” line in the footer. Pro removes that line and adds ${PRO_EXPORT_NAMES}.`,
+    q: 'What counts as one generation?',
+    a: 'One image described by the Alt Text generator, or one prompt produced by an AI tool. Browsing, editing palettes, building type scales, exporting a style guide and everything else in the toolkit are unmetered, because they run in your browser.',
   },
 ]
 
-// The billed line under the Pro price, per offer. A cadence over one month
-// states both prices plainly; the one-month cadence says whether it carries a trial.
-function billedLine(offer, monthlyOffer) {
-  if (offer.months > 1) {
-    if (!offer.totalLabel) return ''
-    const other = monthlyOffer?.totalLabel
-      ? `, or ${monthlyOffer.totalLabel} ${OFFER_BY_ID.monthly.cadence}`
-      : ''
-    return `${offer.totalLabel} ${OFFER_BY_ID[offer.id].cadence}${other}.`
-  }
-  return offer.trialDays
-    ? `Billed monthly after a ${offer.trialDays}-day free trial.`
-    : `Billed monthly. No free trial on ${offer.label}; billing starts today.`
+// Each comparison group borrows the icon and hue of the Pro list row it matches.
+const GROUP_ROW = { AI: 'ai', Colour: 'colour-systems', Libraries: 'library', Icons: 'icon-packs', 'Your work': 'saves', Exports: 'white-label' }
+function groupArt(group) {
+  const index = PRO_ROWS.findIndex((row) => row.id === GROUP_ROW[group])
+  if (index < 0) return null
+  return { d: PLAN_ICON_PATHS[PRO_ROWS[index].icon], color: bandHue('pro', index, PRO_ROWS.length) }
 }
 
-// The unit a cadence bills per, from the months it covers.
+// Every number in a value is set heavier, so the eye can run down a column.
+function Figures({ text }) {
+  return (
+    <span>
+      {digitRuns(text).map((run, i) => (run.num ? <span key={i} className="pl-n">{run.text}</span> : run.text))}
+    </span>
+  )
+}
+
+// One comparison cell, printed by the table and by the stacked list under 1200.
+function FreeValue({ row }) {
+  if (row.free !== null) return <Figures text={row.free} />
+  return (
+    <span className="pl-v">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round"><path d="M6 12h12" /></svg>
+      <span className="sr-only">Not included</span>
+    </span>
+  )
+}
+function ProValue({ row }) {
+  if (row.pro !== 'Included') return <Figures text={row.pro} />
+  return (
+    <span className="pl-v">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
+      <span>Included</span>
+    </span>
+  )
+}
+
 const unitOf = (offer) => (offer.months === 12 ? 'year' : 'month')
-
-// The line under the Pro button: the trial's terms when the cadence has one,
-// otherwise what the best cadence works out at. That second line is only said
-// when the best cadence can be bought in the page's currency (`bestLive`); a
-// fallback amount would point the visitor at something they cannot choose, so
-// the line stays empty and its slot keeps its height.
-function underLine(offer, bestOffer, bestLive) {
-  if (offer.trialDays && offer.totalLabel) return `Free for ${offer.trialDays} days, then ${offer.totalLabel} a ${unitOf(offer)}.`
-  if (bestLive && bestOffer?.amountLabel && bestOffer.id !== offer.id) return `${bestOffer.label} works out at ${bestOffer.amountLabel} a month.`
-  return ''
-}
-
-// The Pro card's two lines above the button: what is billed, and the trial's
-// terms (or the plain fact that this cadence has none).
-function cardLines(offer) {
-  return {
-    billed: `${offer.totalLabel} billed ${BILLED_EVERY[offer.id]}`,
-    trial: offer.trialDays
-      ? `${offer.trialDays}-day free trial, then ${offer.totalLabel} a ${unitOf(offer)}`
-      : 'No free trial; billing starts today.',
-  }
-}
-
-// Every row of the comparison, group labels dropped: the phone table has no
-// group rows, so the order is the ledger's.
-const COMPARE_ROWS = COMPARE.flatMap((group) => group.rows)
-
 const ctaLabel = (offer) => (offer.trialDays ? `Start ${offer.trialDays}-day free trial` : 'Upgrade to Pro')
 
+const SEG_KEYS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
+
 export default function Pricing() {
-  const { user } = useAuth()
-  const { isPro, loading: subLoading } = useSubscription()
+  const { user, loading: authLoading } = useAuth()
+  const { requireLogin } = useLoginPrompt()
+  const navigate = useNavigate()
+  const { isPro, loading: subLoading, subscription } = useSubscription()
   const location = useLocation()
   // Seeded from `?billing=`, validated against the options the switch can
   // show, so a stale `?billing=quarterly` falls back rather than putting the
@@ -188,12 +161,20 @@ export default function Pricing() {
   // The price swap animates only after the person has used the switch, so
   // first paint is still.
   const [switched, setSwitched] = useState(false)
+  // The table head prints the Pro price and button once the pair's button has
+  // scrolled up under the nav.
+  const [stuck, setStuck] = useState(false)
+  const [open, setOpen] = useState({})
+  // Under 768 the Pro list shows its first rows; this opens the rest.
+  const [allRows, setAllRows] = useState(false)
+  // Under 1200 a docked bar carries the Pro action whenever the page's own
+  // action is off screen.
   const [barOn, setBarOn] = useState(false)
-  const ledger = useMediaQuery(LEDGER_QUERY)
-  const headRef = useRef(null)
+  const rootRef = useRef(null)
+  const freeGoRef = useRef(null)
+  const actRef = useRef(null)
   const ctaRef = useRef(null)
-  const endRef = useRef(null)
-  const rampRef = useRef(null)
+  const segRefs = useRef({})
   // Set when a recovery action replaces the Pro button, so focus follows the swap.
   const keepCtaFocus = useRef(false)
 
@@ -201,24 +182,46 @@ export default function Pricing() {
   // usePrices() is the same cache read raw, which resolveOffers needs.
   const price = useProPrice()
   const { prices } = usePrices()
+  const { retrying, retry } = usePriceRetry()
   const currency = price.currency
   const { offers } = resolveOffers({ prices, currency, loaded: price.loaded })
-  const offer = offers.find((o) => o.id === billing) || offers[0]
-  const hasAmount = !!offer.amountLabel
-  const priceServiceDown = price.loaded && !hasAmount
+  // A Pro account prints the cadence it is on, not the one the switch would offer.
+  // When the record cannot say (a founder account, or a month with no stored
+  // count), no price is printed for it.
+  const accountOffer = isPro ? offers.find((o) => o.id === subscriptionCadence(subscription)) : undefined
+  const offer = accountOffer || offers.find((o) => o.id === billing) || offers[0]
+  // ONE STATE decides every price word and whether any button may reach
+  // checkout: only 'live' does (planFacts.js priceState).
+  const state = priceState({ price, offers, selectedId: offer.id, retrying })
+  const live = canCheckout(state)
+  // A Pro account has nothing to buy, so an outage or an unknown cadence prints no price and no outage line.
+  const hidePrice = isPro && !(accountOffer && live)
+  const outage = state === 'unreachable' || state === 'no-currency' || state === 'cadence-missing'
   // When another cadence still has a price the service did answer, and only the
   // selected cadence is unavailable; the note says which.
   const otherOffer = offers.find((o) => o.id !== offer.id && o.amountLabel)
-  const freeAmount = formatMoney(0, currency)
+  const stateCtx = { currencyLabel: price.currencyLabel, selectedLabel: offer.label, otherLabel: otherOffer?.label || offers.find((o) => o.id !== offer.id)?.label }
+  const stateCopy = priceStateCopy(state, stateCtx)
+  // A visitor in another currency reads "US$4", never a bare "$" that could be their own.
+  const money = (amount) => formatMoney(amount, currency, { qualify: true })
+  const freeAmount = money(0)
 
-  // THE PRO CTA IS THE REAL CHECKOUT WIRING. Signed in it goes straight to
-  // /checkout for the chosen cadence; signed out it opens the sign-in popup
-  // via /login with `from` set, and LoginRoute sends the visitor on to that
-  // checkout once they are in.
-  const checkoutHref = `/checkout?plan=${offer.checkoutPlan}`
-  const proTo = user ? checkoutHref : '/login'
-  const proState = user ? undefined : { from: checkoutHref, returnTo: `${location.pathname}${location.search || ''}` }
+  // THE PRO CTA IS THE REAL CHECKOUT WIRING. Every paid button links to
+  // /checkout for the chosen cadence. Signed in, the click follows the link.
+  // Signed out, the login popup opens over this page and, once the visitor has
+  // an account, carries on to that checkout. `from` makes a new account come
+  // back to the same checkout after onboarding. A modified click (new tab or
+  // window) keeps the plain link, and /checkout still asks for an account.
+  const proTo = `/checkout?plan=${offer.checkoutPlan}`
   const proBusy = subLoading || !price.loaded
+  const openPro = (event) => {
+    if (proBusy) { event.preventDefault(); return }
+    if (user || authLoading) return
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    requireLogin('pay for Pro', { reasons: ['Pro is attached to your account, so payment needs one.'], from: proTo })
+      .then((back) => { if (back) navigate(proTo) })
+  }
   const label = ctaLabel(offer)
 
   const chooseBilling = (id) => {
@@ -226,50 +229,27 @@ export default function Pricing() {
     setSwitched(true)
   }
 
-  // The plan bar repeats the Pro button once the real one has scrolled out of
-  // sight. From 1360 it pins under the nav when the header row leaves. From 1024
-  // to 1359 (the ledger) it docks to the bottom when the Pro button leaves and
-  // drops again as the closing colour band comes into view, which would otherwise
-  // paint over it. Below 1024 (the offer-first layout) it docks the same way but
-  // drops when the closing section comes into view, so it never sits over the
-  // closing buttons. It reads positions on scroll rather than
-  // watching for intersections, because a jump past the button (an anchor, a
-  // restored scroll) crosses nothing an observer would report.
-  const barEnabled = !isPro && !proBusy && !priceServiceDown
+  // The switch is one tab stop; the arrow keys move the choice and its focus.
+  const onSegKey = (event, index) => {
+    const step = SEG_KEYS[event.key]
+    if (!step) return
+    event.preventDefault()
+    const next = offers[(index + step + offers.length) % offers.length]
+    chooseBilling(next.id)
+    segRefs.current[next.id]?.focus()
+  }
+
+  // One observer on the pair's action row: once it has gone up under the nav,
+  // the table head takes over the Pro price and button.
   useEffect(() => {
-    if (!barEnabled) return undefined
-    const narrow = window.matchMedia(DOCK_QUERY)
-    let frame = 0
-    const update = () => {
-      frame = 0
-      const head = headRef.current?.getBoundingClientRect()
-      const cta = ctaRef.current?.getBoundingClientRect()
-      const end = endRef.current?.getBoundingClientRect()
-      const ramp = rampRef.current?.getBoundingClientRect()
-      if (!head || !cta || !end || !ramp) return
-      const clear = BAR_CLEAR_PX
-      const headGone = head.bottom < clear
-      const ctaGone = cta.bottom < clear
-      if (!narrow.matches) {
-        setBarOn(headGone)
-      } else if (ledger) {
-        setBarOn(ctaGone && ramp.top >= window.innerHeight)
-      } else {
-        setBarOn(ctaGone && end.top >= window.innerHeight - BAR_END_PX)
-      }
-    }
-    const schedule = () => { if (!frame) frame = requestAnimationFrame(update) }
-    update()
-    window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('resize', schedule)
-    narrow.addEventListener('change', schedule)
-    return () => {
-      if (frame) cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', schedule)
-      window.removeEventListener('resize', schedule)
-      narrow.removeEventListener('change', schedule)
-    }
-  }, [barEnabled, ledger])
+    const el = actRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined
+    const observer = new IntersectionObserver(([entry]) => {
+      setStuck(!entry.isIntersecting && entry.boundingClientRect.bottom < 64)
+    }, { rootMargin: '-64px 0px 0px 0px' })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // The recovery actions replace the Pro button with another element (the buy
   // link, or the loading link), which drops focus to the page. Put it back on
@@ -284,468 +264,455 @@ export default function Pricing() {
     }
     ctaRef.current?.focus({ preventScroll: true })
     if (price.loaded) keepCtaFocus.current = false
-  }, [price.loaded, priceServiceDown, offer.id])
+  }, [price.loaded, state, offer.id])
 
-  // A repeat of the Pro button, so it is hidden from assistive tech and keyboard
-  // users; they reach the real one.
-  const bar = (
-    <div className={`pr-bar${barEnabled && barOn ? ' is-on' : ''}`} aria-hidden="true">
-      <span className="pr-bar-lead">Compare plans</span>
-      <span className="pr-bar-free"><span className="pr-bar-name">Free</span> <span className="pr-bar-amt">{freeAmount}</span></span>
-      <span className="pr-bar-pro">
-        <span className="pr-bar-price">
-          <span className="pr-bar-name">Pro<span className="pr-bar-bill"> · billed {BILLED_EVERY[offer.id]}</span></span>
-          <span className="pr-bar-amt">{offer.amountLabel ? `${offer.amountLabel} / month` : ''}</span>
-        </span>
-        <Link className="pr-bar-btn" to={proTo} state={proState} tabIndex={-1}>{label}</Link>
-      </span>
-    </div>
-  )
+  // The words the price slot prints, by state.
+  const bestOffer = offers.find((o) => o.id === DEFAULT_BILLING)
+  const noTrialOffer = offers.find((o) => !o.trialDays)
+  const liveAmount = live ? money(perMonth(offer.total, offer.months)) : ''
+  const liveTotal = live ? money(offer.total) : ''
+  let detail1 = ''
+  let detail2 = ''
+  let foot1 = ''
+  let foot2 = ''
+  if (isPro) {
+    if (!hidePrice) detail1 = `${liveTotal} billed ${BILLED_EVERY[offer.id]}.`
+    foot1 = 'Manage your plan and receipts in Settings.'
+  } else if (live) {
+    detail1 = offer.trialDays
+      ? `Free for ${offer.trialDays} days, then ${liveTotal} a ${unitOf(offer)}.`
+      : `Billed monthly. No free trial on ${offer.label}; billing starts today.`
+    if (offer.trialDays) {
+      if (noTrialOffer?.total != null) detail2 = `${noTrialOffer.label} is ${money(noTrialOffer.total)}${NBSP}a${NBSP}month, with no${NBSP}free${NBSP}trial.`
+    } else if (bestOffer?.total != null && bestOffer.id !== offer.id) {
+      detail2 = `${bestOffer.label} works out at ${money(perMonth(bestOffer.total, bestOffer.months))} a month.`
+    }
+    foot1 = CANCEL_LINE
+    foot2 = STRIPE_LINE
+  } else {
+    detail1 = stateCopy.line1
+    detail2 = stateCopy.line2
+    foot1 = stateCopy.under
+  }
+  const priceSize = live || state === 'loading' || state === 'retrying' ? 'pa-amt' : 'pa-amt pa-amt--word'
+  // Every price state holds the live slot's height, so the Pro button does not move when the price lands.
+  const detailMin = isPro ? ' pa-slot--short' : ''
+  const fx = switched ? ' pl-fx' : ''
+  const fxKey = switched ? billing : 'first'
 
-  let proCta
+  // The Pro action, by state. Only 'live' links to checkout; every other state
+  // is a button that cannot reach it. No-currency has no Pro action at all.
+  const waiting = state === 'loading' || state === 'retrying'
+  let proCta = null
   if (isPro) {
     proCta = (
-      <Link ref={ctaRef} className="pr-cta pr-cta--pro" to="/settings" state={{ section: 'support' }}>
+      <Link ref={ctaRef} className="hpl-btn hpl-ghost ui-pill-out" to="/settings" state={{ section: 'support' }}>
         View account details
       </Link>
     )
-  } else if (priceServiceDown && otherOffer) {
+  } else if (state === 'cadence-missing') {
     // This cadence has no price in the visitor's currency, so retrying would
     // fail again; the useful action is the cadence that can be bought.
     proCta = (
       <button
         type="button"
         ref={ctaRef}
-        className="pr-cta pr-cta--pro"
+        className="hpl-btn hpl-go pa-go pa-go--plain"
         aria-describedby="pricing-noprice"
         onClick={() => { keepCtaFocus.current = true; chooseBilling(otherOffer.id) }}
       >
-        {`Switch to ${otherOffer.label}`}
+        {stateCopy.button}
       </button>
     )
-  } else if (priceServiceDown) {
-    // No amount means no offer. Asking for a card without being able to name
-    // the amount is the one thing a pricing page must never do.
+  } else if (live) {
+    proCta = (
+      <Link
+        ref={ctaRef}
+        className="hpl-btn hpl-go pa-go"
+        to={proTo}
+        aria-disabled={proBusy ? 'true' : undefined}
+        onClick={openPro}
+      >
+        <span key={fxKey} className={fx.trim() || undefined}>{label}</span>
+        <GoArrow />
+      </Link>
+    )
+  } else if (state !== 'no-currency') {
+    // Loading, retrying, unreachable: no link to checkout. One button in every
+    // one of those states, so it keeps focus through a Retry, and it holds the
+    // Pro button's place while the price is checked.
     proCta = (
       <button
         type="button"
         ref={ctaRef}
-        className="pr-cta pr-cta--free"
-        aria-describedby="pricing-noprice"
-        onClick={() => { keepCtaFocus.current = true; refreshPrices() }}
+        className="hpl-btn hpl-go pa-go pa-go--plain"
+        aria-describedby={outage ? 'pricing-noprice' : undefined}
+        aria-disabled={waiting ? 'true' : undefined}
+        aria-busy={state === 'retrying' ? 'true' : undefined}
+        onClick={() => { if (waiting) return; keepCtaFocus.current = true; retry() }}
       >
-        Retry live pricing
+        {waiting ? (stateCopy.button || label) : stateCopy.button}
       </button>
     )
-  } else {
-    proCta = (
-      <Link
-        ref={ctaRef}
-        className="pr-cta pr-cta--pro"
-        to={proTo}
-        state={proState}
-        aria-disabled={proBusy ? 'true' : undefined}
-        onClick={(event) => { if (proBusy) event.preventDefault() }}
-      >
-        {label}
-      </Link>
-    )
+  }
+  const hasAction = proCta !== null
+  // Side by side (1200 and up) Free is the left panel, so it comes first in the
+  // markup and Tab runs left to right. Stacked, Pro sits above Free and its
+  // action comes first. useMediaQuery picks one tree: CSS `order` would leave the
+  // tab order behind the picture.
+  const wide = useMediaQuery('(min-width: 1200px)')
+  const proFirst = hasAction && !wide
+
+  // The docked bar's one action, by state: Pro's pill when the live price is
+  // up, the recovery button when the price is down or missing, Free's toolkit
+  // link when Pro has no action. Never on a Pro account.
+  let barKind = null
+  if (!isPro && !subLoading) {
+    if (live) barKind = 'price'
+    // 'retrying' keeps the bar a Retry was pressed in, so the press has an answer on screen.
+    else if (state === 'unreachable' || state === 'cadence-missing' || state === 'retrying') barKind = 'action'
+    else if (state === 'no-currency') barKind = 'toolkit'
   }
 
-  // Every state's note sits in one grid cell and the inactive ones are hidden,
-  // so the slot is always as tall as the tallest note and nothing moves when the
-  // switch is used or the price arrives. Until the live price lands, the hidden
-  // notes are sized with the ladder's fallback amounts, shown as the approved USD
-  // amounts the way resolvePlanLadder quotes them, never as the visitor's
-  // currency. On a page in another currency they carry "US$", so a bare "$"
-  // never reads as the page's own dollar. Once the prices have landed the notes
-  // name only live amounts: the monthly price a longer cadence is set beside
-  // (`monthlyForNote`) is the live one in this currency, or it is left out.
-  const qualify = currency !== APPROVED_CURRENCY
-  const sized = offers.map((o) => {
-    const fallback = OFFER_BY_ID[o.id]
-    return {
-      ...o,
-      totalLabel: o.totalLabel || formatMoney(fallback.approvedTotal, APPROVED_CURRENCY, { qualify }),
-      amountLabel: o.amountLabel || formatMoney(perMonth(fallback.approvedTotal, fallback.months), APPROVED_CURRENCY, { qualify }),
-    }
-  })
-  const sizedBest = sized.find((o) => o.id === DEFAULT_BILLING)
-  const sizedMonthly = sized.find((o) => o.id === 'monthly')
-  const bestLive = !!offers.find((o) => o.id === DEFAULT_BILLING)?.amountLabel
-  const monthlyForNote = price.loaded ? offers.find((o) => o.id === 'monthly') : sizedMonthly
-  // The unavailable state is two short lines, each one line wide at 320px, so it
-  // is never the tallest state in the slot and never sizes it. One cadence
-  // unpriced: say so and name the one that can be bought. Nothing priced: say the
-  // prices did not load.
-  const unavailableLines = otherOffer
-    ? [
-      `No ${price.currencyLabel} price for ${offer.label} right now.`,
-      `${otherOffer.label} can be bought in ${price.currencyLabel}.`,
-    ]
-    : ['Live prices didn’t load,', 'so no checkout will start.']
-  const noteStates = [
-    ...sized.map((o) => ({
-      id: o.id,
-      lines: [billedLine(o, monthlyForNote), CANCEL_LINE].filter(Boolean),
-      under: underLine(o, sizedBest, bestLive),
-    })),
-    { id: 'unavailable', lines: unavailableLines, under: FREE_LINE },
-    { id: 'loading', lines: ['Checking the live price…'], under: '' },
-  ]
-  const activeNote = !price.loaded ? 'loading' : priceServiceDown ? 'unavailable' : offer.id
+  // One observer for the bar. Its root is the screen less the bar's 64px, so a
+  // button sitting under the bar counts as off screen. The bar shows while the
+  // page's own action is off screen, and hides while the closing call or the
+  // footer is on screen, so one ink pill is in view at a time.
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || typeof IntersectionObserver === 'undefined') return undefined
+    const main = hasAction ? ctaRef.current : freeGoRef.current
+    const ends = [root.querySelector('.hm-close'), root.querySelector('footer')]
+    const seen = new Map()
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => seen.set(entry.target, entry.isIntersecting))
+      setBarOn(seen.get(main) === false && !ends.some((el) => seen.get(el) === true))
+    }, { rootMargin: '0px 0px -64px 0px' })
+    ;[main, ...ends].forEach((el) => { if (el) observer.observe(el) })
+    return () => observer.disconnect()
+  }, [hasAction, state, isPro])
 
-  // The offer-first layout's two lines above the Pro button, sized the same way:
-  // every state shares one cell, so nothing moves when the switch is used.
-  const cardStates = [
-    ...sized.map((o) => ({ id: o.id, ...cardLines(o) })),
-    { id: 'unavailable', billed: unavailableLines[0], trial: unavailableLines[1] },
-    { id: 'loading', billed: 'Checking the live price…', trial: '' },
-  ]
-
-  // The saving, derived from the ladder and never typed. It reads the
-  // same on both cadences and names the one that saves, so a monthly arrival
-  // still sees it.
-  const savingOffer = offers.find((o) => o.id === DEFAULT_BILLING)
-  const savingLine = price.loaded && savingOffer?.saving > 0
-    ? `Save ${savingOffer.saving}% with ${savingOffer.label}`
-    : ''
-
-  // The closing "Choose Pro" is the same destination as the Pro button, so a
-  // visitor at the end of the page is one tap from checkout on the cadence they
-  // selected. A Pro account has nothing to buy and a missing price means no offer.
-  const closePro = isPro || priceServiceDown ? null : (
+  // The closing "Choose Pro" is the same destination as the Pro button. A Pro
+  // account has nothing to buy and a missing price means no offer.
+  const chooseInner = (
+    <>
+      <span>Choose Pro</span>
+      <span className="mi-go hm-close-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M7 17L17 7M8 7h9v9" />
+        </svg>
+      </span>
+    </>
+  )
+  const closePro = isPro || outage ? null : !live ? (
+    // Checking the price: the button holds its place and links nowhere.
+    <button type="button" className="hm-close-cta" aria-disabled="true">{chooseInner}</button>
+  ) : (
     <Link
-      className="pr-cta pr-cta--pro"
+      className="hm-close-cta"
       to={proTo}
-      state={proState}
       aria-disabled={proBusy ? 'true' : undefined}
-      onClick={(event) => { if (proBusy) event.preventDefault() }}
+      onClick={openPro}
     >
-      Choose Pro
+      {chooseInner}
     </Link>
   )
 
-  const billingSwitch = (nameProps, withSaving) => (
-    // Two options, one tab stop; the arrow keys move the choice.
-    <div className="pr-billing" role="radiogroup" {...nameProps}>
-      {offers.map((o) => (
-        <label className="pr-billing-opt" key={o.id}>
-          <input
-            type="radio"
-            className="pr-billing-input"
-            name="pricing-billing"
-            value={o.id}
-            checked={billing === o.id}
-            onChange={() => chooseBilling(o.id)}
-          />
-          <span className="pr-billing-text">
-            {o.label}
-            {withSaving && o.saving > 0 && <span className="pr-billing-save"> · Save {o.saving}%</span>}
-          </span>
-        </label>
-      ))}
+  // Free's card is placed in the markup by `proFirst`: Pro first when it has an
+  // action and the cards are stacked (its switch and button are the first thing a
+  // keyboard reaches, and it is first on the phone and tablet), Free first
+  // otherwise. Side by side, the grid seats Free left in either order.
+  const freeCard = (
+    <div key="free" className="hpl-card hpl-free">
+      <div className="pa-planrow">
+        <h2 className="hpl-plan">Free</h2>
+        {user && !isPro && !subLoading && <span className="pa-tag pa-tag--free">Your plan</span>}
+      </div>
+      <p className="hpl-amount">{freeAmount}</p>
+      <p className="hpl-note pa-freenote">You don’t need a card, and there’s no time limit.</p>
+      <FreeList live={EXPORT_THEMES_LIVE} />
+      <div className="hpl-freefoot">
+        {/* The toolkit opens without a sign-up gate and lands on the workspace. */}
+        <Link ref={freeGoRef} className="hpl-btn hpl-ghost ui-pill-out" to="/projects">Open the toolkit</Link>
+        {!user && <p>You don’t need an account to start.</p>}
+      </div>
+    </div>
+  )
+
+  const showSwitch = !isPro && state !== 'no-currency'
+  const showPill = live && !isPro
+  const stickyPro = stuck && showPill ? `Pro · ${liveAmount} a month, billed ${BILLED_EVERY[offer.id]}` : 'Pro'
+  const pillOn = stuck && showPill
+
+  // The same card, built once so the pair can seat it before or after Free (see `proFirst`).
+  const proCard = (
+    <div key="pro" className="hpl-card hpl-pro pa-pro">
+      <span className="hpl-edge" aria-hidden="true" />
+      <div className="pa-pro-grid">
+        <div className="pa-pro-top">
+          <div className="pa-proline">
+            <div className="pa-planrow">
+              <h2 className="hpl-plan">Pro</h2>
+              {isPro && <span className="pa-tag pa-tag--pro">Your plan</span>}
+            </div>
+            {showSwitch && (
+              <div className="pl-switch" role="radiogroup" aria-label="Billing">
+                {offers.map((o, index) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    role="radio"
+                    ref={(node) => { segRefs.current[o.id] = node }}
+                    className={`pl-seg${billing === o.id ? ' pl-on' : ''}`}
+                    aria-checked={billing === o.id}
+                    tabIndex={billing === o.id ? 0 : -1}
+                    onClick={() => chooseBilling(o.id)}
+                    onKeyDown={(event) => onSegKey(event, index)}
+                  >
+                    {o.saving > 0 ? `${o.label} · Save ${o.saving}%` : o.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {isPro && <p className="pa-active">Pro is active on this account.</p>}
+          <p className="hpl-tagline">The full studio, white-labelled.</p>
+          <p key={fxKey} className={`pa-price${fx}${hidePrice ? ' pa-price--hold' : ''}`} aria-live="polite">
+            {!hidePrice && <span className={priceSize}>{live ? liveAmount : stateCopy.word}</span>}
+            {live && !hidePrice && <span className="pa-per">{offer.months > 1 ? `a month, billed ${BILLED_EVERY[offer.id]}` : 'a month'}</span>}
+          </p>
+        </div>
+        <div key={`slot-${fxKey}`} className={`pa-slot${detailMin}${fx}`} id={outage ? 'pricing-noprice' : undefined}>
+          <p>{detail1}</p>
+          <p>{detail2}</p>
+        </div>
+        <PlanFigure />
+        <div className={`pa-act${hasAction ? '' : ' pa-act--none'}`} ref={actRef}>
+          {hasAction && <div className="pa-cta">{proCta}</div>}
+          <div key={`foot-${fxKey}`} className={`pa-foot${fx}`}>
+            <p>{foot1}</p>
+            <p>{foot2}</p>
+          </div>
+        </div>
+      </div>
+      <ProList live={EXPORT_THEMES_LIVE} collapsed={!allRows} />
+      <button
+        type="button"
+        className="hpl-more"
+        aria-expanded={allRows}
+        aria-controls="pp-prolist"
+        onClick={() => setAllRows((value) => !value)}
+      >
+        {allRows ? 'Show fewer' : `Show all ${PRO_ROWS.length} Pro features`}
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
     </div>
   )
 
   return (
-    <div className="spectrum pricing">
+    <div className="spectrum pricing" ref={rootRef}>
       {/* The marketing nav, exactly as `/` mounts it. */}
       <PillNav variant="spectrum" />
       <div className="sp-grain" aria-hidden="true" />
 
       <main id="main" tabIndex={-1}>
-        <section id="pricing" className="pr-hero pr-shell" aria-labelledby="pricing-h1">
-          <h1 className="pr-h1" id="pricing-h1">{HEADLINE}</h1>
-          <p className="pr-sub">{HERO_SUB}</p>
-        </section>
+        <header className="pa-wrap pa-head">
+          <h1 className="pa-h1" id="pricing-h1">{HEADLINE}</h1>
+          <p className="pa-lead">{HERO_LEAD}</p>
+        </header>
 
-        {ledger ? (
-          <>
-        <section className="pr-ledger-sec pr-shell" aria-label="Plans compared">
-          <div className="pr-ledger">
-            {bar}
+        <div className="pa-wrap">
+          <div className="hpl pa-hpl">
+            <div className={`pa-pair${hasAction ? '' : ' pa-pair--ff'}`}>
+              {proFirst ? [proCard, freeCard] : [freeCard, proCard]}
+            </div>
+          </div>
 
-            <table className="pr-table" role="table">
+          <section className="pl-panel" aria-labelledby="pl-tbl-h">
+            <h2 id="pl-tbl-h" className="sr-only">Every limit</h2>
+            <table className="pl-t">
               <caption className="sr-only">Free and Pro compared</caption>
-              <thead role="rowgroup">
-                <tr role="row">
-                  <th scope="col" role="columnheader" className="sr-only">What you get</th>
-                  <th scope="col" role="columnheader" className="sr-only">Free</th>
-                  <th scope="col" role="columnheader" className="sr-only">Pro</th>
+              <thead>
+                <tr>
+                  <th scope="col">What you get</th>
+                  <th scope="col" className="pl-ink">Free</th>
+                  <th scope="col" className="pl-ink">
+                    <div className="pl-headpro">
+                      <span key={`head-${fxKey}`} className={`pl-headlabel${stuck && showPill ? ' pl-headlabel--price' : ''}${fx}`}>{stickyPro}</span>
+                      {/* Only a live price may link to checkout; every other state, and a Pro account, has no pill in the markup. */}
+                      {showPill && (
+                        <Link
+                          className={`pl-pill${pillOn ? ' is-on' : ''}`}
+                          to={proTo}
+                          onClick={openPro}
+                          aria-hidden={pillOn ? undefined : 'true'}
+                          tabIndex={pillOn ? 0 : -1}
+                        >
+                          {label}
+                        </Link>
+                      )}
+                    </div>
+                  </th>
                 </tr>
               </thead>
-
-              <tbody role="rowgroup">
-                <tr role="row" className="pr-headrow">
-                  <td role="cell" className="pr-c pr-c--label pr-head pr-head--billing">
-                    <span className="pr-k" id="pricing-billing-k">Billing</span>
-                    {billingSwitch({ 'aria-labelledby': 'pricing-billing-k' }, true)}
-                    <span className="pr-cur">{price.loaded ? `Prices in ${price.currencyLabel}.` : ''}</span>
-                  </td>
-
-                  <td role="cell" className="pr-c pr-c--free pr-head pr-head--free">
-                    <div className="pr-plan">
-                      <span className="pr-plan-name">Free</span>
-                      {user && !isPro && !subLoading && <span className="pr-plan-tag">Your plan</span>}
-                    </div>
-                    <p className="pr-price">
-                      <span className="pr-amt">{freeAmount}</span>
-                      <span className="pr-per">forever</span>
-                    </p>
-                    <p className="pr-note">Free because the tools cost us nothing to run.</p>
-                    {/* The toolkit opens without a sign-up gate and lands on the workspace. */}
-                    <Link className="pr-cta pr-cta--free" to="/projects">Open the toolkit</Link>
-                    <span className="pr-under">No account needed</span>
-                  </td>
-
-                  <td role="cell" className="pr-c pr-c--pro pr-head pr-head--pro" ref={headRef}>
-                    <div className="pr-plan">
-                      <span className="pr-plan-name">Pro</span>
-                      {isPro && <span className="pr-plan-tag">Your plan</span>}
-                    </div>
-                    <div aria-live="polite">
-                      <div key={switched ? billing : 'first'} className={`pr-swap${switched ? ' is-swapped' : ''}`}>
-                        <p className="pr-price">
-                          <span className={`pr-amt${priceServiceDown ? ' is-word' : ''}`}>
-                            {!price.loaded ? '—' : offer.amountLabel || 'Unavailable'}
-                          </span>
-                          {hasAmount && <span className="pr-per">/ month</span>}
-                        </p>
-                        <div className="pr-stack">
-                          {noteStates.map((state) => (
-                            <p
-                              key={state.id}
-                              className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
-                              id={state.id === 'unavailable' && state.id === activeNote ? 'pricing-noprice' : undefined}
-                              aria-hidden={state.id === activeNote ? undefined : 'true'}
-                            >
-                              {state.lines.map((line) => <span key={line}>{line}</span>)}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    {proCta}
-                    <div className="pr-stack pr-stack--under">
-                      {noteStates.map((state) => (
-                        <span
-                          key={state.id}
-                          className={`pr-under${state.id === activeNote ? '' : ' is-ghost'}`}
-                          aria-hidden={state.id === activeNote ? undefined : 'true'}
-                        >
-                          {state.under}
+              {PRO_VALUE.map((group) => {
+                const art = groupArt(group.group)
+                return (
+                  <tbody key={group.group}>
+                    <tr>
+                      <th scope="rowgroup" colSpan={3} className="pl-gh">
+                        <span className="pl-ghin">
+                          {art && (
+                            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={art.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d={art.d} />
+                            </svg>
+                          )}
+                          {group.group}
                         </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-
-              {COMPARE.map((group, groupIndex) => (
-                <tbody key={group.group} role="rowgroup" className="pr-group">
-                  <tr role="row" className="pr-grouprow">
-                    <th scope="rowgroup" role="rowheader" className="pr-c pr-c--label pr-c--group">{group.group}</th>
-                    <td role="cell" className="pr-c pr-c--free pr-c--blank" />
-                    <td role="cell" className="pr-c pr-c--pro pr-c--blank" />
-                  </tr>
-                  {group.rows.map((row, rowIndex) => {
-                    const last = groupIndex === COMPARE.length - 1 && rowIndex === group.rows.length - 1
-                    return (
-                      <tr role="row" className="pr-row" key={row.label}>
-                        <th scope="row" role="rowheader" className="pr-c pr-c--label">{row.label}</th>
-                        <td role="cell" className="pr-c pr-c--free">
-                          <span className="pr-tag" aria-hidden="true">Free</span>
-                          {row.free === null
-                            ? <span className="pr-none"><span aria-hidden="true">–</span><span className="sr-only">Not included</span></span>
-                            : row.free}
-                        </td>
-                        <td role="cell" className={`pr-c pr-c--pro${last ? ' is-last' : ''}`}>
-                          <span className="pr-tag" aria-hidden="true">Pro</span>
-                          {row.pro}
-                        </td>
+                      </th>
+                    </tr>
+                    {group.rows.map((row) => (
+                      <tr className="pl-r" key={row.label}>
+                        <th scope="row" className="pl-l">{row.label}</th>
+                        <td className="pl-f"><FreeValue row={row} /></td>
+                        <td className="pl-p"><ProValue row={row} /></td>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              ))}
-
-              <tbody role="rowgroup" className="pr-group pr-group--same">
-                <tr role="row" className="pr-row pr-row--same">
-                  <th scope="row" role="rowheader" className="pr-c pr-c--label pr-c--group">Same on both plans</th>
-                  <td role="cell" colSpan={2} className="pr-c pr-c--same">{SAME_ON_BOTH}</td>
+                    ))}
+                  </tbody>
+                )
+              })}
+              <tbody className="pl-same">
+                <tr>
+                  <th scope="row">Same on both plans</th>
+                  <td colSpan={2}><p>{SAME_ON_BOTH}</p></td>
                 </tr>
               </tbody>
             </table>
-
-            <div className="pr-foot" ref={endRef}>
-              <p>Secure checkout by Stripe.</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="pr-faq-sec pr-shell" aria-labelledby="pricing-faq-h">
-          <div className="pr-faq">
-            <h2 className="pr-h2" id="pricing-faq-h">Common questions</h2>
-            {FAQS.map((f) => (
-              <div className="pr-faq-row" key={f.q}>
-                <h3>{f.q}</h3>
-                <p>{f.a}</p>
-              </div>
-            ))}
-            {/* "ask support" is the feedback form, the one place a question reaches the team. */}
-            <div className="pr-faq-row">
-              <h3>Something else?</h3>
-              <p>
-                If yours isn’t here, <Link to="/feedback">ask support</Link> and we’ll add it to this list.
-              </p>
-            </div>
-          </div>
-        </section>
-          </>
-        ) : (
-          <>
-            <section className="pr-offer pr-shell" aria-label="Plans">
-              <div className="pr-offer-top">
-                {billingSwitch({ 'aria-label': 'Billing' }, false)}
-                <span className="pr-cur">{price.loaded ? `Prices in ${price.currencyLabel}.` : ''}</span>
-              </div>
-
-              {/* The same hooks as the ledger's Pro head, so a test reads either layout alike. */}
-              <article className="pr-pro pr-head--pro" ref={headRef} aria-labelledby="pricing-pro-name">
-                <div className="pr-pro-main">
-                  <div className="pr-pro-top">
-                    <h2 className="pr-plan" id="pricing-pro-name">
-                      <span className="pr-plan-name">Pro</span>
-                      {isPro && <span className="pr-plan-tag">Your plan</span>}
-                    </h2>
-                    <p className="pr-save">{savingLine}</p>
-                  </div>
-                  <div aria-live="polite">
-                    <div key={switched ? billing : 'first'} className={`pr-swap${switched ? ' is-swapped' : ''}`}>
-                      <p className="pr-price">
-                        <span className={`pr-amt${priceServiceDown ? ' is-word' : ''}`}>
-                          {!price.loaded ? '—' : offer.amountLabel || 'Unavailable'}
-                        </span>
-                        {hasAmount && <span className="pr-per">/ month</span>}
-                      </p>
-                      <div className="pr-stack">
-                        {cardStates.map((state) => (
-                          <p
-                            key={state.id}
-                            className={`pr-note${state.id === activeNote ? '' : ' is-ghost'}`}
-                            id={state.id === 'unavailable' && state.id === activeNote ? 'pricing-noprice' : undefined}
-                            aria-hidden={state.id === activeNote ? undefined : 'true'}
-                          >
-                            <span>{state.billed}</span>
-                            {state.trial && <span>{state.trial}</span>}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {proCta}
-                  {!isPro && <span className="pr-under">{priceServiceDown ? FREE_LINE : CANCEL_LINE}</span>}
-                </div>
-
-                <div className="pr-pro-adds">
-                  <h3 className="pr-pro-adds-h">Everything in Free, plus</h3>
-                  <ul className="pr-ticks">
-                    {PRO_POINTS.map((point) => (
-                      <li key={point}>
-                        <svg className="pr-tick" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
-                          <path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Under 1200 the table gives way to one stack per group: the label, then Free and Pro on their own lines. */}
+            <div className="pl-stack">
+              {PRO_VALUE.map((group, gi) => {
+                const art = groupArt(group.group)
+                return (
+                  <section key={group.group} aria-labelledby={`pl-sg-${gi}`}>
+                    <h3 id={`pl-sg-${gi}`} className="pl-sh">
+                      {art && (
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={art.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d={art.d} />
                         </svg>
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </article>
-
-              <div className="pr-free pr-head--free">
-                <div className="pr-free-id">
-                  <h2 className="pr-plan">
-                    <span className="pr-plan-name">Free</span>
-                    {user && !isPro && !subLoading && <span className="pr-plan-tag">Your plan</span>}
-                  </h2>
-                  <p className="pr-free-amt"><span className="pr-amt">{freeAmount}</span></p>
-                </div>
-                <p className="pr-free-says">
-                  <span>All {numberWord(TOOL_COUNT)} tools. {AI.free.daily} AI generations a day, {AI.free.monthly} a month.</span>
-                  <span>{FREE_SAVE_LIMITS.projects} saved projects · {FREE_SAVE_LIMITS.customIcons} custom icons · {FREE_EXCLUSION}</span>
-                </p>
-                {/* The toolkit opens without a sign-up gate and lands on the workspace. */}
-                <Link className="pr-cta pr-cta--free" to="/projects">Open the toolkit</Link>
-              </div>
-            </section>
-
-            <section className="pr-diff pr-shell" aria-labelledby="pricing-diff-h">
-              <h2 className="pr-h2" id="pricing-diff-h">What you get on each plan</h2>
-              <p className="pr-lede"><strong>Same on both plans.</strong> {SAME_ON_BOTH}</p>
-              <table className="pr-dtable">
-                <caption className="sr-only">Free and Pro compared</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">What you get</th>
-                    <th scope="col">Free</th>
-                    <th scope="col">Pro</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COMPARE_ROWS.map((row) => (
-                    <tr className="pr-drow" key={row.label}>
-                      <th scope="row">{row.label}</th>
-                      <td className={row.free === null ? 'is-none' : undefined}>{row.free === null ? 'Not included' : row.free}</td>
-                      <td className="is-pro">{row.pro}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-
-            <section className="pr-faq-sec pr-faq-sec--acc pr-shell" aria-labelledby="pricing-faq-h">
-              <h2 className="pr-h2" id="pricing-faq-h">Common questions</h2>
-              <div className="pr-qa-list">
-                {FAQS.map((f, i) => (
-                  <details className="pr-qa" key={f.q} open={i === 0}>
-                    <summary>
-                      <span>{f.q}</span>
-                      <span className="pr-qa-mark" aria-hidden="true" />
-                    </summary>
-                    <p>{f.a}</p>
-                  </details>
-                ))}
-                {/* "ask support" is the feedback form, the one place a question reaches the team. */}
-                <p className="pr-qa-more">
-                  If yours isn’t here, <Link to="/feedback">ask support</Link> and we’ll add it to this list.
-                </p>
-              </div>
-            </section>
-
-            <section className="pr-close pr-shell" ref={endRef} aria-labelledby="pricing-close-h">
-              <div className="pr-close-copy">
-                <h2 className="pr-h2" id="pricing-close-h">Start with all {numberWord(TOOL_COUNT)} tools.</h2>
-                <p>Free is {freeAmount}. Choose Pro for higher limits and unmarked exports.</p>
-              </div>
-              <div className="pr-close-btns">
-                <Link className="pr-cta pr-cta--free" to="/projects">Open the toolkit</Link>
-                {closePro}
-              </div>
-              <p className="pr-close-fine">Secure checkout by Stripe.</p>
-            </section>
-
-            {/* The docked plan bar sits outside the flow, in its own stacking context. */}
-            <div className="pr-ledger pr-ledger--dock">{bar}</div>
-          </>
-        )}
-
-        <div ref={rampRef}>
-          <SpectrumRamp className="sp-ramp--close" />
+                      )}
+                      {group.group}
+                    </h3>
+                    <dl>
+                      {group.rows.map((row) => (
+                        <div className="pl-srow" key={row.label}>
+                          <dt>{row.label}</dt>
+                          <dd className="pl-val pl-val--free">
+                            <span className="pl-vl">Free</span>
+                            <span className="pl-vv"><FreeValue row={row} /></span>
+                          </dd>
+                          <dd className="pl-val pl-val--pro">
+                            <span className="pl-vl">Pro</span>
+                            <span className="pl-vv"><ProValue row={row} /></span>
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )
+              })}
+              <section className="pl-ssame" aria-labelledby="pl-same-h">
+                <h3 id="pl-same-h">Same on both plans</h3>
+                <p>{SAME_ON_BOTH}</p>
+              </section>
+            </div>
+          </section>
         </div>
+
+        <section className="pa-wrap pa-faq" aria-labelledby="pl-faq-h">
+          <div className="pa-faq-grid">
+            <h2 id="pl-faq-h" className="pa-h2">Common questions</h2>
+            <div>
+              {FAQS.map((f, i) => {
+                const expanded = !!open[i]
+                return (
+                  <div className={`pl-item${i === FAQS.length - 1 ? ' pl-endq' : ''}`} key={f.q}>
+                    <h3>
+                      <button
+                        type="button"
+                        className="pl-q"
+                        id={`pl-q-${i}`}
+                        aria-expanded={expanded}
+                        aria-controls={`pl-a-${i}`}
+                        onClick={() => setOpen((prev) => ({ ...prev, [i]: !prev[i] }))}
+                      >
+                        <span>{f.q}</span>
+                        <svg className="pl-pm" aria-hidden="true" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                          <path d="M2.5 8h11" />
+                          <path className="pl-pmv" d="M8 2.5v11" />
+                        </svg>
+                      </button>
+                    </h3>
+                    <div id={`pl-a-${i}`} role="region" aria-labelledby={`pl-q-${i}`} hidden={!expanded} className="pl-ans"><p>{f.a}</p></div>
+                  </div>
+                )
+              })}
+              {/* "ask support" is the feedback form, the one place a question reaches the team. */}
+              <div className="pa-more">
+                <p className="pa-more-h">Something else?</p>
+                <p className="pa-more-p">
+                  If yours isn’t here, <Link className="hpl-link pa-help" to="/feedback">ask support</Link> and we’ll add it to this list.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <HomeFinalCall
+          toolkitTo="/projects"
+          heading={`Start with all ${numberWord(TOOL_COUNT)} tools.`}
+          lead={`Free is ${freeAmount}. Pro raises the limits and removes the “Made with UI L4B” line.`}
+          actions={(
+            <>
+              <Link className="hm-close-ghost ui-pill-out" to="/projects">Open the toolkit</Link>
+              {closePro}
+            </>
+          )}
+        />
       </main>
 
-      <SpectrumFooter toolkitTo="/projects" />
+      {barKind && (
+        <aside className="pl-bar" data-on={barOn ? 'true' : 'false'} aria-label={barKind === 'toolkit' ? 'Toolkit' : 'Pro plan'}>
+          {barKind === 'price' && (
+            <>
+              <div key={`bar-${fxKey}`} className={`pl-bar-text${fx}`}>
+                <p className="pl-bar-top"><span className="pl-bar-pro">Pro · </span>{liveAmount} a month</p>
+                <p className="pl-bar-sub">{offer.months > 1 ? `${liveTotal} billed ${BILLED_EVERY[offer.id]}` : `billed ${BILLED_EVERY[offer.id]}`}</p>
+              </div>
+              <Link className="pl-bar-go" to={proTo} onClick={openPro} tabIndex={barOn ? 0 : -1}>
+                <span key={`bar-label-${fxKey}`} className={fx.trim() || undefined}>{label}</span>
+              </Link>
+            </>
+          )}
+          {barKind === 'action' && (
+            <button
+              type="button"
+              className="hm-close-ghost ui-pill-out pl-bar-ghost"
+              onClick={proCta.props.onClick}
+              aria-busy={state === 'retrying' ? 'true' : undefined}
+              tabIndex={barOn ? 0 : -1}
+            >
+              {stateCopy.button}
+            </button>
+          )}
+          {barKind === 'toolkit' && (
+            <Link className="hm-close-ghost ui-pill-out pl-bar-ghost" to="/projects" tabIndex={barOn ? 0 : -1}>Open the toolkit</Link>
+          )}
+        </aside>
+      )}
+
+      <SpectrumFooter toolkitTo="/projects" home pageColumn={false} />
     </div>
   )
 }

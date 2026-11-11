@@ -30,7 +30,7 @@
 //
 // RE-CHECKED 2026-09-04, still unresolved. Recorded so the third attempt starts
 // where this one stopped instead of re-running it:
-//   BLOCKED to every fetcher tried - plain curl, the agent fetch tool, AND a
+//   BLOCKED to every fetcher tried - plain curl, a server-side fetch, AND a
 //   real headless Chromium with a browser UA: pepsico.com (403),
 //   design.pepsico.com (403), contact.pepsico.com, investor.pepsico.com,
 //   pepsico.co.uk, pepsi.co.uk, pepsico.de, pepsicobeveragefacts.com. It is a
@@ -52,8 +52,8 @@
 //   Domain-restricted search against pepsico.com surfaces the 2023 announcement
 //   in PepsiCo's own words ("electric blue and the black of Pepsi Zero Sugar")
 //   and publishes NO hex.
-// RESOLVED 2026-09-05 as a NAMING change, not a data one. The founder chose
-// "rename it to its era" over dropping the row, so the hexes are untouched and
+// RESOLVED as a NAMING change, not a data one. The row is renamed to its era
+// rather than dropped, so the hexes are untouched and
 // the row is now "Pepsi (pre-2023)". The era label is read off the VALUES, and
 // pre-2023 is the tightest claim they support:
 //   1. THE ROW HAS NO BLACK. PepsiCo's own newsroom, quoted above, describes the

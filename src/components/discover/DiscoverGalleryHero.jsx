@@ -7,9 +7,15 @@
 // beyond whatever `action` / `aside` node the caller hands it. That keeps it
 // usable from any browse page without dragging that page's concerns in.
 //
-// THE EYEBROW AND THE COUNTER ARE GONE (#surface-headers-read-as-ai). The
-// founder marked both motifs “AI” on the Font Gallery masthead and asked for
-// the change to reach every header that matches. This one matched twice:
+// `descriptionShort` is optional. When a page passes it, both lines are real
+// text: the short one is what a phone shows and the full one is what 768px and
+// up shows, swapped by CSS (a media query, not script), so neither width
+// flashes the other or shifts the layout. Pages that omit it render the one
+// paragraph they always did.
+//
+// THE EYEBROW AND THE COUNTER ARE GONE. Both motifs read as AI-generated on the
+// Font Gallery masthead, so they are removed from every header that matches.
+// This one matched twice:
 //
 //   • `eyebrow` rendered a taxonomy path (“Discover / Colour”) in letter-spaced
 //     mono caps directly above an <h1> that said the same thing. No browse
@@ -32,6 +38,7 @@
 export default function DiscoverGalleryHero({
   title,
   description,
+  descriptionShort,
   action,
   aside,
 }) {
@@ -39,7 +46,8 @@ export default function DiscoverGalleryHero({
     <header className={`dgh-hero${aside ? ' dgh-hero--controls' : ''}`}>
       <div className="dgh-copy">
         <h1>{title}</h1>
-        {description && <p>{description}</p>}
+        {description && <p className={descriptionShort ? 'dgh-desc-full' : undefined}>{description}</p>}
+        {description && descriptionShort && <p className="dgh-desc-short">{descriptionShort}</p>}
         {action && <div className="dgh-action">{action}</div>}
       </div>
       {aside && <div className="dgh-aside">{aside}</div>}

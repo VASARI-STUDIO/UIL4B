@@ -35,7 +35,9 @@ export async function requireAdmin(req) {
     return { ok: false, status: 401, error: 'Authentication required' }
   }
   try {
-    const decoded = await adminAuth().verifyIdToken(header.slice(7))
+    // checkRevoked: an admin token minted before the account's sessions were
+    // revoked is refused rather than honoured until it expires.
+    const decoded = await adminAuth().verifyIdToken(header.slice(7), true)
     const email = decoded.email?.toLowerCase()
     if (!email || !decoded.email_verified || !isAdminEmail(email)) {
       // 404, not 403. A 403 confirms the endpoint exists and that the caller
@@ -44,7 +46,10 @@ export async function requireAdmin(req) {
       return { ok: false, status: 404, error: 'Not found' }
     }
     return { ok: true, uid: decoded.uid, email }
-  } catch {
+  } catch (err) {
+    if (err?.code === 'auth/id-token-revoked') {
+      return { ok: false, status: 401, code: 'session-revoked', error: 'Your session was ended. Sign in again.' }
+    }
     return { ok: false, status: 401, error: 'Invalid or expired session' }
   }
 }

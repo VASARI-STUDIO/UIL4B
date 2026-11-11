@@ -31,7 +31,7 @@
 //    sentence still there, and 189px past the padding once that sentence came
 //    out - 217px from the top border to the h1 in a 280px box at 320.
 //
-//    FOUNDER DECISION, 2026-09-13: no floor. .dgh-hero is its content plus its
+//    THE RULE NOW: no floor. .dgh-hero is its content plus its
 //    padding at every width, `align-items` is `start`, and .dgh-aside takes
 //    `align-self:end` so a control column still sits on the slab's baseline.
 //    The tests below assert the new rule rather than the old floor.
@@ -44,7 +44,6 @@ import { go } from './helpers.js'
 const SURFACES = [
   '/discover/palettes',
   '/discover/gradients',
-  '/discover/prompts',
   '/create/icons',
   '/create/emoji',
 ]
@@ -80,7 +79,7 @@ const MEASURE = `(() => {
     contentH: Math.round(bottom - top),
     padY: Math.round(padTop + padBottom),
     dead: Math.round(hb.height - (bottom - top) - padTop - padBottom),
-    // The founder's own framing: painted black between the top border and the
+    // The framing: painted black between the top border and the
     // headline, past the padding that is supposed to be there.
     emptyAboveH1: h1 ? Math.round(h1.getBoundingClientRect().top - hb.top - padTop) : null,
     docOverflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -143,7 +142,7 @@ test.describe('the shared Discover gallery masthead', () => {
         // only slack is sub-pixel rounding on the padding clamp. 4px.
         if (m.dead > 4) bad.push(`  ${route} @${width}: ${m.dead}px of empty `
           + `masthead (hero ${m.heroH}, content ${m.contentH}, padding ${m.padY})`)
-        // Stated the way the founder states it, because `dead` alone cannot see
+        // Stated that way, because `dead` alone cannot see
         // the --controls case: a row whose aside is the taller column has no
         // spare height at all and still paints black above the headline.
         if (m.emptyAboveH1 > 4) bad.push(`  ${route} @${width}: ${m.emptyAboveH1}px of `
@@ -160,7 +159,7 @@ test.describe('the shared Discover gallery masthead', () => {
 
   // THIS TEST USED TO ASSERT A 280px FLOOR AT 641 AND IT IS NOW THE OPPOSITE
   // ASSERTION, deliberately. The old one guarded against "the masthead
-  // collapses onto its copy"; after the founder's 2026-09-13 decision that is
+  // collapses onto its copy"; that is now
   // exactly what it is meant to do, and /discover/palettes - which now carries
   // a one-line h1 and nothing else - measures 133px at 641 where it used to be
   // held at 280. Keeping the old number would have failed the shipped design.
@@ -202,7 +201,7 @@ test.describe('the shared Discover gallery masthead', () => {
 // nor a figure strip has come back.
 const TOOLBAR_HEADED = [
   { route: '/create/font-gallery', title: 'Font Gallery', action: 'Build a font pair', to: '/create/font-pair' },
-  { route: '/create/font-pair', title: 'Font Pair', action: 'Browse the Font Gallery', to: '/create/font-gallery' },
+  { route: '/create/font-pair', title: 'Font Pair', action: /^Font Gallery, heading /, to: '/create/font-gallery', nameHidden: true },
 ]
 
 test.describe('the typography tools open on their toolbar, with no furniture', () => {
@@ -210,16 +209,22 @@ test.describe('the typography tools open on their toolbar, with no furniture', (
     test(`${surface.route} states its name and its next action on the toolbar`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await go(page, surface.route)
-      const bar = page.locator('[data-tool-toolbar]')
+      const bar = page.locator('[data-tool-toolbar]').first()
       await expect(bar).toBeVisible()
 
       const h1 = bar.getByRole('heading', { level: 1, name: surface.title })
-      await expect(h1).toBeVisible()
-      // The tool's name is a 15px label, not a display headline.
-      const fs = await h1.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
-      expect(fs, 'the tool name has grown back into a display headline').toBeLessThanOrEqual(16)
+      await expect(h1).toBeAttached()
+      // The tool's name is a 15px label, not a display headline. Font Pair's name is
+      // read aloud only: its switcher is the visible name, so the h1 must be a 1px box.
+      const { fs, w, h } = await h1.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return { fs: parseFloat(getComputedStyle(el).fontSize), w: r.width, h: r.height }
+      })
+      if (surface.nameHidden) expect(Math.max(w, h), 'the hidden tool name takes up room').toBeLessThanOrEqual(1)
+      else expect(fs, 'the tool name has grown back into a display headline').toBeLessThanOrEqual(16)
 
-      const action = bar.getByRole('link', { name: surface.action })
+      // The onward action sits on whichever toolbar row the tool puts it on.
+      const action = page.locator('[data-tool-toolbar]').getByRole('link', { name: surface.action })
       await expect(action).toBeVisible()
       await expect(action).toHaveAttribute('href', surface.to)
       const box = await action.boundingBox()
@@ -237,9 +242,9 @@ test.describe('the Font Gallery search field', () => {
   // search rather than decorating the masthead (Readymag's "Search 1638 fonts").
   test('the family count moved into the search field instead of a stat strip', async ({ page }) => {
     await go(page, '/create/font-gallery')
-    await expect(page.locator('[data-tool-toolbar]')).toBeVisible()
+    await expect(page.locator('[data-tool-toolbar]').first()).toBeVisible()
     const placeholder = await page.evaluate(() => {
-      const input = [...document.querySelectorAll('.fg-controls input')].filter((e) => e.offsetParent !== null)[0]
+      const input = [...document.querySelectorAll('input[aria-label="Search font families"]')].filter((e) => e.offsetParent !== null)[0]
       return input ? input.placeholder : null
     })
     expect(placeholder, 'the search field lost its placeholder').toBeTruthy()

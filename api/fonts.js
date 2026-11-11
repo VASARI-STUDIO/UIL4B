@@ -6,24 +6,34 @@
 // falls back to fonts.google.com/metadata/fonts — which needs no key at all
 // but blocks browser requests via CORS, so it must be fetched server-side.
 
+import { refuseUnexpectedQuery } from './_lib/http.js'
+import {
+  METADATA_URL,
+  fontsFromMetadataList,
+  fontsFromWebfontsItems,
+  hasXssiGuard,
+  parseMetadataText,
+} from './_lib/fontCatalogue.js'
+
+// The parsed catalogue, kept for an hour per warm instance. A CDN miss otherwise
+// downloads and parses the whole Google catalogue again. Only a catalogue that
+// was actually built is kept, so a failed fetch is retried on the next request.
+// Once the hour is up the entry is dropped, never served stale: if the refresh
+// then fails the request gets the same 502 an uncached one would.
+//
+// The WebFonts API answer is the thinner catalogue (no designers, dates or
+// axes), which only appears while the metadata endpoint is failing. It is kept
+// for five minutes, so the richer catalogue is back as soon as upstream is.
+const CATALOGUE_TTL_MS = 60 * 60 * 1000
+const THIN_CATALOGUE_TTL_MS = 5 * 60 * 1000
+let catalogue = null
+let catalogueAt = 0
+let catalogueTtl = CATALOGUE_TTL_MS
+
 const API_KEY =
   process.env.GOOGLE_FONTS_API_KEY ||
   process.env.VITE_GOOGLE_FONTS_API_KEY ||
   ''
-
-// '100', 'regular', '700italic' → numeric weights, italics dropped.
-function weightsFromVariants(variants) {
-  return variants
-    .map(v => {
-      if (v === 'regular') return 400
-      if (v.includes('italic')) return null
-      const n = parseInt(v, 10)
-      return Number.isFinite(n) ? n : null
-    })
-    .filter(w => w !== null)
-    .filter((w, i, arr) => arr.indexOf(w) === i)
-    .sort((a, b) => a - b)
-}
 
 /* WHY THIS FILE LOGS AT ALL.
  *
@@ -64,100 +74,31 @@ async function fromWebfontsApi() {
   // diagnosis.
   if (!res.ok) return degraded('WebFonts API', `HTTP ${res.status} ${res.statusText}`)
   const data = await res.json()
-  const fonts = (data.items || []).map((item, i) => ({
-    family: item.family,
-    category: item.category,
-    variants: weightsFromVariants(item.variants || []),
-    subsets: item.subsets || ['latin'],
-    popularity: i,
-  })).filter(f => f.variants.length)
+  const fonts = fontsFromWebfontsItems(data.items)
   // A 200 that yields nothing usable is a shape change, not an outage, and it
   // would otherwise look identical to a network failure in the log.
   return fonts.length ? fonts : degraded('WebFonts API', `answered 200 with ${(data.items || []).length} items, none of which had usable variants`)
 }
 
 async function fromMetadataEndpoint() {
-  const res = await fetch('https://fonts.google.com/metadata/fonts')
+  const res = await fetch(METADATA_URL)
   if (!res.ok) return degraded('Google Fonts metadata', `HTTP ${res.status} ${res.statusText}`)
   // Response is JSON prefixed with the anti-XSSI guard )]}'
   const text = await res.text()
   // Reported separately from any other parse failure, because the guard
   // disappearing (or changing) is a specific, fixable upstream change and the
   // generic "Unexpected token" it would otherwise produce buries that.
-  if (!text.startsWith(')]}')) {
+  if (!hasXssiGuard(text)) {
     console.error('[api/fonts] Google Fonts metadata: the anti-XSSI guard did not match; '
       + `the body now starts ${JSON.stringify(text.slice(0, 24))}`)
   }
-  const json = JSON.parse(text.replace(/^\)\]\}'/, ''))
-  const list = json.familyMetadataList || []
-  list.sort((a, b) => (a.popularity || 1e9) - (b.popularity || 1e9))
-  const fonts = list.map((f, i) => {
-    const cuts = Object.keys(f.fonts || {})
-    return {
-      family: f.family,
-      // Metadata uses 'Sans Serif'; the WebFonts API uses 'sans-serif'.
-      category: (f.category || 'Sans Serif').toLowerCase().replace(/\s+/g, '-'),
-      variants: cuts
-        .filter(v => !v.endsWith('i'))
-        .map(Number)
-        .filter(Number.isFinite)
-        .sort((a, b) => a - b),
-      subsets: f.subsets || ['latin'],
-      popularity: i,
-      // ── The About-tab fields ──────────────────────────────────────────────
-      // Everything below is carried STRAIGHT THROUGH from Google's own family
-      // metadata. None of it is inferred, and none of it is written by us: the
-      // About tab states facts about a typeface, so every one of them has to be
-      // traceable to a source, or it does not get shown at all.
-      //
-      // `dateAdded` is the day the family landed ON GOOGLE FONTS. It is NOT the
-      // year the typeface was designed or released, and the two differ by
-      // decades for any revival. The UI labels it as what it is for that reason.
-      designers: Array.isArray(f.designers) ? f.designers.filter(Boolean) : [],
-      dateAdded: typeof f.dateAdded === 'string' ? f.dateAdded : '',
-      // Italic availability is otherwise lost: the weight list drops the 'i'
-      // cuts, so a family that ships twelve italics looked identical to one
-      // that ships none.
-      italics: cuts.some(v => v.endsWith('i')),
-      // Axis TAGS only. The ranges are real too, but "wght 100–900" is a
-      // control the tools do not offer, and printing a range you cannot use is
-      // a spec sheet rather than an answer.
-      axes: (f.axes || []).map(a => a && a.tag).filter(Boolean),
-      openSource: f.isOpenSource === true,
-      // ── The two fields the Examples tab picks its scenes from ─────────────
-      //
-      // Both were being dropped, and dropping them is why every family got the
-      // same four examples. `category` — the only descriptor that survived —
-      // CANNOT do this job on its own:
-      //
-      //   `classifications` disagrees with `category` for 351 families. Playfair
-      //   Display is category "Serif" with classifications ["Display"], and so
-      //   are Anton, Bebas Neue, Archivo Black and DM Serif Display. It is also
-      //   the ONLY field that identifies the 22 SYMBOL families (Libre Barcode,
-      //   Noto Music, Yarndings), where setting a paragraph is not a weak
-      //   example, it is nonsense.
-      //
-      //   `stroke` recovers Slab Serif, a distinction `category` erases by
-      //   folding it into Serif.
-      //
-      // Carried straight through and NEVER defaulted: an absent field must stay
-      // absent so src/utils/fontScenes.js can tell "this family is not a
-      // display face" apart from "this catalogue does not say", and degrade to
-      // `category` on the second. Guessing a value here would make the degraded
-      // path invisible at exactly the point it matters.
-      classifications: Array.isArray(f.classifications) ? f.classifications.filter(Boolean) : [],
-      stroke: typeof f.stroke === 'string' ? f.stroke : '',
-    }
-  }).filter(f => f.variants.length)
+  const list = parseMetadataText(text).familyMetadataList || []
+  const fonts = fontsFromMetadataList(list)
   return fonts.length ? fonts : degraded('Google Fonts metadata', `answered 200 with ${list.length} families, none of which had usable variants`)
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET')
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
+// Fetches the catalogue from the upstream sources, or null when both fail.
+async function loadCatalogue() {
   // METADATA FIRST, WebFonts second. This order is the reverse of what shipped,
   // and the reason is data rather than reliability: the WebFonts API answers
   // with family/category/variants/subsets and nothing else, while the metadata
@@ -184,11 +125,37 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('[api/fonts] Google Fonts metadata threw:', String(err?.message || err).slice(0, 300))
   }
+  let ttl = CATALOGUE_TTL_MS
   if (!fonts) {
+    ttl = THIN_CATALOGUE_TTL_MS
     try {
       fonts = await fromWebfontsApi()
     } catch (err) {
       console.error('[api/fonts] WebFonts API threw:', String(err?.message || err).slice(0, 300))
+    }
+  }
+  return fonts ? { fonts, ttl } : null
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET')
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // The route reads no query keys. Each distinct query string is its own CDN
+  // cache entry, so an unused key is a way to force a fresh upstream fetch.
+  if (refuseUnexpectedQuery(req, res, [])) return
+
+  const now = Date.now()
+  let fonts = catalogue && now - catalogueAt < catalogueTtl ? catalogue : null
+  if (!fonts) {
+    const loaded = await loadCatalogue()
+    fonts = loaded ? loaded.fonts : null
+    if (loaded) {
+      catalogue = loaded.fonts
+      catalogueAt = now
+      catalogueTtl = loaded.ttl
     }
   }
 

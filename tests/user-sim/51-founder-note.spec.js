@@ -1,8 +1,7 @@
 // "About this project" — the opt-in note in the footer.
 //
-// The backlog item `founder-intro-popup` asks for a welcome popup. The founder
-// was offered one and chose the opposite: "maybe we make it visable when a user
-// clicks a certian section or button". Everything below tests THAT surface, and
+// The note is opt-in: it is visible only when a user clicks a section or button,
+// not a welcome popup. Everything below tests THAT surface, and
 // the first test is the one that matters most — the panel is not on screen until
 // somebody asks for it.
 //
@@ -271,11 +270,17 @@ test('a wheel over the note scrolls the note, not the page behind it', async ({ 
   // measures), and that half is asserted first, before anything is injected.
   watch(page, 'a reader wheeling through a long note')
   await go(page, '/')
+  // The page is measured below as the fixed point the wheel must not move. The
+  // footer is brought into view and the smooth scroll left to settle before the
+  // click, so the scroll lock does not freeze the page partway through an ease.
+  await page.locator('.app-footer-note').scrollIntoViewIfNeeded()
+  await atRest(page)
   await page.locator('.app-footer-note').click()
   await expect(page.locator('.fnote')).toBeVisible()
   // The wheel is aimed at a bounding box, and a rising panel's box is 8px low
   // and 2% narrow while the entrance is still playing.
   await settle(page)
+  await atRest(page)
 
   const marked = await page.evaluate(() => {
     const body = document.querySelector('.fnote-body')

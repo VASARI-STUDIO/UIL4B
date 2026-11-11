@@ -1,0 +1,558 @@
+/* The homepage page showcase (#examples). ships with the export themes.
+   Spacing comes from the homepage tokens in home-tokens.css. Page images carry a
+   hairline outline; on a pointer hover a page lifts and takes a soft shadow. The
+   picked tab is the section's only filled control. Motion is transform and opacity
+   only: hover lift, the scroll-in reveal (data-hsc-reveal on .hsc) and the crossfade
+   when a pick swaps the pages (.hsc-in over .hsc-out). */
+.hsc {
+  --hsc-ink: #EFEEEA;
+  --hsc-ink-2: rgba(239, 238, 234, .68);
+  --hsc-ink-3: rgba(239, 238, 234, .56);
+  --hsc-line: rgba(239, 238, 234, .1);
+  --hsc-line-ctl: rgba(239, 238, 234, .16);
+  --hsc-line-cta: rgba(239, 238, 234, .24);
+  --hsc-on-ink: #0B0C0E;
+  --hsc-ease: cubic-bezier(.23, 1, .32, 1);
+  --hsc-rail-1: 196px;
+  --hsc-rail-2: 270px;
+  position: relative;
+  box-sizing: border-box;
+  padding: var(--section-y) var(--gutter-x);
+  overflow: clip;
+  background: #060607;
+  color: var(--hsc-ink);
+  font-family: var(--hm-font);
+}
+.hsc-inner { max-width: 1336px; margin: 0 auto; }
+.hsc button, .hsc a { font-family: inherit; }
+.hsc :is(button, a):focus-visible { outline: 2px solid #EFEEEA; outline-offset: 3px; }
+
+/* Header */
+.hsc-head { text-align: center; }
+.hsc-h {
+  margin: 0 auto;
+  max-width: 16ch;
+  font-size: 60px;
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+}
+.hsc-h:focus { outline: none; }
+.hsc-sub {
+  margin: 24px auto 0;
+  max-width: 52ch;
+  font-size: 18px;
+  line-height: 1.6;
+  text-wrap: balance;
+  color: var(--hsc-ink-2);
+}
+
+/* Picker */
+.hsc-bar {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  margin: 48px auto 0;
+  padding: 4px;
+  border: 1px solid var(--hsc-line);
+  border-radius: 999px;
+}
+.hsc-tab {
+  flex: none;
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hsc-ink-2);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 120ms var(--hsc-ease);
+}
+.hsc-tab[aria-selected="true"] { background: var(--hsc-ink); color: var(--hsc-on-ink); }
+@media (hover: hover) {
+  .hsc-tab[aria-selected="false"]:hover { background: rgba(239, 238, 234, .06); color: var(--hsc-ink); }
+}
+.hsc-tab:active { transform: scale(.97); }
+.hsc-note {
+  margin: 16px auto 0;
+  max-width: 60ch;
+  text-align: center;
+  text-wrap: balance;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--hsc-ink-2);
+}
+.hsc-hint { display: none; margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--hsc-ink-3); }
+
+/* Panel: two rows of pages. Each page's flex-grow is its width over its height,
+   so every page in a row is the same height and a row's height never changes. */
+.hsc-panel { margin-top: 32px; }
+.hsc-group + .hsc-group { margin-top: 40px; }
+.hsc-rowlabel { margin: 0 0 12px; font-size: 13px; line-height: 1.4; color: var(--hsc-ink-3); }
+.hsc-row { display: flex; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.hsc-row > li { flex: var(--ar) 1 0%; min-width: 0; margin: 0; }
+.hsc-fig { margin: 0; }
+.hsc-open {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: zoom-in;
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 220ms var(--hsc-ease);
+}
+/* Two layers that fade in on hover: a soft shadow beneath the page and a brighter hairline over it.
+   They are separate from .hsc-page (which clips) so opacity is all that animates. */
+.hsc-open::before,
+.hsc-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms var(--hsc-ease);
+}
+.hsc-open::before { z-index: -1; box-shadow: 0 1px 3px rgba(0, 0, 0, .5), 0 16px 32px -12px rgba(0, 0, 0, .8); }
+.hsc-open::after { z-index: 5; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .4); }
+@media (hover: hover) and (pointer: fine) {
+  .hsc-open:hover { transform: translateY(-3px) scale(1.02); }
+  .hsc-open:hover::before, .hsc-open:hover::after { opacity: 1; }
+}
+.hsc-open:active { transform: scale(.985); transition-duration: 120ms; }
+.hsc-page {
+  position: relative;
+  display: block;
+  aspect-ratio: var(--ar);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0F1012;
+  isolation: isolate;
+}
+.hsc-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px oklch(1 0 0 / .1);
+  pointer-events: none;
+}
+.hsc-page picture { display: contents; }
+.hsc-page img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+/* A pick: the new page fades in over the old one, a beat after the tile before it
+   (--fade-delay is set per tile); the old page is removed once the fade is done. */
+.hsc-in { animation: hsc-in 240ms var(--hsc-ease) both; animation-delay: var(--fade-delay, 0ms); }
+@keyframes hsc-in { from { opacity: 0; } }
+
+/* Scroll-in: the tiles are held back, then rise and fade in a beat apart. */
+.hsc[data-hsc-reveal="armed"] .hsc-row > li { opacity: 0; transform: translateY(8px); }
+.hsc[data-hsc-reveal="in"] .hsc-row > li {
+  transition: opacity 300ms var(--hsc-ease) var(--reveal-delay, 0ms), transform 300ms var(--hsc-ease) var(--reveal-delay, 0ms);
+}
+.hsc-zoom {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(6, 6, 7, .72);
+  color: var(--hsc-ink);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .hsc-zoom { opacity: 0; transition: opacity 150ms ease; }
+  .hsc-open:hover .hsc-zoom, .hsc-open:focus-visible .hsc-zoom { opacity: 1; }
+}
+.hsc-fail {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--hsc-ink-3);
+}
+
+/* Captions: "<Theme> · <tier>" over the brand. Free reads stronger than Pro. */
+.hsc-cap { display: block; margin-top: 10px; }
+.hsc-cap1 { display: block; font-size: 14px; line-height: 1.3; }
+.hsc-name { font-weight: 500; color: var(--hsc-ink); }
+.hsc-tier { font-size: 13px; color: var(--hsc-ink-3); }
+.hsc-tier::before { content: "\00a0\00b7\00a0"; color: var(--hsc-ink-3); }
+.hsc-tier--free { color: var(--hsc-ink); }
+.hsc-cap2 { display: block; margin-top: 2px; font-size: 13px; line-height: 1.4; color: var(--hsc-ink-3); }
+
+/* Foot */
+.hsc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  margin-top: 56px;
+  padding-top: 28px;
+  border-top: 1px solid var(--hsc-line);
+}
+.hsc-footnote { margin: 0; max-width: 64ch; font-size: 14px; line-height: 1.6; color: var(--hsc-ink-3); }
+.hsc .hsc-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 6px 0 22px;
+  border: 1px solid var(--hsc-line-cta);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hsc-ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+@media (hover: hover) {
+  .hsc .hsc-cta:hover { background: transparent; border-color: var(--hsc-line-cta); color: var(--hsc-ink); }
+}
+.hsc .hsc-cta .mi-go {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(239, 238, 234, .08);
+  font-size: 14px;
+}
+
+/* Under 880 the eight tabs sit in a 4 x 2 grid. */
+@media (max-width: 880px) {
+  .hsc-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: auto; border-radius: 28px; }
+  .hsc-tab { padding: 0 8px; }
+}
+
+/* Tablet: the six portrait pages are about 97px wide, so the tier drops to its
+   own line and every brand name in the row reserves two lines. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hsc-row--port .hsc-tier { display: block; }
+  .hsc-row--port .hsc-tier::before { content: none; }
+  .hsc-row--port .hsc-cap2 { min-height: 2.8em; text-wrap: balance; }
+}
+
+/* Phone: left-aligned header, a 4 x 2 picker of 44px cells, and each row a
+   swipe rail at a fixed height so a pick moves nothing. */
+@media (max-width: 767px) {
+  .hsc-head { text-align: left; }
+  .hsc-h { margin: 0; max-width: none; font-size: clamp(28px, 8vw, 36px); }
+  .hsc-h-line { display: block; }
+  .hsc-sub { margin: 16px 0 0; max-width: none; font-size: 16px; line-height: 1.55; }
+  .hsc-bar { gap: 8px; margin-top: 28px; padding: 0; border: 0; border-radius: 0; }
+  .hsc-tab { height: 44px; min-width: 44px; padding: 0 4px; border: 1px solid var(--hsc-line-ctl); font-size: 14px; }
+  .hsc-tab[aria-selected="true"] { border-color: var(--hsc-ink); }
+  .hsc-note { margin: 16px 0 0; max-width: none; text-align: left; }
+  .hsc-hint { display: block; }
+  .hsc-panel { margin-top: 16px; }
+  .hsc-group + .hsc-group { margin-top: 32px; }
+  .hsc-rowlabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .hsc-row {
+    gap: 12px;
+    margin: 0 calc(var(--gutter-x) * -1);
+    padding: 4px var(--gutter-x) 6px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding: 0 var(--gutter-x);
+    scrollbar-width: none;
+  }
+  .hsc-row::-webkit-scrollbar { display: none; }
+  .hsc-row--land { --hsc-ph: var(--hsc-rail-1); }
+  .hsc-row--port { --hsc-ph: var(--hsc-rail-2); }
+  .hsc-row > li { flex: none; width: calc(var(--hsc-ph) * var(--ar)); scroll-snap-align: start; }
+  .hsc-page { aspect-ratio: auto; height: var(--hsc-ph); }
+  .hsc-cap1 { font-size: 13px; white-space: nowrap; }
+  .hsc-cap2 { font-size: 12px; white-space: nowrap; }
+  .hsc-foot { display: block; margin-top: 40px; padding-top: 20px; }
+  .hsc-footnote { max-width: none; font-size: 13px; }
+  .hsc .hsc-cta { display: flex; justify-content: space-between; height: 54px; margin-top: 20px; }
+  .hsc .hsc-cta .mi-go { width: 40px; height: 40px; }
+}
+@media (max-width: 374px) {
+  .hsc { --hsc-rail-1: 152px; --hsc-rail-2: 236px; }
+}
+@media (max-width: 359px) {
+  .hsc-tab { font-size: 13px; }
+}
+
+/* Reduced motion: no lift, no press, no rise and no stagger. The shadow and hairline
+   still appear on hover (instantly), and a pick keeps its opacity crossfade at 120ms.
+   The site-wide backstop cuts every duration to a hundredth of a millisecond, so the
+   crossfade's 120ms is set here with enough weight to win, under the same two inputs
+   as the backstop (the Settings choice, else the operating system's). */
+html[data-reduced-motion="true"] .hsc-tab,
+html[data-reduced-motion="true"] .hsc-open,
+html[data-reduced-motion="true"] .hsc-open::before,
+html[data-reduced-motion="true"] .hsc-open::after,
+html[data-reduced-motion="true"] .hsc-zoom { transition: none; }
+html[data-reduced-motion="true"] .hsc-tab:active,
+html[data-reduced-motion="true"] .hsc-open:active,
+html[data-reduced-motion="true"] .hsc-open:hover { transform: none; }
+html[data-reduced-motion="true"] .hsc .hsc-in {
+  animation-duration: 120ms !important;
+  animation-delay: 0ms !important;
+  animation-timing-function: linear !important;
+}
+html[data-reduced-motion="true"] .hsc[data-hsc-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .hsc-tab,
+  html:not([data-reduced-motion="false"]) .hsc-open,
+  html:not([data-reduced-motion="false"]) .hsc-open::before,
+  html:not([data-reduced-motion="false"]) .hsc-open::after,
+  html:not([data-reduced-motion="false"]) .hsc-zoom { transition: none; }
+  html:not([data-reduced-motion="false"]) .hsc-tab:active,
+  html:not([data-reduced-motion="false"]) .hsc-open:active,
+  html:not([data-reduced-motion="false"]) .hsc-open:hover { transform: none; }
+  html:not([data-reduced-motion="false"]) .hsc .hsc-in {
+    animation-duration: 120ms !important;
+    animation-delay: 0ms !important;
+    animation-timing-function: linear !important;
+  }
+  html:not([data-reduced-motion="false"]) .hsc[data-hsc-reveal] .hsc-row > li { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Page viewer ─────────────────────────────────────────────────────────────
+   Portalled to <body>, so it sets its own tokens. z-index 100 is the one overlay
+   level, above the sticky nav. From 768px up it is a dialog over a scrim; below
+   that it is a full-screen sheet with its controls in a bottom bar. */
+.hsv-ov {
+  --hsv-ink: #EFEEEA;
+  --hsv-ink-2: rgba(239, 238, 234, .68);
+  --hsv-ink-3: rgba(239, 238, 234, .56);
+  --hsv-line: rgba(239, 238, 234, .24);
+  --hsv-ease: cubic-bezier(.23, 1, .32, 1);
+  position: fixed;
+  inset: 0;
+  /* Above the nav (120) and its phone menu (130): the viewer is modal. */
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 24px;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: rgba(6, 6, 7, .86);
+  color: var(--hsv-ink);
+  font-family: var(--hm-font);
+  animation: hsv-fade 200ms var(--hsv-ease);
+}
+.hsv-ov.is-out { animation: hsv-fade-out 150ms ease-in forwards; }
+.hsv-ov button { font-family: inherit; }
+.hsv-ov button:focus-visible, .hsv-dlg:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 3px; }
+
+/* The dialog is always 16:9 wide, so the controls stay put as the pages' shapes change. */
+.hsv-dlg {
+  --hsv-w: min(calc(80vh * 1.778), calc(100vw - 48px));
+  --hsv-h: min(80vh, calc(var(--hsv-w) / 1.778));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas:
+    "meta count prev next close"
+    "stage stage stage stage stage";
+  align-items: center;
+  column-gap: 8px;
+  width: var(--hsv-w);
+  outline: 0;
+  transform-origin: 50% 50%;
+  animation: hsv-pop 200ms var(--hsv-ease);
+}
+.hsv-ov.is-out .hsv-dlg { animation: hsv-pop-out 150ms ease-in forwards; }
+@keyframes hsv-fade { from { opacity: 0; } }
+@keyframes hsv-fade-out { to { opacity: 0; } }
+@keyframes hsv-pop { from { transform: scale(.96); } }
+@keyframes hsv-pop-out { to { transform: scale(.98); } }
+
+.hsv-meta { grid-area: meta; min-width: 0; }
+.hsv-title { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 500; color: var(--hsv-ink); }
+.hsv-tier { font-size: 13px; font-weight: 400; color: var(--hsv-ink-3); }
+.hsv-tier::before { content: "\00a0\00b7\00a0"; }
+.hsv-tier--free { color: var(--hsv-ink); }
+.hsv-brand { margin: 2px 0 0; font-size: 14px; line-height: 1.4; color: var(--hsv-ink-2); }
+.hsv-kind { color: var(--hsv-ink-3); }
+.hsv-kind::before { content: "\00a0\00b7\00a0"; }
+.hsv-count {
+  grid-area: count;
+  margin: 0 8px 0 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--hsv-ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hsv-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--hsv-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hsv-ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms ease, transform 120ms var(--hsv-ease);
+}
+@media (hover: hover) {
+  .hsv-btn:hover { background: rgba(239, 238, 234, .08); }
+}
+.hsv-btn:active { transform: scale(.97); }
+.hsv-prev { grid-area: prev; }
+.hsv-next { grid-area: next; }
+.hsv-close { grid-area: close; }
+.hsv-steptext { display: none; }
+
+/* The page. A fixed-height stage; pages are centred in it at their own shape. */
+.hsv-stage {
+  grid-area: stage;
+  position: relative;
+  height: var(--hsv-h);
+  margin-top: 16px;
+  touch-action: pan-y pinch-zoom;
+}
+.hsv-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px oklch(1 0 0 / .1);
+}
+.hsv-under { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.hsv-top { z-index: 2; opacity: 1; }
+/* A step brings the new page in from the side it came from: it waits 16px off and
+   transparent, then slides home as it fades in over the old page. */
+.hsv-top.is-wait { opacity: 0; transform: translateX(16px); }
+.hsv-stage[data-dir="-1"] .hsv-top.is-wait { transform: translateX(-16px); }
+.hsv-top.is-fade { transition: opacity 220ms var(--hsv-ease), transform 220ms var(--hsv-ease); }
+.hsv-fail {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--hsv-ink-2);
+}
+
+@media (max-width: 880px) {
+  .hsv-ov { padding: 12px; }
+  .hsv-dlg { --hsv-w: min(calc(80vh * 1.778), calc(100vw - 24px)); }
+}
+
+/* Phone: a sheet. Title at the top left and the count at the top right, the page
+   filling the middle, and Previous, Close and Next in one bar of 44px controls
+   at the bottom, in reach of a thumb. */
+@media (max-width: 767px) {
+  .hsv-ov { display: block; padding: 0; background: #060607; }
+  .hsv-dlg {
+    --hsv-w: 100%;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "meta meta meta"
+      "stage stage stage"
+      "prev close next";
+    align-items: start;
+    column-gap: 8px;
+  }
+  .hsv-dlg:focus-visible { outline-offset: -3px; }
+  /* The count shares the meta's row and sits over its right end, so the title and the
+     brand line get the full width less the count's room, not a third of the bar. Each
+     stays on one line and ends in an ellipsis if it still does not fit; the full text
+     is in the DOM, so assistive tech reads all of it. */
+  .hsv-meta { padding: 2px 56px 0 0; }
+  .hsv-title, .hsv-brand { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .hsv-count { grid-area: meta; justify-self: end; margin: 3px 0 0; }
+  .hsv-stage { align-self: stretch; height: auto; margin: 12px 0; }
+  .hsv-close { justify-self: center; align-self: center; }
+  .hsv-prev, .hsv-next {
+    width: auto;
+    min-width: 44px;
+    gap: 6px;
+    grid-auto-flow: column;
+    align-self: center;
+    padding: 0 16px 0 12px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .hsv-next { justify-self: end; padding: 0 12px 0 16px; }
+  .hsv-prev { justify-self: start; }
+  .hsv-steptext { display: inline; }
+}
+
+/* Reduced motion keeps the opacity fade and drops the scale and the press. The site-wide
+   backstop cuts every duration to a hundredth of a millisecond, so the 120ms is set here
+   with enough weight to win, under the same two inputs as the backstop (the Settings
+   choice, else the operating system's). */
+html[data-reduced-motion="true"] .hsv-ov,
+html[data-reduced-motion="true"] .hsv-ov.is-out {
+  animation-duration: 120ms !important;
+  animation-timing-function: linear !important;
+}
+html[data-reduced-motion="true"] .hsv-dlg,
+html[data-reduced-motion="true"] .hsv-ov.is-out .hsv-dlg { animation: none; }
+html[data-reduced-motion="true"] .hsv-ov .hsv-top.is-fade {
+  transition-duration: 120ms !important;
+  transition-timing-function: linear !important;
+}
+html[data-reduced-motion="true"] .hsv-ov .hsv-top.is-wait { transform: none; }
+html[data-reduced-motion="true"] .hsv-ov .hsv-btn { transition: none; }
+html[data-reduced-motion="true"] .hsv-ov .hsv-btn:active { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .hsv-ov,
+  html:not([data-reduced-motion="false"]) .hsv-ov.is-out {
+    animation-duration: 120ms !important;
+    animation-timing-function: linear !important;
+  }
+  html:not([data-reduced-motion="false"]) .hsv-dlg,
+  html:not([data-reduced-motion="false"]) .hsv-ov.is-out .hsv-dlg { animation: none; }
+  html:not([data-reduced-motion="false"]) .hsv-ov .hsv-top.is-fade {
+    transition-duration: 120ms !important;
+    transition-timing-function: linear !important;
+  }
+  html:not([data-reduced-motion="false"]) .hsv-ov .hsv-top.is-wait { transform: none; }
+  html:not([data-reduced-motion="false"]) .hsv-ov .hsv-btn { transition: none; }
+  html:not([data-reduced-motion="false"]) .hsv-ov .hsv-btn:active { transform: none; }
+}

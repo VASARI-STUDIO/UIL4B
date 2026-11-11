@@ -34,7 +34,7 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 //
 // It used to read `ADMIN_EMAILS` out of api/_lib/plans.js, and the argument for
 // doing so was real: the fixture and the live gate could not drift apart
-// without this suite noticing. That coupling went when the founder's personal
+// without this suite noticing. That coupling went when the owner's personal
 // address came out of tracked source — it is set in Vercel now, and a public
 // repo has nothing to read.
 //
@@ -45,10 +45,12 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 // rules cannot diverge between the fixture and the server.
 import { adminEmails } from '../../api/_lib/adminEmails.js'
 import { serveLibrary } from '../../api/_lib/library/serve.js'
+import { servePalettePreview } from '../../api/_lib/library/preview.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { resolveReportDir } from './report-dir.js'
 
-// A RESERVED TEST DOMAIN, never the founder's real address. The whole point
-// of moving the allowlist out of source was that his personal address stopped
+// A RESERVED TEST DOMAIN, never the owner's real address. The whole point
+// of moving the allowlist out of source was that a personal address stopped
 // being published; reinstating it here would put it straight back into a
 // public repo through the test suite.
 //
@@ -139,10 +141,34 @@ export function watch(page, persona) {
     // failure state. Chromium logs each refused response (75 of them: 25 packs
     // by 3 hosts), and none is a finding about the app. Same shape as the
     // motion persona above: keyed on the persona AND the host, so a refusal
-    // anywhere else still surfaces.
+    // anywhere else still surfaces. The refusal also takes the site's own copy
+    // of each pack list (a 404 on /iconify/collections/<pack>.json).
     const deliberateIconifyRefusal = persona === 'visitor whose icon catalogue is refused'
-      && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)/.test(url)
+      && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)|\/iconify\/collections\/[^/]+\.json/.test(url)
     if (deliberateIconifyRefusal) return
+    // 153-preview-examples.spec.js aborts one preview example's chunk ON PURPOSE,
+    // to see the dialog's "This example didn't load" stand in for it. Chromium
+    // logs the aborted fetch; keyed on the persona AND the example chunk, so a
+    // failed download anywhere else still surfaces.
+    const deliberateExampleAbort = persona === 'visitor whose preview example never arrives'
+      && /ERR_FAILED/.test(msg.text())
+      && /assets\/(?:Sundial|SlackWater|OrraWorkroom)-/.test(url)
+    if (deliberateExampleAbort) return
+    // 192-roadmap-voting.spec.js reads vote counts from Firestore, which this
+    // runner cannot reach, so the roadmap shows its counts-failed state. The SDK
+    // logs the unreachable backend once per page; keyed on the persona and the
+    // SDK's own message, so a different failure still surfaces.
+    const roadmapCountsUnreachable = persona === 'signed-out visitor looking at the roadmap'
+      && /Could not reach Cloud Firestore backend/.test(msg.text())
+    if (roadmapCountsUnreachable) return
+    // 192-font-catalogue-static.spec.js aborts /data/font-catalogue.json (and
+    // /api/fonts) ON PURPOSE, to see the saved copy or the banner stand in for
+    // them. Chromium logs the aborted fetch; keyed on the persona AND the file,
+    // so a failed catalogue download in any other spec still surfaces.
+    const deliberateCatalogueAbort = /^(?:returning|first-time) visitor behind a blocker$/.test(persona)
+      && /ERR_FAILED/.test(msg.text())
+      && /\/data\/font-catalogue\.json/.test(url)
+    if (deliberateCatalogueAbort) return
     if (isExpectedNoise(msg.text(), url)) return
     const source = url
       ? ` (${url}${location.lineNumber != null ? `:${location.lineNumber}:${location.columnNumber || 0}` : ''})`
@@ -186,7 +212,7 @@ export function watch(page, persona) {
  * counts against it, `useSubscription().isPro` follows the plan, the export
  * gate opens or does not, and `auth.currentUser` carries it for the hooks that
  * read roles off a token. Nothing in src/ is aware any of this is happening,
- * and src/contexts/AuthContext.jsx — which is founder-gated — is untouched.
+ * and src/contexts/AuthContext.jsx — which is approval-gated — is untouched.
  *
  * IT CANNOT EXIST IN A PRODUCTION BUILD. The doubles are wired in by a Vite
  * plugin that is only constructed under `--mode test`; a production build does
@@ -203,6 +229,35 @@ export function watch(page, persona) {
  * script, which runs before the app's own module scripts on every subsequent
  * page load; a page that has already booted signed out stays signed out.
  */
+
+/* THE BLURRED STAND-IN FOR A LOCKED PALETTE IS THE REAL RENDERER'S OUTPUT.
+ *
+ * A locked Discover card draws GET /api/ai?palettePreview=<id>, which `vite preview` does not
+ * serve (it answers the app shell, so the card would fall back to its text line). This route runs
+ * api/_lib/library/preview.js itself over the same library rows the deployed function uses, so a
+ * spec sees the real PNG, its headers, and the 404 for an unknown id. signIn() installs it; a spec
+ * that walks the page as a visitor (no signIn) calls it itself. Install it before the first
+ * navigation; a route a spec adds afterwards for the same URL takes precedence over this one. */
+export async function routePalettePreview(page) {
+  await page.route(/\/api\/ai\?palettePreview=/, async (route) => {
+    const url = new URL(route.request().url())
+    const reply = { status: 200, headers: {}, body: null }
+    const res = {
+      setHeader: (name, value) => { reply.headers[name] = value },
+      status: (code) => { reply.status = code; return res },
+      json: (body) => { reply.body = body; return res },
+      end: (body) => { reply.body = body; return res },
+    }
+    servePalettePreview({ query: { palettePreview: url.searchParams.get('palettePreview') } }, res, LIBRARY_PALETTES)
+    const isPng = Buffer.isBuffer(reply.body)
+    await route.fulfill({
+      status: reply.status,
+      headers: reply.headers,
+      contentType: isPng ? 'image/png' : 'application/json',
+      body: isPng ? reply.body : JSON.stringify(reply.body),
+    })
+  })
+}
 
 /** Every host the Firebase SDK would talk to. Exported so a spec can assert on it. */
 export const FIREBASE_HOSTS = [
@@ -255,7 +310,7 @@ function seedProject(i, design) {
  *              SubscriptionContext reads over a snapshot — NOT by setting a
  *              flag. So `planForSubscription()` is the code being exercised,
  *              and a change to it changes what these tests see.
- *   admin      true to use the founder's address from api/_lib/plans.js.
+ *   admin      true to use the admin address from api/_lib/plans.js.
  *              Separate from `plan` on purpose: admin implies Pro through a
  *              DIFFERENT branch (the email allowlist), and conflating the two
  *              would make an admin-only failure look like a Pro failure.
@@ -282,6 +337,10 @@ function seedProject(i, design) {
  *              spec with `window.__UIL4B_TEST_AUTH__.signInNow()`, without a
  *              reload. The account's document arrives a moment after the user
  *              does, as it does for a real sign-in made inside the page.
+ *   authDelay  ms to hold the FIRST auth answer back (default 0, a macrotask).
+ *              The page paints with AuthContext still at (loading: true), which
+ *              reads as signed out, so a signed-in session can be looked at in
+ *              the window before it is known to be signed in.
  *   deny       path substrings this session's Firestore must REFUSE, e.g.
  *              ['sync/projects']. Every read, write and listener whose path
  *              contains one answers with a FirebaseError('permission-denied')
@@ -298,9 +357,33 @@ function seedProject(i, design) {
  *   slowReads  [{ path, ms }] — every getDoc whose path contains `path` answers
  *              `ms` late, with the real data. For "what does the app decide
  *              before the account has answered".
+ *              { path, hold: true } instead keeps every onSnapshot on `path`
+ *              silent until window.__UIL4B_TEST_HOLD__.release() is called,
+ *              for as long as a spec needs to look at the plan-still-loading
+ *              state.
+ *   holdWrites path substrings whose setDoc never settles (the offline state: the
+ *              SDK queues the write and neither resolves nor rejects) until the
+ *              page calls window.__UIL4B_TEST_HOLD__.releaseWrites(), which lets
+ *              every held write land and resolve. Every setDoc attempt, held or
+ *              not, is logged in window.__UIL4B_TEST_WRITES__ (paths, in order),
+ *              so a spec can tell a retry that reuses a document id from one
+ *              that makes a second.
+ *   slowWrites [{ path, ms }] — every setDoc whose path contains `path` lands in
+ *              the store at once but answers `ms` late, so a spec can change the
+ *              account (window.__UIL4B_TEST_AUTH__.switchTo) while a save waits.
+ *   provider   the sign-in provider id on the account: 'password' (default) or
+ *              'google.com'. A 'google.com' account has no password, which is
+ *              what makes Settings treat it as Google-only.
  *   projectTombstones  deletes this account already made, keyed by project id
  *              -> ISO timestamp, seeded into the same localStorage key
  *              ProjectContext writes them to.
+ *   creationTime  when the account was made, as a millisecond timestamp or
+ *              anything `new Date()` takes. Default: a day ago, so the account
+ *              is not new. Pass `Date.now() - 2 * 60_000` for an account made two
+ *              minutes ago, which the workspace greets as "Welcome, <name>."
+ *              rather than "Welcome back, <name>.".
+ *   noName     true leaves the profile without a name, so the workspace greets
+ *              with "Welcome back." and offers "Add your name". Default false.
  *   subscription / docs / claims / email / uid / displayName — direct overrides
  *              for anything the four above do not cover. `docs` is merged over
  *              the seeded Firestore documents, keyed by path.
@@ -320,16 +403,22 @@ export async function signIn(page, opts = {}) {
     claims = {},
     deny = [],
     slowReads = [],
+    holdWrites = [],
+    slowWrites = [],
     authFail = null,
+    provider = 'password',
     projectTombstones = null,
     displayName,
+    noName = false,
     emailVerified = true,
     lateSignIn = false,
+    authDelay = 0,
+    creationTime,
   } = opts
 
   const email = (opts.email || (admin ? TEST_ADMIN_EMAIL : `${plan}.user@uil4b.test`)).toLowerCase()
   const uid = opts.uid || `test-uid-${admin ? 'admin' : plan}`
-  const name = displayName || (admin ? 'Founder' : plan === 'pro' ? 'Pia Pro' : 'Freya Free')
+  const name = noName ? '' : displayName || (admin ? 'Founder' : plan === 'pro' ? 'Pia Pro' : 'Freya Free')
 
   // The entitlement, expressed as the document Stripe's webhook would have
   // written. `planForSubscription` in SubscriptionContext is what turns it into
@@ -350,12 +439,17 @@ export async function signIn(page, opts = {}) {
     email,
     displayName: name,
     photoURL: '',
-    provider: 'password',
+    provider,
     emailVerified,
     lateSignIn,
+    authDelay,
+    // Firebase reports creationTime as a UTC string; undefined leaves the double's own default.
+    creationTime: creationTime === undefined ? undefined : new Date(creationTime).toUTCString(),
     claims,
     deny,
     slowReads,
+    holdWrites,
+    slowWrites,
     authFail,
     docs: {
       [`users/${uid}`]: {
@@ -402,6 +496,8 @@ export async function signIn(page, opts = {}) {
     )
     await route.fulfill({ status: reply.status, headers: reply.headers, contentType: 'application/json', body: JSON.stringify(reply.body) })
   })
+
+  await routePalettePreview(page)
 
   /* THE DECLARATION IS RE-READ ON EVERY LOAD; THE STORAGE IS SEEDED ONCE.
    *
@@ -497,6 +593,79 @@ export async function go(page, url) {
   return res
 }
 
+/** The homepage sections that load after the first screen, by id. */
+export const HOME_LAZY_SECTIONS = ['bookmarks', 'try', 'exports', 'examples', 'plans']
+
+/**
+ * Wait until every homepage section below the first screen has arrived.
+ *
+ * Each of those sections mounts when its stand-in is within 600px of the
+ * viewport, or all of them together on a hash, a click, or the first scroll,
+ * wheel, touchstart, keydown or pointerdown. Until a section arrives its id sits
+ * on an empty stand-in of about its final height, and a test that measures or
+ * scrolls before then reads the stand-in. A wheel nudge opens every section at
+ * once instead of waiting for the viewport to come near them, and each section
+ * is waited for by its own heading, which only the real section renders.
+ */
+export async function homeSectionsLoaded(page) {
+  await page.mouse.wheel(0, 1)
+  for (const id of HOME_LAZY_SECTIONS) {
+    await expect(page.locator(`#${id} h2`), `the ${id} section never loaded`).toBeAttached({ timeout: 20000 })
+  }
+}
+
+/**
+ * Navigate, but keep the app's entry script (`/assets/index-*.js`, the one that
+ * calls `createRoot`) from running until `untilPainted()` says the prerendered
+ * shell has been painted AND OBSERVED — then release it and wait for the route
+ * to arrive, exactly as `go()` does.
+ *
+ * WHY THIS EXISTS (a flake, root-caused 2026-10-29)
+ * `main.jsx` mounts with `createRoot`, so React throws the shell's DOM away and
+ * builds its own. A `largest-contentful-paint` entry's `element` is resolved when
+ * it is READ, not when the browser painted: once the node it points at has left
+ * the document it reads `null`. A PerformanceObserver callback is a low-priority
+ * task, and on a slow runner (or a CPU-throttled browser) it ran after the swap:
+ * the shell's headline was recorded at 988ms and delivered at 5111ms, by which
+ * time its node was gone, so a spec that names the LCP element saw "(none)" for a
+ * paint that was in fact the headline. Measured on the 65 spec: 2 of 12 runs at 12x CPU
+ * throttling, 0 of 30 unthrottled; the same signature as the CI failures.
+ *
+ * Holding the script makes the order deterministic instead of lucky: the entry is
+ * recorded while the shell is still the page, and everything after hydration
+ * (later, larger candidates — the thing those specs exist to catch) is observed
+ * live and unchanged. Nothing about the page is altered; its script just starts a
+ * little later, as it would on a slow connection.
+ *
+ * `untilPainted` is awaited with the app held, so it must not need the app:
+ * poll something an init-script PerformanceObserver wrote. It is released even
+ * if `untilPainted` throws, and when the page closes.
+ */
+export async function goHoldingApp(page, url, untilPainted) {
+  let release
+  const gate = new Promise((resolve) => { release = resolve })
+  page.once('close', release)
+  let held = false
+  await page.route(/\/assets\/index-[^/]+\.js(\?.*)?$/, async (route) => {
+    held = true
+    await gate
+    await route.continue().catch(() => { /* the page closed while the script was held */ })
+  })
+  // 'commit', not 'domcontentloaded': a module script blocks DOMContentLoaded,
+  // and this one is held, so goto would wait for the very thing it is holding.
+  const res = await goRaw(page, url, { waitUntil: 'commit' })
+  try {
+    await untilPainted()
+    // If the entry bundle is renamed, nothing is held and the old race is back
+    // silently; say so instead of passing on luck.
+    if (!held) throw new Error('goHoldingApp: the entry bundle /assets/index-*.js was never requested, so nothing was held')
+  } finally {
+    release()
+  }
+  await ready(page, url)
+  return res
+}
+
 /* ── Waiting for a LAZY ROUTE to have actually ARRIVED ───────────────────────
  *
  * WHY THIS EXISTS
@@ -569,13 +738,11 @@ const READY_BACKSTOP_MS = 20000
  *
  * `own` is the route's OWN content — `main` plus any open modal — with the
  * shared chrome excluded, which is the measurement `expectRendered` used to get
- * wrong. The modal half is not a special case for one route: /login (and every
- * RequireAuth redirect into it) is a launcher for the app-wide login popup, so
- * its content genuinely lives in a `[role="dialog"]` outside the shell and its
- * `main` is EMPTY once the dialog is up. (It used to hold a spinner that never
- * stopped; App.jsx now renders that only while AuthContext is still resolving —
- * 2026-09-11. The modal half of this measurement is what made that safe, and it
- * is why it must stay.)
+ * wrong. /login is a full-screen page, so its own content (the h1, the form and
+ * the wall of exports) lives in `main` like any other route. The modal half
+ * stays because the sign-in dialog still opens over other pages, outside the
+ * shell: a route that raises one has its content in a `[role="dialog"]` while
+ * its `main` holds only the page behind it.
  *
  * `crashed` is App.jsx's ErrorBoundary card. It is reported because a crashed
  * route LOOKS rendered by every other measure here — the fallback is gone and
@@ -725,7 +892,7 @@ const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL t
  *
  *     /api/fonts answered      ready at 188ms   .typ-loading 0   .fg-card 24
  *     /api/fonts held open     ready at 148ms   .typ-loading 1   .fg-card  0
- *                              settled at 2530ms                 .fg-card 24
+ *                              settled at 2530ms (2000ms bound at the time) .fg-card 24
  *
  * Zero rows, from a gallery that was working perfectly. That is the third
  * mechanism in `suite-flake-class-unreproduced`, and it is a different one from
@@ -734,9 +901,9 @@ const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL t
  * with ZERO occurrences of ERR_NO_BUFFER_SPACE, on a PR whose diff touched no
  * font-related file, and it passed 8 of 8 in isolation.
  *
- * The 2530ms is the app's own bound, not a guess: `requestCatalogJson` in
- * src/utils/googleFonts.js aborts each source after
- * FONT_CATALOG_SOURCE_TIMEOUT_MS (2000), and `fetchFontCatalog` never rejects —
+ * That settle time is the app's own bound, not a guess: `requestCatalogJson` in
+ * src/utils/googleFonts.js now waits up to
+ * FONT_CATALOG_SOURCE_TIMEOUT_MS (8000) for response headers, and `fetchFontCatalog` never rejects —
  * it always resolves to the 84-family bundled list. So this is a wait for a
  * state the app GUARANTEES terminates, not a widened timeout, and the 20s
  * backstop below is unchanged.
@@ -749,7 +916,9 @@ const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL t
  *      no VITE_GOOGLE_FONTS_API_KEY in the test build, googleFonts.js skips the
  *      Google branch entirely and the only request is /api/fonts, which `vite
  *      preview` answers locally with a 404. Measured above: one hit, settled in
- *      188ms.
+ *      188ms. (The one exception is the static /data/font-catalogue.json, which
+ *      `vite preview` would serve for real; base.js answers it with a 404 so
+ *      these specs keep the catalogue they were written against.)
  *   2. The degraded catalogue is a SHIPPED product state with its own notice and
  *      retry, and 33-offline-state and 11-typography-tools exercise it on
  *      purpose. A stub would have to reproduce live/cache/fallback faithfully or
@@ -767,7 +936,7 @@ const DATA_LOADING_HINT = '\n\n  The route arrived and then the TOOL showed its 
   + ' <FontCatalogLoading>, which the typography tools render INSTEAD of their workbench while'
   + ' the Google Fonts catalogue is in flight. A measurement taken here reads the skeleton — the'
   + ' gallery reports zero rows from a gallery that is working. fetchFontCatalog always resolves'
-  + ' (bundled list after a 2000ms bound per source), so a page still in this state after the'
+  + ' (bundled list after an 8000ms header bound per source), so a page still in this state after the'
   + ' backstop means the catalogue request itself is wedged, not merely slow.'
 
 /**
@@ -782,6 +951,49 @@ function describeStall(s) {
   if (s && s.booting) return 'the app never replaced the static boot shell'
   if (s && s.dataLoading) return 'the tool never got past its own data-loading state'
   return 'the route never got past its lazy-loading fallback'
+}
+
+/**
+ * Waits until no overlay still owns a history entry.
+ *
+ * Every overlay (the Export panel, the phone menu sheet, the palette, the
+ * feedback and prompt dialogs) pushes one entry while it is open, and closing
+ * it any way but the Back gesture gives that entry back with `history.back()`.
+ * That call returns at once and the same-document traversal finishes later,
+ * with the entry's `__overlays` stack empty once it has. A `page.reload()` or
+ * `page.goto()` issued inside that gap is cancelled by the traversal and never
+ * settles: `page.reload: Test timeout exceeded`, or `net::ERR_ABORTED; maybe
+ * frame was detached?`. The closed panel being hidden does not say the
+ * traversal is over, because the panel unmounts first and calls `back()` from
+ * its cleanup. Call this after closing or handing over from an overlay, before
+ * navigating away from the page.
+ */
+export async function overlaysSettled(page, what = 'the overlay') {
+  await expect.poll(
+    () => page.evaluate(() => (window.history.state?.__overlays || []).length),
+    { message: `${what} has given back its history entry`, timeout: 10000 },
+  ).toBe(0)
+}
+
+/**
+ * Wait until a Pro viewer's library has arrived.
+ *
+ * Until the account answers, the Pro galleries (palettes, gradients, prompts)
+ * show the free rows with a "Loading the … library" status block in place of
+ * the upsell (ProLibraryStatus, `.lockt-status`). The first card is on screen
+ * at that point, so "the first card is visible" says nothing about the full
+ * set, its sections or its closing call to action. The status block is the
+ * page's own signal that the full library has landed: it renders for every
+ * waiting state and for a failed fetch, so a library that never arrives fails
+ * here by name instead of being measured half-loaded.
+ *
+ * Call it after the first card is visible and before reading the list.
+ */
+export async function proLibraryArrived(page, what = 'the Pro library') {
+  await expect(
+    page.locator('.lockt-status'),
+    `${what} never finished loading (the status block is still on screen)`,
+  ).toHaveCount(0, { timeout: 15000 })
 }
 
 export async function ready(page, what) {
@@ -845,7 +1057,7 @@ export async function ready(page, what) {
  *
  * The floor stays 40 characters, but it now sits in a gap that was measured
  * rather than guessed: every unarrived route scores exactly 0 on `own`, and the
- * thinnest real page in the suite is /login's popup at 127.
+ * thinnest real surface in the suite, the sign-in dialog, measured 127.
  */
 export async function expectRendered(page, what) {
   const where = what || page.url()
@@ -1055,17 +1267,93 @@ export async function keyToRest(page, key, what = 'the page') {
   return restAfterMove(page, before, what)
 }
 
-// Resolve value-based choices to the visible name, then operate by ARIA role.
+// Type into the Font Gallery's Preview text the way a visitor reaches it. The field
+// sits on the toolbar only where the row has room for it (about 1440px and wider, and
+// the exact edge moves with font metrics). Elsewhere it is in the "More filters" menu
+// (1024 and up) or the Filters sheet (below 1024), so open whichever the page offers,
+// type, check the value took, and close it again.
+export async function fillGalleryPreviewText(page, text) {
+  // Font Gallery has two toolbars (name and filters); the field may sit on either.
+  const bars = page.locator('[data-tool-toolbar]')
+  await expect(bars.first(), 'the toolbar is still measuring').not.toHaveClass(/is-measuring/)
+  const onRow = bars.getByRole('textbox', { name: 'Preview text' }).first()
+  if (await onRow.isVisible()) {
+    await onRow.fill(text)
+    await expect(onRow).toHaveValue(text)
+    return
+  }
+  const panelName = /^(More filters|Filters)$/
+  await page.getByRole('button', { name: panelName }).click()
+  const panel = page.getByRole('dialog', { name: panelName })
+  const field = panel.getByRole('textbox', { name: 'Preview text' })
+  await field.fill(text)
+  await expect(field).toHaveValue(text)
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+}
+
+// Click a listbox option. A label choice is found by its accessible name; a value
+// choice by the option's data-value (not by name: an option with a one-line
+// description has a name that runs on into the description).
 export async function chooseMenuOption(page, trigger, choice) {
   await trigger.click()
   const list = page.locator('.menu-select-list[role="listbox"]')
   await list.waitFor({ state: 'visible' })
-  const name = typeof choice === 'object'
-    ? choice.label
-    : await list.getByRole('option').evaluateAll((rows, value) => {
-      const row = rows.find(row => row.dataset.value === String(value))
-      return row?.getAttribute('aria-label') || row?.textContent?.trim()
-    }, choice)
-  if (!name) throw new Error(`No listbox option for ${String(choice)}`)
-  await list.getByRole('option', { name, exact: true }).click()
+  if (typeof choice === 'object') {
+    await list.getByRole('option', { name: choice.label, exact: true }).click()
+    return
+  }
+  const row = list.locator('[role="option"]').and(list.locator(`[data-value=${JSON.stringify(String(choice))}]`))
+  if (!(await row.count())) throw new Error(`No listbox option for ${String(choice)}`)
+  await row.click()
+}
+
+/**
+ * Open the sign-in dialog the way a visitor does now that /login is a page of
+ * its own: from the header, over an app-header page. Neither entry passes a
+ * reason, so both open the "chosen" variant of the dialog.
+ *
+ * `entry` is 'Log in' (opens on the log-in form) or 'Create a free account'
+ * (opens on sign-up). Wide screens have a "Menu" popover; a phone has the
+ * "Open menu" sheet. Both carry both entries.
+ */
+export async function openChosenDialog(page, entry = 'Log in') {
+  await go(page, '/learn/help')
+  const desktopMenu = page.getByRole('button', { name: 'Menu', exact: true })
+  if (await desktopMenu.isVisible()) {
+    await desktopMenu.click()
+    await page.locator('.pnav-pop-item').filter({ hasText: new RegExp(`^${entry}$`) }).click()
+  } else {
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await page.locator('.pnav-sheet').getByRole('button', { name: entry, exact: true }).click()
+  }
+}
+
+/**
+ * Open a saved project's own page from /projects, the way a person does: the latest project is the kit
+ * sheet's "Open project" link, every other one is a mini sheet under it (behind "Show all" past the first
+ * four). Matches the project's exact name, so "Seeded Project 1" never opens "Seeded Project 10".
+ */
+export async function openProjectFromDashboard(page, name) {
+  const { lead, mini } = dashboardProjectLinks(page, name)
+  const showAll = page.getByTestId('other-projects').locator('..').getByRole('button', { name: /^Show all \d+$/ })
+  await expect(lead.or(mini).or(showAll).first(), `neither the latest sheet nor a mini names "${name}"`).toBeVisible()
+  if (await lead.count()) return lead.click()
+  if (!(await mini.count())) await showAll.click()
+  return mini.click()
+}
+
+/** The two places a saved project's name can be a link on /projects: { lead, mini }. */
+export function dashboardProjectLinks(page, name) {
+  const exact = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return {
+    lead: page.getByRole('link', { name: `Open project, ${name}`, exact: true }),
+    mini: page.getByTestId('other-projects').locator('a.db-mini').filter({ has: page.locator('.nm').filter({ hasText: new RegExp(`^${exact}$`) }) }),
+  }
+}
+
+/** One locator for a project's link on /projects, wherever it sits (the latest sheet or a mini). */
+export function projectLink(page, name) {
+  const { lead, mini } = dashboardProjectLinks(page, name)
+  return lead.or(mini)
 }

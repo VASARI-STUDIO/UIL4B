@@ -5,22 +5,25 @@ import {
   resolveStateShades, readSemanticStates,
 } from '../data/semanticPresets'
 import { useProject } from '../contexts/ProjectContext'
+import { fileName } from '../utils/exportFileName'
+import { semanticTokensCSS, semanticSwatchHTML } from '../utils/semanticExport'
 import {
-  ToolLayout, ToolButton, ToolPills, ToolSlider, ToolSelect, ToolCode, ToolIcon,
+  ToolLayout, ToolButton, ToolPills, ToolSlider, ToolCode, ToolIcon,
 } from '../components/tool/ToolLayout'
-import { useExport } from '../contexts/ExportContext'
+import ExportMenu from '../components/tool/ExportMenu'
 // The keyboard + dismissal contract every non-modal popover in this app owes
 // its user (Escape closes and hands focus back, a press outside closes, opening
 // moves focus in, tabbing past either end closes). The Add-to-Project panel
 // below held none of it.
+import { reconcileStudioPalette, sameColours, studioRoleCount, resolveStudioRoles } from '../utils/studioPalette'
+import { tintsNeedWrite } from '../utils/projectTints'
 import usePopover from '../hooks/usePopover'
-import useExportGate from '../hooks/useExportGate'
+import { useGatedDownload } from '../components/converter/shared'
 // The free-tier cap's refusal, rendered where it was thrown. Shared with the
 // Palette Builder and /projects so one refusal cannot be worded — or styled —
 // two ways on two surfaces.
 import SaveRefusal from '../components/SaveRefusal'
 import { useTheme } from '../contexts/ThemeContext'
-import { useAppearance } from '../contexts/AppearanceContext'
 // The `semantic-color` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -48,6 +51,16 @@ const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 // live in data/semanticPresets.js, which the token export reads too, so the
 // tool and every exported file resolve a saved selection the same way.
 
+// TWO STRINGS STILL BEING WRITTEN. Each lives in one named constant so the
+// approved wording can be swapped in without touching the markup.
+//   COOL_BUNDLE_DESC     the 'Cool' bundle card's description
+//   CODE_EXPAND_LABEL    the button that opens the code box ({n} is the number of
+//                        variables, the same count the Copy button shows)
+//   CODE_COLLAPSE_LABEL  the same button once the box is open
+const COOL_BUNDLE_DESC = 'Teal, yellow, pink and sky signals.'
+const CODE_EXPAND_LABEL = 'Show all {n} variables'
+const CODE_COLLAPSE_LABEL = 'Show fewer variables'
+
 // `purple` is the index into INFO_PURPLE each bundle uses when Information is
 // set to purple — the index its retired pending ramp had, so a bundle keeps
 // its character in either family.
@@ -55,7 +68,7 @@ const STATE_BUNDLES = [
   { name: 'Balanced', desc: 'Familiar, calm defaults for most product UI.', config: { success: 1, warning: 0, error: 0, info: 0 }, purple: 0 },
   { name: 'Material', desc: 'Established Material state foundations.', config: { success: 4, warning: 4, error: 4, info: 4 }, purple: 4 },
   { name: 'Vivid', desc: 'Higher chroma for expressive interfaces.', config: { success: 0, warning: 2, error: 1, info: 2 }, purple: 2 },
-  { name: 'Cool', desc: 'Teal, yellow, pink, sky and violet emphasis.', config: { success: 2, warning: 1, error: 2, info: 1 }, purple: 0 },
+  { name: 'Cool', desc: COOL_BUNDLE_DESC, config: { success: 2, warning: 1, error: 2, info: 1 }, purple: 0 },
   { name: 'Warm', desc: 'Classic green, amber and red signals.', config: { success: 1, warning: 0, error: 0, info: 2 }, purple: 2 },
   { name: 'Apple', desc: 'System colours aligned with Apple platforms.', config: { success: 3, warning: 3, error: 3, info: 3 }, purple: 3 },
   { name: 'Tailwind', desc: 'Direct mapping to Tailwind colour ramps.', config: { success: 5, warning: 5, error: 5, info: 5 }, purple: 5 },
@@ -83,19 +96,90 @@ const presetsFor = (state, infoHue) => (state === 'info' && infoHue === 'purple'
 // dropped) and the Information hue family, blue unless purple was chosen.
 const initialStates = readSemanticStates
 
-function StateShade({ shade, label, onCopy, base }) {
+// One step of a ramp: a swatch with its step number printed inside (no hex on
+// the face; the hex is in the accessible name and on the clipboard). The ink is
+// the better of black and white for that swatch.
+function StateShade({ shade, label, onCopy, base, tabIndex, onKeyDown, onFocus, innerRef }) {
   const fg = textColorForBg(shade)
   return (
     <div onClick={() => onCopy(shade)}
-      role="button" tabIndex={0} aria-label={`Copy ${label}, ${shade.toUpperCase()}${base ? ', the base step' : ''}`}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCopy(shade) } }}
+      role="button" tabIndex={tabIndex} aria-label={`Copy ${label}, ${shade.toUpperCase()}${base ? ', the base step' : ''}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCopy(shade); return }
+        onKeyDown?.(e)
+      }}
+      onFocus={onFocus}
       className={base ? 'stc-cell is-base' : 'stc-cell'}
-      ref={(el) => { if (el) { el.style.setProperty('--stc-c', shade); el.style.setProperty('--stc-ink', fg) } }}
+      ref={(el) => {
+        innerRef?.(el)
+        if (el) { el.style.setProperty('--stc-c', shade); el.style.setProperty('--stc-ink', fg) }
+      }}
     >
-      <span className="stc-cell-swatch" aria-hidden="true" />
-      <span className="stc-cell-tone">{label}</span>
+      <span className="stc-cell-tone" aria-hidden="true">{label}</span>
     </div>
   )
+}
+
+// A ramp is ONE tab stop: Left/Right move between steps, Home/End jump, Enter
+// or Space copies. Forty swatches would otherwise be forty tab stops.
+function Ramp({ label, shades, baseStep, onCopy }) {
+  const [active, setActive] = useState(baseStep)
+  const cells = useRef([])
+  const go = (i) => { setActive(i); cells.current[i]?.focus() }
+  const onKey = (i) => (e) => {
+    const last = shades.length - 1
+    const next = e.key === 'ArrowRight' ? Math.min(last, i + 1)
+      : e.key === 'ArrowLeft' ? Math.max(0, i - 1)
+        : e.key === 'Home' ? 0
+          : e.key === 'End' ? last : null
+    if (next === null) return
+    e.preventDefault()
+    go(next)
+  }
+  return (
+    <div className="stc-ramp" role="group" aria-label={`${label} ramp, ${shades.length} steps`}>
+      {shades.map((shade, si) => (
+        <StateShade
+          key={si}
+          shade={shade}
+          label={STATE_LABELS[si]}
+          onCopy={onCopy}
+          base={si === baseStep}
+          tabIndex={si === active ? 0 : -1}
+          onFocus={() => setActive(si)}
+          onKeyDown={onKey(si)}
+          innerRef={(el) => { cells.current[si] = el }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// The preview's contrast walk. A preview colour is a step of the person's own
+// ramp, read from `from` toward the readable end until it clears `floor` on
+// both the role's 14% wash and the scene's card (`ground`). On a light ground
+// the readable end is 900, on a dark one 50.
+const washOver = (ground, hex) => {
+  const [r1, g1, b1] = hexToRgb(ground)
+  const [r2, g2, b2] = hexToRgb(hex)
+  const m = (a, b) => Math.round(a * 0.86 + b * 0.14).toString(16).padStart(2, '0')
+  return `#${m(r1, r2)}${m(g1, g2)}${m(b1, b2)}`
+}
+function legibleStep(shades, from, floor, ground, dark) {
+  const wash = washOver(ground, shades[from])
+  const dir = dark ? -1 : 1
+  for (let i = from; i >= 0 && i < shades.length; i += dir) {
+    if (contrastRatio(shades[i], wash) >= floor && contrastRatio(shades[i], ground) >= floor) return shades[i]
+  }
+  return shades[dir > 0 ? shades.length - 1 : 0]
+}
+// A scene's ground is the theme's own --card, read off the panel after its
+// data-theme is applied, so it is never a second copy of the token. Outside a
+// browser, or if the token is not a plain hex, the two values the themes ship.
+const SCENE_GROUND_FALLBACK = { light: '#FFFFFF', dark: '#111215' }
+function readSceneGround(el, sceneTheme) {
+  const v = typeof getComputedStyle === 'function' ? getComputedStyle(el).getPropertyValue('--card').trim() : ''
+  return /^#[0-9a-f]{6}$/i.test(v) ? v : SCENE_GROUND_FALLBACK[sceneTheme]
 }
 
 const BASE_STEPS = [
@@ -107,11 +191,10 @@ const alphaOf = (hex, a) => `color-mix(in srgb, ${hex} ${Math.round(a * 100)}%, 
 
 
 export default function ColorStudio({ onCopy, toast }) {
-  // downloadHTML and downloadCSS produce FILES and need a free account;
-  // copyCSS beside them stays free forever. See src/hooks/useExportGate.js.
-  const requireExportAccount = useExportGate()
+  // The two downloads produce FILES and need a free account (the gate asks);
+  // Copy tokens stays free forever. See src/hooks/useExportGate.js.
+  const gatedDownload = useGatedDownload()
   const { theme } = useTheme()
-  const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient, saveProject, projects, loadProject, overwriteProject, canSaveProjects } = useProject()
 
   const [undoToast, setUndoToast] = useState(null)
@@ -128,8 +211,12 @@ export default function ColorStudio({ onCopy, toast }) {
   // `mode` now (so the value round-trips through ProjectContext) but don't expose a
   // setter until that toggle exists. Add `setMode` back when the toggle lands.
   const [mode] = useState(() => design?.palette?.mode || 'auto')
-  const [globalAdjust] = useState(() => design?.palette?.globalAdjust || { h: 0, s: 0, b: 0, temp: 0 })
-  const [extraColors, setExtraColors] = useState(() => design?.palette?.extraColors || [])
+  // The saved colour list wins over base + harmony (see utils/studioPalette.js):
+  // opening this page on a saved project must read the palette it has, not
+  // rebuild a smaller one from its base and write that back.
+  const [reconciled] = useState(() => reconcileStudioPalette(design?.palette))
+  const [globalAdjust] = useState(() => reconciled?.globalAdjust || design?.palette?.globalAdjust || { h: 0, s: 0, b: 0, temp: 0 })
+  const [extraColors, setExtraColors] = useState(() => reconciled?.extraColors || design?.palette?.extraColors || [])
   // Reconcile the incoming palette against this studio's base+harmony model.
   // The Palette Builder (and project loads / brand + variation picks) persist the
   // full, authoritative palette in `colors`, but describe the five roles ONLY
@@ -141,6 +228,7 @@ export default function ColorStudio({ onCopy, toast }) {
   // lens is baked into `colors` (the studio's own base+harmony+adjust round-trip
   // is already faithful, and pinning the adjusted colours would double-apply it).
   const [overrides, setOverrides] = useState(() => {
+    if (reconciled) return reconciled.overrides
     const p = design?.palette || {}
     const stored = p.overrides || {}
     const full = Array.isArray(p.colors) ? p.colors : null
@@ -186,7 +274,13 @@ export default function ColorStudio({ onCopy, toast }) {
   // change (menus, toasts). generateHarmony is pure for a given (base, harmony).
   const colors = useMemo(() => generateHarmony(baseColor, harmony), [baseColor, harmony])
   // Per-index manual overrides applied on top of the harmony-generated colours.
-  const resolvedColors = useMemo(() => colors.map((c, i) => overrides[i] || c), [colors, overrides])
+  // A saved palette sets the slot count (Auto makes one colour, other harmonies
+  // make a fixed set), so the generator never pads or trims what was saved.
+  const roleCount = studioRoleCount(colors, reconciled)
+  const resolvedColors = useMemo(
+    () => resolveStudioRoles(colors, overrides, roleCount),
+    [colors, overrides, roleCount],
+  )
   // baseColors = the RAW palette (generator + overrides + extras). All write-back
   // handlers (drag/edit/remove/randomise) operate on THIS — the global adjust is a
   // non-destructive lens layered on top for display/export only.
@@ -226,7 +320,14 @@ export default function ColorStudio({ onCopy, toast }) {
   const PRO_MAX = 8
 
   // Sync palette state to ProjectContext (full design persistence)
+  // The first run is skipped when it would only restate the project's own
+  // colours: nothing changed, and a write would drop the Palette Builder's
+  // un-lensed `baseColors` for no gain.
+  const palWroteRef = useRef(false)
   useEffect(() => {
+    const first = !palWroteRef.current
+    palWroteRef.current = true
+    if (first && sameColours(design?.palette?.colors, allColors)) return
     setPalette({ base: baseColor, harmony, mode, globalAdjust, extraColors, overrides, activeIdx: activeColorIdx, colors: allColors, locked: [...locked] })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseColor, harmony, mode, JSON.stringify(globalAdjust), extraColors, JSON.stringify(overrides), activeColorIdx, allColors.join(',')])
@@ -276,7 +377,7 @@ export default function ColorStudio({ onCopy, toast }) {
     if (!locked.has(0)) setBaseColor(fresh[0])
     setOverrides(prev => {
       const next = { ...prev }
-      for (let i = 1; i < colors.length; i++) {
+      for (let i = 1; i < roleCount; i++) {
         if (locked.has(i)) next[i] = baseColors[i]       // keep the locked colour
         else next[i] = fresh[i] || hslToHex(Math.floor(Math.random() * 360), 60, 55)
       }
@@ -287,7 +388,7 @@ export default function ColorStudio({ onCopy, toast }) {
       if (locked.has(globalIdx)) return c
       return hslToHex(Math.floor(Math.random() * 360), 50 + Math.floor(Math.random() * 40), 50 + Math.floor(Math.random() * 30))
     }))
-  }, [locked, colors, baseColors, toast])
+  }, [locked, colors, baseColors, roleCount, toast])
 
   // Deal a fresh Auto tonal palette once on mount (CS#3.8) — only if the user
   // hasn't carried in a saved/customised palette.
@@ -312,256 +413,18 @@ export default function ColorStudio({ onCopy, toast }) {
   }, [activeColor, lumBias, satDecay, oled])
 
   // Sync tints to ProjectContext
+  // An existing ramp (the Tint tool's, or an earlier visit's) is not replaced just
+  // by opening this page while it is still made from the active colour; it is
+  // written when the ramp is empty, was made from another colour, or its inputs
+  // move. `from` records the colour the ramp was made from.
+  const tintWroteRef = useRef(false)
   useEffect(() => {
-    setTints({ lumBias, satDecay, oled, scale: tintScale })
+    const first = !tintWroteRef.current
+    tintWroteRef.current = true
+    if (first && !tintsNeedWrite(design?.tints, activeColor)) return
+    setTints({ lumBias, satDecay, oled, scale: tintScale, from: activeColor })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lumBias, satDecay, oled, tintScale.join(',')])
-
-  const { registerExport, clearExport } = useExport()
-
-  useEffect(() => {
-    const labels = allColors.map((_, i) => ['Primary', 'Secondary', 'Accent', 'Neutral', 'Surface'][i] || `Colour ${i + 1}`)
-    const stateLabels = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900']
-
-    const buildVars = () => {
-      const colorVars = allColors.map((c, i) => `  --color-${labels[i].toLowerCase().replace(/\s+/g, '-')}: ${c};`).join('\n')
-      const tintVars = tintScale.map((c, i) => `  --tint-${i + 1}: ${c};`).join('\n')
-      const stateVars = ROLE_IDS.map((state) => {
-        const shades = resolveStateShades(state, stateColors[state], infoHue)
-        return shades.map((c, i) => `  --${state}-${stateLabels[i]}: ${c};`).join('\n')
-      }).join('\n')
-      return { colorVars, tintVars, stateVars }
-    }
-
-    const generateHTML = () => {
-      const { colorVars, tintVars, stateVars } = buildVars()
-      const stateEntries = ROLE_IDS.map((state) => ({
-        name: state, shades: resolveStateShades(state, stateColors[state], infoHue)
-      }))
-      const isDark = theme === 'dark'
-      const rdMap = { none: ['0px', '0px'], subtle: ['6px', '4px'], default: ['12px', '8px'], pronounced: ['20px', '14px'] }
-      const [rdVal, rdSVal] = rdMap[rounding] || rdMap.default
-      return `<!DOCTYPE html>
-<html lang="en" data-theme="${isDark ? 'dark' : 'light'}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design System — UIL4B</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-:root {
-${colorVars}
-${tintVars}
-${stateVars}
-  --ds-bg: #faf9f7; --ds-bg2: #fff; --ds-text: #1a1a17; --ds-text2: #6b6b63;
-  --ds-text3: #a3a299; --ds-border: rgba(0,0,0,.08); --ds-border2: rgba(0,0,0,.05);
-  --ds-code-bg: #1a1a17; --ds-code-text: #e5e5dd;
-  --ds-sidebar: rgba(255,255,255,.85); --ds-hover: rgba(0,0,0,.04);
-  --ds-accent: #a78bfa; --ds-accent-bg: rgba(167,139,250,.1);
-  --ds-radius: ${rdVal}; --ds-radius-s: ${rdSVal};
-  --ds-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
-  --ds-shadow-lg: 0 4px 16px rgba(0,0,0,.06), 0 12px 40px rgba(0,0,0,.04);
-  --ds-glass: rgba(255,255,255,.6);
-}
-[data-theme="dark"] {
-  --ds-bg: #0d0d0c; --ds-bg2: #161614; --ds-text: #e8e8e2; --ds-text2: #8a8a80;
-  --ds-text3: #555550; --ds-border: rgba(255,255,255,.07); --ds-border2: rgba(255,255,255,.04);
-  --ds-code-bg: #111110; --ds-code-text: #d4d4cc;
-  --ds-sidebar: rgba(17,17,15,.9); --ds-hover: rgba(255,255,255,.04);
-  --ds-accent: #a78bfa; --ds-accent-bg: rgba(167,139,250,.12);
-  --ds-shadow: 0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.15);
-  --ds-shadow-lg: 0 4px 16px rgba(0,0,0,.3), 0 12px 40px rgba(0,0,0,.2);
-  --ds-glass: rgba(255,255,255,.04);
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--ds-bg); color: var(--ds-text); line-height: 1.6; display: flex; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-.sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--ds-sidebar); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-right: 1px solid var(--ds-border); padding: 24px 0; overflow-y: auto; z-index: 10; }
-.sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid var(--ds-border); margin-bottom: 12px; }
-.sidebar-brand h3 { font-size: 14px; font-weight: 800; letter-spacing: -.02em; }
-.sidebar-brand .brand-sub { font-size: 10px; color: var(--ds-accent); display: block; margin-top: 2px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-.sidebar-brand .brand-date { font-size: 10px; color: var(--ds-text3); display: block; margin-top: 4px; }
-.sidebar .nav-label { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ds-text3); padding: 16px 20px 6px; }
-.sidebar a { display: block; padding: 8px 20px; font-size: 12px; font-weight: 500; color: var(--ds-text2); text-decoration: none; transition: all .15s; border-left: 2px solid transparent; }
-.sidebar a:hover { color: var(--ds-text); background: var(--ds-hover); }
-.sidebar a.active { color: var(--ds-accent); background: var(--ds-accent-bg); border-left-color: var(--ds-accent); }
-.sidebar-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; border-top: 1px solid var(--ds-border); }
-.sidebar-footer span { font-size: 9px; color: var(--ds-text3); letter-spacing: .04em; }
-.content { margin-left: 220px; flex: 1; padding: 48px 48px; max-width: 920px; }
-header { margin-bottom: 48px; }
-header .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ds-accent); background: var(--ds-accent-bg); padding: 4px 12px; border-radius: 20px; margin-bottom: 14px; }
-header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-bottom: 8px; }
-header p { font-size: 14px; color: var(--ds-text2); line-height: 1.7; }
-.meta { font-size: 11px; color: var(--ds-text3); margin-top: 8px; font-family: 'SF Mono', 'Fira Code', monospace; }
-.format-bar { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
-.fmt-btn { padding: 6px 14px; border: 1px solid var(--ds-border); background: var(--ds-glass); color: var(--ds-text2); font-size: 10px; font-weight: 600; letter-spacing: .04em; border-radius: var(--ds-radius-s); cursor: pointer; font-family: inherit; text-transform: uppercase; transition: all .2s cubic-bezier(.16,1,.3,1); }
-.fmt-btn:hover { border-color: var(--ds-text2); color: var(--ds-text); transform: translateY(-1px); }
-.fmt-btn.active { background: var(--ds-accent-bg); color: var(--ds-accent); border-color: rgba(167,139,250,.3); box-shadow: 0 0 0 1px rgba(167,139,250,.1); }
-section { margin-bottom: 56px; scroll-margin-top: 24px; }
-section h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--ds-border2); color: var(--ds-text3); }
-.color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-.color-card { border-radius: var(--ds-radius); overflow: hidden; border: 1px solid var(--ds-border); background: var(--ds-bg2); cursor: pointer; transition: all .25s cubic-bezier(.16,1,.3,1); box-shadow: var(--ds-shadow); }
-.color-card:hover { transform: translateY(-3px); box-shadow: var(--ds-shadow-lg); }
-.color-swatch { height: 80px; position: relative; transition: filter .2s ease; }
-.color-card:hover .color-swatch { filter: brightness(1.12) saturate(1.05); }
-.color-swatch .swatch-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-weight: 600; color: #fff; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); opacity: 0; transition: opacity .2s; }
-.color-card:hover .swatch-overlay { opacity: 1; }
-.swatch-overlay .hex-val { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
-.swatch-overlay .rgb-val { font-size: 9px; opacity: .85; font-family: 'SF Mono', 'Fira Code', monospace; }
-.color-info { padding: 12px; }
-.color-name { font-weight: 600; font-size: 12px; margin-bottom: 3px; }
-.color-val { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; color: var(--ds-text2); }
-.tint-row { display: flex; gap: 4px; }
-.tint-swatch { flex: 1; height: 48px; border-radius: var(--ds-radius-s); cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 5px; transition: transform .15s cubic-bezier(.16,1,.3,1); box-shadow: inset 0 -1px 0 rgba(0,0,0,.06); }
-.tint-swatch:hover { transform: scaleY(1.2) translateY(-2px); }
-.tint-swatch span { font-size: 7px; font-family: 'SF Mono', 'Fira Code', monospace; opacity: .5; }
-.state-section { margin-bottom: 24px; }
-.state-label { font-size: 11px; font-weight: 700; text-transform: capitalize; margin-bottom: 8px; letter-spacing: .02em; }
-.state-row { display: flex; gap: 4px; }
-.state-chip { flex: 1; height: 40px; border-radius: var(--ds-radius-s); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; cursor: pointer; transition: transform .15s cubic-bezier(.16,1,.3,1); }
-.state-chip:hover { transform: scaleY(1.15) translateY(-1px); }
-.state-chip span { font-size: 7px; font-family: 'SF Mono', 'Fira Code', monospace; opacity: .5; }
-pre.code { background: var(--ds-code-bg); color: var(--ds-code-text); padding: 24px; border-radius: var(--ds-radius); overflow-x: auto; font-size: 11px; line-height: 1.9; border: 1px solid var(--ds-border); font-family: 'SF Mono', 'Fira Code', monospace; }
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--ds-text); color: var(--ds-bg); padding: 10px 20px; border-radius: var(--ds-radius-s); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 100; transform: translateY(8px); box-shadow: var(--ds-shadow-lg); }
-.toast.show { opacity: 1; transform: translateY(0); }
-.theme-toggle { position: fixed; top: 16px; right: 16px; z-index: 20; background: var(--ds-glass); border: 1px solid var(--ds-border); backdrop-filter: blur(12px); padding: 8px 14px; border-radius: var(--ds-radius-s); cursor: pointer; font-size: 11px; font-weight: 600; color: var(--ds-text2); font-family: inherit; transition: all .15s; }
-.theme-toggle:hover { color: var(--ds-text); border-color: var(--ds-text2); }
-@media (max-width: 700px) {
-  .sidebar { display: none; }
-  .content { margin-left: 0; padding: 24px 16px; }
-  .theme-toggle { top: 12px; right: 12px; }
-}
-  </style>
-</head>
-<body>
-  <button class="theme-toggle" onclick="var t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;this.textContent=t==='dark'?'Light Mode':'Dark Mode'">${isDark ? 'Light Mode' : 'Dark Mode'}</button>
-  <nav class="sidebar">
-    <div class="sidebar-brand"><h3>UIL4B</h3><span class="brand-sub">Design System</span><span class="brand-date">Generated ${new Date().toLocaleDateString()}</span></div>
-    <div class="nav-label">Sections</div>
-    <a href="#colours" class="active">Colours</a>
-    <a href="#tint-scale">Tint Scale</a>
-    <a href="#state-colours">State Colours</a>
-    <a href="#css-properties">CSS Properties</a>
-    <div class="sidebar-footer"><span>Exported from UIL4B</span></div>
-  </nav>
-  <div class="content">
-    <header>
-      <span class="tag">Design System Export</span>
-      <h1>Colour System</h1>
-      <p>Complete colour palette, tint scale, and UI state colours with CSS custom properties ready for production.</p>
-    </header>
-    <div class="format-bar">
-      <button class="fmt-btn active" data-fmt="hex">HEX</button>
-      <button class="fmt-btn" data-fmt="rgb">RGB</button>
-      <button class="fmt-btn" data-fmt="hsl">HSL</button>
-      <button class="fmt-btn" data-fmt="hsb">HSB</button>
-      <button class="fmt-btn" data-fmt="cmyk">CMYK</button>
-      <button class="fmt-btn" data-fmt="oklch">OKLCH</button>
-    </div>
-    <section id="colours">
-      <h2>Colours</h2>
-      <div class="color-grid">
-${allColors.map((c, i) => {
-          const rgb = hexToRgb(c)
-          return `        <div class="color-card" data-hex="${c}">
-          <div class="color-swatch" style="background:${c}">
-            <div class="swatch-overlay">
-              <span class="hex-val">${c.toUpperCase()}</span>
-              <span class="rgb-val">rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})</span>
-            </div>
-          </div>
-          <div class="color-info">
-            <div class="color-name">${labels[i]}</div>
-            <div class="color-val">${c.toUpperCase()}</div>
-          </div>
-        </div>`
-        }).join('\n')}
-      </div>
-    </section>
-    <section id="tint-scale">
-      <h2>Tint Scale</h2>
-      <div class="tint-row">
-${tintScale.map((c) => `        <div class="tint-swatch" data-hex="${c}" style="background:${c}"><span>${c.toUpperCase()}</span></div>`).join('\n')}
-      </div>
-    </section>
-    <section id="state-colours">
-      <h2>State Colours</h2>
-${stateEntries.map(s => `      <div class="state-section">
-        <div class="state-label">${s.name}</div>
-        <div class="state-row">
-${s.shades.map((c, i) => `          <div class="state-chip" data-hex="${c}" style="background:${c};color:${i < 5 ? '#000' : '#fff'}"><span>${stateLabels[i]}</span></div>`).join('\n')}
-        </div>
-      </div>`).join('\n')}
-    </section>
-    <section id="css-properties">
-      <h2>CSS Custom Properties</h2>
-      <pre class="code">:root {
-${colorVars}
-${tintVars}
-${stateVars}
-}</pre>
-    </section>
-  </div>
-  <div class="toast" id="toast"></div>
-  <script>
-(function(){
-  function hexToRgb(h){h=h.replace('#','');var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return{r:r,g:g,b:b}}
-  function hexToHsl(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,s=0,hh=0;if(mx!==mn){var d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);if(mx===r)hh=((g-b)/d+(g<b?6:0))/6;else if(mx===g)hh=((b-r)/d+2)/6;else hh=((r-g)/d+4)/6}return{h:Math.round(hh*360),s:Math.round(s*100),l:Math.round(l*100)}}
-  function hexToHsb(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn,s=mx===0?0:d/mx,v=mx,hh=0;if(d!==0){if(mx===r)hh=((g-b)/d+(g<b?6:0))/6;else if(mx===g)hh=((b-r)/d+2)/6;else hh=((r-g)/d+4)/6}return{h:Math.round(hh*360),s:Math.round(s*100),b:Math.round(v*100)}}
-  function hexToCmyk(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255,k=1-Math.max(r,g,b);if(k===1)return{c:0,m:0,y:0,k:100};return{c:Math.round((1-r-k)/(1-k)*100),m:Math.round((1-g-k)/(1-k)*100),y:Math.round((1-b-k)/(1-k)*100),k:Math.round(k*100)}}
-  function hexToOklch(h){var c=hexToRgb(h),r=c.r/255,g=c.g/255,b=c.b/255;function lin(v){return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)}var lr=lin(r),lg=lin(g),lb=lin(b);var l=Math.cbrt(.4122214708*lr+.5363325363*lg+.0514459929*lb);var m=Math.cbrt(.2119034982*lr+.6806995451*lg+.1073969566*lb);var s=Math.cbrt(.0883024619*lr+.2164557872*lg+.6652917509*lb);var L=.2104542553*l+.793617785*m-.0040720468*s;var a=1.9779984951*l-2.428592205*m+.4505937099*s;var bb=.0259040371*l+.7827717662*m-.808675766*s;var C=Math.sqrt(a*a+bb*bb);var H=Math.atan2(bb,a)*180/Math.PI;if(H<0)H+=360;return{l:+(L*100).toFixed(1),c:+C.toFixed(3),h:+H.toFixed(1)}}
-  function fmt(hex,f){hex=hex.trim();switch(f){case'hex':return hex.toUpperCase();case'rgb':var c=hexToRgb(hex);return'rgb('+c.r+', '+c.g+', '+c.b+')';case'hsl':var h=hexToHsl(hex);return'hsl('+h.h+', '+h.s+'%, '+h.l+'%)';case'hsb':var v=hexToHsb(hex);return'hsb('+v.h+', '+v.s+'%, '+v.b+'%)';case'cmyk':var k=hexToCmyk(hex);return'cmyk('+k.c+'%, '+k.m+'%, '+k.y+'%, '+k.k+'%)';case'oklch':var o=hexToOklch(hex);return'oklch('+o.l+'% '+o.c+' '+o.h+')';default:return hex.toUpperCase()}}
-  var cur='hex';
-  var toast=document.getElementById('toast');var tid;
-  function show(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tid);tid=setTimeout(function(){toast.classList.remove('show')},1800)}
-  function update(){document.querySelectorAll('.color-val').forEach(function(el){var card=el.closest('[data-hex]');if(card)el.textContent=fmt(card.dataset.hex,cur)});document.querySelectorAll('.tint-swatch span, .state-chip span').forEach(function(el){var p=el.closest('[data-hex]');if(p)el.textContent=fmt(p.dataset.hex,cur)})}
-  document.querySelectorAll('.fmt-btn').forEach(function(btn){btn.addEventListener('click',function(){cur=btn.dataset.fmt;document.querySelectorAll('.fmt-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');update()})});
-  document.querySelectorAll('[data-hex]').forEach(function(el){el.addEventListener('click',function(){var t=fmt(el.dataset.hex,cur);navigator.clipboard.writeText(t).then(function(){show('Copied: '+t)}).catch(function(){show('Copied: '+t)})})});
-  document.querySelectorAll('.sidebar a').forEach(function(a){a.addEventListener('click',function(){document.querySelectorAll('.sidebar a').forEach(function(l){l.classList.remove('active')});a.classList.add('active')})});
-  var sections=document.querySelectorAll('section[id]');var links=document.querySelectorAll('.sidebar a');
-  var io=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){links.forEach(function(l){l.classList.toggle('active',l.getAttribute('href')==='#'+e.target.id)})}})},{rootMargin:'-20% 0px -60% 0px'});
-  sections.forEach(function(s){io.observe(s)});
-})();
-  </script>
-</body>
-</html>`
-    }
-
-    registerExport({
-      label: 'Colour System',
-      downloadHTML: async () => {
-        if (!(await requireExportAccount('download the colour system'))) return
-        const html = generateHTML()
-        const blob = new Blob([html], { type: 'text/html' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'colour-system.html'
-        a.click()
-        URL.revokeObjectURL(url)
-      },
-      downloadCSS: async () => {
-        if (!(await requireExportAccount('download the colour system CSS'))) return
-        const { colorVars, tintVars, stateVars } = buildVars()
-        const css = `:root {\n${colorVars}\n\n${tintVars}\n\n${stateVars}\n}\n`
-        const blob = new Blob([css], { type: 'text/css' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'colour-system.css'
-        a.click()
-        URL.revokeObjectURL(url)
-      },
-      copyCSS: () => {
-        const { colorVars, tintVars, stateVars } = buildVars()
-        onCopy(`:root {\n${colorVars}\n\n${tintVars}\n\n${stateVars}\n}`)
-      },
-    })
-
-    return () => clearExport()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allColors.join(','), tintScale.join(','), JSON.stringify(stateColors), infoHue, theme, rounding])
 
 
 
@@ -647,14 +510,16 @@ ${stateVars}
 
   const shadesOf = (state) => resolveStateShades(state, stateColors[state], infoHue)
   const baseOf = (state) => shadesOf(state)[baseStep]
-  // The export: the base-step aliases (the design's "SEED AND BASE STEP" code, D:1469)
-  // and then every step of every role, `--color-<role>-<step>`.
-  const baseCSS = ROLE_IDS.map((state) => `  --color-${state}: ${baseOf(state)};`).join('\n')
-  const stateCSS = ROLE_IDS.map((state) => shadesOf(state)
-    .map((c, i) => `  --color-${state}-${STATE_LABELS[i]}: ${c};`).join('\n')).join('\n')
-  const tokensCSS = `:root {\n${baseCSS}\n\n${stateCSS}\n}`
+  // The export: the base-step aliases and then every step of every role,
+  // `--color-<role>-<step>`. Copy tokens, the code box, the stylesheet download
+  // and the swatch sheet all read this one list of roles.
+  const exportRoles = ROLE_IDS.map((state) => ({
+    id: state, label: STATE_META[state].label, intent: STATE_META[state].intent, base: baseOf(state), shades: shadesOf(state),
+  }))
+  const tokensCSS = semanticTokensCSS(exportRoles, STATE_LABELS)
   const sameRoles = (a, b) => ROLE_IDS.every((r) => JSON.stringify(a[r]) === JSON.stringify(b[r]))
-  const activeStateBundleIndex = STATE_BUNDLES.findIndex((bundle) => sameRoles(stateColors, bundle.config))
+  const bundleRoles = (bundle) => ({ ...bundle.config, info: infoHue === 'purple' ? bundle.purple : bundle.config.info })
+  const activeStateBundleIndex = STATE_BUNDLES.findIndex((bundle) => sameRoles(stateColors, bundleRoles(bundle)))
   const handleStateBundleKeyDown = (event, index) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
     event.preventDefault()
@@ -678,12 +543,16 @@ ${stateVars}
   }
   // Blue ↔ purple keeps the position in the preset list (the two lists are
   // parallel: Blue/Violet, Sky/Purple, Indigo/Fuchsia, Apple, Material,
-  // Tailwind). A custom hue returns to the first preset of the new family.
+  // Tailwind). A custom hue returns to the first preset of the new family. A
+  // selected bundle stays selected: it takes its own ramp in the new family,
+  // which for some bundles is not the same position.
   const pickInfoHue = (hue) => {
     if (hue === infoHue) return
     setInfoHue(hue)
     const sel = stateColors.info
-    if (sel && typeof sel === 'object') setStateColors({ ...stateColors, info: 0 })
+    const bundle = STATE_BUNDLES[activeStateBundleIndex]
+    if (bundle) setStateColors({ ...bundle.config, info: hue === 'purple' ? bundle.purple : bundle.config.info })
+    else if (sel && typeof sel === 'object') setStateColors({ ...stateColors, info: 0 })
     setSemCopied(false)
   }
 
@@ -711,44 +580,68 @@ ${stateVars}
     setTimeout(() => setSemCopied(false), 1200)
   }
 
-  // The kit's own brand colour paints "Save changes" in THE COLOURS AT WORK
-  // (the design's card fills it with the Brand family, which this set does not have).
-  const brand = allColors[0] || baseColor
+  // The "see each role do its job" panel has its own Light / Dark switch. Until
+  // it is used the panel follows the page; after, it holds the choice and the
+  // page theme is untouched.
+  const [sceneChoice, setSceneChoice] = useState(null)
+  const sceneTheme = sceneChoice ?? theme
+  const sceneDark = sceneTheme === 'dark'
+  const [hexErrors, setHexErrors] = useState({})
+  const [codeOpen, setCodeOpen] = useState(false)
+  // The count of variables Copy tokens puts on the clipboard, read off the
+  // export itself so the buttons can never disagree with the code.
+  const tokenCount = (tokensCSS.match(/^\s+--color-/gm) || []).length
 
-  // The design's card paints every icon, border and the error line in the role's BASE
-  // step (D:1985-1987). On this set that measured under AA in light theme (a
-  // 500 amber icon 2.1:1 on the white card, the 500 red error line 3.8:1), so
-  // each job walks from the base step toward the readable end of its OWN ramp
-  // until it clears its floor on the card — 3:1 for icons and borders (1.4.11),
-  // 4.5:1 for text. The wash stays the base step at 14%, as drawn. Nothing is
-  // invented: every colour painted is a step of the chosen ramp.
-  const card = theme === 'dark' ? '#111215' : '#FFFFFF'
-  // The icon sits on the role's own 14% wash, not on the bare card, so that
-  // composite is the ground it is measured against.
-  const washOver = (hex) => {
-    const [r1, g1, b1] = hexToRgb(card)
-    const [r2, g2, b2] = hexToRgb(hex)
-    const m = (a, b) => Math.round(a * 0.86 + b * 0.14).toString(16).padStart(2, '0')
-    return `#${m(r1, r2)}${m(g1, g2)}${m(b1, b2)}`
-  }
-  const legible = (state, floor) => {
-    const shades = shadesOf(state)
-    const ground = washOver(shades[baseStep])
-    const dir = theme === 'dark' ? -1 : 1
-    for (let i = baseStep; i >= 0 && i < shades.length; i += dir) {
-      if (contrastRatio(shades[i], ground) >= floor && contrastRatio(shades[i], card) >= floor) return shades[i]
-    }
-    return shades[dir > 0 ? shades.length - 1 : 0]
-  }
+  // Every colour the panel paints is a step of the chosen ramp, walked to a
+  // legible one against THIS panel's ground (3:1 for icons and borders, 4.5:1
+  // for text). The ground is the panel's own --card, so a light panel on a dark
+  // page measures against white and the reverse.
   const sceneRef = (el) => {
     if (!el) return
+    const ground = readSceneGround(el, sceneTheme)
     const set = (k, v) => el.style.setProperty(k, v)
-    set('--stc-brand', brand); set('--stc-brand-ink', textColorForBg(brand))
+    const legible = (state, floor) => legibleStep(shadesOf(state), baseStep, floor, ground, sceneDark)
     for (const role of ROLE_IDS) {
       set(`--stc-${role}`, legible(role, 3))
       set(`--stc-${role}-wash`, alphaOf(baseOf(role), 0.14))
     }
     set('--stc-error-text', legible('error', 4.5))
+    set('--stc-error-fill', baseOf('error'))
+    set('--stc-error-ink', textColorForBg(baseOf('error')))
+  }
+
+
+  // Copying is free (Copy tokens); the two downloads ask for an account inside
+  // gatedDownload, and say so on the row while signed out.
+  const accountHint = canSaveProjects ? undefined : 'Free account'
+  const exportRows = [
+    {
+      id: 'download-css', label: 'Download CSS', icon: 'download-simple', hint: accountHint,
+      onSelect: () => gatedDownload(new Blob([`${tokensCSS}\n`],{ type: 'text/css' }), fileName(design?.name, 'colour-system', 'css'), 'download the colour tokens'),
+    },
+    {
+      id: 'download-html', label: 'Download HTML', icon: 'download-simple', hint: accountHint,
+      onSelect: () => gatedDownload(new Blob([semanticSwatchHTML(exportRoles, STATE_LABELS, baseStep)], { type: 'text/html' }), fileName(design?.name, 'colour-system', 'html'), 'download the colour swatches'),
+    },
+  ]
+  const exportItem = {
+    id: 'export', priority: 0,
+    render: () => <ExportMenu variant="quiet" label="Download" icon="download-simple" items={exportRows} />,
+    // In the overflow the same rows are listed flat, each closing the panel first.
+    menu: (close) => exportRows.map((row) => (
+      <button
+        key={row.id}
+        type="button"
+        className="tl-menu-row"
+        data-export-item={row.id}
+        aria-describedby={row.hint ? `stc-more-${row.id}-hint` : undefined}
+        onClick={() => { close(); row.onSelect() }}
+      >
+        <ToolIcon name={row.icon} size={16} />
+        <span className="tl-menu-row-label">{row.label}</span>
+        {row.hint && <span id={`stc-more-${row.id}-hint`} className="tl-menu-row-hint" aria-hidden="true">{row.hint}</span>}
+      </button>
+    )),
   }
 
   const saveItem = canSaveProjects ? [{
@@ -775,7 +668,7 @@ ${stateVars}
       className="stc"
       title="Semantic Colour"
       titleId="stc-title"
-      items={saveItem}
+      items={[...saveItem, exportItem]}
       primary={(
         <ToolButton variant="accent" icon="copy" iconSize={14} onClick={copyStateTokens}>
           {semCopied ? 'Copied' : 'Copy tokens'}
@@ -783,98 +676,60 @@ ${stateVars}
       )}
     >
       <div className="stc-body">
-        <div className="stc-grid">
-          {/* THE COLOURS AT WORK (D:883-907). The design's components, painted from the
-              chosen base step of each role. Information carries the
-              "underway" meaning the retired pending role had, so it gets both an
-              informational note and an in-progress row. The card is a picture
-              of an interface, so it is inert: nothing in it can be pressed. */}
-          <section className="stc-card stc-work" aria-labelledby="stc-work-title" ref={sceneRef}>
-            <h2 id="stc-work-title" className="tl-sec-label">The colours at work</h2>
-            <div className="stc-work-body" inert>
-              <div className="stc-btns">
-                <span className="stc-btn stc-btn--primary">Save changes</span>
-                <span className="stc-btn">Cancel</span>
-              </div>
-              <div className="stc-alert stc-alert--success">
-                <ToolIcon name="check-circle" size={16} className="stc-alert-ico" />
-                <span>Kit exported to your downloads.</span>
-              </div>
-              <div className="stc-alert stc-alert--warning">
-                <ToolIcon name="warning" size={16} className="stc-alert-ico" />
-                <span>Two roles sit below 4.5:1 on paper.</span>
-              </div>
-              <div className="stc-alert stc-alert--info">
-                <ToolIcon name="info" size={16} className="stc-alert-ico" />
-                <span>Billing runs on the 1st. Changes apply next cycle.</span>
-              </div>
-              <div className="stc-alert stc-alert--info">
-                <ToolIcon name="circle-notch" size={16} className="stc-alert-ico stc-spin" />
-                <span>Publishing design system — 3 of 5 token files written</span>
-              </div>
-              <div className="stc-field">
-                <span className="stc-field-k">Project name</span>
-                <span className="stc-field-input">Untitled</span>
-                <span className="stc-field-err">
-                  <ToolIcon name="x-circle" size={13} />
-                  A project needs a name before it can be shared.
-                </span>
-              </div>
-            </div>
-          </section>
-
-          {/* SEED AND BASE STEP (D:909-925). The design's Brand hue slider seeds a
-              Brand family this set does not have; the build's seed is the
-              bundle, so the bundles sit here, then the Information family
-              (blue, or its purple alternative), then the design's base-step pills and
-              the code the toolbar copies. */}
-          <section className="stc-card stc-seed" aria-labelledby="stc-seed-title">
-            <h2 id="stc-seed-title" className="tl-sec-label">Seed and base step</h2>
-            <div className="stc-bundles" role="radiogroup" aria-label="Semantic colour bundle">
-              {STATE_BUNDLES.map((bundle, bundleIndex) => {
-                const selected = bundleIndex === activeStateBundleIndex
-                return (
-                  <button
-                    key={bundle.name}
-                    type="button"
-                    id={`stc-bundle-${bundleIndex}`}
-                    className={selected ? 'tl-pill is-on' : 'tl-pill'}
-                    role="radio"
-                    aria-checked={selected}
-                    title={bundle.desc}
-                    tabIndex={selected || (activeStateBundleIndex < 0 && bundleIndex === 0) ? 0 : -1}
-                    onClick={() => pickBundle(bundleIndex)}
-                    onKeyDown={(event) => handleStateBundleKeyDown(event, bundleIndex)}
-                  >
-                    {bundle.name}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="stc-row">
-              <span className="stc-row-k" id="stc-info-label">Information</span>
-              <ToolPills
-                labelledBy="stc-info-label"
-                options={[{ value: 'blue', label: 'Blue' }, { value: 'purple', label: 'Purple' }]}
-                value={infoHue}
-                onChange={pickInfoHue}
-              />
-            </div>
-            <ToolPills
-              label="Base step"
-              mono
-              options={BASE_STEPS}
-              value={baseStep}
-              onChange={(v) => { setBaseStep(v); setSemCopied(false) }}
-            />
-            <ToolCode tone="page" className="stc-code" label="Semantic colour tokens">{tokensCSS}</ToolCode>
-          </section>
+        {/* Lead and bundles: one group. */}
+        <div className="stc-intro">
+          <p className="stc-lead">Set success, warning, error and information colours. Start from a bundle or tune one role at a time. Every role gets a full 50 to 900 ramp.</p>
+          <div className="stc-bundles" role="radiogroup" aria-label="Semantic colour bundle">
+            {STATE_BUNDLES.map((bundle, bundleIndex) => {
+              const selected = bundleIndex === activeStateBundleIndex
+              const roles = bundleRoles(bundle)
+              return (
+                <button
+                  key={bundle.name}
+                  type="button"
+                  id={`stc-bundle-${bundleIndex}`}
+                  className={selected ? 'stc-bundle is-on' : 'stc-bundle'}
+                  role="radio"
+                  aria-checked={selected}
+                  aria-label={bundle.name}
+                  aria-describedby={`stc-bundle-desc-${bundleIndex}`}
+                  tabIndex={selected || (activeStateBundleIndex < 0 && bundleIndex === 0) ? 0 : -1}
+                  onClick={() => pickBundle(bundleIndex)}
+                  onKeyDown={(event) => handleStateBundleKeyDown(event, bundleIndex)}
+                >
+                  <span className="stc-bundle-top">
+                    <span className="stc-bundle-name">{bundle.name}</span>
+                    {selected && <ToolIcon name="check-circle" size={16} className="stc-bundle-check" />}
+                  </span>
+                  <span className="stc-bundle-strip" aria-hidden="true">
+                    {ROLE_IDS.map((role) => (
+                      <i key={role} ref={(el) => el?.style.setProperty('--stc-bundle-c', presetsFor(role, infoHue)[roles[role]].shades[baseStep])} />
+                    ))}
+                  </span>
+                  <span className="stc-bundle-desc" id={`stc-bundle-desc-${bundleIndex}`}>{bundle.desc}</span>
+                </button>
+              )
+            })}
+          </div>
+          {activeStateBundleIndex < 0 && (
+            <p className="stc-mix" aria-live="polite">Your own mix. Pick a bundle to reset all four roles.</p>
+          )}
         </div>
 
-        {/* The families (D:928-942): one row per role, name and token, the
-            role's preset (or a custom hue), and its ten steps with the base
-            step ringed. A step copies its hex. */}
-        <div className="stc-families">
+        {/* Ramps: rows on the page ground, split by hairlines. */}
+        <section className="stc-ramps" aria-labelledby="stc-ramps-title">
+          <div className="stc-ramps-head">
+            <h2 id="stc-ramps-title" className="stc-h2">Ramps</h2>
+            <div className="stc-base">
+              <span className="stc-label" id="stc-base-label">Base step</span>
+              <ToolPills
+                labelledBy="stc-base-label"
+                options={BASE_STEPS}
+                value={baseStep}
+                onChange={(v) => { setBaseStep(v); setSemCopied(false) }}
+              />
+            </div>
+          </div>
           {ROLE_IDS.map((state) => {
             const sel = stateColors[state]
             const isCustom = !!(sel && typeof sel === 'object' && Number.isFinite(sel.custom))
@@ -884,29 +739,47 @@ ${stateVars}
             const [, refS, refL] = hexToHsl(STATE_REF_HEX[state])
             const norm = (h) => ((h % 360) + 360) % 360
             const at = (h) => hslToHex(norm(h), refS, refL)
+            const hexErr = hexErrors[state]
             return (
               <div key={state} className="stc-fam" data-role={state}>
-                <div className="stc-fam-id">
-                  <span className="stc-fam-name"><span className="stc-fam-cue" aria-hidden="true">{STATE_META[state].cue}</span>{STATE_META[state].label}</span>
-                  <span className="stc-fam-token">--color-{state}</span>
-                  <ToolSelect
-                    className="stc-fam-preset"
-                    label="Preset"
-                    ariaLabel={`${STATE_META[state].label} preset`}
-                    value={isCustom ? 'custom' : String(Number.isInteger(sel) ? sel : 0)}
-                    options={[...presets.map((p, pi) => ({ value: String(pi), label: p.name })), { value: 'custom', label: 'Custom' }]}
-                    onChange={(v) => {
-                      if (v === 'custom') setCustomHue(state, arc.canonical)
-                      else setStateColors({ ...stateColors, [state]: Number(v) })
-                      setSemCopied(false)
-                    }}
-                  />
+                <div className="stc-fam-head">
+                  <div className="stc-fam-id">
+                    <span className="stc-fam-name"><span className="stc-fam-cue" aria-hidden="true">{STATE_META[state].cue}</span>{STATE_META[state].label}</span>
+                    <span className="stc-fam-meaning">{STATE_META[state].intent}</span>
+                    <span className="stc-fam-token">--color-{state}</span>
+                  </div>
+                  <div className="stc-fam-opts">
+                    {state === 'info' && (
+                      <>
+                        <div className="stc-family">
+                          <span className="stc-label" id="stc-family-label">Family</span>
+                          <ToolPills
+                            labelledBy="stc-family-label"
+                            options={[{ value: 'blue', label: 'Blue', ariaLabel: 'Blue family' }, { value: 'purple', label: 'Purple', ariaLabel: 'Purple family' }]}
+                            value={infoHue}
+                            onChange={pickInfoHue}
+                          />
+                        </div>
+                        <span className="stc-fam-rule" aria-hidden="true" />
+                      </>
+                    )}
+                    <ToolPills
+                      className="stc-chips"
+                      label={`${STATE_META[state].label} preset`}
+                      options={[...presets.map((p, pi) => ({ value: String(pi), label: p.name })), { value: 'custom', label: 'Custom' }]}
+                      value={isCustom ? 'custom' : String(Number.isInteger(sel) ? sel : 0)}
+                      onChange={(v) => {
+                        // Pressing Custom again keeps the hue already dialled in.
+                        if (v === 'custom' && isCustom) return
+                        if (v === 'custom') setCustomHue(state, arc.canonical)
+                        else setStateColors({ ...stateColors, [state]: Number(v) })
+                        setHexErrors({})
+                        setSemCopied(false)
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="stc-ramp">
-                  {shades.map((shade, si) => (
-                    <StateShade key={si} shade={shade} label={STATE_LABELS[si]} onCopy={onCopy} base={si === baseStep} />
-                  ))}
-                </div>
+                <Ramp label={STATE_META[state].label} shades={shades} baseStep={baseStep} onCopy={onCopy} />
                 {isCustom && (
                   <div className="stc-hue">
                     <ToolSlider
@@ -929,19 +802,107 @@ ${stateVars}
                       className="stc-hue-hex"
                       placeholder="Paste hex"
                       maxLength={7}
+                      inputMode="text"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       aria-label={`Import a hex colour for ${state}`}
+                      aria-describedby={hexErr ? `stc-hex-err-${state}` : undefined}
+                      aria-invalid={hexErr ? true : undefined}
+                      onChange={() => { if (hexErr) setHexErrors((e) => ({ ...e, [state]: false })) }}
                       onKeyDown={(e) => {
                         if (e.key !== 'Enter') return
-                        if (applyHexToArc(state, e.currentTarget.value)) e.currentTarget.value = ''
-                        else toast?.('Enter a six-digit hex colour, for example #16A34A')
+                        if (applyHexToArc(state, e.currentTarget.value)) { e.currentTarget.value = ''; setHexErrors((x) => ({ ...x, [state]: false })) }
+                        else setHexErrors((x) => ({ ...x, [state]: true }))
                       }}
                     />
+                    <p className="stc-hue-err" id={`stc-hex-err-${state}`} aria-live="polite">
+                      {hexErr ? 'Enter a six-digit hex colour, for example #16A34A' : ''}
+                    </p>
                   </div>
                 )}
               </div>
             )
           })}
-        </div>
+        </section>
+
+        {/* Each role doing its job, on a panel with its own ground. */}
+        <section className="stc-scenes" aria-labelledby="stc-work-title">
+          <h2 id="stc-work-title" className="stc-h2">See each role do its job</h2>
+          <p className="stc-lead">One component per role, on the surfaces you ship on. Change a role above and it changes here. Each one carries a symbol and a message, so meaning never rests on colour alone.</p>
+          <figure className="stc-work" data-theme={sceneTheme} ref={sceneRef}>
+            <figcaption className="stc-work-head">
+              <strong>{sceneDark ? 'Dark interface' : 'Light interface'}</strong>
+              <span>{activeStateBundleIndex >= 0 ? STATE_BUNDLES[activeStateBundleIndex].name : 'Your own mix'}</span>
+            </figcaption>
+            <ToolPills
+              className="stc-work-switch"
+              label="Preview theme"
+              options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]}
+              value={sceneTheme}
+              onChange={setSceneChoice}
+            />
+            <p className="sr-only">
+              {sceneDark ? 'Dark' : 'Light'} interface preview, {activeStateBundleIndex >= 0 ? `${STATE_BUNDLES[activeStateBundleIndex].name} bundle` : 'your own mix'}: a success switch, a warning on a field, a declined payment, a billing note and a publish in progress.
+            </p>
+            <div className="stc-work-body" inert>
+              <div className="stc-sc stc-sc--success">
+                <ToolIcon name="check-circle" size={16} className="stc-sc-ico" />
+                <span className="stc-sc-lead"><strong>Two-factor authentication</strong><small>Protecting 3 devices</small></span>
+                <span className="stc-sc-switch"><i /></span>
+              </div>
+              <div className="stc-sc stc-sc--warning stc-sc--field">
+                <span className="stc-sc-k">Project slug</span>
+                <span className="stc-sc-input">aurora-design-system</span>
+                <span className="stc-sc-help">
+                  <ToolIcon name="warning" size={14} className="stc-sc-ico" />
+                  <span>Already used by 2 projects</span>
+                  <span className="stc-sc-link">Use anyway</span>
+                </span>
+              </div>
+              <div className="stc-sc stc-sc--error">
+                <ToolIcon name="x-circle" size={16} className="stc-sc-ico" />
+                <span className="stc-sc-lead"><strong>Payment declined</strong><small className="stc-sc-errtext">Your card was declined on 2 September.</small></span>
+                <span className="stc-sc-solid">Update card</span>
+              </div>
+              <div className="stc-sc stc-sc--info">
+                <ToolIcon name="info" size={16} className="stc-sc-ico" />
+                <span className="stc-sc-lead"><span>Billing runs on the 1st. Changes apply next cycle.</span></span>
+                <span className="stc-sc-link">Learn more</span>
+              </div>
+              <div className="stc-sc stc-sc--info">
+                <ToolIcon name="circle-notch" size={16} className="stc-sc-ico" />
+                <span className="stc-sc-lead"><strong>Publishing design system</strong><small>3 of 5 token files written</small></span>
+                <span className="stc-sc-badge">In progress</span>
+              </div>
+            </div>
+          </figure>
+        </section>
+
+        {/* Token names, with the code well. */}
+        <section className="stc-tokens" aria-labelledby="stc-tokens-title">
+          <div className="stc-tokens-copy">
+            <h2 id="stc-tokens-title" className="stc-h2">Token names you can predict</h2>
+            <p className="stc-lead">
+              Each role exports <code>--color-success</code> for its base step, then <code>--color-success-50</code> to <code>--color-success-900</code>. Paste them into any stylesheet or token pipeline.
+            </p>
+            <ToolButton icon="copy" iconSize={14} onClick={copyStateTokens}>
+              {semCopied ? 'Copied' : `Copy ${tokenCount} variables`}
+            </ToolButton>
+          </div>
+          <div className="stc-tokens-code">
+            <div id="stc-code-wrap" className={codeOpen ? 'stc-code-wrap is-open' : 'stc-code-wrap'}>
+              <ToolCode tone="page" className="stc-code" label="Semantic colour tokens">{tokensCSS}</ToolCode>
+            </div>
+            <ToolButton
+              className="stc-code-toggle"
+              aria-expanded={codeOpen}
+              aria-controls="stc-code-wrap"
+              onClick={() => setCodeOpen((o) => !o)}
+            >
+              {codeOpen ? CODE_COLLAPSE_LABEL : CODE_EXPAND_LABEL.replace('{n}', String(tokenCount))}
+            </ToolButton>
+          </div>
+        </section>
       </div>
 
       {saveMenuOpen && (
@@ -980,7 +941,13 @@ ${stateVars}
               <div className="stc-save-sub">Load</div>
               {projects.slice(-5).map(p => (
                 <button key={`load-${p.id}`} type="button" className="stc-save-item"
-                  onClick={() => { loadProject(p.id); closeSaveMenu(); toast?.('Loaded: ' + p.name) }}
+                  onClick={() => {
+                    // Unsaved work that was put aside has its own toast (with Undo); it names this project.
+                    const putAside = loadProject(p.id)
+                    closeSaveMenu()
+                    if (putAside === null) toast?.(`Couldn't open ${p.name}. It may have been deleted on another device.`)
+                    else if (!putAside) toast?.('Loaded: ' + p.name)
+                  }}
                 >{p.name}</button>
               ))}
             </>
