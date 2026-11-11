@@ -14,9 +14,6 @@
 // real catalogue comes from the Iconify service, so nothing waits on this except
 // the built-in grid shown when that service refuses, the "your recent icons"
 // fill flag and the end-of-list stand-ins. Each of those handles "not here yet".
-//
-// The icons routes' shells preload the file (ROUTE_EXTRA_SCRIPTS in
-// scripts/route-chunks.mjs), so it normally arrives beside the page chunk.
 
 /** What every reader gets until the file has loaded, or if it never does. */
 export const NO_BUILTIN_ICONS = Object.freeze({ icons: Object.freeze([]), packs: Object.freeze({}) })
