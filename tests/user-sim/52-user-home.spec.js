@@ -274,6 +274,23 @@ test.describe('"All … tools" opens the Create menu', () => {
     await expect(page.locator('#pnav-mega')).toBeVisible()
   })
 
+  test('it stays open when the pointer has just left the header', async ({ page }) => {
+    watch(page, 'a desktop visitor who brushed the header on the way to the button')
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    const button = shelfOf(page).getByRole('button', { name: /^All \w+ tools$/ })
+    const trigger = page.locator('.pnav-trigger', { hasText: 'Create' }).first()
+    // Into the header and out again, without opening a menu, as a pointer does on its way down.
+    const bar = await page.locator('nav.pnav').boundingBox()
+    await page.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2)
+    // Leaving the header arms its 120ms hover close; the click lands inside that window.
+    await button.click()
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    await page.waitForTimeout(300)
+    await expect(trigger, 'the pending hover close did not shut it').toHaveAttribute('aria-expanded', 'true')
+    await expect(page.locator('#pnav-mega')).toBeVisible()
+  })
+
   test('on a phone it opens the menu sheet', async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
     const page = await context.newPage()

@@ -324,7 +324,7 @@ test('a refused triage write is reverted and reported, not toasted as success', 
 
 test('the dashboard decides from the token, not only from the bundled email list', () => {
   const src = read('src/pages/Admin.jsx')
-  assert.match(src, /const \{ role, loading: roleLoading \} = useModerationRole\(\)/,
+  assert.match(src, /const \{ role, loading: roleLoading, confirmed: roleConfirmed \} = useModerationRole\(\)/,
     'Admin.jsx no longer reads the server-verified role')
   assert.match(src, /const effectiveUnlocked = isAdminUser \|\| canReview\(role\)/,
     'the signed-claim path into the dashboard is gone')

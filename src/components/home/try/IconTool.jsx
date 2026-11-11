@@ -37,6 +37,32 @@ const ASKED = new Set()
 
 const MAGNIFIER = 'm229.66 218.34l-50.07-50.06a88.11 88.11 0 1 0-11.31 11.31l50.06 50.07a8 8 0 0 0 11.32-11.32M40 112a72 72 0 1 1 72 72a72.08 72.08 0 0 1-72-72'
 
+/** The grid's live shape: columns from its resolved template, and how many cells sit wholly
+ *  inside its clipped box (the rest are in rows folded to nothing). */
+function gridShape(grid) {
+  const box = grid.getBoundingClientRect()
+  const cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1
+  const cells = [...grid.children]
+  const shown = cells.filter((c) => c.getBoundingClientRect().bottom <= box.bottom + 1).length
+  return { cells, cols, shown }
+}
+
+/** Where a navigation key sends focus from cell `i` of `shown`, or -1 for no move. */
+function gridTarget(key, ctrl, i, cols, shown) {
+  const rowStart = i - (i % cols)
+  const to = {
+    ArrowLeft: i % cols ? i - 1 : -1,
+    ArrowRight: i % cols < cols - 1 && i + 1 < shown ? i + 1 : -1,
+    ArrowUp: i - cols,
+    ArrowDown: i + cols < shown ? i + cols : -1,
+    Home: ctrl ? 0 : rowStart,
+    End: ctrl ? shown - 1 : Math.min(rowStart + cols - 1, shown - 1),
+  }[key]
+  return to === undefined || to < 0 || to === i ? -1 : to
+}
+
+const GRID_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']
+
 const isOk = (r) => r && r.ok && !r.headers.get(HELD_HEADER)
 
 /** The drawing for a name at a weight, or the Regular one while that weight is on its way. */
@@ -44,6 +70,7 @@ const drawing = (base, weight) => BODIES.get(base + WEIGHTS[weight][1]) || BODIE
 
 export default function IconTool() {
   const root = useRef(null)
+  const grid = useRef(null)
   const dead = useRef(false)
   const token = useRef(0)
   const delay = useRef(0)
@@ -56,6 +83,8 @@ export default function IconTool() {
   const [q, setQ] = useState('')
   const [ran, setRan] = useState('')
   const [results, setResults] = useState(ICON_START.slice(0, CAP))
+  const [stop, setStop] = useState(null)
+  const [shown, setShown] = useState(Infinity)
   const [slow, setSlow] = useState(false)
   const [failed, setFailed] = useState(false)
   const [col, setCol] = useState(SIGNAL)
@@ -68,6 +97,18 @@ export default function IconTool() {
   }, [])
   const startFetching = useCallback(() => setNear(true), [])
   useNear(root, startFetching)
+
+  // The cells in view, so the one tab stop is never a cell in a folded row.
+  useEffect(() => {
+    const el = grid.current
+    if (!el) return undefined
+    const measure = () => setShown(gridShape(el).shown)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const watcher = new ResizeObserver(measure)
+    watcher.observe(el)
+    return () => watcher.disconnect()
+  }, [results, failed])
 
   const mark = (kind) => setKinds((k) => (k.includes(kind) ? k : [...k, kind]))
 
@@ -157,6 +198,21 @@ export default function IconTool() {
   // A colour too dark for the stage puts the icon on the light ground.
   const dark = !!col && ratio('#000000', col) < ratio('#FFFFFF', col)
   const total = results.length
+  // The grid is one tab stop: the cell last moved to, else the picked icon, else the first.
+  const stopAt = [results.indexOf(stop), results.indexOf(sel)].find((i) => i >= 0 && i < shown) ?? 0
+  const onGridKey = (e) => {
+    if (!GRID_KEYS.includes(e.key) || e.altKey || e.metaKey || e.shiftKey) return
+    const { cells, cols, shown: inView } = gridShape(e.currentTarget)
+    const i = cells.indexOf(e.target.closest('[role="option"]'))
+    if (i < 0) return
+    e.preventDefault()
+    const to = gridTarget(e.key, e.ctrlKey, i, cols, inView)
+    if (to < 0) return
+    setStop(results[to])
+    cells[to].focus()
+  }
+  // Leaving the grid forgets the cell moved to, so the next Tab in lands on the picked icon again.
+  const onGridBlur = (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setStop(null) }
   const noun = total === 1 ? 'icon' : 'icons'
   const count = ran
     ? (total ? `${total} ${PACK} ${noun} for “${ran}”.` : `No ${PACK} icons for “${ran}”.`)
@@ -216,16 +272,26 @@ export default function IconTool() {
       <div className="ht-ic">
         <div className="ht-ic-res">
           {!failed && total > 0 && (
-            <div className="ht-ic-grid" role="group" aria-label={`${PACK} icons`}>
-              {results.map((base) => {
+            <div
+              className="ht-ic-grid"
+              role="listbox"
+              aria-label={`${PACK} icons`}
+              ref={grid}
+              onKeyDown={onGridKey}
+              onBlur={onGridBlur}
+            >
+              {results.map((base, i) => {
                 const on = base === sel
                 return (
                   <button
                     key={base}
                     type="button"
+                    role="option"
                     className="ht-ic-t"
-                    aria-pressed={on}
+                    aria-selected={on}
                     aria-label={base}
+                    tabIndex={i === stopAt ? 0 : -1}
+                    onFocus={() => setStop(base)}
                     style={on ? { color: col || undefined, background: dark ? '#EFEEEA' : undefined } : undefined}
                     onClick={() => pick(base)}
                   >

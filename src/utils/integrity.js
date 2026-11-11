@@ -94,7 +94,7 @@ export async function fetchVerified(url, sha256, { label = url, onBytes, signal,
       buf = data.buffer
     }
   } catch (err) {
-    if (stalled && !signal?.aborted) throw new Error(`${url}: no data for ${Math.round(stallMs / 1000)} seconds`)
+    if (stalled && !signal?.aborted) throw new Error(`${url}: no data for ${Math.round(stallMs / 1000)} seconds`, { cause: err })
     throw err
   } finally {
     clearTimeout(timer)
