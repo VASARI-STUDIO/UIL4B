@@ -23,7 +23,7 @@ import {
   downloadFileName, effectiveFormat, readDownloadFormat, saveBlobAs, svgToPngBlob, writeDownloadFormat,
 } from '../utils/iconDownload'
 import useBuiltinIcons from '../hooks/useBuiltinIcons'
-import { builtinIcons, loadBuiltinIcons } from '../utils/builtinIcons'
+import { builtinIcons, loadBuiltinIcons } from '../utils/iconsBuiltin'
 import { addRecentIcon, getRecentIcons, clearRecentIcons, recentIsFilled, SOLID_BUILTIN_PACK } from '../utils/recentIcons'
 import { openInNewTab } from '../utils/newTab'
 import { FREE_SAVE_LIMITS } from '../config/plans'
@@ -3643,7 +3643,7 @@ export default function IconLibrary({ onCopy, onCatalogue, onCredits }) {
   const lastTier = useRef(null)     // the tier the current listing was fetched at
 
   const renderLocal = useCallback((q, packFilter) => {
-    // The built-in set loads on demand (utils/builtinIcons.js). If this is asked for
+    // The built-in set loads on demand (utils/iconsBuiltin.js). If this is asked for
     // before it has arrived, wait for it, and drop the answer if a newer browse started meanwhile.
     const data = builtinIcons()
     if (!data) {
