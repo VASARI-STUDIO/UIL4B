@@ -309,14 +309,10 @@ const ICONS = {
 
 const FALLBACK = <circle cx="12" cy="12" r="7" />
 
-// Hover-moment variants for the mega menu. The same glyph at rest, with
-// its moving parts classed so global.css ("HOVER MOMENTS") can animate them. Only
-// the menu rows ask for these (`moment`), so every other use of an icon is untouched.
-// Rest geometry is identical to ICONS (Contrast aside: its solid half is hatching here); the extra
-// parts are hidden at rest by CSS. Every part is a stroke in the row's hue: a moment moves, turns,
-// draws (stroke-dashoffset) or fades line work, and never paints a fill. A part with the `dr`
-// class is drawn by dashoffset, which needs pathLength="1" on it.
-// A value that is a function gets a unique id, for a clipPath.
+// Variants chosen by the `moment` prop: the same glyph as ICONS (Contrast aside: its solid half is
+// hatching here) with its moving parts classed, so a stylesheet can animate them. Only an icon
+// given `moment` uses these; every other use is untouched. A part with the `dr` class is drawn by
+// dashoffset, which needs pathLength="1" on it. A value that is a function gets a unique id, for a clipPath.
 const MOMENT_ICONS = {
   // The diameter stays; the hatching that marks the shaded half turns with it to the other side.
   contrast: (

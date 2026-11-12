@@ -1,6 +1,6 @@
 // Pure rules for the shared menu: which rows can be reached, where a key goes,
 // and where the panel sits. No DOM, so each is testable without a browser.
-import { typeaheadTarget } from '../../utils/listboxKeys'
+import { typeaheadTarget } from '../../utils/listboxKeys.js'
 
 export const MENU_GAP = 8
 export const MENU_EDGE = 16

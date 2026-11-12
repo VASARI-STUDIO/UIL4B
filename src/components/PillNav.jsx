@@ -442,6 +442,13 @@ function AppHeader() {
     lastRouteChange = Date.now()
   }, [location.key])
 
+  // A navigation closes the mega panel, including Back and Forward, which no link click covers.
+  const [panelKey, setPanelKey] = useState(location.key)
+  if (panelKey !== location.key) {
+    setPanelKey(location.key)
+    setOpen(null)
+  }
+
   // The Export hint is dismissible without moving focus, and its hover delay
   // never outlives the header.
   useEffect(() => {
@@ -584,13 +591,20 @@ function AppHeader() {
   const clearClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
   const hoverOpen = (id) => {
     clearClose()
+    // Re-entering the trigger of a click-opened panel leaves it click-opened, so the next click closes it.
+    if (open === id && openedBy.current === 'click') return
     if (hoverLock.current) return
     if (open === null) hoverLock.current = true
     openedBy.current = 'hover'
     setMenu(null)
     setOpen(id)
   }
-  const hoverLeave = () => { clearClose(); closeTimer.current = setTimeout(() => setOpen(null), 120) }
+  // A click-opened panel stays until Escape, an outside press, its trigger or a navigation.
+  const hoverLeave = () => {
+    clearClose()
+    if (openedBy.current === 'click') return
+    closeTimer.current = setTimeout(() => setOpen(null), 120)
+  }
   const toggle = (id) => {
     hoverLock.current = true
     setMenu(null)

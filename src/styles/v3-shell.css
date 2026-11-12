@@ -17,7 +17,7 @@
   --v3-l2h:color-mix(in srgb,var(--v3-l2),var(--v3-ink) 6%);
   --v3-shadow:0 16px 40px -16px rgba(18,20,24,.28);
   --v3-mgsh:0 1px 2px rgba(18,20,24,.06),0 12px 32px rgba(18,20,24,.10);
-  --v3-rowh:color-mix(in oklch,var(--v3-ink) 5%,transparent);
+  --v3-rowh:color-mix(in oklch,var(--v3-ink) 6%,transparent);
   --v3-rowc:color-mix(in oklch,var(--v3-ink) 9%,transparent);
   --v3-rowhc:color-mix(in oklch,var(--v3-ink) 12%,transparent);
   --v3-rowp:color-mix(in oklch,var(--v3-ink) 14%,transparent);
@@ -27,7 +27,6 @@
   --v3-ease:cubic-bezier(.23,1,.32,1);
   --v3-hues:hsl(8 58% 56%),hsl(22 60% 57%),hsl(36 62% 58%),hsl(48 58% 56%),hsl(62 44% 52%),hsl(84 34% 48%),hsl(104 30% 45%),hsl(134 28% 44%),hsl(160 30% 44%),hsl(182 32% 45%),hsl(200 38% 50%),hsl(216 40% 55%),hsl(238 32% 56%),hsl(262 28% 54%),hsl(288 26% 52%),hsl(312 32% 54%),hsl(332 40% 56%),hsl(350 48% 56%),hsl(8 58% 56%);
   --v3-h-colour:#7A5F00;--v3-h-type:#0C5F58;--v3-h-icons:#036348;--v3-h-imagery:#8D4107;--v3-h-ai:#A31450;
-  --tabbar-h:64px;
 }
 [data-theme="dark"]{
   --v3-ground:#060607;--v3-raised:#0F1012;--v3-l2:#131416;
@@ -237,6 +236,8 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
   .pnav-mobile[aria-expanded="true"]{background:var(--v3-l2h)}
   .pnav-search-field{background:var(--v3-l2);color:var(--v3-ink);border-radius:999px}
 }
+/* Under 360px the symbol stands in for the lockup so the signed-in header fits. */
+@media(max-width:359px){.pnav-word .brand-logo-wide{display:none}.pnav-word .brand-logo-narrow{display:block}}
 .pnav-sheet{background:var(--v3-ground);animation:v3-fade 240ms linear both}
 @keyframes v3-fade{from{opacity:0}to{opacity:1}}
 .pnav-acc-tabs{height:52px;padding:4px;border-radius:999px;background:var(--v3-l2)}
@@ -267,11 +268,13 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 .pnav-upgrade--block{min-height:44px}
 .pnav-sheet-login{border:0;border-radius:999px;box-shadow:inset 0 0 0 1px var(--v3-cta-edge);color:var(--v3-ink)}
 .pnav-reco-link:active{background:var(--v3-rowp)}
+.pnav-sheet .pnav-reco-link{min-height:44px}
 @media(max-width:767px){
-  .pnav-tabs{padding:4px max(12px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left,0px));background:var(--v3-ground);border-top:1px solid var(--v3-hair)}
+  /* 1px line + 3 + 56 + 4 = the 64px --tabbar-h (global.css), plus the safe area. */
+  .pnav-tabs{padding:3px max(12px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left,0px));background:var(--v3-ground);border-top:1px solid var(--v3-hair)}
   .pnav-tab{min-height:56px;border-radius:8px;color:var(--v3-t56);font-size:12px;font-weight:500}
   .pnav-tab.is-current{color:var(--v3-ink);font-weight:500}
-  .pnav-tab.is-current::before{top:-4px;background:var(--v3-ink)}
+  .pnav-tab.is-current::before{top:-3px;background:var(--v3-ink)}
   .pnav-tab:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
 }
 

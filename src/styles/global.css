@@ -2424,7 +2424,7 @@ main[tabindex="-1"]:focus-visible{outline:none}
   --fs-h3:1.5rem;--fs-h4:1.25rem;--fs-h5:1.0625rem;
   --fs-lede:clamp(1.0625rem,calc(0.96rem + 0.45vw),1.3125rem);
   --fs-body:1rem;--fs-body-s:0.875rem;--fs-caption:0.8125rem;--fs-micro:0.6875rem;
-  --nav-h:64px;--tabbar-h:61px;
+  --nav-h:64px;--tabbar-h:64px;
   /* --nav-top is the status-bar / notch inset once the viewport covers the screen (viewport-fit=cover), 0 everywhere else. The fixed nav pads itself by it, and every offset below the nav reads it through --chrome-h. */
   --nav-top:env(safe-area-inset-top,0px);--notice-h:0px;--chrome-h:calc(var(--nav-top) + var(--nav-h) + var(--notice-h));--nav-clear:calc(var(--chrome-h) + 8px);
   /* Wide shared chrome: navigation, toolbars, and footers can use up to 1680px
