@@ -11,8 +11,8 @@ import '../styles/pages/home-tokens.css'
 // and a swipe strip under 768px. The pictures are the app's own screens, cropped
 // to the top of each; the strip snaps to one phone at a time (the snapping is in
 // v3-marketing.css). The buttons and the "N of 3" line follow the scroll position.
-// Colours follow the theme: each screen has a dark and a light capture, swapped
-// in CSS.
+// Colours follow the theme: the Palette and Icon screens have a dark and a light
+// capture, swapped in CSS. The workspace is dark in every theme, so it has one.
 
 const GAP = 16
 const SCREENS = [
@@ -35,7 +35,8 @@ const SCREENS = [
     caption: 'Projects and your plan',
     alt: 'The workspace on a phone, with a project card showing its palette, type scale and font pair',
     dark: '/mobile-screens/projects-dark.jpg',
-    light: '/mobile-screens/projects-light.jpg',
+    // The workspace is a dark surface in every theme, so there is one capture for both.
+    light: '/mobile-screens/projects-dark.jpg',
   },
 ]
 
@@ -97,8 +98,14 @@ export default function SpectrumMobile() {
               <figure key={s.id} className="mk-fig">
                 <div className="mk-frame">
                   <div className="mk-shot">
-                    <img className="mk-img-dark" src={s.dark} alt={s.alt} width="780" height="1424" loading={light ? 'lazy' : 'eager'} decoding="async" />
-                    <img className="mk-img-light" src={s.light} alt={s.alt} width="780" height="1424" loading={light ? 'eager' : 'lazy'} decoding="async" />
+                    {s.dark === s.light ? (
+                      <img src={s.dark} alt={s.alt} width="780" height="1424" loading="eager" decoding="async" />
+                    ) : (
+                      <>
+                        <img className="mk-img-dark" src={s.dark} alt={s.alt} width="780" height="1424" loading={light ? 'lazy' : 'eager'} decoding="async" />
+                        <img className="mk-img-light" src={s.light} alt={s.alt} width="780" height="1424" loading={light ? 'eager' : 'lazy'} decoding="async" />
+                      </>
+                    )}
                   </div>
                 </div>
                 <figcaption>{s.caption}<span>The live app, cropped to the tool.</span></figcaption>

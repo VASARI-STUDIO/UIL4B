@@ -81,7 +81,9 @@ test.describe('/mobile renders as its own page', () => {
       expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(theme)
       for (let i = 0; i < 3; i += 1) {
         const shown = await shownImages(page, i)
-        const want = `/mobile-screens/${['palette', 'icons', 'projects'][i]}-${theme}.jpg`
+        // The workspace is a dark surface in both themes, so its one capture is the dark one.
+        // Mutation: point the light entry for projects at another file in SpectrumMobile.jsx → this fails in light.
+        const want = i === 2 ? '/mobile-screens/projects-dark.jpg' : `/mobile-screens/${['palette', 'icons'][i]}-${theme}.jpg`
         expect(shown.map((s) => s.src), `phone ${i + 1} should draw one ${theme} picture`).toEqual([want])
       }
       await ctx.close()
@@ -107,7 +109,8 @@ test.describe('/mobile renders as its own page', () => {
         })))
         // Mutation: make both captures eager (or both lazy) in SpectrumMobile.jsx → this fails.
         expect(loading.filter((l) => l.shown).map((l) => l.loading), `phone ${i + 1}'s capture on show`).toEqual(['eager'])
-        expect(loading.filter((l) => !l.shown).map((l) => l.loading), `phone ${i + 1}'s hidden capture`).toEqual(['lazy'])
+        // The workspace phone has the one capture, so nothing is hidden or waiting.
+        expect(loading.filter((l) => !l.shown).map((l) => l.loading), `phone ${i + 1}'s hidden capture`).toEqual(i === 2 ? [] : ['lazy'])
       }
       await ctx.close()
     })
