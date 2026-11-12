@@ -175,6 +175,19 @@ const spotY = (page, i, wide) => page.locator(`#ht-s-${i}`).evaluate((el, isWide
   return isWide ? r.top + window.scrollY - (window.innerHeight - r.height) / 2 : r.top + window.scrollY - 60
 }, wide)
 const scrollNow = (page) => page.evaluate(() => window.scrollY)
+// scrollY once it has held the same value for `ms` (polled on animation frames).
+const unmoving = (page, ms) => page.evaluate((hold) => new Promise((resolve) => {
+  let last = window.scrollY
+  let since = performance.now()
+  const tick = () => {
+    const y = window.scrollY
+    const now = performance.now()
+    if (y !== last) { last = y; since = now }
+    if (now - since >= hold) { resolve(y); return }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}), ms)
 
 for (const [width, height] of [[1440, 900], [390, 844]]) {
   test.describe(`home try settle at ${width}`, () => {
@@ -252,12 +265,17 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
         : 'control: the same scroll with no name click is settled', async ({ page }) => {
         await arrive(page, 0)
         // Park 130px short of tool 1 (beyond reach, so nothing settles), then click its name and,
-        // before the click's own scroll has landed, wheel to 30px short of it.
+        // before the click's own scroll has landed, wheel to 60px short of it. (The click's tween adds up to
+        // ~45px of its own before the wheel takes over, so 30 could carry the page across the spot, which
+        // counts as the click having landed and lets the settle run.)
         await aim(page, 1, 130)
         // An in-page click: a pointer click would first scroll the page to bring the name into view.
         if (withClick) await page.locator('#ht-n-1').evaluate((el) => el.click())
-        const target = Math.round((await spotY(page, 1, wide)) - 30)
-        const at = await wheelToRest(page, target - (await scrollNow(page)), 'the page after the wheel')
+        const target = Math.round((await spotY(page, 1, wide)) - 60)
+        await wheelToRest(page, target - (await scrollNow(page)), 'the page after the wheel')
+        // The name click's own smooth scroll can still be landing when the wheel rests; read the page
+        // only once it has not moved for 300ms, so `stays` compares against where it really stopped.
+        const at = await unmoving(page, 300)
         const off = Math.abs((await spotY(page, 1, wide)) - at)
         expect(off, 'the wheel must leave the page within reach of tool 1 but off its spot').toBeGreaterThan(2)
         expect(off, 'the wheel must leave the page within reach of tool 1 but off its spot').toBeLessThan(75)
