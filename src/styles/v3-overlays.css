@@ -201,7 +201,7 @@
 /* The destructive action is a tonal pill with danger text. */
 :root .ov-act-danger { color: var(--danger); background: var(--ov-tone); }
 :root .ov-act-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--t0) 12%, transparent); }
-:root .ov-act-danger:disabled { opacity: .5; cursor: not-allowed; }
+:root .ov-act-danger:disabled { opacity: .7; cursor: not-allowed; }
 @media (max-width: 767px) {
   .ov-layer { padding: 0; }
   .ov-dialog-foot { flex-direction: column-reverse; align-items: stretch; }
