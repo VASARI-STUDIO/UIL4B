@@ -15,7 +15,10 @@
 // navigate instead of calling openLogin(), or change the document.title: the
 // popup tests and the title test fail. Show the signed-out button to a
 // signed-in visitor: the Settings test fails. Delete the /reset-password route
-// in App.jsx: every test lands on the 404 heading instead.
+// in App.jsx: every test lands on the 404 heading instead. Put '/reset-password'
+// back out of NON_RESUMABLE (LoginPromptContext.jsx) and drop `from: '/'` in
+// LinkExpired.jsx: the return-target test fails. Take '/reset-password' out of
+// FOOTER_ROUTES (footerRoutes.js): the footer test fails.
 import { test, expect } from './base.js'
 import { go, goRaw, signIn, watch } from './helpers.js'
 
@@ -84,6 +87,27 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       await page.keyboard.press('Escape')
       await expect(dialog).toHaveCount(0)
       await expect(heading(page)).toBeVisible()
+    })
+
+    test('opening the reset form keeps no sign-up return target holding the reset address or its code', async ({ page }) => {
+      watch(page, 'someone asking for a fresh reset link from an expired one')
+      await goRaw(page, PATH)
+      await expect(heading(page)).toBeVisible()
+      await resetButton(page).click()
+      await expect(resetDialog(page)).toBeVisible()
+
+      const stored = await page.evaluate(() => Object.keys(sessionStorage).map((key) => [key, sessionStorage.getItem(key)]))
+      const leaked = stored.filter(([, value]) => /reset-password|expired-code|oobCode/i.test(String(value)))
+      expect(leaked, 'a session value holds the one-time reset address').toEqual([])
+      expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding'))).toBeNull()
+    })
+
+    test('shows the site footer', async ({ page }) => {
+      watch(page, 'someone on the expired-link page looking for the rest of the site')
+      await goRaw(page, PATH)
+      await expect(heading(page)).toBeVisible()
+      await expect(page.getByRole('contentinfo')).toHaveCount(1)
+      await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).first()).toBeVisible()
     })
 
     test('the reset dialog starts with the cursor in the email field, and sending a link reaches the sent step', async ({ page }) => {

@@ -76,6 +76,18 @@ export async function setConnection(page, context, online) {
   }, online)
 }
 
+/** The home page itself (`/` or `/home`): the command palette's file throws when it opens. */
+export async function landHomeCrash(page, path = '/') {
+  await crashChunk(page, COMMAND_PALETTE_CHUNK)
+  await go(page, path)
+  await spendReload(page)
+  await page.keyboard.press('/')
+  const card = page.locator('.error-boundary')
+  await expect(card).toBeVisible()
+  await expect(card.getByRole('heading', { level: 1 })).toHaveText(TITLE_CRASH)
+  return { card }
+}
+
 /** In-app to /settings, which crashes inside the app shell. */
 export async function landShellCrash(page) {
   await go(page, '/privacy')

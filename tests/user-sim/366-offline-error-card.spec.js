@@ -5,6 +5,8 @@
 // card removes the ways on that need a connection (Reload, Report this, the Help
 // centre) and says it is waiting. Back to the homepage stays: it is a link inside
 // the app, which is already loaded, and it is the one way out that still works.
+// On the homepage itself (`/` or `/home`) it would lead to the page already
+// shown, so it goes there.
 // The waiting line is announced (role=status), the keyboard's first stop is that
 // link, and when the connection returns the other ways on come back and Reload
 // the page really asks the server for the page again.
@@ -19,7 +21,7 @@
 // button do nothing: the reload tests fail on the request count.
 import { test, expect } from './base.js'
 import {
-  landShellCrash, landChromelessCrash, landLoadFailed, setConnection,
+  landShellCrash, landChromelessCrash, landLoadFailed, landHomeCrash, setConnection,
 } from './edge-cards.js'
 
 const reload = (card) => card.getByRole('button', { name: 'Reload the page' })
@@ -93,6 +95,29 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       await expect(home(card), 'the homepage link stays through every change').toBeVisible()
     })
 
+    for (const path of ['/', '/home']) {
+      test(`offline on ${path}, the card has no link back to the homepage, and it returns with the connection`, async ({ page, context }) => {
+        const { card } = await landHomeCrash(page, path)
+        await setConnection(page, context, false)
+        await expect(status(card)).toHaveText('Waiting for a connection')
+        await expect(home(card), 'the link would lead to the page already shown').toHaveCount(0)
+        await expect(card.getByRole('navigation', { name: 'More ways back' }).getByRole('link')).toHaveCount(0)
+
+        await setConnection(page, context, true)
+        await expect(reload(card)).toBeEnabled()
+        await expect(home(card), 'online, the link loads the page afresh').toBeVisible()
+        await expect(help(card)).toBeVisible()
+      })
+    }
+
+    test('offline on any other page, the card keeps its single link to the homepage', async ({ page, context }) => {
+      const { card } = await landChromelessCrash(page)
+      await setConnection(page, context, false)
+      await expect(status(card)).toHaveText('Waiting for a connection')
+      await expect(home(card)).toHaveAttribute('href', '/')
+      await expect(card.getByRole('navigation', { name: 'More ways back' }).getByRole('link')).toHaveCount(1)
+    })
+
     test('after reconnecting, Reload the page requests the failed file again', async ({ page, context }) => {
       const { card, asked } = await landLoadFailed(page)
       await setConnection(page, context, false)
@@ -119,3 +144,18 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     })
   })
 }
+
+test.describe('the offline card at 390: reading order', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('the waiting line sits below the way back to the homepage', async ({ page, context }) => {
+    const { card } = await landShellCrash(page)
+    await setConnection(page, context, false)
+    await expect(status(card)).toHaveText('Waiting for a connection')
+    await expect(home(card)).toBeVisible()
+    const top = (locator) => locator.evaluate((el) => el.getBoundingClientRect().top)
+    const trailTop = await top(card.locator('.ed-trail'))
+    const statusTop = await top(card.locator('.ed-status'))
+    expect(statusTop, `the status (${statusTop}px) is not below the trail (${trailTop}px)`).toBeGreaterThan(trailTop)
+  })
+})

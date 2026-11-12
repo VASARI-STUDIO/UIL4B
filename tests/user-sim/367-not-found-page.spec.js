@@ -12,6 +12,8 @@
 // `document.title` effect, or make sectionSuggestions() return startRows() for
 // every path: the matching tests below fail. Put the old
 // <Navigate to="/" replace /> back in App.jsx: every test fails at the heading.
+// Split the path in EdgeScreen.jsx with a lookbehind regex again: the
+// no-lookbehind test fails.
 import { test, expect } from './base.js'
 import { go, goRaw, signIn, watch } from './helpers.js'
 import { pushInApp } from './edge-cards.js'
@@ -96,6 +98,32 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     })
   })
 }
+
+// Older Safari (before 16.4) throws on a regex lookbehind. A regex literal is
+// compiled with the script, so this engine cannot refuse it up front; instead
+// every match is refused at run time when its pattern holds a lookbehind, which
+// is where the wrapped path would throw in that browser.
+test.describe('the 404 on an engine with no regex lookbehind', () => {
+  test('still renders the path, broken after each slash and hyphen', async ({ page }) => {
+    watch(page, 'a visitor on an older Safari following a mistyped link')
+    await page.addInitScript(() => {
+      const exec = RegExp.prototype.exec
+      RegExp.prototype.exec = function guardedExec(...args) {
+        if (this.source.includes('(?<=') || this.source.includes('(?<!')) throw new SyntaxError(`Invalid regular expression: ${this.source} (lookbehind is not supported)`)
+        return exec.apply(this, args)
+      }
+    })
+    await goRaw(page, '/aa-bb/cc')
+
+    const armed = await page.evaluate(() => {
+      try { /(?<=a)b/.test('ab'); return 'no throw' } catch { return 'throws' }
+    })
+    expect(armed, 'the guard is not refusing lookbehind patterns').toBe('throws')
+    await expect(heading(page)).toBeVisible()
+    await expect(page.locator('.ed-path')).toHaveText('/aa-bb/cc')
+    await expect(page.locator('.ed-path wbr'), 'one break opportunity after each of "/", "aa-", "bb/"').toHaveCount(3)
+  })
+})
 
 test.describe('the 404 inside a section', () => {
   for (const [path, title, line, prefix] of [

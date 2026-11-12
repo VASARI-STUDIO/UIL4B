@@ -11,11 +11,14 @@
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // In ProjectMissing.jsx drop the `below` block or point "Open your workspace" at
-// another route: the recent-projects and workspace tests fail. Make
+// another route: the recent-projects and workspace tests fail. Make the
+// `safe` prop a constant string: the no-projects test fails. In App.jsx show the
+// route's own title instead of resolveRouteTitle(title): the in-app title test fails. Make
 // ProjectLinkGone return <Navigate to="/projects" replace />: every test fails at
 // the first heading.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
+import { pushInApp } from './edge-cards.js'
 
 const TITLE = 'That project isn’t in your account'
 
@@ -75,6 +78,27 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       await go(page, '/projects/not-a-project')
       await expect(heading(page)).toBeVisible()
       await expect(page.getByRole('heading', { level: 2, name: 'Your recent projects' })).toHaveCount(0)
+      await expect(page.getByText('Your other projects are saved.'), 'there are no other projects to point at').toHaveCount(0)
+    })
+
+    test('moving to the missing project inside the app sets the title, and leaving gives the next page its own', async ({ page }) => {
+      watch(page, 'a designer following an in-app link to a deleted project')
+      await signIn(page, { plan: 'free', projects: [savedProject('p1', 'Autumn Rebrand')] })
+      await go(page, '/privacy')
+      const privacyTitle = await page.title()
+      expect(privacyTitle).not.toBe('UI L4B | Project not found')
+
+      // Open a real project first so the project page's code is already loaded
+      // and the missing-project screen mounts in the same render as the route change.
+      await pushInApp(page, '/projects/p1')
+      await expect(page.getByRole('heading', { level: 1, name: 'Autumn Rebrand' })).toBeVisible()
+      await pushInApp(page, '/projects/not-a-project')
+      await expect(heading(page)).toBeVisible()
+      await expect(page, 'the route title must not overwrite the page title on arrival').toHaveTitle('UI L4B | Project not found')
+
+      await pushInApp(page, '/privacy')
+      await expect(heading(page)).toHaveCount(0)
+      await expect(page, 'the missing-project title must not follow the person away').toHaveTitle(privacyTitle)
     })
 
     test('Open your workspace goes to the workspace and the homepage link goes home', async ({ page }) => {
