@@ -4,6 +4,8 @@ import { formatBytes } from '../../spectrum/spectrumKit'
 import { useInView } from '../../spectrum/useImageMeasure'
 import { navigatesThisTab } from '../../../utils/handoffSlot'
 import { setImageHandoff } from '../../../utils/imageHandoff'
+import { ModeScreen } from './ConverterModes'
+import { SCREENS } from './converterScreens'
 import { Radios, ToolLink, Well } from './tryParts'
 import { useTryMeasure } from './useTryMeasure'
 
@@ -25,7 +27,8 @@ const LIMITS = [0, 1280, 640]
 const LIMIT_LABELS = LIMITS.map((v) => (v ? `${v} px` : 'Original'))
 // The phone's three-way choice over the settings.
 const PHONE_MODES = ['Format', 'Quality', 'Size']
-// The tabs the full tool has; only Image runs here.
+// The tabs the full tool has; only Image runs here, the others are preview screens
+// (ConverterModes.jsx) with the same tab, setting and link layout.
 const MODES = [
   ['Image', ''],
   ['Animation', 'Build an animation from frames and save it as GIF, WebP, APNG, MP4 or WebM.'],
@@ -41,6 +44,11 @@ export default function ConverterTool() {
   const [qi, setQi] = useState(DEFAULT_QUALITY)
   const [lim, setLim] = useState(0)
   const [setting, setSetting] = useState(0)
+  // The preview screens: the choice in each of a tab's settings, and the one the phone shows.
+  const [vals, setVals] = useState(() => Object.fromEntries(Object.entries(SCREENS).map(([k, s]) => [k, s.settings.map((x) => x.start)])))
+  const [sub, setSub] = useState(0)
+  const screen = SCREENS[mode]
+  const setVal = (j, v) => setVals((was) => ({ ...was, [mode]: was[mode].map((x, n) => (n === j ? v : x)) }))
   const quality = QUALITIES[qi]
   const [fmtName, type] = FORMATS[fmt]
   const png = type === 'image/png'
@@ -81,12 +89,18 @@ export default function ConverterTool() {
 
   const tabKey = (e) => {
     const next = { ArrowRight: 1, ArrowLeft: -1 }[e.key]
-    if (!next) return
+    let to = null
+    if (next) to = (mode + next + MODES.length) % MODES.length
+    else if (e.key === 'Home') to = 0
+    else if (e.key === 'End') to = MODES.length - 1
+    if (to == null) return
     e.preventDefault()
-    const to = (mode + next + MODES.length) % MODES.length
-    setMode(to)
+    pickMode(to)
     e.currentTarget.querySelectorAll('[role="tab"]')[to]?.focus()
   }
+  const pickMode = (i) => { setMode(i); setSub(0) }
+  const modeSeg = (j, props) => <Radios items={screen.settings[j].items} value={vals[mode][j]} onPick={(v) => setVal(j, v)} {...props} />
+  const modeText = MODES[mode][1]
 
   const formatSeg = (props) => <Radios items={FORMATS.map(([l]) => l)} value={fmt} onPick={setFmt} {...props} />
   const qualitySeg = (props) => <Radios items={QUALITIES.map(String)} value={qi} onPick={setQi} isDisabled={() => png} {...props} />
@@ -109,7 +123,7 @@ export default function ConverterTool() {
             aria-selected={mode === i}
             aria-controls="ht-cv-panel"
             tabIndex={mode === i ? 0 : -1}
-            onClick={() => setMode(i)}
+            onClick={() => pickMode(i)}
           >
             {short ? <><span data-l>{label}</span><span data-s>{short}</span></> : label}
           </button>
@@ -181,42 +195,58 @@ export default function ConverterTool() {
             </div>
           </div>
         ) : (
-          <div className="ht-cv-about">
-            <p>{MODES[mode][1]}</p>
-            <p className="ht-cv-eng">Runs in your browser. The video tools download a converter engine, about 9 MB, the first time.</p>
-          </div>
+          <ModeScreen mode={mode} v={vals[mode]} text={modeText} />
         )}
       </div>
 
-      <div className="ht-cv-set">
-        <div className="ht-cv-row">
-          <span className="ht-cv-lbl" id="ht-cv-fmt">Format</span>
-          {formatSeg({ labelledBy: 'ht-cv-fmt', className: 'ht-cv-seg' })}
-        </div>
-        <div className="ht-cv-row">
-          <span className="ht-cv-lbl" id="ht-cv-q">Quality</span>
-          {qualitySeg({ labelledBy: 'ht-cv-q', className: 'ht-cv-seg' })}
-          <p className="ht-cv-qn">{png ? 'PNG is lossless.' : ''}</p>
-        </div>
-        <div className="ht-cv-row">
-          <span className="ht-cv-lbl" id="ht-cv-s">Size</span>
-          {sizeSeg({ labelledBy: 'ht-cv-s', className: 'ht-cv-seg' })}
-        </div>
-      </div>
+      {mode === 0 ? (
+        <>
+          <div className="ht-cv-set">
+            <div className="ht-cv-row">
+              <span className="ht-cv-lbl" id="ht-cv-fmt">Format</span>
+              {formatSeg({ labelledBy: 'ht-cv-fmt', className: 'ht-cv-seg' })}
+            </div>
+            <div className="ht-cv-row">
+              <span className="ht-cv-lbl" id="ht-cv-q">Quality</span>
+              {qualitySeg({ labelledBy: 'ht-cv-q', className: 'ht-cv-seg' })}
+              <p className="ht-cv-qn">{png ? 'PNG is lossless.' : ''}</p>
+            </div>
+            <div className="ht-cv-row">
+              <span className="ht-cv-lbl" id="ht-cv-s">Size</span>
+              {sizeSeg({ labelledBy: 'ht-cv-s', className: 'ht-cv-seg' })}
+            </div>
+          </div>
 
-      {/* Phone: the three setting rows become one control under a three-way choice. */}
-      <Well label="What the File Converter can change" items={PHONE_MODES} value={setting} onPick={setSetting}>
-        {setting === 0 && formatSeg({ label: 'Output format', className: 'ht-grow' })}
-        {setting === 1 && qualitySeg({ label: 'Output quality', className: 'ht-grow' })}
-        {setting === 2 && sizeSeg({ label: 'Size limit, px', className: 'ht-grow' })}
-      </Well>
+          {/* Phone: the three setting rows become one control under a three-way choice. */}
+          <Well label="What the File Converter can change" items={PHONE_MODES} value={setting} onPick={setSetting}>
+            {setting === 0 && formatSeg({ label: 'Output format', className: 'ht-grow' })}
+            {setting === 1 && qualitySeg({ label: 'Output quality', className: 'ht-grow' })}
+            {setting === 2 && sizeSeg({ label: 'Size limit, px', className: 'ht-grow' })}
+          </Well>
+        </>
+      ) : (
+        <>
+          <div className="ht-cv-set">
+            {screen.settings.map((s, j) => (
+              <div className="ht-cv-row" key={s.label}>
+                <span className="ht-cv-lbl" id={`ht-cv-m${mode}-${j}`}>{s.label}</span>
+                {modeSeg(j, { labelledBy: `ht-cv-m${mode}-${j}`, className: 'ht-cv-seg' })}
+              </div>
+            ))}
+          </div>
+          <Well label={`What ${screen.label} can change`} items={screen.settings.map((s) => s.label)} value={sub} onPick={setSub}>
+            {modeSeg(sub, { label: screen.settings[sub].label, className: 'ht-grow' })}
+          </Well>
+        </>
+      )}
       </div>
 
       <ToolLink
         to={route('file-converter')}
-        onClick={carry}
-        fill={Boolean(pick)}
-        line={line}
+        onClick={mode === 0 ? carry : undefined}
+        fill={mode === 0 && Boolean(pick)}
+        line={mode === 0 ? line : screen.line}
+        short={mode === 0 ? undefined : screen.short}
       >
         Open in File Converter
       </ToolLink>
