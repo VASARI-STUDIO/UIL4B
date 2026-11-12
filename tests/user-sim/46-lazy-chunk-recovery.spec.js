@@ -236,7 +236,7 @@ test.describe('a lazy page that fails to download', () => {
     await expect.poll(() => held.length).toBe(1)
   })
 
-  test('offline, the page says it is waiting for a connection, does not reload, holds back every way on, and returns them once back online', async ({ page }) => {
+  test('offline, the page says it is waiting for a connection, does not reload, holds back the ways on that need one, keeps the homepage link, and returns them once back online', async ({ page }) => {
     const seen = watchReports(page)
     await go(page, '/privacy')
     await page.route(CREDITS_CHUNK, (route) => route.abort())
@@ -257,7 +257,9 @@ test.describe('a lazy page that fails to download', () => {
     const reload = card.getByRole('button', { name: 'Reload the page' })
     await expect(reload).toHaveCount(0)
     await expect(card.getByRole('link', { name: 'Report this', exact: true })).toHaveCount(0)
-    await expect(card.getByRole('link', { name: 'Back to the homepage' })).toHaveCount(0)
+    await expect(card.getByRole('link', { name: 'Help centre' })).toHaveCount(0)
+    // The homepage is in the entry bundle, so its link still works offline.
+    await expect(card.getByRole('link', { name: 'Back to the homepage' })).toBeVisible()
     expect(held.length, 'reloaded while offline').toBe(0)
 
     await page.evaluate(() => {
