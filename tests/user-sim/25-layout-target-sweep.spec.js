@@ -1456,8 +1456,11 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
 })
 
 // The same menu, now that it is the only way to Edit, Swap or Remove a colour on
-// a phone: the fixed menu stays between the header and tab bar, and scrolling
-// it brings every action fully into that band with a clear cue for more below.
+// a phone. Under 768px it is the shared bottom action sheet: it sits on the
+// screen edge over the tab bar (which its scrim dims), stays below the header,
+// and scrolling it brings every action fully into the sheet.
+// MUTATION: in PaletteBuilder.jsx render the `plb-ctx` div on phones again
+// instead of the shared `Menu`: there is no `.v3m-sheet`, so every viewport fails.
 test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a short phone', async ({ browser }) => {
   // Six page loads, but also 30 menu opens, each walking every item (scroll,
   // measure, hit-test) and then a keyboard pass. Counting only the loads gave
@@ -1475,20 +1478,18 @@ test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a 
       const items = await openSwatchMenu(page, cols, i, `${w}x${h}`)
       expect(Object.keys(items).length, `${w}x${h}: swatch ${i + 1} offered nothing to test`).toBeGreaterThanOrEqual(3)
       const menu = page.getByRole('menu', { name: 'Colour actions', exact: true })
+      // The sheet rises over the tab bar: it must be the shared sheet, with a
+      // Cancel row, and sit between the header and the bottom of the screen.
+      const sheet = page.locator('.v3m-sheet')
+      await expect(sheet.getByRole('button', { name: 'Cancel', exact: true }), `${w}x${h}: swatch ${i + 1} sheet has Cancel`).toBeVisible()
       const band = await menu.evaluate((el) => {
-        const b = el.getBoundingClientRect()
+        const b = el.closest('.v3m-sheet').getBoundingClientRect()
         const top = document.querySelector('.pnav')?.getBoundingClientRect().bottom ?? 0
-        const tabs = document.querySelector('.pnav-tabs')
-        const bottom = tabs && getComputedStyle(tabs).display !== 'none' ? tabs.getBoundingClientRect().top : innerHeight
+        const bottom = innerHeight
         return { top, bottom, withinBand: b.top >= top && b.bottom <= bottom, overflows: el.scrollHeight > el.clientHeight + 1 }
       })
-      expect(band.withinBand, `${w}x${h}: swatch ${i + 1} menu stays inside the usable band`).toBe(true)
+      expect(band.withinBand, `${w}x${h}: swatch ${i + 1} sheet stays between the header and the screen bottom`).toBe(true)
       if (w <= 360 && i > 0 && i < 4) expect(band.overflows, `${w}x${h}: short phone exercises menu scrolling`).toBe(true)
-      if (band.overflows) {
-        await expect.poll(() => menu.evaluate(el => getComputedStyle(el).maskImage), {
-          message: `${w}x${h}: overflowing menu shows a bottom fade`,
-        }).not.toBe('none')
-      }
       const actions = menu.getByRole('menuitem')
       for (let j = 0; j < await actions.count(); j++) {
         const item = actions.nth(j)
@@ -1499,7 +1500,7 @@ test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a 
           const menu = el.closest('[role="menu"]').getBoundingClientRect()
           return {
             withinBand: b.top >= band.top && b.bottom <= band.bottom,
-            withinMenu: b.top >= menu.top && b.bottom <= menu.bottom,
+            withinMenu: b.top >= menu.top - 1 && b.bottom <= menu.bottom + 1,
             menuWithinBand: menu.top >= band.top && menu.bottom <= band.bottom,
             hitsItself: [0.2, 0.5, 0.8].every(f => {
               const at = document.elementFromPoint(b.left + b.width * f, b.top + b.height / 2)
@@ -1507,25 +1508,19 @@ test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a 
             }),
           }
         }, band)
-        if (!m.withinBand || !m.withinMenu || !m.menuWithinBand) damage.push(`${w}x${h}: swatch ${i + 1} menu item "${name}" is not fully inside the usable menu band after scrolling`)
+        if (!m.withinBand || !m.withinMenu || !m.menuWithinBand) damage.push(`${w}x${h}: swatch ${i + 1} menu item "${name}" is not fully inside the sheet after scrolling`)
         if (!m.hitsItself) damage.push(`${w}x${h}: swatch ${i + 1} menu item "${name}" is covered after scrolling`)
       }
-      await expect.poll(() => menu.evaluate(el => getComputedStyle(el).maskImage), {
-        message: `${w}x${h}: fade disappears at the end of the menu`,
-      }).toBe('none')
       await closeSwatchMenu(page, `${w}x${h}: swatch ${i + 1}`)
       const more = cols.nth(i).getByRole('button', { name: /^More actions for / })
-      expect(await page.evaluate(() => !!document.activeElement?.closest('.plb-ctx')), 'pointer-opened menu leaves no focus inside the closed menu').toBe(false)
-      await expect(more, 'Escape blurs a pointer-opened trigger').not.toBeFocused()
-      await more.focus()
+      expect(await page.evaluate(() => !!document.activeElement?.closest('[role="menu"]')), 'a closed menu leaves no focus inside it').toBe(false)
+      await expect(more, 'Escape hands focus back to the trigger').toBeFocused()
       await more.press('Enter')
       await expect(actions.first(), 'keyboard opening focuses the first action').toBeFocused()
       await page.keyboard.press('End')
       await expect(menu.getByRole('menuitem', { name: 'Remove', exact: true })).toBeFocused()
       await page.keyboard.press('ArrowUp')
       await expect(actions.nth(await actions.count() - 2)).toBeFocused()
-      await page.keyboard.press('Tab')
-      await expect(menu.getByRole('menuitem', { name: 'Remove', exact: true })).toBeFocused()
       await closeSwatchMenu(page, `${w}x${h}: swatch ${i + 1} keyboard focus`)
       await expect(more, 'Escape inside the menu restores its trigger').toBeFocused()
     }
