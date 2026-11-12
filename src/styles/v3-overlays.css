@@ -129,7 +129,7 @@
   :root .ov-layer {
     align-items: end;
     justify-items: stretch;
-    padding: env(safe-area-inset-top, 0px) 0 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
   }
   :root .ui-modal,
   :root .fb-modal,
