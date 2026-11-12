@@ -7,9 +7,10 @@
 // phone target is big enough to hit.
 //
 // Seams: the project's own page (⋯ menu, then Delete…), the floating Feedback
-// button, the Report button on a community card, and the toast event
-// (`uil4b:toast` with an Undo action). Nothing reaches a real endpoint:
-// /api/support is intercepted.
+// button (desktop) and the "Report a problem" link on the sign-in form (phone,
+// where the floating button is hidden by design), the Report button on a
+// community card, and the toast event (`uil4b:toast` with an Undo action).
+// Nothing reaches a real endpoint: /api/support is intercepted.
 //
 // NOT CONVERTED: the two journeys about the Save popover (desktop 4, phone 5).
 // That popover is a menu, and menus are their own surface; the sweep at 320
@@ -68,25 +69,50 @@ const box = (locator) => locator.evaluate((el) => {
   return { x: r.x, y: r.y, w: r.width, h: r.height, b: r.bottom }
 })
 
+/** Wait for an element's entrance animation to finish, so its box is where it rests. */
+const settled = (locator) => locator.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)).then(() => true))
+
 const noSideways = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
 
 // ── Shared journey bodies (desktop and phone differ only in width and in what
 //    they additionally assert) ────────────────────────────────────────────────
 
-async function feedbackFormJourney(page) {
-  const posts = await interceptSupport(page)
+/**
+ * Open the feedback dialog the way each width reaches it. The floating
+ * "Share feedback" button is hidden on a phone, so a phone opens it from the
+ * "Report a problem" link on the sign-in form, which shows only where the
+ * floating button is hidden. Returns the control that opened it.
+ */
+async function openFeedback(page, { phone }) {
   await go(page, '/community')
-  const opener = page.getByRole('button', { name: 'Share feedback' })
-  await opener.click()
+  if (!phone) {
+    const opener = page.getByRole('button', { name: 'Share feedback' })
+    await opener.click()
+    return opener
+  }
+  await expect(page.getByRole('button', { name: 'Share feedback' }), 'the floating button is hidden on a phone').toBeHidden()
+  await go(page, '/login')
+  const opener = page.getByRole('button', { name: 'Report a problem' })
+  await opener.tap()
+  return opener
+}
+
+async function feedbackFormJourney(page, { phone = false } = {}) {
+  const posts = await interceptSupport(page)
+  const opener = await openFeedback(page, { phone })
   const dialog = page.getByRole('dialog', { name: /feedback/i })
   await expect(dialog).toBeVisible()
 
   // Submit is never disabled: an empty one explains itself, on the field.
   const submit = dialog.locator('.fb-submit')
   await expect(submit).toBeEnabled()
+  // BREAK: `disabled={sending}` -> `disabled={sending || !message.trim()}` on the Submit in FeedbackModal.jsx
   await submit.click()
-  const message = dialog.getByLabel('Message')
+  // The label differs by type (the sign-in link seeds a bug report), the id does not.
+  const message = dialog.locator('#fb-message')
   await expect(message).toHaveAttribute('aria-invalid', 'true')
+  await expect(message).toHaveAttribute('aria-describedby', 'fb-message-error')
+  await expect(dialog.locator('#fb-message-error')).toHaveText('Write a message first.')
   await expect(dialog.getByRole('alert').first()).toBeVisible()
   await expect(message).toBeFocused()
   expect(posts, 'an empty submit must not send').toEqual([])
@@ -94,6 +120,7 @@ async function feedbackFormJourney(page) {
   // Recover: typing clears the error, then it sends.
   await message.fill('The tint scale rounds the last step.')
   await expect(message).not.toHaveAttribute('aria-invalid', 'true')
+  await expect(dialog.locator('#fb-message-error')).toHaveCount(0)
   await submit.click()
   await expect.poll(() => posts.length).toBe(1)
 
@@ -258,6 +285,7 @@ test.describe('overlays at 390', () => {
     await openConfirm(page)
     const dialog = confirmDialog(page)
 
+    await settled(dialog) // the sheet slides in over 240ms; measure it at rest
     const d = await box(dialog)
     const vh = await page.evaluate(() => window.innerHeight)
     expect(Math.abs(d.b - vh), `the sheet is ${vh - d.b}px off the bottom edge`).toBeLessThanOrEqual(1)
@@ -296,7 +324,7 @@ test.describe('overlays at 390', () => {
 
   test('3. the feedback form as a sheet: an empty send explains itself, recovers, sends, focus returns', async ({ page }) => {
     watch(page, 'a phone visitor sending feedback')
-    await feedbackFormJourney(page)
+    await feedbackFormJourney(page, { phone: true })
   })
 
   test('4. the report sheet: nothing pre-chosen, errors, send, and the sheet fits the width', async ({ page }) => {
@@ -309,14 +337,14 @@ test.describe('overlays at 390', () => {
     watch(page, 'someone on the narrowest phone')
     await page.setViewportSize({ width: 320, height: 640 })
 
-    await openConfirm(page)
-    expect(await noSideways(page), 'the confirm scrolls sideways at 320').toBe(true)
-    await page.keyboard.press('Escape')
-
-    await go(page, '/community')
-    await page.getByRole('button', { name: 'Share feedback' }).tap()
+    // Feedback first: its phone entry is the sign-in form's link, which a signed-in visitor never sees.
+    await openFeedback(page, { phone: true })
     await expect(page.getByRole('dialog', { name: /feedback/i })).toBeVisible()
     expect(await noSideways(page), 'the feedback sheet scrolls sideways at 320').toBe(true)
+    await page.keyboard.press('Escape')
+
+    await openConfirm(page)
+    expect(await noSideways(page), 'the confirm scrolls sideways at 320').toBe(true)
     await page.keyboard.press('Escape')
 
     await go(page, '/community')

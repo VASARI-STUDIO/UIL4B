@@ -25,11 +25,17 @@ const FREE = { plan: 'free', projects: 1 }
 const WIDE = { width: 1440, height: 900 }
 const PHONE = { width: 390, height: 844 }
 
-async function open(browser, size, { theme = 'dark', url = '/create/palette', touch = false, who = FREE } = {}) {
+// `recent` seeds the recently used tools, which the Learn suggestion follows.
+async function open(browser, size, { theme = 'dark', url = '/create/palette', touch = false, who = FREE, recent = null } = {}) {
   const ctx = await browser.newContext({ viewport: size, hasTouch: touch, isMobile: touch })
   const page = await ctx.newPage()
   watch(page, `mega ${size.width} ${theme}`)
-  await page.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* blocked */ } }, theme)
+  await page.addInitScript(([t, list]) => {
+    try {
+      localStorage.setItem('vs-t', t)
+      if (list) localStorage.setItem('vs-recent-tools', JSON.stringify(list))
+    } catch { /* blocked */ }
+  }, [theme, recent])
   if (who) await signIn(page, who)
   await go(page, url)
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
@@ -37,7 +43,7 @@ async function open(browser, size, { theme = 'dark', url = '/create/palette', to
 }
 
 const trig = (page, name) => page.locator('.pnav-trigger', { hasText: name })
-const panel = (page) => page.locator('#pnav-mega')
+}
 const rows = (page) => page.locator('#pnav-mega .pnav-tool')
 const box = (loc) => loc.evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, right: r.right, bottom: r.bottom } })
 
@@ -129,23 +135,92 @@ test.describe('desktop menus at 1440', () => {
     await ctx.close()
   })
 
+  test('a menu opened by click survives the pointer leaving, and the next click on its trigger closes it', async ({ browser }) => {
+    const { ctx, page } = await open(browser, WIDE)
+    await trig(page, 'Create').click()
+    await expect(panel(page)).toBeVisible()
+    // BREAK: in `hoverLeave` (PillNav.jsx) drop the `openedBy.current === 'click'` early return, so the 120ms close timer runs.
+    // Leave the bar, and the panel, entirely; wait out the 120ms hover-leave close timer twice over.
+    await page.mouse.move(700, 800)
+    await page.waitForTimeout(300)
+    await expect(panel(page), 'a click-opened panel stays open after the pointer leaves').toBeVisible()
+    await expect(trig(page, 'Create')).toHaveAttribute('aria-expanded', 'true')
+
+    // Coming back over the trigger leaves it click-opened: one click closes it, and it stays closed.
+    await trig(page, 'Create').hover()
+    await page.waitForTimeout(300)
+    await expect(panel(page)).toBeVisible()
+    await trig(page, 'Create').click()
+    await expect(panel(page), 'one click on the trigger closes a click-opened panel').toBeHidden()
+    await page.mouse.move(700, 800)
+    await page.waitForTimeout(300)
+    await expect(panel(page)).toBeHidden()
+    await ctx.close()
+  })
+
+  test('a menu opened by hover still closes when the pointer leaves', async ({ browser }) => {
+    const { ctx, page } = await open(browser, WIDE)
+    await trig(page, 'Create').hover()
+    await expect(panel(page)).toBeVisible()
+    await page.mouse.move(700, 800)
+    await expect(panel(page), 'a hover-opened panel closes on leave').toBeHidden()
+    await ctx.close()
+  })
+
+  test('Back closes a click-opened menu, and so does Forward', async ({ browser }) => {
+    const { ctx, page } = await open(browser, WIDE)
+    // One in-app navigation, so there is a page to go back to.
+    await trig(page, 'Create').click()
+    await rows(page).filter({ hasText: 'Font Pair' }).click()
+    await expect(page).toHaveURL(/\/create\/font-pair/)
+    await expect(panel(page)).toBeHidden()
+
+    await trig(page, 'Discover').click()
+    await expect(panel(page)).toBeVisible()
+    // BREAK: remove the `panelKey` reset block that calls setOpen(null) on a new location.key (PillNav.jsx).
+    await page.goBack()
+    await expect(page).toHaveURL(/\/create\/palette/)
+    await expect(panel(page), 'Back closes the open panel').toBeHidden()
+    await expect(trig(page, 'Discover')).toHaveAttribute('aria-expanded', 'false')
+
+    await trig(page, 'Learn').click()
+    await expect(panel(page)).toBeVisible()
+    await page.goForward()
+    await expect(page).toHaveURL(/\/create\/font-pair/)
+    await expect(panel(page), 'Forward closes the open panel').toBeHidden()
+    await ctx.close()
+  })
+
   test('keyboard Create: arrows walk the rows with a visible ring, Home and End jump, wrap', async ({ browser }) => {
     const { ctx, page } = await open(browser, WIDE)
     await trig(page, 'Create').focus()
     await page.keyboard.press('Enter')
     await expect(panel(page)).toBeVisible()
+    // The first ArrowDown from the trigger moves focus into the panel two animation
+    // frames later (the panel has to be laid out first), so wait for focus to land
+    // in a row instead of reading it straight after the key.
+    const focused = () => page.evaluate(() => {
+      const el = document.activeElement
+      return el?.closest('#pnav-mega') ? (el.textContent || '').trim() : null
+    })
     await page.keyboard.press('ArrowDown')
-    const first = await page.evaluate(() => document.activeElement?.closest('#pnav-mega .pnav-tool')?.getAttribute('data-row-id') || document.activeElement?.textContent)
+    await expect.poll(focused, { message: 'ArrowDown from the trigger focuses the first row' }).not.toBeNull()
+    const first = await focused()
     expect(first).toBeTruthy()
     const ring = await page.evaluate(() => { const cs = getComputedStyle(document.activeElement); return cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2 })
-    expect(ring).toBe(true)
+    expect(ring, 'the focused row has a 2px+ ring').toBe(true)
+    // BREAK: delete the `End` branch in onMenuKeyDown (PillNav.jsx): End stays on the first row and this fails.
     await page.keyboard.press('End')
-    const last = await page.evaluate(() => document.activeElement.textContent)
+    await expect.poll(focused).not.toBe(first)
+    const last = await focused()
+    expect(last).toContain('View all create tools')
     await page.keyboard.press('Home')
-    const home = await page.evaluate(() => document.activeElement.textContent)
-    expect(home).not.toBe(last)
+    await expect.poll(focused).toBe(first)
+    // Wrapping: ArrowUp from the first row lands on the last, ArrowDown from the last on the first.
+    await page.keyboard.press('ArrowUp')
+    await expect.poll(focused).toBe(last)
     await page.keyboard.press('ArrowDown')
-    await page.keyboard.press('Shift+Tab')
+    await expect.poll(focused).toBe(first)
     await ctx.close()
   })
 
@@ -200,11 +275,13 @@ test.describe('desktop menus at 1440', () => {
   }
 
   test('Learn never recommends the guide you are on', async ({ browser }) => {
-    const { ctx, page } = await open(browser, WIDE, { url: '/learn/brand-colour' })
+    // Palette was used last, and its guide is brand-colour: the one being read. The next tool (Tint) names colour-spaces.
+    const { ctx, page } = await open(browser, WIDE, { url: '/learn/brand-colour', recent: ['palette', 'tint'] })
     await trig(page, 'Learn').click()
     await expect(panel(page)).toBeVisible()
+    await expect(panel(page).locator('.pnav-reco[data-guide]'), 'the lazy suggestion has loaded').toHaveCount(1)
     const guides = await panel(page).locator('.pnav-reco').evaluateAll((els) => els.map((e) => e.getAttribute('data-guide')))
-    for (const g of guides) expect(g).not.toBe('brand-colour')
+    expect(guides, 'the suggestion skips the guide being read and falls to the next tool').toEqual(['colour-spaces'])
     await ctx.close()
   })
 
@@ -319,11 +396,29 @@ test.describe('phone sheet at 390 (touch)', () => {
   })
 
   test('Learn on the guide you are on never recommends it', async ({ browser }) => {
-    const { ctx, page } = await open(browser, PHONE, { touch: true, url: '/learn/brand-colour' })
+    const { ctx, page } = await open(browser, PHONE, { touch: true, url: '/learn/brand-colour', recent: ['palette', 'tint'] })
     await page.locator('.pnav-tab', { hasText: 'Create' }).tap()
     await page.locator('.pnav-sheet .pnav-acc-trigger', { hasText: 'Learn' }).tap()
+    await expect(page.locator('.pnav-sheet .pnav-reco[data-guide]'), 'the lazy suggestion has loaded').toHaveCount(1)
     const guides = await page.locator('.pnav-sheet .pnav-reco').evaluateAll((els) => els.map((e) => e.getAttribute('data-guide')))
-    for (const g of guides) expect(g).not.toBe('brand-colour')
+    expect(guides, 'the suggestion skips the guide being read and falls to the next tool').toEqual(['colour-spaces'])
+    await ctx.close()
+  })
+
+  test('the recommended link in the Discover and Learn sections is a 44px target', async ({ browser }) => {
+    const { ctx, page } = await open(browser, PHONE, { touch: true, url: '/projects', recent: ['gradient'] }) // Gradient: a gallery and a guide to suggest
+    await page.locator('.pnav-tab', { hasText: 'Create' }).tap()
+    const sheet = page.locator('.pnav-sheet')
+    await expect(sheet).toBeVisible()
+    for (const seg of ['Discover', 'Learn']) {
+      await sheet.locator('.pnav-acc-trigger', { hasText: seg }).tap()
+      const link = sheet.locator('a.pnav-reco-link:visible')
+      await expect(link, `${seg} shows its recommendation`).toHaveCount(1)
+      // BREAK: delete `.pnav-sheet .pnav-reco-link{min-height:44px}` from v3-shell.css (the row is 36px).
+      const b = await box(link)
+      expect(b.h, `${seg} recommendation is ${b.h}px tall`).toBeGreaterThanOrEqual(43.5)
+      expect(b.right, `${seg} recommendation runs off the right edge`).toBeLessThanOrEqual(390)
+    }
     await ctx.close()
   })
 

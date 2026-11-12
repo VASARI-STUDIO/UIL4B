@@ -239,8 +239,9 @@ test.describe('desktop bar at 1440', () => {
     await ctx.close()
   })
 
+  // The site footer shows on the reading and legal pages (nav/footerRoutes.js), not on app pages such as /projects.
   test('the footer links go to real pages', async ({ browser }) => {
-    const { ctx, page } = await open(browser, WIDE, { url: '/projects' })
+    const { ctx, page } = await open(browser, WIDE, { url: '/privacy' })
     const footer = page.locator('.app-footer')
     await footer.scrollIntoViewIfNeeded()
     const hrefs = await footer.locator('a[href^="/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')))
@@ -287,7 +288,10 @@ test.describe('phone at 390 (touch)', () => {
     await expect(page.locator('.pnav-tab[aria-current="page"]')).toContainText('Create')
     const b = await box(page.locator('.pnav-tabs'))
     expect(Math.round(b.bottom)).toBe(844)
-    expect(b.h).toBeGreaterThanOrEqual(63)
+    // BREAK: set `--tabbar-h` back to 61px in global.css (the bar is then 61 high).
+    expect(Math.round(b.h), 'the tab bar is 64px (1 line + 3 + 56 + 4, no safe area in the test)').toBe(64)
+    const token = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tabbar-h').trim())
+    expect(token, 'the page reserves the same 64px the bar occupies').toBe('64px')
     await ctx.close()
   })
 
@@ -354,8 +358,34 @@ test.describe('phone at 390 (touch)', () => {
     }
   })
 
+  for (const w of [320, 359, 360, 390]) {
+    test(`header at ${w}: no sideways scroll, 44px buttons, and the ${w < 360 ? 'symbol' : 'full lockup'} wordmark`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { width: w, height: 700 }, { touch: true })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), `page width at ${w}`).toBeLessThanOrEqual(w)
+      const right = await page.evaluate(() => Math.max(...[...document.querySelectorAll('.pnav-inner > *')].map((e) => e.getBoundingClientRect().right)))
+      expect(right, 'the header stays inside the width').toBeLessThanOrEqual(w + 0.5)
+      for (const sel of ['.pnav-search-field', '.pnav-export', '.pnav-avatar-btn', '.pnav-mobile']) {
+        const b = await box(page.locator(sel).first())
+        expect(b.w, `${sel} width at ${w}`).toBeGreaterThanOrEqual(43.5)
+        expect(b.h, `${sel} height at ${w}`).toBeGreaterThanOrEqual(43.5)
+        expect(b.right, `${sel} at ${w}`).toBeLessThanOrEqual(w)
+      }
+      // BREAK: change `@media(max-width:359px)` to `(max-width:0px)` in v3-shell.css (the wide lockup then shows at 320).
+      const narrow = page.locator('.pnav-word .brand-logo-narrow')
+      const wide = page.locator('.pnav-word .brand-logo-wide')
+      if (w < 360) {
+        await expect(narrow).toBeVisible()
+        await expect(wide).toBeHidden()
+      } else {
+        await expect(wide).toBeVisible()
+        await expect(narrow).toBeHidden()
+      }
+      await ctx.close()
+    })
+  }
+
   test('footer: two columns of links, every link a 44px target', async ({ browser }) => {
-    const { ctx, page } = await open(browser, PHONE, { touch: true, url: '/projects' })
+    const { ctx, page } = await open(browser, PHONE, { touch: true, url: '/privacy' })
     const footer = page.locator('.app-footer')
     await footer.scrollIntoViewIfNeeded()
     const hs = await footer.locator('.app-footer-links a').evaluateAll((as) => as.map((a) => a.getBoundingClientRect().height))

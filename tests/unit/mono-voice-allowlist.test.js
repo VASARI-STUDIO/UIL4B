@@ -313,6 +313,11 @@ const ALLOWED = {
   'pages/type-tools-nav.css': {
     '.ttn-mono': 'value',
   },
+  'v3-menus.css': {
+    // The shared menu's value column and header sub line carry a hex value (the Tint menu's stops).
+    '.v3m-s': 'hex',
+    '.v3m-val': 'hex',
+  },
   'v3-shell.css': {
     '.pnav-search-kbd': 'kbd',
   },
@@ -457,11 +462,9 @@ test('the debt list can only fall', () => {
 // the allowlist's business (above), not this one.
 //
 // "file :: declaration" -> how many times it may appear.
-const LITERAL_MONO_OK = {
-  // The mega-menu "Font Pair" moment: the second word swaps to the mono face as
-  // a picture of a font pairing. Rule and keyframe both name the face.
-  'global.css :: font-family:"Geist Mono",monospace': 2,
-}
+// None today: the mega-menu "Font Pair" moment that named the face twice was
+// retired with the shell retoken, and the menu type now reads var(--mono).
+const LITERAL_MONO_OK = {}
 
 const LITERAL_MONO = /([\w-]+)\s*:\s*([^;{}]*(?:Geist Mono|monospace)[^;{}]*)/gi
 
