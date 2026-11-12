@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { LONG_PRESS_MS } from './menuModel'
+import { LONG_PRESS_MS } from './menuModel.js'
 
 // Touch long-press for a target that has a context menu. Spread the result on
 // the target:  <div {...useLongPress((point, el) => open(point, el))}>

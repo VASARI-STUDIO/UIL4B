@@ -42,7 +42,7 @@
 .v3m-ht{flex:1;min-width:0}
 .fbx-menu .v3m-t,.fbx-menu [data-fbx-cancel] .v3m-l{white-space:normal;overflow-wrap:anywhere}
 .v3m-t{display:block;font-size:15px;line-height:24px;font-weight:600;color:var(--m-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.v3m-s{display:block;font-size:13px;line-height:18px;color:var(--m-t62);font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.v3m-s{display:block;font-size:13px;line-height:18px;color:var(--m-t62);font-family:var(--mono);font-variant-numeric:tabular-nums}
 .v3m-sec{height:28px;padding:0 12px;display:flex;align-items:flex-end;font-size:13px;line-height:18px;font-weight:500;color:var(--m-t62)}
 .v3m-ln{height:9px;padding:4px 0 0}
 .v3m-ln::before{content:'';display:block;height:1px;background:var(--m-hl08)}
@@ -64,7 +64,7 @@
 .v3m-l2{display:block;font-size:13px;line-height:18px;font-weight:400;color:var(--m-t62)}
 .v3m-tr{flex:none;display:flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:500;color:var(--m-t72)}
 .v3m-hint{font-weight:400;color:var(--m-t56)}
-.v3m-val{font-family:'Geist Mono',ui-monospace,monospace;font-size:13px;line-height:18px;font-weight:400;color:var(--m-t62);font-variant-numeric:tabular-nums}
+.v3m-val{font-family:var(--mono);font-size:13px;line-height:18px;font-weight:400;color:var(--m-t62);font-variant-numeric:tabular-nums}
 .v3m-val.bl{filter:blur(4px)}
 .v3m-tick{flex:none;color:var(--m-ink)}
 .v3m-lk{flex:none}

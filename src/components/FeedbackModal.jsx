@@ -114,6 +114,8 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // whenever the dialog opens afresh so it is never carried to the next person.
   const [contact, setContact] = useState(() => delivery.status === 'sent' ? '' : delivery.draft?.contact ?? '')
   const [contactError, setContactError] = useState('')
+  // Set when Submit is pressed with an empty message; cleared by typing.
+  const [messageError, setMessageError] = useState('')
   const sending = delivery.status === 'sending'
   const sent = sending || delivery.status === 'sent'
   const error = delivery.status === 'failed' ? t(delivery.result.status === 429 ? 'feedback.rateLimit' : 'feedback.submitError') : ''
@@ -196,6 +198,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     setSelections({})
     setSubject('')
     setMessage('')
+    setMessageError('')
     modalFeedbackSend.reset()
     sendingRef.current = false
     attemptRef.current = null
@@ -311,7 +314,13 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!message.trim() || sendingRef.current) return
+    if (sendingRef.current) return
+    if (!message.trim()) {
+      setMessageError('Write a message first.')
+      messageRef.current?.focus()
+      return
+    }
+    setMessageError('')
 
     // Checked here so a mistyped address is named as one, rather than arriving
     // as the generic "didn't send" the server's 400 would turn into.
@@ -473,12 +482,15 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
                 ref={messageRef}
                 className="fb-textarea"
                 value={message}
-                onChange={e => setMessage(e.target.value)}
+                onChange={e => { setMessage(e.target.value); if (messageError) setMessageError('') }}
                 placeholder={activeType.messagePlaceholder}
                 rows={5}
                 maxLength={SUPPORT_MESSAGE_MAX}
                 required
+                aria-invalid={!!messageError}
+                aria-describedby={messageError ? 'fb-message-error' : undefined}
               />
+              {messageError && <p className="fb-error" id="fb-message-error" role="alert">{messageError}</p>}
             </div>
 
             {/* What we are about to attach, in the open, itemised, before they
@@ -554,7 +566,7 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
 
             <div className="fb-actions">
               <button type="button" className="btn" onClick={onClose} disabled={sending}>Cancel</button>
-              <button type="submit" className="btn btn-accent" disabled={sending || !message.trim()} aria-busy={sending}>
+              <button type="submit" className="btn btn-accent fb-submit" disabled={sending} aria-busy={sending}>
                 {sending ? 'Sending...' : 'Submit'}
               </button>
             </div>
