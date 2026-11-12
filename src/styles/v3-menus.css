@@ -1,20 +1,30 @@
 /* The one menu skin (components/menu/Menu.jsx): a 300px popover from 768px, a
    bottom action sheet below it. Tonal fills, no borders, radii 16 / 12 / 8 / 999,
    focus is a 2px ink outline. The colour roles are set once on the layer so a
-   menu opened inside any page or dialog reads the same. */
+   menu opened inside any page or dialog reads the same.
+
+   The row and the surface are tokens so the dropdown list (global.css) and the
+   palette right-click menu (colour.css) are built from the same values: a 36px
+   row at 15/500 with an 8px radius, on a 16px surface with no border. */
+:root{
+  --menu-row-h:36px;--menu-row-px:12px;--menu-row-r:8px;--menu-row-fs:15px;--menu-row-fw:500;--menu-r:16px;
+  --menu-bg:#131416;--menu-ring:0 0 0 1px rgba(239,238,234,.08);--menu-shadow:0 12px 32px -12px rgba(0,0,0,.7);
+}
+:root[data-theme="light"]{
+  --menu-bg:#FFFFFF;--menu-ring:0 0 0 1px rgba(18,20,24,.1);--menu-shadow:0 12px 32px -12px rgba(18,20,24,.22);
+}
 .v3m-layer{
   position:fixed;inset:0;z-index:1000;isolation:isolate;pointer-events:none;
   --m-ink:rgb(var(--ink-rgb));
   --m-t86:rgba(var(--ink-rgb),.86);--m-t72:rgba(var(--ink-rgb),.72);--m-t62:rgba(var(--ink-rgb),.62);--m-t56:rgba(var(--ink-rgb),.56);
   --m-hl08:rgba(var(--ink-rgb),.08);
-  --m-bg:#131416;--m-ring:0 0 0 1px rgba(239,238,234,.08);--m-shadow:0 12px 32px -12px rgba(0,0,0,.7);
+  --m-bg:var(--menu-bg);--m-ring:var(--menu-ring);--m-shadow:var(--menu-shadow);
   --m-edge:rgba(239,238,234,.28);--m-hover:rgba(239,238,234,.06);--m-press:rgba(239,238,234,.1);
   --m-danger:#FF8A7A;--m-scrim:rgba(6,6,7,.6);--m-on-ink:#060607;
   --m-ease:cubic-bezier(.23,1,.32,1);
   font-family:var(--font,'Geist',system-ui,sans-serif);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
 }
 :root[data-theme="light"] .v3m-layer{
-  --m-bg:#FFFFFF;--m-ring:0 0 0 1px rgba(18,20,24,.1);--m-shadow:0 12px 32px -12px rgba(18,20,24,.22);
   --m-edge:rgba(18,20,24,.22);--m-hover:rgba(18,20,24,.05);--m-press:rgba(18,20,24,.08);
   --m-danger:#B3261E;--m-scrim:rgba(18,20,24,.32);--m-on-ink:#F5F5F2;--m-t56:rgba(18,20,24,.62);
 }
@@ -23,7 +33,7 @@
 /* ---- the panel ---- */
 .v3m{
   position:fixed;z-index:40;top:0;left:0;width:300px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);
-  overflow-y:auto;overscroll-behavior:contain;isolation:isolate;padding:8px;border-radius:16px;
+  overflow-y:auto;overscroll-behavior:contain;isolation:isolate;padding:8px;border:0 solid transparent;border-radius:var(--menu-r);
   background:var(--m-bg);color:var(--m-t86);box-shadow:var(--m-ring),var(--m-shadow);outline:none;pointer-events:auto;
   animation:v3m-in 180ms var(--m-ease) both;
 }
@@ -51,8 +61,8 @@
 
 /* ---- rows ---- */
 .v3m-i{
-  position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:36px;padding:6px 12px;
-  border:0;border-radius:8px;background:none;text-align:left;color:var(--m-t86);font:inherit;font-size:15px;line-height:24px;font-weight:500;
+  position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:var(--menu-row-h);padding:6px var(--menu-row-px);
+  border:0;border-radius:var(--menu-row-r);background:none;text-align:left;color:var(--m-t86);font:inherit;font-size:var(--menu-row-fs);line-height:24px;font-weight:var(--menu-row-fw);
   cursor:default;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
   transition:background-color 150ms ease,color 150ms ease;
 }

@@ -4670,10 +4670,11 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 }
 .pop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* Shared row rhythm for anything built on .pop. */
+/* Shared row rhythm for anything built on .pop. The row is the V3 menu row
+   (--menu-row-* in v3-menus.css), so dropdowns and menus read as one family. */
 .pop-head{padding:var(--s-2) 10px var(--s-1);color:var(--t2);font-family:var(--font);font-size:var(--fs-caption);letter-spacing:normal;text-transform:none}
 .pop-sep{height:1px;margin:var(--s-1) 6px;background:var(--border)}
-.pop-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;background:none;border-radius:var(--radius-s);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.pop-item{display:flex;align-items:center;gap:12px;width:100%;min-height:var(--menu-row-h);padding:0 var(--menu-row-px);border:none;background:none;border-radius:var(--menu-row-r);font-family:var(--font);font-size:var(--menu-row-fs);font-weight:var(--menu-row-fw);color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 
 /* Shared select triggers retain the field classes supplied by each surface. */
@@ -4685,9 +4686,14 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .menu-select-trigger.fb-select,.ui-field .menu-select-trigger{width:100%}
 .pop.menu-select-list{position:fixed;inset:auto;left:var(--select-left,8px);top:var(--select-top,0px);bottom:auto;z-index:var(--select-layer,130);min-width:min(max(180px,var(--select-min-w,0px)),calc(100vw - 16px));width:max-content;max-width:calc(100vw - 16px);max-height:min(var(--pop-max-h,100dvh),var(--select-scroll-max-h,100dvh));isolation:isolate;scrollbar-width:thin;scrollbar-color:var(--t3) transparent}
 .pop.menu-select-list[data-pop-side="top"],.pop.menu-select-list[data-pop-align]{left:var(--select-left,8px);right:auto;top:var(--select-top,0px);bottom:auto}
+/* From 768px the list wears the menu surface: 16px radius, tonal fill, no border.
+   Below it the list is a bottom sheet with its own skin (further down). */
+@media(min-width:768px){
+  .pop.menu-select-list{border:0 solid transparent;border-radius:var(--menu-r);background:var(--menu-bg);box-shadow:var(--menu-ring),var(--menu-shadow)}
+}
 .menu-select-option.is-active{background:var(--hvr);color:var(--t0)}
 .pop.menu-select-list:focus-visible{outline:none}
-.menu-select-list:focus-visible .menu-select-option.is-active{outline:2px solid var(--link);outline-offset:-2px}
+.menu-select-list:focus-visible .menu-select-option.is-active{outline:2px solid rgb(var(--ink-rgb));outline-offset:-2px}
 .menu-select-scrim{display:block;position:fixed;inset:0;z-index:calc(var(--select-layer,130) - 1);background:transparent;animation:none}
 .menu-select-list .pop-head{display:flex;justify-content:space-between;gap:var(--s-2)}
 .menu-select-option[aria-selected="true"]{color:var(--accent-text)}
