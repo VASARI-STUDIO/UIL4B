@@ -65,16 +65,16 @@ test.describe('/tools content', () => {
   test('the Contrast card shows a ratio, and a failing pair never uses the pass colour', async ({ page }) => {
     await go(page, '/tools')
     const result = page.locator('.mk-card[data-tool="contrast"] .mk-result')
-    const pass = await result.evaluate((el) => getComputedStyle(el).color)
+    const ratio = result.locator('b')
+    const pass = await ratio.evaluate((el) => getComputedStyle(el).color)
     const swatch = page.locator('.mk-card[data-tool="contrast"] .mk-swatch').first()
-    // Cycle until the verdict fails (step 1 against steps 2 and 3 are close).
-    let colour = pass
-    for (let i = 0; i < 9 && (await result.getAttribute('data-pass')) === 'yes'; i += 1) {
-      await swatch.click()
-    }
-    if ((await result.getAttribute('data-pass')) === 'no') colour = await result.evaluate((el) => getComputedStyle(el).color)
+    // Cycle until the verdict fails (step 1 against steps 2 and 3 are close). Retry click-and-check as one unit.
+    await expect(async () => {
+      if ((await result.getAttribute('data-pass')) === 'yes') await swatch.click()
+      await expect(result).toHaveAttribute('data-pass', 'no', { timeout: 400 })
+    }).toPass({ timeout: 8000 })
     // Mutation: paint a failing pair with --ok-strong → the two colours match.
-    expect(colour).not.toBe(pass)
+    await expect.poll(() => ratio.evaluate((el) => getComputedStyle(el).color)).not.toBe(pass)
   })
 
   test('the live demos respond: palette seed, ratio switch', async ({ page }) => {

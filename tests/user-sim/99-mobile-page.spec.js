@@ -74,14 +74,8 @@ test.describe('/mobile renders as its own page', () => {
     .filter((img) => getComputedStyle(img).display !== 'none')
     .map((img) => ({ src: img.getAttribute('src'), alt: img.getAttribute('alt') })))
 
-
-  // Rows marked test.fail are open product bugs this spec found; each goes red when its bug is fixed, which is the cue to drop the mark.
-  //   dark, drawn once: .mk-img-light stays display:block (v3-marketing.css:162 outranks :171), so two pictures draw.
-  //   light, description: the visible light capture has alt="" (SpectrumMobile.jsx:102), so the description is lost.
-  const BUG_THEME = { once: 'dark', alt: 'light' }
   for (const theme of ['light', 'dark']) {
     test(`${theme} theme: each phone draws its ${theme} capture once`, async ({ browser }) => {
-      if (BUG_THEME.once === theme) test.fail()
       const { ctx, page } = await ctxAt(browser, 1440, { theme })
       await go(page, '/mobile')
       expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(theme)
@@ -94,7 +88,6 @@ test.describe('/mobile renders as its own page', () => {
     })
 
     test(`${theme} theme: the picture each phone draws has its screen reader description`, async ({ browser }) => {
-      if (BUG_THEME.alt === theme) test.fail()
       const { ctx, page } = await ctxAt(browser, 1440, { theme })
       await go(page, '/mobile')
       for (let i = 0; i < 3; i += 1) {
