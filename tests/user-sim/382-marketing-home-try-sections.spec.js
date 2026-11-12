@@ -241,6 +241,18 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
       })
     }
 
+    test('a click after a scroll that was left alone does not pull the page back', async ({ page }) => {
+      await arrive(page, 1)
+      const from = await scrollNow(page)
+      const y = await wheelToRest(page, 60, 'the page after the nudge')
+      expect(Math.abs(y - (from + 60)), 'the wheel left the page where this test aimed it').toBeLessThan(4)
+      await stays(page, y, 'a modest scroll away from a tool')
+      // A click with no scroll behind it: only a scroll may start a settle.
+      await page.mouse.click(2, Math.round(height / 2))
+      // Mutation: drop `if (from === null) return` from settle() in HomeTry.jsx -> the click eases the page back the 60px.
+      await stays(page, y, 'a click after the page was left alone')
+    })
+
     test('a scroll that ends beyond reach of the tool it arrived at is left where it is', async ({ page }) => {
       await arrive(page, 0)
       const y = await aim(page, 1, 120)
