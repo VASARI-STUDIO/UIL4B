@@ -158,8 +158,8 @@ test('a fresh sales hash lands its section 104px from the top', async ({ page })
 })
 
 test('a section link from another route lands on the sales page', async ({ page }) => {
-  watch(page, 'a visitor following Plans from the footer on the mobile page')
-  await go(page, '/mobile')
+  watch(page, 'a visitor following Plans from the footer on the sitemap page')
+  await go(page, '/sitemap')
   await page.locator('.sp-footer a[href="/home#plans"]').first().click()
   await ready(page, '/home')
   await expect(page).toHaveURL(/\/home#plans$/)
@@ -168,8 +168,8 @@ test('a section link from another route lands on the sales page', async ({ page 
 })
 
 test('a footer section link from another route puts focus on the section heading', async ({ page }) => {
-  watch(page, 'a keyboard visitor following Plans from the footer on the mobile page')
-  await go(page, '/mobile')
+  watch(page, 'a keyboard visitor following Plans from the footer on the sitemap page')
+  await go(page, '/sitemap')
   await page.locator('.sp-footer a[href="/home#plans"]').first().click()
   await ready(page, '/home')
   await homeLanding(page, 'plans')
@@ -186,7 +186,7 @@ test('a section that arrives after the landing deadline still takes focus on its
     await new Promise((resolve) => setTimeout(resolve, 4500))
     await route.continue()
   })
-  await go(page, '/mobile')
+  await go(page, '/sitemap')
   await page.locator('.sp-footer a[href="/home#plans"]').first().click()
   await ready(page, '/home')
   await homeLanding(page, 'plans')

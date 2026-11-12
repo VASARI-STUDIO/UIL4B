@@ -1,23 +1,19 @@
-// /mobile, the "On mobile" screen, and the nav that reaches it.
+// /mobile, the "On mobile" page, and the nav that reaches it.
 //
-// The design file (`UIL4B - Spectrum.dc.html`) has a separate
-// "mobile" screen reached from the nav's third quiet link; this is that screen
-// at /mobile. What this file holds, each seen red against the defect it names
-// (the mutation is on the test):
+// What this file holds, each seen red against the defect it names (the
+// mutation is on the test):
 //
-//   · the page renders as a PAGE — one h1, one main, the three phone figures
-//     with the design's captions, the marketing footer — rather than the
-//     Suspense fallback or the 404 shell;
+//   · the page renders as a PAGE (one h1, one main, three captioned phone
+//     screens whose pictures load, the closing call and the home-style footer)
+//     rather than the Suspense fallback or the 404 shell;
 //   · a visitor on the sales page reaches it through the nav, and the nav then
-//     says where they are (aria-current + the design's ink colour), and the
-//     way back to a section of the sales page lands on that section;
-//   · no horizontal overflow from 320 to 1920 in both themes — the phone strip
-//     bleeds to the viewport edge on purpose, which is exactly how a page grows
-//     a sideways scroll;
-//   · at 860 and under the phones are a scroll-snap strip that settles on a
-//     phone, and above it they are three phones in a row;
-//   · under reduced motion nothing moves: no word entrance, no menu stagger,
-//     and the menu leaves at once instead of after the design's 260ms exit.
+//     says where they are (aria-current + the ink colour);
+//   · no horizontal overflow from 320 to 1920 in both themes: the phone strip
+//     bleeds to the viewport edge on purpose, which is how a page grows a
+//     sideways scroll;
+//   · at 767 and under the phones are a scroll-snap strip with Previous and
+//     Next buttons that follow it, and above it they are three phones in a row;
+//   · under reduced motion the menu does not animate and leaves at once.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -35,27 +31,20 @@ async function ctxAt(browser, width, opts = {}) {
   return { ctx, page: await ctx.newPage() }
 }
 
-test.describe('/mobile renders as the design\'s screen', () => {
-  test('one h1, one main, three captioned phones, the marketing chrome', async ({ page }) => {
+test.describe('/mobile renders as its own page', () => {
+  test('one h1, one main, three captioned phone screens, the marketing chrome', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/mobile')
     // Mutation: route /mobile to nothing in App.jsx → the 404 page's h1 fails this.
     await expect(page.locator('h1')).toHaveCount(1)
     await expect(page.locator('h1')).toHaveAccessibleName('The same tools on a phone.')
     await expect(page.locator('main')).toHaveCount(1)
-    await expect(page.locator('.spm-lede')).toContainText('Every tool runs the same on a phone.')
-    await expect(page.locator('.spm-fig figcaption')).toHaveText([
-      'Palette Builder, full controls',
-      'Icon Library, recolour and export',
-      'Projects and your plan',
+    await expect(page.locator('.mk-lead')).toContainText('Every tool runs the same on a phone.')
+    await expect(page.locator('.mk-fig figcaption')).toHaveText([
+      /^Palette Builder, full controls/,
+      /^Icon Library, recolour and export/,
+      /^Projects and your plan/,
     ])
-    // "Project" is the word everywhere, and the weight tabs and RECENT EXPORTS list stay as drawn.
-    await expect(page.locator('.spm-pj-planuse')).toHaveText(/^\d+ of \d+ projects$/)
-    await expect(page.locator('.spm-ic-weight')).toHaveText(['Regular', 'Bold', 'Fill', 'Duo'])
-    await expect(page.locator('.spm-pj-eyebrow')).toHaveText('RECENT EXPORTS')
-    // The phones are illustrations: hidden from assistive tech, captioned for it.
-    const hidden = await page.locator('.spm-phone').evaluateAll((els) => els.map((e) => e.getAttribute('aria-hidden')))
-    expect(hidden).toEqual(['true', 'true', 'true'])
     // The marketing nav and footer, not the app shell's.
     await expect(page.locator('.spnav')).toHaveCount(1)
     await expect(page.locator('.pnav')).toHaveCount(0)
@@ -63,6 +52,60 @@ test.describe('/mobile renders as the design\'s screen', () => {
     await expect(page.getByRole('contentinfo')).toHaveCount(1)
     await expect(page).toHaveTitle('UI L4B | On mobile')
   })
+
+  test('each phone has a picture that loads', async ({ page }) => {
+    await go(page, '/mobile')
+    const figs = page.locator('.mk-fig')
+    await expect(figs).toHaveCount(3)
+    for (let i = 0; i < 3; i += 1) {
+      await figs.nth(i).scrollIntoViewIfNeeded()
+      const first = figs.nth(i).locator('img:visible').first()
+      // Mutation: point a capture at a path that is not in public/mobile-screens → naturalWidth stays 0.
+      await expect.poll(() => first.evaluate((img) => img.complete && img.naturalWidth), { message: `phone ${i + 1}'s picture did not load` }).toBeGreaterThan(0)
+    }
+  })
+
+  const ALTS = [
+    'The Palette Builder on a phone, with colour rows and adjust sliders',
+    'The Icon Library on a phone, with search and the recolour row',
+    'The projects page on a phone',
+  ]
+  const shownImages = (page, i) => page.locator('.mk-fig').nth(i).locator('img').evaluateAll((imgs) => imgs
+    .filter((img) => getComputedStyle(img).display !== 'none')
+    .map((img) => ({ src: img.getAttribute('src'), alt: img.getAttribute('alt') })))
+
+
+  // Rows marked test.fail are open product bugs this spec found; each goes red when its bug is fixed, which is the cue to drop the mark.
+  //   dark, drawn once: .mk-img-light stays display:block (v3-marketing.css:162 outranks :171), so two pictures draw.
+  //   light, description: the visible light capture has alt="" (SpectrumMobile.jsx:102), so the description is lost.
+  const BUG_THEME = { once: 'dark', alt: 'light' }
+  for (const theme of ['light', 'dark']) {
+    test(`${theme} theme: each phone draws its ${theme} capture once`, async ({ browser }) => {
+      if (BUG_THEME.once === theme) test.fail()
+      const { ctx, page } = await ctxAt(browser, 1440, { theme })
+      await go(page, '/mobile')
+      expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(theme)
+      for (let i = 0; i < 3; i += 1) {
+        const shown = await shownImages(page, i)
+        const want = i === 2 ? '/mobile-screens/projects.jpg' : `/mobile-screens/${['palette', 'icons'][i]}-${theme}.jpg`
+        expect(shown.map((s) => s.src), `phone ${i + 1} should draw one ${theme} picture`).toEqual([want])
+      }
+      await ctx.close()
+    })
+
+    test(`${theme} theme: the picture each phone draws has its screen reader description`, async ({ browser }) => {
+      if (BUG_THEME.alt === theme) test.fail()
+      const { ctx, page } = await ctxAt(browser, 1440, { theme })
+      await go(page, '/mobile')
+      for (let i = 0; i < 3; i += 1) {
+        const shown = await shownImages(page, i)
+        expect(shown[0].alt, `phone ${i + 1}'s drawn picture needs its description`).toBe(ALTS[i])
+      }
+      await ctx.close()
+    })
+  }
+
+
 
   test('the heading outline goes h1 → footer h2s, and nothing skips a level', async ({ page }) => {
     await go(page, '/mobile')
@@ -86,7 +129,7 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     // Mutation: drop aria-current from QuietLink → both of these fail.
     await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('On mobile')
     await expect(page.locator('.spnav-quiet-link', { hasText: 'Tools' })).not.toHaveAttribute('aria-current', 'page')
-    // The design's active colour is --ink, the rest --ink-faint.
+    // The active colour is --ink, the rest --ink-faint.
     const [on, off] = await page.evaluate(() => {
       const q = [...document.querySelectorAll('.spnav-quiet-link')]
       const c = (label) => getComputedStyle(q.find((a) => a.textContent.trim() === label)).color
@@ -121,12 +164,13 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     await expect(page.locator('.spnav-quiet-link[aria-current="page"]')).toHaveText('Tools')
   })
 
-  test('Plans is its own screen, /plans, and the hero and footer calls to action enter the app', async ({ page }) => {
+  test('Plans is its own screen, /plans, and the page and closing calls to action enter the app', async ({ page }) => {
     await go(page, '/mobile')
     await expect(page.locator('.spnav-quiet-link', { hasText: 'Plans' })).toHaveAttribute('href', '/plans')
-    // "Open the toolkit" enters the app with no gate, in the page and the footer; the bar has none.
+    // "Open the toolkit" enters the app with no gate, in the intro and the closing call; the bar has none.
     await expect(page.locator('.spnav-cta')).toHaveCount(0)
-    const hrefs = await page.locator('.spm-cta, .sp-footer-cta').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
+    const hrefs = await page.locator('.mk-intro a.mk-pill, .hm-close-cta').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
+    // Mutation: change toolkitTo in SpectrumMobile.jsx → one of these is not /projects.
     expect(hrefs).toEqual(['/projects', '/projects'])
   })
 
@@ -182,19 +226,24 @@ test.describe('the back gesture and the menu', () => {
   })
 })
 
-test.describe('the marketing footer is the design\'s', () => {
-  test('the design\'s columns and copyright line, no Cookies, and the PROJECT anchors are real', async ({ page }) => {
+test.describe('the footers', () => {
+  test('/mobile keeps the home-style footer: Tools, Explore and Legal, no Project column, no Cookies', async ({ page }) => {
     await go(page, '/mobile')
     const footer = page.locator('footer.sp-footer')
-    // TOOLS / PROJECT / LEGAL are the design's (1606-1629); EXPLORE carries the
-    // destinations AppFooter reaches that the design's three do not.
-    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Project', 'Explore', 'Legal'])
+    // Mutation: drop `home` or add `pageColumn` in SpectrumMobile.jsx → the headings change.
+    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Explore', 'Legal'])
     await expect(footer.locator('.sp-footer-col').first().locator('a')).toHaveText(['All tools', 'Colour', 'Type', 'Assets', 'Imagery'])
     await expect(footer.getByRole('link', { name: 'Cookies' }), 'there is no cookies page to link').toHaveCount(0)
-    await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
-    // The about note and credit link sit beside it.
+    await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\.$/)
     await expect(footer.locator('.app-footer-note')).toHaveCount(1)
     await expect(footer.locator('.sp-footer-attrib')).toHaveAttribute('href', 'https://dylan-coleman.com/')
+  })
+
+  test('a page on the plain footer (/sitemap) keeps the Project column, and its anchors are real sales-page sections', async ({ page }) => {
+    await go(page, '/sitemap')
+    const footer = page.locator('footer.sp-footer')
+    await expect(footer.locator('.sp-footer-col-h')).toHaveText(['Tools', 'Project', 'Explore', 'Legal'])
+    await expect(footer.locator('.sp-footer-copy')).toHaveText(/^© \d{4} UI L4B\. Spectrum\.$/)
     // Off the sales page the PROJECT links carry the page with them…
     const project = await footer.locator('.sp-footer-col').nth(1).locator('a')
       .evaluateAll((els) => els.map((a) => a.getAttribute('href')))
@@ -214,7 +263,7 @@ test.describe('/mobile at every width', () => {
         const { ctx, page } = await ctxAt(browser, w, { theme })
         await go(page, '/mobile')
         // POSITIVE CONTROL: the strip that bleeds to the edge is on the page.
-        await expect(page.locator('.spm-row .spm-phone')).toHaveCount(3)
+        await expect(page.locator('.mk-phones .mk-fig')).toHaveCount(3)
         expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(theme)
         const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
         // Mutation: drop the strip's negative-margin/padding pair balance
@@ -233,7 +282,7 @@ test.describe('the phone row', () => {
   test('at 390 it is a scroll-snap strip that settles on a phone', async ({ browser }) => {
     const { ctx, page } = await ctxAt(browser, 390, { reducedMotion: 'reduce' })
     await go(page, '/mobile')
-    const row = page.locator('.spm-row')
+    const row = page.locator('.mk-phones')
     const shape = await row.evaluate((el) => ({
       snap: getComputedStyle(el).scrollSnapType,
       scrolls: el.scrollWidth > el.clientWidth,
@@ -244,33 +293,50 @@ test.describe('the phone row', () => {
     expect(shape.scrolls, 'the strip has nothing to scroll to').toBe(true)
     expect(shape.focusable, 'a keyboard cannot reach the strip').toBe(true)
     // Nudge it a little way and let it settle: mandatory snapping has to bring
-    // a phone's centre to the strip's centre, not leave it where it was left.
+    // a phone's left edge to the strip's padded start, not leave it where it was left.
     await row.evaluate((el) => el.scrollBy({ left: 70, behavior: 'instant' }))
     await expect.poll(async () => row.evaluate((el) => {
-      const mid = el.getBoundingClientRect().left + el.clientWidth / 2
-      return Math.min(...[...el.querySelectorAll('.spm-fig')].map((f) => {
-        const r = f.getBoundingClientRect()
-        return Math.abs(r.left + r.width / 2 - mid)
-      }))
+      const start = el.getBoundingClientRect().left + parseFloat(getComputedStyle(el).scrollPaddingLeft)
+      return Math.min(...[...el.querySelectorAll('.mk-fig')].map((f) => Math.abs(f.getBoundingClientRect().left - start)))
     }), { message: 'the strip did not settle on a phone' }).toBeLessThan(3)
     await ctx.close()
   })
 
-  test('at 1440 the three phones stand in one row', async ({ page }) => {
+  test('at 390 Next and Previous move the strip one phone and the "N of 3" line follows', async ({ browser }) => {
+    const { ctx, page } = await ctxAt(browser, 390, { reducedMotion: 'reduce' })
     await go(page, '/mobile')
-    const tops = await page.locator('.spm-phone').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))
+    const pos = page.locator('.mk-pos')
+    const next = page.getByRole('button', { name: 'Next screen' })
+    const prev = page.getByRole('button', { name: 'Previous screen' })
+    await expect(pos).toHaveText('1 of 3')
+    await expect(prev).toHaveAttribute('aria-disabled', 'true')
+    await expect(next).not.toHaveAttribute('aria-disabled', 'true')
+    // Mutation: make step() return 0 in SpectrumMobile.jsx → the line stays on "1 of 3".
+    await next.click()
+    await expect(pos).toHaveText('2 of 3')
+    await next.click()
+    await expect(pos).toHaveText('3 of 3')
+    await expect(next).toHaveAttribute('aria-disabled', 'true')
+    await prev.click()
+    await expect(pos).toHaveText('2 of 3')
+    await ctx.close()
+  })
+
+  test('at 1440 the three phones stand in one row, with no strip controls', async ({ page }) => {
+    await go(page, '/mobile')
+    const tops = await page.locator('.mk-frame').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))
+    expect(tops).toHaveLength(3)
     expect(new Set(tops).size, 'the phones are not in one row').toBe(1)
-    expect(await page.locator('.spm-row').evaluate((el) => getComputedStyle(el).scrollSnapType)).toBe('none')
+    expect(await page.locator('.mk-phones').evaluate((el) => getComputedStyle(el).scrollSnapType)).toBe('none')
+    await expect(page.locator('.mk-bar')).toBeHidden()
   })
 })
 
 test.describe('reduced motion', () => {
-  test('nothing moves: no word entrance, no menu stagger, no exit wait', async ({ browser }) => {
+  test('the menu does not animate and leaves at once', async ({ browser }) => {
     const { ctx, page } = await ctxAt(browser, 390, { reducedMotion: 'reduce' })
     await page.clock.install()
     await go(page, '/mobile')
-    // Mutation: drop prefersReducedMotion() from heroLit → .is-in lands.
-    await expect(page.locator('.spm-hero')).not.toHaveClass(/is-in/)
     await page.locator('.spnav-burger').click()
     await expect(page.locator('.spnav-menu')).toHaveAttribute('data-menu', 'in')
     const running = await page.evaluate(() => (document.getAnimations?.() || [])
