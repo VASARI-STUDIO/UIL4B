@@ -170,7 +170,7 @@ test.describe('a lazy page that fails to download', () => {
     await navigateInApp(page, '/learn')
 
     const card = await expectLoadFailedCard(page)
-    await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Reload the page' })).toBeVisible()
     expect(held.length, 'reloaded again inside the guard window: a reload loop').toBe(0)
     await expect.poll(() => seen.reports.length).toBe(1)
     // vite's preload helper names the stylesheet by path in some versions and by absolute URL in
@@ -210,7 +210,7 @@ test.describe('a lazy page that fails to download', () => {
     expect(seen.posted).toEqual([])
   })
 
-  test('if the reload does not fix it, the page says it did not load, offers a retry, and reports it once as a load failure', async ({ page }) => {
+  test('if the reload does not fix it, the page says it did not load, offers a reload, and reports it once as a load failure', async ({ page }) => {
     const seen = watchReports(page)
     await go(page, '/privacy')
     // The state right after the one automatic reload: a second failure now
@@ -221,7 +221,7 @@ test.describe('a lazy page that fails to download', () => {
     await navigateInApp(page, '/credits')
 
     const card = await expectLoadFailedCard(page)
-    await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Reload the page' })).toBeVisible()
     expect(held.length, 'reloaded again inside the guard window: a reload loop').toBe(0)
 
     await expect.poll(() => seen.reports.length).toBe(1)
@@ -230,13 +230,13 @@ test.describe('a lazy page that fails to download', () => {
     expect(seen.defaultThrows).toEqual([])
     expect(seen.posted).toEqual([])
 
-    // Try again is a real reload, and the guard does not stop a person asking.
+    // Reload the page is a real reload, and the guard does not stop a person asking.
     // The reload is held, so the click must not wait for it to commit.
-    await card.getByRole('button', { name: 'Try again' }).click({ noWaitAfter: true })
+    await card.getByRole('button', { name: 'Reload the page' }).click({ noWaitAfter: true })
     await expect.poll(() => held.length).toBe(1)
   })
 
-  test('offline, the page says the connection is down, does not reload, holds Try again, and frees it once back online', async ({ page }) => {
+  test('offline, the page says it is waiting for a connection, does not reload, holds back every way on, and returns them once back online', async ({ page }) => {
     const seen = watchReports(page)
     await go(page, '/privacy')
     await page.route(CREDITS_CHUNK, (route) => route.abort())
@@ -250,24 +250,22 @@ test.describe('a lazy page that fails to download', () => {
     await navigateInApp(page, '/credits')
 
     const card = await expectLoadFailedCard(page)
-    await expect(card).toContainText(/You['’]re offline, so this page couldn['’]t be downloaded\. You can try again once you reconnect\./)
-    const tryAgain = card.getByRole('button', { name: 'Try again' })
-    // Held, not removed: the button stays so the person can see why it waits,
-    // and the lead explains it.
-    await expect(tryAgain).toBeVisible()
-    await expect(tryAgain).toBeDisabled()
-    await expect(tryAgain).toHaveAccessibleDescription(/You['’]re offline/)
-    await expect(card.getByRole('link', { name: 'Go to the home page' })).toBeEnabled()
-    await expect(card.getByRole('button', { name: 'Report this problem' })).toBeEnabled()
-    await expect(card.locator('.error-boundary-status')).toHaveText('')
+    await expect(card.locator('.ed-body')).toHaveText('You’re offline. Reconnect and you can try again.')
+    await expect(card.getByRole('status')).toHaveText('Waiting for a connection')
+    // Held back, not greyed: a reload with no connection would swap the page
+    // for the browser's own error, so there is nothing to press.
+    const reload = card.getByRole('button', { name: 'Reload the page' })
+    await expect(reload).toHaveCount(0)
+    await expect(card.getByRole('link', { name: 'Report this', exact: true })).toHaveCount(0)
+    await expect(card.getByRole('link', { name: 'Back to the homepage' })).toHaveCount(0)
     expect(held.length, 'reloaded while offline').toBe(0)
 
     await page.evaluate(() => {
       Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => true })
       window.dispatchEvent(new Event('online'))
     })
-    await expect(tryAgain).toBeEnabled()
-    await expect(card.getByRole('status')).toContainText('You’re back online.')
+    await expect(reload).toBeEnabled()
+    await expect(card.getByRole('status')).toHaveText('Back online')
     await expect(card, 'the offline sentence should give way to the ordinary one')
       .toContainText(/Part of this page couldn['’]t be downloaded/)
     // Back online must not reload by itself (the person may be reading), and
@@ -279,24 +277,19 @@ test.describe('a lazy page that fails to download', () => {
     expect(seen.posted).toEqual([])
   })
 
-  test('offline, Go to the home page still works: it reaches / and renders the sales page', async ({ page, context }) => {
+  test('Back to the homepage leaves the failed page and renders the sales page', async ({ page }) => {
     await go(page, '/privacy')
+    // The state right after the one automatic reload, so the failure lands on the card.
+    await page.evaluate(() => sessionStorage.setItem('vs-chunk-reload', String(Date.now())))
     await page.route(CREDITS_CHUNK, (route) => route.abort())
     await holdReloads(page, '/credits')
-    await page.evaluate(() => {
-      Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => false })
-      window.dispatchEvent(new Event('offline'))
-    })
     await navigateInApp(page, '/credits')
     const card = await expectLoadFailedCard(page)
-    // Really offline for the click too: the home page is in the entry bundle,
-    // so the client-side link needs no network.
-    await context.setOffline(true)
-    await card.getByRole('link', { name: 'Go to the home page' }).click()
+    // The home page is in the entry bundle, so this is a client-side move.
+    await card.getByRole('link', { name: 'Back to the homepage' }).click()
     await expect(page).toHaveURL(/\/$/)
     await expect(page.locator('.error-boundary')).toHaveCount(0)
     await expectRendered(page, '/')
-    await context.setOffline(false)
   })
 
   test('its stylesheet and its JS file both: the page still waits for the one reload', async ({ page }) => {
@@ -343,7 +336,7 @@ test.describe('a lazy page that fails to download', () => {
 
     const card = page.locator('.error-boundary')
     await expect(card.getByRole('heading', { level: 1, name: 'This page didn’t load' })).toBeVisible({ timeout: 25000 })
-    await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Reload the page' })).toBeVisible()
     await expect.poll(() => seen.reports.length, {
       message: 'the failure that outlived its reload was never reported',
     }).toBe(1)
