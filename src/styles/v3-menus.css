@@ -120,13 +120,24 @@
 @media (max-width:767px){.v3m-dots{display:inline-flex}}
 .v3m-dots:focus-visible{outline:2px solid rgb(var(--ink-rgb));outline-offset:2px}
 
+/* The explicit Settings choice, then the OS preference unless the visitor turned motion back on. */
+html[data-reduced-motion="true"] .v3m{animation:v3m-fade 200ms ease-out both}
+html[data-reduced-motion="true"] .v3m.kb{animation:none}
+html[data-reduced-motion="true"] .v3m.out{animation:v3m-fadeout 120ms ease-in both}
+html[data-reduced-motion="true"] .v3m-sheet,html[data-reduced-motion="true"] .v3m-scrim{animation:v3m-fade 200ms ease-out both}
+html[data-reduced-motion="true"] .v3m-sheetwrap.out .v3m-sheet,html[data-reduced-motion="true"] .v3m-sheetwrap.out .v3m-scrim{animation:v3m-fadeout 150ms ease-in both}
+html[data-reduced-motion="true"] .v3m-i,html[data-reduced-motion="true"] .v3m-cancel,html[data-reduced-motion="true"] .v3m-ic{transition:none}
 @media (prefers-reduced-motion:reduce){
-  .v3m{animation:v3m-fade 200ms ease-out both}
-  .v3m.kb{animation:none}
-  .v3m.out{animation:v3m-fadeout 120ms ease-in both}
-  .v3m-sheet,.v3m-scrim{animation:v3m-fade 200ms ease-out both}
-  .v3m-sheetwrap.out .v3m-sheet,.v3m-sheetwrap.out .v3m-scrim{animation:v3m-fadeout 150ms ease-in both}
-  .v3m-i,.v3m-cancel,.v3m-ic{transition:none}
+  html:not([data-reduced-motion="false"]) .v3m{animation:v3m-fade 200ms ease-out both}
+  html:not([data-reduced-motion="false"]) .v3m.kb{animation:none}
+  html:not([data-reduced-motion="false"]) .v3m.out{animation:v3m-fadeout 120ms ease-in both}
+  html:not([data-reduced-motion="false"]) .v3m-sheet,
+  html:not([data-reduced-motion="false"]) .v3m-scrim{animation:v3m-fade 200ms ease-out both}
+  html:not([data-reduced-motion="false"]) .v3m-sheetwrap.out .v3m-sheet,
+  html:not([data-reduced-motion="false"]) .v3m-sheetwrap.out .v3m-scrim{animation:v3m-fadeout 150ms ease-in both}
+  html:not([data-reduced-motion="false"]) .v3m-i,
+  html:not([data-reduced-motion="false"]) .v3m-cancel,
+  html:not([data-reduced-motion="false"]) .v3m-ic{transition:none}
 }
 @media (forced-colors:active){
   .v3m,.v3m-cancel{outline:1px solid CanvasText;outline-offset:-1px}

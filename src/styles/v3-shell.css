@@ -281,14 +281,14 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 /* ── Footer ────────────────────────────────────────────────────────────── */
 .app-footer{padding:96px var(--page-inline) max(72px,var(--fab-clearance));border-top:1px solid var(--v3-hair);background:var(--v3-ground)}
 .app-footer-inner{grid-template-columns:400px minmax(0,1fr);gap:48px}
-.app-footer-start{min-height:32px;color:var(--v3-ink);font-size:14px;font-weight:500;text-decoration:underline;text-decoration-color:rgba(var(--v3-ink-rgb),.35);text-underline-offset:4px}
+.app-footer-start{min-height:32px;color:var(--v3-ink);font-size:14px;font-weight:500;text-decoration:underline;text-decoration-color:rgba(var(--v3-ink-rgb),.47);text-underline-offset:4px}
 .app-footer-start:hover{gap:8px;color:var(--v3-ink);text-decoration-color:var(--v3-ink)}
 .app-footer-links{grid-template-columns:repeat(3,200px)}
 .app-footer-group-h{min-height:32px;font-size:14px;font-weight:500;color:var(--v3-ink)}
 .app-footer-links a,.app-footer-links button{min-height:32px;font-size:14px;color:var(--v3-sec)}
 .app-footer-links a:hover,.app-footer-links button:hover{color:var(--v3-ink)}
 .app-footer-legal{margin-top:0;padding-top:0;border-top:0;flex-wrap:wrap;gap:8px 24px;min-height:48px;font-size:14px;color:var(--v3-t56)}
-.app-footer-attrib{color:var(--v3-ink);text-decoration-color:rgba(var(--v3-ink-rgb),.35);text-underline-offset:4px}
+.app-footer-attrib{color:var(--v3-ink);text-decoration-color:rgba(var(--v3-ink-rgb),.47);text-underline-offset:4px}
 .app-footer-attrib:hover{color:var(--v3-ink);text-decoration-color:var(--v3-ink)}
 @media(max-width:1099px){
   .app-footer-inner{grid-template-columns:minmax(0,1fr)}

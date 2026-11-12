@@ -405,6 +405,10 @@ function AppHeader() {
   const hoverLock = useRef(false)
   // How the open menu was opened: a click on a hover-opened trigger pins it.
   const openedBy = useRef(null)
+  // Mirror of `open` that is current before the next render, so a hover-open and a
+  // click in the same frame decide against what was just requested.
+  const openRef = useRef(null)
+  const requestOpen = (next) => { openRef.current = next; setOpen(next) }
   // Escape returns focus to the trigger that owns the layer it closed.
   const triggerRefs = useRef({})
   // The signed-out menu and the phone sheet each point their sign-in rows at
@@ -415,6 +419,7 @@ function AppHeader() {
   const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu, { arrowNav: true })
   const stateRef = useRef({ open: null, menu: null, sheet: false })
   useEffect(() => {
+    openRef.current = open
     stateRef.current.open = open
     stateRef.current.menu = menu
     stateRef.current.sheet = sheet
@@ -597,7 +602,7 @@ function AppHeader() {
     if (open === null) hoverLock.current = true
     openedBy.current = 'hover'
     setMenu(null)
-    setOpen(id)
+    requestOpen(id)
   }
   // A click-opened panel stays until Escape, an outside press, its trigger or a navigation.
   const hoverLeave = () => {
@@ -608,14 +613,14 @@ function AppHeader() {
   const toggle = (id) => {
     hoverLock.current = true
     setMenu(null)
-    setOpen((cur) => {
-      if (cur === id && openedBy.current === 'hover') {
-        openedBy.current = 'click'
-        return cur
-      }
+    // Updaters must be pure, so the decision and the openedBy write happen here.
+    const cur = openRef.current
+    if (cur === id && openedBy.current === 'hover') {
       openedBy.current = 'click'
-      return cur === id ? null : id
-    })
+      return
+    }
+    openedBy.current = 'click'
+    requestOpen(cur === id ? null : id)
   }
   const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
   const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
