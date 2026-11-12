@@ -47,7 +47,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       await expect(heading(page), 'a screen reader should start at the problem').toBeFocused()
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
       await expect(page).toHaveURL(/\/projects\/not-a-project$/)
-      await expect(page).toHaveTitle(/^UI L4B/)
+      await expect(page).toHaveTitle('UI L4B | Project not found')
       await expect(page.getByText('It may have been deleted, here or on another device.')).toBeVisible()
       await expect(page.getByText('Your other projects are saved.')).toBeVisible()
       await expect(workspace(page)).toHaveAttribute('href', '/projects')

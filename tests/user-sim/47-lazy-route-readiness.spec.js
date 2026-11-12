@@ -530,7 +530,7 @@ async function crashChunk(page, glob) {
   }))
 }
 
-async function expectRecoveryScreen(page) {
+async function expectRecoveryScreen(page, route) {
   // A thrown import goes through vite:preloadError first, and main.jsx reloads
   // once for what looks like a stale deploy; the crash lands on the second try.
   const card = page.locator('.error-boundary')
@@ -538,7 +538,7 @@ async function expectRecoveryScreen(page) {
   await expect(card.getByRole('heading', { level: 1, name: 'This page stopped working' })).toBeVisible()
   await expect(card.getByRole('button', { name: 'Reload the page' })).toBeVisible()
   await expect(card.getByRole('link', { name: 'Back to the homepage' })).toHaveAttribute('href', '/')
-  await expect(card.getByRole('link', { name: 'Report this', exact: true })).toHaveAttribute('href', '/feedback?type=bug')
+  await expect(card.getByRole('link', { name: 'Report this', exact: true })).toHaveAttribute('href', `/feedback?type=bug&page=${encodeURIComponent(route)}`)
   return card
 }
 
@@ -551,10 +551,10 @@ for (const [route, chunk, where] of [
     test.setTimeout(60000)
     await crashChunk(page, chunk)
     await goRaw(page, route)
-    const card = await expectRecoveryScreen(page)
+    const card = await expectRecoveryScreen(page, route)
 
     await card.getByRole('link', { name: 'Report this', exact: true }).click()
-    await expect(page).toHaveURL(/\/feedback\?type=bug$/)
+    await expect(page).toHaveURL((url) => url.pathname === '/feedback' && url.search === `?type=bug&page=${encodeURIComponent(route)}`)
     // Bug is preselected: the person should not have to say what kind of
     // report a crash is.
     await expect(page.locator('.fb-page [role="radio"][aria-checked="true"]')).toHaveText('Bug report')

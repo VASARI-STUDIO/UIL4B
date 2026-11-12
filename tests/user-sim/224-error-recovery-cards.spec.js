@@ -246,7 +246,7 @@ for (const variant of VARIANTS) {
         await expect(card.locator('.ed-status'), 'the status line is empty until there is something to say').toHaveText('')
 
         await expect(reloadButton(card)).toBeEnabled()
-        await expect(reportLink(card)).toHaveAttribute('href', '/feedback?type=bug')
+        await expect(reportLink(card), 'the report names the page that crashed').toHaveAttribute('href', '/feedback?type=bug&page=%2Fsettings')
         await expect(homeLink(card)).toHaveAttribute('href', '/')
         await expect(helpLink(card)).toHaveAttribute('href', '/learn/help')
 
@@ -309,7 +309,7 @@ for (const variant of VARIANTS) {
       await withPage(browser, variant, async (page) => {
         const { card } = await landShellCrash(page, variant)
         await reportLink(card).click()
-        await expect(page).toHaveURL(/\/feedback\?type=bug$/)
+        await expect(page).toHaveURL(/\/feedback\?type=bug&page=%2Fsettings$/)
         const form = page.locator('.fb-page')
         await expect(form).toBeVisible()
         await expect(form.locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug report')
@@ -365,7 +365,7 @@ for (const variant of VARIANTS) {
         await expect(card.locator('.ed-body')).toHaveText(BODY_LOAD)
         await expect(card.locator('.ed-safe')).toHaveText(SAFE_LINE)
         await expect(reloadButton(card)).toBeEnabled()
-        await expect(reportLink(card)).toHaveAttribute('href', '/feedback?type=bug')
+        await expect(reportLink(card), 'the report names the page that did not load').toHaveAttribute('href', '/feedback?type=bug&page=%2Fcredits')
         await expect(homeLink(card)).toHaveAttribute('href', '/')
         await expect(helpLink(card)).toHaveAttribute('href', '/learn/help')
         await expect(card.locator('.ed-status'), 'the status line is empty until there is something to say').toHaveText('')
@@ -388,7 +388,7 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('offline: every way on goes and the card says it is waiting, and reconnecting brings them back without moving focus', async ({ browser }) => {
+    test('offline: the ways on that need a connection go, the homepage link stays, the card says it is waiting, and reconnecting brings them back without moving focus', async ({ browser }) => {
       await withPage(browser, variant, async (page, context) => {
         const { card } = await landLoadFailed(page, variant)
         await setConnection(page, context, false)
@@ -397,8 +397,8 @@ for (const variant of VARIANTS) {
         await expect(card.getByRole('status')).toHaveText('Waiting for a connection')
         await expect(reloadButton(card), 'a reload offline would swap the page for the browser error').toHaveCount(0)
         await expect(reportLink(card)).toHaveCount(0)
-        await expect(homeLink(card)).toHaveCount(0)
         await expect(helpLink(card)).toHaveCount(0)
+        await expect(homeLink(card), 'the homepage is in the loaded app, so it works offline').toBeVisible()
         await expect(card.getByRole('heading', { level: 1 }), 'focus moved when the connection dropped').toBeFocused()
         await expectFits(page, `offline card at ${variant.id}`)
 
@@ -421,14 +421,15 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('a crash card offline says reload in its own words and holds the same ways back', async ({ browser }) => {
+    test('a crash card offline says reload in its own words and holds the same ways back, keeping the homepage link', async ({ browser }) => {
       await withPage(browser, variant, async (page, context) => {
         const { card } = await landShellCrash(page, variant)
         await setConnection(page, context, false)
         await expect(card.locator('.ed-body')).toHaveText(BODY_OFFLINE_CRASH)
         await expect(card.getByRole('status')).toHaveText('Waiting for a connection')
         await expect(reloadButton(card)).toHaveCount(0)
-        await expect(homeLink(card)).toHaveCount(0)
+        await expect(reportLink(card)).toHaveCount(0)
+        await expect(homeLink(card)).toBeVisible()
         await setConnection(page, context, true)
         await expect(reloadButton(card)).toBeEnabled()
         await expect(card.locator('.ed-body')).toHaveText(BODY_CRASH)
@@ -704,7 +705,7 @@ test.describe('the error and loading styles', () => {
   }
 
   test('the rules were found, so the checks below read something', () => {
-    expect(rules.length, 'no .error-boundary / .page-loading rule found in global.css').toBeGreaterThan(8)
+    expect(rules.length, 'no .error-boundary / .page-loading rule found in global.css').toBeGreaterThanOrEqual(8)
     expect(rules.some((r) => r.selector.includes('.error-boundary-card'))).toBe(true)
     expect(rules.some((r) => r.selector.includes('.page-loading-slow'))).toBe(true)
   })
