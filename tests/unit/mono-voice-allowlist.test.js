@@ -172,7 +172,6 @@ const ALLOWED = {
     '.grd .grd-spec-hex': 'hex',
     '.grd .grd-spec-hexes': 'hex',
     '.grd .grd-stop-hex': 'hex',
-    '.grd-tintmenu-hex': 'hex',
   },
   'pages/help-router.css': {
     '.hlr-seed-hex': 'hex',
@@ -313,6 +312,9 @@ const ALLOWED = {
   },
   'pages/type-tools-nav.css': {
     '.ttn-mono': 'value',
+  },
+  'v3-shell.css': {
+    '.pnav-search-kbd': 'kbd',
   },
 }
 
