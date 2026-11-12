@@ -77,6 +77,7 @@
   box-shadow: var(--ov-ring), var(--ov-shadow-modal);
   animation: ov-in 200ms var(--ov-ease);
 }
+@media (max-width: 767px) { :root .fgd { animation-name: ov-sheet; } }
 :root .fbd-overlay .fbd-dialog {
   background: var(--ov-surface);
   border: 0;
@@ -303,7 +304,7 @@ body:has(.toast.show) .global-feedback-btn { transform: translateY(-52px); }
 :root .cpk-dropper,
 :root .cpk-hex,
 :root .cpk-format { border: 0; border-radius: var(--ov-r-row); background: var(--ov-tone); }
-:root .cpk-hex:focus-visible { box-shadow: none; }
+:root .cpk-hex:focus-visible { box-shadow: none; border-color: currentColor; }
 @media (max-width: 767px) {
   :root .pop.cpk-pop[data-pop-fixed="true"],
   :root .pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"] { border-radius: var(--ov-r-modal) var(--ov-r-modal) 0 0; }
