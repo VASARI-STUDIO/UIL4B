@@ -104,7 +104,7 @@ html[data-reduced-motion="true"] .pnav-upgrade::before{transition:none}
 .pnav-tip.is-open{transition-delay:0s}
 
 /* ── Skip link ─────────────────────────────────────────────────────────── */
-.skip-link{top:max(8px,env(safe-area-inset-top,0px));padding:10px 16px;border-radius:8px;background:var(--v3-raised);color:var(--v3-ink);box-shadow:0 0 0 1px var(--v3-hair),var(--v3-shadow);font-size:14px;font-weight:500;transition:transform 180ms var(--v3-ease)}
+.skip-link{top:max(8px,env(safe-area-inset-top,0px));padding:10px 16px;border-radius:8px;background:var(--v3-raised);color:var(--v3-ink);box-shadow:none;font-size:14px;font-weight:500;transition:transform 180ms var(--v3-ease)}
 .skip-link:focus{box-shadow:0 0 0 1px var(--v3-hair),var(--v3-shadow);outline:2px solid var(--v3-ink);outline-offset:2px}
 
 /* ── Account and "…" popovers ──────────────────────────────────────────── */
