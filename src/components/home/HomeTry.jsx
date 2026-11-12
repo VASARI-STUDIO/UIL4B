@@ -149,6 +149,7 @@ export default function HomeTry() {
   //   - when the tool would not fit in the window once landed,
   //   - past the section heading (the first tool is only ever pulled up to), or against
   //     the way out of the section (past the last tool going down).
+  // Only a scroll starts a settle; a click, a finger lifting or a blur on its own never does.
   useEffect(() => {
     let raf = 0
     let timer = 0
@@ -177,6 +178,7 @@ export default function HomeTry() {
       if (lenis.isScrolling) { arm(); return }
       const from = startAt
       startAt = null
+      if (from === null) return
       if (dest.current || prefersReducedMotion()) return
       const els = stages.current.filter(Boolean)
       if (els.length !== TOOLS.length) return
