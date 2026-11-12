@@ -80,7 +80,7 @@ export default function SpectrumMobile() {
           </div>
         </section>
 
-        <section className="mk-sec mk-sec--last mk-wrap" aria-label="Phone screens">
+        <section className="mk-sec mk-sec--last mk-sec--phones mk-wrap" aria-label="Phone screens">
           <div
             ref={strip}
             id="mk-phones"
@@ -99,7 +99,7 @@ export default function SpectrumMobile() {
                     ) : (
                       <>
                         <img className="mk-img-dark" src={s.dark} alt={s.alt} width="780" height="1424" loading="lazy" decoding="async" />
-                        <img className="mk-img-light" src={s.light} alt="" width="780" height="1424" loading="lazy" decoding="async" />
+                        <img className="mk-img-light" src={s.light} alt={s.alt} width="780" height="1424" loading="lazy" decoding="async" />
                       </>
                     )}
                   </div>
