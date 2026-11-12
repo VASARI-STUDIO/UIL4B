@@ -8,7 +8,9 @@
 // the horizon turns to colour, the page says UIL4B is reachable again and
 // reloads into it. The same script (the maintenance build still being served), a
 // non-OK answer or no answer at all says it is still unavailable and leaves the
-// button for another try. While the check runs the button is disabled and busy.
+// button for another try. While the check runs the button is aria-disabled and
+// busy, not disabled: a disabled button drops keyboard focus, and a keyboard
+// user would have to Tab back to it to try again.
 //
 // The switch is the sessionStorage seam `uil4b-maintenance` = `on`, honoured in
 // test and dev builds only, and nothing but `on` turns it on. The init script
@@ -19,8 +21,9 @@
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // In Maintenance.jsx return true from newDeployLive() whatever the entry
 // scripts are: the "same build" test fails. Make it return false: the reload
-// test fails. Drop `disabled` / `aria-busy` from the button, or the useNoindex()
-// call: the in-flight and noindex tests fail. In config/maintenance.js accept
+// test fails. Put `disabled` back on the button, or drop `aria-disabled` /
+// `aria-busy` from it, or the useNoindex() call: the in-flight, focus and
+// noindex tests fail. In config/maintenance.js accept
 // any stored value, not just `on`: the "only on" test fails; return false from
 // maintenanceOn(): every test fails at the first heading.
 import { test, expect } from './base.js'
@@ -112,23 +115,32 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
     })
 
-    test('while the check runs the button is disabled and busy, and both clear when it ends', async ({ page }) => {
+    test('while the check runs the button is aria-disabled and busy, keeps focus, ignores a repeat press, and both clear when it ends', async ({ page }) => {
       watch(page, 'a visitor waiting on a check')
       const held = gate()
       const asked = await setUp(page, { mode: 'down', hold: held })
       await goRaw(page, '/')
-      await expect(heading(page)).toBeVisible()
+      await expect(heading(page)).toBeFocused()
 
-      await checkAgain(page).click()
+      await page.keyboard.press('Tab')
+      await expect(checkAgain(page)).toBeFocused()
+      await page.keyboard.press('Enter')
       await expect(status(page)).toHaveText('Checking…')
-      await expect(checkAgain(page), 'a second click must not start a second check').toBeDisabled()
       await expect(checkAgain(page)).toHaveAttribute('aria-busy', 'true')
-      expect(asked.count).toBe(1)
+      await expect(checkAgain(page)).toHaveAttribute('aria-disabled', 'true')
+      await expect(checkAgain(page), 'a disabled button would have dropped focus').toBeFocused()
+
+      await page.keyboard.press('Enter')
+      await expect(status(page)).toHaveText('Checking…')
+      await expect(checkAgain(page), 'a repeat press while checking must not blur the button').toBeFocused()
+      expect(asked.count, 'a second press must not start a second check').toBe(1)
 
       held.open()
       await expect(status(page)).toHaveText('Still unavailable')
-      await expect(checkAgain(page)).toBeEnabled()
+      await expect(checkAgain(page)).toBeFocused()
       await expect(checkAgain(page)).not.toHaveAttribute('aria-busy', /.*/)
+      await expect(checkAgain(page)).not.toHaveAttribute('aria-disabled', /.*/)
+      expect(asked.count).toBe(1)
     })
 
     test('Check again asks for the page afresh, and a 503 says it is still unavailable and can be tried again', async ({ page }) => {
@@ -216,18 +228,15 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       expect(asked.count).toBe(1)
       await expect(checkAgain(page)).toBeEnabled()
 
-      // Focus is put back on the button by hand: see the test below.
-      await checkAgain(page).focus()
+      // Focus never left the button, so Space asks again without a Tab.
+      await expect(checkAgain(page)).toBeFocused()
       await page.keyboard.press('Space')
       await expect.poll(() => asked.count).toBe(2)
     })
 
-    // Known defect, expected to fail: the button is disabled while the check
-    // runs, and a disabled button drops focus to the page, so a keyboard user
-    // who pressed Enter has to Tab back to try again. Remove test.fail() when
-    // the button stays focusable (aria-disabled) or focus is returned to it.
+    // The button stays focusable through the check (aria-disabled, not
+    // disabled), so a keyboard user can press it again without tabbing back.
     test('focus is still on Check again after a failed check, for another try', async ({ page }) => {
-      test.fail()
       watch(page, 'a keyboard user retrying a check')
       await setUp(page, { mode: 'down' })
       await goRaw(page, '/')

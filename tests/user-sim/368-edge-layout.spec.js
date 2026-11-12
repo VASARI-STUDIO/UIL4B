@@ -19,7 +19,7 @@
 // fails on every surface.
 import { test, expect } from './base.js'
 import { go, goRaw, signIn, watch } from './helpers.js'
-import { landChromelessCrash, landLoadFailed } from './edge-cards.js'
+import { landChromelessCrash, landLoadFailed, setConnection } from './edge-cards.js'
 
 const SURFACES = [
   {
@@ -149,5 +149,50 @@ for (const [scheme, schemeLabel] of [['light', 'light'], ['dark', 'dark']]) {
         })
       })
     }
+  }
+}
+
+// THE OUTER CRASH CARD UNDER THE NOTICE STRIP. A route with no app shell has no
+// nav above its card, and the offline banner is fixed over the top of the page.
+// While the strip shows, the card's heading must start below it (the root carries
+// data-notice for as long as the strip has height); with no strip the heading
+// stays where the layout puts it: 112px at desktop, 80 at tablet, 48 at phone.
+// Mutation: drop the `html[data-notice] .error-boundary--outer .ed-ground` rule
+// from v3-edge.css, or stop NoticeStack setting data-notice: the banner covers
+// the heading and every case here fails.
+const HEADING_TOP = [
+  ['1440', { width: 1440, height: 900 }, 112],
+  ['768', { width: 768, height: 1024 }, 80],
+  ['390', { width: 390, height: 844 }, 48],
+]
+
+for (const scheme of ['light', 'dark']) {
+  for (const [label, size, restingTop] of HEADING_TOP) {
+    test.describe(`the crash card under the offline banner at ${label}, ${scheme}`, () => {
+      test.use({ viewport: size, colorScheme: scheme })
+
+      test('starts below the banner while offline, and returns to its own top when back online', async ({ page, context }) => {
+        watch(page, 'a visitor whose page crashed as the connection dropped')
+        await landChromelessCrash(page)
+        const h1 = page.locator('.error-boundary h1')
+        const top = () => h1.evaluate((el) => el.getBoundingClientRect().top)
+        await expect(page.locator('html')).toHaveAttribute('data-theme', scheme)
+        await expect(page.locator('html'), 'no strip, no marker').not.toHaveAttribute('data-notice', /.*/)
+        expect(await top(), 'the heading top with no strip').toBeCloseTo(restingTop, 0)
+
+        await setConnection(page, context, false)
+        await expect(page.locator('.offline-banner')).toBeVisible()
+        await expect(page.locator('html'), 'the strip has height, so the root says so').toHaveAttribute('data-notice', '')
+        await expect.poll(async () => {
+          const strip = await page.locator('.notice-stack').evaluate((el) => el.getBoundingClientRect().bottom)
+          return (await top()) - strip
+        }, { message: 'the heading starts above the bottom of the offline banner' }).toBeGreaterThanOrEqual(0)
+
+        await setConnection(page, context, true)
+        await expect(page.locator('.offline-banner')).toHaveCount(0)
+        await expect(page.locator('html'), 'the marker leaves with the strip').not.toHaveAttribute('data-notice', /.*/)
+        await expect.poll(top, { message: 'the heading did not return to its resting top' }).toBeCloseTo(restingTop, 0)
+      })
+    })
   }
 }
