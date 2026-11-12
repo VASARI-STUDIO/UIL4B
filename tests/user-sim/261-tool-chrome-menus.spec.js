@@ -328,7 +328,28 @@ test.describe('Right-click menus share the dropdown row', () => {
     await ctx.close()
   })
 
-  // MUTATION: in colour.css set `.plb-ctx-item` back to `padding:7px 9px` with no `min-height`.
+  // BREAK: in PaletteBuilder.jsx render the `.plb-ctx` div on phones again (drop the `phone` branch
+  // that mounts `<Menu label="Colour actions">`), or drop the Cancel button from Menu.jsx's sheet,
+  // or make Cancel not return focus to the trigger.
+  test('on a phone "More actions" opens the shared menu sheet with Cancel, and Cancel closes it and returns focus (390)', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 390)
+    await expect(page.locator('.plb-col')).toHaveCount(5)
+    const trigger = page.locator('.plb-col').nth(1).locator('.plb-tool--more')
+    await trigger.click()
+    const sheet = page.locator('.v3m-sheet')
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByRole('menu', { name: 'Colour actions' })).toBeVisible()
+    await expect(page.locator('.plb-ctx')).toHaveCount(0)
+    const cancel = sheet.getByRole('button', { name: 'Cancel' })
+    await expect(cancel).toBeVisible()
+    await cancel.click()
+    await expect(page.locator('.v3m-sheet')).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    await ctx.close()
+  })
+
+  // MUTATION: in v3-menus.css drop the sheet row's `min-height` (rows fall under 44px), or make
+  // PaletteBuilder.jsx render the old `.plb-ctx` list on phones with rows under 44px.
   test('on a phone the swatch menu rows are 44px targets (390)', async ({ browser }) => {
     const { ctx, page } = await at(browser, 390)
     await expect(page.locator('.plb-col')).toHaveCount(5)

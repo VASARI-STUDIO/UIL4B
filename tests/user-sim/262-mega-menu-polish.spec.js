@@ -298,6 +298,24 @@ for (const theme of THEMES) {
   })
 }
 
+// ── Create on a tablet spans the screen less a 10px margin each side ─────────
+// MUTATION: delete the `@media(min-width:768px) and (max-width:979px){.pnav-menu{width:calc(100vw - 20px)}}`
+// rule in v3-shell.css and the 768 menu is 720px wide, not 748.
+test('the Create menu at 768 is the screen less 10px each side; at 1024 it keeps its 960', async ({ browser }) => {
+  const tablet = await openPage(browser, TABLET, 'light', '/discover')
+  await openMenu(tablet.page, TABLET, 'Create')
+  const a = await tablet.page.locator('#pnav-mega').boundingBox()
+  expect(Math.round(a.x), 'starts 10px from the left edge').toBe(10)
+  expect(Math.round(a.width), 'is the viewport less 20px').toBe(TABLET.width - 20)
+  await tablet.ctx.close()
+
+  const laptop = await openPage(browser, LAPTOP, 'light', '/discover')
+  await openMenu(laptop.page, LAPTOP, 'Create')
+  const b = await laptop.page.locator('#pnav-mega').boundingBox()
+  expect(Math.round(b.width), 'at 1024 the menu keeps its own width').toBe(960)
+  await laptop.ctx.close()
+})
+
 // ── Learn: one guide list, whole read times ──────────────────────────────────
 for (const size of [LAPTOP, DESKTOP]) {
   for (const theme of THEMES) {

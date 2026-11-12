@@ -217,6 +217,49 @@ test.describe('overlays at 1440', () => {
     await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
+  test('2b. Enter that picks an input-method candidate does not confirm a delete; a real Enter does', async ({ page }) => {
+    watch(page, 'someone typing a project name through an input method')
+    await openConfirm(page)
+    const dialog = confirmDialog(page)
+    await nameField(page).fill(NAME)
+    await expect(dialog.getByRole('button', { name: 'Permanently delete' })).toBeEnabled()
+
+    // The key an input method sends to accept a candidate: Enter, flagged as composing.
+    await nameField(page).evaluate((el) => {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }))
+    })
+    await expect(dialog, 'a composing Enter must not delete the project').toBeVisible()
+    await expect(toastEl(page)).toHaveCount(0)
+    // BREAK: drop `&& !e.nativeEvent.isComposing` from the input's onKeyDown in ConfirmDialog.jsx
+
+    await page.keyboard.press('Enter')
+    await expect(toastEl(page), 'a plain Enter still confirms once the name is typed').toContainText('Project deleted')
+  })
+
+  test('2c. a confirm for something with no name never arms, by button or by Enter', async ({ page }) => {
+    watch(page, 'someone deleting a project whose name is empty')
+    await signIn(page, { plan: 'free', projects: 2 })
+    await go(page, '/projects')
+    await page.evaluate(() => {
+      const all = JSON.parse(localStorage.getItem('vs-projects') || '{}')
+      for (const email of Object.keys(all)) all[email] = all[email].map((p) => (p.id === 'seed-1' ? { ...p, name: '' } : p))
+      localStorage.setItem('vs-projects', JSON.stringify(all))
+    })
+    await go(page, '/projects/seed-1')
+    await page.getByRole('button', { name: /^Actions for\s*$/ }).click()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
+
+    const dialog = page.getByRole('dialog', { name: /^Delete\s*\?$/ })
+    await expect(dialog).toBeVisible()
+    const act = dialog.getByRole('button', { name: 'Permanently delete' })
+    await expect(act, 'an empty field must not match an empty name').toBeDisabled()
+    // BREAK: `const armed = !!name && typed === name` -> `const armed = typed === name` in ConfirmDialog.jsx
+
+    await dialog.getByRole('textbox').press('Enter')
+    await expect(dialog, 'Enter on an empty field must not delete').toBeVisible()
+    await expect(toastEl(page)).toHaveCount(0)
+  })
+
   test('3. the feedback form: an empty send explains itself, recovers, sends, and focus returns', async ({ page }) => {
     watch(page, 'a visitor sending feedback')
     await feedbackFormJourney(page)
@@ -272,6 +315,68 @@ test.describe('overlays at 1440', () => {
     await expect(input, 'Clear search keeps focus in the field').toBeFocused()
     await page.keyboard.press('Escape')
     await expect(palette).toBeHidden()
+  })
+
+  test('palette: a pointer that only rests over a row after a miss does not arm it; real movement does', async ({ page }) => {
+    watch(page, 'someone whose mouse sits over the list while they type')
+    await go(page, '/community')
+    await page.keyboard.press('/')
+    const palette = page.getByRole('dialog', { name: /Search/ })
+    await expect(palette).toBeVisible()
+    const input = palette.getByRole('combobox')
+    await input.fill('qzxqzx')
+    await expect(palette.getByRole('status')).toContainText('No results for "qzxqzx"')
+
+    // A list that re-lays out under a resting pointer makes the browser send the
+    // boundary event (mouseover) and no mousemove. That alone must not arm a row.
+    const row = palette.getByRole('option').nth(2)
+    await row.evaluate((el) => el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })))
+    await expect(palette.getByRole('option', { selected: true }), 'a resting pointer must not arm a row').toHaveCount(0)
+    const url = page.url()
+    await page.keyboard.press('Enter')
+    await expect(palette, 'Enter after a resting pointer chooses nothing').toBeVisible()
+    expect(page.url()).toBe(url)
+    // BREAK: change the row's `onMouseMove` back to `onMouseEnter` in CommandPalette.jsx
+
+    await row.evaluate((el) => el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true })))
+    await expect(palette.getByRole('option', { selected: true }), 'real movement arms the row under the pointer').toHaveCount(1)
+    await expect(row).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('Enter')
+    await expect(palette, 'Enter now chooses the row the pointer is on').toBeHidden()
+  })
+
+  test('palette: the focused input shows no halo or border of its own, and the Esc chip is 12px', async ({ page }) => {
+    watch(page, 'someone opening search')
+    await go(page, '/community')
+    await page.keyboard.press('/')
+    const palette = page.getByRole('dialog', { name: /Search/ })
+    await expect(palette).toBeVisible()
+    const input = palette.getByRole('combobox')
+    await expect(input).toBeFocused()
+    const s = await input.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { shadow: cs.boxShadow, border: cs.borderTopColor, matches: el.matches(':focus') }
+    })
+    expect(s.matches, 'positive control: the input really is focused').toBe(true)
+    expect(s.shadow, 'no global focus halo').toBe('none')
+    expect(s.border, 'no accent border').toBe('rgba(0, 0, 0, 0)')
+    // BREAK: delete the `:root .cp-panel .cp-input.cp-input:focus` rule in v3-palette.css
+
+    const chip = await palette.locator('.cp-input-wrap .cp-kbd').evaluate((el) => getComputedStyle(el).fontSize)
+    expect(chip).toBe('12px')
+    // BREAK: set `.cp-input-wrap .cp-kbd` font-size back to 11px in v3-palette.css
+  })
+
+  test('a disabled Permanently delete is dimmed to 0.7, and armed it is not', async ({ page }) => {
+    watch(page, 'someone looking at an unarmed delete')
+    await openConfirm(page)
+    const act = confirmDialog(page).getByRole('button', { name: 'Permanently delete' })
+    await expect(act).toBeDisabled()
+    await expect.poll(() => act.evaluate((el) => getComputedStyle(el).opacity), { message: 'dimmed while unarmed' }).toBe('0.7')
+    // BREAK: change `.ov-act-danger:disabled` opacity from .7 back to .5 in v3-overlays.css
+    await nameField(page).fill(NAME)
+    await expect(act).toBeEnabled()
+    await expect.poll(() => act.evaluate((el) => getComputedStyle(el).opacity), { message: 'full strength once armed' }).toBe('1')
   })
 })
 
@@ -363,6 +468,19 @@ test.describe('overlays at 390', () => {
     const c = await box(close)
     expect(c.w, 'Close is under 44 wide').toBeGreaterThanOrEqual(44)
     expect(c.h, 'Close is under 44 tall').toBeGreaterThanOrEqual(44)
+  })
+
+  test('palette: the Try suggestions are 44px targets on a phone', async ({ page }) => {
+    watch(page, 'a phone visitor opening search')
+    await go(page, '/community')
+    await page.keyboard.press('/')
+    const palette = page.getByRole('dialog', { name: /Search/ })
+    await expect(palette).toBeVisible()
+    const chips = palette.locator('.cp-try-btn')
+    expect(await chips.count(), 'positive control: there are suggestions to measure').toBeGreaterThan(0)
+    const heights = await chips.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height))
+    for (const h of heights) expect(h, `a suggestion is ${h}px tall`).toBeGreaterThanOrEqual(44)
+    // BREAK: delete `:root .cp-try-btn { min-height: 44px; }` from the 767px block of v3-palette.css
   })
 
   test('7. a toast with Undo on a phone: 48px tall, inside the width, Undo runs by key', async ({ page }) => {
