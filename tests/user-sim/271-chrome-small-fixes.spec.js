@@ -91,7 +91,7 @@ test.describe('1 · the floating Feedback button on a narrow mouse window', () =
     const at = await plainPoint(page)
     expect(at, 'a plain surface to right-click on').not.toBeNull()
     await page.mouse.click(at.x, at.y, { button: 'right' })
-    await page.getByRole('button', { name: 'Share feedback on this' }).click()
+    await page.getByRole('menuitem', { name: 'Share feedback on this' }).click()
     const dialog = page.getByRole('dialog', { name: 'Share feedback' })
     await expect(dialog, 'the right-click menu opens the feedback dialog').toBeVisible()
     await page.keyboard.press('Escape')

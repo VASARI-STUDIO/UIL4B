@@ -43,7 +43,7 @@ async function open(browser, size, { theme = 'dark', url = '/create/palette', to
 }
 
 const trig = (page, name) => page.locator('.pnav-trigger', { hasText: name })
-}
+const panel = (page) => page.locator('#pnav-mega')
 const rows = (page) => page.locator('#pnav-mega .pnav-tool')
 const box = (loc) => loc.evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, right: r.right, bottom: r.bottom } })
 
@@ -59,6 +59,9 @@ test.describe('desktop menus at 1440', () => {
     await expect(panel(page)).toContainText('Build your brand kit, step by step')
     await rows(page).filter({ hasText: 'Font Pair' }).click()
     await expect(page).toHaveURL(/\/create\/font-pair/)
+    // The router commits the new location after the URL changes; a menu opened before
+    // that is closed by the commit, so wait for the new page to be drawn.
+    await expect(page.locator('h1').first()).toHaveText('Font Pair')
     await expect(panel(page)).toBeHidden()
     await trig(page, 'Create').click()
     await expect(panel(page)).toBeVisible()
@@ -173,6 +176,7 @@ test.describe('desktop menus at 1440', () => {
     await trig(page, 'Create').click()
     await rows(page).filter({ hasText: 'Font Pair' }).click()
     await expect(page).toHaveURL(/\/create\/font-pair/)
+    await expect(page.locator('h1').first()).toHaveText('Font Pair')
     await expect(panel(page)).toBeHidden()
 
     await trig(page, 'Discover').click()

@@ -7,7 +7,8 @@
 //     pane, and names the guide by the same title the list uses.
 //   · 1440: the suggestion follows the recent tools in storage: its eyebrow, name
 //     and href change with colour, type and image histories.
-//   · 768: the target is at least 44px tall and the pane adds no sideways scroll.
+//   · 768: the target is at least 36px tall (the desktop panel's control row) and the
+//     pane adds no sideways scroll.
 //   · 1440: the link opens a real guide and closes the menu; the keyboard ring
 //     reaches it before the "Open Learn" button.
 //   · 390: the phone sheet's Learn panel carries the same suggestion.
@@ -18,8 +19,8 @@
 //   "follows recent tools" case fails on href.
 // MUTATION: give recommendGuide a default guide for an empty history: "no
 //   activity" fails.
-// MUTATION: set `.pnav-reco-link` min-height to 36px in global.css: "44px target"
-//   and the phone case fail.
+// MUTATION: set `.pnav-reco-link` min-height to 28px in v3-shell.css: "36px target"
+//   fails; set `.pnav-sheet .pnav-reco-link` to 36px: the phone case fails.
 // MUTATION: remove the Learn branch from the phone sheet panel in PillNav.jsx: the
 //   "phone sheet" case fails.
 // MUTATION: drop `data-pnav-menuitem` from the link in LearnRecommended.jsx: "the
@@ -118,11 +119,13 @@ test.describe('Learn suggested guide', () => {
     })
   }
 
-  test('its target is at least 44px and the pane adds no sideways scroll, 768', async ({ browser }) => {
+  test('its target is a full 36px control row and the pane adds no sideways scroll, 768', async ({ browser }) => {
+    // At 768 the menu is the desktop panel, whose rows are the 36px control height;
+    // the 44px target is the phone sheet's, pinned by the 390 case below.
     const { ctx, page } = await openPage(browser, TABLET, 'light', '/discover', ['palette'])
     await openLearn(page, TABLET)
     const box = await page.locator('#pnav-mega a.pnav-reco-link').boundingBox()
-    expect(box.height).toBeGreaterThanOrEqual(44)
+    expect(box.height).toBeGreaterThanOrEqual(36)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow, 'the pane adds no sideways scroll').toBeLessThanOrEqual(1)
     await shot(page, 'learn-reco-768-light')
