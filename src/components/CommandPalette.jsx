@@ -233,7 +233,10 @@ export default function CommandPalette({ open, onClose }) {
                     aria-selected={armed && idx === safeHighlight}
                     tabIndex={-1}
                     className={`cp-item${armed && idx === safeHighlight ? ' active' : ''}`}
-                    onMouseEnter={() => { setHighlight(idx); setMoved(true) }}
+                    // Arms on real pointer movement, not on mouseenter: a list that
+                    // re-renders under a resting cursor fires mouseenter without any
+                    // movement. Sets state only when it would change.
+                    onMouseMove={() => { if (!moved || highlight !== idx) { setHighlight(idx); setMoved(true) } }}
                     onClick={() => select(item)}
                   >
                     <div className="cp-item-icon" aria-hidden="true">

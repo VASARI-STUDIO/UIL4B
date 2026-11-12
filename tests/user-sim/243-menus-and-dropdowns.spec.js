@@ -105,9 +105,9 @@ for (const width of [1440, 390]) {
 }
 
 test.describe('Dropdown phone sheet at 390px', () => {
-  // MUTATION: in global.css put `calc(16px + env(safe-area-inset-bottom))` back on the
-  // `html.has-tabbar .pop.menu-select-list` rule (the lifted sheet counts the inset twice;
-  // tests/unit/menu-select-sheet-css.test.js reads the rule text, as env() is 0 in a test browser).
+  // MUTATION: in global.css set the sheet's `bottom:0` to `bottom:8px` on the phone
+  // `.pop.menu-select-list` rule (the safe-area inset itself is read from the rule text by
+  // tests/unit/menu-select-sheet-css.test.js, as env() is 0 in a test browser).
   for (const theme of ['light', 'dark']) {
     test(`a list opened from Extra tools sits on the screen edge, with 44px rows (${theme})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 390, { theme })
@@ -131,6 +131,91 @@ test.describe('Dropdown phone sheet at 390px', () => {
       await ctx.close()
     })
   }
+})
+
+/** The Scale ratio dropdown (11 rows, the longest plain list on a phone), open and settled. */
+async function openRatio(page) {
+  await page.getByRole('button', { name: 'Fine tuning' }).click()
+  await page.locator('#tsc-ratio').first().click()
+  const list = page.getByRole('listbox', { name: 'Scale ratio' })
+  await expect(list).toBeVisible()
+  const bottom = () => list.evaluate((el) => el.getBoundingClientRect().bottom)
+  await expect.poll(async () => { const first = await bottom(); await page.waitForTimeout(120); return first === await bottom() }, { message: 'the list has settled' }).toBe(true)
+  return list
+}
+
+test.describe('The dropdown sheet over the phone tab bar (390px)', () => {
+  // MUTATION: in global.css put the `html.has-tabbar .pop.menu-select-list{bottom:calc(var(--tabbar-h) + ...)}`
+  // lift back, or take the sheet's max-height cap back down from 640px to 560px.
+  for (const theme of ['light', 'dark']) {
+    test(`the whole Scale ratio sheet shows, the tab bar is dimmed beneath it (${theme})`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, 390, { theme, path: '/create/type-scale' })
+      const list = await openRatio(page)
+      const r = await list.evaluate((el) => {
+        const rows = [...el.querySelectorAll('[role="option"]')]
+        const last = rows.at(-1)
+        const box = last.getBoundingClientRect()
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
+        const tabs = document.querySelector('.pnav-tabs')
+        const tabBox = tabs.getBoundingClientRect()
+        const overTabs = document.elementFromPoint(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2)
+        const z = (node) => Number.parseInt(getComputedStyle(node).zIndex, 10) || 0
+        const scrim = document.querySelector('.menu-select-scrim')
+        return {
+          lastText: last.textContent, vw: window.innerWidth, vh: window.innerHeight,
+          box: { top: box.top, bottom: box.bottom, left: box.left, right: box.right },
+          hitIsLast: !!hit && last.contains(hit),
+          scrolls: el.scrollHeight > el.clientHeight + 1,
+          sheetBottom: el.getBoundingClientRect().bottom,
+          sheetZ: z(el), scrimZ: z(scrim), tabsZ: z(tabs),
+          tabsCovered: !!overTabs && overTabs.classList.contains('menu-select-scrim'),
+        }
+      })
+      expect(r.lastText, 'the last row is Custom ratio').toContain('Custom ratio')
+      expect(r.box.top, 'the last row starts in the viewport').toBeGreaterThanOrEqual(0)
+      expect(r.box.bottom, 'the last row ends in the viewport').toBeLessThanOrEqual(r.vh)
+      expect(r.box.left).toBeGreaterThanOrEqual(0)
+      expect(r.box.right).toBeLessThanOrEqual(r.vw)
+      expect(r.hitIsLast, 'what is under the last row\'s centre is the row, not the tab bar or the scrim').toBe(true)
+      expect(r.scrolls, 'every row fits, so the list does not scroll').toBe(false)
+      expect(Math.abs(r.sheetBottom - r.vh), 'the sheet sits on the screen edge').toBeLessThanOrEqual(1)
+      expect(r.sheetZ, 'the sheet is above the tab bar').toBeGreaterThan(r.tabsZ)
+      expect(r.scrimZ, 'the scrim is above the tab bar').toBeGreaterThan(r.tabsZ)
+      expect(r.tabsCovered, 'a press on the tab bar lands on the scrim, so the bar is dimmed and inert').toBe(true)
+      await ctx.close()
+    })
+  }
+})
+
+test.describe('The chosen row of a dropdown', () => {
+  // MUTATION: in global.css put `var(--accent-text)` back on `.menu-select-option[aria-selected="true"]`.
+  test('keeps the row ink and shows the tick, not the accent colour (1440)', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440, { path: '/create/type-scale' })
+    await page.getByRole('button', { name: 'Fine tuning' }).click()
+    await page.locator('#tsc-ratio').first().click()
+    const list = page.getByRole('listbox', { name: 'Scale ratio' })
+    await expect(list).toBeVisible()
+    const r = await list.evaluate((el) => {
+      const ink = (value) => {
+        const probe = document.createElement('span')
+        probe.style.color = value
+        document.body.append(probe)
+        const out = getComputedStyle(probe).color
+        probe.remove()
+        return out
+      }
+      const chosen = el.querySelector('[role="option"][aria-selected="true"]')
+      const check = chosen.querySelector('.menu-select-check')
+      return {
+        colour: getComputedStyle(chosen).color, t0: ink('var(--t0)'), accent: ink('var(--accent-text)'),
+        tick: getComputedStyle(check).visibility,
+      }
+    })
+    expect(r.colour, 'the chosen row reads in the page ink').toBe(r.t0)
+    expect(r.colour, 'not the accent').not.toBe(r.accent)
+    expect(r.tick, 'the tick still marks it').toBe('visible')
+    await ctx.close()
+  })
 })
 
 test.describe('Pro marks and the focus ring', () => {

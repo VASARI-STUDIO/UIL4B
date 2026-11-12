@@ -545,6 +545,27 @@ for (const [w, h] of [[360, 560], [320, 568], [390, 640], [390, 844], [768, 1024
   })
 }
 
+// The Close button is 44px at the top right and the Google button is the first
+// control under the title. On a short phone they used to touch (the button's top
+// edge was 1.6px inside Close's box at 360x560); Close now ends 8px above it, and
+// the form still fits without scrolling.
+// MUTATION: in auth.css take the `.ui-login .ui-login-x{top:6px}` line (or the
+// `.auth-body{margin-top:16px}` line) out of the `max-width:767px` and `max-height:600px` block.
+for (const [w, h] of [[360, 560], [320, 568]]) {
+  test(`S7 · portrait ${w}x${h}: Close ends 8px above the Google button, and the dialog still does not scroll`, async ({ browser }) => {
+    const { ctx, page } = await openLoginDialog(browser, w, h)
+    const g = await page.evaluate(() => {
+      const m = document.querySelector('.ui-modal')
+      const close = m.querySelector('.ui-login-x').getBoundingClientRect()
+      const google = [...m.querySelectorAll('button')].find((b) => /google/i.test(b.textContent)).getBoundingClientRect()
+      return { closeBottom: close.bottom, googleTop: google.top, hiddenPx: Math.max(0, m.scrollHeight - m.clientHeight) }
+    })
+    await ctx.close()
+    expect(g.googleTop - g.closeBottom, `Close bottom ${g.closeBottom.toFixed(1)}, Google top ${g.googleTop.toFixed(1)}`).toBeGreaterThanOrEqual(8)
+    expect(g.hiddenPx, 'the fix must not push the dialog into scrolling').toBe(0)
+  })
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // S8 · every Settings section is on screen, and no label loses a letter
 // ─────────────────────────────────────────────────────────────────────────────

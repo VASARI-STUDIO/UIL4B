@@ -19,7 +19,8 @@ import Dialog from './Dialog'
 function ConfirmBody({ onClose, onConfirm, name, title, action, fieldLabel, strip = null, error = '' }) {
   const [typed, setTyped] = useState('')
   const errorId = useId()
-  const armed = typed === name
+  // An empty name never arms: an empty field would otherwise match it.
+  const armed = !!name && typed === name
 
   const submit = () => { if (armed) onConfirm() }
 
@@ -32,7 +33,8 @@ function ConfirmBody({ onClose, onConfirm, name, title, action, fieldLabel, stri
         className="ov-dialog-field"
         value={typed}
         onChange={(e) => setTyped(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
+        // Enter while an input method is composing picks a candidate; it is not a confirm.
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); submit() } }}
         placeholder={name}
         aria-label={fieldLabel}
         aria-describedby={error ? errorId : undefined}

@@ -127,6 +127,15 @@
   .auth-form-root .auth-links{margin-top:8px}
   .auth-notnow{margin-top:0}
 }
+/* Short phones in portrait: the 44px Close (top right, level with the title) ends
+   8px above the first control, which sits clear of it instead of touching it. The
+   4px this costs under the title comes back from the divider, so the sheet still
+   fits its cap with no scroll. */
+@media(max-width:767px) and (max-height:600px){
+  .ui-login .ui-login-x{top:6px}
+  .auth-body{margin-top:16px}
+  .auth-form-root .auth-divider{margin:6px 0}
+}
 /* Phones on their side: tighter again. "Not now" goes; Close (top right) and
    Escape do the same thing and every sign-in method stays. */
 @media(max-height:460px){
