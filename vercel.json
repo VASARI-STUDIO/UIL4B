@@ -502,10 +502,6 @@
       "destination": "/404.html"
     },
     {
-      "source": "/reset-password",
-      "destination": "/404.html"
-    },
-    {
       "source": "/create/ai-prompt",
       "destination": "/404.html"
     },
@@ -555,6 +551,10 @@
     },
     {
       "source": "/projects",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/reset-password",
       "destination": "/404.html"
     },
     {
