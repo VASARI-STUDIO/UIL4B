@@ -2,7 +2,9 @@
 // the widths people use.
 //
 //   · /create/file-converter?mode=animation|video|frames opens that tab; an unknown,
-//     empty or wrong-case mode opens Image, and a mode asked for twice is read once
+//     empty or wrong-case mode opens Image, and a mode asked for twice is read once, the
+//     first; the tab is picked on arrival only, and a photo carried over from the home
+//     preview opens Image whatever ?mode= says
 //   · no sideways scroll at 320, 390, 768, 1200 and 1440 on /, /tools and /mobile
 //   · /tools: hex labels read across, the nine-step card is three by three under 1200
 //     and the hero ramp stacks at 374 and under; a row's picture is 72px wide at 320 and
@@ -59,13 +61,92 @@ test.describe('File Converter ?mode= deep links', () => {
     })
   }
 
-  test('the tab is only picked on arrival: choosing another tab afterwards sticks', async ({ page }) => {
+  // A mode asked for twice is read once, and it is the first: URLSearchParams.get gives the first value.
+  for (const [url, id, label] of [
+    ['mode=video&mode=animation', 'video', 'Video'],
+    ['mode=animation&mode=video', 'animation', 'Animation'],
+    ['mode=bogus&mode=video', 'image', 'Image'],
+  ]) {
+    test(`?${url} opens the ${label} tab, the first one asked for`, async ({ page }) => {
+      watch(page, PERSONA)
+      await go(page, `/create/file-converter?${url}`)
+      // Mutation: read the last value (getAll().pop()) -> the first two cases swap their tabs.
+      await expect(page.locator(`#fc-tab-${id}`)).toHaveAttribute('aria-selected', 'true')
+      await expect(selected(page)).toHaveCount(1)
+      await expect(selected(page)).toHaveText(label)
+    })
+  }
+
+  test('the tab is only picked on arrival: later renders never read ?mode= again', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/create/file-converter?mode=video')
     await expect(page.locator('#fc-tab-video')).toHaveAttribute('aria-selected', 'true')
+    // A flip back to the asked-for tab one render after a click would pass a plain "is selected" check
+    // before it happened, so every change of the selected tab is written down and the whole run read.
+    await page.evaluate(() => {
+      const list = document.querySelector('[role="tablist"][aria-label="Converter mode"]')
+      const current = () => list.querySelector('[role="tab"][aria-selected="true"]')?.id
+      window.__selected = [current()]
+      new MutationObserver(() => {
+        const id = current()
+        if (id && id !== window.__selected[window.__selected.length - 1]) window.__selected.push(id)
+      }).observe(list, { attributes: true, attributeFilter: ['aria-selected'], subtree: true })
+    })
+    const settle = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(done)))))
     await page.locator('#fc-tab-image').click()
     await expect(page.locator('#fc-tab-image')).toHaveAttribute('aria-selected', 'true')
+    await settle()
+    await page.locator('#fc-tab-frames').click()
+    await expect(page.locator('#fc-tab-frames')).toHaveAttribute('aria-selected', 'true')
+    await settle()
+    // Mutation: re-read ?mode= in an effect with no dependencies (setMode(asked)) -> the run ends back on video.
+    expect(await page.evaluate(() => window.__selected)).toEqual(['fc-tab-video', 'fc-tab-image', 'fc-tab-frames'])
+    await expect(selected(page)).toHaveCount(1)
     await expect(page.locator('#fc-tab-video')).toHaveAttribute('aria-selected', 'false')
+  })
+
+  // A photo carried over from the home preview opens the Image tab, whatever ?mode= says.
+  // The home link for Image is bare, so a ?mode= is put on the address for it here, as a
+  // pasted or edited link would have one. The photo is chosen on the home page for real.
+  const arriveWithAskedMode = async (page, { photo }) => {
+    await page.addInitScript(() => {
+      const push = history.pushState.bind(history)
+      history.pushState = (state, title, url) => push(state, title, typeof url === 'string' && url.startsWith('/create/file-converter') ? `${url}?mode=video` : url)
+    })
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/')
+    await homeSectionsLoaded(page)
+    await page.locator('#try').scrollIntoViewIfNeeded()
+    await page.locator('#ht-n-3').click()
+    const stage = page.locator('#ht-s-3')
+    await expect(stage).toBeInViewport()
+    if (photo) {
+      const png = await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 96; c.height = 64
+        const x = c.getContext('2d'); x.fillStyle = '#1c40f2'; x.fillRect(0, 0, 96, 64)
+        return c.toDataURL('image/png').split(',')[1]
+      })
+      await stage.locator('input.ht-cv-file').setInputFiles([{ name: 'handoff.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') }])
+      await expect(stage.locator('.ht-cv-name')).toHaveText('handoff.png')
+    }
+    await stage.locator('.ht-go').click()
+    await expect(page).toHaveURL(/\/create\/file-converter\?mode=video$/)
+  }
+
+  test('a chosen photo wins over ?mode=: the Image tab opens with the photo in it', async ({ page }) => {
+    watch(page, PERSONA)
+    await arriveWithAskedMode(page, { photo: true })
+    // Mutation: drop the `!handoff?.files?.length &&` test in FileConverter.jsx -> the Video tab opens and the photo is lost.
+    await expect(page.locator('#fc-tab-image')).toHaveAttribute('aria-selected', 'true')
+    await expect(selected(page)).toHaveCount(1)
+    await expect(page.locator('#fc-panel-image').getByText('handoff.png').first()).toBeVisible()
+  })
+
+  test('the same address with no photo chosen does open the tab it asks for', async ({ page }) => {
+    watch(page, PERSONA)
+    // Positive control for the test above: the address it builds really does carry ?mode=video.
+    await arriveWithAskedMode(page, { photo: false })
+    await expect(page.locator('#fc-tab-video')).toHaveAttribute('aria-selected', 'true')
   })
 
   test('the home preview link for each tab lands on that tab', async ({ page }) => {

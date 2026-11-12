@@ -68,7 +68,7 @@ test.describe('/mobile renders as its own page', () => {
   const ALTS = [
     'The Palette Builder on a phone, with colour rows and adjust sliders',
     'The Icon Library on a phone, with search and the recolour row',
-    'The projects page on a phone',
+    'The workspace on a phone, with a project card showing its palette, type scale and font pair',
   ]
   const shownImages = (page, i) => page.locator('.mk-fig').nth(i).locator('img').evaluateAll((imgs) => imgs
     .filter((img) => getComputedStyle(img).display !== 'none')
@@ -81,7 +81,7 @@ test.describe('/mobile renders as its own page', () => {
       expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(theme)
       for (let i = 0; i < 3; i += 1) {
         const shown = await shownImages(page, i)
-        const want = i === 2 ? '/mobile-screens/projects.jpg' : `/mobile-screens/${['palette', 'icons'][i]}-${theme}.jpg`
+        const want = `/mobile-screens/${['palette', 'icons', 'projects'][i]}-${theme}.jpg`
         expect(shown.map((s) => s.src), `phone ${i + 1} should draw one ${theme} picture`).toEqual([want])
       }
       await ctx.close()
@@ -96,9 +96,22 @@ test.describe('/mobile renders as its own page', () => {
       }
       await ctx.close()
     })
+
+    test(`${theme} theme: the capture on show loads eagerly and the other waits`, async ({ browser }) => {
+      const { ctx, page } = await ctxAt(browser, 1440, { theme })
+      await go(page, '/mobile')
+      for (let i = 0; i < 3; i += 1) {
+        const loading = await page.locator('.mk-fig').nth(i).locator('img').evaluateAll((imgs) => imgs.map((img) => ({
+          shown: getComputedStyle(img).display !== 'none',
+          loading: img.getAttribute('loading'),
+        })))
+        // Mutation: make both captures eager (or both lazy) in SpectrumMobile.jsx → this fails.
+        expect(loading.filter((l) => l.shown).map((l) => l.loading), `phone ${i + 1}'s capture on show`).toEqual(['eager'])
+        expect(loading.filter((l) => !l.shown).map((l) => l.loading), `phone ${i + 1}'s hidden capture`).toEqual(['lazy'])
+      }
+      await ctx.close()
+    })
   }
-
-
 
   test('the heading outline goes h1 → footer h2s, and nothing skips a level', async ({ page }) => {
     await go(page, '/mobile')
