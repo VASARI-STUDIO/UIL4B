@@ -41,12 +41,15 @@
 
 .ht-split { margin-top: 72px; }
 @media (max-width: 767px) { .ht-split { margin-top: 32px; } }
-.ht-stages { --gap: 104px; display: grid; row-gap: var(--gap); max-width: 688px; }
+.ht-stages { --gap: 104px; position: relative; display: grid; row-gap: var(--gap); max-width: 688px; }
 @media (max-width: 767px) { .ht-stages { --gap: 80px; } }
 .ht-stage { position: relative; scroll-margin-top: 60px; transition: opacity 240ms var(--ease); }
-/* A hairline halfway down the gap between two tools, and the tools that are not current stand back. */
-.ht-stage + .ht-stage::before { content: ""; position: absolute; left: 0; right: 0; top: calc(var(--gap) / -2); height: 1px; background: var(--hair); pointer-events: none; }
-.ht-stage[data-on="false"]:not(:focus-within) { opacity: .42; }
+/* A hairline halfway down the gap above a tool: placed in that tool's grid row, outside the stage and its dimming. */
+.ht-rule { position: absolute; grid-column: 1; left: 0; right: 0; top: calc(var(--gap) / -2); height: 1px; background: var(--hair); pointer-events: none; }
+/* The tools that are not current stand back. The dim is held to the level where the
+   secondary text (62% ink on the frame) still reads at 4.5:1 on the #060607 ground;
+   a tool being pressed, focused or hovered comes forward. */
+.ht-stage[data-on="false"]:not(:focus-within):not(:has(:active)) { opacity: .88; }
 @media (hover: hover) and (pointer: fine) { .ht-stage[data-on="false"]:hover { opacity: 1; } }
 .ht-stage:focus { outline: none; }
 .ht.ht .ht-stage:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 4px; }
@@ -437,7 +440,9 @@
 }
 .ht-cv-chip { top: 8px; left: 8px; }
 .ht-cv-n { left: 4px; bottom: 4px; padding: 0 6px; line-height: 16px; }
-.ht-cv-spec { flex: none; margin: 0; min-height: 16px; font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; color: rgba(var(--ink), .86); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ht-cv-spec { flex: none; margin: 0; min-height: 16px; font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; color: rgba(var(--ink), .86); overflow-wrap: anywhere; text-wrap: pretty; }
+/* On a phone the longest line wraps onto a second one; both lines are held so the view above does not move with the state. */
+@container (max-width: 339px) { .ht-cv-spec { min-height: 32px; } }
 .ht-cv-cap { flex: none; margin: 0; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); text-wrap: pretty; }
 .ht-cv-cap [data-s] { display: none; }
 .ht-cv-strip, .ht-cv-grid { flex: none; margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }

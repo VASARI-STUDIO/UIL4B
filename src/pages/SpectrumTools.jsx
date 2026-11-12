@@ -252,11 +252,11 @@ export default function SpectrumTools() {
           toolkitTo="/projects"
           actions={(
             <>
-              <Link className="hm-close-ghost ui-pill-out" to="/plans">See the plans</Link>
               <Link className="hm-close-cta" to="/projects">
                 <span>Use for free</span>
                 <span className="mi-go hm-close-icon" aria-hidden="true">{CLOSE_ARROW}</span>
               </Link>
+              <Link className="hm-close-ghost ui-pill-out" to="/plans">See the plans</Link>
             </>
           )}
         />

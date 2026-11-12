@@ -122,6 +122,15 @@
 .mkt .mk-seg button { min-width: 64px; height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--mk-wash-2); color: var(--sp-ink); font: inherit; font-size: 14px; cursor: pointer; transition: transform 120ms var(--mk-ease), background-color 150ms ease, color 150ms ease; }
 .mkt .mk-seg button:active { transform: scale(.97); }
 .mkt .mk-seg button[aria-pressed="true"] { background: var(--sp-ink); color: var(--sp-page); }
+/* Touch: the demo controls draw at 36px and are hit at 44px. The seeds and buttons
+   reach 4px past their edge (the gaps between them are 8px or more, so the reaches only
+   meet); the field's label takes 4px of padding above and below, cancelled by a negative
+   margin, so a tap beside the 36px input still focuses it and nothing moves. */
+@media (max-width: 767px), (pointer: coarse) {
+  .mkt .mk-seed, .mkt .mk-seg button { position: relative; }
+  .mkt .mk-seed::after, .mkt .mk-seg button::after { content: ""; position: absolute; inset: -4px; border-radius: inherit; }
+  .mkt .mk-field { padding: 4px 0; margin: -4px 0; }
+}
 .mkt .mk-scale li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--mk-hair); line-height: 1.1; }
 .mkt .mk-scale li:first-child { padding-top: 0; border-top: 0; }
 .mkt .mk-scale .mk-mono { flex: none; color: var(--mk-sec); }
