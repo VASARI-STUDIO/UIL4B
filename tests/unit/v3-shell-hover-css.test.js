@@ -8,11 +8,12 @@ import { test } from 'node:test'
 // Line endings are normalised so the read works on a CRLF checkout; comments are dropped.
 const css = fs.readFileSync('src/styles/v3-shell.css', 'utf8').replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '')
 
-// Remove every @media(hover:hover){ ... } block, counting braces so nested rules go with it.
+// Remove every @media block whose query requires (hover:hover), alone or with other
+// features such as (pointer:fine), counting braces so nested rules go with it.
 function withoutHoverBlocks(text) {
   let out = ''
   let i = 0
-  const open = /@media\s*\(\s*hover\s*:\s*hover\s*\)\s*\{/g
+  const open = /@media[^{]*\(\s*hover\s*:\s*hover\s*\)[^{]*\{/g
   for (;;) {
     open.lastIndex = i
     const m = open.exec(text)
