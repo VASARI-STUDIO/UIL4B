@@ -3482,10 +3482,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     onClick={(e) => {
                       if (e.detail !== 0 && moreHiddenAtPressRef.current) { moreHiddenAtPressRef.current = false; return }
                       moreHiddenAtPressRef.current = false
-                      const r = e.currentTarget.getBoundingClientRect()
-                      ctxTriggerRef.current = e.currentTarget
+                      // The updater runs after this handler returns, when currentTarget is null.
+                      const btn = e.currentTarget
+                      const keyboard = e.detail === 0
+                      const r = btn.getBoundingClientRect()
+                      ctxTriggerRef.current = btn
                       setTintsIdx(null); setPickerIdx(null)
-                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6, triggerTop: r.top, keyboard: e.detail === 0, anchor: e.currentTarget })
+                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6, triggerTop: r.top, keyboard, anchor: btn })
                     }}
                   >
                     <ToolIcon name="dots-three" size={15} />

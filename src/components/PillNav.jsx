@@ -426,7 +426,8 @@ function AppHeader() {
   }, [open, menu, sheet])
 
   // The panel's left edge sits under the open trigger, held 24px clear of the
-  // viewport, and it grows from the trigger. Placed after render and again on resize.
+  // viewport (10px below 980px wide, where a 24px gutter leaves the panel too narrow),
+  // and it grows from the trigger. Placed after render and again on resize.
   useLayoutEffect(() => {
     if (!open) return undefined
     const place = () => {
@@ -434,7 +435,8 @@ function AppHeader() {
       const trig = triggerRefs.current[open]
       if (!panel || !trig) return
       const tl = trig.getBoundingClientRect().left
-      const left = Math.max(24, Math.min(tl, window.innerWidth - 24 - panel.offsetWidth))
+      const gap = window.innerWidth < 980 ? 10 : 24
+      const left = Math.max(gap, Math.min(tl, window.innerWidth - gap - panel.offsetWidth))
       panel.style.left = `${left}px`
       panel.style.transformOrigin = `${Math.max(0, tl - left)}px 0`
     }

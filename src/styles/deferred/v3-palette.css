@@ -39,6 +39,8 @@
   font-size: 17px;
   line-height: 24px;
   border-radius: var(--ov-r-row);
+  /* Its border and halo never show, so nothing here animates. */
+  transition: none;
 }
 :root .cp-input::placeholder { color: var(--t3); opacity: 1; }
 :root .cp-panel .cp-input.cp-input:focus-visible { outline: none; }
