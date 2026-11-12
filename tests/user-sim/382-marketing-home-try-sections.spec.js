@@ -279,7 +279,9 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
         // wheel's own resting place is the position to check.
         const at = withClick ? await unmoving(page, 300) : rested
         const off = Math.abs((await spotY(page, 1, wide)) - at)
-        expect(off, 'the wheel must leave the page within reach of tool 1 but off its spot').toBeGreaterThan(2)
+        expect(off, withClick
+          ? 'the page ended on tool 1\'s spot: the settle eased it there while a name click was on its way (the wheel aims 60px short)'
+          : 'the wheel must leave the page within reach of tool 1 but off its spot').toBeGreaterThan(2)
         expect(off, 'the wheel must leave the page within reach of tool 1 but off its spot').toBeLessThan(75)
         if (withClick) {
           // Mutation: drop `dest.current ||` from settle() in HomeTry.jsx -> the page eases onto tool 1.
