@@ -36,6 +36,10 @@ const MODES = [
   ['Extract frames', 'Pull frames out of a video.', 'Frames'],
 ]
 
+// The full tool's mode id for each tab above (FileConverter.jsx MODES); Image is
+// its default, so its link carries no mode.
+const MODE_IDS = ['image', 'animation', 'video', 'frames']
+
 export default function ConverterTool() {
   const root = useRef(null)
   const near = useInView(root)
@@ -242,7 +246,7 @@ export default function ConverterTool() {
       </div>
 
       <ToolLink
-        to={route('file-converter')}
+        to={mode === 0 ? route('file-converter') : `${route('file-converter')}?mode=${MODE_IDS[mode]}`}
         onClick={mode === 0 ? carry : undefined}
         fill={mode === 0 && Boolean(pick)}
         line={mode === 0 ? line : screen.line}
