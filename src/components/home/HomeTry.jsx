@@ -30,6 +30,21 @@ const NAMES_H = 44
 const CHAPTER_GAP = 16
 // How far nearer the next tool must be before it takes over (px).
 const HYSTERESIS = 24
+// The settle: after the scroll has been idle this long (ms), a tool within this share
+// of the window height of its landing spot eases the rest of the way (Lenis, seconds).
+const SETTLE_IDLE = 150
+const SETTLE_REACH = 0.25
+const SETTLE_DURATION = 0.5
+// Closer than this (px) counts as landed.
+const SETTLE_EPS = 2
+
+// The scroll position that lands a tool: centred from 1200, below the names row under it.
+function landingY(el, wide) {
+  const r = el.getBoundingClientRect()
+  return wide
+    ? r.top + window.scrollY - (window.innerHeight - r.height) / 2
+    : r.top + window.scrollY - (NAMES_H + CHAPTER_GAP)
+}
 
 const FREE_PACKS = Object.values(ICON_PACK_TIERS).filter((p) => p.tier !== 'paid').length
 const PRO_PACKS = Object.values(ICON_PACK_TIERS).filter((p) => p.tier === 'paid').length
@@ -166,15 +181,70 @@ export default function HomeTry() {
     clearTimeout(destTimer.current)
     destTimer.current = setTimeout(() => { dest.current = null }, 900)
     setCur(i)
-    const r = el.getBoundingClientRect()
-    const y = isWide()
-      ? r.top + window.scrollY - (window.innerHeight - r.height) / 2
-      : r.top + window.scrollY - (NAMES_H + CHAPTER_GAP)
+    const y = landingY(el, isWide())
     const lenis = getLenis()
     if (lenis) lenis.scrollTo(y)
     else window.scrollTo({ top: y, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
     el.focus({ preventScroll: true })
   }
+
+  // A gentle settle: once the scroll has been idle, the tool nearest its landing spot
+  // eases onto it, if it is close. Only through Lenis (so never under reduced motion),
+  // never while a name click, a held pointer or a Lenis scroll is under way, and never
+  // against the way out of the section: past the first tool going up, or the last going down.
+  useEffect(() => {
+    let timer = 0
+    let held = false
+    let lastY = window.scrollY
+    let dir = 0
+    const settle = () => {
+      timer = 0
+      if (held || dest.current || prefersReducedMotion()) return
+      const lenis = getLenis()
+      if (!lenis || lenis.isStopped) return
+      if (lenis.isScrolling) { arm(); return }
+      const els = stages.current.filter(Boolean)
+      if (els.length !== TOOLS.length) return
+      const wide = isWide()
+      let at = 0
+      let delta = Infinity
+      els.forEach((el, i) => {
+        const d = landingY(el, wide) - window.scrollY
+        if (Math.abs(d) < Math.abs(delta)) { at = i; delta = d }
+      })
+      if (Math.abs(delta) < SETTLE_EPS || Math.abs(delta) > window.innerHeight * SETTLE_REACH) return
+      if (at === 0 && delta > 0 && dir < 0) return
+      if (at === els.length - 1 && delta < 0 && dir > 0) return
+      lenis.scrollTo(window.scrollY + delta, { duration: SETTLE_DURATION })
+    }
+    function arm() {
+      clearTimeout(timer)
+      timer = setTimeout(settle, SETTLE_IDLE)
+    }
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y !== lastY) { dir = y > lastY ? 1 : -1; lastY = y }
+      arm()
+    }
+    const hold = () => { held = true }
+    const release = () => { held = false; arm() }
+    const onMove = (e) => { if (held && e.buttons === 0) release() }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('pointerdown', hold, { passive: true })
+    window.addEventListener('pointerup', release, { passive: true })
+    window.addEventListener('pointercancel', release, { passive: true })
+    window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('blur', release)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('pointerdown', hold)
+      window.removeEventListener('pointerup', release)
+      window.removeEventListener('pointercancel', release)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('blur', release)
+    }
+  }, [])
 
   // Focus landing anywhere in a tool makes it the active one, so the names follow the keyboard.
   const onStageFocus = (i) => { if (cur !== i && !dest.current) setCur(i) }
@@ -233,6 +303,7 @@ export default function HomeTry() {
               <article
                 key={t.id}
                 className="ht-stage"
+                data-on={cur === i ? 'true' : 'false'}
                 id={`ht-s-${i}`}
                 ref={(el) => { stages.current[i] = el }}
                 aria-labelledby={`ht-h3-${i}`}
