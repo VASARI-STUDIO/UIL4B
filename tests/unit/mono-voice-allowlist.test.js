@@ -192,7 +192,11 @@ const ALLOWED = {
   },
   'pages/home-try.css': {
     '.ht-cv-bytes': 'value',
+    '.ht-cv-chip': 'value',
     '.ht-cv-meta': 'value',
+    '.ht-cv-n': 'value',
+    '.ht-cv-spec': 'value',
+    '.ht-cv-times': 'value',
     '.ht-pal-hex': 'value',
     '.ht-val': 'value',
   },
@@ -313,6 +317,11 @@ const ALLOWED = {
   },
   'pages/type-tools-nav.css': {
     '.ttn-mono': 'value',
+  },
+  // The marketing pages read out figures and spec lines (sizes, times, type scale steps):
+  // numeric readouts, not prose.
+  'v3-marketing.css': {
+    '.mkt .mk-mono': 'value',
   },
 }
 

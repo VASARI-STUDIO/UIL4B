@@ -78,6 +78,89 @@ test.describe('home try section settle', () => {
   })
 })
 
+// The section's one scroll listener does three jobs: keep the names in step with the
+// tool in view, settle a tool onto its spot when the wheel stops, and leave a name click
+// to scroll to its tool. Each is read here at a desktop and a phone width.
+for (const [width, height] of [[1440, 900], [390, 844]]) {
+  test.describe(`home try section follows the scroll at ${width}`, () => {
+    test.use({ viewport: { width, height } })
+    const wide = width >= 1200
+
+    // How far the tool sits from the spot it lands on: the middle of the window from
+    // 1200, just below the names row under it.
+    const offSpot = (page, i) => page.locator(`#ht-s-${i}`).evaluate((el, isWide) => {
+      const r = el.getBoundingClientRect()
+      const names = document.querySelector('.ht-names')
+      if (isWide) return Math.abs(r.top + r.height / 2 - window.innerHeight / 2)
+      return Math.abs(r.top - (names.getBoundingClientRect().height + 16))
+    }, wide)
+    const current = (page) => page.locator('.ht-names .ht-n[aria-current="true"]').evaluate((el) => el.id)
+    // Wheel the page until tool i is the one nearest its spot (the names do not drive it).
+    const wheelTo = async (page, i) => {
+      for (let step = 0; step < 40; step += 1) {
+        const gap = await page.locator(`#ht-s-${i}`).evaluate((el, isWide) => {
+          const r = el.getBoundingClientRect()
+          return isWide ? r.top + r.height / 2 - window.innerHeight / 2 : r.top
+        }, wide)
+        if (Math.abs(gap) < 160) return
+        await wheelToRest(page, Math.max(-800, Math.min(800, gap)), `the page on its way to tool ${i}`)
+      }
+    }
+
+    test('the current name follows a scroll that no name click made', async ({ page }) => {
+      watch(page, PERSONA)
+      await go(page, '/')
+      await homeSectionsLoaded(page)
+      await openTool(page, 0)
+      await expect.poll(() => current(page)).toBe('ht-n-0')
+      // Scrolling down to the third tool (by the wheel, never a name) moves the name with it.
+      await wheelTo(page, 2)
+      // Mutation: drop track() from the scroll handler in HomeTry.jsx -> the name stays on the first tool.
+      await expect.poll(() => current(page), { message: 'the name for the tool in view is current', timeout: 8000 }).toBe('ht-n-2')
+      // And back up to the first.
+      await wheelTo(page, 0)
+      await expect.poll(() => current(page), { message: 'the name follows the scroll back up', timeout: 8000 }).toBe('ht-n-0')
+    })
+
+    test('a short wheel nudge settles the tool back onto its spot', async ({ page }) => {
+      watch(page, PERSONA)
+      await go(page, '/')
+      await homeSectionsLoaded(page)
+      await openTool(page, 1)
+      await expect.poll(() => offSpot(page, 1), { message: 'a name click lands the tool' }).toBeLessThan(6)
+      await wheelToRest(page, 120, 'the page after the nudge')
+      // Mutation: drop the settle timer (arm) from the scroll handler in HomeTry.jsx -> the tool stays off its spot.
+      await expect.poll(() => offSpot(page, 1), { message: 'the tool eases back onto its spot', timeout: 8000 }).toBeLessThan(6)
+    })
+
+    test('clicking a name lands its tool and no other name is current on the way', async ({ page }) => {
+      watch(page, PERSONA)
+      await go(page, '/')
+      await homeSectionsLoaded(page)
+      await page.locator('#try').scrollIntoViewIfNeeded()
+      // From the click on, every frame notes which name is current.
+      await page.evaluate(() => {
+        window.__seen = new Set()
+        window.__armed = false
+        document.addEventListener('click', () => { window.__seen.clear(); window.__armed = true }, true)
+        const tick = () => {
+          const el = document.querySelector('.ht-names .ht-n[aria-current="true"]')
+          if (window.__armed && el) window.__seen.add(el.id)
+          requestAnimationFrame(tick)
+        }
+        tick()
+      })
+      for (const i of [3, 1]) {
+        await page.locator(`#ht-n-${i}`).click()
+        await expect.poll(() => offSpot(page, i), { message: `tool ${i} lands from its name`, timeout: 8000 }).toBeLessThan(6)
+        const seen = await page.evaluate(() => { window.__armed = false; return [...window.__seen] })
+        // Mutation: drop dest in go() in HomeTry.jsx -> the tools passed on the way take the name.
+        expect(seen, `names current on the way to tool ${i}`).toEqual([`ht-n-${i}`])
+      }
+    })
+  })
+}
+
 test.describe('home converter tabs', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
