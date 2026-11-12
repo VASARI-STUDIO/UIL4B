@@ -1482,6 +1482,8 @@ test('M1b · the colour actions menu keeps Edit, Swap and Remove on screen on a 
       // Cancel row, and sit between the header and the bottom of the screen.
       const sheet = page.locator('.v3m-sheet')
       await expect(sheet.getByRole('button', { name: 'Cancel', exact: true }), `${w}x${h}: swatch ${i + 1} sheet has Cancel`).toBeVisible()
+      // The sheet rises 16px as it opens; measure where it comes to rest.
+      await menu.evaluate((el) => Promise.all(el.closest('.v3m-sheet').getAnimations().map((a) => a.finished)))
       const band = await menu.evaluate((el) => {
         const b = el.closest('.v3m-sheet').getBoundingClientRect()
         const top = document.querySelector('.pnav')?.getBoundingClientRect().bottom ?? 0

@@ -148,7 +148,7 @@ test.describe('The dropdown sheet over the phone tab bar (390px)', () => {
   // MUTATION: in global.css put the `html.has-tabbar .pop.menu-select-list{bottom:calc(var(--tabbar-h) + ...)}`
   // lift back, or take the sheet's max-height cap back down from 640px to 560px.
   for (const theme of ['light', 'dark']) {
-    test(`the whole Scale ratio sheet shows, the tab bar is dimmed beneath it (${theme})`, async ({ browser }) => {
+    test(`the whole Scale ratio sheet shows, over an inert tab bar (${theme})`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 390, { theme, path: '/create/type-scale' })
       const list = await openRatio(page)
       const r = await list.evaluate((el) => {
@@ -168,7 +168,7 @@ test.describe('The dropdown sheet over the phone tab bar (390px)', () => {
           scrolls: el.scrollHeight > el.clientHeight + 1,
           sheetBottom: el.getBoundingClientRect().bottom,
           sheetZ: z(el), scrimZ: z(scrim), tabsZ: z(tabs),
-          tabsCovered: !!overTabs && overTabs.classList.contains('menu-select-scrim'),
+          tabsCovered: !!overTabs && !overTabs.closest('.pnav-tabs'),
         }
       })
       expect(r.lastText, 'the last row is Custom ratio').toContain('Custom ratio')
@@ -181,7 +181,7 @@ test.describe('The dropdown sheet over the phone tab bar (390px)', () => {
       expect(Math.abs(r.sheetBottom - r.vh), 'the sheet sits on the screen edge').toBeLessThanOrEqual(1)
       expect(r.sheetZ, 'the sheet is above the tab bar').toBeGreaterThan(r.tabsZ)
       expect(r.scrimZ, 'the scrim is above the tab bar').toBeGreaterThan(r.tabsZ)
-      expect(r.tabsCovered, 'a press on the tab bar lands on the scrim, so the bar is dimmed and inert').toBe(true)
+      expect(r.tabsCovered, 'a press on the tab bar lands on the sheet or the scrim, so the bar is inert').toBe(true)
       await ctx.close()
     })
   }
