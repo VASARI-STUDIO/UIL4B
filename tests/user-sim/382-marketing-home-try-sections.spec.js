@@ -272,10 +272,12 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
         // An in-page click: a pointer click would first scroll the page to bring the name into view.
         if (withClick) await page.locator('#ht-n-1').evaluate((el) => el.click())
         const target = Math.round((await spotY(page, 1, wide)) - 60)
-        await wheelToRest(page, target - (await scrollNow(page)), 'the page after the wheel')
+        const rested = await wheelToRest(page, target - (await scrollNow(page)), 'the page after the wheel')
         // The name click's own smooth scroll can still be landing when the wheel rests; read the page
         // only once it has not moved for 300ms, so `stays` compares against where it really stopped.
-        const at = await unmoving(page, 300)
+        // Not for the control: there the settle itself moves the page inside that wait, and the
+        // wheel's own resting place is the position to check.
+        const at = withClick ? await unmoving(page, 300) : rested
         const off = Math.abs((await spotY(page, 1, wide)) - at)
         expect(off, 'the wheel must leave the page within reach of tool 1 but off its spot').toBeGreaterThan(2)
         expect(off, 'the wheel must leave the page within reach of tool 1 but off its spot').toBeLessThan(75)
