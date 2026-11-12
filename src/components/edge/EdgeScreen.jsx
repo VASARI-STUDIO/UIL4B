@@ -42,8 +42,8 @@ export function EdgePill({ to, onClick, go = false, reload = false, disabled = f
 
 /** The outline pill beside it: the app's own `.ui-pill-out`, with its ring. */
 export function EdgeOutline({ to, onClick, children, ...rest }) {
-  if (to) return <Link className="ui-pill-out ed-out" to={to} {...rest}>{children}</Link>
-  return <button type="button" className="ui-pill-out ed-out" onClick={onClick} {...rest}>{children}</button>
+  if (to) return <Link className="ui-pill ui-pill-out ed-out" to={to} {...rest}>{children}</Link>
+  return <button type="button" className="ui-pill ui-pill-out ed-out" onClick={onClick} {...rest}>{children}</button>
 }
 
 /** A path that may wrap at its slashes and hyphens on a narrow screen. Anything
@@ -141,7 +141,7 @@ export default function EdgeScreen({
         </div>
         <div className="ed-wrap">
           <div className="ed-c">
-            <h1 id="ed-h1" className="ed-h1" ref={ref} tabIndex={-1}>
+            <h1 className="ed-h1" ref={ref} tabIndex={-1}>
               {lead ? <span className="ed-lead">{lead}</span> : null}
               {lead ? ' ' : null}
               {title}

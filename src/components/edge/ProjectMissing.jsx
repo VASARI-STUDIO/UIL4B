@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useProject } from '../../contexts/ProjectContext'
 import EdgeScreen, { EdgeBlock, EdgePill } from './EdgeScreen'
 import { projectRows } from './edgeData'
@@ -10,6 +10,12 @@ import { projectRows } from './edgeData'
 export default function ProjectMissing() {
   const { projects } = useProject()
   const rows = useMemo(() => projectRows(projects), [projects])
+
+  useEffect(() => {
+    const before = document.title
+    document.title = 'UI L4B | Project not found'
+    return () => { document.title = before }
+  }, [])
 
   return (
     <EdgeScreen

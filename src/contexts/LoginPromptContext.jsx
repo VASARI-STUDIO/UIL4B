@@ -134,6 +134,8 @@ export function LoginPromptProvider({ children }) {
         // underneath — on the four highest-traffic paths into the product.
         // Callers that pass nothing still get sign-in, so nothing else moves.
         signup: !!opts.signup,
+        // Opens on the password-reset form instead.
+        reset: !!opts.reset,
       })
     })
     pendingPromiseRef.current = promise
@@ -158,6 +160,7 @@ export function LoginPromptProvider({ children }) {
           lockEmail={prompt.lockEmail}
           passwordOnly={prompt.passwordOnly}
           signup={prompt.signup}
+          reset={prompt.reset}
           onSuccess={(u) => finish(u || userRef.current || null)}
           onDismiss={() => finish(null)}
         />

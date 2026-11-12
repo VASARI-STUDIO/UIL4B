@@ -89,14 +89,17 @@ function ErrorCard({ outer, load }) {
           actions={offline ? null : (
             <>
               <EdgePill onClick={() => window.location.reload()}>Reload the page</EdgePill>
-              <EdgeOutline to="/feedback?type=bug">Report this</EdgeOutline>
+              <EdgeOutline to={`/feedback?type=bug&page=${encodeURIComponent(pathname)}`}>Report this</EdgeOutline>
             </>
           )}
-          trail={offline ? [] : [
+          trail={[
             // On the home page itself a client-side link would change nothing and
             // the crash would stay, so there it loads the document afresh.
-            { to: '/', label: 'Back to the homepage', reload: pathname === '/' },
-            { to: '/learn/help', label: 'Help centre' },
+            // Offline the homepage stays: it is in the entry bundle, so the
+            // client-side link needs no download. The reload and the help
+            // centre need a connection.
+            { to: '/', label: 'Back to the homepage', reload: !offline && pathname === '/' },
+            ...(offline ? [] : [{ to: '/learn/help', label: 'Help centre' }]),
           ]}
         />
       </div>

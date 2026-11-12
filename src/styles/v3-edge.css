@@ -10,12 +10,12 @@
 .ed {
   --ed-ink: rgb(var(--ink-rgb));
   --ed-on: rgb(var(--page-rgb));
-  --ed-2: rgba(var(--ink-rgb) / .72);
-  --ed-3: rgba(var(--ink-rgb) / .62);
-  --ed-hair: rgba(var(--ink-rgb) / .1);
-  --ed-hl20: rgba(var(--ink-rgb) / .2);
-  --ed-l2: rgba(var(--ink-rgb) / .06);
-  --ed-hover: rgba(var(--ink-rgb) / .86);
+  --ed-2: rgba(var(--ink-rgb), .72);
+  --ed-3: rgba(var(--ink-rgb), .62);
+  --ed-hair: rgba(var(--ink-rgb), .1);
+  --ed-hl20: rgba(var(--ink-rgb), .2);
+  --ed-l2: rgba(var(--ink-rgb), .06);
+  --ed-hover: rgba(var(--ink-rgb), .86);
   --ed-ease: cubic-bezier(.23, 1, .32, 1);
   --ed-font: var(--hm-font, 'Geist', 'Geist Fallback', system-ui, sans-serif);
   --b-hz-op: .5;
@@ -28,14 +28,22 @@
   color: var(--ed-ink);
 }
 [data-theme="dark"] .ed {
-  --ed-2: rgba(var(--ink-rgb) / .68);
-  --ed-3: rgba(var(--ink-rgb) / .56);
+  --ed-2: rgba(var(--ink-rgb), .68);
+  --ed-3: rgba(var(--ink-rgb), .56);
   --b-hz-op: .64;
   --b-core-bl: screen;
 }
 
 /* ── Ground ───────────────────────────────────────────────────────────────── */
 
+/* The page bleeds to both edges of the window, out of the app page's column.
+   Horizontal overflow is clipped here, at the edge container, so the extra
+   width never becomes a sideways scroll. */
+.ed {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  overflow-x: clip;
+}
 .ed-ground {
   position: relative;
   isolation: isolate;
@@ -158,8 +166,9 @@
   line-height: 1.5;
   color: var(--ed-2);
 }
-.ed-status:empty { display: none; }
-.ed-b-row:empty + .ed-status { margin-top: 40px; }
+/* Stays rendered when empty: it is the live region, and one added to the page
+   already carrying text is announced less reliably than one that fills. */
+.ed-status:empty { margin: 0; min-height: 0; }
 
 /* The filled pill: the one ink pill on the screen. */
 .ed-pill {
@@ -192,6 +201,7 @@
   text-decoration: none;
   white-space: nowrap;
   color: var(--ed-ink);
+  border-radius: 999px;
   box-shadow: inset 0 0 0 1px var(--ed-hl20);
 }
 .ed :is(a, button):focus-visible { outline: 2px solid var(--ed-ink); outline-offset: 2px; }
@@ -404,7 +414,7 @@ html[data-reduced-motion="true"] .ed-pill:is(:hover, :focus-visible) .ed-go-a { 
 .error-boundary-card .ed-body { margin: 24px 0 0; font-size: 18px; line-height: 1.6; color: var(--ed-2); text-align: center; }
 .error-boundary-card .ed-safe { margin: 12px 0 0; font-size: 15px; line-height: 1.5; color: var(--ed-ink); text-align: center; }
 .error-boundary-card .ed-status { margin: 24px 0 0; font-size: 15px; color: var(--ed-2); text-align: center; }
-.error-boundary-card .ed-status:empty { display: none; }
+.error-boundary-card .ed-status:empty { margin: 0; min-height: 0; }
 @media (max-width: 767px) {
   .error-boundary-card .ed-body { font-size: 17px; }
   .error-boundary-card .ed-status { margin-top: 16px; }
