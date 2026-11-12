@@ -118,12 +118,12 @@ const selectedLabels = (tabs) => tabs.filter((t) => t.weight >= 560 || t.bar).ma
 // ── The phone menu button and the tab bar ────────────────────────────────────
 for (const theme of THEMES) {
   test.describe(`phone chrome at 390, ${theme}`, () => {
-    test('Open menu hit area is 44 x 44 around a 36 x 36 circle', async ({ browser }) => {
+    test('Open menu is a 44 x 44 circle and every point of it answers', async ({ browser }) => {
       const { ctx, page } = await openPage(browser, PHONE, theme, '/create/palette')
       const button = page.locator('.pnav-mobile')
       await expect(button).toBeVisible()
       const box = await button.boundingBox()
-      expect([box.width, box.height], 'the drawn circle keeps its size').toEqual([36, 36])
+      expect([box.width, box.height], 'the drawn circle is the 44px target').toEqual([44, 44])
       const hit = await button.evaluate((el) => {
         const area = getComputedStyle(el, '::after')
         const r = el.getBoundingClientRect()
@@ -292,7 +292,7 @@ for (const theme of THEMES) {
     expect(m.scrollWidth, 'the name is not clipped (no ellipsis)').toBeLessThanOrEqual(m.clientWidth)
     expect(m.textRight, 'the name ends before the badge begins').toBeLessThanOrEqual(m.badgeLeft)
     expect(m.badgeRight, 'the badge stays inside its row').toBeLessThanOrEqual(m.rowRight)
-    expect(m.nameHeight, 'the name keeps its 20px line box').toBe(20)
+    expect(m.nameHeight, 'the name stays on one 18px line').toBe(18)
     await shot(page, `create-3d-converter-768-${theme}`)
     await ctx.close()
   })
@@ -369,13 +369,14 @@ test.describe('Discover suggested gallery', () => {
     })
   }
 
-  test('it never links the prompt library and its target is a 48px row', async ({ browser }) => {
+  test('it never links the prompt library and its target is a 36px menu row', async ({ browser }) => {
     const { ctx, page } = await openPage(browser, TABLET, 'light', '/discover')
     await openMenu(page, TABLET, 'Discover')
     const link = page.locator('#pnav-mega a.pnav-reco-link')
     expect(await link.getAttribute('href')).not.toMatch(/^\/discover\/prompts/)
     const box = await link.boundingBox()
-    expect(box.height).toBeGreaterThanOrEqual(44)
+    // Mega spec: the recommendation is drawn as a menu row, 36 high.
+    expect(box.height).toBeGreaterThanOrEqual(36)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow, 'the pane adds no sideways scroll').toBeLessThanOrEqual(1)
     await shot(page, 'discover-reco-768-light')

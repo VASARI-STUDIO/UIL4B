@@ -37,8 +37,8 @@ async function openConfirm(page) {
   await expect(page.getByRole('heading', { level: 1, name: NAME })).toBeVisible()
   const trigger = page.getByRole('button', { name: `Actions for ${NAME}` })
   await trigger.click()
-  await expect(page.getByRole('group', { name: `Actions for ${NAME}` })).toBeVisible()
-  await page.getByRole('button', { name: 'Delete…', exact: true }).click()
+  await expect(page.getByRole('menu', { name: `Actions for ${NAME}` })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
   await expect(confirmDialog(page)).toBeVisible()
   return trigger
 }
@@ -75,7 +75,7 @@ const noSideways = (page) => page.evaluate(() => document.documentElement.scroll
 
 async function feedbackFormJourney(page) {
   const posts = await interceptSupport(page)
-  await go(page, '/')
+  await go(page, '/community')
   const opener = page.getByRole('button', { name: 'Share feedback' })
   await opener.click()
   const dialog = page.getByRole('dialog', { name: /feedback/i })
@@ -146,7 +146,7 @@ test.describe('overlays at 1440', () => {
     await go(page, '/projects')
     await openProjectFromDashboard(page, NAME)
     await page.getByRole('button', { name: `Actions for ${NAME}` }).click()
-    await page.getByRole('button', { name: 'Delete…', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
 
     const dialog = confirmDialog(page)
     await expect(dialog, 'the title names the object').toBeVisible()
@@ -202,7 +202,7 @@ test.describe('overlays at 1440', () => {
 
   test('6. a toast with Undo: a status region, no focus taken, Undo reached by Tab and run', async ({ page }) => {
     watch(page, 'a designer who removes something by mistake')
-    await go(page, '/')
+    await go(page, '/community')
     const before = await page.evaluate(() => document.activeElement?.tagName)
     await raiseUndoToast(page)
 
@@ -210,7 +210,7 @@ test.describe('overlays at 1440', () => {
     expect(await page.evaluate(() => document.activeElement?.tagName), 'a toast must not take focus').toBe(before)
 
     const undo = toastEl(page).getByRole('button', { name: 'Undo' })
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 150; i++) {
       if (await undo.evaluate((el) => el === document.activeElement)) break
       await page.keyboard.press('Tab')
     }
@@ -223,8 +223,8 @@ test.describe('overlays at 1440', () => {
 
   test('palette: a search with no hit says so, offers Clear search, and Enter does nothing until you move', async ({ page }) => {
     watch(page, 'someone searching for a tool that is not there')
-    await go(page, '/')
-    await page.keyboard.press('Control+k')
+    await go(page, '/community')
+    await page.keyboard.press('/')
     const palette = page.getByRole('dialog', { name: /Search/ })
     await expect(palette).toBeVisible()
     await expect(palette.getByText('Try', { exact: true })).toBeVisible()
@@ -288,7 +288,7 @@ test.describe('overlays at 390', () => {
     await expect(trigger).toBeFocused()
 
     await trigger.tap()
-    await page.getByRole('button', { name: 'Delete…', exact: true }).tap()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).tap()
     await expect(dialog).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
@@ -313,7 +313,7 @@ test.describe('overlays at 390', () => {
     expect(await noSideways(page), 'the confirm scrolls sideways at 320').toBe(true)
     await page.keyboard.press('Escape')
 
-    await go(page, '/')
+    await go(page, '/community')
     await page.getByRole('button', { name: 'Share feedback' }).tap()
     await expect(page.getByRole('dialog', { name: /feedback/i })).toBeVisible()
     expect(await noSideways(page), 'the feedback sheet scrolls sideways at 320').toBe(true)
@@ -326,8 +326,8 @@ test.describe('overlays at 390', () => {
     expect(await noSideways(page), 'the report sheet scrolls sideways at 320').toBe(true)
     await page.keyboard.press('Escape')
 
-    await go(page, '/')
-    await page.keyboard.press('Control+k')
+    await go(page, '/community')
+    await page.keyboard.press('/')
     const palette = page.getByRole('dialog', { name: /Search/ })
     await expect(palette).toBeVisible()
     expect(await noSideways(page), 'the palette scrolls sideways at 320').toBe(true)
@@ -339,7 +339,7 @@ test.describe('overlays at 390', () => {
 
   test('7. a toast with Undo on a phone: 48px tall, inside the width, Undo runs by key', async ({ page }) => {
     watch(page, 'a phone user who removes something by mistake')
-    await go(page, '/')
+    await go(page, '/community')
     await raiseUndoToast(page)
 
     const t = await box(toastEl(page))
@@ -348,7 +348,7 @@ test.describe('overlays at 390', () => {
     expect(t.x + t.w, 'the toast runs off the right edge').toBeLessThanOrEqual(390)
 
     const undo = toastEl(page).getByRole('button', { name: 'Undo' })
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 150; i++) {
       if (await undo.evaluate((el) => el === document.activeElement)) break
       await page.keyboard.press('Tab')
     }

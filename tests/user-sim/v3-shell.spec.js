@@ -110,8 +110,8 @@ test.describe('desktop bar at 1440', () => {
     expect((await box(skip)).bottom).toBeLessThanOrEqual(0)
     await page.keyboard.press('Tab')
     await expect(skip).toBeFocused()
-    const on = await box(skip)
-    expect(on.y).toBeGreaterThanOrEqual(0)
+    // The link slides in over 180ms: wait for it to land rather than read mid-slide.
+    await expect.poll(async () => (await box(skip)).y).toBeGreaterThanOrEqual(0)
     await page.keyboard.press('Enter')
     await expect(page.locator('#main')).toBeFocused()
     await ctx.close()

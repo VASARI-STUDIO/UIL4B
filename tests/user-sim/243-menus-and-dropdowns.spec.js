@@ -261,21 +261,27 @@ test.describe('Right-click menu and the dropdown share one row', () => {
     await ctx.close()
   })
 
-  // MUTATION: in gradient.css put `min-height: 32px` and `font-size: 13px` back on `.grd-tintmenu-item`.
-  test('the gradient tints menu rows are the dropdown row too (1440)', async ({ browser }) => {
+  // The tints menu is the shared Menu in its compact skin (.v3m--tints), so its rows
+  // are the one `.v3m-i` row at the compact height. Values are read off v3-menus.css:
+  // .v3m-i is 15px / 500, .v3m-i--compact is a 32px row.
+  // MUTATION: in StopTintMenu.jsx drop `compact: true` (rows go to 36px), or in v3-menus.css set `.v3m-i` font-size back to 13px.
+  test('the gradient tints menu rows are the shared menu row, compact (1440)', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440, { path: '/create/gradient' })
     await expect(page.locator('.grd-stop').first()).toBeVisible()
     const stop = page.locator('.grd-stop').first()
     await stop.click({ button: 'right' })
-    const menu = page.locator('.grd-tintmenu')
+    const menu = page.locator('.v3m.v3m--tints')
     await expect(menu).toBeVisible()
+    await expect(menu.locator('[role="menuitem"]'), 'eleven tint rows').toHaveCount(11)
     const r = await menu.locator('[role="menuitem"]').first().evaluate((el) => {
       const cs = getComputedStyle(el)
-      return { h: el.offsetHeight, size: cs.fontSize, weight: cs.fontWeight, radius: cs.borderRadius }
+      return { shared: el.classList.contains('v3m-i'), compact: el.classList.contains('v3m-i--compact'), h: el.offsetHeight, size: cs.fontSize, weight: cs.fontWeight }
     })
-    expect(r.h).toBe(40)
-    expect(r.size).toBe('14px')
-    expect(r.weight).toBe('560')
+    expect(r.shared, 'the row is the shared menu row').toBe(true)
+    expect(r.compact, 'the tint rows are the compact variant').toBe(true)
+    expect(r.h).toBe(32)
+    expect(r.size).toBe('15px')
+    expect(r.weight).toBe('500')
     await ctx.close()
   })
 })

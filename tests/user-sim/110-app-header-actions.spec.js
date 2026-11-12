@@ -280,7 +280,7 @@ test.describe('app header touch actions', () => {
   })
 
   for (const width of [320, 360, 390]) {
-    test(`at ${width} touch targets reach 44px and circles stay 36px without wrapping`, async ({ page }) => {
+    test(`at ${width} every header circle is drawn 44px and the row does not wrap`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 })
       await signIn(page, { plan: 'free', projects: 1 })
       await go(page, '/create/palette')
@@ -303,8 +303,9 @@ test.describe('app header touch actions', () => {
       })
       for (const target of targets) {
         if (target.selector !== '.pnav-logo') {
-          expect(target.width, target.selector).toBe(36)
-          expect(target.height, target.selector).toBe(36)
+          // Phone header: search, Export, avatar and menu are all 44px circles.
+          expect(target.width, target.selector).toBe(44)
+          expect(target.height, target.selector).toBe(44)
         }
         expect(target.content, target.selector).toBe('""')
         expect(target.hitWidth, target.selector).toBeGreaterThanOrEqual(44)
