@@ -76,6 +76,8 @@ export default function Maintenance() {
     }
   }
 
+  // aria-disabled, not disabled: a disabled button drops keyboard focus. The
+  // click is ignored in check().
   const checking = state === 'checking'
   const status = {
     down: '',
@@ -90,7 +92,7 @@ export default function Maintenance() {
       title="UIL4B is unavailable"
       body="Nothing needs doing on your side."
       status={status}
-      actions={<EdgePill onClick={check} disabled={checking} aria-busy={checking || undefined}>Check again</EdgePill>}
+      actions={<EdgePill onClick={check} aria-disabled={checking || undefined} aria-busy={checking || undefined}>Check again</EdgePill>}
     />
   )
 }

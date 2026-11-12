@@ -53,7 +53,8 @@
   align-items: center;
   text-align: center;
   min-height: min(calc(100svh - 184px), 716px);
-  padding: 112px 0 0;
+  --ed-pt: 112px;
+  padding: var(--ed-pt) 0 0;
 }
 .ed-calm { min-height: auto; padding-bottom: 160px; --b-hz-h: 240px; --b-hz-k: .7; }
 .ed-calm.ed-soft { --b-hz-k: .84; }
@@ -189,8 +190,9 @@
   transition: transform 120ms var(--ed-ease), background-color 150ms linear;
 }
 .ed-pill:active { transform: scale(.97); }
-.ed-pill:disabled { cursor: default; opacity: .5; }
-@media (hover: hover) { .ed-pill:hover:not(:disabled) { background: var(--ed-hover); } }
+.ed-pill:disabled, .ed-pill[aria-disabled="true"] { cursor: default; opacity: .5; }
+.ed-pill[aria-disabled="true"]:active { transform: none; }
+@media (hover: hover) { .ed-pill:hover:not(:disabled, [aria-disabled="true"]) { background: var(--ed-hover); } }
 .ed-acts .ui-pill-out {
   height: 44px;
   padding: 0 22px;
@@ -306,7 +308,7 @@
 /* ── Under 1200 ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 1199px) {
-  .ed-ground { min-height: 0; padding-top: 80px; }
+  .ed-ground { --ed-pt: 80px; min-height: 0; }
   .ed-calm { padding-bottom: 160px; }
   .ed-below { padding: 80px 52px 144px; }
   .ed-blk { max-width: 680px; }
@@ -317,7 +319,7 @@
 @media (max-width: 767px) {
   .ed { --b-hz-op: .7; --ed-num: clamp(120px, 40vw, 200px); }
   [data-theme="dark"] .ed { --b-hz-op: 1; }
-  .ed-ground { padding: 48px 16px 0; min-height: calc(100svh - 64px - 64px - 24px - env(safe-area-inset-bottom, 0px)); }
+  .ed-ground { --ed-pt: 48px; padding: var(--ed-pt) 16px 0; min-height: calc(100svh - 64px - 64px - 24px - env(safe-area-inset-bottom, 0px)); }
   .ed-calm { min-height: auto; padding-bottom: 120px; }
   .ed-wrap, .ed-c { display: contents; }
   .ed-h1 { font-size: clamp(40px, 11vw, 56px); }
@@ -409,6 +411,11 @@ html[data-reduced-motion="true"] .ed-pill:is(:hover, :focus-visible) .ed-go-a { 
 /* ── The route error boundary, restyled onto the same layout ──────────────── */
 
 .error-boundary { display: block; min-height: 0; width: 100%; padding: 0; }
+/* The outer card has no nav above it, and the notice strip (the offline banner,
+   the sync and verify reminders) is fixed over the top of the page. While the
+   strip shows, the card starts below it; with no strip nothing moves.
+   NoticeStack sets data-notice on the root while it has height. */
+html[data-notice] .error-boundary--outer .ed-ground { padding-top: max(var(--ed-pt), calc(var(--chrome-h) + var(--s-6))); }
 .error-boundary-card { background: none; border: 0; border-radius: 0; padding: 0; max-width: none; text-align: center; }
 /* The card sits inside the app's own paragraph rule; these win by one class. */
 .error-boundary-card .ed-body { margin: 24px 0 0; font-size: 18px; line-height: 1.6; color: var(--ed-2); text-align: center; }

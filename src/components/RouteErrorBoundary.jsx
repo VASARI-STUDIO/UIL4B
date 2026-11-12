@@ -77,7 +77,7 @@ function ErrorCard({ outer, load }) {
   const status = offline ? 'Waiting for a connection' : backOnline && !backExpired ?'Back online' : ''
 
   const card = (
-    <div className={`error-boundary${load ? ' error-boundary--load' : ''}`}>
+    <div className={`error-boundary${load ? ' error-boundary--load' : ''}${outer ? ' error-boundary--outer' : ''}`}>
       <div className="error-boundary-card">
         <EdgeScreen
           art={offline ? 'drain' : 'calm'}
