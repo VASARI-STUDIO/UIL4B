@@ -20,10 +20,11 @@ const SYSTEM = 'button[aria-label^="Colour system"]'
 const BAR = '[data-tool-toolbar]'
 
 /** A context at an exact width: touch metrics on a phone, a mouse above it. */
-async function at(browser, width, { path = '/create/palette' } = {}) {
+async function at(browser, width, { path = '/create/palette', theme = null } = {}) {
   const ctx = await browser.newContext(width < 700
     ? { viewport: { width, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: IOS_UA }
     : { viewport: { width, height: 900 } })
+  if (theme) await ctx.addInitScript((t) => { try { localStorage.setItem('vs-t', t) } catch { /* private mode */ } }, theme)
   const page = await ctx.newPage()
   watch(page, `tool chrome visitor at ${width}px`)
   await go(page, path)
@@ -338,5 +339,134 @@ test.describe('Right-click menus share the dropdown row', () => {
     expect(rows.length).toBeGreaterThan(6)
     expect(Math.min(...rows), 'every row is at least 44px').toBeGreaterThanOrEqual(44)
     await ctx.close()
+  })
+})
+
+// ── Dropdowns and the swatch menu against the shared menu row ───────────────
+// The rows are checked against a real `.v3m-i` row (the row of the page's own
+// right-click menu), read live in the same theme, and against the hand-checked
+// V3 values: 36px tall, 8px radius, 15px / 500, 12px left padding, on a 16px
+// surface. The live row keeps the three in step with each other; the fixed
+// values keep all of them from drifting together.
+test.describe('Dropdown rows share the shared menu row', () => {
+  const ROW = { h: 36, radius: '8px', size: '15px', weight: '500', padL: '12px' }
+  const SURFACE_RADIUS = '16px'
+
+  const rowsOf = (locator) => locator.evaluateAll((els) => els.map((el) => {
+    const cs = getComputedStyle(el)
+    return { h: el.offsetHeight, radius: cs.borderTopLeftRadius, size: cs.fontSize, weight: cs.fontWeight, padL: cs.paddingLeft }
+  }))
+  const surfaceOf = (locator) => locator.evaluate((el) => {
+    const cs = getComputedStyle(el)
+    return { radius: cs.borderTopLeftRadius, bg: cs.backgroundColor, borderWidth: cs.borderTopWidth }
+  })
+
+  /** The right-click menu's own `.v3m-i` row and its surface, on a Type Scale page in the same context. */
+  async function sharedRow(ctx, theme) {
+    const page = await ctx.newPage()
+    watch(page, `menu reference in ${theme}`)
+    await go(page, '/create/type-scale')
+    expect(await page.evaluate(() => document.documentElement.dataset.theme), 'the theme took effect').toBe(theme)
+    const point = await page.evaluate(() => {
+      const bad = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'A', 'IMG', 'VIDEO', 'AUDIO', 'CANVAS', 'EMBED', 'OBJECT', 'IFRAME', 'BUTTON', 'OPTION'])
+      for (let y = Math.round(innerHeight * 0.25); y < innerHeight * 0.8; y += 30) {
+        for (let x = Math.round(innerWidth * 0.15); x < innerWidth * 0.85; x += 40) {
+          let n = document.elementFromPoint(x, y)
+          let ok = !!n
+          for (let i = 0; i < 8 && n; i += 1) {
+            if (bad.has(n.tagName) || n.isContentEditable || n.dataset?.feedbackSurface != null) { ok = false; break }
+            n = n.parentElement
+          }
+          if (ok) return { x, y }
+        }
+      }
+      return null
+    })
+    expect(point, 'a plain surface to right-click').not.toBeNull()
+    await page.mouse.click(point.x, point.y, { button: 'right' })
+    const menu = page.locator('.fbx-menu')
+    await expect(menu).toBeVisible()
+    const first = menu.locator('.v3m-i').first()
+    await expect(first).toBeVisible()
+    // The menu opens with a scale-in: offsetHeight is not scaled by it.
+    const ref = { row: (await rowsOf(first))[0], surface: await surfaceOf(menu) }
+    await page.close()
+    return ref
+  }
+
+  /** Every row's reading must equal the reference row and the fixed V3 row. */
+  function expectSharedRows(rows, surface, ref, what) {
+    expect(rows.length, `${what}: has rows`).toBeGreaterThan(2)
+    expect(ref.row, 'the reference is the V3 row').toEqual(ROW)
+    expect(ref.surface.radius, 'the reference surface radius').toBe(SURFACE_RADIUS)
+    for (const row of rows) expect(row, `${what}: a row is the shared menu row`).toEqual(ref.row)
+    expect(surface.radius, `${what}: surface radius`).toBe(ref.surface.radius)
+    expect(surface.bg, `${what}: surface fill`).toBe(ref.surface.bg)
+    expect(surface.borderWidth, `${what}: no border on the surface`).toBe('0px')
+  }
+
+  for (const theme of ['light', 'dark']) {
+    // MUTATION: in global.css set `.pop-item` min-height back to 40px, or give
+    // `.pop.menu-select-list` its own radius.
+    test(`the Rounding dropdown rows and surface are the shared menu row (1440, ${theme})`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, 1440, { path: '/create/type-scale', theme })
+      const ref = await sharedRow(ctx, theme)
+      await page.getByRole('button', { name: 'Fine tuning' }).click()
+      await page.locator('#tsc-round').click()
+      const list = page.getByRole('listbox', { name: 'Rounding' })
+      await expect(list).toBeVisible()
+      expectSharedRows(await rowsOf(list.locator('[role="option"]')), await surfaceOf(list), ref, 'Rounding')
+      await ctx.close()
+    })
+
+    // MUTATION: in global.css set `.pop-item` min-height back to 40px, or take
+    // the `@media(min-width:768px)` surface block off `.pop.menu-select-list`.
+    test(`a MenuSelect list's rows and surface are the shared menu row (1440, ${theme})`, async ({ browser }) => {
+      // The Icon pack list: plain one-line rows in groups. (The Colour system list
+      // carries a hint under each name, so its rows are taller on purpose.)
+      const { ctx, page } = await at(browser, 1440, { path: '/create/icons', theme })
+      const ref = await sharedRow(ctx, theme)
+      await expect(page.locator('.ig .ic').first()).toBeVisible()
+      await page.getByRole('button', { name: 'Icon pack' }).click()
+      const list = page.locator('.menu-select-list[role="listbox"]')
+      await expect(list).toBeVisible()
+      expectSharedRows(await rowsOf(list.locator('[role="option"]')), await surfaceOf(list), ref, 'Icon pack')
+      await ctx.close()
+    })
+
+    // MUTATION: in colour.css give `.plb-ctx-item` its own `border-radius:4px`,
+    // or `.plb-ctx` its own `border-radius`.
+    test(`the swatch context menu rows and surface are the shared menu row (1440, ${theme})`, async ({ browser }) => {
+      const { ctx, page } = await at(browser, 1440, { theme })
+      const ref = await sharedRow(ctx, theme)
+      await expect(page.locator('.plb-col')).toHaveCount(5)
+      await page.locator('.plb-col').nth(1).click({ button: 'right' })
+      const menu = page.getByRole('menu', { name: 'Colour actions' })
+      await expect(menu).toBeVisible()
+      expectSharedRows(await rowsOf(menu.getByRole('menuitem')), await surfaceOf(menu), ref, 'Colour actions')
+      await ctx.close()
+    })
+  }
+
+  // MUTATION: in global.css change the two `.menu-select-option{min-height:44px}`
+  // rules (pointer:coarse, and the narrow-width block) to 36px.
+  test('on a phone the Scale ratio and Colour system rows are 44px targets (390)', async ({ browser }) => {
+    const a = await at(browser, 390, { path: '/create/type-scale' })
+    // On a phone Fine tuning opens the settings sheet, whose first dropdown is the ratio.
+    await a.page.getByRole('button', { name: 'Fine tuning' }).click()
+    await a.page.locator('button[aria-haspopup="listbox"]:visible').first().click()
+    const ratio = a.page.locator('.menu-select-list[role="listbox"]')
+    await expect(ratio).toBeVisible()
+    const ratioRows = await ratio.locator('[role="option"]').evaluateAll((els) => els.map((el) => el.offsetHeight))
+    expect(ratioRows.length).toBeGreaterThan(2)
+    expect(Math.min(...ratioRows), 'every Scale ratio row is at least 44px').toBeGreaterThanOrEqual(44)
+    await a.ctx.close()
+
+    const b = await at(browser, 390)
+    const list = await openSystem(b.page)
+    const sysRows = await list.locator('[role="option"]').evaluateAll((els) => els.map((el) => el.offsetHeight))
+    expect(sysRows.length).toBeGreaterThan(5)
+    expect(Math.min(...sysRows), 'every Colour system row is at least 44px').toBeGreaterThanOrEqual(44)
+    await b.ctx.close()
   })
 })

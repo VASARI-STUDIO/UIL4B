@@ -480,6 +480,11 @@ async function loginGeometry(page) {
       // there at all.
       entirelyBelowFold: controls.filter((e) => visibleHeight(e) === 0)
         .map((e) => (e.innerText || e.getAttribute('aria-label') || e.type || e.tagName).trim().slice(0, 30).replace(/\s+/g, ' ')),
+      // Buttons and fields shorter than the 44px touch minimum. The two legal
+      // links are inline text, so anchors are left out.
+      under44: [...m.querySelectorAll('button,input')]
+        .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.height < 44 })
+        .map((e) => `${(e.innerText || e.getAttribute('aria-label') || e.type || e.tagName).trim().slice(0, 24)}: ${Math.round(e.getBoundingClientRect().height)}px`),
       // The cue is the two `local` layers masking the two `scroll` layers.
       // Rendered proof that it appears only when there IS more is in the PR.
       hasScrollCue: /local/.test(getComputedStyle(m).backgroundAttachment),
@@ -522,13 +527,21 @@ for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
 // dialog, which is too much for one test's time budget when run in a loop.
 // The short-height rules must not leak upward. These four were measured clean
 // by the audit and are the regression guard for the max-height:460px block.
-for (const [w, h] of [[360, 560], [390, 640], [390, 844], [768, 1024]]) {
+// 360x560 and 320x568 are the short phones: the sheet is capped at 100dvh - 48px
+// there, and the max-height:600px spacing in auth.css has to bring the form in
+// under that cap. If it does not, the dialog's own scroll height passes its
+// client height (22px at 360x560 before the spacing was trimmed) and the test
+// names how far. Controls stay at the 44px touch minimum on every phone.
+// MUTATION: in auth.css, in the `@media(max-height:600px)` block, take out the
+// `.auth-body`, `.auth-divider` and `.auth-notnow` lines.
+for (const [w, h] of [[360, 560], [320, 568], [390, 640], [390, 844], [768, 1024]]) {
   test(`S7 · portrait ${w}x${h} still needs no scrolling at all`, async ({ browser }) => {
     const { ctx, page } = await openLoginDialog(browser, w, h)
     const g = await loginGeometry(page)
     await ctx.close()
     expect(g.hiddenPx, `${w}x${h}: the login dialog scrolls by ${g.hiddenPx}px and should not`).toBe(0)
     expect(g.submitVisibleH).toBe(g.submitH)
+    if (w < 700) expect(g.under44, `${w}x${h}: controls under 44px`).toEqual([])
   })
 }
 

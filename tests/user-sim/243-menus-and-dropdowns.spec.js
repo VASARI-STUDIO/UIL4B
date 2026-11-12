@@ -154,7 +154,7 @@ test.describe('Pro marks and the focus ring', () => {
   })
 
   // MUTATION: in global.css put `var(--accent)` back on `.menu-select-trigger:focus-visible`.
-  test('the closed trigger ring is the link colour, like the open list and the toolbar', async ({ browser }) => {
+  test('the closed trigger ring is the link colour, like the toolbar', async ({ browser }) => {
     const { ctx, page } = await at(browser, 1440, { path: '/create/type-scale' })
     await page.getByRole('button', { name: 'Fine tuning' }).click()
     const trigger = page.locator('#tsc-round')
@@ -222,7 +222,7 @@ test.describe('Right-click menu and the dropdown share one row', () => {
     // a hairline between groups, drawn as the dropdown's separator is
     const sep = await menu.locator('.plb-ctx-sep').first().evaluate((el) => { const cs = getComputedStyle(el); return { h: el.offsetHeight, bg: cs.backgroundColor } })
     expect(sep.h).toBe(1)
-    // keyboard focus ring on a row: the link colour, inside the row, like the dropdown's active row
+    // keyboard focus ring on a row: a 2px ink outline inside the row, like `.v3m-i` and the dropdown's active row
     // (a mouse-opened menu leaves focus on the page and the arrow keys are handled on the menu, so
     // put focus on its first row, as a keyboard-opened menu does, then step to the next)
     await menu.getByRole('menuitem').first().focus()
@@ -230,19 +230,17 @@ test.describe('Right-click menu and the dropdown share one row', () => {
     const ring = await b.page.evaluate(() => {
       const el = document.activeElement
       const probe = document.createElement('span')
-      probe.style.color = 'var(--link)'
+      probe.style.color = 'rgb(var(--ink-rgb))'
       document.body.append(probe)
-      const link = getComputedStyle(probe).color
+      const ink = getComputedStyle(probe).color
       probe.remove()
       const cs = getComputedStyle(el)
-      return { role: el.getAttribute('role'), link, color: cs.outlineColor, offset: cs.outlineOffset, visible: el.matches(':focus-visible') }
+      return { role: el.getAttribute('role'), ink, color: cs.outlineColor, offset: cs.outlineOffset, visible: el.matches(':focus-visible') }
     })
     expect(ring.role).toBe('menuitem')
     expect(ring.visible).toBe(true)
-    expect(ring.color).toBe(ring.link)
-    // Soft, so the rest of the test (and the screenshot) still run. Today this reads 2px: the
-    // tool pages' `:is(.tl, .tl-sheet-layer) :is(button, a, ...):focus-visible` rule in
-    // pages/tool-layout.css (0,3,0) outranks `.plb-ctx-item:focus-visible` (0,2,0).
+    // MUTATION: in colour.css set the `.plb-ctx-item:focus-visible` outline colour back to `var(--link)`.
+    expect(ring.color, 'the ring is the ink colour').toBe(ring.ink)
     expect(ring.offset, 'the ring sits inside the row').toBe('-2px')
     await b.page.screenshot({ path: '.claude/scratch/menus1/ctx-menu-1440.png' })
     await b.ctx.close()

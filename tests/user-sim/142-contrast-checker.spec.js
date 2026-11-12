@@ -132,13 +132,17 @@ test.describe('Contrast Checker · the displayed number agrees with the verdict'
 })
 
 test.describe('Contrast Checker · the first screen of a phone', () => {
-  // The fields, then the ratio, then at least the top 300px of the preview all
-  // sit above the tab bar at 390x844, in that order. The colour fields used to
-  // sit about 1,200px down the page. (Also held, with more cases, in 171.)
+  // The fields, then the ratio, then the top of the preview all sit above the
+  // tab bar at 390x844, in that order. The colour fields used to sit about
+  // 1,200px down the page. (Also held, with more cases, in 171.)
+  //
+  // The phone header and the tab bar are each 64px, 8px taller apiece than the
+  // 56px pair the old 300px slice was measured under, so the slice between the
+  // preview's top edge and the tab bar's top edge is now 284px or more.
   //
   // MUTATION: in contrast.css give .cc .cc-pairbar `order: 2` (the fields drop
   // below the preview); the order assertion goes red.
-  test('the fields, the ratio and the top 300px of the preview are in view at 390x844, in that order', async ({ browser }) => {
+  test('the fields, the ratio and the top 284px of the preview are in view at 390x844, in that order', async ({ browser }) => {
     const { ctx, page } = await phone(browser, 390)
     watch(page, 'someone checking a pair on their phone')
     await go(page, '/create/contrast')
@@ -152,6 +156,7 @@ test.describe('Contrast Checker · the first screen of a phone', () => {
         fg: box('#cc-fg'), bg: box('#cc-bg'), pv: box('.cc-pv'), ratio: box('.cc-ratio-num'),
         pairbar: box('.cc-pairbar'),
         floor: Math.round(tabs ? tabs.getBoundingClientRect().top : window.innerHeight),
+        tabHeight: tabs ? Math.round(tabs.getBoundingClientRect().height) : 0,
         vh: window.innerHeight,
       }
     })
@@ -162,7 +167,8 @@ test.describe('Contrast Checker · the first screen of a phone', () => {
       expect(read[name].top, `${name} starts on screen`).toBeGreaterThanOrEqual(0)
       expect(read[name].bottom, `${name} ends above the tab bar (${read.floor}px)`).toBeLessThanOrEqual(read.floor)
     }
-    expect(read.floor - read.pv.top, 'the top 300px of the preview are above the tab bar').toBeGreaterThanOrEqual(300)
+    expect(read.tabHeight, 'the phone tab bar is the 64px bar the budget below assumes').toBe(64)
+    expect(read.floor - read.pv.top, 'at least 284px of the preview are above the tab bar').toBeGreaterThanOrEqual(284)
     await ctx.close()
   })
 })
