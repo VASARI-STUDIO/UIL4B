@@ -90,7 +90,9 @@ const KEEP = {
     // a locked prompt card: a button (signed-out) or a link (Pro) drawn as the card it stands in for
     'pl-card',
     // the homepage's folder tiles on the phone board, its piece chips, its screenshot thumbnails and the icon grid's cells
-    'bmp-fold', 'hx-pc', 'hsc-open', 'ht-ic-t'],
+    'bmp-fold', 'hx-pc', 'hsc-open', 'ht-ic-t',
+    // an onboarding font pair: a radio drawn as a 64px card (pair name, then its fonts) in a list of three
+    'ob-pair'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood

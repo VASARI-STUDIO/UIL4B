@@ -24,7 +24,7 @@
 //     and tells another unverified account that it still is not, including
 //     after the sign-in the signed-out toast offers.
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, continueWithEmail } from './helpers.js'
 
 async function openAccount(page) {
   await go(page, '/settings')
@@ -519,6 +519,7 @@ test.describe('coming back from the link', () => {
   // action is waiting on settles the way it does in life.
   async function signInThroughPopup(page) {
     await page.locator('#ui-login-email').fill('someone@uil4b.test')
+    await continueWithEmail(page)
     await page.locator('#ui-login-password').fill('a-long-password')
     await page.locator('form.auth-form button[type="submit"]').click()
   }

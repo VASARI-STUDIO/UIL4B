@@ -42,9 +42,8 @@ const CASES = [
   // control a finger lands on is 44px tall, not a 20px box inside a label.
   { route: '/create/3d-converter', sels: ['.v3d-out input'] },
   { route: '/create/tint', sels: ['.tt-iconbtn', '.tt-picker', '.tt-hex-input'] },
-  // The /login page: the Google button and the wall's pause button (a phone
-  // gets the band, which carries it).
-  { route: '/login', sels: ['.auth-google-btn', '.aw-pause'] },
+  // The /login page: the Google button, Continue and the way back to the plans.
+  { route: '/login', sels: ['.auth-google-btn', '.auth-continue', '.pf-back'] },
   // The sign-in dialog's close control, opened from the header's Menu.
   {
     route: '/learn/help',

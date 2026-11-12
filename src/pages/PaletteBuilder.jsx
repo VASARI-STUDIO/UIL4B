@@ -1602,7 +1602,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   const pickHarmony = (h) => {
     if (!h.free && !isPro) {
-      openProModal({ gate: 'palette-harmony-system', eyebrow: 'Pro colour tools', title: 'Unlock every colour system', subtitle: 'Analogous, complementary, triadic, tetradic and custom harmonies build richer palettes than the free Auto and Monochromatic systems.' })
+      openProModal({ gate: 'palette-harmony-system', eyebrow: 'Pro colour tools', title: 'Unlock every colour system', subtitle: 'Analogous, complementary, triadic, tetradic and custom harmonies build richer palettes than the free Auto and Monochromatic systems.', system: h.id, name: h.label, caption: `Also Pro: ${HARMONIES.filter(x => !x.free && x.id !== h.id).map(x => x.label).join(', ')}` })
       return
     }
     setHarmony(h.id)
@@ -1752,7 +1752,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // The phone swatch menu is a shared Menu portalled to `.v3m-layer`; it
       // closes itself on an outside press, so a press inside it is not one here.
       const dockedHeld = wideDock && galleryOpen && !saveOpen && !imgOpen && !histOpen
-      if (!dockedHeld && !e.target.closest('.plb-menuwrap, .plb-modal, .ui-modal-overlay, [aria-labelledby="ui-login-title"], .v3m-layer')) closeAllMenus()
+      if (!dockedHeld && !e.target.closest('.plb-menuwrap, .plb-modal, .ui-modal-overlay, .pg-layer, [aria-labelledby="ui-login-title"], .v3m-layer')) closeAllMenus()
       if (!e.target.closest('.plb-pop, .v3m-layer') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) {
         // An open panel that held focus hands it back to its opener, unless the
         // press landed on something that takes focus itself. The press's own
@@ -1948,7 +1948,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const insertAt = (idx, hex) => {
     if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return false }
     if (!isPro && colors.length >= PRO_MAX) {
-      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.`, colors, limit: PRO_MAX, max: HARD_MAX })
       return false
     }
     setColors(prev => { const n = [...prev]; n.splice(idx, 0, hex); return n })
@@ -1980,7 +1980,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     const ceiling = isPro ? HARD_MAX : PRO_MAX
     const room = ceiling - colors.length
     if (n > room) {
-      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.`, colors, limit: PRO_MAX, max: HARD_MAX })
       return
     }
     const a = colors[i]
@@ -2783,7 +2783,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }, [colors, JSON.stringify(adjust), importedGalleryId])
   const pickBrand = (b) => {
     if (!b.free && !isPro) {
-      openProModal({ gate: 'palette-brand-system', eyebrow: 'Pro colour tools', title: 'Load any brand system', subtitle: 'Free covers a handful of starter brands; Pro unlocks the full set — each one applies the brand’s whole colour system, not just its swatches.' })
+      openProModal({ gate: 'palette-brand-system', eyebrow: 'Pro colour tools', title: 'Load any brand system', subtitle: 'Free covers a handful of starter brands; Pro unlocks the full set — each one applies the brand’s whole colour system, not just its swatches.', name: b.name })
       return
     }
     // Selecting a brand applies its WHOLE system. Pro users keep the brand's
@@ -3323,6 +3323,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               eyebrow: 'Pro colour tools',
               title: `Build with ${collapsedSystem}`,
               subtitle: 'Analogous, complementary, triadic, tetradic and custom harmonies build richer palettes than the free Auto and Monochromatic systems.',
+              system: harmony,
+              name: collapsedSystem,
             })}
           >
             See what Pro adds
@@ -3856,7 +3858,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     const at = ctxMenu.i
                     setCtxMenu(null)
                     if (gated) {
-                      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+                      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.`, colors, limit: PRO_MAX, max: HARD_MAX })
                       return
                     }
                     insertBetweenMany(at, n)
@@ -4112,7 +4114,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             onResetVision={() => changeVision('normal')}
             isPro={isPro}
             planKnown={planKnown}
-            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: `See your palette on all ${PREVIEW_SCENES.length} previews, in light and dark.` })}
+            onUnlock={(scene) => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: `See your palette on all ${PREVIEW_SCENES.length} previews, in light and dark.`, name: scene.name })}
             onUse={() => { applyPalette(preview.compare.colors, `Applied variation: ${preview.compare.label}`); setPreview(null) }}
           />
         </Suspense>

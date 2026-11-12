@@ -1,0 +1,492 @@
+/* ── The Pro popup: one offer dialog on desktop, a bottom sheet on phones ──
+ *
+ * Opened by tool pages when a Free or signed-out person tries a Pro action
+ * (components/ProUpgradeModal.jsx). Two panes on desktop: what was locked on
+ * the left, the offer on the right. Under 768px the same markup becomes a
+ * sheet with the picture as a band and the pill pinned in a sticky foot.
+ *
+ * Tonal fills, no borders, no gradients, no glow. One ink pill per screen.
+ * Motion is a short fade and rise; reduced motion is opacity only.
+ * Prices and counts are written by the component from the plan ladder.
+ */
+
+.pg-layer {
+  --pg-ease: var(--ov-ease, cubic-bezier(.23, 1, .32, 1));
+  --pg-ground: #060607;
+  --pg-surface: var(--ov-surface, #0F1012);
+  --pg-l2: var(--ov-raised, #131416);
+  --pg-ink: #EFEEEA;
+  --pg-ink-h: #FFFFFF;
+  --pg-on-ink: #060607;
+  --pg-rgb: 239, 238, 234;
+  --pg-sec: rgba(var(--pg-rgb), .68);
+  --pg-ter: rgba(var(--pg-rgb), .56);
+  --pg-hl: rgba(var(--pg-rgb), .08);
+  --pg-err: var(--danger, #FF8F80);
+  --pg-lockbg: rgba(19, 20, 22, .78);
+  --pg-r: 16px;
+}
+[data-theme="light"] .pg-layer {
+  --pg-ground: #F5F5F2;
+  --pg-ink: #121418;
+  --pg-ink-h: #2A2C31;
+  --pg-on-ink: #F5F5F2;
+  --pg-rgb: 18, 20, 24;
+  --pg-sec: rgba(var(--pg-rgb), .72);
+  --pg-ter: rgba(var(--pg-rgb), .62);
+  --pg-hl: rgba(var(--pg-rgb), .10);
+  --pg-err: var(--danger, #B3261E);
+  --pg-lockbg: rgba(236, 235, 231, .78);
+}
+
+/* ── Layer and dialog ───────────────────────────────────────────────────── */
+.pg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ov-z-dialog, 9999);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--scrim);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  font-family: var(--font);
+  animation: pg-fade 150ms var(--pg-ease) both;
+}
+.pg-layer.is-closing { animation: pg-fade-out 150ms cubic-bezier(.4, 0, 1, 1) both; }
+
+.pg-dialog {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  width: 880px;
+  max-width: 100%;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+  border-radius: var(--pg-r);
+  background: var(--pg-surface);
+  color: var(--t0);
+  box-shadow: var(--ov-shadow-modal);
+  animation: pg-in 200ms var(--pg-ease) both;
+}
+.pg-dialog.pg-nr { grid-template-columns: minmax(0, 1fr); width: 480px; }
+.pg-dialog:focus-visible { outline: none; }
+.pg-layer.is-closing .pg-dialog { animation: pg-out 150ms cubic-bezier(.4, 0, 1, 1) both; }
+
+@keyframes pg-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pg-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pg-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-8px); } }
+@keyframes pg-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes pg-dn { from { transform: none; } to { transform: translateY(100%); } }
+@keyframes pg-spin { to { transform: rotate(360deg); } }
+
+/* ── Close ──────────────────────────────────────────────────────────────── */
+.pg-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pg-sec);
+  cursor: pointer;
+  transition: background-color 120ms var(--pg-ease), color 120ms var(--pg-ease);
+}
+.pg-x:hover { background: var(--pg-hl); color: var(--t0); }
+.pg-x:active { background: rgba(var(--pg-rgb), .14); }
+.pg-x:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+
+/* ── Left pane: what was locked ─────────────────────────────────────────── */
+.pg-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 40px 32px;
+  overflow: hidden;
+  background: var(--pg-ground);
+}
+.pg-cap {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--pg-ter);
+}
+.pg-cap code, .pg-hex { font-family: var(--mono); font-size: 11px; color: var(--pg-ter); }
+.pg-cap code { font-size: .93em; }
+.pg-hex { display: flex; gap: 8px; margin: 0; }
+.pg-hex span { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A label sits 8px over its strip, and the second group opens 24px down. */
+.pg-lbl { margin: 0 0 -4px; font-size: 12px; line-height: 18px; color: var(--pg-sec); }
+.pg-lbl.pg-gap { margin-top: 12px; }
+.pg-seed { font-family: var(--mono); }
+
+.pg-clip {
+  position: relative;
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  outline: 1px solid rgba(var(--pg-rgb), .12);
+  outline-offset: -1px;
+}
+.pg-strip { display: flex; height: 88px; }
+.pg-strip span, .pg-cols span { flex: 1 1 0; min-width: 0; }
+.pg-blur { filter: blur(10px); transform: scale(1.04); }
+.pg-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 16px);
+  height: 32px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: var(--pg-lockbg);
+  color: var(--t0);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+.pg-lock svg { flex: none; }
+.pg-lock span { overflow: hidden; text-overflow: ellipsis; }
+
+.pg-cols { display: flex; height: 100%; min-height: 200px; }
+.pg-cols-wrap {
+  display: grid;
+  grid-template-columns: 8fr 2fr;
+  flex: 1 1 auto;
+  min-height: 200px;
+  max-height: 360px;
+  border-radius: 8px;
+  overflow: hidden;
+  outline: 1px solid rgba(var(--pg-rgb), .12);
+  outline-offset: -1px;
+}
+.pg-cols-wrap > .pg-clip { border-radius: 0; outline: 0; }
+
+.pg-proj { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pg-proj li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--pg-l2);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--t0);
+}
+.pg-proj li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-proj li span:last-child { flex: none; font-size: 13px; font-weight: 400; color: var(--pg-ter); }
+.pg-proj .pg-clip { background: var(--pg-l2); }
+.pg-proj .pg-clip .pg-blur { display: flex; align-items: center; min-height: 44px; padding: 0 16px; font-size: 15px; font-weight: 500; }
+
+.pg-proof { display: grid; justify-items: center; gap: 12px; text-align: center; color: var(--t0); }
+
+/* ── Right pane: the offer ──────────────────────────────────────────────── */
+.pg-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.pg-bd {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 56px 32px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pg-ft { flex: none; padding: 0 32px 24px; }
+
+.pg-title {
+  margin: 0;
+  max-width: 384px;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -.03em;
+  color: var(--t0);
+  text-wrap: balance;
+}
+.pg-sub {
+  margin: 12px 0 0;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--pg-sec);
+  text-wrap: pretty;
+}
+.pg-sub b { font-weight: 600; color: var(--t0); }
+.pg-sub code { font-family: var(--mono); font-size: .93em; color: var(--t0); }
+
+/* What Pro adds */
+.pg-fold-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 12px 0 0 -8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t0);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms var(--pg-ease);
+}
+.pg-fold-btn:hover { background: var(--pg-hl); }
+.pg-fold-btn:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+.pg-fold-btn svg { transition: transform 150ms var(--pg-ease); }
+.pg-fold-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.pg-fold-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 150ms var(--pg-ease), visibility 0s linear 150ms;
+}
+.pg-fold-body.is-open { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 150ms var(--pg-ease), visibility 0s; }
+.pg-fold-body > div { min-height: 0; overflow: hidden; }
+.pg-pts { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0 0 4px; list-style: none; font-size: 14px; line-height: 21px; color: var(--pg-sec); }
+
+/* Billing switch */
+.pg-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 44px;
+  margin-top: 16px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--pg-l2);
+}
+.pg-sg {
+  height: 36px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pg-sec);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms var(--pg-ease), color 150ms var(--pg-ease);
+}
+.pg-sg:hover { color: var(--t0); }
+.pg-sg[aria-checked="true"] { background: rgba(var(--pg-rgb), .14); color: var(--t0); }
+.pg-sg:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+.pg-seg[aria-disabled="true"] { opacity: .45; }
+.pg-seg[aria-disabled="true"] .pg-sg { cursor: default; }
+
+/* Price and the bill in time order. Every layer shares one grid cell, so the
+   dialog never changes height when the cadence, loading or outage state does. */
+.pg-blk { display: grid; margin-top: 20px; }
+.pg-ly {
+  grid-area: 1 / 1;
+  min-width: 0;
+  transition: opacity 150ms ease, visibility 0s linear 0s;
+}
+.pg-ly.is-off { visibility: hidden; opacity: 0; transition: opacity 150ms ease, visibility 0s linear 150ms; }
+
+.pg-price { display: flex; align-items: baseline; gap: 6px; margin: 0; color: var(--t0); }
+.pg-amt { font-size: 40px; font-weight: 500; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.pg-per { font-size: 14px; color: var(--pg-sec); }
+.pg-stops { display: flex; flex-direction: column; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+.pg-stop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 2px;
+}
+.pg-stop-l { font-size: 13px; font-weight: 500; color: var(--t0); }
+.pg-stop-f { font-size: 15px; font-weight: 500; text-align: right; color: var(--t0); font-variant-numeric: tabular-nums; }
+.pg-stop-s { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.45; color: var(--pg-sec); }
+
+.pg-sk { display: block; border-radius: 8px; background: var(--pg-hl); }
+.pg-sk + .pg-sk { margin-top: 12px; }
+.pg-sk-a { width: 45%; height: 40px; }
+.pg-sk-b { height: 20px; }
+.pg-sk-c { width: 70%; height: 20px; }
+
+.pg-out { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-size: 14px; line-height: 1.5; color: var(--pg-sec); }
+.pg-out svg { flex: none; margin-top: 2px; }
+
+/* The one ink pill */
+.pg-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pg-ink);
+  color: var(--pg-on-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 150ms var(--pg-ease), transform 120ms var(--pg-ease);
+}
+.pg-go:hover { background: var(--pg-ink-h); }
+.pg-go:active { transform: scale(.985); }
+.pg-go:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 3px; }
+.pg-go[aria-busy="true"] { cursor: progress; }
+.pg-go[aria-busy="true"]:hover { background: var(--pg-ink); }
+.pg-go[aria-busy="true"]:active { transform: none; }
+.pg-spin {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--pg-on-ink) 30%, transparent);
+  border-top-color: var(--pg-on-ink);
+  border-radius: 50%;
+  animation: pg-spin 800ms linear infinite;
+}
+
+.pg-later {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pg-sec);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms var(--pg-ease), color 120ms var(--pg-ease);
+}
+.pg-later:hover { background: var(--pg-hl); color: var(--t0); }
+.pg-later:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+
+.pg-note { margin: 4px 0 0; font-size: 12px; line-height: 1.5; text-align: center; color: var(--pg-ter); }
+/* One copy per breakpoint: the footer's on wider screens, the body's on phones. */
+.pg-note-bd { display: none; }
+.pg-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--pg-sec);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.pg-link:hover { color: var(--t0); }
+.pg-link:focus-visible { outline: 2px solid var(--pg-ink); outline-offset: 2px; }
+
+/* ── Narrow desktop ─────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 959px) {
+  .pg-dialog { grid-template-columns: 300px minmax(0, 1fr); }
+  .pg-pane { padding: 40px 24px; }
+  .pg-bd { padding: 56px 24px 24px; }
+  .pg-ft { padding: 0 24px 24px; }
+}
+
+/* ── Phone: a bottom sheet ──────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .pg-layer { align-items: end; padding: 0; }
+  .pg-dialog,
+  .pg-dialog.pg-nr {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 560px;
+    max-height: calc(100% - 64px);
+    margin: 0 auto;
+    border-radius: 16px 16px 0 0;
+    animation: pg-up 240ms var(--pg-ease) both;
+  }
+  .pg-layer.is-closing .pg-dialog { animation: pg-dn 150ms cubic-bezier(.4, 0, 1, 1) both; }
+  .pg-x { top: 8px; right: 8px; width: 44px; height: 44px; background: color-mix(in srgb, var(--pg-l2) 78%, transparent); }
+
+  .pg-pane {
+    flex: none;
+    justify-content: center;
+    height: 160px;
+    padding: 16px;
+    gap: 8px;
+  }
+  .pg-strip { height: 64px; }
+  .pg-hex, .pg-lbl, .pg-pane .pg-cap { display: none; }
+  /* The system pane is a 128px band: the Free strip over the blurred Pro one, edge to edge. */
+  .pg-pane[data-pane="system"] { height: 128px; padding: 0; gap: 0; justify-content: flex-start; }
+  .pg-pane[data-pane="system"] .pg-clip { border-radius: 0; outline: 0; }
+  .pg-pane[data-pane="system"] .pg-strip { height: 72px; }
+  .pg-pane[data-pane="system"] .pg-blur { height: 56px; }
+  /* The note scrolls with the body, so the sticky footer holds only the two actions. */
+  .pg-note-ft { display: none; }
+  .pg-note-bd { display: block; margin: 16px 0 0; text-align: left; }
+  .pg-note-bd .pg-link { padding: 0; }
+  .pg-cols-wrap { min-height: 0; max-height: 128px; }
+  .pg-cols { min-height: 0; }
+  .pg-proj li:nth-child(n+3) { display: none; }
+  .pg-proof { gap: 8px; }
+  .pg-proof .ui-pro-proof-art { width: 80px; height: 80px; border-radius: 12px; }
+  .pg-proof .ui-pro-proof-art > svg, .pg-proof .ui-pro-proof-art > img { width: 52px; height: 52px; }
+
+  .pg-main { flex: 1 1 auto; min-height: 0; }
+  .pg-bd { padding: 20px 16px; }
+  .pg-nr .pg-bd { padding-top: 64px; }
+  .pg-title { max-width: none; padding-right: 44px; font-size: 24px; }
+  .pg-pane ~ .pg-main .pg-title { padding-right: 0; }
+  .pg-seg { height: 52px; }
+  .pg-sg { height: 44px; }
+  .pg-ft {
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom, 0px));
+    background: var(--pg-surface);
+  }
+}
+@media (max-width: 359px) {
+  .pg-title { font-size: 22px; }
+  .pg-amt { font-size: 36px; }
+}
+
+/* ── Reduced motion: opacity only ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .pg-layer, html:not([data-reduced-motion="false"]) .pg-dialog, html:not([data-reduced-motion="false"]) .pg-dialog.pg-nr { animation: pg-fade 150ms linear both; }
+  html:not([data-reduced-motion="false"]) .pg-layer.is-closing, html:not([data-reduced-motion="false"]) .pg-layer.is-closing .pg-dialog { animation: pg-fade-out 150ms linear both; }
+  html:not([data-reduced-motion="false"]) .pg-fold-body, html:not([data-reduced-motion="false"]) .pg-fold-body.is-open, html:not([data-reduced-motion="false"]) .pg-fold-btn svg { transition: none; }
+  html:not([data-reduced-motion="false"]) .pg-spin { animation-duration: 2.4s; }
+  html:not([data-reduced-motion="false"]) .pg-go:active { transform: none; }
+}
+html[data-reduced-motion="true"] .pg-layer, html[data-reduced-motion="true"] .pg-dialog, html[data-reduced-motion="true"] .pg-dialog.pg-nr { animation: pg-fade 150ms linear both; }
+html[data-reduced-motion="true"] .pg-layer.is-closing, html[data-reduced-motion="true"] .pg-layer.is-closing .pg-dialog { animation: pg-fade-out 150ms linear both; }
+html[data-reduced-motion="true"] .pg-fold-body, html[data-reduced-motion="true"] .pg-fold-body.is-open, html[data-reduced-motion="true"] .pg-fold-btn svg { transition: none; }
+html[data-reduced-motion="true"] .pg-spin { animation-duration: 2.4s; }
+html[data-reduced-motion="true"] .pg-go:active { transform: none; }
+
+/* The lock line over a column pane sits at the foot, clear of the colours. */
+.pg-cols-wrap { position: relative; }
+.pg-cols-wrap > .pg-lock { top: auto; bottom: 16px; transform: translate(-50%, 0); }
+.pg-proj .pg-ghost { display: block; min-height: 0; padding: 0; background: none; }
+.pg-proj .pg-ghost .pg-clip { min-height: 44px; }

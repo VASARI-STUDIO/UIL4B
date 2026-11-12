@@ -26,7 +26,7 @@
 //   value  a CSS-value column a tool outputs as code: px and rem columns, type steps
 //   glyph  a symbol drawn from the mono face for its metrics
 //   kit    a picture of an exported kit (a miniature of the kit's own page). Left by decision.
-//   ask    prompt text; waiting on Dylan's open decision 1 (the AI prompt text voice)
+//   ask    prompt text; kept until the voice for AI prompt text is decided
 //   debt   still mono and probably should not be. Each one is a selector a later
 //          slice has to move to Geist, then delete from this list. The count can
 //          only fall: DEBT_MAX below is the ceiling, and a new debt entry fails.
@@ -104,6 +104,12 @@ const ALLOWED = {
     '.ui-pro-rail-seed': 'hex',
     '.ui-pro-sub code': 'code',
   },
+  'v3-pro-gate.css': {
+    '.pg-cap code': 'code',
+    '.pg-hex': 'hex',
+    '.pg-seed': 'hex',
+    '.pg-sub code': 'code',
+  },
   'pages/alt-text.css': {
     '.alt-page .alt-row-deco-alt code': 'code',
     '.alt-page .alt-tips code': 'code',
@@ -122,8 +128,8 @@ const ALLOWED = {
     '.blib-page .blib-pre': 'code',
   },
   'pages/checkout.css': {
-    '.checkout-page .checkout-error code': 'code',
-    '.checkout-page .co-ref-code': 'token',
+    '.ck .ck-nokey code': 'code',
+    '.ck-ref code': 'token',
   },
   'pages/contrast.css': {
     '.cc .cc-hex-input': 'hex',
@@ -245,6 +251,12 @@ const ALLOWED = {
     '.prn-ty-px': 'value',
   },
   'pages/projects.css': {
+  },
+  'pages/v3-onboarding.css': {
+    '.ob-hex': 'hex',
+    '.ob-col-x': 'hex',
+    '.ob-spec-p.is-mono': 'value',
+    '.ob-rail-l': 'value',
   },
   'pages/semantic-color.css': {
     '.stc .stc-fam-token': 'token',

@@ -20,7 +20,7 @@
 // tests skip, as in 105-checkout-change-plan.spec.js, whose Stripe stand-in
 // this one trims down.
 import { test, expect } from './base.js'
-import { go, watch, expectRendered, signIn } from './helpers.js'
+import { go, watch, expectRendered, signIn, continueWithEmail } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 import { PLAN_LADDER } from '../../src/config/planLadder.js'
 
@@ -68,8 +68,17 @@ async function trackSignUps(page) {
 const field = (page, label) => page.getByLabel(label, { exact: true })
 const createButton = (page) => page.getByRole('button', { name: 'Create account', exact: true })
 
+// The form is two steps: the email and Continue, then the password. A second call (after a refusal)
+// finds the form already on the password step.
+async function toPasswordStep(page) {
+  if (await field(page, 'Email').isVisible()) {
+    await field(page, 'Email').fill('tod@dler.example')
+    await continueWithEmail(page)
+  }
+}
+
 async function fillSignUp(page, password) {
-  await field(page, 'Email').fill('tod@dler.example')
+  await toPasswordStep(page)
   await field(page, 'Password').fill(password)
 }
 
@@ -148,7 +157,7 @@ async function openFailingCheckout(page, { status, body }) {
   await stubPrices(page)
   await go(page, '/checkout?plan=yearly')
   await expectRendered(page)
-  const form = page.locator('.checkout-form')
+  const form = page.locator('.ck-fp')
   const notConfigured = form.filter({ hasText: /Payments aren.t configured/ })
   const failed = form.filter({ hasText: 'Checkout unavailable' })
   await expect(notConfigured.or(failed)).toBeVisible()
@@ -173,12 +182,12 @@ test.describe('a failed payment session is told in the page\'s own words', () =>
     expect(warnings.some((w) => w.includes(RAW_SERVER_TEXT)), 'the raw text was not logged to the console').toBe(true)
   })
 
-  // MUTATION: in src/styles/pages/checkout.css delete `display: block` from
-  //   `.checkout-error-p`. The sentence and Try again share a row.
+  // MUTATION: in src/pages/Checkout.jsx move the `.ck-ba` actions block above
+  //   the `.ck-bp` sentence. Try again is no longer below the message.
   test('the sentence sits on its own line above Try again', async ({ page }) => {
     watch(page, 'buyer whose checkout fails')
     const form = await openFailingCheckout(page, { status: 500, body: { error: RAW_SERVER_TEXT } })
-    const message = await form.locator('.checkout-error-p').boundingBox()
+    const message = await form.locator('.ck-bp').boundingBox()
     const retry = await form.getByRole('button', { name: 'Try again' }).boundingBox()
     expect(message, 'no message line').not.toBeNull()
     expect(retry, 'no Try again button').not.toBeNull()
@@ -242,6 +251,7 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
       await page.setViewportSize({ width, height: 640 })
       await go(page, '/login?signup=1')
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create your free account')
+      await toPasswordStep(page)
       await expect(createButton(page)).toBeAttached()
       await page.screenshot({ path: testInfo.outputPath(`signup-${width}x640.png`) })
 
@@ -300,6 +310,7 @@ test.describe('the Feedback bubble stays off the forms on a short phone', () => 
   test('at 1440x900 the bubble is still on /login', async ({ page }) => {
     watch(page, 'visitor on a laptop with a sign-in problem')
     await go(page, '/login?signup=1')
+    await toPasswordStep(page)
     await expect(createButton(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Share feedback' })).toBeVisible()
     // And there the quiet link is not drawn, so the screen never carries both.

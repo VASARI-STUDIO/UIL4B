@@ -456,15 +456,15 @@ async function openLoginDialog(browser, width, height) {
 
 async function loginGeometry(page) {
   return page.evaluate(() => {
-    // The chosen variant at 768 and up is a clipped two-pane dialog whose form
-    // pane is the thing that scrolls, so that is what is measured then.
-    const m = document.querySelector('.ui-login--strip .ui-login-pane') || document.querySelector('.ui-modal')
+    // The popup is one scrolling box (the picture pane sits inside it from 768 up).
+    const m = document.querySelector('.ui-modal')
     const mr = m.getBoundingClientRect()
     const visibleHeight = (el) => {
       const r = el.getBoundingClientRect()
       return Math.max(0, Math.min(r.bottom, mr.bottom) - Math.max(r.top, mr.top))
     }
-    const submit = m.querySelector('.auth-submit')
+    // Step 1 is the first screen: its primary button is "Continue with email".
+    const submit = m.querySelector('.auth-continue')
     const signup = m.querySelector('.auth-links button')
     const controls = [...m.querySelectorAll('button,a,input')].filter((e) => {
       const r = e.getBoundingClientRect()
@@ -492,11 +492,12 @@ async function loginGeometry(page) {
   })
 }
 
-// maxBuried is measured, not chosen. At 844x390 the dialog holds 451px of
-// content in 372px, so ONE control (Forgot password?) still starts below the
-// fold — the sign-up link above it peeks, which is the affordance that says so.
-// Before the fix that number was 2: sign-up was buried with it. At 932x430
-// nothing should be buried at all; before the fix Forgot password? was.
+// maxBuried is a ceiling, not a target. At 844x390 the dialog holds 408px of
+// content in 374px, so the sign-up row peeks at the fold, which is the
+// affordance that there is more; one control may start below it. At 932x430
+// the whole form fits and nothing should be buried.
+// MUTATION: in v3-pro-auth.css delete the `@media(max-height:480px) and
+// (min-width:768px)` block. The sign-up row goes below the fold at 844x390.
 for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
   test(`S7 · Login at ${w}x${h} shows a whole Sign In button and does not bury sign-up`, async ({ browser }) => {
     const { ctx, page } = await openLoginDialog(browser, w, h)
@@ -527,13 +528,13 @@ for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
 // dialog, which is too much for one test's time budget when run in a loop.
 // The short-height rules must not leak upward. These four were measured clean
 // by the audit and are the regression guard for the max-height:460px block.
-// 360x560 and 320x568 are the short phones: the sheet is capped at 100dvh - 48px
-// there, and the max-height:600px spacing in auth.css has to bring the form in
-// under that cap. If it does not, the dialog's own scroll height passes its
-// client height (22px at 360x560 before the spacing was trimmed) and the test
-// names how far. Controls stay at the 44px touch minimum on every phone.
-// MUTATION: in auth.css, in the `@media(max-height:600px)` block, take out the
-// `.auth-body`, `.auth-divider` and `.auth-notnow` lines.
+// 360x560 and 320x568 are the short phones: the form pane's top padding drops
+// from 56px to 16px there so the form fits under the sheet's cap. If it does
+// not, the dialog's own scroll height passes its client height (31px at 360x560
+// before the padding was trimmed) and the test names how far. Controls stay at
+// the 44px touch minimum on every phone.
+// MUTATION: in v3-pro-auth.css delete the `@media(max-width:767px) and
+// (max-height:600px){.pp-offer{padding-top:16px}}` rule.
 for (const [w, h] of [[360, 560], [320, 568], [390, 640], [390, 844], [768, 1024]]) {
   test(`S7 · portrait ${w}x${h} still needs no scrolling at all`, async ({ browser }) => {
     const { ctx, page } = await openLoginDialog(browser, w, h)
@@ -549,8 +550,8 @@ for (const [w, h] of [[360, 560], [320, 568], [390, 640], [390, 844], [768, 1024
 // control under the title. On a short phone they used to touch (the button's top
 // edge was 1.6px inside Close's box at 360x560); Close now ends 8px above it, and
 // the form still fits without scrolling.
-// MUTATION: in auth.css take the `.ui-login .ui-login-x{top:6px}` line (or the
-// `.auth-body{margin-top:16px}` line) out of the `max-width:767px` and `max-height:600px` block.
+// MUTATION: in v3-pro-auth.css, in the `max-width:767px` block, change
+// `:root .pp-offer .ui-login-x{top:8px;...}` to top:24px.
 for (const [w, h] of [[360, 560], [320, 568]]) {
   test(`S7 · portrait ${w}x${h}: Close ends 8px above the Google button, and the dialog still does not scroll`, async ({ browser }) => {
     const { ctx, page } = await openLoginDialog(browser, w, h)

@@ -3,7 +3,7 @@
 // own dock. After signing in the export they asked for goes ahead.
 import { chooseFormat, exportPanel, primaryButton, dockStatus } from './export-rows.js'
 import { test, expect } from './base.js'
-import { go, watch, signIn } from './helpers.js'
+import { go, watch, signIn, continueWithEmail } from './helpers.js'
 import { mockThemeApi } from './export-theme-mock.js'
 
 const BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
@@ -83,6 +83,7 @@ test.describe('signed out, signing in from the dialog', () => {
     // The panel hands the export on when the form reports success, so the sign-in goes through the form
     // (the test double completes the late sign-in on submit), not around it.
     await panel.locator('#ui-login-email').fill('visitor@example.com')
+    await continueWithEmail(page, panel)
     await panel.locator('#ui-login-password').fill('correct-horse-battery')
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),

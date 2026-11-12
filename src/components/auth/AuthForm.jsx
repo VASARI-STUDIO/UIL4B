@@ -7,10 +7,17 @@ import { authNow, loadAuthSdk, openFirebaseGate } from '../../utils/firebaseAcce
 import ReportProblemLink from '../ReportProblemLink'
 import { passwordProblem, EMAIL_MAX } from '../../utils/signupInput'
 import '../../styles/pages/auth.css'
+import '../../styles/v3-pro-auth.css'
 
-// The log-in / sign-up / reset / switch form, shared by the modal (and, later,
-// the /login page). It calls the AuthContext functions exactly as the modal
-// always has; only the presentation and copy live here.
+// The log-in / sign-up / reset / switch form, shared by the popup, the /login
+// page, the Pro sign-up layer and the export dock. It calls the AuthContext
+// functions exactly as it always has; only the presentation and copy live here.
+//
+// Log in and sign up are two steps: the email first (with Google above it), then
+// the password. Reset, sent and switch are one screen. The step is held here
+// unless the caller passes `step` and `onStepChange` (the Pro layer keeps it in
+// the browser history). `controlRef.current.back()` steps back one screen and
+// says whether it did, so a caller's Escape can ask first.
 
 const RESEND_SECONDS = 30
 const SILENT_CODES = new Set(['auth/popup-closed-by-user', 'auth/cancelled-popup-request'])
@@ -27,6 +34,7 @@ const ERROR_KEYS = {
 }
 // Never Firebase's own text: anything unmapped reads as `generic`.
 const errorKey = (err) => ERROR_KEYS[err?.code] || 'generic'
+const LOOKS_LIKE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Splits "…{slot}…" copy so a slot can hold an element (bold, a link).
 function fill(template, slots) {
@@ -62,6 +70,7 @@ const Spinner = () => <span className="auth-spin" aria-hidden="true" />
 export default function AuthForm({
   mode, onModeChange, initialEmail = '', lockEmail = false, onSuccess,
   headingLevel = 2, headingId = 'ui-login-title', reason, reasons, unlocks, free = true, onBusyChange, showLoginSub = false, showReport = false,
+  step: stepProp, onStepChange, controlRef, heading, loginHeading, subtitle, onEmailChange,
 }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   // The form is on screen, so the next thing that happens may be a sign-in. Start
@@ -79,28 +88,51 @@ export default function AuthForm({
   }, [])
   const { t } = useI18n()
   const online = useOnline()
-  const offline = online === false
-  const [email, setEmail] = useState(initialEmail)
+  const [offlineSeen, setOfflineSeen] = useState(false)
+  const offline = online === false && !offlineSeen
+  useEffect(() => { if (online) setOfflineSeen(false) }, [online])
+  const [email, setEmailState] = useState(initialEmail)
+  const setEmail = (v) => { setEmailState(v); onEmailChange?.(v) }
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [busy, setBusy] = useState(null) // null | 'google' | 'submit'
   const [error, setError] = useState(null) // { key, tick }
   const [cooldown, setCooldown] = useState(0)
+  const [stepInner, setStepInner] = useState(1)
+  const step = stepProp || stepInner
+  const setStep = (n) => { if (onStepChange) onStepChange(n); else setStepInner(n) }
   const titleRef = useRef(null)
   const errRef = useRef(null)
+  const offlineRef = useRef(null)
+  const emailRef = useRef(null)
+  const pwRef = useRef(null)
   const mounted = useRef(false)
   const [swapped, setSwapped] = useState(false)
 
   useEffect(() => { onBusyChange?.(!!busy) }, [busy, onBusyChange])
 
-  // A new mode moves focus to its title; a failed attempt then moves it to the
-  // error line (declared second, so it wins when both change together).
+  const isEntry = mode === 'login' || mode === 'signup'
+  const onPassword = isEntry && step === 2
+  const onEmail = isEntry && step === 1
+
+  // A new screen moves focus: the password on step 2, the email on reset,
+  // otherwise the title. A failed attempt then moves it to the error line
+  // (declared second, so it wins when both change together).
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
     setSwapped(true)
-    titleRef.current?.focus()
-  }, [mode])
-  useEffect(() => { if (error) errRef.current?.focus() }, [error])
+    if (onPassword) pwRef.current?.focus()
+    else if (mode === 'reset' && emailRef.current) { emailRef.current.focus(); emailRef.current.select() }
+    else titleRef.current?.focus()
+  }, [mode, step]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!error) return
+    // A wrong password clears the field and puts the cursor back in it, so the
+    // next try starts empty; the alert still announces the line.
+    if (error.key === 'invalidCredential' && pwRef.current) { setPassword(''); pwRef.current.focus(); return }
+    if (error.key === 'invalidEmail' && emailRef.current) { emailRef.current.focus(); return }
+    errRef.current?.focus()
+  }, [error])
 
   useEffect(() => {
     if (cooldown <= 0) return undefined
@@ -109,7 +141,28 @@ export default function AuthForm({
   }, [cooldown])
 
   const fail = (key) => setError({ key, tick: Date.now() })
-  const go = (next) => { setError(null); onModeChange(next) }
+  const go = (next) => {
+    setError(null)
+    // Coming back from reset with an address already typed lands on the password.
+    if ((next === 'login' || next === 'signup') && (mode === 'reset' || mode === 'sent')) setStep(email.trim() ? 2 : 1)
+    onModeChange(next)
+  }
+
+  // One screen back, keeping the email. Returns false when there is nowhere
+  // further back to go (the caller then closes). While a request is in flight it
+  // answers true and does nothing: the request cannot be taken back.
+  const backRef = useRef(null)
+  backRef.current = () => {
+    if (busy) return true
+    if (mode === 'reset' || mode === 'sent') { go('login'); return true }
+    if (onPassword) { setError(null); setStep(1); return true }
+    return false
+  }
+  useEffect(() => {
+    if (!controlRef) return undefined
+    controlRef.current = { back: () => backRef.current() }
+    return () => { controlRef.current = null }
+  }, [controlRef])
 
   const sendReset = async () => {
     await resetPassword(email)
@@ -117,9 +170,20 @@ export default function AuthForm({
     onModeChange('sent')
   }
 
+  const handleContinue = (e) => {
+    e.preventDefault()
+    if (busy) return
+    if (offline) { offlineRef.current?.focus(); return }
+    if (!LOOKS_LIKE_EMAIL.test(email.trim())) { fail('invalidEmail'); return }
+    setError(null)
+    setEmail(email.trim())
+    setStep(2)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (offline) return
+    if (busy) return
+    if (offline) { offlineRef.current?.focus(); return }
     // Refused before any request: a password of spaces satisfies the input's
     // own minLength, and the server would accept it.
     const weak = mode === 'signup' ? passwordProblem(password) : null
@@ -133,11 +197,11 @@ export default function AuthForm({
         // No name is asked for: the greeting and avatar fall back to the email,
         // and the account can add a name later.
         const cred = await signup(email, password, '')
-        onSuccess(cred?.user)
+        onSuccess(cred?.user, { created: true })
         return
       } else {
         const cred = await login(email, password)
-        onSuccess(cred?.user)
+        onSuccess(cred?.user, { created: false })
         return
       }
     } catch (err) {
@@ -156,6 +220,18 @@ export default function AuthForm({
   }
 
   const handleResend = async () => {
+    if (busy || cooldown > 0) return
+    if (offline) { offlineRef.current?.focus(); return }
+    setError(null)
+    setBusy('submit')
+    try { await sendReset() } catch (err) { fail(errorKey(err)) }
+    setBusy(null)
+  }
+
+  // The link in the wrong-password line: the reset goes to the email already
+  // typed, with no second form to fill.
+  const resetFromError = async () => {
+    if (busy) return
     setError(null)
     setBusy('submit')
     try { await sendReset() } catch (err) { fail(errorKey(err)) }
@@ -163,12 +239,15 @@ export default function AuthForm({
   }
 
   const handleGoogle = async () => {
-    if (offline || !sdkReady) return
+    if (busy) return
+    // Google stays enabled offline: pressing it moves focus to the offline line.
+    if (offline) { offlineRef.current?.focus(); return }
+    if (!sdkReady) return
     setError(null)
     setBusy('google')
     try {
       const cred = await loginWithGoogle()
-      onSuccess(cred?.user)
+      onSuccess(cred?.user, { created: !!cred?.additionalUserInfo?.isNewUser })
       return
     } catch (err) {
       if (!SILENT_CODES.has(err?.code)) fail(errorKey(err))
@@ -176,48 +255,86 @@ export default function AuthForm({
     setBusy(null)
   }
 
-  const isEntry = mode === 'login' || mode === 'signup'
+  const tryAgain = () => {
+    if (typeof navigator !== 'undefined' && navigator.onLine !== false) setOfflineSeen(true)
+    else offlineRef.current?.focus()
+  }
+
   const interrupt = !!reason && isEntry
   const strong = (v) => <strong>{v}</strong>
+  const mono = <span className="auth-mono">{email}</span>
 
+  const loginTitle = loginHeading || (reason ? t('auth.logInContinue') : t('auth.logInTitle'))
   const title = mode === 'reset' ? t('auth.resetTitle')
     : mode === 'sent' ? t('auth.sentTitle')
       : mode === 'switch' ? t('auth.switchTitle')
-        : mode === 'signup' ? t('auth.createAccount')
-          : reason ? t('auth.logInContinue') : t('auth.logInTitle')
+        : mode === 'signup' ? (onPassword ? t('auth.chooseTitle') : heading || t('auth.createAccount'))
+          : loginTitle
+  const forEmail = (
+    <>
+      {fill(t('auth.forEmail'), { email: mono })}
+      {' '}<button type="button" className="auth-inline" onClick={() => { setError(null); setStep(1) }} disabled={!!busy}>{t('auth.change')}</button>
+    </>
+  )
   const sub = mode === 'reset' ? t('auth.resetSub')
-    : mode === 'sent' ? fill(t('auth.sentSub'), { email: strong(email) })
+    : mode === 'sent' ? fill(t('auth.sentSub'), { email: mono })
       : mode === 'switch' ? fill(t('auth.switchSub'), { email: strong(email) })
-        : interrupt ? fill(t(mode === 'signup' ? 'auth.interruptSignUp' : 'auth.interruptLogIn'), { reason: strong(reason) })
-          : mode === 'signup' ? t('auth.signUpSub') : showLoginSub ? t('auth.logInSub') : null
+        : onPassword ? forEmail
+          : subtitle && mode === 'signup' ? subtitle
+            : interrupt ? fill(t(mode === 'signup' ? 'auth.interruptSignUp' : 'auth.interruptLogIn'), { reason: strong(reason) })
+              : mode === 'signup' ? t('auth.signUpSub') : showLoginSub ? t('auth.logInSub') : null
 
-  const whyList = isEntry && Array.isArray(reasons) ? reasons.filter((r) => typeof r === 'string' && r.trim()) : []
-  const unlockList = interrupt && free && !whyList.length && Array.isArray(unlocks)
+  const whyList = onEmail && Array.isArray(reasons) ? reasons.filter((r) => typeof r === 'string' && r.trim()) : []
+  const unlockList = interrupt && onEmail && free && !whyList.length && Array.isArray(unlocks)
     ? unlocks.filter((u) => typeof u === 'string' && u.trim()) : []
   const Heading = headingLevel === 1 ? 'h1' : 'h2'
 
   const disabled = !!busy
-  const blocked = disabled || offline
   const errKey = error?.key
-  const emailBad = errKey === 'invalidEmail' || errKey === 'emailInUse' || errKey === 'invalidCredential'
+  const emailBad = errKey === 'invalidEmail'
   const weakKey = errKey === 'weakPassword' || errKey === 'weakPasswordSpaces'
-  const pwBad = weakKey || errKey === 'invalidCredential'
+  const pwBad = weakKey || errKey === 'invalidCredential' || errKey === 'emailInUse'
   // The sent screen has no submit button, so it has no label to look up.
   const submitKey = (busy === 'submit'
     ? { login: 'auth.loadingLogin', signup: 'auth.loadingSignup', reset: 'auth.loadingReset', switch: 'auth.loadingSwitch' }
     : { login: 'auth.submitLogin', signup: 'auth.submitSignup', reset: 'auth.sendResetLink', switch: 'auth.submitSwitch' })[mode]
   const submitLabel = submitKey ? t(submitKey) : ''
+  const offlineDesc = offline ? 'ui-login-offline' : undefined
 
   const emailField = (
     <div className="auth-field">
       <label htmlFor="ui-login-email">{t('auth.email')}</label>
-      <input id="ui-login-email" type="email" name="email" maxLength={EMAIL_MAX} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required inputMode="email" autoComplete="email" autoCapitalize="off" spellCheck={false} readOnly={lockEmail} disabled={disabled} aria-invalid={emailBad || undefined} aria-describedby={emailBad ? 'ui-login-error' : undefined} />
+      <input ref={emailRef} id="ui-login-email" type="email" name="email" maxLength={EMAIL_MAX} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('auth.emailPlaceholder')} required inputMode="email" autoComplete="email" autoCapitalize="off" spellCheck={false} readOnly={lockEmail} disabled={disabled} aria-invalid={emailBad || undefined} aria-describedby={emailBad ? 'ui-login-error' : undefined} />
+    </div>
+  )
+
+  const googleBtn = (
+    <>
+      <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={busy === 'submit'} aria-disabled={(!sdkReady && !offline) || busy === 'google' || undefined} aria-busy={busy === 'google' || (!sdkReady && !offline) || undefined} aria-describedby={offlineDesc}>
+        {busy === 'google' ? <Spinner /> : <span className="auth-google-mark"><GoogleIcon /></span>}
+        {busy === 'google' ? t('auth.googleLoading') : t('auth.continueWithGoogle')}
+      </button>
+      <div className="auth-divider"><span>{t('auth.orEmail')}</span></div>
+    </>
+  )
+
+  const pwField = (
+    <div className="auth-field">
+      <label htmlFor="ui-login-password">{t('auth.password')}</label>
+      <div className="auth-pw">
+        <input ref={pwRef} id="ui-login-password" type={showPw ? 'text' : 'password'} name="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} disabled={disabled} aria-invalid={pwBad || undefined} aria-describedby={pwBad ? 'ui-login-error' : mode === 'signup' ? 'ui-login-pw-help' : undefined} />
+        <button type="button" className="auth-show" onClick={() => setShowPw((v) => !v)} aria-pressed={showPw} aria-controls="ui-login-password" disabled={disabled}>{showPw ? t('auth.hidePassword') : t('auth.showPassword')}</button>
+      </div>
+      {mode === 'signup' && <p className={'auth-help' + (weakKey ? ' auth-help--err' : '')} id="ui-login-pw-help">{t('auth.passwordHelp')}</p>}
+      {mode === 'login' && errKey !== 'invalidCredential' && (
+        <button type="button" className="auth-link auth-forgot" onClick={() => go('reset')} disabled={disabled}>{t('auth.forgotPassword')}</button>
+      )}
     </div>
   )
 
   return (
-    <div className="auth-form-root" data-mode={mode} aria-busy={busy ? 'true' : undefined}>
-      <div className={'auth-swap' + (swapped ? ' auth-swap--in' : '')} key={mode}>
+    <div className="auth-form-root" data-mode={mode} data-step={isEntry ? step : undefined} aria-busy={busy ? 'true' : undefined}>
+      <div className={'auth-swap' + (swapped ? ' auth-swap--in' : '')} key={mode + ':' + step}>
         <Heading className="auth-title" id={headingId} ref={titleRef} tabIndex={-1}>{title}</Heading>
         {sub && <p className="auth-sub" id="ui-login-promise">{sub}</p>}
         {whyList.length > 0 && (
@@ -235,50 +352,47 @@ export default function AuthForm({
             <p className="auth-msg auth-msg--err" id="ui-login-error" role="alert" tabIndex={-1} ref={errRef}>
               <MsgIcon />
               <span>
-                {t('auth.errors.' + error.key, { email })}
-                {error.key === 'emailInUse' && <>{' '}<button type="button" className="auth-inline" onClick={() => go('login')}>{t('auth.errors.emailInUseAction')}</button></>}
+                {errKey === 'invalidCredential'
+                  ? fill(t('auth.errors.invalidCredential'), { reset: <button type="button" className="auth-inline" onClick={resetFromError} disabled={!!busy}>{t('auth.errors.resetLink')}</button> })
+                  : t('auth.errors.' + errKey, { email })}
+                {errKey === 'emailInUse' && <>{' '}<button type="button" className="auth-inline" onClick={() => go('login')}>{t('auth.errors.emailInUseAction')}</button></>}
               </span>
             </p>
           )}
-          {offline && <p className="auth-msg" id="ui-login-offline" role="status"><MsgIcon offline /><span>{t('auth.errors.offline')}</span></p>}
+          {offline && (
+            <p className="auth-msg auth-msg--quiet" id="ui-login-offline" role="status" tabIndex={-1} ref={offlineRef}>
+              <MsgIcon offline />
+              <span>{t('auth.errors.offline')} <button type="button" className="auth-inline" onClick={tryAgain}>{t('auth.tryAgain')}</button></span>
+            </p>
+          )}
 
           {mode === 'sent' ? (
-            <button type="button" className="auth-link auth-resend" onClick={handleResend} disabled={disabled || offline || cooldown > 0}>
+            <button type="button" className="auth-link auth-resend" onClick={handleResend} aria-disabled={cooldown > 0 || !!busy || undefined}>
               {cooldown > 0 ? t('auth.resendWait', { n: cooldown }) : t('auth.resend')}
             </button>
           ) : (
             <>
-              {isEntry && (
-                <>
-                  <button className="auth-google-btn auth-google-btn--primary" type="button" onClick={handleGoogle} disabled={blocked} aria-disabled={!sdkReady || undefined} aria-busy={!sdkReady || undefined} aria-describedby={offline ? 'ui-login-offline' : undefined}>
-                    {busy === 'google' ? <Spinner /> : <span className="auth-google-mark"><GoogleIcon /></span>}
-                    {busy === 'google' ? t('auth.googleLoading') : t('auth.continueWithGoogle')}
+              {onEmail ? (
+                <form noValidate onSubmit={handleContinue} className="auth-form" autoComplete="on">
+                  {googleBtn}
+                  {emailField}
+                  <button className="btn auth-continue" type="submit" disabled={disabled} aria-describedby={offlineDesc}>{t('auth.continueEmail')}</button>
+                </form>
+              ) : (
+                <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
+                  {(mode === 'reset' || mode === 'switch') && emailField}
+                  {mode !== 'reset' && pwField}
+                  {/* A pill that is working keeps focus: aria-disabled, never `disabled`. */}
+                  <button className="btn auth-submit" type="submit" aria-disabled={busy === 'submit' || undefined} aria-busy={busy === 'submit' || undefined} disabled={busy === 'google'} aria-describedby={offlineDesc}>
+                    {busy === 'submit' && <Spinner />}{submitLabel}
                   </button>
-                  <div className="auth-divider"><span>{t('auth.orEmail')}</span></div>
-                </>
+                </form>
               )}
-
-              <form onSubmit={handleSubmit} className="auth-form" autoComplete="on">
-                {emailField}
-                {mode !== 'reset' && (
-                  <div className="auth-field">
-                    <label htmlFor="ui-login-password">{t('auth.password')}</label>
-                    <div className="auth-pw">
-                      <input id="ui-login-password" type={showPw ? 'text' : 'password'} name="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} disabled={disabled} aria-invalid={pwBad || undefined} aria-describedby={pwBad ? 'ui-login-error' : mode === 'signup' ? 'ui-login-pw-help' : undefined} />
-                      <button type="button" className="auth-show" onClick={() => setShowPw((v) => !v)} aria-pressed={showPw} aria-controls="ui-login-password" disabled={disabled}>{showPw ? t('auth.hidePassword') : t('auth.showPassword')}</button>
-                    </div>
-                    {mode === 'signup' && <p className={'auth-help' + (weakKey ? ' auth-help--err' : '')} id="ui-login-pw-help">{t('auth.passwordHelp')}</p>}
-                  </div>
-                )}
-                <button className="btn auth-submit" type="submit" disabled={blocked} aria-describedby={offline ? 'ui-login-offline' : undefined}>
-                  {busy === 'submit' && <Spinner />}{submitLabel}
-                </button>
-              </form>
 
               {/* Both modes can create an account (Google from log-in does), so
                   both carry it. New tab, so the form keeps its values. */}
               {isEntry && (
-                <p className="auth-legal">
+                <p className="auth-legal" inert={disabled || undefined}>
                   {fill(t('auth.legal'), {
                     terms: <Link to="/terms" target="_blank" rel="noopener noreferrer">{t('auth.legalTerms')}</Link>,
                     privacy: <Link to="/privacy" target="_blank" rel="noopener noreferrer">{t('auth.legalPrivacy')}</Link>,
@@ -291,10 +405,7 @@ export default function AuthForm({
           {mode !== 'switch' && (
             <div className="auth-links">
               {mode === 'login' && (
-                <>
-                  <button type="button" className="auth-link" onClick={() => go('signup')} disabled={disabled}>{t('auth.noAccount')} <span className="auth-link-strong">{t('auth.noAccountAction')}</span></button>
-                  <button type="button" className="auth-link auth-link--quiet" onClick={() => go('reset')} disabled={disabled}>{t('auth.forgotPassword')}</button>
-                </>
+                <button type="button" className="auth-link" onClick={() => go('signup')} disabled={disabled}>{t('auth.noAccount')} <span className="auth-link-strong">{t('auth.noAccountAction')}</span></button>
               )}
               {mode === 'signup' && (
                 <button type="button" className="auth-link" onClick={() => go('login')} disabled={disabled}>{t('auth.haveAccount')} <span className="auth-link-strong">{t('auth.haveAccountAction')}</span></button>

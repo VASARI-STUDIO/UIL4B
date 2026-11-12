@@ -35,19 +35,19 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // finish-free, the checkout fallback, and skip. Two of those were the pricing
   // step, which is gone, and the survey skip, which went with the survey.
   //
-  // The exits now are: DECLINE, through the constant; and the three first-win
-  // cards, which leave to the tool the user picked. So a count of the constant
-  // no longer describes the flow, and asserting one would just be pinning an
-  // arithmetic fact. What B4 actually cared about is asserted instead, and more
-  // strictly than before: EVERY navigate() in this file must be accounted for —
-  // the constant, a resume target the user themselves chose, a first-win
-  // route, or a stashed checkout in place of that route (someone who signed up
-  // from a Pro button). Anything else is a new exit that has not been thought about.
+  // The exits now are: Skip, through the constant (or a stashed target the user came for); the
+  // kit builder's Save, which lands in the Palette Builder; and the links to the other starts,
+  // which leave to the tool the user picked. So a count of the constant no longer describes the
+  // flow, and asserting one would just be pinning an arithmetic fact. What B4 actually cared about
+  // is asserted instead, and more strictly than before: EVERY navigate() in this file must be
+  // accounted for — the constant, a resume target the user themselves chose, the Palette Builder,
+  // a first-win route, or a stashed checkout in place of either (someone who signed up from a Pro
+  // button). Anything else is a new exit that has not been thought about.
   // One level of nesting, so `navigate(takeResumeTarget() || X)` is captured
   // whole rather than truncated at the inner bracket.
   const navigations = src.match(/navigate\((?:[^()]|\([^()]*\))*\)/g) || []
   assert.ok(navigations.length > 0, 'onboarding must still leave somewhere')
-  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(win\.route\)$|^navigate\(resume\)$|^navigate\(win\.route, win\.id === 'palette' \? \{ state: FIRST_PALETTE_STATE \} : undefined\)$/
+  const allowed = /^navigate\((?:takeResumeTarget\(\) \|\| )?FIRST_RUN_DESTINATION\)$|^navigate\(isCheckoutTarget\(resume\) \? resume : (?:win\.route|'\/create\/palette')\)$/
   for (const nav of navigations) {
     assert.match(nav, allowed,
       `${nav} is an onboarding exit that does not go to the first-run destination or a chosen first win`)
@@ -57,10 +57,10 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
   // owns that guarantee and tests/unit/first-win.test.js checks it against
   // liveToolRoutes(); this asserts the page still takes them from there rather
   // than spelling a path of its own.
-  assert.match(src, /navigate\(win\.route[,)]/)
-  // A bare navigate(resume) is only ever the stashed checkout, never any other stashed page.
-  assert.match(src, /if \(isCheckoutTarget\(resume\)\) \{ navigate\(resume\); return \}/)
-  assert.match(src, /FIRST_WINS\.map/)
+  assert.match(src, /navigate\(isCheckoutTarget\(resume\) \? resume : win\.route\)/)
+  // Save lands in the Palette Builder; a stashed page other than checkout is never the target.
+  assert.match(src, /navigate\(isCheckoutTarget\(resume\) \? resume : '\/create\/palette'\)/)
+  assert.match(src, /FIRST_WINS\.filter\(/)
 
   assert.ok(!/navigate\('\/home'\)/.test(src),
     'an onboarding exit still sends a brand-new account to the anonymous sales page')
@@ -97,7 +97,7 @@ test('a new customer is sent to build, not to a redirect back to the sales page'
   const src = stripComments(read('src/pages/CheckoutReturn.jsx'))
   assert.ok(!/to="\/dashboard"/.test(src),
     '/dashboard is only a redirect to /home — the page trying to acquire them')
-  assert.match(src, /to="\/projects"/)
+  assert.match(src, /to: '\/projects'/)
 })
 
 test('/dashboard reaches the dashboard, not the page selling it', () => {

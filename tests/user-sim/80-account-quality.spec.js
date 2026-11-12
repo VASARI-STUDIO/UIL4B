@@ -48,14 +48,14 @@ test.describe('checkout states a price it cannot confirm', () => {
       await signIn(page, {})
       await go(page, `/checkout?plan=${plan}`)
 
-      const amount = page.locator('.checkout-plan-amount')
-      const note = page.locator('.checkout-plan-note')
+      const amount = page.locator('.ck-out .ck-fig')
+      const note = page.locator('.ck-out .ck-sen').first()
       await expect(amount).toHaveText('Unavailable')
       await expect(note).toHaveText('Stripe didn’t answer, so no checkout can start.')
 
       // The exact string the defect produced, asserted as absent by name so a
       // regression is unmistakable rather than merely "not Unavailable".
-      const summary = await page.locator('.checkout-summary-card').innerText()
+      const summary = await page.locator('.ck-sum').innerText()
       expect(summary, 'the summary must not interpolate a null into a price')
         .not.toContain('null')
       expect((await amount.innerText()).trim().length,
@@ -68,8 +68,8 @@ test.describe('checkout states a price it cannot confirm', () => {
     await signIn(page, {})
     await go(page, '/checkout?plan=lifetime')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Invalid checkout selection')
-    await expect(page.locator('.checkout-plan-amount')).toHaveCount(0)
-    await expect(page.locator('.checkout-page')).not.toContainText(/one-off|Buy Pro once/i)
+    await expect(page.locator('.ck-fig')).toHaveCount(0)
+    await expect(page.locator('.ck')).not.toContainText(/one-off|Buy Pro once/i)
   })
 
   test('a priced-out summary offers a way back to a live price', async ({ page }) => {
@@ -78,7 +78,7 @@ test.describe('checkout states a price it cannot confirm', () => {
     await go(page, '/checkout?plan=yearly')
     // usePrices caches the failure for the life of the module, so without a
     // retry the summary stays on "Unavailable" until a full page reload.
-    const retry = page.locator('.checkout-price-retry')
+    const retry = page.locator('.ck-bill .ck-act').getByRole('button')
     await expect(retry).toBeVisible()
     await expect(retry).toHaveText('Retry live pricing')
   })
@@ -86,7 +86,7 @@ test.describe('checkout states a price it cannot confirm', () => {
 
 test.describe('every account surface starts at heading 1', () => {
   const SURFACES = [
-    ['/checkout/return', {}, 'This link has no payment attached.'],
+    ['/checkout/return', {}, 'This link has no payment attached'],
     ['/checkout', {}, 'Invalid checkout selection'],
   ]
   for (const [url, opts, heading] of SURFACES) {
@@ -122,14 +122,13 @@ test.describe('every account surface starts at heading 1', () => {
     await go(page, '/checkout/return?session_id=cs_test_paid')
     const h1 = page.locator('main h1')
     await expect(h1).toHaveCount(1)
-    await expect(h1).toContainText('You’re on UI L4B Pro.')
-    // It is styled by the page's own `.checkout-page .co-title`
-    // (clamp(30px, 3.6vw, 44px)) and NOT
-    // by whatever an unscoped h1 rule would give a bare <h1> (the .sec-h
-    // display size is 32-52px). The property being guarded is that the h2 -> h1
-    // swap did not hand the heading a page-title size: at this 1440px viewport
-    // .co-title resolves to its 44px ceiling, which .sec-h's 52px would exceed.
-    await expect(h1).toHaveClass(/co-title/)
+    await expect(h1).toHaveText('You’re on UI L4B Pro')
+    // It is styled by the page's own `.ck-rh` (32px on a phone, 40px from
+    // 600px up) and NOT by whatever an unscoped h1 rule would give a bare <h1>
+    // (the .sec-h display size is 32-52px). The property being guarded is that
+    // the h2 -> h1 swap did not hand the heading a page-title size: at this wide
+    // viewport .ck-rh resolves to 40px, which .sec-h's 52px would exceed.
+    await expect(h1).toHaveClass(/ck-rh/)
     const px = parseFloat(await h1.evaluate((el) => getComputedStyle(el).fontSize))
     expect(px, 'the confirmation heading is not set at a page-title size').toBeGreaterThanOrEqual(30)
     expect(px, 'the confirmation heading is not set at a page-title size').toBeLessThanOrEqual(44)
@@ -147,10 +146,10 @@ test.describe('every account surface starts at heading 1', () => {
       }),
     }))
     await go(page, '/checkout/return?session_id=cs_test_pending')
-    await expect(page.locator('main h1')).toHaveText('Payment received.')
+    await expect(page.locator('main h1')).toHaveText('Payment received')
     // The honesty half, which is the reason this state exists at all.
-    await expect(page.locator('.co-return .co-sub'))
-      .toContainText('Pro is still being attached to')
+    await expect(page.locator('.ck-ret .ck-rp[role="status"]'))
+      .toContainText('Pro access is still being attached to')
   })
 })
 

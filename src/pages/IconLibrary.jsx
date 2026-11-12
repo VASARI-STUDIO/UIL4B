@@ -1626,6 +1626,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, openerRef,
       },
       projects: {
         title: 'You’re at the free project limit',
+        projects: projects.map((p) => ({ name: p.name })),
+        limit: Number.isFinite(projectLimit) ? projectLimit : FREE_SAVE_LIMITS.projects,
         subtitle: `The free plan includes ${Number.isFinite(projectLimit) ? projectLimit : FREE_SAVE_LIMITS.projects} projects. Go Pro for unlimited projects and icon saves.`,
       },
     }

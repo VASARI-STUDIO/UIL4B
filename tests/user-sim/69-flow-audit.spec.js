@@ -44,7 +44,7 @@
 //   M6  Settings.jsx   disabled={busy||needsPassword} → disabled={busy}   flow 5 red
 //   M7  CheckoutReturn subscriptionActive !== true  → false               flow 2 red
 //   M8  CheckoutReturn to="/plans" Back to Plans    → to="/checkout"      flow 2 red
-//   (M7/M8 apply to the `.co-return` page; the flow 2 tests below guard them.)
+//   (M7/M8 apply to the `.ck-ret` page; the flow 2 tests below guard them.)
 //   M9  global.css     areas "head" "body" "rail"   → "head" "rail" "body" flow 2 red, all 6 phone cases
 //   M10 global.css     the ≤480 trim                → removed             flow 2 red, the 320×568 pair only
 //
@@ -57,13 +57,14 @@ import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch, signIn } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 import { openPaletteTools } from './palette-helpers.js'
-import { FREE_SAVE_LIMITS, AI_LIMITS } from '../../src/config/plans.js'
-import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
-import { BILLED_EVERY } from '../../src/config/planFacts.js'
-import { resolvePlanLadder, cheapestPerMonth, formatMoney } from '../../src/config/planLadder.js'
+import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
+import { resolvePlanLadder, formatMoney } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { mockThemeApi } from './export-theme-mock.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
+
+// The palette is what "Save to my projects" opens, so the other starts on /onboarding are the rest.
+const OTHER_STARTS = FIRST_WINS.filter((w) => w.id !== 'palette')
 // Export is dimmed until there is a design to export, so these load a palette the way a
 // shared link does (?c=) rather than the untouched starting board.
 const WORKED_BOARD = '/create/palette?c=1F4B8E,2E7BB8,3FA9A0'
@@ -252,14 +253,13 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await go(page, '/create/palette')
       const modal = await raiseWall(page)
 
-      await expect(modal.locator('.ui-pro-plans-err')).toContainText(/couldn.t load current prices/i)
-      // No "from $X/month" — rendered, hidden, or otherwise. The element was
-      // deleted outright on 2026-09-15 (it repeated the cheapest plan row a few
-      // centimetres below it), so this now guards against its REINTRODUCTION:
-      // a headline rate outside the `priceUnavailable` branch is exactly how a
-      // fallback price painted on top of this error block twice before.
-      await expect(modal.locator('.ui-pro-from')).toHaveCount(0)
-      expect(await modal.locator('.ui-pro-body').innerText(), 'no currency amount may appear beside the error')
+      await expect(modal.locator('.pg-out')).toContainText(/couldn.t load current prices/i)
+      // No "from $X/month" — rendered, hidden, or otherwise. A price block
+      // exists only for a cadence with a live price, so none may be in the DOM
+      // while the error shows: a headline rate outside the unavailable state is
+      // exactly how a fallback price painted on top of this error twice before.
+      await expect(modal.locator('.pg-price')).toHaveCount(0)
+      expect(await modal.locator('.pg-main').innerText(), 'no currency amount may appear beside the error')
         .not.toMatch(/[$€£]\s?\d/)
       // No CTA that makes an offer we cannot price; the way out is still there.
       await expect(modal.getByRole('button', { name: 'Upgrade to Pro' })).toHaveCount(0)
@@ -289,7 +289,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await expect(tools).toHaveCount(0)
       const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
       await expect(modal).toBeVisible()
-      const err = modal.locator('.ui-pro-plans-err')
+      const err = modal.locator('.pg-out')
       await expect(err).toBeVisible()
       // The sheet is its own scroll box, so "on the first screen" means inside
       // the sheet's visible box at scrollTop 0 — not merely inside the
@@ -300,8 +300,8 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       expect(box.top, 'the error block must start inside the sheet').toBeGreaterThanOrEqual(sheet.top)
       expect(box.bottom, `the error block must end inside the sheet on a ${h}px screen, without scrolling`).toBeLessThanOrEqual(sheet.bottom)
       // Both ways out are on that first screen too, whole.
-      for (const name of ['Try again', 'See all plans']) {
-        const b = modal.getByRole('button', { name })
+      for (const [role, name] of [['button', 'Try again'], ['link', 'See all plans']]) {
+        const b = modal.getByRole(role, { name })
         await expect(b).toBeVisible()
         const bb = await b.boundingBox()
         expect(bb.y + bb.height, `${name} must be whole without scrolling`).toBeLessThanOrEqual(sheet.bottom)
@@ -320,48 +320,43 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     const modal = await raiseWall(page)
 
     const ladder = resolvePlanLadder({ prices, currency: 'usd' })
-    const headline = cheapestPerMonth(ladder)
     const yearly = ladder.find((p) => p.id === 'yearly')
     const monthly = ladder.find((p) => p.id === 'monthly')
 
-    // Each purchasable row: per-month, total and cadence from the same module.
+    // Each purchasable cadence has a layer: per-month and total from the same module.
     for (const plan of [monthly, yearly]) {
-      const tile = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(tile).toContainText(formatMoney(plan.perMonth, plan.currency, { qualify: true }))
-      await expect(tile).toContainText(`${formatMoney(plan.total, plan.currency, { qualify: true })} ${plan.cadence}`)
+      const layer = modal.locator(`[data-layer="${plan.id}"]`)
+      await expect(layer.locator('.pg-amt')).toHaveText(formatMoney(plan.perMonth, plan.currency, { qualify: true }))
+      await expect(layer.locator('.pg-stops')).toContainText(formatMoney(plan.total, plan.currency, { qualify: true }))
     }
 
     // THE TRIAL IS ON EVERY CADENCE THAT CARRIES ONE — counted off the ladder,
-    // not assumed to be one. It is stated in the row's terms line, after the
-    // total, so it is read off the same line as the money.
+    // not assumed to be one. It is stated in the cadence's dated steps, beside
+    // the money.
     const trialPlans = ladder.filter((pl) => pl.purchasable && pl.trialDays > 0)
     expect(trialPlans.length, 'the ladder has no cadence with a trial — this check would pass vacuously').toBeGreaterThan(0)
-    await expect(modal.locator('.ui-pro-plan-total', { hasText: 'free trial' }), 'one row names a trial per cadence that carries one')
+    await expect(modal.locator('.pg-stops', { hasText: 'free trial' }), 'one set of steps names a trial per cadence that carries one')
       .toHaveCount(trialPlans.length)
     for (const plan of trialPlans) {
-      const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-total')).toContainText(`${formatMoney(plan.total, plan.currency, { qualify: true })} ${plan.cadence} · ${plan.trialDays}-day free trial`)
+      await expect(modal.locator(`[data-layer="${plan.id}"] .pg-stops`)).toContainText(`your ${plan.trialDays}-day free trial starts`)
     }
     // ...and a cadence that bills today says nothing about a trial.
     for (const plan of ladder.filter((pl) => pl.purchasable && !pl.trialDays)) {
-      const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
-      await expect(row.locator('.ui-pro-plan-total')).not.toContainText('free trial')
+      await expect(modal.locator(`[data-layer="${plan.id}"] .pg-stops`)).not.toContainText('free trial')
     }
 
     // The steps say the day money moves, with the real total, for whichever
-    // plan is selected — which is the cheapest per month, i.e. the headline.
-    const chosen = ladder.find((pl) => pl.id === headline.id)
-    if (chosen.trialDays > 0) {
-      // The free days end on day N and the charge lands the day after.
-      await expect(modal.locator('.ui-pro-steps')).toContainText(`Days 1 to ${chosen.trialDays}:`)
-      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays + 1}:`)
-    }
-    await expect(modal.locator('.ui-pro-steps')).toContainText(formatMoney(chosen.total, chosen.currency, { qualify: true }))
+    // plan is selected — which opens on the first cadence that carries a trial.
+    const chosen = trialPlans[0]
+    const shownSteps = modal.locator('.pg-ly:not(.is-off) .pg-stops')
+    await expect(shownSteps).toHaveCount(1)
+    await expect(shownSteps).toContainText(`your ${chosen.trialDays}-day free trial starts`)
+    await expect(shownSteps).toContainText(formatMoney(chosen.total, chosen.currency, { qualify: true }))
 
     // THE CTA NAMES THE TRIAL. It must be more obvious than
     // a line of small print, and the button is the last thing read before the
     // decision. A cadence with no trial must NOT say it.
-    const cta = modal.locator('.ui-pro-cta .btn').first()
+    const cta = modal.locator('.pg-go')
     await expect(cta).toHaveText(
       chosen.trialDays > 0 ? `Start your ${chosen.trialDays}-day free trial` : 'Upgrade to Pro',
     )
@@ -381,36 +376,24 @@ test.describe('flow 2 — the checkout return page', () => {
   const stub = (page, body) => page.route('**/api/checkout-status*', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }))
 
   for (const size of WIDTHS) {
-    test(`${size[0]}px: an active subscription is confirmed, with the ledger, the next step and a short reference`, async ({ browser }) => {
+    test(`${size[0]}px: an active subscription is confirmed, with the next step and a short reference`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a new subscriber back from Stripe (${size[0]}px)`)
       await signIn(page, { plan: 'pro' })
       await stub(page, { status: 'complete', mode: 'subscription', interval: 'monthly', subscriptionActive: true, customerEmail: 'pro.user@uil4b.test' })
       await go(page, '/checkout/return?session_id=cs_test_flow_audit')
 
-      // The return page is a centred column (`.co-return`).
-      const view = page.locator('.co-return')
+      // The return page is one centred column (`.ck-ret`).
+      const view = page.locator('.ck-ret')
       await expect(view.getByRole('heading', { level: 1 })).toContainText(/on UI L4B Pro/i)
       // No "a confirmation has been sent to …": whether Stripe emails a
       // receipt is a dashboard setting nobody here can see, so the page no
       // longer claims one was sent.
       await expect(view).not.toContainText(/confirmation has been sent/i)
-      // What changed is a ledger of Free -> Pro rows; the figures come from
-      // the plan config and each linked row is a real route.
-      const ledger = view.locator('.co-ledger')
-      await expect(ledger.locator('li')).toHaveCount(4)
-      await expect(ledger).toContainText('AI generations')
-      await expect(ledger).toContainText(String(AI_LIMITS.pro.daily))
-      await expect(ledger).toContainText(String(COLOUR_SYSTEMS.length))
-      // The Exports row is short (the extra export names follow it); the details label reads "Plan" once Pro is active.
-      await expect(ledger).toContainText('No “Made with UI L4B” line. Use Export in the top bar.')
-      await expect(view.locator('.co-details dt', { hasText: /^Plan$/ })).toHaveCount(1)
-      await expect(ledger.getByRole('link', { name: /Alt Text/ })).toHaveAttribute('href', '/create/alt-text')
-      // The details list names the account and the plan. The payment
-      // reference is quiet: the last 8 characters, never the whole session id.
-      await expect(view.locator('.co-details')).toContainText('pro.user@uil4b.test')
-      await expect(view.locator('.co-details')).toContainText(`Pro, billed ${BILLED_EVERY.monthly}`)
-      await expect(view.locator('.co-ref-code')).toHaveText('…ow_audit')
+      // The line under the heading is the status region and says the plan is live.
+      await expect(view.locator('.ck-rp[role="status"]')).toContainText('Your Pro subscription is active across the toolkit.')
+      // The payment reference is quiet: the last 8 characters, never the whole session id.
+      await expect(view.locator('.ck-ref code')).toHaveText('…ow_audit')
       await expect(view, 'the full Stripe session id must not be printed on the page').not.toContainText('cs_test_flow_audit')
       await expect(view.getByRole('link', { name: 'Start building' })).toHaveAttribute('href', '/projects')
       await expect(view.getByRole('link', { name: 'Manage subscription' })).toHaveAttribute('href', '/settings')
@@ -425,16 +408,14 @@ test.describe('flow 2 — the checkout return page', () => {
     await stub(page, { status: 'complete', mode: 'subscription', subscriptionActive: false, customerEmail: 'free.user@uil4b.test' })
     await go(page, '/checkout/return?session_id=cs_test_pending')
 
-    const view = page.locator('.co-return')
-    await expect(view.getByRole('heading', { level: 1 })).toHaveText('Payment received.')
-    await expect(view).toContainText(/still being attached/i)
+    const view = page.locator('.ck-ret')
+    await expect(view.getByRole('heading', { level: 1 })).toHaveText('Payment received')
+    await expect(view.locator('.ck-rp[role="status"]')).toContainText(/still being attached/i)
     await expect(view, 'must not claim an active subscription it cannot see').not.toContainText(/subscription is active|on UI L4B Pro/i)
-    // Settling shows what is arriving as plain rows, not links, and offers a re-check.
-    await expect(view.locator('.co-ledger a')).toHaveCount(0)
-    await expect(view.getByRole('button', { name: 'Check again' })).toBeVisible()
-    // Until Pro attaches the details label says what was paid for, not the plan the account is on.
-    await expect(view.locator('.co-details dt', { hasText: /^Paid for$/ })).toHaveCount(1)
-    await expect(view.locator('.co-details dt', { hasText: /^Plan$/ })).toHaveCount(0)
+    // The page keeps the reference so the buyer can quote it, and goes on asking
+    // the server by itself. It still offers the way on, but claims nothing.
+    await expect(view.locator('.ck-ref code')).toHaveText('…_pending')
+    await expect(view.getByRole('link', { name: 'Start building' })).toHaveAttribute('href', '/projects')
     await context.close()
   })
 
@@ -443,9 +424,10 @@ test.describe('flow 2 — the checkout return page', () => {
     watch(page, 'someone who landed on /checkout/return by hand')
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout/return')
-    const card = page.locator('.co-return')
+    const card = page.locator('.ck-ret')
     await expect(card.getByRole('heading', { level: 1 })).toContainText(/no payment attached/i)
-    await expect(card.locator('.checkout-spinner')).toHaveCount(0)
+    await expect(card.locator('[aria-busy="true"]')).toHaveCount(0)
+    await expect(card).not.toContainText('Confirming your checkout')
     // The way forward goes where a plan is chosen. It used to be "Try again"
     // → /checkout, and /checkout without ?plan says "Invalid checkout
     // selection — choose Monthly or Yearly from Plans": a retry that landed
@@ -456,20 +438,21 @@ test.describe('flow 2 — the checkout return page', () => {
     await context.close()
   })
 
-  test('a session the server cannot confirm offers a re-check and support, and keeps the full id off the page', async ({ browser }) => {
+  test('a session the server cannot confirm says so, offers Settings, Plans and a report link, and keeps the full id off the page', async ({ browser }) => {
     const { context, page } = await open(browser, WIDTHS[0])
     watch(page, 'someone whose payment could not be confirmed')
     await signIn(page, { plan: 'free' })
     await page.route('**/api/checkout-status*', (r) => r.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"boom"}' }))
     await go(page, '/checkout/return?session_id=cs_test_unconfirmed')
-    const view = page.locator('.co-return')
+    const view = page.locator('.ck-ret')
     await expect(view.getByRole('heading', { level: 1 })).toContainText(/couldn.t confirm/i)
-    await expect(view.getByRole('button', { name: 'Check again' })).toBeVisible()
     await expect(view.getByRole('link', { name: 'Back to Plans' })).toHaveAttribute('href', '/plans')
-    // The support link carries the full reference so support can find the
-    // payment; the page itself only prints the tail.
-    await expect(view.getByRole('link', { name: 'Email support' })).toHaveAttribute('href', /^mailto:support@uil4b\.com\?.*cs_test_unconfirmed/)
-    await expect(view.locator('.co-ref-code')).toHaveText('…onfirmed')
+    await expect(view.getByRole('link', { name: 'Back to settings' })).toHaveAttribute('href', '/settings')
+    // Someone who may have paid is told to look before paying again, and can report it.
+    await expect(view).toContainText('so you don’t pay twice')
+    await expect(view.getByRole('button', { name: 'Report a problem' })).toBeVisible()
+    // The page only prints the tail of the reference.
+    await expect(view.locator('.ck-ref code')).toHaveText('…onfirmed')
     await expect(view).not.toContainText('cs_test_unconfirmed')
     await context.close()
   })
@@ -682,16 +665,21 @@ test.describe('flow 5 — settings: name, theme and the delete confirmation', ()
 // FLOW 6 — onboarding: by keyboard, and the resume it promises
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('flow 6 — onboarding, by keyboard, and the stashed destination', () => {
-  test('Tab reaches the first start, Enter opens that tool, and the account is marked done', async ({ browser }) => {
+  test('Tab reaches the other starts, Enter opens that tool, and the account is marked done', async ({ browser }) => {
     const { context, page } = await open(browser, WIDTHS[0])
     watch(page, 'a brand-new account on a phone, keyboard only')
     await signIn(page, { plan: 'free', projects: 0, onboarded: false })
     await go(page, '/onboarding')
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('What do you want to make first?')
-    await page.keyboard.press('Tab')
-    expect(await focused(page)).toMatch(new RegExp(FIRST_WINS[0].label))
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Start with your brand colour')
+    // The start links come after the colour field, the swatches and the pill: a bounded run of Tabs.
+    let landed = ''
+    for (let i = 0; i < 40 && !new RegExp(OTHER_STARTS[0].label).test(landed); i++) {
+      await page.keyboard.press('Tab')
+      landed = await focused(page)
+    }
+    expect(landed, 'Tab never reached the first start').toMatch(new RegExp(OTHER_STARTS[0].label))
     await page.keyboard.press('Enter')
-    await expect(page).toHaveURL(new RegExp(`${FIRST_WINS[0].route}$`))
+    await expect(page).toHaveURL(new RegExp(`${OTHER_STARTS[0].route}$`))
     expect(await page.evaluate(() => localStorage.getItem('vs-onboarded'))).toBe('1')
     await context.close()
   })
@@ -705,7 +693,7 @@ test.describe('flow 6 — onboarding, by keyboard, and the stashed destination',
     await signIn(page, { plan: 'free', projects: 0, onboarded: false })
     await page.addInitScript(() => { try { sessionStorage.setItem('vs-resume-after-onboarding', '/plans') } catch { /* ignore */ } })
     await go(page, '/onboarding')
-    await page.getByRole('button', { name: /Not now/ }).click()
+    await page.getByRole('link', { name: /Not now/ }).click()
     await expect(page).toHaveURL(/\/plans$/)
     expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')), 'the stash is consumed, not left to fire again').toBeNull()
     await context.close()

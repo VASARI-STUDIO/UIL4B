@@ -1,7 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, useCallback, Suspense } from 'react'
+import { lazyRoute } from '../utils/lazyRoute'
 import { useAuth } from './AuthContext'
-import LoginPopup from '../components/LoginPopup'
 import { isLocalPath } from '../utils/localPath'
+
+// The popup, its stylesheet and its artwork load on demand, not with the first
+// paint, and are fetched once the page is idle so the first open does not wait.
+const loadPopup = () => import('../components/LoginPopup')
+const LoginPopup = lazyRoute(loadPopup)
 
 // Single-click sign-in, app-wide. Any feature can call
 //   const { requireLogin } = useLoginPrompt()
@@ -56,6 +61,15 @@ export function LoginPromptProvider({ children }) {
   const promptIdRef = useRef(0)
   const userRef = useRef(user)
   useEffect(() => { userRef.current = user }, [user])
+  useEffect(() => {
+    const warm = () => { loadPopup().catch(() => {}) }
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 4000 })
+      return () => window.cancelIdleCallback?.(id)
+    }
+    const t = setTimeout(warm, 2000)
+    return () => clearTimeout(t)
+  }, [])
 
   const finish = useCallback((result) => {
     const resolve = resolverRef.current
@@ -134,6 +148,9 @@ export function LoginPromptProvider({ children }) {
         // underneath — on the four highest-traffic paths into the product.
         // Callers that pass nothing still get sign-in, so nothing else moves.
         signup: !!opts.signup,
+        // Which picture the popup shows beside the form (export, save, switch);
+        // anything else falls back to the popup's own default.
+        gate: typeof opts.gate === 'string' ? opts.gate : undefined,
       })
     })
     pendingPromiseRef.current = promise
@@ -148,6 +165,7 @@ export function LoginPromptProvider({ children }) {
     <LoginPromptContext.Provider value={{ requireLogin, openLogin }}>
       {children}
       {prompt && (
+        <Suspense fallback={null}>
         <LoginPopup
           key={prompt.id}
           reason={prompt.reason}
@@ -158,9 +176,11 @@ export function LoginPromptProvider({ children }) {
           lockEmail={prompt.lockEmail}
           passwordOnly={prompt.passwordOnly}
           signup={prompt.signup}
+          gate={prompt.gate}
           onSuccess={(u) => finish(u || userRef.current || null)}
           onDismiss={() => finish(null)}
         />
+        </Suspense>
       )}
     </LoginPromptContext.Provider>
   )

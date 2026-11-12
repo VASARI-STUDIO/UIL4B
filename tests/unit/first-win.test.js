@@ -122,7 +122,10 @@ test('declining is counted, and is the only non-card outcome', () => {
 
 test('Onboarding renders the first-win step and no pricing table', () => {
   const src = stripComments(read('src/pages/Onboarding.jsx'))
-  assert.match(src, /FIRST_WINS\.map/, 'the cards must be rendered from the one table')
+  // The palette start is the Save step of the kit builder now, so the links under the builder are
+  // the other starts, drawn from the same table.
+  assert.match(src, /FIRST_WINS\.filter\(\(w\) => w\.id !== 'palette'\)/, 'the links must be drawn from the one table, without the palette start')
+  assert.match(src, /starts\.map\(/, 'the other starts must be rendered')
   assert.match(src, /chooseFirstWin/)
   // The step that asked for money before anything had been made is gone.
   assert.doesNotMatch(src, /onb-tiers|onb-billing|useProPrice|PRO_FEATURES/,

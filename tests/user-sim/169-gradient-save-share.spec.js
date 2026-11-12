@@ -58,7 +58,7 @@
 //   gradient.css `.grd .grd-copy-size { visibility: hidden }` -> `display: none`
 //       -> "the Copy button keeps one width ..." and the height test
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { go, signIn, watch, continueWithEmail } from './helpers.js'
 
 const ROUTE = '/create/gradient'
 // Two stops, linear, 135deg: the hand-off the tool decodes into its starting gradient.
@@ -83,6 +83,7 @@ async function logInAtTheGate(page) {
   await expect(page.locator('#ui-login-title')).toBeVisible()
   await page.getByRole('button', { name: /Have an account?/ }).click()
   await page.locator('#ui-login-email').fill('someone@uil4b.test')
+  await continueWithEmail(page)
   await page.locator('#ui-login-password').fill('a-long-password')
   await page.locator('form.auth-form button[type="submit"]').click()
   await expect(page.locator('#ui-login-title')).toHaveCount(0)
@@ -1314,6 +1315,7 @@ async function logInInThePrompt(page) {
   const toggle = page.getByRole('button', { name: /Have an account?/ })
   if (await toggle.count()) await toggle.click()
   await page.locator('#ui-login-email').fill('someone@uil4b.test')
+  await continueWithEmail(page)
   await page.locator('#ui-login-password').fill('a-long-password')
   await page.locator('form.auth-form button[type="submit"]').click()
   await expect(page.locator('#ui-login-title')).toHaveCount(0)
