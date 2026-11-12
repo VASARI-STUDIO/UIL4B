@@ -18,7 +18,7 @@ export default function LinkExpired() {
   // Held back until the session is known, so the wrong choice is never shown.
   const primary = loading ? null : user
     ? <EdgePill to="/settings">Change your password in Settings</EdgePill>
-    : <EdgePill onClick={() => openLogin({ reset: true })}>Reset your password</EdgePill>
+    : <EdgePill onClick={() => openLogin({ reset: true, from: '/' })}>Reset your password</EdgePill>
 
   return (
     <EdgeScreen

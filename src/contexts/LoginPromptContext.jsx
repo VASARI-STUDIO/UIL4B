@@ -20,8 +20,9 @@ const LoginPromptContext = createContext(null)
 // from.
 const RESUME_KEY = 'vs-resume-after-onboarding'
 // Paths that are not destinations: /home is already the post-onboarding default,
-// /login is where this starts, /onboarding is the flow itself, / redirects.
-const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding'])
+// /login is where this starts, /onboarding is the flow itself, / redirects,
+// /reset-password carries a one-time code and is a dead end once it is used.
+const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding', '/reset-password'])
 
 export function stashResumeTarget(explicitFrom) {
   let target = explicitFrom

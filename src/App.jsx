@@ -37,6 +37,7 @@ import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
 // download waits for the recovery reload instead of crashing the route.
 import { lazyRoute as lazy } from './utils/lazyRoute'
+import { resolveRouteTitle } from './utils/pageTitle'
 
 // Static imports — small or always-visited pages (instant load)
 //
@@ -351,7 +352,7 @@ function AppInner({ toast }) {
     const description = missing
       ? 'That page does not exist. Browse the tools, or head back to the homepage.'
       : PAGE_DESCRIPTIONS[metaPath] || DEFAULT_DESCRIPTION
-    document.title = title
+    document.title = resolveRouteTitle(title)
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc) {
       metaDesc.setAttribute('content', description)

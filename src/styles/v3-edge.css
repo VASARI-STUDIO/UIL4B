@@ -366,9 +366,9 @@
   .ed-acts { order: 4; flex-direction: column; align-items: stretch; width: 100%; margin-top: 32px; gap: 8px; }
   .ed-acts .ed-pill { min-height: 52px; width: 100%; }
   .ed-acts .ui-pill-out { min-height: 44px; width: 100%; }
-  .ed-status { order: 5; margin-top: 16px; }
+  .ed-status { order: 6; margin-top: 16px; }
   .ed-status[data-waiting] { margin-top: 24px; }
-  .ed-trail { order: 6; flex-direction: column; align-items: center; margin-top: 24px; }
+  .ed-trail { order: 5; flex-direction: column; align-items: center; margin-top: 24px; }
   .ed-num {
     order: 7;
     width: 100%;

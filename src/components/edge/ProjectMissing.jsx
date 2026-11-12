@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useProject } from '../../contexts/ProjectContext'
 import EdgeScreen, { EdgeBlock, EdgePill } from './EdgeScreen'
 import { projectRows } from './edgeData'
+import { holdPageTitle } from '../../utils/pageTitle'
 
 // A project link that cannot open for a signed-in person. It stays at the same
 // address, so the link in the bar is still the one they were sent. The words are
@@ -11,11 +12,7 @@ export default function ProjectMissing() {
   const { projects } = useProject()
   const rows = useMemo(() => projectRows(projects), [projects])
 
-  useEffect(() => {
-    const before = document.title
-    document.title = 'UI L4B | Project not found'
-    return () => { document.title = before }
-  }, [])
+  useEffect(() => holdPageTitle('UI L4B | Project not found'), [])
 
   return (
     <EdgeScreen
@@ -23,7 +20,7 @@ export default function ProjectMissing() {
       soft
       title="That project isn’t in your account"
       body="It may have been deleted, here or on another device."
-      safe="Your other projects are saved."
+      safe={rows.length ? 'Your other projects are saved.' : undefined}
       actions={<EdgePill to="/projects" go>Open your workspace</EdgePill>}
       trail={[
         { to: '/', label: 'Back to the homepage' },

@@ -49,7 +49,8 @@ export function EdgeOutline({ to, onClick, children, ...rest }) {
 /** A path that may wrap at its slashes and hyphens on a narrow screen. Anything
  *  passed as children (the full stop) stays glued to the path's last piece. */
 export function EdgePath({ path, children }) {
-  const parts = String(path).split(/(?<=[/-])/)
+  // Break after each slash or hyphen (no lookbehind: older Safari throws on it).
+  const parts = String(path).match(/[^/-]*[/-]?/g).filter(Boolean)
   return (
     <span className="ed-nb">
       <code className="ed-path">

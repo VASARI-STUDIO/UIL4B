@@ -65,6 +65,7 @@ function ErrorCard({ outer, load }) {
   if (!online && backExpired) setBackExpired(false)
 
   const offline = !online
+  const onHome = ['/', '/home'].includes(pathname.replace(/\/+$/, '') || '/')
   const backOnline = online && wasOffline
 
   useEffect(() => {
@@ -97,8 +98,9 @@ function ErrorCard({ outer, load }) {
             // the crash would stay, so there it loads the document afresh.
             // Offline the homepage stays: it is in the entry bundle, so the
             // client-side link needs no download. The reload and the help
-            // centre need a connection.
-            { to: '/', label: 'Back to the homepage', reload: !offline && pathname === '/' },
+            // centre need a connection. Offline on the homepage itself the link
+            // would lead to the page already shown, so it is left out.
+            ...(offline && onHome ? [] : [{ to: '/', label: 'Back to the homepage', reload: !offline && pathname === '/' }]),
             ...(offline ? [] : [{ to: '/learn/help', label: 'Help centre' }]),
           ]}
         />
