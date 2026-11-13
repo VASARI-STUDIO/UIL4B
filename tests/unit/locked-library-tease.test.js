@@ -288,7 +288,8 @@ test('the CTA number is derived from the data, never written as a literal', () =
   for (const kind of ['palettes', 'gradients']) {
     for (const variant of ['unknown', 'account', 'more', 'pro-only']) {
       const { heading, body } = libraryGateCopy(kind, { ...given, variant })
-      const numbers = (heading + ' ' + body).match(/\d[\d,]*/g) || []
+      // Thousands groups only, so a comma that ends a clause ("708, and") is not read as part of the number.
+      const numbers = (heading + ' ' + body).match(/\d+(?:,\d{3})*/g) || []
       assert.ok(numbers.length > 0, `${kind}/${variant}: the gate prints no count`)
       for (const num of numbers) {
         assert.ok(['7,311', '8,419', '9,127', '708'].includes(num) || num === LIBRARY_TOTALS[kind].toLocaleString('en-AU'),
