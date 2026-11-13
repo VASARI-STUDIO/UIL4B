@@ -17,6 +17,7 @@ import { LIBRARY_RULES } from '../utils/libraryRules'
 import { matchesGradientFacets } from '../utils/gradientMoods'
 import { countGallery, gateFor, gradientPublicMatch } from '../utils/galleryCounts'
 import { filterNoun } from '../utils/galleryFilterNoun'
+import useResultsScroll from '../hooks/useResultsScroll'
 import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
@@ -246,6 +247,11 @@ export default function GradientGallery({ toast }) {
     query: rawQuery,
   }
   const nounFor = (count) => filterNoun('gradients', nounFilters, count)
+
+  // After a filter, a chip or a search changes the results, bring the heading
+  // back below the sticky toolbar if the shorter page left it hidden.
+  const results = useRef(null)
+  useResultsScroll(results, [tag, types, query])
   return (
     <div ref={root} className="sec lib-surface lib-v3 grg-wrap">
       {/* NO `description`: the sentence here ran
@@ -406,7 +412,7 @@ export default function GradientGallery({ toast }) {
           effect was that the one heading answering "what am I looking at"
           sat in no landmark at all. Nothing here is new copy — the same
           head, the same empty state, one element moved. */}
-      <section aria-labelledby="grg-grid-heading">
+      <section ref={results} className="lib-results" aria-labelledby="grg-grid-heading">
         <DiscoverResultHead
           eyebrow="Curated collection"
           title="Gradients worth building with"

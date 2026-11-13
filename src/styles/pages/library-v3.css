@@ -699,3 +699,9 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] .geg[data-reveal] :i
    single-row V3 bar) and a gap. This replaces, for these surfaces, the global
    rule that left the bar out. */
 .lib-surface.lib-v3[class] [id]{scroll-margin-top:calc(var(--nav-clear) + 8px + var(--lib-toolbar-h,52px) + 16px)}
+
+/* The results never shrink below the space under the nav and the bar. A filter that
+   leaves two rows would otherwise shorten the page, and the browser would clamp the
+   scroll position so the heading ends up under the sticky bar. The reserved height
+   keeps the position valid (the move itself is hooks/useResultsScroll.js). */
+.lib-surface.lib-v3[class] .lib-results{min-height:calc(100dvh - var(--nav-clear) - var(--lib-toolbar-h,52px))}
