@@ -39,6 +39,7 @@ const THEMES = Object.freeze({
   '24-standards': () => import('./exportThemes/themes/24-standards/index.js'),
   '25-label': () => import('./exportThemes/themes/25-label/index.js'),
   '27-swissfield': () => import('./exportThemes/themes/27-swissfield/index.js'),
+  '30-fluted': () => import('./exportThemes/themes/30-fluted/index.js'),
   '32-dieline': () => import('./exportThemes/themes/32-dieline/index.js'),
 })
 
