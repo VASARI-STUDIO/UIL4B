@@ -92,7 +92,8 @@ test.describe('Unsaved work is put aside, not lost', () => {
     await go(page, '/projects/proj-b')
     const before = await settledWorking(page, WORK)
 
-    await page.getByRole('button', { name: 'Continue building' }).first().click()
+    // V3 ProjectDetail renders the primary action as a "Continue: ..." link that loads the project.
+    await page.getByRole('link', { name: /^Continue/ }).first().click()
     await expect(page).toHaveURL(/\/create\//)
 
     expect((await readJson(page, PARKED))?.design, 'A\'s changes are in the slot').toEqual(changedA)

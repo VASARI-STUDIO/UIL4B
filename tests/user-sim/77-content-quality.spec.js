@@ -118,6 +118,7 @@ test.describe('the Learn article shell', () => {
           h1: left('.lart-head h1'),
           prose: left('.lart-prose p'),
           h1Width: Math.round(document.querySelector('.lart-head h1').getBoundingClientRect().width),
+          h1PadL: parseFloat(getComputedStyle(document.querySelector('.lart-head h1')).paddingLeft),
           proseWidth: Math.round(document.querySelector('.lart-prose').getBoundingClientRect().width),
         }
       })
@@ -130,8 +131,12 @@ test.describe('the Learn article shell', () => {
 
       expect(edges.h1, `h1 vs prose left edge at ${width}`).toBeCloseTo(edges.prose, 0)
       expect(edges.crumb, `crumb vs prose left edge at ${width}`).toBeCloseTo(edges.prose, 0)
-      // And the title column is the full measure, not a padded remnant of it.
-      expect(edges.h1Width, `h1 column at ${width}`).toBeGreaterThan(edges.proseWidth - 2)
+      // The V3 title is a display headline held to 15ch on purpose (balanced, three or four lines), so it is
+      // no longer the full measure. What must still hold: it sits inside the measure, has real width, and
+      // gets its narrowness from max-width, not from padding that would push its edge off the prose.
+      expect(edges.h1Width, `h1 column at ${width}`).toBeGreaterThan(300)
+      expect(edges.h1Width, `h1 column at ${width} runs past the prose measure`).toBeLessThanOrEqual(edges.proseWidth + 2)
+      expect(edges.h1PadL, `h1 is padded in from the prose edge at ${width}`).toBe(0)
     }
   })
 
@@ -146,6 +151,10 @@ test.describe('the Learn article shell', () => {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/learn/colour-contrast')
       await expectRendered(page)
+      // V3: the formula and its aside sit behind the "#formula" disclosure, closed on load.
+      const disclosure = page.locator('#formula .lcc-disc')
+      if ((await disclosure.getAttribute('aria-expanded')) !== 'true') await disclosure.click()
+      await expect(disclosure).toHaveAttribute('aria-expanded', 'true')
       const measured = await page.evaluate((sels) => {
         const out = {}
         for (const s of sels) {

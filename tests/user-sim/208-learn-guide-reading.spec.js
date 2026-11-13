@@ -4,23 +4,23 @@
 // What each group guards, and why only a browser can say:
 //
 //   TOP          On a phone or tablet the body starts on the first screen: the
-//                contents are one closed 44px row, not a list that fills it. From
-//                1080 the rail replaces the row, and its top lines up with the
-//                breadcrumb. Exactly one of the two is ever on screen.
+//                contents are one closed 44px row, not a list that fills it (on
+//                the colour-contrast guide the specimen leads instead). From
+//                1080 the contents card (the inline list in the colour-contrast
+//                hero) replaces the row, on the first screen.
 //   CHOOSING     Picking a section from the phone contents folds the row away,
 //                puts focus on that section's h2 and leaves the heading in view
 //                once the scroll has stopped. The row collapsing shifts the page
 //                while the browser is already scrolling, so the landing height
 //                can only be measured after the scroll has settled.
-//   MARKER       One contents link is lit at every moment, the first on a fresh
-//                load, the right one after a jump, the last after End and the
-//                first again after Home. The lit state is read off the DOM and
-//                off the painted colours: an attribute nobody can see is not lit.
+//   CONTENTS     The contents list the guide's sections in page order, and every
+//                link clears 4.5:1 in both themes. The redesign dropped the
+//                scroll-following marker, so no link is "lit".
 //   END          After the prose: the tool button, then "Keep reading", then the
 //                Sources disclosure. The next guide comes from a hand-written
 //                table below, never from the function that computes it.
-//   COLOUR       The filled button, the Sources links, the crumb, the meta link
-//                and the rail clear their contrast floor in both themes.
+//   COLOUR       The filled button, the Sources links, the crumb and the
+//                Keep reading labels clear their contrast floor in both themes.
 //   FIT          No sideways scroll at 360, 390, 768 and 1440, light and dark,
 //                with every disclosure open. No meta line starts on a separator.
 //   CRUMB        The topic in the breadcrumb takes the reader to that topic's
@@ -37,6 +37,12 @@ const TABLET = { width: 768, height: 1024 }
 const DESKTOP = { width: 1440, height: 900 }
 // The rail replaces the phone contents from this width.
 const RAIL_FROM = 1080
+// The colour-contrast guide opens on a live specimen, with its contents inline
+// in the hero instead of a card beside the prose.
+const SPECIMEN = 'colour-contrast'
+const tocSel = (article) => (article.slug === SPECIMEN ? 'nav.lart-toc-inline' : 'nav.lart-toc')
+// The h1 the hero shows: the colour-contrast guide carries its own hero line.
+const HERO_TITLE = { 'colour-contrast': 'How much contrast your text needs, and how to check it.' }
 
 // Hand-written, not derived: what the "Keep reading" row must point at.
 // Accessibility and Psychology each hold one guide, so they have no neighbour
@@ -103,21 +109,6 @@ async function settled(page) {
   expect(r.ok, 'the page never stopped scrolling').toBe(true)
   return r.y
 }
-
-/** The ids of every contents link that is lit (rail markup; hidden below 1080 but still the state). */
-const litIds = (page) => page.evaluate(() => [...document.querySelectorAll('.lart-toc a[data-active]')]
-  .map((a) => a.getAttribute('href').slice(1)))
-
-/** Watch the whole session: record any moment when the rail does not hold exactly one lit link. */
-const watchLit = (page) => page.evaluate(() => {
-  const rail = document.querySelector('.lart-toc')
-  window.__litBad = []
-  const check = () => {
-    const n = rail.querySelectorAll('a[data-active]').length
-    if (n !== 1) window.__litBad.push(n)
-  }
-  new MutationObserver(check).observe(rail, { subtree: true, attributes: true, attributeFilter: ['data-active'], childList: true })
-})
 
 /** Two frames: lets a scroll listener's frame callback and the state it sets land. */
 const frames = (page, n = 2) => page.evaluate((count) => new Promise((resolve) => {
@@ -186,11 +177,18 @@ test.describe('the top of a guide', () => {
           expect(summary.height, `${vp.width}: contents row height`).toBeGreaterThanOrEqual(44)
           await expect(details.locator('summary')).toContainText(`${article.sections.length} sections`)
 
-          // The first section's heading starts on the first screen, below the row.
-          const h2 = await page.locator('.lart-prose section h2').first().boundingBox()
-          expect(h2.y, `${vp.width}: first section heading starts at ${h2.y}px, below the ${vp.height}px fold`)
-            .toBeLessThan(vp.height)
-          expect(h2.y, `${vp.width}: heading overlaps the contents row`).toBeGreaterThanOrEqual(summary.y + summary.height)
+          if (article.slug === SPECIMEN) {
+            // The colour-contrast guide leads with its live specimen, not the prose.
+            const spec = await page.locator('.lcc-spec').boundingBox()
+            expect(spec.y, `${vp.width}: the specimen starts at ${spec.y}px, below the ${vp.height}px fold`)
+              .toBeLessThan(vp.height)
+          } else {
+            // The first section's heading starts on the first screen, below the row.
+            const h2 = await page.locator('.lart-prose section h2').first().boundingBox()
+            expect(h2.y, `${vp.width}: first section heading starts at ${h2.y}px, below the ${vp.height}px fold`)
+              .toBeLessThan(vp.height)
+            expect(h2.y, `${vp.width}: heading overlaps the contents row`).toBeGreaterThanOrEqual(summary.y + summary.height)
+          }
 
           // The rail is not on screen; exactly one contents list is.
           await expect(page.locator('nav.lart-toc')).toBeHidden()
@@ -224,15 +222,17 @@ test.describe('the top of a guide', () => {
       }
     })
 
-    test(`${article.slug}: at 1440 the rail starts level with the breadcrumb and is the only contents`, async ({ browser }) => {
+    test(`${article.slug}: at 1440 the contents show on the first screen, inside the guide, with every section`, async ({ browser }) => {
       const { ctx, page } = await open(browser, article, DESKTOP)
       try {
-        await expect(page.locator('nav.lart-toc')).toBeVisible()
-        await expect(page.locator('nav.lart-toc-nav')).toBeHidden()
-        const rail = await page.locator('.lart-toc').boundingBox()
-        const crumb = await page.locator('.lart-crumb').boundingBox()
-        expect(Math.abs(rail.y - crumb.y), `rail top ${rail.y} vs breadcrumb top ${crumb.y}`).toBeLessThanOrEqual(8)
-        await expect(page.locator('.lart-toc a')).toHaveCount(article.sections.length)
+        const toc = page.locator(tocSel(article))
+        await expect(toc).toBeVisible()
+        const box = await toc.boundingBox()
+        // The rail beside the body can start level with the hero, a little above the crumb, so the floor is the guide's own top.
+        const guide = await page.locator('.lart').first().boundingBox()
+        expect(box.y, `contents top ${box.y} is above the guide top ${guide.y}`).toBeGreaterThanOrEqual(guide.y)
+        expect(box.y, `contents top ${box.y} is below the ${DESKTOP.height}px fold`).toBeLessThan(DESKTOP.height)
+        await expect(toc.locator('a')).toHaveCount(article.sections.length)
       } finally {
         await ctx.close()
       }
@@ -245,7 +245,7 @@ test.describe('the top of a guide', () => {
         await expect(page.locator('.lart-crumb a').last()).toHaveText(article.topic)
         await expect(page.locator('.lart [aria-current]')).toHaveCount(0)
         await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText(article.title)
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(HERO_TITLE[article.slug] ?? article.title)
       } finally {
         await ctx.close()
       }
@@ -253,7 +253,7 @@ test.describe('the top of a guide', () => {
   }
 
   test('the rail and the phone contents swap at 1080 and never show together', async ({ browser }) => {
-    const article = LEARN_ARTICLES[0]
+    const article = LEARN_ARTICLES.find((a) => a.slug !== SPECIMEN)
     for (const width of [RAIL_FROM - 1, RAIL_FROM]) {
       const { ctx, page } = await open(browser, article, { width, height: 900 })
       try {
@@ -303,8 +303,6 @@ test.describe('choosing a section from the phone contents', () => {
             // remainder of the nav height lets it land at 87.94, so 87 is the floor.
             expect(h2.y, `${vp.width} ${id} ("${title}"): heading lands ${h2.y}px from the top`).toBeGreaterThanOrEqual(87)
             expect(h2.y, `${vp.width} ${id} ("${title}"): heading lands ${h2.y}px from the top`).toBeLessThanOrEqual(140)
-            // The heading the reader chose is the one the contents say they are in.
-            await expect.poll(() => litIds(page), { message: `${vp.width} ${id}: marker did not follow the choice` }).toEqual([id])
           }
         } finally {
           await ctx.close()
@@ -315,97 +313,33 @@ test.describe('choosing a section from the phone contents', () => {
 })
 
 // ───────────────────────────────────────────────────────────────────────────
-test.describe('the lit contents link', () => {
+test.describe('the contents list', () => {
   for (const article of LEARN_ARTICLES) {
-    const ids = article.sections.map((s) => s.id)
-    for (const vp of [PHONE, DESKTOP]) {
-      test(`${article.slug} at ${vp.width}: one lit link always, first on load, last after End, first after Home`, async ({ browser }) => {
-        test.setTimeout(120_000)
-        const { ctx, page } = await open(browser, article, vp)
-        try {
-          // Fresh load.
-          expect(await litIds(page), 'nothing or several lit on a fresh load').toEqual([ids[0]])
-          await watchLit(page)
+    test(`${article.slug}: the contents link every section, in page order`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, article, DESKTOP)
+      try {
+        const hrefs = await page.locator(`${tocSel(article)} a`).evaluateAll((as) => as.map((a) => a.getAttribute('href')))
+        expect(hrefs).toEqual(article.sections.map((s) => `#${s.id}`))
+        const domOrder = await page.evaluate((ids) => ids.map((id) => document.getElementById(id))
+          .every((el, i, all) => el && (i === 0 || !!(all[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))),
+        article.sections.map((s) => s.id))
+        expect(domOrder, 'the sections are not in the page in contents order').toBe(true)
+      } finally {
+        await ctx.close()
+      }
+    })
 
-          // A downward sweep: one lit link at every stop, never going backwards.
-          const total = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)
-          expect(total, 'the guide does not scroll').toBeGreaterThan(vp.height)
-          let prev = 0
-          for (let y = 0; y <= total; y += 240) {
-            await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), y)
-            await frames(page)
-            const lit = await litIds(page)
-            expect(lit, `scrollY ${y}: lit links`).toHaveLength(1)
-            const at = ids.indexOf(lit[0])
-            expect(at, `scrollY ${y}: lit link is not one of this guide's sections`).toBeGreaterThanOrEqual(0)
-            expect(at, `scrollY ${y}: the marker went back from ${ids[prev]} to ${lit[0]}`).toBeGreaterThanOrEqual(prev)
-            prev = at
-          }
-
-          // A contents jump lights exactly the section it lands on.
-          for (let i = 0; i < ids.length; i += 1) {
-            const landed = await page.evaluate((id) => {
-              const el = document.getElementById(id)
-              el.scrollIntoView({ block: 'start', behavior: 'instant' })
-              return { top: el.getBoundingClientRect().top, margin: parseFloat(getComputedStyle(el).scrollMarginTop) }
-            }, ids[i])
-            expect(Math.abs(landed.top - landed.margin), `${ids[i]}: could not be brought to its landing line`).toBeLessThan(2)
-            await frames(page)
-            expect(await litIds(page), `jumped to ${ids[i]}`).toEqual([ids[i]])
-          }
-
-          // End, then Home.
-          await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
-          await frames(page)
-          await page.keyboard.press('End')
-          // On a loaded runner the smooth scroll can start after settled() has
-          // already seen twelve still frames at the top, so wait for the page to
-          // arrive before waiting for it to stop.
-          // The guide can still grow while that scroll runs (a late image or
-          // font), so a scroll aimed at the old bottom stops short of the new
-          // one. Once it has stopped short, End is pressed again, as a reader
-          // would.
-          let lastY = -1
-          await expect.poll(async () => {
-            const at = await page.evaluate(() => ({ y: scrollY, bottom: Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2 }))
-            if (!at.bottom && at.y === lastY) await page.keyboard.press('End')
-            lastY = at.y
-            return at.bottom
-          }, { message: 'End did not reach the bottom', timeout: 15_000 }).toBe(true)
-          await settled(page)
-          await expect.poll(() => litIds(page), { message: 'after End' }).toEqual([ids.at(-1)])
-
-          await page.keyboard.press('Home')
-          await expect.poll(() => page.evaluate(() => scrollY), { message: 'Home did not reach the top', timeout: 10_000 }).toBe(0)
-          await settled(page)
-          await expect.poll(() => litIds(page), { message: 'after Home' }).toEqual([ids[0]])
-
-          const bad = await page.evaluate(() => window.__litBad)
-          expect(bad, 'at some moment the rail held no lit link or more than one').toEqual([])
-        } finally {
-          await ctx.close()
-        }
-      })
-    }
-
-    test(`${article.slug}: the lit link looks lit, in light and dark`, async ({ browser }) => {
+    test(`${article.slug}: every contents link clears 4.5:1, in light and dark`, async ({ browser }) => {
       for (const theme of ['light', 'dark']) {
         const { ctx, page } = await open(browser, article, DESKTOP, { theme })
         try {
-          const read = (sel) => page.locator(sel).first().evaluate((a) => {
-            const cs = getComputedStyle(a)
-            return { color: cs.color, border: cs.borderLeftColor, weight: cs.fontWeight }
-          })
-          const lit = await read('.lart-toc a[data-active]')
-          const quiet = await read('.lart-toc a:not([data-active])')
-          expect(lit.color, `${theme}: lit link has the colour of an unlit one`).not.toBe(quiet.color)
-          expect(lit.border, `${theme}: lit link has no marker rule`).not.toBe(quiet.border)
-          expect(Number(lit.weight), `${theme}: lit link is no heavier`).toBeGreaterThan(Number(quiet.weight))
-          // And each state clears 4.5:1 on the page ground.
-          const a = await contrast(page, '.lart-toc a[data-active]')
-          const b = await contrast(page, '.lart-toc a:not([data-active])')
-          expect(a.ratio, `${theme}: lit link contrast`).toBeGreaterThanOrEqual(4.5)
-          expect(b.ratio, `${theme}: unlit link contrast`).toBeGreaterThanOrEqual(4.5)
+          const sel = `${tocSel(article)} a`
+          const n = await page.locator(sel).count()
+          expect(n, `${theme}: no contents links`).toBe(article.sections.length)
+          for (let i = 0; i < n; i += 1) {
+            const r = await contrast(page, sel, { nth: i })
+            expect(r.ratio, `${theme}: contents link ${i} is ${r.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
+          }
         } finally {
           await ctx.close()
         }
@@ -432,8 +366,15 @@ test.describe('the end of a guide', () => {
 
           // The tool.
           const toolBtn = page.locator('.lart-next-go')
-          await expect(toolBtn).toHaveAttribute('href', article.toolTo)
-          await expect(toolBtn).toContainText(`Open the ${article.toolLabel}`)
+          if (article.slug === SPECIMEN) {
+            // The specimen hands its live pair to the checker.
+            const href = await toolBtn.getAttribute('href')
+            expect(href.startsWith(`${article.toolTo}?`), `tool link ${href}`).toBe(true)
+            expect(href.slice(article.toolTo.length), `tool link ${href}`).toMatch(/^\?fg=[0-9A-Fa-f]{6}&bg=FFFFFF$/)
+          } else {
+            await expect(toolBtn).toHaveAttribute('href', article.toolTo)
+          }
+          await expect(toolBtn).toContainText(`Open in ${article.toolLabel}`)
           expect((await toolBtn.boundingBox()).height, 'tool button height').toBeGreaterThanOrEqual(44)
 
           // Keep reading: the next guide from the hand-written table, then the index row.
@@ -458,7 +399,9 @@ test.describe('the end of a guide', () => {
           const sources = page.locator('details.lart-sources')
           expect(await sources.evaluate((d) => d.open), 'Sources open on load').toBe(false)
           await expect(sources.locator('summary')).toContainText(`Sources (${getArticleSources(article.slug).length})`)
-          expect((await sources.locator('summary').boundingBox()).height, 'Sources summary height').toBeGreaterThanOrEqual(44)
+          // The specimen draws Sources as a 36px pill with a pointer (learn-contrast.css); 44px on a phone, like every other guide.
+          const sourcesFloor = article.slug === SPECIMEN && vp.width >= 768 ? 36 : 44
+          expect((await sources.locator('summary').boundingBox()).height, 'Sources summary height').toBeGreaterThanOrEqual(sourcesFloor)
           await sources.locator('summary').click()
           await expect(sources.locator('a')).toHaveCount(getArticleSources(article.slug).length)
           for (let i = 0; i < getArticleSources(article.slug).length; i += 1) {
@@ -474,7 +417,7 @@ test.describe('the end of a guide', () => {
       for (const [vp, floor] of [[PHONE, 44], [TABLET, 44], [DESKTOP, 24]]) {
         const { ctx, page } = await open(browser, article, vp)
         try {
-          for (const sel of ['.lart-crumb a', '.lart-meta a']) {
+          for (const sel of ['.lart-crumb a']) {
             const links = page.locator(sel)
             const n = await links.count()
             expect(n, `${sel} not found`).toBeGreaterThan(0)
@@ -493,7 +436,7 @@ test.describe('the end of a guide', () => {
 // ───────────────────────────────────────────────────────────────────────────
 test.describe('colour of the guide furniture, both themes', () => {
   for (const article of LEARN_ARTICLES) {
-    test(`${article.slug}: button, sources, crumb, meta link and chevrons clear their floor`, async ({ browser }) => {
+    test(`${article.slug}: button, sources, crumb, Keep reading and chevrons clear their floor`, async ({ browser }) => {
       test.setTimeout(90_000)
       for (const theme of ['light', 'dark']) {
         for (const vp of [PHONE, DESKTOP]) {
@@ -513,7 +456,7 @@ test.describe('colour of the guide furniture, both themes', () => {
               expect(r.ratio, `${where}: source link ${i} is ${r.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
             }
 
-            for (const sel of ['.lart-crumb a', '.lart-meta a', '.lart-onward-kicker', '.lart-onward-label', '.lart-sources summary']) {
+            for (const sel of ['.lart-crumb a', '.lart-onward-kicker', '.lart-onward-label', '.lart-sources summary']) {
               const r = await contrast(page, sel)
               expect(r.missing, `${where}: ${sel} not found`).toBeUndefined()
               expect(r.ratio, `${where}: ${sel} is ${r.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
@@ -557,7 +500,7 @@ test.describe('fit and the meta line', () => {
       }
     })
 
-    test(`${article.slug}: the meta line is three items, and no separator leads a line at 360, 390 or 768`, async ({ browser }) => {
+    test(`${article.slug}: the meta line is two items, and no separator leads a line at 360, 390 or 768`, async ({ browser }) => {
       for (const vp of [{ width: 360, height: 740 }, PHONE, TABLET]) {
         const { ctx, page } = await open(browser, article, vp)
         try {
@@ -567,10 +510,9 @@ test.describe('fit and the meta line', () => {
             // the link item is taller on touch, so only the middles agree on a line.
             return { mid: Math.round(r.top + r.height / 2), text: s.textContent.trim(), dot: getComputedStyle(s, '::before').content }
           }))
-          expect(items, `${vp.width}: meta items`).toHaveLength(3)
+          expect(items, `${vp.width}: meta items`).toHaveLength(2)
           expect(items[0].text).toMatch(/^\d+ min read$/)
           expect(items[1].text).toMatch(/^Reviewed \d{1,2} \w+ \d{4}$/)
-          expect(items[2].text).toBe(`Use it in the ${article.toolLabel}`)
           expect(items[0].dot, 'the first item must not carry a separator').toMatch(/^(none|normal)$/)
           // A separator is drawn before an item. It may only sit on a line that
           // already holds text before it, so an item that drew one shares the
@@ -646,10 +588,22 @@ test.describe('motion', () => {
         expect(first, 'the chevron jumped to its final angle instead of turning').toBeGreaterThan(-0.9)
         await expect.poll(() => rotation(page, '.lart-sources .lart-chev')).toBeLessThan(-0.99)
 
-        await page.locator('.lart-next-go').hover()
-        await expect.poll(() => page.locator('.lart-next-arrow').evaluate((a) => getComputedStyle(a).transform)).toBe('matrix(1, 0, 0, 1, 3, 0)')
-        await page.locator('.lart-onward-row').first().hover()
-        await expect.poll(() => page.locator('.lart-onward-go').first().evaluate((a) => getComputedStyle(a).transform)).toBe('matrix(1, 0, 0, 1, 3, 0)')
+        const turn = (sel) => page.locator(sel).first().evaluate((a) => {
+          const m = getComputedStyle(a).transform
+          return m === 'none' ? 1 : Number(m.match(/matrix\(([^,]+)/)[1])
+        })
+        if (article.slug === SPECIMEN) {
+          await page.locator('.lart-next-go').hover()
+          await expect.poll(() => turn('.lart-next-go .lcc-go svg'), { message: 'the tool arrow did not turn' }).toBeLessThan(0.75)
+          await page.locator('.lart-onward-lead').hover()
+          await expect.poll(() => turn('.lart-onward-lead .lart-onward-go svg'), { message: 'the lead arrow did not turn' }).toBeLessThan(0.75)
+        } else {
+          await page.locator('.lart-onward-row:not(.lart-onward-lead)').first().hover()
+          await expect.poll(() => page.locator('.lart-onward-row:not(.lart-onward-lead) .lart-onward-go').first()
+            .evaluate((a) => getComputedStyle(a).transform)).toBe('matrix(1, 0, 0, 1, 3, 0)')
+          await page.locator('.lart-onward-lead').hover()
+          await expect.poll(() => turn('.lart-onward-lead .lart-onward-go'), { message: 'the lead arrow did not turn' }).toBeLessThan(0.75)
+        }
       } finally {
         await ctx.close()
       }
@@ -674,13 +628,15 @@ test.describe('motion', () => {
         await page.locator('.lart-next-go').hover()
         await page.locator('.lart-onward-row').first().hover()
         await frames(page, 40)
-        for (const sel of ['.lart-next-arrow', '.lart-onward-go']) {
+        const moving = article.slug === SPECIMEN ? ['.lart-onward-go', '.lart-onward-go svg', '.lcc-go svg'] : ['.lart-onward-go']
+        for (const sel of moving) {
           const t = await page.locator(sel).first().evaluate((a) => ({
             transform: getComputedStyle(a).transform,
             property: getComputedStyle(a).transitionProperty,
           }))
           expect(t.transform, `${sel} moved under reduced motion`).toBe('none')
-          expect(t.property, `${sel} still has a transition under reduced motion`).toBe('none')
+          // A colour fade is not motion; only a moving transition is ruled out.
+          expect(t.property, `${sel} still has a moving transition under reduced motion`).not.toMatch(/all|transform|translate|rotate|scale/)
         }
       } finally {
         await ctx.close()

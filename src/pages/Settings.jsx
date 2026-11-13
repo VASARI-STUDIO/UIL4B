@@ -791,7 +791,7 @@ function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending
         Delete account
       </button>
       {open && (
-        <div className="stg-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) closePanel() }}>
+        <div className="stg-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) { e.preventDefault(); closePanel() } }}>
           <form className="danger-confirm stg-dlg" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} noValidate onSubmit={handleDelete}>
             <h2 id={titleId} className="stg-dlg-h">Delete {email} and everything in it?</h2>
             {counts && <p className="stg-dlg-count">{counts}</p>}

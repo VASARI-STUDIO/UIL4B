@@ -33,6 +33,9 @@ test.describe('signed-out likes and saves ask to sign in', () => {
       watch(page, `a member liking something on ${s.route}`)
       await signIn(page)
       await go(page, s.route)
+      // The signed-in nav button only renders once auth has hydrated; pressing a like before that
+      // takes the signed-out path and opens the prompt, which is a race in the test, not the page.
+      await expect(page.getByRole('button', { name: 'Account and settings' })).toBeVisible()
       const btn = s.button(page)
       await expect(btn).toBeVisible({ timeout: 20000 })
       await expect(btn).toHaveAttribute(s.pressed, 'false')

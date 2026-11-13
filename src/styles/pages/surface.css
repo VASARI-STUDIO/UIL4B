@@ -18,8 +18,10 @@
   position: relative;
   overflow-x: clip;
   background: var(--bg-0);
-  isolation: isolate;
 }
+/* The stacking context sits on the content, not .srf: PillNav mounts inside .srf, and isolating it
+   there trapped the fixed tab bar's backdrop under a bright block at 390. */
+.srf .srf-wrap { isolation: isolate; }
 [data-theme="light"] .srf { --srf-edge: oklch(0 0 0 / .1); --srf-edge-2: color-mix(in srgb, var(--t0) 10%, transparent); }
 
 .srf .srf-wrap {
@@ -140,6 +142,8 @@
 .srf .lidx-topics a { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; color: var(--t1); white-space: nowrap; border: 0; transition: background-color 150ms ease, color 150ms ease, transform 120ms var(--srf-ease); }
 .srf .lidx-topics a:active { transform: scale(.97); }
 @media (hover: hover) { .srf .lidx-topics a:hover { background: var(--srf-wash); color: var(--t0); } }
+/* Touch tablets get 44px topic targets; 36px stays for mouse and trackpad. */
+@media (pointer: coarse) { .srf .lidx-topics a { height: 44px; } }
 .srf .lidx-topic-n { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--t2); font-variant-numeric: tabular-nums; }
 .srf .lidx-status { min-height: 24px; max-width: none; margin: 12px 0 0; font-size: 15px; line-height: 24px; text-align: left; color: var(--t1); }
 
@@ -218,7 +222,7 @@
   .srf .srf-door--ico .srf-icons { grid-template-columns: repeat(3, 28px); grid-template-rows: repeat(2, 28px); }
   .srf .srf-door-t { min-height: 24px; }
   .srf .srf-also a { min-height: 0; }
-  .srf .srf-also a { padding-block: 13px; margin-block: -13px; }
+  .srf .srf-also a { position: relative; padding-block: 13px; margin-block: -13px; }
   .srf .lidx-ty { grid-template-columns: minmax(0, 1fr); row-gap: 24px; }
   .srf .lidx-grid { grid-template-columns: minmax(0, 1fr); row-gap: 40px; }
   .srf .lidx-tools { flex-direction: column; align-items: stretch; gap: 12px; }

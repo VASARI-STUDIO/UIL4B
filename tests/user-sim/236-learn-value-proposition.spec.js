@@ -54,10 +54,12 @@ test.describe('Improving your value proposition', () => {
   test('is listed on the Learn index under Psychology', async ({ page }) => {
     watch(page, 'reader browsing the Learn index')
     await go(page, '/learn')
-    const card = page.locator(`.lidx-card[href="${ROUTE}"]`)
+    // The index is a list of topic sections; each guide is a card whose title links to it.
+    const topic = page.locator('section#learn-topic-psychology')
+    await expect(topic.getByRole('heading', { level: 3 })).toContainText('Psychology')
+    const card = topic.locator('.lidx-card', { has: page.locator(`a.lidx-title[href="${ROUTE}"]`) })
     await expect(card).toBeVisible()
-    await expect(card).toContainText(article.title)
-    await expect(card).toContainText('Psychology')
+    await expect(card.locator('a.lidx-title')).toContainText(article.title)
   })
 
   test('is a row in the Learn menu', async ({ page }) => {

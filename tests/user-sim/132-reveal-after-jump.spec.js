@@ -39,13 +39,13 @@ const WIDTHS = [
   [1440, 900],
 ]
 
-// /learn/help is not listed: it is a router with no reveal blocks, so the
-// non-vacuous check below would have nothing to measure. The last test in this
-// file fails if reveal blocks ever come back to it, so it gets listed then.
+// /learn/help and the /learn index are not listed: the help router and the
+// redesigned index (a quiet list of topics) have no reveal blocks, so the
+// non-vacuous check below would have nothing to measure. The last two tests in
+// this file fail if reveal blocks ever come back to either, so they get listed then
+// (the index with its #learn-topic-typography and #learn-topic-colour hashes).
 const URLS = [
   '/learn/principles',
-  '/learn#learn-topic-typography',
-  '/learn#learn-topic-colour',
 ]
 
 // Reveal blocks that intersect the viewport, and which of them are not opaque.
@@ -142,5 +142,14 @@ test('the help router has no reveal blocks, so it needs no entry in URLS', async
   await expect(page.locator('#faq')).toBeAttached()
   expect(await page.locator('[data-reveal], [data-reveal-group]').count(),
     '/learn/help gained reveal blocks: add /learn/help#faq to URLS')
+    .toBe(0)
+})
+
+test('the Learn index has no reveal blocks, so its topic hashes need no entry in URLS', async ({ page }) => {
+  watch(page, PERSONA)
+  await go(page, '/learn#learn-topic-typography')
+  await expect(page.locator('#learn-topic-typography')).toBeAttached()
+  expect(await page.locator('[data-reveal], [data-reveal-group]').count(),
+    '/learn gained reveal blocks: add /learn#learn-topic-typography and /learn#learn-topic-colour to URLS')
     .toBe(0)
 })

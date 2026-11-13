@@ -115,31 +115,35 @@ test.describe('the Discover surfaces say what they are made of', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
   })
 
-  test('/discover fills the last row when only one card remains', async ({ page }) => {
-    watch(page, 'the site owner browsing the Discover grid')
-    // Six cards for everyone but an admin, who also sees the unfinished
-    // Collections card, so seven; the lone-last-card rule needs the odd count
-    // to be a test at all.
+  // V3 replaced the seven-card grid with two rows of doors (two, then three) and a line for each of
+  // Community and, for an admin, the unfinished Collections. The promise is unchanged: a lone last
+  // door fills its row, and an admin sees Collections named as not yet built.
+  test('/discover fills the last row when only one door remains', async ({ page }) => {
+    watch(page, 'the site owner browsing the Discover doors')
     await signIn(page, { admin: true })
     for (const width of [768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/discover')
       await arrived(page, 'Discover')
-      const grid = page.locator('.srf .surface-grid')
-      await expect(grid.locator(':scope > .surface-card')).toHaveCount(7)
-      const edges = await grid.evaluate(async (el) => {
+      const row = page.locator('.srf .srf-row2')
+      await expect(row.locator(':scope > .srf-door')).toHaveCount(3)
+      const edges = await row.evaluate(async (el) => {
         await document.fonts.ready
-        const cards = [...el.children].map((card) => card.getBoundingClientRect())
-        const last = cards.at(-1)
+        const doors = [...el.children].map((door) => door.getBoundingClientRect())
+        const last = doors.at(-1)
         return {
-          rowCount: cards.filter((card) => Math.abs(card.top - last.top) < 1).length,
+          rowCount: doors.filter((door) => Math.abs(door.top - last.top) < 1).length,
           lastRight: last.right,
-          gridRight: el.getBoundingClientRect().right,
+          rowRight: el.getBoundingClientRect().right,
         }
       })
-      expect(edges.rowCount, `${width}px: the last card must be alone in its row`).toBe(1)
-      expect(edges.lastRight, `${width}px: the lone card must reach the grid's right edge`)
-        .toBeCloseTo(edges.gridRight, 0)
+      // At 768 the Icon door is the lone one on the second line; at 1440 all three share a line.
+      expect(edges.rowCount, `${width}px: doors on the last line`).toBe(width === 768 ? 1 : 3)
+      expect(edges.lastRight, `${width}px: the last door must reach the row's right edge`)
+        .toBeCloseTo(edges.rowRight, 0)
+      const collections = page.locator('.srf .srf-also--2')
+      await expect(collections, `${width}px: the admin line for Collections`).toContainText('Collections')
+      await expect(collections).toContainText('Soon')
     }
   })
 
@@ -227,7 +231,8 @@ test.describe('the Discover surfaces say what they are made of', () => {
       await expect(
         page.locator('.drh-head p'),
         'the filter did not actually empty the grid',
-      ).toHaveText(new RegExp(`^0 ${lib.noun}s$`))
+      // V3 names the query in the count: "0 palettes matching “…”".
+      ).toHaveText(new RegExp(`^0 ${lib.noun}s( matching .*)?$`))
 
       const whenEmpty = await landmarks(page)
       // Signed out, the closing offer replaces the locked tease once the tease
@@ -266,7 +271,7 @@ test.describe('the Discover surfaces say what they are made of', () => {
     await arrived(page, 'Palette Library')
     // The free rows paint first; the category sections are the Pro library's, and
     // the tree below must be read from the page those headings are read from.
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.vpt').first()).toBeVisible()
     await proLibraryArrived(page, 'the palette library')
 
     const tree = await axTree(page)
@@ -310,20 +315,29 @@ test.describe('the Discover surfaces say what they are made of', () => {
   // controls below are what stop that: the library cards are found BY HREF
   // first and the run fails if either is missing, and `probed` counts the meta
   // elements actually examined so a silent selector rename cannot pass.
-  test('the Discover cards link where they say, and none of them claims a count', async ({ page }) => {
+  test('the Discover cards link where they say, and each count is true', async ({ page }) => {
     watch(page, 'a Pro subscriber reading the index after the count badges came off')
     await signIn(page, { plan: 'pro' })
     await go(page, '/discover')
     await arrived(page, 'Discover')
 
+    // V3 (e2f720d7f): each card is a `.srf-door`; its link holds the title, and
+    // the meta line `.srf-door-c` sits beside the link, not inside it. The V3
+    // index puts the library counts back on the doors ("101 palettes"), built
+    // from LIBRARY_TOTALS, so the rule is no longer "no count" but "the count is
+    // true": for Pro, the door's number is the number the library page announces.
     const cards = await page.evaluate(() =>
-      [...document.querySelectorAll('a.surface-card--link')]
-        .map((a) => ({
-          href: a.getAttribute('href'),
-          title: a.querySelector('.surface-card-title')?.innerText.trim() || null,
-          meta: a.querySelector('.surface-card-meta')?.innerText.trim() || null,
-          hasMetaEl: !!a.querySelector('.surface-card-meta'),
-        })))
+      [...document.querySelectorAll('.srf-door')]
+        .map((door) => {
+          const a = door.querySelector('a.surface-card--link')
+          const meta = door.querySelector('.srf-door-c')
+          return {
+            href: a?.getAttribute('href') || null,
+            title: a?.querySelector('.surface-card-title')?.innerText.trim() || null,
+            meta: meta?.innerText.trim() || null,
+            hasMetaEl: !!meta,
+          }
+        }))
 
     // POSITIVE CONTROL ONE: the two library cards are on the page, by href.
     for (const href of ['/discover/palettes', '/discover/gradients']) {
@@ -332,36 +346,26 @@ test.describe('the Discover surfaces say what they are made of', () => {
       expect(card.title, `the card for ${href} renders no title`).toBeTruthy()
     }
 
-    // POSITIVE CONTROL TWO: the run examined a real number of cards.
+    // POSITIVE CONTROL TWO: the run examined a real number of cards, and some of
+    // them carry a meta line, so the checks below are not run against nothing.
     expect(cards.length, 'the Discover index rendered no linked cards at all').toBeGreaterThan(4)
+    expect(cards.filter((c) => c.meta).length, 'no Discover card carries a meta line').toBeGreaterThan(0)
 
-    // The deletion holds. A count would read "101 palettes", "100 gradients",
-    // "200,000+ icons" — a leading digit is the shape of all four.
-    for (const c of cards) {
-      expect(
-        c.meta === null || !/^[\d,]/.test(c.meta),
-        `the card for ${c.href} is claiming a count again: "${c.meta}"`,
-      ).toBe(true)
-    }
-
-    // AND THE SPAN ITSELF IS GONE, not merely empty. `{preview && <span/>}`
-    // rendered an empty `.surface-card-meta` in four card feet once the strings
-    // came off; this is what fails if that comes back.
+    // AND NO SPAN IS EMPTY. `{preview && <span/>}` once rendered an empty meta
+    // element in four card feet; this is what fails if that comes back.
     const empties = cards.filter((c) => c.hasMetaEl && c.meta === null).map((c) => c.href)
     expect(empties, 'these cards render an EMPTY meta element in the card foot').toEqual([])
 
-    // "Live specimens" is not a count and was deliberately kept, so it is the
-    // control that proves the rule above is not simply matching everything.
-    const specimens = cards.find((c) => c.href === '/create/font-gallery')
-    expect(specimens?.meta, 'the Font Gallery card lost the one meta line that is not a count').toBe('Live specimens')
-
-    // The libraries still announce their own size on their OWN page, where the
-    // number describes what the reader is looking at rather than what they are
-    // being sold. That half was never the problem and must not be lost with it.
+    // Each library's door count is the count its own page announces.
     for (const href of ['/discover/palettes', '/discover/gradients']) {
+      const card = cards.find((c) => c.href === href)
       await go(page, href)
       const announced = (await page.locator('.drh-head p').innerText()).trim()
-      expect(Number.parseInt(announced, 10), `${href} announced no count of its own`).toBeGreaterThan(0)
+      const own = Number.parseInt(announced, 10)
+      expect(own, `${href} announced no count of its own`).toBeGreaterThan(0)
+      if (card.meta && /^[\d,]/.test(card.meta)) {
+        expect(Number.parseInt(card.meta.replace(/,/g, ''), 10), `the ${href} door claims "${card.meta}" but the page announces "${announced}"`).toBe(own)
+      }
       await go(page, '/discover')
     }
   })

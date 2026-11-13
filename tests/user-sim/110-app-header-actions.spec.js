@@ -234,10 +234,15 @@ test.describe('app header actions', () => {
 
   for (const signed of [true, false]) {
     test(`the header never wraps from 320 to 1920 (${signed ? 'signed in' : 'signed out'})`, async ({ page }) => {
+      // Twelve full page loads do not fit the 30s test timeout once the machine is busy, so load the tool once
+      // and resize the window through the widths; the header lays itself out from CSS and live media queries.
+      test.setTimeout(60_000)
       if (signed) await signIn(page, { plan: 'free', projects: 1 })
+      await page.setViewportSize({ width: 320, height: 900 })
+      await go(page, '/create/palette')
       for (const width of [320, 390, 768, 899, 900, 940, 961, 999, 1099, 1100, 1440, 1920]) {
         await page.setViewportSize({ width, height: 900 })
-        await go(page, '/create/palette')
+        await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
         const overflow = await page.locator('.pnav-inner').evaluate((el) => el.scrollWidth - el.clientWidth)
         expect(overflow, `header overflows by ${overflow}px at ${width}`).toBeLessThanOrEqual(0)
       }
@@ -266,17 +271,22 @@ test.describe('app header touch actions', () => {
   })
 
   test('two logo taps 150ms apart from a tool stay on the dashboard', async ({ page }) => {
-    // Warm the destination chunk before measuring the interval between taps.
+    // The 150ms is set on the page's clock, not timed by the runner: a loaded machine took more than the old
+    // 300ms tap timeout just to check the logo was stable, so the gap between the real taps was a coin toss.
+    const start = new Date('2026-10-09T00:00:00Z')
+    await page.clock.setFixedTime(start)
     await go(page, '/projects')
     await go(page, '/create/palette')
-    await page.waitForTimeout(650)
     const logo = page.locator('.pnav-logo')
+    await page.clock.setFixedTime(new Date(+start + 1000))
     await logo.tap()
-    await page.waitForTimeout(150)
-    await expect(logo).toHaveAttribute('href', '/home', { timeout: 300 })
-    await logo.tap({ timeout: 300 })
     await expect(page).toHaveURL(/\/projects$/)
-    await page.waitForTimeout(650)
+    await expect(logo).toHaveAttribute('href', '/home')
+    await page.clock.setFixedTime(new Date(+start + 1150))
+    await logo.tap()
+    await page.waitForTimeout(300)
+    await expect(page, 'the second tap, 150ms after the first, stayed on the dashboard').toHaveURL(/\/projects$/)
+    await page.clock.setFixedTime(new Date(+start + 1800))
     await logo.tap()
     await expect(page).toHaveURL(/\/home$/)
   })

@@ -1,7 +1,8 @@
 // LEARN, DISCOVER AND EMOJI LIBRARY: FIVE BEHAVIOURS THAT USED TO BREAK.
 //
-//   MARKER    On every guide the lit contents link is the first on a fresh load,
-//             the last after End and the first again after Home.
+//   CONTENTS  On every guide the contents link each section in page order, and End
+//             and Home still take the reader to the bottom of the page and back to the top.
+//             (The redesign dropped the scroll-following lit marker on purpose.)
 //   LANDING   Every contents link puts its heading between 88 and 140px from the
 //             top, measured 500ms after the click, at 1440 (rail) and 390
 //             (disclosure). The tween for in-page links is a fixed 0.45s.
@@ -19,7 +20,7 @@
 //           cells keep `has-bitmap` with nothing painted and the EMOJI test goes red.
 // FOCUS     delete the `@media (forced-colors:active)` block under `.lbry-search` in
 //           global.css: the outline is `none` and the FOCUS tests go red.
-// MARKER / DISCOVER are guarded by 208 and 123 as well; they are repeated here so this one
+// CONTENTS / DISCOVER are guarded by 208 and 123 as well; they are repeated here so this one
 //           file shows every fix from the same card set.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
@@ -28,6 +29,10 @@ import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 const DESKTOP = { width: 1440, height: 900 }
 const PHONE = { width: 390, height: 844 }
 const RAIL_FROM = 1080
+// The colour-contrast guide opens on a live specimen, with its contents inline in the
+// hero instead of a card beside the prose.
+const SPECIMEN = 'colour-contrast'
+const tocSel = (article) => (article.slug === SPECIMEN ? 'nav.lart-toc-inline' : 'nav.lart-toc')
 
 // The smooth scroll keeps moving after the marker first changes; a key pressed
 // before it stops can be absorbed by the tween still running.
@@ -58,24 +63,32 @@ async function layoutSettled(page) {
   }, { message: 'the page height holds still', timeout: 15_000, intervals: [200] }).toBe(true)
 }
 
-const litIds = (page) => page.evaluate(() => [...document.querySelectorAll('.lart-toc a[data-active]')]
-  .map((a) => a.getAttribute('href').slice(1)))
-
-test.describe('the contents marker', () => {
+test.describe('the contents', () => {
   for (const article of LEARN_ARTICLES) {
-    test(`${article.slug}: first on load, last after End, first after Home`, async ({ page }) => {
+    test(`${article.slug}: link every section in order; End reaches the last section, Home the top`, async ({ page }) => {
       watch(page, `reader of ${article.slug}`)
       await page.setViewportSize(DESKTOP)
       await go(page, `/learn/${article.slug}`)
       const ids = article.sections.map((s) => s.id)
-      expect(await litIds(page), 'fresh load').toEqual([ids[0]])
+      const hrefs = await page.locator(`${tocSel(article)} a`).evaluateAll((as) => as.map((a) => a.getAttribute('href')))
+      expect(hrefs, 'contents links').toEqual(ids.map((id) => `#${id}`))
       await layoutSettled(page)
       // On a loaded runner the smooth scroll can take several seconds to land.
+      // The page must be tall enough for End to mean something, or the bottom check below
+      // is true before the key is pressed.
+      expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight), 'the guide is taller than one screen').toBeGreaterThan(600)
       await page.keyboard.press('End')
-      await expect.poll(() => litIds(page), { message: 'after End', timeout: 10_000 }).toEqual([ids.at(-1)])
+      // The bottom of the document, not "the last section is on screen": the next-step
+      // block and the footer sit below the last section and are taller than the viewport,
+      // so at the bottom the last section is already scrolled off the top. Checking for it
+      // on screen only passed when the poll happened to catch the scroll passing through.
+      await expect.poll(() => page.evaluate(() => Math.round(scrollY + innerHeight) >= document.documentElement.scrollHeight - 2),
+        { message: 'after End the page is at its bottom', timeout: 10_000 }).toBe(true)
+      expect(await page.evaluate((id) => document.getElementById(id).getBoundingClientRect().top < innerHeight, ids.at(-1)),
+        'the last section is at or above the bottom of the screen').toBe(true)
       await settled(page)
       await page.keyboard.press('Home')
-      await expect.poll(() => litIds(page), { message: 'after Home', timeout: 10_000 }).toEqual([ids[0]])
+      await expect.poll(() => page.evaluate(() => Math.round(window.scrollY)), { message: 'after Home the page is at the top', timeout: 10_000 }).toBe(0)
     })
   }
 })
@@ -93,9 +106,13 @@ test.describe('contents links land their heading at one height', () => {
           if (!rail) {
             await page.evaluate(() => { document.querySelector('details.lart-toc-m').open = true })
           }
-          await page.locator(`${rail ? '.lart-toc' : 'details.lart-toc-m'} a[href="#${id}"]`).click()
+          await page.locator(`${rail ? tocSel(article) : 'details.lart-toc-m'} a[href="#${id}"]`).click()
           await page.waitForTimeout(500)
-          const top = await page.evaluate((sid) => document.querySelector(`#${sid} h2`).getBoundingClientRect().top, id)
+          // On the colour-contrast guide at desktop widths a section can open with its figure
+          // above the h2 (the channel bars lead "formula"), so the landing is the section's
+          // own top; everywhere else, and on a phone where the h2 is first, it is the h2.
+          const edge = rail && article.slug === SPECIMEN ? '' : ' h2'
+          const top = await page.evaluate(({ sid, sub }) => document.querySelector(`#${sid}${sub}`).getBoundingClientRect().top, { sid: id, sub: edge })
           expect(top, `${vp.width} #${id} ("${title}") landed ${Math.round(top)}px from the top`).toBeGreaterThanOrEqual(87)
           expect(top, `${vp.width} #${id} ("${title}") landed ${Math.round(top)}px from the top`).toBeLessThanOrEqual(140)
         }

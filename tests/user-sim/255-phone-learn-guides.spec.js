@@ -108,13 +108,14 @@ function inspectArticle() {
         // scrollWidth starts inside the scroller's border, so take clientLeft off.
         return r.right - sr.left - scroller.clientLeft + scroller.scrollLeft > scroller.scrollWidth + 1 || r.left < sr.left - 1
       }).length,
-      // A stacked row keeps its heading left of its values, all inside the row.
+      // A stacked row keeps its values clear of its heading (to its right, or below
+      // it as colour-contrast's section 1 sets them on phone), all inside the row.
       stackBroken: stacked ? [...table.querySelectorAll('tbody tr')].filter((tr) => {
         const rr = tr.getBoundingClientRect()
         const th = tr.querySelector('th').getBoundingClientRect()
         return [...tr.querySelectorAll('td')].some((td) => {
           const r = td.getBoundingClientRect()
-          return r.left < th.right - 1 || r.right > rr.right + 1 || r.left < rr.left - 1
+          return (r.left < th.right - 1 && r.top < th.bottom - 1) || r.right > rr.right + 1 || r.left < rr.left - 1
         })
       }).length : 0,
     })
@@ -203,7 +204,9 @@ for (const vp of VIEWPORTS) {
             const who = `${slug} table "${t.label.slice(0, 40)}"`
             // MUTATION: set `overflow-x: hidden` on `.lart-table-scroll`: the
             // wide tables are clipped with no way to reach the rest.
-            expect(['auto', 'scroll'], `${who} cannot scroll sideways`).toContain(t.overflowX)
+            // A stacked table that fits (colour-contrast's section 1 on phone) has
+            // nothing to scroll to; the two checks below still catch clipping.
+            if (!t.stacked || t.scrollW > t.clientW + 1) expect(['auto', 'scroll'], `${who} cannot scroll sideways`).toContain(t.overflowX)
             expect(t.inViewport, `${who} sticks out of the screen`).toBe(true)
             expect(t.outside, `${who} has cells outside its scroller`).toBe(0)
             // MUTATION: drop `min-width: 7ch` from `.lart-table tbody th`.

@@ -20,8 +20,8 @@
 //   - GalleryEndGate.jsx: have GateFadeRows read `cols` as a fixed 3 instead of the
 //     live grid's column count: "the faded cards share their rows" fails at the
 //     widths whose grid is not three columns, on both libraries;
-//   - palette-gallery.css: delete the `.pgal-stripes` border-bottom: "the stripes
-//     end in a hairline" fails;
+//   - library-v3.css: set the `.vpt` padding to 0: "the bands sit in a drawn
+//     frame" fails;
 //   - SurfaceIndex.jsx: render the Learn roadmap as `.surface-card` articles again
 //     (or add a Link or `.lidx-go` to the row): "the unwritten topics are plain
 //     rows" fails at all three widths; change the lede and it fails on the text.
@@ -81,8 +81,9 @@ const lockedRows = (page, card) => page.evaluate((sel) => {
 }, card)
 
 const LOCKED_LIBRARIES = [
-  { name: 'Palette Library', route: '/discover/palettes', card: '.pgal-card' },
-  { name: 'Gradient Library', route: '/discover/gradients', card: '.grg-card' },
+  // Both libraries browse in the vertical panel tile (VerticalPanelTile.jsx) since #1043.
+  { name: 'Palette Library', route: '/discover/palettes', card: '.vpt' },
+  { name: 'Gradient Library', route: '/discover/gradients', card: '.vpt' },
 ]
 
 for (const width of [390, 600, 768, 1024, 1440]) {
@@ -112,18 +113,23 @@ for (const width of [390, 600, 768, 1024, 1440]) {
 test.describe('Palette stripes at 390px', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-  test('the stripes end in a hairline, so a white last swatch is not a hole', async ({ page }) => {
+  // V3 (#1043): the bands sit inside the tile's raised frame with 8px of padding,
+  // so a white last band ends against the frame, not the page. The frame is the edge.
+  test('the bands sit in a drawn frame, so a white last swatch is not a hole', async ({ page }) => {
     watch(page, 'someone browsing the palette library on a phone')
     await go(page, '/discover/palettes')
-    const stripes = page.locator('.pgal-card .pgal-stripes').first()
-    await expect(stripes).toBeVisible()
-    const edge = await stripes.evaluate((el) => {
-      const cs = getComputedStyle(el)
-      return { width: parseFloat(cs.borderBottomWidth), style: cs.borderBottomStyle, colour: cs.borderBottomColor }
+    const media = page.locator('.vpt .vpt-media').first()
+    await expect(media).toBeVisible()
+    const edge = await media.evaluate((el) => {
+      const frame = el.closest('.vpt')
+      const cs = getComputedStyle(frame)
+      const f = frame.getBoundingClientRect()
+      const m = el.getBoundingClientRect()
+      return { pad: Math.round(m.left - f.left), below: Math.round(f.bottom - m.bottom), bg: cs.backgroundColor }
     })
-    expect(edge.width, 'hairline width').toBeGreaterThanOrEqual(1)
-    expect(edge.style, 'hairline style').toBe('solid')
-    expect(edge.colour, 'hairline is drawn, not transparent').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+    expect(edge.pad, 'the bands are inset in the frame').toBeGreaterThanOrEqual(8)
+    expect(edge.below, 'the frame continues under the bands').toBeGreaterThanOrEqual(8)
+    expect(edge.bg, 'the frame is drawn, not transparent').not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
   })
 })
 
@@ -140,7 +146,8 @@ for (const width of [390, 768, 1440]) {
       watch(page, `the founder reading the Learn hub at ${width}px`)
       await signIn(page, { admin: true })
       await go(page, '/learn')
-      const rows = page.locator('.lidx-card--soon')
+      // V3: the unwritten topics are the list items of .lidx-soon-list (surface.css), not .lidx-card--soon cards.
+      const rows = page.locator('.lidx-soon')
       await expect(rows.first()).toBeVisible()
       expect(await rows.count(), 'unwritten topics').toBeGreaterThan(0)
       await expect(page.locator('#surface-grid-heading ~ .srf-lede')).toHaveText("These topics aren't written yet.")
@@ -149,18 +156,19 @@ for (const width of [390, 768, 1440]) {
         const r = el.getBoundingClientRect()
         return {
           tag: el.tagName,
-          border: parseFloat(cs.borderTopWidth) + parseFloat(cs.borderLeftWidth),
+          // A hairline between rows is the list's own; a box (left, right or foot edge) would make it a card again.
+          border: parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth) + parseFloat(cs.borderBottomWidth),
           linked: !!el.closest('a') || !!el.querySelector('a'),
           arrow: !!el.querySelector('.lidx-go'),
-          time: el.querySelector('.lidx-time')?.textContent,
-          title: !!el.querySelector('.lidx-title')?.textContent,
-          dek: !!el.querySelector('.lidx-dek')?.textContent,
+          time: el.querySelector('.srf-meta')?.textContent,
+          title: !!el.querySelector('.lidx-soon-t')?.textContent,
+          dek: !!el.querySelector('.lidx-soon-d')?.textContent,
           top: Math.round(r.top),
           left: Math.round(r.left),
         }
       }))
       for (const f of facts) {
-        expect(f.tag, 'a link or button stands in for a plain row').toBe('DIV')
+        expect(f.tag, 'a link or button stands in for a plain row').toBe('LI')
         expect(f.border, 'the row has a border').toBe(0)
         expect(f.linked, 'the row is a link').toBe(false)
         expect(f.arrow, 'the row has an arrow').toBe(false)

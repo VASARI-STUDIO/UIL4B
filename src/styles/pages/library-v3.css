@@ -248,7 +248,8 @@
   border-radius:8px;background:var(--v3-l2);color:var(--v3-sec);
   font-family:var(--mono);font-size:12px;line-height:1;
 }
-.lib-surface.lib-v3[class] .pgal-stripes{border-bottom:0}
+/* A near-white last swatch needs its hairline, or the stripe reads as a hole into the foot. */
+.lib-surface.lib-v3[class] .pgal-stripes{border-bottom:1px solid var(--v3-hair)}
 .lib-surface.lib-v3[class] .pgal-hex{
   background:rgba(6,6,7,.72);color:#EFEEEA;font-size:12px;font-weight:500;
   -webkit-backdrop-filter:none;backdrop-filter:none;

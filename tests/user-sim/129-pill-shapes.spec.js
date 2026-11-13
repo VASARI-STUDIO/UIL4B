@@ -6,10 +6,13 @@
 // still lose the cascade to a later one.
 //
 // "Full" means the computed radius is at least half the box height, so the end
-// caps are semicircles. One carve-out is deliberate: a library toolbar that has
-// wrapped onto a second row (a phone) steps down to a 26px pill-ended box,
+// caps are semicircles. Two carve-outs are deliberate. A library toolbar that has
+// wrapped onto a second row (a phone) steps down to a 24px-radius raised card,
 // because a 999px capsule that tall would cut its corners into the search field
-// and chips inset inside it. The palette and gradient bars always did this.
+// and chips inset inside it (library-v3.css, the 640px phone tray). And the V3
+// Learn index draws its search as a 12px-radius plate with an inset hairline, not
+// a pill (surface.css, .srf .lidx-tools .lbry-search); that one is held to 12px
+// and 44px high here, and is left out of the border, colour and fill match.
 //
 // Each route lists the selectors it must still have, so a renamed class fails
 // the count instead of silently measuring nothing.
@@ -60,7 +63,10 @@ const TOOLBAR_SEARCH_H = 36
 const CIRCLE = 44
 // The toolbar that may step down when it wraps.
 const WRAPS = '.lbry-toolbar'
-const WRAPPED_RADIUS = 26
+const WRAPPED_RADIUS = 24
+// The Learn index search: a plate, not a pill.
+const PLATE_ROUTE = '/learn'
+const PLATE_RADIUS = 12
 // How long a surface may take to mount after its route has arrived.
 const APPEAR_MS = 15000
 
@@ -117,8 +123,10 @@ for (const width of [1440, 390]) {
         if (!found.length) { missing.push(`${route} ${selector}`); continue }
         for (const f of found) {
           // One carve-out: a library toolbar that has wrapped onto a second row steps down to a 26px pill-ended box.
-          const need = selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS : f.height / 2
-          if (f.radius + 0.5 < need) off.push(`${route} ${selector}: radius ${f.radius}px on a ${f.height}px box (needs ${need}px)`)
+          const plate = route === PLATE_ROUTE && selector === '.lbry-search'
+          const need = plate ? PLATE_RADIUS : selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS : f.height / 2
+          if (f.radius + 0.5 < need || (plate && f.radius - 0.5 > need)) off.push(`${route} ${selector}: radius ${f.radius}px on a ${f.height}px box (needs ${need}px)`)
+          if (plate) { searchHeights.set(`${route} ${selector}`, f.height); continue }
           if (SEARCH.has(selector)) searchBorders.add(f.border)
           if (selector === HEADER_SEARCH) {
             // A header search narrower than it is tall is the collapsed icon button.

@@ -96,7 +96,9 @@ test.describe('onboarding is decided by the account record', () => {
       await settleOn(page, expected)
       expect(await routes(page), 'onboarding was painted while the account had not answered').not.toContain('/onboarding')
       // Now let the read land and confirm the answer does not undo the above.
-      await expect.poll(() => flag(page), 'the account completion was never mirrored locally', { timeout: SLOW_MS * 3 }).toBe('1')
+      // expect.poll takes ONE options object: a message string in second place dropped the timeout and left
+      // the 5 s default, which a slow read under load overran.
+      await expect.poll(() => flag(page), { message: 'the account completion was never mirrored locally', timeout: SLOW_MS * 3 }).toBe('1')
       await page.waitForTimeout(300)
       expect(await routes(page), 'onboarding was painted after the account answered').not.toContain('/onboarding')
       await expect(page).toHaveURL(new RegExp(`${expected}/?$`))

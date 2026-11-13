@@ -269,7 +269,8 @@
 .cm-dialog .cm-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .cm-dialog .cm-note { margin-top: 16px; padding: 12px 16px; border-radius: 12px; background: var(--v3-l2); font-size: 14px; line-height: 1.5; color: var(--v3-sec); }
 .cm-dialog .cm-note-lead { color: var(--v3-ink); }
-.cm-dialog .cm-dfoot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+/* The body scrolls on a short (landscape phone) screen; the actions stay pinned at its foot. */
+.cm-dialog .cm-dfoot { position: sticky; bottom: -24px; z-index: 1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; margin-bottom: -24px; padding: 12px 0 24px; background: var(--ov-surface); }
 .cm-dialog .cm-btn { height: 44px; padding: 0 20px; }
 .cm-dialog .cm-file { display: flex; align-items: center; gap: 12px; }
 .cm-dialog .cm-file-name { min-width: 0; overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; color: var(--v3-sec); }
