@@ -492,3 +492,184 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] .lbry-sheet{animatio
   html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] :is(.lbry-filter,.lbry-filtertrig,.geg-pill,.gcta-action,.pgal-act,.pgal-like,.dgh-action .btn,.pgl-build-icon svg,.pgal-use span,.grg-open span,.blib-act span,.grg-copy,.blib-act,.pgal-more){transform:none;transition-property:opacity,color,background-color}
 }
 html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lbry-filtertrig,.geg-pill,.gcta-action,.pgal-act,.pgal-like,.dgh-action .btn,.pgl-build-icon svg,.pgal-use span,.grg-open span,.blib-act span,.grg-copy,.blib-act,.pgal-more){transform:none;transition-property:opacity,color,background-color}
+
+/* ══ The vertical panel tile and its grid ═══════════════════════════════════
+   One tile for palettes and gradients: a frame with 8px of padding round a
+   media panel (8px radius inside the 16px frame), the name and the meta under
+   it. The whole tile is one button; Like sits above it. Columns follow the
+   width of the grid, not of the window: four from 880px, two below, never
+   three. */
+.lib-surface.lib-v3[class] .vpt-grid{container-type:inline-size;width:100%}
+.lib-surface.lib-v3[class] .vpt-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lib-surface.lib-v3[class] .vpt{
+  position:relative;isolation:isolate;display:flex;flex-direction:column;min-width:0;padding:8px;
+  background:var(--v3-raised);border:0;border-radius:16px;box-shadow:none;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3[class] .vpt-media{
+  position:relative;isolation:isolate;display:flex;flex-direction:column;overflow:hidden;
+  aspect-ratio:4/5;border-radius:8px;background:var(--v3-l2);
+}
+@container (min-width:560px){
+  .lib-surface.lib-v3[class] .vpt-cols{gap:16px}
+  .lib-surface.lib-v3[class] .vpt-media{aspect-ratio:1/1}
+}
+@container (min-width:880px){
+  .lib-surface.lib-v3[class] .vpt-cols{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .lib-surface.lib-v3[class] .vpt-media{aspect-ratio:4/5}
+}
+.lib-surface.lib-v3[class] .vpt-band{flex:1 1 0;min-height:0}
+.lib-surface.lib-v3[class] .vpt-foot{display:flex;flex-direction:column;gap:2px;min-width:0;padding:12px 8px 8px}
+.lib-surface.lib-v3[class] .vpt-name{
+  margin:0;overflow:hidden;font-size:16px;font-weight:560;line-height:1.3;letter-spacing:0;color:var(--v3-ink);
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.lib-surface.lib-v3[class] .vpt-meta{
+  margin:0;overflow:hidden;font-size:12px;line-height:1.4;color:var(--v3-sec);font-variant-numeric:tabular-nums;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+/* The open button covers the tile; Like is the only thing above it. */
+.lib-surface.lib-v3[class] .vpt-open{
+  position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;padding:0;
+  border:0;border-radius:16px;background:transparent;color:inherit;cursor:pointer;
+}
+.lib-surface.lib-v3[class] .vpt-open:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3[class] .vpt-like{
+  position:absolute;top:16px;right:16px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;padding:0;border:0;border-radius:999px;
+  background:rgba(6,6,7,.72);color:#EFEEEA;cursor:pointer;
+  transition:opacity 150ms ease,transform 120ms var(--v3-ease),background-color 150ms ease;
+}
+.lib-surface.lib-v3[class] .vpt-like::after{content:"";position:absolute;inset:-6px}
+.lib-surface.lib-v3[class] .vpt-like:active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .vpt-like:focus-visible{outline:2px solid #EFEEEA;outline-offset:2px;box-shadow:0 0 0 4px #060607}
+.lib-surface.lib-v3[class] .vpt:active:not(.vpt--locked){transform:scale(.98)}
+@media(pointer:coarse){
+  .lib-surface.lib-v3[class] .vpt-like{width:44px;height:44px;top:12px;right:12px}
+}
+@media(hover:hover) and (pointer:fine){
+  .lib-surface.lib-v3[class] .vpt:not(.vpt--locked):hover{background:var(--v3-l2)}
+  .lib-surface.lib-v3[class] .vpt-like:not(.is-liked){opacity:0}
+  .lib-surface.lib-v3[class] .vpt:hover .vpt-like,
+  .lib-surface.lib-v3[class] .vpt-like:focus-visible{opacity:1}
+  .lib-surface.lib-v3[class] .vpt-like:hover{background:rgba(6,6,7,.9)}
+}
+
+/* ══ The preview dialog ═════════════════════════════════════════════════════
+   Phone (the default): the bottom sheet. Header 56px (Close, counter, Previous,
+   Next at 44px), the preview 200px, the panel scrolls, the primary is 52px on
+   the bottom edge with the safe area under it. Tablet stacks the same parts in
+   a centred card; desktop sets the preview left and the panel right. The layer
+   itself carries .lib-surface.lib-v3, so its own rules chain off the layer. */
+.lib-surface.lib-v3.gpd-layer[class] .gpd{
+  display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 200px minmax(0,1fr) auto;
+  grid-template-areas:"head" "preview" "panel" "foot";
+  width:100%;height:92dvh;max-height:92dvh;padding:0;overflow:hidden;
+  background:var(--v3-raised);color:var(--v3-ink);border-radius:24px 24px 0 0;
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-head{
+  grid-area:head;display:flex;align-items:center;min-height:56px;padding:6px 8px;touch-action:none;
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-close{order:0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-count{order:1;flex:1 1 auto;text-align:center;font-size:14px;font-weight:560;color:var(--v3-sec);font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-prev{order:2}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-next{order:3}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-icon{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:44px;height:44px;padding:0;
+  border:0;border-radius:999px;background:transparent;color:var(--v3-ink);cursor:pointer;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-icon:active{background:var(--v3-rowp);transform:scale(.97)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-icon:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-preview{
+  grid-area:preview;position:relative;isolation:isolate;display:flex;flex-direction:column;overflow:hidden;
+  margin:0 8px;border-radius:12px;background:var(--v3-l2);touch-action:pan-y;
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-band{flex:1 1 0;min-height:0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-panel{grid-area:panel;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 8px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-name{margin:0;font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.03em;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-meta{margin:6px 0 0;font-size:12px;line-height:1.4;color:var(--v3-sec);font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-sec{margin:24px 0 0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-sec-h{margin:0 0 8px;font-size:12px;font-weight:600;line-height:1.4;letter-spacing:.04em;text-transform:uppercase;color:var(--v3-t56)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-list,
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pairs{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:6px 8px;
+  border:0;border-radius:8px;background:transparent;color:var(--v3-ink);font:inherit;text-align:left;cursor:pointer;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row:active{background:var(--v3-rowp);transform:scale(.98)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-swatch{flex:0 0 32px;width:32px;height:32px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--v3-hair)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-text{display:flex;flex:1 1 auto;flex-direction:column;min-width:0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-hex{font-family:var(--mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:14px;line-height:1.3;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-detail{overflow:hidden;font-size:12px;line-height:1.4;color:var(--v3-sec);text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-copy{flex:0 0 auto;font-size:12px;font-weight:560;color:var(--v3-sec)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-text{margin:0;font-size:14px;line-height:1.5;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-text+.gpd-text{margin-top:4px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-text--quiet{margin-top:8px;font-size:12px;color:var(--v3-sec)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair{display:flex;align-items:center;gap:12px;min-height:44px;padding:4px 8px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair-chip{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px;
+  border-radius:8px;font-size:14px;font-weight:600;box-shadow:inset 0 0 0 1px var(--v3-hair);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair-text{flex:1 1 auto;min-width:0;font-size:14px;line-height:1.3;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair-ratio{flex:0 0 auto;font-size:12px;color:var(--v3-sec);font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-action{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;
+  border:0;border-radius:12px;background:var(--v3-l2);color:var(--v3-ink);font:inherit;font-size:14px;font-weight:560;cursor:pointer;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-action:active{transform:scale(.97)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-action:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-foot{grid-area:foot;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--v3-raised)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-primary{
+  display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;
+  background:var(--v3-ink);color:var(--v3-on-ink);font-size:15px;font-weight:600;line-height:1;text-decoration:none;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-primary:active{transform:scale(.98)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-primary:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+
+/* Tablet: a centred, stacked card. */
+@media(min-width:641px){
+  .lib-surface.lib-v3.gpd-layer[class]{align-items:center;justify-content:center}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd{
+    width:min(680px,100vw - 48px);height:auto;max-height:calc(100dvh - 48px);
+    grid-template-rows:auto 240px minmax(0,1fr) auto;border-radius:24px;
+  }
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-head{padding:8px 12px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-foot{padding:12px 24px 24px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-panel{padding:16px 24px 8px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-preview{margin:0 24px}
+}
+
+/* Desktop: preview left, panel right. */
+@media(min-width:1024px){
+  .lib-surface.lib-v3.gpd-layer[class] .gpd{
+    width:min(1120px,100vw - 64px);height:min(760px,100dvh - 64px);max-height:none;
+    grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-areas:"preview head" "preview panel" "preview foot";
+  }
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-preview{margin:8px 0 8px 8px;border-radius:16px;touch-action:auto}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-head{padding:8px 16px 0 8px;touch-action:auto}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-count{order:3;text-align:right;padding-right:8px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-prev{order:1}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-next{order:2}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-foot{padding:12px 24px 24px}
+}
+@media(hover:hover) and (pointer:fine){
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-icon:hover,
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-row:hover{background:var(--v3-wash)}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-action:hover{background:var(--v3-l2h)}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-primary:hover{background:var(--v3-ink-hover);color:var(--v3-on-ink)}
+}
+
+/* Reduced motion: opacity and colour only, no press scale, the card fades. */
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] :is(.vpt,.vpt-like,.vpt:active:not(.vpt--locked)),
+  html:not([data-reduced-motion="false"]) .lib-surface.lib-v3.gpd-layer[class] :is(.gpd-icon,.gpd-row,.gpd-action,.gpd-primary){transform:none;transition-property:opacity,color,background-color}
+}
+html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.vpt,.vpt-like,.vpt:active:not(.vpt--locked)),
+html[data-reduced-motion="true"] .lib-surface.lib-v3.gpd-layer[class] :is(.gpd-icon,.gpd-row,.gpd-action,.gpd-primary){transform:none;transition-property:opacity,color,background-color}

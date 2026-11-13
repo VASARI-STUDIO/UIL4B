@@ -22,6 +22,7 @@ import { LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
 import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { LIBRARY_RULES } from '../utils/libraryRules'
 import { standinPalettes } from '../utils/gateStandins'
+import { paletteMeta } from '../utils/galleryMeta'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -151,14 +152,14 @@ const SECTIONS = [
 // NOTHING IS HAND-TAGGED. The key is the palette id; the ANSWER comes from the
 // hexes alone. No `mood:` field exists on a palette and none should — a tag is
 // written once and keeps its answer after an edit changes the colours under it.
-// The card's meta line, as the design writes it: "Warm, 5 colours" — the
-// palette's first mood in MOOD_IDS order, then its size. Every mood comes from
-// the classifier, so the word is measured, not tagged.
+// The tile's meta line: the palette's first mood in MOOD_IDS order, then its
+// size ("Warm · 5 colours"); a brand system says so instead of a mood. Every mood
+// comes from the classifier, so the word is measured, not tagged.
 const cardMetaFor = (moodsById) => (palette) => {
+  if (palette.kind === 'brand') return paletteMeta(palette.colors.length, 'Brand system')
   const moods = moodsById.get(palette.id) || {}
   const first = MOOD_IDS.find((id) => moods[id])
-  const size = `${palette.colors.length} ${palette.colors.length === 1 ? 'colour' : 'colours'}`
-  return first ? `${MOOD_LABELS[first]}, ${size}` : size
+  return paletteMeta(palette.colors.length, first ? MOOD_LABELS[first] : null)
 }
 
 // Neutral palettes for the gate's faded cards where the next ones are Pro's.
