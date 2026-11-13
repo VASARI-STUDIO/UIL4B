@@ -129,12 +129,14 @@ test.describe('app header actions', () => {
       const geometry = await tip.evaluate((el) => {
         const r = el.getBoundingClientRect()
         const button = el.parentElement.getBoundingClientRect()
-        return { right: r.right, centre: r.top + r.height / 2,
+        const learn = [...document.querySelectorAll('.pnav-trigger')].find((b) => b.textContent.trim() === 'Learn')
+        return { right: r.right, centre: r.top + r.height / 2, width: el.offsetWidth,
+          learnRight: learn ? learn.getBoundingClientRect().right : null,
           buttonLeft: button.left, buttonCentre: button.top + button.height / 2,
           below: el.classList.contains('pnav-tip--below') }
       })
       if (width === 1440 || !geometry.below) {
-        expect(geometry.right).toBeLessThanOrEqual(geometry.buttonLeft - 7)
+        expect(geometry.right, `hint geometry ${JSON.stringify(geometry)}`).toBeLessThanOrEqual(geometry.buttonLeft - 7)
         expect(Math.abs(geometry.centre - geometry.buttonCentre)).toBeLessThan(1)
       }
     })
@@ -280,7 +282,7 @@ test.describe('app header touch actions', () => {
   })
 
   for (const width of [320, 360, 390]) {
-    test(`at ${width} touch targets reach 44px and circles stay 36px without wrapping`, async ({ page }) => {
+    test(`at ${width} every header circle is drawn 44px and the row does not wrap`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 })
       await signIn(page, { plan: 'free', projects: 1 })
       await go(page, '/create/palette')
@@ -303,8 +305,9 @@ test.describe('app header touch actions', () => {
       })
       for (const target of targets) {
         if (target.selector !== '.pnav-logo') {
-          expect(target.width, target.selector).toBe(36)
-          expect(target.height, target.selector).toBe(36)
+          // Phone header: search, Export, avatar and menu are all 44px circles.
+          expect(target.width, target.selector).toBe(44)
+          expect(target.height, target.selector).toBe(44)
         }
         expect(target.content, target.selector).toBe('""')
         expect(target.hitWidth, target.selector).toBeGreaterThanOrEqual(44)

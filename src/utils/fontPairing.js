@@ -8,12 +8,12 @@
 // lives here, takes a plain array, and is pure.
 export const PAIRING_RULES = {
   serif: [
-    ['sans-serif', 'A neutral sans under a serif headline is the classic editorial split — maximum contrast, zero competition.'],
+    ['sans-serif', 'A neutral sans under a serif headline is the classic editorial split: maximum contrast, zero competition.'],
     ['monospace', 'Mono body copy keeps a serif headline literary while signalling something technical underneath.'],
   ],
   'sans-serif': [
     ['serif', 'A serif body warms up a geometric headline and makes long-form reading easier.'],
-    ['sans-serif', 'Same-genre pairing — lean on a clear weight and size jump to keep the hierarchy obvious.'],
+    ['sans-serif', 'Same-genre pairing. Lean on a clear weight and size jump to keep the hierarchy obvious.'],
   ],
   display: [
     ['sans-serif', 'Display faces carry the personality; a plain sans body keeps the page readable.'],

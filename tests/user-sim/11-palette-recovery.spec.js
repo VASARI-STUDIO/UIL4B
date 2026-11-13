@@ -167,8 +167,8 @@ test.describe('Palette Builder recovery and tool continuity', () => {
       expect(Math.abs(box.left), `${name} starts at the edge`).toBeLessThanOrEqual(1)
       expect(Math.abs(box.right), `${name} ends at the edge`).toBeLessThanOrEqual(1)
     }
-    // The header sits on its own clamp(14px,2vw,22px) gutter: 22px here.
-    expect(geometry.navInset).toBe(22)
+    // The header sits on the shell's 24px gutter from tablet up.
+    expect(geometry.navInset).toBe(24)
   })
 
   test('temperature stays under the pointer for the entire first drag', async ({ page }) => {
@@ -417,11 +417,11 @@ test.describe('Palette Builder recovery and tool continuity', () => {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
       expect(overflow).toBeLessThanOrEqual(1)
 
-      // No site footer under a tool; the header's gutter is the
-      // App file's clamp(14px,2vw,22px), or 16px on a phone header.
+      // No site footer under a tool; the header's gutter is 24px,
+      // or 16px on a phone header.
       await expect(page.locator('.app-footer')).toHaveCount(0)
       const navPad = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.pnav-inner')).paddingLeft))
-      expect(navPad).toBeCloseTo(width < 768 ? 16 : Math.min(22, Math.max(14, width * 0.02)), 0)
+      expect(navPad).toBe(width < 768 ? 16 : 24)
     })
   }
 

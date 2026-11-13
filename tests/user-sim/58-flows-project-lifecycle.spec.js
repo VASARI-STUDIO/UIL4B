@@ -50,7 +50,7 @@ async function openActions(page, projectName) {
   await expect(page.getByRole('heading', { level: 1, name: projectName })).toBeVisible()
   await page.getByRole('button', { name: `Actions for ${projectName}` }).click()
   // The menu is a real popover; wait for it rather than for a timeout.
-  await expect(page.getByRole('group', { name: `Actions for ${projectName}` })).toBeVisible()
+  await expect(page.getByRole('menu', { name: `Actions for ${projectName}` })).toBeVisible()
 }
 
 test.describe('a returning free account managing its projects', () => {
@@ -60,9 +60,9 @@ test.describe('a returning free account managing its projects', () => {
     await go(page, '/projects')
 
     await openActions(page, 'Seeded Project 1')
-    const menu = page.getByRole('group', { name: 'Actions for Seeded Project 1' })
+    const menu = page.getByRole('menu', { name: 'Actions for Seeded Project 1' })
     for (const item of ['Duplicate', 'Rename', 'Archive', 'Delete…']) {
-      await expect(menu.getByRole('button', { name: item, exact: true }),
+      await expect(menu.getByRole('menuitem', { name: item, exact: true }),
         `the ⋯ menu must offer ${item}`).toBeVisible()
     }
   })
@@ -73,7 +73,7 @@ test.describe('a returning free account managing its projects', () => {
     await go(page, '/projects')
 
     await openActions(page, 'Seeded Project 1')
-    await page.getByRole('button', { name: 'Duplicate', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Duplicate', exact: true }).click()
 
     // The store, not the menu. A duplicate that only toasts is not a duplicate.
     await expect.poll(() => stored(page, account.email).then((p) => p.length),
@@ -91,7 +91,7 @@ test.describe('a returning free account managing its projects', () => {
     await go(page, '/projects')
 
     await openActions(page, 'Seeded Project 1')
-    await page.getByRole('button', { name: 'Duplicate', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Duplicate', exact: true }).click()
 
     const toast = page.locator('.toast')
     await expect(toast, 'the refusal must be said out loud').toBeVisible()
@@ -109,7 +109,7 @@ test.describe('a returning free account managing its projects', () => {
     await go(page, '/projects')
 
     await openActions(page, 'Seeded Project 1')
-    await page.getByRole('button', { name: 'Rename', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
 
     const field = page.getByRole('textbox', { name: /Rename Seeded Project 1/i })
     await expect(field, 'Rename must open an editable field on the card').toBeVisible()
@@ -128,7 +128,7 @@ test.describe('a returning free account managing its projects', () => {
     await go(page, '/projects')
 
     await openActions(page, 'Seeded Project 1')
-    await page.getByRole('button', { name: 'Archive', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
 
     await expect(page.locator('.pjd-status'), 'the page says so').toContainText('Archived')
     const all = await stored(page, account.email)
@@ -157,7 +157,7 @@ test.describe('a returning free account managing its projects', () => {
     await go(page, '/projects')
 
     await openActions(page, 'Seeded Project 1')
-    await page.getByRole('button', { name: 'Delete…', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
 
     const confirm = page.getByRole('button', { name: 'Permanently delete' })
     await expect(confirm, 'the destructive button must start out refused').toBeDisabled()

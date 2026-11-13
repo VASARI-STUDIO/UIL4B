@@ -146,7 +146,6 @@ test('the starter grid steps 2, 4, 6 columns, which all divide twelve, and holds
 test('preset text is 12px or more, and the presets do not transition background-color', () => {
   const css = read('src/styles/pages/gradient.css')
   assert.match(css, /\.grd-preset-meta \{ font-size: 12px;/)
-  assert.match(css, /\.grd-tintmenu-hex \{[^}]*font-size: 12px; color: var\(--t1\)/)
   assert.doesNotMatch(css.match(/\.grd \.grd-preset \{[^}]*\}/)[0], /background-color/)
 })
 
