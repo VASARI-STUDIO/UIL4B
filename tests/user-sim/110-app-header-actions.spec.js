@@ -129,12 +129,14 @@ test.describe('app header actions', () => {
       const geometry = await tip.evaluate((el) => {
         const r = el.getBoundingClientRect()
         const button = el.parentElement.getBoundingClientRect()
-        return { right: r.right, centre: r.top + r.height / 2,
+        const learn = [...document.querySelectorAll('.pnav-trigger')].find((b) => b.textContent.trim() === 'Learn')
+        return { right: r.right, centre: r.top + r.height / 2, width: el.offsetWidth,
+          learnRight: learn ? learn.getBoundingClientRect().right : null,
           buttonLeft: button.left, buttonCentre: button.top + button.height / 2,
           below: el.classList.contains('pnav-tip--below') }
       })
       if (width === 1440 || !geometry.below) {
-        expect(geometry.right).toBeLessThanOrEqual(geometry.buttonLeft - 7)
+        expect(geometry.right, `hint geometry ${JSON.stringify(geometry)}`).toBeLessThanOrEqual(geometry.buttonLeft - 7)
         expect(Math.abs(geometry.centre - geometry.buttonCentre)).toBeLessThan(1)
       }
     })

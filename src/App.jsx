@@ -32,11 +32,13 @@ import { useSessionHint } from './hooks/useSessionHint'
 import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES, mergeRedirectQuery } from './data/legacyRoutes'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
+import { maintenanceOn } from './config/maintenance'
 import RouteLoading from './components/RouteLoading'
 import { EVENTS, sendEvent } from './utils/productEvents'
 // `lazy` in this file is lazyRoute, not React's: a page file that failed to
 // download waits for the recovery reload instead of crashing the route.
 import { lazyRoute as lazy } from './utils/lazyRoute'
+import { resolveRouteTitle } from './utils/pageTitle'
 
 // Static imports — small or always-visited pages (instant load)
 //
@@ -104,6 +106,8 @@ const ButtonLibrary = lazy(() => import('./pages/ButtonLibrary'))
 // way /discover is chromeless and /discover/palettes is not.
 const LearnArticle = lazy(() => import('./pages/LearnArticle'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+const LinkExpired = lazy(() => import('./pages/LinkExpired'))
+const Maintenance = lazy(() => import('./pages/Maintenance'))
 
 // The dev-only component sheet. The condition is written out here, in the
 // expressions Vite replaces with literals in a production build, so the
@@ -358,7 +362,7 @@ function AppInner({ toast }) {
     const description = missing
       ? 'That page does not exist. Browse the tools, or head back to the homepage.'
       : PAGE_DESCRIPTIONS[metaPath] || DEFAULT_DESCRIPTION
-    document.title = title
+    document.title = resolveRouteTitle(title)
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc) {
       metaDesc.setAttribute('content', description)
@@ -654,6 +658,7 @@ function AppInner({ toast }) {
               <Route path="/community/:id" element={<CommunityPiece toast={toast} />} />
               <Route path="/u/:handle" element={<CommunityProfile toast={toast} />} />
               <Route path="/feedback" element={<Feedback toast={toast} />} />
+              <Route path="/reset-password" element={<LinkExpired />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/credits" element={<Credits />} />
@@ -678,6 +683,22 @@ function AppInner({ toast }) {
 
       {!fullScreen && <AppFooter />}
       <GoogleOneTap />
+    </div>
+  )
+}
+
+// While the maintenance switch is on (config/maintenance.js) every route shows
+// the maintenance page inside the full shell, so the nav and footer stay.
+function MaintenanceShell() {
+  return (
+    <div className="app-shell">
+      <PillNav />
+      <main className="app-page" id="main" tabIndex={-1}>
+        <Suspense fallback={<RouteLoading />}>
+          <Maintenance />
+        </Suspense>
+      </main>
+      <AppFooter />
     </div>
   )
 }
@@ -712,7 +733,7 @@ export default function App() {
             a crash is a recovery screen rather than a blank page. The shell
             keeps its own boundary inside <main> so the nav survives there. */}
         <RouteErrorBoundary resetKey={pathname} outer>
-          <AppInner toast={toast} />
+          {maintenanceOn() ? <MaintenanceShell /> : <AppInner toast={toast} />}
         </RouteErrorBoundary>
         <Toast message={message} visible={visible} type={type} onDismiss={dismiss} action={toastAction} onHold={holdToast} onRelease={releaseToast} />
         {/* Mounted out here rather than inside AppInner's shell: every Create

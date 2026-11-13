@@ -1106,10 +1106,13 @@ test.describe('a project’s own page', () => {
     await expect(page).toHaveURL(/\/projects$/)
   })
 
-  test('an unknown project id goes back to the workspace instead of rendering nothing', async ({ page }) => {
+  test('an unknown project id says the project is not in the account, with a way to the workspace, instead of rendering nothing', async ({ page }) => {
     watch(page, 'a designer following a link to a project deleted elsewhere')
     await signIn(page, { plan: 'free', projects: [complete()] })
     await go(page, '/projects/not-a-project')
+    await expect(page.getByRole('heading', { level: 1, name: 'That project isn’t in your account' })).toBeVisible()
+    await expect(page).toHaveURL(/\/projects\/not-a-project$/)
+    await page.getByRole('link', { name: 'Open your workspace' }).click()
     await expect(page).toHaveURL(/\/projects$/)
     await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' })).toBeVisible()
   })

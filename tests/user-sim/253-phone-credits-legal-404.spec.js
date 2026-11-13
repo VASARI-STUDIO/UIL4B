@@ -23,10 +23,10 @@
 //     the shared `.sec` rule centres the column anyway.)
 //   - legal.css: put `.lgl .storage-table .storage-key { font-size: 11px }` back
 //     -> "no text under 12px" on /privacy at 768.
-//   - reading.css: set `.nf{margin-inline:0 auto}` -> "balanced margins" on both
-//     404s at 768 (seen red: left 23, right 185; deleting `margin-inline:auto`
-//     is a no-op for the same reason); make `.nf .nf-more a` `min-height:24px` -> "no control
-//     under 44px".
+//   - v3-edge.css: make `.ed-row` `min-height:24px` -> "no control under 44px" on
+//     both 404s. (The 404 is the edge layout, `.ed`, no longer a `.sec` column:
+//     the content is measured inside `.ed`, and the page fills the width, so the
+//     768 balance check holds on it by filling rather than by centring.)
 //   - wrap `.crd-group-body` in an element with `border:1px solid var(--border);
 //     border-radius:12px` and a bordered child of the same kind -> "no card
 //     inside a card".
@@ -50,7 +50,8 @@ const SHOTS = path.join(process.cwd(), '.claude', 'scratch', 'phlegal1')
 
 /** Everything measured in one pass, inside the page. */
 function measure() {
-  const root = document.querySelector('.app-page .sec') || document.querySelector('.sec')
+  // The 404s are the edge layout (`.ed`); every other page is a `.sec` column.
+  const root = document.querySelector('.ed') || document.querySelector('.app-page .sec') || document.querySelector('.sec')
   const visible = (el) => {
     const r = el.getBoundingClientRect()
     const cs = getComputedStyle(el)
@@ -131,7 +132,7 @@ for (const theme of ['light', 'dark']) {
         const page = await ctx.newPage()
         watch(page, 'a visitor on a phone or tablet')
         await go(page, pg.route)
-        await expect(page.locator('.sec h1').first()).toBeVisible()
+        await expect(page.locator('.ed h1, .sec h1').first()).toBeVisible()
         await page.waitForTimeout(300)
 
         fs.mkdirSync(SHOTS, { recursive: true })

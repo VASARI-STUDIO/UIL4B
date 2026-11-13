@@ -530,15 +530,15 @@ async function crashChunk(page, glob) {
   }))
 }
 
-async function expectRecoveryScreen(page) {
+async function expectRecoveryScreen(page, route) {
   // A thrown import goes through vite:preloadError first, and main.jsx reloads
   // once for what looks like a stale deploy; the crash lands on the second try.
   const card = page.locator('.error-boundary')
   await expect(card).toBeVisible({ timeout: 20000 })
   await expect(card.getByRole('heading', { level: 1, name: 'This page stopped working' })).toBeVisible()
-  await expect(card.getByRole('button', { name: 'Try again' })).toBeVisible()
-  await expect(card.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute('href', '/')
-  await expect(card.getByRole('button', { name: 'Report this problem' })).toBeVisible()
+  await expect(card.getByRole('button', { name: 'Reload the page' })).toBeVisible()
+  await expect(card.getByRole('link', { name: 'Back to the homepage' })).toHaveAttribute('href', '/')
+  await expect(card.getByRole('link', { name: 'Report this', exact: true })).toHaveAttribute('href', `/feedback?type=bug&page=${encodeURIComponent(route)}`)
   return card
 }
 
@@ -547,19 +547,16 @@ for (const [route, chunk, where] of [
   ['/learn', '**/assets/SurfaceIndex-*.js', 'a surface index, which returns before the app shell'],
   ['/settings', '**/assets/Settings-*.js', 'a page inside the app shell'],
 ]) {
-  test(`a crash on ${route} (${where}) shows Try again, Go to the home page and Report this problem, and the report is prefilled`, async ({ page }) => {
+  test(`a crash on ${route} (${where}) shows Reload the page, Back to the homepage and Report this, and Report this opens a bug report`, async ({ page }) => {
     test.setTimeout(60000)
     await crashChunk(page, chunk)
     await goRaw(page, route)
-    const card = await expectRecoveryScreen(page)
+    const card = await expectRecoveryScreen(page, route)
 
-    await card.getByRole('button', { name: 'Report this problem' }).click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-    await expect(dialog.locator('#fb-subject')).toHaveValue(new RegExp(`^Crash on ${route}: .*${PROBE}`))
-    await expect(dialog.locator('#fb-message')).toHaveValue(new RegExp(`Route: ${route}\\n`))
+    await card.getByRole('link', { name: 'Report this', exact: true }).click()
+    await expect(page).toHaveURL((url) => url.pathname === '/feedback' && url.search === `?type=bug&page=${encodeURIComponent(route)}`)
     // Bug is preselected: the person should not have to say what kind of
     // report a crash is.
-    await expect(dialog.getByRole('button', { name: 'Bug report', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.fb-page [role="radio"][aria-checked="true"]')).toHaveText('Bug report')
   })
 }
