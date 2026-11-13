@@ -36,10 +36,11 @@ test('there are eight to twenty groups, each of 16–32 distinct icons', () => {
   }
 })
 
-test('every group draws from more than one pack, and only from packs that meet the style rule', () => {
+test('Wayfinding draws from Lucide alone; every other group mixes packs that meet the style rule', () => {
+  assert.deepEqual(groupPacks(groupById('wayfinding')), ['lucide'])
   for (const g of PREMADE_ICON_GROUPS) {
     const packs = groupPacks(g)
-    assert.ok(packs.length >= 2, `${g.id} draws from ${packs.join(', ')} only`)
+    if (g.id !== 'wayfinding') assert.ok(packs.length >= 2, `${g.id} draws from ${packs.join(', ')} only`)
     const outside = packs.filter((p) => !(p in GROUP_STYLE_PACKS))
     assert.deepEqual(outside, [], `${g.id} uses packs outside GROUP_STYLE_PACKS`)
     assert.deepEqual(g.style, { grid: 24, stroke: DEFAULT_GROUP_STROKE, cap: 'round', join: 'round' })
