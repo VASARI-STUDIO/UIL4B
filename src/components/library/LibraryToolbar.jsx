@@ -96,6 +96,10 @@ function LibraryToolbar({
   // still stated (the same reason a collapsed trigger names its selection).
   activeFilters = 0,
   className = '',
+  // The phone sheet's heading, and a class for the layer it is portalled into
+  // (the sheet sits outside the page root, so a page scopes its styling here).
+  sheetTitle = 'Filters',
+  sheetClassName = '',
 }) {
   const phone = useMediaQuery(PHONE_QUERY)
   const groups = Children.toArray(children).filter(Boolean)
@@ -236,6 +240,8 @@ function LibraryToolbar({
             setOpen={setOpen}
             close={close}
             activeFilters={activeFilters}
+            sheetTitle={sheetTitle}
+            sheetClassName={sheetClassName}
             groups={panelGroups}
             action={effective >= 3 ? action : null}
           />
@@ -260,7 +266,7 @@ function LibraryToolbar({
 export default memo(LibraryToolbar)
 
 // The one control the groups collapse into, and the panel it opens.
-function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action }) {
+function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action, sheetTitle, sheetClassName }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const firstControl = ':is(button,a[href],input,select,textarea,[tabindex]):not([disabled]):not([aria-disabled="true"]):not([tabindex="-1"])'
   // Desktop: the app's non-modal disclosure (usePopover — dismissal, focus-in,
@@ -310,7 +316,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
         </div>
       )}
       {open && phone && host && createPortal(
-        <div className="lib-surface lbry-sheet-layer">
+        <div className={`lib-surface lbry-sheet-layer${sheetClassName ? ` ${sheetClassName}` : ''}`}>
           <div className="lbry-sheet-scrim" onClick={close} aria-hidden="true" />
           <div
             ref={sheetRef}
@@ -322,7 +328,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
             tabIndex={-1}
           >
             <div className="lbry-sheet-head">
-              <h2 className="lbry-sheet-title" id={`${panelId}-title`}>Filters</h2>
+              <h2 className="lbry-sheet-title" id={`${panelId}-title`}>{sheetTitle}</h2>
               <button type="button" className="lbry-sheet-done" onClick={close}>Done</button>
             </div>
             <div className="lbry-sheet-body">{panelBody}</div>

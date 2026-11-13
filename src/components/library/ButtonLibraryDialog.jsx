@@ -78,7 +78,7 @@ function ProLock({ title, body, gate, checking }) {
       ) : (
         <>
           <p>{body}</p>
-          <Link className="lib-btn lib-btn--primary blib-lock-cta" to="/plans" onClick={() => { reportUpgradeGate(gate) }}>
+          <Link className="ui-pill-out blib-lock-cta" to="/plans" onClick={() => { reportUpgradeGate(gate) }}>
             See Pro plans
           </Link>
         </>

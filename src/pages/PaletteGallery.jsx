@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
@@ -30,6 +30,8 @@ import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 // This page's own sheet — every selector rooted at the page root's two classes.
 import '../styles/pages/palette-gallery.css'
+// The V3 roles for the three Discover libraries, last so they win ties.
+import '../styles/pages/library-v3.css'
 
 // ── TWO QUESTIONS, TWO TRAYS ────────────────────────────────────────
 //
@@ -250,10 +252,14 @@ export default function PaletteGallery({ toast }) {
       : []
   ), [browsing, visible])
 
+  // Resetting leaves focus in the search field, so the next keystroke starts a
+  // new search instead of landing on a button that has just left the page.
+  const root = useRef(null)
   const clear = () => {
     setQuery('')
     setGroup('all')
     setMood('all')
+    root.current?.querySelector('.lbry-search input')?.focus()
   }
 
   // The results row names a CATEGORY only when the view actually IS that
@@ -293,6 +299,7 @@ export default function PaletteGallery({ toast }) {
   // would be an interruption rather than an offer.
   const anonymous = tier === 'anonymous'
   const proPending = pro.active && !ready
+  const proFailed = pro.status === 'error' || pro.status === 'refused'
 
   // A collection this viewer has no open row of at all, while palettes are
   // still withheld: the tier cap fell before it. No mood or search can fill it,
@@ -346,19 +353,20 @@ export default function PaletteGallery({ toast }) {
   ) : null
 
   return (
-    <div className="sec lib-surface pgl-page">
-      {/* The design's blurb, with the one fact in it made true: the file says
-          "Seventy-one", the library holds 101 today (64 curated, 37 brand
-          systems, 30 of them Pro), so the number is derived rather than typed.
-          The masthead does not open a hole when the copy is short — see the
-          height note above .dgh-hero in global.css. */}
+    <div ref={root} className="sec lib-surface lib-v3 pgl-page">
+      {/* The blurb names the library's size only for a Pro viewer whose full
+          library has arrived or is arriving: when it failed to load, the number
+          would promise what is not on screen. The number is derived rather than
+          typed. */}
       <DiscoverGalleryHero
         title="Palette Library"
-        description={`${isPro === true ? `${LIBRARY_TOTALS.palettes} palettes` : 'Palettes'}, named for the job they do. Open one and it lands in the builder with every stop editable.`}
+        description={`${isPro === true && !proFailed ? `${LIBRARY_TOTALS.palettes} palettes` : 'Palettes'}, named for the job they do. Open one and it lands in the builder with every stop editable.`}
       />
 
       <LibraryToolbar
         className="pgl-toolbar"
+        sheetTitle="Mood"
+        sheetClassName="lib-v3"
         quick={0}
         activeFilters={(group !== 'all' ? 1 : 0) + (mood !== 'all' ? 1 : 0)}
         search={{
@@ -370,10 +378,10 @@ export default function PaletteGallery({ toast }) {
           label: 'Search palettes',
         }}
         action={(
-          <Link className="pgl-build-link" to="/create/palette">
+          <Link className="pgl-build-link ui-pill ui-pill-out" to="/create/palette">
             <span className="pgl-build-label">Create a palette</span>
             <span className="pgl-build-icon" aria-hidden="true">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
             </span>
           </Link>
         )}
@@ -452,6 +460,10 @@ export default function PaletteGallery({ toast }) {
           />
         )}
 
+        {/* A Pro viewer's library is loading or failed: the line sits directly
+            under the heading it qualifies, with Retry beside it. */}
+        {proPending && <ProLibraryStatus library={pro} noun="palette library" row />}
+
         {visible.length ? (
           <>
             {/* Every card is about a dozen tab stops, so a keyboard user gets a
@@ -467,7 +479,7 @@ export default function PaletteGallery({ toast }) {
                         sectioning a list this long rather than filtering it. */}
                     <div className="pgl-section-head">
                       <h3 id={`pgl-section-${section.id}`}>{section.label}</h3>
-                      <span className="pgl-section-count">{section.palettes.length}</span>
+                      <span className="pgl-section-count">{section.palettes.length} {section.palettes.length === 1 ? 'palette' : 'palettes'}</span>
                       <p className="pgl-section-blurb">{section.blurb}</p>
                     </div>
                     <PaletteGalleryGrid
@@ -560,11 +572,6 @@ export default function PaletteGallery({ toast }) {
         </div>
       </section>
 
-      {/* A Pro viewer's stand-in for the upsell, whatever the filters: the rest
-          of the library is loading or failed, and a narrowed result should say
-          why it may be short. */}
-      {proPending && <ProLibraryStatus library={pro} noun="palette library" />}
-
       {/* AFTER the grid, the locked tease and the empty state alike — last child
           of the page, which is what "at the very bottom" has to mean if it is to
           survive the branch above. Rendering it inside either arm would put it
@@ -589,7 +596,7 @@ export default function PaletteGallery({ toast }) {
       {proPending ? null : isPro === true ? (
         <GalleryCloseCta
           className="pgl-cta"
-          detail="Build one in the Palette Builder — then submit it to the community from there."
+          detail="Build one in the Palette Builder, then submit it to the community from there."
           action="Create and submit your own"
           to="/create/palette"
         />

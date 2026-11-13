@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import GradientGalleryGrid from '../components/discover/GradientGalleryGrid'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
@@ -33,6 +33,8 @@ import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 // This page's own sheet — every selector rooted at the page root's two classes.
 import '../styles/pages/gradient-gallery.css'
+// The V3 roles for the three Discover libraries, last so they win ties.
+import '../styles/pages/library-v3.css'
 
 // /discover/gradients — the Gradient Library. A designgradients-style browse
 // surface over the local static set (src/data/gradientGallery.js): search by
@@ -209,8 +211,12 @@ export default function GradientGallery({ toast }) {
     return true
   }), [browsable, query, tag, types])
 
+  // Resetting leaves focus in the search field, so the next keystroke starts a
+  // new search instead of landing on a button that has just left the page.
+  const root = useRef(null)
   const clearAll = () => {
     setRawQuery(''); setTag('all'); setTypes(['all'])
+    root.current?.querySelector('.lbry-search input')?.focus()
     // A mood in the URL would otherwise survive the reset and come back on reload.
     if (searchParams.has('mood')) {
       const next = new URLSearchParams(searchParams)
@@ -279,7 +285,7 @@ export default function GradientGallery({ toast }) {
   ) : null
 
   return (
-    <div className="sec lib-surface grg-wrap">
+    <div ref={root} className="sec lib-surface lib-v3 grg-wrap">
       {/* NO `description`: the sentence here ran
           the same template as the Palette Library’s — "…with a point of view …
           make it yours." — which is what held both pages at 7 on
@@ -375,6 +381,8 @@ export default function GradientGallery({ toast }) {
           in two visually unrelated ways. */}
       <LibraryToolbar
         className="grg-toolbar"
+        sheetTitle="Mood"
+        sheetClassName="lib-v3"
         quick={1}
         activeFilters={(tag !== 'all' ? 1 : 0) + (types.includes('all') ? 0 : 1)}
         search={{
@@ -449,6 +457,10 @@ export default function GradientGallery({ toast }) {
           id="grg-grid-heading"
         />
 
+        {/* A Pro viewer's library is loading or failed: the line sits directly
+            under the heading it qualifies, with Retry beside it. */}
+        {proPending && <ProLibraryStatus library={pro} noun="gradient library" row />}
+
         {visible.length > 0 ? (
           <GradientGalleryGrid toast={toast} gradients={visible} />
         ) : proPending ? null : (
@@ -481,7 +493,6 @@ export default function GradientGallery({ toast }) {
           order Savee's paywall uses and the one the Palette and Prompt libraries
           already run: what you have, then a glimpse of more, then how to get it. */}
       {lockedBlock}
-      {proPending && <ProLibraryStatus library={pro} noun="gradient library" />}
 
       {/* The closing line, last child of the page. Same reasoning as the Palette
           Library: the Gradient Generator is where a gradient gets made, so the
