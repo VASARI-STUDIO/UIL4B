@@ -36,8 +36,11 @@ import {
   HUE_TERMS,
 } from '../../src/utils/paletteMood.js'
 import { paletteHaystack } from '../../src/utils/paletteSearch.js'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
+import { LIBRARY_PALETTES, HAS_REAL_PRO_DATA } from '../../api/_lib/library/data.js'
 import { splitLockedLibrary } from '../../src/utils/lockedPreview.js'
+
+// Checks of the real rows' content skip when the library source is fixtures.
+const realOnly = { skip: !HAS_REAL_PRO_DATA && 'library rows are fixtures' }
 
 // The library, classified once, exactly the way the page classifies it.
 const TAGGED = LIBRARY_PALETTES.map((p) => ({ ...p, mood: classifyPalette(p.colors) }))
@@ -71,12 +74,12 @@ test('there is a library to classify, and a free view of it', () => {
 
 // ── Every control selects something ─────────────────────────────────────────
 
-test('every mood matches at least one palette in the shipped library', () => {
+test('every mood matches at least one palette in the shipped library', realOnly, () => {
   const empty = MOOD_IDS.filter((mood) => matching(mood).length === 0)
   assert.deepEqual(empty, [], `dead filters — a control that matches nothing is broken: ${empty.join(', ')}`)
 })
 
-test('every mood matches at least one palette a FREE viewer can reach', () => {
+test('every mood matches at least one palette a FREE viewer can reach', realOnly, () => {
   const pool = TAGGED.filter((p) => FREE_IDS.has(p.id))
   const empty = MOOD_IDS.filter((mood) => matching(mood, pool).length === 0)
   assert.deepEqual(empty, [], `filters that are dead unless you pay: ${empty.join(', ')}`)

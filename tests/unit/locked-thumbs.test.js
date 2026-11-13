@@ -17,8 +17,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
 import { renderLockedThumbs, lockedThumbKey, THUMB_DIR, THUMB_W, THUMB_H, paintPalette, paintGradient, blurTwice } from '../../scripts/library/lockedThumbs.mjs'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
-import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/data.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/data.js'
 
 // The shift is keyed (LOCKED_THUMB_KEY, never committed), so only a machine
 // with the key can re-render the files. Everything else here reads the

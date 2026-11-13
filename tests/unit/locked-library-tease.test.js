@@ -27,14 +27,17 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { splitLockedLibrary, LOCKED_TEASE, GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
-import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
-import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
+import { BRAND_PALETTES, HAS_REAL_PRO_DATA } from '../../api/_lib/library/data.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/data.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 // Reads the WHOLE app stylesheet, not global.css alone. The rules this file
 // asserts on were split out of global.css into src/styles/deferred/*.css on
 // 2026-09-13; a test that keeps reading one file after a lift like that does
 // not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
 import { ALL_CSS } from './appStylesheets.js'
+
+// Checks of the real rows' content skip when the library source is fixtures.
+const realOnly = { skip: !HAS_REAL_PRO_DATA && 'library rows are fixtures' }
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 
@@ -58,7 +61,7 @@ const TELLTALE = [...new Set(
     .filter((hex) => !achromatic(hex) && !FREE_HEXES.has(hex)),
 )]
 
-test('the fixture itself is discriminating — there are telltale paid hexes to look for', () => {
+test('the fixture itself is discriminating — there are telltale paid hexes to look for', realOnly, () => {
   // If this ever drops to zero the assertions below become vacuous, which is
   // exactly how a test starts passing for the wrong reason.
   assert.ok(TELLTALE.length >= 20, `only ${TELLTALE.length} telltale paid hexes — the oracle assertions would be near-vacuous`)

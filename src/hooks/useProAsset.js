@@ -9,10 +9,9 @@ import { cachedAsset, forgetAssetsExcept, loadProAsset, proAssetKey, setProAsset
 // proAsset.js holds no Firebase import of its own; this is where it gets its auth.
 setProAssetAuth(loadAuthSdk)
 
-// While the locked previews are still also in public/, a deployment without the
-// Pro preview data (the route answers 503) shows the public file instead. The
-// switch-over that removes them from public/ sets this to false.
-export const STATIC_FALLBACK = true
+// The locked previews are not in public/, so a deployment without the Pro
+// preview data (the route answers 503) shows the error state, never a file.
+export const STATIC_FALLBACK = false
 
 const STATIC = { poster: promptPosterSrc, anim: promptAnimSrc, page: promptPageSrc }
 

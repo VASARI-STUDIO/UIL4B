@@ -25,9 +25,13 @@
 // set (a pricing decision, not a data detail) cannot drift.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 
-import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
+import { BRAND_PALETTES, HAS_REAL_PRO_DATA } from '../../api/_lib/library/data.js'
+
+// The rows live in the private data repo. Public CI runs on fixtures, so the
+// checks of the real rows skip there; the checks of the Pro rows' own values
+// (LEGO, the pepsi caveat) run in that repo's tests.
+const realOnly = { skip: !HAS_REAL_PRO_DATA && 'library rows are fixtures' }
 
 const byId = id => BRAND_PALETTES.find(b => b.id === id)
 
@@ -66,52 +70,43 @@ test('brand ids are unique', () => {
 // draw. This flag decides which side of splitLockedLibrary the row lands on:
 // free rows ship their `colors`, gated rows are stripped to id/label/slots, so
 // flipping it is a disclosure change as well as a pricing one.
-test('the free brand set is exactly the seven the founder chose', () => {
+test('the free brand set is exactly the seven the founder chose', realOnly, () => {
   const free = BRAND_PALETTES.filter(b => b.free).map(b => b.id).sort()
   assert.deepEqual(free, ['apple', 'discord', 'google', 'material', 'netflix', 'spotify', 'stripe'])
 })
 
 // ── Retired values stay retired ─────────────────────────────────────────────
-// Each of these was in the file on 2026-09-03 and is wrong. They are listed with
-// the value that replaced them so a reverting diff is self-explaining.
+// Each of these was in the file on 2026-09-03 and is wrong. Free rows list the
+// value that replaced them; a Pro row's current value stays in the private repo.
 const RETIRED = [
   ['#1DB954', '#1ED760', 'Spotify green, pre-2015'],
-  ['#FF5A5F', '#FF385C', 'Airbnb Rausch, pre-refresh'],
-  ['#D01012', '#E3000B', 'LEGO red — never a LEGO published value'],
-  ['#FFCF00', '#FFED00', 'LEGO yellow — never a LEGO published value'],
-  ['#24292F', '#1F2328', 'GitHub neutral, pre-Primer-primitives'],
-  ['#2DA44E', '#1F883D', 'GitHub green, superseded Primer generation'],
-  ['#009CDE', '#0070E0', 'PayPal light blue, retired'],
-  ['#0070BA', '#001C64', 'PayPal blue, retired'],
+  ['#FF5A5F', null, 'Airbnb Rausch, pre-refresh'],
+  ['#D01012', null, 'LEGO red — never a LEGO published value'],
+  ['#FFCF00', null, 'LEGO yellow — never a LEGO published value'],
+  ['#24292F', null, 'GitHub neutral, pre-Primer-primitives'],
+  ['#2DA44E', null, 'GitHub green, superseded Primer generation'],
+  ['#009CDE', null, 'PayPal light blue, retired'],
+  ['#0070BA', null, 'PayPal blue, retired'],
   ['#FFFBFE', '#FEF7FF', 'M3 surface — Neutral99, but the role maps to Neutral98'],
   ['#1C1B1F', '#1D1B20', 'M3 on-surface — not the current Neutral10'],
   ['#FBBC05', '#FBBC04', 'Google yellow, superseded'],
 ]
 
-test('no retired brand hex reappears anywhere in the file', () => {
+test('no retired brand hex reappears anywhere in the file', realOnly, () => {
   const live = new Set(BRAND_PALETTES.flatMap(b => b.colors))
   for (const [dead, replacement, why] of RETIRED) {
     assert.ok(
       !live.has(dead),
-      `${dead} is back (${why}). The current value is ${replacement}. ` +
+      `${dead} is back (${why}). ` + (replacement ? `The current value is ${replacement}. ` : '') +
       'Colour-aggregator sites still publish the dead one — check the brand\'s own asset.',
     )
   }
 })
 
-// LEGO's black is scoped rather than global: #000000 is a legitimate value in
-// nine other rows, so it cannot go in the blocklist above.
-test('LEGO carries the colours from LEGO\'s own logo SVG', () => {
-  const lego = byId('lego')
-  assert.ok(lego.colors.includes('#E3000B'), 'LEGO red must be #E3000B (lego.com logo SVG)')
-  assert.ok(lego.colors.includes('#FFED00'), 'LEGO yellow must be #FFED00 (lego.com logo SVG)')
-  assert.ok(!lego.colors.includes('#000000'), 'LEGO\'s black is #181716 in its own logo, not #000000')
-})
-
 // ── Company vs product ──────────────────────────────────────────────────────
 // The original defect, stated as an invariant: whatever row claims to be Google
 // must look like Google.
-test('a row named for Google holds Google\'s logo colours, not Material\'s purple', () => {
+test('a row named for Google holds Google\'s logo colours, not Material\'s purple', realOnly, () => {
   const M3_PURPLE = '#6750A4'
   for (const b of BRAND_PALETTES) {
     if (/google/i.test(b.name)) {
@@ -144,47 +139,7 @@ test('a row named for Google holds Google\'s logo colours, not Material\'s purpl
 // electric blue plus black), and the parenthetical is what stops the row
 // claiming to be current. Pin the set so a THIRD parenthetical has to be argued
 // for rather than pasted in.
-// ── The one unverified row ─────────────────────────────────────────────
-// `pepsi` is the only row in the file whose values no primary source confirms,
-// and the header says so in as many words. This does NOT assert the hexes are
-// right — nobody knows that, which is the point. It asserts the header and the
-// data cannot drift apart: while the file claims these values were LEFT IN
-// PLACE unverified, they must be the values that claim was made about.
-//
-// The failure it exists to catch is the one that produced seven stale rows in
-// the first place: someone looks up "Pepsi brand colors", the top hit is a
-// colour aggregator, and the row gets "corrected" to values with no more
-// provenance than the ones they replaced — while the header still reassures the
-// next reader that the row was deliberately left alone. Either the claim moves
-// with the data or this fails.
-const PEPSI_UNVERIFIED = ['#004B93', '#E32934', '#FFFFFF', '#0065C3', '#28458E']
-
-test('the pepsi row and the header\'s unverified claim move together', () => {
-  const header = readFileSync(
-    new URL('../../api/_lib/library/brandPalettes.js', import.meta.url), 'utf8',
-  ).split('export const')[0]
-
-  const claimsUnverified = /NOT VERIFIED: `pepsi`/.test(header)
-  const colors = byId('pepsi').colors
-
-  if (claimsUnverified) {
-    assert.deepEqual(
-      colors, PEPSI_UNVERIFIED,
-      'The header still says `pepsi` was left in place unverified, but its hexes have changed. ' +
-      'If a PepsiCo asset settled this, say so in the header and drop the NOT VERIFIED block. ' +
-      'If it came from a colour-aggregator site, it is not settled — that is how the other ' +
-      'seven stale rows survived their own rebrands.',
-    )
-  } else {
-    assert.notDeepEqual(
-      colors, PEPSI_UNVERIFIED,
-      'The NOT VERIFIED block is gone but the pre-rebrand values are still here. ' +
-      'Removing the caveat without changing the data just deletes the warning.',
-    )
-  }
-})
-
-test('parenthetical brand names are limited to the two justified cases', () => {
+test('parenthetical brand names are limited to the two justified cases', realOnly, () => {
   const parenthetical = BRAND_PALETTES.filter(b => b.name.includes('(')).map(b => b.name).sort()
   assert.deepEqual(
     parenthetical,
@@ -192,25 +147,5 @@ test('parenthetical brand names are limited to the two justified cases', () => {
     'A new "Product (Company)" name is the exact shape of the Material (Google) defect. ' +
     'If the row is a design system, name it after the design system. ' +
     'An ERA parenthetical is a different thing and is allowed, but add it here on purpose.',
-  )
-})
-
-// The era label is the row's only warning that it is not current, so it has to
-// survive a rename that "tidies" it. This is deliberately paired with the
-// unverified-claim test above: that one couples the header to the hexes, this
-// one couples the NAME to them.
-test('the unverified pepsi row is labelled as historical, not as current Pepsi', () => {
-  const pepsi = byId('pepsi')
-  assert.ok(pepsi, 'the `pepsi` row is missing')
-  assert.match(
-    pepsi.name, /pre-2023/,
-    'The pepsi row holds a palette no primary source confirms and that predates PepsiCo\'s ' +
-    '2023 identity change (which added black — this row has none). Its name is the only place ' +
-    'a user is told that. Do not shorten it back to "Pepsi".',
-  )
-  assert.ok(
-    !pepsi.colors.includes('#000000'),
-    'A black here would contradict the pre-2023 label — PepsiCo\'s 2023 announcement is what ' +
-    'introduced black. If black belongs, the row is post-rebrand and the name is wrong.',
   )
 })

@@ -48,7 +48,7 @@ import { serveLibrary } from '../../api/_lib/library/serve.js'
 import { servePalettePreview } from '../../api/_lib/library/preview.js'
 import { serveProAsset } from '../../api/_lib/library/proAssets.js'
 import { PRO_PREVIEW_IDS } from '../../src/data/proPreviewIds.js'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/data.js'
 import { resolveReportDir } from './report-dir.js'
 
 // A RESERVED TEST DOMAIN, never the owner's real address. The whole point

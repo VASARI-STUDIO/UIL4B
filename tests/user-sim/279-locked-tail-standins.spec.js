@@ -24,8 +24,8 @@
 //     the "no locked card" test fails.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
-import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/data.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/data.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const RAMP = ['#e4e4e7', '#c9c9ce', '#a1a1aa', '#7b7b84', '#5b5b64', '#3f3f46', '#2a2a30']

@@ -23,10 +23,13 @@
 // (which must fail); read the prompts to judge the rest.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
+import { COMMUNITY_PROMPTS, HAS_REAL_PRO_DATA } from '../../api/_lib/library/data.js'
 import {
   scorePrompts, passes, TEMPLATE_PHRASES, SET_PASS, PROMPT_PASS,
 } from '../../scripts/prompt-voice-check.mjs'
+
+// Checks of the real rows' content skip when the library source is fixtures.
+const realOnly = { skip: !HAS_REAL_PRO_DATA && 'library rows are fixtures' }
 
 // c-1 to c-10 are the prompts under review; the rest are older and unrelated.
 const REVIEWED = COMMUNITY_PROMPTS
@@ -43,7 +46,7 @@ test('the prompt library has the ten prompts the voice check reads', () => {
   assert.equal(REVIEWED.length, 10)
 })
 
-test('the library reads as a set, not a template', () => {
+test('the library reads as a set, not a template', realOnly, () => {
   const result = scorePrompts(REVIEWED)
   assert.ok(result.set.score >= SET_PASS,
     `set scores ${result.set.score}, under ${SET_PASS}:\n  ${describe(result)}`)

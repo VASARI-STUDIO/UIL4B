@@ -47,8 +47,8 @@ import path from 'node:path'
 import zlib from 'node:zlib'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
-import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/data.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/data.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 export const THUMB_DIR = 'public/locked-previews'

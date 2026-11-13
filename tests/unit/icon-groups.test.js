@@ -28,7 +28,7 @@ const TIERS = ['anon', 'free', 'paid']
 const LIBRARY = await resolveLibrary()
 const GROUPS = withProIcons(LIBRARY.PRO_ICON_GROUPS)
 const byId = (id) => GROUPS.find((g) => g.id === id) || null
-const REAL = LIBRARY.source === 'pro' || LIBRARY.source === 'in-tree'
+const REAL = LIBRARY.source === 'pro'
 const realOnly = { skip: !REAL && `library source "${LIBRARY.source}" holds stand-in icon lists` }
 
 // ── The data ────────────────────────────────────────────────────────────────

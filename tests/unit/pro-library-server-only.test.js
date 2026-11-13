@@ -15,7 +15,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { freeSplit, LIBRARIES } from '../../scripts/library/clientRows.js'
-import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/data.js'
 import { renderClientFiles } from '../../scripts/library/emitClient.js'
 import { isStub } from '../../src/utils/libraryRules.js'
 

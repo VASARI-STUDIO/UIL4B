@@ -37,10 +37,10 @@ import {
   tierSentence,
   GALLERY_TIER_LIMITS,
 } from '../../src/utils/lockedPreview.js'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
-import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
-import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
-import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/data.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/data.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/data.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/data.js'
 import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
 import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'

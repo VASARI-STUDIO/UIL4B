@@ -66,7 +66,7 @@
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
 import { clickPaletteAction, readSeed } from './palette-helpers.js'
-import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/data.js'
 
 // A fixed five-colour board, so "the original hexes" is a known thing.
 const BOARD = '/create/palette?c=14224A,249EAF,F2C14E,2563EB,C0392B'
