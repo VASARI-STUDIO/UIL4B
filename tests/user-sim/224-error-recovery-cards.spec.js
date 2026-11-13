@@ -3,9 +3,10 @@
 //
 // What a person needs when a page fails is the same each time: to be told what
 // happened in plain words, to land on that message (a keyboard or screen reader
-// user is otherwise left on <body>), and to have three ways on: try again, go
-// to the home page, and tell us. Offline, "try again" would replace the page
-// with the browser's own error, so it waits and says why.
+// user is otherwise left on <body>), and to have ways on: reload the page, report
+// it, go to the home page, or the help centre. Offline, a reload would replace
+// the page with the browser's own error, so the card removes every way on and
+// says it is waiting for a connection.
 //
 // Every state is read at 390 on a touch device and at 1440, in the light and
 // the dark theme, because the card's colours and its tap targets are different
@@ -29,17 +30,16 @@ import { go, goRaw, expectRendered } from './helpers.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const PROBE = 'probe crash for the error cards'
-const CREDITS_CHUNK = '**/assets/Credits-*.js'
-const SETTINGS_CHUNK = '**/assets/Settings-*.js'
-const PALETTE_CHUNK = '**/assets/PaletteBuilder-*.js'
-const COMMAND_PALETTE_CHUNK = '**/assets/CommandPalette-*.js'
-const TITLE_CRASH = 'This page stopped working'
-const TITLE_LOAD = 'This page didn’t load'
-// Straight or curly: the card writes the title with a typographic apostrophe
-// and the lead with a plain one, and a person reads no difference.
-const LEAD_ONLINE = /Part of this page couldn['’]t be downloaded\. Trying again usually fixes it\./
-const LEAD_OFFLINE = /You['’]re offline, so this page couldn['’]t be downloaded\. You can try again once you reconnect\./
+import {
+  CREDITS_CHUNK, SETTINGS_CHUNK, PALETTE_CHUNK, COMMAND_PALETTE_CHUNK, PROBE, TITLE_CRASH, TITLE_LOAD,
+  pushInApp, spendReload, crashChunk, failChunk, setConnection,
+} from './edge-cards.js'
+
+const BODY_CRASH = 'Reloading usually fixes it.'
+const BODY_LOAD = 'Part of this page couldn’t be downloaded. Trying again usually fixes it.'
+const BODY_OFFLINE_CRASH = 'You’re offline. Reconnect and you can reload.'
+const BODY_OFFLINE_LOAD = 'You’re offline. Reconnect and you can try again.'
+const SAFE_LINE = 'Saved projects are fine. Changes you hadn’t saved may be lost.'
 const SLOW_LINE = 'Still loading. Your connection may be slow.'
 
 const VARIANTS = [
@@ -69,53 +69,6 @@ async function withPage(browser, variant, run) {
 async function expectTheme(page, variant) {
   await expect(page.locator('html'), `the page should be in the ${variant.scheme} theme`)
     .toHaveAttribute('data-theme', variant.scheme)
-}
-
-/** The router's own history object, found on the React tree, pushed to. */
-function pushInApp(page, to) {
-  return page.evaluate((target) => {
-    const root = document.getElementById('root')
-    const key = Object.keys(root).find((k) => k.startsWith('__reactContainer'))
-    const stack = [root[key]]
-    const seen = new Set()
-    let navigator = null
-    while (stack.length && !navigator) {
-      const node = stack.pop()
-      if (!node || seen.has(node)) continue
-      seen.add(node)
-      const value = node.memoizedProps && node.memoizedProps.value
-      if (value && value.navigator && typeof value.navigator.push === 'function') navigator = value.navigator
-      stack.push(node.child, node.sibling)
-    }
-    if (!navigator) throw new Error('the router history was not found on the React tree')
-    navigator.push(target)
-  }, to)
-}
-
-/** The state right after the one automatic reload: a second failure must not reload again. */
-function spendReload(page) {
-  return page.evaluate(() => sessionStorage.setItem('vs-chunk-reload', String(Date.now())))
-}
-
-/** Serve `glob` as a module that throws; the count is how often it was asked for. */
-async function crashChunk(page, glob) {
-  const asked = { count: 0 }
-  await page.route(glob, (route) => {
-    asked.count += 1
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/javascript',
-      body: `throw new Error(${JSON.stringify(PROBE)})`,
-    })
-  })
-  return asked
-}
-
-/** Fail `glob`; the count is how often it was asked for. */
-async function failChunk(page, glob) {
-  const asked = { count: 0 }
-  await page.route(glob, (route) => { asked.count += 1; return route.abort() })
-  return asked
 }
 
 /** In-app to /settings, which crashes inside the app shell. */
@@ -169,15 +122,6 @@ async function landLoadFailed(page, variant) {
   await expect(card).toBeVisible()
   await expect(card.getByRole('heading', { level: 1 })).toHaveText(TITLE_LOAD)
   return { card, asked }
-}
-
-/** Pin the connection state the way the app reads it, and take the context offline to match. */
-async function setConnection(page, context, online) {
-  await context.setOffline(!online)
-  await page.evaluate((on) => {
-    Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => on })
-    window.dispatchEvent(new Event(on ? 'online' : 'offline'))
-  }, online)
 }
 
 /** WCAG contrast of an element's text against what is actually behind it, painted not guessed. */
@@ -242,94 +186,117 @@ async function expectFits(page, what) {
   }
 }
 
-/** The three actions are big enough to hit. 44 everywhere for the two buttons; Report is 44 on touch. */
-async function expectTargets(card, touch, what) {
+/** Every action and trail link is big enough to hit: 44 high and wide, on any device. */
+async function expectTargets(card, what) {
   const sizes = await card.evaluate((root) => {
     const box = (sel) => {
       const r = root.querySelector(sel)?.getBoundingClientRect()
       return r ? { w: r.width, h: r.height } : null
     }
     return {
-      again: box('.error-boundary-actions button'),
-      home: box('.error-boundary-actions a'),
-      report: box('.error-boundary-report'),
+      reload: box('.ed-acts button.ed-pill'),
+      report: box('.ed-acts a.ui-pill-out'),
+      home: box('.ed-trail a[href="/"]'),
+      help: box('.ed-trail a[href="/learn/help"]'),
     }
   })
   for (const [name, size] of Object.entries(sizes)) {
     expect(size, `${what}: ${name} is not in the card`).not.toBeNull()
-    const floor = name === 'report' && !touch ? 24 : 44
-    expect(size.h, `${what}: ${name} is ${size.h}px high, under ${floor}`).toBeGreaterThanOrEqual(floor - 0.01)
+    expect(size.h, `${what}: ${name} is ${size.h}px high, under 44`).toBeGreaterThanOrEqual(43.99)
     expect(size.w, `${what}: ${name} is ${size.w}px wide, under 44`).toBeGreaterThanOrEqual(43.99)
   }
 }
+
+/** Every line of the card reads at 4.5:1 or better against what is painted behind it. */
+async function expectLinesReadable(card, variant) {
+  const lines = {
+    heading: card.getByRole('heading', { level: 1 }),
+    body: card.locator('.ed-body'),
+    'safe line': card.locator('.ed-safe'),
+    'Reload the page': reloadButton(card),
+    'Report this': reportLink(card),
+    'Back to the homepage': homeLink(card),
+    'Help centre': helpLink(card),
+  }
+  for (const [name, locator] of Object.entries(lines)) {
+    const ratio = await contrastOf(locator)
+    expect(ratio, `${name} is ${ratio}:1 in the ${variant.scheme} theme, under 4.5`).toBeGreaterThanOrEqual(4.5)
+  }
+}
+
+/** The ways on a crash or load card offers when there is a connection. */
+const reloadButton = (card) => card.getByRole('button', { name: 'Reload the page' })
+const reportLink = (card) => card.getByRole('link', { name: 'Report this', exact: true })
+const homeLink = (card) => card.getByRole('navigation', { name: 'More ways back' }).getByRole('link', { name: 'Back to the homepage' })
+const helpLink = (card) => card.getByRole('navigation', { name: 'More ways back' }).getByRole('link', { name: 'Help centre' })
 
 // ───────────────────────────── the crash card ─────────────────────────────
 
 for (const variant of VARIANTS) {
   test.describe(`the crash card, ${variant.id}`, () => {
-    test('says what happened, takes focus, shows three ways on, and never shows the raw error', async ({ browser }) => {
+    test('says what happened, takes focus, shows the ways on, and never shows the raw error', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card } = await landShellCrash(page, variant)
 
         const h1 = card.getByRole('heading', { level: 1 })
         await expect(h1).toBeFocused()
         await expect(page.getByRole('heading', { level: 1 }), 'the card is the one h1 on the page').toHaveCount(1)
-        await expect(card).toHaveAttribute('role', 'alert')
-        await expect(card.locator('.error-boundary-lead')).toHaveText(
-          /Part of this page failed while it was running\. Trying again usually fixes it\. If it keeps happening, tell us and we['’]ll look into it\./,
-        )
+        await expect(card.locator('.ed-body')).toHaveText(BODY_CRASH)
+        await expect(card.locator('.ed-safe')).toHaveText(SAFE_LINE)
+        await expect(card.locator('.ed-status'), 'the status line is empty until there is something to say').toHaveText('')
 
-        await expect(card.getByRole('button', { name: 'Try again' })).toBeEnabled()
-        await expect(card.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute('href', '/')
-        await expect(card.getByRole('button', { name: 'Report this problem' })).toBeEnabled()
-        // The old labels are gone: Reload says less about what will happen.
-        await expect(card.getByRole('button', { name: /^Reload$/ })).toHaveCount(0)
+        await expect(reloadButton(card)).toBeEnabled()
+        await expect(reportLink(card), 'the report names the page that crashed').toHaveAttribute('href', '/feedback?type=bug&page=%2Fsettings')
+        await expect(homeLink(card)).toHaveAttribute('href', '/')
+        await expect(helpLink(card)).toHaveAttribute('href', '/learn/help')
 
         const text = await card.innerText()
         expect(text, 'the raw error message is shown to the person').not.toContain(PROBE)
         expect(text, 'a stack or error class is shown').not.toMatch(/\bError:|\bat\s+\S+\s+\(|\.js:\d+/)
 
-        // Tab walks the three actions in reading order, starting from the heading.
+        // Tab walks the ways on in reading order, starting from the heading.
         await page.keyboard.press('Tab')
-        await expect(card.getByRole('button', { name: 'Try again' })).toBeFocused()
+        await expect(reloadButton(card)).toBeFocused()
         await page.keyboard.press('Tab')
-        await expect(card.getByRole('link', { name: 'Go to the home page' })).toBeFocused()
+        await expect(reportLink(card)).toBeFocused()
         await page.keyboard.press('Tab')
-        await expect(card.getByRole('button', { name: 'Report this problem' })).toBeFocused()
+        await expect(homeLink(card)).toBeFocused()
+        await page.keyboard.press('Tab')
+        await expect(helpLink(card)).toBeFocused()
       })
     })
 
-    test('Try again asks for the page again, and a crash that persists lands on the heading again', async ({ browser }) => {
+    test('Reload the page asks for the page again, and a crash that persists lands on the heading again', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card, asked } = await landShellCrash(page, variant)
         expect(asked.count).toBe(1)
         const reloaded = page.waitForEvent('domcontentloaded')
-        await card.getByRole('button', { name: 'Try again' }).click({ noWaitAfter: true })
+        await reloadButton(card).click({ noWaitAfter: true })
         await reloaded
-        await expect.poll(() => asked.count, { message: 'Try again did not request the chunk again' }).toBe(2)
+        await expect.poll(() => asked.count, { message: 'Reload the page did not request the chunk again' }).toBe(2)
         const again = page.locator('.error-boundary')
         await expect(again.getByRole('heading', { level: 1, name: TITLE_CRASH })).toBeFocused()
       })
     })
 
-    test('Go to the home page leaves the crashed page and shows the sales page', async ({ browser }) => {
+    test('Back to the homepage leaves the crashed page and shows the sales page', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card } = await landShellCrash(page, variant)
-        await card.getByRole('link', { name: 'Go to the home page' }).click()
+        await homeLink(card).click()
         await expect(page).toHaveURL(/\/$/)
         await expect(page.locator('.error-boundary')).toHaveCount(0)
         await expectRendered(page, '/')
       })
     })
 
-    test('Go to the home page, when the crash is on the home page itself, loads the document afresh', async ({ browser }) => {
+    test('Back to the homepage, when the crash is on the home page itself, loads the document afresh', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card } = await landHomeCrash(page)
         // A client-side link to the page you are on changes nothing, so the
         // crash would stay. A marker on window proves the document was replaced.
         await page.evaluate(() => { window.__sameDocument = true })
         const reloaded = page.waitForEvent('domcontentloaded')
-        await card.getByRole('link', { name: 'Go to the home page' }).click()
+        await homeLink(card).click()
         await reloaded
         expect(await page.evaluate(() => window.__sameDocument), 'the home page link only navigated inside the old document').toBeUndefined()
         await expect(page).toHaveURL(/\/$/)
@@ -338,18 +305,23 @@ for (const variant of VARIANTS) {
       })
     })
 
-    test('Report this problem opens the feedback form already filled in with where it happened', async ({ browser }) => {
+    test('Report this opens the feedback form as a bug report, and the Help centre opens help', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card } = await landShellCrash(page, variant)
-        await card.getByRole('button', { name: 'Report this problem' }).click()
-        const dialog = page.getByRole('dialog')
-        await expect(dialog).toBeVisible()
-        await expect(dialog.locator('#fb-subject')).toHaveValue(new RegExp(`^Crash on /settings: .*${PROBE}`))
-        await expect(dialog.locator('#fb-message')).toHaveValue(/Route: \/settings\n/)
-        await expect(dialog.locator('#fb-message')).toHaveValue(/What were you doing when this happened\?/)
-        await expect(dialog.getByRole('button', { name: 'Bug report', exact: true })).toHaveAttribute('aria-pressed', 'true')
-        // The card behind the dialog still shows no raw error.
-        expect(await card.innerText()).not.toContain(PROBE)
+        await reportLink(card).click()
+        await expect(page).toHaveURL(/\/feedback\?type=bug&page=%2Fsettings$/)
+        const form = page.locator('.fb-page')
+        await expect(form).toBeVisible()
+        await expect(form.locator('[role="radio"][aria-checked="true"]')).toHaveText('Bug report')
+        await expect(page.locator('.error-boundary')).toHaveCount(0)
+
+        await go(page, '/privacy')
+        await spendReload(page)
+        await crashChunk(page, SETTINGS_CHUNK)
+        await pushInApp(page, '/settings')
+        await helpLink(page.locator('.error-boundary')).click()
+        await expect(page).toHaveURL(/\/learn\/help$/)
+        await expectRendered(page, '/learn/help')
       })
     })
 
@@ -363,7 +335,7 @@ for (const variant of VARIANTS) {
         await expect(main).toHaveAttribute('tabindex', '-1')
         await expect(page.getByRole('main')).toHaveCount(1)
         await expect(card.getByRole('heading', { level: 1 })).toBeFocused()
-        const home = card.getByRole('link', { name: 'Go to the home page' })
+        const home = homeLink(card)
         await expect(home).toHaveAttribute('href', '/')
         await home.click()
         await expect(page).toHaveURL(/\/$/)
@@ -375,18 +347,8 @@ for (const variant of VARIANTS) {
       await withPage(browser, variant, async (page) => {
         const { card } = await landShellCrash(page, variant)
         await expectFits(page, `crash card at ${variant.id}`)
-        await expectTargets(card, variant.touch, `crash card at ${variant.id}`)
-        const lines = {
-          heading: card.getByRole('heading', { level: 1 }),
-          lead: card.locator('.error-boundary-lead'),
-          'Try again': card.getByRole('button', { name: 'Try again' }),
-          'Go to the home page': card.getByRole('link', { name: 'Go to the home page' }),
-          'Report this problem': card.getByRole('button', { name: 'Report this problem' }),
-        }
-        for (const [name, locator] of Object.entries(lines)) {
-          const ratio = await contrastOf(locator)
-          expect(ratio, `${name} is ${ratio}:1 in the ${variant.scheme} theme, under 4.5`).toBeGreaterThanOrEqual(4.5)
-        }
+        await expectTargets(card, `crash card at ${variant.id}`)
+        await expectLinesReadable(card, variant)
       })
     })
   })
@@ -396,91 +358,88 @@ for (const variant of VARIANTS) {
 
 for (const variant of VARIANTS) {
   test.describe(`the load-failed card, ${variant.id}`, () => {
-    test('says the page did not load, takes focus, and shows the same three ways on', async ({ browser }) => {
+    test('says the page did not load, takes focus, and shows the same ways on', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card } = await landLoadFailed(page, variant)
         await expect(card.getByRole('heading', { level: 1 })).toBeFocused()
-        await expect(card.locator('.error-boundary-lead')).toHaveText(LEAD_ONLINE)
-        await expect(card.getByRole('button', { name: 'Try again' })).toBeEnabled()
-        await expect(card.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute('href', '/')
-        await expect(card.getByRole('button', { name: 'Report this problem' })).toBeEnabled()
-        await expect(card.locator('.error-boundary-status'), 'the status line is empty until there is something to say').toHaveText('')
+        await expect(card.locator('.ed-body')).toHaveText(BODY_LOAD)
+        await expect(card.locator('.ed-safe')).toHaveText(SAFE_LINE)
+        await expect(reloadButton(card)).toBeEnabled()
+        await expect(reportLink(card), 'the report names the page that did not load').toHaveAttribute('href', '/feedback?type=bug&page=%2Fcredits')
+        await expect(homeLink(card)).toHaveAttribute('href', '/')
+        await expect(helpLink(card)).toHaveAttribute('href', '/learn/help')
+        await expect(card.locator('.ed-status'), 'the status line is empty until there is something to say').toHaveText('')
         await expectFits(page, `load-failed card at ${variant.id}`)
-        await expectTargets(card, variant.touch, `load-failed card at ${variant.id}`)
+        await expectTargets(card, `load-failed card at ${variant.id}`)
       })
     })
 
-    test('Try again requests the failed file a second time', async ({ browser }) => {
+    test('Reload the page requests the failed file a second time', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card, asked } = await landLoadFailed(page, variant)
         // Chromium 158 retries a failed dynamic import once by itself, so the card can stand on
-        // one or two failed requests. Pin that the file was asked for, then that Try again asks again.
+        // one or two failed requests. Pin that the file was asked for, then that Reload asks again.
         expect(asked.count).toBeGreaterThanOrEqual(1)
         const before = asked.count
         const reloaded = page.waitForEvent('domcontentloaded')
-        await card.getByRole('button', { name: 'Try again' }).click({ noWaitAfter: true })
+        await reloadButton(card).click({ noWaitAfter: true })
         await reloaded
-        await expect.poll(() => asked.count, { message: 'Try again did not request the file again' }).toBeGreaterThan(before)
+        await expect.poll(() => asked.count, { message: 'Reload the page did not request the file again' }).toBeGreaterThan(before)
       })
     })
 
-    test('offline: Try again waits and says why, the other two stay, and reconnecting frees it without moving focus', async ({ browser }) => {
+    test('offline: the ways on that need a connection go, the homepage link stays, the card says it is waiting, and reconnecting brings them back without moving focus', async ({ browser }) => {
       await withPage(browser, variant, async (page, context) => {
         const { card } = await landLoadFailed(page, variant)
         await setConnection(page, context, false)
 
-        const again = card.getByRole('button', { name: 'Try again' })
-        await expect(card.locator('.error-boundary-lead')).toHaveText(LEAD_OFFLINE)
-        await expect(again).toBeDisabled()
-        await expect(again, 'the disabled button must point at the sentence that explains it')
-          .toHaveAccessibleDescription(LEAD_OFFLINE)
-        await expect(card.getByRole('link', { name: 'Go to the home page' })).toBeEnabled()
-        await expect(card.getByRole('button', { name: 'Report this problem' })).toBeEnabled()
+        await expect(card.locator('.ed-body')).toHaveText(BODY_OFFLINE_LOAD)
+        await expect(card.getByRole('status')).toHaveText('Waiting for a connection')
+        await expect(reloadButton(card), 'a reload offline would swap the page for the browser error').toHaveCount(0)
+        await expect(reportLink(card)).toHaveCount(0)
+        await expect(helpLink(card)).toHaveCount(0)
+        await expect(homeLink(card), 'the homepage is in the loaded app, so it works offline').toBeVisible()
+        await expect(card.getByRole('heading', { level: 1 }), 'focus moved when the connection dropped').toBeFocused()
         await expectFits(page, `offline card at ${variant.id}`)
 
-        // Offline text is still text: the lead reads at 4.5:1 or better.
-        expect(await contrastOf(card.locator('.error-boundary-lead'))).toBeGreaterThanOrEqual(4.5)
+        // Offline text is still text: the body and the status read at 4.5:1 or better.
+        expect(await contrastOf(card.locator('.ed-body'))).toBeGreaterThanOrEqual(4.5)
+        expect(await contrastOf(card.getByRole('status')), 'the waiting line is under 4.5:1').toBeGreaterThanOrEqual(4.5)
 
         await setConnection(page, context, true)
-        await expect(again).toBeEnabled()
+        await expect(reloadButton(card)).toBeEnabled()
+        await expect(reportLink(card)).toBeVisible()
+        await expect(homeLink(card)).toBeVisible()
         const status = card.getByRole('status')
-        await expect(status).toHaveText('You’re back online.')
+        await expect(status).toHaveText('Back online')
         expect(await contrastOf(status), 'the back-online line is under 4.5:1').toBeGreaterThanOrEqual(4.5)
-        await expect(card.locator('.error-boundary-lead')).toHaveText(LEAD_ONLINE)
+        await expect(card.locator('.ed-body')).toHaveText(BODY_LOAD)
         await expect(card.getByRole('heading', { level: 1 }), 'focus moved when the connection came back').toBeFocused()
         await expectFits(page, `back-online card at ${variant.id}`)
-        // The button is no longer description-linked to the offline sentence's reason.
-        await expect(again).not.toHaveAttribute('aria-describedby', /.+/)
+        // The back-online line is a moment, not a permanent label.
+        await expect(card.locator('.ed-status')).toHaveText('', { timeout: 8000 })
       })
     })
 
-    test('offline, Go to the home page still reaches the sales page', async ({ browser }) => {
+    test('a crash card offline says reload in its own words and holds the same ways back, keeping the homepage link', async ({ browser }) => {
       await withPage(browser, variant, async (page, context) => {
-        const { card } = await landLoadFailed(page, variant)
+        const { card } = await landShellCrash(page, variant)
         await setConnection(page, context, false)
-        await expect(card.getByRole('button', { name: 'Try again' })).toBeDisabled()
-        await card.getByRole('link', { name: 'Go to the home page' }).click()
-        await expect(page).toHaveURL(/\/$/)
-        await expect(page.locator('.error-boundary')).toHaveCount(0)
-        await expectRendered(page, '/')
+        await expect(card.locator('.ed-body')).toHaveText(BODY_OFFLINE_CRASH)
+        await expect(card.getByRole('status')).toHaveText('Waiting for a connection')
+        await expect(reloadButton(card)).toHaveCount(0)
+        await expect(reportLink(card)).toHaveCount(0)
+        await expect(homeLink(card)).toBeVisible()
         await setConnection(page, context, true)
+        await expect(reloadButton(card)).toBeEnabled()
+        await expect(card.locator('.ed-body')).toHaveText(BODY_CRASH)
       })
     })
 
-    test('every line reads at 4.5:1 or better, the enabled buttons included', async ({ browser }) => {
+    test('every line reads at 4.5:1 or better, the actions included', async ({ browser }) => {
       await withPage(browser, variant, async (page) => {
         const { card } = await landLoadFailed(page, variant)
-        const lines = {
-          heading: card.getByRole('heading', { level: 1 }),
-          lead: card.locator('.error-boundary-lead'),
-          'Try again': card.getByRole('button', { name: 'Try again' }),
-          'Go to the home page': card.getByRole('link', { name: 'Go to the home page' }),
-          'Report this problem': card.getByRole('button', { name: 'Report this problem' }),
-        }
-        for (const [name, locator] of Object.entries(lines)) {
-          const ratio = await contrastOf(locator)
-          expect(ratio, `${name} is ${ratio}:1 in the ${variant.scheme} theme, under 4.5`).toBeGreaterThanOrEqual(4.5)
-        }
+        await expectLinesReadable(card, variant)
       })
     })
   })
@@ -684,7 +643,7 @@ test.describe('at 320 wide, on a phone', () => {
     await withPage(browser, narrow, async (page) => {
       const { card } = await landShellCrash(page, narrow)
       await expectFits(page, 'crash card at 320')
-      await expectTargets(card, true, 'crash card at 320')
+      await expectTargets(card, 'crash card at 320')
     })
   })
 
@@ -692,12 +651,12 @@ test.describe('at 320 wide, on a phone', () => {
     await withPage(browser, narrow, async (page, context) => {
       const { card } = await landLoadFailed(page, narrow)
       await expectFits(page, 'load-failed card at 320')
-      await expectTargets(card, true, 'load-failed card at 320')
+      await expectTargets(card, 'load-failed card at 320')
       await setConnection(page, context, false)
-      await expect(card.getByRole('button', { name: 'Try again' })).toBeDisabled()
+      await expect(card.getByRole('status')).toHaveText('Waiting for a connection')
       await expectFits(page, 'offline card at 320')
       await setConnection(page, context, true)
-      await expect(card.getByRole('status')).toHaveText('You’re back online.')
+      await expect(card.getByRole('status')).toHaveText('Back online')
       await expectFits(page, 'back-online card at 320')
     })
   })
@@ -746,8 +705,8 @@ test.describe('the error and loading styles', () => {
   }
 
   test('the rules were found, so the checks below read something', () => {
-    expect(rules.length, 'no .error-boundary / .page-loading rule found in global.css').toBeGreaterThan(8)
-    expect(rules.some((r) => r.selector.includes('.error-boundary-report'))).toBe(true)
+    expect(rules.length, 'no .error-boundary / .page-loading rule found in global.css').toBeGreaterThanOrEqual(8)
+    expect(rules.some((r) => r.selector.includes('.error-boundary-card'))).toBe(true)
     expect(rules.some((r) => r.selector.includes('.page-loading-slow'))).toBe(true)
   })
 

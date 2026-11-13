@@ -75,11 +75,14 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 1440, hei
   })
 }
 
-test('an id the account does not have still ends at the workspace', async ({ page }) => {
+test('an id the account does not have stays on its address and says the project is not in the account', async ({ page }) => {
   watch(page, 'a designer following a link to a project that is gone')
   await signIn(page, { plan: 'free', projects: [savedProject()] })
   await go(page, '/projects/no-such-project')
 
+  await expect(page.getByRole('heading', { level: 1, name: 'That project isn’t in your account' })).toBeVisible()
+  await expect(page).toHaveURL(/\/projects\/no-such-project$/)
+  await page.getByRole('link', { name: 'Open your workspace' }).click()
   await expect(page).toHaveURL(/\/projects$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' })).toBeVisible()
 })

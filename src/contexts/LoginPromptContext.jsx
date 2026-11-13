@@ -20,8 +20,9 @@ const LoginPromptContext = createContext(null)
 // from.
 const RESUME_KEY = 'vs-resume-after-onboarding'
 // Paths that are not destinations: /home is already the post-onboarding default,
-// /login is where this starts, /onboarding is the flow itself, / redirects.
-const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding'])
+// /login is where this starts, /onboarding is the flow itself, / redirects,
+// /reset-password carries a one-time code and is a dead end once it is used.
+const NON_RESUMABLE = new Set(['/', '/home', '/login', '/onboarding', '/reset-password'])
 
 export function stashResumeTarget(explicitFrom) {
   let target = explicitFrom
@@ -134,6 +135,8 @@ export function LoginPromptProvider({ children }) {
         // underneath — on the four highest-traffic paths into the product.
         // Callers that pass nothing still get sign-in, so nothing else moves.
         signup: !!opts.signup,
+        // Opens on the password-reset form instead.
+        reset: !!opts.reset,
       })
     })
     pendingPromiseRef.current = promise
@@ -158,6 +161,7 @@ export function LoginPromptProvider({ children }) {
           lockEmail={prompt.lockEmail}
           passwordOnly={prompt.passwordOnly}
           signup={prompt.signup}
+          reset={prompt.reset}
           onSuccess={(u) => finish(u || userRef.current || null)}
           onDismiss={() => finish(null)}
         />
