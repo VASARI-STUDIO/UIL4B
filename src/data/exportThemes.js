@@ -13,7 +13,7 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '08-monograph', name: 'Riso' }),
   Object.freeze({ id: '09-blueprint', name: 'Blueprint' }),
   Object.freeze({ id: '10-inuse', name: 'In use' }),
-  // Guidelines-only themes: they have slides and nothing else, and those are free.
+  // The Free pair. Guidelines-only themes: they have slides and nothing else, and those are free.
   Object.freeze({ id: '25-label', name: 'Label', rows: Object.freeze(['slides']), free: true }),
   Object.freeze({ id: '27-swissfield', name: 'Swiss Field', rows: Object.freeze(['slides']), free: true }),
 ])
@@ -25,8 +25,10 @@ export const THEME_ROW_FORMATS = Object.freeze({
   slides: Object.freeze(['pdf', 'html']),
 })
 
-// The themes whose UI kit a free account can download. Apart from these and the free themes' own rows, every row and theme is Pro.
-export const FREE_UI_KIT_THEMES = Object.freeze(['04-standards', '07-spec'])
+// The themes whose UI kit a free account can download. Interim: Standards, until the Free pair (Label and Swiss Field) has UI kits
+// of its own; the pair draws the guidelines only for now. Every other theme and row is Pro. src/config/exportFormats.js mirrors
+// this as Standards' `freeExports`, and a unit test holds the two together.
+export const FREE_UI_KIT_THEMES = Object.freeze(['04-standards'])
 
 export const isExportTheme = (theme) => typeof theme === 'string' && EXPORT_THEMES.some((t) => t.id === theme)
 export const isThemeRowFormat = (row, format) => typeof row === 'string' && typeof format === 'string'
