@@ -27,7 +27,7 @@
 // any stored value, not just `on`: the "only on" test fails; return false from
 // maintenanceOn(): every test fails at the first heading.
 import { test, expect } from './base.js'
-import { goRaw, watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const KEY = 'uil4b-maintenance'
 const TITLE = 'UIL4B is unavailable'
@@ -83,7 +83,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     test('lands on the heading, reads plainly, keeps the nav and footer, and sets its own title', async ({ page }) => {
       watch(page, 'a visitor arriving while UIL4B is in maintenance')
       await setUp(page)
-      await goRaw(page, '/plans')
+      await go(page, '/plans')
 
       await expect(heading(page)).toBeVisible()
       await expect(heading(page), 'a screen reader should start at the problem').toBeFocused()
@@ -109,7 +109,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     test('keeps itself out of search results', async ({ page }) => {
       watch(page, 'a crawler arriving while UIL4B is in maintenance')
       await setUp(page)
-      await goRaw(page, '/plans')
+      await go(page, '/plans')
       await expect(heading(page)).toBeVisible()
       await expect(page.locator('meta[name="robots"]'), 'exactly one robots tag, and it says noindex').toHaveCount(1)
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
@@ -119,7 +119,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       watch(page, 'a visitor waiting on a check')
       const held = gate()
       const asked = await setUp(page, { mode: 'down', hold: held })
-      await goRaw(page, '/')
+      await go(page, '/')
       await expect(heading(page)).toBeFocused()
 
       await page.keyboard.press('Tab')
@@ -147,7 +147,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       watch(page, 'a visitor checking whether UIL4B is back')
       const held = gate()
       const asked = await setUp(page, { mode: 'down', hold: held })
-      await goRaw(page, '/')
+      await go(page, '/')
       await expect(heading(page)).toBeVisible()
 
       await checkAgain(page).click()
@@ -166,7 +166,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     test('Check again with no answer at all says it is still unavailable', async ({ page }) => {
       watch(page, 'a visitor checking while their connection drops')
       const asked = await setUp(page, { mode: 'abort' })
-      await goRaw(page, '/')
+      await go(page, '/')
       await expect(heading(page)).toBeVisible()
 
       await checkAgain(page).click()
@@ -178,7 +178,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     test('Check again that is answered with the same build says it is still unavailable, however fast', async ({ page }) => {
       watch(page, 'a visitor checking while the maintenance build is still served')
       const asked = await setUp(page, { mode: 'same' })
-      await goRaw(page, '/plans')
+      await go(page, '/plans')
       await expect(heading(page)).toBeVisible()
 
       await checkAgain(page).click()
@@ -196,7 +196,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     test('Check again that finds a new deploy says so, then reloads into it', async ({ page }) => {
       watch(page, 'a visitor checking whether UIL4B is back')
       const asked = await setUp(page, { mode: 'new' })
-      await goRaw(page, '/plans')
+      await go(page, '/plans')
       await expect(heading(page)).toBeVisible()
 
       const reloaded = page.waitForEvent('domcontentloaded')
@@ -216,7 +216,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
       watch(page, 'a keyboard user in maintenance')
       const held = gate()
       const asked = await setUp(page, { mode: 'down', hold: held })
-      await goRaw(page, '/')
+      await go(page, '/')
       await expect(heading(page)).toBeFocused()
 
       await page.keyboard.press('Tab')
@@ -239,7 +239,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     test('focus is still on Check again after a failed check, for another try', async ({ page }) => {
       watch(page, 'a keyboard user retrying a check')
       await setUp(page, { mode: 'down' })
-      await goRaw(page, '/')
+      await go(page, '/')
       await expect(heading(page)).toBeFocused()
       await page.keyboard.press('Tab')
       await page.keyboard.press('Enter')
@@ -252,7 +252,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 test.describe('the maintenance switch', () => {
   test('is off for a tab that has not set it, so the seam never shows the page by itself', async ({ page }) => {
     watch(page, 'a normal visitor')
-    await goRaw(page, '/plans')
+    await go(page, '/plans')
     await expect(page.getByRole('heading', { level: 1, name: /less than 1 coffee per month/ })).toBeVisible()
     await expect(heading(page)).toHaveCount(0)
   })
@@ -261,7 +261,7 @@ test.describe('the maintenance switch', () => {
     test(`only "on" turns it on: a stored "${value}" does nothing`, async ({ page }) => {
       watch(page, 'a visitor whose tab holds an old value')
       await page.addInitScript(([key, v]) => window.sessionStorage.setItem(key, v), [KEY, value])
-      await goRaw(page, '/plans')
+      await go(page, '/plans')
       await expect(page.getByRole('heading', { level: 1, name: /less than 1 coffee per month/ })).toBeVisible()
       await expect(heading(page)).toHaveCount(0)
     })
@@ -270,7 +270,7 @@ test.describe('the maintenance switch', () => {
   test('covers a route that is not the home page, with the same page', async ({ page }) => {
     watch(page, 'a visitor following a deep link in maintenance')
     await setUp(page)
-    await goRaw(page, '/learn/help')
+    await go(page, '/learn/help')
     await expect(heading(page)).toBeVisible()
     await expect(page).toHaveURL(/\/learn\/help$/)
   })

@@ -20,7 +20,7 @@
 // LinkExpired.jsx: the return-target test fails. Take '/reset-password' out of
 // FOOTER_ROUTES (footerRoutes.js): the footer test fails.
 import { test, expect } from './base.js'
-import { go, goRaw, signIn, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 
 const TITLE = 'That reset link doesn’t work now'
 const PATH = '/reset-password?mode=resetPassword&oobCode=expired-code.test'
@@ -53,7 +53,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('lands on the heading, says why in plain words, and has its own title', async ({ page }) => {
       watch(page, 'someone opening an old password-reset email')
-      await goRaw(page, PATH)
+      await go(page, PATH)
 
       await expect(heading(page)).toBeVisible()
       await expect(heading(page), 'a screen reader should start at the problem').toBeFocused()
@@ -73,7 +73,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('Reset your password opens the sign-in dialog on the reset form, and closing it leaves the page', async ({ page }) => {
       watch(page, 'someone asking for a fresh reset link')
-      await goRaw(page, PATH)
+      await go(page, PATH)
       await expect(heading(page)).toBeVisible()
 
       await resetButton(page).click()
@@ -91,7 +91,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('opening the reset form keeps no sign-up return target holding the reset address or its code', async ({ page }) => {
       watch(page, 'someone asking for a fresh reset link from an expired one')
-      await goRaw(page, PATH)
+      await go(page, PATH)
       await expect(heading(page)).toBeVisible()
       await resetButton(page).click()
       await expect(resetDialog(page)).toBeVisible()
@@ -104,7 +104,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('shows the site footer', async ({ page }) => {
       watch(page, 'someone on the expired-link page looking for the rest of the site')
-      await goRaw(page, PATH)
+      await go(page, PATH)
       await expect(heading(page)).toBeVisible()
       await expect(page.getByRole('contentinfo')).toHaveCount(1)
       await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).first()).toBeVisible()
@@ -113,7 +113,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
     test('the reset dialog starts with the cursor in the email field, and sending a link reaches the sent step', async ({ page }) => {
       watch(page, 'someone getting a new reset link from an expired one')
       const asked = await answerResetEmail(page)
-      await goRaw(page, PATH)
+      await go(page, PATH)
       await expect(heading(page)).toBeVisible()
 
       await resetButton(page).click()
@@ -136,13 +136,13 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('Back to the homepage goes home and the Help centre goes to help', async ({ page }) => {
       watch(page, 'someone leaving the expired-link page')
-      await goRaw(page, PATH)
+      await go(page, PATH)
       await expect(heading(page)).toBeVisible()
       await back(page).click()
       await expect(page).toHaveURL(/\/$/)
       await expect(heading(page)).toHaveCount(0)
 
-      await goRaw(page, PATH)
+      await go(page, PATH)
       await expect(heading(page)).toBeVisible()
       await help(page).click()
       await expect(page).toHaveURL(/\/learn\/help$/)
@@ -168,7 +168,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
 test('the keyboard walks from the heading to every way on, and Enter on Reset your password opens the reset form', async ({ page }) => {
   watch(page, 'a keyboard user with an expired reset link')
-  await goRaw(page, PATH)
+  await go(page, PATH)
   await expect(heading(page)).toBeFocused()
 
   await page.keyboard.press('Tab')
@@ -188,7 +188,7 @@ test('the keyboard walks from the heading to every way on, and Enter on Reset yo
 
 test('/reset-password with no query still shows the expired-link page, not the 404', async ({ page }) => {
   watch(page, 'someone typing the reset address by hand')
-  await goRaw(page, '/reset-password')
+  await go(page, '/reset-password')
   await expect(heading(page)).toBeVisible()
   await expect(page.getByRole('heading', { level: 1, name: /doesn’t exist/ })).toHaveCount(0)
 })

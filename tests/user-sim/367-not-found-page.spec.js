@@ -15,7 +15,7 @@
 // Split the path in EdgeScreen.jsx with a lookbehind regex again: the
 // no-lookbehind test fails.
 import { test, expect } from './base.js'
-import { go, goRaw, signIn, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { pushInApp } from './edge-cards.js'
 
 const HEADING = 'That page doesn’t exist'
@@ -45,7 +45,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('keeps the address, names it, and has its own title', async ({ page }) => {
       watch(page, 'a visitor following a mistyped link')
-      await goRaw(page, '/plan-s')
+      await go(page, '/plan-s')
 
       await expect(heading(page)).toBeVisible()
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
@@ -57,7 +57,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('offers the homepage, every page, and the report and help links, and no workspace', async ({ page }) => {
       watch(page, 'a signed-out visitor on a dead link')
-      await goRaw(page, '/plan-s')
+      await go(page, '/plan-s')
       await expect(heading(page)).toBeVisible()
 
       await expect(homePill(page)).toHaveAttribute('href', '/')
@@ -69,7 +69,7 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('suggests real tools, and one of them opens', async ({ page }) => {
       watch(page, 'a visitor choosing a page from the 404')
-      await goRaw(page, '/plan-s')
+      await go(page, '/plan-s')
       await expect(heading(page)).toBeVisible()
       await expect(page.getByRole('heading', { level: 2, name: 'Start with a tool' })).toBeVisible()
 
@@ -84,13 +84,13 @@ for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['390', { w
 
     test('Back to the homepage goes home and See every page opens the sitemap', async ({ page }) => {
       watch(page, 'a visitor leaving the 404')
-      await goRaw(page, '/plan-s')
+      await go(page, '/plan-s')
       await expect(heading(page)).toBeVisible()
       await sitemap(page).click()
       await expect(page).toHaveURL(/\/sitemap$/)
       await expect(heading(page)).toHaveCount(0)
 
-      await goRaw(page, '/plan-s')
+      await go(page, '/plan-s')
       await expect(heading(page)).toBeVisible()
       await homePill(page).click()
       await expect(page).toHaveURL(/\/$/)
@@ -113,7 +113,7 @@ test.describe('the 404 on an engine with no regex lookbehind', () => {
         return exec.apply(this, args)
       }
     })
-    await goRaw(page, '/aa-bb/cc')
+    await go(page, '/aa-bb/cc')
 
     const armed = await page.evaluate(() => {
       try { /(?<=a)b/.test('ab'); return 'no throw' } catch { return 'throws' }
@@ -133,7 +133,7 @@ test.describe('the 404 inside a section', () => {
   ]) {
     test(`${path} suggests that section's own pages`, async ({ page }) => {
       watch(page, 'a visitor with a dead link into a section')
-      await goRaw(page, path)
+      await go(page, path)
       await expect(heading(page)).toBeVisible()
       await expect(page.getByRole('heading', { level: 2, name: title })).toBeVisible()
       await expect(page.getByText(line)).toBeVisible()

@@ -18,14 +18,14 @@
 // to a value that does not resolve (`rgba(var(--ink), .1)`): the colour test
 // fails on every surface.
 import { test, expect } from './base.js'
-import { go, goRaw, signIn, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { landChromelessCrash, landLoadFailed, setConnection } from './edge-cards.js'
 
 const SURFACES = [
   {
     name: 'the 404',
     land: async (page) => {
-      await goRaw(page, '/plan-s')
+      await go(page, '/plan-s')
       await expect(page.getByRole('heading', { level: 1, name: 'That page doesn’t exist' })).toBeVisible()
     },
   },
@@ -33,14 +33,14 @@ const SURFACES = [
     name: 'maintenance',
     land: async (page) => {
       await page.addInitScript(() => window.sessionStorage.setItem('uil4b-maintenance', 'on'))
-      await goRaw(page, '/plans')
+      await go(page, '/plans')
       await expect(page.getByRole('button', { name: 'Check again' })).toBeVisible()
     },
   },
   {
     name: 'the expired reset link',
     land: async (page) => {
-      await goRaw(page, '/reset-password')
+      await go(page, '/reset-password')
       await expect(page.getByRole('button', { name: 'Reset your password' })).toBeVisible()
     },
   },
