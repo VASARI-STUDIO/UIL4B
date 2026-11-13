@@ -18,8 +18,9 @@
 // them back out of src/styles/global.css and fails if either theme's --bg-0
 // moves. The check is the reason the constants are allowed to exist.
 //
-// The seed is the Colour Studio's own default base colour, so the ramp a reader
-// sees here is the ramp the product hands them from a standing start.
+// The seed is the colour the Tint tool opens on in a new project. The Tint tool
+// draws its own OKLCH-based ramp, so its swatches will not match this table
+// digit for digit; the article says so.
 
 import { useMemo } from 'react'
 import { contrastRatio, generateTintScale, T_LABELS } from '../utils/colors'
