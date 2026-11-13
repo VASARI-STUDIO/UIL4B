@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { LIBRARY_RULES } from '../../utils/libraryRules'
 import { galleryLimit } from '../../utils/lockedPreview'
-import { hasPromptPreview, promptPosterSrc } from '../../data/promptPreviewAssets'
+import { hasPromptPreview } from '../../data/promptPreviewAssets'
 import { promptStandinSrc } from '../../utils/lockedStandin'
+import { useProAsset } from '../../hooks/useProAsset'
 import { buildOverview, countLine } from './promptGallery'
 import PromptCard from './PromptCard'
 import PromptLockedCard, { LockMark } from './PromptLockedCard'
@@ -33,6 +34,12 @@ const ArrowRight = () => (
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 )
+
+/** An open prompt's poster in a cover mosaic; a Pro one is fetched (hooks/useProAsset). */
+function MosaicPoster({ id }) {
+  const { src } = useProAsset('poster', id)
+  return <img src={src || undefined} data-pin-nopin="true" alt="" loading="lazy" decoding="async" width="960" height="600" />
+}
 
 function ViewMore({ cat, where, more = true, count, onViewMore }) {
   return (
@@ -165,7 +172,9 @@ export default function PromptOverview({
                     return (
                       <div key={p.id} className={`pl-mosaic-tile${kind ? ' is-locked' : ''}`}>
                         {hasPromptPreview(p.id) ? (
-                          <img src={kind ? promptStandinSrc(p.id) : promptPosterSrc(p.id)} data-pin-nopin="true" alt="" loading="lazy" decoding="async" width="960" height="600" />
+                          kind
+                            ? <img src={promptStandinSrc(p.id)} data-pin-nopin="true" alt="" loading="lazy" decoding="async" width="960" height="600" />
+                            : <MosaicPoster id={p.id} />
                         ) : !kind && <span className="pl-mosaic-name">{p.title}</span>}
                         {kind && <LockMark kind={kind} />}
                       </div>
