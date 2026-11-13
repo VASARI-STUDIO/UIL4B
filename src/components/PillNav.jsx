@@ -460,21 +460,34 @@ function AppHeader() {
   // never outlives the header.
   useEffect(() => {
     if (!hintOpen) return undefined
+    let live = true
+    // Beside Export it needs its own width, the 8px gap to the button and 4px
+    // clear of Learn's box (whose own padding keeps the labels further apart).
+    // Placed again whenever the header or the hint changes size, which covers a
+    // webfont that lands after the hint opened.
     const placeHint = () => {
       const tip = hintRef.current
-      if (!tip) return
+      if (!live || !tip || !navRef.current) return
       const button = tip.parentElement.getBoundingClientRect()
       const learn = triggerRefs.current.learn?.getBoundingClientRect()
       const leftEdge = learn?.right ?? navRef.current.getBoundingClientRect().left
-      tip.classList.toggle('pnav-tip--below', button.left - leftEdge < tip.offsetWidth + 16)
+      tip.classList.toggle('pnav-tip--below', button.left - leftEdge < tip.offsetWidth + 12)
     }
     placeHint()
     window.addEventListener('resize', placeHint)
+    const sizes = typeof ResizeObserver === 'function' ? new ResizeObserver(placeHint) : null
+    if (sizes) {
+      if (navRef.current) sizes.observe(navRef.current)
+      if (hintRef.current) sizes.observe(hintRef.current)
+    }
+    document.fonts?.ready?.then(placeHint)
     const onKey = (e) => { if (e.key === 'Escape') setHintOpen(false) }
     document.addEventListener('keydown', onKey)
     return () => {
+      live = false
       document.removeEventListener('keydown', onKey)
       window.removeEventListener('resize', placeHint)
+      sizes?.disconnect()
     }
   }, [hintOpen])
   useEffect(() => () => clearTimeout(hintTimer.current), [])

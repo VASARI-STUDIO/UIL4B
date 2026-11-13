@@ -4,6 +4,7 @@ Disallow: /admin
 Disallow: /settings
 Disallow: /checkout
 Disallow: /login
+Disallow: /reset-password
 Disallow: /onboarding
 Disallow: /dashboard
 Disallow: /projects

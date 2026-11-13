@@ -107,7 +107,7 @@ test.describe('first-time visitor', () => {
 
     // "Not a dead end" is still the requirement — it is just met by offering
     // real destinations rather than by hiding the failure.
-    const suggestions = page.locator('.nf-card')
+    const suggestions = page.getByRole('navigation', { name: 'Suggested pages' }).getByRole('link')
     expect(await suggestions.count(), 'the 404 offers somewhere to go').toBeGreaterThan(2)
     await expect(page.getByRole('link', { name: /Back to the homepage/i })).toBeVisible()
 

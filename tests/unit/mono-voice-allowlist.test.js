@@ -197,7 +197,11 @@ const ALLOWED = {
   },
   'pages/home-try.css': {
     '.ht-cv-bytes': 'value',
+    '.ht-cv-chip': 'value',
     '.ht-cv-meta': 'value',
+    '.ht-cv-n': 'value',
+    '.ht-cv-spec': 'value',
+    '.ht-cv-times': 'value',
     '.ht-pal-hex': 'value',
     '.ht-val': 'value',
   },
@@ -332,6 +336,15 @@ const ALLOWED = {
   },
   'v3-shell.css': {
     '.pnav-search-kbd': 'kbd',
+  },
+  // The marketing pages read out figures and spec lines (sizes, times, type scale steps):
+  // numeric readouts, not prose.
+  'v3-marketing.css': {
+    '.mkt .mk-mono': 'value',
+  },
+  // The address the person typed, shown back on the 404 and link-expired screens.
+  'v3-edge.css': {
+    '.ed-path': 'code',
   },
 }
 

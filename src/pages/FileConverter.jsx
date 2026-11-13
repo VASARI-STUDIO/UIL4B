@@ -211,8 +211,12 @@ export default function FileConverter({ toast }) {
   // choose/drop state — no picker is ever opened on mount.
   const [handoff] = useState(readImageHandoff)
   useEffect(() => { consumeImageHandoff() }, [])
-  // Image is the default tab; handed-over images therefore land on it.
-  const [mode, setMode] = useState('image')
+  // Image is the default tab; handed-over images therefore land on it. A known
+  // ?mode= in the URL picks another tab once, on mount; anything else is ignored.
+  const [mode, setMode] = useState(() => {
+    const asked = new URLSearchParams(window.location.search).get('mode')
+    return !handoff?.files?.length && MODES.some((m) => m.id === asked) ? asked : 'image'
+  })
   const tabRefs = useRef({})
 
   // THE ARIA TABS PATTERN, including the keyboard half. These were four

@@ -554,6 +554,10 @@
       "destination": "/404.html"
     },
     {
+      "source": "/reset-password",
+      "destination": "/404.html"
+    },
+    {
       "source": "/settings",
       "destination": "/404.html"
     },
@@ -674,7 +678,7 @@
       ]
     },
     {
-      "source": "/(locked-images|locked-previews|export-themes|export-templates|home-showcase|home-exports|home-plans|home-bookmarks|home-try|hero-loop|gallery-bg|auth-wall|plans|samples|spectrum)/(.*)\\.(webp|avif|png|jpe?g|gif|svg)",
+      "source": "/(locked-images|locked-previews|export-themes|export-templates|home-showcase|home-exports|home-plans|home-bookmarks|home-try|hero-loop|gallery-bg|auth-wall|plans|samples|spectrum|mobile-screens)/(.*)\\.(webp|avif|png|jpe?g|gif|svg)",
       "headers": [
         {
           "key": "Cross-Origin-Resource-Policy",
