@@ -96,7 +96,7 @@ export const CREATE_GROUPS = [
     label: 'AI Studio',
     hue: 'ai',
     home: '/create/ai-tools',
-    desc: 'Image prompts and alt text.',
+    desc: 'Alt text written for your images.',
     // Live because Alt Text is live and mounted in CreateTool's LIVE_TOOLS. The
     // three unbuilt siblings now carry their own Soon badge, which is exactly
     // the per-tool behaviour the header comment describes.
