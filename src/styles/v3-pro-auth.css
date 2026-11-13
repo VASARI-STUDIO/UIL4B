@@ -163,7 +163,7 @@
 }
 
 /* ---- Plan step ----------------------------------------------------------- */
-.pl-seg{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:4px;margin:24px 0 0;border-radius:999px;background:var(--v3-l2)}
+.pl-root .pl-seg{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:4px;margin:24px 0 0;border-radius:999px;background:var(--v3-l2)}
 .pl-seg-btn{display:flex;align-items:center;justify-content:center;min-height:36px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--v3-sec);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:background-color 150ms var(--v3-ease),color 150ms var(--v3-ease)}
 .pl-seg-btn[aria-checked="true"]{background:var(--v3-seg-on);color:var(--v3-ink);box-shadow:0 0 0 1px var(--v3-hair)}
 .pl-seg-btn:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
