@@ -327,6 +327,11 @@ for (const rung of RUNGS) {
         meta: tile.querySelector('.vpt-meta')?.textContent.trim() || '',
         paint: [tile, ...tile.querySelectorAll('*')]
           .map((el) => `${getComputedStyle(el).backgroundImage} ${getComputedStyle(el).backgroundColor}`).join(' '),
+        // The picture alone: the frame round it is the theme's surface token
+        // (--v3-raised, white in the light theme), which is chrome, not a colour
+        // of the gradient.
+        media: [...tile.querySelectorAll('.vpt-media, .vpt-media *')]
+          .map((el) => `${getComputedStyle(el).backgroundImage} ${getComputedStyle(el).backgroundColor}`).join(' '),
       })))
       for (const t of drawn) {
         expect(t.meta, 'a faded tile says what it is: a row a free account opens, or Pro').toMatch(/^(Free account|Pro( · \d+ stops?)?)$/)
@@ -342,7 +347,7 @@ for (const rung of RUNGS) {
       if (rung.wall === 'pro') expect(proTiles.length, 'every faded tile is a Pro row at the free rung').toBe(drawn.length)
       const allowed = new Set(STANDIN_COLOURS.map((h) => h.toUpperCase()))
       for (const t of proTiles) {
-        const found = hexesIn(t.paint)
+        const found = hexesIn(t.media)
         expect(found.length, 'a Pro tile is not painted').toBeGreaterThan(0)
         expect(found.filter((h) => !allowed.has(h)), 'a Pro tile carries a colour that is not a stand-in').toEqual([])
       }

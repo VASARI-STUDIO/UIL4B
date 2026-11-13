@@ -352,8 +352,9 @@ test.describe('a locked library row hands nothing over — signed in, free', () 
     await expect(gate).toBeVisible()
     const fade = gate.locator(FADE)
     await expectFadeUnreachable(fade, { inert: true })
-    // Blurred, not greyed: the first row a little, the second a lot.
-    expect(await fade.locator('.geg-row[data-row="0"]').evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
+    // Blurred, not greyed: the first row inside each tile's picture (so the tile
+    // frame and name stay crisp), the second row whole.
+    expect(await fade.locator('.geg-row[data-row="0"] .vpt-media').first().evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
     expect(await fade.locator('.geg-row[data-row="1"]').evaluate((e) => getComputedStyle(e).filter)).toMatch(/blur/)
     // No Pro value: not a withheld hex, in the markup or the paint.
     const html = (await fade.evaluate((el) => el.outerHTML)).toUpperCase()
