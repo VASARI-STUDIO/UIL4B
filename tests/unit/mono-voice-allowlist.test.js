@@ -254,6 +254,8 @@ const ALLOWED = {
   },
   'pages/library-v3.css': {
     '.lib-surface.lib-v3[class] .pgal-chip': 'hex',
+    // the preview popup's colour rows: the hex the row copies
+    '.lib-surface.lib-v3.gpd-layer[class] .gpd-row-hex': 'hex',
   },
   'pages/palette-gallery.css': {
     '.lib-surface.pgl-page .pgal-chip': 'hex',

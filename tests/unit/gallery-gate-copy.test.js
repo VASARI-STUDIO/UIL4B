@@ -3,7 +3,8 @@
 // To see it fail: type a number into a heading or body in src/data/galleryGateCopy.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
+import { GALLERY_GATE_COPY, libraryGateCopy } from '../../src/data/galleryGateCopy.js'
+import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
 
 // Counts no real library holds, so a typed number cannot pass by coincidence.
 const SHOWN = 7311
@@ -11,7 +12,7 @@ const TOTAL = 9127
 const OPENS = 8419
 const MORE = TOTAL - SHOWN
 
-for (const name of ['palettes', 'gradients', 'iconGroups', 'prompts']) {
+for (const name of ['iconGroups', 'prompts']) {
   test(`${name}: the signed-out gate states the counts it is given`, () => {
     const { anon } = GALLERY_GATE_COPY[name]
     assert.match(anon.heading(OPENS), /^Log in to access 8,419 /)
@@ -37,14 +38,62 @@ for (const name of ['palettes', 'gradients', 'iconGroups', 'prompts']) {
   })
 }
 
-test('palettes: a collection emptied by the cap names the live counts', () => {
-  const { emptied } = GALLERY_GATE_COPY.palettes
-  assert.match(emptied.anon.body('Curated', OPENS, TOTAL), /^No curated palettes are open signed out\. A free account opens 8,419 of the 9,127 palettes; Pro opens all 9,127\.$/)
-  assert.equal(emptied.pro.heading('Brand'), 'Brand palettes are part of Pro')
-  assert.equal(emptied.pro.body({ anonymous: true, total: TOTAL, locked: MORE, brand: true }), 'Pro opens all 9,127 palettes, brand systems included.')
-  assert.equal(emptied.pro.body({ anonymous: false, total: TOTAL, locked: MORE, brand: true }), 'Another 1,816 palettes open with Pro, including every brand system.')
-  assert.equal(emptied.pro.body({ anonymous: false, total: TOTAL, locked: 1, brand: false }), 'Another 1 palette opens with Pro.')
-})
+// The palette and gradient libraries' gate: every number is one the page counted
+// (S shown, A account, T total, P Pro's extra, opens), except the library's own
+// total, which the unknown-filter variant reads from LIBRARY_TOTALS.
+const nounFor = (count) => (count === 1 ? 'thing' : 'things')
+const COUNTS = { S: SHOWN, A: OPENS, T: TOTAL, P: MORE, opens: OPENS, nounFor }
+
+for (const kind of ['palettes', 'gradients']) {
+  test(`${kind}: the signed-out account gate states the counts it is given`, () => {
+    const copy = libraryGateCopy(kind, { variant: 'account', anonymous: true, ...COUNTS })
+    assert.equal(copy.heading, 'Log in to access 8,419 things')
+    assert.equal(copy.body, "You're seeing 7,311 of the 9,127 things. A free account opens 8,419; Pro opens all 9,127.")
+    assert.deepEqual(copy.primary, { label: 'Create a free account', action: 'signup' })
+    assert.deepEqual(copy.secondary, { label: 'Log in', action: 'login' })
+  })
+
+  test(`${kind}: the Pro gate states the counts it is given and links to the plans`, () => {
+    const free = libraryGateCopy(kind, { variant: 'more', anonymous: false, ...COUNTS })
+    assert.equal(free.heading, '1,816 more things with Pro')
+    assert.ok(free.body.startsWith("You're seeing 7,311 of the 9,127 things. Pro opens the remaining 1,816"), free.body)
+    assert.deepEqual(free.primary, { label: 'Upgrade to Pro', action: 'plans' })
+    assert.equal(free.secondary, undefined)
+    const out = libraryGateCopy(kind, { variant: 'more', anonymous: true, ...COUNTS })
+    assert.deepEqual(out.primary, { label: 'See what Pro includes', action: 'plans' })
+    assert.deepEqual(out.secondary, { label: 'Log in', action: 'login' })
+  })
+
+  test(`${kind}: nothing open under the filter says the filter is part of Pro`, () => {
+    const copy = libraryGateCopy(kind, { variant: 'pro-only', anonymous: false, ...COUNTS, S: 0 })
+    assert.equal(copy.heading, 'Things are part of Pro')
+    assert.equal(copy.body, 'Pro opens all 9,127 things.')
+    assert.equal(libraryGateCopy(kind, { variant: 'pro-only', anonymous: false, ...COUNTS, S: 0, T: 1 }).heading, 'Thing is part of Pro')
+  })
+
+  test(`${kind}: a filter the locked rows cannot answer speaks for the whole library`, () => {
+    const total = LIBRARY_TOTALS[kind].toLocaleString('en-AU')
+    const out = libraryGateCopy(kind, { variant: 'unknown', anonymous: true, ...COUNTS })
+    assert.equal(out.heading, 'Log in to access 8,419 ' + (kind === 'palettes' ? 'palettes' : 'gradients'))
+    assert.ok(out.body.includes(`all ${total}`) && out.body.includes('opens 8,419'), out.body)
+    const free = libraryGateCopy(kind, { variant: 'unknown', anonymous: false, ...COUNTS })
+    assert.deepEqual(free.primary, { label: 'Upgrade to Pro', action: 'plans' })
+    assert.ok(free.body.includes('opens 7,311 that match') && free.body.includes(`all ${total} ${kind}`), free.body)
+    assert.ok(!libraryGateCopy(kind, { variant: 'unknown', anonymous: false, ...COUNTS, S: 0 }).body.includes('opens 0'))
+  })
+
+  test(`${kind}: signed out, where a free account adds nothing, the gate offers Pro and not an account`, () => {
+    const total = LIBRARY_TOTALS[kind].toLocaleString('en-AU')
+    const out = libraryGateCopy(kind, { variant: 'unknown', anonymous: true, accountAdds: false, ...COUNTS, S: 0 })
+    assert.equal(out.heading, `Pro opens every ${kind.slice(0, -1)}`)
+    assert.ok(out.body.startsWith(`Pro opens all ${total} ${kind}`), out.body)
+    assert.deepEqual(out.primary, { label: 'See what Pro includes', action: 'plans' })
+    assert.deepEqual(out.secondary, { label: 'Log in', action: 'login' })
+    assert.ok(!JSON.stringify(out).includes('signup'), 'no sign-up offer')
+    const some = libraryGateCopy(kind, { variant: 'unknown', anonymous: true, accountAdds: false, ...COUNTS })
+    assert.ok(some.body.startsWith("You're seeing 7,311 that match"), some.body)
+  })
+}
 
 test('icon groups: a locked group names its own icon count and sets', () => {
   const { locked } = GALLERY_GATE_COPY.iconGroups

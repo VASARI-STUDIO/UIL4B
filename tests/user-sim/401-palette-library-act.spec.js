@@ -1,44 +1,39 @@
-// V3 Libraries, palettes: doing something with a palette you found. On a
-// desktop the card's hover actions; on a phone the visible "More actions"
-// button and the sheet it opens. Both end in the same places: a copy with its
-// toast, a new project, and the Gradient Generator holding the palette's colours.
+// V3 Libraries, palettes: doing something with a palette you found. A tile has
+// no action buttons of its own any more: you open its preview and act in the
+// dialog's Actions section, on a desktop and on a phone alike. Every route ends
+// in the same places: a copy with its toast, a new project, and the Gradient
+// Generator holding the palette's colours.
 //
 // MUTATIONS this file goes red on:
-//   - in PaletteGalleryGrid.jsx `openInGradient`, drop the `setGradientDraft`
-//     call: the "Gradient link stages the palette" assertions go red (both tests);
-//   - drop `aria-expanded` from the `.pgal-more` button: the phone test's
-//     expanded assertion goes red;
-//   - make `.lbry-act-row` shorter than 52px in library-v3.css: the phone test's
-//     row height assertion goes red.
+//   - in src/components/discover/PaletteGalleryGrid.jsx `openInGradient`, drop the
+//     `setGradientDraft` call: the "Gradient action stages the palette"
+//     assertions go red (both tests);
+//   - in `actionsOf` (same file) drop the `hex` or `css` entry: the desktop copy
+//     assertions and the phone CSS assertions go red;
+//   - drop `aria-haspopup`/the `onOpen` handler on the tile's open button in
+//     src/components/library/VerticalPanelTile.jsx: the dialog never opens and both tests go red;
+//   - in src/components/library/GalleryPreviewDialog.jsx drop the focus restore on close: the phone
+//     test's "Close returns focus to the tile" assertion goes red;
+//   - make `.gpd-action` shorter than 44px in library-v3.css: the phone test's
+//     action height assertion goes red.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 
 const PICK = LIBRARY_PALETTES.find((p) => p.pro !== true && new Set(p.colors.map((c) => c.toLowerCase())).size >= 2)
-const CARD = '.pgal-card:not(.geg-fade *)'
 
-/** Open the page as a Pro member with the library narrowed to the one palette. */
+/**
+ * Open the page as a Pro member, search down to the one palette and open its
+ * preview. Returns the tile's open button (focus goes back to it on close) and the dialog.
+ */
 async function openPick(page) {
   await signIn(page, { plan: 'pro' })
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
   await go(page, '/discover/palettes')
   await page.getByLabel('Search palettes').fill(PICK.name)
-  const card = page.locator(CARD).filter({ has: page.locator('.pgal-name', { hasText: PICK.name }) }).first()
-  await expect(card).toBeVisible()
-  return card
-}
-
-/**
- * Hover the card and wait for its action layer to finish arriving (150ms fade plus a 4px
- * rise). Clicking while it is still moving makes Playwright's stability check fail, and its
- * retry scrolls the page, which takes the card from under the pointer and hides the layer
- * again, so the click never lands. Waiting on the observable end state is the fix.
- */
-async function revealActions(card) {
-  await card.hover()
-  const layer = card.locator('.lbry-card-actions')
-  await expect(layer).toHaveCSS('opacity', '1')
-  await expect(layer).toHaveCSS('transform', 'none')
+  const opener = page.getByRole('button', { name: `Preview ${PICK.name}`, exact: true }).first()
+  await expect(opener).toBeVisible()
+  return { opener, dialog: () => page.getByRole('dialog', { name: PICK.name }) }
 }
 
 /** The Gradient Generator has the palette's colours: they appear in a field or in the text. */
@@ -54,19 +49,22 @@ async function expectStaged(page) {
 test.describe('acting on a palette, desktop', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('Hex copies every colour with a toast, and the Gradient link stages the palette', async ({ page }) => {
+  test('Copy all hex copies every colour with a toast, and the Gradient action stages the palette', async ({ page }) => {
     watch(page, 'a Pro member copying a palette and taking it to the Gradient Generator')
-    const card = await openPick(page)
-    await revealActions(card)
-    await card.getByRole('button', { name: `Copy all ${PICK.colors.length} hex codes from ${PICK.name}` }).click()
+    const { opener, dialog } = await openPick(page)
+    await opener.click()
+    await expect(dialog()).toBeVisible()
+
+    await dialog().getByRole('button', { name: `Copy all ${PICK.colors.length} hex codes from ${PICK.name}` }).click()
     await expect(page.getByText(`Copied ${PICK.colors.length} hex codes`)).toBeVisible()
     const copied = await page.evaluate(() => navigator.clipboard.readText())
     expect(copied.toLowerCase()).toBe(PICK.colors.join(', ').toLowerCase())
 
-    await revealActions(card)
-    const link = card.getByRole('link', { name: `Gradient from ${PICK.name}` })
-    await expect(link).toHaveAttribute('href', '/create/gradient')
-    await link.click()
+    // The dialog stays open after a copy, so the next action is one click away.
+    await expect(dialog()).toBeVisible()
+    // Gradient is a button now (it stages the draft, then navigates), not a link.
+    await expect(dialog().getByRole('link', { name: `Gradient from ${PICK.name}` })).toHaveCount(0)
+    await dialog().getByRole('button', { name: `Gradient from ${PICK.name}` }).click()
     await expectStaged(page)
   })
 })
@@ -74,43 +72,45 @@ test.describe('acting on a palette, desktop', () => {
 test.describe('acting on a palette, phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 
-  test('the More button opens a sheet of 52px rows; Close returns focus; CSS, Project and Gradient each do their job', async ({ page }) => {
+  test('the preview sheet holds four thumb-sized actions; Close returns focus to the tile; CSS, Project and Gradient each do their job', async ({ page }) => {
     watch(page, 'a Pro member on a phone acting on a palette')
-    const card = await openPick(page)
-    const more = card.getByRole('button', { name: `More actions for ${PICK.name}` })
-    await expect(more).toBeVisible()
-    const box = await more.boundingBox()
-    expect(Math.round(box.width), 'More is a 44px target').toBeGreaterThanOrEqual(44)
+    const { opener, dialog } = await openPick(page)
+
+    const box = await opener.boundingBox()
+    expect(Math.round(box.width), 'the tile opens from a target at least 44px wide').toBeGreaterThanOrEqual(44)
     expect(Math.round(box.height)).toBeGreaterThanOrEqual(44)
-    await expect(more).toHaveAttribute('aria-expanded', 'false')
+    await expect(opener).toHaveAttribute('aria-haspopup', 'dialog')
 
-    await more.tap()
-    await expect(more).toHaveAttribute('aria-expanded', 'true')
-    const sheet = page.getByRole('dialog', { name: PICK.name })
-    await expect(sheet).toBeVisible()
-    for (const name of ['Project', 'Gradient', 'CSS', 'Hex']) {
-      await expect(sheet.locator('.lbry-act-row', { hasText: new RegExp(`^${name}$`) })).toHaveCount(1)
+    await opener.tap()
+    await expect(dialog()).toBeVisible()
+    const actions = dialog().locator('.gpd-action')
+    for (const label of [
+      `Save ${PICK.name} to a project`,
+      `Gradient from ${PICK.name}`,
+      `Copy ${PICK.name} as CSS custom properties`,
+      `Copy all ${PICK.colors.length} hex codes from ${PICK.name}`,
+    ]) {
+      await expect(dialog().getByRole('button', { name: label })).toHaveCount(1)
     }
-    const heights = await sheet.locator('.lbry-act-row').evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
-    expect(heights).toHaveLength(4)
-    for (const h of heights) expect(h, 'each row is 52px').toBeGreaterThanOrEqual(52)
+    const heights = await actions.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
+    expect(heights, 'the four actions').toHaveLength(4)
+    for (const h of heights) expect(h, 'each action is at least 44px tall').toBeGreaterThanOrEqual(44)
 
-    await sheet.getByRole('button', { name: 'Close' }).tap()
-    await expect(sheet).toHaveCount(0)
-    await expect(more).toBeFocused()
-    await expect(more).toHaveAttribute('aria-expanded', 'false')
+    await dialog().getByRole('button', { name: 'Close' }).tap()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(opener).toBeFocused()
 
-    await more.tap()
-    await page.getByRole('dialog', { name: PICK.name }).getByRole('button', { name: `Copy ${PICK.name} as CSS custom properties` }).tap()
+    await opener.tap()
+    await dialog().getByRole('button', { name: `Copy ${PICK.name} as CSS custom properties` }).tap()
     await expect(page.getByText(`Copied ${PICK.name} as CSS`)).toBeVisible()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('--')
 
-    await more.tap()
-    await page.getByRole('dialog', { name: PICK.name }).getByRole('button', { name: `Save ${PICK.name} to a project` }).tap()
+    // The sheet is still open; a toast may sit over the bottom of it for a moment,
+    // and a tap retries until it clears.
+    await dialog().getByRole('button', { name: `Save ${PICK.name} to a project` }).tap()
     await expect(page.getByText(`Saved ${PICK.name} to a new project`)).toBeVisible()
 
-    await more.tap()
-    await page.getByRole('dialog', { name: PICK.name }).getByRole('link', { name: `Gradient from ${PICK.name}` }).tap()
+    await dialog().getByRole('button', { name: `Gradient from ${PICK.name}` }).tap()
     await expectStaged(page)
   })
 })

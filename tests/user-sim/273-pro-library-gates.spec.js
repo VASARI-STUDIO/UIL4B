@@ -6,7 +6,9 @@
 //      curated palettes; Pro opens all N" over a button that only goes to Pro.
 //      A free account does not open Brand, so the sentence promised something
 //      the button did not do. It is now one offer: Pro, one sentence, one link
-//      to /plans, and no mention of a free account.
+//      to /plans, and no mention of a free account. (LibraryGate's pro-only
+//      variant also carries a plain "Log in" button for someone who already has
+//      an account; that is a sign-in, not a second offer.)
 //   2. The gate button must be 44px tall on every touch screen, a tablet
 //      included. What holds it on this page is `.lib-surface .btn` under
 //      `pointer: coarse` (deferred/library.css), plus `.btn` under 640px for a
@@ -18,11 +20,20 @@
 //      while it was stuck. Its background is now solid.
 //
 // What the curated arm of the gate can and cannot show: the signed-out Curated
-// chip never reaches the "need an account" body. A collection is only gated
-// when the viewer has NO open row of that kind, and the three rows a signed-out
-// visitor gets are curated, so Curated lists them. That arm is unreachable on
-// screen today; the last test here pins the reason (it fails the day it
-// becomes reachable, which is when its copy needs a spec of its own).
+// chip never reaches the "part of Pro" (pro-only) gate. That variant is for a
+// collection the viewer has NO open row of, and the rows a signed-out visitor
+// gets are curated, so Curated lists them and the gate offers a free account
+// instead. The last test here pins that (it fails the day the pro-only variant
+// becomes reachable for Curated, which is when its copy needs a spec of its own).
+//
+// MUTATIONS this file goes red on:
+//   - make the pro-only copy in libraryGateCopy (src/data/galleryGateCopy.js)
+//     mention a free account, or add a second link to LibraryGate's controls:
+//     the one-offer test goes red;
+//   - drop `min-height` from `.geg-pill` in GalleryEndGate.css: the touch-height
+//     tests go red;
+//   - give `.pgl-section-head` a gradient or translucent background in
+//     src/styles/pages/palette-gallery.css: the sticky-heading test goes red.
 //
 // Everything is read off the rendered page as a viewer meets it. Screenshots
 // are viewport-only: a fullPage capture in an isMobile context resizes the
@@ -36,11 +47,17 @@ const ROUTE = '/discover/palettes'
 const COLLECTION_TRAY = '[aria-label^="Filter palettes by collection"]'
 const COLLECTION_TRIGGER = '.pgl-toolbar .lbry-filtertrig:has(.lbry-filtertrig-k:text-is("Collection"))'
 
-const HEADING = 'Brand palettes are part of Pro'
-const ANON_BODY = `Pro opens all ${LIBRARY_PALETTES.length} palettes, brand systems included.`
+// The gate counts the matches of the filter, so under Brand it names the brand
+// systems in the library, worked out from the data (not from the page).
+const BRAND_COUNT = LIBRARY_PALETTES.filter((p) => p.kind === 'brand').length
+const HEADING = 'Brand systems are part of Pro'
+const ANON_BODY = `Pro opens all ${BRAND_COUNT} brand systems.`
 const MIN_TOUCH = 44
 
-const gatedBlock = (page) => page.locator('[role="status"]').filter({ hasText: HEADING })
+// The open tiles of the results, never the faded stand-ins in the gate under them.
+const TILES = '.lib-results .vpt'
+// LibraryGate's block is a named group, labelled by its heading.
+const gatedBlock = (page) => page.getByRole('group', { name: HEADING })
 
 // Press a collection chip whether its group is a row of buttons, a menu behind
 // a trigger, or (on a phone) inside the Filters sheet - the way a viewer reaches it.
@@ -64,7 +81,7 @@ async function pickCollection(page, label) {
 
 async function openBrandSignedOut(page) {
   await go(page, ROUTE)
-  await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+  await expect(page.locator(TILES)).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
   await pickCollection(page, 'Brand')
   const block = gatedBlock(page)
   await expect(block, 'the Brand gate never appeared').toBeVisible()
@@ -78,12 +95,18 @@ for (const width of [390, 1440]) {
     test('makes one offer, Pro, and never mentions a free account', async ({ page }) => {
       watch(page, 'a signed-out visitor reading the Brand gate')
       const block = await openBrandSignedOut(page)
-      await expect(block.locator('.geg-h')).toHaveText(HEADING)
+      await expect(block.getByRole('heading')).toHaveText(HEADING)
       await expect(block.locator('.geg-p')).toHaveText(ANON_BODY)
-      expect(await block.innerText(), 'the gate talks about a free account that does not open Brand')
+      // The words the gate speaks, not the aria-hidden stand-in tiles behind them
+      // (whose meta lines can say "Free account" for rows a free account opens).
+      expect(await block.locator('.geg-band').innerText(), 'the gate talks about a free account that does not open Brand')
         .not.toMatch(/free account/i)
-      await expect(block.locator('a:not(.geg-fade *), button:not(.geg-fade *)'), 'the gate offers more than one way forward').toHaveCount(1)
+      // One offer: a single link, to the plans. The only other control is the
+      // plain "Log in" button, which is a sign-in and not an offer.
+      await expect(block.locator('.geg-band a'), 'the gate offers more than one way forward').toHaveCount(1)
+      await expect(block.locator('.geg-band button')).toHaveText(['Log in'])
       await expect(block.getByRole('button', { name: /free account/i })).toHaveCount(0)
+      await expect(block.getByRole('link', { name: /free account/i })).toHaveCount(0)
       await page.screenshot() // viewport only, never fullPage
     })
 
@@ -126,7 +149,7 @@ test.describe('sticky section heading · 390px', () => {
     // Pro, because it lists the whole library: several sections, long enough to scroll.
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
-    await expect.poll(() => page.locator('.pgal-card:not(.geg-fade *)').count(), { message: 'the whole library never listed' })
+    await expect.poll(() => page.locator(TILES).count(), { message: 'the whole library never listed' })
       .toBeGreaterThan(GALLERY_TIER_LIMITS.free)
     const heads = page.locator('.pgl-section-head')
     expect(await heads.count(), 'needs two sections to scroll one head into its stuck position').toBeGreaterThan(1)
@@ -170,10 +193,15 @@ test.describe('curated arm of the gate', () => {
   test('a signed-out Curated tap lists the open rows, so the curated gate is unreachable', async ({ page }) => {
     watch(page, 'a signed-out visitor tapping the Curated chip')
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    await expect(page.locator(TILES)).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await pickCollection(page, 'Curated')
-    await expect(page.locator('.pgal-card:not(.geg-fade *)'), 'Curated lists the rows a visitor has').toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    await expect(page.locator(TILES), 'Curated lists the rows a visitor has').toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await expect(page.getByText('Curated palettes need an account')).toHaveCount(0)
+    // The Brand gate does not show under Curated. What does show is the account
+    // gate, which offers the rows a free account opens, under the filter's noun.
     await expect(gatedBlock(page)).toHaveCount(0)
+    await expect(page.getByRole('group', { name: /Curated palettes are part of Pro/ })).toHaveCount(0)
+    await expect(page.locator('[data-gate="anon"]').getByRole('heading'))
+      .toHaveText(`Log in to access ${GALLERY_TIER_LIMITS.free} curated palettes`)
   })
 })

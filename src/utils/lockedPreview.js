@@ -99,9 +99,10 @@ export const LOCKED_TEASE = 3
 
 // ── THREE TIERS, NOT TWO ────────────────────────────────────────────────────
 //
-// In the galleries, signed-out visitors get 3 free rows, signed-in users get
-// 10, and Pro gets the full set. The module was built for two
-// answers — entitled or not — and this is the third: an account is now worth
+// In the galleries, signed-out visitors get the anonymous rung's rows, signed-in
+// users the free rung's, and Pro gets the full set (the counts are
+// GALLERY_TIER_LIMITS below, the one place they are written). The module was
+// built for two answers — entitled or not — and this is the third: an account is now worth
 // something on its own, so the ladder is anonymous → free account → Pro.
 //
 // It applies to the three galleries that hand over a COPYABLE PAYLOAD (palettes,
@@ -123,10 +124,10 @@ export const LOCKED_TEASE = 3
 // Callers must therefore hand in the library, not a view of it. PromptLibrary
 // sorts the OPEN set afterwards, which can no longer move the boundary.
 export const GALLERY_TIER_LIMITS = Object.freeze({
-  // Enough to read the surface as a library that continues rather than as a
-  // stub, and exactly the desktop column count of the palette grid — so the
-  // teased row below reads as the next row. Same reasoning as LOCKED_TEASE.
-  anonymous: 3,
+  // Four: one full desktop row of the panel grid, so the blurred row below reads
+  // as the next row, and enough to read the surface as a library that continues
+  // rather than as a stub.
+  anonymous: 4,
   free: 10,
   pro: Infinity,
 })
