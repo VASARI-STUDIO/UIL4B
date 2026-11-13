@@ -41,7 +41,8 @@ import GradientFx from '../components/tool/GradientFx'
 import GradientText from '../components/tool/GradientText'
 import useMeasured from '../components/tool/useMeasured'
 import PreviewSwitch from '../components/tool/PreviewSwitch'
-import { PREVIEW_STYLES, isPreviewStyle, isTextStyle, specName } from '../utils/gradientPreviewStyles'
+import { FILL_STYLES, FIXED_SHAPE_STYLES, PREVIEW_PLACES, isPreviewStyle, isTextStyle, previewId, specName, splitPreview } from '../utils/gradientPreviewStyles'
+import FillStylePicker from '../components/tool/FillStylePicker'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
 import CommunitySubmitDialog from '../components/tool/CommunitySubmitDialog'
 import useCommunitySubmitGate from '../hooks/useCommunitySubmitGate'
@@ -647,16 +648,16 @@ function GenSection({ filters, setFilters, isPro, onPro, moreOpen, onMore, coars
 }
 
 
+// Where the gradient is previewed (the place) and, on Fill, how the fill is drawn (the
+// fill style), each kept for the session. The place keeps the old key, so a stored flat
+// id from before the split ('grain', 'poster', …) is read by splitPreview.
 const PREVIEW_KEY = 'vs-gradient-preview'
-const PREVIEW_CONTEXTS = [
-  { id: 'fill', label: 'Fill', as: '' },
-  { id: 'hero', label: 'Hero', as: ', shown as a hero' },
-  { id: 'card', label: 'Card', as: ', shown as a card' },
-  { id: 'button', label: 'Button', as: ', shown as a button' },
-  ...PREVIEW_STYLES,
-]
-// The switch's choices: the four contexts, then the styles as a second group.
-const PREVIEW_OPTIONS = PREVIEW_CONTEXTS.map((c) => ({ id: c.id, label: c.label, lead: c.id === PREVIEW_STYLES[0].id }))
+const FILL_KEY = 'vs-gradient-fill'
+// The switch's choices: the canvas and the three UI contexts, then the object scenes as a
+// second group. The fill styles are not here: they are in the Fill style picker.
+const PREVIEW_OPTIONS = PREVIEW_PLACES.map((c) => ({ id: c.id, label: c.label, lead: c.id === 'poster' }))
+const readSession = (key) => { try { return sessionStorage.getItem(key) } catch { return null } }
+const writeSession = (key, value) => { try { sessionStorage.setItem(key, value) } catch { /* private mode */ } }
 
 // Where text sits on the area it is drawn over is read by useMeasured and boxWithin; the
 // ink and the badge come from utils/gradientText.js, shared with the Poster's text layer.
@@ -910,14 +911,21 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const fxOklch = paintCss === css && space === 'oklch'
   // The name of the project this gradient was saved as, for the Spec card.
   const savedName = (projects || []).find((p) => p.id === design?.source?.projectId)?.name
-  // Where the gradient is previewed (a context or a style), kept for the session.
-  const [previewAs, setPreviewAs] = useState(() => {
-    try { const v = sessionStorage.getItem(PREVIEW_KEY); return PREVIEW_CONTEXTS.some((c) => c.id === v) ? v : 'fill' } catch { return 'fill' }
-  })
-  const choosePreview = (id) => {
-    setPreviewAs(id)
-    try { sessionStorage.setItem(PREVIEW_KEY, id) } catch { /* private mode */ }
+  // Where the gradient is previewed and, on Fill, how the fill is drawn.
+  const [{ place: previewPlace, fill: fillStyle }, setPreview] = useState(() => splitPreview(readSession(PREVIEW_KEY), readSession(FILL_KEY)))
+  const choosePlace = (place) => {
+    setPreview((p) => ({ ...p, place }))
+    writeSession(PREVIEW_KEY, place)
   }
+  const chooseFill = (fill) => {
+    setPreview((p) => ({ ...p, fill }))
+    writeSession(FILL_KEY, fill)
+  }
+  // The one scene the stage draws: the place, or on Fill the fill style.
+  const previewAs = previewId(previewPlace, fillStyle)
+  const previewAsLabel = (previewPlace === 'fill' ? FILL_STYLES : PREVIEW_PLACES).find((c) => c.id === (previewPlace === 'fill' ? fillStyle : previewPlace))
+  // A fill style that draws its own shape ignores Type and Angle; Shape says so.
+  const shapeMoot = previewPlace === 'fill' && FIXED_SHAPE_STYLES.includes(fillStyle) ? previewAsLabel?.label : null
 
   // Export code for the copy panel. SVG only applies to linear/radial, so a
   // conic gradient falls back to CSS even if SVG was the last-picked format.
@@ -2136,11 +2144,18 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           )}
           {/* The stage is the canvas's fixed slot. */}
           <div className="grd-stage" data-ctx={previewAs}>
-            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${PREVIEW_CONTEXTS.find((c) => c.id === previewAs)?.as || ''}`} />
+            <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${previewAsLabel?.as || ''}`} />
             <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
             {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
             {isTextStyle(previewAs) && <GradientText id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
-            <PreviewSwitch options={PREVIEW_OPTIONS} value={previewAs} onChange={choosePreview} label="Preview as" moreLabel="More previews" />
+            <PreviewSwitch
+              options={PREVIEW_OPTIONS}
+              value={previewPlace}
+              onChange={choosePlace}
+              label="Preview as"
+              moreLabel="More previews"
+              after={previewPlace === 'fill' ? <FillStylePicker styles={FILL_STYLES} value={fillStyle} onChange={chooseFill} stops={stops} paint={paintCss} oklch={fxOklch} /> : null}
+            />
           </div>
 
           {/* The stop rail. Press empty rail to drop a stop where you press and
@@ -2482,7 +2497,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </ToolSection>
 
           <ToolSection label="Shape" className="grd-geo" aside={LOCK_CAPTION}>
-            <div className="grd-row">
+            {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. They still apply to the export.</p>}
+            <div className={`grd-row${shapeMoot ? ' is-moot' : ''}`}>
               <ToolPills
                 label="Gradient type"
                 options={GRAD_TYPES}
@@ -2493,7 +2509,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
             {/* The row is always drawn, at the wheel's height; a radial gradient
                 says it has no angle in the same space instead of removing it. */}
-            <div className="grd-row grd-row--angle">
+            <div className={`grd-row grd-row--angle${shapeMoot ? ' is-moot' : ''}`}>
               {angleActive ? (
                 <AngleWheel
                   label="Angle"

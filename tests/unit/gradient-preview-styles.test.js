@@ -14,10 +14,13 @@
 //   waveBands sampling at k/7 or in sRGB always -> "the Waves' seven bands are the ramp at k/6 ..."
 //   wavePath drawing a stroke or fewer bands    -> "each wave band is a closed fill"
 //   phoneButton taking the lightest / last tie  -> "the Phone's button is the most chromatic stop ..."
+//   previewId ignoring the place                -> "a fill style shows only on Fill"
+//   splitPreview dropping old flat ids          -> "an old stored style id comes back as Fill with that style"
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   PREVIEW_STYLES, isPreviewStyle, stopList, linearThrough, glowColours, styleVars,
+  FILL_STYLES, PREVIEW_PLACES, FIXED_SHAPE_STYLES, previewId, splitPreview,
   MESH_TABLE, meshPoints, meshGround, meshBackground, waveBands, wavePath, WAVE_COUNT, phoneButton,
 } from '../../src/utils/gradientPreviewStyles.js'
 import { colourAt } from '../../src/utils/gradientScore.js'
@@ -150,4 +153,29 @@ test("the Phone's button is the most chromatic stop, whatever the list order", (
   assert.equal(phoneButton([{ color: '#000000', position: 0 }, { color: '#000000', position: 100 }]), '#000000')
   const best = Math.max(...FOUR.map((s) => hexToOklchRaw(s.color)[1]))
   assert.equal(hexToOklchRaw(phoneButton(FOUR))[1], best)
+})
+
+test('the places and fill styles split the old list with nothing lost or doubled', () => {
+  assert.deepEqual(PREVIEW_PLACES.map((p) => p.id), ['fill', 'hero', 'card', 'button', 'poster', 'spec', 'icon', 'phone'])
+  assert.deepEqual(FILL_STYLES.map((s) => s.id), ['plain', 'grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'])
+  const styleIds = new Set([...PREVIEW_PLACES, ...FILL_STYLES].map((x) => x.id))
+  for (const s of PREVIEW_STYLES) assert.ok(styleIds.has(s.id), s.id)
+  for (const id of FIXED_SHAPE_STYLES) assert.ok(FILL_STYLES.some((s) => s.id === id), id)
+})
+
+test('a fill style shows only on Fill', () => {
+  assert.equal(previewId('fill', 'plain'), 'fill')
+  assert.equal(previewId('fill', 'grain'), 'grain')
+  assert.equal(previewId('button', 'grain'), 'button')
+  assert.equal(previewId('poster', 'mesh'), 'poster')
+  assert.equal(previewId('fill', 'nonsense'), 'fill')
+})
+
+test('an old stored style id comes back as Fill with that style', () => {
+  assert.deepEqual(splitPreview('grain'), { place: 'fill', fill: 'grain' })
+  assert.deepEqual(splitPreview('waves', 'glow'), { place: 'fill', fill: 'waves' })
+  assert.deepEqual(splitPreview('button', 'glow'), { place: 'button', fill: 'glow' })
+  assert.deepEqual(splitPreview('spec'), { place: 'spec', fill: 'plain' })
+  assert.deepEqual(splitPreview(null, null), { place: 'fill', fill: 'plain' })
+  assert.deepEqual(splitPreview('gone', 'gone'), { place: 'fill', fill: 'plain' })
 })

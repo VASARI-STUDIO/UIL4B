@@ -27,6 +27,49 @@ export const PREVIEW_STYLES = [
 
 export const isPreviewStyle = (id) => PREVIEW_STYLES.some((s) => s.id === id)
 
+// The switch has two tiers. A PLACE is where the gradient is shown (the canvas itself,
+// a hero, a card, a button, a poster, a spec card, an app icon, a phone). A FILL STYLE
+// is how the canvas's fill is drawn, and only means something while the place is Fill.
+// Picking any other place sets the fill style aside; coming back to Fill brings it back.
+
+/** The fill styles, in picker order. Plain is the canvas as it is. */
+export const FILL_STYLES = [
+  { id: 'plain', label: 'Plain', as: '' },
+  ...['grain', 'fluted', 'ring', 'streak', 'glow', 'fade', 'mesh', 'waves'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
+]
+export const isFillStyle = (id) => FILL_STYLES.some((s) => s.id === id)
+
+/** The places, in switcher order. Fill first; the four object scenes last. */
+export const PREVIEW_PLACES = [
+  { id: 'fill', label: 'Fill', as: '' },
+  { id: 'hero', label: 'Hero', as: ', shown as a hero' },
+  { id: 'card', label: 'Card', as: ', shown as a card' },
+  { id: 'button', label: 'Button', as: ', shown as a button' },
+  ...['poster', 'spec', 'icon', 'phone'].map((id) => PREVIEW_STYLES.find((s) => s.id === id)),
+]
+export const isPreviewPlace = (id) => PREVIEW_PLACES.some((p) => p.id === id)
+
+/** Fill styles that draw their own shape, so the gradient's Type and Angle don't change them. */
+export const FIXED_SHAPE_STYLES = ['streak', 'glow', 'fade', 'mesh', 'waves']
+
+/** The one id the stage renders: the place, or under Fill the fill style ('fill' when Plain). */
+export function previewId(place, fill) {
+  if (place !== 'fill') return place
+  return fill && fill !== 'plain' && isFillStyle(fill) ? fill : 'fill'
+}
+
+/**
+ * A stored preview id read back as { place, fill }. Ids saved before the split (one flat
+ * list, 'grain' meaning Fill drawn as grain) land on Fill with that style; anything
+ * unknown falls back to Fill, Plain.
+ */
+export function splitPreview(stored, storedFill) {
+  const fill = isFillStyle(storedFill) ? storedFill : 'plain'
+  if (isPreviewPlace(stored)) return { place: stored, fill }
+  if (isFillStyle(stored)) return { place: 'fill', fill: stored }
+  return { place: 'fill', fill }
+}
+
 /** The styles whose words or objects are set in a text layer drawn after the effects layer (GradientText.jsx). */
 export const TEXT_STYLES = ['poster', 'spec', 'icon', 'phone']
 export const isTextStyle = (id) => TEXT_STYLES.includes(id)
