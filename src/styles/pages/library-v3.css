@@ -673,3 +673,22 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lb
 }
 html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.vpt,.vpt-like,.vpt:active:not(.vpt--locked)),
 html[data-reduced-motion="true"] .lib-surface.lib-v3.gpd-layer[class] :is(.gpd-icon,.gpd-row,.gpd-action,.gpd-primary){transform:none;transition-property:opacity,color,background-color}
+
+/* Faded panel tiles behind a gate (GateFadeRows tiles). Row 0 blurs inside each
+   tile's picture; row 1 is cut to part of a tile. GateFadeRows writes
+   --geg-tile-h and --geg-gap on the block. */
+.lib-surface.lib-v3[class] .geg:has(.geg-rows--tiles){--geg-fade-max:calc(var(--geg-tile-h,280px)*1.4 + var(--geg-gap,16px))}
+.lib-surface.lib-v3[class] .geg-rows--tiles{padding-top:0}
+.lib-surface.lib-v3[class] .geg-rows--tiles .geg-row[data-row="0"]{filter:none;opacity:1}
+.lib-surface.lib-v3[class] .geg-rows--tiles .geg-row[data-row="0"] .vpt-media{filter:blur(8px);transform:scale(1.04)}
+.lib-surface.lib-v3[class] .geg-rows--tiles .geg-row[data-row="1"]{max-height:calc(var(--geg-tile-h,280px)*.4);overflow:hidden;filter:blur(10px);opacity:.4}
+.lib-surface.lib-v3[class] .geg:has(.geg-rows--tiles) .geg-band{margin-top:calc(var(--geg-tile-h,280px)*-.2)}
+.lib-surface.lib-v3[class] .geg-fade--click{pointer-events:auto;cursor:pointer}
+
+/* Staged rise-in of the gate's text and controls (GalleryEndGate reveal). */
+.lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){transition:opacity 300ms var(--v3-ease),transform 300ms var(--v3-ease)}
+.lib-surface.lib-v3[class] .geg[data-reveal="armed"] :is(.geg-h,.geg-p,.geg-cta){opacity:0;transform:translateY(12px)}
+.lib-surface.lib-v3[class] .geg[data-reveal] .geg-p{transition-delay:100ms}
+.lib-surface.lib-v3[class] .geg[data-reveal] .geg-cta{transition-delay:200ms}
+html[data-reduced-motion="true"] .lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){opacity:1;transform:none;transition:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){opacity:1;transform:none;transition:none}}
