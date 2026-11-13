@@ -1,5 +1,6 @@
 // V3 project page states: an archived project offers Restore and says so, and a
-// link to a project that is not there goes back to the list instead of a blank page.
+// link to a project that is not there gets the project-missing page with a way back to the list,
+// never a blank page (365-project-missing-page.spec.js covers that page in full).
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // Drop the archived branch of `primary` in ProjectDetail.jsx: the archived test
@@ -24,9 +25,11 @@ test('an archived project says so and its next action is Restore', async ({ page
   await expect(page.locator('.pjv-status')).not.toContainText('Archived')
 })
 
-test('an unknown project goes back to the list', async ({ page }) => {
+test('an unknown project says so and offers the way back to the list', async ({ page }) => {
   watch(page, 'a designer following a link to a deleted project')
   await signIn(page, { plan: 'free', projects: [] })
   await go(page, '/projects/not-there')
-  await expect(page).toHaveURL(/\/projects$/)
+  await expect(page).toHaveURL(/\/projects\/not-there$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'That project isn’t in your account' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open your workspace' })).toHaveAttribute('href', '/projects')
 })
