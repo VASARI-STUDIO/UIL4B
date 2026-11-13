@@ -19,7 +19,7 @@ import BrandLogoField from '../BrandLogoField'
 import ExportFreePreview from './ExportFreePreview'
 import ExportThemeRow, { ThemeStage } from './ExportThemeRow'
 import ExportSignIn from './ExportSignIn'
-import { GUIDELINES_PAGES, UI_KIT_PAGES, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
+import { UI_KIT_PAGES, freeGuidelinesThemeNames, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
 
 // The main column of the Export dialog (Preview, File, Layout, Details) and the
 // dock under it. Everything here follows the category and file the rail and the
@@ -31,8 +31,8 @@ const FILE_COPY = {
   book: { label: 'PDF', blurb: 'The brand book as a print document, in light and dark. It opens in a print window: choose Save as PDF there.', action: 'Export PDF' },
   'book-png': { label: 'PNG pages', blurb: '2K page images, 1448 by 2048 px, in one zip.', action: 'Export PNG pages' },
   'book-html': { label: 'HTML', blurb: 'The brand book as a site, in light and dark, in one zip. It opens offline.', action: 'Export HTML' },
-  guidelines: { label: 'PDF', blurb: `The ${GUIDELINES_PAGES}-page brand guidelines as a print document. It opens in a print window: choose Save as PDF there.`, action: 'Export PDF' },
-  'guidelines-html': { label: 'HTML', blurb: `The ${GUIDELINES_PAGES} guidelines pages as HTML, in one zip. They open offline.`, action: 'Export HTML' },
+  guidelines: { label: 'PDF', blurb: (n) => `The ${n}-page brand guidelines as a print document. It opens in a print window: choose Save as PDF there.`, action: 'Export PDF' },
+  'guidelines-html': { label: 'HTML', blurb: (n) => `The ${n} guidelines pages as HTML, in one zip. They open offline.`, action: 'Export HTML' },
   html: { label: 'HTML', blurb: 'An A4 booklet. Prints to PDF from your browser.', action: 'Export style guide' },
   png: { label: 'PNG', blurb: 'One A4 sheet at 2x, for decks and tickets.', action: 'Export style guide' },
   jpeg: { label: 'JPEG', blurb: 'The same sheet, smaller file.', action: 'Export style guide' },
@@ -195,7 +195,12 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
   const design = useExportDesign()
   const checking = planKnown === false
   const chosen = readExportTemplates(working)
-  const files = cat.files.map((id) => ({ id, ...copyOf(id) }))
+  // The guidelines blurbs count the chosen theme's pages: a guidelines-only theme draws twelve, the others thirty-three.
+  const guidePages = pickerTheme(theme).guidePages
+  const files = cat.files.map((id) => {
+    const copy = copyOf(id)
+    return { id, ...copy, blurb: typeof copy.blurb === 'function' ? copy.blurb(guidePages) : copy.blurb }
+  })
   // A Pro kit is filed under its identity name when it has one (uiKitExport.js).
   const identityName = isPro ? readIdentity(design).name : ''
   // A themed zip is named for its theme; a themed PDF is not saved at all, it opens as a print document, so it carries no file name.
@@ -321,6 +326,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
     // The bundle has no free, marked version, so "no watermark" would promise a difference that isn't there.
     line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</>
       : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in Standards and Specification.</>
+        : cat.preview === 'guidelines' ? <><strong>Pro theme.</strong> The guidelines are free in {freeGuidelinesThemeNames()}.</>
         : <><strong>Pro</strong> unlocks this file.</>
   } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
   else if (!user) line = <><strong>Free with an account.</strong> Log in to export. The file carries a small ‘Made with UI L4B’ mark.</>

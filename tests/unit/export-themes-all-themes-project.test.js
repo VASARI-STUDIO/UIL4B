@@ -1,7 +1,7 @@
 // A project brand (projectToBrand) renders through every export theme, in both editions.
 //
 // What is pinned here, and the change that makes each fail:
-//  1. EVERY GUIDELINES AND UI-KIT PAGE OF EVERY THEME RENDERS FROM A PROJECT BRAND, SLOT AND SHOWCASE, WITH NO THROW AND NO
+//  1. EVERY GUIDELINES AND UI-KIT PAGE OF EVERY THEME (EVERY PAGE THE THEME WRITES, IN THE ROWS IT HAS) RENDERS FROM A PROJECT BRAND, SLOT AND SHOWCASE, WITH NO THROW AND NO
 //     "undefined", "NaN", "[object Object]" OR LEFTOVER PLACEHOLDER MARK IN THE DOCUMENT.
 //     Break: in themes/10-inuse/index.js read ctx.byId.hover.hex again, or in themes/04-standards/guidelines.js read L.geo.x with no fallback.
 //  1b. EVERY THEME'S BRAND BOOK RENDERS FROM A PROJECT BRAND, AS THE PRINT PAGE AND AS THE SITE ZIP, WITH THE SAME ASSERTIONS, AND THE SITE LINKS NO FILE
@@ -21,6 +21,7 @@ import { BRANDS } from '../../api/_lib/exportThemes/brands/index.js'
 import loaders from '../../api/_lib/exportThemes/node-loaders.js'
 import { renderThemeExport } from '../../api/_lib/exportThemeRoute.js'
 import JSZip from 'jszip'
+import { themeHasRow } from '../../src/data/exportThemes.js'
 
 const THEMES_DIR = new URL('../../api/_lib/exportThemes/themes/', import.meta.url)
 const DIRS = fs.readdirSync(THEMES_DIR).filter((d) => /^\d\d-/.test(d)).sort()
@@ -49,12 +50,19 @@ for (const dir of DIRS) {
   test(`theme ${dir}: every guidelines and UI-kit page renders from a project brand, both editions`, () => {
     const T = mods[dir]
     const failures = []
+    // A guidelines-only theme (rows: ['slides']) writes a dozen guidelines pages and no UI kit.
+    const kinds = [['guidelines', GUIDE_PAGES], ...(themeHasRow(dir, 'ui-kit') ? [['uikit', UIKIT_PAGES]] : [])]
+    const written = (kind, list) => list.filter((p) => typeof T[kind]?.[p.id] === 'function')
+    for (const [kind, list] of kinds) {
+      const min = themeHasRow(dir, 'ui-kit') ? list.length : 12
+      assert.ok(written(kind, list).length >= min, `${dir} writes ${written(kind, list).length} ${kind} pages`)
+    }
     for (const [label, brand] of Object.entries(brands)) {
       for (const edition of ['slot', 'showcase']) {
-        for (const [kind, list] of [['guidelines', GUIDE_PAGES], ['uikit', UIKIT_PAGES]]) {
+        for (const [kind, list] of kinds) {
           let ctx
           try { ctx = makeCtx(T, edition, kind, loaders, brand) } catch (e) { failures.push(`${label} ${edition} ${kind}: ctx ${e.message}`); continue }
-          for (const p of list) {
+          for (const p of written(kind, list)) {
             try {
               const doc = pageDoc(ctx, T, { title: p.id, pages: [T[kind][p.id](ctx)], size: ctx.size })
               const m = BAD.exec(doc)
@@ -71,7 +79,7 @@ for (const dir of DIRS) {
 // ---- 1b. every theme's brand book renders from a project brand, as the print page and as the site zip the route returns ----
 // The site's index.html links the kit by relative path; each link must name a file the zip holds (the route's kit zip has no PNG or PDF files).
 for (const dir of DIRS) {
-  test(`theme ${dir}: the brand book renders from a project brand as print HTML and as a site, with no dead download link`, async () => {
+  test(`theme ${dir}: the brand book renders from a project brand as print HTML and as a site, with no dead download link`, { skip: !themeHasRow(dir, 'book') && 'a guidelines-only theme has no book' }, async () => {
     const failures = []
     const check = (label, doc) => {
       const m = BAD.exec(doc)

@@ -41,8 +41,16 @@
 
 .ht-split { margin-top: 72px; }
 @media (max-width: 767px) { .ht-split { margin-top: 32px; } }
-.ht-stages { display: grid; row-gap: 56px; max-width: 688px; }
-.ht-stage { position: relative; scroll-margin-top: 60px; }
+.ht-stages { --gap: 104px; position: relative; display: grid; row-gap: var(--gap); max-width: 688px; }
+@media (max-width: 767px) { .ht-stages { --gap: 80px; } }
+.ht-stage { position: relative; scroll-margin-top: 60px; transition: opacity 240ms var(--ease); }
+/* A hairline halfway down the gap above a tool: placed in that tool's grid row, outside the stage and its dimming. */
+.ht-rule { position: absolute; grid-column: 1; left: 0; right: 0; top: calc(var(--gap) / -2); height: 1px; background: var(--hair); pointer-events: none; }
+/* The tools that are not current stand back. The dim is held to the level where the
+   secondary text (62% ink on the frame) still reads at 4.5:1 on the #060607 ground;
+   a tool being pressed, focused or hovered comes forward. */
+.ht-stage[data-on="false"]:not(:focus-within):not(:has(:active)) { opacity: .88; }
+@media (hover: hover) and (pointer: fine) { .ht-stage[data-on="false"]:hover { opacity: 1; } }
 .ht-stage:focus { outline: none; }
 .ht.ht .ht-stage:focus-visible { outline: 2px solid #EFEEEA; outline-offset: 4px; }
 .ht-h3 { margin: 0; font-size: 24px; line-height: 1.2; font-weight: 600; letter-spacing: -.02em; }
@@ -105,7 +113,7 @@
 
 @media (min-width: 1200px) {
   .ht-split { display: grid; grid-template-columns: minmax(0, 1fr) 50%; column-gap: 64px; }
-  .ht-stages { grid-column: 2; grid-row: 1; row-gap: 120px; max-width: none; }
+  .ht-stages { --gap: 240px; grid-column: 2; grid-row: 1; max-width: none; }
   .ht-stage { scroll-margin-top: 0; }
   /* The name and description are read by assistive tech but drawn in the pinned column. */
   .ht-h3, .ht-d { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -423,9 +431,49 @@
 .ht-cv-pick:has(.ht-cv-file:focus-visible) { outline: 2px solid #EFEEEA; outline-offset: 2px; }
 .ht-cv-file { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .ht-cv-priv { flex: none; margin: 8px 0 0; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
-.ht-cv-about { padding-top: 4px; }
-.ht-cv-about p { margin: 0; max-width: 44ch; font-size: 15px; line-height: 24px; color: rgba(var(--ink), .86); }
-.ht-cv-about .ht-cv-eng { margin-top: 12px; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
+/* the Animation, Video and Extract frames screens: a view, a row or grid of frames, a spec line and a note */
+.ht-cv-scr { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.ht-cv-view { position: relative; flex: 1 1 0; min-height: 0; border-radius: 12px; overflow: hidden; background: var(--l2); }
+.ht-cv-chip, .ht-cv-n {
+  position: absolute; padding: 0 8px; border-radius: 8px; background: rgba(6, 6, 7, .72);
+  font-family: var(--mono); font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; color: #EFEEEA; white-space: nowrap;
+}
+.ht-cv-chip { top: 8px; left: 8px; }
+.ht-cv-n { left: 4px; bottom: 4px; padding: 0 6px; line-height: 16px; }
+.ht-cv-spec { flex: none; margin: 0; min-height: 16px; font-family: var(--mono); font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; color: rgba(var(--ink), .86); overflow-wrap: anywhere; text-wrap: pretty; }
+/* On a phone the longest line wraps onto a second one; both lines are held so the view above does not move with the state. */
+@container (max-width: 339px) { .ht-cv-spec { min-height: 32px; } }
+.ht-cv-cap { flex: none; margin: 0; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); text-wrap: pretty; }
+.ht-cv-cap [data-s] { display: none; }
+.ht-cv-strip, .ht-cv-grid { flex: none; margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.ht-cv-strip li, .ht-cv-grid li, .ht-cv-scrub i {
+  position: relative; border-radius: 8px; background-color: var(--l2); background-image: url("/home-try/riders-640.webp");
+  background-size: 300% auto; background-position: var(--x, 0%) 55%; outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px;
+}
+.ht-cv-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.ht-cv-strip li { aspect-ratio: 4 / 3; }
+.ht-cv-strip li:first-child { outline: 2px solid #EFEEEA; outline-offset: 2px; }
+/* video: a 16:9 clip, a crop guide over it with the rest dimmed, turned in 90 degree steps */
+.ht-cv-clipwrap { flex: 1 1 0; min-height: 0; display: flex; justify-content: center; }
+.ht-cv-clip { flex: none; height: 100%; aspect-ratio: 16 / 9; max-width: 100%; }
+.ht-cv-clip .ht-cv-photo { transform: rotate(0deg); }
+.ht-cv-clip[data-turn="90"] .ht-cv-photo { transform: rotate(90deg) scale(1.78); }
+.ht-cv-clip[data-turn="180"] .ht-cv-photo { transform: rotate(180deg); }
+.ht-cv-clip[data-turn="270"] .ht-cv-photo { transform: rotate(270deg) scale(1.78); }
+.ht-cv-crop { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 1px solid #EFEEEA; box-shadow: 0 0 0 100vmax rgba(6, 6, 7, .55); pointer-events: none; }
+.ht-cv-crop[data-crop="Free"] { width: 86%; height: 86%; }
+.ht-cv-crop[data-crop="1:1"] { height: 86%; aspect-ratio: 1; }
+.ht-cv-crop[data-crop="16:9"] { width: 86%; aspect-ratio: 16 / 9; }
+.ht-cv-crop[data-crop="9:16"] { height: 86%; aspect-ratio: 9 / 16; }
+.ht-cv-clip .ht-cv-chip { z-index: 1; }
+/* extract frames: the video's strip with a tick where each frame is taken, and the frames below it */
+.ht-cv-scrubwrap { flex: none; }
+.ht-cv-scrub { position: relative; height: 40px; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; border-radius: 8px; overflow: hidden; }
+.ht-cv-scrub i { border-radius: 0; background-size: 800% auto; outline: 0; }
+.ht-cv-tick { position: absolute; top: 0; bottom: 0; left: calc(var(--t) * 100%); width: 2px; background: #EFEEEA; }
+.ht-cv-times { display: flex; justify-content: space-between; margin-top: 4px; font-family: var(--mono); font-size: 12px; line-height: 16px; color: rgba(var(--ink), .62); }
+.ht-cv-grid { flex: 1 1 0; min-height: 0; align-content: start; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ht-cv-grid li { aspect-ratio: 16 / 10; }
 .ht-cv-set { flex: none; margin: 16px 0; display: flex; flex-direction: column; gap: 8px; }
 .ht-cv-row { flex: none; height: 36px; display: flex; align-items: center; gap: 12px; }
 .ht-cv-lbl { flex: none; width: 64px; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
@@ -669,5 +717,10 @@ html[data-reduced-motion="true"] .ht-prog { transform: scaleX(calc((var(--k, 0) 
   .ht-cv-line { display: none; }
   .ht-cv-pick { align-self: stretch; margin-top: 12px; height: 44px; }
   .ht-cv-priv { margin-top: 8px; }
+  .ht-cv-scr { gap: 8px; }
+  .ht-cv-cap [data-l] { display: none; }
+  .ht-cv-cap [data-s] { display: inline; }
+  .ht-cv-strip, .ht-cv-grid { gap: 4px; }
+  .ht-cv-n { left: 2px; bottom: 2px; padding: 0 4px; }
 }
 @media (max-width: 359px) { .ht-ctl .ht-val { display: none; } }

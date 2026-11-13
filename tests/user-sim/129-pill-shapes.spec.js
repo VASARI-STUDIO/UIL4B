@@ -40,17 +40,16 @@ const SURFACES = [
   ['/create/icons', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/font-gallery', ['.lbry-search']],
   ['/learn', ['.lbry-search']],
-  ['/mobile', ['.spm-ic-search']],
   ['/create/contrast', ['.tl-pill']],
   ['/plans', ['.pl-switch']],
   ['/seo', ['.seo-seg']],
 ]
 
 // The bordered search fields: one hairline width and style.
-const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.pl-search input', '.spm-ic-search'])
+const SEARCH = new Set(['.pnav-search-field', '.hcmd-bar', '.lbry-search', '.pl-search input'])
 // The search bars proper: one height, one border colour, one fill. .hcmd-bar is
 // the hero input and is left out on purpose.
-const FAMILY = new Set(['.pnav-search-field', '.lbry-search', '.pl-search input', '.spm-ic-search'])
+const FAMILY = new Set(['.pnav-search-field', '.lbry-search', '.pl-search input'])
 const SEARCH_H = 44
 // A search that sits ON a tool toolbar (the Font Gallery's, at 1440) is one of the
 // toolbar's controls, so it takes the toolbar control height, not the page search's.
