@@ -154,7 +154,7 @@ ${body}<div class="a" style="left:${X}px;top:${sy}px;width:${sig.w}px;height:${s
 // ---- digital: the brand's own screen, built from the UI kit's components ----
 function productScreen(ctx, aspect) {
   const B = ctx.brand, S = B.ui.screen.content, ui = ctx.ui, W = 1440, H = Math.round(W / aspect), Ex = S.example || {};
-  const st = ctx.status.find((s) => s.label === S.status) || ctx.status[0], pct = Math.round(S.progress * 100), dstem = displayStem(ctx);
+  const st = ctx.status.find((s) => s.label === S.status) || ctx.status[0], pct = typeof S.progress !== 'number' ? null : Math.round(S.progress * 100), dstem = displayStem(ctx);
   const g = ctx.logo.geos.horizontal, lw = fitW(ctx, 'horizontal', 150, 36), lgh = (lw * g.h) / g.w;
   const CX = 64, CY = 120, CWd = 560, IN = 40, IX = CX + IN, IW = CWd - 2 * IN, RX = CX + CWd + 48, RW = W - 64 - RX;
   const es = fit(dstem, S.eta, [56, 52, 48, 44, 40], IW, 2), en = lines(dstem, S.eta, es, IW, -0.01), elh = Math.round(es * 1.08);
@@ -167,7 +167,7 @@ ${at(CX, CY, CWd, '', `height:${H - 48 - CY}px;background:var(--surface);border:
 ${at(IX, Y.title, IW, `<p style="margin:0;font:500 var(--fs-label)/var(--lh-label) var(--ff-body);color:var(--text-soft)">${A(B.ui.screen.title)}</p>`)}
 ${at(IX, Y.chip, 0, ui.statusChip(st.id, { label: S.status }))}
 ${at(IX, Y.eta, IW, `<h2 class="ui-display" style="margin:0;font-size:${es}px;line-height:${elh}px;color:var(--text)">${A(S.eta)}</h2>`)}
-${at(IX, Y.prog, IW, `<div class="ui-progress"><span class="ui-progress__bar"><i style="width:${pct}%"></i></span><span class="ui-progress__dot" style="left:${pct}%"></span></div>`)}
+${pct === null ? '' : at(IX, Y.prog, IW, `<div class="ui-progress"><span class="ui-progress__bar"><i style="width:${pct}%"></i></span><span class="ui-progress__dot" style="left:${pct}%"></span></div>`)}
 ${at(IX, Y.ft, IW, `<p style="margin:0;display:flex;justify-content:space-between;font:400 var(--fs-caption)/var(--lh-caption) var(--ff-body);color:var(--text-soft)"><span>${A(S.from)}</span><span>${A(S.to)}</span></p>`)}
 ${at(IX, Y.pick, IW, `<p style="margin:0;font:400 16px/24px var(--ff-body);color:var(--text)">${A(S.pickup)}</p>`)}
 ${at(IX, Y.rider, IW, `<div style="display:flex;align-items:center;gap:16px;padding-top:24px;border-top:1px solid var(--divider)"><span class="ui-avatar" aria-hidden="true">${A(S.initials)}</span><div style="flex:1"><p style="margin:0;font:500 16px/24px var(--ff-body);color:var(--text)">${A(S.rider)}</p><p style="margin:0;font:400 var(--fs-caption)/var(--lh-caption) var(--ff-body);color:var(--text-soft)">${A(S.riderNote)}</p></div>${ui.btn(S.call, { variant: 'secondary', iconLeft: 'phone', size: 'sm' })}</div>`)}
@@ -312,7 +312,7 @@ export const guidelines = {
     const keys = [
       [X(32), Y(36), 'Top bar', 'The horizontal logo and the page links.'],
       [X(P.IX - 20), Y(P.Y.chip + 14), 'Status chip', `${A(S.status)}, in the kit's ${A(st.tone)} tone.`],
-      [X(P.IX - 20), Y(P.Y.prog + 4), 'Progress bar', `${Math.round(S.progress * 100)}% along, from ${A(S.from)} to ${A(S.to)}.`],
+      [X(P.IX - 20), Y(P.Y.prog + 4), 'Progress bar', `${typeof S.progress !== 'number' ? `From ${A(S.from)} to ${A(S.to)}.` : `${Math.round(S.progress * 100)}% along, from ${A(S.from)} to ${A(S.to)}.`}`],
       [X(P.IX - 20), Y(P.Y.rider + 46), 'Secondary button', `${A(S.call)}, beside the person on the job.`],
       [X(P.RX - 24), Y(P.CY + 120), 'List rows', `${ctx.brand.ui.screen.content.deliveries.length > 4 ? 'Four' : 'The'} rows, each with its status chip.`],
     ];

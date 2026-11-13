@@ -159,8 +159,8 @@ function colourPage(ctx, id, mode) {
     ];
   } });
   // the progress track: the sunken ground of a bar that has not filled
-  const p = Math.round((S.progress ?? 0.6) * 100);
-  blocks.push({ h: 24, html: (y) => at(X, y, `<div class="ui-progress"><div class="ui-progress__bar"><i style="width:${p}%"></i></div><span class="ui-progress__dot" style="left:${p}%"></span></div>`, `width:${W}px`),
+  const p = typeof S.progress !== 'number' ? null : Math.round(S.progress * 100);
+  blocks.push({ h: 24, html: (y) => p === null ? '' : at(X, y, `<div class="ui-progress"><div class="ui-progress__bar"><i style="width:${p}%"></i></div><span class="ui-progress__dot" style="left:${p}%"></span></div>`, `width:${W}px`),
     t: (y) => [{ x: X + W - 8, y: y + 21, ...role('Sunken', 'sunken', { fg: M['quiet-sunken'], bg: M.sunken, against: 'Quiet', need: 4.5 }) }] });
   // a raised card: a step in the ground
   blocks.push({ h: 2 + 32 + tS.line, html: (y) => at(X, y, ui.card({ title: S.rider, raised: true }), `width:${W}px`),
@@ -248,8 +248,8 @@ export const uikit = {
     y += hl.length * tT.line + 8;
     scr += at(IX, y, `<p style="color:var(--text-soft)">${A(S.pickup)}</p>`, `width:${IW}px`);
     y += linesOf(ctx, 'body', S.pickup, tB.size, IW) * tB.line + 24;
-    const p = Math.round((S.progress ?? 0.6) * 100);
-    scr += at(IX, y, `<div class="ui-progress"><div class="ui-progress__bar"><i style="width:${p}%"></i></div><span class="ui-progress__dot" style="left:${p}%"></span></div>`, `width:${IW}px`);
+    const p = typeof S.progress !== 'number' ? null : Math.round(S.progress * 100);
+    if (p !== null) scr += at(IX, y, `<div class="ui-progress"><div class="ui-progress__bar"><i style="width:${p}%"></i></div><span class="ui-progress__dot" style="left:${p}%"></span></div>`, `width:${IW}px`);
     scr += at(IX, y + 32, `<span>${A(S.from)}</span><span>${A(S.to)}</span>`, `width:${IW}px;display:flex;justify-content:space-between;font-size:var(--fs-caption);line-height:var(--lh-caption);color:var(--quiet)`);
     y += 32 + tC.line + 24;
     const cl = linesOf(ctx, 'body', S.deliverTo, tB.size, IW - 34), cardH = 2 + 32 + tB.line + 6 + tS.line + 6 + cl * tB.size * 1.5;

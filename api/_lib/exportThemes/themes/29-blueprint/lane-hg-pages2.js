@@ -146,14 +146,14 @@ export const pages2 = {
     return sheet(ctx, 'email-signature', { drawing: 'Email signature', scale: 'Not to scale' }, inner);
   },
   digital(ctx) {
-    const B = ctx.brand, S = B.ui.screen.content, ui = ctx.ui, st = ctx.status.find((s) => s.label === S.status) || ctx.status[0], pct = Math.round(S.progress * 100);
+    const B = ctx.brand, S = B.ui.screen.content, ui = ctx.ui, st = ctx.status.find((s) => s.label === S.status) || ctx.status[0], pct = typeof S.progress !== 'number' ? null : Math.round(S.progress * 100);
     const screen = `<div class="hg-scr ui" role="img" aria-label="${A(B.name)}'s product screen, ${A(B.ui.screen.title)}">
 <div class="hg-scr__bar">${logoFilm(ctx, 'horizontal', 140)}</div>
 <div class="hg-scr__b"><div class="hg-scr__c"><p class="hg-scr__k">${A(B.ui.screen.title)}</p>${ui.statusChip(st.id, { label: S.status })}<h2 class="hg-scr__eta ui-display">${A(S.eta)}</h2>
-<div class="ui-progress"><span class="ui-progress__bar"><i style="width:${pct}%"></i></span><span class="ui-progress__dot" style="left:${pct}%"></span></div>
+${pct === null ? '' : `<div class="ui-progress"><span class="ui-progress__bar"><i style="width:${pct}%"></i></span><span class="ui-progress__dot" style="left:${pct}%"></span></div>`}
 <p class="hg-scr__ft"><span>${A(S.from)}</span><span>${A(S.to)}</span></p><p class="hg-scr__p">${A(S.pickup)}</p></div>
 <div class="hg-scr__r">${ui.deliveryRows(4)}</div></div></div>`;
-    const keys = [['Status chip', `${A(S.status)}, in the kit&rsquo;s ${A(st.tone)} tone.`], ['Progress bar', `${pct}% along, from ${A(S.from)} to ${A(S.to)}.`], ['List rows', 'Each row with its status chip.']];
+    const keys = [['Status chip', `${A(S.status)}, in the kit&rsquo;s ${A(st.tone)} tone.`], ['Progress bar', `${pct === null ? '' : pct + '% along, '}${pct === null ? 'From' : 'from'} ${A(S.from)} to ${A(S.to)}.`], ['List rows', 'Each row with its status chip.']];
     const inner = `<figure class="hg-app">${screen}</figure><div class="hg-block">${label('Keynotes')}${notes(keys.map(([t, d], i) => [i + 1, `<p class="hg-note"><span class="hg-note__h">${t}.</span> ${d}</p>`]))}</div>`;
     return sheet(ctx, 'digital', { drawing: 'Product screen', scale: 'Not to scale' }, inner);
   },
