@@ -202,6 +202,11 @@ const ADDED_SELECTORS = {
     '.sp-footer-attrib-icon', '.sp-footer-mark', '.pl-t', '.pl-ink', '.pl-headpro', '.pl-headlabel', '.pl-pill',
     '.pl-gh', '.pl-ghin', '.pl-r', '.pl-l', '.pl-f', '.pl-p', '.pl-same',
   ],
+  // Privacy on the single-column plain page: its own head, sections, table and aside.
+  '/privacy': [
+    '.pv3', '.lgl', '.lgl-doc', '.lgl-head', '.pv-h1', '.lgl-h', '.lgl-sec', '.lgl-p', '.lgl-list', '.lgl-a',
+    '.lgl-aside', '.lgl-updated', '.lgl-table-wrap', '.lgl-table', '.storage-table',
+  ],
 }
 
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'))
