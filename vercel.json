@@ -18,7 +18,7 @@
       "**": false
     }
   },
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src api public index.html vite.config.js vercel.json package.json package-lock.json scripts",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src api public index.html vite.config.js vercel.json package.json package-lock.json pro-data.lock scripts",
   "trailingSlash": false,
   "redirects": [
     {

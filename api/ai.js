@@ -1265,11 +1265,13 @@ export default async function handler(req, res) {
   // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
   // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.
   if (req.method === 'GET' && 'palettePreview' in (req.query || {})) {
-    const [{ servePalettePreview }, { LIBRARY_PALETTES }] = await Promise.all([
+    const [{ servePalettePreview }, { loadLibrary }] = await Promise.all([
       import('./_lib/library/preview.js'),
-      import('./_lib/library/paletteLibrary.js'),
+      import('./_lib/library/load.js'),
     ])
-    return servePalettePreview(req, res, LIBRARY_PALETTES)
+    const lib = await loadLibrary()
+    if (lib.source === 'missing') return res.status(503).json({ error: 'Library unavailable' })
+    return servePalettePreview(req, res, lib.LIBRARY_PALETTES)
   }
 
   // ── The animated icon sets (Pro) ──────────────────────────────────────────
