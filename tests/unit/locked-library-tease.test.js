@@ -26,7 +26,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { splitLockedLibrary, LOCKED_TEASE, GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
-import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
+import { GALLERY_GATE_COPY, libraryGateCopy } from '../../src/data/galleryGateCopy.js'
+import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
@@ -182,8 +183,15 @@ test('the gallery filters and searches the split output, closing the hex oracle'
   // The search haystack indexes each palette's hex values. Filtering the FULL
   // library would let a signed-out visitor confirm a locked brand's colours by
   // typing them — a disclosure oracle dressed as a search box.
-  assert.ok(src.includes('return browsable.filter('), 'the search must run over the browsable set, not LIBRARY_PALETTES')
+  // The count runs over the whole library, so the guard lives in countGallery:
+  // the full filter (haystack included) is matchOpen, which only sees the open
+  // rows, and every locked row goes through the public matcher.
+  assert.ok(/countGallery\(rows, split, \{/.test(src), 'the search must be counted by countGallery over the split')
+  assert.ok(/matchOpen:[\s\S]*?haystacks\.get\(/.test(src), 'the haystack must live in matchOpen, which only sees open rows')
+  assert.ok(/matchPublic:\s*palettePublicMatch\(/.test(src), 'locked rows must be matched on public facets only')
   assert.ok(!/LIBRARY_PALETTES\.filter\(/.test(src), 'the full library must not be the filter source')
+  const counts = stripComments(read('src/utils/galleryCounts.js'))
+  assert.ok(/split\.open\.filter\(matchOpen\)/.test(counts), 'matchOpen must run over the open rows only')
 })
 
 // ── 4. The wall is measured, and it does not invent anything ────────────────
@@ -208,7 +216,6 @@ test('every wall registers a real gate id rather than falling back to a title', 
   // /plans. A Pro `primary` is `{ label, to: '/plans', onClick }`, and the
   // onClick must register this gallery's gate id.
   const GATE_USERS = {
-    'src/pages/PaletteGallery.jsx': 2, 'src/pages/GradientGallery.jsx': 1,
     'src/pages/IconGroups.jsx': 2, 'src/components/prompt/PromptGate.jsx': 1,
   }
   for (const [file, expected] of Object.entries(GATE_USERS)) {
@@ -217,8 +224,16 @@ test('every wall registers a real gate id rather than falling back to a title', 
     assert.equal(primaries.length, expected, `${file}: the number of Pro gate links changed - this assertion would be vacuous`)
     for (const link of primaries) assert.ok(/reportUpgradeGate\('[a-z0-9-]+'\)/.test(link), `${file} has a Pro link that registers no gate: ${link}`)
   }
+  // The palette and gradient gate is the shared LibraryGate: its one Pro link
+  // reports through the page's onPlans, and each page names its own gate id.
+  const libraryGate = stripComments(read('src/components/library/LibraryGate.jsx'))
+  assert.ok(/to: '\/plans', onClick: onPlans/.test(libraryGate), 'LibraryGate has a Pro link that registers no gate')
+  for (const [file, id] of [['src/pages/PaletteGallery.jsx', 'palette-library-tier-lock'], ['src/pages/GradientGallery.jsx', 'gradient-library-tier-lock']]) {
+    assert.ok(stripComments(read(file)).includes(`onPlans={() => reportUpgradeGate('${id}')}`), `${file} must report ${id} from its gate's plans link`)
+  }
   assert.ok(stripComments(read('src/components/prompt/PromptGate.jsx')).includes("reportUpgradeGate('prompt-library-community-lock')"))
-  assert.ok(ids.includes('palette-library-brand-lock'), 'the Palette Library wall must name its gate')
+  assert.ok(ids.includes('palette-library-tier-lock'), 'the Palette Library wall must name its gate')
+  assert.ok(ids.includes('gradient-library-tier-lock'), 'the Gradient Library wall must name its gate')
   assert.ok(ids.includes('palette-builder-brand-lock'), 'the Palette Builder wall must name its gate')
   assert.ok(ids.includes('prompt-library-community-lock'), 'the Prompt Library wall must name its gate')
   for (const id of ids) {
@@ -263,13 +278,27 @@ test('the CTA number is derived from the data, never written as a literal', () =
   // The galleries' gates take their words from data/galleryGateCopy.js, whose
   // builders print only the number they are handed (behaviour, checked here
   // with a count no library holds). The pages must hand them live counts.
-  for (const name of ['palettes', 'gradients', 'iconGroups', 'prompts']) {
+  for (const name of ['iconGroups', 'prompts']) {
     const heading = GALLERY_GATE_COPY[name].pro.heading(7311)
     assert.ok(heading.includes('7,311'), `${name}: the Pro heading does not print the count it is given: ${heading}`)
   }
+  // The palette and gradient gate takes every number from the counts it is given.
+  const nounFor = (c) => (c === 1 ? 'thing' : 'things')
+  const given = { anonymous: true, S: 7311, A: 8419, T: 9127, P: 708, opens: 8419, nounFor }
+  for (const kind of ['palettes', 'gradients']) {
+    for (const variant of ['unknown', 'account', 'more', 'pro-only']) {
+      const { heading, body } = libraryGateCopy(kind, { ...given, variant })
+      const numbers = (heading + ' ' + body).match(/\d[\d,]*/g) || []
+      assert.ok(numbers.length > 0, `${kind}/${variant}: the gate prints no count`)
+      for (const num of numbers) {
+        assert.ok(['7,311', '8,419', '9,127', '708'].includes(num) || num === LIBRARY_TOTALS[kind].toLocaleString('en-AU'),
+          `${kind}/${variant}: the gate prints a number it was not given: ${num}`)
+      }
+    }
+  }
   const PAGE_CALLS = {
-    'src/pages/PaletteGallery.jsx': [/copy\.pro\.heading\(lockedCount\)/, /copy\.anon\.heading\(opens\)/],
-    'src/pages/GradientGallery.jsx': [/copy\.pro\.heading\(lockedCount\)/, /copy\.anon\.heading\(opens\)/],
+    'src/pages/PaletteGallery.jsx': [/countGallery\(rows, split,/, /opens=\{opens\}/],
+    'src/pages/GradientGallery.jsx': [/countGallery\(rows, split,/, /opens=\{opens\}/],
     'src/components/prompt/PromptGate.jsx': [/copy\.pro\.heading\(more\)/, /copy\.anon\.heading\(accountOpens\)/],
   }
   for (const [file, patterns] of Object.entries(PAGE_CALLS)) {
