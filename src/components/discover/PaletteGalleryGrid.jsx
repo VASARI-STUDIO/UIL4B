@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import useModalDialog from '../../hooks/useModalDialog'
 import LibraryCard from '../library/LibraryCard'
 import LibraryGrid from '../library/LibraryGrid'
+import VerticalPanelTile, { VptGrid } from '../library/VerticalPanelTile'
+import GalleryPreviewDialog from '../library/GalleryPreviewDialog'
 import { paletteBuilderUrl } from '../../data/paletteGallery'
 import { setGradientDraft, resetGradientDraft } from '../../utils/colorHandoff'
 import { useProject } from '../../contexts/ProjectContext'
@@ -177,6 +179,9 @@ function PaletteActionSheet({ palette, onClose, onSave, onGradient, onCss, onHex
 export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = [], labelledBy, metaOf, hexChips = false }) {
   const [likes, setLikes] = useState(loadLikes)
   const [sheetFor, setSheetFor] = useState(null)
+  // The tile whose preview dialog is open, by position in `palettes`.
+  const [previewAt, setPreviewAt] = useState(null)
+  const closePreview = useCallback(() => setPreviewAt(null), [])
   const closeSheet = useCallback(() => setSheetFor(null), [])
   const navigate = useNavigate()
   const { saveProject, canSaveProjects, projectCountPending } = useProject()
@@ -265,6 +270,48 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
     const user = await requireLogin('save palettes to a project', { free: true, signup: true })
     if (!user) pendingSaveRef.current = null
   }, [canSaveProjects, saveNow, requireLogin])
+
+  // Browsing (no onPick): V3 tiles, and the preview dialog holds the actions the
+  // legacy card kept on hover. The builder popup keeps the legacy card below.
+  if (!onPick) {
+    const actionsOf = (p) => (p.pro ? [] : [
+      { key: 'project', label: 'Save to project', ariaLabel: `Save ${p.name} to a project`, onClick: () => saveToProject(p) },
+      { key: 'gradient', label: 'Make a gradient', ariaLabel: `Gradient from ${p.name}`, onClick: () => openInGradient(p) },
+      { key: 'css', label: 'Copy CSS', ariaLabel: `Copy ${p.name} as CSS custom properties`, onClick: () => copyText(paletteCss(p), `Copied ${p.name} as CSS`) },
+      { key: 'hex', label: 'Copy all hex', ariaLabel: `Copy all ${p.colors.length} hex codes from ${p.name}`, onClick: () => copyText(p.colors.join(', ').toUpperCase(), `Copied ${p.colors.length} hex codes`) },
+    ])
+    const metaFor = (p) => (metaOf ? metaOf(p) : `${p.colors.length} ${p.colors.length === 1 ? 'colour' : 'colours'}`)
+    return (
+      <>
+        <VptGrid labelledBy={labelledBy}>
+          {palettes.map((p, i) => (
+            <VerticalPanelTile
+              key={p.id}
+              data-kind={p.kind || 'curated'}
+              name={p.name}
+              meta={metaFor(p)}
+              hexes={p.colors}
+              onOpen={() => setPreviewAt(i)}
+              liked={likes.has(p.id)}
+              onLike={() => toggleLike(p.id)}
+            />
+          ))}
+        </VptGrid>
+        {previewAt != null && palettes[previewAt] && (
+          <GalleryPreviewDialog
+            kind="palette"
+            items={palettes}
+            index={previewAt}
+            onIndex={setPreviewAt}
+            onClose={closePreview}
+            metaOf={metaFor}
+            actionsOf={actionsOf}
+            toast={toast}
+          />
+        )}
+      </>
+    )
+  }
 
   return (
     <LibraryGrid className="pgal-grid" labelledBy={labelledBy}>

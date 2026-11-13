@@ -4,12 +4,12 @@
 //
 // Each test is a journey a person walks (search for one, narrow by mood, come
 // back from an empty result). Signed in as Pro so the whole set arrives and the
-// counts are the library's, not the signed-out three.
+// counts are the library's, not the signed-out cap.
 //
 // MUTATIONS this file goes red on:
-//   - in PaletteGallery.jsx `clear`, drop `.focus()` on the search field: the
+//   - in src/pages/PaletteGallery.jsx `clear`, drop `.focus()` on the search field: the
 //     "Clear returns focus to the search" assertion goes red;
-//   - drop `sheetTitle="Mood"` from the toolbar in PaletteGallery.jsx: the phone
+//   - drop `sheetTitle="Mood"` from the toolbar in src/pages/PaletteGallery.jsx: the phone
 //     test's dialog name ("Mood") goes red;
 //   - make the `.lbry-sheet` rows shorter than 48px in library-v3.css: the row
 //     height assertion goes red.
@@ -18,9 +18,10 @@ import { go, watch, signIn } from './helpers.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 
 const FIRST_NAME = LIBRARY_PALETTES.find((p) => p.pro !== true).name
-const CARD = '.pgal-card:not(.geg-fade *)'
+// An open panel tile: not the locked ones, and not the faded copies behind a gate.
+const CARD = '.vpt:not(.vpt--locked):not([data-gate-fade] *)'
 
-/** The Pro library has arrived: more cards than a free account opens. */
+/** The Pro library has arrived: more tiles than a free account opens. */
 const arrived = (page) => expect.poll(() => page.locator(CARD).count(), { timeout: 10000 }).toBeGreaterThan(10)
 
 test.describe('palette library, desktop', () => {
@@ -36,7 +37,7 @@ test.describe('palette library, desktop', () => {
     const search = page.getByLabel('Search palettes')
     await search.fill(FIRST_NAME)
     await expect.poll(() => page.locator(CARD).count()).toBeLessThan(all)
-    await expect(page.locator(`${CARD} .pgal-name`).first()).toContainText(FIRST_NAME)
+    await expect(page.locator(`${CARD} .vpt-name`).first()).toContainText(FIRST_NAME)
 
     await search.fill('zzzz no such palette')
     await expect(page.locator(CARD)).toHaveCount(0)

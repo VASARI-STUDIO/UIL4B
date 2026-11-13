@@ -6,14 +6,13 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
-import GalleryEndGate, { GateFadeRows } from '../components/library/GalleryEndGate'
+import LibraryGate from '../components/library/LibraryGate'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
-import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
-import { splitLockedLibrary, accountTierGain, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
+import { splitLockedLibrary, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../utils/paletteMood'
 import { paletteHaystack } from '../utils/paletteSearch'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
@@ -21,7 +20,10 @@ import { useProLibrary } from '../hooks/useProLibrary'
 import { LIBRARY_PALETTE_ROWS } from '../data/paletteLibrary'
 import { LIBRARY_TOTALS } from '../data/libraryTotals'
 import { LIBRARY_RULES } from '../utils/libraryRules'
-import { standinPalettes } from '../utils/gateStandins'
+import { countGallery, gateFor, palettePublicMatch } from '../utils/galleryCounts'
+import { filterNoun } from '../utils/galleryFilterNoun'
+import useResultsScroll from '../hooks/useResultsScroll'
+import { paletteMeta } from '../utils/galleryMeta'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -151,19 +153,15 @@ const SECTIONS = [
 // NOTHING IS HAND-TAGGED. The key is the palette id; the ANSWER comes from the
 // hexes alone. No `mood:` field exists on a palette and none should — a tag is
 // written once and keeps its answer after an edit changes the colours under it.
-// The card's meta line, as the design writes it: "Warm, 5 colours" — the
-// palette's first mood in MOOD_IDS order, then its size. Every mood comes from
-// the classifier, so the word is measured, not tagged.
+// The tile's meta line: the palette's first mood in MOOD_IDS order, then its
+// size ("Warm · 5 colours"); a brand system says so instead of a mood. Every mood
+// comes from the classifier, so the word is measured, not tagged.
 const cardMetaFor = (moodsById) => (palette) => {
+  if (palette.kind === 'brand') return paletteMeta(palette.colors.length, 'Brand system')
   const moods = moodsById.get(palette.id) || {}
   const first = MOOD_IDS.find((id) => moods[id])
-  const size = `${palette.colors.length} ${palette.colors.length === 1 ? 'colour' : 'colours'}`
-  return first ? `${MOOD_LABELS[first]}, ${size}` : size
+  return paletteMeta(palette.colors.length, first ? MOOD_LABELS[first] : null)
 }
-
-// Neutral palettes for the gate's faded cards where the next ones are Pro's.
-const PALETTE_STANDINS = standinPalettes()
-const standinMeta = (palette) => `${palette.colors.length} colours`
 
 export default function PaletteGallery({ toast }) {
   const [query, setQuery] = useState('')
@@ -199,7 +197,7 @@ export default function PaletteGallery({ toast }) {
   // stubs standing in for the withheld ones, or the server's full list). The cap
   // counts down THAT list, never the filtered one — the distinction is the whole of
   // the prompt-library defect this module was written after.
-  const { open: browsable, next: nextOpen, remaining: lockedCount, eligible } = useMemo(() => (
+  const split = useMemo(() => (
     splitLockedLibrary(rows, {
       unlocked: ready,
       isOpen: LIBRARY_RULES.palettes.isOpen,
@@ -207,6 +205,7 @@ export default function PaletteGallery({ toast }) {
       limit: galleryLimit(tier),
     })
   ), [rows, ready, tier])
+  const { open: browsable, remaining: lockedCount, eligible } = split
 
   // Over the rows this viewer was handed, so a free viewer classifies ten and a
   // Pro viewer the lot. Every row in `browsable` is a full record (open rows are
@@ -220,23 +219,26 @@ export default function PaletteGallery({ toast }) {
   }, [browsable])
   const cardMeta = useMemo(() => cardMetaFor(moodsById), [moodsById])
 
-  // How many more a free account opens. Zero above the anonymous rung.
-  const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
+  const q = query.trim().toLowerCase()
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return browsable.filter((palette) => {
-      if (group === 'brand' && palette.kind !== 'brand') return false
-      if (group === 'curated' && palette.kind !== 'curated') return false
+  // COUNTED OVER THE WHOLE LIBRARY (utils/galleryCounts.js), not over `browsable`
+  // alone. A collection or mood whose matches all sit behind the tier used to
+  // read "0 palettes" with its own gated state; now S is what this viewer has, T
+  // every match in the library, and the gate speaks for the difference. A row the
+  // viewer cannot open is matched on public facets only (never its colours, never
+  // a typed query against its hexes), so no count here is an oracle.
+  const counts = useMemo(() => countGallery(rows, split, {
+    matchOpen: (palette) => {
+      if (group !== 'all' && palette.kind !== group) return false
       // One line for all eight moods, because there is no per-mood branching
       // left to get wrong: the classifier answers, the id indexes the answer.
-      // The previous shape spelled out one comparison per mood inline, which is
-      // how a threshold ends up living in a page instead of a module.
       if (mood !== 'all' && !moodsById.get(palette.id)[mood]) return false
       if (q && !haystacks.get(palette.id).includes(q)) return false
       return true
-    })
-  }, [browsable, moodsById, haystacks, group, mood, query])
+    },
+    matchPublic: palettePublicMatch({ group, mood, query: q }),
+  }), [rows, split, group, mood, q, moodsById, haystacks])
+  const visible = counts.open
 
   const brandCount = useMemo(() => visible.filter((p) => p.kind === 'brand').length, [visible])
 
@@ -288,69 +290,30 @@ export default function PaletteGallery({ toast }) {
     : group === 'curated' ? 'Curated collection'
       : 'Colours worth building with'
 
-  // The end of the open palettes: the shared gate (GalleryEndGate) over two
-  // faded rows of this gallery's own cards. Signed out, the gate offers a free
-  // account and the rows are the next palettes it opens; from the free rung it
-  // offers Pro and the rows are neutral stand-ins, so nothing that is Pro's is
-  // named, coloured or fetched.
-  //
-  // Shown only while the view is unnarrowed. Under a search or a mood filter
-  // the user has asked a narrower question, and answering it with a paywall
-  // would be an interruption rather than an offer.
+  // The gate (components/library/LibraryGate) shows whenever the viewer is withheld
+  // a match, under a collection, a mood or a search too: a narrower question that
+  // the cap answers with "none" is exactly when the way on is wanted. Never while
+  // a Pro library is on its way.
   const anonymous = tier === 'anonymous'
   const proPending = pro.active && !ready
   const proFailed = pro.status === 'error' || pro.status === 'refused'
-
-  // A collection this viewer has no open row of at all, while palettes are
-  // still withheld: the tier cap fell before it. No mood or search can fill it,
-  // so "no palettes match" would be false; the state says it is gated instead.
-  // Keyed off the rows rather than the chip, so it ends by itself the day a
-  // free row of that kind exists.
-  const gatedKind = group !== 'all' && !proPending && lockedCount > 0
-    && !browsable.some((palette) => palette.kind === group)
-  const gatedNoun = group === 'brand' ? 'Brand' : 'Curated'
-  const gatedEmpty = gatedKind && visible.length === 0
-  // Brand systems are flagged Pro outright (see LIBRARY_RULES), so no account
-  // opens them; a curated collection hidden by the cap does open with one.
-  const brandNeedsPro = group === 'brand'
-  // Where the viewer stands on the ladder, in words, for the wall and the close.
+  const gate = gateFor({ tier, counts, pending: proPending })
+  // Where the viewer stands on the ladder, in words, for the close.
   const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'palettes' })
-  const copy = GALLERY_GATE_COPY.palettes
   // What a free account opens in all; the gate names it, not the count on screen.
   const opens = freeOpens({ eligible })
-  // The same sign-in flow the icon library's gate opens.
-  const logIn = () => requireLogin('browse more of the palette library')
-  // The card foot's mood word for the faded free-tier palettes, classified the
-  // way the open ones are.
-  const nextMeta = useMemo(() => cardMetaFor(new Map(nextOpen.map((palette) => [palette.id, classifyPalette(palette.colors)]))), [nextOpen])
-  // The faded cards behind a gate, drawn by this gallery's own grid. `rows` are
-  // the real palettes a free account opens next; with none, neutral stand-ins
-  // take their place (a Pro palette's colours never go in).
-  const fadeOf = (rows) => (rows.length
-    ? <GateFadeRows items={rows} render={(slice) => <PaletteGalleryGrid palettes={slice} metaOf={nextMeta} hexChips />} />
-    : <GateFadeRows items={PALETTE_STANDINS} render={(slice) => <PaletteGalleryGrid palettes={slice} metaOf={standinMeta} hexChips />} />)
-  const lockedBlock = proPending ? null : lockedCount > 0 ? (
-    anonymous && accountAdds > 0 ? (
-      <GalleryEndGate
-        kind="anon"
-        id="pgl-gate-h"
-        heading={copy.anon.heading(opens)}
-        body={copy.anon.body(browsable.length, rows.length, opens)}
-        primary={{ label: copy.anon.action, onClick: logIn }}
-        secondary={{ label: copy.anon.secondary, to: '/plans' }}
-        fade={fadeOf(nextOpen)}
-      />
-    ) : (
-      <GalleryEndGate
-        kind="pro"
-        id="pgl-gate-h"
-        heading={copy.pro.heading(lockedCount)}
-        body={copy.pro.body(browsable.length, rows.length, lockedCount)}
-        primary={{ label: copy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('palette-library-brand-lock') }}
-        fade={fadeOf([])}
-      />
-    )
-  ) : null
+  // What a filter leaves, as a noun, for the count line and the gate.
+  const nounFilters = {
+    collection: group !== 'all' ? group : null,
+    mood: mood !== 'all' ? MOOD_LABELS[mood] : null,
+    query,
+  }
+  const nounFor = (count) => filterNoun('palettes', nounFilters, count)
+
+  // After a filter or a search the results change length. When the heading has
+  // ended up under the sticky toolbar, put it back below it.
+  const results = useRef(null)
+  useResultsScroll(results, [group, mood, q])
 
   return (
     <div ref={root} className="sec lib-surface lib-v3 pgl-page">
@@ -435,30 +398,20 @@ export default function PaletteGallery({ toast }) {
           effect was that the one heading answering "what am I looking at"
           sat in no landmark at all. Nothing here is new copy — the same
           head, the same empty state, one element moved. */}
-      <section aria-labelledby="pgl-grid-heading">
-        {gatedEmpty || proPending ? (
-          // The shared head's count is a live region of its own; here "0
-          // palettes" would be read out on the same tap as the gated message
-          // below, so the head stands down to its heading and the status node
-          // is the one announcer. The same while a Pro library is on its way:
-          // the count of the free rows would be the wrong number to print.
-          <div className="drh-head">
-            <div>
-              <h2 id="pgl-grid-heading">{heading}</h2>
-            </div>
-          </div>
-        ) : (
-          <DiscoverResultHead
-            title={heading}
-            count={visible.length}
-            // The whole library's size beside the part this viewer has, so the
-            // count never contradicts the wall below it. Unnarrowed views only:
-            // under a filter the number is how many of the open rows match.
-            total={lockedCount > 0 && browsing ? rows.length : undefined}
-            noun="palette"
-            id="pgl-grid-heading"
-          />
-        )}
+      <section ref={results} className="lib-results" aria-labelledby="pgl-grid-heading">
+        <DiscoverResultHead
+          title={heading}
+          // No count while a Pro library is on its way: the number of free rows
+          // would be the wrong one. Otherwise S is what this viewer has and T the
+          // whole library's matches, under every filter. Where the locked rows
+          // cannot say whether they match (their stubs lack the facet) T is only
+          // a floor, so it is left off, and with nothing shown the line goes.
+          count={proPending || (counts.lockedUnknown && counts.S === 0) ? undefined : counts.S}
+          total={counts.lockedUnknown ? undefined : counts.T}
+          noun={nounFor(1)}
+          nounPlural={nounFor(2)}
+          id="pgl-grid-heading"
+        />
 
         {/* A Pro viewer's library is loading or failed: the line sits directly
             under the heading it qualifies, with Retry beside it. */}
@@ -492,14 +445,6 @@ export default function PaletteGallery({ toast }) {
                   </div>
                 ))}
                 <div id="pgl-after-grid" className="pgl-after" tabIndex={-1} />
-                {/* AFTER the sections, not inside the last one. It used to hang
-                    off the Brand systems group, because the only locked rows
-                    were brands and that group was always rendered. Under the
-                    tier cap neither is true: the withheld tail starts in
-                    whichever group the cap fell in, and a group with nothing
-                    open is not rendered at all — so a wall nested in it would
-                    vanish exactly when it is the only thing left to say. */}
-                {lockedBlock}
               </>
             ) : (
               <>
@@ -511,66 +456,35 @@ export default function PaletteGallery({ toast }) {
                 )}
                 <PaletteGalleryGrid toast={toast} palettes={visible} metaOf={cardMeta} hexChips />
                 <div id="pgl-after-grid" className="pgl-after" tabIndex={-1} />
-                {/* `mood === 'all'` is now written out. It used to be implied — one
-                    tray meant picking Dark cleared Brand — and with two trays
-                    the rule two comments above ("under a search or a mood filter
-                    the user has asked a narrower question") has to be stated or
-                    it silently stops being true. */}
-                {mood === 'all' && !query.trim() && lockedBlock}
               </>
             )}
           </>
-        ) : (gatedKind || proPending) ? null : (
-          <>
-            <LibraryEmpty
-              className="pgl-empty"
-              title="No palettes match that combination."
-              detail="Try a broader search, or reset the mood and collection filters."
-              onClear={clear}
-            />
-            {/* The generic empty arm: reached for group `all`, while Pro is still
-                loading, and when nothing is withheld (a collection emptied by
-                the tier cap is handled by the status node below). The wall is
-                the unnarrowed view's offer and nothing more. */}
-            {mood === 'all' && !query.trim() && lockedBlock}
-          </>
+        ) : proPending || counts.T > 0 || counts.lockedUnknown ? null : (
+          // Shown only when the whole library holds no match: a match behind the
+          // tier is the gate's to answer, never an empty state.
+          <LibraryEmpty
+            className="pgl-empty"
+            title="No palettes match that combination."
+            detail="Try a broader search, or reset the mood and collection filters."
+            onClear={clear}
+          />
         )}
-        {/* A collection emptied by the tier cap says why and where to go, in
-            place of the "no match" state and the placeholder wall: one offer,
-            and the bottom close below stands down. The polite live region is
-            mounted empty and filled on the tap, because a region that arrives
-            already holding its text is not reliably announced. It is the only
-            live region in this state (the head's count steps aside above) and
-            adds no box of its own to the block flow. */}
-        <div role="status">
-          {gatedEmpty && (
-            anonymous && !brandNeedsPro ? (
-              // A curated collection emptied by the anonymous cap really does
-              // open with a free account, so that is the offer here.
-              <GalleryEndGate
-                kind="anon"
-                id="pgl-gate-h"
-                heading={copy.emptied.anon.heading(opens)}
-                body={copy.emptied.anon.body(gatedNoun, opens, rows.length)}
-                primary={{ label: copy.emptied.anon.action, onClick: logIn }}
-                secondary={{ label: copy.emptied.anon.secondary, to: '/plans' }}
-                fade={fadeOf(nextOpen.filter((palette) => palette.kind === group))}
-              />
-            ) : (
-              // A free account does not open Brand, so signed out the only
-              // offer is Pro.
-              <GalleryEndGate
-                kind="pro"
-                id="pgl-gate-h"
-                heading={copy.emptied.pro.heading(gatedNoun)}
-                body={copy.emptied.pro.body({ anonymous, total: rows.length, locked: lockedCount, brand: group === 'brand' })}
-                primary={{ label: copy.emptied.pro.action, to: '/plans', onClick: () => reportUpgradeGate('palette-library-brand-chip') }}
-                fade={fadeOf([])}
-              />
-            )
-          )}
-        </div>
       </section>
+
+      {/* The tier gate, after the results and before the closing line, in every
+          view: what you have, a glimpse of more, then how to get it. It stands
+          after the section so it is there too when a filter leaves nothing open. */}
+      <LibraryGate
+        kind="palettes"
+        id="pgl-gate-h"
+        gate={gate}
+        counts={counts}
+        opens={opens}
+        nounFor={nounFor}
+        onSignup={() => requireLogin('browse more of the palette library', { free: true, signup: true })}
+        onLogin={() => requireLogin('browse more of the palette library', { free: true })}
+        onPlans={() => reportUpgradeGate('palette-library-tier-lock')}
+      />
 
       {/* AFTER the grid, the locked tease and the empty state alike — last child
           of the page, which is what "at the very bottom" has to mean if it is to
@@ -600,7 +514,7 @@ export default function PaletteGallery({ toast }) {
           action="Create and submit your own"
           to="/create/palette"
         />
-      ) : !(mood === 'all' && !query.trim()) && lockedCount > 0 && !gatedKind ? (
+      ) : !gate && lockedCount > 0 ? (
         // A signed-out visitor's next step is the free account, with the same
         // numbers the wall states; a free account's next step is Pro.
         anonymous ? (

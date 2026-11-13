@@ -81,7 +81,9 @@ const KEEP = {
     'pjv-tb',
     // the V3 library action sheet: each action is a full-width 8px row, and Cancel is its own row-sized
     // block under them, like v3m-cancel
-    'lbry-act-row', 'lbry-act-cancel'],
+    'lbry-act-row', 'lbry-act-cancel',
+    // the gallery preview popup's colour and stop rows: one full-width copy row (swatch, hex, detail) at 8px
+    'gpd-row'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',
@@ -105,7 +107,9 @@ const KEEP = {
     // an onboarding font pair: a radio drawn as a 64px card (pair name, then its fonts) in a list of three
     'ob-pair',
     // the project icon picker: each choice is a 12px tile holding one icon
-    'uh-iconpick-btn'],
+    'uh-iconpick-btn',
+    // a palette or gradient gallery tile's open button: a transparent hit area over the whole tile, at the tile's 16px corner
+    'vpt-open'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
