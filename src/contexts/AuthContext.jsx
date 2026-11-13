@@ -282,6 +282,10 @@ export function AuthProvider({ children }) {
         setFirebaseUser(null)
         setEmailVerified(false)
         setSignupVerification(null)
+        // A new account that signs out before reaching onboarding takes the
+        // flag with it, so the next account to sign in here is not routed into
+        // onboarding as if it were the brand-new one.
+        setPendingOnboarding(false)
         setProfile(null)
         profileRef.current = null
         setProfileSyncError(null)
