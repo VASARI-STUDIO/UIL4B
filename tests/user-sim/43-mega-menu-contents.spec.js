@@ -290,9 +290,9 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
 
   // Group labels are the site's Label role (mono retired from the menu):
-  // 13px, weight 500, in the body face, sentence case, untracked, one faint ink,
+  // 12px, weight 500, in the body face, sentence case, untracked, one faint ink,
   // with no rule. Rows carry no category colour in the label. There are no hue rules.
-  test('group labels are 13px/500 quiet captions in the body face: one colour, no rule, sentence case', async ({ page }) => {
+  test('group labels are 12px/500 quiet captions in the body face: one colour, no rule, sentence case', async ({ page }) => {
     watch(page, 'a scanner trying to tell six columns apart')
     await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
@@ -308,7 +308,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     expect(labels.length).toBeGreaterThanOrEqual(5)
     expect(new Set(labels.map((l) => l.color)).size).toBe(1)
     for (const l of labels) {
-      expect(l.size, `${l.text} is not 13px`).toBe('13px')
+      expect(l.size, `${l.text} is not 12px`).toBe('12px')
       expect(l.weight, `${l.text} is not weight 500`).toBe('500')
       expect(l.family, `${l.text} is not in the body face`).toBe(faces.sans)
       expect(l.family, `${l.text} is in the mono face`).not.toBe(faces.mono)
@@ -323,7 +323,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
   // Mono stays only for a code value, and the menus show none. The export
   // preview in the Create pane is a picture of a printed page (aria-hidden, its
   // own hex chips), so it is the one place left out.
-  test('no text in any desktop menu is set in the mono face, and the badges are sentence-case 13px', async ({ page }) => {
+  test('no text in any desktop menu is set in the mono face, and the badges are sentence-case 12px', async ({ page }) => {
     watch(page, 'a visitor reading all three menus')
     await go(page, MENU_ROUTE)
     for (const name of TRIGGERS) {
@@ -335,7 +335,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
         return { text: el.textContent, size: cs.fontSize, transform: cs.textTransform, spacing: cs.letterSpacing }
       }))
       for (const b of badges) {
-        expect(b.size, `${b.text} badge is not 13px`).toBe('13px')
+        expect(b.size, `${b.text} badge is not 12px`).toBe('12px')
         expect(b.transform).toBe('none')
         expect(['normal', '0px']).toContain(b.spacing)
       }
@@ -573,13 +573,13 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
           .map((d) => d.textContent))
         expect(clipped, `${name} at ${size.width}x${size.height} clipped a description`).toEqual([])
 
-        // The file's row is 42px (8px + a 26px tile + 8px). On a mouse that is
-        // well over WCAG 2.5.8's 24px; a coarse pointer gets 44px (global.css).
+        // A menu row is 36px (mega spec: row 36 high). On a mouse that is
+        // well over WCAG 2.5.8's 24px; a guide title that wraps grows the row.
         const short = await panel.evaluate((el) => [...el.querySelectorAll('.pnav-tool')]
-          .filter((r) => r.getBoundingClientRect().height < 41.5)
+          .filter((r) => r.getBoundingClientRect().height < 35.5)
           .map((r) => r.textContent.trim()))
         expect(short,
-          `${name} at ${size.width}x${size.height} has a row under the file's 42px`,
+          `${name} at ${size.width}x${size.height} has a row under the spec's 36px`,
         ).toEqual([])
 
         await page.keyboard.press('Escape')
@@ -716,7 +716,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await openWithPointer(page, 'Create')
     const heights = await page.evaluate(() => [...new Set([...document.querySelectorAll('#pnav-mega .pnav-tool')]
       .map((r) => Math.round(r.getBoundingClientRect().height)))])
-    expect(heights).toEqual([48])
+    expect(heights).toEqual([36])
     const wrapped = await page.evaluate(() => [...document.querySelectorAll('#pnav-mega .pnav-tool-label')]
       .filter((l) => l.getClientRects().length > 1).map((l) => l.textContent))
     expect(wrapped).toEqual([])

@@ -329,8 +329,8 @@ test.describe('sync has a visible state, in both directions', () => {
     // The ⋯ menu lives on the project's own page since the workspace rebuild.
     await projectCard(page, 'Seeded Project 1').click()
     await page.getByRole('button', { name: 'Actions for Seeded Project 1' }).click()
-    await expect(page.getByRole('group', { name: 'Actions for Seeded Project 1' })).toBeVisible()
-    await page.getByRole('button', { name: 'Delete…', exact: true }).click()
+    await expect(page.getByRole('menu', { name: 'Actions for Seeded Project 1' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'Delete…', exact: true }).click()
     const field = page.getByRole('textbox', { name: /Type the project name to confirm deleting Seeded Project 1/i })
     await field.fill('Seeded Project 1')
     await page.getByRole('button', { name: 'Permanently delete' }).click()

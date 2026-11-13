@@ -1,0 +1,155 @@
+/* The one menu skin (components/menu/Menu.jsx): a 300px popover from 768px, a
+   bottom action sheet below it. Tonal fills, no borders, radii 16 / 12 / 8 / 999,
+   focus is a 2px ink outline. The colour roles are set once on the layer so a
+   menu opened inside any page or dialog reads the same.
+
+   The row and the surface are tokens so the dropdown list (global.css) and the
+   palette right-click menu (colour.css) are built from the same values: a 36px
+   row at 15/500 with an 8px radius, on a 16px surface with no border. */
+:root{
+  --menu-row-h:36px;--menu-row-px:12px;--menu-row-r:8px;--menu-row-fs:15px;--menu-row-fw:500;--menu-r:16px;
+  --menu-bg:#131416;--menu-ring:0 0 0 1px rgba(239,238,234,.08);--menu-shadow:0 12px 32px -12px rgba(0,0,0,.7);
+}
+:root[data-theme="light"]{
+  --menu-bg:#FFFFFF;--menu-ring:0 0 0 1px rgba(18,20,24,.1);--menu-shadow:0 12px 32px -12px rgba(18,20,24,.22);
+}
+.v3m-layer{
+  position:fixed;inset:0;z-index:1000;isolation:isolate;pointer-events:none;
+  --m-ink:rgb(var(--ink-rgb));
+  --m-t86:rgba(var(--ink-rgb),.86);--m-t72:rgba(var(--ink-rgb),.72);--m-t62:rgba(var(--ink-rgb),.62);--m-t56:rgba(var(--ink-rgb),.56);
+  --m-hl08:rgba(var(--ink-rgb),.08);
+  --m-bg:var(--menu-bg);--m-ring:var(--menu-ring);--m-shadow:var(--menu-shadow);
+  --m-edge:rgba(239,238,234,.28);--m-hover:rgba(239,238,234,.06);--m-press:rgba(239,238,234,.1);
+  --m-danger:#FF8A7A;--m-scrim:rgba(6,6,7,.6);--m-on-ink:#060607;
+  --m-ease:cubic-bezier(.23,1,.32,1);
+  font-family:var(--font,'Geist',system-ui,sans-serif);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+}
+:root[data-theme="light"] .v3m-layer{
+  --m-edge:rgba(18,20,24,.22);--m-hover:rgba(18,20,24,.05);--m-press:rgba(18,20,24,.08);
+  --m-danger:#B3261E;--m-scrim:rgba(18,20,24,.32);--m-on-ink:#F5F5F2;--m-t56:rgba(18,20,24,.62);
+}
+.v3m-layer *{box-sizing:border-box}
+
+/* ---- the panel ---- */
+.v3m{
+  position:fixed;z-index:40;top:0;left:0;width:300px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);
+  overflow-y:auto;overscroll-behavior:contain;isolation:isolate;padding:8px;border:0 solid transparent;border-radius:var(--menu-r);
+  background:var(--m-bg);color:var(--m-t86);box-shadow:var(--m-ring),var(--m-shadow);outline:none;pointer-events:auto;
+  animation:v3m-in 180ms var(--m-ease) both;
+}
+.v3m.kb{animation:none}
+.v3m.out{animation:v3m-out 120ms ease-in both;pointer-events:none}
+@keyframes v3m-in{from{opacity:0;transform:scale(.97)}}
+@keyframes v3m-out{to{opacity:0}}
+@keyframes v3m-fade{from{opacity:0}}
+@keyframes v3m-rise{from{opacity:0;transform:translateY(16px)}}
+@keyframes v3m-sink{to{opacity:0;transform:translateY(8px)}}
+
+/* ---- head, labels, hairline, note ---- */
+.v3m-h{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 12px;margin-bottom:4px}
+.v3m-hc{display:flex;gap:4px;flex:none}
+.v3m-chip{display:block;width:24px;height:24px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--m-edge);forced-color-adjust:none}
+.v3m-ht{flex:1;min-width:0}
+.fbx-menu .v3m-t,.fbx-menu [data-fbx-cancel] .v3m-l{white-space:normal;overflow-wrap:anywhere}
+.v3m-t{display:block;font-size:15px;line-height:24px;font-weight:600;color:var(--m-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v3m-s{display:block;font-size:13px;line-height:18px;color:var(--m-t62);font-family:var(--mono);font-variant-numeric:tabular-nums}
+.v3m-sec{height:28px;padding:0 12px;display:flex;align-items:flex-end;font-size:13px;line-height:18px;font-weight:500;color:var(--m-t62)}
+.v3m-ln{height:9px;padding:4px 0 0}
+.v3m-ln::before{content:'';display:block;height:1px;background:var(--m-hl08)}
+.v3m-ln::after{content:'';display:block;height:4px}
+.v3m-note{padding:6px 12px;font-size:13px;line-height:18px;color:var(--m-t62)}
+
+/* ---- rows ---- */
+.v3m-i{
+  position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:var(--menu-row-h);padding:6px var(--menu-row-px);
+  border:0;border-radius:var(--menu-row-r);background:none;text-align:left;color:var(--m-t86);font:inherit;font-size:var(--menu-row-fs);line-height:24px;font-weight:var(--menu-row-fw);
+  cursor:default;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  transition:background-color 150ms ease,color 150ms ease;
+}
+.v3m-i--two{min-height:52px}
+.v3m-i--compact{min-height:32px;padding-top:4px;padding-bottom:4px}
+.v3m-ic{flex:none;display:inline-flex;color:var(--m-t72);transition:color 150ms ease}
+.v3m-tx{flex:1;min-width:0;display:block}
+.v3m-l{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v3m-l2{display:block;font-size:13px;line-height:18px;font-weight:400;color:var(--m-t62)}
+.v3m-tr{flex:none;display:flex;align-items:center;gap:6px;font-size:13px;line-height:18px;font-weight:500;color:var(--m-t72)}
+.v3m-hint{font-weight:400;color:var(--m-t56)}
+.v3m-val{font-family:var(--mono);font-size:13px;line-height:18px;font-weight:400;color:var(--m-t62);font-variant-numeric:tabular-nums}
+.v3m-val.bl{filter:blur(4px)}
+.v3m-tick{flex:none;color:var(--m-ink)}
+.v3m-lk{flex:none}
+.v3m-box{flex:none;width:16px;height:16px;border-radius:5px;background:var(--m-press);display:grid;place-items:center;color:var(--m-bg)}
+.v3m-box.on{background:var(--m-ink)}
+.v3m-box svg{opacity:0}.v3m-box.on svg{opacity:1}
+.v3m-sw{flex:none;width:20px;height:20px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--m-edge);forced-color-adjust:none}
+.v3m-i[aria-disabled="true"],.v3m-i[aria-disabled="true"] .v3m-ic{color:var(--m-t56)}
+.v3m-i--danger,.v3m-i--danger .v3m-ic{color:var(--m-danger)}
+@media (hover:hover){
+  .v3m-i:not([aria-disabled="true"]):hover{background:var(--m-hover);color:var(--m-ink)}
+  .v3m-i--danger:not([aria-disabled="true"]):hover{color:var(--m-danger)}
+  .v3m-i:not([aria-disabled="true"]):hover .v3m-ic{color:var(--m-ink)}
+}
+.v3m-i:focus-visible{background:var(--m-hover);color:var(--m-ink);outline:2px solid var(--m-ink);outline-offset:-2px}
+.v3m-i--danger:focus-visible{color:var(--m-danger)}
+.v3m-i:active:not([aria-disabled="true"]){background:var(--m-press)}
+.v3m:focus-visible{outline:2px solid var(--m-ink);outline-offset:-2px}
+
+/* ---- phone: the action sheet ---- */
+.v3m-sheetwrap{
+  position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:auto;
+  padding:8px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+}
+.v3m-scrim{position:absolute;inset:0;background:var(--m-scrim);animation:v3m-fade 180ms var(--m-ease) both}
+.v3m-sheet{position:relative;display:flex;flex-direction:column;gap:8px;min-height:0;max-height:100%;animation:v3m-rise 240ms var(--m-ease) both}
+.v3m-sheetwrap.out .v3m-scrim{animation:v3m-fadeout 150ms ease-in both}
+.v3m-sheetwrap.out .v3m-sheet{pointer-events:none;animation:v3m-sink 150ms ease-in both}
+@keyframes v3m-fadeout{to{opacity:0}}
+.v3m--sheet{
+  position:static;width:auto;max-width:none;flex:0 1 auto;min-height:0;max-height:calc(100dvh - 176px);padding:4px;border-radius:16px;animation:none;
+}
+.v3m--sheet.out{animation:none}
+.v3m--sheet .v3m-h{min-height:52px;padding:6px 12px;margin-bottom:0}
+.v3m--sheet .v3m-chip{width:20px;height:20px}
+.v3m--sheet .v3m-t{font-size:15px;line-height:20px;font-weight:500}
+.v3m--sheet .v3m-s{font-size:13px}
+.v3m--sheet .v3m-i{min-height:52px;padding:8px 12px;border-radius:12px;font-size:17px}
+.v3m--sheet .v3m-i--two{min-height:68px;padding-top:12px;padding-bottom:12px}
+.v3m--sheet .v3m-i--compact{min-height:44px}
+.v3m--sheet .v3m-ln{height:9px}
+.v3m--sheet .v3m-sec{height:36px;align-items:center}
+.v3m--sheet .v3m-note{padding:8px 12px}
+.v3m-cancel{
+  flex:none;height:56px;border:0;border-radius:16px;background:var(--m-bg);color:var(--m-ink);box-shadow:var(--m-ring),var(--m-shadow);
+  font:inherit;font-size:17px;font-weight:500;cursor:default;-webkit-tap-highlight-color:transparent;transition:background-color 150ms ease;
+}
+.v3m-cancel:active{background:var(--m-press)}
+.v3m-cancel:focus-visible{outline:2px solid var(--m-ink);outline-offset:2px}
+
+/* ---- the trigger's "..." that every long-press target carries on a phone ---- */
+.v3m-dots{display:none;width:44px;height:44px;align-items:center;justify-content:center;border:0;border-radius:12px;background:none;color:rgba(var(--ink-rgb),.72);cursor:pointer}
+@media (max-width:767px){.v3m-dots{display:inline-flex}}
+.v3m-dots:focus-visible{outline:2px solid rgb(var(--ink-rgb));outline-offset:2px}
+
+/* The explicit Settings choice, then the OS preference unless the visitor turned motion back on. */
+html[data-reduced-motion="true"] .v3m{animation:v3m-fade 200ms ease-out both}
+html[data-reduced-motion="true"] .v3m.kb{animation:none}
+html[data-reduced-motion="true"] .v3m.out{animation:v3m-fadeout 120ms ease-in both}
+html[data-reduced-motion="true"] .v3m-sheet,html[data-reduced-motion="true"] .v3m-scrim{animation:v3m-fade 200ms ease-out both}
+html[data-reduced-motion="true"] .v3m-sheetwrap.out .v3m-sheet,html[data-reduced-motion="true"] .v3m-sheetwrap.out .v3m-scrim{animation:v3m-fadeout 150ms ease-in both}
+html[data-reduced-motion="true"] .v3m-i,html[data-reduced-motion="true"] .v3m-cancel,html[data-reduced-motion="true"] .v3m-ic{transition:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .v3m{animation:v3m-fade 200ms ease-out both}
+  html:not([data-reduced-motion="false"]) .v3m.kb{animation:none}
+  html:not([data-reduced-motion="false"]) .v3m.out{animation:v3m-fadeout 120ms ease-in both}
+  html:not([data-reduced-motion="false"]) .v3m-sheet,
+  html:not([data-reduced-motion="false"]) .v3m-scrim{animation:v3m-fade 200ms ease-out both}
+  html:not([data-reduced-motion="false"]) .v3m-sheetwrap.out .v3m-sheet,
+  html:not([data-reduced-motion="false"]) .v3m-sheetwrap.out .v3m-scrim{animation:v3m-fadeout 150ms ease-in both}
+  html:not([data-reduced-motion="false"]) .v3m-i,
+  html:not([data-reduced-motion="false"]) .v3m-cancel,
+  html:not([data-reduced-motion="false"]) .v3m-ic{transition:none}
+}
+@media (forced-colors:active){
+  .v3m,.v3m-cancel{outline:1px solid CanvasText;outline-offset:-1px}
+  .v3m-chip,.v3m-sw{forced-color-adjust:none}
+}

@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import usePopover from '../hooks/usePopover'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import useMediaQuery from '../hooks/useMediaQuery'
+import Menu from './menu/Menu'
+import { keyboardPoint } from './menu/menuModel'
 import { chainFrom, elementSignature, invokedByPointer, nativeMenuWins } from '../utils/elementSignature'
 import { plainTargetLabel } from '../utils/menuTargetLabel'
 
@@ -34,9 +36,7 @@ import { plainTargetLabel } from '../utils/menuTargetLabel'
 // users from the one channel we have for hearing that something is broken,
 // which would be a particularly bad thing to get wrong.
 
-// Fixed width, because the anchor has to be exactly this wide for the shared
-// placement maths to land the menu's LEFT edge on the pointer (see below).
-const MENU_W = 260
+// Where a keyboard-opened menu goes when the focused element has no box.
 const EDGE = 8
 
 // A device whose ONLY pointer is a finger. `contextmenu` still fires there —
@@ -49,41 +49,34 @@ function touchOnlyDevice() {
     && !window.matchMedia('(any-pointer: fine)').matches
 }
 
+const BugIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+)
+const FeedbackIcon = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+)
+
 export default function FeedbackContextMenu({ onReport, suppressed = false }) {
-  const [at, setAt] = useState(null) // { x, y, signature, label }
+  // { x, y, signature, label, opener, viaKeyboard }. It stays set after a close
+  // so the menu keeps its content while it plays its exit.
+  const [at, setAt] = useState(null)
+  const [open, setOpen] = useState(false)
+  const phone = useMediaQuery('(max-width: 767px)')
 
-  // Where focus was when the gesture happened. usePopover returns focus to the
-  // trigger on Escape, but our "trigger" is a zero-height anchor floating at
-  // the pointer — handing focus to that, and then unmounting it in the same
-  // commit, drops a keyboard user on <body>. Measured 2026-09-10: focus was on
-  // `.pop-item` inside the menu, and Escape left it on BODY. For a keyboard
-  // invocation the right answer is the control they were on when they pressed
-  // Shift+F10 or the Menu key.
-  const openerRef = useRef(null)
+  // Where focus was when the gesture happened: Escape and a chosen row hand
+  // focus back there, so a keyboard user is never dropped on <body> (measured
+  // 2026-09-10: Escape left focus on BODY). A click outside leaves focus to
+  // whatever was clicked.
+  const dismiss = useCallback(() => setOpen(false), [])
 
-  const dismiss = useCallback(() => {
-    const opener = openerRef.current
-    openerRef.current = null
-    setAt(null)
-    // On a click outside, the browser focuses whatever was clicked after this
-    // runs, so that wins. This only decides where focus lands when nothing else
-    // claims it — which is the Escape case, the one that was broken.
-    if (opener?.isConnected && typeof opener.focus === 'function') opener.focus()
-  }, [])
-
-  // dismiss, NOT a bare setAt(null): usePopover owns the Escape key, so passing
-  // it a closer that does not restore focus is what made Escape lose it.
-  const { triggerRef, popRef } = usePopover(!!at, dismiss, { arrowNav: true })
-
-  const openAt = useCallback((x, y, signature, label) => {
-    // Clamp so the menu cannot hang off either edge. The anchor is MENU_W wide
-    // with its LEFT edge here, so placePopover's end-alignment (right edge of
-    // panel on right edge of anchor) puts the panel's left edge exactly on the
-    // pointer — a context menu opening down-and-right, the way every native one
-    // does. Doing it this way means placement, edge-flipping and max-height all
-    // still come from usePopover rather than a second placement system.
-    const vw = typeof window !== 'undefined' ? window.innerWidth : MENU_W + EDGE * 2
-    setAt({ x: Math.max(EDGE, Math.min(x, vw - MENU_W - EDGE)), y, signature, label })
+  const openAt = useCallback((point, signature, label, opener, viaKeyboard) => {
+    const back = opener && opener !== document.body ? opener : null
+    setAt({ point, signature, label, opener: back, viaKeyboard })
+    setOpen(true)
   }, [])
 
   useEffect(() => {
@@ -113,14 +106,13 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
       })) return
 
       e.preventDefault()
-      openerRef.current = document.activeElement
+      const opener = document.activeElement
       const signature = elementSignature(chain)
       const label = plainTargetLabel(e.target)
       if (fromPointer) {
-        openAt(e.clientX, e.clientY, signature, label)
+        openAt({ x: e.clientX, y: e.clientY }, signature, label, opener, false)
       } else {
-        const r = document.activeElement?.getBoundingClientRect?.()
-        openAt(r ? r.left : EDGE, r ? r.bottom : EDGE, signature, label)
+        openAt(opener?.getBoundingClientRect ? keyboardPoint(opener) : { x: EDGE, y: EDGE }, signature, label, opener, true)
       }
     }
 
@@ -132,9 +124,7 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
       const chain = chainFrom(target)
       if (nativeMenuWins(chain, { defaultPrevented: e.defaultPrevented, touchOnly: touchOnlyDevice() })) return
       e.preventDefault()
-      openerRef.current = target
-      const r = target?.getBoundingClientRect?.()
-      openAt(r ? r.left : EDGE, r ? r.bottom : EDGE, elementSignature(chain), plainTargetLabel(target))
+      openAt(target?.getBoundingClientRect ? keyboardPoint(target) : { x: EDGE, y: EDGE }, elementSignature(chain), plainTargetLabel(target), target, true)
     }
 
     // Bubble phase, not capture: a local menu that calls stopPropagation has
@@ -148,64 +138,40 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
     }
   }, [suppressed, openAt])
 
-  // Close on scroll. The menu is pinned to a viewport point, so once the page
-  // moves underneath it, it is pointing at nothing.
-  useEffect(() => {
-    if (!at) return undefined
-    const onScroll = () => setAt(null)
-    window.addEventListener('scroll', onScroll, true)
-    return () => window.removeEventListener('scroll', onScroll, true)
-  }, [at])
+  // The head names what was clicked. The two rows hand a seed to the one
+  // feedback modal and stop there. The note is said here rather than after the
+  // form opens, because this is the moment someone decides whether to go further.
+  // The last row keeps the live wording (the revised Shift+right-click line is
+  // not cleared); on a phone the sheet's own Cancel block takes its place.
+  const items = useMemo(() => {
+    const start = (typeId) => () => {
+      const signature = at?.signature
+      onReport?.({ typeId, element: signature })
+    }
+    const rows = [
+      { id: 'bug', label: 'Report a problem here', icon: BugIcon, onSelect: start('bug') },
+      { id: 'feedback', label: 'Share feedback on this', icon: FeedbackIcon, onSelect: start('feedback') },
+      'sep',
+      { type: 'note', text: 'You review everything attached before anything is sent.' },
+    ]
+    if (!phone) rows.push({ id: 'cancel', label: 'Cancel — use the browser menu with Shift+right-click', compact: true, attrs: { 'data-fbx-cancel': '' }, onSelect: () => {} })
+    return rows
+  }, [at, onReport, phone])
 
   if (!at) return null
 
-  const start = (typeId) => {
-    const signature = at.signature
-    openerRef.current = null
-    setAt(null)
-    onReport?.({ typeId, element: signature })
-  }
-
   return (
-    <div
-      ref={triggerRef}
-      className="fbx-anchor"
-      style={{ left: `${at.x}px`, top: `${at.y}px` }}
-      tabIndex={-1}
-      data-feedback-surface=""
-    >
-      {/* Not role="menu". usePopover's panels keep every control in the tab
-          order, and claiming menu semantics for that tells assistive tech to
-          expect a single-tab-stop widget this is not — see the note in
-          usePopover.js. It is a labelled disclosure with arrow-key movement. */}
-      <div
-        ref={popRef}
-        className="pop fbx-menu"
-        role="group"
-        aria-label="Send feedback about this"
-        tabIndex={-1}
-      >
-        <div className="pop-head">{at.label || 'This page'}</div>
-        <button type="button" className="pop-item" onClick={() => start('bug')}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <span>Report a problem here</span>
-        </button>
-        <button type="button" className="pop-item" onClick={() => start('feedback')}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span>Share feedback on this</span>
-        </button>
-        <div className="pop-sep" />
-        {/* Said here rather than after the form opens, because this is the
-            moment someone decides whether to go further. */}
-        <p className="fbx-note">You review everything attached before anything is sent.</p>
-        <button type="button" className="fbx-dismiss" onClick={dismiss}>
-          Cancel — use the browser menu with Shift+right-click
-        </button>
-      </div>
-    </div>
+    <Menu
+      open={open}
+      onClose={dismiss}
+      point={at.point}
+      returnTo={at.opener}
+      viaKeyboard={at.viaKeyboard}
+      label="Send feedback about this"
+      head={{ title: at.label || 'This page' }}
+      items={items}
+      className="fbx-menu"
+      attrs={{ 'data-feedback-surface': '' }}
+    />
   )
 }

@@ -233,6 +233,9 @@ test.describe('the nav does not animate layout', () => {
       const MIN_MS = 500
       const BACKSTOP_MS = 8000
       const row = () => document.querySelector('#pnav-mega .pnav-tool')
+      // Layout position inside the panel (the offsetLeft chain), so the panel's own
+      // opacity-and-scale entrance, which moves its painted box, is not read as layout travel.
+      const layoutX = (el, root) => { let x = 0; for (let e = el; e && e !== root; e = e.offsetParent) x += e.offsetLeft; return x }
       const settling = (menu) => menu.getAnimations({ subtree: true }).some((a) => a.playState === 'running'
         && a.effect?.getComputedTiming().endTime !== Infinity)
       const xs = []
@@ -243,9 +246,9 @@ test.describe('the nav does not animate layout', () => {
         const tick = () => {
           const menu = document.querySelector('#pnav-mega')
           if (!menu) return done()
-          widths.push(Math.round(menu.getBoundingClientRect().width))
+          widths.push(menu.offsetWidth)
           const r = row()
-          if (r) xs.push(Math.round(r.getBoundingClientRect().x))
+          if (r) xs.push(layoutX(r, menu))
           const elapsed = performance.now() - t0
           if (elapsed > BACKSTOP_MS) return done()
           if (widths.length >= MIN_FRAMES && elapsed >= MIN_MS && !settling(menu)) return done()
@@ -271,12 +274,11 @@ test.describe('the nav does not animate layout', () => {
     ).toBe(0)
   })
 
-  // The hover: the row takes an ink .07 wash, and the name moves with the glyph
-  // (3px along, in the row's category colour). The glyph sits bare in its
-  // category colour, with no tile behind it at rest or on hover. The row itself
-  // never moves. The FIRST row is lit at rest, as every menu opens, so the second
-  // row is the one pointed at.
-  test('a row hover moves the name with the glyph, never the row, and draws no tile', async ({ page }) => {
+  // The hover: background only. The row takes a quiet wash and the glyph comes up
+  // to the row's ink; nothing slides (no name shift, no glyph shift, no row shift)
+  // and no tile is drawn behind the glyph at rest or on hover. The FIRST row is lit
+  // at rest, as every menu opens, so the second row is the one pointed at.
+  test('a row hover changes colour only: nothing moves and no tile is drawn', async ({ page }) => {
     watch(page, 'a visitor pointing at one tool')
     await go(page, ROUTE)
     await openMenu(page)
@@ -284,7 +286,7 @@ test.describe('the nav does not animate layout', () => {
     const row = page.locator('#pnav-mega .pnav-tool').nth(1)
     const read = () => row.evaluate((el) => ({
       icon: getComputedStyle(el.querySelector('.pnav-tool-ico')).transform,
-      rowX: Math.round(el.getBoundingClientRect().x),
+      rowX: el.offsetLeft,
       background: getComputedStyle(el).backgroundColor,
       tile: getComputedStyle(el.querySelector('.pnav-tool-ico')).backgroundColor,
       glyph: getComputedStyle(el.querySelector('.pnav-tool-ico')).color,
@@ -298,13 +300,16 @@ test.describe('the nav does not animate layout', () => {
     await expect.poll(async () => (await read()).background).not.toBe(rest.background)
 
     expect(rest.tile, 'a tile is drawn behind the glyph at rest').toBe('rgba(0, 0, 0, 0)')
-    expect(rest.glyph, 'the glyph is not in its category colour').not.toBe(rest.ink)
-    await expect.poll(async () => (await read()).name, { message: 'the name does not move with the glyph' }).toBe('matrix(1, 0, 0, 1, 3, 0)')
+    expect(rest.glyph, 'the glyph rests at the quiet tone, not the full ink').not.toBe(rest.ink)
+    expect(rest.name, 'the name is shifted at rest').toBe('none')
+    // The glyph's colour is a 100ms transition: wait for it to land on the row's ink.
+    await expect.poll(async () => (await read()).glyph, { message: 'the glyph does not come up to the row ink on hover' }).toBe(rest.ink)
     const hot = await read()
+    expect(hot.name, 'the name slides on hover').toBe('none')
     expect(hot.tile, 'a tile appears behind the glyph on hover').toBe('rgba(0, 0, 0, 0)')
     expect(hot.icon, 'the glyph slot itself moves on hover').toBe(rest.icon)
     expect(hot.rowX, 'the row moves when it is pointed at').toBe(rest.rowX)
-    await expect.poll(async () => (await read()).nameColour, { message: 'the name does not take the category colour' }).toBe(hot.glyph)
+    expect(hot.nameColour, 'the name does not take the row ink on hover').toBe(hot.ink)
   })
 })
 

@@ -100,3 +100,11 @@ test('every category rule offers at least two different body categories', () => 
     assert.equal(new Set(targets).size, targets.length, `${category} lists a target twice`)
   }
 })
+
+// The reasons are shown to people word for word, and the site's copy uses plain
+// punctuation, never an em or en dash.
+test('no pairing reason uses a dash for punctuation', () => {
+  for (const [category, rules] of Object.entries(PAIRING_RULES)) {
+    for (const [, reason] of rules) assert.ok(!/[–—]/.test(reason), `${category}: ${reason}`)
+  }
+})
