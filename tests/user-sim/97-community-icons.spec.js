@@ -19,28 +19,28 @@
 //      browser's own storage is wiped and the page reloaded — which is the
 //      requirement stated as something a test can watch.
 //
-// ── MUTATION — all five applied, seen red, and restored byte-exact ─────────
+// ── V3 NOTE ─────────────────────────────────────────────────────────────────
 //
-//   src/pages/Community.jsx
-//     · `onClick={openIconSubmit}` → `onClick={openIconForm}`, i.e. the gate is
-//       skipped and the form opens for anybody
-//         kills 1 — "a signed-out visitor never reaches the icon form"
-//     · `{myIcons.length > 0 && …}` → `{false && …}`
-//         kills 2 — the queued-list test AND the account test, which is the
-//         right blast radius: both are assertions about that section
-//     · `all = [...mine, ...COMMUNITY_DESIGNS]` → `[...mine, ...myIcons, …]`
-//         kills exactly 1 — "…and is NOT in the browse grid". Only one, and
-//         that is the measurement of how narrow the "not published" guard is:
-//         every other test on this page passes while unreviewed work sits in
-//         the grid, which is why the assertion had to be written down.
-//     · `listMySubmissions(uid, 'icon')` → `Promise.resolve([])`
-//         kills 1 — "a submission this browser has never seen is shown"
-//   src/utils/iconSubmission.js
-//     · `iconPreviewDataUri` drops encodeURIComponent
-//         kills 1 — "the artwork is drawn inside an <img>, never as markup"
+// The V3 Community page is a showcase of sample pieces. It has no "Submit icon"
+// button and no "Your submissions" list of its own: an icon is shared through
+// "Share your work" > "An icon" > Next, and a member's own submissions live in
+// "Your submissions" on their profile (/u/me), reached from the "Sent for
+// review" dialog's "See your profile". The properties below are unchanged.
 //
-// The unit file records seven more against the same feature, including the
-// hazard list and the size cap.
+// The icon write is refused by the real firestore.rules for now (icon
+// submissions fail closed); the suite's Firestore double does not enforce the
+// rules, so these tests prove the page, not the rules.
+//
+// MUTATIONS (restore after each):
+//   useCommunityHub.js ask: skip the `if (!uid)` gate
+//       -> "a signed-out visitor never reaches the icon form"
+//   ShareDialogs.jsx IconStep: draw `preview` inline instead of via IconSubmissionPreview
+//       -> "the artwork is drawn inside an <img>, never as markup"
+//   useCommunityHub.js: stop reading the account's icon documents
+//       -> "a submission this browser has never seen is shown"
+//   useCommunityHub.js commit: skip `deleteSubmission(row.docId)`
+//       -> "withdrawing takes it back FROM THE ACCOUNT"
+// The unit file records more against the same feature (hazard list, size cap).
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { COMMUNITY_SUBMIT_REASONS } from '../../src/utils/submitIntent.js'
@@ -54,8 +54,14 @@ const ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="
 // compromised template, or hand-edited, looks exactly like this.
 const HOSTILE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><script>window.__pwned = 1</script><path d="M12 5v14"/></svg>'
 
+const shareButton = (page) => page.locator('.cm-head').getByRole('button', { name: 'Share your work' })
+const yourSubmissions = (page) => page.locator('#your-submissions')
+
 async function openIconForm(page) {
-  await page.getByRole('button', { name: /Submit icon/i }).first().click()
+  await shareButton(page).click()
+  const pick = page.getByRole('dialog', { name: 'Share your work' })
+  await pick.getByRole('radio', { name: /An icon/ }).check({ force: true })
+  await pick.getByRole('button', { name: 'Next' }).click()
   const dialog = page.getByRole('dialog', { name: /Submit an icon/i })
   await expect(dialog, 'the icon form must open for a signed-in member').toBeVisible()
   return dialog
@@ -68,21 +74,23 @@ async function fillIcon(dialog, { name, svg }) {
 
 test.describe('community icon submissions', () => {
   test('a signed-out visitor never reaches the icon form', async ({ page }) => {
-    watch(page, 'a stranger who pressed Submit icon')
+    watch(page, 'a stranger who pressed Share your work')
     await go(page, '/community')
-    await page.getByRole('button', { name: /Submit icon/i }).first().click()
+    await shareButton(page).click()
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog, 'pressing Submit icon must open something').toBeVisible()
-    // The gate, not the form. If the form itself opened, this name would match.
+    await expect(dialog, 'pressing Share your work must open something').toBeVisible()
+    // The gate, not the form. Neither the chooser nor the icon form may open.
     await expect(page.getByRole('dialog', { name: /Submit an icon/i }),
       'a signed-out visitor must not be handed a submission form').toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: 'Share your work' }),
+      'a signed-out visitor must not be handed the share chooser').toHaveCount(0)
 
     // The intent, carried across the sign-in — the sentence that makes the gate
     // a step rather than an interruption. LoginPopup derives its heading from
-    // the reason string Community.jsx passes.
+    // the words useCommunityHub passes (the chooser has no icon-specific gate).
     await expect(dialog, 'the gate must name what the visitor was in the middle of')
-      .toContainText(/about to submit an icon/i)
+      .toContainText(/share your work with the community/i)
 
     // Read from the array the product renders them from, so editing the copy
     // cannot leave this asserting the old words.
@@ -177,17 +185,23 @@ test.describe('community icon submissions', () => {
     await fillIcon(dialog, { name: 'Plus mark', svg: ICON })
     await dialog.getByRole('button', { name: /^Submit icon$/i }).click()
     await expect(dialog, 'a good submission closes the form').toHaveCount(0)
+    const sent = page.getByRole('dialog', { name: 'Sent for review' })
+    await expect(sent).toBeVisible()
+    await sent.getByRole('button', { name: 'Done' }).click()
 
-    const queued = page.locator('section', { has: page.getByRole('heading', { name: 'Your submissions' }) })
-    await expect(queued, 'the submission must be listed').toContainText('Plus mark')
-    await expect(queued, 'and labelled with where it actually is').toContainText(/Pending review/i)
-    await expect(queued, 'the section must say it is not published').toContainText(/not published/i)
-
-    // THE LINE THAT MATTERS. The browse grid is what a visitor reads as "the
+    // THE LINE THAT MATTERS. The showcase is what a visitor reads as "the
     // community". An unreviewed submission in it is a publication that never
     // happened.
-    await expect(page.locator('.ch-grid'), 'an unreviewed icon must not be in the browse grid')
+    await expect(page.locator('.cm-grid').first(), 'an unreviewed icon must not be in the showcase')
       .not.toContainText('Plus mark')
+    // The control: the page knows it is waiting, so the grid's silence means something.
+    await expect(page.getByText(/You have 1 piece waiting for review/)).toBeVisible()
+
+    await page.getByRole('link', { name: 'See your profile' }).click()
+    await expect(page).toHaveURL(/\/u\/[^/]+#your-submissions$/)
+    const queued = yourSubmissions(page)
+    await expect(queued, 'the submission must be listed').toContainText('Plus mark')
+    await expect(queued.locator('.cm-sub-status'), 'and labelled with where it actually is').toHaveText('Pending review')
   })
 
   test('a submission this browser has never seen is shown, because the ACCOUNT holds it', async ({ page }) => {
@@ -232,7 +246,7 @@ test.describe('community icon submissions', () => {
         },
       },
     })
-    await go(page, '/community')
+    await go(page, '/u/me#your-submissions')
 
     // This browser holds nothing. Whatever renders below came off the account.
     // The key EXISTS and is an empty list — readIconSubmissions writes the
@@ -241,7 +255,7 @@ test.describe('community icon submissions', () => {
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('vs-icon-submissions') || '[]')),
       'the local store must be empty for this assertion to mean anything').toEqual([])
 
-    const queued = page.locator('section', { has: page.getByRole('heading', { name: 'Your submissions' }) })
+    const queued = yourSubmissions(page)
     await expect(queued, 'a submission made on another device must be listed here')
       .toContainText('Made elsewhere')
     await expect(queued, 'and it is the account copy, which a reviewer can reach')
@@ -280,15 +294,20 @@ test.describe('community icon submissions', () => {
     await fillIcon(dialog, { name: 'Regretted', svg: ICON })
     await dialog.getByRole('button', { name: /^Submit icon$/i }).click()
 
-    const queued = page.locator('section', { has: page.getByRole('heading', { name: 'Your submissions' }) })
+    const sent = page.getByRole('dialog', { name: 'Sent for review' })
+    await expect(sent).toBeVisible()
+    await sent.getByRole('button', { name: 'See your profile' }).click()
+    const queued = yourSubmissions(page)
+    const rows = queued.locator('.cm-sub')
+    await expect(rows).toHaveCount(1)
     await expect(queued).toContainText('Regretted')
 
     const inQueue = () => page.evaluate(() =>
       [...(window.__UIL4B_TEST_STORE__?.docs?.keys() || [])].filter(k => k.startsWith('community-submissions/')).length)
     expect(await inQueue(), 'the submission must have reached the account first').toBe(1)
 
-    await queued.getByRole('button', { name: /^Withdraw$/i }).first().click()
-    await expect(queued, 'the withdrawn submission must be gone from the list').toHaveCount(0)
+    await rows.getByRole('button', { name: /^Withdraw$/i }).click()
+    await expect(rows, 'the withdrawn submission must be gone from the list').toHaveCount(0)
     // The delete waits out the Undo toast, so it lands a few seconds later.
     await expect.poll(inQueue, {
       message: 'the account still holds a submission the user was told was withdrawn',

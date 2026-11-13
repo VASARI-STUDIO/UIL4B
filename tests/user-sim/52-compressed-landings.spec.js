@@ -45,7 +45,11 @@ const COMPRESSED = ['/discover', '/learn']
 // belong).
 // Signed out. The roadmap of unwritten topics is an admin-only band, so /learn
 // is a head and the guides.
-const EXPECTED_BANDS = { '/discover': 2, '/learn': 2 }
+// /discover is three since the index gained its "Ready to open today" picks
+// (SurfaceIndex TodayDiscover, commit e2f720d7f): head, today's picks, the doors.
+// Each band is named below so a fourth, unnamed one still fails.
+const EXPECTED_BANDS = { '/discover': 3, '/learn': 2 }
+const DISCOVER_BAND_LABELS = ['srf-today-h', 'surface-grid-heading']
 
 // Where each page's real destinations live.
 const LINKS = {
@@ -62,6 +66,10 @@ test.describe('the secondary landings stay compressed', () => {
       const bands = await page.locator('main#main > *').count()
       expect(bands, `${route} has grown a section: expected ${EXPECTED_BANDS[route]} bands under <main>`)
         .toBe(EXPECTED_BANDS[route])
+      if (route === '/discover') {
+        const labels = await page.locator('main#main > section').evaluateAll((els) => els.map((el) => el.getAttribute('aria-labelledby')))
+        expect(labels, '/discover bands: the picks, then the doors, nothing else').toEqual(DISCOVER_BAND_LABELS)
+      }
 
       // The three things that were deleted, and the classes that would tell us
       // any of them came back. The pillar row and the world map were pitch and
@@ -111,8 +119,11 @@ test.describe('the secondary landings stay compressed', () => {
     // Signed out, unfinished libraries are neither counted nor drawn.
     expect(discoverHint).not.toMatch(/still being built/i)
 
-    await expect(page.locator('.surface-card--link')).toHaveCount(DISCOVER_GROUPS.filter((g) => !g.soon).length)
-    await expect(page.locator('.surface-card:not(.surface-card--link)')).toHaveCount(0)
+    // The doors are the live libraries; Community is the "Also in Discover" line
+    // under them, not a door. Each door is a `.surface-card` that holds the one
+    // `.surface-card--link`, so a door without its link would be a dead card.
+    await expect(page.locator('.surface-card--link')).toHaveCount(DISCOVER_LIBRARIES.length)
+    await expect(page.locator('.surface-card:not(:has(.surface-card--link))')).toHaveCount(0)
 
     await go(page, '/learn')
     const learnHint = await page.locator('.home-hero-hint').innerText()

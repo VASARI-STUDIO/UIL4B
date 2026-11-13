@@ -10,7 +10,7 @@
 //   - nothing scrolls sideways at 320 and 390;
 //   - printing hides the contents, nav and footer and spells out external links;
 //   - contents, date and table-label text meets 4.5:1 in light and dark;
-//   - the Learn guide rail shares the same marker hook.
+//   - (the Learn guide no longer has a rail marker: V3 replaced it with an in-hero contents list, so only the legal contents use the hook.)
 import { test, expect } from './base.js'
 import { go, watch, restAfterMove, restingScrollY } from './helpers.js'
 
@@ -289,25 +289,3 @@ test('the date and table labels are set in the sans, not mono capitals', async (
   await ctx.close()
 })
 
-// The marker hook is shared with the Learn guides, so its two cases are checked there too.
-test('Learn guide rail: the marker follows scroll at 1440, and End then Home keep one', async ({ browser }) => {
-  const active = (page) => page.evaluate(() =>
-    [...document.querySelectorAll('.lart-toc a[data-active="true"]')].map((a) => a.getAttribute('href').slice(1)))
-  const ctx = await browser.newContext({ ...VIEWS.desktop })
-  const page = await ctx.newPage()
-  watch(page, 'a reader of a Learn guide')
-  await go(page, '/learn/brand-colour')
-  const ids = await page.evaluate(() => [...document.querySelectorAll('.lart-toc a')].map((a) => a.getAttribute('href').slice(1)))
-  expect(ids.length).toBeGreaterThan(3)
-  expect(await active(page)).toEqual([ids[0]])
-  await scrollToLine(page, ids[2])
-  await expect.poll(() => active(page)).toEqual([ids[2]])
-  await page.evaluate(() => document.activeElement?.blur())
-  await page.keyboard.press('End')
-  await expect.poll(() => atBottom(page)).toBe(true)
-  await expect.poll(async () => (await active(page)).length, 'a marker survives End').toBe(1)
-  await page.keyboard.press('Home')
-  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
-  await expect.poll(() => active(page), 'Home marks the first section').toEqual([ids[0]])
-  await ctx.close()
-})

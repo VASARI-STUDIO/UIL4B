@@ -253,7 +253,7 @@ const REVEAL_CASES = [
   { route: '/color/palette', sel: '.plb-tool', what: 'S11 · Palette Builder per-swatch tools' },
   { route: '/color/palette', sel: '.plb-gap', what: 'S11 · Palette Builder insert-between buttons' },
   { route: '/discover/palettes', sel: '.pgal-act', what: 'S12 · Palette Library per-card actions' },
-  { route: '/community', sel: '.ch-heart', what: 'S14 · Community like buttons' },
+  { route: '/community', sel: '.cm-heart', what: 'S14 · Community like buttons' },
 ]
 
 for (const c of REVEAL_CASES) {
@@ -318,7 +318,7 @@ test('the hover reveal itself is preserved on pointer devices', async ({ browser
 // prefers-reduced-motion variant and therefore survived a reduced-motion retest.
 const REVEAL_LAYERS = [
   ['/discover/palettes', '.lbry-card-actions'],
-  ['/community', '.ch-heart'],
+  ['/community', '.cm-heart'],
   ['/color/palette', '.plb-tool'],
 ]
 

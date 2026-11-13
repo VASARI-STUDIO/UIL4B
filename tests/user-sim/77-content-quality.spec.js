@@ -343,7 +343,7 @@ test.describe('route metadata', () => {
 // landmark sweep structurally cannot ask for.
 test.describe('the two library grids name themselves and announce their size', () => {
   const CASES = [
-    { route: '/community', noun: 'design', cards: '.ch-grid > *' },
+    { route: '/community', noun: 'piece', cards: '.cm-grid > li' },
   ]
   for (const { route, noun, cards } of CASES) {
     test(`${route} exposes a named results region with a live count`, async ({ page }) => {

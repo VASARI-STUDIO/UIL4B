@@ -154,6 +154,14 @@ class El {
     return false
   }
 
+  // The Tab trap skips controls under an inert ancestor. Only the `[inert]`
+  // attribute selector is modelled.
+  closest(selector) {
+    assert.equal(selector, '[inert]', `closest() is only modelled for [inert], got ${selector}`)
+    for (let c = this; c; c = c.parentElement) if (c.hasAttribute('inert')) return c
+    return null
+  }
+
   focus() {
     this.focusCount += 1
     // THE WHOLE POINT OF THE HARNESS. A detached node cannot take focus, and

@@ -273,7 +273,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
     // The ⋯ menu is on a project's own page; open the first project, then
     // its menu.
     await openProjectFromDashboard(page, `Seeded Project ${count}`)
-    await expect(page.locator('.pjd-h1')).toBeVisible()
+    await expect(page.locator('.pjv-name')).toBeVisible()
     await page.getByRole('button', { name: /^Actions for/ }).first().click()
     const dup = page.getByRole('menuitem', { name: 'Duplicate' })
     // Rendering this at 390 found a ninth defect: the hovered card's lift is

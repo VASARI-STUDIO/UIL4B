@@ -117,7 +117,9 @@ test.describe('Library toolbar on a phone', () => {
     await scrollBy(page, -160)
     await expect.poll(async () => (await barState(page)).peek).toBe('in')
     await bar(page).getByRole('button', { name: /Filters/ }).click()
-    const sheet = page.getByRole('dialog', { name: 'Filters' })
+    // The V3 palette page titles its phone sheet "Mood" (PaletteGallery sheetTitle),
+    // so the dialog is named "Mood"; the trigger in the bar still reads "Filters".
+    const sheet = page.getByRole('dialog', { name: 'Mood' })
     await expect(sheet).toBeVisible()
     await sheet.getByRole('button', { name: 'Done' }).click()
     await expect(sheet).toBeHidden()

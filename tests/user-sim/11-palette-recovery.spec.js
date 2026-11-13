@@ -2,6 +2,7 @@ import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { readSeed, seedChip, paletteToolbar, openPaletteTools, clickPaletteAction } from './palette-helpers.js'
 import { hexToHct } from '../../src/utils/colors.js'
+import { PREVIEW_SCENES } from '../../src/data/palettePreviewScenes.js'
 
 /** The Palette Builder writes the board into the saved project on a ~200ms
  *  debounce. Anything that reloads or re-navigates to prove the board SURVIVED
@@ -324,13 +325,12 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await clickPaletteAction(page, 'Preview')
     const dialog = page.getByRole('dialog', { name: 'Palette preview' })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
-    const options = rail.getByRole('option')
-    // Six previews, each a made-up product (Slack Water, Sundial, Orra Workroom,
-    // Ridgeline, Hale & Okoro, Tenner). Four are open to a free account and two
-    // are marked Pro in the list. The Poster and Social previews raise this to
-    // eight, with four Pro, when they are built.
-    await expect(options).toHaveCount(6)
-    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(2)
+    // The open scene lists its states as options too; the scenes carry data-scene-id.
+    const options = rail.locator('[data-scene-id]')
+    // One option per scene in the registry (Product, Marketing, Brand), each a made-up
+    // product. Those without `free` are marked Pro in the list. Both counts come from the data.
+    await expect(options).toHaveCount(PREVIEW_SCENES.length)
+    await expect(options.filter({ hasText: /Pro$/ })).toHaveCount(PREVIEW_SCENES.filter((s) => !s.free).length)
     // The preview opens on the editorial example, which is its own lazy chunk.
     await expect(rail.getByRole('option', { name: /^Editorial hero/ })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('[data-preview-scene="Editorial hero"]')).toBeVisible()

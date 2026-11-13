@@ -72,21 +72,33 @@ export async function openCompareFromSuggest(page) {
 }
 
 /**
- * Pick a state in the preview dialog's State menu, wherever the width puts it:
- * "State" in the header from 768, the "More" sheet on a phone. The menu closes
- * on a pick, so the next call opens it again.
+ * Pick a state in the preview dialog, wherever the width puts it: a nested row
+ * under the open scene in the rail from 1024, the "State" menu in the header from 768,
+ * the Previews sheet behind the dock button on a phone. A menu or sheet closes on a pick,
+ * so the next call opens it again.
  */
 export async function pickPreviewState(dialog, label) {
-  const trigger = dialog.getByRole('button', { name: /^State\b/ })
-  if (await trigger.count()) {
-    await trigger.click()
-    await dialog.getByRole('menuitemradio', { name: label, exact: true }).click()
-    await expect(dialog.getByRole('button', { name: new RegExp(`^State\\s*${label}`) })).toBeVisible()
+  const dock = dialog.locator('.pvd-scenes-btn')
+  if (await dock.count()) {
+    const sheet = dialog.getByRole('dialog', { name: 'Previews' })
+    // A scene pick can leave the sheet open already; only open it when it is not.
+    if (!(await sheet.count())) await dock.click()
+    await expect(sheet).toBeVisible()
+    await sheet.getByRole('group', { name: 'State' }).getByRole('option', { name: label, exact: true }).click()
+    await expect(sheet).toHaveCount(0)
     return
   }
-  await dialog.getByRole('button', { name: 'More', exact: true }).click()
-  await dialog.getByRole('dialog', { name: 'State' }).getByRole('menuitemradio', { name: label, exact: true }).click()
-  await expect(dialog.getByRole('dialog', { name: 'State' })).toHaveCount(0)
+  const nested = dialog.getByRole('group', { name: 'State' })
+  if (await nested.count()) {
+    const row = nested.getByRole('option', { name: label, exact: true })
+    await row.click()
+    await expect(row).toHaveAttribute('aria-selected', 'true')
+    return
+  }
+  const trigger = dialog.getByRole('button', { name: /^State\b/ })
+  await trigger.click()
+  await dialog.getByRole('menuitemradio', { name: label, exact: true }).click()
+  await expect(dialog.getByRole('button', { name: new RegExp(`^State\\s*${label}`) })).toBeVisible()
 }
 
 /**

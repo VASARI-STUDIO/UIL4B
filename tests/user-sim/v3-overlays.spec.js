@@ -8,8 +8,8 @@
 //
 // Seams: the project's own page (⋯ menu, then Delete…), the floating Feedback
 // button (desktop) and the "Report a problem" link on the sign-in form (phone,
-// where the floating button is hidden by design), the Report button on a
-// community card, and the toast event (`uil4b:toast` with an Undo action).
+// where the floating button is hidden by design), the Report item in a
+// community tile's "..." menu, and the toast event (`uil4b:toast` with an Undo action).
 // Nothing reaches a real endpoint: /api/support is intercepted.
 //
 // NOT CONVERTED: the two journeys about the Save popover (desktop 4, phone 5).
@@ -130,14 +130,26 @@ async function feedbackFormJourney(page, { phone = false } = {}) {
   await expect(opener).toBeFocused()
 }
 
-async function reportJourney(page) {
-  const posts = await interceptSupport(page)
+/** On /community, open the first tile's "..." menu and choose Report: the way into the report sheet. */
+async function openTileReport(page, { tap = false } = {}) {
   await go(page, '/community')
   await expectRendered(page)
-  await expect(page.locator('.ch-card').first()).toBeVisible({ timeout: 20000 })
-  const name = (await page.locator('.ch-card .ch-card-name').first().textContent()).trim()
-  const opener = page.getByRole('button', { name: `Report ${name}`, exact: true })
-  await opener.click()
+  const tile = page.locator('.cm-grid .cm-tile').first()
+  await expect(tile).toBeVisible({ timeout: 20000 })
+  const title = (await tile.locator('.cm-tile-title').textContent()).trim()
+  const opener = tile.getByRole('button', { name: `Actions for ${title}`, exact: true })
+  if (tap) await opener.tap()
+  else { await tile.hover(); await opener.click() }
+  const item = page.getByRole('menuitem', { name: 'Report', exact: true })
+  await expect(item, 'the tile menu offers Report').toBeVisible()
+  if (tap) await item.tap()
+  else await item.click()
+  return { opener }
+}
+
+async function reportJourney(page) {
+  const posts = await interceptSupport(page)
+  const { opener } = await openTileReport(page)
   const dialog = page.getByRole('dialog', { name: 'Report content' })
   await expect(dialog).toBeVisible()
 
@@ -452,9 +464,7 @@ test.describe('overlays at 390', () => {
     expect(await noSideways(page), 'the confirm scrolls sideways at 320').toBe(true)
     await page.keyboard.press('Escape')
 
-    await go(page, '/community')
-    await expect(page.locator('.ch-card').first()).toBeVisible({ timeout: 20000 })
-    await page.locator('.ch-card .report-btn').first().tap()
+    await openTileReport(page, { tap: true })
     await expect(page.getByRole('dialog', { name: 'Report content' })).toBeVisible()
     expect(await noSideways(page), 'the report sheet scrolls sideways at 320').toBe(true)
     await page.keyboard.press('Escape')

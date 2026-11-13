@@ -40,6 +40,7 @@
 import { test, expect } from './base.js'
 import { go, signIn, watch, openChosenDialog } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
+import { PREVIEW_SCENES } from '../../src/data/palettePreviewScenes.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -327,7 +328,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
   // src/data/palettePreviewScenes.js. This goes red on the count of options.
   // Deleting the import of the preview component instead takes the whole route
   // down, which this also catches, on the dialog never opening.
-  test('all six scenes render, each with the full --pv-* role set', async ({ page }) => {
+  test('every scene in the registry renders, each with the full --pv-* role set', async ({ page }) => {
     watch(page, 'designer checking a palette across every preview scene')
     // Pro, so every scene is mounted: a free account is shown a stand-in for the Pro scenes (Spending card, Architect portfolio), not the scene.
     await signIn(page, { plan: 'pro' })
@@ -340,10 +341,12 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       '--pv-subtle', '--pv-deep', '--pv-on-primary', '--pv-primary-ink', '--pv-accent-ink',
       '--pv-pborder', '--pv-success', '--pv-success-ink', '--pv-success-tint', '--pv-warning',
       '--pv-warning-ink', '--pv-error', '--pv-error-ink', '--pv-info', '--pv-info-ink']
-    const NAMES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
+    // Names and count come from the registry, so a scene added or dropped is not a stale number here.
+    const NAMES = PREVIEW_SCENES.map((s) => s.name)
 
     const rail = page.getByRole('listbox', { name: 'Previews' })
-    await expect(rail.getByRole('option')).toHaveCount(NAMES.length)
+    // The open scene also lists its states as options, so count the scenes by data-scene-id.
+    await expect(rail.locator('[data-scene-id]')).toHaveCount(NAMES.length)
 
     const seen = new Set()
     for (const name of NAMES) {
@@ -366,7 +369,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
 
       expect(s.name, `${name}: the scene rendered with the wrong data-preview-scene`).toBe(name)
       // The scenes with live controls (Ridgeline, Tenner, Slack Water and Orra) are groups of them; every other scene is one picture.
-      const live = name === 'Trail run app' || name === 'Spending card' || name === 'Editorial hero' || name === 'Product page'
+      const live = ['Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Booking page'].includes(name)
       expect(s.role, `${name}: the scene is not exposed as ${live ? 'a group of controls' : 'one image'}`).toBe(live ? 'group' : 'img')
       expect(s.label, `${name}: the scene lost its accessible name`).toBe(`${name} preview using your palette, light theme`)
       // pvVars moved with the components. If it had not, every one of these
@@ -374,7 +377,7 @@ test.describe('the lifted preview module is what /create/palette paints', () => 
       expect(s.missing, `${name}: pvVars did not write ${s.missing.join(', ')}`).toEqual([])
       seen.add(s.name)
     }
-    expect(seen.size, 'six distinct scenes did not render').toBe(NAMES.length)
+    expect(seen.size, 'every scene in the registry rendered as its own scene').toBe(NAMES.length)
   })
 })
 

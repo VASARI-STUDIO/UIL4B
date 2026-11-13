@@ -313,13 +313,24 @@ test('/sitemap does not promise a Soon group in its Create lede or type a Discov
 test('/community does not promise a submission will appear while nothing shows the queue', () => {
   // A public feed would call listQueue() outside the admin. Read the callers:
   // the day one exists, the sentence is true and this check retires itself.
-  const files = ['src/pages/Community.jsx', 'src/pages/SurfaceIndex.jsx', 'src/components/discover/CommunityCard.jsx']
+  // The community page is split: submitting lives in useCommunityHub.js, and
+  // the sentences a person reads are in the page, its dialogs and the profile.
+  const communityFiles = [
+    'src/pages/Community.jsx',
+    'src/pages/CommunityPiece.jsx',
+    'src/pages/CommunityProfile.jsx',
+    'src/components/community/useCommunityHub.js',
+    'src/components/community/ShareDialogs.jsx',
+    'src/components/community/pieceUi.jsx',
+    'src/components/community/pieceActions.js',
+  ]
+  const files = [...communityFiles, 'src/pages/SurfaceIndex.jsx', 'src/components/discover/CommunityCard.jsx']
   const publicFeed = files.some((f) => stripComments(read(f)).includes('listQueue('))
   if (publicFeed) return
-  const community = stripComments(read('src/pages/Community.jsx'))
+  const community = communityFiles.map((f) => stripComments(read(f))).join('\n')
   assert.ok(community.includes('publishToQueue('),
-    'Community.jsx no longer submits to the queue; this check is reading the wrong page')
-  for (const phrase of ['before it appears', 'appears publicly']) {
+    'the community files no longer submit to the queue; this check is reading the wrong page')
+  for (const phrase of ['before it appears', 'appears publicly', 'will appear here']) {
     assert.ok(!community.includes(phrase),
       `/community says a submission is reviewed "${phrase}" again, and no file outside `
       + 'src/components/admin calls listQueue() — an approved design is shown to nobody but its '

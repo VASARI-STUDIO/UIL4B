@@ -187,6 +187,34 @@ for (const width of WIDTHS) {
         for (let i = 0; i < await cards.count(); i += 1) {
           const card = cards.nth(i)
           await card.scrollIntoViewIfNeeded()
+          if (width <= 640) {
+            // V3 phone board (LibraryR2APhone): the four actions are not on the card at all;
+            // they sit behind one 44px More button that opens the action sheet. The protected
+            // properties are kept: the target is 44px, inside the card, named and not covered.
+            // MUTATION: shrink `.pgal-more` under `@media(max-width:640px)` in library-v3.css to 36px
+            // (or drop its aria-label in PaletteGalleryGrid.jsx) and this fails.
+            const m = await card.evaluate((el) => {
+              const c = el.getBoundingClientRect()
+              const row = el.querySelector('.lbry-card-actions')
+              const more = el.querySelector('.pgal-more')
+              const b = more.getBoundingClientRect()
+              const hit = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)
+              return {
+                rowShown: getComputedStyle(row).display !== 'none',
+                name: more.getAttribute('aria-label') || '',
+                w: b.width, h: b.height, left: b.left, right: b.right, cardLeft: c.left, cardRight: c.right,
+                hittable: !!hit && (hit === more || more.contains(hit)),
+              }
+            })
+            expect(m.rowShown, 'the four hover actions are not on a phone card').toBe(false)
+            expect(m.w, 'More is 44px wide').toBeGreaterThanOrEqual(43.5)
+            expect(m.h, 'More is 44px tall').toBeGreaterThanOrEqual(43.5)
+            expect(m.left, 'More starts inside the card').toBeGreaterThanOrEqual(m.cardLeft - 0.5)
+            expect(m.right, 'More ends inside the card').toBeLessThanOrEqual(m.cardRight + 0.5)
+            expect(m.name, 'More keeps its accessible name').toMatch(/^More actions for /)
+            expect(m.hittable, 'More is not covered by anything').toBe(true)
+            continue
+          }
           const r = await card.evaluate((el) => {
             const c = el.getBoundingClientRect()
             const row = el.querySelector('.lbry-card-actions')

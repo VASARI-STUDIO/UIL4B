@@ -83,8 +83,10 @@ const endsWithTarget = (sel, target) => {
 //   - background: var(--inp), or var(--bg-3) in a dark-only rule
 //   - the V3 header search (.pnav-search-field in v3-shell.css only) is a
 //     borderless L2 pill: border:0, background var(--v3-l2), 36px on desktop and
-//     44px on the phone header. The rule file is part of the reading, so the
-//     same declarations anywhere else still fail.
+//     44px on the phone header. The V3 library search (.lbry-search in
+//     library-v3.css only) is the same pill: its toolbar sets --search-h to 36px
+//     on desktop and 44px on the phone. The rule file is part of the reading, so
+//     the same declarations anywhere else still fail.
 // Not in the family, so not listed: .hcmd-bar (the 60px hero command bar).
 const SEARCH_BARS = ['.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search']
 const declared = (body, prop) => {
@@ -104,7 +106,8 @@ for (const target of SEARCH_BARS) {
     const sized = hits.filter((r) => declared(r.body, 'height') || declared(r.body, 'min-height'))
     assert.ok(sized.length > 0, `${target} sets no height: renamed, or the list is stale`)
     const bad = []
-    const v3Header = (r) => target === '.pnav-search-field' && r.file.endsWith('v3-shell.css')
+    const v3Header = (r) => (target === '.pnav-search-field' && r.file.endsWith('v3-shell.css'))
+      || (target === '.lbry-search' && r.file.endsWith('library-v3.css'))
     for (const r of hits) {
       for (const prop of ['height', 'min-height']) {
         const v = declared(r.body, prop)
@@ -171,9 +174,11 @@ for (const target of TARGETS) {
       if (m) found.push({ file: r.file, value: m[1].trim(), body: r.body })
     }
     assert.ok(found.length > 0, `${target} declares no border-radius anywhere: renamed, or the list is stale`)
-    const bad = found.filter(({ value, body }) => {
+    const bad = found.filter(({ file, value, body }) => {
       if (/^(var\(--radius-pill\)|999px)$/.test(value)) return false
       if (target === '.lbry-toolbar' && value === '26px') return false
+      // The V3 phone tray stacks the search over the switch, so it is a 24px card, not a pill.
+      if (target === '.lbry-toolbar' && value === '24px' && file.endsWith('library-v3.css')) return false
       if (/^0(px)?$/.test(value) && /background\s*:\s*none/.test(body)) return false
       return true
     })

@@ -54,8 +54,9 @@ test.describe('help at 768', () => {
   test('the arrow stays near its label', async ({ page }) => {
     watch(page, 'someone looking for help on a tablet')
     await go(page, '/learn/help')
-    const grid = page.locator('.hlr-grid').first()
+    const grid = page.locator('.hlr-jobs').first()
     await expect(grid).toBeVisible()
-    expect((await grid.boundingBox()).width).toBeLessThanOrEqual(640)
+    // the router is one column held to the page's 760px measure (.hlp), so a row's chevron sits within 760px of its label
+    expect((await grid.boundingBox()).width).toBeLessThanOrEqual(760)
   })
 })

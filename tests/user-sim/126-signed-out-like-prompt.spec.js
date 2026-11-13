@@ -11,7 +11,7 @@ const loginDialog = (page) => page.getByRole('dialog').filter({ has: page.locato
 const SURFACES = [
   { route: '/discover/palettes', button: (page) => page.locator('.pgal-like').first(), pressed: 'aria-pressed' },
   { route: '/discover/gradients', button: (page) => page.locator('.grg-like').first(), pressed: 'aria-pressed' },
-  { route: '/community', button: (page) => page.locator('.ch-heart').first(), pressed: 'aria-pressed' },
+  { route: '/community', button: (page) => page.locator('.cm-heart').first(), pressed: 'aria-pressed' },
 ]
 
 test.describe('signed-out likes and saves ask to sign in', () => {

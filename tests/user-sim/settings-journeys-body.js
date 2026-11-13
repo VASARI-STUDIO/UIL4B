@@ -1,8 +1,8 @@
 // The Settings journeys, as a person would take them, from handover/08_v3_app_part2/05_reviews/settings2-journeys.md.
 // 385 runs them at 1440 with a mouse and a keyboard; 386 at 390 with a finger. Nothing reaches a real delete or billing API.
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
-import { MUTATE, want, stubPrices, stubPortalFails, stubDelete, PROJECT, PRO_SUB, press, openSettings, openSection, rowOf, sweep } from './settings-journeys-lib.js'
+import { watch } from './helpers.js'
+import { MUTATE, want, stubPortalFails, stubDelete, PROJECT, PRO_SUB, press, openSettings, openSection, rowOf, sweep } from './settings-journeys-lib.js'
 
 export function defineJourneys({ touch, tag }) {
   const open = (page, id) => openSection(page, id, touch)

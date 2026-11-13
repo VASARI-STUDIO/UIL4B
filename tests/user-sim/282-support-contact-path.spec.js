@@ -106,10 +106,12 @@ for (const [name, context] of [['390 phone', PHONE], ['1440 desktop', DESKTOP]])
       await expect(link).toHaveAttribute('href', CONTACT_URL)
       await expect(link).toBeVisible()
 
-      // On the first screen, with no scrolling, and a target of 44px or more.
+      // On the first screen, with no scrolling. A phone (coarse pointer) gets a 44px target; from 768 with a
+      // pointer the board's pill is 36px high (help-router.css), still above WCAG 2.2's 24px floor.
       const box = await link.boundingBox()
       expect(box.y + box.height, 'the link is below the first screen').toBeLessThanOrEqual(context.viewport.height)
-      expect(box.height, 'the link is under 44px high').toBeGreaterThanOrEqual(44)
+      const floor = context.viewport.width < 768 ? 44 : 36
+      expect(box.height, `the link is under ${floor}px high`).toBeGreaterThanOrEqual(floor)
 
       await link.click()
       await expect(page).toHaveURL(/\/feedback\?type=help$/)

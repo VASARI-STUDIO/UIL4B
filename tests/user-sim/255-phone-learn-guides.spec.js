@@ -127,7 +127,7 @@ for (const vp of VIEWPORTS) {
     test.describe(`${vp.width}px touch, ${theme}`, () => {
       test.use({ viewport: vp, hasTouch: true, isMobile: true })
 
-      test('the /learn index keeps one line of 44px topic targets, on the 12px gutter', async ({ page }) => {
+      test('the /learn index keeps one line of 44px topic targets, on the 16px gutter', async ({ page }) => {
         watch(page, `reader opening the Learn index on a ${vp.width}px touch screen`)
         await go(page, '/learn')
         await setTheme(page, theme)
@@ -153,16 +153,16 @@ for (const vp of VIEWPORTS) {
           expect(l.lines, 'a topic label wraps').toBe(1)
           // MUTATION: set `min-height: 32px` on `.srf .lidx-topics a`.
           expect(l.height, 'a topic target is under 44px').toBeGreaterThanOrEqual(44)
-          expect(l.left, 'a topic link is clipped on the left').toBeGreaterThanOrEqual(11)
-          expect(l.right, 'a topic link runs to the screen edge').toBeLessThanOrEqual(m.vw - 11)
+          expect(l.left, 'a topic link is clipped on the left').toBeGreaterThanOrEqual(15)
+          expect(l.right, 'a topic link runs to the screen edge').toBeLessThanOrEqual(m.vw - 15)
         }
         // MUTATION: restore `flex-direction: row` on `.srf .lidx-tools` below
         // 1025px: at 768 the topics sit beside the search and start above its bottom.
         expect(m.links[0].top, 'the topics are not on their own row under the search').toBeGreaterThanOrEqual(m.searchBottom)
-        // MUTATION: delete the `.srf.srf--learn .srf-wrap` gutter rule: the
-        // shell's 16px comes back.
-        expect(m.gutterL).toBe(12)
-        expect(m.gutterR).toBe(12)
+        // The V3 index takes the shell's 16px page gutter (the board's main padding is 40px 16px). MUTATION: set a 12px or 0 padding on
+        // `.srf .srf-wrap` (surface.css) and the gutter and the link-edge checks above and below fail.
+        expect(m.gutterL).toBe(16)
+        expect(m.gutterR).toBe(16)
         expect(m.overflow, 'the page scrolls sideways').toBeLessThanOrEqual(0)
         expect(m.small, 'text under 12px on the index').toBe(0)
         await page.screenshot({ path: `${SHOTS}/learn-index-${vp.width}-${theme}.png` })

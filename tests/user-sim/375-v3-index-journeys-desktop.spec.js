@@ -12,7 +12,7 @@
 // guide registry), the test reads the same facts off the page and checks the
 // page agrees with itself: the link carries the colours the plate shows.
 import { test, expect } from './base.js'
-import { go, goRaw, watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 import { LEARN_ARTICLES, TOPICS } from '../../src/data/learnIndex.js'
 
 const DOORS = [
@@ -426,7 +426,7 @@ test.describe('Discover: what is ready today', () => {
     watch(page, 'a designer coming back tomorrow')
     const picksOn = async (iso) => {
       await page.clock.setFixedTime(new Date(iso))
-      await goRaw(page, '/discover')
+      await go(page, '/discover')
       await expect(todayItems(page)).toHaveCount(4)
       return todayItems(page).getByRole('link').evaluateAll((els) => els.map((e) => e.getAttribute('href')))
     }

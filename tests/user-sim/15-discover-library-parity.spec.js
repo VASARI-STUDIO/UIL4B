@@ -118,8 +118,8 @@ test.describe('Discover libraries share one header', () => {
   // padding, the type ramp of the headline and description — rather than
   // asserting a class name, which any hand-rolled copy could satisfy.
   const BROWSE_SURFACES = [
-    { route: '/discover/palettes', title: 'Palette Library' },
-    { route: '/discover/gradients', title: 'Gradient Library' },
+    { route: '/discover/palettes', title: 'Palette Library', v3: true },
+    { route: '/discover/gradients', title: 'Gradient Library', v3: true },
     { route: '/create/icons', title: 'Icon Library' },
     { route: '/create/emoji', title: 'Emoji Library' },
   ]
@@ -182,20 +182,29 @@ test.describe('Discover libraries share one header', () => {
         }
       }))
     }
-    // One masthead means one set of numbers, on all four.
-    for (let i = 1; i < shapes.length; i += 1) {
-      expect(shapes[i].shape, `${BROWSE_SURFACES[i].route} has drifted from ${BROWSE_SURFACES[0].route}`)
-        .toEqual(shapes[0].shape)
-    }
-    // And wherever a description IS rendered, it is rendered the one way. This
-    // is the same claim the ramp was making inside the object above, made
-    // against the surfaces that actually have one.
-    const described = shapes.filter((x) => x.description)
-    expect(described.length, 'no browse surface rendered a description, so the ramp was never compared')
-      .toBeGreaterThanOrEqual(2)
-    for (const d of described) {
-      expect(d.description, 'the description ramp has drifted between browse surfaces')
-        .toEqual(described[0].description)
+    // One masthead means one set of numbers. The Palette and Gradient libraries were
+    // rebuilt to the V3 boards (LibraryR2A: 180px band, 36px/40px padding, its own
+    // type), so the family is compared within itself: the two V3 libraries match each
+    // other, and the two Create libraries still match each other. (Buttons is V3 too and
+    // is covered by the V3 specs; it is not a `.dgh-hero` browse surface here.)
+    for (const group of [true, false]) {
+      const idx = BROWSE_SURFACES.map((s, i) => (Boolean(s.v3) === group ? i : -1)).filter((i) => i >= 0)
+      for (const i of idx.slice(1)) {
+        expect(shapes[i].shape, `${BROWSE_SURFACES[i].route} has drifted from ${BROWSE_SURFACES[idx[0]].route}`)
+          .toEqual(shapes[idx[0]].shape)
+      }
+      // And wherever a description IS rendered, it is rendered the one way. This
+      // is the same claim the ramp was making inside the object above, made
+      // against the surfaces that actually have one.
+      const described = idx.map((i) => shapes[i]).filter((x) => x.description)
+      for (const d of described) {
+        expect(d.description, 'the description ramp has drifted between browse surfaces')
+          .toEqual(described[0].description)
+      }
+      if (!group) {
+        expect(described.length, 'no Create library rendered a description, so the ramp was never compared')
+          .toBeGreaterThanOrEqual(2)
+      }
     }
   })
 
@@ -263,41 +272,25 @@ test.describe('Discover libraries share one header', () => {
     expect(shapes[0]).toEqual(shapes[1])
   })
 
-  test('the filter indicator measures itself onto the active option', async ({ page }) => {
+  test('the active filter option is tinted itself: the sliding indicator is gone from V3', async ({ page }) => {
     watch(page, 'designer switching filters in the Gradient Library')
     await go(page, '/discover/gradients')
 
+    // The V3 board (LibraryR2A) has no sliding pill under the segmented tray: the active
+    // option carries the tint (`data-active`) and `.lbry-filter-ind` is `display:none`.
+    // What this still protects: exactly one option is active at a time, it is the one just
+    // chosen, `aria-pressed` agrees with it, and nothing is drawn by a leftover indicator.
+    // MUTATION: drop `.lbry-filters .lbry-filter-ind{display:none}` in library-v3.css and the
+    // indicator assertion goes red; stop setting `data-active` in LibraryFilterGroup.jsx and
+    // the active-option assertions go red.
     const tray = page.locator('.lbry-filters').first()
-    await expect(tray.locator('.lbry-filter-ind')).toHaveCount(1)
-
-    // An index-derived offset passes a test that only checks "it moved". This
-    // checks it lands on the real box, which is the part that breaks when the
-    // options reflow or the label widths change.
-    // Polled, not sampled once: the indicator TRANSITIONS onto its target, so a
-    // single read lands mid-flight and measures the easing curve rather than
-    // the resting position. Poll until it settles, and compare there.
-    const settled = async () => page.evaluate(() => {
-      const t = document.querySelector('.lbry-filters')
-      const ind = t.querySelector('.lbry-filter-ind')
-      const active = t.querySelector('[data-active="true"]')
-      const style = getComputedStyle(ind)
-      const m = new DOMMatrixReadOnly(style.transform)
-      return [
-        Math.round(m.m41) - active.offsetLeft,
-        Math.round(parseFloat(style.width)) - active.offsetWidth,
-        style.opacity,
-      ].join('/')
-    })
-
-    // The TYPE tray. Mood became a menu at every width on 2026-09-16 (eight
-    // options beside this tray wrapped the toolbar to two rows at 1024), so
-    // the one expanded tray on this page is the type group, and a plain click
-    // on it still replaces the selection — the indicator has one box to land
-    // on.
+    await expect(tray.locator('.lbry-filter-ind')).toBeHidden()
     for (const label of ['Radial', 'Conic', 'All types']) {
-      await tray.getByRole('button', { name: label, exact: true }).click()
-      // "0/0/1" = zero offset error, zero width error, fully visible.
-      await expect.poll(settled, { timeout: 2000 }).toBe('0/0/1')
+      const option = tray.getByRole('button', { name: label, exact: true })
+      await option.click()
+      await expect(option).toHaveAttribute('data-active', 'true')
+      await expect(option).toHaveAttribute('aria-pressed', 'true')
+      await expect(tray.locator('[data-active="true"]')).toHaveCount(1)
     }
   })
 
@@ -386,9 +379,9 @@ test.describe('the Palette Library carries the brand systems', () => {
     await expect(page.locator('.dgh-mark')).toHaveCount(0)
     const sections = page.locator('.pgl-section-head')
     await expect(sections.filter({ hasText: 'Brand systems' }).locator('.pgl-section-count'))
-      .toHaveText(String(BRAND_LIBRARY_PALETTES.length))
+      .toHaveText(`${BRAND_LIBRARY_PALETTES.length} palettes`)
     await expect(sections.filter({ hasText: 'Curated collection' }).locator('.pgl-section-count'))
-      .toHaveText(String(CURATED_LIBRARY_PALETTES.length))
+      .toHaveText(`${CURATED_LIBRARY_PALETTES.length} palettes`)
   })
 
   test('the Brand filter isolates brand systems and Curated excludes them', async ({ page }) => {
@@ -516,10 +509,14 @@ test.describe('the Icon Library is reachable from Discover', () => {
     watch(page, 'designer on Discover looking for icons')
     await go(page, '/discover')
 
-    const card = page.locator('.surface-card', { hasText: 'Icon Library' }).first()
-    await expect(card).toBeVisible()
+    // The Discover index draws each library as a door (`.surface-card`, a div)
+    // whose title is the one link (`.surface-card--link`), so the href lives on
+    // the link, not on the card.
+    const door = page.locator('.surface-card', { hasText: 'Icon Library' }).first()
+    await expect(door).toBeVisible()
+    const card = door.locator('a.surface-card--link')
     // Live, not staged: a "Soon" badge here would be a dead end.
-    await expect(card.locator('.soon-badge')).toHaveCount(0)
+    await expect(door.locator('.soon-badge, .srf-soon')).toHaveCount(0)
     await expect(card).toHaveAttribute('href', '/create/icons')
 
     await card.click()
