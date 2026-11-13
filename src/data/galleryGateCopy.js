@@ -45,33 +45,9 @@ function counted(one, many, proTail = '') {
 
 const iconCount = (v) => `${n(v)} ${v === 1 ? 'icon' : 'icons'}`
 
-// The palette and gradient entries below are the old per-gallery pair, still read
-// by the pages until they move to libraryGateCopy (end of this file).
+// The icon-group and prompt galleries. The palette and gradient libraries count a
+// filter over the whole library and read libraryGateCopy (end of this file).
 export const GALLERY_GATE_COPY = {
-  palettes: {
-    ...counted('palette', 'palettes', ', including every brand system'),
-    // A collection the viewer has no open palette of at all, because the tier
-    // cap fell before it. `kind` is the collection's name ('Curated', 'Brand').
-    emptied: {
-      anon: {
-        heading: (opens) => `Log in to access ${n(opens)} ${opens === 1 ? 'palette' : 'palettes'}`,
-        body: (kind, opens, total) => `No ${kind.toLowerCase()} palettes are open signed out. A free account opens ${n(opens)} of the ${n(total)} palettes; Pro opens all ${n(total)}.`,
-        action: 'Log in',
-        secondary: 'See the plans',
-      },
-      pro: {
-        heading: (kind) => `${kind} palettes are part of Pro`,
-        // Brand systems are Pro outright, so a free account does not help; a
-        // signed-out viewer is told the whole offer in one line.
-        body: ({ anonymous, total, locked, brand }) => (anonymous
-          ? `Pro opens all ${n(total)} palettes, brand systems included.`
-          : `Another ${n(locked)} ${locked === 1 ? 'palette opens' : 'palettes open'} with Pro${brand ? ', including every brand system' : ''}.`),
-        action: 'See what Pro includes',
-      },
-    },
-  },
-  gradients: counted('gradient', 'gradients', ', each one editable in the Gradient Generator'),
-  // Groups of icons, listed as cards on the index.
   // Groups of icons, listed as cards on the index.
   iconGroups: {
     ...counted('icon group', 'icon groups'),
