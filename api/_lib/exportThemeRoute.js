@@ -16,7 +16,7 @@
 //
 // Every file name comes from brand.slug (limited to [a-z0-9-] by the engine) and the theme id, never from the project name.
 
-import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeExportPro, isThemeRowFormat } from '../../src/data/exportThemes.js'
+import { EXPORT_THEMES, THEME_ROW_FORMATS, isThemeExportPro, isThemeRowFormat, themeHasRow } from '../../src/data/exportThemes.js'
 
 export const MAX_THEME_BODY_CHARS = 256 * 1024
 // First in the head of every print document. Inline styles and data: fonts and images are all a print document holds.
@@ -36,6 +36,8 @@ const THEMES = Object.freeze({
   '08-monograph': () => import('./exportThemes/themes/08-monograph/index.js'),
   '09-blueprint': () => import('./exportThemes/themes/09-blueprint/index.js'),
   '10-inuse': () => import('./exportThemes/themes/10-inuse/index.js'),
+  '25-label': () => import('./exportThemes/themes/25-label/index.js'),
+  '27-swissfield': () => import('./exportThemes/themes/27-swissfield/index.js'),
 })
 
 async function loadEngine() {
@@ -67,7 +69,15 @@ function pagesDoc(E, T, ctx, kind, standalone) {
   // A stand-alone page has no font folder beside it: a theme that declares a face of its own in CSS takes it from ctx.mode.fontUrl.
   if (standalone) ctx.mode = { ...ctx.mode, fontBase: '', fontUrl: dataUrl(E) }
   const list = kind === 'uikit' ? E.UIKIT_PAGES : E.GUIDE_PAGES
-  const pages = list.map((p) => T[kind][p.id](ctx))
+  // A theme draws only the pages it has written (a guidelines-only theme has twelve); the engine's list keeps their order.
+  // A page whose layout cannot hold this brand's words (a theme checks every fit and throws) is left out rather than failing the
+  // whole file; only a document with no page at all is a failed build.
+  const pages = []
+  for (const p of list) {
+    if (typeof T[kind]?.[p.id] !== 'function') continue
+    try { pages.push(T[kind][p.id](ctx)) } catch (err) { console.warn(`[export] ${kind} page ${p.id} left out (${err?.name || 'Error'})`) }
+  }
+  if (!pages.length) throw new Error(`no ${kind} page could be drawn`)
   const title = `${ctx.brand.name} ${kind === 'uikit' ? 'UI kit' : 'brand guidelines'}`
   return E.pageDoc(ctx, T, { title, pages, size: ctx.size, stack: true, ...(standalone ? { fontUrl: dataUrl(E) } : {}) })
 }
@@ -121,6 +131,7 @@ const safePath = (p) => (typeof p === 'string' && /^[A-Za-z0-9_.[\]-]{1,120}$/.t
 export function themeRequestProblem({ theme, row, format }) {
   if (typeof theme !== 'string' || !EXPORT_THEMES.some((t) => t.id === theme)) return { error: 'Unknown export theme', code: 'unknown_theme' }
   if (typeof row !== 'string' || !Object.hasOwn(THEME_ROW_FORMATS, row)) return { error: 'Unknown export row', code: 'unknown_row' }
+  if (!themeHasRow(theme, row)) return { error: 'Unknown export row', code: 'unknown_row' }
   if (!isThemeRowFormat(row, format)) return { error: 'Unknown export format', code: 'unknown_format' }
   return null
 }

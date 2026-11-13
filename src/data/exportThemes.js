@@ -13,6 +13,9 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '08-monograph', name: 'Riso' }),
   Object.freeze({ id: '09-blueprint', name: 'Blueprint' }),
   Object.freeze({ id: '10-inuse', name: 'In use' }),
+  // Guidelines-only themes: they have slides and nothing else, and those are free.
+  Object.freeze({ id: '25-label', name: 'Label', rows: Object.freeze(['slides']), free: true }),
+  Object.freeze({ id: '27-swissfield', name: 'Swiss Field', rows: Object.freeze(['slides']), free: true }),
 ])
 
 // Each row and the file formats it can download in. The UI kit is one zip; the book and the slides come as a page to print or a zip.
@@ -22,14 +25,22 @@ export const THEME_ROW_FORMATS = Object.freeze({
   slides: Object.freeze(['pdf', 'html']),
 })
 
-// The themes whose UI kit a free account can download. Every other row and theme is Pro.
+// The themes whose UI kit a free account can download. Apart from these and the free themes' own rows, every row and theme is Pro.
 export const FREE_UI_KIT_THEMES = Object.freeze(['04-standards', '07-spec'])
 
 export const isExportTheme = (theme) => typeof theme === 'string' && EXPORT_THEMES.some((t) => t.id === theme)
 export const isThemeRowFormat = (row, format) => typeof row === 'string' && typeof format === 'string'
   && Object.hasOwn(THEME_ROW_FORMATS, row) && THEME_ROW_FORMATS[row].includes(format)
 
-/** True when downloading `row` in `theme` needs Pro. Anything that is not a known row and theme counts as Pro. */
+/** True when the theme has the row. A theme with no rows list has every row. */
+export function themeHasRow(theme, row) {
+  const t = EXPORT_THEMES.find((x) => x.id === theme)
+  return Boolean(t) && Object.hasOwn(THEME_ROW_FORMATS, row) && (!t.rows || t.rows.includes(row))
+}
+
+/** True when downloading the row in the theme needs Pro. Anything that is not a known row and theme, or a row the theme lacks, counts as Pro. */
 export function isThemeExportPro(row, theme) {
+  if (!themeHasRow(theme, row)) return true
+  if (EXPORT_THEMES.find((x) => x.id === theme).free) return false
   return !(row === 'ui-kit' && FREE_UI_KIT_THEMES.includes(theme))
 }
