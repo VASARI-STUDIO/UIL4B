@@ -57,6 +57,8 @@ async function openBrowser(page, tool, width) {
   const dialog = page.locator('.fbd-dialog')
   await expect(dialog).toBeVisible()
   await expect(dialog.locator('.fbd-card').first()).toBeVisible()
+  // The dialog scales in; sizes are only true once that has finished.
+  await dialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
   return { dialog, trigger }
 }
 

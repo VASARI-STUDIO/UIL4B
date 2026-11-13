@@ -260,7 +260,8 @@ test.describe('the stop tints menu', () => {
     await expect(menu.getByText('Tints are a Pro tool')).toBeVisible()
     const items = menu.getByRole('menuitem')
     await expect(items).toHaveCount(11)
-    await expect(items.first()).toHaveAttribute('aria-disabled', 'true')
+    // A locked row is still pressable (it raises the gate) and says so with a lock glyph.
+    await expect(items.first().locator('.v3m-tr svg'), 'a lock on a locked row').toHaveCount(1)
     await expect(items.first()).toHaveAccessibleName(/\(Pro\)$/)
 
     // aria-disabled rows still take a press (it raises the gate); reach one by keyboard.
@@ -292,7 +293,7 @@ test.describe('the stop tints menu', () => {
       html: el.innerHTML.toUpperCase(),
       text: el.textContent.toUpperCase(),
       names: [...el.querySelectorAll('[role="menuitem"]')].map((i) => i.getAttribute('aria-label')),
-      slots: [...el.querySelectorAll('.grd-tintmenu-hex')].map((s) => {
+      slots: [...el.querySelectorAll('.v3m-val')].map((s) => {
         const cs = getComputedStyle(s)
         return { hidden: s.getAttribute('aria-hidden'), filter: cs.filter, select: cs.userSelect || cs.webkitUserSelect, text: s.textContent }
       }),
@@ -323,9 +324,9 @@ test.describe('the stop tints menu', () => {
     await page.getByRole('button', { name: 'Tints of stop 1', exact: true }).click()
     const menu = page.getByRole('menu', { name: /^Tints of stop 1,/ })
     await expect(menu.getByRole('menuitem')).toHaveCount(11)
-    const shown = await menu.locator('.grd-tintmenu-hex').allInnerTexts()
+    const shown = await menu.locator('.v3m-val').allInnerTexts()
     expect(shown.map((t) => t.trim()), 'the hex column is the real ramp').toEqual(real)
-    await expect(menu.locator('.grd-tintmenu-hex--locked')).toHaveCount(0)
+    await expect(menu.locator('.v3m-val.bl'), 'no blurred stand-in on a Pro account').toHaveCount(0)
   })
 
   test('right-click on a free account also shows the locked ramp, and a press outside closes it', async ({ page }) => {
@@ -794,7 +795,7 @@ test.describe('on a phone', () => {
     // fades in but never scales, so a 44px row reads 44px from the first frame.
 
     const read = await page.evaluate(() => {
-      const m = document.querySelector('.grd-tintmenu')
+      const m = document.querySelector('.v3m--tints')
       const b = m.getBoundingClientRect()
       return {
         left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top), bottom: Math.round(b.bottom),
