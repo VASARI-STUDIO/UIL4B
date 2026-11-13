@@ -7,6 +7,8 @@
 //   { status: 'error', code, line }       a refusal; `line` is fixed copy (ERROR_LINES), never the server's words
 //                                         code: signed-out | unknown | invalid-project | pro-required | too-large | rate-limited
 //                                         | build-failed | network
+//                                         a rate-limited refusal also carries `retryAfter`: the whole seconds (1..600) the server
+//                                         asked us to wait, when it said so; the dialog counts them down on its button
 // `loadAuth` and `fetchImpl` are injected so a test runs this without Firebase or a network.
 
 import { EXPORT_DOCUMENT_URL, documentDesign } from './exportDocument.js'
@@ -34,10 +36,9 @@ const retryAfterSeconds = (header) => (/^\d+$/.test(String(header ?? '')) ? Numb
 const fail = (code, retryAfter) => {
   let line = ERROR_LINES[code]
   // The one number a fixed line may carry: how long the server asked us to wait, when it said so in whole seconds.
-  if (code === 'rate-limited' && Number.isInteger(retryAfter) && retryAfter > 0 && retryAfter <= 600) {
-    line = retryAfter < 90 ? `Too many exports just now. Try again in ${retryAfter} ${retryAfter === 1 ? 'second' : 'seconds'}.` : line
-  }
-  return { status: 'error', code, line }
+  const wait = code === 'rate-limited' && Number.isInteger(retryAfter) && retryAfter > 0 && retryAfter <= 600 ? retryAfter : 0
+  if (wait) line = wait < 90 ? `Too many exports just now. Try again in ${wait} ${wait === 1 ? 'second' : 'seconds'}.` : line
+  return wait ? { status: 'error', code, line, retryAfter: wait } : { status: 'error', code, line }
 }
 
 // The file name from Content-Disposition, only when it is a plain name of the kind the route writes.

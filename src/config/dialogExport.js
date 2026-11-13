@@ -8,10 +8,13 @@
 // tests all read it, and the tests run it under node.
 
 import { GALLERY_CHECKOUT, normalisePick } from '../utils/kitGalleryPick.js'
+import { isExportTheme } from '../data/exportThemes.js'
+import { defaultThemeId, themeFitsFile, themedFileIsPro } from './exportThemePicker.js'
 
 // type -> category -> files.
 //   shape    — the one-line size of the document, for the row's accessible name
-//   pro      — every file in the category is Pro (the plan tag on its row)
+//   pro      — every file in the category is Pro in every theme (the plan tag on its row). The slides are free in the
+//              Free pair's themes (src/data/exportThemes.js), so the theme decides and the category is not marked
 //   files    — format ids, default first
 //   layouts  — the EXPORT_TEMPLATES key the Layout step reads, or null for no step
 //   preview  — which render sits at the top of the column
@@ -25,7 +28,7 @@ export const EXPORT_TYPES = Object.freeze([
     line: '',
     categories: Object.freeze([
       category('book', 'Book', 'A4 pages', true, ['book', 'book-png', 'book-html'], 'book', 'book'),
-      category('slides', 'Slides', '16:9', true, ['guidelines', 'guidelines-html'], 'guidelines', 'guidelines'),
+      category('slides', 'Slides', 'Brand guidelines', false, ['guidelines', 'guidelines-html'], 'guidelines', 'guidelines'),
       category('guide', 'Style guide', 'A4', false, ['html', 'png', 'jpeg', 'md'], null, 'guide'),
     ]),
   }),
@@ -51,6 +54,10 @@ export const EXPORT_TYPES = Object.freeze([
 
 // Where the header Export opens with no earlier pick this session.
 export const DEFAULT_PRESET = Object.freeze({ type: 'brand', category: 'book', file: 'book' })
+
+// Where a free account starts: the guidelines as slides, in the first theme they are free in (defaultThemeId), so the first
+// download works with no account and no payment.
+export const FREE_START = Object.freeze({ type: 'brand', category: 'slides', file: 'guidelines' })
 
 const typeOf = (id) => EXPORT_TYPES.find((t) => t.id === id)
 
@@ -78,6 +85,28 @@ export function resolvePreset(preset) {
   return { type: type.id, category: cat.id, file }
 }
 
+/**
+ * True when the pick, in the theme (or the file's default theme when none), downloads with no Pro plan. The theme is the one
+ * source: src/data/exportThemes.js through themedFileIsPro. A file that takes no theme is free unless its category is Pro.
+ */
+export function pickIsFree(pick, themeId) {
+  const p = resolvePreset(pick)
+  const home = exportLocation(p.file)
+  if (!home || home.category.pro) return false
+  return !themedFileIsPro(p.file, themeId && themeFitsFile(themeId, p.file) ? themeId : defaultThemeId(false, p.file))
+}
+
+/**
+ * Where the dialog opens for an account: a Pro account on its pick; anyone else on its pick only when that pick is free for
+ * them, else on FREE_START. The theme goes with the pick (undefined means the file's default theme).
+ */
+export function startFor(isPro, pick, themeId) {
+  const p = resolvePreset(pick)
+  const theme = themeId && themeFitsFile(themeId, p.file) ? themeId : undefined
+  if (isPro || pickIsFree(p, theme)) return { pick: p, theme }
+  return { pick: { ...FREE_START }, theme: undefined }
+}
+
 // ── The last pick, kept for the session ─────────────────────────────────────
 export const LAST_PICK_KEY = 'uil4b.exportV3.last'
 
@@ -92,9 +121,21 @@ export function readLastPick({ storage = globalThis.sessionStorage } = {}) {
   } catch { return null }
 }
 
-export function storeLastPick(pick, { storage = globalThis.sessionStorage } = {}) {
+/** The theme saved with the last pick, for this file only; null when none was saved, it is not a theme, or it cannot draw the file. */
+export function readLastTheme(file, { storage = globalThis.sessionStorage } = {}) {
   try {
-    storage.setItem(LAST_PICK_KEY, JSON.stringify(resolvePreset(pick)))
+    const raw = storage.getItem(LAST_PICK_KEY)
+    const v = raw ? JSON.parse(raw) : null
+    if (!v || typeof v !== 'object' || resolvePreset(v).file !== file) return null
+    return isExportTheme(v.theme) && themeFitsFile(v.theme, file) ? v.theme : null
+  } catch { return null }
+}
+
+/** Keeps the pick for the session. `theme` is saved with it (the Pro button does, before it leaves the dialog). */
+export function storeLastPick(pick, { storage = globalThis.sessionStorage, theme } = {}) {
+  try {
+    const safe = resolvePreset(pick)
+    storage.setItem(LAST_PICK_KEY, JSON.stringify(isExportTheme(theme) && themeFitsFile(theme, safe.file) ? { ...safe, theme } : safe))
     return true
   } catch { return false }
 }

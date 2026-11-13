@@ -49,9 +49,7 @@
 .xd-type.is-on.has-cats::before{content:none}
 .xd-type.is-on::before,.xd-cat.is-on::before{content:"";position:absolute;left:0;top:var(--s-2);bottom:var(--s-2);width:2px;background:var(--accent-fill)}
 .xd-type[aria-disabled="true"],.xd-cat[aria-disabled="true"]{cursor:not-allowed;opacity:.6}
-.xd-pro,.xd-free{display:inline-flex;align-items:center;gap:var(--s-1);flex:none;font-size:12px;font-weight:600;line-height:1;color:var(--t1)}
-.xd-free{font-weight:400;color:var(--t2)}
-.xd-coming{margin:auto 0 0;font-size:12px;line-height:1.5;color:var(--t2)}
+.xd-pro{display:inline-flex;align-items:center;gap:var(--s-1);flex:none;font-size:12px;font-weight:600;line-height:1;color:var(--t1)}
 
 /* The column: a scroll region over a dock that never leaves the foot. */
 .xd-col{display:flex;flex-direction:column;min-width:0;min-height:0}
@@ -118,9 +116,6 @@
 .xd-frame .exp-preview-failed{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s-2);padding:var(--s-3);text-align:center;color:var(--t1);font-size:var(--fs-body-s)}
 .xd-frame .exp-preview-failed p{margin:0}
 .xd-frame .exp-preview-retry{min-height:36px;padding:0 var(--s-4);font:inherit;font-size:var(--fs-body-s);color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:background-color var(--dur-1) var(--ease-out)}
-.xd-lock{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s-2);pointer-events:none;font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-.xd-lock > span:last-child{padding:var(--s-1) var(--s-3);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill)}
-.xd-lock .xd-pro{color:var(--t0)}
 .xd-prev{display:flex;flex-direction:column;gap:var(--s-2)}
 
 /* The dock. */
@@ -182,12 +177,10 @@
 .xd[data-layout="strip"] .xd-chips::-webkit-scrollbar{display:none}
 .xd[data-layout="strip"] .xd-cat{flex:none;width:auto;margin:0;min-height:44px;padding:0 var(--s-4);white-space:nowrap;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .xd[data-layout="strip"] .xd-cat.is-on{background:var(--bg-2);border-color:var(--t2)}
-.xd[data-layout="strip"] .xd-free{display:none}
 @media (max-width:359px){
   .xd[data-layout="strip"] .xd-cat{padding:0 var(--s-2)}
   .xd[data-layout="strip"] .xd-cat .exp-pro-lock{display:none}
 }
-.xd[data-layout="strip"] .xd-coming{margin:var(--s-6) 0 0}
 
 /* Tablets are coarse: every target is 44px. */
 .xd[data-layout="menu"] .xd-type{min-height:44px}
@@ -242,15 +235,15 @@ html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-cat,.xd-frame .exp-previ
 /* The logo buttons come from the shared identity fields at 40px; below 1024 every target here is 44px. */
 @media (max-width:1023.98px){.xd .exp-logo-acts .btn-s{min-height:44px}}
 
-/* The Theme step: the sample pages, the chosen theme with a Change button, and the listbox of ten. Pictures only. */
+/* The Theme step: the sample pages, then the themes listed in place. Pictures only. */
 .xd-theme-stage{position:relative;isolation:isolate;display:flex;flex-wrap:wrap;gap:var(--s-4);justify-content:center;align-items:flex-start;min-width:0}
 .xd-theme-stage img{display:block;height:auto;max-width:100%;border-radius:3px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px;background:var(--bg-2)}
 .xd-theme-stage--wide img{flex:0 1 400px;width:400px;aspect-ratio:16/9;object-fit:cover}
 .xd-theme-stage--land img{flex:0 1 340px;width:340px;aspect-ratio:1416/1000;object-fit:cover}
 .xd-theme-stage--port img{flex:0 1 280px;width:280px;aspect-ratio:706/1000;object-fit:cover}
 .xd-theme-stage--book img{flex:0 1 100%;width:100%;aspect-ratio:1424/606;object-fit:cover}
-/* The pages of a theme come in three shapes, so the stage holds the tallest one's height (the 16:9 pair stacked): the Change button
-   below it never moves while rows are highlighted. The book is one frame in every theme and needs none. */
+/* The pages of a theme come in three shapes, so the stage holds the tallest one's height (the 16:9 pair stacked): the theme list
+   below it never moves when another theme is chosen. The book is one frame in every theme and needs none. */
 .xd-theme-stage:not(.xd-theme-stage--book){align-content:center;min-height:466px}
 /* A window under 940px tall puts the 16:9 pages side by side and trims the A4 portrait pair, so the Theme row stays in view. */
 @media (min-width:768px) and (max-height:939.98px){
@@ -267,33 +260,20 @@ html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-cat,.xd-frame .exp-previ
 .xd-theme-lock{position:absolute;inset:auto auto var(--s-3) 50%;transform:translateX(-50%);z-index:1;padding:var(--s-1) var(--s-3);font-size:12px;font-weight:600;color:var(--t0);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill)}
 .xd-theme-cap{margin:0;text-align:center;font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
 .xd-theme{position:relative;display:flex;flex-direction:column;gap:var(--s-1)}
-.xd-theme-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3)}
-.xd-theme-name{display:flex;align-items:baseline;gap:var(--s-2);margin:0;font-size:16px;font-weight:600;color:var(--t0)}
-.xd-theme-tier{font-size:13px;font-weight:500;color:var(--t2)}
 .xd-theme-sample{margin:0;min-height:1.5em;font-size:13px;line-height:1.5;color:var(--t1)}
-.xd-theme-change{min-height:44px}
-/* The listbox. Wide: a popover over the dialog card (placed by ExportThemeRow from the Change button's box). Narrow: a sheet over
-   the whole card with a title and a close. Rows are 40px on a fine pointer, 44px on a coarse one, 52px in the sheet. */
-.xd-theme-pop{position:absolute;z-index:5;display:flex;flex-direction:column;min-height:0;background:var(--bg-1);border:1px solid var(--border);border-radius:12px;overflow:hidden;animation:xd-pop 160ms var(--ease-entrance) both}
-.xd-theme-sheet{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;min-height:0;background:var(--bg-1);animation:xd-pop 160ms var(--ease-entrance) both}
-.xd-theme-pop.is-leaving,.xd-theme-sheet.is-leaving{animation:xd-pop-off 120ms ease-in both;pointer-events:none}
-.xd-theme-sheet-head{flex:none;display:flex;align-items:center;gap:var(--s-3);min-height:var(--xd-head);padding:0 var(--s-4) 0 var(--s-5);border-bottom:1px solid var(--border)}
-.xd-theme-sheet-t{flex:1;margin:0;font-size:15px;font-weight:600;line-height:1.3;color:var(--t0)}
-.xd-theme-list{position:relative;list-style:none;margin:0;padding:var(--s-1);display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;outline:none;scrollbar-width:thin}
-.xd-theme-sheet .xd-theme-list{padding:var(--s-2)}
-.xd-theme-list:focus-visible .xd-theme-opt.is-active{outline:2px solid var(--t0);outline-offset:-2px}
-.xd-theme-opt{display:flex;align-items:center;gap:var(--s-2);flex:none;min-height:40px;padding:0 var(--s-3);border-radius:var(--radius-xs);cursor:pointer}
-.xd-theme-opt.is-active{background:var(--bg-2)}
+/* The theme list, in place: a radiogroup, grouped "Free" then "In Pro" for an account that is not Pro. Rows are 40px on a fine
+   pointer, 44px on a coarse one; nothing opens over the dialog, so the File column is never covered. */
+.xd-theme-list{display:flex;flex-direction:column;gap:var(--s-3)}
+.xd-theme-group{display:flex;flex-direction:column;gap:var(--s-1)}
+.xd-theme-gh{margin:0;padding:0 var(--s-3);font-size:12px;font-weight:600;line-height:1.5;color:var(--t2)}
+.xd-theme-opt{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;min-height:40px;padding:0 var(--s-3);font:inherit;text-align:left;color:var(--t0);background:none;border:0;border-radius:var(--radius-xs);cursor:pointer}
+.xd-theme-opt.is-on{background:var(--bg-2)}
+.xd-theme-opt:active{background:var(--bg-2)}
+.xd-theme-opt:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
+@media (hover:hover){.xd-theme-opt:not(.is-on):hover{background:var(--hvr)}}
 @media (pointer:coarse){.xd-theme-opt{min-height:44px}}
-.xd-theme-sheet .xd-theme-opt{min-height:52px}
+.xd[data-layout="menu"] .xd-theme-opt{min-height:44px}
 .xd-theme-opt-t{flex:1;min-width:0;display:flex;align-items:baseline;gap:var(--s-2);white-space:nowrap}
 .xd-theme-opt-n{font-size:14px;font-weight:500;color:var(--t0)}
 .xd-theme-opt-b{font-size:13px;color:var(--t2);overflow:hidden;text-overflow:ellipsis}
-.xd-theme-sheet .xd-theme-opt-t{flex-direction:column;align-items:flex-start;gap:0}
-.xd-theme-sheet .xd-theme-opt-n{font-size:16px;line-height:1.4}
-.xd-theme-sheet .xd-theme-opt-b{max-width:100%;line-height:1.4}
-.xd-theme-opt-r{display:flex;align-items:center;gap:var(--s-1);flex:none;justify-content:flex-end;font-size:13px;color:var(--t2)}
-@keyframes xd-pop{from{opacity:0;transform:translateY(4px)}}
-@keyframes xd-pop-off{to{opacity:0}}
-@media (prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) :is(.xd-theme-pop,.xd-theme-sheet){animation:none}}
-html[data-reduced-motion="true"] :is(.xd-theme-pop,.xd-theme-sheet){animation:none}
+.xd-theme-opt > svg{flex:none;color:var(--t0)}

@@ -3,17 +3,12 @@ import { useProject } from '../../contexts/ProjectContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
 import { useAuth } from '../../contexts/AuthContext'
 import useExportDesign from '../../hooks/useExportDesign'
-import { usePrices, useProPrice, formatPrice } from '../../hooks/usePrices'
-import { resolveOffers } from '../../config/planFacts'
-import { PLAN_LADDER } from '../../config/planLadder'
 import { defaultTemplate, liveTemplates, readExportTemplates } from '../../config/exportTemplates'
 import { readLogo } from '../../utils/brandLogo'
 import { readIdentity } from '../../utils/kitIdentity'
 import { formatFileName } from '../../utils/exportFileName'
-import { trialLabel } from '../../utils/kitGalleryPick'
 import ExportFormatSwitch from '../ExportFormatSwitch'
 import ExportProPreview from '../ExportProPreview'
-import ExportProTag from '../ExportProTag'
 import KitIdentityFields from '../KitIdentityFields'
 import BrandLogoField from '../BrandLogoField'
 import ExportFreePreview from './ExportFreePreview'
@@ -37,7 +32,7 @@ const FILE_COPY = {
   png: { label: 'PNG', blurb: 'One A4 sheet at 2x, for decks and tickets.', action: 'Export style guide' },
   jpeg: { label: 'JPEG', blurb: 'The same sheet, smaller file.', action: 'Export style guide' },
   md: { label: 'Markdown', blurb: 'For Notion or Google Docs.', action: 'Export style guide' },
-  kit: { label: 'ZIP', blurb: `The ${UI_KIT_PAGES}-page UI kit as print-ready HTML, with a code package: CSS, JSON, Tailwind and an example page. In one zip.`, action: 'Export UI kit' },
+  kit: { label: 'ZIP', blurb: `One zip: ${UI_KIT_PAGES} pages and code`, action: 'Export UI kit' },
   css: { label: 'CSS stylesheet', blurb: 'Custom properties for your palette, tints, semantic colours and type. Drop it into any site.', action: 'Export CSS' },
   json: { label: 'JSON', blurb: 'The same tokens in the W3C Design Tokens format, for token pipelines.', action: 'Export JSON' },
   tailwind: { label: 'Tailwind theme', blurb: 'A Tailwind v4 @theme file. Import it after Tailwind and your colours, fonts and type sizes become utilities.', action: 'Export Tailwind theme' },
@@ -143,12 +138,6 @@ function Preview({ cat, file, name, fileProject, isPro, checking, design, chosen
     return (
       <div className={`xd-frame xd-frame--${kind}`}>
         <ExportProPreview kind={kind} template={template} design={design} projectName={name} blurred={!isPro} showLock={false} fit />
-        {!isPro && !checking && (
-          <div className="xd-lock">
-            <ExportProTag className="xd-pro" />
-            <span>Pro export</span>
-          </div>
-        )}
       </div>
     )
   }
@@ -188,7 +177,7 @@ function Manifest({ rows, file, folded }) {
   )
 }
 
-export default function ExportSteps({ cat, file, onFile, name, fileProject = '', project, strip, coming, onRenameState, theme, peek, onTheme, onPeek }) {
+export default function ExportSteps({ cat, file, onFile, name, fileProject = '', project, strip, onRenameState, theme, onTheme }) {
   const uid = useId()
   const { isPro, planKnown } = useSubscription()
   const { design: working } = useProject()
@@ -210,7 +199,7 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
     return zip ? { ...f, saved: zip } : { ...f, saved: 'Print document', plain: true }
   })
   const themed = Boolean(themedFile(file))
-  const shown = pickerTheme(peek || theme)
+  const shown = pickerTheme(theme)
   const showLayout = !themed && Boolean(cat.layouts) && liveTemplates(cat.layouts).length > 1
   const lead = NAME_LEAD[cat.preview]
   const hasLogo = Boolean(readLogo(working))
@@ -239,11 +228,11 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
       )
   }
 
-  // The Theme step sits under the picture on a wide dialog; on a phone it comes first, so Change is in view before the pages.
+  // The Theme step sits under the picture on a wide dialog; on a phone it comes first, so the themes are in view before the pages.
   const themeStep = themed && (
     <section className={`xd-step${strip ? ' xd-step--lead' : ''}`} aria-labelledby={`${uid}-theme`}>
       <h3 className="xd-step-l" id={`${uid}-theme`}>Theme</h3>
-      <ExportThemeRow value={theme} onChange={onTheme} onPreview={onPeek} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} file={file} sheet={strip} />
+      <ExportThemeRow value={theme} onChange={onTheme} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} file={file} />
       <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
     </section>
   )
@@ -282,47 +271,35 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
           {details}
         </section>
       )}
-
-      {strip && coming && <p className="xd-coming">{coming}</p>}
     </>
   )
 }
 
-// The dock: what the click will make and what it costs, then the buttons. The
-// status line is one live region, mounted empty; an error is its own alert.
-// `upgrade` is 'checkout' (a saved project: the trial) or 'plans' for a free
-// account on a Pro file; `onPrimary` decides what the click does.
-export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrade, onPrimary, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn }) {
+// The dock: what the click will make, then the buttons. The status line is one live
+// region, mounted empty; an error is its own alert. A Pro file says the same thing
+// whether the click goes to checkout or to /plans (one offer, one wording; the page
+// it lands on carries the price). The work in progress is said on the button only.
+// `onPrimary` decides what the click does: after an export it is "Done" and closes the
+// dialog, and `onAnother` is the other way on, back to the file step. After a 429 the
+// button counts `retryIn` seconds down, disabled, then is live again.
+export function ExportDock({ cat, file, busy, stage, error, notice, done, retryIn = 0, onPrimary, onAnother, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn }) {
   const { isPro, planKnown } = useSubscription()
   const { user } = useAuth()
-  const proPrice = useProPrice()
-  const { prices } = usePrices()
   const checking = planKnown === false
   const locked = lockedBy ?? (cat.pro && !isPro)
-  const trialDays = PLAN_LADDER.find((e) => e.id === 'yearly')?.trialDays || 0
-  // Read once when the dock mounts, so the cancel-by date holds still while it is open.
-  const [mountedAt] = useState(() => Date.now())
-  const trialEnd = new Date(mountedAt + trialDays * 86400000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
-  const yearly = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded }).offers.find((o) => o.checkoutPlan === 'yearly')
-  const price = yearly?.available ? formatPrice(yearly.total, proPrice.currency) : null
+  const waiting = retryIn > 0
   const doneInfo = done && typeof done === 'object' ? done : null
   const savedFile = doneInfo?.file || doneInfo?.filename || ''
 
   let line
-  if (error) line = null
-  else if (busy) line = BUSY_LABEL[stage] || 'Exporting…'
+  if (error || busy) line = null
   else if (notice) line = <><strong>{notice.lead}</strong> {notice.detail}</>
   else if (done) {
     line = doneInfo?.opened
       ? <><strong>Opened</strong> in a new tab. {PRINT_LINE}</>
       : <><strong>Downloaded</strong>{savedFile ? ` ${savedFile}.` : '.'}</>
   } else if (checking) line = 'Checking your plan…'
-  else if (locked && upgrade === 'checkout') {
-    if (trialDays > 0) {
-      const then = price ? `, then ${price} a year until you cancel.` : proPrice.loaded ? ', then billed yearly until you cancel.' : '.'
-      line = <><strong>{trialDays} {trialDays === 1 ? 'day' : 'days'} free</strong>{then} Cancel before {trialEnd} and you pay nothing.{proPrice.loaded && !price ? ' Checkout shows the price before you pay.' : ''}</>
-    } else line = 'Checkout shows the price before you pay.'
-  } else if (locked) {
+  else if (locked) {
     // The bundle has no free, marked version, so "no watermark" would promise a difference that isn't there.
     line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</>
       : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in {freeThemeNames('kit')}. The guidelines are free in {freeGuidelinesThemeNames()}.</>
@@ -336,8 +313,9 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
   let label = copyOf(file).action
   if (busy) label = BUSY_LABEL[stage] || 'Exporting…'
   else if (checking) label = 'Checking your plan…'
-  else if (locked) label = upgrade === 'checkout' ? (trialDays > 0 ? trialLabel(trialDays) : 'Continue to checkout') : 'Unlock with Pro'
-  else if (done) label = 'Export again'
+  else if (waiting) label = `Try again in ${retryIn}s`
+  else if (locked) label = 'Unlock with Pro'
+  else if (done) label = 'Done'
 
   // The sign-in step takes the dock over: the same form as the account dialog, in place.
   if (signingIn) return <div className="xd-dock xd-dock--signin"><ExportSignIn onDone={onSignIn} /></div>
@@ -354,7 +332,12 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
             Copy file
           </button>
         )}
-        <button type="button" className="btn btn-accent xd-act xd-primary" ref={primaryRef} onClick={onPrimary} disabled={busy || checking}>
+        {done && !busy && (
+          <button type="button" className="btn xd-act" onClick={onAnother}>
+            Export another file
+          </button>
+        )}
+        <button type="button" className="btn btn-accent xd-act xd-primary" ref={primaryRef} onClick={onPrimary} disabled={busy || checking || waiting}>
           {label}
         </button>
       </div>
