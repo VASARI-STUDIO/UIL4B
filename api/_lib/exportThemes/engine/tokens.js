@@ -84,7 +84,7 @@ export function tokensJson(ctx) {
   const house = new Set(ctx.houseRoles.flatMap((t) => [t, t + '-bg']));
   for (const k in light) color[k] = { $type: 'color', $value: light[k], ...(house.has(k) ? { $description: 'House default, not a brand colour.' } : {}), $extensions: { mode: { light: light[k], dark: dark[k] } } };
   const dim = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, { $type: 'dimension', $value: v }]));
-  const palette = Object.fromEntries(ctx.colours.map((c) => [c.id, { $type: 'color', $value: c.hex, $description: c.lands }]));
+  const palette = Object.fromEntries(ctx.colours.map((c) => [c.id, { $type: 'color', $value: c.hex, $description: c.lands, ...(C.cmykParts(c) ? { $extensions: { cmyk: c.cmyk } } : {}) }]));
   return {
     $description: `${ctx.brand.name} design tokens (DTCG). Colour tokens carry a dark value in $extensions.mode.`,
     palette, color, space: dim(g.space), radius: dim(g.radius), width: dim(g.width),

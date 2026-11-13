@@ -36,8 +36,10 @@ const THEMES = Object.freeze({
   '08-monograph': () => import('./exportThemes/themes/08-monograph/index.js'),
   '09-blueprint': () => import('./exportThemes/themes/09-blueprint/index.js'),
   '10-inuse': () => import('./exportThemes/themes/10-inuse/index.js'),
+  '24-standards': () => import('./exportThemes/themes/24-standards/index.js'),
   '25-label': () => import('./exportThemes/themes/25-label/index.js'),
   '27-swissfield': () => import('./exportThemes/themes/27-swissfield/index.js'),
+  '32-dieline': () => import('./exportThemes/themes/32-dieline/index.js'),
 })
 
 async function loadEngine() {

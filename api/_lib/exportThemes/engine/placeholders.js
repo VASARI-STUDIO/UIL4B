@@ -219,7 +219,9 @@ export function applyPlaceholders(ctx) {
   // ctx.ph(path, real): a placeholder for copy a theme hard-codes; real is the words showcase prints
   ctx.ph = (p, real = '') => { const desc = DESCRIPTORS[p]; if (!desc) throw new Error('no placeholder descriptor ' + p); return run(() => sentinel(register(p, desc, 1, real))); };
   // the registry itself stays private; finishText reaches it through run
-  ctx.placeholders = { descriptors: DESCRIPTORS, run, get count() { return reg.entries.length; } };
+  // label(str): str with each placeholder written as its short label, for a theme that measures what a control will print
+  const label = (str) => run(() => String(str).replace(SENT, (m, g) => { const e = reg.entries[decodeId(g)]; return e ? e.label : m; }));
+  ctx.placeholders = { descriptors: DESCRIPTORS, run, label, get count() { return reg.entries.length; } };
   return ctx;
 }
 
@@ -233,6 +235,7 @@ export const PH_CSS = `.ph-b,.ph-b *,.ph-c{text-decoration:none}
 .ph-b--real .ph-w{font-size:1em}
 .ph-m{font:400 11px/1.3 var(--chrome,var(--ff-body,sans-serif));letter-spacing:normal;text-transform:none}
 .ph-c--ui{font-family:var(--chrome,var(--ff-body,sans-serif))}
+.ui-card__title .ph-c{font-size:min(1em,15px);white-space:normal!important;overflow-wrap:anywhere}
 .ph-n{white-space:nowrap!important}
 .ph-c{display:inline;box-decoration-break:clone;-webkit-box-decoration-break:clone;border:1px dashed currentColor;padding:0 .3em;text-transform:none;letter-spacing:normal;font-style:normal;font-variant:normal;font-size:min(1em,20px);white-space:normal}`;
 // The placeholder CSS as a string, for a builder that writes its own stylesheet. Not needed for text that goes through finishText:
