@@ -38,6 +38,20 @@ const PROBE = `
   const m = window.__hm = { anims: [], objs: [], lcp: [], shifts: [], adds: [], removes: [] }
   const seen = new WeakSet()
   const rect = (r) => ({ x: r.x, y: r.y, w: r.width, h: r.height })
+  // The browser reports a null node for a shift source that was removed before the entry
+  // was delivered (a Try row swapped out on a folder switch, say). Such a source is placed by
+  // where its box sits: inside the section box it counts as that section.
+  const within = (r, sel) => {
+    const el = document.querySelector(sel)
+    if (!el || !r || !r.width || !r.height) return false
+    const b = el.getBoundingClientRect()
+    return r.left >= b.left - 1 && r.right <= b.right + 1 && r.top >= b.top - 1 && r.bottom <= b.bottom + 1
+  }
+  const inside = (s, sel) => {
+    if (!s.node) return within(s.currentRect, sel)
+    const el = s.node.closest ? s.node : s.node.parentElement
+    return !!(el && el.closest(sel))
+  }
   const scan = () => {
     try {
       for (const a of document.getAnimations()) {
@@ -65,9 +79,9 @@ const PROBE = `
   try { new PerformanceObserver((l) => { for (const e of l.getEntries()) m.shifts.push({
     t: Math.round(e.startTime), v: e.value, input: e.hadRecentInput,
     sources: (e.sources || []).map((s) => ({ prev: rect(s.previousRect), cur: rect(s.currentRect),
-      inNav: !!(s.node && (s.node.closest ? s.node : s.node.parentElement) && (s.node.closest ? s.node : s.node.parentElement).closest('.spnav')),
-      inTry: !!(s.node && (s.node.closest ? s.node : s.node.parentElement) && (s.node.closest ? s.node : s.node.parentElement).closest('#try')),
-      inLoop: !!(s.node && (s.node.closest ? s.node : s.node.parentElement) && (s.node.closest ? s.node : s.node.parentElement).closest('.hh-slot')) })) }) })
+      inNav: inside(s, '.spnav'),
+      inTry: inside(s, '#try'),
+      inLoop: inside(s, '.hh-slot') })) }) })
     .observe({ type: 'layout-shift', buffered: true }) } catch (e) { /* unsupported */ }
   const add = EventTarget.prototype.addEventListener
   const rem = EventTarget.prototype.removeEventListener
