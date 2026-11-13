@@ -45,7 +45,12 @@ async function requireAdmin(req) {
     if (err?.code === 'auth/id-token-revoked') {
       return { error: 'Your session was ended. Sign in again.', code: 'session-revoked', status: 401 }
     }
-    return { error: credentialProblem() || 'Invalid auth token', status: 401 }
+    // A server credential fault is logged here, never sent: the browser gets
+    // the same answer a bad token gets, so the response says nothing about
+    // how the server is configured.
+    const problem = credentialProblem()
+    if (problem) console.error('setup-stripe auth failed:', problem)
+    return { error: 'Invalid auth token', status: 401 }
   }
 }
 

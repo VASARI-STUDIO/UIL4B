@@ -718,14 +718,16 @@ test.describe('the ordered column', () => {
       await last.getByRole('button', { name: MORE }).tap()
       const menu = page.getByRole('menu', { name: 'Colour actions', exact: true })
       for (const name of ['Edit in HCT', 'Swap left', 'Remove']) await expect(menu.getByRole('menuitem', { name, exact: true })).toBeVisible()
-      const box = await settledBox(page, '.plb-ctx')
+      // The phone menu is the shared bottom sheet: it sits on the screen edge, over
+      // the tab bar (which the sheet's scrim dims), and never runs past the screen.
+      const box = await settledBox(page, '.v3m-sheet')
       const tabs = await page.evaluate(() => {
         const bar = document.querySelector('.pnav-tabs')
         const r = bar?.getBoundingClientRect()
-        return { shown: !!bar && getComputedStyle(bar).display !== 'none' && r.height > 0, top: r?.top ?? innerHeight }
+        return { shown: !!bar && getComputedStyle(bar).display !== 'none' && r.height > 0, vh: innerHeight }
       })
       expect(tabs.shown, 'POSITIVE CONTROL: the tab bar is on screen at 390').toBe(true)
-      expect(box.bottom, `the menu ends at ${Math.round(box.bottom)}, above the tab bar at ${Math.round(tabs.top)}`).toBeLessThanOrEqual(tabs.top)
+      expect(box.bottom, `the sheet ends at ${Math.round(box.bottom)}, inside the ${tabs.vh}px screen`).toBeLessThanOrEqual(tabs.vh)
       expect(box.top, 'and starts below the header').toBeGreaterThanOrEqual(box.navBottom)
       await ctx.close()
     })

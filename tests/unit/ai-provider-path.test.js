@@ -389,6 +389,25 @@ test('the counter never persists the provider response body', async () => {
   assert.ok(!('lastFailoverDetail' in healthWrites(ai)[0].data), 'err.detail is persisted verbatim')
 })
 
+test('a provider failure never puts the upstream body or message in the response', async () => {
+  // err.detail is the raw upstream body and err.message can quote the
+  // provider's own error text. Both stay in the server log; the caller gets
+  // fixed text, on the key-rejected answer and on the total-outage answer.
+  const UPSTREAM = `invalid key ${OPENROUTER_KEY}`
+  const rejected = loadAi({ openrouter: fail(401, UPSTREAM), gemini: fail(403, UPSTREAM) })
+  const a = (await rejected.generate()).res
+  assert.equal(a.statusCode, 502)
+  assert.ok(!('detail' in a.body), `the 502 carried the upstream body: ${JSON.stringify(a.body)}`)
+  assert.doesNotMatch(JSON.stringify(a.body), new RegExp(OPENROUTER_KEY))
+
+  const down = loadAi({ openrouter: ok({ error: { message: `quota for ${OPENROUTER_KEY} spent` } }), gemini: fail(503, UPSTREAM) })
+  const b = (await down.generate()).res
+  assert.equal(b.statusCode, 502)
+  assert.ok(!('detail' in b.body), `the 502 carried the upstream body: ${JSON.stringify(b.body)}`)
+  assert.doesNotMatch(JSON.stringify(b.body), new RegExp(`${OPENROUTER_KEY}|Gemini 503`), 'the provider message reached the caller')
+  assert.ok(down.errors.some((l) => l.includes('Gemini 503')), 'the provider message was not logged server-side')
+})
+
 test('the outcome is recorded BEFORE the error returns, so an outage is not lost', async () => {
   // Both providers down is the case worth waking someone for, and it is also
   // the path that returns early — so it is the one most easily left uncounted.
@@ -565,7 +584,8 @@ test('generate-prompt: an empty Gemini reply that is not a cut-off keeps the gen
     const { result, res } = await ai.generate()
     assert.equal(result, undefined)
     assert.equal(res.statusCode, 502)
-    assert.match(res.body.error, /AI providers unavailable \(Gemini returned empty response\)/)
+    assert.match(res.body.error, /AI providers unavailable/)
+    assert.ok(ai.errors.some((l) => l.includes('Gemini returned empty response')), 'the reason was not logged server-side')
     assert.doesNotMatch(res.body.error, NO_ROOM)
     assert.ok(!('finishReason' in res.body))
   }

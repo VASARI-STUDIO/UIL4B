@@ -27,6 +27,13 @@ const DEFERRED = path.join(STYLES, 'deferred')
 
 export const GLOBAL_CSS = fs.readFileSync(path.join(STYLES, 'global.css'), 'utf8')
 
+// The V3 shared sheets (app shell, menus, overlays) sit beside global.css and
+// load straight after it from src/main.jsx, so they are on every page and win the
+// cascade over global.css. They are discovered by their `v3-` prefix so a fourth
+// one needs no edit here. A test that reads ALL_CSS without them goes quietly
+// vacuous about the header, every menu and every dialog.
+export const V3_STYLESHEETS = fs.readdirSync(STYLES).filter((f) => /^v3-.*\.css$/.test(f)).sort()
+
 export const PAGE_STYLESHEETS = fs.existsSync(PAGES)
   ? fs.readdirSync(PAGES).filter((f) => f.endsWith('.css')).sort()
   : []
@@ -47,13 +54,15 @@ export const DEFERRED_STYLESHEETS = fs.existsSync(DEFERRED)
  */
 export const ALL_STYLESHEETS = [
   { file: 'src/styles/global.css', css: GLOBAL_CSS },
+  ...V3_STYLESHEETS.map((f) => ({ file: `src/styles/${f}`, css: fs.readFileSync(path.join(STYLES, f), 'utf8') })),
   ...DEFERRED_STYLESHEETS.map((f) => ({ file: `src/styles/deferred/${f}`, css: fs.readFileSync(path.join(DEFERRED, f), 'utf8') })),
   ...PAGE_STYLESHEETS.map((f) => ({ file: `src/styles/pages/${f}`, css: fs.readFileSync(path.join(PAGES, f), 'utf8') })),
 ]
 
-/** global.css, then the deferred family sheets, then every page stylesheet. */
+/** global.css, then the V3 shared sheets, the deferred family sheets, then every page stylesheet. */
 export const ALL_CSS = [
   GLOBAL_CSS,
+  ...V3_STYLESHEETS.map((f) => fs.readFileSync(path.join(STYLES, f), 'utf8')),
   ...DEFERRED_STYLESHEETS.map((f) => fs.readFileSync(path.join(DEFERRED, f), 'utf8')),
   ...PAGE_STYLESHEETS.map((f) => fs.readFileSync(path.join(PAGES, f), 'utf8')),
 ].join('\n')

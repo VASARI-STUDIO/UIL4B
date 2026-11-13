@@ -98,6 +98,21 @@
 @media (hover: hover) {
   .hm-close-ghost:hover { background: rgba(239, 238, 234, .06); }
 }
+/* A ghost that also carries `.ui-pill-out` (global.css) would take that rule's
+   card ground and ink whenever global.css lands later in the bundle, which it
+   does in the production build. The higher specificity keeps the dark ghost
+   in either order. */
+.hm-close-btns > .hm-close-ghost.ui-pill-out {
+  background: transparent;
+  color: #EFEEEA;
+  border-color: rgba(239, 238, 234, .2);
+}
+@media (hover: hover) {
+  .hm-close-btns > .hm-close-ghost.ui-pill-out:hover {
+    background: rgba(239, 238, 234, .06);
+    border-color: rgba(239, 238, 234, .2);
+  }
+}
 .hm-close-ghost:active { transform: scale(.97); }
 /* The ring traces the corners the link has at rest. */
 .sp-footer--home a { border-radius: 4px; }
