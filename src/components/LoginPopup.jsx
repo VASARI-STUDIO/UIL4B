@@ -36,9 +36,11 @@ class StripBoundary extends Component {
 // caller's own list of what an account gives, shown only on an interruption.
 // `signup` decides which form this OPENS on, so a "Start for free" control
 // never presents a log-in form. Defaults to false.
-export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, onSuccess, onDismiss }) {
+// `reset` opens on the password-reset form (the one "Forgot password" reaches).
+// Defaults to false.
+export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, reset: openAsReset = false, onSuccess, onDismiss }) {
   const { t } = useI18n()
-  const [mode, setMode] = useState(passwordOnly ? 'switch' : openAsSignup ? 'signup' : 'login')
+  const [mode, setMode] = useState(passwordOnly ? 'switch' : openAsReset ? 'reset' : openAsSignup ? 'signup' : 'login')
   const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   const dismissRef = useRef(onDismiss)
@@ -66,9 +68,10 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
   // The app's shared modal contract: focus trap, Escape, scroll lock, and focus
   // returned to whatever opened us. `initialFocus` keeps the landing spot this
   // dialog has always had: the fast path is one click on Continue with Google,
-  // and in switch mode the email is already filled, so it is the password.
+  // and in switch mode the email is already filled, so it is the password. The
+  // reset form has no Google button, so it starts at the email.
   const dialogRef = useModalDialog(requestDismiss, {
-    initialFocus: passwordOnly ? '#ui-login-password' : '.auth-google-btn',
+    initialFocus: passwordOnly ? '#ui-login-password' : openAsReset ? '#ui-login-email' : '.auth-google-btn',
   })
 
   const isEntry = mode === 'login' || mode === 'signup'

@@ -86,6 +86,7 @@ export const PAGE_TITLES = {
   '/projects': 'UI L4B | Projects',
   '/settings': 'UI L4B | Settings',
   '/login': 'UI L4B | Log in',
+  '/reset-password': 'UI L4B | Link expired',
   '/plans': 'UI L4B | Pricing & Plans',
   '/mobile': 'UI L4B | On mobile',
   '/tools': 'UI L4B | Tools',
@@ -172,6 +173,7 @@ export const PAGE_DESCRIPTIONS = {
   '/projects': 'Manage and organise your saved design projects. Access colour palettes, font selections, and exported assets.',
   '/settings': 'Customise your UI L4B experience. Manage theme, appearance, subscription, and account preferences.',
   '/login': 'Log in to UI L4B to keep your palettes, type scales and icon sets as projects.',
+  '/reset-password': 'This link has expired. Ask for a new one to carry on.',
   // 192 chars was ~35 over what Google renders, so the sentence that names what
   // Pro actually buys was the part being cut. Front-loaded and trimmed to 154.
   // The Spectrum design's own sentence for its "On mobile" screen, verbatim —

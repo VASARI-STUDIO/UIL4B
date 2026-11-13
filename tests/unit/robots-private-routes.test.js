@@ -35,7 +35,7 @@ const disallowed = robots
 // The prefixes the runtime itself treats as private, discovered THROUGH the
 // exported predicate rather than by importing a private constant — so this
 // tracks the behaviour the app has, not a list that could stop being used.
-const PRIVATE = ['/settings', '/projects', '/admin', '/login', '/checkout', '/onboarding', '/style-guide']
+const PRIVATE = ['/settings', '/projects', '/admin', '/login', '/checkout', '/onboarding', '/style-guide', '/reset-password']
 
 test('every route the runtime calls private is disallowed in robots.txt', () => {
   const missing = PRIVATE.filter((p) => !disallowed.includes(p))

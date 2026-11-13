@@ -26,10 +26,10 @@ test.describe('the 404 page', () => {
     watch(page, 'a visitor on a dead link who needs help')
     await go(page, '/nope-help-xyz')
     await expect(page.getByRole('heading', { level: 1, name: 'That page doesn’t exist' })).toBeVisible()
-    const help = page.locator('.nf-more').getByRole('link', { name: 'Help centre' })
+    const help = page.getByRole('navigation', { name: 'More ways back' }).getByRole('link', { name: 'Help centre' })
     await expect(help).toHaveAttribute('href', '/learn/help')
     const box = await help.boundingBox()
-    expect(box.height, 'the Help centre row is a 44px+ target').toBeGreaterThanOrEqual(44)
+    expect(box.height, 'the Help centre link is a 44px+ target').toBeGreaterThanOrEqual(44)
   })
 })
 

@@ -34,7 +34,7 @@ export const SITE_ORIGIN = 'https://uil4b.com'
 // parked behind the admin gate (/discover/prompts).
 // Landing on any of these from a search result is a dead end.
 const PRIVATE_PREFIXES = Object.freeze([
-  '/settings', '/projects', '/admin', '/login', '/checkout', '/onboarding', '/style-guide',
+  '/settings', '/projects', '/admin', '/login', '/checkout', '/onboarding', '/style-guide', '/reset-password',
   '/discover/prompts',
 ])
 

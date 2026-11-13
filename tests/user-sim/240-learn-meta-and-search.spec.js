@@ -31,7 +31,7 @@ async function lineEdges(page, itemSelector) {
       if (!lines.has(key)) lines.set(key, [])
       lines.get(key).push(el)
     }
-    const host = items[0].closest('.trail, .lart-meta')
+    const host = items[0].closest('.trail, .ed-trail, .lart-meta')
     const hostBox = host.getBoundingClientRect()
     return [...lines.values()].map((els) => {
       const first = els[0]
@@ -55,17 +55,18 @@ for (const vp of WIDTHS) {
     const page = await ctx.newPage()
     watch(page, 'a visitor who followed a dead link on a phone')
     await go(page, '/no-such-page-for-trail-check')
-    await expect(page.locator('.nf-more .trail-item')).toHaveCount(4)
-    // The separators are drawn by the stylesheet, so no dot is text in the row:
-    // a dot typed between the links cannot be told apart from a link at a wrap.
-    expect(await page.locator('.nf-more').innerText(), 'a separator dot is typed into the link row').not.toContain('·')
-    const lines = await lineEdges(page, '.nf-more .trail-item')
+    // A guest gets two ways back under the actions: report the link, or the help centre.
+    await expect(page.locator('.ed-trail .ed-tl')).toHaveCount(2)
+    // No separator dot is typed between the links: one cannot be told apart from
+    // a link at a wrap.
+    expect(await page.locator('.ed-trail').innerText(), 'a separator dot is typed into the link row').not.toContain('·')
+    const lines = await lineEdges(page, '.ed-trail .ed-tl')
     for (const l of lines) {
       expect(l.endsOnDot, `a line ends on a separator: ${l.text}`).toBe(false)
       expect(l.startDotVisible, `a line starts on a visible separator: ${l.text}`).toBe(false)
     }
     // Every link is a 44px target on a touch device, 24px at least otherwise.
-    const heights = await page.locator('.nf-more a').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height))
+    const heights = await page.locator('.ed-trail a').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height))
     for (const h of heights) expect(h).toBeGreaterThanOrEqual(24)
     await ctx.close()
   })
