@@ -828,7 +828,7 @@ test('S5 / S10 · the FAB never permanently covers a control', async ({ browser 
 test('S5 / S10 · /sitemap draws no feedback FAB', async ({ browser }) => {
   budget(2)
   for (const [w, h] of [[390, 844], [1440, 900]]) {
-    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.spt-row')
+    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.mk-row')
     const fabs = await page.locator('.global-feedback-btn').count()
     await ctx.close()
     expect(fabs, `${w}x${h}: /sitemap draws the feedback FAB`).toBe(0)
@@ -845,10 +845,10 @@ test('S10 · every /sitemap row is a full-width target at least 44px tall', asyn
   budget(SMAP_ROW_SHAPES.length)
   const damage = []
   for (const [w, h] of SMAP_ROW_SHAPES) {
-    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.spt-row')
+    const { ctx, page } = await open(browser, w, h, '/sitemap', 'a.mk-row')
     await settle(page)
     const { rows, bad } = await page.evaluate(() => {
-      const links = [...document.querySelectorAll('li[data-route] > a.spt-row')]
+      const links = [...document.querySelectorAll('li[data-route] > a.mk-row')]
       const bad = []
       for (const a of links) {
         const r = a.getBoundingClientRect()

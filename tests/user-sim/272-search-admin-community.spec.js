@@ -277,7 +277,7 @@ test.describe('the sitemap Home row', () => {
     await expect(row).toHaveCount(1)
     await expect(row.locator('b')).toHaveText('Home')
     await expect(row.locator('a')).toHaveAttribute('href', '/')
-    await expect(row.locator('.spt-note')).toContainText('front page')
+    await expect(row.locator('.mk-note')).toContainText('front page')
     await expect(page.locator('li[data-route="/home"]'), 'nothing points at the duplicate URL').toHaveCount(0)
     await row.locator('a').click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/')

@@ -99,9 +99,17 @@ test.describe('/info', () => {
       const x = await page.locator('.ic-intro-close').boundingBox()
       const body = await page.locator('.ic-intro-body').boundingBox()
       const box = await intro.boundingBox()
+      // The V3 close is a 36px circle with a 44px touch strip (`::after`).
       // MUTATION: put `width/height: 32px` back on `.ic-intro-close`.
-      expect(x.width, 'X width').toBeGreaterThanOrEqual(44)
-      expect(x.height, 'X height').toBeGreaterThanOrEqual(44)
+      expect(x.width, 'X width').toBeGreaterThanOrEqual(36)
+      expect(x.height, 'X height').toBeGreaterThanOrEqual(36)
+      // MUTATION: delete `.ic-intro-close::after` in info.css.
+      const strip = await page.locator('.ic-intro-close').evaluate((el) => {
+        const s = getComputedStyle(el, '::after')
+        return { w: parseFloat(s.width), h: parseFloat(s.height) }
+      })
+      expect(strip.w, 'touch strip width').toBeGreaterThanOrEqual(44)
+      expect(strip.h, 'touch strip height').toBeGreaterThanOrEqual(44)
       // MUTATION: put `align-items: flex-start` back on `.ic-intro`.
       const dy = Math.abs((x.y + x.height / 2) - (body.y + body.height / 2))
       expect(dy, 'the X and the text share a midline').toBeLessThanOrEqual(1)
@@ -124,10 +132,10 @@ test.describe('/info', () => {
       }
     })
     // MUTATION: delete the `.ic-jump.menu-select-trigger` block in info.css.
-    expect([cs.top, cs.left, cs.right], 'no box around the select').toEqual([0, 0, 0])
-    expect(cs.bottom, 'one hairline under it').toBeGreaterThan(0)
-    expect(cs.radius).toBe(0)
-    expect(cs.bg, 'no fill').toBe('rgba(0, 0, 0, 0)')
+    // V3: a tonal field, no borders at all, radius 12.
+    expect([cs.top, cs.left, cs.right, cs.bottom], 'no borders on the select').toEqual([0, 0, 0, 0])
+    expect(cs.radius).toBe(12)
+    expect(cs.bg, 'a tonal fill').not.toBe('rgba(0, 0, 0, 0)')
     const box = await jump.boundingBox()
     expect(box.height, 'still a 48px target').toBeGreaterThanOrEqual(47.5)
     await ctx.close()

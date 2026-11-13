@@ -56,21 +56,21 @@ test.describe('/sitemap keeps every route inside its row', () => {
         const misaligned = []
         let checked = 0
         for (const li of document.querySelectorAll('li[data-route]')) {
-          const row = li.querySelector('.spt-row')
-          const text = row && row.querySelector('.spt-row-text')
-          const route = text && text.querySelector('.spt-route')
+          const row = li.querySelector('.mk-row')
+          const text = row && row.querySelector('.mk-row-text')
+          const route = text && text.querySelector('.mk-route')
           if (!route) continue
           checked++
           const rowBox = row.getBoundingClientRect()
           const textBox = text.getBoundingClientRect()
           // Every segment must sit inside the row's text column, which is itself inside the row.
-          for (const seg of route.querySelectorAll('.spt-route-seg')) {
+          for (const seg of route.querySelectorAll('.mk-route-seg')) {
             const b = seg.getBoundingClientRect()
             const over = Math.max(b.right - textBox.right, textBox.left - b.left, b.right - rowBox.right)
             if (over > 0.5) escaped.push(`${li.getAttribute('data-route')} ${seg.textContent} overflows by ${over.toFixed(1)}px`)
           }
           // The title, note and route share one left edge.
-          const lefts = [text.querySelector('.spt-lbl'), text.querySelector('.spt-note'), route]
+          const lefts = [text.querySelector('.mk-lbl'), text.querySelector('.mk-note'), route]
             .filter(Boolean).map((el) => el.getBoundingClientRect().left)
           if (Math.max(...lefts) - Math.min(...lefts) > 0.5) misaligned.push(`${li.getAttribute('data-route')} lines start at ${lefts.map((n) => n.toFixed(1)).join(' / ')}`)
         }
@@ -123,8 +123,8 @@ test.describe('/sitemap keeps every route inside its row', () => {
       await go(page, '/sitemap')
       await settle(page)
       const rows = await page.evaluate(() => Array.from(document.querySelectorAll('li[data-route]')).map((li) => {
-        const route = li.querySelector('.spt-route')
-        const els = route ? [route, ...route.querySelectorAll('.spt-route-seg')] : []
+        const route = li.querySelector('.mk-route')
+        const els = route ? [route, ...route.querySelectorAll('.mk-route-seg')] : []
         return {
           declared: li.getAttribute('data-route'),
           shown: route ? route.textContent.trim() : null,

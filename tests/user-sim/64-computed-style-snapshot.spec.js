@@ -170,10 +170,10 @@ const ADDED_SELECTORS = {
     '.tsk-route', '.tsk-rider', '.tsk-foot'],
   // /sitemap now wears the /tools shell and none of its old class names exist, so the
   // frozen list would keep only the few shell classes. These are the page's own hooks.
-  '/sitemap': ['.spm-intro', '.spm-h1', '.spm-lede', '.spt-section', '.spt-h2', '.spt-sub', '.spt-group', '.spt-rail',
-    '.spt-gtile', '.spt-gmeta', '.spt-gdesc', '.spt-rows', '.spt-row', '.spt-row--text', '.spt-thumb', '.spt-row-text',
-    '.spt-lbl', '.spt-note', '.spt-route', '.spt-route-seg', '.spt-row-go', '.spt-cols', '.spt-col', '.sp-footer',
-    '.spm-hero', '.spm-hero-copy', '.spm-spacer', '.sp-grain', '.spectrum', '.spt-section--last', '.spt-art', '.sp-footer-inner',
+  '/sitemap': ['.mk-intro', '.mk-intro-copy', '.mk-h1', '.mk-lead', '.mk-sec', '.mk-h2', '.mk-sub', '.mk-group', '.mk-rail',
+    '.mk-gtile', '.mk-gmeta', '.mk-gdesc', '.mk-rows', '.mk-row', '.mk-row--text', '.mk-thumb', '.mk-row-text',
+    '.mk-lbl', '.mk-note', '.mk-route', '.mk-route-seg', '.mk-row-go', '.mk-cols', '.mk-col', '.sp-footer',
+    '.mk-spacer', '.mk-wrap', '.spectrum', '.mk-sec--last', '.mk-soon', '.sp-footer-inner',
     '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-cta', '.sp-footer-col', '.sp-footer-col-h'],
   // /learn/help is a job list beside one answer. The old section and answer
   // classes are gone; these are the router's own hooks. The stage is painted

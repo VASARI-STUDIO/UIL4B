@@ -232,14 +232,16 @@ for (const width of WIDTHS) {
 }
 
 test.describe('/info on a wide screen', () => {
-  test('the sticky rail is back, with 44px rows, and the jump button is gone', async ({ browser }) => {
+  test('the sticky rail is back, with 14px rows a pointer can hit, and the jump button is gone', async ({ browser }) => {
     const { ctx, page } = await open(browser, 1280, 'light', '/info', { touch: false })
     await expect(page.locator('.ic-toc')).toBeVisible()
     await expect(page.locator('.ic-jump')).toBeHidden()
-    const heights = await page.locator('.ic-toc .cpg-rail-row').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height))
+    const heights = await page.locator('.ic-toc .ic-rail-row').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height))
     expect(heights.length, 'the rail lists 14 links').toBe(14)
-    // MUTATION: drop `.ic-wrap .ic-toc .cpg-rail-row { min-height: 44px }` in info.css and this fails (the rows are 36px).
-    expect(Math.min(...heights)).toBeGreaterThanOrEqual(43.5)
+    // The V3 rail rows are 14px/1.45 text with 6px above and below (about 32px); a coarse
+    // pointer gets 44px from `@media (pointer: coarse)` in info.css. This run has no touch.
+    // MUTATION: drop the `padding: 6px 0 6px 12px` on `.ic-rail-row` in info.css and this fails.
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(31.5)
     await ctx.close()
   })
 })
