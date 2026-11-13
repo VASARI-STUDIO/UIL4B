@@ -589,6 +589,9 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await expect(exportPanel(page)).toBeVisible()
     await chooseFormat(page, 'guidelines')
+    // The guidelines open on Label, a Free theme; a Pro theme is what locks the document.
+    await page.getByRole('button', { name: /^Change theme, current / }).click()
+    await page.getByRole('listbox', { name: 'Theme' }).getByRole('option', { name: /^Studio\b/ }).click()
     await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
     await expect(categoryRadio(page, 'Slides'), 'and the rail names the document it locks').toHaveAccessibleName('Slides, 16:9, Pro')
     await expect(primaryButton(page)).toHaveText('Unlock with Pro')
