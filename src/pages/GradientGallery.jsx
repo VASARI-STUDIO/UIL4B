@@ -6,22 +6,22 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
-import GalleryEndGate, { GateFadeRows } from '../components/library/GalleryEndGate'
+import LibraryGate from '../components/library/LibraryGate'
 import { reportUpgradeGate } from '../contexts/ProModalContext'
-import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { useProLibrary } from '../hooks/useProLibrary'
 import { GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_GRADIENT_ROWS } from '../data/gradientLibrary'
 import { LIBRARY_RULES } from '../utils/libraryRules'
-import { standinGradients } from '../utils/gateStandins'
-import { openGradientRows, matchesGradientFacets } from '../utils/gradientMoods'
+import { matchesGradientFacets } from '../utils/gradientMoods'
+import { countGallery, gateFor, gradientPublicMatch } from '../utils/galleryCounts'
+import { filterNoun } from '../utils/galleryFilterNoun'
 import { countLegacyGradientSubmissions, sanitizeGradientSubmission, removeLegacyGradientSubmission } from '../utils/gradientSubmissions'
 import { listMySubmissions, deleteSubmission } from '../utils/communityQueueApi'
 import useGradientSubmissionMigration from '../hooks/useGradientSubmissionMigration'
 import LegacyGradientsPrompt from '../components/LegacyGradientsPrompt'
-import { splitLockedLibrary, accountTierGain, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
+import { splitLockedLibrary, freeOpens, galleryLimit, galleryTier, tierSentence } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -73,9 +73,6 @@ const TYPE_OPTIONS = [
   { id: 'all', label: 'All types' },
   ...TYPES.map(t => ({ id: t, label: t })),
 ]
-
-// Neutral gradients for the gate's faded cards where the next ones are Pro's.
-const GRADIENT_STANDINS = standinGradients()
 
 export default function GradientGallery({ toast }) {
   const { user, loading: authLoading } = useAuth()
@@ -187,7 +184,7 @@ export default function GradientGallery({ toast }) {
   // the grid: the haystack below indexes every stop's HEX, so filtering the
   // full collection would let a signed-out visitor confirm a withheld
   // gradient's colours by typing them, and read its name back from the result.
-  const { open: browsable, next: nextOpen, remaining: lockedCount, eligible } = useMemo(() => (
+  const split = useMemo(() => (
     // A gradient's NAME is the tease and its stops are the product — the same
     // split as a brand palette, and the opposite of a community prompt, whose
     // title IS the thing being sold. `slots` is the stop count: how many values
@@ -199,17 +196,24 @@ export default function GradientGallery({ toast }) {
       limit: galleryLimit(tier),
     })
   ), [rows, ready, tier])
+  const { open: browsable, remaining: lockedCount, eligible } = split
 
-  const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
-
-  const visible = useMemo(() => browsable.filter(g => {
-    if (!matchesGradientFacets(g, tag, types)) return false
-    if (query) {
+  // COUNTED OVER THE WHOLE LIBRARY (utils/galleryCounts.js), not over `browsable`
+  // alone. A filter whose matches all sit behind the tier used to read "0
+  // gradients" with an empty state and no gate. Now S is what this viewer has,
+  // T every match in the library, and the gate speaks for the difference. A row
+  // the viewer cannot open is matched on public facets only (never its colours,
+  // never a typed query against its stops), so no count here is an oracle.
+  const counts = useMemo(() => countGallery(rows, split, {
+    matchOpen: (g) => {
+      if (!matchesGradientFacets(g, tag, types)) return false
+      if (!query) return true
       const hay = `${g.name} ${g.type} ${g.tags.join(' ')} ${g.stops.map(s => s.color).join(' ')}`.toLowerCase()
-      if (!hay.includes(query)) return false
-    }
-    return true
-  }), [browsable, query, tag, types])
+      return hay.includes(query)
+    },
+    matchPublic: gradientPublicMatch({ tag, types, query }),
+  }), [rows, split, tag, types, query])
+  const visible = counts.open
 
   // Resetting leaves focus in the search field, so the next keystroke starts a
   // new search instead of landing on a button that has just left the page.
@@ -225,65 +229,23 @@ export default function GradientGallery({ toast }) {
     }
   }
 
-  // When a signed-out visitor's mood or type filter comes up empty, say so if
-  // the cap is the reason: a free account opens more rows, and some of them fit.
-  // Counted over the free tier's open rows by mood and type ONLY. A typed search
-  // is deliberately left out — it indexes hex values, so reporting whether
-  // withheld rows match it would be the oracle the gate above exists to close.
-  // Mood and type are public facets, so the count discloses nothing new.
-  //
-  // While auth is still resolving the tier reads anonymous even for a signed-in
-  // account, so nothing is claimed (and no sign-in action offered) until it has.
-  const accountMatches = useMemo(() => {
-    if (authLoading || tier !== 'anonymous' || query) return 0
-    if (tag === 'all' && types.includes('all')) return 0
-    return openGradientRows(rows, 'free').filter(g => matchesGradientFacets(g, tag, types)).length
-  }, [authLoading, tier, query, tag, types, rows])
-
-  // The teased tail. Shown only while the view is unnarrowed: under a search or
-  // a filter the visitor has asked a narrower question, and answering it with a
-  // paywall is an interruption rather than an offer (same rule as the Palette
-  // and Prompt libraries).
-  //
-  // The end of the open gradients is the shared gate (GalleryEndGate) over two faded
-  // rows of this gallery's cards, never a Pro gradient: a withheld
-  // gradient's name, stops and thumbnail never reach the page.
+  // The gate shows whenever the viewer is withheld a match, under a filter too: a
+  // narrower question that the cap answers with "none" is exactly when the way
+  // on is wanted. Never while a Pro library is on its way.
   const anonymous = tier === 'anonymous'
-  const teaseVisible = !proPending && lockedCount > 0 && !query && tag === 'all' && types.includes('all')
+  const gate = gateFor({ tier, counts, pending: proPending })
   // Where the viewer stands on the ladder, in words, for the wall and the close.
   const ladderLine = tierSentence({ tier, shown: browsable.length, total: rows.length, eligible, noun: 'gradients' })
-  const copy = GALLERY_GATE_COPY.gradients
   // What a free account opens in all; the gate names it, not the count on screen.
   const opens = freeOpens({ eligible })
-  // The faded cards behind the gate, drawn by this gallery's own grid: the next
-  // gradients a free account opens, or neutral stand-ins where they are Pro's.
-  const fadeOf = (rows) => (
-    <GateFadeRows items={rows.length ? rows : GRADIENT_STANDINS} render={(slice) => <GradientGalleryGrid gradients={slice} />} />
-  )
-  const lockedBlock = teaseVisible ? (
-    anonymous && accountAdds > 0 ? (
-      <GalleryEndGate
-        kind="anon"
-        id="grg-gate-h"
-        heading={copy.anon.heading(opens)}
-        body={copy.anon.body(browsable.length, rows.length, opens)}
-        // The same sign-in flow the icon library's gate opens.
-        primary={{ label: copy.anon.action, onClick: () => requireLogin('browse more of the gradient library') }}
-        secondary={{ label: copy.anon.secondary, to: '/plans' }}
-        fade={fadeOf(nextOpen)}
-      />
-    ) : (
-      <GalleryEndGate
-        kind="pro"
-        id="grg-gate-h"
-        heading={copy.pro.heading(lockedCount)}
-        body={copy.pro.body(browsable.length, rows.length, lockedCount)}
-        primary={{ label: copy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('gradient-library-tier-lock') }}
-        fade={fadeOf([])}
-      />
-    )
-  ) : null
-
+  // What a filter leaves, as a noun, for the count line and the gate.
+  const nounFilters = {
+    type: !types.includes('all') && types.length === 1 ? types[0] : null,
+    many: !types.includes('all') && types.length > 1,
+    mood: tag !== 'all' ? MOOD_OPTIONS.find(o => o.id === tag)?.label : null,
+    query: rawQuery,
+  }
+  const nounFor = (count) => filterNoun('gradients', nounFilters, count)
   return (
     <div ref={root} className="sec lib-surface lib-v3 grg-wrap">
       {/* NO `description`: the sentence here ran
@@ -448,12 +410,15 @@ export default function GradientGallery({ toast }) {
         <DiscoverResultHead
           eyebrow="Curated collection"
           title="Gradients worth building with"
-          // No count while a Pro library is on its way: the number of free
-          // rows would be the wrong one. Otherwise the whole library's size sits
-          // beside the part this viewer has, on the unnarrowed view only.
-          count={proPending ? undefined : visible.length}
-          total={teaseVisible ? rows.length : undefined}
-          noun="gradient"
+          // No count while a Pro library is on its way: the number of free rows
+          // would be the wrong one. Otherwise S is what this viewer has and T the
+          // whole library's matches, under every filter. Where the locked rows
+          // cannot say whether they match (their stubs lack the facet) T is only
+          // a floor, so it is left off, and with nothing shown the line goes.
+          count={proPending || (counts.lockedUnknown && counts.S === 0) ? undefined : counts.S}
+          total={counts.lockedUnknown ? undefined : counts.T}
+          noun={nounFor(1)}
+          nounPlural={nounFor(2)}
           id="grg-grid-heading"
         />
 
@@ -463,28 +428,17 @@ export default function GradientGallery({ toast }) {
 
         {visible.length > 0 ? (
           <GradientGalleryGrid toast={toast} gradients={visible} />
-        ) : proPending ? null : (
+        ) : proPending || counts.T > 0 || counts.lockedUnknown ? null : (
           // The reset is unconditional now. It used to render only when the page
           // could prove a filter was set, which hid it in precisely the case
-          // where working out what to undo by hand was hardest.
+          // where working out what to undo by hand was hardest. Shown only when
+          // the whole library holds no match: a match behind the tier is the
+          // gate's to answer, never an empty state.
           <LibraryEmpty
             className="grg-empty"
-            title={accountMatches > 0
-              ? 'Nothing open to you matches those filters.'
-              : `No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
-            detail={accountMatches > 0
-              ? `Signed out, you can browse ${browsable.length} of the ${rows.length} gradients. A free account opens ${accountMatches} that ${accountMatches === 1 ? 'fits' : 'fit'} these filters.`
-              : 'Try a broader search, or reset the mood and type filters to see all of them again.'}
+            title={query ? `No gradients match “${rawQuery.trim()}”.` : 'Nothing in the library matches those filters.'}
+            detail="Try a broader search, or reset the mood and type filters to see all of them again."
             onClear={clearAll}
-            action={accountMatches > 0 ? (
-              <button
-                type="button"
-                className="btn btn-accent"
-                onClick={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
-              >
-                {`Open ${accountMatches === 1 ? 'it' : accountMatches} with a free account`}
-              </button>
-            ) : null}
           />
         )}
       </section>
@@ -492,7 +446,17 @@ export default function GradientGallery({ toast }) {
       {/* The tier wall, after the grid and before the closing line — the reading
           order Savee's paywall uses and the one the Palette and Prompt libraries
           already run: what you have, then a glimpse of more, then how to get it. */}
-      {lockedBlock}
+      <LibraryGate
+        kind="gradients"
+        id="grg-gate-h"
+        gate={gate}
+        counts={counts}
+        opens={opens}
+        nounFor={nounFor}
+        onSignup={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
+        onLogin={() => requireLogin('browse more of the gradient library', { free: true })}
+        onPlans={() => reportUpgradeGate('gradient-library-tier-lock')}
+      />
 
       {/* The closing line, last child of the page. Same reasoning as the Palette
           Library: the Gradient Generator is where a gradient gets made, so the
@@ -507,7 +471,7 @@ export default function GradientGallery({ toast }) {
           action="Make your own"
           to="/create/gradient"
         />
-      ) : !teaseVisible && !proPending && lockedCount > 0 ? (
+      ) : !gate && !proPending && lockedCount > 0 ? (
         // A signed-out visitor's next step is the free account, with the same
         // numbers the wall states; a free account's next step is Pro.
         anonymous ? (
