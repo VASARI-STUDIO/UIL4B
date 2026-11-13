@@ -21,16 +21,19 @@
 //
 // GROUP_STYLE_PACKS lists the packs that meet the rule, with the stroke weight
 // each draws natively. tests/unit/icon-groups.test.js checks every icon id
-// against a recorded snapshot of the real glyph data
-// (tests/unit/fixtures/icon-groups-snapshot.json, written by
-// scripts/snapshot-icon-groups.mjs): the id exists, the viewBox is 24, the
-// glyph is stroked on currentColor, and caps and joins are round.
+// (free groups here, Pro groups from the library resolver) against a recorded
+// snapshot of the real glyph data (tests/unit/fixtures/icon-groups-snapshot.json,
+// written by scripts/snapshot-icon-groups.mjs): the id exists, the viewBox is
+// 24, the glyph is stroked on currentColor, and caps and joins are round.
 //
 // ── Who sees which group ────────────────────────────────────────────────────
 //
 // `access: 'free'` groups open for every viewer, signed out included; taking
 // the files away still goes through the account gate (useExportGate).
-// `access: 'pro'` groups open on Pro only. On top of that, a group is only
+// `access: 'pro'` groups open on Pro only, and ship here as a stub (name,
+// count, packs) with no icon ids: a Pro account fetches the lists from
+// /api/ai?library=icongroups and withProIcons() puts them back in place. On
+// top of that, a group is only
 // open when the viewer may see EVERY pack it draws from
 // (src/data/iconPackTiers.js) — so a group can never be the way a gated pack's
 // glyphs reach a viewer. glyphRequestPlan() is the only source of names the
@@ -55,6 +58,7 @@ export const DEFAULT_GROUP_STROKE = 2
 const STYLE = Object.freeze({ grid: 24, stroke: DEFAULT_GROUP_STROKE, cap: 'round', join: 'round' })
 
 const group = (id, label, access, icons) => Object.freeze({ id, label, access, style: STYLE, icons: Object.freeze(icons) })
+const stub = (id, label, count, packs) => Object.freeze({ id, label, access: 'pro', style: STYLE, count, packs: Object.freeze(packs) })
 
 export const PREMADE_ICON_GROUPS = Object.freeze([
   group('wayfinding', 'Wayfinding', 'free', [
@@ -87,152 +91,23 @@ export const PREMADE_ICON_GROUPS = Object.freeze([
     'lucide:sun', 'lucide:moon', 'lucide:languages', 'lucide:refresh-cw',
     'tabler:adjustments', 'tabler:adjustments-horizontal', 'tabler:device-desktop-cog', 'tabler:fingerprint',
   ]),
-  group('commerce', 'Commerce', 'pro', [
-    'lucide:shopping-cart', 'lucide:shopping-bag', 'lucide:shopping-basket', 'lucide:store',
-    'lucide:credit-card', 'lucide:wallet', 'lucide:receipt', 'lucide:tag',
-    'lucide:tags', 'lucide:percent', 'lucide:badge-percent', 'lucide:gift',
-    'lucide:package', 'lucide:package-check', 'lucide:truck', 'lucide:coins',
-    'lucide:banknote', 'lucide:scan-barcode', 'lucide:hand-coins', 'lucide:piggy-bank',
-    'tabler:shopping-cart-plus', 'tabler:shopping-cart-x', 'tabler:credit-card-refund', 'tabler:receipt-refund',
-    'tabler:discount', 'tabler:building-store', 'iconoir:cart-plus', 'iconoir:cart-minus',
-  ]),
-  group('communication', 'Communication', 'pro', [
-    'lucide:mail', 'lucide:mail-open', 'lucide:inbox', 'lucide:send',
-    'lucide:reply', 'lucide:reply-all', 'lucide:forward', 'lucide:at-sign',
-    'lucide:message-circle', 'lucide:message-square', 'lucide:messages-square', 'lucide:message-square-more',
-    'lucide:phone', 'lucide:phone-call', 'lucide:phone-off', 'lucide:video',
-    'lucide:video-off', 'lucide:voicemail', 'lucide:megaphone', 'lucide:contact',
-    'lucide:paperclip', 'tabler:mail-forward', 'tabler:message-2', 'tabler:message-dots',
-    'tabler:phone-incoming', 'tabler:phone-outgoing', 'iconoir:chat-bubble', 'iconoir:chat-lines',
-  ]),
-  group('files', 'Files & data', 'pro', [
-    'lucide:file', 'lucide:file-text', 'lucide:file-plus', 'lucide:file-minus',
-    'lucide:file-check', 'lucide:file-x', 'lucide:files', 'lucide:folder',
-    'lucide:folder-open', 'lucide:folder-plus', 'lucide:archive', 'lucide:clipboard',
-    'lucide:clipboard-list', 'lucide:database', 'lucide:hard-drive-download', 'lucide:download',
-    'lucide:upload', 'lucide:cloud', 'lucide:cloud-upload', 'lucide:cloud-download',
-    'lucide:table', 'lucide:sheet', 'lucide:chart-bar', 'lucide:chart-line',
-    'lucide:chart-pie', 'tabler:file-zip', 'tabler:file-export', 'tabler:file-import',
-    'tabler:database-export', 'tabler:table-export',
-  ]),
-  group('social', 'Social', 'pro', [
-    'lucide:heart', 'lucide:thumbs-up', 'lucide:thumbs-down', 'lucide:star',
-    'lucide:bookmark', 'lucide:share', 'lucide:share-2', 'lucide:repeat-2',
-    'lucide:message-circle', 'lucide:user', 'lucide:users', 'lucide:user-plus',
-    'lucide:user-check', 'lucide:user-minus', 'lucide:at-sign', 'lucide:hash',
-    'lucide:link', 'lucide:smile', 'lucide:flag', 'lucide:eye',
-    'lucide:trending-up', 'lucide:rss', 'tabler:brand-x', 'tabler:brand-instagram',
-    'tabler:brand-facebook', 'tabler:brand-linkedin', 'tabler:brand-youtube', 'tabler:brand-tiktok',
-    'tabler:brand-github', 'tabler:brand-threads', 'tabler:brand-bluesky', 'tabler:brand-pinterest',
-  ]),
-  group('editor', 'Editor & text', 'pro', [
-    'lucide:bold', 'lucide:italic', 'lucide:underline', 'lucide:strikethrough',
-    'lucide:heading-1', 'lucide:heading-2', 'lucide:heading-3', 'lucide:pilcrow',
-    'lucide:type', 'lucide:quote', 'lucide:code', 'lucide:list',
-    'lucide:list-ordered', 'lucide:list-checks', 'lucide:align-left', 'lucide:align-center',
-    'lucide:align-right', 'lucide:align-justify', 'lucide:indent-increase', 'lucide:indent-decrease',
-    'lucide:link', 'lucide:unlink', 'lucide:image', 'lucide:table',
-    'lucide:undo-2', 'lucide:redo-2', 'lucide:highlighter', 'lucide:eraser',
-    'lucide:subscript', 'lucide:superscript', 'tabler:text-size', 'tabler:clear-formatting',
-  ]),
-  group('weather', 'Weather', 'pro', [
-    'lucide:sun', 'lucide:moon', 'lucide:cloud', 'lucide:cloud-sun',
-    'lucide:cloud-moon', 'lucide:cloud-rain', 'lucide:cloud-drizzle', 'lucide:cloud-snow',
-    'lucide:cloud-lightning', 'lucide:cloud-fog', 'lucide:cloud-hail', 'lucide:cloudy',
-    'lucide:snowflake', 'lucide:wind', 'lucide:tornado', 'lucide:rainbow',
-    'lucide:umbrella', 'lucide:thermometer', 'lucide:thermometer-sun', 'lucide:thermometer-snowflake',
-    'lucide:droplets', 'lucide:sunrise', 'lucide:sunset', 'lucide:haze',
-    'tabler:temperature-celsius', 'tabler:temperature-fahrenheit', 'tabler:uv-index', 'tabler:wind-electricity',
-  ]),
-  group('status', 'Status & alerts', 'pro', [
-    'lucide:circle-check', 'lucide:circle-x', 'lucide:circle-alert', 'lucide:triangle-alert',
-    'lucide:info', 'lucide:circle-question-mark', 'lucide:circle-dot', 'lucide:circle-dashed',
-    'lucide:circle-pause', 'lucide:circle-stop', 'lucide:loader', 'lucide:loader-circle',
-    'lucide:hourglass', 'lucide:clock', 'lucide:ban', 'lucide:shield-alert',
-    'lucide:badge-check', 'lucide:badge-alert', 'lucide:bell-ring', 'lucide:check',
-    'lucide:x', 'lucide:plus', 'lucide:minus', 'lucide:octagon-alert',
-    'tabler:progress', 'tabler:progress-check', 'tabler:progress-alert', 'tabler:alert-hexagon',
-  ]),
-  // ── Added from handover/specs/icon-group-use-cases-2026-11-06.md ───────────
-  // Every name below was checked against the pack's own icon list
-  // (public/iconify/collections/<pack>.json) and its glyph data. All of them are
-  // Pro: the free allowance stays at three groups (see icon-groups.test.js).
-  group('dashboard', 'Dashboard & analytics', 'pro', [
-    'lucide:layout-dashboard', 'lucide:layout-grid', 'lucide:panel-left', 'lucide:gauge',
-    'lucide:circle-gauge', 'lucide:activity', 'lucide:trending-up', 'lucide:trending-down',
-    'lucide:target', 'lucide:funnel', 'lucide:list-filter', 'lucide:search',
-    'lucide:calendar-days', 'lucide:users', 'lucide:chart-column', 'lucide:chart-area',
-    'lucide:kanban', 'lucide:columns-3', 'lucide:table-2', 'lucide:sigma',
-    'tabler:dashboard', 'tabler:report-analytics', 'tabler:chart-donut', 'tabler:chart-radar',
-    'tabler:chart-candle', 'tabler:timeline', 'tabler:chart-arcs',
-  ]),
-  group('app-navigation', 'App navigation', 'pro', [
-    'lucide:house', 'lucide:search', 'lucide:bell', 'lucide:circle-user-round',
-    'lucide:menu', 'lucide:ellipsis', 'lucide:plus', 'lucide:circle-plus',
-    'lucide:heart', 'lucide:bookmark', 'lucide:settings', 'lucide:compass',
-    'lucide:map-pin', 'lucide:message-circle', 'lucide:inbox', 'lucide:calendar',
-    'lucide:camera', 'lucide:library', 'lucide:shopping-bag', 'lucide:wallet',
-    'lucide:log-in', 'lucide:log-out', 'lucide:list', 'tabler:apps',
-    'tabler:menu-2', 'tabler:dots-vertical',
-  ]),
-  group('code', 'Code & terminal', 'pro', [
-    'lucide:terminal', 'lucide:square-terminal', 'lucide:code', 'lucide:code-xml',
-    'lucide:braces', 'lucide:file-code', 'lucide:git-branch', 'lucide:git-commit-horizontal',
-    'lucide:git-merge', 'lucide:git-pull-request', 'lucide:git-fork', 'lucide:bug',
-    'lucide:webhook', 'lucide:server', 'lucide:database', 'lucide:container',
-    'lucide:cpu', 'lucide:command', 'lucide:binary', 'lucide:regex',
-    'lucide:variable', 'lucide:package', 'lucide:book-open', 'tabler:api',
-    'tabler:api-app', 'tabler:brackets-contain', 'tabler:git-compare',
-  ]),
-  group('portfolio', 'Portfolio & creative', 'pro', [
-    'lucide:briefcase', 'lucide:pen-tool', 'lucide:camera', 'lucide:image',
-    'lucide:film', 'lucide:clapperboard', 'lucide:paintbrush', 'lucide:layers',
-    'lucide:layout-template', 'lucide:award', 'lucide:trophy', 'lucide:user',
-    'lucide:mail', 'lucide:globe', 'lucide:link', 'lucide:folder-open',
-    'lucide:lightbulb', 'lucide:sparkles', 'lucide:ruler', 'lucide:crop',
-    'lucide:aperture', 'lucide:presentation', 'lucide:graduation-cap', 'lucide:external-link',
-    'tabler:palette', 'tabler:color-swatch', 'tabler:vector-bezier', 'tabler:typography',
-    'tabler:certificate', 'tabler:file-cv',
-  ]),
-  group('events', 'Events & tickets', 'pro', [
-    'lucide:calendar-check', 'lucide:calendar-plus', 'lucide:calendar-clock', 'lucide:clock',
-    'lucide:ticket', 'lucide:ticket-check', 'lucide:map-pin', 'lucide:map-pinned',
-    'lucide:users', 'lucide:user-plus', 'lucide:mic-vocal', 'tabler:music',
-    'lucide:party-popper', 'lucide:megaphone', 'lucide:bell', 'lucide:share-2',
-    'lucide:qr-code', 'lucide:utensils', 'lucide:coffee', 'lucide:wine',
-    'lucide:plane', 'lucide:hotel', 'lucide:handshake', 'lucide:accessibility',
-    'tabler:confetti', 'tabler:calendar-event', 'tabler:building-stadium', 'tabler:microphone-2',
-    'tabler:parking',
-  ]),
-  // The brand groups draw the OUTLINE brand marks the style rule allows (Tabler's
-  // brand-* glyphs, Iconoir's brand glyphs). Simple Icons, Logos and Logo.dev are
-  // filled or coloured, so they stay in the library's Brand logos chip, not here.
-  // Linear has no outline mark in any group pack, so it is not in Tech brands.
-  group('tech-brands', 'Tech brands', 'pro', [
-    'tabler:brand-github', 'tabler:brand-gitlab', 'tabler:brand-figma', 'tabler:brand-slack',
-    'tabler:brand-notion', 'tabler:brand-vercel', 'tabler:brand-stripe', 'tabler:brand-apple',
-    'tabler:brand-windows', 'tabler:brand-aws', 'tabler:brand-azure', 'tabler:brand-dropbox',
-    'tabler:brand-zoom', 'tabler:brand-openai', 'tabler:brand-meta', 'tabler:brand-amazon',
-    'tabler:brand-cloudflare', 'tabler:brand-airtable', 'tabler:brand-asana', 'tabler:brand-jira',
-    'tabler:brand-trello', 'tabler:brand-supabase', 'iconoir:google', 'iconoir:discord',
-    'iconoir:telegram',
-  ]),
-  group('payment-brands', 'Payments & crypto', 'pro', [
-    'tabler:brand-stripe', 'tabler:brand-paypal', 'tabler:brand-visa', 'tabler:brand-mastercard',
-    'tabler:brand-alipay', 'tabler:brand-cashapp', 'tabler:brand-revolut', 'tabler:brand-paypay',
-    'tabler:brand-samsungpass', 'tabler:brand-binance', 'tabler:brand-coinbase', 'tabler:brand-tether',
-    'tabler:brand-stellar', 'tabler:brand-gumroad', 'tabler:brand-patreon', 'tabler:brand-kickstarter',
-    'iconoir:bitcoin-circle', 'iconoir:ethereum-circle', 'iconoir:litecoin-circle', 'iconoir:dogecoin-circle',
-  ]),
-  group('developer-tools', 'Languages & frameworks', 'pro', [
-    'tabler:brand-git', 'tabler:brand-github-copilot', 'tabler:brand-docker', 'tabler:brand-npm',
-    'tabler:brand-nodejs', 'tabler:brand-python', 'tabler:brand-javascript', 'tabler:brand-typescript',
-    'tabler:brand-react', 'tabler:brand-vue', 'tabler:brand-angular', 'tabler:brand-svelte',
-    'tabler:brand-php', 'tabler:brand-swift', 'tabler:brand-golang', 'tabler:brand-rust',
-    'tabler:brand-flutter', 'tabler:brand-mongodb', 'tabler:brand-firebase', 'tabler:brand-redux',
-    'tabler:brand-sass', 'tabler:brand-tailwind', 'tabler:brand-vite', 'tabler:brand-vscode',
-    'tabler:brand-graphql', 'iconoir:html5', 'iconoir:css3', 'iconoir:codepen',
-  ]),
+  // The Pro groups' icon lists are served to Pro accounts by
+  // /api/ai?library=icongroups; the browser holds only what the index shows.
+  stub('commerce', 'Commerce', 28, ['lucide', 'tabler', 'iconoir']),
+  stub('communication', 'Communication', 28, ['lucide', 'tabler', 'iconoir']),
+  stub('files', 'Files & data', 30, ['lucide', 'tabler']),
+  stub('social', 'Social', 32, ['lucide', 'tabler']),
+  stub('editor', 'Editor & text', 32, ['lucide', 'tabler']),
+  stub('weather', 'Weather', 28, ['lucide', 'tabler']),
+  stub('status', 'Status & alerts', 28, ['lucide', 'tabler']),
+  stub('dashboard', 'Dashboard & analytics', 27, ['lucide', 'tabler']),
+  stub('app-navigation', 'App navigation', 26, ['lucide', 'tabler']),
+  stub('code', 'Code & terminal', 27, ['lucide', 'tabler']),
+  stub('portfolio', 'Portfolio & creative', 30, ['lucide', 'tabler']),
+  stub('events', 'Events & tickets', 29, ['lucide', 'tabler']),
+  stub('tech-brands', 'Tech brands', 25, ['tabler', 'iconoir']),
+  stub('payment-brands', 'Payments & crypto', 20, ['tabler', 'iconoir']),
+  stub('developer-tools', 'Languages & frameworks', 28, ['tabler', 'iconoir']),
 ])
 
 /** How many icons an index card previews for an open group. */
@@ -256,7 +131,30 @@ export function groupRoute(id) {
 
 /** The packs a group draws from, in first-use order. */
 export function groupPacks(g) {
-  return [...new Set((g?.icons || []).map((ref) => parseIconRef(ref).pack))]
+  if (Array.isArray(g?.icons)) return [...new Set(g.icons.map((ref) => parseIconRef(ref).pack))]
+  return [...(g?.packs || [])]
+}
+
+/** How many icons a group holds, whether or not its list is loaded. */
+export function groupCount(g) {
+  return g?.icons?.length ?? g?.count ?? 0
+}
+
+/**
+ * The groups with each Pro stub's icon list put back from the library rows a
+ * Pro account fetched ([{ id, label, icons }]). A stub with no matching row
+ * stays a stub, so the result is safe to render before the rows arrive.
+ */
+export function withProIcons(proItems) {
+  const byId = new Map()
+  for (const row of Array.isArray(proItems) ? proItems : []) {
+    if (row && typeof row.id === 'string' && Array.isArray(row.icons) && row.icons.length) byId.set(row.id, row)
+  }
+  if (!byId.size) return PREMADE_ICON_GROUPS
+  return Object.freeze(PREMADE_ICON_GROUPS.map((g) => {
+    const row = g.access === 'pro' && !g.icons ? byId.get(g.id) : null
+    return row ? group(g.id, g.label, 'pro', row.icons.map(String)) : g
+  }))
 }
 
 const RANK = Object.fromEntries(TIER_ORDER.map((t, i) => [t, i]))
@@ -292,7 +190,7 @@ export function glyphRequestPlan(groups, tier, { limit = Infinity } = {}) {
   const plan = new Map()
   for (const g of groups || []) {
     if (!isGroupOpen(g, tier)) continue
-    for (const ref of g.icons.slice(0, limit)) {
+    for (const ref of (g.icons || []).slice(0, limit)) {
       const { pack, name } = parseIconRef(ref)
       if (!canSeePack(pack, tier)) continue
       // The animated sets are not group material and never load from the Iconify host.
@@ -311,19 +209,19 @@ export function glyphRequestPlan(groups, tier, { limit = Infinity } = {}) {
  * opens them) and never an icon id. Shared with any surface that lists the
  * groups, so every list agrees on what is locked.
  */
-export function listIconGroups({ tier = 'anon' } = {}) {
-  return PREMADE_ICON_GROUPS.map((g) => {
+export function listIconGroups({ tier = 'anon', groups = PREMADE_ICON_GROUPS } = {}) {
+  return groups.map((g) => {
     const need = groupNeeds(g, tier)
     return {
       id: g.id,
       label: g.label,
       route: groupRoute(g.id),
-      count: g.icons.length,
+      count: groupCount(g),
       packs: groupPacks(g),
       access: g.access,
       locked: need !== null,
       need,
-      preview: need === null ? g.icons.slice(0, GROUP_PREVIEW_COUNT) : [],
+      preview: need === null ? (g.icons || []).slice(0, GROUP_PREVIEW_COUNT) : [],
     }
   })
 }
