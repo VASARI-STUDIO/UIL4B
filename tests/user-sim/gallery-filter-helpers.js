@@ -47,10 +47,16 @@ export async function pickPaletteMood(page, moodId) {
   await expect(sheet).toHaveCount(0)
 }
 
-/** Every `rgb()` / `rgba()` colour in a computed style string, as upper-case #RRGGBB. */
+/**
+ * Every painted `rgb()` / `rgba()` colour in a computed style string, as
+ * upper-case #RRGGBB. A fully transparent colour (`rgba(0, 0, 0, 0)`, the
+ * computed background of an element that paints none) is not a colour and is
+ * skipped.
+ */
 export function hexesIn(css) {
   const out = []
-  for (const m of String(css).matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)) {
+  for (const m of String(css).matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/g)) {
+    if (m[4] !== undefined && Number(m[4]) === 0) continue
     out.push(`#${[m[1], m[2], m[3]].map((v) => Number(v).toString(16).padStart(2, '0')).join('')}`.toUpperCase())
   }
   return out

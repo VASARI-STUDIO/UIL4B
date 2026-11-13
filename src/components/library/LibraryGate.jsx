@@ -82,6 +82,7 @@ export default function LibraryGate({
   const copy = libraryGateCopy(kind, {
     variant: gate.variant,
     anonymous: gate.anonymous,
+    accountAdds: gate.accountAdds,
     S: counts.S,
     A: counts.A,
     T: counts.T,

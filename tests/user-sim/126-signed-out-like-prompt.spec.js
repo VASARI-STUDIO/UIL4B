@@ -9,8 +9,8 @@ import { go, signIn, watch } from './helpers.js'
 const loginDialog = (page) => page.getByRole('dialog').filter({ has: page.locator('#ui-login-title') })
 
 const SURFACES = [
-  { route: '/discover/palettes', button: (page) => page.locator('.pgal-like').first(), pressed: 'aria-pressed' },
-  { route: '/discover/gradients', button: (page) => page.locator('.grg-like').first(), pressed: 'aria-pressed' },
+  { route: '/discover/palettes', button: (page) => page.locator('.vpt-like').first(), pressed: 'aria-pressed' },
+  { route: '/discover/gradients', button: (page) => page.locator('.vpt-like').first(), pressed: 'aria-pressed' },
   { route: '/community', button: (page) => page.locator('.cm-heart').first(), pressed: 'aria-pressed' },
 ]
 

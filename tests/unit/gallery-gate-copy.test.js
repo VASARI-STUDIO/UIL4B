@@ -78,8 +78,20 @@ for (const kind of ['palettes', 'gradients']) {
     assert.ok(out.body.includes(`all ${total}`) && out.body.includes('opens 8,419'), out.body)
     const free = libraryGateCopy(kind, { variant: 'unknown', anonymous: false, ...COUNTS })
     assert.deepEqual(free.primary, { label: 'Upgrade to Pro', action: 'plans' })
-    assert.ok(free.body.includes('opens 7,311 that match') && free.body.includes(`all ${total}`), free.body)
+    assert.ok(free.body.includes('opens 7,311 that match') && free.body.includes(`all ${total} ${kind}`), free.body)
     assert.ok(!libraryGateCopy(kind, { variant: 'unknown', anonymous: false, ...COUNTS, S: 0 }).body.includes('opens 0'))
+  })
+
+  test(`${kind}: signed out, where a free account adds nothing, the gate offers Pro and not an account`, () => {
+    const total = LIBRARY_TOTALS[kind].toLocaleString('en-AU')
+    const out = libraryGateCopy(kind, { variant: 'unknown', anonymous: true, accountAdds: false, ...COUNTS, S: 0 })
+    assert.equal(out.heading, `Pro opens every ${kind.slice(0, -1)}`)
+    assert.ok(out.body.startsWith(`Pro opens all ${total} ${kind}`), out.body)
+    assert.deepEqual(out.primary, { label: 'See what Pro includes', action: 'plans' })
+    assert.deepEqual(out.secondary, { label: 'Log in', action: 'login' })
+    assert.ok(!JSON.stringify(out).includes('signup'), 'no sign-up offer')
+    const some = libraryGateCopy(kind, { variant: 'unknown', anonymous: true, accountAdds: false, ...COUNTS })
+    assert.ok(some.body.startsWith("You're seeing 7,311 that match"), some.body)
   })
 }
 

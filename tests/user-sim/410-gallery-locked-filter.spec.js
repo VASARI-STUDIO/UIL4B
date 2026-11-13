@@ -41,6 +41,13 @@ const lockedOnlyMood = MOOD_IDS.find((m) => (
 
 const countLine = (page) => page.locator('.drh-head p')
 
+// The count line never reads "0 <noun>" while the gate shows. Until the stubs
+// carry the filter field the filtered total is unknown, and the page leaves the
+// line out rather than print a number it does not have; either way no zero.
+async function expectNoZeroCount(page, noun) {
+  await expect(countLine(page).filter({ hasText: new RegExp(`^0 ${noun}`) })).toHaveCount(0)
+}
+
 async function expectFadeIsClean(fade) {
   await expect(fade).toHaveAttribute('aria-hidden', 'true')
   expect(await fade.locator('button, a').count(), 'a locked tile offers nothing to focus or follow').toBe(0)
@@ -57,7 +64,7 @@ for (const vp of VIEWPORTS) {
       await pickGradientType(page, 'Radial')
 
       await expect(page.getByText('Nothing open to you')).toHaveCount(0)
-      await expect(countLine(page)).not.toHaveText(/^0 gradients$/)
+      await expectNoZeroCount(page, 'gradients')
       const gate = page.locator('[data-gate="anon"]')
       await expect(gate).toBeVisible()
       if (gradientStubsCarryType) {
@@ -108,9 +115,9 @@ for (const vp of VIEWPORTS) {
       watch(page, 'a visitor searching gradients for a word nothing contains')
       await go(page, '/discover/gradients')
       await page.getByRole('searchbox').fill('zzzz')
-      await expect(page.getByText('Nothing in the library matches those filters.')).toBeVisible()
+      await expect(page.getByRole('status').getByText('No gradients match “zzzz”.')).toBeVisible()
       await expect(page.locator('[data-gate]')).toHaveCount(0)
-      await expect(countLine(page)).toHaveText('0 gradients')
+      await expect(countLine(page)).toHaveText('0 gradients matching “zzzz”')
     })
 
     for (const who of ['signed out', 'free']) {
@@ -122,7 +129,7 @@ for (const vp of VIEWPORTS) {
         await pickPaletteMood(page, lockedOnlyMood)
 
         await expect(page.getByText('Nothing open to you')).toHaveCount(0)
-        await expect(countLine(page)).not.toHaveText(/^0 palettes$/)
+        await expectNoZeroCount(page, 'palettes')
         const gate = page.locator(who === 'free' ? '[data-gate="free"]' : '[data-gate="anon"]')
         await expect(gate).toBeVisible()
         await expect(gate.getByRole('heading')).toHaveText(/(\w+) palettes?|brand systems?|palettes/)

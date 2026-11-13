@@ -4,10 +4,10 @@
 // chips share one row.
 //
 // MUTATIONS this file goes red on:
-//   - remove the `.grg-copy` button from GradientGalleryGrid.jsx: the gradient
-//     Copy CSS assertions go red;
-//   - in library-v3.css make the phone Like or Copy chip shorter than 44px: the
-//     phone gradient test goes red;
+//   - remove the `css` action from `actionsOf` in GradientGalleryGrid.jsx: the
+//     gradient Copy CSS assertions (in the preview dialog) go red;
+//   - in library-v3.css make the phone `.vpt-like` or `.gpd-action` shorter than
+//     44px: the phone gradient test goes red;
 //   - let the button-role chips wrap at 390 (drop the one-row rule): the "one row"
 //     assertion goes red;
 //   - drop `disabled={!isEdited(item, live)}` from Reset in ButtonLibraryDialog.jsx:
@@ -25,43 +25,59 @@ const SOLID = BUTTON_ITEMS.find((b) => b.name === 'Solid')
 test.describe('gradient library', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test('a gradient card copies its CSS with a toast and opens in the generator', async ({ page }) => {
+  // The redesign moved the per-card Copy CSS button and the generator link into
+  // the preview dialog a tile opens, so the same two actions are taken there.
+  test('a gradient tile opens its preview, which copies the CSS with a toast and opens in the generator', async ({ page }) => {
     watch(page, 'a visitor copying a gradient')
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
     await go(page, '/discover/gradients')
-    const copy = page.getByRole('button', { name: `Copy ${FIRST_GRADIENT} CSS` })
+    // The tile itself carries no copy button: the only way to the CSS is through the preview.
+    await expect(page.getByRole('button', { name: `Copy ${FIRST_GRADIENT} CSS` })).toHaveCount(0)
+    await page.getByRole('button', { name: `Preview ${FIRST_GRADIENT}`, exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: FIRST_GRADIENT })
+    await expect(dialog).toBeVisible()
+
+    const copy = dialog.getByRole('button', { name: `Copy ${FIRST_GRADIENT} CSS` })
     await expect(copy).toBeVisible()
     await copy.click()
     await expect(page.getByText(`Copied ${FIRST_GRADIENT} CSS`)).toBeVisible()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('gradient')
-    // The card has two links to the generator under the same name (the swatch and the Open
-    // pill), so every one of them must lead there rather than asserting on a single match.
-    const opens = page.getByRole('link', { name: `Open ${FIRST_GRADIENT} in the Gradient Generator` })
-    await expect(opens.first()).toBeVisible()
-    const hrefs = await opens.evaluateAll((els) => els.map((el) => el.getAttribute('href')))
-    expect(hrefs.length, 'the card opens in the generator').toBeGreaterThan(0)
-    for (const href of hrefs) expect(href).toMatch(/\/create\/gradient/)
+
+    // The dialog has one way into the generator, and it carries this gradient.
+    const open = dialog.getByRole('link', { name: 'Open in Gradient Generator' })
+    await expect(open).toBeVisible()
+    const href = await open.getAttribute('href')
+    expect(href).toMatch(/^\/create\/gradient\?/)
+    expect(href, 'the hand-off names the gradient it opens').toContain(`gn=${encodeURIComponent(FIRST_GRADIENT)}`)
   })
 })
 
 test.describe('gradient library, phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 
-  test('Like and Copy CSS are 44px targets and the card meta sits under the name', async ({ page }) => {
+  test('Like on the tile and Copy CSS in its preview are 44px targets and the tile meta sits under the name', async ({ page }) => {
     watch(page, 'a visitor on a phone at the gradient library')
     await go(page, '/discover/gradients')
-    const like = page.getByRole('button', { name: `Like ${FIRST_GRADIENT}` })
-    const copy = page.getByRole('button', { name: `Copy ${FIRST_GRADIENT} CSS` })
+    const like = page.getByRole('button', { name: `Like ${FIRST_GRADIENT}`, exact: true })
     await expect(like).toBeVisible()
-    for (const target of [like, copy]) {
-      const box = await target.boundingBox()
-      expect(Math.round(box.height)).toBeGreaterThanOrEqual(44)
-      expect(Math.round(box.width)).toBeGreaterThanOrEqual(44)
-    }
-    const card = page.locator('.grg-card', { has: copy }).first()
-    const name = await card.locator('.lbry-card-name').first().boundingBox()
-    const meta = await card.locator('.lbry-card-meta').first().boundingBox()
+    const likeBox = await like.boundingBox()
+    expect(Math.round(likeBox.height), 'Like is 44 tall').toBeGreaterThanOrEqual(44)
+    expect(Math.round(likeBox.width), 'Like is 44 wide').toBeGreaterThanOrEqual(44)
+
+    const tile = page.locator('.vpt').filter({ has: like }).first()
+    const name = await tile.locator('.vpt-name').boundingBox()
+    const meta = await tile.locator('.vpt-meta').boundingBox()
     expect(meta.y, 'the meta is under the name').toBeGreaterThan(name.y + name.height - 2)
+
+    // Copy CSS moved off the tile into the preview sheet, so its target is measured there.
+    await page.getByRole('button', { name: `Preview ${FIRST_GRADIENT}`, exact: true }).tap()
+    const dialog = page.getByRole('dialog', { name: FIRST_GRADIENT })
+    await expect(dialog).toBeVisible()
+    const copy = dialog.getByRole('button', { name: `Copy ${FIRST_GRADIENT} CSS` })
+    await expect(copy).toBeVisible()
+    const copyBox = await copy.boundingBox()
+    expect(Math.round(copyBox.height), 'Copy CSS is 44 tall').toBeGreaterThanOrEqual(44)
+    expect(Math.round(copyBox.width), 'Copy CSS is 44 wide').toBeGreaterThanOrEqual(44)
   })
 })
 

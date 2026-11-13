@@ -78,10 +78,16 @@ export function countGallery(rows, split, { matchOpen, matchPublic, take = 12 })
   const lockedRows = []
   let lockedMatches = 0
   let lockedUnknown = false
+  // Rows a free account opens whose verdict is unknown: a free account might add them.
+  let nextUnknown = 0
   for (const row of Array.isArray(rows) ? rows : []) {
     if (taken.has(row)) continue
     const verdict = matchPublic(row)
-    if (verdict === null) { lockedUnknown = true; continue }
+    if (verdict === null) {
+      lockedUnknown = true
+      if (nextSet.has(row)) nextUnknown += 1
+      continue
+    }
     if (!verdict) continue
     if (nextSet.has(row)) nextRows.push(row)
     else {
@@ -92,7 +98,7 @@ export function countGallery(rows, split, { matchOpen, matchPublic, take = 12 })
   const S = open.length
   const A = S + nextRows.length
   const T = A + lockedMatches
-  return { open, nextRows, lockedRows, S, A, T, lockedUnknown }
+  return { open, nextRows, lockedRows, S, A, T, lockedUnknown, nextUnknown }
 }
 
 /**
@@ -103,10 +109,12 @@ export function countGallery(rows, split, { matchOpen, matchPublic, take = 12 })
  *   pending   a Pro library is still on its way: say nothing about the rest.
  *
  * `P` is how many rows Pro opens beyond what this viewer, or this viewer once
- * signed up, has. `variant` is which copy the gate runs.
+ * signed up, has. `variant` is which copy the gate runs. `accountAdds` says
+ * whether a free account could open anything more under these filters; when it
+ * cannot (Brand, say), a signed-out gate offers Pro and not an account.
  */
 export function gateFor({ tier, counts, pending = false }) {
-  const { S, A, T, lockedUnknown } = counts
+  const { S, A, T, lockedUnknown, nextUnknown = 0 } = counts
   if (pending || tier === 'pro') return null
   const unknown = lockedUnknown
   if (!(T > S || unknown)) return null
@@ -116,5 +124,5 @@ export function gateFor({ tier, counts, pending = false }) {
   if (unknown) variant = 'unknown'
   else if (anonymous && A > S) variant = 'account'
   else variant = S > 0 ? 'more' : 'pro-only'
-  return { anonymous, P, variant }
+  return { anonymous, P, variant, accountAdds: A > S || nextUnknown > 0 }
 }

@@ -6,17 +6,24 @@
 // handler); the session is the Firebase double from helpers.js.
 //
 // MUTATIONS this file goes red on:
-//   - change the refusal sentence in the row the page prints: the message
-//     assertion goes red;
+//   - change the refusal sentence in src/components/library/ProLibraryStatus.jsx:
+//     the message assertion goes red;
 //   - drop `setAttempt((n) => n + 1)` from retry in src/hooks/useProLibrary.js:
 //     the "Retry asked the server again" assertions go red;
-//   - draw the free gate while the library is refused: the `.geg` count goes red.
+//   - draw the gate (LibraryGate.jsx) while the library is refused: the `.geg`
+//     count goes red;
+//   - leave the tiles out once the set arrives (PaletteGallery.jsx /
+//     GradientGallery.jsx): the final tile-count assertion goes red.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
+// An open panel tile (VerticalPanelTile.jsx), never one of the locked stand-ins
+// the gate fades in below the grid.
+const TILE = '.vpt:not(.vpt--locked):not([data-gate-fade] *)'
+
 const LIBS = [
-  { key: 'palettes', route: '/discover/palettes', status: 'palette library', card: '.pgal-card:not(.geg-fade *)' },
-  { key: 'gradients', route: '/discover/gradients', status: 'gradient library', card: '.grg-card:not(.geg-fade *)' },
+  { key: 'palettes', route: '/discover/palettes', status: 'palette library', card: TILE },
+  { key: 'gradients', route: '/discover/gradients', status: 'gradient library', card: TILE },
 ]
 
 const VIEWPORTS = [

@@ -96,27 +96,35 @@ const LIBRARY_COPY = {
 
 const upper = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 
-export function libraryGateCopy(kind, { variant, anonymous, S, A, T, P, opens, nounFor }) {
+export function libraryGateCopy(kind, { variant, anonymous, accountAdds = true, S, A, T, P, opens, nounFor }) {
   const lib = LIBRARY_COPY[kind]
   const total = LIBRARY_TOTALS[kind]
   const word = (count) => (count === 1 ? lib.one : lib.many)
   const login = { label: 'Log in', action: 'login' }
 
   if (variant === 'unknown') {
-    if (anonymous) {
+    // Signed out, and a free account could open more under these filters.
+    if (anonymous && accountAdds) {
       return {
         heading: `Log in to access ${n(opens)} ${word(opens)}`,
-        body: `Some of the ${n(total)} ${lib.many} that match are locked. A free account opens ${n(opens)}; Pro opens all ${n(total)}.`,
+        // The locked rows cannot answer this filter yet, so no filtered count:
+        // the numbers are for the whole library and say so.
+        body: `Some ${lib.many} that match are locked. Of the ${n(total)} in the library, a free account opens ${n(opens)}; Pro opens all ${n(total)}.`,
         primary: { label: 'Create a free account', action: 'signup' },
         secondary: login,
       }
     }
+    // Only Pro opens more: a free member, or a signed-out viewer whose filter a
+    // free account adds nothing to (Brand opens with Pro alone).
+    const all = `Pro opens all ${n(total)} ${lib.many}${lib.proTail}.`
+    const seeing = anonymous ? "You're seeing" : 'Your free account opens'
     return {
       heading: `Pro opens every ${lib.one}`,
-      body: S > 0
-        ? `Your free account opens ${n(S)} that match these filters. Pro opens all ${n(total)}${lib.proTail}.`
-        : `Pro opens all ${n(total)}${lib.proTail}.`,
-      primary: { label: 'Upgrade to Pro', action: 'plans' },
+      body: S > 0 ? `${seeing} ${n(S)} that match these filters. ${all}` : all,
+      primary: anonymous
+        ? { label: 'See what Pro includes', action: 'plans' }
+        : { label: 'Upgrade to Pro', action: 'plans' },
+      secondary: anonymous ? login : undefined,
     }
   }
 

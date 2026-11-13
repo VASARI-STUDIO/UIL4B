@@ -54,7 +54,10 @@ test.describe('preview dialog, desktop', () => {
       await expect(dialog.getByText(/^1 of \d+$/)).toBeVisible()
       await dialog.getByRole('button', { name: `Next ${lib.noun}` }).focus()
       await page.keyboard.press('ArrowRight')
-      await expect(dialog.getByText(/^2 of \d+$/)).toBeVisible()
+      // The dialog takes the next item's name, so find it by role from here on.
+      const moved = page.getByRole('dialog')
+      await expect(moved.getByText(/^2 of \d+$/)).toBeVisible()
+      await expect(moved).not.toHaveAccessibleName(tileName.replace(/^Preview /, ''))
 
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
