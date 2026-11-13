@@ -15,6 +15,8 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '10-inuse', name: 'In use' }),
   // Pro themes with all three rows. Named apart from 04 Standards so the picker shows two different names.
   Object.freeze({ id: '24-standards', name: 'Standards Plate' }),
+  Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet' }),
+  Object.freeze({ id: '30-fluted', name: 'Fluted' }),
   Object.freeze({ id: '32-dieline', name: 'Dieline' }),
   // The Free pair. Guidelines-only themes: they have slides and nothing else, and those are free.
   Object.freeze({ id: '25-label', name: 'Label', rows: Object.freeze(['slides']), free: true }),

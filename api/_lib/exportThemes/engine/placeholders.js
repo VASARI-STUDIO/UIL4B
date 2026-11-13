@@ -221,7 +221,10 @@ export function applyPlaceholders(ctx) {
   // the registry itself stays private; finishText reaches it through run
   // label(str): str with each placeholder written as its short label, for a theme that measures what a control will print
   const label = (str) => run(() => String(str).replace(SENT, (m, g) => { const e = reg.entries[decodeId(g)]; return e ? e.label : m; }));
-  ctx.placeholders = { descriptors: DESCRIPTORS, run, label, get count() { return reg.entries.length; } };
+  // entries: a read-only view of what a placeholder prints (label, length, form, bare), without the real words, for a theme that measures slot copy
+  let view = [];
+  const entries = () => { if (view.length !== reg.entries.length) view = reg.entries.map(({ real, ...rest }) => Object.freeze(rest)); return view; };
+  ctx.placeholders = { descriptors: DESCRIPTORS, run, label, get entries() { return entries(); }, get count() { return reg.entries.length; } };
   return ctx;
 }
 
