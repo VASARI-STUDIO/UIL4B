@@ -42,7 +42,9 @@ function blocksFor(sel, source = css) {
 const KEEP = {
   // colour swatches and swatch triggers: the sample is the control (a Contrast Checker swatch is the
   // colour chip with its role name under it, in one 10px-cornered target)
-  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'cpk-preset', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
+  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'cpk-preset', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell',
+    // the Spectrum page's two contrast swatches: tap to step each colour through the ramp
+    'mk-swatch'],
   // rows in a menu, list or popover
   row: ['plb-menu-item', 'plb-sc-row', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'ied-pj',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',

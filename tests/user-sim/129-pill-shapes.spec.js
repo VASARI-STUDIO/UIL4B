@@ -39,19 +39,18 @@ const SURFACES = [
   ['/create/icons', ['.lbry-search', '.lbry-toolbar', '.lib-switch-btn']],
   ['/create/font-gallery', ['.lbry-search']],
   ['/learn', ['.lbry-search']],
-  ['/mobile', ['.spm-ic-search']],
   ['/create/contrast', ['.tl-pill']],
   ['/plans', ['.pl-switch']],
   ['/seo', ['.seo-seg']],
 ]
 
 // The bordered search fields: one hairline width and style.
-const SEARCH = new Set(['.hcmd-bar', '.lbry-search', '.pl-search input', '.spm-ic-search'])
+const SEARCH = new Set(['.hcmd-bar', '.lbry-search', '.pl-search input'])
 // The search bars proper: one height, one border colour, one fill. .hcmd-bar is
 // the hero input and is left out on purpose. The V3 header search
 // (.pnav-search-field) is left out too: it is a borderless L2 pill, 36px at 1440
 // and a 44px circle on the phone header, measured on its own below.
-const FAMILY = new Set(['.lbry-search', '.pl-search input', '.spm-ic-search'])
+const FAMILY = new Set(['.lbry-search', '.pl-search input'])
 const HEADER_SEARCH = '.pnav-search-field'
 const HEADER_SEARCH_H = 36
 const SEARCH_H = 44

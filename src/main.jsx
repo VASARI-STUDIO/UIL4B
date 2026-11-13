@@ -21,6 +21,8 @@ import './styles/global.css'
 import './styles/v3-shell.css'
 import './styles/v3-menus.css'
 import './styles/v3-overlays.css'
+import './styles/v3-marketing.css'
+import './styles/v3-edge.css'
 import { installDownloadObserver } from './utils/downloadObserver'
 
 // Recent exports: every tool download is recorded where
