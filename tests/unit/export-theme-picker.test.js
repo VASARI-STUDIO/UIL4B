@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { UI_KIT_PAGES, GUIDELINES_PAGES, PICKER_THEMES, defaultThemeId, themedFile, themedFileIsPro, themedZipName } from '../../src/config/exportThemePicker.js'
+import { UI_KIT_PAGES, GUIDELINES_PAGES, GUIDELINES_ONLY_PAGES, PICKER_THEMES, defaultThemeId, themedFile, themedFileIsPro, themedZipName, pickerThemesFor, themeFitsFile, freeGuidelinesThemeNames } from '../../src/config/exportThemePicker.js'
 import { requestThemeExport, isPrintSafe, zipNameFrom, ERROR_LINES } from '../../src/utils/exportThemeRequest.js'
 import { UIKIT_PAGES, GUIDE_PAGES } from '../../api/_lib/exportThemes/engine/pages.js'
 import { PRINT_CSP } from '../../api/_lib/exportThemeRoute.js'
@@ -10,11 +10,40 @@ test('the page counts the picker states are the engine\'s page lists', () => {
   assert.equal(GUIDELINES_PAGES, GUIDE_PAGES.length)
 })
 
-test('the picker lists ten themes, and the free UI kit themes are Standards and Specification', () => {
-  assert.equal(PICKER_THEMES.length, 10)
+test('the picker lists twelve themes, and the free UI kit themes are Standards and Specification', () => {
+  assert.equal(PICKER_THEMES.length, 12)
   assert.deepEqual(PICKER_THEMES.filter((t) => t.free).map((t) => t.id), ['04-standards', '07-spec'])
   assert.equal(defaultThemeId(false), '04-standards')
   assert.equal(defaultThemeId(true), '01-presentation')
+})
+
+test('a file lists only the themes that have its row; Label and Swiss Field are guidelines only', () => {
+  const ids = (file) => pickerThemesFor(file).map((t) => t.id)
+  for (const file of ['kit', 'book', 'book-html']) {
+    assert.equal(ids(file).length, 10, file)
+    assert.ok(!ids(file).includes('25-label') && !ids(file).includes('27-swissfield'), file)
+  }
+  for (const file of ['guidelines', 'guidelines-html']) {
+    assert.equal(ids(file).length, 12, file)
+    assert.ok(ids(file).includes('25-label') && ids(file).includes('27-swissfield'), file)
+  }
+  assert.equal(themeFitsFile('25-label', 'kit'), false)
+  assert.equal(themeFitsFile('25-label', 'guidelines'), true)
+  assert.equal(themeFitsFile('nope', 'guidelines'), false)
+})
+
+test('the guidelines of Label and Swiss Field are free, and a free account still starts on Standards', () => {
+  for (const file of ['guidelines', 'guidelines-html']) {
+    assert.equal(themedFileIsPro(file, '25-label'), false, file)
+    assert.equal(themedFileIsPro(file, '27-swissfield'), false, file)
+    assert.equal(defaultThemeId(false, file), '04-standards', file)
+  }
+  assert.equal(defaultThemeId(false, 'kit'), '04-standards')
+  assert.equal(defaultThemeId(false, 'book'), '04-standards')
+  assert.equal(freeGuidelinesThemeNames(), 'Label and Swiss Field')
+  const label = PICKER_THEMES.find((t) => t.id === '25-label')
+  assert.equal(label.guidePages, GUIDELINES_ONLY_PAGES)
+  assert.equal(PICKER_THEMES.find((t) => t.id === '04-standards').guidePages, GUIDELINES_PAGES)
 })
 
 test('a themed file is Pro by the route\'s own rule, and the book as PNG pages takes no theme', () => {
