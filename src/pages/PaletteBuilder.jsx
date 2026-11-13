@@ -3133,7 +3133,18 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // (Undo, Redo, a restore from history) is announced by the effect below, after
   // that action's own message.
   const announcedVisionRef = useRef('normal')
-  const changeVision = (id) => { announcedVisionRef.current = id; setVision(id); setLiveMsg(visionAnnouncement(id)) }
+  // A new mode name changes the trigger's width, so the toolbar measures again and can
+  // move the select into Extra tools. When that takes the focused trigger off the row,
+  // focus goes to the fallback a frame later, once the row has settled.
+  const changeVision = (id) => {
+    announcedVisionRef.current = id
+    setVision(id)
+    setLiveMsg(visionAnnouncement(id))
+    requestAnimationFrame(() => {
+      const now = document.activeElement
+      if (!now || now === document.body) focusVisionFallback()
+    })
+  }
   useEffect(() => {
     if (announcedVisionRef.current === activeVision) return
     announcedVisionRef.current = activeVision
