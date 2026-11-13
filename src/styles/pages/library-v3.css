@@ -617,8 +617,8 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lb
 .lib-surface.lib-v3.gpd-layer[class] .gpd-pair-ratio{flex:0 0 auto;font-size:12px;color:var(--v3-sec);font-variant-numeric:tabular-nums}
 .lib-surface.lib-v3.gpd-layer[class] .gpd-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .lib-surface.lib-v3.gpd-layer[class] .gpd-action{
-  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;
-  border:0;border-radius:12px;background:var(--v3-l2);color:var(--v3-ink);font:inherit;font-size:14px;font-weight:560;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;
+  border:0;border-radius:var(--btn-radius);background:var(--v3-l2);color:var(--v3-ink);font:inherit;font-size:14px;font-weight:560;cursor:pointer;
   transition:background-color 150ms ease,transform 120ms var(--v3-ease);
 }
 .lib-surface.lib-v3.gpd-layer[class] .gpd-action:active{transform:scale(.97)}
