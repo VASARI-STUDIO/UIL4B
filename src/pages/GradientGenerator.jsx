@@ -2138,7 +2138,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="grd-stage" data-ctx={previewAs}>
             <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview${PREVIEW_CONTEXTS.find((c) => c.id === previewAs)?.as || ''}`} />
             <PreviewSample id={previewAs} paint={paintCss} stops={stops} type={type} angle={angle} />
-            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} />}
+            {isPreviewStyle(previewAs) && <GradientFx id={previewAs} stops={stops} paint={paintCss} oklch={fxOklch} name={specName(savedName, type)} />}
             {isTextStyle(previewAs) && <GradientText id={previewAs} stops={stops} paint={paintCss} type={type} angle={angle} oklch={fxOklch} name={specName(savedName, type)} />}
             <PreviewSwitch options={PREVIEW_OPTIONS} value={previewAs} onChange={choosePreview} label="Preview as" moreLabel="More previews" />
           </div>
