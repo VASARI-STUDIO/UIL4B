@@ -10,7 +10,7 @@ import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import useExportRunner from '../../hooks/useExportRunner'
 import { DEFAULT_PRESET, EXPORT_TYPES, readLastPick, resolvePreset, storeLastPick } from '../../config/dialogExport'
 import { comingLine } from '../../config/exportFormats'
-import { defaultThemeId, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
+import { defaultThemeId, themeFitsFile, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
 import ExportNav from './ExportNav'
 import ExportSteps, { ExportDock } from './ExportSteps'
 // The reused pieces (pills, tiles, fields, the Pro preview) are styled by the
@@ -118,10 +118,12 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const mainRef = useRef(null)
   const [localError, setLocalError] = useState('')
   // The theme chosen for the themed files (the UI kit, the book and the slides as PDF or HTML), and the one a highlighted row
-  // is previewing. Until a pick is made it is the plan's own default: Presentation for Pro, Standards (a free one) otherwise.
+  // is previewing. Until a pick is made it is the plan's own default for the file: Presentation for Pro; otherwise the first theme
+  // the file is free in (Label for the guidelines, Standards for the UI kit). A pick the file's row is missing from (a
+  // guidelines-only theme, then the UI kit) gives way to that default, and comes back when a file it draws is chosen again.
   const [themePick, setThemePick] = useState(null)
   const [peek, setPeek] = useState(null)
-  const theme = themePick || defaultThemeId(isPro)
+  const theme = themePick && themeFitsFile(themePick, pick.file) ? themePick : defaultThemeId(isPro, pick.file)
 
   const apply = (next) => {
     if (next.type === pick.type && next.category === pick.category && next.file === pick.file) return

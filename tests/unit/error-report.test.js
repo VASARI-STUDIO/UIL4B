@@ -4,7 +4,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import {
-  describeError, topFrames, cleanRoute, isNoise, createErrorReporter,
+  describeError, topFrames, cleanRoute, isNoise, createErrorReporter, isThirdParty, isForeignFile,
   SESSION_LIMIT, MIN_INTERVAL_MS,
 } from '../../src/utils/errorReport.js'
 import { validateSupportBody } from '../../api/support.js'
@@ -152,4 +152,60 @@ test('only production posts; everywhere else logs', () => {
 test('main.jsx installs the global capture once', () => {
   const src = fs.readFileSync('src/main.jsx', 'utf8')
   assert.equal((src.match(/installGlobalErrorCapture\(\)/g) || []).length, 1)
+})
+
+// Someone else's script is not our crash. The "Crash on /" report behind this
+// came from Google's One Tap client, which runs on accounts.google.com.
+const ORIGIN = 'https://uil4b.com'
+const GOOGLE_STACK = [
+  'TypeError: Cannot read properties of null (reading \'postMessage\')',
+  '    at Kd (https://accounts.google.com/gsi/client:212:331)',
+  '    at https://accounts.google.com/gsi/client:213:12',
+].join('\n')
+const EXTENSION_STACK = [
+  'Error: Could not establish connection',
+  '    at inject (chrome-extension://abcdefghijklmnop/content.js:1:999)',
+].join('\n')
+const MIXED_STACK = [
+  'TypeError: x is not a function',
+  '    at Kd (https://accounts.google.com/gsi/client:212:331)',
+  '    at onCredential (https://uil4b.com/assets/AuthContext-Q1.js:3:44)',
+].join('\n')
+
+test('a stack that runs only through other origins is third-party', () => {
+  assert.equal(isThirdParty(GOOGLE_STACK, ORIGIN), true)
+  assert.equal(isThirdParty(EXTENSION_STACK, ORIGIN), true)
+  // Firefox writes frames as fn@url:line:col.
+  assert.equal(isThirdParty('Kd@https://accounts.google.com/gsi/client:212:331', ORIGIN), true)
+})
+
+test('one frame of our own, no URL frames, or no known origin keeps the report', () => {
+  assert.equal(isThirdParty(STACK, ORIGIN), false)
+  assert.equal(isThirdParty(MIXED_STACK, ORIGIN), false)
+  assert.equal(isThirdParty('    at blob:https://uil4b.com/1f2e-3d4c:1:20', ORIGIN), false)
+  assert.equal(isThirdParty('Error: x\n    at <anonymous>', ORIGIN), false)
+  assert.equal(isThirdParty(GOOGLE_STACK, null), false)
+})
+
+test('the reporter sends our crashes and drops third-party ones', () => {
+  const sent = []
+  const report = createErrorReporter({
+    send: (b) => sent.push(b), storage: memoryStorage(), origin: () => ORIGIN,
+  })
+  const theirs = Object.assign(new Error('postMessage'), { stack: GOOGLE_STACK })
+  assert.equal(report(theirs, { pathname: '/' }), false)
+  assert.equal(sent.length, 0, 'a Google One Tap error reached the queue')
+  const ours = Object.assign(new Error('x is not a function'), { stack: MIXED_STACK })
+  assert.equal(report(ours, { pathname: '/' }), true)
+  assert.equal(sent.length, 1)
+})
+
+test('a window error thrown in another origin\'s file is not reported', () => {
+  assert.equal(isForeignFile('https://accounts.google.com/gsi/client', ORIGIN), true)
+  assert.equal(isForeignFile('chrome-extension://abc/content.js', ORIGIN), true)
+  assert.equal(isForeignFile('https://uil4b.com/assets/index-Xy.js', ORIGIN), false)
+  assert.equal(isForeignFile('', ORIGIN), false)
+  const src = stripJs(fs.readFileSync('src/utils/errorReport.js', 'utf8'))
+  const listener = src.slice(src.indexOf("addEventListener('error'"), src.indexOf("addEventListener('unhandledrejection'"))
+  assert.match(listener, /isForeignFile\(event\.filename/)
 })

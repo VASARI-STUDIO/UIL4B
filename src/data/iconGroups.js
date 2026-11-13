@@ -1,5 +1,5 @@
-// Premade icon groups: themed sets drawn from several packs that read as one
-// family, so a set of icons for one job can be taken in one go.
+// Premade icon groups: themed sets, most drawn from several packs that read as
+// one family, so a set of icons for one job can be taken in one go.
 //
 // ── The style rule every group follows ──────────────────────────────────────
 //
@@ -57,15 +57,17 @@ const STYLE = Object.freeze({ grid: 24, stroke: DEFAULT_GROUP_STROKE, cap: 'roun
 const group = (id, label, access, icons) => Object.freeze({ id, label, access, style: STYLE, icons: Object.freeze(icons) })
 
 export const PREMADE_ICON_GROUPS = Object.freeze([
+  // Wayfinding is drawn from Lucide alone: it is the free group most people take,
+  // and one pack means one licence and one source for every glyph in it.
   group('wayfinding', 'Wayfinding', 'free', [
     'lucide:arrow-up', 'lucide:arrow-down', 'lucide:arrow-left', 'lucide:arrow-right',
     'lucide:arrow-up-right', 'lucide:arrow-down-left', 'lucide:chevron-up', 'lucide:chevron-down',
     'lucide:chevron-left', 'lucide:chevron-right', 'lucide:chevrons-up-down', 'lucide:corner-up-left',
     'lucide:corner-down-right', 'lucide:external-link', 'lucide:move', 'lucide:map-pin',
     'lucide:map', 'lucide:compass', 'lucide:navigation', 'lucide:signpost',
-    'lucide:route', 'lucide:milestone', 'lucide:locate-fixed', 'tabler:arrow-back-up',
-    'tabler:arrow-forward-up', 'tabler:direction-sign', 'tabler:current-location', 'tabler:arrows-exchange',
-    'tabler:arrow-bear-left', 'tabler:arrow-bear-right', 'tabler:arrow-ramp-right', 'tabler:arrow-rotary-right',
+    'lucide:route', 'lucide:milestone', 'lucide:locate-fixed', 'lucide:undo-2',
+    'lucide:redo-2', 'lucide:signpost-big', 'lucide:locate', 'lucide:arrow-left-right',
+    'lucide:split', 'lucide:merge', 'lucide:corner-up-right', 'lucide:navigation-2',
   ]),
   group('media', 'Media controls', 'free', [
     'tabler:player-play', 'tabler:player-pause', 'tabler:player-stop', 'tabler:player-record',
