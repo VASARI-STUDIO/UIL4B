@@ -2,12 +2,14 @@
 // the Free rule are src/data/exportThemes.js's (the one table the server reads too); this adds the sample brand each preview is
 // drawn from, the page shape, and the picture paths. No theme code is here: the previews are pictures of the sample brands' pages.
 
-import { EXPORT_THEMES, isThemeExportPro } from '../data/exportThemes.js'
+import { EXPORT_THEMES, isThemeExportPro, themeHasRow } from '../data/exportThemes.js'
 import { fileName } from '../utils/exportFileName.js'
 
 // Page counts of the two documents, checked against the engine's page lists by tests/unit/export-theme-picker.test.js.
 export const UI_KIT_PAGES = 25
 export const GUIDELINES_PAGES = 33
+// A guidelines-only theme writes twelve of the guidelines pages (the engine's list keeps their order).
+export const GUIDELINES_ONLY_PAGES = 12
 
 const SAMPLE = Object.freeze({
   '01-presentation': ['Kerbside', '16:9'],
@@ -20,17 +22,23 @@ const SAMPLE = Object.freeze({
   '08-monograph': ['Long Room', 'A4'],
   '09-blueprint': ['Plumbline', 'A4'],
   '10-inuse': ['Shallow End', 'A4'],
+  '25-label': ['Margin', '5:4'],
+  '27-swissfield': ['Northern Current', '16:9'],
 })
 
-/** The ten themes in the picker's order: { id, name, brand, shape, free } (free: the UI kit is free in it). */
+/**
+ * Every theme in the picker's order: { id, name, rows, brand, shape, free, guidePages }. free: the UI kit is free in it (a
+ * guidelines-only theme has no UI kit, so it is not); guidePages: how many guidelines pages it draws.
+ */
 export const PICKER_THEMES = Object.freeze(EXPORT_THEMES.map((t) => Object.freeze({
-  ...t, brand: SAMPLE[t.id][0], shape: SAMPLE[t.id][1], free: !isThemeExportPro('ui-kit', t.id),
+  ...t,
+  brand: SAMPLE[t.id][0],
+  shape: SAMPLE[t.id][1],
+  free: !isThemeExportPro('ui-kit', t.id),
+  guidePages: t.rows ? GUIDELINES_ONLY_PAGES : GUIDELINES_PAGES,
 })))
 
 export const pickerTheme = (id) => PICKER_THEMES.find((t) => t.id === id) || PICKER_THEMES[0]
-
-/** The theme a picker starts on: the first Free one for an account that is not Pro, else the first. */
-export const defaultThemeId = (isPro) => (isPro ? PICKER_THEMES[0] : PICKER_THEMES.find((t) => t.free)).id
 
 // The dialog's files that take a theme, as the route's row and format. The book as PNG pages is drawn in the browser and has none.
 export const THEMED_FILES = Object.freeze({
@@ -41,6 +49,24 @@ export const THEMED_FILES = Object.freeze({
   'guidelines-html': Object.freeze({ row: 'slides', format: 'html' }),
 })
 export const themedFile = (fileId) => (Object.hasOwn(THEMED_FILES, fileId) ? THEMED_FILES[fileId] : null)
+
+/** The themes that can draw a file: a guidelines-only theme is offered for the guidelines and nothing else. */
+export const pickerThemesFor = (fileId) => {
+  const f = themedFile(fileId)
+  return f ? PICKER_THEMES.filter((t) => themeHasRow(t.id, f.row)) : PICKER_THEMES
+}
+
+/** True when a theme can draw this file (a file that takes no theme is drawn by any). */
+/** The themes whose guidelines are free, by name: "Label and Swiss Field". */
+export const freeGuidelinesThemeNames = () => {
+  const names = pickerThemesFor('guidelines').filter((t) => !themedFileIsPro('guidelines', t.id)).map((t) => t.name)
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names.join('')
+}
+
+export const themeFitsFile = (themeId, fileId) => {
+  const f = themedFile(fileId)
+  return f ? themeHasRow(themeId, f.row) : true
+}
 
 // The zips a themed file downloads as, by file id. The PDF rows save nothing: the document opens in the print window.
 const THEMED_ZIPS = Object.freeze({ kit: 'ui-kit', 'book-html': 'brand-book', 'guidelines-html': 'brand-guidelines' })
@@ -56,7 +82,18 @@ export const themedFileIsPro = (fileId, themeId) => {
   return t ? isThemeExportPro(t.row, themeId) : false
 }
 
-const SHAPE_CLASS = Object.freeze({ '16:9': 'wide', 'A4 landscape': 'land', A4: 'port' })
+/**
+ * The theme a picker starts on for a file: for an account that is not Pro, the first theme with a free UI kit (Standards), so the
+ * book and the guidelines open locked as they always have and the dock names the themes the guidelines are free in; for Pro, the
+ * first theme that can draw the file.
+ */
+export const defaultThemeId = (isPro, fileId = 'kit') => {
+  const list = pickerThemesFor(fileId)
+  const free = !isPro && list.find((t) => t.free)
+  return (free || list[0] || PICKER_THEMES[0]).id
+}
+
+const SHAPE_CLASS = Object.freeze({ '16:9': 'wide', '5:4': 'land', 'A4 landscape': 'land', A4: 'port' })
 export const shapeClass = (shape) => SHAPE_CLASS[shape] || 'port'
 
 /** The preview pictures of one theme: [{ src, alt }] for a kind ('kit' | 'book' | 'guidelines'). */
@@ -84,6 +121,6 @@ export const themeThumb = (theme) => `/export-themes/${theme.id}-thumb.webp`
 export function themeLines(kind, theme) {
   const t = typeof theme === 'string' ? pickerTheme(theme) : theme
   if (kind === 'book') return { caption: 'The top of the brand book.', desc: `The ${t.name} brand book, in light and dark.` }
-  if (kind === 'guidelines') return { caption: `Cover and palette pages, ${t.shape}.`, desc: `The ${t.name} brand guidelines: ${GUIDELINES_PAGES} pages, ${t.shape}.` }
+  if (kind === 'guidelines') return { caption: `Cover and palette pages, ${t.shape}.`, desc: `The ${t.name} brand guidelines: ${t.guidePages} pages, ${t.shape}.` }
   return { caption: `An app screen and the buttons page, ${t.shape}.`, desc: `The ${t.name} UI kit: ${UI_KIT_PAGES} pages, ${t.shape}, with a code package and an example app.` }
 }

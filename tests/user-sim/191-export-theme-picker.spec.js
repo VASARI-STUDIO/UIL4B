@@ -1,8 +1,9 @@
 // THE EXPORT DIALOG'S THEME STEP.
 //
-// The UI kit, the book (PDF and HTML) and the slides (PDF and HTML) take one of ten themes. The Theme step shows the chosen
-// theme and a Change button; Change opens a popover on a wide window and a "Theme" sheet on a phone. A free account can have
-// the UI kit in Standards and Specification only; every other row and theme is Pro. The files come from
+// The UI kit and the book (PDF and HTML) take one of ten themes; the slides (PDF and HTML) take those ten and two more, Label and
+// Swiss Field, which draw the guidelines only. The Theme step shows the chosen theme and a Change button; Change opens a popover on
+// a wide window and a "Theme" sheet on a phone. A free account can have the UI kit in Standards and Specification and the
+// guidelines in Label and Swiss Field; every other row and theme is Pro. The files come from
 // POST /api/ai?export=document, which every test here answers itself (export-theme-mock.js), so what is checked is what the
 // dialog asks for, what it does with each answer, and what a person reads.
 //
@@ -16,6 +17,8 @@
 //   - Escape closes the dialog as well as the list            -> "Escape closes the list"
 //   - the list asks for focus once, with no retry per frame   -> "reduced motion" at 1440 (both settings)
 //   - the tier label reads the UI kit's free rule for every file -> "the Free or Pro label matches the dock"
+//   - isThemeExportPro ignores a theme's own free flag        -> "free, guidelines in Label" and the free guidelines downloads
+//   - the picker lists every theme for every file             -> "Label and Swiss Field are not offered for the UI kit or the book"
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
@@ -33,6 +36,13 @@ const THEMES = [
 ]
 const NAMES = THEMES.map(([, name]) => name)
 const FREE_KIT = ['Standards', 'Specification']
+// The guidelines list: the ten, then the two guidelines-only themes, which are free.
+const GUIDE_NAMES = [...NAMES, 'Label', 'Swiss Field']
+const FREE_GUIDE = ['Label', 'Swiss Field']
+const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label and Swiss Field.'
+const isGuide = (file) => file.startsWith('guidelines')
+const namesFor = (file) => (isGuide(file) ? GUIDE_NAMES : NAMES)
+const freeFor = (file) => (file === 'kit' ? FREE_KIT : isGuide(file) ? FREE_GUIDE : [])
 
 // The files the Theme step belongs to: what the dialog calls them, the row and format the route is asked for, and the zip they save as.
 const FILES = {
@@ -143,7 +153,7 @@ test.describe('Free and Pro', () => {
         await pick(page, panel, name)
         await expect(themeTier(panel), 'the label says what the dock says').toHaveText('Pro')
         await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
-        await expect(dockStatus(panel)).toHaveText('Pro unlocks this file.')
+        await expect(dockStatus(panel)).toHaveText(isGuide(file) ? GUIDE_LOCK : 'Pro unlocks this file.')
         await expect(panel.locator('.xd-theme-lock'), 'the blurred preview carries its lock').toBeVisible()
         await primaryButton(panel).click()
         await expect(page).toHaveURL(/\/plans(\?|$)/)
@@ -152,9 +162,40 @@ test.describe('Free and Pro', () => {
     }
   }
 
-  // The label and the dock decide from the same file and theme: the UI kit is free in two themes, every other file is Pro in all ten.
+  for (const file of ['guidelines', 'guidelines-html']) {
+    for (const name of FREE_GUIDE) {
+      test(`free, ${file} in ${name}: the guidelines export with no lock`, async ({ page }) => {
+        watch(page, `a free account on ${file} in ${name}, a guidelines-only theme`)
+        const panel = await open(page, { plan: 'free', file, saved: false })
+        await expect(themeName(panel), 'a free account still starts on Standards, locked').toHaveText('Standards')
+        await expect(dockStatus(panel), 'the locked dock names the free themes').toHaveText(GUIDE_LOCK)
+        await pick(page, panel, name)
+        await expect(themeTier(panel)).toHaveText('Free')
+        await expect(primaryButton(panel)).toHaveText(FILES[file].label)
+        await expect(dockStatus(panel)).toContainText('Free.')
+        await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+      })
+    }
+  }
+
+  test('Label and Swiss Field are not offered for the UI kit or the book', async ({ page }) => {
+    watch(page, 'a Pro account reading the theme list of each file')
+    const panel = await open(page, { plan: 'pro', file: 'kit' })
+    for (const file of Object.keys(FILES)) {
+      await chooseFormat(panel, file)
+      await page.mouse.move(0, 0)
+      await openList(page, panel)
+      expect(await optionNames(page), `${file}: the themes that can draw it`).toEqual(namesFor(file))
+      await page.keyboard.press('Escape')
+      await expect(list(page)).toHaveCount(0)
+    }
+  })
+
+  // The label and the dock decide from the same file and theme: the UI kit is free in two themes, the guidelines in the two
+  // guidelines-only themes, and the book is Pro in all ten.
   for (const file of Object.keys(FILES)) {
-    const freeThemes = file === 'kit' ? FREE_KIT : []
+    const freeThemes = freeFor(file)
+    const names = namesFor(file)
     test(`free, ${file}: the Free or Pro label matches the dock for every theme`, async ({ page }) => {
       watch(page, `a free account reading the tier of each theme on ${file}`)
       const panel = await open(page, { plan: 'free', file, saved: file === 'kit' })
@@ -162,15 +203,16 @@ test.describe('Free and Pro', () => {
       const rows = await list(page).locator('.xd-theme-opt').evaluateAll((els) => els.map((r) => ({
         name: r.querySelector('.xd-theme-opt-n').textContent, tier: r.querySelector('.xd-theme-opt-r').textContent.trim(),
       })))
-      expect(rows, 'the list labels every theme for this file').toEqual(NAMES.map((name) => ({ name, tier: freeThemes.includes(name) ? 'Free' : 'Pro' })))
+      expect(rows, 'the list labels every theme for this file').toEqual(names.map((name) => ({ name, tier: freeThemes.includes(name) ? 'Free' : 'Pro' })))
       await page.keyboard.press('Escape')
       await expect(list(page)).toHaveCount(0)
-      for (const name of NAMES) {
+      for (const name of names) {
         const free = freeThemes.includes(name)
         await pick(page, panel, name)
         await expect(themeTier(panel), `${name}: the row`).toHaveText(free ? 'Free' : 'Pro')
         await expect(primaryButton(panel), `${name}: the dock`).toHaveText(free ? FILES[file].label : 'Unlock with Pro')
-        if (file !== 'kit') await expect(panel.locator('.xd-theme-lock'), `${name}: the lock on the blurred preview`).toBeVisible()
+        if (file !== 'kit' && !free) await expect(panel.locator('.xd-theme-lock'), `${name}: the lock on the blurred preview`).toBeVisible()
+        if (free) await expect(panel.locator('.xd-theme-lock'), `${name}: no lock on a free file`).toHaveCount(0)
       }
     })
   }
@@ -422,6 +464,9 @@ test.describe('what is asked for and what is saved', () => {
     ['pro', 'kit', 'Studio', '06-studio'],
     ['pro', 'book-html', 'Blueprint', '09-blueprint'],
     ['pro', 'guidelines-html', 'Riso', '08-monograph'],
+    ['free', 'guidelines-html', 'Label', '25-label'],
+    ['free', 'guidelines-html', 'Swiss Field', '27-swissfield'],
+    ['pro', 'guidelines-html', 'Swiss Field', '27-swissfield'],
   ]
   for (const [plan, file, name, id] of zipCases) {
     test(`${plan}: ${file} in ${name} asks for { theme: ${id}, row: ${FILES[file].row}, format: ${FILES[file].format} } and saves harbour-${FILES[file].zip}-${id}.zip`, async ({ page }) => {
@@ -471,6 +516,19 @@ test.describe('what is asked for and what is saved', () => {
     await expect(dockError(panel)).toBeVisible()
     await pick(page, panel, 'Studio')
     await expect(dockError(panel)).toHaveCount(0)
+  })
+
+  test('free: the guidelines in Label as PDF ask for { theme: 25-label, row: slides, format: pdf } and open a print window', async ({ page, context }) => {
+    watch(page, 'a free account printing the guidelines in Label')
+    await context.addInitScript(() => { window.__printed = 0; window.print = () => { window.__printed += 1 } })
+    const calls = await mockThemeApi(page, () => ({ html: cleanHtml('Harbour brand guidelines') }))
+    const panel = await open(page, { plan: 'free', file: 'guidelines' })
+    await pick(page, panel, 'Label')
+    const [popup] = await Promise.all([context.waitForEvent('page'), primaryButton(panel).click()])
+    await expect(popup.locator('#printed-doc')).toHaveText('Harbour brand guidelines')
+    await expect.poll(() => popup.evaluate(() => window.__printed)).toBe(1)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].body).toMatchObject({ theme: '25-label', row: 'slides', format: 'pdf', projectName: 'Harbour' })
   })
 
   for (const file of ['book', 'guidelines']) {
