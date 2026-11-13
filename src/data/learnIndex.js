@@ -66,7 +66,7 @@ export const LEARN_ARTICLES = Object.freeze([
     dek: 'The four numbers WCAG actually specifies, the formula behind them, and the failures the formula cannot see.',
     description: 'The WCAG contrast thresholds — 4.5:1, 3:1 and 7:1 — the relative-luminance formula behind them, what counts as large text, and what a ratio cannot see.',
     file: 'colourContrast.jsx',
-    words: 1506,
+    words: 1349,
     updated: '2026-09-05',
     toolTo: '/create/contrast',
     toolLabel: 'Contrast Checker',
