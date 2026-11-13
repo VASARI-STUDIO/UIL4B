@@ -7,15 +7,20 @@ import ToolIcon from './ToolIcon'
 // How the Fill preview is drawn (Plain, Grain, Fluted glass, …). The trigger sits at the
 // end of the preview switch while the place is Fill and names the current style; it opens
 // a grid of small live tiles, a popover on desktop and a bottom sheet under 768px
-// (gradient.css, "FILL STYLE PICKER"). It is not modal: picking a tile applies it at once
-// and the picker stays open so styles can be compared on the canvas; Done, Esc, a press
-// outside or tabbing out closes it and focus goes back to the trigger. Tiles are drawn
-// only while it is open.
+// (gradient.css, "FILL STYLE PICKER"). It is not modal: picking a tile applies it at once.
+// On desktop the popover stays open so styles can be compared on the canvas; under 768px
+// the sheet covers the canvas, so a pick closes it. Done, Esc, a press outside or tabbing
+// out closes it and focus goes back to the trigger. Tiles are drawn only while it is open.
+const SHEET_QUERY = '(max-width: 767.98px)'
 export default function FillStylePicker({ styles, value, onChange, stops, paint, oklch }) {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
   const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { initialFocus: '[aria-pressed="true"]', arrowNav: true, portalled: true })
   const current = styles.find((s) => s.id === value) || styles[0]
+  const pick = (id) => {
+    onChange(id)
+    if (window.matchMedia?.(SHEET_QUERY).matches) closeToTrigger()
+  }
 
   useLayoutEffect(() => {
     if (!open) return
@@ -58,7 +63,7 @@ export default function FillStylePicker({ styles, value, onChange, stops, paint,
               {styles.map((s) => {
                 const on = s.id === current.id
                 return (
-                  <button key={s.id} type="button" className={`grd-fill-tile${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => onChange(s.id)}>
+                  <button key={s.id} type="button" className={`grd-fill-tile${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => pick(s.id)}>
                     <span className="grd-fill-thumb" aria-hidden="true">
                       <span className="grd-canvas" style={{ background: paint }} />
                       {s.id !== 'plain' && <GradientFx id={s.id} stops={stops} paint={paint} oklch={oklch} />}

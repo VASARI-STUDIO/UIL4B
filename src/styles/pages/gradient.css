@@ -1521,11 +1521,13 @@
 
 /* Shape, when the Fill style draws its own shape: Type and Angle stay usable (they still
    set the export) but step back, and one line says why the canvas ignores them. */
-.grd .grd-row.is-moot { opacity: .45; transition: opacity var(--dur-1) var(--ease-standard); }
+.grd .grd-row.is-moot { opacity: .7; transition: opacity var(--dur-1) var(--ease-standard); }
 .grd .grd-row.is-moot:focus-within { opacity: 1; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-row.is-moot:hover { opacity: 1; }
 }
+/* The live region stays in the DOM; empty, it is taken out of the grid so it adds no gap. */
+.grd .grd-geo-live:empty { position: absolute; }
 .grd .grd-geo-why { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); text-wrap: pretty; }
 
 /* Poster and Spec card. The effects layer (.grd-fx) draws the Poster's field and the

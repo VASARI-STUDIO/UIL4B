@@ -2497,10 +2497,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           </ToolSection>
 
           <ToolSection label="Shape" className="grd-geo" aside={LOCK_CAPTION}>
-            {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. They still apply to the export.</p>}
+            {/* Always drawn so a screen reader hears the line when it appears. */}
+            <div className="grd-geo-live" aria-live="polite">
+              {shapeMoot && <p className="grd-geo-why" id="grd-geo-why">{shapeMoot} sets its own shape, so Type and Angle don&rsquo;t change this preview. They still apply to the export.</p>}
+            </div>
             <div className={`grd-row${shapeMoot ? ' is-moot' : ''}`}>
               <ToolPills
                 label="Gradient type"
+                describedBy={shapeMoot ? 'grd-geo-why' : undefined}
                 options={GRAD_TYPES}
                 value={type}
                 onChange={(t) => { if (t !== type && guardEdit()) { beginEdit(false); setType(t) } }}
@@ -2509,7 +2513,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             </div>
             {/* The row is always drawn, at the wheel's height; a radial gradient
                 says it has no angle in the same space instead of removing it. */}
-            <div className={`grd-row grd-row--angle${shapeMoot ? ' is-moot' : ''}`}>
+            <div className={`grd-row grd-row--angle${shapeMoot ? ' is-moot' : ''}`} role={shapeMoot ? 'group' : undefined} aria-label={shapeMoot ? 'Angle' : undefined} aria-describedby={shapeMoot ? 'grd-geo-why' : undefined}>
               {angleActive ? (
                 <AngleWheel
                   label="Angle"
