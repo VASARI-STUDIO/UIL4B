@@ -207,6 +207,23 @@ function LibraryToolbar({
   const barRef = useRef(null)
   const { peek, slot } = useToolbarPeek(barRef, { frozen: open })
 
+  // The bar's own height, published on the page root as --lib-toolbar-h so a
+  // scroll target (the results heading) can keep clear of the sticky bar: its
+  // scroll-margin-top adds this (styles/pages/library-v3.css). The stage and the
+  // number of rows change the height, so it is read again on every resize. The
+  // stylesheet's fallback is the V3 single-row height (52).
+  useLayoutEffect(() => {
+    const bar = barRef.current
+    const host = bar?.closest('.lib-surface')
+    if (!bar || !host) return undefined
+    const write = () => host.style.setProperty('--lib-toolbar-h', `${Math.round(bar.getBoundingClientRect().height)}px`)
+    write()
+    if (typeof ResizeObserver === 'undefined') return () => host.style.removeProperty('--lib-toolbar-h')
+    const watcher = new ResizeObserver(write)
+    watcher.observe(bar)
+    return () => { watcher.disconnect(); host.style.removeProperty('--lib-toolbar-h') }
+  }, [])
+
   return (
     <>
     {peek && slot && <div className="lbry-toolbar-spacer" style={{ height: slot.height }} aria-hidden="true" />}

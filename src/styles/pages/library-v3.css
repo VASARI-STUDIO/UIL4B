@@ -692,3 +692,10 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3.gpd-layer[class] :is(.gpd-i
 .lib-surface.lib-v3[class] .geg[data-reveal] .geg-cta{transition-delay:200ms}
 html[data-reduced-motion="true"] .lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){opacity:1;transform:none;transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){opacity:1;transform:none;transition:none}}
+
+/* The sticky toolbar must never cover the results heading. Anything on the page
+   that is scrolled to leaves room for the nav, the bar's own offset, the bar
+   (--lib-toolbar-h, written by LibraryToolbar from its measured height; 52 is the
+   single-row V3 bar) and a gap. This replaces, for these surfaces, the global
+   rule that left the bar out. */
+.lib-surface.lib-v3[class] [id]{scroll-margin-top:calc(var(--nav-clear) + 8px + var(--lib-toolbar-h,52px) + 16px)}
