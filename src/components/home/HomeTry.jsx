@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getLenis } from '../../hooks/useSmoothScroll'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
@@ -30,6 +30,24 @@ const NAMES_H = 44
 const CHAPTER_GAP = 16
 // How far nearer the next tool must be before it takes over (px).
 const HYSTERESIS = 24
+// The settle: after the scroll has been idle this long (ms), the tool the scroll has
+// arrived at eases the rest of the way onto its landing spot if it is within reach
+// (Lenis, seconds). The reach is small, so reading a little further down a tool is
+// never undone.
+const SETTLE_IDLE = 150
+const SETTLE_REACH_PX = 80
+const SETTLE_REACH_VH = 0.1
+const SETTLE_DURATION = 0.5
+// Closer than this (px) counts as landed.
+const SETTLE_EPS = 2
+
+// The scroll position that lands a tool: centred from 1200, below the names row under it.
+function landingY(el, wide) {
+  const r = el.getBoundingClientRect()
+  return wide
+    ? r.top + window.scrollY - (window.innerHeight - r.height) / 2
+    : r.top + window.scrollY - (NAMES_H + CHAPTER_GAP)
+}
 
 const FREE_PACKS = Object.values(ICON_PACK_TIERS).filter((p) => p.tier !== 'paid').length
 const PRO_PACKS = Object.values(ICON_PACK_TIERS).filter((p) => p.tier === 'paid').length
@@ -121,19 +139,114 @@ export default function HomeTry() {
     })
   }, [])
 
+  // One scroll listener for the section: it keeps the names in step with the tool in
+  // view (once a frame) and runs the gentle settle.
+  // The settle: once the scroll has been idle, the tool the scroll arrived at eases onto
+  // its landing spot, if it is within reach. Only through Lenis (so never under reduced
+  // motion), and never
+  //   - toward the tool the gesture started on (it would undo the scroll),
+  //   - while a name click, a held pointer, a finger on the screen or a Lenis scroll is under way,
+  //   - when the tool would not fit in the window once landed,
+  //   - past the section heading (the first tool is only ever pulled up to), or against
+  //     the way out of the section (past the last tool going down).
+  // Only a scroll starts a settle; a click, a finger lifting or a blur on its own never does.
   useEffect(() => {
     let raf = 0
-    const onScroll = () => {
+    let timer = 0
+    let held = false
+    let touching = false
+    let lastY = window.scrollY
+    let dir = 0
+    // The tool the current gesture began on (-1: none), or null between gestures.
+    let startAt = null
+    const reach = () => Math.min(SETTLE_REACH_PX, window.innerHeight * SETTLE_REACH_VH)
+    // The tool whose landing spot is nearest the scroll position y, and how far off it is.
+    const nearest = (els, wide, y) => {
+      let at = 0
+      let delta = Infinity
+      els.forEach((el, i) => {
+        const d = landingY(el, wide) - y
+        if (Math.abs(d) < Math.abs(delta)) { at = i; delta = d }
+      })
+      return { at, delta }
+    }
+    const settle = () => {
+      timer = 0
+      if (held || touching) return
+      const lenis = getLenis()
+      if (!lenis || lenis.isStopped) { startAt = null; return }
+      if (lenis.isScrolling) { arm(); return }
+      const from = startAt
+      startAt = null
+      if (from === null) return
+      if (dest.current || prefersReducedMotion()) return
+      const els = stages.current.filter(Boolean)
+      if (els.length !== TOOLS.length) return
+      const wide = isWide()
+      const { at, delta } = nearest(els, wide, window.scrollY)
+      if (at === from || Math.abs(delta) < SETTLE_EPS || Math.abs(delta) > reach()) return
+      if (at === 0 && delta > 0) return
+      if (at === els.length - 1 && delta < 0 && dir > 0) return
+      const h = els[at].getBoundingClientRect().height
+      if (h > (wide ? window.innerHeight : window.innerHeight - (NAMES_H + CHAPTER_GAP))) return
+      lenis.scrollTo(window.scrollY + delta, { duration: SETTLE_DURATION })
+    }
+    function arm() {
+      clearTimeout(timer)
+      timer = setTimeout(settle, SETTLE_IDLE)
+    }
+    const frame = () => {
       if (raf) return
       raf = requestAnimationFrame(() => { raf = 0; track() })
     }
+    const onScroll = () => {
+      const y = window.scrollY
+      if (startAt === null) {
+        const els = stages.current.filter(Boolean)
+        if (els.length === TOOLS.length) {
+          const { at, delta } = nearest(els, isWide(), lastY)
+          startAt = Math.abs(delta) <= reach() ? at : -1
+        }
+      }
+      if (y !== lastY) { dir = y > lastY ? 1 : -1; lastY = y }
+      arm()
+      frame()
+    }
+    // A touch raises pointerdown too, and pointercancel the moment a pan starts, so a
+    // finger is followed by the touch events and the pointer ones are left to mice and pens.
+    const hold = (e) => { if (e.pointerType !== 'touch') held = true }
+    const release = (e) => { if (e.pointerType !== 'touch') { held = false; arm() } }
+    const onMove = (e) => { if (held && e.pointerType !== 'touch' && e.buttons === 0) release(e) }
+    const onTouch = (e) => {
+      const was = touching
+      touching = e.touches.length > 0
+      if (was && !touching) arm()
+    }
+    const onBlur = () => { held = false; touching = false; arm() }
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', frame)
+    window.addEventListener('pointerdown', hold, { passive: true })
+    window.addEventListener('pointerup', release, { passive: true })
+    window.addEventListener('pointercancel', release, { passive: true })
+    window.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('touchstart', onTouch, { passive: true })
+    window.addEventListener('touchend', onTouch, { passive: true })
+    window.addEventListener('touchcancel', onTouch, { passive: true })
+    window.addEventListener('blur', onBlur)
     track()
     return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      clearTimeout(timer)
       if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', frame)
+      window.removeEventListener('pointerdown', hold)
+      window.removeEventListener('pointerup', release)
+      window.removeEventListener('pointercancel', release)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('touchstart', onTouch)
+      window.removeEventListener('touchend', onTouch)
+      window.removeEventListener('touchcancel', onTouch)
+      window.removeEventListener('blur', onBlur)
     }
   }, [track])
 
@@ -166,10 +279,7 @@ export default function HomeTry() {
     clearTimeout(destTimer.current)
     destTimer.current = setTimeout(() => { dest.current = null }, 900)
     setCur(i)
-    const r = el.getBoundingClientRect()
-    const y = isWide()
-      ? r.top + window.scrollY - (window.innerHeight - r.height) / 2
-      : r.top + window.scrollY - (NAMES_H + CHAPTER_GAP)
+    const y = landingY(el, isWide())
     const lenis = getLenis()
     if (lenis) lenis.scrollTo(y)
     else window.scrollTo({ top: y, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
@@ -230,24 +340,28 @@ export default function HomeTry() {
 
           <div className="ht-stages">
             {TOOLS.map((t, i) => (
-              <article
-                key={t.id}
-                className="ht-stage"
-                id={`ht-s-${i}`}
-                ref={(el) => { stages.current[i] = el }}
-                aria-labelledby={`ht-h3-${i}`}
-                aria-describedby={`ht-d-${i}`}
-                aria-keyshortcuts="Escape"
-                tabIndex={-1}
-                onFocus={() => onStageFocus(i)}
-                onKeyDown={(e) => onStageKey(e, i)}
-              >
-                <h3 className="ht-h3" id={`ht-h3-${i}`}><span data-l>{t.name}</span><span data-s>{t.short}</span></h3>
-                {/* On phones the lead sits under the name and the next-step text under the link. */}
-                <div className="ht-d ht-info" id={`ht-d-${i}`}><p className="ht-lead">{t.lead}</p><p className="ht-next">{t.next}</p></div>
-                <div className="ht-fr">{t.body}</div>
-                {t.after}
-              </article>
+              <Fragment key={t.id}>
+                {/* The hairline between tools sits beside the stage, not in it, so the stage's dimming never reaches it. */}
+                {i > 0 && <i className="ht-rule" aria-hidden="true" style={{ gridRow: i + 1 }} />}
+                <article
+                  className="ht-stage"
+                  data-on={cur === i ? 'true' : 'false'}
+                  id={`ht-s-${i}`}
+                  ref={(el) => { stages.current[i] = el }}
+                  aria-labelledby={`ht-h3-${i}`}
+                  aria-describedby={`ht-d-${i}`}
+                  aria-keyshortcuts="Escape"
+                  tabIndex={-1}
+                  onFocus={() => onStageFocus(i)}
+                  onKeyDown={(e) => onStageKey(e, i)}
+                >
+                  <h3 className="ht-h3" id={`ht-h3-${i}`}><span data-l>{t.name}</span><span data-s>{t.short}</span></h3>
+                  {/* On phones the lead sits under the name and the next-step text under the link. */}
+                  <div className="ht-d ht-info" id={`ht-d-${i}`}><p className="ht-lead">{t.lead}</p><p className="ht-next">{t.next}</p></div>
+                  <div className="ht-fr">{t.body}</div>
+                  {t.after}
+                </article>
+              </Fragment>
             ))}
           </div>
         </div>

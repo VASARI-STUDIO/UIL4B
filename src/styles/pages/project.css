@@ -44,12 +44,6 @@
 .pjd .pjd-btn.is-danger:not(:disabled) { border-color: var(--err-strong); background: var(--err-strong); color: var(--err-fg); font-weight: 560; }
 .pjd .pjd-btn:disabled { opacity: .5; cursor: not-allowed; }
 
-/* Deleting asks for the name, in a panel under the head: a field squeezed into
-   a menu is how somebody mistypes the name of the thing they are destroying. */
-.pjd .pjd-confirm { margin-top: 16px; display: grid; gap: 10px; padding: 14px 16px; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--err) 45%, transparent); background: var(--card); }
-.pjd .pjd-confirm p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--err-strong); }
-.pjd .pjd-confirm input { min-height: 44px; padding: 0 12px; border-radius: 12px; font-size: 14px; }
-.pjd .pjd-confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 @media (hover: hover) and (pointer: fine) {
   .pjd .pjd-back:hover,

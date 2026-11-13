@@ -415,8 +415,8 @@ test.describe('Font Gallery pop-up: motion', () => {
         expect(opening.transform, `the pop-up starts displaced (${opening.names} ${opening.attr})`).toMatch(IDENTITY)
         expect(opening.props, `the opening animation moves it (${opening.names})`).not.toContain('transform')
         expect(opening.props).not.toContain('translate')
-        expect(opening.names, 'a fade is allowed, a slide is not').not.toContain('fgd-sheet-in')
-        expect(opening.names).not.toContain('fgd-in')
+        expect(opening.names, 'a fade is allowed, a slide is not').not.toContain('ov-sheet')
+        expect(opening.names).not.toContain('ov-in')
       })
     }
   })
@@ -425,7 +425,7 @@ test.describe('Font Gallery pop-up: motion', () => {
   // the slide. Without it, "no transform" could just be a sampler that sees
   // nothing.
   test.describe('with motion allowed', () => {
-    for (const { width, name } of [{ width: 390, name: 'fgd-sheet-in' }, { width: 1440, name: 'fgd-in' }]) {
+    for (const { width, name } of [{ width: 390, name: 'ov-sheet' }, { width: 1440, name: 'ov-in' }]) {
       test(`at ${width} the pop-up slides in as ${name}`, async ({ page }) => {
         watch(page, 'visitor with motion on')
         const opening = await openingOf(page, width, 'no-preference')

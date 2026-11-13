@@ -1,11 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { PICKER_THEMES, pickerTheme, preloadTheme, themeShots, shapeClass, themedFileIsPro } from '../../config/exportThemePicker'
+import { pickerTheme, pickerThemesFor, preloadTheme, themeShots, shapeClass, themedFileIsPro } from '../../config/exportThemePicker'
 import { preloadThemeStandins, themeStandinShots } from '../../utils/lockedStandin'
 
 // The Theme step of the Export dialog: the chosen theme with its tier, a line naming the sample brand the pictures come from,
-// and a Change button that opens a listbox of the ten themes. Highlighting a row previews it at once (onPreview); Enter or a
-// click keeps it, and Escape or Tab returns to the chosen one. Free and Pro are plain words, not pills.
+// and a Change button that opens a listbox of the themes that can draw the file (a guidelines-only theme is listed for the
+// guidelines only). Highlighting a row previews it at once (onPreview); Enter or a click keeps it, and Escape or Tab returns to
+// the chosen one. Free and Pro are plain words, not pills.
 //
 // Wide: the listbox is a popover over the dialog, 320px, its right edge on the Change button's. It opens below when it fits
 // above the dock and above the button otherwise. Narrow (`sheet`): it is a sheet over the whole dialog with a title and a
@@ -46,6 +47,7 @@ export function ThemeStage({ kind, theme, locked, standin = locked, lockText }) 
 export default function ExportThemeRow({ value, onChange, onPreview, isPro, checking, yourName, kind = 'kit', file = 'kit', sheet = false }) {
   const uid = useId()
   const theme = pickerTheme(value)
+  const themes = pickerThemesFor(file)
   const [open, setOpen] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [active, setActive] = useState(0)
@@ -71,11 +73,11 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
     leaveTimer.current = setTimeout(() => setLeaving(false), LEAVE_MS)
   }
   const close = (keep) => { shut(keep); button.current?.focus() }
-  const choose = (i) => { onChange(PICKER_THEMES[i].id); close(true); onPreview?.(null) }
+  const choose = (i) => { onChange(themes[i].id); close(true); onPreview?.(null) }
   const move = (i) => {
     setActive(i)
     hot.current = i
-    const id = PICKER_THEMES[i].id
+    const id = themes[i].id
     // A file this account cannot export in that theme preloads its stand-ins, never the real pictures.
     const loading = kind !== 'kit' && !isPro && themedFileIsPro(file, id) ? preloadThemeStandins(kind, id) : preloadTheme(kind, id)
     // The preview follows the row once its pictures are in; a row left before then never swaps.
@@ -85,7 +87,7 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
     clearTimeout(leaveTimer.current)
     setLeaving(false)
     setHost(button.current?.closest('.xd-card') || null)
-    const at = PICKER_THEMES.findIndex((t) => t.id === value)
+    const at = Math.max(0, themes.findIndex((t) => t.id === value))
     hot.current = at
     setActive(at)
     setOpen(true)
@@ -159,7 +161,7 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
   }, [open, active, uid])
 
   const onKey = (e) => {
-    const last = PICKER_THEMES.length - 1
+    const last = themes.length - 1
     if (e.key === 'ArrowDown') { e.preventDefault(); move(Math.min(active + 1, last)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); move(Math.max(active - 1, 0)) }
     else if (e.key === 'Home') { e.preventDefault(); move(0) }
@@ -180,7 +182,7 @@ export default function ExportThemeRow({ value, onChange, onPreview, isPro, chec
       aria-activedescendant={`${uid}-o${active}`}
       onKeyDown={onKey}
     >
-      {PICKER_THEMES.map((t, i) => (
+      {themes.map((t, i) => (
         <li
           key={t.id}
           id={`${uid}-o${i}`}

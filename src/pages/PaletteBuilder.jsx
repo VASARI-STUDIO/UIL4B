@@ -66,6 +66,7 @@ import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, r
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
 import useMediaQuery from '../hooks/useMediaQuery'
+import Menu from '../components/menu/Menu'
 import useBackClosesDialog from '../hooks/useBackClosesDialog'
 import useExportGate from '../hooks/useExportGate'
 // The measured collapse for the action rail — the rule, the measurements that
@@ -1752,9 +1753,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       // dialog a gallery like opened: the gallery stays put behind it. The Pro
       // modal is the same, and the docked panel (wide screens) closes only by
       // its Close button, Escape or its toolbar button, never by an outside press.
+      // The phone swatch menu is a shared Menu portalled to `.v3m-layer`; it
+      // closes itself on an outside press, so a press inside it is not one here.
       const dockedHeld = wideDock && galleryOpen && !saveOpen && !imgOpen && !histOpen
-      if (!dockedHeld && !e.target.closest('.plb-menuwrap, .plb-modal, .ui-modal-overlay, [aria-labelledby="ui-login-title"]')) closeAllMenus()
-      if (!e.target.closest('.plb-pop') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) {
+      if (!dockedHeld && !e.target.closest('.plb-menuwrap, .plb-modal, .ui-modal-overlay, [aria-labelledby="ui-login-title"], .v3m-layer')) closeAllMenus()
+      if (!e.target.closest('.plb-pop, .v3m-layer') && (anyPopover || e.target.closest('.plb-col') !== columnRefs.current[toolsIdx])) {
         // An open panel that held focus hands it back to its opener, unless the
         // press landed on something that takes focus itself. The press's own
         // focus change comes after this handler, so the hand-back waits a tick.
@@ -1915,11 +1918,12 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     setLiveMsg(`Colour moved to position ${to + 1}`)
   }
 
-  const removeCol = (i, event) => {
+  // `viaMenu` is for the phone sheet, whose rows give no click event to read.
+  const removeCol = (i, event, viaMenu = false) => {
     if (colors.length <= 2) { toast?.('A palette needs at least two colours'); return }
     if (outIdx != null) return // let the current close animation finish first
     const keyboard = event?.detail === 0
-    const fromMenu = event?.currentTarget?.closest?.('.plb-ctx') != null
+    const fromMenu = viaMenu || event?.currentTarget?.closest?.('.plb-ctx') != null
     if (!keyboard && !fromMenu) document.activeElement?.blur()
     setTintsIdx(null); setPickerIdx(null); setCtxMenu(null); setSwapIdx(null); setToolsIdx(null)
     const drop = () => {
@@ -3395,7 +3399,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   e.preventDefault()
                   ctxTriggerRef.current = e.currentTarget.querySelector('.plb-tool--more')
                   setTintsIdx(null); setPickerIdx(null)
-                  setCtxMenu({ kind: 'swatch', i, x: e.clientX, y: e.clientY })
+                  setCtxMenu({ kind: 'swatch', i, x: e.clientX, y: e.clientY, anchor: ctxTriggerRef.current })
                 }}
                 onDragOver={(e) => {
                   if (dragFrom.current == null) return
@@ -3482,10 +3486,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                     onClick={(e) => {
                       if (e.detail !== 0 && moreHiddenAtPressRef.current) { moreHiddenAtPressRef.current = false; return }
                       moreHiddenAtPressRef.current = false
-                      const r = e.currentTarget.getBoundingClientRect()
-                      ctxTriggerRef.current = e.currentTarget
+                      // The updater runs after this handler returns, when currentTarget is null.
+                      const btn = e.currentTarget
+                      const keyboard = e.detail === 0
+                      const r = btn.getBoundingClientRect()
+                      ctxTriggerRef.current = btn
                       setTintsIdx(null); setPickerIdx(null)
-                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6, triggerTop: r.top, keyboard: e.detail === 0 })
+                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6, triggerTop: r.top, keyboard, anchor: btn })
                     }}
                   >
                     <ToolIcon name="dots-three" size={15} />
@@ -3867,7 +3874,41 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           })()}
         </div>
       )}
-      {ctxMenu && ctxMenu.kind !== 'gap' && (
+      {/* Under 768px the colour actions are the shared bottom action sheet, the
+          same one every other phone menu uses. The row callbacks touch refs, but
+          only when a row is chosen, never during render. */}
+      {/* eslint-disable-next-line react-hooks/refs */}
+      {ctxMenu && ctxMenu.kind !== 'gap' && phone && (() => {
+        const i = ctxMenu.i
+        const stay = (fn) => () => { fn(); closeCtxMenu(i) }
+        return (
+          <Menu
+            open
+            onClose={() => setCtxMenu(null)}
+            anchor={ctxMenu.anchor}
+            viaKeyboard={!!ctxMenu.keyboard}
+            label="Colour actions"
+            items={[
+              { id: 'copy', label: 'Copy hex', icon: <IcoCopy />, onSelect: stay(() => onCopy?.(adjusted[i])) },
+              { id: 'save', label: 'Save to project', icon: <ToolIcon name="bookmark-simple" size={14} />, onSelect: () => openSaveColour(i) },
+              { id: 'seed', label: 'Use as seed', icon: <IcoShuffle />, onSelect: stay(() => setFromSeedInput(adjusted[i])) },
+              { id: 'hct', label: 'Edit in HCT', icon: <IcoSliders />, onSelect: () => openHctPicker(i) },
+              { id: 'tints', label: 'View tints', icon: <IcoEye />, onSelect: () => openColPanel('tints', i) },
+              { id: 'values', label: 'Colour values', icon: <ToolIcon name="swatches" size={14} />, onSelect: () => openColPanel('values', i) },
+              { id: 'match', label: 'Nearest named colours', icon: <ToolIcon name="tag" size={14} />, pro: planKnown && !isPro, onSelect: () => openColPanel('match', i) },
+              { id: 'contrast', label: 'Check contrast', icon: <ToolIcon name="check-circle" size={14} />, onSelect: () => openInContrast(i) },
+              { id: 'lock', label: locked.has(i) ? 'Unlock' : 'Lock', icon: <IcoLock open={locked.has(i)} size={15} />, onSelect: stay(() => toggleLock(i)) },
+              'sep',
+              ...(i > 0 ? [{ id: 'left', label: 'Swap left', icon: <IcoArrowLeft />, onSelect: () => { swapCols(i, 'left'); closeCtxMenu(i - 1) } }] : []),
+              ...(i < colors.length - 1 ? [{ id: 'right', label: 'Swap right', icon: <IcoArrowRight />, onSelect: () => { swapCols(i, 'right'); closeCtxMenu(i + 1) } }] : []),
+              { id: 'insl', label: 'Insert left', icon: <IcoPlus size={15} />, onSelect: () => closeCtxMenu(i + (insertAt(i, midColor(colors[Math.max(0, i - 1)], colors[i])) ? 1 : 0)) },
+              { id: 'insr', label: 'Insert right', icon: <IcoPlus size={15} />, onSelect: stay(() => insertBetween(i)) },
+              ...(colors.length > 2 ? [{ id: 'remove', label: 'Remove', icon: <IcoX />, danger: true, onSelect: () => removeCol(i, null, true) }] : []),
+            ]}
+          />
+        )
+      })()}
+      {ctxMenu && ctxMenu.kind !== 'gap' && !phone && (
         <div className="plb-pop plb-ctx" role="menu" aria-label="Colour actions" ref={ctxMenuRef}
           onKeyDown={(e) => {
             if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return

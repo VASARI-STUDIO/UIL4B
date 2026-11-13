@@ -328,31 +328,34 @@ const WIDTHS = [
   { width: 1440, inColumn: true, groups: 4 },
 ]
 
-// The home page's footer keeps the LEGAL column at every width and has no baseline row of them.
-for (const w of WIDTHS) {
-  const touch = w.width <= 768
-  test(`front page at ${w.width}: Privacy, Terms and Credits are shown once, in the LEGAL column`, async ({ browser }) => {
-    const { ctx, page } = await open(browser, { name: String(w.width), width: w.width, height: 900, touch }, 'a visitor reading the footer')
-    await go(page, '/')
-    const footer = page.locator('footer.sp-footer')
-    await footer.scrollIntoViewIfNeeded()
-    for (const [name, href] of LEGAL) {
-      await expect(footer.locator(`a[href="${href}"]`), `${name} should be in the page once`).toHaveCount(1)
-      await expect(footer.locator(`.sp-footer-col--legal a[href="${href}"]`), `${name} should sit in the LEGAL column`).toBeVisible()
-    }
-    await expect(footer.locator('.sp-footer-legal-links'), 'the baseline row of legal links is back on the home page').toHaveCount(0)
-    await expect(footer.getByRole('navigation', { name: 'Legal' })).toHaveCount(0)
-    await expect(footer.locator('.sp-footer-col--legal .sp-footer-col-h')).toHaveText('Legal')
-    await ctx.close()
-  })
+// The home-style footer (the front page, /tools and /mobile) keeps the LEGAL column at every width and has no baseline row of them.
+const HOME_FOOTER_ROUTES = [['/', 'front page'], ['/tools', '/tools'], ['/mobile', '/mobile']]
+for (const [route, label] of HOME_FOOTER_ROUTES) {
+  for (const w of WIDTHS) {
+    const touch = w.width <= 768
+    test(`${label} at ${w.width}: Privacy, Terms and Credits are shown once, in the LEGAL column`, async ({ browser }) => {
+      const { ctx, page } = await open(browser, { name: String(w.width), width: w.width, height: 900, touch }, 'a visitor reading the footer')
+      await go(page, route)
+      const footer = page.locator('footer.sp-footer')
+      await footer.scrollIntoViewIfNeeded()
+      for (const [name, href] of LEGAL) {
+        await expect(footer.locator(`a[href="${href}"]`), `${name} should be in the page once`).toHaveCount(1)
+        await expect(footer.locator(`.sp-footer-col--legal a[href="${href}"]`), `${name} should sit in the LEGAL column`).toBeVisible()
+      }
+      await expect(footer.locator('.sp-footer-legal-links'), 'the baseline row of legal links is back on the page').toHaveCount(0)
+      await expect(footer.getByRole('navigation', { name: 'Legal' })).toHaveCount(0)
+      await expect(footer.locator('.sp-footer-col--legal .sp-footer-col-h')).toHaveText('Legal')
+      await ctx.close()
+    })
+  }
 }
 
-// Every other marketing page (here /mobile) carries both sets and lets CSS choose.
+// Every marketing page that keeps the plain footer (here /sitemap) carries both sets and lets CSS choose.
 for (const w of WIDTHS) {
   const touch = w.width <= 768
-  test(`/mobile at ${w.width}: Privacy, Terms and Credits are shown once, in the ${w.inColumn ? 'LEGAL column' : 'baseline row'}`, async ({ browser }) => {
+  test(`/sitemap at ${w.width}: Privacy, Terms and Credits are shown once, in the ${w.inColumn ? 'LEGAL column' : 'baseline row'}`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { name: String(w.width), width: w.width, height: 900, touch }, 'a visitor reading the footer')
-    await go(page, '/mobile')
+    await go(page, '/sitemap')
     const footer = page.locator('footer.sp-footer')
     await footer.scrollIntoViewIfNeeded()
     const keep = w.inColumn ? '.sp-footer-col--legal' : '.sp-footer-legal-links'
@@ -376,7 +379,7 @@ for (const w of WIDTHS) {
 // Nothing in the footer's link markup changes after it first appears, at either
 // side of the 760/761 line, and its height is the same once it has settled.
 for (const width of [760, 761]) {
-  test(`/mobile at ${width}: the footer's links and height do not change after it first appears`, async ({ browser }) => {
+  test(`/sitemap at ${width}: the footer's links and height do not change after it first appears`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { name: String(width), width, height: 900, touch: false }, 'a visitor loading the page')
     await page.addInitScript(() => {
       const state = { first: null, linkChanges: 0 }
@@ -395,7 +398,7 @@ for (const width of [760, 761]) {
         }
       }).observe(document, { childList: true, subtree: true })
     })
-    await go(page, '/mobile')
+    await go(page, '/sitemap')
     await page.locator('footer.sp-footer').scrollIntoViewIfNeeded()
     await page.waitForTimeout(800)
     const seen = await page.evaluate(() => {

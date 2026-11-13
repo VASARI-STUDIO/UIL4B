@@ -1,0 +1,331 @@
+/* ── Overlays: one token set and one skin for every floating surface ──────
+ *
+ * Loaded after global.css (src/main.jsx). Dialogs, sheets, toasts and the
+ * tooltip read the tokens below; the existing dialog shells keep their markup
+ * and take the skin through the selectors here.
+ *
+ * Where the same property is set by a lazy route sheet (font-detail.css and
+ * the like, which cascade after this file), the rule is written `:root .x`
+ * so the extra class of specificity wins without !important.
+ *
+ * Z SCALE. popover 200, dialog 300, toast 400, tooltip 500 is the design.
+ * The live dialogs sit at 500 to 9999 and every menu opened from inside one is
+ * tuned against that, so the dialogs keep their layers and the scale is
+ * stretched above them: toast and tooltip clear every dialog.
+ *
+ * Tonal fills, no borders; radii 24 (modal, sheet top), 12 (popover, toast,
+ * palette), 8 (rows, fields, tooltip), 999 (controls).
+ */
+
+:root {
+  --ov-z-dialog: 9999;
+  --ov-z-toast: 10000;
+  --ov-z-tip: 10010;
+  --ov-ease: cubic-bezier(.23, 1, .32, 1);
+  --ov-r-modal: 24px;
+  --ov-r-pop: 12px;
+  --ov-r-row: 8px;
+}
+[data-theme="dark"] {
+  --scrim: rgba(6, 6, 7, .72);
+  --ov-surface: #0F1012;
+  --ov-raised: #131416;
+  --ov-ring: 0 0 0 1px rgba(242, 241, 236, .10);
+  --ov-shadow-modal: 0 24px 64px rgba(0, 0, 0, .5);
+  --ov-shadow-pop: 0 12px 32px -12px rgba(0, 0, 0, .7);
+  --ov-tone: rgba(242, 241, 236, .06);
+  --danger: #FF8F87;
+}
+[data-theme="light"] {
+  --scrim: rgba(18, 20, 24, .40);
+  --ov-surface: #FFFFFF;
+  --ov-raised: #ECEBE7;
+  --ov-ring: 0 0 0 1px rgba(15, 15, 16, .10);
+  --ov-shadow-modal: 0 24px 64px rgba(18, 20, 24, .16);
+  --ov-shadow-pop: 0 12px 32px -12px rgba(18, 20, 24, .24);
+  --ov-tone: rgba(15, 15, 16, .06);
+  --danger: #B42318;
+}
+
+/* ── Scrim: no blur, one value ───────────────────────────────────────────── */
+:root .ui-modal-overlay,
+:root .fb-overlay,
+:root .fnote-overlay,
+:root .cp-overlay,
+:root .fgd-overlay,
+:root .fbd-overlay,
+:root .ov-layer {
+  background: var(--scrim);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  isolation: isolate;
+  animation: ov-fade 200ms var(--ov-ease);
+}
+@keyframes ov-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ov-in { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes ov-sheet { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+/* ── Modal chrome: surface, ring, radius 24, no border ──────────────────── */
+:root .ui-modal,
+:root .fb-modal,
+:root .fnote,
+:root .fgd,
+:root .ov-dialog {
+  background: var(--ov-surface);
+  border: 0;
+  border-radius: var(--ov-r-modal);
+  box-shadow: var(--ov-ring), var(--ov-shadow-modal);
+  animation: ov-in 200ms var(--ov-ease);
+}
+@media (max-width: 767px) { :root .fgd { animation-name: ov-sheet; } }
+:root .fbd-overlay .fbd-dialog {
+  background: var(--ov-surface);
+  border: 0;
+  border-radius: var(--ov-r-modal);
+  box-shadow: var(--ov-ring), var(--ov-shadow-modal);
+  animation: ov-in 200ms var(--ov-ease);
+}
+:root .fbd-overlay .fbd-close { border: 0; border-radius: 999px; background: var(--ov-tone); }
+:root .fbd-overlay :is(button, a, input, [tabindex]):focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+:root .ui-modal { overflow: hidden auto; }
+:root .ui-modal-x,
+:root .ov-dialog-x {
+  border: 0;
+  border-radius: 999px;
+  background: var(--ov-tone);
+  color: var(--t1);
+}
+:root .ui-modal-x:hover,
+:root .ov-dialog-x:hover { background: color-mix(in srgb, var(--t0) 12%, transparent); color: var(--t0); }
+:root .ui-modal-title,
+:root .ov-dialog-title { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+
+/* Secondary pill inside an overlay is a tonal fill, not an outlined one. */
+:root :is(.ui-modal, .fb-modal, .fnote, .fgd, .ov-dialog, .ov-sheet) .ui-pill-out {
+  border-color: transparent;
+  background: var(--ov-tone);
+}
+:root :is(.ui-modal, .fb-modal, .fnote, .fgd, .ov-dialog, .ov-sheet) .ui-pill-out:hover {
+  background: color-mix(in srgb, var(--t0) 12%, transparent);
+}
+
+/* Focus is a 2px ink outline, offset 2. */
+:root :is(.ui-modal, .fb-modal, .fnote, .fgd, .ov-dialog, .ov-sheet, .cp-panel) :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--t0);
+  outline-offset: 2px;
+}
+
+/* Fields inside an overlay: tonal, no border, radius 8. */
+:root :is(.fb-modal, .ov-dialog) :is(input:not([type="checkbox"]):not([type="radio"]), textarea) {
+  border: 0;
+  border-radius: var(--ov-r-row);
+  background: var(--ov-tone);
+}
+
+/* ── Sheet: under 768 a dialog is a bottom sheet, 24 on top ──────────────── */
+@media (max-width: 767px) {
+  :root .ui-modal-overlay,
+  :root .fb-overlay,
+  :root .fnote-overlay,
+  :root .ov-layer {
+    align-items: end;
+    justify-items: stretch;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
+  }
+  :root .ui-modal,
+  :root .fb-modal,
+  :root .fnote,
+  :root .ov-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 48px - env(safe-area-inset-top, 0px));
+    border-radius: var(--ov-r-modal) var(--ov-r-modal) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: ov-sheet 240ms var(--ov-ease);
+  }
+  :root .ui-modal-x,
+  :root .ov-dialog-x { width: 44px; height: 44px; }
+}
+
+/* ── Danger is text only, never a fill ───────────────────────────────────── */
+.ov-danger { color: var(--danger); }
+
+/* ── The shared Dialog (components/overlay/Dialog.jsx) ───────────────────── */
+.ov-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ov-z-dialog);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.ov-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100dvh - 160px);
+  overflow: hidden;
+  color: var(--t0);
+  font-family: var(--font);
+}
+.ov-dialog[data-size="m"] { max-width: 560px; }
+.ov-dialog[data-size="l"] { max-width: 880px; }
+.ov-dialog:focus-visible { outline: none; }
+.ov-dialog-strip { display: flex; flex: none; height: 64px; }
+.ov-dialog-strip span { flex: 1 1 0; }
+.ov-dialog-body { padding: 20px 24px 24px; overflow-y: auto; }
+.ov-dialog-title { margin: 0 0 8px; color: var(--t0); }
+.ov-dialog-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--t1); text-wrap: pretty; }
+.ov-dialog-text strong { color: var(--t0); font-weight: 600; }
+.ov-nowrap { white-space: nowrap; }
+.ov-dialog-field {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--t0);
+  border: 0;
+  border-radius: var(--ov-r-row);
+  background: var(--ov-tone);
+}
+.ov-dialog-field:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+/* The error slot keeps its height so the dialog does not jump. */
+.ov-dialog-error { min-height: 22px; margin: 12px 0 0; font-size: 13px; line-height: 22px; color: var(--danger); }
+.ov-dialog-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.ov-dialog-foot .ui-pill { min-height: 44px; padding: 0 18px; font-size: 14px; }
+/* The destructive action is a tonal pill with danger text. */
+:root .ov-act-danger { color: var(--danger); background: var(--ov-tone); }
+:root .ov-act-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--t0) 12%, transparent); }
+:root .ov-act-danger:disabled { opacity: .7; cursor: not-allowed; }
+@media (max-width: 767px) {
+  .ov-layer { padding: 0; }
+  .ov-dialog-foot { flex-direction: column-reverse; align-items: stretch; }
+  .ov-dialog-foot .ui-pill { width: 100%; }
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+:root .toast {
+  left: 50%;
+  right: auto;
+  bottom: calc(32px + var(--toast-dock, 0px) + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  min-height: 44px;
+  max-width: min(480px, calc(100vw - 32px));
+  gap: 12px;
+  padding: 6px 8px 6px 16px;
+  background: var(--ov-raised);
+  border: 0;
+  border-radius: var(--ov-r-pop);
+  box-shadow: var(--ov-ring), var(--ov-shadow-pop);
+  z-index: var(--ov-z-toast);
+  isolation: isolate;
+  transform: translate(-50%, 8px);
+  transition: transform 150ms ease-in, opacity 150ms ease-in;
+}
+:root .toast.show {
+  transform: translate(-50%, 0);
+  transition: transform 200ms var(--ov-ease), opacity 200ms var(--ov-ease);
+}
+:root .toast.has-action { max-width: min(480px, calc(100vw - 32px)); }
+:root .toast-msg { font-size: 14px; font-weight: 500; line-height: 1.4; letter-spacing: 0; }
+/* Only an error carries an icon; success and info are the words alone. */
+:root .toast-ico { width: 16px; height: 16px; border-radius: 999px; background: none; color: var(--danger); }
+:root .toast-ico svg { width: 16px; height: 16px; }
+/* The action is an underlined word with a 44px hit area. */
+:root .toast-action {
+  position: relative;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--t0);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:root .toast-action::after { content: ""; position: absolute; left: -4px; right: -4px; top: 50%; height: 44px; transform: translateY(-50%); }
+:root .toast-action:hover { background: none; text-decoration-thickness: 2px; }
+:root .toast-action:focus-visible,
+:root .toast-x:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+/* Dismiss is a 28px disc inside a 44px hit area. */
+:root .toast-x { position: relative; width: 28px; height: 28px; margin: 0; background: var(--ov-tone); color: var(--t1); border-radius: 999px; }
+:root .toast-x::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+:root .toast-x:hover { background: color-mix(in srgb, var(--t0) 12%, transparent); color: var(--t0); }
+@media (max-width: 640px) {
+  :root .toast { width: calc(100vw - 32px); max-width: calc(100vw - 32px); min-height: 48px; bottom: calc(16px + var(--toast-dock, 0px) + env(safe-area-inset-bottom, 0px)); }
+  :root .toast-msg { font-size: 15px; }
+}
+@media (max-width: 767px) {
+  :root.has-tabbar .toast { bottom: calc(var(--tabbar-h) + 16px + var(--toast-dock, 0px) + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* The Feedback button steps aside for a modal and rides up with a toast. */
+html:has([role="dialog"][aria-modal="true"]) .global-feedback-btn { visibility: hidden; }
+body:has(.toast.show) .global-feedback-btn { transform: translateY(-52px); }
+.global-feedback-btn { transition: transform 200ms var(--ov-ease), background-color 150ms ease; }
+
+/* ── Tooltip (components/overlay/Tooltip.jsx) ────────────────────────────── */
+.ov-tip {
+  position: fixed;
+  z-index: var(--ov-z-tip);
+  max-width: 240px;
+  padding: 6px 10px;
+  border-radius: var(--ov-r-row);
+  background: var(--ov-raised);
+  box-shadow: var(--ov-ring), var(--ov-shadow-pop);
+  color: var(--t0);
+  font: 500 13px/1.3 var(--font);
+  pointer-events: none;
+  animation: ov-fade 120ms ease-out;
+}
+
+/* ── Colour picker (ColorPickerPop): 264 wide, tonal controls, 24 on a phone
+   sheet. The panel's own surface and shadow belong to the shared popover skin
+   and are left to it. ─────────────────────────────────────────────────────── */
+:root .pop.cpk-pop { border-radius: var(--ov-r-pop); }
+@media (min-width: 768px) { :root .pop.cpk-pop { width: 264px; } }
+:root .cpk-trigger { border: 0; background: var(--ov-tone); border-radius: var(--ov-r-row); }
+:root .cpk-trigger:hover,
+:root .cpk-trigger[aria-expanded="true"] { background: color-mix(in srgb, var(--t0) 12%, transparent); box-shadow: none; }
+:root .cpk-trigger:focus-visible,
+:root .cpk-dropper:focus-visible,
+:root .cpk-format:focus-visible,
+:root .cpk-hex:focus-visible,
+:root .cpk-swatch:focus-visible,
+:root .cpk-preset:focus-visible { outline: 2px solid var(--t0); outline-offset: 2px; }
+:root .cpk-dropper,
+:root .cpk-hex,
+:root .cpk-format { border: 0; border-radius: var(--ov-r-row); background: var(--ov-tone); }
+:root .cpk-hex:focus-visible { box-shadow: none; border-color: currentColor; }
+@media (max-width: 767px) {
+  :root .pop.cpk-pop[data-pop-fixed="true"],
+  :root .pop.cpk-pop[data-pop-fixed="true"][data-pop-side="top"] { border-radius: var(--ov-r-modal) var(--ov-r-modal) 0 0; }
+}
+
+/* ── Reduced motion: opacity only ────────────────────────────────────────── */
+html[data-reduced-motion="true"] :root .ov-dialog,
+html[data-reduced-motion="true"] .ov-dialog,
+html[data-reduced-motion="true"] .ui-modal,
+html[data-reduced-motion="true"] .fb-modal,
+html[data-reduced-motion="true"] .fnote,
+html[data-reduced-motion="true"] .fgd,
+html[data-reduced-motion="true"] .toast { animation-name: ov-fade; animation-duration: 120ms; }
+html[data-reduced-motion="true"] .toast,
+html[data-reduced-motion="true"] .toast.show { transform: translate(-50%, 0); transition: opacity 120ms linear; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .ov-dialog,
+  html:not([data-reduced-motion="false"]) .ui-modal,
+  html:not([data-reduced-motion="false"]) .fb-modal,
+  html:not([data-reduced-motion="false"]) .fnote,
+  html:not([data-reduced-motion="false"]) .fgd { animation-name: ov-fade; animation-duration: 120ms; }
+  html:not([data-reduced-motion="false"]) .toast,
+  html:not([data-reduced-motion="false"]) .toast.show { transform: translate(-50%, 0); transition: opacity 120ms linear; }
+}

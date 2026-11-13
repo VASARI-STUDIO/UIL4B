@@ -56,12 +56,12 @@
     "placeholder": "Search tools, jump to a page, or run an action…",
     "noResults": "No results for \"{query}\"",
     "recent": "Recent",
-    "allTools": "All Tools",
+    "allTools": "All tools",
     "categories": "Categories",
     "actions": "Actions",
-    "goToDashboard": "Go to Dashboard",
-    "openSettings": "Open Settings",
-    "sendFeedback": "Send Feedback"
+    "goToDashboard": "Go to dashboard",
+    "openSettings": "Open settings",
+    "sendFeedback": "Send feedback"
   },
   "dash": {
     "greeting": {

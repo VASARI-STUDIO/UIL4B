@@ -49,3 +49,30 @@ test('robots.txt leaves /p/ crawlable so the noindex can be read', () => {
   const robots = fs.readFileSync(path.join(process.cwd(), 'public/robots.txt'), 'utf8')
   assert.ok(!/^\s*Disallow:\s*\/p\b/m.test(robots), 'robots.txt disallows /p/, which hides the noindex')
 })
+
+test('the share card PNG is also kept out of the index', async () => {
+  const { res } = await render({ c: '4338E0,7C6CF0', img: '1' })
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['content-type'], 'image/png')
+  assert.match(String(res.headers['x-robots-tag'] || ''), /noindex/, 'the PNG must send X-Robots-Tag: noindex')
+})
+
+test('a lower- or mixed-case code is sent on to one upper-case URL', async () => {
+  const page = await render({ c: '4338e0,7c6cF0' })
+  assert.equal(page.res.statusCode, 308)
+  assert.equal(page.res.headers.location, '/p/4338E0,7C6CF0')
+
+  const img = await render({ c: '4338e0,7c6cF0', img: '1' })
+  assert.equal(img.res.statusCode, 308)
+  assert.equal(img.res.headers.location, '/api/share?c=4338E0,7C6CF0&img=1')
+
+  // The /p/:code rewrite repeats the code in the query; that must not refuse it.
+  const rewrite = await render({ c: '4338e0', code: '4338e0' })
+  assert.equal(rewrite.res.statusCode, 308)
+  assert.equal(rewrite.res.headers.location, '/p/4338E0')
+
+  // The upper-case URL is served, not redirected again.
+  const served = await render({ c: '4338E0,7C6CF0' })
+  assert.equal(served.res.statusCode, 200)
+  assert.match(served.body, /og:image" content="[^"]*c=4338E0,7C6CF0&img=1"/)
+})

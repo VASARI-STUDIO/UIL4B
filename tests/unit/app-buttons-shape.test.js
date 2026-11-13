@@ -42,7 +42,9 @@ function blocksFor(sel, source = css) {
 const KEEP = {
   // colour swatches and swatch triggers: the sample is the control (a Contrast Checker swatch is the
   // colour chip with its role name under it, in one 10px-cornered target)
-  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'cpk-preset', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell'],
+  swatch: ['cc-swatch', 'cpk-trigger', 'cpk-dropper', 'cpk-swatch', 'cpk-preset', 'grd-stop-swatch', 'emoji-skin-btn', 'tt-cell', 'tt-note', 'uh-card-pick', 'emoji-cell',
+    // the Spectrum page's two contrast swatches: tap to step each colour through the ramp
+    'mk-swatch'],
   // rows in a menu, list or popover
   row: ['plb-menu-item', 'plb-sc-row', 'plb-varrow', 'plb-varrow-main', 'plb-varrow-cmp', 'plb-tint-row', 'plb-ctx-item', 'ied-pj',
     'ig-rail-item', 'svt-item', 'pop-item', 'pnav-pop-item', 'pnav-sheet-row', 'stc-save-item', 'settings-suggest-item',
@@ -51,8 +53,10 @@ const KEEP = {
     'xd-type', 'xd-cat',
     // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
     'pvd-state',
-    // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
-    'grd-stop-select', 'grd-tintmenu-item',
+    // the Gradient Generator's stop list: the select area of a stop row
+    'grd-stop-select',
+    // the shared menu's rows (8px in the popover, 12px in the phone sheet) and the sheet's separate Cancel block (16px, a row-sized block)
+    'v3m-i', 'v3m-cancel',
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
     'plb-match-btn',
     // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners

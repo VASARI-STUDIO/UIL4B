@@ -1,7 +1,7 @@
 import { useState, useEffect, useId, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCategory, localiseTools, localiseCategories } from '../data/tools'
-import { categoryPillFor, offerableCategories, queryCommandIndex } from '../data/toolIndex'
+import { categoryPillFor, offerableCategories, queryCommandIndex, searchHints } from '../data/toolIndex'
 import { useWorkspace } from '../contexts/WorkspaceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useIsAdmin } from '../hooks/useIsAdmin'
@@ -11,6 +11,7 @@ import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/overlay.css'
+import '../styles/deferred/v3-palette.css'
 
 // The command bar. V2 gives it a front door in the nav, which makes its
 // keyboard contract load-bearing rather than a power-user extra.
@@ -73,7 +74,7 @@ export default function CommandPalette({ open, onClose }) {
     if (!q) {
       const out = []
       if (recentTools.length) out.push({ label: t('cmd.recent'), items: recentTools.map(tl => ({ kind: 'tool', ...tl })) })
-      out.push({ label: t('cmd.allTools'), items: lTools.map(tl => ({ kind: 'tool', ...tl })) })
+      out.push({ label: t('cmd.allTools'), fallback: true, items: lTools.map(tl => ({ kind: 'tool', ...tl })) })
       const cats = offerableCategories(lCats).map(c => ({ kind: 'category', id: c.id, label: c.label, path: c.path, description: c.description }))
       if (cats.length) out.push({ label: t('cmd.categories'), items: cats })
       out.push({ label: t('cmd.actions'), items: quickActions.map(a => ({ kind: 'action', ...a })) })
@@ -93,10 +94,21 @@ export default function CommandPalette({ open, onClose }) {
     if (guides.length) out.push({ label: 'Guides', items: guides })
     if (cats.length) out.push({ label: t('cmd.categories'), items: cats })
     if (actions.length) out.push({ label: t('cmd.actions'), items: actions })
+    // A search that finds nothing still shows where to go next: every tool.
+    if (!out.length) out.push({ label: t('cmd.allTools'), fallback: true, items: lTools.map(tl => ({ kind: 'tool', ...tl })) })
     return out
   }, [query, recentTools, lTools, lCats, quickActions, t])
 
   const flat = useMemo(() => sections.flatMap(s => s.items), [sections])
+  // The same terms the nav search used to type into its field, from the one
+  // registry list, shown as the Try row while the query is empty.
+  const hints = useMemo(() => searchHints(lTools).slice(0, 4), [lTools])
+  const noMatch = query.trim() !== '' && sections.some(s => s.fallback)
+  // After a search that finds nothing the list below is only a fallback, so no
+  // row is armed until the person arrows or hovers: Enter must not jump to
+  // whichever tool happens to be first.
+  const [moved, setMoved] = useState(false)
+  const armed = !noMatch || moved
 
   // Reset the query per opening. Focus and the body-scroll lock are
   // useModalDialog's job now, so this no longer competes with it for either.
@@ -104,11 +116,19 @@ export default function CommandPalette({ open, onClose }) {
     if (open) {
       setQuery('')
       setHighlight(0)
+      setMoved(false)
     }
   }, [open])
 
   const safeHighlight = Math.min(highlight, Math.max(flat.length - 1, 0))
-  const activeId = flat.length ? `${uid}-opt-${safeHighlight}` : undefined
+  const activeId = flat.length && armed ? `${uid}-opt-${safeHighlight}` : undefined
+
+  const setTerm = (value) => {
+    setQuery(value)
+    setHighlight(0)
+    setMoved(false)
+    inputRef.current?.focus()
+  }
 
   if (!open) return null
 
@@ -122,11 +142,11 @@ export default function CommandPalette({ open, onClose }) {
   // also restores focus to whatever opened the palette. Handling it here too
   // would close it twice and skip the restore.
   const onKey = (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight(Math.min(safeHighlight + 1, flat.length - 1)) }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight(Math.max(safeHighlight - 1, 0)) }
-    else if (e.key === 'Home') { e.preventDefault(); setHighlight(0) }
-    else if (e.key === 'End') { e.preventDefault(); setHighlight(Math.max(flat.length - 1, 0)) }
-    else if (e.key === 'Enter') { e.preventDefault(); select(flat[safeHighlight]) }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight(armed ? Math.min(safeHighlight + 1, flat.length - 1) : 0); setMoved(true) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlight(armed ? Math.max(safeHighlight - 1, 0) : 0); setMoved(true) }
+    else if (e.key === 'Home') { e.preventDefault(); setHighlight(0); setMoved(true) }
+    else if (e.key === 'End') { e.preventDefault(); setHighlight(Math.max(flat.length - 1, 0)); setMoved(true) }
+    else if (e.key === 'Enter') { e.preventDefault(); if (armed) select(flat[safeHighlight]) }
   }
 
   let runningIdx = 0
@@ -160,7 +180,7 @@ export default function CommandPalette({ open, onClose }) {
             aria-label={t('cmd.placeholder') || 'Search UIL4B'}
             placeholder={t('cmd.placeholder')}
             value={query}
-            onChange={e => { setQuery(e.target.value); setHighlight(0) }}
+            onChange={e => { setQuery(e.target.value); setHighlight(0); setMoved(false) }}
             onKeyDown={onKey}
           />
           {/* A real button, not a key hint: a phone has no Esc key. The "esc"
@@ -175,8 +195,19 @@ export default function CommandPalette({ open, onClose }) {
         </div>
 
         <div className="cp-results" ref={listRef} id={`${uid}-list`} role="listbox" aria-label={t('common.tools') || 'Results'}>
-          {flat.length === 0 && (
-            <div className="cp-empty" role="status">{t('cmd.noResults', { query })}</div>
+          {query.trim() === '' && hints.length > 0 && (
+            <div className="cp-try" role="group" aria-label="Try">
+              <span className="cp-try-label" aria-hidden="true">Try</span>
+              {hints.map(h => (
+                <button key={h} type="button" className="cp-try-btn" tabIndex={-1} onClick={() => setTerm(h)}>{h}</button>
+              ))}
+            </div>
+          )}
+          {noMatch && (
+            <div className="cp-empty" role="status">
+              <p>{t('cmd.noResults', { query })}</p>
+              <button type="button" className="cp-clear" tabIndex={-1} onClick={() => setTerm('')}>Clear search</button>
+            </div>
           )}
           {sections.map(section => (
             <div key={section.label} role="group" aria-label={section.label}>
@@ -199,10 +230,13 @@ export default function CommandPalette({ open, onClose }) {
                     // move over it. It stays a real <button> so a mouse user
                     // gets a real click target, not a div with a handler.
                     role="option"
-                    aria-selected={idx === safeHighlight}
+                    aria-selected={armed && idx === safeHighlight}
                     tabIndex={-1}
-                    className={`cp-item${idx === safeHighlight ? ' active' : ''}`}
-                    onMouseEnter={() => setHighlight(idx)}
+                    className={`cp-item${armed && idx === safeHighlight ? ' active' : ''}`}
+                    // Arms on real pointer movement, not on mouseenter: a list that
+                    // re-renders under a resting cursor fires mouseenter without any
+                    // movement. Sets state only when it would change.
+                    onMouseMove={() => { if (!moved || highlight !== idx) { setHighlight(idx); setMoved(true) } }}
                     onClick={() => select(item)}
                   >
                     <div className="cp-item-icon" aria-hidden="true">

@@ -22,7 +22,7 @@ import assert from 'node:assert/strict'
 import JSZip from 'jszip'
 import { serveExportDocument } from '../../api/_lib/exportDocument.js'
 import { MAX_THEME_BODY_CHARS, PRINT_CSP } from '../../api/_lib/exportThemeRoute.js'
-import { EXPORT_THEMES, THEME_ROW_FORMATS, FREE_UI_KIT_THEMES, isThemeExportPro } from '../../src/data/exportThemes.js'
+import { EXPORT_THEMES, THEME_ROW_FORMATS, FREE_UI_KIT_THEMES, isThemeExportPro, themeHasRow } from '../../src/data/exportThemes.js'
 
 const DESIGN = {
   palette: { base: '#2F6F5E', harmony: 'auto', colors: ['#2F6F5E', '#F2C14E', '#8FB8A8', '#F4F1EA', '#1D2B27'] },
@@ -55,13 +55,17 @@ const ask = async (token, body, extra) => {
 }
 const body = (over = {}) => ({ theme: '04-standards', row: 'ui-kit', format: 'zip', projectName: 'Tide & Co.', design: DESIGN, ...over })
 
-test('Free: the UI kit in the free themes is served, every other row and theme is pro_required', async () => {
+// A free theme (guidelines-only, rows: ['slides']) is free in every row it has.
+const FREE_THEMES = EXPORT_THEMES.filter((t) => t.free).map((t) => t.id)
+
+test('Free: the UI kit in the free UI kit themes and every row of a free theme are served, everything else is pro_required', async () => {
   for (const theme of EXPORT_THEMES.map((t) => t.id)) {
     for (const [row, formats] of Object.entries(THEME_ROW_FORMATS)) {
+      if (!themeHasRow(theme, row)) continue
       for (const format of formats) {
         const stub = { projectToBrand() { throw new Error('stop here') } }
         const res = await ask('tok-free', body({ theme, row, format }), { engine: stub })
-        const free = row === 'ui-kit' && FREE_UI_KIT_THEMES.includes(theme)
+        const free = FREE_THEMES.includes(theme) || (row === 'ui-kit' && FREE_UI_KIT_THEMES.includes(theme))
         assert.equal(isThemeExportPro(row, theme), !free)
         assert.equal(res.code, free ? 500 : 403, `${theme} ${row} ${format}`)
         if (!free) assert.equal(res.body.code, 'pro_required')
@@ -74,6 +78,45 @@ test('Pro: a request for any row in any theme gets past the gate', async () => {
   for (const theme of EXPORT_THEMES.map((t) => t.id)) {
     const stub = { projectToBrand() { throw new Error('stop here') } }
     assert.equal((await ask('tok-pro', body({ theme, row: 'slides', format: 'pdf' }), { engine: stub })).code, 500)
+  }
+})
+
+test('the free themes are the two guidelines-only themes, slides only', () => {
+  assert.deepEqual(FREE_THEMES, ['25-label', '27-swissfield'])
+  for (const theme of FREE_THEMES) {
+    assert.deepEqual(Object.keys(THEME_ROW_FORMATS).filter((row) => themeHasRow(theme, row)), ['slides'])
+    assert.equal(isThemeExportPro('slides', theme), false)
+  }
+  assert.equal(themeHasRow('04-standards', 'book'), true)
+  assert.equal(themeHasRow('nope', 'slides'), false)
+  assert.equal(themeHasRow('25-label', '__proto__'), false)
+})
+
+test('a row a theme does not have is a 400 unknown_row for everyone, before the plan check', async () => {
+  for (const token of ['tok-pro', 'tok-free']) {
+    for (const theme of FREE_THEMES) {
+      for (const [row, format] of [['ui-kit', 'zip'], ['book', 'pdf'], ['book', 'html']]) {
+        const res = await ask(token, body({ theme, row, format }))
+        assert.equal(res.code, 400, `${token} ${theme} ${row}`)
+        assert.equal(res.body.code, 'unknown_row')
+      }
+    }
+  }
+})
+
+test('a free account gets the guidelines of a free theme as a real file: print HTML and the zip', async () => {
+  for (const theme of FREE_THEMES) {
+    const pdf = await ask('tok-free', body({ theme, row: 'slides', format: 'pdf' }))
+    assert.equal(pdf.code, 200, theme)
+    assert.equal(pdf.body.theme, theme)
+    assert.ok(!/<script/i.test(pdf.body.html))
+    assert.ok((pdf.body.html.match(/<section|class="page/g) || []).length >= 1, `${theme}: pages`)
+    const zipRes = await ask('tok-free', body({ theme, row: 'slides', format: 'html' }))
+    assert.equal(zipRes.code, 200, theme)
+    assert.equal(zipRes.headers['Content-Type'], 'application/zip')
+    assert.ok(zipRes.headers['Content-Disposition'].endsWith(`brand-guidelines-${theme}.zip"`), theme)
+    const zip = await JSZip.loadAsync(zipRes.buffer)
+    assert.ok(Object.keys(zip.files).some((n) => n.endsWith('/brand-guidelines.html')), `${theme}: page in the zip`)
   }
 })
 
@@ -189,7 +232,7 @@ test('the brand book: print HTML and the site zip, with the kit named from the s
 // over every theme and both print rows, with a project name that tries to break out of its text.
 test('print HTML, every theme: no script, no handler, no outside link, fonts as data URLs, the CSP meta first in the head', async () => {
   for (const theme of EXPORT_THEMES.map((t) => t.id)) {
-    for (const row of ['book', 'slides']) {
+    for (const row of ['book', 'slides'].filter((r) => themeHasRow(theme, r))) {
       const res = await ask('tok-pro', body({ theme, row, format: 'pdf', projectName: '"><script>alert(1)</script> <img src=x onerror=alert(2)>' }))
       const label = `${theme} ${row}`
       assert.equal(res.code, 200, label)
@@ -226,6 +269,6 @@ test('the data table matches the themes: ids, names and the free tier', async ()
     const meta = (await import(`../../api/_lib/exportThemes/themes/${t.id}/index.js`)).meta
     assert.equal(meta.id, t.id)
     assert.equal(meta.name, t.name)
-    assert.equal(meta.tier === 'Free', FREE_UI_KIT_THEMES.includes(t.id), `${t.id} tier`)
+    assert.equal(meta.tier === 'Free', FREE_UI_KIT_THEMES.includes(t.id) || Boolean(t.free), `${t.id} tier`)
   }
 })
