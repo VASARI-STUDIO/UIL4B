@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
 import { SEARCH_KEY } from '../config/shortcuts'
@@ -26,7 +26,6 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
 import { isAdminEmail } from '../utils/constants'
 import NavIcon from './NavIcon'
-import { INTENT_MS, MOMENT_OF, GALLERY_STEP_MS, faceByKey, facesAttr, finePointer, galleryRun, warmFaces } from './nav/menuMoments'
 import ThemeChoice from './ThemeChoice'
 import ThemeCycle from './nav/ThemeCycle'
 import PhoneTabBar from './nav/PhoneTabBar'
@@ -406,6 +405,10 @@ function AppHeader() {
   const hoverLock = useRef(false)
   // How the open menu was opened: a click on a hover-opened trigger pins it.
   const openedBy = useRef(null)
+  // Mirror of `open` that is current before the next render, so a hover-open and a
+  // click in the same frame decide against what was just requested.
+  const openRef = useRef(null)
+  const requestOpen = (next) => { openRef.current = next; setOpen(next) }
   // Escape returns focus to the trigger that owns the layer it closed.
   const triggerRefs = useRef({})
   // The signed-out menu and the phone sheet each point their sign-in rows at
@@ -416,34 +419,75 @@ function AppHeader() {
   const { triggerRef: accountBtnRef, popRef: accountPopRef } = usePopover(menu === 'account', closeAccountMenu, { arrowNav: true })
   const stateRef = useRef({ open: null, menu: null, sheet: false })
   useEffect(() => {
+    openRef.current = open
     stateRef.current.open = open
     stateRef.current.menu = menu
     stateRef.current.sheet = sheet
   }, [open, menu, sheet])
 
+  // The panel's left edge sits under the open trigger, held 24px clear of the
+  // viewport (10px below 980px wide, where a 24px gutter leaves the panel too narrow),
+  // and it grows from the trigger. Placed after render and again on resize.
+  useLayoutEffect(() => {
+    if (!open) return undefined
+    const place = () => {
+      const panel = menuRef.current
+      const trig = triggerRefs.current[open]
+      if (!panel || !trig) return
+      const tl = trig.getBoundingClientRect().left
+      const gap = window.innerWidth < 980 ? 10 : 24
+      const left = Math.max(gap, Math.min(tl, window.innerWidth - gap - panel.offsetWidth))
+      panel.style.left = `${left}px`
+      panel.style.transformOrigin = `${Math.max(0, tl - left)}px 0`
+    }
+    place()
+    window.addEventListener('resize', place)
+    return () => window.removeEventListener('resize', place)
+  }, [open])
+
   useEffect(() => {
     lastRouteChange = Date.now()
   }, [location.key])
+
+  // A navigation closes the mega panel, including Back and Forward, which no link click covers.
+  const [panelKey, setPanelKey] = useState(location.key)
+  if (panelKey !== location.key) {
+    setPanelKey(location.key)
+    setOpen(null)
+  }
 
   // The Export hint is dismissible without moving focus, and its hover delay
   // never outlives the header.
   useEffect(() => {
     if (!hintOpen) return undefined
+    let live = true
+    // Beside Export it needs its own width, the 8px gap to the button and 2px
+    // clear of Learn's box (whose own padding keeps the labels further apart).
+    // Placed again whenever the header or the hint changes size, which covers a
+    // webfont that lands after the hint opened.
     const placeHint = () => {
       const tip = hintRef.current
-      if (!tip) return
+      if (!live || !tip || !navRef.current) return
       const button = tip.parentElement.getBoundingClientRect()
       const learn = triggerRefs.current.learn?.getBoundingClientRect()
       const leftEdge = learn?.right ?? navRef.current.getBoundingClientRect().left
-      tip.classList.toggle('pnav-tip--below', button.left - leftEdge < tip.offsetWidth + 16)
+      tip.classList.toggle('pnav-tip--below', button.left - leftEdge < tip.offsetWidth + 10)
     }
     placeHint()
     window.addEventListener('resize', placeHint)
+    const sizes = typeof ResizeObserver === 'function' ? new ResizeObserver(placeHint) : null
+    if (sizes) {
+      if (navRef.current) sizes.observe(navRef.current)
+      if (hintRef.current) sizes.observe(hintRef.current)
+    }
+    document.fonts?.ready?.then(placeHint)
     const onKey = (e) => { if (e.key === 'Escape') setHintOpen(false) }
     document.addEventListener('keydown', onKey)
     return () => {
+      live = false
       document.removeEventListener('keydown', onKey)
       window.removeEventListener('resize', placeHint)
+      sizes?.disconnect()
     }
   }, [hintOpen])
   useEffect(() => () => clearTimeout(hintTimer.current), [])
@@ -567,24 +611,31 @@ function AppHeader() {
   const clearClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
   const hoverOpen = (id) => {
     clearClose()
+    // Re-entering the trigger of a click-opened panel leaves it click-opened, so the next click closes it.
+    if (open === id && openedBy.current === 'click') return
     if (hoverLock.current) return
     if (open === null) hoverLock.current = true
     openedBy.current = 'hover'
     setMenu(null)
-    setOpen(id)
+    requestOpen(id)
   }
-  const hoverLeave = () => { clearClose(); closeTimer.current = setTimeout(() => setOpen(null), 120) }
+  // A click-opened panel stays until Escape, an outside press, its trigger or a navigation.
+  const hoverLeave = () => {
+    clearClose()
+    if (openedBy.current === 'click') return
+    closeTimer.current = setTimeout(() => setOpen(null), 120)
+  }
   const toggle = (id) => {
     hoverLock.current = true
     setMenu(null)
-    setOpen((cur) => {
-      if (cur === id && openedBy.current === 'hover') {
-        openedBy.current = 'click'
-        return cur
-      }
+    // Updaters must be pure, so the decision and the openedBy write happen here.
+    const cur = openRef.current
+    if (cur === id && openedBy.current === 'hover') {
       openedBy.current = 'click'
-      return cur === id ? null : id
-    })
+      return
+    }
+    openedBy.current = 'click'
+    requestOpen(cur === id ? null : id)
   }
   const toggleMenu = (which) => { setOpen(null); setMenu((cur) => (cur === which ? null : which)) }
   const closeAll = () => { setOpen(null); setSheet(false); setMenu(null) }
@@ -1187,30 +1238,16 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
   // the section's own line when nothing is. Tracked by delegation on the grid
   // (pointerover and focus bubble), not a handler per row. The section id rides
   // along so a row id both menus share (Font Gallery) cannot carry over.
-  // `mode` rides along for the hover moments (nav/menuMoments.js): 'pointer' for a
-  // fine pointer, 'key' for keyboard focus, null for anything that gets no moment.
-  // The same handlers set it, so there is no second tracker.
-  const [active, setActive] = useState({ section: section.id, id: null, mode: null })
+  const [active, setActive] = useState({ section: section.id, id: null })
   const activeId = active.section === section.id ? active.id : null
-  const activeMode = active.section === section.id ? active.mode : null
   const rowOf = (el) => el?.closest?.('[data-row-id]')?.getAttribute('data-row-id') || null
-  const setRow = (id, mode = null) => setActive((prev) => (
-    prev.section === section.id && prev.id === id && prev.mode === (id ? mode : null)
-      ? prev
-      : { section: section.id, id, mode: id ? mode : null }
+  const setRow = (id) => setActive((prev) => (
+    prev.section === section.id && prev.id === id ? prev : { section: section.id, id }
   ))
   // Nothing under the pointer: fall back to the row keyboard focus is in, or to none.
   const settleRow = (grid) => {
     const f = grid.contains(document.activeElement) ? document.activeElement : null
-    setRow(rowOf(f), keyboardRow(f))
-  }
-  const keyboardRow = (el) => (el?.matches?.(':focus-visible') ? 'key' : null)
-  const pointerMode = (e) => {
-    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return null
-    if (!finePointer()) return null
-    // A pointer arriving on the row keyboard focus is already on keeps that moment.
-    const row = e.target.closest?.('[data-row-id]')
-    return row && row === document.activeElement ? keyboardRow(row) || 'pointer' : 'pointer'
+    setRow(rowOf(f))
   }
   const activeRow = activeId
     ? stacks.flat().flatMap((col) => col.tools).find((t) => t.id === activeId)
@@ -1220,52 +1257,12 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
     : null
   const readoutText = activeRow && activeDesc ? activeDesc : null
 
-  // THE HOVER MOMENT. data-live goes on the active row: at once for keyboard focus,
-  // INTENT_MS after a fine pointer arrives. Leaving or blurring clears it at once
-  // (activeId changes), and the timer's cleanup drops a pending start.
-  const [intentId, setIntentId] = useState(null)
-  useEffect(() => {
-    if (activeMode !== 'pointer' || !activeId) return undefined
-    const t = setTimeout(() => setIntentId(activeId), INTENT_MS)
-    return () => { clearTimeout(t); setIntentId(null) }
-  }, [activeId, activeMode])
-  const liveId = activeMode === 'key' ? activeId : activeMode === 'pointer' && intentId === activeId ? activeId : null
-
-  // Faces for the name moments: warmed once, on the first menu open, and used only
-  // once ready. data-faces on the root tells the CSS which are.
-  const [faces, setFaces] = useState(facesAttr)
-  const warms = section.id === 'create' || section.id === 'discover'
-  useEffect(() => {
-    if (!warms) return undefined
-    let alive = true
-    warmFaces().then(() => { if (alive) setFaces(facesAttr()) })
-    return () => { alive = false }
-  }, [warms])
-
-  // Font Gallery: the name steps through the shuffled ready faces and loops while the
-  // row is live. Going quiet resets it; a run of one face (reduced motion) just sets it.
-  const [galleryFace, setGalleryFace] = useState(null)
-  const galleryLive = liveId === 'font-gallery' && finePointer()
-  useEffect(() => {
-    if (!galleryLive) return undefined
-    const run = galleryRun()
-    let step = 0
-    let timer = null
-    const tick = () => {
-      setGalleryFace(run[step % run.length].key)
-      step += 1
-      if (run.length > 1) timer = setTimeout(tick, GALLERY_STEP_MS)
-    }
-    if (run.length) timer = setTimeout(tick, 0)
-    return () => { clearTimeout(timer); setGalleryFace(null) }
-  }, [galleryLive])
   return (
     <div
       ref={ref}
       id="pnav-mega"
       className="pnav-menu"
       data-menu={section.id}
-      data-faces={faces || undefined}
       role="region"
       aria-label={`${section.label} menu`}
       onMouseEnter={onMouseEnter}
@@ -1277,9 +1274,9 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
           <div
             className="pnav-grid"
             data-cols={stacks.length}
-            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id, pointerMode(e)); else settleRow(e.currentTarget) }}
+            onPointerOver={(e) => { const id = rowOf(e.target); if (id) setRow(id); else settleRow(e.currentTarget) }}
             onPointerLeave={(e) => settleRow(e.currentTarget)}
-            onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id, keyboardRow(e.target)) }}
+            onFocus={(e) => { const id = rowOf(e.target); if (id) setRow(id) }}
             onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setRow(null) }}
           >
             {stacks.map((stack) => (
@@ -1288,10 +1285,7 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                   <div className="pnav-col" key={col.label}>
                     <p className="pnav-col-label">{col.label}</p>
                     <ul className="pnav-toollist">
-                      {col.tools.map((t) => {
-                        const moment = MOMENT_OF[t.id]
-                        const face = moment === 'font-gallery' && t.id === liveId ? faceByKey(galleryFace) : null
-                        return (
+                      {col.tools.map((t) => (
                         <li key={t.id}>
                           <Link
                             className="pnav-tool"
@@ -1299,8 +1293,6 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             data-soon={t.soon ? 'true' : undefined}
                             data-hue={t.hue}
                             data-row-id={t.id}
-                            data-moment={moment}
-                            data-live={moment && t.id === liveId ? '' : undefined}
                             aria-describedby={readoutText && t.id === activeId ? 'pnav-readout' : undefined}
                             aria-current={isHere(t) ? 'page' : undefined}
                             aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
@@ -1308,19 +1300,10 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             data-pnav-menuitem
                           >
                             <span className="pnav-tool-ico" aria-hidden="true">
-                              <NavIcon id={t.icon} moment={moment} />
+                              <NavIcon id={t.icon} />
                             </span>
                             <span className="pnav-tool-label">
-                              {moment === 'font-pair'
-                                // A real space between the words, so textContent stays "Font Pair".
-                                ? <span className="pnav-tool-nm"><span className="w1">Font</span> <span className="w2">Pair</span></span>
-                                : (
-                                  <span
-                                    className="pnav-tool-nm"
-                                    data-face={face ? face.key : undefined}
-                                    style={face ? { fontFamily: face.family, fontWeight: face.weight } : undefined}
-                                  >{t.label}</span>
-                                )}
+                              <span className="pnav-tool-nm" data-text={t.label}>{t.label}</span>
                             </span>
                             {t.mins && <span className="pnav-tool-mins">{t.mins}</span>}
                             {t.soon && <span className="soon-badge">Soon</span>}
@@ -1332,8 +1315,7 @@ function MegaMenu({ ref, section, path, showSoon, onMouseEnter, onMouseLeave, on
                             )}
                           </Link>
                         </li>
-                        )
-                      })}
+                      ))}
                     </ul>
                   </div>
                 ))}

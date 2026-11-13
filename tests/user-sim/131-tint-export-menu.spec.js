@@ -65,9 +65,9 @@ test.describe('Tint · Copy or save menu', () => {
     await expect(trigger(page)).toBeVisible({ timeout: 15000 })
     await expect(trigger(page), 'the toolbar button clashes with the header Export button').toHaveAccessibleName('Copy or save')
     await openMenu(page)
-    await expect(row(page, 'Copy CSS').locator('.tl-menu-row-hint'), 'copying is free, no hint').toHaveCount(0)
+    await expect(row(page, 'Copy CSS').locator('.v3m-hint'), 'copying is free, no hint').toHaveCount(0)
     for (const name of ['Save to project', 'Download']) {
-      await expect(row(page, name).locator('.tl-menu-row-hint'), `${name} should say it needs an account`).toHaveText('Free account')
+      await expect(row(page, name).locator('.v3m-hint'), `${name} should say it needs an account`).toHaveText('Free account')
       // Read by a screen reader as the row's description, not glued onto its name.
       await expect(row(page, name), `${name}: the hint should be its description`).toHaveAccessibleDescription('Free account')
     }
@@ -79,7 +79,7 @@ test.describe('Tint · Copy or save menu', () => {
     await signIn(page, {})
     await go(page, '/create/tint')
     await openMenu(page)
-    await expect(page.locator('.tl-menu-row-hint')).toHaveCount(0)
+    await expect(page.locator('.v3m-hint')).toHaveCount(0)
   })
 
   test('Copy CSS puts the tint variables on the clipboard without asking for an account', async ({ page }) => {
@@ -255,7 +255,7 @@ test.describe('Tint · Copy or save menu', () => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {})
     await go(page, '/create/tint')
     await openMenu(page)
-    await expect(page.locator('.tl-sheet')).toBeVisible()
+    await expect(page.locator('.v3m--sheet')).toBeVisible()
 
     for (const name of ['Copy CSS', 'Save to project', 'Download']) {
       const box = await row(page, name).boundingBox()
@@ -267,6 +267,6 @@ test.describe('Tint · Copy or save menu', () => {
 
     await row(page, 'Copy CSS').click()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('--tint-500:')
-    await expect(page.locator('.tl-sheet')).toHaveCount(0)
+    await expect(page.locator('.v3m--sheet')).toHaveCount(0)
   })
 })

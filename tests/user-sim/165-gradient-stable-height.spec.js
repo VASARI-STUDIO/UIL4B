@@ -1145,16 +1145,22 @@ test.describe('every swatch in the gradient panel is a circle', () => {
   test.describe('beyond the stop rows', () => {
     test.use({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
 
-    test('the tint menu chips are round', async ({ page }) => {
+    // The Menu primitive draws its chips as 20px rounded squares (radius 6): a menu row
+    // follows the menu design, not the circle rule the panel swatches follow.
+    // MUTATION: set `.v3m-sw{border-radius:50%}` in v3-menus.css and this goes red.
+    test('the tint menu chips are 20px rounded squares, the Menu chip', async ({ page }) => {
       watch(page, 'a Pro designer opening the tints')
       await signIn(page, { plan: 'pro' })
       await open(page)
       await page.getByRole('button', { name: /^Select stop 2, #[0-9A-F]{6}$/ }).click({ button: 'right' })
       const menu = page.getByRole('menu', { name: /^Tints of stop 2, #[0-9A-F]{6}$/ })
       await expect(menu).toBeVisible()
-      const r = await roundReport(page, '.grd-tintmenu-chip')
-      expect(r.count, 'eleven tint chips').toBe(11)
-      expect(r.bad, r.bad.join('\n')).toEqual([])
+      const chips = await page.locator('.v3m--tints .v3m-sw').evaluateAll((els) => els.map((el) => {
+        const r = el.getBoundingClientRect()
+        return `${Math.round(r.width)}x${Math.round(r.height)} r${getComputedStyle(el).borderTopLeftRadius}`
+      }))
+      expect(chips.length, 'eleven tint chips').toBe(11)
+      expect(new Set(chips), 'every chip is 20x20 with a 6px radius').toEqual(new Set(['20x20 r6px']))
     })
 
     test('the probe can tell a square from a circle', async ({ page }) => {
