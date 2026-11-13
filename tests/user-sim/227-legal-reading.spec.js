@@ -1,12 +1,11 @@
 // Reading the legal pages (/terms, /privacy) and the shared contents marker.
 //
 // What a reader needs, checked at 390 (touch), 768 and 1440 in both themes:
-//   - at 1000px and narrower the contents is a plain vertical list (opened from
-//     its "On this page" disclosure), at 1001px and wider a sticky rail;
+//   - at 768px and wider the contents is an open vertical list under the title,
+//     at 767px and narrower a "Contents" disclosure that starts closed;
 //   - choosing a contents link lands the clause heading below the fixed nav and
 //     leaves focus on that heading;
-//   - the rail marks the clause at the reading line, and still does after
-//     End and Home (the case an observer-based marker lost);
+//   - the open list is 15px links, 8px apart, with no scroll-spy marker;
 //   - nothing scrolls sideways at 320 and 390;
 //   - printing hides the contents, nav and footer and spells out external links;
 //   - contents, date and table-label text meets 4.5:1 in light and dark;
@@ -86,23 +85,21 @@ async function landed(page, id) {
   await restingScrollY(page, `the page after a jump to ${id}`)
 }
 
-/** Every clause the rail marks as current. */
-const marked = (page) => page.evaluate(() =>
-  [...document.querySelectorAll('.lgl .lgl-toc [aria-current="location"]')].map((a) => a.getAttribute('href').slice(1)))
-
 const atBottom = (page) => page.evaluate(() => innerHeight + scrollY >= document.documentElement.scrollHeight - 2)
 
 for (const route of ROUTES) {
   test.describe(`${route} contents`, () => {
-    for (const view of ['phone', 'tablet']) {
-      test(`at ${view} width the contents opens as a vertical list named "On this page"`, async ({ browser }) => {
-        const { ctx, page } = await open(browser, route, { view })
+    // 767 is the last phone width; 768 is the first with the open list.
+    for (const [label, viewport] of [['390', { width: 390, height: 844 }], ['767', { width: 767, height: 900 }]]) {
+      test(`at ${label} wide the contents is a closed "Contents" disclosure that opens to a vertical list`, async ({ browser }) => {
+        const { ctx, page } = await open(browser, route, { view: 'phone', viewport })
         const nav = page.getByRole('navigation', { name: 'On this page' })
         const ids = await clauseIds(page)
         // Closed: the disclosure label is what a reader sees, the links are not.
-        await expect(page.locator('.lgl-toc-m-sum')).toHaveText('On this page')
+        await expect(page.locator('.pv-toc-sum')).toHaveText('Contents')
+        await expect(page.locator('.pv-toc-m')).not.toHaveAttribute('open', '')
         await expect(nav.getByRole('link').first()).toBeHidden()
-        await page.locator('.lgl-toc-m-sum').click()
+        await page.locator('.pv-toc-sum').click()
         const links = nav.getByRole('link')
         await expect(links).toHaveCount(ids.length)
         const boxes = await links.evaluateAll((as) => as.map((a) => a.getBoundingClientRect().toJSON()))
@@ -117,21 +114,40 @@ for (const route of ROUTES) {
       })
     }
 
-    test('at 1440 the contents is a sticky rail and the disclosure is absent', async ({ browser }) => {
-      const { ctx, page } = await open(browser, route)
-      await expect(page.locator('.lgl-toc-m')).toHaveCount(0)
-      await expect(page.getByRole('navigation', { name: 'On this page' }).getByRole('link').first()).toBeVisible()
-      await ctx.close()
-    })
+    for (const view of ['tablet', 'desktop']) {
+      test(`at ${view} width the contents is an open list of 15px links, 8px apart, with no disclosure`, async ({ browser }) => {
+        const { ctx, page } = await open(browser, route, { view })
+        await expect(page.locator('.pv-toc-m')).toHaveCount(0)
+        const nav = page.getByRole('navigation', { name: 'On this page' })
+        const links = nav.getByRole('link')
+        const ids = await clauseIds(page)
+        await expect(links).toHaveCount(ids.length)
+        await expect(links.first()).toBeVisible()
+        const rows = await links.evaluateAll((as) => as.map((a) => ({ ...a.getBoundingClientRect().toJSON(), size: getComputedStyle(a).fontSize })))
+        for (const [i, r] of rows.entries()) {
+          expect(r.size, `link ${i} is 15px`).toBe('15px')
+          // Rows may wrap; the gap between rows is 8px of margin, so no row starts closer than that.
+          if (i) expect(r.top - rows[i - 1].bottom, `link ${i} is 8px below link ${i - 1}`).toBeGreaterThanOrEqual(7.5)
+        }
+        // The list sits under the title and above the first clause.
+        const order = await page.evaluate(() => {
+          const y = (sel) => document.querySelector(sel).getBoundingClientRect().top
+          return [y('.lgl-head h1'), y('.pv-toc'), y('.lgl-sec')]
+        })
+        expect(order[0]).toBeLessThan(order[1])
+        expect(order[1]).toBeLessThan(order[2])
+        await ctx.close()
+      })
+    }
 
-    for (const view of ['phone', 'tablet']) {
+    for (const view of ['phone']) {
       test(`at ${view} width a contents link lands the heading under the nav and focuses it`, async ({ browser }) => {
         const { ctx, page } = await open(browser, route, { view })
         const target = await reachableClause(page)
-        await page.locator('.lgl-toc-m-sum').click()
-        await page.locator(`.lgl-toc-m a[href="#${target}"]`).click()
+        await page.locator('.pv-toc-sum').click()
+        await page.locator(`.pv-toc-m a[href="#${target}"]`).click()
         await landed(page, target)
-        await expect(page.locator('.lgl-toc-m')).not.toHaveAttribute('open', '')
+        await expect(page.locator('.pv-toc-m')).not.toHaveAttribute('open', '')
         await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe('H2')
         expect(await page.evaluate(() => document.activeElement.closest('.lgl-sec').id)).toBe(target)
         const { top, navBottom } = await headingVsNav(page, target)
@@ -141,42 +157,27 @@ for (const route of ROUTES) {
       })
     }
 
-    test('at 1440 a rail link lands the heading under the nav and the rail marks that clause', async ({ browser }) => {
+    test('at 1440 a contents link lands the heading under the nav and focuses it', async ({ browser }) => {
       const { ctx, page } = await open(browser, route)
       const target = await reachableClause(page)
-      await page.locator(`.lgl-toc a[href="#${target}"]`).click()
+      await page.locator(`.pv-toc a[href="#${target}"]`).click()
       await landed(page, target)
       const { top, navBottom } = await headingVsNav(page, target)
       expect(top).toBeGreaterThanOrEqual(navBottom)
       expect(top).toBeLessThan(navBottom + LAND_SLACK)
-      await expect.poll(() => marked(page)).toEqual([target])
+      await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe('H2')
+      expect(await page.evaluate(() => document.activeElement.closest('.lgl-sec').id)).toBe(target)
       await ctx.close()
     })
 
-    test('at 1440 the marker follows the clause at the line, and End and Home keep it', async ({ browser }) => {
-      const { ctx, page } = await open(browser, route)
-      const ids = await clauseIds(page)
-      expect(await marked(page), 'the first clause is marked at the top').toEqual([ids[0]])
-      for (const id of [ids[2], ids[Math.floor(ids.length / 2)], ids[ids.length - 2]]) {
-        await scrollToLine(page, id)
-        await expect.poll(() => marked(page), `scrolled to ${id}`).toEqual([id])
+    test('the contents sets no scroll-spy marker at any width', async ({ browser }) => {
+      for (const view of ['phone', 'desktop']) {
+        const { ctx, page } = await open(browser, route, { view })
+        const ids = await clauseIds(page)
+        await scrollToLine(page, ids[2])
+        await expect(page.locator('.lgl [aria-current="location"]')).toHaveCount(0)
+        await ctx.close()
       }
-      await page.evaluate(() => document.activeElement?.blur())
-      await page.keyboard.press('End')
-      await expect.poll(() => atBottom(page)).toBe(true)
-      await expect.poll(() => marked(page), 'End marks the last clause').toEqual([ids[ids.length - 1]])
-      await page.keyboard.press('Home')
-      await expect.poll(() => page.evaluate(() => scrollY)).toBe(0)
-      await expect.poll(() => marked(page), 'Home marks the first clause').toEqual([ids[0]])
-      await ctx.close()
-    })
-
-    test('at phone width no rail marker is set', async ({ browser }) => {
-      const { ctx, page } = await open(browser, route, { view: 'phone' })
-      const ids = await clauseIds(page)
-      await scrollToLine(page, ids[2])
-      await expect(page.locator('.lgl [aria-current="location"]')).toHaveCount(0)
-      await ctx.close()
     })
 
     for (const width of [320, 390]) {
@@ -184,7 +185,7 @@ for (const route of ROUTES) {
         const { ctx, page } = await open(browser, route, { view: 'phone', viewport: { width, height: 800 } })
         const over = () => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)
         expect(await over()).toBeLessThanOrEqual(0)
-        await page.locator('.lgl-toc-m-sum').click()
+        await page.locator('.pv-toc-sum').click()
         expect(await over()).toBeLessThanOrEqual(0)
         await ctx.close()
       })
@@ -260,16 +261,16 @@ async function expectReadable(page, selectors, pseudo) {
 
 for (const theme of ['light', 'dark']) {
   test.describe(`${theme} theme contrast on the legal pages`, () => {
-    test('rail rows, date and table labels read at 4.5:1 at 1440', async ({ browser }) => {
+    test('contents links, date and table labels read at 4.5:1 at 1440', async ({ browser }) => {
       const { ctx, page } = await open(browser, '/privacy', { theme })
-      await expectReadable(page, ['.lgl-toc .cpg-rail-label', '.lgl-toc .is-on .cpg-rail-label', '.lgl-updated', '.storage-table th', '.storage-table .storage-pii'])
+      await expectReadable(page, ['.pv-toc .pv-toc-link', '.lgl-updated', '.storage-table th', '.storage-table .storage-pii'])
       await ctx.close()
     })
 
     test('contents disclosure, rows and the stacked-table labels read at 4.5:1 at 390', async ({ browser }) => {
       const { ctx, page } = await open(browser, '/privacy', { view: 'phone', theme })
-      await page.locator('.lgl-toc-m-sum').click()
-      await expectReadable(page, ['.lgl-toc-m-sum', '.lgl-toc-m-row', '.lgl-updated'])
+      await page.locator('.pv-toc-sum').click()
+      await expectReadable(page, ['.pv-toc-sum', '.pv-toc-m .pv-toc-link', '.lgl-updated'])
       await expectReadable(page, ['.storage-table td[data-label]'], '::before')
       await ctx.close()
     })

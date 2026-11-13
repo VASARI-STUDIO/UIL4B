@@ -7,9 +7,9 @@
 //      with the header still full-bleed.
 //   3. A GIF the builder reveals on a phone-width screen ends above the fixed
 //      tab bar and the action bar, and Build sits above the tab bar.
-//   4. At 1000px and narrower (where the legal contents is the "On this page"
-//      disclosure, not the sticky rail) every clause of /privacy and /terms
-//      ends with a 44px "Contents" link back to it; from 1001px it is not drawn.
+//   4. At 767px and narrower (where the legal contents is the "Contents"
+//      disclosure, not the open list) every clause of /privacy and /terms
+//      ends with a 44px "Contents" link back to it; from 768px it is not drawn.
 //
 // MUTATIONS (each should turn the named test red):
 //   - global.css: drop `(max-width:767px)` from the `.global-feedback-btn`
@@ -27,9 +27,10 @@
 //     the same test fails on "Build is under the tab bar";
 //   - LegalContents.jsx: drop `<BackToContents />` from Terms.jsx or Privacy.jsx:
 //     the clause-ends-with-a-link tests fail for that page;
-//   - legal.css: delete `.lgl-back { display: none; }`: the 1001 / 1440 tests
-//     fail; delete `min-height: 44px` from the narrow rule: the 44px test fails;
-//   - legal.css: change that narrow query to 767px: the 1000 test fails.
+//   - plain-v3.css: delete the `@media (min-width: 768px) { .pv3 .lgl-back { display: none } }`
+//     rule: the 768 / 1000 / 1440 tests fail;
+//   - legal.css: delete `min-height: 44px` from the narrow `.lgl-back` rule: the 44px test fails;
+//   - plain-v3.css: change that 768px to 1001px: the 768 and 1000 tests fail.
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
@@ -251,7 +252,7 @@ test.describe('3 · a revealed GIF clears the tab bar and the action bar', () =>
 // ── 4 · the legal pages give a way back to the contents ──────────────────────
 test.describe('4 · /privacy and /terms: every clause ends with a Contents link where the index is not a rail', () => {
   for (const route of ['/privacy', '/terms']) {
-    for (const width of [390, 767, 1000]) {
+    for (const width of [390, 767]) {
       test(`${route} at ${width}: each clause ends with a 44px Contents link`, async ({ page }) => {
         watch(page, 'someone reading the long legal page on a phone')
         await page.setViewportSize({ width, height: 844 })
@@ -272,13 +273,13 @@ test.describe('4 · /privacy and /terms: every clause ends with a Contents link 
       })
     }
 
-    for (const width of [1001, 1440]) {
-      test(`${route} at ${width}: the sticky rail is the index, so no Contents link is drawn`, async ({ page }) => {
+    for (const width of [768, 1000, 1440]) {
+      test(`${route} at ${width}: the open list is the index, so no Contents link is drawn`, async ({ page }) => {
         watch(page, 'someone reading the legal page on a desktop')
         await page.setViewportSize({ width, height: 900 })
         await go(page, route)
         await expect(page.locator('.lgl .lgl-sec').first()).toBeVisible()
-        await expect(page.locator('nav.lgl-toc'), 'the rail is the index here').toBeVisible()
+        await expect(page.locator('nav.pv-toc'), 'the open list is the index here').toBeVisible()
         await expect(page.locator('.lgl-back').first()).toBeHidden()
       })
     }
@@ -291,7 +292,7 @@ test.describe('4 · /privacy and /terms: every clause ends with a Contents link 
       const last = links.last()
       await last.scrollIntoViewIfNeeded()
       await last.click()
-      const index = page.locator('.lgl-toc-m')
+      const index = page.locator('.pv-toc-m')
       await expect(index, 'the index opens').toHaveAttribute('open', '')
       await expect.poll(() => page.evaluate(() => {
         const r = document.querySelector('#legal-contents').getBoundingClientRect()

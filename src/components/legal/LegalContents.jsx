@@ -1,37 +1,26 @@
 // The contents for /privacy and /terms: one list of clause links, two shapes.
 //
-//   · 1001px and wider: the sticky rail beside the document, with the clause
-//     being read marked (`is-on`, `aria-current="location"`).
-//   · 1000px and narrower: a closed "On this page" disclosure above the
-//     document, holding the same links as a plain vertical list. The list is
-//     the whole contents at full width, not a row of pills that scrolls
-//     sideways with its scrollbar hidden. Choosing a link closes the
-//     disclosure and moves focus to the clause heading, so a keyboard or
-//     screen-reader reader lands in the clause rather than back on the link.
+//   · 768px and wider: the list sits open under the title, one link per line.
+//   · 767px and narrower: a closed "Contents" disclosure over the same list, so
+//     a phone opens on the title and the first clause rather than on a screen
+//     of links. Every title wraps in full; nothing scrolls sideways.
+//
+// Choosing a link moves focus to the clause heading once the browser has made
+// the jump, so a keyboard or screen-reader reader lands in the clause rather
+// than back on the link. On a phone it also closes the disclosure.
 //
 // `useMediaQuery` picks ONE tree rather than hiding the other with CSS, so the
-// links exist once in the DOM. The query matches content.css's collapse point.
-import { useEffect, useRef } from 'react'
+// links exist once in the DOM. The look is in styles/pages/plain-v3.css.
+import { useRef } from 'react'
 import useMediaQuery from '../../hooks/useMediaQuery'
-import useActiveSection from '../../hooks/useActiveSection'
-
-/* Scroll the rail's own column so the current row is in view, without
-   scrolling the page (`scrollIntoView` would move both). */
-function keepRowVisible(col, row) {
-  if (!col || !row || col.scrollHeight <= col.clientHeight) return
-  const c = col.getBoundingClientRect()
-  const r = row.getBoundingClientRect()
-  if (r.top < c.top) col.scrollTop -= c.top - r.top
-  else if (r.bottom > c.bottom) col.scrollTop += r.bottom - c.bottom
-}
 
 /* The link at the end of each clause that returns to the contents. It is shown
-   only where the contents is the disclosure above the document (the stylesheet
-   hides it beside the sticky rail), and it opens the disclosure so the clause
-   list is there once the page has jumped. */
+   only where the contents is the disclosure (the stylesheet hides it beside the
+   open list), and it opens the disclosure so the clause list is there once the
+   page has jumped. */
 export function BackToContents() {
   const back = () => {
-    const details = document.querySelector('.lgl-toc-m')
+    const details = document.querySelector('.pv-toc-m')
     if (details) details.open = true
     setTimeout(() => details?.querySelector('summary')?.focus({ preventScroll: true }), 0)
   }
@@ -43,17 +32,10 @@ export function BackToContents() {
 }
 
 /* items: [{ id, label, lang? }]. `lang` marks a clause that is not in the
-   page's language, on both the rail entry and (set by the page) the clause. */
+   page's language, on both the list entry and (set by the page) the clause. */
 export default function LegalContents({ items }) {
-  const narrow = useMediaQuery('(max-width: 1000px)')
-  const active = useActiveSection(items, { enabled: !narrow, pinLastAtBottom: true })
-  const colRef = useRef(null)
+  const narrow = useMediaQuery('(max-width: 767px)')
   const detailsRef = useRef(null)
-
-  useEffect(() => {
-    if (!active || !colRef.current) return
-    keepRowVisible(colRef.current, colRef.current.querySelector('[aria-current="location"]'))
-  }, [active])
 
   const choose = (id) => {
     if (detailsRef.current) detailsRef.current.open = false
@@ -64,51 +46,35 @@ export default function LegalContents({ items }) {
     }, 0)
   }
 
+  const list = (
+    <ol className="pv-toc-list">
+      {items.map((it) => (
+        <li key={it.id}>
+          <a className="pv-toc-link" href={`#${it.id}`} lang={it.lang} onClick={() => choose(it.id)}>
+            {it.label}
+          </a>
+        </li>
+      ))}
+    </ol>
+  )
+
+  // `aria-label`, not a visible heading: the list is a landmark whose own name
+  // says what it is, and a heading above it would add an entry to a document
+  // whose headings are the clauses.
   if (narrow) {
     return (
-      <div className="cpg-rail-col lgl-toc-col" id="legal-contents">
-        <details className="lgl-toc-m" ref={detailsRef}>
-          <summary className="lgl-toc-m-sum">On this page</summary>
-          <nav aria-label="On this page">
-            <ol>
-              {items.map((it) => (
-                <li key={it.id}>
-                  <a className="lgl-toc-m-row" href={`#${it.id}`} lang={it.lang} onClick={() => choose(it.id)}>
-                    {it.label}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
+      <div className="pv-toc-wrap lgl-toc-col" id="legal-contents">
+        <details className="pv-toc-m" ref={detailsRef}>
+          <summary className="pv-toc-sum">Contents</summary>
+          <nav aria-label="On this page">{list}</nav>
         </details>
       </div>
     )
   }
 
   return (
-    <div className="cpg-rail-col lgl-toc-col" ref={colRef}>
-      {/* `aria-label`, not a visible heading: the rail is a landmark whose own
-          name says what it is, and a heading above it would add an entry to a
-          document whose headings are the clauses. */}
-      <nav className="cpg-rail lgl-toc" aria-label="On this page">
-        <ol>
-          {items.map((it) => {
-            const on = active === it.id
-            return (
-              <li key={it.id}>
-                <a
-                  className={on ? 'cpg-rail-row is-on' : 'cpg-rail-row'}
-                  href={`#${it.id}`}
-                  lang={it.lang}
-                  aria-current={on ? 'location' : undefined}
-                >
-                  <span className="cpg-rail-label">{it.label}</span>
-                </a>
-              </li>
-            )
-          })}
-        </ol>
-      </nav>
+    <div className="pv-toc-wrap lgl-toc-col" id="legal-contents">
+      <nav className="pv-toc" aria-label="On this page">{list}</nav>
     </div>
   )
 }
