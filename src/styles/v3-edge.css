@@ -386,17 +386,17 @@
 /* ── Reduced motion: opacity only ─────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .ed-num { animation: ed-fade 200ms linear both; }
-  .ed-pill, .ed-row { transition: none; }
-  .ed-pill:active, .ed-row:active { transform: none; }
-  .ed-go > .ed-go-b { display: none; }
-  .ed-pill:hover .ed-go > .ed-go-a, .ed-pill:focus-visible .ed-go > .ed-go-a { transform: none; transition: none; }
+  html:not([data-reduced-motion="false"]) .ed-num { animation: ed-fade 200ms linear both; }
+  html:not([data-reduced-motion="false"]) :is(.ed-pill, .ed-row) { transition: none; }
+  html:not([data-reduced-motion="false"]) :is(.ed-pill, .ed-row):active { transform: none; }
+  html:not([data-reduced-motion="false"]) .ed-go > .ed-go-b { display: none; }
+  html:not([data-reduced-motion="false"]) .ed-pill:is(:hover, :focus-visible) .ed-go > .ed-go-a { transform: none; transition: none; }
 }
 html[data-reduced-motion="true"] .ed-num { animation: ed-fade 200ms linear both; }
 html[data-reduced-motion="true"] :is(.ed-pill, .ed-row) { transition: none; }
 html[data-reduced-motion="true"] :is(.ed-pill, .ed-row):active { transform: none; }
 html[data-reduced-motion="true"] .ed-go > .ed-go-b { display: none; }
-html[data-reduced-motion="true"] .ed-pill:is(:hover, :focus-visible) .ed-go-a { transform: none; }
+html[data-reduced-motion="true"] .ed-pill:is(:hover, :focus-visible) .ed-go > .ed-go-a { transform: none; transition: none; }
 
 /* ── Forced colours ───────────────────────────────────────────────────────── */
 
