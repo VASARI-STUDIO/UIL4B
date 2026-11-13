@@ -298,9 +298,9 @@ function jpegSize() { throw new Error('theme 24: photograph files are not read b
 function photoAt(ctx, s, x, y, w, h) {
   const n = jpegSize(), c = s.crop || { x: 0, y: 0, w: n.w, h: n.h };
   const f = s.crop ? null : cropOf(s, w, h);     // a shot with subject boxes is framed round its riders (photo-focus.js), a cropped one by its own crop
-  if (f) { const k = Math.max(w / n.w, h / n.h); return blk(x, y, w, h, '', `<img src="${A(ctx.photoUrl(s.photo))}" alt="${A(s.alt)}" style="position:absolute;display:block;max-width:none;width:${f2(n.w * k)}px;height:${f2(n.h * k)}px;left:${f2(-f.left * n.w * k)}px;top:${f2(-f.top * n.h * k)}px">`, 'overflow:hidden'); }
+  if (f) { const k = Math.max(w / n.w, h / n.h); return blk(x, y, w, h, '', `<svg role="img" aria-label="${A(s.alt)}" style="position:absolute;display:block;max-width:none;width:${f2(n.w * k)}px;height:${f2(n.h * k)}px;left:${f2(-f.left * n.w * k)}px;top:${f2(-f.top * n.h * k)}px"><image href="${A(ctx.photoUrl(s.photo))}" width="100%" height="100%" preserveAspectRatio="none"/></svg>`, 'overflow:hidden'); }
   const k = Math.max(w / c.w, h / c.h), ox = (w - c.w * k) / 2, oy = (h - c.h * k) / 2;
-  return blk(x, y, w, h, '', `<img src="${A(ctx.photoUrl(s.photo))}" alt="${A(s.alt)}" style="position:absolute;display:block;max-width:none;width:${f2(n.w * k)}px;height:${f2(n.h * k)}px;left:${f2(ox - c.x * k)}px;top:${f2(oy - c.y * k)}px">`, 'overflow:hidden');
+  return blk(x, y, w, h, '', `<svg role="img" aria-label="${A(s.alt)}" style="position:absolute;display:block;max-width:none;width:${f2(n.w * k)}px;height:${f2(n.h * k)}px;left:${f2(ox - c.x * k)}px;top:${f2(oy - c.y * k)}px"><image href="${A(ctx.photoUrl(s.photo))}" width="100%" height="100%" preserveAspectRatio="none"/></svg>`, 'overflow:hidden');
 }
 // a real photographer's credit prints; a generated photo has none to give
 const credit = (s) => (s.generated || !s.credit ? '' : ` Photo: ${s.credit}.`);

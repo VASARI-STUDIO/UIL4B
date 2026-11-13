@@ -180,12 +180,12 @@ function applications(ctx) {
   const B = ctx.brand, Ap = B.applications;
   const q = ctx.sceneInfo(signScene(ctx)).quads[0], sw = 200, sh = Math.round(sw / q.aspect), mm = signMm(ctx);
   const signUrl = ctx.mockup(signScene(ctx), [signArt(ctx)]);
-  const photo = (url, alt, c) => `<div class="sd-mk" style="${c}"><img src="${A(url)}" alt="${A(alt)}"></div>`;
+  const photo = (url, alt, c, sid) => `<div class="sd-mk" style="${c}"><svg viewBox="0 0 ${ctx.sceneInfo(sid).w} ${ctx.sceneInfo(sid).h}" role="img" aria-label="${A(alt)}"><image href="${A(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`;
   const signDraw = `<div class="sd-cropbox">${signFace(ctx, sw, sh)}${crop()}</div>`;
-  const sign = `<div class="sd-pair">${photo(signUrl, `The ${B.name} sign in place`, cropPct(ctx, signScene(ctx), 400, 500, 0.7))}<div>${fig(signDraw, mm ? { h: `${mm[0]} mm`, v: `${mm[1]} mm` } : {})}<p class="sd-body">${A(Ap.signage)}${mm ? '' : ' The board in the photograph is another shape, so the drawing gives no millimetres.'}</p></div></div>`;
+  const sign = `<div class="sd-pair">${photo(signUrl, `The ${B.name} sign in place`, cropPct(ctx, signScene(ctx), 400, 500, 0.7), signScene(ctx))}<div>${fig(signDraw, mm ? { h: `${mm[0]} mm`, v: `${mm[1]} mm` } : {})}<p class="sd-body">${A(Ap.signage)}${mm ? '' : ' The board in the photograph is another shape, so the drawing gives no millimetres.'}</p></div></div>`;
   const phUrl = ctx.mockup(SCENES.phone, [phoneArt(ctx)], { shade: 0.5 });
   const phoneDims = reg([['8.2.1', 'Width', mono(`390 px, ${X(ctx, 390)}`)], ['8.2.2', 'Top bar', mono(`56 px, ${X(ctx, 56)}`)], ['8.2.3', 'Answer', mono(`176 px, ${X(ctx, 176)}`)], ['8.2.4', 'Row', mono(`72 px, ${X(ctx, 72)}`)]]);
-  const ph = `<div class="sd-pair">${photo(phUrl, `The ${B.name} app on a phone`, cropPct(ctx, SCENES.phone, 400, 500, 0.8))}<div class="sd-phwrap"><div class="sd-phone" inert role="img" aria-label="${A(`The ${B.name} app's first screen, drawn`)}">${phone(ctx)}</div>${phoneDims}</div></div>`;
+  const ph = `<div class="sd-pair">${photo(phUrl, `The ${B.name} app on a phone`, cropPct(ctx, SCENES.phone, 400, 500, 0.8), SCENES.phone)}<div class="sd-phwrap"><div class="sd-phone" inert role="img" aria-label="${A(`The ${B.name} app's first screen, drawn`)}">${phone(ctx)}</div>${phoneDims}</div></div>`;
   const card = (side) => fig(`<div class="sd-cropbox">${cardFace(ctx, side, 270)}${crop()}</div>`, { h: '90 mm', v: '55 mm', cap: side === 'front' ? 'Front' : 'Back' });
   const posts = `<ul class="sd-posts">${Ap.social.map((t, i) => post(ctx, t, i, { w: 352, m: 240, n: 312 })).join('')}</ul>`;
   const E = Ap.email || Ap.card, bw = B.fonts.body.weights;

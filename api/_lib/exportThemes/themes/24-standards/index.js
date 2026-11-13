@@ -7,7 +7,7 @@ import { colourMap, tokenGroups } from '../../engine/tokens.js';
 import { roles } from './helpers.js';
 
 export const meta = {
-  id: '24-standards', name: 'Standards', tier: 'Pro', brand: 'two-shores',
+  id: '24-standards', name: 'Standards Plate', tier: 'Pro', brand: 'two-shores',
   guidelinesPage: { w: 1123, h: 794 }, uikitPage: { w: 1123, h: 794 },
   chrome: { family: 'Public Sans', q: 'Public+Sans:wght@400;600', faces: [{ weight: 400, stem: 'PublicSans-400' }, { weight: 600, stem: 'PublicSans-600' }] },
 };

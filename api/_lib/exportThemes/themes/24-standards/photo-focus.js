@@ -50,7 +50,7 @@ export function quietImg(ctx, s, w, h) {
   const iw = Math.max(w / (q.x1 - q.x0), (h * S.ar) / (q.y1 - q.y0)), ih = iw / S.ar;
   const left = Math.min(0, Math.max(w - iw, w / 2 - ((q.x0 + q.x1) / 2) * iw)), top = Math.min(0, Math.max(h - ih, h / 2 - ((q.y0 + q.y1) / 2) * ih));
   const f = (v) => Math.round(v * 100) / 100;
-  return `<img src="${esc(ctx.photoUrl(s.photo))}" alt="${esc(s.alt)}" style="position:absolute;display:block;max-width:none;width:${f(iw)}px;height:${f(ih)}px;left:${f(left)}px;top:${f(top)}px">`;
+  return `<svg role="img" aria-label="${esc(s.alt)}" style="position:absolute;display:block;max-width:none;width:${f(iw)}px;height:${f(ih)}px;left:${f(left)}px;top:${f(top)}px"><image href="${esc(ctx.photoUrl(s.photo))}" width="100%" height="100%" preserveAspectRatio="none"/></svg>`;
 }
 
 // ---- a shot's frame on a page. A shot with a photo is cropped round its riders. A shot with none is filled from the scene photos the brand
@@ -68,7 +68,7 @@ export function shotHtml(ctx, s, { lead = false, compact = false, w = 3, h = 2, 
     const scene = (ctx.brand.applications.scenes && ctx.brand.applications.scenes.signage) || signScene(ctx);
     const url = (ctx._shotScene = ctx._shotScene || ctx.mockup(scene, [signArt(ctx, 800, scene)])), sc = ctx.sceneInfo(scene), q = sc.quads[0].corners;
     const cx = (Math.min(...q.map((c) => c[0])) + Math.max(...q.map((c) => c[0]))) / 2, cy = (Math.min(...q.map((c) => c[1])) + Math.max(...q.map((c) => c[1]))) / 2;
-    return `<img src="${esc(url)}" alt="${esc(`${ctx.brand.name} sign in place, a stand-in until this shot is taken`)}" style="${style};object-fit:cover;object-position:${(cx / sc.w * 100).toFixed(1)}% ${(cy / sc.h * 100).toFixed(1)}%;display:block">`;
+    return `<svg role="img" aria-label="${esc(`${ctx.brand.name} sign in place, a stand-in until this shot is taken`)}" style="${style};object-fit:cover;object-position:${(cx / sc.w * 100).toFixed(1)}% ${(cy / sc.h * 100).toFixed(1)}%;display:block"><image href="${esc(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg>`;
   }
   return `<div class="to-shoot" role="img" aria-label="${esc('To shoot. ' + s.slot)}" style="${style}"><b>To shoot</b>${compact ? '' : `<span>${esc(s.slot)}</span>`}</div>`;
 }

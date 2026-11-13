@@ -93,7 +93,7 @@ function layouts(ctx, id) {
 }
 
 // ---- applications ----
-const photoBox = (url, alt, c) => `<div class="hg-mk" style="${c}"><img src="${A(url)}" alt="${A(alt)}"></div>`;
+const photoBox = (url, alt, c) => `<div class="hg-mk" style="${c}"><svg role="img" aria-label="${A(alt)}"><image href="${A(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`;
 
 function businessCard(ctx, id) {
   const c = ctx.brand.applications.card, card = (side) => fig(`<div class="hg-cropbox">${cardFace(ctx, side, 300)}${crop()}</div>`, { h: '90 mm', v: '55 mm', cap: side === 'front' ? 'Front' : 'Back' });

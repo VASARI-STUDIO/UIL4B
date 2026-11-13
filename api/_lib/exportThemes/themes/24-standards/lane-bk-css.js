@@ -208,7 +208,7 @@ export function bookCss(ctx) {
 /* 8 applications */
 .sd-pair{display:grid;gap:32px;align-items:start}
 .sd-mk{position:relative;aspect-ratio:4/5;overflow:hidden;max-width:400px;background:var(--sk)}
-.sd-mk img{position:absolute;left:var(--pl);top:var(--pt);width:var(--pw);height:auto;max-width:none;display:block}
+.sd-mk img,.sd-mk svg{position:absolute;left:var(--pl);top:var(--pt);width:var(--pw);height:auto;max-width:none;display:block}
 .sd-sign p{font-family:var(--display)}
 .sd-phwrap{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
 .sd-phone{width:195px;height:422px;overflow:hidden;border:1px solid var(--ink);flex:none}

@@ -81,8 +81,8 @@ export function applications(ctx) {
   const box = Math.min(Math.max(((bx0 + bx1) / 2) * zoom - 203, 0), biw - 406), boy = Math.min(Math.max(((by0 + by1) / 2) * zoom - 135.5, 0), bih - 271);
 
   const qy = q.corners.map((c) => c[1] * s), oy = Math.min(Math.max((Math.min(...qy) + Math.max(...qy)) / 2 - 397, 0), ih - 794), where = signWhere(ctx);
-  const photoA = `<div class="a" style="left:0;top:0;width:634px;height:794px;overflow:hidden"><img src="${A(urlA)}" alt="${A(B.name)} sign ${where}" style="position:absolute;left:${f2(-ox)}px;top:${f2(-oy)}px;width:${f2(iw)}px;height:${f2(ih)}px;max-width:none"></div>`;
-  const photoB = `<div class="a" style="left:658px;top:196px;width:406px;height:271px;overflow:hidden"><img src="${A(urlB)}" alt="${A(B.name)} business card, front and back, ${WHERE_CARD[cardScene] || 'on a table'}" style="position:absolute;left:${f2(-box)}px;top:${f2(-boy)}px;width:${f2(biw)}px;height:${f2(bih)}px;max-width:none"></div>`;
+  const photoA = `<div class="a" style="left:0;top:0;width:634px;height:794px;overflow:hidden"><svg role="img" aria-label="${A(B.name)} sign ${where}" style="position:absolute;left:${f2(-ox)}px;top:${f2(-oy)}px;width:${f2(iw)}px;height:${f2(ih)}px;max-width:none"><image href="${A(urlA)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`;
+  const photoB = `<div class="a" style="left:658px;top:196px;width:406px;height:271px;overflow:hidden"><svg role="img" aria-label="${A(B.name)} business card, front and back, ${WHERE_CARD[cardScene] || 'on a table'}" style="position:absolute;left:${f2(-box)}px;top:${f2(-boy)}px;width:${f2(biw)}px;height:${f2(bih)}px;max-width:none"><image href="${A(urlB)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`;
   // a 2 px contact shadow at 18% black under the sign's bottom edge, with a 3 px fall-off at 9% (the quad, mapped into the window)
   const [tl, tr, br, bl] = q.corners.map((c) => [c[0] * s - ox, c[1] * s - oy]);
   // it falls on what the sign meets: the post (scene x range measured below the sign) or, with no post, the whole lower edge

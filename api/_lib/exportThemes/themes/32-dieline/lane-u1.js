@@ -43,7 +43,7 @@ export function textW(ctx, role, weight, s, size) {
 }
 export function kitCopy(ctx) {
   const S = ctx.brand.ui.screen.content, F = S.form, D = S.dialog || {}, s = (p, v) => say(ctx, 'ui.screen.content.' + p, v);
-  const st = (id) => { const i = ctx.status.findIndex((x) => x.id === id); return say(ctx, 'ui.status.*.label', ctx.status[i].label, i + 1); };
+  const st = (id) => { const i = ctx.status.findIndex((x) => x.id === id); return say(ctx, 'ui.status.*.label', ctx.status[Math.max(i, 0)].label, i + 1); };
   return {
     status: s('status', S.status), eta: s('eta', S.eta), pickup: s('pickup', S.pickup), rider: s('rider', S.rider), riderNote: s('riderNote', S.riderNote),
     deliverTo: s('deliverTo', S.deliverTo), paid: s('paid', S.paid),

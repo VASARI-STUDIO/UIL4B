@@ -40,7 +40,7 @@ function photo(ctx, url, sceneId, x, y, w, h, share, alt) {
   const qh = Math.max(...ys) - Math.min(...ys), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
   const sx = sceneClearX(sceneId), k = Math.max((share * h) / qh, w / (sc.w * sx), h / sc.h), cl = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   const left = cl(w / 2 - cx * k, w - sc.w * k * sx, 0), top = cl(h / 2 - cy * k, h - sc.h * k, 0);
-  return `<div class="a" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;overflow:hidden"><img src="${A(url)}" alt="${A(alt)}" style="position:absolute;left:${f2(left)}px;top:${f2(top)}px;width:${f2(sc.w * k)}px;height:${f2(sc.h * k)}px;max-width:none"></div>`;
+  return `<div class="a" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;overflow:hidden"><svg role="img" aria-label="${A(alt)}" style="position:absolute;left:${f2(left)}px;top:${f2(top)}px;width:${f2(sc.w * k)}px;height:${f2(sc.h * k)}px;max-width:none"><image href="${A(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`;
 }
 
 export const css = () => `

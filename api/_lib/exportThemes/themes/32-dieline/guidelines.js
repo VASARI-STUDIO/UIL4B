@@ -123,7 +123,7 @@ function crop(ctx, sceneId, bw, bh, fill) {
   const k = Math.max(fill ? fill * bh / qh : 0, bw / sc.w, bh / sc.h), cl = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   return { w: sc.w * k, h: sc.h * k, left: cl(bw / 2 - cx * k, bw - sc.w * k, 0), top: cl(bh / 2 - cy * k, bh - sc.h * k, 0) };
 }
-const photo = (P, x, y, bw, bh, url, c, alt, style = '') => P.raw(`<div class="ph" style="left:${x}px;top:${y}px;width:${bw}px;height:${bh}px;${style}"><img class="photo" src="${esc(url)}" alt="${esc(alt)}" style="left:${r2(c.left)}px;top:${r2(c.top)}px;width:${r2(c.w)}px;height:${r2(c.h)}px"></div>`);
+const photo = (P, x, y, bw, bh, url, c, alt, style = '') => P.raw(`<div class="ph" style="left:${x}px;top:${y}px;width:${bw}px;height:${bh}px;${style}"><svg role="img" aria-label="${esc(alt)}" style="left:${r2(c.left)}px;top:${r2(c.top)}px;width:${r2(c.w)}px;height:${r2(c.h)}px"><image href="${esc(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`);
 
 // ---- a net drawn at k px/mm (layouts page, signage satchel): panels filled by role, closures at net scale, art on the front ----
 const netMm = (spec) => ({ w: spec.panels.reduce((s, p) => s + p[1], 0), h: spec.kind === 'bag' ? spec.height + spec.seal : spec.kind === 'satchel' ? spec.height + spec.flap : spec.height + 2 * spec.tuck });

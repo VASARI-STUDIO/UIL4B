@@ -137,7 +137,7 @@ function photographed(ctx, R, K) {
   const cw = cropPct(ctx, sid, bw, bh, fill), cn = cropPct(ctx, sid, 4, 5, fill);
   const alt = own ? `${K.name}, front panel, photographed` : POSTER_ALT;
   const cap = own ? [S.hero, S.heroVal] : [POSTER_CAP, S.secondVal];
-  return `<figure class="dl-shotp"><div class="dl-shotp__w" style="--ar:${bw}/${bh};--mw:${bw}px;--cw:${cw.w}%;--cl:${cw.l}%;--ct:${cw.t}%;--cnw:${cn.w}%;--cnl:${cn.l}%;--cnt:${cn.t}%"><img src="${A(url)}" alt="${A(alt)}"></div>
+  return `<figure class="dl-shotp"><div class="dl-shotp__w" style="--ar:${bw}/${bh};--mw:${bw}px;--cw:${cw.w}%;--cl:${cw.l}%;--ct:${cw.t}%;--cnw:${cn.w}%;--cnl:${cn.l}%;--cnt:${cn.t}%"><svg viewBox="0 0 ${ctx.sceneInfo(sid).w} ${ctx.sceneInfo(sid).h}" role="img" aria-label="${A(alt)}"><image href="${A(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>
 <figcaption><span class="dl-shotp__t">${A(cap[0])}</span>${cap[1] ? ` <span class="dl-q">${A(cap[1])}</span>` : ''}</figcaption></figure>`;
 }
 

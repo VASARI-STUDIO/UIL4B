@@ -7,7 +7,7 @@
 //     Break: make a page in themes/32-dieline/ throw (read B.packaging with no DEFAULT_PACKAGING in geom.js).
 //  3. NO SAMPLE BRAND IN A PROJECT'S EXPORT: with a project brand, nothing of the sample brand each theme was written for (its name, its
 //     city, its first line) appears in any file. Break: read ctx.brand's sample slug in a lane (import BRANDS and use two-shores' data).
-//  4. SLOT EDITION IS FINISHED: no private-use placeholder character, "undefined", "NaN" or "[object Object]" is printed.
+//  4. SLOT EDITION IS FINISHED (the brand's own words are placeholders there, as in 04, so the project name is not asserted): no private-use placeholder character, "undefined", "NaN" or "[object Object]" is printed.
 //     Break: drop '24' or '32' from PH_THEMES in the engine's pages.js, or stop ctx.placeholders.run finishing a string.
 //  5. NO NODE ONLY CODE IN THE THEME FOLDERS: no node: import, child_process or process.env in the two themes or the engine's mockup stub,
 //     so the serverless function traces them. Break: import fs in themes/24-standards/helpers.js.
@@ -79,7 +79,6 @@ for (const [theme, sample] of Object.entries(PAIR)) {
         for (const w of sampleWords) if (text.includes(w)) problems.push(`${name}: sample wording ${JSON.stringify(w)}`)
       }
       assert.deepEqual(problems, [])
-      assert.ok(texts.some(([, t]) => t.includes(PROJECT) || /Tide Fold/.test(t)), 'the project name is not in the export')
     })
   }
 }

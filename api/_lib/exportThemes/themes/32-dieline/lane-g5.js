@@ -95,7 +95,7 @@ function cropAt(ctx, id, bw, bh, cx, cy, k0) {
 const quadMid = (ctx, id, qs) => { const ps = qs.flatMap((i) => ctx.sceneInfo(id).quads[i].corners), xs = ps.map((p) => p[0]), ys = ps.map((p) => p[1]); return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2]; };
 const photo = (P, x, y, bw, bh, url, c, alt) => {
   P.boxes.push({ x, y, w: bw, h: bh });
-  P.raw(`<div class="ph" style="left:${x}px;top:${y}px;width:${bw}px;height:${bh}px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px"><img class="photo" src="${esc(url)}" alt="${esc(alt)}" style="left:${r2(c.left)}px;top:${r2(c.top)}px;width:${r2(c.w)}px;height:${r2(c.h)}px"></div>`);
+  P.raw(`<div class="ph" style="left:${x}px;top:${y}px;width:${bw}px;height:${bh}px;outline:1px solid oklch(0 0 0 / .1);outline-offset:-1px"><svg role="img" aria-label="${esc(alt)}" style="left:${r2(c.left)}px;top:${r2(c.top)}px;width:${r2(c.w)}px;height:${r2(c.h)}px"><image href="${esc(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`);
 };
 const artFor = (ctx, id, i, w) => [w, Math.round(w / ctx.sceneInfo(id).quads[i].aspect)];
 

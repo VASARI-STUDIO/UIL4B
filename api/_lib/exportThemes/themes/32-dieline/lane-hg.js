@@ -80,7 +80,7 @@ function fasciaArt(ctx, R, K, sceneId, w0) {
 // one photographed figure: scene, art, the wide box and the phone box (--ar and --arn), the crop for each
 function shotFigure(ctx, sid, art, [bw, bh], [nw, nh], fill, alt, cap) {
   const url = ctx.mockup(sid, [art]), cw = cropPct(ctx, sid, bw, bh, fill), cn = cropPct(ctx, sid, nw, nh, fill);
-  return `<figure class="hg-shotp"><div class="hg-shotp__w" style="--ar:${bw}/${bh};--arn:${nw}/${nh};--mw:${bh > bw * 0.8 ? `${bw}px` : "none"};--cw:${cw.w}%;--cl:${cw.l}%;--ct:${cw.t}%;--cnw:${cn.w}%;--cnl:${cn.l}%;--cnt:${cn.t}%"><img src="${A(url)}" alt="${A(alt)}" decoding="async"></div>
+  return `<figure class="hg-shotp"><div class="hg-shotp__w" style="--ar:${bw}/${bh};--arn:${nw}/${nh};--mw:${bh > bw * 0.8 ? `${bw}px` : "none"};--cw:${cw.w}%;--cl:${cw.l}%;--ct:${cw.t}%;--cnw:${cn.w}%;--cnl:${cn.l}%;--cnt:${cn.t}%"><svg viewBox="0 0 ${ctx.sceneInfo(sid).w} ${ctx.sceneInfo(sid).h}" role="img" aria-label="${A(alt)}"><image href="${A(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>
 ${cap[0] ? `<figcaption class="hs-q">${A(cap[0])}${cap[1] ? ` ${A(cap[1])}` : ''}</figcaption>` : ''}</figure>`;
 }
 // the pack on its own surface (bag or box), then the second surface the brand names: the fascia over the shop door, or the satchel's shelter poster.

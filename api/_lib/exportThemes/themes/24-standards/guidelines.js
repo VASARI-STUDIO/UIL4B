@@ -194,7 +194,7 @@ export const guidelines = {
     const cx = cs.reduce((a, q) => a + q[0], 0) / cs.length, cy = cs.reduce((a, q) => a + q[1], 0) / cs.length;
     const s = Math.max(406 / sc.w, 626 / sc.h), iw = sc.w * s, ih = sc.h * s;
     const ox = Math.min(Math.max(cx * s - 203, 0), iw - 406), oy = Math.min(Math.max(cy * s - 313, 0), ih - 626);
-    const photo = `<div class="a" style="left:658px;top:88px;width:406px;height:626px;overflow:hidden"><img src="${A(url)}" alt="${A(B.name)} app on a phone, at a crossing" style="position:absolute;left:${f2(-ox)}px;top:${f2(-oy)}px;width:${f2(iw)}px;height:${f2(ih)}px;max-width:none"></div>`;
+    const photo = `<div class="a" style="left:658px;top:88px;width:406px;height:626px;overflow:hidden"><svg role="img" aria-label="${A(B.name)} app on a phone, at a crossing" style="position:absolute;left:${f2(-ox)}px;top:${f2(-oy)}px;width:${f2(iw)}px;height:${f2(ih)}px;max-width:none"><image href="${A(url)}" width="100%" height="100%" preserveAspectRatio="none"/></svg></div>`;
     const rowsT = [['Top bar', PH.top], ['Answer block', PH.answer], ['Row', PH.row], ['Button', PH.btn], ['Side margin', PH.margin]];
     const TY = 683 - rowsT.length * 32;
     const table = rowsT.map(([n, px], i) => fill(56, TY + i * 32, 226, 1, R.hair) + blk(56, TY + i * 32 + 6, 226, 20, 'c-body trow', `<span>${n}</span><span>${px} px <span style="color:${R.quiet}">${fx(ctx, px)}</span></span>`, `color:${R.ink}`)).join('')
