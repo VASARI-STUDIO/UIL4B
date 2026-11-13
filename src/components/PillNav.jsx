@@ -461,7 +461,7 @@ function AppHeader() {
   useEffect(() => {
     if (!hintOpen) return undefined
     let live = true
-    // Beside Export it needs its own width, the 8px gap to the button and 4px
+    // Beside Export it needs its own width, the 8px gap to the button and 2px
     // clear of Learn's box (whose own padding keeps the labels further apart).
     // Placed again whenever the header or the hint changes size, which covers a
     // webfont that lands after the hint opened.
@@ -471,7 +471,7 @@ function AppHeader() {
       const button = tip.parentElement.getBoundingClientRect()
       const learn = triggerRefs.current.learn?.getBoundingClientRect()
       const leftEdge = learn?.right ?? navRef.current.getBoundingClientRect().left
-      tip.classList.toggle('pnav-tip--below', button.left - leftEdge < tip.offsetWidth + 12)
+      tip.classList.toggle('pnav-tip--below', button.left - leftEdge < tip.offsetWidth + 10)
     }
     placeHint()
     window.addEventListener('resize', placeHint)
