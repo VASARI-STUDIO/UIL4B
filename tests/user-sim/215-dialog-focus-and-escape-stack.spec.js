@@ -268,7 +268,8 @@ test.describe('the Palette Builder under a dialog', () => {
     expect(await colours(), 'the palette still did not change').toBe(before)
   })
 
-  test('(d) Escape on the From image dialog closes it and nothing else', async ({ page }) => {
+  // From Image is off the toolbar for launch (FROM_IMAGE_LIVE in PaletteBuilder.jsx).
+  test.skip('(d) Escape on the From image dialog closes it and nothing else', async ({ page }) => {
     watch(page, 'someone pulling colours from a photo')
     await go(page, '/palette')
     const before = await page.locator('.plb-seedchip-hex').textContent()

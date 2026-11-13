@@ -398,6 +398,10 @@ async function decodeImage(file) {
   })
 }
 
+// From image is off the toolbar for launch and comes back with its redesign. The
+// dialog and its code stay; this one switch brings the button and the paste back.
+const FROM_IMAGE_LIVE = false
+
 // "From image" — two canvases, deliberately.
 //
 //   `data`   a small ImageData (IMG_ANALYSIS_MAX on its long side). It feeds the
@@ -2314,7 +2318,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         else showImageError('Nothing to paste. Copy an image first.')
         return
       }
-      if (!file) return
+      if (!file || !FROM_IMAGE_LIVE) return
       const t = e.target
       if (t instanceof Element && t.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return
       if (document.querySelector('[aria-modal="true"]')) return
@@ -3208,7 +3212,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       menu: { label: 'Back to all tools', icon: 'arrow-left', onSelect: () => navigate('/tools') },
     },
     { id: 'seed', priority: 4, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
-    {
+    ...(FROM_IMAGE_LIVE ? [{
       id: 'image', priority: 3,
       render: () => (
         <span className="plb-menuwrap">
@@ -3216,7 +3220,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </span>
       ),
       menu: { label: 'From image', icon: 'image', onSelect: () => { closeAllMenus(); setImgOpen(true) } },
-    },
+    }] : []),
     { id: 'system', priority: 1, render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
     // `measure`: the trigger's width follows the mode name, so the row is measured again when it changes.
     { id: 'vision', priority: 0, measure: activeVision, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },

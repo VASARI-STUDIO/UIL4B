@@ -465,7 +465,7 @@
     "loadingSignup": "Ihr Konto wird erstellt…",
     "loadingReset": "Wird gesendet…",
     "loadingSwitch": "Konto wird gewechselt…",
-    "legal": "Mit dem Fortfahren stimmen Sie den {terms} und der {privacy} zu. Sie müssen mindestens 16 Jahre alt sein, um ein Konto zu erstellen.",
+    "legal": "Mit dem Fortfahren stimmen Sie den {terms} und der {privacy} zu. Sie müssen mindestens 18 Jahre alt sein, um ein Konto zu erstellen.",
     "legalTerms": "Nutzungsbedingungen",
     "legalPrivacy": "Datenschutzrichtlinie",
     "noAccount": "Noch kein Konto?",
