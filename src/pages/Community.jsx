@@ -203,10 +203,10 @@ export default function Community({ toast }) {
       {empty ? (
         <div className="cm-empty">{empty}</div>
       ) : (
-        <div className="cm-swap" key={`${kind}|${topic}|${query}|${sort}`}>
-          <h2 className="sr-only">Pieces</h2>
+        <section className="cm-swap" key={`${kind}|${topic}|${query}|${sort}`} aria-labelledby="cm-pieces-h">
+          <h2 id="cm-pieces-h" className="sr-only">Pieces</h2>
           <PieceGrid pieces={shown} actions={actions} tileMenu={tileMenu} label="Showcase pieces" />
-        </div>
+        </section>
       )}
       {tileMenu.menu}
 

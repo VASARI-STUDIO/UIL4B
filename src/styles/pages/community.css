@@ -125,7 +125,7 @@
 .cm-frame[data-fit="cover"] img { object-fit: cover; }
 .cm-frame[data-pos="left"] img { object-position: 0% 50%; }
 .cm-frame[data-fit="contain"] img { box-sizing: border-box; padding: 16px; object-fit: contain; }
-.cm-discs { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 8px; }
+.cm-discs { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 12px; }
 .cm-disc, .cm-more {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
   width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px;
@@ -139,8 +139,8 @@
   margin-top: 12px; overflow: hidden; font-size: 16px; font-weight: 500; line-height: 1.35;
   text-overflow: ellipsis; white-space: nowrap;
 }
-.cm-tile-meta { overflow: hidden; font-size: 14px; line-height: 1.5; color: var(--v3-sec); text-overflow: ellipsis; white-space: nowrap; }
-.cm-sample { color: var(--v3-t56); }
+.cm-tile-meta { font-size: 14px; line-height: 1.5; color: var(--v3-sec); overflow-wrap: anywhere; }
+.cm-sample { color: var(--v3-t56); white-space: nowrap; }
 .cm-maker-link { text-decoration: none; }
 
 @media (hover: hover) and (min-width: 768px) {
