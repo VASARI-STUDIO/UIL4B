@@ -67,20 +67,21 @@ for (const width of [390, 1440]) {
 
 // ── A LINK THAT CANNOT OPEN SAYS WHY ────────────────────────────────────────
 //
-// Signed in, the link ends at the workspace with one line that does not say
-// whether the project exists for someone else. Signed out, it goes to sign-in
-// and, once they are in, to the project. Signing out from the project page
-// itself is the visitor's own choice and goes to the workspace with nothing said.
+// Signed in, the link stays at its own address and a page says the project is
+// not in the account, in words that do not say whether it exists for someone
+// else. Signed out, it goes to sign-in and, once they are in, to the project.
+// Signing out from the project page itself is the visitor's own choice and goes
+// to the workspace with nothing said.
 //
 // ── MUTATION ────────────────────────────────────────────────────────────────
 // In ProjectLinkGone.jsx return <Navigate to="/projects" replace /> for every
-// case (or drop the toast dispatch): the first two tests lose the line, the
+// case: the first two tests lose the page and land on /projects, and the
 // signed-out ones stop at /projects.
-const GONE = /That project isn.t in your account\. It may have been deleted\./
-const toastLine = (page) => page.locator('.toast.show').filter({ hasText: GONE })
+const GONE_TITLE = /That project isn.t in your account/
+const gonePage = (page) => page.getByRole('heading', { level: 1, name: GONE_TITLE })
 
 for (const path of ['/projects/not-a-project', '/projects/not-a-project/export']) {
-  test(`an unknown project link ${path.endsWith('export') ? '(export) ' : ''}ends at the workspace and says why once the account has answered`, async ({ page }) => {
+  test(`an unknown project link ${path.endsWith('export') ? '(export) ' : ''}stays put and says the project is not in the account once the account has answered`, async ({ page }) => {
     watch(page, 'a designer following a link to a project that does not exist')
     await freshDevice(page)
     await go(page, path)
@@ -89,9 +90,13 @@ for (const path of ['/projects/not-a-project', '/projects/not-a-project/export']
     await expect(page.getByText('Opening your project…')).toBeVisible()
     await expect(page).toHaveURL(new RegExp(`${path}$`))
 
-    await expect(page).toHaveURL(/\/projects$/, { timeout: HOLD_MS + 8000 })
+    await expect(gonePage(page), 'the account answered and the page said nothing').toBeVisible({ timeout: HOLD_MS + 8000 })
+    await expect(page.getByText('It may have been deleted, here or on another device.')).toBeVisible()
+    await expect(page, 'the link in the bar must stay the one they were sent').toHaveURL(new RegExp(`${path}$`))
+
+    await page.getByRole('link', { name: 'Open your workspace' }).click()
+    await expect(page).toHaveURL(/\/projects$/)
     await expect(page.getByRole('heading', { level: 1, name: 'Your workspace' })).toBeVisible()
-    await expect(toastLine(page), 'the link was dropped without a word').toBeVisible()
   })
 }
 
@@ -103,7 +108,7 @@ for (const suffix of ['', '/export']) {
 
     await expect.poll(() => new URL(page.url()).pathname).toBe('/login')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
-    await expect(toastLine(page), 'a signed-out visitor was told the project is not in their account').toHaveCount(0)
+    await expect(gonePage(page), 'a signed-out visitor was told the project is not in their account').toHaveCount(0)
 
     await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signInNow())
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 15000 }).toBe(`/projects/p1${suffix}`)
@@ -119,5 +124,5 @@ test('signing out from a project page goes to the workspace, not to sign-in, and
 
   await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signOutNow())
   await expect(page).toHaveURL(/\/projects$/)
-  await expect(toastLine(page), 'signing out was met with a project-not-found line').toHaveCount(0)
+  await expect(gonePage(page), 'signing out was met with a project-not-found page').toHaveCount(0)
 })

@@ -254,16 +254,16 @@ test.describe('the 404', () => {
       href: '/discover',
     })
 
-    const cards = page.locator('.nf-card')
+    const cards = page.locator('.ed-blk .ed-row')
     await expect(cards).toHaveCount(expected.length)
     for (let i = 0; i < expected.length; i += 1) {
-      await expect(cards.nth(i).locator('.nf-card-label')).toHaveText(expected[i].label)
-      await expect(cards.nth(i).locator('.nf-card-desc')).toHaveText(expected[i].desc)
+      await expect(cards.nth(i).locator('.nm')).toHaveText(expected[i].label)
+      await expect(cards.nth(i).locator('.ds')).toHaveText(expected[i].desc)
       await expect(cards.nth(i)).toHaveAttribute('href', expected[i].href)
     }
     // Font Pair is one of the suggestions, and it opens the real tool.
-    await expect(page.locator('.nf-card[href="/create/font-pair"] .nf-card-label')).toHaveText('Font Pair')
-    const text = (await page.locator('.nf-grid').textContent()).toLowerCase()
+    await expect(page.locator('.ed-row[href="/create/font-pair"] .nm')).toHaveText('Font Pair')
+    const text = (await page.locator('.ed-blk').textContent()).toLowerCase()
     expect(text).not.toContain('palette generator')
     expect(text).not.toContain('community palettes')
   })

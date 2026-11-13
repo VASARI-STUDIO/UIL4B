@@ -238,12 +238,17 @@ export default function NoticeStack() {
     // Written on the root element, not on a parent: --chrome-h is declared on
     // :root and a custom property is resolved where it is USED, so a value set
     // anywhere lower would never reach .plb-toolbar in another subtree.
-    const clear = () => root.style.removeProperty('--notice-h')
+    const clear = () => {
+      root.style.removeProperty('--notice-h')
+      root.removeAttribute('data-notice')
+    }
     if (!el) return clear
 
     const publish = (h) => {
-      if (h > 0) root.style.setProperty('--notice-h', `${h}px`)
-      else clear()
+      if (h > 0) {
+        root.style.setProperty('--notice-h', `${h}px`)
+        root.setAttribute('data-notice', '')
+      } else clear()
     }
 
     // No ResizeObserver (an old browser, a test harness): the height is still
