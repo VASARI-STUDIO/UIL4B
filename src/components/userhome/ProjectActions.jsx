@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import usePopover from '../../hooks/usePopover'
+import { useMemo, useState } from 'react'
+import Menu from '../menu/Menu'
+import { menuOpenKey } from '../menu/menuModel'
 import { SYSTEM_PARTS } from '../../utils/userHome'
 
 // Everything you can do to one project, from the ⋯ beside Save on its page
@@ -24,11 +25,11 @@ import { SYSTEM_PARTS } from '../../utils/userHome'
 //
 // ── KEYBOARD AND DISMISSAL ───────────────────────────────────────
 //
-// usePopover, not a hand-rolled dropdown, so this inherits the contract every
-// other popover in the app already owes: Escape closes and returns focus to the
-// trigger, an outside press closes, opening moves focus in, tabbing past either
-// end closes and lets focus continue, and it flips at the viewport edge instead
-// of being clipped. Not role="menu" — see the note in usePopover.js.
+// The shared Menu (components/menu/Menu.jsx), so this inherits the one keyboard
+// model every menu in the app owes: arrows between rows, Escape closes and
+// returns focus to the trigger, an outside press closes, Tab closes and carries
+// on, and it flips at the viewport edge instead of being clipped. Below 768px it
+// is a bottom action sheet with 52px rows.
 
 function Dots() {
   return (
@@ -50,62 +51,65 @@ export default function ProjectActions({
   project, digest, onOpenIn, onDuplicate, onRename, onExportCss, onOverwrite, onArchive, onDelete,
 }) {
   const [open, setOpen] = useState(false)
-  const { triggerRef, popRef, closeToTrigger } = usePopover(open, () => setOpen(false), { arrowNav: true })
+  const [trigger, setTrigger] = useState(null)
+  const [how, setHow] = useState({ keyboard: false, at: 'first' })
 
-  // Every item closes the menu and returns focus to the trigger before acting,
-  // so a keyboard user is never stranded on an element that just unmounted.
-  const run = (fn) => () => { closeToTrigger(); fn?.() }
+  const items = useMemo(() => [
+    { type: 'section', label: 'Open in' },
+    // Which of these would be starting from scratch, said on the row itself
+    // rather than left for the user to discover after the navigation.
+    ...SYSTEM_PARTS.map((part) => ({
+      id: `open-${part.id}`,
+      label: part.label,
+      hint: digest?.parts?.find((p) => p.id === part.id)?.done ? undefined : 'empty',
+      onSelect: () => onOpenIn?.(project.id, part.tool),
+    })),
+    'sep',
+    { id: 'duplicate', label: 'Duplicate', onSelect: () => onDuplicate?.(project.id) },
+    { id: 'rename', label: 'Rename', onSelect: () => onRename?.(project.id) },
+    { id: 'css', label: 'Copy CSS variables', onSelect: () => onExportCss?.(project.id) },
+    ...(project.archived ? [] : [{ id: 'overwrite', label: 'Overwrite with current design', onSelect: () => onOverwrite?.(project.id) }]),
+    'sep',
+    { id: 'archive', label: project.archived ? 'Restore' : 'Archive', onSelect: () => onArchive?.(project.id) },
+    // Deletion still goes through the card's type-the-name confirmation. This
+    // row only ARMS it: a one-click destroy inside a menu that also holds
+    // "Rename" is how people lose work.
+    { id: 'delete', label: 'Delete…', danger: true, onSelect: () => onDelete?.(project.id) },
+  ], [project.id, project.archived, digest, onOpenIn, onDuplicate, onRename, onExportCss, onOverwrite, onArchive, onDelete])
+
+  const onTriggerKey = (e) => {
+    const at = menuOpenKey(e)
+    if (!at) return
+    e.preventDefault()
+    if (open) return
+    setHow({ keyboard: true, at })
+    setOpen(true)
+  }
 
   return (
     <div className="uh-actions">
       <button
         type="button"
-        ref={triggerRef}
+        ref={setTrigger}
         className="uh-actions-trigger"
+        aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Actions for ${project.name}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => { setHow({ keyboard: e.detail === 0, at: 'first' }); setOpen((v) => !v) }}
+        onKeyDown={onTriggerKey}
       >
         <Dots />
       </button>
-
-      {open && (
-        <div ref={popRef} className="pop uh-menu" role="group" aria-label={`Actions for ${project.name}`} tabIndex={-1}>
-          <div className="pop-head">Open in</div>
-          {SYSTEM_PARTS.map((part) => (
-            <button key={part.id} type="button" className="pop-item" onClick={run(() => onOpenIn?.(project.id, part.tool))}>
-              <span>{part.label}</span>
-              {/* Which of these would be starting from scratch, said on the row
-                  itself rather than left for the user to discover after the
-                  navigation. */}
-              {!digest?.parts?.find((p) => p.id === part.id)?.done && (
-                <span className="uh-menu-hint">empty</span>
-              )}
-            </button>
-          ))}
-
-          <div className="pop-sep" />
-          <button type="button" className="pop-item" onClick={run(() => onDuplicate?.(project.id))}>Duplicate</button>
-          <button type="button" className="pop-item" onClick={run(() => onRename?.(project.id))}>Rename</button>
-          <button type="button" className="pop-item" onClick={run(() => onExportCss?.(project.id))}>Copy CSS variables</button>
-          {!project.archived && (
-            <button type="button" className="pop-item" onClick={run(() => onOverwrite?.(project.id))}>
-              Overwrite with current design
-            </button>
-          )}
-
-          <div className="pop-sep" />
-          <button type="button" className="pop-item" onClick={run(() => onArchive?.(project.id))}>
-            {project.archived ? 'Restore' : 'Archive'}
-          </button>
-          {/* Deletion still goes through the card's type-the-name confirmation.
-              This row only ARMS it — a one-click destroy inside a menu that also
-              holds "Rename" is how people lose work. */}
-          <button type="button" className="pop-item uh-menu-danger" onClick={run(() => onDelete?.(project.id))}>
-            Delete…
-          </button>
-        </div>
-      )}
+      <Menu
+        open={open}
+        onClose={() => setOpen(false)}
+        anchor={trigger}
+        label={`Actions for ${project.name}`}
+        items={items}
+        viaKeyboard={how.keyboard}
+        startAt={how.at}
+        className="uh-menu"
+      />
     </div>
   )
 }

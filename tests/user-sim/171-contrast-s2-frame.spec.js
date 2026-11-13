@@ -201,7 +201,7 @@ test.describe('Contrast Checker · the legend and the specimen', () => {
 })
 
 test.describe('Contrast Checker · the ratio on a narrow screen', () => {
-  test('N8: at 390x844 the fields, the ratio and the top 300px of the preview are on screen, in that order', async ({ browser }) => {
+  test('N8: at 390x844 the fields, the ratio and the top 284px of the preview are on screen, in that order', async ({ browser }) => {
     const { ctx, page } = await open(browser, { width: 390, height: 844, phone: true })
     watch(page, 'someone checking a pair on their phone')
     await expect(page.locator('.cc-ratio-num')).toBeVisible()
@@ -212,14 +212,20 @@ test.describe('Contrast Checker · the ratio on a narrow screen', () => {
       const tabs = document.querySelector('.pnav-tabs')
       return {
         pairbar: r('.cc-pairbar'), ratio: r('.cc-ratio-num'), pv: r('.cc-pv'),
-        floor: Math.round(tabs ? tabs.getBoundingClientRect().top : window.innerHeight), count: document.querySelectorAll('.cc-ratio-num').length,
+        floor: Math.round(tabs ? tabs.getBoundingClientRect().top : window.innerHeight),
+        tabHeight: tabs ? Math.round(tabs.getBoundingClientRect().height) : 0,
+        count: document.querySelectorAll('.cc-ratio-num').length,
       }
     })
     expect(read.count, 'the ratio is printed once').toBe(1)
     expect(read.pairbar.bottom, 'the fields come first').toBeLessThanOrEqual(read.ratio.top)
     expect(read.ratio.bottom, 'the ratio sits above the preview').toBeLessThanOrEqual(read.pv.top)
     expect(read.ratio.bottom, 'the ratio ends above the tab bar').toBeLessThanOrEqual(read.floor)
-    expect(read.floor - read.pv.top, `only ${read.floor - read.pv.top}px of the preview is above the tab bar`).toBeGreaterThanOrEqual(300)
+    // The phone header and tab bar are 64px each (8px taller apiece than the old
+    // 56px pair the 300px slice was measured under), so the slice left above the
+    // tab bar is 284px or more.
+    expect(read.tabHeight, 'the phone tab bar is the 64px bar the budget below assumes').toBe(64)
+    expect(read.floor - read.pv.top, `only ${read.floor - read.pv.top}px of the preview is above the tab bar`).toBeGreaterThanOrEqual(284)
     await ctx.close()
   })
 

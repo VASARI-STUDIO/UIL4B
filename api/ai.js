@@ -311,7 +311,7 @@ async function runAltText(req, res, { plan, limit, used, monthUsed, monthLimit, 
     if (err.name === 'AbortError') {
       return res.status(504).json({ error: 'AI provider timed out. Try again.' })
     }
-    return res.status(500).json({ error: 'Request failed', detail: String(err).slice(0, 300) })
+    return failRequest(res, { status: 500, scope: 'ai alt-text', message: 'Request failed', err })
   }
 }
 
@@ -399,7 +399,7 @@ async function runScanPhoto(req, res) {
     if (err.name === 'AbortError') {
       return res.status(504).json({ error: 'AI provider timed out' })
     }
-    return res.status(500).json({ error: 'Request failed', detail: String(err).slice(0, 300) })
+    return failRequest(res, { status: 500, scope: 'ai scan-photo', message: 'Request failed', err })
   }
 }
 
@@ -884,7 +884,6 @@ async function runBrandStarter(req, res, { plan, bucket, used }) {
     }
     return res.status(502).json({
       error: 'The AI provider could not be reached, so nothing was generated. Your allowance is untouched — try again shortly.',
-      detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200),
       quotaSpent: false,
     })
   }
@@ -973,12 +972,14 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
     // 401/403 from a provider means the key was rejected — surface that plainly
     // so a misconfigured key is obvious rather than a vague "unavailable".
     if (lastErr?.status === 401 || lastErr?.status === 403) {
-      return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check OPENROUTER_API_KEY (or OPEN_ROUTER_API) / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
+      return res.status(502).json({ error: `AI provider rejected the API key (${lastErr.status}). Check OPENROUTER_API_KEY (or OPEN_ROUTER_API) / GEMINI_API_KEY in the deployment environment — re-paste with no quotes or trailing spaces, then redeploy.` })
     }
     if (lastErr?.truncatedEmpty) {
       return res.status(502).json({ error: MAX_TOKENS_EMPTY_MESSAGE, finishReason: lastErr.finishReason })
     }
-    return res.status(502).json({ error: `AI providers unavailable (${lastErr?.message || 'unknown error'}).`, detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200) })
+    // lastErr.message can carry the provider's own error text, so it goes to
+    // the log under a correlation id and the caller gets fixed text.
+    return failRequest(res, { status: 502, scope: 'ai generate-prompt', message: 'AI providers unavailable. Try again shortly.', err: lastErr })
   }
 
   return {
@@ -1158,8 +1159,7 @@ async function serveBacklog(req, res) {
     // Named in words rather than swallowed. A board that silently rendered zero
     // rows would read as "the backlog is empty", which is the most misleading
     // thing this surface could say.
-    console.error('ai: could not load the internal boards', { error: err?.message, code: err?.code })
-    return res.status(500).json({ error: `Could not load the boards: ${err?.message || 'unknown error'}` })
+    return failRequest(res, { status: 500, scope: 'ai internal boards', message: 'Could not load the boards. The error is in the server log.', err })
   }
 }
 

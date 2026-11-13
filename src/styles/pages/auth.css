@@ -116,11 +116,25 @@
 
 /* Short viewports (small phones in portrait, phones on their side): the whole
    dialog has to fit, or at worst scroll with the submit and the mode links in
-   reach. Spend vertical rhythm first; controls stay at the 44px touch minimum. */
+   reach. Spend vertical rhythm first; controls stay at the 44px touch minimum.
+   The sheet is capped at 100dvh - 48px by v3-overlays.css, so at 360x560 the
+   cap is 512px and the form needs to come in under that. */
 @media(max-height:600px){
   .auth-form-root{--ctl:44px}
   .ui-login-pane{padding-top:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .auth-body{margin-top:12px}
+  .auth-form-root .auth-divider{margin:8px 0}
   .auth-form-root .auth-links{margin-top:8px}
+  .auth-notnow{margin-top:0}
+}
+/* Short phones in portrait: the 44px Close (top right, level with the title) ends
+   8px above the first control, which sits clear of it instead of touching it. The
+   4px this costs under the title comes back from the divider, so the sheet still
+   fits its cap with no scroll. */
+@media(max-width:767px) and (max-height:600px){
+  .ui-login .ui-login-x{top:6px}
+  .auth-body{margin-top:16px}
+  .auth-form-root .auth-divider{margin:6px 0}
 }
 /* Phones on their side: tighter again. "Not now" goes; Close (top right) and
    Escape do the same thing and every sign-in method stays. */

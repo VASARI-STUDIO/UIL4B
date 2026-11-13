@@ -131,7 +131,7 @@ test.describe('right-click feedback menu', () => {
     await go(page, '/discover/palettes')
     const stripe = page.locator('.pgal-stripe').first()
     await expect(stripe).toBeVisible({ timeout: 20000 })
-    const head = page.locator('.fbx-menu .pop-head')
+    const head = page.locator('.fbx-menu .v3m-t')
     // The menu closes on any scroll, and the gallery can still settle after
     // load, so open it again until one read lands while it is up.
     let read
