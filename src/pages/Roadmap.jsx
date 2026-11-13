@@ -5,7 +5,7 @@ import { useToolVotes } from '../hooks/useToolVotes'
 import { createTools } from '../data/toolTree'
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
 import { listTools, voteWord } from '../utils/roadmapItems'
-import '../styles/home-tokens.css'
+import '../styles/pages/home-tokens.css'
 import '../styles/pages/spectrum-tools.css'
 // This page's own rules on the V3 marketing sheet (imported once in main.jsx), shared with /sitemap.
 import '../styles/pages/map-v3.css'

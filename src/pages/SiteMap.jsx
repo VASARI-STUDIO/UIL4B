@@ -9,7 +9,7 @@ import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP, listedTools } from '../d
 import { CREATE_TOOL_SEARCH } from '../data/toolIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 import { TOOL_VOTES_ON } from '../data/toolVotes'
-import '../styles/home-tokens.css'
+import '../styles/pages/home-tokens.css'
 import '../styles/pages/spectrum-tools.css'
 // This page's own rules on the V3 marketing sheet (imported once in main.jsx), shared with /roadmap.
 import '../styles/pages/map-v3.css'
