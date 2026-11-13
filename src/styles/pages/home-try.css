@@ -13,10 +13,10 @@
   --hair: rgba(var(--ink), .08);
   --ring: inset 0 0 0 1px rgba(var(--ink), .10);
   /* The app tools' control voice: a 10% hairline on a clear ground, a 7% wash on hover, a 22% line and 10% wash when on. */
-  --line: rgba(var(--ink), .10);
-  --line-on: rgba(var(--ink), .22);
-  --wash: rgba(var(--ink), .07);
-  --wash-on: rgba(var(--ink), .10);
+  --ht-line: rgba(var(--ink), .10);
+  --ht-line-on: rgba(var(--ink), .22);
+  --ht-wash: rgba(var(--ink), .07);
+  --ht-wash-on: rgba(var(--ink), .10);
   position: relative;
   isolation: isolate;
   box-sizing: border-box;
@@ -157,14 +157,14 @@
 .ht-tool { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .ht-btn {
   display: inline-flex; align-items: center; justify-content: center; flex: none; height: 36px; padding: 0 14px;
-  border: 1px solid var(--line); border-radius: var(--btn-radius); background: transparent; font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap;
+  border: 1px solid var(--ht-line); border-radius: var(--btn-radius); background: transparent; font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap;
 }
-.ht-seg { display: inline-flex; flex: none; align-self: flex-start; height: 36px; padding: 1px; border: 1px solid var(--line); border-radius: var(--btn-radius); background: transparent; }
+.ht-seg { display: inline-flex; flex: none; align-self: flex-start; height: 36px; padding: 1px; border: 1px solid var(--ht-line); border-radius: var(--btn-radius); background: transparent; }
 .ht-seg button {
   flex: 1 1 auto; height: 32px; padding: 0 14px; border: 0; border-radius: var(--btn-radius); background: transparent;
   font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; color: rgba(var(--ink), .78);
 }
-.ht-seg button[aria-checked="true"], .ht-tabs button[aria-selected="true"] { background: var(--wash-on); box-shadow: inset 0 0 0 1px var(--line-on); color: #EFEEEA; }
+.ht-seg button[aria-checked="true"], .ht-tabs button[aria-selected="true"] { background: var(--ht-wash-on); box-shadow: inset 0 0 0 1px var(--ht-line-on); color: #EFEEEA; }
 .ht-seg button:disabled { color: rgba(var(--ink), .34); cursor: not-allowed; }
 .ht-seg button:disabled[aria-checked="true"] { background: transparent; box-shadow: none; }
 .ht-btn, .ht-seg button, .ht-tabs button, .ht-go, .ht-pal-hex {
@@ -172,8 +172,8 @@
 }
 .ht :is(.ht-btn, .ht-go, .ht-seg button, .ht-tabs button):not(:disabled):active { transform: scale(.97); }
 @media (hover: hover) and (pointer: fine) {
-  .ht-btn:hover { background: var(--wash); }
-  .ht-seg button:hover:not([aria-checked="true"]):not(:disabled), .ht-tabs button:hover:not([aria-selected="true"]) { background: var(--wash); color: #EFEEEA; }
+  .ht-btn:hover { background: var(--ht-wash); }
+  .ht-seg button:hover:not([aria-checked="true"]):not(:disabled), .ht-tabs button:hover:not([aria-selected="true"]) { background: var(--ht-wash); color: #EFEEEA; }
   .ht-go[data-fill="false"]:hover { background: var(--l2); }
   .ht-go[data-fill="true"]:hover { background: #F7F6F2; border-color: #F7F6F2; }
 }
@@ -207,14 +207,14 @@
    on the right, and the app's list or phone sheet when it opens. */
 .ht .ht-msel {
   position: relative; flex: none; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 32px 0 13px;
-  border: 1px solid var(--line); border-radius: var(--btn-radius); background: transparent; color: #EFEEEA; font-family: var(--font); cursor: pointer;
+  border: 1px solid var(--ht-line); border-radius: var(--btn-radius); background: transparent; color: #EFEEEA; font-family: var(--font); cursor: pointer;
   transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
 }
 .ht .ht-msel[aria-expanded="true"] { border-color: rgba(var(--ink), .30); }
 .ht .ht-msel .tl-select-k { font-size: 12.5px; color: rgba(var(--ink), .62); white-space: nowrap; }
 .ht .ht-msel .tl-select-v { font-size: 13.5px; font-weight: 540; color: #EFEEEA; white-space: nowrap; }
 .ht .ht-msel .tl-select-caret { position: absolute; right: 11px; color: rgba(var(--ink), .55); }
-@media (hover: hover) and (pointer: fine) { .ht .ht-msel:hover { background: var(--wash); } }
+@media (hover: hover) and (pointer: fine) { .ht .ht-msel:hover { background: var(--ht-wash); } }
 @media (pointer: coarse) { .ht .ht-msel { height: 44px; } }
 
 .ht-pal-cols { flex: 1 1 0; min-height: 162px; margin-top: 16px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-radius: 12px; overflow: hidden; isolation: isolate; }
@@ -274,13 +274,13 @@
 .ht-field { position: relative; flex: 1; min-width: 0; }
 .ht-field svg { position: absolute; left: 12px; top: 10px; width: 16px; height: 16px; fill: rgba(var(--ink), .62); pointer-events: none; }
 .ht-input, .ht-pin {
-  display: block; width: 100%; height: 36px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px;
+  display: block; width: 100%; height: 36px; padding: 0 16px; border: 1px solid var(--ht-line); border-radius: 999px;
   background: transparent; font-size: 15px; font-weight: 400; line-height: 20px; color: #EFEEEA;
 }
 .ht-input--icon, .ht-pin.ht-input--icon { padding-left: 40px; }
 .ht-input::placeholder, .ht-pin::placeholder { color: rgba(var(--ink), .56); opacity: 1; }
 .ht-input:focus, .ht-pin:focus { border-color: rgba(var(--ink), .30); }
-@media (hover: hover) and (pointer: fine) { .ht-input:hover:not(:focus), .ht-pin:hover:not(:focus) { border-color: var(--line-on); } }
+@media (hover: hover) and (pointer: fine) { .ht-input:hover:not(:focus), .ht-pin:hover:not(:focus) { border-color: var(--ht-line-on); } }
 .ht-msg { margin: 0 0 8px; max-width: 48ch; font-size: 13px; line-height: 18px; color: rgba(var(--ink), .62); }
 .ht-val { font-family: var(--mono); font-size: 12px; line-height: 16px; color: rgba(var(--ink), .72); font-variant-numeric: tabular-nums; }
 .ht-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
@@ -407,7 +407,7 @@
 
 /* ── converter ────────────────────────────────────────────────────────────── */
 
-.ht-tabs { flex: none; align-self: flex-start; display: inline-flex; height: 36px; margin-bottom: 16px; padding: 1px; border: 1px solid var(--line); border-radius: var(--btn-radius); background: transparent; max-width: 100%; overflow: hidden; }
+.ht-tabs { flex: none; align-self: flex-start; display: inline-flex; height: 36px; margin-bottom: 16px; padding: 1px; border: 1px solid var(--ht-line); border-radius: var(--btn-radius); background: transparent; max-width: 100%; overflow: hidden; }
 .ht-tabs button { flex: 1 1 auto; height: 32px; padding: 0 14px; border: 0; border-radius: var(--btn-radius); background: transparent; font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; color: rgba(var(--ink), .78); }
 @container (max-width: 459px) { .ht-tabs button { padding: 0 8px; } }
 /* Touch: this sits after the base sizes above so it wins (the shared coarse rule near the top of the file comes first and lost). */
@@ -673,7 +673,7 @@ html[data-reduced-motion="true"] .ht-prog { transform: scaleX(calc((var(--k, 0) 
 
 /* ── desktop details: the pressed comparison chip, the output line ────────── */
 
-.ht-chip[aria-pressed="true"] { background: var(--wash-on); box-shadow: inset 0 0 0 1px var(--line-on); color: #EFEEEA; }
+.ht-chip[aria-pressed="true"] { background: var(--ht-wash-on); box-shadow: inset 0 0 0 1px var(--ht-line-on); color: #EFEEEA; }
 .ht-chip:disabled { color: rgba(var(--ink), .34); cursor: not-allowed; }
 .ht-cv-line { margin-top: 4px; min-height: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ht-cv-line b { font-weight: 600; color: #EFEEEA; }
