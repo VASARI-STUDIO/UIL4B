@@ -72,12 +72,12 @@ const BODIES = {
 // Held here rather than in learnIndex.js because it is this page's copy, and
 // learnIndex.js has to stay parseable by the Node build scripts.
 const TOOL_LEDE = {
-  'colour-contrast': 'The Contrast Checker runs the formula above on any pair, gives the verdict against all four thresholds at once, and offers the nearest passing colour when a pair falls short.',
-  'type-scales': 'The Type Scale Generator builds the ladder from a base and a ratio at each end of the range, previews it at three viewport widths in real families, and exports the clamp() for every step.',
-  'typeface-metrics': 'The Font Gallery draws the full catalogue as specimens rather than as names, filters it by category, and puts two families side by side at the same size — which is the only way to see the difference this article measures.',
+  'colour-contrast': 'The Contrast Checker runs the formula above on any pair, gives the verdict against all five WCAG tests at once (four for text, one for UI components and graphics), and offers the nearest passing colour when a pair falls short.',
+  'type-scales': 'The Type Scale Generator builds the ladder from a base and a ratio at each end of the range, previews it at three viewport widths in real families, and exports the clamp() for every step (with Fluid on, the default).',
+  'typeface-metrics': 'The Font Gallery draws the full catalogue as specimens rather than as names, filters it by category, and puts two or three families side by side at the same size — which is the only way to see the difference this article measures.',
   'font-loading': 'The Font Pairing tool ends at the import and the CSS for the two families it suggests, which is the declaration this article is about: it is what decides how many files are fetched and what the reader looks at while they arrive.',
-  'colour-spaces': 'The Tint Scale Generator builds a 50–950 ramp from one colour, and its lightness curve is exactly the choice this article is about: Perceived spaces the stops by HCT tone, Linear by HSL lightness. The two are visibly different on the same seed.',
-  'theme-systems': 'The Semantic Colour Generator builds the role layer this article describes: it derives error, success, warning and info from hue arcs that keep each one legible as itself, then picks every shade by measured contrast — 4.5:1 for text, 3:1 for a boundary — separately for a light scene and a dark one.',
+  'colour-spaces': 'The Tint Scale Generator builds a 9, 11 or 13 step ramp from one colour, and its Spacing control is exactly the choice this article is about: Perceived spaces the steps by OKLCH lightness, Linear by actual light. The two are visibly different on the same seed.',
+  'theme-systems': 'The Semantic Colour Generator builds the role layer this article describes: it derives error, success, warning and info from hue arcs that keep each one legible as itself, then, in its Light and Dark preview, picks the step that clears 4.5:1 for text and 3:1 for a boundary against that scene's background.',
   'brand-colour': 'The Palette Generator starts from one seed, builds the harmony and the tonal ramp from it, and rates each colour it produces against black and white ink — so the value that clears a threshold and the value that does not are on screen together rather than checked one at a time afterwards.',
   'improving-value-proposition': 'The Contrast Checker tests any colour pair against the WCAG thresholds, which is the check to run on an accent colour used to make one action stand out.',
 }

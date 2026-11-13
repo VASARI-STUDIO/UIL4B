@@ -156,7 +156,7 @@ export default function KitSheet({ kit, openHref, onPill }) {
   return (
     <section className="db-sheet" aria-label={kit.region}>
       <div className="db-head">
-        <h2 className={`db-name${kit.wrap ? ' wrap' : ''}`} style={kit.face ? { fontFamily: stack(kit.face.family), fontWeight: kit.face.weight, letterSpacing: '-.01em' } : undefined}>{kit.title}</h2>
+        <h2 className={`db-name${kit.wrap ? ' wrap' : ''}`} title={kit.title} style={kit.face ? { fontFamily: stack(kit.face.family), fontWeight: kit.face.weight, letterSpacing: '-.01em' } : undefined}>{kit.title}</h2>
         <div className="db-headr">
           {openHref && <Link className="db-ghost db-ring" to={openHref} aria-label={`Open project, ${kit.title}`}>Open project</Link>}
           {pill && (onPill

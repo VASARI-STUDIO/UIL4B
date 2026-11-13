@@ -280,6 +280,9 @@ const NOUN_TONE = {
   Concrete: [35, 82], Greige: [45, 88], Pewter: [30, 78], Titanium: [35, 82],
   Steel: [30, 80], Alloy: [30, 80], Chrome: [50, 100],
   Basalt: [0, 45], Graphite: [0, 50], Gunmetal: [0, 50], Carbon: [0, 40],
+  // earth and fired clay: dark pigments, never a pale peach or a pink
+  Rust: [0, 60], Sienna: [0, 58], Corten: [0, 58], Kiln: [0, 58], Adobe: [0, 66],
+  Terracotta: [0, 68], Firebrick: [0, 52], Oxblood: [0, 50],
 }
 
 /** Modifiers that claim a light or a dark colour, with the tone they need. */

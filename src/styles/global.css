@@ -1560,9 +1560,6 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .toggle-switch{position:relative;width:44px;height:24px;background:var(--bg-4);border-radius:12px;cursor:pointer;border:none;transition:background var(--dur-2) var(--ease-standard);flex-shrink:0}
 .toggle-switch::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform var(--dur-2) var(--ease-standard);box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .toggle-switch.on::after{transform:translateX(20px)}
-.auth-gate-actions{display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px}
-.auth-gate-actions .btn{display:flex;align-items:center;justify-content:center;gap:8px}
-@media(pointer:coarse){.auth-gate-actions .btn{min-height:44px}}
 /* Projects toolbar */
 /* Alt text examples panel */
 .alt-example.good{background:color-mix(in srgb,var(--ok) 8%,var(--bg-0));border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
@@ -5184,8 +5181,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 /* The inline sign-in gate's two text buttons (AuthGate, rules in studio.css).
    studio.css loads after this sheet at the same specificity, so the override
    carries its parent: --accent-mid on the gate's --bg-1 is 5.55 / 8.48. */
-.auth-gate-footer .auth-gate-google-link,.auth-gate-footer .auth-gate-switch{color:var(--accent-mid)}
-.auth-gate-footer .auth-gate-google-link:hover,.auth-gate-footer .auth-gate-switch:hover{color:var(--accent-text)}
 
 
 

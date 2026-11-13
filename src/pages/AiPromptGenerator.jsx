@@ -94,7 +94,7 @@ export default function AiPromptGenerator({ toast }) {
     setVerifyFor(null)
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
-      if (!token) throw new Error('Sign in to scan photos')
+      if (!token) throw new Error('Log in to scan photos')
       const toBase64 = (f) => new Promise((resolve, reject) => {
         const r = new FileReader()
         r.onerror = () => reject(new Error('Read failed'))
@@ -177,7 +177,7 @@ export default function AiPromptGenerator({ toast }) {
     setVerifyFor(null)
     try {
       const token = await firebaseAuth.currentUser?.getIdToken()
-      if (!token) throw new Error('Sign in to use AI features')
+      if (!token) throw new Error('Log in to use AI features')
 
       const r = await fetch('/api/ai', {
         method: 'POST',
