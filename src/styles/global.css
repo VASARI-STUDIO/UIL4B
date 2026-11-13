@@ -2913,7 +2913,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-act--dash .pnav-act-label::after{content:attr(data-text);height:0;overflow:hidden;visibility:hidden;font-weight:560}
 /* The hint for a disabled Export. Hidden by visibility, not removed, so the
    button's aria-describedby always has something to read. */
-.pnav-tip{position:absolute;top:50%;right:calc(100% + 8px);left:auto;transform:translateY(-50%);z-index:130;padding:6px 8px;border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-s);background:var(--card);box-shadow:0 12px 30px -16px rgba(var(--shade-rgb),var(--shade-a));color:rgb(var(--ink-rgb));font-size:12px;font-weight:400;line-height:1.3;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-1)}
+.pnav-tip{position:absolute;top:50%;right:calc(100% + 8px);left:auto;transform:translateY(-50%);z-index:130;padding:6px;border:1px solid rgba(var(--ink-rgb),.13);border-radius:var(--radius-s);background:var(--card);box-shadow:0 12px 30px -16px rgba(var(--shade-rgb),var(--shade-a));color:rgb(var(--ink-rgb));font-size:12px;font-weight:400;line-height:1.3;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),visibility 0s linear var(--dur-1)}
 .pnav-tip.is-open{opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
 /* Carries the pointer across the gap between the button and the hint. */
 .pnav-tip::before{content:"";position:absolute;top:0;bottom:0;left:100%;width:8px}
