@@ -207,7 +207,7 @@ test.describe('/feedback carries a return address, or says there is none', () =>
     await go(page, '/feedback')
 
     await expect(page.locator('#fb-email'), 'a signed-in visitor must not be asked twice').toHaveCount(0)
-    await expect(page.locator('.fb-form .fb-sending-as')).toHaveText('Sending as free.user@uil4b.test')
+    await expect(page.locator('.fb-page .fb-sending-as')).toHaveText('Sending as free.user@uil4b.test')
 
     await page.fill('#fb-message', 'The export button did nothing.')
     await page.click('.fb-submit')

@@ -26,12 +26,12 @@
 //     on `.ch-heart`: "targets" fails on the heart;
 //   · community.css: delete the 561-900 `repeat(3, ...)` grid rule: the tablet
 //     column count fails;
-//   · feedback.css: delete `margin-inline: auto` from `.fb-page` in the 899px
+//   · feedback.css: delete `max-width: 640px` from `.fb-page` in the 899px
 //     block: "one centred column" fails at 768;
-//   · feedback.css: delete the `position: sticky` from `.fb-submit` and give
+//   · feedback.css: delete the `position: sticky` from `.fb-send` and give
 //     `.fb-textarea` `min-height: 900px`: "Send is on the first screen" fails
 //     at 390;
-//   · feedback.css: drop `min-height: 48px` from `.fb-input`: "targets" fails;
+//   · feedback.css: drop `height: 48px` from `.fb-input`: "targets" fails;
 //   · seo-inspector.css: restore `border: 1px solid var(--border)` and a radius
 //     on `.seo-preview`: "no card inside a card" fails (the social frame sits in it);
 //   · seo-inspector.css: delete the `order: -1` on `.seo-score`: "score ahead
@@ -185,7 +185,7 @@ for (const view of VIEWS) {
           await expectNoSidewaysScroll(page, '/feedback')
 
           // NO CARD AROUND THE FORM below 900px: the page is the surface.
-          const card = await page.locator('.fb-page .fb-card').evaluate((el) => {
+          const card = await page.locator('.fb-page .fb-panel').evaluate((el) => {
             const cs = getComputedStyle(el)
             return { border: cs.borderTopWidth, bg: cs.backgroundColor, pad: cs.paddingLeft }
           })
@@ -200,37 +200,37 @@ for (const view of VIEWS) {
             return { left: r.left, right: window.innerWidth - r.right, width: r.width }
           })
           expect(Math.abs(box.left - box.right), `the form is off-centre (${Math.round(box.left)} left, ${Math.round(box.right)} right)`).toBeLessThanOrEqual(24)
-          expect(box.width, 'the form uses the width').toBeGreaterThanOrEqual(view.viewport.width * (view.name === '390' ? 0.9 : 0.6))
-          expect(box.width, 'one reading column').toBeLessThanOrEqual(560)
+          expect(box.width, 'the form uses the width').toBeGreaterThanOrEqual(view.viewport.width * (view.name === '390' ? 0.85 : 0.6))
+          expect(box.width, 'one reading column').toBeLessThanOrEqual(640)
 
-          // The type radios: 2x2 on a phone, one row of four at 768.
+          // The type radios: four rows in one column, a description under each label.
           const radios = await page.getByRole('radio').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)))
           expect(radios.length).toBe(4)
-          expect(new Set(radios).size, 'type radios in rows').toBe(view.name === '390' ? 2 : 1)
+          expect(new Set(radios).size, 'type radios in four rows').toBe(4)
 
-          // SEND IS ON THE FIRST SCREEN, above the tab bar.
-          const send = await page.locator('.fb-submit').evaluate((el) => {
+          // SEND: a bar above the tab bar on a phone; at 768 it sits under the fields.
+          const send = await page.locator('.fb-page .fb-submit').evaluate((el) => {
             const r = el.getBoundingClientRect()
             return { bottom: r.bottom, top: r.top, width: r.width, height: r.height }
           })
           const floor = await floorOf(page)
-          expect(send.bottom, 'Send is below the first screen or under the tab bar').toBeLessThanOrEqual(floor)
+          if (view.name === '390') expect(send.bottom, 'Send is below the first screen or under the tab bar').toBeLessThanOrEqual(floor)
           expect(send.top).toBeGreaterThan(0)
-          expect(send.height).toBeGreaterThanOrEqual(48)
+          expect(send.height).toBeGreaterThanOrEqual(view.name === '390' ? 52 : 44)
           if (view.name === '390') expect(send.width, 'Send is full width on a phone').toBeGreaterThan(300)
-          else expect(Math.round(send.width), 'Send is 160px on a tablet').toBe(160)
+          else expect(send.width, 'Send is a pill, not a bar, on a tablet').toBeLessThan(400)
 
           expect(await smallTargets(page), 'targets under 44px').toEqual([])
           expect(await tinyText(page), 'text under 12px').toEqual([])
           await shot(page, `feedback-${view.name}-${theme}`)
 
           // The error line is 14px with its icon, directly under the message.
-          await page.locator('.fb-submit').click()
+          await page.locator('.fb-page .fb-submit').click()
           const err = page.locator('#fb-error')
           await expect(err).toBeVisible()
-          const e = await err.evaluate((el) => ({ px: parseFloat(getComputedStyle(el).fontSize), icon: getComputedStyle(el, '::before').content }))
+          const e = await err.evaluate((el) => ({ px: parseFloat(getComputedStyle(el).fontSize), icon: el.querySelectorAll('svg').length }))
           expect(e.px).toBeGreaterThanOrEqual(14)
-          expect(e.icon, 'the error carries a glyph').not.toBe('none')
+          expect(e.icon, 'the error carries a glyph').toBe(1)
           // The message can be READ: the sticky Send bar and the tab bar do not sit
           // on top of it. Probe a point on its first line and ask what is painted there.
           const reachable = await err.evaluate((el) => {
