@@ -95,7 +95,8 @@ test.describe('Improving your value proposition', () => {
 })
 
 test('the prerendered shell on disk carries the h1 for a crawler', async () => {
-  const dist = process.env.DIST_DIR || 'dist'
+  // A lane run serves dist-<LANE> (pw-lane.config.js); the default config serves dist.
+  const dist = process.env.DIST_DIR || (process.env.LANE ? `dist-${process.env.LANE}` : 'dist')
   const file = path.resolve(process.cwd(), dist, 'learn', SLUG, 'index.html')
   expect(fs.existsSync(file), `${file} was not prerendered`).toBe(true)
   const html = fs.readFileSync(file, 'utf8')

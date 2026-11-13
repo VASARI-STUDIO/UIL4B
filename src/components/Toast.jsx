@@ -1,26 +1,12 @@
-const ICONS = {
-  success: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  ),
-  error: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  ),
-  info: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 16v-5M12 8h.01" />
-    </svg>
-  ),
-  // A limit or a soft failure: a warning triangle, never the success tick.
-  warning: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01" />
-    </svg>
-  ),
-}
+// Only an error carries an icon (a circle with a cross, in the danger colour).
+// Success, info and warning are the words alone: the status is the sentence.
+const KINDS = ['success', 'error', 'info', 'warning']
+const ERROR_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="9.5" />
+    <path d="m15 9-6 6M9 9l6 6" />
+  </svg>
+)
 
 // `onDismiss` puts a real button on the toast. It exists for the error kind,
 // which now outlives the success kind by design (useToast.js): a refusal that
@@ -37,7 +23,7 @@ const ICONS = {
 // it runs the action and closes the toast. `onHold`/`onRelease` stop and
 // restart the toast's clock while the pointer or focus is on it.
 export default function Toast({ message, visible, type = 'success', onDismiss, action = null, onHold, onRelease }) {
-  const kind = ICONS[type] ? type : 'success'
+  const kind = KINDS.includes(type) ? type : 'success'
   return (
     <div
       className={`toast toast-${kind}${visible ? ' show' : ''}${action ? ' has-action' : ''}`}
@@ -50,7 +36,7 @@ export default function Toast({ message, visible, type = 'success', onDismiss, a
       onFocus={action ? onHold : undefined}
       onBlur={action ? onRelease : undefined}
     >
-      <span className="toast-ico">{ICONS[kind]}</span>
+      {kind === 'error' && <span className="toast-ico">{ERROR_ICON}</span>}
       <span className="toast-msg">{message}</span>
       {action && (
         <button

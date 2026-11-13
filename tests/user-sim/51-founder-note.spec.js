@@ -187,6 +187,22 @@ test.describe('reduced motion, both directions', () => {
     return { overlay: pick('.fnote-overlay'), panel: pick('.fnote') }
   })
 
+  // Reduced motion leaves the scrim still and lets the panel fade in by opacity
+  // alone (ov-fade, 120ms). What it must never do is move or scale the panel, so
+  // the panel's keyframes may name `opacity` and nothing else, and once the fade
+  // is done it rests fully opaque and untransformed.
+  const expectOpacityOnly = async (page, why) => {
+    const m = await motionOf(page)
+    expect(m.overlay.animationName, `the scrim ${why}`).toBe('none')
+    expect(['none', 'ov-fade'], `the panel plays ${m.panel.animationName}, which ${why}`).toContain(m.panel.animationName)
+    expect(m.panel.transform, `the panel is offset or scaled: it ${why}`).toBe('none')
+    const props = await page.evaluate(() => [...new Set(document.querySelector('.fnote').getAnimations()
+      .flatMap((a) => a.effect.getKeyframes().flatMap((k) => Object.keys(k)))
+      .filter((k) => !['offset', 'computedOffset', 'easing', 'composite'].includes(k)))])
+    expect(props.filter((p) => p !== 'opacity'), `the panel animates more than opacity: it ${why}`).toEqual([])
+    await expect.poll(async () => (await motionOf(page)).panel.opacity, { message: 'the panel never reaches full opacity' }).toBe('1')
+  }
+
   test('the in-app toggle set to REDUCE flattens opacity and transform', async ({ browser }) => {
     // The half the global clamp cannot do. It forces durations and delays to
     // near-zero but never touches `opacity` or `transform`, and opacity and
@@ -204,12 +220,7 @@ test.describe('reduced motion, both directions', () => {
 
     await page.locator('.app-footer-note').click()
     await expect(page.locator('.fnote')).toBeVisible()
-    const m = await motionOf(page)
-    for (const [what, v] of Object.entries(m)) {
-      expect(v.animationName, `${what} still animates under reduced motion`).toBe('none')
-      expect(v.opacity, `${what} must not be part-way through a fade`).toBe('1')
-      expect(v.transform, `${what} must not be offset`).toBe('none')
-    }
+    await expectOpacityOnly(page, 'still moves under reduced motion')
     await ctx.close()
   })
 
@@ -225,12 +236,7 @@ test.describe('reduced motion, both directions', () => {
 
     await page.locator('.app-footer-note').click()
     await expect(page.locator('.fnote')).toBeVisible()
-    const m = await motionOf(page)
-    for (const [what, v] of Object.entries(m)) {
-      expect(v.animationName, `${what} ignores the OS preference`).toBe('none')
-      expect(v.opacity).toBe('1')
-      expect(v.transform).toBe('none')
-    }
+    await expectOpacityOnly(page, 'ignores the OS preference')
     await ctx.close()
   })
 
@@ -251,8 +257,8 @@ test.describe('reduced motion, both directions', () => {
     await page.locator('.app-footer-note').click()
     await expect(page.locator('.fnote')).toBeVisible()
     const m = await motionOf(page)
-    expect(m.overlay.animationName, 'the overlay is expected to fade in when motion is allowed').toBe('cp-fade')
-    expect(m.panel.animationName, 'the panel is expected to rise when motion is allowed').toBe('cp-rise')
+    expect(m.overlay.animationName, 'the overlay is expected to fade in when motion is allowed').toBe('ov-fade')
+    expect(m.panel.animationName, 'the panel is expected to scale in when motion is allowed').toBe('ov-in')
     await ctx.close()
   })
 })
