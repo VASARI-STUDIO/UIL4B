@@ -25,6 +25,7 @@ const SAMPLE = Object.freeze({
   '24-standards': ['Two Shores', 'A4 landscape'],
   '25-label': ['Margin', '5:4'],
   '27-swissfield': ['Northern Current', '16:9'],
+  '29-blueprint': ['Plumbline', 'A4 landscape'],
   '30-fluted': ['Northern Current', '4:5'],
   '32-dieline': ['Kerbside', '1:1'],
 })

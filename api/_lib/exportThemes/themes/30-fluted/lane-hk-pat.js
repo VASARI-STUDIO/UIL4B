@@ -26,7 +26,7 @@ function btnW(ctx, label) {
 
 // ---------------------------------------------------------------- the product's screen, built only from the shipped components and the brand's screen data
 const wordmark = (ctx) => `<strong class="ui-display" style="font-size:var(--fs-title-s)">${A(ctx.brand.logo.showcase.wordmark || ctx.brand.name)}</strong>`;
-const progress = (S) => `<div class="ui-progress" role="progressbar" aria-label="${A(S.status)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(S.progress * 100)}"><div class="ui-progress__bar"><i style="width:${S.progress * 100}%"></i></div><span class="ui-progress__dot" style="left:${S.progress * 100}%"></span></div><div class="hk-route ui-num"><span>${A(S.from)}</span><span>${A(S.to)}</span></div>`;
+const progress = (S) => (typeof S.progress !== 'number' ? '' : `<div class="ui-progress" role="progressbar" aria-label="${A(S.status)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(S.progress * 100)}"><div class="ui-progress__bar"><i style="width:${S.progress * 100}%"></i></div><span class="ui-progress__dot" style="left:${S.progress * 100}%"></span></div><div class="hk-route ui-num"><span>${A(S.from)}</span><span>${A(S.to)}</span></div>`);
 function liveColumn(ctx) {
   const S = sc(ctx), u = ctx.ui, live = S.deliveries[0];
   const who = `<ul class="ui-list">${u.row({ lead: `<span class="ui-avatar">${A(S.initials)}</span>`, title: S.rider, sub: S.riderNote, endHtml: u.btn(S.call, { variant: 'secondary', size: 'sm' }) })}</ul>`;
