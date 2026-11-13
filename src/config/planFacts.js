@@ -167,7 +167,7 @@ export const proValue = (live = EXPORT_THEMES_LIVE) => Object.freeze([
     ...(live ? [{
       label: 'Export themes',
       free: `Preview all ${THEME_COUNT}. UI kit exports in ${freeThemes().length}: ${FREE_THEME_NAMES}`,
-      pro: `All ${THEME_COUNT}, each with all ${numberWord(EXPORTS_PER_THEME)} exports`,
+      pro: `All ${THEME_COUNT}, each with all ${EXPORTS_PER_THEME} exports`,
     }] : []),
     ...proOnlyFormats().map((f) => ({ label: f.name, free: null, pro: 'Included' })),
     {
