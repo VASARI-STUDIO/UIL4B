@@ -323,6 +323,10 @@ const ALLOWED = {
   'v3-marketing.css': {
     '.mkt .mk-mono': 'value',
   },
+  // The address the person typed, shown back on the 404 and link-expired screens.
+  'v3-edge.css': {
+    '.ed-path': 'code',
+  },
 }
 
 // var(--mono) and var(--mono, fallback), but not var(--mono-ink) or var(--mono-glow).

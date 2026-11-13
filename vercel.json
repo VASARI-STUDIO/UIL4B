@@ -554,6 +554,10 @@
       "destination": "/404.html"
     },
     {
+      "source": "/reset-password",
+      "destination": "/404.html"
+    },
+    {
       "source": "/settings",
       "destination": "/404.html"
     },

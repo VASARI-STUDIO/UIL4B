@@ -6,7 +6,7 @@ import { LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 
 export const STATIC_ROUTES = [
   '/', '/home', '/mobile', '/tools', '/plans', '/sitemap',
-  '/login', '/onboarding',
+  '/login', '/reset-password', '/onboarding',
   '/projects', '/checkout', '/checkout/return', '/settings',
   '/community', '/feedback', '/privacy', '/terms', '/credits', '/info', '/seo',
   '/discover', '/discover/palettes', '/discover/gradients', '/discover/buttons',

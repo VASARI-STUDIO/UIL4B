@@ -184,25 +184,11 @@ export function installGlobalErrorCapture(target = window) {
 }
 
 /**
- * Open the feedback dialog prefilled with this crash. FeedbackButton listens
- * for the event and cancels it; if nothing cancelled it (the crash took the
- * listener down with it) the caller falls back to the /feedback page.
+ * The event that asks for the feedback dialog. FeedbackButton listens for it
+ * and cancels it; a caller whose event is still uncancelled falls back to the
+ * /feedback page.
  */
 export const REPORT_PROBLEM_EVENT = 'uil4b:report-problem'
-
-export function openProblemReport(error, pathname) {
-  const { subject, message } = describeError(error, { pathname, kind: 'render' })
-  const event = new CustomEvent(REPORT_PROBLEM_EVENT, {
-    cancelable: true,
-    detail: {
-      typeId: 'bug',
-      subject,
-      message: `${message}\n\nWhat were you doing when this happened?\n`,
-    },
-  })
-  const unhandled = window.dispatchEvent(event)
-  if (unhandled) window.location.assign('/feedback')
-}
 
 /**
  * Ask for the feedback dialog on the current page; FeedbackButton fills in the
