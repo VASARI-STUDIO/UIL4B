@@ -83,12 +83,17 @@ export function DataTable({ head, rows, caption, numeric = [], stack = false }) 
   )
 }
 
-/** A formula or a code fragment, set in the mono face. */
+/**
+ * A formula or a code fragment, set in the mono face. The block scrolls
+ * sideways on a phone, so it takes focus: a keyboard can then scroll it, and
+ * the caption names it when it does.
+ */
 export function Formula({ children, caption }) {
+  const capId = useId()
   return (
     <figure className="lart-formula">
-      <pre><code>{children}</code></pre>
-      {caption && <figcaption>{caption}</figcaption>}
+      <pre tabIndex={0} role="group" aria-labelledby={caption ? capId : undefined} aria-label={caption ? undefined : 'Formula'}><code>{children}</code></pre>
+      {caption && <figcaption id={capId}>{caption}</figcaption>}
     </figure>
   )
 }
