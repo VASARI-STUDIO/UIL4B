@@ -108,6 +108,13 @@ const expectTier = (panel, tier, message) => expect.poll(() => tierOf(panel), { 
 /** The names of the rows a keyboard can Tab to: one, the chosen one. */
 const tabStops = (panel) => themes(panel).getByRole('radio').evaluateAll((els) => els.filter((e) => e.tabIndex === 0).map((e) => e.querySelector('.xd-theme-opt-n').textContent))
 
+/** On a phone the list is folded under a "Theme: <name> · <brand>" row; open it, as a person would, before reaching for a row. A wide list is already open. */
+async function reveal(panel) {
+  const toggle = panel.getByRole('button', { name: /^Theme:/ })
+  if (await toggle.count() && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  await expect(themes(panel)).toBeVisible()
+}
+
 async function pick(panel, name) {
   await row(panel, name).click()
   await expect(chosenRow(panel)).toHaveText(new RegExp(`^${name}`))
@@ -255,6 +262,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
   test('the chosen theme is the one Tab stop; arrows choose and take focus, Home and End jump, the ends wrap', async ({ page }) => {
     watch(page, 'a keyboard user choosing a theme')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
+    await reveal(panel)
     expect(await tabStops(panel), 'one Tab stop, on the chosen theme').toEqual(['Standards'])
 
     // Each step: the chosen row, and focus with it.
@@ -289,6 +297,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
   test('Escape leaves the dialog: there is no list to close first', async ({ page }) => {
     watch(page, 'a keyboard user pressing Escape in the theme list')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
+    await reveal(panel)
     await row(panel, 'Standards').focus()
     await page.keyboard.press('End')
     await expect(chosenRow(panel)).toHaveText(/^In use/)
@@ -299,12 +308,15 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
   test('Space and Enter on a focused row choose it', async ({ page }) => {
     watch(page, 'a keyboard user using Space and Enter on a theme row')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
+    await reveal(panel)
     await row(panel, 'Studio').focus()
     await expect(chosenRow(panel), 'focus alone chooses nothing').toHaveText(/^Standards/)
     await page.keyboard.press('Space')
+    await reveal(panel) // on a phone a pick folds the list; open it again to read the choice and reach the next row
     await expect(chosenRow(panel)).toHaveText(/^Studio/)
     await row(panel, 'Specification').focus()
     await page.keyboard.press('Enter')
+    await reveal(panel)
     await expect(chosenRow(panel)).toHaveText(/^Specification/)
   })
 
@@ -313,6 +325,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
     const fetched = []
     page.on('request', (req) => { const m = /\/export-themes\/([\w-]+)\.webp/.exec(req.url()); if (m) fetched.push(m[1]) })
     const panel = await open(page, { plan: 'free', file: 'kit', size })
+    await reveal(panel)
     const shot = panel.locator('.xd-theme-stage img').first()
     await expect(shot).toHaveAttribute('alt', /^Standards theme UI kit/)
     await row(panel, 'Catalogue').focus()
@@ -320,6 +333,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
     await expect(shot, 'focus alone does not change the preview').toHaveAttribute('alt', /^Standards theme UI kit/)
     await row(panel, 'Catalogue').click()
     await expect(shot, 'choosing changes the preview at once').toHaveAttribute('alt', /^Catalogue theme UI kit/)
+    await reveal(panel) // a pick folds the phone list
     await row(panel, 'Standards').click()
     await expect(shot).toHaveAttribute('alt', /^Standards theme UI kit/)
   })
@@ -327,6 +341,7 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
   test('Tab leaves the list without choosing', async ({ page }) => {
     watch(page, 'a keyboard user tabbing out of the theme list')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
+    await reveal(panel)
     await row(panel, 'Standards').focus()
     await page.keyboard.press('Tab')
     expect(await themes(panel).evaluate((group) => group.contains(document.activeElement)), 'focus left the Theme list').toBe(false)
