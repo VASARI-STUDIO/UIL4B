@@ -12,7 +12,7 @@ import { hasPlate, plateWindow, plateAlt } from './plates.js';
 export function shotPhoto(ctx, R, s, cls, { note = true } = {}) {
   if (!hasPlate(ctx, s)) return ctx.photo(s.id, { cls, slotNote: note });
   const W = 1000, H = 800, html = plateWindow(ctx, R, s, W, H), px = (k) => parseFloat(new RegExp(`[;"]${k}:(-?[\\d.]+)px`).exec(html)[1]);
-  const src = /src="([^"]+)"/.exec(html)[1], left = px('left') / W * 100, w = px('width') / W * 100, cy = (-px('top') + H / 2) / W * 100;
+  const src = /href="([^"]+)"/.exec(html)[1], left = px('left') / W * 100, w = px('width') / W * 100, cy = (-px('top') + H / 2) / W * 100;
   return `<div class="ht-plate ${cls}" role="img" aria-label="${A(plateAlt(s))}">${plateImg(`${src}`, ``, `position:absolute;left:${left.toFixed(3)}cqw;top:calc(50cqh - ${cy.toFixed(3)}cqw);width:${w.toFixed(3)}cqw;height:auto;max-width:none`)}</div>`;
 }
 
