@@ -35,8 +35,8 @@ const STAGE_COLOUR_JS = `(() => {
   return 'transparent'
 })()`
 const stageColour = (page) => page.evaluate(STAGE_COLOUR_JS)
-// The Page ground is the stage's own colour: hand-checked from the board (#060607 dark, #F6F5F1 light).
-const PAGE_GROUND = { dark: 'rgb(6, 6, 7)', light: 'rgb(246, 245, 241)' }
+// The Page ground is the stage's own colour: #060607 dark, #EAE9E5 light (iconColourRow.js).
+const PAGE_GROUND = { dark: 'rgb(6, 6, 7)', light: 'rgb(234, 233, 229)' }
 const stageAndPage = (page) => page.evaluate(`({
   bg: ${STAGE_COLOUR_JS},
   image: getComputedStyle(document.querySelector('.ied-ground')).backgroundImage,
@@ -153,10 +153,8 @@ test.describe('the ground switch', () => {
         const pageBg = await stageColour(page)
         await grounds.getByRole('radio', { name: scheme === 'dark' ? 'Dark' : 'Light', exact: true }).click()
         const fixedBg = await stageColour(page)
-        // The board's plate is a quieter step from the stage than the old 1.2:1 guarantee (about 1.14:1
-        // Dark on the dark stage, 1.09:1 Light on the light stage; icon-ground.test.js holds the 1.2 line as
-        // a todo for the pull request). Here the plate only has to differ from the stage it sits on.
-        expect(ratio(pageBg, fixedBg), `${pageBg} against ${fixedBg}`).toBeGreaterThan(1.05)
+        // The plate is at least 1.2:1 from the stage (icon-ground.test.js holds the same line on the table).
+        expect(ratio(pageBg, fixedBg), `${pageBg} against ${fixedBg}`).toBeGreaterThanOrEqual(1.2)
         const swatch = await page.evaluate(() => {
           const own = getComputedStyle(document.querySelector('.ied-bgb .ied-gnd-page'))
           return { bg: own.backgroundColor, image: own.backgroundImage }

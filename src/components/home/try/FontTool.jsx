@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PhIcon from '../../spectrum/PhIcon'
+import MenuSelect from '../../tool/MenuSelect'
 import { route } from '../../spectrum/spectrumFacts'
 import { Radios, ToolLink, Well } from './tryParts'
 import { useNear } from './useNear'
@@ -46,7 +47,6 @@ const PHONE_MODES = ['Words', 'Size', 'Side by side']
 const LIST_H = 327
 const LOAD_GIVE_UP = 10000
 
-const CHEVRON = 'M213.66 101.66l-80 80a8 8 0 0 1-11.32 0l-80-80a8 8 0 0 1 11.32-11.32L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32'
 const CARET = '<path d="M213.66 101.66l-80 80a8 8 0 0 1-11.32 0l-80-80a8 8 0 0 1 11.32-11.32L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32"/>'
 
 // Archivo is shown at 800 and its widest cut, whatever other pages have loaded of it.
@@ -176,13 +176,8 @@ export default function FontTool() {
         <Radios label="Category" items={CATS} value={cat} onPick={pickCat} />
       </div>
       {/* Phone: the five category chips become one choice. */}
-      <span className="ht-selw ht-selw--cat">
-        <label htmlFor="ht-fn-cat-p">Category</label>
-        <select id="ht-fn-cat-p" className="ht-sel" value={cat} onChange={(e) => pickCat(Number(e.target.value))}>
-          {CATS.map((c, i) => <option key={c} value={i}>{c}</option>)}
-        </select>
-        <svg className="ht-chev" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d={CHEVRON} /></svg>
-      </span>
+      <MenuSelect toolbar id="ht-fn-cat-p" className="ht-msel ht-msel--cat" label="Category" value={cat}
+        options={CATS.map((c, i) => ({ value: i, label: c }))} onChange={(v) => pickCat(Number(v))} />
 
       {!compare && (
         <ul className="ht-fn-list" aria-label="Font families">
