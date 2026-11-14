@@ -13,6 +13,25 @@
  * are separated by rules and fills, never by a second bordered box.
  */
 
+/* The V3 retoken (2026-11-15). content.css resolves the shared --cpg-* aliases to the old
+   --bg-*, --t* and --card ladder; on this page they resolve to the V3 roles (the
+   tool-layout.css pattern), so every rule in this sheet, help.css and reading-end.css reads V3.
+   .cpg.hlp is two classes, so it wins whichever sheet loads last. --cpg-sec is spacing, not
+   a colour, and is left alone. Focus is the 2px ink outline everywhere: nothing here is blue. */
+.cpg.hlp {
+  --cpg-page: var(--v3-ground);
+  --cpg-card: var(--v3-raised);
+  --cpg-ink: var(--v3-ink);
+  --cpg-dim: var(--v3-sec);
+  --cpg-faint: var(--v3-t56);
+  --cpg-quiet: var(--v3-t56);
+  --cpg-line: var(--v3-hair);
+  --cpg-line-strong: var(--v3-hl20);
+  --cpg-hair: var(--v3-hair);
+  --cpg-wash: var(--v3-wash);
+  --cpg-wash-2: var(--v3-wash);
+}
+
 .hlp .hlr { margin-top: calc(var(--s-6) - var(--cpg-sec)); min-width: 0; }
 .hlr-q {
   margin: 0 0 var(--s-5);
@@ -58,7 +77,7 @@
   cursor: pointer;
 }
 .hlr-job[aria-expanded="true"] { color: var(--cpg-ink); }
-.hlr-job:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-job:focus-visible { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
 .hlr-tick { display: inline-flex; flex: 0 0 auto; opacity: 0; transition: opacity 150ms var(--cpg-ease); }
 .hlr-job[aria-expanded="true"] .hlr-tick { opacity: 1; }
 @media (hover: hover) {
@@ -107,12 +126,12 @@
   text-decoration: none;
   transition: background-color 150ms var(--cpg-ease);
 }
-.hlr-btn--ink { background: var(--cpg-ink); border-color: var(--cpg-ink); color: var(--cpg-page); }
-.hlr-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-btn--ink { background: var(--v3-ink); border-color: var(--v3-ink); color: var(--v3-on-ink); }
+.hlr-btn:focus-visible { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
 .hlr-btn:active { transform: scale(.98); }
 @media (hover: hover) {
   .hlr-btn:hover { background: var(--cpg-wash); text-decoration: none; }
-  .hlr-btn--ink:hover { background: color-mix(in srgb, var(--t0) 86%, var(--bg-0)); color: var(--cpg-page); }
+  .hlr-btn--ink:hover { background: var(--v3-ink-hover); border-color: var(--v3-ink-hover); color: var(--v3-on-ink); }
 }
 
 /* A second question answered under the first, set off by a rule. */
@@ -160,7 +179,8 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
   font: 500 16px/1 var(--mono);
   color: var(--cpg-ink);
 }
-.hlr-seed-hex:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-seed-hex:focus { border-color: var(--cpg-line); box-shadow: none; }
+.hlr-seed-hex:focus-visible { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
 .hlr-seed-hex[aria-invalid="true"] { border-color: var(--err); }
 
 /* pan-y: a sideways drag across the strip picks stops, a vertical one still scrolls. */
@@ -185,7 +205,7 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
 }
 [data-theme="dark"] .hlr-stop-sw { box-shadow: inset 0 0 0 1px oklch(1 0 0 / .14); }
 .hlr-stop input:checked + .hlr-stop-sw { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
-.hlr-stop input:focus-visible + .hlr-stop-sw { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-stop input:focus-visible + .hlr-stop-sw { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
 .hlr-stop-n { display: block; margin-top: var(--s-2); font: 500 12px/1 var(--font); font-variant-numeric: tabular-nums; letter-spacing: 0; text-align: center; color: var(--cpg-dim); }
 .hlr-read { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-3); margin: var(--s-4) 0 0; font-size: 15px; line-height: 1.5; color: var(--cpg-dim); }
 .hlr-read b { font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--cpg-ink); font-variant-numeric: tabular-nums; letter-spacing: 0; }
@@ -209,8 +229,8 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
   cursor: pointer;
   transition: background-color 150ms var(--cpg-ease), color 150ms var(--cpg-ease);
 }
-.hlr-seg button[aria-pressed="true"] { background: var(--cpg-ink); color: var(--cpg-page); }
-.hlr-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hlr-seg button[aria-pressed="true"] { background: var(--v3-ink); color: var(--v3-on-ink); }
+.hlr-seg button:focus-visible { outline: 2px solid var(--cpg-ink); outline-offset: 2px; }
 .hlr-ladder { display: grid; gap: var(--s-1); margin-top: var(--s-4); }
 .hlr-ladder > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: var(--s-3); align-items: baseline; }
 .hlr-ladder span { font: 400 13px/1.2 var(--font); letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--cpg-faint); }
@@ -230,7 +250,7 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
   color: var(--cpg-faint);
 }
 .hlr-search input { width: 100%; min-width: 0; border: 0; background: none; font: 400 16px/1.2 var(--font); color: var(--cpg-ink); }
-.hlr-search input:focus { outline: none; }
+.hlr-search input:focus { outline: none; border-color: transparent; box-shadow: none; }
 .hlr-search:focus-within { border-color: var(--cpg-ink); }
 .hlr-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: var(--s-2); margin: var(--s-4) 0 0; padding: 0; list-style: none; }
 .hlr-icons li { display: flex; align-items: center; justify-content: center; height: 56px; border-radius: var(--radius-s); background: var(--cpg-wash); color: var(--cpg-ink); }
@@ -260,13 +280,13 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
 /* Money: the allowance as two bars on one scale. */
 .hlr-allow { display: grid; gap: var(--s-3); }
 .hlr-allow > div { display: grid; grid-template-columns: 48px minmax(0, 1fr) 72px; gap: var(--s-3); align-items: center; font-size: 15px; color: var(--cpg-dim); }
-.hlr-bar { position: relative; display: block; height: 12px; overflow: hidden; border-radius: 999px; background: var(--bg-3); }
+.hlr-bar { position: relative; display: block; height: 12px; overflow: hidden; border-radius: 999px; background: var(--v3-l2); }
 .hlr-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--cpg-ink); }
 .hlr-allow output { font: 400 14px/1 var(--font); text-align: right; font-variant-numeric: tabular-nums; color: var(--cpg-ink); letter-spacing: 0; }
 
 /* Soon: one cell per tool. */
 .hlr-count { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: var(--s-1); }
-.hlr-count i { display: block; height: 32px; border-radius: 6px; background: var(--cpg-ink); }
+.hlr-count i { display: block; height: 32px; border-radius: 8px; background: var(--cpg-ink); }
 .hlr-count i.is-soon { background: none; border: 1.5px dashed var(--cpg-line-strong); }
 .hlr-count-key { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-5); margin: var(--s-3) 0 0; font-size: 14px; color: var(--cpg-faint); }
 
@@ -314,20 +334,20 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
 .hlp .hlp-contact-link:focus-visible{outline-color:var(--cpg-ink)}
 @media(min-width:768px){
   .hlp .hlp-contact{column-gap:var(--s-4)}
-  .hlp .hlp-contact-link{min-height:36px;padding:0 var(--s-4);border:1px solid color-mix(in srgb,var(--t0) 20%,transparent);border-radius:999px;font-size:14px;line-height:1;text-decoration:none;white-space:nowrap;transition:transform 120ms var(--cpg-ease)}
+  .hlp .hlp-contact-link{min-height:36px;padding:0 var(--s-4);border:1px solid var(--v3-hl20);border-radius:999px;font-size:14px;line-height:1;text-decoration:none;white-space:nowrap;transition:transform 120ms var(--cpg-ease)}
   .hlp .hlp-contact-link:active{transform:scale(.97)}
 }
 @media(min-width:768px) and (pointer:coarse){
   .hlp .hlp-contact-link{min-height:44px}
 }
 
-.hlp{--hl-fill:color-mix(in srgb,var(--t0) 4%,var(--bg-0))}
-[data-theme="dark"] .hlp{--hl-fill:color-mix(in srgb,var(--t0) 6%,var(--bg-0))}
+.hlp{--hl-fill:var(--v3-l2)}
 .hlf{margin-top:calc(var(--s-6) - var(--cpg-sec));display:flex;flex-direction:column;gap:var(--s-2)}
 .hlf-label{font:600 13px/1.4 var(--font);color:var(--cpg-ink)}
 .hlf-in{position:relative;display:block}
 .hlf-glass{position:absolute;left:var(--s-5);top:16px;pointer-events:none;color:var(--cpg-faint)}
 .hlf-input{display:block;box-sizing:border-box;width:100%;height:52px;padding:0 var(--s-5) 0 52px;border:0;border-radius:12px;background:var(--hl-fill);font:400 17px/1.2 var(--font);color:var(--cpg-ink)}
+.hlf-input:focus{border-color:transparent;box-shadow:none}
 .hlf-input:focus-visible{outline:2px solid var(--cpg-ink);outline-offset:2px}
 @media(max-width:767px){
   .hlf-glass{display:none}
@@ -350,7 +370,7 @@ html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade;
 .hlr-chev svg{transition:transform 150ms var(--cpg-ease)}
 .hlp .hlr-job[aria-expanded="true"] .hlr-chev svg{transform:rotate(180deg)}
 @media(hover:hover){
-  .hlp .hlr-job:hover .hlr-chev{background:color-mix(in srgb,var(--t0) 6%,transparent)}
+  .hlp .hlr-job:hover .hlr-chev{background:var(--v3-wash)}
 }
 @media(max-width:767px){
   .hlr-chev{width:16px;height:16px;background:none}
