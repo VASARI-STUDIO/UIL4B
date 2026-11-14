@@ -72,6 +72,19 @@ test('pages cannot be framed by another site, and the prompt previews can still 
   assert.match(read('src/data/promptPreviewAssets.js'), /\/previews\/prompts\//)
 })
 
+test('CSP violations are reported to the collector, through both the report-uri and report-to paths', () => {
+  const d = csp()
+  assert.deepEqual(d['report-uri'], ['/api/support?report=csp'])
+  assert.deepEqual(d['report-to'], ['csp-endpoint'])
+  for (const p of PAGES) {
+    assert.equal(headersFor(p)['reporting-endpoints'], 'csp-endpoint="/api/support?report=csp"', p)
+  }
+})
+
+test('Strict-Transport-Security does not ask for preloading', () => {
+  for (const p of PAGES) assert.doesNotMatch(headersFor(p)['strict-transport-security'], /preload/i, p)
+})
+
 test('the Content-Security-Policy is report-only, never enforcing, for now', () => {
   const h = headersFor('/')
   assert.equal(h['content-security-policy'], undefined,

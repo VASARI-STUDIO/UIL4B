@@ -3,6 +3,11 @@ import { getStripeServer } from './_lib/stripe.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins, resolveOrigin } from './_lib/origins.js'
 import { performWithdrawal, withdrawalNoSubscription } from './_lib/billing.js'
+import { limitRequest } from './_lib/rateLimit.js'
+
+// Each call verifies a token and reads Firestore and Stripe. A person opens the
+// portal or withdraws a handful of times; this stops a loop, not a retry.
+const PORTAL_LIMIT = { bucket: 'create-portal', limit: 20, windowMs: 60 * 1000 }
 
 export default async function handler(req, res) {
   // An allowlisted origin is reflected, anything else gets no CORS header at
@@ -25,6 +30,8 @@ export default async function handler(req, res) {
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing auth token' })
   }
+
+  if (await limitRequest(req, res, adminDb, PORTAL_LIMIT)) return
 
   // A withdrawal moves money, so its token is also checked against revocation (a
   // signed-out or password-changed session cannot refund). The portal path is
