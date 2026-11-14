@@ -98,7 +98,7 @@ async function open(page, { plan = 'free', file = 'kit', size, saved = true } = 
 
 // The Theme step: a radiogroup of rows, the chosen one aria-checked, grouped for an account that is not Pro.
 const themes = (panel) => panel.getByRole('radiogroup', { name: 'Theme' })
-const row = (panel, name) => themes(panel).getByRole('radio').filter({ has: panel.locator('.xd-theme-opt-n').getByText(name, { exact: true }) })
+const row = (panel, name) => themes(panel).getByRole('radio').filter({ has: panel.page().locator('.xd-theme-opt-n').getByText(name, { exact: true }) })
 const chosenRow = (panel) => themes(panel).getByRole('radio', { checked: true })
 const rowNames = (panel) => themes(panel).locator('.xd-theme-opt-n').allTextContents()
 const groupsOf = (panel) => themes(panel).locator('.xd-theme-group').evaluateAll((groups) => groups.map((g) => ({
