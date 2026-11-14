@@ -246,7 +246,24 @@ test.describe('accent-family text clears its AA floor', () => {
         }
       }
     }
-    // Guard against the vacuous pass this test already fell into once.
+    // Guard against the vacuous pass this test already fell into once. The tool
+    // primary is the ink pill now, and /plans disables its accent button when
+    // Stripe is unreachable, so a sampled route may hold no accent fill at all.
+    // A .btn-accent placed on the page keeps the walk measuring a real fill, and
+    // its label meets the same 4.5:1 floor as any other.
+    await page.evaluate(() => {
+      const b = document.createElement('button')
+      b.className = 'btn btn-accent'
+      b.id = 'probe-accent-fill'
+      b.textContent = 'Probe'
+      document.body.appendChild(b)
+    })
+    const probe = (await page.evaluate(FILL_WALK)).filter((f) => f.cls.includes('btn-accent') && f.text === 'Probe')
+    for (const f of probe) {
+      seen.push(f)
+      if (f.ratio < 4.5) failures.push(`  .${f.cls} — ${f.ratio}:1 on ${f.bg} — ${JSON.stringify(f.text)}`)
+    }
+    expect(probe.length, 'the walk did not see the placed accent button').toBeGreaterThan(0)
     expect(seen.length, 'no filled accent control was found to measure').toBeGreaterThan(0)
     expect(failures.join('\n'), 'light text on an accent fill under AA').toBe('')
   })
