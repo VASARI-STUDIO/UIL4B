@@ -315,8 +315,8 @@ export default function PromptLibrary({ onCopy, toast }) {
   // the answer did not depend on position. The tier cap does depend on
   // position, so feeding it a sorted list would have rebuilt the original
   // defect in a new place: flipping Sort to Newest would reverse the array,
-  // hand the cap a different first three, and a visitor could collect six
-  // prompts out of a three-prompt allowance by toggling one control.
+  // hand the cap a different first few, and a visitor could collect twice the
+  // signed-out allowance by toggling one control.
   //
   // So the rows go in, in the order the data declares, and the
   // OPEN set is sorted afterwards. Which prompts are free is now a property of

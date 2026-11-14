@@ -62,7 +62,9 @@ test('community submission entry points explain sign-in before showing a form', 
   watch(page, 'signed-out creator trying to contribute')
   await go(page, '/community')
 
-  const submit = page.getByRole('button', { name: 'Submit design' })
+  // The V3 hub has no "Submit design" button: "Share your work" is the way in (it opens the
+  // pick step once signed in, so the gate has to come first, before any step exists).
+  const submit = page.locator('.cm-head-actions').getByRole('button', { name: 'Share your work' })
   await submit.click()
 
   // CREATE AN ACCOUNT, NOT "LOG IN TO CONTINUE". This gate only runs when
@@ -76,7 +78,7 @@ test('community submission entry points explain sign-in before showing a form', 
   await expect(dialog).toContainText('credited to you')
   await expect(dialog).toContainText('reviewed before it appears')
   await expect(dialog).toContainText('withdraw anything')
-  await expect(page.getByRole('dialog', { name: 'Submit a design' })).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: /Share your work|Submit a design|Share a project/ }), 'a share step opened before sign-in').toHaveCount(0)
 
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()

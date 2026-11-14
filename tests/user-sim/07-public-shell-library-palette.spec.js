@@ -114,21 +114,22 @@ test.describe('public UI quality release', () => {
    *
    * '/create/color' left the loop with the colour landing's deletion — it is a
    * redirect now, so it was asserting the footer of '/create/palette' twice. */
-  // The site footer is on /, /plans, /mobile
-  // and the reading and legal pages, and on no app page. Where it renders there
+  // The site footer is on /, /plans, /mobile, the /discover index (commit
+  // 1d8c9d3f8 put it there on purpose)
+  // and the reading and legal pages, and on no tool page. Where it renders there
   // is exactly one landmark; where it does not, /plans is still one click away
   // from the header's Upgrade pill.
   test('reading pages have exactly one footer landmark, app pages none, and /plans stays reachable', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/learn', '/privacy', '/learn/help', '/create/icons']) {
+    for (const route of ['/', '/learn', '/discover', '/privacy', '/learn/help', '/create/icons']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       // The homepage footer names the link Plans and the reading pages' footer Pricing; both go to /plans.
       await expect(page.getByRole('contentinfo').getByRole('link', { name: /^(Pricing|Plans)$/ }).and(page.locator('a[href="/plans"]')).last()).toBeVisible()
     }
-    for (const route of ['/discover', '/create/palette', '/create/aspect-ratio']) {
+    for (const route of ['/create/palette', '/create/aspect-ratio']) {
       await go(page, route)
-      await expect(page.getByRole('contentinfo'), `${route} is an app page and draws no site footer`).toHaveCount(0)
+      await expect(page.getByRole('contentinfo'), `${route} is a tool page and draws no site footer`).toHaveCount(0)
       await expect(page.locator('.pnav a[href="/plans"]').first()).toBeVisible()
     }
   })

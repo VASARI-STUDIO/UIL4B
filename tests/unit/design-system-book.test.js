@@ -291,7 +291,7 @@ test('the book is a Pro format and the flag drives badge AND gate', () => {
   // tests/unit/export-v3.test.js) and the viewer is not.
   const bookRow = EXPORT_TYPES.flatMap((t) => t.categories).find((c) => c.files.includes('book'))
   assert.equal(bookRow?.pro, true, 'the book sits in a row that is not marked Pro')
-  assert.match(NAV, /\{showTags && \(c\.pro \? <ExportProTag className="xd-pro" \/> : /, 'a Pro row no longer carries the Pro tag')
+  assert.match(NAV, /\{showTags && c\.pro && <ExportProTag className="xd-pro" \/>\}/, 'a Pro row no longer carries the Pro tag')
   assert.match(DIALOG, /showTags=\{!isPro && !checking\}/, 'the tag is shown to an account that is already Pro, or while the plan loads')
   // The same flag drives the lock, in the dialog and in the dock under it.
   // A file that takes a theme is locked by the route's own table (themedFileIsPro); every other file by its row's flag.

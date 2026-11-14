@@ -40,8 +40,13 @@ export function scrollDocTo(top) {
   // Lenis owns the scroll position whenever smooth scrolling is on; a raw
   // window.scrollTo would desync its virtual position. Reduced motion never
   // instantiates it.
+  // Lenis caps a scroll at the page height it last measured, which lags a
+  // panel that has just opened, so it measures again first.
   const lenis = getLenis()
-  if (lenis) lenis.scrollTo(top, reduced ? { immediate: true } : undefined)
+  if (lenis) {
+    lenis.resize()
+    lenis.scrollTo(top, reduced ? { immediate: true } : undefined)
+  }
   else window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' })
 }
 

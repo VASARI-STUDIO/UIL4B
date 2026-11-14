@@ -9,9 +9,9 @@ import EmojiStyles from './EmojiStyles'
 
 // The Emoji Library's detail dialog: one emoji, large, with every way of
 // writing it down and a copy button beside each, and a Styles row showing it
-// in other emoji art sets. It is copy-only on purpose: the glyph is whatever
-// the visitor's system font draws, and the other styles are shown, not offered
-// as downloads.
+// in other emoji art sets. The glyph itself is copy-only: it is whatever the
+// visitor's system font draws, which is not ours to hand out as a file. Each
+// art-set tile in the Styles row downloads that set's SVG, credit included.
 //
 // The frame is the customiser's (`icust-*`: a centred dialog on desktop, a
 // bottom sheet on a phone). The body is not: `.icust-body` becomes a two-column

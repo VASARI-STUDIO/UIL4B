@@ -12,10 +12,12 @@ import ExportProTag from '../ExportProTag'
 // of its own there); in the phone layout (`strip`) the same two groups lay out as
 // a segmented control and a row of chips.
 //
-// `showTags` is true for a free account whose plan has loaded: Pro rows carry the
-// lock and "Pro", the free one says "Free". A Pro account sees neither, and
-// nothing appears while the plan is still being read.
-export default function ExportNav({ types, typeId, categoryId, onType, onCategory, strip, disabled, showTags, coming }) {
+// `showTags` is true for a free account whose plan has loaded: a row that is Pro in
+// every theme (the book, the app-ready bundle) carries the lock and "Pro". Nothing else
+// is tagged: a row that is free in some themes and Pro in others (the slides) is decided
+// by the theme in the Theme step, and a free row says nothing. A Pro account sees no
+// tag, and nothing appears while the plan is still being read.
+export default function ExportNav({ types, typeId, categoryId, onType, onCategory, strip, disabled, showTags }) {
   const type = types.find((t) => t.id === typeId) || types[0]
   const cats = type.categories
   const typeRoving = useRovingRadio(types.length, (i) => onType(types[i].id))
@@ -43,7 +45,7 @@ export default function ExportNav({ types, typeId, categoryId, onType, onCategor
             role="radio"
             aria-checked={on}
             aria-disabled={disabled || undefined}
-            aria-label={`${c.name}, ${c.shape}${showTags ? (c.pro ? ', Pro' : ', free') : ''}`}
+            aria-label={`${c.name}, ${c.shape}${showTags && c.pro ? ', Pro' : ''}`}
             tabIndex={on ? 0 : -1}
             className={`xd-cat${on ? ' is-on' : ''}`}
             ref={(el) => { catRoving.refs.current[i] = el }}
@@ -51,7 +53,7 @@ export default function ExportNav({ types, typeId, categoryId, onType, onCategor
             onKeyDown={(e) => keyed(catRoving)(e, i)}
           >
             <span className="xd-cat-n">{c.name}</span>
-            {showTags && (c.pro ? <ExportProTag className="xd-pro" /> : <span className="xd-free">Free</span>)}
+            {showTags && c.pro && <ExportProTag className="xd-pro" />}
           </button>
         )
       })}
@@ -88,7 +90,6 @@ export default function ExportNav({ types, typeId, categoryId, onType, onCategor
         </div>
         {cats.length > 1 && catGroup(strip ? 'xd-chips' : 'xd-cats', strip ? undefined : { '--xd-o': typeAt * 2 + 1 })}
       </div>
-      {!strip && coming && <p className="xd-coming">{coming}</p>}
     </nav>
   )
 }

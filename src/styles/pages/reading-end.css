@@ -1,0 +1,71 @@
+/* reading-end.css — the signed-out close of a reading page (ReadingEnd).
+   Imported by the component, so it rides the lazy chunk of whichever reading
+   page mounts it. */
+.rd-end{--rd-gap:176px;margin-top:var(--rd-gap);display:flex;flex-direction:column;align-items:flex-start;max-width:766px}
+.rd-end h2{margin:0;font-family:var(--display);font-size:clamp(32px,3.33vw,48px);font-weight:600;letter-spacing:-.04em;line-height:1.02;color:var(--t0);text-wrap:balance}
+.rd-end p{margin:var(--s-5) 0 0;font-size:17px;line-height:1.65;color:var(--t1)}
+.rd-end .ui-pill{margin-top:var(--s-6);height:44px;min-height:44px;padding-inline:var(--s-4);font-size:14px;font-weight:500}
+@media(max-width:767px){
+  .rd-end{--rd-gap:112px}
+  .rd-end p{margin-top:var(--s-4)}
+  .rd-end .ui-pill{width:100%;margin-top:var(--s-5)}
+}
+@media(max-width:374px){
+  .rd-end{--rd-gap:96px}
+}
+
+/* The read-on list. Rows are hairline-separated; the lead row is the largest
+   type below the content. */
+.rd-next{--rd-y:clamp(72px,8.4vw,120px);margin-top:var(--rd-y)}
+.rd-next-label{font-family:var(--font);font-size:13px;font-weight:600;color:var(--t0);margin-bottom:var(--s-4)}
+.rd-next ul{list-style:none;margin:0;padding:0}
+.rd-next-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-5);min-height:52px;padding:var(--s-4) 0;border-top:1px solid var(--border);color:var(--t0);text-decoration:none}
+.rd-next li:last-child .rd-next-row{border-bottom:1px solid var(--border)}
+.rd-next-row[data-lead="true"]{padding:var(--s-6) 0}
+.rd-next-text{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
+.rd-next-title{font-size:17px;font-weight:600;line-height:1.35;color:var(--t0)}
+.rd-next-row[data-lead="true"] .rd-next-title{font-family:var(--display);font-size:clamp(24px,2.2vw,32px);letter-spacing:-.035em;line-height:1.1;text-wrap:balance}
+.rd-next-dek{max-width:52ch;font-size:15px;line-height:1.55;color:var(--t1)}
+.rd-next-row[data-lead="true"] .rd-next-dek{font-size:17px;line-height:1.6}
+.rd-next-go{flex:none;font-size:24px;line-height:1;color:var(--t2);transition:transform 320ms cubic-bezier(.23,1,.32,1),color 120ms ease}
+@media(hover:hover){
+  .rd-next-row:hover .rd-next-go{color:var(--t0);transform:translateX(3px)}
+  .rd-next-row[data-lead="true"]:hover .rd-next-go{transform:rotate(-45deg)}
+}
+.rd-next-row:focus-visible .rd-next-go{color:var(--t0)}
+.rd-end :focus-visible,.rd-next :focus-visible{outline:2px solid var(--t0);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .rd-next-go{transition:none;transform:none!important}
+}
+html[data-reduced-motion="true"] .rd-next-go{transition:none;transform:none!important}
+
+/* Help's foot: guide rows alone, a circled arrow, no row to all the guides. */
+.rd-next[data-variant="help"]{margin-top:calc(var(--s-9) - var(--cpg-sec))}
+.rd-next[data-variant="help"] ul{margin-top:var(--s-5);border-bottom:1px solid var(--border)}
+.rd-next[data-variant="help"] .rd-next-row{align-items:center;padding:var(--s-5) 0}
+.rd-next[data-variant="help"] li:last-child .rd-next-row{border-bottom:0}
+.rd-next[data-variant="help"] .rd-next-label{margin-bottom:0;letter-spacing:0}
+.rd-next[data-variant="help"] .rd-next-title{font-family:var(--display);font-size:24px;letter-spacing:-.04em;line-height:1.1;text-wrap:balance}
+.rd-next[data-variant="help"] .rd-next-text{gap:var(--s-3)}
+.rd-next[data-variant="help"] .rd-next-dek{font-size:15px;line-height:1.55}
+.rd-next-circle{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:999px;background:var(--hl-fill,var(--bg-3));color:var(--t0);transition:background-color 150ms ease}
+.rd-next-circle svg{transition:transform 320ms cubic-bezier(.25,1,.5,1)}
+@media(hover:hover){
+  .rd-next-row:hover .rd-next-circle{background:color-mix(in srgb,var(--t0) 6%,transparent)}
+  .rd-next-row:hover .rd-next-circle svg{transform:rotate(45deg)}
+}
+.rd-next-row:focus-visible .rd-next-circle svg{transform:rotate(45deg)}
+@media(max-width:767px){
+  .rd-next[data-variant="help"] .rd-next-row{align-items:flex-start;padding:20px 0}
+  .rd-next[data-variant="help"] .rd-next-title{font-size:19px;letter-spacing:-.02em;line-height:1.25}
+  .rd-next[data-variant="help"] .rd-next-text{gap:var(--s-2)}
+  .rd-next[data-variant="help"]{margin-top:calc(72px - var(--cpg-sec))}
+  .rd-next[data-variant="help"] ul{margin-top:var(--s-2)}
+}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .rd-next-circle svg{transition:none;transform:none!important}
+}
+html[data-reduced-motion="true"] .rd-next-circle svg{transition:none;transform:none!important}
+@media(max-width:767px){
+  .rd-end .ui-pill{width:auto;height:44px;min-height:44px;padding-inline:var(--s-5);font-size:15px}
+}

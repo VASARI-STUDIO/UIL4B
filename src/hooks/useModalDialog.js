@@ -119,7 +119,7 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
 
     const focusables = () => Array.from(
       node?.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') || [],
-    ).filter(el => el.offsetParent !== null || el === document.activeElement)
+    ).filter(el => (el.offsetParent !== null || el === document.activeElement) && !el.closest('[inert]'))
 
     // Read once per open: the landing spot is decided when the dialog opens.
     // preventScroll on every focus() here and in the restore below: moving

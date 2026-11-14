@@ -85,10 +85,12 @@ const RUNTIME_FAMILIES = [
 //   PaletteTool      --ci --si   (the readable ink on a column, and on the shown colour under it)
 //   FontTool         --fs --fp --pitch   (the specimen size on desktop and phone, and the row pitch)
 //   Onboarding       --ob-hs --ob-hs-m   (the spec sheet heading's size on desktop and phone, fitted to the project name)
+//   ContrastFigures  --lcc-bc   (a Learn contrast demo field's border colour, ContrastFigures.jsx)
+//   SystemProofs     --cx-ink --th-ink   (a Principles contrast cell's ink and a theme panel's second ink, SystemProofs.jsx)
 const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px', '--peek-left', '--peek-w',
   '--l', '--nl', '--fd', '--g', '--px', '--chars', '--pos', '--pos-phone', '--w-px', '--w-k', '--w-pxp', '--proj',
   '--hpl-c', '--hpl-c-phone', '--hpl-phone-order', '--ar', '--k', '--ci', '--si', '--fs', '--fp', '--pitch',
-  '--ob-hs', '--ob-hs-m'])
+  '--ob-hs', '--ob-hs-m', '--lcc-bc', '--cx-ink', '--th-ink'])
 
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()

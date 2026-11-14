@@ -5,8 +5,10 @@
 // this holds were invisible to the DOM: /info's fourteen index links wrapped to
 // six rows and pushed the content 480px down, and the palette cards' action
 // chips ran past the card's right edge while still being "present and visible".
+// The chips are gone (V3 tiles keep the actions in the preview dialog), so the
+// palette check now holds the tile's own controls to the same standard.
 // Touch metrics (isMobile + hasTouch) are what make `hover: none` true, which is
-// the state the card actions are laid out for; a resized desktop window is not.
+// the state the tile controls are laid out for; a resized desktop window is not.
 //
 // Viewport-only screenshots go to .claude/scratch/phinfo1/.
 import fs from 'node:fs'
@@ -177,53 +179,59 @@ for (const width of WIDTHS) {
         await ctx.close()
       })
 
-      test('the card actions sit inside the card as 44px icon buttons that keep their names', async ({ browser }) => {
+      // V3: a browsing palette tile has no action row. The four actions live in the preview
+      // dialog; the tile's own controls are the stretched `.vpt-open` button ("Preview {name}")
+      // and the `.vpt-like` heart above it ("Like {name}"). On touch the heart is a 44px circle.
+      test('the tile controls sit inside the tile as 44px targets that keep their names', async ({ browser }) => {
         const { ctx, page } = await open(browser, width, theme, '/discover/palettes')
-        const cards = page.locator('.pgal-card:has(.pgal-act):not(.geg-fade *)')
-        // POSITIVE CONTROL: free palettes carry the four actions, so "inside the card" below is about real buttons.
-        expect(await cards.count()).toBeGreaterThan(0)
-        const NAMES = [/project/i, /Gradient/, /CSS/, /hex codes/i]
+        const tiles = page.locator('.vpt:has(.vpt-open):not(.geg-fade *)')
+        // POSITIVE CONTROL: free palettes carry both controls, so "inside the tile" below is about real buttons.
+        await expect(tiles.first()).toBeVisible()
+        expect(await tiles.count()).toBeGreaterThan(0)
 
-        for (let i = 0; i < await cards.count(); i += 1) {
-          const card = cards.nth(i)
-          await card.scrollIntoViewIfNeeded()
-          const r = await card.evaluate((el) => {
-            const c = el.getBoundingClientRect()
-            const row = el.querySelector('.lbry-card-actions')
-            const rowRect = row.getBoundingClientRect()
-            const acts = [...row.querySelectorAll('.pgal-act')].map((a) => {
-              const b = a.getBoundingClientRect()
-              const cx = b.x + b.width / 2
-              const cy = b.y + b.height / 2
-              const hit = document.elementFromPoint(cx, cy)
+        for (let i = 0; i < await tiles.count(); i += 1) {
+          const tile = tiles.nth(i)
+          await tile.scrollIntoViewIfNeeded()
+          const m = await tile.evaluate((el) => {
+            const t = el.getBoundingClientRect()
+            const read = (sel, x, y) => {
+              const btn = el.querySelector(sel)
+              const b = btn.getBoundingClientRect()
+              const hit = document.elementFromPoint(x(b), y(b))
               return {
-                name: a.getAttribute('aria-label') || '', left: b.left, right: b.right, w: b.width, h: b.height,
-                label: getComputedStyle(a.querySelector('span')).display,
-                hittable: !!hit && (hit === a || a.contains(hit)),
+                name: btn.getAttribute('aria-label') || '',
+                w: b.width, h: b.height, left: b.left, right: b.right, top: b.top, bottom: b.bottom,
+                hittable: !!hit && (hit === btn || btn.contains(hit)),
               }
-            })
-            return { left: c.left, right: c.right, rowScroll: row.scrollWidth - row.clientWidth, rowRight: rowRect.right, acts }
+            }
+            return {
+              tile: { left: t.left, right: t.right, top: t.top, bottom: t.bottom },
+              like: read('.vpt-like', (b) => b.x + b.width / 2, (b) => b.y + b.height / 2),
+              // The open button is stretched over the tile; probe the foot, away from the heart.
+              open: read('.vpt-open', (b) => b.x + b.width / 2, (b) => b.bottom - 12),
+            }
           })
-          expect(r.acts, 'four actions per free card').toHaveLength(4)
-          // MUTATION: delete the `@media(hover:none),(max-width:1000px)` block in palette-gallery.css
-          // (labelled pills again, scrolling off the card edge) and the inside/scroll checks fail.
-          expect(r.rowScroll, 'the action row does not scroll sideways').toBeLessThanOrEqual(1)
-          r.acts.forEach((a, n) => {
-            expect(a.left, `action ${n} starts inside the card`).toBeGreaterThanOrEqual(r.left - 0.5)
-            expect(a.right, `action ${n} ends inside the card`).toBeLessThanOrEqual(r.right + 0.5)
-            // MUTATION: lower `.pgal-act` `min-width`/`min-height` under `@media(hover:none)` to 36px and this fails.
-            expect(a.w, `action ${n} is 44px wide`).toBeGreaterThanOrEqual(43.5)
-            expect(a.h, `action ${n} is 44px tall`).toBeGreaterThanOrEqual(43.5)
-            // MUTATION: remove the `aria-label` from one action in PaletteGalleryGrid.jsx: with the
-            // visible word gone it has no name, and this fails.
-            expect(a.name, `action ${n} keeps its accessible name`).toMatch(NAMES[n])
-            expect(a.label, `action ${n} shows an icon, not a clipped word`).toBe('none')
-            expect(a.hittable, `action ${n} is not covered by anything`).toBe(true)
-          })
+          // MUTATION: shrink `.vpt-like` under `@media(pointer:coarse)` in library-v3.css to 36px and this fails.
+          expect(m.like.w, 'Like is 44px wide').toBeGreaterThanOrEqual(43.5)
+          expect(m.like.h, 'Like is 44px tall').toBeGreaterThanOrEqual(43.5)
+          expect(m.like.left, 'Like starts inside the tile').toBeGreaterThanOrEqual(m.tile.left - 0.5)
+          expect(m.like.right, 'Like ends inside the tile').toBeLessThanOrEqual(m.tile.right + 0.5)
+          expect(m.like.top, 'Like starts inside the tile').toBeGreaterThanOrEqual(m.tile.top - 0.5)
+          expect(m.like.bottom, 'Like ends inside the tile').toBeLessThanOrEqual(m.tile.bottom + 0.5)
+          // MUTATION: remove the `aria-label` from `.vpt-like` or `.vpt-open` in VerticalPanelTile.jsx
+          // (neither has visible text) and this fails.
+          expect(m.like.name, 'Like keeps its accessible name').toMatch(/^(Like|Unlike) /)
+          expect(m.open.name, 'the open button keeps its accessible name').toMatch(/^Preview /)
+          expect(m.like.hittable, 'Like is not covered by anything').toBe(true)
+          // MUTATION: drop `.vpt-like{z-index:2}` in library-v3.css and the open button covers the heart: Like fails.
+          // The open button must itself be reachable, and cover the whole tile (the whole panel is one target).
+          expect(m.open.hittable, 'the open button is not covered by anything').toBe(true)
+          expect(m.open.w, 'the open button spans the tile').toBeGreaterThanOrEqual(m.tile.right - m.tile.left - 1)
+          expect(m.open.h, 'the open button spans the tile').toBeGreaterThanOrEqual(m.tile.bottom - m.tile.top - 1)
         }
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
         expect(overflow, 'no horizontal page overflow').toBeLessThanOrEqual(0)
-        await cards.first().scrollIntoViewIfNeeded()
+        await tiles.first().scrollIntoViewIfNeeded()
         await shot(page, `palettes-${width}-${theme}-cards`)
         await ctx.close()
       })

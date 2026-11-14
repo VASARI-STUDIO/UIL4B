@@ -20,6 +20,7 @@ import {
 } from '../utils/googleFonts'
 import ToolIcon from '../components/tool/ToolIcon'
 import { GALLERY_CATEGORIES, categoryWord, filterGalleryListTypefaces, ladderWeights } from '../utils/fontGallery'
+import { FONT_STYLES, fontStyleCounts, matchesFontStyle } from '../utils/fontStyles'
 import { bandHeight } from '../utils/galleryBand'
 import { ownFont, ownTypeScale, setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 import {
@@ -701,6 +702,7 @@ export default function FontGallery({ onCopy, toast }) {
     try { return new URLSearchParams(window.location.search).get('font') || '' } catch { return '' }
   })
   const [category, setCategory] = useState('all')
+  const [style, setStyle] = useState('any')
   const [sort, setSort] = useState('popularity')
   const [previewText, setPreviewText] = useState('')
   // The specimen size is the reader's choice once they make one; until then
@@ -715,7 +717,7 @@ export default function FontGallery({ onCopy, toast }) {
   // "adjust some state when a prop changes" is this: compare, set, and let React
   // re-run the render before it commits anything. IconEmojiLibrary.jsx uses the
   // same pattern for its keep-alive tab set, with the same reasoning.
-  const filterKey = `${query}|${category}|${sort}`
+  const filterKey = `${query}|${category}|${style}|${sort}`
   const [pageKey, setPageKey] = useState(filterKey)
   if (pageKey !== filterKey) {
     setPageKey(filterKey)
@@ -746,6 +748,15 @@ export default function FontGallery({ onCopy, toast }) {
     () => (category === 'all' ? galleryCatalog : galleryCatalog.filter(f => f.category === category)),
     [galleryCatalog, category],
   )
+  // The Style filter offers the styles of the chosen category (all of them
+  // under "All"); a category with none hides it. A style left over from
+  // another category reads as "Any" rather than emptying the list.
+  const styleOptions = useMemo(() => {
+    const own = FONT_STYLES.filter(s => category === 'all' || s.category === category)
+    return own.length ? [{ id: 'any', label: 'Any' }, ...own] : []
+  }, [category])
+  const activeStyle = styleOptions.some(s => s.id === style) ? style : 'any'
+  const styleCounts = useMemo(() => ({ any: inCategory.length, ...fontStyleCounts(inCategory) }), [inCategory])
   const rankOf = useMemo(() => new Map(galleryCatalog.map((f, i) => [f.family, i + 1])), [galleryCatalog])
   const catPhrase = category === 'all' ? '' : `${catWord(category)} `
   const searchPlaceholder = inCategory.length
@@ -757,10 +768,11 @@ export default function FontGallery({ onCopy, toast }) {
     const q = query.trim().toLowerCase()
     if (q) out = out.filter(f => f.family.toLowerCase().includes(q))
     if (category !== 'all') out = out.filter(f => f.category === category)
+    if (activeStyle !== 'any') out = out.filter(f => matchesFontStyle(f, activeStyle))
     if (sort === 'alphabetical') out = [...out].sort((a, b) => a.family.localeCompare(b.family))
     else if (sort === 'weights') out = [...out].sort((a, b) => b.variants.length - a.variants.length)
     return out
-  }, [galleryCatalog, query, category, sort])
+  }, [galleryCatalog, query, category, activeStyle, sort])
 
   const paged = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page])
   const hasMore = paged.length < filtered.length
@@ -890,13 +902,14 @@ export default function FontGallery({ onCopy, toast }) {
   const sheetShown = sheetOpen && mode !== 'wide'
   // How many of the sheet's choices are off their defaults: the badge on the
   // Filters button. Preview text and the view show in the page itself.
-  const filtersOn = (category !== 'all' ? 1 : 0) + (sort !== 'popularity' ? 1 : 0) + (sizeOverride !== null ? 1 : 0)
+  const filtersOn = (category !== 'all' ? 1 : 0) + (activeStyle !== 'any' ? 1 : 0) + (sort !== 'popularity' ? 1 : 0) + (sizeOverride !== null ? 1 : 0)
   // The empty state clears what narrows the list (search and category); the
   // sheet's own Clear puts back the sheet's controls and leaves the search alone.
-  const clearFilters = () => { setQuery(''); setCategory('all') }
-  const sheetDirty = category !== 'all' || sort !== 'popularity' || sizeOverride !== null || view !== 'list' || previewText !== ''
+  const clearFilters = () => { setQuery(''); setCategory('all'); setStyle('any') }
+  const sheetDirty = category !== 'all' || activeStyle !== 'any' || sort !== 'popularity' || sizeOverride !== null || view !== 'list' || previewText !== ''
   const clearSheet = () => {
     setCategory('all')
+    setStyle('any')
     setSort('popularity')
     setSizeOverride(null)
     setView('list')
@@ -929,6 +942,16 @@ export default function FontGallery({ onCopy, toast }) {
       options={CATS.map(c => ({ value: c.id, label: c.label }))}
       value={category}
       onChange={setCategory}
+    />
+  )
+  const styleSelect = (
+    <ToolSelect
+      label="Style"
+      ariaLabel="Filter by style"
+      value={activeStyle}
+      options={styleOptions.map(s => ({ value: s.id, label: s.label }))}
+      onChange={setStyle}
+      disabled={!ready}
     />
   )
   const sortSelect = (
@@ -1053,6 +1076,7 @@ export default function FontGallery({ onCopy, toast }) {
       categoryItem,
       { id: 'search', priority: 4, render: () => searchField, menu: () => searchField },
       { id: 'preview', priority: 3, render: () => previewField('row'), menu: () => previewField(true) },
+      ...(styleOptions.length ? [{ id: 'style', priority: 2, measure: activeStyle, render: () => styleSelect, menu: () => styleSelect }] : []),
       { id: 'sort', priority: 2, measure: sort, render: () => sortSelect, menu: () => sortSelect },
       { id: 'size', priority: 1, measure: nameSize, render: () => sizeSelect, menu: () => sizeSelect },
       { ...pairItem, align: 'end' },
@@ -1298,6 +1322,10 @@ export default function FontGallery({ onCopy, toast }) {
           previewText={previewText}
           onPreviewText={setPreviewText}
           counts={catCounts}
+          styles={styleOptions}
+          style={activeStyle}
+          onStyle={setStyle}
+          styleCounts={styleCounts}
           ground={ground === 'light' ? 'l' : 'd'}
           onGround={g => setTheme(g === 'l' ? 'light' : 'dark')}
           count={filtered.length}

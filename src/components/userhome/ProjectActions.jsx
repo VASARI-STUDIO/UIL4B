@@ -61,7 +61,7 @@ export default function ProjectActions({
     ...SYSTEM_PARTS.map((part) => ({
       id: `open-${part.id}`,
       label: part.label,
-      hint: digest?.parts?.find((p) => p.id === part.id)?.done ? undefined : 'empty',
+      hint: digest?.parts?.find((p) => p.id === part.id)?.done ? undefined : 'Not set',
       onSelect: () => onOpenIn?.(project.id, part.tool),
     })),
     'sep',

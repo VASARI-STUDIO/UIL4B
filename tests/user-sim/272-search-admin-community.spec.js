@@ -6,8 +6,8 @@
 //   2. Admin overview ranked lists: a label has a hover title, and a list
 //      longer than the eight rows drawn says "top 8 of N".
 //   3. Admin text carries no internal doc path and no dated attribution.
-//   4. Community cards: a save count of zero is not drawn; the "examples"
-//      sentence is as readable as the pitch above it.
+//   4. Community tiles: no figure (a zero, a count) is drawn on a tile, saved or not;
+//      the "every piece is a sample" sentence is readable (size and contrast).
 //   5. /sitemap: the Home row goes to the real front door, "/".
 //
 // Viewport-only screenshots go to .claude/scratch/misc3/.
@@ -24,9 +24,10 @@
 //     fails.
 //   · Admin.jsx: put "docs/OWNER-ACTIONS.md" or a dated attribution
 //     back in the visible text: "no internal detail" fails.
-//   · CommunityCard.jsx: render the count unconditionally: "no zero" fails.
-//   · community.css: set `.ch-sub small` back to var(--cm-quiet) / 13px: "as
-//     readable as the pitch" fails.
+//   · pieceUi.jsx: render a count (`{saves}`) inside the heart or the meta line:
+//     "no zero is drawn" fails.
+//   · community.css: set `.cm-sample-line` to 11px or a pale colour: "the sample
+//     sentence is as readable" fails.
 //   · SiteMap.jsx: set the Home route back to '/home': the sitemap test fails.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -222,45 +223,90 @@ for (const vp of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
 }
 
 // ── Community ──────────────────────────────────────────────────────────────
+/** Ink-on-ground contrast of an element's text, worked out on a canvas so any CSS colour (oklch, alpha) is read as the browser paints it. */
+const contrastOf = (locator) => locator.evaluate((el) => {
+  const px = (css) => {
+    const c = document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+    c.fillStyle = css
+    c.fillRect(0, 0, 1, 1)
+    return [...c.getImageData(0, 0, 1, 1).data]
+  }
+  let ground = 'rgb(255, 255, 255)'
+  for (let n = el; n; n = n.parentElement) {
+    const bg = getComputedStyle(n).backgroundColor
+    if (px(bg)[3] === 255) { ground = bg; break }
+  }
+  const over = (fg) => {
+    const c = document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+    c.fillStyle = ground
+    c.fillRect(0, 0, 1, 1)
+    c.fillStyle = fg
+    c.fillRect(0, 0, 1, 1)
+    return [...c.getImageData(0, 0, 1, 1).data]
+  }
+  const lum = ([r, g, b]) => {
+    const f = (v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4 }
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+  }
+  const a = lum(over(getComputedStyle(el).color))
+  const b = lum(px(ground))
+  return { ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05), size: parseFloat(getComputedStyle(el).fontSize) }
+})
+
 for (const vp of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
-  test.describe(`community cards at ${vp.width}px`, () => {
+  test.describe(`community tiles at ${vp.width}px`, () => {
     test.use({ viewport: vp })
 
-    test('no zero is drawn on a card; a saved card shows its figure', async ({ page }) => {
-      // MUTATION: render the count unconditionally in CommunityCard.jsx.
+    test('no zero is drawn on a tile; saving one draws no figure either', async ({ page }) => {
+      // MUTATION: render a count (`{saves}`) inside the heart or the meta line in pieceUi.jsx.
+      // The showcase pieces carry no counts, likes or reviews, so nothing numeric may be drawn.
       watch(page, 'someone browsing the community hub')
       await signIn(page, {})
       await go(page, '/community')
-      const hearts = page.locator('.ch-spectrum .ch-heart')
-      await expect(hearts.first()).toBeAttached()
-      expect(await hearts.count(), 'the cards rendered').toBeGreaterThan(5)
-      const counts = await page.locator('.ch-heart-count').allTextContents()
-      expect(counts, 'no card shows a bare 0').not.toContain('0')
-      // POSITIVE CONTROL: saving one raises its count above zero, and it shows.
-      await hearts.first().click()
-      await expect(hearts.first()).toHaveAttribute('aria-pressed', 'true')
-      await expect(hearts.first().locator('.ch-heart-count')).toHaveText(/^[1-9]\d*$/)
+      const tiles = page.locator('.cm-grid .cm-tile')
+      await expect(tiles.first()).toBeVisible()
+      expect(await tiles.count(), 'the tiles rendered').toBeGreaterThan(5)
+      const bare = () => tiles.evaluateAll((els) => els.flatMap((t) => [
+        ...[...t.querySelectorAll('.cm-heart')].map((h) => h.textContent.trim()),
+        t.querySelector('.cm-tile-meta').textContent,
+      ]).filter((text) => /(^|\s)0(\s|$)/.test(text) || /^\d+$/.test(text)))
+      expect(await bare(), 'no tile shows a bare 0 or a count').toEqual([])
+
+      // POSITIVE CONTROL: the save really happens, and the tile still draws no figure for it.
+      const first = tiles.first()
+      const title = (await first.locator('.cm-tile-title').textContent()).trim()
+      if (vp.width < 768) {
+        // On a phone the heart is not drawn: "..." is the way to save.
+        await expect(first.locator('.cm-heart')).toBeHidden()
+        await first.getByRole('button', { name: `Actions for ${title}` }).click()
+        await page.getByRole('menuitem', { name: 'Save', exact: true }).click()
+        await first.getByRole('button', { name: `Actions for ${title}` }).click()
+        await expect(page.getByRole('menuitem', { name: 'Remove from saved' }), 'the saved tile now offers Remove').toBeVisible()
+        await page.keyboard.press('Escape')
+      } else {
+        await first.hover()
+        const heart = first.getByRole('button', { name: `Save ${title}` })
+        await heart.click()
+        await expect(first.getByRole('button', { name: `Remove ${title} from saved` })).toHaveAttribute('aria-pressed', 'true')
+      }
+      expect(await bare(), 'a saved tile draws no figure').toEqual([])
       await page.screenshot({ path: path.join(SHOTS, `community-${vp.width}.png`) })
     })
 
-    test('the "examples" sentence is as readable as the pitch above it', async ({ page }) => {
-      // MUTATION: set `.ch-sub small` back to var(--cm-quiet) / 13px.
+    test('the "sample" sentence is as readable as the lead above it', async ({ page }) => {
+      // MUTATION: set `.cm-sample-line` to font-size 11px or a pale colour in community.css.
+      // (The old check was "same ink as the pitch"; the new design deliberately sets it one
+      // step quieter, so what is held is size and contrast, not sameness.)
       watch(page, 'someone browsing the community hub')
       await go(page, '/community')
-      const note = page.locator('.ch-spectrum .ch-sub small')
+      const note = page.locator('.cm-head .cm-sample-line')
       await expect(note).toBeVisible()
-      await expect(note).toContainText('example entries')
-      const m = await page.evaluate(() => {
-        const sub = document.querySelector('.ch-spectrum .ch-sub')
-        const small = sub.querySelector('small')
-        return {
-          subColor: getComputedStyle(sub).color,
-          noteColor: getComputedStyle(small).color,
-          noteSize: parseFloat(getComputedStyle(small).fontSize),
-        }
-      })
-      expect(m.noteColor, 'same ink as the pitch').toBe(m.subColor)
-      expect(m.noteSize, 'a size you can read on a phone').toBeGreaterThanOrEqual(14)
+      await expect(note).toContainText('Every piece here is a sample')
+      const m = await contrastOf(note)
+      expect(m.size, 'a size you can read on a phone').toBeGreaterThanOrEqual(14)
+      expect(m.ratio, 'contrast of the sample sentence on the page').toBeGreaterThanOrEqual(4.5)
+      // The lead above it is the control: if its contrast is also measured it is a fair yardstick.
+      expect((await contrastOf(page.locator('.cm-head .cm-lead'))).ratio).toBeGreaterThanOrEqual(4.5)
     })
   })
 }

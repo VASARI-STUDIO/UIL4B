@@ -1,6 +1,6 @@
 // /learn/help as a router: "What are you here to do?" lists the jobs, each job
-// opens its own answer. From 960px the answer sits in a sticky stage beside the
-// list; below that it opens under its own row, one at a time.
+// opens its own answer. At every width the answer opens under its own row, one
+// at a time; there is no stage beside the list.
 //
 // Every figure is computed here from the registries, not read back from the
 // module the page imports, so a page that stopped deriving it goes red.
@@ -63,20 +63,32 @@ test.describe('Help router: every job opens its answer', () => {
     })
   }
 
-  test('desktop: the answer sits in a sticky stage beside the list', async ({ page }) => {
+  test('desktop: the answer opens in place, under its own row, with no stage beside the list', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/learn/help')
     await expectRendered(page, '/learn/help')
-    const stage = page.locator('.hlr-stage')
-    await expect(stage).toBeVisible()
-    expect(await stage.evaluate((el) => getComputedStyle(el).position)).toBe('sticky')
-    const [list, st] = await Promise.all([
+    // The redesign is one column at every width: the sticky stage is gone.
+    await expect(page.locator('.hlr-stage')).toHaveCount(0)
+
+    const job = VISITOR_JOBS[1]
+    await row(page, job).click()
+    const li = page.locator('.hlr-jobs > li', { has: row(page, job) })
+    const panel = li.locator('.hlr-ans:not([hidden])')
+    await expect(panel).toHaveCount(1)
+    await expect(openPanels(page)).toHaveCount(1)
+    // Under its own row and inside the list's width, not off to the right of it.
+    const [list, btn, ans] = await Promise.all([
       page.locator('.hlr-jobs').boundingBox(),
-      stage.boundingBox(),
+      row(page, job).boundingBox(),
+      panel.boundingBox(),
     ])
-    expect(st.x, 'the stage should be to the right of the list').toBeGreaterThan(list.x + list.width - 1)
-    // Every panel is inside the stage, none under a row.
-    await expect(page.locator('.hlr-jobs .hlr-ans')).toHaveCount(0)
+    expect(ans.y, 'the answer should start below its row').toBeGreaterThanOrEqual(btn.y + btn.height - 1)
+    expect(ans.x + ans.width, 'the answer should not sit beside the list').toBeLessThanOrEqual(list.x + list.width + 1)
+
+    // A second press closes it.
+    await row(page, job).click()
+    await expect(row(page, job)).toHaveAttribute('aria-expanded', 'false')
+    await expect(openPanels(page)).toHaveCount(0)
   })
 
   test('phone: the answer opens under its own row and a second press closes it', async ({ page }) => {

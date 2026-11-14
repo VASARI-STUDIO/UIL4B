@@ -188,7 +188,9 @@ test.describe('/principles has a clean heading outline', () => {
       const list = col.querySelector('ul')
       const labelledBy = list ? list.getAttribute('aria-labelledby') : null
       return {
-        label: label ? label.textContent.trim() : null,
+        // innerText, not textContent: the label carries a desktop span and a phone span, and
+        // textContent reads both. At 1280 only the desktop one ("Built free") is painted.
+        label: label ? label.innerText.trim() : null,
         tag: label ? label.tagName : null,
         bound: !!(labelledBy && label && labelledBy === label.id),
         items: list ? list.querySelectorAll('li').length : 0,
@@ -196,7 +198,7 @@ test.describe('/principles has a clean heading outline', () => {
     }))
 
     expect(cols).toHaveLength(3)
-    expect(cols.map((c) => c.label)).toEqual(['Built, free', 'Built, Pro', 'Not built'])
+    expect(cols.map((c) => c.label)).toEqual(['Built free', 'Built Pro', 'Not built'])
     for (const col of cols) {
       expect(col.tag, 'a column label must not claim a heading level').not.toMatch(/^H[1-6]$/)
       expect(col.bound, `"${col.label}" must name its own list`).toBe(true)

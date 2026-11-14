@@ -97,6 +97,9 @@ function crawlerPaths(xml) {
     .map((match) => match[1] || '/')
 }
 
+// An open panel tile: not a locked one, and not the faded stand-ins behind a gate.
+const OPEN_TILE = '.vpt:not(.vpt--locked):not([data-gate-fade] *)'
+
 test.describe('public route contract', () => {
   test('Discover exposes the live palette, gradient and font libraries', async ({ page }) => {
     watch(page, 'designer browsing the live Discover catalogue')
@@ -108,8 +111,9 @@ test.describe('public route contract', () => {
 
     await go(page, '/discover/palettes')
     await expect(page.getByRole('heading', { level: 1, name: 'Palette Library' })).toBeVisible()
-    // The browsable count, not the library size: withheld palettes are absent
-    // rather than rendered and styled as locked, so they produce no card.
+    // The browsable count, not the library size: the open tiles only. Withheld
+    // palettes show as locked stand-in tiles inside the gate's fade, which are
+    // neither open tiles nor reachable, so they are left out of the count.
     //
     // THE CAP, NOT THE ELIGIBLE SET. This asserted every non-Pro palette (71)
     // until the galleries gained the 3 / 10 / full ladder; a signed-out visitor
@@ -117,11 +121,11 @@ test.describe('public route contract', () => {
     // page caps with, never typed — 44-locked-library-tease.spec.js proves the
     // ladder itself at all three rungs, and this file only needs the route to
     // serve the library at all.
-    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    await expect(page.locator(OPEN_TILE)).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     // Midnight Teal is the first eligible palette, so it is inside the
     // anonymous cap and the search still has something to narrow to.
     await page.getByPlaceholder('Search palettes').fill('Midnight Teal')
-    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(1)
+    await expect(page.locator(OPEN_TILE)).toHaveCount(1)
   })
 
   test('crawler sitemap contains every live canonical route and no staged or redirect destination', async ({ request }) => {

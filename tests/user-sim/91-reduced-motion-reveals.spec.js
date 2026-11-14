@@ -90,7 +90,9 @@ test('with motion ON, the reveal still waits for the scroll', async ({ browser }
   })
   const page = await ctx.newPage()
   watch(page, 'a visitor with animation on')
-  await go(page, '/learn')
+  // /learn/principles, not the /learn index: the redesigned index is a quiet list with
+  // no reveal blocks, and the principles page is the surface that still reveals (5 blocks, 4 below the fold, so the floor is 3).
+  await go(page, '/learn/principles')
   await page.waitForTimeout(1500)
 
   const state = await page.evaluate(() => {
@@ -103,9 +105,9 @@ test('with motion ON, the reveal still waits for the scroll', async ({ browser }
   })
 
   expect(state.attr, 'this context should NOT be in reduced motion').toBe('false')
-  expect(state.total, '/learn renders no reveal blocks, so neither half of this is tested')
-    .toBeGreaterThan(5)
-  expect(state.blank, 'nothing is waiting to reveal on /learn with motion on. The reduced-motion '
+  expect(state.total, '/learn/principles renders too few reveal blocks, so neither half of this is tested')
+    .toBeGreaterThanOrEqual(3)
+  expect(state.blank, 'nothing is waiting to reveal on /learn/principles with motion on. The reduced-motion '
     + 'rule has leaked into the ordinary path and the scroll reveal is gone.')
     .toBeGreaterThan(0)
 })
