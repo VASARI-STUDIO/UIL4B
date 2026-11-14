@@ -1,31 +1,29 @@
-// /login — the full-screen page, and the strip the chosen sign-in dialog shows.
+// /login — the full-screen page, and the popup the chosen sign-in dialog opens.
 //
-// /login is a page of its own: one h1 in <main>, the form first and the wall of
-// exports second in the document, no nav, no footer, no dialog. The same form
-// opens in a dialog over every other page, and at 768 and up the dialog's
-// "chosen" variant (a visitor asked to log in or sign up, no reason given)
-// carries a still strip of the wall.
+// /login is a page of its own: one h1 in <main>, the form first and a wall of
+// sample exports second in the document, a slim bar with the wordmark and a
+// way back to the plans, and no site nav, footer or dialog. The same form opens
+// in a dialog over every other page. The form is two steps: Google and the
+// email, then the password after "Continue with email".
 //
 //   * structure: one h1, form before wall in the DOM, no nav, no footer, no dialog
-//   * layout by width: split at 1024 and up (2 wall columns below 1280, 3 from
-//     1280), a band below 1024 (120px at 390, 200px at 768)
-//   * a phone: sign-up fits 390x844 without scrolling; log-in puts Google high
-//   * reduced motion: nothing animates and there is no pause button
-//   * motion: the drift runs, the pause button stops it and remembers
+//   * layout by width: a split with the wall from 1024, a centred column from
+//     768, a short strip of the wall above the form below 768
+//   * the wall is still decoration: hidden from assistive tech, labelled as
+//     samples, nothing drifts and there is no pause button
+//   * a phone: the Google button and Continue are on screen without scrolling
 //   * a signed-in visitor leaves; the resume stash survives; the mode toggle and
 //     the address stay in step
-//   * the modal's strip is there at 768 and up and not below, and not on an
-//     interruption
+//   * the popup carries a picture pane from 768 up and not below, and its gate
+//     follows what the visitor was doing
 //
-// Expected sizes are written out by hand from the layout rules (5/12 of 1440 is
-// 600, and so on), never read back from the page. Each test carries the
-// mutation that turns it red; each was applied to the source, built into a
-// separate folder, watched go red, and restored.
+// Expected sizes are written out by hand from the layout rules (a 1fr 1fr split
+// of 1440 is 720, and so on), never read back from the page. The mutation that
+// turns each test red is named above it.
 import { test, expect } from './base.js'
-import { go, watch, signIn, openChosenDialog } from './helpers.js'
+import { go, watch, signIn, openChosenDialog, continueWithEmail } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
-const PAUSE_KEY = 'uil4b-auth-wall-paused'
 const RESUME_KEY = 'vs-resume-after-onboarding'
 const GATED = '/checkout/return?session_id=cs_test_resume' // behind RequireAuth, with a query to carry
 
@@ -37,14 +35,16 @@ async function phone(browser, width = 390, height = 844, extra = {}) {
   return { ctx, page: await ctx.newPage() }
 }
 
-const rect = (page, selector) => page.locator(selector).first().evaluate((el) => {
+/** The box of the first match, or null when it is not drawn (display:none has no box). */
+const box = (page, selector) => page.locator(selector).first().evaluate((el) => {
+  if (!el.getClientRects().length) return null
   const r = el.getBoundingClientRect()
   return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width, height: r.height }
 })
 
-/** Playing states of the wall's drift animations (not the one-off settle). */
+/** Playing states of any running CSS animation that is a slow drift (none should be). */
 const driftStates = (page) => page.evaluate(() => document.getAnimations()
-  .filter((a) => /^auth-drift/.test(a.animationName || ''))
+  .filter((a) => /drift/.test(a.animationName || ''))
   .map((a) => a.playState))
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,8 +67,8 @@ test.describe('the /login page is a page, not a dialog', () => {
     expect(seen.dialogs, 'the page is not a dialog').toBe(0)
   })
 
-  // MUTATION: in src/pages/LoginPage.jsx move <AuthWall ... /> above the
-  //   <section className="auth-page-form">. The order check goes red.
+  // MUTATION: in src/pages/LoginPage.jsx move the <aside className="pf-wall"> above
+  //   the <div className="pf-main">. The order check goes red.
   test('puts the form before the wall in the document, with no nav and no footer', async ({ page }) => {
     watch(page, 'screen reader user on the log-in page')
 
@@ -81,19 +81,31 @@ test.describe('the /login page is a page, not a dialog', () => {
     await go(page, '/login')
     await expect(page.locator('main .auth-google-btn')).toBeVisible()
     const seen = await page.evaluate(() => {
-      const form = document.querySelector('.auth-page-form')
-      const wall = document.querySelector('.aw')
+      const form = document.querySelector('main .pf-col')
+      const wall = document.querySelector('aside.pf-wall')
       return {
         formBeforeWall: !!(form && wall && (form.compareDocumentPosition(wall) & Node.DOCUMENT_POSITION_FOLLOWING)),
         navs: document.querySelectorAll('nav').length,
         footers: document.querySelectorAll('footer').length,
-        wallLabelled: wall?.getAttribute('aria-labelledby') && document.getElementById(wall.getAttribute('aria-labelledby'))?.textContent?.trim(),
+        wallHidden: wall?.querySelector('[data-pro-wall]')?.getAttribute('aria-hidden'),
+        wallLabel: wall?.querySelector('.pw-label')?.textContent?.trim(),
+        back: (() => { const a = document.querySelector('header.pf-bar .pf-back'); return a && { text: a.textContent.trim(), href: a.getAttribute('href') } })(),
       }
     })
-    expect(seen.formBeforeWall, 'the wall comes before the form in the document').toBe(true)
+    expect(seen.formBeforeWall, 'the form comes before the wall in the document').toBe(true)
     expect(seen.navs, 'the page carries a nav').toBe(0)
     expect(seen.footers, 'the page carries a footer').toBe(0)
-    expect(seen.wallLabelled, 'the wall is a named region').toBe("Made with UI L4B's own tools")
+    expect(seen.wallHidden, 'the wall is decoration and is hidden from assistive tech').toBe('true')
+    expect(seen.wallLabel, 'the wall says its exports are samples').toBe('Sample exports')
+    expect(seen.back, 'the bar has a way back to the plans').toEqual({ text: 'Back to plans', href: '/plans' })
+  })
+
+  // MUTATION: in LoginPage.jsx point the .pf-back Link at "/" instead of "/plans".
+  test('"Back to plans" leaves for /plans', async ({ page }) => {
+    watch(page, 'visitor who came for a price and wants to go back')
+    await go(page, '/login')
+    await page.getByRole('link', { name: 'Back to plans' }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/plans')
   })
 })
 
@@ -102,279 +114,115 @@ test.describe('the /login page is a page, not a dialog', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the /login layout follows the width', () => {
-  // [viewport width, expected wall columns, expected form column width (±2)]
-  //   1024: the 440px floor beats 5/12 x 1024 = 427
-  //   1279: 2 columns, one pixel under the 3-column breakpoint; 5/12 x 1279 = 533
-  //   1280: 3 columns
-  //   1440: 5/12 x 1440 = 600
-  const SPLITS = [[1024, 2, 440], [1279, 2, 533], [1280, 3, 533], [1440, 3, 600]]
-  for (const [width, columns, formWidth] of SPLITS) {
-    // MUTATION: in src/components/auth/AuthWall.jsx change
-    //   useMediaQuery('(min-width:1280px)') to '(min-width:1500px)'. The 1280
-    //   and 1440 cells go red. In src/styles/pages/auth-page.css change
-    //   minmax(440px,5fr) to minmax(300px,4fr): the form widths go red.
-    test(`at ${width} it is a split with ${columns} wall columns and a ${formWidth}px form column`, async ({ page }) => {
-      watch(page, `visitor on a ${width}px screen`)
-      await page.setViewportSize({ width, height: 900 })
-      await go(page, '/login')
-      await expect(page.locator('.aw--page .aw-col').first()).toBeAttached()
-
-      const m = await page.evaluate(() => {
-        const cols = [...document.querySelectorAll('.aw--page .aw-col')]
-        const form = document.querySelector('.auth-page-form').getBoundingClientRect()
-        const wall = document.querySelector('.aw--page').getBoundingClientRect()
-        return {
-          columns: cols.length,
-          lefts: new Set(cols.map((c) => Math.round(c.getBoundingClientRect().left))).size,
-          formWidth: form.width,
-          wallLeft: wall.left,
-          bands: document.querySelectorAll('.aw--band').length,
-        }
-      })
-      expect(m.bands, 'a split page also drew the band').toBe(0)
-      expect(m.columns, `${width}: wall columns`).toBe(columns)
-      expect(m.lefts, `${width}: the columns sit side by side`).toBe(columns)
-      expect(Math.abs(m.formWidth - formWidth), `${width}: form column is ${m.formWidth}px, wanted ${formWidth}`).toBeLessThanOrEqual(2)
-      expect(Math.abs(m.wallLeft - m.formWidth), 'the wall starts where the form column ends').toBeLessThanOrEqual(2)
-    })
-  }
-
-  // Hand arithmetic: 1440 gives a form of 600 and a wall of 840; a tile is
-  // (840 - 64 padding - 2 x 16 gaps) / 3 = 248. At 1024 the wall is 584 and a
-  // tile is (584 - 64 - 16) / 2 = 252.
-  // MUTATION: in auth-page.css change the .aw-cols gap:16px to gap:32px.
-  for (const [width, tile] of [[1440, 248], [1024, 252]]) {
-    test(`at ${width} a wall tile is ${tile}px wide`, async ({ page }) => {
-      watch(page, `visitor on a ${width}px screen`)
-      await page.setViewportSize({ width, height: 900 })
-      await go(page, '/login')
-      const w = await page.locator('.aw--page .aw-tile').first().evaluate((el) => el.getBoundingClientRect().width)
-      expect(Math.abs(w - tile), `a tile is ${w}px`).toBeLessThanOrEqual(2)
-    })
-  }
-
-  // MUTATION: in auth-page.css change the @media(min-width:1680px) rule's
-  //   minmax(440px,640px) to minmax(440px,900px).
-  test('at 1920 the form column stays at 640px or less', async ({ page }) => {
-    watch(page, 'visitor on a wide monitor')
-    await page.setViewportSize({ width: 1920, height: 1000 })
-    await go(page, '/login')
-    await expect(page.locator('.aw--page .aw-col').first()).toBeAttached()
-    const m = await rect(page, '.auth-page-form')
-    expect(m.width, `the form column is ${m.width}px`).toBeLessThanOrEqual(641)
-    expect(m.width, 'and not collapsed').toBeGreaterThanOrEqual(440)
-    expect(await page.locator('.aw--page .aw-col').count(), '1920 keeps 3 columns').toBe(3)
-  })
-
-  // MUTATION: in auth-page.css change .aw--band{...height:120px} to 100px (390),
-  //   and the 768 rule .aw--band{height:200px} to 180px.
-  test('at 390 the band is 120px tall, above the form', async ({ browser }) => {
-    const { ctx, page } = await phone(browser)
-    watch(page, 'visitor on a phone')
-    await go(page, '/login')
-    await expect(page.locator('.aw--band')).toBeVisible()
-    const band = await rect(page, '.aw--band')
-    const form = await rect(page, '.auth-page-form')
-    expect(Math.abs(band.height - 120), `the band is ${band.height}px`).toBeLessThanOrEqual(1)
-    expect(band.width, 'full bleed').toBeGreaterThanOrEqual(389)
-    expect(band.bottom, 'the band sits above the form').toBeLessThanOrEqual(form.top + 1)
-    expect(await page.locator('.aw--page').count(), 'a phone also drew the split wall').toBe(0)
-    await ctx.close()
-  })
-
-  test('at 768 the band is 200px tall and the form is centred at 400px', async ({ browser }) => {
-    const { ctx, page } = await phone(browser, 768, 1024)
-    watch(page, 'visitor on a tablet')
-    await go(page, '/login')
-    await expect(page.locator('.aw--band')).toBeVisible()
-    const band = await rect(page, '.aw--band')
-    const form = await rect(page, '.auth-page-form')
-    expect(Math.abs(band.height - 200), `the band is ${band.height}px`).toBeLessThanOrEqual(1)
-    expect(Math.abs(form.width - 400), `the form is ${form.width}px`).toBeLessThanOrEqual(1)
-    expect(Math.abs((form.left + form.right) / 2 - 384), 'the form is centred').toBeLessThanOrEqual(1)
-    await ctx.close()
-  })
-})
-
-// ─────────────────────────────────────────────────────────────────────────────
-// A phone, heights
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.describe('on a 390x844 phone', () => {
-  // MUTATION: in auth-page.css delete the @media(max-width:767px) rule that
-  //   makes the sign-up band 72px (or set its height to 200px). The page then
-  //   scrolls and this goes red.
-  test('sign-up does not scroll, and the submit and the legal line are on screen', async ({ browser }) => {
-    const { ctx, page } = await phone(browser)
-    watch(page, 'visitor on a phone creating an account')
-    await go(page, '/login?signup=1')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create your free account')
-    // POSITIVE CONTROL: this really is a touch device, so this is the phone
-    // layout and not a narrow desktop.
-    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
-
-    const m = await page.evaluate(() => {
-      const root = document.scrollingElement
-      const bottom = (sel) => document.querySelector(sel)?.getBoundingClientRect().bottom
-      window.scrollTo(0, 400)
-      return {
-        overflow: root.scrollHeight - window.innerHeight,
-        scrolledTo: window.scrollY,
-        submit: bottom('.auth-submit'),
-        legal: bottom('.auth-legal'),
-        band: document.querySelector('.aw--band').getBoundingClientRect().height,
-        height: window.innerHeight,
-      }
-    })
-    expect(m.submit, 'the submit button is not on the page').toBeGreaterThan(0)
-    expect(m.legal, 'the legal line is not on the page').toBeGreaterThan(0)
-    expect(m.submit, 'the submit button is below the fold').toBeLessThanOrEqual(m.height)
-    expect(m.legal, 'the legal line is below the fold').toBeLessThanOrEqual(m.height)
-    expect(m.overflow, `the page is ${m.overflow}px taller than the screen`).toBeLessThanOrEqual(0)
-    expect(m.scrolledTo, 'the page scrolled when asked to').toBe(0)
-    expect(Math.abs(m.band - 72), `the sign-up band is ${m.band}px`).toBeLessThanOrEqual(1)
-    await ctx.close()
-  })
-
-  // MUTATION: as above, on the log-in side, change .aw--band height:120px to
-  //   200px: Google's top moves past 310.
-  test('log-in puts the top of the Google button at 310px or higher', async ({ browser }) => {
-    const { ctx, page } = await phone(browser)
-    watch(page, 'visitor on a phone logging in')
-    await go(page, '/login')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in to UI L4B')
-    const google = await rect(page, '.auth-google-btn')
-    expect(google.top, `the Google button starts ${google.top}px down`).toBeLessThanOrEqual(310)
-    expect(google.top, 'and it is on the page').toBeGreaterThan(150)
-    expect(google.bottom, 'and is whole on screen').toBeLessThanOrEqual(844)
-    await ctx.close()
-  })
-
-  // MUTATION: in LoginPage.jsx change `phone && mode === 'signup'` to `false`.
-  //   Opening the sign-up form no longer swaps the band to its short, still form.
-  test('switching to sign-up shortens the band to 72px and back to 120px on log-in', async ({ browser }) => {
-    const { ctx, page } = await phone(browser)
-    watch(page, 'visitor on a phone switching form')
-    await go(page, '/login')
-    expect(Math.abs((await rect(page, '.aw--band')).height - 120)).toBeLessThanOrEqual(1)
-    await page.getByRole('button', { name: /Create one$/ }).click()
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create your free account')
-    await expect.poll(async () => Math.round((await rect(page, '.aw--band')).height)).toBe(72)
-    // The sign-up band is a still strip: no pause button, nothing drifting.
-    expect(await page.locator('.aw-pause').count(), 'a still band carries a pause button').toBe(0)
-    expect(await driftStates(page), 'the sign-up band drifts').toEqual([])
-    await page.getByRole('button', { name: /Log in$/ }).click()
-    await expect.poll(async () => Math.round((await rect(page, '.aw--band')).height)).toBe(120)
-    await ctx.close()
-  })
-})
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Motion
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.describe('the wall moves slowly and can be stopped', () => {
-  // MUTATION: in AuthWall.jsx change `const animated = variant !== 'strip' && !reduced && !still`
-  //   to `const animated = variant !== 'strip' && !still`. Reduced motion then
-  //   gets a pause button and a drift.
-  for (const [label, width] of [['desktop', 1440], ['phone', 390]]) {
-    test(`with reduced motion nothing is animated and there is no pause button (${label})`, async ({ browser }) => {
-      const make = width < 700
-        ? () => phone(browser, width, 844, { reducedMotion: 'reduce' })
-        : async () => { const ctx = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' }); return { ctx, page: await ctx.newPage() } }
-      const { ctx, page } = await make()
-      watch(page, `visitor who asked for less motion, on ${label}`)
+  // Below 1024 the wall is not drawn at all; from 1024 the page is two equal
+  // halves (1fr 1fr) with the wall in the right one.
+  // MUTATION: in v3-pro-auth.css change the wall's @media(min-width:1024px) to 1100px.
+  //   The 1024 cell goes red. Change grid-template-columns:1fr 1fr to 2fr 1fr: all go red.
+  for (const [width, half] of [[1024, 512], [1440, 720], [1920, 960]]) {
+    test(`at ${width} the page is a split: the form half on the left, the wall half on the right`, async ({ browser }) => {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 } })
+      const page = await ctx.newPage()
+      watch(page, `visitor at ${width}`)
       await go(page, '/login')
       await expect(page.locator('main .auth-google-btn')).toBeVisible()
-      expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches),
-        'the context lost its reduced-motion setting').toBe(true)
-      // Let any entrance that was going to start have started.
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
-
-      const seen = await page.evaluate(() => ({
-        running: document.getAnimations().map((a) => a.animationName || a.transitionProperty || 'unnamed'),
-        pause: document.querySelectorAll('.aw-pause').length,
-        copies: document.querySelectorAll('.aw-set--copy').length,
-        motion: document.querySelector('.aw').getAttribute('data-motion'),
-      }))
-      expect(seen.running, 'something is still animating').toEqual([])
-      expect(seen.pause, 'a pause button for a wall that does not move').toBe(0)
-      expect(seen.copies, 'the second copy of the loop is rendered').toBe(0)
-      expect(seen.motion).toBe('false')
+      const wall = await box(page, 'aside.pf-wall')
+      const col = await box(page, 'main .pf-col')
+      expect(wall, 'the wall is not drawn').not.toBeNull()
+      expect(Math.abs(wall.left - half), `the wall starts at ${wall.left}`).toBeLessThanOrEqual(1)
+      expect(Math.abs(wall.width - half), `the wall is ${wall.width}px wide`).toBeLessThanOrEqual(1)
+      expect(col.right, 'the form column is in the left half').toBeLessThanOrEqual(half + 1)
+      expect(await box(page, '.pf-strip'), 'the strip is a phone thing').toBeNull()
       await ctx.close()
     })
   }
 
-  // POSITIVE CONTROL for the above and the tests below: without the setting,
-  // the same page does drift and does have the button.
-  test('without it the wall drifts and the pause button is there', async ({ page }) => {
-    watch(page, 'visitor on the log-in page')
-    await go(page, '/login')
-    await expect(page.locator('.aw')).toHaveAttribute('data-run', 'true')
-    await expect.poll(() => driftStates(page)).toEqual(['running', 'running', 'running'])
-    const btn = page.locator('.aw-pause')
-    await expect(btn).toBeVisible()
-    await expect(btn).toHaveAccessibleName('Pause the moving wall')
-    await expect(btn).toHaveAttribute('aria-pressed', 'false')
+  // MUTATION: in v3-pro-auth.css delete `.pf-col{... max-width:360px`. The column grows to the half.
+  test('the form column never grows past 360px, at 1440 or 1920', async ({ browser }) => {
+    for (const width of [1440, 1920]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 } })
+      const page = await ctx.newPage()
+      await go(page, '/login')
+      await expect(page.locator('main .auth-google-btn')).toBeVisible()
+      const col = await box(page, 'main .pf-col')
+      expect(col.width, `at ${width} the column is ${col.width}px`).toBeLessThanOrEqual(360)
+      expect(col.width, 'the column collapsed').toBeGreaterThan(300)
+      await ctx.close()
+    }
   })
 
-  // MUTATION: in AuthWall.jsx change data-paused={paused ? 'true' : 'false'} to
-  //   data-paused="false". Pressing the button stops nothing.
-  test('pressing pause stops every column, and pressing again resumes them', async ({ page }) => {
-    watch(page, 'visitor who finds the wall distracting')
+  // MUTATION: in v3-pro-auth.css delete `.pf-strip{display:none}` from the 768 query: the strip shows at 768.
+  test('at 768 there is one centred column, with neither the wall nor the strip', async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 768, height: 1024 } })
+    const page = await ctx.newPage()
+    watch(page, 'visitor on a tablet')
     await go(page, '/login')
-    await expect(page.locator('.aw')).toHaveAttribute('data-run', 'true')
-    await expect.poll(() => driftStates(page), 'the drift never started').toEqual(['running', 'running', 'running'])
-
-    const btn = page.locator('.aw-pause')
-    await btn.click()
-    await expect(btn).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.locator('.aw'), 'the wall did not take the paused state').toHaveAttribute('data-paused', 'true')
-    await expect.poll(() => driftStates(page), 'the wall is marked paused but keeps moving').toEqual(['paused', 'paused', 'paused'])
-    await expect(btn).toHaveAccessibleName('Play the moving wall')
-
-    await btn.click()
-    await expect.poll(() => driftStates(page)).toEqual(['running', 'running', 'running'])
-    await expect(btn).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.locator('main .auth-google-btn')).toBeVisible()
+    expect(await box(page, 'aside.pf-wall'), 'the wall is drawn below 1024').toBeNull()
+    expect(await box(page, '.pf-strip'), 'the strip is drawn at 768').toBeNull()
+    const col = await box(page, 'main .pf-col')
+    expect(Math.abs((col.left + col.right) / 2 - 384), 'the column is not centred').toBeLessThanOrEqual(1)
+    expect(col.width).toBeLessThanOrEqual(360)
+    await ctx.close()
   })
 
-  // MUTATION: in AuthWall.jsx delete the sessionStorage.setItem(WALL_PAUSED_KEY, '1')
-  //   call in togglePause. The key is never written and a reload runs again.
-  test('a pause is remembered for the session, and cleared by playing again', async ({ page }) => {
-    watch(page, 'visitor who paused the wall and came back')
+  // MUTATION: in v3-pro-auth.css change `.pf-strip{...height:88px` to 120px.
+  test('at 390 an 88px strip of the wall sits above the form, under the bar', async ({ browser }) => {
+    const { ctx, page } = await phone(browser)
+    watch(page, 'visitor on a phone')
     await go(page, '/login')
-    await expect(page.locator('.aw')).toHaveAttribute('data-run', 'true')
-    expect(await page.evaluate((k) => sessionStorage.getItem(k), PAUSE_KEY), 'it starts unpaused').toBeNull()
-
-    await page.locator('.aw-pause').click()
-    expect(await page.evaluate((k) => sessionStorage.getItem(k), PAUSE_KEY)).toBe('1')
-
-    await page.reload()
-    await expect(page.locator('.aw-pause')).toBeVisible()
-    await expect(page.locator('.aw-pause'), 'the pause did not survive a reload').toHaveAttribute('aria-pressed', 'true')
-    expect(await page.evaluate((k) => sessionStorage.getItem(k), PAUSE_KEY)).toBe('1')
-
-    await page.locator('.aw-pause').click()
-    expect(await page.evaluate((k) => sessionStorage.getItem(k), PAUSE_KEY), 'playing again leaves the key behind').toBeNull()
+    await expect(page.locator('main .auth-google-btn')).toBeVisible()
+    const bar = await box(page, 'header.pf-bar')
+    const strip = await box(page, '.pf-strip')
+    const col = await box(page, 'main .pf-col')
+    expect(strip, 'the strip is not drawn on a phone').not.toBeNull()
+    expect(Math.abs(strip.height - 88), `the strip is ${strip.height}px tall`).toBeLessThanOrEqual(1)
+    expect(strip.top, 'the strip sits under the bar').toBeGreaterThanOrEqual(bar.bottom - 1)
+    expect(col.top, 'the form sits under the strip').toBeGreaterThanOrEqual(strip.bottom - 1)
+    expect(await box(page, 'aside.pf-wall'), 'the full wall is drawn on a phone').toBeNull()
+    await ctx.close()
   })
+})
 
-  // MUTATION: in auth-page.css delete `,.auth-page-form:focus-within ~ .aw .aw-track`
-  //   from the paused-state selector list.
-  test('the drift holds still while a form field has focus', async ({ page }) => {
-    watch(page, 'visitor typing their email')
-    await go(page, '/login')
-    await expect(page.locator('.aw')).toHaveAttribute('data-run', 'true')
-    await expect.poll(() => driftStates(page)).toEqual(['running', 'running', 'running'])
-
-    await page.getByLabel('Email').focus()
-    await expect.poll(() => driftStates(page)).toEqual(['paused', 'paused', 'paused'])
-    await page.getByLabel('Email').blur()
-    await expect.poll(() => driftStates(page)).toEqual(['running', 'running', 'running'])
+test.describe('on a 390x844 phone', () => {
+  // MUTATION: in v3-pro-auth.css give `.pf-main` a padding-top of 400px. Continue is pushed off the screen.
+  test('the Google button and Continue are on screen without scrolling, on log-in and on sign-up', async ({ browser }) => {
+    for (const path of ['/login', '/login?signup=1']) {
+      const { ctx, page } = await phone(browser)
+      watch(page, `visitor on a phone opening ${path}`)
+      await go(page, path)
+      const google = page.locator('main .auth-google-btn')
+      await expect(google).toBeVisible()
+      const g = await box(page, 'main .auth-google-btn')
+      const c = await box(page, 'main .auth-continue')
+      expect(g.top, `${path}: the Google button starts at ${g.top}`).toBeLessThan(500)
+      expect(c.bottom, `${path}: Continue ends at ${c.bottom} of 844`).toBeLessThanOrEqual(844)
+      expect(await ctx.pages()[0].evaluate(() => document.scrollingElement.scrollHeight - innerHeight), `${path}: the page scrolls`).toBeLessThanOrEqual(1)
+      await ctx.close()
+    }
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Leaving, resuming, and the mode toggle
+// The wall is still
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('the wall of samples holds still', () => {
+  // MUTATION: give .pw-col in auth.css or v3-pro-auth.css an `animation: auth-drift 40s linear infinite`.
+  //   The drift count goes above 0.
+  test('nothing drifts, there is no pause button, and the tiles are real pictures', async ({ page }) => {
+    watch(page, 'visitor on a wide screen who dislikes motion')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await go(page, '/login')
+    await expect(page.locator('aside.pf-wall .pw-tile').first()).toBeVisible()
+    expect(await page.locator('aside.pf-wall .pw-tile').count(), 'the wall has tiles').toBeGreaterThanOrEqual(10)
+    expect(await driftStates(page), 'a column drifts').toEqual([])
+    await expect(page.locator('.aw-pause, aside.pf-wall button'), 'the still wall carries a control').toHaveCount(0)
+    await expect(page.locator('aside.pf-wall [data-pro-wall]')).toHaveAttribute('aria-hidden', 'true')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Handing the visitor on
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the /login page hands the visitor on', () => {
@@ -470,7 +318,9 @@ test.describe('the /login page hands the visitor on', () => {
     await expect.poll(search).toBe('')
     await expect.poll(() => page.title()).toBe('UI L4B | Log in')
 
-    // Reset is not a URL of its own: it leaves the address alone.
+    // Reset is not a URL of its own: it leaves the address alone. "Forgot password?" sits
+    // on the password step, so go there first.
+    await continueWithEmail(page)
     await page.getByRole('button', { name: 'Forgot password?' }).click()
     await expect.poll(search).toBe('')
     expect(new URL(page.url()).pathname).toBe('/login')
@@ -486,15 +336,15 @@ test.describe('the /login page hands the visitor on', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The dialog's strip
+// The popup
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('the chosen sign-in dialog shows a still strip of the wall from 768 up', () => {
-  // MUTATION: in LoginPopup.jsx change useMediaQuery('(min-width:768px)') to
-  //   '(min-width:1100px)': the 768 cell goes red. Change it to '(min-width:300px)':
-  //   the 767 and 390 cells go red.
-  for (const [width, strip] of [[1280, true], [768, true], [767, false], [390, false]]) {
-    test(`at ${width} the chosen dialog ${strip ? 'has' : 'has no'} strip`, async ({ browser }) => {
+test.describe('the sign-in popup carries a picture pane from 768 up', () => {
+  // MUTATION: in v3-pro-auth.css delete the `.pp-left{display:none}` line in the
+  //   max-width:767px block: the 767 and 390 cells go red. Hide .pp-left at every
+  //   width: the 1280 and 768 cells go red.
+  for (const [width, picture] of [[1280, true], [768, true], [767, false], [390, false]]) {
+    test(`at ${width} the dialog ${picture ? 'has' : 'has no'} picture pane`, async ({ browser }) => {
       const ctx = await browser.newContext(width < 700
         ? { viewport: { width, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IOS_UA }
         : { viewport: { width, height: 900 } })
@@ -503,56 +353,54 @@ test.describe('the chosen sign-in dialog shows a still strip of the wall from 76
       await openChosenDialog(page, 'Log in')
       const dialog = page.getByRole('dialog', { name: /log in to ui l4b/i })
       await expect(dialog).toBeVisible()
-      // The dialog settles on its width after opening.
-      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity))
+      await expect(dialog).toHaveClass(/\bpp\b/)
+      await expect(dialog).toHaveAttribute('aria-modal', 'true')
+      await expect(dialog.locator('.pp-offer .ui-login-x')).toBeVisible()
+      // The old strip of the wall is gone at every width.
+      await expect(page.locator('.ui-login-strip, .ui-login--strip')).toHaveCount(0)
 
-      if (!strip) {
-        await expect(page.locator('.ui-login-strip')).toHaveCount(0)
-        await expect(page.locator('.ui-login--strip')).toHaveCount(0)
+      const left = dialog.locator('.pp-left')
+      await expect(left).toHaveAttribute('aria-hidden', 'true')
+      if (picture) {
+        await expect(left).toBeVisible()
+        const l = await box(page, '.pp-left')
+        const o = await box(page, '.pp-offer')
+        expect(l.right, 'the picture sits left of the form').toBeLessThanOrEqual(o.left + 1)
       } else {
-        const strips = page.locator('.ui-login-strip')
-        await expect(strips).toHaveCount(1)
-        // The wall loads as its own chunk; its box holds the space until then.
-        await expect(page.locator('.ui-login-strip .aw-tile')).toHaveCount(5)
-        await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity))
-        const m = await page.evaluate(() => {
-          const s = document.querySelector('.ui-login-strip')
-          const pane = document.querySelector('.ui-login-pane')
-          return {
-            hidden: s.getAttribute('aria-hidden'),
-            tiles: s.querySelectorAll('.aw-tile').length,
-            pause: s.querySelectorAll('.aw-pause').length,
-            copies: s.querySelectorAll('.aw-set--copy').length,
-            moving: document.getAnimations().filter((a) => /^auth-drift/.test(a.animationName || '')).length,
-            stripWidth: s.getBoundingClientRect().width,
-            stripRight: s.getBoundingClientRect().right,
-            paneLeft: pane.getBoundingClientRect().left,
-          }
-        })
-        expect(m.hidden, 'the strip is decoration and is hidden from assistive tech').toBe('true')
-        expect(m.tiles, 'the first five exports').toBe(5)
-        expect(m.pause, 'a still strip carries a pause button').toBe(0)
-        expect(m.copies, 'a still strip carries a second copy').toBe(0)
-        expect(m.moving, 'the strip drifts').toBe(0)
-        expect(Math.abs(m.stripWidth - 300), `the strip is ${m.stripWidth}px`).toBeLessThanOrEqual(2)
-        expect(m.stripRight, 'the strip sits left of the form').toBeLessThanOrEqual(m.paneLeft + 1)
+        await expect(left).toBeHidden()
       }
       await ctx.close()
     })
   }
 
-  // MUTATION: in LoginPopup.jsx change `useState(() => !reason && !passwordOnly)`
-  //   to `useState(() => true)`. An interruption then gets the strip.
-  test('an interruption stays plain: the thing they were doing is the reason', async ({ page }) => {
+  // MUTATION: in LoginPopup.jsx stop passing the gate (data-gate={gate}) or infer
+  //   'save' from the wrong reason. The attribute goes red.
+  test('an interruption sets the gate from what they were doing, and still names the reason', async ({ page }) => {
     watch(page, 'visitor interrupted at Save')
     await go(page, '/palette')
     await page.getByRole('button', { name: 'Save or share' }).click()
     await page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: /create your free account/i })
     await expect(dialog).toBeVisible()
-    // POSITIVE CONTROL: it is the interruption, not a plain sign-up.
+    await expect(dialog).toHaveAttribute('data-gate', 'save')
+    // POSITIVE CONTROL: a plain "Log in" from the menu is not that gate.
     await expect(dialog).toContainText('You were about to')
-    await expect(page.locator('.ui-login-strip'), 'an interruption drew the wall').toHaveCount(0)
-    await expect(page.locator('.ui-login--strip')).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await openChosenDialog(page, 'Log in')
+    await expect(page.getByRole('dialog', { name: /log in to ui l4b/i })).not.toHaveAttribute('data-gate', 'save')
+  })
+
+  // MUTATION: in AuthForm.jsx show the password field on step 1. The count goes to 1.
+  test('the popup opens on step 1: no password field until Continue', async ({ page }) => {
+    watch(page, 'visitor logging in from the header')
+    await openChosenDialog(page, 'Log in')
+    const dialog = page.getByRole('dialog', { name: /log in to ui l4b/i })
+    await expect(dialog).toHaveAttribute('data-step', '1')
+    await expect(dialog.locator('#ui-login-password')).toHaveCount(0)
+    await dialog.locator('#ui-login-email').fill('someone@example.test')
+    await dialog.locator('.auth-continue').click()
+    await expect(dialog).toHaveAttribute('data-step', '2')
+    await expect(dialog.locator('#ui-login-password')).toBeVisible()
   })
 })

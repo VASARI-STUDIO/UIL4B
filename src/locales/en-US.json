@@ -509,7 +509,7 @@
     "resetSent": "Password reset email sent",
     "errors": {
       "invalidEmail": "That email address doesn't look complete. Check it and try again.",
-      "invalidCredential": "That email and password don't match. Try again, or reset your password.",
+      "invalidCredential": "That email and password don't match. Try again, or {reset}.",
       "noAccountSwitched": "There's no account for {email} yet. Choose a password below to create one.",
       "emailInUse": "There's already an account for that email.",
       "emailInUseAction": "Log in instead",

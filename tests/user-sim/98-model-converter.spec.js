@@ -308,6 +308,9 @@ test.describe('3D Model Converter', () => {
     await expect(page.locator('#ui-login-title'), 'the download did not ask for an account').toBeVisible()
     // The file must not leave AFTER the dialog either: checking while it is
     // still open passes against a gate whose answer is ignored.
+    // The dialog paints before its Escape listener is attached; the hook moves
+    // focus inside in the same step, so wait for that before pressing the key.
+    await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))).toBe(true)
     await page.keyboard.press('Escape')
     await expect(page.locator('#ui-login-title'), 'the dialog did not close').toHaveCount(0)
     await page.waitForTimeout(500)

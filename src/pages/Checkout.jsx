@@ -4,12 +4,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { openFirebaseGate } from '../utils/firebaseAccess'
-import { PRO_POINTS, BILLING_OPTIONS, BILLED_EVERY, canCheckout, canRetryPrice, priceState, priceStateCopy, resolveOffers } from '../config/planFacts'
+import { PRO_POINTS, BILLING_OPTIONS, canCheckout, canRetryPrice, priceState, priceStateCopy, resolveOffers } from '../config/planFacts'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
 import { usePriceRetry, usePrices, useProPrice, formatPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
 import { EVENTS, sendEvent } from '../utils/productEvents'
-import { renewalDisclosure, quotableAmount } from '../utils/renewalDisclosure'
+import { renewalDisclosure, quotableAmount, periodWords } from '../utils/renewalDisclosure'
 import { verifyErrorText } from '../utils/emailVerification'
 import { checkoutErrorText, checkoutErrorAction, plainError } from '../utils/checkoutError'
 import ReportProblemLink from '../components/ReportProblemLink'
@@ -19,40 +19,22 @@ import useMediaQuery from '../hooks/useMediaQuery'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
-// This page's own sheet: every rule under `.checkout-page`, so it wins by
-// specificity rather than by a chunk order Vite does not promise.
+// This page's own sheet: every rule under `.ck`, so it wins by specificity
+// rather than by a chunk order Vite does not promise.
 import '../styles/pages/checkout.css'
-
-// THE TRIAL SENTENCE IS DERIVED, NOT TYPED.
-//
-// It used to be the string "7-day free trial" sitting here next to
-// `if (isYearly) trial_period_days = 7` in api/create-checkout.js, with nothing
-// holding the two together. A page that promises a trial the server does not
-// grant is a bug whose only symptom is a card statement, so the number comes
-// off PLAN_LADDER — which tests/unit/trial-cadence.test.js pins to the server's
-// own TRIAL_DAYS table.
-function trialLine(planId) {
-  const days = PLAN_LADDER.find((entry) => entry.id === planId)?.trialDays || 0
-  if (days <= 0) return null
-  return days + '-day free trial \u2014 you won\u2019t be charged today'
-}
 
 const PLANS = {
   monthly: {
     interval: 'monthly',
     name: 'UI L4B Pro',
     cadence: 'Monthly',
-    per: 'per month',
     months: 1,
-    trial: trialLine('monthly'),
   },
   yearly: {
     interval: 'yearly',
     name: 'UI L4B Pro',
     cadence: 'Yearly',
-    per: 'per year',
     months: 12,
-    trial: trialLine('yearly'),
   },
 }
 
@@ -72,6 +54,11 @@ const CADENCE_WORDS = (() => {
   const labels = BILLING_OPTIONS.map((o) => o.label)
   return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}` : labels.join('')
 })()
+
+// The shared outage sentence the unavailable panel closes on, read from the
+// price copy rather than typed here.
+const PRICE_UNDER = priceStateCopy('unreachable', {}).under
+const PRICE_CHECKING = priceStateCopy('loading', {}).line1
 
 // STRIPE'S EMBEDDED CHECKOUT, ONE INSTANCE AT A TIME.
 //
@@ -142,22 +129,147 @@ function CheckoutEmbed({ fetchClientSecret, onReady, onFail, onPaying }) {
   return <div ref={nodeRef} className="checkout-embed" />
 }
 
-function Check() {
+function Tick() {
   return (
-    <svg className="checkout-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
   )
 }
 
-function SignInToPay({ className = '', cadence, onClick }) {
+function Chevron({ direction }) {
   return (
-    <div className={`checkout-signin ${className}`.trim()}>
-      <strong className="checkout-signin-h">Log in or create an account to pay</strong>
-      <span className="checkout-signin-p">
-        Pro is attached to an account, so the payment form opens once you’re logged in. Your {cadence.toLowerCase()} choice stays selected.
-      </span>
-      <button type="button" className="btn btn-accent checkout-signin-btn" onClick={onClick}>Log in to continue</button>
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={direction === 'back' ? 'M15 6l-6 6 6 6' : 'M6 9l6 6 6-6'} />
+    </svg>
+  )
+}
+
+function GoArrow() {
+  return (
+    <span className="mi-go ck-well" aria-hidden="true">
+      <svg className="mi-a" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 17L17 7M8 7h9v9" /></svg>
+    </span>
+  )
+}
+
+// ── Dates ───────────────────────────────────────────────────────────────────
+// The bill names the real day each charge lands, worked from today and the
+// ladder's trial length. Whole-month steps clamp to the month's last day.
+const DATE_FORMAT = new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+function addDays(date, days) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+function addMonths(date, months) {
+  const next = new Date(date.getFullYear(), date.getMonth() + months, 1)
+  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()
+  next.setDate(Math.min(date.getDate(), lastDay))
+  return next
+}
+function longDate(date, withYear) {
+  const parts = Object.fromEntries(DATE_FORMAT.formatToParts(date).map((p) => [p.type, p.value]))
+  return `${parts.weekday} ${parts.day} ${parts.month}${withYear ? ` ${parts.year}` : ''}`
+}
+
+const NO_FIGURE = '—'
+const NBSP = ' '
+
+// The "today, then, later" bill for one billing period. Every amount comes from
+// the offer the price service answered for; with none, each figure is a dash.
+// `offer` is { label, months, total, trialDays }, `other` the period not chosen.
+function billModel({ offer, other, fmt, today, figures, checking }) {
+  const per = periodWords(offer.months) || 'period'
+  const amt = figures && typeof offer.total === 'number' ? fmt(offer.total) : null
+  const stops = []
+  if (offer.trialDays > 0) {
+    const first = addDays(today, offer.trialDays)
+    const renews = addMonths(first, offer.months)
+    const span = offer.months === 1 ? '1 month' : `${offer.months} months`
+    stops.push({
+      key: 'today',
+      now: true,
+      label: 'Today',
+      fig: amt ? fmt(0) : NO_FIGURE,
+      sen: `Pro opens on this account and your ${offer.trialDays}-day free trial starts.`,
+    }, {
+      key: 'first',
+      label: longDate(first, first.getFullYear() !== today.getFullYear()),
+      fig: amt || NO_FIGURE,
+      sen: `The first payment, for the ${per}.`,
+    }, {
+      key: 'later',
+      label: longDate(renews, true),
+      fig: amt || NO_FIGURE,
+      sen: amt
+        ? `Nothing more to pay for ${span}. Then ${amt} again, every ${per} until you cancel.`
+        : `Nothing more to pay for ${span}. Then it renews every ${per} until you cancel.`,
+    })
+  } else {
+    stops.push({
+      key: 'today',
+      now: true,
+      label: 'Today',
+      fig: amt || NO_FIGURE,
+      sen: `${offer.label} has no trial, so the first payment is taken today.`,
+    }, {
+      key: 'later',
+      label: 'Then',
+      fig: amt ? (offer.months === 1 ? `${amt} a ${per}` : `${amt} every ${per}`) : NO_FIGURE,
+      sen: `Renews every ${per} until you cancel.`,
+    })
+  }
+  let otherLine = ''
+  if (checking) otherLine = PRICE_CHECKING
+  else if (other && typeof other.total === 'number') {
+    if (other.months === 1) {
+      otherLine = `${other.label} is ${fmt(other.total)}${NBSP}a${NBSP}month${other.trialDays === 0 ? `, with no${NBSP}free${NBSP}trial.` : '.'}`
+    } else {
+      otherLine = `${other.label} works out at ${fmt(other.total / other.months)}${NBSP}a${NBSP}month.`
+    }
+  }
+  return { stops, otherLine }
+}
+
+function BillStops({ model, className = '', ghost = false }) {
+  return (
+    <div className={`ck-stops${className ? ` ${className}` : ''}${ghost ? ' gh' : ''}`} aria-hidden={ghost || undefined}>
+      {model.stops.map((stop) => (
+        <div className="ck-stop" key={stop.key}>
+          <span className={`ck-dot${stop.now ? ' now' : ''}`} aria-hidden="true" />
+          <div className="ck-row">
+            <p className="ck-lab">{stop.label}</p>
+            <p className="ck-fig">{stop.fig}</p>
+          </div>
+          <p className="ck-sen">{stop.sen}</p>
+        </div>
+      ))}
+      <p className="ck-small ck-other">{model.otherLine}</p>
+    </div>
+  )
+}
+
+// A refusal sentence, reworded for the phone where the message sits above the
+// form and the action below it. Anything that does not end the way the shared
+// sentences do stays in the panel, unchanged.
+const SIGN_IN_TAIL = 'Log in again to continue.'
+const CONNECTION_TAIL = 'Check your connection, then try again.'
+function belowForm(text, code) {
+  if (!text) return ''
+  if (code === 'log-in' && text.endsWith(SIGN_IN_TAIL)) return `${text.slice(0, -SIGN_IN_TAIL.length)}Log in again below to continue.`
+  if (text.endsWith(CONNECTION_TAIL)) return `${text.slice(0, -'try again.'.length)}try again below.`
+  return ''
+}
+
+function SignInGate({ cadence, onClick }) {
+  return (
+    <div className="ck-blk ck-gate">
+      <h3 className="ck-bh" data-errfocus="1" tabIndex={-1}>Log in or create an account to pay</h3>
+      <p className="ck-bp">Pro is attached to an account, so the payment form opens once you’re logged in. Your {cadence.toLowerCase()} choice stays selected.</p>
+      <div className="ck-ba">
+        <button type="button" className="ck-go" onClick={onClick}>Log in to continue<GoArrow /></button>
+      </div>
     </div>
   )
 }
@@ -183,18 +295,17 @@ function VerifyEmailPrompt({ email, onResend, onRetry }) {
   }
   return (
     <>
-      <span className="checkout-error-p" role="status">
+      <p className="ck-bp" role="status">
         {state === 'sent'
-          ? <> Link sent{email ? <> to {email}</> : null}. Check your inbox and spam folder.</>
-          : <> We sent a link{email ? <> to {email}</> : null} when you signed up. Open it, or send a new one.</>}
-      </span>
-      {state === 'failed' && <span className="checkout-error-p" role="alert"> {failure}</span>}
-      <div>
-        <button type="button" className="btn btn-s checkout-error-retry" aria-disabled={state === 'sending' || undefined} onClick={resend}>
+          ? <>Link sent{email ? <> to {email}</> : null}. Check your inbox and spam folder.</>
+          : <>We sent a link{email ? <> to {email}</> : null} when you signed up. Open it, or send a new one.</>}
+      </p>
+      {state === 'failed' && <p className="ck-bp" role="alert">{failure}</p>}
+      <div className="ck-ba">
+        <button type="button" className="ck-ghost mi-ring" aria-disabled={state === 'sending' || undefined} onClick={resend}>
           {state === 'sending' ? 'Sending…' : state === 'sent' ? 'Resend link' : 'Send link'}
         </button>
-        {' '}
-        <button type="button" className="btn btn-s checkout-error-retry" onClick={onRetry}>I’ve verified, try again</button>
+        <button type="button" className="ck-go plain" onClick={onRetry}>I’ve verified, try again</button>
       </div>
     </>
   )
@@ -206,13 +317,16 @@ export default function Checkout() {
   const { user, loading, sendVerificationEmail, refreshEmailVerified } = useAuth()
   const { isPro, createCheckoutSession } = useSubscription()
   const { requireLogin } = useLoginPrompt()
-  // The features list is open beside the form and folded on a phone. The
-  // breakpoint is the sheet's one-column break.
-  const wide = useMediaQuery('not all and (max-width: 760px)')
+  // The features list is open beside the form and folded on a phone, where the
+  // summary also stacks above the form and the bill reads as rows.
+  const wide = useMediaQuery('not all and (max-width: 599px)')
 
   // Which surface sent the buyer here (the export gallery sends `kit-gallery`).
   const from = params.get('from')
-  const requestedPlan = params.get('plan')
+  // `?plan=` is what every link to this page writes; `?period=` is read as the
+  // same choice and wins when both are present.
+  const periodParam = params.get('period')
+  const requestedPlan = Object.hasOwn(PLANS, periodParam) ? periodParam : params.get('plan')
   const planKey = Object.hasOwn(PLANS, requestedPlan) ? requestedPlan : null
   const plan = PLANS[planKey]
   const proPrice = useProPrice()
@@ -241,8 +355,19 @@ export default function Checkout() {
   // server reported it, keyed by period so a late answer for a period the buyer
   // has left cannot colour the one on screen.
   const [sessionCurrencies, setSessionCurrencies] = useState({})
+  // Counts period changes; its parity restarts the short fade on the bill.
+  const [changes, setChanges] = useState(0)
+  const [today] = useState(() => new Date())
   const startedSent = useRef(false)
   const errorRef = useRef(null)
+  const statusRef = useRef(null)
+  const frameRef = useRef(null)
+  const segRefs = useRef({})
+  const focusSeg = useRef(null)
+  // Set when the buyer asks for the form again, so focus lands on the loading
+  // line and then on the form instead of being lost with the panel they used.
+  const retryFocus = useRef(false)
+  const invalidRef = useRef(null)
 
   // A refusal arrives after the buyer has been looking at the form, and on a
   // phone the panel can sit below the fold: bring it into view and focus it so
@@ -253,6 +378,12 @@ export default function Checkout() {
     errorRef.current.scrollIntoView?.({ block: 'center' })
   }, [error])
 
+  // A link without a usable period lands on the invalid-selection card, which
+  // takes focus on its heading.
+  useEffect(() => {
+    if (!planKey) invalidRef.current?.focus({ preventScroll: true })
+  }, [planKey])
+
   // The billing-period choices are the ladder's buyable cadences that this
   // page has a case for, each with the saving /plans prints on its own tab.
   const resolved = resolveOffers({ prices, currency: proPrice.currency, loaded: proPrice.loaded })
@@ -261,37 +392,65 @@ export default function Checkout() {
   // the period chosen here.
   const chosenOption = periodOptions.find((o) => o.checkoutPlan === planKey)
   const plansHref = chosenOption ? `/plans?billing=${chosenOption.id}` : '/plans'
+  // Shortest period first. With no offers at all the tray still offers both.
+  const segments = (periodOptions.length
+    ? periodOptions.map((o) => ({ key: o.checkoutPlan, label: o.label, months: o.months, saving: o.savingLabel }))
+    : Object.values(PLANS).map((p) => ({ key: p.interval, label: p.cadence, months: p.months, saving: '' }))
+  ).sort((a, b) => a.months - b.months)
 
   // The plan lives in the URL, so a reload, the sign-in hand-off and the
   // session request all read the same choice. `replace` keeps Back going to
   // the page before checkout rather than through every period tried.
-  const choosePlan = (next) => {
+  const choosePlan = (next, { focus = false } = {}) => {
     if (paying || next === planKey || !Object.hasOwn(PLANS, next)) return
     setError(''); setErrorCode('')
+    if (focus) focusSeg.current = next
+    setChanges((n) => n + 1)
     setParams((prev) => {
       const nextParams = new URLSearchParams(prev)
       nextParams.set('plan', next)
+      nextParams.delete('period')
       return nextParams
     }, { replace: true })
   }
+  useEffect(() => {
+    if (focusSeg.current && focusSeg.current === planKey) {
+      segRefs.current[planKey]?.focus()
+      focusSeg.current = null
+    }
+  }, [planKey])
+  const onTrayKey = (event) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key]
+    if (!step && event.key !== 'Home' && event.key !== 'End') return
+    event.preventDefault()
+    if (paying) return
+    const at = segments.findIndex((s) => s.key === planKey)
+    const to = event.key === 'Home' ? 0 : event.key === 'End' ? segments.length - 1 : (at + step + segments.length) % segments.length
+    choosePlan(segments[to].key, { focus: true })
+  }
+
   // THE AMOUNT AND THE NOTE COME OFF THE LADDER (`chosenOption`, from
   // resolveOffers), whatever the cadence — there is no per-cadence branch to
   // forget when a cadence is added. The amount is the total charged each
-  // period; the note names the per-month rate and how often it bills.
+  // period.
   const amount = chosenOption?.available ? formatPrice(chosenOption.total, proPrice.currency) : null
-  const ladderEntry = PLAN_LADDER.find((entry) => entry.id === planKey)
-  // The amount is quoted only when the price service confirmed it live AND the
-  // payment session was created in the currency that amount is shown in. A
-  // returning customer with a locked currency gets a session in that currency
-  // whatever the page asked for, so the server reports the currency it used
-  // and a mismatch (or no report yet) drops the figure. Without one the terms
-  // say how the plan renews and leave the figure to Stripe's own form.
-  const amountLive = !!amount && proPrice.source[planKey] === 'live'
-  const renewal = renewalDisclosure({
-    trialDays: ladderEntry?.trialDays || 0,
-    amount: quotableAmount({ amount, live: amountLive, displayCurrency: proPrice.currency, sessionCurrency: sessionCurrencies[planKey] }),
-    months: plan?.months,
-  })
+  // The renewal line for one period. The amount is quoted only when the price
+  // service confirmed it live AND the payment session was created in the
+  // currency that amount is shown in. A returning customer with a locked
+  // currency gets a session in that currency whatever the page asked for, so
+  // the server reports the currency it used and a mismatch (or no report yet)
+  // drops the figure. Without one the terms say how the plan renews and leave
+  // the figure to Stripe's own form.
+  const renewalFor = (key) => {
+    const offer = periodOptions.find((o) => o.checkoutPlan === key)
+    const quoted = offer?.available ? formatPrice(offer.total, proPrice.currency) : null
+    return renewalDisclosure({
+      trialDays: PLAN_LADDER.find((entry) => entry.id === key)?.trialDays || 0,
+      amount: quotableAmount({ amount: quoted, live: !!quoted && proPrice.source[key] === 'live', displayCurrency: proPrice.currency, sessionCurrency: sessionCurrencies[key] }),
+      months: PLANS[key]?.months,
+    })
+  }
+  const renewal = renewalFor(planKey)
   // The price state is one of loading, retrying, unreachable, no-currency,
   // cadence-missing or live, the same state and the same words /plans and
   // Settings use (planFacts.js). `useProPrice` reports `loaded: true` once the
@@ -300,24 +459,8 @@ export default function Checkout() {
   // from a missing amount. Only `live` sells: the payment form mounts on it.
   const priceStatus = priceState({ price: proPrice, offers: resolved.offers, selectedId: chosenOption?.id, retrying })
   const otherOption = resolved.offers.find((o) => o.id !== chosenOption?.id)
-  const priceCopy = priceStateCopy(priceStatus, { currencyLabel: proPrice.currencyLabel, selectedLabel: chosenOption?.label, otherLabel: otherOption?.label })
-  const note = !proPrice.loaded
-    // Not settled: no rate yet, because there is no offer to take it from. The
-    // loading and retrying states share one line.
-    ? priceCopy.line1
-    : priceStatus === 'unreachable'
-      ? priceCopy.line1
-      // THE SERVICE ANSWERED FOR OTHER CADENCES, BUT NOT WITH A LIVE PRICE FOR
-      // THIS ONE IN THIS CURRENCY (a fallback default is not one). Without this
-      // branch the line would print "GBP · null/mo". Settings' sentence for the
-      // same state.
-      : !amount
-        ? priceCopy.line1
-        : chosenOption.months > 1
-          // A cadence longer than a month names its per-month rate, how often it
-          // bills, and its saving when it has one.
-          ? `${proPrice.currencyLabel} · ${formatPrice(chosenOption.total / chosenOption.months, proPrice.currency)}/mo · billed ${BILLED_EVERY[chosenOption.id]}${chosenOption.saving > 0 ? ` · Save ${chosenOption.saving}%` : ''}`
-          : `${proPrice.currencyLabel} · billed ${BILLED_EVERY[chosenOption.id] || 'monthly'} · cancel any time`
+  const priceContext = { currencyLabel: proPrice.currencyLabel, selectedLabel: chosenOption?.label, otherLabel: otherOption?.label }
+  const priceCopy = priceStateCopy(priceStatus, priceContext)
 
   useEffect(() => {
     if (sessionPlan === planKey) return undefined
@@ -364,220 +507,316 @@ export default function Checkout() {
     requireLogin('pay for Pro', { reasons: ['Pro is attached to your account, so payment needs one.'] })
   }
 
+  // What the payment panel shows, in the order the checks run.
+  const kind = loading
+    ? 'checking'
+    : !user
+      ? 'gate'
+      : !proPrice.loaded
+        ? 'pricewait'
+        // No live price for this cadence in this currency (not `live`, or no
+        // amount): no payment form. The server would refuse it, or worse,
+        // charge something the summary does not show.
+        : !canCheckout(priceStatus) || !amount
+          ? 'unavail'
+          : !hasStripeKey
+            ? 'nokey'
+            : error
+              ? (errorCode === 'email-unverified' ? 'verify' : 'error')
+              : 'form'
+
+  // Asking for the form again: focus the loading line, then the form once it
+  // is there. A new refusal goes to its own heading instead (see above).
+  useEffect(() => {
+    if (!retryFocus.current) return
+    if (error) { retryFocus.current = false; return }
+    if (kind !== 'form') return
+    if (!formReady) { statusRef.current?.focus({ preventScroll: true }); return }
+    retryFocus.current = false
+    const active = document.activeElement
+    if (!active || active === document.body || active === statusRef.current) frameRef.current?.focus({ preventScroll: true })
+  }, [error, formReady, kind])
+
   if (user && isPro) return null
   if (!plan) {
     return (
-      <div className="sec checkout-page">
-        <div className="checkout-return">
-          <div className="card checkout-return-card">
-            <div className="checkout-error-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-            </div>
-            <h1>Invalid checkout selection</h1>
-            {/* The cadences are read from the plan ladder, not typed. */}
-            <p>Choose {CADENCE_WORDS} from Plans. No payment session was created.</p>
-            <NavLink to="/plans" className="btn btn-accent">Back to Plans</NavLink>
+      <div className="ck">
+        <section className="ck-ret ck-ret--solo">
+          <h1 className="ck-rh" data-errfocus="1" tabIndex={-1} ref={invalidRef}>Invalid checkout selection</h1>
+          {/* The cadences are read from the plan ladder, not typed. */}
+          <p className="ck-rp" role="status">Choose {CADENCE_WORDS} from Plans. No payment session was created.</p>
+          <div className="ck-ract">
+            <NavLink to="/plans" className="ck-go">Back to Plans<GoArrow /></NavLink>
           </div>
-        </div>
+        </section>
       </div>
     )
   }
 
+  // ── The bill ──────────────────────────────────────────────────────────────
+  const fmt = (n) => formatPrice(n, proPrice.currency)
+  const offerFor = (key) => {
+    const found = periodOptions.find((o) => o.checkoutPlan === key)
+    return {
+      label: found?.label || PLANS[key].cadence,
+      months: PLANS[key].months,
+      total: found?.available ? found.total : null,
+      trialDays: PLAN_LADDER.find((entry) => entry.id === key)?.trialDays || 0,
+    }
+  }
+  const otherKey = Object.keys(PLANS).find((key) => key !== planKey)
+  const live = priceStatus === 'live'
+  const checking = priceStatus === 'loading'
+  const shown = offerFor(planKey)
+  const unshown = offerFor(otherKey)
+  const bill = billModel({ offer: shown, other: live ? unshown : null, fmt, today, figures: live && shown.total !== null, checking })
+  const ghostBill = billModel({ offer: unshown, other: live ? shown : null, fmt, today, figures: live && unshown.total !== null, checking })
+  const outage = ['retrying', 'unreachable', 'no-currency', 'cadence-missing'].includes(priceStatus)
+  // While Stripe is being asked again the outage block keeps the height of the
+  // one it replaces, by holding that one's lines invisibly under the new ones.
+  const ghostCopy = priceStatus === 'retrying' ? priceStateCopy('unreachable', priceContext) : null
+  const fade = changes === 0 ? '' : changes % 2 ? 'ck-fx-a' : 'ck-fx-b'
+
+  // On a phone the one-line reason sits under the heading, above the form, and
+  // the panel keeps only the action.
+  const stripeDown = priceStatus === 'unreachable' || priceStatus === 'retrying'
+  const leadError = wide ? '' : kind === 'error' ? belowForm(error, errorCode) : stripeDown ? priceStateCopy('unreachable', priceContext).line1 : ''
+  const leadId = 'ck-lead-err'
+
+  const lockId = 'ck-lock'
+  const backToSettings = user
+    ? <NavLink to="/settings" className={`ck-lnk${wide ? ' ck-back-settings' : ' ck-after'}`}><Chevron direction="back" />Back to settings</NavLink>
+    : null
+
+  // How the plan renews and what subscribing agrees to, directly above the
+  // payment form in every layout. The block stays mounted while the period
+  // changes, so its polite live region announces the new wording.
+  const disclosure = (
+    <div className="checkout-disclosure">
+      <div className={`ck-twin ${fade}`.trim()}>
+        <p className="checkout-renewal" aria-live="polite" aria-atomic="true">{renewal}</p>
+        <p className="ck-renew gh" aria-hidden="true">{renewalFor(otherKey) || NBSP}</p>
+      </div>
+      <p className="checkout-terms">
+        By subscribing you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+      </p>
+    </div>
+  )
+
+  const gate = <SignInGate cadence={plan.cadence} onClick={signInToPay} />
+  const included = wide
+    ? (
+      <>
+        <div className="ck-div" />
+        <h3 className="ck-h3">What’s included</h3>
+        <ul className="ck-pts">
+          {FEATURES.map((f) => <li key={f}><Tick /><span>{f}</span></li>)}
+        </ul>
+      </>
+    )
+    : (
+      <details className="ck-det">
+        <summary>What’s included<Chevron direction="down" /></summary>
+        <ul className="ck-pts">
+          {FEATURES.map((f) => <li key={f}><Tick /><span>{f}</span></li>)}
+        </ul>
+      </details>
+    )
+
   return (
-    <div className="sec checkout-page">
-      <div className="sec-h checkout-head">
+    <div className="ck">
+      <header className="ck-head">
         {/* NO TAXONOMY EYEBROW. It is a common AI tell, and the same element was
             removed from the Font Gallery, Font Pair, the Type Scale and the
-            Tint tool. A 10px mono-caps label restating
-            the page's own section, directly above an h1 that names the page,
-            on a route the nav already has lit. Hierarchy is a control, not a
-            label. */}
-        <NavLink to={plansHref} className="checkout-back checkout-back--plans">
-          <span aria-hidden="true">←</span> Back to Plans
-        </NavLink>
-        <h1>Upgrade to Pro</h1>
-        <p>Complete your subscription securely. Your payment is processed by Stripe.</p>
-      </div>
+            Tint tool. A 10px mono-caps label restating the page's own section,
+            directly above an h1 that names the page, on a route the nav already
+            has lit. Hierarchy is a control, not a label. */}
+        <NavLink to={plansHref} className="ck-lnk"><Chevron direction="back" />Back to Plans</NavLink>
+        <h1 className="ck-h1">Upgrade to Pro</h1>
+        <div className="ck-lead-cell">
+          <p className={`ck-lead${paying || leadError ? ' off' : ''}`}>Complete your subscription securely. Your payment is processed by Stripe.</p>
+          <p className={`ck-lead lk${paying ? '' : ' off'}`} id={lockId} role="status">{paying ? 'Payment in progress, so the billing period can’t change now.' : ''}</p>
+          {leadError && <p className="ck-lead ck-lead-err" id={leadId} role={kind === 'error' ? undefined : 'status'}>{leadError}</p>}
+        </div>
+      </header>
 
-      <div className="checkout-grid">
-        {/* Order summary */}
-        <aside className="checkout-summary">
-          <div className="card checkout-summary-card">
-            {/* Native radios, so arrow keys, Space and the screen reader's
-                "1 of 2" come from the platform. Each input is stretched
-                invisibly over its label, which is the visible target. */}
-            <div className={`checkout-period${paying ? ' is-locked' : ''}`} role="radiogroup" aria-labelledby="checkout-period-label" aria-describedby={paying ? 'checkout-period-locked' : undefined}>
-              <span id="checkout-period-label" className="sr-only">Billing period</span>
-              {periodOptions.map((o) => {
-                const on = o.checkoutPlan === planKey
+      <div className="ck-grid">
+        <div className="ck-col">
+          <section className="ck-sum" aria-labelledby="ck-pt">
+            <span className="ck-spec" aria-hidden="true"><i /></span>
+            <h2 className="ck-pt" id="ck-pt">{plan.name}</h2>
+            {/* Buttons with the radio role, so the group is one tab stop and
+                the arrow keys move the choice, as /plans' own switch does. */}
+            <div className="ck-tray" role="radiogroup" aria-label="Billing period" aria-describedby={paying ? lockId : undefined} onKeyDown={onTrayKey}>
+              {segments.map((s) => {
+                const on = s.key === planKey
                 return (
-                  <label key={o.id} className={`checkout-period-opt${on ? ' is-on' : ''}`}>
-                    <input
-                      type="radio"
-                      name="checkout-period"
-                      value={o.checkoutPlan}
-                      checked={on}
-                      disabled={paying}
-                      onChange={() => choosePlan(o.checkoutPlan)}
-                    />
-                    <span className="checkout-period-label">{o.label}</span>
-                    {/* Always rendered; empty, it takes no line (see the sheet),
-                        and the row's 48px floor means a saving arriving with
-                        the live prices does not grow it. */}
-                    <span className="checkout-period-save">{o.savingLabel}</span>
-                  </label>
+                  <button
+                    key={s.key}
+                    type="button"
+                    role="radio"
+                    className={`ck-seg${on ? ' on' : ''}`}
+                    data-seg={s.key}
+                    aria-checked={on}
+                    aria-disabled={paying ? 'true' : undefined}
+                    tabIndex={on ? 0 : -1}
+                    ref={(el) => { segRefs.current[s.key] = el }}
+                    onClick={() => choosePlan(s.key)}
+                  >
+                    {s.label}{s.saving ? ` · ${s.saving}` : ''}
+                  </button>
                 )
               })}
             </div>
-            {paying && (
-              <p id="checkout-period-locked" className="checkout-period-locked">Payment in progress, so the billing period can’t change now.</p>
-            )}
-
-            {/* Announces the new cadence and price after a period change. */}
-            <div className="checkout-plan-head" aria-live="polite" aria-atomic="true">
-              <div>
-                <div className="checkout-plan-name">{plan.name}</div>
-                <div className="checkout-plan-cadence">{plan.cadence} plan</div>
-              </div>
-              <div className="checkout-plan-price">
-                {/* Without an amount the slot prints the state's word from the
-                    shared copy, and neither the cadence suffix nor the trial
-                    band below renders: `loaded` means settled, not known. */}
-                <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{amount || priceCopy.word}</span>
-                {amount && <span className="checkout-plan-per">{plan.per}</span>}
-              </div>
-            </div>
-
-            <div className="checkout-plan-note">{note}</div>
-
-            {/* usePrices caches the failure for the life of the module, so
-                without this the summary stays on "Unavailable" until a full
-                reload. Same control and same label as /plans. */}
-            {canRetryPrice(priceStatus) && (
-              <button
-                type="button"
-                className="btn btn-s checkout-price-retry"
-                aria-disabled={priceStatus === 'retrying' ? 'true' : undefined}
-                aria-busy={priceStatus === 'retrying' ? 'true' : undefined}
-                onClick={() => { if (priceStatus !== 'retrying') retry() }}
-              >
-                {priceCopy.button}
-              </button>
-            )}
-
-            {plan.trial && amount && (
-              <div className="checkout-trial">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                {plan.trial}
-              </div>
-            )}
 
             {/* In one column the panel sits below this whole card, so the
-                sign-in comes up here, above the features list; the panel's
-                copy is hidden at that width. */}
-            {!loading && !user && <SignInToPay className="checkout-signin--inline" cadence={plan.cadence} onClick={signInToPay} />}
+                sign-in comes up here, above the bill; the panel has none. */}
+            {!wide && kind === 'gate' && gate}
 
-            <details className="checkout-included" open={wide}>
-              <summary>What’s included</summary>
-              <ul className="checkout-features">
-                {FEATURES.map(f => (
-                  <li key={f}><Check /> {f}</li>
-                ))}
-              </ul>
-            </details>
-          </div>
-        </aside>
-
-        {/* Embedded Stripe checkout */}
-        <div className={`checkout-form card${!loading && !user ? ' is-signed-out' : ''}`}>
-          {loading ? (
-            <div className="checkout-error">Checking your account…</div>
-          ) : !user ? (
-            <SignInToPay cadence={plan.cadence} onClick={signInToPay} />
-          ) : !proPrice.loaded ? (
-            <div className="checkout-error">Checking the live Stripe price…</div>
-          ) : !canCheckout(priceStatus) || !amount ? (
-            // No live price for this cadence in this currency (not `live`, or no
-            // amount): no payment form.
-            // The server would refuse it, or worse, charge something the
-            // summary does not show.
-            <div className="checkout-error">
-              <strong className="checkout-error-h">Checkout unavailable</strong>
-              <span className="checkout-error-p">{priceCopy.line2 || note}</span>
-            </div>
-          ) : !hasStripeKey ? (
-            <div className="checkout-error">
-              Payments aren’t configured yet. Set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in your environment to enable checkout.
-            </div>
-          ) : error ? (
-            <div className="checkout-error" role="alert" tabIndex={-1} ref={errorRef}>
-              {errorCode === 'email-unverified' ? (
-                <>
-                  <strong className="checkout-error-h">Verify your email to continue</strong>
-                  <VerifyEmailPrompt
-                    email={user.email}
-                    onResend={sendVerificationEmail}
-                    onRetry={async () => {
-                      await refreshEmailVerified().catch(() => {})
-                      setError(''); setErrorCode('')
-                    }}
-                  />
-                </>
-              ) : (
-                <>
-                  <strong className="checkout-error-h">Checkout unavailable</strong>
-                  <span className="checkout-error-p">{error}</span>
-                  {errorCode === 'log-in' ? (
-                    // The session is no good, so a retry would fail the same way:
-                    // sign in again (forced, though the account looks signed in),
-                    // then ask for the form again.
-                    <button className="btn btn-s checkout-error-retry" onClick={() => {
-                      requireLogin('continue to checkout', { force: true, email: user?.email }).then((back) => {
-                        if (back) { setError(''); setErrorCode('') }
-                      })
-                    }}>Log in</button>
-                  ) : (
-                    <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); setErrorCode(''); }}>Try again</button>
+            {/* Announces the new cadence and its charges after a period change. */}
+            <div className="ck-bill" aria-live="polite" aria-atomic="true">
+              <span className="sr-only">{plan.cadence} plan</span>
+              {outage ? (
+                <div className="ck-out">
+                  <p className="ck-fig">{priceCopy.word}</p>
+                  {!leadError && (
+                    <div className="ck-twin">
+                      <p className="ck-sen">{priceCopy.line1}</p>
+                      {ghostCopy && <p className="ck-sen gh" aria-hidden="true">{ghostCopy.line1}</p>}
+                    </div>
                   )}
-                </>
-              )}
-              {/* Quiet, and drawn only where the Feedback bubble is hidden. */}
-              {errorCode !== 'email-unverified' && (
-                <div><ReportProblemLink subject="Problem at checkout" /></div>
+                  {(priceCopy.line2 || ghostCopy?.line2) && (
+                    <div className="ck-twin">
+                      <p className="ck-sen ck-small">{priceCopy.line2}</p>
+                      {ghostCopy && <p className="ck-sen ck-small gh" aria-hidden="true">{ghostCopy.line2}</p>}
+                    </div>
+                  )}
+                  {priceCopy.button && (
+                    // usePrices caches the failure for the life of the module, so
+                    // without this the summary stays on "Unavailable" until a full
+                    // reload. Same control and same label as /plans.
+                    <div className="ck-act">
+                      <button
+                        type="button"
+                        className="ck-ghost mi-ring"
+                        aria-disabled={priceStatus === 'retrying' ? 'true' : undefined}
+                        aria-busy={priceStatus === 'retrying' ? 'true' : undefined}
+                        onClick={() => {
+                          if (priceStatus === 'cadence-missing') choosePlan(otherKey, { focus: true })
+                          else if (canRetryPrice(priceStatus) && priceStatus !== 'retrying') retry()
+                        }}
+                      >
+                        {priceCopy.button}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="ck-twin">
+                  <BillStops model={bill} className={fade} />
+                  <BillStops model={ghostBill} ghost />
+                </div>
               )}
             </div>
-          ) : (
-            <>
-              {/* How the plan renews and what subscribing agrees to, directly
-                  above the payment form in every layout. The block stays
-                  mounted while the period changes, so its polite live region
-                  announces the new wording. */}
-              <div className="checkout-disclosure">
-                <p className="checkout-renewal" aria-live="polite" aria-atomic="true">{renewal}</p>
-                <p className="checkout-terms">
-                  By subscribing you agree to our <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
-                </p>
-              </div>
-              {/* A new period destroys the form at once; the next is created
-                  once the choice has rested, with a new session request. */}
-              {sessionPlan === planKey && (
-                <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={failCheckout} onPaying={setPaying} />
-              )}
-              {/* From the moment a form is destroyed until the next one
-                  mounts. Kept in the tree and emptied, so each new load is
-                  announced. It follows the embed's mount point (empty until
-                  the form mounts), so it fills the form's own place under the
-                  disclosure and nothing above it moves when the form is
-                  ready. */}
-              <p className="checkout-loading" role="status">{formReady ? '' : 'Loading payment form…'}</p>
-            </>
-          )}
+
+            {included}
+          </section>
+          {wide && backToSettings}
         </div>
 
+        {(wide || user || loading) && (
+          <section className="ck-fp" aria-label="Payment">
+            {kind === 'gate' && gate}
+
+            {(kind === 'checking' || kind === 'pricewait') && (
+              <>
+                {disclosure}
+                <div className="ck-slot">
+                  <div className="ck-frame stat" aria-busy="true">
+                    <p className="ck-status" role="status">{kind === 'checking' ? 'Checking your account…' : 'Checking the live Stripe price…'}</p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {kind === 'unavail' && (
+              <div className="ck-blk" role="status">
+                <p className="ck-bp ck-bp0">{priceCopy.under || PRICE_UNDER}</p>
+              </div>
+            )}
+
+            {kind === 'nokey' && (
+              <div className="ck-blk ck-nokey" role="status">
+                <p className="ck-bp ck-bp0">Payments aren’t configured yet. Set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in your environment to enable checkout.</p>
+              </div>
+            )}
+
+            {kind === 'verify' && (
+              <div className="ck-blk checkout-error">
+                <h3 className="ck-bh" data-errfocus="1" tabIndex={-1} ref={errorRef}>Verify your email to continue</h3>
+                <VerifyEmailPrompt
+                  email={user.email}
+                  onResend={sendVerificationEmail}
+                  onRetry={async () => {
+                    await refreshEmailVerified().catch(() => {})
+                    retryFocus.current = true
+                    setError(''); setErrorCode('')
+                  }}
+                />
+              </div>
+            )}
+
+            {kind === 'error' && (
+              <>
+                {disclosure}
+                <div className="ck-slot ck-blk checkout-error" role="alert">
+                  <h3 className="ck-bh" data-errfocus="1" tabIndex={-1} ref={errorRef} aria-describedby={leadError ? leadId : undefined}>Checkout unavailable</h3>
+                  {!leadError && <p className="ck-bp">{error}</p>}
+                  <div className="ck-ba">
+                    {errorCode === 'log-in' ? (
+                      // The session is no good, so a retry would fail the same way:
+                      // sign in again (forced, though the account looks signed in),
+                      // then ask for the form again.
+                      <button type="button" className="ck-go plain" onClick={() => {
+                        requireLogin('continue to checkout', { force: true, email: user?.email }).then((back) => {
+                          if (back) { retryFocus.current = true; setError(''); setErrorCode('') }
+                        })
+                      }}>Log in</button>
+                    ) : (
+                      <button type="button" className="ck-go plain" onClick={() => { retryFocus.current = true; setError(''); setErrorCode('') }}>Try again</button>
+                    )}
+                  </div>
+                  {/* Quiet, and drawn at every width. */}
+                  <div className="ck-br"><ReportProblemLink subject="Problem at checkout" /></div>
+                </div>
+              </>
+            )}
+
+            {kind === 'form' && (
+              <>
+                {disclosure}
+                <div className="ck-slot">
+                  <div className={`ck-frame${formReady ? '' : ' stat'}`} ref={frameRef} role="group" aria-label="Payment form" aria-busy={!formReady || paying} tabIndex={-1}>
+                    {/* From the moment a form is destroyed until the next one
+                        mounts. Kept in the tree and emptied, so each new load is
+                        announced; it takes no room once empty. */}
+                    <p className="ck-status checkout-loading" role="status" tabIndex={-1} ref={statusRef}>{formReady ? '' : 'Loading payment form…'}</p>
+                    {/* A new period destroys the form at once; the next is created
+                        once the choice has rested, with a new session request. */}
+                    {sessionPlan === planKey && (
+                      <CheckoutEmbed fetchClientSecret={fetchClientSecret} onReady={setFormReady} onFail={failCheckout} onPaying={setPaying} />
+                    )}
+                  </div>
+                </div>
+                <p className="ck-cap">Secure checkout by Stripe.</p>
+              </>
+            )}
+          </section>
+        )}
+
         {/* After the payment panel, so the tab order is the reading order on a
-            phone, where it stacks last. From 761px the sheet puts it back
-            under the summary card by grid area. */}
-        {user && <NavLink to="/settings" className="checkout-back">← Back to settings</NavLink>}
+            phone, where it stacks last. */}
+        {!wide && backToSettings}
       </div>
     </div>
   )

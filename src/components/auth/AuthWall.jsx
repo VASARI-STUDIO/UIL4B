@@ -49,7 +49,7 @@ function CodeArt({ id }) {
   )
 }
 
-function Art({ row }) {
+export function Art({ row }) {
   const { t } = useI18n()
   const theme = useTheme()?.theme
   switch (row.kind) {

@@ -185,8 +185,8 @@ test('a stamp must be a real moment between the write and now', () => {
 
 test('the upgrade popup stamps the draft before it navigates to /plans, and the library asks it to', () => {
   const modal = read('src/components/ProUpgradeModal.jsx')
-  assert.match(modal, /onClose\(\)\s*\r?\n\s*onLeave\?\.\(\)\s*\r?\n\s*navigate\(`\/plans\?plan=/, 'the checkout button')
-  assert.match(modal, /seeAllPlans = \(\) => \{ onClose\(\); onLeave\?\.\(\); navigate\('\/plans'\) \}/, 'See all plans')
+  assert.match(modal, /onLeave\?\.\(\)[^]*?navigate\(`\/plans\?plan=/, 'the checkout button')
+  assert.match(modal, /seeAllPlans = \(e\) => \{[^]*?onLeave\?\.\(\)[^]*?navigate\('\/plans'\)/, 'See all plans')
   assert.match(read('src/pages/IconLibrary.jsx'), /openProModal\(\{ gate: preview\.gate, proof, onLeave: \(\) => stampPreviewDraft\(\) \}\)/)
 })
 
