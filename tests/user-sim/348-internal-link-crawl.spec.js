@@ -34,6 +34,8 @@ const SKIPPED = {
   '/learn/:slug': 'walked through the Learn article routes',
   '/projects/:id': 'walked as /projects/seed-1 for the signed-in personas',
   '/projects/:id/export': 'walked as /projects/seed-1/export for the signed-in personas',
+  '/community/:id': 'a piece page needs a real id; the crawl reaches the ones /community links to',
+  '/u/:handle': 'a profile needs a real handle; the crawl reaches it through the maker links on /community',
   '*': 'the 404 itself',
 }
 

@@ -37,6 +37,8 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
   const settings = {}
   for (const label of labels) {
     await tabs.filter({ hasText: label }).click()
+    // The price cross-fades for 150ms with the old figure still in the slot (aria-hidden); read it once that has gone.
+    await expect(section.locator('.sub-tier-pro .stg-xf-out')).toHaveCount(0)
     settings[label] = {
       amount: (await section.locator('.sub-tier-pro .sub-tier-amount').innerText()).trim(),
       billed: (await section.locator('.sub-tier-pro .sub-tier-sub').innerText()).trim(),

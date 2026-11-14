@@ -41,6 +41,13 @@ import { go } from './helpers.js'
 // Every surface that renders the shared masthead. Two are Create routes, which
 // is exactly why the component is shared and why a fix here has to be checked
 // on more than the Discover pair.
+// The V3 library boards (LibraryR2A) give the Palette and Gradient masthead a 180px
+// floor from 641px up. That floor is the board's own design, so it is the one allowance
+// below; at 640px and under the phone board has no floor and none is allowed.
+const V3_FLOOR = 180
+const V3_ROUTES = ['/discover/palettes', '/discover/gradients']
+const floorAllowance = (route, width, m) => (V3_ROUTES.includes(route) && width >= 641
+  ? Math.max(0, V3_FLOOR - (m.contentH + m.padY)) : 0)
 const SURFACES = [
   '/discover/palettes',
   '/discover/gradients',
@@ -140,12 +147,13 @@ test.describe('the shared Discover gallery masthead', () => {
         // WAS 72px, WHICH WAS THE FLOOR'S ALLOWANCE, NOT A JUDGEMENT. With the
         // min-height gone there is nothing left to hold the box open, so the
         // only slack is sub-pixel rounding on the padding clamp. 4px.
-        if (m.dead > 4) bad.push(`  ${route} @${width}: ${m.dead}px of empty `
+        const allowed = floorAllowance(route, width, m)
+        if (m.dead - allowed > 4) bad.push(`  ${route} @${width}: ${m.dead - allowed}px of empty `
           + `masthead (hero ${m.heroH}, content ${m.contentH}, padding ${m.padY})`)
         // Stated that way, because `dead` alone cannot see
         // the --controls case: a row whose aside is the taller column has no
         // spare height at all and still paints black above the headline.
-        if (m.emptyAboveH1 > 4) bad.push(`  ${route} @${width}: ${m.emptyAboveH1}px of `
+        if (m.emptyAboveH1 - allowed > 4) bad.push(`  ${route} @${width}: ${m.emptyAboveH1 - allowed}px of `
           + 'black between the top padding and the top of the h1')
       }
       await ctx.close()
@@ -179,10 +187,12 @@ test.describe('the shared Discover gallery masthead', () => {
       [...document.querySelectorAll('.dgh-hero')].filter((e) => e.offsetParent !== null)[0]).minHeight)
     // No floor of any kind, at any width. This is the declaration that caused
     // every version of the hole, so it is asserted by name.
-    expect(declared, '.dgh-hero has a min-height again').toMatch(/^(0px|auto)$/)
-    // The box is exactly what is in it. Sub-pixel rounding only.
-    expect(Math.abs(m.heroH - m.contentH - m.padY),
-      `hero ${m.heroH} != content ${m.contentH} + padding ${m.padY}`).toBeLessThanOrEqual(4)
+    // /discover/palettes is a V3 board at 641 (LibraryR2A): its masthead declares the board's
+    // one 180px floor and nothing else. Any other value is a floor nobody designed.
+    expect(declared, '.dgh-hero floor is the board\'s 180px and no other').toBe(`${V3_FLOOR}px`)
+    // The box is its content plus its padding, or the board's 180px where that is less.
+    expect(Math.abs(m.heroH - Math.max(m.contentH + m.padY, V3_FLOOR)),
+      `hero ${m.heroH} != max(content ${m.contentH} + padding ${m.padY}, ${V3_FLOOR})`).toBeLessThanOrEqual(4)
     // And the padding is still doing the slab's work rather than being trimmed
     // away to chase the same number from the other side. The floor is the
     // SMALLER masthead: 20px top and bottom at its narrowest.

@@ -9,10 +9,14 @@
 // shown only part of it, and the line reads "101 palettes · 3 shown" instead of
 // a bare "3 palettes" that disagrees with the rest of the page.
 //
+// `nounPlural` is for a noun that does not pluralise with an "s" ("brand systems
+// in these filters"); it defaults to `${noun}s`.
+//
 // Leave `count` out and the line is not drawn at all, for a moment when no
 // number would be the right one (a Pro library still on its way).
 
-export default function DiscoverResultHead({ eyebrow, title, count, noun, id, total }) {
+export default function DiscoverResultHead({ eyebrow, title, count, noun, nounPlural, id, total }) {
+  const plural = nounPlural || `${noun}s`
   const partial = Number.isFinite(total) && total > count
   return (
     <div className="drh-head">
@@ -23,8 +27,8 @@ export default function DiscoverResultHead({ eyebrow, title, count, noun, id, to
       {count != null && (
         <p aria-live="polite">
           {partial
-            ? `${total} ${total === 1 ? noun : `${noun}s`} · ${count} shown`
-            : `${count} ${count === 1 ? noun : `${noun}s`}`}
+            ? `${total} ${total === 1 ? noun : plural} · ${count} shown`
+            : `${count} ${count === 1 ? noun : plural}`}
         </p>
       )}
     </div>
