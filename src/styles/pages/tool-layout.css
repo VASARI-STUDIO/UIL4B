@@ -196,7 +196,7 @@
 .tl-sheet-layer .tl-sheet-title { font-family: var(--font); font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--tl-ink); }
 .tl-sheet-layer .tl-sheet-x {
   display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
-  border: 0; border-radius: 999px; background: transparent; color: var(--tl-ink); cursor: pointer;
+  border: 0; border-radius: var(--btn-radius); background: transparent; color: var(--tl-ink); cursor: pointer;
   transition: background-color 150ms linear;
 }
 .tl-sheet-layer .tl-sheet-x:active { background: var(--v3-rowp); }
@@ -267,7 +267,7 @@
   min-height: 36px;
   padding: 0 16px;
   border: 1px solid var(--v3-hl20);
-  border-radius: 999px;
+  border-radius: var(--btn-radius);
   background: transparent;
   color: var(--tl-ink);
   font-family: var(--font);
@@ -354,7 +354,7 @@
 /* In a toolbar row the select is a pill like the buttons, so a row of controls
    shares one height (36px, 44px on touch) and one corner. In a panel it keeps
    the field radius. */
-:is(.tl, .tl-sheet-layer) .tl-toolbar .tl-select { border-radius: 999px; }
+:is(.tl, .tl-sheet-layer) .tl-toolbar .tl-select { border-radius: var(--btn-radius); }
 :is(.tl, .tl-sheet-layer) .tl-select:focus-within { border-color: var(--tl-focus); }
 :is(.tl, .tl-sheet-layer) .tl-select:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 :is(.tl, .tl-sheet-layer) .tl-select-k { font-size: 13px; color: var(--tl-dim); white-space: nowrap; }
@@ -380,7 +380,7 @@
   min-height: 34px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--btn-radius);
   color: var(--tl-soft);
 }
 :is(.tl, .tl-sheet-layer) .tl-tray .tl-btn[disabled] { color: var(--v3-t56); }
@@ -445,7 +445,7 @@
 :is(.tl, .tl-sheet-layer) .tl-pill.is-on { border-color: var(--tl-line-on); background: var(--tl-wash-on); color: var(--tl-ink); }
 :is(.tl, .tl-sheet-layer) .tl-pill[disabled] { cursor: not-allowed; opacity: .5; }
 :is(.tl, .tl-sheet-layer) .tl-pills--block { flex-wrap: nowrap; }
-:is(.tl, .tl-sheet-layer) .tl-pills--block .tl-pill { flex: 1; justify-content: center; padding: 9px 12px; border-radius: 999px; }
+:is(.tl, .tl-sheet-layer) .tl-pills--block .tl-pill { flex: 1; justify-content: center; padding: 9px 12px; border-radius: var(--btn-radius); }
 
 /* The sliding pill. useSlideIndicator measures the selected pill and sets
    --si-x/-y/-w/-h/-r on the group; the group's ::before is the selected look
@@ -524,15 +524,15 @@
   height: 15px;
   margin-top: -4.5px;
   border-radius: 999px;
-  background: var(--v3-ink);
+  background: #FAFAF8;
   border: 2px solid var(--tl-card);
-  box-shadow: 0 1px 2px rgba(var(--v3-ink-rgb), .24);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, .6);
 }
 :is(.tl, .tl-sheet-layer) .tl-slider input[type="range"]::-moz-range-thumb {
   width: 13px;
   height: 13px;
   border-radius: 999px;
-  background: var(--v3-ink);
+  background: #FAFAF8;
   border: 2px solid var(--tl-card);
 }
 
@@ -575,6 +575,11 @@
   /* The More button is always on the row (it holds "Send feedback"), so with
      its label gone it is a square like the back arrow, not a padded pill. */
   .tl .tl-toolbar .tl-more-btn { width: 36px; padding: 0; }
+}
+/* Tablet: the row holds every action, so the pills and the gaps between them sit a little tighter. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tl .tl-toolbar { gap: 10px; }
+  .tl .tl-toolbar .tl-btn:not(.tl-btn--square):not(.tl-more-btn) { padding-inline: 12px; }
 }
 @media (max-width: 767px) and (pointer: coarse) {
   .tl .tl-toolbar .tl-more-btn { width: 44px; }
