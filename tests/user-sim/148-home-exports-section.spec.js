@@ -212,11 +212,11 @@ test('card 2 lists the exports a theme offers, and the caption names the theme',
     // Red if exportRows or exportCopy stop following EXPORT_THEMES_LIVE, or the brand kit gets a row of its own.
     await expect(docRows(page)).toHaveCount(3)
     const rows = (await docRows(page).allInnerTexts()).map(squash)
-    expect(rows[0]).toMatch(/^Brand guidelines .*Pro$/)
+    expect(rows[0]).toMatch(/^Brand guidelines .*Free in 2 themes$/)
     expect(rows[1]).toMatch(/^HTML brand book .*with the brand kit inside.*Pro$/)
-    expect(rows[2]).toMatch(/^UI kit .*Free in 2 themes$/)
+    expect(rows[2]).toMatch(/^UI kit .*Free in Standards$/)
     await expect(card(page, 1).locator('.hx-cap')).toHaveText('Kerbside, a sample brand, in the Presentation theme. Set in Archivo and IBM Plex Sans.')
-    await expect(card(page, 1).locator('.hx-note')).toHaveText('The UI kit is free in two of the ten themes. Everything else is Pro.')
+    await expect(card(page, 1).locator('.hx-note')).toHaveText('Label and Swiss Field are the Free themes.')
   } finally {
     await ctx.close()
   }

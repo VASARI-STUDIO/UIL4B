@@ -37,8 +37,10 @@ test('a right-button press on a handle is not the start of a drag', () => {
 
 test('the tints menu locks for a free account and gates on press', () => {
   const menu = read('src/components/tool/StopTintMenu.jsx')
-  assert.match(menu, /aria-disabled=\{!isPro \|\| undefined\}/)
-  assert.match(menu, /if \(!isPro\) \{ onGate\(\); onClose\(\); return \}/)
+  // A free account sees every tint as a locked Pro row; pressing one gates, never applies.
+  assert.match(menu, /pro: !isPro,/)
+  assert.match(menu, /value: isPro \? t\.hex\.toUpperCase\(\) : LOCKED_HEX,/)
+  assert.match(menu, /onSelect: \(\) => \{ if \(isPro\) onApply\(t\.hex\.toUpperCase\(\), t\.label\); else onGate\(\) \}/)
   const page = read('src/pages/GradientGenerator.jsx')
   assert.match(page, /gate: 'gradient-stop-tints'/)
   assert.match(page, /onGate=\{gateTints\}/)

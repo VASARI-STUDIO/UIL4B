@@ -73,6 +73,10 @@ const endsWithTarget = (sel, target) => {
 //     icon button, so .pnav-search-field may also say 36px
 //   - border: 1px solid var(--border); border-color: var(--border)
 //   - background: var(--inp), or var(--bg-3) in a dark-only rule
+//   - the V3 header search (.pnav-search-field in v3-shell.css only) is a
+//     borderless L2 pill: border:0, background var(--v3-l2), 36px on desktop and
+//     44px on the phone header. The rule file is part of the reading, so the
+//     same declarations anywhere else still fail.
 // Not in the family, so not listed: .hcmd-bar (the 60px hero command bar).
 const SEARCH_BARS = ['.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search']
 const declared = (body, prop) => {
@@ -92,23 +96,26 @@ for (const target of SEARCH_BARS) {
     const sized = hits.filter((r) => declared(r.body, 'height') || declared(r.body, 'min-height'))
     assert.ok(sized.length > 0, `${target} sets no height: renamed, or the list is stale`)
     const bad = []
+    const v3Header = (r) => target === '.pnav-search-field' && r.file.endsWith('v3-shell.css')
     for (const r of hits) {
       for (const prop of ['height', 'min-height']) {
         const v = declared(r.body, prop)
         if (v === null || v === 'var(--search-h)') continue
         if (target === '.pnav-search-field' && prop === 'height' && v === '36px') continue
+        if (v3Header(r) && prop === 'height' && v === '44px') continue
         bad.push(`${r.file}: ${prop}:${v}`)
       }
       const border = declared(r.body, 'border')
-      if (border !== null && border !== '1px solid var(--border)') bad.push(`${r.file}: border:${border}`)
+      if (border !== null && border !== '1px solid var(--border)' && !(v3Header(r) && border === '0')) bad.push(`${r.file}: border:${border}`)
       const color = declared(r.body, 'border-color')
       if (color !== null && color !== 'var(--border)') bad.push(`${r.file}: border-color:${color}`)
       const ground = declared(r.body, 'background')
       // Dark --inp equals the toolbar card, so a dark-only rule may step up to --bg-3.
       const darkStep = ground === 'var(--bg-3)' && r.selectors.every((sel) => sel.startsWith('[data-theme="dark"]'))
-      if (ground !== null && ground !== 'var(--inp)' && !darkStep) bad.push(`${r.file}: background:${ground}`)
+      const v3Fill = v3Header(r) && ground === 'var(--v3-l2)'
+      if (ground !== null && ground !== 'var(--inp)' && !darkStep && !v3Fill) bad.push(`${r.file}: background:${ground}`)
     }
-    assert.deepEqual(bad, [], `${target} must use --search-h, 1px solid var(--border) and var(--inp)`)
+    assert.deepEqual(bad, [], `${target} must use --search-h, 1px solid var(--border) and var(--inp) (V3 header: 36/44px, no border, var(--v3-l2))`)
   })
 }
 

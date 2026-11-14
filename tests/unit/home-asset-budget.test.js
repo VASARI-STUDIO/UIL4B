@@ -122,8 +122,13 @@ import zlib from 'node:zlib'
 
 // Headroom over the measured 281,262 / 48,719, enough for ordinary work on the
 // shell and not enough for a family to come back.
+// The V3 shared sheets (src/styles/v3-*.css: shell, menus, overlays, marketing
+// pieces, edge screens) load from src/main.jsx on purpose: the header, menus
+// and the crash screen must paint without a second request. With all five in,
+// the measured sheet is 54,036 gzip. The gzip budget moved from 52,000 to
+// 56,000 for them; a family coming back still adds about 13,000 and fails.
 const CRITICAL_CSS_RAW_BUDGET = 300_000
-const CRITICAL_CSS_GZIP_BUDGET = 52_000
+const CRITICAL_CSS_GZIP_BUDGET = 56_000
 
 const outDir = path.join(os.tmpdir(), `uil4b-critical-css-${process.pid}-${Date.now()}`)
 let built = null

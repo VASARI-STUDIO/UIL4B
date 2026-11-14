@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PhIcon from '../spectrum/PhIcon'
-import { EXPORT_THEMES } from '../../config/exportFormats'
+import { SHOWCASE_THEMES } from '../../config/exportFormats'
 import { THEME_FACTS, numberWord } from '../../config/planFacts'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
 import { DEFAULT_KIND_ID, SHOWCASE_KINDS, showcaseImage, showcaseRatio } from './showcaseImages'
@@ -24,7 +24,7 @@ const joinAnd = (items) => (items.length < 2
   : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`)
 
 // Which row a theme sits in follows its page shape; the order is the theme list's.
-const SLOTS = EXPORT_THEMES.map((theme, index) => ({ theme, index, landscape: theme.shape !== 'A4' }))
+const SLOTS = SHOWCASE_THEMES.map((theme, index) => ({ theme, index, landscape: theme.shape !== 'A4' }))
 const LANDSCAPE = SLOTS.filter((s) => s.landscape)
 const PORTRAIT = SLOTS.filter((s) => !s.landscape)
 
@@ -38,7 +38,7 @@ const FADE_STEP_MS = 24
 // The scroll-in reveal: each tile moves for REVEAL_MS (the same in the CSS), REVEAL_STEP_MS apart.
 const REVEAL_MS = 300
 const REVEAL_STEP_MS = 32
-const REVEAL_LAST = EXPORT_THEMES.length - 1
+const REVEAL_LAST = SHOWCASE_THEMES.length - 1
 const kindIndex = (id) => SHOWCASE_KINDS.findIndex((k) => k.id === id)
 const kindLabel = (id) => SHOWCASE_KINDS[kindIndex(id)].label
 
@@ -63,7 +63,7 @@ function loadPage(themeId, kindId) {
   return promise
 }
 
-const loadKind = (kindId) => Promise.all(EXPORT_THEMES.map((t) => loadPage(t.id, kindId)))
+const loadKind = (kindId) => Promise.all(SHOWCASE_THEMES.map((t) => loadPage(t.id, kindId)))
 
 // ── One page ─────────────────────────────────────────────────────────────────
 
@@ -172,8 +172,8 @@ export default function HomeShowcase() {
   // `kindId` is the picked kind. `shown` is the kind each page currently displays: it
   // trails the pick until the new pages have loaded, and stays put for a page that fails.
   const [kindId, setKindId] = useState(DEFAULT_KIND_ID)
-  const [shown, setShown] = useState(() => EXPORT_THEMES.map(() => DEFAULT_KIND_ID))
-  const [failed, setFailed] = useState(() => EXPORT_THEMES.map(() => false))
+  const [shown, setShown] = useState(() => SHOWCASE_THEMES.map(() => DEFAULT_KIND_ID))
+  const [failed, setFailed] = useState(() => SHOWCASE_THEMES.map(() => false))
   const [announce, setAnnounce] = useState('')
   // The page open in the viewer: its position in the theme list and the kind it was showing.
   const [viewer, setViewer] = useState(null)
@@ -227,18 +227,18 @@ export default function HomeShowcase() {
       setFailed((prev) => prev.map((f, i) => (results[i] ? false : f)))
       rootRef.current?.querySelectorAll('[data-hsc-rail]').forEach((rail) => { rail.scrollLeft = 0 })
     }
-    if (EXPORT_THEMES.every((t) => ready.has(pageKey(t.id, id)))) {
-      apply(EXPORT_THEMES.map(() => true))
+    if (SHOWCASE_THEMES.every((t) => ready.has(pageKey(t.id, id)))) {
+      apply(SHOWCASE_THEMES.map(() => true))
       return
     }
-    const loading = EXPORT_THEMES.map((t) => loadPage(t.id, id))
+    const loading = SHOWCASE_THEMES.map((t) => loadPage(t.id, id))
     let swapped = false
     // Not everything arrived in time: swap the pages that are ready. Each of the others keeps
     // its old image, and swaps on its own as soon as its new one has loaded.
     swapTimer.current = window.setTimeout(() => {
       if (!current() || swapped) return
       swapped = true
-      const results = EXPORT_THEMES.map((t) => ready.has(pageKey(t.id, id)))
+      const results = SHOWCASE_THEMES.map((t) => ready.has(pageKey(t.id, id)))
       apply(results)
       loading.forEach((load, at) => {
         if (results[at]) return
@@ -261,7 +261,7 @@ export default function HomeShowcase() {
     if (focus) tabRefs.current[kindIndex(id)]?.focus()
     if (id === kindId) return
     setKindId(id)
-    setAnnounce(`Showing the ${kindLabel(id).toLowerCase()} page in all ${THEME_FACTS.countWord} themes.`)
+    setAnnounce(`Showing the ${kindLabel(id).toLowerCase()} page in all ${THEME_FACTS.showcaseCountWord} themes.`)
     swapTo(id)
   }, [kindId, swapTo])
 
@@ -286,7 +286,7 @@ export default function HomeShowcase() {
     pick(SHOWCASE_KINDS[to].id, { focus: true })
   }
 
-  const count = THEME_FACTS.countWord
+  const count = THEME_FACTS.showcaseCountWord
 
   const renderRow = (slots, modifier, labelId) => (
     <ul className={`hsc-row hsc-row--${modifier}`} role="list" aria-labelledby={labelId} data-hsc-rail="">
@@ -342,7 +342,7 @@ export default function HomeShowcase() {
           ))}
         </div>
         {/* ships with the export themes */}
-        <p className="hsc-note">{THEME_FACTS.freeNames} are free for the UI kit. Everything else is Pro.</p>
+        <p className="hsc-note">These {THEME_FACTS.showcaseCountWord} themes are Pro. The {THEME_FACTS.freeExports} are free in {THEME_FACTS.freeCountWord} more: {THEME_FACTS.freeNames}.</p>
         <p className="hsc-hint">
           Swipe each row. {capitalise(numberWord(LANDSCAPE.length))} on top, {numberWord(PORTRAIT.length)} below.
         </p>
@@ -362,8 +362,8 @@ export default function HomeShowcase() {
         <div className="hsc-foot">
           {/* ships with the export themes */}
           <p className="hsc-footnote">
-            {joinAnd(EXPORT_THEMES.map((t) => t.brand))} are sample brands; {EXPORT_THEMES[0].brand}’s photos are from Unsplash.{' '}
-            {THEME_FACTS.uiKitNote}; every other export is Pro.
+            {joinAnd(SHOWCASE_THEMES.map((t) => t.brand))} are sample brands; {SHOWCASE_THEMES[0].brand}’s photos are from Unsplash.{' '}
+            {THEME_FACTS.freeNote}; every other export is Pro.
           </p>
           <Link className="hsc-cta ui-pill-out" to="/projects">
             Open the toolkit

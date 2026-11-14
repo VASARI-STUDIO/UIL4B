@@ -17,7 +17,11 @@
 //   - delete the 'tech-brands' group from src/data/iconGroups.js -> test 3.
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, signIn, watch } from './helpers.js'
-import { PREMADE_ICON_GROUPS } from '../../src/data/iconGroups.js'
+import { withProIcons } from '../../src/data/iconGroups.js'
+import { resolveLibrary } from '../../api/_lib/library/load.js'
+
+// The groups with the Pro lists the library serves (the same resolver the API mock uses).
+const GROUPS = withProIcons((await resolveLibrary()).PRO_ICON_GROUPS)
 
 const ADDED = ['Dashboard & analytics', 'App navigation', 'Code & terminal', 'Portfolio & creative', 'Events & tickets', 'Tech brands', 'Payments & crypto', 'Languages & frameworks']
 const CHIPS = ['All icons', 'Coloured', 'Brand logos', 'Flags']
@@ -132,7 +136,7 @@ test('the added premade groups are listed on the Groups tab, locked signed out a
   await page.setViewportSize({ width: 1280, height: 900 })
   await go(page, '/create/icons/groups')
   const cards = page.locator('.igp-cards > li:not(.geg-fade *)')
-  await expect(cards).toHaveCount(PREMADE_ICON_GROUPS.length, { timeout: 15000 })
+  await expect(cards).toHaveCount(GROUPS.length, { timeout: 15000 })
   for (const label of ADDED) {
     await expect(page.locator('.lockt-card--group').filter({ hasText: label }), `${label} is a locked card signed out`).toHaveCount(1)
   }
@@ -142,9 +146,9 @@ test('a Pro viewer opens Tech brands and every glyph paints', async ({ page }) =
   watch(page, 'a Pro designer opening the tech brands set')
   await signIn(page, { plan: 'pro' })
   await page.setViewportSize({ width: 1280, height: 900 })
-  const tech = PREMADE_ICON_GROUPS.find((g) => g.id === 'tech-brands')
+  const tech = GROUPS.find((g) => g.id === 'tech-brands')
   await go(page, '/create/icons/groups')
-  await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(PREMADE_ICON_GROUPS.length, { timeout: 15000 })
+  await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(GROUPS.length, { timeout: 15000 })
   await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)').filter({ hasText: 'Payments & crypto' })).toHaveCount(1)
   await go(page, `/create/icons/groups?group=${tech.id}`)
   await expect(page.getByRole('heading', { level: 2, name: 'Tech brands' })).toBeVisible()

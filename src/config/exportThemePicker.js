@@ -27,8 +27,8 @@ const SAMPLE = Object.freeze({
 })
 
 /**
- * Every theme in the picker's order: { id, name, rows, brand, shape, free, guidePages }. free: the UI kit is free in it (a
- * guidelines-only theme has no UI kit, so it is not); guidePages: how many guidelines pages it draws.
+ * Every theme in the picker's order: { id, name, rows, brand, shape, free, guidePages }. free: the UI kit is free in it (Standards
+ * for now, and a guidelines-only theme has no UI kit); guidePages: how many guidelines pages it draws.
  */
 export const PICKER_THEMES = Object.freeze(EXPORT_THEMES.map((t) => Object.freeze({
   ...t,
@@ -56,13 +56,16 @@ export const pickerThemesFor = (fileId) => {
   return f ? PICKER_THEMES.filter((t) => themeHasRow(t.id, f.row)) : PICKER_THEMES
 }
 
-/** True when a theme can draw this file (a file that takes no theme is drawn by any). */
-/** The themes whose guidelines are free, by name: "Label and Swiss Field". */
-export const freeGuidelinesThemeNames = () => {
-  const names = pickerThemesFor('guidelines').filter((t) => !themedFileIsPro('guidelines', t.id)).map((t) => t.name)
+/** The themes a file is free in, by name: "Label and Swiss Field" for the guidelines, "Standards" for the UI kit, '' for none. */
+export const freeThemeNames = (fileId) => {
+  const names = pickerThemesFor(fileId).filter((t) => !themedFileIsPro(fileId, t.id)).map((t) => t.name)
   return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names.join('')
 }
 
+/** The themes whose guidelines are free, by name: "Label and Swiss Field". */
+export const freeGuidelinesThemeNames = () => freeThemeNames('guidelines')
+
+/** True when a theme can draw this file (a file that takes no theme is drawn by any). */
 export const themeFitsFile = (themeId, fileId) => {
   const f = themedFile(fileId)
   return f ? themeHasRow(themeId, f.row) : true
@@ -83,13 +86,13 @@ export const themedFileIsPro = (fileId, themeId) => {
 }
 
 /**
- * The theme a picker starts on for a file: for an account that is not Pro, the first theme with a free UI kit (Standards), so the
- * book and the guidelines open locked as they always have and the dock names the themes the guidelines are free in; for Pro, the
- * first theme that can draw the file.
+ * The theme a picker starts on for a file: for an account that is not Pro, the first theme the file is free in (Label for the
+ * guidelines, Standards for the UI kit), or the first theme that can draw it when it is free in none (the book opens locked, and
+ * the dock names the themes the guidelines are free in); for Pro, the first theme that can draw the file.
  */
 export const defaultThemeId = (isPro, fileId = 'kit') => {
   const list = pickerThemesFor(fileId)
-  const free = !isPro && list.find((t) => t.free)
+  const free = !isPro && list.find((t) => !themedFileIsPro(fileId, t.id))
   return (free || list[0] || PICKER_THEMES[0]).id
 }
 

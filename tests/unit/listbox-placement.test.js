@@ -98,8 +98,8 @@ test('select scrims catch outside presses at every width and dim only through 76
   assert.match(phone, /\.menu-select-scrim\{background:var\(--scrim\);animation:cp-fade/)
   assert.match(phone, /\.pop\.menu-select-list[^{}]*\{left:0;right:0;top:auto;bottom:0;[^}]*max-height:[^}]*animation:menu-select-sheet-in/)
   assert.match(phone, /\.menu-select-list::before\{content:'';display:block/)
-  // the lift is unchanged; the same rule now also sets padding-bottom (menu-select-sheet-css.test.js pins that)
-  assert.match(phone, /html\.has-tabbar \.pop\.menu-select-list\{bottom:calc\(var\(--tabbar-h\) \+ env\(safe-area-inset-bottom\)\)(;|\})/)
+  // the sheet is no longer lifted above the tab bar (menu-select-sheet-css.test.js pins that)
+  assert.doesNotMatch(phone, /html\.has-tabbar \.pop\.menu-select-list/)
   assert.match(css, /@media\(pointer:coarse\)\{\.menu-select-option\{min-height:44px\}\}/)
 })
 

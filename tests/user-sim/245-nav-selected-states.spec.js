@@ -211,8 +211,9 @@ for (const size of [TABLET, DESKTOP]) {
   }
 }
 
-// The current row and a hovered row look different: the hover is a grey tile on a
-// lighter label with no check; the current row is a heavier label with a check and no tile.
+// The current row and a hovered row look different: the hover is a light tile on a
+// lighter label with no check; the current row holds a stronger tile (9% against the
+// hover's lighter wash) on a heavier label, with a check.
 for (const theme of THEMES) {
   test(`the current row and a hovered row are told apart, 1440, ${theme}`, async ({ browser }) => {
     const { ctx, page } = await openPage(browser, DESKTOP, theme, null, '/create/palette')
@@ -224,7 +225,8 @@ for (const theme of THEMES) {
     const hovered = rows.find((r) => r.id === 'gradient')
     expect(here.current, 'the current row keeps aria-current').toBe('page')
     expect(hovered.current, 'the hovered row is not the current page').toBeNull()
-    expect(alpha(here.tile), 'the current row has no hover tile').toBe(0)
+    expect(alpha(here.tile), 'the current row holds a fill at rest').toBeGreaterThan(0)
+    expect(alpha(here.tile), 'the current fill is stronger than a hover wash').toBeGreaterThan(alpha(hovered.tile))
     expect(here.edge, 'the current row has a coloured edge').toBe(false)
     expect(hovered.edge, 'the hovered row has a coloured edge').toBe(false)
     expect(here.weight, 'the current label is heavier than the hovered one').toBeGreaterThan(hovered.weight)
@@ -376,13 +378,13 @@ for (const theme of THEMES) {
 for (const size of [PHONE, PHONE_MOUSE]) {
   for (const theme of THEMES) {
     test.describe(`Open menu button at ${size.name}, ${theme}`, () => {
-      test('is drawn 36 x 36 and its 44 x 44 area answers at every edge', async ({ browser }) => {
+      test('is drawn 44 x 44 and its 44 x 44 area answers at every edge', async ({ browser }) => {
         const { ctx, page } = await openPage(browser, size, theme, null, '/create/palette')
         const button = page.locator('.pnav-mobile')
         await expect(button).toBeVisible()
         const box = await button.boundingBox()
-        expect(box.width, 'the drawn circle keeps its size').toBe(36)
-        expect(box.height).toBe(36)
+        expect(box.width, 'the drawn circle is the 44px target').toBe(44)
+        expect(box.height).toBe(44)
         const hit = await button.evaluate((el) => {
           const area = getComputedStyle(el, '::after')
           const r = el.getBoundingClientRect()
@@ -406,12 +408,13 @@ for (const size of [PHONE, PHONE_MOUSE]) {
         await ctx.close()
       })
 
-      test('takes a tap 20px below its centre', async ({ browser }) => {
+      test('takes a tap 20px below its centre, near the circle\'s lower edge', async ({ browser }) => {
         const { ctx, page } = await openPage(browser, size, theme, null, '/create/palette')
         const box = await page.locator('.pnav-mobile').boundingBox()
         const x = box.x + box.width / 2
         const y = box.y + box.height / 2 + 20
-        expect(y, 'the point is outside the drawn circle').toBeGreaterThan(box.y + box.height)
+        expect(y, 'the point is inside the 44px circle, near its lower edge').toBeLessThan(box.y + box.height)
+        expect(y).toBeGreaterThan(box.y + box.height / 2)
         if (size.touch) await page.touchscreen.tap(x, y)
         else await page.mouse.click(x, y)
         await expect(page.locator('.pnav-sheet')).toBeVisible()
