@@ -25,8 +25,8 @@
 
 import { GALLERY_TIER_LIMITS, splitLockedLibrary } from '../../src/utils/lockedPreview.js'
 import { LIBRARY_RULES, rowSlots } from '../../src/utils/libraryRules.js'
-// data.js resolves the source (fetched Pro data, in-tree copies, or fixtures
-// outside production); see api/_lib/library/load.js.
+// data.js resolves the source (fetched Pro data, or fixtures outside
+// production); see api/_lib/library/load.js.
 import {
   LIBRARY_PALETTES,
   BRAND_PALETTES,

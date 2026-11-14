@@ -21,7 +21,7 @@ import { go, watch, expectRendered, signIn, routePalettePreview } from './helper
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { createTools } from '../../src/data/toolTree.js'
-import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
+import { GALLERY_PALETTES } from '../../api/_lib/library/data.js'
 import { exportPanel } from './export-rows.js'
 import { COMPLETE_COLOURS, HALF_COLOURS, DAY, HOUR, ago, archived, blank, complete, half, many, noTints } from './fixtures/dashboard-projects.js'
 

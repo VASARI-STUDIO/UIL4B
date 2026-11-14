@@ -13,7 +13,7 @@
 // for a free account too; "a free account sees the ramp" goes red.
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
-import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
+import { GALLERY_GRADIENTS } from '../../api/_lib/library/data.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 import { tintRampForHex } from '../../src/utils/tintRamp.js'
 

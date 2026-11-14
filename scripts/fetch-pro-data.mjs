@@ -27,10 +27,9 @@
 //
 // WITHOUT A TOKEN
 // Local and CI builds have no token; the script says so and exits 0, and the
-// API serves the in-tree data (until it moves out) or, outside production, the
-// generated fixtures (api/_lib/library/fixtures.js). On Vercel, once
-// REQUIRED_ON_VERCEL is true, a missing token or a failed fetch fails the build,
-// so production can never ship without the libraries.
+// API serves the generated fixtures (api/_lib/library/fixtures.js), never in
+// production. On Vercel a missing token or a failed fetch fails the build, so a
+// deploy can never ship without the libraries; the previous one stays live.
 //
 // Environment:
 //   PRO_DATA_TOKEN  fine-grained, read-only token for the private repository
@@ -52,9 +51,8 @@ const REPO = process.env.PRO_DATA_REPO || 'VASARI-STUDIO/UIL4B-pro-data'
 const MARKER = 'UIL4B-PRO-DATA'
 const ATTEMPTS = 3
 const TIMEOUT_MS = 60_000
-// Flipped to true by the switch-over change, once PRO_DATA_TOKEN is set in
-// Vercel and the in-tree copies are gone.
-const REQUIRED_ON_VERCEL = false
+// Vercel builds (production and preview) must have the data.
+const REQUIRED_ON_VERCEL = true
 
 const log = (msg) => console.log(`[pro-data] ${msg}`)
 
@@ -247,7 +245,7 @@ export async function fetchProData({ force = false, env = process.env } = {}) {
     if (!token) {
       const msg = 'PRO_DATA_TOKEN is not set, so the Pro library data was not fetched'
       if (env.VERCEL === '1' && REQUIRED_ON_VERCEL) throw new Error(msg)
-      log(`${msg}. The API will use the in-tree data or, outside production, fixtures.`)
+      log(`${msg}. The API will use fixtures (never in production).`)
       return 'skipped'
     }
     log(`fetching ${REPO} at ${sha.slice(0, 12)}`)
@@ -262,9 +260,8 @@ export async function fetchProData({ force = false, env = process.env } = {}) {
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
   fetchProData({ force: process.argv.includes('--force') }).catch((err) => {
-    // A local copy that fails its checks is always an error. On Vercel, once
-    // the data is required, so is any failure. Before the switch-over the
-    // build still has the in-tree data, so a failed fetch is a warning.
+    // A local copy that fails its checks is always an error, and so is any
+    // failure on Vercel. Elsewhere a failed fetch is a warning: fixtures stand in.
     if (process.env.PRO_DATA_DIR || (process.env.VERCEL === '1' && REQUIRED_ON_VERCEL)) {
       console.error(`\n[pro-data] FAILED: ${err.message}`)
       process.exit(1)

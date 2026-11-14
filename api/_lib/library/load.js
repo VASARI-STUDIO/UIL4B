@@ -3,7 +3,6 @@
 // In order:
 //   'pro'       api/_lib/pro/library/*.js, fetched at build time from the
 //               private data repository by scripts/fetch-pro-data.mjs.
-//   'in-tree'   the copies beside this file, until they move out.
 //   'fixtures'  fixtures.js, fake values built from the public stubs. Never in
 //               production.
 // If none is present the source is 'missing' and every list is empty; the
@@ -25,21 +24,13 @@ const SOURCES = {
     import('../pro/library/communityPrompts.js'),
     import('../pro/library/iconGroups.pro.js'),
   ]),
-  'in-tree': () => Promise.all([
-    import('./paletteGallery.js'),
-    import('./brandPalettes.js'),
-    import('./paletteLibrary.js'),
-    import('./gradientGallery.js'),
-    import('./communityPrompts.js'),
-    import('./iconGroups.pro.js'),
-  ]),
   fixtures: () => import('./fixtures.js').then((m) => [m, m, m, m, m, m]),
 }
 
 const isProduction = (env) => env.VERCEL_ENV === 'production'
 
 function sourceOrder(env) {
-  const order = ['pro', 'in-tree']
+  const order = ['pro']
   if (!isProduction(env)) order.push('fixtures')
   // Tests may pin one source. Production ignores the override.
   const forced = env.UIL4B_LIBRARY_SOURCE

@@ -21,9 +21,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { previewPng, previewRow, servePalettePreview, PREVIEW_WIDTH, PREVIEW_HEIGHT } from '../../api/_lib/library/preview.js'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
+import { LIBRARY_PALETTES, HAS_REAL_PRO_DATA } from '../../api/_lib/library/data.js'
 import { decodePng, pixel, hexRgb, hexNeedles } from '../helpers/png.js'
 import { oldBlurRow, fitStops, bestRecovery, nearestTrue } from '../helpers/previewAttack.js'
+
+// Checks of the real rows' content skip when the library source is fixtures.
+const realOnly = { skip: !HAS_REAL_PRO_DATA && 'library rows are fixtures' }
 
 // Four stops with big steps between them, so "blurred" and "hard" are far apart. Hand-checked, the
 // largest channel step at each boundary: 0B -> F2 is 231 (red), F2 -> C9 is 78 (green), C9 -> 4B is 211 (green).
@@ -203,7 +206,7 @@ test('no stop of the fixture can be fitted back out of the picture (stop counts 
   assert.equal(gap, Infinity)
 })
 
-test('no stop of any library palette can be fitted back out of the picture (its own stop count)', () => {
+test('no stop of any library palette can be fitted back out of the picture (its own stop count)', realOnly, () => {
   // The attacker's best case: the palette's real stop count, as the number of blocks to solve for.
   let controlRecovered = 0
   for (const p of LIBRARY_PALETTES) {

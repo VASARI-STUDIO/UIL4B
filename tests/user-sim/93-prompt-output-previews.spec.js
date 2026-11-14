@@ -15,7 +15,7 @@
 // what matters is what the browser was handed.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/data.js'
 import { PROMPT_PREVIEW_IDS } from '../../src/data/promptPreviewAssets.js'
 
 // parked: only an admin can open /discover/prompts, so every page here signs in as the admin.

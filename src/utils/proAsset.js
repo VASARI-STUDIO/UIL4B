@@ -15,8 +15,7 @@
 //   - the token sent is always the one of the uid the request is keyed on.
 //
 // 'unavailable' (503 or 404: this deployment has no preview data for the id)
-// is reported separately from 'error' so the hook can fall back to the public
-// file while the previews are still in public/ (STATIC_FALLBACK).
+// is reported separately from 'error' (see STATIC_FALLBACK in the hook).
 
 export const proAssetKey = (uid, kind, id) => `${uid}:${kind}:${id}`
 

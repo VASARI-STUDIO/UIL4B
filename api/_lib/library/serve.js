@@ -18,8 +18,8 @@
 // `deps` is injected so the unit test can fake the token and the user document.
 // Nothing under src/ is imported here: the function carries only api/ files.
 
-// The data is loaded per request through ./load.js (fetched Pro data, in-tree
-// copies, or fixtures outside production). With none present: 503, no values.
+// The data is loaded per request through ./load.js (fetched Pro data, or
+// fixtures outside production). With none present: 503, no values.
 
 import { planForUser } from '../plans.js'
 import { loadLibrary } from './load.js'

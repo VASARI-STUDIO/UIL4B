@@ -9,7 +9,7 @@
 // the cover tiles stay still, so a section decodes one animation, not five.
 import { test, expect } from './base.js'
 import { go, proLibraryArrived, signIn, watch } from './helpers.js'
-import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
+import { COMMUNITY_PROMPTS } from '../../api/_lib/library/data.js'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS } from '../../src/data/promptPreviewAssets.js'
 import { isProPreview } from '../../src/data/proPreviewIds.js'
 

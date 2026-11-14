@@ -38,7 +38,10 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
-const LIBRARY = 'api/_lib/library/communityPrompts.js'
+// The prompt rows live in the private data repo; scripts/fetch-pro-data.mjs (or
+// PRO_DATA_DIR) puts them here. --ref reads the old in-tree file from history.
+const LIBRARY = 'api/_lib/pro/library/communityPrompts.js'
+const LIBRARY_AT_REF = 'api/_lib/library/communityPrompts.js'
 
 export const SET_PASS = 8
 export const PROMPT_PASS = 7
@@ -306,9 +309,13 @@ export const passes = (result) =>
 async function loadPrompts({ ref, all }) {
   let file = path.join(ROOT, LIBRARY)
   let tmp = null
+  if (!ref && !fs.existsSync(file)) {
+    console.error(`${LIBRARY} is missing. Run \`node scripts/fetch-pro-data.mjs\` (needs PRO_DATA_TOKEN or PRO_DATA_DIR).`)
+    process.exit(2)
+  }
   try {
     if (ref) {
-      const source = execFileSync('git', ['show', `${ref}:${LIBRARY}`], { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
+      const source = execFileSync('git', ['show', `${ref}:${LIBRARY_AT_REF}`], { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
       tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'prompt-voice-'))
       file = path.join(tmp, 'communityPrompts.mjs')
       fs.writeFileSync(file, source)

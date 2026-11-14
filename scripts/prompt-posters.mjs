@@ -9,6 +9,8 @@
 //   --only=c-3,c-16    just these pages (the manifest still lists every page on disk)
 //   --no-anim          posters only
 //   --public=<dir>     capture the pages of another checkout's `public` folder
+//   --pro=<dir>        a checkout of the private Pro data (default: PRO_DATA_DIR);
+//                      its previews/prompts pages are captured too
 //   --out=<dir>        write the images there instead, and leave the manifest alone
 //                      (a trial run: nothing in this repository changes)
 //   --tmp=<dir>        where frames are staged (default: OS temp)
@@ -20,14 +22,21 @@
 // Outputs:
 //   public/previews/prompts/poster/<id>.webp  still, 960 wide
 //   public/previews/prompts/anim/<id>.webp    looping animation, ANIM_WIDTH wide
+//   <pro>/previews/prompts/{poster,anim}/     the same, for the locked pages
 //   src/data/promptPreviewAssets.js           generated manifest
+//
+// The locked prompts' pages (src/data/proPreviewIds.js) are not in this
+// repository: they live in the private Pro data and are served to a Pro
+// account through the API. Without --pro the manifest keeps the locked ids it
+// already lists, so a run on a public checkout never drops them.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // SERVED, NOT OPENED FROM DISK
 // ─────────────────────────────────────────────────────────────────────────────
-// The pages are captured over http from a local server rooted at `public/`,
-// the same transport and paths the product uses, so fonts and shared files
-// under /previews/vendor/ resolve as they do live. Any request that leaves the
+// The pages are captured over http from a local server rooted at `public/`
+// (and, for a request it does not have, at the Pro checkout), the same
+// transport and paths the product uses, so fonts and shared files under
+// /previews/vendor/ resolve as they do live. Any request that leaves the
 // local server is blocked and reported.
 //
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,6 +94,8 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { readCaptureHint } from './prompt-capture-hint.mjs'
+import { PRO_PREVIEW_IDS } from '../src/data/proPreviewIds.js'
+import { PROMPT_PREVIEW_IDS as LISTED, PROMPT_ANIM_IDS as LISTED_ANIM } from '../src/data/promptPreviewAssets.js'
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url))
 
@@ -105,8 +116,16 @@ const PAGES = path.join(PUBLIC, 'previews', 'prompts')
 // A trial run (--out) writes its images elsewhere and never the manifest.
 const TRIAL = typeof args.out === 'string'
 const OUT = TRIAL ? path.resolve(args.out) : path.join(ROOT, 'public', 'previews', 'prompts')
-const POSTER_OUT = path.join(OUT, 'poster')
-const ANIM_OUT = path.join(OUT, 'anim')
+// The private Pro data's checkout, if given: its locked pages, and where their
+// images go (back into that checkout, never into public/).
+const PRO_ARG = typeof args.pro === 'string' ? args.pro : process.env.PRO_DATA_DIR
+const PRO = PRO_ARG ? path.resolve(PRO_ARG) : null
+const PRO_PAGES = PRO ? path.join(PRO, 'previews', 'prompts') : null
+const PRO_OUT = TRIAL ? OUT : PRO_PAGES
+if (PRO && !fs.existsSync(PRO_PAGES)) {
+  console.error(`prompt-posters: no previews/prompts folder in the Pro checkout ${PRO}`)
+  process.exit(1)
+}
 const MANIFEST = path.join(ROOT, 'src/data/promptPreviewAssets.js')
 
 // Composition is laid out at 1280x800 (these pages are desktop designs); the
@@ -172,13 +191,22 @@ async function toWebp(ctx, pngBuffer, outWidth, quality) {
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary', '.json': 'application/json' }
 
-function serve(dir) {
+// Serves each request from the first root that has it; no root answers for a
+// path outside itself.
+function serve(roots) {
+  const find = (rel) => {
+    for (const dir of roots) {
+      const file = path.join(dir, rel)
+      if (file.startsWith(dir + path.sep) && fs.existsSync(file) && !fs.statSync(file).isDirectory()) return file
+    }
+    return null
+  }
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
       let rel
       try { rel = decodeURIComponent(req.url.split('?')[0]) } catch { rel = '' }
-      const file = path.join(dir, rel)
-      if (!rel || !file.startsWith(dir + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      const file = rel ? find(rel) : null
+      if (!file) {
         res.writeHead(404); return res.end('not found')
       }
       res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' })
@@ -401,9 +429,10 @@ const STILL_AREA = 0.04
 // spend the size budget on sharpness instead of on the travel.
 const TOUR = { mode: 'scroll', ms: 5000, stops: [{ y: 0, hold: 1200 }, { y: 760, hold: 1000 }, { y: 1500, hold: 1000 }] }
 
-async function captureAnim(context, port, file, id, tmpRoot) {
+async function captureAnim(context, port, entry, tmpRoot) {
+  const { file, id } = entry
   const problems = []
-  const html = fs.readFileSync(path.join(PAGES, file), 'utf8')
+  const html = fs.readFileSync(path.join(entry.pages, file), 'utf8')
   const hint = readCaptureHint(html)
   if (hint.invalid) problems.push(`capture hint is not valid JSON with mode run|scroll (scroll needs stops): ${hint.invalid}`)
   const dir = fs.mkdtempSync(path.join(tmpRoot, `${id}-`))
@@ -473,7 +502,7 @@ async function captureAnim(context, port, file, id, tmpRoot) {
     const notes = []
     if (frameMotion(list, length) < 1) notes.push(`barely moves at card size (${mode}): the loop will read as a still; a capture hint can show more`)
 
-    const out = path.join(ANIM_OUT, `${id}.webp`)
+    const out = path.join(entry.animOut, `${id}.webp`)
     let bytes = 0; let used = null
     for (const rung of LADDER) {
       bytes = encodeLoop(list, length, rung, out)
@@ -490,21 +519,33 @@ async function captureAnim(context, port, file, id, tmpRoot) {
 
 // ── run ──────────────────────────────────────────────────────────────────────
 
-const files = fs.readdirSync(PAGES)
-  .filter((f) => /^c-\d+\.html$/.test(f))
-  .sort((a, b) => Number(a.match(/\d+/)[0]) - Number(b.match(/\d+/)[0]))
-const selected = ONLY ? files.filter((f) => ONLY.has(f.replace('.html', ''))) : files
+const idNum = (id) => Number(id.match(/\d+/)[0])
+// Every page to capture: the public ones, then the Pro checkout's (a public
+// page wins if both have the same id). Each writes its images beside its kind.
+const SOURCES = [{ pages: PAGES, out: OUT }, ...(PRO ? [{ pages: PRO_PAGES, out: PRO_OUT }] : [])]
+const byId = new Map()
+for (const src of SOURCES) {
+  for (const file of fs.readdirSync(src.pages).filter((f) => /^c-\d+\.html$/.test(f))) {
+    const id = file.replace('.html', '')
+    if (byId.has(id)) continue
+    byId.set(id, { file, id, pages: src.pages, posterOut: path.join(src.out, 'poster'), animOut: path.join(src.out, 'anim') })
+  }
+}
+const entries = [...byId.values()].sort((a, b) => idNum(a.id) - idNum(b.id))
+const selected = ONLY ? entries.filter((e) => ONLY.has(e.id)) : entries
 
 if (!selected.length) {
-  console.error(`prompt-posters: no preview pages found in ${PAGES}`)
+  console.error(`prompt-posters: no preview pages found in ${SOURCES.map((s) => s.pages).join(' or ')}`)
   process.exit(1)
 }
 
-fs.mkdirSync(POSTER_OUT, { recursive: true })
-fs.mkdirSync(ANIM_OUT, { recursive: true })
+for (const e of selected) {
+  fs.mkdirSync(e.posterOut, { recursive: true })
+  fs.mkdirSync(e.animOut, { recursive: true })
+}
 const tmpRoot = fs.mkdtempSync(path.join(typeof args.tmp === 'string' ? args.tmp : os.tmpdir(), 'prompt-anim-'))
 
-const { server, port } = await serve(PUBLIC)
+const { server, port } = await serve(PRO ? [PUBLIC, PRO] : [PUBLIC])
 const browser = await chromium.launch({
   // WebGL in headless Chromium: its software fallback (SwiftShader) must be
   // allowed explicitly. Do NOT force it with --use-angle=swiftshader: that
@@ -532,8 +573,8 @@ await animCtx.addInitScript(() => {
 
 const report = []
 try {
-  for (const file of selected) {
-    const id = file.replace('.html', '')
+  for (const entry of selected) {
+    const { file, id } = entry
     const problems = []
     const page = await posterCtx.newPage()
     await guardNetwork(page, port, problems)
@@ -542,11 +583,11 @@ try {
     const png = await page.screenshot({ type: 'png', scale: 'css' })
     await page.close()
     const webp = await toWebp(posterCtx, png, POSTER_WIDTH, POSTER_QUALITY)
-    fs.writeFileSync(path.join(POSTER_OUT, `${id}.webp`), webp)
+    fs.writeFileSync(path.join(entry.posterOut, `${id}.webp`), webp)
     const row = { id, posterBytes: webp.length, problems }
     if (WITH_ANIM) {
       try {
-        const a = await captureAnim(animCtx, port, file, id, tmpRoot)
+        const a = await captureAnim(animCtx, port, entry, tmpRoot)
         Object.assign(row, { anim: a })
         problems.push(...a.problems)
       } catch (e) {
@@ -572,9 +613,15 @@ try {
 // the other pages listed. A page is listed when its poster exists; it is in
 // PROMPT_ANIM_IDS when its animation exists too. A trial run (--out) leaves it
 // alone. tests/unit/prompt-preview-assets.test.js checks it against the disk.
-const allIds = files.map((f) => f.replace('.html', ''))
-const ids = allIds.filter((id) => fs.existsSync(path.join(POSTER_OUT, `${id}.webp`)))
-const animIds = ids.filter((id) => fs.existsSync(path.join(ANIM_OUT, `${id}.webp`)))
+// Without the Pro checkout the locked ids cannot be checked here, so the ones
+// the manifest already lists are kept as they are.
+const onDisk = entries.filter((e) => fs.existsSync(path.join(e.posterOut, `${e.id}.webp`)))
+const kept = PRO ? [] : PRO_PREVIEW_IDS.filter((id) => !byId.has(id) && LISTED.includes(id))
+const ids = [...onDisk.map((e) => e.id), ...kept].sort((a, b) => idNum(a) - idNum(b))
+const animIds = ids.filter((id) => {
+  const e = byId.get(id)
+  return e ? fs.existsSync(path.join(e.animOut, `${id}.webp`)) : LISTED_ANIM.includes(id)
+})
 if (TRIAL) console.log(`prompt-posters: trial run, images in ${OUT}; manifest not written`)
 const lines = TRIAL ? null : [
   '// GENERATED by scripts/prompt-posters.mjs. Do not edit by hand.',

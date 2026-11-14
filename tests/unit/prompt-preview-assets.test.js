@@ -9,25 +9,33 @@ import { fileURLToPath } from 'node:url'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS, promptPosterSrc, promptAnimSrc, promptPageSrc } from '../../src/data/promptPreviewAssets.js'
 import { readCaptureHint } from '../../scripts/prompt-capture-hint.mjs'
 import { framePreviewHtml } from '../../src/utils/previewFrame.js'
+import { isProPreview } from '../../src/data/proPreviewIds.js'
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const PUBLIC = path.join(ROOT, 'public')
-const onDisk = (url) => path.join(PUBLIC, ...url.split('/').filter(Boolean))
+// Locked previews come with the fetched Pro data under api/_lib/pro/, at the
+// same relative path; free ones are public. Without the Pro data (CI, no
+// PRO_DATA_TOKEN) the locked ones are not checked.
+const PRO = path.join(ROOT, 'api', '_lib', 'pro')
+const PRO_FETCHED = fs.existsSync(path.join(PRO, 'previews'))
+const onDisk = (url, id) => path.join(isProPreview(id) ? PRO : PUBLIC, ...url.split('/').filter(Boolean))
+const checkable = (id) => !isProPreview(id) || PRO_FETCHED
 // The per-file budget the capture script encodes down to.
 const ANIM_BUDGET = 400 * 1024
 
 test('every listed preview has its page and poster on disk', () => {
   assert.ok(PROMPT_PREVIEW_IDS.length > 0)
-  for (const id of PROMPT_PREVIEW_IDS) {
-    assert.ok(fs.existsSync(onDisk(promptPageSrc(id))), `${id}: no demo page`)
-    assert.ok(fs.existsSync(onDisk(promptPosterSrc(id))), `${id}: no poster`)
+  for (const id of PROMPT_PREVIEW_IDS.filter(checkable)) {
+    assert.ok(fs.existsSync(onDisk(promptPageSrc(id), id)), `${id}: no demo page`)
+    assert.ok(fs.existsSync(onDisk(promptPosterSrc(id), id)), `${id}: no poster`)
   }
 })
 
 test('every listed animation exists, belongs to a preview and fits the budget', () => {
   for (const id of PROMPT_ANIM_IDS) {
     assert.ok(PROMPT_PREVIEW_IDS.includes(id), `${id}: animated but has no preview`)
-    const file = onDisk(promptAnimSrc(id))
+    if (!checkable(id)) continue
+    const file = onDisk(promptAnimSrc(id), id)
     assert.ok(fs.existsSync(file), `${id}: listed as animated but the file is missing`)
     const bytes = fs.statSync(file).size
     assert.ok(bytes <= ANIM_BUDGET, `${id}: ${(bytes / 1024).toFixed(0)} KB is over the ${ANIM_BUDGET / 1024} KB budget`)
@@ -35,8 +43,9 @@ test('every listed animation exists, belongs to a preview and fits the budget', 
 })
 
 test('no animation on disk is left out of the manifest', () => {
-  const dir = path.join(PUBLIC, 'previews', 'prompts', 'anim')
-  const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.webp')) : []
+  const files = [PUBLIC, PRO]
+    .map((base) => path.join(base, 'previews', 'prompts', 'anim'))
+    .flatMap((dir) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('.webp')) : []))
   for (const f of files) {
     assert.ok(PROMPT_ANIM_IDS.includes(f.replace('.webp', '')), `${f} is on disk but not in PROMPT_ANIM_IDS`)
   }

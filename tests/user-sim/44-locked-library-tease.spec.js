@@ -33,8 +33,8 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
-import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
+import { BRAND_PALETTES } from '../../api/_lib/library/data.js'
+import { LIBRARY_PALETTES } from '../../api/_lib/library/data.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const ROUTE = '/discover/palettes'

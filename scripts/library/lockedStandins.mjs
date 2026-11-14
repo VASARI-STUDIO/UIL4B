@@ -10,7 +10,8 @@
 // the page, the stylesheet, a srcset or a preload to find. The card scales it up
 // with a mild CSS blur, which reads as the same soft wash the heavy blur gave.
 //
-// Reads  public/previews/prompts/poster/<id>.webp
+// Reads  public/previews/prompts/poster/<id>.webp (free)
+//        api/_lib/pro/previews/prompts/poster/<id>.webp (locked, fetched Pro data)
 //        public/export-themes/<theme>-(book|guideCover|guidePalette).webp
 // Writes public/locked-images/prompts/<id>.webp
 //        public/locked-images/export-themes/<theme>-<key>.webp
@@ -34,13 +35,19 @@ export const PROMPT_W = 32
 export const THEME_W = 40
 const QUALITY = 0.6
 export const THEME_KEYS = Object.freeze(['book', 'guideCover', 'guidePalette'])
+// Free posters, then the locked ones from the fetched Pro data (scripts/fetch-pro-data.mjs).
+export const POSTER_DIRS = Object.freeze(['public/previews/prompts/poster', 'api/_lib/pro/previews/prompts/poster'])
 
 /** Every { from, to, width } job, as repo-relative paths. */
 export function standinJobs() {
   const jobs = []
-  const posters = path.join(ROOT, 'public/previews/prompts/poster')
-  for (const f of fs.readdirSync(posters).filter((n) => n.endsWith('.webp')).sort()) {
-    jobs.push({ from: `public/previews/prompts/poster/${f}`, to: `${STANDIN_DIR}/prompts/${f}`, width: PROMPT_W })
+  // Free posters are public. Locked ones come with the fetched Pro data and are
+  // absent when it was not fetched (no PRO_DATA_TOKEN): their committed stand-ins stay as they are.
+  for (const dir of POSTER_DIRS) {
+    if (!fs.existsSync(path.join(ROOT, dir))) continue
+    for (const f of fs.readdirSync(path.join(ROOT, dir)).filter((n) => n.endsWith('.webp')).sort()) {
+      jobs.push({ from: `${dir}/${f}`, to: `${STANDIN_DIR}/prompts/${f}`, width: PROMPT_W })
+    }
   }
   const themes = path.join(ROOT, 'public/export-themes')
   for (const f of fs.readdirSync(themes).filter((n) => n.endsWith('.webp')).sort()) {

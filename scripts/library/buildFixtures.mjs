@@ -1,6 +1,5 @@
 // Writes api/_lib/library/fixtures.js: stand-in library data for development
-// and tests when neither the fetched Pro data (api/_lib/pro/) nor the in-tree
-// copies are present.
+// and tests when the fetched Pro data (api/_lib/pro/) is not present.
 //
 // It is built ONLY from the public client stubs in src/data/, so it can never
 // carry a Pro value. Free rows are copied as they already are in public; each

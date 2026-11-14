@@ -15,3 +15,7 @@ export const LIBRARY_PALETTES = lib.LIBRARY_PALETTES
 export const GALLERY_GRADIENTS = lib.GALLERY_GRADIENTS
 export const COMMUNITY_PROMPTS = lib.COMMUNITY_PROMPTS
 export const LIBRARIES = lib.LIBRARIES
+export const PRO_ICON_GROUPS = lib.PRO_ICON_GROUPS
+// True when the rows are the real library (fetched), false on fixtures or when
+// nothing is present. Tests of the content itself skip on false.
+export const HAS_REAL_PRO_DATA = lib.source === 'pro'
