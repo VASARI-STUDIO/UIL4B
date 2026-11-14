@@ -127,6 +127,9 @@ const KEEP = {
   split: ['dl-main', 'dl-more'],
   // a switch track, drawn by its own geometry
   switch: ['toggle-switch', 'aipg-rule'],
+  // the Converter's tool rail: a rail tab is an icon over its label in a 12px-cornered cell, like
+  // ig-rail-item, and its More sheet's rows are full-width list rows at the same corner
+  rail: ['fc-rail-tab', 'fc-rail-sheet-item'],
   // previews of the user's own design system, drawn at the user's radius
   preview: ['uis-demo-button', 'uis-scene-tab'],
   // a state modifier the sweep reads off the phone tab bar's buttons; it is not a button, and the

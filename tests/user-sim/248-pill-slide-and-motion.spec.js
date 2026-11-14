@@ -30,6 +30,7 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { clickPaletteAction } from './palette-helpers.js'
+import { openGroup } from './converter-rail-helpers.js'
 import { showTypeScaleCode } from './type-scale-view.js'
 
 const SHOTS = '.claude/scratch/polish3'
@@ -132,7 +133,8 @@ async function openFileConverterVideo(page) {
     return Array.from(new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer()))
   })
   await page.locator('.fc-drop input[type="file"]').setInputFiles({ name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.from(clip) })
-  await expect(page.getByLabel('Width (px)'), 'the clip never loaded').toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('tablist', { name: 'Edit tools' }), 'the clip never loaded').toBeVisible({ timeout: 15000 })
+  await openGroup(page, 'Time') // the Speed choices live in the Time group
 }
 
 // Every case opens its page, prepares the group and returns its locator.

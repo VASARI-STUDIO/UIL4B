@@ -13,7 +13,7 @@ test('the page counts the picker states are the engine\'s page lists', () => {
 
 test('the picker lists every export theme in the table order, and the UI kit is free in Standards only', () => {
   assert.deepEqual(PICKER_THEMES.map((t) => t.id), EXPORT_THEMES.map((t) => t.id))
-  assert.ok(PICKER_THEMES.some((t) => t.id === '24-standards') && PICKER_THEMES.some((t) => t.id === '32-dieline'))
+  assert.equal(PICKER_THEMES.length, EXPORT_THEMES.length)
   assert.deepEqual(PICKER_THEMES.filter((t) => t.free).map((t) => t.id), ['04-standards'])
   assert.equal(defaultThemeId(false), '04-standards')
   assert.equal(defaultThemeId(true), '01-presentation')
@@ -22,7 +22,7 @@ test('the picker lists every export theme in the table order, and the UI kit is 
 test('a file lists only the themes that have its row; Label and Swiss Field are guidelines only', () => {
   const ids = (file) => pickerThemesFor(file).map((t) => t.id)
   const full = PICKER_THEMES.filter((t) => !t.rows).length
-  assert.ok(full >= 12)
+  assert.equal(full, EXPORT_THEMES.filter((t) => !t.rows).length)
   for (const file of ['kit', 'book', 'book-html']) {
     assert.equal(ids(file).length, full, file)
     assert.ok(!ids(file).includes('25-label') && !ids(file).includes('27-swissfield'), file)

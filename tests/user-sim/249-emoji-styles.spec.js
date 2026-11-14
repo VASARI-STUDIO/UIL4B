@@ -115,6 +115,27 @@ for (const view of VIEWS) {
         await page.screenshot({ path: `${SHOTS}/pro-${view.width}-${scheme}.png` })
       })
 
+      test('Pro: a set tile downloads its SVG, named for the emoji and set, with the credit inside', async ({ page }) => {
+        watch(page, 'a Pro member downloading an emoji style')
+        await answerIconifyBatches(page, drawing)
+        await signIn(page, { plan: 'pro' })
+        await go(page, ROUTE)
+        const dialog = await openWave(page)
+        await expect(dialog.locator('.emd-style-img')).toHaveCount(4)
+        for (const label of SETS) await expect(dialog.getByRole('button', { name: `Download ${label} SVG` })).toBeVisible()
+        await expect(dialog.getByRole('button', { name: /Download Your device/ }), 'the system glyph is never offered as a file').toHaveCount(0)
+        const save = dialog.getByRole('button', { name: 'Download Twemoji SVG' })
+        const box = await save.boundingBox()
+        expect(box.width, 'the download tile is a touch target').toBeGreaterThanOrEqual(44)
+        const [download] = await Promise.all([page.waitForEvent('download'), save.click()])
+        expect(download.suggestedFilename()).toBe('waving-hand-twemoji.svg')
+        const fs = await import('node:fs')
+        const text = fs.readFileSync(await download.path(), 'utf8')
+        expect(text.startsWith('<svg'), 'the file opens with <svg').toBe(true)
+        expect(text, 'the file carries the set credit').toMatch(/<!-- Twemoji[^>]*Licence: [^>]*-->/)
+        expect(text, 'the drawing is the twemoji icon').toContain('twemoji/')
+      })
+
       test('Pro: a set with no icon for this emoji hides its tile', async ({ page }) => {
         watch(page, 'a Pro member opening an emoji one set does not draw')
         await answerIconifyBatches(page, (prefix, name) => (prefix === 'twemoji' ? null : drawing(prefix, name)))
