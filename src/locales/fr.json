@@ -465,7 +465,7 @@
     "loadingSignup": "Création de votre compte…",
     "loadingReset": "Envoi…",
     "loadingSwitch": "Changement de compte…",
-    "legal": "En continuant, vous acceptez les {terms} et la {privacy}. Vous devez avoir 16 ans ou plus pour créer un compte.",
+    "legal": "En continuant, vous acceptez les {terms} et la {privacy}. Vous devez avoir 18 ans ou plus pour créer un compte.",
     "legalTerms": "Conditions d'utilisation",
     "legalPrivacy": "Politique de confidentialité",
     "noAccount": "Pas encore de compte ?",
