@@ -1,5 +1,5 @@
 // Spec 248: the sliding selected pill on the hand-built option groups, and the
-// two library entrance animations (the icon glyph fade and the card rise).
+// library entrance animations (the icon glyph fade, and the check that a palette tile has none).
 //
 // Groups covered (each at 1440 and 390 where the group is on screen at that
 // width): Type Scale (preview width, the Scale / Page switch at 1024, the Code drawer's export format at 1440, the settings sheet tabs and fine-tuning join mode), Aspect
@@ -319,11 +319,11 @@ test.describe('keyboard behaviour is unchanged on the adopted groups', () => {
 })
 
 test.describe('library entrance animations', () => {
-  // A card or glyph that mounts is a fresh element, so a clone of one stands in
+  // A tile or glyph that mounts is a fresh element, so a clone of one stands in
   // for it: the page's real stylesheet decides what the clone does.
   async function enteringCard(page) {
     return page.evaluate(() => {
-      const card = document.querySelector('.lib-surface .lbry-card')
+      const card = document.querySelector('.lib-surface .vpt')
       const fresh = card.cloneNode(true)
       card.parentElement.appendChild(fresh)
       const cs = getComputedStyle(fresh)
@@ -332,6 +332,7 @@ test.describe('library entrance animations', () => {
       const timing = anim ? anim.effect.getComputedTiming() : null
       const out = {
         name: cs.animationName,
+        running: fresh.getAnimations().length,
         duration: timing ? timing.duration : null,
         easing: frames[0] ? frames[0].easing : null,
         props: [...new Set(frames.flatMap((f) => Object.keys(f)))].filter((k) => !['offset', 'computedOffset', 'easing', 'composite'].includes(k)).sort(),
@@ -343,33 +344,36 @@ test.describe('library entrance animations', () => {
   }
 
   for (const width of WIDTHS) {
-    // RETARGETED (V3 board). The rebuilt palette library drops the card entrance
-    // on purpose: library-v3.css sets `animation: none` on `.lbry-card` and the
-    // LibraryR2A board has no rise-and-fade. The protected property is now "a
-    // library card never moves on mount", so a stray entrance would fail here.
-    // Mutation: delete the `animation:none` line in library-v3.css and the card
-    // picks up plSlideUp again from library.css -> "none" assertion fails.
-    test(`a mounting V3 library card does not animate in, at ${width}px`, async ({ page }) => {
+    // V3 palette and gradient libraries browse as `.vpt` tiles (VerticalPanelTile). Nothing in
+    // library-v3.css gives `.vpt` an `animation`: the tile only transitions its background colour
+    // and its press scale (`.vpt:active`), and the legacy `.lib-surface .lbry-card` rise
+    // (`plSlideUp`, library.css) does not match a tile because a tile is not a `.lbry-card`. So
+    // the protected property is "a tile never moves on mount": a clone of a tile, appended the
+    // way a freshly mounted one is, has no animation name and no running animation.
+    // MUTATION: add `animation:plSlideUp 240ms both` to `.lib-surface.lib-v3[class] .vpt` in
+    // library-v3.css and the clone picks up the animation -> both assertions fail.
+    test(`a mounting V3 library tile does not animate in, at ${width}px`, async ({ page }) => {
       watch(page, 'someone opening the palette library')
       await page.setViewportSize({ width, height: heightFor(width) })
       await go(page, '/discover/palettes')
-      await expect(page.locator('.lib-surface .lbry-card').first()).toBeVisible()
+      await expect(page.locator('.lib-surface .vpt').first()).toBeVisible()
       await expect(page.locator('.lib-surface.lib-v3')).toHaveCount(1)
       const a = await enteringCard(page)
-      expect(a.name, 'the V3 card has no entrance animation').toBe('none')
+      expect(a.name, 'the V3 tile has no entrance animation').toBe('none')
+      expect(a.running, 'a clone of a V3 tile started an animation').toBe(0)
       expect(a.duration).toBeNull()
       await page.screenshot({ path: `${SHOTS}/library-cards-${width}.png` })
     })
   }
 
-  // RETARGETED (V3 board): with no card entrance there is nothing for reduced
-  // motion to switch off, so the card stays still under every setting. The glyph
+  // With no tile entrance there is nothing for reduced motion to switch off, so
+  // the tile stays still under every setting. The glyph
   // entrance tests below still cover the reduced-motion switch itself.
-  test('a V3 library card stays still under the OS setting and the in-app switch', async ({ page }) => {
+  test('a V3 library tile stays still under the OS setting and the in-app switch', async ({ page }) => {
     watch(page, 'someone who asked for reduced motion')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/discover/palettes')
-    await expect(page.locator('.lib-surface .lbry-card').first()).toBeVisible()
+    await expect(page.locator('.lib-surface .vpt').first()).toBeVisible()
     expect((await enteringCard(page)).name).toBe('none')
 
     // The app re-stamps its attribute from the OS value a moment after the change.

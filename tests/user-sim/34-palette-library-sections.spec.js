@@ -40,7 +40,7 @@ test.describe('palette library sections', () => {
     watch(page, 'a Pro subscriber browsing for a palette')
     await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
+    await expect(page.locator('.vpt:not(.geg-fade *)').first()).toBeVisible()
     // The free rows paint first; the sections below are the Pro library's.
     await proLibraryArrived(page, 'the palette library')
   })
@@ -59,7 +59,7 @@ test.describe('palette library sections', () => {
     const counts = await page.locator('.pgl-section-count').allTextContents()
     const total = counts.reduce((sum, n) => sum + parseInt(n, 10), 0)
     expect(counts.length).toBe(2)
-    expect(total).toBe(await page.locator('.pgal-card:not(.geg-fade *)').count())
+    expect(total).toBe(await page.locator('.vpt:not(.geg-fade *)').count())
   })
 
   // The reason to section a long list rather than filter it: the answer to
@@ -105,7 +105,7 @@ test.describe('palette library sections', () => {
   test('filtering collapses back to one flat grid', async ({ page }) => {
     await page.locator(TRAY).getByRole('button', { name: 'Brand', exact: true }).click()
     await expect(page.locator(HEAD)).toHaveCount(0)
-    await expect(page.locator('.pgal-card:not(.geg-fade *)').first()).toBeVisible()
+    await expect(page.locator('.vpt:not(.geg-fade *)').first()).toBeVisible()
 
     await page.locator(TRAY).getByRole('button', { name: 'All palettes', exact: true }).click()
     await expect(page.locator(HEAD)).toHaveCount(2)
@@ -155,13 +155,13 @@ test.describe('palette library sections', () => {
     await expect(eyebrow).toHaveText('Colours worth building with')
 
     await page.locator(TRAY).getByRole('button', { name: 'Brand', exact: true }).click()
-    await expect(page.locator('.pgal-card[data-kind="brand"]').first()).toBeVisible()
-    await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(0)
+    await expect(page.locator('.vpt[data-kind="brand"]').first()).toBeVisible()
+    await expect(page.locator('.vpt[data-kind="curated"]')).toHaveCount(0)
     await expect(eyebrow).toHaveText('Brand palettes')
 
     await page.locator(TRAY).getByRole('button', { name: 'Curated', exact: true }).click()
-    await expect(page.locator('.pgal-card[data-kind="curated"]').first()).toBeVisible()
-    await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(0)
+    await expect(page.locator('.vpt[data-kind="curated"]').first()).toBeVisible()
+    await expect(page.locator('.vpt[data-kind="brand"]')).toHaveCount(0)
     await expect(eyebrow).toHaveText('Curated collection')
 
     // A mood filter selects on the colours themselves, so it reaches into both
@@ -172,8 +172,8 @@ test.describe('palette library sections', () => {
     // Mood is a menu (nine options), so the chip has to be opened to first.
     await page.locator('.pgl-toolbar .lbry-filtertrig:has(.lbry-filtertrig-k:text-is("Mood"))').click()
     await page.locator(MOOD_TRAY).getByRole('button', { name: 'Dark', exact: true }).click()
-    await expect(page.locator('.pgal-card[data-kind="brand"]').first()).toBeVisible()
-    await expect(page.locator('.pgal-card[data-kind="curated"]').first()).toBeVisible()
+    await expect(page.locator('.vpt[data-kind="brand"]').first()).toBeVisible()
+    await expect(page.locator('.vpt[data-kind="curated"]').first()).toBeVisible()
     await expect(eyebrow).not.toHaveText(/curated collection|brand/i)
   })
 
@@ -210,7 +210,7 @@ test.describe('palette library sections', () => {
   })
 
   test('each section grid names itself to assistive technology', async ({ page }) => {
-    const labelled = await page.locator('.pgl-section .lbry-grid').evaluateAll(
+    const labelled = await page.locator('.pgl-section .vpt-grid').evaluateAll(
       (grids) => grids.map((g) => {
         const id = g.getAttribute('aria-labelledby')
         return id ? document.getElementById(id)?.textContent?.trim() : null
@@ -236,15 +236,15 @@ test.describe('palette library sections', () => {
     // nothing open.
     await signIn(page, { plan: 'free' })
     await go(page, ROUTE)
-    await expect(page.locator('.pgal-card:not(.geg-fade *)')).toHaveCount(10)
+    await expect(page.locator('.vpt:not(.geg-fade *)')).toHaveCount(10)
     const gate = page.locator('section.geg[aria-labelledby="pgl-gate-h"]')
     await expect(gate).toHaveCount(1)
-    await expect(page.locator('#pgl-gate-h')).toHaveText(/^Pro opens \d+ more palettes$/)
+    await expect(page.locator('#pgl-gate-h')).toHaveText(/^\d+ more palettes with Pro$/)
     await expect(page.locator('#pgl-gate-h')).toHaveJSProperty('tagName', 'H2')
     await expect(gate.locator('.geg-fade')).toHaveAttribute('aria-hidden', 'true')
     expect(await page.locator('.pgl-section .geg').count(),
       'the gate is nested inside a section again - it disappears when that section has nothing open').toBe(0)
-    expect(await page.locator('.lbry-grid[aria-labelledby="pgl-locked-more"]').count(),
+    expect(await page.locator('.lbry-grid[aria-labelledby="pgl-locked-more"], .vpt-grid[aria-labelledby="pgl-locked-more"]').count(),
       'the old teased grid is back beside the gate').toBe(0)
   })
 })

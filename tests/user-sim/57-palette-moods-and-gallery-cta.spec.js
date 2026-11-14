@@ -37,7 +37,9 @@ const COLLECTION_TRAY = '[aria-label^="Filter palettes by collection"]'
 // is under test.
 const MOOD_TRIGGER = '.pgl-toolbar .lbry-filtertrig:has(.lbry-filtertrig-k:text-is("Mood"))'
 const MOOD_TRAY = '[aria-label^="Filter palettes by mood"]'
-const CARD = '.pgal-card'
+// V3: palettes browse as vertical panel tiles (PaletteGalleryGrid renders VptGrid and
+// VerticalPanelTile unless a builder picker passes onPick), so a card is `.vpt`.
+const CARD = '.vpt'
 
 async function pickMood(page, label) {
   const trigger = page.locator(MOOD_TRIGGER)
@@ -138,7 +140,7 @@ test.describe('palette mood filters', () => {
     const namesUnder = async (label) => {
       await pickMood(page, label)
       await expect(page.locator(CARD)).toHaveCount(expectedFor(label.toLowerCase()))
-      return page.locator(`${CARD} .pgal-name, ${CARD} h3`).allInnerTexts()
+      return page.locator(`${CARD} .vpt-name`).allInnerTexts()
     }
     for (const [a, b] of [['Pastel', 'Vivid'], ['Dark', 'Light']]) {
       const first = new Set(await namesUnder(a))
@@ -226,8 +228,8 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
 // ship. Its toolbar already offers an onward action ("Build a font pair"),
 // which answers the same question with something real.
 const GALLERIES = [
-  { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
-  { route: '/discover/gradients', card: '.grg-card', action: 'Make your own', href: '/create/gradient' },
+  { route: PALETTES, card: '.vpt', action: 'Create and submit your own', href: '/create/palette' },
+  { route: '/discover/gradients', card: '.vpt', action: 'Make your own', href: '/create/gradient' },
   // The V3 hub closes on its own share block rather than the library CTA.
   { route: '/community', card: '.cm-tile', action: 'Share your work', href: null, ctaSel: '.cm-close', qSel: 'p', question: /^Made something with UIL4B\?$/ },
 ]
@@ -323,7 +325,7 @@ test.describe('the end of a capped result offers more access to free, submission
     watch(page, 'a free account at the end of the palette library')
     await signIn(page, { plan: 'free' })
     await go(page, PALETTES)
-    await expect(page.locator('.geg[data-gate="pro"]')).toBeVisible()
+    await expect(page.locator('.geg[data-gate="free"]')).toBeVisible()
     await expect(page.locator('.gcta')).toHaveCount(0)
     await expect(page.getByText('Create and submit your own')).toHaveCount(0)
   })
@@ -371,7 +373,7 @@ test('the closing CTA clears the feedback button at twenty widths', async ({ bro
       // tease there instead, which is its own end-of-page offer.
       await signIn(page, { plan: 'pro' })
       await go(page, PALETTES)
-      await expect(page.locator('.pgal-card').first()).toBeVisible()
+      await expect(page.locator(CARD).first()).toBeVisible()
       // The closing call to action sits under the last card of the FULL set, so
       // measure only once the Pro library has replaced the free rows.
       await proLibraryArrived(page, `the palette library at ${width}px`)

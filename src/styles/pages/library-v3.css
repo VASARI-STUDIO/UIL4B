@@ -118,9 +118,9 @@
 .lib-surface.lib-v3[class] .lbry-filtermenu .lbry-filter[data-active="true"]{background:rgba(var(--v3-ink-rgb),.12);color:var(--v3-ink)}
 .lib-surface.lib-v3[class] .lbry-filtermenu .lbry-filter:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
 
-/* The hint beside the type chips: 12px tertiary, no pill, off below 1200. */
+/* The hint beside the type chips: 12px in --t2 (the axe fix from main), no pill, off below 1200. */
 .lib-surface.lib-v3[class] .lbry-filter-hint{
-  padding:0;border:0;background:none;border-radius:0;font-size:12px;font-weight:400;color:var(--v3-t56);
+  padding:0;border:0;background:none;border-radius:0;font-size:12px;font-weight:400;color:var(--t2);
 }
 @media(max-width:1199px){.lib-surface.lib-v3[class] .lbry-filter-hint{display:none}}
 
