@@ -38,8 +38,10 @@ for (const plan of ['free', 'pro']) {
       await expect(step(panel, 'Layout')).toHaveCount(0)
       await expect(panel.getByRole('radiogroup', { name: 'Template' })).toHaveCount(0)
       await expect(panel.locator('.exp-tpl-tile')).toHaveCount(0)
-      // A theme is a name in the Theme step; no template name is a radio anywhere in the dialog.
-      const offered = (await panel.getByRole('radio').allInnerTexts()).join('\n')
+      // A theme is a name in the Theme step; no template name is a radio anywhere else in the dialog. The theme radios
+      // carry sample brand names (one of them is Studio), so they are left out by their own group.
+      const themes = await panel.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio').allInnerTexts()
+      const offered = (await panel.getByRole('radio').allInnerTexts()).filter((t) => !themes.includes(t)).join('\n')
       for (const name of TEMPLATE_NAMES) expect(offered, `${name} is not a radio in the dialog`).not.toMatch(new RegExp(`^${name}\\b`, 'm'))
     })
   }

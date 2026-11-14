@@ -10,7 +10,7 @@ import { formatFileName, hasFormatFile } from '../../src/utils/exportFileName.js
 import { EXPORT_TEMPLATES, assertTemplatesCoherent } from '../../src/config/exportTemplates.js'
 import {
   DEFAULT_PRESET, EXPORT_TYPES, LAST_PICK_KEY, exportLocation, galleryPick, needsNetwork,
-  presetFromGalleryPick, readLastPick, resolvePreset, resolveUpgradeTarget, storeLastPick,
+  FREE_START, pickIsFree, presetFromGalleryPick, readLastPick, readLastTheme, resolvePreset, resolveUpgradeTarget, startFor, storeLastPick,
 } from '../../src/config/dialogExport.js'
 import { GALLERY_CHECKOUT, GALLERY_DESIGNS, GALLERY_FORMATS, normalisePick } from '../../src/utils/kitGalleryPick.js'
 import { codeFileName, CODE_FILES, isCodeFile, buildCodeFile } from '../../src/utils/codeFiles.js'
@@ -48,6 +48,11 @@ test('the rail is Brand book (Book, Slides, Style guide), UI kit, Code and App-r
 test('a category is Pro when every one of its files is, and the first file is the default', () => {
   for (const c of allCategories) {
     const formats = c.files.map((id) => EXPORT_FORMATS.find((f) => f.id === id))
+    // Slides is the one exception: its files are Pro in most themes and free in two, so the Theme step decides and the row carries no tag.
+    if (c.id === 'slides') {
+      assert.equal(c.pro, false, 'the slides row is decided by its theme, so it is not marked Pro')
+      continue
+    }
     assert.equal(c.pro, formats.every((f) => f.pro), `${c.id} tier differs from src/config/exportFormats.js`)
     assert.equal(formats.some((f) => f.pro) && !c.pro, false, `${c.id} mixes Pro and free files`)
   }
@@ -157,6 +162,47 @@ test('the last pick is kept for the session, resolved, and an unreadable store r
   assert.equal(LAST_PICK_KEY, 'uil4b.exportV3.last')
 })
 
+test('the theme is kept with the pick, read back only for the file it was chosen for, and dropped when it does not fit', () => {
+  const storage = memory()
+  assert.equal(readLastTheme('kit', { storage }), null)
+  storeLastPick({ type: 'brand', category: 'slides', file: 'guidelines' }, { storage, theme: '27-swissfield' })
+  assert.equal(readLastTheme('guidelines', { storage }), '27-swissfield')
+  // The pick itself still reads as a plain three-key preset.
+  assert.deepEqual(readLastPick({ storage }), { type: 'brand', category: 'slides', file: 'guidelines' })
+  // Another file does not inherit it; neither does a theme that is not one.
+  assert.equal(readLastTheme('kit', { storage }), null)
+  storeLastPick({ type: 'brand', category: 'slides', file: 'guidelines' }, { storage, theme: 'not-a-theme' })
+  assert.equal(readLastTheme('guidelines', { storage }), null)
+  // A pick stored with no theme clears the old one.
+  storeLastPick({ type: 'brand', category: 'slides', file: 'guidelines' }, { storage })
+  assert.equal(readLastTheme('guidelines', { storage }), null)
+  assert.equal(readLastTheme('guidelines', { storage: { getItem() { throw new Error('denied') } } }), null)
+})
+
+test('a free account starts on a free pick: the guidelines in Label, never a Pro file or a Pro theme', () => {
+  assert.deepEqual({ ...FREE_START }, { type: 'brand', category: 'slides', file: 'guidelines' })
+  assert.equal(pickIsFree(FREE_START), true)
+  assert.equal(pickIsFree(FREE_START, '25-label'), true)
+  assert.equal(pickIsFree(FREE_START, '27-swissfield'), true)
+  assert.equal(pickIsFree(FREE_START, '01-presentation'), false)
+  assert.equal(pickIsFree({ type: 'brand', category: 'book', file: 'book' }), false)
+  assert.equal(pickIsFree({ type: 'apps', category: 'apps', file: 'app-bundle' }), false)
+  assert.equal(pickIsFree({ type: 'kit', category: 'kit', file: 'kit' }, '04-standards'), true)
+  assert.equal(pickIsFree({ type: 'kit', category: 'kit', file: 'kit' }, '01-presentation'), false)
+  assert.equal(pickIsFree({ type: 'code', category: 'code', file: 'json' }), true)
+
+  // A Pro account keeps whatever it picked, theme included.
+  const book = { type: 'brand', category: 'book', file: 'book' }
+  assert.deepEqual(startFor(true, book, undefined), { pick: book, theme: undefined })
+  assert.deepEqual(startFor(true, FREE_START, '01-presentation'), { pick: FREE_START, theme: '01-presentation' })
+  // Anyone else keeps a free pick and falls back to the free start for a Pro one.
+  assert.deepEqual(startFor(false, FREE_START, '27-swissfield'), { pick: FREE_START, theme: '27-swissfield' })
+  assert.deepEqual(startFor(false, FREE_START, '01-presentation'), { pick: FREE_START, theme: undefined })
+  assert.deepEqual(startFor(false, book, undefined), { pick: FREE_START, theme: undefined })
+  assert.deepEqual(startFor(false, undefined, undefined), { pick: FREE_START, theme: undefined })
+  assert.notEqual(startFor(false, book, undefined).pick, FREE_START, 'the start is a copy, not the frozen constant')
+})
+
 // ── The way to Pro ──────────────────────────────────────────────────────────
 
 test('a Pro pick from a signed-in account with a saved project goes to the trial checkout, with the pick', () => {
@@ -262,7 +308,7 @@ test('the runner moved the gate tables over unchanged, and asks the server for t
 
 test('the runner exports one hook with the contract names, and copy() never runs the account gate', () => {
   assert.match(runner, /export default function useExportRunner\(\)/)
-  assert.match(runner, /return \{ run, copy, busy, stage, error, notice, done, reset, upgradeTarget \}/)
+  assert.match(runner, /return \{ run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn \}/)
   const copyBody = runner.slice(runner.indexOf('const copy = async'), runner.indexOf('const reset = '))
   assert.ok(copyBody.length > 100)
   assert.doesNotMatch(copyBody, /requireExportAccount|navigate|reportUpgradeGate/)

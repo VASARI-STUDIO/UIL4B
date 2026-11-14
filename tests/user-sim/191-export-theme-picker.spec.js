@@ -1,11 +1,12 @@
 // THE EXPORT DIALOG'S THEME STEP.
 //
 // The UI kit and the book (PDF and HTML) take one of ten themes; the slides (PDF and HTML) take those ten and two more, Label and
-// Swiss Field, which draw the guidelines only. The Theme step shows the chosen theme and a Change button; Change opens a popover on
-// a wide window and a "Theme" sheet on a phone. A free account can have the UI kit in Standards (for now) and the
-// guidelines in Label and Swiss Field; every other row and theme is Pro. The files come from
-// POST /api/ai?export=document, which every test here answers itself (export-theme-mock.js), so what is checked is what the
-// dialog asks for, what it does with each answer, and what a person reads.
+// Swiss Field, which draw the guidelines only. The Theme step is a list in the dialog, one row per theme, and nothing opens or
+// closes: choosing a row changes the pictures at once. A free account sees the list in two groups, "Free" (the themes the file is
+// free in) then "In Pro", with no row tagged one by one; a Pro account, or one whose plan is still being read, sees one plain
+// list. A free account can have the UI kit in Standards (for now) and the guidelines in Label and Swiss Field; every other row
+// and theme is Pro. The files come from POST /api/ai?export=document, which every test here answers itself
+// (export-theme-mock.js), so what is checked is what the dialog asks for, what it does with each answer, and what a person reads.
 //
 // Expected names, themes and copy are written out here, not read from src/, so a reworded button or a moved theme fails the spec.
 //
@@ -13,10 +14,10 @@
 //   - isThemeExportPro answers false for every theme          -> "a free account ... stays locked" (book, slides) and the kit's Pro themes
 //   - isPrintSafe returns true                                -> "a print document that is not the script-free one is refused"
 //   - the Retry-After seconds are read with parseFloat        -> "a Retry-After that is not whole seconds"
-//   - End moves to the second-last row                        -> "Home and End"
-//   - Escape closes the dialog as well as the list            -> "Escape closes the list"
+//   - End moves to the second-last row                        -> "keyboard" (the arrows, Home and End)
+//   - the arrows stop at the ends instead of wrapping         -> "keyboard" (the arrows, Home and End)
 //   - the list asks for focus once, with no retry per frame   -> "reduced motion" at 1440 (both settings)
-//   - the tier label reads the UI kit's free rule for every file -> "the Free or Pro label matches the dock"
+//   - the group reads the UI kit's free rule for every file   -> "the group a theme sits in matches the dock"
 //   - isThemeExportPro ignores a theme's own free flag        -> "free, guidelines in Label" and the free guidelines downloads
 //   - the picker lists every theme for every file             -> "Label and Swiss Field are not offered for the UI kit or the book"
 import { test, expect } from './base.js'
@@ -43,6 +44,17 @@ const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label and Swiss Field.
 const isGuide = (file) => file.startsWith('guidelines')
 const namesFor = (file) => (isGuide(file) ? GUIDE_NAMES : NAMES)
 const freeFor = (file) => (file === 'kit' ? FREE_KIT : isGuide(file) ? FREE_GUIDE : [])
+
+/** The groups a list shows: a free account gets "Free" then "In Pro" (an empty one is left out); a Pro account one list with no heading. */
+const groupsFor = (file, free) => {
+  const names = namesFor(file)
+  if (!free) return [{ heading: null, names }]
+  const ok = freeFor(file)
+  return [
+    { heading: 'Free', names: names.filter((n) => ok.includes(n)) },
+    { heading: 'In Pro', names: names.filter((n) => !ok.includes(n)) },
+  ].filter((g) => g.names.length)
+}
 
 // The files the Theme step belongs to: what the dialog calls them, the row and format the route is asked for, and the zip they save as.
 const FILES = {
@@ -76,53 +88,56 @@ async function open(page, { plan = 'free', file = 'kit', size, saved = true } = 
   await expect(panel).toBeVisible()
   await panel.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)))
   await chooseFormat(panel, file)
-  // A pointer left over a row would highlight it when the list opens under it.
+  // A pointer left over a row would highlight it under the cursor.
   await page.mouse.move(0, 0)
   return panel
 }
 
-const change = (panel) => panel.getByRole('button', { name: /^Change theme, current / })
-const themeName = (panel) => panel.locator('.xd-theme-name > span:first-child')
-const themeTier = (panel) => panel.locator('.xd-theme-tier')
-const list = (page) => page.getByRole('listbox', { name: 'Theme' })
-const option = (page, name) => list(page).getByRole('option', { name: new RegExp(`^${name}\\b`) })
-const activeName = (page) => list(page).evaluate((el) => document.getElementById(el.getAttribute('aria-activedescendant'))?.querySelector('.xd-theme-opt-n')?.textContent)
-const optionNames = (page) => list(page).locator('.xd-theme-opt-n').allTextContents()
+// The Theme step: a radiogroup of rows, the chosen one aria-checked, grouped for an account that is not Pro.
+const themes = (panel) => panel.getByRole('radiogroup', { name: 'Theme' })
+const row = (panel, name) => themes(panel).getByRole('radio').filter({ hasText: new RegExp(`^${name}`) })
+const chosenRow = (panel) => themes(panel).getByRole('radio', { checked: true })
+const rowNames = (panel) => themes(panel).locator('.xd-theme-opt-n').allTextContents()
+const groupsOf = (panel) => themes(panel).locator('.xd-theme-group').evaluateAll((groups) => groups.map((g) => ({
+  heading: g.querySelector('.xd-theme-gh')?.textContent ?? null,
+  names: [...g.querySelectorAll('.xd-theme-opt-n')].map((n) => n.textContent),
+})))
+/** The heading of the group the chosen theme sits in: "Free", "In Pro", or '' when the list has no groups. */
+const tierOf = (panel) => chosenRow(panel).evaluate((el) => el.closest('.xd-theme-group')?.querySelector('.xd-theme-gh')?.textContent ?? '')
+const expectTier = (panel, tier, message) => expect.poll(() => tierOf(panel), { message }).toBe(tier)
+/** The names of the rows a keyboard can Tab to: one, the chosen one. */
+const tabStops = (panel) => themes(panel).getByRole('radio').evaluateAll((els) => els.filter((e) => e.tabIndex === 0).map((e) => e.querySelector('.xd-theme-opt-n').textContent))
 
-async function openList(page, panel) {
-  await change(panel).click()
-  await expect(list(page)).toBeVisible()
+/** On a phone the list is folded under a "Theme: <name> · <brand>" row; open it, as a person would, before reaching for a row. A wide list is already open. */
+async function reveal(panel) {
+  const toggle = panel.getByRole('button', { name: /^Theme:/ })
+  if (await toggle.count() && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  await expect(themes(panel)).toBeVisible()
 }
-async function pick(page, panel, name) {
-  await openList(page, panel)
-  await option(page, name).click()
-  await expect(list(page)).toHaveCount(0)
-  await expect(themeName(panel)).toHaveText(name)
+
+async function pick(panel, name) {
+  await row(panel, name).click()
+  await expect(chosenRow(panel)).toHaveText(new RegExp(`^${name}`))
 }
 
 /* ── Free and Pro, per row and per theme ─────────────────────────────────── */
 
 test.describe('Free and Pro', () => {
-  test('a free account sees the UI kit open in Standards and Pro in the other nine', async ({ page }) => {
-    watch(page, 'a free account opening the theme list for the UI kit')
+  test('a free account sees the UI kit open in Standards, in a Free group, with the other nine in an In Pro group', async ({ page }) => {
+    watch(page, 'a free account reading the theme list for the UI kit')
     const panel = await open(page, { plan: 'free', file: 'kit' })
-    await expect(themeName(panel), 'a free account starts on a theme it can have').toHaveText('Standards')
-    await expect(themeTier(panel)).toHaveText('Free')
-    await openList(page, panel)
-    expect(await optionNames(page), 'ten themes, in order').toEqual(NAMES)
-    const tiers = await list(page).locator('.xd-theme-opt').evaluateAll((rows) => rows.map((r) => ({
-      name: r.querySelector('.xd-theme-opt-n').textContent, tier: r.querySelector('.xd-theme-opt-r').textContent.trim(),
-    })))
-    expect(tiers.filter((t) => t.tier === 'Free').map((t) => t.name)).toEqual(FREE_KIT)
-    expect(tiers.filter((t) => t.tier === 'Pro').map((t) => t.name)).toEqual(NAMES.filter((n) => !FREE_KIT.includes(n)))
-    await expect(option(page, 'Standards')).toHaveAttribute('aria-selected', 'true')
+    await expect(chosenRow(panel), 'a free account starts on a theme it can have').toHaveText(/^Standards/)
+    await expectTier(panel, 'Free')
+    expect(await groupsOf(panel), 'the free theme first, then the nine in Pro').toEqual(groupsFor('kit', true))
+    expect(await rowNames(panel)).toEqual([...FREE_KIT, ...NAMES.filter((n) => !FREE_KIT.includes(n))])
+    await expect(themes(panel).locator('.xd-pro, .xd-free, .xd-theme-opt-r'), 'the group is the tier: no row is tagged').toHaveCount(0)
   })
 
   for (const name of FREE_KIT) {
     test(`free, UI kit in ${name}: the button exports, with no lock`, async ({ page }) => {
       watch(page, `a free account on the UI kit in ${name}`)
       const panel = await open(page, { plan: 'free', file: 'kit' })
-      await pick(page, panel, name)
+      await pick(panel, name)
       await expect(primaryButton(panel)).toHaveText('Export UI kit')
       await expect(dockStatus(panel)).toContainText('Free.')
       await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
@@ -134,8 +149,8 @@ test.describe('Free and Pro', () => {
       watch(page, `a free account on the UI kit in the Pro theme ${name}`)
       const calls = await mockThemeApi(page)
       const panel = await open(page, { plan: 'free', file: 'kit' })
-      await pick(page, panel, name)
-      await expect(themeTier(panel)).toHaveText('Pro')
+      await pick(panel, name)
+      await expectTier(panel, 'In Pro')
       await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
       await expect(dockStatus(panel)).toHaveText('Pro theme. The UI kit is free in Standards. The guidelines are free in Label and Swiss Field.')
       await primaryButton(panel).click()
@@ -150,8 +165,8 @@ test.describe('Free and Pro', () => {
         watch(page, `a free account on ${file} in ${name}, a theme the UI kit is free in`)
         const calls = await mockThemeApi(page)
         const panel = await open(page, { plan: 'free', file, saved: false })
-        await pick(page, panel, name)
-        await expect(themeTier(panel), 'the label says what the dock says').toHaveText('Pro')
+        await pick(panel, name)
+        await expectTier(panel, 'In Pro', 'the group says what the dock says')
         await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
         await expect(dockStatus(panel)).toHaveText(isGuide(file) ? GUIDE_LOCK : 'Pro unlocks this file.')
         await expect(panel.locator('.xd-theme-lock'), 'the blurred preview carries its lock').toBeVisible()
@@ -167,10 +182,10 @@ test.describe('Free and Pro', () => {
       test(`free, ${file} in ${name}: the guidelines export with no lock`, async ({ page }) => {
         watch(page, `a free account on ${file} in ${name}, a guidelines-only theme`)
         const panel = await open(page, { plan: 'free', file, saved: false })
-        await expect(themeName(panel), 'a free account starts on the first theme the guidelines are free in').toHaveText(FREE_GUIDE[0])
-        await expect(themeTier(panel), 'and it opens unlocked').toHaveText('Free')
-        await pick(page, panel, name)
-        await expect(themeTier(panel)).toHaveText('Free')
+        await expect(chosenRow(panel), 'a free account starts on the first theme the guidelines are free in').toHaveText(new RegExp(`^${FREE_GUIDE[0]}`))
+        await expectTier(panel, 'Free', 'and it opens unlocked')
+        await pick(panel, name)
+        await expectTier(panel, 'Free')
         await expect(primaryButton(panel)).toHaveText(FILES[file].label)
         await expect(dockStatus(panel)).toContainText('Free.')
         await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
@@ -183,33 +198,23 @@ test.describe('Free and Pro', () => {
     const panel = await open(page, { plan: 'pro', file: 'kit' })
     for (const file of Object.keys(FILES)) {
       await chooseFormat(panel, file)
-      await page.mouse.move(0, 0)
-      await openList(page, panel)
-      expect(await optionNames(page), `${file}: the themes that can draw it`).toEqual(namesFor(file))
-      await page.keyboard.press('Escape')
-      await expect(list(page)).toHaveCount(0)
+      await expect.poll(() => rowNames(panel), `${file}: the themes that can draw it`).toEqual(namesFor(file))
     }
   })
 
-  // The label and the dock decide from the same file and theme: the UI kit is free in two themes, the guidelines in the two
-  // guidelines-only themes, and the book is Pro in all ten.
+  // The group and the dock decide from the same file and theme: the UI kit is free in one theme, the guidelines in the two
+  // guidelines-only themes, and the book is Pro in all ten (so its list has an In Pro group only).
   for (const file of Object.keys(FILES)) {
     const freeThemes = freeFor(file)
     const names = namesFor(file)
-    test(`free, ${file}: the Free or Pro label matches the dock for every theme`, async ({ page }) => {
-      watch(page, `a free account reading the tier of each theme on ${file}`)
+    test(`free, ${file}: the group a theme sits in matches the dock for every theme`, async ({ page }) => {
+      watch(page, `a free account reading the group of each theme on ${file}`)
       const panel = await open(page, { plan: 'free', file, saved: file === 'kit' })
-      await openList(page, panel)
-      const rows = await list(page).locator('.xd-theme-opt').evaluateAll((els) => els.map((r) => ({
-        name: r.querySelector('.xd-theme-opt-n').textContent, tier: r.querySelector('.xd-theme-opt-r').textContent.trim(),
-      })))
-      expect(rows, 'the list labels every theme for this file').toEqual(names.map((name) => ({ name, tier: freeThemes.includes(name) ? 'Free' : 'Pro' })))
-      await page.keyboard.press('Escape')
-      await expect(list(page)).toHaveCount(0)
+      expect(await groupsOf(panel), 'the list groups every theme for this file').toEqual(groupsFor(file, true))
       for (const name of names) {
         const free = freeThemes.includes(name)
-        await pick(page, panel, name)
-        await expect(themeTier(panel), `${name}: the row`).toHaveText(free ? 'Free' : 'Pro')
+        await pick(panel, name)
+        await expectTier(panel, free ? 'Free' : 'In Pro', `${name}: the group`)
         await expect(primaryButton(panel), `${name}: the dock`).toHaveText(free ? FILES[file].label : 'Unlock with Pro')
         if (file !== 'kit' && !free) await expect(panel.locator('.xd-theme-lock'), `${name}: the lock on the blurred preview`).toBeVisible()
         if (free) await expect(panel.locator('.xd-theme-lock'), `${name}: no lock on a free file`).toHaveCount(0)
@@ -218,19 +223,17 @@ test.describe('Free and Pro', () => {
   }
 
   for (const file of Object.keys(FILES)) {
-    test(`a Pro account on ${file}: starts on Presentation, no tier words anywhere, every theme can be exported`, async ({ page }) => {
+    test(`a Pro account on ${file}: starts on Presentation, one plain list with no tier words, every theme can be exported`, async ({ page }) => {
       watch(page, `a Pro account on ${file}`)
       const panel = await open(page, { plan: 'pro', file })
-      await expect(themeName(panel)).toHaveText('Presentation')
-      await expect(themeTier(panel)).toHaveCount(0)
-      await openList(page, panel)
-      expect((await list(page).locator('.xd-theme-opt-r').allTextContents()).join('').trim(), 'no Free or Pro words in the list').toBe('')
+      await expect(chosenRow(panel)).toHaveText(/^Presentation/)
+      expect(await groupsOf(panel), 'no Free or In Pro headings').toEqual(groupsFor(file, false))
+      await expectTier(panel, '')
       await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
       for (const name of ['Specification', 'Blueprint']) {
-        await option(page, name).click()
+        await pick(panel, name)
         await expect(primaryButton(panel)).toHaveText(FILES[file].label)
         await expect(primaryButton(panel)).toBeEnabled()
-        await change(panel).click()
       }
     })
   }
@@ -241,131 +244,120 @@ test.describe('Free and Pro', () => {
     for (const file of Object.keys(FILES)) {
       await chooseFormat(panel, file)
       await expect(panel.getByRole('heading', { name: 'Theme', level: 3 }), file).toBeVisible()
+      await expect(themes(panel), file).toBeVisible()
     }
     for (const file of ['book-png', 'html', 'css', 'json']) {
       await chooseFormat(panel, file)
       await expect(panel.getByRole('heading', { name: 'Theme', level: 3 }), file).toHaveCount(0)
-      await expect(change(panel), file).toHaveCount(0)
+      await expect(themes(panel), file).toHaveCount(0)
     }
   })
 })
 
 /* ── keyboard ────────────────────────────────────────────────────────────── */
 
-// On a wide window the open list is a popover and on a phone a sheet; both take focus when they open, so the keys reach the list.
-const WIDTHS = [
-  { name: 'wide', size: { width: 1440, height: 900 } },
-  { name: 'phone', size: { width: 390, height: 844 } },
-]
-for (const { name: where, size } of WIDTHS) test.describe(`keyboard, ${where}`, () => {
-  test('Change opens the list on the chosen theme; arrows, Home and End move, Enter keeps it and gives focus back to Change', async ({ page }) => {
+// The Theme list is a radiogroup with one Tab stop (the chosen row). Arrows choose the next or previous row and move focus to it,
+// Home and End jump to the ends, and the ends wrap. The same list is on a wide window and on a phone.
+for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${where}`, () => {
+  test('the chosen theme is the one Tab stop; arrows choose and take focus, Home and End jump, the ends wrap', async ({ page }) => {
     watch(page, 'a keyboard user choosing a theme')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
-    await change(panel).focus()
-    await expect(change(panel)).toHaveAttribute('aria-expanded', 'false')
-    await page.keyboard.press('Enter')
-    await expect(list(page)).toBeVisible()
-    await expect(change(panel)).toHaveAttribute('aria-expanded', 'true')
-    await expect(list(page), 'the list takes focus').toBeFocused()
-    expect(await activeName(page), 'it opens on the chosen theme').toBe('Standards')
+    await reveal(panel)
+    expect(await tabStops(panel), 'one Tab stop, on the chosen theme').toEqual(['Standards'])
 
+    // Each step: the chosen row, and focus with it.
+    const at = async (name, why) => {
+      await expect(chosenRow(panel), why).toHaveText(new RegExp(`^${name}`))
+      await expect(chosenRow(panel), `${why}: focus goes with the choice`).toBeFocused()
+    }
+    await row(panel, 'Standards').focus()
     await page.keyboard.press('ArrowDown')
-    expect(await activeName(page)).toBe('Catalogue')
+    await at('Presentation', 'ArrowDown chooses the next theme')
+    await expectTier(panel, 'In Pro')
+    await expect(primaryButton(panel), 'choosing a Pro theme is a choice, not a purchase').toHaveText('Unlock with Pro')
+    await page.keyboard.press('ArrowRight')
+    await at('Ticket', 'ArrowRight does the same')
     await page.keyboard.press('ArrowUp')
+    await at('Presentation', 'ArrowUp')
+    await page.keyboard.press('ArrowLeft')
+    await at('Standards', 'ArrowLeft back to the first')
+    await expectTier(panel, 'Free')
     await page.keyboard.press('ArrowUp')
-    expect(await activeName(page)).toBe('Broadsheet')
+    await at('In use', 'the top end wraps to the last theme')
+    await page.keyboard.press('ArrowDown')
+    await at('Standards', 'the bottom end wraps to the first theme')
+    await page.keyboard.press('End')
+    await at('In use', 'End')
     await page.keyboard.press('Home')
-    expect(await activeName(page), 'Home').toBe('Presentation')
-    await page.keyboard.press('ArrowUp')
-    expect(await activeName(page), 'the top end holds still').toBe('Presentation')
-    await page.keyboard.press('End')
-    expect(await activeName(page), 'End').toBe('In use')
-    await page.keyboard.press('ArrowDown')
-    expect(await activeName(page), 'the bottom end holds still').toBe('In use')
-    expect(await option(page, 'In use').evaluate((el) => el.classList.contains('is-active'))).toBe(true)
-
-    await page.keyboard.press('Enter')
-    await expect(list(page)).toHaveCount(0)
-    await expect(themeName(panel)).toHaveText('In use')
-    await expect(change(panel)).toBeFocused()
-    await expect(change(panel)).toHaveAttribute('aria-expanded', 'false')
-    await expect(change(panel)).toHaveAccessibleName('Change theme, current In use')
+    await at('Standards', 'Home')
     await expect(exportPanel(page), 'the dialog stays open').toBeVisible()
+    expect(await tabStops(panel), 'the Tab stop followed the choice').toEqual(['Standards'])
   })
 
-  test('Escape closes the list, keeps the earlier theme, returns focus to Change and leaves the dialog open', async ({ page }) => {
-    watch(page, 'a keyboard user backing out of the theme list')
+  test('Escape leaves the dialog: there is no list to close first', async ({ page }) => {
+    watch(page, 'a keyboard user pressing Escape in the theme list')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
-    await change(panel).focus()
-    await page.keyboard.press('Enter')
+    await reveal(panel)
+    await row(panel, 'Standards').focus()
     await page.keyboard.press('End')
-    expect(await activeName(page)).toBe('In use')
+    await expect(chosenRow(panel)).toHaveText(/^In use/)
     await page.keyboard.press('Escape')
-    await expect(list(page)).toHaveCount(0)
-    await expect(themeName(panel), 'nothing was chosen').toHaveText('Standards')
-    await expect(change(panel)).toBeFocused()
-    await expect(exportPanel(page), 'the first Escape closes the list, not the dialog').toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(exportPanel(page), 'the next Escape closes the dialog').toHaveCount(0)
+    await expect(exportPanel(page), 'the first Escape closes the dialog').toHaveCount(0)
   })
 
-  test('Space chooses like Enter and closes the list', async ({ page }) => {
-    watch(page, 'a keyboard user using Space in the theme list')
+  test('Space and Enter on a focused row choose it', async ({ page }) => {
+    watch(page, 'a keyboard user using Space and Enter on a theme row')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
-    await change(panel).focus()
-    await page.keyboard.press('Enter')
-    await page.keyboard.press('ArrowDown')
-    await page.keyboard.press('ArrowDown')
+    await reveal(panel)
+    await row(panel, 'Studio').focus()
+    await expect(chosenRow(panel), 'focus alone chooses nothing').toHaveText(/^Standards/)
     await page.keyboard.press('Space')
-    await expect(themeName(panel), 'two rows below Standards').toHaveText('Studio')
-    await expect(list(page), 'choosing closes the list').toHaveCount(0)
+    const toggle = panel.getByRole('button', { name: /^Theme:/ })
+    if (await toggle.count()) await expect(toggle, 'a phone pick folds the list and keeps focus on the theme row').toBeFocused()
+    await reveal(panel) // on a phone a pick folds the list; open it again to read the choice and reach the next row
+    await expect(chosenRow(panel)).toHaveText(/^Studio/)
+    await row(panel, 'Specification').focus()
+    await page.keyboard.press('Enter')
+    await reveal(panel)
+    await expect(chosenRow(panel)).toHaveText(/^Specification/)
   })
 
-  // The popover leaves Change reachable, so Change toggles it. The phone's sheet covers the whole dialog (its own close button
-  // is exercised below), so a second tap on Change cannot land there.
-  if (where === 'wide') test('Change opens the list and a second press shuts it', async ({ page }) => {
-    watch(page, 'a pointer user toggling the theme list')
-    const panel = await open(page, { plan: 'free', file: 'kit', size })
-    await change(panel).click()
-    await expect(list(page)).toBeVisible()
-    await change(panel).click()
-    await expect(list(page)).toHaveCount(0)
-  })
-
-  if (where === 'wide') test('highlighting a row fetches and previews that theme, and Escape puts the chosen theme back', async ({ page }) => {
+  test('focusing a row fetches that theme’s pictures, and choosing it shows them', async ({ page }) => {
     watch(page, 'a keyboard user previewing themes')
     const fetched = []
     page.on('request', (req) => { const m = /\/export-themes\/([\w-]+)\.webp/.exec(req.url()); if (m) fetched.push(m[1]) })
     const panel = await open(page, { plan: 'free', file: 'kit', size })
+    await reveal(panel)
     const shot = panel.locator('.xd-theme-stage img').first()
     await expect(shot).toHaveAttribute('alt', /^Standards theme UI kit/)
-    await change(panel).focus()
-    await page.keyboard.press('Enter')
-    await page.keyboard.press('ArrowDown')
-    await expect.poll(() => fetched, 'the next theme’s pictures are asked for on focus').toContain('05-specimen-kitScreen')
-    await expect(shot, 'the preview follows the highlighted row once its pictures are in').toHaveAttribute('alt', /^Catalogue theme UI kit/)
-    await page.keyboard.press('Escape')
+    await row(panel, 'Catalogue').focus()
+    await expect.poll(() => fetched, 'the theme’s pictures are asked for on focus, before it is chosen').toContain('05-specimen-kitScreen')
+    await expect(shot, 'focus alone does not change the preview').toHaveAttribute('alt', /^Standards theme UI kit/)
+    await row(panel, 'Catalogue').click()
+    await expect(shot, 'choosing changes the preview at once').toHaveAttribute('alt', /^Catalogue theme UI kit/)
+    await reveal(panel) // a pick folds the phone list
+    await row(panel, 'Standards').click()
     await expect(shot).toHaveAttribute('alt', /^Standards theme UI kit/)
   })
 
-  test('Tab leaves the list and closes it without choosing', async ({ page }) => {
+  test('Tab leaves the list without choosing', async ({ page }) => {
     watch(page, 'a keyboard user tabbing out of the theme list')
     const panel = await open(page, { plan: 'free', file: 'kit', size })
-    await change(panel).focus()
-    await page.keyboard.press('Enter')
-    await page.keyboard.press('End')
+    await reveal(panel)
+    await row(panel, 'Standards').focus()
     await page.keyboard.press('Tab')
-    await expect(list(page)).toHaveCount(0)
-    await expect(themeName(panel)).toHaveText('Standards')
+    expect(await themes(panel).evaluate((group) => group.contains(document.activeElement)), 'focus left the Theme list').toBe(false)
+    expect(await page.evaluate(() => Boolean(document.activeElement?.closest('.xd-card'))), 'and stayed in the dialog').toBe(true)
+    await expect(chosenRow(panel)).toHaveText(/^Standards/)
   })
 })
 
 /* ── reduced motion ──────────────────────────────────────────────────────── */
 
-// Under reduced motion every property change gets a 0.01ms transition, so a popover that has just been placed can still read as
-// hidden for a frame. The list has to take focus all the same, from either setting, in the popover and in the sheet.
+// Under reduced motion every property change gets a 0.01ms transition. The Theme list has to take keyboard focus and move it all
+// the same, from either setting, on a wide window and on a phone.
 for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTION_WIDTHS) {
-  test(`reduced motion (${setting.name}), ${where}: Enter on Change puts focus in the list, ArrowDown moves, Enter chooses and focus goes back to Change`, async ({ page }) => {
+  test(`reduced motion (${setting.name}), ${where}: focus the chosen theme, ArrowDown chooses the next and focus goes with it`, async ({ page }) => {
     watch(page, `a keyboard user with reduced motion on, by ${setting.name}`)
     await setting.apply(page)
     const panel = await open(page, { plan: 'free', file: 'kit', size })
@@ -374,25 +366,24 @@ for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTIO
   })
 }
 
-/* ── where the list opens ────────────────────────────────────────────────── */
+/* ── where the list sits ─────────────────────────────────────────────────── */
 
-test.describe('popover and sheet', () => {
-  test('at 1440 the list is a 320px popover over the dialog with its right edge on Change, and the preview sits above the Theme step', async ({ page }) => {
-    watch(page, 'a designer on a wide window opening the theme list')
+test.describe('the list is in the dialog', () => {
+  test('at 1440 the ten rows sit in the dialog with no popover or Change button, and the preview is above the Theme step, above the File step', async ({ page }) => {
+    watch(page, 'a designer on a wide window reading the theme list')
     const panel = await open(page, { plan: 'free', file: 'kit', size: { width: 1440, height: 900 } })
-    await openList(page, panel)
-    await expect(page.locator('.xd-theme-sheet')).toHaveCount(0)
+    await expect(page.locator('.xd-theme-pop, .xd-theme-sheet'), 'nothing opens over the dialog').toHaveCount(0)
+    await expect(panel.getByRole('button', { name: /^Change theme/ })).toHaveCount(0)
     const box = await page.evaluate(() => {
-      const pop = document.querySelector('.xd-theme-pop').getBoundingClientRect()
-      const btn = document.querySelector('.xd-theme-change').getBoundingClientRect()
+      const list = document.querySelector('.xd-theme-list').getBoundingClientRect()
       const card = document.querySelector('.xd-card').getBoundingClientRect()
-      return { width: pop.width, right: pop.right, btnRight: btn.right, top: pop.top, bottom: pop.bottom, btnTop: btn.top, btnBottom: btn.bottom, card: { l: card.left, r: card.right, t: card.top, b: card.bottom } }
+      const rows = [...document.querySelectorAll('.xd-theme-opt')].map((r) => Math.round(r.getBoundingClientRect().height))
+      return { left: list.left, right: list.right, card: { l: card.left, r: card.right }, rows }
     })
-    expect(box.width).toBe(320)
-    expect(Math.abs(box.right - box.btnRight), 'right edges line up').toBeLessThanOrEqual(2)
-    expect(box.top, 'inside the dialog').toBeGreaterThanOrEqual(box.card.t)
-    expect(box.bottom).toBeLessThanOrEqual(box.card.b)
-    expect(box.top >= box.btnBottom || box.bottom <= box.btnTop, 'it does not cover Change').toBe(true)
+    expect(box.rows, 'ten rows').toHaveLength(10)
+    for (const h of box.rows) expect(h, 'a row is a comfortable target').toBeGreaterThanOrEqual(40)
+    expect(box.left, 'inside the dialog').toBeGreaterThanOrEqual(box.card.l)
+    expect(box.right).toBeLessThanOrEqual(box.card.r)
     const order = await page.evaluate(() => {
       const prev = document.querySelector('.xd-prev').getBoundingClientRect()
       const step = document.querySelector('.xd-theme').getBoundingClientRect()
@@ -400,58 +391,43 @@ test.describe('popover and sheet', () => {
       return { previewAboveTheme: prev.top < step.top, themeAboveFile: step.top < file.top }
     })
     expect(order).toEqual({ previewAboveTheme: true, themeAboveFile: true })
-    await page.mouse.click(5, 5)
-    await expect(list(page), 'a click outside closes it').toHaveCount(0)
   })
 
-  test('at 390 the list is a "Theme" sheet with 52px rows, the Theme step comes before the preview, and a row closes the sheet', async ({ page }) => {
+  test('at 390 the picture comes first, the list is folded under a Theme row, and picking a theme updates the row and keeps the dialog open', async ({ page }) => {
     watch(page, 'a phone user choosing a theme')
     const panel = await open(page, { plan: 'free', file: 'kit', size: { width: 390, height: 844 } })
-    const order = await page.evaluate(() => {
+    await expect(page.locator('.xd-theme-pop, .xd-theme-sheet'), 'no sheet on a phone either').toHaveCount(0)
+    const toggle = panel.getByRole('button', { name: /^Theme:/ })
+    await expect(toggle, 'the folded row names the chosen theme and its sample brand').toHaveText(/^Theme: Standards · \S/)
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(themes(panel), 'the list is folded at first').toBeHidden()
+    const folded = await page.evaluate(() => {
       const prev = document.querySelector('.xd-prev').getBoundingClientRect()
-      const step = document.querySelector('.xd-theme').getBoundingClientRect()
-      return { themeBeforePreview: step.top < prev.top }
+      const t = document.querySelector('.xd-theme > .xd-man-t').getBoundingClientRect()
+      return { previewAboveTheme: prev.top < t.top, row: Math.round(t.height), sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth }
     })
-    expect(order, 'on a phone Change is in view before the pages').toEqual({ themeBeforePreview: true })
-    await openList(page, panel)
-    await expect(page.locator('.xd-theme-pop')).toHaveCount(0)
-    const sheet = page.locator('.xd-theme-sheet')
-    await expect(sheet).toBeVisible()
-    await expect(sheet.getByRole('heading', { name: 'Theme', level: 3 })).toBeVisible()
-    const rows = await list(page).locator('.xd-theme-opt').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
-    expect(rows).toHaveLength(10)
-    for (const h of rows) expect(h, 'a phone row is 52px').toBeGreaterThanOrEqual(52)
+    expect(folded.previewAboveTheme, 'the picture is above the Theme row').toBe(true)
+    expect(folded.row, 'the Theme row is a 44px target').toBeGreaterThanOrEqual(44)
+    expect(folded.sideways).toBe(false)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(themes(panel)).toBeVisible()
     const fit = await page.evaluate(() => {
-      const s = document.querySelector('.xd-theme-sheet').getBoundingClientRect()
-      return { left: s.left, right: s.right, sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth }
+      const list = document.querySelector('.xd-theme-list').getBoundingClientRect()
+      const rows = [...document.querySelectorAll('.xd-theme-opt')].map((r) => Math.round(r.getBoundingClientRect().height))
+      return { left: list.left, right: list.right, rows, sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth }
     })
+    expect(fit.rows).toHaveLength(10)
+    for (const h of fit.rows) expect(h, 'a phone row is a 44px target').toBeGreaterThanOrEqual(44)
     expect(fit.left).toBeGreaterThanOrEqual(0)
     expect(fit.right).toBeLessThanOrEqual(390)
     expect(fit.sideways).toBe(false)
 
-    await option(page, 'Specification').click()
-    await expect(sheet).toHaveCount(0)
-    await expect(themeName(panel)).toHaveText('Specification')
-    await expect(change(panel)).toBeFocused()
-  })
-
-  test('at 390 the sheet’s close button and Escape close only the sheet and give focus back to Change', async ({ page }) => {
-    watch(page, 'a phone user closing the theme sheet')
-    const panel = await open(page, { plan: 'free', file: 'kit', size: { width: 390, height: 844 } })
-    await openList(page, panel)
-    await page.getByRole('button', { name: 'Close theme list' }).click()
-    await expect(page.locator('.xd-theme-sheet')).toHaveCount(0)
-    await expect(themeName(panel), 'closing is not choosing').toHaveText('Standards')
-    await expect(change(panel)).toBeFocused()
-    await expect(exportPanel(page)).toBeVisible()
-
-    await openList(page, panel)
-    await page.keyboard.press('End')
-    await page.keyboard.press('Escape')
-    await expect(page.locator('.xd-theme-sheet')).toHaveCount(0)
-    await expect(themeName(panel)).toHaveText('Standards')
-    await expect(change(panel)).toBeFocused()
-    await expect(exportPanel(page), 'Escape closes the sheet, not the dialog').toBeVisible()
+    await row(panel, 'Specification').click()
+    await expect(exportPanel(page), 'choosing does not close the dialog').toBeVisible()
+    await expect(toggle, 'the row follows the choice').toHaveText(/^Theme: Specification · \S/)
+    await expect(themes(panel), 'a pick folds the list again, so the picture is back in view').toBeHidden()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })
 
@@ -473,7 +449,7 @@ test.describe('what is asked for and what is saved', () => {
       // The server names its own zip; the dialog lists, and saves, the name it shows.
       const calls = await mockThemeApi(page, async () => ({ zip: await tinyZip(), name: 'p-harbour-something-else.zip' }))
       const panel = await open(page, { plan, file })
-      await pick(page, panel, name)
+      await pick(panel, name)
       const saved = `harbour-${FILES[file].zip}-${id}.zip`
       await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n'), 'the file list names it before the click').toHaveText(saved)
       const [download] = await Promise.all([page.waitForEvent('download'), primaryButton(panel).click()])
@@ -484,7 +460,7 @@ test.describe('what is asked for and what is saved', () => {
       expect(calls[0].body).toMatchObject({ theme: id, row: FILES[file].row, format: FILES[file].format, projectName: 'Harbour' })
       expect(calls[0].body.design, 'the project’s design travels with it').toBeTruthy()
       await expect(dockStatus(panel)).toContainText(saved)
-      await expect(primaryButton(panel)).toHaveText('Export again')
+      await expect(primaryButton(panel)).toHaveText('Done')
     })
   }
 
@@ -513,7 +489,7 @@ test.describe('what is asked for and what is saved', () => {
     const panel = await open(page, { plan: 'pro', file: 'kit' })
     await primaryButton(panel).click()
     await expect(dockError(panel)).toBeVisible()
-    await pick(page, panel, 'Studio')
+    await pick(panel, 'Studio')
     await expect(dockError(panel)).toHaveCount(0)
   })
 
@@ -522,7 +498,7 @@ test.describe('what is asked for and what is saved', () => {
     await context.addInitScript(() => { window.__printed = 0; window.print = () => { window.__printed += 1 } })
     const calls = await mockThemeApi(page, () => ({ html: cleanHtml('Harbour brand guidelines') }))
     const panel = await open(page, { plan: 'free', file: 'guidelines' })
-    await pick(page, panel, 'Label')
+    await pick(panel, 'Label')
     const [popup] = await Promise.all([context.waitForEvent('page'), primaryButton(panel).click()])
     await expect(popup.locator('#printed-doc')).toHaveText('Harbour brand guidelines')
     await expect.poll(() => popup.evaluate(() => window.__printed)).toBe(1)
@@ -538,7 +514,7 @@ test.describe('what is asked for and what is saved', () => {
       page.on('download', () => { downloads += 1 })
       const calls = await mockThemeApi(page, () => ({ html: cleanHtml('Harbour brand book') }))
       const panel = await open(page, { plan: 'pro', file })
-      await pick(page, panel, 'Broadsheet')
+      await pick(panel, 'Broadsheet')
       await expect(panel.locator('.xd-man-row[aria-current="true"] .xd-man-n'), 'a print row lists no file name').toHaveText('Print document')
       const [popup] = await Promise.all([context.waitForEvent('page'), primaryButton(panel).click()])
       await expect(popup.locator('#printed-doc')).toHaveText('Harbour brand book')
@@ -585,7 +561,7 @@ test.describe('a print document that is not the script-free one is refused', () 
       watch(page, `a Pro account whose answer has the wrong ${what}`)
       await mockThemeApi(page, () => ({ html: cleanHtml(), json }))
       const panel = await open(page, { plan: 'pro', file: 'book' })
-      await pick(page, panel, 'Broadsheet')
+      await pick(panel, 'Broadsheet')
       const popupP = context.waitForEvent('page')
       await primaryButton(panel).click()
       const popup = await popupP
@@ -672,20 +648,43 @@ test.describe('the error line for each answer', () => {
   })
 
   test.describe('429 and Retry-After', () => {
-    const seconds = [['30', 'Too many exports just now. Try again in 30 seconds.'], ['2', 'Too many exports just now. Try again in 2 seconds.'], ['89', 'Too many exports just now. Try again in 89 seconds.'], ['1', 'Too many exports just now. Try again in 1 second.']]
-    for (const [header, line] of seconds) {
-      test(`Retry-After ${header} shows the seconds`, async ({ page }) => {
+    // A valid wait puts no number in the line (the button carries the one count); a wait of a minute or more reads m:ss on the button.
+    const clock = (n) => (n >= 60 ? `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}` : `${n}s`)
+    const seconds = ['30', '2', '89', '1', '90', '120']
+    for (const header of seconds) {
+      test(`Retry-After ${header} shows the wait on the button, not in the line`, async ({ page }) => {
         watch(page, `a Pro account told to wait ${header} seconds`)
         await mockThemeApi(page, () => ({ status: 429, headers: { 'Retry-After': header }, body: leaky({ code: 'rate_limited' }) }))
         const panel = await open(page, { plan: 'pro', file: 'kit' })
         await primaryButton(panel).click()
-        await expect(dockError(panel)).toHaveText(line)
+        await expect(dockError(panel)).toHaveText('Too many exports just now.')
         expect(await page.locator('body').innerText()).not.toContain(LEAK)
+        // The button is aria-disabled while it counts (readable, not dimmed). (A 1 or 2 second wait can be over before it is read; the
+        // test after this one follows a short wait through.)
+        if (Number(header) >= 30) {
+          const n = Number(header)
+          await expect(primaryButton(panel), 'the button counts the wait down').toHaveText(new RegExp(`^Try again in (${clock(n)}|${clock(n - 1)})$`))
+          await expect(primaryButton(panel), 'and ignores a press until it is over').toHaveAttribute('aria-disabled', 'true')
+        }
       })
     }
 
-    // Not whole seconds, or not seconds worth printing: the plain "in a minute" line, with no number.
-    const notSeconds = ['', 'abc', '2.5', '-5', '+5', '1e1', '0x10', '5.0', '0', '120', '601', 'Wed, 21 Oct 2026 07:28:00 GMT', '30 seconds', 'NaN', 'Infinity']
+    test('a 2 second wait: the button counts down, is disabled, then goes live with the file action again', async ({ page }) => {
+      watch(page, 'a Pro account told to wait 2 seconds')
+      const calls = await mockThemeApi(page, () => ({ status: 429, headers: { 'Retry-After': '2' }, body: leaky({ code: 'rate_limited' }) }))
+      const panel = await open(page, { plan: 'pro', file: 'kit' })
+      await primaryButton(panel).click()
+      await expect(primaryButton(panel)).toHaveText(/^Try again in [12]s$/)
+      await expect(primaryButton(panel)).toHaveAttribute('aria-disabled', 'true')
+      await expect(primaryButton(panel), 'when the wait is over the button is the file action again').toHaveText('Export UI kit', { timeout: 6000 })
+      await expect(primaryButton(panel)).toBeEnabled()
+      await expect(primaryButton(panel)).not.toHaveAttribute('aria-disabled', 'true')
+      await expect(dockError(panel), 'and the rate-limit line goes with the wait').toHaveCount(0)
+      expect(calls, 'waiting asks the route for nothing').toHaveLength(1)
+    })
+
+    // Not whole seconds, or not a wait worth holding the button for (0, or over 600): the plain "in a minute" line, and the button not held.
+    const notSeconds = ['', 'abc', '2.5', '-5', '+5', '1e1', '0x10', '5.0', '0', '601', 'Wed, 21 Oct 2026 07:28:00 GMT', '30 seconds', 'NaN', 'Infinity']
     for (const header of notSeconds) {
       test(`a Retry-After that is not whole seconds (${JSON.stringify(header)}) gives the line with no number`, async ({ page }) => {
         watch(page, `a Pro account sent Retry-After ${JSON.stringify(header)}`)
@@ -694,6 +693,8 @@ test.describe('the error line for each answer', () => {
         await primaryButton(panel).click()
         await expect(dockError(panel)).toHaveText(LINES.rate)
         expect(await page.locator('body').innerText()).not.toContain(LEAK)
+        await expect(primaryButton(panel), 'no wait was asked for, so no count').toHaveText('Export UI kit')
+        await expect(primaryButton(panel)).toBeEnabled()
       })
     }
   })

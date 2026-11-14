@@ -273,7 +273,7 @@ test.describe('the UI kit export', () => {
         await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
         const notice = dockStatus(panel)
         await expect(notice).toContainText(/^Downloaded untitled-ui-kit-[a-z0-9-]+\.zip\.$/)
-        await expect(primaryButton(panel)).toHaveText('Export again')
+        await expect(primaryButton(panel)).toHaveText('Done')
         // Read geometry without scrolling the notice into view. DOM visibility
         // alone also passes when the status is clipped below the format list.
         await expect.poll(async () => notice.evaluate((el) => {
@@ -296,9 +296,9 @@ test.describe('the UI kit export', () => {
     }
   }
 
-  // Under reduced motion the Theme list has to take keyboard focus, from the system's setting and from the app's own, in the popover and the sheet.
+  // Under reduced motion the Theme list has to take keyboard focus, from the system's setting and from the app's own, on a wide window and on a phone.
   for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTION_WIDTHS) {
-    test(`reduced motion (${setting.name}), ${where}: the kit's Theme list takes focus, ArrowDown moves, Enter chooses and focus goes back to Change`, async ({ page }) => {
+    test(`reduced motion (${setting.name}), ${where}: the kit's Theme list takes focus, ArrowDown chooses the next theme and focus goes with it`, async ({ page }) => {
       watch(page, `a free account choosing the kit's theme by keyboard with reduced motion on, by ${setting.name}`)
       await setting.apply(page)
       await page.setViewportSize(size)
@@ -313,7 +313,7 @@ test.describe('the UI kit export', () => {
     })
   }
 
-  test('free: no identity fields, and a finished export with a notice offers another go and the X', async ({ page }) => {
+  test('free: no identity fields, and a finished export with a notice finishes with Done, offers another file and the X', async ({ page }) => {
     watch(page, 'a free account exporting the kit')
     await mockThemeApi(page)
     await signIn(page, { plan: 'free' })
@@ -324,7 +324,8 @@ test.describe('the UI kit export', () => {
     const cta = primaryButton(panel)
     await Promise.all([page.waitForEvent('download', { timeout: 30000 }), cta.click()])
     await expect(dockStatus(panel)).toBeVisible()
-    await expect(cta, 'the button offers another go').toHaveText('Export again')
+    await expect(cta, 'the button finishes with Done').toHaveText('Done')
+    await expect(panel.getByRole('button', { name: 'Export another file' }), 'and another go is one click away').toBeVisible()
     await panel.getByRole('button', { name: 'Close export', exact: true }).click()
     await expect(panel).toHaveCount(0)
   })

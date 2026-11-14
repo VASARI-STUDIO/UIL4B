@@ -82,7 +82,7 @@ async function exportStyleGuide(page, plan) {
 }
 
 test.describe('the export panel, as a free account', () => {
-  test('every unbuilt format is named in one quiet line, and has no row and no button', async ({ page }) => {
+  test('an unbuilt format has no row, no button and no promise', async ({ page }) => {
     // MUTATION: render a row for every EXPORT_FORMATS entry (not only the built
     // groups) or restore the disabled "Export — Soon" button, and this fails.
     watch(page, 'a designer looking for an export format that is not built yet')
@@ -96,8 +96,11 @@ test.describe('the export panel, as a free account', () => {
     for (const fmt of UNBUILT) {
       await expect(panel.getByRole('radio', { name: new RegExp(fmt.name, 'i') }),
         `${fmt.name} is not built, so it must not be a row`).toHaveCount(0)
-      await expect(panel.locator('.xd-coming'),
-        `${fmt.name} must be named in the "on the way" line`).toContainText(fmt.coming.replace(/^an? /, ''), { ignoreCase: true })
+    }
+    // The dialog no longer carries an "on the way" line: nothing is promised for a format that is not built.
+    await expect(panel.locator('.xd-coming'), 'there is no "on the way" line over the file list').toHaveCount(0)
+    for (const fmt of UNBUILT) {
+      await expect(panel, `${fmt.name} is not named anywhere in the dialog as coming`).not.toContainText(new RegExp(`${fmt.name}.{0,12}(soon|coming|on the way)`, 'i'))
     }
     await expect(panel.getByRole('button', { name: /Soon/ })).toHaveCount(0)
     await expect(panel.getByRole('button', { name: /Asset bundle/i }), 'and no button of any kind for them').toHaveCount(0)
