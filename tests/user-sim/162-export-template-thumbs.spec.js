@@ -44,9 +44,11 @@ async function choose(page, panel, name) {
   const folded = (await toggle.count()) > 0
   if (folded && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
   const themes = panel.getByRole('radiogroup', { name: 'Theme' })
-  await themes.getByRole('radio').filter({ hasText: new RegExp(`^${name}`) }).click()
-  if (folded) await expect(toggle).toHaveAccessibleName(new RegExp(`^Theme: ${name}\\b`))
-  else await expect(themes.getByRole('radio', { checked: true })).toHaveText(new RegExp(`^${name}`))
+  // The theme's own name, matched whole: 'Standards' must not also pick 'Standards Plate'.
+  const own = panel.locator('.xd-theme-opt-n').getByText(name, { exact: true })
+  await themes.getByRole('radio').filter({ has: own }).click()
+  if (folded) await expect(toggle).toHaveAccessibleName(new RegExp(`^Theme: ${name} · `))
+  else await expect(themes.getByRole('radio', { checked: true }).locator('.xd-theme-opt-n')).toHaveText(name)
 }
 
 for (const [kind, keys] of Object.entries(KEYS)) {

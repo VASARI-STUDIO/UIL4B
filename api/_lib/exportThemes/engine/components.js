@@ -196,12 +196,15 @@ dialog.ui-dialog::backdrop { background: var(--scrim); }
 `;
 }
 
+// the product screen's content: a theme may adjust it (meta.screenContent, e.g. a brand that says a word only once); else the brand's own
+const screenOf = (ctx) => (ctx.theme && typeof ctx.theme.screenContent === 'function' ? ctx.theme.screenContent(ctx) : ctx.brand.ui.screen.content);
+
 // markup helpers; every function returns a string
 export function makeUi(ctx) {
   const A = esc;
   const ic = (n, s) => icon(ctx, n, s);
   const cls = (...a) => a.filter(Boolean).join(' ');
-  const S = ctx.brand.ui.screen.content;
+  const S = screenOf(ctx);
   const ui = {
     icon: ic,
     btn(label, { variant = 'primary', size, state, iconLeft, iconRight, block, disabled, tag = 'button', attrs = '' } = {}) {
@@ -244,7 +247,7 @@ export function makeUi(ctx) {
 
 // example.html for the code package: every component live, light/dark switch
 export function exampleHtml(ctx) {
-  const ui = ctx.ui, S = ctx.brand.ui.screen.content, F = S.form, { DW, DS } = displayType(ctx);
+  const ui = ctx.ui, S = screenOf(ctx), F = S.form, { DW, DS } = displayType(ctx);
   // sample copy for the demo page: brand data ui.screen.content.example, else neutral words
   const X = { secondary: 'Secondary', quiet: 'Skip', danger: 'Delete', small: 'Add', account: 'Account', checks: ['Checked', 'Unchecked', 'Disabled'], switches: ['Switch on', 'Switch off'], radios: ['First choice', 'Second choice'], statLabel: 'Total', crumbs: ['Home', 'Section'], tabs: ['One', 'Two', 'Three'], links: [['One', 'map-pin'], ['Two', 'plus'], ['Three', 'clock']], ...(S.example || {}) };
   const sec = (t, body) => `<section class="ex"><h2>${esc(t)}</h2>${body}</section>`;
