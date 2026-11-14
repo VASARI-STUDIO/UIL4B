@@ -38,6 +38,7 @@ const THEMES = Object.freeze({
   '10-inuse': () => import('./exportThemes/themes/10-inuse/index.js'),
   '21-presentation': () => import('./exportThemes/themes/21-presentation/index.js'),
   '22-ticket': () => import('./exportThemes/themes/22-ticket/index.js'),
+  '23-broadsheet': () => import('./exportThemes/themes/23-broadsheet/index.js'),
   '24-standards': () => import('./exportThemes/themes/24-standards/index.js'),
   '25-label': () => import('./exportThemes/themes/25-label/index.js'),
   '26-notebook': () => import('./exportThemes/themes/26-notebook/index.js'),
@@ -45,6 +46,7 @@ const THEMES = Object.freeze({
   '28-riso': () => import('./exportThemes/themes/28-riso/index.js'),
   '29-blueprint': () => import('./exportThemes/themes/29-blueprint/index.js'),
   '30-fluted': () => import('./exportThemes/themes/30-fluted/index.js'),
+  '31-contact': () => import('./exportThemes/themes/31-contact/index.js'),
   '32-dieline': () => import('./exportThemes/themes/32-dieline/index.js'),
 })
 
