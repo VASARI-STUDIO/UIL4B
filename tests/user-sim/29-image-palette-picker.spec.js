@@ -161,6 +161,10 @@ function drift(m) {
 // marker's exact centre; every point measured here sits mid-band anyway.
 const TOLERANCE = 2
 
+// From Image is off the toolbar for launch (FROM_IMAGE_LIVE in PaletteBuilder.jsx).
+// These run again when it comes back with its redesign.
+test.skip(true, 'From Image is off the toolbar for launch')
+
 test.describe('image to palette picker', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'designer pulling colours from a photo') })
 
