@@ -16,7 +16,7 @@ export default defineConfig([
   // gitignored, so CI never sees them — but a local run linted all ten and
   // reported 3,760 errors in minified vendor chunks, which buried the six real
   // ones and let a lint failure reach CI that a local run should have caught.
-  globalIgnores(['dist', 'dist-*', 'public', '.claude/worktrees/**', '.agents/**']),
+  globalIgnores(['dist', 'dist-*', 'public', '.claude/worktrees/**', '.agents/**', 'api/_lib/pro/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
