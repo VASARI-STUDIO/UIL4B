@@ -88,6 +88,13 @@ export function loadBrand(data, loaders) {
   // colours: brand colours plus measured tones, addressed by id
   const byId = Object.create(null);
   for (const c of [...B.colours, ...(B.tones || [])]) byId[c.id] = c;
+  // cmyk is optional per colour: [c, m, y, k], four numbers 0 to 100. Absent is fine; a malformed one stops the build.
+  for (const c of [...B.colours, ...(B.tones || [])]) {
+    if (c.cmyk === undefined) continue;
+    if (!Array.isArray(c.cmyk) || c.cmyk.length !== 4 || !c.cmyk.every((v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100)) {
+      throw new Error(`Brand ${slug}: colour "${c.name || c.id}" has a bad cmyk ${JSON.stringify(c.cmyk)}; it must be four numbers from 0 to 100, [c, m, y, k]`);
+    }
+  }
   const hex = (id) => { if (!byId[id]) throw new Error('Unknown colour id ' + id); return byId[id].hex; };
   const hexOr = (v) => (byId[v] ? byId[v].hex : v);
 

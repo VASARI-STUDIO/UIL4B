@@ -40,7 +40,9 @@ async function open(page, plan, file, size) {
 const change = (panel) => panel.getByRole('button', { name: /^Change theme, current / })
 async function choose(page, panel, name) {
   await change(panel).click()
-  await page.getByRole('listbox', { name: 'Theme' }).getByRole('option', { name: new RegExp(`^${name}\\b`) }).click()
+  // The theme's own name, matched whole: 'Standards' must not also pick 'Standards Plate'.
+  const own = page.locator('.xd-theme-opt-n').getByText(name, { exact: true })
+  await page.getByRole('listbox', { name: 'Theme' }).getByRole('option').filter({ has: own }).click()
   await expect(change(panel)).toHaveAccessibleName(`Change theme, current ${name}`)
 }
 

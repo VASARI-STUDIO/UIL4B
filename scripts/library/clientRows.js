@@ -25,14 +25,24 @@
 
 import { GALLERY_TIER_LIMITS, splitLockedLibrary } from '../../src/utils/lockedPreview.js'
 import { LIBRARY_RULES, rowSlots } from '../../src/utils/libraryRules.js'
-import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
-import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
-import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
-import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
-import { GALLERY_PALETTES } from '../../api/_lib/library/paletteGallery.js'
-import { LIBRARIES } from '../../api/_lib/library/serve.js'
+// data.js resolves the source (fetched Pro data, in-tree copies, or fixtures
+// outside production); see api/_lib/library/load.js.
+import {
+  LIBRARY_PALETTES,
+  BRAND_PALETTES,
+  GALLERY_GRADIENTS,
+  COMMUNITY_PROMPTS,
+  GALLERY_PALETTES,
+  LIBRARIES as SERVED,
+} from '../../api/_lib/library/data.js'
 
-export { LIBRARIES }
+// The libraries the browser holds a copy of. The Pro icon groups are served
+// too, but only to a Pro account and with no browser rows, so they are not here.
+export const LIBRARIES = Object.freeze({
+  palettes: SERVED.palettes,
+  gradients: SERVED.gradients,
+  prompts: SERVED.prompts,
+})
 
 /** The free tier's rows of a library, found with the page's own split. */
 export function freeSplit(kind, items = LIBRARIES[kind]) {

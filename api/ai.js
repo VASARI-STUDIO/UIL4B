@@ -1243,6 +1243,17 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── The Pro prompt previews ───────────────────────────────────────────────
+  // GET /api/ai?proAsset=poster|anim|page&id=<prompt id>. Same token +
+  // planForUser gate as the libraries; see api/_lib/library/proAssets.js.
+  if (req.method === 'GET' && 'proAsset' in (req.query || {})) {
+    const { serveProAsset } = await import('./_lib/library/proAssets.js')
+    return serveProAsset(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
   // ── The Pro export documents ───────────────────────────────────────────────
   // POST /api/ai?export=document { format, projectName, design }. Token +
   // planForUser, like the libraries above, and not metered: it reads one user
@@ -1265,11 +1276,13 @@ export default async function handler(req, res) {
   // GET /api/ai?palettePreview=<library id>. No token: a Free or signed-out viewer is who it is for,
   // and what it returns is a soft wash, never a colour; see api/_lib/library/preview.js.
   if (req.method === 'GET' && 'palettePreview' in (req.query || {})) {
-    const [{ servePalettePreview }, { LIBRARY_PALETTES }] = await Promise.all([
+    const [{ servePalettePreview }, { loadLibrary }] = await Promise.all([
       import('./_lib/library/preview.js'),
-      import('./_lib/library/paletteLibrary.js'),
+      import('./_lib/library/load.js'),
     ])
-    return servePalettePreview(req, res, LIBRARY_PALETTES)
+    const lib = await loadLibrary()
+    if (lib.source === 'missing') return res.status(503).json({ error: 'Library unavailable' })
+    return servePalettePreview(req, res, lib.LIBRARY_PALETTES)
   }
 
   // ── The animated icon sets (Pro) ──────────────────────────────────────────

@@ -10,13 +10,17 @@ import JSZip from 'jszip'
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { ICONIFY_HOSTS } from './iconify-stub.js'
-import { PREMADE_ICON_GROUPS, parseIconRef } from '../../src/data/iconGroups.js'
+import { withProIcons, parseIconRef } from '../../src/data/iconGroups.js'
+import { resolveLibrary } from '../../api/_lib/library/load.js'
+
+// The groups with the Pro lists the library serves (the same resolver the API mock uses).
+const GROUPS = withProIcons((await resolveLibrary()).PRO_ICON_GROUPS)
 
 const ROUTE = '/create/icons/groups'
-const FREE = PREMADE_ICON_GROUPS.filter((g) => g.access === 'free')
-const PRO = PREMADE_ICON_GROUPS.filter((g) => g.access === 'pro')
-const WAYFINDING = PREMADE_ICON_GROUPS.find((g) => g.id === 'wayfinding')
-const COMMERCE = PREMADE_ICON_GROUPS.find((g) => g.id === 'commerce')
+const FREE = GROUPS.filter((g) => g.access === 'free')
+const PRO = GROUPS.filter((g) => g.access === 'pro')
+const WAYFINDING = GROUPS.find((g) => g.id === 'wayfinding')
+const COMMERCE = GROUPS.find((g) => g.id === 'commerce')
 
 // Every icon a Pro group holds that no free group also holds: requesting any
 // of these for a signed-out visitor would be a locked group reaching the network.
@@ -69,7 +73,7 @@ test.describe('icon groups', () => {
 
     // Every group is listed; the free ones open, the Pro ones are locked cards.
     const cards = page.locator('.igp-cards > li:not(.geg-fade *)')
-    await expect(cards).toHaveCount(PREMADE_ICON_GROUPS.length)
+    await expect(cards).toHaveCount(GROUPS.length)
     await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(FREE.length)
     await expect(page.locator('.igp-cards .lockt-card--group:not(.geg-fade *)')).toHaveCount(PRO.length)
 
@@ -134,7 +138,7 @@ test.describe('icon groups', () => {
     watch(page, 'a signed-in designer exporting the media controls')
     await signIn(page, { plan: 'free' })
     await page.setViewportSize({ width: 1280, height: 900 })
-    const media = PREMADE_ICON_GROUPS.find((g) => g.id === 'media')
+    const media = GROUPS.find((g) => g.id === 'media')
     await go(page, `${ROUTE}?group=media`)
     await expect(page.locator('.igp-grid .ic img')).toHaveCount(media.icons.length, { timeout: 15000 })
     await watchDownloads(page)
@@ -197,7 +201,7 @@ test.describe('icon groups', () => {
     await expect(gate).toHaveCount(1)
     await expect(gate).toHaveAttribute('data-gate', 'pro')
     await expect(gate.getByRole('heading')).toHaveText(`Pro opens ${PRO.length} more icon groups`)
-    await expect(gate.locator('.geg-p')).toContainText(`You're seeing ${FREE.length} of the ${PREMADE_ICON_GROUPS.length} icon groups.`)
+    await expect(gate.locator('.geg-p')).toContainText(`You're seeing ${FREE.length} of the ${GROUPS.length} icon groups.`)
     // One way on, and it is Pro: no Log in, because a free account opens no more groups.
     await expect(gate.locator('a, button')).toHaveCount(1)
     await expect(gate.getByRole('link', { name: 'See what Pro includes' })).toHaveAttribute('href', '/plans')
@@ -210,7 +214,7 @@ test.describe('icon groups', () => {
     await signIn(page, { plan: 'pro' })
     await page.setViewportSize({ width: 1280, height: 900 })
     await go(page, ROUTE)
-    await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(PREMADE_ICON_GROUPS.length, { timeout: 15000 })
+    await expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(GROUPS.length, { timeout: 15000 })
     await go(page, `${ROUTE}?group=commerce`)
     await expect(page.locator('.igp-grid .ic img')).toHaveCount(COMMERCE.icons.length, { timeout: 15000 })
   })

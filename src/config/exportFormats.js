@@ -173,7 +173,7 @@ export function assertGroupsCoherent(formats = EXPORT_FORMATS, groups = EXPORT_G
 
 // ── Export themes ────────────────────────────────────────────────────────────
 //
-// Ten designed looks for the brand documents. They are their own data, NOT
+// Twelve designed looks for the brand documents: the ten in the homepage showcase, and the Free pair. They are their own data, NOT
 // entries in EXPORT_FORMATS: a format listed there as `pro` must be `live`
 // (assertFormatsCoherent). The export panel's Theme row picks one of them.
 
@@ -185,36 +185,51 @@ export const EXPORT_THEMES_LIVE = true
 
 // ships with the export themes
 // The page shapes a theme can print at.
-export const EXPORT_THEME_SHAPES = Object.freeze(['16:9', 'A4 landscape', 'A4'])
+export const EXPORT_THEME_SHAPES = Object.freeze(['16:9', '5:4', 'A4 landscape', 'A4'])
 
 // ships with the export themes
 // The four things every theme makes. `proOnly` marks an export that needs Pro in
-// every theme; an export without it is free in the free themes only.
+// every theme; an export without it is free in the free themes that make it, and in a
+// Pro theme that lists it in `freeExports`.
 // `guidelinesPages` is the page count of the guidelines document. `inside` names
 // the export that carries this one: the brand kit has no row of its own in the
 // export panel and is zipped inside the HTML brand book.
 export const EXPORT_THEME_EXPORTS = Object.freeze([
   Object.freeze({ id: 'brand-kit', name: 'Brand kit', short: 'kit', proOnly: true, inside: 'brand-book' }),
-  Object.freeze({ id: 'brand-guidelines', name: 'Brand guidelines', short: 'guidelines', proOnly: true, guidelinesPages: 33 }),
+  Object.freeze({ id: 'brand-guidelines', name: 'Brand guidelines', short: 'guidelines', proOnly: false, guidelinesPages: 33 }),
   Object.freeze({ id: 'brand-book', name: 'HTML brand book', short: 'brand book', proOnly: true }),
   Object.freeze({ id: 'ui-kit', name: 'UI kit', short: 'UI kit', proOnly: false }),
 ])
 
 // ships with the export themes
 // `id` is the theme's folder name; `brand` is the sample brand its pages show;
-// `tier` is who may export the UI kit in it ('free' or 'pro').
+// `tier` is who may export its free exports ('free' or 'pro'); `makes` lists the exports a theme has, when it lacks some
+// (no list: all four); `showcase: false` keeps a theme out of the homepage showcase, which has pages for the ten only;
+// `freeExports` lists the exports a Pro theme still gives a free account. Interim: Standards' UI kit, until the Free pair has
+// UI kits (src/data/exportThemes.js FREE_UI_KIT_THEMES says the same for the route).
 export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '01-presentation', name: 'Presentation', brand: 'Kerbside', tier: 'pro', shape: '16:9' }),
   Object.freeze({ id: '02-poster', name: 'Ticket', brand: 'Encore', tier: 'pro', shape: '16:9' }),
   Object.freeze({ id: '03-broadsheet', name: 'Broadsheet', brand: 'Saltbush', tier: 'pro', shape: '16:9' }),
-  Object.freeze({ id: '04-standards', name: 'Standards', brand: 'Two Shores', tier: 'free', shape: 'A4 landscape' }),
+  Object.freeze({ id: '04-standards', name: 'Standards', brand: 'Two Shores', tier: 'pro', shape: 'A4 landscape', freeExports: Object.freeze(['ui-kit']) }),
   Object.freeze({ id: '05-specimen', name: 'Catalogue', brand: 'Margin', tier: 'pro', shape: 'A4' }),
   Object.freeze({ id: '06-studio', name: 'Studio', brand: 'Offcut', tier: 'pro', shape: 'A4' }),
-  Object.freeze({ id: '07-spec', name: 'Specification', brand: 'Northern Current', tier: 'free', shape: 'A4' }),
+  Object.freeze({ id: '07-spec', name: 'Specification', brand: 'Northern Current', tier: 'pro', shape: 'A4' }),
   Object.freeze({ id: '08-monograph', name: 'Riso', brand: 'Long Room', tier: 'pro', shape: 'A4' }),
   Object.freeze({ id: '09-blueprint', name: 'Blueprint', brand: 'Plumbline', tier: 'pro', shape: 'A4' }),
   Object.freeze({ id: '10-inuse', name: 'In use', brand: 'Shallow End', tier: 'pro', shape: 'A4' }),
+  // The Free pair: the brand guidelines, and nothing else.
+  Object.freeze({ id: '25-label', name: 'Label', brand: 'Margin', tier: 'free', shape: '5:4', makes: Object.freeze(['brand-guidelines']), showcase: false }),
+  Object.freeze({ id: '27-swissfield', name: 'Swiss Field', brand: 'Northern Current', tier: 'free', shape: '16:9', makes: Object.freeze(['brand-guidelines']), showcase: false }),
 ])
+
+// ships with the export themes
+// The themes the homepage showcase and its viewer draw, in order.
+export const SHOWCASE_THEMES = Object.freeze(EXPORT_THEMES.filter((t) => t.showcase !== false))
+
+// ships with the export themes
+// True when a theme has an export.
+export const themeMakes = (theme, exportId) => !theme.makes || theme.makes.includes(exportId)
 
 // ships with the export themes
 export const freeThemes = () => EXPORT_THEMES.filter((t) => t.tier === 'free')
@@ -226,18 +241,20 @@ export const proThemes = () => EXPORT_THEMES.filter((t) => t.tier === 'pro')
 export const themeById = (id) => EXPORT_THEMES.find((t) => t.id === id) || null
 
 // ships with the export themes
-// One export of one theme needs Pro unless it is not `proOnly` and the theme is free.
+// One export of one theme needs Pro unless it is not `proOnly`, the theme makes it, and the theme is free or lists it in
+// `freeExports`.
 export const isThemeExportPro = (themeId, exportId) => {
   const theme = themeById(themeId)
   const made = EXPORT_THEME_EXPORTS.find((e) => e.id === exportId)
   if (!theme || !made) throw new Error(`unknown export theme or export: ${themeId} / ${exportId}`)
-  return made.proOnly || theme.tier !== 'free'
+  const given = theme.tier === 'free' || Boolean(theme.freeExports?.includes(exportId))
+  return made.proOnly || !given || !themeMakes(theme, exportId)
 }
 
 // ships with the export themes
-// The four exports of a theme, each with its own gate: [{ id, name, short, pro }].
+// The exports a theme has, each with its own gate: [{ id, name, short, pro }].
 export const themeExports = (themeId) =>
-  EXPORT_THEME_EXPORTS.map((e) => ({ id: e.id, name: e.name, short: e.short, pro: isThemeExportPro(themeId, e.id) }))
+  EXPORT_THEME_EXPORTS.filter((e) => themeMakes(themeById(themeId) || {}, e.id)).map((e) => ({ id: e.id, name: e.name, short: e.short, pro: isThemeExportPro(themeId, e.id) }))
 
 // ships with the export themes
 // The invariants the lists above rest on. Exported so a unit test can run it
@@ -255,10 +272,15 @@ export function assertThemesCoherent(themes = EXPORT_THEMES, exportsList = EXPOR
   if (unbranded.length) throw new Error(`export themes ${unbranded.map((t) => t.id).join(', ')} lack a name or sample brand`)
   const exportIds = exportsList.map((e) => e.id)
   if (new Set(exportIds).size !== exportIds.length) throw new Error('duplicate export theme export id')
-  // A free theme exists to give away an export; with every export proOnly it would be a free label on a closed door.
-  if (themes.some((t) => t.tier === 'free') && exportsList.every((e) => e.proOnly)) {
-    throw new Error('export themes are marked free but every export needs Pro')
-  }
+  const badMakes = themes.filter((t) => t.makes && (!t.makes.length || t.makes.some((id) => !exportIds.includes(id))))
+  if (badMakes.length) throw new Error(`export themes ${badMakes.map((t) => t.id).join(', ')} make an unknown export, or none`)
+  // A free theme exists to give away an export; with every export it makes proOnly it would be a free label on a closed door.
+  const closed = themes.filter((t) => t.tier === 'free' && exportsList.every((e) => e.proOnly || !themeMakes(t, e.id)))
+  if (closed.length) throw new Error(`export themes ${closed.map((t) => t.id).join(', ')} are marked free but every export they make needs Pro`)
+  // `freeExports` gives away a Pro theme's export: it must be one the theme makes and that is not Pro everywhere.
+  const badGift = themes.filter((t) => t.freeExports && (t.tier !== 'pro' || !t.freeExports.length
+    || t.freeExports.some((id) => !themeMakes(t, id) || !exportsList.some((e) => e.id === id && !e.proOnly))))
+  if (badGift.length) throw new Error(`export themes ${badGift.map((t) => t.id).join(', ')} give away an export they cannot`)
   if (!themes.some((t) => t.tier === 'pro')) throw new Error('no Pro export theme: Pro would add no theme')
   return true
 }

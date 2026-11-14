@@ -442,14 +442,15 @@ test('while the themes are off, no plan line mentions them; the Pro export lines
 })
 
 test('what the theme lines promise is what the theme data gates', () => {
-  // "UI kit free in N themes" and "Guidelines, brand book and kit" are Pro everywhere.
+  // The guidelines are free in the Free pair, the UI kit in the themes that give it away (Standards, for now); the rest is Pro.
   assert.equal(freeThemes().length, THEME_FACTS.freeCount)
   for (const t of EXPORT_THEMES) {
-    const exportsOf = themeExports(t.id)
-    assert.equal(exportsOf.find((e) => e.id === 'ui-kit').pro, t.tier !== 'free', `${t.id}: the UI kit gate disagrees with the tier`)
-    for (const e of exportsOf.filter((x) => x.id !== 'ui-kit')) assert.equal(e.pro, true, `${t.id}/${e.id} is not Pro`)
+    for (const e of themeExports(t.id)) {
+      const free = (t.tier === 'free' && e.id === 'brand-guidelines') || Boolean(t.freeExports?.includes(e.id))
+      assert.equal(e.pro, !free, `${t.id}/${e.id}: the gate disagrees with the tier and the theme's free exports`)
+    }
   }
-  assert.equal(EXPORT_THEME_EXPORTS.filter((e) => !e.proOnly).length, 1, 'more than the UI kit can be free')
+  assert.deepEqual(EXPORT_THEME_EXPORTS.filter((e) => !e.proOnly).map((e) => e.id), ['brand-guidelines', 'ui-kit'], 'only the guidelines and the UI kit can be free')
 })
 
 test('the themes are not sold as formats: no theme export is a Pro format in the table', () => {
@@ -468,7 +469,8 @@ test('with the themes live, the Exports group has a themes row: Free previews al
   const row = exportsGroup(true).find((r) => r.label === 'Export themes')
   assert.ok(row, 'the comparison table has no export-themes row')
   assert.ok(row.free.startsWith(`Preview all ${EXPORT_THEMES.length}`), row.free)
-  assert.ok(row.free.includes(`UI kit exports in ${freeThemes().length}`), row.free)
+  assert.ok(row.free.includes(`Brand guidelines in ${freeThemes().length}`), row.free)
+  assert.ok(row.free.endsWith('The UI kit in Standards'), row.free)
   for (const t of freeThemes()) assert.ok(row.free.includes(t.name), `${t.name} is a free theme the row leaves out`)
   assert.ok(row.pro.startsWith(`All ${EXPORT_THEMES.length}`), row.pro)
   // The row prints numerals, never number words.
@@ -479,8 +481,11 @@ test('with the themes live, the Exports group has a themes row: Free previews al
 test('with the themes off, the table has no themes row and still lists every Pro format the dialog offers', () => {
   const rows = exportsGroup(false)
   assert.ok(!rows.some((r) => /theme/i.test(r.label)), 'a themes row shows before the themes export')
+  // With the themes live a format whose theme export is free in some theme is told by the themes row, not as Pro-only.
+  const THEME_OF_GROUP = { guidelines: 'brand-guidelines', book: 'brand-book', kit: 'ui-kit' }
+  const freeInSomeTheme = (f) => Boolean(THEME_OF_GROUP[f.group]) && EXPORT_THEMES.some((t) => themeExports(t.id).some((e) => e.id === THEME_OF_GROUP[f.group] && !e.pro))
   for (const live of [true, false]) {
-    for (const f of documentFormats().filter((x) => x.live && x.pro)) {
+    for (const f of documentFormats().filter((x) => x.live && x.pro && !(live && freeInSomeTheme(x)))) {
       assert.ok(exportsGroup(live).some((r) => r.label === f.name && r.free === null && r.pro === 'Included'), `${f.name} is a Pro format the dialog still offers, missing with live=${live}`)
     }
   }

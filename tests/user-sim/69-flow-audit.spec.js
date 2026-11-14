@@ -291,20 +291,26 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       await expect(modal).toBeVisible()
       const err = modal.locator('.pg-out')
       await expect(err).toBeVisible()
-      // The sheet is its own scroll box, so "on the first screen" means inside
-      // the sheet's visible box at scrollTop 0 — not merely inside the
-      // viewport, which the sheet's fade edge and bottom border sit inside.
-      const sheet = await modal.evaluate((el) => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, scrollTop: el.scrollTop } })
-      expect(sheet.scrollTop, 'measured before anyone scrolled').toBe(0)
-      const box = await err.evaluate((el) => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom } })
-      expect(box.top, 'the error block must start inside the sheet').toBeGreaterThanOrEqual(sheet.top)
-      expect(box.bottom, `the error block must end inside the sheet on a ${h}px screen, without scrolling`).toBeLessThanOrEqual(sheet.bottom)
+      // Measured once the sheet has finished sliding up: mid-slide, everything
+      // is lower and the numbers mean nothing.
+      await modal.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished)))
+      // The body is the sheet's scroll box and the footer sits under it, so "on
+      // the first screen" means inside the body's visible box at scrollTop 0 for
+      // what scrolls, and inside the sheet for the footer's button.
+      const rect = (loc) => loc.evaluate((el) => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, scrollTop: el.scrollTop } })
+      const sheet = await rect(modal)
+      const body = await rect(modal.locator('.pg-bd'))
+      expect(body.scrollTop, 'measured before anyone scrolled').toBe(0)
+      expect(sheet.bottom, 'the sheet sits on the bottom of the screen').toBeLessThanOrEqual(h + 0.5)
+      const box = await rect(err)
+      expect(box.top, 'the error block must start inside the body').toBeGreaterThanOrEqual(body.top)
+      expect(box.bottom, `the error block must end inside the body on a ${h}px screen, without scrolling`).toBeLessThanOrEqual(body.bottom)
       // Both ways out are on that first screen too, whole.
-      for (const [role, name] of [['button', 'Try again'], ['link', 'See all plans']]) {
+      for (const [role, name, within] of [['button', 'Try again', sheet], ['link', 'See all plans', body]]) {
         const b = modal.getByRole(role, { name })
         await expect(b).toBeVisible()
         const bb = await b.boundingBox()
-        expect(bb.y + bb.height, `${name} must be whole without scrolling`).toBeLessThanOrEqual(sheet.bottom)
+        expect(bb.y + bb.height, `${name} must be whole without scrolling`).toBeLessThanOrEqual(within.bottom)
       }
       await context.close()
     })
@@ -572,6 +578,9 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await page.getByRole('button', { name: 'Export', exact: true }).first().click()
     await expect(exportPanel(page)).toBeVisible()
     await chooseFormat(page, 'guidelines')
+    // The guidelines open on Label, a Free theme; a Pro theme is what locks the document.
+    await page.getByRole('button', { name: /^Change theme, current / }).click()
+    await page.getByRole('listbox', { name: 'Theme' }).getByRole('option', { name: /^Studio\b/ }).click()
     await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
     await expect(categoryRadio(page, 'Slides'), 'and the rail names the document it locks').toHaveAccessibleName('Slides, 16:9, Pro')
     await expect(primaryButton(page)).toHaveText('Unlock with Pro')

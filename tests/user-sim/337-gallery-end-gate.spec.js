@@ -29,12 +29,16 @@ import { go, watch } from './helpers.js'
 import { ICONIFY_HOSTS } from './iconify-stub.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
-import { PREMADE_ICON_GROUPS } from '../../src/data/iconGroups.js'
+import { withProIcons } from '../../src/data/iconGroups.js'
+import { resolveLibrary } from '../../api/_lib/library/load.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 import { tierOf } from '../../src/data/iconPackTiers.js'
 
-const FREE_GROUPS = PREMADE_ICON_GROUPS.filter((g) => g.access === 'free')
-const PRO_GROUPS = PREMADE_ICON_GROUPS.filter((g) => g.access === 'pro')
+// The groups with the Pro lists the library serves (the same resolver the API mock uses).
+const GROUPS = withProIcons((await resolveLibrary()).PRO_ICON_GROUPS)
+
+const FREE_GROUPS = GROUPS.filter((g) => g.access === 'free')
+const PRO_GROUPS = GROUPS.filter((g) => g.access === 'pro')
 const FREE_REFS = new Set(FREE_GROUPS.flatMap((g) => g.icons))
 const PRO_ONLY_REFS = new Set(PRO_GROUPS.flatMap((g) => g.icons).filter((r) => !FREE_REFS.has(r)))
 
@@ -77,7 +81,7 @@ const GALLERIES = [
     controls: [{ role: 'link', name: 'See what Pro includes' }],
     login: null, signup: null, plans: 'See what Pro includes',
     heading: `Pro opens ${PRO_GROUPS.length} more icon groups`,
-    body: `You're seeing ${FREE_GROUPS.length} of the ${PREMADE_ICON_GROUPS.length} icon groups. Pro opens the remaining ${PRO_GROUPS.length}.`,
+    body: `You're seeing ${FREE_GROUPS.length} of the ${GROUPS.length} icon groups. Pro opens the remaining ${PRO_GROUPS.length}.`,
     ready: (page) => expect(page.locator('.igp-cards a.igp-card:not(.geg-fade *)')).toHaveCount(FREE_GROUPS.length, { timeout: 15000 }),
   },
 ]

@@ -12,14 +12,17 @@
 //   specSampledNote shown at five stops                        -> "the Sampled at line ..."
 //   fitHexes dropping the +N                                   -> "fitHexes keeps ..."
 //   specTypeLine writing an angle for Radial                   -> "specTypeLine ..."
-//   PREVIEW_STYLES not ending poster, spec / a label changed   -> "the styles end with Poster and Spec card ..."
+//   PREVIEW_STYLES not ending poster ... phone / a label changed -> "Poster and Spec card sit before ..."
+//   TEXT_STYLES missing icon or phone                          -> "Poster and Spec card sit before ..."
+//   the icon's ink box not the centre half                     -> "the App icon's ink is chosen over the centre of a square"
+//   PHONE_COPY or ICON_GLYPH changed                           -> "the Phone sets Offcut's own words and the icon is Tenner's T"
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { boxWithin, inkFor, sceneInks, lowestInk, sceneBadge, badgeText } from '../../src/utils/gradientText.js'
 import { INK_DARK, INK_LIGHT } from '../../src/utils/gradientInk.js'
 import { contrastRatio } from '../../src/utils/colors.js'
 import {
-  PREVIEW_STYLES, POSTER_COPY, TEXT_STYLES, isTextStyle, styleVars, specStrip, specHexes, fitHexes, specTypeLine, specSampledNote, specName,
+  PREVIEW_STYLES, POSTER_COPY, PHONE_COPY, ICON_GLYPH, ICON_INK_BOX, TEXT_STYLES, isTextStyle, styleVars, specStrip, specHexes, fitHexes, specTypeLine, specSampledNote, specName,
 } from '../../src/utils/gradientPreviewStyles.js'
 
 const BW = [{ color: '#000000', position: 0 }, { color: '#FFFFFF', position: 100 }]
@@ -66,12 +69,16 @@ test('the real inks keep the ratio they report, and the lowest of them is the ba
   assert.match(sceneBadge([ink, inkFor(BW, 'Linear', 180, undefined)]).text, / · low$/)
 })
 
-test('the styles end with Poster and Spec card, named and spoken as written', () => {
-  assert.deepEqual(PREVIEW_STYLES.slice(-2).map((s) => s.id), ['poster', 'spec'])
-  assert.deepEqual(PREVIEW_STYLES.slice(-2).map((s) => s.label), ['Poster', 'Spec card'])
-  assert.deepEqual(PREVIEW_STYLES.slice(-2).map((s) => s.as), [', shown as a poster', ', shown as a spec card'])
-  assert.deepEqual(TEXT_STYLES, ['poster', 'spec'])
-  assert.ok(isTextStyle('poster') && !isTextStyle('fade'))
+test('Poster and Spec card sit before Mesh, Waves, App icon and Phone, named and spoken as written', () => {
+  const six = PREVIEW_STYLES.slice(-6)
+  assert.deepEqual(six.map((s) => s.id), ['poster', 'spec', 'mesh', 'waves', 'icon', 'phone'])
+  assert.deepEqual(six.map((s) => s.label), ['Poster', 'Spec card', 'Mesh', 'Waves', 'App icon', 'Phone'])
+  assert.deepEqual(six.map((s) => s.as), [
+    ', shown as a poster', ', shown as a spec card', ', shown as a mesh', ', shown as waves', ', shown as an app icon', ', shown as a phone screen',
+  ])
+  assert.deepEqual(TEXT_STYLES, ['poster', 'spec', 'icon', 'phone'])
+  assert.ok(isTextStyle('poster') && isTextStyle('icon') && isTextStyle('phone'))
+  assert.ok(!isTextStyle('fade') && !isTextStyle('mesh') && !isTextStyle('waves'))
 })
 
 test("the Poster sets Shallow End's own words", () => {
@@ -120,6 +127,26 @@ test('the Sampled at line is there when there are fewer than five stops, and onl
   assert.equal(specSampledNote(some(4)), 'Sampled at 0, 25, 50, 75 and 100%')
   assert.equal(specSampledNote(some(5)), null)
   assert.equal(specSampledNote(some(12)), null)
+})
+
+test("the Phone sets Offcut's own words and the icon is Tenner's T", () => {
+  assert.deepEqual(PHONE_COPY, {
+    line: 'Quote on site. Paid by Friday.', heading: 'Sign in to Offcut', label: 'Email', button: 'Continue', link: 'Create an account',
+  })
+  assert.equal(ICON_GLYPH, 'T')
+})
+
+test("the App icon's ink is chosen over the centre of a square", () => {
+  assert.deepEqual(ICON_INK_BOX, { x: 0.25, y: 0.25, w: 0.5, h: 0.5 })
+  const white = (position) => ({ color: '#FFFFFF', position })
+  const edges = [{ color: '#000000', position: 0 }, white(25), white(75), { color: '#000000', position: 100 }]
+  const centre = inkFor(edges, 'Linear', 180, { aspect: 1, box: ICON_INK_BOX })
+  assert.equal(centre.hex, INK_DARK.hex, 'dark ink over the white middle, whatever the black edges say')
+  assert.ok(centre.ratio > 10)
+})
+
+test("Poster, Spec card, App icon and Phone paint the canvas's own gradient and invent no colour", () => {
+  for (const id of ['icon', 'phone']) assert.deepEqual(styleVars(id, { stops: BW, paint: PAINT, oklch: true }), { '--fx-paint': PAINT })
 })
 
 test('the card is named for the saved project, else the type', () => {

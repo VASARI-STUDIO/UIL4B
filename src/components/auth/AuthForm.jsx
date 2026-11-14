@@ -95,7 +95,7 @@ export default function AuthForm({
   const setEmail = (v) => { setEmailState(v); onEmailChange?.(v) }
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
-  const [busy, setBusy] = useState(null) // null | 'google' | 'submit'
+  const [busy, setBusyState] = useState(null) // null | 'google' | 'submit'
   const [error, setError] = useState(null) // { key, tick }
   const [cooldown, setCooldown] = useState(0)
   const [stepInner, setStepInner] = useState(1)
@@ -109,7 +109,10 @@ export default function AuthForm({
   const mounted = useRef(false)
   const [swapped, setSwapped] = useState(false)
 
-  useEffect(() => { onBusyChange?.(!!busy) }, [busy, onBusyChange])
+  // The caller hears about busy in the same tick it changes, not from an effect,
+  // so a result screen never shows while the caller still thinks a request is in
+  // flight (an Escape pressed on "Check your email" would otherwise be refused).
+  const setBusy = (next) => { setBusyState(next); onBusyChange?.(!!next) }
 
   const isEntry = mode === 'login' || mode === 'signup'
   const onPassword = isEntry && step === 2

@@ -12,8 +12,10 @@ import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { GALLERY_GATE_COPY } from '../data/galleryGateCopy'
 import {
   DEFAULT_GROUP_STROKE, GROUP_PREVIEW_COUNT, GROUP_STROKES, GROUP_STYLE_PACKS, ICON_GROUPS_ROUTE,
-  PREMADE_ICON_GROUPS, glyphRequestPlan, groupById, groupNeeds, groupPacks, groupRoute, parseIconRef,
+  glyphRequestPlan, groupCount, groupNeeds, groupPacks, groupRoute, parseIconRef, withProIcons,
 } from '../data/iconGroups'
+import { useProLibrary } from '../hooks/useProLibrary'
+import ProLibraryStatus from '../components/library/ProLibraryStatus'
 import { viewerTier } from '../data/iconPackTiers'
 import { creditRows, packCredit } from '../data/iconPackCredits'
 import { partsPresent } from '../utils/userHome'
@@ -94,16 +96,16 @@ function GroupStandinGrid({ items }) {
 
 function GroupCard({ group, tier }) {
   const need = groupNeeds(group, tier)
-  if (need) return <li><LockedIconGroupCard preview={{ id: group.id, label: group.label, slots: group.icons.length }} /></li>
+  if (need) return <li><LockedIconGroupCard preview={{ id: group.id, label: group.label, slots: groupCount(group) }} /></li>
   return (
     <li>
-      <Link className="igp-card" to={groupRoute(group.id)} aria-label={`${group.label}, ${group.icons.length} icons`}>
+      <Link className="igp-card" to={groupRoute(group.id)} aria-label={`${group.label}, ${groupCount(group)} icons`}>
         <span className="igp-card-preview" aria-hidden="true">
-          {group.icons.slice(0, GROUP_PREVIEW_COUNT).map((ref) => <Glyph key={ref} iconRef={ref} stroke={DEFAULT_GROUP_STROKE} />)}
+          {(group.icons || []).slice(0, GROUP_PREVIEW_COUNT).map((ref) => <Glyph key={ref} iconRef={ref} stroke={DEFAULT_GROUP_STROKE} />)}
         </span>
         <span className="igp-card-foot">
           <span className="igp-card-name">{group.label}</span>
-          <span className="igp-card-meta">{group.icons.length} icons · {packNames(group)}</span>
+          <span className="igp-card-meta">{groupCount(group)} icons · {packNames(group)}</span>
         </span>
       </Link>
     </li>
@@ -112,12 +114,12 @@ function GroupCard({ group, tier }) {
 
 // The gate under the index for a viewer who cannot open every group. Signed
 // out it offers a free account when one opens more groups; otherwise Pro.
-function GroupIndexGate({ tier }) {
+function GroupIndexGate({ groups, tier }) {
   const { requireLogin } = useLoginPrompt()
   const copy = GALLERY_GATE_COPY.iconGroups
-  const total = PREMADE_ICON_GROUPS.length
-  const shown = PREMADE_ICON_GROUPS.filter((g) => !groupNeeds(g, tier)).length
-  const opens = PREMADE_ICON_GROUPS.filter((g) => !groupNeeds(g, 'free')).length
+  const total = groups.length
+  const shown = groups.filter((g) => !groupNeeds(g, tier)).length
+  const opens = groups.filter((g) => !groupNeeds(g, 'free')).length
   if (shown >= total) return null
   const fade = <GateFadeRows items={GROUP_STANDINS} render={(slice) => <GroupStandinGrid items={slice} />} />
   if (tier === 'anon' && opens > shown) {
@@ -146,15 +148,16 @@ function GroupIndexGate({ tier }) {
   )
 }
 
-function GroupIndex({ tier }) {
-  const [, failed, retry] = useGroupGlyphs(PREMADE_ICON_GROUPS, tier, GROUP_PREVIEW_COUNT)
+function GroupIndex({ groups, tier, pro }) {
+  const [, failed, retry] = useGroupGlyphs(groups, tier, GROUP_PREVIEW_COUNT)
   return (
     <div className="igp-index">
       {failed && <Refused onRetry={retry} />}
+      <ProLibraryStatus library={pro} noun="icon groups" />
       <ul className="igp-cards" aria-label="Icon groups">
-        {PREMADE_ICON_GROUPS.map((g) => <GroupCard key={g.id} group={g} tier={tier} />)}
+        {groups.map((g) => <GroupCard key={g.id} group={g} tier={tier} />)}
       </ul>
-      <GroupIndexGate tier={tier} />
+      <GroupIndexGate groups={groups} tier={tier} />
     </div>
   )
 }
@@ -194,7 +197,7 @@ function useProjectColours() {
   }, [design])
 }
 
-function GroupView({ group, tier, onCopy }) {
+function GroupView({ group, tier, pro, onCopy }) {
   const { requireLogin } = useLoginPrompt()
   const requireExportAccount = useExportGate()
   const need = groupNeeds(group, tier)
@@ -205,7 +208,8 @@ function GroupView({ group, tier, onCopy }) {
   const groups = useMemo(() => [group], [group])
   const [ready, failed, retry] = useGroupGlyphs(groups, tier, Infinity)
   const strokable = groupPacks(group).every((p) => p in GROUP_STYLE_PACKS)
-  const names = useMemo(() => groupFileNames(group.icons), [group])
+  const icons = useMemo(() => group.icons || [], [group])
+  const names = useMemo(() => groupFileNames(icons), [icons])
 
   const copyIcon = useCallback((ref) => {
     const glyph = glyphFor(ref)
@@ -217,10 +221,10 @@ function GroupView({ group, tier, onCopy }) {
     if (!(await requireExportAccount('export this icon group'))) return
     setBusy(true)
     try {
-      if (group.icons.some((ref) => !glyphFor(ref))) {
+      if (icons.some((ref) => !glyphFor(ref))) {
         await loadGroupGlyphs(glyphRequestPlan([group], tier))
       }
-      const entries = group.icons.map((ref) => ({ ref, glyph: glyphFor(ref) }))
+      const entries = icons.map((ref) => ({ ref, glyph: glyphFor(ref) }))
       if (entries.some((e) => !e.glyph)) return
       const { default: JSZip } = await import('jszip')
       const zip = new JSZip()
@@ -248,7 +252,7 @@ function GroupView({ group, tier, onCopy }) {
     <div className="igp-head">
       <BackLink />
       <h2 className="igp-title">{group.label}</h2>
-      <p className="igp-meta">{group.icons.length} icons · {packNames(group)}</p>
+      <p className="igp-meta">{groupCount(group)} icons · {packNames(group)}</p>
     </div>
   )
 
@@ -264,7 +268,7 @@ function GroupView({ group, tier, onCopy }) {
             id="igp-gate-h"
             level={3}
             heading={lockedCopy.pro.heading(group.label)}
-            body={lockedCopy.pro.body(group.icons.length, packNames(group))}
+            body={lockedCopy.pro.body(groupCount(group), packNames(group))}
             primary={{ label: lockedCopy.pro.action, to: '/plans', onClick: () => reportUpgradeGate('icon-group-locked-view') }}
             fade={<GateFadeCards shape="glyph" count={24} min={92} />}
           />
@@ -274,12 +278,22 @@ function GroupView({ group, tier, onCopy }) {
             id="igp-gate-h"
             level={3}
             heading={lockedCopy.free.heading(group.label)}
-            body={lockedCopy.free.body(group.icons.length, packNames(group))}
+            body={lockedCopy.free.body(groupCount(group), packNames(group))}
             primary={{ label: lockedCopy.free.action, onClick: () => requireLogin('open this icon group') }}
             secondary={{ label: lockedCopy.free.secondary, to: '/plans' }}
             fade={<GateFadeCards shape="glyph" count={24} min={92} />}
           />
         )}
+      </div>
+    )
+  }
+
+  // A Pro group whose icon list has not arrived from the library yet.
+  if (!group.icons) {
+    return (
+      <div className="igp-view" data-group={group.id} aria-busy="true">
+        {head}
+        <ProLibraryStatus library={pro} noun="icon groups" />
       </div>
     )
   }
@@ -333,7 +347,7 @@ function GroupView({ group, tier, onCopy }) {
       {failed && <Refused onRetry={retry} />}
 
       <div className="ig igp-grid" aria-busy={!ready}>
-        {group.icons.map((ref) => {
+        {icons.map((ref) => {
           const { name } = parseIconRef(ref)
           return (
             <button key={ref} type="button" className="ic" aria-label={`Copy ${name} SVG`} onClick={() => copyIcon(ref)}>
@@ -354,7 +368,11 @@ export default function IconGroups({ onCopy, onCredits }) {
   const { user, loading: authLoading } = useAuth()
   const tier = viewerTier({ user, isPro, resolving: authLoading })
   const [params] = useSearchParams()
-  const group = groupById(params.get('group'))
+  // Pro groups ship as stubs; a Pro account's lists come from the library.
+  const pro = useProLibrary('icongroups')
+  const groups = useMemo(() => withProIcons(pro.items), [pro.items])
+  const param = params.get('group')
+  const group = groups.find((g) => g.id === param) || null
   // The licences of the sets in an open group, reported to the footer's notice.
   // The index and a locked group show no glyphs to credit.
   const rows = useMemo(
@@ -365,8 +383,8 @@ export default function IconGroups({ onCopy, onCredits }) {
   return (
     <div className="igp-page">
       {group
-        ? <GroupView key={group.id} group={group} tier={tier} onCopy={onCopy} />
-        : <GroupIndex tier={tier} />}
+        ? <GroupView key={group.id} group={group} tier={tier} pro={pro} onCopy={onCopy} />
+        : <GroupIndex groups={groups} tier={tier} pro={pro} />}
     </div>
   )
 }

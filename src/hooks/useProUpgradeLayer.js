@@ -2,7 +2,6 @@ import { createElement, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { stashResumeTarget } from '../contexts/LoginPromptContext'
 import { BILLING_OPTIONS, DEFAULT_BILLING } from '../config/planFacts'
 import ProUpgradeLayer from '../components/auth/ProUpgradeLayer'
 
@@ -43,11 +42,7 @@ export default function useProUpgradeLayer({ billing } = {}) {
     if (depth > 0) navigate(-depth)
     else goUp(0, { replace: true })
   }
-  // `resumeTo` is where a brand-new account goes once onboarding finishes. A new
-  // sign-up is sent to /onboarding as soon as auth resolves, before the plan
-  // step, so the stash is written here when the layer opens.
-  const openLayer = (resumeTo) => {
-    stashResumeTarget(resumeTo)
+  const openLayer = () => {
     setCadence(BILLING_OPTIONS.some((o) => o.id === billing) ? billing : DEFAULT_BILLING)
     setFresh(null)
     goUp(1, { state: { proDepth: 1 } })

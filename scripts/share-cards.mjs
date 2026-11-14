@@ -54,7 +54,7 @@
 // a new guide inherits the card and, because cards.json records the guide
 // list, fails tests/unit/share-cards.test.js until the card is redrawn with it.
 //
-// ── Nine routes deliberately keep the homepage card ────────────────────────
+// ── Routes deliberately keeping the homepage card ────────────────────────
 //
 // /home IS the homepage, so the homepage card is the correct picture, not a
 // fallback. The support and legal pages (/help, /info, /feedback, /privacy,
@@ -67,6 +67,9 @@ import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, TOPICS } from '../src/data/learnI
 import { HOME_SHARE_IMAGE } from '../src/data/routeMetaMap.js'
 
 export const CARD_DIR = '/previews'
+
+// Learn pages that are reference pages rather than guides (not in LEARN_ARTICLES).
+const LEARN_PAGE_ROUTES = ['help', 'principles'].map((slug) => `/learn/${slug}`)
 
 /**
  * The card every route falls back to — and the RIGHT card for the homepage.
@@ -131,7 +134,7 @@ export const SECTIONS = Object.freeze([
     blurb: '200,000 icons and every emoji, copy-ready',
     hue: 'icons',
     group: 'icons',
-    routes: Object.freeze(['/create/icons', '/create/emoji']),
+    routes: Object.freeze(['/create/icons', '/create/icons/groups', '/create/emoji']),
   }),
   Object.freeze({
     id: 'media',
@@ -156,7 +159,7 @@ export const SECTIONS = Object.freeze([
     hue: 'component',
     group: null,
     tools: Object.freeze(['Palette Library', 'Gradient Library']),
-    routes: Object.freeze(['/discover', '/discover/palettes', '/discover/gradients']),
+    routes: Object.freeze(['/discover', '/discover/palettes', '/discover/gradients', '/discover/buttons']),
   }),
   Object.freeze({
     id: 'plans',
@@ -178,7 +181,9 @@ export const SECTIONS = Object.freeze([
     hue: 'ai',
     group: null,
     tools: Object.freeze(LEARN_ARTICLES.map((a) => a.navLabel)),
-    routes: Object.freeze(['/learn', ...LEARN_ARTICLE_ROUTES]),
+    // The Help and Principles pages are not guides, so they are not in the
+    // registry; they sit under /learn and unfurl as the section they are in.
+    routes: Object.freeze(['/learn', ...LEARN_ARTICLE_ROUTES, ...LEARN_PAGE_ROUTES]),
   }),
 ])
 

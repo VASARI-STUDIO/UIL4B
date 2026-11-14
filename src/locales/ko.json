@@ -465,7 +465,7 @@
     "loadingSignup": "계정을 만드는 중…",
     "loadingReset": "보내는 중…",
     "loadingSwitch": "전환하는 중…",
-    "legal": "계속하면 {terms} 및 {privacy}에 동의하는 것으로 간주됩니다. 계정을 만들려면 만 16세 이상이어야 합니다.",
+    "legal": "계속하면 {terms} 및 {privacy}에 동의하는 것으로 간주됩니다. 계정을 만들려면 만 18세 이상이어야 합니다.",
     "legalTerms": "서비스 이용약관",
     "legalPrivacy": "개인정보처리방침",
     "noAccount": "계정이 없으신가요?",

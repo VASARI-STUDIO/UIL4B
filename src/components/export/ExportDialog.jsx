@@ -119,7 +119,7 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const [localError, setLocalError] = useState('')
   // The theme chosen for the themed files (the UI kit, the book and the slides as PDF or HTML), and the one a highlighted row
   // is previewing. Until a pick is made it is the plan's own default for the file: Presentation for Pro; otherwise the first theme
-  // the file is free in (Label for the guidelines, Standards for the UI kit). A pick the file's row is missing from (a
+  // the file is free in (Label for the guidelines), else the first that draws it. A pick the file's row is missing from (a
   // guidelines-only theme, then the UI kit) gives way to that default, and comes back when a file it draws is chosen again.
   const [themePick, setThemePick] = useState(null)
   const [peek, setPeek] = useState(null)

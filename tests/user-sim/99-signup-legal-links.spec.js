@@ -4,7 +4,7 @@
 import { test, expect } from './base.js'
 import { go, openChosenDialog, continueWithEmail } from './helpers.js'
 
-const LEGAL = 'By continuing, you agree to the Terms and Privacy Policy. You must be 16 or older to create an account.'
+const LEGAL = 'By continuing, you agree to the Terms and Privacy Policy. You must be 18 or older to create an account.'
 
 // The same form sits in the /login page and in the dialog; both are walked.
 for (const [where, open, scope] of [
