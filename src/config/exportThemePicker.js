@@ -22,8 +22,12 @@ const SAMPLE = Object.freeze({
   '08-monograph': ['Long Room', 'A4'],
   '09-blueprint': ['Plumbline', 'A4'],
   '10-inuse': ['Shallow End', 'A4'],
+  '24-standards': ['Two Shores', 'A4 landscape'],
   '25-label': ['Margin', '5:4'],
   '27-swissfield': ['Northern Current', '16:9'],
+  '29-blueprint': ['Plumbline', 'A4 landscape'],
+  '30-fluted': ['Northern Current', '4:5'],
+  '32-dieline': ['Kerbside', '1:1'],
 })
 
 /**
@@ -96,7 +100,7 @@ export const defaultThemeId = (isPro, fileId = 'kit') => {
   return (free || list[0] || PICKER_THEMES[0]).id
 }
 
-const SHAPE_CLASS = Object.freeze({ '16:9': 'wide', '5:4': 'land', 'A4 landscape': 'land', A4: 'port' })
+const SHAPE_CLASS = Object.freeze({ '16:9': 'wide', '5:4': 'land', '1:1': 'land', '4:5': 'port', 'A4 landscape': 'land', A4: 'port' })
 export const shapeClass = (shape) => SHAPE_CLASS[shape] || 'port'
 
 /** The preview pictures of one theme: [{ src, alt }] for a kind ('kit' | 'book' | 'guidelines'). */
