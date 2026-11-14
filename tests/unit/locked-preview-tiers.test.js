@@ -1,7 +1,7 @@
 // Three rungs, not two — and the cap that makes the third one real.
 //
-// The tiers: signed-out visitors get 3 free items in the galleries, signed-in
-// users get 10, and paid users get everything. tests/unit/locked-library-tease
+// The tiers: signed-out visitors get the first few items in the galleries,
+// signed-in users get ten, and paid users get everything. tests/unit/locked-library-tease
 // .test.js already proves the OLD half of this gate: that a locked row's payload
 // never reaches a preview, and that only an exact `true` opens it. This file
 // proves the new half, and the new half is where the danger is:
@@ -42,7 +42,7 @@ import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { BRAND_PALETTES } from '../../api/_lib/library/brandPalettes.js'
 import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
-import { GALLERY_GATE_COPY } from '../../src/data/galleryGateCopy.js'
+import { GALLERY_GATE_COPY, libraryGateCopy } from '../../src/data/galleryGateCopy.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
 import { standinPalettes, standinGradients, STANDIN_COLOURS } from '../../src/utils/gateStandins.js'
 
@@ -80,11 +80,14 @@ test('every gated library is bigger than the caps, or these assertions are vacuo
 
 // ── 1. The numbers, and the ladder ──────────────────────────────────────────
 
-test('the tier limits are the ones the founder set: 3, 10, everything', () => {
-  // Pinned as literals on purpose. These are a PRICING decision, not an
-  // implementation detail, so changing one has to be a deliberate edit to a
-  // test that says so — the same reasoning as the pinned free-prompt set.
-  assert.equal(GALLERY_TIER_LIMITS.anonymous, 3, 'a signed-out visitor gets three')
+test('the tier limits are the ones the founder set: a small signed-out cap, 10, everything', () => {
+  // The free and Pro rungs are pinned as literals on purpose. These are a
+  // PRICING decision, not an implementation detail, so changing one has to be a
+  // deliberate edit to a test that says so. The signed-out cap is read from
+  // GALLERY_TIER_LIMITS everywhere else in this file, so it is asserted here
+  // only as a whole number the ladder climbs from.
+  assert.ok(Number.isInteger(GALLERY_TIER_LIMITS.anonymous) && GALLERY_TIER_LIMITS.anonymous > 0,
+    'a signed-out visitor gets a few, as a whole number')
   assert.equal(GALLERY_TIER_LIMITS.free, 10, 'a free account gets ten')
   assert.equal(GALLERY_TIER_LIMITS.pro, Infinity, 'a paid account gets all of it')
   assert.ok(GALLERY_TIER_LIMITS.anonymous < GALLERY_TIER_LIMITS.free,
@@ -369,8 +372,16 @@ test('the gradient gallery filters and searches the split output, closing its he
   // collection would let a signed-out visitor confirm a withheld gradient's
   // colours by typing them — and read its name out of the result.
   const src = stripComments(read(PAGES.gradients))
-  assert.ok(src.includes('browsable.filter('), 'the search must run over the split output')
+  // The count now runs over the whole library, so the guard moves into
+  // countGallery: the full filter (hex haystack included) is its matchOpen, run
+  // over split.open only, and every locked row goes through the public matcher.
+  assert.ok(/countGallery\(rows, split, \{/.test(src), 'the search must be counted by countGallery over the split')
+  assert.ok(/matchPublic:\s*gradientPublicMatch\(/.test(src), 'locked rows must be matched on public facets only')
+  assert.ok(/matchOpen:[\s\S]*?s\.color/.test(src), 'the hex haystack must live in matchOpen, which only sees open rows')
   assert.ok(!/GALLERY_GRADIENTS\.filter\(/.test(src), 'the full collection must not be the filter source')
+  const counts = stripComments(read('src/utils/galleryCounts.js'))
+  assert.ok(/split\.open\.filter\(matchOpen\)/.test(counts), 'matchOpen must run over the open rows only')
+  assert.ok(!/row\.stops/.test(counts), 'the public matcher must never read a locked row\'s stops')
 })
 
 test('no wall writes a tier number as a literal', () => {
@@ -380,12 +391,13 @@ test('no wall writes a tier number as a literal', () => {
   for (const [name, file] of Object.entries(PAGES)) {
     if (name === 'prompts') continue
     const src = stripComments(read(file))
-    // The gate's words are built by data/galleryGateCopy.js from the numbers
-    // the page hands over; the page works those out from its own data.
+    // The gate's words are built by libraryGateCopy (data/galleryGateCopy.js)
+    // from the counts the page hands LibraryGate: countGallery over the whole
+    // library, gateFor's answer, and what a free account opens.
     assert.ok(/freeOpens\(\{ eligible \}\)/.test(src), `${name}'s account gate must work out what a free account opens`)
-    assert.ok(/copy\.anon\.heading\(opens\)/.test(src), `${name}'s account gate must print its own count`)
-    assert.ok(/copy\.pro\.heading\(lockedCount\)/.test(src), `${name}'s Pro gate must print the remaining count`)
-    assert.ok(/accountTierGain\(\{/.test(src), `${name} must compute the account gain rather than assume it`)
+    assert.ok(/countGallery\(/.test(src), `${name} must count the filter over the whole library`)
+    assert.ok(/gateFor\(\{/.test(src), `${name} must ask gateFor whether a gate shows`)
+    assert.ok(/<LibraryGate\b[\s\S]*?opens=\{opens\}/.test(src), `${name}'s gate must be handed the free account's reach`)
   }
   // The prompt library's walls are the overview's closing section and the
   // list's offer under the grid. Each states a count, and each count is
@@ -408,23 +420,48 @@ test('the signed-out wall offers the free account, and the paid wall offers Pro'
   // step costs nothing. `free: true` is what makes the dialog present an
   // account rather than a checkout — the same flag useExportGate passes.
   // Behaviour first: the copy every gate prints.
-  for (const name of ['palettes', 'gradients', 'iconGroups', 'prompts']) {
+  for (const name of ['iconGroups', 'prompts']) {
     const { anon, pro } = GALLERY_GATE_COPY[name]
     assert.equal(anon.action, 'Log in', `${name}: the account rung is not Log in`)
     assert.equal(anon.secondary, 'See the plans', `${name}: the account rung lost its plans link`)
     assert.equal(pro.action, 'See what Pro includes', `${name}: the Pro rung lost its action`)
   }
-  // Then the pages: each renders both kinds of gate, opens the sign-in flow for
-  // the account one and branches on the rung.
-  const GATE_FILES = { palettes: PAGES.palettes, gradients: PAGES.gradients, prompts: 'src/components/prompt/PromptGate.jsx' }
-  for (const [name, file] of Object.entries(GATE_FILES)) {
+  // Then the prompt gate: it renders both kinds of gate, opens the sign-in flow
+  // for the account one and branches on the rung.
+  const prompt = stripComments(read('src/components/prompt/PromptGate.jsx'))
+  assert.ok(prompt.includes('kind="anon"') && prompt.includes('kind="pro"'), 'prompts does not render both rungs of the gate')
+  assert.ok(prompt.includes('copy.anon.action') && prompt.includes('copy.pro.action'), "prompts' gate does not use the shared actions")
+  assert.ok(/secondary=\{\{ label: copy\.anon\.secondary, to: '\/plans' \}\}/.test(prompt), "prompts' account gate must link to the plans")
+  assert.ok(/onLogin|requireLogin\('[a-z ]+'\)/.test(prompt), "prompts' account gate must open the sign-in flow")
+  assert.ok(/tier === 'anonymous'/.test(prompt) || /anonymous =\s*tier === 'anonymous'/.test(prompt),
+    'prompts does not branch on the rung, so one of its two gates is unreachable')
+})
+
+test('the palette and gradient gate sends a signed-out viewer to sign up and a free one to the plans', () => {
+  // Behaviour: the copy the shared LibraryGate prints, for each case it can be in.
+  const counts = { S: 4, A: 10, T: 40, P: 30, opens: 10, nounFor: (c) => (c === 1 ? 'palette' : 'palettes') }
+  for (const kind of ['palettes', 'gradients']) {
+    const account = libraryGateCopy(kind, { variant: 'account', anonymous: true, ...counts })
+    assert.deepEqual(account.primary, { label: 'Create a free account', action: 'signup' }, `${kind}: signed out, the primary is not sign up`)
+    assert.deepEqual(account.secondary, { label: 'Log in', action: 'login' }, `${kind}: signed out lost its Log in`)
+    const free = libraryGateCopy(kind, { variant: 'more', anonymous: false, ...counts })
+    assert.deepEqual(free.primary, { label: 'Upgrade to Pro', action: 'plans' }, `${kind}: a free account is not sent to the plans`)
+    assert.equal(free.secondary, undefined, `${kind}: a free account was offered a second way on`)
+    const unknown = libraryGateCopy(kind, { variant: 'unknown', anonymous: false, ...counts })
+    assert.equal(unknown.primary.action, 'plans', `${kind}: an unanswerable filter must still end at the plans for a free account`)
+  }
+  // The component: plans actions link to /plans, the rung picks the gate kind.
+  const gate = stripComments(read('src/components/library/LibraryGate.jsx'))
+  assert.ok(/c\.action === 'plans'[\s\S]*?to: '\/plans'/.test(gate), 'a plans action must link to /plans')
+  assert.ok(/gate\.anonymous \? 'anon' : 'free'/.test(gate), 'LibraryGate must branch on the rung')
+  // The pages: each opens the sign-in flow for the account actions.
+  for (const [name, file] of Object.entries(PAGES)) {
+    if (name === 'prompts') continue
     const src = stripComments(read(file))
-    assert.ok(src.includes('kind="anon"') && src.includes('kind="pro"'), `${name} does not render both rungs of the gate`)
-    assert.ok(src.includes('copy.anon.action') && src.includes('copy.pro.action'), `${name}'s gate does not use the shared actions`)
-    assert.ok(/secondary=\{\{ label: copy\.anon\.secondary, to: '\/plans' \}\}/.test(src), `${name}'s account gate must link to the plans`)
-    assert.ok(/onLogin|requireLogin\('[a-z ]+'\)/.test(src), `${name}'s account gate must open the sign-in flow`)
-    assert.ok(/tier === 'anonymous'/.test(src) || /anonymous =\s*tier === 'anonymous'/.test(src),
-      `${name} does not branch on the rung, so one of its two gates is unreachable`)
+    assert.ok(/<LibraryGate\b/.test(src), `${name} does not render the shared gate`)
+    assert.ok(/onSignup=\{\(\) => requireLogin\([^)]*signup: true/.test(src), `${name}'s gate must open the sign-up flow`)
+    assert.ok(/onLogin=\{\(\) => requireLogin\(/.test(src), `${name}'s gate must open the sign-in flow`)
+    assert.ok(/tier === 'anonymous'|anonymous = tier === 'anonymous'/.test(src), `${name} does not branch on the rung`)
   }
 })
 
@@ -524,12 +561,16 @@ test('no placeholder is stamped with a price the row does not carry', () => {
       `${file} must label a locked card 'account' only for a signed-out viewer on a row a free account opens`)
   }
   // The palette and gradient galleries no longer render those cards at all:
-  // the rows under the gate are the gallery's own cards (GateFadeRows), real free-tier rows or neutral stand-ins, so
-  // no rung can see a price on them.
+  // the rows under the gate are the gallery's own cards (GateFadeRows, drawn by
+  // LibraryGate), real free-tier rows or neutral stand-ins, so no rung can see a
+  // price on them.
+  const libraryGate = stripComments(read('src/components/library/LibraryGate.jsx'))
+  assert.ok(/<GateFadeRows\b/.test(libraryGate), 'LibraryGate renders no faded rows - this assertion is vacuous')
+  assert.ok(!/Locked(Palette|Prompt)Card/.test(libraryGate), 'LibraryGate renders a locked card that is stamped "Pro" on a row a free account opens')
   for (const [name, file] of Object.entries(PAGES)) {
     if (name === 'prompts') continue
     const src = stripComments(read(file))
-    assert.ok(/<GateFadeRows\b/.test(src), `${name} renders no faded rows - this assertion is vacuous`)
+    assert.ok(/<LibraryGate\b/.test(src), `${name} renders no gate - this assertion is vacuous`)
     assert.ok(!/Locked(Palette|Prompt)Card/.test(src), `${name} renders a locked card that is stamped "Pro" on a row a free account opens`)
   }
   const fadeSrc = stripComments(read('src/components/library/GalleryEndGate.jsx'))

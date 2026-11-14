@@ -92,6 +92,9 @@ test('4 · the signature asserts only what the app already says in public', () =
   assert.equal(FOUNDER_SIGNATURE.place, 'Brisbane')
   assert.match(FOOTER, /Dylan Coleman/, 'the footer is where these two facts already come from')
   assert.match(FOOTER, /Built in Brisbane/)
+  // The name links to the same portfolio the footer's credit already links to.
+  assert.ok(FOOTER.includes(`'${FOUNDER_SIGNATURE.url}'`), 'the portfolio address comes from the footer')
+  assert.match(COMPONENT, /href=\{FOUNDER_SIGNATURE\.url\} target="_blank" rel="noopener noreferrer"/)
 })
 
 test('5 · nothing in the note can open itself', () => {

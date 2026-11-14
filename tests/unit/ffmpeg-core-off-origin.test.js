@@ -170,7 +170,13 @@ test('dist/assets stays within a few MB, not tens', { skip }, () => {
   // well above today's figure so ordinary growth does not trip it, and well
   // below the old one so the regression this file exists for cannot hide
   // inside it.
-  const CEILING = 8_000_000
+  //
+  // Moved from 8,000,000 on 2026-11-15. Main measured 8,039,188 bytes after
+  // #1033 and #1046, and the V3 pages (#1034) add about 0.27 MB: library-v3.css,
+  // project-v3.css, the community hub and its share dialogs, and the larger
+  // Settings and Learn article styles. No single file is most of it, and the
+  // ffmpeg regression (tens of MB) is still far above the new figure.
+  const CEILING = 9_000_000
   const biggest = [...assets].sort((a, b) => b.bytes - a.bytes).slice(0, 5)
   assert.ok(total <= CEILING,
     `dist/assets is ${total} bytes, over the ${CEILING}-byte ceiling. Largest five:\n  `

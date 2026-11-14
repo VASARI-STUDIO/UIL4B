@@ -21,11 +21,14 @@
 // Brisbane (which AppFooter.jsx has said since before this file existed) and
 // nothing else about him. What it says about the PRODUCT is checkable: the tool
 // list is the Create groups, "saving and downloading need a free account" is
-// useExportGate.js, and the feedback link is in the Support column of this very
-// footer on every page.
+// useExportGate.js, and "the Pro plan is how you can back it" matches the
+// panel's own Support button, which goes to /plans. The name links to the same portfolio address the
+// footer's "Built in Brisbane by Dylan Coleman" already links to.
 //
-// The AI sentence describes AI usage the way the product positions it: lowered
-// while the product is in beta, lifted if there is enough support.
+// The AI sentence states the free plan's daily limit and that Pro raises it
+// (public/llms.txt, generated from the plan config). It makes no promise about
+// future plans. The words follow option 1 of
+// handover/specs/about-popup-wording-2026-11-05.md.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE PLACEHOLDER REMOVES ITSELF
@@ -73,9 +76,9 @@ export const NOTE_PROMPTS = [
  */
 export const FOUNDER_NOTE = {
   who: 'I\'m Dylan. I build UI L4B on my own, out of Brisbane.',
-  what: 'It\'s a pile of design tools in one place — colour, type, icons, contrast, a few converters. You can use most of it without an account; saving and downloading need a free one.',
-  state: 'It\'s early. I\'m adding tools and fixing things most days, so you\'ll find rough edges. AI usage is dialled down while it\'s in beta — if enough people get use out of it, I\'ll upgrade the plans behind it.',
-  help: 'The most useful thing I get sent is what\'s missing or what broke. There\'s a feedback link in the footer of every page.',
+  what: 'It\'s a set of design tools in one place: colour, type, icons and emoji, contrast checks, and file and 3D model converters. Most of it works without an account. Saving your work or downloading a file needs a free one.',
+  state: 'It\'s early, so expect rough edges. I\'m changing it most days. The AI tools have a daily limit on the free plan, and Pro raises it.',
+  help: 'What helps most is hearing what\'s missing or what broke. If UI L4B saves you time, the Pro plan is how you can back it.',
 }
 
 /**
@@ -86,7 +89,7 @@ export const FOUNDER_NOTE = {
  * something this file invented. Nothing else about him is asserted in here,
  * which is the point: the biography is his to give, not ours to guess.
  */
-export const FOUNDER_SIGNATURE = { name: 'Dylan Coleman', place: 'Brisbane' }
+export const FOUNDER_SIGNATURE = { name: 'Dylan Coleman', place: 'Brisbane', url: 'https://dylan-coleman.com/' }
 
 /** Has every slot been filled in? Whitespace does not count as filled in. */
 export function noteIsWritten(note = FOUNDER_NOTE) {

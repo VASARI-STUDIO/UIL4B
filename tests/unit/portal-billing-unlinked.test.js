@@ -47,8 +47,18 @@ test('the reference id is kept when the error has one', () => {
   assert.match(fromField, /xyz789/)
 })
 
-test('every other portal failure still says it is safe to try again', () => {
-  const text = portalErrorText()({ code: 'something-else', message: 'Boom [ref r1]' })
-  assert.match(text, /Please try again in a moment\./)
-  assert.match(text, /Boom \[ref r1\]/)
+test('every other portal failure still says it is safe to try again, without the raw message on screen', () => {
+  const warn = console.warn
+  const logged = []
+  console.warn = (...args) => logged.push(args)
+  let text
+  try {
+    text = portalErrorText()({ code: 'something-else', message: 'Boom [ref r1]' })
+  } finally {
+    console.warn = warn
+  }
+  assert.equal(text, 'Billing could not be opened, so nothing about your plan has changed. Please try again in a moment.')
+  assert.doesNotMatch(text, /Boom|\[ref|Failed to fetch/)
+  assert.equal(logged.length, 1, 'the raw error is logged for support instead of shown')
+  assert.equal(logged[0][1].message, 'Boom [ref r1]')
 })

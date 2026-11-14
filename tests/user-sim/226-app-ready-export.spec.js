@@ -169,7 +169,9 @@ for (const size of SIZES) {
       await expect(panel, 'the popup stays open after the export').toBeVisible()
       await expect(dockStatus(panel)).toHaveText(`Downloaded ${ZIP_NAME}.`)
       await expect(dockError(panel)).toHaveCount(0)
-      await expect(primaryButton(panel)).toHaveText('Export again')
+      await expect(primaryButton(panel), 'the finish is Done, which closes the dialog').toHaveText('Done')
+      await expect(panel.getByRole('button', { name: 'Export another file' })).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'Export again' })).toHaveCount(0)
     })
   })
 }

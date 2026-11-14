@@ -6,10 +6,17 @@
 // still lose the cascade to a later one.
 //
 // "Full" means the computed radius is at least half the box height, so the end
-// caps are semicircles. One carve-out is deliberate: a library toolbar that has
-// wrapped onto a second row (a phone) steps down to a 26px pill-ended box,
+// caps are semicircles. Two carve-outs are deliberate. A library toolbar that has
+// wrapped onto a second row (a phone) steps down to a 24px-radius raised card,
 // because a 999px capsule that tall would cut its corners into the search field
-// and chips inset inside it. The palette and gradient bars always did this.
+// and chips inset inside it (library-v3.css, the 640px phone tray). And the V3
+// Learn index draws its search as a 12px-radius plate with an inset hairline, not
+// a pill (surface.css, .srf .lidx-tools .lbry-search); that one is held to 12px
+// and 44px high here, and is left out of the border, colour and fill match.
+// The V3 palette and gradient libraries set their search inside the tray as a
+// borderless L2 pill (library-v3.css, .lib-v3 .lbry-toolbar --search-h): 36px at
+// 1440 and 44px on the phone tray. It is still held to a full pill and to those
+// heights, with no hairline, and is left out of the border, colour and fill match.
 //
 // Each route lists the selectors it must still have, so a renamed class fails
 // the count instead of silently measuring nothing.
@@ -60,7 +67,12 @@ const TOOLBAR_SEARCH_H = 36
 const CIRCLE = 44
 // The toolbar that may step down when it wraps.
 const WRAPS = '.lbry-toolbar'
-const WRAPPED_RADIUS = 26
+const WRAPPED_RADIUS = 24
+// The Learn index search: a plate, not a pill.
+const PLATE_ROUTE = '/learn'
+const PLATE_RADIUS = 12
+// The V3 library tray search: 36px on the desktop tray, 44px on the phone tray.
+const TRAY_SEARCH_H = { 1440: 36, 390: 44 }
 // How long a surface may take to mount after its route has arrived.
 const APPEAR_MS = 15000
 
@@ -84,6 +96,7 @@ const measure = (els, selector) => els
       height: Math.round(r.height * 10) / 10,
       width: Math.round(r.width * 10) / 10,
       inToolbar: !!el.closest('[data-tool-toolbar]'),
+      inV3Tray: !!el.closest('.lib-v3 .lbry-toolbar'),
       border: cs.borderTopWidth + ' ' + cs.borderTopStyle,
       borderColor: cs.borderTopColor,
       fill: cs.backgroundColor,
@@ -100,6 +113,8 @@ for (const width of [1440, 390]) {
     const missing = []
     const searchHeights = new Map()
     const toolbarSearchHeights = new Map()
+    const trayHeights = new Map()
+    const trayBorders = new Set()
     const circles = []
     const headerHeights = new Set()
     const headerBorders = new Set()
@@ -117,8 +132,11 @@ for (const width of [1440, 390]) {
         if (!found.length) { missing.push(`${route} ${selector}`); continue }
         for (const f of found) {
           // One carve-out: a library toolbar that has wrapped onto a second row steps down to a 26px pill-ended box.
-          const need = selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS : f.height / 2
-          if (f.radius + 0.5 < need) off.push(`${route} ${selector}: radius ${f.radius}px on a ${f.height}px box (needs ${need}px)`)
+          const plate = route === PLATE_ROUTE && selector === '.lbry-search'
+          const need = plate ? PLATE_RADIUS : selector === WRAPS && f.height > 80 ? WRAPPED_RADIUS : f.height / 2
+          if (f.radius + 0.5 < need || (plate && f.radius - 0.5 > need)) off.push(`${route} ${selector}: radius ${f.radius}px on a ${f.height}px box (needs ${need}px)`)
+          if (plate) { searchHeights.set(`${route} ${selector}`, f.height); continue }
+          if (selector === '.lbry-search' && f.inV3Tray) { trayHeights.set(`${route} ${selector}`, f.height); trayBorders.add(f.border); continue }
           if (SEARCH.has(selector)) searchBorders.add(f.border)
           if (selector === HEADER_SEARCH) {
             // A header search narrower than it is tall is the collapsed icon button.
@@ -139,6 +157,11 @@ for (const width of [1440, 390]) {
     expect(missing, 'selectors that no longer match anything, so nothing was measured').toEqual([])
     expect(off, 'not a full pill').toEqual([])
     expect([...new Set(searchHeights.values())], `search heights by route and selector: ${JSON.stringify([...searchHeights])}`).toEqual([SEARCH_H])
+    // The V3 tray search: present on both V3 libraries, one height per width, no hairline.
+    expect([...trayHeights.keys()].sort(), 'the V3 libraries set their search inside the tray')
+      .toEqual(['/discover/gradients .lbry-search', '/discover/palettes .lbry-search'])
+    expect([...new Set(trayHeights.values())], `tray search heights: ${JSON.stringify([...trayHeights])}`).toEqual([TRAY_SEARCH_H[width]])
+    expect([...trayBorders], 'the tray search wears no hairline').toEqual(['0px none'])
     // POSITIVE CONTROL for the carve-out: only the gallery at 1440 may use it, and at 36px.
     expect([...toolbarSearchHeights], 'searches that sit on a tool toolbar')
       .toEqual(width === 1440 ? [['/create/font-gallery .lbry-search', TOOLBAR_SEARCH_H]] : [])

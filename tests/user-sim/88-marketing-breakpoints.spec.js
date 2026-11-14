@@ -53,6 +53,13 @@ const MASTHEAD_ROUTES = [
   '/create/emoji',
 ]
 
+// The V3 library boards (LibraryR2A) give the Palette and Gradient masthead one 180px
+// floor from 641px up; it is the board's design, so it is the only floor allowed and
+// only there. At 640px and under (the phone board) there is no floor.
+const V3_FLOOR = 180
+const V3_ROUTES = ['/discover/palettes', '/discover/gradients']
+const isV3Floor = (route, width) => V3_ROUTES.includes(route) && width >= 641
+
 // The marketing and wayfinding set this lane owns.
 const MARKETING_ROUTES = [
   '/', '/plans', '/learn/help', '/info', '/learn/principles', '/privacy', '/terms', '/sitemap',
@@ -118,20 +125,22 @@ test.describe('the Discover masthead is sized by its content at every width', ()
         // asserted by name so a future pass cannot reintroduce it with a
         // "better" value and pass the pixel checks at the widths it happened to
         // pick.
-        if (!/^(0px|auto)$/.test(m.minHeight)) {
+        const v3Floor = isV3Floor(route, width)
+        if (v3Floor ? m.minHeight !== `${V3_FLOOR}px` : !/^(0px|auto)$/.test(m.minHeight)) {
           bad.push(`  ${route} @${width}: .dgh-hero declares min-height:${m.minHeight}`)
         }
+        const allowed = v3Floor ? Math.max(0, V3_FLOOR - (m.contentH + m.padY)) : 0
         // The box equals what is in it. 4px of slack is sub-pixel rounding on
         // the padding clamp, nothing more.
-        if (m.dead > 4) {
-          bad.push(`  ${route} @${width}: ${m.dead}px of empty masthead `
+        if (m.dead - allowed > 4) {
+          bad.push(`  ${route} @${width}: ${m.dead - allowed}px of empty masthead `
             + `(hero ${m.heroH}, content ${m.contentH}, padding ${m.padY})`)
         }
         // The framing, and the only one that catches the
         // two-column case, where the box has no spare height and still paints
         // black above the headline.
-        if (m.emptyAboveH1 > 4) {
-          bad.push(`  ${route} @${width}: ${m.emptyAboveH1}px of black between the `
+        if (m.emptyAboveH1 - allowed > 4) {
+          bad.push(`  ${route} @${width}: ${m.emptyAboveH1 - allowed}px of black between the `
             + 'masthead top padding and the top of its h1')
         }
         // The slab is still a slab: the padding was not trimmed away to chase

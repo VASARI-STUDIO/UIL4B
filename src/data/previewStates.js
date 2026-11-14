@@ -24,6 +24,11 @@ export const PREVIEW_STATES = {
     { id: 'live', label: 'Live tracking' },
     { id: 'pr', label: 'Segment PR' },
   ],
+  booking: [
+    { id: 'pick', label: 'Pick a time' },
+    { id: 'held', label: 'Time held' },
+    { id: 'full', label: 'Fully booked day' },
+  ],
   card: [
     { id: 'overview', label: 'Overview' },
     { id: 'frozen', label: 'Card frozen' },

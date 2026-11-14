@@ -24,6 +24,7 @@ import path from 'node:path'
 import JSZip from 'jszip'
 import { test, expect } from './base.js'
 import { chooseMenuOption, go, watch } from './helpers.js'
+import { openGroup } from './converter-rail-helpers.js'
 
 const CORE_PKG = path.join(process.cwd(), 'node_modules', '@ffmpeg', 'core')
 const CORE_DIR = path.join(CORE_PKG, 'dist', 'esm')
@@ -82,7 +83,7 @@ async function openWithClip(page) {
     return Array.from(new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer()))
   }, { ...SRC, red: RED, blue: BLUE })
   await page.locator('.fc-drop input[type="file"]').setInputFiles({ name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.from(clip) })
-  await expect(page.getByLabel('Width (px)'), 'the clip never loaded').toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('tablist', { name: 'Edit tools' }), 'the clip never loaded').toBeVisible({ timeout: 15000 })
 }
 
 const radio = (page, group, name) => page.getByRole('radiogroup', { name: group }).getByRole('radio', { name, exact: true })
@@ -189,6 +190,7 @@ test.describe('Video tab: what the engine writes', () => {
   })
 
   test('Custom crop: the GIF is the box, and its two halves keep their colours', async ({ page }) => {
+    await openGroup(page, 'Crop')
     await radio(page, 'Shape', 'Custom').click()
     // Width is also the name of the output-width field, so the box fields are reached by id.
     for (const [id, value] of [['x', 40], ['y', 20], ['w', 80], ['h', 60]]) {
@@ -197,6 +199,7 @@ test.describe('Video tab: what the engine writes', () => {
     }
     await expect(page.locator('#fc-vid-box-w')).toHaveValue('80')
     await expect(page.locator('#fc-vid-box-h')).toHaveValue('60')
+    await openGroup(page, 'Size')
     await page.locator('#fc-vid-width').fill('80')
     await page.locator('#fc-vid-width').blur()
     await convert(page, 'Convert to GIF')
@@ -211,8 +214,10 @@ test.describe('Video tab: what the engine writes', () => {
   })
 
   test('Circle cut-out in WebP: transparent outside, opaque inside', async ({ page }) => {
+    await openGroup(page, 'Crop')
     await radio(page, 'Cut-out', 'Circle').click()
     await chooseMenuOption(page, page.locator('#fc-vid-format'), { label: 'Animated WebP' })
+    await openGroup(page, 'Size')
     await page.locator('#fc-vid-width').fill('80')
     await page.locator('#fc-vid-width').blur()
     await convert(page, 'Convert to Animated WebP')
@@ -228,8 +233,10 @@ test.describe('Video tab: what the engine writes', () => {
   })
 
   test('Rounded cut-out in MP4: the corners are filled, because MP4 holds no transparency', async ({ page }) => {
+    await openGroup(page, 'Crop')
     await radio(page, 'Cut-out', 'Rounded').click()
     await chooseMenuOption(page, page.locator('#fc-vid-format'), { label: 'MP4 (H.264)' })
+    await openGroup(page, 'Size')
     await page.locator('#fc-vid-width').fill('80')
     await page.locator('#fc-vid-width').blur()
     await convert(page, 'Convert to MP4 (H.264)')
@@ -244,9 +251,11 @@ test.describe('Video tab: what the engine writes', () => {
   })
 
   test('Fit to 16:9 in MP4: the whole picture stays and bars fill the sides', async ({ page }) => {
+    await openGroup(page, 'Crop')
     await radio(page, 'Shape', '16:9').click()
     await radio(page, 'Crop or fit', 'Fit').click()
     await chooseMenuOption(page, page.locator('#fc-vid-format'), { label: 'MP4 (H.264)' })
+    await openGroup(page, 'Size')
     await page.locator('#fc-vid-width').fill('80')
     await page.locator('#fc-vid-width').blur()
     await convert(page, 'Convert to MP4 (H.264)')
@@ -263,6 +272,7 @@ test.describe('Video tab: what the engine writes', () => {
 
   test('Frames (ZIP of PNGs): every frame is a numbered PNG of the output size', async ({ page }) => {
     await chooseMenuOption(page, page.locator('#fc-vid-format'), { label: 'Frames (ZIP of PNGs)' })
+    await openGroup(page, 'Size')
     await page.locator('#fc-vid-width').fill('80')
     await page.locator('#fc-vid-width').blur()
     await convert(page, 'Make frames ZIP')
@@ -286,6 +296,7 @@ test.describe('Video tab: what the engine writes', () => {
 
   test('Sprite sheet (PNG): the sheet is the frame grid, columns by width and rows by height', async ({ page }) => {
     await chooseMenuOption(page, page.locator('#fc-vid-format'), { label: 'Sprite sheet (PNG)' })
+    await openGroup(page, 'Size')
     await page.locator('#fc-vid-width').fill('80')
     await page.locator('#fc-vid-width').blur()
     await convert(page, 'Make sprite sheet')
@@ -311,8 +322,9 @@ test.describe('Video tab: what the engine writes', () => {
     test.skip(!(await playsH264(page)), 'this browser cannot play H.264, so an MP4 cannot be loaded back in')
     await page.getByRole('button', { name: 'Choose different file' }).click()
     await page.locator('.fc-drop input[type="file"]').setInputFiles({ name: 'known.mp4', mimeType: 'video/mp4', buffer: mp4 })
-    await expect(page.getByLabel('Width (px)'), 'the MP4 never loaded').toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('tablist', { name: 'Edit tools' }), 'the MP4 never loaded').toBeVisible({ timeout: 15000 })
     await chooseMenuOption(page, page.locator('#fc-vid-format'), { label: 'Frames (ZIP of PNGs)' })
+    await openGroup(page, 'Size')
     await page.locator('#fc-vid-width').fill('80')
     await page.locator('#fc-vid-width').blur()
     await expect(page.locator('.fc-consequence')).toContainText(/\d+ PNGs · 80 × 50 px each/)

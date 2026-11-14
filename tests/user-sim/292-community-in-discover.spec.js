@@ -45,10 +45,11 @@ test.describe('Community is findable from Discover', () => {
     await go(page, '/discover')
     // POSITIVE CONTROL: a library card is on the hub.
     await expect(page.locator('main a[href="/discover/palettes"]').first()).toBeVisible()
-    const card = page.locator('main a.surface-card--link[href="/community"]')
-    await expect(card).toHaveCount(1)
-    await expect(card.locator('.surface-card-title')).toHaveText('Community')
-    await card.click()
+    // The V3 Discover index lists Community in its "Also in Discover" line.
+    const link = page.locator('main .srf-also a[href="/community"]')
+    await expect(link).toHaveCount(1)
+    await expect(link).toHaveText('Community')
+    await link.click()
     await expect(page).toHaveURL((url) => url.pathname === '/community')
   })
 

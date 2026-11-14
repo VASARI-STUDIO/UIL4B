@@ -9,7 +9,14 @@ import { FOUNDER_NOTE } from '../../src/data/founderNote.js'
 // in Admin -> Submissions; the note promises nothing about email delivery.
 test('the founder note does not say feedback comes straight to him', () => {
   assert.ok(!/straight to me/i.test(FOUNDER_NOTE.help), FOUNDER_NOTE.help)
-  assert.match(FOUNDER_NOTE.help, /feedback link in the footer of every page\.$/)
+  assert.match(FOUNDER_NOTE.help, /the Pro plan is how you can back it\.$/)
+})
+
+// The beta note once promised to upgrade the plans if enough people used it;
+// nothing schedules that, so the note states the current limit instead.
+test('the founder note makes no promise about future plans', () => {
+  assert.ok(!/upgrade the plans|if enough people/i.test(Object.values(FOUNDER_NOTE).join(' ')))
+  assert.match(FOUNDER_NOTE.state, /daily limit on the free plan, and Pro raises it\.$/)
 })
 
 // Nothing grants AI generations when a prompt is approved: approval only

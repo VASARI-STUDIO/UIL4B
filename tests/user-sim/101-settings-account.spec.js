@@ -93,7 +93,9 @@ test.describe('settings — billing', () => {
     await section.getByRole('button', { name: 'Manage billing' }).click()
     const alert = section.getByRole('alert')
     await expect(alert).toContainText('Billing could not be opened')
-    await expect(alert).toContainText('ref-7f3a')
+    // The raw reference is logged for support, not printed on the page (0082999b6).
+    await expect(alert).not.toContainText('ref-7f3a')
+    await expect(alert).toContainText('Please try again in a moment.')
     // Cancel goes through the same honest path.
     await section.getByRole('button', { name: 'Cancel plan' }).click()
     await expect(alert).toContainText('nothing about your plan has changed')

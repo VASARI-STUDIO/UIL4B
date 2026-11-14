@@ -216,7 +216,9 @@ test('a failed export keeps the dialog open and explains itself', () => {
   const onPrimary = /const onPrimary = async[\s\S]*?\n {2}\}/.exec(dialog)?.[0] || ''
   assert.ok(onPrimary, 'the dialog must still have its Export handler')
   assert.match(onPrimary, /if \(result\?\.status === 'upgrade'\) onCloseRef\.current\(\)/)
-  assert.equal(onPrimary.split('onCloseRef.current()').length - 1, 1, 'the Export handler closes the dialog on something other than an upgrade')
+  // "Done" closes it too, but only once a file has been saved: a failure leaves runner.done false.
+  assert.match(onPrimary, /if \(runner\.done\) \{ onCloseRef\.current\(\); return \}/)
+  assert.equal(onPrimary.split('onCloseRef.current()').length - 1, 2, 'the Export handler closes the dialog on something other than an upgrade or Done')
   assert.ok(/role="alert"/.test(read('src/components/export/ExportSteps.jsx')), 'that message must be announced')
   assert.ok(/\{error && <p className="xd-error" role="alert">\{error\}<\/p>\}/.test(read('src/components/export/ExportSteps.jsx')), 'the dock must show the runner error')
 })

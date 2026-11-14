@@ -84,7 +84,9 @@ for (const [surfaceName, surface] of Object.entries(surfaces)) {
         } else {
           const slotBox = await (surfaceName === 'plans' ? button.locator('xpath=..') : slot).boundingBox()
           const slotMin = surfaceName === 'plans' ? 0.5 : 0.7
-          expect(box.width, 'Retry is not full width').toBeGreaterThan(slotBox.width * slotMin)
+          // Settings' plan card sizes its button to its label (min 168px, left-aligned) from 720 up, and stretches it below that.
+          if (surfaceName === 'settings' && width >= 720) expect(box.width, 'Retry is under its 168px minimum').toBeGreaterThanOrEqual(167.5)
+          else expect(box.width, 'Retry is not full width').toBeGreaterThan(slotBox.width * slotMin)
         }
         const lines = await button.evaluate((el) => {
           const range = document.createRange()
@@ -105,7 +107,13 @@ for (const [surfaceName, surface] of Object.entries(surfaces)) {
         await expect(button).toHaveText('Checking Stripe…')
         await expect(button).toHaveAttribute('aria-disabled', 'true')
         release()
-        await expect(slot).not.toContainText(/Unavailable/)
+        if (surfaceName === 'settings' && state.name.startsWith('no-currency')) {
+          // The stub answers in USD only, so an AUD visitor stays unpriced; the check ends and Retry comes back.
+          await expect(button).not.toHaveAttribute('aria-disabled', 'true')
+          await expect(button).toHaveText('Retry live pricing')
+        } else {
+          await expect(slot).not.toContainText(/Unavailable/)
+        }
       })
     }
     })
