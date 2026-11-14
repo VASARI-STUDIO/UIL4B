@@ -5,7 +5,7 @@ import { guidelines } from './guidelines.js';
 import { N, G, spotOf, bodyWeight, displayWeight, TRACK } from './helpers.js';
 
 export const meta = {
-  id: '23-broadsheet', name: 'Broadsheet', tier: 'Pro', brand: 'saltbush',
+  id: '23-broadsheet', name: 'Front Page', tier: 'Pro', brand: 'saltbush',
   guidelinesPage: { w: 1123, h: 1587 }, uikitPage: { w: 1123, h: 1587 },
   chrome: {
     family: 'Sofia Sans', q: 'Sofia+Sans:wght@400',
