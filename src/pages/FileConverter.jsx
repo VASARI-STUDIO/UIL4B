@@ -29,6 +29,8 @@ import {
   outputDimensions,
 } from '../utils/imageResize'
 import Segmented from '../components/converter/Segmented'
+import ToolRail from '../components/converter/ToolRail'
+import { SIZE_DEFAULTS, activeOf, groupMarks, presentGroups, railPanelId } from '../components/converter/railGroups'
 import CropBox from '../components/converter/CropBox'
 import ResultPreview from '../components/converter/ResultPreview'
 import {
@@ -938,10 +940,10 @@ function VideoConvert({ toast }) {
   const [srcFailed, setSrcFailed] = useState(false) // the browser errored, or said nothing for READ_TIMEOUT_MS
   const [imageLen, setImageLen] = useState(null) // seconds read from a GIF/WebP's own header; null = still reading, 0 = can't tell
   const [format, setFormat] = useState('gif')
-  const [fps, setFps] = useState(10)
-  const [width, setWidth] = useState(480)
-  const [quality, setQuality] = useState('medium')
-  const [plays, setPlays] = useState(0)
+  const [fps, setFps] = useState(SIZE_DEFAULTS.fps)
+  const [width, setWidth] = useState(SIZE_DEFAULTS.width)
+  const [quality, setQuality] = useState(SIZE_DEFAULTS.quality)
+  const [plays, setPlays] = useState(SIZE_DEFAULTS.plays)
   const [duration, setDuration] = useState(0)
   const [trimStart, setTrimStart] = useState(0)
   const [trimEnd, setTrimEnd] = useState(null) // null = to the end
@@ -960,8 +962,16 @@ function VideoConvert({ toast }) {
   const [flipV, setFlipV] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [direction, setDirection] = useState('forward')
-  const [colours, setColours] = useState(GIF_COLOURS_MAX)
-  const [dither, setDither] = useState('pattern')
+  const [colours, setColours] = useState(SIZE_DEFAULTS.colours)
+  const [dither, setDither] = useState(SIZE_DEFAULTS.dither)
+  // The tool rail: which group of controls is open, and where the rail sits.
+  // Wide: a column left of the stage. Tablet: a row above the settings. Phone:
+  // a pinned row of five slots. The DOM follows the screen, so the tab order
+  // is the order on screen at every width.
+  const [group, setGroup] = useState('crop') // always present, so the open group never jumps when Clip appears
+  const railWide = useMediaQuery('(min-width: 961px)')
+  const railPhone = useMediaQuery('(max-width: 767px)')
+  const railLayout = railWide ? 'side' : railPhone ? 'bar' : 'row'
   const [job, setJob] = useState(null)
   const [engineFailed, setEngineFailed] = useState(false)
   const [result, setResult] = useState(null) // { url, blob, bytes, format, sig }
@@ -1293,6 +1303,53 @@ function VideoConvert({ toast }) {
   const resultName = result?.format === 'frames' ? `${base}-frames.zip` : result?.format === 'sprite' ? `${base}-sprite.png` : `${base}.${resultFmt?.ext}`
   const resultNoun = FRAME_NOUN[result?.format] || resultFmt?.label
 
+  // The rail. Every group's controls stay mounted (a hidden panel keeps its
+  // fields and their state), so nothing is lost by closing a group; the open
+  // one is the only one shown. A group with no controls is left out: the Clip
+  // group only exists once the length is known.
+  const groups = presentGroups({ hasDuration: duration > 0 })
+  const openGroup = activeOf(groups, group)?.id
+  const marks = groupMarks({
+    trimStart, trimEnd, shape, cut, turn, flipH, flipV, speed, direction,
+    fps, width, quality, plays, colours, dither,
+  })
+  const panel = (id, body) => (
+    <div
+      key={id} role="tabpanel" id={railPanelId('fc-vid', id)} aria-label={groups.find(g => g.id === id)?.label}
+      className="fc-panel" data-group={id} hidden={openGroup !== id}
+    >
+      {body}
+    </div>
+  )
+  // On a phone the rail is pinned to the bottom and the panels sit higher up
+  // the page, so a picked group is brought into view above the rail.
+  const selectGroup = (id) => {
+    setGroup(id)
+    if (railLayout !== 'bar') return
+    // A pick from the More sheet lands while the sheet still holds the page
+    // still, so the scroll waits a few frames for that hold to let go.
+    let frames = 0
+    const bringIntoView = () => {
+      if (document.documentElement.style.overflow === 'hidden' && frames++ < 30) {
+        requestAnimationFrame(bringIntoView)
+        return
+      }
+      const el = document.getElementById(railPanelId('fc-vid', id))
+      if (!el || el.hidden) return
+      // The panel's scroll-margin-bottom is the height of the pinned stack.
+      const r = el.getBoundingClientRect()
+      const bottomLimit = window.innerHeight - (parseFloat(getComputedStyle(el).scrollMarginBottom) || 0)
+      const topLimit = stickyTopOffset() + 12
+      let delta = r.bottom > bottomLimit ? r.bottom - bottomLimit : 0
+      if (r.top - delta < topLimit) delta = r.top - topLimit
+      if (Math.abs(delta) > 1) scrollDocTo(window.scrollY + delta)
+    }
+    requestAnimationFrame(bringIntoView)
+  }
+  const rail = (
+    <ToolRail groups={groups} active={openGroup} onSelect={selectGroup} marks={marks} layout={railLayout} base="fc-vid" />
+  )
+
   return (
     <>
       {!srcUrl ? (
@@ -1303,7 +1360,8 @@ function VideoConvert({ toast }) {
           sub="MP4, WebM, MOV, AVI, GIF or animated WebP. Crop, turn, change the speed or reverse it, then save as GIF, WebP, APNG, MP4 or WebM."
         />
       ) : (
-        <div className="fc-bench">
+        <div className="fc-bench fc-bench--rail">
+          {railLayout === 'side' && rail}
           <div className="fc-bench-main">
             <VideoSource
               srcUrl={srcUrl}
@@ -1377,8 +1435,11 @@ function VideoConvert({ toast }) {
           </div>
 
           <div className="fc-side">
+          {railLayout === 'row' && rail}
           <aside className="fc-inspector" aria-label="Conversion settings">
-            <div className="fc-insp-sec">
+            {/* The format stays on screen whichever group is open: it decides
+                what the other groups can do, and the Convert button names it. */}
+            <div className="fc-insp-sec fc-insp-format">
               <label className="fc-eyebrow" htmlFor="fc-vid-format">Output format</label>
               <MenuSelect label="Output format" id="fc-vid-format" className="fc-field" value={format} onChange={nextValue => setFormat(nextValue)} disabled={working}>
                 <optgroup label="Animation">
@@ -1399,7 +1460,7 @@ function VideoConvert({ toast }) {
               )}
               {!isFrameExport && <p className="fc-note">Sound is removed</p>}
             </div>
-            {duration > 0 && (
+            {duration > 0 && panel('clip', (
               <div className="fc-insp-sec">
                 <span className="fc-eyebrow">Trim (seconds)</span>
                 <div className="fc-range">
@@ -1425,7 +1486,8 @@ function VideoConvert({ toast }) {
                   </p>
                 )}
               </div>
-            )}
+            ))}
+            {panel('crop', (<>
             <div className="fc-insp-sec">
               <Segmented
                 id="fc-vid-shape" label="Shape" options={shapeOptions} value={shape} onChange={pickShape}
@@ -1497,6 +1559,8 @@ function VideoConvert({ toast }) {
                 </>
               )}
             </div>
+            </>))}
+            {panel('turn', (
             <div className="fc-insp-sec">
               <Segmented id="fc-vid-turn" label="Turn" options={TURNS} value={turn} onChange={setTurn} disabled={working} />
               <div className="fc-flip-pair">
@@ -1505,6 +1569,8 @@ function VideoConvert({ toast }) {
               </div>
               {(turn !== 0 || flipH || flipV) && <p className="fc-note">Turn and flip show in the result, not the preview.</p>}
             </div>
+            ))}
+            {panel('time', (
             <div className="fc-insp-sec">
               <Segmented id="fc-vid-speed" label="Speed" options={speedOptions} value={speed} onChange={setSpeed} disabled={working} className="fc-seg--speed" />
               <p className="fc-note">{isImage ? 'Speed shows in the result.' : 'The preview plays at this speed.'}</p>
@@ -1519,6 +1585,10 @@ function VideoConvert({ toast }) {
               ) : dir !== 'forward' ? (
                 <p className="fc-note">Shows in the result, not the preview.</p>
               ) : null}
+            </div>
+            ))}
+            {panel('size', (<>
+            <div className="fc-insp-sec">
               <div className="fc-pair">
                 <div>
                   <label className="fc-eyebrow" htmlFor="fc-vid-fps">Frame rate (fps)</label>
@@ -1581,7 +1651,9 @@ function VideoConvert({ toast }) {
                 </>
               )}
             </div>
+            </>))}
           </aside>
+          {railLayout === 'bar' && rail}
           <div className="fc-actionbar fc-actions">
             <p className="fc-note fc-consequence" aria-live="polite">{consequence}</p>
             <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working || trimInvalid || (isSprite && (!sheet || !!sheetWhy))}>
