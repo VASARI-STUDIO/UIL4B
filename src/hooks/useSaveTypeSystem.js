@@ -51,10 +51,13 @@ export function useSaveTypeSystem({ gate, label, summary, toast }) {
     openProModal({
       gate,
       eyebrow: 'Pro projects',
+      projects: projects.map((p) => ({ name: p.name })),
+      limit: quota.limit,
+      caption: 'Palette, fonts and type scale are saved together.',
       title: 'Keep every type system you build',
       subtitle: `The free plan holds ${quota.limit} saved projects — palette, fonts and type scale together. Pro removes the cap, so every pairing and scale you build keeps its own project.`,
     })
-  }, [gate, openProModal, quota.limit])
+  }, [gate, openProModal, projects, quota.limit])
 
   // Saving is free and only needs an account, exactly as in PaletteBuilder and
   // IconLibrary. `free: true` keeps the login popup's copy off the Pro pitch --

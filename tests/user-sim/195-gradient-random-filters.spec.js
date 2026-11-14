@@ -163,13 +163,13 @@ test.describe('Use and Base colour on a free account', () => {
     await expect(genOf(page).locator('#grd-gen-more')).toBeVisible()
   }
   /**
-   * The modal's way to the plans page. It is a button, not a link, so there is no href: a press
-   * navigates to /plans. "See all plans" is drawn whether or not the price service answered (the main
-   * button waits for a price, and the suite serves none) and goes to /plans without a ?plan= cadence.
+   * The modal's way to the plans page: a link to /plans. "See all plans" is drawn whether or not the
+   * price service answered (the main button waits for a price, and the suite serves none) and goes to
+   * /plans without a ?plan= cadence.
    */
   async function ctaGoesToPlans(page) {
-    const cta = modal(page).getByRole('button', { name: 'See all plans' }).first()
-    await expect(cta).toBeEnabled()
+    const cta = modal(page).getByRole('link', { name: 'See all plans' })
+    await expect(cta).toHaveAttribute('href', '/plans')
     await cta.click()
     await expect.poll(() => new URL(page.url()).pathname).toBe('/plans')
   }

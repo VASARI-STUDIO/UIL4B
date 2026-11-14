@@ -20,7 +20,7 @@
 // with production's own answer shape. The outage path is asserted too, because a
 // pricing page that cannot name a price must not start a checkout.
 import { test, expect } from './base.js'
-import { go, watch, expectRendered, signIn } from './helpers.js'
+import { go, watch, expectRendered, signIn, continueWithEmail } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
 
@@ -87,6 +87,7 @@ async function stubStripe(page) {
 async function logInThroughPopup(page) {
   await expect(page.locator('#ui-login-title')).toBeVisible()
   await page.locator('#ui-login-email').fill('someone@uil4b.test')
+  await continueWithEmail(page)
   await page.locator('#ui-login-password').fill('a-long-password')
   await page.locator('form.auth-form button[type="submit"]').click()
 }
@@ -324,10 +325,10 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await expect(page.getByRole('heading', { name: 'Invalid checkout selection' })).toBeVisible()
     await expect(page.getByText(/Choose Monthly or Yearly from Plans/)).toBeVisible()
     await expect(page.getByRole('link', { name: 'Back to Plans' })).toHaveAttribute('href', '/plans')
-    await expect(page.locator('.checkout-plan-cadence'), 'a quarterly plan summary rendered').toHaveCount(0)
+    await expect(page.getByRole('radiogroup', { name: 'Billing period' }), 'a plan summary rendered for a quarterly link').toHaveCount(0)
   })
 
-  test('signed out, the Pro button opens the login popup over the plans page and keeps the chosen cadence in its link', async ({ page }) => {
+  test('signed out, the Pro button opens the full-screen upgrade layer over the plans page and keeps the chosen cadence in its link', async ({ page }) => {
     watch(page, 'a visitor upgrading before they have an account')
     await stubPrices(page)
     await go(page, '/plans')
@@ -339,12 +340,12 @@ test.describe('the Pro CTA starts the real upgrade', () => {
 
     // The login flow starts at once, on this page: no second click at checkout.
     await proCta(page).click()
-    await expect(page.locator('#ui-login-title')).toBeVisible()
-    await expect(page).toHaveURL(/\/plans$/)
-    expect(
-      await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')),
-      'a new account would not come back to the checkout it chose',
-    ).toBe('/checkout?plan=monthly')
+    // Start trial is a full-screen layer now, step 1 of the sign-up (its own journey is in the upgrade spec).
+    await expect(page.locator('[data-pro-layer]')).toBeVisible()
+    await expect(page).toHaveURL(/\/plans\?up=1$/)
+    // The Pro sign-up skips onboarding, so there is no resume stash to carry the plan: step 3 of the
+    // layer hands off to checkout itself (covered in the upgrade spec).
+    expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')), 'the layer left a resume stash for a flow that skips onboarding').toBeNull()
   })
 
   test('signed out, opening /checkout directly names the plan and asks for an account', async ({ page }) => {
@@ -352,15 +353,16 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await stubPrices(page)
     await go(page, '/checkout?plan=yearly')
     // Not the bare sign-in box: the visitor lands on the plan, its price and its trial.
-    await expect(page.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
-    await expect(page.locator('.checkout-plan-amount')).not.toHaveText('—')
-    await expect(page.locator('.checkout-trial')).toContainText('7-day free trial')
-    // The panel's prompt: the summary's own copy of it is hidden in two columns.
-    await expect(page.locator('.checkout-form').getByText('Log in or create an account to pay')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Upgrade to Pro')
+    await expect(page.getByRole('radiogroup', { name: 'Billing period' }).getByRole('radio', { name: /^Yearly/ })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.locator('.ck-bill .ck-stop .ck-fig').first()).not.toHaveText('—')
+    await expect(page.locator('.ck-bill')).toContainText('7-day free trial')
+    // The gate's prompt, said once.
+    await expect(page.locator('.ck-gate').getByText('Log in or create an account to pay')).toBeVisible()
   })
 
   // The closing Choose Pro and the comparison head's button (shown once the pair has scrolled away)
-  // are the same destination as the Pro button, so they carry the chosen cadence and open the login popup too.
+  // are the same destination as the Pro button, so they carry the chosen cadence and open the upgrade layer too.
   test('signed out, the closing Choose Pro and the comparison head button also carry the chosen cadence', async ({ page }) => {
     watch(page, 'a visitor at the end of the page before they have an account')
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -374,20 +376,20 @@ test.describe('the Pro CTA starts the real upgrade', () => {
     await expect(page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' })).toHaveAttribute('href', '/checkout?plan=monthly')
     await expect(page.locator('thead a.pl-pill')).toHaveAttribute('href', '/checkout?plan=monthly')
 
-    // Each of them starts the login flow on this page too. Closing the popup
-    // leaves the visitor on /plans with nothing started.
-    const popup = page.locator('#ui-login-title')
+    // Each of them starts the sign-up layer on this page too. Closing it
+    // (Escape on step 1) leaves the visitor on /plans with nothing started.
+    const popup = page.locator('[data-pro-layer]')
     await page.evaluate(() => window.scrollTo(0, document.querySelector('table').getBoundingClientRect().top + window.scrollY + 400))
     // the head button is offered once the table head has scrolled under the nav
     await page.locator('thead').getByRole('link', { name: /free trial|Upgrade to Pro/ }).click()
-    await expect(popup, 'the docked bar button did not open the login popup').toBeVisible()
+    await expect(popup, 'the docked bar button did not open the upgrade layer').toBeVisible()
     await page.keyboard.press('Escape')
     await expect(popup).toHaveCount(0)
     await expect(page).toHaveURL(/\/plans$/)
 
     await page.locator('.hm-close').getByRole('link', { name: 'Choose Pro' }).click()
-    await expect(popup, 'the closing Choose Pro did not open the login popup').toBeVisible()
-    await expect(page).toHaveURL(/\/plans$/)
+    await expect(popup, 'the closing Choose Pro did not open the upgrade layer').toBeVisible()
+    await expect(page).toHaveURL(/\/plans\?up=1$/)
   })
 
   // The continuation of the test above: the visitor clicks the prompt, logs in
@@ -407,30 +409,29 @@ test.describe('the Pro CTA starts the real upgrade', () => {
       await proCta(page).click()
       expect(sessions, 'a payment session was asked for before anyone had logged in').toEqual([])
 
+      // Logging in inside the layer lands on its plan step, with the cadence still the one chosen;
+      // the plan step then hands off to checkout (the layer's own journey is in the upgrade spec).
       await logInThroughPopup(page)
-      await expect(page).toHaveURL(new RegExp(`/checkout\\?plan=${cadence}$`))
-      // The hand-off a brand-new account depends on: sign-up routes through
-      // onboarding, which returns to whatever this holds (69-flow-audit covers
-      // the return itself). The fixture cannot mint a new account, so the
-      // stash is what can be read here.
-      expect(
-        await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')),
-        'the checkout with its cadence was not remembered for a new sign-up',
-      ).toBe(`/checkout?plan=${cadence}`)
+      await expect(page).toHaveURL(/\/plans\?up=3$/)
+      const layer = page.locator('[data-pro-layer]')
+      await expect(layer.getByRole('radiogroup', { name: 'Billing' }).getByRole('radio', { name: new RegExp(`^${word}`) })).toHaveAttribute('aria-checked', 'true')
+      expect(sessions, 'a payment session was asked for before the plan step was confirmed').toEqual([])
+      await layer.locator('.pl-go').click()
+      // The Pro sign-up skips onboarding, so nothing is stashed to resume after it.
+      expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding'))).toBeNull()
 
-      // The checkout for this cadence, with the popup gone.
-      await expect(page.locator('#ui-login-title')).toHaveCount(0)
+      // The checkout for this cadence, with the layer gone.
+      await expect(layer).toHaveCount(0)
       await expect(page.getByText('Log in or create an account to pay')).toHaveCount(0)
       await expect(page).toHaveURL(new RegExp(`/checkout\\?plan=${cadence}$`))
-      await expect(page.locator('.checkout-plan-cadence')).toHaveText(`${word} plan`)
-      await expect(page.locator('.checkout-period-opt.is-on .checkout-period-label')).toHaveText(word)
+      await expect(page.getByRole('radiogroup', { name: 'Billing period' }).getByRole('radio', { name: new RegExp(`^${word}`) })).toHaveAttribute('aria-checked', 'true')
 
       // The payment form is built for that cadence, and only that one. A build
       // without a Stripe publishable key stops at "Payments aren't configured"
       // (105-checkout-change-plan skips there); everything above still ran, and
       // the run says so rather than passing silently.
-      const mounted = page.locator('.checkout-form [data-stub-session]')
-      const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
+      const mounted = page.locator('.ck-frame [data-stub-session]')
+      const notConfigured = page.locator('.ck-nokey')
       await expect(mounted.or(notConfigured)).toBeVisible()
       if (await notConfigured.isVisible()) {
         test.info().annotations.push({ type: 'payment form not asserted', description: 'this build carries no Stripe publishable key' })
