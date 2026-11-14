@@ -307,13 +307,13 @@ test('/plans, the homepage and Settings all name the export line “Made with UI
 // (PlansPageR3A, HomePlans, HomeExports boards).
 test('theme counts follow the board: numerals in labels, words in sentences', () => {
   // Labels and row titles: numerals.
-  assert.equal(PRO_ROWS[1].title, 'All 12 export themes')
+  assert.equal(PRO_ROWS[1].title, 'All 19 export themes')
   assert.equal(THEME_FACTS.freeTag, 'Free in 2 themes')
   assert.equal(freeLines(true)[2], 'Brand guidelines in 2 export themes: Label and Swiss Field, plus the UI kit in Standards')
   // Running sentences: words.
-  assert.match(plansLead(true), /Pro is the full studio: all twelve export themes, the UI kit and brand book,/)
-  assert.match(PRO_ROWS[1].sub, /^Ten more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint and In use\./)
-  assert.match(PRO_ROWS[1].phoneSub, /^Ten more than Free, each with all \w+ exports\.$/)
-  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in two of the twelve themes, Label and Swiss Field, and the UI kit in Standards')
-  assert.equal(THEME_FACTS.countWord, 'twelve')
+  assert.match(plansLead(true), /Pro is the full studio: all nineteen export themes, the UI kit and brand book,/)
+  assert.match(PRO_ROWS[1].sub, /^Seventeen more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint, In use, Keynote, Stub, Standards Plate, Print Shop, Drawing Sheet, Fluted and Dieline\./)
+  assert.match(PRO_ROWS[1].phoneSub, /^Seventeen more than Free, each with all \w+ exports\.$/)
+  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in two of the nineteen themes, Label and Swiss Field, and the UI kit in Standards')
+  assert.equal(THEME_FACTS.countWord, 'nineteen')
 })

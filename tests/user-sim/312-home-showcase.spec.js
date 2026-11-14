@@ -842,7 +842,7 @@ test.describe('the footnote', () => {
     const note = (await page.locator('.hsc-footnote').textContent()).replace(/\s+/g, ' ').trim()
     expect(note).toContain('are sample brands')
     expect(note).toContain('are from Unsplash.')
-    expect(note.endsWith('Brand guidelines are free in two of the twelve themes, Label and Swiss Field, and the UI kit in Standards; every other export is Pro.'), `the footnote ends with the split (it reads: ${note})`).toBe(true)
+    expect(note.endsWith('Brand guidelines are free in two of the nineteen themes, Label and Swiss Field, and the UI kit in Standards; every other export is Pro.'), `the footnote ends with the split (it reads: ${note})`).toBe(true)
     const line = (await page.locator('.hsc-note').textContent()).trim()
     expect(note.includes(line), 'and does not repeat the line under the picker').toBe(false)
     await ctx.close()

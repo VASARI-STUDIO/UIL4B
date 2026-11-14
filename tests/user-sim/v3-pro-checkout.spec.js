@@ -586,7 +586,7 @@ for (const vp of VIEWPORTS) {
         account: { subscription: { status: 'trialing', interval: 'yearly', trialEndsAt: ends, currentPeriodEnd: ends, cancelAtPeriodEnd: false } },
       })
       await expect(returnH1(page, 'You’re on UI L4B Pro')).toBeFocused()
-      await expect(page.getByRole('status')).toContainText('Your free trial runs until November 17, 2026, and you won’t be charged before then.')
+      await expect(page.getByRole('status')).toContainText('Your free trial runs until 17 November 2026, and you won’t be charged before then.')
     })
 
     test('R3 confirming, then payment received: announced, no actions yet, focus follows the new heading', async ({ page }) => {
