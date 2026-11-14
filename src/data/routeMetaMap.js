@@ -24,7 +24,7 @@ const NAMED_3D_INPUTS = ['step', 'iges', 'fbx', 'obj', 'stl'].map((id) => INPUT_
 
 // A title without the site name, whichever end it sits at: tool pages lead with
 // the search phrase ("Type Scale Generator for CSS | UI L4B"), the rest with the
-// brand ("UI L4B | Learn").
+// brand ("UI L4B | Checkout").
 export function pageName(title) {
   if (!title) return null
   return title.replace(/^UI L4B \| /, '').replace(/ \| UI L4B$/, '').trim() || null

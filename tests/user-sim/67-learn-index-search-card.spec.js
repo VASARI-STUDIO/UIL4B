@@ -427,7 +427,7 @@ test.describe('the Learn share card', () => {
       expect(image(html, 'property', 'og:image:alt'))
         .toMatch(new RegExp(`^UI L4B Learn — ${LEARN_ARTICLES.length} guides on `))
       // And it is Learn's shell, not the fallback wearing Learn's picture.
-      expect(html).toMatch(/<title>UI L4B \| /)
+      expect(html).toMatch(/<title>(UI L4B \| [^<]+|[^<]+ \| UI L4B)<\/title>/)
       expect(html).not.toMatch(/<title>UI L4B \| Design Toolkit<\/title>/)
     }
     // Control: the section next door has not been swept into it.
