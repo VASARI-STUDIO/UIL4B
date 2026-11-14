@@ -312,6 +312,8 @@ for (const { name: where, size } of MOTION_WIDTHS) test.describe(`keyboard, ${wh
     await row(panel, 'Studio').focus()
     await expect(chosenRow(panel), 'focus alone chooses nothing').toHaveText(/^Standards/)
     await page.keyboard.press('Space')
+    const toggle = panel.getByRole('button', { name: /^Theme:/ })
+    if (await toggle.count()) await expect(toggle, 'a phone pick folds the list and keeps focus on the theme row').toBeFocused()
     await reveal(panel) // on a phone a pick folds the list; open it again to read the choice and reach the next row
     await expect(chosenRow(panel)).toHaveText(/^Studio/)
     await row(panel, 'Specification').focus()

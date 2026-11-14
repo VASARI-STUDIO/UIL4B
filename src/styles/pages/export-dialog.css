@@ -267,8 +267,8 @@ html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-cat,.xd-frame .exp-previ
 .xd-theme-cap{margin:0;text-align:center;font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
 .xd-theme{position:relative;display:flex;flex-direction:column;gap:var(--s-1)}
 .xd-theme-sample{margin:0;min-height:1.5em;font-size:13px;line-height:1.5;color:var(--t1)}
-/* The theme list, in place: a radiogroup, grouped "Free" then "In Pro" for an account that is not Pro. Rows are 40px on a fine
-   pointer, 44px on a coarse one; nothing opens over the dialog, so the File column is never covered. */
+/* The theme list, in place: a radiogroup, grouped "Free" then "In Pro" for an account that is not Pro. Rows are 44px
+   at every layout but the rail; nothing opens over the dialog, so the File column is never covered. */
 .xd-theme-list{display:flex;flex-direction:column;gap:var(--s-3)}
 .xd-theme-group{display:flex;flex-direction:column;gap:var(--s-1)}
 .xd-theme-gh{margin:0;padding:0 var(--s-3);font-size:12px;font-weight:600;line-height:1.5;color:var(--t2)}

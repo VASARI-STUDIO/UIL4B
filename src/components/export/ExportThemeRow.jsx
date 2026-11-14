@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import useRovingRadio from '../../hooks/useRovingRadio'
 import { pickerThemesFor, preloadTheme, themeShots, shapeClass, themedFileIsPro } from '../../config/exportThemePicker'
 import { preloadThemeStandins, themeStandinShots } from '../../utils/lockedStandin'
@@ -42,6 +42,7 @@ export function ThemeStage({ kind, theme, locked, standin = locked, lockText }) 
 export default function ExportThemeRow({ value, onChange, isPro, checking, yourName, kind = 'kit', file = 'kit', strip = false }) {
   const uid = useId()
   const [open, setOpen] = useState(false)
+  const toggle = useRef(null)
   const all = pickerThemesFor(file)
   // Free then Pro, by the dock's own call (themedFileIsPro), so a group never says Free for a file the dock locks.
   const grouped = !isPro && !checking
@@ -66,7 +67,7 @@ export default function ExportThemeRow({ value, onChange, isPro, checking, yourN
   return (
     <div className="xd-theme">
       {strip && (
-        <button type="button" className="xd-man-t" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((o) => !o)}>
+        <button ref={toggle} type="button" className="xd-man-t" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((o) => !o)}>
           <span className="xd-theme-sel">Theme: {shown.name} · {shown.brand}</span>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
             <path d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -89,7 +90,7 @@ export default function ExportThemeRow({ value, onChange, isPro, checking, yourN
                   tabIndex={on ? 0 : -1}
                   className={`xd-theme-opt${on ? ' is-on' : ''}`}
                   ref={(el) => { roving.refs.current[i] = el }}
-                  onClick={() => { onChange(t.id); if (strip) setOpen(false) }}
+                  onClick={() => { onChange(t.id); if (strip) { setOpen(false); toggle.current?.focus() } }}
                   onKeyDown={(e) => roving.onKeyDown(e, i)}
                   onPointerEnter={() => warm(t.id)}
                   onFocus={() => warm(t.id)}
