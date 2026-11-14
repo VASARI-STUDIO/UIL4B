@@ -48,6 +48,10 @@ const markerPlaces = (page) => page.locator(MARKER).evaluateAll((els) => els.map
 /** The board's hexes, read off each column's group label ("PRIMARY #8B5000"). */
 const boardHexes = async (page) => upper(await page.locator('.plb-col').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label').split(' ').pop())))
 
+// From Image is off the toolbar for launch (FROM_IMAGE_LIVE in PaletteBuilder.jsx).
+// These run again when it comes back with its redesign.
+test.skip(true, 'From Image is off the toolbar for launch')
+
 test.describe('From image studio', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'designer building a palette from a sample photo')

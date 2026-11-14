@@ -465,7 +465,7 @@
     "loadingSignup": "正在创建账户…",
     "loadingReset": "正在发送…",
     "loadingSwitch": "正在切换…",
-    "legal": "继续即表示你同意{terms}和{privacy}。你必须年满 16 岁才能创建账户。",
+    "legal": "继续即表示你同意{terms}和{privacy}。你必须年满 18 岁才能创建账户。",
     "legalTerms": "服务条款",
     "legalPrivacy": "隐私政策",
     "noAccount": "还没有账户？",

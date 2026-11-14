@@ -1243,6 +1243,17 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── The Pro prompt previews ───────────────────────────────────────────────
+  // GET /api/ai?proAsset=poster|anim|page&id=<prompt id>. Same token +
+  // planForUser gate as the libraries; see api/_lib/library/proAssets.js.
+  if (req.method === 'GET' && 'proAsset' in (req.query || {})) {
+    const { serveProAsset } = await import('./_lib/library/proAssets.js')
+    return serveProAsset(req, res, {
+      verifyIdToken: (token, checkRevoked) => adminAuth().verifyIdToken(token, checkRevoked),
+      readUser: async (uid) => (await adminDb().doc(`users/${uid}`).get()).data(),
+    })
+  }
+
   // ── The Pro export documents ───────────────────────────────────────────────
   // POST /api/ai?export=document { format, projectName, design }. Token +
   // planForUser, like the libraries above, and not metered: it reads one user
