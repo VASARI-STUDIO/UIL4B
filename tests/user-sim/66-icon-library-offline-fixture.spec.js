@@ -34,7 +34,7 @@
 //     fails on the label count;
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
-import { chooseMenuOption, go, signIn, watch } from './helpers.js'
+import { chooseMenuOption, go, signIn, watch, wheelToRest } from './helpers.js'
 import { answerIconify, headPackOfUrl, iconifyRequests, isLiveIconify, withholdSnapshots, ICONIFY_STUB_HEADER, REFUSED_VALUE, SNAPSHOT_PATH_RE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
@@ -447,8 +447,7 @@ test('signed out: the grid is capped, and only the outlined packs are ever reque
   const cells = await page.locator('.ig .ic').count()
   expect(cells, 'the signed-out grid is capped').toBeLessThanOrEqual(72)
   expect(cells, 'and it is a real sample, not a stub').toBeGreaterThanOrEqual(24)
-  await page.mouse.wheel(0, 20000)
-  await page.waitForTimeout(1500)
+  await wheelToRest(page, 20000, 'the signed-out grid after a wheel to the bottom')
   expect(await page.locator('.ig .ic').count(), 'scrolling must not reveal more than the cap').toBe(cells)
 
   // The cap is SAID, not only done — a count with no explanation is what makes
