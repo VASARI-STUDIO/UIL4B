@@ -109,3 +109,59 @@ test('the same sign-up with nothing to resume ends on /projects', async ({ page 
   await expect.poll(() => new URL(page.url()).pathname).toBe('/projects')
   await expect.poll(async () => (await record(page))?.completedAt).toEqual(expect.any(Number))
 })
+
+// ── Q145: the sign_up product event ─────────────────────────────────────────
+// AppInner sends `sign_up` from the effect keyed on the account-creation flag
+// (pendingOnboarding), and only on /onboarding, on the line BEFORE it clears that
+// flag. The flag is React state, so it is read through its two effects: if the flag
+// were cleared first, that effect would never send (it returns on a falsy flag), and
+// if the event went out on any other route or at any other time it would be counted
+// again or late. window.va is installed here, ahead of the app, so each event is
+// logged with where the page was and what the new account's document held at the
+// moment it was raised (<Analytics /> keeps an existing window.va, and the queue
+// the other specs read, window.vaq, is still filled).
+//
+// MUTATION: App.jsx, move `clearPendingOnboarding()` above `sendEvent(EVENTS.signUp)`
+// in the /onboarding branch (no event, the count is 0); or add a second
+// `sendEvent(EVENTS.signUp)` (the count is 2).
+test('a brand-new account sends sign_up exactly once, on onboarding, before it is finished', async ({ page }) => {
+  watch(page, 'a new visitor signing up from the login page')
+  await page.addInitScript((uid) => {
+    window.__signUpLog = []
+    window.va = (...params) => {
+      if (params[0] === 'event' && params[1]?.name === 'sign_up') {
+        const doc = window.__UIL4B_TEST_STORE__?.get(`users/${uid}`)
+        window.__signUpLog.push({
+          path: location.pathname,
+          docExists: !!doc,
+          openedAt: doc?.onboarding?.openedAt ?? null,
+          completedAt: doc?.onboarding?.completedAt ?? null,
+        })
+      }
+      if (!window.vaq) window.vaq = []
+      window.vaq.push(params)
+    }
+  }, NEW_UID)
+  await signIn(page, { plan: 'free', lateSignIn: true, returning: false })
+
+  await go(page, '/login')
+  expect(await page.evaluate(() => window.__signUpLog), 'a visitor on the login page is not a sign-up').toEqual([])
+  await createAccount(page)
+
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/onboarding')
+  await expect.poll(() => page.evaluate(() => window.__signUpLog.length), { message: 'the new account is counted' }).toBe(1)
+  const [sent] = await page.evaluate(() => window.__signUpLog)
+  expect(sent.path, 'sent from /onboarding, while the new-account flag was still up').toBe('/onboarding')
+  expect(sent.docExists, 'the account exists when it is counted').toBe(true)
+  expect(sent.openedAt, 'counted when onboarding opened').toEqual(expect.any(Number))
+  expect(sent.completedAt, 'counted before onboarding is finished').toBeNull()
+
+  // Leave onboarding for /projects: the flag is down now, and nothing counts again.
+  await page.getByRole('link', { name: 'Not now, take me to my projects' }).click()
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/projects')
+  await expect.poll(async () => (await record(page))?.completedAt).toEqual(expect.any(Number))
+  await page.waitForTimeout(500)
+  expect(await page.evaluate(() => window.__signUpLog.length), 'one sign-up is one event').toBe(1)
+  const queued = await page.evaluate(() => (window.vaq || []).filter((q) => q[0] === 'event' && q[1].name === 'sign_up').length)
+  expect(queued, 'and one entry on the analytics queue').toBe(1)
+})
