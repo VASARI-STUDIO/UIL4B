@@ -32,7 +32,9 @@ import {
   proOnlyFormats,
   unbuiltFormats,
   EXPORT_THEMES,
+  EXPORT_THEMES_LIVE,
   freeThemes,
+  themeExports,
 } from '../../src/config/exportFormats.js'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
@@ -63,6 +65,12 @@ const stubPrices = (page) => page.route('**/api/get-prices', (route) => route.fu
   contentType: 'application/json',
   body: JSON.stringify(withAvailability({ source: { monthly: 'live', yearly: 'live' }, monthly: { usd: 7 }, yearly: { usd: 48 } })),
 }))
+// With the themes live, a Pro format whose theme export is free in some theme is
+// sold on the Export themes row instead of a row of its own.
+const THEME_OF_GROUP = { guidelines: 'brand-guidelines', book: 'brand-book', kit: 'ui-kit' }
+const freeInSomeTheme = (f) => Boolean(THEME_OF_GROUP[f.group])
+  && EXPORT_THEMES.some((t) => themeExports(t.id).some((e) => e.id === THEME_OF_GROUP[f.group] && !e.pro))
+const proRowFormats = () => proOnlyFormats().filter((f) => !(EXPORT_THEMES_LIVE && freeInSomeTheme(f)))
 const ledgerRow = (page, label) =>
   page.locator('tbody tr', { has: page.getByRole('rowheader', { name: label, exact: true }) })
 
@@ -90,7 +98,7 @@ test.describe('/plans advertises only what the product has', () => {
 
     // …and the gated one that IS built must be offered, or Pro's export
     // benefit is an empty promise. Asserted in both directions on purpose.
-    for (const format of proOnlyFormats()) {
+    for (const format of proRowFormats()) {
       expect(
         benefitText.includes(format.name),
         `Pro no longer names "${format.name}", the only export it actually gates`,
@@ -117,7 +125,7 @@ test.describe('/plans advertises only what the product has', () => {
     expect(text, 'an answer lists formats between dashes').not.toContain(' — ')
     // …and the Pro card names the exports Pro adds.
     const proCard = await page.locator('.hpl-pro').innerText()
-    for (const format of proOnlyFormats()) expect(proCard + (await page.locator('table').innerText()), `Pro no longer names "${format.name}"`).toContain(format.name)
+    for (const format of proRowFormats()) expect(proCard + (await page.locator('table').innerText()), `Pro no longer names "${format.name}"`).toContain(format.name)
   })
 
   test('every quoted limit matches the configuration the product enforces', async ({ page }) => {
@@ -205,7 +213,8 @@ test.describe('/plans advertises only what the product has', () => {
     const free = await cellText(row.locator('td').nth(0))
     const pro = await cellText(row.locator('td').nth(1))
     expect(free).toContain(`Preview all ${EXPORT_THEMES.length}`)
-    expect(free).toContain(`UI kit exports in ${freeThemes().length}`)
+    expect(free).toContain(`Brand guidelines in ${freeThemes().length}`)
+    expect(free).toContain('The UI kit in Standards')
     for (const t of freeThemes()) expect(free, `${t.name} is a free theme`).toContain(t.name)
     expect(pro).toMatch(new RegExp(`^All ${EXPORT_THEMES.length}\\b`))
 
@@ -213,14 +222,14 @@ test.describe('/plans advertises only what the product has', () => {
     expect(shared, 'the UI kit is listed as the same on both plans').not.toMatch(/\bUI kit\b/)
 
     // The older formats stay while the export dialog still offers them.
-    for (const format of proOnlyFormats()) {
+    for (const format of proRowFormats()) {
       await expect(ledgerRow(page, format.name), `the dialog still offers "${format.name}"`).toHaveCount(1)
     }
 
     // The Pro card: the row title has a numeral, its sub-line (a sentence) a word.
     const proCard = await page.locator('.hpl-pro').evaluate((el) => el.textContent)
     expect(proCard).toContain(`All ${EXPORT_THEMES.length} export themes`)
-    expect(proCard).toContain('Eight more than Free')
+    expect(proCard).toContain(`${numberWord(EXPORT_THEMES.length - freeThemes().length, { capital: true })} more than Free`)
     expect(proCard).not.toMatch(/\b(?:ten|eight|two) (?:export )?themes\b/i)
   })
 

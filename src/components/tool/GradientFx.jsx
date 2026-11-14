@@ -1,4 +1,4 @@
-import { styleVars } from '../../utils/gradientPreviewStyles'
+import { styleVars, specHexes, waveBands, wavePath, CAPTION_NARROW_HEXES } from '../../utils/gradientPreviewStyles'
 
 // The Gradient Generator's preview styles, drawn over the canvas slot. Everything is CSS
 // (gradients, masks, blur and an SVG noise tile) so it is vector-crisp at any pixel
@@ -30,7 +30,7 @@ const STREAKS = [
   { pitch: '17px', bar: '4px', from: '0%', to: '70%', alpha: 0.6 },
 ]
 
-function Scene({ id }) {
+function Scene({ id, stops, oklch, name }) {
   switch (id) {
     case 'grain':
       return (<><div className="grd-fx-blob" /><div className="grd-fx-grain" /></>)
@@ -61,19 +61,52 @@ function Scene({ id }) {
     case 'spec':
       // The ground only: the card, its strip and its words are the text layer's (GradientText.jsx).
       return null
+    case 'mesh':
+      return (<><div className="grd-fx-mesh" /><div className="grd-fx-grain" /><Caption name={name} stops={stops} /></>)
+    case 'waves':
+      return (<><Waves stops={stops} oklch={oklch} /><Caption name={name} stops={stops} /></>)
     default:
       return null
   }
 }
 
+// Seven bands in a 100 x 100 box stretched to the stage: only flat fills with no strokes, so
+// the stretch changes the shapes and never the look of an edge. Each band paints over the last.
+function Waves({ stops, oklch }) {
+  const bands = waveBands(stops, oklch)
+  return (
+    <svg className="grd-fx-waves" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+      {bands.map((fill, k) => <path key={k} d={wavePath(k)} fill={fill} />)}
+    </svg>
+  )
+}
+
+// The name and the stops' hexes on the ratio badge's scrim. Under 1024px only the first few
+// hexes show, then "+N" (the rest are hidden by gradient.css).
+function Caption({ name, stops }) {
+  const hexes = specHexes(stops)
+  const extra = hexes.length - CAPTION_NARROW_HEXES
+  return (
+    <p className="grd-fx-cap">
+      <span className="grd-fx-cap-name">{name}</span>
+      <span>·</span>
+      <span className="grd-fx-cap-hexes">
+        {hexes.map((hex, i) => <span key={`${hex}-${i}`} className={i >= CAPTION_NARROW_HEXES ? 'is-extra' : undefined}>{hex}</span>)}
+        {extra > 0 && <span className="grd-fx-cap-more">{`+${extra}`}</span>}
+      </span>
+    </p>
+  )
+}
+
 /**
  * One preview style drawn from the stops. `paint` is the canvas's own gradient CSS and
- * `oklch` says whether it blends in OKLCH, so a style reads colour as the canvas does.
+ * `oklch` says whether it blends in OKLCH, so a style reads colour as the canvas does;
+ * `name` is the caption's name on Mesh and Waves.
  */
-export default function GradientFx({ id, stops, paint, oklch }) {
+export default function GradientFx({ id, stops, paint, oklch, name }) {
   return (
     <div className="grd-fx" data-fx={id} aria-hidden="true" style={styleVars(id, { stops, paint, oklch })}>
-      <Scene id={id} />
+      <Scene id={id} stops={stops} oklch={oklch} name={name} />
     </div>
   )
 }

@@ -109,12 +109,12 @@ test('every cadence, amount, billed total and plan figure on Settings matches /p
           .toMatch(new RegExp(`^All ${systems[1]}\\b`))
         claimed.add(line)
       }
-      // The export themes: Free's UI kit line (a label) carries its theme count as a numeral,
+      // The export themes: Free's guidelines line (a label) carries its theme count as a numeral,
       // and the themes row on /plans holds the same count.
-      const kitThemes = line.match(/^The UI kit in (\d+) export themes\b/)
+      const kitThemes = line.match(/^Brand guidelines in (\d+) export themes\b/)
       if (kitThemes) {
         expect(await plansCell('Export themes', plan), `Settings says "${line}" and the themes row on /plans differs`)
-          .toContain(`UI kit exports in ${kitThemes[1]}:`)
+          .toContain(`Brand guidelines in ${kitThemes[1]}:`)
         claimed.add(line)
       }
       if (/^All \w+ tools$/.test(line)) {

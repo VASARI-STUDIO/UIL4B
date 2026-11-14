@@ -1,31 +1,42 @@
-// /create/gradient: the six preview styles (Grain, Fluted glass, Glow ring, Streak, Soft
-// glow, Fade) beside Fill, Hero, Card and Button.
+// /create/gradient: the places (Fill, Hero, Card, Button, Poster, Spec card, App icon, Phone)
+// on the preview switch, and the fill styles (Plain, Grain, Fluted glass, Glow ring, Streak,
+// Soft glow, Fade, Mesh, Waves) in the Fill style picker at the end of the switch on Fill.
 //
 // What a designer relies on:
 //   - each style draws the colours of THEIR stops: pixels read off the rendered style, not
 //     the page's own variables (red to red has no blue in it; red to blue has both);
-//   - the switch is operable by keyboard, every choice has a name and a pressed state;
-//   - the choice is kept in sessionStorage ('vs-gradient-preview') and survives a reload;
+//   - the switch and the picker are operable by keyboard, every choice has a name and a
+//     pressed state; the picker is offered only on Fill;
+//   - the place ('vs-gradient-preview') and the style ('vs-gradient-fill') are kept in
+//     sessionStorage and survive a reload; under 768 a pick closes the sheet;
 //   - the switch never wraps; what does not fit goes to a More menu that lists the rest and
 //     picks one;
 //   - nothing scrolls sideways at 320.
 //
 // MUTATIONS (each turns the tests named red):
 //   a style painting fixed colours, not the stops                -> "a style draws its own stops ..."
-//   choosePreview not writing sessionStorage                     -> "the choice is kept ..."
-//   PREVIEW_STYLES dropping a style                              -> "the switch lists all ten choices ..."
+//   choosePlace or chooseFill not writing sessionStorage         -> "the choice is kept ..."
+//   FILL_STYLES or PREVIEW_PLACES dropping an entry              -> "the switch lists the places ..."
+//   the trigger rendered on every place                          -> "the style picker is only offered on Fill"
+//   FillStylePicker not closing on pick under 768                -> "a pick in the Fill style sheet ..."
 //   .grd-ctx wrapping (flex-wrap: wrap)                          -> "at 320 the switch is one row and the page does not scroll sideways"
 //   PreviewSwitch always showing every option                    -> "at 320 the switch is one row ..." (the row overflows the stage)
-//   MenuSelect onChange not calling choosePreview                -> "More lists the rest and picks one"
+//   MenuSelect onChange not calling choosePlace                  -> "More lists the rest and picks one"
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
 const KEY = 'vs-gradient-preview'
+const FILL_KEY = 'vs-gradient-fill'
 const STYLES = [['grain', 'Grain'], ['fluted', 'Fluted glass'], ['ring', 'Glow ring'], ['streak', 'Streak'], ['glow', 'Soft glow'], ['fade', 'Fade']]
-const ALL = ['Fill', 'Hero', 'Card', 'Button', ...STYLES.map(([, n]) => n)]
+const PLACES = ['Fill', 'Hero', 'Card', 'Button', 'Poster', 'Spec card', 'App icon', 'Phone']
+const FILL_NAMES = ['Plain', ...STYLES.map(([, n]) => n), 'Mesh', 'Waves']
 
 const switchOf = (page) => page.getByRole('group', { name: 'Preview as' })
 const stageOf = (page) => page.locator('.grd-stage')
+const triggerOf = (page) => page.getByRole('button', { name: /^Fill style: / })
+const pickerOf = (page) => page.getByRole('dialog', { name: 'Fill style' })
+// The style drawn on the canvas, not the swatches on the picker's tiles.
+const fxOf = (page, sel = '') => page.locator(`.grd-fx${sel}:not([role="dialog"] *)`)
 
 async function open(page) {
   await go(page, '/create/gradient')
@@ -69,7 +80,7 @@ test.describe('the preview styles', () => {
       await startOn(page, id)
       await withStops(page, '#FF0000', '#0000FF')
       await open(page)
-      await expect(page.locator(`.grd-fx[data-fx="${id}"]`)).toBeVisible()
+      await expect(fxOf(page, `[data-fx="${id}"]`)).toBeVisible()
       const both = await hues(page)
       expect(both.red, `${name}: red stop drawn`).toBeGreaterThan(0.02)
       expect(both.blue, `${name}: blue stop drawn`).toBeGreaterThan(0.02)
@@ -85,37 +96,67 @@ test.describe('the preview styles', () => {
     })
   }
 
-  test('the switch lists all ten choices with names and a pressed state, by keyboard', async ({ page }) => {
+  test('the switch lists the places and the Fill style picker lists the styles, by keyboard', async ({ page }) => {
     await startOn(page, 'grain')
     await open(page)
     await expect(page.getByRole('img', { name: /shown as grain$/ })).toBeVisible()
     const group = switchOf(page)
     await expect(group).toBeVisible()
-    for (const name of ALL) {
+    for (const name of PLACES) {
       await expect(group.getByRole('button', { name, exact: true }), `${name} is a named button`).toHaveAttribute('aria-pressed', /true|false/)
     }
-    await group.getByRole('button', { name: 'Fluted glass', exact: true }).focus()
-    await page.keyboard.press('Tab')
-    await expect(group.getByRole('button', { name: 'Glow ring', exact: true })).toBeFocused()
+    await expect(group.getByRole('button', { name: 'Grain', exact: true }), 'the styles are not places').toHaveCount(0)
+    const trigger = triggerOf(page)
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    await trigger.focus()
     await page.keyboard.press('Enter')
-    await expect(group.getByRole('button', { name: 'Glow ring', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    await expect(group.getByRole('button', { name: 'Grain', exact: true })).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.locator('.grd-fx')).toHaveAttribute('data-fx', 'ring')
+    const picker = pickerOf(page)
+    await expect(picker).toBeVisible()
+    for (const name of FILL_NAMES) {
+      await expect(picker.getByRole('button', { name, exact: true }), `${name} is a named tile`).toHaveAttribute('aria-pressed', /true|false/)
+    }
+    await expect(picker.getByRole('button', { name: 'Grain', exact: true })).toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect(picker.getByRole('button', { name: 'Fluted glass', exact: true })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(picker.getByRole('button', { name: 'Fluted glass', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(picker.getByRole('button', { name: 'Grain', exact: true })).toHaveAttribute('aria-pressed', 'false')
+    await expect(fxOf(page)).toHaveAttribute('data-fx', 'fluted')
+    await page.keyboard.press('Escape')
+    await expect(picker).toHaveCount(0)
+    await expect(triggerOf(page)).toBeFocused()
+    await expect(triggerOf(page)).toHaveAccessibleName('Fill style: Fluted glass')
+  })
+
+  test('the style picker is only offered on Fill', async ({ page }) => {
+    await open(page)
+    await expect(triggerOf(page)).toBeVisible()
+    await switchOf(page).getByRole('button', { name: 'Button', exact: true }).click()
+    await expect(triggerOf(page)).toHaveCount(0)
+    await switchOf(page).getByRole('button', { name: 'Fill', exact: true }).click()
+    await expect(triggerOf(page)).toBeVisible()
   })
 
   test('the choice is kept in sessionStorage and survives a reload', async ({ page }) => {
     await open(page)
-    await switchOf(page).getByRole('button', { name: 'Streak', exact: true }).click()
-    expect(await page.evaluate((k) => sessionStorage.getItem(k), KEY)).toBe('streak')
+    await triggerOf(page).click()
+    await pickerOf(page).getByRole('button', { name: 'Streak', exact: true }).click()
+    expect(await page.evaluate((k) => sessionStorage.getItem(k), FILL_KEY)).toBe('streak')
     await page.reload()
-    await expect(switchOf(page).getByRole('button', { name: 'Streak', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.locator('.grd-fx')).toHaveAttribute('data-fx', 'streak')
+    await expect(triggerOf(page)).toHaveAccessibleName('Fill style: Streak')
+    await expect(fxOf(page)).toHaveAttribute('data-fx', 'streak')
+    await switchOf(page).getByRole('button', { name: 'Card', exact: true }).click()
+    expect(await page.evaluate((k) => sessionStorage.getItem(k), KEY)).toBe('card')
+    await page.reload()
+    await expect(switchOf(page).getByRole('button', { name: 'Card', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await switchOf(page).getByRole('button', { name: 'Fill', exact: true }).click()
+    await expect(fxOf(page)).toHaveAttribute('data-fx', 'streak')
   })
 
   test('Fill and the contexts draw no style', async ({ page }) => {
     await startOn(page, 'hero')
     await open(page)
-    await expect(page.locator('.grd-fx')).toHaveCount(0)
+    await expect(fxOf(page)).toHaveCount(0)
   })
 })
 
@@ -141,14 +182,24 @@ test.describe('at 320 the switch holds to one row', () => {
   })
 
   test('More lists the rest and picks one', async ({ page }) => {
-    watch(page, 'someone on a small phone choosing a preview style')
+    watch(page, 'someone on a small phone choosing a preview place')
     await open(page)
     await switchOf(page).getByRole('button', { name: /^More/ }).click()
     const list = page.getByRole('listbox', { name: 'More previews' })
     await expect(list).toBeVisible()
-    await list.getByRole('option', { name: 'Fade' }).click()
-    await expect(page.locator('.grd-fx')).toHaveAttribute('data-fx', 'fade')
-    expect(await page.evaluate((k) => sessionStorage.getItem(k), KEY)).toBe('fade')
-    await expect(switchOf(page).getByRole('button', { name: /^More previews: Fade/ })).toBeVisible()
+    await list.getByRole('option', { name: 'Phone' }).click()
+    expect(await page.evaluate((k) => sessionStorage.getItem(k), KEY)).toBe('phone')
+    await expect(switchOf(page).getByRole('button', { name: 'Phone', exact: true }), 'the chosen place is kept on the bar').toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('a pick in the Fill style sheet applies it and closes the sheet', async ({ page }) => {
+    watch(page, 'someone on a small phone choosing a fill style')
+    await open(page)
+    await triggerOf(page).click()
+    await pickerOf(page).getByRole('button', { name: 'Fade', exact: true }).click()
+    await expect(pickerOf(page)).toHaveCount(0)
+    await expect(fxOf(page)).toHaveAttribute('data-fx', 'fade')
+    expect(await page.evaluate((k) => sessionStorage.getItem(k), FILL_KEY)).toBe('fade')
+    await expect(triggerOf(page)).toBeFocused()
   })
 })

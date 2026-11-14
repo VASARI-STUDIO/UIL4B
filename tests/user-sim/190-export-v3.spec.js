@@ -53,6 +53,12 @@ async function settled(page) {
   return panel
 }
 
+/** Switch the theme picker to a named theme (Studio is Pro in every row; Label and Swiss Field are the Free pair). */
+async function chooseTheme(page, panel, name) {
+  await panel.getByRole('button', { name: /^Change theme, current / }).click()
+  await page.getByRole('listbox', { name: 'Theme' }).getByRole('option', { name: new RegExp(`^${name}\\b`) }).click()
+}
+
 /** Open from the app header's Export button. */
 async function openFromHeader(page) {
   await page.locator('.pnav-export').click()
@@ -553,6 +559,11 @@ test.describe('Pro categories for a free account', () => {
       await typeRadio(panel, 'Brand book').click()
       await expect(categoryRadio(panel, name)).toHaveAccessibleName(`${name}, ${name === 'Book' ? 'A4 pages' : '16:9'}, Pro`)
       await categoryRadio(panel, name).click()
+      if (name === 'Slides') {
+        // The guidelines open on Label, a Free theme, so there is no lock yet. The rail still tags the category Pro; a Pro theme is what locks it.
+        await expect(panel.locator('.xd-theme-lock')).toHaveCount(0)
+        await chooseTheme(page, panel, 'Studio')
+      }
       await expect(panel.locator('.xd-theme-lock')).toBeVisible()
       await expect(panel.locator('.xd-theme-lock')).toContainText('Pro')
       const shots = panel.locator('.xd-theme-stage.is-locked img')
