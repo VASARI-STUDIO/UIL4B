@@ -52,16 +52,16 @@ export const COMMUNITY_CATEGORIES = ['All', 'Landing', 'Dashboard', 'Portfolio',
 // guess at someone else's URL structure, and a guess that 404s is just a
 // different kind of dishonesty.
 export const COMMUNITY_DESIGNS = [
-  { id: 's1', name: 'Dashboard & analytics UI', source: 'Dribbble', category: 'Dashboard', c1: '#3B82F6', c2: '#8B5CF6', saves: 0, url: 'https://dribbble.com', curated: true },
-  { id: 's2', name: 'Award-winning landing pages', source: 'Awwwards', category: 'Landing', c1: '#0EA5E9', c2: '#22D3EE', saves: 0, url: 'https://awwwards.com', curated: true },
+  { id: 's1', name: 'Dashboard & analytics UI', source: 'Dribbble', category: 'Dashboard', c1: '#EA580C', c2: '#FDBA74', saves: 0, url: 'https://dribbble.com', curated: true },
+  { id: 's2', name: 'Award-winning landing pages', source: 'Awwwards', category: 'Landing', c1: '#78716C', c2: '#D6D3D1', saves: 0, url: 'https://awwwards.com', curated: true },
   { id: 's3', name: 'Portfolio & folio design', source: 'Behance', category: 'Portfolio', c1: '#111827', c2: '#374151', saves: 0, url: 'https://behance.net', curated: true },
   { id: 's4', name: 'E-commerce & storefronts', source: 'Dribbble', category: 'E-commerce', c1: '#10B981', c2: '#34D399', saves: 0, url: 'https://dribbble.com', curated: true },
   { id: 's5', name: 'Mobile app patterns', source: 'Mobbin', category: 'Mobile', c1: '#F43F5E', c2: '#FB7185', saves: 0, url: 'https://mobbin.com', curated: true },
-  { id: 's6', name: 'Brand & identity systems', source: 'Behance', category: 'Branding', c1: '#2563EB', c2: '#60A5FA', saves: 0, url: 'https://behance.net', curated: true },
+  { id: 's6', name: 'Brand & identity systems', source: 'Behance', category: 'Branding', c1: '#7C2D12', c2: '#C2410C', saves: 0, url: 'https://behance.net', curated: true },
   { id: 's7', name: 'Marketing site inspiration', source: 'Awwwards', category: 'Landing', c1: '#F59E0B', c2: '#FBBF24', saves: 0, url: 'https://awwwards.com', curated: true },
-  { id: 's8', name: 'Data-heavy interfaces', source: 'Dribbble', category: 'Dashboard', c1: '#6366F1', c2: '#A5B4FC', saves: 0, url: 'https://dribbble.com', curated: true },
+  { id: 's8', name: 'Data-heavy interfaces', source: 'Dribbble', category: 'Dashboard', c1: '#4D7C0F', c2: '#A3E635', saves: 0, url: 'https://dribbble.com', curated: true },
   { id: 's9', name: 'Product & checkout flows', source: 'Mobbin', category: 'E-commerce', c1: '#059669', c2: '#6EE7B7', saves: 0, url: 'https://mobbin.com', curated: true },
   { id: 's10', name: 'Minimal portfolio layouts', source: 'Behance', category: 'Portfolio', c1: '#27272A', c2: '#52525B', saves: 0, url: 'https://behance.net', curated: true },
-  { id: 's11', name: 'Finance & wallet apps', source: 'Mobbin', category: 'Mobile', c1: '#7C3AED', c2: '#C4B5FD', saves: 0, url: 'https://mobbin.com', curated: true },
+  { id: 's11', name: 'Finance & wallet apps', source: 'Mobbin', category: 'Mobile', c1: '#DC2626', c2: '#FCA5A5', saves: 0, url: 'https://mobbin.com', curated: true },
   { id: 's12', name: 'Colour & type in branding', source: 'Dribbble', category: 'Branding', c1: '#EC4899', c2: '#F9A8D4', saves: 0, url: 'https://dribbble.com', curated: true },
 ]
