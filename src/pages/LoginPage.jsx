@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
@@ -7,14 +7,14 @@ import { isLocalPath } from '../utils/localPath'
 import { knownProfile, onboardingDestination } from '../utils/onboardingState'
 import { openFirebaseGate } from '../utils/firebaseAccess'
 import { LOGIN_SIGNUP_TITLE, PAGE_TITLES } from '../data/routeMetaMap'
-import useMediaQuery from '../hooks/useMediaQuery'
 import { BrandLockup } from '../components/BrandLogo'
 import AuthForm from '../components/auth/AuthForm'
-import AuthWall from '../components/auth/AuthWall'
+import ProWall from '../components/auth/ProWall'
 import '../styles/pages/auth.css'
+import '../styles/v3-pro-auth.css'
 
 // The full-screen /login page: the same form the sign-in modal shows, beside
-// (or, on a phone, under) the wall of real exports. A real route so bookmarks,
+// (or, on a phone, under a short strip of) the wall of real exports. A real route so bookmarks,
 // RequireAuth redirects and Checkout's `state.from` hand-off keep working. The
 // nav opens the modal in place and never comes here.
 export default function LoginPage() {
@@ -35,8 +35,6 @@ export default function LoginPage() {
   const wantsSignup = location.state?.signup === true
     || new URLSearchParams(location.search).get('signup') === '1'
   const [mode, setMode] = useState(wantsSignup ? 'signup' : 'login')
-  const phone = useMediaQuery('(max-width:767px)')
-  const wide = useMediaQuery('(min-width:1024px)')
 
   useEffect(() => { openFirebaseGate() }, [])
 
@@ -77,25 +75,46 @@ export default function LoginPage() {
     document.title = next === 'signup' ? LOGIN_SIGNUP_TITLE : PAGE_TITLES['/login']
   }, [navigate, location.search, location.state])
 
-  // Below 768 the sign-up form has to fit a 390x844 screen without scrolling,
-  // so its band shrinks to a still strip.
-  const stillBand = phone && mode === 'signup'
+  // A signed-in visitor is already on the way out (the effect above); say so
+  // instead of flashing the form, and move focus to the line.
+  const signedIn = !loading && !!user && (!formBusy || done)
+  const statusRef = useRef(null)
+  useEffect(() => { if (signedIn) statusRef.current?.focus() }, [signedIn])
+
+  // With the on-screen keyboard open the strip would push the form off the
+  // visible area, so it folds away while the visual viewport is much shorter
+  // than the window.
+  const [fold, setFold] = useState(false)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return undefined
+    const check = () => setFold(window.innerHeight - vv.height >= 120)
+    check()
+    vv.addEventListener('resize', check)
+    return () => vv.removeEventListener('resize', check)
+  }, [])
 
   return (
-    <main id="main" className="auth-page" data-mode={mode} tabIndex={-1}>
-      <header className="auth-page-top">
-        <Link to="/" className="auth-wordmark" aria-label={t('auth.wordmarkLabel')}>
+    <main id="main" className="pf" data-mode={mode} data-fold={fold ? 'true' : 'false'} tabIndex={-1}>
+      <header className="pf-bar">
+        <Link to="/" className="pf-wordmark" aria-label={t('auth.wordmarkLabel')}>
           <BrandLockup />
         </Link>
+        <Link to="/plans" className="pf-back">{t('auth.backToPlans')}</Link>
       </header>
-      <section className="auth-page-form">
-        {loading ? (
-          <p className="auth-checking" role="status">{t('auth.checking')}</p>
-        ) : (
-          <AuthForm mode={mode} onModeChange={changeMode} onSuccess={finished} onBusyChange={setFormBusy} headingLevel={1} showLoginSub showReport />
-        )}
-      </section>
-      <AuthWall variant={wide ? 'page' : 'band'} still={stillBand} />
+      <div className="pf-strip"><ProWall variant="strip" /></div>
+      <div className="pf-main">
+        <div className="pf-col">
+          {loading ? (
+            <p className="pf-checking" role="status">{t('auth.checking')}</p>
+          ) : signedIn ? (
+            <p className="pf-status" role="status" tabIndex={-1} ref={statusRef}>{t('auth.loggedIn')}</p>
+          ) : (
+            <AuthForm mode={mode} onModeChange={changeMode} onSuccess={finished} onBusyChange={setFormBusy} headingLevel={1} showLoginSub showReport />
+          )}
+        </div>
+      </div>
+      <aside className="pf-wall"><ProWall /></aside>
     </main>
   )
 }

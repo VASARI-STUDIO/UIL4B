@@ -3,20 +3,17 @@
 // THE ROUTE SWEEP FOUND
 //   /onboarding at 768: the three option rows sat inside an outer card (a card
 //     in a card), and "Not now, take me to my projects" turned into a bare text
-//     link about 20px tall.
+//     link about 20px tall. (The page is now the kit builder; see below.)
 //   /checkout: the invalid-selection state drew a raw "!" character where
 //     /checkout/return draws an icon, hugged the top-left of the page, and at
 //     768 left a 520px card with dead space on its right.
 //
 // WHAT THIS PINS
-//   Onboarding, signed in: no bordered box wraps the rows (at either width); from
-//     521px the rows are 560px, centred, hairline-bordered and unfilled; "Not now"
-//     is a 48px bordered pill at both widths.
-//   Checkout: the alert icon is a drawn 24px svg in the error tone, not a text
-//     glyph; the card is a centred column (up to 480px) with balanced margins; it
-//     sits about 15vh below the nav, not pinned to the top.
-//   Checkout return, no session: the alert icon is a drawn svg in the error tone;
-//     the column (up to 600px, no card) is centred with balanced margins.
+//   Onboarding, signed in: the kit builder, in both themes at both widths. The
+//     heading takes the theme's ink, nothing scrolls sideways, and the way out
+//     ("Not now", the two other starts, the pill) is at least 44px tall.
+//   Checkout and checkout return: the V3 state card (no raw "!" glyph) takes the
+//     theme, is at most 560px wide, and sits clear of the nav.
 //   Every width, both themes: no overflow and no target under 44px.
 //
 // STATES REACHED
@@ -105,210 +102,77 @@ async function expectFitsAndTouchable(page, rootSel, what) {
 for (const theme of THEMES) {
   for (const width of WIDTHS) {
     test.describe(`${width}px touch, ${theme}`, () => {
-      test(`/onboarding signed in: rows on the ground, no card in a card, a 48px Not now pill`, async ({ browser }) => {
+      test(`/onboarding signed in: the kit builder takes the theme, fits, and its ways out are 44px`, async ({ browser }) => {
         const { ctx, page } = await open(browser, { width, theme })
         watch(page, `a new account on onboarding at ${width}px, ${theme}`)
         await signIn(page, { plan: 'free', onboarded: false })
         await go(page, '/onboarding')
-        await expect(page.locator('[data-first-win]')).toHaveCount(3)
+        await expect(page.locator('[data-h1]')).toBeVisible()
+        await expect(page.locator('a[data-start][data-first-win]')).toHaveCount(2)
         await settle(page)
-        await expectTheme(page, '.onb-q', theme)
+        await expectTheme(page, '[data-h1]', theme)
 
-        const m = await page.evaluate(() => {
-          const box = (el) => { const b = el.getBoundingClientRect(); return { x: b.x, w: b.width, h: b.height } }
-          const paint = (el) => {
-            const s = getComputedStyle(el)
-            const bg = s.backgroundColor.match(/[\d.]+/g).map(Number)
-            return {
-              fill: bg.length === 4 ? bg[3] > 0 : true,
-              border: parseFloat(s.borderTopWidth),
-              shadow: s.boxShadow !== 'none',
-              radius: parseFloat(s.borderTopLeftRadius),
-            }
-          }
-          const rows = [...document.querySelectorAll('[data-first-win]')]
-          // Every ancestor of a row, up to the page, that draws itself as a box.
-          const boxedAncestors = []
-          for (const row of rows) {
-            for (let el = row.parentElement; el && el !== document.body; el = el.parentElement) {
-              const p = paint(el)
-              if (p.border > 0 || p.shadow) boxedAncestors.push(`${el.tagName.toLowerCase()}.${el.className}`)
-            }
-          }
-          const back = document.querySelector('.onb-back')
-          return {
-            vw: window.innerWidth,
-            boxedAncestors,
-            cardFill: paint(document.querySelector('.onb-card')).fill,
-            rows: rows.map((r) => ({ ...box(r), ...paint(r) })),
-            back: { ...box(back), ...paint(back) },
-          }
-        })
-
-        // MUTATION: put the `.onb-card` panel back in global.css (a `border:1px
-        // solid var(--border)`, a `padding`, a `var(--card)` background) and this
-        // fails, naming the box that wraps the rows.
-        expect(m.boxedAncestors, 'a bordered or shadowed box wraps the option rows (card in a card)').toEqual([])
-        expect(m.cardFill, 'the onboarding card still paints a fill behind the rows').toBe(false)
-
-        expect(m.rows).toHaveLength(3)
-        for (const r of m.rows) {
-          expect(r.border, 'a row lost its hairline border').toBe(1)
-          expect(r.h, 'a row is not the existing ~76px height').toBeGreaterThanOrEqual(72)
-          // The phone's rows can run taller when a blurb wraps; the 76px spec is the tablet's.
-          if (width >= 768) expect(r.h).toBeLessThanOrEqual(84)
+        // The ways out: "Not now", the two other starts and the pill are all real targets.
+        for (const sel of ['a[data-skip]', 'a[data-first-win="type-scale"]', 'a[data-first-win="gradient"]', '[data-go]']) {
+          const box = await page.locator(sel).boundingBox()
+          expect(box.height, `${sel} is under 44px at ${width}px`).toBeGreaterThanOrEqual(44)
         }
+        const sideways = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+        expect(sideways, 'the page scrolls sideways').toBeLessThanOrEqual(0)
+        // The old outer card is gone, so nothing paints a panel behind the page.
+        await expect(page.locator('.onb-card')).toHaveCount(0)
 
-        if (width >= 768) {
-          // MUTATION: delete `@media(min-width:521px){.onb-firstwin-option{background:transparent}}`
-          // from global.css and the rows take the card fill again, so this fails.
-          for (const r of m.rows) expect(r.fill, 'a tablet row is filled; it should sit on the page ground').toBe(false)
-          // MUTATION: set `.onb-card` back to `max-width:640px` and the column is
-          // 640px, not 560px, so this fails.
-          for (const r of m.rows) expect(Math.abs(r.w - 560), 'the option column is not 560px').toBeLessThanOrEqual(1)
-        } else {
-          for (const r of m.rows) expect(r.fill, 'the phone rows lost their card fill, which was to stay as it is').toBe(true)
-        }
-
-        // Centred: equal margins left and right, on every row and on the pill.
-        for (const r of [...m.rows, m.back]) {
-          expect(Math.abs(r.x - (m.vw - r.x - r.w)), 'the column is not centred (unbalanced margins)').toBeLessThanOrEqual(1.5)
-        }
-
-        // MUTATION: put `.onb-back` back to `min-height:44px; border:none; padding:0;
-        // display:inline-flex` and "Not now" is a 44px, unbordered, text-width link,
-        // so the height, the border and the full-width checks all fail.
-        expect(Math.abs(m.back.h - 48), '"Not now" is not 48px tall').toBeLessThanOrEqual(0.5)
-        expect(m.back.border, '"Not now" lost its border, so it is a bare text link').toBe(1)
-        expect(m.back.radius, '"Not now" is not a pill').toBeGreaterThanOrEqual(24)
-        expect(Math.abs(m.back.w - m.rows[0].w), '"Not now" is not as wide as the option column').toBeLessThanOrEqual(1)
-
-        await expectFitsAndTouchable(page, '.onb', `onboarding at ${width}px ${theme}`)
         await shot(page, `onboarding--in-${width}-${theme}`)
         await ctx.close()
       })
 
-      // The same card serves two states: /checkout signed out and /checkout signed
-      // in. The return page is a column without a card and has its own test below.
-      const CHECKOUT_STATES = [
-        { name: '/checkout signed out', url: '/checkout', signedIn: false, shot: 'checkout' },
-        { name: '/checkout signed in', url: '/checkout', signedIn: true, shot: 'checkout--in' },
+      // The V3 state card serves three states: /checkout signed out and signed in
+      // with no plan (the invalid selection), and /checkout/return with no session.
+      // The design has no alert icon; the heading carries the state.
+      const CARD_STATES = [
+        { name: '/checkout signed out', url: '/checkout', signedIn: false, shot: 'checkout', solo: true },
+        { name: '/checkout signed in', url: '/checkout', signedIn: true, shot: 'checkout--in', solo: true },
+        { name: '/checkout/return signed in, no session', url: '/checkout/return', signedIn: true, shot: 'checkout-return--in', solo: false },
       ]
-      for (const st of CHECKOUT_STATES) {
-        test(`${st.name}: drawn alert icon, a centred column about 15vh below the nav`, async ({ browser }) => {
+      for (const st of CARD_STATES) {
+        test(`${st.name}: the state card takes the theme, sits below the nav, fits and is touchable`, async ({ browser }) => {
           const { ctx, page } = await open(browser, { width, theme })
           watch(page, `a buyer on ${st.name} at ${width}px, ${theme}`)
           if (st.signedIn) await signIn(page, { plan: 'free' })
           await go(page, st.url)
-          const card = page.locator('.checkout-return-card')
+          const card = page.locator('.ck-ret')
           await expect(card.getByRole('heading', { level: 1 })).toBeVisible()
           await settle(page)
-          await expectTheme(page, '.checkout-return-card h1', theme)
+          await expectTheme(page, '.ck-ret h1', theme)
 
           const m = await page.evaluate(() => {
-            const icon = document.querySelector('.checkout-return-card .checkout-error-icon')
-            const svg = icon?.querySelector('svg')
-            // The error tone as the page resolves it, read through a probe so the
-            // test follows the token rather than a hex that drifts.
-            const probe = document.createElement('span')
-            probe.style.color = 'var(--err-strong)'
-            document.body.append(probe)
-            const tone = getComputedStyle(probe).color
-            probe.remove()
-            const body = document.querySelector('.checkout-return-card').getBoundingClientRect()
+            const card = document.querySelector('.ck-ret')
+            const b = card.getBoundingClientRect()
             const nav = document.querySelector('nav.pnav')?.getBoundingClientRect()
             return {
-              hasIcon: !!icon,
-              svg: svg ? { w: svg.getBoundingClientRect().width, h: svg.getBoundingClientRect().height, color: getComputedStyle(svg).color, shapes: svg.querySelectorAll('circle,line,path').length } : null,
-              glyphText: (icon?.textContent || '').trim(),
-              tone,
-              card: { x: body.x, w: body.width, top: body.top },
+              card: { x: b.x, w: b.width, top: b.top },
               navBottom: nav ? nav.bottom : null,
+              // The old raw "!" glyph and its icon block are gone for good.
+              glyph: [...card.querySelectorAll('*')].some((el) => !el.children.length && el.textContent.trim() === '!'),
               vw: window.innerWidth,
-              vh: window.innerHeight,
             }
           })
-
-          // MUTATION: put `<div className="checkout-error-icon" aria-hidden="true">!</div>`
-          // back in Checkout.jsx and the svg is gone and the glyph text is "!", so
-          // these fail (the /checkout/return case fails if its svg is removed).
-          expect(m.hasIcon, 'the state has no alert icon block').toBe(true)
-          expect(m.svg, 'the alert icon is not a drawn svg').not.toBeNull()
-          expect(m.glyphText, 'the alert icon is still a text character').toBe('')
-          expect(m.svg.shapes, 'the drawn icon has no shapes').toBeGreaterThan(0)
-          // MUTATION: change the svg width/height, or the `.checkout-error-icon svg`
-          // rule in checkout.css, to 28px or 30px and this fails.
-          expect(Math.round(m.svg.w), 'the alert icon is not 24px wide').toBe(24)
-          expect(Math.round(m.svg.h), 'the alert icon is not 24px tall').toBe(24)
-          expect(m.svg.color, 'the alert icon is not in the error tone').toBe(m.tone)
-
-          // MUTATION: put `.checkout-return { justify-content: flex-start }` back in
-          // checkout.css and the card hugs the left, so the margins differ by far more than 1px.
-          const left = m.card.x
-          const right = m.vw - m.card.x - m.card.w
-          expect(Math.abs(left - right), 'the card is not centred (unbalanced margins)').toBeLessThanOrEqual(1.5)
-          expect(left, 'the card is pinned to the page edge').toBeGreaterThan(0)
-          // MUTATION: put the card's `max-width` back to 520px and the 768 card is
-          // 520px, so this fails.
-          expect(m.card.w, 'the card is wider than the 480px column').toBeLessThanOrEqual(480.5)
-          if (width >= 768) expect(Math.abs(m.card.w - 480), 'the tablet card is not the 480px column').toBeLessThanOrEqual(1)
-
-          // MUTATION: put `.checkout-return`'s top padding back to 8px and the card
-          // sits at the top of the page, so the gap falls far under 13% of the height.
+          expect(m.glyph, 'the card draws a raw "!" character').toBe(false)
+          // MUTATION: drop the 560px max-width at 600px and up and the 768 card runs
+          // the full container width, so this fails.
+          expect(m.card.w, 'the card is wider than the 560px column').toBeLessThanOrEqual(560.5)
+          expect(m.card.x, 'the card is pinned to the page edge').toBeGreaterThan(0)
+          // MUTATION: set `.ck-ret { margin-top: 0 }` and the card butts the nav.
           expect(m.navBottom, 'the nav was not found to measure from').not.toBeNull()
-          const gap = (m.card.top - m.navBottom) / m.vh
-          expect(gap, `the card is ${(gap * 100).toFixed(1)}vh below the nav, not about 15vh`).toBeGreaterThanOrEqual(0.13)
-          expect(gap, `the card is ${(gap * 100).toFixed(1)}vh below the nav, not about 15vh`).toBeLessThanOrEqual(0.2)
+          const gap = m.card.top - m.navBottom
+          const want = width >= 600 ? (st.solo ? 48 : 96) : 24
+          expect(gap, `the card is ${Math.round(gap)}px below the nav, not about ${want}px`).toBeGreaterThanOrEqual(want - 8)
 
           await expectFitsAndTouchable(page, 'main', `${st.name} at ${width}px ${theme}`)
           await shot(page, `${st.shot}-${width}-${theme}`)
           await ctx.close()
         })
       }
-
-      test(`/checkout/return signed in, no session: drawn alert icon, a centred column, nothing under 44px`, async ({ browser }) => {
-        const { ctx, page } = await open(browser, { width, theme })
-        watch(page, `a buyer on /checkout/return with no session at ${width}px, ${theme}`)
-        await signIn(page, { plan: 'free' })
-        await go(page, '/checkout/return')
-        const view = page.locator('.co-return')
-        await expect(view.getByRole('heading', { level: 1 })).toBeVisible()
-        await settle(page)
-        await expectTheme(page, '.co-return h1', theme)
-
-        const m = await page.evaluate(() => {
-          const icon = document.querySelector('.co-return .co-alert')
-          const probe = document.createElement('span')
-          probe.style.color = 'var(--err-strong)'
-          document.body.append(probe)
-          const tone = getComputedStyle(probe).color
-          probe.remove()
-          const col = document.querySelector('.co-return').getBoundingClientRect()
-          return {
-            svg: icon ? { w: icon.getBoundingClientRect().width, color: getComputedStyle(icon).color, shapes: icon.querySelectorAll('circle,line,path').length } : null,
-            glyphText: (document.querySelector('.co-return .co-glyph')?.textContent || '').trim(),
-            tone,
-            col: { x: col.x, w: col.width },
-            vw: window.innerWidth,
-          }
-        })
-
-        // MUTATION: swap `.co-alert` for a text "!" in CheckoutReturn.jsx and the svg is gone.
-        expect(m.svg, 'the alert icon is not a drawn svg').not.toBeNull()
-        expect(m.glyphText, 'the alert icon is still a text character').toBe('')
-        expect(m.svg.shapes, 'the drawn icon has no shapes').toBeGreaterThan(0)
-        expect(m.svg.color, 'the alert icon is not in the error tone').toBe(m.tone)
-        // MUTATION: put `.co-return { margin-inline: auto }` back to 0 and the
-        // column hugs the left at 768, so the margins differ by far more than 1px.
-        const left = m.col.x
-        const right = m.vw - m.col.x - m.col.w
-        expect(Math.abs(left - right), 'the column is not centred (unbalanced margins)').toBeLessThanOrEqual(1.5)
-        expect(m.col.w, 'the column is wider than 600px').toBeLessThanOrEqual(600.5)
-
-        await expectFitsAndTouchable(page, 'main', `/checkout/return at ${width}px ${theme}`)
-        await shot(page, `checkout-return--in-${width}-${theme}`)
-        await ctx.close()
-      })
     })
   }
 }

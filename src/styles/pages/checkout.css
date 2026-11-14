@@ -1,295 +1,288 @@
-/* checkout.css — /checkout and /checkout/return on the Spectrum ground.
+/* checkout.css — /checkout and /checkout/return on the V3 tokens.
  *
- * STYLING ONLY. Nothing here touches the payment path. This sheet replaces
- * the `.checkout-*` block that sat in deferred/account.css (shared with six
- * other routes) and the seven inline `style={{}}` objects in the two pages.
+ * STYLING ONLY. Nothing here touches the payment path. Every rule sits under
+ * `.ck`, so it wins by specificity over the older sheets rather than by a
+ * chunk order Vite does not promise. Colours are the `--v3-*` tokens from
+ * v3-shell.css, which flip with the theme; the few values with no token are the
+ * `--ck-*` locals below.
  *
- * Every selector is scoped under `.checkout-page`, the root both pages
- * render, because Vite orders chunk CSS by the dependency graph: tool-shell.css
- * and global.css restate `.checkout-return*` and `.card` at equal specificity.
- * Nothing on /checkout moves. On /checkout/return the confirmation spinner (a
- * loading state, frozen by global.css's reduced-motion clamp) and the ledger's
- * one reveal move; see the return-page block below.
+ * Layout: the summary (the plan, its billing period, the bill in time order,
+ * what is included) beside the payment panel at 900px and up, stacked below
+ * that. At 599px and under it is the phone layout: the bill reads as rows and
+ * what is included folds.
  *
- * ── The shape ────────────────────────────────────────────────────────────────
- * The summary beside the form is the pattern every subscription checkout in
- * the reference set uses — Dropbox Dash
- * (mobbin.com/screens/8716add5-01a8-4d04-adc8-d5deaf4da331), Perplexity
- * (mobbin.com/screens/91f7d5d2-65cd-45ee-99a3-6c52bca19944), Descript
- * (mobbin.com/screens/0679f8fc-5125-429f-80a3-2769f94083b6): plan, price as a
- * figure, what is included as a plain list, the trial as a tinted notice. So
- * the structure stays and the surface changes: `UIL4B App.dc.html`'s 18px
- * panels over a hairline with no shadow, the price in the display face with
- * tabular figures, a tick with no tinted chip behind it, the app's rectangle
- * controls. The accent is the derived family, never --accent-strong.       */
+ * The one mono-voice use is the reference code and the key name, which are
+ * things to copy or to read exactly (see tests/unit/mono-voice-allowlist.test.js).
+ */
 
-.checkout-page {
-  --co-hair: color-mix(in srgb, var(--t0) 9%, transparent);
-  --co-hair-2: color-mix(in srgb, var(--t0) 13%, transparent);
-  --co-wash: color-mix(in srgb, var(--t0) 4%, transparent);
-  max-width: 1040px;
+.ck {
+  --ck-plain: rgba(var(--v3-ink-rgb), .1);
+  --ck-ghost: rgba(var(--v3-ink-rgb), .2);
+  --ck-chip: rgba(245, 245, 242, .14);
+  --ck-chip-h: rgba(245, 245, 242, .2);
+  --ck-thumb-sh: 0 1px 2px rgba(18, 20, 24, .14);
+  --ck-ease: var(--v3-ease, cubic-bezier(.23, 1, .32, 1));
+  position: relative;
+  isolation: isolate;
+  color: var(--v3-ink);
+  font-size: 15px;
+  line-height: 1.5;
+}
+[data-theme="dark"] .ck {
+  --ck-plain: rgba(var(--v3-ink-rgb), .12);
+  --ck-chip: rgba(11, 12, 14, .08);
+  --ck-chip-h: rgba(11, 12, 14, .12);
+  --ck-thumb-sh: none;
+}
+.ck *, .ck *::before, .ck *::after { box-sizing: border-box; }
+.ck :where(h1, h2, h3, p, ul) { margin: 0; padding: 0; }
+.ck :where(ul) { list-style: none; }
+.ck :where(a) { color: inherit; text-decoration: none; }
+.ck :where(button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: inherit; }
+
+/* Focus: a 2px ring at an offset of 2. A heading or status line that is only
+   focused by script shows no ring unless the focus is meant to be seen. */
+.ck a:focus-visible, .ck button:focus-visible, .ck summary:focus-visible, .ck [tabindex]:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
+.ck [tabindex="-1"]:focus { outline: none; }
+.ck [data-errfocus]:focus-visible,
+.ck .ck-status[tabindex="-1"]:focus-visible,
+.ck .ck-frame[tabindex="-1"]:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
+
+/* ── Head: back link, h1, lead ─────────────────────────────────────────── */
+.ck-head { padding-top: 8px; }
+.ck-lnk { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; color: var(--v3-sec); transition: color 150ms ease, transform 120ms var(--ck-ease); }
+.ck-lnk svg { flex: none; }
+@media (hover: hover) { .ck-lnk:hover { color: var(--v3-ink); } }
+.ck-lnk:active { transform: scale(.97); }
+.ck-h1 { margin-top: 8px; font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.04em; max-width: 30ch; }
+.ck-lead-cell { margin-top: 16px; display: grid; }
+.ck-lead-cell > * { grid-area: 1 / 1; margin-top: 0; }
+.ck-lead-cell .off { visibility: hidden; }
+.ck-lead { font-size: 16px; line-height: 1.55; color: var(--v3-sec); max-width: 52ch; text-wrap: pretty; }
+.ck-lead.lk, .ck-lead.ck-lead-err { color: var(--v3-ink); align-self: start; }
+.ck-lead.lk:empty { visibility: hidden; }
+
+/* ── The two panels ────────────────────────────────────────────────────── */
+.ck-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+.ck-col { min-width: 0; }
+.ck-sum { position: relative; isolation: isolate; overflow: hidden; border-radius: 24px; border: 1px solid var(--v3-hl20); background: var(--v3-raised); padding: 20px; }
+.ck-spec { position: absolute; top: 0; left: -30%; right: -30%; height: 2px; overflow: hidden; }
+.ck-spec i { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, hsl(10 80% 62%) 16%, hsl(40 84% 62%) 32%, hsl(160 36% 52%) 50%, hsl(205 44% 60%) 66%, hsl(262 34% 64%) 82%, transparent); }
+.ck-pt { font-size: 18px; font-weight: 500; line-height: 1.3; }
+
+/* The billing-period switch: a tray with one thumb. 52px with 44px segments
+   on a phone, 44px with 36px segments from 600px. */
+.ck-tray { display: flex; height: 52px; padding: 4px; margin-top: 16px; border-radius: 999px; background: var(--v3-l2); }
+.ck-seg { flex: 1 1 0; min-width: 0; height: 44px; border-radius: 999px; color: var(--v3-t56); font-size: 15px; font-weight: 500; white-space: nowrap; text-align: center; transition: transform 150ms var(--ck-ease), background-color 150ms ease, color 150ms ease; }
+.ck-seg:active { transform: scale(.97); }
+.ck-seg.on { background: var(--v3-seg-on); box-shadow: var(--ck-thumb-sh); color: var(--v3-ink); }
+.ck-seg[aria-disabled="true"] { cursor: default; }
+.ck-seg[aria-disabled="true"]:not(.on) { color: rgba(var(--v3-ink-rgb), .5); cursor: not-allowed; }
+.ck-seg[aria-disabled="true"]:active { transform: none; }
+@media (hover: hover) and (pointer: fine) { .ck-seg:not(.on):not([aria-disabled="true"]):hover { background: var(--v3-hair); color: var(--v3-ink); } }
+@media (max-width: 359px) { .ck-seg { flex: 1 1 auto; padding: 0 10px; font-size: 14px; } }
+
+/* The bill in time order. The other period's text sits unseen in the same
+   grid cell, so the box is as tall as the taller of the two and the form
+   below never moves when the period changes. */
+.ck-bill { margin-top: 24px; }
+.ck-twin { display: grid; }
+.ck-twin > * { grid-area: 1 / 1; min-width: 0; }
+.ck .gh { visibility: hidden; pointer-events: none; user-select: none; }
+.ck-stops { display: flex; flex-direction: column; }
+.ck-stop { position: relative; min-width: 0; padding: 0 0 16px 28px; }
+.ck-stop:last-of-type { padding-bottom: 0; }
+.ck-stop:not(:last-of-type)::before { content: ""; position: absolute; left: 3.5px; top: 20px; bottom: -4px; width: 1px; background: var(--v3-ring); }
+.ck-dot { position: absolute; left: 0; top: 10px; width: 8px; height: 8px; border-radius: 999px; border: 1.5px solid var(--v3-ink); background: var(--v3-raised); }
+.ck-dot.now { background: var(--v3-ink); }
+.ck-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ck-lab { font-size: 14px; line-height: 1.5; color: var(--v3-sec); }
+.ck-stop .ck-fig { font-size: 24px; line-height: 1.2; font-weight: 500; letter-spacing: -.02em; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.ck-sen { margin-top: 4px; font-size: 13.5px; line-height: 1.5; color: var(--v3-sec); text-wrap: pretty; }
+.ck-small { font-size: 13.5px; line-height: 1.5; color: var(--v3-sec); text-wrap: pretty; }
+.ck-other { margin-top: 16px; padding-left: 28px; }
+@media (max-width: 359px) {
+  .ck-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .ck-stop .ck-fig { text-align: left; }
 }
 
-/* ── Controls: the app's rectangles ──────────────────────────────────────── */
-.checkout-page .btn { min-height: 40px; padding: 0 16px; border-radius: var(--btn-radius); border-color: var(--co-hair-2); background: transparent; color: var(--t0); font-size: 13.5px; font-weight: 500; transition: background var(--dur-1) ease, border-color var(--dur-1) ease; }
-.checkout-page .btn:hover { background: var(--co-wash); border-color: var(--bh); color: var(--t0); }
-.checkout-page .btn-s { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
-/* --accent-mid under --accent-ink (5.18:1 light, 9.17:1 dark), hovering to
-   --accent-text, which moves away from the ground in both themes. */
-.checkout-page .btn-accent { min-height: 44px; padding: 0 18px; border-radius: var(--btn-radius); border-color: var(--accent-fill); background: var(--accent-fill); color: var(--accent-ink); font-weight: 560; }
-.checkout-page .btn-accent:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); color: var(--accent-ink); }
-@media (pointer: coarse) {
-  .checkout-page .btn, .checkout-page .btn-s, .checkout-page .checkout-back { min-height: 44px; }
+/* No live price: the word, the reason, the one action. */
+.ck-out { display: flex; flex-direction: column; align-items: stretch; gap: 24px; }
+.ck-out > .ck-fig { font-size: 40px; font-weight: 500; line-height: 1; letter-spacing: -.04em; }
+.ck-out .ck-sen { margin-top: 0; font-size: 15px; color: var(--v3-ink); }
+.ck-out .ck-sen.ck-small { color: var(--v3-sec); }
+.ck-out .ck-twin + .ck-twin { margin-top: -12px; }
+.ck-act { margin-top: 0; }
+
+/* A period change is a 200ms fade, nothing moves. The two names are two
+   identical animations so the browser restarts it on every change. */
+@keyframes ckFxA { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ckFxB { from { opacity: 0; } to { opacity: 1; } }
+.ck-fx-a { animation: ckFxA 200ms var(--ck-ease) both; }
+.ck-fx-b { animation: ckFxB 200ms var(--ck-ease) both; }
+
+/* ── What is included ──────────────────────────────────────────────────── */
+.ck-det { margin-top: 16px; border-top: 1px solid var(--v3-hair); }
+.ck-det > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 4px; font-size: 15px; font-weight: 500; line-height: 1.5; cursor: pointer; list-style: none; }
+.ck-det > summary::-webkit-details-marker { display: none; }
+.ck-det > summary svg { color: var(--v3-sec); transition: transform 150ms var(--ck-ease); }
+.ck-det[open] > summary svg { transform: rotate(180deg); }
+.ck-div { margin: 24px 0; border-top: 1px solid var(--v3-hair); }
+.ck-h3 { font-size: 15px; font-weight: 500; line-height: 1.5; }
+.ck-pts { margin-top: 8px; padding-bottom: 4px; display: flex; flex-direction: column; gap: 12px; }
+.ck-h3 + .ck-pts { margin-top: 16px; }
+.ck-pts li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.5; text-wrap: pretty; }
+.ck-pts li svg { flex: none; margin-top: 3px; color: var(--v3-sec); }
+
+/* ── The payment panel ─────────────────────────────────────────────────── */
+.ck-fp { border-radius: 24px; border: 1px solid var(--ck-plain); background: var(--v3-raised); padding: 16px; }
+.ck-twin > .checkout-renewal, .ck-renew { font-size: 15px; font-weight: 500; line-height: 1.5; text-wrap: pretty; }
+.ck .checkout-terms { margin-top: 8px; font-size: 13.5px; line-height: 1.5; color: var(--v3-sec); }
+.ck .checkout-terms a { text-decoration: underline; text-decoration-color: rgba(var(--v3-ink-rgb), .4); text-underline-offset: 3px; transition: color 150ms ease, text-decoration-color 150ms ease; }
+@media (hover: hover) { .ck .checkout-terms a:hover { color: var(--v3-ink); text-decoration-color: var(--v3-ink); } }
+.ck-slot { margin-top: 16px; }
+.ck-frame { border-radius: 8px; overflow: hidden; min-height: 485px; }
+.ck-frame.stat { background: var(--v3-l2); display: block; padding: 24px 16px; min-height: 0; }
+.ck-status { font-size: 15px; line-height: 1.5; color: var(--v3-sec); text-align: left; }
+/* Emptied, not removed: it stays a live region in the tree and takes no room. */
+.ck .ck-status:empty { padding: 0; margin: 0; }
+.ck-cap { margin-top: 12px; font-size: 13.5px; line-height: 1.5; color: var(--v3-sec); }
+.ck-after { margin-top: -8px; }
+:root:not([data-theme="dark"]) .ck-frame:not(.stat) { box-shadow: 0 0 0 1px rgba(var(--v3-ink-rgb), .1); }
+
+/* A refusal, the sign-in gate and the unavailable notice replace the frame,
+   left-aligned. */
+.ck-blk { max-width: 52ch; padding: 8px 4px 4px; }
+.ck-bh { font-size: 18px; font-weight: 500; line-height: 1.3; }
+.ck-bp { margin-top: 8px; font-size: 15px; line-height: 1.5; color: var(--v3-sec); text-wrap: pretty; }
+.ck-bp + .ck-bp { margin-top: 4px; }
+.ck-bp0 { margin-top: 0; }
+.ck-ba { margin-top: 16px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+.ck-br { margin-top: 8px; }
+.ck-gate { margin-top: 24px; padding: 0; }
+.ck-fp .ck-gate { margin-top: 0; padding: 8px 4px 4px; }
+.ck .report-problem { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0; font-family: inherit; font-size: 13.5px; color: var(--v3-sec); text-decoration: underline; text-underline-offset: 3px; }
+@media (hover: hover) { .ck .report-problem:hover { color: var(--v3-ink); } }
+/* Mono: the key name a developer has to type exactly. */
+.ck .ck-nokey code { font-family: var(--mono); font-size: 14px; overflow-wrap: anywhere; }
+
+/* ── Pills: one ink pill per state (52px), outline pills 48px with the chroma ring ── */
+.ck-go { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 0 6px 0 22px; border-radius: 999px; background: var(--v3-ink); color: var(--v3-on-ink); font-size: 16px; font-weight: 500; line-height: 1.2; transition: background-color 150ms ease, transform 120ms var(--ck-ease); }
+.ck-go.plain { justify-content: center; padding: 0 22px; }
+@media (hover: hover) { .ck-go:hover { background: var(--v3-ink-hover); } }
+.ck-go:active, .ck-ghost:active { transform: scale(.97); }
+.ck-well { width: 40px; height: 40px; border-radius: 999px; color: var(--v3-on-ink); background: var(--ck-chip); flex: none; }
+@media (hover: hover) and (pointer: fine) { :hover > .ck-well { background: var(--ck-chip-h); } }
+.ck-ghost { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--ck-ghost); color: var(--v3-ink); font-size: 15px; font-weight: 500; line-height: 1.2; transition: transform 120ms var(--ck-ease); }
+.ck-ghost[aria-disabled="true"] { cursor: default; color: var(--v3-sec); }
+.ck-ghost[aria-busy="true"] { cursor: progress; }
+.ck-ghost[aria-disabled="true"]:active { transform: none; }
+
+/* ── The return card and the invalid-selection card ────────────────────── */
+.ck-ret { margin-top: 24px; border-radius: 24px; border: 1px solid var(--ck-plain); background: var(--v3-raised); padding: 24px 20px; }
+.ck-ret--solo { margin-top: 24px; }
+.ck-rh { font-size: 32px; font-weight: 600; line-height: 1.05; letter-spacing: -.04em; max-width: 30ch; }
+.ck-rp { margin-top: 16px; font-size: 16px; line-height: 1.6; color: var(--v3-sec); max-width: 46ch; text-wrap: pretty; }
+.ck-rp + .ck-rp { margin-top: 8px; }
+.ck-rkey { color: var(--v3-ink); font-weight: 500; }
+.ck-ref { margin-top: 24px; border-radius: 12px; background: var(--v3-l2); padding: 16px; }
+.ck-ref span { display: block; font-size: 13.5px; line-height: 1.5; color: var(--v3-sec); }
+.ck-ref code { display: block; margin-top: 4px; font-family: var(--mono); font-size: 14px; line-height: 1.5; color: var(--v3-ink); overflow-wrap: anywhere; user-select: all; }
+.ck-rrep { margin-top: 8px; }
+.ck-ract { margin-top: 24px; display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+.ck-ret [tabindex="-1"]:focus { outline: none; }
+
+/* ── From a small tablet up: the roomier measurements ──────────────────── */
+@media (min-width: 600px) {
+  .ck-head { padding-top: 24px; }
+  .ck-h1 { margin-top: 16px; font-size: clamp(40px, 4.45vw, 64px); }
+  .ck-lead { font-size: 18px; line-height: 1.6; }
+  .ck-grid { margin-top: 32px; }
+  .ck-sum { border-radius: 28px; padding: 32px; }
+  .ck-tray { height: 44px; }
+  .ck-seg { height: 36px; }
+  .ck-stop { padding-bottom: 24px; }
+  .ck-stop::before { top: 18px; }
+  .ck-dot { top: 6px; }
+  .ck-row { display: block; }
+  .ck-lab { font-size: 13.5px; }
+  .ck-stop .ck-fig { margin-top: 8px; font-size: 40px; line-height: 1; letter-spacing: -.04em; text-align: left; }
+  .ck-stop .ck-sen { margin-top: 8px; font-size: 15px; color: var(--v3-ink); }
+  .ck-out .ck-sen { margin-top: 0; }
+  .ck-out { align-items: flex-start; gap: 12px; }
+  .ck-out .ck-sen.ck-small { margin-top: -4px; font-size: 15px; }
+  .ck-act { margin-top: 4px; }
+  .ck-fp { border-radius: 28px; padding: 32px; }
+  .ck-slot { margin-top: 24px; }
+  .ck-frame { border-radius: 16px; min-height: 560px; }
+  .ck-frame.stat { padding: 0; }
+  .ck-status { padding: 32px 24px; }
+  .ck-blk .ck-status { padding: 0; margin-top: 12px; }
+  .ck-blk { padding: 0; }
+  .ck-fp .ck-gate { padding: 0; }
+  .ck-ba { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .ck-br { margin-top: 16px; }
+  .ck-go { display: inline-flex; padding: 0 6px 0 26px; }
+  .ck-go.plain { padding: 0 26px; }
+  .ck-ghost { display: inline-flex; }
+  .ck-ret { margin-top: 96px; max-width: 560px; border-radius: 28px; padding: 40px; }
+  .ck-rh { font-size: 40px; }
+  .ck-rp { font-size: 17px; line-height: 1.65; }
+  .ck-ref { border-radius: 16px; }
+  .ck-ref code { max-width: 30ch; }
+  .ck-ract { margin-top: 32px; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .ck-ret--solo { margin-top: 48px; }
+}
+@media (min-width: 900px) {
+  .ck-grid { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 16px; align-items: start; margin-top: 48px; }
+}
+@media (min-width: 1200px) { .ck-h1 { font-size: 64px; } }
+/* Both columns stay in view while the other scrolls; only when the screen is
+   tall enough to hold the taller one. */
+@media (min-width: 1100px) and (min-height: 900px) {
+  .ck-grid > .ck-col, .ck-grid > .ck-fp { position: sticky; top: calc(var(--chrome-h, 64px) + 24px); }
 }
 
-/* ── Head ───────────────────────────────────────────────────────────────────
-   The app scale, not .sec-h's 52px/1.3 content-page title. */
-.checkout-page .checkout-head { margin-bottom: clamp(20px, 3vw, 32px); }
-.checkout-page .checkout-head h1 { margin: 0; padding: 0; font-family: var(--display); font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -.015em; line-height: 1.04; color: var(--t0); }
-.checkout-page .checkout-head p { margin: 10px 0 0; max-width: 60ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
-
-/* ── Panels ─────────────────────────────────────────────────────────────── */
-.checkout-page .card { padding: 22px; border: 1px solid var(--co-hair); border-radius: var(--radius-2xl); background: var(--card); box-shadow: none; overflow: visible; transition: none; }
-.checkout-page .card:hover { border-color: var(--co-hair); }
-
-.checkout-page .checkout-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
-/* The DOM order is the summary, the payment panel, then "Back to settings", so
-   the tab order is the reading order on a phone, where they stack that way.
-   From 761px the link goes back under the summary card by grid area. That media
-   query is the exact complement of the phone block's (and of the page's own
-   `wide`), so no fractional width matches neither. The 14px between card and
-   link is the 20px grid gap less 6px. */
-.checkout-page .checkout-grid > .checkout-back { justify-self: start; }
-@media not all and (max-width: 760px) {
-  .checkout-page .checkout-grid { grid-template-areas: "summary form" "back form"; grid-template-rows: auto 1fr; }
-  .checkout-page .checkout-summary { grid-area: summary; }
-  .checkout-page .checkout-form { grid-area: form; }
-  .checkout-page .checkout-grid > .checkout-back { grid-area: back; margin-top: -6px; }
+/* ── The chroma ring and the arrow ─────────────────────────────────────── */
+@property --mi-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.ck .mi-ring { position: relative; -webkit-tap-highlight-color: transparent; }
+.ck .mi-ring::before { content: ""; position: absolute; inset: -1px; padding: 1.5px; border-radius: inherit; pointer-events: none;
+  background: conic-gradient(from var(--mi-a), var(--v3-hues), hsl(8 58% 56%));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0; padding: .5px; transition: opacity 280ms cubic-bezier(.25, 1, .5, 1), padding 280ms cubic-bezier(.25, 1, .5, 1), --mi-a 0s linear 280ms; }
+@media (hover: hover) and (pointer: fine) {
+  .ck .mi-ring:hover::before { opacity: .92; padding: 1.5px; --mi-a: 140deg; transition: opacity 320ms cubic-bezier(.25, 1, .5, 1) 40ms, padding 360ms cubic-bezier(.25, 1, .5, 1) 40ms, --mi-a 560ms cubic-bezier(.45, .05, .3, 1) 40ms; }
 }
+.ck .mi-ring:focus-visible::before { opacity: .92; padding: 1.5px; --mi-a: 140deg; transition: opacity 320ms cubic-bezier(.25, 1, .5, 1), padding 360ms cubic-bezier(.25, 1, .5, 1), --mi-a 560ms cubic-bezier(.45, .05, .3, 1); }
+@media (hover: none) { .ck .mi-ring:active::before { opacity: .92; padding: 1.5px; transition: none; } }
+.ck .mi-ring[aria-disabled="true"]::before { display: none; }
+.ck .mi-go { position: relative; display: inline-grid; place-items: center; overflow: hidden; --mi-r: 45deg; transition: background-color 150ms ease; }
+.ck .mi-go > svg { grid-area: 1 / 1; }
+.ck .mi-go > .mi-a { transition: transform 260ms cubic-bezier(.25, 1, .5, 1); }
+@media (hover: hover) and (pointer: fine) { .ck :hover > .mi-go > .mi-a { transform: rotate(var(--mi-r)); transition: transform 320ms cubic-bezier(.25, 1, .5, 1); } }
+.ck :focus-visible > .mi-go > .mi-a { transform: rotate(var(--mi-r)); transition: transform 320ms cubic-bezier(.25, 1, .5, 1); }
+@media (hover: none) { .ck .ck-go:active .mi-a { transform: rotate(45deg); } }
 
-.checkout-page .checkout-plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--co-hair); }
-.checkout-page .checkout-plan-name { font-size: 16px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
-.checkout-page .checkout-plan-cadence { margin-top: 3px; font-family: var(--font); font-size: var(--fs-caption); font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--t1); }
-.checkout-page .checkout-plan-price { text-align: right; white-space: nowrap; }
-.checkout-page .checkout-plan-amount { display: block; font-family: var(--display); font-size: 32px; font-weight: 600; letter-spacing: -.015em; line-height: 1; color: var(--t0); font-variant-numeric: tabular-nums; }
-.checkout-page .checkout-plan-per { font-size: 12px; color: var(--t1); }
-/* "Unavailable" is a word, not a figure: at the price's display size it
-   filled the summary's head. Same treatment /plans gives it. */
-.checkout-page .checkout-plan-amount.is-word { font-family: var(--font); font-size: 17px; font-weight: 560; letter-spacing: -.01em; }
-/* The note is a fact about the price (currency, cadence, or that live
-   pricing is unreachable), not an offer, so it is ink, not accent. */
-.checkout-page .checkout-plan-note { margin-top: 14px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
-.checkout-page .checkout-price-retry { align-self: stretch; width: 100%; min-height: 44px; margin-top: 10px; white-space: nowrap; }
-/* The trial is the one tinted object: it is a state the buyer needs to see
-   before paying (nothing charged today). --ok-strong on the 12% --ok wash. */
-.checkout-page .checkout-trial { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 12px; border-radius: var(--radius); background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok-strong); font-size: 12.5px; font-weight: 560; line-height: 1.4; }
-.checkout-page .checkout-trial svg { flex: 0 0 auto; }
-/* Renewal terms and consent, in the form panel directly above the payment
-   form. The renewal sentence is primary ink: it is what the buyer is agreeing
-   to pay. It reserves two lines, and three where the longest wording (the
-   yearly trial sentence) wraps to three: in one column, and in the narrow band
-   just above it where the two columns first leave the panel little width. So
-   a period change that swaps its wording does not move the payment form. The
-   Terms line stays secondary. */
-.checkout-page .checkout-disclosure { margin: 0 0 16px; }
-.checkout-page .checkout-renewal { min-height: 3em; margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: var(--t0); }
-.checkout-page .checkout-terms { margin: 6px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
-.checkout-page .checkout-terms a { padding-block: 4px; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-@media (hover: hover) {
-  .checkout-page .checkout-terms a:hover { color: var(--t0); }
+/* ── Reduced motion: opacity only ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .ck-seg, html:not([data-reduced-motion="false"]) .ck-go, html:not([data-reduced-motion="false"]) .ck-lnk, html:not([data-reduced-motion="false"]) .ck .checkout-terms a, html:not([data-reduced-motion="false"]) .ck-ghost, html:not([data-reduced-motion="false"]) .ck-det > summary svg { transition: none; }
+  html:not([data-reduced-motion="false"]) .ck-seg:active, html:not([data-reduced-motion="false"]) .ck-go:active, html:not([data-reduced-motion="false"]) .ck-ghost:active, html:not([data-reduced-motion="false"]) .ck-lnk:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .ck-det[open] > summary svg { transform: none; }
+  html:not([data-reduced-motion="false"]) .ck-fx-a, html:not([data-reduced-motion="false"]) .ck-fx-b { animation: none; }
+  html:not([data-reduced-motion="false"]) .ck .mi-ring::before { --mi-a: 140deg; padding: 1.5px; transition: opacity 120ms linear; }
+  html:not([data-reduced-motion="false"]) .ck .mi-ring:hover::before, html:not([data-reduced-motion="false"]) .ck .mi-ring:focus-visible::before { transition: opacity 120ms linear; }
+  html:not([data-reduced-motion="false"]) .ck .mi-go > .mi-a, html:not([data-reduced-motion="false"]) .ck :hover > .mi-go > .mi-a, html:not([data-reduced-motion="false"]) .ck :focus-visible > .mi-go > .mi-a { transform: none; transition: none; }
 }
-.checkout-page .checkout-features { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--co-hair); list-style: none; }
-.checkout-page .checkout-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
-/* The list folds into a disclosure on a phone only. Wider, the summary is
-   hidden and the list is open (the page sets `open`), as it was before. */
-@media not all and (max-width: 760px) { .checkout-page .checkout-included > summary { display: none; } }
-@media (max-width: 760px) {
-  .checkout-page .checkout-included { margin-top: 18px; border-top: 1px solid var(--co-hair); }
-  .checkout-page .checkout-included > summary { display: flex; align-items: center; justify-content: space-between; min-height: 48px; font-size: 14px; font-weight: 560; color: var(--t0); cursor: pointer; list-style: none; }
-  .checkout-page .checkout-included > summary::-webkit-details-marker { display: none; }
-  .checkout-page .checkout-included > summary::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform 150ms ease-out; }
-  .checkout-page .checkout-included[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
-  .checkout-page .checkout-included .checkout-features { margin-top: 0; padding-top: 4px; border-top: 0; }
-}
-.checkout-page .checkout-check { flex-shrink: 0; margin-top: 3px; color: var(--accent-mid); }
-.checkout-page .checkout-back { display: inline-flex; align-items: center; align-self: flex-start; gap: 6px; min-height: 32px; padding: 0 2px; font-size: 13px; color: var(--t1); text-decoration: none; }
-.checkout-page .checkout-back:hover { color: var(--t0); }
-.checkout-page .checkout-back--plans { margin: 0 0 12px -2px; font-weight: 500; }
-
-/* ── Billing period ──────────────────────────────────────────────────────────
-   One row of equal segments on a tray, the shape /plans uses for the same
-   choice, with its selected state (ink fill, panel-coloured text). The column
-   count follows the options, and every label is a single unbroken line, so
-   the row never wraps; the summary column is never wider than 360px, so this
-   is the one layout at every width. A segment with a saving holds two lines
-   (period and saving); one without it drops the empty line, so its label sits
-   centred and the 48px floor keeps the row the same height either way. */
-.checkout-page .checkout-period { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: 0 0 18px; padding: 4px; border: 1px solid var(--co-hair); border-radius: var(--btn-radius); background: var(--co-wash); }
-.checkout-page .checkout-period-opt { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 48px; padding: 6px 4px; border-radius: var(--btn-radius); color: var(--t1); white-space: nowrap; cursor: pointer; transition: background-color var(--dur-1) ease, color var(--dur-1) ease; }
-.checkout-page .checkout-period-opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.checkout-page .checkout-period-label { font-size: 13px; font-weight: 560; line-height: 1.2; }
-.checkout-page .checkout-period-save { min-height: 1.3em; font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; line-height: 1.3; color: var(--t2); font-variant-numeric: tabular-nums; }
-.checkout-page .checkout-period-save:empty { display: none; }
-.checkout-page .checkout-period-opt:hover { background: var(--co-wash); color: var(--t0); }
-.checkout-page .checkout-period-opt.is-on { background: var(--t0); color: var(--card); }
-.checkout-page .checkout-period-opt.is-on .checkout-period-save { color: inherit; }
-/* The input is transparent, so its own outline would be invisible: the ring
-   goes on the segment the person sees. */
-.checkout-page .checkout-period-opt:has(input:focus-visible) { outline: 2px solid var(--link, var(--accent-mid)); outline-offset: 2px; }
-/* Locked once payment is submitted: the choice stays visible, nothing in the
-   row responds, and the line below says why. */
-.checkout-page .checkout-period.is-locked .checkout-period-opt { cursor: not-allowed; }
-.checkout-page .checkout-period.is-locked .checkout-period-opt input { cursor: not-allowed; }
-.checkout-page .checkout-period.is-locked .checkout-period-opt:not(.is-on) { opacity: .5; }
-.checkout-page .checkout-period.is-locked .checkout-period-opt:not(.is-on):hover { background: transparent; color: var(--t1); }
-.checkout-page .checkout-period-locked { margin: -10px 0 18px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
-
-/* The Stripe embed's frame. It paints its own contents; this is the panel. */
-.checkout-page .checkout-form { min-height: 420px; padding: 20px; }
-/* Between one form and the next. Emptied, not removed, once the form mounts,
-   so it takes no space beside the form and the next load is announced. */
-.checkout-page .checkout-loading { margin: 0; padding: 24px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--t1); }
-.checkout-page .checkout-loading:empty { padding: 0; }
-.checkout-page .checkout-error { padding: 24px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--t1); }
-.checkout-page .checkout-error code { padding: 2px 6px; border-radius: var(--radius-xs); background: var(--co-wash); font-family: var(--mono); font-size: 12px; color: var(--t0); }
-.checkout-page .checkout-error-h { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 560; color: var(--t0); }
-.checkout-page .checkout-error-p { display: block; font-size: 13px; color: var(--t1); }
-.checkout-page .checkout-error-note { margin-top: 8px; font-size: 12px; color: var(--t2); }
-.checkout-page .checkout-error-retry { margin-top: 12px; min-height: 44px; }
-
-/* Signed out: the one step on this page that needs an account. Same frame as
-   the panel's other states, with the action as the panel's single control. */
-.checkout-page .checkout-signin { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px; text-align: center; }
-.checkout-page .checkout-signin-h { font-size: 15px; font-weight: 560; color: var(--t0); }
-.checkout-page .checkout-signin-p { max-width: 42ch; font-size: 13px; line-height: 1.6; color: var(--t1); }
-.checkout-page .checkout-signin-btn { margin-top: 8px; }
-/* The copy inside the summary card is for the one-column layout only. */
-.checkout-page .checkout-signin--inline { display: none; }
-
-/* ── The return page, and the invalid-selection state ─────────────────────────
-   One panel in a centred column of up to 480px, 15vh below the nav, text left-aligned inside it, the state carried by the heading's words and a
-   glyph in the state colour — not by a 64px tinted circle, which is the stock
-   confirmation screen. */
-.checkout-page .checkout-return { display: flex; justify-content: center; padding: 15vh 0 24px; }
-.checkout-page .checkout-return-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; max-width: 480px; padding: clamp(22px, 3.4vw, 34px); text-align: left; }
-.checkout-page .checkout-return-card h1 { margin: 4px 0 0; font-family: var(--display); font-size: clamp(24px, 3vw, 30px); font-weight: 600; letter-spacing: -.03em; line-height: 1.1; color: var(--t0); }
-.checkout-page .checkout-return-card p { max-width: 46ch; margin: 0; font-size: 14px; line-height: 1.6; color: var(--t1); }
-.checkout-page .checkout-return-card p strong { color: var(--t0); font-weight: 560; }
-.checkout-page .checkout-success-icon,
-.checkout-page .checkout-error-icon { display: flex; align-items: center; justify-content: flex-start; width: auto; height: auto; border-radius: 0; background: none; font-family: var(--display); font-size: 26px; font-weight: 600; line-height: 1; }
-.checkout-page .checkout-success-icon { color: var(--ok-strong); }
-.checkout-page .checkout-error-icon { color: var(--err-strong); }
-.checkout-page .checkout-success-icon svg { width: 28px; height: 28px; }
-.checkout-page .checkout-error-icon svg { width: 24px; height: 24px; }
-.checkout-page .checkout-spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--co-hair-2); border-top-color: var(--accent-mid); animation: checkout-spin .8s linear infinite; }
-.checkout-page .checkout-return-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }
-
-/* ── The return page after a payment (CheckoutReturn.jsx) ─────────────────────
-   One centred column on the page ground, no card: the card was a small box in
-   a big void. Containment is kept only where it means something, the ledger's
-   hairline rows and the details list's hairline. Top-anchored, not vertically
-   centred, so changing state never moves the headline: the glyph slot is a
-   fixed 28px in every state. The ledger steps each Free value to its Pro value
-   as a link into the tool where it applies; the Pro value is the page's
-   largest coloured element. */
-.checkout-page .co-return { display: flex; flex-direction: column; width: min(100%, 600px); margin-inline: auto; padding: clamp(24px, 8vh, 88px) 0 0; }
-
-.checkout-page .co-head { display: flex; flex-direction: column; align-items: flex-start; animation: co-fade 150ms var(--ease-out) both; }
-.checkout-page .co-glyph { display: flex; align-items: center; justify-content: flex-start; width: 28px; height: 28px; margin-bottom: 16px; }
-.checkout-page .co-tick { color: var(--ok-strong); }
-.checkout-page .co-alert { color: var(--err-strong); }
-.checkout-page .co-spin { width: 20px; height: 20px; border-width: 2px; }
-.checkout-page .co-title { margin: 0; padding: 0; font-family: var(--display); font-size: clamp(30px, 3.6vw, 44px); font-weight: 600; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance; color: var(--t0); }
-.checkout-page .co-title:focus, .checkout-page .co-title:focus-visible { outline: none; }
-.checkout-page .co-sub { display: flex; align-items: flex-start; gap: 8px; max-width: 52ch; margin: 12px 0 0; font-size: 15px; line-height: 1.6; text-wrap: pretty; color: var(--t1); }
-.checkout-page .co-spin-inline { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 4px; }
-
-/* The ledger */
-.checkout-page .co-ledger { margin: 32px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--co-hair); }
-.checkout-page .co-ledger li { border-bottom: 1px solid var(--co-hair); }
-.checkout-page .co-ledger-h { margin: 32px 0 0; font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--t2); }
-.checkout-page .co-ledger-h + .co-ledger { margin-top: 8px; }
-.checkout-page .co-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; column-gap: 16px; align-items: center; min-height: 64px; padding: 14px 0; color: inherit; text-decoration: none; }
-.checkout-page .co-row:hover { text-decoration: none; }
-.checkout-page a.co-row { margin-inline: -12px; padding-inline: 12px; border-radius: 8px; transition: background-color var(--dur-1) ease, color var(--dur-1) ease; }
-.checkout-page a.co-row:focus-visible { outline-offset: -2px; }
-.checkout-page .co-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.checkout-page .co-row-label { font-size: 15px; font-weight: 560; line-height: 1.4; color: var(--t0); }
-.checkout-page .co-row-note { font-size: 13px; line-height: 1.5; text-wrap: pretty; color: var(--t1); }
-.checkout-page .co-change { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.checkout-page .co-from { font-size: 14px; color: var(--t2); }
-.checkout-page .co-arrow { align-self: center; flex: 0 0 auto; color: var(--t2); }
-.checkout-page .co-to { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; color: var(--accent-text); }
-.checkout-page .co-unit { font-size: 13px; color: var(--t1); }
-.checkout-page .co-row-end { display: flex; align-items: center; justify-content: flex-end; }
-.checkout-page .co-chev { color: var(--t2); transition: color var(--dur-1) ease; }
-@media (hover: hover) {
-  .checkout-page a.co-row:hover { background: var(--co-wash); }
-  .checkout-page a.co-row:hover .co-chev { color: var(--t0); }
-}
-
-/* Actions, then the details */
-.checkout-page .co-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
-.checkout-page .co-actions:empty { display: none; }
-.checkout-page .co-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 16px 0 0; font-size: 13.5px; line-height: 1.5; }
-.checkout-page .co-links a { display: inline-flex; align-items: center; min-height: 32px; color: var(--accent-text); }
-.checkout-page .co-details { margin: 32px 0 0; padding: 12px 0 0; border-top: 1px solid var(--co-hair); }
-.checkout-page .co-detail { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 16px; align-items: center; min-height: 36px; font-size: 13px; line-height: 1.5; }
-.checkout-page .co-detail dt { color: var(--t2); }
-.checkout-page .co-detail dd { margin: 0; min-width: 0; color: var(--t1); }
-.checkout-page .co-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.checkout-page .co-ref { display: flex; align-items: center; gap: 12px; }
-.checkout-page .co-ref-code { font-family: var(--mono); font-size: 12.5px; color: var(--t1); }
-
-/* Motion: one staged reveal of the ledger (300ms, rows 100ms apart, rising
-   12px), and a 150ms crossfade as the state changes. The rise runs only when
-   the app has resolved motion on (html[data-reduced-motion="false"] already
-   folds in the OS setting); otherwise rows just fade, with no movement. */
-@keyframes co-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes co-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-.checkout-page .co-ledger.is-live li { animation: co-fade 150ms var(--ease-out) both; }
-html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li { animation: co-rise 300ms var(--ease-out) both; }
-html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(2) { animation-delay: 100ms; }
-html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(3) { animation-delay: 200ms; }
-html[data-reduced-motion="false"] .checkout-page .co-ledger.is-live li:nth-child(4) { animation-delay: 300ms; }
-
-.checkout-page :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-
-/* Two columns, panel at its narrowest: the yearly trial sentence needs three
-   lines until about 790px. The band runs to 860px for room (a longer amount
-   adds characters); wider, two lines hold. One column has the same floor, so
-   the band has no lower edge and no width falls between it and the phone
-   block. */
-@media (max-width: 860px) {
-  .checkout-page .checkout-renewal { min-height: 4.5em; }
-}
-@media (max-width: 760px) {
-  .checkout-page .checkout-grid { grid-template-columns: minmax(0, 1fr); }
-  .checkout-page .checkout-plan-note, .checkout-page .checkout-trial, .checkout-page .checkout-terms { font-size: 13px; }
-  .checkout-page .checkout-back { min-height: 44px; }
-  /* Signed out, the sign-in moves up into the summary card, above the
-     folded features list, and the panel that held it goes. */
-  .checkout-page .checkout-form.is-signed-out { display: none; }
-  .checkout-page .checkout-signin--inline { display: flex; align-items: stretch; gap: 6px; margin-top: 18px; padding: 18px 0 0; border-top: 1px solid var(--co-hair); text-align: left; }
-  .checkout-page .checkout-signin--inline .checkout-signin-btn { min-height: 44px; }
-  .checkout-page .checkout-signin--inline + .checkout-included { margin-top: 18px; }
-}
-@media (max-width: 520px) {
-  .checkout-page .co-return { padding: 8px 8px 0; }
-  .checkout-page .co-actions { flex-direction: column; }
-  .checkout-page .co-actions .btn, .checkout-page .co-actions .btn-accent { width: 100%; min-height: 48px; justify-content: center; }
-  .checkout-page .co-detail { grid-template-columns: 96px minmax(0, 1fr); }
-  /* Exports only: the wide change drops under its note instead of starving it. */
-  .checkout-page .co-row--stack { grid-template-columns: minmax(0, 1fr) 16px; row-gap: 6px; }
-  .checkout-page .co-row--stack .co-change { grid-column: 1; grid-row: 2; justify-self: start; }
-  .checkout-page .co-row--stack .co-row-end { grid-column: 2; grid-row: 1 / span 2; }
-  .checkout-page .co-note-more { display: none; }
-}
-@media (pointer: coarse) {
-  .checkout-page .co-ref .btn-s { min-height: 44px; }
-  .checkout-page .co-links a { min-height: 44px; }
-}
-@media (max-width: 420px) {
-  .checkout-page .card { padding: 18px; }
-  .checkout-page .checkout-plan-amount { font-size: 28px; }
+html[data-reduced-motion="true"] .ck-seg, html[data-reduced-motion="true"] .ck-go, html[data-reduced-motion="true"] .ck-lnk, html[data-reduced-motion="true"] .ck .checkout-terms a, html[data-reduced-motion="true"] .ck-ghost, html[data-reduced-motion="true"] .ck-det > summary svg { transition: none; }
+html[data-reduced-motion="true"] .ck-seg:active, html[data-reduced-motion="true"] .ck-go:active, html[data-reduced-motion="true"] .ck-ghost:active, html[data-reduced-motion="true"] .ck-lnk:active { transform: none; }
+html[data-reduced-motion="true"] .ck-det[open] > summary svg { transform: none; }
+html[data-reduced-motion="true"] .ck-fx-a, html[data-reduced-motion="true"] .ck-fx-b { animation: none; }
+html[data-reduced-motion="true"] .ck .mi-ring::before { --mi-a: 140deg; padding: 1.5px; transition: opacity 120ms linear; }
+html[data-reduced-motion="true"] .ck .mi-ring:hover::before, html[data-reduced-motion="true"] .ck .mi-ring:focus-visible::before { transition: opacity 120ms linear; }
+html[data-reduced-motion="true"] .ck .mi-go > .mi-a, html[data-reduced-motion="true"] .ck :hover > .mi-go > .mi-a, html[data-reduced-motion="true"] .ck :focus-visible > .mi-go > .mi-a { transform: none; transition: none; }
+@media (forced-colors: active) {
+  .ck .mi-ring::before { content: none; }
+  .ck-ghost, .ck-go { border: 1px solid ButtonText; }
+  .ck-seg.on { outline: 2px solid Highlight; }
 }

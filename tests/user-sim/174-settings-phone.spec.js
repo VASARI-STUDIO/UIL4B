@@ -68,7 +68,7 @@
 //   the `!tiersStacked ||` gate dropped from the code line      -> "at 1440 the tiles are unchanged ..."; `l.native !== l.label` dropped -> "at 390 the card holds hairline rows ..."
 //   `.stg .settings-avatar-edit` touch band, or the 1440 opacity:0 base, changed -> "the switch has no extra reach ..."
 import { test, expect } from './base.js'
-import { go, restingScrollY, signIn, watch, wheelToRest } from './helpers.js'
+import { go, restingScrollY, signIn, watch, wheelToRest, continueWithEmail } from './helpers.js'
 import { withAvailability } from './price-payload.js'
 
 const PRICES = withAvailability({ monthly: { usd: 7 }, quarterly: { usd: 18 }, yearly: { usd: 48 } })
@@ -236,6 +236,7 @@ test.describe('settings on a phone: history and focus', () => {
     await toast.getByRole('button', { name: 'Sign in' }).click()
     await expect(page.locator('#ui-login-title')).toBeVisible()
     await page.locator('#ui-login-email').fill('someone@uil4b.test')
+    await continueWithEmail(page)
     await page.locator('#ui-login-password').fill('a-long-password')
     await page.locator('form.auth-form button[type="submit"]').click()
     await expect(page.locator('#ui-login-title')).toBeHidden()

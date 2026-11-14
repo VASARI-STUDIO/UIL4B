@@ -61,6 +61,9 @@ import { openPaletteTools } from './palette-helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
+
+// The palette is what "Save to my projects" opens, so the other starts on /onboarding are the rest.
+const OTHER_STARTS = FIRST_WINS.filter((w) => w.id !== 'palette')
 import { SIGNED_IN_HOME } from '../../src/utils/onboardingState.js'
 import { TOAST_MIN_MS, TOAST_ERROR_MIN_MS } from '../../src/utils/toastDuration.js'
 
@@ -479,8 +482,8 @@ test.describe('7 — an onboarded account typing /onboarding lands on its home',
       // Choosing a start still opens the tool, not the User Home: completion
       // is written to the profile in the same click, and that write must not
       // trip the redirect above.
-      await fresh.page.locator(`[data-first-win="${FIRST_WINS[0].id}"]`).click()
-      await expect(fresh.page).toHaveURL(new RegExp(`${FIRST_WINS[0].route}(\\?|$)`))
+      await fresh.page.locator(`[data-first-win="${OTHER_STARTS[0].id}"]`).click()
+      await expect(fresh.page).toHaveURL(new RegExp(`${OTHER_STARTS[0].route}(\\?|$)`))
       await fresh.context.close()
     })
   }

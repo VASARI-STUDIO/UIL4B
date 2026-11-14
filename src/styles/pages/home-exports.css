@@ -376,14 +376,13 @@
   z-index: 2;
   border-radius: 8px;
   object-fit: cover;
-  transition: transform 300ms var(--hx-swap), filter 240ms ease, opacity 240ms ease;
 }
 .hx-pg { outline: 1px solid oklch(1 0 0 / .1); outline-offset: -1px; }
-.hx-obj[data-front="false"] { transform: scale(.96); filter: brightness(.42) saturate(.7); }
+/* The picked picture comes forward by stacking order alone: nothing in the
+ * pile scales or dims, the same rule the cards keep. */
 .hx-obj[data-front="true"] { z-index: 5; }
 .hx-gf { left: 316px; top: 88px; width: 520px; height: 293px; }
 .hx-gb { display: none; transform: rotate(3deg); }
-.hx-gb[data-front="false"] { transform: rotate(3deg) scale(.96); }
 .hx-kt { z-index: 1; left: 40px; top: 84px; width: 320px; height: 180px; }
 .hx-bk {
   z-index: 3;

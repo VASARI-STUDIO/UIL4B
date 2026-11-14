@@ -51,6 +51,8 @@ const KEEP = {
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's
     'xd-type', 'xd-cat',
+    // its inline Theme list: one row per theme, Free and In Pro
+    'xd-theme-opt',
     // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
     'pvd-state',
     // the Gradient Generator's stop list: the select area of a stop row
@@ -92,7 +94,9 @@ const KEEP = {
     // a locked prompt card: a button (signed-out) or a link (Pro) drawn as the card it stands in for
     'pl-card',
     // the homepage's folder tiles on the phone board, its piece chips, its screenshot thumbnails and the icon grid's cells
-    'bmp-fold', 'hx-pc', 'hsc-open', 'ht-ic-t'],
+    'bmp-fold', 'hx-pc', 'hsc-open', 'ht-ic-t',
+    // an onboarding font pair: a radio drawn as a 64px card (pair name, then its fonts) in a list of three
+    'ob-pair'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood

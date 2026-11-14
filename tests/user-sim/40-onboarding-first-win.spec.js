@@ -1,125 +1,55 @@
-// Onboarding, walked.
+// Onboarding, walked: where each way out of the kit builder lands, and what it records.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// WHY THIS SPEC NEEDS A FIXTURE, AND WHAT THE FIXTURE IS NOT
-// ─────────────────────────────────────────────────────────────────────────────
-// /onboarding is signed-in only, and this suite has no way to create a real
-// account: it runs against `vite preview`, there is no backend, and the audit
-// that produced these items was marked `partial` precisely because signed-in
-// surfaces are unreachable from a signed-out session.
+// /onboarding is signed-in only. signIn() (a test-mode build with the Firebase double) gives an
+// un-onboarded free account, so the page mounts and the exits can be followed for real. The full
+// beat-by-beat journeys live in v3-pro-onboarding.spec.js; this spec pins the exits and the
+// state they leave behind:
 //
-// So the screen that replaced the pricing step could be reasoned about but never
-// OBSERVED, which is how a flow ends up shipping with a card that navigates
-// nowhere. This seeds Firebase Auth's own IndexedDB persistence with a
-// restorable user so AuthContext resolves signed-in and the component mounts.
+//   Save to my projects  -> /create/palette, or a stashed checkout when the account came to pay
+//   Skip                 -> /projects, or a stashed checkout
+//   Type scale / Gradient -> that tool (the palette is what Save already opens, so it has no link)
 //
-// WHAT THAT IS: a rendering fixture. Enough for the SPA to decide it has a user.
-// WHAT IT IS NOT: a session. No token is valid, nothing is signed, every
-// Firestore read fails, and the profile never hydrates — which is why the tests
-// below assert only on what the component renders and where it navigates, never
-// on persisted state coming back.
-//
-// If Firebase changes its persistence format this fixture stops working. It
-// then FAILS LOUDLY on the first assertion (the screen simply will not be
-// there) rather than skipping — a fixture that silently stops covering
-// something is the exact failure mode base.js was written to end.
+// Whatever the exit, onboarding is complete and the time-to-value clock is running.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 
-// Mirrors the fallback in src/utils/firebase.js. The preview build has no
-// VITE_FIREBASE_API_KEY, so this is the key the SDK actually uses; a unit test
-// is not possible here, so the spec asserts the screen appears, which is the
-// observable consequence of the key being right.
-const API_KEY = 'AIzaSyADQoAyU3qwAls2bUW6rfE1csZa0Ud6EKE'
+const STASH = 'vs-resume-after-onboarding'
 
-async function seedSignedIn(page, baseURL) {
-  // The record is written from a static document on the same origin, not from
-  // the running app. A fresh profile's SDK finishes starting up by finding no
-  // user and clearing the persisted-user key; seeded from the loaded page, that
-  // clear can land after the write and the app restores nobody. Written before
-  // the app exists, the SDK's first read of the store finds the user.
-  // Firebase VALIDATES a restored user against Google on the next load. A
-  // forged token is answered with a 400, and the SDK then DELETES the persisted
-  // record and signs out — which is correct of it, and is why simply writing
-  // the record is not enough. (Observed: the record is present before the
-  // navigation and gone after it, with the app back on /login.)
-  //
-  // Aborting those two hosts makes the same calls fail as a NETWORK error
-  // instead, which the SDK treats as retryable and keeps the user for. The
-  // suite already blocks every external host, so this changes the failure mode
-  // of a request that was never going to succeed here, not whether it is made.
-  //
-  // Nothing is forged in the response: no fake token is minted and no auth
-  // answer is faked. The app simply cannot reach Google, exactly as in the rest
-  // of this suite, and falls back to the user it already had.
-  await page.route('**://securetoken.googleapis.com/**', (r) => r.abort())
-  await page.route('**://identitytoolkit.googleapis.com/**', (r) => r.abort())
-  await page.goto(baseURL + '/robots.txt')
-  const result = await page.evaluate(async (apiKey) => {
-    // A returning browser carries the first-paint session hint; without it the
-    // app does not fetch the auth SDK on a cold load and never reads the record.
-    localStorage.setItem('vs-session', '1')
-    const user = {
-      uid: 'usersim-first-win',
-      email: 'first.win@example.com',
-      displayName: 'Ada Lovelace',
-      emailVerified: true,
-      isAnonymous: false,
-      providerData: [],
-      apiKey,
-      appName: '[DEFAULT]',
-      stsTokenManager: {
-        refreshToken: 'usersim', accessToken: 'usersim',
-        expirationTime: Date.now() + 3600e3,
-      },
-      createdAt: String(Date.now()),
-      lastLoginAt: String(Date.now()),
-    }
-    return await new Promise((resolve) => {
-      const open = indexedDB.open('firebaseLocalStorageDb', 1)
-      open.onupgradeneeded = () =>
-        open.result.createObjectStore('firebaseLocalStorage', { keyPath: 'fbase_key' })
-      open.onsuccess = () => {
-        const tx = open.result.transaction('firebaseLocalStorage', 'readwrite')
-        tx.objectStore('firebaseLocalStorage')
-          .put({ fbase_key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: user })
-        tx.oncomplete = () => resolve('seeded')
-        tx.onerror = () => resolve('tx-error')
-      }
-      open.onerror = () => resolve('open-error')
-    })
-  }, API_KEY)
-  expect(result, 'the auth fixture must be written before onboarding is opened').toBe('seeded')
+async function openOnboarding(page, size) {
+  if (size) await page.setViewportSize(size)
+  await signIn(page, { onboarded: false })
+  await go(page, '/onboarding')
+  await expect(page.locator('[data-h1]'), 'the signed-in account must reach the kit builder').toBeVisible()
 }
 
-const firstWinStep = (page) => page.locator('[data-testid="onboarding-first-win"]')
+const path = (page) => new URL(page.url()).pathname
+const pathAndSearch = (page) => new URL(page.url()).pathname + new URL(page.url()).search
+const local = (page, key) => page.evaluate((k) => localStorage.getItem(k), key)
+const stash = (page, value) => page.evaluate(([k, v]) => sessionStorage.setItem(k, v), [STASH, value])
+const stashed = (page) => page.evaluate((k) => sessionStorage.getItem(k), STASH)
 
-/**
- * Seed the restorable user, open /onboarding, and wait for the app to have
- * restored it. The screen only renders once AuthContext has resolved a user,
- * so waiting on it is waiting on the restore.
- */
-async function openFirstWin(page, baseURL) {
-  await seedSignedIn(page, baseURL)
-  await go(page, baseURL + '/onboarding')
-  const step = firstWinStep(page)
-  await expect(step, 'the seeded user must be restored and the first-win screen rendered')
-    .toBeVisible()
-  return step
+/** Open the page, then walk to the last beat with a valid colour, so the pill reads "Save to my projects". */
+async function toSave(page) {
+  await page.locator('#onb-hex').fill('#3a6ea5')
+  await page.locator('[data-go]').click()
+  await expect(page.locator('[data-h1]')).toHaveText('Pick your fonts')
+  await page.locator('[data-go]').click()
+  await expect(page.locator('[data-h1]')).toHaveText('Name your kit')
+  await expect(page.locator('[data-go]')).toContainText('Save to my projects')
 }
 
-test.describe('the first win is on the path, in place of the pricing step', () => {
-  test('a brand-new account is asked what to make, not what to pay', async ({ page, baseURL }) => {
+test.describe('the kit builder is the first screen, and its exits go to real places', () => {
+  test('a brand-new account is asked for a colour, not for money', async ({ page }) => {
     watch(page, 'a brand-new account reaching onboarding')
-    const step = await openFirstWin(page, baseURL)
-    await expect(step.getByRole('heading', { name: 'What do you want to make first?' })).toBeVisible()
+    await openOnboarding(page)
+    await expect(page.locator('[data-h1]')).toHaveText('Start with your brand colour')
 
-    // The three starting points are the three the sign-up dialog promises
-    // ("Your palettes, type scales and gradients, kept") — see utils/firstWin.js.
-    await expect(page.locator('[data-first-win]')).toHaveCount(3)
-    for (const id of ['palette', 'type-scale', 'gradient']) {
-      await expect(page.locator(`[data-first-win="${id}"]`)).toBeVisible()
+    // Two other ways in. The palette is what Save opens, so it is not offered a second time.
+    await expect(page.locator('a[data-start][data-first-win]')).toHaveCount(2)
+    for (const id of ['type-scale', 'gradient']) {
+      await expect(page.locator(`a[data-first-win="${id}"]`)).toBeVisible()
     }
+    await expect(page.locator('a[data-first-win="palette"]')).toHaveCount(0)
 
     // The step that asked for money before anything had been made is gone.
     await expect(page.locator('.onb-tiers')).toHaveCount(0)
@@ -127,147 +57,159 @@ test.describe('the first win is on the path, in place of the pricing step', () =
     await expect(page.getByRole('button', { name: /Go Pro/ })).toHaveCount(0)
 
     // Gone from the path, not hidden: the tier truth stays, with a real link.
-    await expect(step.getByRole('link', { name: 'Pro' })).toHaveAttribute('href', '/plans')
+    await expect(page.getByRole('link', { name: 'Pro', exact: true })).toHaveAttribute('href', '/plans')
   })
 
-  test('the heading takes focus, so the screen is announced', async ({ page, baseURL }) => {
+  test('the heading takes focus, so the screen is announced', async ({ page }) => {
     // App.jsx navigates here with replace:true and manages no focus of its own,
-    // so without this a keyboard/AT user is dropped on <body> (audit C5 / QA Q3).
+    // so without this a keyboard or screen-reader user is dropped on <body>.
     watch(page, 'reaching onboarding with a keyboard')
-    await openFirstWin(page, baseURL)
-
-    await expect
-      .poll(() => page.evaluate(() => document.activeElement?.tagName), { timeout: 5000 })
-      .toBe('H1')
-    expect(await page.evaluate(() => document.activeElement?.textContent))
-      .toContain('What do you want to make first?')
+    await openOnboarding(page)
+    await expect.poll(() => page.evaluate(() => document.activeElement?.tagName), { timeout: 5000 }).toBe('H1')
+    expect(await page.evaluate(() => document.activeElement?.textContent)).toContain('Start with your brand colour')
   })
 
-  // Each card must OPEN ITS TOOL. A card that lands on the "still building"
-  // state, or on the colour sales page, would be the first thing a new account
-  // is shown — and nothing before this test could observe that.
+  // Each other start must OPEN ITS TOOL, not land on the "still building" state.
   for (const [id, heading] of [
-    ['palette', /palette/i],
     ['type-scale', /type scale/i],
     ['gradient', /gradient/i],
   ]) {
-    test(`picking "${id}" opens the real tool`, async ({ page, baseURL }) => {
+    test(`starting with "${id}" opens the real tool`, async ({ page }) => {
       watch(page, `a new account starting with ${id}`)
-      await openFirstWin(page, baseURL)
+      await openOnboarding(page)
+      await page.locator(`a[data-first-win="${id}"]`).click()
 
-      await page.locator(`[data-first-win="${id}"]`).click()
-
-      await expect
-        .poll(() => new URL(page.url()).pathname, { timeout: 10000 })
-        .toBe(`/create/${id}`)
-
-      // Not merely the right URL: a LIVE tool. CreateTool renders the 🤫
-      // still-building state for a `soon` route, and that state is what a
-      // mistyped or retired route would land on.
+      await expect.poll(() => path(page), { timeout: 10000 }).toBe(`/create/${id}`)
       await expect(page.getByText(/still building|coming soon/i)).toHaveCount(0)
       await expect(page.getByRole('heading', { name: heading }).first()).toBeVisible()
 
-      // Onboarding is finished, so the flow cannot re-appear on the next load.
-      expect(await page.evaluate(() => localStorage.getItem('vs-onboarded'))).toBe('1')
-      // ...and the time-to-value clock is running, which is what utils/
-      // timeToValue.js measures the first activation against.
-      expect(
-        await page.evaluate(() => localStorage.getItem('vs-first-win-started')),
-        'the time-to-value clock must start when the screen is answered',
-      ).toMatch(/^\d+$/)
+      // Onboarding is finished, so the flow cannot re-appear on the next load, and the
+      // time-to-value clock is running.
+      expect(await local(page, 'vs-onboarded')).toBe('1')
+      expect(await local(page, 'vs-first-win-started'), 'the clock must start when the screen is answered').toMatch(/^\d+$/)
     })
   }
 
-  // Someone who signed up by clicking a Pro button came to pay. The plans page
-  // stashes the checkout before the login popup opens; picking a start must not
-  // throw that away. Any other stashed page still gives way to the pick.
-  test('picking a start after clicking Pro goes on to that checkout, and the pick is still recorded', async ({ page, baseURL }) => {
+  test('Save to my projects opens the palette tool and finishes onboarding', async ({ page }) => {
+    watch(page, 'a new account saving its first kit')
+    await openOnboarding(page)
+    await toSave(page)
+    await page.locator('[data-go]').click()
+
+    await expect.poll(() => path(page), { timeout: 10000 }).toBe('/create/palette')
+    await expect(page.getByText(/still building|coming soon/i)).toHaveCount(0)
+    expect(await local(page, 'vs-onboarded')).toBe('1')
+    expect(await local(page, 'vs-first-win-started')).toMatch(/^\d+$/)
+  })
+
+  // Someone who signed up by clicking a Pro button came to pay. The plans page stashes the
+  // checkout before the login popup opens; finishing the kit must not throw that away. Any
+  // other stashed page still gives way to the exit that was chosen.
+  test('saving after clicking Pro goes on to that checkout, and the answer is still recorded', async ({ page }) => {
     watch(page, 'a new account that signed up from a Pro button')
-    await openFirstWin(page, baseURL)
-    await page.evaluate(() => sessionStorage.setItem('vs-resume-after-onboarding', '/checkout?plan=monthly'))
+    await openOnboarding(page)
+    await stash(page, '/checkout?plan=monthly')
+    await toSave(page)
+    await page.locator('[data-go]').click()
 
-    await page.locator('[data-first-win="palette"]').click()
-
-    await expect.poll(() => new URL(page.url()).pathname + new URL(page.url()).search, { timeout: 10000 })
-      .toBe('/checkout?plan=monthly')
-    expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding'))).toBeNull()
-    expect(await page.evaluate(() => localStorage.getItem('vs-onboarded'))).toBe('1')
-    expect(await page.evaluate(() => localStorage.getItem('vs-first-win-started'))).toMatch(/^\d+$/)
+    await expect.poll(() => pathAndSearch(page), { timeout: 10000 }).toBe('/checkout?plan=monthly')
+    expect(await stashed(page)).toBeNull()
+    expect(await local(page, 'vs-onboarded')).toBe('1')
+    expect(await local(page, 'vs-first-win-started')).toMatch(/^\d+$/)
   })
 
-  test('picking a start drops any stashed page that is not a checkout', async ({ page, baseURL }) => {
+  test('starting a tool after clicking Pro goes on to that checkout too', async ({ page }) => {
+    watch(page, 'a new account from a Pro button choosing another start')
+    await openOnboarding(page)
+    await stash(page, '/checkout?plan=monthly')
+    await page.locator('a[data-first-win="gradient"]').click()
+
+    await expect.poll(() => pathAndSearch(page), { timeout: 10000 }).toBe('/checkout?plan=monthly')
+    expect(await stashed(page)).toBeNull()
+  })
+
+  test('saving drops any stashed page that is not a checkout', async ({ page }) => {
     watch(page, 'a new account that signed up from a tool page')
-    await openFirstWin(page, baseURL)
-    await page.evaluate(() => sessionStorage.setItem('vs-resume-after-onboarding', '/create/gradient'))
+    await openOnboarding(page)
+    await stash(page, '/create/gradient')
+    await toSave(page)
+    await page.locator('[data-go]').click()
 
-    await page.locator('[data-first-win="palette"]').click()
-
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 10000 }).toBe('/create/palette')
-    expect(await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding'))).toBeNull()
+    await expect.poll(() => path(page), { timeout: 10000 }).toBe('/create/palette')
+    expect(await stashed(page)).toBeNull()
   })
 
-  test('declining still finishes onboarding and lands on the teaching empty state', async ({ page, baseURL }) => {
-    // The decline path is the one that used to write localStorage only, so the
-    // account never learned onboarding had happened and it returned forever on
-    // every new browser. It must complete, and it must not invent an answer.
-    watch(page, 'a new account declining all three starts')
-    await openFirstWin(page, baseURL)
+  test('Skip still finishes onboarding and lands on the teaching empty state', async ({ page }) => {
+    // The decline path used to write localStorage only, so the account never learned onboarding
+    // had happened and it returned on every new browser. It must complete, and it must not
+    // invent an answer.
+    watch(page, 'a new account skipping the kit')
+    await openOnboarding(page)
+    await page.locator('a[data-skip]').click()
 
-    await page.getByRole('button', { name: /Not now/ }).click()
-
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 10000 }).toBe('/projects')
-    expect(await page.evaluate(() => localStorage.getItem('vs-onboarded'))).toBe('1')
-    expect(await page.evaluate(() => localStorage.getItem('vs-first-win-started'))).toMatch(/^\d+$/)
+    await expect.poll(() => path(page), { timeout: 10000 }).toBe('/projects')
+    expect(await local(page, 'vs-onboarded')).toBe('1')
+    expect(await local(page, 'vs-first-win-started')).toMatch(/^\d+$/)
   })
 
-  test('at 390px "Not now" is a 44px target and the card has no outer panel', async ({ page, baseURL }) => {
-    watch(page, 'a new account on a phone declining the first win')
-    await page.setViewportSize({ width: 390, height: 844 })
-    await openFirstWin(page, baseURL)
-
-    const box = await page.getByRole('button', { name: /Not now/ }).boundingBox()
-    expect(box.height, '"Not now" is shorter than 44px on a phone').toBeGreaterThanOrEqual(44)
-    const card = await page.locator('.onb-card').evaluate((el) => {
-      const s = getComputedStyle(el)
-      return { border: s.borderTopWidth, left: s.paddingLeft, right: s.paddingRight }
-    })
-    expect(card.border, 'the onboarding card still has a border on a phone').toBe('0px')
-    // The card is width 100% and border-box, so its own width can't show the
-    // padding; the padding itself does (36px on a wider screen).
-    expect(card.left, 'the onboarding card still pads its left edge on a phone').toBe('0px')
-    expect(card.right, 'the onboarding card still pads its right edge on a phone').toBe('0px')
+  test('Skip takes a stashed checkout and clears the stash', async ({ page }) => {
+    watch(page, 'a new account skipping after a Pro button')
+    await openOnboarding(page)
+    await stash(page, '/checkout?plan=yearly')
+    await page.locator('a[data-skip]').click()
+    await expect.poll(() => pathAndSearch(page), { timeout: 10000 }).toBe('/checkout?plan=yearly')
+    expect(await stashed(page)).toBeNull()
   })
 
-  test('the three unread survey questions are gone from the flow', async ({ page, baseURL }) => {
-    // onboarding-survey-unused. Asserted on the RENDERED flow rather than on
-    // source text: the question is whether a new account is still made to
-    // answer them, not whether a string survives somewhere.
+  test('Skip returns to a stashed tool page, so signing up mid-task does not lose the task', async ({ page }) => {
+    watch(page, 'a new account skipping after a tool page')
+    await openOnboarding(page)
+    await stash(page, '/create/gradient')
+    await page.locator('a[data-skip]').click()
+    await expect.poll(() => path(page), { timeout: 10000 }).toBe('/create/gradient')
+    expect(await stashed(page)).toBeNull()
+  })
+
+  test('at 390px Skip and the other starts are 44px targets and the page has no outer card', async ({ page }) => {
+    watch(page, 'a new account on a phone')
+    await openOnboarding(page, { width: 390, height: 844 })
+
+    for (const sel of ['a[data-skip]', 'a[data-first-win="type-scale"]', 'a[data-first-win="gradient"]', '[data-go]']) {
+      const box = await page.locator(sel).boundingBox()
+      expect(box.height, `${sel} is shorter than 44px on a phone`).toBeGreaterThanOrEqual(44)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'the page scrolls sideways at 390px').toBe(true)
+    await expect(page.locator('.onb-card')).toHaveCount(0)
+  })
+
+  test('the three unread survey questions are gone from the flow', async ({ page }) => {
+    // Asserted on the RENDERED flow rather than on source text: the question is whether a new
+    // account is still made to answer them, not whether a string survives somewhere.
     watch(page, 'checking the survey is really gone')
-    await openFirstWin(page, baseURL)
+    await openOnboarding(page)
 
     await expect(page.getByText('How did you hear about us?')).toHaveCount(0)
     await expect(page.getByText('What best describes you?')).toHaveCount(0)
     await expect(page.getByText(/Quick question \d of \d/)).toHaveCount(0)
-    // One screen, so the progress rail and the corner Skip went with it.
     await expect(page.locator('.onb-dot')).toHaveCount(0)
     await expect(page.locator('.onb-skip')).toHaveCount(0)
   })
 })
 
 test.describe('onboarding stays signed-in only', () => {
-  test('a signed-out visitor is sent to sign in, not shown the flow', async ({ page, baseURL }) => {
+  test('a signed-out visitor is sent to sign in, not shown the flow', async ({ page }) => {
     watch(page, 'a signed-out visitor opening /onboarding directly')
-    await go(page, baseURL + '/onboarding')
-    await expect.poll(() => new URL(page.url()).pathname, { timeout: 10000 }).toBe('/login')
-    await expect(firstWinStep(page)).toHaveCount(0)
+    await go(page, '/onboarding')
+    await expect.poll(() => path(page), { timeout: 10000 }).toBe('/login')
+    await expect(page.locator('[data-h1]')).toHaveCount(0)
   })
 
-  test('the sign-up promise still names the three starting points', async ({ page, baseURL }) => {
-    // utils/firstWin.js derives the three from this sentence. If the dialog's
-    // promise changes, the first wins must change with it — a unit test pins
-    // the source, and this pins what a person is actually shown.
+  test('the sign-up promise still names the three starting points', async ({ page }) => {
+    // utils/firstWin.js derives the three from this sentence. If the dialog's promise changes,
+    // the first wins must change with it: a unit test pins the source, and this pins what a
+    // person is actually shown.
     watch(page, 'reading the sign-up dialog')
-    await go(page, baseURL + '/discover/palettes')
+    await go(page, '/discover/palettes')
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
     await page.getByRole('button', { name: 'Create a free account' }).click()
     const dialog = page.getByRole('dialog')
