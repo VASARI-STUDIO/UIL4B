@@ -30,10 +30,9 @@ let catalogue = null
 let catalogueAt = 0
 let catalogueTtl = CATALOGUE_TTL_MS
 
-const API_KEY =
-  process.env.GOOGLE_FONTS_API_KEY ||
-  process.env.VITE_GOOGLE_FONTS_API_KEY ||
-  ''
+// Server-only on purpose: a VITE_-prefixed value is inlined into the public
+// client bundle, so a key read from it here would already be exposed.
+const API_KEY = process.env.GOOGLE_FONTS_API_KEY || ''
 
 /* WHY THIS FILE LOGS AT ALL.
  *
@@ -67,7 +66,7 @@ async function fromWebfontsApi() {
   // one. Said out loud anyway, because "no catalogue" with no line in the log
   // is the state this whole comment exists to remove — and an operator reading
   // a 502 needs to know the fallback was never configured, not that it broke.
-  if (!API_KEY) return degraded('WebFonts API', 'no GOOGLE_FONTS_API_KEY / VITE_GOOGLE_FONTS_API_KEY is set')
+  if (!API_KEY) return degraded('WebFonts API', 'no GOOGLE_FONTS_API_KEY is set')
   const res = await fetch(`https://www.googleapis.com/webfonts/v1/webfonts?key=${API_KEY}&sort=popularity`)
   // The key is never logged, only whether one existed. A 403 here is usually a
   // restricted or expired key and a 429 is quota, so the status is the whole

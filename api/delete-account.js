@@ -46,9 +46,13 @@ import { adminAuth, adminDb, adminStorageBucket } from './_lib/firebase-admin.js
 import { getStripeServer } from './_lib/stripe.js'
 import { failRequest } from './_lib/http.js'
 import { allowedOrigins } from './_lib/origins.js'
+import { limitRequest } from './_lib/rateLimit.js'
 import {
   isReauthFresh, customerOwnershipVerdict, mayProceedWithDeletion, liveSubscriptions, feedbackEmailFor,
 } from './_lib/accountDeletion.js'
+
+// An account is deleted once; a retry after a failure is the only repeat.
+const DELETE_LIMIT = { bucket: 'delete-account', limit: 5, windowMs: 60 * 1000 }
 
 // Firestore rejects a batch over 500 writes.
 const BATCH_LIMIT = 400
@@ -130,6 +134,8 @@ export default async function handler(req, res) {
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing auth token' })
   }
+
+  if (await limitRequest(req, res, adminDb, DELETE_LIMIT)) return
 
   let uid, email, authTimeMs
   try {

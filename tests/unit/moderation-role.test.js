@@ -564,6 +564,9 @@ function loadRoute({ roster = [], accounts = {}, rosterFails = false } = {}) {
     isAdminEmail: (email) => typeof email === 'string' && email.trim().toLowerCase() === FOUNDER_EMAIL,
     adminEmails: () => [FOUNDER_EMAIL],
     credentialProblem: () => null,
+    // The rate limiter is its own subject (rate-limiter-hardening.test.js); here
+    // it never answers, so the route runs as if under the limit.
+    limitRequest: async () => false,
     adminDb: () => ({ collection }),
     adminAuth: () => ({
       verifyIdToken: async () => { throw new Error('the harness calls the handler with a decoded token') },

@@ -46,10 +46,10 @@
 //   · `semantic`  → `semantic-color`  (semantic *what*?)
 //   · `ratio`     → `aspect-ratio`    (ratio *of what*? — and it is the term
 //                                      people actually search for)
-//   · the `component` group's home was `/ui-builder-cat`, whose "-cat" suffix
-//     only ever existed to dodge a collision with the `/ui-builder` tool. It is
-//     an internal artefact, not an identity, so it becomes `/create/components`
-//     and the tool under it takes its real name, `component-designer`.
+//
+// Old URLs whose tool has no live /create/ page yet (the component builders,
+// box shadow, imagery, the AI prompt tools) land on the closest live tool under
+// /create/ instead of a "coming soon" page, so the 301 never ends on a thin page.
 //
 // Run-together words are hyphenated on the way through (`fontgallery` →
 // `font-gallery`, `typescale` → `type-scale`): the redirect is being issued
@@ -64,28 +64,28 @@ export const CREATE_ROUTE_MIGRATION = Object.freeze([
   ['/color/gradient', '/create/gradient'],
   ['/color/contrast', '/create/contrast'],
   // Icons & Emoji
-  ['/icons-emoji', '/create/icons-emoji'],
+  ['/icons-emoji', '/create/icons'],
   ['/icons', '/create/icons'],
   ['/emoji', '/create/emoji'],
   // Typography
-  ['/typography', '/create/typography'],
+  ['/typography', '/create/type-scale'],
   ['/fontgallery', '/create/font-gallery'],
   ['/fontpairs', '/create/font-pair'],
   ['/typescale', '/create/type-scale'],
   // UI components
-  ['/ui-builder-cat', '/create/components'],
-  ['/ui-builder', '/create/component-designer'],
-  ['/box-shadow', '/create/box-shadow'],
+  ['/ui-builder-cat', '/create/palette'],
+  ['/ui-builder', '/create/palette'],
+  ['/box-shadow', '/create/gradient'],
   ['/auto-builder', '/create/auto-builder'],
   // Imagery & Media
-  ['/imagery', '/create/imagery'],
+  ['/imagery', '/create/file-converter'],
   ['/file-converter', '/create/file-converter'],
   ['/ratio', '/create/aspect-ratio'],
   // AI Studio
-  ['/ai-tools', '/create/ai-tools'],
+  ['/ai-tools', '/create/alt-text'],
   ['/alt-text', '/create/alt-text'],
-  ['/ai-prompt', '/create/ai-prompt'],
-  ['/landing-prompts', '/create/landing-prompts'],
+  ['/ai-prompt', '/create/alt-text'],
+  ['/landing-prompts', '/create/alt-text'],
 ])
 
 // Redirects that already shipped as client-side `<Navigate>` routes and had no
@@ -145,7 +145,7 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/contact', '/feedback?type=help'],
   ['/resources', '/discover'],
   ['/discover/resources', '/discover'],
-  ['/prompts', '/discover/prompts'],
+  ['/prompts', '/discover'],
   ['/pricing', '/plans'],
   ['/site-map', '/sitemap'],
   ['/about', '/learn/help#about'],
