@@ -23,7 +23,7 @@ export const guidelines = {
       const t = `<span class="r-w600" style="color:${ink}">${A(c.name)}</span>&nbsp;&nbsp;${A(lands)}`;
       return box(648, y, 576, lh, `color:${chromeOn(ctx, c.hex)}`, `<p class="r-t${size} r-nw">${t}</p>`);
     };
-    let y = 0, bands = '';
+    let bands = '';
     // the big number: as large as the band allows (cap top at least 128, under the intro), baseline 40 above the band's foot
     const big = `${pc(g)}%`, base = Math.round(gH - 40);
     let size = fitOne(ctx, 'display', dw, [big], 200, 64, 560);
@@ -31,7 +31,7 @@ export const guidelines = {
     bands += box(0, 0, W, gH, `background:${g.hex}`) +
       box(56 - lsb(ctx, 'display', dw, big, size), topForBaseline(ctx, 'display', dw, size, 1, base), 0, 0, disp(ctx, size, 1, gInk, 'letter-spacing:-0.02em'), `<p class="disp r-nw num">${A(big)}</p>`) +
       row(g, topForBaseline(ctx, 'body', 400, 15, 1.6, base), 15);
-    y = gH;
+    let y = gH;
     for (const c of rest) {
       const h = (H * c.share) / tot, size = h >= 28 ? 15 : 12, lh = size === 15 ? 24 : 16, ink = inkOn(ctx, c.hex), ty = y + (h - lh) / 2;
       bands += box(0, y, W, h, `background:${c.hex}`) + (h >= 16 ? box(56, ty, 82, lh, `color:${ink}`, `<p class="r-t${size} r-w600 num">${pc(c)}%</p>`) + row(c, ty, size) : '');
