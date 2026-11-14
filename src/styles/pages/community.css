@@ -1,680 +1,391 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   COMMUNITY — the hub, in Spectrum.
-   ═══════════════════════════════════════════════════════════════════════════
+/* The community showcase: /community, /community/:id and /u/:handle.
+   Every rule reads the V3 roles from v3-shell.css, so light and dark follow the
+   theme. One filled ink pill per screen; radii 16 / 12 / 8 / 999; controls are
+   36px, 44px on a phone. Hover effects sit behind (hover: hover); nothing that
+   sticks to the viewport scales, dims or casts a shadow. */
 
-   The 2026-09-16 audit scored this page 6 — joint worst on the site — and it
-   had never had a design pass since. It wore a 28px/700 masthead, 13.5px body
-   copy, 12px filter chips with an accent FILL on the active one, a 150px card
-   photo on `--card-grad` with a `--warm-shadow`, and a dashed empty state.
+.app-page:has(> .cm-page) { max-width: none; padding-inline: 0; padding-top: var(--chrome-h); }
 
-   ── WHY THIS IS A NEW SHEET AND NOT AN EDIT TO account.css ──────────────────
-   `src/styles/deferred/account.css` holds the `.ch-*` family, and it is also
-   /settings's and /projects's sheet — three other surfaces, two of them owned
-   by other lanes this week. `src/styles/global.css` holds `.ch-filter` and
-   `.ch-sort-btn` and is the render-blocking entry sheet every route pays for.
-   So the page gets its own stylesheet, it is imported LAST in Community.jsx so
-   it outranks both at equal specificity, and every rule is scoped under
-   `.ch-spectrum` — the co-class on the page root — so nothing here can reach
-   a surface this lane does not own.
-
-   `.ch-card` and friends are `CommunityCard.jsx`'s, and that component is
-   built to be rendered on the Discover surface too. Scoping under `.ch-spectrum`
-   means a future Discover mount gets the card it has today, not this one, until
-   somebody decides otherwise on purpose.
-
-   ── WHAT IS DELIBERATELY NOT TOUCHED ────────────────────────────────────────
-   · `.ch-thumb-mono`'s COLOUR, and `.ch-thumb`'s `--mono-ink` pair.
-     `CommunityCard.jsx` computes the monogram's ink per card with
-     `inkOnGradient()` against a 3:1 floor, `community-monogram-ink.test.js`
-     pins the rule text, and `48-text-over-gradients.spec.js` re-measures it in
-     a browser over the card's own gradient in both themes. Nothing below
-     declares `color` on that element.
-   · `.ch-card-source`. `60-community-card-credit.spec.js` walks every one of
-     them at 320/360/390/414 and fails on `scrollWidth > clientWidth + 1` — a
-     truncated platform credit. Its overflow is a measured result, not a style
-     choice: it is 12px, and the category beside it matches at phone width so
-     both still fit.
-   · The `.ch-heart` reveal-on-hover pair. It is already guarded by
-     `@media (hover:hover)` in account.css so the control is permanently visible
-     on touch, which is what `24-mobile-overhaul.spec.js` checks.
-
-   Motion, radii, type scale and accent usage all come from
-   `src/styles/pages/spectrum.css`.                                           */
-
-/* `.ch-wrap.ch-spectrum`, NOT `.ch-spectrum` — the one rule in this sheet that
-   needs the extra class to win.
-   Every other rule below is `.ch-spectrum .thing`, which is (0,2,0) and beats
-   `deferred/account.css`'s `.thing` on specificity whatever order the two
-   sheets land in. The ROOT rule is the exception: `.ch-wrap` and `.ch-spectrum`
-   are both (0,1,0), so it is decided by sheet order — and measured in the built
-   preview, Vite emits this page sheet BEFORE the shared deferred one, so
-   `max-width` here was losing to account.css's 1080 silently. Verified by
-   reading the computed value in a browser, which is the only way this class of
-   bug is ever found. */
-.ch-wrap.ch-spectrum {
-  --cm-page: var(--bg-0);
-  --cm-card: var(--card);
-  --cm-ink: var(--t0);
-  --cm-dim: var(--t1);
-  --cm-faint: var(--t2);
-  --cm-quiet: var(--t3);
-  --cm-line: var(--border);
-  --cm-line-strong: var(--bh);
-  --cm-wash: color-mix(in srgb, var(--t0) 4%, transparent);
-  --cm-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
-  --cm-ease: cubic-bezier(.23, 1, .32, 1);
-
-  /* `width:100%` IS LOAD-BEARING, AND FIXES A LATENT BUG RATHER THAN A STYLE.
-     `.ch-wrap` is a flex ITEM of `.app-page` (a column flex) and carries
-     `margin: 0 auto` from account.css. An auto margin on the cross axis
-     SUPPRESSES stretch — so the box sized itself to `fit-content` and then
-     centred that, and the `max-width: 1080px` this page has declared for years
-     was never once reached. Measured at 1440 it rendered 924px wide: the
-     max-content width of the masthead row, which is to say the gallery's width
-     was decided by how long the two button labels are.
-     `width:100%` restores the stretch; the auto margins then centre the capped
-     box, which is what they were always there to do. Found by reading the
-     computed value in a browser after the max-width change did nothing. */
+.cm-page {
+  --cm-gutter: 52px;
+  --cm-outl-h: oklch(0 0 0 / .2);
+  max-width: 1440px;
   width: 100%;
-  max-width: 1240px;
-  gap: clamp(22px, 3vw, 34px);
+  margin: 0 auto;
+  padding: 48px var(--cm-gutter) 96px;
+  color: var(--v3-ink);
+  font-size: 16px;
+  line-height: 1.5;
+}
+[data-theme="dark"] .cm-page { --cm-outl-h: oklch(1 0 0 / .2); }
+:where(.cm-page) :is(h1, h2, h3, p, ul, dl, dd) { margin: 0; }
+:where(.cm-page) ul { padding: 0; list-style: none; }
+:where(.cm-page) a { color: inherit; }
+
+.cm-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
-/* ── masthead ─────────────────────────────────────────────────────────────── */
-
-.ch-spectrum .ch-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: clamp(18px, 3vw, 40px);
-  min-width: 0;
-  padding-bottom: clamp(22px, 3vw, 32px);
-  border-bottom: 1px solid var(--cm-line-strong);
-}
-.ch-spectrum .ch-head > div:first-child { min-width: 0; max-width: 60ch; }
-
-.ch-spectrum .ch-title {
-  margin: 0;
-  max-width: 18ch;
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: clamp(34px, 5vw, 62px);
-  line-height: .98;
-  letter-spacing: -.02em;
-  color: var(--cm-ink);
-  text-wrap: balance;
-}
-
-.ch-spectrum .ch-sub {
-  margin: 16px 0 0;
-  max-width: 54ch;
-  font-size: clamp(15px, 1.2vw, 16px);
-  line-height: 1.62;
-  color: var(--cm-dim);
-  text-wrap: pretty;
-}
-/* The <small> that says the starter cards are examples is a CAVEAT, not a
-   second sentence of the pitch, and it is the one line that stops twelve seed
-   entries reading as a community. It keeps its own line, a step smaller than the
-   pitch but in the same readable ink, so it is not missed. */
-.ch-spectrum .ch-sub small {
-  display: inline-block;
-  margin-top: 8px;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--cm-dim);
-}
-
-/* The two submit entries. A pair, not one with a switch — Mobbin/Wix runs
-   "Create Your Site" filled beside "Submit a Site" outlined at the head of its
-   showcase, and Mobbin/Webflow does the same with "Showcase your site"
-   (https://mobbin.com/sites/sections/ff53d018-ac1f-47f6-8643-51ff2d4963e1,
-   https://mobbin.com/sites/sections/d6aef00b-6480-4235-9ad9-0f330a64cdba).
-   A design and an icon have nothing in common as submissions, which is the
-   argument Community.jsx already makes at the form. */
-.ch-spectrum .ch-head-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-.ch-spectrum .ch-submit-btn {
-  flex-shrink: 0;
-  min-height: 44px;
-  padding: 11px 20px;
-  border-radius: var(--radius-pill);
-  font-size: 14.5px;
-  font-weight: 540;
-  box-shadow: none;
-  transition: transform var(--dur-1) var(--cm-ease), background var(--dur-1) ease,
-              color var(--dur-1) ease, border-color var(--dur-1) ease;
-}
-.ch-spectrum .ch-submit-btn:active:not(:disabled) { transform: scale(.978); }
-.ch-spectrum .ch-submit-btn svg { flex: 0 0 auto; }
-
-/* ── the toolbar ──────────────────────────────────────────────────────────────
-   Category chips and the sort segment. The chips never wrap: on a narrow screen
-   they stay on one line and scroll sideways, with a fade at the edge.
-
-   THE ACTIVE CHIP LOSES ITS ACCENT FILL. `--accent-strong` behind
-   `--accent-fg` put the loudest colour on the page on a filter, seven times
-   over, above the cards it is filtering. Spectrum's `.sp-chip[aria-pressed]` is
-   the ink ground — the same "selected" the billing tabs and the bench rail use
-   — so selection reads as one idea across the product and the accent is kept
-   for the thing being sold. */
-.ch-spectrum .ch-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-}
-/* One line at every width: the chips scroll sideways instead of wrapping into
-   rows. The block padding (and the matching negative margin) keeps the focus
-   ring inside the scroll box, which clips whatever lies outside it.
-   The scrolling itself, the edge fade that says there is more and the thin
-   scrollbar come from `.rail-overflow` (global.css), put on the row in the
-   markup. The fade only draws while the row overflows and has more to show on
-   that side, so it is off where all seven chips fit. */
-.ch-spectrum .ch-filters {
-  --rail-fade: 48px;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  min-width: 0;
-  margin-block: -6px;
-  padding-block: 6px;
-}
-
-.ch-spectrum .ch-filter {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  min-height: 36px;
-  padding: 9px 16px;
-  border: 1px solid var(--cm-line);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--cm-dim);
-  font-family: var(--font);
-  font-size: 13.5px;
-  font-weight: 400;
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.cm-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; padding: 0 16px; border: 0; border-radius: 999px;
+  font: inherit; font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap; text-decoration: none;
   cursor: pointer;
-  white-space: nowrap;
-  transition: transform var(--dur-1) var(--cm-ease), background var(--dur-1) ease,
-              border-color var(--dur-1) ease, color var(--dur-1) ease;
+  transition: background-color 150ms ease, transform 120ms var(--v3-ease);
 }
-.ch-spectrum .ch-filter:hover {
-  background: var(--cm-wash);
-  border-color: var(--cm-line-strong);
-  color: var(--cm-ink);
+.cm-btn:active { transform: scale(.97); }
+.cm-btn:disabled { cursor: default; opacity: .5; }
+.cm-btn:disabled:active { transform: none; }
+.cm-btn-ink { background: var(--v3-ink); color: var(--v3-on-ink); }
+.cm-btn-tonal { background: var(--v3-l2); color: var(--v3-ink); }
+.cm-btn-line { background: transparent; color: var(--v3-ink); box-shadow: inset 0 0 0 1px var(--v3-hair); }
+.cm-btn-line:hover:not(:disabled) { background: var(--v3-wash); }
+.cm-btn-text { background: transparent; color: var(--v3-ink); padding: 0 12px; }
+.cm-btn-text[aria-pressed="true"] { font-weight: 600; }
+.cm-btn-ink:hover:not(:disabled) { background: var(--v3-ink-hover); }
+.cm-btn-tonal:hover:not(:disabled) { background: var(--v3-l2h); }
+.cm-btn-text:hover:not(:disabled) { background: var(--v3-wash); }
+.cm-btn-ink:hover:not(:disabled), .cm-btn-ink:active { color: var(--v3-on-ink); }
+.cm-link {
+  display: inline; padding: 0; border: 0; background: none; font: inherit; color: var(--v3-ink);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
-.ch-spectrum .ch-filter:active { transform: scale(.96); }
-.ch-spectrum .ch-filter.is-active,
-.ch-spectrum .ch-filter[aria-pressed="true"] {
-  background: var(--cm-ink);
-  border-color: var(--cm-ink);
-  color: var(--cm-page);
-}
-/* The selected chip does not move on hover. The generic `.ch-filter:hover`
-   above lifts an UNSELECTED chip onto the ink wash; applying it to a selected
-   one would put a 4% ink film over an ink ground and drop the label's contrast
-   for no gain. Measure the hover whenever you change a fill — a sibling lane
-   lost a contrast fix exactly this way. */
-.ch-spectrum .ch-filter.is-active:hover,
-.ch-spectrum .ch-filter[aria-pressed="true"]:hover {
-  background: var(--cm-ink);
-  border-color: var(--cm-ink);
-  color: var(--cm-page);
+:is(.cm-page, .cm-dialog) :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--v3-ink); outline-offset: 2px;
 }
 
-.ch-spectrum .ch-sort {
-  display: flex;
-  gap: 3px;
-  flex-shrink: 0;
-  padding: 4px;
-  border: 1px solid var(--cm-line);
-  border-radius: var(--radius-pill);
-  background: var(--cm-wash);
-}
-.ch-spectrum .ch-sort-btn {
-  min-height: 32px;
-  padding: 8px 16px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--cm-faint);
-  font-family: var(--font);
-  font-size: 12.5px;
-  font-weight: 400;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--dur-1) ease, color var(--dur-1) ease;
-}
-.ch-spectrum .ch-sort-btn:hover { background: var(--cm-wash-2); color: var(--cm-ink); }
-/* THE INK GROUND, NOT AN ACCENT WASH — and that is a measured fix, not a taste
-   call. `--accent-bright` on `--accent-wash-4` at 12.5px/560 measured **4.37:1**
-   in light theme at 1280: under the 4.5 floor, on the control that tells the
-   visitor whether they are looking at all designs or only their saved ones.
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.cm-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: end; }
+.cm-h1 { font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -.04em; text-wrap: balance; }
+.cm-lead { max-width: 52ch; margin-top: 16px; font-size: 18px; line-height: 1.6; color: var(--v3-sec); text-wrap: pretty; }
+.cm-sample-line { max-width: 62ch; margin-top: 12px; font-size: 14px; line-height: 1.5; color: var(--v3-t56); text-wrap: pretty; }
+.cm-head-actions { display: flex; align-items: center; gap: 8px; }
+.cm-waiting { margin-top: 24px; font-size: 14px; color: var(--v3-ink); }
+.cm-waiting a, .cm-more-link a, .cm-maker-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-   The replacement is the ink pair Spectrum gives every SEGMENTED control —
-   `.sp-billing-tab[aria-pressed="true"]` is `--sp-ink` on `--sp-page` — which
-   is what this is: two mutually exclusive options inside one bordered track.
-   The chips above are `.sp-chip`, which takes the same ink; the two read
-   apart by their containers, exactly as they do on the front door. It also
-   takes the selected state out of the accent entirely, which is the point:
-   the accent belongs to the thing being sold, not to a sort. */
-.ch-spectrum .ch-sort-btn.is-active,
-.ch-spectrum .ch-sort-btn[aria-pressed="true"] {
-  background: var(--cm-ink);
-  color: var(--cm-page);
-  font-weight: 500;
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.cm-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 56px; }
+.cm-search { position: relative; flex: 0 1 320px; min-width: 200px; }
+.cm-search-ic { position: absolute; left: 14px; top: 50%; translate: 0 -50%; color: var(--v3-t56); pointer-events: none; }
+.cm-toolbar > .cm-seg:last-child { margin-left: auto; }
+.cm-input {
+  box-sizing: border-box; width: 100%; height: 44px; padding: 0 14px;
+  border: 0; border-radius: 8px; background: var(--v3-l2); color: var(--v3-ink);
+  font: inherit; font-size: 16px; line-height: 1.2;
 }
-/* The hover must not undo the fix. `--accent-hover` mixes toward PAPER in both
-   themes, so lifting a selected control on hover with it measured 3.40:1 on a
-   sibling surface — worse than the state it was lifting off. The selected tab
-   therefore does not change on hover at all; only the unselected ones do. */
-.ch-spectrum .ch-sort-btn.is-active:hover,
-.ch-spectrum .ch-sort-btn[aria-pressed="true"]:hover {
-  background: var(--cm-ink);
-  color: var(--cm-page);
+.cm-input::placeholder { color: var(--v3-t56); opacity: 1; }
+.cm-search .cm-input { height: 36px; border-radius: 999px; padding: 0 16px 0 40px; font-size: 14px; }
+.cm-area { height: auto; padding: 12px 14px; line-height: 1.45; resize: vertical; font-family: var(--mono); font-size: 13px; }
+.cm-count { font-size: 14px; color: var(--v3-t56); font-variant-numeric: tabular-nums; }
+.cm-select {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 36px; padding: 0 12px 0 16px; border: 0; border-radius: 999px;
+  background: var(--v3-l2); color: var(--v3-ink); font: inherit; font-size: 14px; font-weight: 500; line-height: 1; cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms var(--v3-ease);
 }
+.cm-select:active { transform: scale(.97); }
+.cm-select svg { flex: none; color: var(--v3-sec); }
+.cm-selects { display: flex; gap: 8px; width: 100%; }
+.cm-selects .cm-select { flex: 1 1 0; min-width: 0; height: 44px; }
+.cm-selects .cm-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── the grid ─────────────────────────────────────────────────────────────────
-   Spectrum's `.sp-disc-grid`/`.sp-disc-card`: a hairline card on the ink wash
-   rather than `--card-grad` behind a `--warm-shadow`, the art band above a
-   single baseline-aligned meta row, and a 2px lift on hover instead of 3.
+.cm-seg {
+  display: inline-flex; gap: 2px; margin: 0; padding: 2px; min-width: 0; border: 0; border-radius: 999px; background: var(--v3-l2);
+}
+.cm-seg label {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  height: 32px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap;
+  color: var(--v3-sec); cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 120ms var(--v3-ease);
+}
+.cm-seg label:active { transform: scale(.97); }
+.cm-seg label[data-on="true"] { background: var(--v3-seg-on); color: var(--v3-ink); box-shadow: 0 0 0 1px var(--v3-hair); }
+.cm-seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.cm-seg label:has(input:focus-visible) { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
 
-   `minmax(min(230px,100%),1fr)` rather than a bare 230px: at 320 the floor
-   collapses instead of overflowing, which is the rule every grid on the
-   Spectrum page follows and what keeps `21-reflow-320` green. */
-.ch-spectrum .ch-grid {
-  display: grid;
-  /* A 270px floor over a 1240px shell gives four ~299px cards at 1440 — the
-     density Mobbin/Lovable's "From the Community" shelf runs
-     (https://mobbin.com/sites/sections/bf12496d-52c5-487f-997e-eb9f6b9bdeab),
-     and wide enough that the monogram and the two meta values are not fighting
-     for the same line. `min(270px,100%)` so a 320 viewport collapses the floor
-     rather than overflowing it. */
-  grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr));
-  gap: 14px;
-  min-width: 0;
+/* ── Grid and tiles ──────────────────────────────────────────────────────── */
+.cm-swap { margin-top: 32px; animation: cm-fade 150ms ease both; }
+@keyframes cm-fade { from { opacity: 0; } to { opacity: 1; } }
+.cm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 24px; }
+.cm-grid > li { min-width: 0; }
+.cm-tile { position: relative; min-width: 0; }
+.cm-frame {
+  position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 12px; background: var(--v3-l2);
+  transition: transform 120ms var(--v3-ease);
 }
+.cm-frame::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--v3-outl); transition: box-shadow 150ms ease;
+}
+.cm-frame:has(.cm-frame-link:active) { transform: scale(.97); }
+.cm-frame-link { position: absolute; inset: 0; display: block; }
+.cm-frame img { display: block; width: 100%; height: 100%; }
+.cm-frame[data-fit="cover"] img { object-fit: cover; }
+.cm-frame[data-pos="left"] img { object-position: 0% 50%; }
+.cm-frame[data-fit="contain"] img { box-sizing: border-box; padding: 16px; object-fit: contain; }
+.cm-discs { position: absolute; top: 8px; right: 8px; z-index: 1; display: flex; gap: 12px; }
+.cm-disc, .cm-more {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px;
+  background: var(--v3-raised); color: var(--v3-ink); box-shadow: 0 0 0 1px var(--v3-hair); cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms var(--v3-ease);
+}
+.cm-disc:active, .cm-more:active { transform: scale(.97); }
+.cm-disc::before { content: ""; position: absolute; inset: -6px; }
+.cm-heart[aria-pressed="true"] { background: var(--v3-ink); color: var(--v3-on-ink); }
+.cm-tile-title {
+  margin-top: 12px; overflow: hidden; font-size: 16px; font-weight: 500; line-height: 1.35;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.cm-tile-meta { font-size: 14px; line-height: 1.5; color: var(--v3-sec); overflow-wrap: anywhere; }
+.cm-sample { color: var(--v3-t56); white-space: nowrap; }
+.cm-maker-link { text-decoration: none; }
 
-.ch-spectrum .ch-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--cm-line);
-  border-radius: var(--radius-2xl);
-  background: var(--cm-wash);
-  box-shadow: none;
-  transition: border-color var(--dur-2) ease, background var(--dur-2) ease,
-              transform var(--dur-2) var(--cm-ease);
+@media (hover: hover) and (min-width: 768px) {
+  .cm-discs { opacity: 0; transition: opacity 150ms ease; }
+  .cm-tile:hover .cm-discs, .cm-tile:focus-within .cm-discs { opacity: 1; }
+  .cm-frame:hover::after { box-shadow: inset 0 0 0 1px var(--cm-outl-h); }
 }
-.ch-spectrum .ch-card:hover {
-  border-color: var(--cm-line-strong);
-  background: var(--cm-wash-2);
-  transform: translateY(-2px);
-}
-
-/* Height only. The gradient, the monogram and its computed ink are
-   CommunityCard's and are measured by two suites — see the header note. */
-.ch-spectrum .ch-thumb { height: 132px; }
-
-.ch-spectrum .ch-card-body { padding: 13px 14px 14px; min-width: 0; }
-.ch-spectrum .ch-card-name {
-  margin-bottom: 6px;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: var(--cm-ink);
-}
-.ch-spectrum .ch-card-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  font-size: 12px;
-  color: var(--cm-faint);
-}
-/* The platform credit is 12px, the floor for text. */
-.ch-spectrum .ch-card-source { font-size: 12px; }
-/* The category tag drops its accent chip. Every card carries one, so a tinted
-   accent pill on each turned the grid into a field of badges and spent the
-   accent on the least load-bearing word on the card. Spectrum's
-   `.sp-disc-meta` is mono micro-caps in the quiet ink, which is what a
-   classification is. */
-.ch-spectrum .ch-card-tag {
-  flex: 0 0 auto;
-  padding: 0;
-  border-radius: 0;
-  background: none;
-  font-family: var(--font);
-  font-size: var(--fs-caption);
-  font-weight: 400;
-  letter-spacing: normal;
-  text-transform: none;
-  /* `--t2`, not `--t3`. On the card's own 4% ink wash `--t3` measured 4.19:1 at
-     390, 834 and 1440 in light — the category is the only classification on the
-     card and it is the smallest type on it, so it is the wrong place to spend
-     the last 0.3 of a contrast ratio. */
-  color: var(--cm-faint);
-  white-space: nowrap;
+@media (hover: hover) {
+  .cm-disc:hover, .cm-more:hover { background: var(--v3-l2); }
+  .cm-heart[aria-pressed="true"]:hover { background: var(--v3-ink-hover); }
+  .cm-select:hover { background: var(--v3-l2h); }
+  .cm-seg label:hover:not([data-on="true"]) { color: var(--v3-ink); }
 }
 
-/* The viewer's own card: where it stands, set apart from the credit line by a
-   hairline. The status reads in the full ink and a heavier weight than the
-   category beside it, because it is the one fact on the card that changes. */
-.ch-spectrum .ch-card-own {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--cm-line);
-  min-width: 0;
+/* ── Empty states ────────────────────────────────────────────────────────── */
+.cm-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 96px 0 64px; text-align: center; }
+.cm-empty-left { align-items: flex-start; padding: 32px 0 0; text-align: left; }
+.cm-empty-page { padding-top: 120px; }
+.cm-empty-h { font-size: 24px; font-weight: 600; line-height: 1.2; letter-spacing: -.02em; text-wrap: balance; }
+.cm-empty-t { max-width: 46ch; font-size: 16px; line-height: 1.55; color: var(--v3-sec); text-wrap: pretty; }
+.cm-empty > .cm-btn, .cm-row { margin-top: 12px; }
+.cm-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.cm-empty:not(.cm-empty-left) .cm-row { justify-content: center; }
+
+.cm-close {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 96px; padding: 32px 40px;
+  border-radius: 16px; background: var(--v3-l2);
 }
-.ch-spectrum .ch-card-status {
-  font-weight: 500;
-  color: var(--cm-ink);
-  white-space: normal;
+.cm-close p { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+
+/* ── Piece page ──────────────────────────────────────────────────────────── */
+.cm-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 24px; font-size: 14px; color: var(--v3-sec); text-decoration: none; }
+.cm-back:hover { color: var(--v3-ink); }
+.cm-detail { padding-top: 32px; }
+.cm-d-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+.cm-d-render {
+  position: relative; display: grid; place-items: center; max-height: 720px; overflow: hidden;
+  border-radius: 16px; background: var(--v3-l2);
+  animation: cm-open 240ms var(--v3-ease) both;
 }
-/* Retry and Withdraw share one row and never wrap: each takes half of whatever
-   the card gives them, down to the 150px phone card. */
-.ch-spectrum .ch-card-own-actions {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  min-width: 0;
+.cm-d-render::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 0 0 1px var(--v3-outl); }
+@keyframes cm-open { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+.cm-d-render img { display: block; }
+.cm-d-render[data-fit="cover"] img { width: 100%; height: auto; max-height: 720px; object-fit: cover; }
+.cm-d-render[data-fit="contain"] { padding: 16px; box-sizing: border-box; }
+.cm-d-render[data-fit="contain"] img { width: auto; max-width: 100%; height: auto; max-height: 688px; }
+.cm-d-rail { position: sticky; top: 96px; display: flex; flex-direction: column; }
+.cm-d-h1 { font-size: 40px; font-weight: 600; line-height: 1.05; letter-spacing: -.03em; text-wrap: balance; }
+.cm-d-maker { display: flex; align-items: center; gap: 12px; margin-top: 24px; }
+.cm-d-maker-name { font-size: 16px; font-weight: 600; text-decoration: none; }
+.cm-d-maker-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.cm-d-maker-line { font-size: 14px; color: var(--v3-sec); }
+.cm-mark {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: var(--cm-mark-size, 40px); height: var(--cm-mark-size, 40px); border-radius: 999px;
+  background: var(--cm-mark, var(--v3-ink)); color: var(--cm-mark-on, #fff);
+  font-size: calc(var(--cm-mark-size, 40px) * .42); font-weight: 600; line-height: 1;
 }
-.ch-spectrum .ch-card-own-actions .btn {
-  flex: 1 1 0;
-  justify-content: center;
-  min-width: 0;
-  min-height: 34px;
-  padding-inline: 8px;
-  border-radius: var(--radius-pill);
-  font-size: 12.5px;
+.cm-facts { margin-top: 24px; font-size: 14px; }
+.cm-facts > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--v3-hair); }
+.cm-facts > div:last-child { border-bottom: 1px solid var(--v3-hair); }
+.cm-facts dt { color: var(--v3-sec); }
+.cm-facts dd { color: var(--v3-ink); }
+.cm-pro { color: var(--v3-t56); }
+.cm-swatches { display: flex; gap: 8px; }
+.cm-swatches li { position: relative; }
+.cm-sw { position: relative; display: block; width: 16px; height: 16px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--v3-outl); }
+.cm-sw::after {
+  content: attr(data-hex); position: absolute; left: 50%; bottom: calc(100% + 8px); translate: -50% 0;
+  padding: 4px 8px; border-radius: 8px; background: var(--v3-ink); color: var(--v3-on-ink);
+  font: 500 12px/1.2 var(--mono); white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity 150ms ease;
+}
+.cm-sw:focus-visible::after { opacity: 1; }
+@media (hover: hover) { .cm-sw:hover::after { opacity: 1; } }
+.cm-d-actions { display: flex; margin-top: 24px; }
+.cm-d-secondary { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 0 -12px; }
+.cm-d-sample { margin-top: 24px; font-size: 14px; color: var(--v3-t56); }
+.cm-more-sec { margin-top: 96px; }
+.cm-h2 { font-size: 24px; font-weight: 600; line-height: 1.2; letter-spacing: -.02em; }
+.cm-more-sec .cm-grid { margin-top: 24px; }
+.cm-more-link { margin-top: 24px; font-size: 14px; font-weight: 500; }
+.cm-bar { display: none; }
+
+/* ── Profile ─────────────────────────────────────────────────────────────── */
+.cm-p-head { display: flex; align-items: center; gap: 24px; }
+.cm-p-copy { min-width: 0; flex: 1 1 auto; }
+.cm-p-edit { flex: none; }
+.cm-tabs { display: inline-flex; gap: 2px; margin-top: 48px; padding: 2px; border-radius: 999px; background: var(--v3-l2); }
+.cm-tabs button {
+  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 16px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--v3-sec); font: inherit; font-size: 14px; font-weight: 500; line-height: 1; cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 120ms var(--v3-ease);
+}
+.cm-tabs button:active { transform: scale(.97); }
+.cm-tabs button[aria-selected="true"] { background: var(--v3-seg-on); color: var(--v3-ink); box-shadow: 0 0 0 1px var(--v3-hair); }
+.cm-tab-n { color: var(--v3-t56); font-variant-numeric: tabular-nums; }
+@media (hover: hover) { .cm-tabs button[aria-selected="false"]:hover { color: var(--v3-ink); } }
+.cm-tabpanel { margin-top: 32px; }
+.cm-tabpanel > .cm-empty { padding-top: 0; }
+.cm-subs { margin-top: 96px; scroll-margin-top: calc(var(--chrome-h) + 16px); }
+.cm-subs h2 { border-radius: 4px; }
+.cm-subs h2:focus-visible { outline: 2px solid var(--v3-ink); outline-offset: 4px; }
+.cm-sub-list { margin-top: 16px; }
+.cm-sub { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--v3-hair); }
+.cm-thumb {
+  position: relative; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px;
+  overflow: hidden; border-radius: 8px; background: var(--v3-l2); color: var(--v3-sec);
+}
+.cm-thumb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--v3-outl); pointer-events: none; }
+.cm-thumb-strip i { flex: 1 1 0; align-self: stretch; }
+.cm-sub-name { overflow: hidden; font-size: 16px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.cm-sub-meta, .cm-sub-status { font-size: 14px; color: var(--v3-sec); }
+.cm-sub-actions { display: flex; gap: 4px; }
+.cm-note-line { margin-top: 16px; font-size: 14px; color: var(--v3-t56); }
+
+/* ── Dialogs (rendered in a portal, under .cm-dialog) ───────────────────── */
+.cm-dialog.cm-dialog-wide { max-width: 640px; }
+.cm-dialog .cm-field { margin-top: 16px; }
+.cm-dialog .cm-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; }
+.cm-dialog .cm-hint { margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--v3-sec); }
+.cm-dialog .cm-error { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--danger, #B3261E); }
+.cm-dialog .cm-error svg { flex: none; margin-top: 1px; }
+.cm-dialog .cm-input[aria-invalid="true"] { box-shadow: inset 0 0 0 1.5px var(--danger, #B3261E); }
+.cm-dialog select.cm-input { appearance: none; padding-right: 36px; background-image: none; }
+.cm-dialog .cm-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cm-dialog .cm-note { margin-top: 16px; padding: 12px 16px; border-radius: 12px; background: var(--v3-l2); font-size: 14px; line-height: 1.5; color: var(--v3-sec); }
+.cm-dialog .cm-note-lead { color: var(--v3-ink); }
+/* The body scrolls on a short (landscape phone) screen; the actions stay pinned at its foot. */
+.cm-dialog .cm-dfoot { position: sticky; bottom: -24px; z-index: 1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; margin-bottom: -24px; padding: 12px 0 24px; background: var(--ov-surface); }
+.cm-dialog .cm-btn { height: 44px; padding: 0 20px; }
+.cm-dialog .cm-file { display: flex; align-items: center; gap: 12px; }
+.cm-dialog .cm-file-name { min-width: 0; overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; color: var(--v3-sec); }
+.cm-dialog .cm-area { margin-top: 12px; }
+.cm-dialog .cm-icon-pv { display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; margin-top: 12px; border-radius: 12px; background: var(--v3-l2); }
+.cm-dialog .cm-check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.cm-dialog .cm-check input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--v3-ink); }
+.cm-dialog .cm-seg { display: flex; width: 100%; margin-top: 16px; }
+.cm-dialog .cm-seg label { flex: 1 1 0; height: 40px; }
+.cm-dialog .cm-picks, .cm-dialog .cm-projects { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; border: 0; min-width: 0; }
+.cm-dialog .cm-pick {
+  position: relative; display: grid; gap: 2px; padding: 14px 16px; border-radius: 12px; background: var(--v3-l2); cursor: pointer;
+  transition: background-color 150ms ease, transform 120ms var(--v3-ease);
+}
+.cm-dialog .cm-pick:active { transform: scale(.97); }
+.cm-dialog .cm-pick[data-on="true"] { box-shadow: inset 0 0 0 2px var(--v3-ink); }
+.cm-dialog .cm-pick input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.cm-dialog .cm-pick:has(input:focus-visible) { outline: 2px solid var(--v3-ink); outline-offset: 2px; }
+.cm-dialog .cm-pick-sm { padding: 10px 16px; }
+.cm-dialog .cm-pick-t { font-size: 16px; font-weight: 500; }
+.cm-dialog .cm-pick-l { font-size: 14px; color: var(--v3-sec); }
+@media (hover: hover) { .cm-dialog .cm-pick:hover { background: var(--v3-l2h); } }
+.cm-dialog .cm-preview { display: flex; height: 56px; margin-top: 12px; overflow: hidden; border-radius: 12px; background: var(--v3-l2); box-shadow: inset 0 0 0 1px var(--v3-outl); }
+.cm-dialog .cm-preview > span { flex: 1 1 0; }
+.cm-dialog .cm-preview-empty { display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--v3-sec); }
+.cm-dialog .cm-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  aspect-ratio: 16 / 9; padding: 16px; border-radius: 12px; background: var(--v3-l2); text-align: center;
+  box-shadow: inset 0 0 0 1.5px var(--v3-hair);
+}
+.cm-dialog .cm-drop[data-over="true"] { box-shadow: inset 0 0 0 2px var(--v3-ink); }
+.cm-dialog .cm-drop-t { font-size: 14px; color: var(--v3-sec); }
+.cm-dialog .cm-drop-file { max-width: 100%; overflow: hidden; font-size: 14px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.cm-dialog .cm-drop-file span { color: var(--v3-sec); font-weight: 400; }
+.cm-dialog .cm-rules { margin: 12px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.5; color: var(--v3-sec); }
+
+/* ── Tablet ──────────────────────────────────────────────────────────────── */
+@media (max-width: 1199px) {
+  .cm-page { --cm-gutter: 32px; }
+  .cm-search { flex-basis: 260px; }
+  .cm-h1 { font-size: 56px; }
+}
+@media (max-width: 899px) {
+  .cm-d-grid { grid-template-columns: minmax(0, 1fr); }
+  .cm-d-rail { position: static; }
 }
 
-/* The button is the 44px hit area; the dark pill the eye sees is its ::before,
-   32px high, so the target is larger than the mark. */
-.ch-spectrum .ch-heart {
-  top: 4px;
-  right: 4px;
-  isolation: isolate;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 16px;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-radius: var(--radius-pill);
-  font-size: 12px;
-  font-weight: 500;
-}
-.ch-spectrum .ch-heart::before {
-  content: "";
-  position: absolute;
-  inset: 6px 4px;
-  z-index: -1;
-  border-radius: var(--radius-pill);
-  background: rgba(0, 0, 0, .5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  transition: background var(--dur-1) ease;
-}
-.ch-spectrum .ch-heart:hover { background: transparent; }
-.ch-spectrum .ch-heart:hover::before { background: rgba(0, 0, 0, .7); }
-
-/* ── the empty state ──────────────────────────────────────────────────────────
-   A hairline panel, not a dashed one. Nothing else on this page is dashed, and
-   a dashed box reads as a drop target — the wrong invitation under a grid whose
-   only action is "save". The sentences are unchanged: they are the product's
-   own and they name the control that fills the state. */
-.ch-spectrum .ch-empty {
-  padding: clamp(40px, 6vw, 64px) 24px;
-  border: 1px solid var(--cm-line);
-  border-radius: var(--radius-2xl);
-  background: var(--cm-wash);
-  text-align: center;
-  font-size: 14.5px;
-  line-height: 1.6;
-  color: var(--cm-faint);
-}
-
-/* ── your submissions ─────────────────────────────────────────────────────────
-   The queued-icon list. It was `<li className="toggle-row ch-toolbar">` with
-   three inline `style` objects doing the layout, because at the time every
-   stylesheet that could have held the rules belonged to another stream. This
-   sheet is that place, so the inline styles are gone and `.ch-queue-row` does
-   the work. Both original classes are KEPT on the element: `.toggle-row` is the
-   app's own row shape and `97-community-icons.spec.js` reaches this section by
-   its heading and its controls, so nothing is renamed out from under it. */
-.ch-spectrum .ch-queue-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--cm-line-strong);
-}
-.ch-spectrum .ch-queue-head h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: clamp(22px, 2.4vw, 30px);
-  line-height: 1.05;
-  letter-spacing: -.02em;
-  color: var(--cm-ink);
-}
-.ch-spectrum .ch-queue-head .meta {
-  font-family: var(--font);
-  font-size: var(--fs-caption);
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--cm-quiet);
-}
-.ch-spectrum .ch-queue-note {
-  margin: 14px 0 0;
-  max-width: 62ch;
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--cm-faint);
-}
-.ch-spectrum .ch-queue-list {
-  display: grid;
-  gap: 9px;
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.ch-spectrum .ch-queue-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--cm-line);
-  border-radius: var(--radius-xl);
-  background: var(--cm-card);
-}
-.ch-spectrum .ch-queue-row .toggle-row-info { flex: 1 1 140px; min-width: 0; }
-.ch-spectrum .ch-queue-row .toggle-row-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--cm-ink);
-}
-.ch-spectrum .ch-queue-row .toggle-row-meta {
-  font-size: 12.5px;
-  color: var(--cm-quiet);
-}
-/* The status marker. `Pending review` vs `Not sent` is the whole point of the
-   row — an entry the account does not hold is one cache clear from gone — so it
-   is mono micro-caps in the quiet ink and NOT an accent chip, because "not
-   sent" is not a feature. */
-.ch-spectrum .ch-queue-row .ch-card-tag {
-  font-family: var(--font);
-  font-size: var(--fs-caption);
-  letter-spacing: normal;
-  color: var(--cm-quiet);
-}
-.ch-spectrum .ch-queue-row .btn {
-  min-height: 34px;
-  border-radius: var(--radius-pill);
-  font-size: 12.5px;
-}
-
-/* ── the closing CTA ──────────────────────────────────────────────────────────
-   GalleryCloseCta provides the heading and action; this page sets its spacing. */
-.ch-spectrum .ch-cta {
-  margin-top: clamp(40px, 6vw, 72px);
-  padding-top: clamp(28px, 4vw, 44px);
-  border-top: 1px solid var(--cm-line);
-  text-align: center;
-}
-.ch-spectrum .ch-cta .gcta-q {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: clamp(24px, 3vw, 38px);
-  line-height: 1.05;
-  letter-spacing: -.025em;
-  color: var(--cm-ink);
-  text-wrap: balance;
-}
-.ch-spectrum .ch-cta .gcta-detail {
-  margin: 14px auto 0;
-  max-width: 48ch;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--cm-dim);
-}
-.ch-spectrum .ch-cta .gcta-action {
-  margin-top: 22px;
-  min-height: 44px;
-  padding: 13px 24px;
-  border-radius: var(--radius-pill);
-  font-size: 15px;
-  font-weight: 540;
-  box-shadow: none;
-}
-
-/* ── focus ────────────────────────────────────────────────────────────────────
-   One ring, on the accent, offset so it clears the card radius and the chip
-   tracks. NO `border-radius` here: an outline follows its own element's radius,
-   so declaring one would round the CONTROL at the instant of focus rather than
-   the ring — a defect that
-   `focus-ring-geometry.test.js` bans in every sheet. */
-.ch-spectrum :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-/* The heart sits ON the card art and is revealed by hover on fine pointers, so
-   its ring needs to be inside the thumbnail rather than on the card edge. */
-.ch-spectrum .ch-heart:focus-visible { outline-offset: 2px; }
-
-/* ── responsive ───────────────────────────────────────────────────────────── */
-
-@media (max-width: 760px) {
-  .ch-spectrum .ch-head { align-items: flex-start; }
-  .ch-spectrum .ch-head-actions { width: 100%; flex-wrap: nowrap; }
-  .ch-spectrum .ch-head-actions .ch-submit-btn { flex: 1 1 0; justify-content: center; }
-  .ch-spectrum .ch-sub small { font-size: 15px; }
-}
-
-/* Phone and tablet: the chips take a row of their own and the sort switch sits
-   under them, each one line. The end padding lets the last chip scroll clear of
-   the fade. */
-@media (max-width: 900px) {
-  /* nowrap: deferred/account.css still gives `.ch-toolbar` `flex-wrap: wrap`, and
-     a wrapping column sizes its line to the chips' full width (660px), which
-     pushed the page sideways instead of letting the row scroll. */
-  .ch-spectrum .ch-toolbar { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
-  .ch-spectrum .ch-sort { align-self: flex-start; }
-  .ch-spectrum .ch-filters { padding-inline-end: var(--rail-fade); }
-}
-
-@media (min-width: 561px) and (max-width: 900px) {
-  .ch-spectrum .ch-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-}
-
-@media (max-width: 560px) {
-  .ch-spectrum .ch-grid { grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 12px; }
-  .ch-spectrum .ch-thumb { height: 104px; }
-  .ch-spectrum .ch-card-name {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 2.6em;
-    line-height: 1.3;
+/* ── Phone ───────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .cm-page { --cm-gutter: 16px; padding-top: 24px; padding-bottom: 64px; }
+  .cm-head { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .cm-h1 { font-size: 40px; }
+  .cm-lead { font-size: 16px; }
+  .cm-head-actions { gap: 8px; }
+  .cm-head-actions .cm-btn { flex: 1 1 0; min-width: 0; height: 52px; font-size: 16px; white-space: nowrap; gap: 8px; }
+  .cm-head-actions .cm-btn svg { flex: none; }
+  .cm-btn, .cm-select, .cm-tabs button { height: 44px; }
+  .cm-tabs button { height: 40px; }
+  .cm-toolbar { gap: 8px; margin-top: 32px; }
+  .cm-search { flex: 1 1 100%; }
+  .cm-search .cm-input { height: 44px; font-size: 16px; padding-left: 42px; }
+  .cm-count { margin: 4px 0 0; flex: 1 1 100%; }
+  .cm-swap { margin-top: 16px; }
+  .cm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 12px; }
+  .cm-tile-title { font-size: 14px; }
+  .cm-tile-meta { font-size: 12px; }
+  .cm-heart { display: none; }
+  .cm-disc::before { inset: -6px; }
+  .cm-empty { padding: 64px 0 48px; }
+  .cm-close { flex-direction: column; align-items: stretch; margin-top: 64px; padding: 24px 20px; }
+  .cm-close p { font-size: 20px; }
+  .cm-close .cm-btn { width: 100%; }
+  .cm-detail { padding-bottom: 120px; }
+  .cm-back { margin-bottom: 16px; }
+  .cm-d-h1 { font-size: 32px; }
+  .cm-d-render[data-fit="contain"] { padding: 12px; }
+  .cm-d-actions { display: none; }
+  .cm-d-secondary { margin-top: 12px; }
+  .cm-more-sec { margin-top: 64px; }
+  .cm-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; gap: 12px;
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: var(--v3-ground); border-top: 1px solid var(--v3-hair);
   }
-  /* The credit and the category share one line in a card of about 150px, so the
-     category drops to the credit's 12px: short enough that neither is cut off at
-     360px. */
-  .ch-spectrum .ch-card-tag { font-size: 12px; letter-spacing: normal; }
-  .ch-spectrum .ch-card-meta { gap: 6px; }
-  .ch-spectrum .ch-queue-row { gap: 10px; padding: 12px; }
+  html.has-tabbar .cm-bar { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); padding-bottom: 12px; }
+  .cm-bar .cm-btn { flex: 1 1 auto; height: 52px; font-size: 16px; }
+  .cm-bar-more {
+    flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
+    border: 0; border-radius: 999px; background: var(--v3-l2); color: var(--v3-ink); cursor: pointer;
+  }
+  .cm-p-head { flex-wrap: wrap; gap: 16px; }
+  .cm-p-h1 { font-size: 40px; }
+  .cm-p-edit { flex: 1 1 100%; }
+  .cm-tabs { margin-top: 32px; }
+  .cm-tabpanel { margin-top: 24px; }
+  .cm-subs { margin-top: 64px; }
+  .cm-sub { grid-template-columns: 48px minmax(0, 1fr) auto; row-gap: 4px; }
+  .cm-sub-actions { grid-column: 2 / -1; margin-left: -12px; }
+  .cm-dialog .cm-two { grid-template-columns: minmax(0, 1fr); }
+  .cm-dialog .cm-dfoot { flex-direction: column-reverse; align-items: stretch; }
+  .cm-dialog .cm-dfoot .cm-btn { width: 100%; }
+  .cm-dialog .cm-seg label { height: 44px; }
+}
+@media (max-width: 359px) {
+  .cm-head-actions { flex-direction: column; align-items: stretch; }
+  .cm-head-actions .cm-btn { flex: none; }
+  .cm-h1, .cm-p-h1 { font-size: 32px; }
+  .cm-d-h1 { font-size: 28px; }
+  .cm-selects .cm-select { padding: 0 10px 0 12px; font-size: 13px; }
 }
 
-/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
-   Both spellings, in the precedence global.css encodes: the in-app Settings
-   choice wins in both directions, the OS preference applies only when no choice
-   has been made. global.css clamps durations; these remove the MOVEMENT, which
-   a clamp does not — a 0.01ms card lift is still a lift. */
-:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-card,
-:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-filter,
-:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-sort-btn,
-:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-submit-btn {
-  transition: none !important;
-}
-:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-card:hover,
-:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-filter:active,
-:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-submit-btn:active {
-  transform: none !important;
-}
-
-/* Touch: 44px under a coarse pointer for the chips and the sort buttons. The
-   heart is 44px at every pointer (see above). */
-@media (pointer: coarse) {
-  .ch-spectrum .ch-filter,
-  .ch-spectrum .ch-sort-btn,
-  .ch-spectrum .ch-card-own-actions .btn,
-  .ch-spectrum .ch-queue-row .btn { min-height: 44px; }
-}
-
+/* ── Reduced motion: fades only ──────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-card,
-  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-filter,
-  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-sort-btn,
-  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-submit-btn {
-    transition: none !important;
-  }
-  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-card:hover,
-  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-filter:active,
-  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-submit-btn:active {
-    transform: none !important;
-  }
+  html:not([data-reduced-motion="false"]) .cm-d-render { animation: cm-fade 150ms ease both; }
+  html:not([data-reduced-motion="false"]) :is(.cm-btn, .cm-select, .cm-seg label, .cm-disc, .cm-more, .cm-tabs button, .cm-frame, .cm-dialog .cm-pick):active { transform: none; }
 }
-
-/* ── FORCED COLOURS ──────────────────────────────────────────────────────────
-   In Windows High Contrast every `color-mix` wash collapses into its ground, so
-   the selected filter chip and the selected sort tab — both carried by a fill
-   alone — would be indistinguishable from the unselected ones. Give each a
-   border the OS is obliged to paint. */
-@media (forced-colors: active) {
-  .ch-spectrum .ch-filter.is-active,
-  .ch-spectrum .ch-filter[aria-pressed="true"],
-  .ch-spectrum .ch-sort-btn.is-active,
-  .ch-spectrum .ch-sort-btn[aria-pressed="true"] { border: 2px solid Highlight; }
-}
+html[data-reduced-motion="true"] .cm-d-render { animation: cm-fade 150ms ease both; }
+html[data-reduced-motion="true"] :is(.cm-btn, .cm-select, .cm-seg label, .cm-disc, .cm-more, .cm-tabs button, .cm-frame, .cm-dialog .cm-pick):active { transform: none; }

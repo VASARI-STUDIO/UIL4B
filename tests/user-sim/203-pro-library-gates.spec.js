@@ -3,11 +3,14 @@
 //
 // Three promises, each the thing a person would complain about if it broke:
 //
-//   1. A signed-out visitor is told exactly where they stand. The wall (and,
-//      once they narrow the view, the closing line) says "Signed out, you see 3
-//      of the N <noun>. A free account opens 10; Pro opens all N." and the
-//      results head on palettes and gradients reads "N palettes · 3 shown", so
-//      the page never claims a size it is not showing.
+//   1. A signed-out visitor is told exactly where they stand. The gate
+//      (LibraryGate) says "You're seeing 4 of the N <noun>. A free account opens
+//      10; Pro opens all N." and, once they narrow the view to rows nothing is
+//      withheld from (the gate steps aside), the closing line says "Signed out,
+//      you see 4 of the N <noun>. A free account opens 10; Pro opens all N."
+//      The results head on palettes and gradients reads "N palettes · 4 shown",
+//      so the page never claims a size it is not showing. (The 4 and the 10 are
+//      the tier caps in GALLERY_TIER_LIMITS, read here and never typed.)
 //
 //   2. A signed-in Pro account never meets the free wall, or a "no match"
 //      empty state, in the moment before its library arrives. Whether the plan
@@ -28,7 +31,12 @@
 //   - drop `setAttempt((n) => n + 1)` from retry in the same file: the Retry
 //     tests go red;
 //   - let the pages draw the free wall while pending (`proPending` false in
-//     PaletteGallery): the "plan still on the way" and "slow library" tests go red.
+//     PaletteGallery.jsx / GradientGallery.jsx, so LibraryGate gets no `pending`):
+//     the "plan still on the way" and "slow library" tests go red;
+//   - change the account variant's body in libraryGateCopy
+//     (src/data/galleryGateCopy.js), or the signed-out cap in
+//     GALLERY_TIER_LIMITS (src/utils/lockedPreview.js) without the tile count:
+//     the signed-out tests go red.
 //
 // CAPTURES: with PROGATE_CAPTURE_DIR set, each state is also saved as a PNG, in
 // light and dark. Unset, nothing is written and only light is run.
@@ -40,6 +48,7 @@ import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { LIBRARY_TOTALS } from '../../src/data/libraryTotals.js'
+import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const CAPTURE_DIR = process.env.PROGATE_CAPTURE_DIR || ''
 const THEMES = CAPTURE_DIR ? ['light', 'dark'] : ['light']
@@ -49,10 +58,10 @@ const VIEWPORTS = [
   { name: '1440', use: { viewport: { width: 1440, height: 900 } }, phone: false },
 ]
 
-// The tiers, as the gate and the closing line print them. Typed
-// here rather than imported, so a change to the cap has to change a test.
-const ANON_SEES = 3
-const FREE_OPENS = 10
+// The tiers, as the gate and the closing line print them: the caps the app
+// itself reads, so a change to a cap changes the arithmetic here and not a literal.
+const ANON_SEES = GALLERY_TIER_LIMITS.anonymous
+const FREE_OPENS = GALLERY_TIER_LIMITS.free
 
 // The first row open to a signed-out visitor, by the name the search matches.
 const FIRST_OPEN = {
@@ -63,13 +72,13 @@ const FIRST_OPEN = {
 
 const LIBS = [
   {
-    key: 'palettes', route: '/discover/palettes', card: '.pgal-card:not(.geg-fade *)', noun: 'palettes', singular: 'palette',
+    key: 'palettes', route: '/discover/palettes', card: '.lib-results .vpt', noun: 'palettes', singular: 'palette',
     total: LIBRARY_PALETTES.length, totalFromData: LIBRARY_TOTALS.palettes,
     status: 'palette library', head: true,
     search: (page) => page.getByLabel('Search palettes'),
   },
   {
-    key: 'gradients', route: '/discover/gradients', card: '.grg-card:not(.geg-fade *)', noun: 'gradients', singular: 'gradient',
+    key: 'gradients', route: '/discover/gradients', card: '.lib-results .vpt', noun: 'gradients', singular: 'gradient',
     total: GALLERY_GRADIENTS.length, totalFromData: LIBRARY_TOTALS.gradients,
     status: 'gradient library', head: true,
     search: (page) => page.getByLabel('Search gradients'),
@@ -90,7 +99,8 @@ const API = /\/api\/ai\?library=/
 const sentenceFor = (lib) =>
   `Signed out, you see ${ANON_SEES} of the ${lib.total} ${lib.noun}. A free account opens ${FREE_OPENS}; Pro opens all ${lib.total}.`
 
-/** The end gate's heading and body for a signed-out visitor, worked out by hand. */
+/** The gate's heading and body for a signed-out visitor on the unfiltered view (LibraryGate's
+ *  'account' variant: a free account opens more), worked out by hand. */
 const gateHeadingFor = (lib) => `Log in to access ${FREE_OPENS} ${lib.noun}`
 const gateBodyFor = (lib) =>
   `You're seeing ${ANON_SEES} of the ${lib.total} ${lib.noun}. A free account opens ${FREE_OPENS}; Pro opens all ${lib.total}.`
@@ -122,7 +132,7 @@ async function capture(page, theme, lib, vp, state) {
 
 /** The block a viewer sees where a free viewer sees the upsell. */
 const statusOf = (page) => page.locator('.lockt-status')
-/** The wall: the shared end gate (GalleryEndGate) under the open rows. */
+/** The wall: the end gate under the open rows (LibraryGate on palettes and gradients, GalleryEndGate underneath). */
 const wallOf = (page) => page.locator('.geg')
 
 test.describe('the fixtures this file leans on', () => {
@@ -161,13 +171,16 @@ for (const vp of VIEWPORTS) {
             await expect(page.locator(lib.card)).toHaveCount(ANON_SEES)
 
             // The gate, on the unnarrowed view: one heading, the tiers, and the
-            // two ways on (Log in, then the plans).
+            // two ways on. The redesigned gate leads with the free account (the
+            // rung a signed-out visitor can reach now) and keeps Log in as the
+            // second; the old "See the plans" link is gone from this variant.
             const gate = wallOf(page)
             await expect(gate).toHaveCount(1)
+            await expect(gate).toHaveAttribute('data-gate', 'anon')
             await expect(gate.getByRole('heading')).toHaveText(gateHeadingFor(lib))
             await expect(gate.locator('.geg-p')).toHaveText(gateBodyFor(lib))
-            await expect(gate.getByRole('button', { name: 'Log in' })).toBeVisible()
-            await expect(gate.getByRole('link', { name: 'See the plans' })).toHaveAttribute('href', '/plans')
+            await expect(gate.getByRole('button', { name: 'Create a free account', exact: true })).toBeVisible()
+            await expect(gate.getByRole('button', { name: 'Log in', exact: true })).toBeVisible()
           }
           if (lib.head) {
             await expect(page.locator('.drh-head p')).toHaveText(`${lib.total} ${lib.noun} · ${ANON_SEES} shown`)
@@ -183,7 +196,9 @@ for (const vp of VIEWPORTS) {
           await lib.search(page).fill(FIRST_OPEN[lib.key])
           // The control: the search found the open row, so this is a real result.
           await expect(page.locator(lib.card).first()).toBeVisible()
-          // The gate steps aside for a narrowed view; the closing line carries the offer.
+          // The search leaves one match and it is open, so nothing is withheld
+          // from the view: the gate steps aside and the closing line carries the
+          // offer (the name is unique in the library, see FIRST_OPEN).
           await expect(wallOf(page)).toHaveCount(0)
           if (lib.key === 'prompts') {
             // A search gets no paywall and no locked card, so it cannot say how
@@ -209,7 +224,8 @@ for (const vp of VIEWPORTS) {
           await expect(block).toContainText(`Loading the full ${lib.status}…`)
           // Not the free wall, not a locked placeholder, not an empty state.
           await expect(wallOf(page)).toHaveCount(0)
-          await expect(page.locator('.lockt-card')).toHaveCount(0)
+          // (the old `.lockt-card` placeholder is gone; locked tiles are `.vpt--locked`)
+          await expect(page.locator('.vpt--locked')).toHaveCount(0)
           await expect(page.getByText(/no (palettes|gradients|prompts) match/i)).toHaveCount(0)
           // Reserved height: min(60vh, 520px), so the page does not jump when the rows land.
           const viewportHeight = page.viewportSize().height
@@ -234,7 +250,7 @@ for (const vp of VIEWPORTS) {
 
           await expect(statusOf(page)).toContainText(`Loading the ${lib.status}…`)
           await expect(wallOf(page)).toHaveCount(0)
-          await expect(page.locator('.lockt-card')).toHaveCount(0)
+          await expect(page.locator('.vpt--locked')).toHaveCount(0)
           await expect(page.getByText(/no (palettes|gradients|prompts) match/i)).toHaveCount(0)
 
           await page.evaluate(() => window.__UIL4B_TEST_HOLD__.release())

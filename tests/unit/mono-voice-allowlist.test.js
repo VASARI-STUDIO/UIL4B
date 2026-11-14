@@ -131,6 +131,10 @@ const ALLOWED = {
     '.ck .ck-nokey code': 'code',
     '.ck-ref code': 'token',
   },
+  'pages/community.css': {
+    '.cm-area': 'code',
+    '.cm-sw::after': 'hex',
+  },
   'pages/contrast.css': {
     '.cc .cc-hex-input': 'hex',
   },
@@ -231,6 +235,18 @@ const ALLOWED = {
     '.lart .lart-prose code': 'code',
     '.lart .lart-table-cap code': 'code',
   },
+  // The colour-contrast guide's figures (ContrastFigures.jsx). The board (ReadingR2A) draws these in Geist Mono:
+  // swatch and field hexes are colour values; the worked-formula readouts (needs 4.5:1, the 4-decimal channel and
+  // luminance values) are figures read down a column that the board keeps mono, so they take 'value'.
+  'pages/learn-contrast.css': {
+    '.lcc-chval i': 'value',
+    '.lcc-hx input': 'hex',
+    '.lcc-lend': 'value',
+    '.lcc-nd': 'value',
+    '.lcc-rl': 'hex',
+    '.lcc-swh': 'hex',
+    '.lcc-tsw div': 'hex',
+  },
   'pages/legal.css': {
     '.lgl .lgl-p .storage-key': 'token',
   },
@@ -241,6 +257,11 @@ const ALLOWED = {
     '.plb .plb-val-v': 'hex',
     ':is(.plb, .tl-sheet-layer) .plb-seedchip-hex': 'hex',
   },
+  'pages/library-v3.css': {
+    '.lib-surface.lib-v3[class] .pgal-chip': 'hex',
+    // the preview popup's colour rows: the hex the row copies
+    '.lib-surface.lib-v3.gpd-layer[class] .gpd-row-hex': 'hex',
+  },
   'pages/palette-gallery.css': {
     '.lib-surface.pgl-page .pgal-chip': 'hex',
   },
@@ -249,11 +270,16 @@ const ALLOWED = {
   },
   'pages/principles.css': {
     '.prn-cap code': 'code',
-    '.prn-cx-role b': 'token',
+    '.prn-cx-hex': 'hex',
     '.prn-th-hex': 'hex',
-    '.prn-th-token': 'token',
-    '.prn-ty-name': 'token',
     '.prn-ty-px': 'value',
+    '.prn-ty-x': 'value',
+  },
+  'pages/project-v3.css': {
+    '.pjv-mono': 'value',
+    '.pjv-stop': 'hex',
+    '.pjv-tmk span': 'value',
+    '.pjv-ts-px': 'value',
   },
   'pages/projects.css': {
   },
@@ -271,6 +297,9 @@ const ALLOWED = {
   'pages/seo-inspector.css': {
     '.seo-page .seo-tags-code': 'code',
     '.seo-page .seo-tags-note code': 'code',
+  },
+  'pages/settings-v3.css': {
+    '.stg-fcap .h': 'hex',
   },
   'pages/spectrum-chrome.css': {
     '.spnav-search kbd': 'kbd',
@@ -301,7 +330,9 @@ const ALLOWED = {
     '.sp-search .hcmd-prompt::after': 'glyph',
   },
   'pages/surface.css': {
-    '.srf .scp-type-mono': 'code',
+    '.srf .srf-hex': 'hex',
+    // index spec: mono only on a hex value or the clamp() literal; the matched text in a search hit is that literal
+    '.srf .lidx-hit mark': 'code',
   },
   'pages/tint.css': {
     '.tt .tt-hex-input': 'hex',

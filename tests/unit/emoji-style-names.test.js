@@ -16,6 +16,9 @@
 //   emojiStyleImage.js  svgFromBatch ignores aliases                 -> "an alias is followed"
 //   emojiStyleImage.js  loadStyleImage treats not_found as ok        -> "a set with no icon is missing"
 //   data/iconPackTiers.js  one of the four moves off 'paid'          -> "all four sets are Pro"
+//   emojiStyleImage.js  commentSafe stops closing up '--'          -> "the credit comment cannot be broken"
+//   emojiStyleImage.js  attributedSvg puts the comment before <svg> -> "a downloaded SVG carries its set's credit"
+//   emojiStyleImage.js  styleFileName drops the set prefix          -> "the file is named emoji, then set"
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -23,13 +26,13 @@ import { fileURLToPath } from 'node:url'
 import {
   EMOJI_STYLE_SETS, kebabEmojiName, styleCandidates, styleIconName,
 } from '../../src/utils/emojiStyleNames.js'
-import { loadStyleImage, svgDataUri, svgFromBatch } from '../../src/utils/emojiStyleImage.js'
+import { attributedSvg, loadStyleImage, styleFileName, svgDataUri, svgFromBatch } from '../../src/utils/emojiStyleImage.js'
 import { SKIN_TONES } from '../../src/utils/emojiSkinTone.js'
 import { lookupEmoji } from '../../src/utils/emojiCodes.js'
 import { parseEmojiIndex } from '../../src/data/emojiIndex.js'
 import { EMOJI_DATA } from '../../src/data/emojiData.js'
 import { TONE_EMOJI } from '../../src/data/emojiTones.js'
-import { ICON_PACK_CREDITS } from '../../src/data/iconPackCredits.js'
+import { ICON_PACK_CREDITS, packCredit } from '../../src/data/iconPackCredits.js'
 import { ICON_PACK_TIERS } from '../../src/data/iconPackTiers.js'
 
 const ROOT = new URL('../../', import.meta.url)
@@ -263,4 +266,36 @@ test('a refused or failed request is an error, kept apart from missing, and is n
   await withFetch(() => json({ width: 24, height: 24, icons: { 'unit-err': { body: '<g/>' } } }), async () => {
     assert.equal((await loadStyleImage('twemoji', 'unit-err')).status, 'ok')
   })
+})
+
+test("a downloaded SVG carries its set's credit, inside the svg element", () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M0 0h32v32H0z"/></svg>'
+  for (const { prefix } of EMOJI_STYLE_SETS) {
+    const credit = packCredit(prefix)
+    const out = attributedSvg(svg, credit)
+    assert.ok(out.startsWith('<svg '), `${prefix}: the file still opens with <svg`)
+    const comment = out.match(/<!--([\s\S]*?)-->/)
+    assert.ok(comment, `${prefix}: a credit comment is present`)
+    assert.ok(out.indexOf('<!--') > out.indexOf('>'), `${prefix}: the comment sits inside the svg element`)
+    assert.ok(comment[1].includes(credit.name), `${prefix}: names the set`)
+    assert.ok(credit.licenceName && comment[1].includes(credit.licenceName), `${prefix}: names the licence`)
+    assert.ok(out.endsWith('<path d="M0 0h32v32H0z"/></svg>'), `${prefix}: the drawing is unchanged`)
+  }
+})
+
+test('the credit comment cannot be broken by its own text', () => {
+  const out = attributedSvg('<svg>x</svg>', { name: 'Set -- one', copyright: 'a\nb', licenceName: 'L' })
+  const body = out.slice(out.indexOf('<!--') + 4, out.indexOf('-->'))
+  assert.ok(!body.includes('--'), 'no "--" inside the comment')
+  assert.ok(!/[\r\n]/.test(body), 'no line breaks inside the comment')
+  assert.equal(attributedSvg('<svg>x</svg>', null), '<svg>x</svg>', 'no credit, no comment')
+  assert.equal(attributedSvg('', packCredit('noto')), '', 'no svg, nothing')
+})
+
+test('the file is named emoji, then set', () => {
+  assert.equal(styleFileName('Waving hand', 'twemoji'), 'waving-hand-twemoji.svg')
+  assert.equal(styleFileName('Flag: Côte d’Ivoire', 'fluent-emoji'), 'flag-c-te-d-ivoire-fluent-emoji.svg')
+  assert.equal(styleFileName('', 'noto'), 'emoji-noto.svg')
+  // The dialog passes the tone after the name, so a toned file says which tone it is.
+  assert.equal(styleFileName('waving hand medium-dark', 'noto'), 'waving-hand-medium-dark-noto.svg')
 })

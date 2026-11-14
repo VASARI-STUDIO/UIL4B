@@ -10,10 +10,11 @@
 // it live in src/components/palette/PalettePreview.jsx.
 
 // A group with no scene in it is left out, so the list never shows an empty
-// heading. The graphic group joins when its first scene does.
+// heading.
 export const PREVIEW_GROUPS = [
   { id: 'product', label: 'Product' },
   { id: 'marketing', label: 'Marketing' },
+  { id: 'brand', label: 'Brand' },
 ]
 
 // `free` is the whole Pro gate: a preview without it is blurred behind
@@ -23,9 +24,15 @@ export const PREVIEW_SCENES = [
   { id: 'energy', name: 'Energy dashboard', group: 'product', free: true, example: true },
   { id: 'trail', name: 'Trail run app', group: 'product', free: true, example: true },
   { id: 'card', name: 'Spending card', group: 'product', free: false, example: true },
+  { id: 'booking', name: 'Booking page', group: 'product', free: true, example: true },
+  { id: 'report', name: 'Sales report', group: 'product', free: false, example: true },
   { id: 'editorial', name: 'Editorial hero', group: 'marketing', free: true, example: true },
   { id: 'product', name: 'Product page', group: 'marketing', free: true, example: true },
   { id: 'studio', name: 'Architect portfolio', group: 'marketing', free: false, example: true },
+  { id: 'email', name: 'Order email', group: 'marketing', free: true, example: true },
+  { id: 'coffee', name: 'Coffee bag', group: 'brand', free: false, example: true },
+  { id: 'shopfront', name: 'Shopfront', group: 'brand', free: false, example: true },
+  { id: 'stationery', name: 'Stationery', group: 'brand', free: false, example: true },
 ]
 
 export const DEFAULT_SCENE = 'editorial'

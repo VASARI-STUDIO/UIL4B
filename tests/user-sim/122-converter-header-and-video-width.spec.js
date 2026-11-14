@@ -21,6 +21,7 @@
 //     -> the settle test goes red.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { openGroup } from './converter-rail-helpers.js'
 
 const PERSONA = 'someone opening the file converter to change a file'
 
@@ -45,7 +46,7 @@ test.describe('File converter: the header', () => {
   }
 })
 
-/** Open the Video tab with a real 1 s webm recorded in the page, and return the Width field. */
+/** Open the Video tab with a real 1 s webm recorded in the page, open its Size group, and return the Width field. */
 async function openVideoWithClip(page) {
   await go(page, '/create/file-converter')
   await page.getByRole('tab', { name: 'Video', exact: true }).click()
@@ -61,6 +62,7 @@ async function openVideoWithClip(page) {
     return Array.from(new Uint8Array(await new Blob(chunks, { type: 'video/webm' }).arrayBuffer()))
   })
   await page.locator('.fc-drop input[type="file"]').setInputFiles({ name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.from(clip) })
+  await openGroup(page, 'Size') // the output Width lives in the Size group
   const field = page.getByLabel('Width (px)')
   await expect(field, 'the clip never loaded, so the settings never showed').toBeVisible({ timeout: 15000 })
   return field

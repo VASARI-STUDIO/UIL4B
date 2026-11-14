@@ -36,6 +36,7 @@
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-helpers.js'
+import { PREVIEW_SCENES } from '../../src/data/palettePreviewScenes.js'
 
 // A DETERMINISTIC palette, not a reroll, so a failure is the same failure on
 // every run. It is the worst case the contrast backlog recorded for the old
@@ -43,12 +44,13 @@ import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-h
 // 4.075:1 in light.
 const PALETTE = ['#20838d', '#2994c7', '#5b89d7', '#8a9fea', '#c5c1f6']
 
-const SCENES = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
+const SCENES = PREVIEW_SCENES.map((s) => s.name)
 
 // A scene with a State menu is swept once per state: the disabled Overseas fees label
 // is only on the Limits form, and the Product page's bag sheet only in Added to bag.
 const STATES = {
   'Trail run app': ['Activity', 'Live tracking', 'Segment PR'],
+  'Booking page': ['Pick a time', 'Time held', 'Fully booked day'],
   'Spending card': ['Overview', 'Card frozen', 'Limits', 'Declined payment'],
   'Editorial hero': ['Article', 'Subscribe sheet', 'Subscribe, email error'],
   'Product page': ['Overview', 'Sold out size', 'Added to bag', 'Focused size'],
@@ -61,7 +63,7 @@ const STATES = {
 // above still catches any other text node that does the same; the contrast floor is
 // still measured on them like every other node. Source: 'now label' in
 // Sundial.data.js TEXT_RECIPE. Slack Water sets no brand colour as text.
-const BRAND_AS_TEXT = { 'Energy dashboard': ['sd-now-t'] }
+const BRAND_AS_TEXT = { 'Energy dashboard': ['sd-now-t'], 'Booking page': ['bk-mark', 'bk-lnk'], 'Order email': ['em-lnk'], Stationery: ['st-sc'] } // the last three: fieldInks.js --fi-link / --fi-deep-text, both brandAsText() with the floor measured
 
 const HELPERS = `
   const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }
@@ -143,7 +145,7 @@ const SWEEP = `((inkVars, fillVars) => {
 })`
 
 test.describe('Palette Builder preview ink', () => {
-  test('every text node clears its floor on its real ground, in all six scenes and both preview themes', async ({ page }) => {
+  test('every text node clears its floor on its real ground, in every scene in the registry and both preview themes', async ({ page }) => {
     watch(page, 'designer checking a palette on a UI mockup')
     // Pro, so every scene is mounted: a free account is shown a stand-in for the Pro scenes, with no scene text to measure.
     await signIn(page, { plan: 'pro' })

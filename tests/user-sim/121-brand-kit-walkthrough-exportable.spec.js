@@ -62,11 +62,11 @@ test.describe('Brand kit walkthrough: the saved project can be exported', () => 
       await page.setViewportSize({ width, height: width < 500 ? 844 : 900 })
       const board = await walk(page)
 
-      await expect(page.getByText('4 of 4 parts')).toBeVisible()
+      await expect(page.locator('.pjv-status')).toHaveText('Complete and ready to export')
       await expect(page.getByText('Fill the gaps')).toHaveCount(0)
-      await expect(page.locator('.pjd-head-actions').getByText('Export project', { exact: true })).toBeVisible()
+      await expect(page.locator('.pjv-rail').getByText('Export project', { exact: true })).toBeVisible()
       await expect(page.getByText('5 colours')).toBeVisible()
-      await expect(page.getByText('11 steps, made from your colours')).toBeVisible()
+      await expect(page.locator('.pjv-bm').getByText('11 steps', { exact: true })).toBeVisible()
 
       const saved = await page.evaluate(() => {
         const all = Object.values(JSON.parse(localStorage.getItem('vs-projects') || '{}')).flat()

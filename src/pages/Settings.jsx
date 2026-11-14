@@ -8,6 +8,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProPrice, usePrices, usePriceRetry } from '../hooks/usePrices'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useOnline from '../hooks/useOnline'
+import useModalDialog from '../hooks/useModalDialog'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { flushAccountSync } from '../hooks/useFirestoreSync'
 import { getSyncState } from '../utils/syncStatus'
@@ -30,7 +31,10 @@ import { formatMoney } from '../config/planLadder'
 import { LOCATIONS } from '../data/locations'
 import { FLAIRS, getFlair } from '../utils/constants'
 import UserName from '../components/UserName'
+import { useProject } from '../contexts/ProjectContext'
+import { activeColour } from '../utils/projectTints'
 import ThemeChoice from '../components/ThemeChoice'
+import { useTheme } from '../contexts/ThemeContext'
 import { clearCommunitySubmissions, COMMUNITY_SUBMISSIONS_KEY } from '../utils/communitySubmissions'
 import { collectStorage, buildExport, keysToClear } from '../utils/dataExport'
 import { initialOf } from '../utils/initials'
@@ -46,6 +50,25 @@ import { db } from '../utils/firebase'
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/settings.css'
+import '../styles/pages/settings-v3.css'
+
+// Two prices, one slot: the new figure fades in over 150ms while the old one fades out on top of it.
+// Opacity only, so reduced motion needs no second version.
+function PriceXfade({ value }) {
+  const [state, setState] = useState({ cur: value, prev: null })
+  if (state.cur !== value) setState({ cur: value, prev: state.cur })
+  useEffect(() => {
+    if (state.prev === null) return undefined
+    const t = setTimeout(() => setState((s) => ({ ...s, prev: null })), 150)
+    return () => clearTimeout(t)
+  }, [state.prev])
+  return (
+    <span className="stg-xf">
+      <span className={state.prev === null ? undefined : 'stg-xf-in'} key={state.cur}>{state.cur}</span>
+      {state.prev !== null && <span className="stg-xf-out" aria-hidden="true">{state.prev}</span>}
+    </span>
+  )
+}
 
 function Check() {
   return (
@@ -60,6 +83,16 @@ function Minus() {
     <svg className="sub-check sub-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
       <line x1="6" y1="12" x2="18" y2="12" />
     </svg>
+  )
+}
+
+function GoArrow() {
+  return (
+    <span className="mi-go" aria-hidden="true">
+      <svg className="mi-a" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 17L17 7M8 7h9v9" />
+      </svg>
+    </span>
   )
 }
 
@@ -81,8 +114,8 @@ function portalErrorText(e) {
     const ref = e.correlationId || /\[ref ([^\]]+)\]/.exec(e.message || '')?.[1]
     return `Billing could not be opened because this billing account isn't linked to your login. Nothing about your plan has changed. Email support@uil4b.com and we'll link it.${ref ? ` Quote reference ${ref}.` : ''}`
   }
-  const detail = e?.message ? ` (${e.message})` : ''
-  return `Billing could not be opened, so nothing about your plan has changed${detail}. Please try again in a moment.`
+  console.warn('Billing portal failed to open', e)
+  return `Billing could not be opened, so nothing about your plan has changed. Please try again in a moment.`
 }
 
 // How long a profile save waits for the server before it is treated as held
@@ -97,6 +130,14 @@ const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navig
 
 function EditField({ label, value, onSave, type = 'text', placeholder, options, maxLength, inputMode, multiline = false }) {
   const [editing, setEditing] = useState(false)
+  const editRef = useRef(null)
+  const focusEditOwed = useRef(false)
+  useEffect(() => {
+    if (editing || !focusEditOwed.current) return
+    focusEditOwed.current = false
+    editRef.current?.focus()
+  }, [editing])
+  const closeEdit = () => { focusEditOwed.current = true; setEditing(false) }
   const [val, setVal] = useState(value || '')
   const [error, setError] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
@@ -140,7 +181,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
     setSaving(true)
     try {
       await onSave(val)
-      setEditing(false)
+      closeEdit()
       setError('')
     } catch (e) {
       setError(e.message || 'Failed to save')
@@ -164,7 +205,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
   const onFieldKey = (e) => {
     if (multiline) {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSave() }
-      else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
+      else if (e.key === 'Escape' && !savingRef.current) { closeEdit(); setError('') }
       return
     }
     if (options) {
@@ -174,7 +215,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
       if (e.key === 'Escape' && listOpen) return
     }
     if (e.key === 'Enter') { e.preventDefault(); handleSave() }
-    else if (e.key === 'Escape' && !savingRef.current) { setEditing(false); setError('') }
+    else if (e.key === 'Escape' && !savingRef.current) { closeEdit(); setError('') }
   }
 
   if (!editing) {
@@ -185,7 +226,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
           <div className="settings-row-value">{value || <span className="settings-row-empty">Not set</span>}</div>
         </div>
         {/* The hidden suffix gives each Edit button its own name. */}
-        <button type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit<span className="sr-only"> {label.toLowerCase()}</span></button>
+        <button ref={editRef} type="button" className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit<span className="sr-only"> {label.toLowerCase()}</span></button>
       </div>
     )
   }
@@ -215,7 +256,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
         </div>
         <div className="settings-edit-actions">
           <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
-          <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
+          <button type="button" className="btn btn-s" onClick={() => { closeEdit(); setError('') }} disabled={saving}>Cancel</button>
         </div>
         {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
       </div>
@@ -268,7 +309,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options, 
           )}
         </div>
         <button type="button" className="btn btn-accent btn-s" onClick={handleSave} disabled={saving}>Save</button>
-        <button type="button" className="btn btn-s" onClick={() => { setEditing(false); setError('') }} disabled={saving}>Cancel</button>
+        <button type="button" className="btn btn-s" onClick={() => { closeEdit(); setError('') }} disabled={saving}>Cancel</button>
       </div>
       {error && <div id={errId} className="settings-field-err" role="alert">{error}</div>}
     </div>
@@ -692,138 +733,133 @@ function deleteErrorText(e) {
   return 'We could not delete your account. Please try again.'
 }
 
-function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending }) {
+function DeleteAccount({ onDelete, onExportFirst, googleOnly, isPro, planPending, email, projectCount }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
-  // The acknowledgement every account type must tick before the button arms.
+  // The acknowledgement every account type must tick before the action runs.
   const [ack, setAck] = useState(false)
   const [error, setError] = useState('')
+  // Which of the two missing steps the person last tried to skip: 'ack' or 'pw'.
+  const [attempt, setAttempt] = useState('')
   const [busy, setBusy] = useState(false)
-  const panelRef = useRef(null)
-  // On Cancel the panel that held focus unmounts, so focus returns to the
-  // button that opened it rather than dropping to <body>.
-  const openBtnRef = useRef(null)
-  const returnFocus = useRef(false)
-  useEffect(() => {
-    if (open || !returnFocus.current) return
-    returnFocus.current = false
-    openBtnRef.current?.focus()
-  }, [open])
+  const ackRef = useRef(null)
+  const pwRef = useRef(null)
+  const titleId = useId()
 
-  // Opening the confirmation unmounts the "Delete account" button that was
-  // just pressed, and a keyboard user's focus went with it — measured on
-  // 2026-09-09: document.activeElement was <body> the moment the panel
-  // appeared, so the next Tab started from the top of the page and a screen
-  // reader announced nothing about the list of what is destroyed. Focus lands
-  // on the password field where there is one (it is the next thing to do),
-  // and on the panel itself for a Google-only account, so the itemised list is
-  // read before the destructive button is reached. Never on the button: Enter
-  // on a freshly focused "Permanently delete" would be a one-keystroke
-  // deletion.
-  useEffect(() => {
-    if (!open) return
-    const input = panelRef.current?.querySelector('#del-confirm-pw')
-    ;(input || panelRef.current)?.focus()
-  }, [open])
-
-  // A password account cannot delete with an empty password — Firebase refuses
-  // the re-authentication — so the button waits for one. The label directly
-  // above the field says what it is waiting for. It also waits for the
-  // acknowledgement, which is the same for a Google-only account.
+  // A password account cannot delete with an empty password (Firebase refuses
+  // the re-authentication), and every account must tick the box. The button
+  // says so with aria-disabled and stays pressable: pressing it explains what
+  // is missing and moves focus there, and never starts the delete.
   const needsPassword = !googleOnly && !password
   const notReady = !ack || needsPassword
 
-  const closePanel = () => { returnFocus.current = true; setOpen(false); setError(''); setPassword(''); setAck(false) }
+  const closePanel = () => { setOpen(false); setError(''); setPassword(''); setAck(false); setAttempt('') }
 
-  // Enter in the password field submits (the button is disabled until there is
-  // a password, which blocks the implicit submit too); Escape closes the panel
-  // from anywhere inside it, unless the delete is already running.
+  // Focus trap, Escape, scroll lock and focus back to "Delete account" come from
+  // the app's modal hook. Focus opens on the password field where there is one
+  // (the next thing to do), else on the dialog itself so its heading is read
+  // before the destructive button is reached. Never on the button.
+  const dialogRef = useModalDialog(() => { if (!busy) closePanel() }, { enabled: open, initialFocus: '#del-confirm-pw' })
+
   const handleDelete = async (e) => {
     e?.preventDefault()
-    if (busy || notReady) return
+    if (busy) return
+    if (!ack) { setAttempt('ack'); ackRef.current?.focus(); return }
+    if (needsPassword) { setAttempt('pw'); pwRef.current?.focus(); return }
     setBusy(true)
     setError('')
     try {
       await onDelete(password)
       // On success the account is gone and AuthContext has signed out; the app
       // re-renders signed out from under this component.
-    } catch (e) {
+    } catch (err) {
       setBusy(false)
-      setError(deleteErrorText(e))
+      setError(deleteErrorText(err))
     }
   }
 
-  if (!open) {
-    return (
-      // Waits for the plan to be known: the list below names Pro's cancellation
-      // only for a Pro account.
-      <button ref={openBtnRef} className="btn danger-zone-open" onClick={() => setOpen(true)} disabled={planPending}>
-        Delete account
-      </button>
-    )
-  }
+  const ackErr = attempt === 'ack' && !ack
+  const pwErr = attempt === 'pw' && needsPassword
+  const fieldErr = pwErr ? 'Enter your password to confirm.' : error
+  const counts = projectCount > 0 ? `${projectCount} project${projectCount === 1 ? '' : 's'} ${projectCount === 1 ? 'is' : 'are'} deleted.` : ''
 
   return (
-    <form
-      className="danger-confirm"
-      ref={panelRef}
-      tabIndex={-1}
-      noValidate
-      onSubmit={handleDelete}
-      onKeyDown={(e) => { if (e.key === 'Escape' && !busy) { e.preventDefault(); closePanel() } }}
-    >
-      <ul className="danger-confirm-list">
-        {isPro && <li>Pro is cancelled straight away, and you won&rsquo;t be billed again.</li>}
-        <li>Your profile, saved projects, icons and synced designs are deleted.</li>
-        <li>Prompts you submitted to the community, and any media with them, are removed.</li>
-        <li>You can sign up again with the same email, but it starts as a new, empty account.</li>
-      </ul>
+    <>
+      {/* Waits for the plan to be known: the list below names Pro's cancellation
+          only for a Pro account. */}
+      <button className="btn danger-zone-open" onClick={() => setOpen(true)} disabled={planPending}>
+        Delete account
+      </button>
+      {open && (
+        <div className="stg-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) { e.preventDefault(); closePanel() } }}>
+          <form className="danger-confirm stg-dlg" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} noValidate onSubmit={handleDelete}>
+            <h2 id={titleId} className="stg-dlg-h">Delete {email} and everything in it?</h2>
+            {counts && <p className="stg-dlg-count">{counts}</p>}
+            <ul className="danger-confirm-list">
+              {isPro && <li>Pro is cancelled straight away, and you won&rsquo;t be billed again.</li>}
+              <li>Your profile, saved projects, icons and synced designs are deleted.</li>
+              <li>Prompts you submitted to the community, and any media with them, are removed.</li>
+              <li>You can sign up again with the same email, but it starts as a new, empty account.</li>
+            </ul>
 
-      {/* A way out to the export, before anything is deleted. It only changes
-          section; nothing is deleted by it. */}
-      <p className="danger-confirm-note">
-        Want a copy first?{' '}
-        <button type="button" className="danger-confirm-link" onClick={onExportFirst} disabled={busy}>Download your data</button>
-      </p>
+            {/* A way out to the export, before anything is deleted. It only changes
+                section; nothing is deleted by it. */}
+            <p className="danger-confirm-note">
+              Want a copy first?{' '}
+              <button type="button" className="danger-confirm-link" onClick={() => { closePanel(); onExportFirst() }} disabled={busy}>Download your data</button>
+            </p>
 
-      <div className="danger-confirm-ack">
-        <input id="del-ack" type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={busy} />
-        <label htmlFor="del-ack">I understand my account and everything in it will be deleted, and this can&rsquo;t be undone.</label>
-      </div>
+            <div className="danger-confirm-ack">
+              <input
+                id="del-ack"
+                ref={ackRef}
+                type="checkbox"
+                checked={ack}
+                onChange={(e) => { setAck(e.target.checked); setAttempt('') }}
+                disabled={busy}
+                aria-invalid={ackErr || undefined}
+                aria-describedby={ackErr ? 'del-ack-err' : undefined}
+              />
+              <label htmlFor="del-ack">I understand my account and everything in it will be deleted, and this can&rsquo;t be undone.</label>
+            </div>
+            {ackErr && <div id="del-ack-err" className="danger-confirm-err" role="alert">Tick the box to confirm.</div>}
 
-      {googleOnly ? (
-        // A Google-only account HAS no password. The old dialog asked for one
-        // unconditionally, which was unanswerable — and then deletion threw
-        // requires-recent-login anyway.
-        <p className="danger-confirm-note">
-          Google will ask you to confirm it&rsquo;s you before anything is deleted.
-        </p>
-      ) : (
-        <>
-          <label className="seg-label" htmlFor="del-confirm-pw">Confirm your password</label>
-          <input
-            id="del-confirm-pw"
-            type="password"
-            className="danger-confirm-input"
-            autoComplete="current-password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            aria-invalid={!!error}
-            aria-describedby={error ? 'del-confirm-err' : undefined}
-          />
-        </>
+            {googleOnly ? (
+              // A Google-only account HAS no password: Google asks it to confirm.
+              <p className="danger-confirm-note">
+                Google will ask you to confirm it&rsquo;s you before anything is deleted.
+              </p>
+            ) : (
+              <>
+                <label className="seg-label" htmlFor="del-confirm-pw">Confirm your password</label>
+                <input
+                  id="del-confirm-pw"
+                  ref={pwRef}
+                  type="password"
+                  className="danger-confirm-input"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setAttempt('') }}
+                  aria-invalid={!!fieldErr}
+                  aria-describedby={fieldErr ? 'del-confirm-err' : undefined}
+                />
+                {fieldErr && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{fieldErr}</div>}
+              </>
+            )}
+            {googleOnly && error && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{error}</div>}
+
+            <div className="danger-confirm-actions">
+              <button type="button" className="btn btn-s" onClick={closePanel} disabled={busy}>
+                Cancel
+              </button>
+              <button type="submit" className="btn danger-confirm-go" disabled={busy} aria-disabled={notReady || undefined}>
+                {busy ? 'Deleting…' : 'Permanently delete'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
-
-      <div className="danger-confirm-actions">
-        <button type="submit" className="btn danger-confirm-go" disabled={busy || notReady}>
-          {busy ? 'Deleting…' : 'Permanently delete'}
-        </button>
-        <button type="button" className="btn btn-s" onClick={closePanel} disabled={busy}>
-          Cancel
-        </button>
-      </div>
-      {error && <div id="del-confirm-err" className="danger-confirm-err" role="alert">{error}</div>}
-    </form>
+    </>
   )
 }
 
@@ -861,11 +897,13 @@ export default function Settings({ toast }) {
   useEffect(() => { openFirebaseGate() }, [])
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, resetPassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError, emailVerificationOwed, sendVerificationEmail, refreshEmailVerified, loading: authLoading } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
+  const { themePref } = useTheme()
   const { isPro, isAdmin, subscription, lifetimeEntitlement, openPortal, loading: subLoading, planKnown } = useSubscription()
   // True until both the account and its plan have answered. Neither plan is
   // shown before then: isPro is false for everyone while the plan is on its way.
   const planPending = authLoading || (!!user && (subLoading || !planKnown))
   const { t, lang, setLang, languages } = useI18n()
+  const { projects } = useProject() || {}
   // 'support' — the SECTION ID, not the label. This said 'subscription', which
   // matched no section: harmless while every panel rendered at once and `active`
   // only drove the nav highlight, so the page opened with nothing highlighted
@@ -887,7 +925,7 @@ export default function Settings({ toast }) {
   // The tiers only stack at 640 (settings.css), so this is not `isPhone`:
   // between 641 and 720 they are still two columns and Free stays on the left.
   // The Language tiles turn into rows at the same line.
-  const tiersStacked = useMediaQuery('(max-width: 640px)')
+  const tiersStacked = useMediaQuery('(max-width: 899px)')
   const navigate = useNavigate()
   // Which view a phone shows lives in the history entry, not in component
   // state: opening a section is a push, so the browser's Back (and the phone's
@@ -1216,9 +1254,9 @@ export default function Settings({ toast }) {
   // Recount whenever the Data panel is opened, and after a clear, so the figure
   // shown is the figure on disk.
   useEffect(() => {
-    if (active !== 'data') return
+    if (active !== 'data' && !(isPhone && phoneView === 'list')) return
     setLocalKeyCount(Object.keys(collectStorage(window.localStorage)).length)
-  }, [active, confirmClear])
+  }, [active, confirmClear, isPhone, phoneView])
 
   // Enumerates storage rather than walking a hand-written list. The old version
   // iterated 15 named keys while the app writes about forty — measured on a
@@ -1330,6 +1368,20 @@ export default function Settings({ toast }) {
     { id: 'privacy', label: t('settings.privacyLegal') || 'Privacy' },
   ]
 
+  // The phone overview: the sections in three groups, each row carrying its
+  // current value. Signed out, Account is not among the sections.
+  const THEME_WORD = { light: 'Light', dark: 'Dark', system: 'System' }
+  const rowValues = {
+    account: userProfile?.displayName || (user?.email || '').split('@')[0],
+    support: !user || planPending ? '' : isPro ? 'UI L4B Pro' : 'Free',
+    accessibility: `${THEME_WORD[themePref] || ''}${reducedMotion ? ', reduced motion on' : ''}`,
+    language: languages.find((l) => l.code === lang)?.native || '',
+    data: `${localKeyCount} item${localKeyCount === 1 ? '' : 's'}`,
+  }
+  const sectionGroups = [['account', 'support'], ['accessibility', 'language'], ['data', 'privacy']]
+    .map((ids) => sections.filter((s) => ids.includes(s.id)))
+  const showOverview = isPhone && phoneView === 'list'
+
   // Roving tabindex: Arrow/Home/End move the active tab, matching the ARIA
   // authoring pattern for a vertical tablist.
   const selectTab = (index) => {
@@ -1410,13 +1462,32 @@ export default function Settings({ toast }) {
       <p className="sub-tier-current">Your current plan</p>
     </div>
   )
+  // The plan card's one colour field: the newest project that is not archived and has a colour of its own
+  // (the default blue means none was chosen). Drawn only; never a control.
+  const leadProject = (Array.isArray(projects) ? projects : [])
+    .filter((p) => p && !p.archived)
+    .sort((a, b) => (Date.parse(b.updatedAt || b.createdAt) || 0) - (Date.parse(a.updatedAt || a.createdAt) || 0))
+    .find((p) => { const c = activeColour(p.design); return c && c.toLowerCase() !== '#0051ff' })
+  const leadColour = leadProject ? activeColour(leadProject.design) : ''
+  const colourField = leadProject ? (
+    <>
+      <div className="stg-field" aria-hidden="true" style={{ background: leadColour }} />
+      <div className="stg-fcap"><span className="n">{leadProject.name || 'Untitled'} · your latest project</span><span className="h">{leadColour.toUpperCase()}</span></div>
+    </>
+  ) : (
+    <div className="stg-field stg-field--empty">
+      <p>Your brand colour shows here once you save a palette.</p>
+      <Link className="settings-linkbtn" to="/create/palette">Open in Palette Builder</Link>
+    </div>
+  )
   const tierPro = (
     <div className="sub-tier sub-tier-pro">
+      {colourField}
       <div className="sub-tier-head">
         <div className="sub-tier-name">Pro</div>
         <div className="sub-tier-price">
           <span className={`sub-tier-amount${priceStatus === 'live' || priceStatus === 'loading' || priceStatus === 'retrying' ? '' : ' is-word'}`}>
-            {canCheckout(priceStatus) ? offer.amountLabel : priceCopy.word}
+            <PriceXfade value={canCheckout(priceStatus) ? offer.amountLabel : priceCopy.word} />
           </span>
           {canCheckout(priceStatus) && <span className="sub-tier-per">per month</span>}
         </div>
@@ -1431,7 +1502,7 @@ export default function Settings({ toast }) {
       {priceStatus === 'live' && !subLoading ? (
         // Every upgrade starts at /plans, which reads ?billing= for the period
         // picked here and carries on to checkout from there.
-        <Link className="btn btn-accent sub-tier-btn" to={`/plans?billing=${encodeURIComponent(offer.id)}`}>Upgrade to Pro</Link>
+        <Link className="btn btn-accent sub-tier-btn sub-tier-btn--go" to={`/plans?billing=${encodeURIComponent(offer.id)}`}>Upgrade to Pro<GoArrow /></Link>
       ) : priceStatus === 'cadence-missing' ? (
         <button type="button" className="btn btn-accent sub-tier-btn" onClick={() => setBilling(otherOffer.id)}>{priceCopy.button}</button>
       ) : (
@@ -1462,6 +1533,32 @@ export default function Settings({ toast }) {
           </button>
         )}
         <h1 className="stg-title">Settings</h1>
+        {showOverview && user && (
+          <div className="stg-id">
+            <div className="stg-id-av" aria-hidden="true">
+              {userProfile?.photoURL ? <img src={userProfile.photoURL} alt="" referrerPolicy="no-referrer" /> : <span>{initialOf(userProfile?.displayName, user.email)}</span>}
+            </div>
+            <div className="stg-id-n">
+              <b>{rowValues.account}</b>
+              <span>{user.email}</span>
+            </div>
+          </div>
+        )}
+        {showOverview && !user && !authLoading && <Link className="stg-signin" to="/login">Sign in</Link>}
+        {!(isPhone && phoneView === 'section') && !(showOverview && !user) && (
+          <p className="stg-status">
+            {!user ? 'Signed out, everything UI L4B keeps is in this browser, and only here.' : (
+              <>
+                Signed in with {signInMethod}.{' '}
+                {planPending ? <span className="stg-sk" aria-hidden="true" />
+                  : isPro ? (noBillingNote || !proFacts.length ? 'On UI L4B Pro.'
+                    : proFacts.find(([l]) => l === 'Next payment') ? `On UI L4B Pro, renews ${proFacts.find(([l]) => l === 'Next payment')[1]}.`
+                      : `On UI L4B Pro. ${proFacts[0][1]}.`)
+                    : <>On Free. <Link to="/plans">See plans</Link></>}
+              </>
+            )}
+          </p>
+        )}
       </div>
 
       <div className="settings-grid">
@@ -1482,24 +1579,39 @@ export default function Settings({ toast }) {
           aria-orientation={isPhone ? undefined : 'vertical'}
           hidden={isPhone && phoneView === 'section'}
         >
-          {sections.map((s, i) => (
-            <button
-              key={s.id}
-              id={`settab-${s.id}`}
-              role={isPhone ? undefined : 'tab'}
-              aria-selected={isPhone ? undefined : active === s.id}
-              aria-controls={isPhone ? undefined : `set-${s.id}`}
-              tabIndex={isPhone || active === s.id ? 0 : -1}
-              ref={(node) => { tabRefs.current[i] = node }}
-              className={`settings-nav-item${active === s.id ? ' active' : ''}`}
-              onClick={() => pickSection(s.id)}
-              onKeyDown={isPhone ? undefined : (event) => onTabKeyDown(event, i)}
-            >
-              <NavIcon id={s.id} />
-              <span>{s.label}</span>
-              {isPhone && <Chevron />}
-            </button>
-          ))}
+          {(isPhone ? sectionGroups : [sections]).map((group, g) => {
+            const rows = group.map((s) => {
+              const i = sections.indexOf(s)
+              return (
+                <button
+                  key={s.id}
+                  id={`settab-${s.id}`}
+                  role={isPhone ? undefined : 'tab'}
+                  aria-selected={isPhone ? undefined : active === s.id}
+                  aria-controls={isPhone ? undefined : `set-${s.id}`}
+                  tabIndex={isPhone || active === s.id ? 0 : -1}
+                  ref={(node) => { tabRefs.current[i] = node }}
+                  className={`settings-nav-item${active === s.id ? ' active' : ''}`}
+                  onClick={() => pickSection(s.id)}
+                  onKeyDown={isPhone ? undefined : (event) => onTabKeyDown(event, i)}
+                >
+                  {isPhone ? (
+                    <>
+                      <span className="stg-ll">{s.label}</span>
+                      <span className="stg-lv">{rowValues[s.id]}</span>
+                      <Chevron />
+                    </>
+                  ) : (
+                    <>
+                      <NavIcon id={s.id} />
+                      <span>{s.label}</span>
+                    </>
+                  )}
+                </button>
+              )
+            })
+            return isPhone ? <div key={g} className="stg-lgroup">{rows}</div> : rows
+          })}
         </nav>
 
         <div className="settings-content" hidden={isPhone && phoneView === 'list'}>
@@ -1516,7 +1628,8 @@ export default function Settings({ toast }) {
               // have both answered: before that, isPro is false for everyone,
               // so a Pro subscriber would see Free marked as their plan. One row
               // at the Pro Plan row's height, so nothing jumps when it resolves.
-              <div className="settings-card sub-active sub-checking" aria-busy="true">
+              <div className="settings-card sub-active sub-checking stg-facts" aria-busy="true">
+                {colourField}
                 <div className="settings-card-body">
                   <div className="settings-row settings-row--fact">
                     <div className="settings-row-label">Plan</div>
@@ -1525,33 +1638,37 @@ export default function Settings({ toast }) {
                 </div>
               </div>
             ) : isPro ? (
-              <div className="settings-card sub-active">
-                <div className="settings-card-body">
-                  <div className="settings-row settings-row--fact">
-                    <div className="settings-row-label">Plan</div>
-                    <div className="settings-fact-body">
-                      <div className="settings-row-value sub-active-title">UI L4B Pro</div>
-                      {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
+              <div className="stg-pro">
+                <div className="settings-card sub-active stg-facts">
+                  {colourField}
+                  <div className="settings-card-body">
+                    <div className="settings-row settings-row--fact">
+                      <div className="settings-row-label">Plan</div>
+                      <div className="settings-fact-body">
+                        <div className="settings-row-value sub-active-title">UI L4B Pro</div>
+                        {noBillingNote && <div className="settings-row-meta sub-active-meta">{noBillingNote}</div>}
+                      </div>
                     </div>
+                    {!noBillingNote && proFacts.map(([label, value]) => (
+                      <div className="settings-row settings-row--fact" key={label}>
+                        <div className="settings-row-label">{label}</div>
+                        <div className="settings-row-value">{value}</div>
+                      </div>
+                    ))}
+                    {!noBillingNote && endsOn && (
+                      <p className="settings-row-meta sub-ends-note">Your plan ends on {endsOn}. Open billing to keep Pro.</p>
+                    )}
                   </div>
-                  {!noBillingNote && proFacts.map(([label, value]) => (
-                    <div className="settings-row settings-row--fact" key={label}>
-                      <div className="settings-row-label">{label}</div>
-                      <div className="settings-row-value">{value}</div>
-                    </div>
-                  ))}
-                  {!noBillingNote && endsOn && (
-                    <p className="settings-row-meta sub-ends-note">Your plan ends on {endsOn}. Open billing to keep Pro.</p>
-                  )}
+                </div>
+                <div className={`stg-pair${subscription ? '' : ' stg-pair--solo'}`}>
                   {/* Admins without a real Stripe subscription have no billing
                       portal to open — no buttons rather than a 500. */}
                   {!!subscription && (
-                    <div className="settings-row sub-active-actions">
-                      <div className="settings-row-main">
-                        <div className="settings-row-label">Billing</div>
-                      </div>
+                    <div className="settings-card stg-billing sub-active-actions">
+                      <h3 className="stg-h3" id="set-billing-h">Billing</h3>
+                      <p className="stg-meta">Opens Stripe’s billing page in this tab.</p>
                       <div className="sub-active-btns">
-                        <button className="btn btn-s" onClick={() => openBilling()} disabled={!!portalBusy} aria-busy={portalBusy === 'manage'}>
+                        <button className="btn btn-accent" onClick={() => openBilling()} disabled={!!portalBusy} aria-busy={portalBusy === 'manage'}>
                           {portalBusy === 'manage' ? 'Opening…' : 'Manage billing'}
                         </button>
                         {!subscription?.cancelAtPeriodEnd && (
@@ -1563,9 +1680,9 @@ export default function Settings({ toast }) {
                       {portalError && <div className="settings-field-err sub-portal-err" role="alert">{portalError}</div>}
                     </div>
                   )}
-                  <div className="settings-row settings-row--open">
-                    <div className="settings-row-label">Included</div>
-                    <ul className="sub-tier-list">
+                  <div className="settings-card stg-incl">
+                    <h3 className="stg-h3" id="set-included-h">Included</h3>
+                    <ul className="sub-tier-list" aria-labelledby="set-included-h">
                       {PRO_POINTS.map((point) => <li key={point}><Check /> {point}</li>)}
                     </ul>
                   </div>
@@ -1604,7 +1721,7 @@ export default function Settings({ toast }) {
                   ))}
                 </div>
 
-                {/* Where the tiers stack (640 and below) Pro comes first: the
+                {/* Where the tiers stack (899 and below) Pro comes first: the
                     cadence toggle then sits over the price it changes, and
                     "Upgrade to Pro" is on the first screen instead of two down.
                     DOM order, not CSS order, so keyboard and screen-reader
@@ -1681,10 +1798,7 @@ export default function Settings({ toast }) {
                       </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
-                        {/* "English (AU)" over "English (AU)": where the tiles are
-                            rows (640 and below, with `tiersStacked`) the repeat
-                            is dropped. The wider tiles keep both lines. */}
-                        {(!tiersStacked || l.native !== l.label) && <span className="lang-tile-code">{l.label}</span>}
+                        {l.native !== l.label && <span className="lang-tile-code">{l.label}</span>}
                       </div>
                       {lang === l.code && (
                         <svg className="lang-tile-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1842,6 +1956,8 @@ export default function Settings({ toast }) {
                       onExportFirst={() => pickSection('data')}
                       planPending={planPending}
                       googleOnly={isGoogleOnlyAccount()}
+                      email={user.email}
+                      projectCount={Array.isArray(projects) ? projects.length : 0}
                       isPro={isPro}
                     />
                   </div>
@@ -1872,20 +1988,23 @@ export default function Settings({ toast }) {
                     {localKeyCount} item{localKeyCount === 1 ? '' : 's'} in this browser
                     {user ? ', plus your account’s copy on the server' : ''}
                   </p>
+                  <p className="settings-data-note">
+                    We don&rsquo;t sell your data or use third-party trackers.
+                  </p>
                 </div>
                 <NavLink to="/privacy" className="btn btn-s">Read the privacy policy</NavLink>
               </div>
               <div className="settings-card-body">
-                <p className="settings-data-note">
-                  We don&rsquo;t sell your data or use third-party trackers.
-                </p>
                 <div className="settings-row settings-row--pad">
                   <div className="settings-row-main">
                     <div className="settings-row-label">Export</div>
                     <div className="settings-row-meta">
-                      {user && !online && 'You’re offline, so this file has this browser’s copy only. '}
-                      A JSON copy of everything — every key in this browser
-                      {user ? ', plus your account’s copy from the server' : ''}
+                      {user && !online
+                        ? 'You’re offline, so this file has this browser’s copy only: every key in this browser. Reconnect to add your account’s copy.'
+                        : <>
+                          A JSON copy of everything — every key in this browser
+                          {user ? ', plus your account’s copy from the server' : ''}
+                        </>}
                     </div>
                     {exportGap && <div className="settings-field-err settings-export-gap" role="status">{exportGap}</div>}
                   </div>
@@ -1903,6 +2022,7 @@ export default function Settings({ toast }) {
                     </div>
                     {confirmClear && (
                       <div className="settings-row-meta settings-clear-warn" role="status">
+                        {`This clears ${localKeyCount} item${localKeyCount === 1 ? '' : 's'} from this browser. `}
                         {user ? 'Your account copy is not affected.' : 'This deletes them for good.'}
                       </div>
                     )}

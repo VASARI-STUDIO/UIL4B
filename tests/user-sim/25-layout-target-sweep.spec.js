@@ -1133,14 +1133,13 @@ test('N1: a font family name is only clipped once it has shrunk to its floor, do
 // while quietly making the grid 262% taller, and this suite has been caught by a
 // fix that helped the page and hurt the cards before.
 //
-// THE NAME AND META SELECTORS. This card's anatomy is the shared `LibraryCard`,
-// so the footer lines are `.lbry-card-name` / `.lbry-card-meta`, not `.grg-name`
-// / `.grg-meta`. A stale selector would not fail: the census loops over
+// THE NAME AND META SELECTORS. Since the V3 libraries the card is the shared
+// panel tile (`VerticalPanelTile`), so the footer lines are `.vpt-name` /
+// `.vpt-meta`. A stale selector would not fail: the census loops over
 // `querySelectorAll`, which would return nothing, so it would find no
-// truncation and report none at every width. Both are scoped through
-// `.grg-card` — the shared class is on four surfaces, and this test is about
-// this one — and the per-card counts below are asserted so a selector rename
-// turns the test red instead of leaving it vacuous.
+// truncation and report none at every width. Both are scoped through the grid's
+// tiles outside the Pro fade, and the per-card counts below are asserted so a
+// selector rename turns the test red instead of leaving it vacuous.
 
 /* 1024 AND 1280 ARE IN THE LIST BECAUSE A LIST ENDING AT 1180 CAN MISS A DEFECT.
  *
@@ -1173,7 +1172,7 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
   budget(GRG_WIDTHS.length)
   const damage = []
   for (const w of GRG_WIDTHS) {
-    const { ctx, page } = await open(browser, w, 900, '/discover/gradients', '.grg-card', { as: { plan: 'pro' } })
+    const { ctx, page } = await open(browser, w, 900, '/discover/gradients', '.vpt', { as: { plan: 'pro' } })
     const r = await page.evaluate(() => {
       const cut = (sel) => {
         const out = []
@@ -1184,14 +1183,16 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
         }
         return out
       }
-      // The footer must not fix itself by shrinking its own actions below the
-      // 2.5.8 floor, or by stacking them on top of each other.
+      // The footer must not fix itself by shrinking the like button below the
+      // 2.5.8 floor, or by stacking it on the name. (The open button is stretched
+      // over the whole tile on purpose, so it is not one of the pair.)
+      const TILE = '.vpt-grid .vpt:not(.geg-fade *)'
       let tiny = 0, collided = 0
-      for (const card of document.querySelectorAll('.grg-card')) {
-        const acts = [...card.querySelectorAll('.grg-copy, .grg-open')]
+      for (const card of document.querySelectorAll(TILE)) {
+        const acts = [...card.querySelectorAll('.vpt-like, .vpt-name')]
         for (const a of acts) {
           const b = a.getBoundingClientRect()
-          if (b.width < 24 || b.height < 24) tiny++
+          if (a.classList.contains('vpt-like') && (b.width < 24 || b.height < 24)) tiny++
         }
         for (let i = 0; i < acts.length; i++) {
           for (let j = i + 1; j < acts.length; j++) {
@@ -1202,10 +1203,10 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
         }
       }
       return {
-        cards: document.querySelectorAll('.grg-card').length,
-        nameCount: document.querySelectorAll('.grg-card .lbry-card-name').length,
-        metaCount: document.querySelectorAll('.grg-card .lbry-card-meta').length,
-        names: cut('.grg-card .lbry-card-name'), metas: cut('.grg-card .lbry-card-meta'), tiny, collided,
+        cards: document.querySelectorAll(TILE).length,
+        nameCount: document.querySelectorAll(`${TILE} .vpt-name`).length,
+        metaCount: document.querySelectorAll(`${TILE} .vpt-meta`).length,
+        names: cut(`${TILE} .vpt-name`), metas: cut(`${TILE} .vpt-meta`), tiny, collided,
       }
     })
     await ctx.close()
@@ -1220,8 +1221,8 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
     expect(r.metaCount, `${w}px: expected a meta line on each of the ${r.cards} cards, found ${r.metaCount} — the card footer has changed shape`).toBe(r.cards)
     if (r.names.length) damage.push(`${w}px: ${r.names.length} of ${r.cards} gradient names truncated — ${r.names[0]}`)
     if (r.metas.length) damage.push(`${w}px: ${r.metas.length} of ${r.cards} meta lines truncated — ${r.metas[0]}`)
-    if (r.tiny) damage.push(`${w}px: ${r.tiny} footer action(s) under 24px`)
-    if (r.collided) damage.push(`${w}px: ${r.collided} footer action pair(s) overlapping`)
+    if (r.tiny) damage.push(`${w}px: ${r.tiny} like button(s) under 24px`)
+    if (r.collided) damage.push(`${w}px: ${r.collided} like button(s) overlapping the name`)
   }
   expect(damage, damage.join('\n')).toEqual([])
 })

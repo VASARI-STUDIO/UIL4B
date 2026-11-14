@@ -60,6 +60,8 @@ import {
 // font, no new origin — and Spectrum is a STATIC import in App.jsx, so the
 // module is already in the entry chunk and costs this route nothing.
 import SpectrumIcon from '../components/spectrum/SpectrumIcon'
+import ReadingNext from '../components/ReadingNext'
+import ReadingEnd from '../components/ReadingEnd'
 // THIS PAGE NO LONGER IMPORTS styles/deferred/reading.css. Its `.prn-*` rules
 // are replaced wholesale by principles.css, and pulling both in would leave
 // two sets of rules for the same class names cascading by file order — which
@@ -97,19 +99,6 @@ export default function DesignPrinciples() {
           applies it, and the figures beside it were measured when the page
           loaded. They come from the same functions that tool runs.
         </p>
-        <div className="prn-hero-cta">
-          {/* The Spectrum pill, replacing `.ui-pill ui-pill-ink ui-pill-lg`.
-              Same destination, same label, same single call to action — the
-              retired family goes, the capability does not. The bubble rotates
-              45 degrees on hover so the arrow points along the direction of
-              travel, which is the front door's own gesture. */}
-          <Link className="cpg-cta cpg-cta--ink cpg-cta--lg" to="/learn">
-            <span>Read the guides behind them</span>
-            <span className="cpg-cta-icon cpg-cta-icon--lg" aria-hidden="true">
-              <SpectrumIcon name="arrow-up-right" size={14} />
-            </span>
-          </Link>
-        </div>
       </header>
 
       <ol className="prn-list">
@@ -142,6 +131,9 @@ export default function DesignPrinciples() {
           )
         })}
       </ol>
+
+      <ReadingNext label="Read the guides behind them" slugs={['colour-contrast']} lead />
+      <ReadingEnd />
     </div>
   )
 }

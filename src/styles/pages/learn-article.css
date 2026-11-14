@@ -34,7 +34,9 @@
    against the 17px this rule declares, and inherits as that px value. */
 @property --lart-measure{syntax:'<length>';inherits:true;initial-value:0px}
 
-.lart{--lart-measure:56ch;--lart-rail:200px;--lart-gap:var(--s-8);font-size:17px;max-width:1180px}
+.lart{--lart-measure:56ch;--lart-y:clamp(72px,8.4vw,120px);font-size:17px;max-width:1336px}
+@media(min-width:768px){.lart{--lart-y:104px}}
+@media(min-width:1200px){.lart{--lart-y:120px}}
 
 /* The meta style: the one voice for everything that is a label rather than a
    value. Mono is kept for literal values (code, formulas, hex, numeric cells). */
@@ -56,11 +58,9 @@
   .lart .lart-crumb a:hover{color:var(--t0)}
 }
 
-.lart .lart-head{max-width:var(--lart-measure);margin-bottom:var(--s-6)}
-/* Capped at 38px, not the site's 52px. In a 581px column a 44px title took
-   three lines and half the first screen; 38px lands the same title in two. */
-.lart .lart-head h1{font-family:var(--display);font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.015em;line-height:1.12;color:var(--t0);text-wrap:balance}
-.lart .lart-dek{margin-top:var(--s-3);font-size:clamp(16px,1.7vw,19px);line-height:1.6;color:var(--t1);max-width:56ch}
+.lart .lart-head{max-width:var(--lart-measure)}
+.lart .lart-head h1{font-family:var(--display);font-size:clamp(40px,4.45vw,64px);font-weight:600;letter-spacing:-.04em;line-height:1;color:var(--t0);text-wrap:balance;max-width:15ch}
+.lart .lart-dek{margin-top:var(--s-5);font-size:18px;line-height:1.6;color:var(--t1);max-width:52ch}
 /* Each item is its own no-wrap span and the dot is drawn on items 2 and 3, so a
    wrapped line can start on a dot but never end on one. */
 .lart .lart-meta{display:flex;align-items:center;flex-wrap:wrap;column-gap:var(--s-2);row-gap:var(--s-1);margin-top:var(--s-5);font-family:var(--font);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--t2)}
@@ -80,35 +80,34 @@
   .lart .lart-meta a:hover{text-decoration-color:currentColor}
 }
 
-/* ── Layout ──
-   One column below 1080: .lart-main holds the crumb, header, contents, prose
-   and end of the guide, capped at the measure and centred so a tablet's spare
-   width is split evenly. From 1080 the rail is the first grid column and spans
-   the whole layout, so its top lines up with the crumb. */
-.lart .lart-layout{display:block}
-.lart .lart-main{max-width:var(--lart-measure);margin-inline:auto}
+/* ── Hero ──
+   The answer first: title, the one-paragraph answer and the list of what the
+   guide covers sit above the prose. Wide, the list is a panel beside the
+   title; below 1080 it folds into the disclosure under the lead. */
+.lart .lart-hero{padding-top:var(--s-7);padding-bottom:var(--lart-y)}
 @media(min-width:1080px){
-  .lart .lart-layout{display:grid;grid-template-columns:var(--lart-rail) minmax(0,var(--lart-measure));justify-content:center;gap:var(--lart-gap);align-items:start}
-  .lart .lart-main{margin-inline:0}
+  .lart .lart-hero{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);column-gap:var(--s-8);align-items:end;padding-top:var(--s-8)}
 }
 
-/* ── Contents: the rail from 1080, a disclosure below ── */
+/* ── Contents: a panel from 1080, a disclosure below ── */
 .lart .lart-toc{display:none}
-.lart .lart-toc-h{font-family:var(--font);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;line-height:24px;color:var(--t2);margin-bottom:var(--s-3)}
-.lart .lart-toc ol{list-style:none;display:flex;flex-direction:column}
-.lart .lart-toc a{display:block;padding:6px 0 6px var(--s-3);font-family:var(--font);font-size:14px;line-height:1.45;color:var(--t2);text-decoration:none;border-left:2px solid transparent;transition:color var(--dur-1) ease}
-.lart .lart-toc a[data-active]{color:var(--t0);font-weight:560;border-left-color:var(--t0)}
+.lart .lart-toc-h{font-family:var(--font);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;line-height:24px;color:var(--t0);margin-bottom:var(--s-3)}
+.lart .lart-toc ol{list-style:none;display:flex;flex-direction:column;gap:var(--s-2);counter-reset:lart-toc}
+.lart .lart-toc li{counter-increment:lart-toc;display:grid;grid-template-columns:var(--s-5) minmax(0,1fr);align-items:baseline}
+.lart .lart-toc li::before{content:counter(lart-toc);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--t3)}
+.lart .lart-toc a{display:block;padding:var(--s-1) 0;font-family:var(--font);font-size:15px;line-height:1.5;color:var(--t1);text-decoration:none;transition:color var(--dur-1) ease}
 @media(hover:hover){
-  .lart .lart-toc a:hover{color:var(--t0);text-decoration:none}
+  .lart .lart-toc a:hover{color:var(--t0);text-decoration:underline;text-underline-offset:3px}
 }
 @media(min-width:1080px){
-  .lart .lart-toc{display:block;position:sticky;top:calc(var(--nav-clear) + var(--s-4));max-height:calc(100dvh - var(--nav-clear) - var(--s-8));overflow-y:auto}
+  .lart .lart-toc{display:block;padding:var(--s-6);border-radius:var(--radius-xl);background:var(--card)}
   .lart .lart-toc-nav{display:none}
 }
 
 /* The disclosure below 1080. Closed it is one 44px row between two hairlines,
    so the first screen reaches the body; open it pushes the page down in place
    and never overlays it. */
+.lart .lart-toc-nav{margin-top:var(--s-5)}
 .lart .lart-toc-m{border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:var(--s-6)}
 .lart .lart-toc-m summary,.lart .lart-sources summary{display:flex;align-items:center;gap:var(--s-2);min-height:44px;cursor:pointer;list-style:none}
 .lart .lart-toc-m summary::-webkit-details-marker,.lart .lart-sources summary::-webkit-details-marker{display:none}
@@ -123,10 +122,10 @@
 }
 
 /* ── Prose ── */
-.lart .lart-prose{max-width:var(--lart-measure);line-height:1.7;color:var(--t1)}
+.lart .lart-prose{max-width:var(--lart-measure);font-size:17px;line-height:1.65;color:var(--t1)}
 .lart .lart-prose>section{scroll-margin-top:calc(var(--nav-clear) + var(--s-4))}
-.lart .lart-prose>section+section{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border)}
-.lart .lart-prose h2{font-family:var(--display);font-size:clamp(21px,2.4vw,27px);font-weight:600;letter-spacing:-.015em;line-height:1.25;color:var(--t0);margin-bottom:var(--s-4);text-wrap:balance}
+.lart .lart-prose>section+section{margin-top:var(--lart-y)}
+.lart .lart-prose h2{font-family:var(--display);font-size:clamp(32px,3.33vw,48px);font-weight:600;letter-spacing:-.04em;line-height:1.02;color:var(--t0);margin-bottom:var(--s-5);text-wrap:balance}
 .lart .lart-prose h3{font-size:16.5px;font-weight:560;letter-spacing:-.01em;line-height:1.4;color:var(--t0);margin-top:var(--s-6);margin-bottom:var(--s-2)}
 .lart .lart-prose p{margin-bottom:var(--s-4)}
 .lart .lart-prose p:last-child{margin-bottom:0}
@@ -140,6 +139,9 @@
    whose point was the exact value. It wraps at its own spaces now; short chips
    are unaffected because there is nothing in them to wrap at. */
 .lart .lart-prose code{font-family:var(--mono);font-size:.88em;padding:1px 5px;border-radius:var(--radius-xs);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);overflow-wrap:anywhere}
+/* The contrast guide's caption and step code keep their own 13px: .88em of
+   the 13px caption fell under the 12px floor. */
+.lart .lart-prose .lcc-chcap code,.lart .lart-prose .lcc-steps code{font-size:13px}
 /* A short token (useShortCode marks code of 20 characters or fewer) is one
    unit: its hyphens and spaces are not places to break. Longer code keeps the
    anywhere-wrap above. */
@@ -302,42 +304,46 @@
 /* ── End of the guide: the tool, further reading, then the citations ──
    These sit after the prose column, not inside it, so none of the prose's link
    or line-height rules reach them. */
-.lart .lart-next{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4)}
-
-/* The same 36.5em as .lart-aside, for the same reason and to the same number:
-   60ch at 15px was 597px = 79 characters a line; 36.5em is 548px = 72. One cap
-   in em keeps both blocks at one measure whatever size each is set at, which is
-   what `60ch` on both was reaching for and what a `ch` cannot hold. */
-.lart .lart-next-lede{max-width:36.5em;font-size:15px;line-height:1.6;color:var(--t1);margin:0}
-/* The page's one filled action: ink on the ground colour, 44px, the arrow
-   nudging on hover. Everything else on the page is a link or a row. */
-.lart .lart-next-go{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 var(--s-5);border:0;border-radius:var(--radius);background:var(--t0);color:var(--bg-0);font-size:14px;font-weight:560;text-decoration:none;transition:opacity var(--dur-1) ease}
-.lart .lart-next-arrow{color:inherit;transition:transform var(--dur-2) cubic-bezier(.23,1,.32,1)}
+.lart .lart-next{margin-top:var(--lart-y);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-5);padding:var(--s-5);border-radius:var(--radius-xl);background:var(--card)}
+.lart .lart-next-copy{display:flex;flex-direction:column;gap:var(--s-3);min-width:0}
+.lart .lart-next h2{font-family:var(--display);font-size:clamp(28px,2.8vw,40px);font-weight:600;letter-spacing:-.035em;line-height:1.05;color:var(--t0);text-wrap:balance}
+.lart .lart-next-lede{max-width:52ch;font-size:17px;line-height:1.6;color:var(--t1);margin:0}
+/* The page's one filled action: ink on the ground colour, 52px. */
+.lart .lart-next-go{display:inline-flex;align-items:center;justify-content:center;height:52px;padding:0 28px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-size:16px;font-weight:560;text-decoration:none;white-space:nowrap;transition:background-color var(--dur-1) ease,transform 150ms cubic-bezier(.23,1,.32,1)}
+.lart .lart-next-go:active{transform:scale(.97)}
 @media(hover:hover){
-  .lart .lart-next-go:hover{opacity:.9;color:var(--bg-0);text-decoration:none}
-  .lart .lart-next-go:hover .lart-next-arrow{transform:translateX(3px)}
+  .lart .lart-next-go:hover{background:var(--t1);color:var(--bg-0);text-decoration:none}
 }
-.lart .lart-next-go:focus-visible .lart-next-arrow{transform:translateX(3px)}
+@media(max-width:767px){
+  .lart .lart-next-go{width:100%}
+}
+@media(min-width:768px){
+  .lart .lart-next{flex-direction:row;align-items:center;justify-content:space-between;gap:var(--s-7);padding:var(--s-7)}
+}
 
-/* Keep reading: two hairline rows in the index's row style, no card. */
-.lart .lart-onward{margin-top:var(--s-7)}
-.lart .lart-onward-label{font-family:var(--font);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;color:var(--t2);margin-bottom:var(--s-2)}
+/* ── Keep reading: the next guide is the largest thing below the prose ── */
+.lart .lart-onward{margin-top:var(--lart-y)}
+.lart .lart-onward-label{font-family:var(--font);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--t0);margin-bottom:var(--s-4)}
 .lart .lart-onward ul{list-style:none;margin:0;padding:0}
-.lart .lart-onward-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);min-height:44px;padding:var(--s-3) 0;border-top:1px solid var(--border);color:var(--t0);text-decoration:none}
+.lart .lart-onward-row{display:flex;align-items:center;justify-content:space-between;gap:var(--s-5);min-height:52px;padding:var(--s-4) 0;border-top:1px solid var(--border);color:var(--t0);text-decoration:none}
 .lart .lart-onward li:last-child .lart-onward-row{border-bottom:1px solid var(--border)}
-.lart .lart-onward-text{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
-.lart .lart-onward-kicker{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--t2)}
-.lart .lart-onward-title{font-size:16.5px;font-weight:560;line-height:1.35;color:var(--t0);letter-spacing:-.01em}
-.lart .lart-onward-dek{font-size:13.5px;line-height:1.55;color:var(--t1)}
-.lart .lart-onward-go{flex:none;color:var(--t2);transition:transform var(--dur-2) cubic-bezier(.23,1,.32,1),color var(--dur-1) ease}
+.lart .lart-onward-lead{padding:var(--s-6) 0}
+.lart .lart-onward-text{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
+.lart .lart-onward-kicker{font-size:13px;font-weight:500;color:var(--t2)}
+.lart .lart-onward-title{font-size:17px;font-weight:600;line-height:1.35;color:var(--t0)}
+.lart .lart-onward-lead .lart-onward-title{font-family:var(--display);font-size:clamp(24px,2.2vw,32px);letter-spacing:-.035em;line-height:1.1;text-wrap:balance}
+.lart .lart-onward-dek{max-width:52ch;font-size:15px;line-height:1.55;color:var(--t1)}
+.lart .lart-onward-lead .lart-onward-dek{font-size:17px;line-height:1.6}
+.lart .lart-onward-go{flex:none;font-size:24px;line-height:1;color:var(--t2);transition:transform 320ms cubic-bezier(.23,1,.32,1),color var(--dur-1) ease}
 @media(hover:hover){
-  .lart .lart-onward-row:hover .lart-onward-go{color:var(--accent-mid);transform:translateX(3px)}
+  .lart .lart-onward-row:hover .lart-onward-go{color:var(--t0);transform:translateX(3px)}
+  .lart .lart-onward-lead:hover .lart-onward-go{transform:rotate(-45deg)}
 }
-.lart .lart-onward-row:focus-visible .lart-onward-go{color:var(--accent-mid);transform:translateX(3px)}
+.lart .lart-onward-row:focus-visible .lart-onward-go{color:var(--t0)}
 
 /* Sources: folded under one 44px row. Opened, the list is the same one that
    always sat here. */
-.lart .lart-sources{margin-top:var(--s-6)}
+.lart .lart-sources{margin-top:var(--s-8)}
 .lart .lart-sources summary{border-top:1px solid var(--border);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--t2)}
 .lart .lart-sources ul{list-style:none;margin:0;padding:var(--s-1) 0 var(--s-3);display:flex;flex-direction:column;gap:var(--s-2)}
 .lart .lart-sources li{padding-left:0;font-size:14px;line-height:1.5}

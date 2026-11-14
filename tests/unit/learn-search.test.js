@@ -177,15 +177,18 @@ test('the index copy stays in Learn\'s neutral register', () => {
   // The decision: neutral, no first person, no
   // marketing. tests/unit/learn-figures.test.js holds the guides to it; this
   // holds the index that fronts them.
-  // What is checked is the COPY: the JSX text after the component's `return (`
-  // with expression containers and tags removed, plus every string and
+  // What is checked is the COPY: the JSX text between tags and expression
+  // containers, plus every string and
   // template literal in the file (the status sentences are built in code).
   // Not the code itself — `!!bodies` is a boolean cast, not an exclamation.
   const page = read('src/components/LearnGuideIndex.jsx')
   const code = page.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
-  const at = code.indexOf('return (')
-  assert.ok(at !== -1, 'LearnGuideIndex.jsx has no return (')
-  const jsxText = code.slice(at).replace(/\{[^}]*\}/g, ' ').replace(/<[^>]*>/g, ' ')
+  // JSX text is whatever sits between a tag or an expression container and the
+  // next one. Containers nest (a ternary holding a list holding more
+  // containers) and leave code between them, so a run that carries code
+  // punctuation is dropped rather than read as copy.
+  const jsxText = [...code.matchAll(/(?<![=-])[>}]([^<>{}]+)(?=[<{])/g)].map((m) => m[1]).filter((t) => !/[=;(){}&|]/.test(t)).join(' ')
+  assert.ok(jsxText.includes('Two guides for today') && jsxText.includes('Help and getting started'), 'the JSX text extraction does not reach the headings and the help link — the guard is vacuous')
   const literals = [...code.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map((m) => m[2]).join(' ')
   const copy = `${jsxText} ${literals}`
   assert.ok(copy.replace(/\s+/g, '').length > 200, 'the copy extraction came back nearly empty — the guard is vacuous')

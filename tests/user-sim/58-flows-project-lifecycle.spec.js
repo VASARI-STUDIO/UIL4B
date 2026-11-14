@@ -111,7 +111,7 @@ test.describe('a returning free account managing its projects', () => {
     await openActions(page, 'Seeded Project 1')
     await page.getByRole('menuitem', { name: 'Rename', exact: true }).click()
 
-    const field = page.getByRole('textbox', { name: /Rename Seeded Project 1/i })
+    const field = page.getByRole('textbox', { name: 'Project name' })
     await expect(field, 'Rename must open an editable field on the card').toBeVisible()
     await field.fill('Autumn Rebrand')
     await page.getByRole('button', { name: 'Save', exact: true }).click()
@@ -130,7 +130,7 @@ test.describe('a returning free account managing its projects', () => {
     await openActions(page, 'Seeded Project 1')
     await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
 
-    await expect(page.locator('.pjd-status'), 'the page says so').toContainText('Archived')
+    await expect(page.locator('.pjv-status'), 'the page says so').toContainText('Archived')
     const all = await stored(page, account.email)
     expect(all.length, 'archiving must not delete anything').toBe(2)
     expect(all.find((p) => p.name === 'Seeded Project 1')?.archived,

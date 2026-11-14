@@ -508,3 +508,12 @@
   .lgl .storage-table, .lgl .lgl-table { font-size: 9.5pt; }
   .lgl-a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .9em; }
 }
+
+/* ── Reading pass: the same type as the guides, the layout unchanged ──
+   Plain pages: no figure, no motion. Screen only, so the print sizes above
+   keep their point values. */
+@media screen {
+  .lgl-head .cpg-h1 { line-height: 1; letter-spacing: -.04em; }
+  .lgl .lgl-h { font-size: clamp(28px, 2.5vw, 32px); font-weight: 600; letter-spacing: -.04em; line-height: 1.1; }
+  .lgl-p, .lgl-list { font-size: 17px; line-height: 1.65; }
+}
