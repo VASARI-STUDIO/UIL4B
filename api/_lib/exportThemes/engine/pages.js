@@ -52,7 +52,7 @@ export function numberPages(list, extra = {}) {
 }
 
 // Themes whose pages read brand copy only through esc(), so slot-edition placeholders can reach them; the rest keep the sample copy until they are moved over.
-const PH_THEMES = new Set(['02', '04', '05', '07', '08', '24', '29', '30', '32']);
+const PH_THEMES = new Set(['02', '04', '05', '07', '08', '21', '24', '29', '30', '32']);
 
 // A theme names the shots of the sample brand it was written for. A brand without one of those ids gets the shot at the same
 // position in the sample's list (wrapping when the brand has fewer), so a brand with any shots fills every frame.
