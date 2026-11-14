@@ -192,7 +192,7 @@ export const proValue = (live = EXPORT_THEMES_LIVE) => Object.freeze([
     ...(live ? [{
       label: 'Export themes',
       free: `Preview all ${THEME_COUNT}. ${FREE_THEME_EXPORTS_TITLE} in ${freeThemes().length}: ${FREE_THEME_NAMES}${PRO_THEME_GIFTS_LINE ? `. ${capitalise(PRO_THEME_GIFTS_LINE)}` : ''}`,
-      pro: `All ${THEME_COUNT}`,
+      pro: `All ${THEME_COUNT}, each with all ${EXPORTS_PER_THEME} exports`,
     }] : []),
     ...(live
       ? [...themedProFormats(), ...proOnlyFormats().filter((f) => !FREE_THEME_GROUPS.includes(f.group))]

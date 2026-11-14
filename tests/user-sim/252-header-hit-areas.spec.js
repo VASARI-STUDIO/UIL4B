@@ -52,18 +52,18 @@ const ROUTES = [
   { label: '/learn', path: '/learn', signedIn: false, slug: 'learn', phone: OUT_PHONE, wide: OUT_WIDE },
 ]
 
-// What each control draws, from the page before this change. A pair is [width, height];
+// What each control draws (the V3 header: 36px controls, 44px on the phone header). A pair is [width, height];
 // null leaves that side open (a wide control's width is its label's). `phone` applies
 // below 768px, `wide` from 768px.
 const DRAWN = {
-  'pnav-search-field': { phone: [36, 36], wide: (w) => (w < 1100 ? [36, 36] : [null, 44]) },
-  'pnav-export': { phone: [36, 36], wide: (w) => (w < 900 ? [38, 38] : [null, 34.8]) },
-  'pnav-mobile': { phone: [36, 36] },
-  'pnav-avatar-btn': { phone: [36, 36], wide: [34, 34] },
+  'pnav-search-field': { phone: [44, 44], wide: [null, 36] },
+  'pnav-export': { phone: [44, 44], wide: (w) => (w < 900 ? [36, 36] : [null, 36]) },
+  'pnav-mobile': { phone: [44, 44] },
+  'pnav-avatar-btn': { phone: [44, 44], wide: [36, 36] },
   'pnav-theme': { wide: [36, 36] },
-  'pnav-trigger': { wide: [null, 34.8] },
-  'pnav-upgrade': { wide: [null, 34.8] },
-  'pnav-logo': { phone: [110.7, 25.8], wide: [null, 24.1] },
+  'pnav-trigger': { wide: [null, 36] },
+  'pnav-upgrade': { wide: [null, 36] },
+  'pnav-logo': { phone: [114.7, 36], wide: [null, 36] },
   'spnav-icon': { phone: [44, 44] },
   'spnav-quiet-link': { wide: [null, 44] },
   // The pill is a 44px target on a touch screen and 40px for a mouse.
@@ -168,6 +168,9 @@ const hitRect = (c) => ({
   right: Math.max(c.box.right, c.ring ? c.ring.right : -Infinity),
   bottom: Math.max(c.box.bottom, c.ring ? c.ring.bottom : -Infinity),
 })
+// A shared strip under a quarter of a pixel is layout rounding between neighbouring labels, not a
+// point a pointer can land on; a real shared area is a pixel or more (the avatar-shift control below).
+const OVERLAP_PX = 0.25
 const overlaps = (controls) => {
   const out = []
   controls.forEach((a, i) => controls.slice(i + 1).forEach((b) => {
@@ -175,7 +178,7 @@ const overlaps = (controls) => {
     const rb = hitRect(b)
     const ox = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left)
     const oy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top)
-    if (ox > 0.01 && oy > 0.01) out.push(`${a.name} (${a.label}) and ${b.name} (${b.label}) share ${ox.toFixed(2)} x ${oy.toFixed(2)}px`)
+    if (ox > OVERLAP_PX && oy > OVERLAP_PX) out.push(`${a.name} (${a.label}) and ${b.name} (${b.label}) share ${ox.toFixed(2)} x ${oy.toFixed(2)}px`)
   }))
   return out
 }
@@ -241,8 +244,8 @@ for (const route of ROUTES) {
         }
 
         // NO OVERLAP: no two hit rectangles intersect.
-        // MUTATION: delete the `@media(pointer:coarse) and (min-width:768px)` avatar shift in global.css:
-        // the theme button and the avatar share a 1px strip, and the 768 touch app cases fail here and in reach.
+        // MUTATION: give .pnav-avatar-btn::after a width of 64px: it runs into the theme button's area,
+        // and the 768 touch app cases fail here and in reach.
         expect(overlaps(controls), 'two hit areas share a point').toEqual([])
         await ctx.close()
       })
@@ -257,22 +260,23 @@ test.describe('the checks can fail', () => {
     const { ctx, page } = await open(browser, PHONE_TOUCH, 'a visitor reading the header')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/projects')
-    await page.addStyleTag({ content: '.pnav-mobile::after{display:none !important}' })
+    // The phone header's buttons are drawn 44px, so the 36px logo is the control that relies on its ring.
+    await page.addStyleTag({ content: '.pnav-logo::after{display:none !important}' })
     const controls = await settledControls(page)
-    const menu = controls.find((c) => c.classes.includes('pnav-mobile'))
-    expect(menu.misses.length, 'with no ::after the menu button should miss most of the grid').toBeGreaterThan(0)
-    expect(menu.ring, 'the ring should be gone').toBeNull()
+    const logo = controls.find((c) => c.classes.includes('pnav-logo'))
+    expect(logo.misses.length, 'with no ::after the logo should miss the top and bottom of the grid').toBeGreaterThan(0)
+    expect(logo.ring, 'the ring should be gone').toBeNull()
     await ctx.close()
   })
 
-  test('768 touch: undoing the avatar shift is seen as a shared strip with the theme button', async ({ browser }) => {
+  test('768 touch: widening the avatar hit area is seen as a shared strip with the theme button', async ({ browser }) => {
     const { ctx, page } = await open(browser, TABLET_TOUCH, 'a visitor reading the header')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/projects')
     expect(await settledControls(page).then(overlaps), 'the page as shipped has none').toEqual([])
-    await page.addStyleTag({ content: '.pnav-avatar-btn::after{transform:translate(-50%,-50%) !important}' })
+    await page.addStyleTag({ content: '.pnav-avatar-btn::after{width:64px !important}' })
     const found = await settledControls(page).then(overlaps)
-    expect(found.length, 'centring both areas leaves the two sharing a strip').toBeGreaterThan(0)
+    expect(found.length, 'a 64px avatar area leaves the two sharing a strip').toBeGreaterThan(0)
     // The report names a control by its first class (pnav-iconbtn for the theme button), so the
     // theme button is told apart by its label.
     expect(found[0]).toMatch(/\(Switch to the \w+ theme\)/)
@@ -280,14 +284,14 @@ test.describe('the checks can fail', () => {
     await ctx.close()
   })
 
-  test('390 mouse: growing the box to 44px is seen as a changed drawn size', async ({ browser }) => {
+  test('390 mouse: shrinking the box to 36px is seen as a changed drawn size', async ({ browser }) => {
     const { ctx, page } = await open(browser, PHONE_MOUSE, 'a visitor reading the header')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/projects')
     expect(await settledControls(page).then((c) => drawnSizeFailures(c, 390)), 'the page as shipped has none').toEqual([])
-    await page.addStyleTag({ content: '.pnav-mobile{width:44px !important;height:44px !important}' })
+    await page.addStyleTag({ content: '.pnav-mobile{width:36px !important;height:36px !important}' })
     const found = await settledControls(page).then((c) => drawnSizeFailures(c, 390))
-    expect(found.join('; ')).toMatch(/pnav-mobile is 44 wide, drawn 36/)
+    expect(found.join('; ')).toMatch(/pnav-mobile is 36 wide, drawn 44/)
     await ctx.close()
   })
 })

@@ -825,71 +825,6 @@
 @media (pointer: coarse) { .grd .grd-explore-cta { min-height: 44px; } }
 @media (forced-colors: active) { .grd .grd-explore-swatch { forced-color-adjust: none; } }
 
-/* ── The tints menu a stop opens (portalled to the body, so these selectors are
-   not under `.grd`). Global tokens only: the `.tl` aliases are not in scope. ── */
-.grd-tintmenu {
-  position: fixed;
-  z-index: 140;
-  min-width: 200px;
-  max-width: calc(100vw - 16px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: var(--s-2);
-  background: var(--bg-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-cmd), 0 0 0 1px color-mix(in srgb, var(--t0) 4%, transparent);
-  color: var(--t0);
-  animation: grd-tintmenu-in var(--dur-2) var(--ease-entrance);
-}
-/* Fade and drop only, no scale: a scaled menu measures every row short (a 44px
-   row reads 43px) for the length of the animation. */
-@keyframes grd-tintmenu-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes grd-tintmenu-fade { from { opacity: 0; } to { opacity: 1; } }
-:where(html[data-reduced-motion="true"]) .grd-tintmenu { animation-name: grd-tintmenu-fade; }
-@media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .grd-tintmenu { animation-name: grd-tintmenu-fade; }
-}
-/* The page's link colour (--tl-link is not in scope out here, so its source). */
-.grd-tintmenu:focus-visible { outline: 2px solid var(--link, var(--accent-text)); outline-offset: 2px; }
-.grd-tintmenu-head { padding: var(--s-2) 10px var(--s-1); font-size: var(--fs-caption); color: var(--t2); }
-.grd-tintmenu-pro { display: inline-flex; align-items: center; gap: var(--s-2); }
-.grd-tintmenu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--radius-s);
-  background: transparent;
-  color: inherit;
-  font-family: var(--font);
-  font-weight: 560;
-  font-size: var(--fs-body-s);
-  text-align: left;
-  cursor: pointer;
-}
-.grd-tintmenu-item[aria-disabled="true"] { color: var(--t2); }
-.grd-tintmenu-item:focus-visible { outline: 2px solid var(--link, var(--accent-text)); outline-offset: -2px; }
-@media (hover: hover) and (pointer: fine) {
-  .grd-tintmenu-item:hover { background: var(--hvr); }
-}
-.grd-tintmenu-chip { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px oklch(0 0 0 / .12); }
-.grd-tintmenu-label { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
-.grd-tintmenu-hex { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--t1); }
-/* A locked row's stand-in for the hex: blurred like the other Pro previews, not selectable. */
-.grd-tintmenu-hex--locked { filter: blur(3px); user-select: none; -webkit-user-select: none; pointer-events: none; }
-@media (pointer: coarse) { .grd-tintmenu-item { min-height: 44px; } }
-@media (forced-colors: active) {
-  .grd-tintmenu-chip { forced-color-adjust: none; }
-  .grd-tintmenu-item:focus-visible { outline-color: Highlight; }
-}
-
 /* ── Coarse pointers: 44px on every stop control, 16px in the hex field so
    iOS does not zoom the page when it takes focus. ────────────────────────── */
 @media (pointer: coarse) {
@@ -1180,7 +1115,10 @@
   touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: background-color var(--dur-1) var(--ease-standard);
 }
-.grd .grd-ctx-opt.is-on { background: rgba(255, 255, 255, .2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55); }
+/* The chosen place is a solid light chip with dark text, so it reads at a glance on any
+   gradient behind the bar. */
+.grd .grd-ctx-opt.is-on { background: #f4f4f2; color: #0a0b0d; }
+.grd .grd-ctx-opt.is-on:focus-visible { outline-color: #f4f4f2; outline-offset: 2px; }
 .grd .grd-ctx-opt:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 @media (hover: hover) and (pointer: fine) {
   .grd .grd-ctx-opt:hover:not(.is-on) { background: rgba(255, 255, 255, .12); }
@@ -1198,8 +1136,9 @@
   .grd .grd-ctx-view { padding-top: 60px; }
 }
 @media (max-width: 600px) {
-  /* A sample under the switch needs more room than the 16:9 Fill preview gives it. */
-  .grd .grd-stage:is([data-ctx="hero"], [data-ctx="card"], [data-ctx="button"], [data-ctx="poster"], [data-ctx="spec"]) { aspect-ratio: 4 / 3; }
+  /* A sample under the switch needs more room than 16:9 gives it, and Fill takes the
+     same 4:3 so the panel below does not jump when the place changes. */
+  .grd .grd-stage { aspect-ratio: 4 / 3; }
   .grd .grd-ctx-h { font-size: 22px; }
   .grd .grd-ctx-btns { grid-auto-flow: row; gap: 8px; }
   .grd .grd-ctx-btn { height: auto; min-height: 32px; }
@@ -1245,6 +1184,12 @@
   background: var(--fx-ground);
   pointer-events: none;
 }
+/* The grain tile is rasterised at its own unit size, so on a dense screen a 120-unit tile is
+   stretched over 240 or 360 device pixels and goes soft. These tiles carry one unit per
+   device pixel at the same 120px size, so the grain stays as sharp as it is at 1x. */
+@media (min-resolution: 1.5dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27180%27 height=%27180%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27180%27 height=%27180%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
+@media (min-resolution: 2dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27240%27 height=%27240%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27240%27 height=%27240%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
+@media (min-resolution: 3dppx) { .grd .grd-fx { --fx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width=%27360%27 height=%27360%27%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency=%27.95%27 numOctaves=%272%27 stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncG type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3CfeFuncB type='linear' slope=%271.5%27 intercept=%27-.25%27/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width=%27360%27 height=%27360%27 filter='url(%23n)'/%3E%3C/svg%3E"); } }
 .grd .grd-fx > *, .grd .grd-fx-flutes, .grd .grd-fx-slice, .grd .grd-fx-slice-in { position: absolute; inset: 0; }
 .grd .grd-fx-grain {
   background-image: var(--fx-grain);
@@ -1257,7 +1202,7 @@
    into the ground, under a fine, soft film grain. */
 .grd .grd-fx-blob {
   background: var(--fx-paint);
-  filter: blur(clamp(4px, 1.5cqmin, 12px));
+  filter: blur(clamp(2px, .6cqmin, 6px));
   mask-image:
     radial-gradient(ellipse 34% 40% at 28% 54%, #000 25%, transparent 100%),
     radial-gradient(ellipse 36% 44% at 55% 42%, #000 25%, transparent 100%),
@@ -1324,13 +1269,13 @@
 .grd .grd-fx-ring {
   width: min(66cqh, 60cqw);
   filter: saturate(1.3) brightness(1.1);
-  mask-image: radial-gradient(closest-side, transparent 52%, #000 64%, #000 72%, transparent 100%);
-  -webkit-mask-image: radial-gradient(closest-side, transparent 52%, #000 64%, #000 72%, transparent 100%);
+  mask-image: radial-gradient(closest-side, transparent 56%, #000 60%, #000 70%, transparent 78%);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 56%, #000 60%, #000 70%, transparent 78%);
 }
 .grd .grd-fx-halo {
   width: min(96cqh, 84cqw);
   opacity: .55;
-  filter: blur(clamp(8px, 3cqmin, 24px));
+  filter: blur(clamp(6px, 2cqmin, 16px));
   mask-image: radial-gradient(closest-side, transparent 40%, #000 62%, transparent 100%);
   -webkit-mask-image: radial-gradient(closest-side, transparent 40%, #000 62%, transparent 100%);
 }
@@ -1356,7 +1301,7 @@
   aspect-ratio: 1;
   translate: -50% -50%;
   border-radius: 50%;
-  filter: blur(clamp(20px, 8cqmin, 56px));
+  filter: blur(clamp(16px, 6cqmin, 40px));
 }
 .grd .grd-fx-orb--heart {
   left: 50%; top: 52%; width: 78cqmin;
@@ -1403,6 +1348,122 @@
 .grd .grd-ctx-gauge { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .grd .grd-ctx-gauge-row { display: flex; gap: 2px; width: max-content; }
 .grd .grd-ctx-gauge .grd-ctx-opt { display: inline-flex; align-items: center; }
+
+/* The Fill style trigger, its own group at the end of the switch (shown on Fill only). */
+.grd .grd-ctx-after { position: relative; flex: none; display: flex; margin-left: 9px; }
+.grd .grd-ctx-after::before {
+  content: '';
+  position: absolute; left: -6px; top: 50%;
+  width: 1px; height: 14px;
+  translate: 0 -50%;
+  background: rgb(255 255 255 / .35);
+}
+.grd .grd-fill-trigger { display: inline-flex; align-items: center; gap: 4px; padding-right: 8px; }
+.grd .grd-fill-trigger[aria-expanded="true"] { background: rgba(255, 255, 255, .16); }
+.grd .grd-fill-trigger svg { flex: none; opacity: .8; transition: rotate var(--dur-2) var(--ease-standard); }
+.grd .grd-fill-trigger[aria-expanded="true"] svg { rotate: 180deg; }
+
+/* ── FILL STYLE PICKER ───────────────────────────────────────────────────────
+   A popover under the trigger on desktop and a bottom sheet under 768px. It is not modal
+   and nothing dims the canvas, so a picked style can be judged on the stage while the
+   picker is still open. Each tile is a small live copy of the canvas. */
+.grd .grd-fill-pop {
+  position: fixed; inset: auto;
+  left: var(--select-left, 8px); top: var(--select-top, 0px); right: auto; bottom: auto;
+  z-index: var(--select-layer, 130);
+  box-sizing: border-box;
+  width: 344px; min-width: 0; max-width: calc(100vw - 16px);
+  max-height: var(--pop-max-h, 100dvh);
+  padding: 10px 12px 12px;
+  isolation: isolate;
+  scrollbar-width: thin; scrollbar-color: var(--t3) transparent;
+}
+.grd .grd-fill-pop:focus-visible { outline: none; }
+.grd .grd-fill-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.grd .grd-fill-title { margin: 0; font-size: 13px; font-weight: 560; line-height: 1.3; color: var(--t0); }
+.grd .grd-fill-done {
+  flex: none; min-height: 28px; padding: 0 12px;
+  border: 0; border-radius: var(--radius-pill);
+  background: var(--t0); color: var(--bg-1);
+  font: inherit; font-size: 12px; font-weight: 560; cursor: pointer;
+  touch-action: manipulation;
+}
+.grd .grd-fill-done:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.grd .grd-fill-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+.grd .grd-fill-tile {
+  display: grid; gap: 6px; min-width: 0; padding: 0;
+  border: 0; background: none; color: var(--t2);
+  font: inherit; font-size: 12px; line-height: 1.25; text-align: left; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.grd .grd-fill-tile.is-on { color: var(--t0); font-weight: 560; }
+.grd .grd-fill-thumb {
+  position: relative; display: block;
+  aspect-ratio: 4 / 3; border-radius: 8px;
+  container-type: size; overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border);
+  transition: box-shadow var(--dur-1) var(--ease-standard);
+}
+.grd .grd-fill-thumb .grd-canvas,
+.grd .grd-fill-thumb .grd-fx { position: absolute; inset: 0; border: 0; border-radius: 0; }
+.grd .grd-fill-tile.is-on .grd-fill-thumb { box-shadow: 0 0 0 2px var(--bg-1), 0 0 0 4px var(--t0); }
+/* A tile is too small for the Mesh and Waves caption; the full preview shows it. */
+.grd .grd-fill-thumb .grd-fx > .grd-fx-cap { display: none; }
+.grd .grd-fill-check {
+  position: absolute; right: 5px; bottom: 5px; z-index: 1;
+  display: grid; place-items: center; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--t0); color: var(--bg-1);
+}
+.grd .grd-fill-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grd .grd-fill-tile:focus-visible { outline: none; }
+.grd .grd-fill-tile:focus-visible .grd-fill-thumb { box-shadow: 0 0 0 2px var(--bg-1), 0 0 0 4px var(--link); }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-fill-tile:hover:not(.is-on) { color: var(--t0); }
+  .grd .grd-fill-tile:hover:not(.is-on) .grd-fill-thumb { box-shadow: 0 0 0 1px var(--t3); }
+}
+@media (pointer: coarse) {
+  .grd .grd-fill-done { min-height: 44px; padding: 0 16px; font-size: 13px; }
+  .grd .grd-fill-tile { min-height: 44px; }
+}
+@media (max-width: 767px) {
+  .grd .grd-fill-pop {
+    left: 0; right: 0; top: auto; bottom: 0;
+    width: auto; max-width: none;
+    max-height: min(85dvh, calc(100dvh - var(--chrome-h) - 16px));
+    padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left, 0px));
+    border-radius: 16px 16px 0 0;
+    box-shadow: var(--shadow-cmd);
+    animation: menu-select-sheet-in var(--dur-2) var(--ease-entrance);
+  }
+  .grd .grd-fill-pop::before { content: ''; display: block; width: 36px; height: 4px; margin: 0 auto 12px; border-radius: var(--radius-pill); background: var(--border); }
+  .grd .grd-fill-title { font-size: 15px; }
+  .grd .grd-fill-done { min-height: 44px; padding: 0 16px; font-size: 13px; }
+  .grd .grd-fill-grid { gap: 14px 10px; }
+  .grd .grd-fill-tile { font-size: 13px; }
+  /* Above the tab bar, which already carries the home-indicator inset. */
+  html.has-tabbar .grd .grd-fill-pop { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); padding-bottom: 16px; max-height: min(85dvh, calc(100dvh - var(--chrome-h) - var(--tabbar-h) - env(safe-area-inset-bottom) - 16px)); }
+  html.has-tabbar .grd .grd-fill-pop[data-in-sheet] { bottom: 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); max-height: min(85dvh, calc(100dvh - var(--chrome-h) - 16px)); }
+}
+@media (forced-colors: active) {
+  .grd .grd-fill-tile.is-on .grd-fill-thumb { outline: 3px solid Highlight; outline-offset: 2px; }
+  .grd .grd-fill-tile:focus-visible .grd-fill-thumb { outline: 3px solid CanvasText; outline-offset: 2px; }
+  .grd .grd-ctx-opt.is-on { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}
+:where(html[data-reduced-motion="true"]) .grd :is(.grd-fill-thumb, .grd-fill-trigger svg) { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .grd :is(.grd-fill-thumb, .grd-fill-trigger svg) { transition: none !important; }
+}
+
+/* Shape, when the Fill style draws its own shape: Type and Angle stay usable (they still
+   set the export) but step back, and one line says why the canvas ignores them. */
+.grd .grd-row.is-moot { opacity: .7; transition: opacity var(--dur-1) var(--ease-standard); }
+.grd .grd-row.is-moot:focus-within { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-row.is-moot:hover { opacity: 1; }
+}
+/* The live region stays in the DOM; empty, it is taken out of the grid so it adds no gap. */
+.grd .grd-geo-live:empty { position: absolute; }
+.grd .grd-geo-why { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--tl-dim); text-wrap: pretty; }
 
 /* Poster and Spec card. The effects layer (.grd-fx) draws the Poster's field and the
    neutral ground; the text layer (.grd-txt) is drawn after it and holds the words. Both
@@ -1469,4 +1530,108 @@
   .grd .grd-spec-strip { margin-top: 8px; }
   .grd .grd-spec-sw { height: 28px; }
   .grd .grd-spec-note { margin-top: 4px; }
+}
+
+/* Mesh and Waves. The effects layer draws the whole scene: Mesh is soft points of colour on a
+   ground (the grain is the shared one, at its base .3), Waves is seven flat bands in one
+   SVG with no blur and no grain. Both carry one caption chip on the ratio badge's scrim. */
+.grd .grd-fx-mesh { background: var(--fx-mesh, none); }
+.grd .grd-fx-waves { display: block; width: 100%; height: 100%; }
+.grd .grd-fx > .grd-fx-cap {
+  inset: auto auto 24px 24px;
+  display: flex; align-items: baseline; gap: 6px; width: fit-content; max-width: calc(100% - 48px);
+  margin: 0; padding: 4px 8px; border-radius: 8px;
+  background: rgba(10, 11, 13, .9); color: #fff;
+  font-family: var(--font); font-size: 12px; line-height: 16px; white-space: nowrap;
+}
+.grd .grd-fx-cap-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.grd .grd-fx-cap-hexes { display: flex; flex: none; gap: 6px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.grd .grd-fx-cap-more { display: none; }
+@media (max-width: 1023px) {
+  .grd .grd-fx-cap-hexes .is-extra { display: none; }
+  .grd .grd-fx-cap-more { display: inline; }
+}
+@media (max-width: 900px) {
+  .grd .grd-fx > .grd-fx-cap { inset: auto auto 16px 16px; max-width: calc(100% - 32px); }
+}
+@media (max-width: 600px) {
+  .grd .grd-fx > .grd-fx-cap { inset: auto auto 12px 12px; max-width: calc(100% - 24px); }
+}
+@media (forced-colors: active) {
+  .grd .grd-fx-cap { forced-color-adjust: none; }
+}
+
+/* App icon and Phone. Their effects layer is only the neutral ground; the objects are in the
+   text layer, set below the switch row. */
+.grd .grd-fx:is([data-fx="icon"], [data-fx="phone"]) { --fx-ground: color-mix(in srgb, var(--t0) 6%, var(--tl-card)); }
+
+/* The icon: one large icon, the sizes row and the home-screen row, centred under the switch.
+   The box is a size container so the large icon is a share of the stage's height. */
+.grd .grd-icon-box { container-type: size; }
+.grd .grd-icon-area { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-top: 56px; }
+.grd .grd-icon-group { display: flex; align-items: center; gap: 48px; }
+.grd .grd-icon-col { display: grid; justify-items: start; gap: 32px; }
+.grd .grd-icon-sizes { display: flex; align-items: flex-end; gap: 24px; }
+.grd .grd-icon-home { display: flex; gap: 20px; }
+.grd .grd-ic {
+  display: grid; flex: none; place-items: center; aspect-ratio: 1;
+  border-radius: 22.37%; overflow: hidden; container-type: inline-size;
+}
+.grd .grd-ic--big { width: min(280px, 44cqh); }
+.grd .grd-ic--120 { width: 120px; }
+.grd .grd-ic--60 { width: 60px; }
+.grd .grd-ic--40 { width: 40px; }
+.grd .grd-ic--blank { background: var(--tl-card); box-shadow: inset 0 0 0 1px var(--tl-line); }
+.grd .grd-ic-t { font-family: var(--font); font-size: 56cqi; font-weight: 700; line-height: 1; text-box: trim-both cap alphabetic; }
+@media (max-width: 900px) {
+  .grd .grd-icon-area { padding-top: 48px; }
+  .grd .grd-ic--big { width: 200px; }
+}
+@media (max-width: 900px) and (pointer: coarse) {
+  .grd .grd-icon-area { padding-top: 60px; }
+}
+@media (max-width: 767px) {
+  .grd .grd-icon-home { display: none; }
+}
+@media (max-width: 600px) {
+  .grd .grd-icon-group { gap: 24px; }
+  .grd .grd-icon-sizes { gap: 16px; }
+  .grd .grd-ic--big { width: 128px; }
+  .grd .grd-ic--120 { display: none; }
+}
+
+/* The phone: a sign-in screen, a band of the gradient over the form. From 901px it stands in a
+   frame that rises from the bottom of the stage; under that the screen is the whole stage and
+   the band runs under the switch row. */
+.grd .grd-phone-box { display: flex; align-items: flex-end; justify-content: center; padding-top: 48px; }
+.grd .grd-phone-frame {
+  height: 100%; aspect-ratio: 390 / 844; overflow: hidden;
+  border: 1px solid var(--tl-line); border-bottom: 0; border-radius: 36px 36px 0 0;
+  background: var(--tl-card);
+}
+.grd .grd-phone { display: flex; flex-direction: column; height: 100%; background: var(--tl-card); }
+.grd .grd-phone-band { display: flex; flex: 0 0 42%; align-items: flex-end; padding: 16px; }
+.grd .grd-phone-line { margin: 0; font-size: 20px; line-height: 23px; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+.grd .grd-phone-form { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 20px; overflow: hidden; }
+.grd .grd-phone-h { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -.01em; color: var(--tl-ink); }
+.grd .grd-phone-label { margin: 16px 0 0; font-size: 13px; line-height: 16px; font-weight: 500; color: var(--tl-ink); }
+.grd .grd-phone-field { height: 40px; margin-top: 4px; border: 1px solid var(--tl-line); border-radius: var(--btn-radius); background: var(--tl-card); }
+.grd .grd-phone-btn {
+  display: flex; align-items: center; justify-content: center; height: 40px; margin-top: 12px;
+  border-radius: var(--btn-radius); font-size: 14px; line-height: 16px; font-weight: 600;
+}
+.grd .grd-phone-link { margin: 12px 0 0; font-size: 13px; line-height: 18px; text-align: center; color: var(--tl-ink); text-decoration: underline; }
+@media (max-width: 900px) {
+  .grd .grd-phone-box { display: block; padding-top: 0; }
+  .grd .grd-phone-band { flex-basis: 40%; padding: 24px; }
+  .grd .grd-phone-form { align-items: center; padding: 16px; }
+  .grd .grd-phone-form > * { width: 100%; max-width: 288px; }
+}
+@media (max-width: 600px) {
+  .grd .grd-phone-band { padding: 16px; }
+  .grd .grd-phone-line { font-size: 18px; line-height: 22px; }
+  .grd .grd-phone-form { align-items: stretch; padding: 12px 12px 36px; }
+  .grd .grd-phone-form > * { max-width: none; }
+  .grd .grd-phone-h, .grd .grd-phone-link { display: none; }
+  .grd .grd-phone-label { margin-top: 0; }
 }
