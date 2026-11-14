@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useProject } from '../../contexts/ProjectContext'
 import { useSubscription } from '../../contexts/SubscriptionContext'
-import { useAuth } from '../../contexts/AuthContext'
 import { stashResumeTarget } from '../../contexts/LoginPromptContext'
 import useExportDesign from '../../hooks/useExportDesign'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack, useInertBehind } from '../../hooks/useCloseOnBack'
 import useExportRunner from '../../hooks/useExportRunner'
-import { DEFAULT_PRESET, EXPORT_TYPES, readLastPick, resolvePreset, storeLastPick } from '../../config/dialogExport'
-import { comingLine } from '../../config/exportFormats'
+import { DEFAULT_PRESET, EXPORT_TYPES, readLastPick, readLastTheme, resolvePreset, startFor, storeLastPick } from '../../config/dialogExport'
 import { defaultThemeId, themeFitsFile, themedFile, themedFileIsPro } from '../../config/exportThemePicker'
 import ExportNav from './ExportNav'
 import ExportSteps, { ExportDock } from './ExportSteps'
@@ -32,8 +30,6 @@ import '../../styles/pages/export-dialog.css'
 // window, and a layout switch would unmount the field being typed in.
 const FIELD = 'input:not([type=checkbox],[type=radio],[type=button],[type=submit],[type=file],[type=color]),textarea,select,[contenteditable="true"]'
 const isField = (el) => Boolean(el && el.matches && el.matches(FIELD))
-// Where a visitor with no account starts: a free file.
-const KIT_PICK = resolvePreset({ type: 'kit', category: 'kit', file: 'kit' })
 const calmMotion =() => window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.dataset.reducedMotion === 'true'
 
 export default function ExportDialog({ onClose, preset, projectId }) {
@@ -56,17 +52,28 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const project = projectId ? projects.find((p) => String(p.id) === String(projectId)) || null : null
   const name = project?.name || design?.name || ''
 
-  const { user } = useAuth()
-  // A visitor with no account starts on a free file: the UI kit, whose default theme is a free one. A Pro document is still one click away.
-  const signedOut = planKnown !== false && !user
-  const freeStart = (p) => (signedOut && EXPORT_TYPES.find((t) => t.id === p.type)?.categories.find((c) => c.id === p.category)?.pro ? KIT_PICK : p)
-  const [pick, setPick] = useState(() => freeStart(resolvePreset(preset || readLastPick() || DEFAULT_PRESET)))
-  // The plan can be unknown when the dialog opens (the session is still being read); once it settles for a visitor, the start applies if nothing has been picked.
+  // An account without Pro, signed in or out, starts on a free file: the slides, in Label. The pick the dialog was given (or the last
+  // one this session, with its theme) stands only when it is free for them; a Pro document is still one click away.
+  const nonPro = planKnown !== false && !isPro
+  const [start] = useState(() => {
+    const p = resolvePreset(preset || readLastPick() || DEFAULT_PRESET)
+    const t = readLastTheme(p.file) || undefined
+    return nonPro ? startFor(false, p, t) : { pick: p, theme: t }
+  })
+  const [pick, setPick] = useState(start.pick)
+  // The theme chosen for the themed files (the UI kit, the book and the slides as PDF or HTML). Until a pick is made it is the plan's own default for the file: Presentation for Pro; otherwise the first theme
+  // the file is free in (Label for the guidelines), else the first that draws it. A pick the file's row is missing from (a
+  // guidelines-only theme, then the UI kit) gives way to that default, and comes back when a file it draws is chosen again.
+  const [themePick, setThemePick] = useState(start.theme ?? null)
+  // The plan can be unknown when the dialog opens (the session is still being read); once it settles for a free account, the start applies if nothing has been picked.
   const touched = useRef(false)
   useEffect(() => {
-    if (signedOut && !touched.current) setPick((p) => freeStart(p))
+    if (!nonPro || touched.current) return
+    const next = startFor(false, pick, themePick || undefined)
+    setPick(next.pick)
+    setThemePick(next.theme ?? null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signedOut])
+  }, [nonPro])
   const type = EXPORT_TYPES.find((t) => t.id === pick.type) || EXPORT_TYPES[0]
   const cat = type.categories.find((c) => c.id === pick.category) || type.categories[0]
   // The file last chosen in each category, so leaving Style guide on PNG and coming back finds PNG.
@@ -117,12 +124,6 @@ export default function ExportDialog({ onClose, preset, projectId }) {
 
   const mainRef = useRef(null)
   const [localError, setLocalError] = useState('')
-  // The theme chosen for the themed files (the UI kit, the book and the slides as PDF or HTML), and the one a highlighted row
-  // is previewing. Until a pick is made it is the plan's own default for the file: Presentation for Pro; otherwise the first theme
-  // the file is free in (Label for the guidelines), else the first that draws it. A pick the file's row is missing from (a
-  // guidelines-only theme, then the UI kit) gives way to that default, and comes back when a file it draws is chosen again.
-  const [themePick, setThemePick] = useState(null)
-  const [peek, setPeek] = useState(null)
   const theme = themePick && themeFitsFile(themePick, pick.file) ? themePick : defaultThemeId(isPro, pick.file)
 
   const apply = (next) => {
@@ -155,17 +156,31 @@ export default function ExportDialog({ onClose, preset, projectId }) {
   const checking = planKnown === false
   const themedNow = Boolean(themedFile(pick.file))
   const locked = themedNow ? !isPro && themedFileIsPro(pick.file, theme) : cat.pro && !isPro
-  const target = locked && !checking ? runner.upgradeTarget(pick.file, projectId) : null
-  const upgrade = target?.checkout ? 'checkout' : 'plans'
 
   // run() sends a free account on a Pro file to checkout or /plans itself; the
-  // dialog only has to get out of the way.
+  // dialog only has to get out of the way. After an export the button is "Done": it closes the dialog.
   const onPrimary = async () => {
-    if (busy || checking) return
+    if (busy || checking || runner.retryIn > 0) return
+    if (runner.done) { onCloseRef.current(); return }
     setLocalError('')
     if (signingIn) return
+    // The Pro button leaves the dialog for checkout or /plans; the theme goes into the saved pick so the way back finds it.
+    if (locked) storeLastPick(pick, { theme })
     const result = await runner.run(pick.file, { projectId, theme: themedNow ? theme : undefined, signIn: askToSignIn })
     if (result?.status === 'upgrade') onCloseRef.current()
+  }
+  // "Export another file": the finished line goes, the column goes back to the top (the File step), and focus returns to the dialog.
+  const onAnother = () => {
+    runner.reset()
+    setLocalError('')
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0
+      const body = mainRef.current.closest('.xd-body')
+      if (body) body.scrollTop = 0
+    }
+    // The File step's own switch when the category has one (several files), else the dialog.
+    const first = mainRef.current?.querySelector('.exp-switch [role="radio"][tabindex="0"]')
+    ;(first || dialogRef.current)?.focus({ preventScroll: true })
   }
   const onCopy = async () => {
     const result = await runner.copy(pick.file)
@@ -182,8 +197,9 @@ export default function ExportDialog({ onClose, preset, projectId }) {
       dialogRef.current?.focus({ preventScroll: true })
     } else if (wasBusy.current) {
       wasBusy.current = false
+      // A 429 leaves the button counting down and disabled; the dialog keeps focus until it is live again.
       const btn = primaryRef.current
-      if (btn && !btn.disabled) btn.focus({ preventScroll: true })
+      ;(btn && !btn.disabled ? btn : dialogRef.current)?.focus({ preventScroll: true })
     }
   }, [busy, dialogRef])
 
@@ -218,31 +234,6 @@ export default function ExportDialog({ onClose, preset, projectId }) {
       card.removeAttribute('data-kbd')
     }
   }, [strip, dialogRef])
-
-  // Toasts sit above the dock while the dialog is open, not behind or over its buttons.
-  useEffect(() => {
-    const root = document.documentElement
-    const card = dialogRef.current
-    const dock = card?.querySelector('.xd-dock')
-    if (!dock) return undefined
-    const sync = () => {
-      const box = dock.getBoundingClientRect()
-      if (box.height) root.style.setProperty('--toast-lift', `${Math.round(window.innerHeight - box.top)}px`)
-      else root.style.removeProperty('--toast-lift')
-    }
-    sync()
-    const watch = typeof ResizeObserver === 'function' ? new ResizeObserver(sync) : null
-    watch?.observe(dock)
-    window.addEventListener('resize', sync)
-    // The card rises into place on open; measure again once it has settled.
-    card.addEventListener('animationend', sync)
-    return () => {
-      watch?.disconnect()
-      window.removeEventListener('resize', sync)
-      card.removeEventListener('animationend', sync)
-      root.style.removeProperty('--toast-lift')
-    }
-  }, [dialogRef, layout])
 
   // A field being typed in holds the layout; focusing anything else lets it follow the window again.
   const onFocus = (e) => setHeld(isField(e.target) ? (h) => h || fitted : null)
@@ -285,7 +276,6 @@ export default function ExportDialog({ onClose, preset, projectId }) {
             strip={strip}
             disabled={busy || signingIn}
             showTags={!isPro && !checking}
-            coming={comingLine()}
           />
           <div className="xd-col">
             <div className="xd-scroll" ref={mainRef} onFocus={onScrollFocus}>
@@ -299,12 +289,9 @@ export default function ExportDialog({ onClose, preset, projectId }) {
                   fileProject={name}
                   project={project}
                   strip={strip}
-                  coming={comingLine()}
                   onRenameState={onRenameState}
                   theme={theme}
-                  peek={peek}
-                  onTheme={(id) => { setThemePick(id); runner.reset(); setLocalError('') }}
-                  onPeek={setPeek}
+                  onTheme={(id) => { touched.current = true; setThemePick(id); runner.reset(); setLocalError('') }}
                 />
               </fieldset>
             </div>
@@ -316,8 +303,9 @@ export default function ExportDialog({ onClose, preset, projectId }) {
               error={runner.error || localError}
               notice={runner.notice}
               done={runner.done}
-              upgrade={upgrade}
+              retryIn={runner.retryIn}
               onPrimary={onPrimary}
+              onAnother={onAnother}
               onCopy={onCopy}
               primaryRef={primaryRef}
               locked={locked}

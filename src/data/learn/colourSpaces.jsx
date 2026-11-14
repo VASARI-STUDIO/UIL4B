@@ -89,7 +89,7 @@ export default function ColourSpaces() {
           stepping HSL lightness in even increments. The steps look even in the
           neutrals and badly uneven in the saturated hues. The same lightness
           change moves a yellow much further than it moves a blue. This is one
-          common reason a palette looks right in the generator and wrong on the
+          common reason a palette looks right in the Tint tool and wrong on the
           page.
         </p>
       </section>

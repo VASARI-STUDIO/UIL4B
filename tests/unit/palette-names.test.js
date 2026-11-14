@@ -14,7 +14,7 @@
 // and fails (1). These tests assert both.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { generateHarmony } from '../../src/utils/colors.js'
+import { generateHarmony, hexToHct } from '../../src/utils/colors.js'
 import {
   NAME_MOVEMENTS, NAME_THEMES, colorName, colorTheme, paletteColorNames, paletteTheme, themeForHue,
   randomPaletteName,
@@ -218,4 +218,55 @@ test('the HCT hue wheel is walked without a family being skipped', () => {
   }
   // And the grey gate still wins over any hue.
   assert.equal(themeForHue(200, 4, false), 'mono')
+})
+
+// ── Dark earth words are not drawn by light colours ────────────────────────
+//
+// REGRESSION GUARD: the noun was filtered by hue only, so #FFD9A0 (pale peach)
+// was titled "Rust" and a pink was titled "Kiln". The sunset bank holds the
+// dark earth and fired-clay words, and nothing stopped a light colour drawing
+// them.
+const DARK_EARTH = ['Rust', 'Sienna', 'Corten', 'Kiln', 'Adobe', 'Terracotta', 'Firebrick', 'Oxblood']
+const nounOf = (hex) => colorName(hex).split(' ').pop()
+
+test('a pale peach is not titled with a dark earth word', () => {
+  assert.ok(!DARK_EARTH.includes(nounOf('#FFD9A0')), colorName('#FFD9A0'))
+})
+
+test('a pink is not titled Kiln or another fired-clay word', () => {
+  assert.ok(!DARK_EARTH.includes(nounOf('#E0788C')), colorName('#E0788C'))
+})
+
+test('no light, low-chroma colour draws a dark earth word', () => {
+  let checked = 0
+  for (let r = 200; r < 256; r += 6) {
+    for (let g = 150; g < 256; g += 6) {
+      for (let b = 120; b < 256; b += 6) {
+        const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+        const [, c, t] = hexToHct(hex)
+        if (t < 70 || c > 45) continue
+        checked++
+        assert.ok(!DARK_EARTH.includes(nounOf(hex)), `${hex} (tone ${t.toFixed(0)}, chroma ${c.toFixed(0)}) is titled "${colorName(hex)}"`)
+      }
+    }
+  }
+  assert.ok(checked > 500, `only ${checked} light colours were checked`)
+})
+
+test('a real rust colour can still draw the dark earth words', () => {
+  const drawn = new Set()
+  for (let r = 150; r <= 205; r += 5) {
+    for (let g = 50; g <= 90; g += 4) {
+      for (let b = 5; b <= 40; b += 5) {
+        const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+        const [h, , t] = hexToHct(hex)
+        if (t > 50 || h < 25 || h > 50) continue
+        drawn.add(nounOf(hex))
+      }
+    }
+  }
+  for (const word of ['Rust', 'Sienna', 'Corten']) {
+    assert.ok(drawn.has(word), `no dark rust-hued colour is ever titled "${word}"`)
+  }
+  assert.ok(DARK_EARTH.includes(nounOf('#B7410E')), colorName('#B7410E'))
 })

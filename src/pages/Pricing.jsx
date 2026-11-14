@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import SpectrumFooter from '../components/spectrum/SpectrumFooter'
 import HomeFinalCall from '../components/home/HomeFinalCall'
@@ -7,7 +7,7 @@ import { FreeList, ProList } from '../components/home/PlanLists'
 import { PLAN_ICON_PATHS, bandHue } from '../components/home/planListArt'
 import { GoArrow, PlanFigure } from '../components/plans/PlanParts'
 import { useAuth } from '../contexts/AuthContext'
-import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import useProUpgradeLayer from '../hooks/useProUpgradeLayer'
 import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { usePriceRetry, usePrices, useProPrice } from '../hooks/usePrices'
@@ -142,8 +142,6 @@ const SEG_KEYS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
 
 export default function Pricing() {
   const { user, loading: authLoading } = useAuth()
-  const { requireLogin } = useLoginPrompt()
-  const navigate = useNavigate()
   const { isPro, loading: subLoading, subscription } = useSubscription()
   const location = useLocation()
   // Seeded from `?billing=`, validated against the options the switch can
@@ -212,6 +210,7 @@ export default function Pricing() {
   // an account, carries on to that checkout. `from` makes a new account come
   // back to the same checkout after onboarding. A modified click (new tab or
   // window) keeps the plain link, and /checkout still asks for an account.
+  const proLayer = useProUpgradeLayer({ billing: offer.id })
   const proTo = `/checkout?plan=${offer.checkoutPlan}`
   const proBusy = subLoading || !price.loaded
   const openPro = (event) => {
@@ -219,8 +218,7 @@ export default function Pricing() {
     if (user || authLoading) return
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
-    requireLogin('pay for Pro', { reasons: ['Pro is attached to your account, so payment needs one.'], from: proTo })
-      .then((back) => { if (back) navigate(proTo) })
+    proLayer.openLayer()
   }
   const label = ctaLabel(offer)
 
@@ -512,7 +510,7 @@ export default function Pricing() {
   )
 
   return (
-    <div className="spectrum pricing" ref={rootRef}>
+    <div className="spectrum pricing" ref={rootRef} inert={proLayer.open || undefined}>
       {/* The marketing nav, exactly as `/` mounts it. */}
       <PillNav variant="spectrum" />
       <div className="sp-grain" aria-hidden="true" />
@@ -713,6 +711,7 @@ export default function Pricing() {
       )}
 
       <SpectrumFooter toolkitTo="/projects" home pageColumn={false} />
+      {proLayer.node}
     </div>
   )
 }

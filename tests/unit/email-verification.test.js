@@ -307,12 +307,11 @@ test('onboarding says to check the inbox, or that the send failed', () => {
   assert.match(src, /Check your inbox: we sent a verification link to/)
   assert.match(src, /Your verification link didn't send\./)
   // The status region is on the page before the line arrives, so it is announced.
-  assert.match(src, /<div role="status">\s*\{lineReady && verifyLine && <p className=\{`onb-greeting onb-verify-line/)
-  // A failed send is read in the normal text colour, and a long address wraps.
-  assert.match(src, /onb-verify-line--failed/)
-  const css = read('src/styles/global.css')
-  assert.match(css, /\.onb-verify-line\{overflow-wrap:anywhere\}/)
-  assert.match(css, /\.onb-verify-line--failed\{color:var\(--t0\)\}/)
+  assert.match(src, /<div role="status" className="ob-verify-wrap">\s*\{lineReady && verifyLine && \(\s*<p className=\{`ob-verify\$\{signupVerification === 'failed' \? ' is-failed' : ''\}`\}/)
+  // A failed send is read in the ink colour, and a long address wraps.
+  const css = read('src/styles/pages/v3-onboarding.css')
+  assert.match(css, /\.ob-verify \{[^}]*overflow-wrap: anywhere;/)
+  assert.match(css, /\.ob-verify\.is-failed \{ color: var\(--v3-ink\); \}/)
 })
 
 test('an email change is proved by a link to the new address before it applies', () => {

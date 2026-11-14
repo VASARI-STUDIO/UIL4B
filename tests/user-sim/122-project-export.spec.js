@@ -60,9 +60,18 @@ for (const width of [390, 1440]) {
           expect(calls[0].body.design.palette.colors[0], 'for this project\u2019s colours').toBe('#1F4B8E')
 
           await expect(panel.getByText('Downloaded harbour-ui-kit-04-standards.zip.')).toBeVisible()
-          // Focus returns to the button when the export ends; the dialog takes Escape only from then on.
-          await expect(panel.getByRole('button', { name: 'Export again', exact: true })).toBeFocused()
-          await page.keyboard.press('Escape')
+          // Focus returns to the finished state's main action, Done, when the export ends.
+          const done = panel.getByRole('button', { name: 'Done', exact: true })
+          await expect(done).toBeFocused()
+          // The other way on, "Export another file", clears the finished line and keeps the dialog open for a second export.
+          await activate(panel.getByRole('button', { name: 'Export another file', exact: true }))
+          await expect(panel.getByText('Downloaded harbour-ui-kit-04-standards.zip.')).toHaveCount(0)
+          await expect(panel).toBeVisible()
+          await Promise.all([page.waitForEvent('download'), activate(panel.getByRole('button', { name: 'Export UI kit', exact: true }))])
+          expect(calls, 'a second export after Export another file').toHaveLength(2)
+          await expect(done).toBeFocused()
+          // Done closes the dialog and gives focus back to the button that opened it.
+          await activate(done)
           await expect(panel).toHaveCount(0)
           await expect(page.locator('#main')).not.toHaveAttribute('inert', '')
           await expect(opener).toBeFocused()

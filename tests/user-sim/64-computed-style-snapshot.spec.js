@@ -468,8 +468,17 @@ async function openSettled(browser, route, width, selectors) {
  * it to the top and leaves the name and contrast badge anchored at the bottom.
  * The computed value (270.312px here) is the height the column's text left
  * over, not a number anyone wrote. Its `position`, `display`, `gap` and the
- * swatch's own padding are still compared. */
-const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'], '.plb-col-tools': ['margin-bottom'] }
+ * swatch's own padding are still compared.
+ *
+ * `.hpl-freefoot` on /plans is the same case again: the Free card's bottom row
+ * is `margin-top: auto` in the card's flex column, and the card is as tall as
+ * the Pro card beside it, so the computed value is the height the two cards'
+ * text left over (204.125px in the baseline, 204.875px on an unchanged
+ * stylesheet since). Below 768px the row's margin is an authored 24px, so
+ * AUTO_FROM keeps that width compared. */
+const AUTO_VERTICAL_MARGIN = { '.fpr-card-foot': ['margin-top'], '.plb-col-tools': ['margin-bottom'], '.hpl-freefoot': ['margin-top'] }
+/** The narrowest width at which a margin above is `auto`; narrower widths are still compared. */
+const AUTO_FROM = { '.hpl-freefoot': 768 }
 
 const updated = {}
 
@@ -494,7 +503,7 @@ for (const route of routeNames) {
       const moved = []
       for (const s of selectors) {
         for (const p of Object.keys(expected[s])) {
-          if (AUTO_VERTICAL_MARGIN[s]?.includes(p)) continue
+          if (AUTO_VERTICAL_MARGIN[s]?.includes(p) && width >= (AUTO_FROM[s] ?? 0)) continue
           if (actual[s][p] !== expected[s][p]) moved.push(`${s} { ${p}: ${expected[s][p]} -> ${actual[s][p]} }`)
         }
       }

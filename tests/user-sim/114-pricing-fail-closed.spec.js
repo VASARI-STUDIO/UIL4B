@@ -48,14 +48,19 @@ test.describe('/checkout before the prices settle', () => {
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout?plan=yearly')
 
-    const note = page.locator('.checkout-plan-note')
-    await expect(note).toHaveText('Checking the live price…')
-    expect(await note.innerText(), 'a rate was printed before any price had landed').not.toMatch(/\/mo|[$€£]\s?\d/)
+    // The bill is on the page, but every figure is a dash and its closing line
+    // says the price is being checked.
+    const bill = page.locator('.ck-bill .ck-stops:not(.gh)')
+    await expect(bill.locator('.ck-other')).toHaveText('Checking the live price…')
+    await expect(bill.locator('.ck-fig').first()).toHaveText('—')
+    expect(await bill.innerText(), 'a figure or rate was printed before any price had landed').not.toMatch(/[$€£]\s?\d|a\s+month|per month|\/mo/)
 
     release()
-    // POSITIVE CONTROL: once the live price lands the same line names the rate.
-    await expect(note).toContainText('/mo')
-    await expect(note).toContainText('billed yearly')
+    // POSITIVE CONTROL: once the live price lands the same bill carries the
+    // figure and names the other period's monthly rate.
+    await expect(bill.locator('.ck-fig').nth(1)).toHaveText(/^\$\d+/)
+    await expect(bill).toContainText(/Monthly is \$\d+(\.\d+)?\s+a\s+month/)
+    await expect(bill.locator('.ck-other')).not.toContainText('Checking the live price')
   })
 })
 
@@ -66,17 +71,20 @@ test.describe('a 200 answer made only of fallback prices is an outage', () => {
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout?plan=yearly')
 
-    const note = page.locator('.checkout-plan-note')
-    await expect(note).toContainText('Stripe didn’t answer')
-    await expect(note).not.toContainText('null')
-    await expect(page.locator('.checkout-plan-amount')).not.toHaveText(/\d/)
+    // The outage block takes the bill's place: the word, the reason, the one action.
+    const out = page.locator('.ck-bill .ck-out')
+    await expect(out).toContainText('Stripe didn’t answer')
+    await expect(out).not.toContainText('null')
+    await expect(out.locator('.ck-fig')).toHaveText('Unavailable')
+    await expect(page.locator('.ck-bill .ck-stops'), 'a bill was drawn with no live price').toHaveCount(0)
     const retry = page.getByRole('button', { name: 'Retry live pricing' })
     await expect(retry).toBeVisible()
 
     await page.unroute('**/api/get-prices*')
     await stub(page, LIVE)
     await retry.click()
-    await expect(note).toContainText('/mo')
+    await expect(page.locator('.ck-bill .ck-stops:not(.gh)').locator('.ck-fig').nth(1)).toHaveText(/^\$\d+/)
+    await expect(page.locator('.ck-bill .ck-out')).toHaveCount(0)
     await expect(retry).toHaveCount(0)
   })
 
@@ -102,6 +110,8 @@ test.describe('a 200 answer made only of fallback prices is an outage', () => {
 })
 
 test.describe('the upgrade modal offers only live cadences', () => {
+  // One layer per cadence that has a live price; the loading and error layers are not prices.
+  const PRICE_LAYERS = '.pg-ly:not([data-layer="ld"]):not([data-layer="er"])'
   // The modal is raised from the palette's colour-system wall.
   async function raiseWall(page) {
     const system = page.getByRole('button', { name: 'Colour system' }).first()
@@ -119,9 +129,10 @@ test.describe('the upgrade modal offers only live cadences', () => {
     await go(page, '/create/palette')
     const modal = await raiseWall(page)
 
-    await expect(modal.locator('.ui-pro-plans-err')).toContainText(/couldn.t load current prices/i)
-    await expect(modal.locator('.ui-pro-plan'), 'a fallback cadence was listed').toHaveCount(0)
-    expect(await modal.locator('.ui-pro-body').innerText(), 'a default amount was printed as a price').not.toMatch(/[$€£]\s?\d/)
+    await expect(modal.locator('.pg-out')).toContainText(/couldn.t load current prices/i)
+    await expect(modal.locator(PRICE_LAYERS), 'a fallback cadence was listed').toHaveCount(0)
+    await expect(modal.getByRole('radiogroup', { name: 'Billing' }), 'the switch offered cadences with no live price').toHaveAttribute('aria-disabled', 'true')
+    expect(await modal.locator('.pg-main').innerText(), 'a default amount was printed as a price').not.toMatch(/[$€£]\s?\d/)
     await expect(modal.getByRole('button', { name: 'Upgrade to Pro' })).toHaveCount(0)
   })
 
@@ -132,11 +143,12 @@ test.describe('the upgrade modal offers only live cadences', () => {
     await go(page, '/create/palette')
     const modal = await raiseWall(page)
 
-    const rows = modal.locator('.ui-pro-plan')
+    const rows = modal.locator(PRICE_LAYERS)
     await expect(rows).toHaveCount(1)
     await expect(rows.first()).toContainText('Monthly')
     await expect(rows.first()).toContainText('$7')
-    await expect(modal.locator('.ui-pro-plans-err')).toHaveCount(0)
+    await expect(modal.getByRole('radiogroup', { name: 'Billing' }), 'one live cadence needs no switch').toHaveCount(0)
+    await expect(modal.locator('.pg-out')).toHaveText('')
     await expect(modal.getByText('Yearly'), 'the fallback Yearly row was listed').toHaveCount(0)
   })
 })
@@ -211,7 +223,7 @@ test.describe('/plans shows the unavailable state in the buyable state\'s slots'
     })
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout?plan=yearly')
-    await expect(page.locator('.checkout-plan-note')).toContainText('Stripe didn’t answer')
+    await expect(page.locator('.ck-bill .ck-out')).toContainText('Stripe didn’t answer')
     expect(calls).toBe(1)
 
     // A client-side move to /plans: the page mounts with the cache already filled.

@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, watch, openChosenDialog } from './helpers.js'
+import { go, watch, openChosenDialog, continueWithEmail } from './helpers.js'
 
 const PERSONA = 'keyboard account access'
 
@@ -12,17 +12,20 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
   const google = dialog.getByRole('button', { name: /continue with google/i })
   await expect(google).toBeFocused()
   await expect(dialog.getByLabel('Email')).toBeVisible()
+  // Step 1 is Google and the email; the password field comes with Continue.
+  await expect(dialog.getByLabel('Password')).toHaveCount(0)
+  await continueWithEmail(page, dialog)
   await expect(dialog.getByLabel('Password')).toBeVisible()
   await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe('hidden')
 
   const close = dialog.getByRole('button', { name: 'Close' })
   await close.focus()
   // Shift+Tab off the first control wraps to the LAST one, which is now the
-  // "Not now" way out below the form; "Forgot password?" is the one before it.
+  // "Not now" way out below the form; the "Create one" link is the one before it.
   await page.keyboard.press('Shift+Tab')
   await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Shift+Tab')
-  await expect(dialog.getByRole('button', { name: /forgot password/i })).toBeFocused()
+  await expect(dialog.getByRole('button', { name: /create one/i })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Tab')
