@@ -37,13 +37,18 @@ async function open(page, plan, file, size) {
   await chooseFormat(panel, file)
   return panel
 }
-const change = (panel) => panel.getByRole('button', { name: /^Change theme, current / })
+/** Pick a theme from the inline list. Where the list is folded under a "Theme: <name> · <brand>" row (a phone, or a window under
+    1024 x 900), open it first, as a person would; a pick folds it again and the row then names the theme. */
 async function choose(page, panel, name) {
-  await change(panel).click()
+  const toggle = panel.getByRole('button', { name: /^Theme:/ })
+  const folded = (await toggle.count()) > 0
+  if (folded && (await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+  const themes = panel.getByRole('radiogroup', { name: 'Theme' })
   // The theme's own name, matched whole: 'Standards' must not also pick 'Standards Plate'.
   const own = page.locator('.xd-theme-opt-n').getByText(name, { exact: true })
-  await page.getByRole('listbox', { name: 'Theme' }).getByRole('option').filter({ has: own }).click()
-  await expect(change(panel)).toHaveAccessibleName(`Change theme, current ${name}`)
+  await themes.getByRole('radio').filter({ has: own }).click()
+  if (folded) await expect(toggle).toHaveAccessibleName(new RegExp(`^Theme: ${name} · `))
+  else await expect(themes.getByRole('radio', { checked: true }).locator('.xd-theme-opt-n')).toHaveText(name)
 }
 
 for (const [kind, keys] of Object.entries(KEYS)) {

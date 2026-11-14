@@ -32,8 +32,8 @@ test('choosing another format clears the finished-export notice', async ({ page 
   expect(download.suggestedFilename()).toBe('untitled-ui-kit-04-standards.zip')
   await expect(dockStatus(panel)).toHaveText('Downloaded untitled-ui-kit-04-standards.zip.')
   await expect(dockStatus(panel).locator('strong')).toHaveText('Downloaded')
-  // With the message on screen the button offers another go.
-  await expect(primaryButton(panel)).toHaveText('Export again')
+  // With the message on screen the button finishes with Done.
+  await expect(primaryButton(panel)).toHaveText('Done')
 
   await chooseFormat(panel, 'css')
 

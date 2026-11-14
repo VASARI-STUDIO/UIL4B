@@ -51,6 +51,8 @@ const KEEP = {
     'tl-menu-row', 'fgd-menu-item', 'ic-acc-head', 'arc-select-btn', 'arc-opt', 'pvd-opt',
     // the export dialog's rail: type and category rows in a list, like the preview dialog's
     'xd-type', 'xd-cat',
+    // its inline Theme list: one row per theme, Free and In Pro
+    'xd-theme-opt',
     // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
     'pvd-state',
     // the Gradient Generator's stop list: the select area of a stop row
