@@ -489,7 +489,7 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
           {brand.map((it) => chip(it.role, it.label, it.i, true))}
         </div>
         {sugg.length > 0 && <span className="pvd-legend-rule" aria-hidden="true" />}
-        <div className="pvd-chips" role="group" aria-label="Derived colours">
+        <div className="pvd-chips" role="group" aria-label="Derived colours, also in your CSS">
           {sugg.map((it) => chip(it.role, it.label, it.i, true))}
         </div>
         {(moreCount > 0 || hasNotes) && (
@@ -507,6 +507,7 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
         )}
         {moreOpen && (
           <div id={popId} ref={popRef} className="pvd-more-pop" role="dialog" aria-label="More colours">
+            <p className="pvd-legend-sub">Derived colours come from your palette and are also in your CSS</p>
             {moreCount > 0 && (
               <div className="pvd-chips" role="group" aria-label="More colours">
                 {rest.map((it) => chip(it.role, it.label, it.i))}

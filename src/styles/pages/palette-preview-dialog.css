@@ -221,6 +221,7 @@
   background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
 .pvd-more-pop .pvd-chips{flex-wrap:wrap}
 .pvd-more-pop .pvd-legend-adj,.pvd-more-pop .pvd-legend-note{grid-column:auto}
+.pvd-more-pop .pvd-legend-sub{min-height:0;font-weight:400}
 
 /* The State menu: "State  Overview" in the header, the list in a popover under it. */
 .pvd-statemenu{position:relative}
