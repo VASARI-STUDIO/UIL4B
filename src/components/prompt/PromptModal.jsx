@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { parseTags } from '../../utils/promptStore'
 import UserName from '../UserName'
 import { resolvePromptProfileLink } from '../../utils/promptSubmission'
-import { hasPromptPreview, promptPageSrc, promptPosterSrc } from '../../data/promptPreviewAssets'
+import { hasPromptPreview } from '../../data/promptPreviewAssets'
+import { useProAsset } from '../../hooks/useProAsset'
 import { framePreviewHtml, isPreviewEscape } from '../../utils/previewFrame'
 import useModalDialog from '../../hooks/useModalDialog'
 import { useCloseOnBack } from '../../hooks/useCloseOnBack'
@@ -32,18 +33,28 @@ function LiveFrame({ id, title, onEscape }) {
   const frameRef = useRef(null)
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState({ status: 'loading', html: '' })
+  // A Pro prompt's page arrives as a blob: URL for a Pro account
+  // (hooks/useProAsset.js), so its relative links resolve against the public
+  // previews folder rather than against the blob.
+  const page = useProAsset('page', id, { retry: attempt })
+  const poster = useProAsset('poster', id)
+  const pageFailed = page.status === 'error' || page.status === 'denied'
 
   useEffect(() => {
+    if (!page.src) return undefined
     let alive = true
     const ctrl = typeof AbortController === 'undefined' ? null : new AbortController()
-    const url = new URL(promptPageSrc(id), window.location.href)
-    const base = new URL('./', url).href
+    const url = new URL(page.src, window.location.href)
+    const base = new URL('/previews/prompts/', window.location.href).href
     fetch(url.href, { signal: ctrl?.signal })
       .then((res) => (res.ok ? res.text() : Promise.reject(new Error(String(res.status)))))
       .then((html) => { if (alive) setState({ status: 'ready', html: framePreviewHtml(html, base) }) })
       .catch(() => { if (alive) setState({ status: 'error', html: '' }) })
     return () => { alive = false; ctrl?.abort() }
-  }, [id, attempt])
+  }, [page.src, attempt])
+
+  // The Pro fetch failing is the same "didn't load" as the page fetch failing.
+  const shown = pageFailed && state.status === 'loading' ? { status: 'error', html: '' } : state
 
   useEffect(() => {
     const onMessage = (e) => { if (isPreviewEscape(e, frameRef.current?.contentWindow)) onEscape() }
@@ -53,22 +64,22 @@ function LiveFrame({ id, title, onEscape }) {
 
   return (
     <div className="pl-modal-live">
-      <div className="pl-modal-stage" data-state={state.status}>
+      <div className="pl-modal-stage" data-state={shown.status}>
         {/* The poster holds the frame's place while the page loads, so the
             view opens on the output rather than on an empty box. */}
-        <img className="pl-modal-stage-poster" data-pin-nopin="true" src={promptPosterSrc(id)} alt="" aria-hidden="true" width="960" height="600" />
-        {state.status === 'ready' && (
+        <img className="pl-modal-stage-poster" data-pin-nopin="true" src={poster.src || undefined} alt="" aria-hidden="true" width="960" height="600" />
+        {shown.status === 'ready' && (
           <iframe
             ref={frameRef}
             className="pl-modal-frame"
-            srcDoc={state.html}
+            srcDoc={shown.html}
             title={`Live output: ${title || 'this prompt'}`}
             sandbox="allow-scripts"
             referrerPolicy="no-referrer"
           />
         )}
-        {state.status === 'loading' && <p className="pl-modal-stage-note" role="status">Loading the demo…</p>}
-        {state.status === 'error' && (
+        {shown.status === 'loading' && <p className="pl-modal-stage-note" role="status">Loading the demo…</p>}
+        {shown.status === 'error' && (
           <div className="pl-modal-stage-error" role="alert">
             <p>The demo didn’t load. Check your connection and try again.</p>
             <button type="button" className="lib-btn" onClick={(e) => { e.stopPropagation(); setState({ status: 'loading', html: '' }); setAttempt((n) => n + 1) }}>Retry</button>

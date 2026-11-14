@@ -23,6 +23,7 @@ const SOURCES = {
     import('../pro/library/paletteLibrary.js'),
     import('../pro/library/gradientGallery.js'),
     import('../pro/library/communityPrompts.js'),
+    import('../pro/library/iconGroups.pro.js'),
   ]),
   'in-tree': () => Promise.all([
     import('./paletteGallery.js'),
@@ -30,8 +31,9 @@ const SOURCES = {
     import('./paletteLibrary.js'),
     import('./gradientGallery.js'),
     import('./communityPrompts.js'),
+    import('./iconGroups.pro.js'),
   ]),
-  fixtures: () => import('./fixtures.js').then((m) => [m, m, m, m, m]),
+  fixtures: () => import('./fixtures.js').then((m) => [m, m, m, m, m, m]),
 }
 
 const isProduction = (env) => env.VERCEL_ENV === 'production'
@@ -50,7 +52,7 @@ function sourceOrder(env) {
 
 const isMissingModule = (err) => err?.code === 'ERR_MODULE_NOT_FOUND' || err?.code === 'MODULE_NOT_FOUND'
 
-function shape(source, [gallery, brands, library, gradients, prompts]) {
+function shape(source, [gallery, brands, library, gradients, prompts, icons]) {
   const lib = {
     source,
     GALLERY_PALETTES: gallery.GALLERY_PALETTES,
@@ -60,6 +62,7 @@ function shape(source, [gallery, brands, library, gradients, prompts]) {
     LIBRARY_PALETTES: library.LIBRARY_PALETTES,
     GALLERY_GRADIENTS: gradients.GALLERY_GRADIENTS,
     COMMUNITY_PROMPTS: prompts.COMMUNITY_PROMPTS,
+    PRO_ICON_GROUPS: icons.PRO_ICON_GROUPS,
   }
   for (const [name, value] of Object.entries(lib)) {
     if (name !== 'source' && !Array.isArray(value)) throw new Error(`library source "${source}" has no ${name} array`)
@@ -68,11 +71,12 @@ function shape(source, [gallery, brands, library, gradients, prompts]) {
     palettes: lib.LIBRARY_PALETTES,
     gradients: lib.GALLERY_GRADIENTS,
     prompts: lib.COMMUNITY_PROMPTS,
+    icongroups: lib.PRO_ICON_GROUPS,
   })
   return Object.freeze(lib)
 }
 
-const EMPTY = shape('missing', Array.from({ length: 5 }, () => ({
+const EMPTY = shape('missing', Array.from({ length: 6 }, () => ({
   GALLERY_PALETTES: [],
   BRAND_PALETTES: [],
   CURATED_LIBRARY_PALETTES: [],
@@ -80,6 +84,7 @@ const EMPTY = shape('missing', Array.from({ length: 5 }, () => ({
   LIBRARY_PALETTES: [],
   GALLERY_GRADIENTS: [],
   COMMUNITY_PROMPTS: [],
+  PRO_ICON_GROUPS: [],
 })))
 
 export async function resolveLibrary(env = process.env) {
