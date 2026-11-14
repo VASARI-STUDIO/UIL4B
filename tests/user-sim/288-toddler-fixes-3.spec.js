@@ -4,7 +4,7 @@
 //      to /plans, like every other upgrade call to action. It does not stack a
 //      second dialog over the first.
 //   2. A Soon tool's URL still redirects, but the arrival says so in a toast.
-//   3. The palette library has one builder link per card and a skip link past
+//   3. The palette library has one builder link per preview and a skip link past
 //      the grid.
 //   4. /discover/prompts shows the not-found page to anyone but an admin.
 //   5. Search fields show a keyboard focus ring (the palette sliders already did).
@@ -18,12 +18,12 @@
 //       -> "the search field shows a ring on focus"
 //   * drop `notFound` from the /discover/prompts route in App.jsx
 //       -> "signed out: the not-found page, at the same address"
-//   * restore the `pgal-act` Builder link in PaletteGalleryGrid.jsx
-//       -> "a card has one link to the builder ..."
+//   * add a builder link to VerticalPanelTile, or a second one to GalleryPreviewDialog
+//       -> "a tile is at most two tab stops, and its preview holds one link to the builder"
 //   * delete the skip link or the `pgl-after-grid` marker in PaletteGallery.jsx
 //       -> "the skip link moves focus past the palettes"
-//   * make `openProModal` in PaletteBuilder.jsx pass no `seed` again
-//       -> "after a randomise, the "Go beyond 8 colours" wall shows the toolbar seed"
+//   * make the "Go beyond" wall in PaletteBuilder.jsx pass the saved history's colours
+//       instead of the board's -> "after a randomise, the "Go beyond 8 colours" wall shows the board, not the saved history"
 //   * put `onOpen={openVariationGate}` back on the Suggest ProBlock in PaletteBuilder.jsx
 //       -> "the Suggest Pro button goes to /plans with no dialog left open"
 //   * delete the `soonNote` effect in CreateTool.jsx
@@ -108,7 +108,7 @@ test.describe('palette Pro walls: the colour preview follows the board', () => {
   const STALE = '#010203'
   const EIGHT = '/create/palette?c=14224A,249EAF,F2C14E,2563EB,C0392B,6B7280,10B981,F97316'
 
-  test('after a randomise, the "Go beyond 8 colours" wall shows the toolbar seed, not the saved history', async ({ page }) => {
+  test('after a randomise, the "Go beyond 8 colours" wall shows the board, not the saved history', async ({ page }) => {
     watch(page, 'a free member hitting the colour cap after a randomise')
     await signIn(page, { plan: 'free' })
     await go(page, EIGHT)
@@ -133,7 +133,14 @@ test.describe('palette Pro walls: the colour preview follows the board', () => {
     await page.getByRole('button', { name: 'Add a colour' }).click()
     const wall = page.getByRole('dialog').filter({ hasText: 'Go beyond 8 colours' })
     await expect(wall).toBeVisible()
-    await expect(wall.locator('.ui-pro-rail-seed')).toHaveText(onScreen.toUpperCase())
+    // The wall's left pane draws the colours on the board; none is the stale one.
+    const pane = wall.locator('[data-pane="colours"] .pg-cols').first().locator('span')
+    const board = (await page.locator('.plb-hex').allTextContents()).map((t) => t.trim().toLowerCase())
+    expect(board.length, 'the board shows its colours').toBe(8)
+    const drawn = await pane.evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor))
+    const toRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})` }
+    expect(drawn, 'the wall drew the colours on the board').toEqual(board.map(toRgb))
+    expect(drawn, 'the wall drew the stale history').not.toContain(toRgb(STALE))
   })
 })
 
@@ -151,40 +158,44 @@ test.describe('palette gallery: tab stops', () => {
     n,
   )
 
-  test('a card has one link to the builder and fewer tab stops than the swatches plus seven', async ({ page }) => {
+  test('a tile is at most two tab stops, and its preview holds one link to the builder', async ({ page }) => {
+    // The V3 tile replaced the card's swatches and five actions with one stretched
+    // "Preview" button (and a like button where liking is offered). The builder link
+    // moved into the preview dialog, where there is exactly one.
     watch(page, 'a keyboard user walking the palette library')
     await go(page, '/discover/palettes')
-    const card = page.locator('.pgal-card:has(.pgal-act)').first()
-    await expect(card).toBeVisible({ timeout: 20000 })
+    const tile = page.locator('.vpt:not(.vpt--locked):not(.geg-fade *)').first()
+    await expect(tile).toBeVisible({ timeout: 20000 })
+    await expect(tile.locator('a[href^="/create/palette"]'), 'no builder link on the tile itself').toHaveCount(0)
 
-    const builder = card.locator('a[href^="/create/palette"]')
-    await expect(builder, 'one link to the builder per card').toHaveCount(1)
-    await expect(builder).toBeVisible()
-
-    // Tab from the first swatch to the card's last stop, counting each one.
-    const stripes = await card.locator('.pgal-stripe').count()
-    await card.locator('.pgal-stripe').first().focus()
+    const open = tile.locator('.vpt-open')
+    await open.focus()
     let stops = 1
-    for (let i = 0; i < 30; i += 1) {
+    for (let i = 0; i < 10; i += 1) {
       await page.keyboard.press('Tab')
       await frames(page)
-      const inside = await card.evaluate((el) => el.contains(document.activeElement))
+      const inside = await tile.evaluate((el) => el.contains(document.activeElement))
       if (!inside) break
       stops += 1
     }
-    // Before: swatches + like + five actions + the foot link = swatches + 7.
-    expect(stops, 'the tab stops in one card').toBeLessThan(stripes + 7)
-    expect(stops).toBe(stripes + 1 + 4 + 1)
+    expect(stops, 'the tab stops in one tile: open, and like where offered').toBeLessThanOrEqual(2)
+    expect(stops).toBe(1 + await tile.locator('.vpt-like').count())
+
+    await open.click()
+    const dialog = page.locator('.gpd')
+    await expect(dialog).toBeVisible()
+    const builder = dialog.locator('a[href^="/create/palette"]:visible')
+    await expect(builder, 'one link to the builder in the preview').toHaveCount(1)
   })
 
   test('the skip link moves focus past the palettes', async ({ page }) => {
     watch(page, 'a keyboard user skipping the palette grid')
     await go(page, '/discover/palettes')
-    await expect(page.locator('.pgal-card').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.vpt').first()).toBeVisible({ timeout: 20000 })
 
     const skip = page.getByRole('link', { name: 'Skip past the palettes' })
     await expect(skip).toHaveCount(1)
-    const first = await skip.evaluate((a) => !!(a.compareDocumentPosition(document.querySelector('.pgal-card')) & Node.DOCUMENT_POSITION_FOLLOWING))
+    const first = await skip.evaluate((a) => !!(a.compareDocumentPosition(document.querySelector('.vpt')) & Node.DOCUMENT_POSITION_FOLLOWING))
     expect(first, 'it comes before the first card').toBe(true)
 
     await skip.focus()
@@ -194,10 +205,10 @@ test.describe('palette gallery: tab stops', () => {
 
     const where = await page.evaluate(() => {
       const active = document.activeElement
-      const cards = [...document.querySelectorAll('.pgal-card:not(.geg-fade *)')]
+      const cards = [...document.querySelectorAll('.vpt:not(.geg-fade *)')]
       const last = cards[cards.length - 1]
       return {
-        insideACard: !!active?.closest('.pgal-card'),
+        insideACard: !!active?.closest('.vpt'),
         afterLastCard: !!(last.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING),
       }
     })
@@ -207,7 +218,7 @@ test.describe('palette gallery: tab stops', () => {
     // The next Tab goes on from there, not back into the grid.
     await page.keyboard.press('Tab')
     await frames(page)
-    expect(await page.evaluate(() => !!document.activeElement?.closest('.pgal-card'))).toBe(false)
+    expect(await page.evaluate(() => !!document.activeElement?.closest('.vpt'))).toBe(false)
   })
 })
 

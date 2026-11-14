@@ -34,7 +34,11 @@ async function hitArea(page, selector) {
 }
 
 const CASES = [
-  { route: '/community', sels: ['.ch-filter', '.ch-sort-btn', '.ch-heart'] },
+  // V3 Community: the header's two buttons and a tile's "..." menu. (The heart
+  // discs are hidden on a phone, so they have no 44px target to measure here;
+  // the "..." menu stands in. The old filter chips and sort buttons no longer
+  // exist, and the tab row only shows for a member with submissions.)
+  { route: '/community', sels: ['.cm-head button', '.cm-tile [aria-label^="Actions for"]'] },
   { route: '/settings', signin: true, sels: ['.settings-nav-item'] },
   { route: '/create/alt-text', sels: ['[data-tl-dock] button', '.alt-field', '.alt-length .tl-pill'] },
   { route: '/create/auto-builder', sels: ['.bs-btn--primary'] },
@@ -42,9 +46,8 @@ const CASES = [
   // control a finger lands on is 44px tall, not a 20px box inside a label.
   { route: '/create/3d-converter', sels: ['.v3d-out input'] },
   { route: '/create/tint', sels: ['.tt-iconbtn', '.tt-picker', '.tt-hex-input'] },
-  // The /login page: the Google button and the wall's pause button (a phone
-  // gets the band, which carries it).
-  { route: '/login', sels: ['.auth-google-btn', '.aw-pause'] },
+  // The /login page: the Google button, Continue and the way back to the plans.
+  { route: '/login', sels: ['.auth-google-btn', '.auth-continue', '.pf-back'] },
   // The sign-in dialog's close control, opened from the header's Menu.
   {
     route: '/learn/help',

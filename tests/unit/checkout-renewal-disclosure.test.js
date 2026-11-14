@@ -84,8 +84,8 @@ test('Checkout.jsx quotes the amount only when it is live, and renders the terms
   // mistake for string delimiters, and these patterns are specific enough that
   // a comment cannot satisfy them.
   const src = read('src/pages/Checkout.jsx')
-  assert.match(src, /proPrice\.source\[planKey\] === 'live'/, 'the amount is not gated on a live price')
-  assert.match(src, /renewalDisclosure\(\{[\s\S]*?trialDays: ladderEntry\?\.trialDays[\s\S]*?amount: quotableAmount\(\{[^}]*live: amountLive[^}]*displayCurrency: proPrice\.currency[^}]*sessionCurrency: sessionCurrencies\[planKey\]/, 'the page no longer derives the sentence from the ladder, the live amount and the session currency')
+  assert.match(src, /proPrice\.source\[key\] === 'live'/, 'the amount is not gated on a live price')
+  assert.match(src, /renewalDisclosure\(\{[\s\S]*?trialDays: PLAN_LADDER\.find\(\(entry\) => entry\.id === key\)\?\.trialDays[\s\S]*?amount: quotableAmount\(\{[^}]*live: !!quoted && proPrice\.source\[key\] === 'live'[^}]*displayCurrency: proPrice\.currency[^}]*sessionCurrency: sessionCurrencies\[key\]/, 'the page no longer derives the sentence from the ladder, the live amount and the session currency')
   assert.match(src, /createCheckoutSession\(sessionInterval, \(session\) => \{[\s\S]*?session\?\.currency/, 'the page does not read the currency the session was created in')
   const renewalAt = src.indexOf('className="checkout-renewal"')
   const termsAt = src.indexOf('className="checkout-terms"')

@@ -13,6 +13,7 @@ import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { landOnHash } from './utils/hashLanding'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
+import { isProSignup } from './utils/proSignupFlow'
 import { purgeStaleUsage } from './utils/usageTracker'
 import { onboardingDestination, knownProfile, resumeOnboardingTarget, resumeDecisionOwed } from './utils/onboardingState'
 import { readSessionHint, rootDestination } from './utils/sessionHint'
@@ -48,7 +49,8 @@ import { resolveRouteTitle } from './utils/pageTitle'
 // the ~22 KB of `.home-*` rules that were deleted from global.css alongside it
 // are what pays for that on the render-blocking budget.
 import Spectrum from './pages/Spectrum'
-import Onboarding from './pages/Onboarding'
+// Onboarding is seen once per account, so it loads on demand like /login.
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 import CreateTool from './pages/CreateTool'
 
@@ -58,6 +60,8 @@ import CreateTool from './pages/CreateTool'
 // are gone until Phase 2 wires each tool's real logic back in.
 const Settings = lazy(() => import('./pages/Settings'))
 const Community = lazy(() => import('./pages/Community'))
+const CommunityPiece = lazy(() => import('./pages/CommunityPiece'))
+const CommunityProfile = lazy(() => import('./pages/CommunityProfile'))
 const Feedback = lazy(() => import('./pages/Feedback'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
@@ -260,6 +264,12 @@ function AppInner({ toast }) {
   // change lands let that redirect win and skip onboarding.
   useEffect(() => {
     if (authLoading || !authUser || !pendingOnboarding) return
+    // An account made in the Pro sign-up layer carries straight on to checkout.
+    if (isProSignup() && location.pathname !== '/onboarding') {
+      sendEvent(EVENTS.signUp)
+      clearPendingOnboarding()
+      return
+    }
     if (location.pathname !== '/onboarding') {
       // `fresh` tells Onboarding this is a brand-new account: it must render the
       // flow even if this browser holds another account's completion flag.
@@ -469,7 +479,7 @@ function AppInner({ toast }) {
     )
   }
   if (location.pathname === '/onboarding') {
-    return <Onboarding />
+    return <Suspense fallback={<RouteLoading />}><Onboarding /></Suspense>
   }
   // /login is a full-screen page of its own: no PillNav, no app-shell, no
   // AppFooter. It is not added to chromelessRoutes(), which feeds the CreateTool
@@ -645,6 +655,8 @@ function AppInner({ toast }) {
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
               <Route path="/settings" element={<Settings toast={toast} />} />
               <Route path="/community" element={<Community toast={toast} />} />
+              <Route path="/community/:id" element={<CommunityPiece toast={toast} />} />
+              <Route path="/u/:handle" element={<CommunityProfile toast={toast} />} />
               <Route path="/feedback" element={<Feedback toast={toast} />} />
               <Route path="/reset-password" element={<LinkExpired />} />
               <Route path="/privacy" element={<Privacy />} />

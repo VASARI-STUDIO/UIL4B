@@ -56,10 +56,11 @@ export const normaliseGround = (v) => (GROUNDS.includes(v) ? v : GROUND_DEFAULT)
 // preview draws on them. `page` is the stage's own colour (the CSS `--ied-stage`; a
 // unit test keeps the two equal). The checker is a pair of squares in the CSS; the
 // note measures the darker one, the harder case, and a unit test keeps the CSS pair
-// equal to this one.
+// equal to this one. Each fixed plate is at least 1.2:1 from the stage of its theme, so a
+// chosen Light or Dark ground reads as a step off the page (icon-ground.test.js).
 const GROUNDS_BY_THEME = Object.freeze({
-  dark: Object.freeze({ page: '#060607', light: '#EFEEEA', dark: '#18181B', checker: ['#242426', '#393A3C'] }),
-  light: Object.freeze({ page: '#F6F5F1', light: '#FFFFFF', dark: '#18181B', checker: ['#FAFAF8', '#DEDDD6'] }),
+  dark: Object.freeze({ page: '#060607', light: '#EFEEEA', dark: '#1E1E21', checker: ['#242426', '#393A3C'] }),
+  light: Object.freeze({ page: '#EAE9E5', light: '#FFFFFF', dark: '#18181B', checker: ['#FAFAF8', '#DEDDD6'] }),
 })
 const themeGrounds = (theme) => GROUNDS_BY_THEME[theme === 'light' ? 'light' : 'dark']
 const lum = (hex) => luminance(...hexToRgb(hex))

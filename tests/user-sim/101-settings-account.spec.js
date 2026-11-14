@@ -93,7 +93,9 @@ test.describe('settings — billing', () => {
     await section.getByRole('button', { name: 'Manage billing' }).click()
     const alert = section.getByRole('alert')
     await expect(alert).toContainText('Billing could not be opened')
-    await expect(alert).toContainText('ref-7f3a')
+    // The raw reference is logged for support, not printed on the page (0082999b6).
+    await expect(alert).not.toContainText('ref-7f3a')
+    await expect(alert).toContainText('Please try again in a moment.')
     // Cancel goes through the same honest path.
     await section.getByRole('button', { name: 'Cancel plan' }).click()
     await expect(alert).toContainText('nothing about your plan has changed')
@@ -106,7 +108,7 @@ test.describe('settings — billing', () => {
     }))
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout?plan=yearly')
-    const note = page.locator('.checkout-plan-note')
+    const note = page.locator('.ck-bill .ck-out')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
     await expect(note).toContainText('Stripe didn’t answer')
@@ -119,7 +121,7 @@ test.describe('settings — billing', () => {
     }))
     await signIn(page, { plan: 'free' })
     await go(page, '/checkout?plan=yearly')
-    const note = page.locator('.checkout-plan-note')
+    const note = page.locator('.ck-bill .ck-out')
     await expect(note).toBeVisible()
     await expect(note).not.toContainText('null')
     await expect(note).toContainText(/price for \w+ yet\./)

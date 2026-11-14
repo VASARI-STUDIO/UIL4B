@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import useActiveSection from '../hooks/useActiveSection'
 import useShortCode from '../hooks/useShortCode'
 import NotFound from './NotFound'
+import ReadingEnd from '../components/ReadingEnd'
+import { ContrastSpecimen, TryColourAction } from '../components/ContrastFigures'
+import { resetContrastPick } from '../hooks/useContrastPick'
 import { LEARN_ARTICLES, findArticle, nextInTopic, readingMinutes, topicAnchorId } from '../data/learnIndex'
 import { getArticleSources } from '../data/learn/sources'
 import ColourContrast from '../data/learn/colourContrast'
@@ -82,6 +84,20 @@ const TOOL_LEDE = {
   'improving-value-proposition': 'The Contrast Checker tests any colour pair against the WCAG thresholds, which is the check to run on an accent colour used to make one action stand out.',
 }
 
+// The try-it heading. One guide has its own line; the rest name the tool.
+const TRY_HEAD = {
+  'colour-contrast': 'Check your own colours.',
+}
+
+// The page heading and lead where a guide's page words differ from its index
+// title and dek. The index title stays the <title>, the card and the menu entry.
+const HERO = {
+  'colour-contrast': {
+    title: 'How much contrast your text needs, and how to check it.',
+    lead: 'Most text needs a contrast ratio of at least 4.5:1 against its background. Large text, and the outline of a field or a checkbox you need to see, need 3:1. The stricter AAA level asks for 7:1. Pick a grey and see which it clears.',
+  },
+}
+
 export default function LearnArticle() {
   const { slug } = useParams()
   const article = findArticle(slug)
@@ -97,14 +113,16 @@ export default function LearnArticle() {
 function Article({ article }) {
   const Body = BODIES[article.slug]
   const sources = getArticleSources(article.slug)
-  const active = useActiveSection(article.sections)
   const contentsRef = useRef(null)
   const proseRef = useRef(null)
   useShortCode(proseRef)
   useFocusableHeadings(article.sections)
+  useEffect(() => resetContrastPick, [])
+  const specimen = article.slug === 'colour-contrast'
   const next = nextInTopic(article.slug)
   const nextInSameTopic = Boolean(next) && next.topic === article.topic
   const minutes = readingMinutes(article.words)
+  const hero = { title: article.title, lead: article.dek, ...HERO[article.slug] }
 
   // Choosing a section from the phone contents folds it away, then puts focus on
   // that section's heading. The anchor's own jump runs after this handler, so
@@ -119,45 +137,22 @@ function Article({ article }) {
 
   return (
     <div className="sec lart">
-      <div className="lart-layout">
-        {/* The wide-screen rail and the phone disclosure below are the same list
-            from article.sections. CSS shows one of them, so only one landmark
-            is ever exposed. */}
-        <nav className="lart-toc" aria-labelledby="lart-toc-h">
-          <h2 className="lart-toc-h" id="lart-toc-h">On this page</h2>
-          <ol>
-            {article.sections.map((s) => (
-              <li key={s.id}>
-                <a href={`#${s.id}`} data-active={active === s.id ? 'true' : undefined}>{s.title}</a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-
-        <div className="lart-main">
+      <header className={`lart-hero${specimen ? ' lart-hero--spec' : ''}`}>
+        <div className="lart-head">
           <nav className="lart-crumb" aria-label="Breadcrumb">
             <Link to="/learn">Learn</Link>
             <span aria-hidden="true">/</span>
             <Link to={`/learn#${topicAnchorId(article.topic)}`}>{article.topic}</Link>
           </nav>
-
-          <header className="lart-head">
-            <h1>{article.title}</h1>
-            <p className="lart-dek">{article.dek}</p>
-            <p className="lart-meta">
-              <span>{minutes} min read</span>
-              <span>Reviewed <time dateTime={article.updated}>{formatDate(article.updated)}</time></span>
-              <span><Link to={article.toolTo}>Use it in the {article.toolLabel}</Link></span>
-            </p>
-          </header>
-
-          <nav className="lart-toc-nav" aria-labelledby="lart-toc-m-h">
-            <details className="lart-toc-m" ref={contentsRef}>
-              <summary>
-                <span className="lart-toc-m-name" id="lart-toc-m-h">On this page</span>
-                <span className="lart-toc-m-count">{article.sections.length} sections</span>
-                <Chevron />
-              </summary>
+          <h1>{hero.title}</h1>
+          <p className="lart-dek">{hero.lead}</p>
+          <p className="lart-meta">
+            <span>{minutes} min read</span>
+            <span>Reviewed <time dateTime={article.updated}>{formatDate(article.updated)}</time></span>
+          </p>
+          {specimen && (
+            <nav className="lart-toc-inline" aria-labelledby="lart-toc-i-h">
+              <h2 className="lart-toc-h" id="lart-toc-i-h">In this guide</h2>
               <ol>
                 {article.sections.map((s) => (
                   <li key={s.id}>
@@ -165,72 +160,122 @@ function Article({ article }) {
                   </li>
                 ))}
               </ol>
-            </details>
-          </nav>
-
-          <article className="lart-prose" ref={proseRef}>
-            <Body />
-          </article>
-
-          {/* The end of the guide has one action: the tool that does the thing
-              the article describes. Not a panel, not a pitch — the reader has
-              just been told how a number is calculated, and the tool calculates
-              it. Further reading and the citations follow it, folded. */}
-          <aside className="lart-next" aria-label="Put this into practice">
-            <p className="lart-next-lede">{TOOL_LEDE[article.slug]}</p>
-            <Link className="lart-next-go" to={article.toolTo}>
-              Open the {article.toolLabel}
-              <span className="lart-next-arrow" aria-hidden="true">&rarr;</span>
-            </Link>
-          </aside>
-
-          <nav className="lart-onward" aria-labelledby="lart-onward-h">
-            <h2 className="lart-onward-label" id="lart-onward-h">Keep reading</h2>
-            <ul>
-              {next && next.slug !== article.slug && BODIES[next.slug] && (
-                <li>
-                  <Link className="lart-onward-row" to={`/learn/${next.slug}`}>
-                    <span className="lart-onward-text">
-                      <span className="lart-onward-kicker">
-                        {nextInSameTopic ? `Next in ${article.topic}` : 'Read next'}
-                        <span className="sr-only">: </span>
-                      </span>
-                      <span className="lart-onward-title">{next.title}</span>
-                      <span className="lart-onward-dek">{next.dek}</span>
-                    </span>
-                    <span className="lart-onward-go" aria-hidden="true">&rarr;</span>
-                  </Link>
-                </li>
-              )}
-              <li>
-                <Link className="lart-onward-row" to="/learn">
-                  <span className="lart-onward-text">
-                    <span className="lart-onward-title">All {LEARN_ARTICLES.length} guides</span>
-                  </span>
-                  <span className="lart-onward-go" aria-hidden="true">&rarr;</span>
-                </Link>
-              </li>
-            </ul>
-          </nav>
-
-          {sources.length > 0 && (
-            <details className="lart-sources">
-              <summary>
-                <span>Sources ({sources.length})</span>
-                <Chevron />
-              </summary>
-              <ul>
-                {sources.map((s) => (
-                  <li key={s.href}>
-                    <a href={s.href} target="_blank" rel="noreferrer noopener">{s.label}</a>
-                  </li>
-                ))}
-              </ul>
-            </details>
+            </nav>
           )}
         </div>
-      </div>
+
+        {specimen && <ContrastSpecimen />}
+
+        {/* The wide-screen list and the phone disclosure are the same list
+            from article.sections. CSS shows one of them, so only one landmark
+            is ever exposed. */}
+        {!specimen && (
+          <nav className="lart-toc" aria-labelledby="lart-toc-h">
+            <h2 className="lart-toc-h" id="lart-toc-h">In this guide</h2>
+            <ol>
+              {article.sections.map((s) => (
+                <li key={s.id}>
+                  <a href={`#${s.id}`} onClick={() => chooseSection(s.id)}>{s.title}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
+
+        <nav className="lart-toc-nav" aria-labelledby="lart-toc-m-h">
+          <details className="lart-toc-m" ref={contentsRef}>
+            <summary>
+              <span className="lart-toc-m-name" id="lart-toc-m-h">In this guide</span>
+              <span className="lart-toc-m-count">{article.sections.length} sections</span>
+              <Chevron />
+            </summary>
+            <ol>
+              {article.sections.map((s) => (
+                <li key={s.id}>
+                  <a href={`#${s.id}`} onClick={() => chooseSection(s.id)}>{s.title}</a>
+                </li>
+              ))}
+            </ol>
+          </details>
+        </nav>
+      </header>
+
+      <article className={`lart-prose${specimen ? ' lart-prose--wide' : ''}`} ref={proseRef}>
+        <Body />
+      </article>
+
+      {/* The end of the guide has one filled action: the tool that does the
+          thing the article describes. Further reading and the citations
+          follow it. */}
+      <aside className="lart-next" aria-labelledby="lart-next-h">
+        <div className="lart-next-copy">
+          <h2 id="lart-next-h">{TRY_HEAD[article.slug] || `Try it in the ${article.toolLabel}.`}</h2>
+          <p className="lart-next-lede">{TOOL_LEDE[article.slug]}</p>
+        </div>
+        {specimen ? (
+          <TryColourAction to={article.toolTo} label={article.toolLabel} />
+        ) : (
+          <Link className="lart-next-go" to={article.toolTo}>
+            Open in {article.toolLabel}
+          </Link>
+        )}
+      </aside>
+
+      <nav className="lart-onward" aria-labelledby="lart-onward-h">
+        <h2 className="lart-onward-label" id="lart-onward-h">Keep reading</h2>
+        <ul>
+          {next && next.slug !== article.slug && BODIES[next.slug] && (
+            <li>
+              <Link className="lart-onward-row lart-onward-lead" to={`/learn/${next.slug}`}>
+                <span className="lart-onward-text">
+                  <span className="lart-onward-kicker">
+                    {nextInSameTopic ? `Next in ${article.topic}` : 'Read next'}
+                    <span className="sr-only">: </span>
+                  </span>
+                  <span className="lart-onward-title">{next.title}</span>
+                  <span className="lart-onward-dek">{next.dek}</span>
+                </span>
+                <span className="lart-onward-go" aria-hidden="true">{specimen ? <ArrowIcon /> : '\u2192'}</span>
+              </Link>
+            </li>
+          )}
+          <li>
+            <Link className="lart-onward-row" to="/learn">
+              <span className="lart-onward-text">
+                <span className="lart-onward-title">All {LEARN_ARTICLES.length} guides</span>
+              </span>
+              <span className="lart-onward-go" aria-hidden="true">{specimen ? <ArrowIcon /> : '\u2192'}</span>
+            </Link>
+          </li>
+        </ul>
+      </nav>
+
+      <ReadingEnd />
+
+      {sources.length > 0 && (
+        <details className="lart-sources">
+          <summary>
+            <span>Sources ({sources.length})</span>
+            <Chevron />
+          </summary>
+          <ul>
+            {sources.map((s) => (
+              <li key={s.href}>
+                <a href={s.href} target="_blank" rel="noreferrer noopener">{s.label}</a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
+  )
+}
+
+function ArrowIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
   )
 }
 

@@ -154,6 +154,14 @@ class El {
     return false
   }
 
+  // The Tab trap skips controls under an inert ancestor. Only the `[inert]`
+  // attribute selector is modelled.
+  closest(selector) {
+    assert.equal(selector, '[inert]', `closest() is only modelled for [inert], got ${selector}`)
+    for (let c = this; c; c = c.parentElement) if (c.hasAttribute('inert')) return c
+    return null
+  }
+
   focus() {
     this.focusCount += 1
     // THE WHOLE POINT OF THE HARNESS. A detached node cannot take focus, and
@@ -753,7 +761,7 @@ test('the upgrade dialog offers an explicit way to decline', () => {
     `the JSX scan found ${buttons.length} buttons in a dialog that has several — it is not parsing`)
 
   const declines = buttons.filter(([, attrs, children]) =>
-    /onClick=\{onClose\}/.test(attrs)
+    /onClick=\{(?:onClose|requestClose)\}/.test(attrs)
     && children.replace(/<[^>]*>/g, '').replace(/\{[\s\S]*?\}/g, '').trim().length > 0)
   assert.ok(declines.length,
     'no labelled button closes the upgrade dialog. The corner ✕ is not a way to decline — '

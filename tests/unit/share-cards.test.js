@@ -325,7 +325,7 @@ test('NO FAQPage on /help, and the built shell proves it', {
   const help = read('src/pages/HelpCentre.jsx')
   assert.match(help, /jobs\.map\(/,
     'HelpCentre.jsx no longer renders the answers from HELP_JOBS')
-  assert.match(help, /<Panel key=\{job\.id\}/,
+  assert.match(help, /<Panel\b[^>]*\bjob=\{job\}/,
     'HelpCentre.jsx no longer renders every job\'s answer on load')
   assert.ok(!/tab === 'faq'/.test(help),
     'the FAQ is behind a tab again — reason 2 in route-schema.mjs was retired on the '

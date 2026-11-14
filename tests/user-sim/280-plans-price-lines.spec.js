@@ -63,11 +63,15 @@ for (const [width, height] of VIEWPORTS) {
       const modal = page.getByRole('dialog', { name: /Unlock every colour system/i })
       await expect(modal).toBeVisible()
 
-      // Yearly is the default selection and the cadence that carries the trial.
-      const steps = modal.locator('.ui-pro-steps')
-      await expect(steps).toContainText('Days 1 to 7:')
-      await expect(steps).toContainText('Day 8:')
-      await expect(steps).not.toContainText(/\bDay 7:/)
+      // Yearly is the default selection and the cadence that carries the trial:
+      // the free trial starts today, and the first payment lands 7 days on.
+      const steps = modal.locator('.pg-ly:not(.is-off) .pg-stops')
+      await expect(steps).toHaveCount(1)
+      // Dates are worked out in the page's own clock and zone, as the dialog does.
+      const when = (days) => page.evaluate((n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) }, days)
+      await expect(steps).toContainText('your 7-day free trial starts')
+      await expect(steps).toContainText(await when(7))
+      await expect(steps).not.toContainText(await when(6))
       await expect(steps).toContainText('£40')
     })
   })

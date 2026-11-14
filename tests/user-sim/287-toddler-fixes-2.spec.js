@@ -60,13 +60,14 @@ const frames = (page, n = 3) => page.evaluate(
 // ── 1. Save to project stays in the gallery ──────────────────────────────────
 
 test.describe('palette gallery: Save to project', () => {
+  // V3 (#1043): the gallery browses in vertical panel tiles, and the actions the
+  // legacy card kept on hover live in the tile's preview dialog.
   async function saveButton(page) {
-    const card = page.locator('.pgal-card').first()
-    await expect(card).toBeVisible({ timeout: 20000 })
-    // Hover reveals the actions, then focus holds them open: a pointer click
-    // alone races the sticky nav and the actions' reveal transition.
-    await card.hover()
-    const save = card.getByRole('button', { name: /^Save .* to a project$/ })
+    const open = page.locator('.vpt .vpt-open').first()
+    await expect(open).toBeVisible({ timeout: 20000 })
+    await open.focus()
+    await page.keyboard.press('Enter')
+    const save = page.locator('.gpd-action').filter({ hasText: 'Save to project' })
     await expect(save).toBeVisible()
     await save.focus()
     await frames(page)
@@ -94,7 +95,7 @@ test.describe('palette gallery: Save to project', () => {
     watch(page, 'a member saving a palette')
     await signIn(page, { plan: 'free' })
     await go(page, '/discover/palettes')
-    const name = (await page.locator('.pgal-card .pgal-name').first().textContent()).trim()
+    const name = (await page.locator('.vpt .vpt-name').first().textContent()).trim()
     await saveButton(page)
     const before = await page.evaluate(() => window.scrollY)
 
@@ -129,7 +130,8 @@ test.describe('right-click feedback menu', () => {
     watch(page, 'a visitor right-clicking a colour swatch')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/discover/palettes')
-    const stripe = page.locator('.pgal-stripe').first()
+    // V3 (#1043): the tile's one button ("Preview {name}") is what a right-click lands on.
+    const stripe = page.locator('.vpt .vpt-open').first()
     await expect(stripe).toBeVisible({ timeout: 20000 })
     const head = page.locator('.fbx-menu .v3m-t')
     // The menu closes on any scroll, and the gallery can still settle after
@@ -140,8 +142,8 @@ test.describe('right-click feedback menu', () => {
       read = await head.evaluate((el) => ({ text: el.textContent.trim(), font: getComputedStyle(el).fontFamily }), null, { timeout: 2000 })
     }).toPass({ timeout: 15000 })
     const { text, font } = read
-    expect(text, 'the head names the swatch by its accessible name').toMatch(/^Button: Copy #[0-9A-F]{6}$/i)
-    expect(text, 'a CSS selector reached the visitor').not.toMatch(/pgal-stripe|^button\.|^\.|\[data-/)
+    expect(text, 'the head names the tile by its accessible name').toMatch(/^Button: Preview \S.*$/i)
+    expect(text, 'a CSS selector reached the visitor').not.toMatch(/vpt-open|^button\.|^\.|\[data-/)
     expect(font.toLowerCase(), 'the head is a label, not mono').not.toMatch(/mono|consolas|courier/)
   })
 
@@ -150,8 +152,18 @@ test.describe('right-click feedback menu', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/discover/palettes')
     const heading = page.locator('h1').first()
-    await heading.dblclick()
-    await heading.click({ button: 'right' })
+    await expect(heading).toBeVisible()
+    // V3: the heading is a block much wider than its words, so the middle of its box is empty page and a
+    // double-click there selects nothing. Aim at the first word itself, as a person copying a heading would.
+    const word = await heading.evaluate((h) => {
+      const range = document.createRange()
+      range.selectNodeContents(h)
+      const r = range.getClientRects()[0]
+      return { x: r.left + Math.min(12, r.width / 2), y: r.top + r.height / 2 }
+    })
+    await page.mouse.dblclick(word.x, word.y)
+    expect(await page.evaluate(() => String(getSelection()).trim()), 'the double-click selected a word').not.toBe('')
+    await page.mouse.click(word.x, word.y, { button: 'right' })
     await expect(page.locator('.fbx-menu')).toHaveCount(0)
   })
 })
@@ -159,14 +171,23 @@ test.describe('right-click feedback menu', () => {
 // ── 3. Community submit dialogs on a phone ───────────────────────────────────
 
 test.describe('community submit dialogs on a phone', () => {
+  // V3: /community has no Submit buttons of its own. "Share your work" asks what is being shared; "A link" then
+  // Next opens the Submit a design form and "An icon" then Next opens the Submit an icon form.
   const DIALOGS = [
-    { opener: /^Submit design$/, name: /Submit a design/i, action: 'Submit design' },
-    { opener: /^Submit icon$/, name: /Submit an icon/i, action: 'Submit icon' },
+    { pick: /A link/, name: /Submit a design/i, action: 'Submit design' },
+    { pick: /An icon/, name: /Submit an icon/i, action: 'Submit icon' },
   ]
 
   async function openDialog(page, d) {
     await go(page, '/community')
-    await page.getByRole('button', { name: d.opener }).first().tap()
+    await page.locator('.cm-head').getByRole('button', { name: 'Share your work' }).tap()
+    const pick = page.getByRole('dialog', { name: 'Share your work' })
+    // Tap the visible card, as a person does: the radio inside is hidden, and a forced click at its point lands on
+    // the sticky action footer in landscape. Without force, the hit-target check scrolls the card clear first.
+    const radio = pick.getByRole('radio', { name: d.pick })
+    await pick.locator('label.cm-pick').filter({ hasText: d.pick }).tap()
+    await expect(radio).toBeChecked()
+    await pick.getByRole('button', { name: 'Next' }).tap()
     const dialog = page.getByRole('dialog', { name: d.name })
     await expect(dialog).toBeVisible()
     return dialog
@@ -183,9 +204,9 @@ test.describe('community submit dialogs on a phone', () => {
         const px = (el) => parseFloat(getComputedStyle(el).fontSize)
         const pick = (sel) => [...root.querySelectorAll(sel)].map(px)
         return {
-          labels: pick('.ui-field>span'),
-          note: pick('.ui-modal-note'),
-          buttons: pick('.ui-modal-actions .btn'),
+          labels: pick('.cm-label'),
+          note: pick('.cm-note'),
+          buttons: pick('.cm-dfoot .cm-btn'),
         }
       })
       for (const [what, list] of Object.entries(sizes)) {
@@ -208,7 +229,8 @@ test.describe('community submit dialogs on a phone', () => {
       const dialog = await openDialog(page, d)
 
       const submit = dialog.getByRole('button', { name: d.action, exact: true })
-      const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true })
+      // V3: the form's footer pairs Submit with Back (to the picker), not Cancel; the close disc is the way out.
+      const cancel = dialog.getByRole('button', { name: 'Back', exact: true })
       for (const control of [submit, cancel]) {
         const box = await control.boundingBox()
         expect(box.y, 'the action starts above the top edge').toBeGreaterThanOrEqual(0)
@@ -228,12 +250,15 @@ test.describe('sign-in popup and page scroll', () => {
     watch(page, 'a visitor tapping a heart three times')
     await go(page, '/community')
 
-    const heart = page.locator('.ch-heart').first()
+    // V3: under 768px the heart is hidden and the "..." menu is the phone's only Save, so a signed-out
+    // visitor reaches the sign-in popup through that menu's Save item.
+    const heart = page.locator('.cm-more').first()
     await heart.scrollIntoViewIfNeeded()
     await frames(page)
     const rest = await page.evaluate(() => window.scrollY)
 
     await heart.tap()
+    await page.getByRole('menuitem', { name: 'Save', exact: true }).tap()
     await expect(loginDialog(page)).toBeVisible()
     await frames(page)
     expect(await page.evaluate(() => window.scrollY), 'opening the popup moved the page').toBe(rest)

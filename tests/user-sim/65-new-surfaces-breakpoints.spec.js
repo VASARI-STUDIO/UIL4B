@@ -318,7 +318,7 @@ for (const theme of ['light', 'dark']) {
     const page = await ctx.newPage()
     watch(page, `someone narrowing the palette library on a ${theme} screen`)
     await go(page, '/discover/palettes')
-    await expect(page.locator('.pgal-card').first()).toBeVisible()
+    await expect(page.locator('.vpt').first()).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
 
     const tray = page.locator('[aria-label^="Filter palettes by collection"]')

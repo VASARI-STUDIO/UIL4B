@@ -252,15 +252,19 @@ const TOUCH_MATRIX = [
 const REVEAL_CASES = [
   { route: '/color/palette', sel: '.plb-tool', what: 'S11 · Palette Builder per-swatch tools' },
   { route: '/color/palette', sel: '.plb-gap', what: 'S11 · Palette Builder insert-between buttons' },
-  { route: '/discover/palettes', sel: '.pgal-act', what: 'S12 · Palette Library per-card actions' },
-  { route: '/community', sel: '.ch-heart', what: 'S14 · Community like buttons' },
+  // V3: a palette tile carries one control of its own above the stretched open button, the Like
+  // heart (`.vpt-like`, library-v3.css). It is the only tile control that waits for hover, and only
+  // under `(hover:hover) and (pointer:fine)`. The per-card action row moved into the preview dialog.
+  // `wait` is the tile control itself, so the check cannot pass on a page that has not drawn a tile.
+  { route: '/discover/palettes', sel: '.vpt-like', wait: '.vpt-like', what: 'S12 · Palette Library tile Like buttons' },
+  { route: '/community', sel: '.cm-heart', what: 'S14 · Community like buttons' },
 ]
 
 for (const c of REVEAL_CASES) {
   test(`${c.what} are never invisible-but-live on a touch device`, async ({ browser }) => {
     const damage = []
     for (const [w, h] of TOUCH_MATRIX) {
-      const { ctx, page } = await openTouch(browser, w, h, c.route, w >= 700)
+      const { ctx, page } = await openTouch(browser, w, h, c.route, w >= 700, c.wait || null)
       // Prove the emulation is doing its job before trusting the result. A
       // desktop Chromium narrowed to 390px still reports hover:hover, and would
       // pass every assertion below on the broken build.
@@ -317,8 +321,9 @@ test('the hover reveal itself is preserved on pointer devices', async ({ browser
 // including under reduced motion, where the same mistake was duplicated in the
 // prefers-reduced-motion variant and therefore survived a reduced-motion retest.
 const REVEAL_LAYERS = [
-  ['/discover/palettes', '.lbry-card-actions'],
-  ['/community', '.ch-heart'],
+  // V3: `.vpt-like` is the tile's only hover-revealed control (opacity, transform and background).
+  ['/discover/palettes', '.vpt-like'],
+  ['/community', '.cm-heart'],
   ['/color/palette', '.plb-tool'],
 ]
 
@@ -341,28 +346,36 @@ for (const [route, sel] of REVEAL_LAYERS) {
   })
 }
 
-test('S13 · the palette card actions are reachable by keyboard at any tab speed', async ({ browser }) => {
+test('S13 · the palette tile Like buttons are reachable by keyboard at any tab speed', async ({ browser }) => {
   // METHODOLOGY, and it is load-bearing (see the audit): focus moves must be
   // recorded IN THE PAGE with a focusin listener and read once at the end. An
   // evaluate() between Tab presses adds ~100ms of round-trip and silently turns
   // a 0-of-5 into a 5-of-5 — the naive version of this test reports a pass at
   // every speed on the broken build.
+  //
+  // V3: each tile is two tab stops, the stretched `.vpt-open` button and then the
+  // `.vpt-like` heart, which sits at opacity 0 until the tile is hovered or the
+  // heart takes focus (library-v3.css). The per-card action row no longer exists
+  // on a browsing tile, so the control that has to survive a fast Tab is the heart.
+  // MUTATION: give `.vpt-like` `visibility:hidden` at rest and show it on
+  // `:focus-visible`, and a Tab that lands in one frame skips it, so the count at
+  // 0ms falls below the count at 250ms and this fails.
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await ctx.newPage()
   watch(page, 'keyboard user in the palette library')
   await go(page, '/discover/palettes')
   await page.waitForLoadState('load').catch(() => {})
-  // Wait for the card to EXIST before the settle pause, not instead of it. The
+  // Wait for the tile to EXIST before the settle pause, not instead of it. The
   // gallery windows its list, so on a contended runner nothing is mounted at
-  // 600ms and the in-page `document.querySelector('.pgal-card')` below crashed
+  // 600ms and the in-page `document.querySelector('.vpt')` below crashed
   // CI with `Cannot read properties of null (reading 'scrollIntoView')` — the
   // same fault openTouch() above was fixed for, and raising the 600 would only
-  // move the coin flip. The stripe is waited for as well because it is the
-  // element the tab loop itself dereferences. The pause stays: layout after
+  // move the coin flip. The open button is waited for as well because it is the
+  // element the tab loop itself starts from. The pause stays: layout after
   // mount is still worth settling, it just no longer decides whether the test
   // has anything to measure.
-  await expect(page.locator('.pgal-card').first()).toBeVisible({ timeout: 15000 })
-  await expect(page.locator('.pgal-stripe').first()).toBeVisible({ timeout: 15000 })
+  await expect(page.locator('.vpt').first()).toBeVisible({ timeout: 15000 })
+  await expect(page.locator('.vpt-open').first()).toBeAttached({ timeout: 15000 })
   await page.waitForTimeout(600)
 
   await page.evaluate(() => {
@@ -370,7 +383,7 @@ test('S13 · the palette card actions are reachable by keyboard at any tab speed
     document.addEventListener('focusin', (e) => {
       window.__seq.push((e.target.className || e.target.tagName).toString().split(' ')[0])
     })
-    document.querySelector('.pgal-card').scrollIntoView({ block: 'center', behavior: 'instant' })
+    document.querySelector('.vpt').scrollIntoView({ block: 'center', behavior: 'instant' })
   })
   await page.waitForTimeout(250)
 
@@ -380,47 +393,57 @@ test('S13 · the palette card actions are reachable by keyboard at any tab speed
   // nothing on its own — both are asserted so the result cannot be speed-luck.
   const reachedAt = {}
   for (const gap of [0, 250]) {
-    await page.evaluate(() => { window.__seq = []; document.querySelector('.pgal-stripe').focus() })
+    await page.evaluate(() => { window.__seq = []; document.querySelector('.vpt-open').focus() })
     for (let i = 0; i < 26; i++) {
       await page.keyboard.press('Tab')
       if (gap) await page.waitForTimeout(gap)
     }
-    reachedAt[gap] = await page.evaluate(() => window.__seq.filter((s) => s === 'pgal-act').length)
+    reachedAt[gap] = await page.evaluate(() => window.__seq.filter((s) => s === 'vpt-like').length)
   }
   await ctx.close()
 
-  expect(reachedAt[0], `only ${reachedAt[0]} action buttons reached at full tab speed — the reveal is costing a frame again`).toBeGreaterThan(0)
+  expect(reachedAt[0], `only ${reachedAt[0]} Like buttons reached at full tab speed — the reveal is costing a frame again`).toBeGreaterThan(0)
   expect(reachedAt[0], `reachability is speed-dependent: ${reachedAt[0]} at 0ms vs ${reachedAt[250]} at 250ms`).toBe(reachedAt[250])
 })
 
-test('S12 · the touch action row does not cover the palette it acts on', async ({ browser }) => {
-  // The first shape of this fix left the actions as a permanent overlay, which
+test('S12 · the touch Like button does not cover the palette it sits on', async ({ browser }) => {
+  // The first shape of the old per-card fix left the actions as a permanent overlay, which
   // hid 85% of the fourth stripe and 35% of the third at tablet widths. A
   // control layer that obscures the artefact it operates on is a different
   // defect, not a fix — so assert the swatch is intact, not merely that the
   // buttons are visible.
+  //
+  // V3: the tile has two layers over its colour bands. The `.vpt-open` button is
+  // stretched over the whole tile, so it must paint nothing; the `.vpt-like` heart is a
+  // 44px circle in the corner on touch, so no band may lose more than half its area to
+  // it (a 5-band tile at 390px has 39px bands, so a heart that grew would swallow the
+  // top one).
+  // MUTATION: give `.vpt-open` a background colour, or make `.vpt-like` 120px square on
+  // `(pointer:coarse)` in library-v3.css, and this fails.
   for (const [w, h] of [[390, 844], [834, 1194], [1180, 820]]) {
-    // waitFor, not the settle pause: MEASURED, .pgal-card lands 326–351ms after
+    // waitFor, not the settle pause: MEASURED, the first tile lands 326–351ms after
     // `load` on an idle machine and 360–503ms under a 4× CPU throttle, against
     // openTouch's fixed 400ms. It was always a coin flip on a contended runner
-    // and CI lost it twice, crashing on a null card rather than failing an
-    // assertion. Measured the same both sides of #254's Discover rewrite
-    // (pre-#254 median 493ms, post 401ms), so the gallery is not the regression
-    // — the fixed pause was never long enough to be the thing that decides.
-    const { ctx, page } = await openTouch(browser, w, h, '/discover/palettes', w >= 700, '.pgal-card')
-    const covered = await page.evaluate(() => {
-      const card = document.querySelector('.pgal-card')
-      const acts = card.querySelector('.lbry-card-actions').getBoundingClientRect()
-      return [...card.querySelectorAll('.pgal-stripe')]
-        .map((s, i) => {
-          const r = s.getBoundingClientRect()
-          const ov = Math.max(0, Math.min(r.bottom, acts.bottom) - Math.max(r.top, acts.top))
-          return ov > 1 ? `stripe ${i + 1}: ${Math.round(ov)}px of ${Math.round(r.height)}px hidden` : null
-        })
-        .filter(Boolean)
+    // and CI lost it twice, crashing on a null tile rather than failing an
+    // assertion.
+    const { ctx, page } = await openTouch(browser, w, h, '/discover/palettes', w >= 700, '.vpt-like')
+    const seen = await page.evaluate(() => {
+      const tile = document.querySelector('.vpt')
+      const like = tile.querySelector('.vpt-like').getBoundingClientRect()
+      const open = getComputedStyle(tile.querySelector('.vpt-open'))
+      const bands = [...tile.querySelectorAll('.vpt-band')].map((band, i) => {
+        const r = band.getBoundingClientRect()
+        const ow = Math.max(0, Math.min(r.right, like.right) - Math.max(r.left, like.left))
+        const oh = Math.max(0, Math.min(r.bottom, like.bottom) - Math.max(r.top, like.top))
+        return { n: i + 1, covered: (ow * oh) / (r.width * r.height) }
+      })
+      return { openPaints: open.backgroundColor !== 'rgba(0, 0, 0, 0)' || open.backgroundImage !== 'none', bands }
     })
     await ctx.close()
-    expect(covered, `${w}x${h}: ${covered.join(', ')}`).toEqual([])
+    expect(seen.bands.length, `${w}x${h}: POSITIVE CONTROL: the first tile drew no colour bands`).toBeGreaterThan(1)
+    expect(seen.openPaints, `${w}x${h}: the stretched open button paints over the colours`).toBe(false)
+    const hidden = seen.bands.filter((b) => b.covered > 0.5).map((b) => `band ${b.n}: ${Math.round(b.covered * 100)}% hidden`)
+    expect(hidden, `${w}x${h}: ${hidden.join(', ')}`).toEqual([])
   }
 })
 
@@ -456,15 +479,15 @@ async function openLoginDialog(browser, width, height) {
 
 async function loginGeometry(page) {
   return page.evaluate(() => {
-    // The chosen variant at 768 and up is a clipped two-pane dialog whose form
-    // pane is the thing that scrolls, so that is what is measured then.
-    const m = document.querySelector('.ui-login--strip .ui-login-pane') || document.querySelector('.ui-modal')
+    // The popup is one scrolling box (the picture pane sits inside it from 768 up).
+    const m = document.querySelector('.ui-modal')
     const mr = m.getBoundingClientRect()
     const visibleHeight = (el) => {
       const r = el.getBoundingClientRect()
       return Math.max(0, Math.min(r.bottom, mr.bottom) - Math.max(r.top, mr.top))
     }
-    const submit = m.querySelector('.auth-submit')
+    // Step 1 is the first screen: its primary button is "Continue with email".
+    const submit = m.querySelector('.auth-continue')
     const signup = m.querySelector('.auth-links button')
     const controls = [...m.querySelectorAll('button,a,input')].filter((e) => {
       const r = e.getBoundingClientRect()
@@ -492,11 +515,12 @@ async function loginGeometry(page) {
   })
 }
 
-// maxBuried is measured, not chosen. At 844x390 the dialog holds 451px of
-// content in 372px, so ONE control (Forgot password?) still starts below the
-// fold — the sign-up link above it peeks, which is the affordance that says so.
-// Before the fix that number was 2: sign-up was buried with it. At 932x430
-// nothing should be buried at all; before the fix Forgot password? was.
+// maxBuried is a ceiling, not a target. At 844x390 the dialog holds 408px of
+// content in 374px, so the sign-up row peeks at the fold, which is the
+// affordance that there is more; one control may start below it. At 932x430
+// the whole form fits and nothing should be buried.
+// MUTATION: in v3-pro-auth.css delete the `@media(max-height:480px) and
+// (min-width:768px)` block. The sign-up row goes below the fold at 844x390.
 for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
   test(`S7 · Login at ${w}x${h} shows a whole Sign In button and does not bury sign-up`, async ({ browser }) => {
     const { ctx, page } = await openLoginDialog(browser, w, h)
@@ -527,13 +551,13 @@ for (const [w, h, maxBuried] of [[844, 390, 1], [932, 430, 0]]) {
 // dialog, which is too much for one test's time budget when run in a loop.
 // The short-height rules must not leak upward. These four were measured clean
 // by the audit and are the regression guard for the max-height:460px block.
-// 360x560 and 320x568 are the short phones: the sheet is capped at 100dvh - 48px
-// there, and the max-height:600px spacing in auth.css has to bring the form in
-// under that cap. If it does not, the dialog's own scroll height passes its
-// client height (22px at 360x560 before the spacing was trimmed) and the test
-// names how far. Controls stay at the 44px touch minimum on every phone.
-// MUTATION: in auth.css, in the `@media(max-height:600px)` block, take out the
-// `.auth-body`, `.auth-divider` and `.auth-notnow` lines.
+// 360x560 and 320x568 are the short phones: the form pane's top padding drops
+// from 56px to 16px there so the form fits under the sheet's cap. If it does
+// not, the dialog's own scroll height passes its client height (31px at 360x560
+// before the padding was trimmed) and the test names how far. Controls stay at
+// the 44px touch minimum on every phone.
+// MUTATION: in v3-pro-auth.css delete the `@media(max-width:767px) and
+// (max-height:600px){.pp-offer{padding-top:16px}}` rule.
 for (const [w, h] of [[360, 560], [320, 568], [390, 640], [390, 844], [768, 1024]]) {
   test(`S7 · portrait ${w}x${h} still needs no scrolling at all`, async ({ browser }) => {
     const { ctx, page } = await openLoginDialog(browser, w, h)
@@ -549,8 +573,8 @@ for (const [w, h] of [[360, 560], [320, 568], [390, 640], [390, 844], [768, 1024
 // control under the title. On a short phone they used to touch (the button's top
 // edge was 1.6px inside Close's box at 360x560); Close now ends 8px above it, and
 // the form still fits without scrolling.
-// MUTATION: in auth.css take the `.ui-login .ui-login-x{top:6px}` line (or the
-// `.auth-body{margin-top:16px}` line) out of the `max-width:767px` and `max-height:600px` block.
+// MUTATION: in v3-pro-auth.css, in the `max-width:767px` block, change
+// `:root .pp-offer .ui-login-x{top:8px;...}` to top:24px.
 for (const [w, h] of [[360, 560], [320, 568]]) {
   test(`S7 · portrait ${w}x${h}: Close ends 8px above the Google button, and the dialog still does not scroll`, async ({ browser }) => {
     const { ctx, page } = await openLoginDialog(browser, w, h)

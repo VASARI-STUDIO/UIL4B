@@ -192,6 +192,7 @@ const showDocument = (html, filename, win, title) => {
  *   notice                        { lead, detail } for a finished export that has something to say
  *   done                          null, or { file, opened } after a success: `file` is the name that
  *                                 downloaded ('' when nothing did), `opened` is a print window showing it
+ *   retryIn                       whole seconds left of a 429's Retry-After (0 when there is no wait)
  */
 export default function useExportRunner() {
   const [busy, setBusy] = useState(false)
@@ -204,6 +205,23 @@ export default function useExportRunner() {
   // Which step a long export is on, for the button label: 'fonts' | 'building' | 'document' | 'pages'.
   const [stage, setStage] = useState('')
   const [done, setDone] = useState(null)
+  // Seconds left of a 429's Retry-After; 0 when there is no wait. One tick a second, cleared when the dialog unmounts or resets.
+  const [retryIn, setRetryIn] = useState(0)
+  // The error line a 429 put up, so the countdown can take back its own line (and only that one) when it ends.
+  const limitLine = useRef('')
+  useEffect(() => {
+    if (retryIn <= 0) {
+      // The button is live again: drop the rate-limit line, but never a different error raised since.
+      if (limitLine.current) {
+        const line = limitLine.current
+        limitLine.current = ''
+        setError((e) => (e === line ? '' : e))
+      }
+      return undefined
+    }
+    const id = setTimeout(() => setRetryIn((n) => Math.max(0, n - 1)), 1000)
+    return () => clearTimeout(id)
+  }, [retryIn])
   const design = useExportDesign()
   // The template picked for each format lives on the working design, beside the
   // identity, so it follows the project.
@@ -359,6 +377,7 @@ export default function useExportRunner() {
     setError('')
     setNotice(null)
     setDone(null)
+    setRetryIn(0)
     // Which activation this export completed.
     let activation = 'style-guide'
     // The file this export handed over, and whether a print window is showing it.
@@ -375,7 +394,11 @@ export default function useExportRunner() {
         const kitName = themed.row === 'ui-kit' && proNow ? readIdentity(design).name : ''
         const answer = await requestThemeExport({ theme, row: themed.row, format: themed.format, design, projectName: kitName || projectName }, { loadAuth: loadAuthSdk })
         if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
-        if (answer.status !== 'ok') throw new Error(answer.line)
+        if (answer.status !== 'ok') {
+          // A 429 that said how long to wait: the button counts it down instead of staying live for a click that will be refused again.
+          if (answer.retryAfter) { limitLine.current = answer.line; setRetryIn(answer.retryAfter) }
+          throw new Error(answer.line)
+        }
         if (answer.zip) {
           savedFile = download(answer.zip, themedZipName(kitName || fileProject, format, theme) || answer.name)
         } else {
@@ -540,7 +563,8 @@ export default function useExportRunner() {
     setError('')
     setNotice(null)
     setDone(null)
+    setRetryIn(0)
   }
 
-  return { run, copy, busy, stage, error, notice, done, reset, upgradeTarget }
+  return { run, copy, busy, stage, error, notice, done, reset, upgradeTarget, retryIn }
 }

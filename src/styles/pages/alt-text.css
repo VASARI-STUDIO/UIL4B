@@ -30,6 +30,21 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* The Terms link is the only one in its sentence and stays the size of its
+ * words. To a finger it is 44px tall: an invisible strip centred on the link,
+ * the device the Info centre's inline links use. It stays on one line so the
+ * strip is not split across two. */
+@media (pointer: coarse), (max-width: 767px) {
+  .alt-page .ai-image-consent a { position: relative; white-space: nowrap; }
+  .alt-page .ai-image-consent a::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 50%;
+    height: 44px;
+    transform: translateY(-50%);
+  }
+}
 
 /* ── Drop zone ────────────────────────────────────────────────────────────── */
 

@@ -16,8 +16,13 @@ import { go, signIn, watch } from './helpers.js'
 import { GALLERY_GRADIENTS } from '../../api/_lib/library/gradientGallery.js'
 import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 import { tintRampForHex } from '../../src/utils/tintRamp.js'
+import { LIBRARY_GRADIENT_ROWS } from '../../src/data/gradientLibrary.js'
+import { loginDialog } from './gallery-filter-helpers.js'
 
 const ROUTE = '/create/gradient'
+// An open library tile (VerticalPanelTile.jsx), never one of the locked tiles the
+// gate fades in below the grid.
+const OPEN_TILE = '.vpt:not(.vpt--locked):not([data-gate-fade] *)'
 // Tests start from Indigo Night's angle, 160deg; the first-visit stops are
 // stops #0A0F2C / #27348B / #6E6BFF.
 const FIRST_ANGLE = 160
@@ -391,15 +396,21 @@ test.describe('the Explore the library panel', () => {
   test('a mood chip lands on the library already filtered to that mood', async ({ page }) => {
     watch(page, 'a designer following a mood chip')
     await go(page, ROUTE)
-    // Light, because a signed-out visitor is shown only the first three library
-    // rows (Sunset Blaze, Golden Hour, Mango Pulp) and Mango Pulp is the only
-    // one of them tagged light. Dark, cool and pastel match none of the three.
+    // Light, because a signed-out visitor is shown only the first rows of the
+    // library (GALLERY_TIER_LIMITS.anonymous of them) and only some of those are
+    // tagged light. The expected tiles are read off that data, not typed.
+    const shown = GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.anonymous)
+    const lit = shown.filter((g) => g.tags.includes('light'))
+    const unlit = shown.find((g) => !g.tags.includes('light'))
+    expect(lit.length, 'an open row is tagged light, so the chip has something to land on').toBeGreaterThan(0)
+    expect(unlit, 'an open row is not tagged light, so the filter has something to remove').toBeTruthy()
     await page.getByRole('link', { name: 'Light gradients in the library' }).click()
     await expect(page).toHaveURL(/\/discover\/gradients\?mood=light$/)
     await expect(page.getByRole('button', { name: 'Mood Light' })).toBeVisible()
-    // The filter is on: the light gradient is listed and a warm-only one is not.
-    await expect(page.getByText('Mango Pulp').first()).toBeVisible()
-    await expect(page.getByText('Sunset Blaze')).toHaveCount(0)
+    // The filter is on: exactly the light rows are listed as open tiles, and an
+    // open row that is not light is not.
+    await expect(page.locator(`${OPEN_TILE} .vpt-name`)).toHaveText(lit.map((g) => g.name))
+    await expect(page.locator(OPEN_TILE).filter({ hasText: unlit.name })).toHaveCount(0)
   })
 
   // MUTATION: in src/pages/GradientGenerator.jsx render EXPLORE_TASTE instead of
@@ -416,7 +427,7 @@ test.describe('the Explore the library panel', () => {
       await go(page, ROUTE)
       await page.getByRole('link', { name: label }).click()
       await expect(page).toHaveURL(new RegExp(`/discover/gradients\\?mood=${mood.toLowerCase()}$`))
-      await expect(page.locator('.grg-card:not(.geg-fade *)').first(), `${mood} lists a gradient`).toBeVisible()
+      await expect(page.locator(OPEN_TILE).first(), `${mood} lists a gradient`).toBeVisible()
       await expect(page.locator('.lbry-empty'), `${mood} is not an empty state`).toHaveCount(0)
     }
   })
@@ -579,88 +590,139 @@ test.describe('the live position over a dragged stop', () => {
 test.describe('the library when the signed-out cap empties a mood', () => {
   const LIBRARY = '/discover/gradients'
   const emptyOf = (page) => page.locator('.grg-empty')
+  const gateOf = (page) => page.locator('.geg[data-gate="anon"]')
 
-  // MUTATION: in src/pages/GradientGallery.jsx make accountMatches return 0
-  // always; the title reverts to "No gradients match those filters." and the
-  // sign-in button is gone, so this goes red.
-  test('?mood=dark signed out says the cap is the reason, keeps Clear filters, and the button opens the sign-in prompt', async ({ page }) => {
+  // The data behind the state, read from the library and the tier constants: the
+  // rows a signed-out visitor opens, the rows a free account opens, and which of
+  // them are tagged dark.
+  const isDark = (g) => g.tags.includes('dark')
+  const darkSignedOut = GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.anonymous).filter(isDark)
+  const darkFree = GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.free).filter(isDark)
+  const EMBER = GALLERY_GRADIENTS.find((g) => g.name === 'Ember Fade')
+  // Until the Pro stubs carry `tags`, a locked row cannot answer a mood filter,
+  // so the gate speaks for the whole library instead of a filtered count.
+  const stubsCarryTags = LIBRARY_GRADIENT_ROWS.some((r) => !Array.isArray(r.stops) && Array.isArray(r.tags))
+
+  // Where the redesign took this state: the empty state ("Nothing open to you
+  // matches those filters", with "Open N with a free account" and Clear filters)
+  // is gone for a mood whose matches sit behind the cap. Matches behind the tier
+  // are the gate's to answer (utils/galleryCounts.js), so the page shows the
+  // sign-up gate with a fade of what a free account would open, and an empty
+  // state only when nothing in the whole library matches.
+  //
+  // MUTATION: in src/pages/GradientGallery.jsx count the empty state over
+  // `visible` alone (drop `counts.T > 0 || counts.lockedUnknown` from its guard):
+  // the empty state comes back in place of the gate and this goes red.
+  test('?mood=dark signed out shows the sign-up gate with no empty state, fades in what a free account opens, and the button opens the sign-in prompt', async ({ page }) => {
     watch(page, 'a signed-out visitor who followed a Dark link')
+    expect(darkSignedOut.length, 'the cap empties Dark: no open row is dark').toBe(0)
+    expect(darkFree.length, 'a free account opens dark rows, so there is something to offer').toBeGreaterThan(0)
     await go(page, `${LIBRARY}?mood=dark`)
-    const empty = emptyOf(page)
-    await expect(empty).toBeVisible()
     await expect(page.getByRole('button', { name: 'Mood Dark' }), 'the filter really is on').toBeVisible()
-    await expect(page.locator('.grg-card:not(.geg-fade *)'), 'nothing listed').toHaveCount(0)
+    await expect(page.locator(OPEN_TILE), 'nothing open is listed').toHaveCount(0)
 
-    await expect(empty).toContainText('Nothing open to you matches those filters.')
-    // The first ten rows carry two dark ones (Bloody Mary, Ember Fade).
-    await expect(empty).toContainText('A free account opens 2 that fit these filters.')
-    await expect(empty.getByRole('button', { name: 'Clear filters' })).toBeVisible()
-    // The sign-in action is the primary: Clear filters is the quiet secondary
-    // (no fill, a 1px ring).
-    const clearStyle = await empty.getByRole('button', { name: 'Clear filters' }).evaluate((el) => {
-      const cs = getComputedStyle(el)
-      return { bg: cs.backgroundColor, ring: cs.borderTopWidth }
-    })
-    expect(clearStyle.bg, 'Clear filters has no fill beside the sign-in action').toBe('rgba(0, 0, 0, 0)')
-    expect(clearStyle.ring).toBe('1px')
-    const signInBtn = empty.getByRole('button', { name: 'Open 2 with a free account' })
-    await expect(signInBtn).toBeVisible()
-    await expect(page.getByRole('dialog'), 'no prompt before the click').toHaveCount(0)
+    // Not an empty state: the library does hold dark gradients.
+    await expect(emptyOf(page)).toHaveCount(0)
+    await expect(page.getByText('Nothing open to you')).toHaveCount(0)
+    const gate = gateOf(page)
+    await expect(gate).toBeVisible()
+    const heading = gate.getByRole('heading')
+    if (stubsCarryTags) {
+      // A true filtered count: what a free account opens that is dark.
+      await expect(heading).toHaveText(`Log in to access ${darkFree.length} dark ${darkFree.length === 1 ? 'gradient' : 'gradients'}`)
+    } else {
+      // The locked rows cannot say which are dark, so the gate names what a free
+      // account opens in all.
+      await expect(heading).toHaveText(`Log in to access ${GALLERY_TIER_LIMITS.free} gradients`)
+    }
 
-    await signInBtn.click()
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await expect(page.getByRole('dialog').getByRole('textbox').first()).toBeVisible()
+    // The fade continues with the dark rows a free account would open, first and
+    // by name; nothing in it is something to press.
+    const fade = page.locator('[data-gate-fade]')
+    await expect(fade).toHaveCount(1)
+    expect(await fade.locator('button, a').count(), 'the fade offers nothing to focus or follow').toBe(0)
+    const names = (await fade.locator('.vpt-name').allInnerTexts()).map((n) => n.trim())
+    expect(names.slice(0, darkFree.length), 'the fade starts with the dark rows a free account opens').toEqual(darkFree.map((g) => g.name))
+
+    await expect(loginDialog(page), 'no prompt before the click').toHaveCount(0)
+    await gate.getByRole('button', { name: 'Create a free account' }).click()
+    await expect(loginDialog(page)).toBeVisible()
+    await expect(loginDialog(page).getByRole('textbox').first()).toBeVisible()
   })
 
-  test('Clear filters from that state brings the three open gradients back', async ({ page }) => {
+  // Clear filters belonged to the empty state, which this state no longer has;
+  // the way back is the Mood menu's "All".
+  test('choosing Mood All from that state brings the open gradients back', async ({ page }) => {
     watch(page, 'a signed-out visitor undoing a Dark link')
     await go(page, `${LIBRARY}?mood=dark`)
-    await expect(emptyOf(page)).toBeVisible()
-    await emptyOf(page).getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.locator('.grg-card:not(.geg-fade *)').first()).toBeVisible()
+    await expect(gateOf(page)).toBeVisible()
+    await expect(page.locator(OPEN_TILE)).toHaveCount(0)
+    await page.locator('.lbry-filtertrig').filter({ hasText: 'Mood' }).click()
+    await page.getByRole('group', { name: 'Filter by mood' }).getByRole('button', { name: 'All', exact: true }).click()
+    await expect(page.locator(OPEN_TILE)).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
     await expect(emptyOf(page)).toHaveCount(0)
   })
 
-  // MUTATION: drop `|| query` from the accountMatches guard in GradientGallery.jsx;
-  // the sign-in button turns up under a typed search, and this goes red.
-  test('?mood=dark with a typed search that matches nothing open is the plain "No gradients match", with no sign-in button', async ({ page }) => {
+  // The old test held that a typed search must not be answered with a count of
+  // withheld rows "however it is worded". A row's NAME is public now (the fade
+  // teases it), so a search by name is answered by the gate and the fade shows
+  // the match; the oracle this guards is the CONTENT, so a search by a withheld
+  // row's colour is still the plain "No gradients match", with no gate, no
+  // sign-in button and no count.
+  //
+  // MUTATION: match a locked row's stops in matchPublic (utils/galleryCounts.js
+  // gradientPublicMatch): the colour search is answered by a gate and this goes red.
+  test('?mood=dark with a search by a withheld row\'s name gets the gate, and by its colour the plain "No gradients match" with no sign-in button', async ({ page }) => {
     watch(page, 'a signed-out visitor searching inside Dark')
     await go(page, `${LIBRARY}?mood=dark`)
-    // POSITIVE CONTROL: the sign-in state is what this page shows before the search.
-    await expect(emptyOf(page).getByRole('button', { name: 'Open 2 with a free account' })).toBeVisible()
+    // POSITIVE CONTROL: the sign-up gate is what this page shows before the search.
+    await expect(gateOf(page)).toBeVisible()
 
-    // Ember Fade is a withheld dark gradient: a search that names it must not be
-    // answered with a count of withheld rows matching, however it is worded.
+    // Ember Fade is a dark gradient a signed-out visitor cannot open.
+    expect(EMBER && isDark(EMBER), 'Ember Fade is a dark gradient').toBeTruthy()
     await page.getByLabel('Search gradients').fill('Ember')
+    await expect(page.locator(OPEN_TILE)).toHaveCount(0)
+    await expect(emptyOf(page)).toHaveCount(0)
+    await expect(gateOf(page)).toBeVisible()
+    await expect(page.locator('[data-gate-fade] .vpt-name').filter({ hasText: 'Ember Fade' })).toHaveCount(1)
+
+    // Its colour is not something the search will confirm. Pick a stop no open
+    // row also carries, so a hit could only come from the withheld row.
+    const openHexes = new Set(GALLERY_GRADIENTS.slice(0, GALLERY_TIER_LIMITS.anonymous).flatMap((g) => g.stops.map((s) => s.color.toUpperCase())))
+    const hex = EMBER.stops.map((s) => s.color).find((c) => !openHexes.has(c.toUpperCase()))
+    expect(hex, 'Ember Fade has a stop no open row carries').toBeTruthy()
+    await page.getByLabel('Search gradients').fill(hex)
     const empty = emptyOf(page)
-    await expect(empty).toContainText('No gradients match “Ember”.')
+    await expect(empty).toContainText(`No gradients match “${hex}”.`)
     await expect(empty).not.toContainText('Nothing open to you')
-    await expect(empty.getByRole('button', { name: /with a free account$/ })).toHaveCount(0)
+    await expect(empty.getByRole('button', { name: /free account/ })).toHaveCount(0)
+    await expect(page.locator('.geg')).toHaveCount(0)
     await expect(empty.getByRole('button', { name: 'Clear filters' })).toBeVisible()
   })
 
-  test('a free account on ?mood=dark gets the dark gradients, not the sign-in state', async ({ page }) => {
+  test('a free account on ?mood=dark gets the dark gradients, not the sign-up gate', async ({ page }) => {
     watch(page, 'a signed-in free visitor following a Dark link')
     await signIn(page, { plan: 'free' })
     await go(page, `${LIBRARY}?mood=dark`)
-    await expect(page.locator('.grg-card:not(.geg-fade *)').filter({ hasText: 'Ember Fade' })).toHaveCount(1)
+    await expect(page.locator(OPEN_TILE).filter({ hasText: 'Ember Fade' })).toHaveCount(1)
+    await expect(page.locator(`${OPEN_TILE} .vpt-name`)).toHaveText(darkFree.map((g) => g.name))
     await expect(emptyOf(page)).toHaveCount(0)
+    await expect(gateOf(page)).toHaveCount(0)
   })
 
-  // MUTATION: drop `authLoading ||` from the accountMatches guard in
-  // GradientGallery.jsx; the button shows while the session is still resolving
-  // and the observer catches it.
-  for (const plan of ['free', 'pro']) test(`a ${plan} account landing on ?mood=dark is never offered "with a free account", even while auth is still resolving`, async ({ page }) => {
+  // MUTATION: in src/pages/GradientGallery.jsx read the tier as anonymous while
+  // the session is still resolving (drop the `signedIn: user != null` exact-true
+  // guard, or the proPending guard on gateFor); the sign-up gate shows while the
+  // session is resolving and the observer catches it.
+  for (const plan of ['free', 'pro']) test(`a ${plan} account landing on ?mood=dark is never offered the sign-up gate, even while auth is still resolving`, async ({ page }) => {
     watch(page, 'a signed-in visitor following a Dark link before the session has answered')
     {
       await signIn(page, { plan, authDelay: 4000 })
-      // Records every moment the offer is on screen, from the first mutation on.
+      // Records every moment the signed-out gate is on screen, from the first mutation on.
       await page.addInitScript(() => {
         window.__offerSeen = false
         const look = () => {
-          for (const b of document.querySelectorAll('.grg-empty button')) {
-            if (/with a free account/.test(b.textContent || '')) window.__offerSeen = true
-          }
+          if (document.querySelector('.geg[data-gate="anon"]')) window.__offerSeen = true
         }
         new MutationObserver(look).observe(document, { subtree: true, childList: true, characterData: true })
       })
@@ -668,14 +730,14 @@ test.describe('the library when the signed-out cap empties a mood', () => {
       // POSITIVE CONTROL: the page is inside the loading window. The session has
       // not answered, but this is a returning session (the hint), so the library
       // shows the neutral loading block rather than reading as signed out: no
-      // "No gradients match" and no offer, and no card has appeared yet.
+      // "No gradients match" and no gate, and no tile has appeared yet.
       await expect(page.locator('.lockt-status'), `${plan}: the neutral loading block shows while auth is pending`).toContainText('Loading the gradient library')
       await expect(emptyOf(page), `${plan}: no empty state while the plan is unknown`).toHaveCount(0)
-      await expect(page.locator('.grg-card:not(.geg-fade *)')).toHaveCount(0)
+      await expect(page.locator(OPEN_TILE)).toHaveCount(0)
       // Then the account answers and the dark gradients arrive.
-      await expect(page.locator('.grg-card:not(.geg-fade *)').filter({ hasText: 'Ember Fade' }), `${plan}: Ember Fade after auth`).toHaveCount(1, { timeout: 10000 })
+      await expect(page.locator(OPEN_TILE).filter({ hasText: 'Ember Fade' }), `${plan}: Ember Fade after auth`).toHaveCount(1, { timeout: 10000 })
       await expect(emptyOf(page)).toHaveCount(0)
-      expect(await page.evaluate(() => window.__offerSeen), `${plan}: the sign-up offer was never on screen`).toBe(false)
+      expect(await page.evaluate(() => window.__offerSeen), `${plan}: the sign-up gate was never on screen`).toBe(false)
     }
   })
 })

@@ -215,7 +215,7 @@ for (const [who, plan] of VIEWERS) {
 
         const dialog = upgradeDialog(page, c.title)
         await expect(dialog, `no popup titled "${c.title}"`).toBeVisible()
-        const proof = dialog.locator('.ui-pro-proof')
+        const proof = dialog.locator('[data-pane="proof"]')
         await expect(proof, 'no proof of the icon').toBeVisible()
         await expect(proof.locator('.ui-pro-proof-cap')).toHaveText(c.caption)
         const art = proof.locator('.ui-pro-proof-art img')
@@ -302,7 +302,7 @@ for (const [who, plan] of VIEWERS) {
       const name = await customiser(page).getAttribute('aria-labelledby').then((id) => page.locator(`#${id}`).innerText())
 
       await primary(page).click()
-      await upgradeDialog(page, 'Export your Pro settings').getByRole('button', { name: 'See all plans' }).click()
+      await upgradeDialog(page, 'Export your Pro settings').getByRole('link', { name: 'See all plans' }).click()
       await expect(page).toHaveURL(/\/plans$/)
       await page.goBack()
 

@@ -42,9 +42,37 @@ export function svgDataUri(svg) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
 }
 
+// A comment may not hold "--", so a value that has one is closed up.
+const commentSafe = (value) => String(value || '').replace(/-{2,}/g, '-').replace(/[\r\n]+/g, ' ').trim()
+
+/**
+ * The SVG as a downloaded file: the same markup with the set's credit written
+ * into it as a comment straight after the root tag, so the attribution every
+ * one of these licences asks for travels with the file. `credit` is a
+ * packCredit() row; with none, the markup is returned unchanged.
+ */
+export function attributedSvg(svg, credit) {
+  if (!svg || !credit) return svg || ''
+  const lines = [
+    `${credit.name}${credit.author ? ` by ${credit.author}` : ''}`,
+    credit.copyright,
+    credit.licenceName ? `Licence: ${credit.licenceName}${credit.licenceUrl ? ` (${credit.licenceUrl})` : ''}` : '',
+    credit.url ? `Source: ${credit.url}` : '',
+  ].map(commentSafe).filter(Boolean)
+  const close = svg.indexOf('>')
+  if (close < 0) return svg
+  return `${svg.slice(0, close + 1)}<!-- ${lines.join(' | ')} -->${svg.slice(close + 1)}`
+}
+
+/** `waving-hand-twemoji.svg`: the emoji's name, then the set's prefix. */
+export function styleFileName(emojiName, prefix) {
+  const base = String(emojiName || 'emoji').toLowerCase().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '') || 'emoji'
+  return `${base}-${prefix}.svg`
+}
+
 /**
  * Resolves to one of
- *   { status: 'ok', src }     the set draws this emoji; `src` is a data: URI
+ *   { status: 'ok', src, svg } the set draws this emoji; `src` is a data: URI of `svg`
  *   { status: 'missing' }     the set answered and has no such icon
  *   { status: 'error' }       the service could not be reached or refused
  * and never rejects.
@@ -58,7 +86,7 @@ export async function loadStyleImage(prefix, name) {
     const res = await iconifyFetch(url, { timeout: 8000 })
     if (res.headers.get(HELD_HEADER) || !res.ok) return { status: 'error' }
     const svg = svgFromBatch(await res.json(), name)
-    const out = svg ? { status: 'ok', src: svgDataUri(svg) } : { status: 'missing' }
+    const out = svg ? { status: 'ok', src: svgDataUri(svg), svg } : { status: 'missing' }
     settled.set(key, out)
     return out
   } catch {

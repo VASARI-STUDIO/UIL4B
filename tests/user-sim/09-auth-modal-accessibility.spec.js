@@ -1,5 +1,5 @@
 import { test, expect } from './base.js'
-import { go, watch, openChosenDialog } from './helpers.js'
+import { go, watch, openChosenDialog, continueWithEmail } from './helpers.js'
 
 const PERSONA = 'keyboard account access'
 
@@ -12,17 +12,20 @@ test('login dialog focuses, traps keyboard navigation, labels fields and restore
   const google = dialog.getByRole('button', { name: /continue with google/i })
   await expect(google).toBeFocused()
   await expect(dialog.getByLabel('Email')).toBeVisible()
+  // Step 1 is Google and the email; the password field comes with Continue.
+  await expect(dialog.getByLabel('Password')).toHaveCount(0)
+  await continueWithEmail(page, dialog)
   await expect(dialog.getByLabel('Password')).toBeVisible()
   await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe('hidden')
 
   const close = dialog.getByRole('button', { name: 'Close' })
   await close.focus()
   // Shift+Tab off the first control wraps to the LAST one, which is now the
-  // "Not now" way out below the form; "Forgot password?" is the one before it.
+  // "Not now" way out below the form; the "Create one" link is the one before it.
   await page.keyboard.press('Shift+Tab')
   await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Shift+Tab')
-  await expect(dialog.getByRole('button', { name: /forgot password/i })).toBeFocused()
+  await expect(dialog.getByRole('button', { name: /create one/i })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(dialog.getByRole('button', { name: 'Not now' })).toBeFocused()
   await page.keyboard.press('Tab')
@@ -59,7 +62,9 @@ test('community submission entry points explain sign-in before showing a form', 
   watch(page, 'signed-out creator trying to contribute')
   await go(page, '/community')
 
-  const submit = page.getByRole('button', { name: 'Submit design' })
+  // The V3 hub has no "Submit design" button: "Share your work" is the way in (it opens the
+  // pick step once signed in, so the gate has to come first, before any step exists).
+  const submit = page.locator('.cm-head-actions').getByRole('button', { name: 'Share your work' })
   await submit.click()
 
   // CREATE AN ACCOUNT, NOT "LOG IN TO CONTINUE". This gate only runs when
@@ -73,7 +78,7 @@ test('community submission entry points explain sign-in before showing a form', 
   await expect(dialog).toContainText('credited to you')
   await expect(dialog).toContainText('reviewed before it appears')
   await expect(dialog).toContainText('withdraw anything')
-  await expect(page.getByRole('dialog', { name: 'Submit a design' })).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: /Share your work|Submit a design|Share a project/ }), 'a share step opened before sign-in').toHaveCount(0)
 
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
