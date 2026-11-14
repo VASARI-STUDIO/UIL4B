@@ -85,8 +85,9 @@ test('only the upgrade rule and the return page name the gallery checkout addres
     .sort()
   // The helper that defines the address, the upgrade-target rule that sends a
   // signed-in account with a project to it, and the return page's retry link,
-  // which keeps a gallery buyer's origin.
-  assert.deepEqual(users, ['CheckoutReturn.jsx', 'dialogExport.js', 'kitGalleryPick.js'])
+  // which keeps a gallery buyer's origin, and the Pro sign-up layer, which
+  // carries that origin on to checkout once the account exists.
+  assert.deepEqual(users, ['CheckoutReturn.jsx', 'ProUpgradeLayer.jsx', 'dialogExport.js', 'kitGalleryPick.js'])
 })
 
 test('the checkout event carries where the buyer came from, and nothing unsafe', () => {

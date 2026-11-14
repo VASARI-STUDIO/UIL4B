@@ -1364,6 +1364,25 @@ export async function chooseMenuOption(page, trigger, choice) {
 }
 
 /**
+ * The sign-in form is two steps: step 1 is Google plus the email field and a
+ * "Continue with email" button, and the password field only exists after it.
+ * Call this once the email is typed. It does nothing when the form is already
+ * on the password step (or is the reset or switch form, which has no step 1),
+ * so a flow that fills the password can call it without knowing which step it
+ * is on. `scope` narrows it to one container (a dialog or a panel).
+ */
+export async function continueWithEmail(page, scope = page) {
+  const next = scope.locator('.auth-continue')
+  if (await next.isVisible()) {
+    // Continue asks for an address first; a flow that never typed one gets a stand-in.
+    const email = scope.locator('#ui-login-email')
+    if (!(await email.inputValue())) await email.fill('someone@example.test')
+    await next.click()
+    await expect(scope.locator('#ui-login-password')).toBeVisible()
+  }
+}
+
+/**
  * Open the sign-in dialog the way a visitor does now that /login is a page of
  * its own: from the header, over an app-header page. Neither entry passes a
  * reason, so both open the "chosen" variant of the dialog.

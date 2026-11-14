@@ -11,7 +11,7 @@
 // So these tests assert the opening state, and that "Log in" — which shares the
 // same popup — still opens on sign-in.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, continueWithEmail } from './helpers.js'
 
 const PERSONA = 'a first-time visitor clicking the primary call to action'
 
@@ -43,8 +43,10 @@ test.describe('signup intent', () => {
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
     await page.getByRole('button', { name: 'Create a free account' }).click()
     await expect(dialogHeading(page)).toBeVisible()
-    await expect(signupOnly(page), 'a signup form is open').toBeVisible()
     await expect(dialogHeading(page)).toHaveText(/create your free account/i)
+    // The password hint (and the field) only come with the second step.
+    await continueWithEmail(page)
+    await expect(signupOnly(page), 'a signup form is open').toBeVisible()
     // Two fields, not three: the form no longer asks for a name, and the
     // password hint is tied to its input.
     await expect(nameField(page), 'the signup form still asks for a name').toHaveCount(0)
@@ -93,14 +95,17 @@ test.describe('signup intent', () => {
     await expect(page.locator('#start').getByRole('button'), 'the final call opens a sign-up form again').toHaveCount(0)
 
     await go(page, '/login?signup=1')
-    await expect(signupOnly(page), 'a signup form is open').toBeVisible()
     await expect(dialogHeading(page)).toHaveText(/create your free account/i)
+    await continueWithEmail(page)
+    await expect(signupOnly(page), 'a signup form is open').toBeVisible()
   })
 
   test('a bare /login visit is still a sign-in, so bookmarks are unchanged', async ({ page }) => {
     watch(page, 'a returning visitor opening a bookmark')
     await go(page, '/login')
     await expect(dialogHeading(page)).toHaveText(/log in to ui l4b/i)
+    await continueWithEmail(page)
+    await expect(page.locator('#ui-login-password')).toBeVisible()
     await expect(signupOnly(page), 'a sign-in form is not a signup form').toHaveCount(0)
   })
 
