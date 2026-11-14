@@ -65,7 +65,18 @@ async function openCard(page, { colors = MID, theme } = {}) {
   await clickPaletteAction(page, 'Preview')
   const dialog = page.getByRole('dialog', { name: 'Palette preview' })
   await expect(dialog).toBeVisible()
-  await dialog.getByRole('option', { name: /^Spending card/ }).click()
+  // The rail lists the scenes; at the menu width they sit behind the scene menu button.
+  const opt = dialog.getByRole('option', { name: /^Spending card/ })
+  if (!(await opt.count())) {
+    // On a phone the scenes sit behind the dock's Previews button.
+    const dock = dialog.locator('.pvd-scenes-btn')
+    if (await dock.count()) await dock.click()
+    else await dialog.locator('.pvd-menu-btn').click()
+  }
+  await opt.click()
+  // A scene pick leaves the phone's Previews sheet open over the stage in the current build; shut it so the scene can be read.
+  const sheet = dialog.getByRole('dialog', { name: 'Previews' })
+  if (await sheet.count()) await sheet.getByRole('button', { name: 'Close previews' }).click()
   await expect(dialog.locator('.pvs[data-preview-scene="Spending card"] .ty')).toBeVisible()
   // A Pro example stays behind the Unlock plate until the account's plan is known; wait for it to lift.
   await expect(dialog.locator('.pvd-scene.is-locked'), 'the Pro gate lifted').toHaveCount(0)
@@ -73,13 +84,17 @@ async function openCard(page, { colors = MID, theme } = {}) {
 }
 
 const scene = (dialog) => dialog.locator('.pvs[data-preview-scene="Spending card"]')
+// The State menu button only exists at the menu width (768 to 1023); the rail shows the states as rows under the open scene.
 const trigger = (dialog) => dialog.getByRole('button', { name: /^State\b/ })
+const stateNow = (dialog) => dialog.getByRole('group', { name: 'State' }).getByRole('option', { selected: true })
 /** The state the scene is showing, read off the scene itself and not off the menu. */
 const shown = (dialog) => scene(dialog).locator('.ty').getAttribute('data-state')
 
 // ── 1. the State menu ────────────────────────────────────────────────────────
 
 test.describe('the State menu', () => {
+  test.use({ viewport: { width: 900, height: 900 } })
+
   test('lists the four states, checks exactly one, and the scene shows only that one', async ({ page }) => {
     watch(page, 'designer reading the Spending card State menu')
     const dialog = await openCard(page)
@@ -336,22 +351,18 @@ test.describe('the controls', () => {
     watch(page, 'designer freezing the card')
     const dialog = await openCard(page)
     const sc = scene(dialog)
-    await expect(trigger(dialog)).toContainText('Overview')
+    await expect(stateNow(dialog)).toHaveText('Overview')
     await expect(sc.getByRole('button', { name: 'Unfreeze', exact: true })).toHaveCount(0)
 
     await sc.getByRole('button', { name: 'Freeze', exact: true }).click()
     await expect(sc.getByRole('button', { name: 'Unfreeze', exact: true })).toBeVisible()
     await expect(sc.getByRole('button', { name: 'Freeze', exact: true })).toHaveCount(0)
-    await expect(trigger(dialog), 'the State menu moved to Card frozen').toContainText('Card frozen')
+    await expect(stateNow(dialog), 'the rail moved to Card frozen').toHaveText('Card frozen')
     await expect(sc.locator('.ty-frozen'), 'a frozen card says so in words').toBeVisible()
-    await trigger(dialog).click()
-    await expect(dialog.getByRole('menuitemradio', { name: 'Card frozen', exact: true })).toHaveAttribute('aria-checked', 'true')
-    await trigger(dialog).click()
-    await expect(dialog.getByRole('menu', { name: 'State' })).toHaveCount(0)
 
     await sc.getByRole('button', { name: 'Unfreeze', exact: true }).click()
     await expect(sc.getByRole('button', { name: 'Freeze', exact: true })).toBeVisible()
-    await expect(trigger(dialog), 'the State menu moved back to Overview').toContainText('Overview')
+    await expect(stateNow(dialog), 'the rail moved back to Overview').toHaveText('Overview')
     await expect(sc.locator('.ty-frozen')).toHaveCount(0)
   })
 
@@ -360,7 +371,7 @@ test.describe('the controls', () => {
     const dialog = await openCard(page)
     const sc = scene(dialog)
     await sc.getByRole('button', { name: 'Limits', exact: true }).click()
-    await expect(trigger(dialog)).toContainText('Limits')
+    await expect(stateNow(dialog)).toHaveText('Limits')
     await expect(sc.locator('.ty-limits')).toBeVisible()
     await expect(sc.getByText('Budget saved'), 'no toast before anything is saved').toHaveCount(0)
 
@@ -368,7 +379,7 @@ test.describe('the controls', () => {
     await expect(sc.getByRole('status').getByText('Budget saved'), 'the toast is announced').toBeVisible()
     // Still on the form while the toast shows; then the Overview comes back by itself.
     await expect(sc.locator('.ty-limits')).toBeVisible()
-    await expect(trigger(dialog)).toContainText('Overview', { timeout: 6000 })
+    await expect(stateNow(dialog)).toHaveText('Overview', { timeout: 6000 })
     await expect(sc.locator('.ty-limits')).toHaveCount(0)
     await expect(sc.getByText('Budget saved')).toHaveCount(0)
     await expect.poll(() => shown(dialog)).toBe('overview')

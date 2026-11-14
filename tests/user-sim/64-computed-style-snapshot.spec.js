@@ -139,6 +139,12 @@ const ADDED_SELECTORS = {
     '.db-link', '.db-open', '.db-opent', '.db-textbtn', '.db-tl', '.db-ring', '.db-bt', '.db-shelf', '.db-plan', '.db-perks',
     '.db-bar', '.db-end', '.db-status', '.db-sr', '.db-sch', '.db-circle', '.db-img', '.db-mono', '.db-group', '.db-minis',
     '.db-mini', '.db-gt', '.db-more', '.db-find', '.db-input', '.db-tick', '.db-also', '.db-anchor'],
+  // The V3 community page replaced the old `.cmh-*` hub: head, toolbar, filters and the grid of
+  // tiles. Classes for dialogs and empty states are not mounted on arrival and are skipped.
+  '/community': ['.cm-page', '.cm-head', '.cm-head-copy', '.cm-h1', '.cm-lead', '.cm-head-actions', '.cm-btn',
+    '.cm-btn-ink', '.cm-btn-line', '.cm-btn-tonal', '.cm-toolbar', '.cm-search', '.cm-search-ic', '.cm-input', '.cm-count',
+    '.cm-selects', '.cm-select', '.cm-seg', '.cm-grid', '.cm-tile', '.cm-frame', '.cm-frame-link', '.cm-tile-meta',
+    '.cm-tile-title', '.cm-discs', '.cm-disc', '.cm-heart', '.cm-more', '.cm-maker-link', '.cm-sample'],
   '/create/palette': ['.tl-dock'],
   '/create/semantic-color': ['.tl-dock'],
   '/create/gradient': ['.tl-dock'],
@@ -175,6 +181,15 @@ const ADDED_SELECTORS = {
     '.spt-lbl', '.spt-note', '.spt-route', '.spt-route-seg', '.spt-row-go', '.spt-cols', '.spt-col', '.sp-footer',
     '.spm-hero', '.spm-hero-copy', '.spm-spacer', '.sp-grain', '.spectrum', '.spt-section--last', '.spt-art', '.sp-footer-inner',
     '.sp-footer-grid', '.sp-footer-brand', '.sp-footer-say', '.sp-footer-cta', '.sp-footer-col', '.sp-footer-col-h'],
+  // The V3 surface index (/discover and /learn): doors, today's picks and the section heads replaced
+  // the old card grid. Taken from SurfaceIndex.jsx; a class the page does not mount at a width is
+  // skipped by the measure, so listing one is safe. Without these, regenerating can only shrink the
+  // two routes to whatever the old list still matches.
+  '/discover': ['.srf', '.srf-wrap', '.srf-head', '.srf-h1', '.srf-hint', '.srf-sec', '.srf-h2', '.srf-after', '.srf-row1',
+    '.srf-row2', '.srf-door', '.srf-plate', '.srf-door-t', '.srf-door-c', '.srf-door-d', '.srf-meta', '.srf-go', '.srf-also',
+    '.srf-today', '.srf-tt', '.srf-tl', '.srf-td', '.srf-td-n', '.srf-td-l', '.srf-pal', '.srf-stop', '.srf-tile', '.srf-fonts',
+    '.srf-icons', '.srf-names', '.srf-nm'],
+  '/learn': ['.srf', '.srf-wrap', '.srf-head', '.srf-h1', '.srf-hint', '.srf-sec', '.srf-h2', '.srf-after'],
   // /learn/help is a job list beside one answer. The old section and answer
   // classes are gone; these are the router's own hooks. The stage is painted
   // from 960px only, so the phone width carries fewer rows.

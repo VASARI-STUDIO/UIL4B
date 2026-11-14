@@ -100,9 +100,9 @@ test('prices only in USD while the visitor is on AUD: no amount, never the USD f
   assert.equal(offer.billed, '')
 })
 
-test('the two upgrade surfaces read the live price and no longer import the frozen label', () => {
+test('the Pro panel reads the live price and no longer imports the frozen label', () => {
   const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
-  for (const file of ['src/components/userhome/ProPanel.jsx', 'src/pages/ProjectDetail.jsx']) {
+  for (const file of ['src/components/userhome/ProPanel.jsx']) {
     const src = read(file)
     assert.match(src, /upgradeOffer\(/, `${file} does not use upgradeOffer`)
     assert.match(src, /usePrices/, `${file} does not read the live prices`)
@@ -110,4 +110,10 @@ test('the two upgrade surfaces read the live price and no longer import the froz
   }
   assert.doesNotMatch(read('src/components/userhome/workspace.js'), /resolvePlanLadder|cheapestPerMonth/,
     'workspace.js is back on the USD fallback ladder')
+})
+
+test('the project page links See Pro to /plans with no price, as its board does', () => {
+  const src = fs.readFileSync(path.join(process.cwd(), 'src/pages/ProjectDetail.jsx'), 'utf8')
+  assert.match(src, /<Link to="\/plans">See Pro<\/Link>/)
+  assert.doesNotMatch(src, /\bUPGRADE\b(?!_LINE)/, 'ProjectDetail.jsx still reads the static UPGRADE')
 })

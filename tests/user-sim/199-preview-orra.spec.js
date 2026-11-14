@@ -12,7 +12,8 @@
 //   8. the compare view (two palettes side by side) is a still picture: no buttons
 //
 // Nothing is mocked: the dialog is opened the way a person opens it, signed in as a free
-// account (the Product page is not a Pro example), at 1440 so the State menu is in the header.
+// account (the Product page is not a Pro example), at 1440. There the V3 dialog shows the states as
+// rows under the open scene in its rail (the "State" button lives at 768 to 1023, the Previews sheet on a phone).
 //
 // To make each go red (undo it after), all in src/components/palette/examples/OrraWorkroom.jsx:
 //   1  in Swatches, make the button's onClick `live.setWay(0)`
@@ -67,18 +68,27 @@ async function openOrra(page, { colors = RED } = {}) {
   await clickPaletteAction(page, 'Preview')
   const dialog = page.getByRole('dialog', { name: 'Palette preview' })
   await expect(dialog).toBeVisible()
-  const wide = await dialog.getByRole('option', { name: /^Product page/ }).count()
-  if (wide) await dialog.getByRole('option', { name: /^Product page/ }).click()
-  else {
-    await dialog.locator('.pvd-menu-btn').click()
-    await dialog.getByRole('option', { name: /^Product page/ }).click()
+  // The rail lists the scenes; 768 to 1023 keeps them behind a menu button, a phone behind the dock's Previews button.
+  const opt = dialog.getByRole('option', { name: /^Product page/ })
+  if (!(await opt.count())) {
+    const dock = dialog.locator('.pvd-scenes-btn')
+    if (await dock.count()) await dock.click()
+    else await dialog.locator('.pvd-menu-btn').click()
   }
+  await opt.click()
+  // A scene pick leaves the phone's Previews sheet open over the stage; shut it so the scene can be read.
+  const previews = dialog.getByRole('dialog', { name: 'Previews' })
+  if (await previews.count()) await previews.getByRole('button', { name: 'Close previews' }).click()
   await expect(dialog.locator('.pvs[data-preview-scene="Product page"] .or')).toBeVisible()
   await expect(dialog.locator('.or-slide:first-child .rc-base')).toHaveJSProperty('complete', true)
   return dialog
 }
 
 const scene = (dialog) => dialog.locator('.pvs[data-preview-scene="Product page"]')
+// The "State" button only exists at 768 to 1023; the 1440 rail nests the states under the open scene as options.
+const stateGroup = (dialog) => dialog.getByRole('group', { name: 'State' })
+const stateNow = (dialog) => stateGroup(dialog).getByRole('option', { selected: true })
+const expectState = (dialog, label, message) => expect(stateNow(dialog), message).toHaveText(label)
 const trigger = (dialog) => dialog.getByRole('button', { name: /^State\b/ })
 /** The state the scene is showing, read off the scene itself and not off the menu. */
 const shown = (dialog) => scene(dialog).locator('.or').getAttribute('data-state')
@@ -311,11 +321,11 @@ test.describe('the sizes', () => {
     watch(page, 'shopper picking the sold-out Orra size')
     const dialog = await openOrra(page)
     const sc = scene(dialog)
-    await expect(trigger(dialog)).toContainText('Overview')
+    await expectState(dialog, 'Overview')
     await expect(sc.getByRole('button', { name: 'Notify me' })).toHaveCount(0)
 
     await sizeBtn(sc, 'XXL, sold out').click()
-    await expect(trigger(dialog), 'the State menu moved').toContainText('Sold out size')
+    await expectState(dialog, 'Sold out size', 'the State menu moved')
     await expect.poll(() => shown(dialog)).toBe('soldout')
     await expect(sizeBtn(sc, 'XXL, sold out')).toHaveAttribute('aria-checked', 'true')
     await expect(sizeLabel(sc)).toHaveText('XXL')
@@ -323,13 +333,13 @@ test.describe('the sizes', () => {
     await expect(sc.locator('.or-note')).toHaveAttribute('role', 'status')
     await expect(add(sc), 'there is no Add to bag for a sold-out size').toHaveCount(0)
     await expect(sc.getByRole('button', { name: 'Notify me', exact: true })).toBeVisible()
-    await trigger(dialog).click()
-    await expect(dialog.getByRole('menuitemradio', { name: 'Sold out size', exact: true })).toHaveAttribute('aria-checked', 'true')
-    await page.keyboard.press('Escape')
+    // The rail marks the chosen state; only that one row is selected.
+    await expect(stateGroup(dialog).getByRole('option', { name: 'Sold out size', exact: true })).toHaveAttribute('aria-selected', 'true')
+    await expect(stateGroup(dialog).getByRole('option', { selected: true })).toHaveCount(1)
 
     // Back to a size in stock: the State menu and the button follow.
     await sizeBtn(sc, 'L').click()
-    await expect(trigger(dialog)).toContainText('Overview')
+    await expectState(dialog, 'Overview')
     await expect(add(sc)).toBeVisible()
     await expect(sc.getByRole('button', { name: /^Notif/ })).toHaveCount(0)
     await expect(sc.locator('.or-note')).toHaveText('Size L is ready to ship in 2 days.')
@@ -346,7 +356,7 @@ test.describe('the sizes', () => {
     const set = sc.getByRole('button', { name: 'Notification set', exact: true })
     await expect(set).toHaveAttribute('aria-pressed', 'true')
     await expect(sc.locator('.or-note')).toHaveText('Got it. We will email you when XXL is back.')
-    await expect(trigger(dialog), 'asking to be told is not a state of its own').toContainText('Sold out size')
+    await expectState(dialog, 'Sold out size', 'asking to be told is not a state of its own')
     await set.click()
     await expect(sc.getByRole('button', { name: 'Notify me', exact: true })).toHaveAttribute('aria-pressed', 'false')
     await expect(sc.locator('.or-note')).toHaveText('XXL is sold out. Back in 4 weeks.')
@@ -361,21 +371,20 @@ test.describe('the sizes', () => {
     await expect(sizeBtn(sc, 'L')).toBeFocused()
     await page.keyboard.press('ArrowRight')
     await expect(sizeBtn(sc, 'XL')).toBeFocused()
-    await expect(trigger(dialog), 'a size in stock keeps the Overview').toContainText('Overview')
+    await expectState(dialog, 'Overview', 'a size in stock keeps the Overview')
     await page.keyboard.press('ArrowRight')
     await expect(sizeBtn(sc, 'XXL, sold out')).toBeFocused()
-    await expect(trigger(dialog)).toContainText('Sold out size')
+    await expectState(dialog, 'Sold out size')
     await page.keyboard.press('ArrowLeft')
     await expect(sizeBtn(sc, 'XL')).toBeFocused()
-    await expect(trigger(dialog)).toContainText('Overview')
+    await expectState(dialog, 'Overview')
   })
 
   test('the State menu draws a focus ring on the chosen size and the other states draw none', async ({ page }) => {
     const dialog = await openOrra(page)
     const sc = scene(dialog)
     await expect(sc.locator('.or-size.is-focus')).toHaveCount(0)
-    await trigger(dialog).click()
-    await dialog.getByRole('menuitemradio', { name: 'Focused size', exact: true }).click()
+    await pickPreviewState(dialog, 'Focused size')
     await expect.poll(() => shown(dialog)).toBe('focus')
     const ringed = sc.locator('.or-size.is-focus')
     await expect(ringed).toHaveCount(1)
@@ -402,7 +411,7 @@ test.describe('Add to bag', () => {
     await add(sc).click()
     await expect(sc.locator('.or-count'), 'the header count').toHaveText('1')
     await expect(bagBtn(sc)).toHaveAttribute('aria-label', 'Bag, 1 item')
-    await expect(trigger(dialog), 'the State menu moved').toContainText('Added to bag')
+    await expectState(dialog, 'Added to bag', 'the State menu moved')
     await expect.poll(() => shown(dialog)).toBe('added')
     const s = sheet(sc)
     await expect(s).toBeVisible()
@@ -432,8 +441,7 @@ test.describe('Add to bag', () => {
     await s.getByRole('button', { name: 'Continue shopping' }).click()
     await expect(sheet(sc)).toHaveCount(0)
     // The State menu's own "Added to bag" still shows one.
-    await trigger(dialog).click()
-    await dialog.getByRole('menuitemradio', { name: 'Added to bag' }).click()
+    await pickPreviewState(dialog, 'Added to bag')
     await expect(sheet(sc).getByText('Added to your bag')).toBeVisible()
     await expect(sc.locator('.or-count')).toHaveText('1')
   })
@@ -488,7 +496,7 @@ test.describe('the bag sheet closes', () => {
     await page.keyboard.press('Escape')
     await expect(dialog, 'Escape closed the sheet and not the dialog').toBeVisible()
     await expect(sheet(sc)).toHaveCount(0)
-    await expect(trigger(dialog), 'the State menu went back to Overview').toContainText('Overview')
+    await expectState(dialog, 'Overview', 'the State menu went back to Overview')
     await expect.poll(() => shown(dialog)).toBe('overview')
     await expect(sc.locator('.or-count'), 'the bag keeps what was added').toHaveText('1')
     await expect(add(sc), 'focus returns to Add to bag').toBeFocused()
@@ -497,22 +505,28 @@ test.describe('the bag sheet closes', () => {
     await expect(dialog, 'a second Escape closes the dialog').toHaveCount(0)
   })
 
-  test('Escape with the State menu open closes the menu first, and the sheet stays', async ({ page }) => {
-    // Was a product bug: with the bag sheet open and then the State menu opened over it, the first Escape
-    // closed the sheet (the older layer). escapeLayer.js keeps one stack and closes the layer opened last.
-    const dialog = await openOrra(page)
-    const sc = scene(dialog)
-    await add(sc).click()
-    await expect(sheet(sc)).toBeVisible()
-    await trigger(dialog).click()
-    await expect(dialog.getByRole('menu', { name: 'State' })).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(dialog.getByRole('menu', { name: 'State' })).toHaveCount(0)
-    await expect(dialog).toBeVisible()
-    await expect(sheet(sc), 'the sheet is still open').toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(sheet(sc), 'the next Escape closes the sheet').toHaveCount(0)
-    await expect(dialog).toBeVisible()
+  // The State popover is a V3 feature of the 768 to 1023 header only (the 1440 rail lists the states inline,
+  // with nothing to dismiss), so the layered Escape is held at 900.
+  test.describe('at the menu width', () => {
+    test.use({ viewport: { width: 900, height: 900 } })
+
+    test('Escape with the State menu open closes the menu first, and the sheet stays', async ({ page }) => {
+      // Was a product bug: with the bag sheet open and then the State menu opened over it, the first Escape
+      // closed the sheet (the older layer). escapeLayer.js keeps one stack and closes the layer opened last.
+      const dialog = await openOrra(page)
+      const sc = scene(dialog)
+      await add(sc).click()
+      await expect(sheet(sc)).toBeVisible()
+      await trigger(dialog).click()
+      await expect(dialog.getByRole('menu', { name: 'State' })).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(dialog.getByRole('menu', { name: 'State' })).toHaveCount(0)
+      await expect(dialog).toBeVisible()
+      await expect(sheet(sc), 'the sheet is still open').toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(sheet(sc), 'the next Escape closes the sheet').toHaveCount(0)
+      await expect(dialog).toBeVisible()
+    })
   })
 
   test('Continue shopping closes the sheet and focus returns to Add to bag', async ({ page }) => {
@@ -522,7 +536,7 @@ test.describe('the bag sheet closes', () => {
     await add(sc).click()
     await sheet(sc).getByRole('button', { name: 'Continue shopping' }).click()
     await expect(sheet(sc)).toHaveCount(0)
-    await expect(trigger(dialog)).toContainText('Overview')
+    await expectState(dialog, 'Overview')
     await expect(add(sc), 'focus is back where it was').toBeFocused()
     await expect(add(sc)).toHaveAttribute('aria-expanded', 'false')
   })
@@ -557,7 +571,7 @@ test.describe('the bag sheet closes', () => {
     const sc = scene(dialog)
     await bagBtn(sc).click()
     await expect(sheet(sc)).toBeVisible()
-    await expect(trigger(dialog)).toContainText('Added to bag')
+    await expectState(dialog, 'Added to bag')
     await sheet(sc).getByRole('button', { name: 'Continue shopping' }).click()
     await expect(sheet(sc)).toHaveCount(0)
     await expect(bagBtn(sc), 'focus returns to the control that opened it').toBeFocused()
@@ -566,11 +580,9 @@ test.describe('the bag sheet closes', () => {
   test('the State menu closes the sheet too: picking Overview takes it away', async ({ page }) => {
     const dialog = await openOrra(page)
     const sc = scene(dialog)
-    await trigger(dialog).click()
-    await dialog.getByRole('menuitemradio', { name: 'Added to bag', exact: true }).click()
+    await pickPreviewState(dialog, 'Added to bag')
     await expect(sheet(sc)).toBeVisible()
-    await trigger(dialog).click()
-    await dialog.getByRole('menuitemradio', { name: 'Overview', exact: true }).click()
+    await pickPreviewState(dialog, 'Overview')
     await expect(sheet(sc)).toHaveCount(0)
     await expect.poll(() => shown(dialog)).toBe('overview')
   })
@@ -591,7 +603,7 @@ test.describe('the small controls', () => {
     await expect(save).toHaveText('Saved')
     await expect(save).toHaveAttribute('aria-pressed', 'true')
     await expect(save.locator('svg'), 'the heart is filled').toHaveAttribute('fill', 'currentColor')
-    await expect(trigger(dialog), 'saving is not a state').toContainText('Overview')
+    await expectState(dialog, 'Overview', 'saving is not a state')
     await save.click()
     await expect(save).toHaveText('Save')
     await expect(save).toHaveAttribute('aria-pressed', 'false')
@@ -693,25 +705,24 @@ test.describe('closing the preview', () => {
     await expect(sc.locator('.or-count')).toHaveText('0')
     await expect(sc.locator('.or-save')).toHaveText('Save')
     await expect(sc.getByRole('navigation', { name: 'Orra Workroom' }).getByRole('button', { name: 'Shirts', exact: true })).toHaveAttribute('aria-current', 'page')
-    await expect(trigger(dialog)).toContainText('Overview')
+    await expectState(dialog, 'Overview')
   })
 
   test('the State menu lists the four states, checks one, and the scene shows only that one', async ({ page }) => {
     watch(page, 'designer reading the Orra State menu')
     const dialog = await openOrra(page)
     const sc = scene(dialog)
-    await trigger(dialog).click()
-    const items = dialog.getByRole('menuitemradio')
+    // At 1440 the four states are options under the open scene in the rail, one of them selected.
+    const items = stateGroup(dialog).getByRole('option')
     await expect(items).toHaveText(STATES)
     for (const label of STATES) {
       await items.filter({ hasText: label }).click()
-      await expect(trigger(dialog)).toContainText(label)
+      await expectState(dialog, label)
       await expect(sc.locator('.or'), `${label}: one scene, not one per state`).toHaveCount(1)
       await expect.poll(() => shown(dialog), `${label}: the scene is in that state`).toBe(STATE_ID[label])
       await expect(sheet(sc), `${label}: the sheet is Added to bag's alone`).toHaveCount(label === 'Added to bag' ? 1 : 0)
       await expect(sc.locator('.or-btn--ghost'), `${label}: Notify me is Sold out size's alone`).toHaveCount(label === 'Sold out size' ? 1 : 0)
-      await trigger(dialog).click()
-      await expect(items.and(dialog.locator('[aria-checked="true"]')), `${label}: exactly one is checked`).toHaveCount(1)
+      await expect(items.and(dialog.locator('[aria-selected="true"]')), `${label}: exactly one is checked`).toHaveCount(1)
     }
   })
 })

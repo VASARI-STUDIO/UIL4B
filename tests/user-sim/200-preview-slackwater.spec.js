@@ -79,7 +79,10 @@ async function openSlack(page, { colors = MID, theme, seen } = {}) {
 }
 
 const scene = (dialog) => dialog.locator(`.pvs[data-preview-scene="${SCENE}"]`)
-const trigger = (dialog) => dialog.getByRole('button', { name: /^State\b/ })
+// V3: at 1440 the states are options under the open scene in the dialog's rail; the "State" button is a 768 to 1023 thing.
+const stateGroup = (dialog) => dialog.getByRole('group', { name: 'State' })
+const stateNow = (dialog) => stateGroup(dialog).getByRole('option', { selected: true })
+const expectState = (dialog, label, message) => expect(stateNow(dialog), message).toHaveText(label)
 const sheet = (dialog) => scene(dialog).locator('.sw-sheet')
 /** The state the scene is showing, read off the scene itself and not off the menu. */
 const shown = (dialog) => scene(dialog).locator('.sw').getAttribute('data-state')
@@ -91,29 +94,28 @@ test.describe('the Subscribe sheet', () => {
     watch(page, 'designer opening the Slack Water Subscribe sheet')
     const dialog = await openSlack(page)
     const sc = scene(dialog)
-    await expect(trigger(dialog)).toContainText('Article')
+    await expectState(dialog, 'Article')
     await expect(sheet(dialog), 'no sheet on the article').toHaveCount(0)
 
     await sc.getByRole('button', { name: 'Subscribe', exact: true }).click()
     await expect(sheet(dialog)).toBeVisible()
     await expect(sheet(dialog).getByRole('heading', { name: 'Subscribe to Slack Water' })).toBeVisible()
     await expect(sheet(dialog).getByLabel('Email address'), 'the field takes focus').toBeFocused()
-    await expect(trigger(dialog), 'the State menu moved to the sheet').toContainText('Subscribe sheet')
+    await expectState(dialog, 'Subscribe sheet', 'the State menu moved to the sheet')
     await expect.poll(() => shown(dialog)).toBe('subscribe')
     await expect(sheet(dialog).locator('.sw-err'), 'no error before anything is typed').toHaveCount(0)
 
     await sheet(dialog).getByRole('button', { name: 'Cancel' }).click()
     await expect(sheet(dialog)).toHaveCount(0)
-    await expect(trigger(dialog), 'the State menu moved back').toContainText('Article')
+    await expectState(dialog, 'Article', 'the State menu moved back')
     await expect.poll(() => shown(dialog)).toBe('article')
   })
 
   test('the State menu opens and closes the sheet too, and its error entry shows the email error', async ({ page }) => {
     watch(page, 'designer walking the Slack Water State menu')
     const dialog = await openSlack(page)
-    await trigger(dialog).click()
-    await expect(dialog.getByRole('menuitemradio')).toHaveText(STATES)
-    await dialog.getByRole('menuitemradio', { name: 'Subscribe sheet', exact: true }).click()
+    await expect(stateGroup(dialog).getByRole('option')).toHaveText(STATES)
+    await pickPreviewState(dialog, 'Subscribe sheet')
     await expect(sheet(dialog)).toBeVisible()
     await expect(sheet(dialog).locator('.sw-err')).toHaveCount(0)
 
@@ -170,7 +172,7 @@ test.describe('the Subscribe sheet', () => {
 
     await sheet(dialog).getByRole('button', { name: 'Close' }).click()
     await expect(sheet(dialog)).toHaveCount(0)
-    await expect(trigger(dialog)).toContainText('Article')
+    await expectState(dialog, 'Article')
     // Opening it again starts clean.
     await scene(dialog).getByRole('button', { name: 'Subscribe', exact: true }).click()
     await expect(sheet(dialog).getByLabel('Email address')).toHaveValue('')
@@ -192,7 +194,7 @@ test.describe('Escape', () => {
     await page.keyboard.press('Escape')
     await expect(dialog, 'Escape closed the sheet and not the dialog').toBeVisible()
     await expect(sheet(dialog)).toHaveCount(0)
-    await expect(trigger(dialog)).toContainText('Article')
+    await expectState(dialog, 'Article')
 
     await page.keyboard.press('Escape')
     await expect(dialog, 'a second Escape closes the dialog').toHaveCount(0)
@@ -405,7 +407,7 @@ async function loadedPhoto(page, dialog) {
   const img = scene(dialog).locator('img.sw-img')
   await expect(img).toBeVisible()
   await expect.poll(() => img.evaluate((i) => i.complete && i.naturalWidth > 0), 'the photograph loaded').toBe(true)
-  return img.evaluate((i) => ({ src: i.currentSrc, natural: i.naturalWidth, box: i.getBoundingClientRect().toJSON() }))
+  return img.evaluate((i) => ({ src: i.currentSrc, natural: i.naturalWidth, naturalH: i.naturalHeight, box: i.getBoundingClientRect().toJSON() }))
 }
 
 test.describe('the photograph', () => {
@@ -430,7 +432,10 @@ test.describe('the photograph', () => {
       const dialog = await openSlack(page, { seen })
       const photo = await loadedPhoto(page, dialog)
       expect(photo.src, 'the browser chose the upright picture').toMatch(PORTRAIT)
-      expect(photo.box.height, 'the picture is taller than it is wide').toBeGreaterThan(photo.box.width * 0.75)
+      // The file is the upright crop; the V3 narrow layout shows it as a 200px band across the top (SlackWater.css, max-width 599px).
+      expect(photo.naturalH, 'the file that loaded is taller than it is wide').toBeGreaterThan(photo.natural)
+      expect(photo.box.height, 'the picture is the 200px band').toBeCloseTo(200, 0)
+      expect(photo.box.width, 'the band runs the width of the scene').toBeGreaterThan(photo.box.height * 1.5)
       await page.waitForTimeout(500)
       expect(seen.filter((r) => WIDE.test(r.url)).map((r) => r.url), 'the wide picture was fetched on a phone').toEqual([])
       expect(seen.filter((r) => PORTRAIT.test(r.url)).length, 'the portrait picture was requested').toBeGreaterThan(0)

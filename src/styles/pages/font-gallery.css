@@ -328,6 +328,12 @@ html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: n
     border-bottom: 0;
   }
 }
+/* The Style filter shares the row, so the fields give back enough for the
+   font-pair link to stay out of More at 1360 and up. */
+@media (min-width: 1360px) {
+  .fg-page .fg-row2 > .tl-item .fg-search { width: 216px; }
+  .fg-page .fg-row2 > .tl-item .fg-preview-field { width: 244px; }
+}
 @media (min-width: 1024px) and (max-width: 1359px) {
   .fg-page .fg-row2 > .tl-item .fg-search { width: 200px; }
   .fg-page .fg-row2 > .tl-item .fg-preview-field { width: 252px; }

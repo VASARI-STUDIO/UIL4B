@@ -7,7 +7,7 @@
 // MUTATIONS (each one turns a test below red):
 //   .crd-row loses align-content: start     -> "keep their lines together"
 //   .crd-row-side loses its max-width        -> "keep their lines together"
-//   .hlr-tick stays at opacity 0 under 960px -> "closed rows show their arrow"
+//   .hlr-chev leaves its svg unturned when a row opens -> "closed rows show their arrow"
 //   .hlr-grid is not capped at 768             -> "the arrow stays near its label"
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
@@ -38,12 +38,12 @@ for (const [width, touch] of [[390, true], [768, false]]) {
       // The first row may open by itself; a closed one is what a thumb has to find.
       const job = page.locator('.hlr-job[aria-expanded="false"]').first()
       await expect(job).toBeVisible()
-      expect(Number(await job.locator('.hlr-tick').evaluate((el) => getComputedStyle(el).opacity)), 'closed rows show their arrow').toBe(1)
+      await expect(job.locator('.hlr-chev svg')).toBeVisible()
       const name = (await job.textContent()).trim()
       await job.click()
       const opened = page.locator('.hlr-job', { hasText: name }).first()
       await expect(opened).toHaveAttribute('aria-expanded', 'true')
-      await expect.poll(() => opened.locator('.hlr-tick').evaluate((el) => getComputedStyle(el).transform)).not.toBe('none')
+      await expect.poll(() => opened.locator('.hlr-chev svg').evaluate((el) => getComputedStyle(el).transform)).not.toBe('none')
     })
   })
 }
@@ -54,8 +54,9 @@ test.describe('help at 768', () => {
   test('the arrow stays near its label', async ({ page }) => {
     watch(page, 'someone looking for help on a tablet')
     await go(page, '/learn/help')
-    const grid = page.locator('.hlr-grid').first()
+    const grid = page.locator('.hlr-jobs').first()
     await expect(grid).toBeVisible()
-    expect((await grid.boundingBox()).width).toBeLessThanOrEqual(640)
+    // the router is one column held to the page's 760px measure (.hlp), so a row's chevron sits within 760px of its label
+    expect((await grid.boundingBox()).width).toBeLessThanOrEqual(760)
   })
 })

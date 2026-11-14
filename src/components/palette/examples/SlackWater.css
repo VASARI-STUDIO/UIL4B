@@ -2,7 +2,8 @@
  *
  * Colour comes only from --pv-* (set by the dialog) and the --sw-* inks, edges and fills the
  * scene works out per palette. The photograph is fixed; no type sits on it. Layout is a container
- * query on .pvs: wide 960px and up, mid 600 to 959, narrow under 600.
+ * query on .pvs: wide 900px and up, mid 600 to 899, narrow under 600. The stage beside the 336px rail
+ * at 1440 is 960px less its scrollbar, so wide has to start under that.
  * Type: 12 / 13 / 15 / 18 / 20 / 28px plus the headline in clamp(). Literata carries the wordmark,
  * headline, dek and story; Geist carries the rest. Neither face is monospace. Both load only when
  * this example opens. Literata's fallback is metric-matched (size-adjust is an estimate from
@@ -117,7 +118,7 @@
 .sw button.sw-save.is-on{font-weight:600}
 
 /* ── Mid ── */
-@container pvs (max-width:959px){
+@container pvs (max-width:899px){
   .sw-mast{padding:0 var(--s-6)}
   .sw-issue{display:none}
   .sw-nav{margin-left:auto}
@@ -132,24 +133,30 @@
   .sw-sheet{right:var(--s-6)}
 }
 
-/* ── Narrow: the upright photograph first, then the headline at 36px, then the story ── */
+/* ── Narrow: a 200px photograph band first, then the headline at 32px, then the story ── */
 @container pvs (max-width:599px){
   .sw-mast{height:56px;gap:var(--s-3);padding:0 var(--s-4)}
   .sw-dock{top:56px}
-  .sw-nav{display:none}
-  .sw-cta{margin-left:auto;height:36px;padding:0 var(--s-4)}
-  .sw-img{height:auto;aspect-ratio:4 / 5}
+  .sw-nav{margin-left:auto}
+  .sw-navi:not(.is-current){display:none}
+  .sw-cta{margin-left:0;height:36px;padding:0 var(--s-4)}
+  .sw-img{height:200px}
   .sw-cap{padding-inline:var(--s-4)}
-  .sw-lede{display:flex;flex-direction:column;padding:var(--s-5) var(--s-4) var(--s-6)}
-  .sw-head{font-size:36px;margin-bottom:var(--s-4)}
+  .sw-lede{display:flex;flex-direction:column;row-gap:0;padding:var(--s-5) var(--s-4) var(--s-6)}
+  .sw-head{font-size:32px;margin-bottom:var(--s-4)}
   .sw-story,.sw-panel{padding-inline:var(--s-4)}
   .sw-story{padding-top:var(--s-6)}
   .sw-cross{margin-inline:calc(var(--s-4) * -1)}
-  .sw-map{aspect-ratio:4 / 3}
   .sw-readout{padding-inline:var(--s-4)}
   .sw-sheet{right:var(--s-4)}
   .sw-row{grid-template-columns:56px minmax(0,1fr)}
   .sw-c{grid-column:2}
+}
+
+/* ── Very narrow: the wordmark and Subscribe need the whole row ── */
+@container pvs (max-width:359px){
+  .sw-nav{display:none}
+  .sw-cta{margin-left:auto}
 }
 
 /* ── Signature moment: the photograph settles in, once ── */

@@ -16,9 +16,11 @@ import './GalleryEndGate.css'
  * account opens, or stand-ins. A Pro item's real asset or values
  * never go in here (see utils/lockedPreview.js, utils/lockedStandin.js and
  * utils/gateStandins.js). The
- * fade is hidden from assistive tech, takes no pointer events and is `inert`,
- * so the focus order is the heading area, then the primary control, then the
- * secondary one.
+ * fade is hidden from assistive tech and holds nothing focusable, so the focus
+ * order is the heading area, then the primary control, then the secondary one.
+ * It takes no pointer events and is `inert`, except where the primary control
+ * is a button: then a click on the faded cards does what that button does (a
+ * pointer shortcut to the same action; the keyboard has the button).
  *
  *   kind        value of data-gate on the root ('anon', 'free', 'search'...).
  *   id          the heading's id; the root is labelled by it.
@@ -33,11 +35,43 @@ import './GalleryEndGate.css'
  *   fade        the faded rows, rendered by the caller.
  *   live        'copy' announces heading and body as a status, 'body' only the
  *               body. Leave it off when the block is not a status.
+ *   reveal      the heading, body and controls rise in once, when the block
+ *               first scrolls into view (300ms each, 100ms apart). Nothing is
+ *               hidden when it is already on screen, under reduced motion or
+ *               without IntersectionObserver.
  */
+/* Arms the staged rise-in of the block's text and controls. The attribute is set
+ * on the DOM directly, after mount, so the prerendered and first-painted block is
+ * fully visible and nothing is hidden for a viewer who never scrolls to it. */
+function useRevealOnView(root, enabled) {
+  useLayoutEffect(() => {
+    const node = root.current
+    if (!enabled || !node || typeof IntersectionObserver === 'undefined') return undefined
+    const html = document.documentElement
+    const reduced = html.dataset.reducedMotion === 'true'
+      || (html.dataset.reducedMotion !== 'false' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+    if (reduced) return undefined
+    // Already on screen: nothing to wait for.
+    if (node.getBoundingClientRect().top < window.innerHeight * 0.7) return undefined
+    node.setAttribute('data-reveal', 'armed')
+    const watcher = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      node.setAttribute('data-reveal', 'in')
+      watcher.disconnect()
+    }, { threshold: 0.3 })
+    watcher.observe(node)
+    return () => { watcher.disconnect(); node.removeAttribute('data-reveal') }
+  }, [root, enabled])
+}
+
 export default function GalleryEndGate({
-  kind, id, heading, level = 2, body, detail, primary, secondary, fade, live, className,
+  kind, id, heading, level = 2, body, detail, primary, secondary, fade, live, className, reveal = false,
 }) {
   const auto = useId()
+  const root = useRef(null)
+  useRevealOnView(root, reveal)
+  // A button primary (no link) makes the faded cards a second hit area for it.
+  const fadeClick = Boolean(primary && !primary.to && primary.onClick)
   const headId = id || `geg-h-${auto.replace(/:/g, '')}`
   const Heading = `h${level}`
   return (
@@ -46,8 +80,18 @@ export default function GalleryEndGate({
     // filter), so as a landmark it would make the page's landmark list differ
     // between signed-out and signed-in, and between a full and a filtered grid.
     // The gallery's own results region stays the one landmark (spec 83).
-    <section role="group" className={`geg${className ? ` ${className}` : ''}`} data-gate={kind} data-end={kind} aria-labelledby={headId}>
-      {fade && <div className="geg-fade" aria-hidden="true" inert>{fade}</div>}
+    <section ref={root} role="group" className={`geg${className ? ` ${className}` : ''}`} data-gate={kind} data-end={kind} aria-labelledby={headId}>
+      {fade && (
+        <div
+          className={`geg-fade${fadeClick ? ' geg-fade--click' : ''}`}
+          data-gate-fade=""
+          aria-hidden="true"
+          inert={fadeClick ? undefined : true}
+          onClick={fadeClick ? primary.onClick : undefined}
+        >
+          {fade}
+        </div>
+      )}
       <div className="geg-band">
         <div className="geg-copy" role={live === 'copy' ? 'status' : undefined}>
           <Heading id={headId} className="geg-h">{heading}</Heading>
@@ -116,33 +160,47 @@ export function GateFadeCards({ shape = 'glyph', srcs = [], count = 12, min = 22
  * nearly transparent). Each row is a grid of its own, so a row never wraps into
  * the next one's styling. `render` must return the grid element and nothing else.
  *
- * Before the first measure (the prerendered page) three columns are assumed.
+ * Before the first measure (the prerendered page) `initial` columns are assumed:
+ * three by default, the card grids' narrowest wide layout.
  *
  *   items    the rows to draw, in order: real free-tier rows or stand-ins.
  *   render   (rows) => the gallery's grid element for those rows.
+ *   tiles    the rows are panel tiles (components/library/VerticalPanelTile): the
+ *            first row is blurred inside each tile's picture, the second is
+ *            cut to part of a tile, and the height of one tile and the gap are
+ *            written to the enclosing block as --geg-tile-h and --geg-gap so
+ *            its CSS can size the fade and tuck the text under it.
+ *   initial  { cols, gap } to assume before the first measure.
  */
-export function GateFadeRows({ items, render }) {
+export function GateFadeRows({ items, render, tiles = false, initial = { cols: 3, gap: 24 } }) {
   const root = useRef(null)
-  const [fit, setFit] = useState({ cols: 3, gap: 24 })
+  const [fit, setFit] = useState(initial)
   useLayoutEffect(() => {
-    const grid = root.current?.querySelector('[data-row="0"]')?.firstElementChild
+    const row = root.current?.querySelector('[data-row="0"]')
+    const grid = (tiles && row?.querySelector('.vpt-cols')) || row?.firstElementChild
     if (!grid) return undefined
+    const block = tiles ? root.current.closest('.geg') : null
     const read = () => {
       const style = getComputedStyle(grid)
       const cols = Math.max(1, style.gridTemplateColumns.split(' ').filter(Boolean).length)
       const gap = parseFloat(style.rowGap) || 0
       setFit((prev) => (prev.cols === cols && prev.gap === gap ? prev : { cols, gap }))
+      if (block) {
+        const tile = grid.querySelector('.vpt')
+        if (tile) block.style.setProperty('--geg-tile-h', `${tile.offsetHeight}px`)
+        block.style.setProperty('--geg-gap', `${gap}px`)
+      }
     }
     read()
     if (typeof ResizeObserver === 'undefined') return undefined
     const watcher = new ResizeObserver(read)
     watcher.observe(grid)
     return () => watcher.disconnect()
-  }, [items])
+  }, [items, tiles])
   if (!items.length) return null
   const rows = [items.slice(0, fit.cols), items.slice(fit.cols, fit.cols * 2)].filter((row) => row.length)
   return (
-    <div ref={root} className="geg-rows" style={{ '--geg-gap': `${fit.gap}px` }}>
+    <div ref={root} className={`geg-rows${tiles ? ' geg-rows--tiles' : ''}`} style={{ '--geg-gap': `${fit.gap}px` }}>
       {rows.map((row, i) => <div key={i} className="geg-row" data-row={i}>{render(row)}</div>)}
     </div>
   )

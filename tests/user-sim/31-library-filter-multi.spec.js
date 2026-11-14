@@ -28,7 +28,7 @@ async function pressed(page) {
   )
 }
 
-const cardCount = (page) => page.locator('.lbry-grid .lbry-card').count()
+const cardCount = (page) => page.locator('.vpt-grid .vpt:not(.geg-fade *)').count()
 
 test.describe('library filter multi-select', () => {
   test.beforeEach(async ({ page }) => {
