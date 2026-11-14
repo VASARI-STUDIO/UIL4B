@@ -330,7 +330,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     >
       <div
         ref={dialogRef}
-        className={'pg-dialog' + (withPane ? '' : ' pg-nr')}
+        className={'pg-dialog' + (withPane ? '' : ' pg-nr') + (priceUnavailable ? ' is-out' : '')}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${uid}-title`}
