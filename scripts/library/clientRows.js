@@ -33,10 +33,16 @@ import {
   GALLERY_GRADIENTS,
   COMMUNITY_PROMPTS,
   GALLERY_PALETTES,
-  LIBRARIES,
+  LIBRARIES as SERVED,
 } from '../../api/_lib/library/data.js'
 
-export { LIBRARIES }
+// The libraries the browser holds a copy of. The Pro icon groups are served
+// too, but only to a Pro account and with no browser rows, so they are not here.
+export const LIBRARIES = Object.freeze({
+  palettes: SERVED.palettes,
+  gradients: SERVED.gradients,
+  prompts: SERVED.prompts,
+})
 
 /** The free tier's rows of a library, found with the page's own split. */
 export function freeSplit(kind, items = LIBRARIES[kind]) {

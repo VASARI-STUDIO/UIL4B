@@ -1,4 +1,6 @@
-// Record the real glyph data behind every icon in src/data/iconGroups.js.
+// Record the real glyph data behind every icon in the premade groups: the free
+// groups in src/data/iconGroups.js and the Pro groups' lists from the library
+// resolver (api/_lib/library/load.js).
 //
 //   node scripts/snapshot-icon-groups.mjs
 //
@@ -19,7 +21,8 @@
 import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PREMADE_ICON_GROUPS, parseIconRef } from '../src/data/iconGroups.js'
+import { parseIconRef, withProIcons } from '../src/data/iconGroups.js'
+import { resolveLibrary } from '../api/_lib/library/load.js'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(root, 'tests', 'unit', 'fixtures', 'icon-groups-snapshot.json')
@@ -67,9 +70,14 @@ function facts(data, name) {
   return null
 }
 
+const library = await resolveLibrary()
+if (library.source === 'fixtures' || library.source === 'missing') {
+  console.error(`the library source is "${library.source}": the Pro groups' real icon lists are needed`)
+  process.exit(1)
+}
 const byPack = new Map()
-for (const g of PREMADE_ICON_GROUPS) {
-  for (const ref of g.icons) {
+for (const g of withProIcons(library.PRO_ICON_GROUPS)) {
+  for (const ref of g.icons || []) {
     const { pack, name } = parseIconRef(ref)
     if (!byPack.has(pack)) byPack.set(pack, new Set())
     byPack.get(pack).add(name)
