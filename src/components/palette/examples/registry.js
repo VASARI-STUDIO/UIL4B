@@ -21,6 +21,12 @@ const LOADERS = {
   trail: () => import('./Ridgeline.jsx'),
   studio: () => import('./HaleOkoro.jsx'),
   card: () => import('./Tenner.jsx'),
+  booking: () => import('./Booking.jsx'),
+  email: () => import('./OrderEmail.jsx'),
+  report: () => import('./SalesReport.jsx'),
+  coffee: () => import('./CoffeeBag.jsx'),
+  shopfront: () => import('./Shopfront.jsx'),
+  stationery: () => import('./Stationery.jsx'),
 }
 
 export const hasExample = (id) => Object.hasOwn(LOADERS, id)

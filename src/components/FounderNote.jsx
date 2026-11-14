@@ -171,7 +171,10 @@ export default function FounderNote() {
 
             <div className="fnote-foot">
               <p className="fnote-sign">
-                {FOUNDER_SIGNATURE.name}
+                <a href={FOUNDER_SIGNATURE.url} target="_blank" rel="noopener noreferrer">
+                  {FOUNDER_SIGNATURE.name}<span aria-hidden="true"> ↗</span>
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
                 <span className="fnote-sign-place">{FOUNDER_SIGNATURE.place}</span>
               </p>
               {/* The feedback action uses the channel this app already has.

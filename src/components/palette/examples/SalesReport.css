@@ -1,0 +1,66 @@
+/* Sales report (SalesReport.jsx): a weekly report painted with the user's palette.
+ *
+ * Colour comes only from --pv-*, set by the dialog. The five brand colours are the five
+ * chart categories; one nearer than 3:1 to the page gets a 1px outline and its ratio in words.
+ * Layout is a container query on .pvs: the chart and direct labels from 880px, a fluid chart with
+ * the ratios in the table under 880px. Type: 11 / 12 / 13 / 14 / 16 / 44 / 56px, all Geist, which
+ * loads only when this example opens. */
+@font-face{font-family:'PV Geist';font-style:normal;font-weight:300 700;font-display:swap;src:url('/fonts/geist-latin.woff2') format('woff2')}
+
+.rp{
+  isolation:isolate;display:flex;flex-direction:column;min-height:100%;
+  background:var(--pv-canvas);color:var(--pv-text);
+  font-family:'PV Geist','Switzer Fallback',system-ui,sans-serif;font-size:14px;line-height:1.45;
+}
+.rp :where(p,i){margin:0;padding:0}
+.rp :where(*,*::before,*::after){box-sizing:border-box}
+
+.rp-top{display:flex;align-items:center;justify-content:space-between;flex:none;height:56px;padding:0 var(--s-7);border-bottom:1px solid var(--pv-border)}
+.rp-wk{font-size:16px;font-weight:600}
+.rp-co{font-size:13px;color:var(--pv-muted)}
+.rp-in{display:flex;flex-direction:column;gap:var(--s-5);padding:var(--s-5) var(--s-7) var(--s-6)}
+.rp-hero{display:flex;flex-direction:column;gap:var(--s-1)}
+.rp-fig{font-size:56px;font-weight:600;line-height:1.05;letter-spacing:-.025em;font-variant-numeric:proportional-nums}
+.rp-up{font-size:16px;color:var(--pv-success-ink)}
+
+.rp-chart{display:grid;grid-template-columns:40px minmax(0,632px);column-gap:var(--s-2)}
+.rp-axis{position:relative;height:248px}
+.rp-tk{position:absolute;right:0;transform:translateY(50%);font-size:12px;line-height:16px;color:var(--pv-muted)}
+.rp-cols{position:relative;height:248px;display:grid;grid-template-columns:repeat(7,56px);column-gap:40px;align-items:end}
+.rp-lines{position:absolute;left:0;right:0;bottom:0;height:220px}
+.rp-lines i{position:absolute;left:0;right:0;height:1px;background:var(--pv-border)}
+.rp-day{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.rp-tot{height:16px;margin-bottom:var(--s-1);font-size:12px;line-height:16px;color:var(--pv-muted)}
+.rp-stack{display:flex;flex-direction:column-reverse;gap:2px;width:56px}
+.rp-seg{display:block;flex:none;width:100%}
+.rp-c0{background:var(--pv-primary)}
+.rp-c1{background:var(--pv-secondary)}
+.rp-c2{background:var(--pv-accent)}
+.rp-c3{background:var(--pv-deep)}
+.rp-c4{background:var(--pv-subtle)}
+.rp-seg.is-edge,.rp-dot.is-edge,.rp-sw.is-edge{box-shadow:inset 0 0 0 1px var(--pv-border-strong)}
+.rp-lab{position:absolute;z-index:1;left:100%;display:flex;align-items:center;gap:var(--s-2);padding-left:var(--s-2);transform:translateY(50%);font-size:13px;line-height:16px;white-space:nowrap}
+.rp-dot{flex:none;width:10px;height:10px;border-radius:2px}
+.rp-fr{font-size:12px;color:var(--pv-muted)}
+.rp-dn{grid-column:2;display:grid;grid-template-columns:repeat(7,56px);column-gap:40px;margin-top:var(--s-2);font-size:12px;text-align:center;color:var(--pv-muted)}
+
+.rp-tb{display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+.rp-r{display:grid;grid-template-columns:minmax(0,1fr) 96px 64px 96px;column-gap:var(--s-4);align-items:center;min-height:32px;border-top:1px solid var(--pv-border)}
+.rp-r > :nth-child(n+2){text-align:right}
+.rp-rt{font-weight:600;border-top:1px solid var(--pv-border-strong)}
+.rp-rh{border-top:0;min-height:28px;font-size:12px;font-weight:500;color:var(--pv-muted)}
+.rp-nm{display:flex;align-items:center;gap:var(--s-3);min-width:0}
+.rp-sw{flex:none;width:12px;height:12px;border-radius:2px}
+.rp-trr{display:none;font-size:12px;color:var(--pv-muted)}
+
+@container pvs (max-width:879px){
+  .rp-top{padding-inline:var(--s-5)}
+  .rp-in{padding-inline:var(--s-5)}
+  .rp-fig{font-size:44px}
+  .rp-chart{grid-template-columns:32px minmax(0,1fr)}
+  .rp-cols,.rp-dn{grid-template-columns:repeat(7,minmax(0,1fr));column-gap:var(--s-2)}
+  .rp-stack{width:100%}
+  .rp-lab{display:none}
+  .rp-trr{display:inline}
+  .rp-r{grid-template-columns:minmax(0,1fr) 72px 48px 72px;column-gap:var(--s-2)}
+}

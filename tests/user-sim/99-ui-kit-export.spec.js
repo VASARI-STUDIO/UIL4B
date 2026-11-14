@@ -122,7 +122,7 @@ test.describe('the UI kit export', () => {
     await go(page, '/projects')
     await openProjectFromDashboard(page, 'Harbour')
     await expect(page.getByRole('heading', { level: 1, name: 'Harbour' })).toBeVisible()
-    await page.locator('.pjd-head-actions').getByRole('button', { name: 'Export project', exact: true }).click()
+    await page.locator('.pjv-rail').getByRole('button', { name: 'Export project', exact: true }).click()
     const panel = exportPanel(page)
     await expect(panel).toBeVisible()
     await chooseFormat(panel, 'kit')

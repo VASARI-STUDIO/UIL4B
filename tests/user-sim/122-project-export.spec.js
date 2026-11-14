@@ -20,7 +20,7 @@ for (const width of [390, 1440]) {
   test.describe(`saved project export at ${width}px`, () => {
     test.use({ viewport: { width, height: 900 }, hasTouch: true })
 
-    for (const [openerName, area] of [['the header Export project', '.pjd-head-actions'], ['the export bar Export project', '.pjd-export']]) {
+    for (const [openerName, area] of [['the header Export project', '.pjv-rail'], ['the export bar Export project', '.pjv-exb']]) {
       for (const input of ['mouse', 'touch', 'Enter']) {
         test(`${openerName} downloads a UI kit with ${input}`, async ({ page }) => {
           // The kit comes from the export route as a zip; a stand-in answers it and records what the dialog asked for.
