@@ -1,5 +1,6 @@
-// The export themes are data in src/config/exportFormats.js: ten looks, four
-// exports each, with the gate on every export. They are not export formats the
+// The export themes are data in src/config/exportFormats.js: ten Pro looks with
+// four exports each and the Free pair with the guidelines only, with the gate on
+// every export. They are not export formats the
 // panel can build, so nothing here may leak into EXPORT_FORMATS.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -19,61 +20,66 @@ import {
   themeById,
   themeExports,
 } from '../../src/config/exportFormats.js'
+import { FREE_UI_KIT_THEMES } from '../../src/data/exportThemes.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const MARKER = 'ships with the export themes'
 
-test('there are ten themes, under the folder ids the export engine reads', () => {
+test('there are twelve themes, under the folder ids the export engine reads', () => {
   assert.deepEqual(EXPORT_THEMES.map((t) => t.id), [
     '01-presentation', '02-poster', '03-broadsheet', '04-standards', '05-specimen',
-    '06-studio', '07-spec', '08-monograph', '09-blueprint', '10-inuse',
+    '06-studio', '07-spec', '08-monograph', '09-blueprint', '10-inuse', '25-label', '27-swissfield',
   ])
   assert.deepEqual(EXPORT_THEMES.map((t) => t.name), [
     'Presentation', 'Ticket', 'Broadsheet', 'Standards', 'Catalogue',
-    'Studio', 'Specification', 'Riso', 'Blueprint', 'In use',
+    'Studio', 'Specification', 'Riso', 'Blueprint', 'In use', 'Label', 'Swiss Field',
   ])
 })
 
 test('each theme names its sample brand, and no sample brand is a real company', () => {
   assert.deepEqual(EXPORT_THEMES.map((t) => t.brand), [
     'Kerbside', 'Encore', 'Saltbush', 'Two Shores', 'Margin',
-    'Offcut', 'Northern Current', 'Long Room', 'Plumbline', 'Shallow End',
+    'Offcut', 'Northern Current', 'Long Room', 'Plumbline', 'Shallow End', 'Margin', 'Northern Current',
   ])
   for (const file of ['src/config/exportFormats.js', 'src/config/planFacts.js']) {
     assert.ok(!/\b(Tally|Paddle)\b/.test(read(file)), `${file} names a retired sample brand`)
   }
 })
 
-test('only Standards and Specification are Free', () => {
-  assert.deepEqual(freeThemes().map((t) => t.id), ['04-standards', '07-spec'])
+test('only Label and Swiss Field are Free', () => {
+  assert.deepEqual(freeThemes().map((t) => t.id), ['25-label', '27-swissfield'])
   assert.equal(proThemes().length, EXPORT_THEMES.length - freeThemes().length)
   assert.ok(EXPORT_THEMES.every((t) => t.tier === 'free' || t.tier === 'pro'))
 })
 
-test('page shapes: three 16:9, one A4 landscape, six A4', () => {
+test('page shapes: four 16:9, one 5:4, one A4 landscape, six A4', () => {
   const shapes = Object.fromEntries(EXPORT_THEMES.map((t) => [t.id, t.shape]))
   assert.deepEqual(shapes, {
     '01-presentation': '16:9', '02-poster': '16:9', '03-broadsheet': '16:9',
     '04-standards': 'A4 landscape',
     '05-specimen': 'A4', '06-studio': 'A4', '07-spec': 'A4', '08-monograph': 'A4', '09-blueprint': 'A4', '10-inuse': 'A4',
+    '25-label': '5:4', '27-swissfield': '16:9',
   })
-  assert.deepEqual([...EXPORT_THEME_SHAPES], ['16:9', 'A4 landscape', 'A4'])
+  assert.deepEqual([...EXPORT_THEME_SHAPES], ['16:9', '5:4', 'A4 landscape', 'A4'])
 })
 
-test('every theme makes the same four exports, and only the UI kit is ever free', () => {
+test('the Pro themes make all four exports, the Free pair the guidelines only, and the free offer is counted', () => {
   assert.deepEqual(EXPORT_THEME_EXPORTS.map((e) => e.id), ['brand-kit', 'brand-guidelines', 'brand-book', 'ui-kit'])
   assert.deepEqual(EXPORT_THEME_EXPORTS.map((e) => e.name), ['Brand kit', 'Brand guidelines', 'HTML brand book', 'UI kit'])
   for (const t of EXPORT_THEMES) {
-    const made = themeExports(t.id)
-    assert.equal(made.length, 4, `${t.id} does not make four exports`)
-    for (const e of made) {
-      const free = e.id === 'ui-kit' && t.tier === 'free'
-      assert.equal(e.pro, !free, `${t.id} / ${e.id}: the gate is wrong`)
-    }
+    const made = themeExports(t.id).map((e) => e.id)
+    assert.deepEqual(made, t.tier === 'free' ? ['brand-guidelines'] : EXPORT_THEME_EXPORTS.map((e) => e.id), `${t.id} makes the wrong exports`)
   }
-  // The whole free offer, counted: two themes, one export each.
+  // The whole free offer: the Free pair's guidelines, and (interim) Standards' UI kit.
   const freePairs = EXPORT_THEMES.flatMap((t) => themeExports(t.id).filter((e) => !e.pro).map((e) => `${t.id}/${e.id}`))
-  assert.deepEqual(freePairs, ['04-standards/ui-kit', '07-spec/ui-kit'])
+  assert.deepEqual(freePairs, ['04-standards/ui-kit', '25-label/brand-guidelines', '27-swissfield/brand-guidelines'])
+  assert.equal(isThemeExportPro('07-spec', 'ui-kit'), true)
+  assert.equal(isThemeExportPro('25-label', 'ui-kit'), true, 'a theme without a UI kit cannot give one away')
+})
+
+test('the route data gives away the same UI kits as the client data', () => {
+  const gifted = EXPORT_THEMES.filter((t) => t.freeExports?.includes('ui-kit')).map((t) => t.id)
+  assert.deepEqual([...FREE_UI_KIT_THEMES], gifted)
 })
 
 test('isThemeExportPro and themeById refuse an id they do not know', () => {
@@ -94,8 +100,14 @@ test('the theme data is coherent, and the check refuses each way it can break', 
   assert.throws(() => assertThemesCoherent([{ ...t[0], tier: 'gold' }, ...t.slice(1)]), /have no tier/)
   assert.throws(() => assertThemesCoherent([{ ...t[0], shape: '4:3' }, ...t.slice(1)]), /unknown page shape/)
   assert.throws(() => assertThemesCoherent([{ ...t[0], brand: '' }, ...t.slice(1)]), /lack a name or sample brand/)
-  assert.throws(() => assertThemesCoherent(t, EXPORT_THEME_EXPORTS.map((e) => ({ ...e, proOnly: true }))), /every export needs Pro/)
-  assert.throws(() => assertThemesCoherent(t.map((x) => ({ ...x, tier: 'free' }))), /no Pro export theme/)
+  assert.throws(() => assertThemesCoherent(t, EXPORT_THEME_EXPORTS.map((e) => ({ ...e, proOnly: true }))), /every export they make needs Pro/)
+  assert.throws(() => assertThemesCoherent([{ ...t[0], makes: [] }, ...t.slice(1)]), /make an unknown export, or none/)
+  assert.throws(() => assertThemesCoherent([{ ...t[0], makes: ['nope'] }, ...t.slice(1)]), /make an unknown export, or none/)
+  assert.throws(() => assertThemesCoherent([{ ...t[0], freeExports: ['brand-book'] }, ...t.slice(1)]), /give away an export they cannot/)
+  assert.throws(() => assertThemesCoherent([{ ...t[0], freeExports: [] }, ...t.slice(1)]), /give away an export they cannot/)
+  assert.throws(() => assertThemesCoherent([{ ...t[0], freeExports: ['nope'] }, ...t.slice(1)]), /give away an export they cannot/)
+  assert.throws(() => assertThemesCoherent(t.map((x) => (x.tier === 'free' ? { ...x, freeExports: ['brand-guidelines'] } : x))), /give away an export they cannot/)
+  assert.throws(() => assertThemesCoherent(t.map((x) => ({ ...x, tier: 'free', freeExports: undefined }))), /no Pro export theme/)
   assert.throws(() => assertThemesCoherent(t, [...EXPORT_THEME_EXPORTS, EXPORT_THEME_EXPORTS[0]]), /duplicate export theme export id/)
 })
 
@@ -142,7 +154,7 @@ test('every theme line carries the one-line code comment', () => {
   ]) {
     assert.ok(commentAbove(facts, new RegExp(`^(?:export )?const ${name} =`)).includes(MARKER), `planFacts ${name} lacks the comment`)
   }
-  for (const name of ['freeUiKitLine', 'proDocumentsLine']) {
+  for (const name of ['freeThemedLine', 'proDocumentsLine']) {
     assert.ok(commentAbove(facts, new RegExp(`^export const ${name} =`)).includes(MARKER), `planFacts ${name} lacks the comment`)
   }
 })

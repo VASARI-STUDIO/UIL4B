@@ -2,7 +2,7 @@
 //
 // The UI kit and the book (PDF and HTML) take one of ten themes; the slides (PDF and HTML) take those ten and two more, Label and
 // Swiss Field, which draw the guidelines only. The Theme step shows the chosen theme and a Change button; Change opens a popover on
-// a wide window and a "Theme" sheet on a phone. A free account can have the UI kit in Standards and Specification and the
+// a wide window and a "Theme" sheet on a phone. A free account can have the UI kit in Standards (for now) and the
 // guidelines in Label and Swiss Field; every other row and theme is Pro. The files come from
 // POST /api/ai?export=document, which every test here answers itself (export-theme-mock.js), so what is checked is what the
 // dialog asks for, what it does with each answer, and what a person reads.
@@ -35,7 +35,7 @@ const THEMES = [
   ['09-blueprint', 'Blueprint'], ['10-inuse', 'In use'],
 ]
 const NAMES = THEMES.map(([, name]) => name)
-const FREE_KIT = ['Standards', 'Specification']
+const FREE_KIT = ['Standards']
 // The guidelines list: the ten, then the two guidelines-only themes, which are free.
 const GUIDE_NAMES = [...NAMES, 'Label', 'Swiss Field']
 const FREE_GUIDE = ['Label', 'Swiss Field']
@@ -103,7 +103,7 @@ async function pick(page, panel, name) {
 /* ── Free and Pro, per row and per theme ─────────────────────────────────── */
 
 test.describe('Free and Pro', () => {
-  test('a free account sees the UI kit open in Standards and Specification and Pro in the other eight', async ({ page }) => {
+  test('a free account sees the UI kit open in Standards and Pro in the other nine', async ({ page }) => {
     watch(page, 'a free account opening the theme list for the UI kit')
     const panel = await open(page, { plan: 'free', file: 'kit' })
     await expect(themeName(panel), 'a free account starts on a theme it can have').toHaveText('Standards')
@@ -137,7 +137,7 @@ test.describe('Free and Pro', () => {
       await pick(page, panel, name)
       await expect(themeTier(panel)).toHaveText('Pro')
       await expect(primaryButton(panel)).toHaveText('Unlock with Pro')
-      await expect(dockStatus(panel)).toHaveText('Pro theme. The UI kit is free in Standards and Specification.')
+      await expect(dockStatus(panel)).toHaveText('Pro theme. The UI kit is free in Standards. The guidelines are free in Label and Swiss Field.')
       await primaryButton(panel).click()
       await expect(page).toHaveURL(/\/(plans|checkout)(\?|$)/)
       expect(calls, 'a locked theme never reaches the route').toHaveLength(0)
@@ -167,8 +167,8 @@ test.describe('Free and Pro', () => {
       test(`free, ${file} in ${name}: the guidelines export with no lock`, async ({ page }) => {
         watch(page, `a free account on ${file} in ${name}, a guidelines-only theme`)
         const panel = await open(page, { plan: 'free', file, saved: false })
-        await expect(themeName(panel), 'a free account still starts on Standards, locked').toHaveText('Standards')
-        await expect(dockStatus(panel), 'the locked dock names the free themes').toHaveText(GUIDE_LOCK)
+        await expect(themeName(panel), 'a free account starts on the first theme the guidelines are free in').toHaveText(FREE_GUIDE[0])
+        await expect(themeTier(panel), 'and it opens unlocked').toHaveText('Free')
         await pick(page, panel, name)
         await expect(themeTier(panel)).toHaveText('Free')
         await expect(primaryButton(panel)).toHaveText(FILES[file].label)
@@ -460,7 +460,6 @@ test.describe('popover and sheet', () => {
 test.describe('what is asked for and what is saved', () => {
   const zipCases = [
     ['free', 'kit', 'Standards', '04-standards'],
-    ['free', 'kit', 'Specification', '07-spec'],
     ['pro', 'kit', 'Studio', '06-studio'],
     ['pro', 'book-html', 'Blueprint', '09-blueprint'],
     ['pro', 'guidelines-html', 'Riso', '08-monograph'],

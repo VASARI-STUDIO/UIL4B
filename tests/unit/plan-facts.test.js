@@ -70,7 +70,7 @@ test('Pro has six ticks, in the order the card prints them, and the checkout rea
   assert.equal(PRO_POINTS[2], 'Every palette, gradient, prompt and brand palette')
   assert.match(PRO_POINTS[3], /icons, in any size and line style$/)
   assert.equal(PRO_POINTS[4], 'Unlimited saved projects and custom icons')
-  assert.match(PRO_POINTS[5], /, with no “Made with UI L4B” line on anything$/)
+  assert.match(PRO_POINTS[5], /, and no “Made with UI L4B” line on anything$/)
   // Checkout builds its feature list straight from PRO_POINTS, so the card, the
   // modal, Settings and the checkout summary cannot differ.
   assert.match(code(SURFACES.checkout), /const FEATURES = PRO_POINTS\b/)
@@ -151,7 +151,7 @@ test('"no card needed" stays out of the surfaces that sell Pro, and cancelling i
 // ── The long-form lists and the export themes switch ─────────────────────────
 import {
   FREE_LINES, PRO_ROWS, PRO_ROWS_PHONE, PRO_PHONE_COLLAPSED_ROWS, PLANS_LEAD, THEME_FACTS,
-  STYLE_GUIDE_EXPORT_NAMES, PRO_EXPORT_NAMES, freeLines, proRows, proValue, plansLead, freeUiKitLine, proDocumentsLine, numberWord,
+  STYLE_GUIDE_EXPORT_NAMES, PRO_EXPORT_NAMES, freeLines, proRows, proValue, plansLead, freeThemedLine, proDocumentsLine, numberWord,
 } from '../../src/config/planFacts.js'
 import {
   EXPORT_GROUPS, EXPORT_THEMES, EXPORT_THEMES_LIVE, EXPORT_THEME_EXPORTS, freeThemes, proThemes,
@@ -161,21 +161,22 @@ import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 
 test('FREE_POINTS and PRO_POINTS keep their text while the themes are off, and name the themes when on', () => {
   const tail = `, and style guide exports in ${STYLE_GUIDE_EXPORT_NAMES}`
-  assert.equal(FREE_POINTS[2], `${freeUiKitLine(EXPORT_THEMES_LIVE)}${tail}`)
-  assert.equal(PRO_POINTS[5], `${proDocumentsLine(EXPORT_THEMES_LIVE)}, with no “Made with UI L4B” line on anything`)
+  assert.equal(FREE_POINTS[2], `${freeThemedLine(EXPORT_THEMES_LIVE)}${tail}`)
+  assert.equal(PRO_POINTS[5], `${proDocumentsLine(EXPORT_THEMES_LIVE)}, and no “Made with UI L4B” line on anything`)
   assert.equal(FREE_POINTS.length, 4)
   assert.equal(PRO_POINTS.length, 6)
   // Off: the exact lines /plans, Settings, the modal and checkout printed before the themes existed.
-  assert.equal(freeUiKitLine(false) + tail, `The UI kit${tail}`)
+  assert.equal(freeThemedLine(false) + tail, `The UI kit${tail}`)
   assert.equal(proDocumentsLine(false), PRO_EXPORT_NAMES)
-  assert.ok(!/export themes/.test(`${freeUiKitLine(false)} ${proDocumentsLine(false)}`))
+  assert.ok(!/export themes/.test(`${freeThemedLine(false)} ${proDocumentsLine(false)}`))
 })
 
 test('the switch turns the Free UI kit line and the Pro export rows, both ways', () => {
   const free = freeThemes()
   const freeNames = free.map((t) => t.name).join(' and ')
   assert.equal(freeLines(false)[2], 'The UI kit')
-  assert.equal(freeLines(true)[2], `The UI kit in ${free.length} export themes: ${freeNames}`)
+  // The Free pair's guidelines, then (interim) the UI kit that Standards still gives a free account.
+  assert.equal(freeLines(true)[2], `Brand guidelines in ${free.length} export themes: ${freeNames}, plus the UI kit in Standards`)
   assert.equal(freeLines(true).length, 8)
   assert.equal(freeLines(false).length, 8)
 
@@ -194,15 +195,16 @@ test('the switch turns the Free UI kit line and the Pro export rows, both ways',
   assert.equal(on[1].sub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free: ${proNames.slice(0, -1).join(', ')} and ${proNames.at(-1)}. Each has all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
   assert.equal(on[1].phoneSub, `${numberWord(proThemes().length).replace(/^./, (c) => c.toUpperCase())} more than Free, each with all ${numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length)} exports.`)
   assert.ok(on[1].phoneSub.length < on[1].sub.length)
-  const pages = EXPORT_THEME_EXPORTS.find((e) => e.id === 'brand-guidelines').guidelinesPages
-  assert.ok(on[2].sub.startsWith(`A ${pages}-page guidelines PDF`))
-  // The documents row names every export that is Pro in all themes, and not the free UI kit.
+  // The guidelines are free in the Free pair, so the documents row describes the UI kit and the book.
+  assert.ok(on[2].sub.startsWith('A UI kit with a code package and an example app'))
+  // The documents row names every export that is Pro in all themes.
   for (const e of EXPORT_THEME_EXPORTS.filter((x) => x.proOnly && !x.inside)) assert.ok(on[2].title.toLowerCase().includes(e.short), `the documents row leaves out ${e.id}`)
   // The brand kit has no panel row of its own; the documents row says it comes inside the brand book.
   assert.match(on[2].sub, /brand book[^.]*with the brand kit[^.]*inside/, 'the documents row no longer says where the brand kit is')
-  assert.ok(!/ui kit/i.test(on[2].title))
+  // The UI kit is Pro in every theme but Standards (interim), so the Pro row names it.
+  assert.equal(on[2].title, 'UI kit and brand book')
 
-  assert.match(plansLead(true), new RegExp(`all ${numberWord(EXPORT_THEMES.length)} export themes, brand guidelines`))
+  assert.match(plansLead(true), new RegExp(`all ${numberWord(EXPORT_THEMES.length)} export themes, the UI kit and brand book`))
   assert.match(plansLead(false), /client-ready books and decks/)
   assert.ok(!/export themes/.test(plansLead(false)))
 })
@@ -245,7 +247,7 @@ test('THEME_FACTS is worked out from the theme list', () => {
   assert.equal(THEME_FACTS.freeCount, freeThemes().length)
   assert.equal(THEME_FACTS.proCount + THEME_FACTS.freeCount, THEME_FACTS.count)
   assert.equal(THEME_FACTS.freeTag, `Free in ${freeThemes().length} themes`)
-  assert.equal(THEME_FACTS.uiKitNote, `The UI kit is free in ${numberWord(freeThemes().length)} of the ${numberWord(EXPORT_THEMES.length)} themes`)
+  assert.equal(THEME_FACTS.freeNote, `Brand guidelines are free in ${numberWord(freeThemes().length)} of the ${numberWord(EXPORT_THEMES.length)} themes, ${THEME_FACTS.freeNames}, and the UI kit in Standards`)
   assert.equal(THEME_FACTS.exportsPerThemeWord, numberWord(EXPORT_THEME_EXPORTS.filter((e) => !e.inside).length))
   assert.equal(PLANS_LEAD, plansLead(EXPORT_THEMES_LIVE))
 })
@@ -305,13 +307,13 @@ test('/plans, the homepage and Settings all name the export line “Made with UI
 // (PlansPageR3A, HomePlans, HomeExports boards).
 test('theme counts follow the board: numerals in labels, words in sentences', () => {
   // Labels and row titles: numerals.
-  assert.equal(PRO_ROWS[1].title, 'All 10 export themes')
+  assert.equal(PRO_ROWS[1].title, 'All 12 export themes')
   assert.equal(THEME_FACTS.freeTag, 'Free in 2 themes')
-  assert.equal(freeLines(true)[2], 'The UI kit in 2 export themes: Standards and Specification')
+  assert.equal(freeLines(true)[2], 'Brand guidelines in 2 export themes: Label and Swiss Field, plus the UI kit in Standards')
   // Running sentences: words.
-  assert.match(plansLead(true), /Pro is the full studio: all ten export themes, brand guidelines,/)
-  assert.match(PRO_ROWS[1].sub, /^Eight more than Free: Presentation, Ticket, Broadsheet, Catalogue, Studio, Riso, Blueprint and In use\./)
-  assert.match(PRO_ROWS[1].phoneSub, /^Eight more than Free, each with all \w+ exports\.$/)
-  assert.equal(THEME_FACTS.uiKitNote, 'The UI kit is free in two of the ten themes')
-  assert.equal(THEME_FACTS.countWord, 'ten')
+  assert.match(plansLead(true), /Pro is the full studio: all twelve export themes, the UI kit and brand book,/)
+  assert.match(PRO_ROWS[1].sub, /^Ten more than Free: Presentation, Ticket, Broadsheet, Standards, Catalogue, Studio, Specification, Riso, Blueprint and In use\./)
+  assert.match(PRO_ROWS[1].phoneSub, /^Ten more than Free, each with all \w+ exports\.$/)
+  assert.equal(THEME_FACTS.freeNote, 'Brand guidelines are free in two of the twelve themes, Label and Swiss Field, and the UI kit in Standards')
+  assert.equal(THEME_FACTS.countWord, 'twelve')
 })
