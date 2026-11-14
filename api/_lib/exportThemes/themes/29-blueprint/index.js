@@ -6,7 +6,7 @@ import { guidelines } from './guidelines.js';
 const spare = [100, 200, 300, 700, 900].map((weight) => ({ family: 'Commissioner', weight, stem: `Commissioner-${weight}`, q: 'Commissioner:wght@100;200;300;400;500;600;700;900' }));
 
 export const meta = {
-  id: '29-blueprint', name: 'Blueprint', tier: 'Pro', brand: 'plumbline',
+  id: '29-blueprint', name: 'Drawing Sheet', tier: 'Pro', brand: 'plumbline',
   guidelinesPage: { w: 1587, h: 1123 }, uikitPage: { w: 1587, h: 1123 },
   chrome: { family: 'Chivo', q: 'Chivo:wght@400;500', faces: [{ weight: 400, stem: 'Chivo-400' }, { weight: 500, stem: 'Chivo-500' }] },
   fonts: [{ family: 'Chivo Mono', weight: 400, stem: 'ChivoMono-400', q: 'Chivo+Mono:wght@400' }, ...spare],

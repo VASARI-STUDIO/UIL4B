@@ -20,7 +20,11 @@ export function baseline(stem, size, lh) {
 }
 // x where the ink of a line ends, from the text's origin (tracking in em, as outline() takes it)
 export const inkEnd = (stem, text, size, track = 0) => outline(loadFont(stem), text, size, track).x2;
-export const bodyStem = (ctx, w) => `${ctx.brand.fonts.body.file}-${w}`;
+// The body face nearest a weight, from the faces this build loads, so a weight the brand's files lack measures in the closest one it has
+export const bodyStem = (ctx, w) => {
+  const fs = ctx.faces.filter((f) => f.role === 'body' && f.style !== 'italic');
+  return (fs.find((f) => f.weight === w) || fs.reduce((a, b) => (Math.abs(b.weight - w) < Math.abs(a.weight - w) ? b : a))).stem;
+};
 // a day and its month never split across a line; used on copy that sets a date
 export const nb = (s) => String(s).replace(/\b(\d{1,2}) (January|February|March|April|May|June|July|August|September|October|November|December)\b/g, '$1 $2');
 // for flowing notes: also keeps "at 11:40" with the word before it, so a clock time never wraps alone

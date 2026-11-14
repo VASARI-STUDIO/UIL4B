@@ -3,7 +3,7 @@
 import { esc as A } from '../../engine/brand.js';
 import { outline } from '../../engine/logo.js';
 import { loadFont } from '../../engine/nodeFont.js';
-import { inkW, wrap, fitW, heaviest, displayStem, baseline, nb, nbt, specimen } from './measure.js';
+import { inkW, wrap, fitW, heaviest, displayStem, bodyStem, baseline, nb, nbt, specimen } from './measure.js';
 import { arts, artDoc, placePhoto, CLIP, hoardingScene, isCourier, photoFill } from './scenes.js';
 import { WEIGHT_NAMES, unusedWeights } from "./weights.js";
 import { phTight } from './ph.js';
@@ -173,7 +173,7 @@ ${own ? `<p class="a bn" style="left:${X}px;top:${Math.round(Y + H + 40)}px;widt
     const used = [...new Set([...F.body.weights, ...(F.display.family === F.body.family ? F.display.weights : [])])].sort((a, b) => a - b);
     // the whole family, so the weights the brand leaves out show beside the ones it uses (meta.fonts loads them); at 24 px if the row would pass 1459
     const all = [...new Set([...used, ...unusedWeights(F)])].sort((a, b) => a - b);
-    const rowW = (s) => all.reduce((n, w) => n + inkW(`${F.body.file}-${w}`, NAMES[w], s), 0) + 24 * (all.length - 1);
+    const rowW = (s) => all.reduce((n, w) => n + inkW(bodyStem(ctx, w), NAMES[w], s), 0) + 24 * (all.length - 1);
     const rowSize = all.length > used.length && rowW(28) > 1459 ? 24 : 28;
     const row = all.map((w) => `<span class="bn nw" style="font-weight:${w}${used.includes(w) ? '' : ';color:var(--faint)'}">${NAMES[w] || w}</span>`).join('');
     const fams = [...new Set([F.display.family, F.body.family, (F.mono || {}).family].filter(Boolean))];
