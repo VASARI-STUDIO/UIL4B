@@ -2,7 +2,7 @@
 import {
   A, U, row, px, nb, tokens, CHROME_STEMS, brandRoles, readable, nearPaper, block, rightText, advance, wrap, capRatio, lineOffset, folios,
   stick, tab, labelStripW, sceneCrop, printHtml, sceneImg, numberWord, weightName, spread, outline, loadFont, signSpec, photoAt,
-  hasPh,
+  hasPh, stemOf,
 } from './helpers.js';
 import { artKit } from './art.js';
 
@@ -166,7 +166,7 @@ export const guidelines = {
     let sb = 150;
     for (const w of [300, 400, 500, 600, 700]) {
       // the stem of each weight (a greyed one is an extra face index.js loads): the line is measured at its own weight, so its knockout fits it
-      const stem = (ctx.faces.find((f) => f.role === 'body' && f.style !== 'italic' && f.weight === w) || { stem: `${B.fonts.body.file}-${w}` }).stem;
+      const stem = stemOf(ctx, 'body', w);
       rc += block(T['b-stack'], { x: 42, w: 228, lines: [`${weightName(w)} ${w}`], widths: [advance(stem, 26, `${weightName(w)} ${w}`, 0)], baseline: sb, cls: 'b-stack', style: `font-weight:${w};color:${bw.includes(w) ? 'var(--ink)' : 'var(--unused)'};` }).html;
       // a weight the brand does not use says so in words, a little after its own name
       if (!bw.includes(w)) {
@@ -242,16 +242,28 @@ export const guidelines = {
     // verso: the logo at about 20 units wide; the zone around it is exactly the brand's clear share of the logo's height on all four sides, and
     // a dot is hidden only when it is inside the zone. The width gives way a pixel at a time until no zone edge lands within 3 px of a dot
     // centre (so no dot is cut in half), which keeps the drawn brackets equal to the figure in the line below them.
-    const lx = 99, lbot = row(18), share = lg.geo.unit / geo.colour.h;
+    // When no width alone does it (a logo of another shape), the logo may also sit up to 9 px off its dot (a whole dot pitch is 19 px).
+    let lx = 99, lbot = row(18);
+    const share = lg.geo.unit / geo.colour.h;
     const nearDot = (v, o) => { const d = ((v - o) % U + U) % U; return Math.min(d, U - d) < 3; };
-    let lw = 380, lh, pad, zone;
-    for (const dw of [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6]) {
-      lw = 380 + dw; lh = lw * geo.colour.h / geo.colour.w; pad = share * lh;
-      const x0 = Math.round(lx - pad), x1 = Math.round(lx + lw + pad), y0 = Math.round(lbot - lh - pad), y1 = Math.round(lbot + pad);
-      zone = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-      if (![x0, x1].some((v) => nearDot(v, 23)) && ![y0, y1].some((v) => nearDot(v, 17))) break;
-      if (dw === 6) throw new Error('logo page: no clear zone keeps every dot whole');
+    let lw = 380, lh, pad, zone, found = false;
+    const sweep = (n) => Array.from({ length: 2 * n + 1 }, (_, i) => (i % 2 ? -(i + 1) >> 1 : i >> 1));
+    for (const reach of [0, 9]) {
+      for (const dw of sweep(6)) {
+        lw = 380 + dw; lh = lw * geo.colour.h / geo.colour.w; pad = share * lh;
+        // each axis takes the smallest nudge that clears both of its zone edges
+        const nudge = (v0, v1, o) => sweep(reach).find((n) => !nearDot(Math.round(v0 + n), o) && !nearDot(Math.round(v1 + n), o));
+        const ox = nudge(99 - pad, 99 + lw + pad, 23), oy = nudge(row(18) - lh - pad, row(18) + pad, 17);
+        if (ox === undefined || oy === undefined) continue;
+        lx = 99 + ox; lbot = row(18) + oy;
+        const x0 = Math.round(lx - pad), x1 = Math.round(lx + lw + pad), y0 = Math.round(lbot - lh - pad), y1 = Math.round(lbot + pad);
+        zone = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+        found = true;
+        break;
+      }
+      if (found) break;
     }
+    if (!found) throw new Error('logo page: no clear zone keeps every dot whole');
     const frac = [[0.25, 'a quarter'], [1 / 3, 'a third'], [0.5, 'half']].find(([f]) => Math.abs(share - f) < 0.02);
     const shareText = frac ? frac[1] : `${Math.round(share * 100)}%`;
     let vc = box(lx, lbot, lw, 'colour', lg.html('colour', { width: lw, color: N.text }));

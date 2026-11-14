@@ -9,7 +9,7 @@
 //   digital          the product screen flat, a 1:1 cut of its form card, and the same laptop cropped wide, the whole room, as the proof
 // Coordinates are leaf-local (see helpers.js); every print edge lands on a dot and every baseline on a dot row. Every class here starts g5-.
 import {
-  A, U, px, tokens, brandRoles, readable, nearPaper, block, advance, wrap, fitLines, capRatio, weightName, stick, printHtml, sceneImg, spread, signSpec, photoAt,
+  A, U, px, tokens, brandRoles, readable, nearPaper, block, advance, wrap, fitLines, capRatio, weightName, stick, printHtml, sceneImg, spread, signSpec, photoAt, stemOf,
 } from './helpers.js';
 import { kitCss } from './lane-u1.js';
 import { artKit } from './art.js';
@@ -23,11 +23,7 @@ const snapUp = (n) => Math.ceil(n / U - 1e-6) * U;
 function artStyle(ctx) {
   const B = ctx.brand, W = ctx.weights, d = B.fonts.display, b = B.fonts.body;
   const stretch = d.stretch ? `font-stretch:${d.stretch}%;` : '';
-  const bodyStem = (w) => {
-    const f = ctx.faces.find((x) => x.role === 'body' && x.style !== 'italic' && x.weight === w);
-    if (!f) throw new Error(`g5: no body face at ${w}`);
-    return f.stem;
-  };
+  const bodyStem = (w) => stemOf(ctx, 'body', w);
   return {
     dStem: tokens(ctx)._displayStem, bodyStem,
     disp: (size, lh, color) => `font-family:'${d.family}',sans-serif;font-weight:${W.heading};${stretch}font-size:${size}px;line-height:${lh}px;color:${color};`,

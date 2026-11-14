@@ -90,6 +90,13 @@ export function advance(stem, size, text, track = 0) {
   if (!PH || !hasPh(text)) return advance0(stem, size, text, track);
   return String(text).split(PH_SENT).reduce((x, part) => x + (part.startsWith('') ? advance0(stem, Math.min(size, 20), slotText(part), track) + 0.6 * Math.min(size, 20) + 3 : part ? advance0(stem, size, part, track) : 0), 0);
 }
+// the stem of a brand face at a weight, or the nearest upright weight it loads (measuring only; the browser sets the real weight). A brand
+// loads only the weights it uses, so a page that asks for another weight must not look for a file the brand does not have.
+export function stemOf(ctx, role, weight) {
+  const fs = ctx.faces.filter((f) => f.role === role && f.style !== 'italic');
+  if (!fs.length) throw new Error(`no ${role} face`);
+  return (fs.find((f) => f.weight === weight) || [...fs].sort((a, b) => Math.abs(a.weight - weight) - Math.abs(b.weight - weight))[0]).stem;
+}
 // a control (button, choice, field value) prints the placeholder's label alone: measure that
 export function advanceLabel(stem, size, text, track = 0) {
   if (!PH || !hasPh(text)) return advance0(stem, size, text, track);

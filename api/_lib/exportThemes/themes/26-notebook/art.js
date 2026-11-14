@@ -1,6 +1,6 @@
 // Theme 26, Notebook: the brand's own art, drawn at real size and photographed into the scene library's mockups.
 // Every colour, face, size and word comes from the brand's data; the theme draws no art of its own.
-import { A, brandRoles, readable, wrap, advance, tokens } from './helpers.js';
+import { A, brandRoles, readable, wrap, advance, tokens, stemOf } from './helpers.js';
 
 // Which brand line each print carries, so that no line is printed more than twice in a book. The hero (primary), the second line on the
 // personality page (the first other line) and the sign (primary) are fixed; the clipboard sheet prefers the brand's own sample headline and the
@@ -18,7 +18,7 @@ export function artKit(ctx) {
   const B = ctx.brand, L = ctx.roles.light, W = ctx.weights, d = B.fonts.display, b = B.fonts.body, m = B.fonts.mono;
   const R = brandRoles(ctx), ground = R.ground.hex, cw = B.logo.colourways;
   const T = tokens(ctx), dStem = T._displayStem;
-  const bodyStem = (w) => ctx.faces.find((x) => x.role === 'body' && x.style !== 'italic' && x.weight === w).stem;
+  const bodyStem = (w) => stemOf(ctx, 'body', w);
   const quiet = readable(ctx, ground, [L.quiet, L.text], 'art quiet text');
   const stretch = d.stretch ? `font-stretch:${d.stretch}%;` : '';
   const disp = (size, lh, color, extra = '') => `font-family:'${d.family}',sans-serif;font-weight:${W.heading};${stretch}font-size:${size}px;line-height:${lh}px;color:${color};${extra}`;

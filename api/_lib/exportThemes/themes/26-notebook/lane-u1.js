@@ -18,7 +18,7 @@
 import {
   A, U, row, px, nb, tokens, readable, nearPaper, block, rightText, advance, wrap, capRatio, fitLines, folios, tab, labelStripW,
   dotsSvg, foldSvg, lineOffset,
-  hasPh,
+  hasPh, stemOf,
 } from './helpers.js';
 import { colourMap, tokenGroups, statusText } from '../../engine/tokens.js';
 import { componentsCss } from '../../engine/components.js';
@@ -31,12 +31,7 @@ export const ratioText = (ctx, a, b) => `${ctx.fmt(ctx.ratio(a, b))} : 1`;
 export const modeLabel = (mode) => (mode === 'dark' ? 'Dark' : 'Light');
 export const kitColours = (ctx, mode) => colourMap(ctx, mode);
 
-// the stem of a brand face at a weight, or the nearest upright weight it loads (measuring only; the browser sets the real weight)
-export function stemOf(ctx, role, weight) {
-  const fs = ctx.faces.filter((f) => f.role === role && f.style !== 'italic');
-  if (!fs.length) throw new Error(`no ${role} face`);
-  return (fs.find((f) => f.weight === weight) || [...fs].sort((a, b) => Math.abs(a.weight - weight) - Math.abs(b.weight - weight))[0]).stem;
-}
+export { stemOf };
 
 // a piece of label tape with no print under it, as on the guidelines spreads
 export function tapeLabel(T, x, y, text, big = false) {
@@ -287,17 +282,31 @@ export const uikit = {
     let vc = heroBlock(h, { x: 42, w: 475, baseline: row(Math.round((74 + h.cap - 17) / U)) }).html;
     const lastHero = row(Math.round((74 + h.cap - 17) / U)) + h.lh * (h.lines.length - 1);
     if (allOn) vc += block(T['b-body'], { x: 42, w: 380, baseline: lastHero + 2 * U, lines: wrap(T['b-body'].stem, 13, `Every gap and padding in the product is one of these, each a multiple of ${base} px.`, 380), cls: 'b-body' }).html;
-    // the squares stand on row 30 (y 587); their labels hang under them
-    const foot = 587, mono = T['c-mono'];
+    // the squares stand on row 30 (y 587); their labels hang under them. A run that would pass the margin wraps to a row of its own above,
+    // every square still at its true size (a project brand has nine steps, more than one row holds).
+    const bottom = 587, mono = T['c-mono'];
+    const runs = [[]];
     let x = 42;
     for (const s of sp) {
       const tok = `sp-${s.token.replace('space-', '')}`, lw = Math.max(advance(mono.stem, 11, tok), advance(mono.stem, 11, `${s.px} px`));
-      vc += `<div class="tape piece u1-sq" style="left:${x}px;top:${foot - s.px}px;width:${s.px}px;height:${s.px}px"></div>`
-        + block(mono, { x, w: Math.ceil(lw) + 4, baseline: foot + 2 * U, lines: [`${s.px} px`], cls: 'c-mono u1-ink' }).html
-        + block(mono, { x, w: Math.ceil(lw) + 4, baseline: foot + 3 * U, lines: [tok], cls: 'c-mono' }).html;
-      x = upCol(x + Math.max(s.px, lw) + 10);
+      let nx = upCol(x + Math.max(s.px, lw) + 10);
+      if (nx - 10 > 517 + U && runs[runs.length - 1].length) { runs.push([]); x = 42; nx = upCol(x + Math.max(s.px, lw) + 10); }
+      if (nx - 10 > 517 + U) throw new Error(`spacing: the squares run to ${nx}`);
+      runs[runs.length - 1].push({ s, tok, lw, x });
+      x = nx;
     }
-    if (x - 10 > 517 + U) throw new Error(`spacing: the squares run to ${x}`);
+    // the lowest run stands on the bottom row; each run above it stands clear of the labels of the run below (four rows between)
+    let foot = bottom;
+    for (let r = runs.length - 1; r >= 0; r--) {
+      for (const { s, tok, lw, x: sx } of runs[r]) {
+        vc += `<div class="tape piece u1-sq" style="left:${sx}px;top:${foot - s.px}px;width:${s.px}px;height:${s.px}px"></div>`
+          + block(mono, { x: sx, w: Math.ceil(lw) + 4, baseline: foot + 2 * U, lines: [`${s.px} px`], cls: 'c-mono u1-ink' }).html
+          + block(mono, { x: sx, w: Math.ceil(lw) + 4, baseline: foot + 3 * U, lines: [tok], cls: 'c-mono' }).html;
+      }
+      const top = foot - Math.max(...runs[r].map(({ s }) => s.px));
+      if (r === 0 && top < lastHero + 4 * U) throw new Error(`spacing: the squares reach up to ${top}, into the heading`);
+      foot = row(Math.floor((top - 4 * U - 17) / U));
+    }
     vc += noteUp(T, { x: 42, w: 380, last: 739, text: 'Squares at true size. The dots are 19 px apart.' });
 
     // the form: two fields in one group, then the button; inside gap is step 3, the gap between groups step 6, the padding step 5
