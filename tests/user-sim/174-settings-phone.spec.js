@@ -254,12 +254,14 @@ test.describe('settings on a phone: the back bar', () => {
 
   test('the All settings bar stays under the site header after a scroll', async ({ page }) => {
     watch(page, 'a person scrolling a long section on a phone')
+    await stubPrices(page)
     await signIn(page, { plan: 'free' })
     await go(page, '/settings')
-    await page.locator('#settab-language').click()
-    await expect(page.locator('#set-language')).toBeVisible()
+    // Plan and billing: the tallest section, so a wheel always moves it.
+    await page.locator('#settab-support').click()
+    await expect(page.locator('#set-support .sub-tier-pro')).toBeVisible()
 
-    const scrolled = await wheelToRest(page, 320, 'the Language section')
+    const scrolled = await wheelToRest(page, 320, 'the Plan and billing section')
     // POSITIVE CONTROL: the page moved, so a bar that stayed put was held there.
     expect(scrolled, 'the section did not scroll, so this proves nothing').toBeGreaterThan(100)
 
