@@ -591,10 +591,19 @@ test.describe('flow 4 — each live free format downloads under its own name', (
     await expect(exportPanel(page)).toBeVisible()
     await chooseFormat(page, 'guidelines')
     // The guidelines open on Label, a Free theme; a Pro theme is what locks the document.
+    // Under 1024 x 900 the list is folded under a "Theme: <name> · <brand>" row, which names the chosen theme; open it to pick.
     const themes = page.getByRole('radiogroup', { name: 'Theme' })
-    await expect(themes.getByRole('radio', { checked: true }), 'the guidelines open on a free theme').toHaveText(/^Label/)
+    const toggle = page.getByRole('button', { name: /^Theme:/ })
+    const folded = (await toggle.count()) > 0
+    if (folded) {
+      await expect(toggle, 'the guidelines open on a free theme').toHaveAccessibleName(/^Theme: Label\b/)
+      await toggle.click()
+    } else {
+      await expect(themes.getByRole('radio', { checked: true }), 'the guidelines open on a free theme').toHaveText(/^Label/)
+    }
     await themes.getByRole('radio', { name: /^Studio\b/ }).click()
-    await expect(themes.getByRole('radio', { checked: true })).toHaveText(/^Studio/)
+    if (folded) await expect(toggle).toHaveAccessibleName(/^Theme: Studio\b/)
+    else await expect(themes.getByRole('radio', { checked: true })).toHaveText(/^Studio/)
     await expect(page.locator('.xd-theme-lock'), 'the preview is locked').toHaveText(/Pro export/)
     // Slides is not tagged Pro in the rail: the theme decides, and the lock is on the preview and the button.
     await expect(categoryRadio(page, 'Slides'), 'the rail does not call the free document Pro').toHaveAccessibleName('Slides, Brand guidelines')
