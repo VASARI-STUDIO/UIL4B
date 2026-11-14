@@ -1,6 +1,6 @@
 // THE EXPORT DIALOG'S THEME STEP.
 //
-// The UI kit and the book (PDF and HTML) take one of fourteen themes; the slides (PDF and HTML) take those fourteen and two more, Label and
+// The UI kit and the book (PDF and HTML) take any theme in the THEMES list below; the slides (PDF and HTML) take those and two more, Label and
 // Swiss Field, which draw the guidelines only. The Theme step is a list in the dialog, one row per theme, and nothing opens or
 // closes: choosing a row changes the pictures at once. A free account sees the list in two groups, "Free" (the themes the file is
 // free in) then "In Pro", with no row tagged one by one; a Pro account, or one whose plan is still being read, sees one plain
@@ -29,18 +29,19 @@ import { MOTION_SETTINGS, MOTION_WIDTHS, motionState, chooseThemeWithKeys } from
 
 const ROUTE = '/projects/harbour/export'
 
-// The fourteen themes in the picker's order, and which of them a free account has the UI kit in.
+// The themes in the picker's order (a count in a message below is THEMES.length, never a word), and which of them a free account has the UI kit in.
 const THEMES = [
   ['01-presentation', 'Presentation'], ['02-poster', 'Ticket'], ['03-broadsheet', 'Broadsheet'], ['04-standards', 'Standards'],
   ['05-specimen', 'Catalogue'], ['06-studio', 'Studio'], ['07-spec', 'Specification'], ['08-monograph', 'Riso'],
-  ['09-blueprint', 'Blueprint'], ['10-inuse', 'In use'], ['24-standards', 'Standards Plate'], ['29-blueprint', 'Drawing Sheet'],
+  ['09-blueprint', 'Blueprint'], ['10-inuse', 'In use'], ['21-presentation', 'Keynote'], ['22-ticket', 'Stub'],
+  ['24-standards', 'Standards Plate'], ['28-riso', 'Print Shop'], ['29-blueprint', 'Drawing Sheet'],
   ['30-fluted', 'Fluted'], ['32-dieline', 'Dieline'],
 ]
 // The last theme in the UI kit list, where End lands.
 const LAST = THEMES[THEMES.length - 1][1]
 const NAMES = THEMES.map(([, name]) => name)
 const FREE_KIT = ['Standards']
-// The guidelines list: the fourteen, then the two guidelines-only themes, which are free.
+// The guidelines list: every theme above, then the two guidelines-only themes, which are free.
 const GUIDE_NAMES = [...NAMES, 'Label', 'Swiss Field']
 const FREE_GUIDE = ['Label', 'Swiss Field']
 const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label and Swiss Field.'
@@ -126,12 +127,12 @@ async function pick(panel, name) {
 /* ── Free and Pro, per row and per theme ─────────────────────────────────── */
 
 test.describe('Free and Pro', () => {
-  test('a free account sees the UI kit open in Standards, in a Free group, with the other thirteen in an In Pro group', async ({ page }) => {
+  test(`a free account sees the UI kit open in Standards, in a Free group, with the other ${THEMES.length - 1} in an In Pro group`, async ({ page }) => {
     watch(page, 'a free account reading the theme list for the UI kit')
     const panel = await open(page, { plan: 'free', file: 'kit' })
     await expect(chosenRow(panel), 'a free account starts on a theme it can have').toHaveText(/^Standards/)
     await expectTier(panel, 'Free')
-    expect(await groupsOf(panel), 'the free theme first, then the thirteen in Pro').toEqual(groupsFor('kit', true))
+    expect(await groupsOf(panel), `the free theme first, then the ${THEMES.length - 1} in Pro`).toEqual(groupsFor('kit', true))
     expect(await rowNames(panel)).toEqual([...FREE_KIT, ...NAMES.filter((n) => !FREE_KIT.includes(n))])
     await expect(themes(panel).locator('.xd-pro, .xd-free, .xd-theme-opt-r'), 'the group is the tier: no row is tagged').toHaveCount(0)
   })
@@ -206,7 +207,7 @@ test.describe('Free and Pro', () => {
   })
 
   // The group and the dock decide from the same file and theme: the UI kit is free in one theme, the guidelines in the two
-  // guidelines-only themes, and the book is Pro in all fourteen (so its list has an In Pro group only).
+  // guidelines-only themes, and the book is Pro in every theme (so its list has an In Pro group only).
   for (const file of Object.keys(FILES)) {
     const freeThemes = freeFor(file)
     const names = namesFor(file)
@@ -372,7 +373,7 @@ for (const setting of MOTION_SETTINGS) for (const { name: where, size } of MOTIO
 /* ── where the list sits ─────────────────────────────────────────────────── */
 
 test.describe('the list is in the dialog', () => {
-  test('at 1440 the fourteen rows sit in the dialog with no popover or Change button, and the preview is above the Theme step, above the File step', async ({ page }) => {
+  test(`at 1440 the ${THEMES.length} rows sit in the dialog with no popover or Change button, and the preview is above the Theme step, above the File step`, async ({ page }) => {
     watch(page, 'a designer on a wide window reading the theme list')
     const panel = await open(page, { plan: 'free', file: 'kit', size: { width: 1440, height: 900 } })
     await expect(page.locator('.xd-theme-pop, .xd-theme-sheet'), 'nothing opens over the dialog').toHaveCount(0)
@@ -383,7 +384,7 @@ test.describe('the list is in the dialog', () => {
       const rows = [...document.querySelectorAll('.xd-theme-opt')].map((r) => Math.round(r.getBoundingClientRect().height))
       return { left: list.left, right: list.right, card: { l: card.left, r: card.right }, rows }
     })
-    expect(box.rows, 'fourteen rows').toHaveLength(THEMES.length)
+    expect(box.rows, `${THEMES.length} rows`).toHaveLength(THEMES.length)
     for (const h of box.rows) expect(h, 'a row is a comfortable target').toBeGreaterThanOrEqual(40)
     expect(box.left, 'inside the dialog').toBeGreaterThanOrEqual(box.card.l)
     expect(box.right).toBeLessThanOrEqual(box.card.r)
