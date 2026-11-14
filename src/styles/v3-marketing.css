@@ -6,7 +6,7 @@
 
 .mkt {
   --mk-raised: var(--sp-card);
-  --mk-l2: var(--bg-3);
+  --mk-l2: var(--v3-l2);
   --mk-sec: var(--sp-dim);
   --mk-ter: var(--sp-faint);
   --mk-hair: var(--sp-line);
@@ -20,6 +20,12 @@
   color: var(--sp-ink);
   font-family: var(--hm-font, var(--font));
 }
+/* The ground and the card on the V3 roles. spectrum.css sets --sp-page and
+   --sp-card from the app's tokens for the homepage, /roadmap and /sitemap too,
+   so they are redeclared here, on the two-class root, rather than moved there.
+   Dark: #060607 and #0F1012 (the card was #111215). Light: the same #F5F5F2 and
+   #FFFFFF the sales sheet already used. */
+.spectrum.mkt { --sp-page: var(--v3-ground); --sp-card: var(--v3-raised); }
 [data-theme="light"] .mkt { --mk-edge: oklch(0 0 0 / .1); --mk-wash-2: rgba(var(--sp-ink-rgb), .06); }
 
 .mkt .mk-spacer { height: calc(var(--spnav-h, 92px) + var(--notice-h, 0px)); }
@@ -94,6 +100,14 @@
 .mkt .mk-art { flex: 1 1 auto; display: grid; min-height: 0; }
 .mkt.spt .spt-art--card { aspect-ratio: auto; height: 100%; min-height: 240px; max-height: 360px; background: var(--mk-l2); --plate: var(--mk-l2); }
 .mkt.spt .spt-art--thumb { --plate: var(--mk-l2); border-radius: 10px; outline-color: var(--mk-edge); }
+/* Semantic Colour thumb: the fourth role takes the group's hue like the circle
+   beside it (--fill), not the app's blue. */
+.mkt.spt .spt-role--accent { fill: var(--fill); }
+/* Voted is a wash of ink, never a fill (no blue; one filled pill per screen). */
+.mkt.spt .vote[type="button"][data-voted="true"] { background: var(--v3-rowhc); border-color: transparent; color: var(--v3-ink); }
+@media (hover: hover) {
+  .mkt.spt .vote[type="button"][data-voted="true"]:not([aria-disabled="true"]):hover { background: var(--v3-rowp); border-color: transparent; }
+}
 
 /* ── demos ── */
 .mkt .mk-demo { display: grid; gap: 16px; min-width: 0; align-content: start; }
