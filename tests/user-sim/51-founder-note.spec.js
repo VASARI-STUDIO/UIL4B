@@ -11,7 +11,7 @@
 // clamp cannot reach, and a wheel over the panel scrolling the panel rather than
 // the page Lenis is driving underneath it.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, wheelToRest } from './helpers.js'
 
 /**
  * Wait until the entrance animation has actually finished.
@@ -80,8 +80,7 @@ test.describe('the note waits to be asked for', () => {
     // that none of them exists.
     await page.waitForLoadState('load').catch(() => {})
     await page.waitForTimeout(1500)
-    await page.mouse.wheel(0, 4000)
-    await atRest(page)
+    await wheelToRest(page, 4000, 'the page after a long wheel on arrival')
 
     let s = await probe(page)
     expect(s.open, 'the panel must never open by itself').toBe(false)
@@ -310,14 +309,15 @@ test('a wheel over the note scrolls the note, not the page behind it', async ({ 
 
   const box = await page.locator('.fnote-body').boundingBox()
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-  await page.mouse.wheel(0, 400)
-  await page.waitForTimeout(500)
-
-  const after = await page.evaluate(() => ({
-    panel: document.querySelector('.fnote-body').scrollTop,
-    page: window.scrollY,
-  }))
-  expect(after.panel, 'the wheel must scroll the note').toBeGreaterThan(before.panel)
+  // The page is the thing that must NOT move, so its resting position is the
+  // reading to wait for. The note itself scrolls natively (Lenis is told to
+  // leave it alone) and may ease for a few frames, so it is polled, not slept on.
+  const pageAfter = await wheelToRest(page, 400, 'the page behind the note after a wheel over it')
+  await expect.poll(
+    () => page.evaluate(() => document.querySelector('.fnote-body').scrollTop),
+    { message: 'the wheel must scroll the note' },
+  ).toBeGreaterThan(before.panel)
+  const after = { page: pageAfter }
   expect(Math.abs(after.page - before.page), 'and must not move the page behind it').toBeLessThan(4)
 })
 
