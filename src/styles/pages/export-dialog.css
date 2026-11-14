@@ -131,9 +131,9 @@
 .xd-act:disabled{cursor:not-allowed}
 /* The wait after a 429: the primary stays a plain, readable button (aria-disabled, not disabled) with the countdown on it; onPrimary ignores the click. */
 .xd-primary[aria-disabled="true"],.xd-primary[aria-disabled="true"]:hover,.xd-primary[aria-disabled="true"]:active{background:var(--bg-2);color:var(--t1);border:1px solid var(--border);cursor:default}
-/* "Export another file": a text button beside Done, not a second outlined pill. Still 44px tall to tap. */
-.btn.xd-act--quiet,.btn.xd-act--quiet:hover,.btn.xd-act--quiet:active{background:none;border-color:transparent;text-decoration:underline!important;text-underline-offset:3px}
-@media (hover:hover){.btn.xd-act--quiet:hover{color:var(--t1)}}
+/* "Export another file": a ghost text button beside Done, not a second outlined pill, so it draws no chroma ring on hover and keeps the
+   plain focus outline. Still 44px tall to tap. The underline needs !important to beat .btn's text-decoration:none!important. */
+.btn.xd-act--quiet{text-decoration:underline!important;text-underline-offset:3px}
 
 /* The sign-in step: the account form in place of the dock's line and buttons. It scrolls inside a capped height, so the dock never takes the whole dialog, and the form keeps a readable width on the wide layouts. */
 .xd-dock--signin{display:block;min-height:0;padding-block:var(--s-4)}

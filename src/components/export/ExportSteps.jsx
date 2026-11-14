@@ -332,7 +332,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, retryI
           </button>
         )}
         {done && !busy && (
-          <button type="button" className="btn xd-act xd-act--quiet" onClick={onAnother}>
+          <button type="button" className="btn btn-ghost xd-act xd-act--quiet" onClick={onAnother}>
             Export another file
           </button>
         )}
