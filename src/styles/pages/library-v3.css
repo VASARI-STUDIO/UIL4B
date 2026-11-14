@@ -521,13 +521,15 @@ html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lb
 }
 .lib-surface.lib-v3[class] .vpt-band{flex:1 1 0;min-height:0}
 .lib-surface.lib-v3[class] .vpt-foot{display:flex;flex-direction:column;gap:2px;min-width:0;padding:12px 8px 8px}
+/* Name and meta wrap rather than cut: at 320 a column is 110px, and "Blue
+   Raspberry" or "Linear 135° · 2 stops" needs a few px more. */
 .lib-surface.lib-v3[class] .vpt-name{
-  margin:0;overflow:hidden;font-size:16px;font-weight:560;line-height:1.3;letter-spacing:0;color:var(--v3-ink);
-  text-overflow:ellipsis;white-space:nowrap;
+  margin:0;font-size:16px;font-weight:560;line-height:1.3;letter-spacing:0;color:var(--v3-ink);
+  overflow-wrap:anywhere;
 }
 .lib-surface.lib-v3[class] .vpt-meta{
-  margin:0;overflow:hidden;font-size:12px;line-height:1.4;color:var(--v3-sec);font-variant-numeric:tabular-nums;
-  text-overflow:ellipsis;white-space:nowrap;
+  margin:0;font-size:12px;line-height:1.4;color:var(--v3-sec);font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
 }
 /* The open button covers the tile; Like is the only thing above it. */
 .lib-surface.lib-v3[class] .vpt-open{

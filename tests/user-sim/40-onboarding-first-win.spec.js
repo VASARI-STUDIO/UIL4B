@@ -211,7 +211,7 @@ test.describe('onboarding stays signed-in only', () => {
     watch(page, 'reading the sign-up dialog')
     await go(page, '/discover/palettes')
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
-    await page.getByRole('button', { name: 'Create a free account' }).click()
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Create a free account' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await expect(dialog.getByText(/palettes, type scales and gradients/)).toBeVisible()
