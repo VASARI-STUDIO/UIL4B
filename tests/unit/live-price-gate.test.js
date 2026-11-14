@@ -228,19 +228,25 @@ test('the approved ladder still has a headline when no prices are passed (the st
 
 test('/checkout prints no rate until the chosen offer is available', () => {
   const page = stripComments(read('src/pages/Checkout.jsx'))
-  const note = page.slice(page.indexOf('const note ='), page.indexOf('const sessionInterval'))
-  assert.ok(note.length > 50, 'the note block was not found')
-  assert.match(note, /^const note = !proPrice\.loaded/, 'the note no longer waits for the prices to settle')
-  assert.doesNotMatch(note, /chosenOption\?\.months/, 'the rate branch is guarded by months alone again — "A$0.00/mo" before the prices land')
-  assert.ok(note.indexOf('!amount') < note.indexOf('chosenOption.months'), 'the rate branch comes before the available check')
+  const model = page.slice(page.indexOf('function billModel('), page.indexOf('function BillStops('))
+  assert.ok(model.length > 200, 'the bill model was not found')
+  // Every figure in the bill waits on `figures` and a numeric total; with none it prints a dash.
+  assert.ok(model.includes("const amt = figures && typeof offer.total === 'number' ? fmt(offer.total) : null"), 'the bill prints an amount without the figures gate')
+  assert.ok(!model.includes('fig: fmt('), 'a bill stop prints an amount without the figures gate')
+  // While the prices are being asked for, the other-period line says so instead of a rate.
+  assert.ok(model.includes('if (checking) otherLine = PRICE_CHECKING'), 'the other-period line prints a rate while the prices are loading')
+  // The page opens the gate only for a live price state and a chosen offer that has a total.
+  assert.ok(page.includes("const live = priceStatus === 'live'"), 'the bill no longer waits for a live price state')
+  assert.ok(page.includes('billModel({ offer: shown, other: live ? unshown : null, fmt, today, figures: live && shown.total !== null, checking })'), 'the bill is built without waiting for the chosen offer')
+  assert.ok(page.includes('total: found?.available ? found.total : null'), 'an unavailable offer still carries a total')
 })
 
 test('/checkout and Settings print no cadence suffix and no trial band beside an unavailable price', () => {
   const checkout = stripComments(read('src/pages/Checkout.jsx'))
   // The slot's word comes from the shared copy; the suffix and the band need an amount.
-  assert.match(checkout, /\{amount \|\| priceCopy\.word\}/, 'Checkout does not print the shared word when there is no amount')
-  assert.match(checkout, /\{amount && <span className="checkout-plan-per">\{plan\.per\}<\/span>\}/, 'Checkout prints "per month" beside a price that is not there')
-  assert.match(checkout, /\{plan\.trial && amount && \(\s*<div className="checkout-trial">/, 'Checkout shows the trial band without a live amount')
+  assert.match(checkout, /<p className="ck-fig">\{priceCopy\.word\}<\/p>/, 'Checkout does not print the shared word when there is no amount')
+  assert.doesNotMatch(checkout, /checkout-plan-per/, 'Checkout prints a cadence suffix beside a price that is not there')
+  assert.match(checkout, /const amount = chosenOption\?\.available/, 'Checkout builds the bill without a live amount')
   const settings = stripComments(read('src/pages/Settings.jsx'))
   assert.match(settings, /\{canCheckout\(priceStatus\) \? offer\.amountLabel : priceCopy\.word\}/, 'Settings does not print the shared word when the price is not live')
   assert.match(settings, /\{canCheckout\(priceStatus\) && <span className="sub-tier-per">per month<\/span>\}/, 'Settings prints "per month" beside a price that is not live')
@@ -276,7 +282,7 @@ test('/checkout and Settings take the outage from the shared priceState, with th
   }
   // The Retry is a state-driven button: Checkout in the summary, Settings in the Pro button slot.
   const checkout = stripComments(read('src/pages/Checkout.jsx'))
-  assert.match(checkout, /canRetryPrice\(priceStatus\) && \(\s*<button[\s\S]{0,400}?retry\(\)/, 'Checkout shows the outage without a Retry')
+  assert.match(checkout, /canRetryPrice\(priceStatus\) && priceStatus !== 'retrying'\) retry\(\)/, 'Checkout shows the outage without a Retry')
   const settings = stripComments(read('src/pages/Settings.jsx'))
   assert.match(settings, /className="btn btn-accent sub-tier-btn"[\s\S]{0,400}?retry\(\)/, 'Settings has no Retry in the Pro button slot')
   // The response that dead-ended both pages: 200, every cadence a fallback.
@@ -292,12 +298,12 @@ test('/checkout reads its amount and note from the ladder, with no per-cadence t
   assert.doesNotMatch(page, /planKey === '(monthly|quarterly|yearly)'/, 'a per-cadence ternary is back')
   assert.doesNotMatch(page, /proPrice\.(yearlyTotal|monthly|yearlyPerMonth|savingsPct)\b/)
   assert.match(page, /const amount = chosenOption\?\.available \? formatPrice\(chosenOption\.total, proPrice\.currency\) : null/)
-  assert.match(page, /BILLED_EVERY\[chosenOption/)
+  assert.match(page, /billModel\(/)
 })
 
 test('/checkout opens no payment form for a cadence with no live price', () => {
   const page = stripComments(read('src/pages/Checkout.jsx'))
-  const gate = page.indexOf(') : !canCheckout(priceStatus) || !amount ? (')
+  const gate = page.indexOf(': !canCheckout(priceStatus) || !amount')
   const embed = page.indexOf('<CheckoutEmbed fetchClientSecret')
   assert.ok(gate > 0, 'the unavailable-price branch is gone, or no longer waits for a live price state')
   assert.ok(gate < embed, 'the payment form is reachable without a live price state and an amount')
@@ -394,7 +400,7 @@ test('/plans shows the unavailable state as one more note state, with the recove
 
 test('/checkout announces a refusal and brings it into view', () => {
   const page = stripComments(read('src/pages/Checkout.jsx'))
-  assert.match(page, /className="checkout-error" role="alert" tabIndex=\{-1\} ref=\{errorRef\}/)
+  assert.match(page, /className="ck-bh" data-errfocus="1" tabIndex=\{-1\} ref=\{errorRef\}/)
   assert.match(page, /errorRef\.current\.scrollIntoView/)
 })
 

@@ -1,7 +1,6 @@
-// The shared upgrade popup is plain text: no uppercase mono label above the
-// title, no uppercase mono plan names, no tick before every feature line, and no
-// em dashes in its copy. These are source scans, because .jsx cannot be loaded
-// here; each one fails against the markup the popup had before this change.
+// The shared upgrade popup is plain text: no uppercase mono label, no eyebrow,
+// no em dashes in its copy, and the money lines say what is actually charged
+// and when. These are source scans, because .jsx cannot be loaded here.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -12,62 +11,51 @@ const SRC = path.join(process.cwd(), 'src')
 const read = (rel) => fs.readFileSync(path.join(SRC, rel), 'utf8').replace(/\r\n/g, '\n')
 
 const MODAL = stripJs(read('components/ProUpgradeModal.jsx'))
-const RAIL = stripJs(read('components/ProHarmonyPreview.jsx'))
-const CSS = read('styles/global.css').replace(/\/\*[\s\S]*?\*\//g, ' ')
+const CSS = read('styles/v3-pro-gate.css').replace(/\/\*[\s\S]*?\*\//g, ' ')
 
-// Every `.ui-pro*` rule in the sheet: { selector, body }. Rules inside an
+// Every `.pg-*` rule in the popup sheet: { selector, body }. Rules inside an
 // @media block match too, because a selector cannot contain `{`.
-const proRules = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+const rules = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
   .map(([, selector, body]) => ({ selector: selector.trim(), body }))
-  .filter(({ selector }) => /\.ui-pro/.test(selector))
+  .filter(({ selector }) => /\.pg-/.test(selector))
 
 test('the rule scan finds the popup rules at all', () => {
   // Positive control: every assertion below loops over these.
-  assert.ok(proRules.length >= 30, `only ${proRules.length} .ui-pro rules found; the scan is not parsing the sheet`)
+  assert.ok(rules.length >= 30, `only ${rules.length} .pg rules found; the scan is not parsing the sheet`)
 })
 
 test('the popup has no eyebrow and no feature ticks', () => {
-  assert.ok(!/ui-pro-eyebrow/.test(MODAL), 'the eyebrow element is back in the popup')
   assert.ok(!/\beyebrow\b/.test(MODAL), 'the popup reads an eyebrow option again')
-  assert.ok(!/Tick\b/.test(MODAL) && !/ui-pro-tick/.test(MODAL), 'a tick is back before the feature lines')
-  assert.ok(!proRules.some(({ selector }) => /ui-pro-(eyebrow|tick)/.test(selector)), 'CSS for the eyebrow or tick is back')
+  assert.ok(!/Tick\b/.test(MODAL) && !/pg-tick/.test(MODAL), 'a tick is back before the feature lines')
 })
 
 test('no popup label is uppercase', () => {
-  const upper = proRules.filter(({ body }) => /text-transform\s*:\s*uppercase/.test(body)).map((r) => r.selector)
+  const upper = rules.filter(({ body }) => /text-transform\s*:\s*uppercase/.test(body)).map((r) => r.selector)
   assert.deepEqual(upper, [], 'these popup rules uppercase their text')
 })
 
 test('mono in the popup is for literal values only', () => {
-  // The seed hex, a size in the subtitle and a size in a proof caption.
-  const allowed = new Set(['.ui-pro-rail-seed', '.ui-pro-sub code', '.ui-pro-proof-cap code'])
-  const mono = proRules
+  // A hex, the seed hex, a size in the subtitle and a size in a caption.
+  const allowed = new Set(['.pg-cap code, .pg-hex', '.pg-seed', '.pg-sub code'])
+  const mono = rules
     .filter(({ body }) => /font-family\s*:\s*var\(--mono\)/.test(body))
-    .map((r) => r.selector)
+    .map((r) => r.selector.replace(/\s+/g, ' '))
     .filter((s) => !allowed.has(s))
   assert.deepEqual(mono, [], 'these popup rules set a label or caption in mono')
 })
 
-test('the plan names and the saving are sans, in sentence case', () => {
-  const name = proRules.find((r) => r.selector === '.ui-pro-plan-name')
-  assert.ok(name, 'no .ui-pro-plan-name rule')
-  assert.match(name.body, /font-size\s*:\s*15px/)
-  assert.match(name.body, /font-weight\s*:\s*560/)
-  assert.ok(!/--mono|uppercase/.test(name.body), 'the plan name is mono or uppercase again')
-  assert.ok(/Save \{save\}%/.test(MODAL), 'the saving no longer reads "Save N%"')
+test('the saving reads "Save N%" and the popup copy has no em dash', () => {
+  assert.ok(/Save \$\{save\}%/.test(MODAL), 'the saving no longer reads "Save N%"')
+  assert.ok(!/[—]|&mdash;/.test(MODAL), 'ProUpgradeModal.jsx prints an em dash')
 })
 
-test('the popup copy has no em dash', () => {
-  for (const [name, code] of [['ProUpgradeModal.jsx', MODAL], ['ProHarmonyPreview.jsx', RAIL]]) {
-    assert.ok(!/[—]|&mdash;/.test(code), `${name} prints an em dash`)
-  }
-})
-
-test('the steps and the default subtitle use colons and full stops', () => {
-  assert.match(MODAL, /<strong>Today:<\/strong> create your account and confirm payment details\./)
-  assert.match(MODAL, /<strong>Days 1 to \{choice\.trialDays\}:<\/strong> full Pro access\. Nothing is charged\./)
-  // The charge lands the day after the last free day, so no day is both.
-  assert.match(MODAL, /<strong>Day \{choice\.trialDays \+ 1\}:<\/strong> \{money\(choice\.total, choice\)\} is charged, then /)
+test('the money lines say what is charged and when', () => {
+  assert.match(MODAL, /label: 'Today', fig: money\(0, plan\)/)
+  assert.match(MODAL, /The first payment, for \$\{span\}\./)
+  // A yearly line is "nothing more to pay", never "free".
+  assert.match(MODAL, /Nothing more to pay for \$\{plan\.months\} months\./)
+  assert.ok(!/12 months[^`']*\bfree\b/i.test(MODAL), 'a yearly line calls the year free')
+  assert.match(MODAL, /Monthly has no trial, so the first payment is taken today\./)
   assert.match(MODAL, /Keep every tool open and every export clean\. Free stays free\. Pro removes the limits\./)
 })
 
@@ -80,9 +68,8 @@ test('the three icon gates have their own titles', () => {
   assert.match(MODAL, /subtitle = gateCopy\.subtitle \|\| /)
 })
 
-test('proof takes the rail slot only where there is no rail, and only when passed', () => {
-  assert.match(MODAL, /const showProof = !showColourRail && !!proof/)
-  assert.match(MODAL, /\{showProof && <div className="ui-pro-proof">\{proof\}<\/div>\}/)
-  // No proof, no colour rail: the single-column layout, as before.
-  assert.match(MODAL, /showColourRail \? '' : showProof \? ' ui-pro--proof' : ' ui-pro--norail'/)
+test('every pill goes to /plans, never to checkout', () => {
+  assert.match(MODAL, /\/plans\?plan=/)
+  assert.ok(!/['"`]\/checkout/.test(MODAL), 'the popup sends people to /checkout directly')
+  assert.match(MODAL, /Opening plans…/)
 })

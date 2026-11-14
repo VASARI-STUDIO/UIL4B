@@ -1,14 +1,15 @@
 // A NEW ACCOUNT'S FIRST PALETTE: the builder's coach (S3), and the dashboard's part in it.
 //
 // The coach (components/PaletteCoach.jsx, rules in utils/paletteCoach.js) opens only on router state
-// { firstPalette: true }. The one link that sends it today is the palette card on /onboarding; the
-// dashboard (/projects) used to carry a "Make your first palette" card and no longer does, so this spec
-// reaches the builder the way a new person does: through the onboarding card. A direct go() to
-// /create/palette sends no state.
+// { firstPalette: true }. Nothing on the site sends that state any more: the onboarding kit builder
+// saves the kit and opens the builder plain, and the dashboard (/projects) no longer carries a "Make
+// your first palette" card. The coach itself is still in the builder, so this spec reaches it the way
+// a link would, by pushing the same history entry (arriveWithState), and holds that the kit builder
+// does NOT turn it on. A direct go() to /create/palette sends no state.
 //
 //   · THE DASHBOARD: no first-palette card on /projects, whatever the account holds; its own link to the
 //     Palette Builder opens the builder with no coach.
-//   · THE COACH: onboarding -> builder shows it. Beat 1 rings the seed chip and moves on when the seed
+//   · THE COACH: the router state -> builder shows it; Save from the onboarding kit does not. Beat 1 rings the seed chip and moves on when the seed
 //     changes (by hand or Randomise), never on mount; Next moves it on too. Both beats are one
 //     height. It sits on the adjust bar, not under the phone tab bar.
 //   · STOPPING: the X, Hide tips and Escape each write vs-palette-coach=1 and it never returns;
@@ -75,16 +76,13 @@ function errorsOf(page) {
   return seen
 }
 
-/** Signed in with nothing saved, through the onboarding palette card into the builder, coach up. */
-async function arriveFromOnboarding(page, opts = {}) {
-  await signIn(page, { plan: 'free', projects: 0, onboarded: false, ...opts })
-  await go(page, '/onboarding')
-  await page.locator('[data-first-win="palette"]').click()
-  await expect(page).toHaveURL(/\/create\/palette$/)
+/** Signed in with nothing saved, into the builder with the coach's router state, coach up. */
+async function arriveWithCoach(page, opts = {}) {
+  await signIn(page, { plan: 'free', projects: 0, ...opts })
+  await arriveWithState(page, '/projects')
   // The URL changes before the lazy route has mounted: until it has, `main` holds the loading
-  // status and the coach is not in the page. Wait for the route itself (the suite's readiness
-  // wait), not for the coach inside the default 5s.
-  await expectRendered(page, '/create/palette')
+  // status and the coach is not in the page. arriveWithState waits for the route itself (the
+  // suite's readiness wait), so the coach is waited for only after that.
   await expect(coach(page)).toBeVisible()
   await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
   await entered(page)
@@ -154,9 +152,27 @@ test.describe('the first-palette coach', () => {
     expect(await stored(page), 'a render wrote the dismissal').toBeNull()
   })
 
-  test('the onboarding card opens the builder with beat 1 up, and nothing is written to storage', async ({ page }) => {
-    watch(page, 'a new account arriving from the onboarding card')
-    await arriveFromOnboarding(page)
+  test('Save to my projects on the onboarding kit opens the builder with no coach', async ({ page }) => {
+    // The kit is the first palette now: it is saved by the time the builder opens, so there is nothing
+    // left for the tips to ask. Nothing is written to storage either.
+    watch(page, 'a new account saving its kit on onboarding')
+    await signIn(page, { plan: 'free', projects: 0, onboarded: false })
+    await go(page, '/onboarding')
+    await page.locator('#onb-hex').fill('#3a6ea5')
+    await page.locator('[data-go]').click()
+    await page.locator('[data-go]').click()
+    await expect(page.locator('[data-go]')).toContainText('Save to my projects')
+    await page.locator('[data-go]').click()
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expectRendered(page, '/create/palette')
+    await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
+    await expect(coach(page), 'the kit builder sent the coach state').toHaveCount(0)
+    expect(await stored(page), 'a visit wrote the dismissal').toBeNull()
+  })
+
+  test('the coach state opens the builder with beat 1 up, and nothing is written to storage', async ({ page }) => {
+    watch(page, 'a new account arriving with the coach state')
+    await arriveWithCoach(page)
     await expect(coach(page).getByRole('heading', { name: 'Make it yours' })).toBeVisible()
     await expect(count(page)).toHaveText('1 of 2')
     await expect(coach(page)).toContainText('Change the first colour to your brand colour. Every other colour updates with it.')
@@ -167,7 +183,7 @@ test.describe('the first-palette coach', () => {
 
   test('it does not move on from beat 1 on its own', async ({ page }) => {
     watch(page, 'a new account looking at beat 1 without touching the board')
-    await arriveFromOnboarding(page)
+    await arriveWithCoach(page)
     const seed = await readSeed(page)
     // Several frames after the board has painted and the toolbar has settled.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))))
@@ -177,7 +193,7 @@ test.describe('the first-palette coach', () => {
 
   test('beat 1 moves to beat 2 when the seed is edited', async ({ page }) => {
     watch(page, 'a new account typing its brand colour')
-    await arriveFromOnboarding(page)
+    await arriveWithCoach(page)
     await setSeed(page, '#E0422B')
     await expect(count(page)).toHaveText('2 of 2')
     await expect(coach(page).getByRole('heading', { name: 'Keep it' })).toBeVisible()
@@ -188,14 +204,14 @@ test.describe('the first-palette coach', () => {
 
   test('beat 1 moves to beat 2 on Randomise', async ({ page }) => {
     watch(page, 'a new account pressing Randomise')
-    await arriveFromOnboarding(page)
+    await arriveWithCoach(page)
     await clickPaletteAction(page, 'Randomise')
     await expect(count(page)).toHaveText('2 of 2')
   })
 
   test('Next moves to beat 2 without an edit', async ({ page }) => {
     watch(page, 'a new account happy with the first draw')
-    await arriveFromOnboarding(page)
+    await arriveWithCoach(page)
     const seed = await readSeed(page)
     await coach(page).getByRole('button', { name: 'Next' }).click()
     await expect(count(page)).toHaveText('2 of 2')
@@ -209,7 +225,7 @@ test.describe('the first-palette coach', () => {
     test(`${size.width}px: beat 1's ring is on a control the person can see`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a new account reading beat 1 on a ${size.name}`)
-      await arriveFromOnboarding(page)
+      await arriveWithCoach(page)
       const seed = page.locator('.plb .plb-seedchip')
       const onRow = (await seed.count()) > 0 && await seed.first().isVisible()
       if (size.width >= 768) expect(onRow, 'the seed chip is on the toolbar row from 768px up').toBe(true)
@@ -234,7 +250,7 @@ test.describe('the first-palette coach', () => {
     test(`${size.width}px: the coach is clear of the phone tab bar and its buttons can be pressed`, async ({ browser }) => {
       const { context, page } = await open(browser, size)
       watch(page, `a new account reading the coach on a ${size.name}`)
-      await arriveFromOnboarding(page)
+      await arriveWithCoach(page)
       const tabs = page.locator('.pnav-tabs')
       const phoneTabs = (await tabs.count()) > 0 && await tabs.first().isVisible()
       expect(phoneTabs, 'the tab bar is only on a phone').toBe(size.width < 768)
@@ -259,7 +275,7 @@ test.describe('the first-palette coach', () => {
       test(`${size.width}px ${theme}: both beats are one height and one place, on the adjust bar, and the toolbar does not move`, async ({ browser }) => {
         const { context, page, mobile } = await open(browser, size, theme)
         watch(page, `a new account in the builder on a ${size.name}, ${theme}`)
-        await arriveFromOnboarding(page)
+        await arriveWithCoach(page)
 
         const bar1 = await rect(toolbar(page))
         const one = await rect(coach(page))
@@ -309,7 +325,7 @@ test.describe('the first-palette coach', () => {
   ]) {
     test(`${how} closes it for good`, async ({ page }) => {
       watch(page, `a new account dismissing the coach with ${how}`)
-      await arriveFromOnboarding(page)
+      await arriveWithCoach(page)
       expect(await stored(page)).toBeNull()
       await act(page)
       await expect(coach(page)).toHaveCount(0)
@@ -320,8 +336,7 @@ test.describe('the first-palette coach', () => {
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
       await expect(coach(page)).toHaveCount(0)
 
-      // And asked for again (the same router state the onboarding card sends): the coach stays gone. The
-      // onboarding page itself does not offer the card a second time, so the state is sent by hand.
+      // And asked for again (the same router state, sent by hand): the coach stays gone.
       await arriveWithState(page, '/projects')
       await expect(page).toHaveURL(/\/create\/palette$/)
       await expectRendered(page, '/create/palette')
@@ -333,7 +348,7 @@ test.describe('the first-palette coach', () => {
 
   test('Escape is ignored while the seed picker is open', async ({ page }) => {
     watch(page, 'a new account pressing Escape inside the colour picker')
-    await arriveFromOnboarding(page)
+    await arriveWithCoach(page)
     await page.locator('.plb .plb-seedchip').click()
     const picker = page.getByRole('dialog', { name: 'Pick seed colour' })
     await expect(picker).toBeVisible()
@@ -349,7 +364,7 @@ test.describe('the first-palette coach', () => {
 
   test('Escape is ignored while the save menu is open', async ({ page }) => {
     watch(page, 'a new account pressing Escape in the save menu')
-    await arriveFromOnboarding(page)
+    await arriveWithCoach(page)
     await coach(page).getByRole('button', { name: 'Next' }).click()
     await coach(page).getByRole('button', { name: 'Save palette' }).click()
     await expect(page.locator('.plb-savemenu')).toBeVisible()
@@ -366,9 +381,8 @@ test.describe('the first-palette coach', () => {
       const { context, page, mobile } = await open(browser, size, 'light', { isMobile: false, hasTouch: false })
       watch(page, `a new account saving its first palette on a ${size.name}`)
       const errors = errorsOf(page)
-      const account = await signIn(page, { plan: 'free', projects: 0, onboarded: false })
-      await go(page, '/onboarding')
-      await page.locator('[data-first-win="palette"]').click()
+      const account = await signIn(page, { plan: 'free', projects: 0 })
+      await arriveWithState(page, '/projects')
       await expect(coach(page)).toBeVisible()
       await expect(toolbar(page)).not.toHaveClass(/is-measuring/)
 
@@ -426,14 +440,14 @@ test.describe('the first-palette coach', () => {
   test('reduced motion fades the coach in and never moves it', async ({ browser }) => {
     const calm = await open(browser, SIZES[2], 'light', { reducedMotion: 'reduce' })
     watch(calm.page, 'a new account that asked for reduced motion')
-    await arriveFromOnboarding(calm.page)
+    await arriveWithCoach(calm.page)
     expect(await coach(calm.page).evaluate((el) => getComputedStyle(el).animationName), 'reduced motion still slides').toBe('plb-coach-fade')
     await calm.context.close()
 
     // The positive control: without the preference it rises.
     const lively = await open(browser, SIZES[2], 'light', { reducedMotion: 'no-preference' })
     watch(lively.page, 'a new account with no motion preference')
-    await arriveFromOnboarding(lively.page)
+    await arriveWithCoach(lively.page)
     expect(await coach(lively.page).evaluate((el) => getComputedStyle(el).animationName)).toBe('plb-coach-in')
     await lively.context.close()
   })
@@ -441,7 +455,7 @@ test.describe('the first-palette coach', () => {
   test('the whole path runs without a console error', async ({ page }) => {
     watch(page, 'a new account walking the coach end to end')
     const errors = errorsOf(page)
-    await arriveFromOnboarding(page)
+    await arriveWithCoach(page)
     await setSeed(page, '#2B8AE2')
     await expect(count(page)).toHaveText('2 of 2')
     await page.keyboard.press('Escape')

@@ -61,7 +61,7 @@ test.describe('reaching /plans from the marketing pages', () => {
 })
 
 test.describe('the upgrade button, reached from a marketing page', () => {
-  test('signed out, it opens the login popup on /plans and keeps the checkout for afterwards', async ({ page }) => {
+  test('signed out, it opens the Pro sign-up layer on /plans', async ({ page }) => {
     watch(page, PERSONA)
     await page.setViewportSize({ width: 1440, height: 900 })
     await stubPrices(page)
@@ -71,11 +71,14 @@ test.describe('the upgrade button, reached from a marketing page', () => {
     await expect(proCta(page)).toHaveAttribute('href', '/checkout?plan=yearly')
     await proCta(page).click()
     await expect(page.locator('#ui-login-title')).toBeVisible()
-    await expect(page).toHaveURL(/\/plans$/)
+    // The Pro sign-up layer keeps its step in the URL.
+    await expect(page).toHaveURL(/\/plans\?up=1$/)
+    // A sign-up in the layer skips onboarding: its last step hands off to the
+    // chosen checkout itself, so nothing is stashed for after onboarding.
     expect(
       await page.evaluate(() => sessionStorage.getItem('vs-resume-after-onboarding')),
-      'a new account would not come back to the checkout it chose',
-    ).toBe('/checkout?plan=yearly')
+      'the layer left a resume stash for a flow that skips onboarding',
+    ).toBeNull()
   })
 
   test('signed in on the free plan, the closing button on /tools goes through /plans to checkout', async ({ page }) => {

@@ -1,0 +1,239 @@
+/* Sign-up, sign-in and the Pro sign-up layer: one design in three forms.
+   The form (.auth-form-root) is shared; .pf is the full-screen frame used by
+   /login and the Pro layer, .pp is the popup. Colours come from the V3 tokens
+   so light and dark both work. Rules lead with :root to out-rank auth.css
+   whatever order the sheets load in. */
+
+/* ---- Form ---------------------------------------------------------------- */
+:root .auth-form-root{--ctl:44px;--ctl-pill:52px;font-family:var(--font);color:var(--v3-ink)}
+@media(max-width:767px){:root .auth-form-root{--ctl:48px}}
+
+:root .auth-form-root .auth-swap--in{animation:pa-step-in 200ms var(--v3-ease)}
+@keyframes pa-step-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+:root .auth-form-root .auth-title{margin:0;padding-right:0;font-size:32px;line-height:1.1;font-weight:600;letter-spacing:-.03em;color:var(--v3-ink);text-wrap:balance}
+:root .auth-form-root .auth-title:focus-visible{outline:none}
+:root .auth-form-root .auth-sub{margin:8px 0 0;max-inline-size:40ch;font-size:16px;line-height:1.55;color:var(--v3-sec);text-wrap:pretty}
+:root .auth-form-root .auth-sub strong{color:var(--v3-ink);font-weight:600}
+:root .auth-form-root .auth-body{margin-top:24px}
+@media(max-width:767px){:root .auth-form-root .auth-title{font-size:28px}}
+@media(max-width:359px){:root .auth-form-root .auth-title{font-size:26px}}
+
+/* The only mono: an email or file name inside a sentence. */
+.auth-mono{font-family:var(--font);font-size:13px;letter-spacing:0;color:var(--v3-ink);overflow-wrap:anywhere}
+
+:root .auth-form-root .auth-why-h{color:var(--v3-ink)}
+:root .auth-form-root .auth-list{color:var(--v3-sec)}
+:root .auth-form-root .auth-list li::before{background:var(--v3-t56)}
+
+/* Errors and notes: a coloured line, no fill, no pill. */
+:root .auth-form-root .auth-msg{display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;font-size:14px;line-height:1.5;color:var(--v3-sec)}
+:root .auth-form-root .auth-msg svg{flex:none;width:16px;height:16px;margin-top:3px}
+:root .auth-form-root .auth-msg--err{color:var(--danger)}
+:root .auth-form-root .auth-msg--err svg{color:var(--danger)}
+:root .auth-form-root .auth-msg--quiet{color:var(--v3-sec)}
+:root .auth-form-root .auth-inline{background:none;border:0;padding:0;font:inherit;font-weight:500;color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+:root .auth-form-root .auth-msg--err .auth-inline{color:var(--danger)}
+
+/* Continue with Google: the ink pill on step 1. */
+:root .auth-form-root .auth-google-btn{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:var(--ctl-pill);padding:0 20px;border:0;border-radius:999px;background:var(--v3-ink);color:var(--v3-on-ink);font-family:var(--font);font-size:15px;font-weight:500;transition:background-color 200ms var(--v3-ease),transform 140ms var(--v3-ease),opacity 150ms var(--v3-ease)}
+:root .auth-form-root .auth-google-btn--primary{background:var(--v3-ink);color:var(--v3-on-ink);border:0}
+:root .auth-form-root .auth-google-btn:disabled,:root .auth-form-root .auth-google-btn[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+:root .auth-form-root .auth-google-mark{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:6px;background:#fff}
+@media(hover:hover){:root .auth-form-root .auth-google-btn--primary:hover:not(:disabled):not([aria-disabled="true"]){background:var(--v3-ink-hover);border:0}}
+:root .auth-form-root .auth-google-btn:active:not(:disabled):not([aria-disabled="true"]),:root .auth-form-root .auth-submit:active:not(:disabled):not([aria-disabled="true"]),:root .auth-form-root .auth-continue:active{transform:scale(.97)}
+
+/* "or with email": the hairline is for these rules only. */
+:root .auth-form-root .auth-divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:var(--v3-t62);font-size:13px;line-height:16px;font-family:var(--font)}
+:root .auth-form-root .auth-divider::before,:root .auth-form-root .auth-divider::after{content:"";flex:1;height:1px;background:var(--v3-hair)}
+
+:root .auth-form-root .auth-form{display:flex;flex-direction:column;gap:16px}
+:root .auth-form-root .auth-field label{display:block;margin-bottom:6px;font-size:13px;line-height:18px;font-weight:500;color:var(--v3-ink)}
+:root .auth-form-root .auth-field input{width:100%;min-height:var(--ctl);padding:0 14px;border:0;border-radius:12px;background:var(--v3-l2);color:var(--v3-ink);font-family:var(--font);font-size:15px;box-shadow:none;scroll-margin-block:96px;transition:box-shadow 150ms var(--v3-ease)}
+:root .auth-form-root .auth-field input::placeholder{color:var(--v3-t56)}
+:root .auth-form-root .auth-field input:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+:root .auth-form-root .auth-field input[aria-invalid="true"]{box-shadow:inset 0 0 0 1px var(--danger)}
+:root .auth-form-root .auth-field input:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:767px){:root .auth-form-root .auth-field input{font-size:16px}}
+:root .auth-form-root .auth-pw input{padding-right:72px}
+:root .auth-form-root .auth-show{position:absolute;top:0;right:0;min-width:64px;height:var(--ctl);padding:0 14px 0 0;background:none;border:0;font-family:var(--font);font-size:13px;font-weight:500;color:var(--v3-ink);text-align:right;cursor:pointer}
+:root .auth-form-root .auth-help{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
+:root .auth-form-root .auth-help--err{color:var(--danger)}
+
+/* Continue with email: the outline pill with the chroma ring. */
+:root .auth-form-root .auth-continue{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:var(--ctl);margin-top:0;padding:0 20px;border:0;border-radius:999px;background:transparent;color:var(--v3-ink);font-family:var(--font);font-size:15px;font-weight:500;box-shadow:inset 0 0 0 1.5px rgba(239,238,234,.4);transition:transform 140ms var(--v3-ease),opacity 150ms var(--v3-ease)}
+:root[data-theme="light"] .auth-form-root .auth-continue{box-shadow:inset 0 0 0 1.5px rgba(18,20,24,.45)}
+:root .auth-form-root .auth-continue::before{content:"";position:absolute;inset:0;padding:1.5px;border-radius:inherit;background:conic-gradient(from var(--mi-a),var(--v3-hues));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mask-composite:exclude;--mi-a:0deg;opacity:.92;pointer-events:none;transition:--mi-a 0s linear 560ms}
+@media(hover:hover) and (pointer:fine){:root .auth-form-root .auth-continue:hover::before{--mi-a:200deg;transition:--mi-a 560ms var(--v3-ease)}}
+:root .auth-form-root .auth-continue:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+:root .auth-form-root .auth-continue:focus-visible::before{--mi-a:200deg}
+@media(hover:none){:root .auth-form-root .auth-continue::before{--mi-a:200deg}}
+:root .auth-form-root .auth-continue:disabled,:root .auth-form-root .auth-continue[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+:root .auth-form-root .auth-continue:disabled::before,:root .auth-form-root .auth-continue[aria-disabled="true"]::before{display:none}
+@media(forced-colors:active){:root .auth-form-root .auth-continue::before{display:none}:root .auth-form-root .auth-continue{box-shadow:none;border:1px solid ButtonText}}
+
+/* The submit: the one ink pill on step 2. */
+:root .auth-form-root .auth-submit{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:var(--ctl-pill);margin-top:8px;padding:0 20px;border:0;border-radius:999px;background:var(--v3-ink);color:var(--v3-on-ink);font-family:var(--font);font-size:15px;font-weight:500;transition:background-color 200ms var(--v3-ease),transform 140ms var(--v3-ease),opacity 150ms var(--v3-ease)}
+:root .auth-form-root .auth-submit::before{display:none}
+:root .auth-form-root .auth-submit:disabled,:root .auth-form-root .auth-submit[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+@media(hover:hover){:root .auth-form-root .auth-submit:hover:not(:disabled):not([aria-disabled="true"]){background:var(--v3-ink-hover)}}
+:root .auth-form-root .auth-google-btn:focus-visible,:root .auth-form-root .auth-submit:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+:root .auth-form-root .auth-spin{width:14px;height:14px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:auth-spin 800ms linear infinite}
+
+:root .auth-form-root .auth-legal{margin:16px 0 0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
+:root .auth-form-root .auth-legal a{padding:5px 0;color:var(--v3-ink);text-decoration:underline;text-underline-offset:3px}
+
+/* Text links: ink, 14/500, a 44px hit area. */
+:root .auth-form-root .auth-links{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:0 24px;margin-top:16px}
+:root .auth-form-root .auth-link{display:inline-flex;align-items:center;min-height:44px;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-ink);cursor:pointer;text-align:left}
+:root .auth-form-root .auth-link-strong{font-weight:500;color:var(--v3-ink);text-decoration:underline;text-underline-offset:3px;margin-left:.3em}
+:root .auth-form-root .auth-link--quiet{color:var(--v3-ink);text-align:left}
+:root .auth-form-root .auth-forgot{align-self:flex-start;margin-top:-8px}
+:root .auth-form-root .auth-resend[aria-disabled="true"]{color:var(--v3-t56);cursor:default}
+:root .auth-form-root .auth-link:disabled,:root .auth-form-root .auth-show:disabled{opacity:.45;cursor:not-allowed}
+:root .auth-form-root :is(.auth-link,.auth-inline,.auth-show):focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(hover:hover){:root .auth-form-root :is(.auth-link,.auth-show):hover:not(:disabled):not([aria-disabled="true"]){text-decoration:underline;text-underline-offset:3px}}
+.auth-notnow{display:flex;align-items:center;width:fit-content;min-height:44px;margin:24px 0 0;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-sec);text-align:left;cursor:pointer}
+.auth-notnow:disabled{opacity:.45;cursor:not-allowed}
+.auth-notnow:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(hover:hover){.auth-notnow:hover:not(:disabled){color:var(--v3-ink);text-decoration:underline;text-underline-offset:3px}}
+
+/* Like global.css, the report link shows only where the Feedback bubble is hidden (phones, short screens). */
+.pf .report-problem,.pp .report-problem{display:none;align-items:center;min-height:44px;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-ink);cursor:pointer;text-decoration:none}
+.pf .report-problem:focus-visible,.pp .report-problem:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(hover:hover){.pf .report-problem:hover,.pp .report-problem:hover{text-decoration:underline;text-underline-offset:3px}}
+@media(max-width:640px),(max-height:500px){.pf .report-problem,.pp .report-problem{display:inline-flex}}
+
+/* ---- The wall ------------------------------------------------------------ */
+.pw{position:absolute;inset:0;overflow:hidden;background:var(--v3-raised);pointer-events:none}
+.pw-tilt{position:absolute;left:50%;top:50%;display:flex;align-items:flex-start;gap:16px;width:max-content;transform:translate(-50%,-50%) rotate(-20deg)}
+.pw-col{display:flex;flex-direction:column;gap:16px;width:200px;flex:none}
+.pw-col:nth-child(even){margin-top:120px}
+.pw-tile{position:relative;width:200px;border-radius:8px;overflow:hidden;background:var(--v3-l2)}
+.pw-tile::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--v3-outl);pointer-events:none}
+.pw-tile .aw-img{display:block;width:100%;height:auto;outline:0}
+.pw-tile .aw-icons{padding:12px;color:var(--v3-ink)}
+.pw-tile .aw-ramp{display:flex;flex-direction:column}
+.pw-label{position:absolute;z-index:1;right:24px;bottom:24px;padding:6px 12px;border-radius:999px;background:var(--v3-ground);color:var(--v3-sec);font-size:12px;line-height:1.5;box-shadow:0 0 0 1px var(--v3-hair)}
+.pw--strip{position:relative;inset:auto;height:88px;background:var(--v3-raised)}
+.pw--strip .pw-tilt{transform:translate(-50%,-50%) rotate(-20deg)}
+
+/* ---- Full-screen frame: /login and the Pro layer ------------------------- */
+.pf{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr;min-height:100dvh;background:var(--v3-ground);color:var(--v3-ink);font-family:var(--font)}
+.pf:focus-visible{outline:none}
+.pf-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:56px;padding-inline:16px}
+.pf-step{margin:0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
+.pf-back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-ink);cursor:pointer;text-decoration:none}
+.pf-back svg{width:16px;height:16px;flex:none}
+.pf-back:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(hover:hover){.pf-back:hover{text-decoration:underline;text-underline-offset:3px}}
+.pf-wordmark{display:inline-flex;align-items:center;min-height:44px;font-size:18px;color:var(--v3-ink)}
+.pf-strip{position:relative;height:88px;overflow:hidden}
+.pf[data-fold="true"] .pf-strip{display:none}
+@media(max-height:520px){.pf-strip{display:none}}
+.pf-main{padding:24px 16px calc(32px + env(safe-area-inset-bottom))}
+.pf-col{width:100%;max-width:360px;margin-inline:auto}
+.pf-wall{display:none}
+.pf-checking{margin:0;min-height:240px;font-size:14px;line-height:1.5;color:var(--v3-sec)}
+.pf-status{margin:0;font-size:16px;line-height:1.55;color:var(--v3-ink)}
+.pf-status:focus-visible{outline:none}
+.pf-h{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* The Pro layer sits over the page: no scrim, it fades in. */
+.pf--layer{position:fixed;inset:0;z-index:var(--ov-z-dialog);isolation:isolate;height:100dvh;min-height:0;overflow:hidden;grid-template-rows:auto auto minmax(0,1fr);animation:pl-in 200ms var(--v3-ease)}
+.pf--layer[data-leaving="true"]{animation:pl-out 150ms ease-in forwards}
+.pf--layer .pf-main{overflow-y:auto;overscroll-behavior:contain}
+@keyframes pl-in{from{opacity:0}to{opacity:1}}
+@keyframes pl-out{from{opacity:1}to{opacity:0}}
+
+/* Tablet: one centred column, no wall. */
+@media(min-width:768px){
+  .pf-bar{height:64px;padding-inline:32px}
+  .pf-strip{display:none}
+  .pf-main{padding:64px 32px 48px}
+}
+
+/* Split: the form half and the wall half. */
+@media(min-width:1024px){
+  .pf{grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;grid-template-areas:"bar wall" "main wall"}
+  .pf-bar{grid-area:bar;padding-inline:52px}
+  .pf-main{grid-area:main;padding:104px 52px 48px}
+  .pf-wall{display:block;grid-area:wall;position:sticky;top:0;align-self:start;height:100dvh;overflow:hidden}
+  .pf--layer .pf-wall{position:relative}
+}
+
+/* ---- Plan step ----------------------------------------------------------- */
+.pl-root .pl-seg{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:4px;margin:24px 0 0;border-radius:999px;background:var(--v3-l2)}
+.pl-seg-btn{display:flex;align-items:center;justify-content:center;min-height:36px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:var(--v3-sec);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:background-color 150ms var(--v3-ease),color 150ms var(--v3-ease)}
+.pl-seg-btn[aria-checked="true"]{background:var(--v3-seg-on);color:var(--v3-ink);box-shadow:0 0 0 1px var(--v3-hair)}
+.pl-seg-btn:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(max-width:767px){.pl-seg-btn{min-height:44px}}
+.pl-fig{display:flex;align-items:baseline;gap:8px;margin:24px 0 0;font-variant-numeric:tabular-nums}
+.pl-fig-n{font-size:48px;line-height:1.1;font-weight:500;letter-spacing:-.04em;color:var(--v3-ink)}
+.pl-fig-u{font-size:14px;line-height:1.5;color:var(--v3-sec)}
+@media(max-width:767px){.pl-fig-n{font-size:40px}}
+.pl-lines{min-height:44px;margin:8px 0 0}
+.pl-lines p{margin:0;font-size:14px;line-height:22px;color:var(--v3-sec)}
+.pl-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;margin-top:24px;padding:0 20px;border:0;border-radius:999px;background:var(--v3-ink);color:var(--v3-on-ink);font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;transition:background-color 200ms var(--v3-ease),transform 140ms var(--v3-ease),opacity 150ms var(--v3-ease)}
+@media(hover:hover){.pl-go:hover:not(:disabled):not([aria-disabled="true"]){background:var(--v3-ink-hover)}}
+.pl-go:active:not(:disabled):not([aria-disabled="true"]){transform:scale(.97)}
+.pl-go:disabled,.pl-go[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.pl-go:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.pl-fine{margin:12px 0 0;font-size:12px;line-height:1.5;color:var(--v3-sec)}
+.pl-err{margin:16px 0 0;font-size:14px;line-height:1.5;color:var(--danger)}
+.pl-err:focus-visible{outline:none}
+.pl-keep{display:flex;align-items:center;width:fit-content;min-height:44px;margin:16px 0 0;padding:0;background:none;border:0;font-family:var(--font);font-size:14px;font-weight:500;color:var(--v3-sec);cursor:pointer}
+.pl-keep:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(hover:hover){.pl-keep:hover{color:var(--v3-ink);text-decoration:underline;text-underline-offset:3px}}
+
+/* ---- Popup (tool pages) -------------------------------------------------- */
+/* The scroll cue (two local layers masking two shadows) is painted on the dialog, so the form pane stays clear to show it. */
+:root .ui-modal.ui-login.pp{display:grid;grid-template-columns:400px minmax(0,1fr);width:880px;max-width:100%;padding:0;overflow:hidden auto;background:linear-gradient(var(--ov-surface) 30%,rgba(0,0,0,0)) top/100% 26px no-repeat local,linear-gradient(rgba(0,0,0,0),var(--ov-surface) 70%) bottom/100% 26px no-repeat local,radial-gradient(farthest-side at 50% 0,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) top/100% 12px no-repeat scroll,radial-gradient(farthest-side at 50% 100%,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) bottom/100% 12px no-repeat scroll,var(--ov-surface)}
+.pp-left{position:relative;min-height:560px;overflow:hidden;background:var(--v3-ground)}
+.pp-left .pw{background:var(--v3-ground)}
+.pp[data-gate="modal-login"] .pp-left .pw{opacity:.8}
+.pp-offer{position:relative;display:flex;flex-direction:column;justify-content:center;min-width:0;padding:56px 48px 40px;background:transparent}
+:root .pp-offer .ui-login-x{position:absolute;top:16px;right:16px;display:grid;place-items:center;width:40px;height:40px}
+
+.pp-pic{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px}
+.pp-kits{position:relative;width:260px;height:300px}
+.pp-kit{position:absolute;width:200px;border-radius:8px;overflow:hidden;background:var(--v3-l2);box-shadow:0 0 0 1px var(--v3-outl),var(--v3-shadow)}
+.pp-kit .aw-img{display:block;width:100%;height:auto;outline:0}
+.pp-kit--a{left:0;top:0}
+.pp-kit--b{right:0;bottom:0}
+.pp-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--v3-raised);color:var(--v3-ink);font-size:12px;line-height:1.5;box-shadow:0 0 0 1px var(--v3-hair)}
+.pp-strip{display:grid;grid-template-columns:repeat(5,1fr);width:280px;height:200px;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px var(--v3-outl),var(--v3-shadow)}
+.pp-dash{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:300px}
+.pp-dash .pp-kit{position:relative;width:auto;left:auto;right:auto;top:auto;bottom:auto}
+
+@media(max-width:767px){
+  :root .ui-modal.ui-login.pp{grid-template-columns:minmax(0,1fr);width:100%}
+  .pp-left{display:none}
+  .pp-offer{padding:56px 16px calc(24px + env(safe-area-inset-bottom));justify-content:flex-start}
+  :root .pp-offer .ui-login-x{top:8px;right:8px;width:44px;height:44px}
+}
+/* Short phones in portrait: the title moves up beside Close so the whole form
+   fits the sheet without scrolling. Close still ends 8px above the first control. */
+@media(max-width:767px) and (max-height:600px){.pp-offer{padding-top:16px}}
+/* Phones on their side: the form tightens so the sign-up link shows above the
+   fold. Controls stay at the 44px touch minimum. */
+@media(max-height:480px) and (min-width:768px){
+  .pp-left{min-height:0}
+  .pp-offer{padding-block:12px}
+  :root .pp-offer .auth-form-root{--ctl-pill:44px}
+  :root .pp-offer .auth-form-root .auth-title{font-size:22px}
+  :root .pp-offer .auth-form-root .auth-body{margin-top:12px}
+  :root .pp-offer .auth-form-root .auth-divider{margin:8px 0}
+}
+
+/* ---- Reduced motion: opacity only ---------------------------------------- */
+html[data-reduced-motion="true"] .auth-form-root .auth-swap--in{animation:auth-fade 150ms linear}
+html[data-reduced-motion="true"] .auth-form-root .auth-spin{animation-duration:2.4s}
+html[data-reduced-motion="true"] .auth-form-root :is(.auth-google-btn,.auth-submit,.auth-continue):active,html[data-reduced-motion="true"] .pl-go:active{transform:none}
+html[data-reduced-motion="true"] .auth-continue::before{transition:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .auth-form-root .auth-swap--in{animation:auth-fade 150ms linear}
+  html:not([data-reduced-motion="false"]) .auth-form-root .auth-spin{animation-duration:2.4s}
+  html:not([data-reduced-motion="false"]) .auth-form-root :is(.auth-google-btn,.auth-submit,.auth-continue):active,html:not([data-reduced-motion="false"]) .pl-go:active{transform:none}
+  html:not([data-reduced-motion="false"]) .auth-continue::before{transition:none}
+}

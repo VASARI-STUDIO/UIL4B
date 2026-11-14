@@ -1,25 +1,56 @@
-import { Component, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import useModalDialog from '../hooks/useModalDialog'
-import useMediaQuery from '../hooks/useMediaQuery'
 import AuthForm from './auth/AuthForm'
-// `lazy` in this file is lazyRoute, not React's: if the strip's file fails to
-// download (a redeploy, a dropped connection) it recovers the way the pages do.
-import { lazyRoute as lazy } from '../utils/lazyRoute'
+import ProWall from './auth/ProWall'
+import { Art } from './auth/AuthWall'
+import { AUTH_WALL } from '../data/authWall'
+import '../styles/v3-pro-auth.css'
 
-// The wall (and its 22 KB table of generated exports) is a separate chunk: this
-// file is reached from the entry chunk, and most visitors never open the strip.
-// Its box (.ui-login-strip, in auth.css) is painted by the dialog itself, so the
-// space is held while the chunk loads and nothing shifts when the wall arrives.
-const AuthWall = lazy(() => import('./auth/AuthWall'))
+// Two real kit renders from the sign-up wall's own data, for the export and
+// switch pictures. Looked up by id so a reordered wall cannot change them.
+const KIT_ROWS = ['g-ocean-deep-guide', 'f-playfair-roboto'].map((id) => AUTH_WALL.find((r) => r.id === id)).filter(Boolean)
+// The five swatches of the save picture: one sample palette, not the user's.
+const SAVE_SWATCHES = ['#FF5A1F', '#1A1A1A', '#E6E4DE', '#FFFFFF', '#3A3936']
 
-// The strip is decoration. lazyRoute answers a stale chunk with a reload; if the
-// load still fails, this keeps the dialog and its form, and the strip stays an
-// empty panel instead of the failure reaching the page's error boundary.
-class StripBoundary extends Component {
-  state = { failed: false }
-  static getDerivedStateFromError() { return { failed: true } }
-  render() { return this.state.failed ? null : this.props.children }
+// Which picture sits beside the form. A caller can name it; otherwise it is
+// read from the reason the dialog was opened for.
+function inferGate(reason, passwordOnly) {
+  if (passwordOnly || /^(switch to|add another account)/i.test(reason || '')) return 'switch'
+  if (/export|download/i.test(reason || '')) return 'export'
+  if (/\bsave\b/i.test(reason || '')) return 'save'
+  return reason ? 'default' : 'modal-login'
+}
+
+function Picture({ gate }) {
+  const { t } = useI18n()
+  if (gate === 'export') {
+    return (
+      <div className="pp-pic">
+        <div className="pp-kits">
+          {KIT_ROWS.map((row, i) => <div className={'pp-kit pp-kit--' + (i ? 'b' : 'a')} key={row.id}><Art row={row} /></div>)}
+        </div>
+        <span className="pp-chip">{t('auth.proAuth.kitChip')}</span>
+      </div>
+    )
+  }
+  if (gate === 'save') {
+    return (
+      <div className="pp-pic">
+        <div className="pp-strip">{SAVE_SWATCHES.map((hex) => <span key={hex} style={{ background: hex }} />)}</div>
+      </div>
+    )
+  }
+  if (gate === 'switch') {
+    return (
+      <div className="pp-pic">
+        <div className="pp-dash">
+          {KIT_ROWS.map((row) => <div className="pp-kit" key={row.id}><Art row={row} /></div>)}
+        </div>
+      </div>
+    )
+  }
+  return <ProWall label={false} />
 }
 
 // Single-click log-in. Opened over the current page (never navigates to
@@ -27,9 +58,10 @@ class StripBoundary extends Component {
 // the shell: overlay, Close, the pane and "Not now". The form itself (copy,
 // fields, errors, the AuthContext calls) lives in ./auth/AuthForm.
 //
-// When the visitor chose to log in or sign up (no reason given, not a switch)
-// and the screen is 768 or wider, a still strip of the wall sits beside the
-// form. An interruption stays plain: the thing they were doing is the reason.
+// On 768 and wider a picture sits beside the form: the wall for a plain log-in,
+// two kit renders for an export, five swatches for a save, a pair of kits for a
+// switch. `gate` names it; without it the reason decides. A phone gets the form
+// alone.
 //
 // `reasons` is an optional short list of plain answers to "why do I need an
 // account for this?" (the community submission gate uses it). `unlocks` is the
@@ -38,17 +70,16 @@ class StripBoundary extends Component {
 // never presents a log-in form. Defaults to false.
 // `reset` opens on the password-reset form (the one "Forgot password" reaches).
 // Defaults to false.
-export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, reset: openAsReset = false, onSuccess, onDismiss }) {
+export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, reset: openAsReset = false, gate: gateProp, onSuccess, onDismiss }) {
   const { t } = useI18n()
   const [mode, setMode] = useState(passwordOnly ? 'switch' : openAsReset ? 'reset' : openAsSignup ? 'signup' : 'login')
   const [loading, setLoading] = useState(false)
   const loadingRef = useRef(false)
   const dismissRef = useRef(onDismiss)
-  // Decided once, when the dialog opens: moving on to reset or sent keeps the
-  // width it opened at, and an interruption that flips to sign-up never gains one.
-  const [chosen] = useState(() => !reason && !passwordOnly)
-  const wide = useMediaQuery('(min-width:768px)')
-  const strip = chosen && wide
+  // Decided once, when the dialog opens, so the picture stays put as the form
+  // moves on to the password step, reset or sent.
+  const [gate] = useState(() => gateProp || inferGate(reason, passwordOnly))
+  const [step, setStep] = useState(1)
 
   useEffect(() => { loadingRef.current = loading }, [loading])
   useEffect(() => { dismissRef.current = onDismiss }, [onDismiss])
@@ -81,7 +112,9 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
       <div
         ref={dialogRef}
-        className={'ui-modal ui-login' + (interrupt ? ' ui-login--interrupt' : '') + (strip ? ' ui-login--strip' : '')}
+        className={'ui-modal ui-login pp' + (interrupt ? ' ui-login--interrupt' : '')}
+        data-gate={gate}
+        data-step={step}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-login-title"
@@ -89,17 +122,18 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
         tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {/* First in DOM order, so Shift+Tab off it wraps to the last control. */}
-        <button type="button" className="ui-modal-x ui-login-x" onClick={onDismiss} aria-label="Close" disabled={loading}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-        </button>
+        <div className="pp-left" aria-hidden="true"><Picture gate={gate} /></div>
 
-        {strip && <div className="ui-login-strip" aria-hidden="true"><StripBoundary><Suspense fallback={null}><AuthWall variant="strip" /></Suspense></StripBoundary></div>}
-
-        <div className="ui-login-pane">
+        <div className="pp-offer">
+          {/* First in DOM order, so Shift+Tab off it wraps to the last control. */}
+          <button type="button" className="ui-modal-x ui-login-x" onClick={onDismiss} aria-label="Close" disabled={loading}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
           <AuthForm
             mode={mode}
             onModeChange={setMode}
+            step={step}
+            onStepChange={setStep}
             initialEmail={initialEmail}
             lockEmail={lockEmail}
             onSuccess={onSuccess}

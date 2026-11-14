@@ -1,6 +1,11 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, Suspense } from 'react'
+import { lazyRoute } from '../utils/lazyRoute'
 import { trackUpgradeGate } from '../utils/analytics'
-import ProUpgradeModal from '../components/ProUpgradeModal'
+
+// The modal and its stylesheet load on demand, not with the first paint, and
+// are fetched once the page is idle so the first open does not wait.
+const loadModal = () => import('../components/ProUpgradeModal')
+const ProUpgradeModal = lazyRoute(loadModal)
 
 // App-wide Pro-upgrade modal (Image 3). Any gated feature calls
 //   const { openProModal } = useProModal()
@@ -29,10 +34,20 @@ export function ProModalProvider({ children }) {
   }, [])
   const closeProModal = useCallback(() => setOpts(null), [])
 
+  useEffect(() => {
+    const warm = () => { loadModal().catch(() => {}) }
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(warm, { timeout: 4000 })
+      return () => window.cancelIdleCallback?.(id)
+    }
+    const t = setTimeout(warm, 2000)
+    return () => clearTimeout(t)
+  }, [])
+
   return (
     <ProModalContext.Provider value={{ openProModal, closeProModal }}>
       {children}
-      {opts && <ProUpgradeModal opts={opts} onClose={closeProModal} />}
+      {opts && <Suspense fallback={null}><ProUpgradeModal opts={opts} onClose={closeProModal} /></Suspense>}
     </ProModalContext.Provider>
   )
 }

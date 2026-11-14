@@ -66,6 +66,10 @@ async function openCheckout(page, plan, { ownStubs = false } = {}) {
 
 const group = (page) => page.getByRole('radiogroup', { name: 'Billing period' })
 const period = (page, label) => group(page).getByRole('radio', { name: new RegExp(`^${label}`) })
+// The summary card, the bill the chosen period shows (the other period's copy
+// sits unseen beside it as an aria-hidden twin), and the payment panel.
+const summaryOf = (page) => page.locator('.ck-sum')
+const billOf = (page) => page.locator('.ck-bill .ck-stops:not(.gh)')
 
 test.describe('changing billing period at checkout', () => {
   test('the period group offers every buyable cadence with the URL\'s one checked', async ({ page }) => {
@@ -78,31 +82,35 @@ test.describe('changing billing period at checkout', () => {
 
   test('a new period rewrites ?plan= and the summary, by click and by arrow key', async ({ page }) => {
     await openCheckout(page, 'yearly')
-    const summary = page.locator('.checkout-summary-card')
-    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('yearly'))
-
-    await expect(summary.locator('.checkout-plan-per')).toHaveText('per year')
-    await expect(summary.locator('.checkout-trial')).toContainText(`${LADDER.yearly.trialDays}-day free trial`)
+    const bill = billOf(page)
+    // Yearly opens with the trial: today, the first payment, then the renewal.
+    await expect(summaryOf(page).getByRole('heading', { name: 'UI L4B Pro' })).toBeVisible()
+    await expect(bill.locator('.ck-stop')).toHaveCount(3)
+    await expect(bill.locator('.ck-stop').first().locator('.ck-lab')).toHaveText('Today')
+    await expect(bill.locator('.ck-stop').first()).toContainText(`${LADDER.yearly.trialDays}-day free trial`)
+    await expect(bill.locator('.ck-stop').nth(1).locator('.ck-fig')).toHaveText(amountOf('yearly'))
+    await expect(bill.locator('.ck-stop').nth(2)).toContainText('Nothing more to pay for 12 months')
 
     await period(page, LADDER.monthly.label).click()
     await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
     await expect(period(page, LADDER.monthly.label)).toBeChecked()
-    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Monthly plan')
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('monthly'))
-    await expect(summary.locator('.checkout-plan-per')).toHaveText('per month')
-    // Monthly carries no trial in the ladder, so the summary promises none.
+    // Monthly carries no trial in the ladder, so the bill promises none: the
+    // first payment is today and it renews monthly.
     expect(LADDER.monthly.trialDays).toBe(0)
-    await expect(summary.locator('.checkout-trial')).toHaveCount(0)
+    await expect(bill.locator('.ck-stop')).toHaveCount(2)
+    await expect(bill.locator('.ck-stop').first().locator('.ck-fig')).toHaveText(amountOf('monthly'))
+    await expect(bill.locator('.ck-stop').first()).toContainText('no trial')
+    await expect(bill.locator('.ck-stop').nth(1).locator('.ck-fig')).toHaveText(`${amountOf('monthly')} a month`)
+    await expect(bill).not.toContainText('free trial')
 
-    // Native radios: an arrow key moves the choice and the focus together.
+    // The radio group is roving: an arrow key moves the choice and the focus together.
     await page.keyboard.press('ArrowRight')
     await expect(page).toHaveURL(/\/checkout\?plan=yearly$/)
     await expect(period(page, LADDER.yearly.label)).toBeChecked()
     await expect(period(page, LADDER.yearly.label)).toBeFocused()
-    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Yearly plan')
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('yearly'))
-    await expect(summary.locator('.checkout-trial')).toContainText(`${LADDER.yearly.trialDays}-day free trial`)
+    await expect(bill.locator('.ck-stop')).toHaveCount(3)
+    await expect(bill.locator('.ck-stop').nth(1).locator('.ck-fig')).toHaveText(amountOf('yearly'))
+    await expect(bill.locator('.ck-stop').first()).toContainText(`${LADDER.yearly.trialDays}-day free trial`)
   })
 
   test('Back to Plans opens /plans with the chosen period selected', async ({ page }) => {
@@ -122,10 +130,9 @@ test.describe('changing billing period at checkout', () => {
   test('at 390px the group is one row of 44px targets, and Back to Plans is one too', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await openCheckout(page, 'monthly')
-    const boxes = await group(page).locator('.checkout-period-opt').evaluateAll((els) => els.map((el) => {
+    const boxes = await group(page).getByRole('radio').evaluateAll((els) => els.map((el) => {
       const r = el.getBoundingClientRect()
-      const label = el.querySelector('.checkout-period-label')
-      return { top: Math.round(r.top), height: r.height, clipped: label.scrollWidth > label.clientWidth + 0.5 }
+      return { top: Math.round(r.top), height: r.height, clipped: el.scrollWidth > el.clientWidth + 0.5 }
     }))
     expect(boxes.length).toBeGreaterThan(1)
     expect(new Set(boxes.map((b) => b.top)).size, 'the period group wrapped onto a second row').toBe(1)
@@ -142,52 +149,49 @@ test.describe('changing billing period at checkout', () => {
   test('at 390px the features list is folded, the payment panel comes before Back to settings, and the form starts on the first screen', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await openCheckout(page, 'yearly')
-    const included = page.locator('.checkout-included')
+    const included = page.locator('.ck-det')
     await expect(included, 'the features list starts folded on a phone').not.toHaveAttribute('open', /.*/)
-    await expect(included.locator('.checkout-features')).toBeHidden()
-    const form = await page.locator('.checkout-form').boundingBox()
+    await expect(included.locator('.ck-pts')).toBeHidden()
+    const form = await page.locator('.ck-fp').boundingBox()
     const back = await page.getByRole('link', { name: 'Back to settings' }).boundingBox()
     expect(form.y, 'the payment panel sits below Back to settings').toBeLessThan(back.y)
     expect(form.y, 'the payment panel starts below the first screen').toBeLessThan(844)
     // Tab order is DOM order (WCAG 2.4.3), so the sheet cannot reorder the
     // link below the panel by CSS alone: the panel must come first in the DOM.
-    const formFirst = await page.locator('.checkout-form').evaluate((el) => {
+    const formFirst = await page.locator('.ck-fp').evaluate((el) => {
       const link = [...document.querySelectorAll('a')].find((a) => a.textContent.includes('Back to settings'))
       return !!(el.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING)
     })
     expect(formFirst, 'Back to settings comes before the payment panel in the tab order').toBe(true)
 
     await included.locator('summary').click()
-    await expect(included.locator('.checkout-features')).toBeVisible()
+    await expect(included.locator('.ck-pts')).toBeVisible()
   })
 
   test('at 1440px the features list is open and has no summary to fold it', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await openCheckout(page, 'yearly')
-    const included = page.locator('.checkout-included')
-    await expect(included, 'the features list is folded at 1440px').toHaveAttribute('open', /.*/)
-    await expect(included.locator('.checkout-features')).toBeVisible()
-    await expect(included.locator('summary')).toBeHidden()
+    // Wide, the list is plain content under its own heading: no <details> to fold it.
+    await expect(page.locator('.ck-det'), 'the features list is folded at 1440px').toHaveCount(0)
+    await expect(summaryOf(page).getByRole('heading', { name: 'What’s included' })).toBeVisible()
+    await expect(summaryOf(page).locator('.ck-pts li').first()).toBeVisible()
   })
 
-  test('a period with no saving shows no empty saving line and its switch stays 48px', async ({ page }) => {
+  test('a period with no saving shows no empty saving text, and both segments are 44px tall', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await openCheckout(page, 'monthly')
-    const save = (label) => period(page, label).locator('xpath=ancestor::label').locator('.checkout-period-save')
 
-    // Control: a period that does carry a saving shows it, so "empty" below is
-    // a real state and not just a missing element.
-    await expect(save(LADDER.yearly.label)).toBeVisible()
-    await expect(save(LADDER.yearly.label)).toHaveText(/^Save \d+%$/)
+    // Control: a period that does carry a saving names it in its own label, so
+    // "no saving" below is a real state and not just a missing element.
+    await expect(period(page, LADDER.yearly.label)).toHaveText(new RegExp(`^${LADDER.yearly.label} · Save \\d+%$`))
 
-    // Monthly has no saving: its line is in the DOM, empty, and takes no space.
-    const monthlySave = save(LADDER.monthly.label)
-    await expect(monthlySave).toHaveCount(1)
-    await expect(monthlySave).toBeEmpty()
-    await expect(monthlySave).toHaveCSS('display', 'none')
+    // Monthly has no saving: its label is the period alone, with no dangling separator.
+    await expect(period(page, LADDER.monthly.label)).toHaveText(LADDER.monthly.label)
 
-    const monthlyBox = await period(page, LADDER.monthly.label).locator('xpath=ancestor::label').boundingBox()
-    expect(monthlyBox.height, 'the Monthly switch is not 48px tall').toBeCloseTo(48, 0)
+    const monthlyBox = await period(page, LADDER.monthly.label).boundingBox()
+    const yearlyBox = await period(page, LADDER.yearly.label).boundingBox()
+    expect(monthlyBox.height, 'the Monthly segment is not 44px tall').toBeCloseTo(44, 0)
+    expect(yearlyBox.height, 'the two segments differ in height').toBeCloseTo(monthlyBox.height, 0)
   })
 
   test('signed out, the summary and period choice work and only payment asks for a login', async ({ page }) => {
@@ -212,12 +216,12 @@ test.describe('changing billing period at checkout', () => {
     await expect(period(page, LADDER.yearly.label)).toBeChecked()
     await period(page, LADDER.monthly.label).click()
     await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
-    const summary = page.locator('.checkout-summary-card')
-    await expect(summary.locator('.checkout-plan-cadence')).toHaveText('Monthly plan')
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('monthly'))
+    // The bill follows the period without an account.
+    await expect(billOf(page).locator('.ck-stop').first().locator('.ck-fig')).toHaveText(amountOf('monthly'))
+    await expect(billOf(page).locator('.ck-stop').nth(1).locator('.ck-fig')).toHaveText(`${amountOf('monthly')} a month`)
 
-    await expect(page.locator('.checkout-form')).toContainText('Log in or create an account to pay')
-    const login = page.locator('.checkout-form').getByRole('button', { name: 'Log in to continue' })
+    await expect(page.locator('.ck-fp')).toContainText('Log in or create an account to pay')
+    const login = page.locator('.ck-fp').getByRole('button', { name: 'Log in to continue' })
     await expect(login).toBeVisible()
     await login.click()
     await expect(page.getByRole('dialog', { name: 'Log in to continue' })).toBeVisible()
@@ -248,7 +252,7 @@ test.describe('changing billing period at checkout', () => {
     const intervals = await answerSessions(page, { hold: 'yearly', until: held })
     await stubStripe(page)
     await openCheckout(page, 'yearly', { ownStubs: true })
-    const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
+    const notConfigured = page.locator('.ck-fp', { hasText: /Payments aren.t configured/ })
     await expect.poll(async () => intervals.length > 0 || await notConfigured.isVisible()).toBe(true)
     test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
     expect(intervals).toEqual(['yearly'])
@@ -258,7 +262,7 @@ test.describe('changing billing period at checkout', () => {
     await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
     release()
 
-    const mounted = page.locator('.checkout-form [data-stub-session]')
+    const mounted = page.locator('.ck-fp [data-stub-session]')
     await expect(mounted).toHaveAttribute('data-stub-session', 'cs_test_stub_monthly')
     expect(intervals).toEqual(['yearly', 'monthly'])
     expect(await page.evaluate(() => window.__stubEmbeds), 'a second embedded Checkout was refused or one was left behind').toEqual({ live: 1, refused: 0 })
@@ -270,7 +274,7 @@ test.describe('changing billing period at checkout', () => {
     const intervals = await answerSessions(page, { hold: 'yearly', until: held, failHeld: true })
     await stubStripe(page)
     await openCheckout(page, 'yearly', { ownStubs: true })
-    const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
+    const notConfigured = page.locator('.ck-fp', { hasText: /Payments aren.t configured/ })
     await expect.poll(async () => intervals.length > 0 || await notConfigured.isVisible()).toBe(true)
     test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
 
@@ -279,9 +283,9 @@ test.describe('changing billing period at checkout', () => {
     // The yearly request fails after the buyer has moved on.
     release()
 
-    const mounted = page.locator('.checkout-form [data-stub-session]')
+    const mounted = page.locator('.ck-fp [data-stub-session]')
     await expect(mounted).toHaveAttribute('data-stub-session', 'cs_test_stub_monthly')
-    await expect(page.locator('.checkout-form'), 'the old period’s failure was shown').not.toContainText('Checkout unavailable')
+    await expect(page.locator('.ck-fp'), 'the old period’s failure was shown').not.toContainText('Checkout unavailable')
     expect(intervals).toEqual(['yearly', 'monthly'])
     expect(await page.evaluate(() => window.__stubEmbeds)).toEqual({ live: 1, refused: 0 })
   })
@@ -300,7 +304,7 @@ test.describe('changing billing period at checkout', () => {
     await period(page, LADDER.monthly.label).click()
     await expect(page).toHaveURL(/\/checkout\?plan=monthly$/)
     await expect(mounted).toHaveAttribute('data-stub-session', 'cs_test_stub_monthly')
-    await expect(page.locator('.checkout-form'), 'a period passed through showed a failure').not.toContainText('Checkout unavailable')
+    await expect(page.locator('.ck-fp'), 'a period passed through showed a failure').not.toContainText('Checkout unavailable')
     expect(intervals[0], 'the first session was not for the period the page opened on').toBe('yearly')
     expect(intervals.at(-1), 'the last session was not for the period the buyer stopped on').toBe('monthly')
     expect(intervals.filter((i) => i === 'monthly'), 'a session was requested for the monthly passed through').toHaveLength(1)
@@ -321,7 +325,7 @@ test.describe('changing billing period at checkout', () => {
     await openCheckout(page, 'yearly', { ownStubs: true })
     const mounted = await embedOrSkip(page)
     await expect(mounted).toHaveAttribute('data-stub-session', 'cs_test_stub_yearly')
-    const status = page.locator('.checkout-form').getByRole('status')
+    const status = page.locator('.ck-fp').getByRole('status')
     await expect(status).toHaveText('')
 
     await period(page, LADDER.monthly.label).click()
@@ -329,12 +333,17 @@ test.describe('changing billing period at checkout', () => {
     await expect(mounted).toHaveCount(0)
     await expect(status).toHaveText('Loading payment form…')
     await expect(status).toBeVisible()
-    const panel = await page.locator('.checkout-form').boundingBox()
-    expect(panel.height, 'the panel collapsed while loading').toBeGreaterThanOrEqual(420)
+    // While the next form loads, the status sits in the payment group, which
+    // is named and marked busy.
+    await expect(page.getByRole('group', { name: 'Payment form' })).toHaveAttribute('aria-busy', 'true')
 
     release()
-    await expect(page.locator('.checkout-form [data-stub-session]')).toHaveAttribute('data-stub-session', 'cs_test_stub_monthly')
+    await expect(page.locator('.ck-fp [data-stub-session]')).toHaveAttribute('data-stub-session', 'cs_test_stub_monthly')
     await expect(status).toHaveText('')
+    // A mounted form holds the frame's full height, so the page does not jump
+    // while the buyer reads the card form.
+    const frame = await page.getByRole('group', { name: 'Payment form' }).boundingBox()
+    expect(frame.height, 'the mounted payment frame is shorter than its minimum').toBeGreaterThanOrEqual(485)
   })
 
   test('once payment is submitted the period radios are locked', async ({ page }) => {
@@ -345,7 +354,7 @@ test.describe('changing billing period at checkout', () => {
 
     await page.evaluate(() => window.__stubCheckout.onAnalyticsEvent({ eventType: 'checkoutSubmitted', details: {} }))
     for (const r of await radios.all()) await expect(r, 'a period can still change after payment was submitted').toBeDisabled()
-    await expect(page.locator('.checkout-period-locked')).toBeVisible()
+    await expect(page.locator('#ck-lock')).toHaveText('Payment in progress, so the billing period can’t change now.')
 
     // A payment that failed hands the choice back.
     await page.evaluate(() => window.__stubCheckout.onAnalyticsEvent({ eventType: 'checkoutSubmitFailed', details: {} }))
@@ -363,18 +372,18 @@ test.describe('changing billing period at checkout', () => {
     const intervals = await answerSessions(page, { hold: 'yearly', until: new Promise(() => {}) })
     await stubStripe(page)
     await openCheckout(page, 'yearly', { ownStubs: true })
-    const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
+    const notConfigured = page.locator('.ck-fp', { hasText: /Payments aren.t configured/ })
     await expect.poll(async () => intervals.length > 0 || await notConfigured.isVisible()).toBe(true)
     test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
 
     await period(page, LADDER.monthly.label).click()
-    await expect(page.locator('.checkout-form').getByRole('status')).toHaveText('Loading payment form…')
+    await expect(page.locator('.ck-fp').getByRole('status')).toHaveText('Loading payment form…')
     // Past the period debounce, until the monthly form is waiting in line…
     await page.clock.fastForward('00:01')
-    await expect(page.locator('.checkout-form .checkout-embed')).toHaveCount(1)
+    await expect(page.locator('.ck-fp .checkout-embed')).toHaveCount(1)
     // …then past the time it may wait.
     await page.clock.fastForward('00:21')
-    const form = page.locator('.checkout-form')
+    const form = page.locator('.ck-fp')
     await expect(form).toContainText('Checkout unavailable')
     await expect(form).toContainText('taking too long')
     await expect(form.getByRole('button', { name: 'Try again' })).toBeVisible()
@@ -393,7 +402,7 @@ test.describe('changing billing period at checkout', () => {
     })
     await answerSessions(page)
     await openCheckout(page, 'yearly', { ownStubs: true })
-    const form = page.locator('.checkout-form')
+    const form = page.locator('.ck-fp')
     const notConfigured = form.filter({ hasText: /Payments aren.t configured/ })
     await expect(notConfigured.or(form.filter({ hasText: 'Checkout unavailable' }))).toBeVisible()
     test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so Stripe.js is never loaded')
@@ -417,7 +426,7 @@ test.describe('changing billing period at checkout', () => {
     await expect(login, 'one log-in button, not two').toHaveCount(1)
     await expect(login).toBeVisible()
     const button = await login.boundingBox()
-    const features = await page.locator('.checkout-included').boundingBox()
+    const features = await page.locator('.ck-det').boundingBox()
     expect(button.y + button.height, 'the log-in comes before the features list on a phone').toBeLessThanOrEqual(features.y)
     expect(button.height).toBeGreaterThanOrEqual(44)
     await login.click()
@@ -486,8 +495,8 @@ async function stubStripe(page) {
 }
 
 async function embedOrSkip(page) {
-  const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
-  const mounted = page.locator('.checkout-form [data-stub-session]')
+  const notConfigured = page.locator('.ck-fp', { hasText: /Payments aren.t configured/ })
+  const mounted = page.locator('.ck-fp [data-stub-session]')
   await expect(notConfigured.or(mounted)).toBeVisible()
   test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
   return mounted
@@ -518,15 +527,17 @@ test.describe('a cadence with no live price', () => {
     await go(page, '/checkout?plan=monthly')
     await expectRendered(page)
 
-    const summary = page.locator('.checkout-summary-card')
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText('Unavailable')
+    const summary = summaryOf(page)
+    await expect(summary.locator('.ck-out .ck-fig')).toHaveText('Unavailable')
     await expect(summary).toContainText('No USD price for Monthly yet.')
-    await expect(page.locator('.checkout-form')).toContainText('Checkout unavailable')
-    await expect(page.locator('.checkout-form [data-stub-session]'), 'a payment form opened with no live price').toHaveCount(0)
+    await expect(billOf(page), 'a bill was drawn with no live price').toHaveCount(0)
+    // The panel says the shared outage sentence and builds no payment form.
+    await expect(page.locator('.ck-fp')).toContainText('Everything on Free keeps working.')
+    await expect(page.locator('.ck-fp [data-stub-session]'), 'a payment form opened with no live price').toHaveCount(0)
     // The other cadence is live and still buyable.
     await period(page, LADDER.yearly.label).click()
-    await expect(summary.locator('.checkout-plan-amount')).toHaveText(amountOf('yearly'))
-    await expect(page.locator('.checkout-form')).not.toContainText('Checkout unavailable')
+    await expect(billOf(page).locator('.ck-stop').nth(1).locator('.ck-fig')).toHaveText(amountOf('yearly'))
+    await expect(page.locator('.ck-fp')).not.toContainText('Everything on Free keeps working.')
     expect(sessionRequests, 'a session was requested for the cadence with no live price').toBe(0)
   })
 
@@ -542,19 +553,19 @@ test.describe('a cadence with no live price', () => {
     })
     await stubStripe(page)
     await openCheckout(page, 'yearly', { ownStubs: true })
-    const notConfigured = page.locator('.checkout-form', { hasText: /Payments aren.t configured/ })
-    const refused = page.locator('.checkout-form', { hasText: 'nothing was charged' })
+    const notConfigured = page.locator('.ck-fp', { hasText: /Payments aren.t configured/ })
+    const refused = page.locator('.ck-fp', { hasText: 'nothing was charged' })
     await expect(notConfigured.or(refused)).toBeVisible()
     test.skip(await notConfigured.isVisible(), 'this build carries no Stripe publishable key, so the embed never asks for a session')
 
     await expect(refused).toContainText('Checkout unavailable')
-    // The refusal is announced and focused, so it is not missed below the fold.
+    // The refusal is announced and its heading focused, so it is not missed below the fold.
     const alert = page.getByRole('alert').filter({ hasText: 'nothing was charged' })
     await expect(alert).toBeVisible()
-    await expect(alert, 'the refusal was not given focus').toBeFocused()
+    await expect(alert.getByRole('heading', { name: 'Checkout unavailable' }), 'the refusal was not given focus').toBeFocused()
     await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible()
     expect((await alert.getByRole('button', { name: 'Try again' }).boundingBox()).height, 'Try again is under 44px').toBeGreaterThanOrEqual(44)
-    await expect(page.locator('.checkout-form [data-stub-session]')).toHaveCount(0)
+    await expect(page.locator('.ck-fp [data-stub-session]')).toHaveCount(0)
     expect(bodies.length, 'the refused session was requested again').toBe(1)
   })
 })

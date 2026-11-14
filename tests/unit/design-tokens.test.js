@@ -84,9 +84,11 @@ const RUNTIME_FAMILIES = [
 //   HomeTry          --k   (the tab mark's index)
 //   PaletteTool      --ci --si   (the readable ink on a column, and on the shown colour under it)
 //   FontTool         --fs --fp --pitch   (the specimen size on desktop and phone, and the row pitch)
+//   Onboarding       --ob-hs --ob-hs-m   (the spec sheet heading's size on desktop and phone, fitted to the project name)
 const RUNTIME_EXACT = new Set(['--i', '--c','--grd-tick', '--grd-wheel-angle', '--ct-bg', '--ct-fg', '--ts-px', '--peek-left', '--peek-w',
   '--l', '--nl', '--fd', '--g', '--px', '--chars', '--pos', '--pos-phone', '--w-px', '--w-k', '--w-pxp', '--proj',
-  '--hpl-c', '--hpl-c-phone', '--hpl-phone-order', '--ar', '--k', '--ci', '--si', '--fs', '--fp', '--pitch'])
+  '--hpl-c', '--hpl-c-phone', '--hpl-phone-order', '--ar', '--k', '--ci', '--si', '--fs', '--fp', '--pitch',
+  '--ob-hs', '--ob-hs-m'])
 
 test('no stylesheet token is used without being defined or set at runtime', () => {
   const defined = definedTokens()

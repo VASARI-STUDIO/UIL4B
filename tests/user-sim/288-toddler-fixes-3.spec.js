@@ -22,8 +22,8 @@
 //       -> "a card has one link to the builder ..."
 //   * delete the skip link or the `pgl-after-grid` marker in PaletteGallery.jsx
 //       -> "the skip link moves focus past the palettes"
-//   * make `openProModal` in PaletteBuilder.jsx pass no `seed` again
-//       -> "after a randomise, the "Go beyond 8 colours" wall shows the toolbar seed"
+//   * make the "Go beyond" wall in PaletteBuilder.jsx pass the saved history's colours
+//       instead of the board's -> "after a randomise, the "Go beyond 8 colours" wall shows the board, not the saved history"
 //   * put `onOpen={openVariationGate}` back on the Suggest ProBlock in PaletteBuilder.jsx
 //       -> "the Suggest Pro button goes to /plans with no dialog left open"
 //   * delete the `soonNote` effect in CreateTool.jsx
@@ -108,7 +108,7 @@ test.describe('palette Pro walls: the colour preview follows the board', () => {
   const STALE = '#010203'
   const EIGHT = '/create/palette?c=14224A,249EAF,F2C14E,2563EB,C0392B,6B7280,10B981,F97316'
 
-  test('after a randomise, the "Go beyond 8 colours" wall shows the toolbar seed, not the saved history', async ({ page }) => {
+  test('after a randomise, the "Go beyond 8 colours" wall shows the board, not the saved history', async ({ page }) => {
     watch(page, 'a free member hitting the colour cap after a randomise')
     await signIn(page, { plan: 'free' })
     await go(page, EIGHT)
@@ -133,7 +133,14 @@ test.describe('palette Pro walls: the colour preview follows the board', () => {
     await page.getByRole('button', { name: 'Add a colour' }).click()
     const wall = page.getByRole('dialog').filter({ hasText: 'Go beyond 8 colours' })
     await expect(wall).toBeVisible()
-    await expect(wall.locator('.ui-pro-rail-seed')).toHaveText(onScreen.toUpperCase())
+    // The wall's left pane draws the colours on the board; none is the stale one.
+    const pane = wall.locator('[data-pane="colours"] .pg-cols').first().locator('span')
+    const board = (await page.locator('.plb-hex').allTextContents()).map((t) => t.trim().toLowerCase())
+    expect(board.length, 'the board shows its colours').toBe(8)
+    const drawn = await pane.evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor))
+    const toRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})` }
+    expect(drawn, 'the wall drew the colours on the board').toEqual(board.map(toRgb))
+    expect(drawn, 'the wall drew the stale history').not.toContain(toRgb(STALE))
   })
 })
 

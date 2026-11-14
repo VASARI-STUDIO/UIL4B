@@ -33,7 +33,7 @@ const WIDTHS = [[320, 640], [390, 844], [1024, 800], [1440, 900]]
 
 const surfaces = {
   plans: { path: '/plans', slot: '.hpl-pro', button: '.hpl-pro .pa-cta button' },
-  checkout: { path: '/checkout?plan=yearly', slot: '.checkout-summary-card', button: '.checkout-price-retry', signedIn: true },
+  checkout: { path: '/checkout?plan=yearly', slot: '.ck-sum', button: '.ck-out .ck-ghost', signedIn: true },
   settings: { path: '/settings', slot: '.sub-tier-pro', button: '.sub-tier-pro .sub-tier-btn', signedIn: true, support: true },
 }
 
@@ -74,12 +74,18 @@ for (const [surfaceName, surface] of Object.entries(surfaces)) {
         expect(text).not.toMatch(/unreachable/i)
         expect(await button.isDisabled(), 'the Pro button is disabled').toBe(false)
 
-        // Retry fills the slot's width, and one line holds its label.
+        // Retry fills the slot's width (checkout's design draws it as a ghost button
+        // under the outage lines, so there it is a full 44px target instead), and
+        // one line holds its label.
         await expect(button).toHaveText('Retry live pricing')
         const box = await button.boundingBox()
-        const slotBox = await (surfaceName === 'plans' ? button.locator('xpath=..') : slot).boundingBox()
-        const slotMin = surfaceName === 'plans' ? 0.5 : 0.7
-        expect(box.width, 'Retry is not full width').toBeGreaterThan(slotBox.width * slotMin)
+        if (surfaceName === 'checkout') {
+          expect(box.height, 'Retry is under 44px tall').toBeGreaterThanOrEqual(44)
+        } else {
+          const slotBox = await (surfaceName === 'plans' ? button.locator('xpath=..') : slot).boundingBox()
+          const slotMin = surfaceName === 'plans' ? 0.5 : 0.7
+          expect(box.width, 'Retry is not full width').toBeGreaterThan(slotBox.width * slotMin)
+        }
         const lines = await button.evaluate((el) => {
           const range = document.createRange()
           range.selectNodeContents(el)
@@ -122,7 +128,8 @@ test('checkout: no "per" label and no trial band without a price', async ({ page
   await stub(page, NO_LIVE)
   await signIn(page, { plan: 'free' })
   await go(page, '/checkout?plan=yearly')
-  await expect(page.locator('.checkout-plan-amount')).toHaveText('Unavailable')
-  await expect(page.locator('.checkout-plan-per')).toHaveCount(0)
-  await expect(page.locator('.checkout-trial')).toHaveCount(0)
+  await expect(page.locator('.ck-out .ck-fig')).toHaveText('Unavailable')
+  // No bill stops (today, then, later), so no "a month" figure and no trial date.
+  await expect(page.locator('.ck-stop')).toHaveCount(0)
+  await expect(page.locator('.ck-bill')).not.toContainText(/free trial|a\s+(month|year)\b/i)
 })

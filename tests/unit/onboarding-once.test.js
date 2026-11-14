@@ -247,13 +247,13 @@ test('both completion paths go through one function', () => {
   // Two call sites that each had to remember to write the profile is how the
   // skip path lost it in the first place.
   const src = stripComments(read('src/pages/Onboarding.jsx'))
-  assert.ok(/const markOnboardingComplete = /.test(src))
+  assert.ok(/function completeOnboarding\(/.test(src))
   // persist() used to be pinned by its exact signature, `() =>
   // markOnboardingComplete(answers)`. There are no survey answers now, and it
   // carries the first-win choice instead. The invariant that actually mattered
   // is what is asserted: persist() DELEGATES rather than writing the profile
   // itself, so there stays exactly one writer.
-  assert.ok(/const persist = \([^)]*\) => markOnboardingComplete\(/.test(src),
+  assert.ok(/const persist = \([^)]*\) => completeOnboarding\(/.test(src),
     'finishing must reuse the same writer')
   assert.equal((src.match(/updateProfile\?\.\(/g) || []).length, 1,
     'exactly one place may write onboarding completion to the profile')

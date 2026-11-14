@@ -5,11 +5,10 @@
 //     subscription needs `subscriptionActive`. The signed-in account is never
 //     consulted, because it can already hold Pro from another purchase or a
 //     stale snapshot.
-//   - Until the server confirms, the page reads "Payment received." and asks
+//   - Until the server confirms, the page reads "Payment received" and asks
 //     again every 4 seconds, at most 15 more times, and stops the moment it is
 //     confirmed or the page is left.
-//   - A subscription that ends at the close of the period labels its date
-//     "Access until", not "Renews".
+//   - A free trial states the day it ends and that nothing is charged before it.
 //
 // `checkout-status` is answered from the spec (vite preview runs no functions),
 // and the page clock is driven by hand so the 4-second wait costs nothing.
@@ -52,8 +51,10 @@ async function drain(page) {
   await page.evaluate(() => fetch('/api/__drain'))
 }
 
-const view = (page) => page.locator('.co-return')
-const heading = (page) => page.locator('.co-return h1')
+const view = (page) => page.locator('.ck-ret')
+const heading = (page) => page.locator('.ck-ret h1')
+// The line under the heading is the page's status region.
+const statusLine = (page) => page.locator('.ck-ret .ck-rp[role="status"]')
 
 test.describe('the checkout return page only reports Pro when this checkout is confirmed', () => {
   test('an account that is already Pro is still told the payment is settling when the one-off is not confirmed', async ({ page }) => {
@@ -62,11 +63,10 @@ test.describe('the checkout return page only reports Pro when this checkout is c
     await answerStatus(page, [ONE_OFF_PENDING])
     await go(page, '/checkout/return?session_id=cs_test_one_off_pending')
 
-    await expect(heading(page)).toHaveText('Payment received.')
+    await expect(heading(page)).toHaveText('Payment received')
     await expect(view(page)).not.toContainText(/Pro is yours/i)
     await expect(view(page)).not.toContainText(/on UI L4B Pro/i)
-    await expect(view(page).locator('.co-details dt', { hasText: /^Paid for$/ })).toHaveCount(1)
-    await expect(view(page).getByRole('link', { name: 'Start building' })).toHaveCount(0)
+    await expect(statusLine(page)).toContainText('still being attached')
     // A one-off has no subscription to manage, settling or not.
     await expect(view(page).getByRole('link', { name: 'View account details' })).toBeVisible()
     await expect(view(page).getByRole('link', { name: 'Manage subscription' })).toHaveCount(0)
@@ -78,9 +78,11 @@ test.describe('the checkout return page only reports Pro when this checkout is c
     await answerStatus(page, [SUBSCRIPTION_PENDING])
     await go(page, '/checkout/return?session_id=cs_test_sub_pending')
 
-    await expect(heading(page)).toHaveText('Payment received.')
+    await expect(heading(page)).toHaveText('Payment received')
     await expect(view(page)).not.toContainText(/on UI L4B Pro/i)
-    await expect(view(page).getByRole('button', { name: 'Check again' })).toBeVisible()
+    await expect(statusLine(page)).toContainText('still being attached')
+    // The reference is the tail of the session id, so the buyer can quote it.
+    await expect(view(page).locator('.ck-ref code')).toHaveText('…_pending')
   })
 
   // Each answer is confirmed for the OTHER kind only; neither may land.
@@ -93,7 +95,7 @@ test.describe('the checkout return page only reports Pro when this checkout is c
       await signIn(page, { plan: 'free' })
       await answerStatus(page, [answer])
       await go(page, '/checkout/return?session_id=cs_test_wrong_flag')
-      await expect(heading(page)).toHaveText('Payment received.')
+      await expect(heading(page)).toHaveText('Payment received')
       await expect(view(page)).not.toContainText(/on UI L4B Pro/i)
     })
   }
@@ -104,43 +106,39 @@ test.describe('the checkout return page only reports Pro when this checkout is c
     await answerStatus(page, [ONE_OFF_CONFIRMED])
     await go(page, '/checkout/return?session_id=cs_test_one_off_done')
 
-    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
-    await expect(view(page).locator('.co-sub')).toContainText('Pro is yours with no renewal.')
-    await expect(view(page).locator('.co-details dd', { hasText: 'Pro, one-off purchase' })).toHaveCount(1)
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro')
+    await expect(statusLine(page)).toContainText('Your Pro access is active across the toolkit, with no renewal.')
+    await expect(view(page).getByRole('link', { name: 'View account details' })).toBeVisible()
+    await expect(view(page).getByRole('link', { name: 'Manage subscription' })).toHaveCount(0)
   })
 })
 
-test.describe('the date row says when access ends if the subscription is set to end', () => {
-  const subscription = (cancelAtPeriodEnd) => ({
-    status: 'active', interval: 'monthly', currentPeriodEnd: PERIOD_END, cancelAtPeriodEnd,
+test.describe('a free trial says when it ends', () => {
+  const trialing = { status: 'trialing', interval: 'yearly', trialEndsAt: PERIOD_END, currentPeriodEnd: PERIOD_END, cancelAtPeriodEnd: false }
+  const TRIAL_CONFIRMED = { ...SUBSCRIPTION_CONFIRMED, interval: 'yearly' }
+
+  test('a subscription in its trial names the day the trial ends and that nothing is charged before it', async ({ page }) => {
+    watch(page, 'a subscriber back from Stripe on a free trial')
+    await signIn(page, { plan: 'pro', subscription: trialing })
+    await answerStatus(page, [TRIAL_CONFIRMED])
+    await go(page, '/checkout/return?session_id=cs_test_trialing')
+
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro')
+    await expect(statusLine(page)).toContainText('Your free trial runs until')
+    await expect(statusLine(page)).toContainText('March')
+    await expect(statusLine(page)).toContainText('2031')
+    await expect(statusLine(page)).toContainText('you won’t be charged before then')
   })
 
-  test('a subscription set to cancel at the end of the period reads "Access until"', async ({ page }) => {
-    watch(page, 'a subscriber who cancelled and is back on the return page')
-    await signIn(page, { plan: 'pro', subscription: subscription(true) })
-    await answerStatus(page, [SUBSCRIPTION_CONFIRMED])
-    await go(page, '/checkout/return?session_id=cs_test_cancelling')
-
-    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
-    const details = view(page).locator('.co-details')
-    const row = details.locator('.co-detail', { has: page.locator('dt', { hasText: /^Access until$/ }) })
-    await expect(row).toHaveCount(1)
-    await expect(row.locator('dd')).toContainText('March')
-    await expect(row.locator('dd')).toContainText('2031')
-    await expect(details.locator('dt', { hasText: /^Renews$/ })).toHaveCount(0)
-  })
-
-  test('a subscription that will renew reads "Renews"', async ({ page }) => {
-    watch(page, 'a subscriber whose plan renews')
-    await signIn(page, { plan: 'pro', subscription: subscription(false) })
+  test('a paid subscription, with no trial, states no trial date', async ({ page }) => {
+    watch(page, 'a subscriber whose plan bills straight away')
+    await signIn(page, { plan: 'pro', subscription: { status: 'active', interval: 'monthly', currentPeriodEnd: PERIOD_END, cancelAtPeriodEnd: false } })
     await answerStatus(page, [SUBSCRIPTION_CONFIRMED])
     await go(page, '/checkout/return?session_id=cs_test_renewing')
 
-    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
-    const details = view(page).locator('.co-details')
-    const row = details.locator('.co-detail', { has: page.locator('dt', { hasText: /^Renews$/ }) })
-    await expect(row.locator('dd')).toContainText('2031')
-    await expect(details.locator('dt', { hasText: /^Access until$/ })).toHaveCount(0)
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro')
+    await expect(statusLine(page)).toContainText('Your Pro subscription is active across the toolkit.')
+    await expect(view(page)).not.toContainText('free trial')
   })
 })
 
@@ -152,7 +150,7 @@ test.describe('a settling payment keeps asking, then stops', () => {
     const status = await answerStatus(page, [SUBSCRIPTION_PENDING, SUBSCRIPTION_PENDING, SUBSCRIPTION_CONFIRMED])
     await go(page, '/checkout/return?session_id=cs_test_settles')
 
-    await expect(heading(page)).toHaveText('Payment received.')
+    await expect(heading(page)).toHaveText('Payment received')
     await expect.poll(status.requests).toBe(1)
 
     // The clock runs on its own after install(), so on a loaded runner real
@@ -168,11 +166,11 @@ test.describe('a settling payment keeps asking, then stops', () => {
     // Past the 4 s mark in all, it has asked.
     await page.clock.fastForward(1500)
     await expect.poll(status.requests).toBe(2)
-    await expect(heading(page)).toHaveText('Payment received.')
+    await expect(heading(page)).toHaveText('Payment received')
 
     await page.clock.fastForward(RETRY_MS)
     await expect.poll(status.requests).toBe(3)
-    await expect(heading(page)).toHaveText('You’re on UI L4B Pro.')
+    await expect(heading(page)).toHaveText('You’re on UI L4B Pro')
 
     // Confirmed: a long wait asks nothing further.
     await page.clock.fastForward('02:00')
@@ -195,7 +193,7 @@ test.describe('a settling payment keeps asking, then stops', () => {
     await page.clock.fastForward('02:00')
     await drain(page)
     expect(status.requests(), 'one initial ask plus 15 re-asks, then no more').toBe(RETRIES + 1)
-    await expect(heading(page)).toHaveText('Payment received.')
+    await expect(heading(page)).toHaveText('Payment received')
   })
 
   test('leaving the page while it settles stops the asking', async ({ page }) => {
@@ -204,7 +202,7 @@ test.describe('a settling payment keeps asking, then stops', () => {
     await signIn(page, { plan: 'free' })
     const status = await answerStatus(page, [SUBSCRIPTION_PENDING])
     await go(page, '/checkout/return?session_id=cs_test_leaves')
-    await expect(heading(page)).toHaveText('Payment received.')
+    await expect(heading(page)).toHaveText('Payment received')
     await expect.poll(status.requests).toBe(1)
 
     // An in-app link: the route unmounts, the document stays.

@@ -392,7 +392,7 @@ test.describe('the login surfaces paint only what is true', () => {
         const { ctx, page } = await at(browser, width, theme)
         watch(page, `visitor arriving on /login at ${width} ${theme}`)
         await go(page, '/login')
-        await expect(page.locator('main .auth-page-form .auth-google-btn')).toBeVisible()
+        await expect(page.locator('main .pf-col .auth-google-btn')).toBeVisible()
         await settled(page)
 
         const seen = await page.evaluate(() => {
@@ -428,7 +428,7 @@ test.describe('the login surfaces paint only what is true', () => {
       const { ctx, page } = await at(browser, width, 'light', { reduced: true })
       watch(page, `visitor who asked for less motion, on /login at ${width}`)
       await go(page, '/login')
-      await expect(page.locator('main .auth-page-form .auth-google-btn')).toBeVisible()
+      await expect(page.locator('main .pf-col .auth-google-btn')).toBeVisible()
       await settled(page)
       expect(await page.locator('.fg-loader').count(), 'a ring is still painted on the page').toBe(0)
       await ctx.close()
@@ -462,28 +462,25 @@ test.describe('the login surfaces paint only what is true', () => {
       // A heading must not be grouped more tightly than the sections under it.
       expect(m.gap, `${width}: the h2 sits ${m.gap}px above the primary action, against a ${m.fieldGap}px field rhythm`)
         .toBeGreaterThanOrEqual(m.fieldGap)
-      // The words and the type are untouched — this cell is a SPACING fix and
-      // nothing else. `auth.welcomeBack` is approval-gated.
-      expect(m.titleSize).toBe('22px')
+      // The words are untouched, and the title steps down with the width
+      // (32 from 768, 28 below it, 26 under 360). `auth.welcomeBack` is approval-gated.
+      expect(m.titleSize, `${width}: the title size follows the width`).toBe(width >= 768 ? '32px' : width >= 360 ? '28px' : '26px')
       await expect(page.locator('#ui-login-title')).toHaveText('Log in to UI L4B')
 
       await ctx.close()
     })
   }
 
-  // The short-viewport rules, which are the half a naive spacing change would
-  // have broken. `@media(max-height:460px)` in src/styles/pages/auth.css exists
-  // because a landscape phone has ~370px for a dialog that wants ~540: without
-  // it the mode links and the legal line sit well below the fold. The dialog
-  // cannot be made to fit at this height without dropping a sign-in method (an
-  // auth change), so the contract is: tighter rhythm, the submit button whole,
-  // and the sign-up / forgot-password row at least peeking, so a scrolling
-  // dialog still says there is more.
+  // The short-viewport rule: a landscape phone has ~370px for a dialog that
+  // wants more. Below 480px tall (and from 768 wide) the picture pane drops its
+  // 560px minimum and the form pane takes 12px of padding top and bottom with a
+  // 44px pill, a 22px title and tighter gaps, so the dialog is as short as it can be. What is left must still hold: Continue whole,
+  // the sign-up / log-in row at least peeking, and a dialog that scrolls for the rest.
   //
-  // MUTATION: delete the `@media(max-height:460px){...}` block in auth.css.
-  // The title gap becomes 24, the pane padding 32 and the cost assertion goes
-  // red; the submit button is then also sliced by the dialog edge.
-  test('a landscape phone keeps the tighter rhythm, the submit button and the mode links', async ({ browser }) => {
+  // MUTATION: delete the `@media(max-height:480px) and (min-width:768px)` block in
+  // v3-pro-auth.css. The padding goes back to 56/40 and the picture pane to 560px.
+  // The dialog also has to keep the scroll cue (its local background layers).
+  test('a landscape phone keeps the tighter rhythm, the Continue button and the mode links', async ({ browser }) => {
     const ctx = await browser.newContext({
       viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: IOS_UA,
     })
@@ -493,51 +490,30 @@ test.describe('the login surfaces paint only what is true', () => {
     await expect(page.locator('.ui-login')).toBeVisible()
     await settled(page)
 
-    // Measured twice on the same rendered dialog: as the stylesheet leaves it,
-    // and again with the tall-viewport title gap forced back on. The difference
-    // is what the short-viewport rule is WORTH here, which is a stronger thing
-    // to assert than any absolute pixel count: the dialog's content has changed
-    // several times and will change again.
     const m = await page.evaluate(() => {
-      // At 768 and up the chosen variant is a clipped two-pane dialog and the
-      // form pane is what scrolls, so that is the box measured then.
-      const dialog = document.querySelector('.ui-login--strip .ui-login-pane') || document.querySelector('.ui-login')
-      const body = document.querySelector('.ui-login .auth-body')
-      const pane = document.querySelector('.ui-login .ui-login-pane')
-      const title = document.querySelector('#ui-login-title')
-      const first = document.querySelector('.ui-login .auth-google-btn')
-      const submit = document.querySelector('.ui-login .auth-submit')
+      const dialog = document.querySelector('.ui-login')
+      const offer = document.querySelector('.ui-login .pp-offer')
+      const left = document.querySelector('.ui-login .pp-left')
+      const next = document.querySelector('.ui-login .auth-continue')
       const links = document.querySelector('.ui-login .auth-links')
       const dr = dialog.getBoundingClientRect()
-      const hidden = () => dialog.scrollHeight - dialog.clientHeight
-      const exempt = {
-        padTop: getComputedStyle(pane).paddingTop,
-        gap: +(first.getBoundingClientRect().top - title.getBoundingClientRect().bottom).toFixed(1),
-        hidden: hidden(),
-        scrolls: dialog.scrollHeight > dialog.clientHeight,
-        submitSliced: Math.round(submit.getBoundingClientRect().bottom - dr.bottom) > 0,
+      return {
+        padTop: getComputedStyle(offer).paddingTop,
+        padBottom: getComputedStyle(offer).paddingBottom,
+        leftMin: getComputedStyle(left).minHeight,
+        nextSliced: Math.round(next.getBoundingClientRect().bottom - dr.bottom) > 0,
         linksPeek: Math.round(dr.bottom - links.getBoundingClientRect().top),
-        notNowShown: !!document.querySelector('.ui-login .auth-notnow')?.getClientRects().length,
+        scrolls: dialog.scrollHeight > dialog.clientHeight,
+        cue: /local/.test(getComputedStyle(dialog).backgroundAttachment),
       }
-      body.style.marginTop = '24px'
-      void dialog.offsetHeight
-      const cost = hidden() - exempt.hidden
-      body.style.marginTop = ''
-      return { ...exempt, cost }
     })
-    expect(m.padTop, 'the landscape rule stopped applying to the dialog padding').toBe('12px')
-    expect(m.gap, 'the title is taking the tall-viewport gap on a landscape phone').toBeLessThan(16)
-    // The whole 12px, not some of it: anything less means two rules are
-    // fighting rather than the later one winning outright.
-    expect(m.cost, 'spending the title gap here would cost nothing, so the rule is dead code').toBe(12)
-    expect(m.submitSliced, 'the submit button is cut by the dialog edge').toBe(false)
-    expect(m.linksPeek, 'the sign-up / forgot-password row is entirely below the fold').toBeGreaterThan(0)
-    // What IS below the fold stays reachable: .ui-modal scrolls, with the
-    // pure-CSS scroll shadow that tells the reader there is more.
+    expect(m.padTop, 'the landscape rule stopped applying to the form padding').toBe('12px')
+    expect(m.padBottom, 'the landscape rule stopped applying to the form padding').toBe('12px')
+    expect(m.leftMin, 'the picture pane keeps its tall minimum on a landscape phone').toBe('0px')
+    expect(m.nextSliced, 'the Continue button is cut by the dialog edge').toBe(false)
+    expect(m.linksPeek, 'the sign-up / log-in row is entirely below the fold').toBeGreaterThan(0)
     expect(m.scrolls, 'the dialog does not scroll, so anything below the fold is lost').toBe(true)
-    // "Not now" is the one control that gives way, and only here: Close is in
-    // the corner and Escape works. Pinned so it cannot go missing elsewhere.
-    expect(m.notNowShown, '"Not now" should give way on a landscape phone').toBe(false)
+    expect(m.cue, 'the dialog scrolls with no scroll cue').toBe(true)
 
     await ctx.close()
   })

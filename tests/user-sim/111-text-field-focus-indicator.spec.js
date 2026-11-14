@@ -8,7 +8,7 @@
 // away from it (a few of these fields change border on hover), and the focused
 // style is polled because border-color carries a transition.
 import { test, expect } from './base.js'
-import { go, watch, openChosenDialog } from './helpers.js'
+import { go, watch, openChosenDialog, continueWithEmail } from './helpers.js'
 
 const THEMES = ['light', 'dark']
 
@@ -97,14 +97,16 @@ for (const scheme of THEMES) {
       const dialog = page.getByRole('dialog')
       await expect(dialog).toBeVisible()
       expectOneIndicator('sign-in email', await focusedLook(page, dialog.getByLabel('Email')))
+      await continueWithEmail(page, dialog)
       expectOneIndicator('sign-in password', await focusedLook(page, dialog.getByLabel('Password')))
     })
 
     test('the /login page email field', async ({ page }) => {
       await go(page, '/login')
-      const form = page.locator('main .auth-page-form')
+      const form = page.locator('main .pf-col')
       await expect(form.getByLabel('Email')).toBeVisible()
       expectOneIndicator('login page email', await focusedLook(page, form.getByLabel('Email')))
+      await continueWithEmail(page, form)
       expectOneIndicator('login page password', await focusedLook(page, form.getByLabel('Password')))
     })
 

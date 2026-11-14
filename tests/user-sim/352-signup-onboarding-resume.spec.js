@@ -10,7 +10,7 @@
 //   /onboarding                       AppInner sends every new account here, and the
 //                                     account's document holds an OPEN onboarding
 //                                     record (openedAt, no completedAt)
-//   "Not now, take me to my projects" the buyer is not dropped on /projects: the stash
+//   "Not now" (a link in the header)  the buyer is not dropped on /projects: the stash
 //                                     takes them back to /checkout/return?session_id=...
 //                                     and the record is now complete
 //
@@ -30,7 +30,7 @@
 // record test fails, and the app skips onboarding). AppInner: stop sending a new
 // account to /onboarding (the /onboarding wait fails).
 import { test, expect } from './base.js'
-import { go, signIn, watch } from './helpers.js'
+import { go, signIn, watch, continueWithEmail } from './helpers.js'
 
 const SESSION = 'cs_test_signup_resume'
 const RETURN = `/checkout/return?session_id=${SESSION}`
@@ -55,6 +55,7 @@ async function createAccount(page) {
   await page.getByRole('button', { name: /Create one$/ }).click()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Create your free account')
   await page.locator('#ui-login-email').fill(EMAIL)
+  await continueWithEmail(page)
   await page.locator('#ui-login-password').fill('a-long-test-password')
   await page.getByRole('button', { name: 'Create account' }).click()
 }
@@ -72,7 +73,7 @@ test('a signed-out buyer on the checkout return signs up, onboards, and is sent 
   await createAccount(page)
 
   await expect.poll(() => new URL(page.url()).pathname, { message: 'a new account goes to onboarding' }).toBe('/onboarding')
-  await expect(page.getByRole('heading', { level: 1, name: 'What do you want to make first?' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Start with your brand colour' })).toBeVisible()
   expect(await page.evaluate(() => window.__UIL4B_TEST_AUTH__.signedIn), 'the account the form made is the signed-in one').toBe(true)
   await expect.poll(async () => (await record(page))?.openedAt, { message: 'the new account document holds an open onboarding record' }).toEqual(expect.any(Number))
   const open = await record(page)
@@ -81,15 +82,16 @@ test('a signed-out buyer on the checkout return signs up, onboards, and is sent 
   expect(doc.email, 'the document is the new buyer\'s').toBe(EMAIL)
   expect(doc.subscription, 'a new account has no plan').toBeUndefined()
 
-  await page.getByRole('button', { name: 'Not now, take me to my projects' }).click()
+  await page.getByRole('link', { name: /^Not now, take me to (checkout|my projects)$/ }).click()
   await expect.poll(() => here(page), { message: 'the buyer resumes where they were headed, not on /projects' }).toBe(RETURN)
-  // The redesigned return page (#569) shows only the last 8 characters of the session id, as
-  // "…p_resume" under Reference; the full id is no longer in the page. The URL (the `here` check
+  // The return page shows only the last 8 characters of the session id, as
+  // "…p_resume" under Confirmation reference; the full id is not in the page. The URL (the `here` check
   // above) carries the whole id, so it proves the buyer is back on THEIR session; the page's own
   // reference proves the return page read it. The mocked status is a paid subscription still
-  // settling, so the headline is "Payment received."
-  await expect(page.locator('.co-return h1')).toHaveText('Payment received.')
-  await expect(page.locator('.co-details .co-detail', { has: page.locator('dt', { hasText: /^Reference$/ }) }).locator('.co-ref-code')).toHaveText(`…${SESSION.slice(-8)}`)
+  // settling, so the headline is "Payment received".
+  await expect(page.locator('.ck-ret h1')).toHaveText('Payment received')
+  await expect(page.locator('.ck-ref span')).toHaveText('Confirmation reference')
+  await expect(page.locator('.ck-ref code')).toHaveText(`…${SESSION.slice(-8)}`)
   await expect.poll(async () => (await record(page))?.completedAt, { message: 'onboarding is recorded as finished' }).toEqual(expect.any(Number))
   expect(await page.evaluate((k) => sessionStorage.getItem(k), RESUME_KEY), 'the stash is used up').toBeNull()
 })
@@ -103,7 +105,7 @@ test('the same sign-up with nothing to resume ends on /projects', async ({ page 
 
   await expect.poll(() => new URL(page.url()).pathname).toBe('/onboarding')
   await expect.poll(async () => (await record(page))?.openedAt).toEqual(expect.any(Number))
-  await page.getByRole('button', { name: 'Not now, take me to my projects' }).click()
+  await page.getByRole('link', { name: 'Not now, take me to my projects' }).click()
   await expect.poll(() => new URL(page.url()).pathname).toBe('/projects')
   await expect.poll(async () => (await record(page))?.completedAt).toEqual(expect.any(Number))
 })
