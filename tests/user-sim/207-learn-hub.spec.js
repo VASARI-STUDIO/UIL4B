@@ -164,10 +164,24 @@ for (const width of [390, 768, 1440]) {
       const using = await edges(`#${USING_ID} .lidx-card`)
       expect(guides.length).toBe(LEARN_ARTICLES.length)
       expect(using.length).toBe(USING_HREFS.length)
-      for (const u of using) expect(u).toEqual(guides[0])
-      // The arrows end at the same x on a guide row and a Using row.
-      const arrow = (sel) => page.locator(sel).first().evaluate((el) => Math.round(el.getBoundingClientRect().right * 2) / 2)
-      expect(await arrow(`#${USING_ID} .lidx-go`)).toBe(await arrow(`.lidx-sections section:not(#${USING_ID}) .lidx-go`))
+      // The rows are laid out in a grid (3, 2 or 1 columns by width), so the
+      // first Using row starts where the first guide row does, and every Using
+      // row sits in a column the guide rows use: the same left and right edges.
+      expect(using[0]).toEqual(guides[0])
+      const columns = new Set(guides.map((g) => `${g.left}|${g.right}`))
+      for (const u of using) expect(columns, `a Using row at ${u.left}-${u.right} is off the guides' columns`).toContain(`${u.left}|${u.right}`)
+      // The arrow sits at the end of the title, in the title's last-word span
+      // (so it cannot be stranded on a line of its own), the same distance from
+      // that span's right edge on a guide row and a Using row.
+      const arrow = (sel) => page.locator(sel).first().evaluate((card) => {
+        const nw = card.querySelector('.lidx-title .lidx-nw')
+        const a = nw?.querySelector('.srf-go')
+        if (!a) return null
+        return Math.round((nw.getBoundingClientRect().right - a.getBoundingClientRect().right) * 2) / 2
+      })
+      const guideArrow = await arrow(`.lidx-sections section:not(#${USING_ID}) .lidx-card`)
+      expect(guideArrow, 'a guide title has no arrow in its last-word span, so there is nothing to compare').not.toBeNull()
+      expect(await arrow(`#${USING_ID} .lidx-card`)).toBe(guideArrow)
       // The group heading starts on the same edge as the topic headings.
       const hx = (sel) => page.locator(sel).first().evaluate((el) => Math.round(el.getBoundingClientRect().left * 2) / 2)
       expect(await hx(`#${USING_ID} .lidx-topic-h`)).toBe(await hx('.lidx-topic-sec .lidx-topic-h'))
@@ -193,7 +207,11 @@ test.describe('on a small phone', () => {
       const cs = getComputedStyle(el)
       const c = document.createElement('canvas').getContext('2d')
       c.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
-      const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+      // The box's own width less its padding. (clientWidth is not used: on a
+      // search field Chromium already leaves the padding out of it, so taking
+      // the padding off again counted it twice and halved the room.)
+      const room = el.getBoundingClientRect().width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+        - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth)
       return { text: c.measureText(el.placeholder).width, room, scroll: el.scrollWidth, client: el.clientWidth, shown: el.matches(':placeholder-shown') }
     })
     expect(m.shown, 'the placeholder is not what the field is showing').toBe(true)
@@ -240,7 +258,7 @@ test.describe('when the full text will not load', () => {
 
       // A title word still finds its guide, with the same notice standing.
       await field(page).fill('contrast')
-      await expect(page.locator('.lidx-card').first()).toHaveAttribute('href', /^\/learn\/.+/)
+      await expect(page.locator('.lidx-card a.lidx-title').first()).toHaveAttribute('href', /^\/learn\/.+/)
       await expect(status).toContainText(/titles only/i)
       await expect(field(page)).toHaveValue('contrast')
       expect(await page.evaluate(() => window.__noReloadMarker)).toBe('kept')
@@ -270,33 +288,39 @@ test.describe('keyboard', () => {
 
       // Tab from the search field and record every link reached.
       await field(page).focus()
-      const reached = []
+      // Every guide card also carries its contents links (and "Two guides for
+      // today" repeats two guide links above the list), so the walk is long:
+      // the limit is generous and the loop stops at the last Using row.
+      const reached = [] // every focus stop: { href, card }, `card` = a title link inside a .lidx-card
       let ring = null
-      for (let i = 0; i < 60; i += 1) {
+      for (let i = 0; i < 400; i += 1) {
         await page.keyboard.press('Tab')
         const at = await page.evaluate(() => {
           const el = document.activeElement
           const cs = getComputedStyle(el)
           return {
-            href: el.getAttribute('href'), cls: el.className, focusVisible: el.matches(':focus-visible'),
+            href: el.getAttribute('href'), card: el.classList.contains('lidx-title') && !!el.closest('li.lidx-card'),
+            focusVisible: el.matches(':focus-visible'),
             outlineStyle: cs.outlineStyle, outlineWidth: parseFloat(cs.outlineWidth), outlineColor: cs.outlineColor,
           }
         })
-        reached.push(at.href)
-        if (at.href === USING_HREFS[0]) ring = at
-        if (at.href === USING_HREFS.at(-1)) break
+        reached.push({ href: at.href, card: at.card })
+        if (at.card && at.href === USING_HREFS[0]) ring = at
+        if (at.card && at.href === USING_HREFS.at(-1)) break
       }
 
-      // DOM order of the cards: the guides first, then the two Using rows.
-      const domCards = await page.$$eval('.lidx-card', (els) => els.map((el) => el.getAttribute('href')))
+      // DOM order of the cards (each card's title link): the guides first, then the two Using rows.
+      const domCards = await page.$$eval('li.lidx-card a.lidx-title', (els) => els.map((el) => el.getAttribute('href')))
       expect(domCards).toHaveLength(LEARN_ARTICLES.length + USING_HREFS.length)
       expect(domCards.slice(-USING_HREFS.length)).toEqual(USING_HREFS)
       // The cards, in the order Tab met them, are exactly the DOM order: every
       // guide comes before Help, and Help before Principles.
-      expect(reached.filter((h) => domCards.includes(h))).toEqual(domCards)
+      const cardsReached = reached.filter((r) => r.card).map((r) => r.href)
+      expect(cardsReached).toEqual(domCards)
       // The topic jump link to the group was met before any card (it is above).
-      expect(reached.indexOf(`#${USING_ID}`)).toBeGreaterThanOrEqual(0)
-      expect(reached.indexOf(`#${USING_ID}`)).toBeLessThan(reached.indexOf(domCards[0]))
+      const hrefs = reached.map((r) => r.href)
+      expect(hrefs.indexOf(`#${USING_ID}`)).toBeGreaterThanOrEqual(0)
+      expect(hrefs.indexOf(`#${USING_ID}`)).toBeLessThan(reached.findIndex((r) => r.card))
 
       // The ring on the first new row is a real one: a solid outline, 2px, with a
       // colour that can be seen on the ground (3:1 for a component boundary).
@@ -364,12 +388,11 @@ test.describe('Discover shares the hint component and keeps its own look', () =>
   })
 })
 
-// A row with no read time. At 561px and over the grid is "title time go", so the
-// empty `time` column still costs a 20px column gap; at 560px and under the grid
-// is "title go / dek / time / hit", and a `:not(:has(.lidx-time))` rule in
-// surface.css drops the empty time and hit rows. This measures the space a Using
-// row gets above its title and below its dek: at 560px and under they must match
-// (within 2px). The numbers are in the failure message.
+// A row with no read time. The cards are plain blocks now (no padding, no
+// grid tracks), so a Using row has nothing under its dek: no empty time, hit or
+// contents track may add space there. This measures the space a Using row gets
+// above its title, between title and dek, and below the dek, against a guide
+// row. The numbers are in the failure message.
 test.describe('the rows with no read time', () => {
   for (const width of [390, 560, 768]) {
     test(`spacing inside a Using row against a guide row at ${width}px`, async ({ page }) => {
@@ -397,15 +420,11 @@ test.describe('the rows with no read time', () => {
       // The gap between title and dek is the grid's own 4px row gap in both
       // (the title's line box can differ by a pixel with its wrapped length).
       expect(Math.abs(using.between - guide.between), note).toBeLessThanOrEqual(1)
-      // Above the title: the card's own 16px padding, the same in both.
+      // Above the title: the same in both (the title's own box, set by the same rule).
       expect(using.above, note).toBeCloseTo(guide.above, 0)
-      if (width <= 560) {
-        // surface.css drops the empty time and hit rows from a card with no read
-        // time, so the space under the dek is the card's own padding, as above.
-        expect(Math.abs(using.below - using.above), note).toBeLessThanOrEqual(2)
-      } else {
-        expect(using.below, note).toBeLessThanOrEqual(16 + 4 + 1)
-      }
+      // Below the dek: the card ends at its dek. Nothing empty (a time, hit or
+      // contents track) holds space open under it, at any width.
+      expect(using.below, note).toBeLessThanOrEqual(1)
     })
   }
 })

@@ -161,6 +161,9 @@ test('submitted markup is never inlined, on any surface that renders it', () => 
   // innerHTML assignment — hands all of that back.
   const surfaces = [
     'src/pages/Community.jsx',
+    'src/pages/CommunityProfile.jsx',
+    'src/components/community/ShareDialogs.jsx',
+    'src/components/community/useCommunityHub.js',
     'src/components/admin/CommunityQueue.jsx',
     'src/components/discover/IconSubmissionPreview.jsx',
   ]
@@ -263,16 +266,32 @@ test('a storage that throws loses nothing but the cache', () => {
 
 /* ── 5 · The page, and the promises it does and does not make ────────────── */
 
-const COMMUNITY = read('src/pages/Community.jsx')
+// The submission logic lives in useCommunityHub.js; the dialogs, the showcase
+// and the profile's Your submissions list are the other community files.
+const HUB_FILE = 'src/components/community/useCommunityHub.js'
+const COMMUNITY_FILES = [
+  'src/pages/Community.jsx',
+  'src/pages/CommunityPiece.jsx',
+  'src/pages/CommunityProfile.jsx',
+  HUB_FILE,
+  'src/components/community/ShareDialogs.jsx',
+  'src/components/community/pieceUi.jsx',
+  'src/components/community/pieceActions.js',
+]
+const COMMUNITY = COMMUNITY_FILES.map(read).join('\n')
+const HUB = read(HUB_FILE)
+const PROFILE = read('src/pages/CommunityProfile.jsx')
 
 test('an icon reaches the ACCOUNT, not just this browser', () => {
-  assert.match(COMMUNITY, /listMySubmissions\(uid, 'icon'\)/,
+  assert.match(HUB, /listMySubmissions\(uid, 'icon'\)/,
     'the page no longer reads the account for icons')
-  assert.match(COMMUNITY, /buildQueueRecord\(\{ kind: 'icon'/,
+  assert.match(HUB, /publish\('icon', item, buildIconPayload\(/,
+    'the icon is not sent through the shared publish path')
+  assert.match(HUB, /buildQueueRecord\(\{ kind, name: item\.name/,
     'the icon is not shaped for the shared queue')
-  assert.match(COMMUNITY, /await publishToQueue\(\{ \.\.\.queued, localId: item\.id \}\)/,
+  assert.match(HUB, /await publishToQueue\(\{ \.\.\.queued, localId: item\.id \}\)/,
     'and is not published, carrying the local id so the merge can pair them')
-  assert.match(COMMUNITY, /mergeSubmissions\(serverIcons, iconLocal\)/,
+  assert.match(HUB, /mergeSubmissions\(iconServer, iconLocal\)/,
     'the account copy and this browser are no longer merged')
 })
 
@@ -280,11 +299,12 @@ test('the local copy is written FIRST, as it is for designs and palettes', () =>
   // Local-first is why submitting works offline and the list updates without
   // waiting on a round trip. Publishing before the local write would make a
   // dropped connection lose the submission outright.
-  // Read inside the submit handler: the publish itself lives in a helper the
-  // handler calls, so the order that matters is the handler's.
-  const handler = COMMUNITY.slice(COMMUNITY.indexOf('const handleIconSubmit'))
+  // Read inside the submit handler in useCommunityHub.js: the publish itself
+  // lives in a helper the handler calls, so the order that matters is the
+  // handler's.
+  const handler = HUB.slice(HUB.indexOf('const submitIcon'))
   const localAt = handler.indexOf('setIconLocal(appendIconSubmission(item))')
-  const publishAt = handler.indexOf('await sendIcon(item)')
+  const publishAt = handler.indexOf('return sendIcon(item)')
   assert.ok(localAt > -1, 'the icon flow keeps no local copy')
   assert.ok(publishAt > -1, 'the icon flow never publishes')
   assert.ok(localAt < publishAt, 'the icon flow publishes before it writes locally')
@@ -294,8 +314,11 @@ test('an unsent submission can still be sent — the hole the other three flows 
   // Gradients, palettes and designs all keep a local copy when the publish
   // fails and then offer no route to the account at all, which re-enters the
   // exact bug the queue was built to end.
-  assert.match(COMMUNITY, /retryIcon/, 'the retry is gone')
-  assert.match(COMMUNITY, /submissionStatusLabel\(\{ status: s\.status, synced: s\.synced/,
+  assert.match(HUB, /const retry = useCallback\(\(row\) => \(row\.kind === 'icon' \? sendIcon\(row\)/,
+    'the retry is gone')
+  assert.match(PROFILE, /hub\.retry\(row\)/, 'the list no longer offers the retry')
+  assert.match(PROFILE, /row\.synced === false/, 'the retry is no longer limited to what did not reach the account')
+  assert.match(HUB, /submissionStatusLabel\(\{ status: row\.status, synced: row\.synced/,
     'the row no longer distinguishes what reached the account from what did not')
 })
 
@@ -305,21 +328,20 @@ test('nothing on /community says an icon will appear', () => {
   // to nobody but its author. The moment a public feed exists, that test says
   // so and this one retires with it.
   const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-  const queueReaders = ['src/pages/Community.jsx', 'src/components/discover/IconSubmissionPreview.jsx']
+  const queueReaders = [...COMMUNITY_FILES, 'src/components/discover/IconSubmissionPreview.jsx']
   for (const file of queueReaders) {
     // Comments stripped for the same reason surface-claims-truth.test.js strips
-    // them: Community.jsx's own note EXPLAINS that listQueue() is called from
-    // the admin and nowhere else, and that sentence is the opposite of a
-    // violation.
+    // them: a note can EXPLAIN that listQueue() is called from the admin and
+    // nowhere else, and that sentence is the opposite of a violation.
     assert.ok(!strip(read(file)).includes('listQueue('), `${file} now renders the queue — revisit both claim tests`)
   }
   const code = strip(COMMUNITY)
-  for (const phrase of ['before it appears', 'appears publicly', 'in the library', 'will be published']) {
+  for (const phrase of ['before it appears', 'appears publicly', 'in the library', 'will be published', 'will appear here']) {
     assert.ok(!code.includes(phrase), `/community claims a submission "${phrase}"`)
   }
-  // Positive control: the comment-stripper has not simply emptied the file.
+  // Positive control: the comment-stripper has not simply emptied the files.
   assert.ok(code.length > 4000, 'the claim scan read an empty or missing page')
-  assert.ok(code.includes('Queued for review'), 'the page no longer says what actually happens')
+  assert.ok(code.includes('saved to your account and queued for review'), 'the page no longer says what actually happens')
 })
 
 test('the icon gate is its own surface, so signing in reopens the right form', () => {
@@ -327,11 +349,13 @@ test('the icon gate is its own surface, so signing in reopens the right form', (
   // back the design form.
   const intent = read('src/utils/submitIntent.js')
   assert.match(intent, /'community-icon'/)
-  assert.match(COMMUNITY, /hasSubmitIntent\(ICON_SUBMIT_SURFACE\)/)
-  assert.match(COMMUNITY, /setSubmitIntent\(ICON_SUBMIT_SURFACE\)/)
+  assert.match(HUB, /SURFACES = \{ design: 'community', icon: 'community-icon' \}/)
+  assert.match(HUB, /hasSubmitIntent\(SURFACES\[k\]\)/)
+  assert.match(HUB, /setSubmitIntent\(surface\)/)
   // And it is a free-account gate that opens on the CREATE-ACCOUNT form, like
   // the other three — everyone who reaches it has no account.
-  assert.match(COMMUNITY, /requireLogin\('submit an icon to the community', \{\s*free: true,\s*signup: true,/)
+  assert.match(HUB, /icon: 'submit an icon to the community'/)
+  assert.match(HUB, /requireLogin\(GATE_WORDS\[what\] \|\| GATE_WORDS\.project, \{\s*free: true,\s*signup: true,/)
 })
 
 test('a reviewer is shown the artwork, not a placeholder', () => {

@@ -27,16 +27,33 @@ const loaderIds = () => {
   return [...table[1].matchAll(/^\s*(\w+):\s*\(\)\s*=>\s*import\(/gm)].map((m) => m[1])
 }
 
-test('the list has six previews today and no duplicate ids', () => {
-  // Poster and Social (the graphic group) raise this to eight when they are built.
-  assert.equal(PREVIEW_SCENES.length, 6)
+test('the list has twelve previews and no duplicate ids', () => {
+  assert.equal(PREVIEW_SCENES.length, 12)
   assert.equal(new Set(PREVIEW_SCENES.map((s) => s.id)).size, PREVIEW_SCENES.length)
 })
 
-test('previews are grouped product and marketing, three each, and no group is empty', () => {
-  assert.deepEqual(PREVIEW_GROUPS.map((g) => g.id), ['product', 'marketing'])
+test('previews are in the rail order, with these names', () => {
+  assert.deepEqual(PREVIEW_SCENES.map((s) => `${s.id}:${s.name}`), [
+    'energy:Energy dashboard',
+    'trail:Trail run app',
+    'card:Spending card',
+    'booking:Booking page',
+    'report:Sales report',
+    'editorial:Editorial hero',
+    'product:Product page',
+    'studio:Architect portfolio',
+    'email:Order email',
+    'coffee:Coffee bag',
+    'shopfront:Shopfront',
+    'stationery:Stationery',
+  ])
+})
+
+test('previews are grouped product (5), marketing (4) and brand (3), and no group is empty', () => {
+  assert.deepEqual(PREVIEW_GROUPS.map((g) => g.id), ['product', 'marketing', 'brand'])
+  const sizes = { product: 5, marketing: 4, brand: 3 }
   for (const g of PREVIEW_GROUPS) {
-    assert.equal(PREVIEW_SCENES.filter((s) => s.group === g.id).length, 3, `${g.id} should hold three previews`)
+    assert.equal(PREVIEW_SCENES.filter((s) => s.group === g.id).length, sizes[g.id], `${g.id} holds the wrong number of previews`)
   }
   for (const s of PREVIEW_SCENES) {
     assert.ok(PREVIEW_GROUPS.some((g) => g.id === s.group), `${s.id} is in "${s.group}", which is not a listed group`)
@@ -54,9 +71,9 @@ test('the list is in group order, because the arrow keys walk it', () => {
   assert.deepEqual(groups, [...groups].sort((a, b) => a - b))
 })
 
-test('the free previews are exactly energy, trail, editorial and product', () => {
-  assert.deepEqual(PREVIEW_SCENES.filter((s) => s.free).map((s) => s.id).sort(), ['editorial', 'energy', 'product', 'trail'])
-  assert.deepEqual(PREVIEW_SCENES.filter((s) => !s.free).map((s) => s.id).sort(), ['card', 'studio'])
+test('the free previews are exactly energy, trail, booking, editorial, product and email', () => {
+  assert.deepEqual(PREVIEW_SCENES.filter((s) => s.free).map((s) => s.id).sort(), ['booking', 'editorial', 'email', 'energy', 'product', 'trail'])
+  assert.deepEqual(PREVIEW_SCENES.filter((s) => !s.free).map((s) => s.id).sort(), ['card', 'coffee', 'report', 'shopfront', 'stationery', 'studio'])
 })
 
 test('the default preview is free, so a free account never opens onto a blurred scene', () => {

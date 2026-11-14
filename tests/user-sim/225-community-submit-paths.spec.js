@@ -1,6 +1,6 @@
 // The other ways into the community review queue, beside the Gradient tool's
 // Save or share menu (spec 169): Palette Builder's "Submit to the community…",
-// the Prompt Library's "Submit prompt" and /community's "Submit design".
+// the Prompt Library's "Submit prompt" and /community's "Share your work" > "A link" form.
 //
 // What this file pins, at 1440 and at 390 on a touch screen, signed in:
 //   1. The entry point is reachable (a popover on a desktop, a bottom sheet on a
@@ -21,10 +21,10 @@
 //   PaletteBuilder.jsx: replace `await publishToQueue({ ...queued, localId })` with a call that
 //       swallows (`.catch(() => {})`) -> "palette: a refused write never says Submitted"
 //   promptSubmission.js buildCommunityPromptRecord: add `extra: 1` -> "prompt: ... only the keys the rules allow"
-//   Community.jsx handleSubmit: add `note: 'x'` to the payload -> "design: ... only the keys the rules allow"
+//   useCommunityHub.js designPayload: add `note: 'x'` to the payload -> "design: ... only the keys the rules allow"
 //   communityQueue.js buildQueueRecord: put the old lookup back, `(user.displayName || 'Anonymous')`
 //       -> every "credited to" assertion here and the authorName tests in spec 169
-//   Community.jsx: drop `authorName: queueAuthorName(),` from the design record -> the two design tests
+//   useCommunityHub.js publish: drop `authorName: queueAuthorName(),` from buildQueueRecord -> the credited-to design tests
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 
@@ -214,6 +214,17 @@ test.describe('Prompt Library: Submit prompt', () => {
 
 test.describe('/community: Submit design', () => {
   const designDialog = (page) => page.getByRole('dialog', { name: 'Submit a design' })
+  const sentDialog = (page) => page.getByRole('dialog', { name: 'Sent for review' })
+  // V3: the Community page has no "Submit design" button of its own. A design
+  // is shared through "Share your work": pick "A link", press Next, and the
+  // "Submit a design" form opens.
+  async function openDesignForm(page) {
+    await page.locator('.cm-head').getByRole('button', { name: 'Share your work' }).click()
+    const pick = page.getByRole('dialog', { name: 'Share your work' })
+    await pick.getByRole('radio', { name: /A link/ }).check({ force: true })
+    await pick.getByRole('button', { name: 'Next' }).click()
+    await expect(designDialog(page)).toBeVisible()
+  }
 
   for (const screen of SCREENS) {
     test(`design ${screen.label}: reachable, and writes one pending record with only the keys the rules allow`, async ({ browser }) => {
@@ -222,16 +233,15 @@ test.describe('/community: Submit design', () => {
         watch(page, `member submitting a design at ${screen.width}px`)
         const account = await signIn(page, { plan: 'free' })
         await go(page, '/community')
-        await page.getByRole('button', { name: 'Submit design' }).first().click()
+        await openDesignForm(page)
         const dialog = designDialog(page)
-        await expect(dialog).toBeVisible()
         const box = await dialog.boundingBox()
         expect(box.x, 'the form starts on screen').toBeGreaterThanOrEqual(0)
         expect(box.x + box.width, 'the form fits the screen').toBeLessThanOrEqual(screen.width)
         await dialog.getByLabel('Name', { exact: true }).fill('Harbour landing')
         await dialog.getByRole('button', { name: 'Submit design' }).click()
         await expect(designDialog(page)).toHaveCount(0)
-        await expect(toastText(page)).toContainText('Design submitted for review')
+        await expect(sentDialog(page)).toBeVisible()
         const docs = await docsIn(page, 'community-submissions')
         expect(docs, 'exactly one document').toHaveLength(1)
         expectOnlyRulesKeys(docs[0])
@@ -250,10 +260,10 @@ test.describe('/community: Submit design', () => {
     const account = await signIn(page, { plan: 'free' })
     await go(page, '/community')
     expect(await page.evaluate(() => localStorage.getItem('vs-community-handle'))).toBeNull()
-    await page.getByRole('button', { name: 'Submit design' }).first().click()
+    await openDesignForm(page)
     await designDialog(page).getByLabel('Name', { exact: true }).fill('Harbour landing')
     await designDialog(page).getByRole('button', { name: 'Submit design' }).click()
-    await expect(toastText(page)).toContainText('Design submitted for review')
+    await expect(sentDialog(page)).toBeVisible()
     const docs = await docsIn(page, 'community-submissions')
     expect(docs).toHaveLength(1)
     expectCreditedTo(docs[0], 'Freya Free', account.email)
@@ -266,10 +276,10 @@ test.describe('/community: Submit design', () => {
     await page.addInitScript(() => localStorage.setItem('vs-community-handle', 'Freya Free!'))
     const account = await signIn(page, { plan: 'free' })
     await go(page, '/community')
-    await page.getByRole('button', { name: 'Submit design' }).first().click()
+    await openDesignForm(page)
     await designDialog(page).getByLabel('Name', { exact: true }).fill('Harbour landing')
     await designDialog(page).getByRole('button', { name: 'Submit design' }).click()
-    await expect(toastText(page)).toContainText('Design submitted for review')
+    await expect(sentDialog(page)).toBeVisible()
     const docs = await docsIn(page, 'community-submissions')
     expect(docs).toHaveLength(1)
     expectCreditedTo(docs[0], 'Freya Free', account.email)
@@ -280,11 +290,12 @@ test.describe('/community: Submit design', () => {
     watch(page, 'member whose design submission is refused')
     await signIn(page, { plan: 'free', deny: [{ path: 'community-submissions', code: 'permission-denied' }] })
     await go(page, '/community')
-    await page.getByRole('button', { name: 'Submit design' }).first().click()
+    await openDesignForm(page)
     await designDialog(page).getByLabel('Name', { exact: true }).fill('Harbour landing')
     await designDialog(page).getByRole('button', { name: 'Submit design' }).click()
     await expect(toastText(page)).toContainText(/could not reach the review queue/i)
-    await expect(toastText(page)).not.toContainText(/submitted for review/i)
+    await expect(toastText(page)).not.toContainText(/sent for review/i)
+    await expect(sentDialog(page), 'a refused write must not open the "Sent for review" dialog').toHaveCount(0)
     expect(await docsIn(page, 'community-submissions')).toHaveLength(0)
   })
 })

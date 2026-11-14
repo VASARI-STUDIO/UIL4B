@@ -1,0 +1,708 @@
+/* ══ The Discover libraries on the V3 roles ═════════════════════════════════
+   /discover/palettes, /discover/gradients and /discover/buttons share one
+   shell (deferred/library.css, global.css, tool-shell.css) that the icon and
+   font libraries also use, so none of it is edited. These rules restate the
+   shell's values on the V3 roles (v3-shell.css) for the three pages whose root
+   carries `lib-v3`.
+
+   Every selector starts `.lib-surface.lib-v3[class]`: the attribute selector
+   adds one class of weight, so each rule out-ranks the shell's
+   `.lib-surface .x .y` rules and the page sheets' `.lib-surface.<page> .x`
+   rules whichever stylesheet loads last.
+
+   Rules of the surface: no blur, no glow, no gradient on a control, no blue,
+   focus is a 2px ink outline, radii 16 / 12 / 8 / 999, controls 36px (44px on
+   a phone), five type sizes 52 / 40 / 28 / 16 / 12. */
+
+/* ── Hero slab ───────────────────────────────────────────────────────────── */
+.lib-surface.lib-v3[class] .dgh-hero{
+  min-height:180px;padding:36px 40px;margin:0 0 16px;
+  background:#0A0A0B;border:0;border-radius:16px;
+  box-shadow:inset 0 0 0 1px rgba(239,238,234,.1);
+  color:#EFEEEA;
+}
+[data-theme="light"] .lib-surface.lib-v3[class] .dgh-hero{box-shadow:inset 0 0 0 1px rgba(239,238,234,.1),0 1px 2px rgba(18,20,24,.06)}
+.lib-surface.lib-v3[class] .dgh-hero h1{
+  max-width:30ch;font-size:clamp(32px,4.3vw,52px);font-weight:600;line-height:1;letter-spacing:-.03em;color:#EFEEEA;
+}
+.lib-surface.lib-v3[class] .dgh-hero p{
+  max-width:58ch;margin:12px 0 0;font-size:16px;line-height:1.55;color:rgba(239,238,234,.68);
+}
+/* The library leads are short, so the phone shows the whole sentence (the
+   shared masthead clamps its paragraph to two lines below 641px). */
+@media(max-width:640px){
+  .lib-surface.lib-v3[class] .dgh-hero{min-height:0;margin-top:8px;padding:24px 20px}
+  .lib-surface.lib-v3[class] .dgh-copy>p{display:block;-webkit-line-clamp:none;line-clamp:none;overflow:visible;font-size:15px;line-height:1.5}
+}
+@media(max-width:359px){.lib-surface.lib-v3[class] .dgh-hero{padding:20px 16px}}
+@media(min-width:1200px){.lib-surface.lib-v3[class] .dgh-hero h1{font-size:52px}}
+.lib-surface.lib-v3[class] .dgh-action{margin-top:20px}
+
+/* The hero's one action (gradients): the ink pill, 36px. */
+.lib-surface.lib-v3[class] .dgh-action .btn{
+  display:inline-flex;align-items:center;gap:10px;height:36px;min-height:36px;padding:0 16px 0 12px;
+  border:0;border-radius:999px;background:#EFEEEA;color:#060607;
+  font-size:14px;font-weight:500;line-height:1;white-space:nowrap;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3[class] .dgh-action .btn:hover{background:#F7F6F2;color:#060607}
+.lib-surface.lib-v3[class] .dgh-action .btn:active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .dgh-action .btn:focus-visible{outline:2px solid #EFEEEA;outline-offset:2px}
+.lib-surface.lib-v3[class] .dgh-action .btn::before{content:none}
+
+/* ── The tray: search, switches, mood, create ───────────────────────────────
+   One 52px pill on the raised ground. Sticky as before, but opaque, with no
+   border, shadow or blur, and it never scales or dims. */
+.lib-surface.lib-v3[class] .lbry-toolbar{
+  --search-h:36px;
+  gap:12px;min-height:52px;margin:0 0 40px;padding:8px;
+  background:var(--v3-raised);border:0;border-radius:999px;box-shadow:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+.lib-surface.lib-v3[class] .lbry-toolbar-row{align-items:center;gap:12px}
+.lib-surface.lib-v3[class] .lbry-toolbar-filters{display:flex;align-items:center;gap:12px}
+.lib-surface.lib-v3[class] .lbry-toolbar-row>.lbry-search{flex:0 1 360px}
+.lib-surface.lib-v3[class] .lbry-search{
+  height:var(--search-h);min-height:var(--search-h);padding:0 14px;gap:10px;
+  background:var(--v3-l2);border:0;border-radius:999px;color:var(--v3-sec);
+}
+.lib-surface.lib-v3[class] .lbry-search input{font-size:14px;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-search input::placeholder{color:var(--v3-t62)}
+.lib-surface.lib-v3[class] .lbry-search:has(input:focus-visible){outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3[class] .lbry-search-clear{color:var(--v3-t56)}
+.lib-surface.lib-v3[class] .lbry-search-clear:hover{color:var(--v3-ink);background:var(--v3-wash)}
+.lib-surface.lib-v3[class] .lbry-search-clear:focus-visible{outline:2px solid var(--v3-ink);outline-offset:1px}
+
+/* The segmented switch. The active segment paints its own fill, so the
+   sliding indicator the shell positions is not drawn. */
+.lib-surface.lib-v3[class] .lbry-filters{
+  flex-wrap:nowrap;gap:2px;height:36px;padding:2px;
+  background:var(--v3-l2);border:0;border-radius:999px;
+}
+.lib-surface.lib-v3[class] .lbry-filters .lbry-filter-ind{display:none}
+.lib-surface.lib-v3[class] .lbry-filters .lbry-filter{
+  height:32px;min-height:32px;padding:0 16px;gap:6px;
+  border:0;border-radius:999px;background:transparent;box-shadow:none;
+  font-size:14px;font-weight:400;color:var(--v3-sec);
+  transition:background-color 150ms ease,color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3[class] .lbry-filters .lbry-filter:hover{color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-filters .lbry-filter:active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .lbry-filters .lbry-filter[data-active="true"]{background:rgba(var(--v3-ink-rgb),.12);color:var(--v3-ink);box-shadow:none}
+.lib-surface.lib-v3[class] .lbry-filters .lbry-filter:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3[class] .lbry-filters .lbry-filter-count{background:var(--v3-wash);color:var(--v3-t56)}
+
+/* The Mood trigger and its menu. */
+.lib-surface.lib-v3[class] .lbry-filtertrig{
+  gap:8px;height:36px;min-height:36px;padding:0 12px 0 16px;
+  background:var(--v3-l2);border:0;border-radius:999px;box-shadow:none;
+  font-size:14px;font-weight:400;color:var(--v3-sec);
+  transition:color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3[class] .lbry-filtertrig:hover,
+.lib-surface.lib-v3[class] .lbry-filtertrig[aria-expanded="true"],
+.lib-surface.lib-v3[class] .lbry-filtertrig[data-active="true"]{background:var(--v3-l2);color:var(--v3-ink);border:0;box-shadow:none}
+.lib-surface.lib-v3[class] .lbry-filtertrig:active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .lbry-filtertrig:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3[class] .lbry-filtertrig-k{font-size:14px;font-weight:400;color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .lbry-filtertrig-v{font-size:14px;font-weight:600;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-filtertrig>svg{color:var(--v3-t56)}
+.lib-surface.lib-v3[class] .lbry-filtermenu{
+  padding:6px;background:var(--v3-raised);border:0;border-radius:12px;box-shadow:var(--v3-mgsh);
+}
+.lib-surface.lib-v3[class] .lbry-filtermenu .lbry-filter{
+  min-height:36px;padding:0 12px;border:0;border-radius:8px;background:transparent;
+  font-size:14px;font-weight:400;color:var(--v3-sec);
+}
+@media(hover:hover){.lib-surface.lib-v3[class] .lbry-filtermenu .lbry-filter:hover{background:var(--v3-wash);color:var(--v3-ink)}}
+.lib-surface.lib-v3[class] .lbry-filtermenu .lbry-filter[data-active="true"]{background:rgba(var(--v3-ink-rgb),.12);color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-filtermenu .lbry-filter:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+
+/* The hint beside the type chips: 12px tertiary, no pill, off below 1200. */
+.lib-surface.lib-v3[class] .lbry-filter-hint{
+  padding:0;border:0;background:none;border-radius:0;font-size:12px;font-weight:400;color:var(--v3-t56);
+}
+@media(max-width:1199px){.lib-surface.lib-v3[class] .lbry-filter-hint{display:none}}
+
+/* The create button: the outline pill, 36px, with a 20px disc whose arrow
+   turns a quarter-eighth on hover. */
+.lib-surface.lib-v3[class] .lbry-toolbar-action .ui-pill-out{
+  gap:12px;height:36px;min-height:36px;padding:0 8px 0 16px;
+  background:transparent;border:1px solid var(--v3-hl20);border-radius:999px;color:var(--v3-ink);
+  font-size:14px;font-weight:500;
+}
+.lib-surface.lib-v3[class] .lbry-toolbar-action .ui-pill-out:hover{background:transparent;border-color:var(--v3-hl20);color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-toolbar-action .ui-pill-out:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3[class] .pgl-build-icon{
+  display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:999px;background:rgba(var(--v3-ink-rgb),.12);color:var(--v3-ink);
+}
+.lib-surface.lib-v3[class] .pgl-build-icon svg{width:12px;height:12px;transition:transform 320ms cubic-bezier(.25,1,.5,1)}
+.lib-surface.lib-v3[class] .pgl-build-link:hover .pgl-build-icon svg{transform:rotate(45deg)}
+
+/* ── Results head, section heads ────────────────────────────────────────────
+   The head is one row, the count on the heading's baseline; it wraps under
+   the heading when the row is short. */
+.lib-surface.lib-v3[class] .drh-head{
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 24px;
+  margin:0 0 24px;padding:0 0 16px;border-bottom:1px solid var(--v3-hair);
+}
+.lib-surface.lib-v3[class] .drh-head>div{display:flex;flex-direction:column;gap:4px}
+.lib-surface.lib-v3[class] .drh-head>div>span{font-size:12px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--v3-t56)}
+.lib-surface.lib-v3[class] .drh-head h2{margin:0;font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.03em;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .drh-head p{margin:0;font-size:12px;line-height:18px;color:var(--v3-t56);font-variant-numeric:tabular-nums}
+
+.lib-surface.lib-v3[class] .pgl-section-head{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:0 0 24px;padding:0;
+  background:var(--v3-ground);border:0;box-shadow:none;
+}
+.lib-surface.lib-v3[class] .pgl-section-head h3{margin:0;font-size:16px;font-weight:600;line-height:1.3;letter-spacing:0;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .pgl-section-count,
+.lib-surface.lib-v3[class] .pgl-section-blurb{
+  min-width:0;height:auto;padding:0;margin:0;border:0;border-radius:0;background:none;
+  font-size:12px;font-weight:400;line-height:18px;color:var(--v3-t56);
+}
+.lib-surface.lib-v3[class] .pgl-section-count{font-variant-numeric:tabular-nums}
+
+/* ── Cards ──────────────────────────────────────────────────────────────────
+   A raised fill, no border, radius 16; the same on hover. */
+.lib-surface.lib-v3[class] .lbry-card{
+  background:var(--v3-raised);border:0;border-radius:16px;box-shadow:none;animation:none;
+}
+.lib-surface.lib-v3[class] .lbry-card:hover{background:var(--v3-raised);border:0;box-shadow:none}
+.lib-surface.lib-v3[class] .lbry-card .lbry-card-foot{padding:16px 20px 20px;gap:0 12px;align-items:center}
+.lib-surface.lib-v3[class] .lbry-card-name{font-size:16px;font-weight:600;line-height:1.3;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-card-meta{font-size:12px;line-height:18px;color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .lbry-card-badge{
+  height:24px;display:inline-flex;align-items:center;padding:0 10px;
+  background:rgba(6,6,7,.72);color:#EFEEEA;font-size:12px;font-weight:500;letter-spacing:0;text-transform:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+
+/* The layer over the artwork: pills on a near-black ground, no border. The
+   like sits at the top right and is always shown; the action pills come in
+   beside it on hover or focus, in the same top row. */
+.lib-surface.lib-v3[class] .lbry-card-float{top:16px;right:12px}
+.lib-surface.lib-v3[class] .lbry-card-actions{gap:6px}
+.lib-surface.lib-v3[class] .pgal-like,
+.lib-surface.lib-v3[class] .grg-like{opacity:1;transform:none}
+@media(hover:hover) and (min-width:1001px){
+  .lib-surface.lib-v3[class] .lbry-card-actions{inset:16px 48px auto auto;flex-wrap:nowrap;justify-content:flex-end}
+  .lib-surface.lib-v3[class] .lbry-card-actions .pgal-act{gap:0}
+  .lib-surface.lib-v3[class] .lbry-card-actions .pgal-act svg{display:none}
+}
+.lib-surface.lib-v3[class] .lbry-card-actions .pgal-act,
+.lib-surface.lib-v3[class] .lbry-card-actions .grg-act{
+  height:28px;min-height:28px;padding:0 10px;border:0;border-radius:999px;
+  background:rgba(6,6,7,.72);color:#EFEEEA;font-size:12px;font-weight:500;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+/* Touch screens wider than a phone (a tablet) keep the 44px targets. */
+@media(pointer:coarse){
+  .lib-surface.lib-v3[class] .lbry-toolbar{--search-h:44px}
+  .lib-surface.lib-v3[class] .lbry-card-actions .pgal-act,
+  .lib-surface.lib-v3[class] .lbry-card-actions .grg-act{height:44px;min-height:44px;padding:0 14px}
+}
+.lib-surface.lib-v3[class] .pgal-act:hover{background:rgba(6,6,7,.9)}
+.lib-surface.lib-v3[class] .pgal-act:active,
+.lib-surface.lib-v3[class] .pgal-like:active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .pgal-act:focus-visible,
+.lib-surface.lib-v3[class] .pgal-like:focus-visible{outline:2px solid #EFEEEA;outline-offset:2px}
+.lib-surface.lib-v3[class] .pgal-like,
+.lib-surface.lib-v3[class] .grg-like{
+  width:28px;height:28px;padding:0;border:0;border-radius:999px;
+  background:rgba(6,6,7,.72);color:#EFEEEA;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  transition:opacity 150ms ease,background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3[class] .pgal-like:hover,
+.lib-surface.lib-v3[class] .grg-like:hover{background:rgba(6,6,7,.9)}
+.lib-surface.lib-v3[class] .pgal-like.is-liked,
+.lib-surface.lib-v3[class] .grg-like.is-liked{background:rgba(6,6,7,.72);color:#EFEEEA;border:0}
+
+/* Open: ink, no blue; the arrow leans 3px on hover. */
+.lib-surface.lib-v3[class] .pgal-use,
+.lib-surface.lib-v3[class] .grg-open,
+.lib-surface.lib-v3[class] .blib-act--open{font-size:13px;font-weight:600;color:var(--v3-ink)}
+@media(pointer:fine){
+  .lib-surface.lib-v3[class] .pgal-use{height:36px;min-height:0;margin:-10px 0;padding:0}
+}
+.lib-surface.lib-v3[class] .pgal-use--pro,
+.lib-surface.lib-v3[class] .pgal-use.is-selected{color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .pgal-use span[aria-hidden],
+.lib-surface.lib-v3[class] .grg-open span[aria-hidden],
+.lib-surface.lib-v3[class] .blib-act--open span[aria-hidden]{display:inline-block;transition:transform 180ms var(--v3-ease)}
+.lib-surface.lib-v3[class] .pgal-use:hover span[aria-hidden],
+.lib-surface.lib-v3[class] .grg-open:hover span[aria-hidden],
+.lib-surface.lib-v3[class] .blib-act--open:hover span[aria-hidden]{transform:translateX(3px)}
+.lib-surface.lib-v3[class] .pgal-use:focus-visible,
+.lib-surface.lib-v3[class] .grg-open:focus-visible,
+.lib-surface.lib-v3[class] .blib-act:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+
+/* Hex chips: 24px, L2 fill, mono 12px. */
+.lib-surface.lib-v3[class] .lbry-card-extra{margin-top:12px}
+.lib-surface.lib-v3[class] .pgal-chips{gap:8px;max-height:24px;overflow:hidden}
+.lib-surface.lib-v3[class] .pgal-chip{
+  display:inline-flex;align-items:center;height:24px;padding:0 8px;
+  border-radius:8px;background:var(--v3-l2);color:var(--v3-sec);
+  font-family:var(--mono);font-size:12px;line-height:1;
+}
+/* A near-white last swatch needs its hairline, or the stripe reads as a hole into the foot. */
+.lib-surface.lib-v3[class] .pgal-stripes{border-bottom:1px solid var(--v3-hair)}
+.lib-surface.lib-v3[class] .pgal-hex{
+  background:rgba(6,6,7,.72);color:#EFEEEA;font-size:12px;font-weight:500;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+.lib-surface.lib-v3[class] .pgal-stripe:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-3px}
+.lib-surface.lib-v3[class] .pgal-grid{gap:24px}
+
+/* ── Status rows ────────────────────────────────────────────────────────────
+   The error line sits under the results head as a plain row; Retry is the
+   outline pill. */
+.lib-surface.lib-v3[class] .lockt-status{
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin:0 0 24px;padding:0;
+  border:0;border-radius:0;background:none;box-shadow:none;
+  font-size:14px;line-height:1.5;color:var(--v3-sec);
+}
+.lib-surface.lib-v3[class] .lockt-status:focus-visible{outline:2px solid var(--v3-ink);outline-offset:4px}
+.lib-surface.lib-v3[class] .lockt-status .ui-pill-out{
+  height:36px;min-height:36px;padding:0 16px;background:transparent;border:1px solid var(--v3-hl20);border-radius:999px;
+  color:var(--v3-ink);font-size:14px;font-weight:500;
+}
+.lib-surface.lib-v3[class] .lockt-status .ui-pill-out:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(pointer:coarse){.lib-surface.lib-v3[class] .lockt-status .ui-pill-out{height:44px;min-height:44px}}
+
+/* A locked block in the button dialog: the heading, then the sentence and the
+   one link on a single line (stacked when the dialog is narrow). No box. */
+.lib-surface.lib-v3[class] .blib-lock{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 24px;
+  padding-top:16px;border-top:1px solid var(--v3-hair);
+}
+.lib-surface.lib-v3[class] .blib-lock h3{grid-column:1 / -1;font-size:15px;font-weight:600;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .blib-lock p{color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .blib-lock-cta{
+  margin:0;height:36px;min-height:36px;padding:0 16px;background:transparent;border:1px solid var(--v3-hl20);border-radius:999px;
+  color:var(--v3-ink);font-size:14px;font-weight:500;white-space:nowrap;
+}
+.lib-surface.lib-v3[class] .blib-lock-cta:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+@media(max-width:640px){
+  .lib-surface.lib-v3[class] .blib-lock{grid-template-columns:minmax(0,1fr)}
+  .lib-surface.lib-v3[class] .blib-lock-cta{justify-self:start;height:44px;min-height:44px}
+}
+
+.lib-surface.lib-v3[class] .lbry-empty{
+  background:var(--v3-raised);border:0;border-radius:16px;box-shadow:none;color:var(--v3-sec);
+}
+.lib-surface.lib-v3[class] .lbry-empty strong{font-size:16px;font-weight:600;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-empty span{font-size:14px;color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .lbry-empty-clear{
+  height:36px;min-height:36px;padding:0 16px;background:transparent;border:1px solid var(--v3-hl20);border-radius:999px;
+  color:var(--v3-ink);font-size:14px;font-weight:500;
+}
+.lib-surface.lib-v3[class] .lbry-empty-clear:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+
+/* ── The page's end: the blurred rows, the heading, the pill ────────────────
+   Row 1 is barely soft, row 2 is deep and clipped, and the heading rises 24px
+   into the fade. */
+.lib-surface.lib-v3[class] .geg{margin-bottom:96px}
+.lib-surface.lib-v3[class] .geg-row[data-row="0"]{filter:blur(1.5px);opacity:.78}
+.lib-surface.lib-v3[class] .geg-row[data-row="1"]{filter:blur(5px);opacity:.28;max-height:120px;overflow:hidden}
+.lib-surface.lib-v3[class] .geg-band{margin-top:48px}
+.lib-surface.lib-v3[class] .geg-fade+.geg-band{margin-top:-24px}
+.lib-surface.lib-v3[class] .geg .geg-h{
+  max-width:24ch;font-size:clamp(28px,3.3vw,40px);font-weight:600;line-height:1.05;letter-spacing:-.03em;color:var(--v3-ink);
+}
+@media(min-width:1200px){.lib-surface.lib-v3[class] .geg .geg-h{font-size:40px}}
+.lib-surface.lib-v3[class] .geg .geg-p{max-width:46ch;margin-top:16px;font-size:16px;line-height:1.55;color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .geg-pill,
+.lib-surface.lib-v3[class] .gcta-action{
+  display:inline-flex;align-items:center;justify-content:center;height:44px;min-height:44px;padding:0 24px;
+  border:0;border-radius:999px;background:var(--v3-ink);color:var(--v3-on-ink);
+  font-size:15px;font-weight:600;line-height:1;white-space:nowrap;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3[class] .geg-pill:hover,
+.lib-surface.lib-v3[class] .gcta-action:hover{background:var(--v3-ink-hover);color:var(--v3-on-ink)}
+.lib-surface.lib-v3[class] .geg-pill:active,
+.lib-surface.lib-v3[class] .gcta-action:active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .geg-pill:focus-visible,
+.lib-surface.lib-v3[class] .gcta-action:focus-visible,
+.lib-surface.lib-v3[class] .geg-link:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3[class] .geg-pill::before,
+.lib-surface.lib-v3[class] .gcta-action::before{content:none}
+.lib-surface.lib-v3[class] .geg-link{display:inline-flex;align-items:center;min-height:44px;font-size:14px;font-weight:600;color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .geg-link:hover{color:var(--v3-ink)}
+
+/* The close that follows a Pro viewer's list (and the buttons page): the same
+   heading, line and pill as the gate. */
+.lib-surface.lib-v3[class] .gcta{margin-top:0;text-align:center}
+.lib-surface.lib-v3[class] .gcta-q{
+  max-width:24ch;margin:0 auto;font-size:clamp(28px,3.3vw,40px);font-weight:600;line-height:1.05;letter-spacing:-.03em;color:var(--v3-ink);
+}
+@media(min-width:1200px){.lib-surface.lib-v3[class] .gcta-q{font-size:40px}}
+.lib-surface.lib-v3[class] .gcta-detail{max-width:46ch;margin:16px auto 0;font-size:16px;line-height:1.55;color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .gcta-action{margin-top:32px}
+
+/* ── Copy CSS: a tonal chip on the gradient and button cards ───────────────── */
+.lib-surface.lib-v3[class] .grg-copy,
+.lib-surface.lib-v3[class] .blib-act:not(.blib-act--open){
+  display:inline-flex;align-items:center;justify-content:center;
+  height:36px;min-height:36px;padding:0 14px;
+  border:0;border-radius:999px;background:var(--v3-l2);color:var(--v3-ink);
+  font-size:13px;font-weight:500;line-height:1;white-space:nowrap;text-decoration:none;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+@media(hover:hover){
+  .lib-surface.lib-v3[class] .grg-copy:hover,
+  .lib-surface.lib-v3[class] .blib-act:not(.blib-act--open):hover{background:rgba(var(--v3-ink-rgb),.12);color:var(--v3-ink);text-decoration:none}
+}
+.lib-surface.lib-v3[class] .grg-copy:active,
+.lib-surface.lib-v3[class] .blib-act:not(.blib-act--open):active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .grg-copy:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+
+/* ── Phone ──────────────────────────────────────────────────────────────────
+   The tray is two rows on a 24px-radius raised card: the search field, then
+   the switch with the Mood and Create discs. Controls are 44px. */
+.pgal-more{display:none}
+@media(max-width:640px){
+  .lib-surface.lib-v3[class] .lbry-toolbar{--search-h:44px;gap:8px;min-height:0;margin:16px 0 32px;padding:8px;border-radius:24px}
+  .lib-surface.lib-v3[class] .lbry-toolbar[data-peek]{margin:0}
+  .lib-surface.lib-v3[class] .lockt-status .ui-pill-out{height:44px;min-height:44px}
+  .lib-surface.lib-v3[class] .lbry-toolbar-row{gap:8px}
+  .lib-surface.lib-v3[class] .lbry-search{padding:0 16px}
+  .lib-surface.lib-v3[class] .lbry-search input{font-size:16px}
+  .lib-surface.lib-v3[class] .lbry-filters{height:44px}
+  .lib-surface.lib-v3[class] .lbry-filters .lbry-filter{height:40px;min-height:40px;padding:0 10px}
+  .lib-surface.lib-v3[class] .lbry-search-clear{min-width:44px;min-height:44px}
+
+  /* Mood and Create: 44px ringed discs. */
+  .lib-surface.lib-v3[class] .lbry-filtersbtn{
+    width:44px;height:44px;min-height:44px;padding:0;
+    background:transparent;border:1px solid var(--v3-hl20);border-radius:999px;color:var(--v3-ink);
+  }
+  .lib-surface.lib-v3[class] .lbry-filtersbtn:hover,
+  .lib-surface.lib-v3[class] .lbry-filtersbtn[aria-expanded="true"],
+  .lib-surface.lib-v3[class] .lbry-filtersbtn[data-active="true"]{background:rgba(var(--v3-ink-rgb),.08);color:var(--v3-ink)}
+  .lib-surface.lib-v3[class] .lbry-filtersbtn:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+  .lib-surface.lib-v3[class] .lbry-filtersbtn-count{background:var(--v3-ink);color:var(--v3-on-ink)}
+  .lib-surface.lib-v3[class] .lbry-toolbar-action .ui-pill-out{width:44px;height:44px;min-height:44px;padding:0;gap:0;justify-content:center}
+
+  /* Buttons page: the five role chips share one row. */
+  .lib-surface.lib-v3[class] .blib-toolbar .lbry-toolbar-quick{margin:0;padding:0;overflow:visible}
+  .lib-surface.lib-v3[class] .blib-toolbar .lbry-toolbar-quick>.lbry-filters{width:100%}
+  .lib-surface.lib-v3[class] .blib-toolbar .lbry-filters .lbry-filter{flex:1 1 auto;justify-content:center;padding:0 8px}
+
+  /* Cards: the foot wraps, name and meta on the first line, actions under. */
+  .lib-surface.lib-v3[class] .lbry-card:has(.grg-open,.blib-act) .lbry-card-foot{flex-wrap:wrap;gap:12px;padding:16px}
+  .lib-surface.lib-v3[class] .lbry-card:has(.grg-open,.blib-act) .lbry-card-id{flex:1 1 100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+  .lib-surface.lib-v3[class] .lbry-card:has(.grg-open,.blib-act) .lbry-card-tail{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px}
+  .lib-surface.lib-v3[class] .grg-like,
+  .lib-surface.lib-v3[class] .pgal-like{width:44px;height:44px}
+  .lib-surface.lib-v3[class] .lbry-card-float{top:8px;right:8px}
+  .lib-surface.lib-v3[class] .grg-copy,
+  .lib-surface.lib-v3[class] .blib-act:not(.blib-act--open){height:44px;min-height:44px;padding:0 12px}
+  .lib-surface.lib-v3[class] .grg-open,
+  .lib-surface.lib-v3[class] .blib-act--open{min-height:44px;display:inline-flex;align-items:center}
+
+  /* Palette cards: the four hover actions move behind one More button. */
+  .lib-surface.lib-v3[class] .pgal-card .lbry-card-actions{display:none}
+  .lib-surface.lib-v3[class] .pgal-more{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:44px;height:44px;margin:-10px 0;padding:0;
+    border:0;border-radius:999px;background:transparent;color:var(--v3-sec);
+    transition:background-color 150ms ease,color 150ms ease;
+  }
+  .lib-surface.lib-v3[class] .pgal-more[aria-expanded="true"]{background:rgba(var(--v3-ink-rgb),.12);color:var(--v3-ink)}
+  .lib-surface.lib-v3[class] .pgal-more:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+  .lib-surface.lib-v3[class] .lbry-card-tail:has(.pgal-more){gap:4px}
+  .lib-surface.lib-v3[class] .pgal-use{min-height:44px;margin:-10px 0}
+
+  /* The page's end: a full-width 52px pill, clear of the bottom edge. */
+  .lib-surface.lib-v3[class] .geg-pill,
+  .lib-surface.lib-v3[class] .gcta-action{display:flex;width:100%;height:52px;min-height:52px}
+  .lib-surface.lib-v3[class] .geg{margin-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+  .lib-surface.lib-v3[class] .gcta{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+}
+/* Three columns when five chips cannot share one row. */
+@media(max-width:359px){
+  .lib-surface.lib-v3[class] .blib-toolbar .lbry-toolbar-quick>.lbry-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:auto;border-radius:var(--radius-pill);padding:4px}
+  .lib-surface.lib-v3[class] .blib-toolbar .lbry-filters .lbry-filter{padding:0 4px}
+}
+
+/* ── The Mood sheet and the card-action sheet ───────────────────────────────
+   Both are portalled out of the page root, into a layer that carries
+   `lib-v3`. They rise over 240ms; reduced motion fades. */
+.lib-surface.lib-v3[class] .lbry-sheet{
+  background:var(--v3-raised);border:0;border-radius:24px 24px 0 0;box-shadow:none;
+  animation:lbry-rise 240ms cubic-bezier(.23,1,.32,1) both;
+}
+.lib-surface.lib-v3[class] .lbry-sheet-scrim{animation:lbry-fade 200ms ease-out both}
+@keyframes lbry-rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes lbry-fade{from{opacity:0}to{opacity:1}}
+.lib-surface.lib-v3[class] .lbry-sheet-head{min-height:52px;padding:4px 8px 4px 16px;border-bottom:0}
+.lib-surface.lib-v3[class] .lbry-sheet-title{font-size:15px;font-weight:600;color:var(--v3-ink)}
+.lib-surface.lib-v3[class] .lbry-sheet-done{
+  height:44px;min-height:44px;padding:0 16px;background:transparent;color:var(--v3-ink);
+  font-size:15px;font-weight:600;border-radius:999px;
+}
+.lib-surface.lib-v3[class] .lbry-sheet-done:active{background:rgba(var(--v3-ink-rgb),.12)}
+.lib-surface.lib-v3[class] .lbry-sheet-done:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.lib-surface.lib-v3[class] .lbry-sheet-body{padding:0 8px 8px}
+/* The group inside the sheet is a list of 48px rows with a dot slot and a check. */
+.lib-surface.lib-v3[class] .lbry-sheet-body .lbry-filters{
+  display:flex;flex-direction:column;align-items:stretch;gap:0;width:100%;height:auto;padding:0;background:none;border-radius:0;
+}
+.lib-surface.lib-v3[class] .lbry-sheet-body .lbry-filters .lbry-filter{
+  position:relative;display:flex;align-items:center;justify-content:flex-start;gap:14px;width:100%;
+  height:48px;min-height:48px;padding:0 12px 0 34px;border-radius:8px;font-size:15px;color:var(--v3-ink);
+}
+.lib-surface.lib-v3[class] .lbry-sheet-body .lbry-filter-dot{position:absolute;left:12px;top:50%;margin-top:-4px;width:8px;height:8px}
+.lib-surface.lib-v3[class] .lbry-sheet-body .lbry-filter[data-active="true"]{background:rgba(var(--v3-ink-rgb),.12);font-weight:600}
+.lib-surface.lib-v3[class] .lbry-sheet-body .lbry-filter[data-active="true"]::after{
+  content:"";margin-left:auto;width:6px;height:11px;border:solid currentColor;border-width:0 2px 2px 0;transform:translateY(-2px) rotate(45deg);
+}
+
+.lib-surface.lib-v3[class] .lbry-sheet--act{
+  max-height:none;background:transparent;border-radius:0;gap:8px;
+  padding:0 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;
+}
+.lib-surface.lib-v3[class] .lbry-act-list{display:flex;flex-direction:column;padding:4px;border-radius:12px;background:var(--v3-raised)}
+.lib-surface.lib-v3[class] .lbry-act-title{margin:0;padding:12px 12px 4px;font-size:13px;font-weight:400;line-height:1.3;color:var(--v3-sec)}
+.lib-surface.lib-v3[class] .lbry-act-row{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:0 12px;
+  border:0;border-radius:8px;background:transparent;color:var(--v3-ink);
+  font:inherit;font-size:15px;line-height:1.3;text-align:left;text-decoration:none;
+}
+.lib-surface.lib-v3[class] .lbry-act-row svg{width:20px;height:20px;flex:0 0 20px}
+.lib-surface.lib-v3[class] .lbry-act-row:active{background:rgba(var(--v3-ink-rgb),.12)}
+@media(hover:hover){.lib-surface.lib-v3[class] .lbry-act-row:hover{background:var(--v3-wash)}}
+.lib-surface.lib-v3[class] .lbry-act-row:focus-visible,
+.lib-surface.lib-v3[class] .lbry-act-cancel:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.lib-surface.lib-v3[class] .lbry-act-cancel{
+  min-height:52px;border:0;border-radius:12px;background:var(--v3-raised);color:var(--v3-ink);
+  font:inherit;font-size:15px;font-weight:500;
+}
+
+/* ── Reduced motion: opacity only ───────────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] .lbry-sheet{animation-name:lbry-fade;animation-duration:150ms}
+}
+html[data-reduced-motion="true"] .lib-surface.lib-v3[class] .lbry-sheet{animation-name:lbry-fade;animation-duration:150ms}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] :is(.lbry-filter,.lbry-filtertrig,.geg-pill,.gcta-action,.pgal-act,.pgal-like,.dgh-action .btn,.pgl-build-icon svg,.pgal-use span,.grg-open span,.blib-act span,.grg-copy,.blib-act,.pgal-more){transform:none;transition-property:opacity,color,background-color}
+}
+html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.lbry-filter,.lbry-filtertrig,.geg-pill,.gcta-action,.pgal-act,.pgal-like,.dgh-action .btn,.pgl-build-icon svg,.pgal-use span,.grg-open span,.blib-act span,.grg-copy,.blib-act,.pgal-more){transform:none;transition-property:opacity,color,background-color}
+
+/* ══ The vertical panel tile and its grid ═══════════════════════════════════
+   One tile for palettes and gradients: a frame with 8px of padding round a
+   media panel (8px radius inside the 16px frame), the name and the meta under
+   it. The whole tile is one button; Like sits above it. Columns follow the
+   width of the grid, not of the window: four from 880px, two below, never
+   three. */
+.lib-surface.lib-v3[class] .vpt-grid{container-type:inline-size;width:100%}
+.lib-surface.lib-v3[class] .vpt-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lib-surface.lib-v3[class] .vpt{
+  position:relative;isolation:isolate;display:flex;flex-direction:column;min-width:0;padding:8px;
+  background:var(--v3-raised);border:0;border-radius:16px;box-shadow:none;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3[class] .vpt-media{
+  position:relative;isolation:isolate;display:flex;flex-direction:column;overflow:hidden;
+  aspect-ratio:4/5;border-radius:8px;background:var(--v3-l2);
+}
+@container (min-width:560px){
+  .lib-surface.lib-v3[class] .vpt-cols{gap:16px}
+  .lib-surface.lib-v3[class] .vpt-media{aspect-ratio:1/1}
+}
+@container (min-width:880px){
+  .lib-surface.lib-v3[class] .vpt-cols{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .lib-surface.lib-v3[class] .vpt-media{aspect-ratio:4/5}
+}
+.lib-surface.lib-v3[class] .vpt-band{flex:1 1 0;min-height:0}
+.lib-surface.lib-v3[class] .vpt-foot{display:flex;flex-direction:column;gap:2px;min-width:0;padding:12px 8px 8px}
+.lib-surface.lib-v3[class] .vpt-name{
+  margin:0;overflow:hidden;font-size:16px;font-weight:560;line-height:1.3;letter-spacing:0;color:var(--v3-ink);
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.lib-surface.lib-v3[class] .vpt-meta{
+  margin:0;overflow:hidden;font-size:12px;line-height:1.4;color:var(--v3-sec);font-variant-numeric:tabular-nums;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+/* The open button covers the tile; Like is the only thing above it. */
+.lib-surface.lib-v3[class] .vpt-open{
+  position:absolute;inset:0;z-index:1;display:block;width:100%;height:100%;padding:0;
+  border:0;border-radius:16px;background:transparent;color:inherit;cursor:pointer;
+}
+.lib-surface.lib-v3[class] .vpt-open:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3[class] .vpt-like{
+  position:absolute;top:16px;right:16px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;padding:0;border:0;border-radius:999px;
+  background:rgba(6,6,7,.72);color:#EFEEEA;cursor:pointer;
+  transition:opacity 150ms ease,transform 120ms var(--v3-ease),background-color 150ms ease;
+}
+.lib-surface.lib-v3[class] .vpt-like::after{content:"";position:absolute;inset:-6px}
+.lib-surface.lib-v3[class] .vpt-like:active{transform:scale(.97)}
+.lib-surface.lib-v3[class] .vpt-like:focus-visible{outline:2px solid #EFEEEA;outline-offset:2px;box-shadow:0 0 0 4px #060607}
+.lib-surface.lib-v3[class] .vpt:active:not(.vpt--locked){transform:scale(.98)}
+@media(pointer:coarse){
+  .lib-surface.lib-v3[class] .vpt-like{width:44px;height:44px;top:12px;right:12px}
+}
+@media(hover:hover) and (pointer:fine){
+  .lib-surface.lib-v3[class] .vpt:not(.vpt--locked):hover{background:var(--v3-l2)}
+  .lib-surface.lib-v3[class] .vpt-like:not(.is-liked){opacity:0}
+  .lib-surface.lib-v3[class] .vpt:hover .vpt-like,
+  .lib-surface.lib-v3[class] .vpt-like:focus-visible{opacity:1}
+  .lib-surface.lib-v3[class] .vpt-like:hover{background:rgba(6,6,7,.9)}
+}
+
+/* ══ The preview dialog ═════════════════════════════════════════════════════
+   Phone (the default): the bottom sheet. Header 56px (Close, counter, Previous,
+   Next at 44px), the preview 200px, the panel scrolls, the primary is 52px on
+   the bottom edge with the safe area under it. Tablet stacks the same parts in
+   a centred card; desktop sets the preview left and the panel right. The layer
+   itself carries .lib-surface.lib-v3, so its own rules chain off the layer. */
+.lib-surface.lib-v3.gpd-layer[class] .gpd{
+  display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 200px minmax(0,1fr) auto;
+  grid-template-areas:"head" "preview" "panel" "foot";
+  width:100%;height:92dvh;max-height:92dvh;padding:0;overflow:hidden;
+  background:var(--v3-raised);color:var(--v3-ink);border-radius:24px 24px 0 0;
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-head{
+  grid-area:head;display:flex;align-items:center;min-height:56px;padding:6px 8px;touch-action:none;
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-close{order:0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-count{order:1;flex:1 1 auto;text-align:center;font-size:14px;font-weight:560;color:var(--v3-sec);font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-prev{order:2}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-next{order:3}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-icon{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:44px;height:44px;padding:0;
+  border:0;border-radius:999px;background:transparent;color:var(--v3-ink);cursor:pointer;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-icon:active{background:var(--v3-rowp);transform:scale(.97)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-icon:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-preview{
+  grid-area:preview;position:relative;isolation:isolate;display:flex;flex-direction:column;overflow:hidden;
+  margin:0 8px;border-radius:12px;background:var(--v3-l2);touch-action:pan-y;
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-band{flex:1 1 0;min-height:0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-panel{grid-area:panel;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 8px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-name{margin:0;font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.03em;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-meta{margin:6px 0 0;font-size:12px;line-height:1.4;color:var(--v3-sec);font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-sec{margin:24px 0 0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-sec-h{margin:0 0 8px;font-size:12px;font-weight:600;line-height:1.4;letter-spacing:.04em;text-transform:uppercase;color:var(--v3-t56)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-list,
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pairs{display:flex;flex-direction:column;gap:2px;margin:0;padding:0;list-style:none}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:6px 8px;
+  border:0;border-radius:8px;background:transparent;color:var(--v3-ink);font:inherit;text-align:left;cursor:pointer;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row:active{background:var(--v3-rowp);transform:scale(.98)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row:focus-visible{outline:2px solid var(--v3-ink);outline-offset:-2px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-swatch{flex:0 0 32px;width:32px;height:32px;border-radius:8px;box-shadow:inset 0 0 0 1px var(--v3-hair)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-text{display:flex;flex:1 1 auto;flex-direction:column;min-width:0}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-hex{font-family:var(--mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:14px;line-height:1.3;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-detail{overflow:hidden;font-size:12px;line-height:1.4;color:var(--v3-sec);text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-row-copy{flex:0 0 auto;font-size:12px;font-weight:560;color:var(--v3-sec)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-text{margin:0;font-size:14px;line-height:1.5;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-text+.gpd-text{margin-top:4px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-text--quiet{margin-top:8px;font-size:12px;color:var(--v3-sec)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair{display:flex;align-items:center;gap:12px;min-height:44px;padding:4px 8px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair-chip{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px;
+  border-radius:8px;font-size:14px;font-weight:600;box-shadow:inset 0 0 0 1px var(--v3-hair);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair-text{flex:1 1 auto;min-width:0;font-size:14px;line-height:1.3;color:var(--v3-ink)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-pair-ratio{flex:0 0 auto;font-size:12px;color:var(--v3-sec);font-variant-numeric:tabular-nums}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-action{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;
+  border:0;border-radius:var(--btn-radius);background:var(--v3-l2);color:var(--v3-ink);font:inherit;font-size:14px;font-weight:560;cursor:pointer;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-action:active{transform:scale(.97)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-action:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-foot{grid-area:foot;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:var(--v3-raised)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-primary{
+  display:flex;align-items:center;justify-content:center;height:52px;border-radius:999px;
+  background:var(--v3-ink);color:var(--v3-on-ink);font-size:15px;font-weight:600;line-height:1;text-decoration:none;
+  transition:background-color 150ms ease,transform 120ms var(--v3-ease);
+}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-primary:active{transform:scale(.98)}
+.lib-surface.lib-v3.gpd-layer[class] .gpd-primary:focus-visible{outline:2px solid var(--v3-ink);outline-offset:2px}
+
+/* Tablet: a centred, stacked card. */
+@media(min-width:641px){
+  .lib-surface.lib-v3.gpd-layer[class]{align-items:center;justify-content:center}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd{
+    width:min(680px,100vw - 48px);height:auto;max-height:calc(100dvh - 48px);
+    grid-template-rows:auto 240px minmax(0,1fr) auto;border-radius:24px;
+  }
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-head{padding:8px 12px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-foot{padding:12px 24px 24px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-panel{padding:16px 24px 8px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-preview{margin:0 24px}
+}
+
+/* Desktop: preview left, panel right. */
+@media(min-width:1024px){
+  .lib-surface.lib-v3.gpd-layer[class] .gpd{
+    width:min(1120px,100vw - 64px);height:min(760px,100dvh - 64px);max-height:none;
+    grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-areas:"preview head" "preview panel" "preview foot";
+  }
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-preview{margin:8px 0 8px 8px;border-radius:16px;touch-action:auto}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-head{padding:8px 16px 0 8px;touch-action:auto}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-count{order:3;text-align:right;padding-right:8px}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-prev{order:1}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-next{order:2}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-foot{padding:12px 24px 24px}
+}
+@media(hover:hover) and (pointer:fine){
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-icon:hover,
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-row:hover{background:var(--v3-wash)}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-action:hover{background:var(--v3-l2h)}
+  .lib-surface.lib-v3.gpd-layer[class] .gpd-primary:hover{background:var(--v3-ink-hover);color:var(--v3-on-ink)}
+}
+
+/* Reduced motion: opacity and colour only, no press scale, the card fades. */
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] :is(.vpt,.vpt-like,.vpt:active:not(.vpt--locked)),
+  html:not([data-reduced-motion="false"]) .lib-surface.lib-v3.gpd-layer[class] :is(.gpd-icon,.gpd-row,.gpd-action,.gpd-primary){transform:none;transition-property:opacity,color,background-color}
+}
+html[data-reduced-motion="true"] .lib-surface.lib-v3[class] :is(.vpt,.vpt-like,.vpt:active:not(.vpt--locked)),
+html[data-reduced-motion="true"] .lib-surface.lib-v3.gpd-layer[class] :is(.gpd-icon,.gpd-row,.gpd-action,.gpd-primary){transform:none;transition-property:opacity,color,background-color}
+
+/* Faded panel tiles behind a gate (GateFadeRows tiles). Row 0 blurs inside each
+   tile's picture; row 1 is cut to part of a tile. GateFadeRows writes
+   --geg-tile-h and --geg-gap on the block. */
+.lib-surface.lib-v3[class] .geg:has(.geg-rows--tiles){--geg-fade-max:calc(var(--geg-tile-h,280px)*1.4 + var(--geg-gap,16px))}
+.lib-surface.lib-v3[class] .geg-rows--tiles{padding-top:0}
+.lib-surface.lib-v3[class] .geg-rows--tiles .geg-row[data-row="0"]{filter:none;opacity:1}
+.lib-surface.lib-v3[class] .geg-rows--tiles .geg-row[data-row="0"] .vpt-media{filter:blur(8px);transform:scale(1.04)}
+.lib-surface.lib-v3[class] .geg-rows--tiles .geg-row[data-row="1"]{max-height:calc(var(--geg-tile-h,280px)*.4);overflow:hidden;filter:blur(10px);opacity:.4}
+.lib-surface.lib-v3[class] .geg:has(.geg-rows--tiles) .geg-band{margin-top:calc(var(--geg-tile-h,280px)*-.2)}
+.lib-surface.lib-v3[class] .geg-fade--click{pointer-events:auto;cursor:pointer}
+
+/* Staged rise-in of the gate's text and controls (GalleryEndGate reveal). */
+.lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){transition:opacity 300ms var(--v3-ease),transform 300ms var(--v3-ease)}
+.lib-surface.lib-v3[class] .geg[data-reveal="armed"] :is(.geg-h,.geg-p,.geg-cta){opacity:0;transform:translateY(12px)}
+.lib-surface.lib-v3[class] .geg[data-reveal] .geg-p{transition-delay:100ms}
+.lib-surface.lib-v3[class] .geg[data-reveal] .geg-cta{transition-delay:200ms}
+html[data-reduced-motion="true"] .lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){opacity:1;transform:none;transition:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .lib-surface.lib-v3[class] .geg[data-reveal] :is(.geg-h,.geg-p,.geg-cta){opacity:1;transform:none;transition:none}}
+
+/* The sticky toolbar must never cover the results heading. Anything on the page
+   that is scrolled to leaves room for the nav, the bar's own offset, the bar
+   (--lib-toolbar-h, written by LibraryToolbar from its measured height; 52 is the
+   single-row V3 bar) and a gap. This replaces, for these surfaces, the global
+   rule that left the bar out. */
+.lib-surface.lib-v3[class] [id]{scroll-margin-top:calc(var(--nav-clear) + 8px + var(--lib-toolbar-h,52px) + 16px)}
+
+/* The results never shrink below the space under the nav and the bar. A filter that
+   leaves two rows would otherwise shorten the page, and the browser would clamp the
+   scroll position so the heading ends up under the sticky bar. The reserved height
+   keeps the position valid (the move itself is hooks/useResultsScroll.js). */
+.lib-surface.lib-v3[class] .lib-results{min-height:calc(100dvh - var(--nav-clear) - var(--lib-toolbar-h,52px))}

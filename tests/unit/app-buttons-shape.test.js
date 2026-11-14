@@ -53,6 +53,8 @@ const KEEP = {
     'xd-type', 'xd-cat',
     // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
     'pvd-state',
+    // the preview dialog's legend: a role chip and its "+N more" are 8px-cornered chips in one row, drawn flat
+    'pvd-chip', 'pvd-more',
     // the Gradient Generator's stop list: the select area of a stop row
     'grd-stop-select',
     // the shared menu's rows (8px in the popover, 12px in the phone sheet) and the sheet's separate Cancel block (16px, a row-sized block)
@@ -72,7 +74,16 @@ const KEEP = {
     'fg-more-proj-row',
     // the Font Pair More sheet's Save row: icon and label in a full-width row with a soft hover wash. Only
     // that sheet rule squares the trigger off; the dock's Save trigger stays a pill
-    'svt-trigger'],
+    'svt-trigger',
+    // the V3 project page's export rows: one full-width list row (icon, kind, note, caret) at 12px
+    'pjv-xr',
+    // the V3 project page's text buttons (Open, Copy, Cancel) sit inside list rows with a 4px hover wash
+    'pjv-tb',
+    // the V3 library action sheet: each action is a full-width 8px row, and Cancel is its own row-sized
+    // block under them, like v3m-cancel
+    'lbry-act-row', 'lbry-act-cancel',
+    // the gallery preview popup's colour and stop rows: one full-width copy row (swatch, hex, detail) at 8px
+    'gpd-row'],
   // selectable cards and tiles
   card: ['cc-pair', 'fc-card', 'fc-frame', 'fbd-tile', 'lang-tile', 'onb-option', 'aipg-preset', 'arc-ratio-card', 'exp-fmt',
     'fg-card-open', 'arc-stat', 'stc-bundle',
@@ -94,11 +105,17 @@ const KEEP = {
     // the homepage's folder tiles on the phone board, its piece chips, its screenshot thumbnails and the icon grid's cells
     'bmp-fold', 'hx-pc', 'hsc-open', 'ht-ic-t',
     // an onboarding font pair: a radio drawn as a 64px card (pair name, then its fonts) in a list of three
-    'ob-pair'],
+    'ob-pair',
+    // the project icon picker: each choice is a 12px tile holding one icon
+    'uh-iconpick-btn',
+    // a palette or gradient gallery tile's open button: a transparent hit area over the whole tile, at the tile's 16px corner
+    'vpt-open'],
   // fields drawn as inputs or selects
   field: ['pnav-search-field', 'typ-picker-trigger', 'snapv-value', 'rc-dim', 'menu-select-trigger', 'tl-select',
     // the From image dialog's mood sheet button at narrow widths: a select-style trigger showing the current mood
-    'plb-imgmoodbtn'],
+    'plb-imgmoodbtn',
+    // the preview dialog's phone dock: select-style triggers (the current scene, Colours) that open a sheet, 12px as the board
+    'pvd-dock-btn'],
   // underline and folder tabs, and the phone tab bar's items
   tab: ['pl-tab', 'fdx-tab', 'pnav-tab'],
   // a segment inside a tray of segments: the tray carries the outer shape, each segment its own inner radius
@@ -116,8 +133,10 @@ const KEEP = {
   state: ['is-current'],
 }
 const KEEP_SET = new Set(Object.values(KEEP).flat())
-// Menu rows that reuse the filter-chip class inside a filter menu.
-const KEEP_CONTEXT = ['.lbry-filtermenu']
+// Menu rows that reuse the filter-chip class inside a filter menu, and the Learn index's Clear search:
+// a 40px square with 10px corners inside the 12px-cornered search field (index spec, Learn tools row).
+// The V3 library filter sheet reuses the filter class for its 48px full-width option rows.
+const KEEP_CONTEXT = ['.lbry-filtermenu', '.srf .lidx-tools .lbry-search-clear', '.lbry-sheet-body .lbry-filters']
 // The sales pages are built to their own drawn radii.
 const SALES_SHEETS = new Set(['spectrum.css', 'spectrum-mobile.css', 'spectrum-tools.css', 'spectrum-chrome.css', 'pricing.css'])
 

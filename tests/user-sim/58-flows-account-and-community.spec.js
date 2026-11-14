@@ -24,7 +24,7 @@
 //   src/pages/Settings.jsx  {isPro && <li>Your subscription is cancelled…</li>}
 //        → {false && …}  fails "a paying account is warned about its billing"
 //        and leaves the free-account control green.
-//   src/pages/Community.jsx  requireLogin('submit a design to the community', …)
+//   src/components/community/useCommunityHub.js  requireLogin(GATE_WORDS[what] || GATE_WORDS.project, …)
 //        → requireLogin('', …)  fails "a signed-out visitor is told what they
 //        were doing", because LoginPopup derives its "Where you left off"
 //        heading from that reason string.
@@ -43,17 +43,17 @@ import { COMMUNITY_SUBMIT_REASONS } from '../../src/utils/submitIntent.js'
 
 test.describe('flow 6 — submitting a design to the community', () => {
   test('a signed-out visitor is told what they were doing and why an account is needed', async ({ page }) => {
-    watch(page, 'a stranger who pressed Submit design')
+    watch(page, 'a stranger who pressed Share your work')
     await go(page, '/community')
-    await page.getByRole('button', { name: /Submit design/i }).first().click()
+    await page.locator('.cm-head-actions').getByRole('button', { name: 'Share your work' }).click()
 
     const dialog = page.getByRole('dialog')
-    await expect(dialog, 'pressing Submit must open something').toBeVisible()
+    await expect(dialog, 'pressing Share your work must open something').toBeVisible()
 
     // The intent, carried across the sign-in. This is the sentence that makes
     // the gate feel like a step rather than an interruption.
     await expect(dialog, 'the gate must name what the visitor was in the middle of')
-      .toContainText(/about to submit a design/i)
+      .toContainText(/about to share your work with the community/i)
 
     // And the reasons, read from the array the product renders them from — so
     // editing the copy in one place cannot leave this test asserting the old
@@ -69,15 +69,20 @@ test.describe('flow 6 — submitting a design to the community', () => {
   test('a signed-in member gets the form itself, not the gate — the control', async ({ page }) => {
     // Without this, the test above passes for a build that shows the sign-in
     // wall to everybody, including people who are already signed in.
-    watch(page, 'a member submitting a design')
+    watch(page, 'a member sharing a design link')
     await signIn(page, { plan: 'free' })
     await go(page, '/community')
-    await page.getByRole('button', { name: /Submit design/i }).first().click()
+    await page.locator('.cm-head-actions').getByRole('button', { name: 'Share your work' }).click()
 
+    // A member goes straight to the share steps (no gate): pick "A link", then the form.
+    const pick = page.getByRole('dialog', { name: 'Share your work' })
+    await expect(pick, 'a member goes straight to the share steps').toBeVisible()
+    await expect(pick, 'and must not be asked to sign in again')
+      .not.toContainText(/about to share your work/i)
+    await pick.getByRole('radio', { name: /A link/ }).check()
+    await pick.getByRole('button', { name: 'Next' }).click()
     const dialog = page.getByRole('dialog', { name: /Submit a design/i })
-    await expect(dialog, 'a member goes straight to the form').toBeVisible()
-    await expect(dialog, 'and must not be asked to sign in again')
-      .not.toContainText(/about to submit a design/i)
+    await expect(dialog, 'the link form opens').toBeVisible()
 
     // The form must also be honest about what happens next: nothing appears
     // publicly on submission.

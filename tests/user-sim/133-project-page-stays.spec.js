@@ -64,7 +64,7 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 1440, hei
     await openCloudOnly(page)
 
     // The account has not answered yet: the page holds, and the address is the project's.
-    await expect(page.locator('.uh-resolving')).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Opening your project' })).toBeVisible()
     await expect(page).toHaveURL(/\/projects\/stay-put$/)
 
     await expect(page.getByRole('heading', { level: 1, name: 'Harbour' }))

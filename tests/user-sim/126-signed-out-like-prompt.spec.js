@@ -9,9 +9,9 @@ import { go, signIn, watch } from './helpers.js'
 const loginDialog = (page) => page.getByRole('dialog').filter({ has: page.locator('#ui-login-title') })
 
 const SURFACES = [
-  { route: '/discover/palettes', button: (page) => page.locator('.pgal-like').first(), pressed: 'aria-pressed' },
-  { route: '/discover/gradients', button: (page) => page.locator('.grg-like').first(), pressed: 'aria-pressed' },
-  { route: '/community', button: (page) => page.locator('.ch-heart').first(), pressed: 'aria-pressed' },
+  { route: '/discover/palettes', button: (page) => page.locator('.vpt-like').first(), pressed: 'aria-pressed' },
+  { route: '/discover/gradients', button: (page) => page.locator('.vpt-like').first(), pressed: 'aria-pressed' },
+  { route: '/community', button: (page) => page.locator('.cm-heart').first(), pressed: 'aria-pressed' },
 ]
 
 test.describe('signed-out likes and saves ask to sign in', () => {
@@ -33,6 +33,9 @@ test.describe('signed-out likes and saves ask to sign in', () => {
       watch(page, `a member liking something on ${s.route}`)
       await signIn(page)
       await go(page, s.route)
+      // The signed-in nav button only renders once auth has hydrated; pressing a like before that
+      // takes the signed-out path and opens the prompt, which is a race in the test, not the page.
+      await expect(page.getByRole('button', { name: 'Account and settings' })).toBeVisible()
       const btn = s.button(page)
       await expect(btn).toBeVisible({ timeout: 20000 })
       await expect(btn).toHaveAttribute(s.pressed, 'false')

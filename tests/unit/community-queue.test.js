@@ -27,6 +27,18 @@ import { fileTextThrough } from '../../scripts/gated-patches.mjs'
 // and a pattern that happens to span a newline must not pass on one machine
 // and fail on another.
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8').replace(/\r\n/g, '\n')
+// The community page's submission logic lives in the hub; the dialogs and the
+// profile's Your submissions list are the other community files.
+const HUB = 'src/components/community/useCommunityHub.js'
+const COMMUNITY_FILES = [
+  'src/pages/Community.jsx',
+  'src/pages/CommunityPiece.jsx',
+  'src/pages/CommunityProfile.jsx',
+  HUB,
+  'src/components/community/ShareDialogs.jsx',
+  'src/components/community/pieceUi.jsx',
+  'src/components/community/pieceActions.js',
+]
 const user = { uid: 'u1', displayName: 'Dylan', email: 'd@example.com' }
 
 // ── The rules, as the moderator role leaves them ────────────────────────────
@@ -255,8 +267,10 @@ test('a palette submission reaches the account, not just this browser', () => {
 })
 
 test('a design submission reaches the account, not just this browser', () => {
-  const src = read('src/pages/Community.jsx')
-  assert.match(src, /buildQueueRecord\(\{\n\s*kind: 'design',/)
+  // The community hub (useCommunityHub.js) holds the submission logic.
+  const src = read(HUB)
+  assert.match(src, /publish\('design', item, designPayload\(item\)\)/)
+  assert.match(src, /buildQueueRecord\(\{ kind, name: item\.name/)
   assert.match(src, /await publishToQueue\(\{ \.\.\.queued, localId: item\.id \}\)/)
 })
 
@@ -264,11 +278,11 @@ test('the local copy is still written FIRST, in both flows', () => {
   // Local-first is the whole reason submitting works offline and the list
   // updates without waiting on a round trip. Publishing before the local write
   // would make a dropped connection lose the submission outright.
-  // Community.jsx sends from a helper its submit handler calls, so its order is
-  // read inside that handler.
+  // The community hub sends from a helper its submit handler calls, so its
+  // order is read inside that handler.
   for (const [file, from, local, publish] of [
     ['src/pages/PaletteBuilder.jsx', '', 'appendCommunitySubmission(', 'await publishToQueue('],
-    ['src/pages/Community.jsx', 'const handleSubmit', 'setSubmissions(prev => [item, ...prev])', 'await publishDesign(item)'],
+    [HUB, 'const submitDesign', 'setDesignLocal((prev) => [item, ...prev])', 'return sendDesign(item)'],
   ]) {
     const whole = read(file)
     const src = from ? whole.slice(whole.indexOf(from)) : whole
@@ -281,7 +295,7 @@ test('the local copy is still written FIRST, in both flows', () => {
 })
 
 test('neither palette nor design flow claims a review it did not queue', () => {
-  for (const file of ['src/pages/PaletteBuilder.jsx', 'src/pages/Community.jsx']) {
+  for (const file of ['src/pages/PaletteBuilder.jsx', HUB]) {
     const src = read(file)
     assert.match(src, /Sign in to submit it for review/, `${file}: a signed-out save says what it is`)
     assert.match(src, /could not reach the review queue/, `${file}: a failed publish says so`)
@@ -289,26 +303,27 @@ test('neither palette nor design flow claims a review it did not queue', () => {
 })
 
 test('the community hub reads the account, not just this browser', () => {
-  const src = read('src/pages/Community.jsx')
+  const src = read(HUB)
   assert.match(src, /listMySubmissions\(uid, 'design'\)/)
-  assert.match(src, /mergeSubmissions\(serverSubmissions, submissions\)/)
+  assert.match(src, /mergeSubmissions\(designServer, designLocal\)/)
 })
 
 test('the hub no longer tells submitters their work stays in this browser', () => {
   // The note read "Submissions are saved to this browser for now. Shared
   // community publishing is coming soon." That was true while nothing was
   // published. It became a lie the moment the queue existed.
-  const src = read('src/pages/Community.jsx')
+  const src = COMMUNITY_FILES.map(read).join('\n')
   assert.ok(!/Submissions are saved to this browser/.test(src),
     'the note must not still promise browser-only storage')
-  assert.match(src, /saved to your account and queued for review/)
+  assert.match(read('src/components/community/ShareDialogs.jsx'), /saved to your account and queued for review/)
+  assert.match(read('src/pages/CommunityProfile.jsx'), /saved to your account and queued for review/)
 })
 
 test('a submission from the wire is sanitised like one from this browser', () => {
   // The cards render `item.url`. A document coming back from Firestore gets the
   // same safeHttpUrl treatment the local store has always applied, so the wire
   // is not a way around it.
-  const src = read('src/pages/Community.jsx')
+  const src = read(HUB)
   assert.match(src, /sanitizeCommunitySubmission\(\{/)
 })
 

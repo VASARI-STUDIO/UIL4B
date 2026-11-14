@@ -34,7 +34,11 @@ async function hitArea(page, selector) {
 }
 
 const CASES = [
-  { route: '/community', sels: ['.ch-filter', '.ch-sort-btn', '.ch-heart'] },
+  // V3 Community: the header's two buttons and a tile's "..." menu. (The heart
+  // discs are hidden on a phone, so they have no 44px target to measure here;
+  // the "..." menu stands in. The old filter chips and sort buttons no longer
+  // exist, and the tab row only shows for a member with submissions.)
+  { route: '/community', sels: ['.cm-head button', '.cm-tile [aria-label^="Actions for"]'] },
   { route: '/settings', signin: true, sels: ['.settings-nav-item'] },
   { route: '/create/alt-text', sels: ['[data-tl-dock] button', '.alt-field', '.alt-length .tl-pill'] },
   { route: '/create/auto-builder', sels: ['.bs-btn--primary'] },

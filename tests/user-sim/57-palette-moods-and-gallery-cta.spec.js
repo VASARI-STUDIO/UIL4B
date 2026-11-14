@@ -228,7 +228,8 @@ test('at 390px the tray fits and every chip is still a touch target', async ({ b
 const GALLERIES = [
   { route: PALETTES, card: '.pgal-card', action: 'Create and submit your own', href: '/create/palette' },
   { route: '/discover/gradients', card: '.grg-card', action: 'Make your own', href: '/create/gradient' },
-  { route: '/community', card: '.ch-card', action: 'Create and submit your own', href: null },
+  // The V3 hub closes on its own share block rather than the library CTA.
+  { route: '/community', card: '.cm-tile', action: 'Share your work', href: null, ctaSel: '.cm-close', qSel: 'p', question: /^Made something with UIL4B\?$/ },
 ]
 
 test.describe('the closing CTA on every gallery', () => {
@@ -285,10 +286,15 @@ test.describe('the closing CTA on every gallery', () => {
         return { lowestCard: lowest, ctaTop: block.top + window.scrollY, ctaHeight: block.height }
       }, { sel: gallery.card, ctaSel })
       expect(geom.ctaHeight, 'the CTA rendered with no height').toBeGreaterThan(60)
+      // RETARGETED (V3 board): the V3 libraries set the closing block's margin-top
+      // to 0 (library-v3.css `.gcta{margin-top:0}`; the block's own padding makes
+      // the space), so it may touch the last card's box but never start above it.
+      // 1px of slack covers sub-pixel rounding. Mutation: give `.gcta` a negative
+      // margin-top and the CTA starts above the last card -> this fails.
       expect(
         geom.ctaTop,
         `the CTA starts ${Math.round(geom.lowestCard - geom.ctaTop)}px ABOVE the last card`,
-      ).toBeGreaterThan(geom.lowestCard)
+      ).toBeGreaterThanOrEqual(geom.lowestCard - 1)
     })
   }
 })

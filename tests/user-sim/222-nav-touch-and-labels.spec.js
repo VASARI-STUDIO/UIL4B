@@ -59,7 +59,9 @@ test.describe('hover styles', () => {
     await expect(tab).toBeVisible()
     const rest = await colour(tab)
     const current = await colour(page.locator('.pnav-tab.is-current').first())
-    expect(alpha(rest), 'the resting tab should be dimmer than the current one').toBeLessThan(alpha(current))
+    // V3 (v3-shell.css): the resting tab is the solid --v3-t56 and the current one --v3-ink, so the two differ
+    // in colour, not alpha. A hover that latched would turn the resting tab to the ink.
+    expect(rest, `the resting tab should not wear the current tab's ink (rest ${rest}, current ${current})`).not.toBe(current)
     const { x, y } = await centre(tab)
     await page.mouse.move(x, y)
     await page.waitForTimeout(250)
@@ -77,7 +79,7 @@ test.describe('hover styles', () => {
     const rest = await colour(tab)
     const { x, y } = await centre(tab)
     await page.mouse.move(x, y)
-    await expect.poll(async () => alpha(await colour(tab)), { message: 'a hover no longer inks the tab' }).toBeGreaterThan(alpha(rest))
+    await expect.poll(() => colour(tab), { message: `a hover no longer inks the tab (rest ${rest})` }).not.toBe(rest)
     await ctx.close()
   })
 

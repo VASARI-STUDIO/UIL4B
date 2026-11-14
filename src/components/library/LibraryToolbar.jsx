@@ -96,6 +96,10 @@ function LibraryToolbar({
   // still stated (the same reason a collapsed trigger names its selection).
   activeFilters = 0,
   className = '',
+  // The phone sheet's heading, and a class for the layer it is portalled into
+  // (the sheet sits outside the page root, so a page scopes its styling here).
+  sheetTitle = 'Filters',
+  sheetClassName = '',
 }) {
   const phone = useMediaQuery(PHONE_QUERY)
   const groups = Children.toArray(children).filter(Boolean)
@@ -203,6 +207,23 @@ function LibraryToolbar({
   const barRef = useRef(null)
   const { peek, slot } = useToolbarPeek(barRef, { frozen: open })
 
+  // The bar's own height, published on the page root as --lib-toolbar-h so a
+  // scroll target (the results heading) can keep clear of the sticky bar: its
+  // scroll-margin-top adds this (styles/pages/library-v3.css). The stage and the
+  // number of rows change the height, so it is read again on every resize. The
+  // stylesheet's fallback is the V3 single-row height (52).
+  useLayoutEffect(() => {
+    const bar = barRef.current
+    const host = bar?.closest('.lib-surface')
+    if (!bar || !host) return undefined
+    const write = () => host.style.setProperty('--lib-toolbar-h', `${Math.round(bar.getBoundingClientRect().height)}px`)
+    write()
+    if (typeof ResizeObserver === 'undefined') return () => host.style.removeProperty('--lib-toolbar-h')
+    const watcher = new ResizeObserver(write)
+    watcher.observe(bar)
+    return () => { watcher.disconnect(); host.style.removeProperty('--lib-toolbar-h') }
+  }, [])
+
   return (
     <>
     {peek && slot && <div className="lbry-toolbar-spacer" style={{ height: slot.height }} aria-hidden="true" />}
@@ -236,6 +257,8 @@ function LibraryToolbar({
             setOpen={setOpen}
             close={close}
             activeFilters={activeFilters}
+            sheetTitle={sheetTitle}
+            sheetClassName={sheetClassName}
             groups={panelGroups}
             action={effective >= 3 ? action : null}
           />
@@ -260,7 +283,7 @@ function LibraryToolbar({
 export default memo(LibraryToolbar)
 
 // The one control the groups collapse into, and the panel it opens.
-function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action }) {
+function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, action, sheetTitle, sheetClassName }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const firstControl = ':is(button,a[href],input,select,textarea,[tabindex]):not([disabled]):not([aria-disabled="true"]):not([tabindex="-1"])'
   // Desktop: the app's non-modal disclosure (usePopover — dismissal, focus-in,
@@ -310,7 +333,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
         </div>
       )}
       {open && phone && host && createPortal(
-        <div className="lib-surface lbry-sheet-layer">
+        <div className={`lib-surface lbry-sheet-layer${sheetClassName ? ` ${sheetClassName}` : ''}`}>
           <div className="lbry-sheet-scrim" onClick={close} aria-hidden="true" />
           <div
             ref={sheetRef}
@@ -322,7 +345,7 @@ function FiltersControl({ phone, open, setOpen, close, activeFilters, groups, ac
             tabIndex={-1}
           >
             <div className="lbry-sheet-head">
-              <h2 className="lbry-sheet-title" id={`${panelId}-title`}>Filters</h2>
+              <h2 className="lbry-sheet-title" id={`${panelId}-title`}>{sheetTitle}</h2>
               <button type="button" className="lbry-sheet-done" onClick={close}>Done</button>
             </div>
             <div className="lbry-sheet-body">{panelBody}</div>

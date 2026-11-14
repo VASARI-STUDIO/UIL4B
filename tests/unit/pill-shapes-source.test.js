@@ -43,6 +43,14 @@ function splitList(list) {
   return out
 }
 
+// The Discover/Learn index draws its search field as the index spec says: 520 x 44, raised --card
+// fill, a 12px radius and an inset hairline instead of a border. Only the rules under this prefix in
+// surface.css are exempt from the shared search-bar and pill readings; the test at the end of the
+// search-bar block pins what that field is.
+const INDEX_SEARCH = '.srf .lidx-tools .lbry-search'
+const INDEX_SHEET = 'src/styles/pages/surface.css'
+const isIndexSearch = (r) => r.file === INDEX_SHEET && r.selectors.every((s) => s === INDEX_SEARCH || s.startsWith(`${INDEX_SEARCH} `) || s.startsWith(`${INDEX_SEARCH}:`))
+
 /** Drop :is()/:where()/:not() groups and state pseudo-classes so the subject is what is left. */
 const subject = (sel) => sel.replace(/:(?:is|where|not)\([^)]*\)/g, '').trim().replace(/\s+/g, ' ')
 
@@ -75,8 +83,10 @@ const endsWithTarget = (sel, target) => {
 //   - background: var(--inp), or var(--bg-3) in a dark-only rule
 //   - the V3 header search (.pnav-search-field in v3-shell.css only) is a
 //     borderless L2 pill: border:0, background var(--v3-l2), 36px on desktop and
-//     44px on the phone header. The rule file is part of the reading, so the
-//     same declarations anywhere else still fail.
+//     44px on the phone header. The V3 library search (.lbry-search in
+//     library-v3.css only) is the same pill: its toolbar sets --search-h to 36px
+//     on desktop and 44px on the phone. The rule file is part of the reading, so
+//     the same declarations anywhere else still fail.
 // Not in the family, so not listed: .hcmd-bar (the 60px hero command bar).
 const SEARCH_BARS = ['.pnav-search-field', '.lbry-search', '.spm-ic-search', '.adm-search']
 const declared = (body, prop) => {
@@ -92,11 +102,12 @@ test('--search-h is 44px, the touch floor', () => {
 
 for (const target of SEARCH_BARS) {
   test(`${target} takes the shared search height, hairline and fill`, () => {
-    const hits = rules.filter((r) => r.selectors.some((s) => endsWithTarget(s, target)))
+    const hits = rules.filter((r) => r.selectors.some((s) => endsWithTarget(s, target)) && !isIndexSearch(r))
     const sized = hits.filter((r) => declared(r.body, 'height') || declared(r.body, 'min-height'))
     assert.ok(sized.length > 0, `${target} sets no height: renamed, or the list is stale`)
     const bad = []
-    const v3Header = (r) => target === '.pnav-search-field' && r.file.endsWith('v3-shell.css')
+    const v3Header = (r) => (target === '.pnav-search-field' && r.file.endsWith('v3-shell.css'))
+      || (target === '.lbry-search' && r.file.endsWith('library-v3.css'))
     for (const r of hits) {
       for (const prop of ['height', 'min-height']) {
         const v = declared(r.body, prop)
@@ -118,6 +129,18 @@ for (const target of SEARCH_BARS) {
     assert.deepEqual(bad, [], `${target} must use --search-h, 1px solid var(--border) and var(--inp) (V3 header: 36/44px, no border, var(--v3-l2))`)
   })
 }
+
+test('the index search field keeps its spec shape: 44px, 12px corners, raised fill, inset hairline, no border', () => {
+  const own = rules.filter((r) => isIndexSearch(r) && r.selectors.includes(INDEX_SEARCH))
+  assert.ok(own.length > 0, `${INDEX_SEARCH} has no rule in ${INDEX_SHEET}: renamed, or the exemption is stale`)
+  const base = own.find((r) => declared(r.body, 'height'))
+  assert.ok(base, 'the index search field sets no height')
+  assert.equal(declared(base.body, 'height'), '44px')
+  assert.equal(declared(base.body, 'border-radius'), '12px')
+  assert.equal(declared(base.body, 'background'), 'var(--card)')
+  assert.equal(declared(base.body, 'border'), '0')
+  assert.match(declared(base.body, 'box-shadow') || '', /^inset 0 0 0 1px /)
+})
 
 // ONE TRAY TREATMENT: A HAIRLINE.
 //
@@ -146,14 +169,16 @@ for (const target of TARGETS) {
   test(`${target} takes the pill radius wherever it sets one`, () => {
     const found = []
     for (const r of rules) {
-      if (!r.selectors.some((s) => endsWithTarget(s, target))) continue
+      if (!r.selectors.some((s) => endsWithTarget(s, target)) || isIndexSearch(r)) continue
       const m = r.body.match(/(?:^|;)\s*border-radius\s*:\s*([^;]+)/)
       if (m) found.push({ file: r.file, value: m[1].trim(), body: r.body })
     }
     assert.ok(found.length > 0, `${target} declares no border-radius anywhere: renamed, or the list is stale`)
-    const bad = found.filter(({ value, body }) => {
+    const bad = found.filter(({ file, value, body }) => {
       if (/^(var\(--radius-pill\)|999px)$/.test(value)) return false
       if (target === '.lbry-toolbar' && value === '26px') return false
+      // The V3 phone tray stacks the search over the switch, so it is a 24px card, not a pill.
+      if (target === '.lbry-toolbar' && value === '24px' && file.endsWith('library-v3.css')) return false
       if (/^0(px)?$/.test(value) && /background\s*:\s*none/.test(body)) return false
       return true
     })

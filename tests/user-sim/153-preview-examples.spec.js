@@ -58,6 +58,7 @@
 import { test, expect } from './base.js'
 import { go, signIn, watch } from './helpers.js'
 import { clickPaletteAction, pickPreviewState, cardInkRatios } from './palette-helpers.js'
+import { PREVIEW_SCENES } from '../../src/data/palettePreviewScenes.js'
 
 // name: the option in the dialog's list. text: a string only that example prints.
 // roles: the roles each example tags, by hand, from its ROLES in <File>.data.js.
@@ -139,16 +140,22 @@ async function openDialog(page, { plan = 'pro' } = {}) {
 }
 
 /**
- * Pick a scene in whichever layout the width gives: rail, the 768 menu, or the phone strip.
+ * Pick a scene in whichever layout the width gives: rail, the 768 menu, or the phone's dock and Previews sheet.
  * `locked` is a Pro scene on a free account: its scene is never mounted, so the stage holds the stand-in instead.
  */
 async function pickScene(dialog, name, { locked = false } = {}) {
   let option = dialog.getByRole('option', { name: rx(name) })
   if (!(await option.count())) {
-    await dialog.locator('.pvd-menu-btn').click()
+    // The phone opens the Previews sheet from the dock; 768 opens the scene menu.
+    const dock = dialog.locator('.pvd-scenes-btn')
+    if (await dock.count()) await dock.click()
+    else await dialog.locator('.pvd-menu-btn').click()
     option = dialog.getByRole('option', { name: rx(name) })
   }
   await option.click()
+  // A scene pick leaves the phone's Previews sheet open over the stage in the current build; shut it so the scene can be read.
+  const sheet = dialog.getByRole('dialog', { name: 'Previews' })
+  if (await sheet.count()) await sheet.getByRole('button', { name: 'Close previews' }).click()
   if (locked) await expect(dialog.locator('.pvd-scene.is-locked .pvd-scene-stub')).toBeVisible()
   else await expect(dialog.locator(`.pvs[data-preview-scene="${name}"]`)).toBeVisible()
 }
@@ -792,7 +799,7 @@ test.describe('the Orra product stage', () => {
 })
 
 // ── 7f. the legend is one row, and its note is attached to the chips ─────────
-// The legend is a single 48px row: the heading, the chips that fit, then "+N more".
+// The legend is a single 64px row (the A board's): the heading, the chips that fit, then "+N more".
 // The chips that do not fit, and the "darker as text, so it reads" caption, sit in
 // the popover that button opens. Every chip that names a colour read as text points
 // at the caption with aria-describedby, whether it is on the row or in the popover.
@@ -820,7 +827,7 @@ test.describe('the legend', () => {
       })
       expect(onRow, 'the legend was found').toBeTruthy()
       expect(onRow.rows, 'the chips on the row sit on more than one line').toBe(1)
-      expect(onRow.height, 'the legend is taller than one row').toBeLessThanOrEqual(56)
+      expect(onRow.height, 'the legend is taller than the board\'s 64px row').toBeLessThanOrEqual(64)
       expect(onRow.more, 'the "+N more" button is missing').toMatch(/^\+\d+ more$/)
       const hidden = Number(/\d+/.exec(onRow.more)[0])
       expect(onRow.shown + hidden, 'the chips on the row plus those under "+N more" are the ten colours').toBe(10)
@@ -1012,7 +1019,8 @@ test.describe('the preview dialog fails to download', () => {
 
 // ── 10. the free/Pro gate, and walking the list ──────────────────────────────
 
-const SCENE_ORDER = ['Energy dashboard', 'Trail run app', 'Spending card', 'Editorial hero', 'Product page', 'Architect portfolio']
+// The rail's order is the registry's: grouped Product, Marketing, Brand, as the board lists them.
+const SCENE_ORDER = PREVIEW_SCENES.map((s) => s.name)
 
 test.describe('the free and Pro examples', () => {
   test('a free account has Trail run app open and sees Architect portfolio and Spending card blurred and out of reach', async ({ page }) => {
@@ -1020,7 +1028,7 @@ test.describe('the free and Pro examples', () => {
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page, { plan: null })
     const rail = dialog.getByRole('listbox', { name: 'Previews' })
-    await expect(rail.getByRole('option'), 'six previews in the list').toHaveCount(SCENE_ORDER.length)
+    await expect(rail.locator('[data-scene-id]'), 'one preview per scene in the registry').toHaveCount(SCENE_ORDER.length)
 
     for (const ex of EXAMPLES) {
       await pickScene(dialog, ex.name, { locked: ex.pro })
@@ -1059,7 +1067,7 @@ test.describe('the free and Pro examples', () => {
     }
   })
 
-  test('the arrow keys walk the rail through all six previews in order, and Home and End reach the ends', async ({ page }) => {
+  test('the arrow keys walk the rail through every preview in order, and Home and End reach the ends', async ({ page }) => {
     watch(page, 'keyboard designer walking the preview list')
     await seed(page, PALETTES.mid)
     const dialog = await openDialog(page)

@@ -57,7 +57,7 @@ test.describe('palette library sections', () => {
 
   test('every palette on the page is inside a section, and the counts add up', async ({ page }) => {
     const counts = await page.locator('.pgl-section-count').allTextContents()
-    const total = counts.reduce((sum, n) => sum + Number(n), 0)
+    const total = counts.reduce((sum, n) => sum + parseInt(n, 10), 0)
     expect(counts.length).toBe(2)
     expect(total).toBe(await page.locator('.pgal-card:not(.geg-fade *)').count())
   })
@@ -259,9 +259,17 @@ test('the section count stays the width of its number on a phone', async ({ brow
   await go(page, '/discover/palettes')
   const count = page.locator('.pgl-section-count').first()
   await expect(count).toBeVisible()
-  // POSITIVE CONTROL: this is the narrow layout, where the head has two columns.
-  expect(await page.locator('.pgl-section-head').first().evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2)
-  const w = (await count.boundingBox()).width
-  expect(w, `the count pill is ${w}px wide`).toBeLessThan(48)
+  // V3 (LibraryR2A): the head is a wrapping flex row and the count is plain text with its unit
+  // ("37 palettes"), not a pill in a grid column. What the old test protected is that the count
+  // never stretches wider than its own text, so measure the box against the text it holds.
+  // MUTATION: give `.pgl-section-count` `flex:1 1 auto` (or `flex-grow:1`) in library-v3.css and it
+  // stretches to the free width of the row, and this fails.
+  expect(await page.locator('.pgl-section-head').first().evaluate((el) => getComputedStyle(el).display), 'POSITIVE CONTROL: the V3 head is a flex row').toBe('flex')
+  const { w, text } = await count.evaluate((el) => {
+    const r = document.createRange()
+    r.selectNodeContents(el)
+    return { w: el.getBoundingClientRect().width, text: r.getBoundingClientRect().width }
+  })
+  expect(w, `the count is ${w}px wide for ${text}px of text`).toBeLessThanOrEqual(text + 1)
   await ctx.close()
 })

@@ -41,7 +41,8 @@ test.describe('signup intent', () => {
     await go(page, '/learn/help')
 
     await page.getByRole('button', { name: 'Menu', exact: true }).click()
-    await page.getByRole('button', { name: 'Create a free account' }).click()
+    // Scoped to the primary nav: the V3 page body carries its own "Create a free account" button too.
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Create a free account' }).click()
     await expect(dialogHeading(page)).toBeVisible()
     await expect(dialogHeading(page)).toHaveText(/create your free account/i)
     // The password hint (and the field) only come with the second step.

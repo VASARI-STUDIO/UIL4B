@@ -113,7 +113,7 @@ test.describe('every entry point opens the same popup', () => {
   test('both project page buttons open it, named for the project', async ({ page }) => {
     watch(page, 'a designer opening a saved project')
     await signIn(page, { plan: 'free', projects: [savedProject()] })
-    for (const area of ['.pjd-head-actions', '.pjd-export']) {
+    for (const area of ['.pjv-rail', '.pjv-exb']) {
       await go(page, PROJECT)
       await expect(page.getByRole('heading', { level: 1, name: PROJECT_NAME })).toBeVisible()
       await page.locator(area).getByRole('button', { name: 'Export project', exact: true }).click()
@@ -141,7 +141,7 @@ test.describe('every entry point opens the same popup', () => {
     await expect(page.getByRole('link', { name: 'Open project' })).toHaveAttribute('href', PROJECT)
     // The old gallery's design cards, format cards and price bar are gone.
     await expect(page.getByRole('radio')).toHaveCount(0)
-    await expect(page.locator('.pxg-cta')).toHaveCount(1)
+    await expect(page.locator('.pjv-exact .pjv-go')).toHaveCount(1)
 
     await page.getByRole('button', { name: 'Open export' }).click()
     await expect(await settled(page)).toBeVisible()

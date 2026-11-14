@@ -1,0 +1,342 @@
+/* The colour contrast guide's own figures: the hero specimen, the size ruler,
+   the channel bars, the field pair, four failure specimens, the "Show the
+   working" disclosure and the try-it hex field. Everything else on the page is
+   learn-article.css.
+
+   The sheet of white the figures sit on is #FFFFFF with #121418 type because the
+   guide measures colours against white; its ratios are "on white" and a themed
+   ground would change them. */
+
+.lart{--lcc-paper:#FFFFFF;--lcc-ink:#121418;--lcc-sec:#50504A;--lcc-hair:rgba(18,20,24,.1);--lcc-ease:cubic-bezier(.23,1,.32,1)}
+
+.lart .lart-prose--wide{max-width:none}
+
+/* ── Hero: the specimen takes the right column, the contents sit under the lead ── */
+.lart .lart-hero--spec .lart-toc-inline{margin-top:var(--s-6)}
+.lart .lart-hero--spec .lart-toc-inline .lart-toc-h{margin-bottom:var(--s-2)}
+.lart .lart-toc-inline{display:none}
+.lart .lart-toc-inline a{display:block;padding:var(--s-1) 0;font-family:var(--font);font-size:15px;line-height:1.5;color:var(--t1);text-decoration:none;transition:color var(--dur-1) ease}
+@media(hover:hover){
+  .lart .lart-toc-inline a:hover{color:var(--t0);text-decoration:underline;text-underline-offset:3px}
+}
+@media(min-width:1080px){
+  .lart .lart-hero--spec{grid-template-columns:minmax(0,11fr) minmax(0,14fr);align-items:start}
+  .lart .lart-toc-inline{display:block}
+  .lart .lart-toc-inline ol{list-style:none;display:flex;flex-direction:column;gap:var(--s-2)}
+  .lart .lart-toc-inline li{display:block}
+  .lart .lart-toc-inline li::before{content:none}
+}
+@media(min-width:1280px){
+  .lart .lart-hero--spec{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+
+.lcc-spec{container-type:inline-size;min-width:0;background:var(--card);border-radius:var(--radius-xl);padding:var(--s-5)}
+.lcc-lab{margin:0;font-size:13px;line-height:1.4;font-weight:500;color:var(--t2)}
+.lcc-sws{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s-2);margin-top:var(--s-3)}
+.lcc-swi{display:flex;flex-direction:column;align-items:center;gap:var(--s-2)}
+.lcc-sw{position:relative;width:36px;height:36px;padding:0;border:0;border-radius:999px;cursor:pointer;box-shadow:inset 0 0 0 1px var(--bh);transition:transform 120ms var(--lcc-ease)}
+.lcc-sw::before{content:'';position:absolute;inset:-4px}
+.lcc-sw:active{transform:scale(.97)}
+.lcc-sw[aria-checked="true"]{box-shadow:inset 0 0 0 1px var(--bh),0 0 0 3px var(--card),0 0 0 5px var(--t0)}
+.lcc-sw:focus-visible{outline:2px solid var(--t0);outline-offset:6px}
+.lcc-swh{font-family:var(--mono);font-size:12px;line-height:1.4;color:var(--t2)}
+
+.lcc-paper{position:relative;background:var(--lcc-paper);color:var(--lcc-ink);border-radius:var(--radius);box-shadow:inset 0 0 0 1px var(--lcc-hair)}
+.lcc-field{min-height:200px;margin-top:20px;padding:var(--s-5);overflow:hidden}
+.lcc-tx{max-width:330px;display:flex;flex-direction:column;gap:var(--s-3);margin-top:var(--s-2)}
+.lcc-tx p{margin:0}
+.lcc-tl{font-size:24px;line-height:1.3;font-weight:400}
+.lcc-tb{font-size:17px;line-height:1.5;font-weight:400}
+.lcc-rt{position:absolute;top:var(--s-4);right:var(--s-5);font-size:64px;line-height:1;font-weight:600;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--lcc-ink)}
+@container (max-width:480px){
+  .lcc-tx{margin-top:56px}
+  .lcc-rt{font-size:48px}
+}
+.lcc-vr{margin:var(--s-4) 0 0;padding:0;list-style:none}
+.lcc-vr li{display:grid;grid-template-columns:minmax(0,1fr) auto 64px;column-gap:var(--s-4);align-items:center;min-height:40px;font-size:15px;line-height:1.4;color:var(--t0)}
+.lcc-vr li+li{border-top:1px solid var(--border)}
+.lcc-nd{font-family:var(--mono);font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
+.lcc-vd{text-align:right;font-weight:600}
+
+/* ── Section layout: text and figure side by side from 1080 ── */
+.lart .lcc-sec{display:block}
+.lcc-w{margin-top:var(--s-6)}
+.lcc-disc{display:inline-flex;align-items:center;gap:var(--s-2);height:36px;padding:0 var(--s-4);border:0;border-radius:var(--radius-pill);background:var(--bg-3);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;line-height:1;cursor:pointer;transition:background-color 150ms ease,transform 120ms var(--lcc-ease)}
+.lcc-disc svg{transition:transform 150ms var(--lcc-ease)}
+.lcc-disc[aria-expanded="true"] svg{transform:rotate(180deg)}
+.lcc-disc:active{transform:scale(.97)}
+.lcc-disc:focus-visible{outline:2px solid var(--t0);outline-offset:2px}
+@media(hover:hover){
+  .lcc-disc:hover{background:var(--bg-4)}
+}
+.lart .lart-prose .lcc-wk{margin-top:var(--s-5);padding:var(--s-5);border-radius:var(--radius-xl);background:var(--bg-2);max-width:760px}
+.lart .lart-prose .lcc-wk>*{margin:0;font-size:15px;line-height:1.6;color:var(--t1)}
+.lart .lart-prose .lcc-wk>*+*{margin-top:var(--s-4)}
+.lart .lart-prose .lcc-wk h3{font-size:16.5px;color:var(--t0)}
+.lart .lart-prose .lcc-wk .lart-spec{margin-block:0}
+
+.lart .lcc-fig-gap{margin-top:var(--s-7)}
+@media(min-width:1080px){
+  .lart .lcc-sec{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--s-5);align-items:start}
+  .lart .lcc-sec>*{grid-column:1/-1;min-width:0}
+  .lart .lcc-sec>.lcc-w{grid-row:auto}
+  .lart .lcc-s1-text{grid-column:1/7}
+  .lart .lcc-s2 .lcc-txt{grid-column:1/7;grid-row:1}
+  .lart .lcc-s2 .lcc-rul{grid-column:8/13;grid-row:1}
+  .lart .lcc-s3 .lcc-chw{grid-row:1}
+  .lart .lcc-s3 .lcc-txt{grid-column:4/10;grid-row:2;margin-top:var(--s-7)}
+  .lart .lcc-s3 .lcc-w{grid-row:3}
+  .lart .lcc-s4 .lcc-txt{grid-column:8/13;grid-row:1}
+  .lart .lcc-s4 .lcc-fld{grid-column:1/7;grid-row:1}
+  .lart .lcc-s4 .lcc-w{grid-row:2}
+  .lart .lcc-s5 .lcc-txt{grid-column:1/7}
+}
+.lart .lcc-txt>p:first-of-type{margin-top:0}
+@media(max-width:1079px){
+  .lart .lcc-txt,.lart .lcc-s1-text{max-width:var(--lart-measure)}
+  .lart .lcc-rul,.lart .lcc-fld,.lart .lcc-chw{margin-top:var(--s-6)}
+  .lart .lcc-s3 .lcc-chw{margin-top:0;margin-bottom:var(--s-6)}
+  .lart .lcc-s3 .lcc-txt{margin-top:0}
+}
+
+/* ── Section 2: the size ruler ── */
+.lcc-rul{padding:var(--s-5);display:flex;flex-direction:column}
+.lcc-ln{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--s-4);align-items:center;min-height:82px}
+.lcc-ln+.lcc-ln{box-shadow:0 -1px 0 var(--lcc-hair)}
+.lcc-ln .lcc-vd{font-size:13px;color:var(--lcc-ink)}
+
+/* ── Section 3: the channel bars ── */
+.lcc-chcap{display:flex;align-items:center;gap:var(--s-2);margin:0;font-size:13px;line-height:18px;color:var(--t1)}
+.lcc-chcap i{display:block;width:16px;height:16px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--bh)}
+.lcc-chcap code{font-size:13px;color:var(--t0);background:none;border:0;padding:0}
+.lcc-ch{position:relative;margin-top:var(--s-4);padding:var(--s-5);background:var(--card);border-radius:var(--radius-xl);overflow:hidden}
+.lcc-grid{display:grid;grid-template-columns:128px 72px minmax(0,880px);column-gap:var(--s-4)}
+.lcc-chlab,.lcc-chval,.lcc-trk{position:relative;height:208px}
+.lcc-chlab span,.lcc-chval .lcc-vs{position:absolute;left:0;height:24px;line-height:24px;font-size:14px;color:var(--t1)}
+.lcc-chval .lcc-vs{right:0;display:grid}
+.lcc-chval i{grid-area:1/1;font-style:normal;font-family:var(--mono);font-size:13px;line-height:24px;color:var(--t1);opacity:0;visibility:hidden;transition:opacity 300ms var(--lcc-ease),visibility 0s linear 300ms}
+.lcc-st1 .v1,.lcc-st2 .v2,.lcc-st3 .v3,.lcc-chval i.lcc-on{opacity:1;visibility:visible;transition:opacity 300ms var(--lcc-ease),visibility 0s}
+.lcc-trk{overflow:hidden}
+.lcc-tr{position:absolute;left:0;right:0;height:24px;border-radius:6px;background:color-mix(in srgb,var(--t0) 6%,transparent)}
+.lcc-bar{position:absolute;left:0;width:100%;height:24px;border-radius:6px;transform-origin:left center;transition:transform 300ms var(--lcc-ease)}
+.lcc-bar.lcc-r{background:color-mix(in srgb,var(--t0) 50%,transparent)}
+.lcc-bar.lcc-g{background:var(--t0)}
+.lcc-bar.lcc-b{background:color-mix(in srgb,var(--t0) 26%,transparent)}
+.lcc-bar.lcc-w{background:var(--lcc-paper);box-shadow:inset 0 0 0 1px var(--bh)}
+.lcc-done .lcc-bar{transition:none}
+.lcc-gh{position:absolute;left:0;width:100%;height:24px;border-radius:6px;transform-origin:left center;background:color-mix(in srgb,var(--t0) 24%,transparent);opacity:0;transition:opacity 300ms var(--lcc-ease)}
+.lcc-st3 .lcc-gh{opacity:1}
+.lcc-lend{position:absolute;height:24px;line-height:24px;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;color:var(--t0);opacity:0;transition:opacity 300ms var(--lcc-ease);white-space:nowrap}
+.lcc-st3 .lcc-lend{opacity:1}
+.lcc-res{margin:var(--s-5) 0 0;font-size:15px;line-height:1.5;color:var(--t0);font-variant-numeric:tabular-nums;opacity:0;transition:opacity 300ms var(--lcc-ease)}
+.lcc-st3 .lcc-res{opacity:1}
+.lcc-steps{margin:var(--s-4) 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-6);font-size:13px;line-height:1.5;color:var(--t2)}
+.lcc-steps li{margin:0;padding:0;opacity:.55;transition:opacity 300ms var(--lcc-ease)}
+.lcc-st1 .lcc-steps li:nth-child(1),.lcc-st2 .lcc-steps li:nth-child(-n+2),.lcc-st3 .lcc-steps li{opacity:1}
+.lcc-steps code{font-size:13px;background:none;border:0;padding:0;color:inherit}
+@media(max-width:767px){
+  .lcc-ch{padding:var(--s-4)}
+  .lcc-grid{grid-template-columns:88px 56px minmax(0,1fr);column-gap:var(--s-2)}
+  .lcc-chlab span{font-size:13px}
+}
+html[data-reduced-motion="true"] .lcc-ch[data-seen="false"]{opacity:0}
+html[data-reduced-motion="true"] :is(.lcc-bar,.lcc-gh,.lcc-lend,.lcc-res,.lcc-steps li,.lcc-chval i){transition:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lcc-ch[data-seen="false"]{opacity:0}
+  html:not([data-reduced-motion="false"]) :is(.lcc-bar,.lcc-gh,.lcc-lend,.lcc-res,.lcc-steps li,.lcc-chval i){transition:none}
+}
+/* The global clamp zeroes every duration with !important, so the section 3
+   fade is restored here at a higher specificity. */
+html[data-reduced-motion="true"] .lart .lcc-ch{transition-property:opacity!important;transition-duration:300ms!important;transition-delay:0s!important;transition-timing-function:ease-out!important}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lart .lcc-ch{transition-property:opacity!important;transition-duration:300ms!important;transition-delay:0s!important;transition-timing-function:ease-out!important}
+}
+
+/* ── Section 4: two fields ── */
+.lcc-fld{padding:var(--s-5);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--s-6)}
+.lcc-fl{display:flex;flex-direction:column;gap:var(--s-2);min-width:0}
+.lcc-fl label{font-size:13px;line-height:1.4;font-weight:500;color:var(--lcc-sec)}
+.lcc-in{display:block;width:100%;box-sizing:border-box;height:44px;padding:0 var(--s-3);border-radius:var(--radius-xs);background:var(--lcc-paper);border:1px solid var(--lcc-bc);font:inherit;color:var(--lcc-ink)}
+.lcc-in:focus-visible{outline:2px solid var(--lcc-ink);outline-offset:2px}
+.lcc-rr{display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:baseline;margin:var(--s-1) 0 0;font-size:15px;line-height:1.4;color:var(--lcc-ink)}
+.lcc-rr b{font-weight:600;font-variant-numeric:tabular-nums}
+.lcc-rr i{font-style:normal;font-size:13px;color:var(--lcc-sec)}
+
+/* ── Section 5: four failure specimens ── */
+.lcc-fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-7) var(--s-5);margin-top:var(--s-7)}
+.lcc-fs{min-width:0;margin:0}
+.lcc-fr{height:280px;display:flex;align-items:center;justify-content:center;gap:var(--s-6);padding:var(--s-5);overflow:hidden}
+.lcc-fs figcaption{margin-top:var(--s-4);font-size:15px;line-height:1.5;color:var(--t1);max-width:62ch}
+.lcc-fs figcaption b{color:var(--t0);font-weight:600}
+.lcc-col{display:flex;flex-direction:column;align-items:center;gap:var(--s-3)}
+.lcc-rn{font-size:15px;line-height:1.4;font-weight:600;font-variant-numeric:tabular-nums;color:var(--lcc-ink)}
+.lcc-big{font-size:32px;line-height:1;font-weight:600;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--lcc-ink)}
+.lcc-rl{font-size:13px;line-height:1.4;color:var(--lcc-sec);font-family:var(--mono)}
+.lcc-sq{width:120px;height:120px;border-radius:var(--radius)}
+.lcc-btn{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border-radius:var(--radius-pill);background:#DC2626;font-size:15px;font-weight:600}
+.lcc-fr--split{padding:0;justify-content:center}
+.lcc-split{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr}
+.lcc-wl{position:relative;z-index:1;margin:0;font-size:24px;line-height:1.2;font-weight:600;text-align:center;padding:0 var(--s-5)}
+.lcc-splcap{display:grid;grid-template-columns:1fr 1fr;margin:var(--s-3) 0 0;font-size:13px;line-height:1.4;color:var(--t1);font-variant-numeric:tabular-nums}
+@media(max-width:767px){
+  .lcc-fg{grid-template-columns:minmax(0,1fr)}
+  .lcc-fr{height:240px;gap:var(--s-5)}
+  .lcc-sq{width:96px;height:96px}
+}
+
+/* ── Try it: the hex field, the two swatches and the note ── */
+.lcc-hx{display:flex;flex-direction:column;gap:var(--s-1)}
+.lcc-hxrow{display:flex;align-items:center;gap:var(--s-3)}
+.lcc-hx label{font-size:13px;line-height:18px;font-weight:500;color:var(--t1)}
+.lcc-hx input{width:120px;height:44px;padding:0 var(--s-3);border:0;border-radius:var(--radius);background:var(--bg-2);box-shadow:inset 0 0 0 1px var(--bh);color:var(--t0);font-family:var(--mono);font-size:14px}
+.lcc-hx input:focus-visible{outline:2px solid var(--t0);outline-offset:2px}
+.lcc-hx input[aria-invalid="true"]{box-shadow:inset 0 0 0 1px var(--t0)}
+.lcc-hxerr{margin:0;min-height:18px;font-size:13px;line-height:18px;color:var(--t0)}
+.lcc-tsw{display:flex;flex-wrap:wrap;gap:var(--s-4) var(--s-5)}
+.lcc-tsw div{display:flex;align-items:center;gap:var(--s-3);font-family:var(--mono);font-size:13px;color:var(--t1)}
+.lcc-tsw i{display:block;width:48px;height:48px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--bh)}
+.lcc-ntry{margin:0;font-size:15px;line-height:1.5;color:var(--t1)}
+
+.lart .lcc-s1>h2{max-width:20ch}
+.lart-next-act{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-5);min-width:0}
+@media(max-width:767px){
+  .lart-next-act{width:100%}
+}
+@media(min-width:768px){
+  .lart .lcc-try{flex:0 0 min(44%,420px)}
+}
+
+.lart .lart-prose.lart-prose--wide{max-width:none}
+.lart .lart-prose .lcc-paper b,.lart .lart-prose .lcc-paper strong{color:inherit}
+
+@media(max-width:420px){
+  .lcc-swh{font-size:12px;letter-spacing:-.02em}
+  .lcc-vr li{grid-template-columns:minmax(0,1fr) 56px;grid-template-areas:"name vd" "need vd";padding:var(--s-2) 0}
+  .lcc-vr li>span:nth-child(1){grid-area:name}
+  .lcc-vr li>.lcc-nd{grid-area:need}
+  .lcc-vr li>.lcc-vd{grid-area:vd}
+}
+
+/* Phone: figure above its paragraphs in sections 2 to 4, the reading time
+   under the specimen, the contents as a filled pill. */
+@media(max-width:767px){
+  .lart .lcc-s2,.lart .lcc-s3,.lart .lcc-s4{display:flex;flex-direction:column}
+  .lart .lcc-s2 .lcc-txt,.lart .lcc-s3 .lcc-txt,.lart .lcc-s4 .lcc-txt{display:contents}
+  .lart .lcc-sec>.lcc-txt>h2{order:1}
+  .lart .lcc-s2 .lcc-rul,.lart .lcc-s3 .lcc-chw,.lart .lcc-s4 .lcc-fld{order:2;margin:var(--s-5) 0 0}
+  .lart .lcc-sec>.lcc-txt>p{order:3;margin:var(--s-5) 0 0}
+  .lart .lcc-sec>.lcc-txt>p+p{margin-top:var(--s-4)}
+  .lart .lcc-sec>.lcc-w{order:4}
+  .lart .lart-hero--spec{display:flex;flex-direction:column}
+  .lart .lart-hero--spec .lart-head{display:contents}
+  .lart .lart-hero--spec .lart-crumb{order:1}
+  .lart .lart-hero--spec h1{order:2}
+  .lart .lart-hero--spec .lart-dek{order:3}
+  .lart .lart-hero--spec .lcc-spec{order:4;margin-top:var(--s-5)}
+  .lart .lart-hero--spec .lart-meta{order:5;margin-top:var(--s-5)}
+  .lart .lart-toc-m{border:0;margin-bottom:0}
+  .lart .lart-toc-m summary{justify-content:space-between;padding:0 var(--s-4) 0 var(--s-5);border-radius:999px;background:var(--bg-3)}
+  .lart .lart-toc-m-name{font-size:15px;font-weight:500}
+  .lart .lart-toc-m-count{display:none}
+}
+@media(max-width:767px){
+  .lart .lart-hero--spec .lart-toc-nav{order:6;margin-top:var(--s-5)}
+  .lart .lcc-s1 .lart-table-wrap{margin:var(--s-6) 0 0}
+  .lart .lcc-s1 .lart-table-scroll{overflow:visible;border:0;border-radius:0}
+  .lart .lcc-s1 .lart-table--stack tbody tr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:var(--s-4);padding:var(--s-4) 0;border-bottom:0}
+  .lart .lcc-s1 .lart-table--stack tbody tr+tr{border-top:1px solid var(--border)}
+  .lart .lcc-s1 .lart-table--stack tbody th{grid-column:1/-1;grid-row:1;font-size:15px;line-height:20px;margin-bottom:var(--s-2)}
+  .lart .lcc-s1 .lart-table--stack tbody td{display:block;grid-column:auto;padding:0;text-align:left;font-size:32px;line-height:40px;font-weight:600;letter-spacing:-.04em;color:var(--t0)}
+  .lart .lcc-s1 .lart-table--stack tbody td::before{display:block;margin:0;font-size:13px;line-height:18px;font-weight:400;letter-spacing:0;color:var(--t1)}
+  .lart .lcc-s1 .lart-table--stack tbody td[data-label="Level"]{grid-column:1/-1;margin-top:var(--s-1);font-size:13px;line-height:18px;font-weight:400;letter-spacing:0;color:var(--t1)}
+  .lart .lcc-s1 .lart-table--stack tbody td[data-label="Level"]::before{display:inline;content:attr(data-label) " "}
+}
+
+/* ── Close of the guide: the tool button, Keep reading and Sources ── */
+.lart .lart-next:has(.lcc-try) h2{font-size:clamp(32px,3.33vw,48px);line-height:1.02;letter-spacing:-.04em}
+.lart .lart-next:has(.lcc-try) .lart-next-lede{line-height:1.65}
+.lart .lcc-try{gap:20px}
+.lart .lcc-try .lart-next-go{gap:var(--s-3);padding:0 6px 0 var(--s-5);font-size:15px;font-weight:500}
+.lcc-go{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:999px}
+.lcc-go svg,.lart-onward-go svg{transition:transform 320ms cubic-bezier(.25,1,.5,1)}
+@media(hover:hover) and (pointer:fine){
+  .lart .lcc-try .lart-next-go:hover .lcc-go svg{transform:rotate(45deg)}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead:hover .lart-onward-go svg{transform:rotate(45deg)}
+}
+.lart .lcc-try .lart-next-go:focus-visible .lcc-go svg,
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead:focus-visible .lart-onward-go svg{transform:rotate(45deg)}
+html[data-reduced-motion="true"] .lart .lcc-go svg,
+html[data-reduced-motion="true"] .lart .lart-onward-go svg{transition:none;transform:none!important}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lart .lcc-go svg,
+  html:not([data-reduced-motion="false"]) .lart .lart-onward-go svg{transition:none;transform:none!important}
+}
+
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-label{margin-bottom:var(--s-5);line-height:1.4}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-kicker{line-height:22.5px}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row{min-height:52px;padding:0;border:0}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead{gap:var(--s-5);padding:var(--s-6) 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-text{gap:0}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-kicker{line-height:22.5px;color:var(--t2)}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-title{margin-top:var(--s-2);font-size:32px;line-height:1.1;letter-spacing:-.04em}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-dek{margin-top:var(--s-3);max-width:62ch;font-size:17px;line-height:1.55}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-go{display:grid;place-items:center;font-size:0;transform:none!important}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go{width:56px;height:56px;border-radius:999px;background:var(--bg-3);color:var(--t0);transition:background-color 150ms ease}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go svg{width:20px;height:20px}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead){color:var(--t1);transition:color 150ms ease}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-title{font-size:15px;font-weight:500;line-height:1.4;color:inherit}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-go{color:inherit}
+.lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-go svg{width:14px;height:14px}
+@media(hover:hover){
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead:hover .lart-onward-go{background:color-mix(in srgb,var(--t0) 8%,var(--bg-3))}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead):hover{color:var(--t0)}
+}
+
+.lart .lart-prose--wide ~ .lart-sources summary{display:inline-flex;gap:var(--s-2);min-height:36px;padding:0 var(--s-4);border:0;border-radius:999px;background:var(--bg-3);font-size:14px;font-weight:500;color:var(--t0);transition:background-color 150ms ease}
+.lart .lart-prose--wide ~ .lart-sources summary:focus-visible{outline:2px solid var(--t0);outline-offset:2px}
+.lart .lart-prose--wide ~ .lart-sources .lart-chev{width:12px;height:12px;margin-left:0;color:inherit;stroke-width:2.3}
+.lart .lart-prose--wide ~ .lart-sources ul{margin:var(--s-4) 0 0;padding:0;gap:var(--s-2)}
+.lart .lart-prose--wide ~ .lart-sources li{font-size:15px;line-height:1.5}
+.lart .lart-prose--wide ~ .lart-sources a{color:var(--t1);text-underline-offset:4px;text-decoration-color:color-mix(in srgb,var(--t0) 30%,transparent)}
+@media(hover:hover){
+  .lart .lart-prose--wide ~ .lart-sources summary:hover{background:color-mix(in srgb,var(--t0) 8%,var(--bg-3))}
+  .lart .lart-prose--wide ~ .lart-sources a:hover{color:var(--t0)}
+}
+
+/* Phone */
+@media(max-width:767px){
+  .lart .lart-next:has(.lcc-try){padding:var(--s-5) var(--s-4)}
+  .lart .lart-next:has(.lcc-try) h2{font-size:32px;line-height:1.02;letter-spacing:-.04em}
+  .lart .lart-next:has(.lcc-try) .lart-next-copy{gap:var(--s-4)}
+  .lart .lart-next:has(.lcc-try) .lart-next-lede{line-height:1.65}
+  .lart .lcc-try{gap:0}
+  .lart .lcc-try .lcc-tsw{order:1;gap:var(--s-4);margin-top:0}
+  .lart .lcc-try .lcc-tsw div{flex-direction:column;align-items:flex-start;gap:6px;font-size:12px;line-height:18px;color:var(--t0)}
+  .lart .lcc-try .lcc-hx{order:2;gap:0;margin-top:20px}
+  .lart .lcc-try .lcc-hxrow{flex-direction:column;align-items:flex-start;gap:var(--s-2)}
+  .lart .lcc-try .lcc-hx label{font-weight:600;color:var(--t0)}
+  .lart .lcc-try .lcc-hx input{height:48px;font-size:15px}
+  .lart .lcc-try .lcc-hxerr{min-height:0}
+  .lart .lcc-try .lcc-hxerr:not(:empty){margin-top:6px}
+  .lart .lcc-try .lcc-ntry{order:3;margin-top:var(--s-4)}
+  .lart .lcc-try .lart-next-go{order:4;margin-top:var(--s-4);justify-content:space-between;padding:0 6px 0 22px;font-size:16px}
+  .lart .lcc-try .lcc-go{width:40px;height:40px;background:color-mix(in srgb,var(--bg-0) 14%,transparent)}
+  [data-theme="dark"] .lart .lcc-try .lcc-go{background:color-mix(in srgb,var(--bg-0) 8%,transparent)}
+
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-label{margin-bottom:var(--s-2);line-height:18px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-kicker{line-height:22.5px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead{align-items:flex-start;gap:var(--s-4);padding:20px 0;border:0}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-title{margin-top:var(--s-1);font-size:28px;line-height:1.08}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-dek{margin-top:var(--s-2);max-width:52ch;font-size:15px;line-height:1.5}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go{width:44px;height:44px;margin-top:2px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-lead .lart-onward-go svg{width:18px;height:18px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead){display:inline-flex;min-height:44px;color:var(--t0)}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-title{text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--t0) 35%,transparent);text-decoration-thickness:1px;text-underline-offset:4px}
+  .lart .lart-prose--wide ~ .lart-onward .lart-onward-row:not(.lart-onward-lead) .lart-onward-go{display:none}
+
+  .lart .lart-prose--wide ~ .lart-sources{margin-top:56px}
+  .lart .lart-prose--wide ~ .lart-sources summary{min-height:44px;padding:0 var(--s-4) 0 20px;font-size:15px}
+  .lart .lart-prose--wide ~ .lart-sources .lart-chev{width:14px;height:14px}
+  .lart .lart-prose--wide ~ .lart-sources ul{margin-top:12px}
+  .lart .lart-prose--wide ~ .lart-sources li a{padding:4px 0;font-size:15px;line-height:1.4;color:var(--t0);text-decoration-color:color-mix(in srgb,var(--t0) 25%,transparent)}
+}

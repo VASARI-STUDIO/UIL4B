@@ -47,12 +47,12 @@
   justify-content: space-between;
   gap: var(--s-3);
   width: 100%;
-  min-height: 60px;
+  min-height: 64px;
   padding: var(--s-3) 0;
   border: 0;
   border-radius: var(--btn-radius);
   background: none;
-  font: 500 18px/1.3 var(--font);
+  font: 500 17px/1.4 var(--font);
   text-align: left;
   color: var(--cpg-dim);
   cursor: pointer;
@@ -121,7 +121,17 @@
 .hlr-more p { margin: var(--s-2) 0 0; max-width: 56ch; font-size: 16px; line-height: 1.6; color: var(--cpg-dim); }
 
 /* ── The pictures ── */
-.hlr-demo { margin-top: var(--s-5); padding-top: var(--s-5); border-top: 1px solid var(--cpg-line); min-width: 0; }
+.hlr-demo { margin-top: var(--s-5); padding-top: var(--s-5); border-top: 1px solid var(--cpg-line); min-width: 0; animation: hlr-demo-in 300ms cubic-bezier(.23, 1, .32, 1) both; }
+/* Plays each time an answer opens (the panel goes from display:none to shown). */
+@keyframes hlr-demo-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes hlr-demo-fade { from { opacity: 0; } to { opacity: 1; } }
+/* Reduced motion keeps the fade and drops the rise. The global clamp zeroes
+   every animation duration with !important, so the fade is restored here at a
+   higher specificity. */
+html[data-reduced-motion="true"] .hlp .hlr-demo { animation-name: hlr-demo-fade; animation-duration: 300ms !important; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .hlp .hlr-demo { animation-name: hlr-demo-fade; animation-duration: 300ms !important; }
+}
 .hlr-note { margin: var(--s-3) 0 0; font-size: 14px; line-height: 1.5; color: var(--cpg-faint); }
 
 /* Colour: base input, the eleven stops, the reading, the files it leaves as. */
@@ -286,4 +296,83 @@
   .hlr-btn { width: 100%; }
   .hlr-ladder > div { grid-template-columns: 88px minmax(0, 1fr); }
   .hlr-icons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ── Reading pass: one 760px column, answers open in place ──
+   Search first, then the jobs as rows. The two-column stage is gone: every
+   answer opens under its own row at every width. */
+.hlp{max-width:760px;margin-inline:auto}
+.hlp .hlp-hero{padding-top:var(--s-7);gap:var(--s-5)}
+.hlp .hlp-hint{margin-top:calc(var(--s-4) - var(--s-5));line-height:18px}
+.hlp .hlp-h1{max-width:none;font-size:clamp(40px,4.45vw,64px);line-height:1;letter-spacing:-.04em}
+.hlp .hlp-lede{max-width:52ch;font-size:18px;text-wrap:pretty}
+.hlp .hlp-contact{margin-top:var(--s-2);column-gap:var(--s-1)}
+.hlp .hlp-contact-link{color:var(--cpg-ink);text-decoration-color:currentColor}
+@media(hover:hover){
+  .hlp .hlp-contact-link:hover{color:var(--cpg-dim)}
+}
+.hlp .hlp-contact-link:focus-visible{outline-color:var(--cpg-ink)}
+@media(min-width:768px){
+  .hlp .hlp-contact{column-gap:var(--s-4)}
+  .hlp .hlp-contact-link{min-height:36px;padding:0 var(--s-4);border:1px solid color-mix(in srgb,var(--t0) 20%,transparent);border-radius:999px;font-size:14px;line-height:1;text-decoration:none;white-space:nowrap;transition:transform 120ms var(--cpg-ease)}
+  .hlp .hlp-contact-link:active{transform:scale(.97)}
+}
+@media(min-width:768px) and (pointer:coarse){
+  .hlp .hlp-contact-link{min-height:44px}
+}
+
+.hlp{--hl-fill:color-mix(in srgb,var(--t0) 4%,var(--bg-0))}
+[data-theme="dark"] .hlp{--hl-fill:color-mix(in srgb,var(--t0) 6%,var(--bg-0))}
+.hlf{margin-top:calc(var(--s-6) - var(--cpg-sec));display:flex;flex-direction:column;gap:var(--s-2)}
+.hlf-label{font:600 13px/1.4 var(--font);color:var(--cpg-ink)}
+.hlf-in{position:relative;display:block}
+.hlf-glass{position:absolute;left:var(--s-5);top:16px;pointer-events:none;color:var(--cpg-faint)}
+.hlf-input{display:block;box-sizing:border-box;width:100%;height:52px;padding:0 var(--s-5) 0 52px;border:0;border-radius:12px;background:var(--hl-fill);font:400 17px/1.2 var(--font);color:var(--cpg-ink)}
+.hlf-input:focus-visible{outline:2px solid var(--cpg-ink);outline-offset:2px}
+@media(max-width:767px){
+  .hlf-glass{display:none}
+  .hlf-input{padding:0 var(--s-4);font-size:16px}
+}
+
+.hlp .hlr{margin-top:calc(72px - var(--cpg-sec))}
+.hlp .hlr-q{margin-bottom:var(--s-6);font-size:32px;font-weight:600;letter-spacing:-.04em;line-height:1.1}
+.hlp .hlr-rc{margin:0 0 var(--s-4);font:600 13px/1.4 var(--font);color:var(--cpg-ink)}
+@media(max-width:767px){
+  .hlp .hlr{margin-top:calc(88px - var(--cpg-sec))}
+  .hlp .hlr-q{margin-bottom:var(--s-5);line-height:1.02}
+}
+.hlp .hlr-job{min-height:64px;font-weight:500;font-size:17px;color:var(--cpg-ink)}
+@media(max-width:767px){
+  .hlp .hlr-job{min-height:56px;padding:var(--s-2) 0;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+}
+.hlp .hlr-tick{opacity:1;color:var(--cpg-faint);transition:transform 150ms var(--cpg-ease)}
+.hlr-chev{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:999px;background:var(--hl-fill);color:var(--cpg-ink);transition:background-color 150ms ease}
+.hlr-chev svg{transition:transform 150ms var(--cpg-ease)}
+.hlp .hlr-job[aria-expanded="true"] .hlr-chev svg{transform:rotate(180deg)}
+@media(hover:hover){
+  .hlp .hlr-job:hover .hlr-chev{background:color-mix(in srgb,var(--t0) 6%,transparent)}
+}
+@media(max-width:767px){
+  .hlr-chev{width:16px;height:16px;background:none}
+  .hlr-chev svg{width:16px;height:16px;transition-duration:200ms}
+}
+.hlp a.hlr-job{text-decoration:none}
+.hlr-hit-text{display:flex;flex-direction:column;gap:var(--s-1);min-width:0}
+.hlr-hit-d{font:400 15px/1.5 var(--font);color:var(--cpg-dim)}
+.hlr-hit-d b{font-weight:600;color:var(--cpg-ink)}
+.hlp .hlr-ans{padding:var(--s-3) 0 var(--s-6)}
+.hlp .hlr-h2{max-width:none;font-size:clamp(28px,3.33vw,32px);line-height:1.1;letter-spacing:-.04em}
+.hlp .hlr-h2:focus-visible{outline:2px solid var(--cpg-ink);outline-offset:4px}
+.hlp .hlr-lede,.hlp .hlr-more p{font-size:17px;line-height:1.65}
+.hlp .hlr-job:focus-visible,.hlp .hlr-btn:focus-visible{outline-color:var(--cpg-ink)}
+.hlp .rd-next,.hlp .rd-end{max-width:none}
+.hlp .rd-end{margin-top:calc(96px - var(--cpg-sec))}
+@media(max-width:767px){
+  .hlf{margin-top:calc(var(--s-5) - var(--cpg-sec))}
+  .hlp .hlp-contact{margin-top:calc(var(--s-3) - var(--s-2));column-gap:var(--s-2)}
+  .hlp .hlr-h2{font-size:32px;line-height:1.02}
+  .hlp .rd-end{margin-top:calc(112px - var(--cpg-sec))}
+}
+@media(max-width:374px){
+  .hlp .rd-end{margin-top:calc(96px - var(--cpg-sec))}
 }

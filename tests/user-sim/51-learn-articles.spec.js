@@ -25,6 +25,12 @@ import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 import { getArticleSources } from '../../src/data/learn/sources.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 
+// The <h1> of a guide whose page heading differs from its index title
+// (HERO in src/pages/LearnArticle.jsx). Every other guide's <h1> is its title.
+const PAGE_HEADING = {
+  'colour-contrast': 'How much contrast your text needs, and how to check it.',
+}
+
 // A guard against this whole file passing over an empty list.
 test('the registry this spec walks is not empty', async () => {
   expect(LEARN_ARTICLES.length, 'no Learn articles are registered').toBeGreaterThan(0)
@@ -38,12 +44,15 @@ test.describe('Learn articles', () => {
     await signIn(page, { admin: true })
     await go(page, '/learn')
 
-    // Every published guide is a real link with its real destination.
+    // Every published guide is a real link with its real destination. A card is
+    // a list item whose title is the link (a.lidx-title); its topic is the
+    // heading of the topic section it sits under, not text inside the card.
     for (const article of LEARN_ARTICLES) {
-      const card = page.locator(`.lidx-card[href="/learn/${article.slug}"]`)
-      await expect(card, `${article.slug} is missing from the Learn landing`).toBeVisible()
-      await expect(card).toContainText(article.title)
-      await expect(card).toContainText(article.topic)
+      const title = page.locator(`.lidx-card a.lidx-title[href="/learn/${article.slug}"]`)
+      await expect(title, `${article.slug} is missing from the Learn landing`).toBeVisible()
+      await expect(title).toContainText(article.title)
+      await expect(title.locator('xpath=ancestor::section[contains(@class,"lidx-topic-sec")][1]/h3'),
+        `${article.slug} sits under the wrong topic on the Learn landing`).toContainText(article.topic)
     }
     // The guides, counted apart from the "Using UI L4B" group after them (Help and
     // Design Principles are pages that help, not guides; 207-learn-hub.spec.js
@@ -59,9 +68,10 @@ test.describe('Learn articles', () => {
 
     // And the topics that are NOT written are plain rows that say Soon and go
     // nowhere: no card, no link, no arrow (275-tool-small-fixes-5.spec.js holds the shape).
-    const soon = page.locator('.lidx-card--soon')
+    const soon = page.locator('.lidx-soon')
     await expect(soon).toHaveCount(LEARN_GROUPS.filter((g) => g.soon).length)
-    await expect(soon.locator('.lidx-time').first()).toHaveText('Soon')
+    await expect(soon.locator('.srf-meta').first()).toHaveText('Soon')
+    await expect(soon.locator('a')).toHaveCount(0)
   })
 
   for (const article of LEARN_ARTICLES) {
@@ -70,18 +80,24 @@ test.describe('Learn articles', () => {
       await go(page, `/learn/${article.slug}`)
       await expectRendered(page, `/learn/${article.slug}`)
 
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(article.title)
+      // The page heading is the article's own title, except where the page words
+      // it differently from the index (HERO in LearnArticle.jsx): the index title
+      // stays the <title>, the card and the menu entry, asserted below.
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(PAGE_HEADING[article.slug] || article.title)
       await expect(page.locator('.lart-crumb a').last()).toHaveText(article.topic)
 
       // The contents list every section, and every anchor lands on a real one.
       // Wide screens show the rail and phones show the disclosure; the list that
       // is on screen is the one under test, so the rail is asserted visible
       // first and a hidden copy can never satisfy these counts.
-      const links = page.locator('.lart-toc a')
-      await expect(page.locator('nav.lart-toc')).toBeVisible()
+      // The colour-contrast guide keeps its contents in the hero (nav.lart-toc-inline,
+      // shown from 1080px); every other guide has the rail (nav.lart-toc).
+      const toc = page.locator('nav.lart-toc, nav.lart-toc-inline')
+      const links = toc.locator('a')
+      await expect(toc).toBeVisible()
       await expect(links).toHaveCount(article.sections.length)
       for (const section of article.sections) {
-        const link = page.locator(`.lart-toc a[href="#${section.id}"]`)
+        const link = toc.locator(`a[href="#${section.id}"]`)
         await expect(link, `no contents link for #${section.id}`).toHaveText(section.title)
         await expect(
           page.locator(`section#${section.id}`),
@@ -91,7 +107,7 @@ test.describe('Learn articles', () => {
 
       // On a phone the same sections sit behind the "On this page" row.
       await page.setViewportSize({ width: 390, height: 844 })
-      await expect(page.locator('nav.lart-toc')).toBeHidden()
+      await expect(toc).toBeHidden()
       const phone = page.locator('details.lart-toc-m')
       await phone.locator('summary').click()
       await expect(phone.locator('a')).toHaveCount(article.sections.length)
@@ -104,7 +120,9 @@ test.describe('Learn articles', () => {
       // Every source is a real outbound link, and the article ends at its tool.
       const sources = page.locator('.lart-sources a')
       await expect(sources).toHaveCount(getArticleSources(article.slug).length)
-      await expect(page.locator(`.lart-next a[href="${article.toolTo}"]`)).toBeVisible()
+      // The colour-contrast guide's action carries the picked grey to the tool
+      // (`?fg=…&bg=FFFFFF`), so the destination is the tool route with or without a query.
+      await expect(page.locator(`.lart-next a[href="${article.toolTo}"], .lart-next a[href^="${article.toolTo}?"]`)).toBeVisible()
 
       // The head is the article's own, not the homepage's.
       await expect(page).toHaveTitle(new RegExp(article.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
@@ -119,6 +137,11 @@ test.describe('Learn articles', () => {
 
     // The contrast article's live reading of this page's own colours.
     await go(page, '/learn/colour-contrast')
+    // The table sits behind the formula section's "Show the working" disclosure,
+    // closed on arrival. A reader opens it; so does this.
+    const disclosure = page.locator('#formula .lcc-disc')
+    await disclosure.click()
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'true')
     const ratios = page.locator('.lart-verdict')
     await expect(ratios.first(), 'TokenContrastTable rendered nothing — it measured no usable pair').toBeVisible()
     const verdicts = await ratios.allInnerTexts()
@@ -147,7 +170,10 @@ test.describe('Learn articles', () => {
     // page — which is the exact defect a passing render assertion would miss.
     expect(chars, `the reading column measures ${chars} characters a line, outside the 45-75 this article cites`)
       .toBeGreaterThanOrEqual(45)
-    expect(chars).toBeLessThanOrEqual(75)
+    // Soft, so a column that drifts past the range still lets the colour-spaces
+    // check below run and report in the same pass.
+    expect.soft(chars, `the reading column measures ${chars} characters a line, above the 75 this article cites`)
+      .toBeLessThanOrEqual(75)
 
     // The colour article's four color-mix() results, painted and read back.
     await go(page, '/learn/colour-spaces')

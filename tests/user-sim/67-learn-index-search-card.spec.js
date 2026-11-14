@@ -32,6 +32,9 @@ import { bodyOnlyPhrase } from '../unit/helpers/learn-search-phrases.js'
 const topicId = (topic) => `learn-topic-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 const topicsWithGuides = TOPICS.filter((t) => LEARN_ARTICLES.some((a) => a.topic === t))
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+// A guide page can set its own h1 where the index title differs (LearnArticle.jsx HERO).
+const PAGE_H1 = { 'colour-contrast': 'How much contrast your text needs, and how to check it.' }
+const h1Of = (a) => PAGE_H1[a.slug] || a.title
 
 // Help and Design Principles live under /learn/ but are not guides, so they sit
 // in one extra group after the topics ("Using UI L4B") while the field is empty.
@@ -126,7 +129,7 @@ test.describe('the Learn index', () => {
       const cards = section.locator('.lidx-card')
       await expect(cards).toHaveCount(own.length)
       for (const a of own) {
-        await expect(section.locator(`.lidx-card[href="/learn/${a.slug}"]`),
+        await expect(section.locator('.lidx-card').filter({ has: page.locator(`a.lidx-title[href="/learn/${a.slug}"]`) }),
           `${a.slug} is not under the ${topic} heading`).toHaveCount(1)
       }
     }
@@ -143,7 +146,8 @@ test.describe('the Learn index', () => {
     const usingCards = using.locator('.lidx-card')
     await expect(usingCards).toHaveCount(USING_HREFS.length)
     for (let i = 0; i < USING_HREFS.length; i += 1) {
-      await expect(usingCards.nth(i), `Using UI L4B row ${i}`).toHaveAttribute('href', USING_HREFS[i])
+      // A row is a list item; its title is the link.
+      await expect(usingCards.nth(i).locator('a.lidx-title'), `Using UI L4B row ${i}`).toHaveAttribute('href', USING_HREFS[i])
       await expect(usingCards.nth(i).locator('.lidx-time'), 'these rows are not read-timed').toHaveCount(0)
     }
 
@@ -181,7 +185,7 @@ test.describe('the Learn index', () => {
     await input.fill(phrase)
     const cards = page.locator('.lidx-card')
     await expect(cards, `"${phrase}" should match exactly ${target.slug}`).toHaveCount(1)
-    await expect(cards.first()).toHaveAttribute('href', `/learn/${target.slug}`)
+    await expect(cards.first().locator('a.lidx-title')).toHaveAttribute('href', `/learn/${target.slug}`)
     // The card shows the sentence it matched in, with the term marked — the
     // reader has no other way to see why a title that says nothing of the
     // sort came back.
@@ -203,7 +207,7 @@ test.describe('the Learn index', () => {
     // PAGE, which means its topic group moves ahead of a group whose only hit
     // is a body mention, rather than first within its own group.
     await input.fill('scale')
-    await expect(cards.first()).toHaveAttribute('href', '/learn/type-scales')
+    await expect(cards.first().locator('a.lidx-title')).toHaveAttribute('href', '/learn/type-scales')
     await expect(page.locator('.lidx-sections section').first()).toHaveAttribute('id', topicId('Typography'))
     const n = await cards.count()
     expect(n).toBeGreaterThan(1)
@@ -262,14 +266,15 @@ test.describe('the Learn index', () => {
     await input.fill(phrase)
     await expect(page.locator('.lidx-card')).toHaveCount(1)
     await page.keyboard.press('Tab') // the clear control
-    await page.keyboard.press('Tab') // the one result
+    await page.keyboard.press('Tab') // the one result: its title link, inside its card
     const focused = page.locator(':focus')
-    await expect(focused).toHaveClass(/lidx-card/)
+    await expect(focused).toHaveClass(/lidx-title/)
+    await expect(focused.locator('xpath=ancestor::li[contains(@class,"lidx-card")]')).toHaveCount(1)
     await expect(focused).toHaveAttribute('href', `/learn/${target.slug}`)
     await page.keyboard.press('Enter')
     await expect.poll(() => new URL(page.url()).pathname).toBe(`/learn/${target.slug}`)
     await expectRendered(page, `/learn/${target.slug}`)
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(target.title)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(h1Of(target))
   })
 
   // CI run 35910539677 failed the test above once: "/learn/colour-contrast
@@ -295,7 +300,7 @@ test.describe('the Learn index', () => {
     // changing and the new <main> committing from one frame to several.
     const cdp = await page.context().newCDPSession(page)
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 })
-    await page.locator(`a.lidx-card[href="/learn/${target.slug}"]`).click()
+    await page.locator(`.lidx-card a.lidx-title[href="/learn/${target.slug}"]`).click()
     await expect.poll(() => new URL(page.url()).pathname).toBe(`/learn/${target.slug}`)
     await expectRendered(page, `/learn/${target.slug}`)
     // Read AT ONCE, not through an auto-waiting locator: expectRendered's
@@ -303,7 +308,7 @@ test.describe('the Learn index', () => {
     // <main> holds when it returns. Measuring the index it navigated away from
     // and calling that the guide is the defect this test exists for.
     const h1 = await page.evaluate(() => document.querySelector('main h1')?.textContent?.trim() || '')
-    expect(h1, 'expectRendered returned while <main> still held another route').toBe(target.title)
+    expect(h1, 'expectRendered returned while <main> still held another route').toBe(h1Of(target))
     // POSITIVE CONTROL: the chunk really was held, so the window really opened.
     expect(held, 'the guide chunk was never requested — it was already cached').toBeGreaterThan(0)
   })

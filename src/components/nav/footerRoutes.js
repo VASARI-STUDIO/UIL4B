@@ -1,10 +1,10 @@
-// WHERE THE SITE FOOTER RENDERS — on /, /plans, /mobile, the reading and
+// WHERE THE SITE FOOTER RENDERS — on /, /plans, /mobile, the two indexes, the reading and
 // legal pages and the link-expired page, never on app pages. The App design draws no footer under a
 // tool, a library or the workspace, so every other route returns nothing here. `/` and `/home` render
 // SpectrumFooter themselves and never mount this component.
 export const FOOTER_ROUTES = new Set([
   '/plans', '/mobile', '/tools',
-  '/learn', '/learn/principles', '/learn/help', '/info', '/sitemap',
+  '/discover', '/learn', '/learn/principles', '/learn/help', '/info', '/sitemap',
   '/privacy', '/terms', '/credits', '/reset-password',
 ])
 

@@ -54,7 +54,7 @@ for (const width of [390, 1440]) {
     await go(page, '/projects/p1')
 
     // The account has not answered: a loading state, and the link is still the link.
-    await expect(page.locator('.uh-resolving')).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Opening your project' })).toBeVisible()
     await expect(page).toHaveURL(/\/projects\/p1$/)
     expect(await page.evaluate(() => localStorage.getItem('vs-projects') || '{}')
       .then((raw) => JSON.parse(raw))).toEqual({})

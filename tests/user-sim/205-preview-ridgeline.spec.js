@@ -75,10 +75,16 @@ async function openRidgeline(page, { colors = PALETTES.mid, theme } = {}) {
   await expect(dialog).toBeVisible()
   let option = dialog.getByRole('option', { name: /^Trail run app/ })
   if (!(await option.count())) {
-    await dialog.locator('.pvd-menu-btn').click()
+    // Not in the rail: the phone opens the Previews sheet from the dock, 768 opens the menu.
+    const dock = dialog.locator('.pvd-scenes-btn')
+    if (await dock.count()) await dock.click()
+    else await dialog.locator('.pvd-menu-btn').click()
     option = dialog.getByRole('option', { name: /^Trail run app/ })
   }
   await option.click()
+  // A scene pick leaves the phone's Previews sheet open over the stage in the current build; shut it so the scene can be read.
+  const sheet = dialog.getByRole('dialog', { name: 'Previews' })
+  if (await sheet.count()) await sheet.getByRole('button', { name: 'Close previews' }).click()
   await expect(dialog.locator(`.pvs[data-preview-scene="${NAME}"]`)).toBeVisible()
   if (theme) await setTheme(page, dialog, theme)
   await expect(dialog.locator('.rl.is-live'), 'the scene has live controls').toBeVisible()
@@ -87,17 +93,14 @@ async function openRidgeline(page, { colors = PALETTES.mid, theme } = {}) {
 
 async function setTheme(page, dialog, theme) {
   const group = dialog.getByRole('group', { name: 'Preview theme' })
-  if (await group.count()) await group.getByRole('button', { name: theme, exact: true }).click()
-  else {
-    await dialog.getByRole('button', { name: 'More', exact: true }).click()
-    await page.getByRole('button', { name: theme, exact: true }).first().click()
-    await page.keyboard.press('Escape')
-  }
+  // The theme group is in the header at every width, the phone included.
+  await group.getByRole('button', { name: theme, exact: true }).click()
   await expect(dialog.locator('.pvs')).toHaveAttribute('data-mode', theme.toLowerCase())
 }
 
 const scene = (dialog) => dialog.locator(`.pvs[data-preview-scene="${NAME}"]`)
-const trigger = (dialog) => dialog.getByRole('button', { name: /^State\b/ })
+// Where the open state is named. The tests that read it run on the rail (1440), where the states are rows under the open scene; there is no State button there.
+const trigger = (dialog) => dialog.getByRole('group', { name: 'State' }).getByRole('option', { selected: true })
 /** The state the scene is showing, read off the scene itself and not off the menu. */
 const shown = (dialog) => scene(dialog).locator('.rl').getAttribute('data-state')
 const splitRows = (sc) => sc.getByRole('list', { name: 'Splits' }).getByRole('button')

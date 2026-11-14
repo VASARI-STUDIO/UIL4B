@@ -3,8 +3,9 @@
 // paints.
 //
 // The list takes three shapes, chosen once by width and height (useMediaQuery,
-// so only one tree is mounted): a grouped rail from 1024px, a "Dashboard"
-// button that opens the same list as a popover from 768px, and a chip strip
+// so only one tree is mounted): a grouped rail on the right from 1024px, which
+// also holds the title, the theme switch and, under the open preview, its
+// states; a button that opens the same list as a popover from 768px, and a chip strip
 // docked at the bottom below that, or whenever the window is under 500px tall
 // (a phone on its side keeps the strip, which leaves the scene the most room).
 // All three are one listbox contract: arrows, Home and End move and select,
@@ -21,7 +22,7 @@
 // picture. Only the chosen option shows a small spinner, and only if the load
 // is slow. The neighbours of the open example are fetched when the browser is
 // idle, so the next click is usually instant.
-import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { Fragment, Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import PreviewScene from './PalettePreview'
 import { useEscapeLayer } from './escapeLayer'
 import { preloadExample } from './examples/registry'
@@ -52,6 +53,9 @@ const PIN_MS = 3000
 // The one line under the list. Each example is its own made-up brand.
 const NOTE = 'Sample content. Every brand here is made up.'
 
+// Said in place of the legend while a Pro preview is locked.
+const LOCKED_NOTE = 'Your colours show once this preview is unlocked.'
+
 const sentence = (s) => s.charAt(0) + s.slice(1).toLowerCase()
 
 function swatchOf(roles, role) {
@@ -59,6 +63,13 @@ function swatchOf(roles, role) {
   if (SUGGESTED.some(([r]) => r === role)) return roles[role].fill
   return roles[role]
 }
+
+// The ink pill's arrow bubble.
+const IcoArrow = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M7 17 17 7" /><path d="M8 7h9v9" />
+  </svg>
+)
 
 const IcoX = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -70,7 +81,7 @@ const IcoX = () => (
 
 // `onChoose` fires on a click or Enter/Space on an option, not on the arrow keys
 // that also select, so a popover can close on a choice and stay open to browse.
-function SceneListbox({ grouped, orientation, sceneId, pendingId, onPick, onChoose, isLocked, label, className, listRef, onScroll }) {
+function SceneListbox({ grouped, orientation, sceneId, pendingId, onPick, onChoose, isLocked, label, className, listRef, onScroll, check, states, stateId, onState }) {
   const uid = useId()
   const innerRef = useRef(null)
   const ref = listRef || innerRef
@@ -92,33 +103,76 @@ function SceneListbox({ grouped, orientation, sceneId, pendingId, onPick, onChoo
     ref.current?.querySelector(`[data-scene-id="${id}"]`)?.focus()
   }
 
+  // The states of the open preview, nested under its row (the rail only). Their
+  // own arrows move within them and stop there, so the scene selection stays put.
+  const onStateKey = (e) => {
+    const i = states.findIndex((x) => x.id === stateId)
+    let n
+    if (e.key === 'ArrowDown') n = Math.min(i + 1, states.length - 1)
+    else if (e.key === 'ArrowUp') n = Math.max(i - 1, 0)
+    else if (e.key === 'Home') n = 0
+    else if (e.key === 'End') n = states.length - 1
+    else return
+    e.preventDefault()
+    e.stopPropagation()
+    onState(states[n].id)
+    ref.current?.querySelector(`[data-state-id="${states[n].id}"]`)?.focus()
+  }
+
+  const stateRows = () => (
+    <div role="group" aria-label="State" className="pvd-states" onKeyDown={onStateKey}>
+      {states.map((st) => {
+        const on = st.id === stateId
+        return (
+          <button
+            key={st.id}
+            type="button"
+            role="option"
+            aria-selected={on}
+            tabIndex={on ? 0 : -1}
+            data-state-id={st.id}
+            className={on ? 'pvd-state is-on' : 'pvd-state'}
+            onClick={() => onState(st.id)}
+          >
+            {on && <i className="pvd-dot" aria-hidden="true" />}
+            <span>{st.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+
   const option = (s) => {
     const on = s.id === sceneId
+    const locked = isLocked(s)
     return (
-      <button
-        key={s.id}
-        type="button"
-        role="option"
-        aria-selected={on}
-        tabIndex={on ? 0 : -1}
-        data-scene-id={s.id}
-        className={on ? 'pvd-opt is-on' : 'pvd-opt'}
-        onClick={() => { onPick(s.id); if (onChoose) onChoose() }}
-      >
-        <span className="pvd-opt-name">{s.name}</span>
-        {s.id === pendingId && (
-          <>
-            <i className="pvd-spin" aria-hidden="true" />
-            <span className="sr-only">Loading</span>
-          </>
-        )}
-        {isLocked(s) && (
-          <>
-            <ToolIcon name="lock-simple" size={13} />
-            <span className="sr-only">Pro</span>
-          </>
-        )}
-      </button>
+      <Fragment key={s.id}>
+        <button
+          type="button"
+          role="option"
+          aria-selected={on}
+          tabIndex={on ? 0 : -1}
+          data-scene-id={s.id}
+          className={on ? 'pvd-opt is-on' : 'pvd-opt'}
+          onClick={() => { onPick(s.id); if (onChoose) onChoose() }}
+        >
+          <span className="pvd-opt-name">{s.name}</span>
+          {s.id === pendingId && (
+            <>
+              <i className="pvd-spin" aria-hidden="true" />
+              <span className="sr-only">Loading</span>
+            </>
+          )}
+          {locked && (
+            <>
+              <ToolIcon name="lock-simple" size={13} />
+              <span className="sr-only">Pro</span>
+            </>
+          )}
+          {on && check && <ToolIcon name="check" size={14} />}
+        </button>
+        {on && states && stateRows()}
+      </Fragment>
     )
   }
 
@@ -190,36 +244,6 @@ function SceneMenu({ scene, sceneId, pendingId, onPick, isLocked }) {
         </div>
       )}
     </div>
-  )
-}
-
-// Under 768: chips docked at the bottom. A right-edge fade says there are more.
-function SceneStrip({ sceneId, pendingId, onPick, isLocked }) {
-  const ref = useRef(null)
-
-  const measure = useCallback(() => {
-    const el = ref.current
-    if (!el) return
-    el.dataset.more = el.scrollWidth - el.clientWidth - el.scrollLeft > 4 ? 'true' : 'false'
-  }, [])
-
-  useEffect(() => {
-    measure()
-    ref.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
-  }, [measure, sceneId])
-
-  return (
-    <SceneListbox
-      listRef={ref}
-      orientation="horizontal"
-      label="Previews"
-      sceneId={sceneId}
-      pendingId={pendingId}
-      isLocked={isLocked}
-      onPick={onPick}
-      className="pvd-strip"
-      onScroll={measure}
-    />
   )
 }
 
@@ -320,7 +344,7 @@ function StateMenu({ states, value, onPick }) {
 const MORE_W = 96
 const ROW_GAP = 8
 
-function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet }) {
+function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin, sheet, locked }) {
   const failFor = (role) => roles.fails.find((f) => f.role === role)
   const unset = new Set(roles.unset)
   const adjId = useId()
@@ -328,7 +352,8 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
   // `compact` is the chip as the one-row legend prints it: swatch, name and a
   // short warning. The hex and the long notes live in the "+N more" popover.
   const chip = (role, label, i, compact = false) => {
-    const off = Boolean(used) && !used.includes(role)
+    // A locked preview is not mounted, so `used` still describes the one before it.
+    const off = !locked && Boolean(used) && !used.includes(role)
     const fail = failFor(role)
     const on = pinned === role
     const mouse = (fn) => (e) => { if (e.pointerType === 'mouse') fn() }
@@ -400,11 +425,12 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
       if (!row || !ghost) return
       const widths = [...ghost.querySelectorAll('.pvd-chip')].map((c) => c.getBoundingClientRect().width)
       const head = ghost.querySelector('.pvd-legend-t').getBoundingClientRect().width
-      const room = row.clientWidth - head - ROW_GAP
+      const cs = getComputedStyle(row)
+      const room = row.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - head - ROW_GAP
       // The hairline between the groups takes a gap on each side.
       const total = widths.reduce((t, w) => t + w + ROW_GAP, 0)
       const hasNotes = Boolean(note) || adjusted.length > 0 || roles.errorShifted
-      if (total <= room && !hasNotes) { setFit(widths.length); return }
+      if (total + 2 * ROW_GAP + 1 <= room && !hasNotes) { setFit(widths.length); return }
       let left = room - MORE_W
       let n = 0
       for (const w of widths) {
@@ -419,7 +445,7 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
     const ro = new ResizeObserver(measure)
     ro.observe(rowRef.current)
     return () => ro.disconnect()
-  }, [sheet, harmony, failKey, note, adjusted.length, roles.errorShifted]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sheet, locked, harmony, failKey, note, adjusted.length, roles.errorShifted])
 
   const closeMore = useCallback(() => {
     setMoreOpen(false)
@@ -435,6 +461,18 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
     document.addEventListener('pointerdown', onDown, true)
     return () => document.removeEventListener('pointerdown', onDown, true)
   }, [moreOpen])
+
+  if (locked && !sheet) {
+    return (
+      <div className="pvd-legend is-row is-locked" ref={rowRef}>
+        <p className="pvd-legend-t">Where each colour lands</p>
+        <p className="pvd-legend-lock">{LOCKED_NOTE}</p>
+        <div className="pvd-legend-ghost" ref={ghostRef} aria-hidden="true" inert>
+          <p className="pvd-legend-t">Where each colour lands</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!sheet) {
     const shown = items.slice(0, fit)
@@ -535,7 +573,7 @@ function SceneStub({ roles }) {
   )
 }
 
-function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock, state, onState }) {
+function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock, state, onState, lockNote }) {
   const locked = gate !== 'open'
   return (
     <div className={locked ? 'pvd-scene is-locked' : 'pvd-scene'}>
@@ -555,7 +593,11 @@ function Stage({ scene, roles, labels, highlight, onRoles, gate, onUnlock, state
             ) : (
               <>
                 <p>{scene.name} is a Pro preview</p>
-                <button type="button" className="btn btn-accent pvd-lock-btn" onClick={() => onUnlock(scene)}>Unlock preview</button>
+                {lockNote && <p className="pvd-lock-sub">{LOCKED_NOTE}</p>}
+                <button type="button" className="pvd-pill pvd-lock-btn" onClick={() => onUnlock(scene)}>
+                  <span>Unlock preview</span>
+                  <span className="pvd-pill-ico"><IcoArrow /></span>
+                </button>
               </>
             )}
           </div>
@@ -605,18 +647,19 @@ export default function PalettePreviewDialog({
   const [stateBy, setStateBy] = useState({})
   const stateId = (states.find((s) => s.id === stateBy[scene.id]) || states[0])?.id
   const pickState = (id) => setStateBy((prev) => ({ ...prev, [scene.id]: id }))
-  const [moreOpen, setMoreOpen] = useState(false)
-  const moreBtnRef = useRef(null)
-  const moreSheetRef = useRef(null)
-  const moreListRef = useRef(null)
-  const closeMoreSheet = useCallback(() => {
-    setMoreOpen(false)
-    moreBtnRef.current?.focus()
-  }, [])
-  useEscapeLayer(moreOpen, closeMoreSheet)
+  // The phone sheet of previews, opened from the dock. Focus lands on the
+  // chosen row and returns to the dock button on close.
+  const [scenesOpen, setScenesOpen] = useState(false)
+  const scenesBtnRef = useRef(null)
+  const scenesSheetRef = useRef(null)
+  const scenesWasOpen = useRef(false)
+  const closeScenes = useCallback(() => setScenesOpen(false), [])
+  useEscapeLayer(scenesOpen, closeScenes)
   useEffect(() => {
-    if (moreOpen) moreListRef.current?.querySelector('[aria-checked="true"]')?.focus()
-  }, [moreOpen])
+    if (scenesOpen) scenesSheetRef.current?.querySelector('[data-scene-id][aria-selected="true"]')?.focus()
+    else if (scenesWasOpen.current) scenesBtnRef.current?.focus()
+    scenesWasOpen.current = scenesOpen
+  }, [scenesOpen])
 
   // Picking is a transition: `preview.scene` (and with it the picture) changes
   // when the chosen example has loaded. `target` is what was picked, so the list
@@ -750,6 +793,12 @@ export default function PalettePreviewDialog({
       : SUGGESTED.find(([r]) => r === pinned)?.[1])
     : null
 
+  // The rail nests the states under the open preview, so it reads them for the
+  // option the list shows as chosen (which can be one still loading).
+  const railStates = statesOf(shownId)
+  const railStateId = (railStates.find((s) => s.id === stateBy[shownId]) || railStates[0])?.id
+  const pickRailState = (id) => setStateBy((prev) => ({ ...prev, [shownId]: id }))
+
   const list = (props) => (
     <SceneListbox
       orientation="vertical"
@@ -773,7 +822,47 @@ export default function PalettePreviewDialog({
       onHover={setHover}
       onPin={pin}
       sheet={layout === 'strip'}
+      locked={gate !== 'open'}
     />
+  )
+
+  const modes = (
+    <div className={layout === 'rail' ? 'plb-modal-modes pvd-seg' : 'plb-modal-modes'} role="group" aria-label="Preview theme">
+      {['light', 'dark'].map((m) => (
+        <button
+          key={m}
+          type="button"
+          className={mode === m ? 'plb-mode plb-mode--on' : 'plb-mode'}
+          aria-pressed={mode === m}
+          onClick={() => onChange({ mode: m })}
+        >
+          {m === 'light' ? 'Light' : 'Dark'}
+        </button>
+      ))}
+    </div>
+  )
+
+  const visionBar = vision !== 'normal' && (
+    <div className="pvd-vision" role="status">
+      <span>Seeing it as: <b>{visionLabel}</b></span>
+      <button type="button" className="pvd-link" onClick={onResetVision}>Normal</button>
+    </div>
+  )
+
+  // The row above the stage that says which colour is traced. On a phone it is
+  // always there, so tracing never moves the scene; elsewhere it appears with a
+  // pinned colour.
+  const showing = !compare && (layout === 'strip' || pinned) && (
+    <div className="pvd-showing" role="status">
+      {pinned ? (
+        <>
+          <span>Showing: <b>{pinnedLabel}</b></span>
+          <button type="button" className="pvd-link" onClick={unpin}>Clear</button>
+        </>
+      ) : (
+        <span className="pvd-showing-hint" aria-hidden="true">Tap Colours to trace a colour</span>
+      )}
+    </div>
   )
 
   return (
@@ -788,55 +877,54 @@ export default function PalettePreviewDialog({
       onPointerDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="plb-modal-card plb-modal-card--preview">
-        <div className="plb-modal-head pvd-head">
-          <span className="plb-pop-title">{compare ? 'Compare palettes' : 'Preview'}</span>
-          {!compare && states.length > 1 && layout !== 'strip' && (
-            <StateMenu states={states} value={stateId} onPick={pickState} />
-          )}
-          {!compare && states.length > 1 && layout === 'strip' && (
-            <button
-              ref={moreBtnRef}
-              type="button"
-              className="pvd-state-btn pvd-more-btn"
-              aria-haspopup="dialog"
-              aria-expanded={moreOpen}
-              onClick={() => setMoreOpen(true)}
-            >
-              More
-            </button>
-          )}
-          <div className="plb-modal-modes" role="group" aria-label="Preview theme">
-            {['light', 'dark'].map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={mode === m ? 'plb-mode plb-mode--on' : 'plb-mode'}
-                aria-pressed={mode === m}
-                onClick={() => onChange({ mode: m })}
-              >
-                {m === 'light' ? 'Light' : 'Dark'}
-              </button>
-            ))}
-          </div>
-          <button type="button" className="plb-pop-x pvd-close" aria-label="Close preview" onClick={onClose}><IcoX /></button>
-        </div>
-
-        {vision !== 'normal' && (
-          <div className="pvd-vision" role="status">
-            <span>Seeing it as: <b>{visionLabel}</b></span>
-            <button type="button" className="pvd-link" onClick={onResetVision}>Normal</button>
+        {layout !== 'rail' && (
+          <div className="plb-modal-head pvd-head">
+            {layout === 'strip' && (
+              <button type="button" className="plb-pop-x pvd-close" aria-label="Close preview" onClick={onClose}><IcoX /></button>
+            )}
+            <span className="plb-pop-title">{compare ? 'Compare palettes' : 'Preview'}</span>
+            {!compare && states.length > 1 && layout === 'menu' && (
+              <StateMenu states={states} value={stateId} onPick={pickState} />
+            )}
+            {modes}
+            {layout !== 'strip' && (
+              <button type="button" className="plb-pop-x pvd-close" aria-label="Close preview" onClick={onClose}><IcoX /></button>
+            )}
           </div>
         )}
+
+        {layout !== 'rail' && visionBar}
 
         <div className="pvd-body">
           {layout === 'rail' && (
             <aside className="pvd-rail">
-              {list({ grouped: true, className: 'pvd-list' })}
+              <div className="pvd-rail-head">
+                <h2 className="pvd-rail-title">{compare ? 'Compare palettes' : 'Preview'}</h2>
+                <button type="button" className="plb-pop-x pvd-close" aria-label="Close preview" onClick={onClose}><IcoX /></button>
+              </div>
+              <div className="pvd-rail-scroll">
+                {modes}
+                {list({
+                  grouped: true,
+                  className: 'pvd-list',
+                  check: true,
+                  states: compare ? undefined : railStates.length > 1 ? railStates : undefined,
+                  stateId: railStateId,
+                  onState: pickRailState,
+                })}
+              </div>
+              {compare && (
+                <button type="button" className="pvd-pill pvd-use" onClick={onUse}>
+                  <span>Use {compare.label}</span>
+                  <span className="pvd-pill-ico"><IcoArrow /></span>
+                </button>
+              )}
               <p className="pvd-note">{NOTE}</p>
             </aside>
           )}
 
           <div className="pvd-main">
+            {layout === 'rail' && visionBar}
             {layout === 'menu' && (
               <div className="pvd-pickbar">
                 <SceneMenu scene={sceneById(shownId)} sceneId={shownId} pendingId={pendingId} onPick={pick} isLocked={isLocked} />
@@ -844,18 +932,7 @@ export default function PalettePreviewDialog({
               </div>
             )}
 
-            {layout === 'strip' && !compare && (
-              <div className="pvd-showing" role="status">
-                {pinned ? (
-                  <>
-                    <span>Showing: <b>{pinnedLabel}</b></span>
-                    <button type="button" className="pvd-link" onClick={unpin}>Clear</button>
-                  </>
-                ) : (
-                  <span className="pvd-showing-hint" aria-hidden="true">Tap Colours to trace a colour</span>
-                )}
-              </div>
-            )}
+            {showing}
 
             <div
               ref={stageRef}
@@ -876,7 +953,7 @@ export default function PalettePreviewDialog({
                   </section>
                 </>
               ) : (
-                <Stage scene={scene} roles={roles} labels={labels} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} state={stateId} onState={pickState} />
+                <Stage scene={scene} roles={roles} labels={labels} highlight={highlight} onRoles={onRoles} gate={gate} onUnlock={onUnlock} state={stateId} onState={pickState} lockNote={layout === 'strip'} />
               )}
             </div>
 
@@ -884,7 +961,7 @@ export default function PalettePreviewDialog({
           </div>
         </div>
 
-        {compare && (
+        {compare && layout !== 'rail' && (
           <div className="plb-modal-actions pvd-actions">
             <button type="button" className="btn btn-s btn-accent" onClick={onUse}>Use {compare.label}</button>
           </div>
@@ -892,12 +969,28 @@ export default function PalettePreviewDialog({
 
         {layout === 'strip' && (
           <div className="pvd-dock">
-            <SceneStrip sceneId={shownId} pendingId={pendingId} onPick={pick} isLocked={isLocked} />
+            <button
+              ref={scenesBtnRef}
+              type="button"
+              className="pvd-dock-btn pvd-scenes-btn"
+              aria-haspopup="dialog"
+              aria-expanded={scenesOpen}
+              onClick={() => setScenesOpen(true)}
+            >
+              <span className="pvd-scenes-name">{sceneById(shownId).name}</span>
+              {pendingId && (
+                <>
+                  <i className="pvd-spin" aria-hidden="true" />
+                  <span className="sr-only">Loading</span>
+                </>
+              )}
+              <ToolIcon name="caret-down" size={14} className="pvd-scenes-caret" />
+            </button>
             {!compare && (
               <button
                 ref={coloursRef}
                 type="button"
-                className="pvd-colours"
+                className="pvd-dock-btn pvd-colours"
                 aria-haspopup="dialog"
                 aria-expanded={sheet}
                 onClick={() => setSheet(true)}
@@ -908,11 +1001,18 @@ export default function PalettePreviewDialog({
           </div>
         )}
 
-        {layout === 'strip' && moreOpen && states.length > 1 && (
-          <div ref={moreSheetRef} className="pvd-sheet pvd-state-sheet" role="dialog" aria-label="State">
-            <button type="button" className="plb-pop-x pvd-close pvd-sheet-x" aria-label="Close state menu" onClick={closeMoreSheet}><IcoX /></button>
-            <p className="pvd-sheet-t">State</p>
-            <StateList states={states} value={stateId} listRef={moreListRef} onPick={(id, choose) => { pickState(id); if (choose) closeMoreSheet() }} />
+        {layout === 'strip' && scenesOpen && (
+          <div ref={scenesSheetRef} className="pvd-sheet pvd-scenes-sheet" role="dialog" aria-label="Previews">
+            <button type="button" className="plb-pop-x pvd-close pvd-sheet-x" aria-label="Close previews" onClick={closeScenes}><IcoX /></button>
+            <p className="pvd-sheet-t">Previews</p>
+            {list({
+              grouped: true,
+              className: 'pvd-list',
+              check: true,
+              states: compare ? undefined : railStates.length > 1 ? railStates : undefined,
+              stateId: railStateId,
+              onState: (id) => { pickRailState(id); closeScenes() },
+            })}
           </div>
         )}
 

@@ -60,6 +60,8 @@ import CreateTool from './pages/CreateTool'
 // are gone until Phase 2 wires each tool's real logic back in.
 const Settings = lazy(() => import('./pages/Settings'))
 const Community = lazy(() => import('./pages/Community'))
+const CommunityPiece = lazy(() => import('./pages/CommunityPiece'))
+const CommunityProfile = lazy(() => import('./pages/CommunityProfile'))
 const Feedback = lazy(() => import('./pages/Feedback'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
@@ -653,6 +655,8 @@ function AppInner({ toast }) {
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
               <Route path="/settings" element={<Settings toast={toast} />} />
               <Route path="/community" element={<Community toast={toast} />} />
+              <Route path="/community/:id" element={<CommunityPiece toast={toast} />} />
+              <Route path="/u/:handle" element={<CommunityProfile toast={toast} />} />
               <Route path="/feedback" element={<Feedback toast={toast} />} />
               <Route path="/reset-password" element={<LinkExpired />} />
               <Route path="/privacy" element={<Privacy />} />

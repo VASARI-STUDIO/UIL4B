@@ -440,13 +440,13 @@ test.describe('an account that already has a Default Project keeps it', () => {
       // the saved design (the slots on /projects/:id carry these values), so this is the
       // whole record checked through the product's own reading of it.
       await openProjectFromDashboard(page, 'Default Project')
-      const detail = (label) => page.locator('.pjd-slot', { has: page.locator('.pjd-slot-label', { hasText: new RegExp(`^${label}$`) }) }).locator('.pjd-slot-detail')
-      await expect(detail('Colour')).toHaveText('5 colours')
-      await expect(detail('Type')).toContainText('Fraunces')
-      await expect(detail('Type')).toContainText('Manrope')
-      await expect(detail('Type scale')).toContainText('from 17 px')
-      await expect(detail('Tints')).toHaveText('6 steps')
-      await expect(page.locator('.pjd-progress-label')).toHaveText('4 of 4 parts')
+      const meta = (id) => page.locator(`#pjv-${id} .pjv-bm`)
+      await expect(meta('palette')).toHaveText('5 colours')
+      await expect(meta('fonts')).toContainText('Fraunces')
+      await expect(meta('fonts')).toContainText('Manrope')
+      await expect(page.locator('#pjv-type-scale .pjv-note')).toContainText('from 17 px')
+      await expect(meta('tints')).toHaveText('6 steps')
+      await expect(page.locator('.pjv-status')).toHaveText('Complete and ready to export')
 
       await context.close()
     })

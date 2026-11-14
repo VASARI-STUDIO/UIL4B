@@ -343,30 +343,34 @@ test.describe('library entrance animations', () => {
   }
 
   for (const width of WIDTHS) {
-    test(`plSlideUp: a mounting library card rises 12px as it fades in, at ${width}px`, async ({ page }) => {
+    // RETARGETED (V3 board). The rebuilt palette library drops the card entrance
+    // on purpose: library-v3.css sets `animation: none` on `.lbry-card` and the
+    // LibraryR2A board has no rise-and-fade. The protected property is now "a
+    // library card never moves on mount", so a stray entrance would fail here.
+    // Mutation: delete the `animation:none` line in library-v3.css and the card
+    // picks up plSlideUp again from library.css -> "none" assertion fails.
+    test(`a mounting V3 library card does not animate in, at ${width}px`, async ({ page }) => {
       watch(page, 'someone opening the palette library')
       await page.setViewportSize({ width, height: heightFor(width) })
       await go(page, '/discover/palettes')
       await expect(page.locator('.lib-surface .lbry-card').first()).toBeVisible()
+      await expect(page.locator('.lib-surface.lib-v3')).toHaveCount(1)
       const a = await enteringCard(page)
-      expect(a.name).toBe('plSlideUp')
-      expect(a.props, 'only transform and opacity may move').toEqual(['opacity', 'transform'])
-      expect(a.duration).toBeGreaterThanOrEqual(150)
-      expect(a.duration).toBeLessThanOrEqual(250)
-      const rise = Number(/translateY\(([\d.]+)px\)/.exec(a.fromTransform || '')?.[1])
-      expect(rise, 'the card starts further than 12px away').toBeLessThanOrEqual(12)
-      expect(rise).toBeGreaterThan(0)
-      expect(a.easing, 'entering motion eases out').not.toBe('linear')
+      expect(a.name, 'the V3 card has no entrance animation').toBe('none')
+      expect(a.duration).toBeNull()
       await page.screenshot({ path: `${SHOTS}/library-cards-${width}.png` })
     })
   }
 
-  test('plSlideUp is off under the OS setting and the in-app switch, and back on when the app opts in', async ({ page }) => {
+  // RETARGETED (V3 board): with no card entrance there is nothing for reduced
+  // motion to switch off, so the card stays still under every setting. The glyph
+  // entrance tests below still cover the reduced-motion switch itself.
+  test('a V3 library card stays still under the OS setting and the in-app switch', async ({ page }) => {
     watch(page, 'someone who asked for reduced motion')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/discover/palettes')
     await expect(page.locator('.lib-surface .lbry-card').first()).toBeVisible()
-    expect((await enteringCard(page)).name).toBe('plSlideUp')
+    expect((await enteringCard(page)).name).toBe('none')
 
     // The app re-stamps its attribute from the OS value a moment after the change.
     const stamped = (value) => expect.poll(() => page.evaluate(() => document.documentElement.dataset.reducedMotion)).toBe(value)
@@ -374,12 +378,10 @@ test.describe('library entrance animations', () => {
     await stamped('true')
     expect((await enteringCard(page)).name, 'OS reduce').toBe('none')
 
-    // The app's own choice to keep motion beats the OS in the other direction.
+    // The app's own choice to keep motion must not bring an entrance back either.
     await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'false' })
-    expect((await enteringCard(page)).name, 'app set to motion, OS reduce').toBe('plSlideUp')
+    expect((await enteringCard(page)).name, 'app set to motion, OS reduce').toBe('none')
 
-    // Start from "true" so the wait below only passes once the app has really
-    // re-stamped from the OS change, not on the value set by hand above.
     await page.evaluate(() => { document.documentElement.dataset.reducedMotion = 'true' })
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await stamped('false')
