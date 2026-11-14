@@ -262,8 +262,8 @@ export const ASSURANCES = [
  * A REAL testimonial band belongs here the day there is a real testimonial.
  *
  * ON THE LANDING the band is rebuilt as drawn — heading, four count-up
- * figures, the rules above and below — with FOUR REAL FIGURES, each counted
- * off the array that decides it (PROOF_STATS below). Still no usage stats: the
+ * figures, the rules above and below — with three library counts and the tool
+ * count, each read off the array that decides it (PROOF_STATS below). Still no usage stats: the
  * product measures none, so every figure is about the toolkit itself. PROOF is
  * kept for any surface that still wants the three checkable rows.
  */
@@ -274,8 +274,10 @@ export const PROOF_STATS = [
   { value: LIBRARY_TOTALS.palettes, label: 'palettes in the Discover library' },
   // the true size of the library /discover/gradients renders
   { value: LIBRARY_TOTALS.gradients, label: 'gradients in the Discover library' },
-  // one row per pack in iconPackTiers.js, the Icon Library's own table
-  { value: Object.keys(ICON_PACK_TIERS).length, label: 'icon sets to search in the Icon Library' },
+  // one row per pack in iconPackTiers.js, the Icon Library's own table. The
+  // label says how many of them the free plan opens, so the total does not
+  // read as a promise to a free visitor.
+  { value: Object.keys(ICON_PACK_TIERS).length, label: `icon sets in the Icon Library, ${Object.values(ICON_PACK_TIERS).filter((p) => p.tier !== 'paid').length} on the free plan` },
 ]
 
 export const PROOF = [

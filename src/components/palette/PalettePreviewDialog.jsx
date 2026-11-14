@@ -38,7 +38,8 @@ import { simCvd } from '../../utils/colors'
 import { prefersReducedMotion } from '../spectrum/reducedMotion'
 import '../../styles/pages/palette-preview-dialog.css'
 
-// Roles the export does not write; the legend labels them as suggestions.
+// Roles derived from the palette rather than picked; the CSS export writes
+// them after the five slots.
 const SUGGESTED = [
   ['success', 'Success'],
   ['warning', 'Warning'],
@@ -488,7 +489,7 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
           {brand.map((it) => chip(it.role, it.label, it.i, true))}
         </div>
         {sugg.length > 0 && <span className="pvd-legend-rule" aria-hidden="true" />}
-        <div className="pvd-chips" role="group" aria-label="Suggested colours">
+        <div className="pvd-chips" role="group" aria-label="Derived colours">
           {sugg.map((it) => chip(it.role, it.label, it.i, true))}
         </div>
         {(moreCount > 0 || hasNotes) && (
@@ -542,8 +543,8 @@ function Legend({ roles, harmony, used, adjusted, hover, pinned, onHover, onPin,
           {adjusted.map(adjustedName).join(', ')}: {roles.mode === 'dark' ? 'lighter' : 'darker'} as text, so it reads
         </p>
       )}
-      <p className="pvd-legend-sub">Suggested, not in your export</p>
-      <div className="pvd-chips" role="group" aria-label="Suggested colours">
+      <p className="pvd-legend-sub">Derived from your palette, also in your CSS</p>
+      <div className="pvd-chips" role="group" aria-label="Derived colours">
         {SUGGESTED.map(([role, label]) => chip(role, label, null))}
       </div>
       {note && <p className="pvd-legend-note">{note}</p>}

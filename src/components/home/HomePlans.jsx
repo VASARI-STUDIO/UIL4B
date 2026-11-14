@@ -166,7 +166,7 @@ export default function HomePlans() {
                 <GoArrow />
               </Link>
               <p className="hpl-small">
-                Cancel any time and keep every export you made. You pick yearly or monthly on the next page.{' '}
+                Cancel any time. You pick yearly or monthly on the next page.{' '}
                 <Link className="hpl-link" to="/plans">Compare every limit</Link>
               </p>
             </div>

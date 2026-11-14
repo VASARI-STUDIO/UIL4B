@@ -322,12 +322,13 @@ for (const size of [PHONE, TABLET, DESKTOP]) {
 
 // ── 3e: the legal links, once at every width ─────────────────────────────────
 const LEGAL = [['Privacy', '/privacy'], ['Terms', '/terms'], ['Credits', '/credits']]
+// Groups: Tools, Project, Explore and Support, plus Legal once it is a column.
 const WIDTHS = [
-  { width: 390, inColumn: false, groups: 3 },
-  { width: 760, inColumn: false, groups: 3 },
-  { width: 761, inColumn: true, groups: 4 },
-  { width: 768, inColumn: true, groups: 4 },
-  { width: 1440, inColumn: true, groups: 4 },
+  { width: 390, inColumn: false, groups: 4 },
+  { width: 760, inColumn: false, groups: 4 },
+  { width: 761, inColumn: true, groups: 5 },
+  { width: 768, inColumn: true, groups: 5 },
+  { width: 1440, inColumn: true, groups: 5 },
 ]
 
 // The home-style footer (the front page, /tools and /mobile) keeps the LEGAL column at every width and has no baseline row of them.

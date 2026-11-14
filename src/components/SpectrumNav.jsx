@@ -26,12 +26,17 @@ const CommandPalette = lazy(() => import('./CommandPalette'))
 // hero's call to action, so the bar carries none.
 //
 // Tools is the page's `#try` section on the sales page and the `/tools` page
-// anywhere else. Plans is `/plans`, On mobile is `/mobile`.
+// anywhere else. Plans is `/plans`, On mobile is `/mobile`. Help is the help
+// centre, which opens with Contact support; it sits in the phone menu only
+// (`menuOnly`), so a phone reaches help without scrolling to the footer and
+// the wide bar keeps its three links.
 const QUIET = [
   { id: 'tools', label: 'Tools', to: '/tools', hash: '#try' },
   { id: 'pricing', label: 'Plans', to: '/plans' },
   { id: 'mobile', label: 'On mobile', to: '/mobile' },
+  { id: 'help', label: 'Help', to: '/learn/help', menuOnly: true },
 ]
+const BAR_QUIET = QUIET.filter((q) => !q.menuOnly)
 
 // The sales page's sections in page order: the phone menu's second list.
 const PAGE_ANCHORS = [
@@ -49,6 +54,7 @@ function activeQuiet(pathname) {
   if (p === '/tools') return 'tools'
   if (p === '/plans') return 'pricing'
   if (p === '/mobile') return 'mobile'
+  if (p === '/learn/help') return 'help'
   return null
 }
 
@@ -342,7 +348,7 @@ export default function SpectrumNav() {
 
           <div className="spnav-end">
             <div className="spnav-quiet">
-              {QUIET.map((q) => (
+              {BAR_QUIET.map((q) => (
                 <QuietLink key={q.id} className="spnav-quiet-link" label={q.label} href={quietHref(q)} current={active === q.id} onClick={() => setOpen(false)} />
               ))}
             </div>
