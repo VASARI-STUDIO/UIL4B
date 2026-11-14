@@ -59,24 +59,24 @@
   text-align: center;
   color: var(--tl-dim);
   background: transparent;
-  border: 1px dashed var(--bh);
-  border-radius: var(--radius-2xl);
+  border: 1px dashed var(--tl-line-on);
+  border-radius: 16px;
   cursor: pointer;
   transition: border-color var(--dur-1) ease, background-color var(--dur-1) ease;
 }
 
 /* Hover is for a mouse: on touch it would stay lit after a tap. */
 @media (hover: hover) {
-  .alt-page .alt-dropzone:hover { border-color: var(--t2); }
+  .alt-page .alt-dropzone:hover { border-color: var(--tl-ink); }
   .alt-page .alt-field:hover { border-color: var(--tl-line-on); }
   .alt-page .alt-row-text:hover { border-color: var(--tl-line); }
 }
 
-.alt-page .alt-dropzone.dragging { border-color: var(--accent); background: var(--accent-wash); }
+.alt-page .alt-dropzone.dragging { border-style: solid; border-color: var(--tl-ink); background: var(--tl-wash-on); }
 
-.alt-page .alt-dropzone:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.alt-page .alt-dropzone:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 3px; }
 
-.alt-page .alt-dropzone-title { font-size: 16px; font-weight: 540; line-height: 1.3; color: var(--tl-ink); }
+.alt-page .alt-dropzone-title { font-size: 16px; font-weight: 500; line-height: 1.3; color: var(--tl-ink); }
 
 .alt-page .alt-dropzone-sub { margin-top: var(--s-1); font-size: var(--fs-caption); color: var(--tl-dim); }
 
@@ -87,7 +87,7 @@
   height: 56px;
   min-height: 56px;
   padding: 0 var(--s-4);
-  border-radius: var(--radius);
+  border-radius: 12px;
 }
 
 .alt-page .alt-dropzone--compact .alt-dropzone-title { font-size: 13px; font-weight: 400; color: var(--tl-dim); }
@@ -98,7 +98,7 @@
 
 .alt-page .alt-brief-col { display: grid; gap: var(--s-2); align-content: start; min-width: 0; }
 
-.alt-page .alt-brief-label { font-size: 14px; font-weight: 540; line-height: 1.3; color: var(--tl-ink); }
+.alt-page .alt-brief-label { font-size: 14px; font-weight: 500; line-height: 1.3; color: var(--tl-ink); }
 
 .alt-page .alt-brief-opt { font-weight: 400; color: var(--tl-faint); }
 
@@ -109,18 +109,18 @@
   font-family: var(--font);
   font-size: 16px;
   color: var(--tl-ink);
-  background: var(--inp);
+  background: var(--tl-wash);
   border: 1px solid var(--tl-line);
-  border-radius: var(--radius-s);
+  border-radius: 12px;
   outline: none;
   transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
 }
 
-.alt-page .alt-field:focus-visible { border-color: var(--tl-line); box-shadow: none; outline: 2px solid var(--accent); outline-offset: 2px; }
+.alt-page .alt-field:focus-visible { border-color: var(--tl-line); box-shadow: none; outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 .alt-page .alt-field-help { margin: 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--tl-dim); text-wrap: pretty; }
 
-.alt-page .alt-field-help strong { font-weight: 560; color: var(--tl-ink); }
+.alt-page .alt-field-help strong { font-weight: 500; color: var(--tl-ink); }
 
 .alt-page .alt-count { color: var(--tl-dim); }
 
@@ -157,12 +157,12 @@
   align-items: center;
   min-height: 44px;
   font-size: 14px;
-  font-weight: 540;
+  font-weight: 500;
   color: var(--tl-ink);
   cursor: pointer;
 }
 
-.alt-page .alt-guide summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.alt-page .alt-guide summary:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 /* display:flex drops the native disclosure marker, so the caret is drawn here:
    it points right while closed and down once open. */
 .alt-page .alt-guide summary::-webkit-details-marker { display: none; }
@@ -180,9 +180,9 @@
 
 .alt-page .alt-tips { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: var(--s-2) 0 var(--s-3) 18px; max-width: 72ch; }
 
-.alt-page .alt-tips li { font-size: var(--fs-caption); line-height: 1.55; color: var(--t1); }
+.alt-page .alt-tips li { font-size: var(--fs-caption); line-height: 1.55; color: var(--tl-soft); }
 
-.alt-page .alt-tips code { padding: 1px 5px; font-family: var(--mono); font-size: 12px; background: var(--bg-2); border-radius: var(--radius-xs); }
+.alt-page .alt-tips code { padding: 1px 5px; font-family: var(--mono); font-size: 12px; background: var(--tl-card2); border-radius: 8px; }
 
 .alt-page .alt-tips a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
@@ -199,7 +199,7 @@
   border-bottom: 1px solid var(--tl-hair);
 }
 
-.alt-page .alt-sheet-head h2 { flex: none; margin: 0; font-size: 14px; font-weight: 560; color: var(--tl-ink); white-space: nowrap; }
+.alt-page .alt-sheet-head h2 { flex: none; margin: 0; font-size: 14px; font-weight: 500; color: var(--tl-ink); white-space: nowrap; }
 
 .alt-page .alt-sheet-sum { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s-3); min-width: 0; margin: 0; font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -226,8 +226,8 @@
   width: 100%;
   height: 88px;
   object-fit: contain;
-  background: var(--bg-2);
-  border-radius: var(--radius);
+  background: var(--tl-card2);
+  border-radius: 12px;
 }
 
 .alt-page .alt-row-thumb img { outline: 1px solid oklch(0 0 0 / .1); outline-offset: -1px; }
@@ -259,14 +259,14 @@
   text-wrap: pretty;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-s);
+  border-radius: 12px;
   outline: none;
   resize: none;
   transition: border-color var(--dur-1) ease;
   animation: alt-fade-in 200ms var(--alt-ease) both;
 }
 
-.alt-page .alt-row-text:focus-visible { border-color: var(--tl-line-on); box-shadow: none; outline: 2px solid var(--accent); outline-offset: 2px; }
+.alt-page .alt-row-text:focus-visible { border-color: var(--tl-line-on); box-shadow: none; outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 /* Touch has no hover, so the written text carries its edge from the start. The
    box reaches 8px past the column on each side (4px clear of a phone's edge) and
@@ -316,9 +316,9 @@
 
 .alt-page .alt-row-deco { grid-area: deco; display: inline-flex; align-items: center; gap: var(--s-2); min-height: 44px; font-size: var(--fs-caption); color: var(--tl-dim); cursor: pointer; }
 
-.alt-page .alt-row-deco input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent-fill); }
+.alt-page .alt-row-deco input { width: 20px; height: 20px; margin: 0; accent-color: var(--tl-ink); }
 
-.alt-page .alt-row-deco input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.alt-page .alt-row-deco input:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 .alt-page .alt-row-actions { grid-area: actions; display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
 
@@ -394,9 +394,9 @@
   margin-inline: 2px;
   padding: 24px;
   text-align: left;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
+  border-radius: 16px;
 }
 
 /* Its own icon holder, so a dropzone restyle can't change this card. No tile of
@@ -407,16 +407,16 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  color: var(--t1);
+  color: var(--tl-dim);
 }
 
-.alt-page .alt-region-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; color: var(--t0); border-radius: var(--radius-xs); }
+.alt-page .alt-region-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; color: var(--tl-ink); border-radius: 8px; }
 
-.alt-page .alt-region-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.alt-page .alt-region-title:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 3px; }
 
-.alt-page .alt-region-body { margin: 0; max-width: 72ch; font-size: 13px; line-height: 1.55; color: var(--t1); }
+.alt-page .alt-region-body { margin: 0; max-width: 72ch; font-size: 13px; line-height: 1.55; color: var(--tl-soft); }
 
-.alt-page .alt-region-note { margin: 2px 0 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--t2); }
+.alt-page .alt-region-note { margin: 2px 0 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--tl-dim); }
 
 /* An anchor wearing the pill: no underline, hugs its text, sits under the note. */
 .alt-page .alt-region-link { justify-self: start; margin-top: 10px; text-decoration: none; }
