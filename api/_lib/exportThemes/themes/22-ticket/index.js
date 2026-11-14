@@ -10,7 +10,7 @@ const BRAND = 'encore';
 const bodyFont = { family: 'Work Sans', css: 'Work+Sans:wght@400;500;600', file: 'WorkSans', weights: [400, 500, 600] };
 
 export const meta = {
-  id: '22-ticket', name: 'Ticket', tier: 'Pro', brand: BRAND,
+  id: '22-ticket', name: 'Stub', tier: 'Pro', brand: BRAND,
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 },
   chrome: { family: bodyFont.family, q: bodyFont.css, faces: bodyFont.weights.map((w) => ({ weight: w, stem: `${bodyFont.file}-${w}` })) },
 };

@@ -12,7 +12,7 @@ import { cssR1 } from './css-r1.js';
 
 export const meta = {
   screenContent,  // Long Room says "free" once: the engine's example page and delivery rows read the product screen through this
-  id: '21-presentation', name: 'Presentation', tier: 'Pro', brand: 'kerbside',
+  id: '21-presentation', name: 'Keynote', tier: 'Pro', brand: 'kerbside',
   guidelinesPage: { w: 1280, h: 720 }, uikitPage: { w: 1280, h: 720 },
   // the chrome face: running heads, folios, captions. Files are in fonts/; google css2 query for canvas boards.
   chrome: { family: 'Instrument Sans', q: 'Instrument+Sans:wght@400;500;600', faces: [{ weight: 400, stem: 'InstrumentSans-400' }, { weight: 500, stem: 'InstrumentSans-500' }, { weight: 600, stem: 'InstrumentSans-600' }] },

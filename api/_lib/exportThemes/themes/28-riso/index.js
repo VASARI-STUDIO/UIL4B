@@ -11,7 +11,7 @@ import { tile } from './tiles.js';
 const BRAND = 'long-room';
 
 export const meta = {
-  id: '28-riso', name: 'Riso', tier: 'Pro', brand: BRAND,
+  id: '28-riso', name: 'Print Shop', tier: 'Pro', brand: BRAND,
   guidelinesPage: { w: 794, h: 1123 }, uikitPage: { w: 794, h: 1123 },
   chrome: { family: 'Sono Mono', q: 'Sono:wght,MONO@400,1', faces: [{ weight: 400, stem: 'SonoMono-400', q: 'Sono:wght,MONO@400,1' }] },
   fonts: [],
