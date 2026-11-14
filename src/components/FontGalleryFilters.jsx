@@ -44,11 +44,13 @@ const DRAG_CLOSE_DY = 96
 const DRAG_CLOSE_SPEED = 0.5
 const DRAG_JITTER = 12
 
-// `counts` maps a category id to its family count. `previewFirst` puts the
+// `counts` maps a category id to its family count; `styleCounts` does the same
+// for the styles on offer (`styles`, already narrowed to the category, with
+// 'any' first). `previewFirst` puts the
 // preview text field above Category, where the phone keyboard leaves it in
 // view.
 export default function FiltersSheet({
-  onClose, cats, category, onCategory, counts, sorts, sort, onSort, size, sizeMin, sizeMax, onSize, ground, onGround,
+  onClose, cats, category, onCategory, counts, styles = [], style, onStyle, styleCounts = {}, sorts, sort, onSort, size, sizeMin, sizeMax, onSize, ground, onGround,
   view, onView, previewText, onPreviewText, count, canClear, onClear, previewFirst,
 }) {
   const ref = useModalDialog(onClose)
@@ -147,6 +149,26 @@ export default function FiltersSheet({
               ))}
             </div>
           </div>
+
+          {styles.length > 1 && (
+            <div className="fg-sheet-group" role="group" aria-labelledby="fg-sheet-style">
+              <span className="fg-sheet-k" id="fg-sheet-style">Style</span>
+              <div className="fg-sheet-cats">
+                {styles.map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={style === s.id ? 'fg-sheet-pill fg-sheet-pill--cat is-on' : 'fg-sheet-pill fg-sheet-pill--cat'}
+                    aria-pressed={style === s.id}
+                    onClick={() => onStyle(s.id)}
+                  >
+                    <span>{s.label}</span>
+                    <em>{(styleCounts[s.id] || 0).toLocaleString()}</em>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="fg-sheet-group" role="group" aria-labelledby="fg-sheet-sort">
             <span className="fg-sheet-k" id="fg-sheet-sort">Sort</span>
