@@ -376,24 +376,41 @@ test.describe('the list is in the dialog', () => {
     expect(order).toEqual({ previewAboveTheme: true, themeAboveFile: true })
   })
 
-  test('at 390 the rows fit the window with no sideways scroll, and a tap on a row chooses it and keeps the dialog open', async ({ page }) => {
+  test('at 390 the picture comes first, the list is folded under a Theme row, and picking a theme updates the row and keeps the dialog open', async ({ page }) => {
     watch(page, 'a phone user choosing a theme')
     const panel = await open(page, { plan: 'free', file: 'kit', size: { width: 390, height: 844 } })
     await expect(page.locator('.xd-theme-pop, .xd-theme-sheet'), 'no sheet on a phone either').toHaveCount(0)
+    const toggle = panel.getByRole('button', { name: /^Theme:/ })
+    await expect(toggle, 'the folded row names the chosen theme and its sample brand').toHaveText(/^Theme: Standards · \S/)
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(themes(panel), 'the list is folded at first').toBeHidden()
+    const folded = await page.evaluate(() => {
+      const prev = document.querySelector('.xd-prev').getBoundingClientRect()
+      const t = document.querySelector('.xd-theme > .xd-man-t').getBoundingClientRect()
+      return { previewAboveTheme: prev.top < t.top, row: Math.round(t.height), sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth }
+    })
+    expect(folded.previewAboveTheme, 'the picture is above the Theme row').toBe(true)
+    expect(folded.row, 'the Theme row is a 44px target').toBeGreaterThanOrEqual(44)
+    expect(folded.sideways).toBe(false)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(themes(panel)).toBeVisible()
     const fit = await page.evaluate(() => {
       const list = document.querySelector('.xd-theme-list').getBoundingClientRect()
       const rows = [...document.querySelectorAll('.xd-theme-opt')].map((r) => Math.round(r.getBoundingClientRect().height))
       return { left: list.left, right: list.right, rows, sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth }
     })
     expect(fit.rows).toHaveLength(10)
-    for (const h of fit.rows) expect(h, 'a phone row is a comfortable target').toBeGreaterThanOrEqual(40)
+    for (const h of fit.rows) expect(h, 'a phone row is a 44px target').toBeGreaterThanOrEqual(44)
     expect(fit.left).toBeGreaterThanOrEqual(0)
     expect(fit.right).toBeLessThanOrEqual(390)
     expect(fit.sideways).toBe(false)
 
     await row(panel, 'Specification').click()
-    await expect(chosenRow(panel)).toHaveText(/^Specification/)
     await expect(exportPanel(page), 'choosing does not close the dialog').toBeVisible()
+    await expect(toggle, 'the row follows the choice').toHaveText(/^Theme: Specification · \S/)
+    await expect(themes(panel), 'a pick folds the list again, so the picture is back in view').toBeHidden()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })
 
@@ -614,20 +631,23 @@ test.describe('the error line for each answer', () => {
   })
 
   test.describe('429 and Retry-After', () => {
-    const seconds = [['30', 'Too many exports just now. Try again in 30 seconds.'], ['2', 'Too many exports just now. Try again in 2 seconds.'], ['89', 'Too many exports just now. Try again in 89 seconds.'], ['1', 'Too many exports just now. Try again in 1 second.']]
-    for (const [header, line] of seconds) {
-      test(`Retry-After ${header} shows the seconds`, async ({ page }) => {
+    // A valid wait puts no number in the line (the button carries the one count); a wait of a minute or more reads m:ss on the button.
+    const clock = (n) => (n >= 60 ? `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}` : `${n}s`)
+    const seconds = ['30', '2', '89', '1', '90', '120']
+    for (const header of seconds) {
+      test(`Retry-After ${header} shows the wait on the button, not in the line`, async ({ page }) => {
         watch(page, `a Pro account told to wait ${header} seconds`)
         await mockThemeApi(page, () => ({ status: 429, headers: { 'Retry-After': header }, body: leaky({ code: 'rate_limited' }) }))
         const panel = await open(page, { plan: 'pro', file: 'kit' })
         await primaryButton(panel).click()
-        await expect(dockError(panel)).toHaveText(line)
+        await expect(dockError(panel)).toHaveText('Too many exports just now.')
         expect(await page.locator('body').innerText()).not.toContain(LEAK)
-        // The wait is on the button too: a count of seconds, disabled. (A 1 or 2 second wait can be over before it is read; the
+        // The button is aria-disabled while it counts (readable, not dimmed). (A 1 or 2 second wait can be over before it is read; the
         // test after this one follows a short wait through.)
         if (Number(header) >= 30) {
-          await expect(primaryButton(panel), 'the button counts the wait down').toHaveText(new RegExp(`^Try again in (${header}|${Number(header) - 1})s$`))
-          await expect(primaryButton(panel), 'and cannot be pressed until it is over').toBeDisabled()
+          const n = Number(header)
+          await expect(primaryButton(panel), 'the button counts the wait down').toHaveText(new RegExp(`^Try again in (${clock(n)}|${clock(n - 1)})$`))
+          await expect(primaryButton(panel), 'and ignores a press until it is over').toHaveAttribute('aria-disabled', 'true')
         }
       })
     }
@@ -638,15 +658,16 @@ test.describe('the error line for each answer', () => {
       const panel = await open(page, { plan: 'pro', file: 'kit' })
       await primaryButton(panel).click()
       await expect(primaryButton(panel)).toHaveText(/^Try again in [12]s$/)
-      await expect(primaryButton(panel)).toBeDisabled()
+      await expect(primaryButton(panel)).toHaveAttribute('aria-disabled', 'true')
       await expect(primaryButton(panel), 'when the wait is over the button is the file action again').toHaveText('Export UI kit', { timeout: 6000 })
       await expect(primaryButton(panel)).toBeEnabled()
+      await expect(primaryButton(panel)).not.toHaveAttribute('aria-disabled', 'true')
+      await expect(dockError(panel), 'and the rate-limit line goes with the wait').toHaveCount(0)
       expect(calls, 'waiting asks the route for nothing').toHaveLength(1)
     })
 
-    // Not whole seconds, or not seconds worth printing: the plain "in a minute" line, with no number, and the button not held.
-    // 120 is whole seconds but over the 90 the line prints, so the line has no number while the button still counts it down.
-    const notSeconds = ['', 'abc', '2.5', '-5', '+5', '1e1', '0x10', '5.0', '0', '120', '601', 'Wed, 21 Oct 2026 07:28:00 GMT', '30 seconds', 'NaN', 'Infinity']
+    // Not whole seconds, or not a wait worth holding the button for (0, or over 600): the plain "in a minute" line, and the button not held.
+    const notSeconds = ['', 'abc', '2.5', '-5', '+5', '1e1', '0x10', '5.0', '0', '601', 'Wed, 21 Oct 2026 07:28:00 GMT', '30 seconds', 'NaN', 'Infinity']
     for (const header of notSeconds) {
       test(`a Retry-After that is not whole seconds (${JSON.stringify(header)}) gives the line with no number`, async ({ page }) => {
         watch(page, `a Pro account sent Retry-After ${JSON.stringify(header)}`)
@@ -655,13 +676,8 @@ test.describe('the error line for each answer', () => {
         await primaryButton(panel).click()
         await expect(dockError(panel)).toHaveText(LINES.rate)
         expect(await page.locator('body').innerText()).not.toContain(LEAK)
-        if (header === '120') {
-          await expect(primaryButton(panel)).toHaveText(/^Try again in (120|119)s$/)
-          await expect(primaryButton(panel)).toBeDisabled()
-        } else {
-          await expect(primaryButton(panel), 'no wait was asked for, so no count').toHaveText('Export UI kit')
-          await expect(primaryButton(panel)).toBeEnabled()
-        }
+        await expect(primaryButton(panel), 'no wait was asked for, so no count').toHaveText('Export UI kit')
+        await expect(primaryButton(panel)).toBeEnabled()
       })
     }
   })

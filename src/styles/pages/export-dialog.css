@@ -58,7 +58,6 @@
 .xd[data-layout="strip"] .xd-scroll{padding:var(--s-4)}
 .xd-swap{display:flex;flex-direction:column;gap:var(--s-6);max-width:720px;min-width:0;margin:0;padding:0;border:0;animation:xd-swap 150ms var(--ease-out)}
 .xd-step{display:flex;flex-direction:column;gap:var(--s-3);padding-top:var(--s-6);border-top:1px solid var(--border)}
-.xd-step--lead{padding-top:0;border-top:0}
 .xd-step-l{margin:0;font-size:13px;font-weight:600;color:var(--t1)}
 .xd-note{margin:0;font-size:var(--fs-body-s);line-height:1.5;color:var(--t1);max-width:68ch}
 .xd-name{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-1) var(--s-3);margin:0;font-size:var(--fs-body-s);color:var(--t1)}
@@ -130,6 +129,11 @@
 .xd-act{min-height:44px;padding:0 var(--s-5);justify-content:center;white-space:nowrap}
 .xd-primary{min-width:176px}
 .xd-act:disabled{cursor:not-allowed}
+/* The wait after a 429: the primary stays a plain, readable button (aria-disabled, not disabled) with the countdown on it; onPrimary ignores the click. */
+.xd-primary[aria-disabled="true"],.xd-primary[aria-disabled="true"]:hover,.xd-primary[aria-disabled="true"]:active{background:var(--bg-2);color:var(--t1);border:1px solid var(--border);cursor:default}
+/* "Export another file": a text button beside Done, not a second outlined pill. Still 44px tall to tap. */
+.btn.xd-act--quiet,.btn.xd-act--quiet:hover,.btn.xd-act--quiet:active{background:none;border-color:transparent;text-decoration:underline!important;text-underline-offset:3px}
+@media (hover:hover){.btn.xd-act--quiet:hover{color:var(--t1)}}
 
 /* The sign-in step: the account form in place of the dock's line and buttons. It scrolls inside a capped height, so the dock never takes the whole dialog, and the form keeps a readable width on the wide layouts. */
 .xd-dock--signin{display:block;min-height:0;padding-block:var(--s-4)}
@@ -156,6 +160,8 @@
 .xd[data-layout="strip"] .xd-card:has(.xd-dock--signin) :is(.xd-nav,.xd-scroll){display:none}
 .xd[data-layout="strip"] .xd-signin{max-height:none}
 .xd[data-layout="strip"] .xd-dock-line{flex:none}
+.xd[data-layout="strip"] .xd-dock-acts > .xd-act--quiet{flex:0 0 auto}
+.xd[data-layout="menu"] .xd-dock-line,.xd[data-layout="menu"] .xd-dock-line :is(.xd-status,.xd-error){overflow-wrap:normal}
 .xd[data-layout="strip"] :is(.xd-dock-line,.xd-error){max-height:6.5em;overflow-y:auto}
 .xd[data-layout="strip"] .xd-dock-acts > .xd-act{flex:1 1 0;min-height:48px;min-width:0}
 .xd[data-layout="strip"] .xd-x{width:44px;height:44px}
@@ -271,8 +277,10 @@ html[data-reduced-motion="true"] :is(.xd-x,.xd-type,.xd-cat,.xd-frame .exp-previ
 .xd-theme-opt:active{background:var(--bg-2)}
 .xd-theme-opt:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 @media (hover:hover){.xd-theme-opt:not(.is-on):hover{background:var(--hvr)}}
-@media (pointer:coarse){.xd-theme-opt{min-height:44px}}
-.xd[data-layout="menu"] .xd-theme-opt{min-height:44px}
+.xd:not([data-layout="rail"]) .xd-theme-opt{min-height:44px}
+.xd-theme-list[hidden]{display:none}
+/* The folded phone row: the chosen theme and its sample brand on one line, cut with an ellipsis rather than wrapped. */
+.xd-theme-sel{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .xd-theme-opt-t{flex:1;min-width:0;display:flex;align-items:baseline;gap:var(--s-2);white-space:nowrap}
 .xd-theme-opt-n{font-size:14px;font-weight:500;color:var(--t0)}
 .xd-theme-opt-b{font-size:13px;color:var(--t2);overflow:hidden;text-overflow:ellipsis}

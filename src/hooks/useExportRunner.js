@@ -207,8 +207,18 @@ export default function useExportRunner() {
   const [done, setDone] = useState(null)
   // Seconds left of a 429's Retry-After; 0 when there is no wait. One tick a second, cleared when the dialog unmounts or resets.
   const [retryIn, setRetryIn] = useState(0)
+  // The error line a 429 put up, so the countdown can take back its own line (and only that one) when it ends.
+  const limitLine = useRef('')
   useEffect(() => {
-    if (retryIn <= 0) return undefined
+    if (retryIn <= 0) {
+      // The button is live again: drop the rate-limit line, but never a different error raised since.
+      if (limitLine.current) {
+        const line = limitLine.current
+        limitLine.current = ''
+        setError((e) => (e === line ? '' : e))
+      }
+      return undefined
+    }
     const id = setTimeout(() => setRetryIn((n) => Math.max(0, n - 1)), 1000)
     return () => clearTimeout(id)
   }, [retryIn])
@@ -386,7 +396,7 @@ export default function useExportRunner() {
         if (!mounted.current) { closePrintWin(); return { status: 'unmounted' } }
         if (answer.status !== 'ok') {
           // A 429 that said how long to wait: the button counts it down instead of staying live for a click that will be refused again.
-          if (answer.retryAfter) setRetryIn(answer.retryAfter)
+          if (answer.retryAfter) { limitLine.current = answer.line; setRetryIn(answer.retryAfter) }
           throw new Error(answer.line)
         }
         if (answer.zip) {

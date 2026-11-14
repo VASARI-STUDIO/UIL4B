@@ -31,6 +31,8 @@ export async function chooseThemeWithKeys(page, panel) {
   const group = panel.getByRole('radiogroup', { name: 'Theme' })
   const chosen = group.getByRole('radio', { checked: true })
 
+  // On a phone the list is folded under a "Theme: <name> · <brand>" row; open it, as a person would, before choosing.
+  if (!(await group.isVisible())) await panel.getByRole('button', { name: /^Theme:/ }).click()
   await expect(chosen, 'a free account starts on Standards').toHaveText(/^Standards/)
   await chosen.focus()
   await expect(chosen).toBeFocused()

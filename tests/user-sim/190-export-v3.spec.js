@@ -289,7 +289,7 @@ test.describe('the sizes the spec names', () => {
       await typeRadio(panel, 'Code').click()
       const rows = panel.locator('.xd-man-row')
       await expect(rows, 'Code lists CSS, JSON, Tailwind and both contrast files').toHaveCount(5)
-      await expect(panel.locator('.xd-man-t'), 'the rows are not folded at 1440').toHaveCount(0)
+      await expect(panel.locator('.xd-man .xd-man-t'), 'the rows are not folded at 1440').toHaveCount(0)
       const names = await panel.locator('.xd-man-n').allInnerTexts()
       expect(names).toEqual([
         'untitled.tokens.css', 'untitled.tokens.json', 'untitled-tailwind.css',
@@ -360,7 +360,7 @@ test.describe('the sizes the spec names', () => {
       await go(page, WORKED_BOARD)
       const panel = await openFromHeader(page)
       await typeRadio(panel, 'Code').click()
-      const toggle = panel.locator('.xd-man-t')
+      const toggle = panel.locator('.xd-man .xd-man-t')
       await expect(toggle).toHaveText('5 files')
       await expect(toggle).toHaveAttribute('aria-expanded', 'false')
       await expect(panel.locator('.xd-man-row').first(), 'folded rows are not shown').toBeHidden()
@@ -378,7 +378,7 @@ test.describe('the sizes the spec names', () => {
       await expect(panel.locator('.xd-man-row').first()).toBeHidden()
       // A category with one file has nothing to fold.
       await typeRadio(panel, 'UI kit').click()
-      await expect(panel.locator('.xd-man-t')).toHaveCount(0)
+      await expect(panel.locator('.xd-man .xd-man-t')).toHaveCount(0)
       await expect(panel.locator('.xd-man-n')).toHaveText('untitled-ui-kit-04-standards.zip')
     })
 

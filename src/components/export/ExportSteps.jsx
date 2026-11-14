@@ -228,22 +228,21 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
       )
   }
 
-  // The Theme step sits under the picture on a wide dialog; on a phone it comes first, so the themes are in view before the pages.
+  // The Theme step sits under the picture at every width, so a chosen theme is seen at once. On a phone its list is folded to one row
+  // that already reads "Theme: <name> · <brand>", so the heading is for screen readers only there.
   const themeStep = themed && (
-    <section className={`xd-step${strip ? ' xd-step--lead' : ''}`} aria-labelledby={`${uid}-theme`}>
-      <h3 className="xd-step-l" id={`${uid}-theme`}>Theme</h3>
-      <ExportThemeRow value={theme} onChange={onTheme} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} file={file} />
+    <section className="xd-step" aria-labelledby={`${uid}-theme`}>
+      <h3 className={`xd-step-l${strip ? ' sr-only' : ''}`} id={`${uid}-theme`}>Theme</h3>
+      <ExportThemeRow value={theme} onChange={onTheme} isPro={isPro} checking={checking} yourName={name} kind={cat.preview} file={file} strip={strip} />
       <p className="xd-note">{themeLines(cat.preview, shown).desc}</p>
     </section>
   )
 
   return (
     <>
-      {themed && strip && themeStep}
-
       <Preview cat={cat} file={file} name={name} fileProject={fileProject} isPro={isPro} checking={checking} design={design} chosen={chosen} shown={shown} />
 
-      {themed && !strip && themeStep}
+      {themeStep}
 
       <section className="xd-step" aria-labelledby={`${uid}-file`}>
         <h3 className="xd-step-l" id={`${uid}-file`}>File</h3>
@@ -281,7 +280,7 @@ export default function ExportSteps({ cat, file, onFile, name, fileProject = '',
 // it lands on carries the price). The work in progress is said on the button only.
 // `onPrimary` decides what the click does: after an export it is "Done" and closes the
 // dialog, and `onAnother` is the other way on, back to the file step. After a 429 the
-// button counts `retryIn` seconds down, disabled, then is live again.
+// button counts `retryIn` seconds down (aria-disabled, and still readable), then is live again.
 export function ExportDock({ cat, file, busy, stage, error, notice, done, retryIn = 0, onPrimary, onAnother, onCopy, primaryRef, locked: lockedBy, signingIn = false, onSignIn }) {
   const { isPro, planKnown } = useSubscription()
   const { user } = useAuth()
@@ -313,7 +312,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, retryI
   let label = copyOf(file).action
   if (busy) label = BUSY_LABEL[stage] || 'Exporting…'
   else if (checking) label = 'Checking your plan…'
-  else if (waiting) label = `Try again in ${retryIn}s`
+  else if (waiting) label = `Try again in ${retryIn >= 60 ? `${Math.floor(retryIn / 60)}:${String(retryIn % 60).padStart(2, '0')}` : `${retryIn}s`}`
   else if (locked) label = 'Unlock with Pro'
   else if (done) label = 'Done'
 
@@ -333,11 +332,11 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, retryI
           </button>
         )}
         {done && !busy && (
-          <button type="button" className="btn xd-act" onClick={onAnother}>
+          <button type="button" className="btn xd-act xd-act--quiet" onClick={onAnother}>
             Export another file
           </button>
         )}
-        <button type="button" className="btn btn-accent xd-act xd-primary" ref={primaryRef} onClick={onPrimary} disabled={busy || checking || waiting}>
+        <button type="button" className="btn btn-accent xd-act xd-primary" ref={primaryRef} onClick={onPrimary} disabled={busy || checking} aria-disabled={waiting || undefined}>
           {label}
         </button>
       </div>

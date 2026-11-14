@@ -35,9 +35,10 @@ const retryAfterSeconds = (header) => (/^\d+$/.test(String(header ?? '')) ? Numb
 
 const fail = (code, retryAfter) => {
   let line = ERROR_LINES[code]
-  // The one number a fixed line may carry: how long the server asked us to wait, when it said so in whole seconds.
+  // A valid wait (whole seconds, 1..600) rides on the result and is counted down on the dialog's button, so the line does not repeat it.
+  // Without one the fixed line says "in a minute".
   const wait = code === 'rate-limited' && Number.isInteger(retryAfter) && retryAfter > 0 && retryAfter <= 600 ? retryAfter : 0
-  if (wait) line = wait < 90 ? `Too many exports just now. Try again in ${wait} ${wait === 1 ? 'second' : 'seconds'}.` : line
+  if (wait) line = 'Too many exports just now.'
   return wait ? { status: 'error', code, line, retryAfter: wait } : { status: 'error', code, line }
 }
 

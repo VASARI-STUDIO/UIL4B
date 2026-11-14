@@ -76,8 +76,11 @@ test('each refusal is fixed copy, never the server\'s words', async () => {
     assert.equal(out.code, code)
     assert.ok(!out.line.includes('LEAK'))
   }
-  assert.match((await ask(refuse(429, { code: 'rate_limited' }, { 'Retry-After': '30' }))).line, /30 seconds/)
-  assert.match((await ask(refuse(429, { code: 'rate_limited' }, { 'Retry-After': '1' }))).line, /in 1 second\./)
+  // With a valid Retry-After the line carries no time (the button counts it); without one the fixed "in a minute" line stays.
+  for (const wait of ['1', '30', '90', '600']) {
+    assert.equal((await ask(refuse(429, { code: 'rate_limited' }, { 'Retry-After': wait }))).line, 'Too many exports just now.', `Retry-After ${wait}`)
+  }
+  assert.equal((await ask(refuse(429, { code: 'rate_limited' }))).line, ERROR_LINES['rate-limited'])
   // The wait itself rides on the result, so the dock can count it down; any other refusal carries none.
   assert.equal((await ask(refuse(429, { code: 'rate_limited' }, { 'Retry-After': '30' }))).retryAfter, 30)
   assert.equal((await ask(refuse(429, { code: 'rate_limited' }, { 'Retry-After': '9999' }))).retryAfter, undefined)

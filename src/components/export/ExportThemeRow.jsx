@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import useRovingRadio from '../../hooks/useRovingRadio'
 import { pickerThemesFor, preloadTheme, themeShots, shapeClass, themedFileIsPro } from '../../config/exportThemePicker'
 import { preloadThemeStandins, themeStandinShots } from '../../utils/lockedStandin'
@@ -10,6 +10,9 @@ import { preloadThemeStandins, themeStandinShots } from '../../utils/lockedStand
 //
 // The list is a radiogroup with one Tab stop (the chosen theme): arrows choose the next or previous theme, and the ends wrap.
 // Choosing a theme changes the picture at once, so there is nothing to confirm and nothing that covers the rest of the dialog.
+//
+// On a phone (`strip`) the list is folded to one 44px row, "Theme: Presentation · Kerbside", so the picture above it stays in view;
+// the row opens the list in place (the same disclosure as the file list), and choosing a theme closes it again. Wide layouts keep the list open.
 //
 // The previews are pictures (public/export-themes), so no theme code is in the page. A theme's pictures are fetched when its
 // row gets hover or focus, so choosing it finds them in.
@@ -36,8 +39,9 @@ export function ThemeStage({ kind, theme, locked, standin = locked, lockText }) 
   )
 }
 
-export default function ExportThemeRow({ value, onChange, isPro, checking, yourName, kind = 'kit', file = 'kit' }) {
+export default function ExportThemeRow({ value, onChange, isPro, checking, yourName, kind = 'kit', file = 'kit', strip = false }) {
   const uid = useId()
+  const [open, setOpen] = useState(false)
   const all = pickerThemesFor(file)
   // Free then Pro, by the dock's own call (themedFileIsPro), so a group never says Free for a file the dock locks.
   const grouped = !isPro && !checking
@@ -58,9 +62,18 @@ export default function ExportThemeRow({ value, onChange, isPro, checking, yourN
     else preloadTheme(kind, id)
   }
 
+  const listId = `${uid}-list`
   return (
     <div className="xd-theme">
-      <div className="xd-theme-list" role="radiogroup" aria-label="Theme">
+      {strip && (
+        <button type="button" className="xd-man-t" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((o) => !o)}>
+          <span className="xd-theme-sel">Theme: {shown.name} · {shown.brand}</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+            <path d={open ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+      <div className="xd-theme-list" id={listId} role="radiogroup" aria-label="Theme" hidden={strip && !open}>
         {groups.map((g) => (
           <div key={g.id} className="xd-theme-group" role={grouped ? 'group' : undefined} aria-labelledby={grouped ? `${uid}-${g.id}` : undefined}>
             {grouped && <p className="xd-theme-gh" id={`${uid}-${g.id}`}>{g.label}</p>}
@@ -76,7 +89,7 @@ export default function ExportThemeRow({ value, onChange, isPro, checking, yourN
                   tabIndex={on ? 0 : -1}
                   className={`xd-theme-opt${on ? ' is-on' : ''}`}
                   ref={(el) => { roving.refs.current[i] = el }}
-                  onClick={() => onChange(t.id)}
+                  onClick={() => { onChange(t.id); if (strip) setOpen(false) }}
                   onKeyDown={(e) => roving.onKeyDown(e, i)}
                   onPointerEnter={() => warm(t.id)}
                   onFocus={() => warm(t.id)}
