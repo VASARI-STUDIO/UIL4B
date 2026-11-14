@@ -297,6 +297,7 @@
 
 /* Reduced motion: the dialog's entrance does not animate. */
 html[data-reduced-motion="true"] .iel-page .icust-panel{animation:none;transition:none}
+html[data-reduced-motion="true"] .iel-page .emd-style-save:active{transform:none}
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .iel-page .icust-panel{animation:none;transition:none}
   html:not([data-reduced-motion="false"]) .iel-page .emd-style-save:active{transform:none}
