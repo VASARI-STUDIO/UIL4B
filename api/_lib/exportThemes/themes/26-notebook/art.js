@@ -7,9 +7,9 @@ import { A, brandRoles, readable, wrap, advance, tokens } from './helpers.js';
 // business card front takes whatever line is left, or none.
 export function lineUse(ctx) {
   const B = ctx.brand, all = [B.lines.primary, ...(B.lines.others || [])], count = new Map();
-  const use = (l) => { if (l) count.set(l, (count.get(l) || 0) + 1); return l; };
-  use(B.lines.primary); use((B.lines.others || [])[0]); use(B.lines.primary);
-  const pick = (pref) => use([pref, ...all].filter(Boolean).find((l) => (count.get(l) || 0) < 2));
+  const tally = (l) => { if (l) count.set(l, (count.get(l) || 0) + 1); return l; };
+  tally(B.lines.primary); tally((B.lines.others || [])[0]); tally(B.lines.primary);
+  const pick = (pref) => tally([pref, ...all].filter(Boolean).find((l) => (count.get(l) || 0) < 2));
   const clip = pick(B.type.sample.headline), card = pick();
   return { clip, card };
 }

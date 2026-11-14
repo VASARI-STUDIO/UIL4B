@@ -98,7 +98,7 @@ export function advanceLabel(stem, size, text, track = 0) {
 function advance0(stem, size, text, track = 0) {
   const font = loadFont(stem);
   let x = 0, prev = null;
-  for (const ch of String(text).replace(/ /g, ' ')) {   // a no-break space is as wide as a space
+  for (const ch of String(text).replace(/\u00A0/g, ' ')) {   // a no-break space is as wide as a space
     const g = font.charToGlyph(ch);
     if (prev) { try { x += font.getKerningValue(prev, g) * size / font.unitsPerEm; } catch { /* no kerning table */ } }
     x += g.advanceWidth * size / font.unitsPerEm + track * size; prev = g;

@@ -146,7 +146,7 @@ export const guidelines = {
     const T = tokens(ctx), B = ctx.brand, R = brandRoles(ctx), kit = artKit(ctx);
     // verso: "Aa" is drawn as a path (so the checker sees a shape, not text), sized so its cap height is a whole number of units
     const font = loadFont(T._displayStem), cr = capRatio(T._displayStem);
-    let k = 13, size = 0, o;
+    let k = 13, size, o;
     for (; k >= 8; k--) {
       size = k * U / cr; o = outline(font, 'Aa', size, 0);
       if (o.x2 - o.x1 <= 475) break;

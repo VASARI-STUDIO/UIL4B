@@ -74,7 +74,7 @@ function layout(ctx, kind, G, detail = false) {
   const ink = readable(ctx, R.ground.hex, [R.text, nb(ctx).graphiteInk], `layouts ${kind}`);
   const land = G.w > G.h, m = G.margin, n = G.columns;
   const cols = (k) => Math.max(1, Math.round(n * k));
-  let html = '', spans = [];
+  let html = '', spans;
   if (kind === 'cover') {
     const pc = land ? cols(7 / 12) : n, tc = land ? n - pc : cols(10 / 12);
     const ph = land ? G.h - 2 * m : Math.round((G.h - 2 * m) * 0.5 / G.base) * G.base;
