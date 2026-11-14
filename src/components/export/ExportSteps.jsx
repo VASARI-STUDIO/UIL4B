@@ -19,7 +19,7 @@ import BrandLogoField from '../BrandLogoField'
 import ExportFreePreview from './ExportFreePreview'
 import ExportThemeRow, { ThemeStage } from './ExportThemeRow'
 import ExportSignIn from './ExportSignIn'
-import { UI_KIT_PAGES, freeGuidelinesThemeNames, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
+import { UI_KIT_PAGES, freeGuidelinesThemeNames, freeThemeNames, pickerTheme, themedFile, themedFileIsPro, themedZipName, themeLines } from '../../config/exportThemePicker'
 
 // The main column of the Export dialog (Preview, File, Layout, Details) and the
 // dock under it. Everything here follows the category and file the rail and the
@@ -325,7 +325,7 @@ export function ExportDock({ cat, file, busy, stage, error, notice, done, upgrad
   } else if (locked) {
     // The bundle has no free, marked version, so "no watermark" would promise a difference that isn't there.
     line = cat.preview === 'bundle' ? <><strong>Pro</strong> unlocks the app-ready bundle.</>
-      : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in Standards and Specification.</>
+      : cat.preview === 'kit' ? <><strong>Pro theme.</strong> The UI kit is free in {freeThemeNames('kit')}. The guidelines are free in {freeGuidelinesThemeNames()}.</>
         : cat.preview === 'guidelines' ? <><strong>Pro theme.</strong> The guidelines are free in {freeGuidelinesThemeNames()}.</>
         : <><strong>Pro</strong> unlocks this file.</>
   } else if (isPro) line = cat.preview === 'bundle' ? <strong>Included in Pro.</strong> : <><strong>Included in Pro.</strong> No watermark.</>
