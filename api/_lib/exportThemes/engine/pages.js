@@ -3,6 +3,7 @@ import { makeLogo } from './logo.js';
 import { makeUi } from './components.js';
 import { pageSizeMap, largestSize } from './doc.js';
 import { applyPlaceholders } from './placeholders.js';
+import { addMockups } from './mockup.js';
 import { BRANDS } from '../brands/index.js';
 
 // The fixed page-id lists for the two documents. Order is the order in the PDF.
@@ -51,7 +52,7 @@ export function numberPages(list, extra = {}) {
 }
 
 // Themes whose pages read brand copy only through esc(), so slot-edition placeholders can reach them; the rest keep the sample copy until they are moved over.
-const PH_THEMES = new Set(['02', '04', '05', '07', '08']);
+const PH_THEMES = new Set(['02', '04', '05', '07', '08', '21', '24', '29', '30', '32']);
 
 // A theme names the shots of the sample brand it was written for. A brand without one of those ids gets the shot at the same
 // position in the sample's list (wrapping when the brand has fewer), so a brand with any shots fills every frame.
@@ -74,6 +75,7 @@ export function makeCtx(T, edition, kind, loaders, data = BRANDS[T.meta.brand].d
   const ctx = loadBrand(data, loaders);
   ctx.edition = edition; ctx.theme = T.meta; ctx.kind = kind;
   ctx.logo = makeLogo(ctx); ctx.ui = makeUi(ctx);
+  addMockups(ctx, T);
   const list = kind === 'uikit' ? UIKIT_PAGES : GUIDE_PAGES;
   const nos = numberPages(list, (T.meta.extraPages && T.meta.extraPages[kind]) || {});
   ctx.size = kind === 'uikit' ? (T.meta.uikitPage || T.meta.guidelinesPage) : T.meta.guidelinesPage;

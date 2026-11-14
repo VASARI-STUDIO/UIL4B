@@ -30,6 +30,9 @@ export function fromOklch(L, C, H) {
 }
 export const oklchString = (hex) => { const { L, C, H } = toOklch(hex); return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${C < 0.002 ? 0 : H.toFixed(1)})`; };
 export const rgbString = (hex) => { const [r, g, b] = hexToRgb(hex); return `R${r} G${g} B${b}`; };
+// CMYK as the brand supplies it ([c, m, y, k], 0 to 100), never worked out from the hex. null when the colour carries none.
+export const cmykParts = (c) => (c && Array.isArray(c.cmyk) && c.cmyk.length === 4 ? c.cmyk.map(String) : null);
+export const cmykOf = (c) => { const p = cmykParts(c); return p ? `C ${p[0]} M ${p[1]} Y ${p[2]} K ${p[3]}` : null; };
 
 // A 10-step ramp (50..900) holding the base colour's hue; chroma follows the base but is capped on the light steps.
 // The base sits at the step whose lightness is nearest its own (a near-white base lands at 50, a near-black one at 900),
