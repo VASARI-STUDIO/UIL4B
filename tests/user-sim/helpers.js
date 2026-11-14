@@ -46,6 +46,8 @@ import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { adminEmails } from '../../api/_lib/adminEmails.js'
 import { serveLibrary } from '../../api/_lib/library/serve.js'
 import { servePalettePreview } from '../../api/_lib/library/preview.js'
+import { serveProAsset } from '../../api/_lib/library/proAssets.js'
+import { PRO_PREVIEW_IDS } from '../../src/data/proPreviewIds.js'
 import { LIBRARY_PALETTES } from '../../api/_lib/library/paletteLibrary.js'
 import { resolveReportDir } from './report-dir.js'
 
@@ -257,6 +259,19 @@ export async function routePalettePreview(page) {
       body: isPng ? reply.body : JSON.stringify(reply.body),
     })
   })
+}
+
+/** The Pro preview data as the build writes it ({ id: base64 | html }), read from public/previews/prompts. */
+const PREVIEW_DIR = new URL('../../public/previews/prompts/', import.meta.url)
+const PRO_PREVIEW_FILES = { poster: (id) => `poster/${id}.webp`, anim: (id) => `anim/${id}.webp`, page: (id) => `${id}.html` }
+function proPreviewData(kind) {
+  const out = {}
+  for (const id of PRO_PREVIEW_IDS) {
+    const file = new URL(PRO_PREVIEW_FILES[kind](id), PREVIEW_DIR)
+    if (!fs.existsSync(file)) continue
+    out[id] = kind === 'page' ? fs.readFileSync(file, 'utf8') : fs.readFileSync(file).toString('base64')
+  }
+  return out
 }
 
 /** Every host the Firebase SDK would talk to. Exported so a spec can assert on it. */
@@ -495,6 +510,38 @@ export async function signIn(page, opts = {}) {
       },
     )
     await route.fulfill({ status: reply.status, headers: reply.headers, contentType: 'application/json', body: JSON.stringify(reply.body) })
+  })
+
+  /* A LOCKED PROMPT'S PREVIEW IS ANSWERED BY THE REAL ENDPOINT CODE TOO.
+   *
+   * GET /api/ai?proAsset=<kind>&id=<id> runs api/_lib/library/proAssets.js with
+   * the session's user document, so a Pro session gets the bytes and a Free one
+   * the 403. The preview data is read from the files a build would package. */
+  await page.route(/\/api\/ai\?proAsset=/, async (route) => {
+    const url = new URL(route.request().url())
+    const reply = { status: 200, headers: {}, body: null }
+    const res = {
+      setHeader: (name, value) => { reply.headers[name] = value },
+      status: (code) => { reply.status = code; return res },
+      json: (body) => { reply.body = body; return res },
+      end: (body) => { reply.body = body; return res },
+    }
+    await serveProAsset(
+      { headers: route.request().headers(), query: { proAsset: url.searchParams.get('proAsset'), id: url.searchParams.get('id') } },
+      res,
+      {
+        verifyIdToken: async () => ({ uid: session.uid, email: session.email, email_verified: session.emailVerified }),
+        readUser: async () => session.docs[`users/${session.uid}`],
+        loadPreviews: async (kind) => proPreviewData(kind),
+      },
+    )
+    const bytes = Buffer.isBuffer(reply.body)
+    await route.fulfill({
+      status: reply.status,
+      headers: reply.headers,
+      contentType: bytes ? reply.headers['Content-Type'] : 'application/json',
+      body: bytes ? reply.body : JSON.stringify(reply.body),
+    })
   })
 
   await routePalettePreview(page)

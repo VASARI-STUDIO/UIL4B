@@ -29,6 +29,11 @@
 // reload or not. A chunk failure that outlives the reload is reported once as
 // "Chunk load failed on <route>", so it is never mistaken for a code crash in
 // the queue.
+//
+// SOMEONE ELSE'S SCRIPT IS NOT OUR CRASH. An error whose stack runs only through
+// other origins (Google's sign-in client, a browser extension) is theirs, so it
+// is not reported. One frame of our own is enough to report it: then our code
+// was on the path.
 
 import { canWriteSharedAnalytics } from './environment.js'
 import { chunkReloadPending, isChunkLoadError } from './lazyRoute.js'
@@ -95,6 +100,47 @@ export function isNoise(message) {
   return m === 'Script error.' || m === 'Script error' || /ResizeObserver loop/.test(m)
 }
 
+// A frame's URL: http(s) or a browser-extension scheme. A blob: URL is read by
+// its inner http(s) URL, which carries the origin that made it.
+const FRAME_URL_RE = /(?:https?|chrome-extension|moz-extension|safari-extension|safari-web-extension):\/\/[^\s)]+/
+
+function originOf(url) {
+  try {
+    const o = new URL(url).origin
+    return o && o !== 'null' ? o : url.split('/').slice(0, 3).join('/')
+  } catch {
+    return null
+  }
+}
+
+/**
+ * True when every stack frame that names a file names one from another origin.
+ * A stack with no URL frames, or no known origin to compare against, is not
+ * judged third-party: when unsure, the error is reported.
+ */
+export function isThirdParty(stack, origin) {
+  if (!origin) return false
+  const urls = String(stack || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => /:\d+:\d+\)?$/.test(l))
+    .map((l) => (l.match(FRAME_URL_RE) || [])[0])
+    .filter(Boolean)
+  if (!urls.length) return false
+  return urls.every((u) => originOf(u) !== origin)
+}
+
+/** True when a window error event names a script file from another origin. */
+export function isForeignFile(filename, origin) {
+  if (!filename || !origin) return false
+  const m = String(filename).match(FRAME_URL_RE)
+  return Boolean(m) && originOf(m[0]) !== origin
+}
+
+function pageOrigin() {
+  try { return globalThis.location?.origin || null } catch { return null }
+}
+
 function readLog(storage) {
   try {
     const parsed = JSON.parse(storage?.getItem(STORE_KEY) || '[]')
@@ -110,11 +156,12 @@ function readLog(storage) {
  * under `node --test` with no browser. `reloadPending` says a reload to
  * recover a failed chunk is in flight, which holds back chunk-load errors only.
  */
-export function createErrorReporter({ send, storage, now = () => Date.now(), reloadPending = () => false }) {
+export function createErrorReporter({ send, storage, now = () => Date.now(), reloadPending = () => false, origin = pageOrigin }) {
   return function report(error, context) {
     if (isChunkLoadError(error) && reloadPending()) return false
     const { subject, message } = describeError(error, context)
     if (isNoise(messageOf(error))) return false
+    if (isThirdParty(error && error.stack, origin())) return false
     const key = subject
     const log = readLog(storage)
     if (log.length >= SESSION_LIMIT) return false
@@ -176,6 +223,8 @@ export function installGlobalErrorCapture(target = window) {
     // A failed <img>/<script> load also fires `error` on window during
     // capture, with no `error` object — that is a missing asset, not a crash.
     if (!event || (!event.error && !event.message)) return
+    // Thrown inside another origin's script file: not our crash.
+    if (isForeignFile(event.filename, pageOrigin())) return
     reportError(event.error || event.message, 'error')
   })
   target.addEventListener('unhandledrejection', (event) => {

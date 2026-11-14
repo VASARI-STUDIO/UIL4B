@@ -11,6 +11,7 @@ import { test, expect } from './base.js'
 import { go, proLibraryArrived, signIn, watch } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../api/_lib/library/communityPrompts.js'
 import { PROMPT_PREVIEW_IDS, PROMPT_ANIM_IDS } from '../../src/data/promptPreviewAssets.js'
+import { isProPreview } from '../../src/data/proPreviewIds.js'
 
 // parked: only an admin can open /discover/prompts, so every page here signs in as the admin.
 // The admin plan is Pro, so this file says nothing about Free or signed-out gating.
@@ -78,7 +79,9 @@ test.describe('the community prompt gallery', () => {
     // On screen: it plays, over the poster, in the same box.
     await shot.evaluate((el) => el.scrollIntoView({ block: 'center' }))
     await expect(shot).toHaveAttribute('data-anim', 'on')
-    await expect(anim).toHaveAttribute('src', `/previews/prompts/anim/${id}.webp`)
+    // A Pro preview arrives through the authorised fetch as a blob URL; a free
+    // one is the public file.
+    await expect(anim).toHaveAttribute('src', isProPreview(id) ? /^blob:/ : `/previews/prompts/anim/${id}.webp`)
     await expect(shot, 'the animation never finished loading').toHaveClass(/is-playing/)
     const after = await shot.evaluate((el) => el.getBoundingClientRect().height)
     expect(after, 'the preview box changed size when the animation arrived').toBe(before)

@@ -280,3 +280,16 @@ test('the one answer still collected has a reader', () => {
   assert.ok(/onboarding\?\.firstWin/.test(admin),
     'onboarding.firstWin must be read somewhere, or it must not be written')
 })
+
+test('signing out drops the new-account onboarding flag', () => {
+  // The flag routes the next signed-in render to /onboarding as a brand-new
+  // account. A new account that signs out before it gets there must not leave
+  // it raised for whichever account signs in next in this tab.
+  const src = stripComments(read('src/contexts/AuthContext.jsx'))
+  const handler = /const onAuthUser = \(fbUser\) => \{[\s\S]*?\r?\n {4}\}\r?\n/.exec(src)?.[0] || ''
+  assert.ok(handler, 'the auth state handler must still exist')
+  const signedOut = handler.slice(handler.lastIndexOf('} else {'))
+  assert.ok(/setFirebaseUser\(null\)/.test(signedOut), 'the signed-out branch must be the last else')
+  assert.ok(/setPendingOnboarding\(false\)/.test(signedOut),
+    'the signed-out branch must clear the new-account onboarding flag')
+})

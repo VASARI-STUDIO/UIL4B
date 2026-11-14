@@ -108,8 +108,10 @@ export default function handler(req, res) {
   }
   const imgValid = query.img === '1'
   const extraKeys = Object.keys(query).some((key) => key !== 'c' && key !== 'img' && key !== 'code')
-  if (extraKeys || (query.img !== undefined && !imgValid)) {
-    const clean = hexes.join(',')
+  // A lower- or mixed-case code is the same palette under a second URL, so it
+  // is sent on to the upper-case spelling too, for the page and the PNG alike.
+  const clean = hexes.join(',')
+  if (extraKeys || code !== clean || (query.img !== undefined && !imgValid)) {
     res.setHeader('Location', imgValid ? `/api/share?c=${clean}&img=1` : `/p/${clean}`)
     res.setHeader('Cache-Control', 'public, s-maxage=86400')
     return res.status(308).end()
@@ -120,6 +122,10 @@ export default function handler(req, res) {
 
   if (req.query?.img) {
     res.setHeader('Content-Type', 'image/png')
+    // The card image is only there for unfurls. Without this a crawler that
+    // follows og:image indexes one PNG per palette, the same thin set the page
+    // itself keeps out of the index.
+    res.setHeader('X-Robots-Tag', 'noindex')
     return res.status(200).send(palettePng(hexes))
   }
 
@@ -149,8 +155,8 @@ export default function handler(req, res) {
   const origin = process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : 'https://uil4b.com'
-  const appUrl = `${origin}/create/palette?c=${code}`
-  const imgUrl = `${origin}/api/share?c=${code}&img=1`
+  const appUrl = `${origin}/create/palette?c=${clean}`
+  const imgUrl = `${origin}/api/share?c=${clean}&img=1`
   const title = `${hexes.length}-colour palette — UI L4B`
   const desc = hexes.map(h => `#${h}`).join(' · ')
 

@@ -30,6 +30,10 @@ import { markScrollContainers } from '../utils/scrollContainment.js'
 // assistive technology to expect a single-tab-stop widget it isn't. Arrow keys
 // here are a movement convenience layered on a disclosure — every control keeps
 // its own tab stop, so a user who ignores the arrows loses nothing.
+// Inside an element marked `data-arrow-grid` (a grid of tiles) the arrows move
+// by row and column instead: Left/Right step through the tiles, Up/Down move a
+// whole row and stop at the edges. The column count is read from the grid's
+// computed `grid-template-columns`, so a layout change needs no code change.
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
 
@@ -214,6 +218,24 @@ export function popoverArrowTarget(key, index, count) {
   }
 }
 
+// The arrow/Home/End target inside a grid of `cols` columns. Left/Right step
+// through the cells in reading order and wrap; Up/Down move a row and stay put
+// at the top or bottom edge. Returns -1 for any other key.
+export function popoverGridTarget(key, index, count, cols) {
+  if (!count) return -1
+  const width = Math.max(1, cols || 1)
+  const at = index < 0 ? 0 : index
+  switch (key) {
+    case 'ArrowRight': return (at + 1) % count
+    case 'ArrowLeft': return (at - 1 + count) % count
+    case 'ArrowDown': return at + width < count ? at + width : at
+    case 'ArrowUp': return at - width >= 0 ? at - width : at
+    case 'Home': return 0
+    case 'End': return count - 1
+    default: return -1
+  }
+}
+
 // Home/End belong to the caret inside a text-entry control, and arrow keys move
 // it. Never steal them from one.
 function ownsItsOwnKeys(el) {
@@ -347,8 +369,13 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
       }
       if (!panel) return
       if (arrowNav && !ownsItsOwnKeys(e.target) && (panel === document.activeElement || panel.contains(document.activeElement))) {
-        const controls = focusablesIn(panel)
-        const next = popoverArrowTarget(e.key, controls.indexOf(document.activeElement), controls.length)
+        const grid = document.activeElement?.closest?.('[data-arrow-grid]')
+        const inGrid = grid && panel.contains(grid)
+        const controls = focusablesIn(inGrid ? grid : panel)
+        const at = controls.indexOf(document.activeElement)
+        const next = inGrid
+          ? popoverGridTarget(e.key, at, controls.length, getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length)
+          : popoverArrowTarget(e.key, at, controls.length)
         if (next >= 0) {
           e.preventDefault()
           controls[next].focus()

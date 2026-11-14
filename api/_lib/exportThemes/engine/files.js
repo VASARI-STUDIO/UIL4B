@@ -131,7 +131,7 @@ export function codePackageFiles(ctx, theme) {
   put(ctx, files, 'fonts.css', `/* ${commentText(ctx.brand.name)} fonts: local files in assets/fonts (open licence, SIL OFL 1.1). */\n${fontFaceCss(ctx, (f) => `assets/fonts/${f.stem}.woff2`)}\n\n/* Or load from Google Fonts instead: delete the rules above and use this.\n${fontsCss(ctx).split('\n').filter((l) => l.startsWith('@import')).join('\n')}\n*/\n`);
   // logo and icons
   if (ctx.edition === 'slot') put(ctx, files, 'assets/logo/logo-slot.svg', ctx.logo.slotSvgFile());
-  else for (const id of ctx.logo.versions) put(ctx, files, `assets/logo/${ctx.slug}-${logoFileName(id)}.svg`, ctx.logo.svg(id) + '\n');
+  else for (const id of ctx.logo.exportVersions) put(ctx, files, `assets/logo/${ctx.slug}-${logoFileName(id)}.svg`, ctx.logo.svg(id) + '\n');
   putIcons(ctx, files, 'assets/icons');
   return files;
 }
@@ -146,7 +146,7 @@ export function kitFiles(ctx, theme) {
     put(ctx, files, '01 Logo/README.md', `# Logo\n\nThis folder is where the approved ${mdEsc(B.name)} logo files go. Until then, \`logo-slot.svg\` is a labelled empty frame at the logo's proportion (${ctx.logo.geo.width.toFixed(0)} : ${ctx.logo.geo.height.toFixed(0)}).\n\nPut the final files in three folders:\n\n- \`svg/\` the vector master of each version\n- \`png/\` 512, 1024 and 2048 px wide, transparent\n- \`pdf/\` a vector PDF of each version\n\nVersions to supply: full colour, mono dark, mono light, reversed, horizontal, stacked, symbol.\n\nClear space is ${ctx.logo.clearShare}% of the logo's height on every side. Set the minimum size once the logo is in place.\n`);
   } else {
     const logo = ctx.logo;
-    for (const id of logo.versions) {
+    for (const id of logo.exportVersions) {
       const g = logo.geos[id];
       put(ctx, files, `01 Logo/svg/${slug}-${logoFileName(id)}.svg`, `<?xml version="1.0" encoding="UTF-8"?>\n` + logo.svg(id, { title: `${B.name} logo, ${logo.labels[id].toLowerCase()}` }).replace('<svg ', `<svg width="${g.w.toFixed(1)}" height="${g.h.toFixed(1)}" `) + '\n');
     }
@@ -189,7 +189,7 @@ export function kitListing(ctx, theme, files, { outside = true } = {}) {
   const list = Object.entries(files).map(([rel, v]) => ({ rel, size: typeof v === 'string' ? Buffer.byteLength(v) : v.length }));
   const add = (rel, size) => { if (!list.some((f) => f.rel === rel)) list.push({ rel, size }); };
   if (outside && ctx.edition !== 'slot') {
-    for (const id of ctx.logo.versions) {
+    for (const id of ctx.logo.exportVersions) {
       const n = `${ctx.slug}-${logoFileName(id)}`;
       add(`01 Logo/png/${n}-512.png`, NOMINAL.png512); add(`01 Logo/png/${n}-1024.png`, NOMINAL.png1024); add(`01 Logo/png/${n}-2048.png`, NOMINAL.png2048);
       add(`01 Logo/pdf/${n}.pdf`, NOMINAL.logoPdf);

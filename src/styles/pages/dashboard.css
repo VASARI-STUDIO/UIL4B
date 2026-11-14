@@ -388,7 +388,7 @@
   .db-head { height: auto; min-height: 44px; gap: 12px; }
   .db-head .db-go { display: none; }
   .db-head .db-ghost { height: 44px; flex: none; }
-  .db-name { font-size: 36px; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; text-wrap: balance; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .db-name { font-size: 36px; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; text-wrap: balance; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
   .db-name.wrap { display: block; -webkit-line-clamp: none; font-size: 24px; line-height: 1.15; font-weight: 600; letter-spacing: -.02em; overflow: visible; }
   .db-parked + .db-sheet { margin-top: 16px; }
   .db-meta { margin-top: 4px; height: auto; text-wrap: pretty; }
@@ -454,7 +454,6 @@
   .db-group { margin-top: 48px; }
   .db-gh { flex-wrap: wrap; height: auto; min-height: 24px; }
   .db-gh.find { height: auto; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 12px; }
-  .db-find label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .db-fwrap { width: 100%; }
   .db-fwrap svg { top: 14px; }
   .db-fwrap .db-input, .db-input { height: 44px; }
@@ -518,6 +517,12 @@
 }
 @media (hover: hover) { .db-gt:hover .r { background: var(--raised); } }
 
+/* a phone: the name sits beside Open project in about 200px, so a long one gets a third line before it is cut
+ * (the full name is also in the heading's title and in the sheet's accessible name) */
+@media (max-width: 479px) {
+  .db-name:not(.wrap) { -webkit-line-clamp: 3; }
+}
+
 /* 320: the sheet's inner width is 256, so Open project becomes a text link, the "Open in" label drops to the arrow,
  * the shelf pairs stack and the type tightens */
 @media (max-width: 359px) {
@@ -527,7 +532,7 @@
   .db-name { font-size: 32px; }
   .db-name.wrap { font-size: 22px; }
   .db-head .db-ghost { display: none; }
-  .db-opent { display: inline; }
+  .db-opent { display: inline-flex; align-items: center; min-height: 24px; vertical-align: middle; }
   .db-kit .db-fname { font-size: 22px; }
   .db-kit .db-fsample { margin-top: 6px; line-height: 16px; -webkit-line-clamp: 4; }
   .db-kit .db-plate.sc { padding: 10px; }

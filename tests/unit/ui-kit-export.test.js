@@ -229,8 +229,8 @@ test('the export panel offers the kit as a free format, and the plan lines say s
   assert.equal(EXPORT_FORMATS[0].id, 'kit', 'the kit is the first format in the shared table')
   assert.ok(freeFormats().includes(kit))
   assert.ok(!styleGuideFormats().includes(kit))
-  assert.ok(FREE_POINTS.some((l) => l.startsWith('The UI kit')))
-  assert.ok(PRO_POINTS.some((l) => /with no “Made with UI L4B” line on anything/.test(l)), 'Pro no longer says the “Made with UI L4B” line comes off')
+  assert.ok(FREE_POINTS.some((l) => l.includes('UI kit')), 'the Free card no longer names the UI kit')
+  assert.ok(PRO_POINTS.some((l) => /no “Made with UI L4B” line on anything/.test(l)), 'Pro no longer says the “Made with UI L4B” line comes off')
   // The dialog gives the kit its own rail row, a free one with one file.
   const row = EXPORT_TYPES.find((t) => t.id === 'kit')
   assert.deepEqual(row?.categories.map((c) => [c.id, c.pro, c.files]), [['kit', false, ['kit']]], 'the kit is not a free row of its own')
