@@ -18,7 +18,7 @@
  *     text and glyphs).
  *   - `--accent-strong` gone from the selected tab and the Desktop/Mobile
  *     switch (global.css). Selected is ink, as on the converter's tabs; the
- *     accent is the Copy action.
+ *     Copy action is the ink pill.
  *   - The panels were `--card-grad` with a warm drop shadow; they are the app
  *     file's flat card over a hairline. Buttons and the seg switch are
  *     pills (--radius-pill); the phrase chips are small rectangles.
@@ -58,7 +58,7 @@
 .seo-page .seo-tabs::-webkit-scrollbar { display: none; }
 
 /* Tabs are pills (the tool pattern's chips): selected is the ink wash, the
-   accent stays on the Copy action. */
+   Copy action is the ink pill. */
 .seo-page .seo-tab {
   display: inline-flex;
   flex: none;
@@ -67,7 +67,7 @@
   padding: 0 14px;
   font-family: var(--font);
   font-size: 13px;
-  font-weight: 450;
+  font-weight: 500;
   white-space: nowrap;
   color: var(--tl-dim);
   background: transparent;
@@ -82,7 +82,7 @@
 
 .seo-page .seo-tab.is-active { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); }
 
-.seo-page .seo-tab:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+.seo-page .seo-tab:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
 .seo-page .seo-about { max-width: 78ch; margin: 0 0 18px; font-size: 12.5px; line-height: 1.55; color: var(--tl-dim); }
 
@@ -93,27 +93,27 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 34px;
-  padding: 0 13px;
+  min-height: 36px;
+  padding: 0 14px;
   font-family: var(--font);
   font-size: 12.5px;
-  font-weight: 540;
+  font-weight: 500;
   line-height: 1.2;
-  color: var(--t0);
+  color: var(--tl-ink);
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
+  border: 1px solid var(--tl-line-on);
+  border-radius: 999px;
   cursor: pointer;
-  transition: background var(--dur-1) ease, border-color var(--dur-1) ease;
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
 
-.seo-page .seo-btn:hover { background: var(--hvr); border-color: var(--bh); }
+.seo-page .seo-btn:hover { background: var(--tl-wash-2); }
 
-.seo-page .seo-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seo-page .seo-btn:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 2px; }
 
-.seo-page .seo-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: transparent; }
+.seo-page .seo-btn--primary { color: var(--v3-on-ink); background: var(--v3-ink); border-color: transparent; }
 
-.seo-page .seo-btn--primary:hover { background: var(--accent-fill-hover); border-color: transparent; }
+.seo-page .seo-btn--primary:hover { background: var(--v3-ink-hover); }
 
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 
@@ -123,24 +123,24 @@
 
 .seo-page .seo-field { display: flex; flex-direction: column; gap: 7px; }
 
-.seo-page .seo-field-label { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 560; color: var(--t1); }
+.seo-page .seo-field-label { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 500; color: var(--tl-soft); }
 
-.seo-page .seo-field-label em { font-family: var(--font); font-size: var(--fs-caption); font-style: normal; font-weight: 500; color: var(--t2); font-variant-numeric: tabular-nums; }
+.seo-page .seo-field-label em { font-family: var(--font); font-size: var(--fs-caption); font-style: normal; font-weight: 500; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
 .seo-page .seo-field input,
 .seo-page .seo-field textarea,
-.seo-page .seo-field .menu-select-trigger { width: 100%; border-radius: var(--radius-s); }
+.seo-page .seo-field .menu-select-trigger { width: 100%; border-radius: 8px; }
 
 .seo-page .seo-field input,
 .seo-page .seo-field .menu-select-trigger { min-height: 40px; }
 
 .seo-page .seo-field textarea { line-height: 1.5; resize: vertical; }
 
-.seo-page .seo-field :is(input, textarea):focus-visible { border-color: var(--border); box-shadow: none; }
+.seo-page .seo-field :is(input, textarea):focus-visible { border-color: var(--tl-line); box-shadow: none; }
 
-.seo-page .seo-meter { display: block; height: 4px; overflow: hidden; background: var(--bg-3); border-radius: var(--radius-pill); }
+.seo-page .seo-meter { display: block; height: 4px; overflow: hidden; background: var(--tl-card2); border-radius: 999px; }
 
-.seo-page .seo-meter-fill { display: block; height: 100%; background: var(--seo-tone); border-radius: var(--radius-pill); transition: width var(--dur-2) var(--ease-standard), background var(--dur-2) var(--ease-standard); }
+.seo-page .seo-meter-fill { display: block; height: 100%; background: var(--seo-tone); border-radius: 999px; transition: width var(--dur-2) var(--ease-standard), background var(--dur-2) var(--ease-standard); }
 
 /* ── Score and previews ───────────────────────────────────────────────────── */
 
@@ -153,26 +153,26 @@
   align-items: center;
   gap: 2px 16px;
   padding: 18px 20px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line);
   border-left: 3px solid var(--seo-tone);
-  border-radius: var(--radius-xl);
+  border-radius: 16px;
 }
 
 .seo-page .seo-score-num { grid-row: 1 / span 2; font-size: 42px; font-weight: 600; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--seo-tone-ink); }
 
 .seo-page .seo-score-band { font-size: 14px; font-weight: 600; color: var(--seo-tone-ink); }
 
-.seo-page .seo-score-lbl { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--t3); }
+.seo-page .seo-score-lbl { font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
 
-.seo-page .seo-score-bar { grid-column: 1 / -1; height: 5px; margin-top: 8px; overflow: hidden; background: var(--bg-3); border-radius: var(--radius-pill); }
+.seo-page .seo-score-bar { grid-column: 1 / -1; height: 5px; margin-top: 8px; overflow: hidden; background: var(--tl-card2); border-radius: 999px; }
 
-.seo-page .seo-score-bar-fill { height: 100%; background: var(--seo-tone); border-radius: var(--radius-pill); transition: width var(--dur-3) var(--ease-standard), background var(--dur-3) var(--ease-standard); }
+.seo-page .seo-score-bar-fill { height: 100%; background: var(--seo-tone); border-radius: 999px; transition: width var(--dur-3) var(--ease-standard), background var(--dur-3) var(--ease-standard); }
 
 /* The previews are headed sections on the page, divided by a hairline: no panel
    around them. The score above is the one card in this column, and the social
    card's own frame is the only other bordered thing. */
-.seo-page .seo-preview { padding-top: 12px; border-top: 1px solid var(--border); }
+.seo-page .seo-preview { padding-top: 12px; border-top: 1px solid var(--tl-line); }
 
 .seo-page .seo-preview-head {
   display: flex;
@@ -185,10 +185,10 @@
   font-weight: 500;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
-.seo-page .seo-seg { display: flex; gap: 2px; padding: 2px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-pill); }
+.seo-page .seo-seg { display: flex; gap: 2px; padding: 2px; background: var(--tl-card2); border: 1px solid var(--tl-line); border-radius: 999px; }
 
 .seo-page .seo-seg button {
   display: inline-flex;
@@ -198,21 +198,21 @@
   padding: 3px 12px;
   font-family: var(--font);
   font-size: 12px;
-  font-weight: 540;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--t2);
+  color: var(--tl-dim);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   cursor: pointer;
 }
 
-.seo-page .seo-seg button:hover { color: var(--t0); }
+.seo-page .seo-seg button:hover { color: var(--tl-ink); }
 
-.seo-page .seo-seg button.is-active { color: var(--t0); background: var(--card); border-color: var(--border); }
+.seo-page .seo-seg button.is-active { color: var(--tl-ink); background: var(--tl-card); border-color: var(--tl-line); }
 
-.seo-page .seo-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seo-page .seo-seg button:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; }
 
 .seo-page .seo-serp { padding: 0; }
 
@@ -220,11 +220,11 @@
 
 .seo-page .seo-serp-url { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 
-.seo-page .seo-serp-fav { flex-shrink: 0; width: 18px; height: 18px; background: var(--bg-3); border: 1px solid var(--border); border-radius: 50%; }
+.seo-page .seo-serp-fav { flex-shrink: 0; width: 18px; height: 18px; background: var(--tl-card2); border: 1px solid var(--tl-line); border-radius: 50%; }
 
-.seo-page .seo-serp-domain { font-size: 12px; color: var(--t1); }
+.seo-page .seo-serp-domain { font-size: 12px; color: var(--tl-soft); }
 
-.seo-page .seo-serp-path { color: var(--t2); }
+.seo-page .seo-serp-path { color: var(--tl-dim); }
 
 /* Google's own link colours: the preview imitates a results page on purpose. */
 .seo-page .seo-serp-title { margin: 2px 0 3px; font-size: 18px; font-weight: 400; line-height: 1.3; color: #8ab4f8; }
@@ -233,11 +233,11 @@
 
 .seo-page .seo-serp.is-mobile .seo-serp-title { font-size: 16px; }
 
-.seo-page .seo-serp-desc { font-size: 13px; line-height: 1.5; color: var(--t1); }
+.seo-page .seo-serp-desc { font-size: 13px; line-height: 1.5; color: var(--tl-soft); }
 
 /* The share image and its caption are one framed unit: the frame is the only
    border here, the caption is a fill inside it. */
-.seo-page .seo-social { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); }
+.seo-page .seo-social { overflow: hidden; border: 1px solid var(--tl-line); border-radius: 12px; }
 
 /* Unchanged: a stand-in for the page's own share image. Its ink is measured
    pixel by pixel in tests/user-sim/48-text-over-gradients.spec.js. */
@@ -245,30 +245,30 @@
 
 .seo-page .seo-social-img span { font-family: var(--font); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0; color: #FFFFFF; }
 
-.seo-page .seo-social-body { padding: 12px 14px; background: var(--bg-2); }
+.seo-page .seo-social-body { padding: 12px 14px; background: var(--tl-card2); }
 
-.seo-page .seo-social-domain { margin-bottom: 4px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--t2); }
+.seo-page .seo-social-domain { margin-bottom: 4px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--tl-dim); }
 
-.seo-page .seo-social-title { margin-bottom: 3px; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--t0); }
+.seo-page .seo-social-title { margin-bottom: 3px; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--tl-ink); }
 
-.seo-page .seo-social-desc { font-size: 12px; line-height: 1.45; color: var(--t2); }
+.seo-page .seo-social-desc { font-size: 12px; line-height: 1.45; color: var(--tl-dim); }
 
 /* ── Checklist and code panels ────────────────────────────────────────────── */
 
 .seo-page .seo-checklist,
-.seo-page .seo-tags { padding: 20px 0 0; border-top: 1px solid var(--border); }
+.seo-page .seo-tags { padding: 20px 0 0; border-top: 1px solid var(--tl-line); }
 
 .seo-page .seo-tags { margin-top: 24px; }
 
 .seo-page .seo-tags--flush { margin: 0; }
 
-.seo-page .seo-checklist-h { margin: 0 0 14px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--t0); }
+.seo-page .seo-checklist-h { margin: 0 0 14px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--tl-ink); }
 
 .seo-page .seo-checklist-h--flush { margin: 0; }
 
 .seo-page .seo-checklist-h--tight { margin: 0 0 10px; }
 
-.seo-page .seo-check { display: flex; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+.seo-page .seo-check { display: flex; gap: 12px; padding: 11px 0; border-top: 1px solid var(--tl-line); }
 
 .seo-page .seo-check:first-of-type { padding-top: 0; border-top: none; }
 
@@ -285,18 +285,18 @@
   border-radius: 50%;
 }
 
-.seo-page .seo-check-label { margin-bottom: 2px; font-size: 13px; font-weight: 560; color: var(--t0); }
+.seo-page .seo-check-label { margin-bottom: 2px; font-size: 13px; font-weight: 500; color: var(--tl-ink); }
 
-.seo-page .seo-check-detail { font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+.seo-page .seo-check-detail { font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
 
 .seo-page .seo-tags-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
-.seo-page .seo-tags-note { margin: 8px 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+.seo-page .seo-tags-note { margin: 8px 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
 
-.seo-page .seo-tags-note code { padding: 1px 5px; font-family: var(--mono); font-size: 12px; color: var(--t1); background: var(--bg-3); border-radius: var(--radius-xs); }
+.seo-page .seo-tags-note code { padding: 1px 5px; font-family: var(--mono); font-size: 12px; color: var(--tl-soft); background: var(--tl-card2); border-radius: 8px; }
 
-/* A filled block, not a bordered one: the code sits straight on the page. --bg-3, because --bg-2 is the page colour to within a shade in light mode and the block vanished. */
-.seo-page .seo-tags-code { margin: 0; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--t1); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-3); border: 0; border-radius: var(--radius); }
+/* A filled block, not a bordered one: the code sits straight on the page. L2, because the page ground is too close to the card in light mode and the block vanished. */
+.seo-page .seo-tags-code { margin: 0; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--tl-soft); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--tl-card2); border: 0; border-radius: 12px; }
 
 .seo-page .seo-faqs { display: flex; flex-direction: column; gap: 14px; }
 
@@ -307,15 +307,15 @@
 /* min 24px: the 14px glyph plus 2px padding made this an 18x18 target at
    every width from 320 to 1920 (2026-09-09), under WCAG 2.2 AA 2.5.8 and the
    floor 58-target-size-24 holds the shell to. The glyph stays 14px. */
-.seo-page .seo-faq-del { display: flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 2px; color: var(--t2); background: none; border: none; border-radius: var(--radius-pill); cursor: pointer; transition: color var(--dur-1) var(--ease-standard); }
+.seo-page .seo-faq-del { display: flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 2px; color: var(--tl-dim); background: none; border: none; border-radius: 999px; cursor: pointer; transition: color var(--dur-1) var(--ease-standard); }
 
 .seo-page .seo-faq-del:hover { color: var(--err-strong); }
 
-.seo-page .seo-faq-del:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seo-page .seo-faq-del:focus-visible { outline: 2px solid var(--tl-focus); outline-offset: 1px; }
 
 /* ── Content analysis ─────────────────────────────────────────────────────── */
 
-.seo-page .seo-ca-empty { padding: 40px 20px; font-size: 13px; text-align: center; color: var(--t2); border: 1px dashed var(--bh); border-radius: var(--radius-xl); }
+.seo-page .seo-ca-empty { padding: 40px 20px; font-size: 13px; text-align: center; color: var(--tl-dim); border: 1px dashed var(--tl-line-on); border-radius: 16px; }
 
 .seo-page .seo-ca-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 
@@ -324,13 +324,13 @@
   .seo-page .seo-ca-stats { grid-template-columns: repeat(2, 1fr); }
 }
 
-.seo-page .seo-ca-stat { padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+.seo-page .seo-ca-stat { padding: 12px; background: var(--tl-card); border: 1px solid var(--tl-line); border-radius: 12px; }
 
-.seo-page .seo-ca-num { font-size: 20px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--t0); }
+.seo-page .seo-ca-num { font-size: 20px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--tl-ink); }
 
-.seo-page .seo-ca-num span { font-size: 12px; font-weight: 500; color: var(--t2); }
+.seo-page .seo-ca-num span { font-size: 12px; font-weight: 500; color: var(--tl-dim); }
 
-.seo-page .seo-ca-lbl { margin-top: 7px; font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--t3); }
+.seo-page .seo-ca-lbl { margin-top: 7px; font-family: var(--font); font-size: var(--fs-caption); letter-spacing: normal; text-transform: none; color: var(--tl-faint); }
 
 .seo-page .seo-ca-ease { display: flex; align-items: center; gap: 18px; }
 
@@ -338,25 +338,25 @@
 
 .seo-page .seo-ca-ease-label { font-size: 15px; font-weight: 600; color: var(--seo-tone-ink); }
 
-.seo-page .seo-ca-ease-grade { margin-top: 3px; font-size: 12px; color: var(--t2); }
+.seo-page .seo-ca-ease-grade { margin-top: 3px; font-size: 12px; color: var(--tl-dim); }
 
-.seo-page .seo-ca-kwline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--t1); }
+.seo-page .seo-ca-kwline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--tl-soft); }
 
 .seo-page .seo-ca-verdict { font-size: 12.5px; font-weight: 600; color: var(--seo-tone-ink); }
 
 .seo-page .seo-ca-kw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-.seo-page .seo-ca-kw { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-s); }
+.seo-page .seo-ca-kw { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; background: var(--tl-card2); border: 1px solid var(--tl-line); border-radius: 8px; }
 
-.seo-page .seo-ca-kw-word { overflow: hidden; font-size: 12.5px; font-weight: 560; color: var(--t0); text-overflow: ellipsis; white-space: nowrap; }
+.seo-page .seo-ca-kw-word { overflow: hidden; font-size: 12.5px; font-weight: 500; color: var(--tl-ink); text-overflow: ellipsis; white-space: nowrap; }
 
-.seo-page .seo-ca-kw-meta { flex-shrink: 0; font-family: var(--font); font-size: var(--fs-caption); color: var(--t2); font-variant-numeric: tabular-nums; }
+.seo-page .seo-ca-kw-meta { flex-shrink: 0; font-family: var(--font); font-size: var(--fs-caption); color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
 .seo-page .seo-ca-phrases { display: flex; flex-wrap: wrap; gap: 7px; }
 
-.seo-page .seo-ca-phrase { padding: 4px 10px; font-size: 12px; color: var(--t1); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-s); }
+.seo-page .seo-ca-phrase { padding: 4px 10px; font-size: 12px; color: var(--tl-soft); background: var(--tl-card2); border: 1px solid var(--tl-line); border-radius: 8px; }
 
-.seo-page .seo-ca-phrase em { margin-left: 3px; font-family: var(--font); font-size: var(--fs-caption); font-style: normal; color: var(--t2); font-variant-numeric: tabular-nums; }
+.seo-page .seo-ca-phrase em { margin-left: 3px; font-family: var(--font); font-size: var(--fs-caption); font-style: normal; color: var(--tl-dim); font-variant-numeric: tabular-nums; }
 
 /* ── Widths, touch ────────────────────────────────────────────────────────── */
 
@@ -389,9 +389,9 @@
     gap: 2px;
     padding: 3px;
     overflow: visible;
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
+    background: var(--tl-card2);
+    border: 1px solid var(--tl-line);
+    border-radius: 999px;
   }
   .seo-page .seo-tab {
     justify-content: center;
@@ -403,7 +403,7 @@
     white-space: normal;
     border-color: transparent;
   }
-  .seo-page .seo-tab.is-active { background: var(--card); border-color: var(--border); }
+  .seo-page .seo-tab.is-active { background: var(--tl-card); border-color: var(--tl-line); }
   .seo-page .seo-ca-stats { grid-template-columns: repeat(2, 1fr); }
   .seo-page .seo-ca-kw-grid { grid-template-columns: 1fr; }
 }
