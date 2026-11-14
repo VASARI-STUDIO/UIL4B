@@ -53,8 +53,10 @@ const KEEP = {
     'xd-type', 'xd-cat',
     // the preview dialog's State menu: one row per state in a popover or sheet, like pvd-opt
     'pvd-state',
-    // the Gradient Generator's stop list: the select area of a stop row, and the rows of a stop's tints menu
-    'grd-stop-select', 'grd-tintmenu-item',
+    // the Gradient Generator's stop list: the select area of a stop row
+    'grd-stop-select',
+    // the shared menu's rows (8px in the popover, 12px in the phone sheet) and the sheet's separate Cancel block (16px, a row-sized block)
+    'v3m-i', 'v3m-cancel',
     // a nearest-colour row (swatch, name, closeness): a list row at 8px, like its loading, locked and failed siblings
     'plb-match-btn',
     // a Font Pair suggestion: one full-width list row (pair, family, reason) whose hover wash has soft corners

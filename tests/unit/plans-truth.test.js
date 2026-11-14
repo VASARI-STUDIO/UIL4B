@@ -472,7 +472,8 @@ test('with the themes live, the Exports group has a themes row: Free previews al
   for (const t of freeThemes()) assert.ok(row.free.includes(t.name), `${t.name} is a free theme the row leaves out`)
   assert.ok(row.pro.startsWith(`All ${EXPORT_THEMES.length}`), row.pro)
   // The row prints numerals, never number words.
-  assert.ok(!/\b(two|ten|eight)\b/i.test(`${row.free} ${row.pro}`), 'a theme count is spelled as a word')
+  // That covers the export count in the Pro cell as well as the theme counts.
+  assert.ok(!/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i.test(`${row.free} ${row.pro}`), 'a count in the row is spelled as a word')
 })
 
 test('with the themes off, the table has no themes row and still lists every Pro format the dialog offers', () => {

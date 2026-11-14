@@ -272,7 +272,7 @@ test.describe('4 — an error toast stays until it is read or dismissed; a succe
     await openProjectFromDashboard(page, `Seeded Project ${count}`)
     await expect(page.locator('.pjd-h1')).toBeVisible()
     await page.getByRole('button', { name: /^Actions for/ }).first().click()
-    const dup = page.getByRole('button', { name: 'Duplicate' })
+    const dup = page.getByRole('menuitem', { name: 'Duplicate' })
     // Rendering this at 390 found a ninth defect: the hovered card's lift is
     // a transform, so the menu was boxed inside the card and the next card's
     // art painted over Duplicate. Fixed in projects.css; held here.

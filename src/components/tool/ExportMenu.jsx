@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import usePopover, { popoverArrowTarget } from '../../hooks/usePopover'
-import useMediaQuery from '../../hooks/useMediaQuery'
+import { useMemo, useState } from 'react'
+import Menu from '../menu/Menu'
+import { menuOpenKey } from '../menu/menuModel'
 import ToolIcon from './ToolIcon'
 
 // The tool toolbar's "Copy or save" menu: one accent pill that opens a short
@@ -13,7 +12,7 @@ import ToolIcon from './ToolIcon'
 //           Choosing a row closes the menu, returns focus to the button, then
 //           calls onSelect. Anything that needs an account asks for it inside
 //           onSelect (useExportGate / requireLogin), so a row is never inert.
-//           `hint` is the small mono text at the row's end ("Free account"). It is
+//           `hint` is the small text at the row's end ("Free account"). It is
 //           kept out of the row's name (aria-hidden) and read as its description
 //           (aria-describedby), so the name stays "Save to project", not
 //           "Save to projectFree account".
@@ -24,127 +23,52 @@ import ToolIcon from './ToolIcon'
 //   variant 'accent' (default, the toolbar's one primary) or 'quiet' (a hairline
 //           action that sits beside a different primary).
 //
-// Placement, dismissal and focus return are usePopover's. From 768px the list
-// is a popover under the button; below it the same rows sit in the toolbar
-// overflow's bottom sheet (tool-layout.css: .tl-sheet-layer).
-//
-// Keyboard (the APG menu-button pattern): Enter and Space open it through the
-// button's own click, ArrowDown opens onto the first row and ArrowUp onto the
-// last, the arrows wrap, Home and End jump, Escape closes and refocuses the
-// button, and Tab closes it and moves on.
-const PHONE = '(max-width: 767px)'
-const ROWS = '[role="menuitem"]'
-
+// The list is the shared Menu (components/menu/Menu.jsx): a popover under the
+// button from 768px, a bottom action sheet below it. Keys are Menu's: Enter and
+// Space open it through the button's own click, ArrowDown opens onto the first
+// row and ArrowUp onto the last, the arrows wrap, Home and End jump, a letter
+// jumps, Escape closes and refocuses the button, and Tab closes it and moves on.
 export default function ExportMenu({ items, label = 'Copy or save', icon = 'copy', variant = 'accent' }) {
   const [open, setOpen] = useState(false)
-  const phone = useMediaQuery(PHONE)
-  const menuId = useId().replace(/:/g, '')
-  const startAt = useRef('first')
-  const close = useCallback(() => setOpen(false), [])
-  const { triggerRef, popRef, closeToTrigger } = usePopover(open, close, { initialFocus: ROWS })
+  const [trigger, setTrigger] = useState(null)
+  const [how, setHow] = useState({ keyboard: false, at: 'first' })
+  const close = () => setOpen(false)
 
-  const rows = () => Array.from(popRef.current?.querySelectorAll(ROWS) || [])
-
-  // usePopover focuses the first row; ArrowUp asks for the last one instead.
-  useEffect(() => {
-    if (!open) return
-    const wantsLast = startAt.current === 'last'
-    startAt.current = 'first'
-    if (wantsLast) requestAnimationFrame(() => rows().at(-1)?.focus())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  const rows = useMemo(() => items.map((item) => ({
+    id: item.id,
+    label: item.label,
+    hint: item.hint,
+    disabled: item.disabled,
+    icon: item.icon ? <ToolIcon name={item.icon} size={16} /> : null,
+    attrs: { 'data-export-item': item.id },
+    onSelect: item.onSelect,
+  })), [items])
 
   const onTriggerKey = (e) => {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    const at = menuOpenKey(e)
+    if (!at) return
     e.preventDefault()
-    if (open) {
-      const list = rows()
-      list[e.key === 'ArrowUp' ? list.length - 1 : 0]?.focus()
-      return
-    }
-    startAt.current = e.key === 'ArrowUp' ? 'last' : 'first'
+    if (open) return
+    setHow({ keyboard: true, at })
     setOpen(true)
   }
-
-  const onMenuKey = (e) => {
-    if (e.key === 'Tab') {
-      // The sheet is portalled to <body>, so the browser's next stop would be
-      // far from the button: hand focus back to it instead.
-      if (phone) { e.preventDefault(); triggerRef.current?.focus() }
-      setOpen(false)
-      return
-    }
-    const list = rows()
-    const next = popoverArrowTarget(e.key, list.indexOf(document.activeElement), list.length)
-    if (next < 0) return
-    e.preventDefault()
-    list[next].focus()
-  }
-
-  const choose = (item) => {
-    if (item.disabled) return
-    closeToTrigger()
-    item.onSelect?.()
-  }
-
-  const menu = (
-    <div id={menuId} role="menu" aria-label={label} className="tl-menu-list tl-export-rows" onKeyDown={onMenuKey}>
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="menuitem"
-          tabIndex={-1}
-          className="tl-menu-row"
-          data-export-item={item.id}
-          aria-disabled={item.disabled ? true : undefined}
-          aria-describedby={item.hint ? `${menuId}-${item.id}-hint` : undefined}
-          onClick={() => choose(item)}
-        >
-          {item.icon && <ToolIcon name={item.icon} size={16} />}
-          <span className="tl-menu-row-label">{item.label}</span>
-          {item.hint && <span id={`${menuId}-${item.id}-hint`} className="tl-menu-row-hint" aria-hidden="true">{item.hint}</span>}
-        </button>
-      ))}
-    </div>
-  )
-
-  const panel = open && (phone
-    ? createPortal(
-      <div className="tl-sheet-layer">
-        <div className="tl-sheet-scrim" aria-hidden="true" onClick={close} />
-        <div ref={popRef} className="tl-sheet" role="dialog" aria-label={label} tabIndex={-1}>
-          <span className="tl-sheet-grab" aria-hidden="true" />
-          <div className="tl-sheet-head">
-            <span className="tl-sheet-title">{label}</span>
-            <button type="button" className="tl-sheet-x" onClick={closeToTrigger} aria-label="Close">
-              <ToolIcon name="x" size={16} />
-            </button>
-          </div>
-          {menu}
-        </div>
-      </div>,
-      document.body,
-    )
-    : <div ref={popRef} className="tl-pop tl-export-pop">{menu}</div>)
 
   return (
     <div className="tl-export">
       <button
-        ref={triggerRef}
+        ref={setTrigger}
         type="button"
         className={`tl-btn tl-btn--${variant} tl-export-btn`}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => { startAt.current = 'first'; setOpen((v) => !v) }}
+        onClick={(e) => { setHow({ keyboard: e.detail === 0, at: 'first' }); setOpen((v) => !v) }}
         onKeyDown={onTriggerKey}
       >
         <ToolIcon name={icon} size={14} className="tl-btn-ico" />
         <span className="tl-btn-label">{label}</span>
         <ToolIcon name="caret-down" size={12} className="tl-btn-ico tl-export-caret" />
       </button>
-      {panel}
+      <Menu open={open} onClose={close} anchor={trigger} label={label} items={rows} viaKeyboard={how.keyboard} startAt={how.at} className="tl-export-pop" />
     </div>
   )
 }
