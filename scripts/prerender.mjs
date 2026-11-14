@@ -133,6 +133,13 @@ export function rewriteHead(html, { title, description, robots, canonical, card,
     `<meta property="og:description" content="${attr(description)}" />`)
   sub('og:url', /<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/,
     `<meta property="og:url" content="${attr(canonical)}" />`)
+  // The site is written in Australian English and index.html says lang="en-AU",
+  // but the shell names no og:locale, so unfurlers assume en_US. Inserted after
+  // og:site_name, and skipped if the shell ever starts carrying one itself.
+  if (!/property="og:locale"/.test(html)) {
+    sub('og:locale', /(<meta\s+property="og:site_name"\s+content="[^"]*"\s*\/?>)/,
+      '$1\n<meta property="og:locale" content="en_AU" />')
+  }
   sub('twitter:title', /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/,
     `<meta name="twitter:title" content="${attr(title)}" />`)
   sub('twitter:description', /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/,
