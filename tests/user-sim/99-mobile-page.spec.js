@@ -151,12 +151,12 @@ test.describe('the nav reaches /mobile and says where you are', () => {
     const { ctx, page } = await ctxAt(browser, 390)
     watch(page, PERSONA)
     await go(page, '/')
-    // Up to 767px the quiet links are the menu's first three items.
+    // Up to 767px the quiet links are the menu's first three items, then Help.
     await expect(page.locator('.spnav-quiet')).toBeHidden()
     await page.locator('.spnav-burger').click()
     const menu = page.locator('.spnav-menu')
     await expect(menu).toHaveAttribute('data-menu', 'in')
-    await expect(menu.locator('.spnav-rail > a.spnav-mi')).toHaveText(['Tools', 'Plans', 'On mobile'])
+    await expect(menu.locator('.spnav-rail > a.spnav-mi')).toHaveText(['Tools', 'Plans', 'On mobile', 'Help'])
     await expect(menu.getByText('Open the toolkit'), 'the menu carries a call to action again').toHaveCount(0)
     await menu.locator('.spnav-mi', { hasText: 'On mobile' }).click()
     await expect(page).toHaveURL(/\/mobile$/)

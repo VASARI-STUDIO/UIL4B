@@ -320,9 +320,12 @@ html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost, .hm-close-i
 html[data-reduced-motion="true"] :is(.hm-close-cta, .hm-close-ghost):active { transform: none; }
 
 /* /plans and /mobile drop the "This page" column, so the headline line has
-   four columns instead of five, four across on a tablet. */
-.sp-footer--home.sp-footer--no-page .sp-footer-grid {
-  grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr));
+   four columns instead of five, four across on a tablet. Phones keep the
+   single-column stack above. */
+@media (min-width: 1024px) {
+  .sp-footer--home.sp-footer--no-page .sp-footer-grid {
+    grid-template-columns: 1.6fr repeat(4, minmax(0, 1fr));
+  }
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   .sp-footer--home.sp-footer--no-page .sp-footer-grid {
