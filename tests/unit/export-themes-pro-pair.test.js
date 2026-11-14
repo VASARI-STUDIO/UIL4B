@@ -1,4 +1,4 @@
-// The Pro themes ported from the engine (24 Standards, 32 Dieline, then 21 Presentation, 22 Ticket, 26 Notebook, 28 Riso: the keys of PAIR
+// The Pro themes ported from the engine (24 Standards, 32 Dieline, then 21 Presentation, 22 Ticket, 28 Riso: the keys of PAIR
 // below), drawn through renderThemeExport.
 //
 // What is pinned here, and the change that makes each fail:
@@ -23,7 +23,7 @@ import { BRANDS } from '../../api/_lib/exportThemes/brands/index.js'
 // Theme id -> the sample brand its meta.brand names.
 const PAIR = {
   '24-standards': 'two-shores', '32-dieline': 'kerbside', '21-presentation': 'kerbside',
-  '22-ticket': 'encore', '26-notebook': 'offcut', '28-riso': 'long-room',
+  '22-ticket': 'encore', '28-riso': 'long-room',
 }
 const DESIGN = {
   palette: { base: '#2F6F5E', harmony: 'auto', colors: ['#2F6F5E', '#F2C14E', '#8FB8A8', '#F4F1EA', '#1D2B27'] },

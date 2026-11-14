@@ -25,7 +25,6 @@ const SAMPLE = Object.freeze({
   '21-presentation': ['Kerbside', '16:9'],
   '22-ticket': ['Encore', '16:9'],
   '24-standards': ['Two Shores', 'A4 landscape'],
-  '26-notebook': ['Offcut', 'A4 landscape'],
   '28-riso': ['Long Room', 'A4'],
   '25-label': ['Margin', '5:4'],
   '27-swissfield': ['Northern Current', '16:9'],

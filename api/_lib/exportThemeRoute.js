@@ -40,7 +40,6 @@ const THEMES = Object.freeze({
   '22-ticket': () => import('./exportThemes/themes/22-ticket/index.js'),
   '24-standards': () => import('./exportThemes/themes/24-standards/index.js'),
   '25-label': () => import('./exportThemes/themes/25-label/index.js'),
-  '26-notebook': () => import('./exportThemes/themes/26-notebook/index.js'),
   '27-swissfield': () => import('./exportThemes/themes/27-swissfield/index.js'),
   '28-riso': () => import('./exportThemes/themes/28-riso/index.js'),
   '29-blueprint': () => import('./exportThemes/themes/29-blueprint/index.js'),
