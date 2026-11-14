@@ -51,16 +51,16 @@ export const guidelines = {
     while (size > 40 && ink.w > 400) { size -= 2; ink = inkWidth(ctx, 'display', 'Aa', size, tr); }
     const aa = `<div class="a disp" style="left:${px(72 - ink.x1)};top:${px(lineTop(ctx, 'display', size, size, 452))};font-size:${size}px;line-height:${size}px;letter-spacing:${tr}em;color:${R.fieldInk};white-space:nowrap">Aa</div>`;
     const axes = F.display.axes ? `, ${F.display.axes.replace(/^wdth/, 'width')}` : '';
-    const useOf = (face) => (scale.find((s) => s.face === face) || {}).use || '';
+    const usedFor = (face) => (scale.find((s) => s.face === face) || {}).use || '';
     const monoRule = (B.type.rules || []).find((r) => /mono/i.test(r.do));
     const monoLine = monoRule ? `Weight ${F.mono.weights[0]}. ${(s => s[0].toUpperCase() + s.slice(1))(monoRule.do.replace(/^Use the mono face /i, ''))}` : `Weight ${F.mono.weights[0]}. Literal values only.`;
     const wordsX = F.body.weights.map((w) => `<span style="font-weight:${w}">${weightName(w)}</span>`).join('');
     // the two family names are equals: both 36 px, the display face at its one weight and the body face at its heaviest
     const bodyHeavy = Math.max(...F.body.weights);
     const right = el(516, 72, 'disp ink nw', A(F.display.family), `font-size:36px;line-height:40px;letter-spacing:${tr}em;color:${R.fieldInk}`, 420)
-      + el(516, 120, 'c13 ink', `Weight${F.display.weights.length > 1 ? 's' : ''} ${F.display.weights.join(', ')}${axes}<br>${A(useOf('display'))}`, '', 420)
+      + el(516, 120, 'c13 ink', `Weight${F.display.weights.length > 1 ? 's' : ''} ${F.display.weights.join(', ')}${axes}<br>${A(usedFor('display'))}`, '', 420)
       + el(516, 196, 'ink nw', A(F.body.family), `font:${bodyHeavy} 36px/40px var(--body);letter-spacing:-0.01em;color:${R.fieldInk}`, 420)
-      + el(516, 244, 'c13 ink', `Weights ${listAnd(F.body.weights)}<br>${A(useOf('body'))}`, '', 420)
+      + el(516, 244, 'c13 ink', `Weights ${listAnd(F.body.weights)}<br>${A(usedFor('body'))}`, '', 420)
       + el(516, 296, 'c20 ink', wordsX, `display:flex;gap:24px;color:${R.fieldInk}`, 420)
       + el(516, 388, 'ink nw', A(F.mono.family), `font:${F.mono.weights[0]} 20px/28px var(--mono);color:${R.fieldInk}`, 420)
       + el(516, 420, 'c12 ink', A(monoLine), '', 420);

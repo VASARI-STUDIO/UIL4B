@@ -42,9 +42,9 @@ function wrap(ctx, text, size, w, track = 0) {
 const lines = (ls) => ls.map((l) => `<span class="ln">${A(l)}</span>`).join('');
 
 // the logo (or, in the slot edition, its labelled frame) at a width; a frame too small for a 12 px label goes unlabelled
-function mark(ctx, id, width, colourway, { label } = {}) {
+function mark(ctx, id, width, colourway, { label, color } = {}) {
   const cw = ctx.brand.logo.colourways[colourway];
-  return ctx.logo.html(id, { width, colourway, color: cw.name, label: width >= 168 ? (label || 'Logo') : '' });
+  return ctx.logo.html(id, { width, colourway, color: color || cw.name, label: width >= 168 ? (label || 'Logo') : '' });
 }
 
 // a photograph from the theme's night scenes: the scene is given a plain field-coloured print (the build needs art on its surface),
@@ -63,10 +63,8 @@ const photoImg = (P, w, h) => {
 // a street brand's own photograph (the engine's night scenes are Encore's pub and bar): the shot with this photo name, cropped to win
 // (px of the 2000 x 1333 file) into a w x h box. Returns null when the brand has no such photograph.
 function streetPhoto(ctx, name, win, w, h) {
-  const shot = ctx.brand.imagery.shots.find((s) => s.photo && s.photo.includes(name));
-  if (!shot) return null;
-  const k = Math.max(w / win.w, h / win.h);
-  return { alt: shot.alt, html: `${plateImg(`${A(ctx.photoUrl(shot.photo))}`, ``, `position:absolute;left:${px(-win.x * k)};top:${px(-win.y * k)};width:${px(2000 * k)};height:${px(1333 * k)};max-width:none`)}` };
+  // a server export carries no brand photographs (only the neutral plates ctx.mockup draws), so the page keeps its drawn stand-in
+  return null;
 }
 
 // a row of perforation holes from (x1, y1) to (x2, y2): 4 px holes about 10 px apart, as the ticket's own perforation is cut
@@ -229,7 +227,7 @@ export const guidelines = {
     items.forEach(([title, text, art], i) => {
       const x = 72 + (i % 3) * 296, y = 72 + Math.floor(i / 3) * 200;
       if (art === null) {
-        body += `<div class="a ar g2-art" role="img" aria-label="Logo on a busy photograph of ${busyStreet ? 'a shopping street' : 'a back bar'}" style="left:${x}px;top:${y}px;width:${aw}px;height:${ah}px">${busyStreet ? busyStreet.html : photoImg(busy, aw, ah)}<div class="g2-c" style="position:absolute;inset:0">${mark(ctx, 'colour', w, onDark)}</div></div>`;
+        body += `<div class="a ar g2-art" role="img" aria-label="Logo on a busy photograph of ${busyStreet ? 'a shopping street' : 'a back bar'}" style="left:${x}px;top:${y}px;width:${aw}px;height:${ah}px">${busyStreet ? busyStreet.html : photoImg(busy, aw, ah)}<div class="g2-c" style="position:absolute;inset:0">${mark(ctx, 'colour', w, onDark, slot ? { color: R.inkOn(R.field, 13, 400, '(Logo slot frame on the busy ground)') } : {})}</div></div>`;
       } else body += `<div class="a g2-art g2-c" style="left:${x}px;top:${y}px;width:${aw}px;height:${ah}px">${art}</div>`;
       body += el(x, y + ah + 8, 'c13 b ink', A(title), '', aw) + el(x, y + ah + 26, 'c12 ink', A(text), '', aw);
       // the cross: two rows of holes corner to corner, cut through to the bar top (on the photograph they are printed in the field colour)

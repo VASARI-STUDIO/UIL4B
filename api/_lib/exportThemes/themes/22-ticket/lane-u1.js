@@ -102,6 +102,8 @@ export function css(ctx) {
 .pg .u1-li .num{flex:none}
 .pg .u1-stairs{position:absolute;display:flex;align-items:flex-end;gap:20px}
 .pg .u1-step{display:flex;flex-direction:column;gap:12px;flex:none}
+/* the display face runs wide: in a 184 px card the title takes a smaller step so its longest word stays inside */
+.pg .u1-step .ui-card__title,.pg .u2-col .ui-card__title{font-size:19px;line-height:24px}
 .pg .ph-tight .ui-card__title .ph-c{font-size:min(1em,15px);white-space:normal!important;overflow-wrap:anywhere}
 .pg .u1-step .u1-cap{display:flex;flex-direction:column;gap:2px;font:400 12px/16px var(--ff-body);color:var(--quiet)}
 .pg .u1-step .u1-cap b{font:600 13px/18px var(--ff-body);color:var(--text)}

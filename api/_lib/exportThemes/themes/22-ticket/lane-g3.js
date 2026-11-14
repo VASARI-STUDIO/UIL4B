@@ -229,8 +229,8 @@ export const guidelines = {
     // the sample for each step: real lines from the brand, the first that fits the column at the step's true size
     const cands = {
       display: [(c.eta.match(/\d{1,2}:\d{2}/) || [])[0], c.time, ...prim],
-      headline: [...prim, ...head, ...B.lines.others],
-      title: [B.lines.others[0], ...B.lines.others, ...prim],
+      headline: [...prim, ...head, ...B.lines.others, B.name],
+      title: [B.lines.others[0], ...B.lines.others, ...prim, B.name],
       body: [...sentences(B.type.sample.paragraph), c.pickup],
       label: [c.form && c.form.book, c.call, c.share],
       caption: [B.type.sample.caption, c.deliverTo],

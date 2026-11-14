@@ -118,7 +118,9 @@ export function fitLines(ctx, text, { w, max, min, maxLines, track = trackOf(ctx
     }
     return lines;
   };
-  for (let size = max; size >= min; size -= step) { const lines = wrap(size); if (lines.length <= maxLines) return { size, lines }; }
+  // a size holds only when no single word is wider than the box: the wide display faces run past it on one long word
+  const holds = (size, lines) => lines.length <= maxLines && lines.every((l) => textWidth(ctx, role, l, size, track) <= w);
+  for (let size = max; size >= min; size -= step) { const lines = wrap(size); if (holds(size, lines)) return { size, lines }; }
   return { size: min, lines: wrap(min) };
 }
 // the fitted lines as a block: each line is its own nowrap block, so the line count laid out is the count that renders

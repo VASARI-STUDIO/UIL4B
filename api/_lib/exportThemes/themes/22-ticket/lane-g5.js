@@ -81,7 +81,7 @@ function cardFront(ctx, R) {
 // the back: the same perforation, seen from behind (so on the left), and the person on the body, on the paper colour
 function cardBack(ctx, R) {
   const B = ctx.brand, c = B.applications.card, C = CARD, x0 = C.w - C.perf + C.pad, bw = C.w - x0 - C.pad, ink = R.onPaper().fieldInk;
-  const name = fitBlock(ctx, c.person, { x: x0, y: C.pad, w: bw, max: 44, min: 26, maxLines: 2, color: ink });
+  const name = fitBlock(ctx, c.person, { x: x0, y: C.pad, w: bw, max: 44, min: 14, maxLines: 2, color: ink });
   const contact = [c.contact, B.applications.site.url];
   contact.forEach((s) => { if (bodyW(ctx, s, 17) > bw) throw new Error(`ticket g5: "${s}" is wider than the card`); });
   const inner = name.html

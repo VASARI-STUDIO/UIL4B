@@ -49,10 +49,8 @@ const cropMarks = (R, w, h, c = R.quiet) => {
 // a frame on the field. opts.text: write the shot's title and brief inside the panel (slots only); opts.wash: lay a flat colour over it (the don't)
 function frame(ctx, R, shot, n, { x, y, w, h, text = true, wash = null, measure = 360, pos = '50% 50%' }) {
   const p = partsOf(shot), plate = hasPlate(ctx, shot);
-  let inner = '', brief = false;
-  // the slot edition keeps the brand's photograph but not its words: the description becomes the placeholder's label
-  if (shot.photo && isSlot(ctx)) inner = `${plateImg(`${A(ctx.photoUrl(shot.photo))}`, `${A(shot.alt)}`, `object-fit:cover;object-position:${pos};display:block;width:100%;height:100%`)}`;
-  else if (shot.photo) inner = ctx.photo(shot.id, { style: 'width:100%;height:100%', pos });
+  let inner, brief = false;
+  if (shot.photo) inner = ctx.photo(shot.id, { style: 'width:100%;height:100%', pos });
   // a brief with no photograph yet shows a stand-in plate (plates.js), not an empty frame
   else if (plate) inner = plateWindow(ctx, R, shot, w, h);
   else if (!text && !isSlot(ctx)) {

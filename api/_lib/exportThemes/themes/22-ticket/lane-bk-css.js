@@ -237,7 +237,7 @@ ul.tb-for-light{display:grid}[data-theme="dark"] ul.tb-for-dark{display:grid}
 .tb-grid__page{border:1px solid currentColor}
 .tb-grid__cols{display:grid;height:100%}
 .tb-grid__cols i{border-left:1px solid currentColor;border-right:1px solid currentColor}
-.tb-grid__big{font-size:min(200px,22cqw);line-height:.85}
+.tb-grid__big{font-size:min(112px,12cqw);line-height:.85}
 .tb-grid__w{font-size:15px;line-height:22px;font-weight:600}
 .tb-meas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--hair)}
 .tb-meas div{padding:16px 24px 0 0}
@@ -315,6 +315,8 @@ ul.tb-for-light{display:grid}[data-theme="dark"] ul.tb-for-dark{display:grid}
 .tb-tk__body{padding:24px;min-height:300px}
 .tb-tk--s .tb-tk__body,.tb-tk--zip .tb-tk__body{min-height:0}
 .tb-tk__stub,.tb-tk--s .tb-tk__stub,.tb-tk--zip .tb-tk__stub{padding:32px 24px 24px;display:grid;grid-template-columns:1fr auto;gap:8px 16px}
+.tb-serial{font-size:32px;line-height:32px}
+.tb-bc{max-width:100%;height:auto}
 .tb-tk__stub::before,.tb-tk--s .tb-tk__stub::before{left:28px;right:28px;top:-2px;bottom:auto;width:auto;height:4px;-webkit-mask:${hole(false)} repeat-x 0 0/10px 4px;mask:${hole(false)} repeat-x 0 0/10px 4px}
 .tb-notch--a{left:-16px;top:-16px}.tb-notch--b{left:auto;right:-16px;top:-16px;bottom:auto}
 .tb-stub__sec{margin:0;grid-column:1}
@@ -327,7 +329,7 @@ ul.tb-for-light{display:grid}[data-theme="dark"] ul.tb-for-dark{display:grid}
 .tb-main,.tb-side,.tb-full{grid-column:1;padding:0}
 .tb-pair,.tb-take{grid-template-columns:1fr;gap:32px}
 .tb-lead{font-size:20px;line-height:28px}
-.tb-order li,.tb-wtn li,.tb-rules li,.tb-scale li,.tb-group,.tb-piece{grid-template-columns:1fr;gap:8px}
+.tb-order li,.tb-wtn li,.tb-rules li,.tb-scale li,.tb-group,.tb-piece{grid-template-columns:minmax(0,1fr);gap:8px}
 .tb-order__k,.tb-lines li,.tb-col__n,.tb-group__n{font-size:32px;line-height:36px}
 .tb-pair__r{font-size:min(32px,17cqw);line-height:36px}
 .tb-set li{grid-template-columns:1fr;gap:4px}
@@ -344,11 +346,12 @@ ul.tb-for-light{display:grid}[data-theme="dark"] ul.tb-for-dark{display:grid}
 .tb-type{grid-template-columns:1fr}
 .tb-aa{font-size:min(120px,calc(100cqw / ${aaK}))}
 .tb-chars{font-size:24px;line-height:32px}
+.tb-scale__s{font-size:min(calc(var(--size)*1px),16vw);overflow-wrap:anywhere}
 .tb-inuse__h{font-size:40px;line-height:40px}
 .tb-shots{grid-template-columns:1fr}
 .tb-shot--lead .tb-ph{aspect-ratio:3/2}
 .tb-grid{grid-template-columns:1fr;gap:24px}
-.tb-grid__big{font-size:96px}
+.tb-grid__big{font-size:56px}
 .tb-meas{grid-template-columns:1fr 1fr;row-gap:16px}
 .tb-meas dd{font-size:40px;line-height:44px}
 .tb-tk--apps .tb-tk__body{min-height:0}
