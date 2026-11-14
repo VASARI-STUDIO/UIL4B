@@ -174,6 +174,13 @@ for (const vp of VIEWPORTS) {
       await expect(stops(page).nth(2).locator('.ck-sen')).toHaveText(`Nothing more to pay for 12 months. Then ${YEARLY} again, every year until you cancel.`)
       await expect(page.locator('.ck-bill .ck-other').first()).toHaveText(`Monthly is ${MONTHLY} a month, with no free trial.`)
 
+      // The Terms line sits with the payment form, which a build with no Stripe
+      // publishable key never shows. The bill above is checked either way.
+      await expect(nokey(page).or(page.locator('.checkout-terms'))).toBeVisible()
+      if (await nokey(page).isVisible()) {
+        test.info().annotations.push({ type: 'skip-part', description: 'this build carries no Stripe publishable key, so the Terms line never shows' })
+        return
+      }
       const terms = page.getByRole('link', { name: 'Terms' })
       await expect(terms).toHaveAttribute('href', '/terms')
       await expect(terms).toHaveAttribute('target', '_blank')
