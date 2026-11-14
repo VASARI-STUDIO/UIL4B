@@ -81,7 +81,9 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
   const [gate] = useState(() => gateProp || inferGate(reason, passwordOnly))
   const [step, setStep] = useState(1)
 
-  useEffect(() => { loadingRef.current = loading }, [loading])
+  // The ref is set with the state, not after the next render, so Escape is
+  // answered as soon as the form says the request is over.
+  const changeLoading = useCallback((next) => { loadingRef.current = next; setLoading(next) }, [])
   useEffect(() => { dismissRef.current = onDismiss }, [onDismiss])
 
   // Closing is refused while an auth call is in flight. A popup dismissed
@@ -143,7 +145,7 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
             reasons={reasons}
             unlocks={unlocks}
             free={free}
-            onBusyChange={setLoading}
+            onBusyChange={changeLoading}
           />
           {/* The way out, stated as plainly as the way in. Resolves the
               caller's promise with null, exactly like Close. */}
