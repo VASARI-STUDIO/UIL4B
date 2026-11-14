@@ -88,7 +88,6 @@ export function OtherProjects({ others, room, onNew, busy = false }) {
                 className="db-input"
                 type="search"
                 aria-label="Find a project"
-                placeholder="Project name"
                 autoComplete="off"
                 spellCheck="false"
                 value={q}

@@ -18,8 +18,9 @@
 // them back out of src/styles/global.css and fails if either theme's --bg-0
 // moves. The check is the reason the constants are allowed to exist.
 //
-// The seed is the Colour Studio's own default base colour, so the ramp a reader
-// sees here is the ramp the product hands them from a standing start.
+// The seed is the colour the Tint tool opens on in a new project. The Tint tool
+// draws its own OKLCH-based ramp, so its swatches will not match this table
+// digit for digit; the article says so.
 
 import { useMemo } from 'react'
 import { contrastRatio, generateTintScale, T_LABELS } from '../utils/colors'
@@ -101,9 +102,10 @@ export default function BrandRampTable() {
         </table>
       </div>
       <figcaption className="lart-table-cap">
-        <code>generateTintScale()</code> on <code>{SEED}</code> at the Colour Studio&rsquo;s own
-        defaults, then <code>contrastRatio()</code> against each theme&rsquo;s{' '}
-        <code>--bg-0</code>. The last column is derived from the two ratios beside it: 4.5:1 for
+        <code>generateTintScale()</code> on <code>{SEED}</code>, measured against{' '}
+        <code>#EFEEE9</code> (the light background this guide was measured on) and{' '}
+        <code>#060607</code> (the dark theme&rsquo;s <code>--bg-0</code>), at the Tint tool&rsquo;s
+        defaults for a new project. The last column is derived from the two ratios beside it: 4.5:1 for
         text (SC 1.4.3), 3:1 for a border or an icon that identifies a control (SC 1.4.11).
       </figcaption>
     </figure>
