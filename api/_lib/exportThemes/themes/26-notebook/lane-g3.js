@@ -160,6 +160,9 @@ export const guidelines = {
     const cols = [...ctx.colours].sort((a, b) => (a.role === 'ground') - (b.role === 'ground') || b.share - a.share);
     const steps = Object.keys(cols[0].ramp).sort((a, b) => a - b), S = 2 * U, X = 137;
     if (X + S * steps.length > 517) throw new Error(`colour-values: ${steps.length} ramp steps do not fit`);
+    // seven rows a colour when the page has room, fewer when the brand has many colours (a project brand has six); a colour needs five rows, six with a CMYK line
+    const need = cols.some((c) => ctx.C.cmykOf(c)) ? 6 : 5, pitch = cols.length > 1 ? Math.min(7, Math.floor(28 / (cols.length - 1))) : 7;
+    if (pitch < need) throw new Error(`colour-values: ${cols.length} colours do not fit`);
     let rc = steps.map((s, k) => block(T['c-mono'], { x: X + S * k, w: S, baseline: row(5), lines: [s], cls: 'c-mono', align: 'center' }).html).join('');
     let j = 8;
     for (const c of cols) {
@@ -176,9 +179,9 @@ export const guidelines = {
         if (x + advance(T['c-mono'].stem, 11, v) > 517) throw new Error(`colour-values: ${v} runs past the margin`);
         rc += block(T['c-mono'], { x, w: 517 - x, lines: [v], baseline: row(j + 2), cls: 'c-mono g3-val' }).html;
       }
-      j += 7;
+      j += pitch;
     }
-    if (row(j - 5) > 739) throw new Error(`colour-values: the ramps run to ${row(j - 5)}`);
+    if (row(j - pitch + 2) > 739) throw new Error(`colour-values: the ramps run to ${row(j - 5)}`);
 
     // verso: the title, the print note, then the text tones hung from the foot of the leaf
     let vc = pageTitle(T, ctx, 'colour-values');
