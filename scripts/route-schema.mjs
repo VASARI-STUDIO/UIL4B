@@ -182,7 +182,7 @@ export function articleFor(pathname, origin) {
     description: article.description,
     dateModified: article.updated,
     image: cardUrl(origin, cardFor(route)),
-    inLanguage: 'en',
+    inLanguage: 'en-AU',
     mainEntityOfPage: { '@type': 'WebPage', '@id': `${origin}${route}` },
     author: PUBLISHER,
     publisher: PUBLISHER,
