@@ -621,7 +621,7 @@ test.describe('settings: Language is rows on a phone, tiles on a desktop', () =>
     watch(page, 'a person choosing a language on a phone')
     await openLanguage(page, 390)
     const rows = await tiles(page)
-    expect(rows.length, 'POSITIVE CONTROL: the language list is there').toBeGreaterThanOrEqual(8)
+    expect(rows.length, 'POSITIVE CONTROL: the two English rows are there').toBe(2)
     rows.forEach((row, i) => {
       expect(row.sides, `row ${i} has a bordered edge`).toEqual([0, 0, 0])
       expect(row.foot, `row ${i} has a border under it`).toBe(0)
@@ -648,8 +648,7 @@ test.describe('settings: Language is rows on a phone, tiles on a desktop', () =>
     expect(grid[0].sides, 'the 1440 tiles gained a border').toEqual([0, 0, 0])
     expect(grid[0].radius, 'the 1440 tiles lost their corners').toBeGreaterThan(0)
     expect(grid[0].lines, 'the English (AU) tile prints its name twice').toEqual(['English (AU)'])
-    const koreanLines = grid.map((t) => t.lines).find((l) => l.includes('한국어'))
-    expect(koreanLines, 'a tile with a different native name lost its second line').toEqual(['한국어', 'Korean'])
+    expect(grid.map((t) => t.lines), 'launch offers English (AU) and English (US) only').toEqual([['English (AU)'], ['English (US)']])
     const lefts = new Set(grid.map((t) => Math.round(t.left)))
     expect(lefts.size, 'the tiles are not in two columns').toBe(2)
   })
