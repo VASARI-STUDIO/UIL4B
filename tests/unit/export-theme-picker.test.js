@@ -4,14 +4,20 @@ import { UI_KIT_PAGES, GUIDELINES_PAGES, GUIDELINES_ONLY_PAGES, PICKER_THEMES, d
 import { requestThemeExport, isPrintSafe, zipNameFrom, ERROR_LINES } from '../../src/utils/exportThemeRequest.js'
 import { UIKIT_PAGES, GUIDE_PAGES } from '../../api/_lib/exportThemes/engine/pages.js'
 import { PRINT_CSP } from '../../api/_lib/exportThemeRoute.js'
+import { EXPORT_THEMES } from '../../src/data/exportThemes.js'
+
+// Counted from the theme table, so adding a theme doesn't mean editing a number here. A theme with a rows list is guidelines only.
+const ALL = EXPORT_THEMES.length
+const EVERY_ROW = EXPORT_THEMES.filter((t) => !t.rows).length
 
 test('the page counts the picker states are the engine\'s page lists', () => {
   assert.equal(UI_KIT_PAGES, UIKIT_PAGES.length)
   assert.equal(GUIDELINES_PAGES, GUIDE_PAGES.length)
 })
 
-test('the picker lists twelve themes, and the UI kit is free in Standards only', () => {
-  assert.equal(PICKER_THEMES.length, 12)
+test('the picker lists every theme in the table, and the UI kit is free in Standards only', () => {
+  assert.equal(PICKER_THEMES.length, ALL)
+  assert.ok(ALL > EVERY_ROW && EVERY_ROW > 0)
   assert.deepEqual(PICKER_THEMES.filter((t) => t.free).map((t) => t.id), ['04-standards'])
   assert.equal(defaultThemeId(false), '04-standards')
   assert.equal(defaultThemeId(true), '01-presentation')
@@ -20,11 +26,11 @@ test('the picker lists twelve themes, and the UI kit is free in Standards only',
 test('a file lists only the themes that have its row; Label and Swiss Field are guidelines only', () => {
   const ids = (file) => pickerThemesFor(file).map((t) => t.id)
   for (const file of ['kit', 'book', 'book-html']) {
-    assert.equal(ids(file).length, 10, file)
+    assert.equal(ids(file).length, EVERY_ROW, file)
     assert.ok(!ids(file).includes('25-label') && !ids(file).includes('27-swissfield'), file)
   }
   for (const file of ['guidelines', 'guidelines-html']) {
-    assert.equal(ids(file).length, 12, file)
+    assert.equal(ids(file).length, ALL, file)
     assert.ok(ids(file).includes('25-label') && ids(file).includes('27-swissfield'), file)
   }
   assert.equal(themeFitsFile('25-label', 'kit'), false)
