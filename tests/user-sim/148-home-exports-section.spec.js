@@ -638,16 +638,11 @@ test('Tab walks card 1, 2 and 3 in order, each stop shows a 2px focus ring, and 
 
 // ── reduced motion ─────────────────────────────────────────────────────────────
 
-for (const [reducedMotion, runs] of [['reduce', false], ['no-preference', true]]) {
-  test(`card 2 file swap ${runs ? 'animates' : 'does not animate'} with motion ${reducedMotion}`, async ({ browser }) => {
+for (const reducedMotion of ['reduce', 'no-preference']) {
+  test(`card 2 file swap brings the picked picture forward without scaling or dimming the rest, motion ${reducedMotion}`, async ({ browser }) => {
     const { ctx, page } = await open(browser, { reducedMotion })
     try {
       const objs = card(page, 1).locator('.hx-obj')
-      // Red if the reduced-motion rule is dropped from home-exports.css (the swap would run, or only the site backstop would remain).
-      const styles = await objs.evaluateAll((els) => els.map((el) => {
-        const s = getComputedStyle(el)
-        return { property: s.transitionProperty, duration: s.transitionDuration }
-      }))
       await page.evaluate(() => {
         window.__swapRuns = 0
         document.querySelector('#exports .hx-card[data-card="1"]').addEventListener('transitionrun', (e) => {
@@ -656,20 +651,24 @@ for (const [reducedMotion, runs] of [['reduce', false], ['no-preference', true]]
       })
       await docRows(page).nth(2).click()
       await expect(docRows(page).nth(2)).toHaveAttribute('aria-pressed', 'true')
-      const swapRuns = () => page.evaluate(() => window.__swapRuns)
-      if (runs) {
-        // The same click does animate when motion is allowed, so the detector can see a swap.
-        expect(styles.every((st) => st.property.includes('transform') && st.duration.split(',').some((v) => parseFloat(v) > 0.1))).toBe(true)
-        await expect.poll(swapRuns, { message: 'no .hx-obj transition ran after the row was picked' }).toBeGreaterThan(0)
-      } else {
-        await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-        const running = await swapRuns()
-        // Property none, not merely a near-zero duration: the site-wide backstop alone leaves a 1e-5s transition.
-        expect(styles.map((st) => st.property)).toEqual(Array(styles.length).fill('none'))
-        expect(running).toBe(0)
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+      const pile = await objs.evaluateAll((els) => els.map((el) => {
+        const s = getComputedStyle(el)
+        const m = s.transform === 'none' ? [1, 0] : s.transform.slice(s.transform.indexOf('(') + 1).split(',').map(parseFloat)
+        return { front: el.dataset.front, display: s.display, scale: Math.hypot(m[0], m[1]), filter: s.filter, opacity: s.opacity }
+      }))
+      const shown = pile.filter((o) => o.display !== 'none')
+      expect(shown.some((o) => o.front === 'true')).toBe(true)
+      // Red if a scale(.96), brightness or saturate comes back on the pictures behind the picked one.
+      for (const o of shown) {
+        expect(o.scale).toBeCloseTo(1, 3)
+        expect(o.filter).toBe('none')
+        expect(o.opacity).toBe('1')
       }
+      expect(await page.evaluate(() => window.__swapRuns)).toBe(0)
     } finally {
       await ctx.close()
     }
   })
 }
+
