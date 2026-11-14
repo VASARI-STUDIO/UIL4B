@@ -85,8 +85,6 @@ async function landed(page, id) {
   await restingScrollY(page, `the page after a jump to ${id}`)
 }
 
-const atBottom = (page) => page.evaluate(() => innerHeight + scrollY >= document.documentElement.scrollHeight - 2)
-
 for (const route of ROUTES) {
   test.describe(`${route} contents`, () => {
     // 767 is the last phone width; 768 is the first with the open list.
