@@ -165,7 +165,7 @@ test.describe('the tool rail at 1440', () => {
     await page.getByRole('radio', { name: 'Double speed' }).click()
     await expect(timeTab, 'Time holds an edit and has no mark').toHaveAttribute('data-edited', 'true')
     await expect(timeTab.locator('.fc-rail-mark')).toBeVisible()
-    await expect(timeTab, 'a screen reader is not told it is edited').toContainText('edited')
+    await expect(timeTab, 'a screen reader is not told it is edited').toHaveAccessibleName('Time, edited')
     await expect(turnTab, 'Turn was not touched but is marked').not.toHaveAttribute('data-edited', 'true')
 
     const undo = page.locator('.fc-editbar [data-edit="undo"]')
@@ -302,9 +302,11 @@ for (const width of [320, 360, 390]) {
       await expect(page.getByRole('dialog', { name: 'More tools' })).toHaveCount(0)
       await expect(page.getByRole('radiogroup', { name: 'Turn' })).toBeVisible()
       await expect(page.locator('.fc-rail-more')).toHaveAttribute('data-active', 'true')
+      await expect(page.locator('.fc-rail-more'), 'More does not say which group is open').toHaveAccessibleName('More, Turn open')
       await expect(page.getByRole('button', { name: 'Flip horizontal' })).toBeVisible()
       await page.getByRole('button', { name: 'Flip horizontal' }).tap()
       await expect(page.locator('.fc-rail-more'), 'More does not show the Turn edit').toHaveAttribute('data-edited', 'true')
+      await expect(page.locator('.fc-rail-more')).toHaveAccessibleName('More, Turn open, edited')
     })
 
     test('a picked group scrolls into view above the pinned row', async ({ page }) => {

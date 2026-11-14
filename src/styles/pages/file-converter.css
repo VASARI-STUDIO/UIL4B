@@ -1335,6 +1335,10 @@ html[data-reduced-motion="true"] .fc .fc-seg[data-slide]::before { transition: n
   }
   .fc .fc-rail--row .fc-rail-tab { flex-direction: row; gap: 8px; min-height: 48px; font-size: 13px; }
   .fc .fc-rail--row .fc-rail-mark { position: static; flex: none; }
+  /* The Convert bar is pinned to the foot of the screen here too, so a tab
+     reached by Tab and a picked group's panel both stop clear of it. */
+  .fc .fc-rail--row .fc-rail-tab,
+  .fc .fc-panel { scroll-margin-bottom: calc(var(--fc-bar-live, 0px) + 16px); }
 }
 
 /* Bar: phone. Pinned above the Convert bar; the app's tab bar sits under both. */

@@ -31,14 +31,14 @@ const ICONS = {
 }
 
 
+// The mark is drawn only; the button's name says it. Spoken text in a hidden
+// span gets a stray space before its comma ("Turn , edited") wherever the
+// label is laid out as a block.
 function Mark({ on }) {
-  return on ? (
-    <>
-      <span className="fc-rail-mark" aria-hidden="true" />
-      <span className="sr-only">, edited</span>
-    </>
-  ) : null
+  return on ? <span className="fc-rail-mark" aria-hidden="true" /> : null
 }
+
+const named = (label, edited) => (edited ? `${label}, edited` : label)
 
 // The sheet behind "More". Mounted only while open, so the modal hook's focus
 // trap, Escape and scroll lock are all tied to it being on screen. Focus goes
@@ -46,7 +46,10 @@ function Mark({ on }) {
 function MoreSheet({ groups, active, marks, onPick, onClose }) {
   const ref = useModalDialog(onClose)
   return (
-    <div className="fc-rail-scrim" onClick={onClose}>
+    // Pressing on the scrim would otherwise move focus to the page behind
+    // before the click closes the sheet, and the hook only hands focus back
+    // when it is still inside the sheet.
+    <div className="fc-rail-scrim" onMouseDown={e => e.preventDefault()} onClick={onClose}>
       <div
         ref={ref} className="fc-rail-sheet" role="dialog" aria-modal="true" aria-label="More tools" tabIndex={-1}
         onClick={e => e.stopPropagation()}
@@ -61,6 +64,7 @@ function MoreSheet({ groups, active, marks, onPick, onClose }) {
               <button
                 type="button" className="fc-rail-sheet-item" data-group={g.id}
                 aria-current={g.id === active ? 'true' : undefined}
+                aria-label={named(g.label, marks[g.id])}
                 onClick={() => onPick(g.id)}
               >
                 {ICONS[g.id]}
@@ -99,6 +103,12 @@ export default function ToolRail({ groups, active, onSelect, marks, layout = 'si
   const split = layout === 'bar' ? splitRail(groups) : { direct: groups, more: [] }
   const { direct, more } = split
   const inMore = more.some(g => g.id === active)
+  // No tab is selected while the open group is one behind More, so More's
+  // name carries which group that is.
+  const moreName = named(
+    inMore ? `More, ${more.find(g => g.id === active).label} open` : 'More',
+    more.some(g => marks[g.id]),
+  )
 
   // One Tab stop: the open group's button, or the first slot when the open
   // group is one of those behind "More".
@@ -131,6 +141,7 @@ export default function ToolRail({ groups, active, onSelect, marks, layout = 'si
               aria-controls={railPanelId(base, g.id)}
               tabIndex={g.id === stop ? 0 : -1}
               className="fc-rail-tab"
+              aria-label={named(g.label, marks[g.id])}
               data-group={g.id}
               data-edited={marks[g.id] ? 'true' : undefined}
               onClick={() => onSelect(g.id)}
@@ -149,6 +160,7 @@ export default function ToolRail({ groups, active, onSelect, marks, layout = 'si
             data-group="more"
             data-active={inMore ? 'true' : undefined}
             data-edited={more.some(g => marks[g.id]) ? 'true' : undefined}
+            aria-label={moreName}
             aria-haspopup="dialog"
             aria-expanded={sheet}
             onClick={() => setSheet(true)}

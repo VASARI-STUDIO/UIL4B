@@ -1322,10 +1322,12 @@ function VideoConvert({ toast }) {
     </div>
   )
   // On a phone the rail is pinned to the bottom and the panels sit higher up
-  // the page, so a picked group is brought into view above the rail.
+  // the page; on a tablet the panels sit under the rail and the Convert bar
+  // is pinned below them. Either way a picked group is brought into view
+  // clear of what is pinned (each panel's scroll-margin-bottom says how much).
   const selectGroup = (id) => {
     setGroup(id)
-    if (railLayout !== 'bar') return
+    if (railLayout === 'side') return
     // A pick from the More sheet lands while the sheet still holds the page
     // still, so the scroll waits a few frames for that hold to let go.
     let frames = 0
