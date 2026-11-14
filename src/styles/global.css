@@ -5178,9 +5178,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    it fails AA for normal-size text everywhere in the light theme. It is for
    fills, borders, icons, focus rings and LARGE display text only. (.auth-links
    button, the last failure here, is fixed in its own rule.) */
-/* The inline sign-in gate's two text buttons (AuthGate, rules in studio.css).
-   studio.css loads after this sheet at the same specificity, so the override
-   carries its parent: --accent-mid on the gate's --bg-1 is 5.55 / 8.48. */
 
 
 
