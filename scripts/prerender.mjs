@@ -92,7 +92,7 @@ const text = (s) => String(s)
  * no-op here would ship the homepage's metadata again while the build stayed
  * green, which is precisely the failure this script exists to end.
  */
-export function rewriteHead(html, { title, description, robots, canonical, card, schema = '', keepNoscript = false }) {
+export function rewriteHead(html, { title, shareTitle = title, description, robots, canonical, card, schema = '', keepNoscript = false }) {
   const misses = []
   const sub = (label, re, next) => {
     if (!re.test(html)) { misses.push(label); return }
@@ -128,7 +128,7 @@ export function rewriteHead(html, { title, description, robots, canonical, card,
       `<link rel="canonical" href="${attr(canonical)}" />`)
   }
   sub('og:title', /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/,
-    `<meta property="og:title" content="${attr(title)}" />`)
+    `<meta property="og:title" content="${attr(shareTitle)}" />`)
   sub('og:description', /<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/,
     `<meta property="og:description" content="${attr(description)}" />`)
   sub('og:url', /<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/,
@@ -141,7 +141,7 @@ export function rewriteHead(html, { title, description, robots, canonical, card,
       '$1\n<meta property="og:locale" content="en_AU" />')
   }
   sub('twitter:title', /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/,
-    `<meta name="twitter:title" content="${attr(title)}" />`)
+    `<meta name="twitter:title" content="${attr(shareTitle)}" />`)
   sub('twitter:description', /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/,
     `<meta name="twitter:description" content="${attr(description)}" />`)
 
@@ -334,11 +334,20 @@ async function main() {
   // place in a hierarchy, and drawing it a card would be dressing up a dead
   // end. It keeps the site card, which is the honest picture for "you are on
   // uil4b.com, but not on a page".
+  //
+  // The same file is the shell for the private client-only routes (/projects,
+  // /settings, /login, /onboarding, /checkout), so a link to one of those
+  // unfurls from this head. The <title> stays "Page not found" for a real 404
+  // (App.jsx sets the same string), but the share title is the bare brand,
+  // which is true for both, and og:url is the site root, not a /404 path that
+  // does not exist. A noindex shell writes no canonical, so `canonical` here
+  // only feeds og:url.
   const notFound = rewriteHead(shell, {
     title: 'UI L4B | Page not found',
+    shareTitle: 'UI L4B',
     description: 'That page does not exist. Browse the tools, or head back to the homepage.',
     robots: 'noindex,follow',
-    canonical: `${ORIGIN}/404`,
+    canonical: `${ORIGIN}/`,
     card: DEFAULT_CARD,
   })
   notFound.misses.forEach(m => allMisses.add(m))
