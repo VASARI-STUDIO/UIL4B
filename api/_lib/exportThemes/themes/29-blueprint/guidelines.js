@@ -104,7 +104,7 @@ ${own ? `<p class="a bn" style="left:${X}px;top:${Math.round(Y + H + 40)}px;widt
     // a short schedule (under five finishes) hands its spare rows to the fields, so the table always ends 71 px above the title block
     // a schedule of five or fewer has 36 px more again, so the table ends about 35 px above the title block and no dead strip is left under it
     const roomy = n <= 5 ? 36 : 0, spare = Math.max(0, 5 - n) * 32 + roomy, FH = Math.max(480, 620 - Math.max(0, n - 5) * 36) + spare, RY = 740 + spare;
-    let x = 40, fields = '', ext = '', segs = '', vals = '', rows = '';
+    let x = 40, fields = '', ext = '', segs, vals = '', rows = '';
     const R = reds(ctx), cy = 40 + FH + 24;
     const dimLine = [];
     // the primary line, set once on the widest dark field in the brand's own text colour for it: the page shows a pairing at work

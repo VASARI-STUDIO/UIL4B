@@ -285,7 +285,7 @@ function tokens(ctx) {
   let y = TOP;
   y = kv(896, y, 290, 'Space', g.space);
   y = kv(896, y, 290, 'Radius', g.radius);
-  y = kv(896, y, 290, 'Border width', g.width);
+  kv(896, y, 290, 'Border width', g.width);
   const fam = (id) => ctx.brand.fonts[id].family;
   let y2 = grp(1210, TOP, 337, 'Fonts', [['Token', 0], ['Family', 118]]);
   [['ff-display', fam('display')], ['ff-body', fam('body')], ['ff-mono', fam('mono')]].forEach(([k, v]) => { line(1210, y2, 337, '--' + k, v); y2 += RH; });

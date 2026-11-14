@@ -176,7 +176,7 @@ export const uikit = {
     const BW = snap(bw1 * k), BH = 44 * k, rad = ctx.radius.button * k, size = fs * k, line = size;
     // the label's line box ends above the band (it is page text, not glass); the button's lower part runs on into the reeds
     let cy = 768 - 8 - size / 2 + 4, base = cy + capH(ctx, 'body', size, W.medium) / 2, top = lineTop(ctx, 'body', size, line, base, W.medium);
-    if (top + line > 764) { const d = top + line - 764; cy -= d; base -= d; top -= d; }
+    if (top + line > 764) { const d = top + line - 764; cy -= d; top -= d; }
     const bx = 60, by = Math.round(cy - BH / 2);
     const btn = box(bx, by, BW, BH, rad, { fill: T.strong });
     const fg = T.strongLabel;

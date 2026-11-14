@@ -361,7 +361,7 @@ function logoPage(ctx) {
   };
   // the K, in page coordinates (its own translate and the scale applied), its vertical edges on reed boundaries
   const kPage = (p) => {
-    const n = p.d.match(/[A-Za-z]|-?\d+(?:\.\d+)?/g) || [], tt = (p.tf.match(/-?[\d.]+/g) || [0, 0]).map(Number); let out = '', c = '';
+    const n = p.d.match(/[A-Za-z]|-?\d+(?:\.\d+)?/g) || [], tt = (p.tf.match(/-?[\d.]+/g) || [0, 0]).map(Number); let out = '', c;
     // only absolute x,y pair commands can be moved point by point; any other path is drawn as it is
     if (n.some((t) => /[A-Za-z]/.test(t) && !'MLQCZ'.includes(t))) return null;
     // each pair is spaced from the one before it, or a curve's points run together into one number

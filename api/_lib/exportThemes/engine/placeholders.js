@@ -223,6 +223,7 @@ export function applyPlaceholders(ctx) {
   const label = (str) => run(() => String(str).replace(SENT, (m, g) => { const e = reg.entries[decodeId(g)]; return e ? e.label : m; }));
   // entries: a read-only view of what a placeholder prints (label, length, form, bare), without the real words, for a theme that measures slot copy
   let view = [];
+  // eslint-disable-next-line no-unused-vars -- real is taken out so the view never holds the real words
   const entries = () => { if (view.length !== reg.entries.length) view = reg.entries.map(({ real, ...rest }) => Object.freeze(rest)); return view; };
   ctx.placeholders = { descriptors: DESCRIPTORS, run, label, get entries() { return entries(); }, get count() { return reg.entries.length; } };
   return ctx;

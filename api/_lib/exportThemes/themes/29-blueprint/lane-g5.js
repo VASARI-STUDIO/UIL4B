@@ -99,7 +99,7 @@ function storyViewer(ctx, aspect) {
 // ---- signage: the sign face at the brand's own size, half a px to the mm ----
 function signFace(ctx) {
   const B = ctx.brand, rev = B.logo.colourways.reversed, stem = displayStem(ctx), g = ctx.logo.geos.horizontal;
-  let mm = null; try { mm = arts.hoarding(ctx).mm; } catch { mm = null; }
+  let mm; try { mm = arts.hoarding(ctx).mm; } catch { mm = null; }
   const [Wmm, Hmm] = mm || [3400, 1000];
   const W = Wmm / 2, H = Hmm / 2, M = 100, line = B.lines.others[0] || B.lines.primary, TW = W - 2 * M;
   // fitted to 90% of the measure, so the browser's own line breaking (in the photo's art page too) never spills a third line

@@ -1,6 +1,6 @@
 // THE EXPORT DIALOG'S THEME STEP.
 //
-// The UI kit and the book (PDF and HTML) take one of ten themes; the slides (PDF and HTML) take those ten and two more, Label and
+// The UI kit and the book (PDF and HTML) take one of fourteen themes; the slides (PDF and HTML) take those fourteen and two more, Label and
 // Swiss Field, which draw the guidelines only. The Theme step shows the chosen theme and a Change button; Change opens a popover on
 // a wide window and a "Theme" sheet on a phone. A free account can have the UI kit in Standards (for now) and the
 // guidelines in Label and Swiss Field; every other row and theme is Pro. The files come from
@@ -28,15 +28,18 @@ import { MOTION_SETTINGS, MOTION_WIDTHS, motionState, chooseThemeWithKeys } from
 
 const ROUTE = '/projects/harbour/export'
 
-// The ten themes in the picker's order, and which of them a free account has the UI kit in.
+// The fourteen themes in the picker's order, and which of them a free account has the UI kit in.
 const THEMES = [
   ['01-presentation', 'Presentation'], ['02-poster', 'Ticket'], ['03-broadsheet', 'Broadsheet'], ['04-standards', 'Standards'],
   ['05-specimen', 'Catalogue'], ['06-studio', 'Studio'], ['07-spec', 'Specification'], ['08-monograph', 'Riso'],
-  ['09-blueprint', 'Blueprint'], ['10-inuse', 'In use'],
+  ['09-blueprint', 'Blueprint'], ['10-inuse', 'In use'], ['24-standards', 'Standards Plate'], ['29-blueprint', 'Drawing Sheet'],
+  ['30-fluted', 'Fluted'], ['32-dieline', 'Dieline'],
 ]
+// The last theme in the UI kit list, where End lands.
+const LAST = THEMES[THEMES.length - 1][1]
 const NAMES = THEMES.map(([, name]) => name)
 const FREE_KIT = ['Standards']
-// The guidelines list: the ten, then the two guidelines-only themes, which are free.
+// The guidelines list: the fourteen, then the two guidelines-only themes, which are free.
 const GUIDE_NAMES = [...NAMES, 'Label', 'Swiss Field']
 const FREE_GUIDE = ['Label', 'Swiss Field']
 const GUIDE_LOCK = 'Pro theme. The guidelines are free in Label and Swiss Field.'
@@ -85,7 +88,8 @@ const change = (panel) => panel.getByRole('button', { name: /^Change theme, curr
 const themeName = (panel) => panel.locator('.xd-theme-name > span:first-child')
 const themeTier = (panel) => panel.locator('.xd-theme-tier')
 const list = (page) => page.getByRole('listbox', { name: 'Theme' })
-const option = (page, name) => list(page).getByRole('option', { name: new RegExp(`^${name}\\b`) })
+// Matched on the row's name alone, so Standards never also finds Standards Plate.
+const option = (page, name) => list(page).getByRole('option').filter({ has: page.locator('.xd-theme-opt-n').getByText(name, { exact: true }) })
 const activeName = (page) => list(page).evaluate((el) => document.getElementById(el.getAttribute('aria-activedescendant'))?.querySelector('.xd-theme-opt-n')?.textContent)
 const optionNames = (page) => list(page).locator('.xd-theme-opt-n').allTextContents()
 
@@ -103,13 +107,13 @@ async function pick(page, panel, name) {
 /* ── Free and Pro, per row and per theme ─────────────────────────────────── */
 
 test.describe('Free and Pro', () => {
-  test('a free account sees the UI kit open in Standards and Pro in the other nine', async ({ page }) => {
+  test('a free account sees the UI kit open in Standards and Pro in the other thirteen', async ({ page }) => {
     watch(page, 'a free account opening the theme list for the UI kit')
     const panel = await open(page, { plan: 'free', file: 'kit' })
     await expect(themeName(panel), 'a free account starts on a theme it can have').toHaveText('Standards')
     await expect(themeTier(panel)).toHaveText('Free')
     await openList(page, panel)
-    expect(await optionNames(page), 'ten themes, in order').toEqual(NAMES)
+    expect(await optionNames(page), 'fourteen themes, in order').toEqual(NAMES)
     const tiers = await list(page).locator('.xd-theme-opt').evaluateAll((rows) => rows.map((r) => ({
       name: r.querySelector('.xd-theme-opt-n').textContent, tier: r.querySelector('.xd-theme-opt-r').textContent.trim(),
     })))
@@ -192,7 +196,7 @@ test.describe('Free and Pro', () => {
   })
 
   // The label and the dock decide from the same file and theme: the UI kit is free in two themes, the guidelines in the two
-  // guidelines-only themes, and the book is Pro in all ten.
+  // guidelines-only themes, and the book is Pro in all fourteen.
   for (const file of Object.keys(FILES)) {
     const freeThemes = freeFor(file)
     const names = namesFor(file)
@@ -279,17 +283,17 @@ for (const { name: where, size } of WIDTHS) test.describe(`keyboard, ${where}`, 
     await page.keyboard.press('ArrowUp')
     expect(await activeName(page), 'the top end holds still').toBe('Presentation')
     await page.keyboard.press('End')
-    expect(await activeName(page), 'End').toBe('In use')
+    expect(await activeName(page), 'End').toBe(LAST)
     await page.keyboard.press('ArrowDown')
-    expect(await activeName(page), 'the bottom end holds still').toBe('In use')
-    expect(await option(page, 'In use').evaluate((el) => el.classList.contains('is-active'))).toBe(true)
+    expect(await activeName(page), 'the bottom end holds still').toBe(LAST)
+    expect(await option(page, LAST).evaluate((el) => el.classList.contains('is-active'))).toBe(true)
 
     await page.keyboard.press('Enter')
     await expect(list(page)).toHaveCount(0)
-    await expect(themeName(panel)).toHaveText('In use')
+    await expect(themeName(panel)).toHaveText(LAST)
     await expect(change(panel)).toBeFocused()
     await expect(change(panel)).toHaveAttribute('aria-expanded', 'false')
-    await expect(change(panel)).toHaveAccessibleName('Change theme, current In use')
+    await expect(change(panel)).toHaveAccessibleName(`Change theme, current ${LAST}`)
     await expect(exportPanel(page), 'the dialog stays open').toBeVisible()
   })
 
@@ -299,7 +303,7 @@ for (const { name: where, size } of WIDTHS) test.describe(`keyboard, ${where}`, 
     await change(panel).focus()
     await page.keyboard.press('Enter')
     await page.keyboard.press('End')
-    expect(await activeName(page)).toBe('In use')
+    expect(await activeName(page)).toBe(LAST)
     await page.keyboard.press('Escape')
     await expect(list(page)).toHaveCount(0)
     await expect(themeName(panel), 'nothing was chosen').toHaveText('Standards')
@@ -419,7 +423,7 @@ test.describe('popover and sheet', () => {
     await expect(sheet).toBeVisible()
     await expect(sheet.getByRole('heading', { name: 'Theme', level: 3 })).toBeVisible()
     const rows = await list(page).locator('.xd-theme-opt').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)))
-    expect(rows).toHaveLength(10)
+    expect(rows).toHaveLength(THEMES.length)
     for (const h of rows) expect(h, 'a phone row is 52px').toBeGreaterThanOrEqual(52)
     const fit = await page.evaluate(() => {
       const s = document.querySelector('.xd-theme-sheet').getBoundingClientRect()

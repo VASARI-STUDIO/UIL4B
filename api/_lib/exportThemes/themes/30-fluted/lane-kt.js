@@ -202,7 +202,7 @@ function typeSheets(ctx) {
     const alpha = ['ABCDEFGHIJKLM', 'NOPQRSTUVWXYZ', 'abcdefghijklm', 'nopqrstuvwxyz', '0123456789'];
     html += put(ctx, { x: 64, y: 304, w: 420, cls: 'a', style: 'white-space:pre', html: alpha.map((r) => `<div style="font-size:28px;line-height:32px;color:var(--soft);${own}font-weight:${fw};letter-spacing:0.06em">${r}</div>`).join('') });
     // the sample
-    let sample = '', keyHtml = '';
+    let sample, keyHtml;
     if (role === 'body') {
       const tk = scale.find((t) => t.token === 'body') || { size: 16, line: 1.55, use: 'Reading text' }, lh = Math.round(tk.size * tk.line);
       sample = put(ctx, { x: 64, y: 496, w: 420, cls: 'a', style: `white-space:normal;font:${tk.weight || 400} ${tk.size}px/${lh}px var(--body);color:var(--soft)`, html: A(S.paragraph) });

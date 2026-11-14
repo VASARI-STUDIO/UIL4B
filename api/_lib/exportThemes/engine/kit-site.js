@@ -6,7 +6,7 @@ export function applyState(html, st) {
   return html.replace(/<([a-z]+)([^>]*\bdata-target\b[^>]*)>/, (m, tag, attrs) => {
     let a = attrs;
     if (st.cls) a = /\bclass="/.test(a) ? a.replace(/\bclass="([^"]*)"/, (x, c) => `class="${(c + ' ' + st.cls).trim()}"`) : a + ` class="${st.cls}"`;
-    for (const [k, v] of Object.entries(st.attr || {})) a = a.replace(new RegExp(`\s${k}(="[^"]*")?(?=[\s>/]|$)`), '') + (v === '' ? ` ${k}` : ` ${k}="${esc(v)}"`);
+    for (const [k, v] of Object.entries(st.attr || {})) a = a.replace(new RegExp(`\\s${k}(="[^"]*")?(?=[\\s>/]|$)`), '') + (v === '' ? ` ${k}` : ` ${k}="${esc(v)}"`);
     return `<${tag}${a}>`;
   });
 }
