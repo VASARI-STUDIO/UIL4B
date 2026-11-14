@@ -41,6 +41,10 @@ pubsub-debug.log
 # committed: the ITF FFL v2.0 bans putting it in a public repository.
 public/fonts/switzer/
 
+# The Pro library data is fetched at build time (scripts/fetch-pro-data.mjs)
+# from a private repository and must never be committed.
+api/_lib/pro/
+
 # Env
 .env
 .env.local

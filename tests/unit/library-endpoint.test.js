@@ -8,7 +8,8 @@
 // and an error message and NO library values, whatever else goes wrong.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { serveLibrary, LIBRARIES } from '../../api/_lib/library/serve.js'
+import { serveLibrary } from '../../api/_lib/library/serve.js'
+import { LIBRARIES } from '../../api/_lib/library/data.js'
 import { freeSplit } from '../../scripts/library/clientRows.js'
 
 function fakeRes() {
