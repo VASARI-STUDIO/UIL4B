@@ -260,7 +260,7 @@ test('nothing search offers is a retired URL', () => {
       `"${entry.label}" sends visitors to ${entry.path}, which is a retired URL`)
   }
   // The resolver is what keeps that true, so check it does something.
-  assert.equal(liveDestination('/prompts'), '/discover/prompts')
+  assert.equal(liveDestination('/prompts'), '/discover')
 })
 
 test('each row that names a page the tree lists lands on the tree own route', () => {
