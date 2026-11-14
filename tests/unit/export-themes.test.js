@@ -1,4 +1,4 @@
-// The export themes are data in src/config/exportFormats.js: seventeen Pro looks with
+// The export themes are data in src/config/exportFormats.js: eighteen Pro looks with
 // four exports each and the Free pair with the guidelines only, with the gate on
 // every export. They are not export formats the
 // panel can build, so nothing here may leak into EXPORT_FORMATS.
@@ -25,16 +25,16 @@ import { FREE_UI_KIT_THEMES, EXPORT_THEMES as SHIPPED_THEMES } from '../../src/d
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const MARKER = 'ships with the export themes'
 
-test('there are nineteen themes, under the folder ids the export engine reads', () => {
+test('there are twenty themes, under the folder ids the export engine reads', () => {
   assert.deepEqual(EXPORT_THEMES.map((t) => t.id), [
     '01-presentation', '02-poster', '03-broadsheet', '04-standards', '05-specimen',
     '06-studio', '07-spec', '08-monograph', '09-blueprint', '10-inuse', '21-presentation', '22-ticket', '24-standards',
-    '28-riso', '29-blueprint', '30-fluted', '32-dieline', '25-label', '27-swissfield',
+    '26-notebook', '28-riso', '29-blueprint', '30-fluted', '32-dieline', '25-label', '27-swissfield',
   ])
   assert.deepEqual(EXPORT_THEMES.map((t) => t.name), [
     'Presentation', 'Ticket', 'Broadsheet', 'Standards', 'Catalogue',
     'Studio', 'Specification', 'Riso', 'Blueprint', 'In use', 'Keynote', 'Stub', 'Standards Plate',
-    'Print Shop', 'Drawing Sheet', 'Fluted', 'Dieline', 'Label', 'Swiss Field',
+    'Notebook', 'Print Shop', 'Drawing Sheet', 'Fluted', 'Dieline', 'Label', 'Swiss Field',
   ])
 })
 
@@ -42,7 +42,7 @@ test('each theme names its sample brand, and no sample brand is a real company',
   assert.deepEqual(EXPORT_THEMES.map((t) => t.brand), [
     'Kerbside', 'Encore', 'Saltbush', 'Two Shores', 'Margin',
     'Offcut', 'Northern Current', 'Long Room', 'Plumbline', 'Shallow End', 'Kerbside', 'Encore', 'Two Shores',
-    'Long Room', 'Plumbline', 'Northern Current', 'Kerbside', 'Margin', 'Northern Current',
+    'Offcut', 'Long Room', 'Plumbline', 'Northern Current', 'Kerbside', 'Margin', 'Northern Current',
   ])
   for (const file of ['src/config/exportFormats.js', 'src/config/planFacts.js']) {
     assert.ok(!/\b(Tally|Paddle)\b/.test(read(file)), `${file} names a retired sample brand`)
@@ -55,13 +55,13 @@ test('only Label and Swiss Field are Free', () => {
   assert.ok(EXPORT_THEMES.every((t) => t.tier === 'free' || t.tier === 'pro'))
 })
 
-test('page shapes: five 16:9, one 5:4, one 4:5, one 1:1, three A4 landscape, seven A4', () => {
+test('page shapes: five 16:9, one 5:4, one 4:5, one 1:1, four A4 landscape, seven A4', () => {
   const shapes = Object.fromEntries(EXPORT_THEMES.map((t) => [t.id, t.shape]))
   assert.deepEqual(shapes, {
     '01-presentation': '16:9', '02-poster': '16:9', '03-broadsheet': '16:9',
     '04-standards': 'A4 landscape',
     '05-specimen': 'A4', '06-studio': 'A4', '07-spec': 'A4', '08-monograph': 'A4', '09-blueprint': 'A4', '10-inuse': 'A4',
-    '21-presentation': '16:9', '22-ticket': '16:9', '24-standards': 'A4 landscape', '28-riso': 'A4', '29-blueprint': 'A4 landscape',
+    '21-presentation': '16:9', '22-ticket': '16:9', '24-standards': 'A4 landscape', '26-notebook': 'A4 landscape', '28-riso': 'A4', '29-blueprint': 'A4 landscape',
     '30-fluted': '4:5', '32-dieline': '1:1',
     '25-label': '5:4', '27-swissfield': '16:9',
   })

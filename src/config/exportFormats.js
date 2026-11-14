@@ -173,7 +173,7 @@ export function assertGroupsCoherent(formats = EXPORT_FORMATS, groups = EXPORT_G
 
 // ── Export themes ────────────────────────────────────────────────────────────
 //
-// Nineteen designed looks for the brand documents, in the export dialog's order: the ten in the homepage showcase, seven more Pro looks, and the Free pair. They are their own data, NOT
+// Twenty designed looks for the brand documents, in the export dialog's order: the ten in the homepage showcase, eight more Pro looks, and the Free pair. They are their own data, NOT
 // entries in EXPORT_FORMATS: a format listed there as `pro` must be `live`
 // (assertFormatsCoherent). The export panel's Theme row picks one of them.
 
@@ -221,6 +221,7 @@ export const EXPORT_THEMES = Object.freeze([
   Object.freeze({ id: '21-presentation', name: 'Keynote', brand: 'Kerbside', tier: 'pro', shape: '16:9', showcase: false }),
   Object.freeze({ id: '22-ticket', name: 'Stub', brand: 'Encore', tier: 'pro', shape: '16:9', showcase: false }),
   Object.freeze({ id: '24-standards', name: 'Standards Plate', brand: 'Two Shores', tier: 'pro', shape: 'A4 landscape', showcase: false }),
+  Object.freeze({ id: '26-notebook', name: 'Notebook', brand: 'Offcut', tier: 'pro', shape: 'A4 landscape', showcase: false }),
   Object.freeze({ id: '28-riso', name: 'Print Shop', brand: 'Long Room', tier: 'pro', shape: 'A4', showcase: false }),
   Object.freeze({ id: '29-blueprint', name: 'Drawing Sheet', brand: 'Plumbline', tier: 'pro', shape: 'A4 landscape', showcase: false }),
   Object.freeze({ id: '30-fluted', name: 'Fluted', brand: 'Northern Current', tier: 'pro', shape: '4:5', showcase: false }),
