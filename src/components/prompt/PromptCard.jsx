@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { parseTags } from '../../utils/promptStore'
 import { previewDuration } from '../../utils/promptPreview'
-import { hasPromptPreview, hasPromptAnim, promptPosterSrc, promptAnimSrc } from '../../data/promptPreviewAssets'
+import { hasPromptPreview, hasPromptAnim } from '../../data/promptPreviewAssets'
+import { useProAsset } from '../../hooks/useProAsset'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import useInViewPlayback, { allowsAnimatedPreview } from '../../hooks/useInViewPlayback'
 import UserName from '../UserName'
@@ -76,6 +77,10 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
   // Ready belongs to one mount of the animation: leaving view resets it, so
   // coming back fades in only once the file has decoded again.
   if (!playing && animReady) setAnimReady(false)
+  // A Pro prompt's preview is fetched for a Pro account and shown as a blob:
+  // URL (hooks/useProAsset.js); a free prompt's is its public file.
+  const poster = useProAsset('poster', p.id, { enabled: showsOutput })
+  const anim = useProAsset('anim', p.id, { enabled: playing })
 
   const open = () => onOpen(p)
   const excerpt = variant === 'lead' ? firstSentence(text) : ''
@@ -110,17 +115,17 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, onToggleSa
           >
             <img
               className="pl-card-poster" data-pin-nopin="true"
-              src={promptPosterSrc(p.id)}
+              src={poster.src || undefined}
               alt=""
               loading="lazy"
               decoding="async"
               width="960"
               height="600"
             />
-            {playing && (
+            {playing && anim.src && (
               <img
                 className="pl-card-anim" data-pin-nopin="true"
-                src={promptAnimSrc(p.id)}
+                src={anim.src}
                 alt=""
                 decoding="async"
                 width="960"

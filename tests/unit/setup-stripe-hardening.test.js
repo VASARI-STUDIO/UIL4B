@@ -319,3 +319,24 @@ test('a 500 gives the caller fixed text, never the Stripe error message', async 
   assert.equal(half.res.body.partial, true)
   assert.ok(!/No such price|sk_live|price_1AbCd/.test(JSON.stringify(half.res.body)), 'a partial failure echoed the Stripe message')
 })
+
+test('a rejected token gets fixed text, never the server credential diagnosis', async () => {
+  // credentialProblem() describes how the server's Firebase key is set up. It
+  // goes to the log; the caller gets the same 401 any bad token gets.
+  const diagnosis = 'FIREBASE_SERVICE_ACCOUNT_KEY is not set on this deployment'
+  process.env.ADMIN_EMAILS = ADMIN
+  install({ auth: fakeAuth({ tokens: {} }), db: fakeDb(), stripe: fakeStripe(), credentialProblem: diagnosis })
+  const res = fakeRes()
+  const logged = []
+  const realError = console.error
+  console.error = (...args) => logged.push(args.join(' '))
+  try {
+    await setupStripe({ method: 'GET', headers: { authorization: 'Bearer nope', 'x-forwarded-for': '203.0.113.9' } }, res)
+  } finally {
+    console.error = realError
+  }
+  assert.equal(res.statusCode, 401)
+  assert.deepEqual(res.body, { error: 'Invalid auth token' })
+  assert.ok(!JSON.stringify(res.body).includes('FIREBASE'), `the 401 echoed the credential diagnosis: ${JSON.stringify(res.body)}`)
+  assert.ok(logged.some((l) => l.includes(diagnosis)), 'the diagnosis must still reach the server log')
+})

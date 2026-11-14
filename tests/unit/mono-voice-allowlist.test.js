@@ -173,6 +173,7 @@ const ALLOWED = {
   },
   'pages/gradient.css': {
     '.grd .grd-code-text': 'code',
+    '.grd .grd-fx-cap-hexes': 'hex',
     '.grd .grd-gen-hex': 'hex',
     '.grd .grd-hex': 'hex',
     '.grd .grd-spec-hex': 'hex',

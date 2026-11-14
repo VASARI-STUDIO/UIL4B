@@ -246,6 +246,9 @@ const summary = [];
 const all = [];
 for (const dir of dirs) {
   const T = await mod(path.join(ET, 'themes', dir, 'index.js'));
+  // a guidelines-only theme (an empty uikit, like 25 Label and 27 Swiss Field) draws a subset of the guidelines pages and no UI kit:
+  // the app offers it for the guidelines alone and leaves out the pages it has no builder for
+  const partial = !T.uikit || !Object.keys(T.uikit).length;
   for (const edition of editions) {
     const tasks = [];
     const task = (label, files, entry, o) => tasks.push(async () => {
@@ -256,12 +259,12 @@ for (const dir of dirs) {
     // the two page documents: every page on its own, fonts beside the pages. Markup is built in one go after makeCtx,
     // because the slot edition's placeholder registry belongs to the ctx made last.
     for (const [kind, list, impl] of [['guidelines', GUIDE_PAGES, T.guidelines], ['uikit', UIKIT_PAGES, T.uikit]]) {
-      if (!parts.includes(kind)) continue;
+      if (!parts.includes(kind) || (partial && kind === 'uikit')) continue;
       const ctx = makeCtx(T, edition, kind, nodeLoaders);
       const files = { ...fontFiles(ctx, T) };
       const ids = [];
       for (const p of list) {
-        if (!impl || typeof impl[p.id] !== 'function') { all.push({ theme: dir, edition, view: `${kind}/${p.id}`, type: 'missing-builder', page: p.id, text: '', detail: `${kind} has no builder for ${p.id}` }); continue; }
+        if (!impl || typeof impl[p.id] !== 'function') { if (partial) continue; all.push({ theme: dir, edition, view: `${kind}/${p.id}`, type: 'missing-builder', page: p.id, text: '', detail: `${kind} has no builder for ${p.id}` }); continue; }
         files[`${p.id}.html`] = pageDoc(ctx, T, { title: p.id, pages: [impl[p.id](ctx)], size: ctx.size });
         ids.push(p.id);
       }
@@ -269,7 +272,7 @@ for (const dir of dirs) {
     }
 
     // the UI kit's example page
-    if (parts.includes('example')) {
+    if (parts.includes('example') && !partial) {
       const files = codePackageFiles(makeCtx(T, edition, 'uikit', nodeLoaders), T);
       for (const [v, w, h] of MODE_VIEWS) task(`example/${v}`, files, 'example.html', { w, h, rootSel: 'body', prepare: modePrepare(v.startsWith('dark')) });
     }

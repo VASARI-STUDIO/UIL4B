@@ -98,26 +98,27 @@ test('every community monogram ink clears the 3:1 large-text floor on its own gr
   assert.deepEqual(bad, [], 'monograms below the floor:\n  ' + bad.join('\n  '))
 })
 
-test('no curated colour is touched — only the ink moves', () => {
-  // The whole reason per-item ink was chosen over darkening the seeds: the
-  // colour IS the content on a design-community card. inkOnGradient is a pure
-  // read; this pins the intent so a future "fix" cannot quietly edit the data.
+test('the curated seed colours are pinned — the ink adapts to them', () => {
+  // Per-item ink was chosen over darkening the seeds: the colour IS the
+  // content on a design-community card. inkOnGradient is a pure read. The
+  // starters were retinted on purpose to the brand's warm range; this pins
+  // them so any further change to the data is a deliberate one.
   const seeds = CARDS.map((d) => `${d.id}:${d.c1}/${d.c2}`)
-  assert.deepEqual(seeds.slice(0, 3), ['s1:#3B82F6/#8B5CF6', 's2:#0EA5E9/#22D3EE', 's3:#111827/#374151'])
+  assert.deepEqual(seeds.slice(0, 3), ['s1:#EA580C/#FDBA74', 's2:#78716C/#D6D3D1', 's3:#111827/#374151'])
   const s9 = CARDS.find((d) => d.id === 's9')
   assert.equal(`${s9.c1}/${s9.c2}`, '#059669/#6EE7B7', 'the worst-contrast card keeps its colours')
 })
 
-test('the accepted cost is real and pinned: ten of the twelve monograms are dark ink', () => {
+test('the accepted cost is real and pinned: nine of the twelve monograms are dark ink', () => {
   // This cost is accepted. Pinned so nobody "restores the single
   // white ink" believing it is a cosmetic tidy-up — it is the defect coming back.
   const dark = CARDS.filter((d) => {
     const ink = inkOnGradient(d.c1, d.c2, FLOOR)
     return contrastRatio(ink, '#FFFFFF') >= contrastRatio(ink, '#000000')
   })
-  assert.equal(dark.length, 10, `expected 10 dark-ink monograms of 12, got ${dark.length}`)
+  assert.equal(dark.length, 9, `expected 9 dark-ink monograms of 12, got ${dark.length}`)
   const light = CARDS.filter((d) => !dark.includes(d)).map((d) => d.id).sort()
-  assert.deepEqual(light, ['s10', 's3'], 'only the two near-black gradients keep a light ink')
+  assert.deepEqual(light, ['s10', 's3', 's6'], 'only the near-black and deep-rust gradients keep a light ink')
 })
 
 // ── 3. The model has to SAMPLE, and this is the case that proves it ─────────

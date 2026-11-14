@@ -143,7 +143,7 @@ for (const [width, ctx] of [
       const notice = noticeOf(page)
       await expect(notice.locator('.sp-footer-notice-h')).toHaveText('Icon sets in this group')
       const text = (await notice.locator('.sp-footer-notice-list').textContent()).replace(/\s+/g, ' ').trim()
-      expect(text, 'the Wayfinding group draws from Lucide and Tabler').toBe('Lucide (ISC), Tabler Icons (MIT). Every licence in full')
+      expect(text, 'the Wayfinding group draws from Lucide alone').toBe('Lucide (ISC). Every licence in full')
       await expect(notice.getByRole('link', { name: 'Lucide', exact: true })).toHaveAttribute('href', 'https://github.com/lucide-icons/lucide')
       await expect(page.getByRole('contentinfo')).toHaveCount(1)
     })

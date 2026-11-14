@@ -14,7 +14,7 @@
 // tests/user-sim/28-account-menu-keyboard.spec.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { popoverArrowTarget } from '../../src/hooks/usePopover.js'
+import { popoverArrowTarget, popoverGridTarget } from '../../src/hooks/usePopover.js'
 
 const N = 5
 
@@ -60,4 +60,25 @@ test('an empty panel claims no key', () => {
   for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End']) {
     assert.equal(popoverArrowTarget(key, -1, 0), -1, key)
   }
+})
+
+test('in a grid, Left and Right step through the cells and wrap', () => {
+  assert.equal(popoverGridTarget('ArrowRight', 1, 9, 3), 2)
+  assert.equal(popoverGridTarget('ArrowRight', 8, 9, 3), 0)
+  assert.equal(popoverGridTarget('ArrowLeft', 0, 9, 3), 8)
+})
+
+test('in a grid, Up and Down move a whole row and stop at the edges', () => {
+  assert.equal(popoverGridTarget('ArrowDown', 1, 9, 3), 4)
+  assert.equal(popoverGridTarget('ArrowDown', 7, 9, 3), 7)
+  assert.equal(popoverGridTarget('ArrowUp', 4, 9, 3), 1)
+  assert.equal(popoverGridTarget('ArrowUp', 2, 9, 3), 2)
+  assert.equal(popoverGridTarget('ArrowDown', 6, 8, 3), 6)
+})
+
+test('in a grid, Home and End jump to the ends and other keys are left alone', () => {
+  assert.equal(popoverGridTarget('Home', 5, 9, 3), 0)
+  assert.equal(popoverGridTarget('End', 0, 9, 3), 8)
+  assert.equal(popoverGridTarget('Enter', 0, 9, 3), -1)
+  assert.equal(popoverGridTarget('ArrowRight', 0, 0, 3), -1)
 })

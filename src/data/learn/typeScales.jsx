@@ -116,7 +116,7 @@ export default function TypeScales() {
             `${Math.pow(r, 6).toFixed(2)}x`,
             `${stepPx(16, r, 6, 'half')}px`,
           ])}
-          caption="Sizes from stepPx() at half-pixel rounding, the Type Scale Generator's default."
+          caption="Sizes from stepPx() at half-pixel rounding, the tool's 'Nearest 0.5px' option."
         />
 
         <p>

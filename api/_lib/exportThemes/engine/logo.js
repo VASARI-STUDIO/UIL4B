@@ -60,6 +60,12 @@ export function makeLogo(ctx) {
   if (!(clearUnit > 0)) throw new Error(`logo plugin for ${ctx.slug}: clearUnit must be a positive number`);
   const geos = { colour: primary, 'mono-dark': primary, 'mono-light': primary, reversed: primary, horizontal, stacked, symbol };
   const labels = { colour: 'Full colour', 'mono-dark': 'Mono dark', 'mono-light': 'Mono light', reversed: 'Reversed', horizontal: 'Horizontal', stacked: 'Stacked', symbol: 'Symbol' };
+  // optional small mark, drawn for use under 100 px: not one of `versions` (pages that list the versions are unchanged), but in `geos` so svg() draws it, and in `exportVersions` so the logo set and kit carry it
+  const small = made.small || null;
+  if (small) {
+    if (!(small.w > 0) || !(small.h > 0) || !Array.isArray(small.parts)) throw new Error(`logo plugin for ${ctx.slug}: small must be { w, h, parts: [{ d, role, tf }] }`);
+    geos.small = small; labels.small = 'Small mark';
+  }
   const colourwayOf = (id) => (['colour', 'mono-dark', 'mono-light', 'reversed'].includes(id) ? id : 'colour');
   // a part's colour: the plugin's role map names a colourway key (or gives a function); a role it does not map takes the name colour
   const roleMap = made.roles || {};
@@ -90,7 +96,9 @@ export function makeLogo(ctx) {
   const logo = {
     // measurements for themes: width/height/aspect of the primary logo, the clear-space unit (also as cap), plus anything the plugin adds
     geo: { ...(made.geo || {}), unit: clearUnit, cap: (made.geo && made.geo.cap) || clearUnit, aspect: primary.w / primary.h, height: primary.h, width: primary.w, symbolAspect: symbol.w / symbol.h },
-    versions: Object.keys(geos), labels, geos, svg, slotSvgFile, colourwayOf,
+    versions: Object.keys(geos).filter((id) => id !== 'small'), labels,
+    small: small ? { belowPx: small.belowPx || 100 } : null,
+    exportVersions: Object.keys(geos), geos, svg, slotSvgFile, colourwayOf,
     // markup for a page: the logo in the showcase edition, the slot frame in the slot edition
     html(id, { width = 200, colourway, color, label } = {}) {
       if (ctx.edition === 'slot') { const g = geos[id]; return slotHtml({ width, color, label }).replace(/height:[\d.]+px/, `height:${(width * g.h / g.w).toFixed(1)}px`); }
